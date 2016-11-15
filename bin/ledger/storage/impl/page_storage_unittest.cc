@@ -180,6 +180,17 @@ class FakeDbImpl : public DB {
   PageStorageImpl* page_storage_;
 };
 
+class ObjectData {
+ public:
+  ObjectData(const std::string& value)
+      : value(value),
+        size(value.size()),
+        object_id(glue::SHA256Hash(value.data(), value.size())) {}
+  const std::string value;
+  const size_t size;
+  const std::string object_id;
+};
+
 class PageStorageTest : public ::testing::Test {
  public:
   PageStorageTest() {}
@@ -412,11 +423,11 @@ TEST_F(PageStorageTest, DestroyUncommittedJournal) {
 }
 
 TEST_F(PageStorageTest, AddObjectFromLocal) {
-  std::string content("Some data");
+  ObjectData data("Some data");
 
   ObjectId object_id;
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(content), content.size(),
+      mtl::WriteStringToConsumerHandle(data.value), data.size,
       [this, &object_id](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::OK, returned_status);
         object_id = std::move(returned_object_id);
@@ -424,48 +435,93 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
       });
   message_loop_.Run();
 
-  std::string hash = glue::SHA256Hash(content.data(), content.size());
-  EXPECT_EQ(hash, object_id);
+  EXPECT_EQ(data.object_id, object_id);
 
   std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(object_id);
   std::string file_content;
   EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
-  EXPECT_EQ(content, file_content);
+  EXPECT_EQ(data.value, file_content);
+  EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
 }
 
 TEST_F(PageStorageTest, AddObjectFromLocalNegativeSize) {
-  std::string content("Some data");
+  ObjectData data("Some data");
+
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(content), -1,
+      mtl::WriteStringToConsumerHandle(data.value), -1,
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::OK, returned_status);
         message_loop_.QuitNow();
       });
   message_loop_.Run();
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
 }
 
 TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
-  std::string content("Some data");
+  ObjectData data("Some data");
 
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(content), 123,
+      mtl::WriteStringToConsumerHandle(data.value), 123,
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::IO_ERROR, returned_status);
         message_loop_.QuitNow();
       });
   message_loop_.Run();
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
+}
+
+TEST_F(PageStorageTest, AddObjectFromSync) {
+  ObjectData data("Some data");
+
+  storage_->AddObjectFromSync(data.object_id,
+                              mtl::WriteStringToConsumerHandle(data.value),
+                              data.size, [this](Status returned_status) {
+                                EXPECT_EQ(Status::OK, returned_status);
+                                message_loop_.QuitNow();
+                              });
+  message_loop_.Run();
+
+  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(data.object_id);
+  std::string file_content;
+  EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
+  EXPECT_EQ(data.value, file_content);
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
+}
+
+TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
+  ObjectData data("Some data");
+  ObjectId wrong_id = RandomId(kObjectIdSize);
+
+  storage_->AddObjectFromSync(
+      wrong_id, mtl::WriteStringToConsumerHandle(data.value), data.size,
+      [this](Status returned_status) {
+        EXPECT_EQ(Status::OBJECT_ID_MISMATCH, returned_status);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+}
+
+TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
+  ObjectData data("Some data");
+
+  storage_->AddObjectFromSync(data.object_id,
+                              mtl::WriteStringToConsumerHandle(data.value), 123,
+                              [this](Status returned_status) {
+                                EXPECT_EQ(Status::IO_ERROR, returned_status);
+                                message_loop_.QuitNow();
+                              });
+  message_loop_.Run();
 }
 
 TEST_F(PageStorageTest, GetObject) {
-  std::string content("Some data");
-  ObjectId object_id = glue::SHA256Hash(content.data(), content.size());
-  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(object_id);
-  ASSERT_TRUE(files::WriteFile(file_path, content.data(), content.size()));
+  ObjectData data("Some data");
+  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(data.object_id);
+  ASSERT_TRUE(files::WriteFile(file_path, data.value.data(), data.size));
 
   Status status;
   std::unique_ptr<const Object> object;
   storage_->GetObject(
-      object_id,
+      data.object_id,
       [this, &status, &object](Status returned_status,
                                std::unique_ptr<const Object> returned_object) {
         status = returned_status;
@@ -475,51 +531,50 @@ TEST_F(PageStorageTest, GetObject) {
   message_loop_.Run();
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(object_id, object->GetId());
-  ftl::StringView data;
-  ASSERT_EQ(Status::OK, object->GetData(&data));
-  EXPECT_EQ(content, convert::ToString(data));
+  EXPECT_EQ(data.object_id, object->GetId());
+  ftl::StringView object_data;
+  ASSERT_EQ(Status::OK, object->GetData(&object_data));
+  EXPECT_EQ(data.value, convert::ToString(object_data));
 }
 
 TEST_F(PageStorageTest, AddObjectSynchronous) {
-  std::string content("Some data");
+  ObjectData data("Some data");
 
   std::unique_ptr<const Object> object;
-  Status status = storage_->AddObjectSynchronous(content, &object);
+  Status status = storage_->AddObjectSynchronous(data.value, &object);
   EXPECT_EQ(Status::OK, status);
-  std::string hash = glue::SHA256Hash(content.data(), content.size());
-  EXPECT_EQ(hash, object->GetId());
+  EXPECT_EQ(data.object_id, object->GetId());
 
-  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(hash);
+  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(data.object_id);
   std::string file_content;
   EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
-  EXPECT_EQ(content, file_content);
+  EXPECT_EQ(data.value, file_content);
 }
 
 TEST_F(PageStorageTest, GetObjectSynchronous) {
-  std::string content("Some data");
-  ObjectId object_id = glue::SHA256Hash(content.data(), content.size());
-  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(object_id);
-  ASSERT_TRUE(files::WriteFile(file_path, content.data(), content.size()));
+  ObjectData data("Some data");
+  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(data.object_id);
+  ASSERT_TRUE(files::WriteFile(file_path, data.value.data(), data.size));
 
   std::unique_ptr<const Object> object;
-  Status status = storage_->GetObjectSynchronous(object_id, &object);
+  Status status = storage_->GetObjectSynchronous(data.object_id, &object);
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(object_id, object->GetId());
-  ftl::StringView data;
-  ASSERT_EQ(Status::OK, object->GetData(&data));
-  EXPECT_EQ(content, convert::ToString(data));
+  EXPECT_EQ(data.object_id, object->GetId());
+  ftl::StringView object_data;
+  ASSERT_EQ(Status::OK, object->GetData(&object_data));
+  EXPECT_EQ(data.value, convert::ToString(object_data));
 }
 
 TEST_F(PageStorageTest, UnsyncedObjects) {
   int size = 3;
-  std::string values[] = {"Some data", "Some more data", "Even more data"};
-  std::string object_ids[size];
+  ObjectData data[] = {
+      ObjectData("Some data"), ObjectData("Some more data"),
+      ObjectData("Even more data"),
+  };
   for (int i = 0; i < size; ++i) {
-    object_ids[i] = glue::SHA256Hash(values[i].data(), values[i].size());
-    TryAddFromLocal(values[i], object_ids[i]);
-    EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[i]));
+    TryAddFromLocal(data[i].value, data[i].object_id);
+    EXPECT_TRUE(storage_->ObjectIsUntracked(data[i].object_id));
   }
 
   std::vector<CommitId> commits;
@@ -530,7 +585,7 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     EXPECT_EQ(Status::OK, storage_->StartCommit(
                               GetFirstHead(), JournalType::IMPLICIT, &journal));
     EXPECT_EQ(Status::OK, journal->Put("key" + ftl::NumberToString(i),
-                                       object_ids[i], KeyPriority::LAZY));
+                                       data[i].object_id, KeyPriority::LAZY));
     journal->Commit([](Status status, const CommitId& id) {
       EXPECT_EQ(Status::OK, status);
     });
@@ -549,55 +604,57 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     EXPECT_EQ(Status::OK, storage_->GetCommit(commits[i], &commit));
     EXPECT_TRUE(std::find(objects.begin(), objects.end(),
                           commit->GetRootId()) != objects.end());
-    for (int j = 0; j < i; ++j) {
-      EXPECT_TRUE(std::find(objects.begin(), objects.end(), object_ids[j]) !=
-                  objects.end());
+    for (int j = 0; j <= i; ++j) {
+      EXPECT_TRUE(std::find(objects.begin(), objects.end(),
+                            data[j].object_id) != objects.end());
     }
   }
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsSimple) {
-  std::string content("Some data");
+  ObjectData data("Some data");
 
   // The object is not yet created and its id should not be marked as untracked.
-  std::string object_id = glue::SHA256Hash(content.data(), content.size());
-  EXPECT_FALSE(storage_->ObjectIsUntracked(object_id));
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
 
   // After creating the object it should be marked as untracked.
-  TryAddFromLocal(content, object_id);
-  EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
+  TryAddFromLocal(data.value, data.object_id);
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
 
   // After adding the object in a commit it should not be untracked any more.
   std::unique_ptr<Journal> journal;
   EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
                                               JournalType::IMPLICIT, &journal));
-  EXPECT_EQ(Status::OK, journal->Put("key", object_id, KeyPriority::EAGER));
-  EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
+  EXPECT_EQ(Status::OK,
+            journal->Put("key", data.object_id, KeyPriority::EAGER));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
   journal->Commit(
       [](Status status, const CommitId& id) { EXPECT_EQ(Status::OK, status); });
-  EXPECT_FALSE(storage_->ObjectIsUntracked(object_id));
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsComplex) {
-  std::string values[] = {"Some data", "Some more data", "Even more data"};
-  std::string object_ids[3];
+  ObjectData data[] = {
+      ObjectData("Some data"), ObjectData("Some more data"),
+      ObjectData("Even more data"),
+  };
   for (int i = 0; i < 3; ++i) {
-    object_ids[i] = glue::SHA256Hash(values[i].data(), values[i].size());
-    TryAddFromLocal(values[i], object_ids[i]);
-    EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[i]));
+    TryAddFromLocal(data[i].value, data[i].object_id);
+    EXPECT_TRUE(storage_->ObjectIsUntracked(data[i].object_id));
   }
 
   // Add a first commit containing object_ids[0].
   std::unique_ptr<Journal> journal;
   EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
                                               JournalType::IMPLICIT, &journal));
-  EXPECT_EQ(Status::OK, journal->Put("key0", object_ids[0], KeyPriority::LAZY));
-  EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[0]));
+  EXPECT_EQ(Status::OK,
+            journal->Put("key0", data[0].object_id, KeyPriority::LAZY));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data[0].object_id));
   journal->Commit(
       [](Status status, const CommitId& id) { EXPECT_EQ(Status::OK, status); });
-  EXPECT_FALSE(storage_->ObjectIsUntracked(object_ids[0]));
-  EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[1]));
-  EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[2]));
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data[0].object_id));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data[1].object_id));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data[2].object_id));
 
   // Create a second commit. After calling Put for "key1" for the second time
   // object_ids[1] is no longer part of this commit: it should remain untracked
@@ -605,16 +662,20 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   journal.reset();
   EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead(),
                                               JournalType::IMPLICIT, &journal));
-  EXPECT_EQ(Status::OK, journal->Put("key1", object_ids[1], KeyPriority::LAZY));
-  EXPECT_EQ(Status::OK, journal->Put("key2", object_ids[2], KeyPriority::LAZY));
-  EXPECT_EQ(Status::OK, journal->Put("key1", object_ids[2], KeyPriority::LAZY));
-  EXPECT_EQ(Status::OK, journal->Put("key3", object_ids[0], KeyPriority::LAZY));
+  EXPECT_EQ(Status::OK,
+            journal->Put("key1", data[1].object_id, KeyPriority::LAZY));
+  EXPECT_EQ(Status::OK,
+            journal->Put("key2", data[2].object_id, KeyPriority::LAZY));
+  EXPECT_EQ(Status::OK,
+            journal->Put("key1", data[2].object_id, KeyPriority::LAZY));
+  EXPECT_EQ(Status::OK,
+            journal->Put("key3", data[0].object_id, KeyPriority::LAZY));
   journal->Commit(
       [](Status status, const CommitId& id) { EXPECT_EQ(Status::OK, status); });
 
-  EXPECT_FALSE(storage_->ObjectIsUntracked(object_ids[0]));
-  EXPECT_TRUE(storage_->ObjectIsUntracked(object_ids[1]));
-  EXPECT_FALSE(storage_->ObjectIsUntracked(object_ids[2]));
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data[0].object_id));
+  EXPECT_TRUE(storage_->ObjectIsUntracked(data[1].object_id));
+  EXPECT_FALSE(storage_->ObjectIsUntracked(data[2].object_id));
 }
 
 TEST_F(PageStorageTest, CommitWatchers) {

@@ -22,6 +22,7 @@
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/file_descriptor.h"
+#include "lib/ftl/files/path.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
 
@@ -375,33 +376,30 @@ void PageStorageImpl::AddObjectFromSync(
     mx::datapipe_consumer data,
     size_t size,
     const std::function<void(Status)>& callback) {
-  callback(Status::NOT_IMPLEMENTED);
+  AddObject(std::move(data), size,
+            [ this, object_id = object_id.ToString(), callback ](
+                Status status, ObjectId found_id) {
+              if (status != Status::OK) {
+                callback(status);
+              } else if (found_id != object_id) {
+                FTL_LOG(ERROR) << "Object ID mismatch. Given ID: " << object_id
+                               << ". Found: " << found_id;
+                files::DeletePath(objects_dir_ + "/" + ToHex(found_id), false);
+                callback(Status::OBJECT_ID_MISMATCH);
+              } else {
+                callback(Status::OK);
+              }
+            });
 }
 
 void PageStorageImpl::AddObjectFromLocal(
     mx::datapipe_consumer data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
-  auto file_writer = std::make_unique<FileWriter>(staging_dir_, objects_dir_);
-  FileWriter* file_writer_ptr = file_writer.get();
-  writers_.push_back(std::move(file_writer));
-
-  auto cleanup = [this, file_writer_ptr]() {
-    auto writer_it =
-        std::find_if(writers_.begin(), writers_.end(),
-                     [file_writer_ptr](const std::unique_ptr<FileWriter>& c) {
-                       return c.get() == file_writer_ptr;
-                     });
-    FTL_DCHECK(writer_it != writers_.end());
-    writers_.erase(writer_it);
-  };
-
-  file_writer_ptr->Start(std::move(data), size, [
-    this, cleanup = std::move(cleanup), callback = std::move(callback)
-  ](Status status, ObjectId object_id) {
+  AddObject(std::move(data), size, [ this, callback = std::move(callback) ](
+                                       Status status, ObjectId object_id) {
     untracked_objects_.insert(object_id);
     callback(status, std::move(object_id));
-    cleanup();
   });
 }
 
@@ -514,6 +512,32 @@ void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
 
   callback(Status::OK);
   NotifyWatchers(*(commit.get()), source);
+}
+
+void PageStorageImpl::AddObject(
+    mx::datapipe_consumer data,
+    int64_t size,
+    const std::function<void(Status, ObjectId)>& callback) {
+  auto file_writer = std::make_unique<FileWriter>(staging_dir_, objects_dir_);
+  FileWriter* file_writer_ptr = file_writer.get();
+  writers_.push_back(std::move(file_writer));
+
+  auto cleanup = [this, file_writer_ptr]() {
+    auto writer_it =
+        std::find_if(writers_.begin(), writers_.end(),
+                     [file_writer_ptr](const std::unique_ptr<FileWriter>& c) {
+                       return c.get() == file_writer_ptr;
+                     });
+    FTL_DCHECK(writer_it != writers_.end());
+    writers_.erase(writer_it);
+  };
+
+  file_writer_ptr->Start(std::move(data), size, [
+    this, cleanup = std::move(cleanup), callback = std::move(callback)
+  ](Status status, ObjectId object_id) {
+    callback(status, std::move(object_id));
+    cleanup();
+  });
 }
 
 bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {

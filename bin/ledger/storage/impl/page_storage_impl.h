@@ -57,9 +57,8 @@ class PageStorageImpl : public PageStorage {
   Status GetUnsyncedCommits(
       std::vector<std::unique_ptr<const Commit>>* commits) override;
   Status MarkCommitSynced(const CommitId& commit_id) override;
-  Status GetDeltaObjects(
-      const CommitId& commit_id,
-      std::vector<ObjectId>* objects) override;
+  Status GetDeltaObjects(const CommitId& commit_id,
+                         std::vector<ObjectId>* objects) override;
   Status GetUnsyncedObjects(const CommitId& commit_id,
                             std::vector<ObjectId>* objects) override;
   Status MarkObjectSynced(ObjectIdView object_id) override;
@@ -88,6 +87,9 @@ class PageStorageImpl : public PageStorage {
   void AddCommit(std::unique_ptr<const Commit> commit,
                  ChangeSource source,
                  std::function<void(Status)> callback);
+  void AddObject(mx::datapipe_consumer data,
+                 int64_t size,
+                 const std::function<void(Status, ObjectId)>& callback);
 
   // Notifies the registered watchers with the given |commit|.
   void NotifyWatchers(const Commit& commit, ChangeSource source);
