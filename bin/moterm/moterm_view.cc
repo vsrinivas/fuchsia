@@ -14,6 +14,7 @@
 #include "apps/mozart/services/input/cpp/formatting.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkPaint.h"
 
@@ -22,6 +23,7 @@ namespace moterm {
 namespace {
 constexpr uint32_t kContentImageResourceId = 1;
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+constexpr ftl::TimeDelta kBlinkInterval = ftl::TimeDelta::FromMilliseconds(500);
 }  // namespace
 
 MotermView::MotermView(
@@ -35,6 +37,8 @@ MotermView::MotermView(
       input_handler_(GetViewServiceProvider(), this),
       model_(MotermModel::Size(24, 80), this),
       font_loader_(std::move(font_provider)),
+      weak_ptr_factory_(this),
+      task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       params_(moterm_params) {
   FTL_CHECK(!params_.command.empty());
   auto font_request = fonts::FontRequest::New();
@@ -66,12 +70,28 @@ MotermView::MotermView(
           OnDataReceived(bytes, num_bytes);
         }));
         command_->Start(params_.command.c_str(), 0, argv, nullptr, nullptr);
-
+        Blink();
         Invalidate();
       });
 }
 
 MotermView::~MotermView() {}
+
+void MotermView::Blink() {
+  ftl::TimeDelta delta = ftl::TimePoint::Now() - last_key_;
+  if (delta > kBlinkInterval) {
+    blink_on_ = !blink_on_;
+    Invalidate();
+  }
+
+  task_runner_->PostDelayedTask(
+      [weak = weak_ptr_factory_.GetWeakPtr()] {
+        if (weak) {
+          weak->Blink();
+        }
+      },
+      kBlinkInterval);
+}
 
 // |BaseView|:
 void MotermView::OnDraw() {
@@ -155,34 +175,31 @@ void MotermView::DrawContent(SkCanvas* canvas,
 
       // Paint the foreground.
       if (ch.code_point) {
-        uint32_t flags = SkPaint::kAntiAlias_Flag;
-        // TODO(vtl): Use real bold font?
-        if ((ch.attributes & MotermModel::kAttributesBold))
-          flags |= SkPaint::kFakeBoldText_Flag;
-        if ((ch.attributes & MotermModel::kAttributesUnderline))
-          flags |= SkPaint::kUnderlineText_Flag;
-        // TODO(vtl): Handle blink, because that's awesome.
-        fg_paint.setFlags(flags);
-        fg_paint.setColor(SkColorSetRGB(ch.foreground_color.red,
-                                        ch.foreground_color.green,
-                                        ch.foreground_color.blue));
+        if (!(ch.attributes & MotermModel::kAttributesBlink) || blink_on_) {
+          uint32_t flags = SkPaint::kAntiAlias_Flag;
+          // TODO(jpoichet): Use real bold font
+          if ((ch.attributes & MotermModel::kAttributesBold))
+            flags |= SkPaint::kFakeBoldText_Flag;
+          if ((ch.attributes & MotermModel::kAttributesUnderline))
+            flags |= SkPaint::kUnderlineText_Flag;
+          fg_paint.setFlags(flags);
+          fg_paint.setColor(SkColorSetRGB(ch.foreground_color.red,
+                                          ch.foreground_color.green,
+                                          ch.foreground_color.blue));
 
-        canvas->drawText(&ch.code_point, sizeof(ch.code_point), x, y + ascent_,
-                         fg_paint);
+          canvas->drawText(&ch.code_point, sizeof(ch.code_point), x,
+                           y + ascent_, fg_paint);
+        }
       }
     }
   }
 
-  if (model_.GetCursorVisibility()) {
+  if (model_.GetCursorVisibility() && blink_on_) {
     // Draw the cursor.
     MotermModel::Position cursor_pos = model_.GetCursorPosition();
-    // Reuse the background paint, but don't just paint over.
-    // TODO(vtl): Consider doing other things. Maybe make it blink, to be extra
-    // annoying.
-    // TODO(vtl): Maybe vary how we draw the cursor, depending on if we're
+    // TODO(jpoichet): Vary how we draw the cursor, depending on if we're
     // focused and/or active.
-    bg_paint.setColor(SK_ColorWHITE);
-    //    bg_paint.setXfermodeMode(SkXfermode::kDifference_Mode);
+    bg_paint.setARGB(64, 255, 255, 255);
     canvas->drawRect(SkRect::MakeXYWH(cursor_pos.column * advance_width_,
                                       cursor_pos.row * line_height_,
                                       advance_width_, line_height_),
@@ -223,6 +240,9 @@ void MotermView::OnEvent(mozart::EventPtr event,
 }
 
 void MotermView::OnKeyPressed(mozart::EventPtr key_event) {
+  last_key_ = ftl::TimePoint::Now();
+  blink_on_ = true;
+
   std::string input_sequence =
       GetInputSequenceForKeyPressedEvent(*key_event, keypad_application_mode_);
   if (input_sequence.empty())

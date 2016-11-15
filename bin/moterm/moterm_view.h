@@ -14,6 +14,10 @@
 #include "apps/mozart/lib/view_framework/input_handler.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_ptr.h"
+#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/ftl/tasks/task_runner.h"
+#include "lib/ftl/time/time_point.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkTypeface.h"
 
@@ -48,6 +52,8 @@ class MotermView : public mozart::BaseView,
   void OnDataReceived(const void* bytes, size_t num_bytes);
   void SendData(const void* bytes, size_t num_bytes);
 
+  void Blink();
+
   mozart::InputHandler input_handler_;
 
   // TODO(vtl): Consider the structure of this app. Do we really want the "view"
@@ -69,6 +75,11 @@ class MotermView : public mozart::BaseView,
   int advance_width_;
   // Keyboard state.
   bool keypad_application_mode_;
+
+  ftl::WeakPtrFactory<MotermView> weak_ptr_factory_;
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  ftl::TimePoint last_key_;
+  bool blink_on_ = true;
 
   MotermParams params_;
   std::unique_ptr<Command> command_;
