@@ -11,10 +11,9 @@ interface Resolver {
   // Find components whose module facets match the specified |contract| and can
   // accept the optionally-specified |data|. The |results| are ordered from
   // most relevant to least relevant.
-  ResolveModules(string contract, document_store.Document? data) => (array<Result> results);
+  ResolveModules(string contract, document_store.Document? data) => (array<ModuleInfo> modules);
 };
 
-struct Result {
-  // URL that can be used to connect to the module service.
-  string module_url;
+struct ModuleInfo {
+  string component_id;
 };

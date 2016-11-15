@@ -5,6 +5,7 @@
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/src/resolver/resolver_impl.h"
 
+#include "apps/component_manager/services/component.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/service_provider_impl.h"
 
@@ -16,7 +17,10 @@ namespace resolver {
 class ResolverApp {
  public:
   ResolverApp()
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(modular::ApplicationContext::CreateFromStartupInfo()),
+        resolver_impl_(
+            context_->ConnectToEnvironmentService<component::ComponentIndex>(
+                component::ComponentIndex::Name_)) {
     // Singleton service
     context_->outgoing_services()->AddService<Resolver>(
         [this](fidl::InterfaceRequest<Resolver> request) {
