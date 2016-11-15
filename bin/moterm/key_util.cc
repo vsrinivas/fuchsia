@@ -42,10 +42,8 @@ std::string GetInputSequenceForKeyPressedEvent(const mozart::Event& key_event,
         }
         return std::string(1, c);
       }
-      return std::string();
-    } else {
-      return std::string(1, static_cast<char>(key_data.code_point));
     }
+    return std::string(1, static_cast<char>(key_data.code_point));
   }
 
   switch (key_data.hid_usage) {
