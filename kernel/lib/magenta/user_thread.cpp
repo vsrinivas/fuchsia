@@ -171,16 +171,9 @@ void UserThread::Exit() {
 void UserThread::Kill() {
     LTRACE_ENTRY_OBJ;
 
-    // see if we're already going down.
-    // check these ahead of time in case we're recursing from inside an already exiting situation
-    // the recursion path is UserThread::Exiting -> ProcessDispatcher::RemoveThread -> clean up handle table ->
-    // UserThread::DispatcherClosed -> UserThread::Kill
-    if (state_ == State::DYING || state_ == State::DEAD)
-        return;
-
     AutoLock lock(state_lock_);
 
-    // double check that the above check wasn't a race
+    // see if we're already going down.
     if (state_ == State::DYING || state_ == State::DEAD)
         return;
 
@@ -214,10 +207,6 @@ static void ThreadCleanupDpc(dpc_t *d) {
 void UserThread::Exiting() {
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(state_lock_);
-
-    DEBUG_ASSERT(state_ == State::DYING);
-
     // signal any waiters
     state_tracker_.UpdateState(0u, MX_TASK_TERMINATED);
 
@@ -230,8 +219,14 @@ void UserThread::Exiting() {
     // remove ourselves from our parent process's view
     process_->RemoveThread(this);
 
-    // put ourselves into to dead state
-    SetState(State::DEAD);
+    {
+        AutoLock lock(state_lock_);
+
+        DEBUG_ASSERT(state_ == State::DYING);
+
+        // put ourselves into the dead state
+        SetState(State::DEAD);
+    }
 
     // drop LK's reference
     if (Release()) {
