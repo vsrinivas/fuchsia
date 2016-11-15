@@ -57,8 +57,31 @@ static bool launchpad_test(void)
     END_TEST;
 }
 
+static bool launch_mxio_test(void)
+{
+    BEGIN_TEST;
+
+    // Trying to launch a program that caused launchpad_create to fail
+    // previously caused a segv. We can do that by passing too large a name.
+    char name[MX_MAX_NAME_LEN + 1];
+    memset(name, 'x', sizeof(name));
+    name[sizeof(name) - 1] = '\0';
+    // The test never gets as far as loading the program so the actual
+    // path doesn't matter here.
+    const char* const argv[] = {
+        "/does/not/exist",
+    };
+    mx_status_t status =
+        launchpad_launch_mxio_etc(name, countof(argv), argv,
+                                  NULL, 0, NULL, NULL);
+    EXPECT_EQ(status, ERR_INVALID_ARGS, "launchpad_launch_mxio_etc");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(launchpad_tests)
 RUN_TEST(launchpad_test);
+RUN_TEST(launch_mxio_test);
 END_TEST_CASE(launchpad_tests)
 
 int main(int argc, char **argv)
