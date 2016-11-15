@@ -11,6 +11,7 @@
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
 #include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/services/user/story_provider.fidl.h"
 
 namespace maxwell {
 namespace suggestion {
@@ -67,6 +68,9 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   void RegisterSuggestionAgent(
       const fidl::String& url,
       fidl::InterfaceRequest<SuggestionAgentClient> client) override;
+
+  void SetStoryProvider(
+      fidl::InterfaceHandle<modular::StoryProvider> story_provider) override;
 
   // end SuggestionEngine
 

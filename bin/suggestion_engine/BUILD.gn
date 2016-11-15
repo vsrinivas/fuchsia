@@ -16,6 +16,7 @@ executable("suggestion_engine") {
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src:bound_set",
     "//apps/modular/lib/app",
+    "//apps/modular/services/user",
     "//lib/mtl",
   ]
 }

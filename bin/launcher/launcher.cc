@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/maxwell/services/context/context_engine.fidl.h"
+#include "apps/maxwell/services/launcher/launcher.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/launcher/agent_launcher.h"
 #include "apps/modular/lib/app/application_context.h"
@@ -12,9 +13,9 @@
 namespace {
 
 // TODO(rosswang): determine if lifecycle controls are needed
-class Launcher {
+class LauncherApp : public maxwell::Launcher {
  public:
-  Launcher()
+  LauncherApp()
       : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
         context_engine_(ConnectToService<maxwell::context::ContextEngine>(
             "file:///system/apps/context_engine")),
@@ -30,6 +31,10 @@ class Launcher {
     StartAgent("file:///system/apps/agents/carmen_sandiego");
     StartAgent("file:///system/apps/agents/ideas");
 
+    app_context_->outgoing_services()->AddService<maxwell::Launcher>(
+        [this](fidl::InterfaceRequest<maxwell::Launcher> request) {
+          launcher_bindings_.AddBinding(this, std::move(request));
+        });
     app_context_->outgoing_services()
         ->AddService<maxwell::suggestion::SuggestionProvider>([this](
             fidl::InterfaceRequest<maxwell::suggestion::SuggestionProvider>
@@ -37,6 +42,14 @@ class Launcher {
           modular::ConnectToService<maxwell::suggestion::SuggestionProvider>(
               suggestion_services_.get(), std::move(request));
         });
+  }
+
+  void SetStoryProvider(
+      fidl::InterfaceHandle<modular::StoryProvider> story_provider) override {
+    suggestion_engine_->SetStoryProvider(std::move(story_provider));
+    // TODO(rosswang): Also update any agents that need to affect individual
+    // stories. This may just be the modular acquirer if everything else works
+    // through context.
   }
 
  private:
@@ -85,6 +98,8 @@ class Launcher {
 
   std::unique_ptr<modular::ApplicationContext> app_context_;
 
+  fidl::BindingSet<maxwell::Launcher> launcher_bindings_;
+
   maxwell::context::ContextEnginePtr context_engine_;
   modular::ServiceProviderPtr suggestion_services_;
   maxwell::suggestion::SuggestionEnginePtr suggestion_engine_;
@@ -96,7 +111,7 @@ class Launcher {
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  Launcher app;
+  LauncherApp app;
   loop.Run();
   return 0;
 }

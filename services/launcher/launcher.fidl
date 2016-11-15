@@ -1,0 +1,13 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell;
+
+import "apps/modular/services/user/story_provider.fidl";
+
+[ServiceName="maxwell.Launcher"]
+interface Launcher {
+  // Sets a story provider to be used to create, affect, and inspect stories.
+  SetStoryProvider(modular.StoryProvider story_provider);
+};

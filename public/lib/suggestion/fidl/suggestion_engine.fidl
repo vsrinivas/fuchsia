@@ -4,12 +4,15 @@
 
 module maxwell.suggestion;
 
-import "suggestion_agent_client.fidl";
-import "suggestion_provider.fidl"; // convenience import
+import "apps/maxwell/services/suggestion/suggestion_agent_client.fidl";
+import "apps/maxwell/services/suggestion/suggestion_provider.fidl"; // convenience import
+import "apps/modular/services/user/story_provider.fidl";
 
 // Administrative interface for Suggestion Engine.
 [ServiceName="maxwell.suggestion.SuggestionEngine"]
 interface SuggestionEngine {
   // Registers a component that produces suggestions.
   RegisterSuggestionAgent(string url, SuggestionAgentClient& client);
+  // Sets a story provider to be used to create and affect stories.
+  SetStoryProvider(modular.StoryProvider story_provider);
 };

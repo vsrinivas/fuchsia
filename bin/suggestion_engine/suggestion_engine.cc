@@ -19,6 +19,11 @@ void SuggestionEngineApp::RegisterSuggestionAgent(
   source->AddBinding(std::move(client));
 }
 
+void SuggestionEngineApp::SetStoryProvider(
+    fidl::InterfaceHandle<modular::StoryProvider> story_provider) {
+  // TODO(rosswang)
+}
+
 }  // suggestion
 }  // maxwell
 
