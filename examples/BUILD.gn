@@ -78,6 +78,10 @@ executable("example_recipe") {
 flutter_app("example_module3") {
   main_dart = "example_module3.dart"
   deps = [
+    "//apps/modular/lib/app/dart",
+    "//apps/modular/services/story:public_dart",
+    "//apps/mozart/services/views:views_dart",
+    "//lib/fidl/dart",
     "//lib/flutter/packages/flutter",
   ]
 }
