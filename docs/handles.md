@@ -5,7 +5,7 @@
 ## Basics
 Handles are kernel constructs that allows user-mode programs to
 reference a kernel object. A handle can be thought as a session
-or connection to a paricular kernel object.
+or connection to a particular kernel object.
 
 It is often the case that multiple processes concurrently access
 the same object via different handles. However, a single handle
@@ -18,7 +18,7 @@ In user-mode a handle is simply a specific number returned by
 some syscall. Only handles that are not in-transit are visible
 to user-mode.
 
-The integer that represents a handle is only meaninful for that
+The integer that represents a handle is only meaningful for that
 process. The same number in another process might not map to any
 handle or it might map to a handle pointing to a completely
 different kernel object.
@@ -73,7 +73,7 @@ the source process calls `mx_channel_write` and then the
 destination process calls `mx_channel_read` on the same channel.
 
 Finally, there is a single syscall that gives a new process its
-boostrapping handle, that is, the handle that it can use to
+bootstrapping handle, that is, the handle that it can use to
 request other handles:
 + `mx_process_start`
 
