@@ -13,10 +13,8 @@
 
 namespace flog {
 
-FlogServiceImpl::FlogServiceImpl()
-    : application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()) {
-  application_context_->outgoing_services()->AddService<FlogService>(
+FlogServiceImpl::FlogServiceImpl() {
+  application_context()->outgoing_services()->AddService<FlogService>(
       [this](fidl::InterfaceRequest<FlogService> request) {
         bindings_.AddBinding(this, std::move(request));
       });

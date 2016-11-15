@@ -15,14 +15,10 @@
 
 namespace media {
 
-MediaServiceImpl::MediaServiceImpl()
-    : application_context_(
-          modular::ApplicationContext::CreateFromStartupInfo()) {
-  FTL_DCHECK(application_context_);
+MediaServiceImpl::MediaServiceImpl() {
+  FLOG_INITIALIZE(application_context(), "media_service");
 
-  FLOG_INITIALIZE(application_context_.get(), "media_service");
-
-  application_context_->outgoing_services()->AddService<MediaService>(
+  application_context()->outgoing_services()->AddService<MediaService>(
       [this](fidl::InterfaceRequest<MediaService> request) {
         bindings_.AddBinding(this, std::move(request));
       });

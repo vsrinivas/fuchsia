@@ -50,7 +50,6 @@ class MediaServiceImpl : public FactoryServiceBase, public MediaService {
                                     timeline_controller) override;
 
  private:
-  std::unique_ptr<modular::ApplicationContext> application_context_;
   fidl::BindingSet<MediaService> bindings_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MediaServiceImpl);

@@ -65,6 +65,10 @@ class FactoryServiceBase {
 
   virtual ~FactoryServiceBase();
 
+  modular::ApplicationContext* application_context() {
+    return application_context_.get();
+  }
+
   template <typename Interface>
   fidl::InterfacePtr<Interface> ConnectToEnvironmentService(
       const std::string& interface_name = Interface::Name_) {

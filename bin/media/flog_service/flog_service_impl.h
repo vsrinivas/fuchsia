@@ -36,7 +36,6 @@ class FlogServiceImpl : public FactoryServiceBase, public FlogService {
   void DeleteAllLogs() override;
 
  private:
-  std::unique_ptr<modular::ApplicationContext> application_context_;
   fidl::BindingSet<FlogService> bindings_;
   Incident ready_;
   uint32_t last_allocated_log_id_ = 0;
