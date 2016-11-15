@@ -89,7 +89,8 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
 // Create a new process and a launchpad that will set it up.
 mx_status_t launchpad_create(mx_handle_t job,
                              const char* name, launchpad_t** result) {
-    uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
+    // -1: MX_MAX_NAME_LEN includes the trailing NUL
+    uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN - 1);
     launchpad_t* lp = NULL;
 
     mx_handle_t proc = MX_HANDLE_INVALID;
