@@ -37,7 +37,7 @@ On failure, an error value is returned.
 [eventpair_create](eventpair_create.md),
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
-[handle_wait_one](handle_wait_one),
+[handle_wait_one](handle_wait_one.md),
 [handle_wait_many](handle_wait_many.md),
 [handle_replace](handle_replace.md),
 [object_signal](object_signal.md).

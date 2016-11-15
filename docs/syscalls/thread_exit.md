@@ -30,7 +30,7 @@ or *handle_wait_many*() on a handle to the thread.
 
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
-[handle_wait_one](handle_wait_one),
+[handle_wait_one](handle_wait_one.md),
 [handle_wait_many](handle_wait_many.md),
 [thread_create](thread_create.md),
 [thread_start](thread_start.md).

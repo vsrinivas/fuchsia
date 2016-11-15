@@ -53,7 +53,7 @@ does not belong to *process*.
 
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
-[handle_wait_one](handle_wait_one),
+[handle_wait_one](handle_wait_one.md),
 [handle_wait_many](handle_wait_many.md),
 [process_create](process_create.md),
 [thread_create](thread_create.md),

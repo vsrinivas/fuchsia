@@ -44,7 +44,7 @@ was greater than *MX_MAX_NAME_LEN*, or *flags* was non-zero.
 
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
-[handle_wait_one](handle_wait_one),
+[handle_wait_one](handle_wait_one.md),
 [handle_wait_many](handle_wait_many.md),
 [process_start](process_start.md),
 [thread_create](thread_create.md),

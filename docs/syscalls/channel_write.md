@@ -79,7 +79,7 @@ array, not its size in bytes.
 [handle_close](handle_close.md),
 [handle_duplicate](handle_duplicate.md),
 [handle_replace](handle_replace.md),
-[handle_wait_one](handle_wait_one),
+[handle_wait_one](handle_wait_one.md),
 [handle_wait_many](handle_wait_many.md),
 [channel_create](channel_create.md),
 [channel_read](channel_read.md).
