@@ -18,7 +18,13 @@ using ObjectId = std::string;
 using ObjectIdView = ftl::StringView;
 using Data = std::string;
 
-enum class Status { OK, UNKNOWN_ERROR };
+enum class Status {
+  OK,
+  ARGUMENT_ERROR,
+  NETWORK_ERROR,
+  INTERNAL_ERROR,
+  UNKNOWN_ERROR
+};
 
 }  // namespace cloud_provider
 

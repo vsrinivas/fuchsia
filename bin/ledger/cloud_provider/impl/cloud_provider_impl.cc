@@ -12,17 +12,27 @@
 #include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_view.h"
+#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace cloud_provider {
 namespace {
 // The root path under which all commits are stored.
 constexpr ftl::StringView kCommitRoot = "commits";
 
+// The root path under which all objects are stored.
+constexpr ftl::StringView kObjectRoot = "objects";
+
 // Returns the path under which the given commit is stored.
 std::string GetCommitPath(const Commit& commit) {
   return ftl::Concatenate({kCommitRoot, "/", firebase::EncodeKey(commit.id)});
 }
 
+// Returns the path under which the given object is stored.
+std::string GetObjectPath(ObjectIdView object_id) {
+  return ftl::Concatenate(
+      {kObjectRoot, "/", firebase::EncodeKey(object_id.ToString())});
+}
 }  // namespace
 
 CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase)
@@ -83,7 +93,31 @@ void CloudProviderImpl::GetCommits(
 void CloudProviderImpl::AddObject(ObjectIdView object_id,
                                   mx::vmo data,
                                   std::function<void(Status)> callback) {
-  FTL_NOTIMPLEMENTED();
+  std::string data_str;
+  auto result = mtl::StringFromVmo(data, &data_str);
+  if (!result) {
+    callback(Status::INTERNAL_ERROR);
+    return;
+  }
+
+  std::string encoded =
+      ftl::Concatenate({"\"", firebase::EncodeValue(data_str), "\""});
+  // Maximum size of a value stored in Firebase is 10MB.
+  // TODO(ppi): switch to GCS for the object API.
+  if (encoded.size() > 10'000'000) {
+    FTL_LOG(ERROR) << "Failed to upload object to Firebase - object too big.";
+    callback(Status::ARGUMENT_ERROR);
+    return;
+  }
+
+  firebase_->Put(GetObjectPath(object_id), encoded,
+                 [callback](firebase::Status status) {
+                   if (status == firebase::Status::OK) {
+                     callback(Status::OK);
+                   } else {
+                     callback(Status::NETWORK_ERROR);
+                   }
+                 });
 }
 
 void CloudProviderImpl::GetObject(
@@ -91,7 +125,22 @@ void CloudProviderImpl::GetObject(
     std::function<void(Status status,
                        uint64_t size,
                        mx::datapipe_consumer data)> callback) {
-  FTL_NOTIMPLEMENTED();
+  firebase_->Get(
+      GetObjectPath(object_id), "",
+      [callback](firebase::Status status, const rapidjson::Value& value) {
+        if (status == firebase::Status::OK) {
+          std::string data;
+          if (!value.IsString() ||
+              !firebase::Decode(value.GetString(), &data)) {
+            callback(Status::INTERNAL_ERROR, 0u, mx::datapipe_consumer());
+            return;
+          }
+          callback(Status::OK, data.size(),
+                   mtl::WriteStringToConsumerHandle(data));
+        } else {
+          callback(Status::NETWORK_ERROR, 0u, mx::datapipe_consumer());
+        }
+      });
 }
 
 std::string CloudProviderImpl::GetTimestampQuery(

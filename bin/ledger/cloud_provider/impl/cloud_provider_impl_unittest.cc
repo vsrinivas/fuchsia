@@ -16,7 +16,11 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/strings.h"
+#include "mx/datapipe.h"
+#include "mx/vmo.h"
 
 #include <rapidjson/document.h>
 
@@ -265,6 +269,50 @@ TEST_F(CloudProviderImplTest, GetCommits) {
   EXPECT_EQ("commits", get_keys_[0]);
   EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", get_queries_[0]);
   EXPECT_TRUE(callback_called);
+}
+
+TEST_F(CloudProviderImplTest, AddObject) {
+  mx::vmo data;
+  ASSERT_TRUE(mtl::VmoFromString("bazinga", &data));
+
+  bool callback_called = false;
+  cloud_provider_->AddObject("object_id", std::move(data),
+                             [&callback_called](Status status) {
+                               EXPECT_EQ(Status::OK, status);
+                               callback_called = true;
+                             });
+  message_loop_.Run();
+
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(1u, put_keys_.size());
+  EXPECT_EQ(put_keys_.size(), put_data_.size());
+  EXPECT_EQ("objects/object_idV", put_keys_[0]);
+  EXPECT_EQ("\"bazingaV\"", put_data_[0]);
+}
+
+TEST_F(CloudProviderImplTest, GetObject) {
+  std::string get_response_content = "\"bazingaV\"";
+  get_response_.reset(new rapidjson::Document());
+  get_response_->Parse(get_response_content.c_str(),
+                       get_response_content.size());
+
+  bool callback_called = false;
+  cloud_provider_->GetObject(
+      "object_id", [&callback_called](Status status, uint64_t size,
+                                      mx::datapipe_consumer data) {
+        EXPECT_EQ(Status::OK, status);
+        std::string data_str;
+        EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &data_str));
+        EXPECT_EQ("bazinga", data_str);
+        EXPECT_EQ(7u, data_str.size());
+        EXPECT_EQ(7u, size);
+        callback_called = true;
+      });
+  message_loop_.Run();
+
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(1u, get_keys_.size());
+  EXPECT_EQ("objects/object_idV", get_keys_[0]);
 }
 
 }  // namespace
