@@ -45,7 +45,6 @@ static bool done_tests = false;
 static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)
 {
     uint64_t test_data_addr = 0;
-    mx_ssize_t ssize;
     uint8_t test_data[TEST_MEMORY_SIZE];
 
 #ifdef __x86_64__
@@ -55,8 +54,8 @@ static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)
     test_data_addr = get_uint64_register(thread, offsetof(mx_aarch64_general_regs_t, r[9]));
 #endif
 
-    ssize = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
-    EXPECT_EQ(ssize, (mx_ssize_t) sizeof(test_data), "read_inferior_memory: short read");
+    mx_size_t size = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
+    EXPECT_EQ(size, sizeof(test_data), "read_inferior_memory: short read");
 
     for (unsigned i = 0; i < sizeof(test_data); ++i) {
         EXPECT_EQ(test_data[i], i, "test_memory_ops");
@@ -65,8 +64,8 @@ static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)
     for (unsigned i = 0; i < sizeof(test_data); ++i)
         test_data[i] += TEST_DATA_ADJUST;
 
-    ssize = write_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
-    EXPECT_EQ(ssize, (mx_ssize_t) sizeof(test_data), "write_inferior_memory: short write");
+    size = write_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
+    EXPECT_EQ(size, sizeof(test_data), "write_inferior_memory: short write");
 
     // Note: Verification of the write is done in the inferior.
 }
