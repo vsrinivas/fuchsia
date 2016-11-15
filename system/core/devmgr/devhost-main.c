@@ -133,6 +133,16 @@ static void init_builtin_drivers(bool for_root) {
 }
 
 static mx_handle_t app_launcher;
+static mx_handle_t sysinfo_job_root;
+
+mx_handle_t get_sysinfo_job_root(void) {
+    mx_handle_t h;
+    if (mx_handle_duplicate(sysinfo_job_root, MX_RIGHT_SAME_RIGHTS, &h) < 0) {
+        return MX_HANDLE_INVALID;
+    } else {
+        return h;
+    }
+}
 
 extern driver_api_t devhost_api;
 
@@ -147,6 +157,8 @@ int main(int argc, char** argv) {
     }
 
     job_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    sysinfo_job_root = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HJOBROOT));
+    app_launcher = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER));
 
     if ((argc > 1) && (!strcmp(argv[1], "root"))) {
         as_root = true;
@@ -161,7 +173,6 @@ int main(int argc, char** argv) {
         // it, it will fail later.
         devmgr_init_pcie();
     }
-    app_launcher = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER));
     if ((r = devhost_cmdline(argc, argv)) < 0) {
         return r;
     }

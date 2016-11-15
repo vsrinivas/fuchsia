@@ -35,6 +35,16 @@ mx_handle_t application_launcher;
 mx_handle_t get_root_resource(void) {
     return root_resource_handle;
 }
+mx_handle_t get_sysinfo_job_root(void) {
+    mx_handle_t h;
+    //TODO: limit to enumerate rights
+    if (mx_handle_duplicate(root_job_handle, MX_RIGHT_SAME_RIGHTS, &h) < 0) {
+        return MX_HANDLE_INVALID;
+    } else {
+        return h;
+    }
+}
+
 #define VC_DEVICE "/dev/class/console/vc"
 
 static const uint8_t minfs_magic[16] = {

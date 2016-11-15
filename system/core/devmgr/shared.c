@@ -42,8 +42,8 @@ extern mx_handle_t application_launcher;
 void devmgr_launch_devhost(mx_handle_t job,
                            const char* name, int argc, char** argv,
                            mx_handle_t hdevice, mx_handle_t hrpc) {
-    mx_handle_t hnd[7];
-    uint32_t ids[7];
+    mx_handle_t hnd[8];
+    uint32_t ids[8];
     ids[0] = MX_HND_INFO(MX_HND_TYPE_VDSO_VMO, 0);
     hnd[0] = launchpad_get_vdso_vmo();
     ids[1] = MX_HND_INFO(MX_HND_TYPE_USER0, ID_HDEVICE);
@@ -80,6 +80,10 @@ void devmgr_launch_devhost(mx_handle_t job,
         }
     }
 #endif
+    if ((hnd[hcount] = get_sysinfo_job_root()) != MX_HANDLE_INVALID) {
+        ids[hcount] = MX_HND_INFO(MX_HND_TYPE_USER0, ID_HJOBROOT);
+        hcount++;
+    }
     mx_handle_t job_copy = MX_HANDLE_INVALID;
     mx_status_t status = mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_copy);
     if (status < 0) {

@@ -24,6 +24,7 @@
 #define ID_HRPC 1
 #define ID_HACPI 2
 #define ID_HLAUNCHER 3
+#define ID_HJOBROOT 4
 
 // Nothing outside of devmgr/{devmgr,devhost,rpc-device}.c
 // should be calling devhost_*() APIs, as this could
@@ -86,6 +87,7 @@ static inline void dev_ref_acquire(mx_device_t* dev) {
 }
 
 mx_handle_t get_root_resource(void);
+mx_handle_t get_sysinfo_job_root(void);
 
 // locking and lock debugging
 extern mtx_t __devhost_api_lock;
