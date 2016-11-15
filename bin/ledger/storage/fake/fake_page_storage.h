@@ -11,13 +11,14 @@
 
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
+#include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
 
-class FakePageStorage : public PageStorage {
+class FakePageStorage : public test::PageStorageEmptyImpl {
  public:
   FakePageStorage(PageId page_id);
   ~FakePageStorage() override;
@@ -27,28 +28,9 @@ class FakePageStorage : public PageStorage {
   Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) override;
   Status GetCommit(const CommitId& commit_id,
                    std::unique_ptr<const Commit>* commit) override;
-  Status AddCommitFromSync(const CommitId& id,
-                           std::string&& storage_bytes) override;
   Status StartCommit(const CommitId& commit_id,
                      JournalType journal_type,
                      std::unique_ptr<Journal>* journal) override;
-  Status StartMergeCommit(const CommitId& left,
-                          const CommitId& right,
-                          std::unique_ptr<Journal>* journal) override;
-  Status AddCommitWatcher(CommitWatcher* watcher) override;
-  Status RemoveCommitWatcher(CommitWatcher* watcher) override;
-  Status GetUnsyncedCommits(
-      std::vector<std::unique_ptr<const Commit>>* commits) override;
-  Status MarkCommitSynced(const CommitId& commit_id) override;
-  Status GetDeltaObjects(const CommitId& commit_id,
-                         std::vector<ObjectId>* objects) override;
-  Status GetUnsyncedObjects(const CommitId& commit_id,
-                            std::vector<ObjectId>* objects) override;
-  Status MarkObjectSynced(ObjectIdView object_id) override;
-  void AddObjectFromSync(ObjectIdView object_id,
-                         mx::datapipe_consumer data,
-                         size_t size,
-                         const std::function<void(Status)>& callback) override;
   void AddObjectFromLocal(
       mx::datapipe_consumer data,
       int64_t size,
@@ -61,8 +43,6 @@ class FakePageStorage : public PageStorage {
                               std::unique_ptr<const Object>* object) override;
   Status AddObjectSynchronous(convert::ExtendedStringView data,
                               std::unique_ptr<const Object>* object) override;
-  Status SetSyncMetadata(ftl::StringView sync_state) override;
-  Status GetSyncMetadata(std::string* sync_state) override;
 
   // For testing:
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&

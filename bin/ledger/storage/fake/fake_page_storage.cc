@@ -75,11 +75,6 @@ Status FakePageStorage::GetCommit(const CommitId& commit_id,
   return Status::OK;
 }
 
-Status FakePageStorage::AddCommitFromSync(const CommitId& id,
-                                          std::string&& storage_bytes) {
-  return Status::NOT_IMPLEMENTED;
-}
-
 Status FakePageStorage::StartCommit(const CommitId& commit_id,
                                     JournalType journal_type,
                                     std::unique_ptr<Journal>* journal) {
@@ -87,51 +82,6 @@ Status FakePageStorage::StartCommit(const CommitId& commit_id,
   *journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   return Status::OK;
-}
-
-Status FakePageStorage::StartMergeCommit(const CommitId& left,
-                                         const CommitId& right,
-                                         std::unique_ptr<Journal>* journal) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status FakePageStorage::AddCommitWatcher(CommitWatcher* watcher) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status FakePageStorage::GetUnsyncedCommits(
-    std::vector<std::unique_ptr<const Commit>>* commits) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status FakePageStorage::MarkCommitSynced(const CommitId& commit_id) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status FakePageStorage::GetDeltaObjects(const CommitId& commit_id,
-                                        std::vector<ObjectId>* objects) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status FakePageStorage::GetUnsyncedObjects(const CommitId& commit_id,
-                                           std::vector<ObjectId>* objects) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status FakePageStorage::MarkObjectSynced(ObjectIdView object_id) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-void FakePageStorage::AddObjectFromSync(
-    ObjectIdView object_id,
-    mx::datapipe_consumer data,
-    size_t size,
-    const std::function<void(Status)>& callback) {
-  callback(Status::NOT_IMPLEMENTED);
 }
 
 void FakePageStorage::AddObjectFromLocal(
@@ -180,14 +130,6 @@ Status FakePageStorage::AddObjectSynchronous(
   std::string object_id = RandomId();
   objects_[object_id] = data.ToString();
   return GetObjectSynchronous(object_id, object);
-}
-
-Status FakePageStorage::SetSyncMetadata(ftl::StringView sync_state) {
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status FakePageStorage::GetSyncMetadata(std::string* sync_state) {
-  return Status::NOT_IMPLEMENTED;
 }
 
 const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&

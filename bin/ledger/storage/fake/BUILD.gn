@@ -26,6 +26,7 @@ source_set("lib") {
 
   public_deps = [
     "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/storage/test",
     "//lib/ftl",
   ]
 
