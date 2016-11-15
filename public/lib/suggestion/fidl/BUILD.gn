@@ -7,8 +7,8 @@ import("//lib/fidl/fidl.gni")
 fidl("suggestion") {
   sources = [
     "display.fidl",
-    "shell_client.fidl",
     "suggestion_agent_client.fidl",
     "suggestion_engine.fidl",
+    "suggestion_provider.fidl",
   ]
 }

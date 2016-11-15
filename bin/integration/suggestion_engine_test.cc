@@ -139,16 +139,20 @@ class NProposals : public Proposinator,
 
 class SuggestionEngineTest : public ContextEngineTestBase {
  public:
-  SuggestionEngineTest()
-      : suggestion_engine_(
-            ConnectToService<maxwell::suggestion::SuggestionEngine>(
-                "file:///system/apps/suggestion_engine")),
-        listener_binding_(&listener_) {
-    suggestion_engine_->GetShellClient(GetProxy(&shell_client_));
+  SuggestionEngineTest() : listener_binding_(&listener_) {
+    modular::ServiceProviderPtr suggestion_services =
+        StartServiceProvider("file:///system/apps/suggestion_engine");
+    suggestion_engine_ =
+        modular::ConnectToService<maxwell::suggestion::SuggestionEngine>(
+            suggestion_services.get());
+    suggestion_provider_ =
+        modular::ConnectToService<maxwell::suggestion::SuggestionProvider>(
+            suggestion_services.get());
 
     fidl::InterfaceHandle<maxwell::suggestion::Listener> listener_handle;
     listener_binding_.Bind(GetProxy(&listener_handle));
-    shell_client_->SubscribeToNext(std::move(listener_handle), GetProxy(&ctl_));
+    suggestion_provider_->SubscribeToNext(std::move(listener_handle),
+                                          GetProxy(&ctl_));
   }
 
  protected:
@@ -179,7 +183,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   maxwell::suggestion::SuggestionEnginePtr suggestion_engine_;
 
  private:
-  maxwell::suggestion::ShellClientPtr shell_client_;
+  maxwell::suggestion::SuggestionProviderPtr suggestion_provider_;
   TestListener listener_;
   fidl::Binding<maxwell::suggestion::Listener> listener_binding_;
   maxwell::suggestion::NextControllerPtr ctl_;

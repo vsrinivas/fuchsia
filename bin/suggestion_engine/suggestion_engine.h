@@ -17,7 +17,7 @@ namespace suggestion {
 
 class SuggestionAgentClientImpl;
 
-class SuggestionEngineApp : public SuggestionEngine, public ShellClient {
+class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
  public:
   SuggestionEngineApp()
       : app_context_(modular::ApplicationContext::CreateFromStartupInfo()) {
@@ -25,9 +25,13 @@ class SuggestionEngineApp : public SuggestionEngine, public ShellClient {
         [this](fidl::InterfaceRequest<SuggestionEngine> request) {
           bindings_.AddBinding(this, std::move(request));
         });
+    app_context_->outgoing_services()->AddService<SuggestionProvider>(
+        [this](fidl::InterfaceRequest<SuggestionProvider> request) {
+          suggestion_provider_bindings_.AddBinding(this, std::move(request));
+        });
   }
 
-  // ShellClient
+  // SuggestionProvider
 
   void SubscribeToInterruptions(
       fidl::InterfaceHandle<Listener> listener) override {
@@ -56,17 +60,13 @@ class SuggestionEngineApp : public SuggestionEngine, public ShellClient {
                   << " suggestion " << suggestion_uuid << ")";
   }
 
-  // end ShellClient
+  // end SuggestionProvider
 
   // SuggestionEngine
 
   void RegisterSuggestionAgent(
       const fidl::String& url,
       fidl::InterfaceRequest<SuggestionAgentClient> client) override;
-
-  void GetShellClient(fidl::InterfaceRequest<ShellClient> client) override {
-    shell_client_bindings_.AddBinding(this, std::move(client));
-  }
 
   // end SuggestionEngine
 
@@ -84,7 +84,7 @@ class SuggestionEngineApp : public SuggestionEngine, public ShellClient {
                       std::unique_ptr<NextSubscriber>,
                       NextSubscriber::GetBinding>
       next_subscribers_;
-  fidl::BindingSet<ShellClient> shell_client_bindings_;
+  fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
 };
 
 }  // namespace suggestion

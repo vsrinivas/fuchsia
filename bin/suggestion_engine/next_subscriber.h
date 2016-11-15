@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/services/suggestion/shell_client.fidl.h"
+#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {

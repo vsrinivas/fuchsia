@@ -5,14 +5,10 @@
 module maxwell.suggestion;
 
 import "suggestion_agent_client.fidl";
-import "shell_client.fidl";
 
 // Administrative interface for Suggestion Engine.
 [ServiceName="maxwell.suggestion.SuggestionEngine"]
 interface SuggestionEngine {
   // Registers a component that produces suggestions.
   RegisterSuggestionAgent(string url, SuggestionAgentClient& client);
-  // Requests a shell client service. This could be directly offered on the
-  // app's ServiceProvider, but it is offered here for consistency.
-  GetShellClient(ShellClient& client);
 };

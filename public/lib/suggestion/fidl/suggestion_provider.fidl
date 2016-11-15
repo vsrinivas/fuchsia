@@ -10,8 +10,8 @@ import "display.fidl";
 // through the results. Supports both passive consumption of Suggestions based
 // on contextual changes, as well as Suggestions derived from user-driven
 // "Asks".
-[ServiceName="maxwell.suggestion.ShellClient"]
-interface ShellClient {
+[ServiceName="maxwell.suggestion.SuggestionProvider"]
+interface SuggestionProvider {
   // Creates a subscription to the "interruptions" category of Suggestions.
   // Interruptions are delivered immediately once they become available, and are
   // potentially unlimited in number.
@@ -43,7 +43,7 @@ interface ShellClient {
   NotifyInteraction(string suggestion_uuid, Interaction interaction);
 };
 
-// Exposed through |InitiateAsk()| on the ShellClient. Gives clients the ability
+// Exposed through |InitiateAsk()| on the SuggestionProvider. Gives clients the ability
 // to update the suggestion engine on changes to user input once a user
 // initiates an "Ask" interaction.
 interface AskController {
