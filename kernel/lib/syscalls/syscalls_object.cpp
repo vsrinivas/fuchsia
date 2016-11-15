@@ -200,6 +200,47 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t top
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
+        case MX_INFO_RESOURCE_CHILDREN:
+        case MX_INFO_RESOURCE_RECORDS: {
+            mxtl::RefPtr<ResourceDispatcher> resource;
+            mx_status_t status = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_READ);
+            if (status < 0)
+                return status;
+
+            if (topic_size != sizeof(mx_rrec_t))
+                return ERR_INVALID_ARGS;
+
+            // must have room for header
+            if (buffer_size < sizeof(mx_info_header_t))
+                return ERR_BUFFER_TOO_SMALL;
+
+            auto payload = _buffer.byte_offset(sizeof(mx_info_header_t));
+            auto records = payload.reinterpret<mx_rrec_t>();
+            size_t count = (buffer_size - sizeof(mx_info_header_t)) / sizeof(mx_rrec_t);
+            size_t avail = 0;
+            if (topic == MX_INFO_RESOURCE_CHILDREN) {
+                status = resource->GetChildren(records, count, &count, &avail);
+            } else {
+                status = resource->GetRecords(records, count, &count, &avail);
+            }
+
+            // record counts cannot exceed MAXUINT32 so the
+            // static casts are safe here
+            mx_info_header_t hdr;
+            hdr.topic = topic;
+            hdr.avail_topic_size = sizeof(mx_rrec_t);
+            hdr.topic_size = topic_size;
+            hdr.avail_count = static_cast<uint32_t>(avail);
+            hdr.count = static_cast<uint32_t>(count);
+
+            if (_buffer.reinterpret<mx_info_header_t>().copy_array_to_user(&hdr, 1) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+
+            if (actual.copy_to_user(sizeof(mx_rrec_t) * count + sizeof(mx_info_header_t)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+
+            return status;
+        }
         default:
             return ERR_NOT_FOUND;
     }

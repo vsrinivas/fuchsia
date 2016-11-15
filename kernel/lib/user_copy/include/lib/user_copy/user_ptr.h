@@ -56,6 +56,14 @@ public:
         return copy_to_user_unsafe(ptr_, src, count * internal::type_size<T>());
     }
 
+    // Copies an array of T to user memory. Note: This takes a count not a size, unless T is |void|.
+    // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
+    // overflow).
+    status_t copy_array_to_user(const T* src, size_t count, size_t offset) const {
+        return copy_to_user_unsafe(ptr_ + (offset * internal::type_size<T>()),
+                                   src, count * internal::type_size<T>());
+    }
+
     // Copies a single T from user memory. (Using this will fail to compile if T is |void|.)
     status_t copy_from_user(typename mxtl::remove_const<T>::type* dst) const {
         // Intentionally use sizeof(T) here, so *using* this method won't compile if T is |void|.

@@ -51,7 +51,7 @@ ResourceDispatcher::ResourceDispatcher(const char* name, uint16_t subtype) :
     if (len >= MX_MAX_NAME_LEN)
         len = MX_MAX_NAME_LEN - 1;
     memcpy(name_, name, len);
-    name_[len] = 0;
+    memset(name_ + len, 0, MX_MAX_NAME_LEN - len);
 }
 
 ResourceDispatcher::~ResourceDispatcher() {
@@ -167,6 +167,77 @@ ResourceRecord* ResourceDispatcher::GetNthRecordLocked(uint32_t index) {
         --index;
     }
     return nullptr;
+}
+
+mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t max,
+                                           size_t* actual, size_t* available) {
+    size_t n = 0;
+    *actual = 0;
+    mx_status_t status = NO_ERROR;
+
+    mx_rrec_t rec = {};
+    rec.self.type = MX_RREC_SELF;
+    rec.self.subtype = subtype_;
+    memcpy(rec.self.name, name_, MX_MAX_NAME_LEN);
+
+    {
+        AutoLock lock(lock_);
+
+        // indicate how many we *could* return
+        *available = num_records_ + 1;
+
+        // copy our self entry first
+        if (n < max) {
+            if (records.copy_array_to_user(&rec, 1, n) != NO_ERROR) {
+                status = ERR_INVALID_ARGS;
+                goto done;
+            }
+            n++;
+        }
+        for (auto& record: records_) {
+            if (n == max)
+                break;
+            if (records.copy_array_to_user(&record.content_, 1, n) != NO_ERROR) {
+                status = ERR_INVALID_ARGS;
+                break;
+            }
+            n++;
+        }
+    }
+
+done:
+    *actual = n;
+    return status;
+}
+
+mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t max,
+                                            size_t* actual, size_t* available) {
+    mx_rrec_t rec = {};
+    size_t n = 0;
+    mx_status_t status = NO_ERROR;
+    rec.self.type = MX_RREC_SELF;
+    {
+        AutoLock lock(lock_);
+
+        // indicate how many we *could* return;
+        *available = num_children_;
+
+        for (auto& child: children_) {
+            if (n == max)
+                break;
+            memcpy(rec.self.name, child.name_, MX_MAX_NAME_LEN);
+            rec.self.subtype = child.subtype_;
+            rec.self.child_count = child.num_children_;
+            rec.self.record_count = child.num_records_;
+            if (records.copy_array_to_user(&rec, 1, n) != NO_ERROR) {
+                status = ERR_INVALID_ARGS;
+                break;
+            }
+            ++n;
+        }
+    }
+    *actual = n;
+    return status;
 }
 
 mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index,

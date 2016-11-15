@@ -49,6 +49,11 @@ public:
 
     mxtl::RefPtr<ResourceDispatcher> LookupChildById(mx_koid_t koid);
 
+    mx_status_t GetRecords(user_ptr<mx_rrec_t> records, size_t max,
+                           size_t* actual, size_t* available);
+    mx_status_t GetChildren(user_ptr<mx_rrec_t> records, size_t max,
+                            size_t* actual, size_t* available);
+
     uint16_t get_subtype() const { return subtype_; }
 
 private:

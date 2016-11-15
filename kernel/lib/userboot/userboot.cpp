@@ -121,10 +121,11 @@ static mx_status_t get_job_handle(Handle** ptr) {
 
 static mx_status_t get_resource_handle(Handle** ptr) {
     mx_rights_t rights;
-    mxtl::RefPtr<ResourceDispatcher> dispatcher;
-    mx_status_t result = ResourceDispatcher::Create(&dispatcher, &rights, "root", MX_RREC_SELF_ROOT);
+    mxtl::RefPtr<ResourceDispatcher> root;
+    mx_status_t result = ResourceDispatcher::Create(&root, &rights, "root", MX_RREC_SELF_ROOT);
+    root->MakeRoot();
     if (result == NO_ERROR)
-        *ptr = MakeHandle(mxtl::RefPtr<Dispatcher>(dispatcher.get()), rights);
+        *ptr = MakeHandle(mxtl::RefPtr<Dispatcher>(root.get()), rights);
     return result;
 }
 
