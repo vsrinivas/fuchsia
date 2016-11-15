@@ -29,7 +29,7 @@ using OnReportCallback = std::function<void(InputReport::ReportType type)>;
 
 class InputDevice {
  public:
-  static std::unique_ptr<InputDevice> Open(int dirfd, const char* filename);
+  static std::unique_ptr<InputDevice> Open(int dirfd, std::string filename);
   ~InputDevice();
 
   bool Initialize();
@@ -60,7 +60,7 @@ class InputDevice {
   const TouchReport& touch_report() const { return touch_report_; }
 
  private:
-  InputDevice(const char* name, int fd);
+  InputDevice(std::string name, int fd);
 
   mx_status_t GetProtocol(int* out_proto);
   mx_status_t GetReportDescriptionLength(size_t* out_report_desc_len);

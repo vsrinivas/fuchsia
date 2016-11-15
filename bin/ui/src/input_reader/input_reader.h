@@ -7,11 +7,13 @@
 
 #include <mx/channel.h>
 
-#include <map>
+#include <unordered_map>
 #include <utility>
 
+#include "apps/mozart/src/input_reader/input_device.h"
 #include "apps/mozart/src/input_reader/input_interpreter.h"
 #include "lib/ftl/macros.h"
+#include "lib/mtl/io/device_watcher.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -25,7 +27,6 @@ class InputReader : mtl::MessageLoopHandler {
   void Start();
 
  private:
-  void MonitorDirectory();
   void DeviceAdded(std::unique_ptr<InputDevice> device);
   void DeviceRemoved(mx_handle_t handle);
 
@@ -35,17 +36,13 @@ class InputReader : mtl::MessageLoopHandler {
   // |mtl::MessageLoopHandler|:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending);
 
-  InputInterpreter* interpreter_;
+  InputInterpreter* const interpreter_;
 
-  mtl::MessageLoop* main_loop_;
-  mtl::MessageLoop::HandlerKey input_directory_key_;
-  int input_directory_fd_;
-  mx::channel input_directory_channel_;
-
-  std::map<
+  std::unordered_map<
       mx_handle_t,
       std::pair<std::unique_ptr<InputDevice>, mtl::MessageLoop::HandlerKey>>
       devices_;
+  std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(InputReader);
 };
