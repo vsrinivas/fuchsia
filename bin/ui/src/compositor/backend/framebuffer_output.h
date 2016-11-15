@@ -35,12 +35,15 @@ class FramebufferOutput : public Output {
 
   void PostErrorCallback();
   void PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame);
-  void RunScheduledFrameCallback();
+
+  void OnDisplayReady(mozart::DisplayInfoPtr display_info);
 
   void OnFrameFinished(uint32_t frame_number,
                        ftl::TimePoint submit_time,
                        ftl::TimePoint start_time,
                        ftl::TimePoint finish_time);
+  void PrepareNextFrame();
+  void RunScheduledFrameCallback();
 
   ftl::RefPtr<ftl::TaskRunner> compositor_task_runner_;
   ftl::Closure error_callback_;
@@ -52,12 +55,15 @@ class FramebufferOutput : public Output {
   FrameCallback scheduled_frame_callback_;
 
   uint32_t frame_number_ = 0u;
-  bool frame_in_progress_ = false;
+  bool frame_in_progress_ = true;  // wait for display ready
   ftl::RefPtr<RenderFrame> next_frame_;
 
   ftl::TimePoint last_submit_time_;
   ftl::TimePoint last_presentation_time_;
   ftl::TimeDelta presentation_latency_;
+
+  mozart::DisplayInfoPtr display_info_;
+  std::vector<DisplayCallback> display_callbacks_;
 
   ftl::WeakPtrFactory<FramebufferOutput> weak_ptr_factory_;
 

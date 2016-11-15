@@ -11,6 +11,7 @@
 
 #include <memory>
 
+#include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/macros.h"
 
 namespace compositor {
@@ -27,10 +28,10 @@ class Framebuffer {
   bool Flush();
 
  private:
-  explicit Framebuffer(int fd);
+  explicit Framebuffer(ftl::UniqueFD fd);
   bool Initialize();
 
-  int fd_;
+  ftl::UniqueFD fd_;
   mx::vmo vmo_;
   mx_display_info_t info_ = {};
 

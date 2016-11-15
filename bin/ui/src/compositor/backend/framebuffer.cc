@@ -21,41 +21,40 @@ constexpr char kVirtualConsole[] = "/dev/class/console/vc";
 }  // namespace
 
 std::unique_ptr<Framebuffer> Framebuffer::Open() {
-  int fd = open(kVirtualConsole, O_RDWR);
-  if (fd < 0) {
+  int result = open(kVirtualConsole, O_RDWR);
+  if (result < 0) {
     FTL_DLOG(ERROR) << "Failed to open " << kVirtualConsole
                     << ": errno=" << errno;
     return nullptr;
   }
 
-  std::unique_ptr<Framebuffer> framebuffer(new Framebuffer(fd));
+  std::unique_ptr<Framebuffer> framebuffer(
+      new Framebuffer(ftl::UniqueFD(result)));
   if (framebuffer->Initialize())
     return framebuffer;
   return nullptr;
 }
 
-Framebuffer::Framebuffer(int fd) : fd_(fd) {}
+Framebuffer::Framebuffer(ftl::UniqueFD fd) : fd_(std::move(fd)) {}
 
-Framebuffer::~Framebuffer() {
-  close(fd_);
-}
+Framebuffer::~Framebuffer() {}
 
 bool Framebuffer::Initialize() {
   uint32_t full_screen = 1;
-  ssize_t result = ioctl_display_set_fullscreen(fd_, &full_screen);
+  ssize_t result = ioctl_display_set_fullscreen(fd_.get(), &full_screen);
   if (result < 0) {
     FTL_DLOG(ERROR) << "IOCTL_DISPLAY_SET_FULLSCREEN failed: result=" << result;
     return false;
   }
 
-  result = ioctl_console_set_active_vc(fd_);
+  result = ioctl_console_set_active_vc(fd_.get());
   if (result < 0) {
     FTL_DLOG(ERROR) << "IOCTL_CONSOLE_SET_ACTIVE_VC failed: result=" << result;
     return false;
   }
 
   ioctl_display_get_fb_t description;
-  result = ioctl_display_get_fb(fd_, &description);
+  result = ioctl_display_get_fb(fd_.get(), &description);
   if (result < 0) {
     FTL_DLOG(ERROR) << "IOCTL_DISPLAY_GET_FB failed: result=" << result;
     return false;
@@ -67,7 +66,7 @@ bool Framebuffer::Initialize() {
 }
 
 bool Framebuffer::Flush() {
-  ssize_t result = ioctl_display_flush_fb(fd_);
+  ssize_t result = ioctl_display_flush_fb(fd_.get());
   if (result < 0) {
     FTL_DLOG(ERROR) << "IOCTL_DISPLAY_FLUSH_FB failed: result=" << result;
     return false;

@@ -14,6 +14,7 @@
 #include "apps/mozart/src/compositor/render/render_frame.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/io/device_watcher.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 #include "third_party/skia/include/core/SkCanvas.h"
@@ -42,17 +43,17 @@ class FramebufferOutput::Rasterizer {
   explicit Rasterizer(FramebufferOutput* output);
   ~Rasterizer();
 
-  mozart::DisplayInfoPtr GetDisplayInfo();
-
   void DrawFrame(ftl::RefPtr<RenderFrame> frame,
                  uint32_t frame_number,
                  ftl::TimePoint submit_time);
 
  private:
-  bool Initialize();
+  void VirtualConsoleReady();
+  bool OpenFramebuffer();
 
-  FramebufferOutput* output_;
+  FramebufferOutput* const output_;
 
+  std::unique_ptr<mtl::DeviceWatcher> device_watcher_;
   std::unique_ptr<Framebuffer> framebuffer_;
   sk_sp<SkSurface> framebuffer_surface_;
 };
@@ -91,10 +92,13 @@ void FramebufferOutput::Initialize(ftl::Closure error_callback) {
 void FramebufferOutput::GetDisplayInfo(DisplayCallback callback) {
   FTL_DCHECK(rasterizer_);
 
-  // Safe to post "this" because this task runs on the rasterizer thread
-  // which is shut down before this object is destroyed.
-  rasterizer_task_runner_->PostTask(
-      [this, callback] { callback(rasterizer_->GetDisplayInfo()); });
+  if (display_info_) {
+    callback(display_info_.Clone());
+    return;
+  }
+
+  // Will resume in |OnDisplayReady|.
+  display_callbacks_.push_back(std::move(callback));
 }
 
 void FramebufferOutput::ScheduleFrame(FrameCallback callback) {
@@ -144,6 +148,19 @@ void FramebufferOutput::PostFrameToRasterizer(ftl::RefPtr<RenderFrame> frame) {
   }));
 }
 
+void FramebufferOutput::OnDisplayReady(mozart::DisplayInfoPtr display_info) {
+  FTL_DCHECK(display_info);
+  FTL_DCHECK(!display_info_);
+  FTL_DCHECK(frame_in_progress_);
+
+  display_info_ = std::move(display_info);
+
+  for (auto& callback : display_callbacks_)
+    callback(display_info_.Clone());
+
+  PrepareNextFrame();
+}
+
 void FramebufferOutput::OnFrameFinished(uint32_t frame_number,
                                         ftl::TimePoint submit_time,
                                         ftl::TimePoint start_time,
@@ -157,6 +174,12 @@ void FramebufferOutput::OnFrameFinished(uint32_t frame_number,
   // presentation_latency_ = last_presentation_time_ - submit_time;
   presentation_latency_ = kHardwareRefreshInterval + kHardwareDisplayLatency;
   TRACE_EVENT_ASYNC_END0("gfx", "SubmitFrame", frame_number);
+
+  PrepareNextFrame();
+}
+
+void FramebufferOutput::PrepareNextFrame() {
+  FTL_DCHECK(frame_in_progress_);
 
   if (next_frame_) {
     PostFrameToRasterizer(std::move(next_frame_));
@@ -187,16 +210,45 @@ FramebufferOutput::Rasterizer::Rasterizer(FramebufferOutput* output)
     : output_(output) {
   FTL_DCHECK(output_);
 
-  if (!Initialize())
-    output_->PostErrorCallback();
+  device_watcher_ = mtl::DeviceWatcher::Create(
+      "/dev/class/console", [this](int dir_fd, std::string filename) {
+        if (filename == "vc") {
+          device_watcher_.reset();
+          VirtualConsoleReady();
+        }
+      });
 }
 
-bool FramebufferOutput::Rasterizer::Initialize() {
+FramebufferOutput::Rasterizer::~Rasterizer() {}
+
+void FramebufferOutput::Rasterizer::VirtualConsoleReady() {
+  if (!OpenFramebuffer()) {
+    output_->PostErrorCallback();
+    return;
+  }
+
+  // Need a weak reference because the task may outlive the output.
+  auto display_info = mozart::DisplayInfo::New();
+  display_info->size = mozart::Size::New();
+  display_info->size->width = framebuffer_->info().width;
+  display_info->size->height = framebuffer_->info().height;
+  display_info->device_pixel_ratio = 1.f;  // TODO: don't hardcode this
+  output_->compositor_task_runner_->PostTask(ftl::MakeCopyable([
+    output_weak = output_->weak_ptr_factory_.GetWeakPtr(),
+    display_info = std::move(display_info)
+  ]() mutable {
+    if (output_weak)
+      output_weak->OnDisplayReady(std::move(display_info));
+  }));
+}
+
+bool FramebufferOutput::Rasterizer::OpenFramebuffer() {
   TRACE_EVENT0("gfx", "InitializeRasterizer");
 
   framebuffer_ = Framebuffer::Open();
   if (!framebuffer_) {
     FTL_LOG(ERROR) << "Failed to open framebuffer";
+    output_->PostErrorCallback();
     return false;
   }
 
@@ -226,17 +278,6 @@ bool FramebufferOutput::Rasterizer::Initialize() {
   }
 
   return true;
-}
-
-FramebufferOutput::Rasterizer::~Rasterizer() {}
-
-mozart::DisplayInfoPtr FramebufferOutput::Rasterizer::GetDisplayInfo() {
-  auto result = mozart::DisplayInfo::New();
-  result->size = mozart::Size::New();
-  result->size->width = framebuffer_->info().width;
-  result->size->height = framebuffer_->info().height;
-  result->device_pixel_ratio = 1.f;  // TODO: don't hardcode this
-  return result;
 }
 
 void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
