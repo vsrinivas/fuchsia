@@ -36,10 +36,6 @@
             "bootfs_path": "apps/launch"
         },
         {
-            "binary": "launcher",
-            "bootfs_path": "apps/launcher"
-        },
-        {
             "binary": "noodles_view",
             "bootfs_path": "apps/noodles_view"
         },
@@ -50,6 +46,10 @@
         {
             "binary": "print_input",
             "bootfs_path": "apps/print_input"
+        },
+        {
+            "binary": "root_presenter",
+            "bootfs_path": "apps/root_presenter"
         },
         {
             "binary": "shapes_view",
