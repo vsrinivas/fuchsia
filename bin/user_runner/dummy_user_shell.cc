@@ -133,17 +133,29 @@ class DummyUserShellApp
     // When some data has arrived, we stop the story.
     if (data_count_ % 5 == 0) {
       FTL_LOG(INFO) << "DummyUserShell::OnData() Story.Stop()";
-      story_controller_->Stop([this]() {
-        TearDownStoryController();
 
-        // When the story stops, we start it again.
-        FTL_LOG(INFO) << "DummyUserShell Story.Stop() WAIT for 10s";
-        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-            [this]() {
-              FTL_LOG(INFO) << "DummyUserShell Story.Stop() DONE WAIT for 10s";
-              ResumeStory();
-            },
-            ftl::TimeDelta::FromSeconds(10));
+      story_provider_->GetStoryInfo(story_info_->id, [this](
+                                                         modular::StoryInfoPtr
+                                                             story_info) {
+        FTL_DCHECK(story_info->is_running == true);
+        story_controller_->Stop([this]() {
+          TearDownStoryController();
+
+          // When the story stops, we start it again.
+          FTL_LOG(INFO) << "DummyUserShell Story.Stop() WAIT for 10s";
+          mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+              [this]() {
+                story_provider_->GetStoryInfo(
+                    story_info_->id, [this](modular::StoryInfoPtr story_info) {
+                      FTL_DCHECK(story_info->is_running == false);
+
+                      FTL_LOG(INFO)
+                          << "DummyUserShell Story.Stop() DONE WAIT for 10s";
+                      ResumeStory();
+                    });
+              },
+              ftl::TimeDelta::FromSeconds(10));
+        });
       });
     }
   }

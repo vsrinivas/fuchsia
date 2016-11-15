@@ -20,6 +20,13 @@ interface StoryProvider {
   // over the newly created story through a StroyController.
   CreateStory(string url, StoryController& story);
 
+  // Delete an existing story from the list of known stories. Returns when the
+  // request has been submitted to the Ledger.
+  DeleteStory(string story_id) => ();
+
+  // Request detail information on the given story.
+  GetStoryInfo(string story_id) => (StoryInfo info);
+
   // Obtains a controller for a previously run story identified by its
   // story ID. Obtaining the controller doesn't run it yet.
   ResumeStoryById(string story_id, StoryController& story);

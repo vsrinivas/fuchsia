@@ -41,10 +41,10 @@ class StoryProviderImpl : public StoryProvider {
     aux_bindings_.AddBinding(this, std::move(request));
   }
 
+  // |StoryProvider|
   // Obtains the StoryInfo for an existing story from the ledger.
-  void GetStoryInfo(
-      const fidl::String& story_id,
-      std::function<void(StoryInfoPtr story_info)> story_info_callback);
+  void GetStoryInfo(const fidl::String& story_id,
+                    const GetStoryInfoCallback& story_info_callback) override;
 
   // Used by StoryControllerImpl to write story meta-data to the
   // ledger. Used after calling |Stop| or when the |Story| pipe is
@@ -64,6 +64,10 @@ class StoryProviderImpl : public StoryProvider {
   void CreateStory(const fidl::String& url,
                    fidl::InterfaceRequest<StoryController>
                        story_controller_request) override;
+
+  // |StoryProvider|
+  void DeleteStory(const fidl::String& story_id,
+                   const DeleteStoryCallback& callback) override;
 
   // |StoryProvider|
   void ResumeStoryById(const fidl::String& story_id,

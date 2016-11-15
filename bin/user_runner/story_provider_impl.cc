@@ -43,7 +43,7 @@ std::string MakeStoryId(std::unordered_set<std::string>* story_ids,
 // operations on the Ledger. Because the operations all return
 // something, the handles on which they are invoked need to be kept
 // around until the return value arrives. This precludes them to be
-// local variabes. The next thing that comes to mind is to make them
+// local variables. The next thing that comes to mind is to make them
 // fields of the containing object. However, there might be multiple
 // such operations going on concurrently in one StoryProviderImpl, so
 // they cannot be fields of StoryProviderImpl. Thus such operations
@@ -58,7 +58,7 @@ std::string MakeStoryId(std::unordered_set<std::string>* story_ids,
 
 class GetStoryInfoCall : public Transaction {
  public:
-  using Result = std::function<void(StoryInfoPtr)>;
+  using Result = StoryProviderImpl::GetStoryInfoCallback;
 
   GetStoryInfoCall(TransactionContainer* const container,
                    ledger::Ledger* const ledger,
@@ -206,6 +206,38 @@ class CreateStoryCall : public Transaction {
   FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
 
+// Delete a story given its id.
+
+class DeleteStoryCall : public Transaction {
+ public:
+  using Result = StoryProviderImpl::DeleteStoryCallback;
+
+  DeleteStoryCall(TransactionContainer* const container,
+                  ledger::Ledger* const ledger,
+                  const fidl::String& story_id,
+                  Result result)
+      : Transaction(container),
+        ledger_(ledger),
+        story_id_(story_id),
+        result_(result) {
+    ledger_->GetRootPage(GetProxy(&root_page_), [this](ledger::Status status) {
+      root_page_->Delete(to_array(story_id_),
+                         [this](ledger::Status ledger_status) {
+                           result_();
+                           Done();
+                         });
+    });
+  }
+
+ private:
+  ledger::Ledger* const ledger_;  // not owned
+  ledger::PagePtr root_page_;
+  const fidl::String story_id_;
+  Result result_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
+};
+
 class ResumeStoryCall : public Transaction {
  public:
   // Resumes a story given only its ID.
@@ -346,7 +378,7 @@ StoryProviderImpl::StoryProviderImpl(
 
 void StoryProviderImpl::GetStoryInfo(
     const fidl::String& story_id,
-    std::function<void(StoryInfoPtr story_info)> story_info_callback) {
+    const GetStoryInfoCallback& story_info_callback) {
   new GetStoryInfoCall(&transaction_container_, ledger_.get(), story_id,
                        story_info_callback);
 }
@@ -387,6 +419,14 @@ void StoryProviderImpl::CreateStory(
   new CreateStoryCall(&transaction_container_, ledger_.get(),
                       environment_.get(), this, url, story_id,
                       std::move(story_controller_request));
+}
+
+// |StoryProvider|
+void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
+                                    const DeleteStoryCallback& callback) {
+  FTL_LOG(INFO) << "StoryProviderImpl::DeleteStory()";
+  new DeleteStoryCall(&transaction_container_, ledger_.get(), story_id,
+                      callback);
 }
 
 // |StoryProvider|
