@@ -10,6 +10,7 @@
 #include "apps/network/net_errors.h"
 #include "apps/network/upload_element_reader.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/ascii.h"
 
 #include <asio.hpp>
 #include <asio/ssl.hpp>
@@ -135,14 +136,19 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
 
   std::ostream request_header_stream(&request_header_buf_);
 
+  bool has_accept = false;
   request_header_stream << method << " " << path << " HTTP/1.1\r\n";
   request_header_stream << "Host: " << server << "\r\n";
-  request_header_stream << "Accept: */*\r\n";
   // TODO(toshik): should we make this work without closing the connection?
   request_header_stream << "Connection: close\r\n";
 
-  for (auto it = extra_headers.begin(); it != extra_headers.end(); ++it)
+  for (auto it = extra_headers.begin(); it != extra_headers.end(); ++it) {
     request_header_stream << it->first << ": " << it->second << "\r\n";
+    has_accept =
+        has_accept || ftl::EqualsCaseInsensitiveASCII(it->first, "accept");
+  }
+  if (!has_accept)
+    request_header_stream << "Accept: */*\r\n";
 
   std::ostream request_body_stream(&request_body_buf_);
 
