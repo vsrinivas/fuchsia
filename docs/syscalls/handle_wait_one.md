@@ -48,6 +48,10 @@ not be waited upon.
 
 **ERR_HANDLE_CLOSED**  *handle* was invalidated (e.g., closed) during the wait.
 
+**ERR_TIMED_OUT**  The specified timeout elapsed (or was 0 to begin
+with) before any of the specified *signals* are observed on
+*handle*. There may still be pending signals.
+
 ## BUGS
 
 Currently the smallest *timeout* is 1 millisecond. Intervals smaller

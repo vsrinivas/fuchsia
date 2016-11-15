@@ -58,6 +58,10 @@ have **MX_RIGHT_READ** and may not be waited upon.
 **ERR_HANDLE_CLOSED**  One or more of the provided *handles* was invalidated
 (e.g., closed) during the wait.
 
+**ERR_TIMED_OUT**  The specified timeout elapsed (or was 0 to begin
+with) before any of the specified signals are observed on any of the
+specified handles. There may still be pending signals.
+
 **ERR_NO_MEMORY** (Temporary) failure due to lack of memory.
 
 ## BUGS
