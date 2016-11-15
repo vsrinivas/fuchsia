@@ -7,14 +7,14 @@
 #pragma once
 
 #include <lib/rodso.h>
-#include <magenta/process_dispatcher.h>
+#include <magenta/vm_address_region_dispatcher.h>
 
 class VDso : public RoDso {
 public:
     VDso();
 
-    inline mx_status_t Map(mxtl::RefPtr<ProcessDispatcher> process,
-                           uintptr_t vdso_base) {
-        return MapFixed(mxtl::move(process), vdso_base);
+    inline mx_status_t Map(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
+                           uintptr_t vdso_addr) {
+        return MapFixed(mxtl::move(vmar), vdso_addr);
     }
 };

@@ -29,6 +29,7 @@
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
 #include <magenta/user_thread.h>
+#include <magenta/vm_address_region_dispatcher.h>
 
 #include <mxtl/ref_ptr.h>
 #include <mxtl/string_piece.h>
@@ -179,7 +180,8 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
 
 mx_status_t sys_process_create(mx_handle_t job_handle,
                                user_ptr<const char> name, uint32_t name_len,
-                               uint32_t flags, user_ptr<mx_handle_t> out) {
+                               uint32_t flags, user_ptr<mx_handle_t> proc_handle,
+                               user_ptr<mx_handle_t> vmar_handle) {
     LTRACEF("name %p, flags 0x%x\n", name.get(), flags);
 
     // currently, the only valid flag value is 0
@@ -209,24 +211,49 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     }
 
     // create a new process dispatcher
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
-    status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, &dispatcher, &rights, flags);
+    mxtl::RefPtr<Dispatcher> proc_dispatcher;
+    mx_rights_t proc_rights;
+    status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, &proc_dispatcher, &proc_rights, flags);
     if (res != NO_ERROR)
         return res;
 
-    uint32_t koid = (uint32_t)dispatcher->get_koid();
+    mxtl::RefPtr<Dispatcher> vmar_dispatcher;
+    mx_rights_t vmar_rights;
+    {
+        mxtl::RefPtr<ProcessDispatcher> process_dispatcher(
+                proc_dispatcher->get_specific<ProcessDispatcher>());
+        ASSERT(process_dispatcher);
+
+        // Create a dispatcher for the root VMAR
+        mxtl::RefPtr<VmAddressRegion> root_vmar(process_dispatcher->aspace()->root_vmar());
+        status_t status = VmAddressRegionDispatcher::Create(mxtl::move(root_vmar),
+                                                            &vmar_dispatcher, &vmar_rights);
+        if (status != NO_ERROR)
+            return status;
+    }
+
+    uint32_t koid = (uint32_t)proc_dispatcher->get_koid();
     ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);
     ktrace_name(TAG_PROC_NAME, koid, 0, buf);
 
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
-    if (!handle)
+    // Create a handle and attach the dispatcher to it
+    HandleUniquePtr proc_h(MakeHandle(mxtl::move(proc_dispatcher), proc_rights));
+    if (!proc_h)
         return ERR_NO_MEMORY;
 
-    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    // Create a handle and attach the dispatcher to it
+    HandleUniquePtr vmar_h(MakeHandle(mxtl::move(vmar_dispatcher), vmar_rights));
+    if (!vmar_h)
+        return ERR_NO_MEMORY;
+
+    if (proc_handle.copy_to_user(up->MapHandleToValue(proc_h.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    up->AddHandle(mxtl::move(handle));
+    if (vmar_handle.copy_to_user(up->MapHandleToValue(vmar_h.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    up->AddHandle(mxtl::move(vmar_h));
+    up->AddHandle(mxtl::move(proc_h));
 
     return NO_ERROR;
 }

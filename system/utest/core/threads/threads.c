@@ -1,4 +1,5 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
+//
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -55,14 +56,16 @@ static bool test_thread_start_on_initial_thread(void) {
     static const char kProcessName[] = "Test process";
     static const char kThreadName[] = "Test thread";
     mx_handle_t process;
+    mx_handle_t vmar;
     mx_handle_t thread;
     ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
-                                0, &process), NO_ERROR, "");
+                                0, &process, &vmar), NO_ERROR, "");
     ASSERT_EQ(mx_thread_create(process, kThreadName, sizeof(kThreadName) - 1,
                                0, &thread), NO_ERROR, "");
     ASSERT_EQ(mx_thread_start(thread, 1, 1, 1, 1), ERR_BAD_STATE, "");
 
     ASSERT_EQ(mx_handle_close(thread), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(vmar), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(process), NO_ERROR, "");
 
     END_TEST;
@@ -77,9 +80,10 @@ static bool test_thread_start_with_zero_instruction_pointer(void) {
     static const char kProcessName[] = "Test process";
     static const char kThreadName[] = "Test thread";
     mx_handle_t process;
+    mx_handle_t vmar;
     mx_handle_t thread;
     ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
-                                0, &process), NO_ERROR, "");
+                                0, &process, &vmar), NO_ERROR, "");
     ASSERT_EQ(mx_thread_create(process, kThreadName, sizeof(kThreadName) - 1,
                                0, &thread), NO_ERROR, "");
     ASSERT_EQ(mx_process_start(process, thread, 0, 0, thread, 0), NO_ERROR, "");
@@ -90,6 +94,7 @@ static bool test_thread_start_with_zero_instruction_pointer(void) {
     mx_nanosleep(MX_MSEC(100));
 
     ASSERT_EQ(mx_handle_close(process), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(vmar), NO_ERROR, "");
 
     END_TEST;
 }

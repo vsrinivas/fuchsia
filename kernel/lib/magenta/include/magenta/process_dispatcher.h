@@ -174,11 +174,6 @@ public:
     uint32_t get_bad_handle_policy() const { return bad_handle_policy_; }
     mx_status_t set_bad_handle_policy(uint32_t new_policy);
 
-    mx_status_t Map(mxtl::RefPtr<VmObjectDispatcher> vmo, uint32_t vmo_rights,
-                    uint64_t offset, size_t len,
-                    uintptr_t* ptr, uint32_t flags);
-    mx_status_t Unmap(uintptr_t address, size_t len);
-
 private:
     // The diagnostic code is allow to know about the internals of this code.
     friend void DumpProcessList();

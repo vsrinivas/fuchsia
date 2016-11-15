@@ -30,6 +30,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls_resource.cpp \
     $(LOCAL_DIR)/syscalls_task.cpp \
     $(LOCAL_DIR)/syscalls_test.cpp \
+    $(LOCAL_DIR)/syscalls_vmar.cpp \
     $(LOCAL_DIR)/syscalls_vmo.cpp \
 
 include make/module.mk

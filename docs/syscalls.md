@@ -26,11 +26,8 @@
 
 ## Processes
 + [process_create](syscalls/process_create.md) - create a new process within a job
-+ [process_map_vm](syscalls/process_map_vm.md) - map a VMO into a process
-+ [process_protect_vm](syscalls/process_protect_vm.md) - adjust memory access permissions
 + [process_read_memory](syscalls/process_read_memory.md) - read from a process's address space
 + [process_start](syscalls/process_start.md) - cause a new process to start executing
-+ [process_unmap_vm](syscalls/process_unmap_vm.md) - unmap a memory region from a process
 + [process_write_memory](syscalls/process_write_memory.md) - write to a process's address space
 + [process_exit](syscalls/process_exit.md) - exit the current process
 
@@ -83,6 +80,13 @@
 + [vmo_get_size](syscalls/vmo_get_size.md) - obtain the size of a vmo
 + [vmo_set_size](syscalls/vmo_set_size.md) - adjust the size of a vmo
 + [vmo_op_range](syscalls/vmo_op_range.md) - perform an operation on a range of a vmo
+
+## Virtual Memory Address Regions (VMARs)
++ [vmar_allocate](syscalls/vmar_allocate.md) - create a new child VMAR
++ [vmar_map](syscalls/vmar_map.md) - map a VMO into a process
++ [vmar_unmap](syscalls/vmar_unmap.md) - unmap a memory region from a process
++ [vmar_protect](syscalls/vmar_protect.md) - adjust memory access permissions
++ [vmar_destroy](syscalls/vmar_destroy.md) - destroy a VMAR and all of its children
 
 ## Cryptographically Secure RNG
 + [cprng_draw](syscalls/cprng_draw.md)

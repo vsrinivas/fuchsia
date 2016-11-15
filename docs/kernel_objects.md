@@ -21,6 +21,7 @@ Magenta actively manages the following resources:
 + [Event](objects/event.md)
 + [Channel](objects/channel.md)
 + [VMObject](objects/vm_object.md)
++ [Virtual Memory Address Region](objects/vm_address_region.md)
 + [Port](objects/port.md)
 + [Futex](objects/futex.md)
 + [Waitset](objects/waitset.md)

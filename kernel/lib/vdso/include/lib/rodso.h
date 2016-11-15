@@ -21,21 +21,21 @@ protected:
     RoDso(const char* name, const void* image, size_t size,
           uintptr_t code_start);
 
-    mx_status_t MapAnywhere(mxtl::RefPtr<ProcessDispatcher> process,
-                            uintptr_t* start_address);
-    mx_status_t MapFixed(mxtl::RefPtr<ProcessDispatcher> process,
-                         uintptr_t start_address);
+    mx_status_t MapAnywhere(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
+                            uintptr_t* start_addr);
+    mx_status_t MapFixed(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
+                         uintptr_t start_addr);
 
 private:
 
-    mx_status_t Map(mxtl::RefPtr<ProcessDispatcher> process,
-                    uintptr_t* start_address);
+    mx_status_t Map(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
+                    uintptr_t* start_addr);
 
-    mx_status_t MapSegment(mxtl::RefPtr<ProcessDispatcher> process,
+    mx_status_t MapSegment(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
                            bool code,
                            uintptr_t start_offset,
                            uintptr_t end_offset,
-                           uintptr_t* mapped_address);
+                           uintptr_t* mapped_addr);
 
     const char* name_;
     mxtl::RefPtr<VmObjectDispatcher> vmo_;

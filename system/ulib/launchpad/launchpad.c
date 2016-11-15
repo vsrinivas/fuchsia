@@ -93,9 +93,13 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t tra
     launchpad_t* lp = NULL;
 
     mx_handle_t proc = MX_HANDLE_INVALID;
-    mx_status_t status = mx_process_create(creation_job, name, name_len, 0, &proc);
+    mx_handle_t vmar = MX_HANDLE_INVALID;
+    mx_status_t status = mx_process_create(creation_job, name, name_len, 0, &proc, &vmar);
     if (status < 0)
         goto cleanup;
+
+    // TODO(teisenbe): Hold on to vmar instead of just closing it
+    mx_handle_close(vmar);
 
     status = launchpad_create_with_process(proc, &lp);
     if (status != NO_ERROR)

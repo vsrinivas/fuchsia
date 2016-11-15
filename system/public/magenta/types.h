@@ -163,13 +163,24 @@ typedef uint32_t mx_rights_t;
 #define MX_VMO_OP_LOOKUP                5u
 #define MX_VMO_OP_CACHE_SYNC            6u
 
-// flags to vm map routines
-#define MX_VM_FLAG_FIXED          (1u << 0)
-#define MX_VM_FLAG_PERM_READ      (1u << 1)
-#define MX_VM_FLAG_PERM_WRITE     (1u << 2)
-#define MX_VM_FLAG_PERM_EXECUTE   (1u << 3)
-#define MX_VM_FLAG_ALLOC_BASE     (1u << 4)
-#define MX_VM_FLAG_DMA            (1u << 5)
+// flags to vmar routines
+#define MX_VM_FLAG_PERM_READ        (1u << 0)
+#define MX_VM_FLAG_PERM_WRITE       (1u << 1)
+#define MX_VM_FLAG_PERM_EXECUTE     (1u << 2)
+#define MX_VM_FLAG_COMPACT          (1u << 3)
+#define MX_VM_FLAG_SPECIFIC         (1u << 4)
+#define MX_VM_FLAG_CAN_MAP_SPECIFIC (1u << 5)
+#define MX_VM_FLAG_CAN_MAP_READ     (1u << 6)
+#define MX_VM_FLAG_CAN_MAP_WRITE    (1u << 7)
+#define MX_VM_FLAG_CAN_MAP_EXECUTE  (1u << 8)
+#define MX_VM_FLAG_DMA              (1u << 9)
+
+// compatibility flag for vmar routines
+// TODO(teisenbe): Convert all callers to using SPECIFIC instead, and remove
+// this
+#define MX_VM_FLAG_FIXED MX_VM_FLAG_SPECIFIC
+// TODO(teisenbe): Move all users of this to using subregions.
+#define MX_VM_FLAG_ALLOC_BASE      (1u << 10)
 
 // flags to channel routines
 #define MX_FLAG_REPLY_CHANNEL            (1u << 0)

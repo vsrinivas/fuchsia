@@ -117,19 +117,12 @@ MAGENTA_SYSCALL_DEF(4, 4, 44, mx_status_t, thread_write_state, mx_handle_t handl
 
 // Processes
 MAGENTA_SYSCALL_DEF_WITH_ATTRS(1, 1, 50, void, process_exit, (noreturn), int retcode)
-MAGENTA_SYSCALL_DEF(5, 5, 51, mx_status_t, process_create, mx_handle_t job,
+MAGENTA_SYSCALL_DEF(6, 6, 51, mx_handle_t, process_create, mx_handle_t job,
                     USER_PTR(const char) name, uint32_t name_len, uint32_t options,
-                    USER_PTR(mx_handle_t) out)
+                    USER_PTR(mx_handle_t) proc_handle, USER_PTR(mx_handle_t) vmar_handle)
 MAGENTA_SYSCALL_DEF(6, 6, 52, mx_status_t, process_start, mx_handle_t process_handle,
                     mx_handle_t thread_handle, uintptr_t entry, uintptr_t stack,
                     mx_handle_t arg_handle, uintptr_t arg2)
-MAGENTA_SYSCALL_DEF(6, 7, 53, mx_status_t, process_map_vm, mx_handle_t proc_handle,
-                    mx_handle_t vmo_handle, uint64_t offset, size_t len,
-                    USER_PTR(uintptr_t) ptr, uint32_t options)
-MAGENTA_SYSCALL_DEF(3, 3, 54, mx_status_t, process_unmap_vm, mx_handle_t proc_handle,
-                    uintptr_t address, size_t len)
-MAGENTA_SYSCALL_DEF(4, 4, 55, mx_status_t, process_protect_vm, mx_handle_t proc_handle,
-                    uintptr_t address, size_t len, uint32_t prot)
 MAGENTA_SYSCALL_DEF(5, 5, 56, mx_status_t, process_read_memory, mx_handle_t proc, uintptr_t vaddr,
                     USER_PTR(void) buffer, size_t len, USER_PTR(size_t) actual)
 MAGENTA_SYSCALL_DEF(5, 5, 57, mx_status_t, process_write_memory, mx_handle_t proc, uintptr_t vaddr,
@@ -171,6 +164,19 @@ MAGENTA_SYSCALL_DEF(4, 6, 92, mx_status_t, port_wait, mx_handle_t handle, mx_tim
                     USER_PTR(void) packet, size_t size)
 MAGENTA_SYSCALL_DEF(4, 6, 93, mx_status_t, port_bind, mx_handle_t handle, uint64_t key,
                     mx_handle_t source, mx_signals_t signals)
+
+// Address space management
+MAGENTA_SYSCALL_DEF(6, 6, 95, mx_status_t, vmar_allocate, mx_handle_t parent_vmar_handle,
+                    size_t offset, size_t size, uint32_t flags,
+                    USER_PTR(mx_handle_t) child_vmar, USER_PTR(uintptr_t) child_addr)
+MAGENTA_SYSCALL_DEF(1, 1, 96, mx_status_t, vmar_destroy, mx_handle_t vmar_handle)
+MAGENTA_SYSCALL_DEF(7, 9, 97, mx_status_t, vmar_map, mx_handle_t vmar_handle, size_t vmar_offset,
+                    mx_handle_t vmo_handle, uint64_t vmo_offset, size_t len, uint32_t flags,
+                    USER_PTR(uintptr_t) mapped_addr)
+MAGENTA_SYSCALL_DEF(3, 3, 98, mx_status_t, vmar_unmap, mx_handle_t vmar_handle,
+                    uintptr_t addr, size_t len)
+MAGENTA_SYSCALL_DEF(4, 4, 99, mx_status_t, vmar_protect, mx_handle_t vmar_handle,
+                    uintptr_t addr, size_t len, uint32_t prot)
 
 // Memory management
 MAGENTA_SYSCALL_DEF(3, 4, 100, mx_status_t, vmo_create, uint64_t size, uint32_t options,

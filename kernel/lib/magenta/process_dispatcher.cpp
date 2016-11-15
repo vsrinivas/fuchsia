@@ -532,29 +532,6 @@ const char* StateToString(ProcessDispatcher::State state) {
     return "unknown";
 }
 
-mx_status_t ProcessDispatcher::Map(
-    mxtl::RefPtr<VmObjectDispatcher> vmo, uint32_t vmo_rights,
-    uint64_t offset, size_t len, uintptr_t* address, uint32_t flags) {
-    mx_status_t status;
-
-    status = vmo->Map(aspace(), vmo_rights, offset, len, address, flags);
-
-    return status;
-}
-
-mx_status_t ProcessDispatcher::Unmap(uintptr_t address, size_t len) {
-    mx_status_t status;
-
-    // TODO: support range unmapping
-    // at the moment only support unmapping what is at a given address, signaled with len = 0
-    if (len != 0)
-        return ERR_INVALID_ARGS;
-
-    status = aspace_->FreeRegion(address);
-
-    return status;
-}
-
 mx_status_t ProcessDispatcher::BadHandle(mx_handle_t handle_value,
                                          mx_status_t error) {
     // TODO(mcgrathr): Maybe treat other errors the same?

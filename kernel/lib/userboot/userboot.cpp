@@ -31,6 +31,7 @@
 #include <magenta/resource_dispatcher.h>
 #include <magenta/stack.h>
 #include <magenta/thread_dispatcher.h>
+#include <magenta/vm_address_region_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
 static const size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
@@ -54,11 +55,11 @@ public:
                 USERBOOT_CODE_END, USERBOOT_CODE_START),
           vdso_(vdso) {}
 
-    mx_status_t Map(mxtl::RefPtr<ProcessDispatcher> process,
+    mx_status_t Map(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
                     uintptr_t* vdso_base, uintptr_t* entry) {
         // Map userboot anywhere.
         uintptr_t start;
-        mx_status_t status = MapAnywhere(process, &start);
+        mx_status_t status = MapAnywhere(vmar, &start);
         if (status == NO_ERROR) {
             *entry = start + USERBOOT_ENTRY;
             // TODO(mcgrathr): The rodso-code.sh script uses nm, which lies
@@ -76,7 +77,7 @@ public:
             // top of the address space that there isn't any room left for
             // the vDSO.
             *vdso_base = start + USERBOOT_CODE_END;
-            status = vdso_->Map(mxtl::move(process), *vdso_base);
+            status = vdso_->Map(mxtl::move(vmar), *vdso_base);
         }
         return status;
     }
@@ -166,6 +167,7 @@ enum bootstrap_handle_index {
     BOOTSTRAP_PROC,
     BOOTSTRAP_THREAD,
     BOOTSTRAP_JOB,
+    BOOTSTRAP_VMAR_ROOT,
     BOOTSTRAP_HANDLES
 };
 
@@ -219,6 +221,9 @@ static mxtl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
             break;
         case BOOTSTRAP_JOB:
             info = MX_HND_INFO(MX_HND_TYPE_JOB, 0);
+            break;
+        case BOOTSTRAP_VMAR_ROOT:
+            info = MX_HND_INFO(MX_HND_TYPE_VMAR_ROOT, 0);
             break;
         case BOOTSTRAP_HANDLES:
             __builtin_unreachable();
@@ -279,24 +284,41 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     handles[BOOTSTRAP_PROC] = MakeHandle(proc_disp, rights);
 
     auto proc = DownCastDispatcher<ProcessDispatcher>(mxtl::move(proc_disp));
+    ASSERT(proc);
+
+    // Create a dispatcher for the root VMAR
+    mxtl::RefPtr<Dispatcher> vmar_disp;
+    mx_rights_t vmar_rights;
+    mxtl::RefPtr<VmAddressRegion> root_vmar(proc->aspace()->root_vmar());
+    status = VmAddressRegionDispatcher::Create(mxtl::move(root_vmar),
+                                               &vmar_disp, &vmar_rights);
+    if (status != NO_ERROR)
+        return status;
+
+    handles[BOOTSTRAP_VMAR_ROOT] = MakeHandle(vmar_disp, vmar_rights);
+
+    auto vmar = DownCastDispatcher<VmAddressRegionDispatcher>(mxtl::move(vmar_disp));
+
 
     VDso vdso;
     handles[BOOTSTRAP_VDSO] = vdso.vmo_handle().release();
 
     UserbootImage userboot(&vdso);
     uintptr_t vdso_base, entry;
-    status = userboot.Map(proc, &vdso_base, &entry);
+    status = userboot.Map(vmar, &vdso_base, &entry);
     if (status != NO_ERROR)
         return status;
 
     // Map the stack anywhere.
-    uintptr_t stack_base;
-    status = proc->Map(mxtl::move(stack_vmo_dispatcher),
-                       MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP,
-                       0, stack_size, &stack_base,
-                       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mxtl::RefPtr<VmMapping> stack_mapping;
+    status = vmar->Map(0,
+                       mxtl::move(stack_vmo), 0, stack_size,
+                       MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                       &stack_mapping);
     if (status != NO_ERROR)
         return status;
+
+    uintptr_t stack_base = stack_mapping->base();
     uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
 
     // Create the user thread and stash its handle for the bootstrap message.

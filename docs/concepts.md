@@ -71,10 +71,7 @@ Without a Job Handle, it is not possible for a Thread within a Process to create
 Process or another Job.
 
 See: [process_create](syscalls/process_create.md),
-[process_map_vm](syscalls/process_map_vm.md),
-[process_protect_vm](syscalls/process_protect_vm.md),
 [process_start](syscalls/process_start.md),
-[process_unmap_vm](syscalls/process_unmap_vm.md),
 [thread_create](syscalls/thread_create.md),
 and [thread_start](syscalls/thread_start.md).
 
@@ -154,14 +151,29 @@ Virtual Memory Objects represent a set of physical pages of memory, or the *pote
 for pages (which will be created/filled lazily, on-demand).
 
 They may be mapped into the address space of a Process with
-[*mx_process_map_vm*](syscalls/process_map_vm.md) and unmapped with
-[*mx_process_unmap_vm*](syscalls/process_unmap_vm.md).  Permissions of
-mapped pages may be adjusted with [*mx_process_protect_vm*](syscalls/process_protect_vm.md).
+[*mx_vmar_map*](syscalls/vmar_map.md) and unmapped with
+[*mx_vmar_unmap*](syscalls/vmar_unmap.md).  Permissions of
+mapped pages may be adjusted with [*mx_vmar_protect*](syscalls/vmar_protect.md).
 
 VMOs may also be read from and written to directly with *vmo_read* and *vmo_write*.
 Thus the cost of mapping them into an address space may be avoided for one-shot operations
 like "create a VMO, write a dataset into it, and hand it to another Process to use."
 
+## Address Space Management
+
+Virtual Memory Address Regions (VMARs) provide an abstraction for managing a
+process's address space.  At process creation time, a handle to the root VMAR
+is given to the process creator.  That handle refers to a VMAR that spans the
+entire address space.  This space can be carved up via the *mx_vmar_map* and
+*mx_vmar_allocate* interfaces.  *mx_vmar_allocate* can be used to generate new
+VMARs (called subregions or children) which can be used to group together
+parts of the address space.
+
+See: [vmar_map](syscalls/vmar_map.md),
+[vmar_allocate](syscalls/vmar_allocate.md),
+[vmar_protect](syscalls/vmar_protect.md),
+[vmar_unmap](syscalls/vmar_unmap.md),
+[vmar_destroy](syscalls/vmar_destroy.md),
 
 ## Futexes
 

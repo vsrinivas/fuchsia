@@ -89,6 +89,9 @@ struct mx_proc_args {
 // be different.
 #define MX_HND_TYPE_JOB 6
 
+// Handle to the root of our address space
+#define MX_HND_TYPE_VMAR_ROOT 7
+
 // Handle types the mxio library uses
 #define MX_HND_TYPE_MXIO_ROOT 0x10
 #define MX_HND_TYPE_MXIO_REMOTE 0x11

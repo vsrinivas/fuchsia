@@ -11,7 +11,8 @@ process_create - create a new process
 
 mx_status_t mx_process_create(mx_handle_t job,
                               const char* name, uint32_t name_len,
-                              uint32_t flags, mx_handle_t* out);
+                              uint32_t flags,
+                              mx_handle_t* proc_handle, mx_handle_t* vmar_handle);
 
 ```
 
@@ -19,8 +20,9 @@ mx_status_t mx_process_create(mx_handle_t job,
 
 **process_create**() creates a new process.
 
-Upon success a handle for the new process is returned.  The thread
-will not start executing until *process_start()* is called.
+Upon success handles for the new process and the root of its address space
+are returned.  The thread will not start executing until *process_start()* is
+called.
 
 *name* is silently truncated to a maximum of *MX_MAX_NAME_LEN-1* characters.
 
@@ -34,8 +36,9 @@ process, which will become a child of that job.
 
 ## RETURN VALUE
 
-**process_create**() returns NO_ERROR and a handle to the new process
-(via *out*) on success.  In the event of failure, a negative error value
+**process_create**() returns NO_ERROR, a handle to the new process
+(via *proc_handle*), and a handle to the root of its address space (via
+*vmar_handle*) on success.  In the event of failure, a negative error value
 is returned.
 
 ## ERRORS

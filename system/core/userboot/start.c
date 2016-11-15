@@ -164,9 +164,12 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     const char* filename = o.value[OPTION_FILENAME];
     mx_handle_t proc;
-    status = mx_process_create(job, filename, strlen(filename), 0, &proc);
+    mx_handle_t vmar;
+    status = mx_process_create(job, filename, strlen(filename), 0, &proc, &vmar);
     if (status < 0)
         fail(log, status, "mx_process_create failed\n");
+    // TODO(teisenbe): Don't close this.  Just closing for now to not leak it.
+    mx_handle_close(vmar);
 
     mx_vaddr_t entry, vdso_base;
     size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;

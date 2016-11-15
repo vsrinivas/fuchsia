@@ -14,7 +14,7 @@ of instructions which will be executed by one or more threads.
 The process object is a container of the following resources:
 
 + [Handles](../handles.md)
-+ Memory regions
++ [Virtual Memory Address Regions](vm_address_region.md)
 + [Threads](thread.md)
 
 In general, it is associated with code which it is executing until it is
