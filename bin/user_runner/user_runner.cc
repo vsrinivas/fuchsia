@@ -205,7 +205,8 @@ class UserRunnerImpl : public UserRunner {
         ConnectToService<ledger::Ledger>(environment_services.get()),
         GetProxy(&story_provider));
 
-    ServiceProviderPtr maxwell_services = RunMaxwell();
+    auto maxwell_services =
+        GetServiceProvider("file:///system/apps/maxwell_launcher");
 
     auto maxwell_launcher =
         ConnectToService<maxwell::Launcher>(maxwell_services.get());
@@ -221,12 +222,12 @@ class UserRunnerImpl : public UserRunner {
                             std::move(suggestion_provider));
   }
 
-  ServiceProviderPtr RunMaxwell() {
+  ServiceProviderPtr GetServiceProvider(const std::string& url) {
     auto launch_info = ApplicationLaunchInfo::New();
 
     ServiceProviderPtr app_services;
     launch_info->services = GetProxy(&app_services);
-    launch_info->url = "file:///system/apps/maxwell_launcher";
+    launch_info->url = url;
 
     ApplicationLauncherPtr launcher;
     user_runner_scope_->GetEnvironment()->GetApplicationLauncher(
@@ -242,16 +243,7 @@ class UserRunnerImpl : public UserRunner {
   void RunUserShell(
       const std::string& user_shell,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-    auto launch_info = ApplicationLaunchInfo::New();
-
-    ServiceProviderPtr app_services;
-    launch_info->services = GetProxy(&app_services);
-    launch_info->url = user_shell;
-
-    ApplicationLauncherPtr launcher;
-    user_runner_scope_->GetEnvironment()->GetApplicationLauncher(
-        fidl::GetProxy(&launcher));
-    launcher->CreateApplication(std::move(launch_info), nullptr);
+    auto app_services = GetServiceProvider(user_shell);
 
     mozart::ViewProviderPtr view_provider;
     ConnectToService(app_services.get(), GetProxy(&view_provider));
