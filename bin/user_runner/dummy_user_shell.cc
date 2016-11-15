@@ -6,6 +6,7 @@
 // This takes |recipe_url| as a command line argument and passes it to the
 // Story Manager.
 
+#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
@@ -50,9 +51,8 @@ class DummyUserShellView : public mozart::BaseView {
 
  private:
   // |mozart::BaseView|
-  void OnChildAttached(
-      uint32_t child_key,
-      mozart::ViewInfoPtr child_view_info) override {
+  void OnChildAttached(uint32_t child_key,
+                       mozart::ViewInfoPtr child_view_info) override {
     view_info_ = std::move(child_view_info);
     auto view_properties = mozart::ViewProperties::New();
     GetViewContainer()->SetChildProperties(child_view_key_, 0 /* scene_token */,
@@ -97,8 +97,9 @@ class DummyUserShellView : public mozart::BaseView {
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellView);
 };
 
-class DummyUserShellApp : public modular::StoryWatcher,
-                          public modular::SingleServiceViewApp<modular::UserShell> {
+class DummyUserShellApp
+    : public modular::StoryWatcher,
+      public modular::SingleServiceViewApp<modular::UserShell> {
  public:
   explicit DummyUserShellApp() : story_watcher_binding_(this) {}
   ~DummyUserShellApp() override = default;
@@ -109,13 +110,15 @@ class DummyUserShellApp : public modular::StoryWatcher,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<modular::ServiceProvider> services) override {
     view_.reset(new DummyUserShellView(
-        application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
+        application_context()
+            ->ConnectToEnvironmentService<mozart::ViewManager>(),
         std::move(view_owner_request)));
   }
 
   // |UserShell|
-  void SetStoryProvider(
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider) override {
+  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+                  fidl::InterfaceHandle<maxwell::suggestion::SuggestionProvider>
+                      suggestion_provider) override {
     story_provider_.Bind(std::move(story_provider));
     CreateStory(kExampleRecipeUrl);
   }

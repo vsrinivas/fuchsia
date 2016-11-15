@@ -5,10 +5,12 @@
 module modular;
 
 import "apps/modular/services/user/story_provider.fidl";
+import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
 
 // This interface is meant to be implemented by a User Shell so that
-// |StoryProvider| could be passed to it on startup.
+// dependencies can be passed to it on startup.
 [ServiceName="modular.UserShell"]  // Created by user shell applications.
 interface UserShell {
-  SetStoryProvider(StoryProvider service);
+  Initialize(StoryProvider story_provider,
+    maxwell.suggestion.SuggestionProvider suggestion_provider);
 };

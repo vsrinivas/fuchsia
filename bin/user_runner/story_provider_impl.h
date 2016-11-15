@@ -15,6 +15,7 @@
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/transaction.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
@@ -32,6 +33,13 @@ class StoryProviderImpl : public StoryProvider {
       fidl::InterfaceRequest<StoryProvider> story_provider_request);
 
   ~StoryProviderImpl() override = default;
+
+  // Adds a non-lifecycle-governing binding to this |StoryProvider|. (The
+  // principal binding established in the constructor governs the lifespan of
+  // this instance.)
+  void AddAuxiliaryBinding(fidl::InterfaceRequest<StoryProvider> request) {
+    aux_bindings_.AddBinding(this, std::move(request));
+  }
 
   // Obtains the StoryInfo for an existing story from the ledger.
   void GetStoryInfo(
@@ -72,6 +80,7 @@ class StoryProviderImpl : public StoryProvider {
 
   ApplicationEnvironmentPtr environment_;
   StrongBinding<StoryProvider> binding_;
+  fidl::BindingSet<StoryProvider> aux_bindings_;
   ledger::LedgerPtr ledger_;
 
   std::unordered_set<std::string> story_ids_;

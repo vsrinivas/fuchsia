@@ -24,6 +24,7 @@ executable("user_runner") {
 
   deps = [
     "//apps/ledger/services",
+    "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/app",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:strong_binding",
@@ -44,6 +45,7 @@ executable("dummy_user_shell") {
   ]
 
   deps = [
+    "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/lib/fidl:strong_binding",
@@ -56,4 +58,3 @@ executable("dummy_user_shell") {
     "//lib/mtl/tasks",
   ]
 }
-

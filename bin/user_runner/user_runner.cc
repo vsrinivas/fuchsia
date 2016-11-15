@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "apps/ledger/services/ledger.fidl.h"
+#include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
@@ -106,36 +107,34 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
   }
 
   void RegisterServices() {
-    env_services_.AddService<ledger::Ledger>(
-        [this](fidl::InterfaceRequest<ledger::Ledger> request) {
-          FTL_DLOG(INFO) << "Servicing Ledger service request";
-          // TODO(alhaad): Once supported by Ledger, only create a user scoped
-          // ledger here.
-          ledger::LedgerRepositoryPtr repository;
-          ledger_repository_factory_->GetRepository(
-              kLedgerBaseDir + ToHex(user_id_), GetProxy(&repository),
-              [this](ledger::Status status) {
-                if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR)
-                      << "UserRunnerScope::"
-                         "GetApplicationEnvironmentServices():"
-                      << " LedgerRepositoryFactory.GetRepository() failed:"
-                      << " " << LedgerStatusToString(status) << ".";
-                }
-              });
+    env_services_.AddService<ledger::Ledger>([this](
+        fidl::InterfaceRequest<ledger::Ledger> request) {
+      FTL_DLOG(INFO) << "Servicing Ledger service request";
+      // TODO(alhaad): Once supported by Ledger, only create a user scoped
+      // ledger here.
+      ledger::LedgerRepositoryPtr repository;
+      ledger_repository_factory_->GetRepository(
+          kLedgerBaseDir + ToHex(user_id_), GetProxy(&repository),
+          [this](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              FTL_LOG(ERROR)
+                  << "UserRunnerScope::"
+                     "GetApplicationEnvironmentServices():"
+                  << " LedgerRepositoryFactory.GetRepository() failed:"
+                  << " " << LedgerStatusToString(status) << ".";
+            }
+          });
 
-          repository->GetLedger(
-              to_array(kAppId), std::move(request),
-              [this](ledger::Status status) {
-                if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR)
-                      << "UserRunnerScope::"
-                         "GetApplicationEnvironmentServices():"
-                      << " LedgerRepositoryFactory.GetLedger() failed:"
-                      << " " << LedgerStatusToString(status) << ".";
-                }
-              });
-        });
+      repository->GetLedger(
+          to_array(kAppId), std::move(request), [this](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              FTL_LOG(ERROR) << "UserRunnerScope::"
+                                "GetApplicationEnvironmentServices():"
+                             << " LedgerRepositoryFactory.GetLedger() failed:"
+                             << " " << LedgerStatusToString(status) << ".";
+            }
+          });
+    });
 
     env_services_.SetDefaultServiceConnector(
         [this](std::string service_name, mx::channel channel) {
@@ -200,12 +199,40 @@ class UserRunnerImpl : public UserRunner {
     user_runner_scope_->GetEnvironment()->GetServices(
         GetProxy(&environment_services));
     fidl::InterfaceHandle<StoryProvider> story_provider;
-    new StoryProviderImpl(
+    auto story_provider_impl = new StoryProviderImpl(
         user_runner_scope_->GetEnvironment(),
         ConnectToService<ledger::Ledger>(environment_services.get()),
         GetProxy(&story_provider));
 
-    user_shell_->SetStoryProvider(std::move(story_provider));
+    fidl::InterfaceHandle<StoryProvider> story_provider_aux;
+    story_provider_impl->AddAuxiliaryBinding(GetProxy(&story_provider_aux));
+
+    fidl::InterfaceHandle<maxwell::suggestion::SuggestionProvider>
+        suggestion_provider;
+    RunMaxwell(std::move(story_provider_aux), GetProxy(&suggestion_provider));
+
+    user_shell_->Initialize(std::move(story_provider),
+                            std::move(suggestion_provider));
+  }
+
+  void RunMaxwell(
+      fidl::InterfaceHandle<StoryProvider> story_provider,
+      fidl::InterfaceRequest<maxwell::suggestion::SuggestionProvider>
+          suggestion_provider_request) {
+    auto launch_info = ApplicationLaunchInfo::New();
+
+    ServiceProviderPtr app_services;
+    launch_info->services = GetProxy(&app_services);
+    launch_info->url = "file:///system/apps/maxwell_launcher";
+
+    ApplicationLauncherPtr launcher;
+    user_runner_scope_->GetEnvironment()->GetApplicationLauncher(
+        fidl::GetProxy(&launcher));
+    launcher->CreateApplication(std::move(launch_info), nullptr);
+
+    ConnectToService(app_services.get(),
+                     std::move(suggestion_provider_request));
+    // TODO(rosswang): SetStoryProvider
   }
 
   // This method starts UserShell in a new process, connects to its
