@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <iterator>
 #include <set>
 #include <string>
 #include <vector>
@@ -177,7 +178,11 @@ class Array {
   //   http://en.cppreference.com/w/cpp/concept/RandomAccessIterator.
   class Iterator {
    public:
+    using iterator_category = std::random_access_iterator_tag;
     using difference_type = std::ptrdiff_t;
+    using value_type = T;
+    using pointer = T*;
+    using reference = T&;
 
     // The following satisfy BidirectionalIterator:
     Iterator() : arr_(nullptr), pos_(0u) {}
