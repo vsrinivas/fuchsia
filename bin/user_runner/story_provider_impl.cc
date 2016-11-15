@@ -302,6 +302,10 @@ class PreviousStoriesCall : public Transaction {
                   // too large to return from Ledger is also too
                   // large to return from StoryProvider.
                   fidl::Array<fidl::String> story_ids;
+                  // This resize() has the side effect of marking the array as
+                  // non-null. Do not remove it because the fidl declaration
+                  // of this return value does not allow nulls.
+                  story_ids.resize(0);
                   for (auto& entry : entries) {
                     StoryInfoPtr story_info = StoryInfo::New();
                     story_info->Deserialize(entry->value.data(),
