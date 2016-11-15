@@ -66,7 +66,9 @@ enum thread_tls_list {
 
 #define THREAD_MAGIC (0x74687264) // 'thrd'
 
-#define THREAD_NAME_LENGTH 64
+// This includes the trailing NUL.
+// N.B. This must match MX_MAX_NAME_LEN.
+#define THREAD_NAME_LENGTH 32
 
 #define THREAD_LINEBUFFER_LENGTH 128
 
@@ -191,6 +193,8 @@ status_t thread_detach(thread_t *t);
 status_t thread_join(thread_t *t, int *retcode, lk_time_t timeout);
 status_t thread_detach_and_resume(thread_t *t);
 status_t thread_set_real_time(thread_t *t);
+
+const char* thread_owner_name(thread_t *t);
 
 /* wait for at least delay amount of time. interruptable may return early with ERR_INTERRUPTED
  * if thread is signaled for kill.

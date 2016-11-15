@@ -23,12 +23,15 @@
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
 
+#include <magenta/c_user_thread.h>
 #include <magenta/exception.h>
 #include <magenta/excp_port.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/debug.h>
 #include <magenta/thread_dispatcher.h>
+
+#include <mxtl/algorithm.h>
 
 #define LOCAL_TRACE 0
 
@@ -74,19 +77,17 @@ status_t UserThread::Initialize(mxtl::StringPiece name) {
 
     DEBUG_ASSERT(state_ == State::INITIAL);
 
-    // Make sure we can hold process name and thread name combined.
-    static_assert((MX_MAX_NAME_LEN * 2) == THREAD_NAME_LENGTH, "name length issue");
+    // Make sure LK's max name length agrees with ours.
+    static_assert(THREAD_NAME_LENGTH == MX_MAX_NAME_LEN, "name length issue");
 
-    char full_name[THREAD_NAME_LENGTH + 1];
-    auto pname = process_->name();
-    if ((pname.length() > 0) && (pname.length() < THREAD_NAME_LENGTH)) {
-        snprintf(full_name, sizeof(full_name), "%s:%s", pname.data(), name.data());
-    } else {
-        snprintf(full_name, sizeof(full_name), "<unnamed>:%s", name.data());
-    }
+    char thread_name[THREAD_NAME_LENGTH];
+    // Leave room for trailing NUL, which |name| does not have.
+    size_t name_len = mxtl::min(sizeof(thread_name) - 1, name.length());
+    memcpy(thread_name, name.data(), name_len);
+    thread_name[name_len] = '\0';
 
     // create an underlying LK thread
-    thread_t* lkthread = thread_create_etc(&thread_, full_name, StartRoutine, this, LOW_PRIORITY,
+    thread_t* lkthread = thread_create_etc(&thread_, thread_name, StartRoutine, this, LOW_PRIORITY,
                                            NULL, DEFAULT_STACK_SIZE, NULL);
 
     if (!lkthread) {
@@ -418,6 +419,14 @@ status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_
     default:
         return ERR_INVALID_ARGS;
     }
+}
+
+const char* magenta_thread_process_name(void* user_thread) {
+    UserThread* ut = reinterpret_cast<UserThread*>(user_thread);
+    const char* name = ut->process()->name().data();
+    if (*name != '\0')
+        return name;
+    return "unnamed";
 }
 
 const char* StateToString(UserThread::State state) {

@@ -230,7 +230,8 @@ private:
     uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;
 
     // The user-friendly process name. For debug purposes only.
-    char name_[THREAD_NAME_LENGTH / 2] = {};
+    // This includes the trailing NUL.
+    char name_[MX_MAX_NAME_LEN] = {};
 
     static mutex_t global_process_list_mutex_;
     static mxtl::DoublyLinkedList<ProcessDispatcher*> global_process_list_;

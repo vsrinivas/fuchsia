@@ -32,6 +32,10 @@
 #include <lib/heap.h>
 #include <lib/ktrace.h>
 
+#if WITH_LIB_MAGENTA
+#include <magenta/c_user_thread.h>
+#endif
+
 #if THREAD_STATS
 struct thread_stats thread_stats[SMP_MAX_CPUS];
 #endif
@@ -1144,6 +1148,21 @@ thread_t *thread_create_idle_thread(uint cpu_num)
     return t;
 }
 
+/**
+ * @brief Return the name of the "owner" of the thread.
+ *
+ * Returns "kernel" if there is no owner.
+ */
+
+const char* thread_owner_name(thread_t *t)
+{
+#if WITH_LIB_MAGENTA
+    if (t->user_thread)
+        return magenta_thread_process_name(t->user_thread);
+#endif
+    return "kernel";
+}
+
 static const char *thread_state_to_str(enum thread_state state)
 {
     switch (state) {
@@ -1179,7 +1198,7 @@ void dump_thread(thread_t *t, bool full_dump)
     }
 
     if (full_dump) {
-        dprintf(INFO, "dump_thread: t %p (%s)\n", t, t->name);
+        dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, thread_owner_name(t), t->name);
 #if WITH_SMP
         dprintf(INFO, "\tstate %s, curr_cpu %d, pinned_cpu %d, priority %d, remaining quantum %d\n",
                 thread_state_to_str(t->state), t->curr_cpu, t->pinned_cpu, t->priority, t->remaining_quantum);
@@ -1204,8 +1223,8 @@ void dump_thread(thread_t *t, bool full_dump)
                 t->user_thread, t->user_pid, t->user_tid);
         arch_dump_thread(t);
     } else {
-        printf("thr %p st %4s pri %2d pid %" PRIu64 " tid %" PRIu64 " (%s)\n",
-            t, thread_state_to_str(t->state), t->priority, t->user_pid, t->user_tid, t->name);
+        printf("thr %p st %4s pri %2d pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n",
+               t, thread_state_to_str(t->state), t->priority, t->user_pid, t->user_tid, thread_owner_name(t), t->name);
     }
 }
 
