@@ -86,25 +86,21 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
         mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
 
     mx_status_t status = launchpad_create(job_to_child, name, &lp);
-    if (status != NO_ERROR) {
-        // Return now because we don't have a valid |lp|.
-        return status;
+    if (status == NO_ERROR) {
+        status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
+        if (status == NO_ERROR)
+            status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
+        if (status == NO_ERROR)
+            status = launchpad_add_vdso_vmo(lp);
+        if (status == NO_ERROR)
+            status = launchpad_arguments(lp, argc, argv);
+        if (status == NO_ERROR)
+            status = launchpad_environ(lp, envp);
+        if (status == NO_ERROR)
+            status = launchpad_add_all_mxio(lp);
+        if (status == NO_ERROR)
+            status = launchpad_add_handles(lp, hnds_count, handles, ids);
     }
-
-    // From here forward |lp| needs to be destroyed on failure.
-    status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
-    if (status == NO_ERROR)
-        status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
-    if (status == NO_ERROR)
-        status = launchpad_add_vdso_vmo(lp);
-    if (status == NO_ERROR)
-        status = launchpad_arguments(lp, argc, argv);
-    if (status == NO_ERROR)
-        status = launchpad_environ(lp, envp);
-    if (status == NO_ERROR)
-        status = launchpad_add_all_mxio(lp);
-    if (status == NO_ERROR)
-        status = launchpad_add_handles(lp, hnds_count, handles, ids);
 
     return finish_launch(lp, status, handles, hnds_count);
 }
