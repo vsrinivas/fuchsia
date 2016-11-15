@@ -10,6 +10,7 @@
 #include "apps/ledger/src/glue/data_pipe/data_pipe_drainer_client.h"
 #include "apps/ledger/src/glue/data_pipe/data_pipe_writer.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/ascii.h"
 
 namespace firebase {
 
@@ -113,22 +114,8 @@ void FirebaseImpl::Delete(const std::string& key,
 void FirebaseImpl::Watch(const std::string& key,
                          const std::string& query,
                          WatchClient* watch_client) {
-  network::URLLoaderPtr url_loader;
-  network_service_->CreateURLLoader(GetProxy(&url_loader));
-  network::URLRequestPtr request =
-      MakeRequest(BuildRequestUrl(key, query), "GET", "");
-
-  auto accept_header = network::HttpHeader::New();
-  accept_header->name = "Accept";
-  accept_header->value = "text/event-stream";
-  request->headers.push_back(std::move(accept_header));
-
-  url_loader->Start(std::move(request),
-                    [this, watch_client](network::URLResponsePtr response) {
-                      OnStream(watch_client, std::move(response));
-                    });
-  watch_data_[watch_client] = std::make_unique<WatchData>();
-  watch_data_[watch_client]->url_loader = std::move(url_loader);
+  watch_data_[watch_client] = std::unique_ptr<WatchData>(new WatchData());
+  StartWatchRequest(BuildRequestUrl(key, query), watch_client);
 }
 
 void FirebaseImpl::UnWatch(WatchClient* watch_client) {
@@ -224,8 +211,26 @@ void FirebaseImpl::OnResponse(
       });
 }
 
-void FirebaseImpl::OnStream(WatchClient* watch_client,
-                            network::URLResponsePtr response) {
+void FirebaseImpl::StartWatchRequest(const std::string& url,
+                                     WatchClient* watch_client) {
+  network::URLLoaderPtr url_loader;
+  network_service_->CreateURLLoader(GetProxy(&url_loader));
+  network::URLRequestPtr request = MakeRequest(url, "GET", "");
+
+  auto accept_header = network::HttpHeader::New();
+  accept_header->name = "Accept";
+  accept_header->value = "text/event-stream";
+  request->headers.push_back(std::move(accept_header));
+
+  url_loader->Start(std::move(request),
+                    [this, watch_client](network::URLResponsePtr response) {
+                      OnWatchResponse(watch_client, std::move(response));
+                    });
+  watch_data_[watch_client]->url_loader = std::move(url_loader);
+}
+
+void FirebaseImpl::OnWatchResponse(WatchClient* watch_client,
+                                   network::URLResponsePtr response) {
   // No need to hang onto the URLLoaderPtr anymore.
   watch_data_[watch_client]->url_loader.reset();
 
@@ -233,15 +238,29 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
     FTL_LOG(ERROR) << response->url << " error "
                    << response->error->description;
     watch_client->OnError();
+    watch_client->OnDone();
+    watch_data_.erase(watch_client);
     return;
+  }
+
+  FTL_DCHECK(response->body->is_stream());
+
+  // Handle redirect.
+  if (response->status_code == 307) {
+    for (const auto& header : response->headers) {
+      if (ftl::EqualsCaseInsensitiveASCII(header->name.get(), "location")) {
+        StartWatchRequest(header->value, watch_client);
+        return;
+      }
+    }
+    // If location is not found, fall back to the error case below.
   }
 
   if (response->status_code != 200 && response->status_code != 204) {
     const std::string& url = response->url;
     const std::string& status_line = response->status_line;
-    // DataPipeDrainerClient deletes itself once it's done.
-    watch_data_[watch_client]->drainer.reset(new glue::DataPipeDrainerClient());
-    FTL_DCHECK(response->body->is_stream());
+    watch_data_[watch_client]->drainer =
+        std::make_unique<glue::DataPipeDrainerClient>();
     watch_data_[watch_client]->drainer->Start(
         std::move(response->body->get_stream()),
         [this, watch_client, url, status_line](const std::string& body) {
@@ -254,10 +273,14 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
     return;
   }
 
+  OnStream(watch_client, std::move(response->body->get_stream()));
+}
+
+void FirebaseImpl::OnStream(WatchClient* watch_client,
+                            mx::datapipe_consumer stream) {
   watch_data_[watch_client]->event_stream = std::make_unique<EventStream>();
-  FTL_DCHECK(response->body->is_stream());
   watch_data_[watch_client]->event_stream->Start(
-      std::move(response->body->get_stream()),
+      std::move(stream),
       [this, watch_client](Status status, const std::string& event,
                            const std::string& data) {
         OnStreamEvent(watch_client, status, event, data);

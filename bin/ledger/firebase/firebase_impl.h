@@ -68,7 +68,12 @@ class FirebaseImpl : public Firebase {
       network::URLLoader* url_loader,
       network::URLResponsePtr response);
 
-  void OnStream(WatchClient* watch_client, network::URLResponsePtr response);
+  void StartWatchRequest(const std::string& url, WatchClient* watch_client);
+
+  void OnWatchResponse(WatchClient* watch_client,
+                       network::URLResponsePtr response);
+
+  void OnStream(WatchClient* watch_client, mx::datapipe_consumer stream);
 
   void OnStreamComplete(WatchClient* watch_client);
 
