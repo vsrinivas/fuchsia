@@ -1,5 +1,6 @@
 {
     "labels": [
+        "//dart/pkg/analyzer_cli(//build/toolchain:host_x64)",
         "//dart/runtime/bin:dart_no_observatory",
         "//dart/runtime/bin:dart_no_observatory(//build/toolchain:host_x64)",
         "//dart/runtime/bin:run_vm_tests",
