@@ -16,30 +16,24 @@ namespace {
 
 class LedgerStorageTest : public ::testing::Test {
  public:
-  LedgerStorageTest() {}
+  LedgerStorageTest()
+      : storage_(message_loop_.task_runner(), tmp_dir_.path(), "test_app") {}
 
   ~LedgerStorageTest() override {}
 
-  // Test:
-  void SetUp() override {
-    storage_.reset(new LedgerStorageImpl(message_loop_.task_runner(),
-                                         tmp_dir_.path(), "test_app"));
-    std::srand(0);
-  }
+ private:
+  files::ScopedTempDir tmp_dir_;
 
  protected:
   mtl::MessageLoop message_loop_;
-  std::unique_ptr<LedgerStorageImpl> storage_;
-
- private:
-  files::ScopedTempDir tmp_dir_;
+  LedgerStorageImpl storage_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerStorageTest);
 };
 
 TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   PageId page_id = "1234";
-  storage_->GetPageStorage(
+  storage_.GetPageStorage(
       page_id,
       [this](Status status, std::unique_ptr<PageStorage> page_storage) {
         EXPECT_EQ(Status::NOT_FOUND, status);
@@ -49,10 +43,10 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   message_loop_.Run();
 
   std::unique_ptr<PageStorage> page_storage;
-  ASSERT_EQ(Status::OK, storage_->CreatePageStorage(page_id, &page_storage));
+  ASSERT_EQ(Status::OK, storage_.CreatePageStorage(page_id, &page_storage));
   ASSERT_EQ(page_id, page_storage->GetId());
   page_storage.reset();
-  storage_->GetPageStorage(
+  storage_.GetPageStorage(
       page_id,
       [this](Status status, std::unique_ptr<PageStorage> page_storage) {
         EXPECT_EQ(Status::OK, status);
@@ -65,10 +59,10 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
 TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   PageId page_id = "1234";
   std::unique_ptr<PageStorage> page_storage;
-  ASSERT_EQ(Status::OK, storage_->CreatePageStorage(page_id, &page_storage));
+  ASSERT_EQ(Status::OK, storage_.CreatePageStorage(page_id, &page_storage));
   ASSERT_EQ(page_id, page_storage->GetId());
   page_storage.reset();
-  storage_->GetPageStorage(
+  storage_.GetPageStorage(
       page_id,
       [this](Status status, std::unique_ptr<PageStorage> page_storage) {
         EXPECT_EQ(Status::OK, status);
@@ -77,8 +71,8 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
       });
   message_loop_.Run();
 
-  EXPECT_TRUE(storage_->DeletePageStorage(page_id));
-  storage_->GetPageStorage(
+  EXPECT_TRUE(storage_.DeletePageStorage(page_id));
+  storage_.GetPageStorage(
       page_id,
       [this](Status status, std::unique_ptr<PageStorage> page_storage) {
         EXPECT_EQ(Status::NOT_FOUND, status);

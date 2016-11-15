@@ -27,7 +27,8 @@ class CloudProviderImplTest : public ::testing::Test,
                               public firebase::Firebase,
                               public CommitWatcher {
  public:
-  CloudProviderImplTest() : cloud_provider_(new CloudProviderImpl(this)) {}
+  CloudProviderImplTest()
+      : cloud_provider_(std::make_unique<CloudProviderImpl>(this)) {}
   ~CloudProviderImplTest() override {}
 
   // firebase::Firebase:
@@ -234,7 +235,7 @@ TEST_F(CloudProviderImplTest, GetCommits) {
       "\"id\":\"id2V\","
       "\"timestamp\":42"
       "}}";
-  get_response_.reset(new rapidjson::Document());
+  get_response_ = std::make_unique<rapidjson::Document>();
   get_response_->Parse(get_response_content.c_str(),
                        get_response_content.size());
 

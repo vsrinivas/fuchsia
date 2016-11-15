@@ -12,8 +12,8 @@ namespace storage {
 
 DiffIterator::DiffIterator(std::unique_ptr<const TreeNode> left,
                            std::unique_ptr<const TreeNode> right)
-    : left_(new BTreeIterator(std::move(left))),
-      right_(new BTreeIterator(std::move(right))) {
+    : left_(std::make_unique<BTreeIterator>(std::move(left))),
+      right_(std::make_unique<BTreeIterator>(std::move(right))) {
   if (left_->Valid() && right_->Valid() && **left_ == **right_) {
     Advance();
   } else if (left_->Valid() || right_->Valid()) {

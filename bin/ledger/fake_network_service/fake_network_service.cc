@@ -20,8 +20,8 @@ FakeNetworkService::~FakeNetworkService() {}
 void FakeNetworkService::CreateURLLoader(
     fidl::InterfaceRequest<network::URLLoader> loader) {
   FTL_DCHECK(response_to_return_);
-  loaders_.push_back(std::unique_ptr<FakeURLLoader>(new FakeURLLoader(
-      std::move(loader), std::move(response_to_return_), &request_received_)));
+  loaders_.push_back(std::make_unique<FakeURLLoader>(
+      std::move(loader), std::move(response_to_return_), &request_received_));
 }
 
 void FakeNetworkService::GetCookieStore(mx::channel cookie_store) {

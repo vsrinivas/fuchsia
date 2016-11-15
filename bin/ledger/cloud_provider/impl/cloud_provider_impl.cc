@@ -48,9 +48,9 @@ void CloudProviderImpl::AddCommit(const Commit& commit,
 
 void CloudProviderImpl::WatchCommits(const std::string& min_timestamp,
                                      CommitWatcher* watcher) {
-  watchers_[watcher].reset(
-      new WatchClientImpl(firebase_, kCommitRoot.ToString(),
-                          GetTimestampQuery(min_timestamp), watcher));
+  watchers_[watcher] = std::make_unique<WatchClientImpl>(
+      firebase_, kCommitRoot.ToString(), GetTimestampQuery(min_timestamp),
+      watcher);
 }
 
 void CloudProviderImpl::UnwatchCommits(CommitWatcher* watcher) {

@@ -31,11 +31,12 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
   void SetUp() override {
     ::testing::Test::SetUp();
     network::NetworkServicePtr fake_network_service;
-    fake_network_service_.reset(new fake_network_service::FakeNetworkService(
-        GetProxy(&fake_network_service)));
+    fake_network_service_ =
+        std::make_unique<fake_network_service::FakeNetworkService>(
+            GetProxy(&fake_network_service));
 
-    firebase_.reset(new FirebaseImpl(std::move(fake_network_service), "example",
-                                     "pre/fix"));
+    firebase_ = std::make_unique<FirebaseImpl>(std::move(fake_network_service),
+                                               "example", "pre/fix");
   }
 
   // Allows to step through the watch events one by one. Needs to be called each

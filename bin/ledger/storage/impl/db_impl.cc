@@ -151,7 +151,7 @@ class JournalEntryIterator : public Iterator<const EntryChange> {
       change_.reset(nullptr);
       return;
     }
-    change_.reset(new EntryChange());
+    change_ = std::make_unique<EntryChange>();
 
     leveldb::Slice key_slice = it_->key();
     key_slice.remove_prefix(kJournalEntryPrefixSize);
@@ -229,8 +229,8 @@ Status DbImpl::Init() {
 
 std::unique_ptr<DB::Batch> DbImpl::StartBatch() {
   FTL_DCHECK(!batch_);
-  batch_.reset(new leveldb::WriteBatch());
-  return std::unique_ptr<Batch>(new BatchImpl([this](bool execute) {
+  batch_ = std::make_unique<leveldb::WriteBatch>();
+  return std::make_unique<BatchImpl>([this](bool execute) {
     std::unique_ptr<leveldb::WriteBatch> batch = std::move(batch_);
     if (execute) {
       leveldb::Status status = db_->Write(write_options_, batch.get());
@@ -241,7 +241,7 @@ std::unique_ptr<DB::Batch> DbImpl::StartBatch() {
       }
     }
     return Status::OK;
-  }));
+  });
 }
 
 Status DbImpl::GetHeads(std::vector<CommitId>* heads) {
@@ -358,7 +358,7 @@ Status DbImpl::GetJournalEntries(
   std::string prefix = GetJournalEntryPrefixFor(journal_id);
   it->Seek(prefix);
 
-  entries->reset(new JournalEntryIterator(std::move(it), prefix));
+  *entries = std::make_unique<JournalEntryIterator>(std::move(it), prefix);
   return Status::OK;
 }
 

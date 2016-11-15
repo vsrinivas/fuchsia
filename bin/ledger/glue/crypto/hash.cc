@@ -16,7 +16,8 @@ struct SHA256StreamingHash::Context {
 
 SHA256StreamingHash::~SHA256StreamingHash() {}
 
-SHA256StreamingHash::SHA256StreamingHash() : context_(new Context()) {
+SHA256StreamingHash::SHA256StreamingHash()
+    : context_(std::make_unique<Context>()) {
   SHA256_Init(&context_->sha256);
 }
 

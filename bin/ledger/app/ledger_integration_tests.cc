@@ -130,8 +130,9 @@ class LedgerApplicationTest : public ::testing::Test {
     thread_ = mtl::CreateThread(&task_runner_);
     task_runner_->PostTask(ftl::MakeCopyable(
         [ this, request = GetProxy(&ledger_repository_factory_) ]() mutable {
-          factory_container_.reset(new LedgerRepositoryFactoryContainer(
-              task_runner_, tmp_dir_.path(), std::move(request)));
+          factory_container_ =
+              std::make_unique<LedgerRepositoryFactoryContainer>(
+                  task_runner_, tmp_dir_.path(), std::move(request));
         }));
     ledger_ = GetTestLedger();
     std::srand(0);

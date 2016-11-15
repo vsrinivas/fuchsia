@@ -22,7 +22,7 @@ TEST(DataPipeWriter, WriteAndRead) {
   writer->Start("bazinga\n", std::move(data_pipe.producer_handle));
 
   std::string value;
-  std::unique_ptr<DataPipeDrainerClient> drainer(new DataPipeDrainerClient());
+  auto drainer = std::make_unique<DataPipeDrainerClient>();
   drainer->Start(std::move(data_pipe.consumer_handle),
                  [&value, &message_loop](const std::string& v) {
                    value = v;

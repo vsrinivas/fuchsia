@@ -62,7 +62,7 @@ std::unique_ptr<BTreeIterator> CommitContentsImpl::NewIterator() const {
   std::unique_ptr<const TreeNode> root;
   // TODO(nellyv): Update API to return error Status. LE-39
   FTL_CHECK(TreeNode::FromId(page_storage_, root_id_, &root) == Status::OK);
-  return std::unique_ptr<BTreeIterator>(new BTreeIterator(std::move(root)));
+  return std::make_unique<BTreeIterator>(std::move(root));
 }
 
 }  // namespace storage

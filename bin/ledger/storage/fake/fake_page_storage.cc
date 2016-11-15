@@ -71,7 +71,7 @@ Status FakePageStorage::GetCommit(const CommitId& commit_id,
   if (it == journals_.end()) {
     return Status::NOT_FOUND;
   }
-  commit->reset(new FakeCommit(journals_[commit_id].get()));
+  *commit = std::make_unique<FakeCommit>(journals_[commit_id].get());
   return Status::OK;
 }
 
@@ -83,9 +83,8 @@ Status FakePageStorage::AddCommitFromSync(const CommitId& id,
 Status FakePageStorage::StartCommit(const CommitId& commit_id,
                                     JournalType journal_type,
                                     std::unique_ptr<Journal>* journal) {
-  std::unique_ptr<FakeJournalDelegate> delegate(new FakeJournalDelegate);
-  std::unique_ptr<Journal> fake_journal(new FakeJournal(delegate.get()));
-  journal->swap(fake_journal);
+  auto delegate = std::make_unique<FakeJournalDelegate>();
+  *journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   return Status::OK;
 }

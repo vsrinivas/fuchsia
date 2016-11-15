@@ -33,8 +33,8 @@ class App {
             modular::ApplicationContext::CreateFromStartupInfo()) {
     FTL_DCHECK(application_context_);
 
-    factory_impl_.reset(new LedgerRepositoryFactoryImpl(
-        mtl::MessageLoop::GetCurrent()->task_runner()));
+    factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
+        mtl::MessageLoop::GetCurrent()->task_runner());
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>([this](

@@ -66,8 +66,7 @@ class FakeCommitContents : public CommitContents {
   std::unique_ptr<Iterator<const Entry>> begin() const override {
     const std::map<std::string, fake::FakeJournalDelegate::Entry,
                    convert::StringViewComparator>& data = journal_->GetData();
-    return std::unique_ptr<Iterator<const Entry>>(
-        new EntryMapIterator(data.begin(), data.end()));
+    return std::make_unique<EntryMapIterator>(data.begin(), data.end());
   }
 
   std::unique_ptr<Iterator<const Entry>> find(
@@ -112,8 +111,7 @@ int64_t FakeCommit::GetTimestamp() const {
 }
 
 std::unique_ptr<CommitContents> FakeCommit::GetContents() const {
-  std::unique_ptr<CommitContents> contents(new FakeCommitContents(journal_));
-  return contents;
+  return std::make_unique<FakeCommitContents>(journal_);
 }
 
 ObjectId FakeCommit::FakeCommit::GetRootId() const {

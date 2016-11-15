@@ -163,10 +163,10 @@ bool DecodeCommitFromValue(const rapidjson::Value& value,
     return false;
   }
 
-  std::unique_ptr<Record> record(
-      new Record(Commit(std::move(commit_id), std::move(commit_content),
-                        std::move(storage_objects)),
-                 ServerTimestampToBytes(value[kTimestampKey].GetInt64())));
+  auto record = std::make_unique<Record>(
+      Commit(std::move(commit_id), std::move(commit_content),
+             std::move(storage_objects)),
+      ServerTimestampToBytes(value[kTimestampKey].GetInt64()));
   output_record->swap(record);
   return true;
 }

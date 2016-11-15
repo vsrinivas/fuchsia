@@ -127,7 +127,7 @@ void FirebaseImpl::Watch(const std::string& key,
                     [this, watch_client](network::URLResponsePtr response) {
                       OnStream(watch_client, std::move(response));
                     });
-  watch_data_[watch_client] = std::unique_ptr<WatchData>(new WatchData());
+  watch_data_[watch_client] = std::make_unique<WatchData>();
   watch_data_[watch_client]->url_loader = std::move(url_loader);
 }
 
@@ -177,8 +177,7 @@ void FirebaseImpl::Request(
                                             network::URLResponsePtr response) {
     OnResponse(callback, url_loader_ptr, std::move(response));
   });
-  request_data_[url_loader.get()] =
-      std::unique_ptr<RequestData>(new RequestData());
+  request_data_[url_loader.get()] = std::make_unique<RequestData>();
   request_data_[url_loader.get()]->url_loader = std::move(url_loader);
 }
 
@@ -199,7 +198,8 @@ void FirebaseImpl::OnResponse(
   if (response->status_code != 200 && response->status_code != 204) {
     const std::string& url = response->url;
     const std::string& status_line = response->status_line;
-    request_data_[url_loader]->drainer.reset(new glue::DataPipeDrainerClient());
+    request_data_[url_loader]->drainer =
+        std::make_unique<glue::DataPipeDrainerClient>();
     FTL_DCHECK(response->body->is_stream());
     request_data_[url_loader]->drainer->Start(
         std::move(response->body->get_stream()),
@@ -214,7 +214,8 @@ void FirebaseImpl::OnResponse(
   }
 
   FTL_DCHECK(response->body->is_stream());
-  request_data_[url_loader]->drainer.reset(new glue::DataPipeDrainerClient());
+  request_data_[url_loader]->drainer =
+      std::make_unique<glue::DataPipeDrainerClient>();
   request_data_[url_loader]->drainer->Start(
       std::move(response->body->get_stream()),
       [this, callback, url_loader](const std::string& body) {
@@ -253,7 +254,7 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
     return;
   }
 
-  watch_data_[watch_client]->event_stream.reset(new EventStream());
+  watch_data_[watch_client]->event_stream = std::make_unique<EventStream>();
   FTL_DCHECK(response->body->is_stream());
   watch_data_[watch_client]->event_stream->Start(
       std::move(response->body->get_stream()),

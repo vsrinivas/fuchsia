@@ -26,7 +26,7 @@ class EventStreamTest : public ::testing::Test {
     ::testing::Test::SetUp();
     glue::DataPipe data_pipe;
     producer_handle_ = std::move(data_pipe.producer_handle);
-    event_stream_.reset(new EventStream());
+    event_stream_ = std::make_unique<EventStream>();
     event_stream_->Start(std::move(data_pipe.consumer_handle),
                          [this](Status status, const std::string& event,
                                 const std::string& data) {

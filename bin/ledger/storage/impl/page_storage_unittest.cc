@@ -188,10 +188,9 @@ class PageStorageTest : public ::testing::Test {
 
   // Test:
   void SetUp() override {
-    std::srand(0);
     PageId id = RandomId(16);
-    storage_.reset(
-        new PageStorageImpl(message_loop_.task_runner(), tmp_dir_.path(), id));
+    storage_ = std::make_unique<PageStorageImpl>(message_loop_.task_runner(),
+                                                 tmp_dir_.path(), id);
     EXPECT_EQ(Status::OK, storage_->Init());
     EXPECT_EQ(id, storage_->GetId());
   }

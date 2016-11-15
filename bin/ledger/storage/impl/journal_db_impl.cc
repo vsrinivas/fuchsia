@@ -51,7 +51,7 @@ std::unique_ptr<Journal> JournalDBImpl::Merge(PageStorageImpl* page_storage,
                                               const CommitId& other) {
   JournalDBImpl* db_journal =
       new JournalDBImpl(JournalType::EXPLICIT, page_storage, db, id, base);
-  db_journal->other_ = std::unique_ptr<CommitId>(new std::string(other));
+  db_journal->other_ = std::make_unique<CommitId>(other);
   std::unique_ptr<Journal> journal(db_journal);
   return journal;
 }

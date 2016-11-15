@@ -136,8 +136,7 @@ int64_t CommitImpl::GetTimestamp() const {
 }
 
 std::unique_ptr<CommitContents> CommitImpl::GetContents() const {
-  return std::unique_ptr<CommitContents>(
-      new CommitContentsImpl(root_node_id_, page_storage_));
+  return std::make_unique<CommitContentsImpl>(root_node_id_, page_storage_);
 }
 
 ObjectId CommitImpl::CommitImpl::GetRootId() const {

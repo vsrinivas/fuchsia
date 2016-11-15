@@ -43,13 +43,12 @@ class CloudStorageImplTest : public ::testing::Test {
     ::testing::Test::SetUp();
 
     network::NetworkServicePtr fake_network_service;
-    fake_network_service_.reset(new fake_network_service::FakeNetworkService(
-        GetProxy(&fake_network_service)));
+    fake_network_service_ =
+        std::make_unique<fake_network_service::FakeNetworkService>(
+            GetProxy(&fake_network_service));
 
-    gcs_.reset(new CloudStorageImpl(message_loop_.task_runner(),
-                                    std::move(fake_network_service), "bucket"));
-
-    tmp_dir_.reset(new files::ScopedTempDir());
+    gcs_ = std::make_unique<CloudStorageImpl>(
+        message_loop_.task_runner(), std::move(fake_network_service), "bucket");
   }
 
   void SetResponse(const std::string& body,
@@ -70,16 +69,16 @@ class CloudStorageImplTest : public ::testing::Test {
   }
 
   bool CreateFile(const std::string& content, std::string* path) {
-    if (!tmp_dir_->NewTempFile(path))
+    if (!tmp_dir_.NewTempFile(path))
       return false;
     return files::WriteFile(*path, content.data(), content.size());
   }
 
+  files::ScopedTempDir tmp_dir_;
   mtl::MessageLoop message_loop_;
   std::unique_ptr<CloudStorageImpl> gcs_;
   std::unique_ptr<fake_network_service::FakeNetworkService>
       fake_network_service_;
-  std::unique_ptr<files::ScopedTempDir> tmp_dir_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudStorageImplTest);

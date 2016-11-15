@@ -33,8 +33,8 @@ class PageImplTest : public ::testing::Test {
   void SetUp() override {
     ::testing::Test::SetUp();
     page_id1_ = storage::PageId(kPageIdSize, 'a');
-    std::unique_ptr<storage::fake::FakePageStorage> fake_storage(
-        new storage::fake::FakePageStorage(page_id1_));
+    auto fake_storage =
+        std::make_unique<storage::fake::FakePageStorage>(page_id1_);
     fake_storage_ = fake_storage.get();
 
     manager_ = std::make_unique<PageManager>(std::move(fake_storage));
