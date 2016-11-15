@@ -16,7 +16,7 @@
 #include "devhost.h"
 
 static ssize_t dmctl_write(mx_device_t* dev, const void* buf, size_t count, mx_off_t off) {
-    char cmd[128];
+    char cmd[1024];
     if (count < sizeof(cmd)) {
         memcpy(cmd, buf, count);
         cmd[count] = 0;
