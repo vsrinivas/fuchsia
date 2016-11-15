@@ -20,6 +20,7 @@ executable("example_module1") {
   ]
 
   deps = [
+    ":store",
     "//apps/modular/lib/app",
     "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:single_service_view_app",
@@ -40,6 +41,7 @@ executable("example_module2") {
   ]
 
   deps = [
+    ":store",
     "//apps/modular/lib/app",
     "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:single_service_view_app",
@@ -77,5 +79,15 @@ flutter_app("example_module3") {
   main_dart = "example_module3.dart"
   deps = [
     "//lib/flutter/packages/flutter",
+  ]
+}
+
+source_set("store") {
+  sources = [
+    "store.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/document_editor",
+    "//apps/modular/services/story",
   ]
 }

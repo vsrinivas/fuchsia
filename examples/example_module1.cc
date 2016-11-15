@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iterator>
-
-#include "apps/modular/lib/document_editor/document_editor.h"
+#include "apps/modular/examples/store.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
@@ -15,61 +13,41 @@
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/time/time_point.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkRect.h"
+
+using fidl::InterfaceHandle;
+using fidl::InterfacePtr;
+using fidl::InterfaceRequest;
+
+using modular::Link;
+using modular::Module;
+using modular::Store;
+using modular::Story;
+using modular::StrongBinding;
+using modular::operator<<;
 
 namespace {
 
 constexpr uint32_t kContentImageResourceId = 1;
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr int kTickRotationDegrees = 45;
-constexpr int kValueHandoffDuration = 3;
+constexpr int kValueHandoffDuration = 1;
 
-// Subjects
-constexpr char kDocId[] =
-    "http://google.com/id/dc7cade7-7be0-4e23-924d-df67e15adae5";
+constexpr char kModuleName[] = "Module1Impl";
 
-// Property labels
-constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
-constexpr char kSenderLabel[] = "http://schema.org/sender";
-
-// Property values
-constexpr char kSenderValueSelf[] = "Module1Impl";
-
-using document_store::Document;
-using document_store::Value;
-
-using fidl::Array;
-using fidl::InterfaceHandle;
-using fidl::InterfacePtr;
-using fidl::InterfaceRequest;
-using fidl::Map;
-using fidl::String;
-using fidl::StructPtr;
-
-using modular::DocumentEditor;
-using modular::FidlDocMap;
-using modular::Link;
-using modular::LinkWatcher;
-using modular::Module;
-using modular::Story;
-using modular::StrongBinding;
-using modular::operator<<;
-
-// Module implementation that acts as a leaf module. It implements
-// both Module and the LinkWatcher observer of its own Link.
-class Module1Impl : public mozart::BaseView, public Module, public LinkWatcher {
+// Module implementation that acts as a leaf module. It implements Module.
+// TODO(jimbe) Factor out the BaseView code into its own class.
+class Module1Impl : public mozart::BaseView, public Module {
  public:
   explicit Module1Impl(
       mozart::ViewManagerPtr view_manager,
@@ -77,11 +55,14 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkWatcher {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
-                 "Module1Impl"),
+                 kModuleName),
         module_binding_(this, std::move(module_request)),
-        watcher_binding_(this),
-        tick_(0) {
-    FTL_LOG(INFO) << "Module1Impl";
+        store_(kModuleName),
+        weak_ptr_factory_(this) {
+    FTL_LOG(INFO) << kModuleName;
+
+    store_.AddCallback([this] { IncrementCounterAction(); });
+    store_.AddCallback([this] { CheckForDone(); });
   }
 
   ~Module1Impl() override { FTL_LOG(INFO) << "~Module1Impl"; }
@@ -89,73 +70,43 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkWatcher {
   void Initialize(InterfaceHandle<Story> story,
                   InterfaceHandle<Link> link) override {
     story_.Bind(std::move(story));
-    link_.Bind(std::move(link));
-
-    InterfaceHandle<LinkWatcher> watcher;
-    watcher_binding_.Bind(&watcher);
-    link_->Watch(std::move(watcher));
+    store_.Initialize(std::move(link));
   }
 
   void Stop(const StopCallback& done) override {
-    watcher_binding_.Close();
-    link_.reset();
+    store_.Stop();
     story_.reset();
     done();
   }
 
-  // See comments on Module2Impl in example-module2.cc.
-  void Notify(FidlDocMap docs) override {
-    FTL_LOG(INFO) << "Module1Impl::Notify() " << (int64_t)this << docs;
-    docs_ = std::move(docs);
-
-    tick_++;
-    if (UpdateCounter()) {
-      handoff_time_ = ftl::TimePoint::Now() +
-                      ftl::TimeDelta::FromSeconds(kValueHandoffDuration);
-      Invalidate();
-    }
+ private:
+  void CheckForDone() {
+    if (store_.counter.counter > 10)
+      story_->Done();
   }
 
- private:
-  bool UpdateCounter() {
-    DocumentEditor editor;
-    if (!editor.Edit(kDocId, &docs_))
-      return false;
+  void IncrementCounterAction() {
+    if (store_.counter.sender == kModuleName || store_.counter.counter > 10)
+      return;
 
-    Value* sender = editor.GetValue(kSenderLabel);
-    Value* counter = editor.GetValue(kCounterLabel);
+    // TODO(jimbe) Enabling animation should be done in its own function, but
+    // it needs a trigger to know when to start.
+    enable_animation_ = true;
+    Invalidate();
+    ftl::WeakPtr<Module1Impl> module_ptr = weak_ptr_factory_.GetWeakPtr();
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this, module_ptr]() {
+          FTL_LOG(INFO) << "ControlAnimation() DONE";
+          if (!module_ptr.get())
+            return;
 
-    FTL_DCHECK(counter != nullptr);
-
-    // Ignore values from myself. See example_module2.cc for why
-    // sender can be null here.
-    //
-    // TODO(mesch): Normally nofifications of values from myself are
-    // suppressed by listing using Watch() not WatchAll(). However, if
-    // a story is brought back, the initial link value is sent to
-    // every listener including self.
-    if (sender != nullptr && sender->get_string_value() == kSenderValueSelf) {
-      return false;
-    }
-
-    int n = counter->get_int_value();
-    counter->set_int_value(n + 1);
-
-    bool updated = n <= 10;
-    if (updated) {
-      FTL_LOG(INFO) << "COUNTER " << (n + 1) << " INCREMENT";
-
-      sender->set_string_value(kSenderValueSelf);
-      link_->SetAllDocuments(docs_.Clone());
-    } else {
-      FTL_LOG(INFO) << "COUNTER " << (n + 1) << " DONE";
-
-      // For the last iteration, test that Module2 removes the sender.
-      FTL_DCHECK(sender == nullptr);
-      story_->Done();
-    }
-
-    return updated;
+          enable_animation_ = false;
+          store_.counter.sender = kModuleName;
+          store_.counter.counter += 1;
+          store_.MarkDirty();
+          store_.ModelChanged();
+        },
+        ftl::TimeDelta::FromSeconds(kValueHandoffDuration));
   }
 
   // Copied from
@@ -192,17 +143,15 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkWatcher {
     scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
 
-    if (ftl::TimePoint::Now() >= handoff_time_) {
-      UpdateCounter();
-    } else {
+    if (enable_animation_)
       Invalidate();
-    }
   }
 
   void DrawContent(SkCanvas* const canvas, const mozart::Size& size) {
     canvas->clear(SK_ColorBLUE);
     canvas->translate(size.width / 2, size.height / 2);
-    canvas->rotate(SkIntToScalar(kTickRotationDegrees * tick_));
+    canvas->rotate(
+        SkIntToScalar(kTickRotationDegrees * store_.counter.counter));
     SkPaint paint;
     paint.setColor(SK_ColorGREEN);
     paint.setAntiAlias(true);
@@ -214,28 +163,23 @@ class Module1Impl : public mozart::BaseView, public Module, public LinkWatcher {
   mozart::BufferProducer buffer_producer_;
 
   StrongBinding<Module> module_binding_;
-  StrongBinding<LinkWatcher> watcher_binding_;
-
   InterfacePtr<Story> story_;
-  InterfacePtr<Link> link_;
 
-  // Used by |OnDraw()| to decide whether enough time has passed, so that the
-  // value can be sent back and a new frame drawn.
-  ftl::TimePoint handoff_time_;
-  FidlDocMap docs_;
+  Store store_;
 
-  // This is a counter that is incremented when a new value is received and used
-  // to rotate a square.
-  int tick_;
+  bool enable_animation_ = false;
+
+  // Note: This should remain the last member so it'll be destroyed and
+  // invalidate its weak pointers before any other members are destroyed.
+  ftl::WeakPtrFactory<Module1Impl> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Module1Impl);
 };
-}
-// namespace
+}  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  modular::SingleServiceViewApp<modular::Module, Module1Impl> app;
+  modular::SingleServiceViewApp<Module, Module1Impl> app;
   loop.Run();
   return 0;
 }

@@ -134,11 +134,13 @@ void LinkConnection::AddDocuments(FidlDocMap mojo_add_docs) {
   for (auto& add_doc : add_docs) {
     DocumentEditor editor;
     if (!editor.Edit(add_doc.first, &shared_->docs_map)) {
+      FTL_LOG(INFO) << "LinkImpl::AddDocuments()    docid NEW.";
       // Docid does not currently exist. Add the entire Document.
       shared_->docs_map[add_doc.first] = std::move(add_doc.second);
       dirty = true;
     } else {
       // Docid does exist. Add or update the individual properties.
+      FTL_LOG(INFO) << "LinkImpl::AddDocuments()    docid EXISTS.";
       auto& new_props = add_doc.second->properties;
       for (auto it = new_props.begin(); it != new_props.end(); ++it) {
         const std::string& new_key = it.GetKey();
@@ -150,12 +152,13 @@ void LinkConnection::AddDocuments(FidlDocMap mojo_add_docs) {
           editor.SetProperty(new_key, std::move(new_value));
         }
       }
-      editor.TakeDocument(&shared_->docs_map[editor.docid()]);
     }
   }
 
   if (dirty) {
     DatabaseChanged(shared_->docs_map);
+  } else {
+    FTL_LOG(INFO) << "LinkImpl::AddDocuments()    Skipped notify, not dirty";
   }
 }
 

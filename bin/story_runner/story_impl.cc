@@ -74,7 +74,7 @@ StoryImpl::StoryImpl(std::shared_ptr<ApplicationContext> application_context,
     : binding_(this),
       application_context_(application_context),
       page_(new StoryPage(std::move(story_storage))) {
-  FTL_LOG(INFO) << "StoryImpl()";
+  //FTL_LOG(INFO) << "StoryImpl()";
   resolver_.Bind(std::move(resolver));
 
   page_->Init(ftl::MakeCopyable([
@@ -118,7 +118,7 @@ void StoryImpl::StartModule(
         module_controller_request = std::move(module_controller_request),
         view_owner_request = std::move(view_owner_request)
       ](fidl::String module_url) mutable {
-        FTL_LOG(INFO) << "StoryImpl::StartModule() resolver callback";
+        //FTL_LOG(INFO) << "StoryImpl::StartModule() resolver callback";
 
         auto launch_info = ApplicationLaunchInfo::New();
 
@@ -235,19 +235,19 @@ void StoryImpl::Stop(const StopCallback& done) {
 
 StoryPage::StoryPage(fidl::InterfaceHandle<StoryStorage> story_storage)
     : data_(StoryData::New()) {
-  FTL_LOG(INFO) << "StoryPage()";
+  //FTL_LOG(INFO) << "StoryPage()";
   data_->links.mark_non_null();
   story_storage_.Bind(std::move(story_storage));
 };
 
 StoryPage::~StoryPage() {
-  FTL_LOG(INFO) << "~StoryPage() " << this << " begin";
+  //FTL_LOG(INFO) << "~StoryPage() " << this << " begin";
 
   // TODO(mesch): We should write on every link change, not just at
   // the end.
   story_storage_->WriteStoryData(std::move(data_));
 
-  FTL_LOG(INFO) << "~StoryPage() " << this << " end";
+  //FTL_LOG(INFO) << "~StoryPage() " << this << " end";
 }
 
 void StoryPage::Init(std::function<void()> done) {
@@ -271,8 +271,8 @@ void StoryPage::MaybeReadLink(const fidl::String& name,
       (*docs_map)[doc->docid] = doc->Clone();
     }
   }
-  FTL_LOG(INFO) << "StoryPage::MaybeReadlink() " << to_string(id_) << " "
-                << name << " docs " << *docs_map;
+  //FTL_LOG(INFO) << "StoryPage::MaybeReadlink() " << to_string(id_) << " "
+  //              << name << " docs " << *docs_map;
 }
 
 void StoryPage::WriteLink(const fidl::String& name,

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/modular/examples/store.h"
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/document_store/document.fidl.h"
@@ -13,56 +14,39 @@
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkRect.h"
 
-namespace {
-
-constexpr uint32_t kContentImageResourceId = 1;
-constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
-
-// Subjects
-constexpr char kDocId[] =
-    "http://google.com/id/dc7cade7-7be0-4e23-924d-df67e15adae5";
-
-// Property labels
-constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
-constexpr char kSenderLabel[] = "http://schema.org/sender";
-
-// Property values
-constexpr char kSenderValueSelf[] = "Module2Impl";
-
-using document_store::Document;
-using document_store::Value;
-
-using fidl::Array;
 using fidl::InterfaceHandle;
 using fidl::InterfacePtr;
 using fidl::InterfaceRequest;
-using fidl::Map;
-using fidl::String;
 
-using modular::DocumentEditor;
-using modular::FidlDocMap;
 using modular::Link;
-using modular::LinkWatcher;
 using modular::Module;
+using modular::Store;
 using modular::Story;
 using modular::StrongBinding;
 using modular::operator<<;
 
-// Module implementation that acts as a leaf module. It implements
-// both Module and the LinkWatcher observer of its own Link.
-class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
+namespace {
+
+constexpr uint32_t kContentImageResourceId = 1;
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+constexpr int kValueHandoffDuration = 1;
+
+constexpr char kModuleName[] = "Module2Impl";
+
+// Module implementation that acts as a leaf module. It implements Module.
+// TODO(jimbe) Factor out the BaseView code into its own class.
+class Module2Impl : public Module, public mozart::BaseView {
  public:
   explicit Module2Impl(
       mozart::ViewManagerPtr view_manager,
@@ -72,9 +56,11 @@ class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
                  std::move(view_owner_request),
                  "Module2Impl"),
         module_binding_(this, std::move(module_request)),
-        watcher_binding_(this),
-        tick_(0) {
-    FTL_LOG(INFO) << "Module2Impl";
+        store_(kModuleName),
+        weak_ptr_factory_(this) {
+    FTL_LOG(INFO) << kModuleName;
+
+    store_.AddCallback([this] { IncrementCounterAction(); });
   }
 
   ~Module2Impl() override { FTL_LOG(INFO) << "~Module2Impl"; }
@@ -82,65 +68,40 @@ class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
   void Initialize(InterfaceHandle<Story> story,
                   InterfaceHandle<Link> link) override {
     story_.Bind(std::move(story));
-    link_.Bind(std::move(link));
-
-    InterfaceHandle<LinkWatcher> watcher;
-    watcher_binding_.Bind(&watcher);
-    link_->Watch(std::move(watcher));
+    store_.Initialize(std::move(link));
   }
 
   void Stop(const StopCallback& done) override {
-    watcher_binding_.Close();
-    link_.reset();
+    store_.Stop();
     story_.reset();
     done();
   }
 
-  // Whenever the module sees a changed value, it increments it by 1
-  // and writes it back. This works because the module is not notified
-  // of changes from itself. More precisely, a watcher registered
-  // through one link handle is not notified of changes requested
-  // through the same handle. It's really the handle identity that
-  // decides.
-  void Notify(FidlDocMap docs) override {
-    FTL_LOG(INFO) << "Module2Impl::Notify() " << (int64_t)this << docs;
-
-    DocumentEditor editor;
-    if (!editor.Edit(kDocId, &docs))
+ private:
+  void IncrementCounterAction() {
+    if (store_.counter.sender == kModuleName || store_.counter.counter > 11)
       return;
 
-    Value* sender = editor.GetValue(kSenderLabel);
-    Value* counter = editor.GetValue(kCounterLabel);
-
-    FTL_DCHECK(counter != nullptr);
-
-    // Ignore values from myself. See below for why sender can be null
-    // here.
-    //
-    // TODO(mesch): Normally nofifications of values from myself are
-    // suppressed by listing using Watch() not WatchAll(). However, if
-    // a story is brought back, the initial link value is sent to
-    // every listener including self.
-    if (sender == nullptr || sender->get_string_value() == kSenderValueSelf) {
-      return;
-    }
-
-    sender->set_string_value(kSenderValueSelf);
-
-    int n = counter->get_int_value() + 1;
-    counter->set_int_value(n);
-
-    // For the last value, remove the sender property to prove that property
-    // removal works.
-    if (n == 11) {
-      editor.RemoveProperty(kSenderLabel);
-    }
-
+    // TODO(jimbe) Enabling animation should be done in its own function, but
+    // it needs a trigger to know when to start.
+    enable_animation_ = true;
     Invalidate();
-    link_->SetAllDocuments(std::move(docs));
+    ftl::WeakPtr<Module2Impl> module_ptr = weak_ptr_factory_.GetWeakPtr();
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        [this, module_ptr]() {
+          FTL_LOG(INFO) << "ControlAnimation() DONE";
+          if (!module_ptr.get())
+            return;
+
+          enable_animation_ = false;
+          store_.counter.sender = kModuleName;
+          store_.counter.counter += 1;
+          store_.MarkDirty();
+          store_.ModelChanged();
+        },
+        ftl::TimeDelta::FromSeconds(kValueHandoffDuration));
   }
 
- private:
   // Copied from
   // https://fuchsia.googlesource.com/mozart/+/master/examples/spinning_square/spinning_square.cc
   // |BaseView|:
@@ -174,12 +135,15 @@ class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
     }
     scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
+
+    if (enable_animation_)
+      Invalidate();
   }
 
   void DrawContent(SkCanvas* const canvas, const mozart::Size& size) {
     canvas->clear(SK_ColorBLUE);
     canvas->translate(size.width / 2, size.height / 2);
-    canvas->rotate(SkIntToScalar(45 * (tick_++)));
+    canvas->rotate(SkIntToScalar(45 * store_.counter.counter));
     SkPaint paint;
     paint.setColor(0xFFFF00FF);
     paint.setAntiAlias(true);
@@ -191,12 +155,16 @@ class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
   mozart::BufferProducer buffer_producer_;
 
   StrongBinding<Module> module_binding_;
-  StrongBinding<LinkWatcher> watcher_binding_;
 
   InterfacePtr<Story> story_;
-  InterfacePtr<Link> link_;
 
-  int tick_;
+  Store store_;
+
+  bool enable_animation_ = false;
+
+  // Note: This should remain the last member so it'll be destroyed and
+  // invalidate its weak pointers before any other members are destroyed.
+  ftl::WeakPtrFactory<Module2Impl> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Module2Impl);
 };
@@ -205,7 +173,7 @@ class Module2Impl : public Module, public LinkWatcher, public mozart::BaseView {
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  modular::SingleServiceViewApp<modular::Module, Module2Impl> app;
+  modular::SingleServiceViewApp<Module, Module2Impl> app;
   loop.Run();
   return 0;
 }

@@ -84,15 +84,22 @@ class LinkConnection : public LinkWatcher {
   }
 
   void Notify(FidlDocMap docs) override {
-    if (docs.size() > 0) {
+    FTL_LOG(INFO) << "LinkConnection::Notify()" << docs;
+    // We receive an initial update when the Link initializes. It's empty
+    // if this is a new session, or it has documents if it's a restored session.
+    // In either case, it should be ignored, otherwise we can get multiple
+    // messages traveling at the same time.
+    if (!initial_update_ && docs.size() > 0) {
       dst_->SetAllDocuments(std::move(docs));
     }
+    initial_update_ = false;
   }
 
  private:
   Binding<LinkWatcher> src_binding_;
   Link* const src_;
   Link* const dst_;
+  bool initial_update_ = true;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkConnection);
 };

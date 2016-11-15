@@ -66,6 +66,8 @@ bool DocumentEditor::Edit(const std::string& docid, FidlDocMap* const docs) {
 
 void DocumentEditor::TakeDocument(document_store::DocumentPtr* const ptr) {
   FTL_DCHECK(newdoc_.get() != nullptr);
+  FTL_DCHECK(ptr != nullptr);
+  FTL_DCHECK(ptr->get() == nullptr);
   *ptr = std::move(newdoc_);
 }
 
