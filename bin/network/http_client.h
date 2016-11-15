@@ -291,7 +291,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(
       return;
     }
     if (!(status_code_ >= 200 && status_code_ <= 299) && status_code_ != 301 &&
-        status_code_ != 302) {
+        status_code_ != 302 && status_code_ != 307 && status_code_ != 308) {
       // TODO(toshik): handle more status codes
       FTL_LOG(ERROR) << "ReadStatusLine: Status code " << status_code_;
       SendError(network::NETWORK_ERR_NOT_IMPLEMENTED);
