@@ -40,7 +40,7 @@ void WatchClientImpl::OnPut(const std::string& path,
       return;
     }
     for (size_t i = 0u; i < records.size(); i++) {
-      commit_watcher_->OnNewCommit(records[i].commit, records[i].timestamp);
+      commit_watcher_->OnRemoteCommit(records[i].commit, records[i].timestamp);
     }
     return;
   }
@@ -58,7 +58,7 @@ void WatchClientImpl::OnPut(const std::string& path,
     return;
   }
 
-  commit_watcher_->OnNewCommit(record->commit, record->timestamp);
+  commit_watcher_->OnRemoteCommit(record->commit, record->timestamp);
 }
 
 void WatchClientImpl::OnError() {

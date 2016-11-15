@@ -18,8 +18,8 @@ class CommitWatcher {
   // Called when a new commit is added to the cloud. |timestamp| is opaque
   // to the client, but can be passed back to CloudProvider as a query
   // parameter.
-  virtual void OnNewCommit(const Commit& commit,
-                           const std::string& timestamp) = 0;
+  virtual void OnRemoteCommit(const Commit& commit,
+                              const std::string& timestamp) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);

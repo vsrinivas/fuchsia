@@ -82,8 +82,8 @@ class CloudProviderImplTest : public ::testing::Test,
   }
 
   // CommitWatcher:
-  void OnNewCommit(const Commit& commit,
-                   const std::string& timestamp) override {
+  void OnRemoteCommit(const Commit& commit,
+                      const std::string& timestamp) override {
     commits_.push_back(commit.Clone());
     server_timestamps_.push_back(timestamp);
   }
