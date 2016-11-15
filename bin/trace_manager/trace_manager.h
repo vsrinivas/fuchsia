@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <list>
 #include <memory>
 #include <unordered_map>
 
@@ -60,8 +61,8 @@ class TraceManager : public TraceRegistry, public TraceController {
   ControllerState controller_state_{ControllerState::kStopped};
 
   fidl::Array<fidl::String> categories_;
-  std::vector<ProviderInfo> providers_;
-  std::vector<ProviderInfo*> active_providers_;
+  std::list<ProviderInfo> providers_;
+  std::vector<typename std::list<ProviderInfo>::iterator> active_providers_;
   mx::socket output_;
   int generation_ = 0;
 

@@ -114,9 +114,10 @@ void TraceManager::StartTracing(fidl::Array<fidl::String> categories,
   controller_state_ = ControllerState::kStarted;
   categories_ = std::move(categories);
 
-  for (auto& info : providers_)
-    if (StartTracingForProvider(&info))
-      active_providers_.push_back(&info);
+  for (auto it = providers_.begin(); it != providers_.end(); ++it) {
+    if (StartTracingForProvider(&*it))
+      active_providers_.push_back(it);
+  }
 
   ++generation_;
 }
@@ -125,8 +126,8 @@ void TraceManager::StopTracing() {
   if (controller_state_ != ControllerState::kStarted)
     return;
 
-  for (auto info : active_providers_)
-    StopTracingForProvider(info);
+  for (auto it : active_providers_)
+    StopTracingForProvider(&*it);
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [ this, generation = generation_ ]() {
@@ -144,13 +145,14 @@ void TraceManager::RegisterTraceProvider(
   providers_.emplace_back(TraceProviderPtr::Create(std::move(handle)),
                           std::move(label), std::move(categories));
 
-  auto& info = providers_.back();
-  info.provider.set_connection_error_handler(
-      [ this, ptr = info.provider.get() ]() { EraseProvider(ptr); });
+  auto it = --providers_.end();
+  it->provider.set_connection_error_handler(
+      [ this, ptr = it->provider.get() ]() { EraseProvider(ptr); });
 
-  if (controller_state_ == ControllerState::kStarted)
-    if (StartTracingForProvider(&info))
-      active_providers_.push_back(&info);
+  if (controller_state_ == ControllerState::kStarted) {
+    if (StartTracingForProvider(&*it))
+      active_providers_.push_back(it);
+  }
 }
 
 void TraceManager::FinalizeTracing() {
@@ -188,10 +190,11 @@ bool TraceManager::StartTracingForProvider(ProviderInfo* info) {
 void TraceManager::StopTracingForProvider(ProviderInfo* info) {
   FTL_DCHECK(info->current_buffer);
   info->provider->Stop([this, info]() {
+    FTL_LOG(INFO) << "Provider stopped, write out data";
     WriteRecordsToSocket(std::move(info->current_buffer), kSharedBufferSize,
                          output_);
-    auto it =
-        std::find(active_providers_.begin(), active_providers_.end(), info);
+    auto it = std::find_if(active_providers_.begin(), active_providers_.end(),
+                           [info](auto it) { return &*it == info; });
     if (it != active_providers_.end())
       active_providers_.erase(it);
     if (active_providers_.empty())
@@ -204,7 +207,7 @@ void TraceManager::EraseProvider(TraceProvider* provider) {
       providers_.begin(), providers_.end(),
       [provider](const auto& info) { return info.provider.get() == provider; });
   FTL_DCHECK(it != providers_.end());
-  if (std::find(active_providers_.begin(), active_providers_.end(), &*it) !=
+  if (std::find(active_providers_.begin(), active_providers_.end(), it) !=
       active_providers_.end())
     StopTracingForProvider(&*it);
   providers_.erase(it);
