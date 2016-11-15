@@ -10,6 +10,7 @@ namespace {
 
 class Cleanable {
  public:
+  Cleanable(int id = 0) : id(id) {}
   void set_on_empty(const ftl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
@@ -19,6 +20,8 @@ class Cleanable {
       on_empty_callback_();
   }
 
+  int id;
+
  private:
   ftl::Closure on_empty_callback_;
 };
@@ -27,16 +30,49 @@ TEST(AutoCleanableSet, ClearsOnEmpty) {
   AutoCleanableSet<Cleanable> set;
   EXPECT_TRUE(set.empty());
 
-  const auto& p1 = set.emplace().first;
-  const auto& p2 = set.emplace().first;
+  auto& p1 = set.emplace();
+  auto& p2 = set.emplace();
 
   EXPECT_FALSE(set.empty());
 
-  p1->Clean();
+  p1.Clean();
   EXPECT_FALSE(set.empty());
 
-  p2->Clean();
+  p2.Clean();
   EXPECT_TRUE(set.empty());
+}
+
+TEST(AutoCleanableSet, Iterator) {
+  AutoCleanableSet<Cleanable> set;
+  EXPECT_TRUE(set.empty());
+
+  auto& p1 = set.emplace(1);
+  auto& p2 = set.emplace(2);
+  auto& p3 = set.emplace(3);
+  auto& p4 = set.emplace(4);
+  EXPECT_FALSE(set.empty());
+  p2.Clean();
+
+  AutoCleanableSet<Cleanable>::iterator it = set.begin();
+  std::unordered_set<int> expected_ids{p1.id, p3.id, p4.id};
+
+  // Test postfix increment
+  std::unordered_set<int> actual_ids{it++->id, it++->id, it++->id};
+  EXPECT_EQ(expected_ids, actual_ids);
+
+  EXPECT_EQ(set.end(), it);
+
+  it = set.begin();
+  actual_ids.clear();
+
+  // Test prefix increment
+  actual_ids.insert(it->id);
+  actual_ids.insert((++it)->id);
+  actual_ids.insert((++it)->id);
+  ++it;
+  EXPECT_EQ(expected_ids, actual_ids);
+
+  EXPECT_EQ(set.end(), it);
 }
 
 TEST(AutoCleanableSet, CallsOnEmpty) {
@@ -46,10 +82,10 @@ TEST(AutoCleanableSet, CallsOnEmpty) {
 
   EXPECT_FALSE(empty_called);
 
-  const auto& p1 = set.emplace().first;
+  auto& p1 = set.emplace();
   EXPECT_FALSE(empty_called);
 
-  p1->Clean();
+  p1.Clean();
   EXPECT_TRUE(empty_called);
 }
 

@@ -18,7 +18,6 @@ namespace ledger {
 // List that will delete its elements when they call their on_empty_callback.
 // The elements must have a setter method:
 // |void set_on_empty(const // ftl::Closure&)|.
-
 template <typename V>
 class AutoCleanableSet {
  public:
@@ -35,7 +34,32 @@ class AutoCleanableSet {
   };
 
   using Set_ = typename std::unordered_set<V, ReferenceHash, ReferenceEquality>;
-  using iterator = typename Set_::iterator;
+  class iterator : public std::iterator<std::forward_iterator_tag, V> {
+   public:
+    iterator(typename Set_::iterator base) : base_(base) {}
+
+    iterator& operator++() {
+      ++base_;
+      return *this;
+    }
+
+    iterator operator++(int) {
+      iterator result(base_);
+      operator++();
+      return result;
+    }
+
+    bool operator==(const iterator& rhs) const { return base_ == rhs.base_; }
+    bool operator!=(const iterator& rhs) const { return base_ != rhs.base_; }
+    // This set uses the reference of the object (and not its contents) to
+    // define object equality. Thus, calling non-const methods on the stored
+    // objects do not change their hash, and are safe to use.
+    V& operator*() const { return const_cast<V&>(*(base_)); }
+    V* operator->() const { return const_cast<V*>(base_.operator->()); }
+
+   private:
+    typename Set_::iterator base_;
+  };
 
   AutoCleanableSet() {}
   ~AutoCleanableSet() {}
@@ -43,7 +67,7 @@ class AutoCleanableSet {
   bool empty() { return set_.empty(); }
 
   template <class... Args>
-  std::pair<iterator, bool> emplace(Args&&... args) {
+  V& emplace(Args&&... args) {
     auto pair = set_.emplace(std::forward<Args>(args)...);
     FTL_DCHECK(pair.second);
     // Set iterators are const because modifying the element would change the
@@ -55,8 +79,12 @@ class AutoCleanableSet {
       FTL_DCHECK(erase_count == 1);
       CheckEmpty();
     });
-    return pair;
+    return item;
   }
+
+  iterator begin() { return iterator(set_.begin()); }
+
+  iterator end() { return iterator(set_.end()); }
 
   void set_on_empty(const ftl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
