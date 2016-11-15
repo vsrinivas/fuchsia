@@ -26,11 +26,11 @@ class Command : mtl::MessageLoopHandler {
  public:
   explicit Command(CommandCallback callback);
   ~Command();
-  bool Start(const char* name,
-             int argc,
-             const char* const* argv,
-             fidl::InterfaceHandle<modular::ApplicationEnvironment> environment,
-             fidl::InterfaceRequest<modular::ServiceProvider> services);
+  bool Start(
+      const char* name,
+      int argc,
+      const char* const* argv,
+      fidl::InterfaceHandle<modular::ApplicationEnvironment> environment);
 
   void SendData(const void* bytes, size_t num_bytes);
 

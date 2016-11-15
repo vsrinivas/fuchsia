@@ -5,6 +5,8 @@
 #ifndef APPS_MOTERM_MOTERM_VIEW_H_
 #define APPS_MOTERM_MOTERM_VIEW_H_
 
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/moterm/command.h"
 #include "apps/moterm/moterm_model.h"
 #include "apps/moterm/moterm_params.h"
@@ -28,7 +30,7 @@ class MotermView : public mozart::BaseView,
  public:
   MotermView(mozart::ViewManagerPtr view_manager,
              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-             fonts::FontProviderPtr font_provider,
+             modular::ApplicationContext* context,
              const MotermParams& moterm_params);
   ~MotermView() override;
 
@@ -67,6 +69,7 @@ class MotermView : public mozart::BaseView,
   bool force_next_draw_;
 
   mozart::BufferProducer buffer_producer_;
+  modular::ApplicationContext* context_;
   mozart::SkiaFontLoader font_loader_;
   sk_sp<SkTypeface> regular_typeface_;
 

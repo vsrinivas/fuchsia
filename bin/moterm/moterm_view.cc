@@ -29,50 +29,57 @@ constexpr ftl::TimeDelta kBlinkInterval = ftl::TimeDelta::FromMilliseconds(500);
 MotermView::MotermView(
     mozart::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-    fonts::FontProviderPtr font_provider,
+    modular::ApplicationContext* context,
     const MotermParams& moterm_params)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
                "Moterm"),
       input_handler_(GetViewServiceProvider(), this),
       model_(MotermModel::Size(24, 80), this),
-      font_loader_(std::move(font_provider)),
+      context_(context),
+      font_loader_(
+          context_->ConnectToEnvironmentService<fonts::FontProvider>()),
       weak_ptr_factory_(this),
       task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       params_(moterm_params) {
   FTL_CHECK(!params_.command.empty());
+  FTL_DCHECK(context_);
+
   auto font_request = fonts::FontRequest::New();
   font_request->family = "RobotoMono";
-  font_loader_.LoadFont(
-      std::move(font_request), [this](sk_sp<SkTypeface> typeface) {
-        FTL_CHECK(typeface);  // TODO(jpoichet): Fail gracefully.
-        regular_typeface_ = std::move(typeface);
+  font_loader_.LoadFont(std::move(font_request), [this](sk_sp<SkTypeface>
+                                                            typeface) {
+    FTL_CHECK(typeface);  // TODO(jpoichet): Fail gracefully.
+    regular_typeface_ = std::move(typeface);
 
-        // TODO(vtl): This duplicates some code.
-        SkPaint fg_paint;
-        fg_paint.setTypeface(regular_typeface_);
-        fg_paint.setTextSize(params_.font_size);
-        // Figure out appropriate metrics.
-        SkPaint::FontMetrics fm = {};
-        fg_paint.getFontMetrics(&fm);
-        ascent_ = static_cast<int>(ceilf(-fm.fAscent));
-        line_height_ =
-            ascent_ + static_cast<int>(ceilf(fm.fDescent + fm.fLeading));
-        FTL_DCHECK(line_height_ > 0);
-        // To figure out the advance width, measure an X. Better hope the font
-        // is monospace.
-        advance_width_ = static_cast<int>(ceilf(fg_paint.measureText("X", 1)));
-        FTL_DCHECK(advance_width_ > 0);
+    // TODO(vtl): This duplicates some code.
+    SkPaint fg_paint;
+    fg_paint.setTypeface(regular_typeface_);
+    fg_paint.setTextSize(params_.font_size);
+    // Figure out appropriate metrics.
+    SkPaint::FontMetrics fm = {};
+    fg_paint.getFontMetrics(&fm);
+    ascent_ = static_cast<int>(ceilf(-fm.fAscent));
+    line_height_ = ascent_ + static_cast<int>(ceilf(fm.fDescent + fm.fLeading));
+    FTL_DCHECK(line_height_ > 0);
+    // To figure out the advance width, measure an X. Better hope the font
+    // is monospace.
+    advance_width_ = static_cast<int>(ceilf(fg_paint.measureText("X", 1)));
+    FTL_DCHECK(advance_width_ > 0);
 
-        const char* argv[]{params_.command.c_str(),
-                           reinterpret_cast<const char*>(NULL)};
-        command_.reset(new Command([this](const void* bytes, size_t num_bytes) {
-          OnDataReceived(bytes, num_bytes);
-        }));
-        command_->Start(params_.command.c_str(), 0, argv, nullptr, nullptr);
-        Blink();
-        Invalidate();
-      });
+    const char* argv[]{params_.command.c_str(),
+                       reinterpret_cast<const char*>(NULL)};
+    command_.reset(new Command([this](const void* bytes, size_t num_bytes) {
+      OnDataReceived(bytes, num_bytes);
+    }));
+
+    fidl::InterfaceHandle<modular::ApplicationEnvironment> child_environment;
+    context_->environment()->Duplicate(fidl::GetProxy(&child_environment));
+    command_->Start(params_.command.c_str(), 0, argv,
+                    std::move(child_environment));
+    Blink();
+    Invalidate();
+  });
 }
 
 MotermView::~MotermView() {}

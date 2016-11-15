@@ -55,10 +55,9 @@ bool Command::Start(
     const char* name,
     int argc,
     const char* const* argv,
-    fidl::InterfaceHandle<modular::ApplicationEnvironment> environment,
-    fidl::InterfaceRequest<modular::ServiceProvider> services) {
-  mx_handle_t handles[5];
-  uint32_t ids[5];
+    fidl::InterfaceHandle<modular::ApplicationEnvironment> environment) {
+  mx_handle_t handles[4];
+  uint32_t ids[4];
   uint32_t count = 0;
 
   stdin_ = CreateRemotePipe(STDIN_FILENO, handles + count, ids + count);
@@ -86,13 +85,6 @@ bool Command::Start(
     handles[count] =
         static_cast<mx_handle_t>(environment.PassHandle().release()),
     ids[count] = MX_HND_TYPE_APPLICATION_ENVIRONMENT;
-    count++;
-  }
-
-  if (services) {
-    handles[count] =
-        static_cast<mx_handle_t>(services.PassMessagePipe().release()),
-    ids[count] = MX_HND_TYPE_APPLICATION_SERVICES;
     count++;
   }
 
