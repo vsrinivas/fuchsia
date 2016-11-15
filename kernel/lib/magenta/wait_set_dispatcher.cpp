@@ -351,7 +351,7 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
 
     *max_results = num_triggered_entries_;
 
-    return NO_ERROR;
+    return result;
 }
 
 WaitSetDispatcher::WaitSetDispatcher()
