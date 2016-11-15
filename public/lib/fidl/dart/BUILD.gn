@@ -6,4 +6,8 @@ import("//build/dart/dart_package.gni")
 
 dart_package("dart") {
   package_name = "lib.fidl.dart"
+
+  deps = [
+    "//third_party/dart-pkg/pub/meta",
+  ]
 }

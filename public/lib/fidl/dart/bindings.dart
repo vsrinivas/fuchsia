@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:lib.fidl.dart/core.dart' as core;
+import 'package:meta/meta.dart';
 
 part 'src/bindings/codec.dart';
 part 'src/bindings/enum.dart';

@@ -4,7 +4,7 @@
 
 part of bindings;
 
-int align(int size) =>
+int _align(int size) =>
     size + ((kAlignment - (size & kAlignmentMask)) & kAlignmentMask);
 
 const int kAlignment = 8;
@@ -118,13 +118,13 @@ class Encoder {
       _buffer.trimmed, _buffer.handles, _buffer.extent, _buffer.handles.length);
 
   void encodeStructDataHeader(StructDataHeader dataHeader) {
-    _buffer.claimMemory(align(dataHeader.size));
+    _buffer.claimMemory(_align(dataHeader.size));
     encodeUint32(dataHeader.size, StructDataHeader.kSizeOffset);
     encodeUint32(dataHeader.version, StructDataHeader.kVersionOffset);
   }
 
   void encodeArrayDataHeader(ArrayDataHeader dataHeader) {
-    _buffer.claimMemory(align(dataHeader.size));
+    _buffer.claimMemory(_align(dataHeader.size));
     encodeUint32(dataHeader.size, ArrayDataHeader.kSizeOffset);
     encodeUint32(dataHeader.numElements, ArrayDataHeader.kNumElementsOffset);
   }
@@ -265,7 +265,7 @@ class Encoder {
   void encodeNestedUnion(Union value, int offset, bool nullable) {
     encodePointerToNextUnclaimed(offset);
     var encoder = new Encoder._fromBuffer(_buffer);
-    _buffer.claimMemory(align(kUnionSize));
+    _buffer.claimMemory(_align(kUnionSize));
     encoder.encodeUnion(value, 0, nullable);
   }
 
@@ -585,7 +585,7 @@ class _Validator {
     if (end > _maxMemory) {
       throw new FidlCodecError('Cannot access out of range memory.');
     }
-    _minNextMemory = align(end);
+    _minNextMemory = _align(end);
   }
 }
 

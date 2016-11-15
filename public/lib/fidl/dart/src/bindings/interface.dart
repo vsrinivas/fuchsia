@@ -4,14 +4,61 @@
 
 part of bindings;
 
+/// A channel over which messages from interface T can be sent.
+///
+/// An interface handle holds a [channel] whose peer expects to receive messages
+/// from the FIDL interface T. The channel held by an interface handle is not
+/// currently bound, which means messages cannot yet be exchanged with the
+/// channel's peer.
+///
+/// To send messages over the channel, bind the interface handle to a `TProxy`
+/// object using use [ProxyController<T>.bind] method on the proxy's
+/// [Proxy<T>.ctrl] property.
+///
+/// Example:
+///
+/// ```dart
+/// InterfaceHandle<T> fooHandle = [...]
+/// FooProxy foo = new FooProxy();
+/// foo.ctrl.bind(fooHandle);
+/// foo.bar();
+/// ```
+///
+/// To obtain an interface handle to send over a channel, used the
+/// [Binding<T>.wrap] method on an object of type `TBinding`.
+///
+/// Example:
+///
+/// ```dart
+/// class FooImpl extends Foo {
+///   final FooBinding _binding = new FooBinding();
+///
+///   InterfaceHandle<T> getInterfaceHandle() => _binding.wrap(this);
+///
+///   @override
+///   void bar() {
+///     print('Received bar message.');
+///   }
+/// }
+/// ```
 class InterfaceHandle<T> {
+  /// Creates an interface handle that wraps the given channel.
   InterfaceHandle(this._channel, this.version);
 
+  /// The underlying channel messages will be sent over when the interface
+  /// handle is bound to a [Proxy].
+  ///
+  /// To take the channel from this object, use [passChannel].
   core.Channel get channel => _channel;
   core.Channel _channel;
 
+  /// The version of the interface this object expects at the remote end of the
+  /// channel.
   final int version;
 
+  /// Returns [channel] and sets [channel] to null.
+  ///
+  /// Useful for taking ownership of the underlying channel.
   core.Channel passChannel() {
     final core.Channel result = _channel;
     _channel = null;
@@ -19,12 +66,58 @@ class InterfaceHandle<T> {
   }
 }
 
+/// A channel over which messages from interface T can be received.
+///
+/// An interface request holds a [channel] whose peer expects to be able to send
+/// messages from the FIDL interface T. A channel held by an interface request
+/// is not currently bound, which means messages cannot yet be exchanged with
+/// the channel's peer.
+///
+/// To receive messages sent over the channel, bind the interface handle using
+/// [Binding<T>.bind] on a `TBinding` object, which you typically hold as a
+/// private member variable in a class that implements [T].
+/// 
+/// Example:
+/// 
+/// ```dart
+/// class FooImpl extends Foo {
+///   final FooBinding _binding = new FooBinding();
+/// 
+///   void bind(InterfaceRequest<T> request) {
+///     _binding.bind(request);
+///   }
+/// 
+///   @override
+///   void bar() {
+///     print('Received bar message.');
+///   }
+/// }
+/// ```
+/// 
+/// To obtain an interface request to send over a channel, used the
+/// [ProxyController<T>.request] method on the [Proxy<T>.ctrl] property of an
+/// object of type `TProxy`.
+///
+/// Example:
+///
+/// ```dart
+/// FooProxy foo = new FooProxy();
+/// InterfaceRequest<T> request = foo.ctrl.request();
+/// ```
 class InterfaceRequest<T> {
+  /// Creates an interface request that wraps the given channel.
   InterfaceRequest(this._channel);
 
+  /// The underlying channel messages will be received over when the interface
+  /// handle is bound to [Binding].
+  ///
+  /// To take the channel from this object, use [passChannel].
   core.Channel get channel => _channel;
   core.Channel _channel;
 
+  /// Returns [channel] and sets [channel] to null.
+  ///
+  /// Useful for taking ownership of the underlying channel.
   core.Channel passChannel() {
     final core.Channel result = _channel;
     _channel = null;
@@ -32,12 +125,26 @@ class InterfaceRequest<T> {
   }
 }
 
+/// Listens for messages and dispatches them to an implementation of T.
 abstract class Binding<T> {
+  /// Creates a binding object in an unbound state.
+  ///
+  /// Rather than creating a [Binding<T>] object directly, you typically create
+  /// a `TBinding` object, which are subclasses of [Binding<T>] created by the
+  /// FIDL compiler for a specific interface.
   Binding() {
     _reader.onReadable = _handleReadable;
   }
 
+  /// Returns an interface handle whose peer is bound to the given object.
+  ///
+  /// Creates a channel pair, binds one of the channels to this object, and
+  /// returns the other channel. Messages sent over the returned channel will be
+  /// decoded and dispatched to `impl`.
+  ///
+  /// The `impl` parameter must not be null.
   InterfaceHandle<T> wrap(T impl) {
+    assert(!isBound);
     core.ChannelPair pair = new core.ChannelPair();
     if (pair.status != core.NO_ERROR)
       return null;
@@ -46,22 +153,59 @@ abstract class Binding<T> {
     return new InterfaceHandle<T>(pair.passChannel1(), version);
   }
 
+  /// Binds the given implementation to the given interface request.
+  ///
+  /// Listens for messages on channel underlying the given interface request,
+  /// decodes them, and dispatches the decoded messages to `impl`.
+  ///
+  /// This object must not already be bound.
+  ///
+  /// The `impl` and `interfaceRequest` parameters must not be null. The
+  /// `channel` property of the given `interfaceRequest` must not be null.
   void bind(T impl, InterfaceRequest<T> interfaceRequest) {
+    assert(!isBound);
+    assert(impl != null);
+    assert(interfaceRequest != null);
+    core.Channel channel = interfaceRequest.passChannel();
+    assert(channel != null);
     _impl = impl;
-    _reader.bind(interfaceRequest.passChannel());
+    _reader.bind(channel);
   }
 
+  /// Unbinds [impl] and returns the unbound channel as an interface request.
+  ///
+  /// Stops listening for messages on the bound channel, wraps the channel in an
+  /// interface request of the appropriate type, and returns that interface
+  /// request.
+  ///
+  /// The object must have previously been bound (e.g., using [bind]).
   InterfaceRequest<T> unbind() {
+    assert(isBound);
     final InterfaceRequest<T> result =
         new InterfaceRequest<T>(_reader.unbind());
     _impl = null;
     return result;
   }
 
+  /// The implementation of [T] bound using this object.
+  ///
+  /// If this object is not bound, this property is null.
   T get impl => _impl;
   T _impl;
 
+  /// Whether this object is bound to a channel.
+  ///
+  /// See [bind] and [unbind] for more information.
+  bool get isBound => _impl != null;
+
+  /// Decodes the given message and dispatches the decoded message to [impl].
+  ///
+  /// This function is called by this object whenever a message arrives over a
+  /// bound channel.
+  @protected
   void handleMessage(ServiceMessage message, MessageSink respond);
+
+  /// The version of [T] implemented by this object.
   int get version;
 
   void _handleReadable() {
@@ -99,64 +243,133 @@ abstract class Binding<T> {
   final core.ChannelReader _reader = new core.ChannelReader();
 }
 
-/// The object that [ProxyController.error] completes with when there is
+/// The object that [ProxyController<T>.error] completes with when there is
 /// an error.
 class ProxyError {
+  /// Creates a proxy error with the given message.
+  ///
+  /// The `message` argument must not be null.
   ProxyError(this.message);
 
+  /// What went wrong.
   final String message;
 
+  @override
   String toString() => 'ProxyError: $message';
 }
 
+/// The control plane for an interface proxy.
+///
+/// A proxy controller lets you operate on the local [Proxy<T>] object itself
+/// rather than send messages to the remote implementation of the proxy. For
+/// example, you can [unbind] or [close] the proxy.
+///
+/// You typically obtain a [ProxyController<T>] object as the [Proxy<T>.ctrl]
+/// property of a `TProxy` object.
+/// 
+/// Example:
+/// 
+/// ```dart
+/// FooProxy foo = new FooProxy();
+/// fooProvider.getFoo(foo.ctrl.request());
+/// ```
 class ProxyController<T> {
+  /// Creates proxy controller.
+  ///
+  /// Proxy controllers are not typically created directly. Instead, you
+  /// typically obtain a [ProxyController<T>] object as the [Proxy<T>.ctrl]
+  /// property of a `TProxy` object.
   ProxyController({ this.serviceName }) {
     _reader.onReadable = _handleReadable;
   }
 
+  /// The service name associated with [T], if any.
+  ///
+  /// Corresponds to the `[ServiceName]` attribute in the FIDL interface
+  /// definition.
+  ///
+  /// This string is typically used with the `ServiceProvider` interface to
+  /// request an implementation of [T].
   final String serviceName;
 
+  /// Creates an interface request whose peer is bound to this interface proxy.
+  ///
+  /// Creates a channel pair, binds one of the channels to this object, and
+  /// returns the other channel. Calls to the proxy will be encoded as messages
+  /// and sent to the returned channel.
+  ///
+  /// The proxy must not already have been bound.
+  ///
+  /// The `version` parameter must not be null.
   InterfaceRequest<T> request({ int version: 0 }) {
+    assert(version != null);
+    assert(!isBound);
     core.ChannelPair pair = new core.ChannelPair();
-    if (pair.status != core.NO_ERROR)
-      return null;
+    assert(pair.status != core.NO_ERROR);
     _version = version;
     _reader.bind(pair.passChannel0());
     return new InterfaceRequest<T>(pair.passChannel1());
   }
 
+  /// Binds the proxy to the given interface handle.
+  ///
+  /// Calls to the proxy will be encoded as messages and sent over the channel
+  /// underlying the given interface handle.
+  ///
+  /// This object must not already be bound.
+  ///
+  /// The `interfaceHandle` parameter must not be null. The `channel` property
+  /// of the given `interfaceHandle` must not be null.
   void bind(InterfaceHandle<T> interfaceHandle) {
+    assert(!isBound);
+    assert(interfaceHandle != null);
+    assert(interfaceHandle.channel != null);
     _version = interfaceHandle.version;
     _reader.bind(interfaceHandle.passChannel());
   }
 
+  /// Unbinds the proxy and returns the unbound channel as an interface handle.
+  ///
+  /// Calls on the proxy will no longer be encoded as messages on the bound
+  /// channel.
+  ///
+  /// The proxy must have previously been bound (e.g., using [bind]).
   InterfaceHandle<T> unbind() {
+    assert(isBound);
     if (!_reader.isBound)
       return null;
     return new InterfaceHandle<T>(_reader.unbind(), _version);
   }
 
+  /// Whether this object is bound to a channel.
+  ///
+  /// See [bind] and [unbind] for more information.
   bool get isBound => _reader.isBound;
 
+  /// Close the channel bound to the proxy.
+  ///
+  /// The proxy must have previously been bound (e.g., using [bind]).
   void close() {
+    assert(isBound);
     if (_pendingResponsesCount > 0)
       proxyError('The proxy is closed.');
     _reset();
     _reader.close();
   }
 
+  /// Called whenever this object receives a response on a bound channel.
+  ///
+  /// Used by subclasses of [Proxy<T>] to receive responses to messages.
   MessageSink onResponse;
 
   final core.ChannelReader _reader = new core.ChannelReader();
   final HashMap<int, Function> _callbackMap = new HashMap<int, Function>();
 
-  /// If there is an error in using this proxy, this future completes with
-  /// a ProxyError.
-  Future get error => _errorCompleter.future;
+  /// A future that completes when an error is generated by the proxy.
+  Future<ProxyError> get error => _errorCompleter.future;
   Completer<ProxyError> _errorCompleter = new Completer<ProxyError>();
 
-  /// Version of this interface that the remote side supports. Updated when a
-  /// call to [queryVersion] or [requireVersion] is made.
+  /// Version of this interface that the remote side supports.
   int get version => _version;
   int _version = 0;
 
@@ -194,6 +407,9 @@ class ProxyController<T> {
     }
   }
 
+  /// Sends the given messages over the bound channel.
+  ///
+  /// Used by subclasses of [Proxy<T>] to send encoded messages.
   void sendMessage(Struct message, int name) {
     if (!_reader.isBound) {
       proxyError('The proxy is closed.');
@@ -208,6 +424,10 @@ class ProxyController<T> {
       proxyError('Failed to write to channel: ${_reader.channel} (status: $status)');
   }
 
+  /// Sends the given messages over the bound channel and registers a callback
+  /// to handle the response.
+  ///
+  /// Used by subclasses of [Proxy<T>] to send encoded messages.
   void sendMessageWithRequestId(Struct message,
                                 int name,
                                 int id,
@@ -240,6 +460,10 @@ class ProxyController<T> {
     _pendingResponsesCount++;
   }
 
+  /// Returns the callback associated with the given response message.
+  ///
+  /// Used by subclasses of [Proxy<T>] to retrieve registered callbacks when
+  /// handling response messages.
   Function getCallback(ServiceMessage message) {
     if (!message.header.hasRequestId) {
       proxyError('Expected a message with a valid request id.');
@@ -254,6 +478,7 @@ class ProxyController<T> {
     return result;
   }
 
+  /// Complete the [error] future with the given message.
   void proxyError(String message) {
     if (!_errorCompleter.isCompleted) {
       error.whenComplete(() {
@@ -264,9 +489,20 @@ class ProxyController<T> {
   }
 }
 
+/// Sends messages to a remote implementation of [T]
 class Proxy<T> {
+  /// Creates a proxy object with the given [ctrl].
+  ///
+  /// Rather than creating [Proxy<T>] object directly, you typically create
+  /// `TProxy` objects, which are subclasses of [Proxy<T>] created by the FIDL
+  /// compiler for a specific interface.
   Proxy(this.ctrl);
 
+  /// The control plane for this proxy.
+  ///
+  /// Methods that manipulate the local proxy (as opposed to sending messages
+  /// to the remote implementation of [T]) are exposed on this [ctrl] object to
+  /// avoid naming conflicts with the methods of [T].
   final ProxyController<T> ctrl;
 
   // In general it's probably better to avoid adding fields and methods to this

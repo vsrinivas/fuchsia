@@ -4,7 +4,11 @@
 
 part of bindings;
 
+/// An enumerated typed in a FIDL interface.
 class FidlEnum {
+  /// The numerical value assigned to this value in the interface.
   final int fidlEnumValue;
+
+  /// Creates an instance with the given numerical value.
   const FidlEnum(this.fidlEnumValue);
 }
