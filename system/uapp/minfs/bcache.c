@@ -205,7 +205,7 @@ mx_status_t bcache_read(bcache_t* bc, uint32_t bno, void* data, uint32_t off, ui
 }
 
 mx_status_t bcache_sync(bcache_t* bc) {
-    return ioctl_device_sync(bc->fd);
+    return fsync(bc->fd);
 }
 
 int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize, uint32_t num) {

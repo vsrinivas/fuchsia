@@ -358,6 +358,9 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
         attr->size = dev->ops->get_size(dev);
         return msg->datalen;
     }
+    case MXRIO_SYNC: {
+        return do_ioctl(dev, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0);
+    }
     case MXRIO_IOCTL: {
         if (len > MXIO_IOCTL_MAX_INPUT || arg > (ssize_t)sizeof(msg->data)) {
             return ERR_INVALID_ARGS;
