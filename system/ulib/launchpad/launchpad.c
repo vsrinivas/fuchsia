@@ -87,14 +87,14 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
 }
 
 // Create a new process and a launchpad that will set it up.
-mx_status_t launchpad_create(mx_handle_t job,
+mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t transfered_job,
                              const char* name, launchpad_t** result) {
     // -1: MX_MAX_NAME_LEN includes the trailing NUL
     uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN - 1);
     launchpad_t* lp = NULL;
 
     mx_handle_t proc = MX_HANDLE_INVALID;
-    mx_status_t status = mx_process_create(job, name, name_len, 0, &proc);
+    mx_status_t status = mx_process_create(creation_job, name, name_len, 0, &proc);
     if (status < 0)
         goto cleanup;
 
@@ -102,9 +102,8 @@ mx_status_t launchpad_create(mx_handle_t job,
     if (status != NO_ERROR)
         goto cleanup;
 
-    if (job > 0) {
-        // TODO(cpu): remove the |job| check.
-        status = launchpad_add_handle(lp, job, MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    if (transfered_job != MX_HANDLE_INVALID) {
+        status = launchpad_add_handle(lp, transfered_job, MX_HND_INFO(MX_HND_TYPE_JOB, 0));
         if (status != NO_ERROR)
             goto cleanup;
     }
@@ -113,13 +112,18 @@ mx_status_t launchpad_create(mx_handle_t job,
     return status;
 
 cleanup:
-    if (job > 0)
-        mx_handle_close(job);
+    if (transfered_job != MX_HANDLE_INVALID)
+        mx_handle_close(transfered_job);
     if (proc != MX_HANDLE_INVALID)
         mx_handle_close(proc);
     if (lp != NULL)
         launchpad_destroy(lp);
     return status;
+}
+
+mx_status_t launchpad_create(mx_handle_t job,
+                             const char* name, launchpad_t** result) {
+    return launchpad_create_with_jobs(job, job, name, result);
 }
 
 mx_handle_t launchpad_get_process_handle(launchpad_t* lp) {

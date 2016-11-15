@@ -18,9 +18,17 @@ typedef struct launchpad launchpad_t;
 
 // Create a new process and a launchpad that will set it up. The
 // job handle is consumed regardless of the result.
-// TODO(cpu): Temporarily we allow |job| to be 0.
+// It is equivalent to calling launchpad_create_with_jobs(job, job ..).
 mx_status_t launchpad_create(mx_handle_t job, const char* name,
                              launchpad_t** lp);
+
+// Create a new process and a launchpad that will set it up. The
+// transfered_job handle is optional (can be 0) when valid, is consumed
+// regardless of the result.
+mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job,
+                                       mx_handle_t transfered_job,
+                                       const char* name,
+                                       launchpad_t** result);
 
 // Create a new launchpad for a given existing process handle.
 // On success, the launchpad takes ownership of the process handle.

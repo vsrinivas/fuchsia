@@ -11,7 +11,10 @@
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
 
+#include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+
+#include <mxio/util.h>
 
 #include <unittest/unittest.h>
 
@@ -28,7 +31,10 @@ static bool launchpad_test(void)
 
     launchpad_t* lp = NULL;
 
-    mx_status_t status = launchpad_create(0u, test_inferior_child_name, &lp);
+    mx_handle_t mxio_job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    ASSERT_GT(mxio_job, 0, "no mxio job object");
+
+    mx_status_t status = launchpad_create(mxio_job, test_inferior_child_name, &lp);
     ASSERT_EQ(status, NO_ERROR, "launchpad_create");
 
     status = launchpad_elf_load(lp, launchpad_vmo_from_file(program_path));
