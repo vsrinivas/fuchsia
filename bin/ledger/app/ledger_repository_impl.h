@@ -6,8 +6,8 @@
 #define APPS_LEDGER_SRC_APP_LEDGER_REPOSITORY_IMPL_H_
 
 #include "apps/ledger/services/ledger.fidl.h"
-#include "apps/ledger/src/app/auto_cleanable.h"
 #include "apps/ledger/src/app/ledger_manager.h"
+#include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"

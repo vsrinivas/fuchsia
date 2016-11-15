@@ -15,7 +15,6 @@ group("app") {
 
 source_set("lib") {
   sources = [
-    "auto_cleanable.h",
     "constants.cc",
     "constants.h",
     "branch_tracker.h",
@@ -40,6 +39,7 @@ source_set("lib") {
 
   deps = [
     "//apps/ledger/services",
+    "//apps/ledger/src/callback",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue",
     "//apps/ledger/src/glue/data_pipe",
@@ -75,7 +75,6 @@ executable("unittests") {
   testonly = true
 
   sources = [
-    "auto_cleanable_unittest.cc",
     "ledger_manager_unittest.cc",
     "page_impl_unittest.cc",
     "page_manager_unittest.cc",

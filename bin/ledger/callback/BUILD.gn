@@ -4,6 +4,7 @@
 
 source_set("callback") {
   sources = [
+    "auto_cleanable.h",
     "cancellable.cc",
     "cancellable.h",
     "cancellable_helper.cc",
@@ -21,6 +22,7 @@ executable("unittests") {
   output_name = "ledger_callback_unittests"
 
   sources = [
+    "auto_cleanable_unittest.cc",
     "cancellable_helper_unittest.cc",
     "cancellable_unittest.cc",
   ]

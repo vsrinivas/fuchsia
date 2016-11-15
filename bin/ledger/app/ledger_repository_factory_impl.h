@@ -9,8 +9,8 @@
 #include <string>
 
 #include "apps/ledger/services/ledger.fidl.h"
-#include "apps/ledger/src/app/auto_cleanable.h"
 #include "apps/ledger/src/app/ledger_repository_impl.h"
+#include "apps/ledger/src/callback/auto_cleanable.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
 

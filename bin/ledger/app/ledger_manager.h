@@ -10,8 +10,8 @@
 #include <memory>
 #include <type_traits>
 
-#include "apps/ledger/src/app/auto_cleanable.h"
 #include "apps/ledger/src/app/ledger_impl.h"
+#include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"

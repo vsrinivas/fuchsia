@@ -8,9 +8,9 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/src/app/auto_cleanable.h"
 #include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
+#include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

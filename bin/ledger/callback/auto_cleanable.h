@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_APP_AUTO_CLEANABLE_H_
-#define APPS_LEDGER_SRC_APP_AUTO_CLEANABLE_H_
+#ifndef APPS_LEDGER_SRC_CALLBACK_AUTO_CLEANABLE_H_
+#define APPS_LEDGER_SRC_CALLBACK_AUTO_CLEANABLE_H_
 
 #include <functional>
 #include <map>
@@ -143,4 +143,4 @@ class AutoCleanableMap {
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP_AUTO_CLEANABLE_H_
+#endif  // APPS_LEDGER_SRC_CALLBACK_AUTO_CLEANABLE_H_
