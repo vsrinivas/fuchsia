@@ -90,13 +90,13 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
 mx_status_t launchpad_create(mx_handle_t job,
                              const char* name, launchpad_t** result) {
     uint32_t name_len = MIN(strlen(name), MX_MAX_NAME_LEN);
+    launchpad_t* lp = NULL;
 
-    mx_handle_t proc;
+    mx_handle_t proc = MX_HANDLE_INVALID;
     mx_status_t status = mx_process_create(job, name, name_len, 0, &proc);
     if (status < 0)
-        return status;
+        goto cleanup;
 
-    launchpad_t* lp;
     status = launchpad_create_with_process(proc, &lp);
     if (status != NO_ERROR)
         goto cleanup;
@@ -114,8 +114,10 @@ mx_status_t launchpad_create(mx_handle_t job,
 cleanup:
     if (job > 0)
         mx_handle_close(job);
-    mx_handle_close(proc);
-    launchpad_destroy(lp);
+    if (proc != MX_HANDLE_INVALID)
+        mx_handle_close(proc);
+    if (lp != NULL)
+        launchpad_destroy(lp);
     return status;
 }
 
