@@ -42,6 +42,7 @@ void dn_attach(dnode_t* dn, vnode_t* vn);
 void dn_delete(dnode_t* dn);
 
 mx_status_t dn_lookup(dnode_t* dn, dnode_t** out, const char* name, size_t len);
+mx_status_t dn_lookup_name(const dnode_t* dn, const vnode_t* vn, char* out_name, size_t out_len);
 
 void dn_add_child(dnode_t* parent, dnode_t* child);
 

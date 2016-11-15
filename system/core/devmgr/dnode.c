@@ -109,6 +109,23 @@ mx_status_t dn_lookup(dnode_t* parent, dnode_t** out, const char* name, size_t l
     return ERR_NOT_FOUND;
 }
 
+// return the (first) name matching this vnode
+mx_status_t dn_lookup_name(const dnode_t* parent, const vnode_t* vn, char* out, size_t out_len) {
+    dnode_t* dn;
+    list_for_every_entry(&parent->children, dn, dnode_t, dn_entry) {
+        if (dn->vnode == vn) {
+            mx_off_t len = DN_NAME_LEN(dn->flags);
+            if (len > out_len-1) {
+                len = out_len-1;
+            }
+            memcpy(out, dn->name, len);
+            out[len] = '\0';
+            return NO_ERROR;
+        }
+    }
+    return ERR_NOT_FOUND;
+}
+
 mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len) {
     vdircookie_t* c = cookie;
     dnode_t* last = c->p;

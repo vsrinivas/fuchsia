@@ -23,26 +23,18 @@
 #define MAXBLOCKS 8192
 #define BLOCKSIZE 8192
 
-typedef struct mnode mnode_t;
-struct mnode {
-    vnode_t vn;
-    size_t datalen;
-    uint8_t* block[MAXBLOCKS];
-};
-
 mx_status_t mem_get_node(vnode_t** out, mx_device_t* dev);
 mx_status_t mem_can_unlink(dnode_t* dn);
 
 static void mem_release(vnode_t* vn) {
     xprintf("memfs: vn %p destroyed\n", vn);
 
-    mnode_t* mem = vn->pdata;
     for (int i = 0; i < MAXBLOCKS; i++) {
-        if (mem->block[i]) {
-            free(mem->block[i]);
+        if (vn->data.block[i]) {
+            free(vn->data.block[i]);
         }
     }
-    free(mem);
+    free(vn);
 }
 
 mx_status_t memfs_open(vnode_t** _vn, uint32_t flags) {
@@ -60,13 +52,12 @@ mx_status_t memfs_close(vnode_t* vn) {
 }
 
 static ssize_t mem_read(vnode_t* vn, void* _data, size_t len, size_t off) {
-    mnode_t* mem = vn->pdata;
     uint8_t* data = _data;
     ssize_t count = 0;
-    if (off >= mem->datalen)
+    if (off >= vn->data.length)
         return 0;
-    if (len > (mem->datalen - off))
-        len = mem->datalen - off;
+    if (len > (vn->data.length - off))
+        len = vn->data.length - off;
 
     size_t bno = off / BLOCKSIZE;
     off = off % BLOCKSIZE;
@@ -74,11 +65,11 @@ static ssize_t mem_read(vnode_t* vn, void* _data, size_t len, size_t off) {
         size_t xfer = (BLOCKSIZE - off);
         if (len < xfer)
             xfer = len;
-        if (mem->block[bno] == NULL) {
+        if (vn->data.block[bno] == NULL) {
             xprintf("mem_read: hole at %zu\n", bno);
             memset(data, 0, xfer);
         } else {
-            memcpy(data, mem->block[bno] + off, xfer);
+            memcpy(data, vn->data.block[bno] + off, xfer);
         }
         data += xfer;
         len -= xfer;
@@ -90,7 +81,6 @@ static ssize_t mem_read(vnode_t* vn, void* _data, size_t len, size_t off) {
 }
 
 static ssize_t mem_write(vnode_t* vn, const void* _data, size_t len, size_t off) {
-    mnode_t* mem = vn->pdata;
     const uint8_t* data = _data;
     ssize_t count = 0;
     size_t bno = off / BLOCKSIZE;
@@ -102,17 +92,17 @@ static ssize_t mem_write(vnode_t* vn, const void* _data, size_t len, size_t off)
         if (bno >= MAXBLOCKS) {
             return count ? count : ERR_NO_MEMORY;
         }
-        if (mem->block[bno] == NULL) {
+        if (vn->data.block[bno] == NULL) {
             xprintf("mem_write: alloc at %zu\n", bno);
-            if ((mem->block[bno] = calloc(1, BLOCKSIZE)) == NULL) {
+            if ((vn->data.block[bno] = calloc(1, BLOCKSIZE)) == NULL) {
                 return count ? count : ERR_NO_MEMORY;
             }
         }
-        memcpy(mem->block[bno] + off, data, xfer);
+        memcpy(vn->data.block[bno] + off, data, xfer);
 
         size_t pos = bno * BLOCKSIZE + off + xfer;
-        if (pos > mem->datalen)
-            mem->datalen = pos;
+        if (pos > vn->data.length)
+            vn->data.length = pos;
 
         data += xfer;
         len -= xfer;
@@ -124,17 +114,16 @@ static ssize_t mem_write(vnode_t* vn, const void* _data, size_t len, size_t off)
 }
 
 mx_status_t memfs_truncate(vnode_t* vn, size_t len) {
-    mnode_t* mem = vn->pdata;
     mx_status_t r = 0;
 
-    while (len < mem->datalen) {
+    while (len < vn->data.length) {
         // Truncate should make the file shorter
 
         // Observe the final blocks of the file first
-        size_t bno = mem->datalen / BLOCKSIZE;
+        size_t bno = vn->data.length / BLOCKSIZE;
         size_t b_start = bno * BLOCKSIZE;
 
-        if (b_start == mem->datalen) {
+        if (b_start == vn->data.length) {
             // If the last block is empty, move to the one before
             bno--;
             b_start -= BLOCKSIZE;
@@ -143,26 +132,26 @@ mx_status_t memfs_truncate(vnode_t* vn, size_t len) {
 
         if (len <= b_start) {
             // Wipe out this entire block
-            if (mem->block[bno] != NULL) {
-                free(mem->block[bno]);
-                mem->block[bno] = NULL;
+            if (vn->data.block[bno] != NULL) {
+                free(vn->data.block[bno]);
+                vn->data.block[bno] = NULL;
             }
-            mem->datalen = b_start;
+            vn->data.length = b_start;
         } else {
             // Wipe out a portion of a block
             size_t sub_block_off = len - b_start;
-            memset(mem->block[bno] + sub_block_off, 0, BLOCKSIZE - sub_block_off);
-            mem->datalen = len;
+            memset(vn->data.block[bno] + sub_block_off, 0, BLOCKSIZE - sub_block_off);
+            vn->data.length = len;
         }
     }
-    if (len > mem->datalen) {
+    if (len > vn->data.length) {
         // Truncate should make the file longer
         if (len > MAXBLOCKS * BLOCKSIZE) {
             return ERR_INVALID_ARGS;
         }
         // Memfs supports sparse files, so we can simply extend the data length,
         // and trust the rest of the filesystem to deal with this appropriately
-        mem->datalen = len;
+        vn->data.length = len;
     }
     return r;
 }
@@ -291,10 +280,9 @@ mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_
 }
 
 static mx_status_t mem_getattr(vnode_t* vn, vnattr_t* attr) {
-    mnode_t* mem = vn->pdata;
     memset(attr, 0, sizeof(vnattr_t));
     if (vn->dnode == NULL) {
-        attr->size = mem->datalen;
+        attr->size = vn->data.length;
         attr->mode = V_TYPE_FILE | V_IRUSR;
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
@@ -310,16 +298,16 @@ mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len)
     return dn_readdir(parent->dnode, cookie, data, len);
 }
 
-static mx_status_t _mem_create(vnode_t* parent, mnode_t** out,
+static mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
                                const char* name, size_t namelen,
                                bool isdir);
 
-static mx_status_t mem_create(vnode_t* vn, vnode_t** out, const char* name, size_t len, uint32_t mode) {
-    mnode_t* mem;
-    mx_status_t r = _mem_create(vn, &mem, name, len, S_ISDIR(mode));
+static mx_status_t mem_create(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode) {
+    vnode_t* vn;
+    mx_status_t r = _mem_create(vndir, &vn, name, len, S_ISDIR(mode));
     if (r >= 0) {
-        vn_acquire(&mem->vn);
-        *out = &mem->vn;
+        vn_acquire(vn);
+        *out = vn;
     }
     return r;
 }
@@ -400,67 +388,66 @@ static dnode_t mem_root_dn = {
     .children = LIST_INITIAL_VALUE(mem_root_dn.children),
 };
 
-static mnode_t mem_root = {
-    .vn = {
-        .ops = &vn_mem_ops_dir,
-        .refcount = 2, // One for 'created', one for 'unlinkable'
-        .pdata = &mem_root,
-        .dnode = &mem_root_dn,
-        .dn_list = LIST_INITIAL_VALUE(mem_root.vn.dn_list),
-        .watch_list = LIST_INITIAL_VALUE(mem_root.vn.watch_list),
-    },
+static vnode_t mem_root = {
+    .ops = &vn_mem_ops_dir,
+    .refcount = 2, // One for 'created', one for 'unlinkable'
+    .dnode = &mem_root_dn,
+    .dn_list = LIST_INITIAL_VALUE(mem_root.dn_list),
+    .watch_list = LIST_INITIAL_VALUE(mem_root.watch_list),
 };
 
-static mx_status_t _mem_create(vnode_t* parent, mnode_t** out,
+static mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
                                const char* name, size_t namelen,
                                bool isdir) {
     if ((parent == NULL) || (parent->dnode == NULL)) {
         return ERR_INVALID_ARGS;
     }
 
-    mnode_t* mem;
-    if ((mem = calloc(1, sizeof(mnode_t))) == NULL) {
+    vnode_t* vn;
+    if ((vn = calloc(1, sizeof(vnode_t)+MAXBLOCKS*sizeof(uint8_t*))) == NULL) {
         return ERR_NO_MEMORY;
     }
     xprintf("mem_create: vn=%p, parent=%p name='%.*s'\n",
-            mem, parent, (int)namelen, name);
+            vn, parent, (int)namelen, name);
 
     if (isdir) {
-        mem->vn.ops = &vn_mem_ops_dir;
+        vn->ops = &vn_mem_ops_dir;
     } else {
-        mem->vn.ops = &vn_mem_ops;
+        vn->ops = &vn_mem_ops;
     }
-    mem->vn.pdata = mem;
-    list_initialize(&mem->vn.dn_list);
-    list_initialize(&mem->vn.watch_list);
+    list_initialize(&vn->dn_list);
+    list_initialize(&vn->watch_list);
 
     mx_status_t r;
     dnode_t* dn;
     if ((r = dn_lookup(parent->dnode, &dn, name, namelen)) == NO_ERROR) {
-        free(mem);
+        free(vn);
         return ERR_ALREADY_EXISTS;
     }
 
     // dnode takes a reference to the vnode
-    if ((r = dn_create(&dn, name, namelen, &mem->vn)) < 0) {
-        free(mem);
+    if ((r = dn_create(&dn, name, namelen, vn)) < 0) {
+        free(vn);
         return r;
     }
     dn_add_child(parent->dnode, dn);
 
     if (isdir) {
-        mem->vn.dnode = dn;
+        vn->dnode = dn;
     }
 
-    *out = mem;
+    *out = vn;
     return NO_ERROR;
 }
 
 vnode_t* memfs_get_root(void) {
-    mem_root_dn.vnode = &mem_root.vn;
-    return &mem_root.vn;
+    mem_root_dn.vnode = &mem_root;
+    return &mem_root;
 }
 
+mx_status_t memfs_lookup_name(const vnode_t* vn, char* out_name, size_t out_len) {
+    return dn_lookup_name(vn->dnode->parent, vn, out_name, out_len);
+}
 
 static dnode_t vfs_root_dn = {
     .name = "<root>",
@@ -469,33 +456,30 @@ static dnode_t vfs_root_dn = {
     .parent = &vfs_root_dn,
 };
 
-static mnode_t vfs_root = {
-    .vn = {
-        .ops = &vn_mem_ops_dir,
-        .refcount = 1,
-        .pdata = &vfs_root,
-        .dnode = &vfs_root_dn,
-        .dn_list = LIST_INITIAL_VALUE(vfs_root.vn.dn_list),
-        .watch_list = LIST_INITIAL_VALUE(vfs_root.vn.watch_list),
-    },
+static vnode_t vfs_root = {
+    .ops = &vn_mem_ops_dir,
+    .refcount = 1,
+    .dnode = &vfs_root_dn,
+    .dn_list = LIST_INITIAL_VALUE(vfs_root.dn_list),
+    .watch_list = LIST_INITIAL_VALUE(vfs_root.watch_list),
 };
 
-static mnode_t* vn_data;
-static mnode_t* vn_volume;
-static mnode_t* vn_socket;
+static vnode_t* vn_data;
+static vnode_t* vn_volume;
+static vnode_t* vn_socket;
 
 // Hardcoded initialization function to access global root directory
 vnode_t* vfs_create_global_root(void) {
     if (vfs_root_dn.vnode == NULL) {
-        vfs_root_dn.vnode = &vfs_root.vn;
+        vfs_root_dn.vnode = &vfs_root;
         //TODO implement fs mount mechanism
         dn_add_child(&vfs_root_dn, devfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, bootfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, memfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, systemfs_get_root()->dnode);
-        _mem_create(&vfs_root.vn, &vn_data, "data", 4, true);
-        _mem_create(&vfs_root.vn, &vn_volume, "volume", 6, true);
+        _mem_create(&vfs_root, &vn_data, "data", 4, true);
+        _mem_create(&vfs_root, &vn_volume, "volume", 6, true);
         _mem_create(devfs_get_root(), &vn_socket, "socket", 6, true);
     }
-    return &vfs_root.vn;
+    return &vfs_root;
 }

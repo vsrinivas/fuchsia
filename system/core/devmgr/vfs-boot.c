@@ -18,15 +18,6 @@
 
 #define MXDEBUG 0
 
-typedef struct vnboot vnboot_t;
-struct vnboot {
-    vnode_t vn;
-    mx_handle_t vmo;
-    mx_off_t off;
-    void* data;
-    size_t datalen;
-};
-
 mx_status_t vnb_get_node(vnode_t** out, mx_device_t* dev);
 
 static void vnb_release(vnode_t* vn) {
@@ -36,13 +27,12 @@ static void vnb_release(vnode_t* vn) {
 }
 
 static ssize_t vnb_read(vnode_t* vn, void* data, size_t len, size_t off) {
-    vnboot_t* vnb = vn->pdata;
-    if (off > vnb->datalen)
+    if (off > vn->vmo.length)
         return 0;
-    size_t rlen = vnb->datalen - off;
+    size_t rlen = vn->vmo.length - off;
     if (len > rlen)
         len = rlen;
-    memcpy(data, vnb->data + off, len);
+    memcpy(data, vn->vmo.data + off, len);
     return len;
 }
 
@@ -51,10 +41,9 @@ static ssize_t vnb_write(vnode_t* vn, const void* data, size_t len, size_t off) 
 }
 
 static mx_status_t vnb_getattr(vnode_t* vn, vnattr_t* attr) {
-    vnboot_t* vnb = vn->pdata;
     memset(attr, 0, sizeof(vnattr_t));
     if (vn->dnode == NULL) {
-        attr->size = vnb->datalen;
+        attr->size = vn->vmo.length;
         attr->mode = V_TYPE_FILE | V_IRUSR;
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
@@ -67,15 +56,14 @@ static mx_status_t vnb_create(vnode_t* vn, vnode_t** out, const char* name, size
 }
 
 mx_handle_t vfs_get_vmofile(vnode_t* vn, mx_off_t* off, mx_off_t* len) {
-    vnboot_t* vnb = vn->pdata;
     mx_handle_t vmo;
-    mx_status_t status = mx_handle_duplicate(vnb->vmo, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER, &vmo);
+    mx_status_t status = mx_handle_duplicate(vn->vmo.h, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER, &vmo);
     if (status < 0)
         return status;
-    xprintf("vmofile: %x (%x) off=%" PRIu64 " len=%zd\n", vmo, vnb->vmo, vnb->off, vnb->datalen);
+    xprintf("vmofile: %x (%x) off=%" PRIu64 " len=%zd\n", vmo, vn->vmo.h, vn->vmo.offset, vn->vmo.length);
 
-    *off = vnb->off;
-    *len = vnb->datalen;
+    *off = vn->vmo.offset;
+    *len = vn->vmo.length;
     return vmo;
 }
 
@@ -101,15 +89,12 @@ static dnode_t bootfs_root_dn = {
     .children = LIST_INITIAL_VALUE(bootfs_root_dn.children),
 };
 
-static vnboot_t bootfs_root = {
-    .vn = {
-        .ops = &vn_boot_ops,
-        .refcount = 1,
-        .pdata = &bootfs_root,
-        .dnode = &bootfs_root_dn,
-        .dn_list = LIST_INITIAL_VALUE(bootfs_root.vn.dn_list),
-        .watch_list = LIST_INITIAL_VALUE(bootfs_root.vn.watch_list),
-    },
+static vnode_t bootfs_root = {
+    .ops = &vn_boot_ops,
+    .refcount = 1,
+    .dnode = &bootfs_root_dn,
+    .dn_list = LIST_INITIAL_VALUE(bootfs_root.dn_list),
+    .watch_list = LIST_INITIAL_VALUE(bootfs_root.watch_list),
 };
 
 static dnode_t systemfs_root_dn = {
@@ -118,46 +103,42 @@ static dnode_t systemfs_root_dn = {
     .children = LIST_INITIAL_VALUE(systemfs_root_dn.children),
 };
 
-static vnboot_t systemfs_root = {
-    .vn = {
-        .ops = &vn_boot_ops,
-        .refcount = 1,
-        .pdata = &systemfs_root,
-        .dnode = &systemfs_root_dn,
-        .dn_list = LIST_INITIAL_VALUE(systemfs_root.vn.dn_list),
-        .watch_list = LIST_INITIAL_VALUE(systemfs_root.vn.watch_list),
-    },
+static vnode_t systemfs_root = {
+    .ops = &vn_boot_ops,
+    .refcount = 1,
+    .dnode = &systemfs_root_dn,
+    .dn_list = LIST_INITIAL_VALUE(systemfs_root.dn_list),
+    .watch_list = LIST_INITIAL_VALUE(systemfs_root.watch_list),
 };
 
-static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
+static mx_status_t _vnb_create(vnode_t* parent, vnode_t** out,
                                const char* name, size_t namelen,
                                mx_handle_t vmo, mx_off_t off,
                                void* data, size_t datalen) {
-    if (parent->vn.dnode == NULL) {
+    if (parent->dnode == NULL) {
         return ERR_NOT_DIR;
     }
 
-    vnboot_t* vnb;
-    if ((vnb = calloc(1, sizeof(vnboot_t))) == NULL) {
+    vnode_t* vnb;
+    if ((vnb = calloc(1, sizeof(vnode_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
     xprintf("vnb_create: vn=%p, parent=%p name='%.*s' datalen=%zd\n",
             vnb, parent, (int)namelen, name, datalen);
 
-    vnb->vn.ops = &vn_boot_ops;
-    vnb->vn.pdata = vnb;
-    list_initialize(&vnb->vn.dn_list);
-    list_initialize(&vnb->vn.watch_list);
+    vnb->ops = &vn_boot_ops;
+    list_initialize(&vnb->dn_list);
+    list_initialize(&vnb->watch_list);
 
-    vnb->data = data;
-    vnb->datalen = datalen;
-    vnb->vmo = vmo;
-    vnb->off = off;
+    vnb->vmo.data = data;
+    vnb->vmo.length = datalen;
+    vnb->vmo.h = vmo;
+    vnb->vmo.offset = off;
 
     dnode_t* dn;
     mx_status_t r;
     // dnode takes a reference to the vnode
-    if ((r = dn_create(&dn, name, namelen, &vnb->vn)) < 0) {
+    if ((r = dn_create(&dn, name, namelen, vnb)) < 0) {
         free(vnb);
         return r;
     }
@@ -165,34 +146,34 @@ static mx_status_t _vnb_create(vnboot_t* parent, vnboot_t** out,
     if (data == NULL) {
         // no data means this is a directory,
         // so take ownership of the dnode
-        vnb->vn.dnode = dn;
+        vnb->dnode = dn;
     }
 
     if (vmo) {
-        vnb->vn.flags |= V_FLAG_VMOFILE;
+        vnb->flags |= V_FLAG_VMOFILE;
     }
 
     // TODO: dups?
-    dn_add_child(parent->vn.dnode, dn);
+    dn_add_child(parent->dnode, dn);
     *out = vnb;
 
     return NO_ERROR;
 }
 
-static mx_status_t _vnb_mkdir(vnboot_t* parent, vnboot_t** out, const char* name, size_t namelen) {
+static mx_status_t _vnb_mkdir(vnode_t* parent, vnode_t** out, const char* name, size_t namelen) {
     //printf("vnb_mkdir: parent=%p name='%.*s'\n", parent, (int)namelen, name);
-    if (parent->vn.dnode == NULL) {
+    if (parent->dnode == NULL) {
         printf("bootfs: %p not a directory\n", parent);
         return ERR_NOT_DIR;
     }
 
     // existing directory of the same name?
     dnode_t* dn;
-    if (dn_lookup(parent->vn.dnode, &dn, name, namelen) == NO_ERROR) {
+    if (dn_lookup(parent->dnode, &dn, name, namelen) == NO_ERROR) {
         //printf("vnb_mkdir: found dn %p\n", dn);
         if (dn->vnode->dnode != NULL) {
             // is a directory, success!
-            *out = dn->vnode->pdata;
+            *out = dn->vnode;
             return NO_ERROR;
         } else {
             return ERR_NOT_DIR;
@@ -203,7 +184,7 @@ static mx_status_t _vnb_mkdir(vnboot_t* parent, vnboot_t** out, const char* name
     return _vnb_create(parent, out, name, namelen, 0, 0, NULL, 0);
 }
 
-static mx_status_t _add_file(vnboot_t* vnb, const char* path, mx_handle_t vmo,
+static mx_status_t _add_file(vnode_t* vnb, const char* path, mx_handle_t vmo,
                              mx_off_t off, void* data, size_t len) {
     mx_status_t r;
     if ((path[0] == '/') || (path[0] == 0))
@@ -234,11 +215,11 @@ mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, v
 }
 
 vnode_t* bootfs_get_root(void) {
-    bootfs_root_dn.vnode = &bootfs_root.vn;
-    return &bootfs_root.vn;
+    bootfs_root_dn.vnode = &bootfs_root;
+    return &bootfs_root;
 }
 
 vnode_t* systemfs_get_root(void) {
-    systemfs_root_dn.vnode = &systemfs_root.vn;
-    return &systemfs_root.vn;
+    systemfs_root_dn.vnode = &systemfs_root;
+    return &systemfs_root;
 }

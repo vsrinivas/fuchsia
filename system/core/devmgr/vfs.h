@@ -14,15 +14,13 @@
 typedef struct dnode dnode_t;
 
 struct vnode {
-    vnode_ops_t* ops;
-    uint32_t flags;
-    uint32_t refcount;
+    VNODE_BASE_FIELDS
     uint32_t seqcount;
-    mx_handle_t remote;
-    dnode_t* dnode;
 
-    void* pdata;
-    void* pops;
+    // TODO(ORR) -- to be moved into dir (after memfs works)
+    dnode_t* dnode;      // list of my children
+
+    mx_handle_t remote;
 
     // all dnodes that point at this vnode
     list_node_t dn_list;
@@ -30,6 +28,24 @@ struct vnode {
 
     // all directory watchers
     list_node_t watch_list;
+
+
+    union {
+        struct {
+            // TODO(orr): add remote support for memfs-ng
+            // mx_handle_t remote;  // mount point on remote directories
+        } dir; // TYPE_DIR
+        struct {
+            mx_handle_t h;
+            mx_off_t offset; // offset into file
+            mx_off_t length; // extent of data
+            void* data;  // pointer to h[offset]
+        } vmo;
+        struct {
+            mx_off_t length;
+            uint8_t* block[];
+        } data;
+    };
 };
 
 typedef struct vnode_watcher {
@@ -104,6 +120,7 @@ ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
 mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len);
 ssize_t memfs_ioctl(vnode_t* vn, uint32_t op, const void* in_data, size_t in_len,
                     void* out_data, size_t out_len);
+mx_status_t memfs_lookup_name(const vnode_t* vn, char* outname, size_t out_len);
 
 mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h);
 mx_status_t vfs_uninstall_remote(vnode_t* vn);

@@ -403,24 +403,6 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     return r;
 }
 
-static int vfs_watchdog(void* arg) {
-    int txn = vfs_txn;
-    for (;;) {
-        mx_nanosleep(1000000000ULL);
-        int now = vfs_txn;
-        if ((now == txn) && (now != -1)) {
-            vnode_t* vn = vfs_txn_vn;
-            printf("devmgr: watchdog: txn %d did not complete: vn=%p op=%d\n", txn, vn, vfs_txn_op);
-            if (vn->flags & V_FLAG_DEVICE) {
-                printf("devmgr: watchdog: vn=%p is device '%s'\n", vn,
-                       ((mx_device_t*)vn->pdata)->name);
-            }
-        }
-        txn = now;
-    }
-    return 0;
-}
-
 // Acquire the root vnode and return a handle to it through the VFS dispatcher
 mx_handle_t vfs_create_root_handle(vnode_t* vn) {
     mx_status_t r;
@@ -438,8 +420,6 @@ void vfs_global_init(vnode_t* root) {
     if (mxio_dispatcher_create(&vfs_dispatcher, mxrio_handler) == NO_ERROR) {
         mxio_dispatcher_start(vfs_dispatcher, "vfs-rio-dispatcher");
     }
-    thrd_t t;
-    thrd_create_with_name(&t, vfs_watchdog, NULL, "vfs-watchdog");
 }
 
 // Return a RIO handle to the global root
