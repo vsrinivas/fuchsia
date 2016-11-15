@@ -24,6 +24,7 @@ executable("user_runner") {
 
   deps = [
     "//apps/ledger/services",
+    "//apps/maxwell/services/launcher",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/app",
     "//apps/modular/lib/fidl:array_to_string",

@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "apps/ledger/services/ledger.fidl.h"
+#include "apps/maxwell/services/launcher/launcher.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
@@ -204,21 +205,23 @@ class UserRunnerImpl : public UserRunner {
         ConnectToService<ledger::Ledger>(environment_services.get()),
         GetProxy(&story_provider));
 
+    ServiceProviderPtr maxwell_services = RunMaxwell();
+
+    auto maxwell_launcher =
+        ConnectToService<maxwell::Launcher>(maxwell_services.get());
     fidl::InterfaceHandle<StoryProvider> story_provider_aux;
     story_provider_impl->AddAuxiliaryBinding(GetProxy(&story_provider_aux));
+    maxwell_launcher->SetStoryProvider(std::move(story_provider_aux));
 
-    fidl::InterfaceHandle<maxwell::suggestion::SuggestionProvider>
-        suggestion_provider;
-    RunMaxwell(std::move(story_provider_aux), GetProxy(&suggestion_provider));
+    auto suggestion_provider =
+        ConnectToService<maxwell::suggestion::SuggestionProvider>(
+            maxwell_services.get());
 
     user_shell_->Initialize(std::move(story_provider),
                             std::move(suggestion_provider));
   }
 
-  void RunMaxwell(
-      fidl::InterfaceHandle<StoryProvider> story_provider,
-      fidl::InterfaceRequest<maxwell::suggestion::SuggestionProvider>
-          suggestion_provider_request) {
+  ServiceProviderPtr RunMaxwell() {
     auto launch_info = ApplicationLaunchInfo::New();
 
     ServiceProviderPtr app_services;
@@ -230,9 +233,7 @@ class UserRunnerImpl : public UserRunner {
         fidl::GetProxy(&launcher));
     launcher->CreateApplication(std::move(launch_info), nullptr);
 
-    ConnectToService(app_services.get(),
-                     std::move(suggestion_provider_request));
-    // TODO(rosswang): SetStoryProvider
+    return app_services;
   }
 
   // This method starts UserShell in a new process, connects to its
