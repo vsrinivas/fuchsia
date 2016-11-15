@@ -13,7 +13,7 @@
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
-#include "apps/mozart/services/launcher/launcher.fidl.h"
+#include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
@@ -116,7 +116,7 @@ class DeviceRunnerApp {
     view_provider->CreateView(GetProxy(&root_view),
                               GetProxy(&device_shell_services));
 
-    context_->ConnectToEnvironmentService<mozart::Launcher>()->Display(
+    context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
     ConnectToService(device_shell_services.get(), GetProxy(&device_shell_));

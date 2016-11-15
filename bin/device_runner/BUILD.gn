@@ -21,7 +21,7 @@ executable("device_runner") {
     "//apps/modular/services/application",
     "//apps/modular/services/device",
     "//apps/modular/services/user",
-    "//apps/mozart/services/launcher",
+    "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
     "//lib/ftl",
     "//lib/mtl",
