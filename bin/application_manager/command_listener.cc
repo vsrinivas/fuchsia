@@ -54,21 +54,14 @@ void CommandListener::ExecuteCommand(std::string command) {
   // which is invoking the command listener.
   std::vector<std::string> args = ftl::SplitStringCopy(
       command, " ", ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
-  if (args.size() > 0) {
-    auto launch_info = ApplicationLaunchInfo::New();
-    launch_info->url = args[0];
-    for (size_t i = 1; i < args.size(); ++i)
-      launch_info->arguments.push_back(args[i]);
+  if (args.size() < 2 || args[0] != "@")
+    return;
 
-    // TODO(jeffbrown): We should probably have the shell take ownership of
-    // the application which was created.  Considering this more deeply,
-    // it would actually make more sense if the shell itself were simply
-    // an ordinary application that launched subprocesses via its environment.
-    // That would let us get rid of the special command channel and would
-    // enable shells to run within arbitrary environments and create
-    // environments of their own.
-    launcher_->CreateApplication(std::move(launch_info), nullptr);
-  }
+  auto launch_info = ApplicationLaunchInfo::New();
+  launch_info->url = args[1];
+  for (size_t i = 2; i < args.size(); ++i)
+    launch_info->arguments.push_back(args[i]);
+  launcher_->CreateApplication(std::move(launch_info), nullptr);
 }
 
 void CommandListener::Close() {

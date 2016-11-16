@@ -16,7 +16,10 @@ namespace modular {
 
 // This class listens on the given handle for commands to drive the application
 // manager. For example, mxsh sends commands the user types that begin with
-// "file:" to this class to run the corresponding applications.
+// "@" to this class to run the corresponding applications.
+//
+// Currently supported commands are:
+//   @ <uri> : run application with specified uri
 class CommandListener : mtl::MessageLoopHandler {
  public:
   explicit CommandListener(ApplicationLauncher* launcher,
