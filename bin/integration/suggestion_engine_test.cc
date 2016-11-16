@@ -47,10 +47,10 @@ class Proposinator {
     p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
     auto d = maxwell::suggestion::Display::New();
 
-    d->headline = "";
+    d->headline = id;
     d->subheadline = "";
     d->details = "";
-    d->color = 0x00aa00aa; // argb purple
+    d->color = 0x00aa00aa;  // argb purple
     d->icon_urls = fidl::Array<fidl::String>::New(1);
     d->icon_urls[0] = "";
     d->image_url = "";
@@ -264,4 +264,28 @@ TEST_F(SuggestionEngineTest, NamespacingPerAgent) {
   // are namespaced by component).
   conflictinator.Propose(maxwell::agents::IdeasAgent::kIdeaId);
   CHECK_RESULT_COUNT(2);
+}
+
+// Tests the removal of earlier suggestions, ensuring that suggestion engine can
+// handle the case where an agent requests the removal of suggestions in a non-
+// LIFO ordering. This exercises some internal shuffling, especially when
+// rankings are likewise non-LIFO (where last = lowest-priority).
+//
+// TODO(rosswang): Currently this test also tests removing higher-ranked
+// suggestions. After we have real ranking, add a test for that.
+TEST_F(SuggestionEngineTest, Fifo) {
+  Proposinator fifo(suggestion_engine_);
+
+  SetResultCount(10);
+  fifo.Propose("1");
+  CHECK_RESULT_COUNT(1);
+  auto uuid_1 = GetOnlySuggestion()->uuid;
+
+  fifo.Propose("2");
+  CHECK_RESULT_COUNT(2);
+  fifo.Remove("1");
+  CHECK_RESULT_COUNT(1);
+  auto suggestion = GetOnlySuggestion();
+  EXPECT_NE(uuid_1, suggestion->uuid);
+  EXPECT_EQ("2", suggestion->display->headline);
 }
