@@ -14,6 +14,7 @@
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/journal.h"
 #include "apps/ledger/src/storage/public/object.h"
+#include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
@@ -28,6 +29,10 @@ class PageStorage {
 
   // Returns the id of this page.
   virtual PageId GetId() = 0;
+
+  // Sets the PageSyncDelegate for this PageStorage. A nullptr can be passed to
+  // unset a previously set value.
+  virtual void SetSyncDelegate(PageSyncDelegate* page_sync) = 0;
 
   // Finds the ids of all head commits and adds them in the |commit_ids| vector.
   // It is guaranteed that valid pages have at least one head commit, even if

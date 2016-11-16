@@ -10,6 +10,7 @@
 #include <set>
 
 #include "apps/ledger/src/storage/impl/db_impl.h"
+#include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
 
@@ -41,6 +42,7 @@ class PageStorageImpl : public PageStorage {
 
   // PageStorage:
   PageId GetId() override;
+  void SetSyncDelegate(PageSyncDelegate* page_sync) override;
   Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) override;
   Status GetCommit(const CommitId& commit_id,
                    std::unique_ptr<const Commit>* commit) override;
@@ -103,6 +105,7 @@ class PageStorageImpl : public PageStorage {
   std::string objects_dir_;
   std::string staging_dir_;
   std::vector<std::unique_ptr<FileWriter>> writers_;
+  PageSyncDelegate* page_sync_;
 };
 
 }  // namespace storage

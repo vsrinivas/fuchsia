@@ -11,10 +11,12 @@
 #include "lib/ftl/logging.h"
 
 namespace ledger {
-PageManager::PageManager(std::unique_ptr<storage::PageStorage> page_storage)
-    : page_storage_(std::move(page_storage)) {
+
+PageManager::PageManager(std::unique_ptr<storage::PageStorage> page_storage,
+                         std::unique_ptr<storage::PageSyncDelegate> page_sync)
+    : page_storage_(std::move(page_storage)), page_sync_(std::move(page_sync)) {
   pages_.set_on_empty([this] { CheckEmpty(); });
-  snapshots_.set_on_empty([this]() { CheckEmpty(); });
+  snapshots_.set_on_empty([this] { CheckEmpty(); });
 }
 
 PageManager::~PageManager() {}

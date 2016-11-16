@@ -238,6 +238,10 @@ PageId PageStorageImpl::GetId() {
   return page_id_;
 }
 
+void PageStorageImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
+  page_sync_ = page_sync;
+}
+
 Status PageStorageImpl::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
   return db_.GetHeads(commit_ids);
 }

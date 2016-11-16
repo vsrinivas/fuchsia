@@ -41,8 +41,8 @@ source_set("lib") {
   deps = [
     "//apps/ledger/services",
     "//apps/ledger/src/callback",
+    "//apps/ledger/src/cloud_sync/impl",
     "//apps/ledger/src/convert",
-    "//apps/ledger/src/callback",
     "//apps/ledger/src/glue",
     "//apps/ledger/src/glue/data_pipe",
     "//apps/ledger/src/storage/impl:lib",
@@ -84,6 +84,7 @@ executable("unittests") {
 
   deps = [
     ":lib",
+    "//apps/ledger/src/cloud_sync/impl",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue",
     "//apps/ledger/src/storage/fake:lib",

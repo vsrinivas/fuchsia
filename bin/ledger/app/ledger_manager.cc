@@ -10,9 +10,11 @@
 
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/page_utils.h"
+#include "apps/ledger/src/cloud_sync/impl/page_sync_delegate_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 
 namespace ledger {
@@ -117,8 +119,8 @@ void LedgerManager::CreatePage(fidl::InterfaceRequest<Page> page_request,
   }
 
   PageManagerContainer* container = AddPageManagerContainer(page_id);
-  container->SetPageManager(
-      Status::OK, NewPageManager(std::move(page_id), std::move(page_storage)));
+  container->SetPageManager(Status::OK,
+                            NewPageManager(std::move(page_storage)));
   container->BindPage(std::move(page_request), std::move(callback));
 }
 
@@ -158,10 +160,8 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
             return;
           }
         }
-
-        container->SetPageManager(
-            Status::OK,
-            NewPageManager(std::move(page_id), std::move(page_storage)));
+        container->SetPageManager(Status::OK,
+                                  NewPageManager(std::move(page_storage)));
       });
 }
 
@@ -188,9 +188,11 @@ LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(
 }
 
 std::unique_ptr<PageManager> LedgerManager::NewPageManager(
-    storage::PageId&& page_id,
     std::unique_ptr<storage::PageStorage> page_storage) {
-  return std::make_unique<PageManager>(std::move(page_storage));
+  auto page_sync =
+      std::make_unique<cloud_sync::PageSyncDelegateImpl>(page_storage.get());
+  return std::make_unique<PageManager>(std::move(page_storage),
+                                       std::move(page_sync));
 }
 
 void LedgerManager::CheckEmpty() {

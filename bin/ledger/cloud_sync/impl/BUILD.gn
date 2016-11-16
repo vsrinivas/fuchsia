@@ -6,6 +6,8 @@ source_set("impl") {
   sources = [
     "commit_upload.cc",
     "commit_upload.h",
+    "page_sync_delegate_impl.cc",
+    "page_sync_delegate_impl.h",
     "page_sync_impl.cc",
     "page_sync_impl.h",
   ]

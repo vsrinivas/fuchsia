@@ -13,6 +13,7 @@
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
+#include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/closure.h"
 
@@ -28,9 +29,10 @@ namespace ledger {
 // |on_empty_callback|.
 class PageManager {
  public:
-  // |page_storage| becomes owned by PageManager and is deleted when it goes
-  //   away
-  explicit PageManager(std::unique_ptr<storage::PageStorage> page_storage);
+  // Both |page_storage| and |page_sync| are owned by PageManager and are
+  // deleted when it goes away.
+  PageManager(std::unique_ptr<storage::PageStorage> page_storage,
+              std::unique_ptr<storage::PageSyncDelegate> page_sync);
   ~PageManager();
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
@@ -50,6 +52,7 @@ class PageManager {
   void CheckEmpty();
 
   std::unique_ptr<storage::PageStorage> page_storage_;
+  std::unique_ptr<storage::PageSyncDelegate> page_sync_;
   AutoCleanableSet<BoundInterface<PageSnapshot, PageSnapshotImpl>> snapshots_;
   AutoCleanableSet<BranchTracker> pages_;
   ftl::Closure on_empty_callback_;

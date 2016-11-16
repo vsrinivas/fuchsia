@@ -55,7 +55,6 @@ class LedgerManager : public LedgerImpl::Delegate {
   PageManagerContainer* AddPageManagerContainer(storage::PageIdView page_id);
   // Create a new page manager for the given storage.
   std::unique_ptr<PageManager> NewPageManager(
-      storage::PageId&& page_id,
       std::unique_ptr<storage::PageStorage> page_storage);
 
   void CheckEmpty();

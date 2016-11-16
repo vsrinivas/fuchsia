@@ -5,9 +5,9 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_LEDGER_STORAGE_IMPL_H_
 
-#include <string>
-
 #include "apps/ledger/src/storage/public/ledger_storage.h"
+
+#include <string>
 
 #include "lib/ftl/tasks/task_runner.h"
 

@@ -14,6 +14,10 @@ PageId PageStorageEmptyImpl::GetId() {
   return "NOT_IMPLEMENTED";
 }
 
+void PageStorageEmptyImpl::SetSyncDelegate(PageSyncDelegate* page_sync) {
+  FTL_NOTIMPLEMENTED();
+}
+
 Status PageStorageEmptyImpl::GetHeadCommitIds(
     std::vector<CommitId>* commit_ids) {
   FTL_NOTIMPLEMENTED();
