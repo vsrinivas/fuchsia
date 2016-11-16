@@ -4,9 +4,11 @@
 
 #include "apps/maxwell/src/integration/test.h"
 
+#include "lib/ftl/synchronization/sleep.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-constexpr auto kYieldBatchPeriod = ftl::TimeDelta::FromMilliseconds(1);
+constexpr auto kYieldSleepPeriod = ftl::TimeDelta::FromMilliseconds(1);
+constexpr auto kYieldBatchPeriod = ftl::TimeDelta::FromMilliseconds(0);
 
 void Yield() {
   // Tried a combination of Thread::sleep_for (formerly required) and
@@ -19,8 +21,11 @@ void Yield() {
   // e   1ms: 7.9s 7.9s
   // p  10ms: 8s
   //
-  // Based on those results, opt to remove thread sleep and use PostDelayedTask
-  // with 1ms.
+  // However, we've observed some additional flakiness in the Launcher tests
+  // without the sleep.
+  //
+  // Based on those results, opt to sleep 1ms; post delayed w/ 0ms.
+  ftl::SleepFor(kYieldSleepPeriod);
 
   // Combinations tried:
   //                      PostQuitTask QuitNow
