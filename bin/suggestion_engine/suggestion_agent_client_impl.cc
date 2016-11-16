@@ -21,7 +21,10 @@ void SuggestionAgentClientImpl::Remove(const fidl::String& proposal_id) {
   const auto it = suggestions_.find(proposal_id);
 
   if (it != suggestions_.end()) {
-    BroadcastRemoveSuggestion(it->second);
+    const Suggestion& suggestion = it->second;
+    BroadcastRemoveSuggestion(suggestion);
+    auto& ranked = suggestinator_->ranked_suggestions_;
+    ranked.erase(std::find(ranked.begin(), ranked.end(), &suggestion));
     suggestions_.erase(it);
 
     if (suggestions_.empty() && bindings_.empty())

@@ -37,19 +37,35 @@ class NextSubscriber : public NextController {
 
   void OnNewSuggestion(const Suggestion& suggestion) {
     if (IncludeSuggestion(suggestion)) {
-      fidl::Array<SuggestionPtr> batch;
-      batch.push_back(suggestion.Clone());
-      listener_->OnAdd(std::move(batch));
+      DispatchAdd(suggestion);
+
+      // Evict if we were already full
+      if (IsFull())
+        listener_->OnRemove((*ranked_suggestions_)[max_results_]->uuid);
     }
   }
 
   void BeforeRemoveSuggestion(const Suggestion& suggestion) {
     if (IncludeSuggestion(suggestion)) {
+      // Shift in if we were full
+      if (IsFull())
+        DispatchAdd(*(*ranked_suggestions_)[max_results_]);
+
       listener_->OnRemove(suggestion.uuid);
     }
   }
 
  private:
+  bool IsFull() const {
+    return ranked_suggestions_->size() > (size_t)max_results_;
+  }
+
+  void DispatchAdd(const Suggestion& suggestion) {
+    fidl::Array<SuggestionPtr> batch;
+    batch.push_back(suggestion.Clone());
+    listener_->OnAdd(std::move(batch));
+  }
+
   bool IncludeSuggestion(const Suggestion& suggestion) const;
 
   fidl::Binding<NextController> binding_;

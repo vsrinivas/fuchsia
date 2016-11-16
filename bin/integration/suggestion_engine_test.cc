@@ -289,3 +289,38 @@ TEST_F(SuggestionEngineTest, Fifo) {
   EXPECT_NE(uuid_1, suggestion->uuid);
   EXPECT_EQ("2", suggestion->display->headline);
 }
+
+// Tests the removal of earlier suggestions while capped.
+// TODO(rosswang): see above TODO
+TEST_F(SuggestionEngineTest, CappedFifo) {
+  Proposinator fifo(suggestion_engine_);
+
+  SetResultCount(1);
+  fifo.Propose("1");
+  CHECK_RESULT_COUNT(1);
+  auto uuid1 = GetOnlySuggestion()->uuid;
+
+  fifo.Propose("2");
+  Sleep();
+  EXPECT_EQ(uuid1, GetOnlySuggestion()->uuid)
+      << "Proposal 2 ranked over proposal 2; test invalid; update to test "
+         "FIFO-ranked proposals.";
+
+  fifo.Remove("1");
+  // Need the suggestion-count() == 1 because there may be a brief moment when
+  // the suggestion count is 2.
+  ASYNC_CHECK(suggestion_count() == 1 && GetOnlySuggestion()->uuid != uuid1);
+
+  EXPECT_EQ("2", GetOnlySuggestion()->display->headline);
+}
+
+TEST_F(SuggestionEngineTest, RemoveBeforeSubscribe) {
+  Proposinator zombinator(suggestion_engine_);
+
+  zombinator.Propose("brains");
+  zombinator.Remove("brains");
+  Sleep();
+
+  SetResultCount(10);
+  CHECK_RESULT_COUNT(0);
+}

@@ -41,7 +41,7 @@ void NextSubscriber::SetResultCount(int32_t count) {
 bool NextSubscriber::IncludeSuggestion(const Suggestion& suggestion) const {
   if (max_results_ == 0)
     return false;
-  if (ranked_suggestions_->size() <= (size_t)max_results_)
+  if (!IsFull())
     return true;
 
   float newRank = suggestion.rank;
