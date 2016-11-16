@@ -20,6 +20,7 @@
         "lua",
         "media",
         "modular",
+        "modules",
         "moterm",
         "mozart",
         "mtl",

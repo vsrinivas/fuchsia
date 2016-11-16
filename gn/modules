@@ -1,0 +1,23 @@
+{
+    "labels": [
+        "//apps/modules"
+    ],
+    "binaries": [
+        {
+            "binary": "email_folder_list.flx",
+            "bootfs_path": "apps/email_folder_list"
+        },
+        {
+            "binary": "email_story.flx",
+            "bootfs_path": "apps/email_story"
+        },
+        {
+            "binary": "email_user_shell",
+            "bootfs_path": "apps/email_user_shell"
+        },
+        {
+            "binary": "modules_gallery.flx",
+            "bootfs_path": "apps/modules_gallery"
+        }
+  ]
+}
