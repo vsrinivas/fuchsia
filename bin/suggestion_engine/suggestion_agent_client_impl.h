@@ -30,10 +30,7 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
 
   void Propose(ProposalPtr proposal) override;
   void Remove(const fidl::String& proposal_id) override;
-
-  void GetAll(const GetAllCallback& callback) override {
-    // TODO
-  }
+  void GetAll(const GetAllCallback& callback) override;
 
  private:
   class BindingSet : public maxwell::BindingSet<SuggestionAgentClient> {
@@ -42,12 +39,7 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
 
    protected:
     void OnConnectionError(
-        fidl::Binding<SuggestionAgentClient>* binding) override {
-      maxwell::BindingSet<SuggestionAgentClient>::OnConnectionError(binding);
-
-      if (empty() && impl_->suggestions_.empty())
-        impl_->EraseSelf();
-    }
+        fidl::Binding<SuggestionAgentClient>* binding) override;
 
    private:
     SuggestionAgentClientImpl* const impl_;

@@ -29,6 +29,18 @@ void SuggestionAgentClientImpl::Remove(const fidl::String& proposal_id) {
   }
 }
 
+void SuggestionAgentClientImpl::GetAll(const GetAllCallback& callback) {
+  // TODO
+}
+
+void SuggestionAgentClientImpl::BindingSet::OnConnectionError(
+    fidl::Binding<SuggestionAgentClient>* binding) {
+  maxwell::BindingSet<SuggestionAgentClient>::OnConnectionError(binding);
+
+  if (empty() && impl_->suggestions_.empty())
+    impl_->EraseSelf();
+}
+
 void SuggestionAgentClientImpl::BroadcastNewSuggestion(
     const Suggestion& suggestion) {
   for (const auto& subscriber : suggestinator_->next_subscribers_)

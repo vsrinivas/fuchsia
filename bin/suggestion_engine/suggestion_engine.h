@@ -35,31 +35,17 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   // SuggestionProvider
 
   void SubscribeToInterruptions(
-      fidl::InterfaceHandle<Listener> listener) override {
-    // TODO(rosswang): no interruptions yet
-  }
+      fidl::InterfaceHandle<Listener> listener) override;
 
   void SubscribeToNext(
       fidl::InterfaceHandle<Listener> listener,
-      fidl::InterfaceRequest<NextController> controller) override {
-    std::unique_ptr<NextSubscriber> sub(
-        new NextSubscriber(&ranked_suggestions_, std::move(listener)));
-    sub->Bind(std::move(controller));
-    next_subscribers_.emplace(std::move(sub));
-  }
+      fidl::InterfaceRequest<NextController> controller) override;
 
   void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
-                   fidl::InterfaceRequest<AskController> controller) override {
-    // TODO(rosswang): no ask handlers yet
-  }
+                   fidl::InterfaceRequest<AskController> controller) override;
 
   void NotifyInteraction(const fidl::String& suggestion_uuid,
-                         InteractionPtr interaction) override {
-    FTL_LOG(INFO) << (interaction->type == InteractionType::SELECTED
-                          ? "Accepted"
-                          : "Dismissed")
-                  << " suggestion " << suggestion_uuid << ")";
-  }
+                         InteractionPtr interaction) override;
 
   // end SuggestionProvider
 

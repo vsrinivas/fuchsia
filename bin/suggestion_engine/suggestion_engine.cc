@@ -9,6 +9,40 @@
 namespace maxwell {
 namespace suggestion {
 
+// SuggestionProvider
+
+void SuggestionEngineApp::SubscribeToInterruptions(
+    fidl::InterfaceHandle<Listener> listener) {
+  // TODO(rosswang): no interruptions yet
+}
+
+void SuggestionEngineApp::SubscribeToNext(
+    fidl::InterfaceHandle<Listener> listener,
+    fidl::InterfaceRequest<NextController> controller) {
+  std::unique_ptr<NextSubscriber> sub(
+      new NextSubscriber(&ranked_suggestions_, std::move(listener)));
+  sub->Bind(std::move(controller));
+  next_subscribers_.emplace(std::move(sub));
+}
+
+void SuggestionEngineApp::InitiateAsk(
+    fidl::InterfaceHandle<Listener> listener,
+    fidl::InterfaceRequest<AskController> controller) {
+  // TODO(rosswang): no ask handlers yet
+}
+
+void SuggestionEngineApp::NotifyInteraction(const fidl::String& suggestion_uuid,
+                                            InteractionPtr interaction) {
+  FTL_LOG(INFO) << (interaction->type == InteractionType::SELECTED
+                        ? "Accepted"
+                        : "Dismissed")
+                << " suggestion " << suggestion_uuid << ")";
+}
+
+// end SuggestionProvider
+
+// SuggestionEngine
+
 void SuggestionEngineApp::RegisterSuggestionAgent(
     const fidl::String& url,
     fidl::InterfaceRequest<SuggestionAgentClient> client) {
@@ -23,6 +57,8 @@ void SuggestionEngineApp::SetStoryProvider(
     fidl::InterfaceHandle<modular::StoryProvider> story_provider) {
   // TODO(rosswang)
 }
+
+// end SuggestionEngine
 
 }  // suggestion
 }  // maxwell
