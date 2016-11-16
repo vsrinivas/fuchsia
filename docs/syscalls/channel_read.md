@@ -24,12 +24,6 @@ specified by *handle* into the provided *bytes* and/or *handles* buffers.
 The parameters *num_bytes* and *num_handles* are used to specify the
 size of the read buffers.
 
- and upon return may be used to indicate the
-actual size of the message read (upon success) or the size of the
-message (upon failure due to the provided buffers being too small.
-If these pointers are NULL, their respective buffer sizes are understood
-to be zero.
-
 Channel messages may contain both byte data and handle payloads and may
 only be read in their entirety.  Partial reads are not possible.
 
