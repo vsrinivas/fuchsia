@@ -188,7 +188,7 @@ func (d *directory) Rename(src, dst string) error {
 	return rename(d.node, src, dst)
 }
 
-func (d *directory) Flush() error {
+func (d *directory) Sync() error {
 	d.fs.RLock()
 	defer d.fs.RUnlock()
 	if d.fs.unmounted {
@@ -200,7 +200,7 @@ func (d *directory) Flush() error {
 		return fs.ErrNotOpen
 	}
 
-	return flush(d.node)
+	return syncDirectory(d.node)
 }
 
 func (d *directory) Unlink(target string) error {

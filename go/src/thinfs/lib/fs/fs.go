@@ -231,9 +231,9 @@ type Directory interface {
 	// Rename will not overwrite dst if it already exists.  Returns an error, if any.
 	Rename(src, dst string) error
 
-	// Flush does not return until all changes to this directory and its children have been
-	// persisted to stable storage.  Returns an error, if any.
-	Flush() error
+	// Sync does not return until all changes to this directory have been persisted to stable
+	// storage.  Returns an error, if any.
+	Sync() error
 
 	// Unlink unlinks target from its parent directory.
 	// If target points to a directory, then the directory must be empty and it must not have
@@ -289,4 +289,8 @@ type File interface {
 	// Seek modified the seek position to offset + some starting position, dependent on whence.
 	// Seek returns the new seek position.
 	Seek(offset int64, whence int) (int64, error)
+
+	// Sync does not return until all changes to this file have been persisted to stable storage.
+	// Returns an error, if any.
+	Sync() error
 }

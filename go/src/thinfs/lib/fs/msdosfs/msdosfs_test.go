@@ -1258,7 +1258,7 @@ func TestUseAfterClose(t *testing.T) {
 			t.Fatalf("Expected %s error, saw: %s", goldErr, err)
 		} else if err := d.Rename("foo", "bar"); err != goldErr {
 			t.Fatalf("Expected %s error, saw: %s", goldErr, err)
-		} else if err := d.Flush(); err != goldErr {
+		} else if err := d.Sync(); err != goldErr {
 			t.Fatalf("Expected %s error, saw: %s", goldErr, err)
 		} else if err := d.Unlink("foo"); err != goldErr {
 			t.Fatalf("Expected %s error, saw: %s", goldErr, err)

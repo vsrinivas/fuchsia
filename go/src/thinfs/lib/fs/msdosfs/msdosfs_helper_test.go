@@ -226,8 +226,8 @@ func checkRename(t *testing.T, d fs.Directory, src, dst string) {
 	}
 }
 
-func checkFlush(t *testing.T, d fs.Directory) {
-	if err := d.Flush(); err != nil {
+func checkSync(t *testing.T, d fs.Directory) {
+	if err := d.Sync(); err != nil {
 		t.Fatal(err)
 	}
 }

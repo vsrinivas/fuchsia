@@ -306,3 +306,18 @@ func (f *file) Seek(offset int64, whence int) (int64, error) {
 
 	return f.position.offset, nil
 }
+
+func (f *file) Sync() error {
+	f.fs.RLock()
+	defer f.fs.RUnlock()
+	if f.fs.unmounted {
+		return fs.ErrUnmounted
+	}
+	f.RLock()
+	defer f.RUnlock()
+	if f.closed {
+		return fs.ErrNotOpen
+	}
+
+	return syncFile(f.node)
+}

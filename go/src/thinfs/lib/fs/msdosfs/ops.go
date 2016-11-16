@@ -5,7 +5,6 @@
 package msdosfs
 
 import (
-	"errors"
 	"time"
 
 	"fuchsia.googlesource.com/thinfs/lib/fs"
@@ -14,33 +13,8 @@ import (
 )
 
 func closeFile(n node.FileNode) error {
-	// Lock parent (if not nil) then node
-	parent, direntIndex := n.LockParent()
-	n.Lock()
-
-	if parent != nil {
-		// If this node has a direntry which can be updated, update it
-		if !n.Metadata().Readonly {
-			if _, err := node.Update(parent, n.StartCluster(), n.MTime(), uint32(n.Size()), direntIndex); err != nil {
-				panic(err)
-			}
-		}
-		// We are about to "ref down" the child. If it is the LAST child, remove it from the parent.
-		if n.RefCount() == 1 {
-			parent.RemoveFile(direntIndex)
-		}
-
-		// RELEASE the parent directory from the access acquired when opening
-		parent.Metadata().Dcache.Release(parent.ID())
-
-		// Unlock the parent after updating the dirent, but before possibly deleting the child's
-		// clusters. This is fine because (1) the parent is not updated beyond this point, and (2)
-		// the lock acquisition order is preserved, so deadlock is prevented.
-		parent.Unlock()
-	}
-	err := n.RefDown(1)
-	n.Unlock()
-	return err
+	doClose := true
+	return flushFile(n, doClose)
 }
 
 func closeDirectory(n node.DirectoryNode, unmount bool) error {
@@ -309,8 +283,16 @@ func rename(n node.DirectoryNode, src, dst string) error {
 	return nil
 }
 
-func flush(n node.Node) error {
-	return errors.New("Unimplemented")
+func syncFile(n node.FileNode) error {
+	doClose := false
+	flushFile(n, doClose)
+	n.Metadata().Dev.Flush()
+	return nil
+}
+
+func syncDirectory(n node.DirectoryNode) error {
+	n.Metadata().Dev.Flush()
+	return nil
 }
 
 func unlink(n node.DirectoryNode, target string) error {
@@ -341,6 +323,49 @@ func unlink(n node.DirectoryNode, target string) error {
 		return err
 	}
 	return parent.Metadata().ClusterMgr.ClusterDelete(cluster)
+}
+
+// Sync the file with its parent directory. If requested, decrease the number of references to the
+// file.
+//
+// Precondition:
+//	 - the node lock is not held by the caller
+//	 - the parent lock is not held by the caller
+// Postcontiion:
+//	 - same as precondition
+func flushFile(n node.FileNode, doClose bool) (err error) {
+	// Lock parent (if not nil) then node
+	parent, direntIndex := n.LockParent()
+	n.Lock()
+
+	if parent != nil {
+		// If this node has a direntry which can be updated, update it
+		if !n.Metadata().Readonly {
+			if _, err = node.Update(parent, n.StartCluster(), n.MTime(), uint32(n.Size()), direntIndex); err != nil {
+				panic(err)
+			}
+		}
+		if doClose {
+			// We are about to "ref down" the child. If it is the LAST child, remove it from the parent.
+			if n.RefCount() == 1 {
+				parent.RemoveFile(direntIndex)
+			}
+
+			// RELEASE the parent directory from the access acquired when opening
+			parent.Metadata().Dcache.Release(parent.ID())
+		}
+
+		// Unlock the parent after updating the dirent, but before possibly deleting the child's
+		// clusters. This is fine because (1) the parent is not updated beyond this point, and (2)
+		// the lock acquisition order is preserved, so deadlock is prevented.
+		parent.Unlock()
+	}
+
+	if doClose {
+		err = n.RefDown(1)
+	}
+	n.Unlock()
+	return err
 }
 
 // Ensure that we are not attempting to unlink a non-empty directory by looking up the name of a

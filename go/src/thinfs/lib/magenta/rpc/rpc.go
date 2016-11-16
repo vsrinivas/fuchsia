@@ -237,6 +237,8 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 		}
 		err := f.Truncate(uint64(off))
 		return errorToRIO(err)
+	case rio.OpSync:
+		return errorToRIO(f.Sync())
 	case rio.OpSetAttr:
 		atime, mtime := getTimeShared(msg)
 		return errorToRIO(f.Touch(atime, mtime))
@@ -389,6 +391,8 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 		err := dir.Rename(paths[0], paths[1])
 		msg.Datalen = 0
 		return errorToRIO(err)
+	case rio.OpSync:
+		return errorToRIO(dir.Sync())
 	case rio.OpIoctl:
 		switch msg.IoctlOp() {
 		case mxio.IoctlDevmgrUnmountFS:
