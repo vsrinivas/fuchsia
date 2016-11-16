@@ -166,6 +166,14 @@ void ApplicationEnvironmentImpl::Duplicate(
 void ApplicationEnvironmentImpl::CreateApplication(
     modular::ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
+  std::string canon_url = CanonicalizeURL(launch_info->url);
+  if (canon_url.empty()) {
+    FTL_LOG(ERROR) << "Cannot run " << launch_info->url
+                   << " because the url could not be canonicalized";
+    return;
+  }
+  launch_info->url = canon_url;
+
   if (HasReservedHandles(launch_info->startup_handles)) {
     FTL_LOG(ERROR)
         << "Cannot run " << launch_info->url

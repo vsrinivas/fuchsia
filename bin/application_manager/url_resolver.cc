@@ -12,6 +12,12 @@ constexpr size_t kFileUriPrefixLength = sizeof(kFileUriPrefix) - 1;
 
 }  // namespace
 
+std::string CanonicalizeURL(const std::string& url) {
+  if (!url.empty() && url[0] == '/')
+    return kFileUriPrefix + url;
+  return url;
+}
+
 std::string GetPathFromURL(const std::string& url) {
   if (url.find(kFileUriPrefix) == 0)
     return url.substr(kFileUriPrefixLength);
