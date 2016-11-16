@@ -606,23 +606,23 @@ static const struct {
     { MX_EXCP_HW_BREAKPOINT, "hw-bkpt", trigger_hw_bkpt },
 };
 
-static void __NO_RETURN trigger_exception(const char* int_name)
+static void __NO_RETURN trigger_exception(const char* excp_name)
 {
     for (size_t i = 0; i < countof(exceptions); ++i)
     {
-        if (strcmp(int_name, exceptions[i].name) == 0)
+        if (strcmp(excp_name, exceptions[i].name) == 0)
         {
             exceptions[i].trigger_function();
         }
     }
-    fprintf(stderr, "unknown exception: %s\n", int_name);
+    fprintf(stderr, "unknown exception: %s\n", excp_name);
     exit (1);
 }
 
-static void __NO_RETURN test_child_trigger(const char* int_name)
+static void __NO_RETURN test_child_trigger(const char* excp_name)
 {
-    unittest_printf("Exception trigger test child (%s) starting.\n", int_name);
-    trigger_exception(int_name);
+    unittest_printf("Exception trigger test child (%s) starting.\n", excp_name);
+    trigger_exception(excp_name);
     /* NOTREACHED */
 }
 
@@ -703,9 +703,9 @@ int main(int argc, char **argv)
 
     if (argc >= 2 && strcmp(argv[1], test_child_name) == 0) {
         check_verbosity(argc, argv);
-        const char* int_name = check_trigger(argc, argv);
-        if (int_name)
-            test_child_trigger(int_name);
+        const char* excp_name = check_trigger(argc, argv);
+        if (excp_name)
+            test_child_trigger(excp_name);
         else
             test_child();
         return 0;
