@@ -72,14 +72,12 @@ mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> data,
         return status;
 
     // do the read operation
-    mx_ssize_t result = vmo->Read(data, len, offset);
-    if (result < 0)
-        return static_cast<mx_status_t>(result);
+    mx_size_t nread;
+    status = vmo->Read(data, len, offset, &nread);
+    if (status == NO_ERROR)
+        status = actual.copy_to_user(nread);
 
-    if (actual.copy_to_user(static_cast<mx_size_t>(result)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-
-    return NO_ERROR;
+    return status;
 }
 
 mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> data,
@@ -96,14 +94,12 @@ mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> data,
         return status;
 
     // do the write operation
-    mx_ssize_t result = vmo->Write(data, len, offset);
-    if (result < 0)
-        return static_cast<mx_status_t>(result);
+    mx_size_t nwritten;
+    status = vmo->Write(data, len, offset, &nwritten);
+    if (status == NO_ERROR)
+        status = actual.copy_to_user(nwritten);
 
-    if (actual.copy_to_user(static_cast<mx_size_t>(result)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-
-    return NO_ERROR;
+    return status;
 }
 
 mx_status_t sys_vmo_get_size(mx_handle_t handle, user_ptr<uint64_t> _size) {

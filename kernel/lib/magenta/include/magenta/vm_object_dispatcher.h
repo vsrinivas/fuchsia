@@ -24,8 +24,10 @@ public:
     ~VmObjectDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_VMEM; }
 
-    mx_ssize_t Read(user_ptr<void> user_data, mx_size_t length, uint64_t offset);
-    mx_ssize_t Write(user_ptr<const void> user_data, mx_size_t length, uint64_t offset);
+    mx_status_t Read(user_ptr<void> user_data, mx_size_t length,
+                     uint64_t offset, mx_size_t* actual);
+    mx_status_t Write(user_ptr<const void> user_data, mx_size_t length,
+                      uint64_t offset, mx_size_t* actual);
     mx_status_t SetSize(uint64_t);
     mx_status_t GetSize(uint64_t* size);
     mx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_ptr<void> buffer, size_t buffer_size, mx_rights_t);
