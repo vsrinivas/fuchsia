@@ -69,7 +69,7 @@ void CloudProviderImpl::UnwatchCommits(CommitWatcher* watcher) {
 
 void CloudProviderImpl::GetCommits(
     const std::string& min_timestamp,
-    std::function<void(Status, const std::vector<Record>&)> callback) {
+    std::function<void(Status, std::vector<Record>&&)> callback) {
   firebase_->Get(
       kCommitRoot.ToString(), GetTimestampQuery(min_timestamp),
       [callback](firebase::Status status, const rapidjson::Value& value) {
@@ -86,7 +86,7 @@ void CloudProviderImpl::GetCommits(
           callback(Status::UNKNOWN_ERROR, std::vector<Record>());
           return;
         }
-        callback(Status::OK, records);
+        callback(Status::OK, std::move(records));
       });
 }
 

@@ -66,7 +66,7 @@ class CloudProvider {
   // corresponding server timestamps.
   virtual void GetCommits(
       const std::string& min_timestamp,
-      std::function<void(Status, const std::vector<Record>&)> callback) = 0;
+      std::function<void(Status, std::vector<Record>&&)> callback) = 0;
 
   // Uploads the given object to the cloud under the given id.
   virtual void AddObject(ObjectIdView object_id,

@@ -26,7 +26,7 @@ void CloudProviderEmptyImpl::UnwatchCommits(CommitWatcher* watcher) {
 
 void CloudProviderEmptyImpl::GetCommits(
     const std::string& min_timestamp,
-    std::function<void(Status, const std::vector<Record>&)> callback) {
+    std::function<void(Status, std::vector<Record>&&)> callback) {
   FTL_NOTIMPLEMENTED();
 }
 

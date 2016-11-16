@@ -31,9 +31,9 @@ class CloudProviderEmptyImpl : public CloudProvider {
 
   void UnwatchCommits(CommitWatcher* watcher) override;
 
-  void GetCommits(const std::string& min_timestamp,
-                  std::function<void(Status, const std::vector<Record>&)>
-                      callback) override;
+  void GetCommits(
+      const std::string& min_timestamp,
+      std::function<void(Status, std::vector<Record>&&)> callback) override;
 
   void AddObject(ObjectIdView object_id,
                  mx::vmo data,
