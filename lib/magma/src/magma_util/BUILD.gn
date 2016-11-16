@@ -33,7 +33,6 @@ source_set("common") {
   sources = [
     "dlog.h",
     "macros.h",
-    "mutex.h",
   ]
 }
 

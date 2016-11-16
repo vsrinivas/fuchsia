@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "magma_util/macros.h"
-#include "magma_util/mutex.h"
 #include "gtest/gtest.h"
 
 TEST(MagmaUtil, GetPow2)
