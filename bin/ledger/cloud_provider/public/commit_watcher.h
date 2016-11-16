@@ -21,6 +21,10 @@ class CommitWatcher {
   virtual void OnRemoteCommit(const Commit& commit,
                               const std::string& timestamp) = 0;
 
+  // Called when an unrecoverable error occurs. No further commit notifications
+  // are delivered after this call is received.
+  virtual void OnError() = 0;
+
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);
 };

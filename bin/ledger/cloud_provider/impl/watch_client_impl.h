@@ -28,8 +28,14 @@ class WatchClientImpl : public firebase::WatchClient {
   void OnError() override;
 
  private:
+  void HandleDecodingError(const std::string& path,
+                           const rapidjson::Value& value,
+                           const char error_description[]);
+  void HandleError();
+
   firebase::Firebase* const firebase_;
   CommitWatcher* const commit_watcher_;
+  bool errored_ = false;
 };
 
 }  // namespace cloud_provider

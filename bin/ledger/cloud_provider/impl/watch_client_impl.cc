@@ -4,6 +4,10 @@
 
 #include "apps/ledger/src/cloud_provider/impl/watch_client_impl.h"
 
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include "apps/ledger/src/cloud_provider/impl/encoding.h"
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
 #include "lib/ftl/logging.h"
@@ -20,14 +24,19 @@ WatchClientImpl::WatchClientImpl(firebase::Firebase* firebase,
 }
 
 WatchClientImpl::~WatchClientImpl() {
-  firebase_->UnWatch(this);
+  if (!errored_) {
+    firebase_->UnWatch(this);
+  }
 }
 
 void WatchClientImpl::OnPut(const std::string& path,
                             const rapidjson::Value& value) {
+  if (errored_) {
+    return;
+  }
+
   if (!value.IsObject()) {
-    FTL_LOG(ERROR) << "Ignoring a malformed commit from Firebase. "
-                   << "Returned data is not a dictionary.";
+    HandleDecodingError(path, value, "received data is not a dictionary");
     return;
   }
 
@@ -35,26 +44,25 @@ void WatchClientImpl::OnPut(const std::string& path,
     // The initial put event contains multiple commits.
     std::vector<Record> records;
     if (!DecodeMultipleCommitsFromValue(value, &records)) {
-      FTL_LOG(ERROR) << "Ignoring a malformed commit from Firebase. "
-                     << "Can't decode a collection of commits.";
+      HandleDecodingError(path, value,
+                          "failed to decode a collection of commits");
       return;
     }
-    for (size_t i = 0u; i < records.size(); i++) {
-      commit_watcher_->OnRemoteCommit(records[i].commit, records[i].timestamp);
+    for (const auto& record : records) {
+      commit_watcher_->OnRemoteCommit(record.commit, record.timestamp);
     }
+    HandleError();
     return;
   }
 
   if (path.empty() || path.front() != '/') {
-    FTL_LOG(ERROR) << "Ignoring a malformed commit from Firebase. " << path
-                   << " is not a valid path.";
+    HandleDecodingError(path, value, "invalid path");
     return;
   }
 
   std::unique_ptr<Record> record;
   if (!DecodeCommitFromValue(value, &record)) {
-    FTL_LOG(ERROR) << "Ignoring a malformed commit from Firebase. "
-                   << "Can't decode the commit.";
+    HandleDecodingError(path, value, "failed to decode the commit");
     return;
   }
 
@@ -62,9 +70,29 @@ void WatchClientImpl::OnPut(const std::string& path,
 }
 
 void WatchClientImpl::OnError() {
-  // TODO(ppi): add an error callback on the CommitWatcher and
-  // surface this there.
   FTL_LOG(ERROR) << "Firebase client signalled an unknown error.";
+  HandleError();
+}
+
+void WatchClientImpl::HandleDecodingError(const std::string& path,
+                                          const rapidjson::Value& value,
+                                          const char error_description[]) {
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  value.Accept(writer);
+
+  FTL_LOG(ERROR) << "Error processing received commits: " << error_description;
+  FTL_LOG(ERROR) << "Path: " << path;
+  FTL_LOG(ERROR) << "Content: " << buffer.GetString();
+
+  HandleError();
+}
+
+void WatchClientImpl::HandleError() {
+  FTL_DCHECK(!errored_);
+  errored_ = true;
+  firebase_->UnWatch(this);
+  commit_watcher_->OnError();
 }
 
 }  // namespace cloud_provider

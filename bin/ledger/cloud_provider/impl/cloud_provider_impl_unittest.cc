@@ -88,6 +88,8 @@ class CloudProviderImplTest : public ::testing::Test,
     server_timestamps_.push_back(timestamp);
   }
 
+  void OnError() override { commit_watcher_errors_++; }
+
  protected:
   const std::unique_ptr<CloudProviderImpl> cloud_provider_;
 
@@ -109,6 +111,7 @@ class CloudProviderImplTest : public ::testing::Test,
   // registered as a CommitWatcher.
   std::vector<Commit> commits_;
   std::vector<std::string> server_timestamps_;
+  unsigned int commit_watcher_errors_ = 0u;
 
   mtl::MessageLoop message_loop_;
 
@@ -222,6 +225,42 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
   EXPECT_EQ(expected_commit, commits_[0]);
   EXPECT_EQ(1u, server_timestamps_.size());
   EXPECT_EQ(expected_timestamp, server_timestamps_[0]);
+}
+
+// Verifies that malformed commit notifications are reported through OnError()
+// callback and that processing further notifications is stopped.
+TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
+  rapidjson::Document document;
+  EXPECT_EQ(0u, commit_watcher_errors_);
+  EXPECT_EQ(0u, unwatch_count_);
+
+  // Not a dictionary.
+  document.Parse("[]");
+  ASSERT_FALSE(document.HasParseError());
+  cloud_provider_->WatchCommits("", this);
+  watch_client_->OnPut("/commits/commit_idV", document);
+  EXPECT_EQ(1u, commit_watcher_errors_);
+  EXPECT_EQ(1u, unwatch_count_);
+
+  // Missing fields.
+  document.Parse("{}");
+  ASSERT_FALSE(document.HasParseError());
+  cloud_provider_->WatchCommits("", this);
+  watch_client_->OnPut("/commits/commit_idV", document);
+  EXPECT_EQ(2u, commit_watcher_errors_);
+  EXPECT_EQ(2u, unwatch_count_);
+
+  // Timestamp is not a number.
+  const char content[] =
+      "{\"id\":\"commit_idV\","
+      "\"content\":\"some_contentV\","
+      "\"timestamp\":\"42\""
+      "}";
+  document.Parse(content);
+  ASSERT_FALSE(document.HasParseError());
+  cloud_provider_->WatchCommits("", this);
+  watch_client_->OnPut("/commits/commit_idV", document);
+  EXPECT_EQ(3u, commit_watcher_errors_);
 }
 
 TEST_F(CloudProviderImplTest, GetCommits) {
