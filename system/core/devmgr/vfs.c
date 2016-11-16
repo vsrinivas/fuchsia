@@ -62,8 +62,8 @@ void untrack_vfs_iostate(vfs_iostate_t* ios) {
 //
 // If a non-negative status is returned, the vnode at 'out' has been acquired.
 // Otherwise, no net deltas in acquires/releases occur.
-static mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
-                            const char* path, const char** pathout) {
+mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
+                     const char* path, const char** pathout) {
     vnode_t* oldvn = NULL;
     const char* nextpath;
     mx_status_t r;

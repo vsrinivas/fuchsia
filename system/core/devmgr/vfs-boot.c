@@ -79,8 +79,8 @@ static vnode_ops_t vn_boot_ops = {
     .create = vnb_create,
     .ioctl = memfs_ioctl,
     .unlink = memfs_unlink,
-    .truncate = memfs_truncate_none,
-    .rename = memfs_rename_none,
+    .truncate = mem_truncate_none,
+    .rename = mem_rename_none,
 };
 
 static dnode_t bootfs_root_dn = {

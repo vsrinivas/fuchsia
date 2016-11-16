@@ -242,7 +242,7 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
     return NO_ERROR;
 }
 
-mx_status_t memfs_rename_none(vnode_t* olddir, vnode_t* newdir,
+mx_status_t mem_rename_none(vnode_t* olddir, vnode_t* newdir,
                               const char* oldname, size_t oldlen,
                               const char* newname, size_t newlen) {
     return ERR_NOT_SUPPORTED;
@@ -254,7 +254,7 @@ mx_status_t memfs_sync(vnode_t* vn) {
     return NO_ERROR;
 }
 
-mx_status_t memfs_truncate_none(vnode_t* vn, size_t len) {
+mx_status_t mem_truncate_none(vnode_t* vn, size_t len) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -262,7 +262,7 @@ ssize_t memfs_read_none(vnode_t* vn, void* data, size_t len, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
-ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off) {
+ssize_t mem_write_none(vnode_t* vn, const void* data, size_t len, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -277,6 +277,10 @@ mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_
         *out = dn->vnode;
     }
     return r;
+}
+
+mx_status_t mem_lookup_none(vnode_t* parent, vnode_t** out, const char* name, size_t len) {
+    return ERR_NOT_SUPPORTED;
 }
 
 static mx_status_t mem_getattr(vnode_t* vn, vnattr_t* attr) {
@@ -298,18 +302,30 @@ mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len)
     return dn_readdir(parent->dnode, cookie, data, len);
 }
 
+mx_status_t mem_readdir_none(vnode_t* parent, void* cookie, void* data, size_t len) {
+    return ERR_NOT_SUPPORTED;
+}
+
 static mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
                                const char* name, size_t namelen,
-                               bool isdir);
+                               uint32_t flags);
 
+// postcondition: reference taken on vn returned through "out"
 static mx_status_t mem_create(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode) {
     vnode_t* vn;
-    mx_status_t r = _mem_create(vndir, &vn, name, len, S_ISDIR(mode));
+    uint32_t flags = S_ISDIR(mode)
+        ? MEMFS_TYPE_DIR
+        : MEMFS_TYPE_DATA;
+    mx_status_t r = _mem_create(vndir, &vn, name, len, flags);
     if (r >= 0) {
         vn_acquire(vn);
         *out = vn;
     }
     return r;
+}
+
+static mx_status_t mem_create_none(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode) {
+    return ERR_NOT_SUPPORTED;
 }
 
 ssize_t memfs_ioctl(vnode_t* vn, uint32_t op,
@@ -350,6 +366,57 @@ mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len) {
     return NO_ERROR;
 }
 
+mx_status_t mem_unlink_none(vnode_t* vn, const char* name, size_t len) {
+    return ERR_NOT_SUPPORTED;
+}
+
+static void dir_release(vnode_t* vn) {
+    xprintf("memfs: directory vn %p destroyed\n", vn);
+
+    free(vn);
+}
+
+static void vmo_release(vnode_t* vn) {
+    xprintf("memfs: vn %p destroyed\n", vn);
+    if (vn->vmo.h <= 0) {
+        xprintf("vmofile_release: invalid handle\n");
+    }
+    if ((vn->memfs_flags & MEMFS_FLAG_VMO_REUSE) != 0) {
+        // "reused" vmo's are closed by vmo owner
+        mx_status_t r = mx_handle_close(vn->vmo.h);
+        if (r < 0) {
+            printf("unexpected error closing vfs vmo handle %d\n", r);
+        }
+    }
+    free(vn);
+}
+
+static ssize_t vmo_read(vnode_t* vn, void* data, size_t len, size_t off) {
+    if (off > vn->vmo.length)
+        return 0;
+    size_t rlen = vn->vmo.length - off;
+    if (len > rlen)
+        len = rlen;
+    mx_status_t r = mx_vmo_read(vn->vmo.h, data, vn->vmo.offset+off, len, &len);
+    if (r < 0) {
+        return r;
+    }
+    return len;
+}
+
+static ssize_t vmo_write(vnode_t* vn, const void* data, size_t len, size_t off) {
+    size_t rlen;
+    if (off+len > vn->vmo.length) {
+        // TODO(orr): grow vmo to support extending length
+        return ERR_NOT_SUPPORTED;
+    }
+    mx_status_t r = mx_vmo_write(vn->vmo.h, data, vn->vmo.offset+off, len, &rlen);
+    if (r < 0) {
+        return r;
+    }
+    return rlen;
+}
+
 static vnode_ops_t vn_mem_ops = {
     .release = mem_release,
     .open = memfs_open,
@@ -366,18 +433,34 @@ static vnode_ops_t vn_mem_ops = {
     .sync = memfs_sync,
 };
 
+static vnode_ops_t vn_vmo_ops = {
+    .release = vmo_release,
+    .open = memfs_open,
+    .close = memfs_close,
+    .read = vmo_read,
+    .write = vmo_write,
+    .lookup = mem_lookup_none,
+    .getattr = mem_getattr,
+    .readdir = mem_readdir_none,
+    .create = mem_create_none,
+    .unlink = mem_unlink_none,
+    .truncate = mem_truncate_none,
+    .rename = mem_rename_none,
+    .sync = memfs_sync,
+};
+
 static vnode_ops_t vn_mem_ops_dir = {
-    .release = mem_release,
+    .release = dir_release,
     .open = memfs_open,
     .close = memfs_close,
     .read = memfs_read_none,
-    .write = memfs_write_none,
+    .write = mem_write_none,
     .lookup = memfs_lookup,
     .getattr = mem_getattr,
     .readdir = memfs_readdir,
     .create = mem_create,
     .unlink = memfs_unlink,
-    .truncate = memfs_truncate_none,
+    .truncate = mem_truncate_none,
     .rename = memfs_rename,
     .sync = memfs_sync,
 };
@@ -396,46 +479,71 @@ static vnode_t mem_root = {
     .watch_list = LIST_INITIAL_VALUE(mem_root.watch_list),
 };
 
+// common memfs node creation
+// postcondition: return vn linked into dir (1 ref); no extra ref returned
 static mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
                                const char* name, size_t namelen,
-                               bool isdir) {
+                               uint32_t flags) {
     if ((parent == NULL) || (parent->dnode == NULL)) {
         return ERR_INVALID_ARGS;
     }
 
+    uint32_t type = flags & MEMFS_TYPE_MASK;
+
     vnode_t* vn;
-    if ((vn = calloc(1, sizeof(vnode_t)+MAXBLOCKS*sizeof(uint8_t*))) == NULL) {
-        return ERR_NO_MEMORY;
+    switch (type) {
+    case MEMFS_TYPE_DATA:
+        if ((vn = calloc(1, sizeof(vnode_t)+MAXBLOCKS*sizeof(uint8_t*))) == NULL) {
+            return ERR_NO_MEMORY;
+        }
+        vn->ops = &vn_mem_ops;
+        break;
+    case MEMFS_TYPE_DIR:
+        if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
+            return ERR_NO_MEMORY;
+        }
+        vn->ops = &vn_mem_ops_dir;
+        break;
+    case MEMFS_TYPE_VMO:
+        if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
+            return ERR_NO_MEMORY;
+        }
+        vn->ops = &vn_vmo_ops;
+        // vmo is filled in by caller
+        break;
+    default:
+        printf("mem_create: ERROR unknown type %d\n", type);
+        return ERR_INVALID_ARGS;
     }
     xprintf("mem_create: vn=%p, parent=%p name='%.*s'\n",
             vn, parent, (int)namelen, name);
 
-    if (isdir) {
-        vn->ops = &vn_mem_ops_dir;
-    } else {
-        vn->ops = &vn_mem_ops;
-    }
+    vn->memfs_flags = flags;
+
     list_initialize(&vn->dn_list);
     list_initialize(&vn->watch_list);
 
-    mx_status_t r;
     dnode_t* dn;
-    if ((r = dn_lookup(parent->dnode, &dn, name, namelen)) == NO_ERROR) {
+    if (dn_lookup(parent->dnode, &dn, name, namelen) == NO_ERROR) {
         free(vn);
         return ERR_ALREADY_EXISTS;
     }
 
     // dnode takes a reference to the vnode
+    mx_status_t r;
     if ((r = dn_create(&dn, name, namelen, vn)) < 0) {
         free(vn);
         return r;
     }
+
+    // parent takes first reference
     dn_add_child(parent->dnode, dn);
 
-    if (isdir) {
+    if (type == MEMFS_TYPE_DIR) {
         vn->dnode = dn;
     }
 
+    // returning, without incrementing refcount
     *out = vn;
     return NO_ERROR;
 }
@@ -464,11 +572,8 @@ static vnode_t vfs_root = {
     .watch_list = LIST_INITIAL_VALUE(vfs_root.watch_list),
 };
 
-static vnode_t* vn_data;
-static vnode_t* vn_volume;
-static vnode_t* vn_socket;
-
 // Hardcoded initialization function to access global root directory
+// precondition: vfs_root is a viable root directory
 vnode_t* vfs_create_global_root(void) {
     if (vfs_root_dn.vnode == NULL) {
         vfs_root_dn.vnode = &vfs_root;
@@ -477,9 +582,118 @@ vnode_t* vfs_create_global_root(void) {
         dn_add_child(&vfs_root_dn, bootfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, memfs_get_root()->dnode);
         dn_add_child(&vfs_root_dn, systemfs_get_root()->dnode);
-        _mem_create(&vfs_root, &vn_data, "data", 4, true);
-        _mem_create(&vfs_root, &vn_volume, "volume", 6, true);
-        _mem_create(devfs_get_root(), &vn_socket, "socket", 6, true);
     }
+    memfs_create_directory("/data", 0);
+    memfs_create_directory("/volume", 0);
+    memfs_create_directory("/dev/socket", 0);
     return &vfs_root;
 }
+
+// postcondition: new vnode linked into namespace, data mapped into address space
+mx_status_t memfs_create_from_vmo(const char* path, uint32_t flags,
+                                  mx_handle_t vmo, mx_off_t off, mx_off_t len) {
+
+    mx_status_t r;
+    const char* pathout;
+    vnode_t* parent;
+
+    if ((r = vfs_walk(&vfs_root, &parent, path, &pathout)) < 0) {
+        return r;
+    }
+
+    if (strcmp(pathout, "") == 0) {
+        vn_release(parent);
+        return ERR_ALREADY_EXISTS;
+    }
+
+    vnode_t* vn;
+    r = _mem_create(parent, &vn, pathout, strlen(pathout), MEMFS_TYPE_VMO);
+    if (r < 0) {
+        vn_release(parent);
+        return r;
+    }
+    vn_release(parent);
+
+    vn->vmo.h = vmo;
+    vn->vmo.offset = off;
+    vn->vmo.length = len;
+
+    return NO_ERROR;
+}
+
+// postcondition: new vnode linked into namespace
+mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,
+                                     const char* ptr, mx_off_t len) {
+    mx_status_t r;
+    const char* pathout;
+    vnode_t* parent;
+
+    if ((r = vfs_walk(&vfs_root, &parent, path, &pathout)) != NO_ERROR) {
+        return r;
+    }
+
+    if (strcmp(pathout, "") == 0) {
+        vn_release(parent);
+        return ERR_ALREADY_EXISTS;
+    }
+
+    vnode_t* vn;
+    r = _mem_create(parent, &vn, pathout, strlen(pathout), flags); // no ref taken
+    if (r != NO_ERROR) {
+        vn_release(parent);
+        return r;
+    }
+
+    mx_status_t unlink_r;
+    if (flags == MEMFS_TYPE_VMO) {
+        // add a backing file
+        mx_handle_t vmo;
+        if ((r = mx_vmo_create(len, 0, &vmo)) < 0) {
+            if ((unlink_r = parent->ops->unlink(parent, pathout, strlen(pathout))) != NO_ERROR) {
+                printf("memfs: unexpected unlink failure: %s %d\n", pathout, unlink_r);
+            }
+            vn_release(parent);
+            return r;
+        }
+        vn->vmo.h = vmo;
+        vn->vmo.offset = 0;
+        vn->vmo.length = len;
+    }
+
+    r = vn->ops->write(vn, ptr, len, 0);
+    if (r != (int)len) {
+        if ((unlink_r = parent->ops->unlink(parent, pathout, strlen(pathout))) != NO_ERROR) {
+            printf("memfs: unexpected unlink failure: %s %d\n", pathout, unlink_r);
+        }
+        vn_release(parent);
+        if (r < 0) {
+            return r;
+        }
+        // wrote less than our whole buffer
+        return ERR_IO;
+    }
+    vn_release(parent);
+    return NO_ERROR;
+}
+
+// postcondition: new vnode linked into namespace
+mx_status_t memfs_create_directory(const char* path, uint32_t flags) {
+    mx_status_t r;
+    const char* pathout;
+    vnode_t* parent;
+
+    if ((r = vfs_walk(&vfs_root, &parent, path, &pathout)) < 0) {
+        return r;
+    }
+    if (strcmp(pathout, "") == 0) {
+        vn_release(parent);
+        return ERR_ALREADY_EXISTS;
+    }
+
+    vnode_t* vn;
+    r = _mem_create(parent, &vn, pathout, strlen(pathout), MEMFS_TYPE_DIR);
+    vn_release(parent);
+
+    return r;
+}
+

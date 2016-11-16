@@ -13,11 +13,17 @@
 
 typedef struct dnode dnode_t;
 
+#define MEMFS_TYPE_DATA 0
+#define MEMFS_TYPE_DIR 1
+#define MEMFS_TYPE_VMO 2
+#define MEMFS_TYPE_MASK 0x3
+#define MEMFS_FLAG_VMO_REUSE 4
+
 struct vnode {
     VNODE_BASE_FIELDS
     uint32_t seqcount;
+    uint32_t memfs_flags; // type + flags
 
-    // TODO(ORR) -- to be moved into dir (after memfs works)
     dnode_t* dnode;      // list of my children
 
     mx_handle_t remote;
@@ -29,17 +35,12 @@ struct vnode {
     // all directory watchers
     list_node_t watch_list;
 
-
     union {
         struct {
-            // TODO(orr): add remote support for memfs-ng
-            // mx_handle_t remote;  // mount point on remote directories
-        } dir; // TYPE_DIR
-        struct {
             mx_handle_t h;
-            mx_off_t offset; // offset into file
+            mx_off_t offset; // offset into object
             mx_off_t length; // extent of data
-            void* data;  // pointer to h[offset]
+            void* data; // TODO(orr): temp to support bootfs
         } vmo;
         struct {
             mx_off_t length;
@@ -59,6 +60,8 @@ typedef struct vnode_watcher {
 
 mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
                      const char** pathout, uint32_t flags, uint32_t mode);
+mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
+                     const char* path, const char** pathout);
 
 mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath,
                        mx_handle_t rh);
@@ -111,16 +114,22 @@ mx_status_t memfs_open(vnode_t** _vn, uint32_t flags);
 mx_status_t memfs_close(vnode_t* vn);
 mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_t len);
 mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len);
-mx_status_t memfs_truncate_none(vnode_t* vn, size_t len);
-mx_status_t memfs_rename_none(vnode_t* olddir, vnode_t* newdir,
+mx_status_t mem_truncate_none(vnode_t* vn, size_t len);
+mx_status_t mem_rename_none(vnode_t* olddir, vnode_t* newdir,
                               const char* oldname, size_t oldlen,
                               const char* newname, size_t newlen);
 ssize_t memfs_read_none(vnode_t* vn, void* data, size_t len, size_t off);
-ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
+ssize_t mem_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
 mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len);
 ssize_t memfs_ioctl(vnode_t* vn, uint32_t op, const void* in_data, size_t in_len,
                     void* out_data, size_t out_len);
 mx_status_t memfs_lookup_name(const vnode_t* vn, char* outname, size_t out_len);
+
+mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,
+                                     const char* ptr, mx_off_t len);
+mx_status_t memfs_create_directory(const char* path, uint32_t flags);
+mx_status_t memfs_create_from_vmo(const char* path, uint32_t flags,
+                                  mx_handle_t vmo, mx_off_t off, mx_off_t len);
 
 mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h);
 mx_status_t vfs_uninstall_remote(vnode_t* vn);

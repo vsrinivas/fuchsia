@@ -53,15 +53,15 @@ static vnode_ops_t vn_device_ops = {
     .open = memfs_open,
     .close = memfs_close,
     .read = memfs_read_none,
-    .write = memfs_write_none,
+    .write = mem_write_none,
     .lookup = memfs_lookup,
     .getattr = vnd_getattr,
     .readdir = memfs_readdir,
     .create = vnd_create,
     .ioctl = memfs_ioctl,
     .unlink = vnd_unlink,
-    .truncate = memfs_truncate_none,
-    .rename = memfs_rename_none,
+    .truncate = mem_truncate_none,
+    .rename = mem_rename_none,
 };
 
 static dnode_t vnd_root_dn = {
