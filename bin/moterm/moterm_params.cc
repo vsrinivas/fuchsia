@@ -4,21 +4,32 @@
 
 #include "apps/moterm/moterm_params.h"
 
-#include <string>
+#include "lib/ftl/strings/string_number_conversions.h"
 
 namespace moterm {
+namespace {
+
+constexpr char kDefaultShell[] = "file:///boot/bin/mxsh";
+
+}  // namespace
 
 MotermParams::MotermParams() {}
 
 MotermParams::~MotermParams() {}
 
 bool MotermParams::Parse(const ftl::CommandLine& command_line) {
+  // --font-size=<size>
   std::string value;
-  if (command_line.GetOptionValue("command", &value)) {
-    command = value;
+  if (command_line.GetOptionValue("font-size", &value) &&
+      !ftl::StringToNumberWithError(value, &font_size)) {
+    return false;
   }
-  if (command_line.GetOptionValue("font-size", &value)) {
-    font_size = std::stoi(value);
+
+  // <command> <args...>
+  if (!command_line.positional_args().empty()) {
+    command = command_line.positional_args();
+  } else {
+    command.push_back(kDefaultShell);
   }
   return true;
 }

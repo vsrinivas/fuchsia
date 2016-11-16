@@ -47,42 +47,52 @@ MotermView::MotermView(
 
   auto font_request = fonts::FontRequest::New();
   font_request->family = "RobotoMono";
-  font_loader_.LoadFont(std::move(font_request), [this](sk_sp<SkTypeface>
-                                                            typeface) {
-    FTL_CHECK(typeface);  // TODO(jpoichet): Fail gracefully.
-    regular_typeface_ = std::move(typeface);
+  font_loader_.LoadFont(
+      std::move(font_request), [this](sk_sp<SkTypeface> typeface) {
+        FTL_CHECK(typeface);  // TODO(jpoichet): Fail gracefully.
+        regular_typeface_ = std::move(typeface);
 
-    // TODO(vtl): This duplicates some code.
-    SkPaint fg_paint;
-    fg_paint.setTypeface(regular_typeface_);
-    fg_paint.setTextSize(params_.font_size);
-    // Figure out appropriate metrics.
-    SkPaint::FontMetrics fm = {};
-    fg_paint.getFontMetrics(&fm);
-    ascent_ = static_cast<int>(ceilf(-fm.fAscent));
-    line_height_ = ascent_ + static_cast<int>(ceilf(fm.fDescent + fm.fLeading));
-    FTL_DCHECK(line_height_ > 0);
-    // To figure out the advance width, measure an X. Better hope the font
-    // is monospace.
-    advance_width_ = static_cast<int>(ceilf(fg_paint.measureText("X", 1)));
-    FTL_DCHECK(advance_width_ > 0);
+        // TODO(vtl): This duplicates some code.
+        SkPaint fg_paint;
+        fg_paint.setTypeface(regular_typeface_);
+        fg_paint.setTextSize(params_.font_size);
+        // Figure out appropriate metrics.
+        SkPaint::FontMetrics fm = {};
+        fg_paint.getFontMetrics(&fm);
+        ascent_ = static_cast<int>(ceilf(-fm.fAscent));
+        line_height_ =
+            ascent_ + static_cast<int>(ceilf(fm.fDescent + fm.fLeading));
+        FTL_DCHECK(line_height_ > 0);
+        // To figure out the advance width, measure an X. Better hope the font
+        // is monospace.
+        advance_width_ = static_cast<int>(ceilf(fg_paint.measureText("X", 1)));
+        FTL_DCHECK(advance_width_ > 0);
 
-    const char* argv[]{params_.command.c_str(),
-                       reinterpret_cast<const char*>(NULL)};
-    command_.reset(new Command([this](const void* bytes, size_t num_bytes) {
-      OnDataReceived(bytes, num_bytes);
-    }));
-
-    fidl::InterfaceHandle<modular::ApplicationEnvironment> child_environment;
-    context_->environment()->Duplicate(fidl::GetProxy(&child_environment));
-    command_->Start(params_.command.c_str(), 0, argv,
-                    std::move(child_environment));
-    Blink();
-    Invalidate();
-  });
+        StartCommand();
+      });
 }
 
 MotermView::~MotermView() {}
+
+void MotermView::StartCommand() {
+  command_.reset(new Command());
+
+  bool success = command_->Start(context_->launcher().get(), params_.command,
+                                 [this](const void* bytes, size_t num_bytes) {
+                                   OnDataReceived(bytes, num_bytes);
+                                 },
+                                 [this]() {
+                                   FTL_LOG(INFO) << "Command terminated.";
+                                   exit(1);
+                                 });
+  if (!success) {
+    FTL_LOG(ERROR) << "Error starting command.";
+    exit(1);
+  }
+
+  Blink();
+  Invalidate();
+}
 
 void MotermView::Blink() {
   ftl::TimeDelta delta = ftl::TimePoint::Now() - last_key_;

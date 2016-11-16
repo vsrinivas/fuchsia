@@ -7,12 +7,14 @@
 #include "apps/mozart/lib/skia/skia_font_loader.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/log_settings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   moterm::MotermParams params;
-  if (!params.Parse(command_line)) {
+  if (!ftl::SetLogSettingsFromCommandLine(command_line) ||
+      !params.Parse(command_line)) {
     FTL_LOG(ERROR) << "Missing or invalid parameters. See README.";
     return 1;
   }

@@ -9,15 +9,13 @@
 
 namespace moterm {
 
-constexpr char kDefaultShell[] = "/boot/bin/mxsh";
-
 struct MotermParams {
   MotermParams();
   ~MotermParams();
 
   bool Parse(const ftl::CommandLine& command_line);
 
-  std::string command = kDefaultShell;
+  std::vector<std::string> command;
   uint32_t font_size = 16;
 };
 

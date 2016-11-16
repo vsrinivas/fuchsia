@@ -4,43 +4,28 @@
 
 #include "apps/moterm/command.h"
 
-#include <launchpad/launchpad.h>
-#include <magenta/device/device.h>
-#include <magenta/device/input.h>
-#include <magenta/processargs.h>
-#include <magenta/types.h>
-#include <mxio/io.h>
-#include <mxio/util.h>
-#include <poll.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_printf.h"
+#include "lib/mtl/io/redirection.h"
 
 namespace moterm {
-
 namespace {
-mx::socket CreateRemotePipe(uint32_t destination,
-                            mx_handle_t* out_handle,
-                            uint32_t* out_id) {
-  mx_handle_t socket_handle;
-  uint32_t socket_id;
-  mx_status_t status = mxio_pipe_half(&socket_handle, &socket_id);
-  if (status < 0) {
-    return mx::socket();
-  }
-  mx::socket socket(socket_handle);
-  int remote_fd = status;
-  status = mxio_clone_fd(remote_fd, destination, out_handle, out_id);
-  FTL_CHECK(status == 1);
-  close(remote_fd);
-  return socket;
+
+mx_status_t AddRedirectedSocket(modular::ApplicationLaunchInfo* launch_info,
+                                int startup_fd,
+                                mx::socket* out_socket) {
+  mtl::StartupHandle startup_handle;
+  mx_status_t status =
+      mtl::CreateRedirectedSocket(startup_fd, out_socket, &startup_handle);
+  if (status != NO_ERROR)
+    return status;
+  launch_info->startup_handles.insert(startup_handle.id,
+                                      std::move(startup_handle.handle));
+  return NO_ERROR;
 }
+
 }  // namespace
 
-Command::Command(CommandCallback callback) : callback_(callback) {}
+Command::Command() = default;
 
 Command::~Command() {
   if (out_key_) {
@@ -51,98 +36,72 @@ Command::~Command() {
   }
 }
 
-bool Command::Start(
-    const char* name,
-    int argc,
-    const char* const* argv,
-    fidl::InterfaceHandle<modular::ApplicationEnvironment> environment) {
-  mx_handle_t handles[4];
-  uint32_t ids[4];
-  uint32_t count = 0;
+bool Command::Start(modular::ApplicationLauncher* launcher,
+                    std::vector<std::string> command,
+                    ReceiveCallback receive_callback,
+                    ftl::Closure termination_callback) {
+  FTL_DCHECK(!command.empty());
 
-  stdin_ = CreateRemotePipe(STDIN_FILENO, handles + count, ids + count);
-  if (!stdin_) {
-    FTL_LOG(ERROR) << "Failed to create stdin pipe";
+  auto launch_info = modular::ApplicationLaunchInfo::New();
+  launch_info->url = command[0];
+  for (size_t i = 1; i < command.size(); ++i)
+    launch_info->arguments.push_back(command[i]);
+
+  mx_status_t status;
+  if ((status =
+           AddRedirectedSocket(launch_info.get(), STDIN_FILENO, &stdin_))) {
+    FTL_LOG(ERROR) << "Failed to create stdin pipe: status=" << status;
     return false;
   }
-  count++;
-
-  stdout_ = CreateRemotePipe(STDOUT_FILENO, handles + count, ids + count);
-  if (!stdout_) {
-    FTL_LOG(ERROR) << "Failed to create stdout pipe";
+  if ((status =
+           AddRedirectedSocket(launch_info.get(), STDOUT_FILENO, &stdout_))) {
+    FTL_LOG(ERROR) << "Failed to create stdout pipe: status=" << status;
     return false;
   }
-  count++;
-
-  stderr_ = CreateRemotePipe(STDERR_FILENO, handles + count, ids + count);
-  if (!stderr_) {
-    FTL_LOG(ERROR) << "Failed to create stderr pipe";
-    return false;
-  }
-  count++;
-
-  if (environment) {
-    handles[count] =
-        static_cast<mx_handle_t>(environment.PassHandle().release()),
-    ids[count] = MX_HND_TYPE_APPLICATION_ENVIRONMENT;
-    count++;
-  }
-
-  mx_handle_t result =
-      launchpad_launch_mxio_etc(name, argc, argv, nullptr, count, handles, ids);
-  if (result < 0) {
-    FTL_LOG(ERROR) << "Failed to start process";
-    return false;
-  }
-  process_.reset(result);
-
-  mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
-
-  out_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-      this, stdout_.get(), signals, ftl::TimeDelta::Max());
-  if (!out_key_) {
-    FTL_LOG(ERROR) << "Failed to monitor stdout";
-    return false;
-  }
-  err_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-      this, stderr_.get(), signals, ftl::TimeDelta::Max());
-  if (!err_key_) {
-    FTL_LOG(ERROR) << "Failed to monitor sterr";
+  if ((status =
+           AddRedirectedSocket(launch_info.get(), STDERR_FILENO, &stderr_))) {
+    FTL_LOG(ERROR) << "Failed to create stderr pipe: status=" << status;
     return false;
   }
 
-  FTL_LOG(INFO) << "Command " << name << " started";
+  FTL_LOG(INFO) << "Starting " << command[0];
+  launcher->CreateApplication(std::move(launch_info),
+                              GetProxy(&application_controller_));
+  application_controller_.set_connection_error_handler(
+      std::move(termination_callback));
+
+  receive_callback_ = std::move(receive_callback);
+  out_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(this, stdout_.get(),
+                                                        MX_SOCKET_READABLE);
+  err_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(this, stderr_.get(),
+                                                        MX_SOCKET_READABLE);
   return true;
 }
 
 void Command::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  if (pending & MX_SIGNAL_READABLE) {
+  if (pending & MX_SOCKET_READABLE) {
     char buffer[2048];
     mx_size_t len;
 
     if (handle == stdout_.get()) {
-      if (stdout_.read(0, buffer, 2048, &len) != NO_ERROR) {
+      if (stdout_.read(0, buffer, sizeof(buffer), &len) != NO_ERROR) {
         return;
       }
     } else if (handle == stderr_.get()) {
-      if (stderr_.read(0, buffer, 2048, &len) != NO_ERROR) {
+      if (stderr_.read(0, buffer, sizeof(buffer), &len) != NO_ERROR) {
         return;
       }
     } else {
       return;
     }
-    buffer[len] = '\0';
-
-    callback_(buffer, len);
-  } else if (pending & MX_SIGNAL_PEER_CLOSED) {
-    FTL_LOG(INFO) << "Command exited";
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    receive_callback_(buffer, len);
   }
 }
 
 void Command::SendData(const void* bytes, size_t num_bytes) {
   mx_size_t len;
   if (stdin_.write(0, bytes, num_bytes, &len) != NO_ERROR) {
+    // TODO: Deal with the socket being full.
     FTL_LOG(ERROR) << "Failed to send";
   }
 }
