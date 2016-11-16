@@ -9,6 +9,7 @@
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
+#include "apps/ledger/src/storage/impl/db_empty_impl.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/constants.h"
@@ -55,9 +56,9 @@ class FakeCommitWatcher : public CommitWatcher {
   ChangeSource last_source;
 };
 
-// Only implements |Init()|, |CreateJournal() and |CreateMergeJournal()| and
-// returns an |IO_ERROR| in all other cases.
-class FakeDbImpl : public DB {
+// Implements |Init()|, |CreateJournal() and |CreateMergeJournal()| and
+// fails with a |NOT_IMPLEMENTED| error in all other cases.
+class FakeDbImpl : public DbEmptyImpl {
  public:
   FakeDbImpl(PageStorageImpl* page_storage) : page_storage_(page_storage) {}
 
@@ -70,110 +71,13 @@ class FakeDbImpl : public DB {
         JournalDBImpl::Simple(journal_type, page_storage_, this, id, base);
     return Status::OK;
   }
+
   Status CreateMergeJournal(const CommitId& base,
                             const CommitId& other,
                             std::unique_ptr<Journal>* journal) override {
     *journal =
         JournalDBImpl::Merge(page_storage_, this, RandomId(10), base, other);
     return Status::OK;
-  }
-
-  std::unique_ptr<Batch> StartBatch() override { return nullptr; }
-  Status GetHeads(std::vector<CommitId>* heads) override {
-    return Status::IO_ERROR;
-  }
-  Status AddHead(const CommitId& head) override { return Status::IO_ERROR; }
-  Status RemoveHead(const CommitId& head) override { return Status::IO_ERROR; }
-  Status ContainsHead(const CommitId& commit_id) override {
-    return Status::IO_ERROR;
-  }
-  Status GetCommitStorageBytes(const CommitId& commit_id,
-                               std::string* storage_bytes) override {
-    return Status::IO_ERROR;
-  }
-  Status AddCommitStorageBytes(const CommitId& commit_id,
-                               const std::string& storage_bytes) override {
-    return Status::IO_ERROR;
-  }
-  Status RemoveCommit(const CommitId& commit_id) override {
-    return Status::IO_ERROR;
-  }
-  Status GetImplicitJournalIds(std::vector<JournalId>* journal_ids) override {
-    return Status::IO_ERROR;
-  }
-  Status GetImplicitJournal(const JournalId& journal_id,
-                            std::unique_ptr<Journal>* journal) override {
-    return Status::IO_ERROR;
-  }
-  Status RemoveExplicitJournals() override { return Status::IO_ERROR; }
-  Status RemoveJournal(const JournalId& journal_id) override {
-    return Status::IO_ERROR;
-  }
-  Status AddJournalEntry(const JournalId& journal_id,
-                         ftl::StringView key,
-                         ftl::StringView value,
-                         KeyPriority priority) override {
-    return Status::IO_ERROR;
-  }
-  Status GetJournalValue(const JournalId& journal_id,
-                         ftl::StringView key,
-                         std::string* value) override {
-    return Status::IO_ERROR;
-  }
-  Status RemoveJournalEntry(const JournalId& journal_id,
-                            convert::ExtendedStringView key) override {
-    return Status::IO_ERROR;
-  }
-  Status GetJournalEntries(
-      const JournalId& journal_id,
-      std::unique_ptr<Iterator<const EntryChange>>* entries) override {
-    return Status::IO_ERROR;
-  }
-  Status GetJournalValueCounter(const JournalId& journal_id,
-                                ftl::StringView value,
-                                int* counter) override {
-    return Status::IO_ERROR;
-  }
-  Status SetJournalValueCounter(const JournalId& journal_id,
-                                ftl::StringView value,
-                                int counter) override {
-    return Status::IO_ERROR;
-  }
-  Status GetJournalValues(const JournalId& journal_id,
-                          std::vector<std::string>* values) override {
-    return Status::IO_ERROR;
-  }
-  Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override {
-    return Status::IO_ERROR;
-  }
-  Status MarkCommitIdSynced(const CommitId& commit_id) override {
-    return Status::IO_ERROR;
-  }
-  Status MarkCommitIdUnsynced(const CommitId& commit_id) override {
-    return Status::IO_ERROR;
-  }
-  Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override {
-    return Status::IO_ERROR;
-  }
-  Status GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) override {
-    return Status::IO_ERROR;
-  }
-  Status MarkObjectIdSynced(ObjectIdView object_id) override {
-    return Status::IO_ERROR;
-  }
-  Status MarkObjectIdUnsynced(ObjectIdView object_id) override {
-    return Status::IO_ERROR;
-  }
-  Status IsObjectSynced(ObjectIdView object_id, bool* is_synced) override {
-    return Status::IO_ERROR;
-  }
-  Status SetNodeSize(size_t node_size) override { return Status::IO_ERROR; }
-  Status GetNodeSize(size_t* node_size) override { return Status::IO_ERROR; }
-  Status SetSyncMetadata(ftl::StringView sync_state) override {
-    return Status::IO_ERROR;
-  }
-  Status GetSyncMetadata(std::string* sync_state) override {
-    return Status::IO_ERROR;
   }
 
  private:
@@ -387,29 +291,30 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   std::unique_ptr<Journal> journal;
   // Explicit journals.
   // The first call will fail because FakeDBImpl::AddJournalEntry() returns an
-  // IO_ERROR. After a failed call all other Put/Delete/Commit operations should
-  // fail with ILLEGAL_STATE. Rollback will fail with IO_ERROR because
-  // FakeDBImpl::RemoveJournal() returns it.
+  // error. After a failed call all other Put/Delete/Commit operations should
+  // fail with ILLEGAL_STATE. Rollback should not fail with ILLEGAL_STATE.
   db.CreateJournal(JournalType::EXPLICIT, RandomId(kCommitIdSize), &journal);
-  EXPECT_EQ(Status::IO_ERROR, journal->Put("key", "value", KeyPriority::EAGER));
+  EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
   EXPECT_EQ(Status::ILLEGAL_STATE,
             journal->Put("key", "value", KeyPriority::EAGER));
   EXPECT_EQ(Status::ILLEGAL_STATE, journal->Delete("key"));
   journal->Commit([](Status s, const CommitId& id) {
     EXPECT_EQ(Status::ILLEGAL_STATE, s);
   });
-  EXPECT_EQ(Status::IO_ERROR, journal->Rollback());
+  EXPECT_NE(Status::ILLEGAL_STATE, journal->Rollback());
 
   // Implicit journals.
   // All calls will fail because of FakeDBImpl implementation, not because of
-  // ILLEGAL_STATE.
+  // an ILLEGAL_STATE error.
   db.CreateJournal(JournalType::IMPLICIT, RandomId(kCommitIdSize), &journal);
-  EXPECT_EQ(Status::IO_ERROR, journal->Put("key", "value", KeyPriority::EAGER));
-  EXPECT_EQ(Status::IO_ERROR, journal->Put("key", "value", KeyPriority::EAGER));
-  EXPECT_EQ(Status::IO_ERROR, journal->Delete("key"));
-  journal->Commit(
-      [](Status s, const CommitId& id) { EXPECT_EQ(Status::IO_ERROR, s); });
-  EXPECT_EQ(Status::IO_ERROR, journal->Rollback());
+  EXPECT_NE(Status::OK, journal->Put("key", "value", KeyPriority::EAGER));
+  Status put_status = journal->Put("key", "value", KeyPriority::EAGER);
+  EXPECT_NE(Status::ILLEGAL_STATE, put_status);
+  EXPECT_NE(Status::ILLEGAL_STATE, journal->Delete("key"));
+  journal->Commit([](Status s, const CommitId& id) {
+    EXPECT_NE(Status::ILLEGAL_STATE, s);
+  });
+  EXPECT_NE(Status::ILLEGAL_STATE, journal->Rollback());
 }
 
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {

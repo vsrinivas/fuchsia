@@ -50,6 +50,8 @@ executable("unittests") {
 
   sources = [
     "commit_impl_unittest.cc",
+    "db_empty_impl.cc",
+    "db_empty_impl.h",
     "db_unittest.cc",
     "ledger_storage_unittest.cc",
     "object_impl_unittest.cc",
