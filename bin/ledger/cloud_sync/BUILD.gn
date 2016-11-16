@@ -8,5 +8,6 @@ group("cloud_sync") {
   deps = [
     "//apps/ledger/src/cloud_sync/impl",
     "//apps/ledger/src/cloud_sync/impl:unittests",
+    "//apps/ledger/src/cloud_sync/public",
   ]
 }
