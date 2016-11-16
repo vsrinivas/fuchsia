@@ -30,6 +30,8 @@ static const char* excp_type_to_string(uint type) {
         return "software breakpoint";
     case MX_EXCP_HW_BREAKPOINT:
         return "hardware breakpoint";
+    case MX_EXCP_UNALIGNED_ACCESS:
+        return "alignment fault";
     default:
         return "unknown fault";
     }

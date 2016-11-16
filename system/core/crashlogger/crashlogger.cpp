@@ -37,6 +37,8 @@ const char* excp_type_to_str(uint32_t type) {
         return "sw breakpoint";
     case MX_EXCP_HW_BREAKPOINT:
         return "hw breakpoint";
+    case MX_EXCP_UNALIGNED_ACCESS:
+        return "alignment fault";
     default:
         // Note: To get a compilation failure when a new exception type has
         // been added without having also updated this function, compile with

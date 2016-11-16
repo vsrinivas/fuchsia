@@ -22,6 +22,8 @@
 
 #define LOCAL_TRACE 0
 
+#define DFSC_ALIGNMENT_FAULT 0b100001
+
 struct fault_handler_table_entry {
     uint64_t pc;
     uint64_t fault_handler;
@@ -63,11 +65,11 @@ static status_t try_magenta_exception_handler (mx_excp_type_t type, struct arm64
     return status;
 }
 
-static status_t try_magenta_page_fault_exception_handler (struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
+static status_t try_magenta_data_fault_exception_handler (mx_excp_type_t type, struct arm64_iframe_long *iframe, uint32_t esr, uint64_t far)
 {
     arch_exception_context_t context = { .frame = iframe, .esr = esr, .far = far };
     arch_enable_ints();
-    status_t status = magenta_exception_handler(MX_EXCP_FATAL_PAGE_FAULT, &context, iframe->elr);
+    status_t status = magenta_exception_handler(type, &context, iframe->elr);
     arch_disable_ints();
     return status;
 }
@@ -145,7 +147,7 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
 #if WITH_LIB_MAGENTA
             /* if this is from user space, let magenta get a shot at it */
             if (is_user) {
-                if (try_magenta_page_fault_exception_handler (iframe, esr, far) == NO_ERROR)
+                if (try_magenta_data_fault_exception_handler (MX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == NO_ERROR)
                     return;
             }
 #endif
@@ -171,11 +173,15 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
                     ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
                     iframe->elr, is_user, far, esr, iss);
 
-            arch_enable_ints();
-            status_t err = vmm_page_fault_handler(far, pf_flags);
-            arch_disable_ints();
-            if (err >= 0)
-                return;
+            uint8_t dfsc = BITS(iss, 5, 0);
+            if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
+                arch_enable_ints();
+                status_t err = vmm_page_fault_handler(far, pf_flags);
+                arch_disable_ints();
+                if (err >= 0){
+                    return;
+                }
+            }
 
             // Check if the current thread was expecting a data fault and
             // we should return to its handler.
@@ -197,7 +203,11 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
 #if WITH_LIB_MAGENTA
             /* if this is from user space, let magenta get a shot at it */
             if (is_user) {
-                if (try_magenta_page_fault_exception_handler (iframe, esr, far) == NO_ERROR)
+                mx_excp_type_t excp_type = MX_EXCP_FATAL_PAGE_FAULT;
+                if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
+                    excp_type = MX_EXCP_UNALIGNED_ACCESS;
+                }
+                if (try_magenta_data_fault_exception_handler (excp_type, iframe, esr, far) == NO_ERROR)
                     return;
             }
 #endif
