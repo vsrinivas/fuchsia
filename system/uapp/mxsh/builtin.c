@@ -26,13 +26,13 @@ static int mxc_motd(int argc, char** argv) {
     char kernel_rev[64] = {'?'};
     mx_version_get(kernel_rev, sizeof(kernel_rev));
 
-    printf("-----------------------------------------------------------------\n"
+    printf("---------------------------------------------------------------------------\n"
            "Welcome to fuchsia.\n"
            "  revision [%s]\n"
            "  - type 'help' for a list of builtin commands\n"
            "  - hit enter if you do not see a '>' prompt\n"
-           "  - launch applications with 'file:///system/apps/$APP_NAME'\n"
-           "-----------------------------------------------------------------\n",
+           "  - launch applications in root environment with '@ /system/apps/$APP_NAME'\n"
+           "---------------------------------------------------------------------------\n",
            kernel_rev);
     return 0;
 }

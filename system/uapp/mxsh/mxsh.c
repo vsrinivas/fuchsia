@@ -698,7 +698,7 @@ void execline(char* line) {
         line[len] = 0;
     }
 
-    if (!strncmp(line, "file:", 5)) {
+    if (!strncmp(line, "@", 1)) {
         app_launch(line);
         return;
     }

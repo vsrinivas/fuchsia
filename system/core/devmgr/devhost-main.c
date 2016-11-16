@@ -254,7 +254,7 @@ mx_status_t devmgr_control(const char* cmd) {
         mx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, NULL);
         return NO_ERROR;
     }
-    if (!strncmp(cmd, "file:", 5)) {
+    if (!strncmp(cmd, "@", 1)) {
         return mx_channel_write(app_launcher, 0, cmd, strlen(cmd), NULL, 0);
     }
     const char* ps0prefix = "acpi-ps0:";
