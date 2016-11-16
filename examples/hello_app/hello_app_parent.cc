@@ -10,6 +10,7 @@
 #include "apps/modular/examples/hello_app/hello.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/app/application_context.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -19,10 +20,17 @@ namespace {
 
 class HelloAppParent {
  public:
-  HelloAppParent()
+  HelloAppParent(ftl::CommandLine& command_line)
       : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
     auto launch_info = modular::ApplicationLaunchInfo::New();
-    launch_info->url = "file:///system/apps/hello_app_child";
+    const std::vector<std::string>& args = command_line.positional_args();
+    if (args.empty()) {
+      launch_info->url = "file:///system/apps/hello_app_child";
+    } else {
+      launch_info->url = args[0];
+      for (size_t i = 1; i < args.size(); ++i)
+        launch_info->arguments.push_back(args[i]);
+    }
     launch_info->services = fidl::GetProxy(&child_services_);
     context_->launcher()->CreateApplication(std::move(launch_info),
                                             fidl::GetProxy(&child_));
@@ -52,8 +60,10 @@ class HelloAppParent {
 }  // namespace
 
 int main(int argc, const char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+
   mtl::MessageLoop loop;
-  HelloAppParent app;
+  HelloAppParent app(command_line);
   loop.Run();
   return 0;
 }
