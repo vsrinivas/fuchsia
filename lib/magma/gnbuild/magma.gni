@@ -9,6 +9,7 @@ declare_args() {
   msd_intel_gen_build_root = "//driver/msd-intel-gen"
   glm_build_root = "//third_party/glm"
   boringssl_build_root = "//third_party/boringssl"
+  magenta_build_root = "//magenta"
 
   magma_shared_toolchain = "//build/toolchain/fuchsia:${target_cpu}-shared"
 

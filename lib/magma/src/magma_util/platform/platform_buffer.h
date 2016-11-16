@@ -13,6 +13,7 @@ namespace magma {
 class PlatformBuffer {
 public:
     static std::unique_ptr<PlatformBuffer> Create(uint64_t size);
+    // Import takes ownership of the handle.
     static std::unique_ptr<PlatformBuffer> Import(uint32_t handle);
 
     virtual ~PlatformBuffer() {}
@@ -41,6 +42,6 @@ public:
     virtual bool UnmapPageBus(uint32_t page_index) = 0;
 };
 
-} // namespace magma
+}  // namespace magma
 
-#endif // PLATFORM_BUFFER_H
+#endif  // PLATFORM_BUFFER_H

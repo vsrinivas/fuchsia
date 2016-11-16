@@ -7,10 +7,11 @@
 #include "platform_buffer.h"
 #include <ddk/driver.h>
 #include <errno.h>
-#include <limits.h> // PAGE_SIZE
-#include <magenta/syscalls.h>
+#include <limits.h>  // PAGE_SIZE
 #include <magenta/syscalls/object.h>
 #include <map>
+#include <mx/process.h>
+#include <mx/vmo.h>
 #include <vector>
 
 namespace magma {
@@ -80,7 +81,7 @@ public:
         return array->pin_count(array_offset);
     }
 
-    void incr(uint32_t page_index) 
+    void incr(uint32_t page_index)
     {
         uint32_t array_index = page_index / PinCountArray::kPinCounts;
         uint32_t array_offset = page_index - PinCountArray::kPinCounts * array_index;
@@ -118,20 +119,20 @@ public:
 private:
     PinCountSparseArray(uint32_t array_size) : sparse_array_(array_size) {}
 
-    std::vector<std::unique_ptr<PinCountArray>> sparse_array_; 
+    std::vector<std::unique_ptr<PinCountArray>> sparse_array_;
     uint32_t total_pin_count_{};
 };
 
 class MagentaPlatformBuffer : public PlatformBuffer {
 public:
-    MagentaPlatformBuffer(mx_handle_t handle, uint64_t size) : handle_(handle), size_(size)
+    MagentaPlatformBuffer(mx::vmo vmo, uint64_t size) : vmo_(std::move(vmo)), size_(size)
     {
-        DLOG("MagentaPlatformBuffer ctor size %ld handle 0x%x", size, handle_);
+        DLOG("MagentaPlatformBuffer ctor size %ld vmo 0x%x", size, vmo_.get());
 
         DASSERT(magma::is_page_aligned(size));
         pin_count_array_ = PinCountSparseArray::Create(size / PAGE_SIZE);
 
-        bool success = PlatformBuffer::IdFromHandle(handle_, &koid_);
+        bool success = PlatformBuffer::IdFromHandle(vmo_.get(), &koid_);
         DASSERT(success);
     }
 
@@ -140,7 +141,6 @@ public:
         if (map_count_ > 0)
             UnmapCpu();
         ReleasePages();
-        mx_handle_close(handle_);
     }
 
     // PlatformBuffer implementation
@@ -150,11 +150,11 @@ public:
 
     bool duplicate_handle(uint32_t* handle_out) override
     {
-        mx_handle_t duplicate;
-        mx_status_t status = mx_handle_duplicate(handle_, MX_RIGHT_SAME_RIGHTS, &duplicate);
+        mx::vmo duplicate;
+        mx_status_t status = vmo_.duplicate(MX_RIGHT_SAME_RIGHTS, &duplicate);
         if (status < 0)
             return DRETF(false, "mx_handle_duplicate failed");
-        *handle_out = duplicate;
+        *handle_out = duplicate.release();
         return true;
     }
 
@@ -176,7 +176,7 @@ public:
 private:
     void ReleasePages();
 
-    mx_handle_t handle_;
+    mx::vmo vmo_;
     uint64_t size_;
     uint64_t koid_;
     void* virt_addr_{};
@@ -190,8 +190,8 @@ bool MagentaPlatformBuffer::MapCpu(void** addr_out)
     if (map_count_ == 0) {
         DASSERT(!virt_addr_);
         uintptr_t ptr;
-        mx_status_t status = mx_process_map_vm(mx_process_self(), handle_, 0, size(), &ptr,
-                                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+        mx_status_t status = mx::process::self().map_vm(
+            vmo_, 0, size(), &ptr, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
         if (status != NO_ERROR)
             return DRETF(false, "failed to map vmo");
 
@@ -232,7 +232,8 @@ bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_co
     if ((start_page_index + page_count) * PAGE_SIZE > size())
         return DRETF(false, "offset + length greater than buffer size");
 
-    mx_status_t status = mx_vmo_op_range(handle_, MX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE, nullptr, 0);
+    mx_status_t status = vmo_.op_range(MX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE,
+                                       page_count * PAGE_SIZE, nullptr, 0);
     if (status != NO_ERROR)
         return DRETF(false, "failed to commit vmo");
 
@@ -265,25 +266,25 @@ bool MagentaPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_
 
     DLOG("pages_to_unpin %u page_count %u", pages_to_unpin, page_count);
 
-
     if (pages_to_unpin == page_count) {
         for (uint32_t i = 0; i < page_count; i++) {
             pin_count_array_->decr(start_page_index + i);
         }
 
         // Decommit the entire range.
-        mx_status_t status =
-            mx_vmo_op_range(handle_, MX_VMO_OP_DECOMMIT, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE, nullptr, 0);
+        mx_status_t status = vmo_.op_range(MX_VMO_OP_DECOMMIT, start_page_index * PAGE_SIZE,
+                                           page_count * PAGE_SIZE, nullptr, 0);
         if (status != NO_ERROR && status != ERR_NOT_SUPPORTED) {
             return DRETF(false, "failed to decommit full range: %d", status);
         }
 
     } else {
         // Decommit page by page
-        for (uint32_t page_index = start_page_index; page_index < start_page_index + page_count; page_index++) {
+        for (uint32_t page_index = start_page_index; page_index < start_page_index + page_count;
+             page_index++) {
             if (pin_count_array_->decr(page_index) == 0) {
-                mx_status_t status = mx_vmo_op_range(handle_, MX_VMO_OP_DECOMMIT,
-                                                     page_index * PAGE_SIZE, PAGE_SIZE, nullptr, 0);
+                mx_status_t status = vmo_.op_range(MX_VMO_OP_DECOMMIT, page_index * PAGE_SIZE,
+                                                   PAGE_SIZE, nullptr, 0);
                 if (status != NO_ERROR && status != ERR_NOT_SUPPORTED) {
                     return DRETF(false, "failed to decommit page_index %u: %u", page_index, status);
                 }
@@ -298,7 +299,7 @@ void MagentaPlatformBuffer::ReleasePages()
 {
     if (pin_count_array_->total_pin_count()) {
         // Still have some pinned pages, decommit full range to be sure everything is released.
-        mx_status_t status = mx_vmo_op_range(handle_, MX_VMO_OP_DECOMMIT, 0, size(), nullptr, 0);
+        mx_status_t status = vmo_.op_range(MX_VMO_OP_DECOMMIT, 0, size(), nullptr, 0);
         if (status != NO_ERROR && status != ERR_NOT_SUPPORTED)
             DLOG("failed to decommit pages: %d", status);
     }
@@ -317,9 +318,8 @@ bool MagentaPlatformBuffer::MapPageCpu(uint32_t page_index, void** addr_out)
     }
 
     uintptr_t ptr;
-    mx_status_t status =
-        mx_process_map_vm(mx_process_self(), handle_, page_index * PAGE_SIZE, PAGE_SIZE, &ptr,
-                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_status_t status = mx::process::self().map_vm(vmo_, page_index * PAGE_SIZE, PAGE_SIZE, &ptr,
+                                                    MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     if (status != NO_ERROR)
         return DRETF(false, "page map failed");
 
@@ -354,7 +354,8 @@ bool MagentaPlatformBuffer::MapPageBus(uint32_t page_index, uint64_t* addr_out)
 
     mx_paddr_t paddr[1];
 
-    mx_status_t status = mx_vmo_op_range(handle_, MX_VMO_OP_LOOKUP, page_index * PAGE_SIZE, PAGE_SIZE, paddr, sizeof(paddr));
+    mx_status_t status =
+        vmo_.op_range(MX_VMO_OP_LOOKUP, page_index * PAGE_SIZE, PAGE_SIZE, paddr, sizeof(paddr));
     if (status != NO_ERROR)
         return DRETF(false, "failed to lookup vmo");
 
@@ -368,8 +369,8 @@ bool PlatformBuffer::IdFromHandle(uint32_t handle, uint64_t* id_out)
 {
     mx_info_handle_basic_t info;
     mx_size_t info_size = 0;
-    mx_status_t status =
-        mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info), &info_size);
+    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info,
+                                            sizeof(info), &info_size);
     if (status != NO_ERROR || info_size != sizeof(info))
         return DRETF(false, "mx_object_get_info failed");
 
@@ -383,14 +384,14 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size)
     if (size == 0)
         return DRETP(nullptr, "attempting to allocate 0 sized buffer");
 
-    mx_handle_t vmo_handle;
-    mx_status_t status = mx_vmo_create(size, 0, &vmo_handle);
+    mx::vmo vmo;
+    mx_status_t status = mx::vmo::create(size, 0, &vmo);
     if (status != NO_ERROR) {
-        return DRETP(nullptr, "failed to allocate vmo size %lld: %d", size, vmo_handle);
+        return DRETP(nullptr, "failed to allocate vmo size %lld: %d", size);
     }
 
-    DLOG("allocated vmo size %ld handle 0x%x", size, vmo_handle);
-    return std::unique_ptr<PlatformBuffer>(new MagentaPlatformBuffer(vmo_handle, size));
+    DLOG("allocated vmo size %ld handle 0x%x", size, vmo.get());
+    return std::unique_ptr<PlatformBuffer>(new MagentaPlatformBuffer(std::move(vmo), size));
 }
 
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
@@ -398,7 +399,8 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
     uint64_t size;
     // presumably this will fail if handle is invalid or not a vmo handle, so we perform no
     // additional error checking
-    auto status = mx_vmo_get_size(handle, &size);
+    mx::vmo vmo(handle);
+    auto status = vmo.get_size(&size);
 
     if (status != NO_ERROR)
         return DRETP(nullptr, "mx_vmo_get_size failed");
@@ -406,6 +408,6 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
     if (!magma::is_page_aligned(size))
         return DRETP(nullptr, "attempting to import vmo with invalid size");
 
-    return std::unique_ptr<PlatformBuffer>(new MagentaPlatformBuffer(handle, size));
+    return std::unique_ptr<PlatformBuffer>(new MagentaPlatformBuffer(std::move(vmo), size));
 }
 }
