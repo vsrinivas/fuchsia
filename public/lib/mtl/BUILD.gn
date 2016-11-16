@@ -20,6 +20,7 @@ executable("mtl_unittests") {
   sources = [
     "data_pipe/data_pipe_drainer_unittest.cc",
     "handles/object_info_unittest.cc",
+    "io/redirection_unittest.cc",
     "tasks/message_loop_unittest.cc",
     "vmo/shared_vmo_unittest.cc",
     "vmo/strings_unittest.cc",

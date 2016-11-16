@@ -6,6 +6,8 @@ source_set("io") {
   sources = [
     "device_watcher.cc",
     "device_watcher.h",
+    "redirection.cc",
+    "redirection.h",
   ]
 
   libs = [ "magenta" ]
