@@ -51,6 +51,7 @@ private:
         bool Init(uint32_t len);
         mx_size_t Write(const void* src, mx_size_t len, bool from_user);
         mx_size_t Read(void* dest, mx_size_t len, bool from_user);
+        mx_size_t CouldRead() const;
         mx_size_t free() const;
         bool empty() const;
 

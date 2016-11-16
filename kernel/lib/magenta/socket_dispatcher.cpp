@@ -142,6 +142,10 @@ mx_size_t SocketDispatcher::CBuf::Read(void* dest, mx_size_t len, bool from_user
     return ret;
 }
 
+mx_size_t SocketDispatcher::CBuf::CouldRead() const {
+    return modpow2((uint)(head_ - tail_), len_pow2_);
+}
+
 // static
 status_t SocketDispatcher::Create(uint32_t flags,
                                   mxtl::RefPtr<Dispatcher>* dispatcher0,
@@ -322,6 +326,12 @@ mx_status_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len,
 mx_status_t SocketDispatcher::Read(void* dest, mx_size_t len,
                                    bool from_user, mx_size_t* nread) {
     AutoLock lock(&lock_);
+
+    // Just query for bytes outstanding.
+    if (!dest && len == 0) {
+        *nread = cbuf_.CouldRead();
+        return NO_ERROR;
+    }
 
     bool closed = half_closed_[1] || !other_;
 

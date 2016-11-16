@@ -437,7 +437,10 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
                             user_ptr<mx_size_t> actual) {
     LTRACEF("handle %d\n", handle);
 
-    if (!_buffer || !actual || flags)
+    if (!actual || flags)
+        return ERR_INVALID_ARGS;
+
+    if (!_buffer && size > 0)
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
