@@ -305,7 +305,7 @@ class ProxyController<T> {
     assert(version != null);
     assert(!isBound);
     core.ChannelPair pair = new core.ChannelPair();
-    assert(pair.status != core.NO_ERROR);
+    assert(pair.status == core.NO_ERROR);
     _version = version;
     _reader.bind(pair.passChannel0());
     return new InterfaceRequest<T>(pair.passChannel1());
