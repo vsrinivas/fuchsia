@@ -63,7 +63,7 @@ class GpsAcquirerApp : public maxwell::acquirers::GpsAcquirer,
     json << "{ \"lat\": " << rand() % 18001 / 100. - 90
          << ", \"lng\": " << rand() % 36001 / 100. - 180 << " }";
 
-    FTL_LOG(INFO) << "Update by acquirers/gps: " << json.str();
+    FTL_VLOG(1) << "Update by acquirers/gps: " << json.str();
 
     out_->Update(json.str());
   }

@@ -61,7 +61,7 @@ class ModularAcquirerApp : public ModularAcquirer,
   inline void PublishModularState() {
     std::ostringstream json;
     json << "{ \"modular_state\": " << modular_state << " }";
-    FTL_LOG(INFO) << ": " << json.str();
+    FTL_VLOG(1) << ": " << json.str();
 
     out_->Update(json.str());
   }

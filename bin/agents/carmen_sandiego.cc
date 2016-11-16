@@ -46,8 +46,8 @@ class CarmenSandiegoApp : public maxwell::context::PublisherController,
   }
 
   void OnUpdate(maxwell::context::UpdatePtr update) override {
-    FTL_LOG(INFO) << "OnUpdate from " << update->source << ": "
-                  << update->json_value;
+    FTL_VLOG(1) << "OnUpdate from " << update->source << ": "
+                << update->json_value;
 
     std::string hlloc = "somewhere";
 
