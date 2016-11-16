@@ -15,6 +15,11 @@ import "apps/modular/services/application/service_provider.fidl";
 // support for their lifecycle.
 [ServiceName="modular.ApplicationEnvironment"]
 interface ApplicationEnvironment {
+  // Creates another interface to this environment.
+  // Note: Assigning explicit ordinal index because this method is referenced
+  // manually in programs such as mxsh.
+  Duplicate@0(ApplicationEnvironment& environment);
+
   // Creates a new environment nested inside this environment.
   //
   // When applications are created inside the nested environment using the
@@ -43,7 +48,4 @@ interface ApplicationEnvironment {
   // Gets the services provided by this environment's
   // |ApplicationEnvironmentHost|.
   GetServices(ServiceProvider& services);
-
-  // Creates another interface to this environment.
-  Duplicate(ApplicationEnvironment& environment);
 };
