@@ -411,18 +411,17 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
 
     switch (flags) {
     case 0: {
-        mx_ssize_t result = socket->Write(_buffer.get(), size, true);
+        mx_size_t nwritten;
+        status = socket->Write(_buffer.get(), size, true, &nwritten);
 
-        if (result < 0)
-            return static_cast<mx_status_t>(result);
+        if (status != NO_ERROR)
+            return status;
 
-        // caller may ignore results if desired
-        if (actual) {
-            if (actual.copy_to_user(static_cast<mx_size_t>(result)) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-        }
+        // Caller may ignore results if desired.
+        if (actual)
+            status = actual.copy_to_user(nwritten);
 
-        return NO_ERROR;
+        return status;
     }
     case MX_SOCKET_HALF_CLOSE:
         if (size == 0)
@@ -448,13 +447,11 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     if (status != NO_ERROR)
         return status;
 
-    mx_ssize_t result = socket->Read(_buffer.get(), size, true);
+    mx_size_t nread;
+    status = socket->Read(_buffer.get(), size, true, &nread);
 
-    if (result < 0)
-        return static_cast<mx_status_t>(result);
+    if (status == NO_ERROR)
+        status = actual.copy_to_user(nread);
 
-    if (actual.copy_to_user(static_cast<mx_size_t>(result)) != NO_ERROR)
-        return ERR_INVALID_ARGS;
-
-    return NO_ERROR;
+    return status;
 }

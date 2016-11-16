@@ -279,7 +279,8 @@ status_t SocketDispatcher::HalfCloseOther() {
     return NO_ERROR;
 }
 
-mx_ssize_t SocketDispatcher::Write(const void* src, mx_size_t len, bool from_user) {
+mx_status_t SocketDispatcher::Write(const void* src, mx_size_t len,
+                                    bool from_user, mx_size_t* nwritten) {
     mxtl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
@@ -290,10 +291,11 @@ mx_ssize_t SocketDispatcher::Write(const void* src, mx_size_t len, bool from_use
         other = other_;
     }
 
-    return other->WriteSelf(src, len, from_user);
+    return other->WriteSelf(src, len, from_user, nwritten);
 }
 
-mx_ssize_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len, bool from_user) {
+mx_status_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len,
+                                        bool from_user, mx_size_t* written) {
     AutoLock lock(&lock_);
 
     if (!cbuf_.free())
@@ -313,10 +315,12 @@ mx_ssize_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len, bool from
     if (!cbuf_.free())
         other_->state_tracker_.UpdateState(MX_SOCKET_WRITABLE, 0u);
 
-    return st;
+    *written = st;
+    return NO_ERROR;
 }
 
-mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
+mx_status_t SocketDispatcher::Read(void* dest, mx_size_t len,
+                                   bool from_user, mx_size_t* nread) {
     AutoLock lock(&lock_);
 
     bool closed = half_closed_[1] || !other_;
@@ -335,5 +339,6 @@ mx_ssize_t SocketDispatcher::Read(void* dest, mx_size_t len, bool from_user) {
     if (!closed && was_full && (st > 0))
         other_->state_tracker_.UpdateState(0u, MX_SOCKET_WRITABLE);
 
-    return st;
+    *nread = static_cast<mx_size_t>(st);
+    return NO_ERROR;
 }

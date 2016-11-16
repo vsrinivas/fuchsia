@@ -34,11 +34,13 @@ public:
     status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // Socket methods.
-    mx_ssize_t Write(const void* src, mx_size_t len, bool from_user);
+    mx_status_t Write(const void* src, mx_size_t len, bool from_user,
+                      mx_size_t* written);
 
     status_t HalfClose();
 
-    mx_ssize_t Read(void* dest, mx_size_t len, bool from_user);
+    mx_status_t Read(void* dest, mx_size_t len, bool from_user,
+                     mx_size_t* nread);
 
     void OnPeerZeroHandles();
 
@@ -62,7 +64,8 @@ private:
 
     SocketDispatcher(uint32_t flags);
     mx_status_t Init(mxtl::RefPtr<SocketDispatcher> other);
-    mx_ssize_t WriteSelf(const void* src, mx_size_t len, bool from_user);
+    mx_status_t WriteSelf(const void* src, mx_size_t len, bool from_user,
+                          mx_size_t* nwritten);
     status_t  UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t HalfCloseOther();
 
