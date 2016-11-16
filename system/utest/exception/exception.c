@@ -33,7 +33,7 @@ static int thread_func(void* arg);
 // argv[0]
 static char* program_path;
 
-static const char test_child_name[] = "exceptions_test_child";
+static const char test_child_name[] = "test-child";
 
 // Setting to true when done turns off the watchdog timer.
 static bool done_tests;
@@ -538,17 +538,6 @@ static bool thread_gone_notification_test(void)
     END_TEST;
 }
 
-static const struct {
-    mx_excp_type_t type;
-    const char* name;
-} exceptions[] = {
-    { MX_EXCP_GENERAL, "general" },
-    { MX_EXCP_FATAL_PAGE_FAULT, "page-fault" },
-    { MX_EXCP_UNDEFINED_INSTRUCTION, "undefined-insn" },
-    { MX_EXCP_SW_BREAKPOINT, "sw-bkpt" },
-    { MX_EXCP_HW_BREAKPOINT, "hw-bkpt" },
-};
-
 static void __NO_RETURN trigger_unsupported(void)
 {
     unittest_printf("unsupported exception\n");
@@ -572,7 +561,7 @@ static void __NO_RETURN trigger_fatal_page_fault(void)
     trigger_unsupported();
 }
 
-static void __NO_RETURN trigger_undefined_instruction(void)
+static void __NO_RETURN trigger_undefined_insn(void)
 {
 #if defined(__x86_64__)
     __asm__("ud2");
@@ -584,7 +573,17 @@ static void __NO_RETURN trigger_undefined_instruction(void)
     trigger_unsupported();
 }
 
-static void __NO_RETURN trigger_hw_breakpoint(void)
+static void __NO_RETURN trigger_sw_bkpt(void)
+{
+#if defined(__x86_64__)
+    __asm__("int3");
+#elif defined(__aarch64__)
+    __asm__("brk 0");
+#endif
+    trigger_unsupported();
+}
+
+static void __NO_RETURN trigger_hw_bkpt(void)
 {
 #if defined(__x86_64__)
     // We can't set the debug regs from user space, support for setting the
@@ -595,15 +594,17 @@ static void __NO_RETURN trigger_hw_breakpoint(void)
     trigger_unsupported();
 }
 
-static void __NO_RETURN trigger_sw_breakpoint(void)
-{
-#if defined(__x86_64__)
-    __asm__("int3");
-#elif defined(__aarch64__)
-    __asm__("brk 0");
-#endif
-    trigger_unsupported();
-}
+static const struct {
+    mx_excp_type_t type;
+    const char* name;
+    void __NO_RETURN (*trigger_function) (void);
+} exceptions[] = {
+    { MX_EXCP_GENERAL, "general", trigger_general },
+    { MX_EXCP_FATAL_PAGE_FAULT, "page-fault", trigger_fatal_page_fault },
+    { MX_EXCP_UNDEFINED_INSTRUCTION, "undefined-insn", trigger_undefined_insn },
+    { MX_EXCP_SW_BREAKPOINT, "sw-bkpt", trigger_sw_bkpt },
+    { MX_EXCP_HW_BREAKPOINT, "hw-bkpt", trigger_hw_bkpt },
+};
 
 static void __NO_RETURN trigger_exception(const char* int_name)
 {
@@ -611,22 +612,7 @@ static void __NO_RETURN trigger_exception(const char* int_name)
     {
         if (strcmp(int_name, exceptions[i].name) == 0)
         {
-            switch (exceptions[i].type)
-            {
-            case MX_EXCP_GENERAL:
-                trigger_general();
-            case MX_EXCP_FATAL_PAGE_FAULT:
-                trigger_fatal_page_fault();
-            case MX_EXCP_UNDEFINED_INSTRUCTION:
-                trigger_undefined_instruction();
-            case MX_EXCP_SW_BREAKPOINT:
-                trigger_sw_breakpoint();
-            case MX_EXCP_HW_BREAKPOINT:
-                trigger_hw_breakpoint();
-            default:
-                assert(0);
-                trigger_unsupported();
-            }
+            exceptions[i].trigger_function();
         }
     }
     fprintf(stderr, "unknown exception: %s\n", int_name);
