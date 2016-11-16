@@ -6,7 +6,7 @@
 #include <iostream>
 #include <utility>
 
-#include "apps/tracing/lib/trace/trace_reader.h"
+#include "apps/tracing/lib/trace/reader.h"
 #include "apps/tracing/lib/trace_converters/chromium_exporter.h"
 #include "apps/tracing/src/trace/trace_app.h"
 #include "lib/ftl/logging.h"

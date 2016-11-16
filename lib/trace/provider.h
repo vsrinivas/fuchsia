@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_TRACE_PROVIDER_H_
-#define APPS_TRACING_LIB_TRACE_TRACE_PROVIDER_H_
+#ifndef APPS_TRACING_LIB_TRACE_PROVIDER_H_
+#define APPS_TRACING_LIB_TRACE_PROVIDER_H_
 
 #include <map>
 #include <string>
@@ -34,4 +34,4 @@ void DestroyTracer();
 
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_TRACE_PROVIDER_H_
+#endif  // APPS_TRACING_LIB_TRACE_PROVIDER_H_

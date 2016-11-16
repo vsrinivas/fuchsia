@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "apps/tracing/lib/trace/internal/trace_types.h"
+#include "apps/tracing/lib/trace/internal/types.h"
 #include "apps/tracing/src/trace_manager/trace_manager.h"
 #include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"

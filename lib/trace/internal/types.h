@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_TYPES_H_
-#define APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_TYPES_H_
+#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_TYPES_H_
+#define APPS_TRACING_LIB_TRACE_INTERNAL_TYPES_H_
 
 namespace tracing {
 namespace internal {
@@ -123,4 +123,4 @@ struct EventRecordFields : RecordFields {
 }  // namspace internal
 }  // namepsace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_TRACE_TYPES_H_
+#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_TYPES_H_

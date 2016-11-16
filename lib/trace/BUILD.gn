@@ -6,17 +6,17 @@
 # mojo tracing service (see tracing.mojo).
 source_set("types") {
   sources = [
-    "internal/trace_types.h",
+    "internal/types.h",
   ]
 }
 
 source_set("trace") {
   sources = [
-    "trace_event.h",
+    "event.h",
     "internal/categories_matcher.h",
     "internal/categories_matcher.cc",
-    "internal/trace_writer.h",
-    "internal/trace_writer.cc",
+    "internal/writer.h",
+    "internal/writer.cc",
   ]
 
   deps = [
@@ -33,8 +33,8 @@ source_set("trace") {
 
 source_set("provider") {
   sources = [
-    "trace_provider.h",
-    "trace_provider.cc",
+    "provider.h",
+    "provider.cc",
   ]
 
   deps = [
@@ -48,8 +48,8 @@ source_set("provider") {
 
 source_set("reader") {
   sources = [
-    "trace_reader.h",
-    "trace_reader.cc",
+    "reader.h",
+    "reader.cc",
   ]
 
   deps = [
@@ -59,12 +59,12 @@ source_set("reader") {
   ]
 }
 
-executable("trace_event_tests") {
+executable("trace_tests") {
   testonly = true
 
   sources = [
     "tests/categories_matcher_unittest.cc",
-    "tests/trace_writer_unittest.cc",
+    "tests/writer_unittest.cc",
   ]
 
   deps = [

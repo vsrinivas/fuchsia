@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace/trace_provider.h"
+#include "apps/tracing/lib/trace/provider.h"
 
-#include "apps/tracing/lib/trace/internal/trace_writer.h"
+#include "apps/tracing/lib/trace/internal/writer.h"
 #include "apps/tracing/services/trace_manager.fidl.h"
 #include "apps/tracing/services/trace_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"

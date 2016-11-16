@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_TRACE_READER_H_
-#define APPS_TRACING_LIB_TRACE_TRACE_READER_H_
+#ifndef APPS_TRACING_LIB_TRACE_READER_H_
+#define APPS_TRACING_LIB_TRACE_READER_H_
 
 #include <stdint.h>
 
@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/tracing/lib/trace/internal/trace_types.h"
+#include "apps/tracing/lib/trace/internal/types.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
@@ -437,4 +437,4 @@ class TraceReader {
 }  // namespace reader
 }  // namespace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_TRACE_READER_H_
+#endif  // APPS_TRACING_LIB_TRACE_READER_H_

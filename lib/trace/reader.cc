@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#include "apps/tracing/lib/trace/trace_reader.h"
+#include "apps/tracing/lib/trace/reader.h"
 
 namespace tracing {
 namespace reader {

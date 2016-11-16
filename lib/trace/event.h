@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_TRACE_EVENT_H_
-#define APPS_TRACING_LIB_TRACE_TRACE_EVENT_H_
+#ifndef APPS_TRACING_LIB_TRACE_EVENT_H_
+#define APPS_TRACING_LIB_TRACE_EVENT_H_
 
 #include "lib/ftl/macros.h"
-#include "apps/tracing/lib/trace/internal/trace_writer.h"
+#include "apps/tracing/lib/trace/internal/writer.h"
 
 namespace tracing {
 
@@ -116,4 +116,4 @@ class ScopedDurationTracer {
                                      tracing::internal::MakeArgument(k0, v0)); \
   }
 
-#endif  // APPS_TRACING_LIB_TRACE_TRACE_EVENT_H_
+#endif  // APPS_TRACING_LIB_TRACE_EVENT_H_
