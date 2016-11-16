@@ -38,7 +38,7 @@ public:
         bool claimed() const { return claimed_; }
 
       private:
-        friend class mxtl::default_delete<PciDeviceWrapper>;
+        friend mxtl::default_delete<PciDeviceWrapper>;
 
         struct CachePolicyRef {
             uint     ref_count;
