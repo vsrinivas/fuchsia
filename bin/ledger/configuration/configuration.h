@@ -1,0 +1,37 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef APPS_LEDGER_SRC_CONFIGURATION_CONFIGURATION_H_
+#define APPS_LEDGER_SRC_CONFIGURATION_CONFIGURATION_H_
+
+#include <string>
+
+namespace configuration {
+
+// The configuration for the Ledger.
+struct Configuration {
+  // Creates a default, empty configuration.
+  Configuration();
+
+  // Parameters used for cloud synchronization.
+  struct SyncParams {
+    // ID of the firebase instance.
+    std::string firebase_id;
+    // Prefix of firebase keys.
+    std::string firebase_prefix;
+  };
+  // Set to true to enable cloud synchronization. False by default.
+  bool use_sync;
+  // sync_params holds the parameters used for cloud synchronization if
+  // |use_sync| is true.
+  SyncParams sync_params;
+};
+
+bool operator==(const Configuration& lhs, const Configuration& rhs);
+bool operator==(const Configuration::SyncParams& lhs,
+                const Configuration::SyncParams& rhs);
+
+}  // namespace configuration
+
+#endif  // APPS_LEDGER_SRC_CONFIGURATION_CONFIGURATION_H_

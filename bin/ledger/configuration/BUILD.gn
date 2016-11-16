@@ -1,0 +1,57 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("configuration") {
+  testonly = true
+
+  deps = [
+    ":lib",
+    ":unittests",
+    ":configuration_writer",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "configuration.cc",
+    "configuration.h",
+    "configuration_encoder.cc",
+    "configuration_encoder.h",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//third_party/rapidjson",
+  ]
+}
+
+executable("unittests") {
+  output_name = "ledger_configuration_unittests"
+
+  testonly = true
+
+  sources = [
+    "configuration_encoder_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//apps/ledger/src/test",
+    "//lib/ftl",
+    "//third_party/gtest",
+  ]
+}
+
+executable("configuration_writer") {
+  output_name = "ledger_configuration"
+
+  sources = [
+    "configuration_writer.cc"
+  ]
+
+  deps = [
+    ":lib",
+    "//lib/ftl",
+  ]
+}

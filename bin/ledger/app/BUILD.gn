@@ -39,6 +39,7 @@ source_set("lib") {
   ]
 
   deps = [
+    "//apps/ledger/src/configuration:lib",
     "//apps/ledger/services",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/cloud_sync/impl",
