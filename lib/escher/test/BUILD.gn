@@ -12,7 +12,8 @@ if (is_linux) {
 
     sources = [
       "run_all_unittests.cc",
-      "impl/glsl_compiler_unittest.cc"
+      "impl/glsl_compiler_unittest.cc",
+      "impl/pipeline_cache_unittest.cc"
     ]
 
     deps = [
@@ -28,6 +29,7 @@ if (is_linux) {
       "OSDependent",
       "pthread",
       "SPIRV",
+      "vulkan",
     ]
 
     lib_dirs = [
