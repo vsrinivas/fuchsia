@@ -6,6 +6,7 @@
 #define APPS_LEDGER_SRC_STORAGE_TEST_COMMIT_EMPTY_IMPL_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "apps/ledger/src/storage/public/commit.h"
@@ -22,6 +23,8 @@ class CommitEmptyImpl : public Commit {
   ~CommitEmptyImpl() override = default;
 
   // Commit:
+  std::unique_ptr<Commit> Clone() const override;
+
   CommitId GetId() const override;
 
   std::vector<CommitId> GetParentIds() const override;

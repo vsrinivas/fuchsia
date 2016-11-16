@@ -31,6 +31,7 @@ class CommitImpl : public Commit {
   static std::unique_ptr<Commit> Empty(PageStorage* page_storage);
 
   // Commit:
+  std::unique_ptr<Commit> Clone() const override;
   CommitId GetId() const override;
   std::vector<CommitId> GetParentIds() const override;
   int64_t GetTimestamp() const override;

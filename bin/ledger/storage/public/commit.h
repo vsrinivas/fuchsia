@@ -6,6 +6,7 @@
 #define APPS_LEDGER_SRC_STORAGE_PUBLIC_COMMIT_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "apps/ledger/src/storage/public/commit_contents.h"
@@ -18,6 +19,9 @@ class Commit {
  public:
   Commit() {}
   virtual ~Commit() {}
+
+  // Returns a copy of the commit.
+  virtual std::unique_ptr<Commit> Clone() const = 0;
 
   // Returns the id of this commit.
   virtual CommitId GetId() const = 0;

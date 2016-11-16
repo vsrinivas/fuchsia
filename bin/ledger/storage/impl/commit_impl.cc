@@ -123,6 +123,12 @@ std::unique_ptr<Commit> CommitImpl::Empty(PageStorage* page_storage) {
                      std::vector<CommitId>(), ""));
 }
 
+std::unique_ptr<Commit> CommitImpl::Clone() const {
+  return std::unique_ptr<CommitImpl>(
+      new CommitImpl(page_storage_, id_, timestamp_, root_node_id_, parent_ids_,
+                     std::string(storage_bytes_)));
+}
+
 CommitId CommitImpl::GetId() const {
   return id_;
 }

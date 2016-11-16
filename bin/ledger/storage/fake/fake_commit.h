@@ -22,6 +22,8 @@ class FakeCommit : public Commit {
   ~FakeCommit() override;
 
   // Commit:
+  std::unique_ptr<Commit> Clone() const override;
+
   CommitId GetId() const override;
 
   std::vector<CommitId> GetParentIds() const override;

@@ -9,6 +9,11 @@
 namespace storage {
 namespace test {
 
+std::unique_ptr<Commit> CommitEmptyImpl::Clone() const {
+  FTL_NOTIMPLEMENTED();
+  return nullptr;
+}
+
 CommitId CommitEmptyImpl::GetId() const {
   FTL_NOTIMPLEMENTED();
   return "NOT_IMPLEMENTED";

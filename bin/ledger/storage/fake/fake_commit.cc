@@ -98,6 +98,10 @@ class FakeCommitContents : public CommitContents {
 FakeCommit::FakeCommit(FakeJournalDelegate* journal) : journal_(journal) {}
 FakeCommit::~FakeCommit() {}
 
+std::unique_ptr<Commit> FakeCommit::Clone() const {
+  return std::make_unique<FakeCommit>(journal_);
+}
+
 CommitId FakeCommit::GetId() const {
   return journal_->GetId();
 }
