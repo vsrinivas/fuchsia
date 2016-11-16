@@ -54,8 +54,10 @@ class MotermView : public mozart::BaseView,
   void OnDataReceived(const void* bytes, size_t num_bytes);
   void SendData(const void* bytes, size_t num_bytes);
 
+  void ComputeMetrics();
   void StartCommand();
   void Blink();
+  void Resize();
 
   mozart::InputHandler input_handler_;
 

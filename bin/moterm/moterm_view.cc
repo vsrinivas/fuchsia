@@ -51,28 +51,29 @@ MotermView::MotermView(
       std::move(font_request), [this](sk_sp<SkTypeface> typeface) {
         FTL_CHECK(typeface);  // TODO(jpoichet): Fail gracefully.
         regular_typeface_ = std::move(typeface);
-
-        // TODO(vtl): This duplicates some code.
-        SkPaint fg_paint;
-        fg_paint.setTypeface(regular_typeface_);
-        fg_paint.setTextSize(params_.font_size);
-        // Figure out appropriate metrics.
-        SkPaint::FontMetrics fm = {};
-        fg_paint.getFontMetrics(&fm);
-        ascent_ = static_cast<int>(ceilf(-fm.fAscent));
-        line_height_ =
-            ascent_ + static_cast<int>(ceilf(fm.fDescent + fm.fLeading));
-        FTL_DCHECK(line_height_ > 0);
-        // To figure out the advance width, measure an X. Better hope the font
-        // is monospace.
-        advance_width_ = static_cast<int>(ceilf(fg_paint.measureText("X", 1)));
-        FTL_DCHECK(advance_width_ > 0);
-
+        ComputeMetrics();
         StartCommand();
       });
 }
 
 MotermView::~MotermView() {}
+
+void MotermView::ComputeMetrics() {
+  // TODO(vtl): This duplicates some code.
+  SkPaint fg_paint;
+  fg_paint.setTypeface(regular_typeface_);
+  fg_paint.setTextSize(params_.font_size);
+  // Figure out appropriate metrics.
+  SkPaint::FontMetrics fm = {};
+  fg_paint.getFontMetrics(&fm);
+  ascent_ = static_cast<int>(ceilf(-fm.fAscent));
+  line_height_ = ascent_ + static_cast<int>(ceilf(fm.fDescent + fm.fLeading));
+  FTL_DCHECK(line_height_ > 0);
+  // To figure out the advance width, measure an X. Better hope the font
+  // is monospace.
+  advance_width_ = static_cast<int>(ceilf(fg_paint.measureText("X", 1)));
+  FTL_DCHECK(advance_width_ > 0);
+}
 
 void MotermView::StartCommand() {
   command_.reset(new Command());
@@ -154,7 +155,10 @@ void MotermView::OnDraw() {
 
 // |BaseView|:
 void MotermView::OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) {
-  // Compute size
+  Resize();
+}
+
+void MotermView::Resize() {
   uint32_t columns = properties()->view_layout->size->width / advance_width_;
   uint32_t rows = properties()->view_layout->size->height / line_height_;
   MotermModel::Size current = model_.GetSize();
@@ -249,7 +253,19 @@ void MotermView::OnSetKeypadMode(bool application_mode) {
 void MotermView::OnEvent(mozart::EventPtr event,
                          const OnEventCallback& callback) {
   if (event->action == mozart::EventType::KEY_PRESSED) {
-    OnKeyPressed(std::move(event));
+    if (event->key_data->code_point == '+' &&
+        event->key_data->modifiers & mozart::kModifierAlt) {
+      params_.font_size++;
+      ComputeMetrics();
+      Resize();
+    } else if (event->key_data->code_point == '-' &&
+               event->key_data->modifiers & mozart::kModifierAlt) {
+      params_.font_size--;
+      ComputeMetrics();
+      Resize();
+    } else {
+      OnKeyPressed(std::move(event));
+    }
     callback(true);
   } else {
     callback(false);

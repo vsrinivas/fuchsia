@@ -211,14 +211,20 @@ void MotermModel::SetSize(const Size& size, bool reset) {
   Size old_size = size_;
   size_ = size;
   size_t new_num_chars = size_.rows * size_.columns;
-  if (num_chars_ < new_num_chars) {
+  if (num_chars_ != new_num_chars) {
     teken_char_t* new_characters = new teken_char_t[new_num_chars];
     memset(new_characters, 0, new_num_chars * sizeof(teken_char_t));
 
     teken_attr_t* new_attributes = new teken_attr_t[new_num_chars];
     memset(new_attributes, 0, new_num_chars * sizeof(teken_attr_t));
 
+    // FIXME(jpoichet) copy from bottom to top instead
     for (size_t r = 0; r < old_size.rows; ++r) {
+      size_t bytes = old_size.columns * sizeof(teken_char_t);
+      if (r * size_.columns + bytes > new_num_chars) {
+        // Until we copy bottom to top, ignore the last line.
+        break;
+      }
       memcpy(new_characters + r * size_.columns,
              characters_.get() + r * old_size.columns,
              old_size.columns * sizeof(teken_char_t));
