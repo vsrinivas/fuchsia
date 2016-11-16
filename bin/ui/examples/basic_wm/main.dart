@@ -9,9 +9,11 @@ import 'package:apps.modular.services.application/application_controller.fidl.da
 import 'package:apps.modular.services.application/application_launcher.fidl.dart';
 import 'package:apps.modular.services.application/service_provider.fidl.dart';
 import 'package:apps.mozart.lib.flutter/child_view.dart';
+import 'package:apps.mozart.services.presentation/presenter.fidl.dart';
+import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/material.dart';
 
-final ApplicationContext context = new ApplicationContext.fromStartupInfo();
+final ApplicationContext _context = new ApplicationContext.fromStartupInfo();
 
 class LauncherData {
   const LauncherData({ this.url, this.title });
@@ -42,7 +44,7 @@ class ChildApplication {
 }
 
 const Size _kInitialWindowSize = const Size(200.0, 200.0);
-const double _kWindowPadding = 10.0;
+const double _kWindowPadding = 24.0;
 
 enum WindowSide {
   topCenter,
@@ -68,14 +70,14 @@ class WindowDecoration extends StatelessWidget {
   Widget build(BuildContext context) {
     double top, right, bottom, left, width, height;
 
-    height = _kWindowPadding * 2.0;
+    height = _kWindowPadding;
 
     if (side == WindowSide.topCenter || side == WindowSide.topRight)
       top = 0.0;
 
     if (side == WindowSide.topRight || side == WindowSide.bottomRight) {
       right = 0.0;
-      width = _kWindowPadding * 2.0;
+      width = _kWindowPadding;
     }
 
     if (side == WindowSide.topCenter) {
@@ -106,6 +108,47 @@ class WindowDecoration extends StatelessWidget {
   }
 }
 
+class WindowTitleBar extends StatelessWidget {
+  WindowTitleBar({
+    Key key,
+    this.onClose,
+    this.onMove,
+  }) : super(key: key);
+
+  final VoidCallback onClose;
+  final GestureDragUpdateCallback onMove;
+
+  Widget build(BuildContext context) {
+    return new Row(
+      children: <Widget>[
+        new Flexible(
+          child: new GestureDetector(
+            onPanUpdate: onMove,
+            child: new Container(
+              height: _kWindowPadding,
+              decoration: new BoxDecoration(
+                backgroundColor: Colors.blue[200],
+              ),
+            ),
+          ),
+        ),
+        new GestureDetector(
+          onTap: onClose,
+          child: new Container(
+            width: _kWindowPadding,
+            height: _kWindowPadding,
+            decoration: new BoxDecoration(
+              backgroundColor: Colors.red[200],
+            ),
+            alignment: FractionalOffset.center,
+            child: new Icon(Icons.close),
+          ),
+        ),
+      ]
+    );
+  }
+}
+
 class Window extends StatefulWidget {
   Window({ Key key, this.child, this.onClose }) : super(key: key);
 
@@ -129,7 +172,7 @@ class _WindowState extends State<Window> {
     });
   }
 
-  void _handleRepositionDrag(DragUpdateDetails details) {
+  void _handleMove(DragUpdateDetails details) {
     setState(() {
       _offset += details.delta;
     });
@@ -144,30 +187,40 @@ class _WindowState extends State<Window> {
     return new Positioned(
       left: _offset.dx,
       top: _offset.dy,
-      width: _size.width + _kWindowPadding * 2.0,
-      height: _size.height + _kWindowPadding * 2.0,
+      width: _size.width + _kWindowPadding * 0.5,
+      height: _size.height + _kWindowPadding * 1.5,
       child: new Stack(
         children: <Widget>[
-          new WindowDecoration(
-            side: WindowSide.topCenter,
-            onPanUpdate: _handleRepositionDrag,
-            color: Colors.green[200]
+          new Positioned(
+            bottom: 0.0,
+            right: 0.0,
+            width: _kWindowPadding,
+            height: _kWindowPadding,
+            child: new GestureDetector(
+              onPanUpdate: _handleResizerDrag,
+              child: new Container(
+                decoration: new BoxDecoration(
+                  backgroundColor: Colors.blue[200],
+                ),
+              )
+            )
           ),
-          new WindowDecoration(
-            side: WindowSide.topRight,
-            onTap: _handleClose,
-            color: Colors.red[200]
-          ),
-          new WindowDecoration(
-            side: WindowSide.bottomRight,
-            onPanUpdate: _handleResizerDrag,
-            color: Colors.blue[200]
-          ),
-          new Container(
-            padding: const EdgeInsets.all(_kWindowPadding),
+          new Positioned.fill(
+            right: _kWindowPadding,
+            bottom: _kWindowPadding,
             child: new Material(
               elevation: 8,
-              child: new ChildView(connection: config.child.connection)
+              child: new Column(
+                children: <Widget>[
+                  new WindowTitleBar(
+                    onClose: _handleClose,
+                    onMove: _handleMove,
+                  ),
+                  new Flexible(
+                    child: new ChildView(connection: config.child.connection),
+                  ),
+                ]
+              )
             )
           )
         ]
@@ -194,7 +247,7 @@ class LauncherItem extends StatelessWidget {
     final ApplicationLaunchInfo launchInfo = new ApplicationLaunchInfo()
       ..url = url
       ..services = services.ctrl.request();
-    context.launcher.createApplication(launchInfo, controller.ctrl.request());
+    _context.launcher.createApplication(launchInfo, controller.ctrl.request());
     onLaunch(new ChildApplication(
       controller: controller,
       connection: new ChildViewConnection.connect(services),
@@ -225,6 +278,8 @@ class Launcher extends StatelessWidget {
 }
 
 class WindowManager extends StatefulWidget {
+  WindowManager({ Key key }) : super(key: key);
+
   @override
   _WindowManagerState createState() => new _WindowManagerState();
 }
@@ -241,7 +296,7 @@ class _WindowManagerState extends State<WindowManager> {
   void _handleClose(ChildApplication child) {
     setState(() {
       _windows.remove(child);
-      child.controller.kill(null);
+      child.controller?.kill(null);
     });
   }
 
@@ -274,9 +329,33 @@ class _WindowManagerState extends State<WindowManager> {
   }
 }
 
+class PresenterImpl extends Presenter {
+  PresenterImpl(this._key);
+
+  final GlobalKey<_WindowManagerState> _key;
+  final PresenterBinding _binding = new PresenterBinding();
+
+  void bind(InterfaceRequest<Presenter> request) {
+    _binding.bind(this, request);
+  }
+
+  @override
+  void present(InterfaceHandle<ViewOwner> viewOwner) {
+    _key.currentState._handleLaunch(
+      new ChildApplication(connection: new ChildViewConnection(viewOwner))
+    );
+  }
+}
+
 void main() {
+  GlobalKey<_WindowManagerState> windowManagerKey = new GlobalKey<_WindowManagerState>();
+
+  _context.outgoingServices.addServiceForName((request) {
+    new PresenterImpl(windowManagerKey).bind(request);
+  }, Presenter.serviceName);
+
   runApp(new MaterialApp(
     title: 'Basic Window Manager',
-    home: new WindowManager()
+    home: new WindowManager(key: windowManagerKey)
   ));
 }

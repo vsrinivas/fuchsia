@@ -5,9 +5,16 @@
 #include <memory>
 
 #include "apps/mozart/src/view_manager/view_manager_app.h"
+#include "lib/ftl/command_line.h"
+#include "lib/ftl/log_settings.h"
+#include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+    return 1;
+
   mtl::MessageLoop loop;
 
   view_manager::ViewManagerApp app;
