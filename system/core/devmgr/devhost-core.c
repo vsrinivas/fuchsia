@@ -37,7 +37,8 @@
 
 #define TRACE_ADD_REMOVE 0
 
-#define FIRMWARE_DIR "/boot/lib/firmware"
+#define BOOT_FIRMWARE_DIR "/boot/lib/firmware"
+#define SYSTEM_FIRMWARE_DIR "/system/lib/firmware"
 
 bool __dm_locked = false;
 mtx_t __devhost_api_lock = MTX_INIT;
@@ -576,20 +577,52 @@ mx_status_t devhost_driver_unbind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 }
 
+typedef struct {
+    int fd;
+    const char* path;
+    int open_failures;
+} fw_dir;
+
+static fw_dir fw_dirs[] = {
+    { -1, BOOT_FIRMWARE_DIR, 0},
+    { -1, SYSTEM_FIRMWARE_DIR, 0},
+};
+
+static int devhost_open_firmware(const char* fwpath) {
+    for (size_t i = 0; i < countof(fw_dirs); i++) {
+        // Open the firmware directory if necessary
+        if (fw_dirs[i].fd < 0) {
+            fw_dirs[i].fd = open(fw_dirs[i].path, O_RDONLY | O_DIRECTORY);
+            // If the directory doesn't open, it could mean there is no firmware
+            // at that path (so the build system didn't create the directory),
+            // or the filesystem hasn't been mounted yet. Log a warning every 5
+            // failures and move on.
+            if (fw_dirs[i].fd < 0) {
+                if (fw_dirs[i].open_failures++ % 5 == 0) {
+                    printf("devhost: warning: could not open firmware dir '%s' (err=%d)\n",
+                            fw_dirs[i].path, errno);
+                }
+            }
+        }
+        // If the firmware directory is open, try to load the firmware.
+        if (fw_dirs[i].fd >= 0) {
+            int fwfd = openat(fw_dirs[i].fd, fwpath, O_RDONLY);
+            // If the error is NOT that the firmware wasn't found, (e.g.,
+            // EACCES), return early, with errno set by openat.
+            if (fwfd >= 0 || errno != ENOENT) return fwfd;
+        }
+    }
+
+    // Firmware wasn't found anywhere.
+    errno = ENOENT;
+    return -1;
+}
+
 mx_status_t devhost_load_firmware(mx_driver_t* drv, const char* path, mx_handle_t* fw,
                                   mx_size_t* size) {
     xprintf("devhost: drv=%p path=%s fw=%p\n", drv, path, fw);
 
-    static int fwdir = -1;
-    if (fwdir < 0) {
-        fwdir = open(FIRMWARE_DIR, O_RDONLY | O_DIRECTORY);
-        if (fwdir < 0) {
-            printf("devhost: error opening firmware dir '%s': %d\n", FIRMWARE_DIR, errno);
-            return ERR_IO;
-        }
-    }
-
-    int fwfd = openat(fwdir, path, O_RDONLY);
+    int fwfd = devhost_open_firmware(path);
     if (fwfd < 0) {
         switch (errno) {
         case ENOENT: return ERR_NOT_FOUND;
