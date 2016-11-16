@@ -68,16 +68,16 @@ read_mem (mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len)
   return NO_ERROR;
 }
 
-static mx_ssize_t
-get_inferior_greg_buf_size (mx_handle_t thread)
+static mx_status_t
+get_inferior_greg_buf_size (mx_handle_t thread, uint32_t* regset_size)
 {
   // The general regs are defined to be in regset zero.
-  uint32_t regset_size = 0;
-  mx_status_t status = mx_thread_read_state (thread, MX_THREAD_STATE_REGSET0, NULL, regset_size, &regset_size);
+  mx_status_t status = mx_thread_read_state (thread, MX_THREAD_STATE_REGSET0,
+                                             NULL, 0, regset_size);
   assert (status != NO_ERROR);
-  if (status != ERR_BUFFER_TOO_SMALL)
-    return status;
-  return regset_size;
+  if (status == ERR_BUFFER_TOO_SMALL)
+    status = NO_ERROR;
+  return status;
 }
 
 static mx_status_t
@@ -293,10 +293,11 @@ remote_access_reg (unw_addr_space_t as, unw_regnum_t reg, unw_word_t *val,
     Debug (3, "bad regnum: %d\n", (int) reg);
     return -UNW_EBADREG;
   }
-  mx_ssize_t regset_size = get_inferior_greg_buf_size (thread);
-  if (regset_size < 0)
+  uint32_t regset_size;
+  mx_status_t status = get_inferior_greg_buf_size (thread, &regset_size);
+  if (status != NO_ERROR)
   {
-    Debug (3, "unable to get greg buf size: %d\n", (int) regset_size);
+    Debug (3, "unable to get greg buf size: %d\n", status);
     return -UNW_EUNSPEC;
   }
   char* buf = malloc (regset_size);
