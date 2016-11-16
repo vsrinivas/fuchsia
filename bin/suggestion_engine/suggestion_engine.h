@@ -10,6 +10,7 @@
 #include "apps/maxwell/src/bound_set.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_record.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 
@@ -67,7 +68,10 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   std::unordered_map<std::string, std::unique_ptr<SuggestionAgentClientImpl>>
       sources_;
+  // TODO(rosswang): limit ranking window size based on listeners
   std::vector<Suggestion*> ranked_suggestions_;
+  // indexed by suggestion ID
+  std::unordered_map<std::string, SuggestionRecord*> suggestions_;
 
   fidl::BindingSet<SuggestionEngine> bindings_;
   maxwell::BindingSet<NextController,

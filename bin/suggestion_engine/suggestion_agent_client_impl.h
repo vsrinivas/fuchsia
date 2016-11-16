@@ -6,6 +6,7 @@
 
 #include "apps/maxwell/services/suggestion/suggestion_agent_client.fidl.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_engine.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_record.h"
 
 namespace maxwell {
 namespace suggestion {
@@ -45,34 +46,33 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
     SuggestionAgentClientImpl* const impl_;
   };
 
-  void ProposalToSuggestion(const Proposal& proposal, Suggestion* suggestion) {
+  // Converts a proposal to a suggestion. Note that after this operation, the
+  // proposal no longer has a valid display (it will have been moved to the
+  // suggestion).
+  void ProposalToSuggestion(ProposalPtr* proposal, Suggestion* suggestion) {
     // TODO(rosswang): real UUIDs
     suggestion->uuid =
         std::to_string(reinterpret_cast<size_t>(this)) + std::to_string(id_++);
     // TODO(rosswang): rank
     suggestion->rank = id_;  // shhh
 
-    suggestion->display = proposal.display->Clone();
+    suggestion->display = std::move((*proposal)->display);
   }
 
   void BroadcastNewSuggestion(const Suggestion& suggestion);
   void BroadcastRemoveSuggestion(const Suggestion& suggestion);
-  void OnNewProposal(const Proposal& proposal, Suggestion* suggestion);
+  void OnNewProposal(ProposalPtr proposal, SuggestionRecord* suggestion);
+  void OnChangeProposal(ProposalPtr proposal, SuggestionRecord* suggestion);
 
-  void OnChangeProposal(const Proposal& proposal, Suggestion* suggestion) {
-    BroadcastRemoveSuggestion(*suggestion);
-
-    // TODO(rosswang): re-rank if necessary
-    suggestion->display = proposal.display->Clone();
-
-    BroadcastNewSuggestion(*suggestion);
+  bool ShouldEraseSelf() const {
+    return suggestions_.empty() && bindings_.empty();
   }
-
   void EraseSelf();
 
   SuggestionEngineApp* const suggestinator_;
   const std::string component_url_;
-  std::unordered_map<std::string, Suggestion> suggestions_;
+  // indexed by proposal ID
+  std::unordered_map<std::string, SuggestionRecord> suggestions_;
   BindingSet bindings_;
 
   uint64_t id_;

@@ -9,25 +9,28 @@ namespace suggestion {
 
 void SuggestionAgentClientImpl::Propose(ProposalPtr proposal) {
   const size_t old_size = suggestions_.size();
-  Suggestion* suggestion = &suggestions_[proposal->id];
+  SuggestionRecord* suggestion_record = &suggestions_[proposal->id];
 
   if (suggestions_.size() > old_size)
-    OnNewProposal(*proposal, suggestion);
+    OnNewProposal(std::move(proposal), suggestion_record);
   else
-    OnChangeProposal(*proposal, suggestion);
+    OnChangeProposal(std::move(proposal), suggestion_record);
 }
 
 void SuggestionAgentClientImpl::Remove(const fidl::String& proposal_id) {
   const auto it = suggestions_.find(proposal_id);
 
   if (it != suggestions_.end()) {
-    const Suggestion& suggestion = it->second;
+    const Suggestion& suggestion = it->second.suggestion;
     BroadcastRemoveSuggestion(suggestion);
+
     auto& ranked = suggestinator_->ranked_suggestions_;
     ranked.erase(std::find(ranked.begin(), ranked.end(), &suggestion));
+
+    suggestinator_->suggestions_.erase(suggestion.uuid);
     suggestions_.erase(it);
 
-    if (suggestions_.empty() && bindings_.empty())
+    if (ShouldEraseSelf())
       EraseSelf();
   }
 }
@@ -40,7 +43,7 @@ void SuggestionAgentClientImpl::BindingSet::OnConnectionError(
     fidl::Binding<SuggestionAgentClient>* binding) {
   maxwell::BindingSet<SuggestionAgentClient>::OnConnectionError(binding);
 
-  if (empty() && impl_->suggestions_.empty())
+  if (impl_->ShouldEraseSelf())
     impl_->EraseSelf();
 }
 
@@ -56,14 +59,33 @@ void SuggestionAgentClientImpl::BroadcastRemoveSuggestion(
     subscriber->BeforeRemoveSuggestion(suggestion);
 }
 
-void SuggestionAgentClientImpl::OnNewProposal(const Proposal& proposal,
-                                              Suggestion* suggestion) {
-  ProposalToSuggestion(proposal, suggestion);
+void SuggestionAgentClientImpl::OnNewProposal(
+    ProposalPtr proposal,
+    SuggestionRecord* suggestion_record) {
+  Suggestion* suggestion = &suggestion_record->suggestion;
+  ProposalToSuggestion(&proposal, suggestion);
+  suggestion_record->proposal = std::move(proposal);
 
   // TODO(rosswang): sort
   suggestinator_->ranked_suggestions_.emplace_back(suggestion);
 
+  suggestinator_->suggestions_[suggestion->uuid] = suggestion_record;
+
   BroadcastNewSuggestion(*suggestion);
+}
+
+void SuggestionAgentClientImpl::OnChangeProposal(
+    ProposalPtr proposal,
+    SuggestionRecord* suggestion_record) {
+  Suggestion& suggestion = suggestion_record->suggestion;
+  BroadcastRemoveSuggestion(suggestion);
+
+  // TODO(rosswang): re-rank if necessary
+  suggestion.display = std::move(proposal->display);
+
+  suggestion_record->proposal = std::move(proposal);
+
+  BroadcastNewSuggestion(suggestion);
 }
 
 void SuggestionAgentClientImpl::EraseSelf() {
