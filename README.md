@@ -16,5 +16,5 @@ semantic goals are satisfied and what services are employed.
 and build is done, you can start the TQ Framework flow thus:
 
 ```sh
-file:///system/apps/bootstrap file:///system/apps/device_runner --user-shell=file:///system/apps/dummy_user_shell
+@ /system/apps/bootstrap /system/apps/device_runner --user-shell=/system/apps/dummy_user_shell
 ```
