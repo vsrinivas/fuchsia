@@ -46,9 +46,9 @@
 + [channel_write](syscalls/channel_write.md) - write a message to a channel
 
 ## Sockets
-+ socket_create - create a new socket
-+ socket_write - write data to a socket
-+ socket_read - read data from a socket
++ [socket_create](syscalls/socket_create.md) - create a new socket
++ [socket_write](syscalls/socket_write.md) - write data to a socket
++ [socket_read](syscalls/socket_read.md) - read data from a socket
 
 ## Events and Event Pairs
 + [event_create](syscalls/event_create.md) - create an event
