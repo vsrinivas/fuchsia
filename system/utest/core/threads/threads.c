@@ -45,8 +45,31 @@ bool threads_test(void) {
     END_TEST;
 }
 
+// mx_thread_start() is not supposed to be usable for creating a
+// process's first thread.  That's what mx_process_start() is for.
+// Check that mx_thread_start() returns an error in this case.
+static bool test_thread_start_on_initial_thread(void) {
+    BEGIN_TEST;
+
+    static const char kProcessName[] = "Test process";
+    static const char kThreadName[] = "Test thread";
+    mx_handle_t process;
+    mx_handle_t thread;
+    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+                                0, &process), NO_ERROR, "");
+    ASSERT_EQ(mx_thread_create(process, kThreadName, sizeof(kThreadName) - 1,
+                               0, &thread), NO_ERROR, "");
+    ASSERT_EQ(mx_thread_start(thread, 1, 1, 1, 1), ERR_BAD_STATE, "");
+
+    ASSERT_EQ(mx_handle_close(thread), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(threads_tests)
 RUN_TEST(threads_test)
+RUN_TEST(test_thread_start_on_initial_thread)
 END_TEST_CASE(threads_tests)
 
 #ifndef BUILD_COMBINED_TESTS

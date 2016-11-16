@@ -192,16 +192,19 @@ status_t ProcessDispatcher::AddThread(UserThread* t, bool initial_thread) {
 
     AutoLock state_lock(&state_lock_);
 
-    if (initial_thread && state_ != State::INITIAL)
-        return ERR_BAD_STATE;
-
-    // cannot add thread to dying/dead state
-    if (state_ == State::DYING || state_ == State::DEAD) {
-        return ERR_BAD_STATE;
+    if (initial_thread) {
+        if (state_ != State::INITIAL)
+            return ERR_BAD_STATE;
+    } else {
+        // We must not add a thread when in the DYING or DEAD states.
+        // Also, we want to ensure that this is not the first thread.
+        if (state_ != State::RUNNING)
+            return ERR_BAD_STATE;
     }
 
     // add the thread to our list
     AutoLock lock(&thread_list_lock_);
+    DEBUG_ASSERT(thread_list_.is_empty() == initial_thread);
     thread_list_.push_back(t);
 
     DEBUG_ASSERT(t->process() == this);
