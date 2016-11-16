@@ -11,6 +11,7 @@ fidl("public") {
   ]
 
   deps = [
+    "//apps/maxwell/services/suggestion",
     "//apps/mozart/services/views",
   ]
 }
