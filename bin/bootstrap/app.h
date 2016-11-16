@@ -52,6 +52,10 @@ class App : public modular::ApplicationEnvironmentHost {
 
   std::unique_ptr<modular::ApplicationContext> application_context_;
 
+  // Keep track of all services, indexed by url.
+  std::unordered_map<std::string, modular::ServiceProviderPtr>
+      service_providers_;
+
   // Nested environment within which the apps started by Bootstrap will run.
   modular::ApplicationEnvironmentPtr env_;
   modular::ApplicationEnvironmentControllerPtr env_controller_;

@@ -53,28 +53,33 @@ void App::RegisterSingleton(std::string service_name,
   env_services_.AddServiceForName(
       ftl::MakeCopyable([
         this, service_name, launch_info = std::move(launch_info),
-        services = modular::ServiceProviderPtr(),
         controller = modular::ApplicationControllerPtr()
       ](mx::channel client_handle) mutable {
         FTL_VLOG(2) << "Servicing singleton service request for "
                     << service_name;
-        if (!services) {
+        auto it = service_providers_.find(launch_info->url);
+        if (it == service_providers_.end()) {
           FTL_VLOG(1) << "Starting singleton " << launch_info->url
                       << " for service " << service_name;
+          modular::ServiceProviderPtr service_provider;
           auto dup_launch_info = modular::ApplicationLaunchInfo::New();
           dup_launch_info->url = launch_info->url;
           dup_launch_info->arguments = launch_info->arguments.Clone();
-          dup_launch_info->services = GetProxy(&services);
+          dup_launch_info->services = GetProxy(&service_provider);
           env_launcher_->CreateApplication(std::move(dup_launch_info),
                                            GetProxy(&controller));
-          services.set_connection_error_handler(
-              [ url = launch_info->url, &services, &controller ] {
+          service_provider.set_connection_error_handler(
+              [ this, url = launch_info->url, &controller ] {
                 FTL_LOG(ERROR) << "Singleton " << url << " died";
                 controller.reset();  // kills the singleton application
-                services.reset();
+                service_providers_.erase(url);
               });
+
+          std::tie(it, std::ignore) = service_providers_.emplace(
+              launch_info->url, std::move(service_provider));
         }
-        services->ConnectToService(service_name, std::move(client_handle));
+
+        it->second->ConnectToService(service_name, std::move(client_handle));
       }),
       service_name);
 }
