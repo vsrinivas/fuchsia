@@ -7,7 +7,7 @@ module maxwell.suggestion;
 // TODO(thatguy): This will likely be a union eventually, with different
 // display descriptions for different kinds of Suggestions.
 struct Display {
-  string icon;  // logo?
+  string? icon;  // logo?
   string headline;
   string subheadline;
   string details;

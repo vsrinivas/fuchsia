@@ -58,7 +58,6 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
         p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
         auto d = maxwell::suggestion::Display::New();
 
-        d->icon = "";
         d->headline = idea;
         d->subheadline = "";
         d->details = "";
