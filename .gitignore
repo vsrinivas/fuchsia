@@ -2,6 +2,7 @@
 /linux64/bootserver
 /linux64/bootserver.stamp
 /linux64/cmake.stamp
+/linux64/._go
 /linux64/gn
 /linux64/gn.stamp
 /linux64/go
