@@ -48,8 +48,9 @@ void WatchClientImpl::OnPut(const std::string& path,
                           "failed to decode a collection of commits");
       return;
     }
-    for (const auto& record : records) {
-      commit_watcher_->OnRemoteCommit(record.commit, record.timestamp);
+    for (auto& record : records) {
+      commit_watcher_->OnRemoteCommit(std::move(record.commit),
+                                      std::move(record.timestamp));
     }
     HandleError();
     return;
@@ -66,7 +67,8 @@ void WatchClientImpl::OnPut(const std::string& path,
     return;
   }
 
-  commit_watcher_->OnRemoteCommit(record->commit, record->timestamp);
+  commit_watcher_->OnRemoteCommit(std::move(record->commit),
+                                  std::move(record->timestamp));
 }
 
 void WatchClientImpl::OnError() {
