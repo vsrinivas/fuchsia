@@ -66,9 +66,8 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
  private:
   void CreateApplicationWithProcess(
       const std::string& path,
-      fidl::Array<fidl::String> arguments,
       fidl::InterfaceHandle<ApplicationEnvironment> environment,
-      fidl::InterfaceRequest<ServiceProvider> services,
+      ApplicationLaunchInfoPtr launch_info,
       fidl::InterfaceRequest<ApplicationController> controller);
 
   fidl::BindingSet<ApplicationEnvironment> environment_bindings_;

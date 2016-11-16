@@ -60,7 +60,7 @@ void ApplicationRunnerHolder::StartApplication(
     fidl::InterfaceRequest<ApplicationController> controller) {
   mx::vmo data = CopyToVMO(fd.get());
   if (!data) {
-    FTL_LOG(ERROR) << "Cannot run " << startup_info->url
+    FTL_LOG(ERROR) << "Cannot run " << startup_info->launch_info->url
                    << " because URL is unreadable.";
     return;
   }

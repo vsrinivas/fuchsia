@@ -24,46 +24,55 @@ constexpr char kFuchsiaMagic[] = "#!fuchsia ";
 constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
 constexpr size_t kMaxShebangLength = 2048;
 
-constexpr size_t kSubprocessHandleCount = 2;
+bool HasHandle(const fidl::Map<uint32_t, mx::handle<void>>& startup_handles,
+               uint32_t handle_id) {
+  return startup_handles.find(handle_id) != startup_handles.cend();
+}
+
+bool HasReservedHandles(
+    const fidl::Map<uint32_t, mx::handle<void>>& startup_handles) {
+  return HasHandle(startup_handles, MX_HND_TYPE_APPLICATION_ENVIRONMENT) ||
+         HasHandle(startup_handles, MX_HND_TYPE_APPLICATION_SERVICES);
+}
 
 mx::process CreateProcess(
     const std::string& path,
-    fidl::Array<fidl::String> arguments,
     fidl::InterfaceHandle<ApplicationEnvironment> environment,
-    fidl::InterfaceRequest<ServiceProvider> services) {
-  const char* path_arg = path.c_str();
-
-  mx_handle_t handles[kSubprocessHandleCount]{
-      static_cast<mx_handle_t>(environment.PassHandle().release()),
-      static_cast<mx_handle_t>(services.PassMessagePipe().release()),
-  };
-
-  uint32_t ids[kSubprocessHandleCount] = {
-      MX_HND_TYPE_APPLICATION_ENVIRONMENT, MX_HND_TYPE_APPLICATION_SERVICES,
-  };
-
-  size_t count = 0;
-  while (count < kSubprocessHandleCount) {
-    if (handles[count] == MX_HANDLE_INVALID)
-      break;
-    ++count;
+    ApplicationLaunchInfoPtr launch_info) {
+  fidl::Map<uint32_t, mx::handle<void>> startup_handles =
+      std::move(launch_info->startup_handles);
+  startup_handles.insert(MX_HND_TYPE_APPLICATION_ENVIRONMENT,
+                         environment.PassHandle());
+  if (launch_info->services) {
+    startup_handles.insert(MX_HND_TYPE_APPLICATION_SERVICES,
+                           launch_info->services.PassMessagePipe());
   }
 
+  std::vector<uint32_t> ids;
+  std::vector<mx_handle_t> handles;
+  ids.reserve(startup_handles.size());
+  handles.reserve(startup_handles.size());
+  for (auto it = startup_handles.begin(); it != startup_handles.end(); ++it) {
+    ids.push_back(it.GetKey());
+    handles.push_back(it.GetValue().release());
+  }
+
+  const char* path_arg = path.c_str();
   std::vector<const char*> argv;
-  argv.reserve(arguments.size() + 1);
+  argv.reserve(launch_info->arguments.size() + 1);
   argv.push_back(path_arg);
-  for (const auto& argument : arguments)
+  for (const auto& argument : launch_info->arguments)
     argv.push_back(argument.get().c_str());
 
-  // TODO(abarth): We shouldn't pass stdin, stdout, stderr, or the file system
-  // when launching Mojo applications. We probably shouldn't pass environ, but
-  // currently this is very useful as a way to tell the loader in the child
-  // process to print out load addresses so we can understand crashes.
-  mx_handle_t result = launchpad_launch_mxio_etc(
-      path_arg, argv.size(), argv.data(), environ, count, handles, ids);
+  // TODO(abarth): We probably shouldn't pass environ, but currently this
+  // is very useful as a way to tell the loader in the child process to
+  // print out load addresses so we can understand crashes.
+  mx_handle_t result =
+      launchpad_launch_mxio_etc(path_arg, argv.size(), argv.data(), environ,
+                                handles.size(), handles.data(), ids.data());
   if (result < 0) {
     auto status = static_cast<mx_status_t>(result);
-    FTL_LOG(ERROR) << "Cannot run executable " << path_arg << " due to error "
+    FTL_LOG(ERROR) << "Cannot run executable " << path << " due to error "
                    << status << " (" << mx_status_get_string(status) << ")";
     return mx::process();
   }
@@ -157,6 +166,13 @@ void ApplicationEnvironmentImpl::Duplicate(
 void ApplicationEnvironmentImpl::CreateApplication(
     modular::ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
+  if (HasReservedHandles(launch_info->startup_handles)) {
+    FTL_LOG(ERROR)
+        << "Cannot run " << launch_info->url
+        << " because the caller tried to bind reserved startup handles.";
+    return;
+  }
+
   std::string path = GetPathFromURL(launch_info->url);
   if (path.empty()) {
     // TODO(abarth): Support URL schemes other than file:// by querying the host
@@ -194,29 +210,24 @@ void ApplicationEnvironmentImpl::CreateApplication(
     }
 
     ApplicationStartupInfoPtr startup_info = ApplicationStartupInfo::New();
-    startup_info->url = launch_info->url;
-    startup_info->arguments = std::move(launch_info->arguments);
     startup_info->environment = environment_bindings_.AddBinding(this);
-    startup_info->outgoing_services = std::move(launch_info->services);
+    startup_info->launch_info = std::move(launch_info);
     it.first->second->StartApplication(std::move(fd), std::move(startup_info),
                                        std::move(controller));
     return;
   }
 
-  CreateApplicationWithProcess(path, std::move(launch_info->arguments),
-                               environment_bindings_.AddBinding(this),
-                               std::move(launch_info->services),
-                               std::move(controller));
+  CreateApplicationWithProcess(path, environment_bindings_.AddBinding(this),
+                               std::move(launch_info), std::move(controller));
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     const std::string& path,
-    fidl::Array<fidl::String> arguments,
     fidl::InterfaceHandle<ApplicationEnvironment> environment,
-    fidl::InterfaceRequest<ServiceProvider> services,
+    ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  mx::process process = CreateProcess(
-      path, std::move(arguments), std::move(environment), std::move(services));
+  mx::process process =
+      CreateProcess(path, std::move(environment), std::move(launch_info));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, std::move(process));

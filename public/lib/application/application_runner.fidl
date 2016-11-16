@@ -16,22 +16,8 @@ struct ApplicationStartupInfo {
   // The application's environment.
   ApplicationEnvironment environment;
 
-  // The services provided by this application.
-  //
-  // This interface request typically originates from the
-  // |ApplicationLauncher.CreateApplication| message that caused this
-  // application to be created.
-  ServiceProvider&? outgoing_services;
-
-  // The location from which this application was retrieved.
-  //
-  // This field will probably be replaced with a stronger notion of identity,
-  // such as an unforgeable token. This field is included in this iteration to
-  // ease the transition from the previous application interfaces.
-  string url;
-
-  // The arguments provided to the application.
-  array<string>? arguments;
+  // The application launch info for the application to start.
+  ApplicationLaunchInfo launch_info;
 
   // TODO(abarth): Add more fields to this struct relating to application and
   // environment identity.
