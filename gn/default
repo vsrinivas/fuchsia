@@ -29,6 +29,7 @@
         "runtime",
         "sysui",
         "thinfs",
+        "tracing",
         "url",
         "vim",
         "wpa_supplicant"

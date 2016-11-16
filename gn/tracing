@@ -1,0 +1,17 @@
+{
+    "labels": [ "//apps/tracing" ],
+    "binaries": [
+        {
+            "binary": "trace",
+            "bootfs_path": "apps/trace"
+        },
+        {
+            "binary": "trace_manager",
+            "bootfs_path": "apps/trace_manager"
+        },
+        {
+            "binary": "trace_tests",
+            "bootfs_path": "apps/trace_tests"
+        }
+    ]
+}
