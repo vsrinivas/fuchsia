@@ -47,7 +47,7 @@ class StoryConnection : public Story {
                   ModuleControllerImpl* module_controller_impl,
                   fidl::InterfaceRequest<Story> story);
 
-  ~StoryConnection() override;
+  ~StoryConnection() override = default;
 
  private:
   // |Story|
@@ -88,11 +88,15 @@ class StoryImpl : public StoryContext {
 
  private:
   // Deletes itself on Stop().
-  ~StoryImpl();
+  ~StoryImpl() override = default;
 
   // |StoryContext|
-  void GetStory(fidl::InterfaceRequest<Story> story_request);
-  void Stop(const StopCallback& done);
+  void GetStory(fidl::InterfaceRequest<Story> story_request) override;
+  void Stop(const StopCallback& done) override;
+
+  // Phases of Stop(), broken out into separate methods.
+  void StopModules();
+  void StopLinks();
 
   struct Connection {
     std::shared_ptr<StoryConnection> story_connection;
@@ -102,7 +106,7 @@ class StoryImpl : public StoryContext {
   fidl::Binding<StoryContext> binding_;
   std::shared_ptr<ApplicationContext> application_context_;
   fidl::InterfacePtr<Resolver> resolver_;
-  std::shared_ptr<StoryPage> page_;
+  StoryStoragePtr story_storage_;
   std::vector<Connection> connections_;
 
   // TODO(mesch): Link instances are cleared only when the Story
@@ -115,28 +119,6 @@ class StoryImpl : public StoryContext {
   std::vector<std::function<void()>> teardown_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
-};
-
-// Shared owner of the connection to the ledger page. Shared between
-// the StoryImpl and all LinkImpls, so the connection is around until
-// all Links are closed when the story shuts down.
-class StoryPage {
- public:
-  StoryPage(fidl::InterfaceHandle<StoryStorage> story_storage);
-  ~StoryPage();
-
-  void Init(std::function<void()> done);
-
-  // These methods are called by LinkImpl.
-  void MaybeReadLink(const fidl::String& name, FidlDocMap* data);
-  void WriteLink(const fidl::String& name, const FidlDocMap& data);
-
- private:
-  fidl::InterfacePtr<StoryStorage> story_storage_;
-  fidl::StructPtr<StoryData> data_;
-  fidl::Array<uint8_t> id_;  // logging only
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryPage);
 };
 
 }  // namespace modular

@@ -34,19 +34,10 @@ StoryConnection::StoryConnection(
     fidl::InterfaceRequest<Story> story)
     : story_impl_(story_impl),
       module_controller_impl_(module_controller_impl),
-      binding_(this, std::move(story)) {
-  FTL_LOG(INFO) << "StoryConnection() " << this
-                << (module_controller_impl_ ? " primary" : "");
-}
-
-StoryConnection::~StoryConnection() {
-  FTL_LOG(INFO) << "~StoryConnection() " << this
-                << (module_controller_impl_ ? " primary" : "");
-}
+      binding_(this, std::move(story)) {}
 
 void StoryConnection::CreateLink(const fidl::String& name,
                                  fidl::InterfaceRequest<Link> link) {
-  FTL_LOG(INFO) << "StoryConnection::CreateLink() " << name;
   story_impl_->CreateLink(name, std::move(link));
 }
 
@@ -55,13 +46,11 @@ void StoryConnection::StartModule(
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  FTL_LOG(INFO) << "StoryConnection::StartModule() " << query;
   story_impl_->StartModule(query, std::move(link), std::move(module_controller),
                            std::move(view_owner));
 }
 
 void StoryConnection::Done() {
-  FTL_LOG(INFO) << "StoryConnection::Done()";
   if (module_controller_impl_) {
     module_controller_impl_->Done();
   }
@@ -71,22 +60,10 @@ StoryImpl::StoryImpl(std::shared_ptr<ApplicationContext> application_context,
                      fidl::InterfaceHandle<Resolver> resolver,
                      fidl::InterfaceHandle<StoryStorage> story_storage,
                      fidl::InterfaceRequest<StoryContext> story_context_request)
-    : binding_(this),
-      application_context_(application_context),
-      page_(new StoryPage(std::move(story_storage))) {
-  //FTL_LOG(INFO) << "StoryImpl()";
+    : binding_(this), application_context_(application_context) {
   resolver_.Bind(std::move(resolver));
-
-  page_->Init(ftl::MakeCopyable([
-    this, story_context_request = std::move(story_context_request)
-  ]() mutable {
-    // Only bind after we are actually able to handle method invocations.
-    binding_.Bind(std::move(story_context_request));
-  }));
-}
-
-StoryImpl::~StoryImpl() {
-  FTL_LOG(INFO) << "~StoryImpl()";
+  story_storage_.Bind(std::move(story_storage));
+  binding_.Bind(std::move(story_context_request));
 }
 
 void StoryImpl::Dispose(ModuleControllerImpl* const module_controller_impl) {
@@ -97,13 +74,14 @@ void StoryImpl::Dispose(ModuleControllerImpl* const module_controller_impl) {
                         });
   FTL_DCHECK(f != connections_.end());
   connections_.erase(f);
-
-  FTL_LOG(INFO) << "StoryImpl::Dispose() " << connections_.size();
 }
 
 void StoryImpl::CreateLink(const fidl::String& name,
                            fidl::InterfaceRequest<Link> link) {
-  links_.emplace_back(LinkImpl::New(page_, name, std::move(link)));
+  StoryStoragePtr story_storage_dup;
+  story_storage_->Dup(GetProxy(&story_storage_dup));
+  links_.emplace_back(
+      new LinkImpl(std::move(story_storage_dup), name, std::move(link)));
 }
 
 void StoryImpl::StartModule(
@@ -111,15 +89,12 @@ void StoryImpl::StartModule(
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_LOG(INFO) << "StoryImpl::StartModule()";
   resolver_->Resolve(
       query, ftl::MakeCopyable([
         this, link = std::move(link),
         module_controller_request = std::move(module_controller_request),
         view_owner_request = std::move(view_owner_request)
       ](fidl::String module_url) mutable {
-        //FTL_LOG(INFO) << "StoryImpl::StartModule() resolver callback";
-
         auto launch_info = ApplicationLaunchInfo::New();
 
         ServiceProviderPtr app_services;
@@ -169,9 +144,6 @@ void StoryImpl::GetStory(fidl::InterfaceRequest<Story> story_request) {
 void StoryImpl::Stop(const StopCallback& done) {
   teardown_.push_back(done);
 
-  FTL_LOG(INFO) << "StoryImpl::Stop() " << connections_.size() << " "
-                << teardown_.size();
-
   if (teardown_.size() != 1) {
     // A teardown is in flight, just piggyback on it.
     return;
@@ -181,27 +153,43 @@ void StoryImpl::Stop(const StopCallback& done) {
   // can still be created. Those will be missed here, and only caught
   // by the destructor.
 
-  // Take down all Link instances and write them to Storage.
-  //
-  // TODO(mesch): Technically this should be possible in the callback
-  // shortly before the teardown_/done() calls. However, there it
-  // causes a crash, and it's not clear why: It looks as if the error
-  // handler on the binding is called after the destructor, even
-  // though this should not be possible as the connection is closed in
-  // the destructor.
-  //
-  // TODO(mesch): The Link destructor just sends the data off to the
-  // ledger. There is no guarantee that, once this method here
-  // returns, the data will already be written. A TearDown() with
-  // return is needed for the Link instances as well.
-  links_.clear();
-  page_.reset();
+  StopModules();
+}
 
+void StoryImpl::StopModules() {
   auto cont = [this]() {
     if (!connections_.empty()) {
       // Not the last call.
       return;
     }
+
+    StopLinks();
+  };
+
+  // First, get rid of all connections without a ModuleController.
+  auto n = std::remove_if(
+      connections_.begin(), connections_.end(),
+      [](Connection& c) { return c.module_controller_impl.get() == nullptr; });
+  connections_.erase(n, connections_.end());
+
+  // Second, tear down all connections with a ModuleController.
+  if (connections_.empty()) {
+    cont();
+  } else {
+    for (auto& connection : connections_) {
+      connection.module_controller_impl->TearDown(cont);
+    }
+  }
+}
+
+void StoryImpl::StopLinks() {
+  auto count = std::make_shared<unsigned int>(0);
+  auto cont = [this, count]() {
+    if (++*count < links_.size()) {
+      return;
+    }
+
+    links_.clear();
 
     for (auto done : teardown_) {
       done();
@@ -209,88 +197,14 @@ void StoryImpl::Stop(const StopCallback& done) {
 
     // Also closes own connection.
     delete this;
-
-    FTL_LOG(INFO) << "StoryImpl::Stop() DONE";
   };
 
-  if (connections_.empty()) {
+  if (links_.empty()) {
     cont();
   } else {
-    // First, get rid of all connections without a ModuleController.
-    auto n = std::remove_if(connections_.begin(), connections_.end(),
-                            [](Connection& c) {
-                              return c.module_controller_impl.get() == nullptr;
-                            });
-    connections_.erase(n, connections_.end());
-
-    // Second, tear down all connections with a ModuleController.
-    for (auto& connection : connections_) {
-      connection.module_controller_impl->TearDown(cont);
+    for (auto& link : links_) {
+      link->WriteLinkData(cont);
     }
-  }
-}
-
-StoryPage::StoryPage(fidl::InterfaceHandle<StoryStorage> story_storage)
-    : data_(StoryData::New()) {
-  //FTL_LOG(INFO) << "StoryPage()";
-  data_->links.mark_non_null();
-  story_storage_.Bind(std::move(story_storage));
-};
-
-StoryPage::~StoryPage() {
-  //FTL_LOG(INFO) << "~StoryPage() " << this << " begin";
-
-  // TODO(mesch): We should write on every link change, not just at
-  // the end.
-  story_storage_->WriteStoryData(std::move(data_));
-
-  //FTL_LOG(INFO) << "~StoryPage() " << this << " end";
-}
-
-void StoryPage::Init(std::function<void()> done) {
-  FTL_LOG(INFO) << "StoryPage::Init() " << this << to_string(id_) << " start";
-
-  story_storage_->ReadStoryData(ftl::MakeCopyable([this,
-                                                   done](StoryDataPtr data) {
-    if (!data.is_null()) {
-      data_ = std::move(data);
-    }
-    FTL_LOG(INFO) << "StoryPage::Init() " << this << to_string(id_) << " done";
-    done();
-  }));
-}
-
-void StoryPage::MaybeReadLink(const fidl::String& name,
-                              FidlDocMap* const docs_map) {
-  auto i = data_->links.find(name);
-  if (i != data_->links.end()) {
-    for (const auto& doc : i.GetValue()->docs) {
-      (*docs_map)[doc->docid] = doc->Clone();
-    }
-  }
-  //FTL_LOG(INFO) << "StoryPage::MaybeReadlink() " << to_string(id_) << " "
-  //              << name << " docs " << *docs_map;
-}
-
-void StoryPage::WriteLink(const fidl::String& name,
-                          const FidlDocMap& docs_map) {
-  FTL_LOG(INFO) << "StoryPage::WriteLink() " << to_string(id_) << " name "
-                << name << " docs " << docs_map;
-
-  auto i = data_->links.find(name);
-  if (i == data_->links.end()) {
-    data_->links[name] = LinkData::New();
-  }
-
-  auto& docs_list = data_->links[name]->docs;
-
-  // Clear existing values in link data, and mark new link data
-  // instance not null (there is no such method in Array, only in
-  // Map).
-  docs_list.resize(0);
-
-  for (auto i = docs_map.cbegin(); i != docs_map.cend(); ++i) {
-    docs_list.push_back(i.GetValue()->Clone());
   }
 }
 

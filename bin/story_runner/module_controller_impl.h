@@ -31,7 +31,7 @@ class ModuleControllerImpl : public ModuleController {
       fidl::InterfacePtr<Module> module,
       fidl::InterfaceRequest<ModuleController> module_controller);
 
-  ~ModuleControllerImpl() override;
+  ~ModuleControllerImpl() override = default;
 
   // Notifies all watchers of Done, then tears down the Module
   // instance.

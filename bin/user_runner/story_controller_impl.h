@@ -67,8 +67,7 @@ class StoryControllerImpl : public StoryController,
   void NotifyStoryWatchers(void (StoryWatcher::*method)());
 
   // Starts the Story instance for the given story.
-  void StartStory(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+  void StartStory(fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
   // Tears down the currently used StoryRunner instance, if any.
   void TearDownStory(std::function<void()> done);
@@ -76,6 +75,7 @@ class StoryControllerImpl : public StoryController,
   StoryInfoPtr story_info_;
   StoryProviderImpl* const story_provider_impl_;
   std::shared_ptr<StoryStorageImpl::Storage> storage_;
+  std::unique_ptr<StoryStorageImpl> story_storage_impl_;
   ApplicationLauncherPtr launcher_;
 
   StrongBinding<StoryController> binding_;

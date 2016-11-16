@@ -90,8 +90,7 @@ void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
 
 void StoryControllerImpl::StartStory(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_LOG(INFO) << "StoryControllerImpl::StartStory() "
-                << story_info_->id;
+  FTL_LOG(INFO) << "StoryControllerImpl::StartStory() " << story_info_->id;
 
   // NOTE(mesch): We start a new application for each of the services
   // we need here. Instead, we could have started the application once
@@ -114,13 +113,13 @@ void StoryControllerImpl::StartStory(
   ConnectToService(resolver_app_services.get(), GetProxy(&resolver));
 
   StoryStoragePtr story_storage;
-  new StoryStorageImpl(
+  story_storage_impl_.reset(new StoryStorageImpl(
       story_provider_impl_->storage(),
       story_provider_impl_->GetStoryPage(story_info_->story_page_id),
-      story_info_->id, GetProxy(&story_storage));
+      story_info_->id, GetProxy(&story_storage)));
 
   story_runner->CreateStory(std::move(resolver), std::move(story_storage),
-                             GetProxy(&story_context_));
+                            GetProxy(&story_context_));
 
   story_context_->GetStory(GetProxy(&story_));
   story_->CreateLink("root", GetProxy(&root_));
@@ -143,12 +142,11 @@ void StoryControllerImpl::StartStory(
 }
 
 void StoryControllerImpl::TearDownStory(std::function<void()> done) {
-  FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() "
-                << story_info_->id;
+  FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() " << story_info_->id;
 
   story_context_->Stop([this, done]() {
-    FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() "
-                  << story_info_->id << " CONT";
+    FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() " << story_info_->id
+                  << " CONT";
 
     story_info_->is_running = false;
     story_provider_impl_->WriteStoryInfo(story_info_->Clone());
@@ -161,8 +159,8 @@ void StoryControllerImpl::TearDownStory(std::function<void()> done) {
 
     done();
 
-    FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() "
-                  << story_info_->id << " DONE";
+    FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() " << story_info_->id
+                  << " DONE";
   });
 }
 

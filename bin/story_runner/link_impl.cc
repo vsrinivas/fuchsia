@@ -12,7 +12,9 @@
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/macros.h"
 
 namespace modular {
 
@@ -26,38 +28,62 @@ using fidl::InterfaceHandle;
 using fidl::InterfacePtr;
 using fidl::InterfaceRequest;
 
-LinkImpl::LinkImpl(std::shared_ptr<StoryPage> p, const fidl::String& n)
-    : name(n), page_(p) {
-  // The document map is always valid, even when empty.
-  docs_map.mark_non_null();
-
-  FTL_LOG(INFO) << "LinkImpl() " << name;
-  page_->MaybeReadLink(name, &docs_map);
+LinkImpl::LinkImpl(StoryStoragePtr story_storage,
+                   const fidl::String& n,
+                   fidl::InterfaceRequest<Link> link_request)
+    : name(n), story_storage_(std::move(story_storage)) {
+  ReadLinkData(ftl::MakeCopyable([
+    this, link_request = std::move(link_request)
+  ]() mutable { new LinkConnection(this, std::move(link_request)); }));
 }
 
-LinkImpl::~LinkImpl() {
-  FTL_LOG(INFO) << "~LinkImpl() " << name;
-  page_->WriteLink(name, docs_map);
+void LinkImpl::ReadLinkData(const std::function<void()>& done) {
+  story_storage_->ReadLinkData(name, [this, done](LinkDataPtr data) {
+    if (!data.is_null()) {
+      FTL_DCHECK(!data->docs.is_null());
+      docs_map = std::move(data->docs);
+    } else {
+      // The document map is always valid, even when empty.
+      docs_map.mark_non_null();
+    }
+
+    done();
+  });
 }
 
-LinkImpl* LinkImpl::New(std::shared_ptr<StoryPage> page,
-                        const fidl::String& name,
-                        InterfaceRequest<Link> link_request) {
-  LinkImpl* const shared = new LinkImpl(page, name);
-  new LinkConnection(shared, std::move(link_request));
-  return shared;
+void LinkImpl::WriteLinkData(const std::function<void()>& done) {
+  auto link_data = LinkData::New();
+  link_data->docs = docs_map.Clone();
+  story_storage_->WriteLinkData(name, std::move(link_data), done);
+}
+
+void LinkImpl::DatabaseChanged(LinkConnection* const src) {
+  // src is only used to compare its value. If the connection was
+  // deleted before the callback is invoked, it will also be removed
+  // from impls.
+  WriteLinkData([this, src]() { NotifyWatchers(src); });
+}
+
+void LinkImpl::OnChange(LinkDataPtr link_data) {
+  if (docs_map.Equals(link_data->docs)) {
+    return;
+  }
+  docs_map = std::move(link_data->docs);
+  NotifyWatchers(nullptr);
+}
+
+void LinkImpl::NotifyWatchers(LinkConnection* const src) {
+  for (auto& dst : impls) {
+    const bool self_notify = (dst.get() != src);
+    dst->NotifyWatchers(docs_map, self_notify);
+  }
 }
 
 LinkConnection::LinkConnection(LinkImpl* const shared,
                                fidl::InterfaceRequest<Link> link_request)
     : shared_(shared), binding_(this, std::move(link_request)) {
-  FTL_LOG(INFO) << "LinkConnection() " << shared->name;
   shared_->impls.emplace_back(this);
   binding_.set_connection_error_handler([this]() { RemoveImpl(); });
-}
-
-LinkConnection::~LinkConnection() {
-  FTL_LOG(INFO) << "~LinkConnection() " << shared_->name;
 }
 
 void LinkConnection::Query(const LinkConnection::QueryCallback& callback) {
@@ -90,20 +116,11 @@ void LinkConnection::AddWatcher(InterfaceHandle<LinkWatcher> watcher,
 void LinkConnection::NotifyWatchers(const FidlDocMap& docs,
                                     const bool self_notify) {
   if (self_notify) {
-    watchers_.ForAllPtrs([&docs](LinkWatcher* const link_changed) {
-      link_changed->Notify(docs.Clone());
-    });
+    watchers_.ForAllPtrs(
+        [&docs](LinkWatcher* const watcher) { watcher->Notify(docs.Clone()); });
   }
-  all_watchers_.ForAllPtrs([&docs](LinkWatcher* const link_changed) {
-    link_changed->Notify(docs.Clone());
-  });
-}
-
-void LinkConnection::DatabaseChanged(const FidlDocMap& docs) {
-  for (auto& dst : shared_->impls) {
-    bool self_notify = (dst.get() != this);
-    dst->NotifyWatchers(docs, self_notify);
-  }
+  all_watchers_.ForAllPtrs(
+      [&docs](LinkWatcher* const watcher) { watcher->Notify(docs.Clone()); });
 }
 
 void LinkConnection::Dup(InterfaceRequest<Link> dup) {
@@ -119,13 +136,14 @@ void LinkConnection::RemoveImpl() {
   shared_->impls.erase(it, shared_->impls.end());
 }
 
-// The |LinkConnection| object knows which client made the call to AddDocument()
-// or
-// SetAllDocument(), so it notifies either all clients or all other clients,
-// depending on whether WatchAll() or Watch() was called, respectively.
+// The |LinkConnection| object knows which client made the call to
+// AddDocument() or SetAllDocument(), so it notifies either all
+// clients or all other clients, depending on whether WatchAll() or
+// Watch() was called, respectively.
 //
-// TODO(jimbe) This mechanism breaks if the call to Watch() is made *after*
-// the call to SetAllDocument(). Need to find a way to improve this.
+// TODO(jimbe) This mechanism breaks if the call to Watch() is made
+// *after* the call to SetAllDocument(). Need to find a way to improve
+// this.
 void LinkConnection::AddDocuments(FidlDocMap mojo_add_docs) {
   DocMap add_docs;
   mojo_add_docs.Swap(&add_docs);
@@ -134,19 +152,17 @@ void LinkConnection::AddDocuments(FidlDocMap mojo_add_docs) {
   for (auto& add_doc : add_docs) {
     DocumentEditor editor;
     if (!editor.Edit(add_doc.first, &shared_->docs_map)) {
-      FTL_LOG(INFO) << "LinkImpl::AddDocuments()    docid NEW.";
       // Docid does not currently exist. Add the entire Document.
       shared_->docs_map[add_doc.first] = std::move(add_doc.second);
       dirty = true;
     } else {
       // Docid does exist. Add or update the individual properties.
-      FTL_LOG(INFO) << "LinkImpl::AddDocuments()    docid EXISTS.";
       auto& new_props = add_doc.second->properties;
       for (auto it = new_props.begin(); it != new_props.end(); ++it) {
         const std::string& new_key = it.GetKey();
         ValuePtr& new_value = it.GetValue();
 
-        Value* old_value = editor.GetValue(new_key);
+        Value* const old_value = editor.GetValue(new_key);
         if (!old_value || !new_value->Equals(*old_value)) {
           dirty = true;
           editor.SetProperty(new_key, std::move(new_value));
@@ -156,9 +172,7 @@ void LinkConnection::AddDocuments(FidlDocMap mojo_add_docs) {
   }
 
   if (dirty) {
-    DatabaseChanged(shared_->docs_map);
-  } else {
-    FTL_LOG(INFO) << "LinkImpl::AddDocuments()    Skipped notify, not dirty";
+    shared_->DatabaseChanged(this);
   }
 }
 
@@ -166,7 +180,7 @@ void LinkConnection::SetAllDocuments(FidlDocMap new_docs) {
   bool dirty = !new_docs.Equals(shared_->docs_map);
   if (dirty) {
     shared_->docs_map.Swap(&new_docs);
-    DatabaseChanged(shared_->docs_map);
+    shared_->DatabaseChanged(this);
   }
 }
 

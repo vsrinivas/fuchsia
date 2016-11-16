@@ -28,6 +28,7 @@
 namespace {
 
 constexpr char kExampleRecipeUrl[] = "file:///system/apps/example_recipe";
+//constexpr char kExampleRecipeUrl[] = "file:///system/apps/example_flutter_parent_module";
 constexpr char kFlutterModuleUrl[] = "file:///system/apps/example_module3.flx";
 
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;

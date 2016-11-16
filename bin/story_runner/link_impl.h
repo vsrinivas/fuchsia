@@ -11,6 +11,7 @@
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/services/story/story_storage.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -21,7 +22,6 @@
 
 namespace modular {
 
-class StoryPage;
 class LinkConnection;
 
 // A Link is a mutable and observable value shared between modules.
@@ -48,40 +48,44 @@ class LinkConnection;
 // closed. This is done by the StoryImpl that created it. TODO(mesch):
 // Link instances should already be deleted earlier, when they lose
 // all their references.
-class LinkImpl {
+class LinkImpl : public StoryStorageLinkWatcher {
  public:
-  ~LinkImpl();
-
-  // Connect a new LinkConnection object on the heap for the given
-  // Link interface request. The underlying shared LinkImpl is
-  // returned and can be deleted. It owns the LinkConnection created
+  // Connects a new LinkConnection object on the heap for the given
+  // Link interface request. LinkImpl owns the LinkConnection created
   // now and all future ones created by Dup(). LinkConnection
   // instances are deleted when their connections close, and they are
   // all deleted (and close their connections) when LinkImpl is
-  // deleted.
-  static LinkImpl* New(std::shared_ptr<StoryPage> page,
-                       const fidl::String& name,
-                       fidl::InterfaceRequest<Link> req);
+  // destroyed.
+  LinkImpl(StoryStoragePtr story_storage,
+           const fidl::String& n,
+           fidl::InterfaceRequest<Link> link_request);
+  ~LinkImpl() override = default;
+
+  void ReadLinkData(const std::function<void()>& done);
+  void WriteLinkData(const std::function<void()>& done);
+  void DatabaseChanged(LinkConnection* src);
 
  private:
   friend class LinkConnection;
 
-  // LinkImpl may not be constructed on the stack, so the constructor
-  // is private.
-  LinkImpl(std::shared_ptr<StoryPage> p, const fidl::String& n);
+  // |StoryStorageLinkWatcher|
+  void OnChange(LinkDataPtr link_data) override;
+
+  void NotifyWatchers(LinkConnection* src);
 
   FidlDocMap docs_map;
   std::vector<std::unique_ptr<LinkConnection>> impls;
   const fidl::String name;
-  std::shared_ptr<StoryPage> page_;
+  StoryStoragePtr story_storage_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
 
 class LinkConnection : public Link {
  public:
-  ~LinkConnection() override;
+  ~LinkConnection() override = default;
 
+ private:
   // |Link|
   void AddDocuments(FidlDocMap docs) override;
   void SetAllDocuments(FidlDocMap docs) override;
@@ -90,23 +94,20 @@ class LinkConnection : public Link {
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void Dup(fidl::InterfaceRequest<Link> dup) override;
 
- private:
   friend class LinkImpl;
 
   // LinkConnection may not be constructed on the stack, so the
-  // constructor is private.
+  // constructor is private. It's used only by LinkImpl.
   LinkConnection(LinkImpl* shared, fidl::InterfaceRequest<Link> link_request);
 
-  // For use by the binding error handler.
   void RemoveImpl();
 
   void AddWatcher(fidl::InterfaceHandle<LinkWatcher> watcher,
                   const bool self_notify);
-  void NotifyWatchers(const FidlDocMap& docs, const bool self_notify);
-  void DatabaseChanged(const FidlDocMap& docs);
 
-  // |shared_| is owned (and eventually deleted) by the LinkConnection
-  // instance that created it, aka the primary instance.
+  // Used by LinkImpl.
+  void NotifyWatchers(const FidlDocMap& docs, const bool self_notify);
+
   LinkImpl* const shared_;
   fidl::Binding<Link> binding_;
 

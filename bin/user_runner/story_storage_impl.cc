@@ -12,24 +12,25 @@ namespace modular {
 
 namespace {
 
-class ReadStoryDataCall : public Transaction {
+class ReadLinkDataCall : public Transaction {
  public:
-  using Result = StoryStorageImpl::ReadStoryDataCallback;
+  using Result = StoryStorageImpl::ReadLinkDataCallback;
 
-  ReadStoryDataCall(TransactionContainer* const container,
-                      ledger::Page* const page,
-                      Result result) :
-      Transaction(container),
-      page_(page),
-      result_(result) {
+  ReadLinkDataCall(TransactionContainer* const container,
+                   ledger::Page* const page,
+                   const fidl::String& link_id,
+                   Result result)
+      : Transaction(container),
+        page_(page),
+        link_id_(link_id),
+        result_(result) {
     page_->GetSnapshot(
-        GetProxy(&page_snapshot_),
-        [this](ledger::Status status) {
+        GetProxy(&page_snapshot_), [this](ledger::Status status) {
           page_snapshot_->Get(
-              to_array("story_data"),
+              to_array(link_id_),
               [this](ledger::Status status, ledger::ValuePtr value) {
                 if (value) {
-                  data_ = StoryData::New();
+                  data_ = LinkData::New();
                   data_->Deserialize(value->get_bytes().data(),
                                      value->get_bytes().size());
                 }
@@ -42,10 +43,46 @@ class ReadStoryDataCall : public Transaction {
  private:
   ledger::Page* const page_;  // not owned
   ledger::PageSnapshotPtr page_snapshot_;
-  StoryDataPtr data_;
+  const fidl::String link_id_;
+  LinkDataPtr data_;
   Result result_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ReadStoryDataCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
+};
+
+class WriteLinkDataCall : public Transaction {
+ public:
+  using Result = StoryStorageImpl::WriteLinkDataCallback;
+
+  WriteLinkDataCall(TransactionContainer* const container,
+                    ledger::Page* const page,
+                    const fidl::String& link_id,
+                    LinkDataPtr data,
+                    Result result)
+      : Transaction(container),
+        page_(page),
+        link_id_(link_id),
+        data_(std::move(data)),
+        result_(result) {
+    fidl::Array<uint8_t> bytes;
+    bytes.resize(data_->GetSerializedSize());
+    data_->Serialize(bytes.data(), bytes.size());
+
+    page_->Put(to_array(link_id_), std::move(bytes),
+               [this](ledger::Status status) {
+                 result_();
+                 Done();
+               });
+  }
+
+ private:
+  ledger::Page* const page_;  // not owned
+  ledger::PageSnapshotPtr page_snapshot_;
+  const fidl::String link_id_;
+  LinkDataPtr data_;
+  Result result_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
 
 }  // namespace
@@ -54,48 +91,88 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
                                    ledger::PagePtr story_page,
                                    const fidl::String& key,
                                    fidl::InterfaceRequest<StoryStorage> request)
-    : binding_(this, std::move(request)), key_(key), storage_(storage),
+    : page_watcher_binding_(this),
+      key_(key),
+      storage_(storage),
       story_page_(std::move(story_page)) {
-  FTL_LOG(INFO) << "StoryStorageImpl() " << this << " " << key_;
+  bindings_.AddBinding(this, std::move(request));
+
+  fidl::InterfaceHandle<ledger::PageWatcher> watcher;
+  page_watcher_binding_.Bind(GetProxy(&watcher));
+  story_page_->Watch(std::move(watcher), [](ledger::Status status) {});
 }
 
-StoryStorageImpl::~StoryStorageImpl() {
-  FTL_LOG(INFO) << "~StoryStorageImpl() " << this << " " << key_;
-}
-
-void StoryStorageImpl::ReadStoryData(const ReadStoryDataCallback& cb) {
-  FTL_LOG(INFO) << "StoryStorageImpl::ReadStoryData() " << this << " " << key_;
-
+// |StoryStorage|
+void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
+                                    const ReadLinkDataCallback& cb) {
   if (story_page_.is_bound()) {
-    new ReadStoryDataCall(
-        &transaction_container_,
-        story_page_.get(),
-        cb);
+    new ReadLinkDataCall(&transaction_container_, story_page_.get(), link_id,
+                         cb);
 
   } else {
-    if (storage_->find(key_) != storage_->end()) {
-      cb(storage_->find(key_)->second->Clone());
+    auto& story_data = (*storage_)[key_];
+    auto i = story_data.find(link_id);
+    if (i != story_data.end()) {
+      cb(i->second->Clone());
     } else {
       cb(nullptr);
     }
   }
 }
 
-void StoryStorageImpl::WriteStoryData(StoryDataPtr data) {
-  FTL_LOG(INFO) << "StoryStorageImpl::WriteStoryData() " << this << " " << key_;
+// |StoryStorage|
+void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
+                                     LinkDataPtr data,
+                                     const WriteLinkDataCallback& cb) {
   if (story_page_.is_bound()) {
-    fidl::Array<uint8_t> bytes;
-    bytes.resize(data->GetSerializedSize());
-    data->Serialize(bytes.data(), bytes.size());
-    // Destructor is called synchronously by client after this method
-    // returns, so the pipe closes before the result callback is
-    // received.
-    story_page_->Put(to_array("story_data"), std::move(bytes),
-                       ledger::Page::PutCallback());
+    new WriteLinkDataCall(&transaction_container_, story_page_.get(), link_id,
+                          std::move(data), cb);
 
   } else {
-    storage_->emplace(std::make_pair(key_, std::move(data)));
+    (*storage_)[key_][link_id] = std::move(data);
   }
+}
+
+// |StoryStorage|
+void StoryStorageImpl::WatchLink(
+    const fidl::String& link_id,
+    fidl::InterfaceHandle<StoryStorageLinkWatcher> watcher) {
+  watchers_.emplace_back(std::make_pair(
+      link_id, StoryStorageLinkWatcherPtr::Create(std::move(watcher))));
+}
+
+// |StoryStorage|
+void StoryStorageImpl::Dup(fidl::InterfaceRequest<StoryStorage> dup) {
+  bindings_.AddBinding(this, std::move(dup));
+}
+
+// |PageWatcher|
+void StoryStorageImpl::OnInitialState(
+    fidl::InterfaceHandle<ledger::PageSnapshot> page,
+    const OnInitialStateCallback& cb) {
+  // TODO(mesch): We get the initial state from a direct query. This
+  // leaves the possibility that the next OnChange is against a
+  // different base state.
+  cb();
+}
+
+// |PageWatcher|
+void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
+                                const OnChangeCallback& cb) {
+  if (!page.is_null() && !page->changes.is_null()) {
+    for (auto& entry : page->changes) {
+      const fidl::String link_id = to_string(entry->key);
+      for (auto& watcher_entry : watchers_) {
+        if (link_id == watcher_entry.first) {
+          auto data = LinkData::New();
+          data->Deserialize(entry->new_value->get_bytes().data(),
+                            entry->new_value->get_bytes().size());
+          watcher_entry.second->OnChange(std::move(data));
+        }
+      }
+    }
+  }
+  cb();
 }
 
 }  // namespace modular

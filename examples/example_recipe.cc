@@ -293,9 +293,10 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<modular::ServiceProvider> services) override {
-    view_.reset(new RecipeView(
-        application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
-        std::move(view_owner_request)));
+    view_.reset(
+        new RecipeView(application_context()
+                           ->ConnectToEnvironmentService<mozart::ViewManager>(),
+                       std::move(view_owner_request)));
 
     for (auto& view_owner : child_views_) {
       view_->ConnectView(std::move(view_owner));
@@ -361,39 +362,34 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     // the Story is not new, but already contains existing Modules
     // and Links from the previous execution that is continued here.
     // Is that really enough?
-    module1_link_->Query(
-        [this](fidl::Map<fidl::String, document_store::DocumentPtr> value) {
-          if (value.size() == 0) {
-            // This must come last, otherwise LinkConnection gets a
-            // notification of our own write because of the "send
-            // initial values" code.
-            modular::FidlDocMap docs;
-            modular::DocumentEditor(kDocId)
-                .SetProperty(kIsALabel,
-                             modular::DocumentEditor::NewIriValue(kIsAValue))
-                .SetProperty(kCounterLabel,
-                             modular::DocumentEditor::NewIntValue(1))
-                .SetProperty(kSenderLabel,
-                             modular::DocumentEditor::NewStringValue("RecipeImpl"))
-                .Insert(&docs);
-            module1_link_->SetAllDocuments(std::move(docs));
-          }
-        });
+    module1_link_->Query([this](
+        fidl::Map<fidl::String, document_store::DocumentPtr> value) {
+      if (value.size() == 0) {
+        // This must come last, otherwise LinkConnection gets a
+        // notification of our own write because of the "send
+        // initial values" code.
+        modular::FidlDocMap docs;
+        modular::DocumentEditor(kDocId)
+            .SetProperty(kIsALabel,
+                         modular::DocumentEditor::NewIriValue(kIsAValue))
+            .SetProperty(kCounterLabel, modular::DocumentEditor::NewIntValue(1))
+            .SetProperty(kSenderLabel,
+                         modular::DocumentEditor::NewStringValue("RecipeImpl"))
+            .Insert(&docs);
+        module1_link_->SetAllDocuments(std::move(docs));
+      }
+    });
   }
 
   // |Module|
   void Stop(const StopCallback& done) override {
     // TODO(mesch): This is tentative. Not sure what the right amount
-    // of cleanup it is to ask from a module implementation.
+    // of cleanup it is to ask from a module implementation, but this
+    // disconnects all the watchers and thus prevents any further
+    // state change of the module.
     connections_.clear();
     module_monitors_.clear();
-    module1_->Stop([this, done]() {
-      module2_->Stop([this, done]() {
-        module1_link_.reset();
-        module2_link_.reset();
-        done();
-      });
-    });
+    done();
   }
 
   std::unique_ptr<RecipeView> view_;

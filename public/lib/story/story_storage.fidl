@@ -9,14 +9,22 @@ import "apps/modular/services/document_store/document.fidl";
 // The abstraction provided internally by UserRunner to StoryRunner
 // for state persistence.
 interface StoryStorage {
-  ReadStoryData() => (StoryData? data);
-  WriteStoryData(StoryData data);
+  ReadLinkData(string link_id) => (LinkData? data);
+  WriteLinkData(string link_id, LinkData data) => ();
+  WatchLink(string link_id, StoryStorageLinkWatcher watcher);
+  Dup(StoryStorage& dup);  // gives a connection to every Link
 };
 
-struct StoryData {
-  map<string, LinkData> links;
+interface StoryStorageLinkWatcher {
+  // Called when the link data has changed in the underlying ledger
+  // page. For now, Link data are never deleted from a story, they
+  // just stop changing when they are no longer accessed by any Link
+  // instance.
+  OnChange(LinkData changed);
 };
 
 struct LinkData {
-  array<document_store.Document> docs;
+  // The data stored in one Link instance. The key is the docid of the
+  // Document.
+  map<string, document_store.Document> docs;
 };
