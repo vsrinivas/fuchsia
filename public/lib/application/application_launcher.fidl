@@ -25,9 +25,9 @@ struct ApplicationLaunchInfo {
   // request.
   ServiceProvider&? services;
 
-  // The map of startup handles to be provided to the newly created process.
-  // Each entry consists of a handle id as defined in <magenta/processargs.h>
-  // and the handle to associate with it.
+  // A map of additional startup handles to be provided to the newly created
+  // process.  Each entry consists of a handle id as defined in
+  // <magenta/processargs.h> and the handle to associate with it.
   //
   // This mechanism may be used to redirect stdin, stdout, and stderr streams
   // by passing the appropriate handles here.
