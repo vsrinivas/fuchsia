@@ -90,23 +90,17 @@ mx_koid_t GetProcessId(launchpad_t* lp) {
   FTL_DCHECK(process_handle);
 
   mx_info_handle_basic_t info;
-  mx_size_t size;
   mx_status_t status =
-      mx_object_get_info(process_handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec),
-                         &info, sizeof(info), &size);
+      mx_object_get_info(process_handle, MX_INFO_HANDLE_BASIC, &info,
+                         sizeof(info), nullptr, nullptr);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("mx_object_get_info_failed", status);
     return MX_KOID_INVALID;
   }
-  if (size != sizeof(info)) {
-    FTL_LOG(ERROR) << "mx_object_get_info failed - expected size: "
-                   << sizeof(info) << ", returned: " << size;
-    return MX_KOID_INVALID;
-  }
 
-  FTL_DCHECK(info.rec.type == MX_OBJ_TYPE_PROCESS);
+  FTL_DCHECK(info.type == MX_OBJ_TYPE_PROCESS);
 
-  return info.rec.koid;
+  return info.koid;
 }
 
 mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
@@ -322,38 +316,30 @@ bool Process::RefreshAllThreads() {
 
   // First get the thread count so that we can allocate an appropriately sized
   // buffer.
-  mx_info_header_t hdr;
-  mx_size_t result_size;
+  mx_size_t num_threads;
   mx_status_t status =
-      mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS, 0, &hdr,
-                         sizeof(hdr), &result_size);
+      mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
+                         nullptr, 0, nullptr, &num_threads);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Failed to get process thread info", status);
     return false;
   }
 
-  const size_t buffer_size =
-      sizeof(mx_info_process_threads_t) +
-      hdr.avail_count * sizeof(mx_record_process_thread_t);
-  std::unique_ptr<uint8_t[]> buffer(new uint8_t[buffer_size]);
+  auto buffer_size = num_threads * sizeof(mx_koid_t);
+  auto koids = std::make_unique<mx_koid_t[]>(num_threads);
+  mx_size_t records_read;
   status = mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
-                              sizeof(mx_record_process_thread_t), buffer.get(),
-                              buffer_size, &result_size);
+                              koids.get(), buffer_size, &records_read, nullptr);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Failed to get process thread info", status);
     return false;
   }
 
-  // This comparison is OK (size_t vs mx_ssize_t) since |hdr.avail_count| is a
-  // uint32_t. The cast is OK because we know that |result_size| is a natural
-  // number here.
-  FTL_DCHECK(buffer_size == static_cast<size_t>(result_size));
+  FTL_DCHECK(records_read == num_threads);
 
-  mx_info_process_threads_t* thread_info =
-      reinterpret_cast<mx_info_process_threads_t*>(buffer.get());
   ThreadMap new_threads;
-  for (size_t i = 0; i < hdr.avail_count; ++i) {
-    mx_koid_t thread_id = thread_info->rec[i].koid;
+  for (size_t i = 0; i < num_threads; ++i) {
+    mx_koid_t thread_id = koids[i];
     mx_handle_t thread_debug_handle = MX_HANDLE_INVALID;
     status = mx_object_get_child(debug_handle_.get(), thread_id,
                                  MX_RIGHT_SAME_RIGHTS, &thread_debug_handle);
