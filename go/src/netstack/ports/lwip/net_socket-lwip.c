@@ -381,10 +381,12 @@ int net_getaddrinfo(const char* node, const char* service,
   }
 
   // TODO: do this somewhere else
-  if (strcmp(service, "http") == 0) {
-    service = "80";
-  } else if (strcmp(service, "https") == 0) {
-    service = "443";
+  if (service) {
+    if (strcmp(service, "http") == 0) {
+      service = "80";
+    } else if (strcmp(service, "https") == 0) {
+      service = "443";
+    }
   }
 
   ret = lwip_getaddrinfo(node, service, hints, &lwip_res);
