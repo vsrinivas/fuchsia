@@ -145,6 +145,45 @@ ApplicationEnvironmentImpl::ExtractApplication(
   return application;
 }
 
+ApplicationEnvironmentImpl* ApplicationEnvironmentImpl::FindByLabel(
+    ftl::StringView label) {
+  if (label_ == label)
+    return this;
+  for (const auto& child : children_) {
+    ApplicationEnvironmentImpl* env =
+        child.second->environment()->FindByLabel(label);
+    if (env)
+      return env;
+  }
+  return nullptr;
+}
+
+void ApplicationEnvironmentImpl::Describe(std::ostream& out) {
+  out << "Environment " << label_ << " [" << this << "]" << std::endl;
+
+  if (!applications_.empty()) {
+    out << "  applications:" << std::endl;
+    for (const auto& pair : applications_) {
+      ApplicationControllerImpl* app = pair.second.get();
+      out << "    - " << app->path() << " [" << app << "]" << std::endl;
+    }
+  }
+
+  if (!children_.empty()) {
+    out << "  children:" << std::endl;
+    for (const auto& pair : children_) {
+      ApplicationEnvironmentImpl* env = pair.second->environment();
+      out << "    - " << env->label() << " [" << env << "]" << std::endl;
+    }
+  }
+
+  if (!children_.empty()) {
+    for (const auto& pair : children_) {
+      pair.second->environment()->Describe(out);
+    }
+  }
+}
+
 void ApplicationEnvironmentImpl::CreateNestedEnvironment(
     fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
     fidl::InterfaceRequest<ApplicationEnvironment> environment,
@@ -249,7 +288,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
       CreateProcess(path, std::move(environment), std::move(launch_info));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
-        std::move(controller), this, std::move(process));
+        std::move(controller), this, std::move(process), path);
     ApplicationControllerImpl* key = application.get();
     applications_.emplace(key, std::move(application));
   }

@@ -19,8 +19,11 @@ class ApplicationControllerImpl : public ApplicationController {
   ApplicationControllerImpl(
       fidl::InterfaceRequest<ApplicationController> request,
       ApplicationEnvironmentImpl* environment,
-      mx::process process);
+      mx::process process,
+      std::string path);
   ~ApplicationControllerImpl() override;
+
+  const std::string& path() const { return path_; }
 
   void Kill(const KillCallback& callback) override;
 
@@ -30,6 +33,7 @@ class ApplicationControllerImpl : public ApplicationController {
   fidl::Binding<ApplicationController> binding_;
   ApplicationEnvironmentImpl* environment_;
   mx::process process_;
+  std::string path_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
 };

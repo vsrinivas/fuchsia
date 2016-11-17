@@ -5,6 +5,7 @@
 #ifndef APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_ENVIRONMENT_IMPL_H_
 #define APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_ENVIRONMENT_IMPL_H_
 
+#include <iosfwd>
 #include <memory>
 #include <unordered_map>
 
@@ -14,6 +15,7 @@
 #include "apps/modular/services/application/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace modular {
 
@@ -42,6 +44,14 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   // calling this function.
   std::unique_ptr<ApplicationControllerImpl> ExtractApplication(
       ApplicationControllerImpl* controller);
+
+  // Finds the environment with the specified label.
+  // Returns this environment if it matches the specified label, otherwise
+  // returns the first child which does or null if none.
+  ApplicationEnvironmentImpl* FindByLabel(ftl::StringView label);
+
+  // Writes a diagnostic description of the environment to the stream.
+  void Describe(std::ostream& out);
 
   // ApplicationEnvironment implementation:
 

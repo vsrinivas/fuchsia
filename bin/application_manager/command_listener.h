@@ -7,7 +7,7 @@
 
 #include <mx/channel.h>
 
-#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "apps/modular/src/application_manager/application_environment_impl.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
@@ -19,10 +19,13 @@ namespace modular {
 // "@" to this class to run the corresponding applications.
 //
 // Currently supported commands are:
-//   @ <uri> : run application with specified uri
+//   @<scope> <uri> <args> : run application with specified uri in scope.
+//   @<scope>? : display information about the specified scope
+//
+// Scopes are names for environments.
 class CommandListener : mtl::MessageLoopHandler {
  public:
-  explicit CommandListener(ApplicationLauncher* launcher,
+  explicit CommandListener(ApplicationEnvironmentImpl* root_environment,
                            mx::channel command_channel);
   ~CommandListener();
 
@@ -31,9 +34,11 @@ class CommandListener : mtl::MessageLoopHandler {
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
 
   void ExecuteCommand(std::string command);
+  ApplicationEnvironmentImpl* FindEnvironment(ftl::StringView scope);
+  void Usage();
   void Close();
 
-  ApplicationLauncher* const launcher_;
+  ApplicationEnvironmentImpl* const root_environment_;
   mtl::MessageLoop* const message_loop_;
 
   mx::channel command_channel_;

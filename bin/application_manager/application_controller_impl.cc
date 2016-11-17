@@ -14,8 +14,12 @@ namespace modular {
 ApplicationControllerImpl::ApplicationControllerImpl(
     fidl::InterfaceRequest<ApplicationController> request,
     ApplicationEnvironmentImpl* environment,
-    mx::process process)
-    : binding_(this), environment_(environment), process_(std::move(process)) {
+    mx::process process,
+    std::string path)
+    : binding_(this),
+      environment_(environment),
+      process_(std::move(process)),
+      path_(std::move(path)) {
   if (request.is_pending()) {
     binding_.Bind(std::move(request));
     binding_.set_connection_error_handler([this] {
