@@ -65,7 +65,7 @@ MaxwellTestBase::MaxwellTestBase()
   test_environment_host_binding_.Bind(&test_environment_host_handle);
   root_environment->CreateNestedEnvironment(
       std::move(test_environment_host_handle), GetProxy(&test_environment_),
-      NULL);
+      NULL, "maxwell-test");
   test_environment_->GetApplicationLauncher(GetProxy(&test_launcher_));
   agent_launcher_ =
       std::make_unique<maxwell::AgentLauncher>(test_environment_.get());

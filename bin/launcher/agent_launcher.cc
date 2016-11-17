@@ -5,16 +5,22 @@
 #include "apps/maxwell/src/launcher/agent_launcher.h"
 
 namespace maxwell {
+namespace {
+
+constexpr char kEnvironmentLabel[] = "agent";
+
+} // namespace
 
 void AgentLauncher::StartAgent(
-    const std::string& url,
+    const std::string &url,
     std::unique_ptr<modular::ApplicationEnvironmentHost> env_host) {
   fidl::InterfaceHandle<modular::ApplicationEnvironmentHost> agent_host_handle =
       agent_host_bindings_.AddBinding(std::move(env_host));
 
   modular::ApplicationEnvironmentPtr agent_env;
   environment_->CreateNestedEnvironment(std::move(agent_host_handle),
-                                        GetProxy(&agent_env), NULL);
+                                        GetProxy(&agent_env), NULL,
+                                        kEnvironmentLabel);
 
   modular::ApplicationLauncherPtr agent_launcher;
   agent_env->GetApplicationLauncher(GetProxy(&agent_launcher));
@@ -24,4 +30,4 @@ void AgentLauncher::StartAgent(
   agent_launcher->CreateApplication(std::move(launch_info), NULL);
 }
 
-}  // namespace maxwell
+} // namespace maxwell
