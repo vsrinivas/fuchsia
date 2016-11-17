@@ -1,0 +1,17 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+interface FocusListener {
+    // Receives changes to the list of focused story ids.
+    OnFocusChanged(string[] focused_story_ids);
+};
+
+interface FocusController {
+    // Requests that a specific story be brought into focus.
+    FocusStory(string story_id);
+    // Register a focus listener.
+    Watch(FocusListener focus_listener);
+}

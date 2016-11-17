@@ -16,6 +16,12 @@ fidl("public") {
   ]
 }
 
+fidl("focus") {
+  sources = [
+    "focus.fidl",
+  ]
+}
+
 fidl("user") {
   sources = [
     "user_runner.fidl",
