@@ -28,6 +28,14 @@ ViewContainerProxy _initViewContainer() {
   final ViewContainerProxy proxy = new ViewContainerProxy()
     ..ctrl.bind(new InterfaceHandle<ViewContainer>(new core.Channel(handle), 0))
     ..setListener(_ViewContainerListenerImpl.instance.createInterfaceHandle());
+
+  assert(() {
+    proxy.ctrl.error.then((ProxyError error) {
+      print('ViewContainerProxy: error: $error');
+    });
+    return true;
+  });
+
   return proxy;
 }
 
@@ -44,14 +52,14 @@ class _ViewContainerListenerImpl extends ViewContainerListener {
   static final _ViewContainerListenerImpl instance = new _ViewContainerListenerImpl();
 
   @override
-  void onChildAttached(int childKey,ViewInfo childViewInfo,void callback()) {
+  void onChildAttached(int childKey, ViewInfo childViewInfo, void callback()) {
     ChildViewConnection connection = _connections[childKey];
     connection?._onAttachedToContainer(childViewInfo);
     callback();
   }
 
   @override
-  void onChildUnavailable(int childKey,void callback()) {
+  void onChildUnavailable(int childKey, void callback()) {
     ChildViewConnection connection = _connections[childKey];
     connection?._onUnavailable();
     callback();
