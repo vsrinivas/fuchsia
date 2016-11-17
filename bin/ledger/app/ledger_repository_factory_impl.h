@@ -11,6 +11,7 @@
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_repository_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/environment/environment.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
 
@@ -19,7 +20,8 @@ namespace ledger {
 class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
  public:
   // |task_runner| executes asynchronous tasks for the created ledgers
-  LedgerRepositoryFactoryImpl(ftl::RefPtr<ftl::TaskRunner> task_runner);
+  LedgerRepositoryFactoryImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                              ledger::Environment* environment);
   ~LedgerRepositoryFactoryImpl() override;
 
  private:
@@ -30,6 +32,7 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
       const GetRepositoryCallback& callback) override;
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  ledger::Environment* const environment_;
   AutoCleanableMap<std::string, LedgerRepositoryImpl> repositories_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);

@@ -12,6 +12,7 @@
 #include "apps/ledger/src/app/fidl/bound_interface.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -32,7 +33,7 @@ class PageManager {
   // Both |page_storage| and |page_sync| are owned by PageManager and are
   // deleted when it goes away.
   PageManager(std::unique_ptr<storage::PageStorage> page_storage,
-              std::unique_ptr<storage::PageSyncDelegate> page_sync);
+              std::unique_ptr<cloud_sync::PageSyncContext> page_sync);
   ~PageManager();
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
@@ -52,7 +53,7 @@ class PageManager {
   void CheckEmpty();
 
   std::unique_ptr<storage::PageStorage> page_storage_;
-  std::unique_ptr<storage::PageSyncDelegate> page_sync_;
+  std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_;
   AutoCleanableSet<BoundInterface<PageSnapshot, PageSnapshotImpl>> snapshots_;
   AutoCleanableSet<BranchTracker> pages_;
   ftl::Closure on_empty_callback_;

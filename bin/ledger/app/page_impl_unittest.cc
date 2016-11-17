@@ -36,11 +36,7 @@ class PageImplTest : public ::testing::Test {
     auto fake_storage =
         std::make_unique<storage::fake::FakePageStorage>(page_id1_);
     fake_storage_ = fake_storage.get();
-    auto page_sync =
-        std::make_unique<cloud_sync::PageSyncDelegateImpl>(fake_storage_);
-
-    manager_ = std::make_unique<PageManager>(std::move(fake_storage),
-                                             std::move(page_sync));
+    manager_ = std::make_unique<PageManager>(std::move(fake_storage), nullptr);
     manager_->BindPage(GetProxy(&page_ptr_));
   }
 

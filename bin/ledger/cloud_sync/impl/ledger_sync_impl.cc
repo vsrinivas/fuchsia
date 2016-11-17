@@ -22,23 +22,27 @@ std::string GetFirebasePrefix(ftl::StringView user_prefix,
 }
 
 LedgerSyncImpl::LedgerSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                               ledger::Environment* environment,
                                ftl::StringView app_id)
-    : task_runner_(task_runner), app_id_(app_id.ToString()) {}
+    : task_runner_(task_runner),
+      environment_(environment),
+      app_id_(app_id.ToString()) {}
 
 LedgerSyncImpl::~LedgerSyncImpl() {}
 
 std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
-    const configuration::Configuration& configuration,
     storage::PageStorage* page_storage,
     std::function<void()> error_callback) {
-  FTL_DCHECK(configuration.use_sync);
+  FTL_DCHECK(environment_->configuration.use_sync);
+  FTL_DCHECK(!environment_->configuration.sync_params.firebase_id.empty());
   FTL_DCHECK(page_storage);
 
   auto result = std::make_unique<PageSyncContext>();
   result->firebase = std::make_unique<firebase::FirebaseImpl>(
-      nullptr, configuration.sync_params.firebase_id,
-      GetFirebasePrefix(configuration.sync_params.firebase_prefix, app_id_,
-                        page_storage->GetId()));
+      environment_->network_service,
+      environment_->configuration.sync_params.firebase_id,
+      GetFirebasePrefix(environment_->configuration.sync_params.firebase_prefix,
+                        app_id_, page_storage->GetId()));
   result->cloud_provider = std::make_unique<cloud_provider::CloudProviderImpl>(
       result->firebase.get());
   result->page_sync = std::make_unique<PageSyncImpl>(

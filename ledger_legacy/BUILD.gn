@@ -15,6 +15,7 @@ group("ledger") {
     "//apps/ledger/src/cloud_sync",
     "//apps/ledger/src/configuration",
     "//apps/ledger/src/convert",
+    "//apps/ledger/src/environment",
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/glue",

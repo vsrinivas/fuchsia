@@ -38,12 +38,17 @@ source_set("lib") {
     "page_utils.h",
   ]
 
+  public_deps = [
+    "//apps/ledger/src/firebase",
+  ]
+
   deps = [
-    "//apps/ledger/src/configuration:lib",
     "//apps/ledger/services",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/cloud_sync/impl",
+    "//apps/ledger/src/configuration:lib",
     "//apps/ledger/src/convert",
+    "//apps/ledger/src/environment",
     "//apps/ledger/src/glue",
     "//apps/ledger/src/glue/data_pipe",
     "//apps/ledger/src/network",
@@ -63,6 +68,9 @@ executable("ledger_app") {
   deps = [
     ":lib",
     "//apps/ledger/services",
+    "//apps/ledger/src/configuration:lib",
+    "//apps/ledger/src/environment",
+    "//apps/ledger/src/network",
     "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
     "//apps/modular/lib/app",

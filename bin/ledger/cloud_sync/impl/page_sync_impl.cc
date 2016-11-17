@@ -30,8 +30,10 @@ PageSyncImpl::PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
 }
 
 PageSyncImpl::~PageSyncImpl() {
-  // Remove the watchers, if they were not already removed on hard error.
+  // Remove the watchers and the delegate, if they were not already removed on
+  // hard error.
   if (!errored_) {
+    storage_->SetSyncDelegate(nullptr);
     storage_->RemoveCommitWatcher(this);
     cloud_provider_->UnwatchCommits(this);
   }
@@ -40,6 +42,7 @@ PageSyncImpl::~PageSyncImpl() {
 void PageSyncImpl::Start() {
   FTL_DCHECK(!started_);
   started_ = true;
+  storage_->SetSyncDelegate(this);
 
   TryDownload();
 
@@ -201,6 +204,7 @@ void PageSyncImpl::HandleError(const char error_description[]) {
   if (remote_watch_set_) {
     cloud_provider_->UnwatchCommits(this);
   }
+  storage_->SetSyncDelegate(nullptr);
   error_callback_();
   errored_ = true;
 }

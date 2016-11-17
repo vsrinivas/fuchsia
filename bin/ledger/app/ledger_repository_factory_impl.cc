@@ -7,8 +7,9 @@
 namespace ledger {
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
-    ftl::RefPtr<ftl::TaskRunner> task_runner)
-    : task_runner_(task_runner) {}
+    ftl::RefPtr<ftl::TaskRunner> task_runner,
+    ledger::Environment* environment)
+    : task_runner_(task_runner), environment_(environment) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -20,7 +21,8 @@ void LedgerRepositoryFactoryImpl::GetRepository(
   if (it == repositories_.end()) {
     auto result = repositories_.emplace(
         std::piecewise_construct, std::forward_as_tuple(repository_path.get()),
-        std::forward_as_tuple(task_runner_, repository_path.get()));
+        std::forward_as_tuple(task_runner_, repository_path.get(),
+                              environment_));
     FTL_DCHECK(result.second);
     it = result.first;
   }

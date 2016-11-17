@@ -1,0 +1,15 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("environment") {
+  sources = [
+    "environment.cc",
+    "environment.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/configuration:lib",
+    "//apps/ledger/src/network",
+  ]
+}

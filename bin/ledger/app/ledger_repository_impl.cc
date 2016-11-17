@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/app/ledger_repository_impl.h"
 
+#include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
+#include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/impl/ledger_storage_impl.h"
 
@@ -11,8 +13,11 @@ namespace ledger {
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(
     ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::string& base_storage_dir)
-    : task_runner_(task_runner), base_storage_dir_(base_storage_dir) {
+    const std::string& base_storage_dir,
+    ledger::Environment* environment)
+    : task_runner_(task_runner),
+      base_storage_dir_(base_storage_dir),
+      environment_(environment) {
   bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
 }
@@ -39,10 +44,16 @@ void LedgerRepositoryImpl::GetLedger(
     std::unique_ptr<storage::LedgerStorage> ledger_storage =
         std::make_unique<storage::LedgerStorageImpl>(
             task_runner_, base_storage_dir_, name_as_string);
+    std::unique_ptr<cloud_sync::LedgerSync> ledger_sync;
+    if (environment_->configuration.use_sync) {
+      ledger_sync = std::make_unique<cloud_sync::LedgerSyncImpl>(
+          task_runner_, environment_, name_as_string);
+    }
     auto result = ledger_managers_.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(std::move(name_as_string)),
-        std::forward_as_tuple(std::move(ledger_storage)));
+        std::forward_as_tuple(std::move(ledger_storage),
+                              std::move(ledger_sync)));
     FTL_DCHECK(result.second);
     it = result.first;
   }

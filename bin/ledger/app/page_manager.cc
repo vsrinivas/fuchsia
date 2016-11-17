@@ -12,11 +12,17 @@
 
 namespace ledger {
 
-PageManager::PageManager(std::unique_ptr<storage::PageStorage> page_storage,
-                         std::unique_ptr<storage::PageSyncDelegate> page_sync)
-    : page_storage_(std::move(page_storage)), page_sync_(std::move(page_sync)) {
+PageManager::PageManager(
+    std::unique_ptr<storage::PageStorage> page_storage,
+    std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_context)
+    : page_storage_(std::move(page_storage)),
+      page_sync_context_(std::move(page_sync_context_context)) {
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
+
+  if (page_sync_context_) {
+    page_sync_context_->page_sync->Start();
+  }
 }
 
 PageManager::~PageManager() {}

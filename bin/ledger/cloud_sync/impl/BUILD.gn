@@ -16,14 +16,15 @@ source_set("impl") {
 
   public_deps = [
     "//apps/ledger/src/backoff",
+    "//apps/ledger/src/cloud_provider/impl",
     "//apps/ledger/src/cloud_provider/public",
     "//apps/ledger/src/cloud_sync/public",
+    "//apps/ledger/src/environment",
+    "//apps/ledger/src/firebase",
     "//apps/ledger/src/storage/public",
   ]
 
   deps = [
-    "//apps/ledger/src/cloud_provider/impl",
-    "//apps/ledger/src/firebase",
     "//lib/mtl",
   ]
 }

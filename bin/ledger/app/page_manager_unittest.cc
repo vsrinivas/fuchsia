@@ -41,9 +41,7 @@ class PageManagerTest : public ::testing::Test {
 TEST_F(PageManagerTest, OnEmptyCallback) {
   bool on_empty_called = false;
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
-  auto page_sync =
-      std::make_unique<cloud_sync::PageSyncDelegateImpl>(storage.get());
-  PageManager page_manager(std::move(storage), std::move(page_sync));
+  PageManager page_manager(std::move(storage), nullptr);
   page_manager.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
     message_loop_.PostQuitTask();
@@ -88,10 +86,8 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
 
 TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
-  auto page_sync =
-      std::make_unique<cloud_sync::PageSyncDelegateImpl>(storage.get());
   auto page_manager =
-      std::make_unique<PageManager>(std::move(storage), std::move(page_sync));
+      std::make_unique<PageManager>(std::move(storage), nullptr);
 
   PagePtr page;
   page_manager->BindPage(GetProxy(&page));
@@ -109,9 +105,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
 TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   bool on_empty_called = false;
   auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
-  auto page_sync =
-      std::make_unique<cloud_sync::PageSyncDelegateImpl>(storage.get());
-  PageManager page_manager(std::move(storage), std::move(page_sync));
+  PageManager page_manager(std::move(storage), nullptr);
   page_manager.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
     message_loop_.PostQuitTask();

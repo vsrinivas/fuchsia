@@ -109,7 +109,7 @@ class LedgerRepositoryFactoryContainer {
       ftl::RefPtr<ftl::TaskRunner> task_runner,
       const std::string& path,
       fidl::InterfaceRequest<LedgerRepositoryFactory> request)
-      : factory_impl_(task_runner),
+      : factory_impl_(task_runner, nullptr),
         factory_binding_(&factory_impl_, std::move(request)) {}
   ~LedgerRepositoryFactoryContainer() {}
 

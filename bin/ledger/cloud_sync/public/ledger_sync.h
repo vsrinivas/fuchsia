@@ -34,7 +34,6 @@ class LedgerSync {
   // |error_callback| is called when sync is stopped due to an unrecoverable
   // error.
   virtual std::unique_ptr<PageSyncContext> CreatePageContext(
-      const configuration::Configuration& configuration,
       storage::PageStorage* page_storage,
       std::function<void()> error_callback) = 0;
 

@@ -9,6 +9,7 @@
 #include "apps/ledger/src/app/ledger_manager.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/environment/environment.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -18,7 +19,8 @@ namespace ledger {
 class LedgerRepositoryImpl : public LedgerRepository {
  public:
   LedgerRepositoryImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                       const std::string& base_storage_dir);
+                       const std::string& base_storage_dir,
+                       ledger::Environment* environment);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(const ftl::Closure& on_empty_callback) {
@@ -38,6 +40,7 @@ class LedgerRepositoryImpl : public LedgerRepository {
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   const std::string base_storage_dir_;
+  ledger::Environment* const environment_;
   AutoCleanableMap<std::string, LedgerManager, convert::StringViewComparator>
       ledger_managers_;
   fidl::BindingSet<LedgerRepository> bindings_;

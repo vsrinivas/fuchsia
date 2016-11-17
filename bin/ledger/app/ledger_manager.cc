@@ -98,8 +98,11 @@ class LedgerManager::PageManagerContainer {
   FTL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
 };
 
-LedgerManager::LedgerManager(std::unique_ptr<storage::LedgerStorage> storage)
-    : storage_(std::move(storage)), ledger_impl_(this) {}
+LedgerManager::LedgerManager(std::unique_ptr<storage::LedgerStorage> storage,
+                             std::unique_ptr<cloud_sync::LedgerSync> sync)
+    : storage_(std::move(storage)),
+      sync_(std::move(sync)),
+      ledger_impl_(this) {}
 
 LedgerManager::~LedgerManager() {}
 
@@ -189,8 +192,13 @@ LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(
 
 std::unique_ptr<PageManager> LedgerManager::NewPageManager(
     std::unique_ptr<storage::PageStorage> page_storage) {
-  auto page_sync =
-      std::make_unique<cloud_sync::PageSyncDelegateImpl>(page_storage.get());
+  std::unique_ptr<cloud_sync::PageSyncContext> page_sync;
+  if (sync_) {
+    page_sync = sync_->CreatePageContext(page_storage.get(), [] {
+      // TODO(ppi): reinitialize the sync?
+      FTL_LOG(ERROR) << "Page Sync stopped due to unrecoverable error.";
+    });
+  }
   return std::make_unique<PageManager>(std::move(page_storage),
                                        std::move(page_sync));
 }

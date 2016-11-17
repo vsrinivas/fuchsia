@@ -9,6 +9,9 @@
 
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
+#include "apps/ledger/src/configuration/configuration_encoder.h"
+#include "apps/ledger/src/environment/environment.h"
+#include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -33,8 +36,25 @@ class App {
             modular::ApplicationContext::CreateFromStartupInfo()) {
     FTL_DCHECK(application_context_);
 
+    configuration::Configuration configuration;
+    if (configuration::ConfigurationEncoder::Decode(
+            configuration::kDefaultConfigurationFile.ToString(),
+            &configuration)) {
+      FTL_LOG(INFO) << "Read the configuration file at "
+                    << configuration::kDefaultConfigurationFile;
+    }
+
+    if (configuration.use_sync) {
+      network_service_ = std::make_unique<ledger::NetworkServiceImpl>([this] {
+        return application_context_
+            ->ConnectToEnvironmentService<network::NetworkService>();
+      });
+    }
+    environment_ = std::make_unique<Environment>(std::move(configuration),
+                                                 network_service_.get());
+
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
-        mtl::MessageLoop::GetCurrent()->task_runner());
+        mtl::MessageLoop::GetCurrent()->task_runner(), environment_.get());
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>([this](
@@ -46,6 +66,8 @@ class App {
 
  private:
   std::unique_ptr<modular::ApplicationContext> application_context_;
+  std::unique_ptr<NetworkService> network_service_;
+  std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
   fidl::BindingSet<LedgerRepositoryFactory> factory_bindings_;
 

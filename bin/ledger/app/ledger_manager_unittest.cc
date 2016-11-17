@@ -96,7 +96,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   std::unique_ptr<FakeLedgerStorage> storage =
       std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
   FakeLedgerStorage* storage_ptr = storage.get();
-  LedgerManager ledger_manager(std::move(storage));
+  LedgerManager ledger_manager(std::move(storage), nullptr);
 
   LedgerPtr ledger;
   ledger_manager.BindLedger(GetProxy(&ledger));
@@ -150,7 +150,8 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   std::unique_ptr<LedgerManager> ledger_manager =
       std::make_unique<LedgerManager>(
-          std::make_unique<FakeLedgerStorage>(message_loop_.task_runner()));
+          std::make_unique<FakeLedgerStorage>(message_loop_.task_runner()),
+          nullptr);
 
   LedgerPtr ledger;
   ledger_manager->BindLedger(GetProxy(&ledger));
@@ -170,7 +171,7 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
   std::unique_ptr<FakeLedgerStorage> storage =
       std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
   FakeLedgerStorage* storage_ptr = storage.get();
-  LedgerManager ledger_manager(std::move(storage));
+  LedgerManager ledger_manager(std::move(storage), nullptr);
   LedgerPtr ledger;
   ledger_manager.BindLedger(GetProxy(&ledger));
   PagePtr page;

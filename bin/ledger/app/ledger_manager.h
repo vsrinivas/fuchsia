@@ -28,7 +28,8 @@ namespace ledger {
 // pipes, deletes the LedgerImpl and tears down the storage.
 class LedgerManager : public LedgerImpl::Delegate {
  public:
-  LedgerManager(std::unique_ptr<storage::LedgerStorage> storage);
+  LedgerManager(std::unique_ptr<storage::LedgerStorage> storage,
+                std::unique_ptr<cloud_sync::LedgerSync> sync);
   ~LedgerManager();
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
@@ -60,6 +61,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   void CheckEmpty();
 
   std::unique_ptr<storage::LedgerStorage> storage_;
+  std::unique_ptr<cloud_sync::LedgerSync> sync_;
   LedgerImpl ledger_impl_;
   fidl::BindingSet<Ledger> bindings_;
 
