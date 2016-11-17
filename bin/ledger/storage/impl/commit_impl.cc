@@ -44,7 +44,7 @@ CommitImpl::CommitImpl(PageStorage* page_storage,
                        int64_t timestamp,
                        ObjectIdView root_node_id,
                        const std::vector<CommitId>& parent_ids,
-                       std::string&& storage_bytes)
+                       std::string storage_bytes)
     : page_storage_(page_storage),
       id_(id),
       timestamp_(timestamp),
@@ -61,7 +61,7 @@ CommitImpl::~CommitImpl() {}
 std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
     PageStorage* page_storage,
     const CommitId& id,
-    std::string&& storage_bytes) {
+    std::string storage_bytes) {
   int parent_count =
       (storage_bytes.size() - kParentsStartIndex) / kCommitIdSize;
 
@@ -90,7 +90,7 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
 std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
     PageStorage* page_storage,
     ObjectIdView root_node_id,
-    std::vector<CommitId>&& parent_ids) {
+    std::vector<CommitId> parent_ids) {
   // Sort commit ids for uniqueness.
   std::sort(parent_ids.begin(), parent_ids.end());
   // Compute timestamp.

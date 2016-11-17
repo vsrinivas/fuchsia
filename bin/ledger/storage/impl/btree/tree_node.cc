@@ -14,9 +14,9 @@
 namespace storage {
 
 TreeNode::TreeNode(PageStorage* page_storage,
-                   std::string&& id,
-                   std::vector<Entry>&& entries,
-                   std::vector<ObjectId>&& children)
+                   std::string id,
+                   std::vector<Entry> entries,
+                   std::vector<ObjectId> children)
     : page_storage_(page_storage),
       id_(std::move(id)),
       entries_(entries),
@@ -172,6 +172,8 @@ ObjectId TreeNode::GetId() const {
 
 // TreeNode::Mutation
 TreeNode::Mutation::Mutation(const TreeNode& node) : node_(node) {}
+
+TreeNode::Mutation::Mutation(Mutation&&) = default;
 
 TreeNode::Mutation::~Mutation() {}
 

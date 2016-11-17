@@ -31,7 +31,7 @@ class CloudStorageImpl : public CloudStorage {
 
  private:
   void Request(
-      std::function<network::URLRequestPtr()>&& request_factory,
+      std::function<network::URLRequestPtr()> request_factory,
       const std::function<void(Status status,
                                network::URLResponsePtr response)>& callback);
   void OnResponse(

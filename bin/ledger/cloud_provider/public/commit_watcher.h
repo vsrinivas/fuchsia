@@ -18,7 +18,7 @@ class CommitWatcher {
   // Called when a new commit is added to the cloud. |timestamp| is opaque
   // to the client, but can be passed back to CloudProvider as a query
   // parameter.
-  virtual void OnRemoteCommit(Commit&& commit, std::string&& timestamp) = 0;
+  virtual void OnRemoteCommit(Commit commit, std::string timestamp) = 0;
 
   // Called when an unrecoverable error occurs. No further commit notifications
   // are delivered after this call is received.

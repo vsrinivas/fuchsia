@@ -36,8 +36,7 @@ class TreeNode {
   class Mutation {
    public:
     explicit Mutation(const TreeNode& node);
-    Mutation(Mutation&&) = default;
-
+    Mutation(Mutation&&);
     ~Mutation();
 
     // Adds a new entry with the given ids as its left and right children. The
@@ -165,9 +164,9 @@ class TreeNode {
 
  private:
   TreeNode(PageStorage* page_storage,
-           std::string&& id,
-           std::vector<Entry>&& entries,
-           std::vector<ObjectId>&& children);
+           std::string id,
+           std::vector<Entry> entries,
+           std::vector<ObjectId> children);
 
   PageStorage* page_storage_;
   ObjectId id_;

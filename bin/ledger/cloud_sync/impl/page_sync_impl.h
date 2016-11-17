@@ -73,16 +73,15 @@ class PageSyncImpl : public PageSync,
                          mx::datapipe_consumer data)> callback) override;
 
   // cloud_provider::CommitWatcher:
-  void OnRemoteCommit(cloud_provider::Commit&& commit,
-                      std::string&& timestamp) override;
+  void OnRemoteCommit(cloud_provider::Commit commit,
+                      std::string timestamp) override;
 
   void OnError() override;
 
  private:
   void TryDownload();
 
-  bool AddRemoteCommit(cloud_provider::Commit&& commit,
-                       std::string&& timestamp);
+  bool AddRemoteCommit(cloud_provider::Commit commit, std::string timestamp);
 
   void EnqueueUpload(std::unique_ptr<const storage::Commit> commit);
 

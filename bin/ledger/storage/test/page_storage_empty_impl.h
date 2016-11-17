@@ -32,7 +32,7 @@ class PageStorageEmptyImpl : public PageStorage {
                    std::unique_ptr<const Commit>* commit) override;
 
   Status AddCommitFromSync(const CommitId& id,
-                           std::string&& storage_bytes) override;
+                           std::string storage_bytes) override;
 
   Status StartCommit(const CommitId& commit_id,
                      JournalType journal_type,

@@ -95,8 +95,8 @@ void PageSyncImpl::GetObject(
       });
 }
 
-void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit&& commit,
-                                  std::string&& timestamp) {
+void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit commit,
+                                  std::string timestamp) {
   AddRemoteCommit(std::move(commit), std::move(timestamp));
 }
 
@@ -146,8 +146,8 @@ void PageSyncImpl::TryDownload() {
       });
 }
 
-bool PageSyncImpl::AddRemoteCommit(cloud_provider::Commit&& commit,
-                                   std::string&& timestamp) {
+bool PageSyncImpl::AddRemoteCommit(cloud_provider::Commit commit,
+                                   std::string timestamp) {
   if (storage_->AddCommitFromSync(commit.id, std::move(commit.content)) !=
       storage::Status::OK) {
     HandleError("Failed to persist a synced commit.");

@@ -274,7 +274,7 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit,
 }
 
 Status PageStorageImpl::AddCommitFromSync(const CommitId& id,
-                                          std::string&& storage_bytes) {
+                                          std::string storage_bytes) {
   std::unique_ptr<Commit> commit =
       CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
   if (!commit) {

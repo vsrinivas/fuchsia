@@ -23,8 +23,8 @@ class NetworkService {
 
   // Starts a url network request.
   virtual ftl::RefPtr<callback::Cancellable> Request(
-      std::function<network::URLRequestPtr()>&& request_factory,
-      std::function<void(network::URLResponsePtr)>&& callback) = 0;
+      std::function<network::URLRequestPtr()> request_factory,
+      std::function<void(network::URLResponsePtr)> callback) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(NetworkService);

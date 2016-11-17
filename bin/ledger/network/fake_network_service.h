@@ -25,8 +25,8 @@ class FakeNetworkService : public NetworkService {
  private:
   // NetworkService
   ftl::RefPtr<callback::Cancellable> Request(
-      std::function<network::URLRequestPtr()>&& request_factory,
-      std::function<void(network::URLResponsePtr)>&& callback) override;
+      std::function<network::URLRequestPtr()> request_factory,
+      std::function<void(network::URLResponsePtr)> callback) override;
 
   network::URLRequestPtr request_received_;
   network::URLResponsePtr response_to_return_;

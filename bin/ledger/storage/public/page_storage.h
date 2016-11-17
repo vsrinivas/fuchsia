@@ -45,7 +45,7 @@ class PageStorage {
 
   // Adds the given synced |commit| in this |PageStorage|.
   virtual Status AddCommitFromSync(const CommitId& id,
-                                   std::string&& storage_bytes) = 0;
+                                   std::string storage_bytes) = 0;
   // Starts a new |journal| based on the commit with the given |commit_id|. The
   // base commit must be one of  the head commits. If |implicit| is false all
   // changes will be lost after a crash. Otherwise, changes to implicit

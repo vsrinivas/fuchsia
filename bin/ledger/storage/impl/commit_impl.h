@@ -19,12 +19,12 @@ class CommitImpl : public Commit {
   // returned.
   static std::unique_ptr<Commit> FromStorageBytes(PageStorage* page_storage,
                                                   const CommitId& id,
-                                                  std::string&& storage_bytes);
+                                                  std::string storage_bytes);
 
   static std::unique_ptr<Commit> FromContentAndParents(
       PageStorage* page_storage,
       ObjectIdView root_node_id,
-      std::vector<CommitId>&& parent_ids);
+      std::vector<CommitId> parent_ids);
 
   // Factory method for creating an empty |CommitImpl| object, i.e. without
   // parents and with empty contents.
@@ -47,7 +47,7 @@ class CommitImpl : public Commit {
              int64_t timestamp,
              ObjectIdView root_node_id,
              const std::vector<CommitId>& parent_ids,
-             std::string&& storage_bytes);
+             std::string storage_bytes);
 
   PageStorage* page_storage_;
   CommitId id_;

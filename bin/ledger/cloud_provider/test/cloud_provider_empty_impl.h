@@ -33,7 +33,7 @@ class CloudProviderEmptyImpl : public CloudProvider {
 
   void GetCommits(
       const std::string& min_timestamp,
-      std::function<void(Status, std::vector<Record>&&)> callback) override;
+      std::function<void(Status, std::vector<Record>)> callback) override;
 
   void AddObject(ObjectIdView object_id,
                  mx::vmo data,

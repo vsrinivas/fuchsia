@@ -150,7 +150,7 @@ void JournalDBImpl::Commit(
   btree::ApplyChanges(
       page_storage_, base_commit->GetRootId(), node_size, std::move(entries),
       [this, callback](Status status, ObjectId object_id,
-                       std::unordered_set<ObjectId>&& new_nodes) {
+                       std::unordered_set<ObjectId> new_nodes) {
         if (status != Status::OK) {
           callback(status, "");
           return;

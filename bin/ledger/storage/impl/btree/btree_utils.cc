@@ -204,7 +204,7 @@ void ApplyChanges(
     ObjectIdView root_id,
     size_t node_size,
     std::unique_ptr<Iterator<const EntryChange>> changes,
-    std::function<void(Status, ObjectId, std::unordered_set<ObjectId>&&)>
+    std::function<void(Status, ObjectId, std::unordered_set<ObjectId>)>
         callback) {
   std::unordered_set<ObjectId> new_nodes;
   std::unique_ptr<const TreeNode> root;

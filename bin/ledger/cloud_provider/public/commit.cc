@@ -10,9 +10,9 @@ namespace cloud_provider {
 
 Commit::Commit() = default;
 
-Commit::Commit(CommitId&& id,
-               Data&& content,
-               std::map<ObjectId, Data>&& storage_objects)
+Commit::Commit(CommitId id,
+               Data content,
+               std::map<ObjectId, Data> storage_objects)
     : id(std::move(id)),
       content(std::move(content)),
       storage_objects(std::move(storage_objects)) {}

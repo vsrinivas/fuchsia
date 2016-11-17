@@ -15,7 +15,7 @@
 
 namespace storage {
 
-ObjectImpl::ObjectImpl(ObjectId&& id, std::string&& file_path)
+ObjectImpl::ObjectImpl(ObjectId id, std::string file_path)
     : id_(id), file_path_(file_path) {}
 
 ObjectImpl::~ObjectImpl() {}

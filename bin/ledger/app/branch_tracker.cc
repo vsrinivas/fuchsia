@@ -13,10 +13,10 @@
 namespace ledger {
 class BranchTracker::PageWatcherContainer {
  public:
-  PageWatcherContainer(PageWatcherPtr&& watcher,
+  PageWatcherContainer(PageWatcherPtr watcher,
                        storage::PageStorage* storage,
-                       std::unique_ptr<const storage::Commit>&& base_commit,
-                       PageSnapshotPtr&& snapshot)
+                       std::unique_ptr<const storage::Commit> base_commit,
+                       PageSnapshotPtr snapshot)
       : change_in_flight_(true),
         last_commit_(std::move(base_commit)),
         storage_(storage),

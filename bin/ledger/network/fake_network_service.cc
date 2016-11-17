@@ -14,8 +14,8 @@ FakeNetworkService::FakeNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner)
 FakeNetworkService::~FakeNetworkService() {}
 
 ftl::RefPtr<callback::Cancellable> FakeNetworkService::Request(
-    std::function<network::URLRequestPtr()>&& request_factory,
-    std::function<void(network::URLResponsePtr)>&& callback) {
+    std::function<network::URLRequestPtr()> request_factory,
+    std::function<void(network::URLResponsePtr)> callback) {
   std::unique_ptr<bool> cancelled = std::make_unique<bool>(false);
 
   bool* cancelled_ptr = cancelled.get();

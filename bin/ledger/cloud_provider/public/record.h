@@ -13,7 +13,7 @@ namespace cloud_provider {
 // Represents a commit along with its timestamp.
 struct Record {
   Record();
-  Record(Commit&& n, std::string&& t);
+  Record(Commit n, std::string t);
 
   ~Record();
 

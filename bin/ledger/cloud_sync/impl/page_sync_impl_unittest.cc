@@ -66,7 +66,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   }
 
   storage::Status AddCommitFromSync(const storage::CommitId& id,
-                                    std::string&& storage_bytes) override {
+                                    std::string storage_bytes) override {
     if (should_fail_add_commit_from_sync) {
       return storage::Status::IO_ERROR;
     }
@@ -173,7 +173,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 
   void GetCommits(const std::string& min_timestamp,
                   std::function<void(cloud_provider::Status,
-                                     std::vector<cloud_provider::Record>&&)>
+                                     std::vector<cloud_provider::Record>)>
                       callback) override {
     get_commits_calls++;
     if (should_fail_get_commits) {

@@ -18,8 +18,8 @@ class NetworkServiceImpl : public NetworkService {
   ~NetworkServiceImpl() override;
 
   ftl::RefPtr<callback::Cancellable> Request(
-      std::function<network::URLRequestPtr()>&& request_factory,
-      std::function<void(network::URLResponsePtr)>&& callback) override;
+      std::function<network::URLRequestPtr()> request_factory,
+      std::function<void(network::URLResponsePtr)> callback) override;
 
  private:
   class RunningRequest;

@@ -51,7 +51,7 @@ class LedgerManager::PageManagerContainer {
   // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
   // when a PageManager is available or an error occurs.
   void BindPage(fidl::InterfaceRequest<Page> page_request,
-                std::function<void(Status)>&& callback) {
+                std::function<void(Status)> callback) {
     if (status_ != Status::OK) {
       callback(status_);
       return;

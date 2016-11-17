@@ -24,7 +24,7 @@ class DataPipeDrainerClient : public mtl::DataPipeDrainer::Client {
   void Start(mx::datapipe_consumer source,
              const std::function<void(std::string)>& callback);
 
-  void set_on_empty(ftl::Closure&& on_empty_callback) {
+  void set_on_empty(ftl::Closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 

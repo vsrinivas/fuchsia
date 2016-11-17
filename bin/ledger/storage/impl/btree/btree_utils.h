@@ -22,7 +22,7 @@ void ApplyChanges(
     ObjectIdView root_id,
     size_t node_size,
     std::unique_ptr<Iterator<const EntryChange>> changes,
-    std::function<void(Status, ObjectId, std::unordered_set<ObjectId>&&)>
+    std::function<void(Status, ObjectId, std::unordered_set<ObjectId>)>
         callback);
 
 // Retrieves the ids of all objects in the BTree, i.e tree nodes and values of

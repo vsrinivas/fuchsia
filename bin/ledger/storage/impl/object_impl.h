@@ -13,7 +13,7 @@ namespace storage {
 
 class ObjectImpl : public Object {
  public:
-  ObjectImpl(ObjectId&& id, std::string&& file_path);
+  ObjectImpl(ObjectId id, std::string file_path);
   ~ObjectImpl() override;
 
   // Object:

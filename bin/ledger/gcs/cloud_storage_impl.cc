@@ -175,7 +175,7 @@ void CloudStorageImpl::DownloadFile(
 }
 
 void CloudStorageImpl::Request(
-    std::function<network::URLRequestPtr()>&& request_factory,
+    std::function<network::URLRequestPtr()> request_factory,
     const std::function<void(Status status, network::URLResponsePtr response)>&
         callback) {
   network_service_->Request(std::move(request_factory),

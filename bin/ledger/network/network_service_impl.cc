@@ -15,7 +15,7 @@ const int32_t kInvalidResponseErrorCode = -320;
 
 class NetworkServiceImpl::RunningRequest {
  public:
-  RunningRequest(std::function<network::URLRequestPtr()>&& request_factory)
+  RunningRequest(std::function<network::URLRequestPtr()> request_factory)
       : request_factory_(std::move(request_factory)),
         next_url_(),
         redirect_count_(0u) {}
@@ -32,7 +32,7 @@ class NetworkServiceImpl::RunningRequest {
     Start();
   }
 
-  void set_callback(std::function<void(network::URLResponsePtr)>&& callback) {
+  void set_callback(std::function<void(network::URLResponsePtr)> callback) {
     // Once this class calls its callback, it must notify its container.
     callback_ = [ this, callback = std::move(callback) ](
         network::URLResponsePtr response) {
@@ -114,7 +114,7 @@ class NetworkServiceImpl::RunningRequest {
     return;
   }
 
-  network::URLResponsePtr NewErrorResponse(int32_t code, std::string&& reason) {
+  network::URLResponsePtr NewErrorResponse(int32_t code, std::string reason) {
     auto response = network::URLResponse::New();
     response->error = network::NetworkError::New();
     response->error->code = code;
@@ -138,8 +138,8 @@ NetworkServiceImpl::NetworkServiceImpl(
 NetworkServiceImpl::~NetworkServiceImpl() {}
 
 ftl::RefPtr<callback::Cancellable> NetworkServiceImpl::Request(
-    std::function<network::URLRequestPtr()>&& request_factory,
-    std::function<void(network::URLResponsePtr)>&& callback) {
+    std::function<network::URLRequestPtr()> request_factory,
+    std::function<void(network::URLResponsePtr)> callback) {
   RunningRequest& request =
       running_requests_.emplace(std::move(request_factory));
 
