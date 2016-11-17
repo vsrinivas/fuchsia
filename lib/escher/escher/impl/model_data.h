@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "escher/geometry/types.h"
+#include "escher/impl/descriptor_set_pool.h"
 #include "ftl/macros.h"
 
 namespace escher {
@@ -57,20 +58,35 @@ class ModelData {
                                             size_t max_object_count,
                                             float overallocate_percent);
 
-  vk::DescriptorSetLayout per_model_layout() const { return per_model_layout_; }
+  DescriptorSetPool* per_model_descriptor_set_pool() {
+    return &per_model_descriptor_set_pool_;
+  }
+
+  DescriptorSetPool* per_object_descriptor_set_pool() {
+    return &per_object_descriptor_set_pool_;
+  }
+
+  vk::DescriptorSetLayout per_model_layout() const {
+    return per_model_descriptor_set_pool_.layout();
+  }
+
   vk::DescriptorSetLayout per_object_layout() const {
-    return per_object_layout_;
+    return per_object_descriptor_set_pool_.layout();
   }
 
  private:
-  vk::DescriptorSetLayout NewPerModelLayout();
-  vk::DescriptorSetLayout NewPerObjectLayout();
+  // Provide access to statically-allocated layout info for per-model and
+  // per-object descriptor-sets.
+  static const vk::DescriptorSetLayoutCreateInfo&
+  GetPerModelDescriptorSetLayoutCreateInfo();
+  static const vk::DescriptorSetLayoutCreateInfo&
+  GetPerObjectDescriptorSetLayoutCreateInfo();
 
   vk::Device device_;
   GpuAllocator* allocator_;
 
-  vk::DescriptorSetLayout per_model_layout_;
-  vk::DescriptorSetLayout per_object_layout_;
+  DescriptorSetPool per_model_descriptor_set_pool_;
+  DescriptorSetPool per_object_descriptor_set_pool_;
 
   // We associate a ModelUniformWriter with a particular CommandBuffer.  This
   // piggyback's on the reuse pattern established by CommandBufferPool: a

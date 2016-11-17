@@ -12,52 +12,63 @@
 namespace escher {
 namespace impl {
 
+// DescriptorSetPools allocate new sets as necessary, so these are no big deal.
+constexpr uint32_t kInitialPerModelDescriptorSetCount = 50;
+constexpr uint32_t kInitialPerObjectDescriptorSetCount = 200;
+
 ModelData::ModelData(vk::Device device, GpuAllocator* allocator)
     : device_(device),
       allocator_(allocator),
-      per_model_layout_(NewPerModelLayout()),
-      per_object_layout_(NewPerObjectLayout()) {}
+      per_model_descriptor_set_pool_(device,
+                                     GetPerModelDescriptorSetLayoutCreateInfo(),
+                                     kInitialPerModelDescriptorSetCount),
+      per_object_descriptor_set_pool_(
+          device,
+          GetPerObjectDescriptorSetLayoutCreateInfo(),
+          kInitialPerObjectDescriptorSetCount) {}
 
-ModelData::~ModelData() {
-  device_.destroyDescriptorSetLayout(per_model_layout_);
-  device_.destroyDescriptorSetLayout(per_object_layout_);
+ModelData::~ModelData() {}
+
+const vk::DescriptorSetLayoutCreateInfo&
+ModelData::GetPerModelDescriptorSetLayoutCreateInfo() {
+  static vk::DescriptorSetLayoutBinding binding;
+  static vk::DescriptorSetLayoutCreateInfo info;
+  static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
+  if (!ptr) {
+    binding.binding = 0;
+    binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+    binding.descriptorCount = 1;
+    binding.stageFlags |= vk::ShaderStageFlagBits::eFragment;
+    info.bindingCount = 1;
+    info.pBindings = &binding;
+    ptr = &info;
+  }
+  return *ptr;
 }
 
-vk::DescriptorSetLayout ModelData::NewPerModelLayout() {
-  vk::DescriptorSetLayoutBinding binding;
-  binding.binding = 0;
-  binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-  binding.descriptorCount = 1;
-  binding.stageFlags |= vk::ShaderStageFlagBits::eFragment;
-
-  vk::DescriptorSetLayoutCreateInfo info;
-  info.bindingCount = 1;
-  info.pBindings = &binding;
-
-  return ESCHER_CHECKED_VK_RESULT(device_.createDescriptorSetLayout(info));
-}
-
-vk::DescriptorSetLayout ModelData::NewPerObjectLayout() {
-  vk::DescriptorSetLayoutBinding bindings[2];
-  auto& uniform_binding = bindings[0];
-  auto& texture_binding = bindings[1];
-
-  uniform_binding.binding = 0;
-  uniform_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
-  uniform_binding.descriptorCount = 1;
-  uniform_binding.stageFlags |= vk::ShaderStageFlagBits::eFragment;
-  uniform_binding.stageFlags |= vk::ShaderStageFlagBits::eVertex;
-
-  texture_binding.binding = 1;
-  texture_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
-  texture_binding.descriptorCount = 1;
-  texture_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
-
-  vk::DescriptorSetLayoutCreateInfo info;
-  info.bindingCount = 2;
-  info.pBindings = bindings;
-
-  return ESCHER_CHECKED_VK_RESULT(device_.createDescriptorSetLayout(info));
+const vk::DescriptorSetLayoutCreateInfo&
+ModelData::GetPerObjectDescriptorSetLayoutCreateInfo() {
+  constexpr uint32_t kNumBindings = 2;
+  static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
+  static vk::DescriptorSetLayoutCreateInfo info;
+  static vk::DescriptorSetLayoutCreateInfo* ptr = nullptr;
+  if (!ptr) {
+    auto& uniform_binding = bindings[0];
+    auto& texture_binding = bindings[1];
+    uniform_binding.binding = 0;
+    uniform_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
+    uniform_binding.descriptorCount = 1;
+    uniform_binding.stageFlags |= vk::ShaderStageFlagBits::eFragment;
+    uniform_binding.stageFlags |= vk::ShaderStageFlagBits::eVertex;
+    texture_binding.binding = 1;
+    texture_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
+    texture_binding.descriptorCount = 1;
+    texture_binding.stageFlags = vk::ShaderStageFlagBits::eFragment;
+    info.bindingCount = kNumBindings;
+    info.pBindings = bindings;
+    ptr = &info;
+  }
+  return *ptr;
 }
 
 ModelUniformWriter* ModelData::GetWriterWithCapacity(
@@ -71,7 +82,8 @@ ModelUniformWriter* ModelData::GetWriterWithCapacity(
         static_cast<uint32_t>(max_object_count * (1.f + overallocate_percent));
     FTL_CHECK(capacity >= max_object_count);
     auto writer = std::make_unique<ModelUniformWriter>(
-        device_, allocator_, capacity, per_model_layout_, per_object_layout_);
+        device_, allocator_, capacity, per_model_descriptor_set_pool(),
+        per_object_descriptor_set_pool());
     ptr = writer.get();
     writers_[command_buffer] = std::move(writer);
   }

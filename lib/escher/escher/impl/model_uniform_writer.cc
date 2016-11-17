@@ -11,28 +11,6 @@ namespace impl {
 
 namespace {
 
-vk::DescriptorPool CreateDescriptorPool(vk::Device device, uint32_t capacity) {
-  vk::DescriptorPoolSize pool_sizes[] = {vk::DescriptorPoolSize(),
-                                         vk::DescriptorPoolSize()};
-  pool_sizes[0].type = vk::DescriptorType::eUniformBuffer;
-  pool_sizes[0].descriptorCount = capacity + 1;
-  pool_sizes[1].type = vk::DescriptorType::eCombinedImageSampler;
-  pool_sizes[1].descriptorCount = capacity;
-
-  // TODO: GDC 2016 "Vulkan Fast Paths" presentation suggests not to use
-  // eFreeDescriptorSet, which might result in fragmentation.  Actually,
-  // this flag is probably unnecessary, since I only free the sets in the
-  // destructor.  I'm not sure what to do instead... could it be as simple as
-  // calling resetDescriptorPool() immediately before destroyDescriptorPool()?
-  vk::DescriptorPoolCreateInfo pool_info;
-  pool_info.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-  pool_info.poolSizeCount = 2;
-  pool_info.pPoolSizes = pool_sizes;
-  pool_info.maxSets = capacity + 1;
-
-  return ESCHER_CHECKED_VK_RESULT(device.createDescriptorPool(pool_info));
-}
-
 // TODO: This is a temporary hack (it is the value on my NVIDIA Quadro).  See
 // discussion below.
 constexpr uint32_t kMinUniformBufferOffsetAlignment = 256;
@@ -43,8 +21,8 @@ ModelUniformWriter::ModelUniformWriter(
     vk::Device device,
     GpuAllocator* allocator,
     uint32_t capacity,
-    vk::DescriptorSetLayout per_model_layout,
-    vk::DescriptorSetLayout per_object_layout)
+    DescriptorSetPool* per_model_descriptor_set_pool,
+    DescriptorSetPool* per_object_descriptor_set_pool)
     : device_(device),
       capacity_(capacity),
       uniforms_(device_,
@@ -61,25 +39,23 @@ ModelUniformWriter::ModelUniformWriter(
                 (capacity + 1) * kMinUniformBufferOffsetAlignment,
                 vk::BufferUsageFlagBits::eUniformBuffer,
                 vk::MemoryPropertyFlagBits::eHostVisible),
-      descriptor_pool_(CreateDescriptorPool(device_, capacity)) {
+      per_model_descriptor_set_pool_(per_model_descriptor_set_pool),
+      per_object_descriptor_set_pool_(per_object_descriptor_set_pool) {
   FTL_CHECK(kMinUniformBufferOffsetAlignment >= sizeof(ModelData::PerModel));
   FTL_CHECK(kMinUniformBufferOffsetAlignment >= sizeof(ModelData::PerObject));
+  AllocateDescriptorSets();
+}
 
-  // Create the descriptor sets.
-  {
-    vk::DescriptorSetAllocateInfo info;
-    info.descriptorPool = descriptor_pool_;
-    info.descriptorSetCount = 1;
-    info.pSetLayouts = &per_model_layout;
-    per_model_descriptor_set_ =
-        ESCHER_CHECKED_VK_RESULT(device_.allocateDescriptorSets(info))[0];
+ModelUniformWriter::~ModelUniformWriter() {}
 
-    std::vector<vk::DescriptorSetLayout> layouts(capacity, per_object_layout);
-    info.descriptorSetCount = capacity;
-    info.pSetLayouts = layouts.data();
-    per_object_descriptor_sets_ =
-        ESCHER_CHECKED_VK_RESULT(device_.allocateDescriptorSets(info));
-  }
+void ModelUniformWriter::AllocateDescriptorSets() {
+  FTL_DCHECK(!per_model_descriptor_sets_);
+  FTL_DCHECK(!per_object_descriptor_sets_);
+
+  per_model_descriptor_sets_ =
+      per_model_descriptor_set_pool_->Allocate(1, nullptr);
+  per_object_descriptor_sets_ =
+      per_object_descriptor_set_pool_->Allocate(capacity_, nullptr);
 
   // The descriptor sets have been created, but not initialized.
   {
@@ -95,26 +71,19 @@ ModelUniformWriter::ModelUniformWriter(
     // Per-Model.
     info.range = sizeof(ModelData::PerModel);
     info.offset = 0;
-    write.dstSet = per_model_descriptor_set_;
+    write.dstSet = per_model_descriptor_sets_->get(0);
     write.dstBinding = ModelData::PerModel::kDescriptorSetUniformBinding;
     device_.updateDescriptorSets(1, &write, 0, nullptr);
 
     // Per-Object.
     info.range = sizeof(ModelData::PerObject);
-    for (size_t i = 0; i < per_object_descriptor_sets_.size(); ++i) {
+    for (uint32_t i = 0; i < per_object_descriptor_sets_->size(); ++i) {
       info.offset = (i + 1) * kMinUniformBufferOffsetAlignment;
-      write.dstSet = per_object_descriptor_sets_[i];
+      write.dstSet = per_object_descriptor_sets_->get(i);
       write.dstBinding = ModelData::PerObject::kDescriptorSetUniformBinding;
       device_.updateDescriptorSets(1, &write, 0, nullptr);
     }
   }
-}
-
-ModelUniformWriter::~ModelUniformWriter() {
-  device_.freeDescriptorSets(descriptor_pool_, 1, &per_model_descriptor_set_);
-  device_.freeDescriptorSets(descriptor_pool_, capacity_,
-                             per_object_descriptor_sets_.data());
-  device_.destroyDescriptorPool(descriptor_pool_);
 }
 
 void ModelUniformWriter::WritePerModelData(
@@ -140,7 +109,7 @@ ModelUniformWriter::PerObjectBinding ModelUniformWriter::WritePerObjectData(
   image_info.imageView = texture;
   image_info.sampler = sampler;
   vk::WriteDescriptorSet write;
-  write.dstSet = per_object_descriptor_sets_[write_index_];
+  write.dstSet = per_object_descriptor_sets_->get(write_index_);
   write.dstBinding = ModelData::PerObject::kDescriptorSetSamplerBinding;
   write.dstArrayElement = 0;
   write.descriptorType = vk::DescriptorType::eCombinedImageSampler;
@@ -151,9 +120,15 @@ ModelUniformWriter::PerObjectBinding ModelUniformWriter::WritePerObjectData(
   return write_index_++;
 }
 
-void ModelUniformWriter::Flush(vk::CommandBuffer command_buffer) {
+void ModelUniformWriter::Flush(CommandBuffer* command_buffer) {
   FTL_DCHECK(is_writable_);
   is_writable_ = false;
+
+  command_buffer->AddUsedResource(std::move(per_model_descriptor_sets_));
+  command_buffer->AddUsedResource(std::move(per_object_descriptor_sets_));
+
+  // TODO: this is a hack due to the way that we reuse ModelUniformWriters.
+  AllocateDescriptorSets();
 
   uniforms_.Unmap();
 
@@ -203,20 +178,20 @@ void ModelUniformWriter::BecomeWritable() {
 void ModelUniformWriter::BindPerModelData(vk::PipelineLayout pipeline_layout,
                                           vk::CommandBuffer command_buffer) {
   FTL_DCHECK(!is_writable_);
-  command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                    pipeline_layout,
-                                    ModelData::PerModel::kDescriptorSetIndex, 1,
-                                    &per_model_descriptor_set_, 0, nullptr);
+  vk::DescriptorSet set_to_bind = per_model_descriptor_sets_->get(0);
+  command_buffer.bindDescriptorSets(
+      vk::PipelineBindPoint::eGraphics, pipeline_layout,
+      ModelData::PerModel::kDescriptorSetIndex, 1, &set_to_bind, 0, nullptr);
 }
 
 void ModelUniformWriter::BindPerObjectData(PerObjectBinding binding,
                                            vk::PipelineLayout pipeline_layout,
                                            vk::CommandBuffer command_buffer) {
   FTL_DCHECK(!is_writable_);
+  vk::DescriptorSet set_to_bind = per_object_descriptor_sets_->get(binding);
   command_buffer.bindDescriptorSets(
       vk::PipelineBindPoint::eGraphics, pipeline_layout,
-      ModelData::PerObject::kDescriptorSetIndex, 1,
-      &(per_object_descriptor_sets_[binding]), 0, nullptr);
+      ModelData::PerObject::kDescriptorSetIndex, 1, &set_to_bind, 0, nullptr);
 }
 
 }  // namespace impl

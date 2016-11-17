@@ -106,7 +106,7 @@ void ModelRenderer::Draw(Stage& stage,
       per_object_bindings_.push_back(
           writer->WritePerObjectData(per_object, image_view, sampler));
     }
-    writer->Flush(vk_command_buffer);
+    writer->Flush(command_buffer);
   }
 
   // Do a second pass over the data, so that flushing the uniform writer above
