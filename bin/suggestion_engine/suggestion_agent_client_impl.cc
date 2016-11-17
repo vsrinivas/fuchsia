@@ -67,8 +67,12 @@ void SuggestionAgentClientImpl::OnNewProposal(
   suggestion_record->source = this;
   suggestion_record->proposal = std::move(proposal);
 
-  // TODO(rosswang): sort
-  suggestinator_->ranked_suggestions_.emplace_back(suggestion);
+  auto& ranked = suggestinator_->ranked_suggestions_;
+  ranked.insert(std::upper_bound(ranked.begin(), ranked.end(), suggestion,
+                                 [](const auto& a, const auto& b) {
+                                   return a->rank < b->rank;
+                                 }),
+                suggestion);
 
   suggestinator_->suggestions_[suggestion->uuid] = suggestion_record;
 
