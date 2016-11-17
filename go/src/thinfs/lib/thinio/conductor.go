@@ -134,21 +134,11 @@ func (d *device) Discard(off, len int64) error {
 
 // Flush is a convenience function for calling Flush on the underlying block.Device.
 func (d *device) Flush() {
-	var err error
-	for dur := time.Millisecond; dur < 2*time.Second; dur *= 2 {
-		err = d.dev.Flush()
-		if err == nil {
-			return
-		}
-
-		glog.Warningf("Failed to flush device: %v.  Retrying after %v.\n", err, dur)
-		time.Sleep(dur)
-	}
-
-	d.recordError(devError{
-		kind: flushErr,
-		err:  err,
-	})
+	// Yes the error *could* be recorded here, but I don't want it popping up on another random
+	// function.
+	// TODO(smklein): Redo the error handling in this file; it doesn't make much sense to defer
+	// errors to unrelated functions.
+	d.dev.Flush()
 }
 
 // Close is a convenience function for calling Close on the underlying block.Device.
