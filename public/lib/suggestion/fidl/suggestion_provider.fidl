@@ -106,5 +106,6 @@ struct Suggestion {
   // Lower ranks appear first.
   float rank;
 
+  // Display properties of the Suggestion
   Display display;
 };

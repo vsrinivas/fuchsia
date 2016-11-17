@@ -58,10 +58,14 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
         p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
         auto d = maxwell::suggestion::Display::New();
 
-        d->icon = "";
         d->headline = idea;
         d->subheadline = "";
         d->details = "";
+        d->color = 0x00aaaa00; // argb yellow
+        d->icon_urls = fidl::Array<fidl::String>::New(1);
+        d->icon_urls[0] = "";
+        d->image_url = "";
+        d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
 
         p->display = std::move(d);
 

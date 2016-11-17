@@ -47,10 +47,14 @@ class Proposinator {
     p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
     auto d = maxwell::suggestion::Display::New();
 
-    d->icon = "";
     d->headline = "";
     d->subheadline = "";
     d->details = "";
+    d->color = 0x00aa00aa; // argb purple
+    d->icon_urls = fidl::Array<fidl::String>::New(1);
+    d->icon_urls[0] = "";
+    d->image_url = "";
+    d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
 
     p->display = std::move(d);
 

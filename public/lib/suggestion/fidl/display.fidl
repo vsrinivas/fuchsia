@@ -4,11 +4,33 @@
 
 module maxwell.suggestion;
 
+enum SuggestionImageType {
+  PERSON,
+  OTHER
+};
+
 // TODO(thatguy): This will likely be a union eventually, with different
 // display descriptions for different kinds of Suggestions.
 struct Display {
-  string icon;  // logo?
+  // Title text for this Suggestion
   string headline;
+
+  // Sub-headline text to be optionally displayed with this Suggestion
   string subheadline;
+
+  // A longer details string to be optionally displayed with this Suggestion
   string details;
+
+  // Color in which the Suggestion should be displayed
+  // Format is 0xaarrggbb
+  int32 color;
+
+  // List of icon URLs that can be displayed with the Suggestion
+  array<string> icon_urls;
+
+  // An image URL to display as part of the Suggestion
+  string image_url;
+
+  // Information about the content contained in the image
+  SuggestionImageType image_type;
 };
