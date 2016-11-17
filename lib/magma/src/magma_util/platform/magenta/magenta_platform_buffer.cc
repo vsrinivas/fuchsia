@@ -235,7 +235,12 @@ bool MagentaPlatformBuffer::PinPages(uint32_t start_page_index, uint32_t page_co
     mx_status_t status = vmo_.op_range(MX_VMO_OP_COMMIT, start_page_index * PAGE_SIZE,
                                        page_count * PAGE_SIZE, nullptr, 0);
     if (status != NO_ERROR)
-        return DRETF(false, "failed to commit vmo");
+        return DRETF(false, "failed to commit vmo pages: 0x%x", status);
+
+    status = vmo_.op_range(MX_VMO_OP_LOCK, start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
+                           nullptr, 0);
+    if (status != NO_ERROR && status != ERR_NOT_SUPPORTED)
+        return DRETF(false, "failed to lock vmo pages: 0x%x", status);
 
     for (uint32_t i = 0; i < page_count; i++) {
         pin_count_array_->incr(start_page_index + i);
@@ -271,22 +276,22 @@ bool MagentaPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_
             pin_count_array_->decr(start_page_index + i);
         }
 
-        // Decommit the entire range.
-        mx_status_t status = vmo_.op_range(MX_VMO_OP_DECOMMIT, start_page_index * PAGE_SIZE,
+        // Unlock the entire range.
+        mx_status_t status = vmo_.op_range(MX_VMO_OP_UNLOCK, start_page_index * PAGE_SIZE,
                                            page_count * PAGE_SIZE, nullptr, 0);
         if (status != NO_ERROR && status != ERR_NOT_SUPPORTED) {
-            return DRETF(false, "failed to decommit full range: %d", status);
+            return DRETF(false, "failed to unlock full range: %d", status);
         }
 
     } else {
-        // Decommit page by page
+        // Unlock page by page
         for (uint32_t page_index = start_page_index; page_index < start_page_index + page_count;
              page_index++) {
             if (pin_count_array_->decr(page_index) == 0) {
-                mx_status_t status = vmo_.op_range(MX_VMO_OP_DECOMMIT, page_index * PAGE_SIZE,
-                                                   PAGE_SIZE, nullptr, 0);
+                mx_status_t status =
+                    vmo_.op_range(MX_VMO_OP_UNLOCK, page_index * PAGE_SIZE, PAGE_SIZE, nullptr, 0);
                 if (status != NO_ERROR && status != ERR_NOT_SUPPORTED) {
-                    return DRETF(false, "failed to decommit page_index %u: %u", page_index, status);
+                    return DRETF(false, "failed to unlock page_index %u: %u", page_index, status);
                 }
             }
         }
@@ -298,10 +303,10 @@ bool MagentaPlatformBuffer::UnpinPages(uint32_t start_page_index, uint32_t page_
 void MagentaPlatformBuffer::ReleasePages()
 {
     if (pin_count_array_->total_pin_count()) {
-        // Still have some pinned pages, decommit full range to be sure everything is released.
-        mx_status_t status = vmo_.op_range(MX_VMO_OP_DECOMMIT, 0, size(), nullptr, 0);
+        // Still have some pinned pages, unlock.
+        mx_status_t status = vmo_.op_range(MX_VMO_OP_UNLOCK, 0, size(), nullptr, 0);
         if (status != NO_ERROR && status != ERR_NOT_SUPPORTED)
-            DLOG("failed to decommit pages: %d", status);
+            DLOG("failed to unlock pages: %d", status);
     }
 
     for (auto& pair : mapped_pages_) {
