@@ -97,7 +97,7 @@ void TileView::CreateNestedEnvironment() {
   modular::ApplicationEnvironmentHostPtr env_host;
   env_host_binding_.Bind(GetProxy(&env_host));
   application_context_->environment()->CreateNestedEnvironment(
-      std::move(env_host), GetProxy(&env_), GetProxy(&env_controller_));
+      std::move(env_host), GetProxy(&env_), GetProxy(&env_controller_), "tile");
   env_->GetApplicationLauncher(GetProxy(&env_launcher_));
 
   // Add a binding for the presenter service
