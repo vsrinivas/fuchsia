@@ -66,6 +66,7 @@ TEST_F(BulkNamePoolTest, BulkRegistrationAndRetrieval) {
 
   for (size_t i = 1; i < 4095; i++) {
     char* s = static_cast<char*>(malloc(1));
+    *s = 42;
     EXPECT_NE(0, (ids[s] = tracing::internal::RegisterString(s)).encoded);
   }
 
