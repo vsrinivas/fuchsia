@@ -111,3 +111,11 @@ ARCH_arm_COMPILEFLAGS += -march=armv7-a
 endif
 
 endif
+
+# Clang
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+FOUNDTOOL=$(shell which $(CLANG_TOOLCHAIN_PREFIX)clang)
+ifeq ($(FOUNDTOOL),)
+$(error cannot find toolchain, please set CLANG_TOOLCHAIN_PREFIX or add it to your path)
+endif
+endif

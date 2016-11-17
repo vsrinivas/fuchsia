@@ -374,13 +374,13 @@ KERNEL_INCLUDES := $(addprefix -I,$(KERNEL_INCLUDES))
 # default to no ccache
 CCACHE ?=
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-CC := $(CCACHE) $(TOOLCHAIN_PREFIX)clang
-AR := $(TOOLCHAIN_PREFIX)llvm-ar
-OBJDUMP := $(TOOLCHAIN_PREFIX)llvm-objdump
-READELF := $(TOOLCHAIN_PREFIX)llvm-readobj -elf-output-style=GNU
-CPPFILT := $(TOOLCHAIN_PREFIX)llvm-cxxfilt
-SIZE := $(TOOLCHAIN_PREFIX)llvm-size
-NM := $(TOOLCHAIN_PREFIX)llvm-nm
+CC := $(CCACHE) $(CLANG_TOOLCHAIN_PREFIX)clang
+AR := $(CLANG_TOOLCHAIN_PREFIX)llvm-ar
+OBJDUMP := $(CLANG_TOOLCHAIN_PREFIX)llvm-objdump
+READELF := $(CLANG_TOOLCHAIN_PREFIX)llvm-readobj -elf-output-style=GNU
+CPPFILT := $(CLANG_TOOLCHAIN_PREFIX)llvm-cxxfilt
+SIZE := $(CLANG_TOOLCHAIN_PREFIX)llvm-size
+NM := $(CLANG_TOOLCHAIN_PREFIX)llvm-nm
 else
 CC := $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
 AR := $(TOOLCHAIN_PREFIX)ar
