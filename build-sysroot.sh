@@ -76,7 +76,7 @@ build() {
 
   mkdir -p -- "${outdir}/build-libunwind-${target}"
   pushd "${outdir}/build-libunwind-${target}"
-  [[ -f "${outdir}/build-libunwind-${target}/build.ninja" ]] || CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/projects/libcxx/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+  [[ -f "${outdir}/build-libunwind-${target}/build.ninja" ]] || CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/runtimes/libcxx/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
@@ -85,7 +85,7 @@ build() {
     -DLIBUNWIND_ENABLE_STATIC=ON \
     -DLIBUNWIND_TARGET_TRIPLE="${target}-fuchsia" \
     -DLIBUNWIND_SYSROOT="${sysroot}" \
-    ${ROOT_DIR}/third_party/llvm/projects/libunwind
+    ${ROOT_DIR}/third_party/llvm/runtimes/libunwind
   env DESTDIR="${sysroot}" ${ROOT_DIR}/buildtools/ninja install
   popd
 
@@ -98,11 +98,11 @@ build() {
     -DCMAKE_SHARED_LINKER_FLAGS="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-${target}.a" \
     -DLIBCXXABI_TARGET_TRIPLE="${target}-fuchsia" \
     -DLIBCXXABI_SYSROOT="${sysroot}" \
-    -DLIBCXXABI_LIBCXX_INCLUDES="${ROOT_DIR}/third_party/llvm/projects/libcxx/include" \
-    -DLIBCXXABI_LIBUNWIND_INCLUDES="${ROOT_DIR}/third_party/llvm/projects/libunwind/include" \
+    -DLIBCXXABI_LIBCXX_INCLUDES="${ROOT_DIR}/third_party/llvm/runtimes/libcxx/include" \
+    -DLIBCXXABI_LIBUNWIND_INCLUDES="${ROOT_DIR}/third_party/llvm/runtimes/libunwind/include" \
     -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
     -DLIBCXXABI_ENABLE_SHARED=ON \
-    ${ROOT_DIR}/third_party/llvm/projects/libcxxabi
+    ${ROOT_DIR}/third_party/llvm/runtimes/libcxxabi
   env DESTDIR="${sysroot}" ${ROOT_DIR}/buildtools/ninja install
   popd
 
@@ -115,13 +115,13 @@ build() {
     -DCMAKE_SHARED_LINKER_FLAGS="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-${target}.a" \
     -DLIBCXX_CXX_ABI=libcxxabi \
     -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
-    -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${ROOT_DIR}/third_party/llvm/projects/libcxxabi/include" \
+    -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${ROOT_DIR}/third_party/llvm/runtimes/libcxxabi/include" \
     -DLIBCXX_ABI_VERSION=2 \
     -DLIBCXX_ENABLE_SHARED=ON \
     -DLIBCXX_HAS_MUSL_LIBC=ON \
     -DLIBCXX_TARGET_TRIPLE="${target}-fuchsia" \
     -DLIBCXX_SYSROOT="${sysroot}" \
-    ${ROOT_DIR}/third_party/llvm/projects/libcxx
+    ${ROOT_DIR}/third_party/llvm/runtimes/libcxx
   env DESTDIR="${sysroot}" ${ROOT_DIR}/buildtools/ninja install
   popd
 
