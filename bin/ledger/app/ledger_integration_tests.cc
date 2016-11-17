@@ -812,5 +812,27 @@ TEST_F(LedgerApplicationTest, PageWatcherParallel) {
   EXPECT_EQ(1u, watcher2.changes_seen);
 }
 
+TEST_F(LedgerApplicationTest, PageWatcherEmptyTransaction) {
+  PagePtr page = GetTestPage();
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(GetProxy(&watcher_ptr),
+                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+
+  page->Watch(std::move(watcher_ptr),
+              [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      [] { mtl::MessageLoop::GetCurrent()->QuitNow(); },
+      ftl::TimeDelta::FromSeconds(1));
+  mtl::MessageLoop::GetCurrent()->Run();
+  EXPECT_EQ(0u, watcher.changes_seen);
+}
+
 }  // namespace
 }  // namespace ledger

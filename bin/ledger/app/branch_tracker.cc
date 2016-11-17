@@ -69,6 +69,13 @@ class BranchTracker::PageWatcherContainer {
             return;
           }
 
+          if (!it->Valid()) {
+            change_in_flight_ = false;
+            last_commit_.swap(new_commit);
+            SendCommit();
+            return;
+          }
+
           auto waiter =
               callback::Waiter<storage::Status, const storage::Object>::Create(
                   storage::Status::OK);
