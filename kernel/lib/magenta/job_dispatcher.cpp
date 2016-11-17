@@ -14,7 +14,8 @@
 #include <magenta/process_dispatcher.h>
 
 constexpr mx_rights_t kDefaultJobRights =
-    MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE;
+    MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE |
+    MX_RIGHT_ENUMERATE;
 
 class JobNode : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<JobNode>> {
 public:

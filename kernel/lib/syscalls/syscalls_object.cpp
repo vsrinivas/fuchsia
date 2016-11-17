@@ -113,7 +113,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         case MX_INFO_PROCESS_THREADS: {
             // grab a reference to the dispatcher
             mxtl::RefPtr<ProcessDispatcher> process;
-            auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_READ);
+            auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_ENUMERATE);
             if (error < 0)
                 return error;
 
@@ -143,7 +143,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         case MX_INFO_RESOURCE_CHILDREN:
         case MX_INFO_RESOURCE_RECORDS: {
             mxtl::RefPtr<ResourceDispatcher> resource;
-            mx_status_t status = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_READ);
+            mx_status_t status = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_ENUMERATE);
             if (status < 0)
                 return status;
 
@@ -335,7 +335,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         //TODO: lookup process from job instead of treating INVALID as magic
         const auto kDebugRights =
             MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
-            MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY;
+            MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY | MX_RIGHT_ENUMERATE;
 
         if (rights == MX_RIGHT_SAME_RIGHTS) {
             rights = kDebugRights;
@@ -362,6 +362,9 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
     uint32_t parent_rights;
     if (!up->GetDispatcher(handle, &dispatcher, &parent_rights))
         return ERR_BAD_HANDLE;
+
+    if (!(parent_rights & MX_RIGHT_ENUMERATE))
+        return ERR_ACCESS_DENIED;
 
     if (rights == MX_RIGHT_SAME_RIGHTS) {
         rights = parent_rights;

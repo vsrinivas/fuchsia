@@ -34,7 +34,7 @@
 
 static constexpr mx_rights_t kDefaultProcessRights =
         MX_RIGHT_READ  | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
-        MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY;
+        MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY | MX_RIGHT_ENUMERATE;
 
 mutex_t ProcessDispatcher::global_process_list_mutex_ =
     MUTEX_INITIAL_VALUE(global_process_list_mutex_);

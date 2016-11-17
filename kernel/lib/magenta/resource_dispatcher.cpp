@@ -31,7 +31,7 @@ private:
 
 
 constexpr mx_rights_t kDefaultResourceRights =
-    MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER;
+    MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_ENUMERATE;
 
 status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher,
                                     mx_rights_t* rights, const char* name, uint16_t subtype) {
