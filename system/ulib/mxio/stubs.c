@@ -130,14 +130,6 @@ int socketpair(int domain, int type, int protocol, int fd[2]) {
 // So far just a bit of plumbing around checking whether the fds are
 // indeed fds, and if so, are indeed sockets.
 
-ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct sockaddr* addr, socklen_t addrlen) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
-ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
-    return checksocket(fd, ENOTSOCK, ENOSYS);
-}
-
 int sendmmsg(int fd, struct mmsghdr* msgvec, unsigned int vlen, unsigned int flags) {
     return checksocket(fd, ENOTSOCK, ENOSYS);
 }

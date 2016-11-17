@@ -26,6 +26,14 @@ ssize_t mxio_default_write(mxio_t* io, const void* _data, size_t len) {
     return len;
 }
 
+ssize_t mxio_default_recvmsg(mxio_t* io, struct msghdr* msg, int flags) {
+    return ERR_WRONG_TYPE;
+}
+
+ssize_t mxio_default_sendmsg(mxio_t* io, const struct msghdr* msg, int flags) {
+    return ERR_WRONG_TYPE;
+}
+
 off_t mxio_default_seek(mxio_t* io, off_t offset, int whence) {
     return ERR_NOT_SUPPORTED;
 }
@@ -63,9 +71,15 @@ void mxio_default_wait_begin(mxio_t* io, uint32_t events,
 void mxio_default_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
 }
 
+ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, void* arg) {
+    return ERR_NOT_SUPPORTED;
+}
+
 static mxio_ops_t mx_null_ops = {
     .read = mxio_default_read,
     .write = mxio_default_write,
+    .recvmsg = mxio_default_recvmsg,
+    .sendmsg = mxio_default_sendmsg,
     .seek = mxio_default_seek,
     .misc = mxio_default_misc,
     .close = mxio_default_close,
@@ -75,6 +89,7 @@ static mxio_ops_t mx_null_ops = {
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,
     .unwrap = mxio_default_unwrap,
+    .posix_ioctl = mxio_default_posix_ioctl,
 };
 
 mxio_t* mxio_null_create(void) {

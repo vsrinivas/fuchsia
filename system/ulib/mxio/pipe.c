@@ -148,9 +148,28 @@ static mx_status_t mx_pipe_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* ty
     return 1;
 }
 
+static ssize_t mx_pipe_posix_ioctl(mxio_t* io, int req, void* arg) {
+    mx_pipe_t* p = (void*)io;
+    switch (req) {
+    case FIONREAD: {
+        mx_status_t r;
+        size_t avail;
+        if ((r = mx_socket_read(p->h, 0, NULL, 0, &avail)) < 0) {
+            return r;
+        }
+        *(int*)arg = avail;
+        return NO_ERROR;
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
 static mxio_ops_t mx_pipe_ops = {
     .read = mx_pipe_read,
     .write = mx_pipe_write,
+    .recvmsg = mxio_default_recvmsg,
+    .sendmsg = mxio_default_sendmsg,
     .seek = mxio_default_seek,
     .misc = mxio_default_misc,
     .close = mx_pipe_close,
@@ -160,6 +179,7 @@ static mxio_ops_t mx_pipe_ops = {
     .wait_begin = mx_pipe_wait_begin,
     .wait_end = mx_pipe_wait_end,
     .unwrap = mx_pipe_unwrap,
+    .posix_ioctl = mx_pipe_posix_ioctl,
 };
 
 mxio_t* mxio_pipe_create(mx_handle_t h) {
@@ -231,21 +251,4 @@ fail:
     mx_handle_close(h0);
     mx_handle_close(h1);
     return r;
-}
-
-mx_status_t mxio_pipe_posix_ioctl(mxio_t* io, int req, void* arg) {
-    mx_pipe_t* p = (void*)io;
-    switch (req) {
-    case FIONREAD: {
-        mx_status_t r;
-        size_t avail;
-        if ((r = mx_socket_read(p->h, 0, NULL, 0, &avail)) < 0) {
-            return r;
-        }
-        *(int*)arg = avail;
-        return NO_ERROR;
-    }
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
 }

@@ -77,4 +77,14 @@ typedef struct mxrio_sockopt_req_reply {
     socklen_t optlen;
 } mxrio_sockopt_req_reply_t;
 
+// wire format for datagram messages
+typedef struct mxio_socket_msg {
+    struct sockaddr_storage addr;
+    socklen_t addrlen;
+    int32_t flags;
+    char data[1]; // variable size
+} mxio_socket_msg_t;
+
+#define MXIO_SOCKET_MSG_HEADER_SIZE offsetof(mxio_socket_msg_t, data)
+
 __END_CDECLS

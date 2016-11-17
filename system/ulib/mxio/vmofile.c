@@ -110,6 +110,8 @@ static mx_status_t vmofile_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t m
 static mxio_ops_t vmofile_ops = {
     .read = vmofile_read,
     .write = mxio_default_write,
+    .recvmsg = mxio_default_recvmsg,
+    .sendmsg = mxio_default_sendmsg,
     .seek = vmofile_seek,
     .misc = vmofile_misc,
     .close = vmofile_close,
@@ -119,6 +121,7 @@ static mxio_ops_t vmofile_ops = {
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,
     .unwrap = mxio_default_unwrap,
+    .posix_ioctl = mxio_default_posix_ioctl,
 };
 
 mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len) {

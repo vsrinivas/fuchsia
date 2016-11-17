@@ -43,6 +43,11 @@ int socket(int domain, int type, int protocol) {
     if ((r = __mxio_open(&io, path, 0, 0)) < 0) {
         return ERROR(r);
     }
+    if (type & SOCK_STREAM) {
+        mxio_socket_set_stream_ops(io);
+    } else if (type & SOCK_DGRAM) {
+        mxio_socket_set_dgram_ops(io);
+    }
 
     if (type & SOCK_NONBLOCK) {
         io->flags |= MXIO_FLAG_NONBLOCK;
@@ -173,6 +178,8 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERROR(r);
     }
     mxio_release(io);
+
+    mxio_socket_set_stream_ops(io2);
     io2->flags |= MXIO_FLAG_SOCKET_CONNECTED;
 
     if (flags & SOCK_NONBLOCK) {
@@ -375,52 +382,133 @@ int setsockopt(int fd, int level, int optname, const void* optval,
     return STATUS(r);
 }
 
-ssize_t send(int fd, const void* buf, size_t len, int flags) {
-    // TODO: support flags
-    return write(fd, buf, len);
+static ssize_t mxio_sendmsg(mxio_t* io, const struct msghdr* msg, int flags) {
+    mx_status_t r = io->ops->sendmsg(io, msg, flags);
+    // TODO: better error codes?
+    if (r == ERR_WRONG_TYPE)
+        return ERRNO(ENOTSOCK);
+    else if (r == ERR_BAD_STATE)
+        return ERRNO(ENOTCONN);
+    else if (r == ERR_ALREADY_EXISTS)
+        return ERRNO(EISCONN);
+    return STATUS(r);
+}
+
+static ssize_t mxio_sendto(mxio_t* io, const void* buf, size_t buflen, int flags, const struct sockaddr* addr, socklen_t addrlen) {
+    struct iovec iov;
+    iov.iov_base = (void*)buf;
+    iov.iov_len = buflen;
+
+    struct msghdr msg;
+    msg.msg_name = (void*)addr;
+    msg.msg_namelen = addrlen;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = 0; // this field is ignored
+
+    return mxio_sendmsg(io, &msg, flags);
+}
+
+ssize_t mxio_send(mxio_t* io, const void* buf, size_t len, int flags) {
+    return mxio_sendto(io, buf, len, flags, NULL, 0);
+}
+
+static ssize_t mxio_recvmsg(mxio_t* io, struct msghdr* msg, int flags) {
+    mx_status_t r = io->ops->recvmsg(io, msg, flags);
+    // TODO: better error codes?
+    if (r == ERR_WRONG_TYPE)
+        return ERRNO(ENOTSOCK);
+    else if (r == ERR_BAD_STATE)
+        return ERRNO(ENOTCONN);
+    else if (r == ERR_ALREADY_EXISTS)
+        return ERRNO(EISCONN);
+    return STATUS(r);
+}
+
+static ssize_t mxio_recvfrom(mxio_t* io, void* restrict buf, size_t buflen, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
+    struct iovec iov;
+    iov.iov_base = buf;
+    iov.iov_len = buflen;
+
+    struct msghdr msg;
+    msg.msg_name = addr;
+    msg.msg_namelen = (addrlen == NULL) ? 0 : *addrlen;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_control = NULL;
+    msg.msg_controllen = 0;
+    msg.msg_flags = 0;
+
+    ssize_t r = mxio_recvmsg(io, &msg, flags);
+    if (addrlen != NULL)
+        *addrlen = msg.msg_namelen;
+    return r;
+}
+
+ssize_t mxio_recv(mxio_t* io, void* buf, size_t len, int flags) {
+    return mxio_recvfrom(io, buf, len, flags, NULL, NULL);
 }
 
 ssize_t sendmsg(int fd, const struct msghdr *msg, int flags) {
-    // TODO: support flags and control messages
-    //       make this atomic for datagrams
-    ssize_t total = 0;
-    for (int i = 0; i < msg->msg_iovlen; i++) {
-        struct iovec *iov = &msg->msg_iov[i];
-        if (iov->iov_len <= 0) {
-            return ERRNO(EINVAL);
-        }
-        ssize_t n = write(fd, iov->iov_base, iov->iov_len);
-        if (n < 0) {
-            return -1;
-        }
-        total += n;
-        if ((size_t)n != iov->iov_len) {
-            break;
-        }
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
     }
-    return total;
+    ssize_t r = mxio_sendmsg(io, msg, flags);
+    mxio_release(io);
+    return r;
 }
 
-ssize_t recv(int fd, void* buf, size_t len, int flags) {
-    // TODO: support flags
-    return read(fd, buf, len);
+ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct sockaddr* addr, socklen_t addrlen) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    ssize_t r = mxio_sendto(io, buf, buflen, flags, addr, addrlen);
+    mxio_release(io);
+    return r;
+}
+
+ssize_t send(int fd, const void* buf, size_t len, int flags) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    ssize_t r = mxio_send(io, buf, len, flags);
+    mxio_release(io);
+    return r;
 }
 
 ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
-    // TODO: support flags and control messages
-    ssize_t total = 0;
-    for (int i = 0; i < msg->msg_iovlen; i++) {
-        struct iovec *iov = &msg->msg_iov[i];
-        ssize_t n = read(fd, iov->iov_base, iov->iov_len);
-        if (n < 0) {
-            return -1;
-        }
-        total += n;
-        if ((size_t)n != iov->iov_len) {
-            break;
-        }
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
     }
-    return total;
+    ssize_t r = mxio_recvmsg(io, msg, flags);
+    mxio_release(io);
+    return r;
+}
+
+ssize_t recvfrom(int fd, void* restrict buf, size_t buflen, int flags, struct sockaddr* restrict addr, socklen_t* restrict addrlen) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    ssize_t r = mxio_recvfrom(io, buf, buflen, flags, addr, addrlen);
+    mxio_release(io);
+    return r;
+}
+
+ssize_t recv(int fd, void* buf, size_t len, int flags) {
+    mxio_t* io = fd_to_io(fd);
+    if (io == NULL) {
+        return ERRNO(EBADF);
+    }
+    ssize_t r = mxio_recv(io, buf, len, flags);
+    mxio_release(io);
+    return r;
 }
 
 int shutdown(int fd, int how) {

@@ -1492,20 +1492,11 @@ int ioctl(int fd, int req, ...) {
     if ((io = fd_to_io(fd)) == NULL) {
         return ERRNO(EBADF);
     }
-    mx_status_t r = ERR_NOT_SUPPORTED;
-    if (io->flags & MXIO_FLAG_SOCKET) {
-        va_list ap;
-        va_start(ap, req);
-        void* arg = va_arg(ap, void*);
-        va_end(ap);
-        r = mxio_socket_posix_ioctl(io, req, arg);
-    } else if (io->flags & MXIO_FLAG_PIPE) {
-        va_list ap;
-        va_start(ap, req);
-        void* arg = va_arg(ap, void*);
-        va_end(ap);
-        r = mxio_pipe_posix_ioctl(io, req, arg);
-    }
+    va_list ap;
+    va_start(ap, req);
+    void* arg = va_arg(ap, void*);
+    va_end(ap);
+    ssize_t r = io->ops->posix_ioctl(io, req, arg);
     mxio_release(io);
     return STATUS(r);
 }

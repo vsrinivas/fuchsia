@@ -88,6 +88,8 @@ static mx_status_t mxio_epoll_close(mxio_t* io) {
 static mxio_ops_t mxio_epoll_ops = {
     .read = mxio_default_read,
     .write = mxio_default_write,
+    .recvmsg = mxio_default_recvmsg,
+    .sendmsg = mxio_default_sendmsg,
     .seek = mxio_default_seek,
     .misc = mxio_default_misc,
     .close = mxio_epoll_close,
@@ -96,6 +98,7 @@ static mxio_ops_t mxio_epoll_ops = {
     .ioctl = mxio_default_ioctl,
     .wait_begin = mxio_default_wait_begin,
     .wait_end = mxio_default_wait_end,
+    .posix_ioctl = mxio_default_posix_ioctl,
 };
 
 mxio_t* mxio_epoll_create(mx_handle_t h) {

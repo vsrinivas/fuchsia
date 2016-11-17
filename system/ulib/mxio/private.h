@@ -5,10 +5,10 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
-
-#include <stdatomic.h>
+#include <sys/socket.h>
 
 typedef struct mxio mxio_t;
 
@@ -28,6 +28,8 @@ typedef struct mxio_ops {
     ssize_t (*read_at)(mxio_t* io, void* data, size_t len, off_t offset);
     ssize_t (*write)(mxio_t* io, const void* data, size_t len);
     ssize_t (*write_at)(mxio_t* io, const void* data, size_t len, off_t offset);
+    ssize_t (*recvmsg)(mxio_t* io, struct msghdr* msg, int flags);
+    ssize_t (*sendmsg)(mxio_t* io, const struct msghdr* msg, int flags);
     off_t (*seek)(mxio_t* io, off_t offset, int whence);
     mx_status_t (*misc)(mxio_t* io, uint32_t op, int64_t off, uint32_t maxreply, void* data, size_t len);
     mx_status_t (*close)(mxio_t* io);
@@ -37,6 +39,7 @@ typedef struct mxio_ops {
     void (*wait_begin)(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* signals);
     void (*wait_end)(mxio_t* io, mx_signals_t signals, uint32_t* events);
     ssize_t (*ioctl)(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
+    ssize_t (*posix_ioctl)(mxio_t* io, int req, void* arg);
 } mxio_ops_t;
 
 // mxio_t flags
@@ -142,6 +145,9 @@ static inline void mxio_release(mxio_t* io) {
 // wraps an arbitrary handle with a mxio_t that works with wait hooks
 mxio_t* mxio_waitable_create(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_out, bool shared_handle);
 
+void mxio_socket_set_stream_ops(mxio_t* io);
+void mxio_socket_set_dgram_ops(mxio_t* io);
+
 mx_status_t mxio_socket_posix_ioctl(mxio_t* io, int req, void* arg);
 mx_status_t mxio_socket_shutdown(mxio_t* io, int how);
 
@@ -150,6 +156,8 @@ ssize_t mxio_default_read(mxio_t* io, void* _data, size_t len);
 ssize_t mxio_default_read_at(mxio_t* io, void* _data, size_t len, off_t offset);
 ssize_t mxio_default_write(mxio_t* io, const void* _data, size_t len);
 ssize_t mxio_default_write_at(mxio_t* io, const void* _data, size_t len, off_t offset);
+ssize_t mxio_default_recvmsg(mxio_t* io, struct msghdr* msg, int flags);
+ssize_t mxio_default_sendmsg(mxio_t* io, const struct msghdr* msg, int flags);
 off_t mxio_default_seek(mxio_t* io, off_t offset, int whence);
 mx_status_t mxio_default_misc(mxio_t* io, uint32_t op, int64_t off, uint32_t arg, void* data, size_t len);
 mx_status_t mxio_default_close(mxio_t* io);
@@ -159,6 +167,7 @@ ssize_t mxio_default_ioctl(mxio_t* io, uint32_t op, const void* in_buf, size_t i
 void mxio_default_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals);
 void mxio_default_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events);
 mx_status_t mxio_default_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* types);
+ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, void* arg);
 
 void __mxio_startup_handles_init(uint32_t num, mx_handle_t handles[],
                                  uint32_t handle_info[])
