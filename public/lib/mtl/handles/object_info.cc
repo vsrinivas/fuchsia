@@ -11,11 +11,9 @@ namespace mtl {
 
 mx_koid_t GetKoid(mx_handle_t handle) {
   mx_info_handle_basic_t info;
-  size_t info_size;
   mx_status_t status =
-      mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info,
-                         sizeof(info), &info_size);
-  return status == NO_ERROR ? info.rec.koid : MX_KOID_INVALID;
+      mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  return status == NO_ERROR ? info.koid : MX_KOID_INVALID;
 }
 
 }  // namespace mtl
