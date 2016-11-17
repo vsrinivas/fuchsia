@@ -63,6 +63,10 @@ class TimeDelta {
     return TimeDelta::FromNanoseconds(delta_ + other.delta_);
   }
 
+  constexpr TimeDelta operator/(int64_t divisor) const {
+    return TimeDelta::FromNanoseconds(delta_ / divisor);
+  }
+
   constexpr int64_t operator/(TimeDelta other) const {
     return delta_ / other.delta_;
   }
