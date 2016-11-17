@@ -11,77 +11,68 @@ class MxTime {
   static int timerMillisecondClock() => _get(0) ~/ (1000 * 1000);
 }
 
-// Data associated with an open handle.
-class _OpenHandle {
-  final StackTrace stack;
-  String description;
-  _OpenHandle(this.stack, {this.description});
-}
-
 class MxHandle {
-  static HashMap<int, _OpenHandle> _openHandles = new HashMap();
-
-  static void addOpenHandle(int handleToken, {String description}) {
-    var stack;
-    // We only remember a stack trace when in checked mode.
-    assert((stack = StackTrace.current) != null);
-    var openHandle = new _OpenHandle(stack, description: description);
-    // TODO(abarth): Should we assert that the handle isn't already in the map?
-    _openHandles[handleToken] = openHandle;
-  }
-
-  static void removeOpenHandle(int handleToken) {
-    // TODO(abarth): Should we assert that the handle is in the map?
-    _openHandles.remove(handleToken);
-  }
-
-  static void _reportOpenHandle(int handle, _OpenHandle openHandle) {
-    StringBuffer sb = new StringBuffer();
-    sb.writeln('HANDLE LEAK: handle: $handle');
-    if (openHandle.description != null) {
-      sb.writeln('HANDLE LEAK: description: ${openHandle.description}');
-    }
-    if (openHandle.stack != null) {
-      sb.writeln('HANDLE LEAK: creation stack trace:');
-      sb.writeln(openHandle.stack);
-    } else {
-      sb.writeln('HANDLE LEAK: creation stack trace available in strict mode.');
-    }
-    print(sb.toString());
-  }
-
-  static bool reportOpenHandles() {
-    if (_openHandles.length == 0) {
-      return true;
-    }
-    _openHandles.forEach(_reportOpenHandle);
-    return false;
-  }
-
-  static bool setDescription(int handleToken, String description) {
-    _OpenHandle openHandle = _openHandles[handleToken];
-    if (openHandle != null)
-      openHandle.description = description;
-    return true;
-  }
-
-  static int registerFinalizer(Object eventSubscription, int handleToken)
+  static int _registerFinalizer(Handle handle, int h)
       native "MxHandle_RegisterFinalizer";
 
-  static int close(int handleToken) native "MxHandle_Close";
+  static int _unregisterFinalizer(Handle handle)
+      native "MxHandle_UnregisterFinalizer";
 
-  // Called from the embedder's unhandled exception callback.
-  // Returns the number of successfully closed handles.
-  static int _closeOpenHandles() {
-    int count = 0;
-    _openHandles.forEach((int handle, _) {
-      if (MxHandle.close(handle) == 0) {
-        count++;
-      }
-    });
-    _openHandles.clear();
-    return count;
+  static int close(int h) native "MxHandle_Close";
+}
+
+/// A wrapper for an mx_Handle_t.
+/// 
+/// A Handle object registers a finalizer for its underlying mx_handle_t that
+/// closes the mx_handle_t when the Handle is garbage collected.
+class Handle extends NativeFieldWrapperClass2 {
+  /// Creates a wrapper for the given mx_handle_t.
+  Handle(this._h) {
+    if (isValid)
+      MxHandle._registerFinalizer(this, _h);
   }
+
+  /// Creates a wrapper for MX_HANDLE_INVALID.
+  Handle.invalid() : _h = 0;
+
+  /// The mx_handle_t underlying this Handle object.
+  int get h => _h;
+  int _h;
+
+  /// Returns true if [h] is not MX_HANDLE_INVALID.
+  bool get isValid => _h != 0;
+
+  /// Closes the underlying mx_handle_t and returns an mx_status_t.
+  int close() {
+    if (!isValid)
+      return MxHandle.close(0);
+    MxHandle._unregisterFinalizer(this);
+    int result = MxHandle.close(_h);
+    _h = 0;
+    return result;
+  }
+
+  /// Returns the underlying mx_handle_t and sets [h] to MX_HANDLE_INVALID.
+  /// 
+  /// This function removes the finalizer for the underlying handle. It is the
+  /// callee's responsibility to close the returned handle.
+  int release() {
+    if (!isValid)
+      return 0;
+    MxHandle._unregisterFinalizer(this);
+    int result = _h;
+    _h = 0;
+    return result;
+  }
+
+  @override
+  String toString() => 'Handle(${isValid ? _h : "MX_HANDLE_INVALID"})';
+
+  @override
+  bool operator ==(other) => (other is Handle) && (_h == other._h);
+
+  @override
+  int get hashCode => _h.hashCode;
 }
 
 class MxChannel {

@@ -213,19 +213,11 @@ abstract class Binding<T> {
     if ((result.data == null) || (result.dataLength == 0))
       throw new FidlCodecError('Unexpected empty message or error: $result');
 
-    try {
-      final Message message = new Message(result.data,
-                                          result.handles,
-                                          result.dataLength,
-                                          result.handlesLength);
-      handleMessage(new ServiceMessage.fromMessage(message), _sendResponse);
-    } catch (e) {
-      // TODO(abarth): This exception handler might be doing more harm than
-      // good. Some of the handles might have ended up in useful places.
-      if (result.handles != null)
-        result.handles.forEach((handle) => handle.close());
-      rethrow;
-    }
+    final Message message = new Message(result.data,
+                                        result.handles,
+                                        result.dataLength,
+                                        result.handlesLength);
+    handleMessage(new ServiceMessage.fromMessage(message), _sendResponse);
   }
 
   void _sendResponse(Message response) {

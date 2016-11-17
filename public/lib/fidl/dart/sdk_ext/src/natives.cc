@@ -19,19 +19,30 @@
 
 namespace fidl {
 namespace dart {
+namespace {
+
+constexpr int kNumberOfNativeFields = 2;
+
+struct HandlePeer {
+  Dart_WeakPersistentHandle weak;
+  mx_handle_t handle;
+};
+
+}  // namespace
 
 #define REGISTER_FUNCTION(name, count) {"" #name, name, count},
 #define DECLARE_FUNCTION(name, count) \
   extern void name(Dart_NativeArguments args);
 
-#define FIDL_NATIVE_LIST(V)        \
-  V(MxChannel_Create, 1)           \
-  V(MxChannel_Write, 5)            \
-  V(MxChannel_Read, 5)             \
-  V(MxChannel_QueryAndRead, 3)     \
-  V(MxTime_Get, 1)                 \
-  V(MxHandle_Close, 1)             \
-  V(MxHandle_RegisterFinalizer, 2) \
+#define FIDL_NATIVE_LIST(V)          \
+  V(MxChannel_Create, 1)             \
+  V(MxChannel_Write, 5)              \
+  V(MxChannel_Read, 5)               \
+  V(MxChannel_QueryAndRead, 3)       \
+  V(MxTime_Get, 1)                   \
+  V(MxHandle_Close, 1)               \
+  V(MxHandle_RegisterFinalizer, 2)   \
+  V(MxHandle_UnregisterFinalizer, 1) \
   V(MxHandleWatcher_SendControlData, 5)
 
 FIDL_NATIVE_LIST(DECLARE_FUNCTION);
@@ -91,28 +102,23 @@ static void SetInvalidArgumentReturn(Dart_NativeArguments arguments) {
     }                                                            \
   }
 
-struct CloserCallbackPeer {
-  mx_handle_t handle;
-};
-
-static void HandleCloserCallback(void* isolate_data,
-                                 Dart_WeakPersistentHandle handle,
-                                 void* peer) {
-  CloserCallbackPeer* callback_peer =
-      reinterpret_cast<CloserCallbackPeer*>(peer);
-  if (callback_peer->handle != MX_HANDLE_INVALID)
-    mx_handle_close(callback_peer->handle);
-  delete callback_peer;
+static void HandleFinalizer(void* isolate_data,
+                            Dart_WeakPersistentHandle weak,
+                            void* peer_ptr) {
+  HandlePeer* peer = reinterpret_cast<HandlePeer*>(peer_ptr);
+  if (peer->handle != MX_HANDLE_INVALID)
+    mx_handle_close(peer->handle);
+  delete peer;
 }
 
-// Setup a weak persistent handle for a mx_handle_t that calls mx_handle_close
-// on the handle when the Dart wrapper object is GC'd or the VM is going down.
 void MxHandle_RegisterFinalizer(Dart_NativeArguments arguments) {
-  Dart_Handle handle_instance = Dart_GetNativeArgument(arguments, 0);
-  if (!Dart_IsInstance(handle_instance)) {
-    SetInvalidArgumentReturn(arguments);
-    return;
-  }
+  Dart_Handle wrapper = Dart_GetNativeArgument(arguments, 0);
+
+  intptr_t native_fields[kNumberOfNativeFields];
+  FTL_CHECK(!Dart_IsError(Dart_GetNativeFieldsOfArgument(
+      arguments, 0, kNumberOfNativeFields, native_fields)));
+  FTL_CHECK(!native_fields[0]);
+  FTL_CHECK(!native_fields[1]);
 
   int64_t raw_handle = static_cast<int64_t>(MX_HANDLE_INVALID);
   CHECK_INTEGER_ARGUMENT(arguments, 1, &raw_handle, InvalidArgument);
@@ -122,13 +128,32 @@ void MxHandle_RegisterFinalizer(Dart_NativeArguments arguments) {
   }
 
   mx_handle_t handle = static_cast<mx_handle_t>(raw_handle);
+  HandlePeer* peer = new HandlePeer();
 
-  // Set up a finalizer.
-  CloserCallbackPeer* callback_peer = new CloserCallbackPeer();
-  callback_peer->handle = handle;
-  Dart_NewWeakPersistentHandle(
-      handle_instance, reinterpret_cast<void*>(callback_peer),
-      sizeof(CloserCallbackPeer), HandleCloserCallback);
+  FTL_CHECK(!Dart_IsError(Dart_SetNativeInstanceField(
+      wrapper, 0, reinterpret_cast<intptr_t>(peer))));
+
+  peer->handle = handle;
+  peer->weak = Dart_NewWeakPersistentHandle(wrapper, peer, sizeof(HandlePeer),
+                                            HandleFinalizer);
+  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(NO_ERROR));
+}
+
+void MxHandle_UnregisterFinalizer(Dart_NativeArguments arguments) {
+  Dart_Handle wrapper = Dart_GetNativeArgument(arguments, 0);
+
+  intptr_t native_fields[kNumberOfNativeFields];
+  FTL_CHECK(!Dart_IsError(Dart_GetNativeFieldsOfArgument(
+      arguments, 0, kNumberOfNativeFields, native_fields)));
+  FTL_CHECK(native_fields[0]);
+  FTL_CHECK(!native_fields[1]);
+
+  HandlePeer* peer = reinterpret_cast<HandlePeer*>(native_fields[0]);
+  FTL_CHECK(!Dart_IsError(Dart_SetNativeInstanceField(wrapper, 0, 0)));
+
+  Dart_DeleteWeakPersistentHandle(Dart_CurrentIsolate(), peer->weak);
+  delete peer;
+
   Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(NO_ERROR));
 }
 
@@ -211,6 +236,9 @@ void MxChannel_Write(Dart_NativeArguments arguments) {
     for (int i = 0; i < handles_len; i++) {
       Dart_Handle dart_handle = Dart_ListGetAt(dart_handles, i);
       if (!Dart_IsInteger(dart_handle)) {
+        if (!Dart_IsNull(typed_data)) {
+          Dart_TypedDataReleaseData(typed_data);
+        }
         SetInvalidArgumentReturn(arguments);
         return;
       }
