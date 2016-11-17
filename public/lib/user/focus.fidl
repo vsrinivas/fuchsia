@@ -14,4 +14,4 @@ interface FocusController {
     FocusStory(string story_id);
     // Register a focus listener.
     Watch(FocusListener focus_listener);
-}
+};
