@@ -69,7 +69,7 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
   void Complete() {
     FTL_DCHECK(counter_ != 0);
     --counter_;
-    if (counter_ == 0) {
+    if (counter_ == 0 && join_callback_) {
       std::function<void()> join_callback;
       join_callback = join_callback_;
       join_callback_ = nullptr;
@@ -95,6 +95,7 @@ class CallbackJoiner : public std::enable_shared_from_this<CallbackJoiner> {
   // copy called later (and reset) when all child oeprations have completed.
   // Only one callback at a time can be registered with WhenJoined.
   void WhenJoined(const std::function<void()>& join_callback) {
+    FTL_DCHECK(join_callback);
     FTL_DCHECK(!join_callback_);
     if (counter_ == 0) {
       join_callback();

@@ -143,7 +143,7 @@ void FileReaderImpl::WriteToProducer() {
     }
 
     if (status == ERR_SHOULD_WAIT) {
-      fidl::GetDefaultAsyncWaiter()->AsyncWait(
+      wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
           datapipe_producer_.get(), MX_SIGNAL_WRITABLE, MX_TIME_INFINITE,
           FileReaderImpl::WriteToProducerStatic, this);
       return;

@@ -82,7 +82,7 @@ class MediaTimelineControllerImpl
 
     ~TimelineTransition();
 
-    // Calls returns a new callback for a child (control point) transition. THIS
+    // Returns a new callback for a child (control point) transition. THIS
     // METHOD WILL ONLY WORK IF THERE IS ALREADY A SHARED POINTER TO THIS
     // OBJECT.
     std::function<void(bool)> NewCallback() {
@@ -106,9 +106,10 @@ class MediaTimelineControllerImpl
     void Cancel() {
       FTL_DCHECK(!cancelled_);
       cancelled_ = true;
-      FTL_DCHECK(!callback_);
-      callback_(false);
-      callback_ = nullptr;
+      if (callback_) {
+        callback_(false);
+        callback_ = nullptr;
+      }
       completed_callback_ = nullptr;
     }
 
