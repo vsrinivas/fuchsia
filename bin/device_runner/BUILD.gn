@@ -20,7 +20,7 @@ executable("device_runner") {
     "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/application",
     "//apps/modular/services/device",
-    "//apps/modular/services/user",
+    "//apps/modular/services/user:private",
     "//apps/mozart/services/presentation",
     "//apps/mozart/services/views",
     "//lib/ftl",

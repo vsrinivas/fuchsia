@@ -12,7 +12,6 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
-#include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"

@@ -5,10 +5,11 @@
 import("//lib/fidl/fidl.gni")
 
 # For consumption outside modular.
-fidl("public") {
+fidl("story") {
   sources = [
     "link.fidl",
     "module.fidl",
+    "module_controller.fidl",
     "story.fidl",
   ]
 
@@ -17,21 +18,24 @@ fidl("public") {
   ]
 }
 
-# Really only for implementation of modular.
-fidl("story") {
+# Only for implementation of modular.
+fidl("private") {
   sources = [
-    "module_controller.fidl",
     "resolver.fidl",
     "story_runner.fidl",
     "story_storage.fidl",
   ]
 
   public_deps = [
-    ":public",
+    ":story",
   ]
 
   deps = [
     "//apps/mozart/services/views",
     "//apps/modular/services/document_store",
+  ]
+
+  visibility = [
+    "//apps/modular/*",
   ]
 }

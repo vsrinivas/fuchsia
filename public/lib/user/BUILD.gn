@@ -4,7 +4,8 @@
 
 import("//lib/fidl/fidl.gni")
 
-fidl("public") {
+# For consumption outside modular.
+fidl("user") {
   sources = [
     "story_provider.fidl",
     "user_shell.fidl",
@@ -22,16 +23,21 @@ fidl("focus") {
   ]
 }
 
-fidl("user") {
+# Only for implementation of modular.
+fidl("private") {
   sources = [
     "user_runner.fidl",
   ]
 
   public_deps = [
-    ":public",
+    ":user",
   ]
 
   deps = [
     "//apps/mozart/services/views",
+  ]
+
+  visibility = [
+    "//apps/modular/*",
   ]
 }
