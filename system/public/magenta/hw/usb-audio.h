@@ -298,7 +298,7 @@ typedef struct {
     uint8_t baSourcePin;
 } __PACKED usb_midi_ms_out_jack_desc;
 
-struct usb_ms_endpoint_descriptor {
+typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;        // USB_AUDIO_CS_ENDPOINT
     uint8_t bDescriptorSubtype;     // USB_MIDI_MS_GENERAL
