@@ -6,7 +6,7 @@ module modular;
 
 interface FocusListener {
     // Receives changes to the list of focused story ids.
-    OnFocusChanged(string[] focused_story_ids);
+    OnFocusChanged(array<string> focused_story_ids);
 };
 
 interface FocusController {
