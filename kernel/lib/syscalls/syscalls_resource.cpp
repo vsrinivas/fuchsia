@@ -102,7 +102,7 @@ mx_status_t sys_resource_get_handle(mx_handle_t handle, uint32_t index,
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    result = resource->RecordCreateDispatcher(index, &dispatcher, &rights);
+    result = resource->RecordCreateDispatcher(index, options, &dispatcher, &rights);
     if (result)
         return result;
 

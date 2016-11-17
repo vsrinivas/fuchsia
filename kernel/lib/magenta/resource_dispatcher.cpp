@@ -5,8 +5,11 @@
 // https://opensource.org/licenses/MIT
 
 #include <kernel/auto_lock.h>
+#include <kernel/vm/vm_object.h>
 #include <magenta/handle.h>
 #include <magenta/resource_dispatcher.h>
+#include <magenta/interrupt_event_dispatcher.h>
+#include <magenta/vm_object_dispatcher.h>
 #include <new.h>
 #include <string.h>
 
@@ -23,7 +26,8 @@ private:
     explicit ResourceRecord() {};
 
     mx_rrec_t content_;
-    mx_handle_t (*create_dispatcher_)(const mx_rrec_t* rec, mxtl::RefPtr<Dispatcher>*, mx_rights_t*);
+    mx_status_t (*create_dispatcher_)(const mx_rrec_t* rec, uint32_t options,
+                                      mxtl::RefPtr<Dispatcher>*, mx_rights_t*);
     mx_status_t (*do_action_)(const mx_rrec_t* rec, uint32_t action, uint32_t arg0, uint32_t arg1);
 
     friend class ResourceDispatcher;
@@ -110,7 +114,39 @@ mxtl::RefPtr<ResourceDispatcher> ResourceDispatcher::LookupChildById(mx_koid_t k
     return iter.CopyPointer();
 }
 
-static mx_handle_t default_create_dispatcher(const mx_rrec_t*, mxtl::RefPtr<Dispatcher>*, mx_rights_t*) {
+static mx_status_t mmio_create_dispatcher(const mx_rrec_t* rec, uint32_t options,
+                                          mxtl::RefPtr<Dispatcher>* dispatcher,
+                                          mx_rights_t* rights) {
+    mxtl::RefPtr<VmObject> vmo = VmObjectPhysical::Create(rec->mmio.phys_base, rec->mmio.phys_size);
+    if (!vmo)
+        return ERR_NO_MEMORY;
+
+    return VmObjectDispatcher::Create(mxtl::move(vmo), dispatcher, rights);
+}
+
+static mx_status_t irq_create_dispatcher(const mx_rrec_t* rec, uint32_t options,
+                                         mxtl::RefPtr<Dispatcher>* dispatcher,
+                                         mx_rights_t* rights) {
+    return InterruptEventDispatcher::Create(rec->irq.irq_base, options, dispatcher, rights);
+}
+
+#if ARCH_X86
+#include <arch/x86/descriptor.h>
+#include <arch/x86/ioport.h>
+
+static mx_status_t ioport_do_action(const mx_rrec_t* rec, uint32_t action,
+                                    uint32_t arg0, uint32_t arg1) {
+    switch (action) {
+    case MX_RACT_ENABLE:
+        return x86_set_io_bitmap(rec->ioport.port_base, rec->ioport.port_count, 1);
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+#endif
+
+static mx_status_t default_create_dispatcher(const mx_rrec_t*, uint32_t,
+                                             mxtl::RefPtr<Dispatcher>*, mx_rights_t*) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -118,7 +154,7 @@ static mx_status_t default_do_action(const mx_rrec_t*, uint32_t, uint32_t, uint3
     return ERR_NOT_SUPPORTED;
 }
 
-status_t ResourceDispatcher::AddRecord(mxtl::unique_ptr<ResourceRecord> rec) {
+status_t ResourceDispatcher::AddRecord(mxtl::unique_ptr<ResourceRecord> rrec) {
     AutoLock lock(lock_);
 
     if (valid_)
@@ -127,11 +163,34 @@ status_t ResourceDispatcher::AddRecord(mxtl::unique_ptr<ResourceRecord> rec) {
     if (num_records_ >= kMaxRecords)
         return ERR_BAD_STATE;
 
-    //TODO: validate record contents, assign appropriate hooks
-    rec->create_dispatcher_ = default_create_dispatcher;
-    rec->do_action_ = default_do_action;
+    mx_rrec_t* rec = &rrec->content_;
 
-    records_.push_back(mxtl::move(rec));
+    //TODO: validate mmio/irq values, ensure they're non-overlapping
+    //TODO: special rights needed to create MMIO/IRQ records?
+    switch (rec->type) {
+    case MX_RREC_IRQ:
+        rrec->create_dispatcher_ = irq_create_dispatcher;
+        rrec->do_action_ = default_do_action;
+        break;
+    case MX_RREC_MMIO:
+        rrec->create_dispatcher_ = mmio_create_dispatcher;
+        rrec->do_action_ = default_do_action;
+        break;
+#if ARCH_X86
+    case MX_RREC_IOPORT:
+        rrec->create_dispatcher_ = default_create_dispatcher;
+        rrec->do_action_ = ioport_do_action;
+        break;
+#endif
+    case MX_RREC_DATA:
+        rrec->create_dispatcher_ = default_create_dispatcher;
+        rrec->do_action_ = default_do_action;
+        break;
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+
+    records_.push_back(mxtl::move(rrec));
     ++num_records_;
 
     return NO_ERROR;
@@ -256,7 +315,7 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
     return status;
 }
 
-mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index,
+mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index, uint32_t options,
                                                        mxtl::RefPtr<Dispatcher>* dispatcher,
                                                        mx_rights_t* rights) {
     AutoLock lock(lock_);
@@ -265,7 +324,7 @@ mx_status_t ResourceDispatcher::RecordCreateDispatcher(uint32_t index,
     if (rec == nullptr) {
         return ERR_NOT_SUPPORTED;
     } else {
-        return rec->create_dispatcher_(&rec->content_, dispatcher, rights);
+        return rec->create_dispatcher_(&rec->content_, options, dispatcher, rights);
     }
 }
 

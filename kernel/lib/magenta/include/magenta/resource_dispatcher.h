@@ -42,7 +42,8 @@ public:
     status_t AddRecord(mx_rrec_t* record);
 
     // Create a Dispatcher for the indicated Record
-    mx_status_t RecordCreateDispatcher(uint32_t index, mxtl::RefPtr<Dispatcher>* dispatcher,
+    mx_status_t RecordCreateDispatcher(uint32_t index, uint32_t options,
+                                       mxtl::RefPtr<Dispatcher>* dispatcher,
                                        mx_rights_t* rights);
 
     // Ask the sub-resource of the specified Record to do an action
