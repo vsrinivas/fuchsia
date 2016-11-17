@@ -15,6 +15,7 @@
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -64,6 +65,15 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     return storage::Status::OK;
   }
 
+  storage::Status AddCommitFromSync(const storage::CommitId& id,
+                                    std::string&& storage_bytes) override {
+    if (should_fail_add_commit_from_sync) {
+      return storage::Status::IO_ERROR;
+    }
+    received_commits[id] = storage_bytes;
+    return storage::Status::OK;
+  }
+
   storage::Status GetUnsyncedObjects(
       const storage::CommitId& commit_id,
       std::vector<storage::ObjectId>* object_ids) override {
@@ -72,6 +82,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   }
 
   storage::Status AddCommitWatcher(storage::CommitWatcher* watcher) override {
+    watcher_set = true;
     return storage::Status::OK;
   }
 
@@ -98,6 +109,16 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     return storage::Status::OK;
   }
 
+  storage::Status SetSyncMetadata(ftl::StringView sync_state) override {
+    sync_metadata = sync_state.ToString();
+    return storage::Status::OK;
+  }
+
+  storage::Status GetSyncMetadata(std::string* sync_state) override {
+    *sync_state = sync_metadata;
+    return storage::Status::OK;
+  }
+
   storage::PageId page_id_to_return;
   // Commits to be returned from GetUnsyncedCommits calls.
   std::vector<std::unique_ptr<const storage::Commit>>
@@ -107,9 +128,13 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       new_commits_to_return;
   bool should_fail_get_unsynced_commits = false;
   bool should_fail_get_commit = false;
+  bool should_fail_add_commit_from_sync = false;
 
   std::set<storage::CommitId> commits_marked_as_synced;
+  bool watcher_set = false;
   bool watcher_removed = false;
+  std::unordered_map<storage::CommitId, std::string> received_commits;
+  std::string sync_metadata;
 };
 
 // Fake implementation of cloud_provider::CloudProvider. Injects the returned
@@ -130,8 +155,47 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
         [this, callback]() { callback(commit_status_to_return); });
   }
 
+  void WatchCommits(const std::string& min_timestamp,
+                    cloud_provider::CommitWatcher* watcher) override {
+    for (auto& record : notifications_to_deliver) {
+      message_loop_->task_runner()->PostTask(ftl::MakeCopyable([
+        watcher, commit = std::move(record.commit),
+        timestamp = std::move(record.timestamp)
+      ]() mutable {
+        watcher->OnRemoteCommit(std::move(commit), std::move(timestamp));
+      }));
+    }
+  }
+
+  void UnwatchCommits(cloud_provider::CommitWatcher* watcher) override {
+    watcher_removed = true;
+  }
+
+  void GetCommits(const std::string& min_timestamp,
+                  std::function<void(cloud_provider::Status,
+                                     std::vector<cloud_provider::Record>&&)>
+                      callback) override {
+    get_commits_calls++;
+    if (should_fail_get_commits) {
+      message_loop_->task_runner()->PostTask([this, callback]() {
+        callback(cloud_provider::Status::NETWORK_ERROR, {});
+      });
+      return;
+    }
+
+    message_loop_->task_runner()->PostTask([this, callback]() {
+      callback(cloud_provider::Status::OK, std::move(records_to_return));
+    });
+  }
+
+  bool should_fail_get_commits = false;
+  std::vector<cloud_provider::Record> records_to_return;
+  std::vector<cloud_provider::Record> notifications_to_deliver;
   cloud_provider::Status commit_status_to_return = cloud_provider::Status::OK;
+
+  unsigned int get_commits_calls = 0u;
   std::vector<cloud_provider::Commit> received_commits;
+  bool watcher_removed = false;
 
  private:
   mtl::MessageLoop* message_loop_;
@@ -195,7 +259,7 @@ class PageSyncImplTest : public ::testing::Test {
 
 // Verifies that the backlog of commits to upload returned from
 // GetUnsyncedCommits() is uploaded to CloudProvider.
-TEST_F(PageSyncImplTest, UploadExistingCommits) {
+TEST_F(PageSyncImplTest, UploadBacklog) {
   storage_.unsynced_commits_to_return.push_back(
       std::make_unique<const TestCommit>("id1", "content1"));
   storage_.unsynced_commits_to_return.push_back(
@@ -287,7 +351,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
 
 // Verifies that failing uploads are retried. In production the retries are
 // delayed, here we set the delays to 0.
-TEST_F(PageSyncImplTest, RecoverableError) {
+TEST_F(PageSyncImplTest, RetryUpload) {
   storage_.unsynced_commits_to_return.push_back(
       std::make_unique<const TestCommit>("id1", "content1"));
   cloud_provider_.commit_status_to_return =
@@ -309,17 +373,154 @@ TEST_F(PageSyncImplTest, RecoverableError) {
 }
 
 // Verifies that if listing the original commits to be uploaded fails, the
-// client is notified about the error and the storage watcher is removed, so
+// client is notified about the error and the storage watcher is never set, so
 // that subsequent commits are not handled. (as this would violate the contract
 // of uploading commits in order)
 TEST_F(PageSyncImplTest, FailToListCommits) {
-  EXPECT_FALSE(storage_.watcher_removed);
+  EXPECT_FALSE(storage_.watcher_set);
   EXPECT_FALSE(error_callback_called_);
   storage_.should_fail_get_unsynced_commits = true;
   page_sync_.Start();
   EXPECT_TRUE(error_callback_called_);
-  EXPECT_TRUE(storage_.watcher_removed);
+  EXPECT_FALSE(storage_.watcher_set);
   EXPECT_EQ(0u, cloud_provider_.received_commits.size());
+}
+
+// Verifies that the backlog of unsynced commits is retrieved from the cloud
+// provider and saved in storage.
+TEST_F(PageSyncImplTest, DownloadBacklog) {
+  EXPECT_EQ(0u, storage_.received_commits.size());
+  EXPECT_EQ("", storage_.sync_metadata);
+
+  cloud_provider_.records_to_return.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id1", "content1", {}), "42"));
+  cloud_provider_.records_to_return.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id2", "content2", {}), "43"));
+  page_sync_.Start();
+
+  message_loop_.SetAfterTaskCallback([this] {
+    if (storage_.received_commits.size() == 2u) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  message_loop_.Run();
+
+  EXPECT_EQ(2u, storage_.received_commits.size());
+  EXPECT_EQ("content1", storage_.received_commits["id1"]);
+  EXPECT_EQ("content2", storage_.received_commits["id2"]);
+  EXPECT_EQ("43", storage_.sync_metadata);
+}
+
+// Verifies that commit notifications about new commits in cloud provider are
+// received and passed to storage.
+TEST_F(PageSyncImplTest, ReceiveNotifications) {
+  EXPECT_EQ(0u, storage_.received_commits.size());
+  EXPECT_EQ("", storage_.sync_metadata);
+
+  cloud_provider_.notifications_to_deliver.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id1", "content1", {}), "42"));
+  cloud_provider_.notifications_to_deliver.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id2", "content2", {}), "43"));
+  page_sync_.Start();
+
+  message_loop_.SetAfterTaskCallback([this] {
+    if (storage_.received_commits.size() == 2u) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  message_loop_.Run();
+
+  EXPECT_EQ(2u, storage_.received_commits.size());
+  EXPECT_EQ("content1", storage_.received_commits["id1"]);
+  EXPECT_EQ("content2", storage_.received_commits["id2"]);
+  EXPECT_EQ("43", storage_.sync_metadata);
+}
+
+// Verify that the backlog commits are downloaded before receiving notifications
+// about the new ones.
+TEST_F(PageSyncImplTest, DownloadBacklogThenReceiveNotifications) {
+  EXPECT_EQ(0u, storage_.received_commits.size());
+  EXPECT_EQ("", storage_.sync_metadata);
+
+  cloud_provider_.records_to_return.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id1", "content1", {}), "42"));
+  cloud_provider_.notifications_to_deliver.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id2", "content2", {}), "43"));
+  page_sync_.Start();
+
+  message_loop_.SetAfterTaskCallback([this] {
+    if (storage_.received_commits.size() == 1u) {
+      message_loop_.QuitNow();
+    }
+  });
+  message_loop_.Run();
+
+  EXPECT_EQ(1u, storage_.received_commits.size());
+  EXPECT_EQ("content1", storage_.received_commits["id1"]);
+  EXPECT_EQ("42", storage_.sync_metadata);
+
+  message_loop_.SetAfterTaskCallback([this] {
+    if (storage_.received_commits.size() == 2u) {
+      message_loop_.QuitNow();
+    }
+  });
+  message_loop_.Run();
+
+  EXPECT_EQ(2u, storage_.received_commits.size());
+  EXPECT_EQ("content2", storage_.received_commits["id2"]);
+  EXPECT_EQ("43", storage_.sync_metadata);
+}
+
+// Verifies that failing attempts to download the backlog of unsynced commits
+// are retried.
+TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
+  cloud_provider_.records_to_return.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id1", "content1", {}), "42"));
+  cloud_provider_.should_fail_get_commits = true;
+  page_sync_.Start();
+
+  // Loop through five attempts to download the backlog.
+  message_loop_.SetAfterTaskCallback([this] {
+    if (cloud_provider_.get_commits_calls == 5u) {
+      message_loop_.QuitNow();
+    }
+  });
+  message_loop_.Run();
+  EXPECT_EQ(0u, storage_.received_commits.size());
+
+  cloud_provider_.should_fail_get_commits = false;
+  message_loop_.SetAfterTaskCallback([this] {
+    if (storage_.received_commits.size() == 1u) {
+      message_loop_.QuitNow();
+    }
+  });
+  message_loop_.Run();
+
+  EXPECT_EQ(1u, storage_.received_commits.size());
+  EXPECT_EQ("content1", storage_.received_commits["id1"]);
+  EXPECT_EQ("42", storage_.sync_metadata);
+}
+
+// Verifies that a failure to persist the remote commit stops syncing remote
+// commits and calls the error callback.
+TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
+  EXPECT_FALSE(cloud_provider_.watcher_removed);
+  EXPECT_FALSE(error_callback_called_);
+
+  cloud_provider_.notifications_to_deliver.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id1", "content1", {}), "42"));
+  storage_.should_fail_add_commit_from_sync = true;
+  page_sync_.Start();
+
+  message_loop_.SetAfterTaskCallback([this] {
+    if (cloud_provider_.watcher_removed) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  message_loop_.Run();
+
+  EXPECT_TRUE(cloud_provider_.watcher_removed);
+  EXPECT_TRUE(error_callback_called_);
 }
 
 }  // namespace

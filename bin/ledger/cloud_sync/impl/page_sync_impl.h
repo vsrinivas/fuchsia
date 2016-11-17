@@ -9,10 +9,12 @@
 
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
+#include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/cloud_sync/impl/commit_upload.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
+#include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/ftl/memory/ref_ptr.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -26,6 +28,16 @@ namespace cloud_sync {
 // The backlog of unsynced commits is uploaded first, then we upload commits
 // delivered through storage watcher in the notification order.
 //
+// Conversely for the remote commits: the backlog of remote commits is
+// downloaded first, then a cloud watcher is set to track new remote commits
+// appearing in the cloud provider. Remote commits are added to storage in the
+// order in which they were added to the cloud provided.
+//
+// In order to track which remote commits were already fetched, we keep track of
+// the server-side timestamp of the last commit we added to storage. As this
+// information needs to be persisted through reboots, we store the timestamp
+// itself in storage using a dedicated API (Get/SetSyncMetadata()).
+//
 // Recoverable errors (such as network errors) are automatically retried with
 // the given backoff policy, using the given task runner to schedule the tasks.
 // TODO(ppi): once the network service can notify us about regained
@@ -35,7 +47,10 @@ namespace cloud_sync {
 // Unrecoverable errors (such as internal errors accessing the storage) cause
 // the page sync to stop, in which case the client is notified using the given
 // error callback.
-class PageSyncImpl : public PageSync, public storage::CommitWatcher {
+class PageSyncImpl : public PageSync,
+                     public storage::CommitWatcher,
+                     public storage::PageSyncDelegate,
+                     public cloud_provider::CommitWatcher {
  public:
   PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                storage::PageStorage* storage,
@@ -50,7 +65,25 @@ class PageSyncImpl : public PageSync, public storage::CommitWatcher {
   void OnNewCommit(const storage::Commit& commit,
                    storage::ChangeSource source) override;
 
+  // storage::PageSyncDelegate:
+  void GetObject(
+      storage::ObjectIdView object_id,
+      std::function<void(storage::Status status,
+                         uint64_t size,
+                         mx::datapipe_consumer data)> callback) override;
+
+  // cloud_provider::CommitWatcher:
+  void OnRemoteCommit(cloud_provider::Commit&& commit,
+                      std::string&& timestamp) override;
+
+  void OnError() override;
+
  private:
+  void TryDownload();
+
+  bool AddRemoteCommit(cloud_provider::Commit&& commit,
+                       std::string&& timestamp);
+
   void EnqueueUpload(std::unique_ptr<const storage::Commit> commit);
 
   void HandleError(const char error_description[]);
@@ -63,9 +96,13 @@ class PageSyncImpl : public PageSync, public storage::CommitWatcher {
 
   // Ensures that each instance is started only once.
   bool started_ = false;
+  // Track which watchers are set, so that we know which to unset on hard error.
+  bool local_watch_set_ = false;
+  bool remote_watch_set_ = false;
   // Set to true on unrecoverable error. This indicates that PageSyncImpl is in
-  // broken state without a storage watcher registered.
+  // broken state.
   bool errored_ = false;
+  // A queue of pending commit uploads.
   std::queue<CommitUpload> commit_uploads_;
 
   // Must be the last member field.
