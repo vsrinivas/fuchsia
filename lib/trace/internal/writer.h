@@ -12,9 +12,9 @@
 #include <type_traits>
 #include <utility>
 
+#include <mx/vmo.h>
+
 #include "apps/tracing/lib/trace/internal/types.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/mtl/vmo/shared_vmo.h"
 
 namespace tracing {
 namespace internal {
