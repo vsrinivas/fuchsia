@@ -171,8 +171,11 @@ Status ApplyChanges(PageStorage* page_storage,
         continue;
       } else if (child_status == Status::NO_SUCH_CHILD) {
         if ((*changes)->deleted) {
-          // We try to remove an entry that is not in the tree.
-          FTL_LOG(INFO) << "Failed to delete key " << key << ": No such entry.";
+          // We try to remove an entry that is not in the tree. This is
+          // expected, as journals collate all operations on a key in a single
+          // change: if one does a put then a delete on a key, then we will only
+          // see here the delete operation.
+          FTL_VLOG(1) << "Failed to delete key " << key << ": No such entry.";
         } else {
           // Add the entry here. Since there is no child, both the new left and
           // right children are empty.
