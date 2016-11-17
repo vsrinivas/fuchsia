@@ -17,6 +17,7 @@
 namespace maxwell {
 namespace suggestion {
 
+struct SuggestionRecord;
 class SuggestionAgentClientImpl;
 
 class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
@@ -79,6 +80,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                       NextSubscriber::GetBinding>
       next_subscribers_;
   fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
+
+  modular::StoryProviderPtr story_provider_;
 };
 
 }  // namespace suggestion

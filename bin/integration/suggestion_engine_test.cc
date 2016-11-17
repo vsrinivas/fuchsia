@@ -41,10 +41,12 @@ class Proposinator {
 
   virtual ~Proposinator() = default;
 
-  void Propose(const std::string& id) {
+  void Propose(const std::string& id,
+               fidl::Array<maxwell::suggestion::ActionPtr> actions =
+                   fidl::Array<maxwell::suggestion::ActionPtr>::New(0)) {
     auto p = maxwell::suggestion::Proposal::New();
     p->id = id;
-    p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
+    p->on_selected = std::move(actions);
     auto d = maxwell::suggestion::Display::New();
 
     d->headline = id;
@@ -143,9 +145,25 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     StartAgent(url, std::move(agent_host));
   }
 
+  void AcceptSuggestion(const std::string& suggestion_id) {
+    Interact(suggestion_id, maxwell::suggestion::InteractionType::SELECTED);
+  }
+
+  void DismissSuggestion(const std::string& suggestion_id) {
+    Interact(suggestion_id, maxwell::suggestion::InteractionType::DISMISSED);
+  }
+
   maxwell::suggestion::SuggestionEnginePtr suggestion_engine_;
 
  private:
+  void Interact(const std::string& suggestion_id,
+                maxwell::suggestion::InteractionType interaction_type) {
+    auto interaction = maxwell::suggestion::Interaction::New();
+    interaction->type = interaction_type;
+    suggestion_provider_->NotifyInteraction(suggestion_id,
+                                            std::move(interaction));
+  }
+
   maxwell::suggestion::SuggestionProviderPtr suggestion_provider_;
   TestSuggestionListener listener_;
   fidl::Binding<maxwell::suggestion::Listener> listener_binding_;
@@ -323,4 +341,63 @@ TEST_F(SuggestionEngineTest, RemoveBeforeSubscribe) {
 
   SetResultCount(10);
   CHECK_RESULT_COUNT(0);
+}
+
+class TestStoryProvider : public modular::StoryProvider {
+ public:
+  void CreateStory(
+      const fidl::String& url,
+      fidl::InterfaceRequest<modular::StoryController> story) override {
+    last_created_story_ = url;
+  }
+
+  void DeleteStory(const fidl::String& story_id,
+                   const DeleteStoryCallback& callback) override {}
+  void GetStoryInfo(const fidl::String& story_id,
+                    const GetStoryInfoCallback& callback) override {}
+  void ResumeStory(
+      const fidl::String& story_id,
+      fidl::InterfaceRequest<modular::StoryController> story) override {}
+  void PreviousStories(const PreviousStoriesCallback& callback) override {}
+
+  std::string last_created_story() const { return last_created_story_; }
+
+ private:
+  std::string last_created_story_;
+};
+
+class SuggestionInteractionTest : public SuggestionEngineTest {
+ public:
+  SuggestionInteractionTest() : story_provider_binding_(&story_provider_) {
+    fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
+    story_provider_binding_.Bind(&story_provider_handle);
+    suggestion_engine_->SetStoryProvider(std::move(story_provider_handle));
+  }
+
+ protected:
+  std::string last_created_story() const {
+    return story_provider_.last_created_story();
+  }
+
+ private:
+  TestStoryProvider story_provider_;
+  fidl::Binding<modular::StoryProvider> story_provider_binding_;
+};
+
+TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
+  Proposinator p(suggestion_engine_);
+  SetResultCount(10);
+
+  auto add_module = maxwell::suggestion::AddModule::New();
+  add_module->module_id = "foo://bar";
+  auto action = maxwell::suggestion::Action::New();
+  action->set_add_module(std::move(add_module));
+  fidl::Array<maxwell::suggestion::ActionPtr> actions;
+  actions.push_back(std::move(action));
+  p.Propose("1", std::move(actions));
+  CHECK_RESULT_COUNT(1);
+
+  auto suggestion_id = GetOnlySuggestion()->uuid;
+  AcceptSuggestion(suggestion_id);
+  ASYNC_EQ("foo://bar", last_created_story());
 }

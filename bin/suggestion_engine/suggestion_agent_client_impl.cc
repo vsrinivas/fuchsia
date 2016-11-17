@@ -64,6 +64,7 @@ void SuggestionAgentClientImpl::OnNewProposal(
     SuggestionRecord* suggestion_record) {
   Suggestion* suggestion = &suggestion_record->suggestion;
   ProposalToSuggestion(&proposal, suggestion);
+  suggestion_record->source = this;
   suggestion_record->proposal = std::move(proposal);
 
   // TODO(rosswang): sort

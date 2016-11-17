@@ -4,6 +4,8 @@
 
 #pragma once
 
+class SuggestionAgentClientImpl;
+
 #include "apps/maxwell/services/suggestion/suggestion_agent_client.fidl.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_engine.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_record.h"
@@ -11,6 +13,7 @@
 namespace maxwell {
 namespace suggestion {
 
+struct SuggestionRecord;
 class SuggestionEngineApp;
 
 // SuggestionAgentClientImpl tracks proposals and their resulting suggestions
@@ -28,6 +31,8 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
     bindings_.emplace(
         new fidl::Binding<SuggestionAgentClient>(this, std::move(request)));
   }
+
+  std::string component_url() const { return component_url_; }
 
   void Propose(ProposalPtr proposal) override;
   void Remove(const fidl::String& proposal_id) override;
@@ -51,8 +56,8 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
   // suggestion).
   void ProposalToSuggestion(ProposalPtr* proposal, Suggestion* suggestion) {
     // TODO(rosswang): real UUIDs
-    suggestion->uuid =
-        std::to_string(reinterpret_cast<size_t>(this)) + std::to_string(id_++);
+    suggestion->uuid = std::to_string(reinterpret_cast<size_t>(this)) + "-" +
+                       std::to_string(id_++);
     // TODO(rosswang): rank
     suggestion->rank = id_;  // shhh
 

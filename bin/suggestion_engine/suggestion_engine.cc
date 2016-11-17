@@ -33,10 +33,49 @@ void SuggestionEngineApp::InitiateAsk(
 
 void SuggestionEngineApp::NotifyInteraction(const fidl::String& suggestion_uuid,
                                             InteractionPtr interaction) {
+  SuggestionRecord* suggestion_record = suggestions_[suggestion_uuid];
+
+  std::ostringstream log_detail;
+  if (suggestion_record)
+    log_detail << "proposal " << suggestion_record->proposal->id << " from "
+               << suggestion_record->source->component_url();
+  else
+    log_detail << "invalid";
+
   FTL_LOG(INFO) << (interaction->type == InteractionType::SELECTED
                         ? "Accepted"
                         : "Dismissed")
-                << " suggestion " << suggestion_uuid << ")";
+                << " suggestion " << suggestion_uuid << " (" << log_detail.str()
+                << ")";
+
+  if (suggestion_record) {
+    if (interaction->type == InteractionType::SELECTED) {
+      modular::StoryControllerPtr story;
+      // TODO(rosswang): If we're asked to add multiple modules, we probably
+      // want to add them to the same story. We can't do that yet, but we need
+      // to receive a StoryController anyway (not optional atm.).
+      for (const auto& action : suggestion_record->proposal->on_selected) {
+        switch (action->which()) {
+          case Action::Tag::ADD_MODULE: {
+            const auto& add_module = action->get_add_module();
+            if (story_provider_) {
+              story_provider_->CreateStory(add_module->module_id,
+                                           GetProxy(&story));
+              FTL_LOG(INFO) << "Adding module " << add_module->module_id;
+            } else {
+              FTL_LOG(WARNING) << "Unable to add module; no story provider";
+            }
+            break;
+          }
+          default:
+            FTL_LOG(WARNING) << "Unknown action tag "
+                             << (uint32_t)action->which();
+        }
+      }
+    }
+
+    suggestion_record->source->Remove(suggestion_record->proposal->id);
+  }
 }
 
 // end SuggestionProvider
@@ -55,7 +94,7 @@ void SuggestionEngineApp::RegisterSuggestionAgent(
 
 void SuggestionEngineApp::SetStoryProvider(
     fidl::InterfaceHandle<modular::StoryProvider> story_provider) {
-  // TODO(rosswang)
+  story_provider_.Bind(std::move(story_provider));
 }
 
 // end SuggestionEngine
