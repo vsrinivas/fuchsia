@@ -5,9 +5,28 @@
 source_set("backoff") {
   sources = [
     "backoff.h",
+    "exponential_backoff.cc",
+    "exponential_backoff.h",
   ]
 
   public_deps = [
+    "//apps/ledger/src/glue",
     "//lib/ftl",
+  ]
+}
+
+executable("unittests") {
+  testonly = true
+
+  output_name = "ledger_backoff_unittests"
+
+  sources = [
+    "exponential_backoff_unittest.cc",
+  ]
+
+  deps = [
+    ":backoff",
+    "//apps/ledger/src/test",
+    "//third_party/gtest",
   ]
 }
