@@ -59,13 +59,14 @@ class CancellableImpl final : public Cancellable {
 
   template <typename T>
   internal::LambdaPostRunWrapper<T> WrapCallback(T callback) {
-    return internal::LambdaPostRunWrapper<T>(callback, [this]() {
-      if (is_done_)
-        return;
-      is_done_ = true;
-      if (on_done_)
-        on_done_();
-    });
+    return internal::LambdaPostRunWrapper<T>(
+        callback, [ref_ptr = ftl::RefPtr<CancellableImpl>(this)]() {
+          if (ref_ptr->is_done_)
+            return;
+          ref_ptr->is_done_ = true;
+          if (ref_ptr->on_done_)
+            ref_ptr->on_done_();
+        });
   }
 
   // Cancellable

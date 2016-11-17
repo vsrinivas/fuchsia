@@ -1,0 +1,37 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("network") {
+  sources = [
+    "network_service.h",
+    "network_service_impl.cc",
+    "network_service_impl.h",
+  ]
+
+  public_deps = [
+    "//apps/ledger/src/callback",
+    "//apps/network/services",
+    "//lib/ftl",
+    "//magenta/system/ulib/mx",
+  ]
+}
+
+executable("unittests") {
+  testonly = true
+
+  output_name = "ledger_network_unittests"
+
+  sources = [
+    "network_service_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":network",
+    "//apps/ledger/src/fake_network_service",
+    "//apps/ledger/src/test",
+    "//lib/mtl",
+    "//lib/mtl/waiter",
+    "//third_party/gtest",
+  ]
+}
