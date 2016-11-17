@@ -62,7 +62,7 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
     {}
 };
 
-void *_zero_page_boot_params;
+extern void *_zero_page_boot_params;
 
 uint32_t bootloader_acpi_rsdp;
 uint32_t bootloader_fb_base;
