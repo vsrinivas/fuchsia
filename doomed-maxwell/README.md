@@ -11,4 +11,4 @@ Before running, follow the instructions at [manifest/README.md](https://fuchsia.
 
 To run the Maxwell tests in a running Fuchsia environment:
 
-    file:///system/apps/maxwell_test
+    @ /system/apps/maxwell_test
