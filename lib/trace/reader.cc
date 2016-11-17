@@ -504,10 +504,8 @@ void TraceReader::ForEachRecord(TraceInput& input) {
   Chunk chunk;
   internal::RecordHeader record_header = 0;
   while (true) {
-    if (!input.ReadChunk(1, &chunk)) {
-      trace_context_.OnError("Failed to read header from input");
+    if (!input.ReadChunk(1, &chunk))
       return;
-    }
 
     bool success = chunk.Read(&record_header);
     FTL_DCHECK(success);
@@ -517,15 +515,11 @@ void TraceReader::ForEachRecord(TraceInput& input) {
     auto record_size =
         internal::RecordFields::RecordSize::Get<uint16_t>(record_header);
 
-    if (record_size == 0) {
-      trace_context_.OnError("Invalid record size");
+    if (record_size == 0)
       return;
-    }
 
-    if (!input.ReadChunk(record_size - 1, &chunk)) {
-      trace_context_.OnError("Failed to read payload from input");
+    if (!input.ReadChunk(record_size - 1, &chunk))
       return;
-    }
 
     switch (record_type) {
       case RecordType::kMetadata:

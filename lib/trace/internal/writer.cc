@@ -8,6 +8,7 @@
 #include "apps/tracing/lib/trace/internal/writer.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/handles/object_info.h"
+#include "lib/mtl/vmo/shared_vmo.h"
 #include "magenta/syscalls.h"
 
 namespace tracing {

@@ -88,7 +88,6 @@ void WriteRecordsToSocket(mx::vmo vmo, size_t vmo_size, mx::socket& socket) {
   while (current < end) {
     auto length = internal::RecordFields::RecordSize::Get<uint16_t>(*current);
     if (length == 0 || length > kMaxRecordSize) {
-      FTL_LOG(INFO) << "Invalid record length " << length;
       break;
     }
     current += length;
