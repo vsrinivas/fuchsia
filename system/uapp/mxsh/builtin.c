@@ -141,27 +141,23 @@ static int mxc_ls(int argc, char** argv) {
         fprintf(stderr, "usage: ls [ <file_or_directory> ]\n");
         return -1;
     }
-    if(stat(dirn, &s) == -1) {
-        fprintf(stderr, "error: cannot stat '%s'\n", dirn);
-        return -1;
-    }
-    if((s.st_mode & S_IFMT) == S_IFDIR) {
-        if ((dir = opendir(dirn)) == NULL) {
-            fprintf(stderr, "error: cannot open dir '%s'\n", dirn);
+    if ((dir = opendir(dirn)) == NULL) {
+        if(stat(dirn, &s) == -1) {
+            fprintf(stderr, "error: cannot stat '%s'\n", dirn);
             return -1;
         }
-        while((de = readdir(dir)) != NULL) {
-            memset(&s, 0, sizeof(struct stat));
-            if ((strlen(de->d_name) + dirln + 2) <= sizeof(tmp)) {
-                snprintf(tmp, sizeof(tmp), "%s/%s", dirn, de->d_name);
-                stat(tmp, &s);
-            }
-            printf("%s %8jd %s\n", modestr(s.st_mode), (intmax_t)s.st_size, de->d_name);
-        }
-        closedir(dir);
-    } else {
         printf("%s %8jd %s\n", modestr(s.st_mode), (intmax_t)s.st_size, dirn);
+        return 0;
     }
+    while((de = readdir(dir)) != NULL) {
+        memset(&s, 0, sizeof(struct stat));
+        if ((strlen(de->d_name) + dirln + 2) <= sizeof(tmp)) {
+            snprintf(tmp, sizeof(tmp), "%s/%s", dirn, de->d_name);
+            stat(tmp, &s);
+        }
+        printf("%s %8jd %s\n", modestr(s.st_mode), (intmax_t)s.st_size, de->d_name);
+    }
+    closedir(dir);
     return 0;
 }
 
