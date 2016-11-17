@@ -47,3 +47,23 @@ executable("ideas") {
     "//lib/mtl",
   ]
 }
+
+executable("module_suggester") {
+  output_name = "agents/module_suggester"
+
+  sources = [
+    "module_suggester.cc",
+    "module_suggester.h",
+  ]
+
+  public_deps = [
+    "//third_party/rapidjson",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//apps/maxwell/services/suggestion",
+    "//apps/modular/lib/app",
+    "//lib/mtl",
+  ]
+}
