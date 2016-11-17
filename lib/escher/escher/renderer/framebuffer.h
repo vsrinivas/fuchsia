@@ -22,7 +22,7 @@ class Framebuffer : public impl::Resource {
  private:
   friend class Renderer;
 
-  // Called by impl::Renderer::CreateFramebuffer().
+  // Called by Renderer::CreateFramebuffer().
   Framebuffer(vk::Framebuffer framebuffer,
               impl::EscherImpl* escher,
               Renderer* renderer,

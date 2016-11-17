@@ -24,8 +24,6 @@ class PaperRenderer : public Renderer {
   PaperRenderer(impl::EscherImpl* escher);
   ~PaperRenderer() override;
 
-  void BeginModelRenderPass(const FramebufferPtr& framebuffer,
-                            vk::CommandBuffer command_buffer);
   impl::ImageCache* image_cache_;
   vk::Format depth_format_;
   vk::RenderPass render_pass_;

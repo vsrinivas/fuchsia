@@ -88,44 +88,6 @@ FramebufferPtr PaperRenderer::NewFramebuffer(const ImagePtr& image) {
                            std::vector<ImagePtr>{image, depth_image}, views);
 }
 
-void PaperRenderer::BeginModelRenderPass(const FramebufferPtr& framebuffer,
-                                         vk::CommandBuffer command_buffer) {
-  uint32_t width = framebuffer->width();
-  uint32_t height = framebuffer->height();
-
-  vk::ClearValue clear_values[2];
-  clear_values[0] =
-      vk::ClearColorValue(std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}});
-  clear_values[1] = vk::ClearDepthStencilValue{1.f, 0};
-
-  vk::RenderPassBeginInfo info;
-  info.renderPass = render_pass_;
-  info.renderArea.offset.x = 0;
-  info.renderArea.offset.y = 0;
-  info.renderArea.extent.width = width;
-  info.renderArea.extent.height = height;
-  info.clearValueCount = 2;
-  info.pClearValues = clear_values;
-  info.framebuffer = framebuffer->framebuffer();
-
-  command_buffer.beginRenderPass(&info, vk::SubpassContents::eInline);
-
-  vk::Viewport viewport;
-  viewport.width = static_cast<float>(width);
-  viewport.height = static_cast<float>(height);
-  viewport.minDepth = static_cast<float>(0.0f);
-  viewport.maxDepth = static_cast<float>(1.0f);
-  command_buffer.setViewport(0, 1, &viewport);
-
-  // TODO: probably unnecessary?
-  vk::Rect2D scissor;
-  scissor.extent.width = width;
-  scissor.extent.height = height;
-  scissor.offset.x = 0;
-  scissor.offset.y = 0;
-  command_buffer.setScissor(0, 1, &scissor);
-}
-
 void PaperRenderer::DrawFrame(Stage& stage,
                               Model& model,
                               const FramebufferPtr& framebuffer,
@@ -133,7 +95,10 @@ void PaperRenderer::DrawFrame(Stage& stage,
                               FrameRetiredCallback frame_retired_callback) {
   impl::CommandBuffer* command_buffer = BeginFrame(framebuffer, frame_done);
 
-  BeginModelRenderPass(framebuffer, command_buffer->get());
+  std::vector<vk::ClearValue> clear_values{
+      vk::ClearColorValue(std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}}),
+      vk::ClearDepthStencilValue{1.f, 0}};
+  command_buffer->BeginRenderPass(render_pass_, framebuffer, clear_values);
   model_renderer_->Draw(stage, model, command_buffer);
   command_buffer->get().endRenderPass();
 

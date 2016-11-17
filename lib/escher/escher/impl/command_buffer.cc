@@ -6,6 +6,7 @@
 
 #include "escher/impl/mesh_impl.h"
 #include "escher/impl/resource.h"
+#include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 
 #include "ftl/macros.h"
@@ -163,6 +164,43 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
                                   1, &barrier);
 
   AddUsedResource(std::move(image));
+}
+
+void CommandBuffer::BeginRenderPass(
+    vk::RenderPass render_pass,
+    const FramebufferPtr& framebuffer,
+    const std::vector<vk::ClearValue>& clear_values) {
+  uint32_t width = framebuffer->width();
+  uint32_t height = framebuffer->height();
+
+  vk::RenderPassBeginInfo info;
+  info.renderPass = render_pass;
+  info.renderArea.offset.x = 0;
+  info.renderArea.offset.y = 0;
+  info.renderArea.extent.width = width;
+  info.renderArea.extent.height = height;
+  info.clearValueCount = static_cast<uint32_t>(clear_values.size());
+  info.pClearValues = clear_values.data();
+  info.framebuffer = framebuffer->framebuffer();
+
+  command_buffer_.beginRenderPass(&info, vk::SubpassContents::eInline);
+
+  vk::Viewport viewport;
+  viewport.width = static_cast<float>(width);
+  viewport.height = static_cast<float>(height);
+  viewport.minDepth = static_cast<float>(0.0f);
+  viewport.maxDepth = static_cast<float>(1.0f);
+  command_buffer_.setViewport(0, 1, &viewport);
+
+  // TODO: probably unnecessary?
+  vk::Rect2D scissor;
+  scissor.extent.width = width;
+  scissor.extent.height = height;
+  scissor.offset.x = 0;
+  scissor.offset.y = 0;
+  command_buffer_.setScissor(0, 1, &scissor);
+
+  // TODO: should we retain the framebuffer?
 }
 
 bool CommandBuffer::Retire() {

@@ -69,6 +69,12 @@ class CommandBuffer {
                              vk::ImageLayout old_layout,
                              vk::ImageLayout new_layout);
 
+  // Convenient way to begin a render-pass that renders to the whole framebuffer
+  // (i.e. width/height of viewport and scissors are obtained from framebuffer).
+  void BeginRenderPass(vk::RenderPass,
+                       const FramebufferPtr& framebuffer,
+                       const std::vector<vk::ClearValue>& clear_values);
+
  private:
   friend class CommandBufferPool;
 
