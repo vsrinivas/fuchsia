@@ -164,7 +164,7 @@ static bool verify_exception(const mx_exception_packet_t* packet,
             tu_fatal("mx_process_debug", status);
         mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(debug_child, &process_info);
-        EXPECT_EQ(process_info.rec.koid, report->context.pid, "mx_process_debug got pid mismatch");
+        EXPECT_EQ(process_info.koid, report->context.pid, "mx_process_debug got pid mismatch");
         tu_handle_close(debug_child);
     } else if (strcmp(kind, "thread") == 0) {
         // TODO(dje): Verify exception was from expected thread.
@@ -176,7 +176,7 @@ static bool verify_exception(const mx_exception_packet_t* packet,
     if (process != MX_HANDLE_INVALID) {
         mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(process, &process_info);
-        EXPECT_EQ(process_info.rec.koid, report->context.pid, "wrong process in exception report");
+        EXPECT_EQ(process_info.koid, report->context.pid, "wrong process in exception report");
     }
 
     unittest_printf("%s: exception received: pid %"

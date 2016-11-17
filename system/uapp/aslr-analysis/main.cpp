@@ -235,15 +235,13 @@ int JoinProcess(mx_handle_t proc) {
 
     // read the return code
     mx_info_process_t proc_info;
-    mx_size_t ret = 0;
-    mx_object_get_info(proc, MX_INFO_PROCESS, sizeof(proc_info.rec),
-                       &proc_info, sizeof(proc_info), &ret);
-    if (ret != sizeof(proc_info)) {
-        printf("handle_get_info failed? %zd\n", ret);
+    if ((status = mx_object_get_info(proc, MX_INFO_PROCESS, &proc_info,
+                                     sizeof(proc_info), NULL, NULL)) < 0) {
+        printf("handle_get_info failed? %d\n", status);
         return -1;
     }
 
-    return proc_info.rec.return_code;
+    return proc_info.return_code;
 }
 
 } // namespace

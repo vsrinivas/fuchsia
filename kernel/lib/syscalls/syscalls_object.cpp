@@ -23,15 +23,21 @@
 
 #define LOCAL_TRACE 0
 
+// actual is an optional return parameter for the number of records returned
+// avail is an optional return parameter for the number of records available
 
-mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t topic_size,
+// Topics which return a fixed number of records will return ERR_BUFFER_TOO_SMALL
+// if there is not enough buffer space provided.
+// This allows for mx_object_get_info(handle, topic, &info, sizeof(info), NULL, NULL)
+
+mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                                 user_ptr<void> _buffer, mx_size_t buffer_size,
-                                user_ptr<mx_size_t> actual) {
+                                user_ptr<mx_size_t> _actual, user_ptr<mx_size_t> _avail) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    LTRACEF("handle %d topic %u topic_size %u buffer %p buffer_size %"
+    LTRACEF("handle %d topic %u buffer %p buffer_size %"
             PRIuPTR "\n",
-            handle, topic, topic_size, _buffer.get(), buffer_size);
+            handle, topic, _buffer.get(), buffer_size);
 
     switch (topic) {
         case MX_INFO_HANDLE_VALID: {
@@ -44,101 +50,64 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t top
             return NO_ERROR;
         }
         case MX_INFO_HANDLE_BASIC: {
-            mxtl::RefPtr<Dispatcher> dispatcher;
-            uint32_t rights;
+            mx_size_t actual = (buffer_size < sizeof(mx_info_handle_basic_t)) ? 0 : 1;
+            mx_size_t avail = 1;
 
-            if (!up->GetDispatcher(handle, &dispatcher, &rights))
-                return up->BadHandle(handle, ERR_BAD_HANDLE);
+            if (actual > 0) {
+                mxtl::RefPtr<Dispatcher> dispatcher;
+                uint32_t rights;
 
-            // test that they've asking for an appropriate version
-            if (topic_size != 0 && topic_size != sizeof(mx_record_handle_basic_t))
-                return ERR_INVALID_ARGS;
+                if (!up->GetDispatcher(handle, &dispatcher, &rights))
+                    return up->BadHandle(handle, ERR_BAD_HANDLE);
 
-            // make sure they passed us a buffer
-            if (!_buffer)
-                return ERR_INVALID_ARGS;
-
-            // test that we have at least enough target buffer to support the header and one record
-            if (buffer_size < sizeof(mx_info_header_t) + topic_size)
-                return ERR_BUFFER_TOO_SMALL;
-
-            // build the info structure
-            mx_info_handle_basic_t info = {};
-
-            // fill in the header
-            info.hdr.topic = topic;
-            info.hdr.avail_topic_size = sizeof(info.rec);
-            info.hdr.topic_size = topic_size;
-            info.hdr.avail_count = 1;
-            info.hdr.count = 1;
-
-            mx_size_t tocopy;
-            if (topic_size == 0) {
-                // just copy the header
-                tocopy = sizeof(info.hdr);
-            } else {
                 bool waitable = dispatcher->get_state_tracker() != nullptr;
 
-                // copy the header and the record
-                info.rec.koid = dispatcher->get_koid();
-                info.rec.rights = rights;
-                info.rec.type = dispatcher->get_type();
-                info.rec.props = waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE;
+                // build the info structure
+                mx_info_handle_basic_t info = {
+                    .koid = dispatcher->get_koid(),
+                    .rights = rights,
+                    .type = dispatcher->get_type(),
+                    .props = waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE,
+                };
 
-                tocopy = sizeof(info);
+                if (_buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
+                    return ERR_INVALID_ARGS;
             }
-
-            if (_buffer.copy_array_to_user(&info, tocopy) != NO_ERROR)
+            if (_actual && _actual.copy_to_user(actual) != NO_ERROR)
                 return ERR_INVALID_ARGS;
-            if (actual.copy_to_user(tocopy) != NO_ERROR)
+            if (_avail && _avail.copy_to_user(avail) != NO_ERROR)
                 return ERR_INVALID_ARGS;
+            if (actual == 0)
+                return ERR_BUFFER_TOO_SMALL;
             return NO_ERROR;
         }
         case MX_INFO_PROCESS: {
-            // grab a reference to the dispatcher
-            mxtl::RefPtr<ProcessDispatcher> process;
-            auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_READ);
-            if (error < 0)
-                return error;
+            mx_size_t actual = (buffer_size < sizeof(mx_info_handle_basic_t)) ? 1 : 0;
+            mx_size_t avail = 1;
 
-            // test that they've asking for an appropriate version
-            if (topic_size != 0 && topic_size != sizeof(mx_record_process_t))
-                return ERR_INVALID_ARGS;
+            if (actual > 0) {
+                // grab a reference to the dispatcher
+                mxtl::RefPtr<ProcessDispatcher> process;
+                auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_READ);
+                if (error < 0)
+                    return error;
 
-            // make sure they passed us a buffer
-            if (!_buffer)
-                return ERR_INVALID_ARGS;
+                // build the info structure
+                mx_info_process_t info = { };
 
-            // test that we have at least enough target buffer to support the header and one record
-            if (buffer_size < sizeof(mx_info_header_t) + topic_size)
-                return ERR_BUFFER_TOO_SMALL;
-
-            // build the info structure
-            mx_info_process_t info = {};
-
-            // fill in the header
-            info.hdr.topic = topic;
-            info.hdr.avail_topic_size = sizeof(info.rec);
-            info.hdr.topic_size = topic_size;
-            info.hdr.avail_count = 1;
-            info.hdr.count = 1;
-
-            mx_size_t tocopy;
-            if (topic_size == 0) {
-                // just copy the header
-                tocopy = sizeof(info.hdr);
-            } else {
-                auto err = process->GetInfo(&info.rec);
+                auto err = process->GetInfo(&info);
                 if (err != NO_ERROR)
                     return err;
 
-                tocopy = sizeof(info);
+                if (_buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
+                    return ERR_INVALID_ARGS;
             }
-
-            if (_buffer.copy_array_to_user(&info, tocopy) != NO_ERROR)
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            if (actual.copy_to_user(tocopy) != NO_ERROR)
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
                 return ERR_INVALID_ARGS;
+            if (actual == 0)
+                return ERR_BUFFER_TOO_SMALL;
             return NO_ERROR;
         }
         case MX_INFO_PROCESS_THREADS: {
@@ -148,18 +117,6 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t top
             if (error < 0)
                 return error;
 
-            // test that they've asking for an appropriate version
-            if (topic_size != 0 && topic_size != sizeof(mx_record_process_thread_t))
-                return ERR_INVALID_ARGS;
-
-            // make sure they passed us a buffer
-            if (!_buffer)
-                return ERR_INVALID_ARGS;
-
-            // test that we have at least enough target buffer to at least support the header
-            if (buffer_size < sizeof(mx_info_header_t))
-                return ERR_BUFFER_TOO_SMALL;
-
             // Getting the list of threads is inherently racy (unless the
             // caller has already stopped all threads, but that's not our
             // concern). Still, we promise to either return all threads we know
@@ -167,36 +124,19 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t top
             // more threads exist than what we computed at that same point in
             // time.
 
-            mxtl::Array<mx_record_process_thread_t> threads;
+            mxtl::Array<mx_koid_t> threads;
             mx_status_t status = process->GetThreads(&threads);
             if (status != NO_ERROR)
                 return status;
-            size_t actual_num_threads = threads.size();
-            if (actual_num_threads > UINT32_MAX)
-                return ERR_BAD_STATE;
-            size_t thread_offset = offsetof(mx_info_process_threads_t, rec);
-            size_t num_space_for =
-                (buffer_size - thread_offset) / sizeof(mx_record_process_thread_t);
-            size_t num_to_copy = 0;
-            if (topic_size > 0)
-                num_to_copy = MIN(actual_num_threads, num_space_for);
-            if (num_to_copy > UINT32_MAX)
-                return ERR_INVALID_ARGS;
+            size_t num_threads = threads.size();
+            size_t num_space_for = buffer_size / sizeof(mx_koid_t);
+            size_t num_to_copy = MIN(num_threads, num_space_for);
 
-            mx_info_header_t hdr;
-            hdr.topic = topic;
-            hdr.avail_topic_size = sizeof(mx_record_process_thread_t);
-            hdr.topic_size = topic_size;
-            hdr.avail_count = static_cast<uint32_t>(actual_num_threads);
-            hdr.count = static_cast<uint32_t>(num_to_copy);
-
-            if (_buffer.copy_array_to_user(&hdr, sizeof(hdr)) != NO_ERROR)
+            if (_buffer.copy_array_to_user(threads.get(), sizeof(mx_koid_t) * num_to_copy) != NO_ERROR)
                 return ERR_INVALID_ARGS;
-            auto thread_result_buffer = _buffer.byte_offset(thread_offset);
-            if (thread_result_buffer.reinterpret<mx_record_process_thread_t>().copy_array_to_user(threads.get(), num_to_copy) != NO_ERROR)
+            if (_actual && (_actual.copy_to_user(num_to_copy) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-            size_t result_bytes = thread_offset + (num_to_copy * topic_size);
-            if (actual.copy_to_user(result_bytes) != NO_ERROR)
+            if (_avail && (_avail.copy_to_user(num_threads) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -207,16 +147,8 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t top
             if (status < 0)
                 return status;
 
-            if (topic_size != sizeof(mx_rrec_t))
-                return ERR_INVALID_ARGS;
-
-            // must have room for header
-            if (buffer_size < sizeof(mx_info_header_t))
-                return ERR_BUFFER_TOO_SMALL;
-
-            auto payload = _buffer.byte_offset(sizeof(mx_info_header_t));
-            auto records = payload.reinterpret<mx_rrec_t>();
-            size_t count = (buffer_size - sizeof(mx_info_header_t)) / sizeof(mx_rrec_t);
+            auto records = _buffer.reinterpret<mx_rrec_t>();
+            size_t count = buffer_size / sizeof(mx_rrec_t);
             size_t avail = 0;
             if (topic == MX_INFO_RESOURCE_CHILDREN) {
                 status = resource->GetChildren(records, count, &count, &avail);
@@ -224,25 +156,14 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic, uint16_t top
                 status = resource->GetRecords(records, count, &count, &avail);
             }
 
-            // record counts cannot exceed MAXUINT32 so the
-            // static casts are safe here
-            mx_info_header_t hdr;
-            hdr.topic = topic;
-            hdr.avail_topic_size = sizeof(mx_rrec_t);
-            hdr.topic_size = topic_size;
-            hdr.avail_count = static_cast<uint32_t>(avail);
-            hdr.count = static_cast<uint32_t>(count);
-
-            if (_buffer.reinterpret<mx_info_header_t>().copy_array_to_user(&hdr, 1) != NO_ERROR)
+            if (_actual && (_actual.copy_to_user(count) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-
-            if (actual.copy_to_user(sizeof(mx_rrec_t) * count + sizeof(mx_info_header_t)) != NO_ERROR)
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
                 return ERR_INVALID_ARGS;
-
             return status;
         }
         default:
-            return ERR_NOT_FOUND;
+            return ERR_NOT_SUPPORTED;
     }
 }
 

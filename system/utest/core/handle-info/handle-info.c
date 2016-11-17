@@ -18,28 +18,27 @@ bool handle_info_test(void) {
     mx_status_t status = mx_handle_duplicate(event, MX_RIGHT_SAME_RIGHTS, &duped);
     ASSERT_EQ(status, NO_ERROR, "");
 
-    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, 0, NULL, 0u, NULL), NO_ERROR,
+    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, NULL, 0u, NULL, NULL), NO_ERROR,
               "handle should be valid");
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "failed to close the handle");
-    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, 0, NULL, 0u, NULL), ERR_BAD_HANDLE,
+    ASSERT_EQ(mx_object_get_info(event, MX_INFO_HANDLE_VALID, NULL, 0u, NULL, NULL), ERR_BAD_HANDLE,
               "handle should be valid");
 
-    mx_size_t sz;
+
     mx_info_handle_basic_t info = {};
-    ASSERT_EQ(mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, 4u, &sz),
+    ASSERT_EQ(mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, &info, 4u, NULL, NULL),
               ERR_BUFFER_TOO_SMALL, "bad struct size validation");
 
-    status = mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info), &sz);
-    ASSERT_EQ(status, NO_ERROR, "");
-    ASSERT_EQ(sz, sizeof(info), "handle should be valid");
+    status = mx_object_get_info(duped, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+    ASSERT_EQ(status, NO_ERROR, "handle should be valid");
 
     const mx_rights_t evr = MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
                             MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-    EXPECT_GT(info.rec.koid, 0ULL, "object id should be positive");
-    EXPECT_EQ(info.rec.type, (uint32_t)MX_OBJ_TYPE_EVENT, "handle should be an event");
-    EXPECT_EQ(info.rec.rights, evr, "wrong set of rights");
-    EXPECT_EQ(info.rec.props, (uint32_t)MX_OBJ_PROP_WAITABLE, "");
+    EXPECT_GT(info.koid, 0ULL, "object id should be positive");
+    EXPECT_EQ(info.type, (uint32_t)MX_OBJ_TYPE_EVENT, "handle should be an event");
+    EXPECT_EQ(info.rights, evr, "wrong set of rights");
+    EXPECT_EQ(info.props, (uint32_t)MX_OBJ_PROP_WAITABLE, "");
 
     mx_handle_close(event);
     mx_handle_close(duped);
@@ -56,13 +55,11 @@ bool handle_rights_test(void) {
     mx_status_t status = mx_handle_duplicate(event, MX_RIGHT_READ, &duped_ro);
     ASSERT_EQ(status, NO_ERROR, "");
 
-    mx_size_t sz;
     mx_info_handle_basic_t info = {};
-    status = mx_object_get_info(duped_ro, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info, sizeof(info), &sz);
-    ASSERT_EQ(status, NO_ERROR, "");
-    ASSERT_EQ(sz, sizeof(info), "handle should be valid");
+    status = mx_object_get_info(duped_ro, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+    ASSERT_EQ(status, NO_ERROR, "handle should be valid");
 
-    ASSERT_EQ(info.rec.rights, MX_RIGHT_READ, "wrong set of rights");
+    ASSERT_EQ(info.rights, MX_RIGHT_READ, "wrong set of rights");
 
     mx_handle_t h;
     status = mx_handle_duplicate(duped_ro, MX_RIGHT_SAME_RIGHTS, &h);

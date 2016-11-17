@@ -111,9 +111,9 @@ syscall object_signal_peer
     returns (mx_status_t);
 
 syscall object_get_info
-    (handle: mx_handle_t, topic: uint32_t, topic_size: uint16_t,
+    (handle: mx_handle_t, topic: uint32_t,
         buffer: any[buffer_size] OUT, buffer_size: mx_size_t,
-        actual_size: mx_size_t[1] OUT)
+        actual: mx_size_t[1] OUT, avail: mx_size_t[1] OUT)
     returns (mx_status_t);
 
 # Threads

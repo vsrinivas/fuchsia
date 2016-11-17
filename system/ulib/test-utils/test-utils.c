@@ -219,15 +219,11 @@ mx_handle_t tu_launch_mxio_fini(launchpad_t* lp)
 int tu_process_get_return_code(mx_handle_t process)
 {
     mx_info_process_t info;
-    mx_size_t ret;
-    if (mx_object_get_info(process, MX_INFO_PROCESS, sizeof(info.rec), &info, sizeof(info), &ret) < 0)
-        tu_fatal("get process info", ret);
-    if (ret != sizeof(info)) {
-        // Bleah. Kernel/App mismatch?
-        unittest_printf_critical("%s: unexpected result from mx_object_get_info\n", __func__);
-        exit(TU_FAIL_ERRCODE);
-    }
-    return info.rec.return_code;
+    mx_status_t status;
+    if ((status = mx_object_get_info(process, MX_INFO_PROCESS, &info,
+                                     sizeof(info), NULL, NULL)) < 0)
+        tu_fatal("get process info", status);
+    return info.return_code;
 }
 
 int tu_process_wait_exit(mx_handle_t process)
@@ -263,9 +259,8 @@ void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key, 
 
 void tu_handle_get_basic_info(mx_handle_t handle, mx_info_handle_basic_t* info)
 {
-    mx_size_t sz;
-    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info->rec),
-                                            info, sizeof(*info), &sz);
+    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC,
+                                            info, sizeof(*info), NULL, NULL);
     if (status < 0)
         tu_fatal(__func__, status);
 }

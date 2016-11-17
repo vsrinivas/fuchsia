@@ -365,7 +365,7 @@ bool ProcessDispatcher::GetDispatcher(mx_handle_t handle_value,
     return true;
 }
 
-status_t ProcessDispatcher::GetInfo(mx_record_process_t* info) {
+status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
     info->return_code = retcode_;
 
     return NO_ERROR;
@@ -390,17 +390,17 @@ status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t fl
 // |num_info_threads| is the number of threads |info| can hold.
 // Return the actual number of threads, which may be more than |num_info_threads|.
 
-status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_record_process_thread_t>* out_threads) {
+status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
     AutoLock lock(&thread_list_lock_);
     size_t n = thread_list_.size_slow();
-    mxtl::Array<mx_record_process_thread_t> threads;
+    mxtl::Array<mx_koid_t> threads;
     AllocChecker ac;
-    threads.reset(new (&ac) mx_record_process_thread_t[n], n);
+    threads.reset(new (&ac) mx_koid_t[n], n);
     if (!ac.check())
         return ERR_NO_MEMORY;
     size_t i = 0;
     for (auto& thread : thread_list_) {
-        threads[i].koid = thread.get_koid();
+        threads[i] = thread.get_koid();
         ++i;
     }
     DEBUG_ASSERT(i == n);

@@ -78,8 +78,8 @@ MAGENTA_SYSCALL_DEF(4, 4, 22, mx_status_t, object_get_property, mx_handle_t hand
 MAGENTA_SYSCALL_DEF(4, 4, 23, mx_status_t, object_set_property, mx_handle_t handle,
                     uint32_t property, USER_PTR(const void) value, mx_size_t size)
 MAGENTA_SYSCALL_DEF(6, 6, 24, mx_status_t, object_get_info, mx_handle_t handle,
-                    uint32_t topic, uint16_t topic_size, USER_PTR(void) buffer,
-                    mx_size_t buffer_size, USER_PTR(mx_size_t) actual_size)
+                    uint32_t topic, USER_PTR(void) buffer, mx_size_t buffer_size,
+                    USER_PTR(mx_size_t) actual_count, USER_PTR(mx_size_t) avail_count)
 MAGENTA_SYSCALL_DEF(4, 6, 25, mx_status_t, object_get_child, mx_handle_t handle,
                     uint64_t koid, mx_rights_t rights, USER_PTR(mx_handle_t) out)
 MAGENTA_SYSCALL_DEF(4, 5, 26, mx_status_t, object_bind_exception_port,

@@ -62,10 +62,4 @@ typedef union mx_rrec {
 
 static_assert(sizeof(mx_rrec_t) == 64, "OOPS");
 
-// Returned for topic MX_INFO_RESOURCE_CHILDREN and MX_INFO_RESOURCE_RECORDS
-typedef struct mx_info_resource {
-    mx_info_header_t hdr;
-    mx_rrec_t rec;
-} mx_info_resource_t;
-
 __END_CDECLS

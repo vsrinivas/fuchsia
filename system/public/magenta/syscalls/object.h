@@ -11,16 +11,14 @@ __BEGIN_CDECLS
 // ask clang format not to mess up the indentation:
 // clang-format off
 
-
-
 // Valid topics for mx_object_get_info.
 typedef enum {
     MX_INFO_HANDLE_VALID = 1,
-    MX_INFO_HANDLE_BASIC,
-    MX_INFO_PROCESS,
-    MX_INFO_PROCESS_THREADS,
-    MX_INFO_RESOURCE_CHILDREN,
-    MX_INFO_RESOURCE_RECORDS,
+    MX_INFO_HANDLE_BASIC,           // mx_info_handle_basic_t[1]
+    MX_INFO_PROCESS,                // mx_info_process_t[1]
+    MX_INFO_PROCESS_THREADS,        // mx_koid_t[n]
+    MX_INFO_RESOURCE_CHILDREN,      // mx_rrec_t[n]
+    MX_INFO_RESOURCE_RECORDS,       // mx_rrec_t[n]
 } mx_object_info_topic_t;
 
 typedef enum {
@@ -50,49 +48,17 @@ typedef enum {
     MX_OBJ_PROP_WAITABLE        = 1,
 } mx_obj_props_t;
 
-// Common MX_INFO header
-typedef struct mx_info_header {
-    uint32_t topic;              // identifies the info struct
-    uint16_t avail_topic_size;   // “native” size of the struct
-    uint16_t topic_size;         // size of the returned struct (<=topic_size)
-    uint32_t avail_count;        // number of records the kernel has
-    uint32_t count;              // number of records returned (limited by buffer size)
-} mx_info_header_t;
-
-#define mx_info_nth_record(rec, n) (&(rec)[n])
-
-typedef struct mx_record_handle_basic {
+typedef struct mx_info_handle_basic {
     mx_koid_t koid;
     mx_rights_t rights;
     uint32_t type;                // mx_obj_type_t;
     uint32_t props;               // mx_obj_props_t;
-} mx_record_handle_basic_t;
-
-// Returned for topic MX_INFO_HANDLE_BASIC
-typedef struct mx_info_handle_basic {
-    mx_info_header_t hdr;
-    mx_record_handle_basic_t rec;
 } mx_info_handle_basic_t;
 
-typedef struct mx_record_process {
-    int return_code;
-} mx_record_process_t;
-
-// Returned for topic MX_INFO_PROCESS
 typedef struct mx_info_process {
-    mx_info_header_t hdr;
-    mx_record_process_t rec;
+    int return_code;
 } mx_info_process_t;
 
-typedef struct mx_record_process_thread {
-    mx_koid_t koid;
-} mx_record_process_thread_t;
-
-// Returned for topic MX_INFO_PROCESS_THREADS
-typedef struct mx_info_process_threads {
-    mx_info_header_t hdr;
-    mx_record_process_thread_t rec[];
-} mx_info_process_threads_t;
 
 // Object properties.
 

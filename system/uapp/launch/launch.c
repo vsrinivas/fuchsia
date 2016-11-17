@@ -281,19 +281,12 @@ int main(int argc, char** argv) {
     check("mx_handle_wait_one", status);
 
     mx_info_process_t info;
-    mx_size_t n = 0;
-    status = mx_object_get_info(proc, MX_INFO_PROCESS, sizeof(info.rec),
-                                &info, sizeof(info), &n);
+    status = mx_object_get_info(proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL);
     check("mx_object_get_info", status);
-    if (n != sizeof(info)) {
-        fprintf(stderr, "mx_object_get_info short read: %zu != %zu\n",
-                (size_t)n, sizeof(info));
-        exit(2);
-    }
 
     if (job)
         mx_handle_close(job);
 
-    printf("Process finished with return code %d\n", info.rec.return_code);
-    return info.rec.return_code;
+    printf("Process finished with return code %d\n", info.return_code);
+    return info.return_code;
 }

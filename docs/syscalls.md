@@ -10,7 +10,7 @@
 ## Objects
 + object_bind_exception_port - attach an exception port to a task
 + object_get_child - find the child of an object by its koid
-+ object_get_info - obtain information about an object
++ [object_get_info](syscalls/object_get_info.md) - obtain information about an object
 + object_get_property - read an object property
 + object_set_property - modify an object property
 + [object_signal](syscalls/object_signal.md) - set or clear the user signals on an object

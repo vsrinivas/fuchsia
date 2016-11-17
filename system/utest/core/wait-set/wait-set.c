@@ -18,13 +18,11 @@ bool wait_set_create_test(void) {
     ASSERT_EQ(mx_waitset_create(0, &ws), NO_ERROR, "");
     ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
-    mx_size_t sz;
     mx_info_handle_basic_t ws_info;
-    mx_status_t status = mx_object_get_info(ws, MX_INFO_HANDLE_BASIC, sizeof(ws_info.rec), &ws_info, sizeof(ws_info), &sz);
+    mx_status_t status = mx_object_get_info(ws, MX_INFO_HANDLE_BASIC, &ws_info, sizeof(ws_info), NULL, NULL);
     ASSERT_EQ(status, NO_ERROR, "");
-    ASSERT_EQ(sz, sizeof(ws_info), "");
-    EXPECT_EQ(ws_info.rec.rights, MX_RIGHT_READ | MX_RIGHT_WRITE, "");
-    EXPECT_EQ(ws_info.rec.type, (uint32_t)MX_OBJ_TYPE_WAIT_SET, "");
+    EXPECT_EQ(ws_info.rights, MX_RIGHT_READ | MX_RIGHT_WRITE, "");
+    EXPECT_EQ(ws_info.type, (uint32_t)MX_OBJ_TYPE_WAIT_SET, "");
 
     EXPECT_EQ(mx_handle_close(ws), NO_ERROR, "");
 

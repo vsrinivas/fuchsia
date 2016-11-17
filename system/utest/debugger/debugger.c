@@ -229,30 +229,27 @@ static bool debugger_thread_list_test(void)
         return false;
     EXPECT_EQ(msg, MSG_EXTRA_THREADS_STARTED, "unexpected response when starting extra threads");
 
-    uint32_t buf_size = sizeof(mx_info_process_threads_t) + 100 * sizeof(mx_record_process_thread_t);
-    mx_info_process_threads_t* threads = tu_malloc(buf_size);
-    mx_size_t size;
+    uint32_t buf_size = 100 * sizeof(mx_koid_t);
+    mx_size_t num_threads;
+    mx_koid_t* threads = tu_malloc(buf_size);
     mx_status_t status = mx_object_get_info(inferior, MX_INFO_PROCESS_THREADS,
-                                            sizeof(mx_record_process_thread_t), threads, buf_size, &size);
+                                            threads, buf_size, &num_threads, NULL);
     ASSERT_EQ(status, NO_ERROR, "");
 
     // There should be at least 1+NUM_EXTRA_THREADS threads in the result.
-    ASSERT_GE(size, sizeof(mx_info_header_t) + (1+NUM_EXTRA_THREADS) * sizeof(mx_record_process_thread_t), "mx_object_get_info failed");
-
-    uint32_t num_threads = threads->hdr.count;
+    ASSERT_GE(num_threads, (unsigned)(1 + NUM_EXTRA_THREADS), "mx_object_get_info failed");
 
     // Verify each entry is valid.
     for (uint32_t i = 0; i < num_threads; ++i) {
-        mx_koid_t koid = threads->rec[i].koid;
+        mx_koid_t koid = threads[i];
         unittest_printf("Looking up thread %llu\n", (long long) koid);
         mx_handle_t thread;
         status = mx_object_get_child(inferior, koid, MX_RIGHT_SAME_RIGHTS, &thread);
         EXPECT_EQ(status, 0, "mx_debug_task_get_child failed");
-        mx_size_t size = 0;
         mx_info_handle_basic_t info;
-        mx_object_get_info(thread, MX_INFO_HANDLE_BASIC, sizeof(mx_record_handle_basic_t), &info, sizeof(info), &size);
-        EXPECT_EQ(size, sizeof(info), "mx_object_get_info failed");
-        EXPECT_EQ(info.rec.type, (uint32_t) MX_OBJ_TYPE_THREAD, "not a thread");
+        status = mx_object_get_info(thread, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);
+        EXPECT_EQ(status, NO_ERROR, "mx_object_get_info failed");
+        EXPECT_EQ(info.type, (uint32_t) MX_OBJ_TYPE_THREAD, "not a thread");
     }
 
     if (!shutdown_inferior(channel, inferior, eport))

@@ -438,13 +438,10 @@ void joinproc(mx_handle_t p) {
 
     // read the return code
     mx_info_process_t proc_info;
-    mx_size_t ret = 0;
-    mx_object_get_info(p, MX_INFO_PROCESS, sizeof(proc_info.rec),
-                       &proc_info, sizeof(proc_info), &ret);
-    if (ret != sizeof(proc_info)) {
-        fprintf(stderr, "[process(%x): object_get_info failed? %" PRIdPTR "]\n", p, ret);
+    if ((r = mx_object_get_info(p, MX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL)) < 0) {
+        fprintf(stderr, "[process(%x): object_get_info failed? %d\n", p, r);
     } else {
-        fprintf(stderr, "[process(%x): status: %d]\n", p, proc_info.rec.return_code);
+        fprintf(stderr, "[process(%x): status: %d]\n", p, proc_info.return_code);
     }
 
     settitle("mxsh");

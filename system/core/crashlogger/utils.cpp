@@ -64,18 +64,16 @@ void do_print_mx_error(const char* file, int line, const char* what, mx_status_t
 
 mx_koid_t get_koid(mx_handle_t handle) {
     mx_info_handle_basic_t info;
-    mx_size_t size = 0;
-    mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec),
-                       &info, sizeof(info), &size);
-    if (size == sizeof(info))
-        return info.rec.koid;
-    // This shouldn't ever happen, so don't just ignore it.
-    fprintf(stderr, "Eh? MX_INFO_HANDLE_BASIC failed\n");
-    // OTOH we can't just fail, we have to be robust about reporting back
-    // to the kernel that we handled the exception.
-    // TODO: Provide ability to safely terminate at any point (e.g., for assert
-    // failures and such).
-    return MX_KOID_INVALID;
+    if (mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL) < 0) {
+        // This shouldn't ever happen, so don't just ignore it.
+        fprintf(stderr, "Eh? MX_INFO_HANDLE_BASIC failed\n");
+        // OTOH we can't just fail, we have to be robust about reporting back
+        // to the kernel that we handled the exception.
+        // TODO: Provide ability to safely terminate at any point (e.g., for assert
+        // failures and such).
+        return MX_KOID_INVALID;
+    }
+    return info.koid;
 }
 
 mx_status_t read_mem(mx_handle_t h, mx_vaddr_t vaddr, void* ptr, size_t len) {

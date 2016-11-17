@@ -320,7 +320,7 @@ bool setup_inferior(const char* name, mx_handle_t* out_channel, mx_handle_t* out
 
     mx_info_handle_basic_t process_info;
     tu_handle_get_basic_info(inferior, &process_info);
-    unittest_printf("Inferior pid = %llu\n", (long long) process_info.rec.koid);
+    unittest_printf("Inferior pid = %llu\n", (long long) process_info.koid);
 
     // |inferior| is given to the child by launchpad_start.
     // We need our own copy, but we need it before launchpad_start returns.
@@ -413,7 +413,7 @@ bool verify_exception(const mx_exception_packet_t* packet,
     if (process != MX_HANDLE_INVALID) {
         mx_info_handle_basic_t process_info;
         tu_handle_get_basic_info(process, &process_info);
-        ASSERT_EQ(process_info.rec.koid, report->context.pid, "wrong process in exception report");
+        ASSERT_EQ(process_info.koid, report->context.pid, "wrong process in exception report");
     }
 
     unittest_printf("exception received: pid %"

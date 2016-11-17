@@ -128,11 +128,11 @@ public:
     void Exit(int retcode);
     void Kill();
 
-    status_t GetInfo(mx_record_process_t* info);
+    status_t GetInfo(mx_info_process_t* info);
 
     status_t CreateUserThread(mxtl::StringPiece name, uint32_t flags, mxtl::RefPtr<UserThread>* user_thread);
 
-    status_t GetThreads(mxtl::Array<mx_record_process_thread_t>* threads);
+    status_t GetThreads(mxtl::Array<mx_koid_t>* threads);
 
     // exception handling support
     status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, bool debugger);
