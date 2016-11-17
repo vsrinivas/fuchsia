@@ -33,7 +33,15 @@ static void log_write(const void* data, size_t len) {
 // The reason these are here is that the "core" tests intentionally do not
 // use mxio. See ./README.md.
 
-void __libc_extensions_init(mx_proc_info_t* pi) {
+mx_handle_t root_resource;
+
+void __libc_extensions_init(uint32_t count, mx_handle_t handle[], uint32_t info[]) {
+    for (unsigned n = 0; n < count; n++) {
+        if (info[n] == MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0)) {
+            root_resource = handle[n];
+            break;
+        }
+    }
 }
 
 ssize_t write(int fd, const void* data, size_t count) {
@@ -76,7 +84,6 @@ off_t lseek(int fd, off_t offset, int whence) {
 int isatty(int fd) {
     return 1;
 }
-
 
 int main(int argc, char** argv) {
     if ((log_handle = mx_log_create(0)) < 0) {

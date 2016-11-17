@@ -110,6 +110,9 @@ typedef uint32_t mx_signals_t;
 #define MX_DATAPIPE_READ_THRESHOLD  MX_OBJECT_SIGNAL_4
 #define MX_DATAPIPE_WRITE_THRESHOLD MX_OBJECT_SIGNAL_5
 
+// Resource
+#define MX_RESOURCE_CHILD_ADDED     MX_OBJECT_SIGNAL_0
+
 // Legacy signal names, to be removed.
 #define MX_SIGNAL_READABLE          MX_OBJECT_SIGNAL_0
 #define MX_SIGNAL_WRITABLE          MX_OBJECT_SIGNAL_1

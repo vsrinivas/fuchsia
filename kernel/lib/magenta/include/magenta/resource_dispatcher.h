@@ -23,6 +23,7 @@ public:
 
     virtual ~ResourceDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_RESOURCE; }
+    status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // MakeRoot() validates the resource as the parent of a tree.
     // If successful children may be added to it, but it may never
@@ -56,6 +57,8 @@ public:
 
     uint16_t get_subtype() const { return subtype_; }
 
+    static constexpr uint32_t kMaxRecords = 32;
+
 private:
     ResourceDispatcher(const char* name, uint16_t subtype_);
     mx_status_t ValidateLocked();
@@ -70,6 +73,8 @@ private:
     uint32_t num_children_;
     uint16_t num_records_;
     uint16_t subtype_;
+
+    mxtl::unique_ptr<PortClient> iopc_;
 
     bool valid_;
     char name_[MX_MAX_NAME_LEN];

@@ -29,9 +29,13 @@ private:
     friend class ResourceDispatcher;
 };
 
+// WRITE: ability to add child resources to a resource
+// EXECUTE: ability to get_handle() and do_action()
+// ENUMERATE: ability to list children, list records, and get children
 
 constexpr mx_rights_t kDefaultResourceRights =
-    MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_ENUMERATE;
+    MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_EXECUTE |
+    MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_ENUMERATE;
 
 status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher,
                                     mx_rights_t* rights, const char* name, uint16_t subtype) {
@@ -57,6 +61,17 @@ ResourceDispatcher::ResourceDispatcher(const char* name, uint16_t subtype) :
 ResourceDispatcher::~ResourceDispatcher() {
 }
 
+status_t ResourceDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
+    AutoLock lock(lock_);
+    if (iopc_)
+        return ERR_BAD_STATE;
+
+    if ((client->get_trigger_signals() & (~MX_RESOURCE_CHILD_ADDED)) != 0)
+        return ERR_INVALID_ARGS;
+
+    iopc_ = mxtl::move(client);
+    return NO_ERROR;
+}
 
 status_t ResourceDispatcher::MakeRoot() {
     AutoLock lock(lock_);
@@ -80,7 +95,8 @@ status_t ResourceDispatcher::AddChild(const mxtl::RefPtr<ResourceDispatcher>& ch
     children_.push_back(mxtl::move(child));
     ++num_children_;
 
-    //TODO: signal observers
+    if (iopc_)
+        iopc_->Signal(MX_RESOURCE_CHILD_ADDED, &lock_);
 
     return NO_ERROR;
 }
@@ -108,6 +124,9 @@ status_t ResourceDispatcher::AddRecord(mxtl::unique_ptr<ResourceRecord> rec) {
     if (valid_)
         return ERR_BAD_STATE;
 
+    if (num_records_ >= kMaxRecords)
+        return ERR_BAD_STATE;
+
     //TODO: validate record contents, assign appropriate hooks
     rec->create_dispatcher_ = default_create_dispatcher;
     rec->do_action_ = default_do_action;
@@ -128,9 +147,6 @@ status_t ResourceDispatcher::AddRecord(mx_rrec_t* tmpl) {
 }
 
 status_t ResourceDispatcher::AddRecords(user_ptr<mx_rrec_t> records, size_t count) {
-    if (count > 32)
-        return ERR_BAD_STATE;
-
     for (uint32_t n = 1; n < count; n++) {
         status_t status;
         mxtl::unique_ptr<ResourceRecord> rec;
@@ -149,8 +165,6 @@ status_t ResourceDispatcher::AddRecords(user_ptr<mx_rrec_t> records, size_t coun
 
 status_t ResourceDispatcher::ValidateLocked(void) {
     if (valid_)
-        return ERR_BAD_STATE;
-    if (num_children_ == 0)
         return ERR_BAD_STATE;
 
     valid_ = true;
@@ -178,6 +192,7 @@ mx_status_t ResourceDispatcher::GetRecords(user_ptr<mx_rrec_t> records, size_t m
     mx_rrec_t rec = {};
     rec.self.type = MX_RREC_SELF;
     rec.self.subtype = subtype_;
+    rec.self.koid = get_koid();
     memcpy(rec.self.name, name_, MX_MAX_NAME_LEN);
 
     {
@@ -229,6 +244,7 @@ mx_status_t ResourceDispatcher::GetChildren(user_ptr<mx_rrec_t> records, size_t 
             rec.self.subtype = child.subtype_;
             rec.self.child_count = child.num_children_;
             rec.self.record_count = child.num_records_;
+            rec.self.koid = child.get_koid();
             if (records.copy_array_to_user(&rec, 1, n) != NO_ERROR) {
                 status = ERR_INVALID_ARGS;
                 break;

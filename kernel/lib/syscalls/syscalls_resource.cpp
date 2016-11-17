@@ -35,7 +35,7 @@ mx_status_t sys_resource_create(mx_handle_t handle, user_ptr<mx_rrec_t> records,
         return result;
 
     // Disallow no records (self is required) or excessive number
-    if ((count < 1) || (count > 32))
+    if ((count < 1) || (count > ResourceDispatcher::kMaxRecords))
         return ERR_OUT_OF_RANGE;
 
     mx_rrec_t rec;
@@ -96,7 +96,7 @@ mx_status_t sys_resource_get_handle(mx_handle_t handle, uint32_t index,
     // Obtain the parent Resource
     mx_status_t result;
     mxtl::RefPtr<ResourceDispatcher> resource;
-    result = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_WRITE);
+    result = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_EXECUTE);
     if (result)
         return result;
 
@@ -128,7 +128,7 @@ mx_status_t sys_resource_do_action(mx_handle_t handle, uint32_t index,
     // Obtain the parent Resource
     mx_status_t result;
     mxtl::RefPtr<ResourceDispatcher> resource;
-    result = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_WRITE);
+    result = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_EXECUTE);
     if (result)
         return result;
 

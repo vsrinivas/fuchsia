@@ -60,8 +60,7 @@ public:
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
     status_t copy_array_to_user(const T* src, size_t count, size_t offset) const {
-        return copy_to_user_unsafe(ptr_ + (offset * internal::type_size<T>()),
-                                   src, count * internal::type_size<T>());
+        return copy_to_user_unsafe(ptr_ + offset, src, count * internal::type_size<T>());
     }
 
     // Copies a single T from user memory. (Using this will fail to compile if T is |void|.)
@@ -83,7 +82,7 @@ public:
     // WARNING: This does not check that |count| is reasonable (i.e., that multiplication won't
     // overflow).
     status_t copy_array_from_user(typename mxtl::remove_const<T>::type* dst, size_t count, size_t offset) const {
-        return copy_from_user_unsafe(dst, ptr_ + (offset * internal::type_size<T>()), count * internal::type_size<T>());
+        return copy_from_user_unsafe(dst, ptr_ + offset, count * internal::type_size<T>());
     }
 
 private:

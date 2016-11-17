@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userapp
 
-MODULE_SRCS += \
+MODULE_SRCS := \
     $(wildcard $(LOCAL_DIR)/*/*.c) \
     $(wildcard $(LOCAL_DIR)/*/*.cpp) \
     $(LOCAL_DIR)/posix-bits.c \
