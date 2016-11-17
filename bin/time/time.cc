@@ -39,9 +39,8 @@ int main(int argc, char **argv) {
   }
 
   mx_info_process_t proc_info;
-  mx_size_t info_size;
-  status = mx_object_get_info(handle, MX_INFO_PROCESS, sizeof(proc_info.rec),
-                              &proc_info, sizeof(proc_info), &info_size);
+  status = mx_object_get_info(handle, MX_INFO_PROCESS, &proc_info,
+                              sizeof(proc_info), nullptr, nullptr);
   mx_handle_close(handle);
 
   if (status != NO_ERROR) {
@@ -49,13 +48,9 @@ int main(int argc, char **argv) {
            status);
     return 1;
   }
-  if (info_size != sizeof(proc_info)) {
-    fprintf(stderr, "Failed to get full process info\n");
-    return 1;
-  }
-  if (proc_info.rec.return_code != 0) {
+  if (proc_info.return_code != 0) {
     fprintf(stderr, "%s exited with nonzero status: %d\n", argv[1],
-           proc_info.rec.return_code);
+           proc_info.return_code);
   }
   suseconds_t usecdiff =
       endtimeval.tv_usec >= starttimeval.tv_usec
@@ -66,5 +61,5 @@ int main(int argc, char **argv) {
     secdiff--;
   }
   printf("real\t%ld.%06lds\n", secdiff, usecdiff);
-  return proc_info.rec.return_code;
+  return proc_info.return_code;
 }
