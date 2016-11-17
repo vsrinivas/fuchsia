@@ -4,7 +4,6 @@
 
 group("mtl") {
   public_deps = [
-    "//lib/mtl/data_pipe",
     "//lib/mtl/handles",
     "//lib/mtl/io",
     "//lib/mtl/socket",
@@ -19,7 +18,6 @@ executable("mtl_unittests") {
   testonly = true
 
   sources = [
-    "data_pipe/data_pipe_drainer_unittest.cc",
     "handles/object_info_unittest.cc",
     "io/redirection_unittest.cc",
     "socket/files_unittest.cc",
