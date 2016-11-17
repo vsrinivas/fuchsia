@@ -126,8 +126,8 @@ void StoryControllerImpl::StartStory(
 
   fidl::InterfaceHandle<Link> link;
   root_->Dup(GetProxy(&link));
-  story_->StartModule(story_info_->url, std::move(link), GetProxy(&module_),
-                      std::move(view_owner_request));
+  story_->StartModule(story_info_->url, std::move(link), nullptr, nullptr,
+                      GetProxy(&module_), std::move(view_owner_request));
 
   story_info_->is_running = true;
   story_provider_impl_->WriteStoryInfo(story_info_->Clone());

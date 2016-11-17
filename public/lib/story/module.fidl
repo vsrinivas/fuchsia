@@ -23,13 +23,17 @@ interface Module {
   // Story.StartModule().
   //
   // The Link instance can be used to exchange data with the calling
-  // module.
+  // module. Additionally, this module may provide its services to the calling
+  // module by implementing its |outgoing_services|, and consume the calling
+  // module's |incoming_services|.
   //
   // The Story instance can be used to start more Module instances,
   // and to create Link instances to share data with those Module
   // instances. It can also be used to signal that this module wants
   // to stop.
-  Initialize(Story story, Link link);
+  Initialize(Story story, Link link,
+             ServiceProvider? incoming_services,
+             ServiceProvider&? outgoing_services);
 
   // This method is invoked by the Story instance to notify the module
   // that something in the system has requested it to stop. What can

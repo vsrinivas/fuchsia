@@ -4,6 +4,7 @@
 
 module modular;
 
+import "apps/modular/services/application/service_provider.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/story/module_controller.fidl";
 import "apps/mozart/services/views/view_token.fidl";
@@ -32,10 +33,16 @@ interface Story {
   CreateLink(string name, Link& link);
 
   // Starts a new module. The query identifies the module in some way.
-  // Currently, it's just the URL of the application executable, but
-  // in the future it might for example be a specification of a data
-  // schema the module can provide or consume.
-  StartModule(string query, Link link, ModuleController& module_controller,
+  // Currently, it's just the URL of the application executable, but in the
+  // future it might for example be a specification of a data schema the module
+  // can provide or consume. The calling module and the new module may also
+  // interact by exchanging ServiceProviders. The calling module may provide its
+  // |outgoing_services|, and the new module may implement |incoming_services|,
+  // if an interface request is supplied.
+  StartModule(string query, Link link,
+              ServiceProvider? outgoing_services,
+              ServiceProvider&? incoming_services,
+              ModuleController& module_controller,
               mozart.ViewOwner& view_owner);
 
   // The module holding this handle to the Story declares it's done

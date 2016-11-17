@@ -56,6 +56,8 @@ class StoryConnection : public Story {
   void StartModule(
       const fidl::String& query,
       fidl::InterfaceHandle<Link> link,
+      fidl::InterfaceHandle<ServiceProvider> outgoing_services,
+      fidl::InterfaceRequest<ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   void Done() override;
@@ -82,6 +84,8 @@ class StoryImpl : public StoryContext {
   void CreateLink(const fidl::String& name, fidl::InterfaceRequest<Link> link);
   void StartModule(const fidl::String& query,
                    fidl::InterfaceHandle<Link> link,
+                   fidl::InterfaceHandle<ServiceProvider> outgoing_services,
+                   fidl::InterfaceRequest<ServiceProvider> incoming_services,
                    fidl::InterfaceRequest<ModuleController> module_controller,
                    fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
   void Dispose(ModuleControllerImpl* controller);

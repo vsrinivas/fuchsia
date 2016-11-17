@@ -44,9 +44,14 @@ void StoryConnection::CreateLink(const fidl::String& name,
 void StoryConnection::StartModule(
     const fidl::String& query,
     fidl::InterfaceHandle<Link> link,
+    fidl::InterfaceHandle<ServiceProvider> outgoing_services,
+    fidl::InterfaceRequest<ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_impl_->StartModule(query, std::move(link), std::move(module_controller),
+  story_impl_->StartModule(query, std::move(link),
+                           std::move(outgoing_services),
+                           std::move(incoming_services),
+                           std::move(module_controller),
                            std::move(view_owner));
 }
 
@@ -87,11 +92,15 @@ void StoryImpl::CreateLink(const fidl::String& name,
 void StoryImpl::StartModule(
     const fidl::String& query,
     fidl::InterfaceHandle<Link> link,
+    fidl::InterfaceHandle<ServiceProvider> outgoing_services,
+    fidl::InterfaceRequest<ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   resolver_->Resolve(
       query, ftl::MakeCopyable([
         this, link = std::move(link),
+        outgoing_services = std::move(outgoing_services),
+        incoming_services = std::move(incoming_services),
         module_controller_request = std::move(module_controller_request),
         view_owner_request = std::move(view_owner_request)
       ](fidl::String module_url) mutable {
@@ -114,7 +123,8 @@ void StoryImpl::StartModule(
         fidl::InterfaceHandle<Story> self;
         fidl::InterfaceRequest<Story> self_request = GetProxy(&self);
 
-        module->Initialize(std::move(self), std::move(link));
+        module->Initialize(std::move(self), std::move(link),
+            std::move(outgoing_services), std::move(incoming_services));
 
         Connection connection;
 

@@ -314,8 +314,12 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
   }
 
   // |Module|
-  void Initialize(fidl::InterfaceHandle<modular::Story> story,
-                  fidl::InterfaceHandle<modular::Link> link) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::Link> link,
+      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
+      override {
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
 
@@ -330,14 +334,14 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
     fidl::InterfaceHandle<mozart::ViewOwner> module1_view;
     story_->StartModule("file:///system/apps/example_module1",
-                        std::move(module1_link_handle), GetProxy(&module1_),
-                        GetProxy(&module1_view));
+                        std::move(module1_link_handle), nullptr, nullptr,
+                        GetProxy(&module1_), GetProxy(&module1_view));
     ConnectView(std::move(module1_view));
 
     fidl::InterfaceHandle<mozart::ViewOwner> module2_view;
     story_->StartModule("file:///system/apps/example_module2",
-                        std::move(module2_link_handle), GetProxy(&module2_),
-                        GetProxy(&module2_view));
+                        std::move(module2_link_handle), nullptr, nullptr,
+                        GetProxy(&module2_), GetProxy(&module2_view));
     ConnectView(std::move(module2_view));
 
     connections_.emplace_back(

@@ -15,6 +15,7 @@ fidl("story") {
 
   deps = [
     "//apps/modular/services/document_store",
+    "//apps/modular/services/application:service_provider"
   ]
 }
 

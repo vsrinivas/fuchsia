@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:apps.modular.lib.app.dart/app.dart';
+import 'package:apps.modular.services.application/service_provider.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.story/module.fidl.dart';
 import 'package:apps.modular.services.story/story.fidl.dart';
@@ -30,6 +31,8 @@ class ModuleImpl extends Module {
   void initialize(
     InterfaceHandle<Story> storyHandle,
     InterfaceHandle<Link> linkHandle,
+    InterfaceHandle<ServiceProvider> incomingServices,
+    InterfaceRequest<ServiceProvider> outgoingServices
   ) {
     _log('ModuleImpl::initialize call');
 

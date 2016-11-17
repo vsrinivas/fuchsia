@@ -12,6 +12,11 @@ fidl("application") {
     "application_environment.fidl",
     "application_launcher.fidl",
     "application_runner.fidl",
-    "service_provider.fidl",
   ]
+
+  public_deps = [":service_provider"]
+}
+
+fidl("service_provider") {
+  sources = ["service_provider.fidl"]
 }

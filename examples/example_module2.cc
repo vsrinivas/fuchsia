@@ -132,8 +132,12 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
   }
 
   // |Module|
-  void Initialize(fidl::InterfaceHandle<modular::Story> story,
-                  fidl::InterfaceHandle<modular::Link> link) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::Story> story,
+      fidl::InterfaceHandle<modular::Link> link,
+      fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
+      override {
     story_.Bind(std::move(story));
     store_.Initialize(std::move(link));
   }
