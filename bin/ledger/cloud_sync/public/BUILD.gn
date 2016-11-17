@@ -4,10 +4,15 @@
 
 source_set("public") {
   sources = [
+    "ledger_sync.h",
     "page_sync.h",
   ]
 
   public_deps = [
+    "//apps/ledger/src/cloud_provider/public",
+    "//apps/ledger/src/configuration:lib",
+    "//apps/ledger/src/firebase",
+    "//apps/ledger/src/storage/public",
     "//lib/ftl",
   ]
 }

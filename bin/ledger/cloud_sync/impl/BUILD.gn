@@ -6,6 +6,8 @@ source_set("impl") {
   sources = [
     "commit_upload.cc",
     "commit_upload.h",
+    "ledger_sync_impl.cc",
+    "ledger_sync_impl.h",
     "page_sync_delegate_impl.cc",
     "page_sync_delegate_impl.h",
     "page_sync_impl.cc",
@@ -20,6 +22,8 @@ source_set("impl") {
   ]
 
   deps = [
+    "//apps/ledger/src/cloud_provider/impl",
+    "//apps/ledger/src/firebase",
     "//lib/mtl",
   ]
 }
