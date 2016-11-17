@@ -101,7 +101,7 @@ class DummyUserShellApp
     : public modular::StoryWatcher,
       public modular::SingleServiceViewApp<modular::UserShell> {
  public:
-  explicit DummyUserShellApp() : story_watcher_binding_(this) {}
+  DummyUserShellApp() : story_watcher_binding_(this) {}
   ~DummyUserShellApp() override = default;
 
  private:
@@ -204,8 +204,8 @@ class DummyUserShellApp
                   << modular::to_string(story_info_->story_page_id)
                   << " is_running: " << story_info_->is_running;
 
-    story_provider_->ResumeStoryByInfo(story_info_->Clone(),
-                                       fidl::GetProxy(&story_controller_));
+    story_provider_->ResumeStory(story_info_->id,
+                                 fidl::GetProxy(&story_controller_));
     InitStory();
   }
 

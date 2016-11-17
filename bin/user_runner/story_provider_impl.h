@@ -70,14 +70,9 @@ class StoryProviderImpl : public StoryProvider {
                    const DeleteStoryCallback& callback) override;
 
   // |StoryProvider|
-  void ResumeStoryById(const fidl::String& story_id,
-                       fidl::InterfaceRequest<StoryController>
-                           story_controller_request) override;
-
-  // |StoryProvider|
-  void ResumeStoryByInfo(fidl::StructPtr<StoryInfo> story_info,
-                         fidl::InterfaceRequest<StoryController>
-                             story_controller_request) override;
+  void ResumeStory(const fidl::String& story_id,
+                   fidl::InterfaceRequest<StoryController>
+                   story_controller_request) override;
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override;

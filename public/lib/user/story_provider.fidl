@@ -17,7 +17,7 @@ import "apps/mozart/services/views/view_token.fidl";
 // accesses it. Apply same pattern as for Story/Module/Link here.
 interface StoryProvider {
   // Creates a new story by running the module at |url|. Gives control
-  // over the newly created story through a StroyController.
+  // over the newly created story through a StoryController.
   CreateStory(string url, StoryController& story);
 
   // Delete an existing story from the list of known stories. Returns when the
@@ -29,15 +29,11 @@ interface StoryProvider {
 
   // Obtains a controller for a previously run story identified by its
   // story ID. Obtaining the controller doesn't run it yet.
-  ResumeStoryById(string story_id, StoryController& story);
-
-  // Obtains a controller for a previously run story identified by its
-  // story info. Obtaining the controller doesn't run it yet.
-  ResumeStoryByInfo(StoryInfo story_info, StoryController& story);
+  ResumeStory(string story_id, StoryController& story);
 
   // Returns IDs of all previously run stories for the user. More
   // information about the stories can be retrieved using
-  // ResumeStoryById().
+  // GetStoryInfo(), or by ResumeStoryBy()+StoryController.GetInfo().
   PreviousStories() => (array<string> story_ids);
 };
 

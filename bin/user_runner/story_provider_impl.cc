@@ -206,8 +206,7 @@ class CreateStoryCall : public Transaction {
   FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
 
-// Delete a story given its id.
-
+// Deletes a story given its id.
 class DeleteStoryCall : public Transaction {
  public:
   using Result = StoryProviderImpl::DeleteStoryCallback;
@@ -240,7 +239,6 @@ class DeleteStoryCall : public Transaction {
 
 class ResumeStoryCall : public Transaction {
  public:
-  // Resumes a story given only its ID.
   ResumeStoryCall(
       TransactionContainer* const container,
       ledger::Ledger* const ledger,
@@ -268,34 +266,6 @@ class ResumeStoryCall : public Transaction {
 
                 Done();
               });
-        });
-  }
-
-  // Resumes a story given its full story info. Compared to the
-  // variant above, this saves to obtain the story info first.
-  ResumeStoryCall(
-      TransactionContainer* const container,
-      ledger::Ledger* const ledger,
-      ApplicationEnvironment* const environment,
-      StoryProviderImpl* const story_provider_impl,
-      StoryInfoPtr story_info,
-      fidl::InterfaceRequest<StoryController> story_controller_request)
-      : Transaction(container),
-        ledger_(ledger),
-        environment_(environment),
-        story_provider_impl_(story_provider_impl),
-        story_controller_request_(std::move(story_controller_request)),
-        story_info_(std::move(story_info)) {
-    ledger_->GetPage(
-        story_info_->story_page_id.Clone(), GetProxy(&story_page_),
-        [this](ledger::Status status) {
-          ApplicationLauncherPtr launcher;
-          environment_->GetApplicationLauncher(fidl::GetProxy(&launcher));
-          StoryControllerImpl::New(std::move(story_info_), story_provider_impl_,
-                                   std::move(launcher),
-                                   std::move(story_controller_request_));
-
-          Done();
         });
   }
 
@@ -376,6 +346,7 @@ StoryProviderImpl::StoryProviderImpl(
   ledger_.Bind(std::move(ledger));
 }
 
+// |StoryProvider|
 void StoryProviderImpl::GetStoryInfo(
     const fidl::String& story_id,
     const GetStoryInfoCallback& story_info_callback) {
@@ -430,22 +401,12 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 }
 
 // |StoryProvider|
-void StoryProviderImpl::ResumeStoryById(
+void StoryProviderImpl::ResumeStory(
     const fidl::String& story_id,
     fidl::InterfaceRequest<StoryController> story_controller_request) {
-  FTL_LOG(INFO) << "StoryProviderImpl::ResumeStoryById() " << story_id;
+  FTL_LOG(INFO) << "StoryProviderImpl::ResumeStory() " << story_id;
   new ResumeStoryCall(&transaction_container_, ledger_.get(),
                       environment_.get(), this, story_id,
-                      std::move(story_controller_request));
-}
-
-// |StoryProvider|
-void StoryProviderImpl::ResumeStoryByInfo(
-    StoryInfoPtr story_info,
-    fidl::InterfaceRequest<StoryController> story_controller_request) {
-  FTL_LOG(INFO) << "StoryProviderImpl::ResumeStoryByInfo() " << story_info->id;
-  new ResumeStoryCall(&transaction_container_, ledger_.get(),
-                      environment_.get(), this, std::move(story_info),
                       std::move(story_controller_request));
 }
 
