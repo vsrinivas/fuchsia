@@ -34,16 +34,30 @@ Assign 192.168.3.1 to the tap interface.
 $ sudo ifconfig qemu 192.168.3.1/24
 ```
 
-### Setting up dnsmasq
+### Install dnsmasq
 
 You need a DHCPv4 server running for the subnet.
 In this document, we use dnsmasq.
+It also forwards DNS queries to upstream.
+
 On Ubuntu, install dnsmasq with apt-get.
 
 ```
 $ sudo apt-get install dnsmasq
 ```
-Add these 2 lines to /etc/dnsmasq.conf.
+
+On Mac, you can use [homebrew](http://brew.sh) to install dnsmasq.
+
+```
+$ brew install dnsmasq
+```
+
+### Setting up dnsmasq
+
+You need these 2 lines in your dnsmasq.conf. You can delete everything else.
+
+On Ubuntu, edit /etc/dnsmasq.conf.
+On Mac, edit /usr/local/etc/dnsmasq.conf (or $HOMEBREW_PREFIX/etc/dnsmasq.conf if you changed the installation dir).
 
 ```
 interface=qemu
@@ -52,14 +66,24 @@ dhcp-range=qemu,192.168.3.50,192.168.3.150,24h
 
 Restart dnsmasq.
 
+On Ubuntu,
+
 ```
 $ sudo /etc/init.d/dnsmasq restart
+```
+
+On Mac (if you used homebrew),
+
+```
+$ sudo brew services restart dnsmasq
 ```
 
 ### Setting up NAT (on Linux)
 
 Optionally you can set up NAT to route the traffic to the external network
 interface (e.g. eth0)
+
+Execute the following commands as root (you need this every time you reboot the machine).
 
 ```
 echo 1 > /proc/sys/net/ipv4/ip_forward
@@ -94,7 +118,7 @@ Assign 192.168.2.1 to the USB Ethernet adapter (e.g. eth5)
 $ sudo ifconfig eth5 192.168.2.1/24
 ```
 
-Add these 2 lines to /etc/dnsmasq.
+Add these 2 lines to dnsmasq.conf.
 
 ```
 interface=eth5
