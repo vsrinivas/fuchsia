@@ -388,7 +388,7 @@ void PageStorageImpl::AddObjectFromSync(
               } else if (found_id != object_id) {
                 FTL_LOG(ERROR) << "Object ID mismatch. Given ID: " << object_id
                                << ". Found: " << found_id;
-                files::DeletePath(objects_dir_ + "/" + ToHex(found_id), false);
+                files::DeletePath(GetFilePath(found_id), false);
                 callback(Status::OBJECT_ID_MISMATCH);
               } else {
                 callback(Status::OK);
@@ -411,7 +411,7 @@ void PageStorageImpl::GetObject(
     ObjectIdView object_id,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
-  std::string file_path = objects_dir_ + "/" + ToHex(object_id);
+  std::string file_path = GetFilePath(object_id);
   if (!files::IsFile(file_path)) {
     GetObjectFromSync(object_id, callback);
     return;
@@ -429,7 +429,7 @@ void PageStorageImpl::GetObject(
 Status PageStorageImpl::GetObjectSynchronous(
     ObjectIdView object_id,
     std::unique_ptr<const Object>* object) {
-  std::string file_path = objects_dir_ + "/" + ToHex(object_id);
+  std::string file_path = GetFilePath(object_id);
   if (!files::IsFile(file_path))
     return Status::NOT_FOUND;
 
@@ -451,8 +451,8 @@ Status PageStorageImpl::AddObjectSynchronous(
   if (fsync(fd.get()) != 0)
     return Status::INTERNAL_IO_ERROR;
   fd.reset();
-  std::string file_path = objects_dir_ + "/" + ToHex(object_id);
-  Status status = StagingToDestination(data.size(), staging_path, file_path);
+  Status status =
+      StagingToDestination(data.size(), staging_path, GetFilePath(object_id));
   if (status != Status::OK)
     return status;
   return GetObjectSynchronous(object_id, object);
@@ -565,12 +565,16 @@ void PageStorageImpl::GetObjectFromSync(
         callback(status, nullptr);
         return;
       }
-      std::string file_path = objects_dir_ + "/" + ToHex(object_id);
+      std::string file_path = GetFilePath(object_id);
       FTL_DCHECK(files::IsFile(file_path));
       callback(Status::OK, std::make_unique<ObjectImpl>(std::move(object_id),
                                                         std::move(file_path)));
     });
   });
+}
+
+std::string PageStorageImpl::GetFilePath(ObjectIdView object_id) {
+  return objects_dir_ + "/" + ToHex(object_id);
 }
 
 bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {

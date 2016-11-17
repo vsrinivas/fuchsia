@@ -96,6 +96,7 @@ class PageStorageImpl : public PageStorage {
       ObjectIdView object_id,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback);
+  std::string GetFilePath(ObjectIdView object_id);
 
   // Notifies the registered watchers with the given |commit|.
   void NotifyWatchers(const Commit& commit, ChangeSource source);
