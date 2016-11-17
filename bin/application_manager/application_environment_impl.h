@@ -22,10 +22,12 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
  public:
   ApplicationEnvironmentImpl(
       ApplicationEnvironmentImpl* parent,
-      fidl::InterfaceHandle<ApplicationEnvironmentHost> host);
+      fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
+      const fidl::String& label);
   ~ApplicationEnvironmentImpl() override;
 
   ApplicationEnvironmentImpl* parent() const { return parent_; }
+  const std::string& label() const { return label_; }
 
   // Removes the child environment from this environment and returns the owning
   // reference to the child's controller. The caller of this function typically
@@ -46,8 +48,8 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   void CreateNestedEnvironment(
       fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
       fidl::InterfaceRequest<ApplicationEnvironment> environment,
-      fidl::InterfaceRequest<ApplicationEnvironmentController> controller)
-      override;
+      fidl::InterfaceRequest<ApplicationEnvironmentController> controller,
+      const fidl::String& label) override;
 
   void GetApplicationLauncher(
       fidl::InterfaceRequest<ApplicationLauncher> launcher) override;
@@ -64,6 +66,8 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
       fidl::InterfaceRequest<ApplicationController> controller) override;
 
  private:
+  static uint32_t next_numbered_label_;
+
   void CreateApplicationWithProcess(
       const std::string& path,
       fidl::InterfaceHandle<ApplicationEnvironment> environment,
@@ -75,6 +79,7 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
 
   ApplicationEnvironmentImpl* parent_;
   ApplicationEnvironmentHostPtr host_;
+  std::string label_;
 
   std::unordered_map<ApplicationEnvironmentImpl*,
                      std::unique_ptr<ApplicationEnvironmentControllerImpl>>

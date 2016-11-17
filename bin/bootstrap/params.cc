@@ -14,6 +14,7 @@ namespace {
 
 constexpr const char kDefaultConfigFile[] =
     "/system/data/bootstrap/services.config";
+constexpr const char kDefaultLabel[] = "boot";
 
 }  // namespace
 
@@ -49,6 +50,11 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
       launch_info->url = split[1].ToString();
       services_.emplace(split[0].ToString(), std::move(launch_info));
     }
+  }
+
+  // --label=<name>
+  if (!command_line.GetOptionValue("label", &label_) || label_.empty()) {
+    label_ = kDefaultLabel;
   }
 
   // positional args

@@ -16,6 +16,7 @@
 #include <utility>
 
 #include "apps/modular/src/application_manager/url_resolver.h"
+#include "lib/ftl/strings/string_printf.h"
 
 namespace modular {
 namespace {
@@ -23,6 +24,7 @@ namespace {
 constexpr char kFuchsiaMagic[] = "#!fuchsia ";
 constexpr size_t kFuchsiaMagicLength = sizeof(kFuchsiaMagic) - 1;
 constexpr size_t kMaxShebangLength = 2048;
+constexpr char kNumberedLabelFormat[] = "env-%d";
 
 bool HasHandle(const fidl::Map<uint32_t, mx::handle<void>>& startup_handles,
                uint32_t handle_id) {
@@ -103,11 +105,19 @@ bool HasShebang(const std::string& path,
 
 }  // namespace
 
+uint32_t ApplicationEnvironmentImpl::next_numbered_label_ = 1u;
+
 ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
     ApplicationEnvironmentImpl* parent,
-    fidl::InterfaceHandle<ApplicationEnvironmentHost> host)
+    fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
+    const fidl::String& label)
     : parent_(parent) {
   host_.Bind(std::move(host));
+
+  if (label.size() == 0)
+    label_ = ftl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
+  else
+    label_ = label.get().substr(0, ApplicationEnvironment::kLabelMaxLength);
 }
 
 ApplicationEnvironmentImpl::~ApplicationEnvironmentImpl() = default;
@@ -138,11 +148,12 @@ ApplicationEnvironmentImpl::ExtractApplication(
 void ApplicationEnvironmentImpl::CreateNestedEnvironment(
     fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
     fidl::InterfaceRequest<ApplicationEnvironment> environment,
-    fidl::InterfaceRequest<ApplicationEnvironmentController>
-        controller_request) {
+    fidl::InterfaceRequest<ApplicationEnvironmentController> controller_request,
+    const fidl::String& label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
-      std::make_unique<ApplicationEnvironmentImpl>(this, std::move(host)));
+      std::make_unique<ApplicationEnvironmentImpl>(this, std::move(host),
+                                                   label));
   ApplicationEnvironmentImpl* child = controller->environment();
   child->Duplicate(std::move(environment));
   children_.emplace(child, std::move(controller));

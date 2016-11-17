@@ -33,6 +33,7 @@ namespace {
 const char kAppId[] = "modular_user_runner";
 const char kLedgerBaseDir[] = "/data/ledger/";
 const char kHexadecimalCharacters[] = "0123456789abcdef";
+const char kEnvironmentLabelPrefix[] = "user-";
 
 std::string ToHex(const fidl::Array<uint8_t>& user_id) {
   std::string result;
@@ -87,7 +88,8 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
     ApplicationEnvironmentHostPtr env_host;
     binding_.Bind(fidl::GetProxy(&env_host));
     application_context_->environment()->CreateNestedEnvironment(
-        std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_));
+        std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_),
+        kEnvironmentLabelPrefix + ToHex(user_id));
 
     // Register and set up Services hosted in this environment.
     RegisterServices();

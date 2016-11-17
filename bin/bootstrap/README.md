@@ -37,6 +37,10 @@ Do not register services from config file (note that --reg-associate will not wo
 
     --no-config
 
+Set environment label (default is "boot"):
+
+    --label=<name>
+
 Standard logging arguments:
 
     --verbose=[<level>]

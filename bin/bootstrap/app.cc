@@ -31,7 +31,8 @@ App::App(Params* params)
   modular::ApplicationEnvironmentHostPtr env_host;
   env_host_binding_.Bind(GetProxy(&env_host));
   application_context_->environment()->CreateNestedEnvironment(
-      std::move(env_host), GetProxy(&env_), GetProxy(&env_controller_));
+      std::move(env_host), GetProxy(&env_), GetProxy(&env_controller_),
+      params->label());
   env_->GetApplicationLauncher(GetProxy(&env_launcher_));
 
   // Register services.

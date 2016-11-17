@@ -21,6 +21,8 @@ class Params {
 
   bool Setup(const ftl::CommandLine& command_line);
 
+  std::string label() const { return label_; }
+
   ServiceMap TakeServices() { return std::move(services_); }
   modular::ApplicationLaunchInfoPtr TakeInitialLaunch() {
     return std::move(initial_launch_);
@@ -29,6 +31,7 @@ class Params {
  private:
   ServiceMap services_;
   modular::ApplicationLaunchInfoPtr initial_launch_;
+  std::string label_;
 };
 
 }  // namespace bootstrap

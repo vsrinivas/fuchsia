@@ -9,12 +9,17 @@
 #include "apps/modular/services/application/application_environment.fidl.h"
 
 namespace modular {
+namespace {
+
+constexpr char kRootLabel[] = "root";
+
+}  // namespace
 
 RootEnvironmentHost::RootEnvironmentHost() : host_binding_(this) {
   fidl::InterfaceHandle<ApplicationEnvironmentHost> host;
   host_binding_.Bind(&host);
-  environment_ =
-      std::make_unique<ApplicationEnvironmentImpl>(nullptr, std::move(host));
+  environment_ = std::make_unique<ApplicationEnvironmentImpl>(
+      nullptr, std::move(host), kRootLabel);
 }
 
 RootEnvironmentHost::~RootEnvironmentHost() = default;

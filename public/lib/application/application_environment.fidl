@@ -15,6 +15,9 @@ import "apps/modular/services/application/service_provider.fidl";
 // support for their lifecycle.
 [ServiceName="modular.ApplicationEnvironment"]
 interface ApplicationEnvironment {
+  // Maximum length for an environment label.
+  const uint32 kLabelMaxLength = 32;
+
   // Creates another interface to this environment.
   // Note: Assigning explicit ordinal index because this method is referenced
   // manually in programs such as mxsh.
@@ -34,9 +37,14 @@ interface ApplicationEnvironment {
   // The |controller| can be used to control the lifecycle of the created
   // environment. If an |ApplicationEnvironmentController|'s interface is
   // request, the environment will be killed when the interface is closed.
+  //
+  // The |label| is an optional name to associate with the environment for
+  // diagnostic purposes.  The label will be truncated if it is longer
+  // than |kLabelMaxLength|.
   CreateNestedEnvironment(ApplicationEnvironmentHost host,
                           ApplicationEnvironment& environment,
-                          ApplicationEnvironmentController&? controller);
+                          ApplicationEnvironmentController&? controller,
+                          string? label);
 
   // Gets the ApplicationLauncher associated with this environment.
   //
