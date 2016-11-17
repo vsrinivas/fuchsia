@@ -413,8 +413,7 @@ void PageStorageImpl::GetObject(
         callback) {
   std::string file_path = objects_dir_ + "/" + ToHex(object_id);
   if (!files::IsFile(file_path)) {
-    // TODO(qsr): Request data from sync: LE-30
-    callback(Status::NOT_FOUND, nullptr);
+    GetObjectFromSync(object_id, callback);
     return;
   }
 
@@ -541,6 +540,36 @@ void PageStorageImpl::AddObject(
   ](Status status, ObjectId object_id) {
     callback(status, std::move(object_id));
     cleanup();
+  });
+}
+
+void PageStorageImpl::GetObjectFromSync(
+    ObjectIdView object_id,
+    const std::function<void(Status, std::unique_ptr<const Object>)>&
+        callback) {
+  if (!page_sync_) {
+    callback(Status::NOT_CONNECTED_ERROR, nullptr);
+    return;
+  }
+  page_sync_->GetObject(object_id, [
+    this, callback = std::move(callback), object_id = object_id.ToString()
+  ](Status status, uint64_t size, mx::datapipe_consumer data) {
+    if (status != Status::OK) {
+      callback(status, nullptr);
+      return;
+    }
+    AddObjectFromSync(object_id, std::move(data), size, [
+      this, callback = std::move(callback), object_id
+    ](Status status) mutable {
+      if (status != Status::OK) {
+        callback(status, nullptr);
+        return;
+      }
+      std::string file_path = objects_dir_ + "/" + ToHex(object_id);
+      FTL_DCHECK(files::IsFile(file_path));
+      callback(Status::OK, std::make_unique<ObjectImpl>(std::move(object_id),
+                                                        std::move(file_path)));
+    });
   });
 }
 

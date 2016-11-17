@@ -56,6 +56,22 @@ class FakeCommitWatcher : public CommitWatcher {
   ChangeSource last_source;
 };
 
+class FakeSyncDelegate : public PageSyncDelegate {
+ public:
+  void SetValue(const std::string& value) { value_ = value; }
+
+  void GetObject(ObjectIdView object_id,
+                 std::function<void(Status status,
+                                    uint64_t size,
+                                    mx::datapipe_consumer data)> callback) {
+    callback(Status::OK, value_.size(),
+             mtl::WriteStringToConsumerHandle(value_));
+  }
+
+ private:
+  std::string value_;
+};
+
 // Implements |Init()|, |CreateJournal() and |CreateMergeJournal()| and
 // fails with a |NOT_IMPLEMENTED| error in all other cases.
 class FakeDbImpl : public DbEmptyImpl {
@@ -440,6 +456,39 @@ TEST_F(PageStorageTest, GetObject) {
   ftl::StringView object_data;
   ASSERT_EQ(Status::OK, object->GetData(&object_data));
   EXPECT_EQ(data.value, convert::ToString(object_data));
+}
+
+TEST_F(PageStorageTest, GetObjectFromSync) {
+  ObjectData data("Some data");
+  FakeSyncDelegate sync;
+  sync.SetValue(data.value);
+  storage_->SetSyncDelegate(&sync);
+
+  Status status;
+  std::unique_ptr<const Object> object;
+  storage_->GetObject(
+      data.object_id,
+      [this, &status, &object](Status returned_status,
+                               std::unique_ptr<const Object> returned_object) {
+        status = returned_status;
+        object = std::move(returned_object);
+        message_loop_.QuitNow();
+      });
+  message_loop_.Run();
+
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(data.object_id, object->GetId());
+  ftl::StringView object_data;
+  ASSERT_EQ(Status::OK, object->GetData(&object_data));
+  EXPECT_EQ(data.value, convert::ToString(object_data));
+
+  storage_->SetSyncDelegate(nullptr);
+  storage_->GetObject(RandomId(kObjectIdSize),
+                      [this](Status returned_status,
+                             std::unique_ptr<const Object> returned_object) {
+                        EXPECT_EQ(Status::NOT_CONNECTED_ERROR, returned_status);
+                        EXPECT_EQ(nullptr, returned_object);
+                      });
 }
 
 TEST_F(PageStorageTest, AddObjectSynchronous) {

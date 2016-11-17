@@ -92,6 +92,10 @@ class PageStorageImpl : public PageStorage {
   void AddObject(mx::datapipe_consumer data,
                  int64_t size,
                  const std::function<void(Status, ObjectId)>& callback);
+  void GetObjectFromSync(
+      ObjectIdView object_id,
+      const std::function<void(Status, std::unique_ptr<const Object>)>&
+          callback);
 
   // Notifies the registered watchers with the given |commit|.
   void NotifyWatchers(const Commit& commit, ChangeSource source);
