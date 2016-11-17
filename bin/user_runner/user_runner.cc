@@ -13,6 +13,7 @@
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
+#include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/user_runner/story_provider_impl.h"
@@ -214,14 +215,20 @@ class UserRunnerImpl : public UserRunner {
         ConnectToService<maxwell::Launcher>(maxwell_services.get());
     fidl::InterfaceHandle<StoryProvider> story_provider_aux;
     story_provider_impl->AddAuxiliaryBinding(GetProxy(&story_provider_aux));
-    maxwell_launcher->SetStoryProvider(std::move(story_provider_aux));
+
+    // The FocusController is implemented by the UserShell.
+    fidl::InterfaceHandle<FocusController> focus_controller;
+    auto focus_controller_request = fidl::GetProxy(&focus_controller);
+    maxwell_launcher->Initialize(std::move(story_provider_aux),
+                                 std::move(focus_controller));
 
     auto suggestion_provider =
         ConnectToService<maxwell::suggestion::SuggestionProvider>(
             maxwell_services.get());
 
     user_shell_->Initialize(std::move(story_provider),
-                            std::move(suggestion_provider));
+                            std::move(suggestion_provider),
+                            std::move(focus_controller_request));
   }
 
   ServiceProviderPtr GetServiceProvider(const std::string& url) {

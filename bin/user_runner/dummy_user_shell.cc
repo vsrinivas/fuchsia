@@ -118,7 +118,9 @@ class DummyUserShellApp
   // |UserShell|
   void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
                   fidl::InterfaceHandle<maxwell::suggestion::SuggestionProvider>
-                      suggestion_provider) override {
+                      suggestion_provider,
+                  fidl::InterfaceRequest<modular::FocusController>
+                      focus_controller_request) override {
     story_provider_.Bind(std::move(story_provider));
     CreateStory(kExampleRecipeUrl);
   }

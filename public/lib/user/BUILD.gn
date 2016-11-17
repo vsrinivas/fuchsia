@@ -7,6 +7,7 @@ import("//lib/fidl/fidl.gni")
 # For consumption outside modular.
 fidl("user") {
   sources = [
+    "focus.fidl",
     "story_provider.fidl",
     "user_shell.fidl",
   ]
@@ -14,12 +15,6 @@ fidl("user") {
   deps = [
     "//apps/maxwell/services/suggestion:suggestion_provider",
     "//apps/mozart/services/views",
-  ]
-}
-
-fidl("focus") {
-  sources = [
-    "focus.fidl",
   ]
 }
 
