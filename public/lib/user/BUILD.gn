@@ -12,7 +12,7 @@ fidl("user") {
   ]
 
   deps = [
-    "//apps/maxwell/services/suggestion",
+    "//apps/maxwell/services/suggestion:suggestion_provider",
     "//apps/mozart/services/views",
   ]
 }
