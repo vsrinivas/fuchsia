@@ -24,9 +24,7 @@ ROOT_PUBSPECS = [
 
 # These are the locations of yaml files listing the Dart dependencies of a git
 # project.
-PROJECT_DEPENDENCIES = [
-    'apps/modules',
-]
+PROJECT_DEPENDENCIES = ['apps/modules', ]
 
 
 def main():
@@ -43,9 +41,8 @@ def main():
                                  'importer', 'importer.py')
     args = [importer_path]
     env = os.environ
-    env['PATH'] += ":" + flutter_bin_path
-    env['PATH'] += ":" + \
-        os.path.join(flutter_bin_path, 'cache', 'dart-sdk', 'bin')
+    env['PATH'] = flutter_bin_path + ":" + os.path.join(
+        flutter_bin_path, 'cache', 'dart-sdk', 'bin') + ":" + env['PATH']
     env['FLUTTER_ROOT'] = flutter_path
     args.append('--pubspecs')
     for root in ROOT_PUBSPECS:
@@ -55,6 +52,7 @@ def main():
         args.append(os.path.join(paths.FUCHSIA_ROOT, project))
 
     subprocess.check_call(args, env=env)
+
 
 if __name__ == '__main__':
     sys.exit(main())
