@@ -36,12 +36,16 @@
             "bootfs_path": "test/ledger_callback_unittests"
         },
         {
+            "binary": "ledger_glue_unittests",
+            "bootfs_path": "test/ledger_glue_unittests"
+        },
+        {
             "binary": "ledger_integration_tests",
             "bootfs_path": "test/ledger_integration_tests"
         },
         {
-            "binary": "ledger_glue_unittests",
-            "bootfs_path": "test/ledger_glue_unittests"
+            "binary": "ledger_network_unittests",
+            "bootfs_path": "test/ledger_network_unittests"
         },
         {
             "binary": "ledger_unittests",
