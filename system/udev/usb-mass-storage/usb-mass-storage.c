@@ -718,6 +718,10 @@ static ssize_t ums_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
          *blksize = msd->block_size;
          return sizeof(*blksize);
     }
+    case IOCTL_DEVICE_SYNC: {
+        // TODO(smklein): Implement
+        return ERR_NOT_SUPPORTED;
+    }
     default:
         return ERR_NOT_SUPPORTED;
     }

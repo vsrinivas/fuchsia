@@ -107,6 +107,10 @@ static ssize_t gpt_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
         utf16_to_cstring(name, device->gpt_entry.name, MIN((max - 1) * 2, GPT_NAME_LEN));
         return strnlen(name, GPT_NAME_LEN / 2);
     }
+    case IOCTL_DEVICE_SYNC: {
+        // Propagate sync to parent device
+        return dev->parent->ops->ioctl(dev->parent, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0);
+    }
     default:
         return ERR_NOT_SUPPORTED;
     }
