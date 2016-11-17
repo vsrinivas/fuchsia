@@ -6,9 +6,22 @@ import("//lib/fidl/fidl.gni")
 
 fidl("suggestion") {
   sources = [
-    "display.fidl",
     "suggestion_agent_client.fidl",
     "suggestion_engine.fidl",
+  ]
+
+  public_deps = [
+    ":suggestion_provider",
+  ]
+
+  deps = [
+    "//apps/modular/services/user",
+  ]
+}
+
+fidl("suggestion_provider") {
+  sources = [
+    "display.fidl",
     "suggestion_provider.fidl",
   ]
 }
