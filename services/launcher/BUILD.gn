@@ -8,4 +8,8 @@ fidl("launcher") {
   sources = [
     "launcher.fidl",
   ]
+
+  deps = [
+    "//apps/modular/services/user",
+  ]
 }

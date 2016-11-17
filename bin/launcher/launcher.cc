@@ -44,12 +44,17 @@ class LauncherApp : public maxwell::Launcher {
         });
   }
 
-  void SetStoryProvider(
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+      fidl::InterfaceHandle<modular::FocusController> focus_controller) override {
     suggestion_engine_->SetStoryProvider(std::move(story_provider));
     // TODO(rosswang): Also update any agents that need to affect individual
     // stories. This may just be the modular acquirer if everything else works
     // through context.
+    //
+    // TODO(thatguy): Initialize Agents here so they can depend on the
+    // story_provider or the focus_controller.
+    focus_controller_ = std::move(focus_controller);
   }
 
  private:
@@ -105,6 +110,8 @@ class LauncherApp : public maxwell::Launcher {
   maxwell::suggestion::SuggestionEnginePtr suggestion_engine_;
 
   maxwell::AgentLauncher agent_launcher_;
+
+  fidl::InterfaceHandle<modular::FocusController> focus_controller_;
 };
 
 }  // namespace
