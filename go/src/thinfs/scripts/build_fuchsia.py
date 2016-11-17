@@ -8,8 +8,8 @@
 
 import argparse
 import os
+import subprocess
 import sys
-from subprocess import call
 
 
 def main():
@@ -20,6 +20,11 @@ def main():
                         required=True)
     parser.add_argument('--go-bin-directory', help='Path to GOBIN',
                         required=True)
+    parser.add_argument('--output', help='The path to the output file',
+                        required=True)
+    parser.add_argument('--depfile', help='The path to the depfile',
+                        required=True)
+    parser.add_argument('package', help='The package name')
     args = parser.parse_args()
 
     scripts_dir = os.path.dirname(os.path.realpath(__file__))
@@ -33,7 +38,13 @@ def main():
     os.environ['GOOS'] = 'fuchsia'
     os.environ['GOBIN'] = args.go_bin_directory
     target = os.path.join(scripts_dir, '../magenta/thinfs.go')
-    return call([args.go_binary, 'install', target], env=os.environ)
+    godepfile = os.path.join(args.fuchsia_root, 'buildtools/godepfile')
+
+    retcode = subprocess.call([args.go_binary, 'build', '-o', args.output, args.package], env=os.environ)
+    if retcode == 0 and args.depfile is not None:
+        with open(args.depfile, "wb") as out:
+            subprocess.Popen([godepfile, '-o', args.output, args.package], stdout=out, env=os.environ)
+    return retcode
 
 
 if __name__ == '__main__':

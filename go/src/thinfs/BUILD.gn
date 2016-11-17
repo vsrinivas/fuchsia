@@ -3,12 +3,16 @@
 # found in the LICENSE file.
 
 action("thinfs") {
-  outputs = [ "$target_gen_dir/thinfs" ]
+  thinfs_path = "$root_out_dir/thinfs"
+  depfile_path = "${thinfs_path}.d"
+
+  outputs = [ thinfs_path ]
 
   if (target_cpu == "x64") {
     # TODO(smklein): Delete this conditional (obliterating the 'else' case)
     # once the ARM64 build is fixed.
     script = "scripts/build_fuchsia.py"
+    depfile = depfile_path
 
     args = [
       "--fuchsia-root",
@@ -17,6 +21,11 @@ action("thinfs") {
       rebase_path("$root_gen_dir/third_party/go/bin/go"),
       "--go-bin-directory",
       rebase_path("$root_out_dir"),
+      "--output",
+      rebase_path(thinfs_path, root_build_dir),
+      "--depfile",
+      rebase_path(depfile_path),
+      "fuchsia.googlesource.com/thinfs/magenta",
     ]
 
     deps = [
