@@ -13,10 +13,10 @@ group("ledger") {
     "//apps/ledger/src/cloud_provider",
     "//apps/ledger/src/cloud_sync",
     "//apps/ledger/src/convert",
-    "//apps/ledger/src/fake_network_service",
     "//apps/ledger/src/firebase",
     "//apps/ledger/src/gcs",
     "//apps/ledger/src/glue",
+    "//apps/ledger/src/network",
     "//apps/ledger/src/storage",
   ]
 }

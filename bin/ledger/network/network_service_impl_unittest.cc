@@ -4,11 +4,16 @@
 
 #include "apps/ledger/src/network/network_service_impl.h"
 
+#include <memory>
+#include <vector>
+
 #include <mx/datapipe.h>
 
-#include "apps/ledger/src/fake_network_service/fake_network_service.h"
+#include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/macros.h"
 #include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -16,6 +21,100 @@ namespace ledger {
 namespace {
 
 const char kRedirectUrl[] = "http://example.com/redirect";
+
+// Url loader that stores the url request for inspection in |request_received|,
+// and returns response indicated in |response_to_return|. |response_to_return|
+// is moved out in ::Start().
+class FakeURLLoader : public network::URLLoader {
+ public:
+  FakeURLLoader(fidl::InterfaceRequest<network::URLLoader> message_pipe,
+                network::URLResponsePtr response_to_return,
+                network::URLRequestPtr* request_received)
+      : binding_(this, std::move(message_pipe)),
+        response_to_return_(std::move(response_to_return)),
+        request_received_(request_received) {
+    FTL_DCHECK(response_to_return_);
+  }
+  ~FakeURLLoader() override {}
+
+  // URLLoader:
+  void Start(network::URLRequestPtr request,
+             const StartCallback& callback) override {
+    FTL_DCHECK(response_to_return_);
+    *request_received_ = std::move(request);
+    callback(std::move(response_to_return_));
+  }
+  void FollowRedirect(const FollowRedirectCallback& callback) override {}
+  void QueryStatus(const QueryStatusCallback& callback) override {}
+
+ private:
+  fidl::Binding<network::URLLoader> binding_;
+  network::URLResponsePtr response_to_return_;
+  network::URLRequestPtr* request_received_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(FakeURLLoader);
+};
+
+// Fake implementation of network service, allowing to inspect the last request
+// passed to any url loader and set the response that url loaders need to
+// return. Response is moved out when url request starts, and needs to be set
+// each time.
+class FakeNetworkService : public network::NetworkService {
+ public:
+  FakeNetworkService(fidl::InterfaceRequest<NetworkService> request)
+      : binding_(this, std::move(request)) {}
+  ~FakeNetworkService() override {}
+
+  network::URLRequest* GetRequest() { return request_received_.get(); }
+
+  void SetResponse(network::URLResponsePtr response) {
+    response_to_return_ = std::move(response);
+  }
+
+  // NetworkService:
+  void CreateURLLoader(
+      fidl::InterfaceRequest<network::URLLoader> loader) override {
+    FTL_DCHECK(response_to_return_);
+    loaders_.push_back(std::make_unique<FakeURLLoader>(
+        std::move(loader), std::move(response_to_return_), &request_received_));
+  }
+  void GetCookieStore(mx::channel cookie_store) override { FTL_DCHECK(false); }
+  void CreateWebSocket(mx::channel socket) override { FTL_DCHECK(false); }
+  void CreateTCPBoundSocket(
+      network::NetAddressPtr local_address,
+      mx::channel bound_socket,
+      const CreateTCPBoundSocketCallback& callback) override {
+    FTL_DCHECK(false);
+  }
+  void CreateTCPConnectedSocket(
+      network::NetAddressPtr remote_address,
+      mx::datapipe_consumer send_stream,
+      mx::datapipe_producer receive_stream,
+      mx::channel client_socket,
+      const CreateTCPConnectedSocketCallback& callback) override {
+    FTL_DCHECK(false);
+  }
+  void CreateUDPSocket(mx::channel socket) override { FTL_DCHECK(false); }
+  void CreateHttpServer(network::NetAddressPtr local_address,
+                        mx::channel delegate,
+                        const CreateHttpServerCallback& callback) override {
+    FTL_DCHECK(false);
+  }
+  void RegisterURLLoaderInterceptor(mx::channel factory) override {
+    FTL_DCHECK(false);
+  }
+  void CreateHostResolver(mx::channel host_resolver) override {
+    FTL_DCHECK(false);
+  }
+
+ private:
+  fidl::Binding<NetworkService> binding_;
+  std::vector<std::unique_ptr<FakeURLLoader>> loaders_;
+  network::URLRequestPtr request_received_;
+  network::URLResponsePtr response_to_return_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(FakeNetworkService);
+};
 
 class DestroyWatcher : public ftl::RefCountedThreadSafe<DestroyWatcher> {
  public:
@@ -79,8 +178,7 @@ class NetworkServiceImplTest : public ::testing::Test {
   network::NetworkServicePtr NewNetworkService() {
     network::NetworkServicePtr result;
     fake_network_service_ =
-        std::make_unique<fake_network_service::FakeNetworkService>(
-            GetProxy(&result));
+        std::make_unique<FakeNetworkService>(GetProxy(&result));
     if (response_) {
       fake_network_service_->SetResponse(std::move(response_));
     }
@@ -90,8 +188,7 @@ class NetworkServiceImplTest : public ::testing::Test {
  protected:
   mtl::MessageLoop loop_;
   NetworkServiceImpl network_service_;
-  std::unique_ptr<fake_network_service::FakeNetworkService>
-      fake_network_service_;
+  std::unique_ptr<FakeNetworkService> fake_network_service_;
   network::URLResponsePtr response_;
 };
 

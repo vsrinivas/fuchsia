@@ -15,6 +15,7 @@
 #include "lib/ftl/files/file_descriptor.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/unique_fd.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/ascii.h"
 #include "lib/ftl/strings/string_number_conversions.h"
@@ -77,7 +78,7 @@ void OnFileWritten(const std::string& destination,
 }  // namespace
 
 CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                                   network::NetworkServicePtr network_service,
+                                   ledger::NetworkService* network_service,
                                    const std::string& bucket_name)
     : task_runner_(std::move(task_runner)),
       network_service_(std::move(network_service)),
@@ -94,52 +95,61 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     return;
   }
 
-  std::string url =
-      "https://storage-upload.googleapis.com/" + bucket_name_ + "/" + key;
-  network::URLRequestPtr request(network::URLRequest::New());
-  request->url = url;
-  request->method = "PUT";
-  request->auto_follow_redirects = true;
-
-  // Content-Length header.
-  network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
-  content_length_header->name = kContentLengthHeader;
-  content_length_header->value = ftl::NumberToString(file_size);
-  request->headers.push_back(std::move(content_length_header));
-
-  // x-goog-if-generation-match header. This ensures that files are never
-  // overwritten.
-  network::HttpHeaderPtr generation_match_header = network::HttpHeader::New();
-  generation_match_header->name = "x-goog-if-generation-match";
-  generation_match_header->value = "0";
-  request->headers.push_back(std::move(generation_match_header));
-
-  glue::DataPipe data_pipe;
-
   ftl::UniqueFD fd(open(source.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
     callback(Status::UNKNOWN_ERROR);
     return;
   }
 
-  mtl::CopyFromFileDescriptor(
-      std::move(fd), std::move(data_pipe.producer_handle), task_runner_,
-      [](bool result, ftl::UniqueFD fd) {
-        if (!result) {
-          // An error while reading the file means that
-          // the data sent to the server will not match
-          // the content length header, and the server
-          // will not accept the file.
-          FTL_LOG(ERROR) << "Error when reading the data.";
-        }
-      });
-  request->body = network::URLBody::New();
-  request->body->set_stream(std::move(data_pipe.consumer_handle));
+  std::string url =
+      "https://storage-upload.googleapis.com/" + bucket_name_ + "/" + key;
 
-  Request(std::move(request), [callback](Status status,
-                                         network::URLResponsePtr response) {
-    RunUploadFileCallback(std::move(callback), status, std::move(response));
+  auto request_factory = ftl::MakeCopyable([
+    url, source, file_size, task_runner = task_runner_, fd = std::move(fd)
+  ]() {
+    network::URLRequestPtr request(network::URLRequest::New());
+    request->url = url;
+    request->method = "PUT";
+    request->auto_follow_redirects = true;
+
+    // Content-Length header.
+    network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
+    content_length_header->name = kContentLengthHeader;
+    content_length_header->value = ftl::NumberToString(file_size);
+    request->headers.push_back(std::move(content_length_header));
+
+    // x-goog-if-generation-match header. This ensures that files are never
+    // overwritten.
+    network::HttpHeaderPtr generation_match_header = network::HttpHeader::New();
+    generation_match_header->name = "x-goog-if-generation-match";
+    generation_match_header->value = "0";
+    request->headers.push_back(std::move(generation_match_header));
+
+    glue::DataPipe data_pipe;
+
+    ftl::UniqueFD new_fd(dup(fd.get()));
+    lseek(new_fd.get(), 0, SEEK_SET);
+    mtl::CopyFromFileDescriptor(
+        std::move(new_fd), std::move(data_pipe.producer_handle), task_runner,
+        [](bool result, ftl::UniqueFD fd) {
+          if (!result) {
+            // An error while reading the file means that
+            // the data sent to the server will not match
+            // the content length header, and the server
+            // will not accept the file.
+            FTL_LOG(ERROR) << "Error when reading the data.";
+          }
+        });
+    request->body = network::URLBody::New();
+    request->body->set_stream(std::move(data_pipe.consumer_handle));
+    return request;
   });
+
+  Request(std::move(request_factory),
+          [callback](Status status, network::URLResponsePtr response) {
+            RunUploadFileCallback(std::move(callback), status,
+                                  std::move(response));
+          });
 }
 
 void CloudStorageImpl::DownloadFile(
@@ -148,45 +158,37 @@ void CloudStorageImpl::DownloadFile(
     const std::function<void(Status)>& callback) {
   std::string url =
       "https://storage-download.googleapis.com/" + bucket_name_ + "/" + key;
-  network::URLRequestPtr request(network::URLRequest::New());
-  request->url = url;
-  request->method = "GET";
-  request->auto_follow_redirects = true;
 
   Request(
-      std::move(request), [this, destination, callback](
-                              Status status, network::URLResponsePtr response) {
+      [url]() {
+        network::URLRequestPtr request(network::URLRequest::New());
+        request->url = url;
+        request->method = "GET";
+        request->auto_follow_redirects = true;
+        return request;
+      },
+      [this, destination, callback](Status status,
+                                    network::URLResponsePtr response) {
         OnDownloadResponseReceived(std::move(destination), std::move(callback),
                                    status, std::move(response));
       });
 }
 
 void CloudStorageImpl::Request(
-    network::URLRequestPtr request,
+    std::function<network::URLRequestPtr()>&& request_factory,
     const std::function<void(Status status, network::URLResponsePtr response)>&
         callback) {
-  network::URLLoaderPtr url_loader;
-  network_service_->CreateURLLoader(GetProxy(&url_loader));
-  network::URLLoader* url_loader_ptr = url_loader.get();
-
-  url_loader->Start(std::move(request), [this, callback, url_loader_ptr](
-                                            network::URLResponsePtr response) {
-    OnResponse(std::move(callback), url_loader_ptr, std::move(response));
-  });
-  loaders_.push_back(std::move(url_loader));
+  network_service_->Request(std::move(request_factory),
+                            [this, callback](network::URLResponsePtr response) {
+                              OnResponse(std::move(callback),
+                                         std::move(response));
+                            });
 }
 
 void CloudStorageImpl::OnResponse(
     const std::function<void(Status status, network::URLResponsePtr response)>&
         callback,
-    network::URLLoader* url_loader,
     network::URLResponsePtr response) {
-  // Clear loader.
-  loaders_.erase(std::find_if(loaders_.begin(), loaders_.end(),
-                              [url_loader](const network::URLLoaderPtr& l) {
-                                return l.get() == url_loader;
-                              }));
-
   if (response->error) {
     FTL_LOG(ERROR) << response->url << " error "
                    << response->error->description;

@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-#include "apps/ledger/src/fake_network_service/fake_network_service.h"
+#include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/file.h"
@@ -34,21 +34,20 @@ network::HttpHeaderPtr GetHeader(
 
 class CloudStorageImplTest : public ::testing::Test {
  public:
-  CloudStorageImplTest() {}
+  CloudStorageImplTest()
+      : fake_network_service_(message_loop_.task_runner()),
+        gcs_(message_loop_.task_runner(), &fake_network_service_, "bucket") {}
   ~CloudStorageImplTest() override {}
 
  protected:
-  // ApplicationTestBase:
-  void SetUp() override {
-    ::testing::Test::SetUp();
-
-    network::NetworkServicePtr fake_network_service;
-    fake_network_service_ =
-        std::make_unique<fake_network_service::FakeNetworkService>(
-            GetProxy(&fake_network_service));
-
-    gcs_ = std::make_unique<CloudStorageImpl>(
-        message_loop_.task_runner(), std::move(fake_network_service), "bucket");
+  void RunLoop() {
+    message_loop_.task_runner()->PostDelayedTask(
+        [this] {
+          message_loop_.PostQuitTask();
+          FAIL();
+        },
+        ftl::TimeDelta::FromSeconds(1));
+    message_loop_.Run();
   }
 
   void SetResponse(const std::string& body,
@@ -65,7 +64,7 @@ class CloudStorageImplTest : public ::testing::Test {
 
     server_response->headers.push_back(std::move(content_length_header));
 
-    fake_network_service_->SetResponse(std::move(server_response));
+    fake_network_service_.SetResponse(std::move(server_response));
   }
 
   bool CreateFile(const std::string& content, std::string* path) {
@@ -76,9 +75,8 @@ class CloudStorageImplTest : public ::testing::Test {
 
   files::ScopedTempDir tmp_dir_;
   mtl::MessageLoop message_loop_;
-  std::unique_ptr<CloudStorageImpl> gcs_;
-  std::unique_ptr<fake_network_service::FakeNetworkService>
-      fake_network_service_;
+  ledger::FakeNetworkService fake_network_service_;
+  CloudStorageImpl gcs_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudStorageImplTest);
@@ -91,25 +89,25 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   ASSERT_TRUE(CreateFile(content, &file));
 
   SetResponse("", 0, 200);
-  gcs_->UploadFile("hello/world/baz/quz", file, [this, &status](Status s) {
+  gcs_.UploadFile("hello/world/baz/quz", file, [this, &status](Status s) {
     status = s;
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
-  message_loop_.Run();
+  RunLoop();
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("https://storage-upload.googleapis.com/bucket/hello/world/baz/quz",
-            fake_network_service_->GetRequest()->url);
-  EXPECT_EQ("PUT", fake_network_service_->GetRequest()->method);
-  EXPECT_TRUE(fake_network_service_->GetRequest()->body->is_stream());
+            fake_network_service_.GetRequest()->url);
+  EXPECT_EQ("PUT", fake_network_service_.GetRequest()->method);
+  EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_stream());
   std::string sent_content;
   EXPECT_TRUE(mtl::BlockingCopyToString(
-      std::move(fake_network_service_->GetRequest()->body->get_stream()),
+      std::move(fake_network_service_.GetRequest()->body->get_stream()),
       &sent_content));
   EXPECT_EQ(content, sent_content);
 
   network::HttpHeaderPtr content_length_header =
-      GetHeader(fake_network_service_->GetRequest()->headers, "content-length");
+      GetHeader(fake_network_service_.GetRequest()->headers, "content-length");
   EXPECT_TRUE(content_length_header);
   unsigned content_length;
   EXPECT_TRUE(ftl::StringToNumberWithError(content_length_header->value.get(),
@@ -117,7 +115,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ(content.size(), content_length);
 
   network::HttpHeaderPtr if_generation_match_header =
-      GetHeader(fake_network_service_->GetRequest()->headers,
+      GetHeader(fake_network_service_.GetRequest()->headers,
                 "x-goog-if-generation-match");
   EXPECT_TRUE(if_generation_match_header);
   EXPECT_EQ("0", if_generation_match_header->value);
@@ -129,11 +127,11 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
   ASSERT_TRUE(CreateFile("", &file));
 
   SetResponse("", 0, 412);
-  gcs_->UploadFile("hello/world/baz/quz", file, [this, &status](Status s) {
+  gcs_.UploadFile("hello/world/baz/quz", file, [this, &status](Status s) {
     status = s;
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
-  message_loop_.Run();
+  RunLoop();
 
   EXPECT_EQ(Status::OBJECT_ALREADY_EXIST, status);
 }
@@ -145,17 +143,17 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   ASSERT_TRUE(CreateFile("", &file));
 
   SetResponse(content, content.size(), 200);
-  gcs_->DownloadFile("hello/world/baz/quz", file, [this, &status](Status s) {
+  gcs_.DownloadFile("hello/world/baz/quz", file, [this, &status](Status s) {
     status = s;
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
-  message_loop_.Run();
+  RunLoop();
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(
       "https://storage-download.googleapis.com/bucket/hello/world/baz/quz",
-      fake_network_service_->GetRequest()->url);
-  EXPECT_EQ("GET", fake_network_service_->GetRequest()->method);
+      fake_network_service_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
 
   std::string downloaded_content;
   EXPECT_TRUE(files::ReadFileToString(file, &downloaded_content));
@@ -169,11 +167,11 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   ASSERT_TRUE(CreateFile(content, &file));
 
   SetResponse(content, content.size() - 1, 200);
-  gcs_->DownloadFile("hello/world/baz/quz", file, [this, &status](Status s) {
+  gcs_.DownloadFile("hello/world/baz/quz", file, [this, &status](Status s) {
     status = s;
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
-  message_loop_.Run();
+  RunLoop();
 
   EXPECT_EQ(Status::UNKNOWN_ERROR, status);
 }

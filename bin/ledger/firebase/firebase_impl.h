@@ -10,12 +10,14 @@
 #include <string>
 #include <vector>
 
+#include "apps/ledger/src/callback/auto_cleanable.h"
+#include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/firebase/event_stream.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/status.h"
 #include "apps/ledger/src/firebase/watch_client.h"
-#include "apps/network/services/network_service.fidl.h"
-#include "apps/network/services/url_loader.fidl.h"
+#include "apps/ledger/src/glue/data_pipe/data_pipe_drainer_client.h"
+#include "apps/ledger/src/network/network_service.h"
 
 #include <rapidjson/document.h>
 
@@ -30,7 +32,7 @@ class FirebaseImpl : public Firebase {
   // |prefix| is a url prefix against which all requests will be made, without a
   // leading or trailing slash. (possible with slashes inside) If empty,
   // requests will be made against root of the database.
-  FirebaseImpl(network::NetworkServicePtr network_service,
+  FirebaseImpl(ledger::NetworkService* network_service,
                const std::string& db_id,
                const std::string& prefix);
   ~FirebaseImpl() override;
@@ -65,15 +67,9 @@ class FirebaseImpl : public Firebase {
 
   void OnResponse(
       const std::function<void(Status status, std::string response)>& callback,
-      network::URLLoader* url_loader,
       network::URLResponsePtr response);
 
-  void StartWatchRequest(const std::string& url, WatchClient* watch_client);
-
-  void OnWatchResponse(WatchClient* watch_client,
-                       network::URLResponsePtr response);
-
-  void OnStream(WatchClient* watch_client, mx::datapipe_consumer stream);
+  void OnStream(WatchClient* watch_client, network::URLResponsePtr response);
 
   void OnStreamComplete(WatchClient* watch_client);
 
@@ -82,12 +78,12 @@ class FirebaseImpl : public Firebase {
                      const std::string& event,
                      const std::string& data);
 
-  const network::NetworkServicePtr network_service_;
+  ledger::NetworkService* const network_service_;
   // Api url against which requests are made, without a trailing slash.
   const std::string api_url_;
 
-  struct RequestData;
-  std::map<network::URLLoader*, std::unique_ptr<RequestData>> request_data_;
+  callback::CancellableContainer requests_;
+  ledger::AutoCleanableSet<glue::DataPipeDrainerClient> drainers_;
 
   struct WatchData;
   std::map<WatchClient*, std::unique_ptr<WatchData>> watch_data_;

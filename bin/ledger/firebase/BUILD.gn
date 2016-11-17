@@ -17,7 +17,7 @@ source_set("firebase") {
 
   public_deps = [
     "//apps/ledger/src/convert",
-    "//apps/network/services:services_cpp_sources",
+    "//apps/ledger/src/network",
     "//third_party/rapidjson",
   ]
 
@@ -43,8 +43,8 @@ executable("unittests") {
   deps = [
     ":firebase",
     "//apps/ledger/src/convert",
-    "//apps/ledger/src/fake_network_service",
     "//apps/ledger/src/glue/data_pipe",
+    "//apps/ledger/src/network:fake",
     "//apps/ledger/src/test",
     "//lib/ftl",
     "//lib/mtl",

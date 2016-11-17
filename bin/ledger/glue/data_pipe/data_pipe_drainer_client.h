@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
 
@@ -23,6 +24,10 @@ class DataPipeDrainerClient : public mtl::DataPipeDrainer::Client {
   void Start(mx::datapipe_consumer source,
              const std::function<void(std::string)>& callback);
 
+  void set_on_empty(ftl::Closure&& on_empty_callback) {
+    on_empty_callback_ = std::move(on_empty_callback);
+  }
+
  private:
   void OnDataAvailable(const void* data, size_t num_bytes) override;
 
@@ -31,6 +36,7 @@ class DataPipeDrainerClient : public mtl::DataPipeDrainer::Client {
   std::function<void(std::string)> callback_;
   std::string data_;
   mtl::DataPipeDrainer drainer_;
+  ftl::Closure on_empty_callback_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DataPipeDrainerClient);
 };

@@ -25,7 +25,11 @@ void DataPipeDrainerClient::OnDataAvailable(const void* data,
 }
 
 void DataPipeDrainerClient::OnDataComplete() {
+  ftl::Closure on_empty_callback = std::move(on_empty_callback_);
   callback_(data_);
+  // This class might be deleted here. Do not access any field.
+  if (on_empty_callback)
+    on_empty_callback();
 }
 
 }  // namespace glue

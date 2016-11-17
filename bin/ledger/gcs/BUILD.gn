@@ -10,13 +10,12 @@ source_set("gcs") {
   ]
 
   deps = [
-    "//lib/fidl/cpp/bindings",
     "//lib/mtl",
   ]
 
   public_deps = [
     "//apps/ledger/src/glue/data_pipe",
-    "//apps/network/services:services_cpp_sources",
+    "//apps/ledger/src/network",
     "//lib/ftl",
   ]
 }
@@ -32,7 +31,7 @@ executable("unittests") {
 
   deps = [
     ":gcs",
-    "//apps/ledger/src/fake_network_service",
+    "//apps/ledger/src/network:fake",
     "//apps/ledger/src/test",
     "//lib/ftl",
     "//lib/mtl",

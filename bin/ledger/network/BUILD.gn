@@ -17,6 +17,19 @@ source_set("network") {
   ]
 }
 
+source_set("fake") {
+  testonly = true
+
+  sources = [
+    "fake_network_service.cc",
+    "fake_network_service.h",
+  ]
+
+  public_deps = [
+    ":network",
+  ]
+}
+
 executable("unittests") {
   testonly = true
 
@@ -28,7 +41,6 @@ executable("unittests") {
 
   deps = [
     ":network",
-    "//apps/ledger/src/fake_network_service",
     "//apps/ledger/src/test",
     "//lib/mtl",
     "//lib/mtl/waiter",
