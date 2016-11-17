@@ -94,12 +94,15 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
     : page_watcher_binding_(this),
       key_(key),
       storage_(storage),
+      // Comment out this initializer in order to switch to in-memory storage.
       story_page_(std::move(story_page)) {
   bindings_.AddBinding(this, std::move(request));
 
   fidl::InterfaceHandle<ledger::PageWatcher> watcher;
   page_watcher_binding_.Bind(GetProxy(&watcher));
-  story_page_->Watch(std::move(watcher), [](ledger::Status status) {});
+  if (story_page_.is_bound()) {
+    story_page_->Watch(std::move(watcher), [](ledger::Status status) {});
+  }
 }
 
 // |StoryStorage|
@@ -130,6 +133,7 @@ void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
 
   } else {
     (*storage_)[key_][link_id] = std::move(data);
+    cb();
   }
 }
 
