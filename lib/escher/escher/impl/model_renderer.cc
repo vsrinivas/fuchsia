@@ -41,12 +41,15 @@ void ModelRenderer::Draw(Stage& stage,
   vk::CommandBuffer vk_command_buffer = command_buffer->get();
 
   auto& objects = model.objects();
-  ModelUniformWriter* writer =
-      model_data_->GetWriterWithCapacity(command_buffer, objects.size(), 0.2f);
+
+  ModelUniformWriter writer(objects.size(), model_data_->device(),
+                            model_data_->uniform_buffer_pool(),
+                            model_data_->per_model_descriptor_set_pool(),
+                            model_data_->per_object_descriptor_set_pool());
 
   ModelData::PerModel per_model;
   per_model.brightness = vec4(vec3(stage.brightness()), 1.f);
-  writer->WritePerModelData(per_model);
+  writer.WritePerModelData(per_model);
 
   // TODO: temporary hack... this is a way to allow objects to be drawn with
   // color only... if the object's material doesn't have a texture, then this
@@ -104,9 +107,9 @@ void ModelRenderer::Draw(Stage& stage,
       }
 
       per_object_bindings_.push_back(
-          writer->WritePerObjectData(per_object, image_view, sampler));
+          writer.WritePerObjectData(per_object, image_view, sampler));
     }
-    writer->Flush(command_buffer);
+    writer.Flush(command_buffer);
   }
 
   // Do a second pass over the data, so that flushing the uniform writer above
@@ -134,14 +137,14 @@ void ModelRenderer::Draw(Stage& stage,
 
       // TODO: many pipeline will share the same layout so rebinding may not be
       // necessary.
-      writer->BindPerModelData(pipeline->pipeline_layout(), vk_command_buffer);
+      writer.BindPerModelData(pipeline->pipeline_layout(), vk_command_buffer);
 
       previous_pipeline_spec = pipeline_spec;
     }
 
     // Bind the descriptor set, using the binding obtained in the first pass.
-    writer->BindPerObjectData(per_object_bindings_[i],
-                              pipeline->pipeline_layout(), vk_command_buffer);
+    writer.BindPerObjectData(per_object_bindings_[i],
+                             pipeline->pipeline_layout(), vk_command_buffer);
 
     command_buffer->DrawMesh(mesh);
   }

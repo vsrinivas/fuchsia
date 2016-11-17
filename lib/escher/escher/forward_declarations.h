@@ -42,6 +42,8 @@ namespace impl {
 class CommandBuffer;
 class CommandBufferPool;
 class EscherImpl;
+class GpuAllocator;
+class GpuMem;
 class ImageCache;
 class MeshImpl;
 class MeshManager;
@@ -50,7 +52,9 @@ class ModelPipelineCache;
 class ModelRenderer;
 class Resource;
 
+typedef ftl::RefPtr<GpuMem> GpuMemPtr;
 typedef ftl::RefPtr<Resource> ResourcePtr;
+
 }  // namespace impl
 
 }  // namespace escher

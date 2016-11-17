@@ -11,46 +11,49 @@ namespace impl {
 
 namespace {
 
-// TODO: This is a temporary hack (it is the value on my NVIDIA Quadro).  See
-// discussion below.
-constexpr uint32_t kMinUniformBufferOffsetAlignment = 256;
+// See discussion in AllocateBuffersAndDescriptorSets().
+constexpr vk::DeviceSize kMinUniformBufferOffsetAlignment = 256;
 
 }  // namespace
 
 ModelUniformWriter::ModelUniformWriter(
-    vk::Device device,
-    GpuAllocator* allocator,
     uint32_t capacity,
+    vk::Device device,
+    UniformBufferPool* uniform_buffer_pool,
     DescriptorSetPool* per_model_descriptor_set_pool,
     DescriptorSetPool* per_object_descriptor_set_pool)
-    : device_(device),
-      capacity_(capacity),
-      uniforms_(device_,
-                allocator,
-                // TODO: the use of kMinUniformBufferOffsetAlignment is a
-                // temporary hack to make buffer-offsets work.  However, buffer
-                // offsets are ultimately not what we want to use, because
-                // our uniform data is much smaller than 256 bytes; as a result,
-                // we waste > 100 bytes per object.  Instead, we should create
-                // multiple buffers from a single memory allocation, and bind a
-                // different uniform buffer to each descriptor.
-                // sizeof(ModelData::PerModel) + capacity *
-                // sizeof(ModelData::PerObject),
-                (capacity + 1) * kMinUniformBufferOffsetAlignment,
-                vk::BufferUsageFlagBits::eUniformBuffer,
-                vk::MemoryPropertyFlagBits::eHostVisible),
+    : capacity_(capacity),
+      device_(device),
+      uniform_buffer_pool_(uniform_buffer_pool),
       per_model_descriptor_set_pool_(per_model_descriptor_set_pool),
       per_object_descriptor_set_pool_(per_object_descriptor_set_pool) {
   FTL_CHECK(kMinUniformBufferOffsetAlignment >= sizeof(ModelData::PerModel));
   FTL_CHECK(kMinUniformBufferOffsetAlignment >= sizeof(ModelData::PerObject));
-  AllocateDescriptorSets();
+  AllocateBuffersAndDescriptorSets();
 }
 
 ModelUniformWriter::~ModelUniformWriter() {}
 
-void ModelUniformWriter::AllocateDescriptorSets() {
+void ModelUniformWriter::AllocateBuffersAndDescriptorSets() {
+  FTL_DCHECK(!uniforms_);
   FTL_DCHECK(!per_model_descriptor_sets_);
   FTL_DCHECK(!per_object_descriptor_sets_);
+
+  // Allocate a buffer and verify that it is large enough.
+  uniforms_ = uniform_buffer_pool_->Allocate();
+  // TODO: If the required capacity exceeds the buffer size, use multiple
+  // buffers.  This could be done lazily, so that there is no need to know the
+  // capacity in advance.
+  // TODO: the use of kMinUniformBufferOffsetAlignment is a temporary
+  // hack to make buffer-offsets work.  However, buffer offsets are
+  // ultimately not what we want to use, because our uniform data is
+  // much smaller than 256 bytes; as a result, we waste > 100 bytes per
+  // object.  Instead, we should use descriptor sets with arrays, and
+  // pass in the array index somehow (e.g. push constant).  See:
+  // http://www.gamedev.net/topic/674379-solved-uniform-buffer-actually-viable/
+  vk::DeviceSize required_size =
+      (capacity_ + 1) * kMinUniformBufferOffsetAlignment;
+  FTL_CHECK(uniforms_->size() >= required_size);
 
   per_model_descriptor_sets_ =
       per_model_descriptor_set_pool_->Allocate(1, nullptr);
@@ -60,7 +63,7 @@ void ModelUniformWriter::AllocateDescriptorSets() {
   // The descriptor sets have been created, but not initialized.
   {
     vk::DescriptorBufferInfo info;
-    info.buffer = uniforms_.buffer();
+    info.buffer = uniforms_->get();
 
     vk::WriteDescriptorSet write;
     write.dstArrayElement = 0;
@@ -89,7 +92,7 @@ void ModelUniformWriter::AllocateDescriptorSets() {
 void ModelUniformWriter::WritePerModelData(
     const ModelData::PerModel& per_model) {
   FTL_DCHECK(is_writable_);
-  auto ptr = reinterpret_cast<ModelData::PerModel*>(uniforms_.Map());
+  auto ptr = reinterpret_cast<ModelData::PerModel*>(uniforms_->ptr());
   ptr[0] = per_model;
 }
 
@@ -100,7 +103,7 @@ ModelUniformWriter::PerObjectBinding ModelUniformWriter::WritePerObjectData(
   // Write the uniforms to the buffer.
   FTL_DCHECK(write_index_ < capacity_);
   auto ptr = reinterpret_cast<ModelData::PerObject*>(
-      &uniforms_.Map()[(write_index_ + 1) * kMinUniformBufferOffsetAlignment]);
+      &uniforms_->ptr()[(write_index_ + 1) * kMinUniformBufferOffsetAlignment]);
   ptr[0] = per_object;
 
   // Update the texture.
@@ -124,13 +127,9 @@ void ModelUniformWriter::Flush(CommandBuffer* command_buffer) {
   FTL_DCHECK(is_writable_);
   is_writable_ = false;
 
-  command_buffer->AddUsedResource(std::move(per_model_descriptor_sets_));
-  command_buffer->AddUsedResource(std::move(per_object_descriptor_sets_));
-
-  // TODO: this is a hack due to the way that we reuse ModelUniformWriters.
-  AllocateDescriptorSets();
-
-  uniforms_.Unmap();
+  command_buffer->AddUsedResource(uniforms_);
+  command_buffer->AddUsedResource(per_model_descriptor_sets_);
+  command_buffer->AddUsedResource(per_object_descriptor_sets_);
 
 // TODO: there should be a barrier similar to the following, but it cannot
 // happen within a render-pass.  To address this, ModelRenderer::Draw() should
@@ -167,12 +166,6 @@ void ModelUniformWriter::Flush(CommandBuffer* command_buffer) {
 #endif
 
   write_index_ = 0;
-}
-
-void ModelUniformWriter::BecomeWritable() {
-  FTL_DCHECK(!is_writable_);
-  FTL_DCHECK(write_index_ == 0);
-  is_writable_ = true;
 }
 
 void ModelUniformWriter::BindPerModelData(vk::PipelineLayout pipeline_layout,

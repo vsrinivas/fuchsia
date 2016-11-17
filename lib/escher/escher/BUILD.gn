@@ -71,6 +71,8 @@ static_library("escher") {
     "impl/render_pass_manager.h",
     "impl/resource.cc",
     "impl/resource.h",
+    "impl/uniform_buffer_pool.cc",
+    "impl/uniform_buffer_pool.h",
     "impl/vk/pipeline.cc",
     "impl/vk/pipeline.h",
     "impl/vk/pipeline_cache.cc",

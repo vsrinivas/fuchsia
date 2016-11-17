@@ -16,9 +16,9 @@ namespace impl {
 
 class ModelUniformWriter {
  public:
-  ModelUniformWriter(vk::Device,
-                     GpuAllocator* allocator,
-                     uint32_t capacity,
+  ModelUniformWriter(uint32_t capacity,
+                     vk::Device device,
+                     UniformBufferPool* uniform_buffer_pool,
                      DescriptorSetPool* per_model_descriptor_set_pool,
                      DescriptorSetPool* per_object_descriptor_set_pool);
   ~ModelUniformWriter();
@@ -45,26 +45,25 @@ class ModelUniformWriter {
 
   void Flush(CommandBuffer* command_buffer);
 
-  // Allows ModelData to guarantee that Flush() is called each frame.
-  void BecomeWritable();
-
  private:
   // Initialize descriptor sets whenever the writer is reset.
-  void AllocateDescriptorSets();
+  void AllocateBuffersAndDescriptorSets();
 
-  vk::Device device_;
   // The number of ObjectData structs that can be held.
   uint32_t capacity_;
-  Buffer uniforms_;
 
-  bool is_writable_ = false;
-  uint32_t write_index_ = 0;
+  vk::Device device_;
 
+  UniformBufferPool* uniform_buffer_pool_;
   DescriptorSetPool* per_model_descriptor_set_pool_;
   DescriptorSetPool* per_object_descriptor_set_pool_;
 
+  UniformBufferPtr uniforms_;
   DescriptorSetAllocationPtr per_model_descriptor_sets_;
   DescriptorSetAllocationPtr per_object_descriptor_sets_;
+
+  bool is_writable_ = true;
+  uint32_t write_index_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ModelUniformWriter);
 };

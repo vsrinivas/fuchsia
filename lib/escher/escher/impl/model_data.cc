@@ -18,7 +18,7 @@ constexpr uint32_t kInitialPerObjectDescriptorSetCount = 200;
 
 ModelData::ModelData(vk::Device device, GpuAllocator* allocator)
     : device_(device),
-      allocator_(allocator),
+      uniform_buffer_pool_(device, allocator),
       per_model_descriptor_set_pool_(device,
                                      GetPerModelDescriptorSetLayoutCreateInfo(),
                                      kInitialPerModelDescriptorSetCount),
@@ -69,26 +69,6 @@ ModelData::GetPerObjectDescriptorSetLayoutCreateInfo() {
     ptr = &info;
   }
   return *ptr;
-}
-
-ModelUniformWriter* ModelData::GetWriterWithCapacity(
-    CommandBuffer* command_buffer,
-    size_t max_object_count,
-    float overallocate_percent) {
-  auto ptr = writers_[command_buffer].get();
-  if (!ptr || ptr->capacity() < max_object_count) {
-    // Create a new writer with at least the required capacity.
-    uint32_t capacity =
-        static_cast<uint32_t>(max_object_count * (1.f + overallocate_percent));
-    FTL_CHECK(capacity >= max_object_count);
-    auto writer = std::make_unique<ModelUniformWriter>(
-        device_, allocator_, capacity, per_model_descriptor_set_pool(),
-        per_object_descriptor_set_pool());
-    ptr = writer.get();
-    writers_[command_buffer] = std::move(writer);
-  }
-  ptr->BecomeWritable();
-  return ptr;
 }
 
 }  // namespace impl
