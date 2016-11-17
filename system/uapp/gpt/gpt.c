@@ -49,10 +49,10 @@ static char* guid_to_cstring(char* dst, const uint8_t* src) {
 
 static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
     if (warn) {
-        printf("Using %s... <enter> to continue, any other key to cancel\n", dev);
+        printf("WARNING: You are about to permanently alter %s\n\nType 'y' to continue, any other key to cancel\n", dev);
 
         int c = cgetc();
-        if (c != 10) return NULL;
+        if (c != 'y') return NULL;
     }
 
     int fd = open(dev, O_RDWR);
@@ -83,7 +83,7 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
     gpt_device_t* gpt;
     rc = gpt_device_init(fd, blocksize, blocks, &gpt);
     if (rc < 0) {
-        printf("error initializing test\n");
+        printf("error initializing GPT\n");
         close(fd);
         return NULL;
     }
@@ -92,10 +92,19 @@ static gpt_device_t* init(const char* dev, bool warn, int* out_fd) {
     return gpt;
 }
 
-static void commit(gpt_device_t* gpt, int fd) {
-    printf("commit\n");
-    gpt_device_sync(gpt);
-    ioctl_block_rr_part(fd);
+static mx_status_t commit(gpt_device_t* gpt, int fd) {
+    int rc = gpt_device_sync(gpt);
+    if (rc) {
+        printf("Error: GPT device sync failed.\n");
+        return ERR_INTERNAL;
+    }
+    rc = ioctl_block_rr_part(fd);
+    if (rc) {
+        printf("Error: GPT updated but device could not be rebound. Please reboot.\n");
+        return ERR_INTERNAL;
+    }
+    printf("GPT changes complete.\n");
+    return 0;
 }
 
 static void dump_partitions(const char* dev) {
@@ -110,14 +119,19 @@ static void dump_partitions(const char* dev) {
 
     printf("Partition table is valid\n");
     gpt_partition_t* p;
-    char name[37];
-    char guid[37];
+    char name[GPT_GUID_STRLEN];
+    char guid[GPT_GUID_STRLEN];
+    char id[GPT_GUID_STRLEN];
     int i;
     for (i = 0; i < PARTITIONS_COUNT; i++) {
         p = gpt->partitions[i];
         if (!p) break;
-        memset(name, 0, 37);
-        printf("%d: %s 0x%" PRIx64 " 0x%" PRIx64 " (%" PRIx64 " blocks) %s\n", i, utf16_to_cstring(name, (const uint16_t*)p->name, 36), p->first, p->last, p->last - p->first + 1, guid_to_cstring(guid, (const uint8_t*)p->guid));
+        memset(name, 0, GPT_GUID_STRLEN);
+        printf("%d: %s 0x%" PRIx64 " 0x%" PRIx64 " (%" PRIx64 " blocks)\n    id:   %s\n    type: %s\n",
+               i, utf16_to_cstring(name, (const uint16_t*)p->name, GPT_GUID_STRLEN - 1), p->first,
+               p->last, p->last - p->first + 1,
+               guid_to_cstring(guid, (const uint8_t*)p->guid),
+               guid_to_cstring(id, (const uint8_t*)p->type));
     }
     printf("Total: %d partitions\n", i);
 
@@ -131,14 +145,17 @@ static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, con
     if (!gpt) return;
 
     if (!gpt->valid) {
-        commit(gpt, fd); // generate a default header
+        // generate a default header
+        if(commit(gpt, fd)) {
+            return;
+        }
     }
 
-    uint8_t type[16];
-    uint8_t guid[16];
-    memset(type, 0xff, 16);
+    uint8_t type[GPT_GUID_LEN];
+    uint8_t guid[GPT_GUID_LEN];
+    memset(type, 0xff, GPT_GUID_LEN);
     mx_size_t sz;
-    mx_cprng_draw(guid, 16, &sz);
+    mx_cprng_draw(guid, GPT_GUID_LEN, &sz);
     int rc = gpt_partition_add(gpt, name, type, guid, offset, blocks, 0);
     if (rc == 0) {
         printf("add partition: name=%s offset=0x%" PRIx64 " blocks=0x%" PRIx64 "\n", name, offset, blocks);
@@ -163,13 +180,158 @@ static void remove_partition(const char* dev, int n) {
     }
     int rc = gpt_partition_remove(gpt, p->guid);
     if (rc == 0) {
-        char name[37];
-        printf("remove partition: n=%d name=%s\n", n, utf16_to_cstring(name, (const uint16_t*)p->name, 36));
+        char name[GPT_GUID_STRLEN];
+        printf("remove partition: n=%d name=%s\n", n,
+               utf16_to_cstring(name, (const uint16_t*)p->name,
+                                GPT_GUID_STRLEN - 1));
         commit(gpt, fd);
     }
 
     gpt_device_release(gpt);
     close(fd);
+}
+
+/*
+ * Given a file descriptor used to read a gpt_device_t and the corresponding
+ * gpt_device_t, first release the gpt_device_t and then close the FD.
+ */
+static void tear_down_gpt(int fd, gpt_device_t* gpt) {
+    if (gpt != NULL) {
+        gpt_device_release(gpt);
+    }
+    close(fd);
+}
+
+/*
+ * Converts a GUID of the format xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx to
+ * a properly arranged, 16 byte sequence. This takes care of flipping the byte
+ * order section-wise for the first three sections (8 bytes total) of the GUID.
+ * bytes_out should be a 16 byte array where the final output will be placed.
+ * A bool is returned representing success of parsing the GUID. false will be
+ * returned if the GUID string is the wrong length or contains invalid
+ * characters.
+ */
+static bool parse_guid(char* guid, uint8_t* bytes_out) {
+    if (strlen(guid) != GPT_GUID_STRLEN - 1) {
+        printf("GUID length is wrong: %zd but expected %d\n", strlen(guid),
+               (GPT_GUID_STRLEN - 1));
+        return false;
+    }
+
+    // how many nibbles of the byte we've processed
+    uint8_t nibbles = 0;
+    // value to accumulate byte as we parse its two char nibbles
+    uint8_t val = 0;
+    // which byte we're parsing
+    uint8_t out_idx = 0;
+    uint8_t dashes = 0;
+
+    for (int idx = 0; idx < GPT_GUID_STRLEN - 1; idx++) {
+        char c = guid[idx];
+
+        uint8_t char_val = 0;
+        if (c == '-') {
+            dashes++;
+            continue;
+        } else if (c >= '0' && c <= '9') {
+            char_val = c - '0';
+        } else if (c >= 'A' && c <= 'F') {
+            char_val = c - 'A' + 10;
+        } else if (c >= 'a' && c <= 'f') {
+            char_val = c - 'a' + 10;
+        } else {
+            fprintf(stderr, "'%c' is not a valid GUID character\n", c);
+            return false;
+        }
+
+        val += char_val << (4 * (1 - nibbles));
+
+        if (++nibbles == 2) {
+            bytes_out[out_idx++] = val;
+            nibbles = 0;
+            val = 0;
+        }
+    }
+
+    if (dashes != 4) {
+        printf("Error, incorrect number of hex characters.\n");
+        return false;
+    }
+
+    // Shuffle bytes because endianness is swapped for certain sections
+    uint8_t swap;
+    swap = bytes_out[0];
+    bytes_out[0] = bytes_out[3];
+    bytes_out[3] = swap;
+    swap = bytes_out[1];
+    bytes_out[1] = bytes_out[2];
+    bytes_out[2] = swap;
+
+    swap = bytes_out[4];
+    bytes_out[4] = bytes_out[5];
+    bytes_out[5] = swap;
+
+    swap = bytes_out[6];
+    bytes_out[6] = bytes_out[7];
+    bytes_out[7] = swap;
+
+    return true;
+}
+
+/*
+ * Edit a partition, changing either its type or ID GUID. path_device should be
+ * the path to the device where the GPT can be read. idx_part should be the
+ * index of the partition in the GPT that you want to change. guid should be the
+ * string/human-readable form of the GUID and should be 36 characters plus a
+ * null terminator.
+ */
+static mx_status_t edit_partition(char* path_device, long idx_part,
+                                  char* type_or_id, char* guid) {
+    if (idx_part < 0 || idx_part >= PARTITIONS_COUNT) {
+        return ERR_INVALID_ARGS;
+    }
+
+    int fd = -1;
+    gpt_device_t* gpt = init(path_device, true, &fd);
+    if (gpt == NULL) {
+        tear_down_gpt(fd, gpt);
+        return ERR_INTERNAL;
+    }
+
+    gpt_partition_t* part = gpt->partitions[idx_part];
+    if (part == NULL) {
+        tear_down_gpt(fd, gpt);
+        return ERR_INVALID_ARGS;
+    }
+
+    // whether we're setting the type or id GUID
+    bool set_type;
+
+    if (!strcmp(type_or_id, "type")) {
+        set_type = true;
+    } else if (!strcmp(type_or_id, "id")) {
+        set_type = false;
+    } else {
+        tear_down_gpt(fd, gpt);
+        return ERR_INVALID_ARGS;
+    }
+
+    uint8_t guid_bytes[GPT_GUID_LEN];
+    if (!parse_guid(guid, guid_bytes)) {
+        printf("GUID could not be parsed.\n");
+        tear_down_gpt(fd, gpt);
+        return ERR_INVALID_ARGS;
+    }
+
+    if (set_type) {
+        memcpy(part->type, guid_bytes, GPT_GUID_LEN);
+    } else {
+        memcpy(part->guid, guid_bytes, GPT_GUID_LEN);
+    }
+
+    commit(gpt, fd);
+    tear_down_gpt(fd, gpt);
+    return NO_ERROR;
 }
 
 int main(int argc, char** argv) {
@@ -185,6 +347,11 @@ int main(int argc, char** argv) {
     } else if (!strcmp(cmd, "remove")) {
         if (argc < 3) goto usage;
         remove_partition(argc > 3 ? argv[3] : dev, strtol(argv[2], NULL, 0));
+    } else if (!strcmp(cmd, "edit")) {
+        if (argc < 6) goto usage;
+        if (edit_partition(argv[5], strtol(argv[2], NULL, 0), argv[3], argv[4])) {
+            printf("Failed to edit partition.\n");
+        }
     } else {
         goto usage;
     }
@@ -195,5 +362,6 @@ usage:
     printf("dump [<dev>]\n");
     printf("add <offset> <blocks> <name> [<dev>]\n");
     printf("remove <n> [<dev>]\n");
+    printf("edit <n> type|id <guid> <dev>\n");
     return 0;
 }
