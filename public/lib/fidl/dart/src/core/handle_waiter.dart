@@ -6,13 +6,10 @@ part of core;
 
 class HandleWaiter {
   HandleWaiter(this._handle, this.signals) {
-    if (_handle == null || _handle == MX_HANDLE_INVALID)
+    if (_handle == null || _handle.h == MX_HANDLE_INVALID)
       throw new FidlInternalError('HandleWaiter requires a valid handle. Got handle: $_handle.');
     if (signals == null || signals == 0)
       throw new FidlInternalError('HandleWaiter requires non-zero signals. Got signals: $signals.');
-    int status = MxHandle.registerFinalizer(this, _handle.h);
-    if (status != NO_ERROR)
-      throw new FidlInternalError('Failed to register the handle.');
   }
 
   final int signals;
@@ -53,8 +50,7 @@ class HandleWaiter {
     if (_handle == null)
       return;
     if (_receivePort != null) {
-      MxHandle.removeOpenHandle(_handle.h);
-      HandleWatcher.close(_handle.h);
+      HandleWatcher.close(_handle.release());
       _receivePort.close();
       _receivePort = null;
     } else {

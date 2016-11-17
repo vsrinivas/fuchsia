@@ -81,16 +81,21 @@ class Channel {
     if (dataNumBytes > dataLengthInBytes)
       return ERR_INVALID_ARGS;
 
-    // handles may be null, otherwise convert to ints.
     List<int> rawHandles;
     if (handles != null) {
       rawHandles = new List<int>(handles.length);
-      for (int i = 0; i < handles.length; ++i) {
-        rawHandles[i] = handles[i].h;
-      }
+      for (int i = 0; i < handles.length; ++i)
+        rawHandles[i] = handles[i].release();
     }
 
-    return MxChannel.write(handle.h, data, dataNumBytes, rawHandles, flags);
+    int status = MxChannel.write(handle.h, data, dataNumBytes, rawHandles, flags);
+
+    if (status != NO_ERROR) {
+      for (int i = 0; i < rawHandles.length; ++i)
+        MxHandle.close(rawHandles[i]);
+    }
+
+    return status;
   }
 
   ChannelReadResult read(ByteData data,
@@ -124,16 +129,12 @@ class Channel {
 
     // Copy out the handles that were read.
     if (handles != null) {
-      for (var i = 0; i < readResult.handlesRead; i++) {
+      for (var i = 0; i < readResult.handlesRead; i++)
         handles[i] = new Handle(rawHandles[i]);
-      }
     }
 
     return readResult;
   }
-
-  bool setDescription(String description) =>
-      MxHandle.setDescription(handle.h, description);
 
   /// Warning: The object returned by this function, and the buffers inside of
   /// it are only valid until the next call to this function by the same

@@ -191,7 +191,7 @@ class Encoder {
       encodeInvalidHandle(offset, nullable);
     } else {
       encodeUint32(_buffer.handles.length, offset);
-      _buffer.handles.add(value.pass());
+      _buffer.handles.add(value);
     }
   }
 

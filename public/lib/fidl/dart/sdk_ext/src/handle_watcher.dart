@@ -39,19 +39,8 @@ class HandleWatcher {
         localControlHandle, command, handleOrDeadline, port, signals);
   }
 
-  static Future<int> close(int handle, {bool wait: false}) {
-    if (!wait)
-      return new Future.value(_sendControlData(_kClose, handle, null, 0));
-    int result;
-    var completer = new Completer();
-    var rawPort = new RawReceivePort((_) {
-      completer.complete(result);
-    });
-    result = _sendControlData(_kClose, handle, rawPort.sendPort, 0);
-    return completer.future.then((r) {
-      rawPort.close();
-      return r;
-    });
+  static int close(int handle) {
+    return _sendControlData(_kClose, handle, null, 0);
   }
 
   static int add(int handle, SendPort port, int signals) {

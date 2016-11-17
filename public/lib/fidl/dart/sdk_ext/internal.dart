@@ -7,6 +7,7 @@ library internal;
 import 'dart:async';
 import 'dart:collection';
 import 'dart:isolate';
+import 'dart:nativewrappers';
 import 'dart:typed_data';
 
 part 'src/handle_watcher.dart';

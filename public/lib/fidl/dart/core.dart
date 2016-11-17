@@ -9,9 +9,10 @@ import 'dart:fidl.internal';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+export 'dart:fidl.internal' show Handle;
+
 part 'src/core/channel.dart';
 part 'src/core/channel_reader.dart';
 part 'src/core/errors.dart';
 part 'src/core/handle_waiter.dart';
-part 'src/core/handle.dart';
 part 'src/core/types.dart';
