@@ -105,7 +105,8 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 
   PagePtr page;
-  ledger->NewPage(GetProxy(&page), [this](Status) { message_loop_.QuitNow(); });
+  ledger->NewPage(GetProxy(&page),
+                  [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
@@ -115,7 +116,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 
   storage_ptr->get_page_fails = true;
   ledger->GetRootPage(GetProxy(&page),
-                      [this](Status) { message_loop_.QuitNow(); });
+                      [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
@@ -125,7 +126,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 
   storage::PageId id = RandomId();
   ledger->GetPage(convert::ToArray(id), GetProxy(&page),
-                  [this](Status) { message_loop_.QuitNow(); });
+                  [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
@@ -135,7 +136,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   storage_ptr->ClearCalls();
 
   ledger->DeletePage(convert::ToArray(id),
-                     [this](Status) { message_loop_.QuitNow(); });
+                     [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
@@ -156,7 +157,7 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   bool ledger_closed = false;
   ledger.set_connection_error_handler([this, &ledger_closed] {
     ledger_closed = true;
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
 
   ledger_manager.reset();
@@ -179,13 +180,13 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
   ledger->GetPage(convert::ToArray(id), GetProxy(&page),
                   [this, &calls](Status) {
                     calls++;
-                    message_loop_.QuitNow();
+                    message_loop_.PostQuitTask();
                   });
   page.reset();
   ledger->GetPage(convert::ToArray(id), GetProxy(&page),
                   [this, &calls](Status) {
                     calls++;
-                    message_loop_.QuitNow();
+                    message_loop_.PostQuitTask();
                   });
   page.reset();
   message_loop_.Run();

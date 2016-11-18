@@ -191,7 +191,7 @@ class PageStorageTest : public ::testing::Test {
         [this, &expected_id](Status returned_status, ObjectId object_id) {
           EXPECT_EQ(Status::OK, returned_status);
           EXPECT_EQ(expected_id, object_id);
-          message_loop_.QuitNow();
+          message_loop_.PostQuitTask();
         });
     message_loop_.Run();
   }
@@ -352,7 +352,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
       [this, &object_id](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::OK, returned_status);
         object_id = std::move(returned_object_id);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
 
@@ -372,7 +372,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalNegativeSize) {
       mtl::WriteStringToConsumerHandle(data.value), -1,
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::OK, returned_status);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
   EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
@@ -385,7 +385,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
       mtl::WriteStringToConsumerHandle(data.value), 123,
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::IO_ERROR, returned_status);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
   EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
@@ -398,7 +398,7 @@ TEST_F(PageStorageTest, AddObjectFromSync) {
                               mtl::WriteStringToConsumerHandle(data.value),
                               data.size, [this](Status returned_status) {
                                 EXPECT_EQ(Status::OK, returned_status);
-                                message_loop_.QuitNow();
+                                message_loop_.PostQuitTask();
                               });
   message_loop_.Run();
 
@@ -417,7 +417,7 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
       wrong_id, mtl::WriteStringToConsumerHandle(data.value), data.size,
       [this](Status returned_status) {
         EXPECT_EQ(Status::OBJECT_ID_MISMATCH, returned_status);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
 }
@@ -429,7 +429,7 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
                               mtl::WriteStringToConsumerHandle(data.value), 123,
                               [this](Status returned_status) {
                                 EXPECT_EQ(Status::IO_ERROR, returned_status);
-                                message_loop_.QuitNow();
+                                message_loop_.PostQuitTask();
                               });
   message_loop_.Run();
 }
@@ -447,7 +447,7 @@ TEST_F(PageStorageTest, GetObject) {
                                std::unique_ptr<const Object> returned_object) {
         status = returned_status;
         object = std::move(returned_object);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
 
@@ -472,7 +472,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
                                std::unique_ptr<const Object> returned_object) {
         status = returned_status;
         object = std::move(returned_object);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
 

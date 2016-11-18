@@ -38,7 +38,7 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
       [this](Status status, std::unique_ptr<PageStorage> page_storage) {
         EXPECT_EQ(Status::NOT_FOUND, status);
         EXPECT_EQ(nullptr, page_storage);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
 
@@ -51,7 +51,7 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
       [this](Status status, std::unique_ptr<PageStorage> page_storage) {
         EXPECT_EQ(Status::OK, status);
         EXPECT_NE(nullptr, page_storage);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
 }
@@ -67,7 +67,7 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
       [this](Status status, std::unique_ptr<PageStorage> page_storage) {
         EXPECT_EQ(Status::OK, status);
         EXPECT_NE(nullptr, page_storage);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
 
@@ -77,7 +77,7 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
       [this](Status status, std::unique_ptr<PageStorage> page_storage) {
         EXPECT_EQ(Status::NOT_FOUND, status);
         EXPECT_EQ(nullptr, page_storage);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
 }

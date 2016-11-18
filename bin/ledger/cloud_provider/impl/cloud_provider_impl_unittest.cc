@@ -45,7 +45,7 @@ class CloudProviderImplTest : public ::testing::Test,
     get_queries_.push_back(query);
     message_loop_.task_runner()->PostTask([this, callback]() {
       callback(firebase::Status::OK, *get_response_);
-      message_loop_.QuitNow();
+      message_loop_.PostQuitTask();
     });
   }
 
@@ -57,7 +57,7 @@ class CloudProviderImplTest : public ::testing::Test,
     put_data_.push_back(data);
     message_loop_.task_runner()->PostTask([this, callback]() {
       callback(firebase::Status::OK);
-      message_loop_.QuitNow();
+      message_loop_.PostQuitTask();
     });
   }
 

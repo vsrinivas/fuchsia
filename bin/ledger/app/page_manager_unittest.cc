@@ -46,7 +46,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   PageManager page_manager(std::move(storage), std::move(page_sync));
   page_manager.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
 
   EXPECT_FALSE(on_empty_called);
@@ -57,7 +57,8 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   page1.reset();
   page2.reset();
   message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
+      [this]() { message_loop_.PostQuitTask(); },
+      ftl::TimeDelta::FromSeconds(1));
   message_loop_.Run();
   EXPECT_TRUE(on_empty_called);
 
@@ -66,7 +67,8 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   page_manager.BindPage(GetProxy(&page3));
   page3.reset();
   message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
+      [this]() { message_loop_.PostQuitTask(); },
+      ftl::TimeDelta::FromSeconds(1));
   message_loop_.Run();
   EXPECT_TRUE(on_empty_called);
 
@@ -78,7 +80,8 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
       GetProxy(&snapshot));
   snapshot.reset();
   message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
+      [this]() { message_loop_.PostQuitTask(); },
+      ftl::TimeDelta::FromSeconds(1));
   message_loop_.Run();
   EXPECT_TRUE(on_empty_called);
 }
@@ -95,7 +98,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   bool page_closed = false;
   page.set_connection_error_handler([this, &page_closed] {
     page_closed = true;
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
 
   page_manager.reset();
@@ -111,7 +114,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   PageManager page_manager(std::move(storage), std::move(page_sync));
   page_manager.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
 
   EXPECT_FALSE(on_empty_called);
@@ -122,7 +125,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   page1->Put(convert::ToArray("key1"), convert::ToArray("value1"),
              [this](Status status) {
                EXPECT_EQ(Status::OK, status);
-               message_loop_.QuitNow();
+               message_loop_.PostQuitTask();
              });
   message_loop_.Run();
 
@@ -130,20 +133,22 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   fidl::InterfaceRequest<PageWatcher> watcher_request = GetProxy(&watcher);
   page1->Watch(std::move(watcher), [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
   message_loop_.Run();
 
   page1.reset();
   page2.reset();
   message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
+      [this]() { message_loop_.PostQuitTask(); },
+      ftl::TimeDelta::FromSeconds(1));
   message_loop_.Run();
   EXPECT_FALSE(on_empty_called);
 
   watcher_request.PassChannel();
   message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.QuitNow(); }, ftl::TimeDelta::FromSeconds(1));
+      [this]() { message_loop_.PostQuitTask(); },
+      ftl::TimeDelta::FromSeconds(1));
   message_loop_.Run();
   EXPECT_TRUE(on_empty_called);
 }

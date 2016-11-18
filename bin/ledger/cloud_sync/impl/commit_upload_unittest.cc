@@ -165,11 +165,11 @@ TEST_F(CommitUploadTest, NoObjects) {
   CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commit),
                              [this, &done_calls] {
                                done_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              },
                              [this, &error_calls] {
                                error_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              });
 
   commit_upload.Start();
@@ -205,11 +205,11 @@ TEST_F(CommitUploadTest, WithObjects) {
   CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commit),
                              [this, &done_calls] {
                                done_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              },
                              [this, &error_calls] {
                                error_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              });
 
   commit_upload.Start();
@@ -249,11 +249,11 @@ TEST_F(CommitUploadTest, FailedObjectUpload) {
   CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commit),
                              [this, &done_calls] {
                                done_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              },
                              [this, &error_calls] {
                                error_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              });
 
   cloud_provider_.object_status_to_return =
@@ -287,11 +287,11 @@ TEST_F(CommitUploadTest, FailedCommitUpload) {
   CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commit),
                              [this, &done_calls] {
                                done_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              },
                              [this, &error_calls] {
                                error_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              });
 
   cloud_provider_.commit_status_to_return =
@@ -330,11 +330,11 @@ TEST_F(CommitUploadTest, ErrorAndRetry) {
   CommitUpload commit_upload(&storage_, &cloud_provider_, std::move(commit),
                              [this, &done_calls] {
                                done_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              },
                              [this, &error_calls] {
                                error_calls++;
-                               message_loop_.QuitNow();
+                               message_loop_.PostQuitTask();
                              });
 
   cloud_provider_.object_status_to_return =

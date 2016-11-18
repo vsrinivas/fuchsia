@@ -75,7 +75,7 @@ storage::ObjectId PageImplTest::AddObjectToStorage(
 TEST_F(PageImplTest, GetId) {
   page_ptr_->GetId([this](fidl::Array<uint8_t> page_id) {
     EXPECT_EQ(page_id1_, convert::ToString(page_id));
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
   message_loop_.Run();
 }
@@ -103,7 +103,7 @@ TEST_F(PageImplTest, PutNoTransaction) {
     EXPECT_EQ(object_id, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback);
   message_loop_.Run();
@@ -133,7 +133,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
     EXPECT_EQ(object_id, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
                           Priority::LAZY, callback);
@@ -159,7 +159,7 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key);
     EXPECT_TRUE(entry.deleted);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
   message_loop_.Run();
 }
@@ -181,7 +181,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   //  - Commit
   page_ptr_->StartTransaction([this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
   message_loop_.Run();
 
@@ -206,7 +206,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(object_id1, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
 
   };
   page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value), put_callback);
@@ -229,7 +229,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(object_id2, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
 
   };
   page_ptr_->PutReference(convert::ToArray(key2), std::move(reference),
@@ -251,7 +251,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     storage::fake::FakeJournalDelegate::Entry entry =
         it->second->GetData().at(key2);
     EXPECT_TRUE(entry.deleted);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
 
   page_ptr_->Delete(convert::ToArray(key2), delete_callback);
@@ -268,7 +268,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     auto it = journals.begin();
     EXPECT_TRUE(it->second->IsCommitted());
     EXPECT_EQ(2u, it->second->GetData().size());
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
   message_loop_.Run();
 }
@@ -291,7 +291,7 @@ TEST_F(PageImplTest, TransactionRollback) {
     auto it = journals.begin();
     EXPECT_TRUE(it->second->IsRolledBack());
     EXPECT_EQ(0u, it->second->GetData().size());
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
   message_loop_.Run();
 }
@@ -304,7 +304,7 @@ TEST_F(PageImplTest, NoTwoTransactions) {
       [](Status status) { EXPECT_EQ(Status::OK, status); });
   page_ptr_->StartTransaction([this](Status status) {
     EXPECT_EQ(Status::TRANSACTION_ALREADY_IN_PROGRESS, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
   message_loop_.Run();
 }
@@ -314,7 +314,7 @@ TEST_F(PageImplTest, NoTransactionCommit) {
   //  - Commit
   page_ptr_->Commit([this](Status status) {
     EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
   message_loop_.Run();
 }
@@ -324,7 +324,7 @@ TEST_F(PageImplTest, NoTransactionRollback) {
   //  - Rollback
   page_ptr_->Rollback([this](Status status) {
     EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   });
   message_loop_.Run();
 }
@@ -339,7 +339,7 @@ TEST_F(PageImplTest, CreateReference) {
                                   ReferencePtr received_reference) {
         status = received_status;
         reference = std::move(received_reference);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
   EXPECT_EQ(Status::OK, status);
@@ -361,7 +361,7 @@ TEST_F(PageImplTest, GetReference) {
       [this, &value](Status status, ValuePtr received_value) {
         EXPECT_EQ(Status::OK, status);
         value = std::move(received_value);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
   EXPECT_TRUE(value->is_bytes());
@@ -380,7 +380,7 @@ TEST_F(PageImplTest, GetLargeReference) {
       [this, &value](Status status, ValuePtr received_value) {
         EXPECT_EQ(Status::OK, status);
         value = std::move(received_value);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
   EXPECT_TRUE(value->is_buffer());
@@ -401,7 +401,7 @@ TEST_F(PageImplTest, GetPartialReference) {
       [this, &buffer](Status status, mx::vmo received_buffer) {
         EXPECT_EQ(Status::OK, status);
         buffer = std::move(received_buffer);
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
   std::string content;
@@ -420,7 +420,7 @@ TEST_F(PageImplTest, GetUnknownReference) {
       std::move(reference),
       [this, &status](Status received_status, ValuePtr received_value) {
         status = received_status;
-        message_loop_.QuitNow();
+        message_loop_.PostQuitTask();
       });
   message_loop_.Run();
   EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
@@ -433,14 +433,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
 
   auto callback_put = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
   message_loop_.Run();
 
   auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
@@ -452,7 +452,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
     actual_entries = std::move(entries);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
   message_loop_.Run();
@@ -471,7 +471,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
 
   auto callback_statusok = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->StartTransaction(callback_statusok);
   message_loop_.Run();
@@ -486,7 +486,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
 
   auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
@@ -498,7 +498,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
     actual_keys = std::move(keys);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
   message_loop_.Run();
@@ -515,14 +515,14 @@ TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
 
   auto callback_put = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
   message_loop_.Run();
 
   auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
@@ -531,7 +531,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
   auto callback_get = [this, &actual_value](Status status, ValuePtr value) {
     EXPECT_EQ(Status::OK, status);
     actual_value = std::move(value);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   snapshot->Get(convert::ToArray(key), callback_get);
   message_loop_.Run();
@@ -551,7 +551,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
 
   auto callback_put = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
                           Priority::EAGER, callback_put);
@@ -559,7 +559,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
 
   auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
@@ -568,7 +568,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
   auto callback_get = [this, &actual_value](Status status, ValuePtr value) {
     EXPECT_EQ(Status::OK, status);
     actual_value = std::move(value);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   snapshot->Get(convert::ExtendedStringView(key).ToArray(), callback_get);
   message_loop_.Run();
@@ -587,14 +587,14 @@ TEST_F(PageImplTest, SnapshotGetPartial) {
 
   auto callback_put = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
   message_loop_.Run();
 
   auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
   message_loop_.Run();
@@ -606,7 +606,7 @@ TEST_F(PageImplTest, SnapshotGetPartial) {
                                                 mx::vmo received_buffer) {
                          status = received_status;
                          buffer = std::move(received_buffer);
-                         message_loop_.QuitNow();
+                         message_loop_.PostQuitTask();
                        });
   message_loop_.Run();
   EXPECT_EQ(Status::OK, status);
@@ -628,7 +628,7 @@ TEST_F(PageImplTest, ParallelPut) {
 
   auto callback_simple = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->StartTransaction(callback_simple);
   message_loop_.Run();
@@ -651,7 +651,7 @@ TEST_F(PageImplTest, ParallelPut) {
 
   auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   page_ptr_->GetSnapshot(GetProxy(&snapshot1), callback_getsnapshot);
   message_loop_.Run();
@@ -663,7 +663,7 @@ TEST_F(PageImplTest, ParallelPut) {
                                                    ValuePtr returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value1 = convert::ToString(returned_value->get_bytes());
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   snapshot1->Get(convert::ToArray(key), callback_getvalue1);
   message_loop_.Run();
@@ -673,7 +673,7 @@ TEST_F(PageImplTest, ParallelPut) {
                                                    ValuePtr returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value2 = convert::ToString(returned_value->get_bytes());
-    message_loop_.QuitNow();
+    message_loop_.PostQuitTask();
   };
   snapshot2->Get(convert::ToArray(key), callback_getvalue2);
   message_loop_.Run();

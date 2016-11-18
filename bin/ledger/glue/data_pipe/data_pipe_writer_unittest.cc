@@ -26,7 +26,7 @@ TEST(DataPipeWriter, WriteAndRead) {
   drainer->Start(std::move(data_pipe.consumer_handle),
                  [&value, &message_loop](const std::string& v) {
                    value = v;
-                   message_loop.QuitNow();
+                   message_loop.PostQuitTask();
                  });
   message_loop.Run();
 
