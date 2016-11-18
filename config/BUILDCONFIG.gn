@@ -113,6 +113,7 @@ if (host_os == "linux" || host_os == "mac") {
 
 is_android = false
 is_fuchsia = false
+is_fuchsia_host = false
 is_ios = false
 is_linux = false
 is_mac = false
@@ -125,8 +126,10 @@ if (current_os == "fuchsia") {
   is_fuchsia = true
 } else if (current_os == "linux") {
   is_linux = true
+  is_fuchsia_host = true
 } else if (current_os == "mac") {
   is_mac = true
+  is_fuchsia_host = true
 }
 
 set_default_toolchain(target_toolchain)
