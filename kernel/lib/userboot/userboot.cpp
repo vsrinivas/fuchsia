@@ -307,7 +307,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         if (status < 0)
             return status;
         mxtl::RefPtr<Dispatcher> ut_disp;
-        status = ThreadDispatcher::Create(ut, &ut_disp, &rights);
+        status = ThreadDispatcher::Create(mxtl::move(ut), &ut_disp, &rights);
         if (status < 0)
             return status;
         handles[BOOTSTRAP_THREAD] = MakeHandle(ut_disp, rights);
