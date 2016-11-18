@@ -21,10 +21,10 @@ function envhelp() {
     # note: please keep these sorted
     cat <<END
 magenta functions:
-  mboot, mbuild, mcheck, mgo, mrev, mrun, mset, msymbolize
+  mboot, mbuild, mbuild-if-changed, mcheck, mgo, mrev, mrun, mset, msymbolize
 fuchsia functions:
-  fboot, fbuild, fbuild-sysroot, fbuild-sysroot-if-needed, fcheck, fgen,
-  fgen-if-needed, fgo, frun, fset, fsymbolize
+  fboot, fbuild, fbuild-sysroot, fbuild-sysroot-if-changed, fcheck, fgen,
+  fgen-if-changed, fgo, frun, fset, fsymbolize
 END
     return
   fi
@@ -99,6 +99,7 @@ function mset() {
 
   export MAGENTA_BUILD_DIR="${MAGENTA_DIR}/build-${MAGENTA_PROJECT}"
   export MAGENTA_TOOLS_DIR="${MAGENTA_DIR}/build-${MAGENTA_PROJECT}/tools"
+  export MAGENTA_BUILD_REV_CACHE="${MAGENTA_BUILD_DIR}/build.rev";
   export MAGENTA_SETTINGS="${settings}"
   export ENVPROMPT_INFO="${MAGENTA_ARCH}"
 
@@ -135,8 +136,32 @@ END
 function mbuild() {
   mcheck || return 1
 
-  echo "Building magenta..."
-  "${MAGENTA_DIR}/scripts/make-parallel" -C "${MAGENTA_DIR}" "${MAGENTA_PROJECT}" "$@"
+  echo "Building magenta..." \
+    && "${MAGENTA_DIR}/scripts/make-parallel" -C "${MAGENTA_DIR}" "${MAGENTA_PROJECT}" "$@" \
+    && (mrev > "${MAGENTA_BUILD_REV_CACHE}")
+}
+
+### mbuild-if-changed: only build magenta if stale
+
+function mbuild-if-changed-usage() {
+  cat >&2 <<END
+Usage: mbuild-if-changed [extra make args...]
+Builds magenta only if HEAD revision has changed.
+END
+}
+
+function mbuild-if-changed() {
+  mcheck || return 1
+
+  local last_rev
+  if [[ -f "${MAGENTA_BUILD_REV_CACHE}" ]]; then
+    last_rev=$(cat "${MAGENTA_BUILD_REV_CACHE}")
+  fi
+
+  if ! ([[ -d "${MAGENTA_BUILD_DIR}" ]] \
+      && [[ "$(mrev)" == "${last_rev}" ]]); then
+    mbuild "$@"
+  fi
 }
 
 ### mboot: run magenta bootserver
@@ -304,7 +329,7 @@ function fset() {
   export FUCHSIA_BUILD_NINJA="${FUCHSIA_BUILD_DIR}/build.ninja"
   export FUCHSIA_GEN_ARGS_CACHE="${FUCHSIA_BUILD_DIR}/build.gen-args"
   export FUCHSIA_SYSROOT_DIR="${FUCHSIA_OUT_DIR}/sysroot/${FUCHSIA_SYSROOT_TARGET}-fuchsia"
-  export FUCHSIA_SYSROOT_REV_CACHE="${FUCHSIA_OUT_DIR}/sysroot/${FUCHSIA_SYSROOT_TARGET}-fuchsia.rev"
+  export FUCHSIA_SYSROOT_REV_CACHE="${FUCHSIA_SYSROOT_DIR}/build.rev"
   export FUCHSIA_SETTINGS="${settings}"
   export ENVPROMPT_INFO="${ENVPROMPT_INFO}-${FUCHSIA_VARIANT}"
 
@@ -354,16 +379,16 @@ function fgen() {
     && (echo "${FUCHSIA_GEN_ARGS}" > "${FUCHSIA_GEN_ARGS_CACHE}")
 }
 
-### fgen-if-needed: only generate ninja build files if they are absent
+### fgen-if-changed: only generate ninja build files if stale
 
-function fgen-if-needed-usage() {
+function fgen-if-changed-usage() {
   cat >&2 <<END
-Usage: fgen-if-needed [extra gen.py args...]
+Usage: fgen-if-changed [extra gen.py args...]
 Generates ninja build files for fuchsia only if gen args have changed.
 END
 }
 
-function fgen-if-needed() {
+function fgen-if-changed() {
   fcheck || return 1
 
   local last_gen_args
@@ -389,21 +414,22 @@ END
 function fbuild-sysroot() {
   fcheck || return 1
 
-  echo "Building sysroot..."
-  (fgo && "./scripts/build-sysroot.sh" -t "${FUCHSIA_SYSROOT_TARGET}" "$@") \
+  mbuild-if-changed \
+    && echo "Building sysroot..." \
+    && (fgo && "./scripts/build-sysroot.sh" -t "${FUCHSIA_SYSROOT_TARGET}" "$@") \
     && (mrev > "${FUCHSIA_SYSROOT_REV_CACHE}")
 }
 
-### fbuild-sysroot-if-needed: only build sysroot if absent
+### fbuild-sysroot-if-changed: only build sysroot if stale
 
-function fbuild-sysroot-if-needed-usage() {
+function fbuild-sysroot-if-changed-usage() {
   cat >&2 <<END
-Usage: fbuild-sysroot-if-needed [extra build-sysroot.sh args...]
+Usage: fbuild-sysroot-if-changed [extra build-sysroot.sh args...]
 Builds fuchsia system root only if magenta HEAD revision has changed.
 END
 }
 
-function fbuild-sysroot-if-needed() {
+function fbuild-sysroot-if-changed() {
   fcheck || return 1
 
   local last_rev
@@ -426,7 +452,7 @@ Builds fuchsia.
 END
 }
 
-function fbuild-start-goma-if-needed() {
+function fbuild-goma-ensure-start() {
   if [[ "${FUCHSIA_GEN_ARGS}" == *--goma* ]]; then
     ~/goma/goma_ctl.py ensure_start
   fi
@@ -435,9 +461,9 @@ function fbuild-start-goma-if-needed() {
 function fbuild() {
   fcheck || return 1
 
-  fgen-if-needed \
-    && fbuild-sysroot-if-needed \
-    && fbuild-start-goma-if-needed \
+  fgen-if-changed \
+    && fbuild-sysroot-if-changed \
+    && fbuild-goma-ensure-start \
     && echo "Building fuchsia..." \
     && "${FUCHSIA_DIR}/buildtools/ninja" ${FUCHSIA_NINJA_ARGS} "$@"
 }
