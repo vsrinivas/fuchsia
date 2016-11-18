@@ -71,5 +71,11 @@
             "binary": "view_manager_service",
             "bootfs_path": "apps/view_manager_service"
         }
+    ],
+    "resources": [
+      {
+          "file": "apps/mozart/src/root_presenter/resources/cursor32.png",
+          "bootfs_path": "data/root_presenter/cursor32.png"
+      }
     ]
 }
