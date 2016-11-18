@@ -13,6 +13,8 @@ executable("root_presenter") {
 
   deps = [
     "//apps/modular/lib/app",
+    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/input",
@@ -21,8 +23,9 @@ executable("root_presenter") {
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/src/input_reader",
     "//apps/tracing/lib/trace:provider",
+    "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/fidl/cpp/bindings",
+    "//third_party/skia",
   ]
 }

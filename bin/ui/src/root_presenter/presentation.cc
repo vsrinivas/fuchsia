@@ -4,11 +4,32 @@
 
 #include "apps/mozart/src/root_presenter/presentation.h"
 
+#include <mx/vmo.h>
+
 #include "apps/modular/lib/app/connect.h"
+#include "apps/mozart/lib/skia/skia_vmo_data.h"
+#include "apps/mozart/lib/skia/skia_vmo_surface.h"
+#include "apps/mozart/services/composition/resources.fidl.h"
+#include "apps/mozart/services/composition/scenes.fidl.h"
+#include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/vmo/file.h"
+#include "third_party/skia/include/core/SkCanvas.h"
+#include "third_party/skia/include/core/SkData.h"
+#include "third_party/skia/include/core/SkSurface.h"
 
 namespace root_presenter {
+
+namespace {
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+constexpr uint32_t kRootViewKey = 1u;
+constexpr uint32_t kMainViewKey = 2u;
+constexpr uint32_t kCursorViewKey = 3u;
+constexpr uint32_t kCursorImageResourceId = 2u;
+constexpr uint32_t kMainSceneResourceId = 3u;
+constexpr char kCursorImage[] = "/system/data/root_presenter/cursor32.png";
+}
 
 Presentation::Presentation(mozart::Compositor* compositor,
                            mozart::ViewManager* view_manager,
@@ -17,11 +38,14 @@ Presentation::Presentation(mozart::Compositor* compositor,
       view_manager_(view_manager),
       view_owner_(std::move(view_owner)),
       input_reader_(&input_interpreter_),
-      view_tree_listener_binding_(this),
-      view_container_listener_binding_(this) {
+      tree_listener_binding_(this),
+      tree_container_listener_binding_(this),
+      view_container_listener_binding_(this),
+      view_listener_binding_(this) {
   FTL_DCHECK(compositor_);
   FTL_DCHECK(view_manager_);
   FTL_DCHECK(view_owner_);
+  LoadCursor();
 }
 
 Presentation::~Presentation() {}
@@ -45,6 +69,24 @@ void Presentation::Present(ftl::Closure shutdown_callback) {
 void Presentation::StartInput() {
   input_interpreter_.RegisterDisplay(*display_info_->size);
   input_interpreter_.RegisterCallback([this](mozart::EventPtr event) {
+    if (event->pointer_data) {
+      if (event->pointer_data->kind == mozart::PointerKind::MOUSE) {
+        cursor_position_.x = event->pointer_data->x;
+        cursor_position_.y = event->pointer_data->y;
+        if (!show_cursor_) {
+          layout_changed_ = true;
+          show_cursor_ = true;
+        }
+        root_view_->Invalidate();
+      } else {
+        if (show_cursor_) {
+          layout_changed_ = true;
+          show_cursor_ = false;
+          root_view_->Invalidate();
+        }
+      }
+    }
+
     if (input_dispatcher_)
       input_dispatcher_->DispatchEvent(std::move(event));
   });
@@ -57,31 +99,31 @@ void Presentation::CreateViewTree() {
   FTL_DCHECK(display_info_);
 
   // Register the view tree.
-  mozart::ViewTreeListenerPtr view_tree_listener;
-  view_tree_listener_binding_.Bind(fidl::GetProxy(&view_tree_listener));
-  view_manager_->CreateViewTree(fidl::GetProxy(&view_tree_),
-                                std::move(view_tree_listener), "Presentation");
-  view_tree_.set_connection_error_handler([this] {
+  mozart::ViewTreeListenerPtr tree_listener;
+  tree_listener_binding_.Bind(fidl::GetProxy(&tree_listener));
+  view_manager_->CreateViewTree(fidl::GetProxy(&tree_),
+                                std::move(tree_listener), "Presentation");
+  tree_.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "View tree connection error.";
     Shutdown();
   });
 
   // Prepare the view container for the root.
-  view_tree_->GetContainer(fidl::GetProxy(&view_container_));
-  view_container_.set_connection_error_handler([this] {
-    FTL_LOG(ERROR) << "View container connection error.";
+  tree_->GetContainer(fidl::GetProxy(&tree_container_));
+  tree_container_.set_connection_error_handler([this] {
+    FTL_LOG(ERROR) << "Tree view container connection error.";
     Shutdown();
   });
-  mozart::ViewContainerListenerPtr view_container_listener;
-  view_container_listener_binding_.Bind(
-      fidl::GetProxy(&view_container_listener));
-  view_container_->SetListener(std::move(view_container_listener));
+  mozart::ViewContainerListenerPtr tree_container_listener;
+  tree_container_listener_binding_.Bind(
+      fidl::GetProxy(&tree_container_listener));
+  tree_container_->SetListener(std::move(tree_container_listener));
 
   // Get view tree services.
-  modular::ServiceProviderPtr view_tree_service_provider;
-  view_tree_->GetServiceProvider(fidl::GetProxy(&view_tree_service_provider));
+  modular::ServiceProviderPtr tree_service_provider;
+  tree_->GetServiceProvider(fidl::GetProxy(&tree_service_provider));
   input_dispatcher_ = modular::ConnectToService<mozart::InputDispatcher>(
-      view_tree_service_provider.get());
+      tree_service_provider.get());
   input_dispatcher_.set_connection_error_handler([this] {
     // This isn't considered a fatal error right now since it is still useful
     // to be able to test a view system that has graphics but no input.
@@ -91,13 +133,144 @@ void Presentation::CreateViewTree() {
   });
 
   // Attach the renderer.
-  view_tree_->SetRenderer(std::move(renderer_));
-  view_container_->AddChild(++root_key_, std::move(view_owner_));
+  tree_->SetRenderer(std::move(renderer_));
 
-  UpdateViewProperties();
+  // Create root view
+  mozart::ViewListenerPtr root_view_listener;
+  view_listener_binding_.Bind(GetProxy(&root_view_listener));
+  view_manager_->CreateView(fidl::GetProxy(&root_view_),
+                            fidl::GetProxy(&root_view_owner_),
+                            std::move(root_view_listener), "RootView");
+  tree_container_->AddChild(kRootViewKey, std::move(root_view_owner_));
+  root_view_->CreateScene(GetProxy(&root_scene_));
+
+  // Add main view to root view
+  root_view_->GetContainer(fidl::GetProxy(&root_container_));
+
+  mozart::ViewContainerListenerPtr view_container_listener;
+  view_container_listener_binding_.Bind(
+      fidl::GetProxy(&view_container_listener));
+  root_container_->SetListener(std::move(view_container_listener));
+
+  root_container_->AddChild(kMainViewKey, std::move(view_owner_));
+
+  UpdateRootViewProperties();
 }
 
-void Presentation::UpdateViewProperties() {
+void Presentation::LoadCursor() {
+  // TODO(jpoichet) Since VmoFromFilename copies the file into a VMO we should
+  // do this asynchronously
+  mx::vmo vmo;
+  if (mtl::VmoFromFilename(kCursorImage, &vmo)) {
+    sk_sp<SkData> data = mozart::MakeSkDataFromVMO(vmo);
+    cursor_image_ = data ? SkImage::MakeFromEncoded(data) : nullptr;
+  }
+  if (!cursor_image_) {
+    FTL_LOG(ERROR) << "Failed to load " << kCursorImage;
+  }
+}
+
+mozart::SceneMetadataPtr Presentation::CreateSceneMetadata() const {
+  auto metadata = mozart::SceneMetadata::New();
+  metadata->version = scene_version_;
+  metadata->presentation_time = frame_tracker_.frame_info().presentation_time;
+  return metadata;
+}
+
+// When |initiliaze| is true, resources and nodes are created. On subsequent
+// update we only re-create the tree and don't touch resources
+void Presentation::UpdateScene() {
+  FTL_DCHECK(root_scene_);
+  auto update = mozart::SceneUpdate::New();
+
+  mozart::NodePtr container_node = nullptr;
+  if (layout_changed_) {
+    mozart::RectF extent;
+    extent.width = display_info_->size->width;
+    extent.height = display_info_->size->height;
+    container_node = mozart::Node::New();
+    container_node->content_clip = extent.Clone();
+    container_node->combinator = mozart::Node::Combinator::PRUNE;
+  }
+
+  if (main_view_info_) {
+    if (!scene_resources_uploaded_) {
+      // Main Scene Resource
+      auto scene_resource = mozart::Resource::New();
+      scene_resource->set_scene(mozart::SceneResource::New());
+      scene_resource->get_scene()->scene_token =
+          main_view_info_->scene_token.Clone();
+      update->resources.insert(kMainSceneResourceId, std::move(scene_resource));
+      scene_resources_uploaded_ = true;
+    }
+
+    if (layout_changed_) {
+      // Main Scene Node
+      auto scene_node = mozart::Node::New();
+      scene_node->op = mozart::NodeOp::New();
+      scene_node->op->set_scene(mozart::SceneNodeOp::New());
+      scene_node->op->get_scene()->scene_resource_id = kMainSceneResourceId;
+      update->nodes.insert(kMainViewKey, std::move(scene_node));
+      container_node->child_node_ids.push_back(kMainViewKey);
+    }
+  }
+
+  if (cursor_image_) {
+    if (!cursor_resources_uploaded_) {
+      mozart::Size size;
+      size.width = 32;
+      size.height = 32;
+
+      mozart::ImagePtr image;
+      sk_sp<SkSurface> surface =
+          mozart::MakeSkSurface(size, &buffer_producer_, &image);
+      FTL_CHECK(surface);
+      SkCanvas* canvas = surface->getCanvas();
+      canvas->drawImage(cursor_image_, 0, 0);
+      canvas->flush();
+
+      auto cursor_resource = mozart::Resource::New();
+      cursor_resource->set_image(mozart::ImageResource::New());
+      cursor_resource->get_image()->image = std::move(image);
+      update->resources.insert(kCursorImageResourceId,
+                               std::move(cursor_resource));
+      cursor_resources_uploaded_ = true;
+    }
+
+    if (show_cursor_) {
+      mozart::RectF cursor;
+      cursor.width = 32.f;
+      cursor.height = 32.f;
+
+      auto cursor_node = mozart::Node::New();
+      cursor_node->op = mozart::NodeOp::New();
+      cursor_node->op->set_image(mozart::ImageNodeOp::New());
+      cursor_node->op->get_image()->content_rect = cursor.Clone();
+      cursor_node->op->get_image()->image_resource_id = kCursorImageResourceId;
+
+      cursor_node->content_transform = mozart::Transform::New();
+      SetTranslationTransform(cursor_node->content_transform.get(),
+                              cursor_position_.x, cursor_position_.y, 0.f);
+      update->nodes.insert(kCursorViewKey, std::move(cursor_node));
+      if (layout_changed_) {
+        container_node->child_node_ids.push_back(kCursorViewKey);
+      }
+    }
+  }
+
+  if (layout_changed_) {
+    auto root_node = mozart::Node::New();
+    update->nodes.insert(kRootViewKey, std::move(container_node));
+    root_node->child_node_ids.push_back(kRootViewKey);
+    update->nodes.insert(kRootNodeId, std::move(root_node));
+    layout_changed_ = false;
+  }
+
+  root_scene_->Update(std::move(update));
+  root_scene_->Publish(CreateSceneMetadata());
+}
+
+void Presentation::OnLayout() {
   auto properties = mozart::ViewProperties::New();
   properties->display_metrics = mozart::DisplayMetrics::New();
   properties->display_metrics->device_pixel_ratio =
@@ -105,7 +278,19 @@ void Presentation::UpdateViewProperties() {
   properties->view_layout = mozart::ViewLayout::New();
   properties->view_layout->size = display_info_->size.Clone();
 
-  view_container_->SetChildProperties(root_key_, mozart::kSceneVersionNone,
+  root_container_->SetChildProperties(kMainViewKey, mozart::kSceneVersionNone,
+                                      std::move(properties));
+}
+
+void Presentation::UpdateRootViewProperties() {
+  auto properties = mozart::ViewProperties::New();
+  properties->display_metrics = mozart::DisplayMetrics::New();
+  properties->display_metrics->device_pixel_ratio =
+      display_info_->device_pixel_ratio;
+  properties->view_layout = mozart::ViewLayout::New();
+  properties->view_layout->size = display_info_->size.Clone();
+
+  tree_container_->SetChildProperties(kRootViewKey, mozart::kSceneVersionNone,
                                       std::move(properties));
 }
 
@@ -114,9 +299,12 @@ void Presentation::OnChildAttached(uint32_t child_key,
                                    const OnChildAttachedCallback& callback) {
   FTL_DCHECK(child_view_info);
 
-  if (root_key_ == child_key) {
-    FTL_VLOG(1) << "OnChildAttached: child_view_info=" << child_view_info;
+  if (kRootViewKey == child_key) {
+    FTL_VLOG(1) << "OnChildAttached(root): child_view_info=" << child_view_info;
     root_view_info_ = std::move(child_view_info);
+  } else if (kMainViewKey == child_key) {
+    FTL_VLOG(1) << "OnChildAttached(main): child_view_info=" << child_view_info;
+    main_view_info_ = std::move(child_view_info);
   }
   callback();
 }
@@ -124,10 +312,24 @@ void Presentation::OnChildAttached(uint32_t child_key,
 void Presentation::OnChildUnavailable(
     uint32_t child_key,
     const OnChildUnavailableCallback& callback) {
-  if (root_key_ == child_key) {
+  if (kRootViewKey == child_key) {
     FTL_LOG(ERROR) << "Root view terminated unexpectedly.";
     Shutdown();
+  } else if (kMainViewKey == child_key) {
+    FTL_LOG(ERROR) << "Main view terminated unexpectedly.";
+    Shutdown();
   }
+  callback();
+}
+
+void Presentation::OnInvalidation(mozart::ViewInvalidationPtr invalidation,
+                                  const OnInvalidationCallback& callback) {
+  frame_tracker_.Update(*invalidation->frame_info, ftl::TimePoint::Now());
+  scene_version_ = invalidation->scene_version;
+  if (invalidation->properties) {
+    OnLayout();
+  }
+  UpdateScene();
   callback();
 }
 
