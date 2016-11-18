@@ -83,8 +83,10 @@ class Message {
   final handlesLength;
 
   void closeAllHandles() {
-    for (int i = 0; i < handles.length; ++i)
-      handles[i].close();
+    if (handles != null) {
+      for (int i = 0; i < handles.length; ++i)
+        handles[i].close();
+    }
   }
 
   String toString() =>
