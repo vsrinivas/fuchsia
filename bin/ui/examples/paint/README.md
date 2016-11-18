@@ -5,4 +5,4 @@ input usage.
 
 ## USAGE
 
-  $ file:///system/apps/launch file:///system/apps/paint_view
+  @ bootstrap launch paint_view

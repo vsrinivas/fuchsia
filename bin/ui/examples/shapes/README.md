@@ -5,4 +5,4 @@ some simple shapes to a view.
 
 ## USAGE
 
-  $ file:///system/apps/launch file:///system/apps/shapes_view
+  @ bootstrap launch shapes_view

@@ -6,4 +6,4 @@ various functions such as stalling or crashing the app.
 
 ## USAGE
 
-  $ file:///system/apps/launch file:///system/apps/jank_view
+  @ bootstrap launch jank_view

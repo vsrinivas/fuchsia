@@ -15,12 +15,12 @@ which will eventually take over this function.
 
 Run an application which offers a ViewProvider service:
 
-    $ file:///system/apps/launch <app url> <app args>
+    @ bootstrap launch <app url> <app args>
 
 When the environment does not already contain the Presenter service,
 it may be necessary to bootstrap it:
 
-    $ file:///system/apps/bootstrap file:///system/apps/launch <app url> <app args>
+    @ bootstrap launch <app url> <app args>
 
 ### Arguments
 
@@ -31,4 +31,4 @@ Standard logging arguments:
 
 ### Examples
 
-    $ file:///system/apps/launch file:///system/apps/noodles_view
+    @ bootstrap launch noodles_view

@@ -5,4 +5,4 @@ square using Skia.
 
 ## USAGE
 
-  $ file:///system/apps/launch file:///system/apps/spinning_square_view
+  @ bootstrap launch spinning_square_view

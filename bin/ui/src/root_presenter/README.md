@@ -14,4 +14,4 @@ application and ask the Presenter in its environment to display it.
 
 This program should not be run directly.
 
-Use file:///system/apps/launch instead.
+Use launch instead.

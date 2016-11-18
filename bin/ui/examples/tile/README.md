@@ -11,7 +11,7 @@ The applications must implement the ViewProvider interface to be embedded.
 
 Specify the urls of the views to embed initially as command-line arguments.
 
-  $ file:///system/apps/launch file:///system/apps/tile_view <app1> <app2> ...
+  @ bootstrap launch tile_view <app1> <app2> ...
 
 The following command-line options are also supported:
 
