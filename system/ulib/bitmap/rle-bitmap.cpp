@@ -4,7 +4,7 @@
 
 #include <bitmap/rle-bitmap.h>
 
-#include <stdint.h>
+#include <stddef.h>
 
 #include <magenta/errors.h>
 #include <magenta/types.h>
@@ -45,7 +45,7 @@ void ReleaseElement(RleBitmap::FreeList* free_list, mxtl::unique_ptr<RleBitmapEl
 
 } // namespace
 
-bool RleBitmap::Get(uint64_t bitoff, uint64_t bitmax, uint64_t* first_unset) const {
+bool RleBitmap::Get(size_t bitoff, size_t bitmax, size_t* first_unset) const {
     for (auto& elem : elems_) {
         if (bitoff < elem.bitoff) {
             break;
@@ -69,11 +69,11 @@ void RleBitmap::ClearAll() {
     num_elems_ = 0;
 }
 
-mx_status_t RleBitmap::Set(uint64_t bitoff, uint64_t bitmax) {
+mx_status_t RleBitmap::Set(size_t bitoff, size_t bitmax) {
     return SetInternal(bitoff, bitmax, nullptr);
 }
 
-mx_status_t RleBitmap::SetNoAlloc(uint64_t bitoff, uint64_t bitmax, FreeList* free_list) {
+mx_status_t RleBitmap::SetNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (free_list == nullptr) {
         return ERR_INVALID_ARGS;
     }
@@ -81,11 +81,11 @@ mx_status_t RleBitmap::SetNoAlloc(uint64_t bitoff, uint64_t bitmax, FreeList* fr
     return SetInternal(bitoff, bitmax, free_list);
 }
 
-mx_status_t RleBitmap::Clear(uint64_t bitoff, uint64_t bitmax) {
+mx_status_t RleBitmap::Clear(size_t bitoff, size_t bitmax) {
     return ClearInternal(bitoff, bitmax, nullptr);
 }
 
-mx_status_t RleBitmap::ClearNoAlloc(uint64_t bitoff, uint64_t bitmax, FreeList* free_list) {
+mx_status_t RleBitmap::ClearNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (free_list == nullptr) {
         return ERR_INVALID_ARGS;
     }
@@ -93,12 +93,12 @@ mx_status_t RleBitmap::ClearNoAlloc(uint64_t bitoff, uint64_t bitmax, FreeList* 
     return ClearInternal(bitoff, bitmax, free_list);
 }
 
-mx_status_t RleBitmap::SetInternal(uint64_t bitoff, uint64_t bitmax, FreeList* free_list) {
+mx_status_t RleBitmap::SetInternal(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (bitmax < bitoff) {
         return ERR_INVALID_ARGS;
     }
 
-    const uint64_t bitlen = bitmax - bitoff;
+    const size_t bitlen = bitmax - bitoff;
     if (bitlen == 0) {
         return NO_ERROR;
     }
@@ -136,7 +136,7 @@ mx_status_t RleBitmap::SetInternal(uint64_t bitoff, uint64_t bitmax, FreeList* f
     }
 
     // Walk forwards and remove/merge any overlaps
-    uint64_t max = elem.bitoff + elem.bitlen;
+    size_t max = elem.bitoff + elem.bitlen;
     while (itr != elems_.end()) {
         if (itr->bitoff > max) {
             break;
@@ -154,7 +154,7 @@ mx_status_t RleBitmap::SetInternal(uint64_t bitoff, uint64_t bitmax, FreeList* f
     return NO_ERROR;
 }
 
-mx_status_t RleBitmap::ClearInternal(uint64_t bitoff, uint64_t bitmax, FreeList* free_list) {
+mx_status_t RleBitmap::ClearInternal(size_t bitoff, size_t bitmax, FreeList* free_list) {
     if (bitmax < bitoff) {
         return ERR_INVALID_ARGS;
     }

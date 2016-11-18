@@ -84,7 +84,7 @@ static bool GetReturnArg(void) {
     RawBitmap bitmap(128);
     EXPECT_EQ(bitmap.size(), 128U, "get size");
 
-    uint64_t first_unset = 0;
+    size_t first_unset = 0;
     EXPECT_FALSE(bitmap.Get(2, 3, nullptr), "get bit with null");
     EXPECT_FALSE(bitmap.Get(2, 3, &first_unset), "get bit with nonnull");
     EXPECT_EQ(first_unset, 2U, "check returned arg");
@@ -112,7 +112,7 @@ static bool SetRange(void) {
 
     ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
 
-    uint64_t first_unset = 0;
+    size_t first_unset = 0;
     EXPECT_TRUE(bitmap.Get(2, 3, &first_unset), "get first bit in range");
     EXPECT_EQ(first_unset, 3U, "check returned arg");
 
@@ -151,7 +151,7 @@ static bool ClearAll(void) {
 
     bitmap.ClearAll();
 
-    uint64_t first = 0;
+    size_t first = 0;
     EXPECT_FALSE(bitmap.Get(2, 100, &first), "get range");
     EXPECT_EQ(first, 2U, "all clear");
 
@@ -171,7 +171,7 @@ static bool ClearSubrange(void) {
     ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
     ASSERT_EQ(bitmap.Clear(50, 80), NO_ERROR, "clear range");
 
-    uint64_t first_unset = 0;
+    size_t first_unset = 0;
     EXPECT_FALSE(bitmap.Get(2, 100, &first_unset), "get whole original range");
     EXPECT_EQ(first_unset, 50U, "check returned arg");
 

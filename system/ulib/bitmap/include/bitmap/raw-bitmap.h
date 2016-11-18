@@ -32,21 +32,21 @@ public:
 
     // Returns the lesser of bitmax and the index of the first bit that doesn't
     // match *is_set* starting from *bitoff*.
-    uint64_t Scan(uint64_t bitoff, uint64_t bitmax, bool is_set) const;
+    size_t Scan(size_t bitoff, size_t bitmax, bool is_set) const;
 
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set. Afterwards,
     // *first_unset* will be set to the lesser of bitmax and the index of the
     // first unset bit after *bitoff*.
-    bool Get(uint64_t bitoff, uint64_t bitmax,
-             uint64_t* first_unset = nullptr) const override;
+    bool Get(size_t bitoff, size_t bitmax,
+             size_t* first_unset = nullptr) const override;
 
-    // Sets all bits in the range [*bitoff*, *bitmax*).  Returns an error if 
+    // Sets all bits in the range [*bitoff*, *bitmax*).  Returns an error if
     // bitmax < bitoff or size_ < bitmax, and NO_ERROR otherwise.
-    mx_status_t Set(uint64_t bitoff, uint64_t bitmax) override;
+    mx_status_t Set(size_t bitoff, size_t bitmax) override;
 
-    // Clears all bits in the range [*bitoff*, *bitmax*).  Returns an error if 
+    // Clears all bits in the range [*bitoff*, *bitmax*).  Returns an error if
     // bitmax < bitoff or size_ < bitmax, and NO_ERROR otherwise.
-    mx_status_t Clear(uint64_t bitoff, uint64_t bitmax) override;
+    mx_status_t Clear(size_t bitoff, size_t bitmax) override;
 
     // Clear all bits in the bitmap.
     void ClearAll() override;
@@ -56,7 +56,7 @@ private:
     size_t size_;
 
     // The array backing this bitmap.
-    mxtl::unique_ptr<uint64_t[]> bits_;
+    mxtl::unique_ptr<size_t[]> bits_;
 };
 
 } // namespace bitmap

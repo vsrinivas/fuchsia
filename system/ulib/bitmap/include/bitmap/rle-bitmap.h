@@ -6,6 +6,8 @@
 
 #include <bitmap/bitmap.h>
 
+#include <stddef.h>
+
 #include <magenta/types.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
@@ -15,7 +17,7 @@ namespace bitmap {
 
 struct RleBitmapElement;
 
-// A run-length encoded bitmap
+// A run-length encoded bitmap.
 class RleBitmap final : public Bitmap {
 private:
     // Private forward-declaration to share the type between the iterator type
@@ -41,11 +43,11 @@ public:
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set.  Afterwards,
     // *first_unset* will be set to the lesser of bitmax and the index of the
     // first unset bit after *bitoff*.
-    bool Get(uint64_t bitoff, uint64_t bitmax, uint64_t* first_unset = nullptr) const override;
+    bool Get(size_t bitoff, size_t bitmax, size_t* first_unset = nullptr) const override;
 
     // Sets all bits in the range [*bitoff*, *bitmax*).  Only fails on allocation
     // error or if bitmax < bitoff.
-    mx_status_t Set(uint64_t bitoff, uint64_t bitmax) override;
+    mx_status_t Set(size_t bitoff, size_t bitmax) override;
 
     // Sets all bits in the range [*bitoff*, *bitmax*).  Only fails if
     // *bitmax* < *bitoff* or if an allocation is needed and *free_list*
@@ -55,11 +57,11 @@ public:
     // it will be drawn from it.  This function is guaranteed to need at most
     // one allocation.  If any nodes need to be deleted, they will be appended
     // to *free_list*.
-    mx_status_t SetNoAlloc(uint64_t bitoff, uint64_t bitmax, FreeList* free_list);
+    mx_status_t SetNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list);
 
     // Clears all bits in the range [*bitoff*, *bitmax*).  Only fails on allocation
     // error or if bitmax < bitoff.
-    mx_status_t Clear(uint64_t bitoff, uint64_t bitmax) override;
+    mx_status_t Clear(size_t bitoff, size_t bitmax) override;
 
     // Clear all bits in the range [*bitoff*, *bitmax*).  Only fails if
     // *bitmax* < *bitoff* or if an allocation is needed and *free_list*
@@ -69,7 +71,7 @@ public:
     // it will be drawn from it.  This function is guaranteed to need at most
     // one allocation.  If any nodes need to be deleted, they will be appended
     // to *free_list*.
-    mx_status_t ClearNoAlloc(uint64_t bitoff, uint64_t bitmax, FreeList* free_list);
+    mx_status_t ClearNoAlloc(size_t bitoff, size_t bitmax, FreeList* free_list);
 
     // Clear all bits in the bitmap.
     void ClearAll() override;
@@ -82,8 +84,8 @@ public:
     const_iterator cend() const { return elems_.cend(); }
 
 private:
-    mx_status_t SetInternal(uint64_t bitoff, uint64_t bitmax, FreeList* free_list);
-    mx_status_t ClearInternal(uint64_t bitoff, uint64_t bitmax, FreeList* free_list);
+    mx_status_t SetInternal(size_t bitoff, size_t bitmax, FreeList* free_list);
+    mx_status_t ClearInternal(size_t bitoff, size_t bitmax, FreeList* free_list);
 
     // The ranges of the bitmap.
     ListType elems_;
@@ -95,9 +97,9 @@ private:
 // Elements of the bitmap list
 struct RleBitmapElement : public mxtl::DoublyLinkedListable<mxtl::unique_ptr<RleBitmapElement>> {
     // The start of this run of 1-bits.
-    uint64_t bitoff;
+    size_t bitoff;
     // The number of 1-bits in this run.
-    uint64_t bitlen;
+    size_t bitlen;
 };
 
 } // namespace bitmap

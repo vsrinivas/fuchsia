@@ -94,7 +94,7 @@ static bool GetReturnArg(void) {
 
     RleBitmap bitmap;
 
-    uint64_t first_unset = 0;
+    size_t first_unset = 0;
     EXPECT_FALSE(bitmap.Get(2, 3, nullptr), "get bit with null");
     EXPECT_FALSE(bitmap.Get(2, 3, &first_unset), "get bit with nonnull");
     EXPECT_EQ(first_unset, 2U, "check returned arg");
@@ -121,7 +121,7 @@ static bool SetRange(void) {
 
     ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
 
-    uint64_t first_unset = 0;
+    size_t first_unset = 0;
     EXPECT_TRUE(bitmap.Get(2, 3, &first_unset), "get first bit in range");
     EXPECT_EQ(first_unset, 3U, "check returned arg");
 
@@ -173,7 +173,7 @@ static bool ClearSubrange(void) {
     ASSERT_EQ(bitmap.Set(2, 100), NO_ERROR, "set range");
     ASSERT_EQ(bitmap.Clear(50, 80), NO_ERROR, "clear range");
 
-    uint64_t first_unset = 0;
+    size_t first_unset = 0;
     EXPECT_FALSE(bitmap.Get(2, 100, &first_unset), "get whole original range");
     EXPECT_EQ(first_unset, 50U, "check returned arg");
 
@@ -209,13 +209,13 @@ static bool MergeRanges(void) {
 
     RleBitmap bitmap;
 
-    constexpr uint64_t kMaxVal = 100;
+    constexpr size_t kMaxVal = 100;
 
-    for (uint64_t i = 0; i < kMaxVal; i += 2) {
+    for (size_t i = 0; i < kMaxVal; i += 2) {
         ASSERT_EQ(bitmap.SetOne(i), NO_ERROR, "setting even bits");
     }
 
-    uint64_t count = 0;
+    size_t count = 0;
     for (auto& range : bitmap) {
         EXPECT_EQ(range.bitoff, 2 * count, "bitoff");
         EXPECT_EQ(range.bitlen, 1U, "bitlen");
@@ -223,7 +223,7 @@ static bool MergeRanges(void) {
     }
     EXPECT_EQ(count, kMaxVal / 2, "check range count");
 
-    for (uint64_t i = 1; i < kMaxVal; i += 4) {
+    for (size_t i = 1; i < kMaxVal; i += 4) {
         ASSERT_EQ(bitmap.SetOne(i), NO_ERROR, "setting congruent 1 mod 4 bits");
     }
 
@@ -244,21 +244,21 @@ static bool SplitRanges(void) {
 
     RleBitmap bitmap;
 
-    constexpr uint64_t kMaxVal = 100;
+    constexpr size_t kMaxVal = 100;
     ASSERT_EQ(bitmap.Set(0, kMaxVal), NO_ERROR, "setting all bits");
 
-    for (uint64_t i = 1; i < kMaxVal; i += 4) {
+    for (size_t i = 1; i < kMaxVal; i += 4) {
         ASSERT_EQ(bitmap.ClearOne(i), NO_ERROR, "clearing congruent 1 mod 4 bits");
     }
 
-    uint64_t count = 0;
+    size_t count = 0;
     for (auto& range : bitmap) {
         if (count == 0) {
             EXPECT_EQ(range.bitoff, 0U, "bitoff");
             EXPECT_EQ(range.bitlen, 1U, "bitlen");
         } else {
-            uint64_t offset = 4 * count - 2;
-            uint64_t len = mxtl::min(uint64_t(3), kMaxVal - offset);
+            size_t offset = 4 * count - 2;
+            size_t len = mxtl::min(size_t(3), kMaxVal - offset);
             EXPECT_EQ(range.bitoff, offset, "bitoff");
             EXPECT_EQ(range.bitlen, len, "bitlen");
         }
@@ -267,7 +267,7 @@ static bool SplitRanges(void) {
     EXPECT_EQ(count, kMaxVal / 4 + 1, "check range count");
     EXPECT_EQ(count, bitmap.num_ranges(), "count is number of elements");
 
-    for (uint64_t i = 0; i < kMaxVal; i += 2) {
+    for (size_t i = 0; i < kMaxVal; i += 2) {
         ASSERT_EQ(bitmap.ClearOne(i), NO_ERROR, "clearing even bits");
     }
 
@@ -326,7 +326,7 @@ static bool NoAlloc(void) {
     free_list.push_back(mxtl::unique_ptr<RleBitmapElement>(new (&ac) RleBitmapElement()));
     ASSERT_TRUE(ac.check(), "alloc check");
     EXPECT_EQ(bitmap.ClearNoAlloc(1, 65535, &free_list), NO_ERROR, "clear bits");
-    uint64_t first_unset = 0;
+    size_t first_unset = 0;
     EXPECT_FALSE(bitmap.Get(0, 65536, &first_unset), "get bit after clearing");
     EXPECT_EQ(first_unset, 1U, "check first_unset");
     EXPECT_EQ(free_list.size_slow(), 0U, "free list empty after alloc");
