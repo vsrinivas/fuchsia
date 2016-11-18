@@ -90,7 +90,7 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
     binding_.Bind(fidl::GetProxy(&env_host));
     application_context_->environment()->CreateNestedEnvironment(
         std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_),
-        kEnvironmentLabelPrefix + ToHex(user_id));
+        kEnvironmentLabelPrefix + ToHex(user_id_));
 
     // Register and set up Services hosted in this environment.
     RegisterServices();
