@@ -104,6 +104,7 @@ source_set("msd_abi_conformance_tests") {
     "test_msd_context.cc",
     "test_msd_device.cc",
     "test_msd_driver.cc",
+    "test_magma_system_multithread.cc",
   ]
 
   deps = [
