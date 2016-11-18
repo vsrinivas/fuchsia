@@ -184,17 +184,30 @@ void MouseState::Update(const MouseReport& report,
   uint64_t now = InputEventTimestampNow();
   uint8_t pressed = (report.buttons ^ buttons_) & report.buttons;
   uint8_t released = (report.buttons ^ buttons_) & buttons_;
+  buttons_ = report.buttons;
 
   position_.x =
       std::max(0.0f, std::min(position_.x + report.rel_x,
                               static_cast<float>(display_size.width)));
   position_.y =
-      std::max(0.0f, std::min(position_.y - report.rel_y,
+      std::max(0.0f, std::min(position_.y + report.rel_y,
                               static_cast<float>(display_size.height)));
 
   if (!pressed && !released) {
-    SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
-              mozart::EventFlags::NONE, callback);
+    if (buttons_ & kMouseLeftButtonMask) {
+      SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
+                mozart::EventFlags::LEFT_MOUSE_BUTTON, callback);
+    } else if (buttons_ & kMouseRightButtonMask) {
+      SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
+                mozart::EventFlags::RIGHT_MOUSE_BUTTON, callback);
+
+    } else if (buttons_ & kMouseMiddleButtonMask) {
+      SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
+                mozart::EventFlags::MIDDLE_MOUSE_BUTTON, callback);
+    } else {
+      SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
+                mozart::EventFlags::NONE, callback);
+    }
   } else {
     if (pressed) {
       if (pressed & kMouseLeftButtonMask) {
@@ -228,7 +241,6 @@ void MouseState::Update(const MouseReport& report,
       }
     }
   }
-  buttons_ = report.buttons;
 }
 
 #pragma mark - StylusState
