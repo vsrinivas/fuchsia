@@ -4,54 +4,42 @@
 
 #include <magenta/processargs.h>
 #include <mxio/util.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "apps/modular/src/application_manager/application_loader.h"
 #include "apps/modular/src/application_manager/command_listener.h"
+#include "apps/modular/src/application_manager/config.h"
 #include "apps/modular/src/application_manager/root_environment_host.h"
-#include "apps/modular/src/application_manager/startup_config.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/file.h"
+#include "lib/ftl/log_settings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 using namespace modular;
 
 constexpr char kDefaultConfigPath[] =
-    "/system/data/application_manager/startup.config";
-
-static void LoadStartupConfig(StartupConfig* config,
-                              const std::string& config_path) {
-  std::string data;
-  if (!files::ReadFileToString(config_path, &data)) {
-    fprintf(stderr, "application_manager: Failed to read startup config: %s\n",
-            config_path.c_str());
-  } else if (!config->Parse(data)) {
-    fprintf(stderr, "application_manager: Failed to parse startup config: %s\n",
-            config_path.c_str());
-  }
-}
+    "/system/data/application_manager/applications.config";
 
 int main(int argc, char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
 
-  std::string config_path;
-  command_line.GetOptionValue("config", &config_path);
+  std::string config_file;
+  command_line.GetOptionValue("config", &config_file);
 
   const auto& positional_args = command_line.positional_args();
-  if (config_path.empty() && positional_args.empty())
-    config_path = kDefaultConfigPath;
+  if (config_file.empty() && positional_args.empty())
+    config_file = kDefaultConfigPath;
 
-  std::vector<ApplicationLaunchInfoPtr> initial_apps;
-  if (!config_path.empty()) {
-    StartupConfig config;
-    LoadStartupConfig(&config, config_path);
-    initial_apps = config.TakeInitialApps();
+  Config config;
+  if (!config_file.empty()) {
+    config.ReadIfExistsFrom(config_file);
   }
 
+  auto initial_apps = config.TakeInitialApps();
   if (!positional_args.empty()) {
     auto launch_info = ApplicationLaunchInfo::New();
     launch_info->url = positional_args[0];
@@ -70,7 +58,8 @@ int main(int argc, char** argv) {
 
   mtl::MessageLoop message_loop;
 
-  RootEnvironmentHost root;
+  ApplicationLoader loader(config.TakePath());
+  RootEnvironmentHost root(&loader);
 
   if (!initial_apps.empty()) {
     message_loop.task_runner()->PostTask([&root, &initial_apps] {

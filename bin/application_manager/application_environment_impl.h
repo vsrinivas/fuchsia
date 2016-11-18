@@ -7,10 +7,12 @@
 
 #include <iosfwd>
 #include <memory>
+#include <string>
 #include <unordered_map>
 
 #include "apps/modular/src/application_manager/application_controller_impl.h"
 #include "apps/modular/src/application_manager/application_environment_controller_impl.h"
+#include "apps/modular/src/application_manager/application_loader.h"
 #include "apps/modular/src/application_manager/application_runner_holder.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -24,6 +26,7 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
  public:
   ApplicationEnvironmentImpl(
       ApplicationEnvironmentImpl* parent,
+      ApplicationLoader* loader,
       fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
       const fidl::String& label);
   ~ApplicationEnvironmentImpl() override;
@@ -88,6 +91,7 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   fidl::BindingSet<ApplicationLauncher> launcher_bindings_;
 
   ApplicationEnvironmentImpl* parent_;
+  ApplicationLoader* loader_;
   ApplicationEnvironmentHostPtr host_;
   std::string label_;
 

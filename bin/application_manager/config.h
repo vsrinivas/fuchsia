@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_APPLICATION_MANAGER_STARTUP_CONFIG_H_
-#define MOJO_APPLICATION_MANAGER_STARTUP_CONFIG_H_
+#ifndef MOJO_APPLICATION_MANAGER_CONFIG_H_
+#define MOJO_APPLICATION_MANAGER_CONFIG_H_
 
 #include <string>
 #include <unordered_map>
@@ -19,24 +19,38 @@ namespace modular {
 //   "initial-apps": [
 //     "file:///system/apps/app_without_args",
 //     [ "file:///system/apps/app_with_args", "arg1", "arg2", "arg3" ]
+//   ],
+//   "path": [
+//     "/system/apps"
+//   ],
+//   "include": [
+//     "/system/data/application_manager/startup.config"
 //   ]
 // }
 
-class StartupConfig {
+class Config {
  public:
-  StartupConfig();
-  ~StartupConfig();
+  Config();
+  ~Config();
 
-  bool Parse(const std::string& string);
+  bool ReadIfExistsFrom(const std::string& config_file);
 
+  // Gets path for finding apps on root file system.
+  std::vector<std::string> TakePath();
+
+  // Gets initial apps to launch.
   std::vector<ApplicationLaunchInfoPtr> TakeInitialApps();
 
  private:
+  bool Parse(const std::string& string);
+  bool ReadFromIfExists(const std::string& config_file);
+
+  std::vector<std::string> path_;
   std::vector<ApplicationLaunchInfoPtr> initial_apps_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(StartupConfig);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Config);
 };
 
 }  // namespace modular
 
-#endif  // MOJO_APPLICATION_MANAGER_STARTUP_CONFIG_H_
+#endif  // MOJO_APPLICATION_MANAGER_CONFIG_H_

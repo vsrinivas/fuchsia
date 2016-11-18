@@ -81,10 +81,7 @@ mx::process CreateProcess(
   return mx::process(result);
 }
 
-bool HasShebang(const std::string& path,
-                ftl::UniqueFD* result_fd,
-                std::string* runner) {
-  ftl::UniqueFD fd(open(path.c_str(), O_RDONLY));
+bool HasShebang(const ftl::UniqueFD& fd, std::string* runner) {
   if (!fd.is_valid())
     return false;
   std::string shebang(kMaxShebangLength, '\0');
@@ -98,7 +95,6 @@ bool HasShebang(const std::string& path,
     return false;
   if (lseek(fd.get(), 0, SEEK_SET) == -1)
     return false;
-  *result_fd = std::move(fd);
   *runner = shebang.substr(kFuchsiaMagicLength, newline - kFuchsiaMagicLength);
   return true;
 }
@@ -109,9 +105,10 @@ uint32_t ApplicationEnvironmentImpl::next_numbered_label_ = 1u;
 
 ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
     ApplicationEnvironmentImpl* parent,
+    ApplicationLoader* loader,
     fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
     const fidl::String& label)
-    : parent_(parent) {
+    : parent_(parent), loader_(loader) {
   host_.Bind(std::move(host));
 
   if (label.size() == 0)
@@ -191,8 +188,8 @@ void ApplicationEnvironmentImpl::CreateNestedEnvironment(
     const fidl::String& label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
-      std::make_unique<ApplicationEnvironmentImpl>(this, std::move(host),
-                                                   label));
+      std::make_unique<ApplicationEnvironmentImpl>(this, loader_,
+                                                   std::move(host), label));
   ApplicationEnvironmentImpl* child = controller->environment();
   child->Duplicate(std::move(environment));
   children_.emplace(child, std::move(controller));
@@ -231,18 +228,12 @@ void ApplicationEnvironmentImpl::CreateApplication(
     return;
   }
 
-  std::string path = GetPathFromURL(launch_info->url);
-  if (path.empty()) {
-    // TODO(abarth): Support URL schemes other than file:// by querying the host
-    // for an application runner.
-    FTL_LOG(ERROR) << "Cannot run " << launch_info->url
-                   << " because the scheme is not supported.";
-    return;
-  }
-
   ftl::UniqueFD fd;
+  std::string path;
+  std::tie(fd, path) = loader_->Open(launch_info->url);
+
   std::string runner;
-  if (HasShebang(path, &fd, &runner)) {
+  if (HasShebang(fd, &runner)) {
     // We create the entry in |runners_| before calling ourselves recursively
     // to detect cycles.
     auto it = runners_.emplace(runner, nullptr);

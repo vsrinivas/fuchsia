@@ -15,11 +15,12 @@ constexpr char kRootLabel[] = "root";
 
 }  // namespace
 
-RootEnvironmentHost::RootEnvironmentHost() : host_binding_(this) {
+RootEnvironmentHost::RootEnvironmentHost(ApplicationLoader* loader)
+    : loader_(loader), host_binding_(this) {
   fidl::InterfaceHandle<ApplicationEnvironmentHost> host;
   host_binding_.Bind(&host);
   environment_ = std::make_unique<ApplicationEnvironmentImpl>(
-      nullptr, std::move(host), kRootLabel);
+      nullptr, loader_, std::move(host), kRootLabel);
 }
 
 RootEnvironmentHost::~RootEnvironmentHost() = default;
