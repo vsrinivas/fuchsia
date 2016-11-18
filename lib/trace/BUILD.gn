@@ -23,10 +23,10 @@ source_set("trace") {
     ":types",
     "//lib/ftl",
     "//lib/mtl",
+    "//lib/mtl/vmo",
   ]
 
   public_deps = [
-    "//lib/mtl/vmo",
     "//magenta/system/ulib/mx",
   ]
 }
@@ -38,11 +38,14 @@ source_set("provider") {
   ]
 
   deps = [
-    ":trace",
     "//apps/modular/lib/app",
     "//apps/tracing/services",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+
+  public_deps = [
+    ":trace",
   ]
 }
 
@@ -53,7 +56,6 @@ source_set("reader") {
   ]
 
   deps = [
-    ":trace",
     ":types",
     "//lib/ftl",
   ]
