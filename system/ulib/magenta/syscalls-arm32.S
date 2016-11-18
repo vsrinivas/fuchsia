@@ -11,7 +11,16 @@
 // EABI unwind directives cause an implicit reference to this symbol,
 // though it's never actually used for anything.  Define it locally
 // just to resolve that reference.
-__aeabi_unwind_cpp_pr0 = 0xdeadbeef
+// Originally this was "= 0xdeadbeef" to have an obviously bogus value
+// in case it ever popped out anywhere (it shouldn't).  But Clang's
+// assembler has a bug (https://llvm.org/bugs/show_bug.cgi?id=31064)
+// that makes it crash when this is set to an absolute value instead
+// of a section-based value.  It shouldn't matter what it's set to, so
+// use a section-based value to work around that bug.
+// TODO(mcgrathr): Go back to 0xdeadbeef when the LLVM bug is fixed.
+.pushsection .text.dummy,"ax"
+__aeabi_unwind_cpp_pr0 = .
+.popsection
 
 .cfi_sections .debug_frame
 
