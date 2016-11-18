@@ -15,8 +15,8 @@ constexpr char maxwell::agents::ModuleSuggesterAgent::kModuleSuggestionId[];
 
 // TODO(afergan): Once we can populate modular_state with actual data, we
 // can decide which module to launch, and actually launch it. For now, we just
-// create a proposal with the HooliMail text.
-const std::string kHooliMailHeadline = "Open HooliMail";
+// create a proposal with the mail headline.
+const std::string kMailHeadline = "Open Mail";
 
 namespace {
 
@@ -56,7 +56,7 @@ class ModuleSuggesterAgentApp : public maxwell::agents::ModuleSuggesterAgent,
           p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
           auto d = maxwell::suggestion::Display::New();
 
-          d->headline = kHooliMailHeadline;
+          d->headline = kMailHeadline;
           d->subheadline = "";
           d->details = "";
           d->color = 0x00aaaa00; // argb yellow
