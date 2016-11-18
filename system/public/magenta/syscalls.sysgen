@@ -497,7 +497,7 @@ syscall acpi_cache_flush
 
 syscall resource_create
     (parent_handle: mx_handle_t, records: mx_rrec_t[count] IN, count: uint32_t,
-    resource_out: mx_handle_t[1] OUT, msgpipe_out: mx_handle_t[1] OUT)
+    resource_out: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
 syscall resource_get_handle
@@ -509,7 +509,11 @@ syscall resource_do_action
     returns (mx_status_t);
 
 syscall resource_connect
-    (handle: mx_handle_t, msgpipe: mx_handle_t)
+    (handle: mx_handle_t, channel: mx_handle_t)
+    returns (mx_status_t);
+
+syscall resource_accept
+    (handle: mx_handle_t, channel: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
 # Test syscalls (keep at the end)

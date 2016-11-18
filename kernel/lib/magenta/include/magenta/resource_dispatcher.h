@@ -56,6 +56,9 @@ public:
     mx_status_t GetChildren(user_ptr<mx_rrec_t> records, size_t max,
                             size_t* actual, size_t* available);
 
+    mx_status_t Connect(HandleUniquePtr* channel);
+    mx_status_t Accept(HandleUniquePtr* channel);
+
     uint16_t get_subtype() const { return subtype_; }
 
     static constexpr uint32_t kMaxRecords = 32;
@@ -74,10 +77,11 @@ private:
     uint32_t num_children_;
     uint16_t num_records_;
     uint16_t subtype_;
+    bool valid_;
 
+    HandleUniquePtr inbound_;
     mxtl::unique_ptr<PortClient> iopc_;
 
-    bool valid_;
     char name_[MX_MAX_NAME_LEN];
 };
 

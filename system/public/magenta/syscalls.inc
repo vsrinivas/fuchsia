@@ -299,12 +299,13 @@ MAGENTA_SYSCALL_DEF(1, 1, 221, mx_status_t, acpi_cache_flush, mx_handle_t handle
 // Resources
 MAGENTA_SYSCALL_DEF(5, 5, 300, mx_status_t, resource_create, mx_handle_t parent_handle,
                     USER_PTR(const mx_rrec_t) records, uint32_t count,
-                    USER_PTR(mx_handle_t) resource_out, USER_PTR(mx_handle_t) msgpipe_out)
+                    USER_PTR(mx_handle_t) resource_out)
 MAGENTA_SYSCALL_DEF(4, 4, 301, mx_status_t, resource_get_handle, mx_handle_t handle,
                     uint32_t index, uint32_t options, USER_PTR(mx_handle_t) out)
 MAGENTA_SYSCALL_DEF(5, 5, 302, mx_status_t, resource_do_action, mx_handle_t handle,
                     uint32_t index, uint32_t action, uint32_t arg0, uint32_t arg1)
-MAGENTA_SYSCALL_DEF(2, 2, 303, mx_status_t, resource_connect, mx_handle_t handle, mx_handle_t msgpipe)
+MAGENTA_SYSCALL_DEF(2, 2, 303, mx_status_t, resource_connect, mx_handle_t handle, mx_handle_t channel)
+MAGENTA_SYSCALL_DEF(2, 2, 304, mx_status_t, resource_accept, mx_handle_t handle, USER_PTR(mx_handle_t) channel)
 
 // syscall arg passing tests
 MAGENTA_SYSCALL_DEF(0, 0, 20000, int, syscall_test_0, void)
