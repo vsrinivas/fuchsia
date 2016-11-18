@@ -250,7 +250,8 @@ function fgo() {
 
 function fset-usage() {
   cat >&2 <<END
-Usage: fset x86-64|arm64 [--release] [--modules m1,m2...] [--goma|--no-goma] [--ccache]
+Usage: fset x86-64|arm64 [--release] [--modules m1,m2...]
+                         [--goma|--no-goma] [--ccache|--no-ccache]
 Sets fuchsia build options.
 END
 }
@@ -294,6 +295,7 @@ function fset() {
   shift
 
   local goma
+  local ccache
   while [[ $# -ne 0 ]]; do
     case $1 in
       --release)
@@ -315,7 +317,10 @@ function fset() {
         goma=0
         ;;
       --ccache)
-        fset-add-gen-arg --ccache
+        ccache=1
+        ;;
+      --no-ccache)
+        ccache=0
         ;;
       *)
         fset-usage
@@ -335,12 +340,21 @@ function fset() {
 
   fset-add-ninja-arg -C "${FUCHSIA_BUILD_DIR}"
 
-  if [[ -z "${goma}" ]] && [[ -d ~/goma ]]; then
-    goma=1
+  # Automatically detect goma and ccache if not specified explicitly.
+  if [[ -z "${goma}" ]] && [[ -z "${ccache}" ]]; then
+    if [[ -d ~/goma ]]; then
+      goma=1
+    elif [[ -n "${CCACHE_DIR}" ]] && [[ -d "${CCACHE_DIR}" ]]; then
+      ccache=1
+    fi
   fi
+
+  # Add --goma or --ccache as appropriate.
   if [[ "${goma}" -eq 1 ]]; then
     fset-add-gen-arg --goma
     fset-add-ninja-arg -j 1000
+  elif [[ "${ccache}" -eq 1 ]]; then
+    fset-add-gen-arg --ccache
   fi
 }
 
