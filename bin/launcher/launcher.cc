@@ -26,11 +26,6 @@ class LauncherApp : public maxwell::Launcher {
         modular::ConnectToService<maxwell::suggestion::SuggestionEngine>(
             suggestion_services_.get());
 
-    // TODO(rosswang): iterate through folders
-    StartAgent("file:///system/apps/acquirers/gps");
-    StartAgent("file:///system/apps/agents/carmen_sandiego");
-    StartAgent("file:///system/apps/agents/ideas");
-
     app_context_->outgoing_services()->AddService<maxwell::Launcher>(
         [this](fidl::InterfaceRequest<maxwell::Launcher> request) {
           launcher_bindings_.AddBinding(this, std::move(request));
@@ -48,13 +43,13 @@ class LauncherApp : public maxwell::Launcher {
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<modular::FocusController> focus_controller) override {
     suggestion_engine_->SetStoryProvider(std::move(story_provider));
-    // TODO(rosswang): Also update any agents that need to affect individual
-    // stories. This may just be the modular acquirer if everything else works
-    // through context.
-    //
-    // TODO(thatguy): Initialize Agents here so they can depend on the
-    // story_provider or the focus_controller.
-    focus_controller_ = std::move(focus_controller);
+
+    focus_controller_.Bind(std::move(focus_controller));
+
+    // TODO(rosswang): Search the ComponentIndex and iterate through results.
+    StartAgent("file:///system/apps/acquirers/gps");
+    StartAgent("file:///system/apps/agents/carmen_sandiego");
+    StartAgent("file:///system/apps/agents/ideas");
   }
 
  private:
@@ -98,6 +93,11 @@ class LauncherApp : public maxwell::Launcher {
           suggestion_engine_->RegisterSuggestionAgent(url, std::move(request));
         });
 
+    agent_host->AddService<modular::FocusController>(
+        [this] (fidl::InterfaceRequest<modular::FocusController> request) {
+          focus_controller_->Duplicate(std::move(request));
+        });
+
     agent_launcher_.StartAgent(url, std::move(agent_host));
   }
 
@@ -111,7 +111,7 @@ class LauncherApp : public maxwell::Launcher {
 
   maxwell::AgentLauncher agent_launcher_;
 
-  fidl::InterfaceHandle<modular::FocusController> focus_controller_;
+  fidl::InterfacePtr<modular::FocusController> focus_controller_;
 };
 
 }  // namespace
