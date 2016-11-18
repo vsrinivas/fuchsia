@@ -1147,7 +1147,6 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/signal/arm/restore.s \
     $(LOCAL_DIR)/src/signal/arm/sigsetjmp.s \
     $(LOCAL_DIR)/src/thread/arm/__unmapself.s \
-    $(LOCAL_DIR)/src/thread/arm/atomics.s \
     $(LOCAL_DIR)/src/thread/arm/syscall_cp.s \
     $(LOCAL_DIR)/third_party/math/acosl.c \
     $(LOCAL_DIR)/third_party/math/asinl.c \
