@@ -118,7 +118,7 @@ END
 
 function mcheck() {
   if [[ -z "${MAGENTA_SETTINGS}" ]]; then
-    echo "must run mset first" >&2
+    echo "Must run mset first (see envhelp for more)." >&2
     return 1
   fi
   return 0
@@ -251,7 +251,7 @@ function fgo() {
 function fset-usage() {
   cat >&2 <<END
 Usage: fset x86-64|arm64 [--release] [--modules m1,m2...] [--goma|--no-goma] [--ccache]
-Sets fuchsia built options.
+Sets fuchsia build options.
 END
 }
 
@@ -355,7 +355,7 @@ END
 
 function fcheck() {
   if [[ -z "${FUCHSIA_SETTINGS}" ]]; then
-    echo "must run fset first" >&2
+    echo "Must run fset first (see envhelp for more)." >&2
     return 1
   fi
   return 0
@@ -375,7 +375,8 @@ function fgen() {
 
   echo "Generating ninja files..."
   rm -f "${FUCHSIA_GEN_ARGS_CACHE}"
-  "${FUCHSIA_DIR}/packages/gn/gen.py" ${FUCHSIA_GEN_ARGS} "$@" \
+  fbuild-sysroot-if-changed \
+    && "${FUCHSIA_DIR}/packages/gn/gen.py" ${FUCHSIA_GEN_ARGS} "$@" \
     && (echo "${FUCHSIA_GEN_ARGS}" > "${FUCHSIA_GEN_ARGS_CACHE}")
 }
 
@@ -461,8 +462,8 @@ function fbuild-goma-ensure-start() {
 function fbuild() {
   fcheck || return 1
 
-  fgen-if-changed \
-    && fbuild-sysroot-if-changed \
+  fbuild-sysroot-if-changed \
+    && fgen-if-changed \
     && fbuild-goma-ensure-start \
     && echo "Building fuchsia..." \
     && "${FUCHSIA_DIR}/buildtools/ninja" ${FUCHSIA_NINJA_ARGS} "$@"
