@@ -13,7 +13,6 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/futex_context.h>
-#include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/object.h>
@@ -26,13 +25,30 @@
 #include <mxtl/ref_ptr.h>
 #include <mxtl/string_piece.h>
 
-class ProcessDispatcher : public Dispatcher
-                        , public mxtl::DoublyLinkedListable<ProcessDispatcher*> {
+class JobDispatcher;
+
+class ProcessDispatcher : public Dispatcher {
 public:
     static mx_status_t Create(mxtl::RefPtr<JobDispatcher> job,
                               mxtl::StringPiece name,
                               mxtl::RefPtr<Dispatcher>* dispatcher,
                               mx_rights_t* rights, uint32_t flags);
+
+    // Traits to belong in the global list of processes.
+    struct ProcessListTraits {
+        static mxtl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(
+            ProcessDispatcher& obj) {
+            return obj.dll_process_;
+        }
+    };
+
+    // Traits to belong in the parent job's list.
+    struct JobListTraits {
+        static mxtl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(
+            ProcessDispatcher& obj) {
+            return obj.dll_job_;
+        }
+    };
 
     static ProcessDispatcher* GetCurrent() {
         UserThread* current = UserThread::GetCurrent();
@@ -122,7 +138,7 @@ public:
     StateTracker* state_tracker() { return &state_tracker_; }
     State state() const { return state_; }
     mxtl::RefPtr<VmAspace> aspace() { return aspace_; }
-    mxtl::RefPtr<JobDispatcher> job() { return job_; }
+    mxtl::RefPtr<JobDispatcher> job();
 
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
     status_t set_name(const char* name, size_t len) final;
@@ -197,9 +213,12 @@ private:
     // Remove a process from the global process list.
     static void RemoveProcess(ProcessDispatcher* process);
 
+    mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_process_;
+    mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_;
+
     mx_handle_t handle_rand_ = 0;
 
-    // protects thread_list_, as well as the UserThread joined_ and detached_ flags
+    // protects thread_list_
     mutable Mutex thread_list_lock_;
 
     // list of threads in this process
@@ -209,7 +228,7 @@ private:
     mxtl::RefPtr<VmAspace> aspace_;
 
     // the enclosing job
-    mxtl::RefPtr<JobDispatcher> job_;
+    const mxtl::RefPtr<JobDispatcher> job_;
 
     // our list of handles
     mutable Mutex handle_table_lock_; // protects |handles_|.
@@ -240,7 +259,7 @@ private:
     char name_[MX_MAX_NAME_LEN] = {};
 
     static mutex_t global_process_list_mutex_;
-    static mxtl::DoublyLinkedList<ProcessDispatcher*> global_process_list_;
+    static mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessListTraits> global_process_list_;
 };
 
 const char* StateToString(ProcessDispatcher::State state);

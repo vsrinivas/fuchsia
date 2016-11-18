@@ -36,10 +36,13 @@ static constexpr mx_rights_t kDefaultProcessRights =
         MX_RIGHT_READ  | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
         MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY | MX_RIGHT_ENUMERATE;
 
+
+
 mutex_t ProcessDispatcher::global_process_list_mutex_ =
     MUTEX_INITIAL_VALUE(global_process_list_mutex_);
-mxtl::DoublyLinkedList<ProcessDispatcher*> ProcessDispatcher::global_process_list_;
 
+mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::ProcessListTraits>
+    ProcessDispatcher::global_process_list_;
 
 mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
     // Ensure that the last bit of the result is not zero and that
@@ -80,8 +83,11 @@ ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,
     : job_(mxtl::move(job)), state_tracker_(0u) {
     LTRACE_ENTRY_OBJ;
 
-    // Add ourself to the global process list, generating an ID at the same time.
+    // Add ourself to the global process list.
     AddProcess(this);
+
+    if (job_)
+        job_->AddChildProcess(this);
 
     // Generate handle XOR mask with top bit and bottom two bits cleared
     uint32_t secret;
@@ -102,6 +108,9 @@ ProcessDispatcher::~ProcessDispatcher() {
 
     // assert that we have no handles, should have been cleaned up in the -> DEAD transition
     DEBUG_ASSERT(handles_.is_empty());
+
+    if (job_)
+        job_->RemoveChildProcess(this);
 
     // remove ourself from the global process list
     RemoveProcess(this);
@@ -274,6 +283,10 @@ void ProcessDispatcher::AllHandlesClosed() {
 
 mx_koid_t ProcessDispatcher::get_inner_koid() const {
     return job_ ? job_->get_koid() : 0ull;
+}
+
+mxtl::RefPtr<JobDispatcher> ProcessDispatcher::job() {
+    return job_;
 }
 
 void ProcessDispatcher::SetState(State s) {

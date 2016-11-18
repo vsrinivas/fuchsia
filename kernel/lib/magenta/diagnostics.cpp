@@ -12,9 +12,10 @@
 #include <lib/console.h>
 
 #include <magenta/job_dispatcher.h>
+#include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 
-void DumpProcessListKeyMap() {
+static void DumpProcessListKeyMap() {
     printf("id  : process id number\n");
     printf("-s  : state: R = running D = dead\n");
     printf("#t  : number of threads\n");
@@ -30,7 +31,7 @@ void DumpProcessListKeyMap() {
     printf("#dp : number of data pipe handles (both)\n");
 }
 
-char StateChar(const ProcessDispatcher& pd) {
+static char StateChar(const ProcessDispatcher& pd) {
     switch (pd.state()) {
         case ProcessDispatcher::State::INITIAL:
             return 'I';
@@ -44,7 +45,7 @@ char StateChar(const ProcessDispatcher& pd) {
     return '?';
 }
 
-const char* ObjectTypeToString(mx_obj_type_t type) {
+static const char* ObjectTypeToString(mx_obj_type_t type) {
     static_assert(MX_OBJ_TYPE_LAST == 18, "need to update switch below");
 
     switch (type) {
@@ -92,7 +93,7 @@ size_t ProcessDispatcher::PageCount() const {
     return aspace_->AllocatedPages();
 }
 
-char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
+static char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
     static char buf[(MX_OBJ_TYPE_LAST * 4) + 1];
 
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
@@ -133,20 +134,10 @@ void DumpProcessList() {
 }
 
 void DumpProcessHandles(mx_koid_t id) {
-    mxtl::RefPtr<ProcessDispatcher> pd;
-    {
-        AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
-
-        auto process_iter =
-            ProcessDispatcher::global_process_list_.find_if([id] (const ProcessDispatcher& pd) {
-                return (id == pd.get_koid());
-        });
-
-        if (!process_iter.IsValid()) {
-            printf("process %" PRIu64 " not found\n", id);
-            return;
-        }
-        pd.reset(process_iter.CopyPointer());
+    auto pd = ProcessDispatcher::LookupProcessById(id);
+    if (!pd) {
+        printf("process not found!\n");
+        return;
     }
 
     printf("process [%" PRIu64 "] handles :\n", id);
@@ -165,24 +156,83 @@ void DumpProcessHandles(mx_koid_t id) {
     printf("total: %u handles\n", total);
 }
 
+
+class JobDumper final : public JobEnumerator {
+public:
+    JobDumper(mx_koid_t self) : self_(self) {}
+    JobDumper(const JobDumper&) = delete;
+
+private:
+    bool Size(uint32_t proc_count, uint32_t job_count) final {
+        if (!job_count)
+            printf("no jobs\n");
+        if (proc_count < 2)
+            printf("no processes\n");
+        return true;
+    }
+
+    bool OnJob(JobDispatcher* job, uint32_t index) final {
+        printf("- %" PRIu64 " child job (%" PRIu32 " processes)\n",
+            job->get_koid(), job->process_count());
+        return true;
+    }
+
+    bool OnProcess(ProcessDispatcher* proc, uint32_t index) final {
+        auto id = proc->get_koid();
+        if (id != self_) {
+            char pname[MX_MAX_NAME_LEN];
+            proc->get_name(pname);
+            printf("- %" PRIu64 " proc [%s]\n", id, pname);
+        }
+
+        return true;
+    }
+
+    mx_koid_t self_;
+};
+
+void DumpJobTreeForProcess(mx_koid_t id) {
+    auto pd = ProcessDispatcher::LookupProcessById(id);
+    if (!pd) {
+        printf("process not found!\n");
+        return;
+    }
+
+    auto job = pd->job();
+    if (!job) {
+        printf("process has no job!!\n");
+        return;
+    }
+
+    char pname[MX_MAX_NAME_LEN];
+    pd->get_name(pname);
+
+    printf("process %" PRIu64 " [%s]\n", id, pname);
+    printf("in job [%" PRIu64 "]", job->get_koid());
+
+    auto parent = job;
+    while (true) {
+        parent = parent->parent();
+        if (!parent)
+            break;
+        printf("-->[%" PRIu64 "]", parent->get_koid());
+    }
+    printf("\n");
+
+    JobDumper dumper(id);
+    job->EnumerateChildren(&dumper);
+}
+
 void KillProcess(mx_koid_t id) {
     // search the process list and send a kill if found
-    mxtl::RefPtr<ProcessDispatcher> proc_ref;
-
-    // search the process list for our process
-    AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
-    for (auto& process : ProcessDispatcher::global_process_list_) {
-        if (process.get_koid() == id) {
-            proc_ref.reset(&process);
-            break;
-        }
+    auto pd = ProcessDispatcher::LookupProcessById(id);
+    if (!pd) {
+        printf("process not found!\n");
+        return;
     }
-
     // if found, outside of the lock hit it with kill
-    if (proc_ref) {
-        printf("killing process %" PRIu64 "\n", id);
-        proc_ref->Kill();
-    }
+    printf("killing process %" PRIu64 "\n", id);
+    pd->Kill();
 }
 
 static size_t mwd_limit = 32 * 256;
@@ -218,6 +268,7 @@ static int cmd_diagnostics(int argc, const cmd_args* argv) {
         printf("%s ps         : list processes\n", argv[0].str);
         printf("%s mwd <mb>   : memory watchdog\n", argv[0].str);
         printf("%s ht   <pid> : dump process handles\n", argv[0].str);
+        printf("%s jb   <pid> : list job tree\n", argv[0].str);
         printf("%s kill <pid> : kill process\n", argv[0].str);
         return -1;
     }
@@ -243,6 +294,10 @@ static int cmd_diagnostics(int argc, const cmd_args* argv) {
         if (argc < 3)
             goto usage;
         DumpProcessHandles(argv[2].u);
+    } else if (strcmp(argv[1].str, "jb") == 0) {
+        if (argc < 3)
+            goto usage;
+        DumpJobTreeForProcess(argv[2].u);
     } else if (strcmp(argv[1].str, "kill") == 0) {
         if (argc < 3)
             goto usage;
