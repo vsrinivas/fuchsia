@@ -16,7 +16,6 @@
 
 struct udisplay_info {
     paddr_t framebuffer_phys;
-    void* framebuffer_user_virt;
     void* framebuffer_virt;
     size_t framebuffer_size;
     struct display_info info;
@@ -30,20 +29,7 @@ status_t udisplay_init(void) {
 
 status_t udisplay_set_framebuffer(paddr_t fb_phys, void* fb_user_virt, size_t fb_size) {
     g_udisplay.framebuffer_phys = fb_phys;
-    g_udisplay.framebuffer_user_virt = fb_user_virt;
     g_udisplay.framebuffer_size = fb_size;
-
-    return NO_ERROR;
-}
-
-status_t udisplay_set_display_info(struct display_info* display) {
-    memcpy(&g_udisplay.info, display, sizeof(struct display_info));
-    return NO_ERROR;
-}
-
-status_t udisplay_bind_gfxconsole(void) {
-    if (g_udisplay.framebuffer_phys == 0 || g_udisplay.framebuffer_size == 0)
-        return ERR_NOT_FOUND;
 
     // map the framebuffer
     vmm_aspace_t* aspace = vmm_get_kernel_aspace();
@@ -58,7 +44,24 @@ status_t udisplay_bind_gfxconsole(void) {
             0 /* vmm flags */,
             ARCH_MMU_FLAG_WRITE_COMBINING | ARCH_MMU_FLAG_PERM_READ |
                 ARCH_MMU_FLAG_PERM_WRITE);
-    if (result) return result;
+
+    if (result)
+        g_udisplay.framebuffer_virt = 0;
+
+    return NO_ERROR;
+}
+
+status_t udisplay_set_display_info(struct display_info* display) {
+    memcpy(&g_udisplay.info, display, sizeof(struct display_info));
+    return NO_ERROR;
+}
+
+status_t udisplay_bind_gfxconsole(void) {
+    if (g_udisplay.framebuffer_phys == 0 || g_udisplay.framebuffer_size == 0)
+        return ERR_NOT_FOUND;
+
+    if (g_udisplay.framebuffer_virt == 0)
+        return ERR_NOT_FOUND;
 
     // bind the display to the gfxconsole
     g_udisplay.info.framebuffer = g_udisplay.framebuffer_virt;

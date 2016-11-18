@@ -52,6 +52,14 @@ void platform_init_mmu_mappings(void);
  * it to applications with this function.  */
 platform_halt_reason platform_get_reboot_reason(void);
 
+
+/* platform_panic_start informs the system that a panic message is about
+ * to be printed and that platformn_halt will be called shortly.  The
+ * platform should stop other CPUs if possible and do whatever is necessary
+ * to safely ensure that the panic message will be visible to the user.
+ */
+void platform_panic_start(void);
+
 /* platform_halt is a method which is called from various places in the LK
  * system, and may be implemented by platforms and called by applications.  This
  * call represents the end of the life of SW for a device; there is no returning

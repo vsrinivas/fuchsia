@@ -17,6 +17,38 @@
 #include <lib/debuglog.h>
 #endif
 
+static volatile int panic_started;
+
+static void halt_other_cpus(void) {
+#if WITH_SMP
+    static volatile int halted = 0;
+
+    if (atomic_swap(&halted, 1) == 0) {
+        // stop the other cpus
+        printf("stopping other cpus\n");
+        arch_mp_send_ipi(MP_CPU_ALL_BUT_LOCAL, MP_IPI_HALT);
+
+        // spin for a while
+        // TODO: find a better way to spin at this low level
+        for (volatile int i = 0; i < 100000000; i++) {
+            __asm volatile ("nop");
+        }
+    }
+#endif
+}
+
+void platform_panic_start(void) {
+    arch_disable_ints();
+
+    halt_other_cpus();
+
+    if (atomic_swap(&panic_started, 1) == 0) {
+#if WITH_LIB_DEBUGLOG
+        dlog_bluescreen();
+#endif
+    }
+}
+
 void platform_halt(
         platform_halt_action suggested_action,
         platform_halt_reason reason)
@@ -37,25 +69,11 @@ void platform_halt(
         case HALT_ACTION_HALT:
             printf("Halting...\n");
 
-#if WITH_SMP
-            // stop the other cpus
-            printf("stopping other cpus\n");
-            arch_mp_send_ipi(MP_CPU_ALL_BUT_LOCAL, MP_IPI_HALT);
-
-            // spin for a while
-            // TODO: find a better way to spin at this low level
-            for (volatile int i = 0; i < 100000000; i++) {
-                __asm volatile ("nop");
-            }
-#endif
+            halt_other_cpus();
             break;
     }
 
     printf("Halted\n");
-
-#if WITH_LIB_DEBUGLOG
-    dlog_bluescreen();
-#endif
 
 #if ENABLE_PANIC_SHELL
     panic_shell_start();

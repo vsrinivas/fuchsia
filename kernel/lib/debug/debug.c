@@ -28,6 +28,8 @@ void spin(uint32_t usecs)
 
 void _panic(void *caller, const char *fmt, ...)
 {
+    platform_panic_start();
+
     printf("panic (caller %p): ", caller);
 
     va_list ap;

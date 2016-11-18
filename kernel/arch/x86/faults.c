@@ -59,6 +59,8 @@ static void dump_fault_frame(x86_iframe_t *frame)
 
 __NO_RETURN static void exception_die(x86_iframe_t *frame, const char *msg)
 {
+    platform_panic_start();
+
     printf("vector %lu\n", (ulong) frame->vector);
     dprintf(CRITICAL, "%s", msg);
     dump_fault_frame(frame);

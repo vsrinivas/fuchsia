@@ -30,6 +30,10 @@ __WEAK void platform_quiesce(void)
 {
 }
 
+__WEAK void platform_panic_start(void)
+{
+}
+
 __WEAK void *platform_get_ramdisk(size_t *size)
 {
     *size = 0;

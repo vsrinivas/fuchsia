@@ -204,17 +204,47 @@ static int debuglog_reader(void* arg) {
     return NO_ERROR;
 }
 
+#define REPLAY_LOG 0
+
+#if REPLAY_LOG
+static status_t dlog_read_unsafe(dlog_reader_t* rdr, uint32_t flags, void* ptr, size_t len) {
+    dlog_t* log = rdr->log;
+    status_t r = ERR_BAD_STATE;
+
+    if (rdr->tail != log->head) {
+        dlog_record_t* rec = REC(log->data, rdr->tail);
+        size_t copylen = rec->datalen + sizeof(dlog_record_t);
+        if (copylen > len) {
+            r = ERR_BUFFER_TOO_SMALL;
+        } else {
+            memcpy(ptr, rec, copylen);
+            r = copylen;
+            rdr->tail = rec->next;
+        }
+    }
+    return r;
+}
+
+static void dlog_reader_init_unsafe(dlog_reader_t* rdr) {
+    dlog_t* log = &DLOG;
+    memset(rdr, 0, sizeof(dlog_reader_t));
+    rdr->log = log;
+    rdr->tail = log->tail;
+}
+#endif
+
 void dlog_bluescreen(void) {
     udisplay_bind_gfxconsole();
 
     DLOG.paused = true;
 
+#if REPLAY_LOG
     uint8_t buffer[DLOG_MAX_ENTRY + 1];
     dlog_record_t* rec = (dlog_record_t*)buffer;
     dlog_reader_t reader;
 
-    dlog_reader_init(&reader);
-    while (dlog_read(&reader, 0, rec, DLOG_MAX_ENTRY) > 0) {
+    dlog_reader_init_unsafe(&reader);
+    while (dlog_read_unsafe(&reader, 0, rec, DLOG_MAX_ENTRY) > 0) {
         rec->data[rec->datalen] = 0;
         if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
             rec->data[rec->datalen - 1] = 0;
@@ -225,6 +255,9 @@ void dlog_bluescreen(void) {
                 (rec->flags & DLOG_FLAG_KERNEL) ? 'K' : 'U',
                 rec->data);
     }
+#else
+    dprintf(INFO, "\nKERNEL PANIC\n\n");
+#endif
 }
 
 static void dlog_init_hook(uint level) {
