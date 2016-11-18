@@ -66,7 +66,8 @@ class _HomeScreenState extends State<_HomeScreen>
   void initialize(
     InterfaceHandle<Story> storyHandle,
     InterfaceHandle<Link> linkHandle,
-  ) {
+    InterfaceHandle<Link> incomingServices,
+    InterfaceRequest<Link> outgoingServices) {
     _log('_HomeScreenState::initialize call');
 
     // Bind the provided handles to our proxy objects.
