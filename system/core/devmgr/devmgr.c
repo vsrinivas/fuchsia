@@ -72,8 +72,7 @@ static mx_status_t mount_remote_handle(const char* where, mx_handle_t* h) {
     int fd;
     if ((fd = open(where, O_DIRECTORY | O_RDWR)) < 0) {
         return ERR_BAD_STATE;
-    }
-    if (ioctl_devmgr_mount_fs(fd, h) != sizeof(mx_handle_t)) {
+    } else if (ioctl_devmgr_mount_fs(fd, h) != sizeof(mx_handle_t)) {
         close(fd);
         return ERR_BAD_STATE;
     }

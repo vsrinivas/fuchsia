@@ -135,6 +135,10 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
         return r;
     }
 
+    if ((flags & O_CREAT) && (flags & O_NOREMOTE)) {
+        return ERR_INVALID_ARGS;
+    }
+
     size_t len = strlen(path);
     vnode_t* vn;
 
@@ -155,7 +159,15 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
         if (r < 0) {
             return r;
         }
-        if ((vn->flags & V_FLAG_REMOTE) && (vn->remote > 0)) {
+        if (flags & O_NOREMOTE) {
+            // Opening a mount point: Do NOT traverse across remote.
+            if (!(vn->flags & V_FLAG_REMOTE)) {
+                // There must be a remote handle mounted on this vnode.
+                vn_release(vn);
+                return ERR_BAD_STATE;
+            }
+        } else if ((vn->flags & V_FLAG_REMOTE) && (vn->remote > 0)) {
+            // Opening a mount point: Traverse across remote.
             *pathout = ".";
             r = vn->remote;
             vn_release(vn);
@@ -288,6 +300,9 @@ ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
         }
         memcpy(out_buf, &h0, sizeof(mx_handle_t));
         return sizeof(mx_handle_t);
+    }
+    case IOCTL_DEVMGR_UNMOUNT_NODE: {
+        return vfs_uninstall_remote(vn);
     }
     default:
         return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
