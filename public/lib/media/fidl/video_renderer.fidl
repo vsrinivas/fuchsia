@@ -1,0 +1,17 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+import "apps/mozart/services/geometry/geometry.fidl";
+import "apps/mozart/services/views/view_token.fidl";
+
+// Video-specific renderer.
+interface VideoRenderer {
+  // Gets the size of the video.
+  GetVideoSize() => (mozart.Size size);
+
+  // Creates a video view.
+  CreateView(mozart.ViewOwner& view_owner);
+};

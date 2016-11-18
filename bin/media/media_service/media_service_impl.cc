@@ -12,6 +12,7 @@
 #include "apps/media/src/media_service/media_source_impl.h"
 #include "apps/media/src/media_service/media_timeline_controller_impl.h"
 #include "apps/media/src/media_service/network_reader_impl.h"
+#include "apps/media/src/media_service/video_renderer_impl.h"
 
 namespace media {
 
@@ -75,6 +76,13 @@ void MediaServiceImpl::CreateFileReader(
     const fidl::String& path,
     fidl::InterfaceRequest<SeekingReader> reader) {
   AddProduct(FileReaderImpl::Create(path, std::move(reader), this));
+}
+
+void MediaServiceImpl::CreateVideoRenderer(
+    fidl::InterfaceRequest<VideoRenderer> video_renderer,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer) {
+  AddProduct(VideoRendererImpl::Create(std::move(video_renderer),
+                                       std::move(media_renderer), this));
 }
 
 void MediaServiceImpl::CreateTimelineController(

@@ -29,5 +29,10 @@ fidl("services") {
     "seeking_reader.fidl",
     "timeline_controller.fidl",
     "timelines.fidl",
+    "video_renderer.fidl",
+  ]
+
+  public_deps = [
+    "//apps/mozart/services/views",
   ]
 }

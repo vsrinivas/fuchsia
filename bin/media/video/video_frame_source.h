@@ -6,31 +6,44 @@
 
 #include <memory>
 #include <queue>
+#include <unordered_set>
 
 #include "apps/media/lib/media_packet_consumer_base.h"
 #include "apps/media/lib/timeline_function.h"
-#include "apps/media/lib/video_converter.h"
 #include "apps/media/services/media_renderer.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
+#include "apps/media/services/video_renderer.fidl.h"
+#include "apps/media/src/video/video_converter.h"
+#include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {
 
 // Implements MediaRenderer for an app that wants to show video.
-class VideoRenderer : public MediaPacketConsumerBase,
-                      public MediaRenderer,
-                      public MediaTimelineControlPoint,
-                      public TimelineConsumer {
+class VideoFrameSource : public MediaPacketConsumerBase,
+                         public MediaRenderer,
+                         public MediaTimelineControlPoint,
+                         public TimelineConsumer {
  public:
-  VideoRenderer();
+  VideoFrameSource();
 
-  ~VideoRenderer() override;
+  ~VideoFrameSource() override;
 
-  void Bind(fidl::InterfaceRequest<MediaRenderer> renderer_request);
+  void Bind(fidl::InterfaceRequest<MediaRenderer> media_renderer_request);
 
-  // Get the size of the video to be rendered.
-  mozart::Size GetSize();
+  void RegisterView(mozart::BaseView* view) { views_.insert(view); }
+
+  void UnregisterView(mozart::BaseView* view) { views_.erase(view); }
+
+  mozart::Size GetSize() { return converter_.GetSize(); }
+
+  bool views_should_animate() {
+    return current_timeline_function_.subject_delta() != 0 ||
+           pending_timeline_function_.subject_delta() != 0;
+  }
+
+  void GetVideoSize(const VideoRenderer::GetVideoSizeCallback& callback);
 
   // Gets an RGBA video frame corresponding to the specified reference time.
   void GetRgbaFrame(uint8_t* rgba_buffer,
@@ -94,7 +107,14 @@ class VideoRenderer : public MediaPacketConsumerBase,
   // Calls the callback with the current status.
   void CompleteGetStatus(const GetStatusCallback& callback);
 
-  fidl::Binding<MediaRenderer> renderer_binding_;
+  // Calls Invalidate on all registered views.
+  void InvalidateViews() {
+    for (mozart::BaseView* view : views_) {
+      view->Invalidate();
+    }
+  }
+
+  fidl::Binding<MediaRenderer> media_renderer_binding_;
   fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
   fidl::Binding<TimelineConsumer> timeline_consumer_binding_;
   std::queue<std::unique_ptr<SuppliedPacket>> packet_queue_;
@@ -107,6 +127,8 @@ class VideoRenderer : public MediaPacketConsumerBase,
   uint64_t status_version_ = 1u;
   std::vector<GetStatusCallback> pending_status_callbacks_;
   VideoConverter converter_;
+  VideoRenderer::GetVideoSizeCallback get_video_size_callback_;
+  std::unordered_set<mozart::BaseView*> views_;
 };
 
 }  // namespace media

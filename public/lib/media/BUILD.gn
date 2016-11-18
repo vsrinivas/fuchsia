@@ -23,12 +23,6 @@ source_set("lib") {
     "timeline_function.h",
     "timeline_rate.cc",
     "timeline_rate.h",
-    "video_converter.cc",
-    "video_converter.h",
-    "video_packet_layout.cc",
-    "video_packet_layout.h",
-    "video_renderer.cc",
-    "video_renderer.h",
   ]
 
   deps = [

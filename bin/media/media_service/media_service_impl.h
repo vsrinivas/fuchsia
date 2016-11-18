@@ -46,6 +46,10 @@ class MediaServiceImpl : public FactoryServiceBase, public MediaService {
   void CreateFileReader(const fidl::String& path,
                         fidl::InterfaceRequest<SeekingReader> reader) override;
 
+  void CreateVideoRenderer(
+      fidl::InterfaceRequest<VideoRenderer> video_renderer,
+      fidl::InterfaceRequest<MediaRenderer> media_renderer) override;
+
   void CreateTimelineController(fidl::InterfaceRequest<MediaTimelineController>
                                     timeline_controller) override;
 

@@ -26,19 +26,10 @@
 namespace examples {
 
 namespace {
-constexpr uint32_t kSkiaImageResourceId = 1;
-constexpr uint32_t kVideoImageResourceId = 2;
+constexpr uint32_t kVideoChildKey = 0u;
+constexpr uint32_t kSceneResourceId = 1u;
+constexpr uint32_t kSkiaImageResourceId = 2u;
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
-
-// Creates a RectF at the origin with the specified size.
-mozart::RectFPtr CreateRectF(const mozart::Size& size) {
-  auto rectF = mozart::RectF::New();
-  rectF->x = 0.0f;
-  rectF->y = 0.0f;
-  rectF->width = size.width;
-  rectF->height = size.height;
-  return rectF;
-}
 
 // Determines whether the rectangle contains the point x,y.
 bool Contains(const mozart::RectF& rect, float x, float y) {
@@ -67,14 +58,29 @@ VideoPlayerView::VideoPlayerView(
 
   // Get an audio renderer.
   media::AudioTrackPtr audio_track;
-  media::MediaRendererPtr audio_renderer;
-  audio_service->CreateTrack(GetProxy(&audio_track), GetProxy(&audio_renderer));
+  media::MediaRendererPtr audio_media_renderer;
+  audio_service->CreateTrack(GetProxy(&audio_track),
+                             GetProxy(&audio_media_renderer));
 
-  // Get a video renderer (in-proc for now).
-  media::MediaRendererPtr video_renderer;
-  fidl::InterfaceRequest<media::MediaRenderer> video_renderer_request =
-      fidl::GetProxy(&video_renderer);
-  video_renderer_.Bind(std::move(video_renderer_request));
+  // Get a video renderer.
+  media::MediaRendererPtr video_media_renderer;
+  media_service->CreateVideoRenderer(GetProxy(&video_renderer_),
+                                     GetProxy(&video_media_renderer));
+
+  mozart::ViewOwnerPtr video_view_owner;
+  video_renderer_->CreateView(fidl::GetProxy(&video_view_owner));
+  GetViewContainer()->AddChild(kVideoChildKey, std::move(video_view_owner));
+
+  // We start with a non-zero size so we get a progress bar regardless of
+  // whether we get video.
+  video_size_.width = 640u;
+  video_size_.height = 1u;
+  video_renderer_->GetVideoSize([this](mozart::SizePtr video_size) {
+    FTL_DLOG(INFO) << "video_size " << video_size->width << "x"
+                   << video_size->height;
+    video_size_ = *video_size;
+    Invalidate();
+  });
 
   // Get a file reader.
   media::SeekingReaderPtr reader;
@@ -82,8 +88,8 @@ VideoPlayerView::VideoPlayerView(
 
   // Create a player from all that stuff.
   media_service->CreatePlayer(
-      std::move(reader), nullptr,  // std::move(audio_renderer),
-      std::move(video_renderer), GetProxy(&media_player_));
+      std::move(reader), nullptr,  // std::move(audio_media_renderer),
+      std::move(video_media_renderer), GetProxy(&media_player_));
 
   // Get the first frames queued up so we can show something.
   media_player_->Pause();
@@ -104,12 +110,11 @@ void VideoPlayerView::OnEvent(mozart::EventPtr event,
   switch (event->action) {
     case mozart::EventType::POINTER_DOWN:
       FTL_DCHECK(event->pointer_data);
-      if (Contains(progress_bar_rect_,
-                   event->pointer_data->x + progress_bar_rect_.x,
+      if (Contains(progress_bar_rect_, event->pointer_data->x,
                    event->pointer_data->y)) {
         // User poked the progress bar...seek.
-        media_player_->Seek(event->pointer_data->x * metadata_->duration /
-                            progress_bar_rect_.width);
+        media_player_->Seek((event->pointer_data->x - progress_bar_rect_.x) *
+                            metadata_->duration / progress_bar_rect_.width);
         if (state_ != State::kPlaying) {
           media_player_->Play();
         }
@@ -145,6 +150,26 @@ void VideoPlayerView::OnEvent(mozart::EventPtr event,
   callback(handled);
 }
 
+void VideoPlayerView::OnLayout() {
+  FTL_DCHECK(properties());
+
+  auto view_properties = mozart::ViewProperties::New();
+  view_properties->view_layout = mozart::ViewLayout::New();
+  view_properties->view_layout->size = mozart::Size::New();
+  view_properties->view_layout->size->width = video_size_.width;
+  view_properties->view_layout->size->height = video_size_.height;
+
+  if (video_view_properties_.Equals(view_properties)) {
+    // no layout work to do
+    return;
+  }
+
+  video_view_properties_ = view_properties.Clone();
+  ++scene_version_;
+  GetViewContainer()->SetChildProperties(kVideoChildKey, scene_version_,
+                                         std::move(view_properties));
+}
+
 void VideoPlayerView::OnDraw() {
   FTL_DCHECK(properties());
 
@@ -152,18 +177,17 @@ void VideoPlayerView::OnDraw() {
   frame_time_ = media::Timeline::local_now();
 
   // Log the frame rate every five seconds.
-  if (ftl::TimeDelta::FromNanoseconds(frame_time_).ToSeconds() / 5 !=
-      ftl::TimeDelta::FromNanoseconds(prev_frame_time_).ToSeconds() / 5) {
+  if (state_ == State::kPlaying &&
+      ftl::TimeDelta::FromNanoseconds(frame_time_).ToSeconds() / 5 !=
+          ftl::TimeDelta::FromNanoseconds(prev_frame_time_).ToSeconds() / 5) {
     FTL_DLOG(INFO) << "frame rate " << frame_rate() << " fps";
   }
 
   auto update = mozart::SceneUpdate::New();
 
   const mozart::Size& view_size = *properties()->view_layout->size;
-  mozart::Size video_size = video_renderer_.GetSize();
 
-  if (view_size.width == 0 || view_size.height == 0 || video_size.width == 0 ||
-      video_size.height == 0) {
+  if (view_size.width == 0 || view_size.height == 0) {
     // Nothing to show yet.
     update->nodes.insert(kRootNodeId, mozart::Node::New());
   } else {
@@ -171,15 +195,15 @@ void VideoPlayerView::OnDraw() {
 
     // Shrink-to-fit the video horizontally, if necessary, otherwise center it.
     float width_scale = static_cast<float>(view_size.width) /
-                        static_cast<float>(video_size.width);
+                        static_cast<float>(video_size_.width);
     float height_scale = static_cast<float>(view_size.height) /
-                         static_cast<float>(video_size.height);
+                         static_cast<float>(video_size_.height);
     float scale = std::min(width_scale, height_scale);
     float translate_x = 0.0f;
 
     if (scale > 1.0f) {
       scale = 1.0f;
-      translate_x = (view_size.width - video_size.width) / 2.0f;
+      translate_x = (view_size.width - video_size_.width) / 2.0f;
     }
 
     mozart::TransformPtr transform = mozart::Translate(
@@ -188,12 +212,12 @@ void VideoPlayerView::OnDraw() {
     // Use the transform to position the progress bar under the video.
     mozart::PointF progress_bar_left;
     progress_bar_left.x = 0.0f;
-    progress_bar_left.y = video_size.height;
+    progress_bar_left.y = video_size_.height;
     progress_bar_left = TransformPoint(*transform, progress_bar_left);
 
     mozart::PointF progress_bar_right;
-    progress_bar_right.x = video_size.width;
-    progress_bar_right.y = video_size.height;
+    progress_bar_right.x = video_size_.width;
+    progress_bar_right.y = video_size_.height;
     progress_bar_right = TransformPoint(*transform, progress_bar_right);
 
     progress_bar_rect_.x = progress_bar_left.x;
@@ -230,11 +254,27 @@ void VideoPlayerView::OnDraw() {
   scene()->Update(std::move(update));
   scene()->Publish(CreateSceneMetadata());
 
-  // Draw again immediately. It would be great to do this only when we're
-  // playing, but we aren't told when the video renderer get its first frame,
-  // so we might miss showing the first frame on startup. When the video
-  // renderer is implemented as a ViewProvider, we won't need to animate like
-  // this anymore.
+  if (state_ == State::kPlaying) {
+    // Need to animate the progress bar.
+    Invalidate();
+  }
+}
+
+void VideoPlayerView::OnChildAttached(uint32_t child_key,
+                                      mozart::ViewInfoPtr child_view_info) {
+  FTL_DCHECK(child_key == kVideoChildKey);
+
+  video_view_info_ = std::move(child_view_info);
+  Invalidate();
+}
+
+void VideoPlayerView::OnChildUnavailable(uint32_t child_key) {
+  FTL_DCHECK(child_key == kVideoChildKey);
+  FTL_LOG(ERROR) << "Video view died unexpectedly";
+
+  video_view_info_.reset();
+
+  GetViewContainer()->RemoveChild(child_key, nullptr);
   Invalidate();
 }
 
@@ -264,10 +304,38 @@ mozart::NodePtr VideoPlayerView::MakeSkiaNode(
       mozart::CreateTranslationTransform(rect.x, rect.y);
   skia_node->op = mozart::NodeOp::New();
   skia_node->op->set_image(mozart::ImageNodeOp::New());
-  skia_node->op->get_image()->content_rect = CreateRectF(size);
+  skia_node->op->get_image()->content_rect = mozart::RectF::New();
+  skia_node->op->get_image()->content_rect->x = 0.0f;
+  skia_node->op->get_image()->content_rect->y = 0.0f;
+  skia_node->op->get_image()->content_rect->width = size.width;
+  skia_node->op->get_image()->content_rect->height = size.height;
   skia_node->op->get_image()->image_resource_id = resource_id;
 
   return skia_node;
+}
+
+mozart::NodePtr VideoPlayerView::MakeVideoNode(
+    mozart::TransformPtr transform,
+    const mozart::SceneUpdatePtr& update) {
+  if (!video_view_info_) {
+    return mozart::Node::New();
+  }
+
+  auto scene_resource = mozart::Resource::New();
+  scene_resource->set_scene(mozart::SceneResource::New());
+  scene_resource->get_scene()->scene_token =
+      video_view_info_->scene_token.Clone();
+  update->resources.insert(kSceneResourceId, std::move(scene_resource));
+
+  auto video_node = mozart::Node::New();
+  video_node->content_transform = std::move(transform);
+  video_node->hit_test_behavior = mozart::HitTestBehavior::New();
+  video_node->op = mozart::NodeOp::New();
+  video_node->op->set_scene(mozart::SceneNodeOp::New());
+  video_node->op->get_scene()->scene_resource_id = kSceneResourceId;
+  video_node->op->get_scene()->scene_version = scene_version_;
+
+  return video_node;
 }
 
 void VideoPlayerView::DrawSkiaContent(const mozart::Size& size,
@@ -311,64 +379,6 @@ void VideoPlayerView::DrawSkiaContent(const mozart::Size& size,
     path.lineTo((size.width - kSymbolWidth) / 2.0f,
                 kProgressBarHeight + kSymbolVerticalSpacing);
     canvas->drawPath(path, paint);
-  }
-}
-
-mozart::NodePtr VideoPlayerView::MakeVideoNode(
-    mozart::TransformPtr transform,
-    const mozart::SceneUpdatePtr& update) {
-  mozart::Size video_size = video_renderer_.GetSize();
-
-  if (video_size.width == 0 || video_size.height == 0) {
-    return mozart::Node::New();
-  }
-
-  mozart::ResourcePtr vid_resource = DrawVideoTexture(
-      video_size, frame_tracker().frame_info().presentation_time);
-  FTL_DCHECK(vid_resource);
-  update->resources.insert(kVideoImageResourceId, std::move(vid_resource));
-
-  auto video_node = mozart::Node::New();
-  video_node->content_transform = std::move(transform);
-  video_node->hit_test_behavior = mozart::HitTestBehavior::New();
-  video_node->op = mozart::NodeOp::New();
-  video_node->op->set_image(mozart::ImageNodeOp::New());
-  video_node->op->get_image()->content_rect = CreateRectF(video_size);
-  video_node->op->get_image()->image_resource_id = kVideoImageResourceId;
-
-  return video_node;
-}
-
-mozart::ResourcePtr VideoPlayerView::DrawVideoTexture(
-    const mozart::Size& size,
-    int64_t presentation_time) {
-  EnsureBuffer(size);
-
-  mozart::ImagePtr image = mozart::Image::New();
-  image->size = size.Clone();
-  image->stride = size.width * sizeof(uint32_t);
-  image->pixel_format = mozart::Image::PixelFormat::B8G8R8A8;
-  image->alpha_format = mozart::Image::AlphaFormat::OPAQUE;
-  image->buffer = mozart::Buffer::New();
-  image->buffer->vmo = buffer_.GetDuplicateVmo();
-
-  video_renderer_.GetRgbaFrame(static_cast<uint8_t*>(buffer_.PtrFromOffset(0)),
-                               size, presentation_time);
-
-  mozart::ResourcePtr resource = mozart::Resource::New();
-  resource->set_image(mozart::ImageResource::New());
-  resource->get_image()->image = std::move(image);
-  return resource;
-}
-
-void VideoPlayerView::EnsureBuffer(const mozart::Size& size) {
-  if (!buffer_.initialized() || buffer_size_ != size) {
-    buffer_.Reset();
-    mx_status_t status =
-        buffer_.InitNew(size.height * size.width * sizeof(uint32_t));
-    FTL_DCHECK(status == NO_ERROR);
-    buffer_size_ = size;
-    std::memset(buffer_.PtrFromOffset(0), 0, buffer_.size());
   }
 }
 

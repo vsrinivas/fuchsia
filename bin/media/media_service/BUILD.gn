@@ -25,6 +25,8 @@ executable("media_service") {
     "media_timeline_controller_impl.h",
     "network_reader_impl.cc",
     "network_reader_impl.h",
+    "video_renderer_impl.cc",
+    "video_renderer_impl.h",
   ]
 
   deps = [
@@ -37,7 +39,10 @@ executable("media_service") {
     "//apps/media/src/framework",
     "//apps/media/src/framework_create",
     "//apps/media/src/util",
+    "//apps/media/src/video",
     "//apps/modular/lib/app",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/views",
     "//apps/network/services",
     "//lib/ftl",
     "//lib/mtl",

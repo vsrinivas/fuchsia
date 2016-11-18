@@ -12,7 +12,7 @@ VideoPlayerParams::VideoPlayerParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
   if (!command_line.GetOptionValue("path", &path_)) {
-    FTL_LOG(ERROR) << "URL must have query, e.g. fidl:video_player?path=<path>";
+    FTL_LOG(ERROR) << "Path must be supplied, e.g. --path=/data/vid.ogv";
     return;
   }
 

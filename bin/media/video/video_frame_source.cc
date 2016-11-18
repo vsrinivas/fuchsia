@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/lib/video_renderer.h"
+#include "apps/media/src/video/video_frame_source.h"
 
 #include <limits>
 
@@ -11,28 +11,24 @@
 
 namespace media {
 
-VideoRenderer::VideoRenderer()
-    : renderer_binding_(this),
+VideoFrameSource::VideoFrameSource()
+    : media_renderer_binding_(this),
       control_point_binding_(this),
       timeline_consumer_binding_(this) {
   // Make sure the PTS rate for all packets is nanoseconds.
   SetPtsRate(TimelineRate::NsPerSecond);
 }
 
-VideoRenderer::~VideoRenderer() {}
+VideoFrameSource::~VideoFrameSource() {}
 
-void VideoRenderer::Bind(
-    fidl::InterfaceRequest<MediaRenderer> renderer_request) {
-  renderer_binding_.Bind(std::move(renderer_request));
+void VideoFrameSource::Bind(
+    fidl::InterfaceRequest<MediaRenderer> media_renderer_request) {
+  media_renderer_binding_.Bind(std::move(media_renderer_request));
 }
 
-mozart::Size VideoRenderer::GetSize() {
-  return converter_.GetSize();
-}
-
-void VideoRenderer::GetRgbaFrame(uint8_t* rgba_buffer,
-                                 const mozart::Size& rgba_buffer_size,
-                                 int64_t reference_time) {
+void VideoFrameSource::GetRgbaFrame(uint8_t* rgba_buffer,
+                                    const mozart::Size& rgba_buffer_size,
+                                    int64_t reference_time) {
   MaybeApplyPendingTimelineChange(reference_time);
   MaybePublishEndOfStream();
 
@@ -53,7 +49,24 @@ void VideoRenderer::GetRgbaFrame(uint8_t* rgba_buffer,
   }
 }
 
-void VideoRenderer::GetSupportedMediaTypes(
+void VideoFrameSource::GetVideoSize(
+    const VideoRenderer::GetVideoSizeCallback& callback) {
+  mozart::Size video_size = converter_.GetSize();
+  if (video_size.width != 0) {
+    callback(video_size.Clone());
+    return;
+  }
+
+  if (get_video_size_callback_) {
+    // We got another GetVideoSize call when one was already pending. That's
+    // not really supported, so we return the zero size for the old call.
+    get_video_size_callback_(video_size.Clone());
+  }
+
+  get_video_size_callback_ = callback;
+}
+
+void VideoFrameSource::GetSupportedMediaTypes(
     const GetSupportedMediaTypesCallback& callback) {
   VideoMediaTypeSetDetailsPtr video_details = VideoMediaTypeSetDetails::New();
   video_details->min_width = 1;
@@ -72,26 +85,31 @@ void VideoRenderer::GetSupportedMediaTypes(
   callback(std::move(supported_types));
 }
 
-void VideoRenderer::SetMediaType(MediaTypePtr media_type) {
+void VideoFrameSource::SetMediaType(MediaTypePtr media_type) {
   FTL_DCHECK(media_type);
   FTL_DCHECK(media_type->details);
   const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
   FTL_DCHECK(details);
 
   converter_.SetMediaType(media_type);
+
+  if (get_video_size_callback_) {
+    get_video_size_callback_(converter_.GetSize().Clone());
+    get_video_size_callback_ = nullptr;
+  }
 }
 
-void VideoRenderer::GetPacketConsumer(
+void VideoFrameSource::GetPacketConsumer(
     fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
   MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 
-void VideoRenderer::GetTimelineControlPoint(
+void VideoFrameSource::GetTimelineControlPoint(
     fidl::InterfaceRequest<MediaTimelineControlPoint> control_point_request) {
   control_point_binding_.Bind(std::move(control_point_request));
 }
 
-void VideoRenderer::OnPacketSupplied(
+void VideoFrameSource::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
   FTL_DCHECK(supplied_packet);
   FTL_DCHECK(supplied_packet->packet()->pts_rate_ticks ==
@@ -108,25 +126,33 @@ void VideoRenderer::OnPacketSupplied(
     return;
   }
 
+  bool packet_queue_was_empty = packet_queue_.empty();
+
   packet_queue_.push(std::move(supplied_packet));
 
   // Discard old packets now in case our frame rate is so low that we have to
   // skip more packets than we demand when GetRgbaFrame is called.
   DiscardOldPackets();
+
+  // If this is the first packet to arrive and we're not telling the views to
+  // animate, invalidate the views so the first frame can be displayed.
+  if (packet_queue_was_empty && !views_should_animate()) {
+    InvalidateViews();
+  }
 }
 
-void VideoRenderer::OnFlushRequested(const FlushCallback& callback) {
+void VideoFrameSource::OnFlushRequested(const FlushCallback& callback) {
   while (!packet_queue_.empty()) {
     packet_queue_.pop();
   }
   MaybeClearEndOfStream();
   callback();
+  InvalidateViews();
 }
 
-void VideoRenderer::OnFailure() {
-  // TODO(dalesat): Report this to our owner.
-  if (renderer_binding_.is_bound()) {
-    renderer_binding_.Close();
+void VideoFrameSource::OnFailure() {
+  if (media_renderer_binding_.is_bound()) {
+    media_renderer_binding_.Close();
   }
 
   if (control_point_binding_.is_bound()) {
@@ -140,8 +166,8 @@ void VideoRenderer::OnFailure() {
   MediaPacketConsumerBase::OnFailure();
 }
 
-void VideoRenderer::GetStatus(uint64_t version_last_seen,
-                              const GetStatusCallback& callback) {
+void VideoFrameSource::GetStatus(uint64_t version_last_seen,
+                                 const GetStatusCallback& callback) {
   if (version_last_seen < status_version_) {
     CompleteGetStatus(callback);
   } else {
@@ -149,18 +175,18 @@ void VideoRenderer::GetStatus(uint64_t version_last_seen,
   }
 }
 
-void VideoRenderer::GetTimelineConsumer(
+void VideoFrameSource::GetTimelineConsumer(
     fidl::InterfaceRequest<TimelineConsumer> timeline_consumer_request) {
   timeline_consumer_binding_.Bind(std::move(timeline_consumer_request));
 }
 
-void VideoRenderer::Prime(const PrimeCallback& callback) {
+void VideoFrameSource::Prime(const PrimeCallback& callback) {
   pts_ = kUnspecifiedTime;
   SetDemand(2);
   callback();  // TODO(dalesat): Wait until we get packets.
 }
 
-void VideoRenderer::SetTimelineTransform(
+void VideoFrameSource::SetTimelineTransform(
     TimelineTransformPtr timeline_transform,
     const SetTimelineTransformCallback& callback) {
   FTL_DCHECK(timeline_transform);
@@ -187,9 +213,11 @@ void VideoRenderer::SetTimelineTransform(
       timeline_transform->subject_delta);
 
   set_timeline_transform_callback_ = callback;
+
+  InvalidateViews();
 }
 
-void VideoRenderer::DiscardOldPackets() {
+void VideoFrameSource::DiscardOldPackets() {
   // We keep at least one packet around even if it's old, so we can show an
   // old frame rather than no frame when we starve.
   while (packet_queue_.size() > 1 &&
@@ -199,7 +227,7 @@ void VideoRenderer::DiscardOldPackets() {
   }
 }
 
-void VideoRenderer::ClearPendingTimelineFunction(bool completed) {
+void VideoFrameSource::ClearPendingTimelineFunction(bool completed) {
   pending_timeline_function_ =
       TimelineFunction(kUnspecifiedTime, kUnspecifiedTime, 1, 0);
   if (set_timeline_transform_callback_) {
@@ -208,7 +236,7 @@ void VideoRenderer::ClearPendingTimelineFunction(bool completed) {
   }
 }
 
-void VideoRenderer::MaybeApplyPendingTimelineChange(int64_t reference_time) {
+void VideoFrameSource::MaybeApplyPendingTimelineChange(int64_t reference_time) {
   if (pending_timeline_function_.reference_time() == kUnspecifiedTime ||
       pending_timeline_function_.reference_time() > reference_time) {
     return;
@@ -226,7 +254,7 @@ void VideoRenderer::MaybeApplyPendingTimelineChange(int64_t reference_time) {
   SendStatusUpdates();
 }
 
-void VideoRenderer::MaybeClearEndOfStream() {
+void VideoFrameSource::MaybeClearEndOfStream() {
   if (end_of_stream_pts_ != kUnspecifiedTime) {
     end_of_stream_pts_ = kUnspecifiedTime;
     end_of_stream_published_ = false;
@@ -234,7 +262,7 @@ void VideoRenderer::MaybeClearEndOfStream() {
   }
 }
 
-void VideoRenderer::MaybePublishEndOfStream() {
+void VideoFrameSource::MaybePublishEndOfStream() {
   if (!end_of_stream_published_ && end_of_stream_pts_ != kUnspecifiedTime &&
       current_timeline_function_(Timeline::local_now()) >= end_of_stream_pts_) {
     end_of_stream_published_ = true;
@@ -242,7 +270,7 @@ void VideoRenderer::MaybePublishEndOfStream() {
   }
 }
 
-void VideoRenderer::SendStatusUpdates() {
+void VideoFrameSource::SendStatusUpdates() {
   ++status_version_;
 
   std::vector<GetStatusCallback> pending_status_callbacks;
@@ -254,7 +282,7 @@ void VideoRenderer::SendStatusUpdates() {
   }
 }
 
-void VideoRenderer::CompleteGetStatus(const GetStatusCallback& callback) {
+void VideoFrameSource::CompleteGetStatus(const GetStatusCallback& callback) {
   MediaTimelineControlPointStatusPtr status =
       MediaTimelineControlPointStatus::New();
   status->timeline_transform =

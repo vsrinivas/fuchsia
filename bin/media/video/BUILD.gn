@@ -1,0 +1,21 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("video") {
+  sources = [
+    "video_converter.cc",
+    "video_converter.h",
+    "video_frame_source.cc",
+    "video_frame_source.h",
+    "video_packet_layout.cc",
+    "video_packet_layout.h",
+  ]
+
+  deps = [
+    "//apps/media/lib",
+    "//apps/media/services",
+    "//apps/mozart/services/geometry/cpp",
+    "//lib/ftl",
+  ]
+}
