@@ -101,8 +101,7 @@ void InputDispatcherImpl::OnHitTestResult(
         auto it = resolved_hits->map().find(scene->scene_token->value);
         if (it != resolved_hits->map().end()) {
           focused_view_token_ = it->second.Clone();
-          focused_view_transform_ =
-              std::move(scene->hits[0]->get_node()->transform);
+          focused_view_transform_ = scene->transform.Clone();
         }
         break;
       }

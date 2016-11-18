@@ -92,6 +92,14 @@ struct SceneHit {
   // was performed.
   uint32 scene_version;
 
+  // The transformation from the global coordinate system of the scene graph
+  // to the local coordinate system of the scene at the time the hit test was
+  // performed.
+  //
+  // To obtain the point of intersection of the hit test within the scene,
+  // multiply this transformation matrix by the hit test point.
+  Transform transform;
+
   // The array of hits within this scene, in dispatch order.
   // This list always contains at least one entry.
   array<Hit> hits;

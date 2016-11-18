@@ -6,6 +6,7 @@
 
 #include <ostream>
 
+#include "apps/mozart/lib/skia/type_converters.h"
 #include "apps/mozart/src/compositor/graph/scene_def.h"
 #include "lib/ftl/logging.h"
 
@@ -55,6 +56,8 @@ bool SceneContent::HitTest(const Snapshot* snapshot,
     scene_hit->scene_token = mozart::SceneToken::New();
     scene_hit->scene_token->value = label_.token();
     scene_hit->scene_version = version_;
+    scene_hit->transform =
+        fidl::ConvertTo<mozart::TransformPtr>(global_to_scene_transform);
     scene_hit->hits = std::move(hits);
     *out_scene_hit = std::move(scene_hit);
   }
