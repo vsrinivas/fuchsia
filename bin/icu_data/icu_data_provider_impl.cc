@@ -7,8 +7,8 @@
 #include <magenta/syscalls.h>
 #include <utility>
 
-#include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/vmo/file.h"
 #include "apps/icu_data/lib/constants.h"
 
 namespace icu_data {
@@ -25,31 +25,12 @@ ICUDataProviderImpl::ICUDataProviderImpl() = default;
 ICUDataProviderImpl::~ICUDataProviderImpl() = default;
 
 bool ICUDataProviderImpl::LoadData() {
-  // TODO(mikejurka): get the underlying VMO of the data file, so we don't need
-  // to load it and then copy it
-  std::string data;
-  if (!files::ReadFileToString(kICUDataPath, &data)) {
-    FTL_LOG(ERROR) << "Loading ICU data failed: Failed to read ICU data from '"
+  if (!mtl::VmoFromFilename(kICUDataPath, &icu_data_vmo_)) {
+    FTL_LOG(ERROR) << "Loading ICU data failed: Failed to create VMO from file '"
                    << kICUDataPath << "'.";
-    return false;
-  }
-
-  mx_status_t rv = mx::vmo::create(data.size(), 0, &icu_data_vmo_);
-  if (rv < 0) {
-    FTL_LOG(ERROR)
-        << "Loading ICU data failed: Failed to create VMO for ICU data.";
     icu_data_vmo_.reset();
     return false;
   }
-
-  rv = icu_data_vmo_.write(data.data(), 0, data.size(), nullptr);
-  if (rv < 0) {
-    FTL_LOG(ERROR)
-        << "Loading ICU data failed: Failed to write ICU data to VMO.";
-    icu_data_vmo_.reset();
-    return false;
-  }
-
   return true;
 }
 
