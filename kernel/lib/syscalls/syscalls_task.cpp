@@ -189,6 +189,9 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     // copy out the name
     char buf[MX_MAX_NAME_LEN];
     mxtl::StringPiece sp;
+    // Silently truncate the given name.
+    if (name_len > sizeof(buf))
+        name_len = sizeof(buf);
     status_t result = magenta_copy_user_string(name.get(), name_len, buf, sizeof(buf), &sp);
     if (result != NO_ERROR)
         return result;

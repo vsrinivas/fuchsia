@@ -22,6 +22,8 @@ mx_status_t mx_process_create(mx_handle_t job,
 Upon success a handle for the new process is returned.  The thread
 will not start executing until *process_start()* is called.
 
+*name* is silently truncated to a maximum of *MX_MAX_NAME_LEN-1* characters.
+
 When the last handle to a process is closed, the process is destroyed.
 
 Process handles may be waited on and will assert the signal
@@ -35,8 +37,8 @@ is returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *name* was an invalid pointer, or *name_len*
-was greater than *MX_MAX_NAME_LEN*, or *flags* was non-zero.
+**ERR_INVALID_ARGS**  *name* was an invalid pointer,
+or *flags* was non-zero.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
