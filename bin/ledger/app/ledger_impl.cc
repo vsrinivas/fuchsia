@@ -30,7 +30,9 @@ void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
 void LedgerImpl::GetPage(fidl::Array<uint8_t> id,
                          fidl::InterfaceRequest<Page> page_request,
                          const GetPageCallback& callback) {
-  delegate_->GetPage(id, Delegate::CreateIfNotFound::NO,
+  // TODO(etiennej): Switch back to Delegate::CreateIfNotFound::NO once LE-87 is
+  // done.
+  delegate_->GetPage(id, Delegate::CreateIfNotFound::YES,
                      std::move(page_request), callback);
 }
 
