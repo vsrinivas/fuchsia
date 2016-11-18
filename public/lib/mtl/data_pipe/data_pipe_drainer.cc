@@ -12,13 +12,18 @@
 namespace mtl {
 
 DataPipeDrainer::DataPipeDrainer(Client* client, const FidlAsyncWaiter* waiter)
-    : client_(client), waiter_(waiter), wait_id_(0) {
+    : client_(client),
+      waiter_(waiter),
+      wait_id_(0),
+      destruction_sentinel_(nullptr) {
   FTL_DCHECK(client_);
 }
 
 DataPipeDrainer::~DataPipeDrainer() {
   if (wait_id_)
     waiter_->CancelWait(wait_id_);
+  if (destruction_sentinel_)
+    *destruction_sentinel_ = true;
 }
 
 void DataPipeDrainer::Start(mx::datapipe_consumer source) {
@@ -32,7 +37,15 @@ void DataPipeDrainer::ReadData() {
   mx_status_t rv =
       source_.begin_read(0, reinterpret_cast<uintptr_t*>(&buffer), &num_bytes);
   if (rv == NO_ERROR) {
+    // Calling the user callback, and exiting early if this objects is
+    // destroyed.
+    bool is_destroyed = false;
+    destruction_sentinel_ = &is_destroyed;
     client_->OnDataAvailable(buffer, num_bytes);
+    if (is_destroyed)
+      return;
+    destruction_sentinel_ = nullptr;
+
     source_.end_read(num_bytes);
     WaitForData();
   } else if (rv == ERR_SHOULD_WAIT) {

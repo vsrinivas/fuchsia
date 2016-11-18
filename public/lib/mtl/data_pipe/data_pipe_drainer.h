@@ -41,6 +41,7 @@ class DataPipeDrainer {
   mx::datapipe_consumer source_;
   const FidlAsyncWaiter* waiter_;
   FidlAsyncWaitID wait_id_;
+  bool* destruction_sentinel_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DataPipeDrainer);
 };
