@@ -200,7 +200,7 @@ function mrev() {
     return 1
   fi
 
-  git --work-tree "${MAGENTA_DIR}" rev-parse --verify HEAD
+  (mgo && git rev-parse --verify HEAD)
 }
 
 ### fgo: navigate to directory within fuchsia
@@ -225,13 +225,17 @@ function fgo() {
 
 function fset-usage() {
   cat >&2 <<END
-Usage: fset x86-64|arm64 [--release] [--modules m1,m2...] [--goma] [--ccache]
+Usage: fset x86-64|arm64 [--release] [--modules m1,m2...] [--goma|--no-goma] [--ccache]
 Sets fuchsia built options.
 END
 }
 
 function fset-add-gen-arg() {
   export FUCHSIA_GEN_ARGS="${FUCHSIA_GEN_ARGS} $*"
+}
+
+function fset-add-ninja-arg() {
+  export FUCHSIA_NINJA_ARGS="${FUCHSIA_NINJA_ARGS} $*"
 }
 
 function fset() {
@@ -242,6 +246,7 @@ function fset() {
 
   local settings="$*"
   export FUCHSIA_GEN_ARGS=
+  export FUCHSIA_NINJA_ARGS=
   export FUCHSIA_VARIANT=debug
 
   case $1 in
@@ -263,6 +268,7 @@ function fset() {
   fset-add-gen-arg --target_cpu "${FUCHSIA_GEN_TARGET}"
   shift
 
+  local goma
   while [[ $# -ne 0 ]]; do
     case $1 in
       --release)
@@ -278,7 +284,10 @@ function fset() {
         shift
         ;;
       --goma)
-        fset-add-gen-arg --goma
+        goma=1
+        ;;
+      --no-goma)
+        goma=0
         ;;
       --ccache)
         fset-add-gen-arg --ccache
@@ -298,6 +307,16 @@ function fset() {
   export FUCHSIA_SYSROOT_REV_CACHE="${FUCHSIA_OUT_DIR}/sysroot/${FUCHSIA_SYSROOT_TARGET}-fuchsia.rev"
   export FUCHSIA_SETTINGS="${settings}"
   export ENVPROMPT_INFO="${ENVPROMPT_INFO}-${FUCHSIA_VARIANT}"
+
+  fset-add-ninja-arg -C "${FUCHSIA_BUILD_DIR}"
+
+  if [[ -z "${goma}" ]] && [[ -d ~/goma ]]; then
+    goma=1
+  fi
+  if [[ "${goma}" -eq 1 ]]; then
+    fset-add-gen-arg --goma
+    fset-add-ninja-arg -j 1000
+  fi
 }
 
 ### fcheck: checks whether fset was run
@@ -407,13 +426,20 @@ Builds fuchsia.
 END
 }
 
+function fbuild-start-goma-if-needed() {
+  if [[ "${FUCHSIA_GEN_ARGS}" == *--goma* ]]; then
+    ~/goma/goma_ctl.py ensure_start
+  fi
+}
+
 function fbuild() {
   fcheck || return 1
 
   fgen-if-needed \
     && fbuild-sysroot-if-needed \
+    && fbuild-start-goma-if-needed \
     && echo "Building fuchsia..." \
-    && "${FUCHSIA_DIR}/buildtools/ninja" -C "${FUCHSIA_BUILD_DIR}" "$@"
+    && "${FUCHSIA_DIR}/buildtools/ninja" ${FUCHSIA_NINJA_ARGS} "$@"
 }
 
 ### fboot: run fuchsia bootserver
