@@ -11,38 +11,9 @@
 
 #include <utility>
 
+#include "lib/mtl/vmo/file.h"
+
 namespace modular {
-namespace {
-
-// TODO(abarth): mxio should be able to do this for us.
-// TODO(abarth): This copy should be asynchronous.
-mx::vmo CopyToVMO(int fd) {
-  struct stat64 st;
-  fstat64(fd, &st);
-  size_t size = st.st_size;
-
-  mx::vmo result;
-  if (mx::vmo::create(size, 0, &result) != NO_ERROR)
-    return mx::vmo();
-
-  constexpr size_t kBufferSize = 1 << 16;
-  char buffer[kBufferSize];
-  size_t offset = 0;
-  while (offset < size) {
-    ssize_t bytes_read = read(fd, buffer, kBufferSize);
-    if (bytes_read < 0)
-      return mx::vmo();
-    mx_size_t actual = 0;
-    mx_status_t rv = result.write(buffer, offset, bytes_read, &actual);
-    if (rv < 0 || actual != static_cast<mx_size_t>(bytes_read))
-      return mx::vmo();
-    offset += bytes_read;
-  }
-
-  return result;
-}
-
-}  // namespace
 
 ApplicationRunnerHolder::ApplicationRunnerHolder(
     ServiceProviderPtr services,
@@ -58,8 +29,9 @@ void ApplicationRunnerHolder::StartApplication(
     ftl::UniqueFD fd,
     ApplicationStartupInfoPtr startup_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  mx::vmo data = CopyToVMO(fd.get());
-  if (!data) {
+  mx::vmo data;
+  // TODO(abarth): This copy should be asynchronous.
+  if (!mtl::VmoFromFd(std::move(fd), &data)) {
     FTL_LOG(ERROR) << "Cannot run " << startup_info->launch_info->url
                    << " because URL is unreadable.";
     return;
