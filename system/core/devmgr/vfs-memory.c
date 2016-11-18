@@ -417,19 +417,41 @@ static ssize_t vmo_write(vnode_t* vn, const void* data, size_t len, size_t off) 
     return rlen;
 }
 
+static void device_release(vnode_t* vn) {
+    xprintf("devfs: vn %p destroyed\n", vn);
+    if (vn->remote) {
+        mx_status_t r = mx_handle_close(vn->remote);
+        if (r < 0) {
+            printf("device_release: unexected error closing remote %d\n", r);
+        }
+    }
+    free(vn);
+}
+
+static mx_status_t device_getattr(vnode_t* vn, vnattr_t* attr) {
+    memset(attr, 0, sizeof(vnattr_t));
+    if ((vn->remote != 0) && list_is_empty(&vn->dnode->children)) {
+        attr->mode = V_TYPE_CDEV | V_IRUSR | V_IWUSR;
+    } else {
+        attr->mode = V_TYPE_DIR | V_IRUSR;
+    }
+    attr->size = 0;
+    return NO_ERROR;
+}
+
 static vnode_ops_t vn_mem_ops = {
     .release = mem_release,
     .open = memfs_open,
     .close = memfs_close,
     .read = mem_read,
     .write = mem_write,
-    .lookup = memfs_lookup,
+    .lookup = mem_lookup_none,
     .getattr = mem_getattr,
-    .readdir = memfs_readdir,
+    .readdir = mem_readdir_none,
     .create = mem_create,
-    .unlink = memfs_unlink,
+    .unlink = mem_unlink_none,
     .truncate = memfs_truncate,
-    .rename = memfs_rename,
+    .rename = mem_rename_none,
     .sync = memfs_sync,
 };
 
@@ -463,6 +485,22 @@ static vnode_ops_t vn_mem_ops_dir = {
     .truncate = mem_truncate_none,
     .rename = memfs_rename,
     .sync = memfs_sync,
+};
+
+static vnode_ops_t vn_device_ops = {
+    .release = device_release,
+    .open = memfs_open,
+    .close = memfs_close,
+    .read = memfs_read_none,
+    .write = mem_write_none,
+    .lookup = memfs_lookup,
+    .getattr = device_getattr,
+    .readdir = memfs_readdir,
+    .create = mem_create_none,
+    .ioctl = memfs_ioctl,
+    .unlink = mem_unlink_none,
+    .truncate = mem_truncate_none,
+    .rename = mem_rename_none,
 };
 
 static dnode_t mem_root_dn = {
@@ -511,6 +549,12 @@ static mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
         vn->ops = &vn_vmo_ops;
         // vmo is filled in by caller
         break;
+    case MEMFS_TYPE_DEVICE:
+        if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
+            return ERR_NO_MEMORY;
+        }
+        vn->ops = &vn_device_ops;
+        break;
     default:
         printf("mem_create: ERROR unknown type %d\n", type);
         return ERR_INVALID_ARGS;
@@ -539,7 +583,7 @@ static mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
     // parent takes first reference
     dn_add_child(parent->dnode, dn);
 
-    if (type == MEMFS_TYPE_DIR) {
+    if (type == MEMFS_TYPE_DIR || type == MEMFS_TYPE_DEVICE) {
         vn->dnode = dn;
     }
 
@@ -572,6 +616,25 @@ static vnode_t vfs_root = {
     .watch_list = LIST_INITIAL_VALUE(vfs_root.watch_list),
 };
 
+static dnode_t vnd_root_dn = {
+    .name = "dev",
+    .flags = 3,
+    .children = LIST_INITIAL_VALUE(vnd_root_dn.children),
+};
+
+static vnode_t vnd_root = {
+    .ops = &vn_device_ops,
+    .refcount = 1,
+    .dnode = &vnd_root_dn,
+    .dn_list = LIST_INITIAL_VALUE(vnd_root.dn_list),
+    .watch_list = LIST_INITIAL_VALUE(vnd_root.watch_list),
+};
+
+vnode_t* devfs_get_root(void) {
+    vnd_root_dn.vnode = &vnd_root;
+    return &vnd_root;
+}
+
 // Hardcoded initialization function to access global root directory
 // precondition: vfs_root is a viable root directory
 vnode_t* vfs_create_global_root(void) {
@@ -587,6 +650,54 @@ vnode_t* vfs_create_global_root(void) {
     memfs_create_directory("/volume", 0);
     memfs_create_directory("/dev/socket", 0);
     return &vfs_root;
+}
+
+// precondition: no ref taken on parent
+// postcondition: ref returned on out parameter
+static mx_status_t _memfs_create_device_at(vnode_t* parent, vnode_t** out, const char* name, mx_handle_t h) {
+    if ((parent == NULL) || (name == NULL)) {
+        return ERR_INVALID_ARGS;
+    }
+    xprintf("devfs_add_node() p=%p name='%s'\n", parent, name);
+    size_t len = strlen(name);
+
+    // check for duplicate
+    dnode_t* dn;
+    if (dn_lookup(parent->dnode, &dn, name, len) == NO_ERROR) {
+        *out = dn->vnode;
+        if ((h == 0) && (dn->vnode->remote == 0)) {
+            // creating a duplicate directory node simply
+            // returns the one that's already there
+            return NO_ERROR;
+        }
+        return ERR_ALREADY_EXISTS;
+    }
+
+    // create vnode
+    vnode_t* vn;
+    mx_status_t r = _mem_create(parent, &vn, name, len, MEMFS_TYPE_DEVICE);
+    if (r < 0) {
+        return r;
+    }
+
+    if (h) {
+        // attach device
+        vn->remote = h;
+        vn->flags = V_FLAG_DEVICE;
+    }
+
+    vfs_notify_add(parent, name, len);
+    xprintf("devfs_add_node() vn=%p\n", vn);
+    *out = vn;
+    return NO_ERROR;
+}
+
+mx_status_t memfs_create_device_at(vnode_t* parent, vnode_t** out, const char* name, mx_handle_t h) {
+    mx_status_t r;
+    mtx_lock(&vfs_lock);
+    r = _memfs_create_device_at(parent, out, name, h);
+    mtx_unlock(&vfs_lock);
+    return r;
 }
 
 // postcondition: new vnode linked into namespace, data mapped into address space

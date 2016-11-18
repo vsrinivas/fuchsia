@@ -16,6 +16,7 @@ typedef struct dnode dnode_t;
 #define MEMFS_TYPE_DATA 0
 #define MEMFS_TYPE_DIR 1
 #define MEMFS_TYPE_VMO 2
+#define MEMFS_TYPE_DEVICE 3
 #define MEMFS_TYPE_MASK 0x3
 #define MEMFS_FLAG_VMO_REUSE 4
 
@@ -86,7 +87,7 @@ mx_handle_t vfs_create_root_handle(vnode_t* vn);
 
 // device fs
 vnode_t* devfs_get_root(void);
-mx_status_t devfs_add_node(vnode_t** out, vnode_t* parent, const char* name, mx_handle_t hdevice);
+mx_status_t memfs_create_device_at(vnode_t* parent, vnode_t** out, const char* name, mx_handle_t hdevice);
 mx_status_t devfs_add_link(vnode_t* parent, const char* name, vnode_t* target);
 mx_status_t devfs_remove(vnode_t* vn);
 

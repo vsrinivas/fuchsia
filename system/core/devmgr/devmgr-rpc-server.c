@@ -60,12 +60,12 @@ static void prepopulate_protocol_dirs(void) {
     const char** namep = proto_names;
     while (*namep) {
         vnode_t* vnp;
-        devfs_add_node(&vnp, vnclass, *namep++, 0);
+        memfs_create_device_at(vnclass, &vnp, *namep++, 0);
     }
 }
 
 void devhost_publish(device_ctx_t* parent, device_ctx_t* ctx) {
-    if (devfs_add_node(&ctx->vnode, parent->vnode, ctx->name, ctx->hdevice)) {
+    if (memfs_create_device_at(parent->vnode, &ctx->vnode, ctx->name, ctx->hdevice)) {
         printf("devmgr: could not add '%s' to devfs!\n", ctx->name);
         return;
     }
@@ -76,7 +76,7 @@ void devhost_publish(device_ctx_t* parent, device_ctx_t* ctx) {
     // find or create a vnode for class/<pname>
     vnode_t* vnp;
     mx_status_t status;
-    if ((status = devfs_add_node(&vnp, vnclass, pname, 0)) < 0) {
+    if ((status = memfs_create_device_at(vnclass, &vnp, pname, 0)) < 0) {
         printf("devmgr: could not link to '%s'\n", ctx->name);
     }
 
@@ -235,7 +235,7 @@ void devmgr_init(mx_handle_t root_job) {
     printf("devmgr: init\n");
 
     vnroot = devfs_get_root();
-    devfs_add_node(&vnclass, vnroot, "class", 0);
+    memfs_create_device_at(vnroot, &vnclass, "class", 0);
     prepopulate_protocol_dirs();
 
     mx_status_t status = mx_job_create(root_job, 0u, &devhost_job_handle);
