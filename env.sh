@@ -469,7 +469,7 @@ END
 function frun() {
   fcheck || return 1
 
-  "${MAGENTA_DIR}/scripts/run-magenta" -a "${MAGENTA_ARCH}" "$@"
+  mrun -x "${FUCHSIA_BUILD_DIR}/user.bootfs" "$@"
 }
 
 ### fsymbolize: symbolizes stack traces with fuchsia build
