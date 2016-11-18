@@ -31,11 +31,6 @@ void RootEnvironmentHost::GetApplicationEnvironmentServices(
 }
 
 void RootEnvironmentHost::ConnectToService(const fidl::String& interface_name,
-                                           mx::channel channel) {
-  if (interface_name == ApplicationEnvironment::Name_) {
-    environment_->Duplicate(
-        fidl::InterfaceRequest<ApplicationEnvironment>(std::move(channel)));
-  }
-}
+                                           mx::channel channel) {}
 
 }  // namespace modular
