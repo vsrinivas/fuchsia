@@ -399,7 +399,7 @@ NM := $(TOOLCHAIN_PREFIX)nm
 endif
 LD := $(TOOLCHAIN_PREFIX)ld
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
-LD := $(LD).lld
+LD := $(CLANG_TOOLCHAIN_PREFIX)ld.lld
 endif
 ifeq ($(call TOBOOL,$(USE_GOLD)),true)
 USER_LD := $(LD).gold
