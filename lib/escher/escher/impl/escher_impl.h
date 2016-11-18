@@ -12,10 +12,11 @@
 namespace escher {
 namespace impl {
 class CommandBufferPool;
+class GlslToSpirvCompiler;
 class GpuAllocator;
 class ImageCache;
 class MeshManager;
-class RenderPassManager;
+class PipelineCache;
 
 // Implements the public Escher API.
 class EscherImpl {
@@ -25,10 +26,12 @@ class EscherImpl {
 
   CommandBufferPool* command_buffer_pool();
   CommandBufferPool* transfer_command_buffer_pool();
-  ImageCache* image_cache();
-  RenderPassManager* render_pass_manager();
-  MeshManager* mesh_manager();
   GpuAllocator* gpu_allocator();
+  PipelineCache* pipeline_cache();
+  ImageCache* image_cache();
+  MeshManager* mesh_manager();
+  GlslToSpirvCompiler* glsl_compiler();
+
   const VulkanContext& vulkan_context();
 
   void IncrementRendererCount() { ++renderer_count_; }
@@ -41,10 +44,11 @@ class EscherImpl {
   VulkanContext vulkan_context_;
   std::unique_ptr<CommandBufferPool> command_buffer_pool_;
   std::unique_ptr<CommandBufferPool> transfer_command_buffer_pool_;
-  std::unique_ptr<RenderPassManager> render_pass_manager_;
   std::unique_ptr<GpuAllocator> gpu_allocator_;
+  std::unique_ptr<PipelineCache> pipeline_cache_;
   std::unique_ptr<ImageCache> image_cache_;
   std::unique_ptr<MeshManager> mesh_manager_;
+  std::unique_ptr<GlslToSpirvCompiler> glsl_compiler_;
 
   std::atomic<uint32_t> renderer_count_;
   std::atomic<uint32_t> resource_count_;

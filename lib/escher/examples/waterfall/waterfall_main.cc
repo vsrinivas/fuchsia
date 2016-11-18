@@ -13,7 +13,6 @@
 #include "escher/renderer/paper_renderer.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
-#include "escher/util/image_loader.h"
 #include "escher/util/stopwatch.h"
 #include "escher/vk/vulkan_swapchain_helper.h"
 #include "ftl/logging.h"
@@ -54,6 +53,7 @@ int main(int argc, char** argv) {
 
     vec2 focus;
     escher::Stage stage;
+    stage.Resize(escher::SizeI(1024, 1024), 1.0, escher::SizeI(0, 0));
     stage.set_brightness(0.0);
     float brightness_change = 0.0;
 
@@ -66,7 +66,8 @@ int main(int argc, char** argv) {
     // escher::Model model = scene.GetModel(stage.viewing_volume(), focus);
 
     auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
-        escher::NewCheckerboardImage(&escher, 16, 16), vulkan_context.device);
+        escher.NewCheckerboardImage(16, 16), vulkan_context.device,
+        vk::Filter::eNearest);
 
     auto yellow = ftl::MakeRefCounted<escher::Material>();
     yellow->set_color(vec3(0.937f, 0.886f, 0.184f));
@@ -82,12 +83,12 @@ int main(int argc, char** argv) {
     escher::Model model(objects);
 
     while (!glfwWindowShouldClose(demo->GetWindow())) {
-      if ((frame_count % 4000) == 0) {
+      if ((frame_count % 200) == 0) {
         stage.set_brightness(0.0);
-        brightness_change = 0.0005;
-      } else if ((frame_count % 2000) == 0) {
+        brightness_change = 0.01;
+      } else if ((frame_count % 100) == 0) {
         stage.set_brightness(1.0);
-        brightness_change = -0.0005;
+        brightness_change = -0.01;
       } else {
         stage.set_brightness(stage.brightness() + brightness_change);
       }

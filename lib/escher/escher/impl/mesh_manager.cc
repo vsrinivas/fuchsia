@@ -186,8 +186,7 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
 
   // TODO: We currenty hardcode support for a single mesh layout.
   FTL_CHECK(spec.flags ==
-            (MeshAttributeFlags(MeshAttributeFlagBits::kPosition) |
-             MeshAttributeFlagBits::kUV));
+            (MeshAttributeFlagBits::kPosition | MeshAttributeFlagBits::kUV));
   FTL_CHECK(stride == 4 * sizeof(float));
 
   ptr = impl.get();

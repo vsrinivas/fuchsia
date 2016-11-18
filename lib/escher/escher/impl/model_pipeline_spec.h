@@ -14,9 +14,13 @@ namespace impl {
 struct ModelPipelineSpec {
   MeshSpec mesh_spec;
 
+  // TODO: this is a hack.
+  bool use_depth_prepass = true;
+
   struct Hash {
     std::size_t operator()(const ModelPipelineSpec& spec) const {
-      return static_cast<std::uint32_t>(spec.mesh_spec.flags);
+      return static_cast<std::uint32_t>(spec.mesh_spec.flags) +
+             static_cast<std::uint32_t>(spec.use_depth_prepass);
     }
   };
 };
@@ -25,7 +29,8 @@ struct ModelPipelineSpec {
 
 inline bool operator==(const ModelPipelineSpec& spec1,
                        const ModelPipelineSpec& spec2) {
-  return spec1.mesh_spec == spec2.mesh_spec;
+  return spec1.mesh_spec == spec2.mesh_spec &&
+         spec1.use_depth_prepass == spec2.use_depth_prepass;
 }
 
 inline bool operator!=(const ModelPipelineSpec& spec1,

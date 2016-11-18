@@ -20,16 +20,29 @@ class ModelRenderer {
  public:
   ModelRenderer(EscherImpl* escher,
                 ModelData* model_data,
-                ModelPipelineCache* pipeline_cache);
+                vk::Format color_format,
+                vk::Format depth_format);
   ~ModelRenderer();
   void Draw(Stage& stage, Model& model, CommandBuffer* command_buffer);
 
+  // TODO: remove
+  bool hack_use_depth_prepass = false;
+
+  vk::RenderPass depth_prepass() const { return depth_prepass_; }
+  vk::RenderPass lighting_pass() const { return lighting_pass_; }
+
  private:
   const MeshPtr& GetMeshForShape(const Shape& shape) const;
+  void CreateRenderPasses(vk::Format color_format, vk::Format depth_format);
+
+  vk::Device device_;
+  vk::RenderPass depth_prepass_;
+  vk::RenderPass lighting_pass_;
 
   MeshManager* mesh_manager_;
   ModelData* model_data_;
-  ModelPipelineCache* pipeline_cache_;
+
+  std::unique_ptr<impl::ModelPipelineCache> pipeline_cache_;
 
   // Avoid per-frame heap allocations.
   std::vector<ModelUniformWriter::PerObjectBinding> per_object_bindings_;

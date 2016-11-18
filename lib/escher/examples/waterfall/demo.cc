@@ -293,10 +293,6 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
       swapchain_present_mode = vk::PresentModeKHR::eMailbox;
       break;
     }
-    if (mode == vk::PresentModeKHR::eImmediate) {
-      // Satisfactory choice: fastest, but tears.
-      swapchain_present_mode = vk::PresentModeKHR::eImmediate;
-    }
   }
 
   // Determine number of images in the swapchain.
@@ -334,7 +330,9 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
     info.imageColorSpace = surface_formats[0].colorSpace;
     info.imageExtent = swapchain_extent;
     info.imageArrayLayers = 1;  // TODO: what is this?
-    info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
+    // Using eTransferDst allows us to blit debug info onto the surface.
+    info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment |
+                      vk::ImageUsageFlagBits::eTransferDst;
     info.queueFamilyIndexCount = 1;
     info.pQueueFamilyIndices = &queue_family_index_;
     info.preTransform = pre_transform;

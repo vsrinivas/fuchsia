@@ -33,11 +33,30 @@ class ImageCache {
   ImagePtr NewImage(const vk::ImageCreateInfo& info,
                     vk::MemoryPropertyFlags memory_flags);
 
-  ImagePtr GetDepthImage(vk::Format format, uint32_t width, uint32_t height);
+  ImagePtr GetDepthImage(vk::Format format,
+                         uint32_t width,
+                         uint32_t height,
+                         vk::ImageUsageFlags additional_flags);
+
+  // TODO: document, and clean up image creation API in general.
+  ImagePtr NewColorAttachmentImage(uint32_t width,
+                                   uint32_t height,
+                                   vk::ImageUsageFlags additional_flags);
 
   // Return new Image containing the provided pixels.  Use transfer queue to
   // efficiently transfer image data to GPU.
+  ImagePtr NewImageFromPixels(vk::Format format,
+                              uint32_t width,
+                              uint32_t height,
+                              uint8_t* pixels);
+  // Return new Image containing the provided pixels.  Use transfer queue to
+  // efficiently transfer image data to GPU.  If bytes is null, don't bother
+  // transferring.
   ImagePtr NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes);
+  // Returns RGBA image.
+  ImagePtr NewCheckerboardImage(uint32_t width, uint32_t height);
+  // Returns single-channel luminance image.
+  ImagePtr NewNoiseImage(uint32_t width, uint32_t height);
 
  private:
   // TODO: merge this with base Image class.  I now think that the correct

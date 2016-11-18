@@ -39,4 +39,8 @@ MeshPtr TessellateCircle(MeshBuilderFactory* factory,
                          vec2 center,
                          float radius);
 
+// Tessellate a full-screen mesh.  The returned mesh has only position and UV
+// coordinates.
+MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory);
+
 }  // namespace escher

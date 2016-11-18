@@ -7,6 +7,7 @@
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/gpu_allocator.h"
 #include "escher/impl/vulkan_utils.h"
+#include "escher/util/image_loader.h"
 
 namespace escher {
 namespace impl {
@@ -46,7 +47,8 @@ ImagePtr ImageCache::NewImage(const vk::ImageCreateInfo& info,
 
 ImagePtr ImageCache::GetDepthImage(vk::Format format,
                                    uint32_t width,
-                                   uint32_t height) {
+                                   uint32_t height,
+                                   vk::ImageUsageFlags additional_flags) {
   vk::ImageCreateInfo info;
   info.imageType = vk::ImageType::e2D;
   info.format = format;
@@ -55,7 +57,8 @@ ImagePtr ImageCache::GetDepthImage(vk::Format format,
   info.arrayLayers = 1;
   info.samples = vk::SampleCountFlagBits::e1;
   info.tiling = vk::ImageTiling::eOptimal;
-  info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+  info.usage =
+      additional_flags | vk::ImageUsageFlagBits::eDepthStencilAttachment;
   info.initialLayout = vk::ImageLayout::eUndefined;
   info.sharingMode = vk::SharingMode::eExclusive;
 
@@ -70,9 +73,49 @@ ImagePtr ImageCache::GetDepthImage(vk::Format format,
   return image;
 }
 
-ImagePtr ImageCache::NewRgbaImage(uint32_t width,
-                                  uint32_t height,
-                                  uint8_t* pixels) {
+ImagePtr ImageCache::NewColorAttachmentImage(
+    uint32_t width,
+    uint32_t height,
+    vk::ImageUsageFlags additional_flags) {
+  vk::ImageCreateInfo info;
+  info.imageType = vk::ImageType::e2D;
+  info.format = vk::Format::eB8G8R8A8Unorm;
+  info.extent = vk::Extent3D{width, height, 1};
+  info.mipLevels = 1;
+  info.arrayLayers = 1;
+  info.samples = vk::SampleCountFlagBits::e1;
+  info.tiling = vk::ImageTiling::eOptimal;
+  info.usage = additional_flags | vk::ImageUsageFlagBits::eColorAttachment;
+  info.initialLayout = vk::ImageLayout::eUndefined;
+  info.sharingMode = vk::SharingMode::eExclusive;
+
+  auto image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+  auto command_buffer = main_command_buffer_pool_->GetCommandBuffer();
+  command_buffer->TransitionImageLayout(
+      image, vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eColorAttachmentOptimal);
+  command_buffer->Submit(main_queue_, nullptr);
+
+  return image;
+}
+
+ImagePtr ImageCache::NewImageFromPixels(vk::Format format,
+                                        uint32_t width,
+                                        uint32_t height,
+                                        uint8_t* pixels) {
+  size_t bytes_per_pixel = 0;
+  switch (format) {
+    case vk::Format::eR8G8B8A8Unorm:
+      bytes_per_pixel = 4;
+      break;
+    case vk::Format::eR8Unorm:
+      bytes_per_pixel = 1;
+      break;
+    default:
+      FTL_CHECK(false);
+  }
+
   // Create a command-buffer that will copy the pixels to the final image.
   // Do this first because it may free up memory that was used by previous
   // uploads (when finished command-buffers release any resources that they
@@ -84,7 +127,7 @@ ImagePtr ImageCache::NewRgbaImage(uint32_t width,
   // Create the "transfer source" Image.
   vk::ImageCreateInfo info;
   info.imageType = vk::ImageType::e2D;
-  info.format = vk::Format::eR8G8B8A8Unorm;
+  info.format = format;
   info.extent = vk::Extent3D{width, height, 1};
   info.mipLevels = 1;
   info.arrayLayers = 1;
@@ -103,12 +146,13 @@ ImagePtr ImageCache::NewRgbaImage(uint32_t width,
   info.tiling = vk::ImageTiling::eOptimal;
   info.usage =
       vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+  info.initialLayout = vk::ImageLayout::eUndefined;
   auto dst_image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
   dst_image->SetWaitSemaphore(std::move(semaphore));
 
   // Copy the pixels into the "transfer source" image.
   uint8_t* mapped = src_image->Map();
-  memcpy(mapped, pixels, width * height * 4);
+  memcpy(mapped, pixels, width * height * bytes_per_pixel);
   src_image->Unmap();
 
   // Write image-copy command, and submit the command buffer.  No barrier is
@@ -132,8 +176,7 @@ ImagePtr ImageCache::NewRgbaImage(uint32_t width,
   command_buffer->TransitionImageLayout(src_image,
                                         vk::ImageLayout::ePreinitialized,
                                         vk::ImageLayout::eTransferSrcOptimal);
-  command_buffer->TransitionImageLayout(dst_image,
-                                        vk::ImageLayout::ePreinitialized,
+  command_buffer->TransitionImageLayout(dst_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eTransferDstOptimal);
   command_buffer->CopyImage(std::move(src_image), dst_image,
                             vk::ImageLayout::eTransferSrcOptimal,
@@ -144,6 +187,23 @@ ImagePtr ImageCache::NewRgbaImage(uint32_t width,
   command_buffer->Submit(transfer_queue_, nullptr);
 
   return dst_image;
+}
+
+ImagePtr ImageCache::NewRgbaImage(uint32_t width,
+                                  uint32_t height,
+                                  uint8_t* pixels) {
+  return NewImageFromPixels(vk::Format::eR8G8B8A8Unorm, width, height, pixels);
+}
+
+ImagePtr ImageCache::NewCheckerboardImage(uint32_t width, uint32_t height) {
+  auto pixels = NewCheckerboardPixels(width, height);
+  return NewImageFromPixels(vk::Format::eR8G8B8A8Unorm, width, height,
+                            pixels.get());
+}
+
+ImagePtr ImageCache::NewNoiseImage(uint32_t width, uint32_t height) {
+  auto pixels = NewNoisePixels(width, height);
+  return NewImageFromPixels(vk::Format::eR8Unorm, width, height, pixels.get());
 }
 
 void ImageCache::DestroyImage(vk::Image image, vk::Format format) {
@@ -178,7 +238,8 @@ void ImageCache::Image::Unmap() {
   if (mapped_) {
     vk::Device device = cache_->device_;
 
-    // TODO: only flush if the coherent bit isn't set; also see Buffer::Unmap().
+    // TODO: only flush if the coherent bit isn't set; also see
+    // Buffer::Unmap().
     vk::MappedMemoryRange range;
     range.memory = mem_->base();
     range.offset = mem_->offset();

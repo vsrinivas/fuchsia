@@ -24,8 +24,7 @@ Renderer::~Renderer() {
   escher_->DecrementRendererCount();
 }
 
-impl::CommandBuffer* Renderer::BeginFrame(const FramebufferPtr& framebuffer,
-                                          const SemaphorePtr& frame_done) {
+void Renderer::BeginFrame(const FramebufferPtr& framebuffer) {
   FTL_DCHECK(!current_frame_);
   ++frame_number_;
   FTL_LOG(INFO) << "Beginning frame #" << frame_number_;
@@ -34,14 +33,18 @@ impl::CommandBuffer* Renderer::BeginFrame(const FramebufferPtr& framebuffer,
   current_frame_->AddWaitSemaphore(
       framebuffer->TakeWaitSemaphore(),
       vk::PipelineStageFlagBits::eColorAttachmentOutput);
-
-  current_frame_->AddSignalSemaphore(frame_done);
-
-  return current_frame_;
 }
 
-void Renderer::EndFrame(FrameRetiredCallback frame_retired_callback) {
+void Renderer::SubmitPartialFrame() {
   FTL_DCHECK(current_frame_);
+  current_frame_->Submit(context_.queue, nullptr);
+  current_frame_ = pool_->GetCommandBuffer();
+}
+
+void Renderer::EndFrame(const SemaphorePtr& frame_done,
+                        FrameRetiredCallback frame_retired_callback) {
+  FTL_DCHECK(current_frame_);
+  current_frame_->AddSignalSemaphore(frame_done);
   current_frame_->Submit(context_.queue, std::move(frame_retired_callback));
   current_frame_ = nullptr;
 }
@@ -51,9 +54,11 @@ FramebufferPtr Renderer::CreateFramebuffer(
     uint32_t width,
     uint32_t height,
     std::vector<ImagePtr> images,
-    std::vector<vk::ImageView> image_views) {
+    std::vector<vk::ImageView> image_views,
+    FramebufferPtr extra_framebuffer) {
   return AdoptRef(new Framebuffer(fb, escher_, this, width, height,
-                                  std::move(images), std::move(image_views)));
+                                  std::move(images), std::move(image_views),
+                                  std::move(extra_framebuffer)));
 }
 
 }  // namespace escher

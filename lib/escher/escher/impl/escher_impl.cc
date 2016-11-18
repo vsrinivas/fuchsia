@@ -5,11 +5,12 @@
 #include "escher/impl/escher_impl.h"
 
 #include "escher/impl/command_buffer_pool.h"
+#include "escher/impl/glsl_compiler.h"
 #include "escher/impl/gpu_allocator.h"
 #include "escher/impl/image_cache.h"
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/naive_gpu_allocator.h"
-#include "escher/impl/render_pass_manager.h"
+#include "escher/impl/vk/pipeline_cache.h"
 #include "escher/util/cplusplus.h"
 
 namespace escher {
@@ -50,8 +51,8 @@ EscherImpl::EscherImpl(const VulkanContext& context,
     : vulkan_context_(context),
       command_buffer_pool_(NewCommandBufferPool(context)),
       transfer_command_buffer_pool_(NewTransferCommandBufferPool(context)),
-      render_pass_manager_(std::make_unique<RenderPassManager>(context)),
       gpu_allocator_(std::make_unique<NaiveGpuAllocator>(context)),
+      pipeline_cache_(std::make_unique<PipelineCache>()),
       image_cache_(std::make_unique<ImageCache>(context.device,
                                                 context.physical_device,
                                                 command_buffer_pool(),
@@ -60,6 +61,7 @@ EscherImpl::EscherImpl(const VulkanContext& context,
       mesh_manager_(NewMeshManager(command_buffer_pool(),
                                    transfer_command_buffer_pool(),
                                    gpu_allocator())),
+      glsl_compiler_(std::make_unique<GlslToSpirvCompiler>()),
       renderer_count_(0) {
   FTL_DCHECK(context.instance);
   FTL_DCHECK(context.physical_device);
@@ -93,12 +95,12 @@ ImageCache* EscherImpl::image_cache() {
   return image_cache_.get();
 }
 
-RenderPassManager* EscherImpl::render_pass_manager() {
-  return render_pass_manager_.get();
-}
-
 MeshManager* EscherImpl::mesh_manager() {
   return mesh_manager_.get();
+}
+
+GlslToSpirvCompiler* EscherImpl::glsl_compiler() {
+  return glsl_compiler_.get();
 }
 
 GpuAllocator* EscherImpl::gpu_allocator() {

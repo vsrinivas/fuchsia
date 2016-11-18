@@ -15,14 +15,16 @@ Framebuffer::Framebuffer(vk::Framebuffer framebuffer,
                          uint32_t width,
                          uint32_t height,
                          std::vector<ImagePtr> images,
-                         std::vector<vk::ImageView> image_views)
+                         std::vector<vk::ImageView> image_views,
+                         FramebufferPtr extra_framebuffer)
     : impl::Resource(escher),
       framebuffer_(framebuffer),
       renderer_(renderer),
       width_(width),
       height_(height),
       images_(std::move(images)),
-      image_views_(std::move(image_views)) {
+      image_views_(std::move(image_views)),
+      extra_framebuffer_(std::move(extra_framebuffer)) {
   FTL_DCHECK(framebuffer);
   FTL_DCHECK(escher);
 }

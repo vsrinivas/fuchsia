@@ -35,23 +35,27 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
   virtual ~Renderer();
 
   // Obtain a CommandBuffer, to record commands for the current frame.
-  impl::CommandBuffer* BeginFrame(const FramebufferPtr& framebuffer,
-                                  const SemaphorePtr& frame_done);
-  void EndFrame(FrameRetiredCallback frame_retired_callback);
+  void BeginFrame(const FramebufferPtr& framebuffer);
+  void SubmitPartialFrame();
+  void EndFrame(const SemaphorePtr& frame_done,
+                FrameRetiredCallback frame_retired_callback);
 
   FramebufferPtr CreateFramebuffer(vk::Framebuffer,
                                    uint32_t width,
                                    uint32_t height,
                                    std::vector<ImagePtr> images,
-                                   std::vector<vk::ImageView> image_views);
+                                   std::vector<vk::ImageView> image_views,
+                                   FramebufferPtr extra_framebuffer = nullptr);
+
+  impl::CommandBuffer* current_frame() { return current_frame_; }
 
   impl::EscherImpl* const escher_;
   const VulkanContext context_;
 
+ private:
   impl::CommandBufferPool* pool_;
   impl::CommandBuffer* current_frame_;
 
- private:
   uint64_t frame_number_ = 0;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Renderer);

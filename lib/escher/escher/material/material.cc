@@ -6,7 +6,8 @@
 
 namespace escher {
 
-Material::Material(TexturePtr texture) : texture_(std::move(texture)) {
+Material::Material(TexturePtr texture)
+    : texture_(std::move(texture)), color_(vec3(1.f, 1.f, 1.f)) {
   if (texture_) {
     image_view_ = texture_->image_view();
     sampler_ = texture_->sampler();

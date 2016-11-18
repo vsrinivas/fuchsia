@@ -96,4 +96,24 @@ MeshPtr TessellateCircle(MeshBuilderFactory* factory,
   return mesh;
 }
 
+MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory) {
+  MeshSpec spec;
+  spec.flags = MeshAttributeFlagBits::kPosition | MeshAttributeFlagBits::kUV;
+
+  // Some internet lore has it that it is better to use a single triangle rather
+  // than a rectangle composed of a pair of triangles, so that is what we do.
+  // The triangle extends beyond the bounds of the screen, and is clipped so
+  // that each fragment has the same position and UV coordinates as would a
+  // two-triangle quad. In each vertex, the first two coordinates are position,
+  // and the second two are UV coords.
+  return factory->NewMeshBuilder(spec, 3, 3)
+      ->AddVertex(vec4(-1.f, -1.f, 0.f, 0.f))
+      .AddVertex(vec4(3.f, -1.f, 2.f, 0.f))
+      .AddVertex(vec4(-1.f, 3.f, 0.f, 2.f))
+      .AddIndex(0)
+      .AddIndex(1)
+      .AddIndex(2)
+      .Build();
+}
+
 }  // namespace escher

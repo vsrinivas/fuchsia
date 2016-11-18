@@ -20,6 +20,9 @@ class Mesh : public impl::Resource {
   const uint32_t num_vertices;
   const uint32_t num_indices;
 
+  // TODO: This is a temporary hack that shouldn't be necessary.
+  virtual const impl::MeshSpecImpl& spec_impl() const = 0;
+
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(Mesh);
   virtual ~Mesh();

@@ -14,15 +14,28 @@ Image::Image(vk::Image image,
       image_(image),
       format_(format),
       width_(width),
-      height_(height) {}
+      height_(height),
+      has_depth_(false),
+      has_stencil_(false) {
+  // TODO: How do we future-proof this in case more formats are added?
+  switch (format) {
+    case vk::Format::eD16Unorm:
+    case vk::Format::eX8D24UnormPack32:
+    case vk::Format::eD32Sfloat:
+      has_depth_ = true;
+    case vk::Format::eS8Uint:
+      has_stencil_ = true;
+    case vk::Format::eD16UnormS8Uint:
+    case vk::Format::eD24UnormS8Uint:
+    case vk::Format::eD32SfloatS8Uint:
+      has_depth_ = true;
+      has_stencil_ = true;
+    default:
+      // No depth or stencil component.
+      break;
+  }
+}
 
 Image::~Image() {}
-
-bool Image::HasStencilComponent() const {
-  // TODO: are these the only stencil formats?  How do we future-proof this
-  // in case more are added?
-  return format_ == vk::Format::eD32SfloatS8Uint ||
-         format_ == vk::Format::eD24UnormS8Uint;
-}
 
 }  // namespace escher

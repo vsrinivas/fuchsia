@@ -75,6 +75,9 @@ class CommandBuffer {
                        const FramebufferPtr& framebuffer,
                        const std::vector<vk::ClearValue>& clear_values);
 
+  // Simple wrapper around endRenderPass().
+  void EndRenderPass() { command_buffer_.endRenderPass(); }
+
  private:
   friend class CommandBufferPool;
 

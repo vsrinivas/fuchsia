@@ -71,20 +71,25 @@ constexpr char g_fragment_src[] = R"GLSL(
 }  // namespace
 
 ModelPipelineCache::ModelPipelineCache(vk::Device device,
-                                       vk::RenderPass render_pass,
-                                       uint32_t subpass_index,
-                                       ModelData* model_data)
+                                       vk::RenderPass depth_prepass,
+                                       vk::RenderPass lighting_pass)
     : device_(device),
-      render_pass_(render_pass),
-      subpass_index_(subpass_index),
+      depth_prepass_(depth_prepass),
+      lighting_pass_(lighting_pass) {}
+
+ModelPipelineCacheOLD::ModelPipelineCacheOLD(vk::Device device,
+                                             vk::RenderPass depth_prepass,
+                                             vk::RenderPass lighting_pass,
+                                             ModelData* model_data)
+    : ModelPipelineCache(device, depth_prepass, lighting_pass),
       model_data_(model_data) {}
 
-ModelPipelineCache::~ModelPipelineCache() {
+ModelPipelineCacheOLD::~ModelPipelineCacheOLD() {
   device_.waitIdle();
   pipelines_.clear();
 }
 
-ModelPipeline* ModelPipelineCache::GetPipeline(
+ModelPipeline* ModelPipelineCacheOLD::GetPipeline(
     const ModelPipelineSpec& spec,
     const MeshSpecImpl& mesh_spec_impl) {
   // TODO: deal with hash collisions
@@ -98,7 +103,7 @@ ModelPipeline* ModelPipelineCache::GetPipeline(
   return new_pipeline_ptr;
 }
 
-std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
+std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
     const ModelPipelineSpec& spec,
     const MeshSpecImpl& mesh_spec_impl) {
   // TODO: create customized pipelines for different shapes/materials/etc.
@@ -159,8 +164,18 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
 
   vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
   depth_stencil_info.depthTestEnable = true;
-  depth_stencil_info.depthWriteEnable = true;
-  depth_stencil_info.depthCompareOp = vk::CompareOp::eLess;
+  if (spec.use_depth_prepass) {
+    // The whole point of a depth pre-pass is to write the depth buffer.
+    depth_stencil_info.depthWriteEnable = true;
+    depth_stencil_info.depthCompareOp = vk::CompareOp::eLess;
+  } else {
+    // Don't write to the depth buffer; we re-use the buffer generated in the
+    // depth pre-pass.  Must modify the comparison operator, otherwise nothing
+    // would appear, because the nearest objects would have the exact same depth
+    // as in the depth buffer.
+    depth_stencil_info.depthWriteEnable = true;
+    depth_stencil_info.depthCompareOp = vk::CompareOp::eLessOrEqual;
+  }
   depth_stencil_info.depthBoundsTestEnable = false;
   depth_stencil_info.stencilTestEnable = false;
 
@@ -234,8 +249,8 @@ std::unique_ptr<ModelPipeline> ModelPipelineCache::NewPipeline(
   pipeline_info.pMultisampleState = &multisampling;
   pipeline_info.pColorBlendState = &color_blending;
   pipeline_info.layout = pipeline_layout;
-  pipeline_info.renderPass = render_pass_;
-  pipeline_info.subpass = subpass_index_;
+  pipeline_info.renderPass = lighting_pass_;
+  pipeline_info.subpass = 0;
   pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 
   vk::Pipeline pipeline = ESCHER_CHECKED_VK_RESULT(

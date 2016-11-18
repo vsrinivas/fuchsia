@@ -121,9 +121,11 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.image = image->get();
 
-  if (new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-    if (image->HasStencilComponent()) {
+  if (image->has_depth() || image->has_stencil()) {
+    if (image->has_depth()) {
+      barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+    }
+    if (image->has_stencil()) {
       barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
     }
   } else {
@@ -136,24 +138,67 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount = 1;
 
-  if (old_layout == vk::ImageLayout::ePreinitialized &&
-      new_layout == vk::ImageLayout::eTransferSrcOptimal) {
-    barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-    barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
-  } else if (old_layout == vk::ImageLayout::ePreinitialized &&
-             new_layout == vk::ImageLayout::eTransferDstOptimal) {
-    barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-    barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-  } else if (old_layout == vk::ImageLayout::eTransferDstOptimal &&
-             new_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+  bool success = true;
+  if (old_layout == vk::ImageLayout::ePreinitialized ||
+      old_layout == vk::ImageLayout::eUndefined) {
+    // If layout was eUndefined, we don't need a srcAccessMask.
+    if (old_layout == vk::ImageLayout::ePreinitialized) {
+      barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
+    }
+
+    // Determine appropriate dstAccessMask.
+    if (new_layout == vk::ImageLayout::eTransferSrcOptimal) {
+      barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+    } else if (new_layout == vk::ImageLayout::eTransferDstOptimal) {
+      barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+    } else if (new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+      barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
+                              vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+    } else if (new_layout == vk::ImageLayout::eColorAttachmentOptimal) {
+      barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    } else {
+      // Don't know what to do.
+      success = false;
+    }
+  } else if (new_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
     barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-  } else if (old_layout == vk::ImageLayout::eUndefined &&
-             new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
-    barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
-                            vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+    if (old_layout == vk::ImageLayout::eTransferDstOptimal) {
+      barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+    } else if (old_layout == vk::ImageLayout::eColorAttachmentOptimal) {
+      barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    } else if (old_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+      barrier.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+    } else {
+      // Don't know what to do.
+      success = false;
+    }
+  } else if (old_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
+    barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+    if (new_layout == vk::ImageLayout::eColorAttachmentOptimal) {
+      barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
+                              vk::AccessFlagBits::eColorAttachmentWrite;
+    } else if (new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+      barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
+                              vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+    } else if (new_layout == vk::ImageLayout::ePresentSrcKHR) {
+      // TODO: eMemoryRead may not be the best choice.  What is?
+      barrier.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+    } else {
+      // Don't know what to do.
+      success = false;
+    }
+  } else if (new_layout == vk::ImageLayout::ePresentSrcKHR &&
+             old_layout == vk::ImageLayout::eColorAttachmentOptimal) {
+    barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    // TODO: eMemoryRead may not be the best choice.  What is?
+    barrier.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
   } else {
-    FTL_LOG(ERROR) << "Unsupported layout transition from: "
+    // Don't know what to do.
+    success = false;
+  }
+
+  if (!success) {
+    FTL_LOG(ERROR) << "Escher: unsupported layout transition from: "
                    << to_string(old_layout) << " to: " << to_string(new_layout);
     FTL_DCHECK(false);
     return;
@@ -204,10 +249,14 @@ void CommandBuffer::BeginRenderPass(
 }
 
 bool CommandBuffer::Retire() {
-  if (!is_active_ && !is_submitted_) {
+  if (!is_active_) {
     // Submission failed, so proceed with cleanup.
+    FTL_DLOG(INFO)
+        << "CommandBuffer submission failed, proceeding with retirement";
+  } else if (!is_submitted_) {
+    return false;
   } else {
-    FTL_DCHECK(is_active_ && is_submitted_);
+    FTL_DCHECK(is_active_);
     // Check if fence has been reached.
     auto fence_status = device_.getFenceStatus(fence_);
     if (fence_status == vk::Result::eNotReady) {

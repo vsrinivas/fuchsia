@@ -13,6 +13,7 @@
 #include "escher/impl/model_data.h"
 #include "escher/impl/model_pipeline.h"
 #include "escher/impl/model_pipeline_cache.h"
+#include "escher/impl/vulkan_utils.h"
 #include "escher/renderer/image.h"
 #include "escher/scene/model.h"
 #include "escher/scene/shape.h"
@@ -24,16 +25,24 @@ namespace impl {
 
 ModelRenderer::ModelRenderer(EscherImpl* escher,
                              ModelData* model_data,
-                             ModelPipelineCache* pipeline_cache)
-    : mesh_manager_(escher->mesh_manager()),
-      model_data_(model_data),
-      pipeline_cache_(pipeline_cache) {
+                             vk::Format color_format,
+                             vk::Format depth_format)
+    : device_(escher->vulkan_context().device),
+      mesh_manager_(escher->mesh_manager()),
+      model_data_(model_data) {
   rectangle_ = CreateRectangle();
   circle_ = CreateCircle();
   white_texture_ = CreateWhiteTexture(escher);
+
+  CreateRenderPasses(color_format, depth_format);
+  pipeline_cache_ = std::make_unique<impl::ModelPipelineCacheOLD>(
+      device_, depth_prepass_, lighting_pass_, model_data_);
 }
 
-ModelRenderer::~ModelRenderer() {}
+ModelRenderer::~ModelRenderer() {
+  device_.destroyRenderPass(depth_prepass_);
+  device_.destroyRenderPass(lighting_pass_);
+}
 
 void ModelRenderer::Draw(Stage& stage,
                          Model& model,
@@ -126,6 +135,7 @@ void ModelRenderer::Draw(Stage& stage,
 
     ModelPipelineSpec pipeline_spec;
     pipeline_spec.mesh_spec = mesh->spec;
+    pipeline_spec.use_depth_prepass = hack_use_depth_prepass;
 
     // Don't rebind pipeline state if it is already up-to-date.
     if (previous_pipeline_spec != pipeline_spec) {
@@ -204,8 +214,118 @@ TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
 
   auto image = escher->image_cache()->NewRgbaImage(1, 1, channels);
-  return ftl::MakeRefCounted<Texture>(std::move(image),
-                                      escher->vulkan_context().device);
+  return ftl::MakeRefCounted<Texture>(
+      std::move(image), escher->vulkan_context().device, vk::Filter::eNearest);
+}
+
+void ModelRenderer::CreateRenderPasses(vk::Format color_format,
+                                       vk::Format depth_format) {
+  constexpr uint32_t kAttachmentCount = 2;
+  const uint32_t kColorAttachment = 0;
+  const uint32_t kDepthAttachment = 1;
+  vk::AttachmentDescription attachments[kAttachmentCount];
+  auto& color_attachment = attachments[kColorAttachment];
+  auto& depth_attachment = attachments[kDepthAttachment];
+
+  color_attachment.format = color_format;
+  color_attachment.samples = vk::SampleCountFlagBits::e1;
+  // Load/store ops and image layouts differ between passes; see below.
+
+  depth_attachment.format = depth_format;
+  depth_attachment.samples = vk::SampleCountFlagBits::e1;
+  depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+  depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+  // Load/store ops and image layouts differ between passes; see below.
+
+  vk::AttachmentReference color_reference;
+  color_reference.attachment = kColorAttachment;
+  color_reference.layout = vk::ImageLayout::eColorAttachmentOptimal;
+
+  vk::AttachmentReference depth_reference;
+  depth_reference.attachment = kDepthAttachment;
+  depth_reference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+
+  // Every vk::RenderPass needs at least one subpass.
+  vk::SubpassDescription subpass;
+  subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_reference;
+  subpass.pDepthStencilAttachment = &depth_reference;
+  subpass.inputAttachmentCount = 0;  // no other subpasses to sample from
+
+  // Even though we have a single subpass, we need to declare dependencies to
+  // support the layout transitions specified by the attachment references.
+  constexpr uint32_t kDependencyCount = 2;
+  vk::SubpassDependency dependencies[kDependencyCount];
+  auto& input_dependency = dependencies[0];
+  auto& output_dependency = dependencies[1];
+
+  // The first dependency transitions from the final layout from the previous
+  // render pass, to the initial layout of this one.
+  input_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;  // not in vulkan.hpp ?!?
+  input_dependency.dstSubpass = 0;
+  input_dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+  input_dependency.dstStageMask =
+      vk::PipelineStageFlagBits::eColorAttachmentOutput;
+  input_dependency.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
+  input_dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
+                                   vk::AccessFlagBits::eColorAttachmentWrite;
+  input_dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+
+  // The second dependency describes the transition from the initial to final
+  // layout.
+  output_dependency.srcSubpass = 0;  // our sole subpass
+  output_dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+  output_dependency.srcStageMask =
+      vk::PipelineStageFlagBits::eColorAttachmentOutput;
+  output_dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
+  output_dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
+                                    vk::AccessFlagBits::eColorAttachmentWrite;
+  output_dependency.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+  output_dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+
+  // We're almost ready to create the render-passes... we just need to fill in
+  // some final values that differ between the passes.
+  vk::RenderPassCreateInfo info;
+  info.attachmentCount = kAttachmentCount;
+  info.pAttachments = attachments;
+  info.subpassCount = 1;
+  info.pSubpasses = &subpass;
+  info.dependencyCount = kDependencyCount;
+  info.pDependencies = dependencies;
+
+  // Create the depth-prepass RenderPass.
+  color_attachment.loadOp = vk::AttachmentLoadOp::eDontCare;
+  color_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+  color_attachment.initialLayout = vk::ImageLayout::eUndefined;
+  color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+  depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+  depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
+  depth_attachment.initialLayout =
+      vk::ImageLayout::eDepthStencilAttachmentOptimal;
+  depth_attachment.finalLayout =
+      vk::ImageLayout::eDepthStencilAttachmentOptimal;
+  depth_prepass_ = ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
+
+  // Create the illumination RenderPass.
+  color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+  color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
+  color_attachment.initialLayout = vk::ImageLayout::eColorAttachmentOptimal;
+  color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+  depth_attachment.loadOp = vk::AttachmentLoadOp::eLoad;
+  // TODO: Investigate whether we would say eDontCare about the depth_attachment
+  // contents.  Ideally the Vulkan implementation would notice that the pipeline
+  // that we use during the illumination pass don't write to the depth-buffer
+  // (only read), but who knows?  By saying eDontCare, we be indicating that
+  // Vulkan wouldn't go out of its way to trash memory that it being used
+  // read-only.  Anyway, until profiling indicates that it's a problem, we can
+  // leave it this way.
+  depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
+  depth_attachment.initialLayout =
+      vk::ImageLayout::eDepthStencilAttachmentOptimal;
+  depth_attachment.finalLayout =
+      vk::ImageLayout::eDepthStencilAttachmentOptimal;
+  lighting_pass_ = ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
 }
 
 }  // namespace impl

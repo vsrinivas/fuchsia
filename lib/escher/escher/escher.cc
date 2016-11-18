@@ -24,9 +24,16 @@ MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
                                                max_index_count);
 }
 
-// Return new Image containing the provided pixels.
 ImagePtr Escher::NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes) {
   return impl_->image_cache()->NewRgbaImage(width, height, bytes);
+}
+
+ImagePtr Escher::NewCheckerboardImage(uint32_t width, uint32_t height) {
+  return impl_->image_cache()->NewCheckerboardImage(width, height);
+}
+
+ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
+  return impl_->image_cache()->NewNoiseImage(width, height);
 }
 
 PaperRendererPtr Escher::NewPaperRenderer() {

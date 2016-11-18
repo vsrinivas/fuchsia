@@ -25,6 +25,11 @@ enum class MeshAttributeFlagBits {
 
 using MeshAttributeFlags = vk::Flags<MeshAttributeFlagBits, uint32_t>;
 
+inline MeshAttributeFlags operator|(MeshAttributeFlagBits bit0,
+                                    MeshAttributeFlagBits bit1) {
+  return MeshAttributeFlags(bit0) | bit1;
+}
+
 struct MeshSpec {
   MeshAttributeFlags flags;
 

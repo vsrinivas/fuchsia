@@ -17,6 +17,8 @@ class PaperRenderer : public Renderer {
                  const SemaphorePtr& frame_done,
                  FrameRetiredCallback frame_retired_callback) override;
 
+  // Given a color image, create a framebuffer into which clients can draw
+  // frames.
   FramebufferPtr NewFramebuffer(const ImagePtr& image) override;
 
  private:
@@ -24,12 +26,19 @@ class PaperRenderer : public Renderer {
   PaperRenderer(impl::EscherImpl* escher);
   ~PaperRenderer() override;
 
+  void DrawDepthPrePass(const FramebufferPtr& framebuffer,
+                        Stage& stage,
+                        Model& model);
+  void DrawLightingPass(const FramebufferPtr& framebuffer,
+                        Stage& stage,
+                        Model& model);
+
+  MeshPtr full_screen_;
   impl::ImageCache* image_cache_;
   vk::Format depth_format_;
-  vk::RenderPass render_pass_;
   std::unique_ptr<impl::ModelData> model_data_;
-  std::unique_ptr<impl::ModelPipelineCache> model_pipeline_cache_;
   std::unique_ptr<impl::ModelRenderer> model_renderer_;
+  std::vector<vk::ClearValue> clear_values_;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(PaperRenderer);
   FTL_DISALLOW_COPY_AND_ASSIGN(PaperRenderer);

@@ -24,7 +24,8 @@ class Image : public impl::Resource {
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
 
-  bool HasStencilComponent() const;
+  bool has_depth() const { return has_depth_; }
+  bool has_stencil() const { return has_stencil_; }
 
   // TODO: These no-ops will no longer be necessary when this class is merged
   // with the "impl" class (impl::ImageCache::Image).
@@ -36,6 +37,8 @@ class Image : public impl::Resource {
   vk::Format format_;
   uint32_t width_;
   uint32_t height_;
+  bool has_depth_;
+  bool has_stencil_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Image);
 };

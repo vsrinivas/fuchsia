@@ -14,10 +14,22 @@ class MeshManager;
 struct MeshSpecImpl {
   vk::VertexInputBindingDescription binding;
   std::vector<vk::VertexInputAttributeDescription> attributes;
+
+  // We need to explicitly define a default constructor, because of
+  // FTL_DISALLOW_COPY_AND_ASSIGN below.
+  MeshSpecImpl() {}
+
+ private:
+  // The binding contains raw pointers into the vector of attributes,
+  // which would no longer be valid if a MeshSpecImpl is copied, and the
+  // original destroyed.
+  FTL_DISALLOW_COPY_AND_ASSIGN(MeshSpecImpl);
 };
 
 class MeshImpl : public Mesh {
  public:
+  // spec_impl continues to be referenced by the MeshImpl... it MUST outlive the
+  // MeshImpl.
   MeshImpl(MeshSpec spec,
            uint32_t num_vertices,
            uint32_t num_indices,
@@ -35,6 +47,8 @@ class MeshImpl : public Mesh {
   vk::DeviceSize vertex_buffer_offset() const { return 0; }
 
   uint32_t vertex_buffer_binding() const { return spec_impl_.binding.binding; }
+
+  const impl::MeshSpecImpl& spec_impl() const override { return spec_impl_; }
 
  private:
   MeshManager* manager_;

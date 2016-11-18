@@ -19,6 +19,16 @@ class Framebuffer : public impl::Resource {
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
 
+  const ImagePtr& get_image(uint32_t index) const { return images_.at(index); }
+
+  // TODO: this is a hack for associating two framebuffers, where one uses
+  // a subset of the images/views of the other one.  Here's the use-case: if
+  // you have a framebuffer with a color and a depth attachment, then you might
+  // have a render-pass that just wants to render into the color attachment.
+  // Unfortunately, Vulkan doesn't let you use the same framebuffer (or at least
+  // the validation layers don't)... you need to create a separate framebuffer.
+  const FramebufferPtr& extra_framebuffer() { return extra_framebuffer_; }
+
  private:
   friend class Renderer;
 
@@ -29,7 +39,8 @@ class Framebuffer : public impl::Resource {
               uint32_t width,
               uint32_t height,
               std::vector<ImagePtr> images,
-              std::vector<vk::ImageView> image_views);
+              std::vector<vk::ImageView> image_views,
+              FramebufferPtr extra_framebuffer = nullptr);
 
   vk::Framebuffer framebuffer_;
 
@@ -44,6 +55,8 @@ class Framebuffer : public impl::Resource {
   // not destroyed before the Framebuffer is.
   std::vector<ImagePtr> images_;
   std::vector<vk::ImageView> image_views_;
+
+  FramebufferPtr extra_framebuffer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Framebuffer);
 };

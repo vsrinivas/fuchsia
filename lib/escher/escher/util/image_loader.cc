@@ -20,6 +20,9 @@ struct RGBA {
 
 std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
                                                  uint32_t height) {
+  FTL_DCHECK(width % 2 == 0);
+  FTL_DCHECK(height % 2 == 0);
+
   auto ptr = std::make_unique<uint8_t[]>(width * height * sizeof(RGBA));
   RGBA* pixels = reinterpret_cast<RGBA*>(ptr.get());
 
@@ -36,8 +39,8 @@ std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
 }
 
 std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height) {
-  auto ptr = std::make_unique<uint8_t[]>(width * height * sizeof(RGBA));
-  RGBA* pixels = reinterpret_cast<RGBA*>(ptr.get());
+  auto ptr = std::make_unique<uint8_t[]>(width * height);
+  auto pixels = ptr.get();
 
   std::random_device seed;
   std::default_random_engine prng(seed());
@@ -45,25 +48,11 @@ std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height) {
 
   for (uint32_t j = 0; j < height; ++j) {
     for (uint32_t i = 0; i < width; ++i) {
-      auto& p = pixels[j * width + i];
-      p.r = random(prng);
-      p.g = random(prng);
-      p.b = random(prng);
-      p.a = random(prng);
+      pixels[j * width + i] = random(prng);
     }
   }
 
   return ptr;
-}
-
-ImagePtr NewCheckerboardImage(Escher* escher, uint32_t width, uint32_t height) {
-  auto pixels = NewCheckerboardPixels(width, height);
-  return escher->NewRgbaImage(width, height, pixels.get());
-}
-
-ImagePtr NewNoiseImage(Escher* escher, uint32_t width, uint32_t height) {
-  auto pixels = NewNoisePixels(width, height);
-  return escher->NewRgbaImage(width, height, pixels.get());
 }
 
 }  // namespace escher

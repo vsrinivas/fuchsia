@@ -12,17 +12,11 @@
 namespace escher {
 
 // Return RGBA pixels containing a checkerboard pattern, where each white/black
-// region is a single pixel.
+// region is a single pixel.  Only works for even values of width/height.
 std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
                                                  uint32_t height);
 
-// Return RGBA pixels containing random noise.
+// Return eR8Unorm pixels containing random noise.
 std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height);
-
-// Create new Image, populating it with pixels from NewCheckerboardPixels().
-ImagePtr NewCheckerboardImage(Escher* escher, uint32_t width, uint32_t height);
-
-// Create new Image, populating it with pixels from NewNoisePixels().
-ImagePtr NewNoiseImage(Escher* escher, uint32_t width, uint32_t height);
 
 }  // namespace escher
