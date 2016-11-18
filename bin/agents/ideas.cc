@@ -61,7 +61,7 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
         d->headline = idea;
         d->subheadline = "";
         d->details = "";
-        d->color = 0x00aaaa00; // argb yellow
+        d->color = 0x00aaaa00;  // argb yellow
         d->icon_urls = fidl::Array<fidl::String>::New(1);
         d->icon_urls[0] = "";
         d->image_url = "";

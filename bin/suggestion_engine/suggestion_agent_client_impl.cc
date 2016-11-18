@@ -8,27 +8,26 @@ namespace maxwell {
 namespace suggestion {
 
 void SuggestionAgentClientImpl::Propose(ProposalPtr proposal) {
-  const size_t old_size = suggestions_.size();
-  SuggestionRecord* suggestion_record = &suggestions_[proposal->id];
+  const size_t old_size = proposals_.size();
+  AgentSuggestionRecord* record = &proposals_[proposal->id];
 
-  if (suggestions_.size() > old_size)
-    OnNewProposal(std::move(proposal), suggestion_record);
+  if (proposals_.size() > old_size)
+    repo_->AddSuggestion(
+        std::make_unique<ProposalRecord>(this, std::move(proposal)), record);
   else
-    OnChangeProposal(std::move(proposal), suggestion_record);
+    OnChangeProposal(std::move(proposal), record);
 }
 
 void SuggestionAgentClientImpl::Remove(const fidl::String& proposal_id) {
-  const auto it = suggestions_.find(proposal_id);
+  const auto record = proposals_.find(proposal_id);
 
-  if (it != suggestions_.end()) {
-    const Suggestion& suggestion = it->second.suggestion;
-    BroadcastRemoveSuggestion(suggestion);
+  if (record != proposals_.end()) {
+    for (auto& channel_rank : record->second.ranks_by_channel) {
+      channel_rank.first->OnRemoveSuggestion(channel_rank.second);
+    }
 
-    auto& ranked = suggestinator_->ranked_suggestions_;
-    ranked.erase(std::find(ranked.begin(), ranked.end(), &suggestion));
-
-    suggestinator_->suggestions_.erase(suggestion.uuid);
-    suggestions_.erase(it);
+    repo_->RemoveSuggestion(record->second.suggestion_prototype->first);
+    proposals_.erase(record);
 
     if (ShouldEraseSelf())
       EraseSelf();
@@ -47,54 +46,20 @@ void SuggestionAgentClientImpl::BindingSet::OnConnectionError(
     impl_->EraseSelf();
 }
 
-void SuggestionAgentClientImpl::BroadcastNewSuggestion(
-    const Suggestion& suggestion) {
-  for (const auto& subscriber : suggestinator_->next_subscribers_)
-    subscriber->OnNewSuggestion(suggestion);
-}
-
-void SuggestionAgentClientImpl::BroadcastRemoveSuggestion(
-    const Suggestion& suggestion) {
-  for (const auto& subscriber : suggestinator_->next_subscribers_)
-    subscriber->BeforeRemoveSuggestion(suggestion);
-}
-
-void SuggestionAgentClientImpl::OnNewProposal(
-    ProposalPtr proposal,
-    SuggestionRecord* suggestion_record) {
-  Suggestion* suggestion = &suggestion_record->suggestion;
-  ProposalToSuggestion(&proposal, suggestion);
-  suggestion_record->source = this;
-  suggestion_record->proposal = std::move(proposal);
-
-  auto& ranked = suggestinator_->ranked_suggestions_;
-  ranked.insert(std::upper_bound(ranked.begin(), ranked.end(), suggestion,
-                                 [](const auto& a, const auto& b) {
-                                   return a->rank < b->rank;
-                                 }),
-                suggestion);
-
-  suggestinator_->suggestions_[suggestion->uuid] = suggestion_record;
-
-  BroadcastNewSuggestion(*suggestion);
-}
-
 void SuggestionAgentClientImpl::OnChangeProposal(
     ProposalPtr proposal,
-    SuggestionRecord* suggestion_record) {
-  Suggestion& suggestion = suggestion_record->suggestion;
-  BroadcastRemoveSuggestion(suggestion);
+    AgentSuggestionRecord* record) {
+  // TODO(rosswang): dedup
 
-  // TODO(rosswang): re-rank if necessary
-  suggestion.display = std::move(proposal->display);
+  record->suggestion_prototype->second->proposal = std::move(proposal);
 
-  suggestion_record->proposal = std::move(proposal);
-
-  BroadcastNewSuggestion(suggestion);
+  for (auto& channel_rank : record->ranks_by_channel) {
+    channel_rank.first->OnChangeSuggestion(channel_rank.second);
+  }
 }
 
 void SuggestionAgentClientImpl::EraseSelf() {
-  suggestinator_->sources_.erase(component_url_);
+  repo_->RemoveSourceClient(component_url_);
 }
 
 }  // namespace suggestion

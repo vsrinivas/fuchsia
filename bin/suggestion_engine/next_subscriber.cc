@@ -19,14 +19,14 @@ void NextSubscriber::SetResultCount(int32_t count) {
     if (target > prev) {
       fidl::Array<SuggestionPtr> delta;
       for (size_t i = prev; i < target; i++) {
-        delta.push_back((*ranked_suggestions_)[i]->Clone());
+        delta.push_back(CreateSuggestion(*(*ranked_suggestions_)[i]));
       }
       listener_->OnAdd(std::move(delta));
     } else if (target == 0) {
       listener_->OnRemoveAll();
     } else if (target < prev) {
       for (size_t i = prev - 1; i >= target; i--) {
-        listener_->OnRemove((*ranked_suggestions_)[i]->uuid);
+        listener_->OnRemove((*ranked_suggestions_)[i]->prototype->first);
       }
     }
   }
@@ -38,29 +38,30 @@ void NextSubscriber::SetResultCount(int32_t count) {
 // max_results_. We don't have to do a full iteration here since we can just
 // compare the rank with the tail for all but the edge case where ranks are
 // identical.
-bool NextSubscriber::IncludeSuggestion(const Suggestion& suggestion) const {
+//
+// The mutable content of the RankedSuggestion given here is not used; only the
+// rank and pointer address or ID are considered.
+bool NextSubscriber::IncludeSuggestion(
+    const RankedSuggestion& ranked_suggestion) const {
   if (max_results_ == 0)
     return false;
   if (!IsFull())
     return true;
 
-  float newRank = suggestion.rank;
+  float newRank = ranked_suggestion.rank;
 
   const int32_t i = max_results_ - 1;
   auto it = ranked_suggestions_->begin() + i;
 
-  if (newRank > (*it)->rank)
-    return false;
-
   if (newRank < (*it)->rank)
     return true;
 
-  // else we actually have to iterate. Iterate until the rank is less than
-  // the new suggestion, at which point we can conclude that the new
-  // suggestion has not made it into the window.
-  do {
+  // Else we might actually have to iterate. Iterate until the rank is less than
+  // the new suggestion, at which point we can conclude that the new suggestion
+  // has not made it into the window.
+  while (newRank == (*it)->rank) {
     // Could also compare UUIDs
-    if (*it == &suggestion) {
+    if ((*it)->prototype == ranked_suggestion.prototype) {
       return true;
     }
 
@@ -69,7 +70,7 @@ bool NextSubscriber::IncludeSuggestion(const Suggestion& suggestion) const {
       return false;
 
     --it;
-  } while (newRank == (*it)->rank);
+  }
 
   return false;
 }

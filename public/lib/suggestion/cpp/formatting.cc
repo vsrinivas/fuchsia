@@ -9,8 +9,8 @@ namespace suggestion {
 
 std::ostream& operator<<(std::ostream& os,
                          const maxwell::suggestion::Display& o) {
-  return os << "{ headline: " << o.headline << ", subheadline: "
-            << o.subheadline << ", details: " << o.details
+  return os << "{ headline: " << o.headline
+            << ", subheadline: " << o.subheadline << ", details: " << o.details
             << "}";
 }
 

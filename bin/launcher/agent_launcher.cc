@@ -9,10 +9,10 @@ namespace {
 
 constexpr char kEnvironmentLabel[] = "agent";
 
-} // namespace
+}  // namespace
 
 void AgentLauncher::StartAgent(
-    const std::string &url,
+    const std::string& url,
     std::unique_ptr<modular::ApplicationEnvironmentHost> env_host) {
   fidl::InterfaceHandle<modular::ApplicationEnvironmentHost> agent_host_handle =
       agent_host_bindings_.AddBinding(std::move(env_host));
@@ -30,4 +30,4 @@ void AgentLauncher::StartAgent(
   agent_launcher->CreateApplication(std::move(launch_info), NULL);
 }
 
-} // namespace maxwell
+}  // namespace maxwell

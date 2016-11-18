@@ -5,13 +5,15 @@
 #pragma once
 
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
+#include "apps/maxwell/src/suggestion_engine/agent_suggestion_record.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
 namespace suggestion {
 
 // Manages a single "Next" suggestion subscriber, translating raw suggestion
-// lifecycle events into windowed suggestion lists.
+// lifecycle events into windowed suggestion lists using a vector of ranked
+// suggestions.
 //
 // TODO(rosswang): Ask is probably the more general case, but we probably want
 // a direct propagation channel for agents to be sensitive to Asks (as well as
@@ -23,8 +25,9 @@ class NextSubscriber : public NextController {
     return &(*next_subscriber)->binding_;
   }
 
-  NextSubscriber(std::vector<Suggestion*>* ranked_suggestions,
-                 fidl::InterfaceHandle<Listener> listener)
+  NextSubscriber(
+      const std::vector<std::unique_ptr<RankedSuggestion>>* ranked_suggestions,
+      fidl::InterfaceHandle<Listener> listener)
       : binding_(this),
         ranked_suggestions_(ranked_suggestions),
         listener_(ListenerPtr::Create(std::move(listener))) {}
@@ -35,44 +38,58 @@ class NextSubscriber : public NextController {
 
   void SetResultCount(int32_t count) override;
 
-  void OnNewSuggestion(const Suggestion& suggestion) {
-    if (IncludeSuggestion(suggestion)) {
-      DispatchAdd(suggestion);
+  void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) {
+    if (IncludeSuggestion(ranked_suggestion)) {
+      DispatchAdd(ranked_suggestion);
 
       // Evict if we were already full
       if (IsFull())
-        listener_->OnRemove((*ranked_suggestions_)[max_results_]->uuid);
+        DispatchRemove(*(*ranked_suggestions_)[max_results_]);
     }
   }
 
-  void BeforeRemoveSuggestion(const Suggestion& suggestion) {
-    if (IncludeSuggestion(suggestion)) {
+  void OnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) {
+    if (IncludeSuggestion(ranked_suggestion)) {
       // Shift in if we were full
       if (IsFull())
         DispatchAdd(*(*ranked_suggestions_)[max_results_]);
 
-      listener_->OnRemove(suggestion.uuid);
+      DispatchRemove(ranked_suggestion);
     }
   }
 
  private:
+  static SuggestionPtr CreateSuggestion(
+      const RankedSuggestion& suggestion_data) {
+    auto suggestion = Suggestion::New();
+    suggestion->uuid = suggestion_data.prototype->first;
+    suggestion->rank = suggestion_data.rank;
+    suggestion->display =
+        suggestion_data.prototype->second->proposal->display->Clone();
+    return suggestion;
+  }
+
   bool IsFull() const {
     return ranked_suggestions_->size() > (size_t)max_results_;
   }
 
-  void DispatchAdd(const Suggestion& suggestion) {
+  void DispatchAdd(const RankedSuggestion& ranked_suggestion) {
     fidl::Array<SuggestionPtr> batch;
-    batch.push_back(suggestion.Clone());
+    batch.push_back(CreateSuggestion(ranked_suggestion));
     listener_->OnAdd(std::move(batch));
   }
 
-  bool IncludeSuggestion(const Suggestion& suggestion) const;
+  void DispatchRemove(const RankedSuggestion& ranked_suggestion) {
+    listener_->OnRemove(ranked_suggestion.prototype->first);
+  }
+
+  bool IncludeSuggestion(const RankedSuggestion& suggestion) const;
 
   fidl::Binding<NextController> binding_;
   // An upper bound on the number of suggestions to offer this subscriber, as
   // given by SetResultCount.
   int32_t max_results_ = 0;
-  std::vector<Suggestion*>* ranked_suggestions_;
+  const std::vector<std::unique_ptr<RankedSuggestion>>* ranked_suggestions_;
   ListenerPtr listener_;
 };
 

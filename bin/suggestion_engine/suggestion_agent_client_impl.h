@@ -4,28 +4,25 @@
 
 #pragma once
 
-class SuggestionAgentClientImpl;
-
 #include "apps/maxwell/services/suggestion/suggestion_agent_client.fidl.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_engine.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_record.h"
+#include "apps/maxwell/src/suggestion_engine/agent_suggestion_record.h"
+#include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
+#include "apps/maxwell/src/suggestion_engine/repo.h"
+#include "apps/maxwell/src/bound_set.h"
+#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
 namespace suggestion {
 
-struct SuggestionRecord;
-class SuggestionEngineApp;
+class Repo;
 
 // SuggestionAgentClientImpl tracks proposals and their resulting suggestions
 // from a single suggestion agent. Source entries are created on demand and kept
 // alive as long as any proposals or publisher bindings exist.
 class SuggestionAgentClientImpl : public SuggestionAgentClient {
  public:
-  SuggestionAgentClientImpl(SuggestionEngineApp* suggestinator,
-                            const std::string& component_url)
-      : suggestinator_(suggestinator),
-        component_url_(component_url),
-        bindings_(this) {}
+  SuggestionAgentClientImpl(Repo* repo, const std::string& component_url)
+      : repo_(repo), component_url_(component_url), bindings_(this) {}
 
   void AddBinding(fidl::InterfaceRequest<SuggestionAgentClient> request) {
     bindings_.emplace(
@@ -51,36 +48,19 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
     SuggestionAgentClientImpl* const impl_;
   };
 
-  // Converts a proposal to a suggestion. Note that after this operation, the
-  // proposal no longer has a valid display (it will have been moved to the
-  // suggestion).
-  void ProposalToSuggestion(ProposalPtr* proposal, Suggestion* suggestion) {
-    // TODO(rosswang): real UUIDs
-    suggestion->uuid = std::to_string(reinterpret_cast<size_t>(this)) + "-" +
-                       std::to_string(id_++);
-    // TODO(rosswang): rank
-    suggestion->rank = id_;  // shhh
-
-    suggestion->display = std::move((*proposal)->display);
-  }
-
-  void BroadcastNewSuggestion(const Suggestion& suggestion);
-  void BroadcastRemoveSuggestion(const Suggestion& suggestion);
-  void OnNewProposal(ProposalPtr proposal, SuggestionRecord* suggestion);
-  void OnChangeProposal(ProposalPtr proposal, SuggestionRecord* suggestion);
+  void OnNewProposal(ProposalPtr proposal, AgentSuggestionRecord* record);
+  void OnChangeProposal(ProposalPtr proposal, AgentSuggestionRecord* record);
 
   bool ShouldEraseSelf() const {
-    return suggestions_.empty() && bindings_.empty();
+    return proposals_.empty() && bindings_.empty();
   }
   void EraseSelf();
 
-  SuggestionEngineApp* const suggestinator_;
+  Repo* const repo_;
   const std::string component_url_;
   // indexed by proposal ID
-  std::unordered_map<std::string, SuggestionRecord> suggestions_;
+  std::unordered_map<std::string, AgentSuggestionRecord> proposals_;
   BindingSet bindings_;
-
-  uint64_t id_;
 };
 
 }  // namespace suggestion
