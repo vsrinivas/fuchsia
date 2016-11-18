@@ -4,6 +4,8 @@
 
 source_set("vmo") {
   sources = [
+    "file.cc",
+    "file.h",
     "shared_vmo.cc",
     "shared_vmo.h",
     "strings.h",

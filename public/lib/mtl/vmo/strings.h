@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MTL_SHARED_BUFFER_STRINGS_H_
-#define LIB_MTL_SHARED_BUFFER_STRINGS_H_
+#ifndef LIB_MTL_VMO_STRINGS_H_
+#define LIB_MTL_VMO_STRINGS_H_
 
 #include <string>
 
@@ -20,4 +20,4 @@ bool StringFromVmo(const mx::vmo& handle, std::string* string_ptr);
 
 }  // namespace mtl
 
-#endif  // LIB_MTL_SHARED_BUFFER_STRINGS_H_
+#endif  // LIB_MTL_VMO_STRINGS_H_
