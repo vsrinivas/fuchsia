@@ -5,13 +5,18 @@
 module modular;
 
 interface FocusListener {
-    // Receives changes to the list of focused story ids.
-    OnFocusChanged(array<string> focused_story_ids);
+  // Receives changes to the list of focused story ids.
+  OnFocusChanged(array<string> focused_story_ids);
 };
 
+[ServiceName="modular.FocusController"]
 interface FocusController {
-    // Requests that a specific story be brought into focus.
-    FocusStory(string story_id);
-    // Register a focus listener.
-    Watch(FocusListener focus_listener);
+  // Requests that a specific story be brought into focus.
+  FocusStory(string story_id);
+
+  // Register a focus listener.
+  Watch(FocusListener focus_listener);
+
+  // Creates a duplicate handle to this FocusController.
+  Duplicate(FocusController& controller);
 };
