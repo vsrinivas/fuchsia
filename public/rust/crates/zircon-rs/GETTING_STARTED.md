@@ -57,6 +57,13 @@ Run:
 ./x.py build --stage 1 --target=x86_64-unknown-fuchsia
 ```
 
+(If your cmake installation is too old (e.g., Ubuntu 14.04), you can use the
+prebuilt in Fuchsia:
+```
+PATH=${FUCHSIA_ROOT}/buildtools/cmake/bin:$PATH ./x.py build --stage 1 --target=x86_64-unknown-fuchsia
+```
+where ${FUCHSIA_ROOT} is the base of your Fuchsia checkout.)
+
 You should now have a working Rust compiler under `build/x86_64-apple-darwin/stage1/bin/rustc`
 (adjust your host triple as necessary).
 
