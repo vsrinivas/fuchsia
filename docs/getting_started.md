@@ -12,7 +12,7 @@ $ git clone https://fuchsia.googlesource.com/magenta $SRC/magenta
 ```
 
 For the purpose of this document, we will assume that Magenta is checked
-out in $SRC/magenta and that we will build toolchains, qemu, etc alongside
+out in $SRC/magenta and that we will build toolchains, QEMU, etc alongside
 that.  Various make invocations are presented with a "-j32" option for
 parallel make.  If that's excessive for the machine you're building on,
 try -j16 or -j8.
@@ -43,33 +43,8 @@ Just run this script from your Magenta working directory:
 ./scripts/download-toolchain
 ```
 
-## Build Toolchains (Optional)
-
-If the prebuilt toolchain binaries do not work for you, there are a
-set of scripts which will download and build suitable gcc toolchains
-for building Magenta for ARM32, ARM64, and x86-64 architectures:
-
-```
-cd $SRC
-git clone https://fuchsia.googlesource.com/third_party/gcc_none_toolchains toolchains
-cd toolchains
-./doit -a 'arm aarch64 x86_64' -f -j32
-```
-
-## Configure PATH
-
-If you're using the prebuilt toolchains, you can skip this step, since
-the build will find them automatically.
-
-```
-# on Linux
-export PATH=$PATH:$SRC/toolchains/aarch64-elf-5.3.0-Linux-x86_64/bin
-export PATH=$PATH:$SRC/toolchains/x86_64-elf-5.3.0-Linux-x86_64/bin
-
-# on Mac
-export PATH=$PATH:$SRC/toolchains/aarch64-elf-5.3.0-Darwin-x86_64/bin
-export PATH=$PATH:$SRC/toolchains/x86_64-elf-5.3.0-Darwin-x86_64/bin
-```
+If you would like to build the toolchains yourself, follow the instructions later
+in the document.
 
 ## Build Magenta
 
@@ -98,12 +73,41 @@ make -j32 magenta-pc-x86-64
 Please build for all targets before submitting to ensure builds work
 on all architectures.
 
-## Qemu
+## QEMU
 
 You can skip this if you're only testing on actual hardware, but the emulator
 is handy for quick local tests and generally worth having around.
 
-See [Qemu](qemu.md) for information on building and using QEMU with magenta.
+See [QEMU](qemu.md) for information on building and using QEMU with magenta.
+
+
+## Build Toolchains (Optional)
+
+If the prebuilt toolchain binaries do not work for you, there are a
+set of scripts which will download and build suitable gcc toolchains
+for building Magenta for ARM32, ARM64, and x86-64 architectures:
+
+```
+cd $SRC
+git clone https://fuchsia.googlesource.com/third_party/gcc_none_toolchains toolchains
+cd toolchains
+./doit -a 'arm aarch64 x86_64' -f -j32
+```
+
+### Configure PATH for toolchains
+
+If you're using the prebuilt toolchains, you can skip this step, since
+the build will find them automatically.
+
+```
+# on Linux
+export PATH=$PATH:$SRC/toolchains/aarch64-elf-5.3.0-Linux-x86_64/bin
+export PATH=$PATH:$SRC/toolchains/x86_64-elf-5.3.0-Linux-x86_64/bin
+
+# on Mac
+export PATH=$PATH:$SRC/toolchains/aarch64-elf-5.3.0-Darwin-x86_64/bin
+export PATH=$PATH:$SRC/toolchains/x86_64-elf-5.3.0-Darwin-x86_64/bin
+```
 
 ## Copying files to and from Magenta
 
@@ -122,7 +126,7 @@ netcp :/tmp/myprogram myprogram
 
 The Magenta build creates a bootfs image containing necessary userspace components
 for the system to boot (the device manager, some device drivers, etc).  The kernel
-is capable of including a second bootfs image which is provided by Qemu or the
+is capable of including a second bootfs image which is provided by QEMU or the
 bootloader as a ramdisk image.
 
 To create such a bootfs image, use the mkbootfs tool that's generated as part of
@@ -141,7 +145,7 @@ $BUILDDIR/tools/mkbootfs -o extra.bootfs manifest
 On the booted Magenta system, the files in the bootfs will appear under /boot, so
 in the above manifest example, the "hosts" file would appear at /boot/etc/hosts.
 
-For Qemu, use the -x option to the run-magenta-* scripts to specify an extra bootfs image.
+For QEMU, use the -x option to the run-magenta-* scripts to specify an extra bootfs image.
 
 ## Network Booting
 
@@ -172,7 +176,7 @@ The default build of Magenta includes a network log service that multicasts the
 system log over the link local IPv6 UDP.  Please note that this is a quick hack
 and the protocol will certainly change at some point.
 
-For now, if you're running Magenta on Qemu with the -N flag or running on hardware
+For now, if you're running Magenta on QEMU with the -N flag or running on hardware
 with a supported ethernet interface (ASIX USB Dongle or Intel Ethernet on NUC),
 the loglistener tool will observe logs broadcast over the local link:
 

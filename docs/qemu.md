@@ -1,6 +1,6 @@
-# Qemu
+# QEMU
 
-## Build Qemu
+## Build QEMU
 
 If you don't want to install in /usr/local (the default), which will require you
 to be root, add --prefix=/path/to/install  (perhaps $HOME/qemu) and then you'll
@@ -15,7 +15,7 @@ make -j32
 sudo make install
 ```
 
-## Run Magenta under Qemu
+## Run Magenta under QEMU
 
 ```
 # for aarch64
@@ -30,10 +30,10 @@ if necessary and -g to run with a graphical framebuffer.
 
 To exit qemu, enter Ctrl-a x. Use Ctrl-a h to see other commands.
 
-## Enabling Networking under Qemu (x86-64 only)
+## Enabling Networking under QEMU (x86-64 only)
 
 The run-magenta-x86-64 script, when given the -N argument will attempt to create
-a network interface using the Linux tun/tap network device named "qemu".  Qemu
+a network interface using the Linux tun/tap network device named "qemu".  QEMU
 does not need to be run with any special privileges for this, but you need to
 create a persistent tun/tap device ahead of time (which does require you be root):
 
@@ -75,11 +75,11 @@ network interface needs to be brought back up each time QEMU is restarted.
 
 Here is a sample session to get you started.
 
-In the shell you're running Qemu in:
+In the shell you're running QEMU in:
 
 ```
 shell1$ ./scripts/run-magenta-x86-64 -- -s -S
-[... some Qemu start up text ...]
+[... some QEMU start up text ...]
 ```
 
 And then in the shell you're running GDB in:
@@ -127,7 +127,7 @@ arch_idle () at kernel/arch/x86/64/ops.S:32
 * 1    Thread 1 (CPU#0 [halted ]) arch_idle () at kernel/arch/x86/64/ops.S:32
 ```
 
-Qemu reports one thread to GDB for each CPU.
+QEMU reports one thread to GDB for each CPU.
 
 ### The magenta.elf-gdb.py script
 
@@ -149,16 +149,16 @@ Heads up: This script isn't always updated as magenta changes.
 
 ### Terminating the session
 
-To terminate Qemu you can send commands to Qemu from GDB:
+To terminate QEMU you can send commands to QEMU from GDB:
 
 ```
 (gdb) monitor quit
 (gdb) quit
 ```
 
-### Interacting with Qemu from Gdb
+### Interacting with QEMU from Gdb
 
-To see the list of Qemu commands you can execute from GDB:
+To see the list of QEMU commands you can execute from GDB:
 
 ```
 (gdb) monitor help
