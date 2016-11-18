@@ -10,6 +10,7 @@ group("all") {
     ":example_module2",
     ":example_module3",
     ":example_recipe",
+    "flutter:all",
     "hello_app",
   ]
 }
@@ -79,31 +80,6 @@ flutter_app("example_module3") {
   main_dart = "example_module3.dart"
   deps = [
     "//apps/modular/lib/app/dart",
-    "//apps/modular/services/story:story_dart",
-    "//apps/mozart/services/views:views_dart",
-    "//lib/fidl/dart",
-    "//lib/flutter/packages/flutter",
-  ]
-}
-
-flutter_app("example_flutter_parent_module") {
-  main_dart = "example_flutter_parent_module.dart"
-  deps = [
-    "//apps/modular/lib/app/dart",
-    "//apps/modular/services/document_store:document_store_dart",
-    "//apps/modular/services/story:story_dart",
-    "//apps/mozart/lib/flutter",
-    "//apps/mozart/services/views:views_dart",
-    "//lib/fidl/dart",
-    "//lib/flutter/packages/flutter",
-  ]
-}
-
-flutter_app("example_flutter_child_module") {
-  main_dart = "example_flutter_child_module.dart"
-  deps = [
-    "//apps/modular/lib/app/dart",
-    "//apps/modular/services/document_store:document_store_dart",
     "//apps/modular/services/story:story_dart",
     "//apps/mozart/services/views:views_dart",
     "//lib/fidl/dart",
