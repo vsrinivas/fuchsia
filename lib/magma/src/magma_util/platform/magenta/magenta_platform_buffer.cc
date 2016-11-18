@@ -373,13 +373,12 @@ bool MagentaPlatformBuffer::UnmapPageBus(uint32_t page_index) { return true; }
 bool PlatformBuffer::IdFromHandle(uint32_t handle, uint64_t* id_out)
 {
     mx_info_handle_basic_t info;
-    mx_size_t info_size = 0;
-    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, sizeof(info.rec), &info,
-                                            sizeof(info), &info_size);
-    if (status != NO_ERROR || info_size != sizeof(info))
+    mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info,
+                                            sizeof(info), nullptr, nullptr);
+    if (status != NO_ERROR)
         return DRETF(false, "mx_object_get_info failed");
 
-    *id_out = info.rec.koid;
+    *id_out = info.koid;
     return true;
 }
 
