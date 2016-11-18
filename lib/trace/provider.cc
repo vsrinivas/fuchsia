@@ -17,22 +17,17 @@ namespace {
 class TraceProviderImpl : public TraceProvider {
  public:
   // Initializes a new instance, registering itself with |registry|.
-  TraceProviderImpl(TraceRegistryPtr registry,
-                    const std::string& label,
-                    const std::map<std::string, std::string>& known_categories)
+  TraceProviderImpl(TraceRegistryPtr registry, const TraceSettings& settings)
       : state_(State::kStopped),
         binding_(this),
-        registry_(std::move(registry)),
-        label_(label),
-        known_categories_(known_categories) {
+        registry_(std::move(registry)) {
     TraceProviderPtr provider;
     fidl::InterfaceRequest<TraceProvider> provider_request =
         fidl::GetProxy(&provider);
 
     binding_.Bind(std::move(provider_request));
     registry_->RegisterTraceProvider(
-        std::move(provider), fidl::String::From(label_),
-        fidl::Map<fidl::String, fidl::String>::From(known_categories_));
+        std::move(provider), fidl::String::From(settings.provider_label));
   }
 
  private:
@@ -70,8 +65,6 @@ class TraceProviderImpl : public TraceProvider {
   State state_;
   fidl::Binding<TraceProvider> binding_;
   TraceRegistryPtr registry_;
-  std::string label_ = "HeWhoShallNotBeNamed";
-  std::map<std::string, std::string> known_categories_;
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceProviderImpl);
 };
 
@@ -80,21 +73,25 @@ TraceProviderImpl* g_tracer = nullptr;
 
 }  // namespace
 
-void InitializeTracer(
-    modular::ApplicationContext* app_context,
-    const std::string& label,
-    const std::map<std::string, std::string>& known_categories) {
-  auto registry = app_context->ConnectToEnvironmentService<TraceRegistry>();
-  InitializeTracer(std::move(registry), label, known_categories);
+bool InitializeTracerFromCommandLine(modular::ApplicationContext* app_context,
+                                     const ftl::CommandLine& command_line) {
+  TraceSettings settings;
+  if (!ParseTraceSettings(command_line, &settings))
+    return false;
+  InitializeTracer(app_context, settings);
+  return true;
 }
 
-void InitializeTracer(
-    TraceRegistryPtr registry,
-    const std::string& label,
-    const std::map<std::string, std::string>& known_categories) {
+void InitializeTracer(modular::ApplicationContext* app_context,
+                      const TraceSettings& settings) {
+  auto registry = app_context->ConnectToEnvironmentService<TraceRegistry>();
+  InitializeTracer(std::move(registry), settings);
+}
+
+void InitializeTracer(TraceRegistryPtr registry,
+                      const TraceSettings& settings) {
   FTL_CHECK(!g_tracer) << "Tracer is already initialized.";
-  g_tracer =
-      new TraceProviderImpl(std::move(registry), label, known_categories);
+  g_tracer = new TraceProviderImpl(std::move(registry), settings);
 }
 
 void DestroyTracer() {

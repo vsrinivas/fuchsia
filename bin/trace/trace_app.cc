@@ -40,7 +40,8 @@ void TraceApp::ListProviders() {
         std::ostringstream out;
         out << "Registered providers" << std::endl;
         for (const auto& provider : providers) {
-          out << "  " << provider->label << std::endl;
+          out << "  #" << provider->id << ": '" << provider->label << "'"
+              << std::endl;
         }
         FTL_LOG(INFO) << out.str();
         mtl::MessageLoop::GetCurrent()->QuitNow();

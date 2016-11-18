@@ -36,6 +36,9 @@ interface TraceController {
 
 // Information about a registered trace provider.
 struct TraceProviderInfo {
+  // The provider's id.
+  uint32 id;
+
   // The trace provider's label.
   string label;
 };

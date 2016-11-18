@@ -9,16 +9,13 @@ import "apps/tracing/services/trace_provider.fidl";
 // The interface which applications call into to register their trace providers.
 [ServiceName="tracing::TraceRegistry"]
 interface TraceRegistry {
+  // Maximum length for a provider label.
+  const uint32 kLabelMaxLength = 63;
+
   // Registers the trace provider.
   // To unregister, simply close the TraceProvider pipe.
   //
   // |label| is a human-readable name to assign to the trace provider.
-  //
-  // |categories| is a map of trace event categories which are published
-  // by this provider.  Each entry is a pair category name -> short description
-  // (in English).
-  //
-  // The maximum length of labels and category names is 31 characters each.
-  RegisterTraceProvider(TraceProvider provider, string label,
-    map<string, string> categories);
+  // The label is truncated if longer than |kLabelMaxLength|.
+  RegisterTraceProvider(TraceProvider provider, string? label);
 };

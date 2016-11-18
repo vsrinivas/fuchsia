@@ -28,6 +28,8 @@ source_set("provider") {
   sources = [
     "provider.h",
     "provider.cc",
+    "settings.h",
+    "settings.cc",
   ]
 
   deps = [
@@ -80,11 +82,13 @@ executable("trace_tests") {
   sources = [
     "internal/categories_matcher_unittest.cc",
     "internal/fields_unittest.cc",
+    "settings_unittest.cc",
     "writer_unittest.cc",
   ]
 
   deps = [
     ":internal_fields",
+    ":provider",
     ":reader",
     ":trace",
     ":types",

@@ -16,20 +16,6 @@ namespace {
 static constexpr size_t kSharedBufferSize = 3 * 1024 * 1024;
 static const ftl::TimeDelta kStopTimeout = ftl::TimeDelta::FromSeconds(5);
 
-bool IsAnyKnownCategoryEnabled(
-    const fidl::Map<fidl::String, fidl::String>& known,
-    const fidl::Array<fidl::String>& enabled) {
-  // We treat the empty set of enabled or known categories as
-  // a wildcard to turn on all categories.
-  if (enabled.size() == 0 || known.size() == 0)
-    return true;
-
-  for (size_t i = 0; i < enabled.size(); i++)
-    if (known.find(enabled[i]) != known.cend())
-      return true;
-  return false;
-}
-
 void WriteBufferToSocket(const uint8_t* buffer,
                          size_t len,
                          mx::socket& socket) {
@@ -96,6 +82,14 @@ void WriteRecordsToSocket(mx::vmo vmo, size_t vmo_size, mx::socket& socket) {
                       socket);
 }
 
+std::string SanitizeLabel(const fidl::String& label) {
+  std::string result =
+      label.get().substr(0, tracing::TraceRegistry::kLabelMaxLength);
+  if (result.empty())
+    result = "unnamed";
+  return result;
+}
+
 }  // namespace
 
 TraceManager::TraceManager() {
@@ -142,6 +136,7 @@ void TraceManager::GetRegisteredProviders(
   for (const auto& provider : providers_) {
     auto info = TraceProviderInfo::New();
     info->label = provider.label;
+    info->id = provider.id;
     results.push_back(std::move(info));
   }
   callback(std::move(results));
@@ -149,11 +144,14 @@ void TraceManager::GetRegisteredProviders(
 
 void TraceManager::RegisterTraceProvider(
     fidl::InterfaceHandle<TraceProvider> handle,
-    const fidl::String& label,
-    fidl::Map<fidl::String, fidl::String> categories) {
-  FTL_LOG(INFO) << "Registering provider with label: " << label;
-  providers_.emplace_back(TraceProviderPtr::Create(std::move(handle)),
-                          std::move(label), std::move(categories));
+    const fidl::String& label) {
+  const uint32_t id = next_provider_id_++;
+  std::string sanitized_label = SanitizeLabel(label);
+
+  FTL_LOG(INFO) << "Registering provider: id=" << id
+                << ", label=" << sanitized_label;
+  providers_.emplace_back(TraceProviderPtr::Create(std::move(handle)), id,
+                          std::move(sanitized_label));
 
   auto it = --providers_.end();
   it->provider.set_connection_error_handler(
@@ -173,12 +171,6 @@ void TraceManager::FinalizeTracing() {
 bool TraceManager::StartTracingForProvider(ProviderInfo* info) {
   FTL_DCHECK(!info->current_buffer);
   FTL_LOG(INFO) << "StartTracingForProvider: " << info->label;
-
-  if (!IsAnyKnownCategoryEnabled(info->known_categories, categories_)) {
-    FTL_LOG(INFO) << "Not starting provider " << info->label << ": "
-                  << "No known category has been enabled";
-    return false;
-  }
 
   if (mx::vmo::create(kSharedBufferSize, 0, &info->current_buffer) < 0) {
     FTL_LOG(ERROR) << "Failed to create shared buffer for provider";

@@ -29,19 +29,18 @@ class TraceManager : public TraceRegistry, public TraceController {
   enum class ControllerState { kStarted, kStopped };
 
   struct ProviderInfo {
-    explicit ProviderInfo(
-        TraceProviderPtr provider,
-        fidl::String label,
-        fidl::Map<fidl::String, fidl::String> known_categories)
-        : provider(std::move(provider)),
-          label(std::move(label)),
-          known_categories(std::move(known_categories)) {}
+    explicit ProviderInfo(TraceProviderPtr provider,
+                          uint32_t id,
+                          std::string label)
+        : provider(std::move(provider)), id(id), label(std::move(label)) {}
 
     TraceProviderPtr provider;
-    fidl::String label;
-    fidl::Map<fidl::String, fidl::String> known_categories;
+    uint32_t id;
+    std::string label;
     mx::vmo current_buffer;
   };
+
+  uint32_t next_provider_id_ = 0u;
 
   // |TraceController| implementation.
   void StartTracing(fidl::Array<fidl::String> categories,
@@ -53,8 +52,7 @@ class TraceManager : public TraceRegistry, public TraceController {
   // |TraceRegistry| implementation.
   void RegisterTraceProvider(
       fidl::InterfaceHandle<tracing::TraceProvider> provider,
-      const fidl::String& label,
-      fidl::Map<fidl::String, fidl::String> categories) override;
+      const fidl::String& label) override;
 
   void FinalizeTracing();
   bool StartTracingForProvider(ProviderInfo* provider);
