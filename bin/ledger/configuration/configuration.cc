@@ -10,6 +10,14 @@ namespace configuration {
 
 Configuration::Configuration() : use_sync(false) {}
 
+Configuration::Configuration(const Configuration&) = default;
+
+Configuration::Configuration(Configuration&&) = default;
+
+Configuration& Configuration::operator=(const Configuration&) = default;
+
+Configuration& Configuration::operator=(Configuration&&) = default;
+
 bool operator==(const Configuration& lhs, const Configuration& rhs) {
   return lhs.use_sync == rhs.use_sync && lhs.sync_params == rhs.sync_params;
 }

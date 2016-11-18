@@ -54,8 +54,11 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
     return false;
   }
 
+  Configuration new_configuration;
+
   if (!document.HasMember(kSynchronization)) {
-    configuration->use_sync = false;
+    new_configuration.use_sync = false;
+    *configuration = std::move(new_configuration);
     return true;
   }
 
@@ -66,7 +69,7 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
   }
 
   auto sync_config = document[kSynchronization].GetObject();
-  configuration->use_sync = true;
+  new_configuration.use_sync = true;
   if (!sync_config.HasMember(kFirebaseId) ||
       !sync_config[kFirebaseId].IsString()) {
     FTL_LOG(ERROR) << "The " << kFirebaseId
@@ -75,7 +78,7 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
     return false;
   }
 
-  configuration->sync_params.firebase_id = sync_config[kFirebaseId].GetString();
+  new_configuration.sync_params.firebase_id = sync_config[kFirebaseId].GetString();
 
   if (!sync_config.HasMember(kFirebasePrefix) ||
       !sync_config[kFirebasePrefix].IsString()) {
@@ -84,7 +87,7 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
                    << ".";
     return false;
   }
-  configuration->sync_params.firebase_prefix =
+  new_configuration.sync_params.firebase_prefix =
       sync_config[kFirebasePrefix].GetString();
 
   if (sync_config.MemberCount() != 2u) {
@@ -93,6 +96,7 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
     return false;
   }
 
+  *configuration = std::move(new_configuration);
   return true;
 }
 

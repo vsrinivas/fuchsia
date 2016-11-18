@@ -26,8 +26,8 @@ void PrintHelp() {
   printf("Creates the configuration file used by the Ledger.\n");
   printf("\n");
   printf("Optional, global arguments:\n");
-  printf("  --config_path=/path/to/config/dir: path to the configuration \n");
-  printf("    directory to write to (default: /data/ledger).\n");
+  printf("  --config_path=/path/to/config/file: path to the configuration \n");
+  printf("    file to write to (default: /data/ledger/config.json).\n");
   printf("  --help: prints this help.\n");
   printf("Synchronization arguments (these enable cloud sync):\n");
   printf("  --firebase_id=<NAME_OF_FIREBASE_INSTANCE>\n");
@@ -39,7 +39,7 @@ int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
 
   configuration::Configuration config;
-  std::string config_path = "/data/ledger";
+  ftl::StringView config_path = configuration::kDefaultConfigurationFile;
   bool first_skipped = false;
   for (const std::string& arg : args) {
     if (!first_skipped) {
@@ -49,7 +49,7 @@ int main(int argc, const char** argv) {
       PrintHelp();
       return 0;
     } else if (IsArgument(arg, kConfigPathArg)) {
-      config_path = arg.substr(kConfigPathArg.size());
+      config_path = ftl::StringView(arg).substr(kConfigPathArg.size());
     } else if (IsArgument(arg, kFirebaseIdArg)) {
       config.use_sync = true;
       config.sync_params.firebase_id = arg.substr(kFirebaseIdArg.size());
@@ -69,7 +69,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  if (!configuration::ConfigurationEncoder::Write(config_path + "/config.json",
+  if (!configuration::ConfigurationEncoder::Write(config_path.ToString(),
                                                   config)) {
     FTL_LOG(ERROR) << "Unable to write to file " << config_path;
     return 1;

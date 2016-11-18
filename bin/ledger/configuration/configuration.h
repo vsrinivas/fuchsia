@@ -7,12 +7,22 @@
 
 #include <string>
 
+#include "lib/ftl/strings/string_view.h"
+
 namespace configuration {
+
+constexpr ftl::StringView kDefaultConfigurationFile =
+    "/data/ledger/config.json";
 
 // The configuration for the Ledger.
 struct Configuration {
   // Creates a default, empty configuration.
   Configuration();
+  Configuration(const Configuration&);
+  Configuration(Configuration&&);
+
+  Configuration& operator=(const Configuration&);
+  Configuration& operator=(Configuration&&);
 
   // Parameters used for cloud synchronization.
   struct SyncParams {
@@ -31,7 +41,6 @@ struct Configuration {
 bool operator==(const Configuration& lhs, const Configuration& rhs);
 bool operator==(const Configuration::SyncParams& lhs,
                 const Configuration::SyncParams& rhs);
-
 }  // namespace configuration
 
 #endif  // APPS_LEDGER_SRC_CONFIGURATION_CONFIGURATION_H_
