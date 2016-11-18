@@ -13,7 +13,10 @@ namespace firebase {
 
 EventStream::EventStream() {}
 
-EventStream::~EventStream() {}
+EventStream::~EventStream() {
+  if (destruction_sentinel_)
+    *destruction_sentinel_ = true;
+}
 
 void EventStream::Start(
     mx::datapipe_consumer source,
@@ -33,7 +36,8 @@ void EventStream::OnDataAvailable(const void* data, size_t num_bytes) {
     pending_line_.append(current, newline - current);
     current = newline;
     if (newline != end) {
-      ProcessLine(pending_line_);
+      if (!ProcessLine(std::move(pending_line_)))
+        return;
       pending_line_.clear();
       ++current;
     }
@@ -45,13 +49,13 @@ void EventStream::OnDataComplete() {
 }
 
 // See https://www.w3.org/TR/eventsource/#event-stream-interpretation.
-void EventStream::ProcessLine(ftl::StringView line) {
+bool EventStream::ProcessLine(ftl::StringView line) {
   // If the line is empty, dispatch the event.
   if (line.empty()) {
     // If data is empty, clear event type and abort.
     if (data_.empty()) {
       event_type_.clear();
-      return;
+      return true;
     }
 
     // Remove the trailing line break from data.
@@ -59,15 +63,23 @@ void EventStream::ProcessLine(ftl::StringView line) {
       data_.resize(data_.size() - 1);
     }
 
-    event_callback_(Status::OK, event_type_, data_);
+    // Calling the user callback, and exiting early if this objects is
+    // destroyed.
+    bool is_destroyed = false;
+    destruction_sentinel_ = &is_destroyed;
+    event_callback_(Status::OK, std::move(event_type_), std::move(data_));
+    if (is_destroyed)
+      return false;
+
+    destruction_sentinel_ = nullptr;
     event_type_.clear();
     data_.clear();
-    return;
+    return true;
   }
 
   // If the line starts with a colon, ignore the line.
   if (line[0] == ':') {
-    return;
+    return true;
   }
 
   // If the line contains a colon, process the field.
@@ -76,12 +88,13 @@ void EventStream::ProcessLine(ftl::StringView line) {
     ftl::StringView field(line.substr(0, colon_pos));
     ftl::StringView value = line.substr(colon_pos + 1);
     ProcessField(field, ftl::TrimString(value, " "));
-    return;
+    return true;
   }
 
   // If the line does not contain a colon, process the field using the whole
   // line as the field name and empty string as field value.
   ProcessField(line, "");
+  return true;
 }
 
 void EventStream::ProcessField(ftl::StringView field, ftl::StringView value) {

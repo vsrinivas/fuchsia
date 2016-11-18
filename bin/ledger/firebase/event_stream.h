@@ -40,7 +40,8 @@ class EventStream : public mtl::DataPipeDrainer::Client {
   void OnDataAvailable(const void* data, size_t num_bytes) override;
   void OnDataComplete() override;
 
-  void ProcessLine(ftl::StringView line);
+  // Returns false if the object has been destroyed within this method.
+  bool ProcessLine(ftl::StringView line);
 
   void ProcessField(ftl::StringView field, ftl::StringView value);
 
@@ -53,6 +54,8 @@ class EventStream : public mtl::DataPipeDrainer::Client {
   std::string event_type_;
 
   std::unique_ptr<mtl::DataPipeDrainer> drainer_;
+
+  bool* destruction_sentinel_ = nullptr;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(EventStream);
 };

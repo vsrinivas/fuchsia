@@ -11,6 +11,7 @@
 #include "apps/ledger/src/glue/data_pipe/data_pipe.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace firebase {
@@ -33,6 +34,9 @@ class EventStreamTest : public ::testing::Test {
                            status_.push_back(status);
                            events_.push_back(event);
                            data_.push_back(data);
+                           if (delete_on_event_) {
+                             event_stream_.reset();
+                           }
                          },
                          []() {});
   }
@@ -48,12 +52,13 @@ class EventStreamTest : public ::testing::Test {
 
   void Done() { event_stream_->OnDataComplete(); }
 
+  mtl::MessageLoop message_loop_;
   mx::datapipe_producer producer_handle_;
   std::unique_ptr<EventStream> event_stream_;
   std::vector<Status> status_;
   std::vector<std::string> events_;
   std::vector<std::string> data_;
-  mtl::MessageLoop message_loop_;
+  bool delete_on_event_ = false;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(EventStreamTest);
@@ -168,6 +173,21 @@ TEST_F(EventStreamTest, MultipleEvents) {
   EXPECT_EQ(Status::OK, status_[2]);
   EXPECT_EQ("fgh", events_[2]);
   EXPECT_EQ("50", data_[2]);
+}
+
+TEST_F(EventStreamTest, DeleteOneEvent) {
+  delete_on_event_ = true;
+  mtl::BlockingCopyFromString("event: abc\ndata: bazinga\n\n",
+                              producer_handle_);
+  message_loop_.task_runner()->PostTask([this]() {
+    message_loop_.PostQuitTask();
+  });
+  message_loop_.Run();
+
+  EXPECT_EQ(1u, status_.size());
+  EXPECT_EQ(Status::OK, status_[0]);
+  EXPECT_EQ("abc", events_[0]);
+  EXPECT_EQ("bazinga", data_[0]);
 }
 
 }  // namespace
