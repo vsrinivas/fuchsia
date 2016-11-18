@@ -53,13 +53,13 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             mx_size_t actual = (buffer_size < sizeof(mx_info_handle_basic_t)) ? 0 : 1;
             mx_size_t avail = 1;
 
+            mxtl::RefPtr<Dispatcher> dispatcher;
+            uint32_t rights;
+
+            if (!up->GetDispatcher(handle, &dispatcher, &rights))
+                return up->BadHandle(handle, ERR_BAD_HANDLE);
+
             if (actual > 0) {
-                mxtl::RefPtr<Dispatcher> dispatcher;
-                uint32_t rights;
-
-                if (!up->GetDispatcher(handle, &dispatcher, &rights))
-                    return up->BadHandle(handle, ERR_BAD_HANDLE);
-
                 bool waitable = dispatcher->get_state_tracker() != nullptr;
 
                 // build the info structure
@@ -82,16 +82,16 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             return NO_ERROR;
         }
         case MX_INFO_PROCESS: {
-            mx_size_t actual = (buffer_size < sizeof(mx_info_handle_basic_t)) ? 1 : 0;
+            mx_size_t actual = (buffer_size < sizeof(mx_info_process_t)) ? 0 : 1;
             mx_size_t avail = 1;
 
-            if (actual > 0) {
-                // grab a reference to the dispatcher
-                mxtl::RefPtr<ProcessDispatcher> process;
-                auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_READ);
-                if (error < 0)
-                    return error;
+            // grab a reference to the dispatcher
+            mxtl::RefPtr<ProcessDispatcher> process;
+            auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_READ);
+            if (error < 0)
+                return error;
 
+            if (actual > 0) {
                 // build the info structure
                 mx_info_process_t info = { };
 
