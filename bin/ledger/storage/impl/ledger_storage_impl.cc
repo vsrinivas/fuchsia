@@ -63,22 +63,19 @@ void LedgerStorageImpl::GetPageStorage(
     const std::function<void(Status, std::unique_ptr<PageStorage>)>& callback) {
   std::string path = GetPathFor(page_id);
   if (files::IsDirectory(path)) {
-    task_runner_->PostTask([ this, callback, page_id = page_id.ToString() ]() {
-      auto result = std::make_unique<PageStorageImpl>(
-          task_runner_, GetPathFor(page_id), page_id);
-      Status status = result->Init();
-      if (status != Status::OK) {
-        callback(status, nullptr);
-        return;
-      }
-      callback(status, std::move(result));
-    });
+    auto result = std::make_unique<PageStorageImpl>(
+        task_runner_, GetPathFor(page_id), page_id);
+    Status status = result->Init();
+    if (status != Status::OK) {
+      callback(status, nullptr);
+      return;
+    }
+    callback(status, std::move(result));
     return;
   }
   // TODO(nellyv): Maybe the page exists but is not synchronized, yet. We need
   // to check in the cloud.
-  task_runner_->PostTask(
-      [callback]() { callback(Status::NOT_FOUND, nullptr); });
+  callback(Status::NOT_FOUND, nullptr);
 }
 
 bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
