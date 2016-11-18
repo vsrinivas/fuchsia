@@ -31,7 +31,7 @@
 constexpr mx_size_t kDefaultDataPipeCapacity = 32 * 1024u;
 
 // TODO(vtl): Do we want to provide the producer handle as an out parameter (possibly in the same
-// way as in msgpipe_create, instead of overloading the return value)?
+// way as in channel_create, instead of overloading the return value)?
 mx_handle_t sys_datapipe_create(uint32_t options, mx_size_t element_size, mx_size_t capacity,
                                 user_ptr<mx_handle_t> _consumer_handle) {
     LTRACEF("options %u\n", options);

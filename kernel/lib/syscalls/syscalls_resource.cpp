@@ -20,11 +20,11 @@
 // records must be an array of valid resource info records
 // records[0] must be a mx_rrec_type_self describing the resource.
 // On success, a new resource is created and handle is returned
-// If records[0].options MX_ROPT_SELF_MSGPIPE, a new ipc msgpipe is returned
-// via new_msgpipe_handle and ipc connections may be accepted via this pipe.
+// If records[0].options MX_ROPT_SELF_CHANNEL, a new ipc channel is returned
+// via new_channel_handle and ipc connections may be accepted via this pipe.
 // parent_handle must have RIGHT_WRITE
 mx_status_t sys_resource_create(mx_handle_t handle, user_ptr<mx_rrec_t> records, uint32_t count,
-                                user_ptr<mx_handle_t> rsrc_out, user_ptr<mx_handle_t> msgpipe_out) {
+                                user_ptr<mx_handle_t> rsrc_out, user_ptr<mx_handle_t> channel_out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // Obtain the parent Resource
@@ -76,7 +76,7 @@ mx_status_t sys_resource_create(mx_handle_t handle, user_ptr<mx_rrec_t> records,
     if (rsrc_out.copy_to_user(child_hv) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (msgpipe_out.get() != nullptr) {
+    if (channel_out.get() != nullptr) {
         //TODO: support this
         return ERR_INVALID_ARGS;
     }
@@ -138,7 +138,7 @@ mx_status_t sys_resource_do_action(mx_handle_t handle, uint32_t index,
 // Given a resource handle and a message pipe handle, send that pipe to the
 // resource handle’s ipc connection message pipe.
 // resource handle must have RIGHT_READ
-// msgpipe handle must have RIGHT_TRANSFER
-mx_status_t sys_resource_connect(mx_handle_t handle, mx_handle_t msgpipe) {
+// channel handle must have RIGHT_TRANSFER
+mx_status_t sys_resource_connect(mx_handle_t handle, mx_handle_t channel) {
     return ERR_NOT_SUPPORTED;
 }
