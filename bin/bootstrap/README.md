@@ -21,11 +21,17 @@ By default, bootstrap reads a configuration file from
 Bootstrap takes a single application to run within the newly created
 environment.
 
-    $ file:///system/apps/bootstrap [args...] <app url> <app args...>
+    @ bootstrap [args...] <app url> <app args...>
 
 Bootstrap can also be run without any initial apps for debugging purposes.
 
-    $ file:///system/apps/bootstrap -
+    @ bootstrap -
+
+URLs can be specified in any of the following forms:
+
+    file:///path/to/my_app : canonical url
+    /path/to/my_app : absolute path
+    my_app : partial name resolved in path
 
 ### Arguments
 
@@ -54,23 +60,38 @@ Standard logging arguments:
 
 Run 'device_runner':
 
-    $ file:///system/apps/bootstrap file:///system/apps/device_runner
+    @ bootstrap device_runner
 
 Run 'launcher' passing 'noodles_view' as argument to it:
 
-    $ file:///system/apps/bootstrap file:///system/apps/launcher file:///system/apps/noodles_view
+    @ bootstrap launcher noodles_view
 
 Run 'guide' providing two additional services in its environment:
 
-    $ file:///system/apps/bootstrap --reg=hitchhike::Towel@file:///system/apps/towel,hitchhike::HoopyFrood@file:///system/apps/ford_prefect file:///system/apps/guide
+    @ bootstrap --reg=hitchhike::Towel@file:///path/to/towel,hitchhike::HoopyFrood@file:///path/to/ford_prefect guide
 
 Run 'my_app' with a custom configuration file:
 
-    $ file:///system/apps/bootstrap --config=my.config file:///system/apps/my_app
+    @ bootstrap --config=my.config my_app
 
 Run 'my_app' without any other configured services:
 
-    $ file:///system/apps/bootstrap --no-config --reg=my::Service@file:///system/apps/my_server file:///system/apps/my_app
+    @ bootstrap --no-config --reg=my::Service@file:///path/to/my_server my_app
+
+## CONFIGURATION
+
+The bootstrap configuration is a JSON file consisting of service
+registrations.  Each entry in the "services" map consists of a service
+name and the application URL which provides it.
+
+    {
+      "services": {
+        "service-name-1": "file:///system/apps/app_without_args",
+        "service-name-2": [
+           "file:///system/apps/app_with_args", "arg1", "arg2", "arg3"
+        ]
+      }
+    }
 
 ## FUTURE WORK
 

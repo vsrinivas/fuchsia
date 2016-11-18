@@ -14,19 +14,9 @@
 
 namespace bootstrap {
 
-// The configuration file should be specified as:
-// {
-//   "services": {
-//     "service-name-1": "file:///system/apps/app_without_args",
-//     "service-name-2": [
-//        "file:///system/apps/app_with_args", "arg1", "arg2", "arg3"
-//     ]
-//   }
-// }
-//
+// Parses configuration files.  See README.md for format.
 // TODO(jeffbrown): Support chaining multiple configuration files together
 // via imports.
-
 class Config {
  public:
   using ServiceMap =
