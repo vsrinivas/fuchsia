@@ -111,8 +111,11 @@ sk_sp<SkImage> MakeSkImageFromBuffer(const SkImageInfo& info,
   FTL_DCHECK(consumer);
   FTL_DCHECK(consumer->map_flags() & MX_VM_FLAG_PERM_READ);
 
-  return MakeSkImageInternal(
-      info, row_bytes, consumer->ConsumeBuffer(std::move(buffer)), out_fence);
+  auto buffer_holder = consumer->ConsumeBuffer(std::move(buffer));
+  if (!buffer_holder)
+    return nullptr;
+  return MakeSkImageInternal(info, row_bytes, std::move(buffer_holder),
+                             out_fence);
 }
 
 }  // namespace mozart
