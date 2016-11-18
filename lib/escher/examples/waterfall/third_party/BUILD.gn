@@ -4,6 +4,9 @@ config("glfw_config") {
     "glfw/deps",
   ]
   cflags = [ "-Wall", "-Wno-deprecated" ]
+
+  # add flags to avoid compiler warnings
+  cflags += [ "-Wno-int-conversion", "-Wno-implicit-function-declaration", "-Wno-sign-compare"]
 }
 
 static_library("glfw") {
