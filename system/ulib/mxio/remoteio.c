@@ -18,6 +18,7 @@
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
+#include <mxio/socket.h>
 #include <mxio/util.h>
 
 #include "private.h"
@@ -755,7 +756,21 @@ static ssize_t mxsio_write(mxio_t* io, const void* data, size_t len) {
 static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
-    mx_signals_t signals = MX_USER_SIGNAL_2; // EPOLLERR is always detected
+    // TODO: locking for flags/state
+    if (io->flags & MXIO_FLAG_SOCKET_CONNECTING) {
+        // check the connection state
+        mx_signals_t observed;
+        mx_status_t r;
+        r = mx_handle_wait_one(rio->h2, MXSIO_SIGNAL_CONNECTED, 0u,
+                               &observed);
+        if (r == NO_ERROR || r == ERR_TIMED_OUT) {
+            if (observed & MXSIO_SIGNAL_CONNECTED) {
+                io->flags &= ~MXIO_FLAG_SOCKET_CONNECTING;
+                io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
+            }
+        }
+    }
+    mx_signals_t signals = MXSIO_SIGNAL_ERROR;
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         // if socket is connected
         if (events & EPOLLIN) {
@@ -768,12 +783,13 @@ static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
         // if socket is not connected
         if (events & EPOLLIN) {
             // signal when a listening socket gets an incoming connection
-            signals |= MXIO_SIGNAL_SOCKET_INCOMING_CONNECTION |
-                MX_SIGNAL_PEER_CLOSED;
+            // or a connecting socket gets connected and receives data
+            signals |= MXSIO_SIGNAL_INCOMING |
+                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
         }
         if (events & EPOLLOUT) {
             // signal when connect() operation is finished
-            signals |= MXIO_SIGNAL_SOCKET_OUTGOING_CONNECTION;
+            signals |= MXSIO_SIGNAL_OUTGOING;
         }
     }
     if (events & EPOLLRDHUP) {
@@ -783,6 +799,13 @@ static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, m
 }
 
 static void mxsio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
+    // check the connection state
+    if (io->flags & MXIO_FLAG_SOCKET_CONNECTING) {
+        if (signals & MXSIO_SIGNAL_CONNECTED) {
+            io->flags &= ~MXIO_FLAG_SOCKET_CONNECTING;
+            io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
+        }
+    }
     uint32_t events = 0;
     if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
         if (signals & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) {
@@ -792,15 +815,14 @@ static void mxsio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) 
             events |= EPOLLOUT;
         }
     } else {
-        if (signals & (MXIO_SIGNAL_SOCKET_INCOMING_CONNECTION |
-                       MX_SIGNAL_PEER_CLOSED)) {
+        if (signals & (MXSIO_SIGNAL_INCOMING | MX_SIGNAL_PEER_CLOSED)) {
             events |= EPOLLIN;
         }
-        if (signals & MXIO_SIGNAL_SOCKET_OUTGOING_CONNECTION) {
+        if (signals & MXSIO_SIGNAL_OUTGOING) {
             events |= EPOLLOUT;
         }
     }
-    if (signals & MXIO_SIGNAL_SOCKET_ERROR) {
+    if (signals & MXSIO_SIGNAL_ERROR) {
         events |= EPOLLERR;
     }
     if (signals & MX_SIGNAL_PEER_CLOSED) {

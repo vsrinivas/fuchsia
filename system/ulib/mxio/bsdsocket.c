@@ -65,6 +65,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     r = io->ops->misc(io, MXRIO_CONNECT, 0, 0, (void*)addr, len);
     if (r == ERR_SHOULD_WAIT) {
         if (io->flags & MXIO_FLAG_NONBLOCK) {
+            io->flags |= MXIO_FLAG_SOCKET_CONNECTING;
             mxio_release(io);
             return ERRNO(EINPROGRESS);
         }
@@ -344,22 +345,6 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
 
     mx_status_t r;
     r = mxio_getsockopt(io, level, optname, optval, optlen);
-    // detect the end of the connecting phase
-    // TODO: use more reliable detection mechanism
-    if (r == NO_ERROR && !(io->flags & MXIO_FLAG_SOCKET_CONNECTED) &&
-        level == SOL_SOCKET && optname == SO_ERROR) {
-        uint32_t events = EPOLLOUT;
-        mx_handle_t h;
-        mx_signals_t sigs;
-        io->ops->wait_begin(io, events, &h, &sigs);
-        mx_status_t r1 = mx_handle_wait_one(h, sigs, 0, &sigs);
-        if (r1 == NO_ERROR || r1 == ERR_TIMED_OUT) {
-            io->ops->wait_end(io, sigs, &events);
-            if (events & EPOLLOUT) {
-                io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
-            }
-        }
-    }
     mxio_release(io);
 
     return STATUS(r);

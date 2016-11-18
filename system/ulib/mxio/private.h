@@ -44,13 +44,9 @@ typedef struct mxio_ops {
 #define MXIO_FLAG_SOCKET ((int32_t)1 << 1)
 #define MXIO_FLAG_EPOLL ((int32_t)1 << 2)
 #define MXIO_FLAG_WAITABLE ((int32_t)1 << 3)
-#define MXIO_FLAG_SOCKET_CONNECTED ((int32_t)1 << 4)
-#define MXIO_FLAG_NONBLOCK ((int32_t)1 << 5)
-
-// mxio signals
-#define MXIO_SIGNAL_SOCKET_INCOMING_CONNECTION MX_USER_SIGNAL_0
-#define MXIO_SIGNAL_SOCKET_OUTGOING_CONNECTION MX_USER_SIGNAL_1
-#define MXIO_SIGNAL_SOCKET_ERROR MX_USER_SIGNAL_2
+#define MXIO_FLAG_SOCKET_CONNECTING ((int32_t)1 << 4)
+#define MXIO_FLAG_SOCKET_CONNECTED ((int32_t)1 << 5)
+#define MXIO_FLAG_NONBLOCK ((int32_t)1 << 6)
 
 // The subset of mxio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.c ensure we aren't colliding.
