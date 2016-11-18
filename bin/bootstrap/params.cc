@@ -60,14 +60,19 @@ bool Params::Setup(const ftl::CommandLine& command_line) {
   // positional args
   const auto& positional_args = command_line.positional_args();
   if (positional_args.empty()) {
-    FTL_LOG(ERROR) << "Must specify application to run";
+    FTL_LOG(ERROR) << "Must specify application to run or '-' if none";
     return false;
   }
 
-  initial_launch_ = modular::ApplicationLaunchInfo::New();
-  initial_launch_->url = positional_args[0];
-  for (size_t i = 1; i < positional_args.size(); ++i)
-    initial_launch_->arguments.push_back(positional_args[i]);
+  if (positional_args[0] != "-") {
+    initial_launch_ = modular::ApplicationLaunchInfo::New();
+    initial_launch_->url = positional_args[0];
+    for (size_t i = 1; i < positional_args.size(); ++i)
+      initial_launch_->arguments.push_back(positional_args[i]);
+  } else if (positional_args.size() > 1) {
+    FTL_LOG(ERROR) << "Found excess arguments after '-'";
+    return false;
+  }
   return true;
 }
 

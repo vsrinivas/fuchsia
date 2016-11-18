@@ -44,7 +44,9 @@ App::App(Params* params)
   RegisterViewManager();
 
   // Launch application specified on command-line.
-  LaunchApplication(params->TakeInitialLaunch());
+  auto launch_info = params->TakeInitialLaunch();
+  if (launch_info)
+    LaunchApplication(std::move(launch_info));
 }
 
 App::~App() {}

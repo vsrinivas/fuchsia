@@ -23,6 +23,10 @@ environment.
 
     $ file:///system/apps/bootstrap [args...] <app url> <app args...>
 
+Bootstrap can also be run without any initial apps for debugging purposes.
+
+    $ file:///system/apps/bootstrap -
+
 ### Arguments
 
 Register additional services by providing service name and application url to launch:
