@@ -16,12 +16,12 @@
             "bootfs_path": "apps/dummy_user_shell"
         },
         {
-            "binary": "example_flutter_parent_module.flx",
-            "bootfs_path": "apps/example_flutter_parent_module"
+            "binary": "example_flutter_counter_child.flx",
+            "bootfs_path": "apps/example_flutter_counter_child"
         },
         {
-            "binary": "example_flutter_child_module.flx",
-            "bootfs_path": "apps/example_flutter_child_module"
+            "binary": "example_flutter_counter_parent.flx",
+            "bootfs_path": "apps/example_flutter_counter_parent"
         },
         {
             "binary": "example_module1",
