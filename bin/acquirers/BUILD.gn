@@ -9,6 +9,22 @@ group("acquirers") {
   ]
 }
 
+executable("focus") {
+  output_name = "acquirers/focus"
+
+  sources = [
+    "focus.cc",
+    "focus.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/context",
+    "//apps/modular/lib/app",
+    "//apps/modular/services/user",
+    "//lib/mtl",
+  ]
+}
+
 executable("gps") {
   output_name = "acquirers/gps"
 

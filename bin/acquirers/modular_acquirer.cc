@@ -71,7 +71,9 @@ class ModularAcquirerApp : public ModularAcquirer,
       tick_keep_alive_--;
     }
 
-    PublishModularState();
+    // TODO(afergan): Since focused_story_ids is actually modifying
+    // modular_state right now, do not modify the value here.
+    // PublishModularState();
 
     if (!tick_keep_alive_) {
       FTL_LOG(INFO) << "Modular acquirer off";

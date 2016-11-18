@@ -48,27 +48,27 @@ class ModuleSuggesterAgentApp : public maxwell::agents::ModuleSuggesterAgent,
 
       std::string module_suggestion;
 
-      if (modular_state == 0) {
+      if (modular_state > 0) {
         out_->Remove(kModuleSuggestionId);
       } else {
-          auto p = maxwell::suggestion::Proposal::New();
-          p->id = kModuleSuggestionId;
-          p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
-          auto d = maxwell::suggestion::Display::New();
+        auto p = maxwell::suggestion::Proposal::New();
+        p->id = kModuleSuggestionId;
+        p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
+        auto d = maxwell::suggestion::Display::New();
 
-          d->headline = kMailHeadline;
-          d->subheadline = "";
-          d->details = "";
-          d->color = 0x00aaaa00; // argb yellow
-          d->icon_urls = fidl::Array<fidl::String>::New(1);
-          d->icon_urls[0] = "";
-          d->image_url = "";
-          d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
+        d->headline = kMailHeadline;
+        d->subheadline = "";
+        d->details = "";
+        d->color = 0x00aaaa00;  // argb yellow
+        d->icon_urls = fidl::Array<fidl::String>::New(1);
+        d->icon_urls[0] = "";
+        d->image_url = "";
+        d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
 
-          p->display = std::move(d);
+        p->display = std::move(d);
 
-          out_->Propose(std::move(p));
-        }
+        out_->Propose(std::move(p));
+      }
     }
   }
 
