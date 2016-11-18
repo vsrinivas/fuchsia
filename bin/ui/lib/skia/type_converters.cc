@@ -62,6 +62,21 @@ mozart::RectF TypeConverter<mozart::RectF, SkRect>::Convert(
   return output;
 }
 
+SkRect TypeConverter<SkRect, mozart::RectFPtr>::Convert(
+    const mozart::RectFPtr& input) {
+  return SkRect::MakeXYWH(input->x, input->y, input->width, input->height);
+}
+
+mozart::RectFPtr TypeConverter<mozart::RectFPtr, SkRect>::Convert(
+    const SkRect& input) {
+  mozart::RectFPtr output = mozart::RectF::New();
+  output->x = input.x();
+  output->y = input.y();
+  output->width = input.width();
+  output->height = input.height();
+  return output;
+}
+
 SkRRect TypeConverter<SkRRect, mozart::RRectF>::Convert(
     const mozart::RRectF& input) {
   SkVector radii[4] = {

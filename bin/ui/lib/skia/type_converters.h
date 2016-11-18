@@ -53,6 +53,15 @@ struct TypeConverter<mozart::RectF, SkRect> {
 };
 
 template <>
+struct TypeConverter<SkRect, mozart::RectFPtr> {
+  static SkRect Convert(const mozart::RectFPtr& input);
+};
+template <>
+struct TypeConverter<mozart::RectFPtr, SkRect> {
+  static mozart::RectFPtr Convert(const SkRect& input);
+};
+
+template <>
 struct TypeConverter<SkRRect, mozart::RRectF> {
   static SkRRect Convert(const mozart::RRectF& input);
 };
