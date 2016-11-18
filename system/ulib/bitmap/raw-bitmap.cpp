@@ -79,7 +79,8 @@ void RawBitmap::Reset(size_t size) {
 }
 
 uint64_t RawBitmap::Scan(uint64_t bitoff, uint64_t bitmax, bool is_set) const {
-    bitmax = mxtl::min(bitmax, size_);
+    uint64_t size = static_cast<uint64_t> (size_);
+    bitmax = mxtl::min(bitmax, size);
     if (bitoff >= bitmax) {
         return bitmax;
     }
@@ -106,7 +107,8 @@ uint64_t RawBitmap::Scan(uint64_t bitoff, uint64_t bitmax, bool is_set) const {
 }
 
 bool RawBitmap::Get(uint64_t bitoff, uint64_t bitmax, uint64_t* first) const {
-    bitmax = mxtl::min(bitmax, size_);
+    uint64_t size = static_cast<uint64_t> (size_);
+    bitmax = mxtl::min(bitmax, size);
     uint64_t result = Scan(bitoff, bitmax, true);
     if (first) {
         *first = result;
