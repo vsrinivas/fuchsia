@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/compositor/render/render_frame.h"
 
-#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkPicture.h"

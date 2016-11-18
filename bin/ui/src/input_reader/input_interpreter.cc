@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/input_reader/input_interpreter.h"
 
-#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace mozart {

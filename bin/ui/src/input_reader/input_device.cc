@@ -15,7 +15,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "apps/mozart/src/input_reader/input_report.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"

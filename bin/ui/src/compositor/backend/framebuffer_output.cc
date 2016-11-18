@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/src/compositor/backend/framebuffer.h"
 #include "apps/mozart/src/compositor/render/render_frame.h"

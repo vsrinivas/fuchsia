@@ -4,7 +4,7 @@
 
 #include "apps/mozart/lib/view_framework/base_view.h"
 
-#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
 
@@ -77,7 +77,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
                               const OnInvalidationCallback& callback) {
   FTL_DCHECK(invalidation);
   FTL_DCHECK(invalidation->frame_info);
-  TRACE_EVENT0("ui", "OnInvalidation");
+  TRACE_EVENT0("view", "OnInvalidation");
 
   invalidated_ = false;
   frame_tracker_.Update(*invalidation->frame_info, ftl::TimePoint::Now());
@@ -87,7 +87,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
     FTL_DCHECK(invalidation->properties->display_metrics);
     FTL_DCHECK(invalidation->properties->view_layout);
     FTL_DCHECK(invalidation->properties->view_layout->size);
-    TRACE_EVENT0("ui", "OnPropertiesChanged");
+    TRACE_EVENT0("view", "OnPropertiesChanged");
 
     ViewPropertiesPtr old_properties = std::move(properties_);
     properties_ = std::move(invalidation->properties);
@@ -98,7 +98,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
     return;
 
   {
-    TRACE_EVENT0("ui", "OnLayout");
+    TRACE_EVENT0("view", "OnLayout");
     OnLayout();
   }
 
@@ -108,7 +108,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
   }
 
   {
-    TRACE_EVENT0("ui", "OnDraw");
+    TRACE_EVENT0("view", "OnDraw");
     OnDraw();
   }
 
@@ -120,14 +120,14 @@ void BaseView::OnChildAttached(uint32_t child_key,
                                const OnChildUnavailableCallback& callback) {
   FTL_DCHECK(child_view_info);
 
-  TRACE_EVENT1("ui", "OnChildAttached", "child_key", child_key);
+  TRACE_EVENT1("view", "OnChildAttached", "child_key", child_key);
   OnChildAttached(child_key, std::move(child_view_info));
   callback();
 }
 
 void BaseView::OnChildUnavailable(uint32_t child_key,
                                   const OnChildUnavailableCallback& callback) {
-  TRACE_EVENT1("ui", "OnChildUnavailable", "child_key", child_key);
+  TRACE_EVENT1("view", "OnChildUnavailable", "child_key", child_key);
   OnChildUnavailable(child_key);
   callback();
 }

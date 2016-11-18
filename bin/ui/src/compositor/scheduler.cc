@@ -4,7 +4,7 @@
 
 #include "apps/mozart/src/compositor/scheduler.h"
 
-#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace compositor {

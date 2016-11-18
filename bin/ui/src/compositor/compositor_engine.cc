@@ -8,7 +8,7 @@
 #include <sstream>
 #include <utility>
 
-#include "apps/mozart/glue/base/trace_event.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "apps/mozart/lib/skia/type_converters.h"
 #include "apps/mozart/services/composition/cpp/formatting.h"
 #include "apps/mozart/src/compositor/backend/framebuffer_output.h"

@@ -13,11 +13,11 @@ source_set("view_framework") {
   public_deps = [
     "//apps/modular/services/application",
     "//apps/modular/lib/app",
-    "//apps/mozart/glue/base",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/input",
     "//apps/mozart/services/views",
+    "//apps/tracing/lib/trace",
     "//lib/ftl",
     "//lib/fidl/cpp/bindings",
   ]
@@ -33,5 +33,6 @@ source_set("view_provider") {
 
   public_deps = [
     ":view_framework",
+    "//apps/tracing/lib/trace:provider",
   ]
 }

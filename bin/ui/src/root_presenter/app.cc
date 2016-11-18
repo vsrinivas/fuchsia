@@ -9,6 +9,7 @@
 #include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/src/root_presenter/presentation.h"
+#include "apps/tracing/lib/trace/provider.h"
 #include "lib/ftl/logging.h"
 
 namespace root_presenter {
@@ -17,6 +18,8 @@ App::App(const ftl::CommandLine& command_line)
     : application_context_(
           modular::ApplicationContext::CreateFromStartupInfo()) {
   FTL_DCHECK(application_context_);
+
+  tracing::InitializeTracer(application_context_.get(), "root_presenter", {});
 
   application_context_->outgoing_services()->AddService<mozart::Presenter>(
       [this](fidl::InterfaceRequest<mozart::Presenter> request) {

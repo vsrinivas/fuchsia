@@ -17,8 +17,8 @@ source_set("input_reader") {
   ]
 
   deps = [
-    "//apps/mozart/glue/base",
     "//apps/mozart/services/input",
+    "//apps/tracing/lib/trace",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
   ]

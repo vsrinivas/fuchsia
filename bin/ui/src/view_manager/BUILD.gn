@@ -40,12 +40,12 @@ source_set("lib") {
 
   public_deps = [
     "//apps/modular/lib/app",
-    "//apps/mozart/glue/base",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/geometry/cpp",
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
+    "//apps/tracing/lib/trace:provider",
     "//lib/ftl",
     "//lib/mtl",
     "//lib/fidl/cpp/bindings",

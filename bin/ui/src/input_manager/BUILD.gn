@@ -19,7 +19,6 @@ executable("input_manager") {
 
   deps = [
     "//apps/modular/lib/app",
-    "//apps/mozart/glue/base",
     "//apps/mozart/lib/view_associate_framework",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
@@ -28,6 +27,7 @@ executable("input_manager") {
     "//apps/mozart/services/input",
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/services/views",
+    "//apps/tracing/lib/trace:provider",
     "//lib/ftl",
     "//lib/mtl",
     "//lib/fidl/cpp/bindings",

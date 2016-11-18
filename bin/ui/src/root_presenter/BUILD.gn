@@ -13,7 +13,6 @@ executable("root_presenter") {
 
   deps = [
     "//apps/modular/lib/app",
-    "//apps/mozart/glue/base",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/composition/cpp",
     "//apps/mozart/services/input",
@@ -21,6 +20,7 @@ executable("root_presenter") {
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
     "//apps/mozart/src/input_reader",
+    "//apps/tracing/lib/trace:provider",
     "//lib/ftl",
     "//lib/mtl",
     "//lib/fidl/cpp/bindings",

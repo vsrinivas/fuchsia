@@ -5,7 +5,6 @@
 group("mozart") {
   deps = [
     "examples",
-    "glue/base",
     "lib/skia",
     "lib/view_associate_framework",
     "lib/view_framework",

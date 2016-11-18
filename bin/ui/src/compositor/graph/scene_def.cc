@@ -174,8 +174,7 @@ ftl::RefPtr<const Resource> SceneDef::CreateResource(
     ftl::RefPtr<RenderImage> image = RenderImage::CreateFromImage(
         std::move(image_decl), universe->buffer_consumer());
     if (!image) {
-      err << "ImageResource is invalid: resource_id=" << resource_id
-          << ", decl=" << image_decl;
+      err << "ImageResource is invalid: resource_id=" << resource_id;
       return nullptr;
     }
     return ftl::MakeRefCounted<ImageResource>(std::move(image));
