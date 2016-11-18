@@ -132,7 +132,7 @@ class {{class_name}}_{{method.name}}_ProxyToResponder {
     // the pipe so the calling application knows to stop waiting for a reply.
     if (callback_was_dropped) {
       delete responder_;
-      FTL_DCHECK(true)  << "The callback passed to "
+      FTL_DCHECK(false) << "The callback passed to "
           "{{class_name}}::{{method.name}}({%- if method.parameters -%}{{pass_params(method.parameters)}}, {% endif -%}callback) "
           "was never run.";
     }
