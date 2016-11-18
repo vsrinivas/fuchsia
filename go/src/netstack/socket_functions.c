@@ -51,6 +51,11 @@ static void schedule_sigconn_w(iostate_t* ios) {
 
 static void schedule_rw(iostate_t* ios) {
   debug("schedule_rw\n");
+  mx_status_t r =
+    mx_object_signal_peer(ios->s, 0u, MXSIO_SIGNAL_CONNECTED);
+  if (r < 0)
+    error("schedule_rw: mx_object_signal_peer failed (%d)\n", r);
+
   fd_event_set(ios->sockfd, EVENT_READ);
   wait_queue_put(WAIT_NET, ios->sockfd, request_pack(MXRIO_READ, 0, NULL, ios));
 
@@ -345,7 +350,7 @@ mx_status_t do_sigconn_w(mxrio_msg_t* msg, iostate_t* ios, int events,
                          mx_signals_t signals) {
   debug_net("do_sigconn_w: events=0x%x\n", events);
   mx_status_t r =
-      mx_object_signal_peer(ios->s, 0u, MXIO_SIGNAL_SOCKET_OUTGOING_CONNECTION);
+      mx_object_signal_peer(ios->s, 0u, MXSIO_SIGNAL_OUTGOING);
   debug_always("mx_object_signal_peer(set) => %d\n", r);
   int val;
   socklen_t vallen = sizeof(val);
@@ -395,8 +400,7 @@ mx_status_t do_listen(mxrio_msg_t* msg, iostate_t* ios, int events,
 mx_status_t do_sigconn_r(mxrio_msg_t* msg, iostate_t* ios, int events,
                          mx_signals_t signals) {
   debug_net("do_sigconn_r: events=0x%x\n", events);
-  mx_status_t r =
-      mx_object_signal_peer(ios->s, 0u, MXIO_SIGNAL_SOCKET_INCOMING_CONNECTION);
+  mx_status_t r = mx_object_signal_peer(ios->s, 0u, MXSIO_SIGNAL_INCOMING);
   debug_always("mx_object_signal_peer(set) => %d\n", r);
   return NO_ERROR;
 }
@@ -413,7 +417,7 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  mx_status_t r = mx_object_signal_peer(ios->s, MX_USER_SIGNAL_0, 0u);
+  mx_status_t r = mx_object_signal_peer(ios->s, MXSIO_SIGNAL_INCOMING, 0u);
   debug_always("mx_object_signal_peer(clear) => %d\n", r);
   schedule_sigconn_r(ios);
 
