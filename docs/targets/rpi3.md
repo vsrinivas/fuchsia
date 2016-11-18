@@ -1,3 +1,12 @@
+Building the image
+
+1. from within the magenta source directory:
+
+'make rpi3-test'
+
+2. the location of the resulting binary (to be used in following step):
+
+'./build-rpi3-test/magenta.bin'
 
 In order to boot on Raspberry Pi3 you will need an sd card with the following:
 
