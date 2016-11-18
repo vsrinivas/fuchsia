@@ -239,6 +239,10 @@ int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize,
     return 0;
 }
 
+int bcache_close(bcache_t* bc) {
+    return close(bc->fd);
+}
+
 #ifndef __Fuchsia__
 // This is used by the ioctl wrappers in magenta/device/device.h. It's not
 // called by host tools, so just satisfy the linker with a stub.

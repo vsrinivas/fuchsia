@@ -13,6 +13,7 @@
 #include <mxio/util.h>
 #include <mxio/vfs.h>
 
+#include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
@@ -257,12 +258,30 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
 
-        ssize_t r = vn->ops->ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
-        if (r >= 0) {
-            msg->arg2.off = 0;
-            msg->datalen = r;
+        // TODO(smklein): Converge with core/devmgr/vfs.c's vfs_do_ioctl
+        switch (msg->arg2.op) {
+            case IOCTL_DEVMGR_MOUNT_FS: {
+                printf("MinFS Cannot yet mount filesystems\n");
+                return ERR_NOT_SUPPORTED;
+            }
+            case IOCTL_DEVMGR_UNMOUNT_NODE: {
+                printf("MinFS Cannot yet mount (or unmount) filesystems\n");
+                return ERR_NOT_SUPPORTED;
+            }
+            case IOCTL_DEVMGR_UNMOUNT_FS: {
+                vn->ops->ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
+                mx_handle_close(rh);
+                exit(0);
+            }
+            default: {
+                ssize_t r = vn->ops->ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
+                if (r >= 0) {
+                    msg->arg2.off = 0;
+                    msg->datalen = r;
+                }
+                return r;
+            }
         }
-        return r;
     }
     case MXRIO_TRUNCATE: {
         if (msg->arg2.off < 0) {

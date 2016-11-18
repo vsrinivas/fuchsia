@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include <magenta/device/devmgr.h>
 #include <mxio/vfs.h>
 
 #include "minfs-private.h"
@@ -851,7 +852,18 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
 
 static ssize_t fs_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
                         size_t in_len, void* out_buf, size_t out_len) {
-    return ERR_NOT_SUPPORTED;
+    switch (op) {
+        case IOCTL_DEVMGR_UNMOUNT_FS: {
+            mx_status_t status = vn->ops->sync(vn);
+            if (status != NO_ERROR) {
+                error("minfs unmount failed to sync; unmounting anyway: %d\n", status);
+            }
+            return minfs_unmount(vn->fs);
+        }
+        default: {
+            return ERR_NOT_SUPPORTED;
+        }
+    }
 }
 
 static mx_status_t fs_unlink(vnode_t* vn, const char* name, size_t len) {

@@ -327,6 +327,10 @@ mx_status_t minfs_mount(vnode_t** out, bcache_t* bc) {
     return NO_ERROR;
 }
 
+mx_status_t minfs_unmount(minfs_t* fs) {
+    return bcache_close(fs->bc);
+}
+
 int minfs_mkfs(bcache_t* bc) {
     uint32_t blocks = bcache_max_block(bc);
     uint32_t inodes = 32768;

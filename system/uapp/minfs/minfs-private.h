@@ -74,6 +74,8 @@ mx_status_t minfs_check(bcache_t* bc);
 
 mx_status_t minfs_mount(vnode_t** root_out, bcache_t* bc);
 
+mx_status_t minfs_unmount(minfs_t* fs);
+
 mx_status_t minfs_get_vnode(minfs_t* fs, vnode_t** out, uint32_t ino);
 
 void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent);

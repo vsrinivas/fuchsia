@@ -90,6 +90,7 @@ typedef struct bcache bcache_t;
 typedef struct block block_t;
 
 int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize, uint32_t num);
+int bcache_close(bcache_t* bc);
 
 #define BLOCK_DIRTY 1
 
