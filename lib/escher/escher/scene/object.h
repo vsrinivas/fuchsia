@@ -26,11 +26,14 @@ class Object {
   static Object NewRect(const vec2& position,
                         const vec2& size,
                         float z,
-                        const MaterialPtr& material);
+                        MaterialPtr material);
   static Object NewCircle(const vec2& center,
                           float radius,
                           float z,
-                          const MaterialPtr& material);
+                          MaterialPtr material);
+  static Object NewFromMesh(MeshPtr mesh,
+                            const vec3& position,
+                            MaterialPtr material);
 
   float width() const { return size_.x; }
   float height() const { return size_.y; }

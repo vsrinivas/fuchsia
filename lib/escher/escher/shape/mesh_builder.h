@@ -23,10 +23,11 @@ class MeshBuilder : public ftl::RefCountedThreadSafe<MeshBuilder> {
   // GPU when Build() is called.
   MeshBuilder& AddIndex(uint32_t index);
 
-  // Copy |size| bytes of data to the staging buffer..
-  MeshBuilder& AddData(const void* ptr, size_t size);
+  // Copy |size| bytes of data to the staging buffer; this data represents a
+  // single vertex.
+  MeshBuilder& AddVertexData(const void* ptr, size_t size);
 
-  // Wrap AddData() to automatically obtain the size from the vertex.
+  // Wrap AddVertexData() to automatically obtain the size from the vertex.
   template <typename VertexT>
   MeshBuilder& AddVertex(const VertexT& v);
 
@@ -66,7 +67,7 @@ inline MeshBuilder& MeshBuilder::AddIndex(uint32_t index) {
   return *this;
 }
 
-inline MeshBuilder& MeshBuilder::AddData(const void* ptr, size_t size) {
+inline MeshBuilder& MeshBuilder::AddVertexData(const void* ptr, size_t size) {
   FTL_DCHECK(vertex_count_ < max_vertex_count_);
   FTL_DCHECK(size <= vertex_stride_);
   size_t offset = vertex_stride_ * vertex_count_++;
@@ -76,7 +77,7 @@ inline MeshBuilder& MeshBuilder::AddData(const void* ptr, size_t size) {
 
 template <typename VertexT>
 MeshBuilder& MeshBuilder::AddVertex(const VertexT& v) {
-  AddData(&v, sizeof(VertexT));
+  AddVertexData(&v, sizeof(VertexT));
   return *this;
 }
 

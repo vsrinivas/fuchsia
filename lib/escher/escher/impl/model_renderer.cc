@@ -206,7 +206,7 @@ MeshPtr ModelRenderer::CreateCircle() {
   spec.flags |= MeshAttributeFlagBits::kPosition;
   spec.flags |= MeshAttributeFlagBits::kUV;
 
-  return TessellateCircle(mesh_manager_, spec, 4, vec2(0.5f, 0.5f), 0.5f);
+  return NewCircleMesh(mesh_manager_, spec, 4, vec2(0.5f, 0.5f), 0.5f);
 }
 
 TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {

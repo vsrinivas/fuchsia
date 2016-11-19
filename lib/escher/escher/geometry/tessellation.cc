@@ -28,19 +28,121 @@ void Tessellation::SanityCheck() const {
       [vertex_count](size_t index) { return index < vertex_count; }));
 }
 
-MeshPtr TessellateCircle(MeshBuilderFactory* factory,
-                         const MeshSpec& spec,
-                         int subdivisions,
-                         vec2 center,
-                         float radius) {
+MeshPtr NewCircleMesh(MeshBuilderFactory* factory,
+                      const MeshSpec& spec,
+                      int subdivisions,
+                      vec2 center,
+                      float radius,
+                      float offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FTL_DCHECK(subdivisions >= 0);
-  size_t circle_vertex_count = 4;
-  while (subdivisions-- > 0)
-    circle_vertex_count *= 2;
+  size_t outer_vertex_count = 4;
+  while (subdivisions-- > 0) {
+    outer_vertex_count *= 2;
+  }
 
-  auto builder = factory->NewMeshBuilder(spec, circle_vertex_count,
-                                         circle_vertex_count * 3 - 6);
+  size_t vertex_count = outer_vertex_count + 1;  // Add 1 for center vertex.
+  size_t index_count = outer_vertex_count * 3;
+
+  auto builder = factory->NewMeshBuilder(spec, vertex_count, index_count);
+
+  // Generate vertex positions.
+  constexpr size_t kMaxVertexSize = 100;
+  uint8_t vertex[kMaxVertexSize];
+  FTL_CHECK(builder->vertex_stride() <= kMaxVertexSize);
+
+  vec2* pos = nullptr;
+  vec2* uv = nullptr;
+  vec2* pos_offset = nullptr;
+  float* perim = nullptr;
+
+  // Compute the offset of each vertex attribute.  While we're at it, set the
+  // values for the circle's center vertex.
+  if (spec.flags & MeshAttributeFlagBits::kPosition) {
+    pos = reinterpret_cast<vec2*>(
+        vertex + builder->GetAttributeOffset(MeshAttributeFlagBits::kPosition));
+    *pos = center;
+  }
+  if (spec.flags & MeshAttributeFlagBits::kUV) {
+    uv = reinterpret_cast<vec2*>(
+        vertex + builder->GetAttributeOffset(MeshAttributeFlagBits::kUV));
+    *uv = vec2(0.5f, 0.5f);
+  }
+  if (spec.flags & MeshAttributeFlagBits::kPositionOffset) {
+    pos_offset = reinterpret_cast<vec2*>(
+        vertex +
+        builder->GetAttributeOffset(MeshAttributeFlagBits::kPositionOffset));
+    *pos_offset = vec2(0.f, 0.f);
+  }
+  if (spec.flags & MeshAttributeFlagBits::kPerimeter) {
+    perim = reinterpret_cast<float*>(
+        vertex +
+        builder->GetAttributeOffset(MeshAttributeFlagBits::kPerimeter));
+    // TODO: This is an undesirable singularity.  Perhaps it would be better to
+    // treat circles as a ring with inner radius of zero?
+    *perim = 0.f;
+  }
+  builder->AddVertexData(vertex, builder->vertex_stride());
+
+  // Compute attributes for each of the circle's outer vertices.
+  const float outer_vertex_count_reciprocal = 1.f / outer_vertex_count;
+  const float radian_step = 2 * M_PI / outer_vertex_count;
+  for (size_t i = 0; i < outer_vertex_count; ++i) {
+    float radians = i * radian_step;
+
+    // Direction of the current vertex from the center of the circle.
+    vec2 dir(sin(radians), cos(radians));
+
+    if (pos) {
+      *pos = dir * radius + center;
+    }
+    if (uv) {
+      *uv = 0.5f * (dir + vec2(1.f, 1.f));
+    }
+    if (pos_offset) {
+      *pos_offset = dir * offset_magnitude;
+    }
+    if (perim) {
+      *perim = i * outer_vertex_count_reciprocal;
+    }
+
+    builder->AddVertexData(vertex, builder->vertex_stride());
+  }
+
+  // Generate vertex indices.
+  for (size_t i = 1; i < outer_vertex_count; ++i) {
+    builder->AddIndex(0);
+    builder->AddIndex(i + 1);
+    builder->AddIndex(i);
+  }
+  builder->AddIndex(0);
+  builder->AddIndex(1);
+  builder->AddIndex(outer_vertex_count);
+
+  auto mesh = builder->Build();
+  FTL_DCHECK(mesh->num_indices == index_count);
+  return mesh;
+}
+
+MeshPtr NewRingMesh(MeshBuilderFactory* factory,
+                    const MeshSpec& spec,
+                    int subdivisions,
+                    vec2 center,
+                    float outer_radius,
+                    float inner_radius,
+                    float outer_offset_magnitude,
+                    float inner_offset_magnitude) {
+  // Compute the number of vertices in the tessellated circle.
+  FTL_DCHECK(subdivisions >= 0);
+  size_t outer_vertex_count = 4;
+  while (subdivisions-- > 0) {
+    outer_vertex_count *= 2;
+  }
+
+  size_t vertex_count = outer_vertex_count * 2;
+  size_t index_count = outer_vertex_count * 6;
+
+  auto builder = factory->NewMeshBuilder(spec, vertex_count, index_count);
 
   // Generate vertex positions.
   constexpr size_t kMaxVertexSize = 100;
@@ -71,58 +173,59 @@ MeshPtr TessellateCircle(MeshBuilderFactory* factory,
         builder->GetAttributeOffset(MeshAttributeFlagBits::kPerimeter));
   }
 
-  const float radian_step = 2 * M_PI / circle_vertex_count;
-  for (size_t i = 0; i < circle_vertex_count; ++i) {
+  const float outer_vertex_count_reciprocal = 1.f / outer_vertex_count;
+  const float radian_step = 2 * M_PI / outer_vertex_count;
+  for (size_t i = 0; i < outer_vertex_count; ++i) {
     float radians = i * radian_step;
 
     // Direction of the current vertex from the center of the circle.
     vec2 dir(sin(radians), cos(radians));
 
+    // Build outer-ring vertex.
     if (pos) {
-      *pos = dir * radius + center;
+      *pos = dir * outer_radius + center;
     }
     if (uv) {
-      *uv = vec2(sin(radians) * 0.5f + 0.5f, cos(radians) * 0.5f + 0.5f);
+      *uv = 0.5f * (dir + vec2(1.f, 1.f));
     }
     if (pos_offset) {
-      *pos_offset = dir;
+      *pos_offset = dir * outer_offset_magnitude;
     }
     if (perim) {
-      *perim = i * (1.f / circle_vertex_count);
+      *perim = i * outer_vertex_count_reciprocal;
     }
+    builder->AddVertexData(vertex, builder->vertex_stride());
 
-    builder->AddData(vertex, builder->vertex_stride());
+    // Build inner-ring vertex.  Only the position and offset may differ from
+    // the corresponding outer-ring vertex.
+    if (pos) {
+      *pos = dir * inner_radius + center;
+    }
+    if (pos_offset) {
+      // Positive offsets point inward, toward the center of the circle.
+      *pos_offset = dir * -inner_offset_magnitude;
+    }
+    builder->AddVertexData(vertex, builder->vertex_stride());
   }
 
   // Generate vertex indices.
-  // Tesselate outer edge of circle, working inward.  Every second vertex
-  // becomes the outer point of a triangle, and is not made available to the
-  // next iteration.  As a result, each successive iteration has half as many
-  // indices to process, exactly as if 'subdivisions - 1' had been passed as
-  // the argument to this function.
-  std::vector<uint16_t> circle_indices;
-  std::vector<uint16_t> half_of_circle_indices;
-  circle_indices.reserve(circle_vertex_count);
-  half_of_circle_indices.reserve(circle_vertex_count / 2);
-  for (size_t i = 0; i < circle_vertex_count; ++i) {
-    circle_indices.push_back(i);
+  for (size_t i = 2; i < vertex_count; i += 2) {
+    builder->AddIndex(i - 2);
+    builder->AddIndex(i - 1);
+    builder->AddIndex(i);
+    builder->AddIndex(i);
+    builder->AddIndex(i - 1);
+    builder->AddIndex(i + 1);
   }
-  while (circle_indices.size() > 2) {
-    for (size_t i = 0; i < circle_indices.size(); i += 2) {
-      builder->AddIndex(circle_indices[(i + 1) % circle_indices.size()]);
-      builder->AddIndex(circle_indices[i]);
-      builder->AddIndex(circle_indices[(i + 2) % circle_indices.size()]);
-
-      // Keep half of the indices (every second one) for the next iteration.
-      half_of_circle_indices.push_back(circle_indices[i]);
-    }
-    std::swap(circle_indices, half_of_circle_indices);
-    half_of_circle_indices.clear();
-  }
-  FTL_DCHECK(circle_indices.size() == 2);
+  builder->AddIndex(vertex_count - 2);
+  builder->AddIndex(vertex_count - 1);
+  builder->AddIndex(0);
+  builder->AddIndex(0);
+  builder->AddIndex(vertex_count - 1);
+  builder->AddIndex(1);
 
   auto mesh = builder->Build();
-  FTL_DCHECK(mesh->num_indices == circle_vertex_count * 3 - 6);
+  FTL_DCHECK(mesh->num_indices == index_count);
   return mesh;
 }
 

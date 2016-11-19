@@ -8,6 +8,7 @@
 
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
+#include "escher/geometry/tessellation.h"
 #include "escher/geometry/types.h"
 #include "escher/material/material.h"
 #include "escher/renderer/paper_renderer.h"
@@ -71,6 +72,8 @@ int main(int argc, char** argv) {
 
     auto yellow = ftl::MakeRefCounted<escher::Material>();
     yellow->set_color(vec3(0.937f, 0.886f, 0.184f));
+    auto red = ftl::MakeRefCounted<escher::Material>();
+    red->set_color(vec3(0.937f, 0.1, 0.184f));
     auto purple = ftl::MakeRefCounted<escher::Material>(checkerboard);
     purple->set_color(vec3(0.588f, 0.239f, 0.729f));
 
@@ -79,7 +82,20 @@ int main(int argc, char** argv) {
     escher::Object rectangle(escher::Object::NewRect(
         vec2(12.f, 300.f), vec2(1000.f, 300.f), 6.f, purple));
 
-    std::vector<escher::Object> objects{circle, rectangle};
+    escher::MeshSpec spec{escher::MeshAttributeFlagBits::kPosition |
+                          escher::MeshAttributeFlagBits::kPositionOffset |
+                          escher::MeshAttributeFlagBits::kPerimeter |
+                          escher::MeshAttributeFlagBits::kUV};
+    auto mesh = escher::NewRingMesh(&escher, spec, 8, vec2(0.f, 0.f), 200.f,
+                                    150.f, 20.f, -20.f);
+    escher::Object ring(
+        escher::Object::NewFromMesh(mesh, vec3(512.f, 512.f, 4.f), red));
+
+    mesh = escher::NewCircleMesh(&escher, spec, 8, vec2(0.f, 0.f), 100.f, 20.f);
+    escher::Object circle2(
+        escher::Object::NewFromMesh(mesh, vec3(512.f, 512.f, 4.f), red));
+
+    std::vector<escher::Object> objects{circle, rectangle, ring, circle2};
     escher::Model model(objects);
 
     while (!glfwWindowShouldClose(demo->GetWindow())) {

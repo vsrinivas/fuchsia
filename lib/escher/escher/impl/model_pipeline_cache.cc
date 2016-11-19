@@ -44,6 +44,38 @@ constexpr char g_vertex_src[] = R"GLSL(
   }
   )GLSL";
 
+constexpr char g_wobble_vertex_src[] = R"GLSL(
+    #version 450
+    #extension GL_ARB_separate_shader_objects : enable
+
+    // Attribute locations must match constants in mesh_impl.h
+    layout(location = 0) in vec2 inPosition;
+    layout(location = 1) in vec2 inPositionOffset;
+    layout(location = 2) in vec2 inUV;
+    layout(location = 3) in float inPerimeter;
+
+    layout(location = 0) out vec2 fragUV;
+
+    layout(set = 1, binding = 0) uniform PerObject {
+      mat4 transform;
+      vec4 color;
+    };
+
+    out gl_PerVertex {
+      vec4 gl_Position;
+    };
+
+    void main() {
+      // Halfway between min and max depth.
+      float scale = sin(16.f * 2.f * 3.14159 * inPerimeter);
+      gl_Position = transform * vec4(inPosition + scale * inPositionOffset, 0, 1);
+
+      // Divide by 25 to convert 'Material Stage' depth to range 0-1.
+      gl_Position.z *= 0.04;
+      fragUV = inUV;
+    }
+    )GLSL";
+
 constexpr char g_fragment_src[] = R"GLSL(
   #version 450
   #extension GL_ARB_separate_shader_objects : enable
@@ -109,9 +141,30 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
     const MeshSpecImpl& mesh_spec_impl) {
   // TODO: create customized pipelines for different shapes/materials/etc.
 
-  auto vertex_spirv_future =
-      compiler_.Compile(vk::ShaderStageFlagBits::eVertex, {{g_vertex_src}},
-                        std::string(), "main");
+  std::future<SpirvData> vertex_spirv_future;
+
+  MeshSpec default_spec{MeshAttributeFlagBits::kPosition |
+                        MeshAttributeFlagBits::kUV};
+  MeshSpec wobble_spec{MeshAttributeFlagBits::kPosition |
+                       MeshAttributeFlagBits::kPositionOffset |
+                       MeshAttributeFlagBits::kPerimeter |
+                       MeshAttributeFlagBits::kUV};
+
+  bool use_wobble = false;
+  if (spec.mesh_spec == default_spec) {
+    use_wobble = false;
+    vertex_spirv_future =
+        compiler_.Compile(vk::ShaderStageFlagBits::eVertex, {{g_vertex_src}},
+                          std::string(), "main");
+  } else if (spec.mesh_spec == wobble_spec) {
+    use_wobble = true;
+    vertex_spirv_future =
+        compiler_.Compile(vk::ShaderStageFlagBits::eVertex,
+                          {{g_wobble_vertex_src}}, std::string(), "main");
+  } else {
+    FTL_CHECK(false);
+  }
+
   auto fragment_spirv_future =
       compiler_.Compile(vk::ShaderStageFlagBits::eFragment, {{g_fragment_src}},
                         std::string(), "main");
@@ -205,7 +258,8 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
   rasterizer.rasterizerDiscardEnable = false;
   rasterizer.polygonMode = vk::PolygonMode::eFill;
   rasterizer.lineWidth = 1.0f;
-  rasterizer.cullMode = vk::CullModeFlagBits::eBack;
+  rasterizer.cullMode =
+      use_wobble ? vk::CullModeFlagBits::eBack : vk::CullModeFlagBits::eBack;
   rasterizer.frontFace = vk::FrontFace::eClockwise;
   rasterizer.depthBiasEnable = false;
 
