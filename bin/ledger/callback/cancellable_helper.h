@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include "apps/ledger/src/callback/cancellable.h"
+#include "lib/ftl/logging.h"
 
 namespace callback {
 
@@ -17,14 +18,17 @@ template <typename T>
 class LambdaPostRunWrapper {
  public:
   LambdaPostRunWrapper(T func, std::function<void()> callback)
-      : func_(std::move(func)), callback_(std::move(callback)) {}
+      : func_(std::move(func)), callback_(std::move(callback)) {
+    FTL_DCHECK(callback_);
+  }
 
   template <typename... ArgType,
             typename std::enable_if<!std::is_void<typename std::result_of<
                 T(ArgType...)>::type>::value>::type* = nullptr>
   auto operator()(ArgType&&... args) const {
+    auto callback = std::move(callback_);
     auto result = func_(std::forward<ArgType>(args)...);
-    callback_();
+    callback();
     return result;
   }
 
@@ -32,8 +36,9 @@ class LambdaPostRunWrapper {
             typename std::enable_if<std::is_void<typename std::result_of<
                 T(ArgType...)>::type>::value>::type* = nullptr>
   void operator()(ArgType&&... args) const {
+    auto callback = std::move(callback_);
     func_(std::forward<ArgType>(args)...);
-    callback_();
+    callback();
   }
 
  private:
