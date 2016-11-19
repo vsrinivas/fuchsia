@@ -5,7 +5,8 @@
     "labels": [
         "//magma:magma_service_driver",
         "//magma:magma_service_driver_test",
-        "//magma:magma_tests"
+        "//magma:magma_tests",
+        "//magma:mesa_tests"
     ],
     "binaries": [
         {
@@ -17,12 +18,40 @@
             "bootfs_path": "lib/driver/msd-intel-gen-test.so"
         },
         {
-            "binary": "magma_app_unit_tests",
-            "bootfs_path": "bin/magma_app_unit_tests"
+            "binary": "x64-shared/libmagma.so",
+            "bootfs_path": "lib/libmagma.so"
+        },
+        {
+            "binary": "x64-shared/libvulkan.so",
+            "bootfs_path": "lib/libvulkan.so"
         },
         {
             "binary": "magma_sys_unit_tests",
-            "bootfs_path": "bin/magma_sys_unit_tests"
+            "bootfs_path": "test/magma_sys_unit_tests"
+        },
+        {
+            "binary": "magma_sys_abi_conformance_tests",
+            "bootfs_path": "test/magma_sys_abi_conformance_tests"
+        },
+        {
+            "binary": "vkreadback",
+            "bootfs_path": "test/vkreadback"
+        },
+        {
+            "binary": "test_wsi_magma",
+            "bootfs_path": "test/test_wsi_magma"
+        },
+        {
+            "binary": "state_pool",
+            "bootfs_path": "test/state_pool"
+        },
+        {
+            "binary": "state_pool_free_list_only",
+            "bootfs_path": "test/state_pool_free_list_only"
+        },
+        {
+            "binary": "state_pool_no_free",
+            "bootfs_path": "test/state_pool_no_free"
         }
     ]
 }
