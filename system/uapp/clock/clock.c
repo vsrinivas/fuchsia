@@ -2,58 +2,90 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magenta/device/rtc.h>
+
 #include <fcntl.h>
+#include <getopt.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-#include <mxio/io.h>
-#include <mxio/util.h>
-
-#include <magenta/syscalls.h>
-
-#define  VT_ESC "\033"
-#define  SAVE_CUR  VT_ESC "7"
-#define  REST_CUR  VT_ESC "8"
-#define  MOVE_CUR  VT_ESC "[%d;%df"
-
-void print_at(const char* text, int v, int h) {
-    static char buf[64] = {0};
-    if (!text)
-        return;
-    int s = snprintf(buf, sizeof(buf), SAVE_CUR MOVE_CUR "%s" REST_CUR, v, h, text);
-    if (s < 0)
-        return;
-    write(STDOUT_FILENO, buf, s);
+int usage(const char* cmd) {
+    fprintf(
+        stderr,
+        "Interact with the real-time clock:\n"
+        "   %s                              Print the time\n"
+        "   %s --set YYYY-mm-ddThh:mm:ss    Set the time\n",
+        cmd,
+        cmd);
+    return -1;
 }
 
-char* get_rtc_time(int fd) {
-    static char time[12] = {0};
-    int r = read(fd, time, sizeof(time));
-    return (r > 1) ? time : NULL;
+int open_rtc(int mode) {
+    int rtc_fd = open("/dev/misc/rtc", mode);
+    if (rtc_fd < 0) {
+        printf("Can not open RTC device\n");
+    }
+    return rtc_fd;
 }
 
-char* gen_text(char* time) {
-    static char buf[16];
-    snprintf(buf, sizeof(buf), "[%s]", time);
-    return buf;
+int print_rtc(void) {
+    int rtc_fd = open_rtc(O_RDONLY);
+    if (rtc_fd < 0) {
+        return -1;
+    }
+    rtc_t rtc;
+    ssize_t n = ioctl_rtc_get(rtc_fd, &rtc);
+    if (n < (ssize_t)sizeof(rtc_t)) {
+        return -1;
+    }
+    printf(
+        "%04d-%02d-%02dT%02d:%02d:%02d\n",
+        rtc.year,
+        rtc.month,
+        rtc.day,
+        rtc.hours,
+        rtc.minutes,
+        rtc.seconds);
+    return 0;
+}
+
+int set_rtc(const char* time) {
+    rtc_t rtc;
+    int n = sscanf(
+        time,
+        "%04hd-%02hhd-%02hhdT%02hhd:%02hhd:%02hhd",
+        &rtc.year,
+        &rtc.month,
+        &rtc.day,
+        &rtc.hours,
+        &rtc.minutes,
+        &rtc.seconds);
+    if (n != 6) {
+        return -1;
+    }
+    int rtc_fd = open_rtc(O_WRONLY);
+    if (rtc_fd < 0) {
+        return -1;
+    }
+    return ioctl_rtc_set(rtc_fd, &rtc);
 }
 
 int main(int argc, char** argv) {
-    printf("=@ clock @=\n");
-
-    int rtc_fd = open("/dev/misc/rtc", O_RDONLY);
-    if (rtc_fd < 0) {
-        printf("cannot open rtc device\n");
-        return -1;
+    const char* cmd = basename(argv[0]);
+    struct option opts[] = {
+        {"set", required_argument, NULL, 's'},
+        {0},
+    };
+    for (int opt; (opt = getopt_long(argc, argv, "", opts, NULL)) != -1;) {
+        switch (opt) {
+        case 's':
+            return set_rtc(optarg);
+        default:
+            return usage(cmd);
+        }
     }
-
-    for (;;) {
-        char* time = get_rtc_time(rtc_fd);
-        if (time)
-            print_at(gen_text(time), 1, 50);
-        mx_nanosleep(MX_SEC(1));
+    if (argc != 1) {
+        return usage(cmd);
     }
-
-    return 0;
+    return print_rtc();
 }

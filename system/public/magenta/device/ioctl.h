@@ -35,6 +35,7 @@
 #define IOCTL_FAMILY_BT_HCI         0x1C
 #define IOCTL_FAMILY_SYSINFO        0x1D
 #define IOCTL_FAMILY_GPU            0x1E
+#define IOCTL_FAMILY_RTC            0x1F  // ioctls for RTC
 
 // IOCTL constructor
 // --K-FFNN

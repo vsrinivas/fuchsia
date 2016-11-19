@@ -5,20 +5,23 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/rtc.h>
 #include <hw/inout.h>
 
-#include <assert.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
-#include <stdio.h>
+
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 #define RTC_IO_BASE 0x70
 #define RTC_NUM_IO_REGISTERS 8
 
 #define RTC_IDX_REG 0x70
 #define RTC_DATA_REG 0x71
+
+static mtx_t lock = MTX_INIT;
 
 enum intel_rtc_registers {
     REG_SECONDS,
@@ -31,52 +34,134 @@ enum intel_rtc_registers {
     REG_DAY_OF_MONTH,
     REG_MONTH,
     REG_YEAR,
+    REG_A,
+    REG_B,
+    REG_C,
+    REG_D,
 };
 
-struct rtc_time {
-    uint8_t seconds, minutes, hours;
+enum intel_rtc_register_a {
+    REG_A_UPDATE_IN_PROGRESS_BIT = 1 << 7,
 };
-static void read_time(struct rtc_time* t) {
-    outp(RTC_IDX_REG, REG_SECONDS);
-    t->seconds = inp(RTC_DATA_REG);
-    outp(RTC_IDX_REG, REG_MINUTES);
-    t->minutes = inp(RTC_DATA_REG);
-    outp(RTC_IDX_REG, REG_HOURS);
-    t->hours = inp(RTC_DATA_REG);
+
+enum intel_rtc_register_b {
+    REG_B_DAYLIGHT_SAVINGS_ENABLE_BIT = 1 << 0,
+    REG_B_HOUR_FORMAT_BIT = 1 << 1,
+    REG_B_DATA_MODE_BIT = 1 << 2,
+    REG_B_SQUARE_WAVE_ENABLE_BIT = 1 << 3,
+    REG_B_UPDATE_ENDED_INTERRUPT_ENABLE_BIT = 1 << 4,
+    REB_B_ALARM_INTERRUPT_ENABLE_BIT = 1 << 5,
+    REG_B_PERIODIC_INTERRUPT_ENABLE_BIT = 1 << 6,
+    REG_B_UPDATE_CYCLE_INHIBIT_BIT = 1 << 7,
+};
+
+static uint8_t read_reg(enum intel_rtc_registers reg) {
+    outp(RTC_IDX_REG, reg);
+    return inp(RTC_DATA_REG);
 }
 
-static bool rtc_time_eq(struct rtc_time* lhs, struct rtc_time* rhs) {
-    return lhs->seconds == rhs->seconds &&
-           lhs->minutes == rhs->minutes &&
-           lhs->hours == rhs->hours;
+static void write_reg(enum intel_rtc_registers reg, uint8_t val) {
+    outp(RTC_IDX_REG, reg);
+    outp(RTC_DATA_REG, val);
 }
 
-// implement char protocol
-static ssize_t intel_rtc_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
-    struct rtc_time cur, last;
+// Set the hour format to 24 hours, and the data mode to binary, rather than
+// binary-coded decimal.
+static void set_rtc_mode(void) {
+    write_reg(REG_B, read_reg(REG_B) | REG_B_HOUR_FORMAT_BIT | REG_B_DATA_MODE_BIT);
+}
 
-    read_time(&cur);
-    do {
-        last = cur;
-        read_time(&cur);
-    } while (!rtc_time_eq(&cur, &last));
+static void read_time(rtc_t* rtc) {
+    mtx_lock(&lock);
+    set_rtc_mode();
 
-    int n = snprintf(buf, count, "%02x:%02x:%02x", cur.hours, cur.minutes, cur.seconds);
-    if (n < 0) {
-        return ERR_INTERNAL;
-    }
-    if ((unsigned int)n > count) {
+    rtc->seconds = read_reg(REG_SECONDS);
+    rtc->minutes = read_reg(REG_MINUTES);
+    rtc->hours = read_reg(REG_HOURS);
+
+    rtc->day = read_reg(REG_DAY_OF_MONTH);
+    rtc->month = read_reg(REG_MONTH);
+    rtc->year = read_reg(REG_YEAR) + 2000;
+
+    mtx_unlock(&lock);
+}
+
+static void write_time(const rtc_t* rtc) {
+    mtx_lock(&lock);
+    set_rtc_mode();
+
+    write_reg(REG_B, read_reg(REG_B) | REG_B_UPDATE_CYCLE_INHIBIT_BIT);
+
+    write_reg(REG_SECONDS, rtc->seconds);
+    write_reg(REG_MINUTES, rtc->minutes);
+    write_reg(REG_HOURS, rtc->hours);
+
+    write_reg(REG_DAY_OF_MONTH, rtc->day);
+    write_reg(REG_MONTH, rtc->month);
+    write_reg(REG_YEAR, rtc->year - 2000);
+
+    write_reg(REG_B, read_reg(REG_B) & ~REG_B_UPDATE_CYCLE_INHIBIT_BIT);
+
+    mtx_unlock(&lock);
+}
+
+static ssize_t intel_rtc_get(void* buf, size_t count) {
+    if (count < sizeof(rtc_t)) {
         return ERR_BUFFER_TOO_SMALL;
     }
-    return n;
+
+    // Ensure we have a consistent time.
+    rtc_t rtc, prev;
+    do {
+        // Using memcpy, as we use memcmp to compare.
+        memcpy(&prev, &rtc, sizeof(rtc_t));
+        read_time(&rtc);
+    } while (memcmp(&rtc, &prev, sizeof(rtc_t)));
+
+    memcpy(buf, &rtc, sizeof(rtc_t));
+    return sizeof(rtc_t);
+}
+
+static ssize_t intel_rtc_set(const void* buf, size_t count) {
+    if (count < sizeof(rtc_t)) {
+        return ERR_BUFFER_TOO_SMALL;
+    }
+    rtc_t rtc;
+    memcpy(&rtc, buf, sizeof(rtc_t));
+
+    // An invalid time was supplied.
+    if (rtc.seconds > 59 ||
+        rtc.minutes > 59 ||
+        rtc.hours > 23 ||
+        rtc.day > 31 ||
+        rtc.month > 12 ||
+        rtc.year < 2000 || rtc.year > 2099) {
+        return ERR_OUT_OF_RANGE;
+    }
+
+    write_time(&rtc);
+    return sizeof(rtc_t);
+}
+
+// Implement ioctl protocol.
+static ssize_t intel_rtc_ioctl(mx_device_t* dev, uint32_t op,
+                               const void* in_buf, size_t in_len,
+                               void* out_buf, size_t out_len) {
+    switch (op) {
+    case IOCTL_RTC_GET:
+        return intel_rtc_get(out_buf, out_len);
+
+    case IOCTL_RTC_SET:
+        return intel_rtc_set(in_buf, in_len);
+    }
+    return ERR_NOT_SUPPORTED;
 }
 
 static mx_protocol_device_t intel_rtc_device_proto __UNUSED = {
-    .read = intel_rtc_read,
+    .ioctl = intel_rtc_ioctl,
 };
 
-// implement driver object:
-//
+// Implement driver object.
 static mx_status_t intel_rtc_init(mx_driver_t* drv) {
 #if defined(__x86_64__) || defined(__i386__)
     // TODO(teisenbe): This should be probed via the ACPI pseudo bus whenever it

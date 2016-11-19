@@ -8,8 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userapp
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/clock.c \
+MODULE_SRCS += $(LOCAL_DIR)/clock.c
 
 MODULE_NAME := clock
 
