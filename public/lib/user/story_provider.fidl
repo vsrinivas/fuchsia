@@ -41,7 +41,12 @@ interface StoryProvider {
 // Used by the client of StoryProvider (UserShell) to interact with a
 // single story. Created by StoryProvider.
 interface StoryController {
+  // Gets all information associated with the story.
   GetInfo() => (StoryInfo info);
+
+  // Stores extra information associated with the story, like title,
+  // color, etc. Available in the |extra| field in the StoryInfo.
+  SetInfoExtra(string name, string value) => ();
 
   // Runs the |Story| controlled by this |StoryController| instance if
   // not yet running, else does nothing. |view_owner| is an interface
@@ -73,4 +78,7 @@ interface StoryWatcher {
 
   // Story done by its root module calling Done().
   OnDone();
+
+  // The root module could not be started.
+  OnError();
 };

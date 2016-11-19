@@ -6,13 +6,30 @@ module modular;
 
 // Information about a story as provided to the UserShell.
 struct StoryInfo {
-  // URL of the first mojo application run as a part of this story. Typically
-  // this will be the URL of the recipe.
+  // URL of the first application run in this story. This application
+  // is free to run more applications in the story.
   string url;
 
-  // The ID of the Story, under which it's kept in the root page.
+  // The ID of the Story, used to reference it in method arguments.
   string id;
 
-  // Whether this story is running on this device.
+  // Whether this story is currently running. Deprecated, and
+  // superseded by the status enum below.
   bool is_running;
+
+  // Which state the story is in.
+  StoryState state;
+
+  // Data the UserShell wants to keep associated with this Story, like
+  // title, a color, or a display rank.
+  map<string, string> extra;
+};
+
+
+enum StoryState {
+  NEW = 0,
+  RUNNING,
+  STOPPED,
+  DONE,
+  ERROR,
 };

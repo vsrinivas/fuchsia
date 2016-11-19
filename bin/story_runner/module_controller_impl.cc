@@ -26,14 +26,21 @@ ModuleControllerImpl::ModuleControllerImpl(
       url_(url),
       module_(std::move(module)),
       binding_(this, std::move(module_controller)) {
-  // If the Module instance closes its own connection, we tear it
-  // down.
-  module_.set_connection_error_handler([this]() { TearDown([]() {}); });
+  // If the Module instance closes its own connection, we signal this
+  // as error to all current and future watchers.
+  module_.set_connection_error_handler([this]() { Error(); });
 }
 
 void ModuleControllerImpl::Done() {
   for (auto& watcher : watchers_) {
     watcher->OnDone();
+  }
+};
+
+void ModuleControllerImpl::Error() {
+  error_ = true;
+  for (auto& watcher : watchers_) {
+    watcher->OnError();
   }
 };
 
@@ -71,6 +78,10 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
     }
   };
 
+  // At this point, it's no longer an error if the module closes its
+  // connection.
+  module_.set_connection_error_handler(nullptr);
+
   // Call Module.Stop(), but also schedule a timeout.
   module_->Stop(cont);
 
@@ -81,6 +92,9 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
 void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
   watchers_.push_back(
       fidl::InterfacePtr<ModuleWatcher>::Create(std::move(watcher)));
+  if (error_) {
+    watchers_.back()->OnError();
+  }
 }
 
 void ModuleControllerImpl::Stop(const StopCallback& done) {

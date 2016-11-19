@@ -177,10 +177,12 @@ class CreateStoryCall : public Transaction {
         story_data_ = StoryData::New();
         story_data_->story_page_id = std::move(story_page_id);
         story_data_->story_info = StoryInfo::New();
-        auto* story_info = story_data_->story_info.get();
+        auto* const story_info = story_data_->story_info.get();
         story_info->url = url_;
         story_info->id = story_id_;
         story_info->is_running = false;
+        story_info->state = StoryState::NEW;
+        story_info->extra.mark_non_null();
 
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
           ApplicationLauncherPtr launcher;

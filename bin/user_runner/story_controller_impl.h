@@ -52,6 +52,8 @@ class StoryControllerImpl : public StoryController,
 
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
+  void SetInfoExtra(const fidl::String& name, const fidl::String& value,
+                    const SetInfoExtraCallback& callback) override;
   void Start(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
   void Stop(const StopCallback& done) override;
@@ -60,11 +62,12 @@ class StoryControllerImpl : public StoryController,
   // |ModuleWatcher|
   void OnDone() override;
   void OnStop() override;
+  void OnError() override;
 
   // |LinkWatcher|
   void Notify(FidlDocMap docs) override;
 
- private:
+  void WriteStoryData(std::function<void()> done);
   void NotifyStoryWatchers(void (StoryWatcher::*method)());
 
   // Starts the Story instance for the given story.

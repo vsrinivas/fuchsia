@@ -29,6 +29,14 @@ void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
 }
 
 // |StoryController|
+void StoryControllerImpl::SetInfoExtra(const fidl::String& name,
+                                       const fidl::String& value,
+                                       const SetInfoExtraCallback& callback) {
+  story_data_->story_info->extra[name] = value;
+  WriteStoryData(callback);
+}
+
+// |StoryController|
 void StoryControllerImpl::Start(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   if (story_data_->story_info->is_running) {
@@ -56,17 +64,35 @@ void StoryControllerImpl::Watch(
 
 // |ModuleWatcher|
 void StoryControllerImpl::OnStop() {
-  NotifyStoryWatchers(&StoryWatcher::OnStop);
+  story_data_->story_info->state = StoryState::STOPPED;
+  WriteStoryData([this]() {
+    NotifyStoryWatchers(&StoryWatcher::OnStop);
+  });
 }
 
 // |ModuleWatcher|
 void StoryControllerImpl::OnDone() {
-  NotifyStoryWatchers(&StoryWatcher::OnDone);
+  story_data_->story_info->state = StoryState::DONE;
+  WriteStoryData([this]() {
+    NotifyStoryWatchers(&StoryWatcher::OnDone);
+  });
+}
+
+// |ModuleWatcher|
+void StoryControllerImpl::OnError() {
+  story_data_->story_info->state = StoryState::ERROR;
+  WriteStoryData([this]() {
+    NotifyStoryWatchers(&StoryWatcher::OnError);
+  });
 }
 
 // |LinkWatcher|
 void StoryControllerImpl::Notify(FidlDocMap docs) {
   NotifyStoryWatchers(&StoryWatcher::OnData);
+}
+
+void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
+  story_provider_impl_->WriteStoryData(story_data_->Clone(), done);
 }
 
 void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
@@ -115,7 +141,8 @@ void StoryControllerImpl::StartStory(
                       GetProxy(&module_), std::move(view_owner_request));
 
   story_data_->story_info->is_running = true;
-  story_provider_impl_->WriteStoryData(story_data_->Clone(), [](){});
+  story_data_->story_info->state = StoryState::RUNNING;
+  WriteStoryData([](){});
 
   fidl::InterfaceHandle<ModuleWatcher> module_watcher;
   module_watcher_binding_.Bind(GetProxy(&module_watcher));
@@ -129,7 +156,8 @@ void StoryControllerImpl::StartStory(
 void StoryControllerImpl::TearDownStory(std::function<void()> done) {
   story_context_->Stop([this, done]() {
     story_data_->story_info->is_running = false;
-    story_provider_impl_->WriteStoryData(story_data_->Clone(), [this, done]() {
+    story_data_->story_info->state = StoryState::STOPPED;
+    WriteStoryData([this, done]() {
         root_.reset();
         link_changed_binding_.Close();
         module_.reset();

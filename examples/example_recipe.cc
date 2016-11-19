@@ -103,6 +103,7 @@ class ModuleMonitor : public modular::ModuleWatcher {
   }
 
   void OnStop() override {}
+  void OnError() override {}
 
  private:
   fidl::Binding<modular::ModuleWatcher> binding_;

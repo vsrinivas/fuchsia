@@ -31,4 +31,8 @@ interface ModuleWatcher {
   // Called after the module instance is stopped. See Module.Stop()
   // for when this can happen, and what else happens then.
   OnStop();
+
+  // Called when the connection to the module instance gets closed
+  // without Stop() request.
+  OnError();
 };

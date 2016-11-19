@@ -168,6 +168,9 @@ class DummyUserShellApp
   void OnStop() override { FTL_LOG(INFO) << "DummyUserShell::OnStop()"; }
 
   // |StoryWatcher|
+  void OnError() override { FTL_LOG(INFO) << "DummyUserShell::OnError()"; }
+
+  // |StoryWatcher|
   void OnDone() override {
     FTL_LOG(INFO) << "DummyUserShell::OnDone()";
     story_controller_->Stop([this]() {
