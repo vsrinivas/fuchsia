@@ -18,6 +18,7 @@
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
+#include "debugger.h"
 #include "utils.h"
 
 // 0.5 seconds
@@ -525,6 +526,12 @@ int main(int argc, char **argv)
         check_verbosity(argc, argv);
         return test_segfault();
     }
+#ifdef __x86_64__
+    if (argc >= 2 && strcmp(argv[1], test_tbit_child_name) == 0) {
+        check_verbosity(argc, argv);
+        return child_test_tbit();
+    }
+#endif
 
     thrd_t watchdog_thread;
     tu_thread_create_c11(&watchdog_thread, watchdog_thread_func, NULL, "watchdog-thread");

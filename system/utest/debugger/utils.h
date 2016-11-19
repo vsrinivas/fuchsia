@@ -22,6 +22,8 @@ enum message {
     MSG_RECOVERED_FROM_CRASH,
     MSG_START_EXTRA_THREADS,
     MSG_EXTRA_THREADS_STARTED,
+    MSG_START_TBIT_TEST,
+    MSG_TBIT_TEST_DONE,
 };
 
 extern const char* program_path;

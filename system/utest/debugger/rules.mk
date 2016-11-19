@@ -12,6 +12,7 @@ MODULE_NAME := debugger-test
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/debugger.c \
+    $(LOCAL_DIR)/tbit.c \
     $(LOCAL_DIR)/utils.c
 
 MODULE_STATIC_LIBS := ulib/runtime
