@@ -21,6 +21,9 @@ enum class MeshAttributeFlagBits {
   kPositionOffset = 1 << 1,
   // vec2.  UV surface parameterization, often used as texture coordinates.
   kUV = 1 << 2,
+  // float. Parameterization around the perimeter of an shape, which varies from
+  // 0 - 1, and allows the vertex shader to know "where it is" on the shape.
+  kPerimeter = 1 << 3,
 };
 
 using MeshAttributeFlags = vk::Flags<MeshAttributeFlagBits, uint32_t>;

@@ -28,6 +28,12 @@ struct MeshSpecImpl {
 
 class MeshImpl : public Mesh {
  public:
+  // Vertex attribute locations corresponding to the flags in MeshSpec.
+  static constexpr uint32_t kPositionAttributeLocation = 0;
+  static constexpr uint32_t kPositionOffsetAttributeLocation = 1;
+  static constexpr uint32_t kUVAttributeLocation = 2;
+  static constexpr uint32_t kPerimeterAttributeLocation = 3;
+
   // spec_impl continues to be referenced by the MeshImpl... it MUST outlive the
   // MeshImpl.
   MeshImpl(MeshSpec spec,

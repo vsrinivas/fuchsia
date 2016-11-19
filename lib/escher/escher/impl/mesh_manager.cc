@@ -151,7 +151,7 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
   vk::DeviceSize stride = 0;
   if (spec.flags & MeshAttributeFlagBits::kPosition) {
     vk::VertexInputAttributeDescription attribute;
-    attribute.location = 0;
+    attribute.location = MeshImpl::kPositionAttributeLocation;
     attribute.binding = 0;
     attribute.format = vk::Format::eR32G32Sfloat;
     attribute.offset = stride;
@@ -161,7 +161,7 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
   }
   if (spec.flags & MeshAttributeFlagBits::kPositionOffset) {
     vk::VertexInputAttributeDescription attribute;
-    attribute.location = 1;
+    attribute.location = MeshImpl::kPositionOffsetAttributeLocation;
     attribute.binding = 0;
     attribute.format = vk::Format::eR32G32Sfloat;
     attribute.offset = stride;
@@ -171,12 +171,22 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
   }
   if (spec.flags & MeshAttributeFlagBits::kUV) {
     vk::VertexInputAttributeDescription attribute;
-    attribute.location = 2;
+    attribute.location = MeshImpl::kUVAttributeLocation;
     attribute.binding = 0;
     attribute.format = vk::Format::eR32G32Sfloat;
     attribute.offset = stride;
 
     stride += sizeof(vec2);
+    impl->attributes.push_back(attribute);
+  }
+  if (spec.flags & MeshAttributeFlagBits::kPerimeter) {
+    vk::VertexInputAttributeDescription attribute;
+    attribute.location = MeshImpl::kPerimeterAttributeLocation;
+    attribute.binding = 0;
+    attribute.format = vk::Format::eR32Sfloat;
+    attribute.offset = stride;
+
+    stride += sizeof(float);
     impl->attributes.push_back(attribute);
   }
 

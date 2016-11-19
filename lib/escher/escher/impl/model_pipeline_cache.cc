@@ -20,6 +20,7 @@ constexpr char g_vertex_src[] = R"GLSL(
   #version 450
   #extension GL_ARB_separate_shader_objects : enable
 
+  // Attribute locations must match constants in mesh_impl.h
   layout(location = 0) in vec2 inPosition;
   layout(location = 2) in vec2 inUV;
 
