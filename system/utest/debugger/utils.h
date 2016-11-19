@@ -65,11 +65,19 @@ extern mx_status_t create_inferior(const char* name,
                                    uint32_t* ids, launchpad_t** out_launchpad);
 
 extern bool setup_inferior(const char* name,
-                           mx_handle_t* out_channel,
+                           launchpad_t** out_lp,
                            mx_handle_t* out_inferior,
-                           mx_handle_t* out_eport);
+                           mx_handle_t* out_channel);
 
-extern bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior, mx_handle_t eport);
+extern mx_handle_t attach_inferior(mx_handle_t inferior);
+
+extern bool start_inferior(launchpad_t* lp);
+
+extern bool verify_inferior_running(mx_handle_t channel);
+
+extern bool resume_inferior(mx_handle_t inferior, mx_koid_t tid);
+
+extern bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior);
 
 extern bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet);
 

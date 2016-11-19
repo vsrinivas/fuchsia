@@ -297,7 +297,7 @@ mx_status_t create_inferior(const char* name,
     return status;
 }
 
-bool setup_inferior(const char* name, mx_handle_t* out_channel, mx_handle_t* out_inferior, mx_handle_t* out_eport)
+bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inferior, mx_handle_t* out_channel)
 {
     mx_status_t status;
     mx_handle_t channel1, channel2;
@@ -310,11 +310,12 @@ bool setup_inferior(const char* name, mx_handle_t* out_channel, mx_handle_t* out
     uint32_t handle_ids[1] = { MX_HND_TYPE_USER0 };
 
     launchpad_t* lp;
-    unittest_printf("Starting process \"%s\"\n", name);
+    unittest_printf("Creating process \"%s\"\n", name);
     status = create_inferior(name, ARRAY_SIZE(argv), argv, NULL,
                              ARRAY_SIZE(handles), handles, handle_ids, &lp);
     ASSERT_EQ(status, NO_ERROR, "failed to create inferior");
 
+    // Note: |inferior| is a borrowed handle here.
     mx_handle_t inferior = launchpad_get_process_handle(lp);
     ASSERT_GT(inferior, 0, "can't get launchpad process handle");
 
@@ -323,49 +324,70 @@ bool setup_inferior(const char* name, mx_handle_t* out_channel, mx_handle_t* out
     unittest_printf("Inferior pid = %llu\n", (long long) process_info.koid);
 
     // |inferior| is given to the child by launchpad_start.
-    // We need our own copy, but we need it before launchpad_start returns.
-    // So create our own copy.
+    // We need our own copy, and launchpad_start will give us one, but we need
+    // it before we call launchpad_start in order to attach to the debugging
+    // exception port. We could leave this to our caller to do, but since every
+    // caller needs this for convenience sake we do this here.
     status = mx_handle_duplicate(inferior, MX_RIGHT_SAME_RIGHTS, &inferior);
-    ASSERT_EQ(status, 0, "mx_handle_duplicate failed");
+    ASSERT_EQ(status, NO_ERROR, "mx_handle_duplicate failed");
 
-    // TODO(dje): Set the debug exception port when available.
-    mx_handle_t eport = tu_io_port_create(0);
-    status = mx_object_bind_exception_port(inferior, eport, 0, 0);
-    EXPECT_EQ(status, NO_ERROR, "error setting exception port");
-    unittest_printf("Attached to inferior\n");
-
-    // launchpad_start returns a dup of |inferior|. The original inferior
-    // handle is given to the child.
-    mx_handle_t dup_inferior = launchpad_start(lp);
-    ASSERT_GT(dup_inferior, 0, "launchpad_start failed");
-    unittest_printf("Inferior started\n");
-    tu_handle_close(dup_inferior);
-
-    launchpad_destroy(lp);
-
-    enum message msg;
-    send_msg(channel1, MSG_PING);
-    if (!recv_msg(channel1, &msg))
-        return false;
-    EXPECT_EQ(msg, MSG_PONG, "unexpected response from ping");
-
-    *out_channel = channel1;
+    *out_lp = lp;
     *out_inferior = inferior;
-    *out_eport = eport;
+    *out_channel = channel1;
     return true;
 }
 
-bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior, mx_handle_t eport)
+// While this should perhaps take a launchpad_t* argument instead of the
+// inferior's handle, we later want to test attaching to an already running
+// inferior.
+
+mx_handle_t attach_inferior(mx_handle_t inferior)
+{
+    mx_handle_t eport = tu_io_port_create(0);
+    tu_set_exception_port(inferior, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    unittest_printf("Attached to inferior\n");
+    return eport;
+}
+
+bool start_inferior(launchpad_t* lp)
+{
+    mx_handle_t dup_inferior = tu_launch_mxio_fini(lp);
+    unittest_printf("Inferior started\n");
+    // launchpad_start returns a dup of |inferior|. The original inferior
+    // handle is given to the child. However we don't need it, we already
+    // created one so that we could attach to the inferior before starting it.
+    tu_handle_close(dup_inferior);
+    return true;
+}
+
+bool verify_inferior_running(mx_handle_t channel)
+{
+    enum message msg;
+    send_msg(channel, MSG_PING);
+    if (!recv_msg(channel, &msg))
+        return false;
+    EXPECT_EQ(msg, MSG_PONG, "unexpected response from ping");
+    return true;
+}
+
+bool resume_inferior(mx_handle_t inferior, mx_koid_t tid)
+{
+    mx_handle_t thread;
+    mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    ASSERT_EQ(status, NO_ERROR, "mx_object_get_child failed");
+
+    unittest_printf("Resuming inferior ...\n");
+    status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
+    tu_handle_close(thread);
+    ASSERT_EQ(status, NO_ERROR, "mx_task_resume failed");
+    return true;
+}
+
+bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior)
 {
     unittest_printf("Shutting down inferior\n");
 
     send_msg(channel, MSG_DONE);
-    tu_handle_close(channel);
-
-    mx_koid_t tid;
-    if (!read_and_verify_exception(eport, inferior, MX_EXCP_GONE, &tid))
-        return false;
-    EXPECT_EQ(tid, 0u, "reading of process gone notification");
 
     tu_wait_signaled(inferior);
     EXPECT_EQ(tu_process_get_return_code(inferior), 1234,
@@ -376,8 +398,6 @@ bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior, mx_handle_t ep
         mx_object_bind_exception_port(inferior, MX_HANDLE_INVALID, 0,
                                       MX_EXCEPTION_PORT_DEBUGGER);
     EXPECT_EQ(status, NO_ERROR, "error resetting exception port");
-    tu_handle_close(eport);
-    tu_handle_close(inferior);
 
     return true;
 }
@@ -389,6 +409,7 @@ bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
     unittest_printf("Waiting for exception on eport %d\n", eport);
     ASSERT_EQ(mx_port_wait(eport, MX_TIME_INFINITE, packet, sizeof(*packet)), NO_ERROR, "mx_port_wait failed");
     ASSERT_EQ(packet->hdr.key, 0u, "bad report key");
+    unittest_printf("read_exception: got exception %d\n", packet->report.header.type);
     return true;
 }
 
