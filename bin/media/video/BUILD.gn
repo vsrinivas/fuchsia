@@ -15,6 +15,7 @@ source_set("video") {
   deps = [
     "//apps/media/lib",
     "//apps/media/services",
+    "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/geometry/cpp",
     "//lib/ftl",
   ]
