@@ -1,0 +1,18 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/user/story_info.fidl";
+
+// Internal data that user runner keeps about stories. Some of them
+// are exposed to the UserShell, which are kept in StoryInfo.
+struct StoryData {
+  // Metadata available to the UserShell.
+  StoryInfo story_info;
+
+  // Page id on the user's ledger which stores story information. It
+  // might be NULL until the story is being started.
+  array<uint8, 16>? story_page_id;
+};

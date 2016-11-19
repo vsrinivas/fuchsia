@@ -4,6 +4,7 @@
 
 module modular;
 
+import "apps/modular/services/user/story_info.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // UserRunner implementation creates an instance of this service and
@@ -72,24 +73,4 @@ interface StoryWatcher {
 
   // Story done by its root module calling Done().
   OnDone();
-};
-
-// Information about a story as provided by Story.GetInfo(), to
-// display story information in the UserShell UI.
-struct StoryInfo {
-  // URL of the first mojo application run as a part of this story. Typically
-  // this will be the URL of the recipe.
-  string url;
-
-  // The ID of the Story, under which it's kept in the root page.
-  string id;
-
-  // Whether this story is running on this device.
-  bool is_running;
-
-  // Page id on the user's ledger which stores story information. It
-  // might be NULL until the story is being started. TODO(mesch): This
-  // information does not belong here, as the UserShell does not need
-  // it.
-  array<uint8, 16>? story_page_id;
 };

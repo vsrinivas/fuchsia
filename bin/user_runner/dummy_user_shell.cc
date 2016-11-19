@@ -190,8 +190,6 @@ class DummyUserShellApp
     story_controller_->GetInfo([this](modular::StoryInfoPtr story_info) {
       FTL_LOG(INFO) << "DummyUserShell::CreateStory() Story.Getinfo()"
                     << " url: " << story_info->url << " id: " << story_info->id
-                    << " story_page_id: "
-                    << modular::to_string(story_info->story_page_id)
                     << " is_running: " << story_info->is_running;
 
       // Retain the story info so we can resume it by ID.
@@ -204,8 +202,6 @@ class DummyUserShellApp
   void ResumeStory() {
     FTL_LOG(INFO) << "DummyUserShell::ResumeStory() "
                   << " url: " << story_info_->url << " id: " << story_info_->id
-                  << " story_page_id: "
-                  << modular::to_string(story_info_->story_page_id)
                   << " is_running: " << story_info_->is_running;
 
     story_provider_->ResumeStory(story_info_->id,

@@ -1,0 +1,18 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// Information about a story as provided to the UserShell.
+struct StoryInfo {
+  // URL of the first mojo application run as a part of this story. Typically
+  // this will be the URL of the recipe.
+  string url;
+
+  // The ID of the Story, under which it's kept in the root page.
+  string id;
+
+  // Whether this story is running on this device.
+  bool is_running;
+};

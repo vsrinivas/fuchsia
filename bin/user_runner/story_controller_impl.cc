@@ -12,35 +12,26 @@
 namespace modular {
 
 StoryControllerImpl::StoryControllerImpl(
-    StoryInfoPtr story_info,
+    StoryDataPtr story_data,
     StoryProviderImpl* const story_provider_impl,
     ApplicationLauncherPtr launcher,
     fidl::InterfaceRequest<StoryController> story_controller_request)
-    : story_info_(std::move(story_info)),
+    : story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
       launcher_(std::move(launcher)),
       binding_(this, std::move(story_controller_request)),
       module_watcher_binding_(this),
-      link_changed_binding_(this) {
-  FTL_LOG(INFO) << "StoryControllerImpl() " << story_info_->id << " "
-                << to_string(story_info_->story_page_id);
-}
-
-StoryControllerImpl::~StoryControllerImpl() {
-  FTL_LOG(INFO) << "~StoryControllerImpl() " << story_info_->id;
-}
+      link_changed_binding_(this) {}
 
 // |StoryController|
 void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
-  callback(story_info_->Clone());
+  callback(story_data_->story_info->Clone());
 }
 
 // |StoryController|
 void StoryControllerImpl::Start(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_LOG(INFO) << "StoryControllerImpl::Start() " << story_info_->id;
-
-  if (story_info_->is_running) {
+  if (story_data_->story_info->is_running) {
     return;
   }
 
@@ -50,7 +41,6 @@ void StoryControllerImpl::Start(
 
 // |StoryController|
 void StoryControllerImpl::Stop(const StopCallback& done) {
-  FTL_LOG(INFO) << "StoryControllerImpl::Stop() " << story_info_->id;
   TearDownStory([this, done]() {
     NotifyStoryWatchers(&StoryWatcher::OnStop);
     done();
@@ -60,20 +50,17 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
 // |StoryController|
 void StoryControllerImpl::Watch(
     fidl::InterfaceHandle<StoryWatcher> story_watcher) {
-  FTL_LOG(INFO) << "StoryControllerImpl::Watch() " << story_info_->id;
   story_watchers_.emplace_back(
       StoryWatcherPtr::Create(std::move(story_watcher)));
 }
 
 // |ModuleWatcher|
 void StoryControllerImpl::OnStop() {
-  FTL_LOG(INFO) << "StoryControllerImpl::OnStop() " << story_info_->id;
   NotifyStoryWatchers(&StoryWatcher::OnStop);
 }
 
 // |ModuleWatcher|
 void StoryControllerImpl::OnDone() {
-  FTL_LOG(INFO) << "StoryControllerImpl::OnDone() " << story_info_->id;
   NotifyStoryWatchers(&StoryWatcher::OnDone);
 }
 
@@ -90,8 +77,6 @@ void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
 
 void StoryControllerImpl::StartStory(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  FTL_LOG(INFO) << "StoryControllerImpl::StartStory() " << story_info_->id;
-
   // NOTE(mesch): We start a new application for each of the services
   // we need here. Instead, we could have started the application once
   // at startup and just request a new service instance here.
@@ -115,8 +100,8 @@ void StoryControllerImpl::StartStory(
   StoryStoragePtr story_storage;
   story_storage_impl_.reset(new StoryStorageImpl(
       story_provider_impl_->storage(),
-      story_provider_impl_->GetStoryPage(story_info_->story_page_id),
-      story_info_->id, GetProxy(&story_storage)));
+      story_provider_impl_->GetStoryPage(story_data_->story_page_id),
+      story_data_->story_info->id, GetProxy(&story_storage)));
 
   story_runner->CreateStory(std::move(resolver), std::move(story_storage),
                             GetProxy(&story_context_));
@@ -126,11 +111,11 @@ void StoryControllerImpl::StartStory(
 
   fidl::InterfaceHandle<Link> link;
   root_->Dup(GetProxy(&link));
-  story_->StartModule(story_info_->url, std::move(link), nullptr, nullptr,
+  story_->StartModule(story_data_->story_info->url, std::move(link), nullptr, nullptr,
                       GetProxy(&module_), std::move(view_owner_request));
 
-  story_info_->is_running = true;
-  story_provider_impl_->WriteStoryInfo(story_info_->Clone());
+  story_data_->story_info->is_running = true;
+  story_provider_impl_->WriteStoryData(story_data_->Clone(), [](){});
 
   fidl::InterfaceHandle<ModuleWatcher> module_watcher;
   module_watcher_binding_.Bind(GetProxy(&module_watcher));
@@ -142,25 +127,17 @@ void StoryControllerImpl::StartStory(
 }
 
 void StoryControllerImpl::TearDownStory(std::function<void()> done) {
-  FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() " << story_info_->id;
-
   story_context_->Stop([this, done]() {
-    FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() " << story_info_->id
-                  << " CONT";
+    story_data_->story_info->is_running = false;
+    story_provider_impl_->WriteStoryData(story_data_->Clone(), [this, done]() {
+        root_.reset();
+        link_changed_binding_.Close();
+        module_.reset();
+        story_.reset();
+        module_watcher_binding_.Close();
 
-    story_info_->is_running = false;
-    story_provider_impl_->WriteStoryInfo(story_info_->Clone());
-
-    root_.reset();
-    link_changed_binding_.Close();
-    module_.reset();
-    story_.reset();
-    module_watcher_binding_.Close();
-
-    done();
-
-    FTL_LOG(INFO) << "StoryControllerImpl::TearDownStory() " << story_info_->id
-                  << " DONE";
+        done();
+      });
   });
 }
 

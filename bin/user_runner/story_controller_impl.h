@@ -12,6 +12,7 @@
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
+#include "apps/modular/services/user/story_data.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
@@ -29,22 +30,22 @@ class StoryControllerImpl : public StoryController,
                             public LinkWatcher {
  public:
   static StoryControllerImpl* New(
-      StoryInfoPtr story_info,
+      StoryDataPtr story_data,
       StoryProviderImpl* story_provider_impl,
       ApplicationLauncherPtr launcher,
       fidl::InterfaceRequest<StoryController> story_controller_request) {
-    return new StoryControllerImpl(std::move(story_info), story_provider_impl,
+    return new StoryControllerImpl(std::move(story_data), story_provider_impl,
                                    std::move(launcher),
                                    std::move(story_controller_request));
   }
 
-  ~StoryControllerImpl() override;
+  ~StoryControllerImpl() override = default;
 
  private:
   // Constructor is private to ensure (by way of New()) that instances
   // are created always with new.
   StoryControllerImpl(
-      StoryInfoPtr story_info,
+      StoryDataPtr story_data,
       StoryProviderImpl* story_provider_impl,
       ApplicationLauncherPtr launcher,
       fidl::InterfaceRequest<StoryController> story_controller_request);
@@ -72,7 +73,7 @@ class StoryControllerImpl : public StoryController,
   // Tears down the currently used StoryRunner instance, if any.
   void TearDownStory(std::function<void()> done);
 
-  StoryInfoPtr story_info_;
+  StoryDataPtr story_data_;
   StoryProviderImpl* const story_provider_impl_;
   std::shared_ptr<StoryStorageImpl::Storage> storage_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;

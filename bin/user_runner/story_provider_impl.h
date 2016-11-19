@@ -12,6 +12,7 @@
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
+#include "apps/modular/services/user/story_data.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/transaction.h"
@@ -41,18 +42,12 @@ class StoryProviderImpl : public StoryProvider {
     aux_bindings_.AddBinding(this, std::move(request));
   }
 
-  // |StoryProvider|
-  // Obtains the StoryInfo for an existing story from the ledger.
-  void GetStoryInfo(const fidl::String& story_id,
-                    const GetStoryInfoCallback& story_info_callback) override;
-
-  // Used by StoryControllerImpl to write story meta-data to the
-  // ledger. Used after calling |Stop| or when the |Story| pipe is
-  // closed.
-  void WriteStoryInfo(StoryInfoPtr story_info);
+  // Obtains the StoryData for an existing story from the ledger.
+  void GetStoryData(const fidl::String& story_id,
+                    const std::function<void(StoryDataPtr)>& result);
 
   // Used by CreateStory() to write story meta-data to the ledger.
-  void WriteStoryInfo(StoryInfoPtr story_info, std::function<void()> done);
+  void WriteStoryData(StoryDataPtr story_data, std::function<void()> done);
 
   // Used by StoryControllerImpl.
   using Storage = StoryStorageImpl::Storage;
@@ -60,6 +55,11 @@ class StoryProviderImpl : public StoryProvider {
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
 
  private:
+  // |StoryProvider|
+  // Obtains the StoryInfo for an existing story from the ledger.
+  void GetStoryInfo(const fidl::String& story_id,
+                    const GetStoryInfoCallback& story_info_callback) override;
+
   // |StoryProvider|
   void CreateStory(const fidl::String& url,
                    fidl::InterfaceRequest<StoryController>

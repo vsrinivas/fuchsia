@@ -8,6 +8,7 @@ import("//lib/fidl/fidl.gni")
 fidl("user") {
   sources = [
     "focus.fidl",
+    "story_info.fidl",
     "story_provider.fidl",
     "user_shell.fidl",
   ]
@@ -21,6 +22,7 @@ fidl("user") {
 # Only for implementation of modular.
 fidl("private") {
   sources = [
+    "story_data.fidl",
     "user_runner.fidl",
   ]
 
