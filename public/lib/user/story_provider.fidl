@@ -4,6 +4,7 @@
 
 module modular;
 
+import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/user/story_info.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
@@ -53,6 +54,10 @@ interface StoryController {
   // request for the root view of this story.
   Start(mozart.ViewOwner& view_owner);
 
+  // Gets a connection to the Link to the root module. Only available
+  // while the story is running, otherwise gets closed.
+  GetLink(Link& link);
+  
   // Stops this |Story| if it is running, else does nothing. Returns
   // when the story is stopped.
   Stop() => ();

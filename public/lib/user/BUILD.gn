@@ -13,6 +13,10 @@ fidl("user") {
     "user_shell.fidl",
   ]
 
+  public_deps = [
+    "//apps/modular/services/story",
+  ]
+
   deps = [
     "//apps/maxwell/services/suggestion:suggestion_provider",
     "//apps/mozart/services/views",

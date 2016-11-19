@@ -153,6 +153,12 @@ void StoryControllerImpl::StartStory(
   root_->Watch(std::move(link_changed));
 }
 
+void StoryControllerImpl::GetLink(fidl::InterfaceRequest<Link> link_request) {
+  if (root_.is_bound()) {
+    root_->Dup(std::move(link_request));
+  }
+}
+
 void StoryControllerImpl::TearDownStory(std::function<void()> done) {
   story_context_->Stop([this, done]() {
     story_data_->story_info->is_running = false;

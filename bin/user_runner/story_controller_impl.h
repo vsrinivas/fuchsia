@@ -56,6 +56,7 @@ class StoryControllerImpl : public StoryController,
                     const SetInfoExtraCallback& callback) override;
   void Start(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
+  void GetLink(fidl::InterfaceRequest<Link> link_request) override;
   void Stop(const StopCallback& done) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> story_watcher) override;
 
