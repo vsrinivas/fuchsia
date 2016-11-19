@@ -9,7 +9,7 @@
 #include <string>
 
 #include "apps/modular/lib/app/application_context.h"
-#include "apps/tracing/services/trace_manager.fidl.h"
+#include "apps/tracing/services/trace_registry.fidl.h"
 
 namespace tracing {
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "apps/tracing/src/trace/trace_app.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/log_settings.h"
 #include "lib/mtl/tasks/message_loop.h"
 

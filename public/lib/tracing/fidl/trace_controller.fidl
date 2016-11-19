@@ -4,26 +4,7 @@
 
 module tracing;
 
-import "apps/tracing/services/trace_provider.fidl";
-
-// The registration interface implemented by Trace Manager.
-[ServiceName="tracing::TraceRegistry"]
-interface TraceRegistry {
-  // Registers the trace provider.
-  // To unregister, simply close the TraceProvider pipe.
-  //
-  // |label| is a human-readable name to assign to the trace provider.
-  //
-  // |categories| is a map of trace event categories which are published
-  // by this provider.  Each entry is a pair category name -> short description
-  // (in English).
-  //
-  // The maximum length of labels and category names is 31 characters each.
-  RegisterTraceProvider(TraceProvider provider, string label,
-    map<string, string> categories);
-};
-
-// The controller interface implemented by Trace Manager.
+// The controller interface used by the trace tool to start/stop tracing.
 [ServiceName="tracing::TraceController"]
 interface TraceController {
   // Requests to start tracing the specified categories.
@@ -48,4 +29,13 @@ interface TraceController {
   // The trace controller continues to transfer any remaining data to the
   // output until finished, then closes the output.
   StopTracing();
+
+  // Gets the list of registered providers.
+  GetRegisteredProviders() => (array<TraceProviderInfo> providers);
+};
+
+// Information about a registered trace provider.
+struct TraceProviderInfo {
+  // The trace provider's label.
+  string label;
 };

@@ -97,6 +97,10 @@ struct StringArgumentFields : ArgumentFields {
 using RecordHeader = uint64_t;
 
 struct RecordFields {
+  static constexpr size_t kMaxRecordSizeWords = 0xfff;
+  static constexpr size_t kMaxRecordSizeBytes =
+      kMaxRecordSizeWords * sizeof(uint64_t);
+
   using Type = Field<0, 3>;
   using RecordSize = Field<4, 15>;
 };

@@ -22,8 +22,8 @@ struct Configuration {
 
   std::vector<std::string> categories = {};
   std::string output_file_name = "/tmp/trace.json";
-  uint64_t buffer_size = 2 * 1024 * 1024;
   ftl::TimeDelta duration = ftl::TimeDelta::FromSeconds(10);
+  bool list_providers = false;
   modular::ApplicationLaunchInfoPtr launch_info;
 };
 

@@ -28,6 +28,8 @@ class Chunk {
   Chunk();
   explicit Chunk(const uint64_t* begin, size_t size);
 
+  uint64_t remaining_words() const { return end_ - current_; }
+
   bool Read(uint64_t* value);
   bool ReadChunk(size_t num_words, Chunk* out);
   bool ReadString(size_t length, ftl::StringView* out);
@@ -52,6 +54,10 @@ class TraceInput {
 class MemoryTraceInput : public TraceInput {
  public:
   explicit MemoryTraceInput(void* memory, size_t size);
+
+  uint64_t remaining_bytes() const {
+    return chunk_.remaining_words() * sizeof(uint64_t);
+  }
 
   // |TraceInput| implementation.
   bool ReadChunk(size_t num_words, Chunk* chunk) override;
@@ -83,7 +89,7 @@ struct Thread {
 
 static_assert(sizeof(Thread) == 2 * sizeof(uint64_t), "");
 
-using TraceErrorHandler = std::function<void(const std::string&)>;
+using TraceErrorHandler = std::function<void(std::string)>;
 
 class TraceContext {
  public:
@@ -416,10 +422,13 @@ using RecordVisitor = std::function<void(const Record&)>;
 
 class TraceReader {
  public:
-  explicit TraceReader(const TraceErrorHandler& error_handler,
-                       const RecordVisitor& visitor);
+  explicit TraceReader(RecordVisitor visitor, TraceErrorHandler error_handler);
 
-  void ForEachRecord(TraceInput& input);
+  // Reads as many records as possible from the input, invoking the
+  // record visitor for each one.  Returns true if the stream could possibly
+  // contain more records, false if the trace stream is corrupt and no
+  // further decoding is possible.
+  bool ReadRecords(TraceInput& input);
 
  private:
   void HandleInitializationRecord(internal::RecordHeader header, Chunk& input);
@@ -430,8 +439,9 @@ class TraceReader {
 
   void HandleEventRecord(internal::RecordHeader header, Chunk& input);
 
-  TraceContext trace_context_;
   RecordVisitor visitor_;
+  TraceContext trace_context_;
+  internal::RecordHeader pending_record_header_ = 0u;
 };
 
 }  // namespace reader

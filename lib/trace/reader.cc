@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <inttypes.h>
-#include <stdio.h>
+#include "apps/tracing/lib/trace/reader.h"
 
 #include <iostream>
-
-#include "apps/tracing/lib/trace/reader.h"
 
 namespace tracing {
 namespace reader {
@@ -362,9 +359,8 @@ Record& Record::Copy(const Record& other) {
   return *this;
 }
 
-TraceReader::TraceReader(const TraceErrorHandler& error_handler,
-                         const RecordVisitor& visitor)
-    : trace_context_(error_handler), visitor_(visitor) {}
+TraceReader::TraceReader(RecordVisitor visitor, TraceErrorHandler error_handler)
+    : visitor_(std::move(visitor)), trace_context_(std::move(error_handler)) {}
 
 void TraceReader::HandleInitializationRecord(internal::RecordHeader header,
                                              Chunk& chunk) {
@@ -500,46 +496,49 @@ void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
   }
 }
 
-void TraceReader::ForEachRecord(TraceInput& input) {
+bool TraceReader::ReadRecords(TraceInput& input) {
   Chunk chunk;
-  internal::RecordHeader record_header = 0;
   while (true) {
-    if (!input.ReadChunk(1, &chunk))
-      return;
+    if (!pending_record_header_ && !input.ReadChunk(1, &chunk))
+      return true;  // need more data
 
-    bool success = chunk.Read(&record_header);
+    bool success = chunk.Read(&pending_record_header_);
     FTL_DCHECK(success);
 
-    auto record_type =
-        internal::RecordFields::Type::Get<RecordType>(record_header);
-    auto record_size =
-        internal::RecordFields::RecordSize::Get<uint16_t>(record_header);
-
-    if (record_size == 0)
-      return;
+    auto record_size = internal::RecordFields::RecordSize::Get<uint16_t>(
+        pending_record_header_);
+    if (record_size == 0) {
+      trace_context_.OnError("Unexpected record of size 0");
+      return false;  // fatal error
+    }
+    FTL_DCHECK(record_size <= internal::RecordFields::kMaxRecordSizeWords);
 
     if (!input.ReadChunk(record_size - 1, &chunk))
-      return;
+      return true;  // could be more records if we get more data
 
+    auto record_type =
+        internal::RecordFields::Type::Get<RecordType>(pending_record_header_);
     switch (record_type) {
       case RecordType::kMetadata:
         break;
       case RecordType::kInitialization:
-        HandleInitializationRecord(record_header, chunk);
+        HandleInitializationRecord(pending_record_header_, chunk);
         break;
       case RecordType::kString:
-        HandleStringRecord(record_header, chunk);
+        HandleStringRecord(pending_record_header_, chunk);
         break;
       case RecordType::kThread:
-        HandleThreadRecord(record_header, chunk);
+        HandleThreadRecord(pending_record_header_, chunk);
         break;
       case RecordType::kEvent:
-        HandleEventRecord(record_header, chunk);
+        HandleEventRecord(pending_record_header_, chunk);
         break;
       default:
         FTL_LOG(INFO) << "Skipping record with unknown type";
         break;
     }
+
+    pending_record_header_ = 0u;
   }
 }
 

@@ -5,7 +5,6 @@
 #include "apps/tracing/lib/trace/provider.h"
 
 #include "apps/tracing/lib/trace/internal/writer.h"
-#include "apps/tracing/services/trace_manager.fidl.h"
 #include "apps/tracing/services/trace_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"

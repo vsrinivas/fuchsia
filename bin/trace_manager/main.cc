@@ -7,7 +7,9 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/tracing/src/trace_manager/trace_manager.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/log_settings.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -40,7 +42,11 @@ class TraceManagerApp {
 
 }  // namespace tracing
 
-int main() {
+int main(int argc, char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  if (!ftl::SetLogSettingsFromCommandLine(command_line))
+    return 1;
+
   mtl::MessageLoop loop;
   tracing::TraceManagerApp trace_manager_app;
   loop.Run();

@@ -6,7 +6,8 @@ import("//lib/fidl/fidl.gni")
 
 fidl("services") {
   sources = [
-    "trace_manager.fidl",
+    "trace_controller.fidl",
     "trace_provider.fidl",
+    "trace_registry.fidl",
   ]
 }

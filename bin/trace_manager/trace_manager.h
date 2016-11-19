@@ -11,7 +11,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "apps/tracing/services/trace_manager.fidl.h"
+#include "apps/tracing/services/trace_controller.fidl.h"
+#include "apps/tracing/services/trace_registry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -46,6 +47,8 @@ class TraceManager : public TraceRegistry, public TraceController {
   void StartTracing(fidl::Array<fidl::String> categories,
                     mx::socket output) override;
   void StopTracing() override;
+  void GetRegisteredProviders(
+      const GetRegisteredProvidersCallback& callback) override;
 
   // |TraceRegistry| implementation.
   void RegisterTraceProvider(

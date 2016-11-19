@@ -5,8 +5,7 @@
 #ifndef APPS_TRACING_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 #define APPS_TRACING_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 
-#include <iosfwd>
-#include <string>
+#include <fstream>
 
 #include "apps/tracing/lib/trace/reader.h"
 #include "third_party/rapidjson/rapidjson/ostreamwrapper.h"
@@ -16,14 +15,17 @@ namespace tracing {
 
 class ChromiumExporter {
  public:
+  explicit ChromiumExporter(std::ofstream file_out);
   explicit ChromiumExporter(std::ostream& out);
   ~ChromiumExporter();
 
   void ExportRecord(const reader::Record& record);
 
  private:
+  void Start();
   void ExportEvent(const reader::EventRecord& event);
 
+  std::ofstream file_out_;
   rapidjson::OStreamWrapper wrapper_;
   rapidjson::Writer<rapidjson::OStreamWrapper> writer_;
 };

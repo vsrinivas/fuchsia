@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
+#include "apps/tracing/lib/trace_converters/chromium_exporter.h"
+
+#include <inttypes.h>
+
 #include <utility>
 
-#include "apps/tracing/lib/trace_converters/chromium_exporter.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
@@ -29,13 +31,22 @@ bool IsEventTypeSupported(reader::TraceEventType type) {
 
 }  // namespace
 
+ChromiumExporter::ChromiumExporter(std::ofstream file_out)
+    : file_out_(std::move(file_out)), wrapper_(file_out_), writer_(wrapper_) {
+  Start();
+}
+
 ChromiumExporter::ChromiumExporter(std::ostream& out)
     : wrapper_(out), writer_(wrapper_) {
-  writer_.StartArray();
+  Start();
 }
 
 ChromiumExporter::~ChromiumExporter() {
   writer_.EndArray();
+}
+
+void ChromiumExporter::Start() {
+  writer_.StartArray();
 }
 
 void ChromiumExporter::ExportRecord(const reader::Record& record) {

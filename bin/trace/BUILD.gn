@@ -14,10 +14,12 @@ executable("trace") {
 
 source_set("trace_app") {
   sources = [
-    "configuration.h",
     "configuration.cc",
-    "trace_app.h",
+    "configuration.h",
     "trace_app.cc",
+    "trace_app.h",
+    "tracer.cc",
+    "tracer.h,"
   ]
 
   public_deps = [
@@ -27,6 +29,5 @@ source_set("trace_app") {
     "//apps/tracing/services",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/mtl/data_pipe",
   ]
 }

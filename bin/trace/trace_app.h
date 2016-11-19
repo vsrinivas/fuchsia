@@ -12,36 +12,37 @@
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/services/application/application_controller.fidl.h"
-#include "apps/tracing/services/trace_manager.fidl.h"
+#include "apps/tracing/lib/trace_converters/chromium_exporter.h"
+#include "apps/tracing/services/trace_controller.fidl.h"
 #include "apps/tracing/src/trace/configuration.h"
-#include "lib/ftl/files/scoped_temp_dir.h"
+#include "apps/tracing/src/trace/tracer.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/tasks/message_loop.h"
+#include "lib/ftl/memory/weak_ptr.h"
 
 namespace tracing {
 
-class TraceApp : public mtl::MessageLoopHandler {
+class TraceApp {
  public:
   explicit TraceApp(Configuration configuration);
+  ~TraceApp();
 
  private:
-  // |MessageLoopHandler| implementation.
-  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
-  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+  void ListProviders();
+  void StartTrace();
+  void StopTrace();
+  void DoneTrace();
 
-  void ExportTrace();
-  void LaunchApp(modular::ApplicationLaunchInfoPtr info);
-
+  Configuration configuration_;
   std::unique_ptr<modular::ApplicationContext> context_;
-  modular::ApplicationControllerPtr application_controller_;
-  modular::ServiceProviderPtr application_services_;
   TraceControllerPtr trace_controller_;
-  std::vector<char> buffer_;
-  mx::socket socket_;
-  files::ScopedTempDir temp_dir_;
-  std::string output_file_name_;
-  std::string buffer_file_name_;
-  std::ofstream buffer_file_;
+
+  modular::ApplicationControllerPtr application_controller_;
+
+  std::unique_ptr<ChromiumExporter> exporter_;
+  std::unique_ptr<Tracer> tracer_;
+  bool tracing_ = false;
+
+  ftl::WeakPtrFactory<TraceApp> weak_ptr_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceApp);
 };

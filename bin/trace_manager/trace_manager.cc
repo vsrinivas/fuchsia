@@ -63,7 +63,6 @@ void WriteBufferToSocket(const uint8_t* buffer,
 void WriteRecordsToSocket(mx::vmo vmo, size_t vmo_size, mx::socket& socket) {
   FTL_DCHECK(vmo);
   FTL_DCHECK(socket);
-  static const size_t kMaxRecordSize = (1 << 12) - 1;
 
   std::vector<uint8_t> buffer(vmo_size);
 
@@ -87,9 +86,9 @@ void WriteRecordsToSocket(mx::vmo vmo, size_t vmo_size, mx::socket& socket) {
 
   while (current < end) {
     auto length = internal::RecordFields::RecordSize::Get<uint16_t>(*current);
-    if (length == 0 || length > kMaxRecordSize) {
-      break;
-    }
+    if (length == 0)
+      break;  // end of stream or corrupt data
+    FTL_DCHECK(length <= internal::RecordFields::kMaxRecordSizeWords);
     current += length;
   }
 
@@ -134,6 +133,18 @@ void TraceManager::StopTracing() {
           FinalizeTracing();
       },
       kStopTimeout);
+}
+
+void TraceManager::GetRegisteredProviders(
+    const GetRegisteredProvidersCallback& callback) {
+  fidl::Array<TraceProviderInfoPtr> results;
+  results.resize(0u);
+  for (const auto& provider : providers_) {
+    auto info = TraceProviderInfo::New();
+    info->label = provider.label;
+    results.push_back(std::move(info));
+  }
+  callback(std::move(results));
 }
 
 void TraceManager::RegisterTraceProvider(
