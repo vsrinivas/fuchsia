@@ -23,7 +23,7 @@ TEST(MagmaSystemConnection, GetDeviceId)
     uint32_t test_id = 0xdeadbeef;
 
     auto msd_dev = new MsdMockDevice_GetDeviceId(test_id);
-    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
+    MagmaSystemDevice dev(MsdDeviceUniquePtr(msd_dev));
 
     uint32_t device_id = dev.GetDeviceId();
     // For now device_id is invalid
@@ -58,7 +58,7 @@ TEST(MagmaSystemConnection, ContextManagement)
     auto msd_connection = new MsdMockConnection_ContextManagement();
 
     auto msd_dev = new MsdMockDevice();
-    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
+    MagmaSystemDevice dev(MsdDeviceUniquePtr(msd_dev));
     MagmaSystemConnection connection(&dev, MsdConnectionUniquePtr(msd_connection),
                                      MAGMA_SYSTEM_CAPABILITY_RENDERING);
 
@@ -88,7 +88,7 @@ TEST(MagmaSystemConnection, BufferManagement)
     ASSERT_NE(msd_drv, nullptr);
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
     ASSERT_NE(msd_dev, nullptr);
-    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
+    MagmaSystemDevice dev(MsdDeviceUniquePtr(msd_dev));
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
     MagmaSystemConnection connection(&dev, MsdConnectionUniquePtr(msd_connection),
@@ -129,7 +129,7 @@ TEST(MagmaSystemConnection, BufferSharing)
     ASSERT_NE(msd_drv, nullptr);
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
     ASSERT_NE(msd_dev, nullptr);
-    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
+    MagmaSystemDevice dev(MsdDeviceUniquePtr(msd_dev));
 
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
@@ -181,7 +181,7 @@ TEST(MagmaSystemConnection, PageFlip)
 {
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    auto dev = MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
+    MagmaSystemDevice dev(MsdDeviceUniquePtr(msd_dev));
 
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);

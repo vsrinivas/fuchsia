@@ -10,8 +10,8 @@
 #include "platform_connection.h"
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <unordered_map>
-#include <vector>
 
 using msd_device_unique_ptr_t = std::unique_ptr<msd_device, decltype(&msd_device_destroy)>;
 
@@ -45,6 +45,7 @@ public:
 private:
     msd_device_unique_ptr_t msd_dev_;
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
+    std::mutex buffer_map_mutex_;
 };
 
 #endif //_MAGMA_SYSTEM_DEVICE_H_

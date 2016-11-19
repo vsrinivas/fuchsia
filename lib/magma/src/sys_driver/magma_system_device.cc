@@ -36,6 +36,8 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::GetBufferForHandle(uint32_
     if (!magma::PlatformBuffer::IdFromHandle(handle, &id))
         return DRETP(nullptr, "invalid buffer handle");
 
+    std::unique_lock<std::mutex> lock(buffer_map_mutex_);
+
     auto iter = buffer_map_.find(id);
     if (iter != buffer_map_.end()) {
         auto buf = iter->second.lock();
@@ -51,6 +53,7 @@ std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::GetBufferForHandle(uint32_
 
 void MagmaSystemDevice::ReleaseBuffer(uint64_t id)
 {
+    std::unique_lock<std::mutex> lock(buffer_map_mutex_);
     auto iter = buffer_map_.find(id);
     if (iter != buffer_map_.end() && iter->second.expired())
         buffer_map_.erase(iter);
