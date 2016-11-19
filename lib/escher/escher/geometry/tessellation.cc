@@ -42,26 +42,56 @@ MeshPtr TessellateCircle(MeshBuilderFactory* factory,
   auto builder = factory->NewMeshBuilder(spec, circle_vertex_count,
                                          circle_vertex_count * 3 - 6);
 
-  {
-    // TODO: Only pos/color vertices are currently supported.
-    MeshSpec supported_spec;
-    supported_spec.flags |= MeshAttributeFlagBits::kPosition;
-    supported_spec.flags |= MeshAttributeFlagBits::kUV;
-    FTL_DCHECK(spec == supported_spec);
-  }
-  impl::ModelData::PerVertex vertex{vec2(0.0, 0.0), vec2(0.0, 0.0)};
-
   // Generate vertex positions.
+  constexpr size_t kMaxVertexSize = 100;
+  uint8_t vertex[kMaxVertexSize];
+  FTL_CHECK(builder->vertex_stride() <= kMaxVertexSize);
+
+  vec2* pos = nullptr;
+  vec2* uv = nullptr;
+  vec2* pos_offset = nullptr;
+  float* perim = nullptr;
+
+  if (spec.flags & MeshAttributeFlagBits::kPosition) {
+    pos = reinterpret_cast<vec2*>(
+        vertex + builder->GetAttributeOffset(MeshAttributeFlagBits::kPosition));
+  }
+  if (spec.flags & MeshAttributeFlagBits::kUV) {
+    uv = reinterpret_cast<vec2*>(
+        vertex + builder->GetAttributeOffset(MeshAttributeFlagBits::kUV));
+  }
+  if (spec.flags & MeshAttributeFlagBits::kPositionOffset) {
+    pos_offset = reinterpret_cast<vec2*>(
+        vertex +
+        builder->GetAttributeOffset(MeshAttributeFlagBits::kPositionOffset));
+  }
+  if (spec.flags & MeshAttributeFlagBits::kPerimeter) {
+    perim = reinterpret_cast<float*>(
+        vertex +
+        builder->GetAttributeOffset(MeshAttributeFlagBits::kPerimeter));
+  }
+
   const float radian_step = 2 * M_PI / circle_vertex_count;
   for (size_t i = 0; i < circle_vertex_count; ++i) {
     float radians = i * radian_step;
-    float x = sin(radians) * radius + center.x;
-    float y = cos(radians) * radius + center.y;
-    float u = sin(radians) * 0.5f + 0.5f;
-    float v = cos(radians) * 0.5f + 0.5f;
-    vertex.position = vec2(x, y);
-    vertex.uv = vec2(u, v);
-    builder->AddVertex(vertex);
+
+    // Direction of the current vertex from the center of the circle.
+    vec2 dir(sin(radians), cos(radians));
+
+    if (pos) {
+      *pos = dir * radius + center;
+    }
+    if (uv) {
+      *uv = vec2(sin(radians) * 0.5f + 0.5f, cos(radians) * 0.5f + 0.5f);
+    }
+    if (pos_offset) {
+      *pos_offset = dir;
+    }
+    if (perim) {
+      *perim = i * (1.f / circle_vertex_count);
+    }
+
+    builder->AddData(vertex, builder->vertex_stride());
   }
 
   // Generate vertex indices.

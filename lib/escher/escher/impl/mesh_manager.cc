@@ -140,6 +140,35 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   return mesh;
 }
 
+size_t MeshManager::MeshBuilder::GetAttributeOffset(
+    MeshAttributeFlagBits flag) {
+  // Find the attribute location corresponding to the flag.
+  uint32_t location = static_cast<uint32_t>(-1);
+  switch (flag) {
+    case MeshAttributeFlagBits::kPosition:
+      location = MeshImpl::kPositionAttributeLocation;
+      break;
+    case MeshAttributeFlagBits::kPositionOffset:
+      location = MeshImpl::kPositionOffsetAttributeLocation;
+      break;
+    case MeshAttributeFlagBits::kUV:
+      location = MeshImpl::kUVAttributeLocation;
+      break;
+    case MeshAttributeFlagBits::kPerimeter:
+      location = MeshImpl::kPerimeterAttributeLocation;
+      break;
+  }
+
+  // Return offset of the attribute whose location matches.
+  for (auto& attr : spec_impl_.attributes) {
+    if (attr.location == location) {
+      return attr.offset;
+    }
+  }
+  FTL_CHECK(0);
+  return 0;
+}
+
 const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
   auto ptr = spec_cache_[spec].get();
   if (ptr) {
@@ -193,11 +222,6 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
   impl->binding.binding = 0;
   impl->binding.stride = stride;
   impl->binding.inputRate = vk::VertexInputRate::eVertex;
-
-  // TODO: We currenty hardcode support for a single mesh layout.
-  FTL_CHECK(spec.flags ==
-            (MeshAttributeFlagBits::kPosition | MeshAttributeFlagBits::kUV));
-  FTL_CHECK(stride == 4 * sizeof(float));
 
   ptr = impl.get();
   spec_cache_[spec] = std::move(impl);
