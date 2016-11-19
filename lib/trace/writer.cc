@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/tracing/lib/trace/writer.h"
+
 #include "apps/tracing/lib/trace/internal/allocator.h"
 #include "apps/tracing/lib/trace/internal/categories_matcher.h"
 #include "apps/tracing/lib/trace/internal/table.h"
-#include "apps/tracing/lib/trace/internal/writer.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/handles/object_info.h"
 #include "lib/mtl/vmo/shared_vmo.h"
 #include "magenta/syscalls.h"
 
+using namespace ::tracing::internal;
+
 namespace tracing {
-namespace internal {
+namespace writer {
 namespace {
 
 // A hacky way of ensuring a unique id per thread.
@@ -34,131 +37,125 @@ Allocator g_allocator;
 ftl::RefPtr<mtl::SharedVmo> g_shared_vmo;
 bool g_is_tracing_started = false;
 CategoriesMatcher g_categories_matcher;
-Table<uintptr_t, StringRefFields::kInvalidIndex, 4096> g_string_table;
-Table<uint64_t, ThreadRefFields::kInline, 256> g_thread_object_table;
+Table<uintptr_t, StringIndex, 4095> g_string_table;
+Table<mx_koid_t, ThreadIndex, 255> g_thread_object_table;
 
 inline uint64_t GetNanosecondTimestamp() {
   return mx_time_get(MX_CLOCK_MONOTONIC);
 }
 
+inline Payload BeginRecord(size_t num_words) {
+  return Payload(static_cast<uint64_t*>(g_allocator.Allocate(num_words)));
+}
+
+inline uint64_t MakeRecordHeader(RecordType type, size_t size) {
+  return RecordFields::Type::Make(ToUnderlyingType(type)) |
+         RecordFields::RecordSize::Make(size >> 3);
+}
+
 }  // namespace
-
-Payload Payload::New(size_t size) {
-  return Payload(static_cast<uint64_t*>(g_allocator.Allocate(size)));
-}
-
-ThreadRef RegisterCurrentThread() {
-  uint16_t index = ThreadRefFields::kInline;
-
-  if (g_thread_object_table.Register(g_thread_koid, &index))
-    WriteThreadRecord(index, g_process_koid, g_thread_koid);
-
-  return ThreadRef{index, g_process_koid, g_thread_koid};
-}
 
 StringRef RegisterString(const char* string) {
   if (!string || !*string)
     return StringRef::MakeEmpty();
 
-  uint16_t index = StringRefFields::kInvalidIndex;
+  bool added;
+  StringIndex index =
+      g_string_table.Register(reinterpret_cast<uintptr_t>(string), &added);
+  if (!index)
+    return StringRef::MakeInlined(string, strlen(string));
 
-  if (g_string_table.Register(reinterpret_cast<uintptr_t>(string), &index))
+  if (added)
     WriteStringRecord(index, string);
+  return StringRef::MakeIndexed(index);
+}
 
-  return index == StringRefFields::kInvalidIndex
-             ? StringRef::MakeInlined(string, strlen(string))
-             : StringRef::MakeIndexed(index);
+ThreadRef RegisterCurrentThread() {
+  bool added;
+  ThreadIndex index = g_thread_object_table.Register(g_thread_koid, &added);
+  if (!index)
+    return ThreadRef::MakeInlined(g_process_koid, g_thread_koid);
+
+  if (added)
+    WriteThreadRecord(index, g_process_koid, g_thread_koid);
+  return ThreadRef::MakeIndexed(index);
 }
 
 void WriteInitializationRecord(uint64_t ticks_per_second) {
-  static const uint64_t kRecordSize =
-      sizeof(RecordHeader) + sizeof(ticks_per_second);
+  static const size_t kRecordSize = sizeof(RecordHeader) + sizeof(uint64_t);
 
-  FTL_DCHECK(g_allocator);
-
-  if (Payload payload = Payload::New(kRecordSize)) {
-    payload
-        .Write(InitializationRecordFields::Type::Make(
-                   ToUnderlyingType(RecordType::kInitialization)) |
-               InitializationRecordFields::RecordSize::Make(kRecordSize >> 3))
+  if (Payload payload = BeginRecord(kRecordSize)) {
+    payload.Write(MakeRecordHeader(RecordType::kInitialization, kRecordSize))
         .Write(ticks_per_second);
   }
 }
 
-void WriteStringRecord(uint16_t index, const char* string) {
-  FTL_DCHECK(g_allocator);
+void WriteStringRecord(StringIndex index, const char* string) {
   FTL_DCHECK(index != StringRefFields::kInvalidIndex);
 
-  auto length = strlen(string);
-  auto size = sizeof(RecordHeader) + Pad(length);
+  size_t length = strlen(string);
+  size_t record_size = sizeof(RecordHeader) + Pad(length);
 
-  if (Payload payload = Payload::New(size)) {
+  if (Payload payload = BeginRecord(record_size)) {
     payload
-        .Write(StringRecordFields::Type::Make(
-                   ToUnderlyingType(RecordType::kString)) |
-               StringRecordFields::RecordSize::Make(size >> 3) |
+        .Write(MakeRecordHeader(RecordType::kString, record_size) |
                StringRecordFields::StringIndex::Make(index) |
                StringRecordFields::StringLength::Make(length))
         .WriteBytes(string, length);
   }
 }
 
-void WriteThreadRecord(uint16_t index,
+void WriteThreadRecord(ThreadIndex index,
                        uint64_t process_koid,
                        uint64_t thread_koid) {
-  FTL_DCHECK(g_allocator);
   FTL_DCHECK(index != ThreadRefFields::kInline);
 
-  auto size = sizeof(RecordHeader) + 2 * sizeof(uint64_t);
+  size_t record_size = sizeof(RecordHeader) + 2 * sizeof(uint64_t);
 
-  if (Payload payload = Payload::New(size)) {
+  if (Payload payload = BeginRecord(record_size)) {
     payload
-        .Write(ThreadRecordFields::Type::Make(
-                   ToUnderlyingType(RecordType::kThread)) |
-               ThreadRecordFields::RecordSize::Make(size >> 3) |
+        .Write(MakeRecordHeader(RecordType::kThread, record_size) |
                ThreadRecordFields::ThreadIndex::Make(index))
         .Write(process_koid)
         .Write(thread_koid);
   }
 }
 
-Payload WriteEventRecord(TraceEventType event_type,
+Payload WriteEventRecord(EventType type,
                          const char* category,
                          const char* name,
                          size_t argument_count,
                          uint64_t payload_size) {
-  FTL_DCHECK(g_allocator);
+  StringRef category_ref = RegisterString(category);
+  StringRef name_ref = RegisterString(name);
+  ThreadRef thread_ref = RegisterCurrentThread();
 
-  auto category_ref = RegisterString(category);
-  auto name_ref = RegisterString(name);
-  auto thread_ref = RegisterCurrentThread();
+  size_t record_size = sizeof(RecordHeader) + sizeof(uint64_t) +
+                       thread_ref.Size() + category_ref.Size() +
+                       name_ref.Size() + payload_size;
 
-  auto size = sizeof(RecordHeader) + sizeof(uint64_t) + thread_ref.Size() +
-              category_ref.Size() + name_ref.Size() + payload_size;
-
-  if (Payload payload = Payload::New(size)) {
-    return payload
+  Payload payload = BeginRecord(record_size);
+  if (payload) {
+    payload
         .Write(
-            EventRecordFields::Type::Make(
-                ToUnderlyingType(RecordType::kEvent)) |
-            EventRecordFields::RecordSize::Make(size >> 3) |
-            EventRecordFields::EventType::Make(ToUnderlyingType(event_type)) |
+            MakeRecordHeader(RecordType::kEvent, record_size) |
+            EventRecordFields::EventType::Make(ToUnderlyingType(type)) |
             EventRecordFields::ArgumentCount::Make(argument_count) |
-            EventRecordFields::ThreadRef::Make(thread_ref.index) |
-            EventRecordFields::CategoryStringRef::Make(category_ref.encoded) |
-            EventRecordFields::NameStringRef::Make(name_ref.encoded))
+            EventRecordFields::ThreadRef::Make(thread_ref.encoded_value()) |
+            EventRecordFields::CategoryStringRef::Make(
+                category_ref.encoded_value()) |
+            EventRecordFields::NameStringRef::Make(name_ref.encoded_value()))
         .Write(GetNanosecondTimestamp())
         .WriteValue(thread_ref)
         .WriteValue(category_ref)
         .WriteValue(name_ref);
   }
-
-  return Payload(nullptr);
+  return payload;
 }
 
 void StartTracing(mx::vmo current,
                   mx::vmo next,
-                  const std::vector<std::string>& categories) {
+                  std::vector<std::string> categories) {
   FTL_VLOG(1) << "Started tracing...";
   // TODO: Use next, instead of just dropping it.
   g_shared_vmo = ftl::MakeRefCounted<mtl::SharedVmo>(
@@ -174,12 +171,7 @@ void StartTracing(mx::vmo current,
   g_allocator.Initialize(g_shared_vmo->Map(), g_shared_vmo->vmo_size());
   g_string_table.Reset();
   g_thread_object_table.Reset();
-  g_categories_matcher.SetEnabledCategories(categories);
-}
-
-bool IsTracingEnabled(const char* categories) {
-  return g_is_tracing_started &&
-         g_categories_matcher.IsAnyCategoryEnabled(categories);
+  g_categories_matcher.SetEnabledCategories(std::move(categories));
 }
 
 void StopTracing() {
@@ -191,5 +183,10 @@ void StopTracing() {
   g_categories_matcher.Reset();
 }
 
-}  // namespace internal
+bool IsTracingEnabledForCategory(const char* categories) {
+  return g_is_tracing_started &&
+         g_categories_matcher.IsAnyCategoryEnabled(categories);
+}
+
+}  // namespace writer
 }  // namespace tracing

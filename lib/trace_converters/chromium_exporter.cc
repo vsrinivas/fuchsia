@@ -14,13 +14,13 @@
 namespace tracing {
 namespace {
 
-bool IsEventTypeSupported(reader::TraceEventType type) {
+bool IsEventTypeSupported(EventType type) {
   switch (type) {
-    case internal::TraceEventType::kDurationBegin:
-    case internal::TraceEventType::kDurationEnd:
-    case internal::TraceEventType::kAsyncStart:
-    case internal::TraceEventType::kAsyncInstant:
-    case internal::TraceEventType::kAsyncEnd:
+    case EventType::kDurationBegin:
+    case EventType::kDurationEnd:
+    case EventType::kAsyncStart:
+    case EventType::kAsyncInstant:
+    case EventType::kAsyncEnd:
       return true;
     default:
       break;
@@ -51,7 +51,7 @@ void ChromiumExporter::Start() {
 
 void ChromiumExporter::ExportRecord(const reader::Record& record) {
   switch (record.type()) {
-    case internal::RecordType::kEvent:
+    case RecordType::kEvent:
       ExportEvent(record.GetEventRecord());
       break;
     default:
@@ -60,7 +60,7 @@ void ChromiumExporter::ExportRecord(const reader::Record& record) {
 }
 
 void ChromiumExporter::ExportEvent(const reader::EventRecord& event) {
-  if (!IsEventTypeSupported(event.event_type))
+  if (!IsEventTypeSupported(event.type()))
     return;
 
   writer_.StartObject();
@@ -76,28 +76,28 @@ void ChromiumExporter::ExportEvent(const reader::EventRecord& event) {
   writer_.Key("tid");
   writer_.Uint64(event.thread.thread_koid);
 
-  switch (event.event_type) {
-    case internal::TraceEventType::kDurationBegin:
+  switch (event.type()) {
+    case EventType::kDurationBegin:
       writer_.Key("ph");
       writer_.String("B");
       break;
-    case internal::TraceEventType::kDurationEnd:
+    case EventType::kDurationEnd:
       writer_.Key("ph");
       writer_.String("E");
       break;
-    case internal::TraceEventType::kAsyncStart:
+    case EventType::kAsyncStart:
       writer_.Key("ph");
       writer_.String("b");
       writer_.Key("id");
       writer_.Uint64(event.event_data.GetAsyncBegin().id);
       break;
-    case internal::TraceEventType::kAsyncInstant:
+    case EventType::kAsyncInstant:
       writer_.Key("ph");
       writer_.String("n");
       writer_.Key("id");
       writer_.Uint64(event.event_data.GetAsyncInstant().id);
       break;
-    case internal::TraceEventType::kAsyncEnd:
+    case EventType::kAsyncEnd:
       writer_.Key("ph");
       writer_.String("e");
       writer_.Key("id");
@@ -112,29 +112,29 @@ void ChromiumExporter::ExportEvent(const reader::EventRecord& event) {
     writer_.StartObject();
     for (const auto& arg : event.arguments) {
       switch (arg.value.type()) {
-        case internal::ArgumentType::kInt32:
+        case ArgumentType::kInt32:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.Int(arg.value.GetInt32());
           break;
-        case internal::ArgumentType::kInt64:
+        case ArgumentType::kInt64:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.Int64(arg.value.GetInt64());
           break;
-        case internal::ArgumentType::kDouble:
+        case ArgumentType::kDouble:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.Double(arg.value.GetDouble());
           break;
-        case internal::ArgumentType::kString:
+        case ArgumentType::kString:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.String(arg.value.GetString().data(),
                          arg.value.GetString().size());
           break;
-        case internal::ArgumentType::kPointer:
+        case ArgumentType::kPointer:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.String(
               ftl::StringPrintf("0x%" PRIx64, arg.value.GetPointer()).c_str());
           break;
-        case internal::ArgumentType::kKernelObjectId:
+        case ArgumentType::kKernelObjectId:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.String(
               ftl::StringPrintf("#%" PRIu64, arg.value.GetKernelObjectId())

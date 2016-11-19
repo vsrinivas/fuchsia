@@ -5,115 +5,80 @@
 #ifndef APPS_TRACING_LIB_TRACE_EVENT_H_
 #define APPS_TRACING_LIB_TRACE_EVENT_H_
 
-#include "lib/ftl/macros.h"
-#include "apps/tracing/lib/trace/internal/writer.h"
+#include "apps/tracing/lib/trace/writer.h"
 
-namespace tracing {
+// Converts a |uint64_t| koid value into one which can be passed as an
+// argument to the trace macros to distinguish it from other 64-bit integers.
+#define TRACE_KOID(value) ::tracing::Koid(value)
 
-// Relies on RAII to trace begin and end of a duration event.
-class ScopedDurationTracer {
- public:
-  // Initializes a new instance, injecting a duration begin event with
-  // the given parameters into the tracing infrastructure.
-  //
-  // We assume that the lifetime of |cat| and |name|
-  // exceeds the lifetime of this instance.
-  ScopedDurationTracer(const char* cat, const char* name)
-      : is_enabled_for_tracing_(internal::IsTracingEnabled(cat)),
-        cat_(cat),
-        name_(name) {
-    if (is_enabled_for_tracing_)
-      Begin();
-  }
+// Returns true if tracing is active and the category is enabled right now.
+#define TRACE_CATEGORY_ENABLED(cat) TRACE_INTERNAL_CATEGORY_ENABLED(cat)
 
-  template <typename T>
-  ScopedDurationTracer(const char* cat,
-                       const char* name,
-                       const char* key,
-                       const T& value)
-      : is_enabled_for_tracing_(internal::IsTracingEnabled(cat)),
-        cat_(cat),
-        name_(name) {
-    if (is_enabled_for_tracing_)
-      Begin(internal::MakeArgument(key, value));
-  }
+// Writes a duration event which ends when the current scope exits.
+#define TRACE_EVENT0(cat, name) TRACE_INTERNAL_EVENT_DURATION(cat, name)
+#define TRACE_EVENT1(cat, name, k1, v1) \
+  TRACE_INTERNAL_EVENT_DURATION(cat, name, TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
+#define TRACE_EVENT2(cat, name, k1, v1, k2, v2) \
+  TRACE_INTERNAL_EVENT_DURATION(cat, name,      \
+                                TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2))
+#define TRACE_EVENT3(cat, name, k1, v1, k2, v2, k3, v3) \
+  TRACE_INTERNAL_EVENT_DURATION(                        \
+      cat, name, TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3))
+#define TRACE_EVENT4(cat, name, k1, v1, k2, v2, k3, v3, k4, v4) \
+  TRACE_INTERNAL_EVENT_DURATION(                                \
+      cat, name, TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
 
-  template <typename T, typename U>
-  ScopedDurationTracer(const char* cat,
-                       const char* name,
-                       const char* key0,
-                       const T& value0,
-                       const char* key1,
-                       const U& value1)
-      : is_enabled_for_tracing_(internal::IsTracingEnabled(cat)),
-        cat_(cat),
-        name_(name) {
-    if (is_enabled_for_tracing_)
-      Begin(internal::MakeArgument(key0, value0),
-            internal::MakeArgument(key1, value1));
-  }
+// Writes an asynchronous begin event with the specified id.
+#define TRACE_EVENT_ASYNC_BEGIN0(cat, name, id) \
+  TRACE_INTERNAL_EVENT_ASYNC_BEGIN(cat, name, id)
+#define TRACE_EVENT_ASYNC_BEGIN1(cat, name, id, k1, v1) \
+  TRACE_INTERNAL_EVENT_ASYNC_BEGIN(cat, name, id,       \
+                                   TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
+#define TRACE_EVENT_ASYNC_BEGIN2(cat, name, id, k1, v1, k2, v2) \
+  TRACE_INTERNAL_EVENT_ASYNC_BEGIN(cat, name, id,               \
+                                   TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2))
+#define TRACE_EVENT_ASYNC_BEGIN3(cat, name, id, k1, v1, k2, v2, k3, v3) \
+  TRACE_INTERNAL_EVENT_ASYNC_BEGIN(                                     \
+      cat, name, id, TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3))
+#define TRACE_EVENT_ASYNC_BEGIN4(cat, name, id, k1, v1, k2, v2, k3, v3, k4, \
+                                 v4)                                        \
+  TRACE_INTERNAL_EVENT_ASYNC_BEGIN(                                         \
+      cat, name, id,                                                        \
+      TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
 
-  template <typename... Args>
-  void Begin(Args&&... args) const {
-    internal::TraceDurationBegin(cat_, name_, std::forward<Args>(args)...);
-  }
+// Writes an asynchronous instant event with the specified id.
+#define TRACE_EVENT_ASYNC_INSTANT0(cat, name, id) \
+  TRACE_INTERNAL_EVENT_ASYNC_INSTANT(cat, name, id)
+#define TRACE_EVENT_ASYNC_INSTANT1(cat, name, id, k1, v1) \
+  TRACE_INTERNAL_EVENT_ASYNC_INSTANT(cat, name, id,       \
+                                     TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
+#define TRACE_EVENT_ASYNC_INSTANT2(cat, name, id, k1, v1, k2, v2) \
+  TRACE_INTERNAL_EVENT_ASYNC_INSTANT(                             \
+      cat, name, id, TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2))
+#define TRACE_EVENT_ASYNC_INSTANT3(cat, name, id, k1, v1, k2, v2, k3, v3) \
+  TRACE_INTERNAL_EVENT_ASYNC_INSTANT(                                     \
+      cat, name, id, TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3))
+#define TRACE_EVENT_ASYNC_INSTANT4(cat, name, id, k1, v1, k2, v2, k3, v3, k4, \
+                                   v4)                                        \
+  TRACE_INTERNAL_EVENT_ASYNC_INSTANT(                                         \
+      cat, name, id,                                                          \
+      TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
 
-  void End() const { internal::TraceDurationEnd(cat_, name_); }
-
-  // Injects a duration end event with the parameters passed in
-  // on construction into the tracing infrastructure.
-  ~ScopedDurationTracer() {
-    if (is_enabled_for_tracing_)
-      End();
-  }
-
- private:
-  bool is_enabled_for_tracing_;
-  const char* cat_;
-  const char* name_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(ScopedDurationTracer);
-};
-
-}  // namespace tracing
-
-#define __TRACE_EVENT_PASTE_ARGS(x, y) x##y
-#define __TRACE_EVENT_PASTE_ARGS2(x, y) __TRACE_EVENT_PASTE_ARGS(x, y)
-
-#define TRACE_KOID(value) tracing::internal::Koid(value)
-
-#define TRACE_EVENT0(cat, name)                                             \
-  tracing::ScopedDurationTracer __TRACE_EVENT_PASTE_ARGS2(_, __LINE__)(cat, \
-                                                                       name)
-
-#define TRACE_EVENT1(cat, name, k0, v0)                                 \
-  tracing::ScopedDurationTracer __TRACE_EVENT_PASTE_ARGS2(_, __LINE__)( \
-      cat, name, k0, v0)
-
-#define TRACE_EVENT2(cat, name, k0, v0, k1, v1)                         \
-  tracing::ScopedDurationTracer __TRACE_EVENT_PASTE_ARGS2(_, __LINE__)( \
-      cat, name, k0, v0, k1, v1)
-
-#define TRACE_EVENT_ASYNC_BEGIN0(cat, name, id)        \
-  if (tracing::internal::IsTracingEnabled(cat)) {      \
-    tracing::internal::TraceAsyncBegin(cat, name, id); \
-  }
-
-#define TRACE_EVENT_ASYNC_END0(cat, name, id)        \
-  if (tracing::internal::IsTracingEnabled(cat)) {    \
-    tracing::internal::TraceAsyncEnd(cat, name, id); \
-  }
-
-#define TRACE_EVENT_ASYNC_BEGIN1(cat, name, id, k0, v0)          \
-  if (tracing::internal::IsTracingEnabled(cat)) {                \
-    tracing::internal::TraceAsyncBegin(                          \
-        cat, name, id, tracing::internal::MakeArgument(k0, v0)); \
-  }
-
-#define TRACE_EVENT_ASYNC_END1(cat, name, id, k0, v0)                          \
-  if (tracing::internal::IsTracingEnabled(cat)) {                              \
-    tracing::internal::TraceAsyncEnd(cat, name, id,                            \
-                                     tracing::internal::MakeArgument(k0, v0)); \
-  }
+// Writes an asynchronous instant event with the specified id.
+#define TRACE_EVENT_ASYNC_END0(cat, name, id) \
+  TRACE_INTERNAL_EVENT_ASYNC_END(cat, name, id)
+#define TRACE_EVENT_ASYNC_END1(cat, name, id, k1, v1) \
+  TRACE_INTERNAL_EVENT_ASYNC_END(cat, name, id,       \
+                                 TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
+#define TRACE_EVENT_ASYNC_END2(cat, name, id, k1, v1, k2, v2) \
+  TRACE_INTERNAL_EVENT_ASYNC_END(cat, name, id,               \
+                                 TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2))
+#define TRACE_EVENT_ASYNC_END3(cat, name, id, k1, v1, k2, v2, k3, v3) \
+  TRACE_INTERNAL_EVENT_ASYNC_END(                                     \
+      cat, name, id, TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3))
+#define TRACE_EVENT_ASYNC_END4(cat, name, id, k1, v1, k2, v2, k3, v3, k4, v4) \
+  TRACE_INTERNAL_EVENT_ASYNC_END(                                             \
+      cat, name, id,                                                          \
+      TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
 
 #endif  // APPS_TRACING_LIB_TRACE_EVENT_H_

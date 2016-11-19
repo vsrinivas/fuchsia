@@ -2,8 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_TYPES_H_
-#define APPS_TRACING_LIB_TRACE_INTERNAL_TYPES_H_
+#ifndef APPS_TRACING_LIB_TRACE_INTERNAL_FIELDS_H_
+#define APPS_TRACING_LIB_TRACE_INTERNAL_FIELDS_H_
+
+#include <stdint.h>
+
+#include <type_traits>
+
+#include "apps/tracing/lib/trace/types.h"
 
 namespace tracing {
 namespace internal {
@@ -12,50 +18,23 @@ inline size_t Pad(size_t size) {
   return size + ((8 - (size & 7)) & 7);
 }
 
-// Enumerates all known record types.
-enum class RecordType {
-  kMetadata = 0,
-  kInitialization = 1,
-  kString = 2,
-  kThread = 3,
-  kEvent = 4
-};
-
-// Enumerates all known types of arguments.
-//
-// Extend at end.
-enum class ArgumentType {
-  kNull = 0,
-  kInt32 = 1,
-  kInt64 = 2,
-  kDouble = 3,
-  kString = 4,
-  kPointer = 5,
-  kKernelObjectId = 6
-};
-
-// TraceEventType enumerates all well-known
-// types of trace events.
-enum class TraceEventType {
-  kDurationBegin = 1,
-  kDurationEnd = 2,
-  kAsyncStart = 3,
-  kAsyncInstant = 4,
-  kAsyncEnd = 5
-};
+template <typename T>
+inline typename std::underlying_type<T>::type ToUnderlyingType(T value) {
+  return static_cast<typename std::underlying_type<T>::type>(value);
+}
 
 struct StringRefFields {
-  static constexpr uint16_t kEmpty = 0;
-  static constexpr uint16_t kInvalidIndex = 0;
-  static constexpr uint16_t kInlineFlag = 0x8000;
-  static constexpr uint16_t kLengthMask = 0x7fff;
+  static constexpr EncodedStringRef kEmpty = 0;
+  static constexpr EncodedStringRef kInvalidIndex = 0;
+  static constexpr EncodedStringRef kInlineFlag = 0x8000;
+  static constexpr EncodedStringRef kLengthMask = 0x7fff;
   static constexpr size_t kMaxLength = 0x7fff;
-  static constexpr uint16_t kMaxIndex = 0x7fff;
+  static constexpr EncodedStringRef kMaxIndex = 0x7fff;
 };
 
 struct ThreadRefFields {
-  static constexpr uint16_t kInline = 0;
-  static constexpr uint16_t kMaxIndex = 0xff;
+  static constexpr EncodedThreadRef kInline = 0;
+  static constexpr EncodedThreadRef kMaxIndex = 0xff;
 };
 
 template <size_t begin, size_t end>
@@ -127,4 +106,4 @@ struct EventRecordFields : RecordFields {
 }  // namspace internal
 }  // namepsace tracing
 
-#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_TYPES_H_
+#endif  // APPS_TRACING_LIB_TRACE_INTERNAL_FIELDS_H_

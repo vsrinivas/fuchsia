@@ -2,31 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# trace is a helper library for talking to the
-# mojo tracing service (see tracing.mojo).
-source_set("types") {
-  sources = [
-    "internal/types.h",
-  ]
-}
-
 source_set("trace") {
   sources = [
     "event.h",
     "internal/categories_matcher.h",
     "internal/categories_matcher.cc",
-    "internal/writer.h",
-    "internal/writer.cc",
+    "writer.h",
+    "writer.cc",
   ]
 
   deps = [
-    ":types",
+    ":internal_fields",
     "//lib/ftl",
     "//lib/mtl",
     "//lib/mtl/vmo",
   ]
 
   public_deps = [
+    ":types",
     "//magenta/system/ulib/mx",
   ]
 }
@@ -56,8 +49,28 @@ source_set("reader") {
   ]
 
   deps = [
-    ":types",
+    ":internal_fields",
     "//lib/ftl",
+  ]
+
+  public_deps = [
+    ":types",
+  ]
+}
+
+source_set("internal_fields") {
+  sources = [
+    "internal/fields.h",
+  ]
+
+  public_deps = [
+    ":types",
+  ]
+}
+
+source_set("types") {
+  sources = [
+    "types.h",
   ]
 }
 
@@ -65,13 +78,16 @@ executable("trace_tests") {
   testonly = true
 
   sources = [
-    "tests/categories_matcher_unittest.cc",
-    "tests/writer_unittest.cc",
+    "internal/categories_matcher_unittest.cc",
+    "internal/fields_unittest.cc",
+    "writer_unittest.cc",
   ]
 
   deps = [
-    ":trace",
+    ":internal_fields",
     ":reader",
+    ":trace",
+    ":types",
     "//apps/tracing/services",
     "//lib/mtl/test",
     "//third_party/gtest",

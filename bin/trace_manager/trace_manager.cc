@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "apps/tracing/lib/trace/internal/types.h"
+#include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/src/trace_manager/trace_manager.h"
 #include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -85,7 +85,7 @@ void WriteRecordsToSocket(mx::vmo vmo, size_t vmo_size, mx::socket& socket) {
   const uint64_t* end = start + (buffer.size() / sizeof(uint64_t));
 
   while (current < end) {
-    auto length = internal::RecordFields::RecordSize::Get<uint16_t>(*current);
+    auto length = internal::RecordFields::RecordSize::Get<size_t>(*current);
     if (length == 0)
       break;  // end of stream or corrupt data
     FTL_DCHECK(length <= internal::RecordFields::kMaxRecordSizeWords);

@@ -11,17 +11,13 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/tracing/lib/trace/internal/types.h"
-#include "lib/ftl/logging.h"
+#include "apps/tracing/lib/trace/internal/fields.h"
+#include "apps/tracing/lib/trace/types.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace tracing {
 namespace reader {
-
-using ArgumentType = internal::ArgumentType;
-using RecordType = internal::RecordType;
-using TraceEventType = internal::TraceEventType;
 
 class Chunk {
  public:
@@ -293,40 +289,39 @@ static_assert(sizeof(AsyncInstant) == sizeof(uint64_t), "");
 class EventData {
  public:
   explicit EventData(const DurationBegin& duration_begin)
-      : type_(TraceEventType::kDurationBegin),
-        duration_begin_(duration_begin) {}
+      : type_(EventType::kDurationBegin), duration_begin_(duration_begin) {}
 
   explicit EventData(const DurationEnd& duration_end)
-      : type_(TraceEventType::kDurationEnd), duration_end_(duration_end) {}
+      : type_(EventType::kDurationEnd), duration_end_(duration_end) {}
 
   explicit EventData(const AsyncBegin& async_begin)
-      : type_(TraceEventType::kAsyncStart), async_begin_(async_begin) {}
+      : type_(EventType::kAsyncStart), async_begin_(async_begin) {}
 
   explicit EventData(const AsyncInstant& async_instant)
-      : type_(TraceEventType::kAsyncInstant), async_instant_(async_instant) {}
+      : type_(EventType::kAsyncInstant), async_instant_(async_instant) {}
 
   explicit EventData(const AsyncEnd& async_end)
-      : type_(TraceEventType::kAsyncEnd), async_end_(async_end) {}
+      : type_(EventType::kAsyncEnd), async_end_(async_end) {}
 
   const AsyncBegin& GetAsyncBegin() const {
-    FTL_DCHECK(type_ == TraceEventType::kAsyncStart);
+    FTL_DCHECK(type_ == EventType::kAsyncStart);
     return async_begin_;
   };
 
   const AsyncInstant& GetAsyncInstant() const {
-    FTL_DCHECK(type_ == TraceEventType::kAsyncInstant);
+    FTL_DCHECK(type_ == EventType::kAsyncInstant);
     return async_instant_;
   }
 
   const AsyncEnd& GetAsyncEnd() const {
-    FTL_DCHECK(type_ == TraceEventType::kAsyncEnd);
+    FTL_DCHECK(type_ == EventType::kAsyncEnd);
     return async_end_;
   }
 
-  TraceEventType type() const { return type_; }
+  EventType type() const { return type_; }
 
  private:
-  TraceEventType type_;
+  EventType type_;
   union {
     DurationBegin duration_begin_;
     DurationEnd duration_end_;
@@ -351,7 +346,7 @@ struct ThreadRecord {
 };
 
 struct EventRecord {
-  TraceEventType event_type;
+  EventType event_type;
   uint64_t timestamp;
   Thread thread;
   std::string cat;

@@ -409,7 +409,7 @@ void TraceReader::HandleThreadRecord(internal::RecordHeader record_header,
 
 void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
                                     Chunk& chunk) {
-  auto event_type = internal::EventRecordFields::EventType::Get<TraceEventType>(
+  auto event_type = internal::EventRecordFields::EventType::Get<EventType>(
       record_header);
   auto argument_count =
       internal::EventRecordFields::ArgumentCount::Get<uint8_t>(record_header);
@@ -455,19 +455,19 @@ void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
   }
 
   switch (event_type) {
-    case TraceEventType::kDurationBegin: {
+    case EventType::kDurationBegin: {
       visitor_(Record(EventRecord{event_type, timestamp, thread,
                                   category.ToString(), name.ToString(),
                                   arguments, EventData(DurationBegin{})}));
       break;
     }
-    case TraceEventType::kDurationEnd: {
+    case EventType::kDurationEnd: {
       visitor_(Record(EventRecord{event_type, timestamp, thread,
                                   category.ToString(), name.ToString(),
                                   arguments, EventData(DurationEnd{})}));
       break;
     }
-    case TraceEventType::kAsyncStart: {
+    case EventType::kAsyncStart: {
       uint64_t id = 0;
       if (chunk.Read(&id))
         visitor_(Record(EventRecord{event_type, timestamp, thread,
@@ -475,7 +475,7 @@ void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
                                     arguments, EventData(AsyncBegin{id})}));
       break;
     }
-    case TraceEventType::kAsyncInstant: {
+    case EventType::kAsyncInstant: {
       uint64_t id = 0;
       if (chunk.Read(&id))
         visitor_(Record(EventRecord{event_type, timestamp, thread,
@@ -483,7 +483,7 @@ void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
                                     arguments, EventData(AsyncInstant{id})}));
       break;
     }
-    case TraceEventType::kAsyncEnd: {
+    case EventType::kAsyncEnd: {
       uint64_t id = 0;
       if (chunk.Read(&id))
         visitor_(Record(EventRecord{event_type, timestamp, thread,

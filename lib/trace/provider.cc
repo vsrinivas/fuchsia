@@ -4,7 +4,7 @@
 
 #include "apps/tracing/lib/trace/provider.h"
 
-#include "apps/tracing/lib/trace/internal/writer.h"
+#include "apps/tracing/lib/trace/writer.h"
 #include "apps/tracing/services/trace_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -49,8 +49,8 @@ class TraceProviderImpl : public TraceProvider {
       return;
 
     state_ = State::kStarted;
-    internal::StartTracing(std::move(initial_buffer), mx::vmo(),
-                           categories.To<std::vector<std::string>>());
+    writer::StartTracing(std::move(initial_buffer), mx::vmo(),
+                         categories.To<std::vector<std::string>>());
   }
 
   void Stop(const StopCallback& cb) override {
@@ -58,7 +58,7 @@ class TraceProviderImpl : public TraceProvider {
 
     if (state_ == State::kStarted) {
       state_ = State::kStopped;
-      internal::StopTracing();
+      writer::StopTracing();
     }
 
     cb();

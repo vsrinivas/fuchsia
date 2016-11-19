@@ -11,7 +11,7 @@
 namespace tracing {
 namespace internal {
 
-template <typename Value, uint16_t null_value, size_t size>
+template <typename Value, typename Index, size_t size>
 class Table {
  public:
   void Reset() {
@@ -19,27 +19,27 @@ class Table {
     table_.clear();
   }
 
-  bool Register(Value object, uint16_t* index) {
+  Index Register(Value object, bool* out_added) {
     std::lock_guard<std::mutex> lg(guard_);
 
     auto it = table_.find(object);
     if (it != table_.end()) {
-      *index = it->second;
-      return false;
+      *out_added = false;
+      return it->second;
     }
 
     if (table_.size() == size) {
-      *index = null_value;
-      return false;
+      *out_added = false;
+      return 0;
     }
 
-    *index = table_[object] = table_.size() + 1;
-    return true;
+    *out_added = true;
+    return table_[object] = table_.size() + 1;
   }
 
  private:
   std::mutex guard_;
-  std::unordered_map<Value, uint16_t> table_;
+  std::unordered_map<Value, Index> table_;
 };
 
 }  // namespace internal

@@ -265,4 +265,4 @@ TEST_F(TracingClientTest, ConcurrentTraceRecording) {
 }
 
 }  // namespace
-}  // namespace trace_event
+}  // namespace tracing

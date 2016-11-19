@@ -68,4 +68,4 @@ bool CategoriesMatcher::IsAnyCategoryEnabled(const char* categories) {
 }
 
 }  // namespace internal
-}  // namespace trace_event
+}  // namespace tracing
