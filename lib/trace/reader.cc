@@ -461,13 +461,13 @@ void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
   switch (event_type) {
     case TraceEventType::kDurationBegin: {
       visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                  name.ToString(), category.ToString(),
+                                  category.ToString(), name.ToString(),
                                   arguments, EventData(DurationBegin{})}));
       break;
     }
     case TraceEventType::kDurationEnd: {
       visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                  name.ToString(), category.ToString(),
+                                  category.ToString(), name.ToString(),
                                   arguments, EventData(DurationEnd{})}));
       break;
     }
@@ -475,7 +475,7 @@ void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
       uint64_t id = 0;
       if (chunk.Read(&id))
         visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                    name.ToString(), category.ToString(),
+                                    category.ToString(), name.ToString(),
                                     arguments, EventData(AsyncBegin{id})}));
       break;
     }
@@ -483,7 +483,7 @@ void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
       uint64_t id = 0;
       if (chunk.Read(&id))
         visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                    name.ToString(), category.ToString(),
+                                    category.ToString(), name.ToString(),
                                     arguments, EventData(AsyncInstant{id})}));
       break;
     }
@@ -491,7 +491,7 @@ void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
       uint64_t id = 0;
       if (chunk.Read(&id))
         visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                    name.ToString(), category.ToString(),
+                                    category.ToString(), name.ToString(),
                                     arguments, EventData(AsyncEnd{id})}));
       break;
     }

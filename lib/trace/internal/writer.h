@@ -319,9 +319,8 @@ template <typename T>
 struct ArgumentMaker<
     T,
     typename std::enable_if<std::is_unsigned<T>::value>::type> {
-  using NumericType = typename std::conditional<sizeof(T) < sizeof(int32_t),
-                                                int32_t,
-                                                int64_t>::type;
+  using NumericType = typename std::
+      conditional<sizeof(T) < sizeof(int32_t), int32_t, int64_t>::type;
   using ResultType = Argument<NumericType>;
   static ResultType Make(const char* name, T value) {
     return ResultType(name, static_cast<NumericType>(value));
@@ -350,58 +349,58 @@ bool IsTracingEnabled(const char* categories);
 void StopTracing();
 
 template <typename... Args>
-inline void TraceDurationBegin(const char* name,
-                               const char* cat,
+inline void TraceDurationBegin(const char* cat,
+                               const char* name,
                                Args&&... args) {
   if (auto payload = WriteEventRecord(
-          TraceEventType::kDurationBegin, name, cat, sizeof...(Args),
+          TraceEventType::kDurationBegin, cat, name, sizeof...(Args),
           SizeArguments(std::forward<Args>(args)...))) {
     payload.WriteValues(std::forward<Args>(args)...);
   }
 }
 
 template <typename... Args>
-inline void TraceDurationEnd(const char* name,
-                             const char* cat,
+inline void TraceDurationEnd(const char* cat,
+                             const char* name,
                              Args&&... args) {
   if (auto payload = WriteEventRecord(
-          TraceEventType::kDurationEnd, name, cat, sizeof...(Args),
+          TraceEventType::kDurationEnd, cat, name, sizeof...(Args),
           SizeArguments(std::forward<Args>(args)...))) {
     payload.WriteValues(std::forward<Args>(args)...);
   }
 }
 
 template <typename... Args>
-inline void TraceAsyncBegin(const char* name,
-                            const char* cat,
+inline void TraceAsyncBegin(const char* cat,
+                            const char* name,
                             uint64_t id,
                             Args&&... args) {
   if (auto payload = WriteEventRecord(
-          TraceEventType::kAsyncStart, name, cat, sizeof...(Args),
+          TraceEventType::kAsyncStart, cat, name, sizeof...(Args),
           sizeof(id) + SizeArguments(std::forward<Args>(args)...))) {
     payload.WriteValues(std::forward<Args>(args)...).Write(id);
   }
 }
 
 template <typename... Args>
-inline void TraceAsyncInstant(const char* name,
-                              const char* cat,
+inline void TraceAsyncInstant(const char* cat,
+                              const char* name,
                               uint64_t id,
                               Args&&... args) {
   if (auto payload = WriteEventRecord(
-          TraceEventType::kAsyncInstant, name, cat, sizeof...(Args),
+          TraceEventType::kAsyncInstant, cat, name, sizeof...(Args),
           sizeof(id) + SizeArguments(std::forward<Args>(args)...))) {
     payload.WriteValues(std::forward<Args>(args)...).Write(id);
   }
 }
 
 template <typename... Args>
-inline void TraceAsyncEnd(const char* name,
-                          const char* cat,
+inline void TraceAsyncEnd(const char* cat,
+                          const char* name,
                           uint64_t id,
                           Args&&... args) {
   if (auto payload = WriteEventRecord(
-          TraceEventType::kAsyncEnd, name, cat, sizeof...(Args),
+          TraceEventType::kAsyncEnd, cat, name, sizeof...(Args),
           sizeof(id) + SizeArguments(std::forward<Args>(args)...))) {
     payload.WriteValues(std::forward<Args>(args)...).Write(id);
   }

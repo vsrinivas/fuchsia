@@ -348,8 +348,8 @@ struct EventRecord {
   TraceEventType event_type;
   uint64_t timestamp;
   Thread thread;
-  std::string name;
   std::string cat;
+  std::string name;
   std::vector<Argument> arguments;
   EventData event_data;
 };

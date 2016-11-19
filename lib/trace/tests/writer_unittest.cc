@@ -101,22 +101,22 @@ TEST_F(RegisterThreadTest, RegistrationForMultipleThreads) {
 using WriterTest = TracingControllingFixture<1024 * 1024>;
 
 TEST_F(WriterTest, EventRecording) {
-  internal::TraceDurationBegin("name", "cat");
-  internal::TraceDurationEnd("name", "cat");
-  internal::TraceAsyncBegin("name", "cat", 42);
-  internal::TraceAsyncInstant("name", "cat", 42);
-  internal::TraceAsyncEnd("name", "cat", 42);
+  internal::TraceDurationBegin("cat", "name");
+  internal::TraceDurationEnd("cat", "name");
+  internal::TraceAsyncBegin("cat", "name", 42);
+  internal::TraceAsyncInstant("cat", "name", 42);
+  internal::TraceAsyncEnd("cat", "name", 42);
 }
 
 TEST_F(WriterTest, EventRecordingMultiThreaded) {
   std::vector<std::thread> threads;
   for (size_t i = 0; i < 10; i++)
     threads.emplace_back([]() {
-      internal::TraceDurationBegin("name", "cat");
-      internal::TraceDurationEnd("name", "cat");
-      internal::TraceAsyncBegin("name", "cat", 42);
-      internal::TraceAsyncInstant("name", "cat", 42);
-      internal::TraceAsyncEnd("name", "cat", 42);
+      internal::TraceDurationBegin("cat", "name");
+      internal::TraceDurationEnd("cat", "name");
+      internal::TraceAsyncBegin("cat", "name", 42);
+      internal::TraceAsyncInstant("cat", "name", 42);
+      internal::TraceAsyncEnd("cat", "name", 42);
     });
 
   for (auto& thread : threads)
@@ -128,7 +128,7 @@ TEST_F(WriterTest, EventRecordingWithArguments) {
   int i = 0;
 
   internal::TraceDurationBegin(
-      "name", "cat", internal::MakeArgument("int32", int32_t(42)),
+      "cat", "name", internal::MakeArgument("int32", int32_t(42)),
       internal::MakeArgument("int64", int64_t(-42)),
       internal::MakeArgument("double", 42.42),
       internal::MakeArgument("cstring", "constant"),
@@ -137,7 +137,7 @@ TEST_F(WriterTest, EventRecordingWithArguments) {
       internal::MakeArgument("koid", internal::Koid(1 << 10)));
 
   internal::TraceDurationEnd(
-      "name", "cat", internal::MakeArgument("int32", int32_t(42)),
+      "cat", "name", internal::MakeArgument("int32", int32_t(42)),
       internal::MakeArgument("int64", int64_t(-42)),
       internal::MakeArgument("double", 42.42),
       internal::MakeArgument("cstring", "constant"),
@@ -146,7 +146,7 @@ TEST_F(WriterTest, EventRecordingWithArguments) {
       internal::MakeArgument("koid", internal::Koid(1 << 10)));
 
   internal::TraceAsyncBegin(
-      "name", "cat", 42, internal::MakeArgument("int32", int32_t(42)),
+      "cat", "name", 42, internal::MakeArgument("int32", int32_t(42)),
       internal::MakeArgument("int64", int64_t(-42)),
       internal::MakeArgument("double", 42.42),
       internal::MakeArgument("cstring", "constant"),
@@ -155,7 +155,7 @@ TEST_F(WriterTest, EventRecordingWithArguments) {
       internal::MakeArgument("koid", internal::Koid(1 << 10)));
 
   internal::TraceAsyncInstant(
-      "name", "cat", 42, internal::MakeArgument("int32", int32_t(42)),
+      "cat", "name", 42, internal::MakeArgument("int32", int32_t(42)),
       internal::MakeArgument("int64", int64_t(-42)),
       internal::MakeArgument("double", 42.42),
       internal::MakeArgument("cstring", "constant"),
@@ -164,7 +164,7 @@ TEST_F(WriterTest, EventRecordingWithArguments) {
       internal::MakeArgument("koid", internal::Koid(1 << 10)));
 
   internal::TraceAsyncEnd(
-      "name", "cat", 42, internal::MakeArgument("int32", int32_t(42)),
+      "cat", "name", 42, internal::MakeArgument("int32", int32_t(42)),
       internal::MakeArgument("int64", int64_t(-42)),
       internal::MakeArgument("double", 42.42),
       internal::MakeArgument("cstring", "constant"),
@@ -181,7 +181,7 @@ TEST_F(WriterTest, EventRecordingWithArgumentsMultiThreaded) {
       int i = 0;
 
       internal::TraceDurationBegin(
-          "name", "cat", internal::MakeArgument("int32", int32_t(42)),
+          "cat", "name", internal::MakeArgument("int32", int32_t(42)),
           internal::MakeArgument("int64", int64_t(-42)),
           internal::MakeArgument("double", 42.42),
           internal::MakeArgument("cstring", "constant"),
@@ -190,7 +190,7 @@ TEST_F(WriterTest, EventRecordingWithArgumentsMultiThreaded) {
           internal::MakeArgument("koid", internal::Koid(1 << 10)));
 
       internal::TraceDurationEnd(
-          "name", "cat", internal::MakeArgument("int32", int32_t(42)),
+          "cat", "name", internal::MakeArgument("int32", int32_t(42)),
           internal::MakeArgument("int64", int64_t(-42)),
           internal::MakeArgument("double", 42.42),
           internal::MakeArgument("cstring", "constant"),
@@ -199,7 +199,7 @@ TEST_F(WriterTest, EventRecordingWithArgumentsMultiThreaded) {
           internal::MakeArgument("koid", internal::Koid(1 << 10)));
 
       internal::TraceAsyncBegin(
-          "name", "cat", 42, internal::MakeArgument("int32", int32_t(42)),
+          "cat", "name", 42, internal::MakeArgument("int32", int32_t(42)),
           internal::MakeArgument("int64", int64_t(-42)),
           internal::MakeArgument("double", 42.42),
           internal::MakeArgument("cstring", "constant"),
@@ -208,7 +208,7 @@ TEST_F(WriterTest, EventRecordingWithArgumentsMultiThreaded) {
           internal::MakeArgument("koid", internal::Koid(1 << 10)));
 
       internal::TraceAsyncInstant(
-          "name", "cat", 42, internal::MakeArgument("int32", int32_t(42)),
+          "cat", "name", 42, internal::MakeArgument("int32", int32_t(42)),
           internal::MakeArgument("int64", int64_t(-42)),
           internal::MakeArgument("double", 42.42),
           internal::MakeArgument("cstring", "constant"),
@@ -217,7 +217,7 @@ TEST_F(WriterTest, EventRecordingWithArgumentsMultiThreaded) {
           internal::MakeArgument("koid", internal::Koid(1 << 10)));
 
       internal::TraceAsyncEnd(
-          "name", "cat", 42, internal::MakeArgument("int32", int32_t(42)),
+          "cat", "name", 42, internal::MakeArgument("int32", int32_t(42)),
           internal::MakeArgument("int64", int64_t(-42)),
           internal::MakeArgument("double", 42.42),
           internal::MakeArgument("cstring", "constant"),
