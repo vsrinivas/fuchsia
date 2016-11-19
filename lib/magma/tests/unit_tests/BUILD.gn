@@ -86,9 +86,9 @@ executable("magma_sys_abi_conformance_tests") {
   ]
 
   deps = [
+    "$magma_build_root:magma",
     "$magma_build_root/include:sys_abi",
     "$magma_build_root/src/magma_util/platform:buffer",
-    "$magma_build_root/src/sys_driver:sys_abi_impl",
     "//third_party/gtest",
   ]
 }

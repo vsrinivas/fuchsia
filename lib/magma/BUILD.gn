@@ -47,5 +47,13 @@ group("magma_tests") {
 }
 
 group("mesa_tests") {
-  deps = [ "$mesa_build_root:tests" ]
+  deps = [
+    "$mesa_build_root:tests",
+  ]
+}
+
+shared_library("magma") {
+  deps = [
+    "src/sys_driver:sys_abi_impl($magma_shared_toolchain)",
+  ]
 }
