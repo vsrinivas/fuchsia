@@ -14,9 +14,8 @@ endif
 
 " keyword definitions
 syn match fidlImport        "^\(import\)\s"
-syn keyword fidlLanguageKeywords module interface
-syn keyword fidlLanguageKeywords struct union
-syn keyword fidlType bool float double int8 int16 int32 int64 uint8 uint16 uint32 uint64 string handle channel socket vmo process job thread
+syn keyword fidlLanguageKeywords enum module interface struct union
+syn keyword fidlType array bool float double int8 int16 int32 int64 uint8 uint16 uint32 uint64 string handle channel socket vmo process job thread
 
 " Comments
 syntax keyword fidlTodo           contained TODO FIXME XXX
