@@ -1,16 +1,26 @@
-#!/usr/bin/env bash
 # Copyright 2016 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 #
-# Source this script to include variable useful functions in your environment.
+# Source this script into BASH or ZSH to include various useful functions
+# in your environment.
+#
+#   $ source path/to/fuchsia/scripts/env.sh
+#   $ envprompt
+#   $ fgo
+#   $ fset x86-64
+#   $ fbuild
 #
 # Functions prefixed with 'f' are for fuchsia.
 # Functions prefixed with 'm' are for magenta.
 #
 
-export FUCHSIA_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -n "${ZSH_VERSION}" ]]; then
+  export FUCHSIA_SCRIPTS_DIR="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+else
+  export FUCHSIA_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
 export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
 export MAGENTA_DIR="${FUCHSIA_DIR}/magenta"
 
@@ -40,8 +50,15 @@ function envprompt-info() {
 }
 
 function envprompt() {
-  export PS1='\[\e[0;1;33m\]$(envprompt-info)\[\e[34m\]\h:\w\\$\[\e[0m\] '
-  export PS2='\[\e[0;1;34m\]>\[\e[0m\] '
+  if [[ -n "${ZSH_VERSION}" ]]; then
+    autoload -Uz colors && colors
+    setopt PROMPT_SUBST
+    export PS1='%B%F{yellow}$(envprompt-info)%B%F{blue}%m:%~%#%f%b '
+    export PS2='%B%F{blue}>%f%b '
+  else
+    export PS1='\[\e[0;1;33m\]$(envprompt-info)\[\e[34m\]\h:\w\\$\[\e[0m\] '
+    export PS2='\[\e[0;1;34m\]>\[\e[0m\] '
+  fi
 }
 
 ### mgo: navigate to directory within magenta
@@ -384,13 +401,21 @@ Generates ninja build files for fuchsia.
 END
 }
 
+function fgen-internal() {
+  if [[ -n "${ZSH_VERSION}" ]]; then
+    "${FUCHSIA_DIR}/packages/gn/gen.py" ${=FUCHSIA_GEN_ARGS} "$@"
+  else
+    "${FUCHSIA_DIR}/packages/gn/gen.py" ${FUCHSIA_GEN_ARGS} "$@"
+  fi
+}
+
 function fgen() {
   fcheck || return 1
 
   echo "Generating ninja files..."
   rm -f "${FUCHSIA_GEN_ARGS_CACHE}"
   fbuild-sysroot-if-changed \
-    && "${FUCHSIA_DIR}/packages/gn/gen.py" ${FUCHSIA_GEN_ARGS} "$@" \
+    && fgen-internal "$@" \
     && (echo "${FUCHSIA_GEN_ARGS}" > "${FUCHSIA_GEN_ARGS_CACHE}")
 }
 
@@ -473,6 +498,14 @@ function fbuild-goma-ensure-start() {
   fi
 }
 
+function fbuild-internal() {
+  if [[ -n "${ZSH_VERSION}" ]]; then
+    "${FUCHSIA_DIR}/buildtools/ninja" ${=FUCHSIA_NINJA_ARGS} "$@"
+  else
+    "${FUCHSIA_DIR}/buildtools/ninja" ${FUCHSIA_NINJA_ARGS} "$@"
+  fi
+}
+
 function fbuild() {
   fcheck || return 1
 
@@ -480,7 +513,7 @@ function fbuild() {
     && fgen-if-changed \
     && fbuild-goma-ensure-start \
     && echo "Building fuchsia..." \
-    && "${FUCHSIA_DIR}/buildtools/ninja" ${FUCHSIA_NINJA_ARGS} "$@"
+    && fbuild-internal "$@"
 }
 
 ### fboot: run fuchsia bootserver
