@@ -6,5 +6,6 @@ group("all") {
   deps = [
     "//apps/modular/examples/flutter/counter/parent:example_flutter_counter_parent",
     "//apps/modular/examples/flutter/counter/child:example_flutter_counter_child",
+    "//apps/modular/examples/flutter/hello_world:example_flutter_hello_world",
   ]
 }

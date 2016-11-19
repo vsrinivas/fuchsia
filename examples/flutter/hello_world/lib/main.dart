@@ -14,7 +14,7 @@ import 'package:flutter/widgets.dart';
 final ApplicationContext _appContext = new ApplicationContext.fromStartupInfo();
 
 void _log(String msg) {
-  print('[ExampleModule3] $msg');
+  print('[Hello World Module] $msg');
 }
 
 /// An implementation of the [Module] interface.
@@ -29,11 +29,10 @@ class ModuleImpl extends Module {
   /// Implementation of the Initialize(Story story, Link link) method.
   @override
   void initialize(
-    InterfaceHandle<Story> storyHandle,
-    InterfaceHandle<Link> linkHandle,
-    InterfaceHandle<ServiceProvider> incomingServices,
-    InterfaceRequest<ServiceProvider> outgoingServices
-  ) {
+      InterfaceHandle<Story> storyHandle,
+      InterfaceHandle<Link> linkHandle,
+      InterfaceHandle<ServiceProvider> incomingServices,
+      InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('ModuleImpl::initialize call');
 
     StoryProxy story = new StoryProxy();
@@ -70,5 +69,5 @@ void main() {
     Module.serviceName,
   );
 
-  runApp(new Text("This is an example Flutter module!"));
+  runApp(new Text("Hello, world!"));
 }
