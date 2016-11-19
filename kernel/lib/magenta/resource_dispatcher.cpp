@@ -117,7 +117,8 @@ mxtl::RefPtr<ResourceDispatcher> ResourceDispatcher::LookupChildById(mx_koid_t k
 static mx_status_t mmio_create_dispatcher(const mx_rrec_t* rec, uint32_t options,
                                           mxtl::RefPtr<Dispatcher>* dispatcher,
                                           mx_rights_t* rights) {
-    mxtl::RefPtr<VmObject> vmo = VmObjectPhysical::Create(rec->mmio.phys_base, rec->mmio.phys_size);
+    mxtl::RefPtr<VmObject> vmo = VmObjectPhysical::Create(
+        static_cast<mx_paddr_t>(rec->mmio.phys_base), rec->mmio.phys_size);
     if (!vmo)
         return ERR_NO_MEMORY;
 
