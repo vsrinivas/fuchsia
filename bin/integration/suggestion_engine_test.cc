@@ -388,10 +388,10 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   Proposinator p(suggestion_engine_);
   SetResultCount(10);
 
-  auto add_module = maxwell::suggestion::AddModule::New();
-  add_module->module_id = "foo://bar";
+  auto create_story = maxwell::suggestion::CreateStory::New();
+  create_story->module_id = "foo://bar";
   auto action = maxwell::suggestion::Action::New();
-  action->set_add_module(std::move(add_module));
+  action->set_create_story(std::move(create_story));
   fidl::Array<maxwell::suggestion::ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));

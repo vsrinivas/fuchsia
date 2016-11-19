@@ -56,12 +56,13 @@ void SuggestionEngineApp::NotifyInteraction(const fidl::String& suggestion_uuid,
       // to receive a StoryController anyway (not optional atm.).
       for (const auto& action : suggestion_record->proposal->on_selected) {
         switch (action->which()) {
-          case Action::Tag::ADD_MODULE: {
-            const auto& add_module = action->get_add_module();
+          case Action::Tag::CREATE_STORY: {
+            const auto& create_story = action->get_create_story();
             if (story_provider_) {
-              story_provider_->CreateStory(add_module->module_id,
+              story_provider_->CreateStory(create_story->module_id,
                                            GetProxy(&story));
-              FTL_LOG(INFO) << "Adding module " << add_module->module_id;
+              FTL_LOG(INFO) << "Creating story with module "
+                            << create_story->module_id;
             } else {
               FTL_LOG(WARNING) << "Unable to add module; no story provider";
             }

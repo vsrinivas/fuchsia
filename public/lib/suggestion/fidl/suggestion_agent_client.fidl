@@ -57,12 +57,12 @@ union ExpiryCondition {
 */
 
 union Action {
-  AddModule add_module;
+  CreateStory create_story;
 
   // TODO(thatguy): Add other actions.
 };
 
-struct AddModule {
+struct CreateStory {
   string module_id;
 
   // TODO(thatguy): Make this useful.
