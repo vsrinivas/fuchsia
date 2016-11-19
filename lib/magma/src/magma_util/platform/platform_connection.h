@@ -62,6 +62,7 @@ class PlatformConnection {
 public:
     class Delegate {
     public:
+        virtual ~Delegate() {}
         virtual bool ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) = 0;
         virtual bool ReleaseBuffer(uint64_t buffer_id) = 0;
 
@@ -74,6 +75,8 @@ public:
         virtual void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
                               void* data) = 0;
     };
+
+    virtual ~PlatformConnection() {}
 
     static std::unique_ptr<PlatformConnection> Create(std::unique_ptr<Delegate> Delegate);
     virtual uint32_t GetHandle() = 0;
