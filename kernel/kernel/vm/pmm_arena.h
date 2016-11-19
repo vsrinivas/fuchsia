@@ -30,6 +30,7 @@ public:
     size_t size() const { return info_->size; }
     unsigned int flags() const { return info_->flags; }
     unsigned int priority() const { return info_->priority; }
+    size_t free_count() const { return free_count_; };
 
     vm_page_t* get_page(size_t index) { return &page_array_[index]; }
 

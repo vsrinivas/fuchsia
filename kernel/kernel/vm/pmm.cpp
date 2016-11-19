@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
+#include <kernel/timer.h>
 #include <kernel/vm.h>
 #include <lib/console.h>
 #include <list.h>
@@ -295,6 +296,21 @@ size_t pmm_free_page(vm_page_t* page) {
     return pmm_free(&list);
 }
 
+void pmm_dump_free() {
+    size_t free = 0u;
+    for (const auto& a : arena_list) {
+        free += a.free_count();
+    }
+    auto megabytes_free = free / 256u;
+    printf(" %zu free MBs\n", megabytes_free);
+}
+
+extern "C"
+enum handler_return pmm_dump_timer(struct timer *t, lk_time_t, void *) {
+    pmm_dump_free();
+    return INT_NO_RESCHEDULE;
+}
+
 static int cmd_pmm(int argc, const cmd_args* argv) {
     if (argc < 2) {
     notenoughargs:
@@ -308,6 +324,7 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
         printf("%s alloc_contig <count> <alignment>\n", argv[0].str);
         printf("%s dump_alloced\n", argv[0].str);
         printf("%s free_alloced\n", argv[0].str);
+        printf("%s free\n", argv[0].str);
         return ERR_INTERNAL;
     }
 
@@ -316,6 +333,19 @@ static int cmd_pmm(int argc, const cmd_args* argv) {
     if (!strcmp(argv[1].str, "arenas")) {
         for (auto& a : arena_list) {
             a.Dump(false);
+        }
+    } else if (!strcmp(argv[1].str, "free")) {
+        static bool show_mem = false;
+        static timer_t timer;
+
+        if (!show_mem) {
+            printf("pmm free: issue the same command to stop.\n");
+            timer_initialize(&timer);
+            timer_set_periodic(&timer, 1000, &pmm_dump_timer, NULL);
+            show_mem = true;
+        } else {
+            timer_cancel(&timer);
+            show_mem = false;
         }
     } else if (!strcmp(argv[1].str, "alloc")) {
         if (argc < 3)
