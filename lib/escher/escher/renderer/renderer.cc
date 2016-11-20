@@ -27,7 +27,6 @@ Renderer::~Renderer() {
 void Renderer::BeginFrame(const FramebufferPtr& framebuffer) {
   FTL_DCHECK(!current_frame_);
   ++frame_number_;
-  FTL_LOG(INFO) << "Beginning frame #" << frame_number_;
   current_frame_ = pool_->GetCommandBuffer();
 
   current_frame_->AddWaitSemaphore(

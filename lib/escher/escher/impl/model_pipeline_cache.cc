@@ -61,40 +61,68 @@ constexpr char g_vertex_wobble_src[] = R"GLSL(
       float time;
     };
 
-    layout(set = 1, binding = 0) uniform PerObject {
-      mat4 transform;
-      vec4 color;
-    };
-
     out gl_PerVertex {
       vec4 gl_Position;
     };
 
-
-    const float TWO_PI = 6.28318530718f;
-
+    // TODO: unused.  See discussion in PerObject struct, below.
     struct SineParams {
       float speed;
       float amplitude;
       float frequency;
     };
-
-    const SineParams sine_params[3] = {
-      { -0.3f * TWO_PI, 0.4f, 7.f * TWO_PI },
-      { -0.2f * TWO_PI, 0.2f, 23.f * TWO_PI },
-      { 1.f * TWO_PI, 0.6f, 5.f * TWO_PI }
-    };
-
+    const int kNumSineParams = 3;
     float EvalSineParams(SineParams params) {
       float arg = params.frequency * inPerimeter + params.speed * time;
       return params.amplitude * sin(arg);
     }
 
+    layout(set = 1, binding = 0) uniform PerObject {
+      mat4 transform;
+      vec4 color;
+      // Corresponds to ModifierWobble::SineParams[0].
+      float speed_0;
+      float amplitude_0;
+      float frequency_0;
+      // Corresponds to ModifierWobble::SineParams[1].
+      float speed_1;
+      float amplitude_1;
+      float frequency_1;
+      // Corresponds to ModifierWobble::SineParams[2].
+      float speed_2;
+      float amplitude_2;
+      float frequency_2;
+      // TODO: for some reason, I can't say:
+      //   SineParams sine_params[kNumSineParams];
+      // nor:
+      //   SineParams sine_params_0;
+      //   SineParams sine_params_1;
+      //   SineParams sine_params_2;
+      // ... if I try, the GLSL compiler produces SPIR-V,
+      // but we fail when trying to create a vk::ShaderModule
+      // from that SPIR-V.
+    };
+
+    // TODO: workaround.  See discussion in PerObject struct, above.
+    float EvalSineParams_0() {
+      float arg = frequency_0 * inPerimeter + speed_0 * time;
+      return amplitude_0 * sin(arg);
+    }
+    float EvalSineParams_1() {
+      float arg = frequency_1 * inPerimeter + speed_1 * time;
+      return amplitude_1 * sin(arg);
+    }
+    float EvalSineParams_2() {
+      float arg = frequency_2 * inPerimeter + speed_2 * time;
+      return amplitude_2 * sin(arg);
+    }
+
     void main() {
-      // Halfway between min and max depth.
-      float scale = EvalSineParams(sine_params[0]) +
-                    EvalSineParams(sine_params[1]) +
-                    EvalSineParams(sine_params[2]);
+      // TODO: workaround.  See discussion in PerObject struct, above.
+      // float scale = EvalSineParams(sine_params_0) +
+      //               EvalSineParams(sine_params_1) +
+      //               EvalSineParams(sine_params_2);
+      float scale = EvalSineParams_0() + EvalSineParams_1() + EvalSineParams_2();
       vec2 move = vec2(cos(time * 0.4f) * 200.f, sin(time) * 100.f);
       gl_Position = transform * vec4(inPosition + move + scale * inPositionOffset, 0, 1);
 

@@ -118,6 +118,8 @@ static_library("escher") {
     "shape/mesh_builder.cc",
     "shape/mesh_builder.h",
     "shape/mesh_builder_factory.h",
+    "shape/modifier_wobble.cc",
+    "shape/modifier_wobble.h",
     "util/image_loader.cc",
     "util/image_loader.h",
     "util/need.h",

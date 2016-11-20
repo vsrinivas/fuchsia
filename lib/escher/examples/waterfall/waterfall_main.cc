@@ -14,6 +14,7 @@
 #include "escher/renderer/paper_renderer.h"
 #include "escher/scene/model.h"
 #include "escher/scene/stage.h"
+#include "escher/shape/modifier_wobble.h"
 #include "escher/util/stopwatch.h"
 #include "escher/vk/vulkan_swapchain_helper.h"
 #include "ftl/logging.h"
@@ -107,6 +108,14 @@ int main(int argc, char** argv) {
     ring2.set_shape_modifiers(ShapeModifier::kWobble);
     Object ring3(ring_mesh3, vec3(512.f, 512.f, 2.f), blue_green);
     ring3.set_shape_modifiers(ShapeModifier::kWobble);
+
+    constexpr float TWO_PI = 6.28318530718f;
+    escher::ModifierWobble wobble_data{{{-0.3f * TWO_PI, 0.4f, 7.f * TWO_PI},
+                                        {-0.2f * TWO_PI, 0.2f, 23.f * TWO_PI},
+                                        {1.f * TWO_PI, 0.6f, 5.f * TWO_PI}}};
+    ring1.set_shape_modifier_data(wobble_data);
+    ring2.set_shape_modifier_data(wobble_data);
+    ring3.set_shape_modifier_data(wobble_data);
 
     std::vector<Object> objects{circle1,   circle2, circle3, circle4,
                                 rectangle, ring1,   ring2,   ring3};

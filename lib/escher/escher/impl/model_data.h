@@ -11,6 +11,7 @@
 #include "escher/geometry/types.h"
 #include "escher/impl/descriptor_set_pool.h"
 #include "escher/impl/uniform_buffer_pool.h"
+#include "escher/shape/modifier_wobble.h"
 #include "ftl/macros.h"
 
 namespace escher {
@@ -44,6 +45,9 @@ class ModelData {
 
     mat4 transform;
     vec4 color;
+    // Temporary hack.  Soon, per-object params for shape-modifiers, etc. will
+    // only be provided to the pipelines that need them.
+    ModifierWobble wobble;
   };
 
   ModelData(vk::Device device, GpuAllocator* allocator);

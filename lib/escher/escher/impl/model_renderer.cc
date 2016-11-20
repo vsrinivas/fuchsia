@@ -116,6 +116,11 @@ void ModelRenderer::Draw(Stage& stage,
         sampler = default_sampler;
       }
 
+      if (o.shape().modifiers() | ShapeModifier::kWobble) {
+        auto wobble = o.shape_modifier_data<ModifierWobble>();
+        per_object.wobble = wobble ? *wobble : ModifierWobble();
+      }
+
       per_object_bindings_.push_back(
           writer.WritePerObjectData(per_object, image_view, sampler));
     }

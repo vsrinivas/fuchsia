@@ -44,6 +44,19 @@ class Object {
     return *this;
   }
 
+  // Obtain a temporary reference to data corresponding to a particular
+  // ShapeModifier; the modifier that is used is determined by DataT::kType.
+  // The returned pointer is invalidated by the next call to
+  // set_shape_modifier_data().  Escher clients should only use pre-existing
+  // Escher types for DataT (e.g. ModifierWobble), since those are the ones that
+  // the renderer implementation knows how to deal with.
+  template <typename DataT>
+  const DataT* shape_modifier_data() const;
+  // Set per-object ShapeModifier data for the ShapeModifier type specified by
+  // DataT::kType.  Uses memcpy() to copy the DataT into shape_modifier_data_.
+  template <typename DataT>
+  void set_shape_modifier_data(const DataT& data);
+
  private:
   Object(const Shape& shape, const MaterialPtr& material);
 
@@ -53,5 +66,28 @@ class Object {
   vec2 size_;
   std::unordered_map<ShapeModifier, std::vector<uint8_t>> shape_modifier_data_;
 };
+
+// Inline function definitions.
+
+template <typename DataT>
+const DataT* Object::shape_modifier_data() const {
+  auto it = shape_modifier_data_.find(DataT::kType);
+  if (it == shape_modifier_data_.end()) {
+    return nullptr;
+  } else {
+    FTL_DCHECK(it->second.size() == sizeof(DataT));
+    return reinterpret_cast<const DataT*>(it->second.data());
+  }
+}
+
+template <typename DataT>
+void Object::set_shape_modifier_data(const DataT& data) {
+  auto& vect = shape_modifier_data_[DataT::kType];
+  vect.resize(sizeof(DataT));
+  memcpy(vect.data(), &data, sizeof(DataT));
+}
+
+template <typename DataT>
+void set_shape_modifier_data(const DataT& data);
 
 }  // namespace escher
