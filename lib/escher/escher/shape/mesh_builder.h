@@ -35,7 +35,7 @@ class MeshBuilder : public ftl::RefCountedThreadSafe<MeshBuilder> {
   size_t vertex_stride() const { return vertex_stride_; }
 
   // Return the byte-offset of the attribute within each vertex.
-  virtual size_t GetAttributeOffset(MeshAttributeFlagBits flag) = 0;
+  virtual size_t GetAttributeOffset(MeshAttribute flag) = 0;
 
  protected:
   MeshBuilder(size_t max_vertex_count,

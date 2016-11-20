@@ -58,26 +58,24 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory,
 
   // Compute the offset of each vertex attribute.  While we're at it, set the
   // values for the circle's center vertex.
-  if (spec.flags & MeshAttributeFlagBits::kPosition) {
+  if (spec.flags & MeshAttribute::kPosition) {
     pos = reinterpret_cast<vec2*>(
-        vertex + builder->GetAttributeOffset(MeshAttributeFlagBits::kPosition));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kPosition));
     *pos = center;
   }
-  if (spec.flags & MeshAttributeFlagBits::kUV) {
+  if (spec.flags & MeshAttribute::kUV) {
     uv = reinterpret_cast<vec2*>(
-        vertex + builder->GetAttributeOffset(MeshAttributeFlagBits::kUV));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kUV));
     *uv = vec2(0.5f, 0.5f);
   }
-  if (spec.flags & MeshAttributeFlagBits::kPositionOffset) {
+  if (spec.flags & MeshAttribute::kPositionOffset) {
     pos_offset = reinterpret_cast<vec2*>(
-        vertex +
-        builder->GetAttributeOffset(MeshAttributeFlagBits::kPositionOffset));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kPositionOffset));
     *pos_offset = vec2(0.f, 0.f);
   }
-  if (spec.flags & MeshAttributeFlagBits::kPerimeter) {
+  if (spec.flags & MeshAttribute::kPerimeter) {
     perim = reinterpret_cast<float*>(
-        vertex +
-        builder->GetAttributeOffset(MeshAttributeFlagBits::kPerimeter));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kPerimeter));
     // TODO: This is an undesirable singularity.  Perhaps it would be better to
     // treat circles as a ring with inner radius of zero?
     *perim = 0.f;
@@ -154,23 +152,21 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory,
   vec2* pos_offset = nullptr;
   float* perim = nullptr;
 
-  if (spec.flags & MeshAttributeFlagBits::kPosition) {
+  if (spec.flags & MeshAttribute::kPosition) {
     pos = reinterpret_cast<vec2*>(
-        vertex + builder->GetAttributeOffset(MeshAttributeFlagBits::kPosition));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kPosition));
   }
-  if (spec.flags & MeshAttributeFlagBits::kUV) {
+  if (spec.flags & MeshAttribute::kUV) {
     uv = reinterpret_cast<vec2*>(
-        vertex + builder->GetAttributeOffset(MeshAttributeFlagBits::kUV));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kUV));
   }
-  if (spec.flags & MeshAttributeFlagBits::kPositionOffset) {
+  if (spec.flags & MeshAttribute::kPositionOffset) {
     pos_offset = reinterpret_cast<vec2*>(
-        vertex +
-        builder->GetAttributeOffset(MeshAttributeFlagBits::kPositionOffset));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kPositionOffset));
   }
-  if (spec.flags & MeshAttributeFlagBits::kPerimeter) {
+  if (spec.flags & MeshAttribute::kPerimeter) {
     perim = reinterpret_cast<float*>(
-        vertex +
-        builder->GetAttributeOffset(MeshAttributeFlagBits::kPerimeter));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kPerimeter));
   }
 
   const float outer_vertex_count_reciprocal = 1.f / outer_vertex_count;
@@ -231,7 +227,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory,
 
 MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory) {
   MeshSpec spec;
-  spec.flags = MeshAttributeFlagBits::kPosition | MeshAttributeFlagBits::kUV;
+  spec.flags = MeshAttribute::kPosition | MeshAttribute::kUV;
 
   // Some internet lore has it that it is better to use a single triangle rather
   // than a rectangle composed of a pair of triangles, so that is what we do.

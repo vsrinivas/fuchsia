@@ -143,12 +143,10 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
 
   std::future<SpirvData> vertex_spirv_future;
 
-  MeshSpec default_spec{MeshAttributeFlagBits::kPosition |
-                        MeshAttributeFlagBits::kUV};
-  MeshSpec wobble_spec{MeshAttributeFlagBits::kPosition |
-                       MeshAttributeFlagBits::kPositionOffset |
-                       MeshAttributeFlagBits::kPerimeter |
-                       MeshAttributeFlagBits::kUV};
+  MeshSpec default_spec{MeshAttribute::kPosition | MeshAttribute::kUV};
+  MeshSpec wobble_spec{MeshAttribute::kPosition |
+                       MeshAttribute::kPositionOffset |
+                       MeshAttribute::kPerimeter | MeshAttribute::kUV};
 
   bool use_wobble = false;
   if (spec.mesh_spec == default_spec) {

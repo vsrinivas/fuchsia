@@ -82,10 +82,10 @@ int main(int argc, char** argv) {
     escher::Object rectangle(escher::Object::NewRect(
         vec2(12.f, 300.f), vec2(1000.f, 300.f), 6.f, purple));
 
-    escher::MeshSpec spec{escher::MeshAttributeFlagBits::kPosition |
-                          escher::MeshAttributeFlagBits::kPositionOffset |
-                          escher::MeshAttributeFlagBits::kPerimeter |
-                          escher::MeshAttributeFlagBits::kUV};
+    escher::MeshSpec spec{escher::MeshAttribute::kPosition |
+                          escher::MeshAttribute::kPositionOffset |
+                          escher::MeshAttribute::kPerimeter |
+                          escher::MeshAttribute::kUV};
     auto mesh = escher::NewRingMesh(&escher, spec, 8, vec2(0.f, 0.f), 200.f,
                                     150.f, 20.f, -20.f);
     escher::Object ring(

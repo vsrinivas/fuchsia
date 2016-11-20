@@ -140,21 +140,20 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   return mesh;
 }
 
-size_t MeshManager::MeshBuilder::GetAttributeOffset(
-    MeshAttributeFlagBits flag) {
+size_t MeshManager::MeshBuilder::GetAttributeOffset(MeshAttribute flag) {
   // Find the attribute location corresponding to the flag.
   uint32_t location = static_cast<uint32_t>(-1);
   switch (flag) {
-    case MeshAttributeFlagBits::kPosition:
+    case MeshAttribute::kPosition:
       location = MeshImpl::kPositionAttributeLocation;
       break;
-    case MeshAttributeFlagBits::kPositionOffset:
+    case MeshAttribute::kPositionOffset:
       location = MeshImpl::kPositionOffsetAttributeLocation;
       break;
-    case MeshAttributeFlagBits::kUV:
+    case MeshAttribute::kUV:
       location = MeshImpl::kUVAttributeLocation;
       break;
-    case MeshAttributeFlagBits::kPerimeter:
+    case MeshAttribute::kPerimeter:
       location = MeshImpl::kPerimeterAttributeLocation;
       break;
   }
@@ -178,7 +177,7 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
   auto impl = std::make_unique<MeshSpecImpl>();
 
   vk::DeviceSize stride = 0;
-  if (spec.flags & MeshAttributeFlagBits::kPosition) {
+  if (spec.flags & MeshAttribute::kPosition) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = MeshImpl::kPositionAttributeLocation;
     attribute.binding = 0;
@@ -188,7 +187,7 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
     stride += sizeof(vec2);
     impl->attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttributeFlagBits::kPositionOffset) {
+  if (spec.flags & MeshAttribute::kPositionOffset) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = MeshImpl::kPositionOffsetAttributeLocation;
     attribute.binding = 0;
@@ -198,7 +197,7 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
     stride += sizeof(vec2);
     impl->attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttributeFlagBits::kUV) {
+  if (spec.flags & MeshAttribute::kUV) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = MeshImpl::kUVAttributeLocation;
     attribute.binding = 0;
@@ -208,7 +207,7 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
     stride += sizeof(vec2);
     impl->attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttributeFlagBits::kPerimeter) {
+  if (spec.flags & MeshAttribute::kPerimeter) {
     vk::VertexInputAttributeDescription attribute;
     attribute.location = MeshImpl::kPerimeterAttributeLocation;
     attribute.binding = 0;

@@ -56,7 +56,7 @@ class MeshManager : public MeshBuilderFactory {
     MeshPtr Build() override;
 
     // Return the byte-offset of the attribute within each vertex.
-    size_t GetAttributeOffset(MeshAttributeFlagBits flag) override;
+    size_t GetAttributeOffset(MeshAttribute flag) override;
 
    private:
     MeshManager* manager_;

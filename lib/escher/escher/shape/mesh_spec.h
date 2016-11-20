@@ -11,7 +11,7 @@
 
 namespace escher {
 
-enum class MeshAttributeFlagBits {
+enum class MeshAttribute {
   // vec2.  Position of the vertex, to be transformed by model-view-projection
   // (MVP) matrix.
   kPosition = 1,
@@ -26,15 +26,14 @@ enum class MeshAttributeFlagBits {
   kPerimeter = 1 << 3,
 };
 
-using MeshAttributeFlags = vk::Flags<MeshAttributeFlagBits, uint32_t>;
+using MeshAttributes = vk::Flags<MeshAttribute, uint32_t>;
 
-inline MeshAttributeFlags operator|(MeshAttributeFlagBits bit0,
-                                    MeshAttributeFlagBits bit1) {
-  return MeshAttributeFlags(bit0) | bit1;
+inline MeshAttributes operator|(MeshAttribute bit0, MeshAttribute bit1) {
+  return MeshAttributes(bit0) | bit1;
 }
 
 struct MeshSpec {
-  MeshAttributeFlags flags;
+  MeshAttributes flags;
 
   struct Hash {
     std::size_t operator()(const MeshSpec& spec) const {
