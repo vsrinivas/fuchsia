@@ -18,19 +18,25 @@
 #include "lib/ftl/macros.h"
 
 namespace tracing {
+namespace internal {
+class TraceEngine;
+}  // namespace internal
 namespace writer {
 
 // Sets up the Writer API to use |buffer| as destination for
 // incoming trace records.
 void StartTracing(mx::vmo current,
                   mx::vmo next,
-                  std::vector<std::string> categories);
+                  std::vector<std::string> enabled_categories);
 
 // Tears down the Writer API and frees up all allocated resources.
 void StopTracing();
 
 // Returns true if the tracer has been initialized by a call to |StartTracing|
 // and the specified |category| has been enabled.
+//
+// |category| must be a string constant such as would be passed to
+// |PrepareCategory| or |WriteEventRecord|.
 bool IsTracingEnabledForCategory(const char* category);
 
 // Provides support for writing sequences of 64-bit words into a buffer.
@@ -83,6 +89,9 @@ class Payload {
 // string table index.
 class StringRef {
  public:
+  // Constructs an uninitialized instance.
+  StringRef() {}
+
   static StringRef MakeEmpty() {
     return StringRef(::tracing::internal::StringRefFields::kEmpty, nullptr);
   }
@@ -141,17 +150,17 @@ class StringRef {
   explicit StringRef(EncodedStringRef encoded_value, const char* inline_string)
       : encoded_value_(encoded_value), inline_string_(inline_string) {}
 
-  EncodedStringRef const encoded_value_;
-  const char* const inline_string_;
+  EncodedStringRef encoded_value_;
+  const char* inline_string_;
 };
-
-// Registers a constant string in the string table.
-StringRef RegisterString(const char* string);
 
 // A thread reference which is either encoded inline or indirectly by
 // thread table index.
 class ThreadRef {
  public:
+  // Constructs an uninitialized instance.
+  ThreadRef() {}
+
   static ThreadRef MakeInlined(uint64_t process_koid, uint64_t thread_koid) {
     return ThreadRef(::tracing::internal::ThreadRefFields::kInline,
                      process_koid, thread_koid);
@@ -184,22 +193,19 @@ class ThreadRef {
         inline_process_koid_(inline_process_koid),
         inline_thread_koid_(inline_thread_koid) {}
 
-  EncodedThreadRef const encoded_value_;
-  uint64_t const inline_process_koid_;
-  uint64_t const inline_thread_koid_;
+  EncodedThreadRef encoded_value_;
+  uint64_t inline_process_koid_;
+  uint64_t inline_thread_koid_;
 };
 
-// Registers the current thread in the thread table.
-ThreadRef RegisterCurrentThread();
-
 // Represents a named argument and value pair.
-class ArgumentBase {
+class Argument {
  public:
-  explicit ArgumentBase(const char* name) : name_ref_(RegisterString(name)) {}
+  explicit Argument(StringRef name_ref) : name_ref_(std::move(name_ref)) {}
 
- protected:
   size_t Size() const { return sizeof(uint64_t) + name_ref_.Size(); }
 
+ protected:
   void WriteTo(Payload& payload,
                ArgumentType type,
                size_t size,
@@ -219,19 +225,24 @@ class ArgumentBase {
   StringRef const name_ref_;
 };
 
-template <typename T>
-class Argument;
-
-template <>
-class Argument<int32_t> : public ArgumentBase {
+class NullArgument : public Argument {
  public:
-  explicit Argument(const char* name, int32_t value)
-      : ArgumentBase(name), value_(value) {}
+  explicit NullArgument(StringRef name_ref) : Argument(std::move(name_ref)) {}
 
-  size_t Size() const { return ArgumentBase::Size(); }
+  size_t Size() const { return Argument::Size(); }
 
   void WriteTo(Payload& payload) const {
-    ArgumentBase::WriteTo(
+    Argument::WriteTo(payload, ArgumentType::kNull, Size());
+  }
+};
+
+class Int32Argument : public Argument {
+ public:
+  explicit Int32Argument(StringRef name_ref, int32_t value)
+      : Argument(std::move(name_ref)), value_(value) {}
+
+  void WriteTo(Payload& payload) const {
+    Argument::WriteTo(
         payload, ArgumentType::kInt32, Size(),
         ::tracing::internal::Int32ArgumentFields::Value::Make(value_));
   }
@@ -240,16 +251,15 @@ class Argument<int32_t> : public ArgumentBase {
   int32_t const value_;
 };
 
-template <>
-class Argument<int64_t> : public ArgumentBase {
+class Int64Argument : public Argument {
  public:
-  explicit Argument(const char* name, int64_t value)
-      : ArgumentBase(name), value_(value) {}
+  explicit Int64Argument(StringRef name_ref, int64_t value)
+      : Argument(std::move(name_ref)), value_(value) {}
 
-  size_t Size() const { return ArgumentBase::Size() + sizeof(int64_t); }
+  size_t Size() const { return Argument::Size() + sizeof(uint64_t); }
 
   void WriteTo(Payload& payload) const {
-    ArgumentBase::WriteTo(payload, ArgumentType::kInt64, Size());
+    Argument::WriteTo(payload, ArgumentType::kInt64, Size());
     payload.WriteInt64(value_);
   }
 
@@ -257,16 +267,15 @@ class Argument<int64_t> : public ArgumentBase {
   int64_t const value_;
 };
 
-template <>
-class Argument<double> : public ArgumentBase {
+class DoubleArgument : public Argument {
  public:
-  explicit Argument(const char* name, double value)
-      : ArgumentBase(name), value_(value) {}
+  explicit DoubleArgument(StringRef name_ref, double value)
+      : Argument(std::move(name_ref)), value_(value) {}
 
-  size_t Size() const { return ArgumentBase::Size() + sizeof(double); }
+  size_t Size() const { return Argument::Size() + sizeof(uint64_t); }
 
   void WriteTo(Payload& payload) const {
-    ArgumentBase::WriteTo(payload, ArgumentType::kDouble, Size());
+    Argument::WriteTo(payload, ArgumentType::kDouble, Size());
     payload.WriteDouble(value_);
   }
 
@@ -274,18 +283,17 @@ class Argument<double> : public ArgumentBase {
   double const value_;
 };
 
-class StringArgumentBase : public ArgumentBase {
+class StringArgument : public Argument {
  public:
-  explicit StringArgumentBase(const char* name, StringRef value_ref)
-      : ArgumentBase(name), value_ref_(std::move(value_ref)) {}
+  explicit StringArgument(StringRef name_ref, StringRef value_ref)
+      : Argument(std::move(name_ref)), value_ref_(std::move(value_ref)) {}
 
-  size_t Size() const { return ArgumentBase::Size() + value_ref_.Size(); }
+  size_t Size() const { return Argument::Size() + value_ref_.Size(); }
 
   void WriteTo(Payload& payload) const {
-    ArgumentBase::WriteTo(
-        payload, ArgumentType::kString, Size(),
-        ::tracing::internal::StringArgumentFields::Index::Make(
-            value_ref_.encoded_value()));
+    Argument::WriteTo(payload, ArgumentType::kString, Size(),
+                      ::tracing::internal::StringArgumentFields::Index::Make(
+                          value_ref_.encoded_value()));
     payload.WriteValue(value_ref_);
   }
 
@@ -293,282 +301,401 @@ class StringArgumentBase : public ArgumentBase {
   StringRef const value_ref_;
 };
 
-template <>
-class Argument<const char*> : public StringArgumentBase {
+class RetainedStringArgument : public StringArgument {
  public:
-  explicit Argument(const char* name, const char* value)
-      : StringArgumentBase(name, RegisterString(value)) {}
+  explicit RetainedStringArgument(StringRef name_ref, std::string value)
+      : StringArgument(std::move(name_ref),
+                       StringRef::MakeInlinedOrEmpty(value)),
+        retained_value_(std::move(value)) {}
+
+ private:
+  std::string retained_value_;
 };
 
-template <size_t n>
-class Argument<char[n]> : public StringArgumentBase {
+class PointerArgument : public Argument {
  public:
-  explicit Argument(const char* name, const char* value)
-      : StringArgumentBase(name, RegisterString(value)) {}
-};
+  explicit PointerArgument(StringRef name_ref, uintptr_t value)
+      : Argument(std::move(name_ref)), value_(value) {}
 
-template <>
-class Argument<std::string> : public StringArgumentBase {
- public:
-  explicit Argument(const char* name, const std::string& value)
-      : StringArgumentBase(name, StringRef::MakeInlinedOrEmpty(value)) {}
-};
-
-template <typename T>
-class Argument<T*> : public ArgumentBase {
- public:
-  explicit Argument(const char* name, const T* value)
-      : ArgumentBase(name), value_(reinterpret_cast<uintptr_t>(value)) {}
-
-  size_t Size() const { return ArgumentBase::Size() + sizeof(uint64_t); }
+  size_t Size() const { return Argument::Size() + sizeof(uint64_t); }
 
   void WriteTo(Payload& payload) const {
-    ArgumentBase::WriteTo(payload, ArgumentType::kPointer, Size());
+    Argument::WriteTo(payload, ArgumentType::kPointer, Size());
     payload.Write(value_);
   }
 
  private:
-  uintptr_t value_;
+  uintptr_t const value_;
 };
 
-template <>
-class Argument<Koid> : public ArgumentBase {
+class KoidArgument : public Argument {
  public:
-  explicit Argument(const char* name, const Koid& koid)
-      : ArgumentBase(name), koid_(koid) {}
+  explicit KoidArgument(StringRef name_ref, uint64_t koid)
+      : Argument(std::move(name_ref)), koid_(koid) {}
 
-  size_t Size() const { return ArgumentBase::Size() + sizeof(uint64_t); }
+  size_t Size() const { return Argument::Size() + sizeof(uint64_t); }
 
   void WriteTo(Payload& payload) const {
-    ArgumentBase::WriteTo(payload, ArgumentType::kKoid, Size());
-    payload.Write(koid_.value);
+    Argument::WriteTo(payload, ArgumentType::kKoid, Size());
+    payload.Write(koid_);
   }
 
  private:
-  Koid const koid_;
+  uint64_t const koid_;
 };
 
-// Helps make arguments, particularly enums and integer literals.
-template <typename T, typename Enable = void>
-struct ArgumentMaker {
-  using ResultType = Argument<T>;
-  static ResultType Make(const char* name, const T& value) {
-    return ResultType(name, value);
+// Gets the total size of a list of arguments.
+constexpr size_t SizeArguments() {
+  return 0;
+}
+
+template <typename Head, typename... Tail>
+constexpr size_t SizeArguments(Head&& head, Tail&&... tail) {
+  return head.Size() + SizeArguments(std::forward<Tail>(tail)...);
+}
+
+// Scope for writing one or more related trace records.
+// The trace infrastructure keeps track of how many pending trace writers
+// exist and waits for them to be destroyed before shutting them down.
+class TraceWriter {
+ public:
+  // Releases the trace writer.
+  //
+  // Note: This is non-virtual to avoid initialization of a vtable.
+  // The only subclass is |CategorizedTraceWriter| which only adds POD members
+  // and is final.
+  ~TraceWriter();
+
+  // Prepares to write trace records.
+  // If tracing is enabled, returns a valid |TraceWriter|.
+  static TraceWriter Prepare();
+
+  // Returns true if the trace writer is valid.
+  // It is illegal to call functions on an invalid trace writer.
+  explicit operator bool() const { return engine_; }
+
+  // Registers a constant string in the string table.
+  StringRef RegisterString(const char* string);
+
+  // Registers the current thread in the thread table.
+  ThreadRef RegisterCurrentThread();
+
+  // Writes an initialization record into the trace buffer.
+  // Discards the record if it cannot be written.
+  void WriteInitializationRecord(uint64_t ticks_per_second);
+
+  // Writes a string record into the trace buffer.
+  // Discards the record if it cannot be written.
+  void WriteStringRecord(StringIndex index, const char* string);
+
+  // Writes a thread record into the trace buffer.
+  // Discards the record if it cannot be written.
+  void WriteThreadRecord(ThreadIndex index,
+                         uint64_t process_koid,
+                         uint64_t thread_koid);
+
+ private:
+  // Private friend (instead of protected) to prevent subclassing of
+  // TraceWriter by anyone else since it could be unsafe.
+  friend class CategorizedTraceWriter;
+
+  explicit TraceWriter(::tracing::internal::TraceEngine* engine)
+      : engine_(engine) {}
+
+  ::tracing::internal::TraceEngine* const engine_;
+};
+
+// Writes events in a particular category.
+class CategorizedTraceWriter final : public TraceWriter {
+ public:
+  // Prepares to write trace records for a specified event category.
+  // If tracing is enabled for the category, returns a valid |TraceWriter|
+  // which is bound to the category.
+  static CategorizedTraceWriter Prepare(const char* category);
+
+  // Writes a duration begin event record with arguments into the trace
+  // buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteDurationBeginEventRecord(const char* name, Args&&... args) {
+    if (Payload payload =
+            WriteEventRecord(EventType::kDurationBegin, name, sizeof...(Args),
+                             SizeArguments(std::forward<Args>(args)...))) {
+      payload.WriteValues(std::forward<Args>(args)...);
+    }
   }
+
+  // Writes a duration end event record with arguments into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteDurationEndEventRecord(const char* name, Args&&... args) {
+    if (Payload payload =
+            WriteEventRecord(EventType::kDurationEnd, name, sizeof...(Args),
+                             SizeArguments(std::forward<Args>(args)...))) {
+      payload.WriteValues(std::forward<Args>(args)...);
+    }
+  }
+
+  // Writes an asynchronous begin event record into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteAsyncBeginEventRecord(const char* name,
+                                  uint64_t id,
+                                  Args&&... args) {
+    if (Payload payload = WriteEventRecord(
+            EventType::kAsyncStart, name, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
+      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+    }
+  }
+
+  // Writes an asynchronous instant event record into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteAsyncInstantEventRecord(const char* name,
+                                    uint64_t id,
+                                    Args&&... args) {
+    if (Payload payload = WriteEventRecord(
+            EventType::kAsyncInstant, name, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
+      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+    }
+  }
+
+  // Writes an asynchronous end event record into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteAsyncEndEventRecord(const char* name, uint64_t id, Args&&... args) {
+    if (Payload payload = WriteEventRecord(
+            EventType::kAsyncEnd, name, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
+      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+    }
+  }
+
+ protected:
+  explicit CategorizedTraceWriter(::tracing::internal::TraceEngine* engine,
+                                  const StringRef& category_ref)
+      : TraceWriter(engine), category_ref_(category_ref) {}
+
+  Payload WriteEventRecord(EventType type,
+                           const char* name,
+                           size_t argument_count,
+                           size_t payload_size);
+
+  StringRef const category_ref_;
 };
 
-template <typename T>
-struct ArgumentMaker<T, typename std::enable_if<std::is_enum<T>::value>::type> {
-  using UnderlyingType = typename std::underlying_type<T>::type;
-  using NumericType =
-      typename std::conditional<sizeof(UnderlyingType) < sizeof(int32_t),
-                                int32_t,
-                                int64_t>::type;
-  using ResultType = Argument<NumericType>;
-  static ResultType Make(const char* name, T value) {
-    return ResultType(name, static_cast<NumericType>(value));
+// Helps construct named arguments using SFINAE to coerce types.
+template <typename T, typename Enable = void>
+struct ArgumentMaker;
+
+template <>
+struct ArgumentMaker<nullptr_t> {
+  using ResultType = NullArgument;
+  static ResultType Make(TraceWriter& writer,
+                         StringRef name_ref,
+                         nullptr_t value) {
+    return ResultType(std::move(name_ref));
   }
 };
 
 template <typename T>
 struct ArgumentMaker<
     T,
-    typename std::enable_if<std::is_unsigned<T>::value>::type> {
-  using NumericType = typename std::
-      conditional<sizeof(T) < sizeof(int32_t), int32_t, int64_t>::type;
-  using ResultType = Argument<NumericType>;
-  static ResultType Make(const char* name, T value) {
-    return ResultType(name, static_cast<NumericType>(value));
+    typename std::enable_if<std::is_integral<T>::value &&
+                            (sizeof(T) <= sizeof(int32_t))>::type> {
+  using ResultType = Int32Argument;
+  static ResultType Make(TraceWriter& writer,
+                         StringRef name_ref,
+                         const T& value) {
+    return ResultType(std::move(name_ref), static_cast<int32_t>(value));
+  }
+};
+
+template <typename T>
+struct ArgumentMaker<
+    T,
+    typename std::enable_if<std::is_integral<T>::value &&
+                            (sizeof(T) > sizeof(int32_t)) &&
+                            (sizeof(T) <= sizeof(int64_t))>::type> {
+  using ResultType = Int64Argument;
+  static ResultType Make(TraceWriter& writer,
+                         StringRef name_ref,
+                         const T& value) {
+    return ResultType(std::move(name_ref), static_cast<int64_t>(value));
+  }
+};
+
+template <typename T>
+struct ArgumentMaker<T, typename std::enable_if<std::is_enum<T>::value>::type> {
+  using UnderlyingType = typename std::underlying_type<T>::type;
+  using ResultType = typename ArgumentMaker<UnderlyingType>::ResultType;
+  static ResultType Make(TraceWriter& writer,
+                         StringRef name_ref,
+                         const T& value) {
+    return ArgumentMaker<UnderlyingType>::Make(
+        writer, std::move(name_ref), static_cast<UnderlyingType>(value));
+  }
+};
+
+template <typename T>
+struct ArgumentMaker<
+    T,
+    typename std::enable_if<std::is_floating_point<T>::value>::type> {
+  using ResultType = DoubleArgument;
+  static ResultType Make(TraceWriter& writer,
+                         StringRef name_ref,
+                         const T& value) {
+    return ResultType(std::move(name_ref), static_cast<double>(value));
+  }
+};
+
+template <size_t n>
+struct ArgumentMaker<char[n]> {
+  using ResultType = StringArgument;
+  static ResultType Make(TraceWriter& writer,
+                         StringRef name_ref,
+                         const char* value) {
+    return ResultType(std::move(name_ref), writer.RegisterString(value));
+  }
+};
+
+template <>
+struct ArgumentMaker<const char*> {
+  using ResultType = StringArgument;
+  static ResultType Make(TraceWriter& writer,
+                         StringRef name_ref,
+                         const char* value) {
+    return ResultType(std::move(name_ref), writer.RegisterString(value));
+  }
+};
+
+template <>
+struct ArgumentMaker<std::string> {
+  using ResultType = RetainedStringArgument;
+  static ResultType Make(TraceWriter& writer,
+                         StringRef name_ref,
+                         std::string value) {
+    return ResultType(std::move(name_ref), std::move(value));
+  }
+};
+
+template <typename T>
+struct ArgumentMaker<T*> {
+  using ResultType = PointerArgument;
+  static ResultType Make(TraceWriter& writer,
+                         StringRef name_ref,
+                         const T* pointer) {
+    return ResultType(std::move(name_ref),
+                      reinterpret_cast<uintptr_t>(pointer));
+  }
+};
+
+template <>
+struct ArgumentMaker<Koid> {
+  using ResultType = KoidArgument;
+  static ResultType Make(TraceWriter& writer, StringRef name_ref, Koid koid) {
+    return ResultType(std::move(name_ref), koid.value);
   }
 };
 
 // Makes an argument with given name and value.
 template <typename T>
-inline typename ArgumentMaker<T>::ResultType MakeArgument(const char* name,
-                                                          const T& value) {
-  return ArgumentMaker<T>::Make(name, value);
+typename ArgumentMaker<T>::ResultType MakeArgument(TraceWriter& writer,
+                                                   const char* name,
+                                                   const T& value) {
+  return ArgumentMaker<T>::Make(writer, writer.RegisterString(name), value);
 }
 
-// Gets the total size of a list of arguments.
-inline size_t SizeArguments() {
-  return 0;
-}
-
-template <typename Head, typename... Tail>
-inline size_t SizeArguments(Head&& head, Tail&&... tail) {
-  return head.Size() + SizeArguments(std::forward<Tail>(tail)...);
-}
-
-// Writes an initialization record into the trace buffer.
-// Discards the record if it cannot be written.
-void WriteInitializationRecord(uint64_t ticks_per_second);
-
-// Writes a string record into the trace buffer.
-// Discards the record if it cannot be written.
-void WriteStringRecord(StringIndex index, const char* string);
-
-// Writes a thread record into the trace buffer.
-// Discards the record if it cannot be written.
-void WriteThreadRecord(ThreadIndex index,
-                       uint64_t process_koid,
-                       uint64_t thread_koid);
-
-// Writes an event record into the trace buffer, returning a payload object
-// into which event type specific data and arguments can be written.
-// Discards the record and returns an invalid payload object if it cannot
-// be written.
-Payload WriteEventRecord(EventType type,
-                         const char* category,
-                         const char* name,
-                         size_t argument_count,
-                         uint64_t payload_size);
-
-// Writes a duration begin event record with arguments into the trace buffer.
-// Discards the record if it cannot be written.
-template <typename... Args>
-void WriteDurationBeginEventRecord(const char* cat,
-                                   const char* name,
-                                   Args&&... args) {
-  if (Payload payload = WriteEventRecord(
-          EventType::kDurationBegin, cat, name, sizeof...(Args),
-          SizeArguments(std::forward<Args>(args)...))) {
-    payload.WriteValues(std::forward<Args>(args)...);
-  }
-}
-
-// Writes a duration end event record with arguments into the trace buffer.
-// Discards the record if it cannot be written.
-template <typename... Args>
-void WriteDurationEndEventRecord(const char* cat,
-                                 const char* name,
-                                 Args&&... args) {
-  if (Payload payload =
-          WriteEventRecord(EventType::kDurationEnd, cat, name, sizeof...(Args),
-                           SizeArguments(std::forward<Args>(args)...))) {
-    payload.WriteValues(std::forward<Args>(args)...);
-  }
-}
-
-// Writes an asynchronous begin event record into the trace buffer.
-// Discards the record if it cannot be written.
-template <typename... Args>
-void WriteAsyncBeginEventRecord(const char* cat,
-                                const char* name,
-                                uint64_t id,
-                                Args&&... args) {
-  if (Payload payload = WriteEventRecord(
-          EventType::kAsyncStart, cat, name, sizeof...(Args),
-          SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-    payload.WriteValues(std::forward<Args>(args)...).Write(id);
-  }
-}
-
-// Writes an asynchronous instant event record into the trace buffer.
-// Discards the record if it cannot be written.
-template <typename... Args>
-void WriteAsyncInstantEventRecord(const char* cat,
-                                  const char* name,
-                                  uint64_t id,
-                                  Args&&... args) {
-  if (auto payload = WriteEventRecord(
-          EventType::kAsyncInstant, cat, name, sizeof...(Args),
-          SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-    payload.WriteValues(std::forward<Args>(args)...).Write(id);
-  }
-}
-
-// Writes an asynchronous end event record into the trace buffer.
-// Discards the record if it cannot be written.
-template <typename... Args>
-void WriteAsyncEndEventRecord(const char* cat,
-                              const char* name,
-                              uint64_t id,
-                              Args&&... args) {
-  if (Payload payload = WriteEventRecord(
-          EventType::kAsyncEnd, cat, name, sizeof...(Args),
-          SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-    payload.WriteValues(std::forward<Args>(args)...).Write(id);
-  }
-}
-
-// Relies on RAII to trace begin and end of a duration event.
-class ScopedDurationEventWriter {
+// When destroyed, writes the end of a duration event.
+class DurationEventScope {
  public:
-  // Initializes a new instance, determining whether a given category should
-  // be traced, and storing the category and name to inject a duration end
-  // event when destroyed.  The creator is responsible for calling |Begin|.
-  //
-  // We assume that the lifetime of |cat| and |name| exceeds the lifetime
-  // of this instance.
-  explicit ScopedDurationEventWriter(const char* cat, const char* name)
-      : is_enabled_(IsTracingEnabledForCategory(cat)), cat_(cat), name_(name) {}
+  explicit DurationEventScope(const char* category, const char* name)
+      : category_(category), name_(name) {}
 
-  // Injects a duration end event with the parameters passed in
-  // on construction into the tracing infrastructure.
-  ~ScopedDurationEventWriter() {
-    if (is_enabled_)
-      WriteDurationEndEventRecord(cat_, name_);
+  ~DurationEventScope() {
+    auto writer = CategorizedTraceWriter::Prepare(category_);
+    if (writer)
+      writer.WriteDurationEndEventRecord(name_);
   }
 
-  // Returns true if this event should be traced.
-  bool is_enabled() const { return is_enabled_; }
-
-  // Writes a duration begin event.
-  // Must only be called if |is_enabled()| returns true.
-  template <typename... Args>
-  void Begin(Args&&... args) const {
-    WriteDurationBeginEventRecord(cat_, name_, std::forward<Args>(args)...);
-  }
+  const char* category() const { return category_; }
+  const char* name() const { return name_; }
 
  private:
-  bool const is_enabled_;
-  const char* const cat_;
+  const char* const category_;
   const char* const name_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ScopedDurationEventWriter);
+  FTL_DISALLOW_COPY_AND_ASSIGN(DurationEventScope);
 };
 
 }  // namespace writer
 }  // namespace tracing
 
-#define TRACE_INTERNAL_CATEGORY_ENABLED(cat) \
-  ::tracing::writer::IsTracingEnabledForCategory(cat)
+#define TRACE_INTERNAL_CATEGORY_ENABLED(category) \
+  ::tracing::writer::IsTracingEnabledForCategory(category)
+
+#define TRACE_INTERNAL_SCOPE_LABEL__(token) __trace_scope_##token
+#define TRACE_INTERNAL_SCOPE_LABEL_(token) TRACE_INTERNAL_SCOPE_LABEL__(token)
+#define TRACE_INTERNAL_SCOPE_LABEL() TRACE_INTERNAL_SCOPE_LABEL_(__COUNTER__)
+
+#define TRACE_INTERNAL_WRITER __trace_writer
 
 #define TRACE_INTERNAL_MAKE_ARG(key, value) \
-  ::tracing::writer::MakeArgument(key, value)
-
+  , MakeArgument(TRACE_INTERNAL_WRITER, key, value)
 #define TRACE_INTERNAL_MAKE_ARGS1(k1, v1) TRACE_INTERNAL_MAKE_ARG(k1, v1)
 #define TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2) \
-  TRACE_INTERNAL_MAKE_ARGS1(k1, v1), TRACE_INTERNAL_MAKE_ARG(k2, v2)
+  TRACE_INTERNAL_MAKE_ARGS1(k1, v1) TRACE_INTERNAL_MAKE_ARG(k2, v2)
 #define TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3) \
-  TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2), TRACE_INTERNAL_MAKE_ARG(k3, v3)
+  TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2) TRACE_INTERNAL_MAKE_ARG(k3, v3)
 #define TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4) \
   TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3)               \
-  , TRACE_INTERNAL_MAKE_ARG(k4, v4)
+  TRACE_INTERNAL_MAKE_ARG(k4, v4)
 
-#define TRACE_INTERNAL_SCOPE_LABEL_(token) __trace_scope_##token
-#define TRACE_INTERNAL_SCOPE_LABEL() TRACE_INTERNAL_SCOPE_LABEL_(__LINE__)
+#define TRACE_INTERNAL_CATEGORIZED(category, stmt)                    \
+  do {                                                                \
+    auto TRACE_INTERNAL_WRITER =                                      \
+        ::tracing::writer::CategorizedTraceWriter::Prepare(category); \
+    if (TRACE_INTERNAL_WRITER) {                                      \
+      stmt;                                                           \
+    }                                                                 \
+  } while (0)
 
-#define TRACE_INTERNAL_EVENT_DURATION(cat, name, args...)                    \
-  ::tracing::writer::ScopedDurationEventWriter TRACE_INTERNAL_SCOPE_LABEL()( \
-      cat, name);                                                            \
-  if (TRACE_INTERNAL_SCOPE_LABEL().is_enabled()) {                           \
-    TRACE_INTERNAL_SCOPE_LABEL().Begin(args);                                \
-  }
+#define TRACE_INTERNAL_DURATION_SCOPE(scope_label, scope_category, scope_name, \
+                                      args...)                                 \
+  ::tracing::writer::DurationEventScope scope_label(scope_category,            \
+                                                    scope_name);               \
+  TRACE_INTERNAL_CATEGORIZED(                                                  \
+      scope_label.category(),                                                  \
+      TRACE_INTERNAL_WRITER.WriteDurationBeginEventRecord(                     \
+          scope_label.category() args))
 
-#define TRACE_INTERNAL_EVENT_ASYNC_BEGIN(cat, name, id_and_args...)        \
-  if (TRACE_INTERNAL_CATEGORY_ENABLED(cat)) {                              \
-    ::tracing::writer::WriteAsyncBeginEventRecord(cat, name, id_and_args); \
-  }
+#define TRACE_INTERNAL_DURATION(scope_category, scope_name, args...)          \
+  TRACE_INTERNAL_DURATION_SCOPE(TRACE_INTERNAL_SCOPE_LABEL(), scope_category, \
+                                scope_name, args)
 
-#define TRACE_INTERNAL_EVENT_ASYNC_INSTANT(cat, name, id_and_args...)        \
-  if (TRACE_INTERNAL_CATEGORY_ENABLED(cat)) {                                \
-    ::tracing::writer::WriteAsyncInstantEventRecord(cat, name, id_and_args); \
-  }
+#define TRACE_INTERNAL_DURATION_BEGIN(category, name, args...) \
+  TRACE_INTERNAL_CATEGORIZED(                                  \
+      category,                                                \
+      TRACE_INTERNAL_WRITER.WriteDurationBeginEventRecord(name args))
 
-#define TRACE_INTERNAL_EVENT_ASYNC_END(cat, name, id_and_args...)        \
-  if (TRACE_INTERNAL_CATEGORY_ENABLED(cat)) {                            \
-    ::tracing::writer::WriteAsyncEndEventRecord(cat, name, id_and_args); \
-  }
+#define TRACE_INTERNAL_DURATION_END(category, name, args...) \
+  TRACE_INTERNAL_CATEGORIZED(                                \
+      category, TRACE_INTERNAL_WRITER.WriteDurationEndEventRecord(name args))
+
+#define TRACE_INTERNAL_ASYNC_BEGIN(category, name, id, args...) \
+  TRACE_INTERNAL_CATEGORIZED(                                   \
+      category,                                                 \
+      TRACE_INTERNAL_WRITER.WriteAsyncBeginEventRecord(name, id args))
+
+#define TRACE_INTERNAL_ASYNC_INSTANT(category, name, id, args...) \
+  TRACE_INTERNAL_CATEGORIZED(                                     \
+      category,                                                   \
+      TRACE_INTERNAL_WRITER.WriteAsyncInstantEventRecord(name, id args))
+
+#define TRACE_INTERNAL_ASYNC_END(category, name, id, args...) \
+  TRACE_INTERNAL_CATEGORIZED(                                 \
+      category, TRACE_INTERNAL_WRITER.WriteAsyncEndEventRecord(name, id args))
 
 #endif  // APPS_TRACING_LIB_TRACE_INTERNAL_WRITER_H_

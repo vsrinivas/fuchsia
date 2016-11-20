@@ -125,47 +125,47 @@ TEST_F(TracingClientTest, ConcurrentTraceRecording) {
   threads_with_enabled_category.emplace_back(
       sampler,
       [](size_t) {
-        TRACE_EVENT0("disabled", "TRACE_EVENT0");
-        TRACE_EVENT0("cat", "TRACE_EVENT0");
+        TRACE_DURATION0("disabled", "TRACE_DURATION0");
+        TRACE_DURATION0("cat", "TRACE_DURATION0");
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       },
       kTraceEventsPerThread / 2);
   threads_with_enabled_category.emplace_back(
       sampler,
       [](size_t) {
-        TRACE_EVENT1("disabled", "TRACE_EVENT1", "bool", true);
-        TRACE_EVENT1("one", "TRACE_EVENT1", "bool", true);
+        TRACE_DURATION1("disabled", "TRACE_DURATION1", "bool", true);
+        TRACE_DURATION1("one", "TRACE_DURATION1", "bool", true);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       },
       kTraceEventsPerThread / 2);
   threads_with_enabled_category.emplace_back(
       sampler,
       [](size_t) {
-        TRACE_EVENT2("disabled", "TRACE_EVENT2", "int", -42, "uint", 42);
-        TRACE_EVENT2("two", "TRACE_EVENT2", "int", -42, "uint", 42);
+        TRACE_DURATION2("disabled", "TRACE_DURATION2", "int", -42, "uint", 42);
+        TRACE_DURATION2("two", "TRACE_DURATION2", "int", -42, "uint", 42);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       },
       kTraceEventsPerThread / 2);
   threads_with_enabled_category.emplace_back(
       sampler,
       [](size_t iteration) {
-        TRACE_EVENT_ASYNC_BEGIN0("disabled", "ASYNC_0_DISABLED", iteration);
-        TRACE_EVENT_ASYNC_BEGIN0("one", "ASYNC_0", iteration);
+        TRACE_ASYNC_BEGIN0("disabled", "ASYNC_0_DISABLED", iteration);
+        TRACE_ASYNC_BEGIN0("one", "ASYNC_0", iteration);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        TRACE_EVENT_ASYNC_END0("disabled", "ASYNC_0_DISABLED", iteration);
-        TRACE_EVENT_ASYNC_END0("one", "ASYNC_0", iteration);
+        TRACE_ASYNC_END0("disabled", "ASYNC_0_DISABLED", iteration);
+        TRACE_ASYNC_END0("one", "ASYNC_0", iteration);
       },
       kTraceEventsPerThread / 2);
   threads_with_enabled_category.emplace_back(
       sampler,
       [](size_t iteration) {
-        TRACE_EVENT_ASYNC_BEGIN1("disabled", "ASYNC_1_DISABLED", iteration,
+        TRACE_ASYNC_BEGIN1("disabled", "ASYNC_1_DISABLED", iteration,
                                  "int", -42);
-        TRACE_EVENT_ASYNC_BEGIN1("two", "ASYNC_1", iteration, "int", -42);
+        TRACE_ASYNC_BEGIN1("two", "ASYNC_1", iteration, "int", -42);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        TRACE_EVENT_ASYNC_END1("disabled", "ASYNC_1_DISABLED", iteration, "int",
+        TRACE_ASYNC_END1("disabled", "ASYNC_1_DISABLED", iteration, "int",
                                -33);
-        TRACE_EVENT_ASYNC_END1("two", "ASYNC_1", iteration, "int", -33);
+        TRACE_ASYNC_END1("two", "ASYNC_1", iteration, "int", -33);
       },
       kTraceEventsPerThread / 2);
 
@@ -195,9 +195,9 @@ TEST_F(TracingClientTest, ConcurrentTraceRecording) {
             events.Size())
       << trace;
 
-  std::unordered_map<std::string, size_t> event_counters = {{"TRACE_EVENT0", 0},
-                                                            {"TRACE_EVENT1", 0},
-                                                            {"TRACE_EVENT2", 0},
+  std::unordered_map<std::string, size_t> event_counters = {{"TRACE_DURATION0", 0},
+                                                            {"TRACE_DURATION1", 0},
+                                                            {"TRACE_DURATION2", 0},
                                                             {"ASYNC_0", 0},
                                                             {"ASYNC_1", 0}};
 
@@ -215,16 +215,16 @@ TEST_F(TracingClientTest, ConcurrentTraceRecording) {
         << Print(event);
     std::string name = event["name"].GetString();
 
-    if (name == "TRACE_EVENT0" && (ph == "B" || ph == "E")) {
+    if (name == "TRACE_DURATION0" && (ph == "B" || ph == "E")) {
       EXPECT_TRUE(!event.HasMember("args")) << Print(event);
-    } else if (name == "TRACE_EVENT1" && ph == "B") {
+    } else if (name == "TRACE_DURATION1" && ph == "B") {
       EXPECT_TRUE(event.HasMember("args") && event["args"].HasMember("bool") &&
                   event["args"]["bool"].IsBool() &&
                   event["args"]["bool"].GetBool() == true)
           << Print(event);
-    } else if (name == "TRACE_EVENT1" && ph == "E") {
+    } else if (name == "TRACE_DURATION1" && ph == "E") {
       EXPECT_TRUE(!event.HasMember("args")) << Print(event);
-    } else if (name == "TRACE_EVENT2" && ph == "B") {
+    } else if (name == "TRACE_DURATION2" && ph == "B") {
       EXPECT_TRUE(event.HasMember("args") && event["args"].HasMember("int") &&
                   event["args"]["int"].IsInt() &&
                   event["args"]["int"].GetInt() == -42)
@@ -233,7 +233,7 @@ TEST_F(TracingClientTest, ConcurrentTraceRecording) {
                   event["args"]["uint"].IsUint() &&
                   event["args"]["uint"].GetUint() == 42)
           << Print(event);
-    } else if (name == "TRACE_EVENT2" && ph == "E") {
+    } else if (name == "TRACE_DURATION2" && ph == "E") {
       EXPECT_TRUE(!event.HasMember("args")) << Print(event);
     } else if (name == "ASYNC_0" && (ph == "S" || ph == "F")) {
       EXPECT_TRUE(!event.HasMember("args")) << Print(event);
@@ -252,9 +252,9 @@ TEST_F(TracingClientTest, ConcurrentTraceRecording) {
     }
   }
 
-  EXPECT_EQ(kTraceEventsPerThread, event_counters["TRACE_EVENT0"]);
-  EXPECT_EQ(kTraceEventsPerThread, event_counters["TRACE_EVENT1"]);
-  EXPECT_EQ(kTraceEventsPerThread, event_counters["TRACE_EVENT2"]);
+  EXPECT_EQ(kTraceEventsPerThread, event_counters["TRACE_DURATION0"]);
+  EXPECT_EQ(kTraceEventsPerThread, event_counters["TRACE_DURATION1"]);
+  EXPECT_EQ(kTraceEventsPerThread, event_counters["TRACE_DURATION2"]);
   EXPECT_EQ(kTraceEventsPerThread, event_counters["ASYNC_0"]);
   EXPECT_EQ(kTraceEventsPerThread, event_counters["ASYNC_1"]);
 
