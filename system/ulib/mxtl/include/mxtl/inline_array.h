@@ -38,7 +38,7 @@ public:
             // regardless!
             ac->arm(0u, true);
             for (size_t i = 0; i < count_; i++)
-                new (static_cast<void*>(&inline_storage_[i * sizeof(T)])) T();
+                new (&ptr_[i]) T();
         }
     }
 
