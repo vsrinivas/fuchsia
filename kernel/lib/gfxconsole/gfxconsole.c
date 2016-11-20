@@ -28,6 +28,9 @@
 #define TEXT_COLOR 0xffffffff
 #define BACK_COLOR 0xff000000
 
+#define CRASH_TEXT_COLOR 0xffffffff
+#define CRASH_BACK_COLOR 0xffe000e0
+
 /** @addtogroup graphics
  * @{
  */
@@ -181,15 +184,19 @@ static void gfxconsole_setup(gfx_surface *surface, gfx_surface *hw_surface)
             gfxconsole.columns, gfxconsole.extray);
 }
 
-static void gfxconsole_clear(void)
+static void gfxconsole_clear(bool crash_console)
 {
     // start in the upper left
     gfxconsole.x = 0;
     gfxconsole.y = 0;
 
-    // colors are black and magenta
-    gfxconsole.front_color = TEXT_COLOR;
-    gfxconsole.back_color = BACK_COLOR;
+    if (crash_console) {
+        gfxconsole.front_color = CRASH_TEXT_COLOR;
+        gfxconsole.back_color = CRASH_BACK_COLOR;
+    } else {
+        gfxconsole.front_color = TEXT_COLOR;
+        gfxconsole.back_color = BACK_COLOR;
+    }
 
     // fill screen with back color
     gfx_fillrect(gfxconsole.surface, 0, 0, gfxconsole.surface->width, gfxconsole.surface->height,
@@ -208,7 +215,7 @@ void gfxconsole_start(gfx_surface *surface, gfx_surface *hw_surface)
     DEBUG_ASSERT(gfxconsole.surface == NULL);
 
     gfxconsole_setup(surface, hw_surface);
-    gfxconsole_clear();
+    gfxconsole_clear(false);
 
     // register for debug callbacks
     register_print_callback(&cb);
@@ -263,7 +270,7 @@ void gfxconsole_bind_display(struct display_info *info, void *raw_sw_fb) {
         memcpy(&hw_surface, &hw, sizeof(hw));
         gfxconsole_setup(&hw_surface, &hw_surface);
         memcpy(&dispinfo, info, sizeof(*info));
-        gfxconsole_clear();
+        gfxconsole_clear(true);
         register_print_callback(&cb);
         active = true;
         return;
@@ -304,7 +311,7 @@ void gfxconsole_bind_display(struct display_info *info, void *raw_sw_fb) {
     if (!same_as_before) {
         // on first init, or different-backing-buffer re-init
         // we clear and reset to x,y @ 0,0
-        gfxconsole_clear();
+        gfxconsole_clear(false);
     }
 
     memcpy(&dispinfo, info, sizeof(*info));

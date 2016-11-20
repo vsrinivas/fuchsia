@@ -15,6 +15,8 @@
 #include <platform.h>
 #include <string.h>
 
+#include "git-version.h"
+
 #define DLOG_SIZE (64 * 1024)
 
 static uint8_t DLOG_DATA[DLOG_SIZE];
@@ -256,7 +258,8 @@ void dlog_bluescreen(void) {
                 rec->data);
     }
 #else
-    dprintf(INFO, "\nKERNEL PANIC\n\n");
+    dprintf(INFO, "\nMAGENTA KERNEL PANIC\n\n");
+    dprintf(INFO, "GIT REVISION %s\n\n", MAGENTA_GIT_REV);
 #endif
 }
 
