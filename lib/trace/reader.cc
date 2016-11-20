@@ -4,116 +4,136 @@
 
 #include "apps/tracing/lib/trace/reader.h"
 
-#include <iostream>
+#include "apps/tracing/lib/trace/internal/fields.h"
+
+#include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_printf.h"
+
+using namespace ::tracing::internal;
 
 namespace tracing {
 namespace reader {
 
-TraceInput::TraceInput() = default;
-TraceInput::~TraceInput() = default;
-
-MemoryTraceInput::MemoryTraceInput(void* memory, size_t size)
-    : chunk_(reinterpret_cast<uint64_t*>(memory), size / sizeof(uint64_t)) {}
-
-bool MemoryTraceInput::ReadChunk(size_t num_words, Chunk* out) {
-  return chunk_.ReadChunk(num_words, out);
-}
-
-StreamTraceInput::StreamTraceInput(std::istream& in) : in_(in) {}
-
-bool StreamTraceInput::ReadChunk(size_t num_words, Chunk* out) {
-  buffer_.reserve(num_words);
-  in_.read(reinterpret_cast<char*>(buffer_.data()),
-           num_words * sizeof(uint64_t));
-
-  if (in_.bad() || in_.fail() || in_.eof())
-    return false;
-
-  *out = Chunk(buffer_.data(), num_words);
-  return true;
-}
-
 Chunk::Chunk() : current_(nullptr), end_(nullptr) {}
 
-Chunk::Chunk(const uint64_t* begin, size_t size)
-    : current_(begin), end_(current_ + size) {}
+Chunk::Chunk(const uint64_t* begin, size_t num_words)
+    : current_(begin), end_(current_ + num_words) {}
 
-bool Chunk::Read(uint64_t* value) {
+bool Chunk::Read(uint64_t* out_value) {
   if (current_ < end_) {
-    *value = *current_++;
+    *out_value = *current_++;
     return true;
   }
   return false;
 }
 
-bool Chunk::ReadChunk(size_t num_words, Chunk* out) {
+bool Chunk::ReadInt64(int64_t* out_value) {
+  if (current_ < end_) {
+    *out_value = *reinterpret_cast<const int64_t*>(current_++);
+    return true;
+  }
+  return false;
+}
+
+bool Chunk::ReadDouble(double* out_value) {
+  if (current_ < end_) {
+    *out_value = *reinterpret_cast<const double*>(current_++);
+    return true;
+  }
+  return false;
+}
+
+bool Chunk::ReadChunk(size_t num_words, Chunk* out_chunk) {
   if (current_ + num_words > end_)
     return false;
 
-  *out = Chunk(current_, num_words);
+  *out_chunk = Chunk(current_, num_words);
   current_ += num_words;
   return true;
 }
 
-bool Chunk::ReadString(size_t length, ftl::StringView* out) {
-  auto num_words = internal::Pad(length) / sizeof(uint64_t);
+bool Chunk::ReadString(size_t length, ftl::StringView* out_string) {
+  auto num_words = Pad(length) / sizeof(uint64_t);
   if (current_ + num_words > end_)
     return false;
 
-  *out = ftl::StringView(reinterpret_cast<const char*>(current_), length);
+  *out_string =
+      ftl::StringView(reinterpret_cast<const char*>(current_), length);
   current_ += num_words;
   return true;
 }
 
-TraceContext::TraceContext(const TraceErrorHandler& error_handler)
+TraceContext::TraceContext(ErrorHandler error_handler)
     : error_handler_(error_handler) {}
 
-void TraceContext::OnError(const std::string& error) const {
-  error_handler_(error);
+TraceContext::~TraceContext() {}
+
+void TraceContext::ReportError(std::string error) const {
+  error_handler_(std::move(error));
 }
 
-ftl::StringView TraceContext::DecodeStringRef(uint16_t string_ref,
-                                              Chunk& chunk) const {
-  if (string_ref == internal::StringRefFields::kEmpty)
-    return ftl::StringView();
-
-  if (!(string_ref & internal::StringRefFields::kInlineFlag)) {
-    auto it = string_table_.find(string_ref);
-    return it != string_table_.end() ? it->second : ftl::StringView();
+bool TraceContext::DecodeStringRef(Chunk& chunk,
+                                   EncodedStringRef string_ref,
+                                   std::string* out_string) const {
+  if (string_ref == StringRefFields::kEmpty) {
+    out_string->clear();
+    return true;
   }
 
-  auto length = string_ref & internal::StringRefFields::kLengthMask;
-  ftl::StringView string;
-  if (!chunk.ReadString(length, &string))
-    OnError("Failed to decode string ref");
-  return string;
-}
-
-void TraceContext::RegisterStringRef(uint16_t index,
-                                     const ftl::StringView& string) {
-  FTL_DCHECK(index != internal::StringRefFields::kInvalidIndex &&
-             index <= internal::StringRefFields::kMaxIndex);
-  string_table_[index] = string.ToString();
-}
-
-Thread TraceContext::DecodeThreadRef(uint16_t thread_ref, Chunk& chunk) const {
-  if (thread_ref == internal::ThreadRefFields::kInline) {
-    Thread result{0, 0};
-    if (chunk.Read(&result.process_koid) && chunk.Read(&result.thread_koid))
-      return result;
-  } else {
-    auto it = thread_table_.find(thread_ref);
-    if (it != thread_table_.end())
-      return it->second;
+  if (string_ref & StringRefFields::kInlineFlag) {
+    size_t length = string_ref & StringRefFields::kLengthMask;
+    ftl::StringView string_view;
+    if (!chunk.ReadString(length, &string_view)) {
+      ReportError("Could not read inline string");
+      return false;
+    }
+    *out_string = string_view.ToString();
+    return true;
   }
 
-  return Thread{0, 0};
+  auto it = string_table_.find(string_ref);
+  if (it == string_table_.end()) {
+    ReportError("String ref not in table");
+    return false;
+  }
+  *out_string = it->second;
+  return true;
 }
 
-void TraceContext::RegisterThreadRef(uint16_t index, const Thread& thread) {
-  FTL_DCHECK(index != internal::ThreadRefFields::kInline &&
-             index <= internal::ThreadRefFields::kMaxIndex);
-  thread_table_[index] = thread;
+bool TraceContext::DecodeThreadRef(Chunk& chunk,
+                                   EncodedThreadRef thread_ref,
+                                   ProcessThread* out_process_thread) const {
+  if (thread_ref == ThreadRefFields::kInline) {
+    ProcessThread process_thread;
+    if (!chunk.Read(&process_thread.process_koid) ||
+        !chunk.Read(&process_thread.thread_koid)) {
+      ReportError("Could not read inline process and thread");
+      return false;
+    }
+    *out_process_thread = process_thread;
+    return true;
+  }
+
+  auto it = thread_table_.find(thread_ref);
+  if (it == thread_table_.end()) {
+    ReportError("Thread ref not in table");
+    return false;
+  }
+  *out_process_thread = it->second;
+  return true;
+}
+
+void TraceContext::RegisterString(StringIndex index, std::string string) {
+  FTL_DCHECK(index != StringRefFields::kInvalidIndex &&
+             index <= StringRefFields::kMaxIndex);
+  string_table_[index] = std::move(string);
+}
+
+void TraceContext::RegisterThread(ThreadIndex index,
+                                  const ProcessThread& process_thread) {
+  FTL_DCHECK(index != ThreadRefFields::kInline &&
+             index <= ThreadRefFields::kMaxIndex);
+  thread_table_[index] = process_thread;
 }
 
 ArgumentValue& ArgumentValue::Destroy() {
@@ -142,7 +162,7 @@ ArgumentValue& ArgumentValue::Copy(const ArgumentValue& other) {
     case ArgumentType::kPointer:
       uint64_ = other.uint64_;
       break;
-    case ArgumentType::kKernelObjectId:
+    case ArgumentType::kKoid:
       uint64_ = other.uint64_;
       break;
     default:
@@ -152,183 +172,19 @@ ArgumentValue& ArgumentValue::Copy(const ArgumentValue& other) {
   return *this;
 }
 
-bool ArgumentReader::ForEachArgument(TraceContext& context,
-                                     size_t argument_count,
-                                     Chunk& chunk,
-                                     const Visitor& visitor) {
-  Chunk payload;
-  internal::ArgumentHeader header = 0;
-  while (argument_count > 0) {
-    if (!chunk.Read(&header)) {
-      context.OnError("Failed to read argument header");
-      return false;
-    }
-
-    auto type = internal::ArgumentFields::Type::Get<ArgumentType>(header);
-    auto size = internal::ArgumentFields::ArgumentSize::Get<uint16_t>(header);
-    auto name_ref = internal::ArgumentFields::NameRef::Get<uint16_t>(header);
-
-    if (size == 0)
-      return false;
-
-    if (!chunk.ReadChunk(size - 1, &payload))
-      return false;
-
-    bool handled = false;
-
-    switch (type) {
-      case ArgumentType::kNull:
-        handled = HandleNullArgument(context, header,
-                                     context.DecodeStringRef(name_ref, payload),
-                                     payload, visitor);
-        break;
-      case ArgumentType::kInt32:
-        handled = HandleInt32Argument(
-            context, header, context.DecodeStringRef(name_ref, payload),
-            payload, visitor);
-        break;
-      case ArgumentType::kInt64:
-        handled = HandleInt64Argument(
-            context, header, context.DecodeStringRef(name_ref, payload),
-            payload, visitor);
-        break;
-      case ArgumentType::kDouble:
-        handled = HandleDoubleArgument(
-            context, header, context.DecodeStringRef(name_ref, payload),
-            payload, visitor);
-        break;
-      case ArgumentType::kString:
-        handled = HandleStringArgument(
-            context, header, context.DecodeStringRef(name_ref, payload),
-            payload, visitor);
-        break;
-      case ArgumentType::kPointer:
-        handled = HandlePointerArgument(
-            context, header, context.DecodeStringRef(name_ref, payload),
-            payload, visitor);
-        break;
-      case ArgumentType::kKernelObjectId:
-        handled = HandleKernelObjectIdArgument(
-            context, header, context.DecodeStringRef(name_ref, payload),
-            payload, visitor);
-        break;
-      default:
-        context.OnError("Encountered an unknown argument type: " +
-                        std::to_string(static_cast<uint32_t>(type)));
-        break;
-    }
-
-    argument_count--;
-
-    if (!handled)
-      return false;
-  }
-
-  return true;
-}
-
-bool ArgumentReader::HandleNullArgument(TraceContext& context,
-                                        internal::ArgumentHeader header,
-                                        const ftl::StringView& name,
-                                        Chunk&,
-                                        const Visitor& visitor) {
-  visitor(Argument{name.ToString(), ArgumentValue::MakeNull()});
-  return true;
-}
-
-bool ArgumentReader::HandleInt32Argument(TraceContext& context,
-                                         internal::ArgumentHeader header,
-                                         const ftl::StringView& name,
-                                         Chunk&,
-                                         const Visitor& visitor) {
-  visitor(Argument{
-      name.ToString(),
-      ArgumentValue::MakeInt32(
-          internal::Int32ArgumentFields::Value::Get<int32_t>(header))});
-  return true;
-}
-
-bool ArgumentReader::HandleInt64Argument(TraceContext& context,
-                                         internal::ArgumentHeader header,
-                                         const ftl::StringView& name,
-                                         Chunk& chunk,
-                                         const Visitor& visitor) {
-  uint64_t value = 0;
-  if (chunk.Read(&value)) {
-    visitor(Argument{name.ToString(),
-                     ArgumentValue::MakeInt64(static_cast<int64_t>(value))});
-    return true;
-  }
-  return false;
-}
-
-bool ArgumentReader::HandleDoubleArgument(TraceContext& context,
-                                          internal::ArgumentHeader header,
-                                          const ftl::StringView& name,
-                                          Chunk& chunk,
-                                          const Visitor& visitor) {
-  double value = 0;
-  if (chunk.Read(reinterpret_cast<uint64_t*>(&value))) {
-    visitor(Argument{name.ToString(),
-                     ArgumentValue::MakeDouble(static_cast<double>(value))});
-    return true;
-  }
-  return false;
-}
-
-bool ArgumentReader::HandleStringArgument(TraceContext& context,
-                                          internal::ArgumentHeader header,
-                                          const ftl::StringView& name,
-                                          Chunk& chunk,
-                                          const Visitor& visitor) {
-  auto index = internal::StringArgumentFields::Index::Get<uint16_t>(header);
-  auto value = context.DecodeStringRef(index, chunk);
-  visitor(
-      Argument{name.ToString(), ArgumentValue::MakeString(value.ToString())});
-  return true;
-}
-
-bool ArgumentReader::HandlePointerArgument(TraceContext& context,
-                                           internal::ArgumentHeader header,
-                                           const ftl::StringView& name,
-                                           Chunk& chunk,
-                                           const Visitor& visitor) {
-  uint64_t value = 0;
-  if (chunk.Read(&value)) {
-    visitor(Argument{name.ToString(), ArgumentValue::MakePointer(
-                                          static_cast<uintptr_t>(value))});
-    return true;
-  }
-  return false;
-}
-
-bool ArgumentReader::HandleKernelObjectIdArgument(
-    TraceContext& context,
-    internal::ArgumentHeader header,
-    const ftl::StringView& name,
-    Chunk& chunk,
-    const Visitor& visitor) {
-  uint64_t value = 0;
-  if (chunk.Read(&value)) {
-    visitor(
-        Argument{name.ToString(), ArgumentValue::MakeKernelObjectId(value)});
-    return true;
-  }
-  return false;
-}
-
 Record& Record::Destroy() {
   switch (type_) {
     case RecordType::kInitialization:
+      initialization_.~Initialization();
       break;
     case RecordType::kString:
-      string_record_.~StringRecord();
+      string_.~String();
       break;
     case RecordType::kThread:
-      thread_record_.~ThreadRecord();
+      thread_.~Thread();
       break;
     case RecordType::kEvent:
-      event_record_.~EventRecord();
+      event_.~Event();
       break;
     default:
       break;
@@ -341,16 +197,16 @@ Record& Record::Copy(const Record& other) {
   type_ = other.type_;
   switch (type_) {
     case RecordType::kInitialization:
-      initialization_record_ = other.initialization_record_;
+      new (&initialization_) Initialization(other.initialization_);
       break;
     case RecordType::kString:
-      new (&string_record_) StringRecord(other.string_record_);
+      new (&string_) String(other.string_);
       break;
     case RecordType::kThread:
-      new (&thread_record_) ThreadRecord(other.thread_record_);
+      new (&thread_) Thread(other.thread_);
       break;
     case RecordType::kEvent:
-      new (&event_record_) EventRecord(other.event_record_);
+      new (&event_) Event(other.event_);
       break;
     default:
       break;
@@ -359,187 +215,280 @@ Record& Record::Copy(const Record& other) {
   return *this;
 }
 
-TraceReader::TraceReader(RecordVisitor visitor, TraceErrorHandler error_handler)
-    : visitor_(std::move(visitor)), trace_context_(std::move(error_handler)) {}
+TraceReader::TraceReader(RecordConsumer record_consumer,
+                         ErrorHandler error_handler)
+    : record_consumer_(std::move(record_consumer)),
+      context_(std::move(error_handler)) {}
 
-void TraceReader::HandleInitializationRecord(internal::RecordHeader header,
-                                             Chunk& chunk) {
-  InitializationRecord record{0};
-  if (chunk.Read(&record.ticks_per_second))
-    visitor_(Record(record));
-}
+bool TraceReader::ReadRecords(Chunk& chunk) {
+  while (true) {
+    if (!pending_header_ && !chunk.Read(&pending_header_))
+      return true;  // need more data
 
-void TraceReader::HandleStringRecord(internal::RecordHeader record_header,
-                                     Chunk& chunk) {
-  auto id =
-      internal::StringRecordFields::StringIndex::Get<uint16_t>(record_header);
-  auto length =
-      internal::StringRecordFields::StringLength::Get<uint16_t>(record_header);
-
-  if (id == internal::StringRefFields::kInvalidIndex) {
-    trace_context_.OnError("Cannot associate string with reserved id 0");
-    return;
-  }
-
-  ftl::StringView string;
-  if (chunk.ReadString(length, &string)) {
-    trace_context_.RegisterStringRef(id, string);
-    visitor_(Record(StringRecord{id, string.ToString()}));
-  }
-}
-
-void TraceReader::HandleThreadRecord(internal::RecordHeader record_header,
-                                     Chunk& chunk) {
-  auto index =
-      internal::ThreadRecordFields::ThreadIndex::Get<uint8_t>(record_header);
-
-  if (index == internal::ThreadRefFields::kInline) {
-    trace_context_.OnError("Cannot associate thread with reserved id 0");
-    return;
-  }
-
-  Thread thread{0, 0};
-  if (chunk.Read(&thread.process_koid) && chunk.Read(&thread.thread_koid)) {
-    if (thread) {
-      trace_context_.RegisterThreadRef(index, thread);
-      visitor_(Record(ThreadRecord{index, thread}));
+    auto size = RecordFields::RecordSize::Get<size_t>(pending_header_);
+    if (size == 0) {
+      context_.ReportError("Unexpected record of size 0");
+      return false;  // fatal error
     }
+    FTL_DCHECK(size <= RecordFields::kMaxRecordSizeWords);
+
+    Chunk record;
+    if (!chunk.ReadChunk(size - 1, &record))
+      return true;  // need more data to decode record
+
+    auto type = RecordFields::Type::Get<RecordType>(pending_header_);
+    switch (type) {
+      case RecordType::kMetadata: {
+        break;
+      }
+      case RecordType::kInitialization: {
+        if (!ReadInitializationRecord(record, pending_header_)) {
+          context_.ReportError("Failed to read initialization record");
+        }
+        break;
+      }
+      case RecordType::kString: {
+        if (!ReadStringRecord(record, pending_header_)) {
+          context_.ReportError("Failed to read string record");
+        }
+        break;
+      }
+      case RecordType::kThread: {
+        if (!ReadThreadRecord(record, pending_header_)) {
+          context_.ReportError("Failed to read thread record");
+        }
+        break;
+      }
+      case RecordType::kEvent: {
+        if (!ReadEventRecord(record, pending_header_)) {
+          context_.ReportError("Failed to read event record");
+        }
+        break;
+      }
+      default: {
+        // Ignore unknown record types for forward compatibility.
+        context_.ReportError(ftl::StringPrintf(
+            "Skipping record of unknown type %d", static_cast<uint32_t>(type)));
+        break;
+      }
+    }
+    pending_header_ = 0u;
   }
 }
 
-void TraceReader::HandleEventRecord(internal::RecordHeader record_header,
-                                    Chunk& chunk) {
-  auto event_type = internal::EventRecordFields::EventType::Get<EventType>(
-      record_header);
-  auto argument_count =
-      internal::EventRecordFields::ArgumentCount::Get<uint8_t>(record_header);
-  auto thread_ref =
-      internal::EventRecordFields::ThreadRef::Get<uint8_t>(record_header);
+bool TraceReader::ReadInitializationRecord(Chunk& record, RecordHeader header) {
+  uint64_t ticks_per_second;
+  if (!record.Read(&ticks_per_second))
+    return false;
+
+  record_consumer_(Record(Record::Initialization{ticks_per_second}));
+  return true;
+}
+
+bool TraceReader::ReadStringRecord(Chunk& record, RecordHeader header) {
+  auto index = StringRecordFields::StringIndex::Get<StringIndex>(header);
+  if (index == StringRefFields::kInvalidIndex) {
+    context_.ReportError("Cannot associate string with reserved id 0");
+    return false;
+  }
+
+  auto length = StringRecordFields::StringLength::Get<size_t>(header);
+  ftl::StringView string_view;
+  if (!record.ReadString(length, &string_view))
+    return false;
+  std::string string = string_view.ToString();
+
+  context_.RegisterString(index, string);
+  record_consumer_(Record(Record::String{index, std::move(string)}));
+  return true;
+}
+
+bool TraceReader::ReadThreadRecord(Chunk& record, RecordHeader header) {
+  auto index = ThreadRecordFields::ThreadIndex::Get<ThreadIndex>(header);
+  if (index == ThreadRefFields::kInline) {
+    context_.ReportError("Cannot associate thread with reserved id 0");
+    return false;
+  }
+
+  ProcessThread process_thread;
+  if (!record.Read(&process_thread.process_koid) ||
+      !record.Read(&process_thread.thread_koid))
+    return false;
+
+  context_.RegisterThread(index, process_thread);
+  record_consumer_(Record(Record::Thread{index, process_thread}));
+  return true;
+}
+
+bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
+  auto type = EventRecordFields::EventType::Get<EventType>(header);
+  auto argument_count = EventRecordFields::ArgumentCount::Get<size_t>(header);
+  auto thread_ref = EventRecordFields::ThreadRef::Get<EncodedThreadRef>(header);
   auto category_ref =
-      internal::EventRecordFields::CategoryStringRef::Get<uint16_t>(
-          record_header);
+      EventRecordFields::CategoryStringRef::Get<EncodedStringRef>(header);
   auto name_ref =
-      internal::EventRecordFields::NameStringRef::Get<uint16_t>(record_header);
+      EventRecordFields::NameStringRef::Get<EncodedStringRef>(header);
 
-  uint64_t timestamp = 0;
-  if (!chunk.Read(&timestamp)) {
-    trace_context_.OnError("Failed to read timestamp");
-    return;
-  }
-
-  auto thread = trace_context_.DecodeThreadRef(thread_ref, chunk);
-  if (!thread) {
-    trace_context_.OnError("Failed to resolve thread ref");
-    return;
-  }
-
-  auto category = trace_context_.DecodeStringRef(category_ref, chunk);
-  if (category.empty()) {
-    trace_context_.OnError("Failed to resolve string ref for category");
-    return;
-  }
-
-  auto name = trace_context_.DecodeStringRef(name_ref, chunk);
-  if (name.empty()) {
-    trace_context_.OnError("Failed to resolve string ref for name");
-    return;
-  }
-
+  uint64_t timestamp;
+  ProcessThread process_thread;
+  std::string category;
+  std::string name;
   std::vector<Argument> arguments;
-  ArgumentReader argument_reader;
-  if (!argument_reader.ForEachArgument(
-          trace_context_, argument_count, chunk,
-          [&arguments](const Argument& arg) { arguments.push_back(arg); })) {
-    trace_context_.OnError("Failed to visit arguments");
-    return;
-  }
+  if (!record.Read(&timestamp) ||
+      !context_.DecodeThreadRef(record, thread_ref, &process_thread) ||
+      !context_.DecodeStringRef(record, category_ref, &category) ||
+      !context_.DecodeStringRef(record, name_ref, &name) ||
+      !ReadArguments(record, argument_count, &arguments))
+    return false;
 
-  switch (event_type) {
+  switch (type) {
     case EventType::kDurationBegin: {
-      visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                  category.ToString(), name.ToString(),
-                                  arguments, EventData(DurationBegin{})}));
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments), EventData(EventData::DurationBegin{})}));
       break;
     }
     case EventType::kDurationEnd: {
-      visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                  category.ToString(), name.ToString(),
-                                  arguments, EventData(DurationEnd{})}));
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments), EventData(EventData::DurationEnd{})}));
       break;
     }
     case EventType::kAsyncStart: {
-      uint64_t id = 0;
-      if (chunk.Read(&id))
-        visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                    category.ToString(), name.ToString(),
-                                    arguments, EventData(AsyncBegin{id})}));
+      uint64_t id;
+      if (!record.Read(&id))
+        return false;
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments), EventData(EventData::AsyncBegin{id})}));
       break;
     }
     case EventType::kAsyncInstant: {
-      uint64_t id = 0;
-      if (chunk.Read(&id))
-        visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                    category.ToString(), name.ToString(),
-                                    arguments, EventData(AsyncInstant{id})}));
+      uint64_t id;
+      if (!record.Read(&id))
+        return false;
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments), EventData(EventData::AsyncInstant{id})}));
       break;
     }
     case EventType::kAsyncEnd: {
-      uint64_t id = 0;
-      if (chunk.Read(&id))
-        visitor_(Record(EventRecord{event_type, timestamp, thread,
-                                    category.ToString(), name.ToString(),
-                                    arguments, EventData(AsyncEnd{id})}));
+      uint64_t id;
+      if (!record.Read(&id))
+        return false;
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments), EventData(EventData::AsyncBegin{id})}));
       break;
     }
-    default:
+    default: {
+      // Ignore unknown event types for forward compatibility.
+      context_.ReportError(ftl::StringPrintf(
+          "Skipping event of unknown type %d", static_cast<uint32_t>(type)));
       break;
+    }
   }
+  return true;
 }
 
-bool TraceReader::ReadRecords(TraceInput& input) {
-  Chunk chunk;
-  while (true) {
-    if (!pending_record_header_ && !input.ReadChunk(1, &chunk))
-      return true;  // need more data
-
-    bool success = chunk.Read(&pending_record_header_);
-    FTL_DCHECK(success);
-
-    auto record_size = internal::RecordFields::RecordSize::Get<uint16_t>(
-        pending_record_header_);
-    if (record_size == 0) {
-      trace_context_.OnError("Unexpected record of size 0");
-      return false;  // fatal error
-    }
-    FTL_DCHECK(record_size <= internal::RecordFields::kMaxRecordSizeWords);
-
-    if (!input.ReadChunk(record_size - 1, &chunk))
-      return true;  // could be more records if we get more data
-
-    auto record_type =
-        internal::RecordFields::Type::Get<RecordType>(pending_record_header_);
-    switch (record_type) {
-      case RecordType::kMetadata:
-        break;
-      case RecordType::kInitialization:
-        HandleInitializationRecord(pending_record_header_, chunk);
-        break;
-      case RecordType::kString:
-        HandleStringRecord(pending_record_header_, chunk);
-        break;
-      case RecordType::kThread:
-        HandleThreadRecord(pending_record_header_, chunk);
-        break;
-      case RecordType::kEvent:
-        HandleEventRecord(pending_record_header_, chunk);
-        break;
-      default:
-        FTL_LOG(INFO) << "Skipping record with unknown type";
-        break;
+bool TraceReader::ReadArguments(Chunk& record,
+                                size_t count,
+                                std::vector<Argument>* out_arguments) {
+  while (count-- > 0) {
+    ArgumentHeader header;
+    if (!record.Read(&header)) {
+      context_.ReportError("Failed to read argument header");
+      return false;
     }
 
-    pending_record_header_ = 0u;
+    auto size = ArgumentFields::ArgumentSize::Get<size_t>(header);
+    Chunk arg;
+    if (!size || !record.ReadChunk(size - 1, &arg)) {
+      context_.ReportError("Invalid argument size");
+      return false;
+    }
+
+    auto name_ref = ArgumentFields::NameRef::Get<EncodedStringRef>(header);
+    std::string name;
+    if (!context_.DecodeStringRef(arg, name_ref, &name)) {
+      context_.ReportError("Failed to read argument name");
+      return false;
+    }
+
+    auto type = ArgumentFields::Type::Get<ArgumentType>(header);
+    switch (type) {
+      case ArgumentType::kNull: {
+        out_arguments->emplace_back(std::move(name), ArgumentValue::MakeNull());
+        break;
+      }
+      case ArgumentType::kInt32: {
+        auto value = Int32ArgumentFields::Value::Get<int32_t>(header);
+        out_arguments->emplace_back(std::move(name),
+                                    ArgumentValue::MakeInt32(value));
+        break;
+      }
+      case ArgumentType::kInt64: {
+        int64_t value;
+        if (!arg.ReadInt64(&value)) {
+          context_.ReportError("Failed to read int64 argument value");
+          return false;
+        }
+        out_arguments->emplace_back(std::move(name),
+                                    ArgumentValue::MakeInt64(value));
+        break;
+      }
+      case ArgumentType::kDouble: {
+        double value;
+        if (!arg.ReadDouble(&value)) {
+          context_.ReportError("Failed to read double argument value");
+          return false;
+        }
+        out_arguments->emplace_back(std::move(name),
+                                    ArgumentValue::MakeDouble(value));
+        break;
+      }
+      case ArgumentType::kString: {
+        auto string_ref =
+            StringArgumentFields::Index::Get<EncodedStringRef>(header);
+        std::string value;
+        if (!context_.DecodeStringRef(arg, string_ref, &value)) {
+          context_.ReportError("Failed to read string argument value");
+          return false;
+        }
+        out_arguments->emplace_back(
+            std::move(name), ArgumentValue::MakeString(std::move(value)));
+        break;
+      }
+      case ArgumentType::kPointer: {
+        uintptr_t value;
+        if (!arg.Read(&value)) {
+          context_.ReportError("Failed to read pointer argument value");
+          return false;
+        }
+        out_arguments->emplace_back(std::move(name),
+                                    ArgumentValue::MakePointer(value));
+        break;
+      }
+      case ArgumentType::kKoid: {
+        uint64_t value;
+        if (!arg.Read(&value)) {
+          context_.ReportError("Failed to read koid argument value");
+          return false;
+        }
+        out_arguments->emplace_back(std::move(name),
+                                    ArgumentValue::MakeKoid(value));
+        break;
+      }
+      default: {
+        // Ignore unknown argument types for forward compatibility.
+        context_.ReportError(ftl::StringPrintf(
+            "Skipping argument of unknown type %d, argument name %s",
+            static_cast<uint32_t>(type), name.c_str()));
+        break;
+      }
+    }
   }
+  return true;
 }
 
 }  // namespace reader

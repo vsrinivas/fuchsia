@@ -26,7 +26,7 @@ enum class ArgumentType {
   kDouble = 3,
   kString = 4,
   kPointer = 5,
-  kKernelObjectId = 6
+  kKoid = 6
 };
 
 // EventType enumerates all known trace event types.

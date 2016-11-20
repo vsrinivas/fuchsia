@@ -52,29 +52,29 @@ void ChromiumExporter::Start() {
 void ChromiumExporter::ExportRecord(const reader::Record& record) {
   switch (record.type()) {
     case RecordType::kEvent:
-      ExportEvent(record.GetEventRecord());
+      ExportEvent(record.GetEvent());
       break;
     default:
       break;
   }
 }
 
-void ChromiumExporter::ExportEvent(const reader::EventRecord& event) {
+void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
   if (!IsEventTypeSupported(event.type()))
     return;
 
   writer_.StartObject();
 
+  writer_.Key("cat");
+  writer_.String(event.category.data(), event.category.size());
   writer_.Key("name");
   writer_.String(event.name.data(), event.name.size());
-  writer_.Key("cat");
-  writer_.String(event.cat.data(), event.cat.size());
   writer_.Key("ts");
   writer_.Uint64(event.timestamp / 1000);
   writer_.Key("pid");
-  writer_.Uint64(event.thread.process_koid);
+  writer_.Uint64(event.process_thread.process_koid);
   writer_.Key("tid");
-  writer_.Uint64(event.thread.thread_koid);
+  writer_.Uint64(event.process_thread.thread_koid);
 
   switch (event.type()) {
     case EventType::kDurationBegin:
@@ -134,11 +134,10 @@ void ChromiumExporter::ExportEvent(const reader::EventRecord& event) {
           writer_.String(
               ftl::StringPrintf("0x%" PRIx64, arg.value.GetPointer()).c_str());
           break;
-        case ArgumentType::kKernelObjectId:
+        case ArgumentType::kKoid:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.String(
-              ftl::StringPrintf("#%" PRIu64, arg.value.GetKernelObjectId())
-                  .c_str());
+              ftl::StringPrintf("#%" PRIu64, arg.value.GetKoid()).c_str());
           break;
         default:
           break;

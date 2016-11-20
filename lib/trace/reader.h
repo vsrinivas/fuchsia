@@ -7,7 +7,6 @@
 
 #include <stdint.h>
 
-#include <iosfwd>
 #include <unordered_map>
 #include <vector>
 
@@ -19,94 +18,65 @@
 namespace tracing {
 namespace reader {
 
+// Provides support for reading sequences of 64-bit words from a buffer.
 class Chunk {
  public:
   Chunk();
-  explicit Chunk(const uint64_t* begin, size_t size);
+  explicit Chunk(const uint64_t* begin, size_t num_words);
 
   uint64_t remaining_words() const { return end_ - current_; }
 
-  bool Read(uint64_t* value);
-  bool ReadChunk(size_t num_words, Chunk* out);
-  bool ReadString(size_t length, ftl::StringView* out);
+  // Reads from the chunk, maintaining proper alignment.
+  // Returns true on success, false if the chunk has insufficient remaining
+  // words to satisfy the request.
+  bool Read(uint64_t* out_value);
+  bool ReadInt64(int64_t* out_value);
+  bool ReadDouble(double* out_value);
+  bool ReadString(size_t length, ftl::StringView* out_string);
+  bool ReadChunk(size_t num_words, Chunk* out_chunk);
 
  private:
   const uint64_t* current_;
   const uint64_t* end_;
 };
 
-class TraceInput {
- public:
-  virtual ~TraceInput();
-  virtual bool ReadChunk(size_t num_words, Chunk* chunk) = 0;
+// Callback invoked when decoding errors are detected in the trace.
+using ErrorHandler = std::function<void(std::string)>;
 
- protected:
-  TraceInput();
-
- private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(TraceInput);
-};
-
-class MemoryTraceInput : public TraceInput {
- public:
-  explicit MemoryTraceInput(void* memory, size_t size);
-
-  uint64_t remaining_bytes() const {
-    return chunk_.remaining_words() * sizeof(uint64_t);
-  }
-
-  // |TraceInput| implementation.
-  bool ReadChunk(size_t num_words, Chunk* chunk) override;
-
- private:
-  Chunk chunk_;
-};
-
-class StreamTraceInput : public TraceInput {
- public:
-  explicit StreamTraceInput(std::istream& in);
-
-  // |TraceInput| implementation.
-  bool ReadChunk(size_t num_words, Chunk* chunk) override;
-
- private:
-  std::istream& in_;
-  std::vector<uint64_t> buffer_;
-};
-
-struct Thread {
-  explicit operator bool() const {
-    return thread_koid != 0 && process_koid != 0;
-  }
-
-  uint64_t process_koid;
-  uint64_t thread_koid;
-};
-
-static_assert(sizeof(Thread) == 2 * sizeof(uint64_t), "");
-
-using TraceErrorHandler = std::function<void(std::string)>;
-
+// Retains context needed to decode traces.
 class TraceContext {
  public:
-  explicit TraceContext(const TraceErrorHandler& error_handler);
+  explicit TraceContext(ErrorHandler error_handler);
+  ~TraceContext();
 
-  void OnError(const std::string& error) const;
+  // Reports a decoding error.
+  void ReportError(std::string error) const;
 
-  ftl::StringView DecodeStringRef(uint16_t string_ref, Chunk& chunk) const;
-  void RegisterStringRef(uint16_t index, const ftl::StringView& string);
+  // Decodes a string reference from a chunk.
+  bool DecodeStringRef(Chunk& chunk,
+                       EncodedStringRef string_ref,
+                       std::string* out_string) const;
 
-  Thread DecodeThreadRef(uint16_t thread_ref, Chunk& chunk) const;
-  void RegisterThreadRef(uint16_t index, const Thread& thread);
+  // Decodes a thread reference from a chunk.
+  bool DecodeThreadRef(Chunk& chunk,
+                       EncodedThreadRef thread_ref,
+                       ProcessThread* out_process_thread) const;
+
+  // Registers a string in the current string table.
+  void RegisterString(StringIndex index, std::string string);
+
+  // Registers a thread in the current thread table.
+  void RegisterThread(ThreadIndex index, const ProcessThread& process_thread);
 
  private:
-  TraceErrorHandler error_handler_;
-  std::unordered_map<uint16_t, std::string> string_table_;
-  std::unordered_map<uint16_t, Thread> thread_table_;
+  ErrorHandler error_handler_;
+  std::unordered_map<StringIndex, std::string> string_table_;
+  std::unordered_map<ThreadIndex, ProcessThread> thread_table_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceContext);
 };
 
+// A typed argument value.
 class ArgumentValue {
  public:
   static ArgumentValue MakeNull() { return ArgumentValue(); }
@@ -117,15 +87,15 @@ class ArgumentValue {
 
   static ArgumentValue MakeDouble(double value) { return ArgumentValue(value); }
 
-  static ArgumentValue MakeString(const std::string& value) {
-    return ArgumentValue(value);
+  static ArgumentValue MakeString(std::string value) {
+    return ArgumentValue(std::move(value));
   }
 
   static ArgumentValue MakePointer(uintptr_t value) {
     return ArgumentValue(PointerTag(), value);
   }
 
-  static ArgumentValue MakeKernelObjectId(uint64_t value) {
+  static ArgumentValue MakeKoid(uint64_t value) {
     return ArgumentValue(KoidTag(), value);
   }
 
@@ -138,6 +108,8 @@ class ArgumentValue {
   ArgumentValue& operator=(const ArgumentValue& rhs) {
     return Destroy().Copy(rhs);
   }
+
+  ArgumentType type() const { return type_; }
 
   int32_t GetInt32() const {
     FTL_DCHECK(type_ == ArgumentType::kInt32);
@@ -164,12 +136,10 @@ class ArgumentValue {
     return uint64_;
   }
 
-  uint64_t GetKernelObjectId() const {
-    FTL_DCHECK(type_ == ArgumentType::kKernelObjectId);
+  uint64_t GetKoid() const {
+    FTL_DCHECK(type_ == ArgumentType::kKoid);
     return uint64_;
   }
-
-  ArgumentType type() const { return type_; }
 
  private:
   struct PointerTag {};
@@ -185,16 +155,15 @@ class ArgumentValue {
 
   explicit ArgumentValue(double d) : type_(ArgumentType::kDouble), double_(d) {}
 
-  explicit ArgumentValue(const std::string& string)
-      : type_(ArgumentType::kString) {
-    new (&string_) std::string(string);
+  explicit ArgumentValue(std::string string) : type_(ArgumentType::kString) {
+    new (&string_) std::string(std::move(string));
   }
 
   explicit ArgumentValue(PointerTag, uintptr_t pointer)
       : type_(ArgumentType::kPointer), uint64_(pointer) {}
 
   explicit ArgumentValue(KoidTag, uint64_t koid)
-      : type_(ArgumentType::kKernelObjectId), uint64_(koid) {}
+      : type_(ArgumentType::kKoid), uint64_(koid) {}
 
   ArgumentValue& Destroy();
   ArgumentValue& Copy(const ArgumentValue& other);
@@ -209,85 +178,39 @@ class ArgumentValue {
   };
 };
 
+// Named argument and value.
 struct Argument {
+  explicit Argument(std::string name, ArgumentValue value)
+      : name(std::move(name)), value(std::move(value)) {}
+
   std::string name;
   ArgumentValue value;
 };
 
-class ArgumentReader {
- public:
-  using Visitor = std::function<void(const Argument&)>;
-
-  bool ForEachArgument(TraceContext& context,
-                       size_t argument_count,
-                       Chunk& chunk,
-                       const Visitor& visitor);
-
- private:
-  bool HandleNullArgument(TraceContext& context,
-                          internal::ArgumentHeader header,
-                          const ftl::StringView& name,
-                          Chunk& chunk,
-                          const Visitor& visitor);
-
-  bool HandleInt32Argument(TraceContext& context,
-                           internal::ArgumentHeader header,
-                           const ftl::StringView& name,
-                           Chunk& chunk,
-                           const Visitor& visitor);
-
-  bool HandleInt64Argument(TraceContext& context,
-                           internal::ArgumentHeader header,
-                           const ftl::StringView& name,
-                           Chunk& chunk,
-                           const Visitor& visitor);
-
-  bool HandleDoubleArgument(TraceContext& context,
-                            internal::ArgumentHeader header,
-                            const ftl::StringView& name,
-                            Chunk& chunk,
-                            const Visitor& visitor);
-
-  bool HandleStringArgument(TraceContext& context,
-                            internal::ArgumentHeader header,
-                            const ftl::StringView& name,
-                            Chunk& chunk,
-                            const Visitor& visitor);
-
-  bool HandlePointerArgument(TraceContext& context,
-                             internal::ArgumentHeader header,
-                             const ftl::StringView& name,
-                             Chunk& chunk,
-                             const Visitor& visitor);
-
-  bool HandleKernelObjectIdArgument(TraceContext& context,
-                                    internal::ArgumentHeader header,
-                                    const ftl::StringView& name,
-                                    Chunk& chunk,
-                                    const Visitor& visitor);
-};
-
-struct DurationBegin {};
-
-struct DurationEnd {};
-
-struct AsyncBegin {
-  uint64_t id;
-};
-static_assert(sizeof(AsyncBegin) == sizeof(uint64_t), "");
-
-struct AsyncInstant {
-  uint64_t id;
-};
-static_assert(sizeof(AsyncInstant) == sizeof(uint64_t), "");
-
-struct AsyncEnd {
-  uint64_t id;
-};
-static_assert(sizeof(AsyncInstant) == sizeof(uint64_t), "");
-
+// Event type specific data.
 class EventData {
  public:
+  // Duration begin event data.
+  struct DurationBegin {};
+
+  // Duration end event data.
+  struct DurationEnd {};
+
+  // Async begin event data.
+  struct AsyncBegin {
+    uint64_t id;
+  };
+
+  // Async instant event data.
+  struct AsyncInstant {
+    uint64_t id;
+  };
+
+  // Async end event data.
+  struct AsyncEnd {
+    uint64_t id;
+  };
+
   explicit EventData(const DurationBegin& duration_begin)
       : type_(EventType::kDurationBegin), duration_begin_(duration_begin) {}
 
@@ -331,45 +254,50 @@ class EventData {
   };
 };
 
-struct InitializationRecord {
-  uint64_t ticks_per_second;
-};
-
-struct StringRecord {
-  uint16_t index;
-  std::string string;
-};
-
-struct ThreadRecord {
-  uint16_t index;
-  Thread thread;
-};
-
-struct EventRecord {
-  EventType event_type;
-  uint64_t timestamp;
-  Thread thread;
-  std::string cat;
-  std::string name;
-  std::vector<Argument> arguments;
-  EventData event_data;
-};
-
+// A decoded record.
 class Record {
  public:
-  explicit Record(const InitializationRecord& record)
-      : type_(RecordType::kInitialization), initialization_record_(record) {}
+  // Initialization record data.
+  struct Initialization {
+    uint64_t ticks_per_second;
+  };
 
-  explicit Record(const StringRecord& record) : type_(RecordType::kString) {
-    new (&string_record_) StringRecord(record);
+  // String record data.
+  struct String {
+    StringIndex index;
+    std::string string;
+  };
+
+  // Thread record data.
+  struct Thread {
+    ThreadIndex index;
+    ProcessThread process_thread;
+  };
+
+  // Event record data.
+  struct Event {
+    EventType type() const { return event_data.type(); }
+    uint64_t timestamp;
+    ProcessThread process_thread;
+    std::string category;
+    std::string name;
+    std::vector<Argument> arguments;
+    EventData event_data;
+  };
+
+  explicit Record(const Initialization& record)
+      : type_(RecordType::kInitialization), initialization_(record) {}
+
+  explicit Record(const String& record) : type_(RecordType::kString) {
+    new (&string_) String(record);
   }
 
-  explicit Record(const ThreadRecord& record) : type_(RecordType::kThread) {
-    new (&thread_record_) ThreadRecord(record);
+  explicit Record(const Thread& record) : type_(RecordType::kThread) {
+    new (&thread_) Thread(record);
   }
 
-  explicit Record(const EventRecord& record) : type_(RecordType::kEvent) {
-    new (&event_record_) EventRecord(record);
+  explicit Record(const Event& record) : type_(RecordType::kEvent) {
+    new (&event_) Event(record);
   }
 
   Record(const Record& other) { Copy(other); }
@@ -378,24 +306,24 @@ class Record {
 
   Record& operator=(const Record& rhs) { return Destroy().Copy(rhs); }
 
-  const InitializationRecord& GetInitializationRecord() const {
+  const Initialization& GetInitialization() const {
     FTL_DCHECK(type_ == RecordType::kInitialization);
-    return initialization_record_;
+    return initialization_;
   }
 
-  const StringRecord& GetStringRecord() const {
+  const String& GetString() const {
     FTL_DCHECK(type_ == RecordType::kString);
-    return string_record_;
+    return string_;
   }
 
-  const ThreadRecord& GetThreadRecord() const {
+  const Thread& GetThread() const {
     FTL_DCHECK(type_ == RecordType::kThread);
-    return thread_record_;
+    return thread_;
   };
 
-  const EventRecord& GetEventRecord() const {
+  const Event& GetEvent() const {
     FTL_DCHECK(type_ == RecordType::kEvent);
-    return event_record_;
+    return event_;
   }
 
   RecordType type() const { return type_; }
@@ -406,37 +334,47 @@ class Record {
 
   RecordType type_;
   union {
-    InitializationRecord initialization_record_;
-    StringRecord string_record_;
-    ThreadRecord thread_record_;
-    EventRecord event_record_;
+    Initialization initialization_;
+    String string_;
+    Thread thread_;
+    Event event_;
   };
 };
 
-using RecordVisitor = std::function<void(const Record&)>;
+// Called once for each record read by |ReadRecords|.
+// TODO(jeffbrown): It would be nice to get rid of this by making |ReadRecords|
+// return std::optional<Record> as an out parameter.
+using RecordConsumer = std::function<void(const Record&)>;
 
+// Reads trace records.
 class TraceReader {
  public:
-  explicit TraceReader(RecordVisitor visitor, TraceErrorHandler error_handler);
+  explicit TraceReader(RecordConsumer record_consumer,
+                       ErrorHandler error_handler);
 
-  // Reads as many records as possible from the input, invoking the
-  // record visitor for each one.  Returns true if the stream could possibly
-  // contain more records, false if the trace stream is corrupt and no
-  // further decoding is possible.
-  bool ReadRecords(TraceInput& input);
+  // Reads as many records as possible from the chunk, invoking the
+  // record consumer for each one.  Returns true if the stream could possibly
+  // contain more records if the chunk were extended with new data.
+  // Returns false if the trace stream is unrecoverably corrupt and no
+  // further decoding is possible.  May be called repeatedly with new
+  // chunks as they become available to resume decoding.
+  bool ReadRecords(Chunk& chunk);
 
  private:
-  void HandleInitializationRecord(internal::RecordHeader header, Chunk& input);
+  bool ReadInitializationRecord(Chunk& record,
+                                ::tracing::internal::RecordHeader header);
+  bool ReadStringRecord(Chunk& record,
+                        ::tracing::internal::RecordHeader header);
+  bool ReadThreadRecord(Chunk& record,
+                        ::tracing::internal::RecordHeader header);
+  bool ReadEventRecord(Chunk& record, ::tracing::internal::RecordHeader header);
+  bool ReadArguments(Chunk& record,
+                     size_t count,
+                     std::vector<Argument>* out_arguments);
 
-  void HandleStringRecord(internal::RecordHeader header, Chunk& input);
-
-  void HandleThreadRecord(internal::RecordHeader header, Chunk& input);
-
-  void HandleEventRecord(internal::RecordHeader header, Chunk& input);
-
-  RecordVisitor visitor_;
-  TraceContext trace_context_;
-  internal::RecordHeader pending_record_header_ = 0u;
+  RecordConsumer record_consumer_;
+  TraceContext context_;
+  ::tracing::internal::RecordHeader pending_header_ = 0u;
 };
 
 }  // namespace reader

@@ -340,7 +340,7 @@ class Argument<Koid> : public ArgumentBase {
   size_t Size() const { return ArgumentBase::Size() + sizeof(uint64_t); }
 
   void WriteTo(Payload& payload) const {
-    ArgumentBase::WriteTo(payload, ArgumentType::kKernelObjectId, Size());
+    ArgumentBase::WriteTo(payload, ArgumentType::kKoid, Size());
     payload.Write(koid_.value);
   }
 

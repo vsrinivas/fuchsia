@@ -27,7 +27,7 @@ Tracer::~Tracer() {
 }
 
 void Tracer::Start(std::vector<std::string> categories,
-                   RecordVisitor record_visitor,
+                   RecordConsumer record_consumer,
                    ErrorHandler error_handler,
                    ftl::Closure done_callback) {
   FTL_DCHECK(state_ == State::kStopped);
@@ -47,7 +47,7 @@ void Tracer::Start(std::vector<std::string> categories,
                             std::move(outgoing_socket));
 
   buffer_.reserve(kBufferSize);
-  reader_.reset(new reader::TraceReader(record_visitor, error_handler));
+  reader_.reset(new reader::TraceReader(record_consumer, error_handler));
 
   handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
       this, socket_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
@@ -92,14 +92,16 @@ void Tracer::DrainSocket() {
     size_t bytes_available = buffer_end_;
     FTL_DCHECK(bytes_available > 0);
 
-    reader::MemoryTraceInput input(buffer_.data(), bytes_available);
-    if (!reader_->ReadRecords(input)) {
+    reader::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
+                        bytes_available / sizeof(uint64_t));
+    if (!reader_->ReadRecords(chunk)) {
       FTL_LOG(ERROR) << "Trace stream is corrupted";
       Done();
       return;
     }
 
-    size_t bytes_consumed = bytes_available - input.remaining_bytes();
+    size_t bytes_consumed =
+        bytes_available - chunk.remaining_words() * sizeof(uint64_t);
     bytes_available -= bytes_consumed;
     memmove(buffer_.data(), buffer_.data() + bytes_consumed, bytes_available);
     buffer_end_ = bytes_available;

@@ -23,17 +23,17 @@ namespace tracing {
 // Runs traces.
 class Tracer : private mtl::MessageLoopHandler {
  public:
-  using RecordVisitor = reader::RecordVisitor;
-  using ErrorHandler = reader::TraceErrorHandler;
+  using RecordConsumer = reader::RecordConsumer;
+  using ErrorHandler = reader::ErrorHandler;
 
   explicit Tracer(TraceController* controller);
   ~Tracer() override;
 
   // Starts tracing.
-  // Streams records |record_visitor| and errors to |error_handler|.
+  // Streams records |record_consumer| and errors to |error_handler|.
   // Invokes |done_callback| when tracing stops.
   void Start(std::vector<std::string> categories,
-             RecordVisitor record_visitor,
+             RecordConsumer record_consumer,
              ErrorHandler error_handler,
              ftl::Closure done_callback);
 
