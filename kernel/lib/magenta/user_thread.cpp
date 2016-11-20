@@ -56,15 +56,24 @@ void UserThread::set_dispatcher(ThreadDispatcher* dispatcher) {
 UserThread::~UserThread() {
     LTRACE_ENTRY_OBJ;
 
-    DEBUG_ASSERT_MSG(state_ == State::DEAD, "state is %s\n", StateToString(state_));
     DEBUG_ASSERT(&thread_ != get_current_thread());
 
-    // join the LK thread before doing anything else to clean up LK state and ensure
-    // the thread we're destroying has stopped.
-    LTRACEF("joining LK thread to clean up state\n");
-    __UNUSED auto ret = thread_join(&thread_, nullptr, INFINITE_TIME);
-    LTRACEF("done joining LK thread\n");
-    DEBUG_ASSERT_MSG(ret == NO_ERROR, "thread_join returned something other than NO_ERROR\n");
+    switch (state_) {
+    case State::DEAD: {
+        // join the LK thread before doing anything else to clean up LK state and ensure
+        // the thread we're destroying has stopped.
+        LTRACEF("joining LK thread to clean up state\n");
+        __UNUSED auto ret = thread_join(&thread_, nullptr, INFINITE_TIME);
+        LTRACEF("done joining LK thread\n");
+        DEBUG_ASSERT_MSG(ret == NO_ERROR, "thread_join returned something other than NO_ERROR\n");
+        break;
+    }
+    case State::INITIAL:
+        // this gets a pass, we can destruct a partially constructed thread
+        break;
+    default:
+        DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n", StateToString(state_), this);
+    }
 
     cond_destroy(&exception_wait_cond_);
 }
