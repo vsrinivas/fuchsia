@@ -38,7 +38,8 @@ ModelData::GetPerModelDescriptorSetLayoutCreateInfo() {
     binding.binding = 0;
     binding.descriptorType = vk::DescriptorType::eUniformBuffer;
     binding.descriptorCount = 1;
-    binding.stageFlags |= vk::ShaderStageFlagBits::eFragment;
+    binding.stageFlags =
+        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
     info.bindingCount = 1;
     info.pBindings = &binding;
     ptr = &info;
@@ -58,8 +59,8 @@ ModelData::GetPerObjectDescriptorSetLayoutCreateInfo() {
     uniform_binding.binding = 0;
     uniform_binding.descriptorType = vk::DescriptorType::eUniformBuffer;
     uniform_binding.descriptorCount = 1;
-    uniform_binding.stageFlags |= vk::ShaderStageFlagBits::eFragment;
-    uniform_binding.stageFlags |= vk::ShaderStageFlagBits::eVertex;
+    uniform_binding.stageFlags =
+        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
     texture_binding.binding = 1;
     texture_binding.descriptorType = vk::DescriptorType::eCombinedImageSampler;
     texture_binding.descriptorCount = 1;

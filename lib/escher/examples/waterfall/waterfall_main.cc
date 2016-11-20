@@ -45,6 +45,10 @@ int main(int argc, char** argv) {
   {
     using escher::vec2;
     using escher::vec3;
+    using escher::MeshAttribute;
+    using escher::MeshSpec;
+    using escher::Object;
+    using escher::ShapeModifier;
 
     escher::VulkanContext vulkan_context = demo->GetVulkanContext();
 
@@ -70,32 +74,42 @@ int main(int argc, char** argv) {
         escher.NewCheckerboardImage(16, 16), vulkan_context.device,
         vk::Filter::eNearest);
 
-    auto yellow = ftl::MakeRefCounted<escher::Material>();
-    yellow->set_color(vec3(0.937f, 0.886f, 0.184f));
-    auto red = ftl::MakeRefCounted<escher::Material>();
-    red->set_color(vec3(0.937f, 0.1, 0.184f));
+    auto blue = ftl::MakeRefCounted<escher::Material>();
+    auto pink = ftl::MakeRefCounted<escher::Material>();
+    auto green = ftl::MakeRefCounted<escher::Material>();
+    auto blue_green = ftl::MakeRefCounted<escher::Material>();
     auto purple = ftl::MakeRefCounted<escher::Material>(checkerboard);
+    blue->set_color(vec3(0.188f, 0.188f, 0.788f));
+    pink->set_color(vec3(0.929f, 0.678f, 0.925f));
+    green->set_color(vec3(0.259f, 0.956f, 0.667));
+    blue_green->set_color(vec3(0.039f, 0.788f, 0.788f));
     purple->set_color(vec3(0.588f, 0.239f, 0.729f));
 
-    escher::Object circle(
-        escher::Object::NewCircle(vec2(512.f, 512.f), 256.f, 5.f, yellow));
-    escher::Object rectangle(escher::Object::NewRect(
-        vec2(12.f, 300.f), vec2(1000.f, 300.f), 6.f, purple));
+    Object rectangle(
+        Object::NewRect(vec2(112.f, 112.f), vec2(800.f, 800.f), 8.f, purple));
+    Object circle1(Object::NewCircle(vec2(612.f, 212.f), 200.f, 5.f, blue));
+    Object circle2(Object::NewCircle(vec2(412.f, 800.f), 200.f, 5.f, blue));
+    Object circle3(Object::NewCircle(vec2(162.f, 412.f), 120.f, 3.f, blue));
+    Object circle4(Object::NewCircle(vec2(850.f, 600.f), 120.f, 3.f, blue));
 
-    escher::MeshSpec spec{escher::MeshAttribute::kPosition |
-                          escher::MeshAttribute::kPositionOffset |
-                          escher::MeshAttribute::kPerimeter |
-                          escher::MeshAttribute::kUV};
-    auto mesh = escher::NewRingMesh(&escher, spec, 8, vec2(0.f, 0.f), 200.f,
-                                    150.f, 20.f, -20.f);
-    escher::Object ring(
-        escher::Object::NewFromMesh(mesh, vec3(512.f, 512.f, 4.f), red));
+    // Create meshes for fancy wobble effect.
+    MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
+                  MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
+    auto ring_mesh1 = escher::NewRingMesh(&escher, spec, 8, vec2(0.f, 0.f),
+                                          300.f, 250.f, 18.f, -15.f);
+    auto ring_mesh2 = escher::NewRingMesh(&escher, spec, 8, vec2(0.f, 0.f),
+                                          200.f, 150.f, 11.f, -8.f);
+    auto ring_mesh3 = escher::NewRingMesh(&escher, spec, 8, vec2(0.f, 0.f),
+                                          100.f, 50.f, 5.f, -2.f);
+    Object ring1(ring_mesh1, vec3(512.f, 512.f, 6.f), pink);
+    ring1.set_shape_modifiers(ShapeModifier::kWobble);
+    Object ring2(ring_mesh2, vec3(512.f, 512.f, 4.f), green);
+    ring2.set_shape_modifiers(ShapeModifier::kWobble);
+    Object ring3(ring_mesh3, vec3(512.f, 512.f, 2.f), blue_green);
+    ring3.set_shape_modifiers(ShapeModifier::kWobble);
 
-    mesh = escher::NewCircleMesh(&escher, spec, 8, vec2(0.f, 0.f), 100.f, 20.f);
-    escher::Object circle2(
-        escher::Object::NewFromMesh(mesh, vec3(512.f, 512.f, 4.f), red));
-
-    std::vector<escher::Object> objects{circle, rectangle, ring, circle2};
+    std::vector<Object> objects{circle1,   circle2, circle3, circle4,
+                                rectangle, ring1,   ring2,   ring3};
     escher::Model model(objects);
 
     while (!glfwWindowShouldClose(demo->GetWindow())) {
@@ -110,6 +124,7 @@ int main(int argc, char** argv) {
       }
 
       model.set_blur_plane_height(12.0f);
+      model.set_time(stopwatch.GetElapsedSeconds());
       swapchain_helper.DrawFrame(stage, model);
 
       if (++frame_count == 1) {

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <unordered_map>
 #include <glm/glm.hpp>
 
 #include "escher/material/material.h"
@@ -17,12 +18,8 @@ class Object {
  public:
   ~Object();
 
-  // The shape to draw.
-  const Shape& shape() const { return shape_; }
-
-  // The material with which to fill the shape.
-  const MaterialPtr& material() const { return material_; }
-
+  // Constructors.
+  Object(MeshPtr mesh, const vec3& position, MaterialPtr material);
   static Object NewRect(const vec2& position,
                         const vec2& size,
                         float z,
@@ -31,13 +28,21 @@ class Object {
                           float radius,
                           float z,
                           MaterialPtr material);
-  static Object NewFromMesh(MeshPtr mesh,
-                            const vec3& position,
-                            MaterialPtr material);
+
+  // The shape to draw.
+  const Shape& shape() const { return shape_; }
+
+  // The material with which to fill the shape.
+  const MaterialPtr& material() const { return material_; }
 
   float width() const { return size_.x; }
   float height() const { return size_.y; }
   const vec3& position() const { return position_; }
+
+  Object& set_shape_modifiers(ShapeModifiers modifiers) {
+    shape_.set_modifiers(modifiers);
+    return *this;
+  }
 
  private:
   Object(const Shape& shape, const MaterialPtr& material);
@@ -46,6 +51,7 @@ class Object {
   MaterialPtr material_;
   vec3 position_;
   vec2 size_;
+  std::unordered_map<ShapeModifier, std::vector<uint8_t>> shape_modifier_data_;
 };
 
 }  // namespace escher

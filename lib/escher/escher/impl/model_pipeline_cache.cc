@@ -44,7 +44,7 @@ constexpr char g_vertex_src[] = R"GLSL(
   }
   )GLSL";
 
-constexpr char g_wobble_vertex_src[] = R"GLSL(
+constexpr char g_vertex_wobble_src[] = R"GLSL(
     #version 450
     #extension GL_ARB_separate_shader_objects : enable
 
@@ -56,6 +56,11 @@ constexpr char g_wobble_vertex_src[] = R"GLSL(
 
     layout(location = 0) out vec2 fragUV;
 
+    layout(set = 0, binding = 0) uniform PerModel {
+      vec4 brightness;
+      float time;
+    };
+
     layout(set = 1, binding = 0) uniform PerObject {
       mat4 transform;
       vec4 color;
@@ -65,10 +70,33 @@ constexpr char g_wobble_vertex_src[] = R"GLSL(
       vec4 gl_Position;
     };
 
+
+    const float TWO_PI = 6.28318530718f;
+
+    struct SineParams {
+      float speed;
+      float amplitude;
+      float frequency;
+    };
+
+    const SineParams sine_params[3] = {
+      { -0.3f * TWO_PI, 0.4f, 7.f * TWO_PI },
+      { -0.2f * TWO_PI, 0.2f, 23.f * TWO_PI },
+      { 1.f * TWO_PI, 0.6f, 5.f * TWO_PI }
+    };
+
+    float EvalSineParams(SineParams params) {
+      float arg = params.frequency * inPerimeter + params.speed * time;
+      return params.amplitude * sin(arg);
+    }
+
     void main() {
       // Halfway between min and max depth.
-      float scale = sin(16.f * 2.f * 3.14159 * inPerimeter);
-      gl_Position = transform * vec4(inPosition + scale * inPositionOffset, 0, 1);
+      float scale = EvalSineParams(sine_params[0]) +
+                    EvalSineParams(sine_params[1]) +
+                    EvalSineParams(sine_params[2]);
+      vec2 move = vec2(cos(time * 0.4f) * 200.f, sin(time) * 100.f);
+      gl_Position = transform * vec4(inPosition + move + scale * inPositionOffset, 0, 1);
 
       // Divide by 25 to convert 'Material Stage' depth to range 0-1.
       gl_Position.z *= 0.04;
@@ -84,6 +112,7 @@ constexpr char g_fragment_src[] = R"GLSL(
 
   layout(set = 0, binding = 0) uniform PerModel {
     vec4 brightness;
+    float time;
   };
 
   layout(set = 1, binding = 0) uniform PerObject {
@@ -96,9 +125,23 @@ constexpr char g_fragment_src[] = R"GLSL(
   layout(location = 0) out vec4 outColor;
 
   void main() {
-    outColor = brightness * color * texture(tex, inUV);
+    // TODO: would use mix(0.4f, 1.0f, brightness), but we currently don't have
+    // access to the GLSL standard library.  See glsl_compiler.h.
+    outColor = (0.4f + 0.6f * brightness) * color * texture(tex, inUV);
   }
+  )GLSL";
 
+constexpr char g_fragment_depth_prepass_src[] = R"GLSL(
+  #version 450
+  #extension GL_ARB_separate_shader_objects : enable
+
+  layout(location = 0) in vec2 inUV;
+
+  layout(location = 0) out vec4 outColor;
+
+  void main() {
+    outColor = vec4(1.f, 1.f, 1.f, 1.f);
+  }
   )GLSL";
 
 }  // namespace
@@ -136,59 +179,18 @@ ModelPipeline* ModelPipelineCacheOLD::GetPipeline(
   return new_pipeline_ptr;
 }
 
-std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
-    const ModelPipelineSpec& spec,
+namespace {
+
+// Creates a new PipelineLayout and Pipeline using only the provided arguments.
+std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
+    vk::Device device,
+    vk::ShaderModule vertex_module,
+    vk::ShaderModule fragment_module,
+    bool enable_depth_write,
+    vk::CompareOp depth_compare_op,
+    vk::RenderPass render_pass,
+    std::vector<vk::DescriptorSetLayout> descriptor_set_layouts,
     const MeshSpecImpl& mesh_spec_impl) {
-  // TODO: create customized pipelines for different shapes/materials/etc.
-
-  std::future<SpirvData> vertex_spirv_future;
-
-  MeshSpec default_spec{MeshAttribute::kPosition | MeshAttribute::kUV};
-  MeshSpec wobble_spec{MeshAttribute::kPosition |
-                       MeshAttribute::kPositionOffset |
-                       MeshAttribute::kPerimeter | MeshAttribute::kUV};
-
-  bool use_wobble = false;
-  if (spec.mesh_spec == default_spec) {
-    use_wobble = false;
-    vertex_spirv_future =
-        compiler_.Compile(vk::ShaderStageFlagBits::eVertex, {{g_vertex_src}},
-                          std::string(), "main");
-  } else if (spec.mesh_spec == wobble_spec) {
-    use_wobble = true;
-    vertex_spirv_future =
-        compiler_.Compile(vk::ShaderStageFlagBits::eVertex,
-                          {{g_wobble_vertex_src}}, std::string(), "main");
-  } else {
-    FTL_CHECK(false);
-  }
-
-  auto fragment_spirv_future =
-      compiler_.Compile(vk::ShaderStageFlagBits::eFragment, {{g_fragment_src}},
-                        std::string(), "main");
-
-  vk::ShaderModule vertex_module;
-  {
-    SpirvData spirv = vertex_spirv_future.get();
-
-    vk::ShaderModuleCreateInfo module_info;
-    module_info.codeSize = spirv.size() * sizeof(uint32_t);
-    module_info.pCode = spirv.data();
-    vertex_module =
-        ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(module_info));
-  }
-
-  vk::ShaderModule fragment_module;
-  {
-    SpirvData spirv = fragment_spirv_future.get();
-
-    vk::ShaderModuleCreateInfo module_info;
-    module_info.codeSize = spirv.size() * sizeof(uint32_t);
-    module_info.pCode = spirv.data();
-    fragment_module =
-        ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(module_info));
-  }
-
   vk::PipelineShaderStageCreateInfo vertex_stage_info;
   vertex_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
   vertex_stage_info.module = vertex_module;
@@ -216,18 +218,8 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
 
   vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
   depth_stencil_info.depthTestEnable = true;
-  if (spec.use_depth_prepass) {
-    // The whole point of a depth pre-pass is to write the depth buffer.
-    depth_stencil_info.depthWriteEnable = true;
-    depth_stencil_info.depthCompareOp = vk::CompareOp::eLess;
-  } else {
-    // Don't write to the depth buffer; we re-use the buffer generated in the
-    // depth pre-pass.  Must modify the comparison operator, otherwise nothing
-    // would appear, because the nearest objects would have the exact same depth
-    // as in the depth buffer.
-    depth_stencil_info.depthWriteEnable = true;
-    depth_stencil_info.depthCompareOp = vk::CompareOp::eLessOrEqual;
-  }
+  depth_stencil_info.depthWriteEnable = enable_depth_write;
+  depth_stencil_info.depthCompareOp = depth_compare_op;
   depth_stencil_info.depthBoundsTestEnable = false;
   depth_stencil_info.stencilTestEnable = false;
 
@@ -256,8 +248,7 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
   rasterizer.rasterizerDiscardEnable = false;
   rasterizer.polygonMode = vk::PolygonMode::eFill;
   rasterizer.lineWidth = 1.0f;
-  rasterizer.cullMode =
-      use_wobble ? vk::CullModeFlagBits::eBack : vk::CullModeFlagBits::eBack;
+  rasterizer.cullMode = vk::CullModeFlagBits::eBack;
   rasterizer.frontFace = vk::FrontFace::eClockwise;
   rasterizer.depthBiasEnable = false;
 
@@ -281,15 +272,14 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
   color_blending.blendConstants[2] = 0.0f;
   color_blending.blendConstants[3] = 0.0f;
 
-  vk::DescriptorSetLayout layouts[] = {model_data_->per_model_layout(),
-                                       model_data_->per_object_layout()};
   vk::PipelineLayoutCreateInfo pipeline_layout_info;
-  pipeline_layout_info.setLayoutCount = 2;
-  pipeline_layout_info.pSetLayouts = layouts;
+  pipeline_layout_info.setLayoutCount =
+      static_cast<uint32_t>(descriptor_set_layouts.size());
+  pipeline_layout_info.pSetLayouts = descriptor_set_layouts.data();
   pipeline_layout_info.pushConstantRangeCount = 0;
 
   vk::PipelineLayout pipeline_layout = ESCHER_CHECKED_VK_RESULT(
-      device_.createPipelineLayout(pipeline_layout_info, nullptr));
+      device.createPipelineLayout(pipeline_layout_info, nullptr));
 
   vk::GraphicsPipelineCreateInfo pipeline_info;
   pipeline_info.stageCount = 2;
@@ -302,18 +292,92 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
   pipeline_info.pMultisampleState = &multisampling;
   pipeline_info.pColorBlendState = &color_blending;
   pipeline_info.layout = pipeline_layout;
-  pipeline_info.renderPass = lighting_pass_;
+  pipeline_info.renderPass = render_pass;
   pipeline_info.subpass = 0;
   pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 
   vk::Pipeline pipeline = ESCHER_CHECKED_VK_RESULT(
-      device_.createGraphicsPipeline(nullptr, pipeline_info));
+      device.createGraphicsPipeline(nullptr, pipeline_info));
+
+  return {pipeline, pipeline_layout};
+}
+}  // namespace
+
+std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
+    const ModelPipelineSpec& spec,
+    const MeshSpecImpl& mesh_spec_impl) {
+  // TODO: create customized pipelines for different shapes/materials/etc.
+
+  std::future<SpirvData> vertex_spirv_future;
+  std::future<SpirvData> fragment_spirv_future;
+
+  // The wobble modifier causes a different vertex shader to be used.
+  if (spec.shape_modifiers & ShapeModifier::kWobble) {
+    vertex_spirv_future =
+        compiler_.Compile(vk::ShaderStageFlagBits::eVertex,
+                          {{g_vertex_wobble_src}}, std::string(), "main");
+  } else {
+    vertex_spirv_future =
+        compiler_.Compile(vk::ShaderStageFlagBits::eVertex, {{g_vertex_src}},
+                          std::string(), "main");
+  }
+
+  // The depth-only pre-pass uses a different renderpass, cheap fragment shader,
+  // and different depth test settings.
+  vk::RenderPass render_pass = depth_prepass_;
+  bool enable_depth_write = true;
+  vk::CompareOp depth_compare_op = vk::CompareOp::eLess;
+  if (spec.use_depth_prepass) {
+    // Use cheap fragment shader, since the results will be discarded.
+    fragment_spirv_future = compiler_.Compile(
+        vk::ShaderStageFlagBits::eFragment, {{g_fragment_depth_prepass_src}},
+        std::string(), "main");
+  } else {
+    render_pass = lighting_pass_;
+    // Don't write to the depth buffer; we re-use the buffer generated in the
+    // depth pre-pass.  Must modify the comparison operator, otherwise nothing
+    // would appear, because the nearest objects would have the exact same depth
+    // as in the depth buffer.
+    enable_depth_write = false;
+    depth_compare_op = vk::CompareOp::eLessOrEqual;
+    fragment_spirv_future =
+        compiler_.Compile(vk::ShaderStageFlagBits::eFragment,
+                          {{g_fragment_src}}, std::string(), "main");
+  }
+
+  // Wait for completion of asynchronous shader compilation.
+  vk::ShaderModule vertex_module;
+  {
+    SpirvData spirv = vertex_spirv_future.get();
+
+    vk::ShaderModuleCreateInfo module_info;
+    module_info.codeSize = spirv.size() * sizeof(uint32_t);
+    module_info.pCode = spirv.data();
+    vertex_module =
+        ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(module_info));
+  }
+  vk::ShaderModule fragment_module;
+  {
+    SpirvData spirv = fragment_spirv_future.get();
+
+    vk::ShaderModuleCreateInfo module_info;
+    module_info.codeSize = spirv.size() * sizeof(uint32_t);
+    module_info.pCode = spirv.data();
+    fragment_module =
+        ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(module_info));
+  }
+
+  auto pipeline_and_layout = NewPipelineHelper(
+      device_, vertex_module, fragment_module, enable_depth_write,
+      depth_compare_op, render_pass,
+      {model_data_->per_model_layout(), model_data_->per_object_layout()},
+      mesh_spec_impl);
 
   device_.destroyShaderModule(vertex_module);
   device_.destroyShaderModule(fragment_module);
 
-  return std::make_unique<ModelPipeline>(spec, device_, pipeline,
-                                         pipeline_layout);
+  return std::make_unique<ModelPipeline>(
+      spec, device_, pipeline_and_layout.first, pipeline_and_layout.second);
 }
 
 }  // namespace impl

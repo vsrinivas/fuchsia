@@ -73,9 +73,9 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory,
         vertex + builder->GetAttributeOffset(MeshAttribute::kPositionOffset));
     *pos_offset = vec2(0.f, 0.f);
   }
-  if (spec.flags & MeshAttribute::kPerimeter) {
+  if (spec.flags & MeshAttribute::kPerimeterPos) {
     perim = reinterpret_cast<float*>(
-        vertex + builder->GetAttributeOffset(MeshAttribute::kPerimeter));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kPerimeterPos));
     // TODO: This is an undesirable singularity.  Perhaps it would be better to
     // treat circles as a ring with inner radius of zero?
     *perim = 0.f;
@@ -164,9 +164,9 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory,
     pos_offset = reinterpret_cast<vec2*>(
         vertex + builder->GetAttributeOffset(MeshAttribute::kPositionOffset));
   }
-  if (spec.flags & MeshAttribute::kPerimeter) {
+  if (spec.flags & MeshAttribute::kPerimeterPos) {
     perim = reinterpret_cast<float*>(
-        vertex + builder->GetAttributeOffset(MeshAttribute::kPerimeter));
+        vertex + builder->GetAttributeOffset(MeshAttribute::kPerimeterPos));
   }
 
   const float outer_vertex_count_reciprocal = 1.f / outer_vertex_count;

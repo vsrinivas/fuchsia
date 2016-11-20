@@ -30,6 +30,7 @@ class ModelData {
     static constexpr uint32_t kDescriptorSetUniformBinding = 0;
 
     vec4 brightness;
+    float time;
   };
 
   // Describes per-object data accessible by shaders.
@@ -43,11 +44,6 @@ class ModelData {
 
     mat4 transform;
     vec4 color;
-  };
-
-  struct PerVertex {
-    vec2 position;
-    vec2 uv;
   };
 
   ModelData(vk::Device device, GpuAllocator* allocator);

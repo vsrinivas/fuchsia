@@ -14,6 +14,7 @@ namespace impl {
 typedef std::vector<uint32_t> SpirvData;
 
 // Wraps the reference GLSL compiler provided by Khronos.
+// TODO: GLSL standard library functions are currently not available.
 class GlslToSpirvCompiler {
  public:
   GlslToSpirvCompiler();

@@ -6,6 +6,12 @@
 
 namespace escher {
 
+Object::Object(MeshPtr mesh, const vec3& position, MaterialPtr material)
+    : shape_(std::move(mesh)),
+      material_(std::move(material)),
+      position_(position),
+      size_(vec2(1.f, 1.f)) {}
+
 Object::Object(const Shape& shape, const MaterialPtr& material)
     : shape_(shape), material_(material) {}
 
@@ -28,15 +34,6 @@ Object Object::NewCircle(const vec2& center,
   Object obj(Shape(Shape::Type::kCircle), std::move(material));
   obj.position_ = vec3(center.x - radius, center.y - radius, z);
   obj.size_ = vec2(radius * 2.f, radius * 2.f);
-  return obj;
-}
-
-Object Object::NewFromMesh(MeshPtr mesh,
-                           const vec3& position,
-                           MaterialPtr material) {
-  Object obj(Shape(std::move(mesh)), std::move(material));
-  obj.position_ = position;
-  obj.size_ = vec2(1.f, 1.f);
   return obj;
 }
 

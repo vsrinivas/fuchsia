@@ -153,8 +153,8 @@ size_t MeshManager::MeshBuilder::GetAttributeOffset(MeshAttribute flag) {
     case MeshAttribute::kUV:
       location = MeshImpl::kUVAttributeLocation;
       break;
-    case MeshAttribute::kPerimeter:
-      location = MeshImpl::kPerimeterAttributeLocation;
+    case MeshAttribute::kPerimeterPos:
+      location = MeshImpl::kPerimeterPosAttributeLocation;
       break;
   }
 
@@ -207,9 +207,9 @@ const MeshSpecImpl& MeshManager::GetMeshSpecImpl(MeshSpec spec) {
     stride += sizeof(vec2);
     impl->attributes.push_back(attribute);
   }
-  if (spec.flags & MeshAttribute::kPerimeter) {
+  if (spec.flags & MeshAttribute::kPerimeterPos) {
     vk::VertexInputAttributeDescription attribute;
-    attribute.location = MeshImpl::kPerimeterAttributeLocation;
+    attribute.location = MeshImpl::kPerimeterPosAttributeLocation;
     attribute.binding = 0;
     attribute.format = vk::Format::eR32Sfloat;
     attribute.offset = stride;

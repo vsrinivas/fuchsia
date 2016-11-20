@@ -23,7 +23,7 @@ enum class MeshAttribute {
   kUV = 1 << 2,
   // float. Parameterization around the perimeter of an shape, which varies from
   // 0 - 1, and allows the vertex shader to know "where it is" on the shape.
-  kPerimeter = 1 << 3,
+  kPerimeterPos = 1 << 3,
 };
 
 using MeshAttributes = vk::Flags<MeshAttribute, uint32_t>;

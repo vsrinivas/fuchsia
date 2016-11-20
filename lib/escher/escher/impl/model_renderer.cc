@@ -58,6 +58,7 @@ void ModelRenderer::Draw(Stage& stage,
 
   ModelData::PerModel per_model;
   per_model.brightness = vec4(vec3(stage.brightness()), 1.f);
+  per_model.time = model.time();
   writer.WritePerModelData(per_model);
 
   // TODO: temporary hack... this is a way to allow objects to be drawn with
@@ -135,6 +136,7 @@ void ModelRenderer::Draw(Stage& stage,
 
     ModelPipelineSpec pipeline_spec;
     pipeline_spec.mesh_spec = mesh->spec;
+    pipeline_spec.shape_modifiers = o.shape().modifiers();
     pipeline_spec.use_depth_prepass = hack_use_depth_prepass;
 
     // Don't rebind pipeline state if it is already up-to-date.
@@ -177,15 +179,14 @@ const MeshPtr& ModelRenderer::GetMeshForShape(const Shape& shape) const {
 
 MeshPtr ModelRenderer::CreateRectangle() {
   // TODO: create rectangle, not triangle.
-  MeshSpec spec;
-  spec.flags |= MeshAttribute::kPosition;
-  spec.flags |= MeshAttribute::kUV;
+  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kUV};
 
-  // In each vertex, the first vec2 is position and the second is UV coords.
-  ModelData::PerVertex v0{vec2(0.f, 0.f), vec2(0.f, 0.f)};
-  ModelData::PerVertex v1{vec2(1.f, 0.f), vec2(1.f, 0.f)};
-  ModelData::PerVertex v2{vec2(1.f, 1.f), vec2(1.f, 1.f)};
-  ModelData::PerVertex v3{vec2(0.f, 1.f), vec2(0.f, 1.f)};
+  // In each vertex, the first two floats represent the position and the second
+  // two are UV coordinates.
+  vec4 v0(0.f, 0.f, 0.f, 0.f);
+  vec4 v1(1.f, 0.f, 1.f, 0.f);
+  vec4 v2(1.f, 1.f, 1.f, 1.f);
+  vec4 v3(0.f, 1.f, 0.f, 1.f);
 
   MeshBuilderPtr builder = mesh_manager_->NewMeshBuilder(spec, 4, 6);
   return builder->AddVertex(v0)
