@@ -53,6 +53,8 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
   storage::PageId GetId() override { return page_id_to_return; }
 
+  void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override {}
+
   storage::Status GetCommit(
       const storage::CommitId& commit_id,
       std::unique_ptr<const storage::Commit>* commit) override {
@@ -232,20 +234,17 @@ class PageSyncImplTest : public ::testing::Test {
                    }) {}
   ~PageSyncImplTest() override {}
 
-  // ::testing::Test:
-  void SetUp() override {
-    ::testing::Test::SetUp();
-    // Prevent a failing test from hanging forever, as in some of the tests we
-    // only quit the message loop when the condition being tested becomes true.
+ protected:
+  void RunLoopWithTimeout() {
     message_loop_.task_runner()->PostDelayedTask(
         [this] {
-          FTL_LOG(WARNING) << "Quitting a slow to finish test.";
           message_loop_.PostQuitTask();
+          FAIL();
         },
         ftl::TimeDelta::FromSeconds(1));
+    message_loop_.Run();
   }
 
- protected:
   mtl::MessageLoop message_loop_;
   TestPageStorage storage_;
   TestCloudProvider cloud_provider_;
@@ -271,7 +270,7 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
       message_loop_.PostQuitTask();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id1", cloud_provider_.received_commits[0].id);
@@ -309,7 +308,7 @@ TEST_F(PageSyncImplTest, UploadNewCommits) {
       message_loop_.PostQuitTask();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id1", cloud_provider_.received_commits[0].id);
@@ -337,7 +336,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
       message_loop_.PostQuitTask();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id1", cloud_provider_.received_commits[0].id);
@@ -365,11 +364,65 @@ TEST_F(PageSyncImplTest, RetryUpload) {
       message_loop_.PostQuitTask();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
   EXPECT_EQ(5, backoff_get_next_calls_);
+}
+
+// Verifies that the on idle callback is called when there is no pending upload
+// tasks.
+TEST_F(PageSyncImplTest, UploadIdleCallback) {
+  int on_idle_calls = 0;
+
+  storage_.unsynced_commits_to_return.push_back(
+      std::make_unique<const TestCommit>("id1", "content1"));
+  storage_.unsynced_commits_to_return.push_back(
+      std::make_unique<const TestCommit>("id2", "content2"));
+
+  page_sync_.SetOnIdle([&on_idle_calls] { on_idle_calls++; });
+  page_sync_.Start();
+
+  // Stop the message loop when the cloud receives the last commit (before
+  // cloud sync receives the async confirmation), and verify that the idle
+  // callback is not yet called.
+  message_loop_.SetAfterTaskCallback([this] {
+    if (cloud_provider_.received_commits.size() == 2u) {
+      message_loop_.QuitNow();
+    }
+  });
+  RunLoopWithTimeout();
+  EXPECT_EQ(0, on_idle_calls);
+  EXPECT_FALSE(page_sync_.IsIdle());
+
+  // Let the confirmation be delivered and verify that the idle callback was
+  // called.
+  message_loop_.PostQuitTask();
+  RunLoopWithTimeout();
+  EXPECT_EQ(1, on_idle_calls);
+  EXPECT_TRUE(page_sync_.IsIdle());
+
+  // Notify about a new commit to upload and verify that the idle callback was
+  // called again on completion.
+  storage_.new_commits_to_return["id3"] =
+      std::make_unique<const TestCommit>("id3", "content3");
+  page_sync_.OnNewCommit(TestCommit("id3", "content3"),
+                         storage::ChangeSource::LOCAL);
+  EXPECT_FALSE(page_sync_.IsIdle());
+  message_loop_.SetAfterTaskCallback([this] {
+    if (cloud_provider_.received_commits.size() == 3u) {
+      message_loop_.QuitNow();
+    }
+  });
+  RunLoopWithTimeout();
+  EXPECT_EQ(1, on_idle_calls);
+  EXPECT_FALSE(page_sync_.IsIdle());
+
+  message_loop_.PostQuitTask();
+  RunLoopWithTimeout();
+  EXPECT_EQ(2, on_idle_calls);
+  EXPECT_TRUE(page_sync_.IsIdle());
 }
 
 // Verifies that if listing the original commits to be uploaded fails, the
@@ -403,7 +456,7 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
       message_loop_.PostQuitTask();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -428,7 +481,7 @@ TEST_F(PageSyncImplTest, ReceiveNotifications) {
       message_loop_.PostQuitTask();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -453,7 +506,7 @@ TEST_F(PageSyncImplTest, DownloadBacklogThenReceiveNotifications) {
       message_loop_.QuitNow();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(1u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -464,7 +517,7 @@ TEST_F(PageSyncImplTest, DownloadBacklogThenReceiveNotifications) {
       message_loop_.QuitNow();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
@@ -485,7 +538,7 @@ TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
       message_loop_.QuitNow();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
   EXPECT_EQ(0u, storage_.received_commits.size());
 
   cloud_provider_.should_fail_get_commits = false;
@@ -494,7 +547,7 @@ TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
       message_loop_.QuitNow();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(1u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -517,10 +570,30 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
       message_loop_.PostQuitTask();
     }
   });
-  message_loop_.Run();
+  RunLoopWithTimeout();
 
   EXPECT_TRUE(cloud_provider_.watcher_removed);
   EXPECT_TRUE(error_callback_called_);
+}
+
+// Verifies that the on idle callback is called when there is no download in
+// progress.
+TEST_F(PageSyncImplTest, DownloadIdleCallback) {
+  cloud_provider_.records_to_return.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id1", "content1", {}), "42"));
+  cloud_provider_.records_to_return.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id2", "content2", {}), "43"));
+
+  int on_idle_calls = 0;
+  page_sync_.SetOnIdle([&on_idle_calls] { on_idle_calls++; });
+  page_sync_.Start();
+  EXPECT_EQ(0, on_idle_calls);
+  EXPECT_FALSE(page_sync_.IsIdle());
+
+  message_loop_.PostQuitTask();
+  RunLoopWithTimeout();
+  EXPECT_EQ(1, on_idle_calls);
+  EXPECT_TRUE(page_sync_.IsIdle());
 }
 
 }  // namespace

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "apps/ledger/src/storage/public/types.h"
@@ -44,6 +45,7 @@ void PageSyncImpl::Start() {
   started_ = true;
   storage_->SetSyncDelegate(this);
 
+  download_in_progress_ = true;
   TryDownload();
 
   // Retrieve the backlog of the existing unsynced commits and enqueue them for
@@ -64,6 +66,15 @@ void PageSyncImpl::Start() {
   // Subscribe to notifications about new commits in Storage.
   storage_->AddCommitWatcher(this);
   local_watch_set_ = true;
+}
+
+void PageSyncImpl::SetOnIdle(ftl::Closure on_idle_callback) {
+  FTL_DCHECK(!on_idle_callback_);
+  on_idle_callback_ = std::move(on_idle_callback);
+}
+
+bool PageSyncImpl::IsIdle() {
+  return commit_uploads_.empty() && !download_in_progress_;
 }
 
 void PageSyncImpl::OnNewCommit(const storage::Commit& commit,
@@ -140,6 +151,8 @@ void PageSyncImpl::TryDownload() {
             return;
           }
         }
+        download_in_progress_ = false;
+        CheckIdle();
 
         // Register a cloud watcher for the new commits. This currently mixes
         // connection errors with data errors in one OnError() callback, see
@@ -179,6 +192,8 @@ void PageSyncImpl::EnqueueUpload(
                             commit_uploads_.pop();
                             if (!commit_uploads_.empty()) {
                               commit_uploads_.front().Start();
+                            } else {
+                              CheckIdle();
                             }
                           },
                           [this] {
@@ -207,6 +222,12 @@ void PageSyncImpl::HandleError(const char error_description[]) {
   storage_->SetSyncDelegate(nullptr);
   error_callback_();
   errored_ = true;
+}
+
+void PageSyncImpl::CheckIdle() {
+  if (on_idle_callback_ && IsIdle()) {
+    on_idle_callback_();
+  }
 }
 
 }  // namespace cloud_sync

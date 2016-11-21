@@ -5,6 +5,7 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_PAGE_SYNC_IMPL_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_PAGE_SYNC_IMPL_H_
 
+#include <functional>
 #include <queue>
 
 #include "apps/ledger/src/backoff/backoff.h"
@@ -59,7 +60,12 @@ class PageSyncImpl : public PageSync,
                std::function<void()> error_callback);
   ~PageSyncImpl() override;
 
+  // PageSync:
   void Start() override;
+
+  void SetOnIdle(ftl::Closure on_idle_callback) override;
+
+  bool IsIdle() override;
 
   // storage::CommitWatcher:
   void OnNewCommit(const storage::Commit& commit,
@@ -87,12 +93,15 @@ class PageSyncImpl : public PageSync,
 
   void HandleError(const char error_description[]);
 
+  void CheckIdle();
+
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
   cloud_provider::CloudProvider* const cloud_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
   const std::function<void()> error_callback_;
 
+  ftl::Closure on_idle_callback_;
   // Ensures that each instance is started only once.
   bool started_ = false;
   // Track which watchers are set, so that we know which to unset on hard error.
@@ -103,6 +112,10 @@ class PageSyncImpl : public PageSync,
   bool errored_ = false;
   // A queue of pending commit uploads.
   std::queue<CommitUpload> commit_uploads_;
+  // Tracks whether we have pending download tasks, so that we know when to call
+  // |on_idle_callback_|. Note: this will need to become more elaborate when
+  // AddCommitFromSync() becomes asynchronous.
+  bool download_in_progress_ = false;
 
   // Must be the last member field.
   ftl::WeakPtrFactory<PageSyncImpl> weak_factory_;

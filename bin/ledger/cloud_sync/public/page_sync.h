@@ -5,6 +5,9 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_PAGE_SYNC_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_PAGE_SYNC_H_
 
+#include <functional>
+
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 
 namespace cloud_sync {
@@ -22,6 +25,15 @@ class PageSync {
   // Starts syncing. Upon connection drop, the sync will restart automatically,
   // the client doesn't need to call Start() again.
   virtual void Start() = 0;
+
+  // Sets a callback that will be called after Start() every time when PageSync
+  // becomes idle, that is: finished uploading alll unsynced local artifacts to
+  // the cloud and not downloading any remote artifacts.
+  virtual void SetOnIdle(ftl::Closure on_idle_callback) = 0;
+
+  // Returns true iff PageSync is idle, that is with no pending upload or
+  // download work.
+  virtual bool IsIdle() = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageSync);
