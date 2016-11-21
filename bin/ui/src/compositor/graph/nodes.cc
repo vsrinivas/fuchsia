@@ -248,7 +248,7 @@ bool Node::HitTest(const SceneContent* content,
   if (content_transform_) {
     // TODO(jeffbrown): Defer matrix multiplications using a matrix stack.
     local_point = content_transform_->InverseMapPoint(parent_point);
-    global_to_local_transform.preConcat(content_transform_->GetInverse());
+    global_to_local_transform.postConcat(content_transform_->GetInverse());
   }
 
   if (content_clip_ && !Contains(content_clip_->To<SkRect>(), local_point))

@@ -2,16 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("examples") {
+import("//flutter/build/flutter_app.gni")
+
+flutter_app("hello_material") {
+  main_dart = "main.dart"
+
   deps = [
-    "basic_wm",
-    "hello_compositor",
-    "hello_material",
-    "jank",
-    "noodles",
-    "paint",
-    "shapes",
-    "spinning_square",
-    "tile",
+    "//lib/flutter/packages/flutter",
   ]
 }
