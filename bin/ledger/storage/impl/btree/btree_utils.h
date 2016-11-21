@@ -32,6 +32,13 @@ Status GetObjects(ObjectIdView root_id,
                   PageStorage* page_storage,
                   std::set<ObjectId>* objects);
 
+// Tries to download all tree nodes and values with EAGER priority that are not
+// locally available from sync. To do this PageStorage::GetObject is called for
+// all corresponding objects.
+void GetObjectsFromSync(ObjectIdView root_id,
+                        PageStorage* page_storage,
+                        std::function<void(Status)> callback);
+
 }  // namespace btree
 }  // namespace storage
 

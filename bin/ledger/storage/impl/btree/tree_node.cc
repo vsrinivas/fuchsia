@@ -34,10 +34,17 @@ Status TreeNode::FromId(PageStorage* page_storage,
   if (status != Status::OK) {
     return status;
   }
+  return FromObject(page_storage, std::move(object), node);
+}
+
+Status TreeNode::FromObject(PageStorage* page_storage,
+                            std::unique_ptr<const Object> object,
+                            std::unique_ptr<const TreeNode>* node) {
   ftl::StringView json;
-  status = object->GetData(&json);
-  if (status != Status::OK)
+  Status status = object->GetData(&json);
+  if (status != Status::OK) {
     return status;
+  }
   std::vector<Entry> entries;
   std::vector<ObjectId> children;
   if (!DecodeNode(json, &entries, &children)) {
@@ -146,6 +153,11 @@ Status TreeNode::GetChild(int index,
     return Status::NO_SUCH_CHILD;
   }
   return FromId(page_storage_, children_[index], child);
+}
+
+ObjectId TreeNode::GetChildId(int index) const {
+  FTL_DCHECK(index >= 0 && index <= GetKeyCount());
+  return children_[index];
 }
 
 Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,

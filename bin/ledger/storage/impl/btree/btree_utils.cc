@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/storage/impl/btree/btree_utils.h"
 
+#include "apps/ledger/src/callback/waiter.h"
+
 namespace storage {
 namespace btree {
 namespace {
@@ -46,6 +48,59 @@ Status GetObjectsFromChild(const TreeNode& node,
     return s;
   }
   return GetObjects(std::move(child), objects);
+}
+
+// Recursively retrieves all tree nodes and the eager objects they contain
+// starting from |node|.
+void GetObjectsFromSync(std::unique_ptr<const TreeNode> node,
+                        PageStorage* page_storage,
+                        std::function<void(Status)> callback) {
+  // For each object to be downloaded store whether it is a tree node or not.
+  std::vector<bool> is_node;
+  auto waiter = callback::Waiter<Status, const Object>::Create(Status::OK);
+  for (int i = 0; i <= node->GetKeyCount(); ++i) {
+    if (!node->GetChildId(i).empty()) {
+      page_storage->GetObject(node->GetChildId(i), waiter->NewCallback());
+      is_node.push_back(true);
+    }
+    if (i == node->GetKeyCount()) {
+      break;
+    }
+    Entry entry;
+    Status s = node->GetEntry(i, &entry);
+    if (s != Status::OK) {
+      callback(s);
+      return;
+    }
+    if (entry.priority == KeyPriority::EAGER) {
+      page_storage->GetObject(entry.object_id, waiter->NewCallback());
+      is_node.push_back(false);
+    }
+  }
+  waiter->Finalize([
+    page_storage, is_node = std::move(is_node), callback = std::move(callback)
+  ](Status s, std::vector<std::unique_ptr<const Object>> objects) {
+    if (s != Status::OK) {
+      callback(s);
+      return;
+    }
+    FTL_DCHECK(objects.size() == is_node.size());
+    callback::StatusWaiter<Status> children_waiter(Status::OK);
+    for (size_t i = 0; i < objects.size(); ++i) {
+      if (!is_node[i]) {
+        continue;
+      }
+      std::unique_ptr<const TreeNode> node;
+      s = TreeNode::FromObject(page_storage, std::move(objects[i]), &node);
+      if (s != Status::OK) {
+        callback(s);
+        return;
+      }
+      GetObjectsFromSync(std::move(node), page_storage,
+                         children_waiter.NewCallback());
+    }
+    children_waiter.Finalize(callback);
+  });
 }
 
 // Recursively merge |left| and |right| nodes. |new_id| will contain the ID of
@@ -253,6 +308,27 @@ Status GetObjects(ObjectIdView root_id,
   }
   objects->swap(result);
   return Status::OK;
+}
+
+void GetObjectsFromSync(ObjectIdView root_id,
+                        PageStorage* page_storage,
+                        std::function<void(Status)> callback) {
+  FTL_DCHECK(!root_id.empty());
+  page_storage->GetObject(
+      root_id, [page_storage, callback](Status status,
+                                        std::unique_ptr<const Object> object) {
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+        std::unique_ptr<const TreeNode> root;
+        status = TreeNode::FromObject(page_storage, std::move(object), &root);
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+        GetObjectsFromSync(std::move(root), page_storage, std::move(callback));
+      });
 }
 
 }  // namespace btree

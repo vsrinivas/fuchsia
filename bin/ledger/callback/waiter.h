@@ -92,6 +92,32 @@ class Waiter : public ftl::RefCountedThreadSafe<Waiter<S, T>> {
   std::function<void(S, std::vector<std::unique_ptr<T>>)> result_callback_;
 };
 
+// StatusWaiter can be used to collate the results of many asynchronous calls
+// into one callback. It is different from Waiter in that the callbacks only use
+// S (e.g. storage::Status) as an argument.
+template <class S>
+class StatusWaiter {
+ public:
+  StatusWaiter(S default_status)
+      : waiter_(Waiter<S, bool>::Create(default_status)) {}
+
+  std::function<void(S)> NewCallback() {
+    return [callback = waiter_->NewCallback()](S s) {
+      callback(s, std::make_unique<bool>(true));
+    };
+  }
+
+  void Finalize(std::function<void(S)> callback) {
+    waiter_->Finalize([callback](
+        S s, std::vector<std::unique_ptr<bool>> values) { callback(s); });
+  }
+
+ private:
+  ftl::RefPtr<Waiter<S, bool>> waiter_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(StatusWaiter);
+};
+
 }  // namespace callback
 
 #endif  // APPS_LEDGER_SRC_CALLBACK_WAITER_H_

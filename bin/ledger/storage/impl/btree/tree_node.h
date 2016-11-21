@@ -105,6 +105,12 @@ class TreeNode {
                        ObjectIdView id,
                        std::unique_ptr<const TreeNode>* node);
 
+  // Creates a |TreeNode| object for an existing |object| and stores it in the
+  // given |node|.
+  static Status FromObject(PageStorage* page_storage,
+                           std::unique_ptr<const Object> object,
+                           std::unique_ptr<const TreeNode>* node);
+
   // Creates a |TreeNode| object with the given entries. Contents of |children|
   // are optional and if a child is not present, an empty id should be given in
   // the corresponding index. The id of the new node is stored in |node_id|. It
@@ -153,6 +159,11 @@ class TreeNode {
   // has to be in [0, GetKeyCount()]. If the child at the given index is empty
   // |NO_SUCH_CHILD| is returned and the value of |child| is not updated.
   Status GetChild(int index, std::unique_ptr<const TreeNode>* child) const;
+
+  // Returns the id of the child node at position |index|. If the child at the
+  // given index is empty, an empty string is returned. |index| has to be in [0,
+  // GetKeyCount()].
+  ObjectId GetChildId(int index) const;
 
   // Searches for the given |key| in this node. If it is found, |OK| is
   // returned and index contains the index of the entry. If not, |NOT_FOUND|

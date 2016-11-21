@@ -13,24 +13,30 @@
 #include "apps/ledger/src/storage/public/types.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/logging.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/ftl/strings/string_printf.h"
+#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace storage {
 namespace {
 
 const int kTestNodeSize = 4;
 
-std::vector<EntryChange> CreateEntryChanges(int size) {
-  FTL_CHECK(size >= 0 && size < 100);
-  std::vector<EntryChange> result;
-  for (int i = 0; i < size; ++i) {
-    std::string key = (i < 10 ? "key0" : "key") + ftl::NumberToString(i);
-    result.push_back(EntryChange{
-        Entry{key, "objectid" + ftl::NumberToString(i), KeyPriority::LAZY},
-        false});
+class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
+ public:
+  TrackGetObjectFakePageStorage(PageId id) : fake::FakePageStorage(id) {}
+  ~TrackGetObjectFakePageStorage() {}
+
+  void GetObject(
+      ObjectIdView object_id,
+      const std::function<void(Status, std::unique_ptr<const Object>)>&
+          callback) override {
+    object_requests.insert(object_id.ToString());
+    fake::FakePageStorage::GetObject(object_id, callback);
   }
-  return result;
-}
+
+  std::set<ObjectId> object_requests;
+};
 
 class BTreeUtilsTest : public ::testing::Test {
  public:
@@ -42,6 +48,30 @@ class BTreeUtilsTest : public ::testing::Test {
   void SetUp() override {
     ::testing::Test::SetUp();
     std::srand(0);
+  }
+
+  void RunLoop() {
+    message_loop_.task_runner()->PostDelayedTask(
+        [this] {
+          message_loop_.PostQuitTask();
+          FAIL();
+        },
+        ftl::TimeDelta::FromSeconds(1));
+    message_loop_.Run();
+  }
+
+  std::vector<EntryChange> CreateEntryChanges(int size) {
+    FTL_CHECK(size >= 0 && size < 100);
+    std::vector<EntryChange> result;
+    for (int i = 0; i < size; ++i) {
+      std::unique_ptr<const Object> object;
+      EXPECT_EQ(Status::OK, fake_storage_.AddObjectSynchronous(
+                                ftl::StringPrintf("object%02d", i), &object));
+      result.push_back(EntryChange{Entry{ftl::StringPrintf("key%02d", i),
+                                         object->GetId(), KeyPriority::EAGER},
+                                   false});
+    }
+    return result;
   }
 
   ObjectId CreateEmptyContents() {
@@ -67,8 +97,10 @@ class BTreeUtilsTest : public ::testing::Test {
   }
 
  protected:
-  fake::FakePageStorage fake_storage_;
+  TrackGetObjectFakePageStorage fake_storage_;
+  mtl::MessageLoop message_loop_;
 
+ private:
   FTL_DISALLOW_COPY_AND_ASSIGN(BTreeUtilsTest);
 };
 
@@ -260,6 +292,41 @@ TEST_F(BTreeUtilsTest, GetObjectBigTree) {
   EXPECT_TRUE(objects.find(root_id) != objects.end());
   for (EntryChange& e : entries) {
     EXPECT_TRUE(objects.find(e.entry.object_id) != objects.end());
+  }
+}
+
+TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
+  std::vector<EntryChange> entries = CreateEntryChanges(5);
+  entries[3].entry.priority = KeyPriority::LAZY;
+  ObjectId root_id = CreateTree(entries);
+
+  // Expected layout (XX is key "keyXX"):
+  //        [02]
+  //      /      \
+  // [00, 01]  [03, 04]
+  fake_storage_.object_requests.clear();
+  btree::GetObjectsFromSync(root_id, &fake_storage_, [this](Status s) {
+    EXPECT_EQ(Status::OK, s);
+    message_loop_.PostQuitTask();
+  });
+  RunLoop();
+
+  std::vector<ObjectId> object_requests;
+  std::copy(fake_storage_.object_requests.begin(),
+            fake_storage_.object_requests.end(),
+            std::back_inserter(object_requests));
+  // There are 8 objects: 3 nodes and 4 eager values and 1 lazy. Except from the
+  // lazy object, all others should have been requested.
+  EXPECT_EQ(3 + 4u, object_requests.size());
+
+  std::set<ObjectId> objects;
+  ASSERT_EQ(Status::OK, btree::GetObjects(root_id, &fake_storage_, &objects));
+  ASSERT_EQ(3 + 5u, objects.size());
+  for (ObjectId& id : object_requests) {
+    // entries[3] contains the lazy value.
+    if (id != entries[3].entry.object_id) {
+      EXPECT_TRUE(objects.find(id) != objects.end());
+    }
   }
 }
 
