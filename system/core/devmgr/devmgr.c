@@ -184,7 +184,7 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
 
 static const char* argv_netsvc[] = { "/boot/bin/netsvc" };
 static const char* argv_mxsh[] = { "/boot/bin/mxsh" };
-static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun" };
+static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun", "/system/autorun" };
 static const char* argv_appmgr[] = { "/system/bin/application_manager" };
 
 void create_application_launcher_handles(void) {
@@ -194,14 +194,15 @@ void create_application_launcher_handles(void) {
 int service_starter(void* arg) {
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
-        devmgr_launch(svcs_job_handle, "netsvc", 1, argv_netsvc, -1, 0, 0);
+        devmgr_launch(svcs_job_handle, "netsvc", countof(argv_netsvc), argv_netsvc, -1, 0, 0);
     }
 
-    devmgr_launch(svcs_job_handle, "mxsh:autorun", 2, argv_mxsh_autorun, -1, 0, 0);
+    devmgr_launch(svcs_job_handle, "mxsh:autorun", countof(argv_mxsh_autorun),
+                  argv_mxsh_autorun, -1, 0, 0);
 
     if (application_launcher_child) {
-        devmgr_launch(svcs_job_handle, "application-manager", 1, argv_appmgr, -1,
-                      application_launcher_child,
+        devmgr_launch(svcs_job_handle, "application-manager", countof(argv_appmgr), argv_appmgr,
+                      -1, application_launcher_child,
                       MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0));
         application_launcher_child = 0;
     }
@@ -221,7 +222,7 @@ static int console_starter(void* arg) {
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open("/dev/class/misc/console", O_RDWR)) >= 0) {
-            devmgr_launch(svcs_job_handle, "mxsh:console", 1, argv_mxsh, fd, 0, 0);
+            devmgr_launch(svcs_job_handle, "mxsh:console", countof(argv_mxsh), argv_mxsh, fd, 0, 0);
             break;
         }
         mx_nanosleep(MX_MSEC(100));

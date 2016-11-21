@@ -803,7 +803,9 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (argc > 1) {
-        execscript(argv[1]);
+        for (int arg = 1; arg < argc; arg++) {
+            execscript(argv[arg]);
+        }
         return 0;
     }
 
