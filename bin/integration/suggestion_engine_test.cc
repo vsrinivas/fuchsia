@@ -351,6 +351,9 @@ class TestStoryProvider : public modular::StoryProvider {
     last_created_story_ = url;
   }
 
+  void Watch(
+      fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {}
+
   void DeleteStory(const fidl::String& story_id,
                    const DeleteStoryCallback& callback) override {}
   void GetStoryInfo(const fidl::String& story_id,
