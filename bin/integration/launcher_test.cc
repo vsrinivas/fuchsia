@@ -8,7 +8,8 @@
 #include "apps/maxwell/src/integration/test.h"
 
 TEST_F(MaxwellTestBase, Launcher) {
-  auto launcher_services = StartServiceProvider("file:///system/apps/maxwell_launcher");
+  auto launcher_services =
+      StartServiceProvider("file:///system/apps/maxwell_launcher");
   maxwell::LauncherPtr launcher =
       modular::ConnectToService<maxwell::Launcher>(launcher_services.get());
   fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
@@ -21,10 +22,12 @@ TEST_F(MaxwellTestBase, Launcher) {
   // get a response because FIDL will buffer the requests indefinitely.
   fidl::GetProxy(&story_provider_handle);
   fidl::GetProxy(&focus_controller_handle);
-  launcher->Initialize(std::move(story_provider_handle), std::move(focus_controller_handle));
+  launcher->Initialize(std::move(story_provider_handle),
+                       std::move(focus_controller_handle));
 
   maxwell::suggestion::SuggestionProviderPtr client =
-      modular::ConnectToService<maxwell::suggestion::SuggestionProvider>(launcher_services.get());
+      modular::ConnectToService<maxwell::suggestion::SuggestionProvider>(
+          launcher_services.get());
   TestSuggestionListener listener;
   fidl::InterfaceHandle<maxwell::suggestion::Listener> listener_handle;
   fidl::Binding<maxwell::suggestion::Listener> binding(&listener,
@@ -34,5 +37,6 @@ TEST_F(MaxwellTestBase, Launcher) {
   client->SubscribeToNext(std::move(listener_handle), GetProxy(&ctl));
 
   ctl->SetResultCount(10);
-  ASYNC_EQ(1, listener.suggestion_count())
+  // TODO(afergan): Test this again once we are using the focus acquirer agent.
+  // ASYNC_EQ(1, listener.suggestion_count())
 }

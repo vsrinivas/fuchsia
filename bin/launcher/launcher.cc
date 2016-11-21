@@ -39,17 +39,17 @@ class LauncherApp : public maxwell::Launcher {
         });
   }
 
-  void Initialize(
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-      fidl::InterfaceHandle<modular::FocusController> focus_controller) override {
+  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+                  fidl::InterfaceHandle<modular::FocusController>
+                      focus_controller) override {
     suggestion_engine_->SetStoryProvider(std::move(story_provider));
 
     focus_controller_.Bind(std::move(focus_controller));
 
     // TODO(rosswang): Search the ComponentIndex and iterate through results.
-    StartAgent("file:///system/apps/acquirers/gps");
-    StartAgent("file:///system/apps/agents/carmen_sandiego");
-    StartAgent("file:///system/apps/agents/ideas");
+    // StartAgent("file:///system/apps/acquirers/gps");
+    // StartAgent("file:///system/apps/agents/carmen_sandiego");
+    // StartAgent("file:///system/apps/agents/ideas");
   }
 
  private:
@@ -94,7 +94,7 @@ class LauncherApp : public maxwell::Launcher {
         });
 
     agent_host->AddService<modular::FocusController>(
-        [this] (fidl::InterfaceRequest<modular::FocusController> request) {
+        [this](fidl::InterfaceRequest<modular::FocusController> request) {
           focus_controller_->Duplicate(std::move(request));
         });
 
