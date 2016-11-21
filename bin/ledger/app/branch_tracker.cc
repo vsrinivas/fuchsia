@@ -158,7 +158,8 @@ BranchTracker::BranchTracker(PageManager* manager,
                              storage::PageStorage* storage,
                              fidl::InterfaceRequest<Page> request)
     : storage_(storage),
-      interface_(std::move(request), storage, manager, this) {
+      interface_(std::move(request), storage, manager, this),
+      transaction_in_progress_(false) {
   interface_.set_on_empty([this] {
     this->SetTransactionInProgress(false);
     CheckEmpty();

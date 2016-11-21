@@ -150,6 +150,16 @@ class LedgerApplicationTest : public ::testing::Test {
     ::testing::Test::TearDown();
   }
 
+  void RunLoop() {
+    loop_.task_runner()->PostDelayedTask(
+        [this] {
+          loop_.PostQuitTask();
+          FAIL();
+        },
+        ftl::TimeDelta::FromSeconds(1));
+    loop_.Run();
+  }
+
   LedgerPtr GetTestLedger();
   PagePtr GetTestPage();
   PagePtr GetPage(const fidl::Array<uint8_t>& page_id, Status expected_status);
@@ -841,6 +851,52 @@ TEST_F(LedgerApplicationTest, PageWatcherEmptyTransaction) {
       ftl::TimeDelta::FromSeconds(1));
   mtl::MessageLoop::GetCurrent()->Run();
   EXPECT_EQ(0u, watcher.changes_seen);
+}
+
+TEST_F(LedgerApplicationTest, PageWatcher1Change2Pages) {
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  PageWatcherPtr watcher1_ptr;
+  Watcher watcher1(GetProxy(&watcher1_ptr),
+                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  page1->Watch(std::move(watcher1_ptr),
+               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  PageWatcherPtr watcher2_ptr;
+  Watcher watcher2(GetProxy(&watcher2_ptr),
+                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  page2->Watch(std::move(watcher2_ptr),
+               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  RunLoop();
+  RunLoop();
+
+  ASSERT_EQ(1u, watcher1.changes_seen);
+  PageChangePtr change = watcher1.GetLastPageChange();
+  ASSERT_EQ(1u, change->changes.size());
+  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Alice",
+            convert::ToString(change->changes[0]->new_value->get_bytes()));
+
+  ASSERT_EQ(1u, watcher2.changes_seen);
+  change = watcher2.GetLastPageChange();
+  ASSERT_EQ(1u, change->changes.size());
+  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Alice",
+            convert::ToString(change->changes[0]->new_value->get_bytes()));
 }
 
 }  // namespace
