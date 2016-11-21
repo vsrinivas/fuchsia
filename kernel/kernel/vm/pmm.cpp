@@ -182,9 +182,11 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
                 continue;
         }
 
-        count = a.AllocContiguous(count, alignment_log2, pa, list);
-        if (count > 0)
-            return count;
+        size_t allocated = a.AllocContiguous(count, alignment_log2, pa, list);
+        if (allocated > 0) {
+            DEBUG_ASSERT(allocated == count);
+            return allocated;
+        }
     }
 
     LTRACEF("couldn't find run\n");
