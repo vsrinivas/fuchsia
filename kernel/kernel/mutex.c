@@ -56,13 +56,17 @@ void mutex_destroy(mutex_t *m)
 
 status_t mutex_acquire_internal(mutex_t *m)
 {
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
     if (unlikely(++m->count > 1)) {
         status_t ret = wait_queue_block(&m->wait, INFINITE_TIME);
         if (unlikely(ret < NO_ERROR)) {
-            /* if there was a general error, it may have been destroyed out from
-             * underneath us, so just exit (which is really an invalid state anyway)
+            /* mutexes are not interruptable and cannot time out, so it
+             * is illegal to return with any error state.
              */
-            return ret;
+            panic("mutex_acquire_internal: wait_queue_block returns with error %d m %p, thr %p, sp %p\n",
+                   ret, m, get_current_thread(), __GET_FRAME());
         }
     }
 
@@ -95,6 +99,9 @@ status_t mutex_acquire(mutex_t *m)
 
 void mutex_release_internal(mutex_t *m, bool reschedule)
 {
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
     m->holder = 0;
 
     if (unlikely(--m->count >= 1)) {
