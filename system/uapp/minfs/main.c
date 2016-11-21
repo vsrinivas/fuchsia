@@ -18,10 +18,6 @@ int do_minfs_check(bcache_t* bc, int argc, char** argv) {
 
 #ifdef __Fuchsia__
 int do_minfs_mount(bcache_t* bc, int argc, char** argv) {
-    if (argc != 1) {
-        fprintf(stderr, "mount requires one argument: A mount path\n");
-        return -1;
-    }
     vnode_t* vn = 0;
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
