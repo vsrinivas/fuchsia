@@ -24,6 +24,7 @@
 #include "lib/ftl/files/file_descriptor.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/unique_fd.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
 
 namespace storage {
@@ -478,43 +479,65 @@ void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
                                 std::function<void(Status)> callback) {
   // Apply all changes atomically.
   std::unique_ptr<DB::Batch> batch = db_.StartBatch();
-  Status s =
-      db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes());
+  CommitId commit_id = commit->GetId();
+  Status s = db_.AddCommitStorageBytes(commit_id, commit->GetStorageBytes());
   if (s != Status::OK) {
     callback(s);
     return;
   }
 
-  if (source == ChangeSource::LOCAL) {
-    s = db_.MarkCommitIdUnsynced(commit->GetId());
+  ObjectId root_id = commit->GetRootId();
+
+  auto finish_commit = [
+    this, batch = std::move(batch), source, commit = std::move(commit), callback
+  ](Status s) {
     if (s != Status::OK) {
       callback(s);
       return;
     }
-  }
 
-  // Update heads.
-  s = db_.AddHead(commit->GetId());
-  if (s != Status::OK) {
-    callback(s);
-    return;
-  }
+    // Update heads.
+    s = db_.AddHead(commit->GetId());
+    if (s != Status::OK) {
+      callback(s);
+      return;
+    }
 
-  // TODO(nellyv): Here we assume that commits arrive in order. Change this to
-  // support out of order commit arrivals.
-  // Remove parents from head (if they are in heads).
-  for (const CommitId& parent_id : commit->GetParentIds()) {
-    db_.RemoveHead(parent_id);
-  }
+    // Commits must arrive in order: Check that the parents are stored in DB and
+    // remove them from the heads if they are present.
+    for (const CommitId& parent_id : commit->GetParentIds()) {
+      std::unique_ptr<const Commit> parent_commit;
+      s = GetCommit(parent_id, &parent_commit);
+      if (s != Status::OK) {
+        FTL_LOG(ERROR) << "Failed to find parent commit \"" << parent_id
+                       << "\" of commit \"" << commit->GetId() << "\"";
+        if (s == Status::NOT_FOUND) {
+          callback(Status::ILLEGAL_STATE);
+        } else {
+          callback(Status::INTERNAL_IO_ERROR);
+        }
+        return;
+      }
+      db_.RemoveHead(parent_id);
+    }
 
-  s = batch->Execute();
-  if (s != Status::OK) {
-    callback(s);
-    return;
-  }
+    s = batch->Execute();
+    if (s != Status::OK) {
+      callback(s);
+      return;
+    }
 
-  callback(Status::OK);
-  NotifyWatchers(*(commit.get()), source);
+    callback(Status::OK);
+    NotifyWatchers(*(commit.get()), source);
+  };
+
+  if (source == ChangeSource::LOCAL) {
+    s = db_.MarkCommitIdUnsynced(std::move(commit_id));
+    finish_commit(s);
+  } else {
+    btree::GetObjectsFromSync(root_id, this,
+                              ftl::MakeCopyable(std::move(finish_commit)));
+  }
 }
 
 void PageStorageImpl::AddObject(

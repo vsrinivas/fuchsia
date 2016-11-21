@@ -8,6 +8,7 @@
 
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
+#include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/db_empty_impl.h"
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
@@ -15,6 +16,7 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/file.h"
+#include "lib/ftl/files/path.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_number_conversions.h"
@@ -58,18 +60,24 @@ class FakeCommitWatcher : public CommitWatcher {
 
 class FakeSyncDelegate : public PageSyncDelegate {
  public:
-  void SetValue(const std::string& value) { value_ = value; }
+  void AddObject(ObjectIdView object_id, const std::string& value) {
+    id_to_value_[object_id.ToString()] = value;
+  }
 
   void GetObject(ObjectIdView object_id,
                  std::function<void(Status status,
                                     uint64_t size,
                                     mx::datapipe_consumer data)> callback) {
-    callback(Status::OK, value_.size(),
-             mtl::WriteStringToConsumerHandle(value_));
+    std::string id = object_id.ToString();
+    std::string& value = id_to_value_[id];
+    object_requests.insert(id);
+    callback(Status::OK, value.size(), mtl::WriteStringToConsumerHandle(value));
   }
 
+  std::set<ObjectId> object_requests;
+
  private:
-  std::string value_;
+  std::map<ObjectId, std::string> id_to_value_;
 };
 
 // Implements |Init()|, |CreateJournal() and |CreateMergeJournal()| and
@@ -145,8 +153,12 @@ class PageStorageTest : public ::testing::Test {
   }
 
   CommitId TryCommitFromSync() {
+    ObjectId root_id;
+    EXPECT_EQ(Status::OK,
+              TreeNode::FromEntries(storage_.get(), std::vector<Entry>(),
+                                    std::vector<ObjectId>(1), &root_id));
     std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-        storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
+        storage_.get(), root_id, {GetFirstHead()});
     CommitId id = commit->GetId();
 
     storage_->AddCommitFromSync(id, commit->GetStorageBytes(),
@@ -240,17 +252,61 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   EXPECT_EQ(storage_bytes, found->GetStorageBytes());
 }
 
-TEST_F(PageStorageTest, AddGetSyncedCommits) {
+TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
+  // Try to add a commit before its parent and see the error.
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
+      storage_.get(), RandomId(kObjectIdSize), {RandomId(kCommitIdSize)});
+
+  storage_->AddCommitFromLocal(std::move(commit), [](Status status) {
+    EXPECT_EQ(Status::ILLEGAL_STATE, status);
+  });
+}
+
+TEST_F(PageStorageTest, AddGetSyncedCommits) {
+  FakeSyncDelegate sync;
+  storage_->SetSyncDelegate(&sync);
+
+  // Create a node with 2 values.
+  ObjectData lazy_value("Some data");
+  ObjectData eager_value("More data");
+  std::vector<Entry> entries = {
+      Entry{"key0", lazy_value.object_id, storage::KeyPriority::LAZY},
+      Entry{"key1", eager_value.object_id, storage::KeyPriority::EAGER},
+  };
+  ObjectId root_id;
+  ASSERT_EQ(Status::OK,
+            TreeNode::FromEntries(storage_.get(), entries,
+                                  std::vector<ObjectId>(entries.size() + 1),
+                                  &root_id));
+
+  // Add the three objects to FakeSyncDelegate.
+  sync.AddObject(lazy_value.object_id, lazy_value.value);
+  sync.AddObject(eager_value.object_id, eager_value.value);
+  std::unique_ptr<const Object> root_object;
+  ASSERT_EQ(Status::OK, storage_->GetObjectSynchronous(root_id, &root_object));
+  ftl::StringView root_data;
+  ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
+  sync.AddObject(root_id, root_data.ToString());
+
+  // Remove the root from the local storage. The two values were never added.
+  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(root_id);
+  files::DeletePath(file_path, false);
+
+  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+      storage_.get(), root_id, {GetFirstHead()});
   CommitId id = commit->GetId();
 
+  sync.object_requests.clear();
   storage_->AddCommitFromSync(id, commit->GetStorageBytes(),
                               [this](Status status) {
                                 EXPECT_EQ(Status::OK, status);
                                 message_loop_.PostQuitTask();
                               });
   RunLoopWithTimeout();
+  EXPECT_EQ(2u, sync.object_requests.size());
+  EXPECT_TRUE(sync.object_requests.find(root_id) != sync.object_requests.end());
+  EXPECT_TRUE(sync.object_requests.find(eager_value.object_id) !=
+              sync.object_requests.end());
 
   std::unique_ptr<const Commit> found;
   EXPECT_EQ(Status::OK, storage_->GetCommit(id, &found));
@@ -479,7 +535,7 @@ TEST_F(PageStorageTest, GetObject) {
 TEST_F(PageStorageTest, GetObjectFromSync) {
   ObjectData data("Some data");
   FakeSyncDelegate sync;
-  sync.SetValue(data.value);
+  sync.AddObject(data.object_id, data.value);
   storage_->SetSyncDelegate(&sync);
 
   Status status;

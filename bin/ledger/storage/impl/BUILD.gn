@@ -63,6 +63,7 @@ executable("unittests") {
     "//apps/ledger/src/cloud_sync/impl",
     "//apps/ledger/src/glue",
     "//apps/ledger/src/storage/fake:lib",
+    "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test:main",
     "//lib/ftl",
