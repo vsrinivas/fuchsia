@@ -10,7 +10,6 @@ namespace escher {
 namespace impl {
 
 namespace {
-
 inline vk::Buffer CreateBufferHelper(vk::Device device,
                                      vk::DeviceSize size,
                                      vk::BufferUsageFlags usage_flags) {
@@ -31,11 +30,11 @@ inline GpuMemPtr AllocateMemoryHelper(vk::Device device,
 
 }  // namespace
 
-Buffer::Buffer(vk::Device device,
-               GpuAllocator* allocator,
-               vk::DeviceSize size,
-               vk::BufferUsageFlags usage_flags,
-               vk::MemoryPropertyFlags memory_property_flags)
+BufferOLD::BufferOLD(vk::Device device,
+                     GpuAllocator* allocator,
+                     vk::DeviceSize size,
+                     vk::BufferUsageFlags usage_flags,
+                     vk::MemoryPropertyFlags memory_property_flags)
     : device_(device),
       allocator_(allocator),
       usage_flags_(usage_flags),
@@ -48,7 +47,7 @@ Buffer::Buffer(vk::Device device,
   device.bindBufferMemory(buffer_, mem_->base(), mem_->offset());
 }
 
-Buffer::Buffer(Buffer&& other)
+BufferOLD::BufferOLD(BufferOLD&& other)
     : device_(std::move(other.device_)),
       allocator_(other.allocator_),
       usage_flags_(other.usage_flags_),
@@ -61,7 +60,7 @@ Buffer::Buffer(Buffer&& other)
   other.mapped_ = nullptr;
 }
 
-Buffer::~Buffer() {
+BufferOLD::~BufferOLD() {
   FTL_DCHECK(!mapped_);
   // TODO: register vk::Buffer for destruction somewhere.
   if (device_) {
@@ -69,7 +68,7 @@ Buffer::~Buffer() {
   }
 }
 
-uint8_t* Buffer::Map() {
+uint8_t* BufferOLD::Map() {
   if (!mapped_) {
     mapped_ = ESCHER_CHECKED_VK_RESULT(
         device_.mapMemory(mem_->base(), mem_->offset(), mem_->size()));
@@ -77,7 +76,7 @@ uint8_t* Buffer::Map() {
   return reinterpret_cast<uint8_t*>(mapped_);
 }
 
-void Buffer::Unmap() {
+void BufferOLD::Unmap() {
   if (mapped_) {
     // TODO: only flush if the coherent bit isn't set; also see
     // ImageCache::Image::Unmap().

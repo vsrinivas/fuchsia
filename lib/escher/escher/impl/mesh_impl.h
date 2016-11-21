@@ -40,13 +40,13 @@ class MeshImpl : public Mesh {
            uint32_t num_vertices,
            uint32_t num_indices,
            MeshManager* manager,
-           Buffer vertex_buffer,
-           Buffer index_buffer,
+           BufferPtr vertex_buffer,
+           BufferPtr index_buffer,
            const MeshSpecImpl& spec_impl);
   ~MeshImpl();
 
-  vk::Buffer vertex_buffer() const { return vertex_buffer_.buffer(); }
-  vk::Buffer index_buffer() const { return index_buffer_.buffer(); }
+  vk::Buffer vertex_buffer() const { return vertex_buffer_; }
+  vk::Buffer index_buffer() const { return index_buffer_; }
 
   // TODO: in the future, some or all of these may not be zero.
   vk::DeviceSize index_buffer_offset() const { return 0; }
@@ -58,8 +58,10 @@ class MeshImpl : public Mesh {
 
  private:
   MeshManager* manager_;
-  Buffer vertex_buffer_;
-  Buffer index_buffer_;
+  vk::Buffer vertex_buffer_;
+  vk::Buffer index_buffer_;
+  BufferPtr vertex_buffer_ptr_;
+  BufferPtr index_buffer_ptr_;
   const MeshSpecImpl& spec_impl_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MeshImpl);

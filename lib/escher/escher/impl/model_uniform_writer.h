@@ -58,7 +58,7 @@ class ModelUniformWriter {
   DescriptorSetPool* per_model_descriptor_set_pool_;
   DescriptorSetPool* per_object_descriptor_set_pool_;
 
-  UniformBufferPtr uniforms_;
+  BufferPtr uniforms_;
   DescriptorSetAllocationPtr per_model_descriptor_sets_;
   DescriptorSetAllocationPtr per_object_descriptor_sets_;
 

@@ -11,6 +11,7 @@ class RefPtr;
 
 namespace escher {
 
+class Buffer;
 class Escher;
 class Framebuffer;
 class Image;
@@ -30,6 +31,7 @@ class Texture;
 struct VulkanContext;
 struct VulkanSwapchain;
 
+typedef ftl::RefPtr<Buffer> BufferPtr;
 typedef ftl::RefPtr<Framebuffer> FramebufferPtr;
 typedef ftl::RefPtr<Image> ImagePtr;
 typedef ftl::RefPtr<Mesh> MeshPtr;

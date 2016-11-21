@@ -7,55 +7,25 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-#include <escher/forward_declarations.h>
-#include <escher/impl/resource.h>
+#include "escher/forward_declarations.h"
+#include "escher/vk/buffer.h"
 
 namespace escher {
 namespace impl {
 
-class GpuAllocator;
-class UniformBufferPool;
-
-// A 64kB host-accessible uniform buffer that returns its resources to its
-// UniformBufferPool upon destruction.  Not thread-safe.
-class UniformBuffer : public Resource {
- public:
-  ~UniformBuffer() override;
-
-  vk::Buffer get() { return buffer_; }
-  vk::DeviceSize size() const;
-  UniformBufferPool* pool() { return pool_; }
-  uint8_t* ptr() const { return ptr_; }
-
- private:
-  friend class UniformBufferPool;
-  UniformBuffer(UniformBufferPool* pool,
-                vk::Buffer buffer,
-                uint8_t* mapped_ptr);
-
-  UniformBufferPool* pool_;
-  vk::Buffer buffer_;
-  uint8_t* ptr_;
-};
-
-typedef ftl::RefPtr<UniformBuffer> UniformBufferPtr;
-
-// Vends UniformBuffers whose resources are automatically returned to the pool
-// upon destruction.  If necessary, it will grow by creating new buffers (and
-// allocating backing memory for them).  Not thread-safe.
-class UniformBufferPool {
+// Vends 64kB host-accessible Buffers whose resources are automatically returned
+// to the pool upon destruction.  If necessary, it will grow by creating new
+// buffers (and allocating backing memory for them).  Not thread-safe.
+class UniformBufferPool : public BufferOwner {
  public:
   UniformBufferPool(vk::Device device, GpuAllocator* allocator);
   ~UniformBufferPool();
 
-  UniformBufferPtr Allocate();
-
-  vk::DeviceSize buffer_size() const { return buffer_size_; }
+  BufferPtr Allocate();
 
  private:
-  // Called by ~UniformBuffer to return its buffer to free_buffers_.
-  friend class UniformBuffer;
-  void ReturnUniformBuffer(vk::Buffer buffer, uint8_t* mapped_ptr);
+  // Implement BufferOwner::RecycleBuffer().
+  void RecycleBuffer(std::unique_ptr<BufferInfo> info) override;
 
   // Create a batch of new buffers, which are added to free_buffers_.
   void InternalAllocate();
@@ -72,12 +42,22 @@ class UniformBufferPool {
   // The size of each allocated buffer.
   vk::DeviceSize buffer_size_;
 
-  // List of free buffers that are available for allocation.
-  struct MappedBuffer {
+  // Item in free_buffers_.
+  class UniformBufferInfo : public BufferInfo {
+   public:
+    UniformBufferInfo(vk::Buffer buffer, uint8_t* ptr);
+    ~UniformBufferInfo();
+
+    vk::Buffer GetBuffer() override;
+    vk::DeviceSize GetSize() override;
+    uint8_t* GetMappedPointer() override;
+
     vk::Buffer buffer;
     uint8_t* ptr;
   };
-  std::vector<MappedBuffer> free_buffers_;
+
+  // List of free buffers that are available for allocation.
+  std::vector<std::unique_ptr<BufferInfo>> free_buffers_;
 
   // Memory allocated to back all of the buffers created by this pool.
   std::vector<GpuMemPtr> backing_memory_;
@@ -88,12 +68,6 @@ class UniformBufferPool {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UniformBufferPool);
 };
-
-// Inline function definitions.
-
-inline vk::DeviceSize UniformBuffer::size() const {
-  return pool_->buffer_size();
-}
 
 }  // namespace impl
 }  // namespace escher

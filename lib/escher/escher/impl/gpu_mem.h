@@ -15,6 +15,7 @@ namespace impl {
 
 // Memory allocated by a GpuAllocator.  It is a region of a GpuMemSlab (this is
 // an implementation detail, not relevant to clients of GpuAllocator/GpuMem).
+// TODO: move out of impl namespace.
 class GpuMem : public ftl::RefCountedThreadSafe<GpuMem> {
  public:
   // Accessors for the base address of the underlying GpuMemSlab, and the offset

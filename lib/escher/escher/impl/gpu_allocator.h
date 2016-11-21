@@ -16,6 +16,7 @@ namespace impl {
 // applications are expected to allocate larger chunks of memory, and do their
 // own memory management within these chunks.  This is the responsibility of
 // concrete subclasses of GpuAllocator.
+// TODO: move out of impl namespace.
 class GpuAllocator {
  public:
   GpuAllocator(const VulkanContext& context);

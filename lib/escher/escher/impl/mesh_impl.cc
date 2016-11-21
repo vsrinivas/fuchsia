@@ -5,6 +5,7 @@
 #include "escher/impl/mesh_impl.h"
 
 #include "escher/impl/mesh_manager.h"
+#include "escher/vk/buffer.h"
 
 namespace escher {
 namespace impl {
@@ -13,15 +14,17 @@ MeshImpl::MeshImpl(MeshSpec spec,
                    uint32_t num_vertices,
                    uint32_t num_indices,
                    MeshManager* manager,
-                   Buffer vertex_buffer,
-                   Buffer index_buffer,
+                   BufferPtr vertex_buffer,
+                   BufferPtr index_buffer,
                    const MeshSpecImpl& spec_impl)
     // TODO: shouldn't pass nullptr as first argument.  Leaving for now, because
     // we might remove the EscherImpl field from Resource.
     : Mesh(nullptr, spec, num_vertices, num_indices),
       manager_(manager),
-      vertex_buffer_(std::move(vertex_buffer)),
-      index_buffer_(std::move(index_buffer)),
+      vertex_buffer_(vertex_buffer->get()),
+      index_buffer_(index_buffer->get()),
+      vertex_buffer_ptr_(std::move(vertex_buffer)),
+      index_buffer_ptr_(std::move(index_buffer)),
       spec_impl_(spec_impl) {
   manager_->IncrementMeshCount();
 }

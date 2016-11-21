@@ -10,13 +10,30 @@
 namespace escher {
 namespace impl {
 
-UniformBuffer::UniformBuffer(UniformBufferPool* pool,
-                             vk::Buffer buffer,
-                             uint8_t* mapped_ptr)
-    : Resource(nullptr), pool_(pool), buffer_(buffer), ptr_(mapped_ptr) {}
+// TODO: obtain max uniform-buffer size from Vulkan.  64kB is typical.
+constexpr vk::DeviceSize kBufferSize = 65536;
 
-UniformBuffer::~UniformBuffer() {
-  pool_->ReturnUniformBuffer(buffer_, ptr_);
+UniformBufferPool::UniformBufferInfo::UniformBufferInfo(vk::Buffer b,
+                                                        uint8_t* p)
+    : buffer(b), ptr(p) {
+  FTL_DCHECK(buffer);
+}
+
+UniformBufferPool::UniformBufferInfo::~UniformBufferInfo() {
+  // Pool is responsible for destroying the vk::Buffer.
+  FTL_DCHECK(!buffer);
+}
+
+vk::Buffer UniformBufferPool::UniformBufferInfo::GetBuffer() {
+  return buffer;
+}
+
+vk::DeviceSize UniformBufferPool::UniformBufferInfo::GetSize() {
+  return kBufferSize;
+}
+
+uint8_t* UniformBufferPool::UniformBufferInfo::GetMappedPointer() {
+  return ptr;
 }
 
 UniformBufferPool::UniformBufferPool(vk::Device device, GpuAllocator* allocator)
@@ -24,31 +41,30 @@ UniformBufferPool::UniformBufferPool(vk::Device device, GpuAllocator* allocator)
       allocator_(allocator),
       flags_(vk::MemoryPropertyFlagBits::eHostVisible |
              vk::MemoryPropertyFlagBits::eHostCoherent),
-      // TODO: obtain max uniform-buffer size from Vulkan.  64kB is typical.
-      buffer_size_(65536) {}
+      buffer_size_(kBufferSize) {}
 
 UniformBufferPool::~UniformBufferPool() {
   FTL_CHECK(allocation_count_ == 0);
-  for (auto buf : free_buffers_) {
-    device_.destroyBuffer(buf.buffer);
+  for (auto& info : free_buffers_) {
+    auto uniform_buffer_info = static_cast<UniformBufferInfo*>(info.get());
+    device_.destroyBuffer(uniform_buffer_info->buffer);
+    uniform_buffer_info->buffer = nullptr;
   }
 }
 
-UniformBufferPtr UniformBufferPool::Allocate() {
+BufferPtr UniformBufferPool::Allocate() {
   if (free_buffers_.empty()) {
     InternalAllocate();
   }
-  auto& free_buffer = free_buffers_.back();
-  auto buf = ftl::AdoptRef(
-      new UniformBuffer(this, free_buffer.buffer, free_buffer.ptr));
+  auto buf = NewBuffer(std::move(free_buffers_.back()));
   free_buffers_.pop_back();
   ++allocation_count_;
   return buf;
 }
 
-void UniformBufferPool::ReturnUniformBuffer(vk::Buffer buffer, uint8_t* ptr) {
+void UniformBufferPool::RecycleBuffer(std::unique_ptr<BufferInfo> info) {
   --allocation_count_;
-  free_buffers_.push_back({buffer, ptr});
+  free_buffers_.push_back(std::move(info));
 }
 
 void UniformBufferPool::InternalAllocate() {
@@ -84,7 +100,8 @@ void UniformBufferPool::InternalAllocate() {
   vk::DeviceSize offset = mem->offset();
   for (uint32_t i = 0; i < kBufferBatchSize; ++i) {
     device_.bindBufferMemory(new_buffers[i], mem->base(), offset);
-    free_buffers_.push_back({new_buffers[i], ptr});
+    free_buffers_.push_back(
+        std::make_unique<UniformBufferInfo>(new_buffers[i], ptr));
     offset += buffer_size_;
     ptr += buffer_size_;
   }

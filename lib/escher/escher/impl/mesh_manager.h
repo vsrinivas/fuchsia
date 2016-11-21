@@ -39,7 +39,7 @@ class MeshManager : public MeshBuilderFactory {
   const MeshSpecImpl& GetMeshSpecImpl(MeshSpec spec);
 
  private:
-  Buffer GetStagingBuffer(uint32_t size);
+  BufferOLD GetStagingBuffer(uint32_t size);
   void UpdateBusyResources();
 
   class MeshBuilder : public escher::MeshBuilder {
@@ -48,8 +48,8 @@ class MeshManager : public MeshBuilderFactory {
                 const MeshSpec& spec,
                 size_t max_vertex_count,
                 size_t max_index_count,
-                Buffer vertex_staging_buffer,
-                Buffer index_staging_buffer,
+                BufferOLD vertex_staging_buffer,
+                BufferOLD index_staging_buffer,
                 const MeshSpecImpl& spec_impl);
     ~MeshBuilder() override;
 
@@ -62,8 +62,8 @@ class MeshManager : public MeshBuilderFactory {
     MeshManager* manager_;
     MeshSpec spec_;
     bool is_built_;
-    Buffer vertex_staging_buffer_;
-    Buffer index_staging_buffer_;
+    BufferOLD vertex_staging_buffer_;
+    BufferOLD index_staging_buffer_;
     const MeshSpecImpl& spec_impl_;
   };
 
@@ -75,7 +75,7 @@ class MeshManager : public MeshBuilderFactory {
   GpuAllocator* allocator_;
   vk::Device device_;
   vk::Queue queue_;
-  std::list<Buffer> free_staging_buffers_;
+  std::list<BufferOLD> free_staging_buffers_;
 
   std::unordered_map<MeshSpec, std::unique_ptr<MeshSpecImpl>, MeshSpec::Hash>
       spec_cache_;

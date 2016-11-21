@@ -124,6 +124,8 @@ static_library("escher") {
     "util/image_loader.h",
     "util/need.h",
     "util/stopwatch.h",
+    "vk/buffer.h",
+    "vk/buffer.cc",
     "vk/vulkan_context.h",
     "vk/vulkan_swapchain.h",
     "vk/vulkan_swapchain_helper.cc",

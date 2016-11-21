@@ -11,15 +11,16 @@ namespace escher {
 namespace impl {
 
 // Convenient wrapper for vk::Buffer that provides automatic memory management.
-class Buffer {
+// TODO: this is deprecated... all usages should be removed ASAP.
+class BufferOLD {
  public:
-  Buffer(vk::Device device,
-         GpuAllocator* allocator,
-         vk::DeviceSize size,
-         vk::BufferUsageFlags usage_flags,
-         vk::MemoryPropertyFlags memory_property_flags);
-  Buffer(Buffer&& other);
-  ~Buffer();
+  BufferOLD(vk::Device device,
+            GpuAllocator* allocator,
+            vk::DeviceSize size,
+            vk::BufferUsageFlags usage_flags,
+            vk::MemoryPropertyFlags memory_property_flags);
+  BufferOLD(BufferOLD&& other);
+  ~BufferOLD();
 
   vk::DeviceSize GetSize() const { return mem_->size(); }
   vk::Buffer buffer() const { return buffer_; }
@@ -36,7 +37,7 @@ class Buffer {
   GpuMemPtr mem_;
   void* mapped_ = nullptr;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Buffer);
+  FTL_DISALLOW_COPY_AND_ASSIGN(BufferOLD);
 };
 
 }  // namespace impl
