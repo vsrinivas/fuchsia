@@ -9,27 +9,31 @@
 #include <vector>
 
 #include "lib/ftl/macros.h"
+#include "lib/ftl/memory/ref_counted.h"
 
 namespace callback {
 // Waiter can be used to collate the results of many asynchronous calls into one
 // callback. A typical usage example would be:
 // Waiter<Status, Object> waiter(Status::OK);
-// storage->GetObject(object1, waiter.NewCallback());
-// storage->GetObject(object2, waiter.NewCallback());
-// storage->GetObject(object3, waiter.NewCallback());
+// storage->GetObject(object_id1, waiter.NewCallback());
+// storage->GetObject(object_id2, waiter.NewCallback());
+// storage->GetObject(object_id3, waiter.NewCallback());
 // ...
-// waiter.Finalize([](Status s, std::vector<std::unique_ptr<Object>> v) {
+// waiter->Finalize([](Status s, std::vector<std::unique_ptr<Object>> v) {
 //   do something with the returned objects
 // });
 template <class S, class T>
 class Waiter : public ftl::RefCountedThreadSafe<Waiter<S, T>> {
  public:
-  static ftl::RefPtr<callback::Waiter<S, T>> Create(S default_status) {
-    return ftl::AdoptRef(new callback::Waiter<S, T>(default_status));
+  static ftl::RefPtr<Waiter<S, T>> Create(S default_status) {
+    return ftl::AdoptRef(new Waiter<S, T>(default_status));
   }
 
   std::function<void(S, std::unique_ptr<T>)> NewCallback() {
     FTL_DCHECK(!finalized_);
+    if (result_status_ != default_status_) {
+      return [](S status, std::unique_ptr<T> result) {};
+    }
     results_.push_back(std::unique_ptr<T>());
     std::function<void(S, std::unique_ptr<T>)> callback = [
       waiter_ref = ftl::RefPtr<Waiter<S, T>>(this), index = results_.size() - 1
@@ -51,9 +55,7 @@ class Waiter : public ftl::RefCountedThreadSafe<Waiter<S, T>> {
   Waiter(S default_status)
       : default_status_(default_status), result_status_(default_status_) {}
 
-  void ReturnResult(int index,
-                    storage::Status status,
-                    std::unique_ptr<T> result) {
+  void ReturnResult(int index, S status, std::unique_ptr<T> result) {
     if (result_status_ != default_status_)
       return;
     if (status != default_status_) {
