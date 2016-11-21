@@ -20,6 +20,10 @@
             "bootfs_path": "apps/hello_compositor"
         },
         {
+            "binary": "hello_material.flx",
+            "bootfs_path": "apps/hello_material"
+        },
+        {
             "binary": "input_manager_service",
             "bootfs_path": "apps/input_manager_service"
         },
