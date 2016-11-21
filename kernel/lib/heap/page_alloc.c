@@ -33,14 +33,18 @@
 
 void *page_alloc(size_t pages)
 {
+    DEBUG_ASSERT(pages > 0);
+
     struct list_node list = LIST_INITIAL_VALUE(list);
 
     void *result = pmm_alloc_kpages(pages, &list, NULL);
 
-    // mark all of the allocated page as HEAP
-    vm_page_t *p;
-    list_for_every_entry(&list, p, vm_page_t, free.node) {
-        p->state = VM_PAGE_STATE_HEAP;
+    if (likely(result)) {
+        // mark all of the allocated page as HEAP
+        vm_page_t *p;
+        list_for_every_entry(&list, p, vm_page_t, free.node) {
+            p->state = VM_PAGE_STATE_HEAP;
+        }
     }
 
     return result;
@@ -49,6 +53,7 @@ void *page_alloc(size_t pages)
 void page_free(void *ptr, size_t pages)
 {
     DEBUG_ASSERT(IS_PAGE_ALIGNED((uintptr_t)ptr));
+    DEBUG_ASSERT(pages > 0);
 
     pmm_free_kpages(ptr, pages);
 }
