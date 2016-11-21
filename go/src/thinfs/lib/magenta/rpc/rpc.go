@@ -76,12 +76,12 @@ func (vfs *ThinVFS) CreateHandle(obj interface{}) (mx.Handle, error) {
 	}
 
 	var serverHandler rio.ServerHandler = mxioServer
-	if err := vfs.dispatcher.AddHandler(h0, serverHandler, vfs.allocateCookie(obj)); err != nil {
+	if err := vfs.dispatcher.AddHandler(h0.Handle, serverHandler, vfs.allocateCookie(obj)); err != nil {
 		h0.Close()
 		h1.Close()
 		return 0, err
 	}
-	return h1, nil
+	return h1.Handle, nil
 }
 
 // TODO(smklein): Calibrate thinfs flags with standard C library flags to make conversion smoother
