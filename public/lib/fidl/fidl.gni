@@ -43,68 +43,10 @@ template("fidl") {
   cpp_sync_sources_target_name = "${target_name}_${cpp_sources_suffix}_sync"
 
   if (defined(invoker.sources)) {
-    generator_root = rebase_path("//lib/fidl/compiler/legacy_generators")
-    legacy_gen_path = rebase_path("${generator_root}/legacy")
+    legacy_gen_path = rebase_path("${root_out_dir}/legacy_generators/run_code_generators.py")
     go_gen_path = rebase_path("${root_out_dir}/fidl-go")
     fidl_tool = rebase_path("${root_out_dir}/fidl")
 
-    # The following list of files will trigger a rebuild if any of them change.
-    # TODO(vardhan): This should be split up to be per-language.
-    generator_sources = [
-      fidl_tool,
-      "$generator_root/run_code_generators.py",
-      "$generator_root/generators/cpp_templates/enum_macros.tmpl",
-      "$generator_root/generators/cpp_templates/interface_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/interface_definition.tmpl",
-      "$generator_root/generators/cpp_templates/interface_macros.tmpl",
-      "$generator_root/generators/cpp_templates/interface_proxy_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/interface_request_validator_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/interface_response_validator_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/interface_stub_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/module-common.cc.tmpl",
-      "$generator_root/generators/cpp_templates/module-common.h.tmpl",
-      "$generator_root/generators/cpp_templates/module-internal.h.tmpl",
-      "$generator_root/generators/cpp_templates/module-sync.cc.tmpl",
-      "$generator_root/generators/cpp_templates/module-sync.h.tmpl",
-      "$generator_root/generators/cpp_templates/module.cc.tmpl",
-      "$generator_root/generators/cpp_templates/module.h.tmpl",
-      "$generator_root/generators/cpp_templates/struct_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/struct_definition.tmpl",
-      "$generator_root/generators/cpp_templates/struct_macros.tmpl",
-      "$generator_root/generators/cpp_templates/struct_serialization_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/struct_serialization_definition.tmpl",
-      "$generator_root/generators/cpp_templates/union_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/union_definition.tmpl",
-      "$generator_root/generators/cpp_templates/union_serialization_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/union_serialization_definition.tmpl",
-      "$generator_root/generators/cpp_templates/validation_macros.tmpl",
-      "$generator_root/generators/cpp_templates/wrapper_class_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/wrapper_class_definition.tmpl",
-      "$generator_root/generators/cpp_templates/wrapper_union_class_declaration.tmpl",
-      "$generator_root/generators/cpp_templates/wrapper_union_class_definition.tmpl",
-      "$generator_root/generators/dart_templates/encoding_macros.tmpl",
-      "$generator_root/generators/dart_templates/enum_definition.tmpl",
-      "$generator_root/generators/dart_templates/interface_definition.tmpl",
-      "$generator_root/generators/dart_templates/module.lib.tmpl",
-      "$generator_root/generators/dart_templates/module_definition.tmpl",
-      "$generator_root/generators/dart_templates/struct_definition.tmpl",
-      "$generator_root/generators/dart_templates/union_definition.tmpl",
-      "$generator_root/generators/python_templates/module.py.tmpl",
-      "$generator_root/generators/python_templates/module_macros.tmpl",
-      "$generator_root/generators/fidl_cpp_generator.py",
-      "$generator_root/generators/fidl_dart_generator.py",
-      "$generator_root/generators/fidl_python_generator.py",
-      "$generator_root/pylib/mojom/__init__.py",
-      "$generator_root/pylib/mojom/error.py",
-      "$generator_root/pylib/mojom/generate/__init__.py",
-      "$generator_root/pylib/mojom/generate/constant_resolver.py",
-      "$generator_root/pylib/mojom/generate/generator.py",
-      "$generator_root/pylib/mojom/generate/module.py",
-      "$generator_root/pylib/mojom/generate/pack.py",
-      "$generator_root/pylib/mojom/generate/template_expander.py",
-      "$generator_root/pylib/mojom/parse/__init__.py",
-      "$generator_root/pylib/mojom/parse/parser_runner.py",
-    ]
     generator_cpp_outputs = [
       "{{source_gen_dir}}/{{source_file_part}}-common.cc",
       "{{source_gen_dir}}/{{source_file_part}}-common.h",
@@ -129,11 +71,10 @@ template("fidl") {
     generator_target_name = target_name + "__generator"
     action_foreach(generator_target_name) {
       script = "/usr/bin/env"
-      inputs = generator_sources
       public_deps = [
         "//lib/fidl/compiler:fidl",
       ]
-      deps = [ "//lib/fidl/compiler:fidl-go" ]
+      deps = [ "//lib/fidl/compiler:fidl-go", "//lib/fidl/compiler/legacy_generators" ]
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
         deps += [
           "//lib/fidl/compiler/interfaces:interfaces",

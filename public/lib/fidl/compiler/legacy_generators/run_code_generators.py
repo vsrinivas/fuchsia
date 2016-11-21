@@ -52,13 +52,6 @@ def _ParseCLIArgs():
 # We assume this script is located in the Mojo SDK in tools/bindings.
 # If __file__ is a link, we look for the real location of the script.
 BINDINGS_DIR = os.path.dirname(os.path.realpath(os.path.abspath(__file__)))
-SDK_ROOT = os.path.abspath(os.path.join(BINDINGS_DIR, os.pardir, os.pardir))
-PYTHON_SDK_DIR = os.path.abspath(os.path.join(SDK_ROOT, "python"))
-
-sys.path.insert(0, PYTHON_SDK_DIR)
-# In order to use fidl_files_fidl we need to make sure the dummy mojo_system
-# can be found on the python path.
-sys.path.insert(0, os.path.join(PYTHON_SDK_DIR, "dummy_mojo_system"))
 
 sys.path.insert(0, os.path.join(BINDINGS_DIR, "pylib"))
 
