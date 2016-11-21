@@ -29,15 +29,15 @@ void InputReader::Start() {
 }
 
 void InputReader::DeviceRemoved(mx_handle_t handle) {
-  FTL_LOG(INFO) << "Input device " << devices_.at(handle).first->name()
-                << " removed";
+  FTL_VLOG(1) << "Input device " << devices_.at(handle).first->name()
+              << " removed";
   mtl::MessageLoop::GetCurrent()->RemoveHandler(devices_.at(handle).second);
   interpreter_->UnregisterDevice(devices_[handle].first.get());
   devices_.erase(handle);
 }
 
 void InputReader::DeviceAdded(std::unique_ptr<InputDevice> device) {
-  FTL_LOG(INFO) << "Input device " << device->name() << " added ";
+  FTL_VLOG(1) << "Input device " << device->name() << " added ";
   mx_handle_t handle = device->handle();
   mx_signals_t signals = MX_USER_SIGNAL_0;
   mtl::MessageLoop::HandlerKey key =

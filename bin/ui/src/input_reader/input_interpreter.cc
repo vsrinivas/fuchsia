@@ -15,16 +15,11 @@ void InputInterpreter::RegisterCallback(OnEventCallback callback) {
 }
 
 void InputInterpreter::RegisterDevice(const InputDevice* device) {
-  if (!devices_.count(device)) {
-    FTL_LOG(INFO) << "Registering " << device->name();
-    TRACE_DURATION1("input", "RegisterDevice", "device", device->name());
-    devices_[device] = DeviceState();
-  }
+  FTL_DCHECK(devices_.count(device) == 0);
+  devices_.emplace(device, DeviceState());
 }
 
 void InputInterpreter::UnregisterDevice(const InputDevice* device) {
-  FTL_LOG(INFO) << "Unregistering " << device->name();
-  TRACE_DURATION1("input", "UnregisterDevice", "device", device->name());
   devices_.erase(device);
 }
 

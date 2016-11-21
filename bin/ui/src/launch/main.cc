@@ -34,7 +34,6 @@ int main(int argc, const char** argv) {
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info->arguments.push_back(positional_args[i]);
   launch_info->services = GetProxy(&services);
-  FTL_LOG(INFO) << "Launching view provider " << launch_info->url;
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       nullptr);
 

@@ -176,8 +176,6 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
   }
 
   void OnClick(const Button& button) {
-    FTL_LOG(INFO) << "Clicked: " << button.label;
-
     switch (button.action) {
       case Action::kHang10: {
         sleep(10);

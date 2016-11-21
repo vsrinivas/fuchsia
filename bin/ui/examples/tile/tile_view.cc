@@ -68,7 +68,6 @@ void TileView::ConnectViews() {
     launch_info->url = url;
     launch_info->services = GetProxy(&services);
 
-    FTL_LOG(INFO) << "Launching view " << url;
     // |env_launcher_| launches the app with our nested environment.
     env_launcher_->CreateApplication(std::move(launch_info),
                                      GetProxy(&controller));
