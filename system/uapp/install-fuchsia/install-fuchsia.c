@@ -253,7 +253,7 @@ static mx_status_t find_partition_path(gpt_partition_t* const* part_info,
                 }
             }
         } else {
-            printf("ioctl failed getting GUID for %s, error:(%li) '%s'\n",
+            printf("ioctl failed getting GUID for %s, error:(%zi) '%s'\n",
                    entry->d_name, rc, strerror(errno));
         }
 
