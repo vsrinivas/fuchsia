@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <err.h>
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
@@ -871,11 +872,16 @@ static ssize_t heap_grow(size_t size, free_t **bucket)
     // sentinels) so we need to grow the gross heap size by this much more.
     size += 2 * sizeof(header_t);
     size = ROUNDUP(size, PAGE_SIZE);
+
     void *ptr = page_alloc(size >> PAGE_SIZE_SHIFT);
+    if (ptr == NULL)
+        return ERR_NO_MEMORY;
+
     theheap.size += size;
-    if (ptr == NULL) return -1;
+
     LTRACEF("growing heap by 0x%zx bytes, new ptr %p\n", size, ptr);
     add_to_heap(ptr, size, bucket);
+
     return size;
 }
 
