@@ -17,14 +17,14 @@ void InputInterpreter::RegisterCallback(OnEventCallback callback) {
 void InputInterpreter::RegisterDevice(const InputDevice* device) {
   if (!devices_.count(device)) {
     FTL_LOG(INFO) << "Registering " << device->name();
-    TRACE_EVENT1("input", "RegisterDevice", "device", device->name());
+    TRACE_DURATION1("input", "RegisterDevice", "device", device->name());
     devices_[device] = DeviceState();
   }
 }
 
 void InputInterpreter::UnregisterDevice(const InputDevice* device) {
   FTL_LOG(INFO) << "Unregistering " << device->name();
-  TRACE_EVENT1("input", "UnregisterDevice", "device", device->name());
+  TRACE_DURATION1("input", "UnregisterDevice", "device", device->name());
   devices_.erase(device);
 }
 
@@ -39,7 +39,7 @@ void InputInterpreter::OnReport(const InputDevice* device,
     return;
   }
 
-  TRACE_EVENT1("input", "OnReport", "type", type);
+  TRACE_DURATION1("input", "OnReport", "type", type);
   DeviceState& state = it->second;
   auto on_update = [this](mozart::EventPtr event) {
     for (auto callback : callbacks_) {

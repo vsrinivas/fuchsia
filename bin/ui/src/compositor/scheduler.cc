@@ -38,7 +38,7 @@ void Scheduler::SetCallbacks(FrameCallback update_callback,
 }
 
 void Scheduler::ScheduleFrame(SchedulingMode scheduling_mode) {
-  TRACE_EVENT1("gfx", "ScheduleFrame", "scheduling_mode", scheduling_mode);
+  TRACE_DURATION1("gfx", "ScheduleFrame", "scheduling_mode", scheduling_mode);
 
   if (scheduling_mode == SchedulingMode::kUpdateThenSnapshot)
     update_pending_ = true;
@@ -56,7 +56,7 @@ void Scheduler::ScheduleFrame(SchedulingMode scheduling_mode) {
 }
 
 void Scheduler::OnFrameScheduled(const Output::FrameTiming& timing) {
-  TRACE_EVENT0("gfx", "OnFrameScheduled");
+  TRACE_DURATION0("gfx", "OnFrameScheduled");
   FTL_DCHECK(timing.presentation_interval > ftl::TimeDelta::Zero());
   FTL_DCHECK(timing.presentation_latency >= ftl::TimeDelta::Zero());
   FTL_DCHECK(frame_scheduled_);
@@ -155,7 +155,7 @@ void Scheduler::PostSnapshot(const FrameInfo& frame_info) {
 }
 
 void Scheduler::OnUpdate(const FrameInfo& frame_info) {
-  TRACE_EVENT0("gfx", "OnUpdate");
+  TRACE_DURATION0("gfx", "OnUpdate");
   FTL_DCHECK(frame_scheduled_);
 
   // Yell if we completely missed the deadline.
@@ -178,7 +178,7 @@ void Scheduler::OnUpdate(const FrameInfo& frame_info) {
 }
 
 void Scheduler::OnSnapshot(const FrameInfo& frame_info) {
-  TRACE_EVENT0("gfx", "OnSnapshot");
+  TRACE_DURATION0("gfx", "OnSnapshot");
   FTL_DCHECK(frame_scheduled_);
 
   // Yell if we completely missed the deadline.

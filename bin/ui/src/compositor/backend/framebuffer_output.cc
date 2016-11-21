@@ -116,12 +116,12 @@ void FramebufferOutput::SubmitFrame(ftl::RefPtr<RenderFrame> frame) {
   FTL_DCHECK(frame);
   FTL_DCHECK(rasterizer_);
   frame_number_++;
-  TRACE_EVENT_ASYNC_BEGIN0("gfx", "SubmitFrame", frame_number_);
+  TRACE_ASYNC_BEGIN0("gfx", "SubmitFrame", frame_number_);
 
   if (frame_in_progress_) {
     if (next_frame_) {
       FTL_DLOG(WARNING) << "Discarded a frame to catch up";
-      TRACE_EVENT_ASYNC_END0("gfx", "SubmitFrame", frame_number_ - 1);
+      TRACE_ASYNC_END0("gfx", "SubmitFrame", frame_number_ - 1);
     }
     next_frame_ = frame;
     return;
@@ -173,7 +173,7 @@ void FramebufferOutput::OnFrameFinished(uint32_t frame_number,
   // TODO(jeffbrown): Filter this feedback loop to avoid large swings.
   // presentation_latency_ = last_presentation_time_ - submit_time;
   presentation_latency_ = kHardwareRefreshInterval + kHardwareDisplayLatency;
-  TRACE_EVENT_ASYNC_END0("gfx", "SubmitFrame", frame_number);
+  TRACE_ASYNC_END0("gfx", "SubmitFrame", frame_number);
 
   PrepareNextFrame();
 }
@@ -243,7 +243,7 @@ void FramebufferOutput::Rasterizer::VirtualConsoleReady() {
 }
 
 bool FramebufferOutput::Rasterizer::OpenFramebuffer() {
-  TRACE_EVENT0("gfx", "InitializeRasterizer");
+  TRACE_DURATION0("gfx", "InitializeRasterizer");
 
   framebuffer_ = Framebuffer::Open();
   if (!framebuffer_) {
@@ -283,13 +283,13 @@ bool FramebufferOutput::Rasterizer::OpenFramebuffer() {
 void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
                                               uint32_t frame_number,
                                               ftl::TimePoint submit_time) {
-  TRACE_EVENT_ASYNC_BEGIN0("gfx", "Rasterize", frame_number);
+  TRACE_ASYNC_BEGIN0("gfx", "Rasterize", frame_number);
   FTL_DCHECK(frame);
 
   ftl::TimePoint start_time = ftl::TimePoint::Now();
 
   {
-    TRACE_EVENT0("gfx", "WaitFences");
+    TRACE_DURATION0("gfx", "WaitFences");
     ftl::TimePoint wait_timeout = start_time + kFenceTimeout;
     for (const auto& image : frame->images()) {
       if (image->fence() &&
@@ -309,14 +309,14 @@ void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
   }
 
   {
-    TRACE_EVENT0("gfx", "Draw");
+    TRACE_DURATION0("gfx", "Draw");
     SkCanvas* canvas = framebuffer_surface_->getCanvas();
     frame->Draw(canvas);
     canvas->flush();
   }
 
   {
-    TRACE_EVENT0("gfx", "Flush");
+    TRACE_DURATION0("gfx", "Flush");
     framebuffer_->Flush();
   }
 
@@ -327,7 +327,7 @@ void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
     output_weak = output_->weak_ptr_factory_.GetWeakPtr(), frame_number,
     submit_time, start_time, finish_time
   ] {
-    TRACE_EVENT_ASYNC_END0("gfx", "DrawFrame", frame_number);
+    TRACE_ASYNC_END0("gfx", "DrawFrame", frame_number);
 
     if (output_weak) {
       output_weak->OnFrameFinished(frame_number, submit_time, start_time,

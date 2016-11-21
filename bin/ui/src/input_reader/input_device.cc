@@ -126,7 +126,7 @@ bool InputDevice::Read(const OnReportCallback& callback) {
     return false;
   }
 
-  TRACE_EVENT0("input", "Read");
+  TRACE_DURATION0("input", "Read");
   std::vector<InputReport::ReportType> pending;
   if (has_keyboard_) {
     ParseKeyboardReport(report_.data(), rc);
