@@ -11,6 +11,7 @@
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 
 namespace cloud_sync {
@@ -38,8 +39,8 @@ class CommitUpload {
   CommitUpload(storage::PageStorage* storage,
                cloud_provider::CloudProvider* cloud_provider,
                std::unique_ptr<const storage::Commit> commit,
-               std::function<void()> done_callback,
-               std::function<void()> error_callback);
+               ftl::Closure done_callback,
+               ftl::Closure error_callback);
   ~CommitUpload();
 
   // Starts a new upload attempt. Results are reported through |done_callback|
@@ -57,8 +58,8 @@ class CommitUpload {
   storage::PageStorage* storage_;
   cloud_provider::CloudProvider* cloud_provider_;
   std::unique_ptr<const storage::Commit> commit_;
-  std::function<void()> done_callback_;
-  std::function<void()> error_callback_;
+  ftl::Closure done_callback_;
+  ftl::Closure error_callback_;
   // Incremented on every upload attempt / Start() call. Tracked to detect stale
   // callbacks executing for the previous upload attempts.
   int current_attempt_ = 0;

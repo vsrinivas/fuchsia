@@ -7,6 +7,7 @@
 
 #include <set>
 
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/ftl/memory/ref_ptr.h"
@@ -35,7 +36,7 @@ class Cancellable : public ftl::RefCountedThreadSafe<Cancellable> {
   // done. If the |OnDone| method has been called, the service must call the
   // |callback| after having called any completion callbacks. It must not call
   // the callback if the |Cancel| method has been called.
-  virtual void SetOnDone(std::function<void()> callback) = 0;
+  virtual void SetOnDone(ftl::Closure callback) = 0;
 
  private:
   friend CancellableContainer;

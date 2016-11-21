@@ -70,8 +70,8 @@ TEST(CancellableImpl, WrapWithReturnValue) {
 TEST(CancellableImpl, DeleteWrappingCallbackInWrappedCallback) {
   {
     ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
-    std::unique_ptr<std::function<void()>> callback;
-    callback = std::make_unique<std::function<void()>>(
+    std::unique_ptr<ftl::Closure> callback;
+    callback = std::make_unique<ftl::Closure>(
         cancellable->WrapCallback([&callback] { callback.reset(); }));
     cancellable = nullptr;
     (*callback)();

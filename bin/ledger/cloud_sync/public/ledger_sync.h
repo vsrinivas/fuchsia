@@ -35,7 +35,7 @@ class LedgerSync {
   // error.
   virtual std::unique_ptr<PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,
-      std::function<void()> error_callback) = 0;
+      ftl::Closure error_callback) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerSync);

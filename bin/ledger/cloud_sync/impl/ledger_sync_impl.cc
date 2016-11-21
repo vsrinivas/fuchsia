@@ -32,7 +32,7 @@ LedgerSyncImpl::~LedgerSyncImpl() {}
 
 std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
     storage::PageStorage* page_storage,
-    std::function<void()> error_callback) {
+    ftl::Closure error_callback) {
   FTL_DCHECK(environment_->configuration.use_sync);
   FTL_DCHECK(!environment_->configuration.sync_params.firebase_id.empty());
   FTL_DCHECK(page_storage);

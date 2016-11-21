@@ -14,8 +14,8 @@ namespace cloud_sync {
 CommitUpload::CommitUpload(storage::PageStorage* storage,
                            cloud_provider::CloudProvider* cloud_provider,
                            std::unique_ptr<const storage::Commit> commit,
-                           std::function<void()> done_callback,
-                           std::function<void()> error_callback)
+                           ftl::Closure done_callback,
+                           ftl::Closure error_callback)
     : storage_(storage),
       cloud_provider_(cloud_provider),
       commit_(std::move(commit)),

@@ -6,7 +6,7 @@
 
 namespace callback {
 
-CancellableImpl::CancellableImpl(std::function<void()> on_cancel)
+CancellableImpl::CancellableImpl(ftl::Closure on_cancel)
     : on_cancel_(std::move(on_cancel)), is_done_(false) {}
 
 void CancellableImpl::Cancel() {
@@ -20,7 +20,7 @@ bool CancellableImpl::IsDone() {
   return is_done_;
 }
 
-void CancellableImpl::SetOnDone(std::function<void()> callback) {
+void CancellableImpl::SetOnDone(ftl::Closure callback) {
   FTL_DCHECK(!on_done_);
   on_done_ = std::move(callback);
 }

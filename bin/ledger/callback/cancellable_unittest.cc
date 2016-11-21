@@ -23,7 +23,7 @@ class FakeCancellable : public Cancellable {
     return false;
   }
 
-  void SetOnDone(std::function<void()> callback) override {
+  void SetOnDone(ftl::Closure callback) override {
     ++nb_on_done;
     this->callback = callback;
   }
@@ -31,7 +31,7 @@ class FakeCancellable : public Cancellable {
   int nb_cancel = 0;
   int nb_is_done = 0;
   int nb_on_done = 0;
-  std::function<void()> callback;
+  ftl::Closure callback;
 
  private:
   ~FakeCancellable() override {

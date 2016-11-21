@@ -181,7 +181,7 @@ class LedgerApplicationTest : public ::testing::Test {
 class Watcher : public PageWatcher {
  public:
   Watcher(fidl::InterfaceRequest<PageWatcher> request,
-          std::function<void()> change_callback)
+          ftl::Closure change_callback)
       : binding_(this, std::move(request)), change_callback_(change_callback) {}
 
   PageChangePtr GetLastPageChange() { return last_page_change_.Clone(); }
@@ -205,7 +205,7 @@ class Watcher : public PageWatcher {
 
   PageChangePtr last_page_change_;
   fidl::Binding<PageWatcher> binding_;
-  std::function<void()> change_callback_;
+  ftl::Closure change_callback_;
 };
 
 LedgerPtr LedgerApplicationTest::GetTestLedger() {

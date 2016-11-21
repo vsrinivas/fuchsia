@@ -58,7 +58,7 @@ class BranchTracker : public storage::CommitWatcher {
   storage::PageStorage* storage_;
   BoundInterface<Page, PageImpl> interface_;
   AutoCleanableSet<PageWatcherContainer> watchers_;
-  std::function<void()> on_empty_callback_;
+  ftl::Closure on_empty_callback_;
 
   bool transaction_in_progress_;
   storage::CommitId current_commit_;

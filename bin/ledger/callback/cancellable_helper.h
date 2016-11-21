@@ -17,7 +17,7 @@ namespace internal {
 template <typename T>
 class LambdaPostRunWrapper {
  public:
-  LambdaPostRunWrapper(T func, std::function<void()> callback)
+  LambdaPostRunWrapper(T func, ftl::Closure callback)
       : func_(std::move(func)), callback_(std::move(callback)) {
     FTL_DCHECK(callback_);
   }
@@ -43,7 +43,7 @@ class LambdaPostRunWrapper {
 
  private:
   T func_;
-  std::function<void()> callback_;
+  ftl::Closure callback_;
 };
 
 }  // namespace internal
@@ -57,8 +57,7 @@ class LambdaPostRunWrapper {
 // is correct.
 class CancellableImpl final : public Cancellable {
  public:
-  inline static ftl::RefPtr<CancellableImpl> Create(
-      std::function<void()> on_cancel) {
+  inline static ftl::RefPtr<CancellableImpl> Create(ftl::Closure on_cancel) {
     return ftl::AdoptRef(new CancellableImpl(std::move(on_cancel)));
   }
 
@@ -77,14 +76,14 @@ class CancellableImpl final : public Cancellable {
   // Cancellable
   void Cancel() override;
   bool IsDone() override;
-  void SetOnDone(std::function<void()> callback) override;
+  void SetOnDone(ftl::Closure callback) override;
 
  private:
-  CancellableImpl(std::function<void()> on_cancel);
+  CancellableImpl(ftl::Closure on_cancel);
 
-  std::function<void()> on_cancel_;
+  ftl::Closure on_cancel_;
   bool is_done_;
-  std::function<void()> on_done_;
+  ftl::Closure on_done_;
 };
 
 }  // namespace callback

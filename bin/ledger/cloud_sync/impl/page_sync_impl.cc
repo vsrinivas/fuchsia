@@ -19,7 +19,7 @@ PageSyncImpl::PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                            storage::PageStorage* storage,
                            cloud_provider::CloudProvider* cloud_provider,
                            std::unique_ptr<backoff::Backoff> backoff,
-                           std::function<void()> error_callback)
+                           ftl::Closure error_callback)
     : task_runner_(task_runner),
       storage_(storage),
       cloud_provider_(cloud_provider),

@@ -23,7 +23,7 @@ class LedgerSyncImpl : public LedgerSync {
 
   std::unique_ptr<PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,
-      std::function<void()> error_callback) override;
+      ftl::Closure error_callback) override;
 
  private:
   ftl::RefPtr<ftl::TaskRunner> task_runner_;

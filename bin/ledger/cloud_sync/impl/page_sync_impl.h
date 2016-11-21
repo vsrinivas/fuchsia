@@ -57,7 +57,7 @@ class PageSyncImpl : public PageSync,
                storage::PageStorage* storage,
                cloud_provider::CloudProvider* cloud_provider,
                std::unique_ptr<backoff::Backoff> backoff,
-               std::function<void()> error_callback);
+               ftl::Closure error_callback);
   ~PageSyncImpl() override;
 
   // PageSync:
@@ -99,7 +99,7 @@ class PageSyncImpl : public PageSync,
   storage::PageStorage* const storage_;
   cloud_provider::CloudProvider* const cloud_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
-  const std::function<void()> error_callback_;
+  const ftl::Closure error_callback_;
 
   ftl::Closure on_idle_callback_;
   // Ensures that each instance is started only once.
