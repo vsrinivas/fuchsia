@@ -19,12 +19,18 @@ class LogSettingsFixture : public ::testing::Test {
   LogSettings old_settings_;
 };
 
+TEST(LogSettings, DefaultOptions) {
+  LogSettings settings;
+  EXPECT_EQ(LOG_INFO, settings.min_log_level);
+}
+
 TEST(LogSettings, ParseValidOptions) {
   LogSettings settings;
+  settings.min_log_level = LOG_FATAL;
 
   EXPECT_TRUE(
       ParseLogSettings(CommandLineFromInitializerList({"argv0"}), &settings));
-  EXPECT_EQ(LOG_INFO, settings.min_log_level);
+  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
 
   EXPECT_TRUE(ParseLogSettings(
       CommandLineFromInitializerList({"argv0", "--verbose"}), &settings));
@@ -53,24 +59,25 @@ TEST(LogSettings, ParseValidOptions) {
 
 TEST(LogSettings, ParseInvalidOptions) {
   LogSettings settings;
+  settings.min_log_level = LOG_FATAL;
 
   EXPECT_FALSE(ParseLogSettings(
       CommandLineFromInitializerList({"argv0", "--verbose=-1"}), &settings));
-  EXPECT_EQ(LOG_INFO, settings.min_log_level);
+  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
 
   EXPECT_FALSE(ParseLogSettings(
       CommandLineFromInitializerList({"argv0", "--verbose=123garbage"}),
       &settings));
-  EXPECT_EQ(LOG_INFO, settings.min_log_level);
+  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
 
   EXPECT_FALSE(ParseLogSettings(
       CommandLineFromInitializerList({"argv0", "--quiet=-1"}), &settings));
-  EXPECT_EQ(LOG_INFO, settings.min_log_level);
+  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
 
   EXPECT_FALSE(ParseLogSettings(
       CommandLineFromInitializerList({"argv0", "--quiet=123garbage"}),
       &settings));
-  EXPECT_EQ(LOG_INFO, settings.min_log_level);
+  EXPECT_EQ(LOG_FATAL, settings.min_log_level);
 }
 
 TEST_F(LogSettingsFixture, SetAndGet) {

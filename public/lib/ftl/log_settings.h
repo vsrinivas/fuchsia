@@ -45,7 +45,8 @@ int GetMinLogLevel();
 // Quiet supersedes verbose if both are specified.
 //
 // Returns false and leaves |out_settings| unchanged if there was an
-// error parsing the options.
+// error parsing the options.  Otherwise updates |out_settings| with any
+// values which were overridden by the command-line.
 bool ParseLogSettings(const ftl::CommandLine& command_line,
                       LogSettings* out_settings);
 

@@ -34,7 +34,7 @@ int GetMinLogLevel() {
 
 bool ParseLogSettings(const ftl::CommandLine& command_line,
                       LogSettings* out_settings) {
-  LogSettings settings;
+  LogSettings settings = *out_settings;
 
   // --verbose=<level>
   // (always parse this even if --quiet is present)
