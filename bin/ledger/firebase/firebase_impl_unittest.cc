@@ -34,7 +34,7 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
   // time before starting the message loop.
   void QuitLoopOnNextEvent() { quit_loop_on_next_event_ = true; }
 
-  void RunLoop() {
+  void RunLoopWithTimeout() {
     message_loop_.task_runner()->PostDelayedTask(
         [this] {
           message_loop_.PostQuitTask();
@@ -133,7 +133,7 @@ TEST_F(FirebaseImplTest, Get) {
                   message_loop_.PostQuitTask();
                 });
 
-  RunLoop();
+  RunLoopWithTimeout();
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/bazinga.json",
             fake_network_service_.GetRequest()->url);
   EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
@@ -149,7 +149,7 @@ TEST_F(FirebaseImplTest, GetError) {
                   message_loop_.PostQuitTask();
                 });
 
-  RunLoop();
+  RunLoopWithTimeout();
 }
 
 TEST_F(FirebaseImplTest, GetWithQuery) {
@@ -159,7 +159,7 @@ TEST_F(FirebaseImplTest, GetWithQuery) {
                   message_loop_.PostQuitTask();
                 });
 
-  RunLoop();
+  RunLoopWithTimeout();
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/"
       "bazinga.json?orderBy=\"timestamp\"",
@@ -174,7 +174,7 @@ TEST_F(FirebaseImplTest, Root) {
     message_loop_.PostQuitTask();
   });
 
-  RunLoop();
+  RunLoopWithTimeout();
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/.json",
             fake_network_service_.GetRequest()->url);
 }
@@ -189,7 +189,7 @@ TEST_F(FirebaseImplTest, Put) {
     message_loop_.PostQuitTask();
   });
 
-  RunLoop();
+  RunLoopWithTimeout();
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/name.json",
             fake_network_service_.GetRequest()->url);
   EXPECT_EQ("PUT", fake_network_service_.GetRequest()->method);
@@ -203,7 +203,7 @@ TEST_F(FirebaseImplTest, Delete) {
     message_loop_.PostQuitTask();
   });
 
-  RunLoop();
+  RunLoopWithTimeout();
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/name.json",
             fake_network_service_.GetRequest()->url);
   EXPECT_EQ("DELETE", fake_network_service_.GetRequest()->method);
@@ -214,7 +214,7 @@ TEST_F(FirebaseImplTest, WatchRequest) {
   SetStringResponse("", 200);
 
   firebase_.Watch("some/path", "", this);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ("https://example.firebaseio.com/pre/fix/some/path.json",
             fake_network_service_.GetRequest()->url);
@@ -229,7 +229,7 @@ TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
   SetStringResponse("", 200);
 
   firebase_.Watch("some/path", "orderBy=\"timestamp\"", this);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(
       "https://example.firebaseio.com/pre/fix/some/path.json"
@@ -256,7 +256,7 @@ TEST_F(FirebaseImplTest, WatchPut) {
   SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", "", this);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(3u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -283,7 +283,7 @@ TEST_F(FirebaseImplTest, WatchPatch) {
   SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", "", this);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(1u, patch_count_);
@@ -304,7 +304,7 @@ TEST_F(FirebaseImplTest, WatchKeepAlive) {
   SetStringResponse(stream_body, 200);
 
   firebase_.Watch("name", "", this);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -321,7 +321,7 @@ TEST_F(FirebaseImplTest, WatchCancel) {
   SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", "", this);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -338,7 +338,7 @@ TEST_F(FirebaseImplTest, WatchAuthRevoked) {
   SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", "", this);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -357,7 +357,7 @@ TEST_F(FirebaseImplTest, WatchErrorUnknownEvent) {
   SetStringResponse(stream_body, 200);
 
   firebase_.Watch("/", "", this);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -370,7 +370,7 @@ TEST_F(FirebaseImplTest, WatchHttpError) {
   SetStringResponse("", 404);
 
   firebase_.Watch("/", "", this);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(0u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -390,7 +390,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
 
   EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(1u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -400,7 +400,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
 
   EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
   QuitLoopOnNextEvent();
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(2u, put_count_);
   EXPECT_EQ(0u, patch_count_);
@@ -418,7 +418,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   message_loop_.task_runner()->PostDelayedTask(
       [this] { message_loop_.PostQuitTask(); },
       ftl::TimeDelta::FromMilliseconds(100));
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_EQ(2u, put_count_);
   EXPECT_EQ(0u, patch_count_);

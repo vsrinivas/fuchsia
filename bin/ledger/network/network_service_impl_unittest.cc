@@ -164,7 +164,7 @@ class NetworkServiceImplTest : public ::testing::Test {
     return request;
   }
 
-  void RunLoop() {
+  void RunLoopWithTimeout() {
     loop_.task_runner()->PostDelayedTask(
         [this] {
           loop_.PostQuitTask();
@@ -209,7 +209,7 @@ TEST_F(NetworkServiceImplTest, SimpleRequest) {
         loop_.PostQuitTask();
       });
   EXPECT_FALSE(callback_destroyed);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_TRUE(response);
   EXPECT_TRUE(callback_destroyed);
@@ -237,7 +237,7 @@ TEST_F(NetworkServiceImplTest, CancelRequest) {
 
   loop_.task_runner()->PostTask([cancel] { cancel->Cancel(); });
   cancel = nullptr;
-  RunLoop();
+  RunLoopWithTimeout();
   EXPECT_FALSE(received_response);
   EXPECT_TRUE(callback_destroyed);
 }
@@ -258,7 +258,7 @@ TEST_F(NetworkServiceImplTest, NetworkDeleted) {
         response = std::move(received_response);
         loop_.PostQuitTask();
       });
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_TRUE(response);
   EXPECT_EQ(2, request_count);
@@ -282,7 +282,7 @@ TEST_F(NetworkServiceImplTest, Redirection) {
         response = std::move(received_response);
         loop_.PostQuitTask();
       });
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_TRUE(response);
   EXPECT_EQ(2, request_count);
@@ -306,7 +306,7 @@ TEST_F(NetworkServiceImplTest, CancelOnCallback) {
         request = nullptr;
       });
   EXPECT_FALSE(response);
-  RunLoop();
+  RunLoopWithTimeout();
 
   EXPECT_TRUE(response);
 }

@@ -150,7 +150,7 @@ class LedgerApplicationTest : public ::testing::Test {
     ::testing::Test::TearDown();
   }
 
-  void RunLoop() {
+  void RunLoopWithTimeout() {
     loop_.task_runner()->PostDelayedTask(
         [this] {
           loop_.PostQuitTask();
@@ -881,8 +881,8 @@ TEST_F(LedgerApplicationTest, PageWatcher1Change2Pages) {
              [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  RunLoop();
-  RunLoop();
+  RunLoopWithTimeout();
+  RunLoopWithTimeout();
 
   ASSERT_EQ(1u, watcher1.changes_seen);
   PageChangePtr change = watcher1.GetLastPageChange();
