@@ -369,7 +369,15 @@ function fset() {
   # Add --goma or --ccache as appropriate.
   if [[ "${goma}" -eq 1 ]]; then
     fset-add-gen-arg --goma
-    fset-add-ninja-arg -j 1000
+    # macOS needs a lower value of -j parameter, because it has a limit on the
+    # number of open file descriptors. Use 15 * cpu_count, which works well in
+    # practice.
+    if [[ "$(uname -s)" = "Darwin" ]]; then
+      numjobs=$(( $(sysctl -n hw.ncpu) * 15 ))
+      fset-add-ninja-arg -j ${numjobs}
+    else
+      fset-add-ninja-arg -j 1000
+    fi
   elif [[ "${ccache}" -eq 1 ]]; then
     fset-add-gen-arg --ccache
   fi
