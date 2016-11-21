@@ -38,8 +38,8 @@ mkdir -p $bootfs_path/bin
 mkdir -p $bootfs_path/lib
 cp $build_dir/x64-shared/libcrypto.so* $bootfs_path/lib
 cp $build_dir/x64-shared/libssl.so* $bootfs_path/lib
-cp $build_dir/x64-shared/libmagma.so* $bootfs_path/lib
-cp $build_dir/x64-shared/libvulkan.so* $bootfs_path/lib
+cp $build_dir/libmagma.so* $bootfs_path/lib
+cp $build_dir/libvulkan.so* $bootfs_path/lib
 
 cp $sysroot_path/x86_64-fuchsia/lib/*libc*.so* $bootfs_path/lib
 cp $sysroot_path/x86_64-fuchsia/lib/*libunwind.so* $bootfs_path/lib
