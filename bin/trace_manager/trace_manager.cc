@@ -6,6 +6,7 @@
 
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/src/trace_manager/trace_manager.h"
+#include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -117,9 +118,8 @@ std::string SanitizeLabel(const fidl::String& label) {
 
 }  // namespace
 
-TraceManager::TraceManager() {
-  FTL_LOG(INFO) << "Creating new instance";
-}
+TraceManager::TraceManager() = default;
+
 TraceManager::~TraceManager() = default;
 
 void TraceManager::StartTracing(fidl::Array<fidl::String> categories,
@@ -173,14 +173,13 @@ void TraceManager::RegisterTraceProvider(
   const uint32_t id = next_provider_id_++;
   std::string sanitized_label = SanitizeLabel(label);
 
-  FTL_LOG(INFO) << "Registering provider: id=" << id
-                << ", label=" << sanitized_label;
   providers_.emplace_back(TraceProviderPtr::Create(std::move(handle)), id,
                           std::move(sanitized_label));
 
   auto it = --providers_.end();
   it->provider.set_connection_error_handler(
       [ this, ptr = it->provider.get() ]() { EraseProvider(ptr); });
+  FTL_VLOG(1) << "Registered trace provider: " << it->ToString();
 
   if (controller_state_ == ControllerState::kStarted) {
     if (StartTracingForProvider(&*it))
@@ -195,29 +194,31 @@ void TraceManager::FinalizeTracing() {
 
 bool TraceManager::StartTracingForProvider(ProviderInfo* info) {
   FTL_DCHECK(!info->current_buffer);
-  FTL_LOG(INFO) << "StartTracingForProvider: " << info->label;
+  FTL_VLOG(2) << "Starting trace provider: " << info->ToString();
 
   if (mx::vmo::create(kSharedBufferSize, 0, &info->current_buffer) < 0) {
-    FTL_LOG(ERROR) << "Failed to create shared buffer for provider";
+    FTL_LOG(ERROR) << "Failed to create shared buffer for provider: "
+                   << info->ToString();
     return false;
   }
 
   mx::vmo first, second;
   if (info->current_buffer.duplicate(MX_RIGHT_SAME_RIGHTS, &first) < 0) {
-    FTL_LOG(ERROR) << "Failed to dup shared buffer for provider";
+    FTL_LOG(ERROR) << "Failed to dup shared buffer for provider: "
+                   << info->ToString();
     return false;
   }
 
   info->provider->Start(std::move(first), std::move(second),
                         categories_.Clone());
-  FTL_LOG(INFO) << "Started tracing for provider " << info->label;
   return true;
 }
 
 void TraceManager::StopTracingForProvider(ProviderInfo* info) {
   FTL_DCHECK(info->current_buffer);
   info->provider->Stop([this, info]() {
-    FTL_LOG(INFO) << "Provider stopped, write out data";
+    FTL_VLOG(2) << "Trace provider stopped: " << info->ToString();
+
     WriteProviderInfoRecordToSocket(info->id, info->label, output_);
     WriteRecordsToSocket(std::move(info->current_buffer), kSharedBufferSize,
                          output_);
@@ -239,6 +240,10 @@ void TraceManager::EraseProvider(TraceProvider* provider) {
       active_providers_.end())
     StopTracingForProvider(&*it);
   providers_.erase(it);
+}
+
+std::string TraceManager::ProviderInfo::ToString() {
+  return ftl::StringPrintf("#%d '%s'", id, label.c_str());
 }
 
 }  // namespace tracing

@@ -34,6 +34,8 @@ class TraceManager : public TraceRegistry, public TraceController {
                           std::string label)
         : provider(std::move(provider)), id(id), label(std::move(label)) {}
 
+    std::string ToString();
+
     TraceProviderPtr provider;
     uint32_t id;
     std::string label;
