@@ -14,12 +14,21 @@
 namespace tracing {
 namespace internal {
 
-inline size_t Pad(size_t size) {
+inline constexpr size_t Pad(size_t size) {
   return size + ((8 - (size & 7)) & 7);
 }
 
+inline constexpr size_t BytesToWords(size_t num_bytes) {
+  return num_bytes / sizeof(uint64_t);
+}
+
+inline constexpr size_t WordsToBytes(size_t num_words) {
+  return num_words * sizeof(uint64_t);
+}
+
 template <typename T>
-inline typename std::underlying_type<T>::type ToUnderlyingType(T value) {
+inline constexpr typename std::underlying_type<T>::type ToUnderlyingType(
+    T value) {
   return static_cast<typename std::underlying_type<T>::type>(value);
 }
 
@@ -78,7 +87,7 @@ using RecordHeader = uint64_t;
 struct RecordFields {
   static constexpr size_t kMaxRecordSizeWords = 0xfff;
   static constexpr size_t kMaxRecordSizeBytes =
-      kMaxRecordSizeWords * sizeof(uint64_t);
+      WordsToBytes(kMaxRecordSizeWords);
 
   using Type = Field<0, 3>;
   using RecordSize = Field<4, 15>;

@@ -53,7 +53,7 @@ bool Chunk::ReadChunk(size_t num_words, Chunk* out_chunk) {
 }
 
 bool Chunk::ReadString(size_t length, ftl::StringView* out_string) {
-  auto num_words = Pad(length) / sizeof(uint64_t);
+  auto num_words = BytesToWords(Pad(length));
   if (current_ + num_words > end_)
     return false;
 

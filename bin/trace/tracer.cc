@@ -6,15 +6,18 @@
 
 #include <utility>
 
+#include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/lib/trace/reader.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
+
+using namespace tracing::internal;
 
 namespace tracing {
 namespace {
 
 // Note: Buffer needs to be big enough to store records of maximum size.
-constexpr size_t kBufferSize = internal::RecordFields::kMaxRecordSizeBytes * 4;
+constexpr size_t kBufferSize = RecordFields::kMaxRecordSizeBytes * 4;
 
 }  // namespace
 
@@ -93,7 +96,7 @@ void Tracer::DrainSocket() {
     FTL_DCHECK(bytes_available > 0);
 
     reader::Chunk chunk(reinterpret_cast<const uint64_t*>(buffer_.data()),
-                        bytes_available / sizeof(uint64_t));
+                        BytesToWords(bytes_available));
     if (!reader_->ReadRecords(chunk)) {
       FTL_LOG(ERROR) << "Trace stream is corrupted";
       Done();
@@ -101,7 +104,7 @@ void Tracer::DrainSocket() {
     }
 
     size_t bytes_consumed =
-        bytes_available - chunk.remaining_words() * sizeof(uint64_t);
+        bytes_available - WordsToBytes(chunk.remaining_words());
     bytes_available -= bytes_consumed;
     memmove(buffer_.data(), buffer_.data() + bytes_consumed, bytes_available);
     buffer_end_ = bytes_available;

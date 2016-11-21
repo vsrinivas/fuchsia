@@ -65,7 +65,7 @@ TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
 }
 
 void TraceEngine::WriteInitializationRecord(uint64_t ticks_per_second) {
-  const size_t record_size = sizeof(RecordHeader) + sizeof(uint64_t);
+  const size_t record_size = sizeof(RecordHeader) + WordsToBytes(1);
   Payload payload = AllocateRecord(record_size);
   if (!payload)
     return;
@@ -95,7 +95,7 @@ void TraceEngine::WriteThreadRecord(ThreadIndex index,
                                     uint64_t thread_koid) {
   FTL_DCHECK(index != ThreadRefFields::kInline);
 
-  const size_t record_size = sizeof(RecordHeader) + 2 * sizeof(uint64_t);
+  const size_t record_size = sizeof(RecordHeader) + WordsToBytes(2);
   Payload payload = AllocateRecord(record_size);
   if (!payload)
     return;
@@ -115,7 +115,7 @@ TraceEngine::Payload TraceEngine::WriteEventRecord(
     size_t payload_size) {
   const StringRef name_ref = string_table_.RegisterString(this, name);
   const ThreadRef thread_ref = thread_table_.RegisterCurrentThread(this);
-  const size_t record_size = sizeof(RecordHeader) + sizeof(uint64_t) +
+  const size_t record_size = sizeof(RecordHeader) + WordsToBytes(1) +
                              thread_ref.Size() + category_ref.Size() +
                              name_ref.Size() + payload_size;
   Payload payload = AllocateRecord(record_size);

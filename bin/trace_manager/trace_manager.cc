@@ -10,6 +10,8 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
+using namespace tracing::internal;
+
 namespace tracing {
 namespace {
 
@@ -68,18 +70,17 @@ void WriteRecordsToSocket(mx::vmo vmo, size_t vmo_size, mx::socket& socket) {
 
   const uint64_t* start = reinterpret_cast<const uint64_t*>(buffer.data());
   const uint64_t* current = start;
-  const uint64_t* end = start + (buffer.size() / sizeof(uint64_t));
+  const uint64_t* end = start + BytesToWords(buffer.size());
 
   while (current < end) {
-    auto length = internal::RecordFields::RecordSize::Get<size_t>(*current);
+    auto length = RecordFields::RecordSize::Get<size_t>(*current);
     if (length == 0)
       break;  // end of stream or corrupt data
-    FTL_DCHECK(length <= internal::RecordFields::kMaxRecordSizeWords);
+    FTL_DCHECK(length <= RecordFields::kMaxRecordSizeWords);
     current += length;
   }
 
-  WriteBufferToSocket(buffer.data(), (current - start) * sizeof(uint64_t),
-                      socket);
+  WriteBufferToSocket(buffer.data(), WordsToBytes(current - start), socket);
 }
 
 std::string SanitizeLabel(const fidl::String& label) {
