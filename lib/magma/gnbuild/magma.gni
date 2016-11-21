@@ -13,8 +13,7 @@ declare_args() {
 
   magma_shared_toolchain = "//build/toolchain/fuchsia:${target_cpu}-shared"
 
-  # Placeholder for mako module once it's available
-  magma_python_path = ":"
+  magma_python_path = rebase_path("//third_party/mako", root_build_dir)
 
   # A service driver can supply a testing target here.
   # These tests are run when the test driver is configured to
