@@ -450,7 +450,7 @@ TEST_F(PageSyncImplTest, DownloadBacklogThenReceiveNotifications) {
 
   message_loop_.SetAfterTaskCallback([this] {
     if (storage_.received_commits.size() == 1u) {
-      message_loop_.PostQuitTask();
+      message_loop_.QuitNow();
     }
   });
   message_loop_.Run();
@@ -461,7 +461,7 @@ TEST_F(PageSyncImplTest, DownloadBacklogThenReceiveNotifications) {
 
   message_loop_.SetAfterTaskCallback([this] {
     if (storage_.received_commits.size() == 2u) {
-      message_loop_.PostQuitTask();
+      message_loop_.QuitNow();
     }
   });
   message_loop_.Run();
@@ -482,7 +482,7 @@ TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
   // Loop through five attempts to download the backlog.
   message_loop_.SetAfterTaskCallback([this] {
     if (cloud_provider_.get_commits_calls == 5u) {
-      message_loop_.PostQuitTask();
+      message_loop_.QuitNow();
     }
   });
   message_loop_.Run();
@@ -491,7 +491,7 @@ TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
   cloud_provider_.should_fail_get_commits = false;
   message_loop_.SetAfterTaskCallback([this] {
     if (storage_.received_commits.size() == 1u) {
-      message_loop_.PostQuitTask();
+      message_loop_.QuitNow();
     }
   });
   message_loop_.Run();
