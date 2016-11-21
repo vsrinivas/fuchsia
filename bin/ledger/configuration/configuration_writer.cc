@@ -7,6 +7,8 @@
 
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/configuration/configuration_encoder.h"
+#include "lib/ftl/files/directory.h"
+#include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_view.h"
 
@@ -69,7 +71,12 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  if (!configuration::ConfigurationEncoder::Write(config_path.ToString(),
+
+  std::string config_path_string = config_path.ToString();
+  if (!files::CreateDirectory(files::GetDirectoryName(config_path_string))) {
+    FTL_LOG(ERROR) << "Unable to create directory for file " << config_path;
+  }
+  if (!configuration::ConfigurationEncoder::Write(config_path_string,
                                                   config)) {
     FTL_LOG(ERROR) << "Unable to write to file " << config_path;
     return 1;
