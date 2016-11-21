@@ -30,7 +30,7 @@ struct magma_system_relocation_entry {
 
 // a buffer plus its associated relocations referenced by a command buffer
 struct magma_system_exec_resource {
-    uint32_t buffer_handle;
+    uint64_t buffer_id;
     uint32_t num_relocations;
     uint64_t offset;
     uint64_t length;

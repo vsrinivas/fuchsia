@@ -35,14 +35,14 @@ TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidBatchBufferIndex)
 TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidExecResourceHandle)
 {
     auto cmd_buf = CommandBufferHelper::Create();
-    cmd_buf->abi_resources()[0].buffer_handle = 0xdeadbeef;
+    cmd_buf->abi_resources()[0].buffer_id = 0xdeadbeefdeadbeef;
     EXPECT_FALSE(cmd_buf->Execute());
 }
 
 TEST(MagmaSystemContext, ExecuteCommandBuffer_DuplicateExecResourceHandle)
 {
     auto cmd_buf = CommandBufferHelper::Create();
-    cmd_buf->abi_resources()[1].buffer_handle = cmd_buf->abi_resources()[0].buffer_handle;
+    cmd_buf->abi_resources()[1].buffer_id = cmd_buf->abi_resources()[0].buffer_id;
     EXPECT_FALSE(cmd_buf->Execute());
 }
 

@@ -116,7 +116,7 @@ private:
             DASSERT(connection_->ImportBuffer(duplicate_handle, &id));
             resources_.push_back(connection_->LookupBuffer(id).get());
             DASSERT(buffer->platform_buffer()->duplicate_handle(&duplicate_handle));
-            batch_buf->buffer_handle = id;
+            batch_buf->buffer_id = id;
             batch_buf->offset = 0;
             batch_buf->length = buffer->platform_buffer()->size();
             batch_buf->num_relocations = kNumResources - 1;
@@ -142,7 +142,7 @@ private:
             DASSERT(connection_->ImportBuffer(duplicate_handle, &id));
             resources_.push_back(connection_->LookupBuffer(id).get());
             DASSERT(buffer->platform_buffer()->duplicate_handle(&duplicate_handle));
-            resource->buffer_handle = id;
+            resource->buffer_id = id;
             resource->offset = 0;
             resource->length = buffer->platform_buffer()->size();
             resource->num_relocations = 0;

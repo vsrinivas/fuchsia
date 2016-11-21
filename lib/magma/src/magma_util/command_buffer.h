@@ -38,7 +38,7 @@ public:
         {
         }
 
-        uint32_t buffer_handle() const { return resource_->buffer_handle; }
+        uint64_t buffer_id() const { return resource_->buffer_id; }
 
         uint32_t num_relocations() const { return resource_->num_relocations; }
 

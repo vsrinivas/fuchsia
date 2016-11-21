@@ -59,15 +59,13 @@ void magma_system_destroy_context(magma_system_connection* connection, uint32_t 
 }
 
 int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, uint64_t* size_out,
-                           uint32_t* buffer_id_out)
+                           uint64_t* buffer_id_out)
 {
     auto buf = magma::PlatformBuffer::Create(size);
     if (!buf)
         return DRET(-ENOMEM);
 
     *size_out = buf->size();
-    // TODO(MA-104) Use 64 bit buffer ids everywhere
-    DASSERT(buf->id() <= UINT32_MAX);
     *buffer_id_out = buf->id();
 
     if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(std::move(buf)))
@@ -76,13 +74,13 @@ int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, u
     return 0;
 }
 
-void magma_system_free(magma_system_connection* connection, uint32_t buffer_id)
+void magma_system_free(magma_system_connection* connection, uint64_t buffer_id)
 {
     magma::PlatformIpcConnection::cast(connection)->ReleaseBuffer(buffer_id);
 }
 
 int32_t magma_system_import(magma_system_connection* connection, uint32_t buffer_handle,
-                            uint32_t* buffer_id_out)
+                            uint64_t* buffer_id_out)
 {
     uint64_t id;
     if (!magma::PlatformBuffer::IdFromHandle(buffer_handle, &id))
@@ -107,7 +105,7 @@ int32_t magma_system_import(magma_system_connection* connection, uint32_t buffer
     return 0;
 }
 
-int32_t magma_system_export(magma_system_connection* connection, uint32_t buffer_id,
+int32_t magma_system_export(magma_system_connection* connection, uint64_t buffer_id,
                             uint32_t* buffer_handle_out)
 {
 
@@ -121,13 +119,13 @@ int32_t magma_system_export(magma_system_connection* connection, uint32_t buffer
     return 0;
 }
 
-void magma_system_set_tiling_mode(magma_system_connection* connection, uint32_t buffer_id,
+void magma_system_set_tiling_mode(magma_system_connection* connection, uint64_t buffer_id,
                                   uint32_t tiling_mode)
 {
     DLOG("magma_system_set_tiling_mode unimplemented");
 }
 
-int32_t magma_system_map(magma_system_connection* connection, uint32_t buffer_id, void** addr_out)
+int32_t magma_system_map(magma_system_connection* connection, uint64_t buffer_id, void** addr_out)
 {
     auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(buffer_id);
     if (!buf)
@@ -139,7 +137,7 @@ int32_t magma_system_map(magma_system_connection* connection, uint32_t buffer_id
     return 0;
 }
 
-int32_t magma_system_unmap(magma_system_connection* connection, uint32_t buffer_id, void* addr)
+int32_t magma_system_unmap(magma_system_connection* connection, uint64_t buffer_id, void* addr)
 {
     auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(buffer_id);
     if (!buf)
@@ -151,26 +149,25 @@ int32_t magma_system_unmap(magma_system_connection* connection, uint32_t buffer_
     return 0;
 }
 
-void magma_system_set_domain(magma_system_connection* connection, uint32_t buffer_id,
+void magma_system_set_domain(magma_system_connection* connection, uint64_t buffer_id,
                              uint32_t read_domains, uint32_t write_domain)
 {
     DLOG("magma_system_set_tiling_mode unimplemented");
 }
 
 void magma_system_submit_command_buffer(magma_system_connection* connection,
-                                        uint32_t command_buffer_id, uint32_t context_id)
+                                        uint64_t command_buffer_id, uint32_t context_id)
 {
     magma::PlatformIpcConnection::cast(connection)
         ->ExecuteCommandBuffer(command_buffer_id, context_id);
 }
 
-void magma_system_wait_rendering(magma_system_connection* connection, uint32_t buffer_id)
+void magma_system_wait_rendering(magma_system_connection* connection, uint64_t buffer_id)
 {
-
     magma::PlatformIpcConnection::cast(connection)->WaitRendering(buffer_id);
 }
 
-void magma_system_display_page_flip(magma_system_connection* connection, uint32_t buffer_id,
+void magma_system_display_page_flip(magma_system_connection* connection, uint64_t buffer_id,
                                     magma_system_pageflip_callback_t callback, void* data)
 {
 

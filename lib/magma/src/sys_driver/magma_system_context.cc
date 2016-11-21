@@ -79,7 +79,7 @@ bool MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer>
 
     // validate exec resources
     for (uint32_t i = 0; i < cmd_buf->num_resources(); i++) {
-        uint64_t id = cmd_buf->resource(i).buffer_handle();
+        uint64_t id = cmd_buf->resource(i).buffer_id();
 
         auto buf = owner_->LookupBufferForContext(id);
         if (!buf)
