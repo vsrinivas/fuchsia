@@ -47,7 +47,7 @@ void CancellableContainer::AddCancellable(
     cancellables_.insert(cancellable);
     // Do not keep a ftl::RefPtr<Cancellable> in the callback, otherwise
     // cancellable will own itself and will never be deleted.
-    cancellable->OnDone([ this, cancellable = cancellable.get() ] {
+    cancellable->SetOnDone([ this, cancellable = cancellable.get() ] {
       cancellables_.erase(ftl::RefPtr<Cancellable>(cancellable));
     });
   }

@@ -31,11 +31,11 @@ class Cancellable : public ftl::RefCountedThreadSafe<Cancellable> {
   Cancellable();
   virtual ~Cancellable();
 
-  // The client can call the |OnDone| method once before the cancellable is
+  // The client can call the |SetOnDone| method once before the cancellable is
   // done. If the |OnDone| method has been called, the service must call the
   // |callback| after having called any completion callbacks. It must not call
   // the callback if the |Cancel| method has been called.
-  virtual void OnDone(std::function<void()> callback) = 0;
+  virtual void SetOnDone(std::function<void()> callback) = 0;
 
  private:
   friend CancellableContainer;

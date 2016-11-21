@@ -23,7 +23,7 @@ class FakeCancellable : public Cancellable {
     return false;
   }
 
-  void OnDone(std::function<void()> callback) override {
+  void SetOnDone(std::function<void()> callback) override {
     ++nb_on_done;
     this->callback = callback;
   }

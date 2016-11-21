@@ -20,7 +20,7 @@ bool CancellableImpl::IsDone() {
   return is_done_;
 }
 
-void CancellableImpl::OnDone(std::function<void()> callback) {
+void CancellableImpl::SetOnDone(std::function<void()> callback) {
   FTL_DCHECK(!on_done_);
   on_done_ = std::move(callback);
 }

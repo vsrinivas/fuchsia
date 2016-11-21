@@ -77,7 +77,7 @@ class CancellableImpl final : public Cancellable {
   // Cancellable
   void Cancel() override;
   bool IsDone() override;
-  void OnDone(std::function<void()> callback) override;
+  void SetOnDone(std::function<void()> callback) override;
 
  private:
   CancellableImpl(std::function<void()> on_cancel);

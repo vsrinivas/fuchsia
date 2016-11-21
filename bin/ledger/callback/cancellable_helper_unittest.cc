@@ -39,7 +39,7 @@ TEST(CancellableImpl, DoneInvalidateCancellable) {
 TEST(CancellableImpl, DoneCallsOnDone) {
   ftl::RefPtr<CancellableImpl> cancellable = CancellableImpl::Create([] {});
   bool is_done;
-  cancellable->OnDone([&is_done] { is_done = true; });
+  cancellable->SetOnDone([&is_done] { is_done = true; });
 
   EXPECT_FALSE(is_done);
 
