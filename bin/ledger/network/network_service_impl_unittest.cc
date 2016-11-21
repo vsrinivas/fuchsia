@@ -290,5 +290,26 @@ TEST_F(NetworkServiceImplTest, Redirection) {
   EXPECT_EQ(kRedirectUrl, fake_network_service_->GetRequest()->url);
 }
 
+TEST_F(NetworkServiceImplTest, CancelOnCallback) {
+  ftl::RefPtr<callback::Cancellable> request;
+  network::URLResponsePtr response;
+  request = network_service_.Request(
+      [this] {
+        SetStringResponse("Hello", 200);
+        return NewRequest("GET", "http://example.com");
+      },
+      [this, &request,
+       &response](network::URLResponsePtr received_response) mutable {
+        response = std::move(received_response);
+        loop_.PostQuitTask();
+        request->Cancel();
+        request = nullptr;
+      });
+  EXPECT_FALSE(response);
+  RunLoop();
+
+  EXPECT_TRUE(response);
+}
+
 }  // namespace
 }  // namespace ledger

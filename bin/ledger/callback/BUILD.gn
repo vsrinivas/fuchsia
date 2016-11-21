@@ -5,6 +5,8 @@
 source_set("callback") {
   sources = [
     "auto_cleanable.h",
+    "destruction_sentinel.cc",
+    "destruction_sentinel.h",
     "cancellable.cc",
     "cancellable.h",
     "cancellable_helper.cc",
@@ -26,6 +28,7 @@ executable("unittests") {
     "auto_cleanable_unittest.cc",
     "cancellable_helper_unittest.cc",
     "cancellable_unittest.cc",
+    "destruction_sentinel_unittest.cc",
   ]
 
   deps = [

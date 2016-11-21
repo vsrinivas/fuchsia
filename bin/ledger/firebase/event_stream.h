@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/src/callback/destruction_sentinel.h"
 #include "apps/ledger/src/firebase/status.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"
@@ -55,7 +56,7 @@ class EventStream : public mtl::DataPipeDrainer::Client {
 
   std::unique_ptr<mtl::DataPipeDrainer> drainer_;
 
-  bool* destruction_sentinel_ = nullptr;
+  callback::DestructionSentinel destruction_sentinel_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(EventStream);
 };

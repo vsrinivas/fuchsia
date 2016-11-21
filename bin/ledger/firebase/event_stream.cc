@@ -13,10 +13,7 @@ namespace firebase {
 
 EventStream::EventStream() {}
 
-EventStream::~EventStream() {
-  if (destruction_sentinel_)
-    *destruction_sentinel_ = true;
-}
+EventStream::~EventStream() {}
 
 void EventStream::Start(
     mx::datapipe_consumer source,
@@ -63,15 +60,11 @@ bool EventStream::ProcessLine(ftl::StringView line) {
       data_.resize(data_.size() - 1);
     }
 
-    // Calling the user callback, and exiting early if this objects is
-    // destroyed.
-    bool is_destroyed = false;
-    destruction_sentinel_ = &is_destroyed;
-    event_callback_(Status::OK, std::move(event_type_), std::move(data_));
-    if (is_destroyed)
+    if (destruction_sentinel_.DestructedWhile([this] {
+          event_callback_(Status::OK, std::move(event_type_), std::move(data_));
+        })) {
       return false;
-
-    destruction_sentinel_ = nullptr;
+    }
     event_type_.clear();
     data_.clear();
     return true;

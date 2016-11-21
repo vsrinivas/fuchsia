@@ -5,6 +5,7 @@
 #include "apps/ledger/src/network/network_service_impl.h"
 
 #include "apps/ledger/src/callback/cancellable_helper.h"
+#include "apps/ledger/src/callback/destruction_sentinel.h"
 #include "lib/ftl/strings/ascii.h"
 
 namespace ledger {
@@ -17,12 +18,11 @@ class NetworkServiceImpl::RunningRequest {
  public:
   RunningRequest(std::function<network::URLRequestPtr()> request_factory)
       : request_factory_(std::move(request_factory)),
-        next_url_(),
         redirect_count_(0u) {}
 
   void Cancel() {
-    if (on_empty_callback_)
-      on_empty_callback_();
+    FTL_DCHECK(on_empty_callback_);
+    on_empty_callback_();
   }
 
   // Set the network service to use. This will start (or restart) the request.
@@ -36,9 +36,13 @@ class NetworkServiceImpl::RunningRequest {
     // Once this class calls its callback, it must notify its container.
     callback_ = [ this, callback = std::move(callback) ](
         network::URLResponsePtr response) {
-      callback(std::move(response));
-      if (on_empty_callback_)
-        on_empty_callback_();
+      FTL_DCHECK(on_empty_callback_);
+      if (destruction_sentinel_.DestructedWhile([
+            callback = std::move(callback), &response
+          ] { callback(std::move(response)); })) {
+        return;
+      }
+      on_empty_callback_();
     };
   }
 
@@ -129,6 +133,7 @@ class NetworkServiceImpl::RunningRequest {
   uint32_t redirect_count_;
   network::NetworkService* network_service_;
   network::URLLoaderPtr url_loader_;
+  callback::DestructionSentinel destruction_sentinel_;
 };
 
 NetworkServiceImpl::NetworkServiceImpl(
