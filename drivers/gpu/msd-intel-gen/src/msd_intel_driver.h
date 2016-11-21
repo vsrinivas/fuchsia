@@ -11,7 +11,9 @@
 
 class MsdIntelDriver : public msd_driver {
 public:
-    static MsdIntelDriver* Create();
+    virtual ~MsdIntelDriver() {}
+
+    static std::unique_ptr<MsdIntelDriver> Create();
     static void Destroy(MsdIntelDriver* drv);
 
     static MsdIntelDriver* cast(msd_driver* drv)
@@ -27,7 +29,6 @@ public:
 
 private:
     MsdIntelDriver();
-    virtual ~MsdIntelDriver() {}
 
     static const uint32_t kMagic = 0x64726976; //"driv"
 

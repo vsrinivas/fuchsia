@@ -9,21 +9,16 @@
 
 MsdIntelDriver::MsdIntelDriver() { magic_ = kMagic; }
 
-MsdIntelDriver* MsdIntelDriver::Create()
+std::unique_ptr<MsdIntelDriver> MsdIntelDriver::Create()
 {
-    auto drv = new MsdIntelDriver();
-    if (!drv) {
-        DLOG("Failed to allocate MsdIntelDriver");
-        return nullptr;
-    }
-    return drv;
+    return std::unique_ptr<MsdIntelDriver>(new MsdIntelDriver());
 }
 
 void MsdIntelDriver::Destroy(MsdIntelDriver* drv) { delete drv; }
 
 //////////////////////////////////////////////////////////////////////////////
 
-msd_driver* msd_driver_create(void) { return MsdIntelDriver::Create(); }
+msd_driver* msd_driver_create(void) { return MsdIntelDriver::Create().release(); }
 
 void msd_driver_configure(struct msd_driver* drv, uint32_t flags)
 {
