@@ -2,9 +2,7 @@
     "labels": [
         "//apps/dart_content_handler",
         "//apps/dart_content_handler/examples",
-        "//apps/modular/src/document_store",
-        "//apps/maxwell",
-        "//apps/modular/examples/hello_app"
+        "//apps/maxwell"
     ],
     "binaries": [
         {
@@ -26,22 +24,6 @@
         {
             "binary": "dart_content_handler",
             "bootfs_path": "apps/dart_content_handler"
-        },
-        {
-            "binary": "document_store_factory",
-            "bootfs_path": "apps/document_store"
-        },
-        {
-            "binary": "document_store_test",
-            "bootfs_path": "apps/document_store_test"
-        },
-        {
-            "binary": "hello_app_child",
-            "bootfs_path": "apps/hello_app_child"
-        },
-        {
-            "binary": "hello_app_parent",
-            "bootfs_path": "apps/hello_app_parent"
         },
         {
             "binary": "hello_app_dart.dartx",
