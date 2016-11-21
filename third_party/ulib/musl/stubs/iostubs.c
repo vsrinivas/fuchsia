@@ -341,3 +341,9 @@ static int stub_ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeo
     return -1;
 }
 weak_alias(stub_ppoll, ppoll);
+
+static int stub_ioctl(int fd, int req, ...) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_ioctl, ioctl);

@@ -490,7 +490,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/getrusage.c \
     $(LOCAL_DIR)/src/misc/getsubopt.c \
     $(LOCAL_DIR)/src/misc/initgroups.c \
-    $(LOCAL_DIR)/src/misc/ioctl.c \
     $(LOCAL_DIR)/src/misc/issetugid.c \
     $(LOCAL_DIR)/src/misc/lockf.c \
     $(LOCAL_DIR)/src/misc/login_tty.c \

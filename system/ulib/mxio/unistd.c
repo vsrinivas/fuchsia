@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
@@ -1483,4 +1484,20 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
     }
 
     return (r == NO_ERROR || r == ERR_TIMED_OUT) ? nfds : ERROR(r);
+}
+
+int ioctl(int fd, int req, ...) {
+    void* arg;
+    va_list ap;
+    va_start(ap, req);
+    arg = va_arg(ap, void*);
+    va_end(ap);
+
+    const void* in_buf;
+    void* out_buf;
+    size_t in_len, out_len;
+    in_buf = out_buf = arg;
+    in_len = out_len = req & 0xffff;
+
+    return STATUS(mxio_ioctl(fd, req, in_buf, in_len, out_buf, out_len));
 }

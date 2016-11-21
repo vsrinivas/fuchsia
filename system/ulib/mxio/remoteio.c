@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sys/ioctl.h>
 #include <threads.h>
 
 #include <magenta/device/ioctl.h>
@@ -751,6 +752,25 @@ static ssize_t mxsio_write(mxio_t* io, const void* data, size_t len) {
     }
 }
 
+static ssize_t mxsio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
+                           size_t in_len, void* out_buf, size_t out_len) {
+    mxrio_t* rio = (mxrio_t*)io;
+    mx_status_t r;
+
+    switch (op) {
+    case FIONREAD: {
+        mx_size_t avail;
+        if ((r = mx_socket_read(rio->h2, 0, NULL, 0, &avail)) < 0) {
+            return r;
+        }
+        *(int*)out_buf = avail;
+        return NO_ERROR;
+    }
+    }
+
+    return mxrio_ioctl(io, op, in_buf, in_len, out_buf, out_len);
+}
+
 static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
@@ -816,7 +836,7 @@ static mxio_ops_t mxio_socket_ops = {
     .close = mxrio_close,
     .open = mxrio_open,
     .clone = mxio_default_clone,
-    .ioctl = mxrio_ioctl,
+    .ioctl = mxsio_ioctl,
     .wait_begin = mxsio_wait_begin,
     .wait_end = mxsio_wait_end,
     .unwrap = mxio_default_unwrap,
