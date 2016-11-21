@@ -84,17 +84,30 @@ static void timer_set(timer_t *timer, lk_time_t delay, lk_time_t period, timer_c
     delay += 1;
 
     now = current_time();
-    timer->scheduled_time = now + delay;
-    timer->periodic_time = period;
-    timer->callback = callback;
-    timer->arg = arg;
-
-    LTRACEF("scheduled time %u\n", timer->scheduled_time);
 
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&timer_lock, state);
 
     uint cpu = arch_curr_cpu_num();
+
+    if (unlikely(timer->active_cpu == (int)cpu)) {
+        /* the timer is active on our own cpu, we must be inside the callback */
+        if (timer->cancel)
+            goto out;
+    } else if (unlikely(timer->active_cpu >= 0)) {
+        panic("timer %p currently active on a different cpu %d\n", timer, timer->active_cpu);
+    }
+
+    /* set up the structure */
+    timer->scheduled_time = now + delay;
+    timer->periodic_time = period;
+    timer->callback = callback;
+    timer->arg = arg;
+    timer->active_cpu = -1;
+    timer->cancel = false;
+
+    LTRACEF("scheduled time %u\n", timer->scheduled_time);
+
     insert_timer_in_queue(cpu, timer);
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
@@ -105,6 +118,7 @@ static void timer_set(timer_t *timer, lk_time_t delay, lk_time_t period, timer_c
     }
 #endif
 
+out:
     spin_unlock_irqrestore(&timer_lock, state);
 }
 
@@ -160,43 +174,66 @@ void timer_cancel(timer_t *timer)
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&timer_lock, state);
 
-#if PLATFORM_HAS_DYNAMIC_TIMER
     uint cpu = arch_curr_cpu_num();
 
-    timer_t *oldhead = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+    /* mark the timer as cancelled */
+    timer->cancel = true;
+    smp_mb();
+
+    /* see if we're trying to cancel the timer we're currently in the middle of handling */
+    if (unlikely(timer->active_cpu == (int)cpu)) {
+        /* zero it out */
+        timer->callback = NULL;
+        timer->arg = NULL;
+        timer->periodic_time = 0;
+
+        /* we're done, so return back to the callback */
+        spin_unlock_irqrestore(&timer_lock, state);
+        return;
+    }
+
+    /* if the timer is in a queue, remove it and adjust hardware timers if needed */
+    if (list_in_list(&timer->node)) {
+#if PLATFORM_HAS_DYNAMIC_TIMER
+        timer_t *oldhead = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
 #endif
 
-    if (list_in_list(&timer->node))
+        /* remove it from the queue */
         list_delete(&timer->node);
 
-    /* to keep it from being reinserted into the queue if called from
-     * periodic timer callback.
-     */
-    timer->periodic_time = 0;
-    timer->callback = NULL;
-    timer->arg = NULL;
-
 #if PLATFORM_HAS_DYNAMIC_TIMER
-    /* see if we've just modified the head of the timer queue */
-    timer_t *newhead = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
-    if (newhead == NULL) {
-        LTRACEF("clearing old hw timer, nothing in the queue\n");
-        platform_stop_timer();
-    } else if (newhead != oldhead) {
-        lk_time_t delay;
-        lk_time_t now = current_time();
+        /* see if we've just modified the head of this cpu's timer queue */
+        /* if we modified another cpu's queue, we'll just let it fire and sort itself out */
+        timer_t *newhead = list_peek_head_type(&timers[cpu].timer_queue, timer_t, node);
+        if (newhead == NULL) {
+            LTRACEF("clearing old hw timer, nothing in the queue\n");
+            platform_stop_timer();
+        } else if (newhead != oldhead) {
+            lk_time_t delay;
+            lk_time_t now = current_time();
 
-        if (TIME_LT(newhead->scheduled_time, now))
-            delay = 0;
-        else
-            delay = newhead->scheduled_time - now;
+            if (TIME_LT(newhead->scheduled_time, now))
+                delay = 0;
+            else
+                delay = newhead->scheduled_time - now;
 
-        LTRACEF("setting new timer to %u\n", (uint) delay);
-        platform_set_oneshot_timer(timer_tick, NULL, delay);
-    }
+            LTRACEF("setting new timer to %u\n", (uint) delay);
+            platform_set_oneshot_timer(timer_tick, NULL, delay);
+        }
 #endif
+    }
 
     spin_unlock_irqrestore(&timer_lock, state);
+
+    /* wait for the timer to become un-busy in case a callback is currently active on another cpu */
+    while (timer->active_cpu >= 0) {
+        arch_spinloop_pause();
+    }
+
+    /* zero it out */
+    timer->callback = NULL;
+    timer->arg = NULL;
+    timer->periodic_time = 0;
 }
 
 /* called at interrupt time to process any pending timers */
@@ -229,14 +266,16 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
         DEBUG_ASSERT(timer && timer->magic == TIMER_MAGIC);
         list_delete(&timer->node);
 
+        /* mark the timer busy */
+        timer->active_cpu = cpu;
+        /* spinlock below acts as a memory barrier */
+
         /* we pulled it off the list, release the list lock to handle it */
         spin_unlock(&timer_lock);
 
         LTRACEF("dequeued timer %p, scheduled %u periodic %u\n", timer, timer->scheduled_time, timer->periodic_time);
 
         THREAD_STATS_INC(timers);
-
-        bool periodic = timer->periodic_time > 0;
 
         LTRACEF("timer %p firing callback %p, arg %p\n", timer, timer->callback, timer->arg);
         if (timer->callback(timer, now, timer->arg) == INT_RESCHEDULE)
@@ -246,13 +285,23 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
         /* it may have been requeued or periodic, grab the lock so we can safely inspect it */
         spin_lock(&timer_lock);
 
-        /* if it was a periodic timer and it hasn't been requeued
-         * by the callback put it back in the list
-         */
-        if (periodic && !list_in_list(&timer->node) && timer->periodic_time > 0) {
-            LTRACEF("periodic timer, period %u\n", timer->periodic_time);
-            timer->scheduled_time = now + timer->periodic_time;
-            insert_timer_in_queue(cpu, timer);
+        /* record whether or not we've been cancelled in the meantime */
+        bool cancelled = timer->cancel;
+
+        /* mark it not busy */
+        timer->active_cpu = -1;
+        smp_mb();
+
+        /* if we've been cancelled, it's not okay to touch the timer structure from now on out */
+        if (!cancelled) {
+            /* if it is a periodic timer and it hasn't been requeued
+             * by the callback put it back in the list
+             */
+            if (timer->periodic_time > 0 && !list_in_list(&timer->node)) {
+                LTRACEF("periodic timer, period %u\n", timer->periodic_time);
+                timer->scheduled_time = now + timer->periodic_time;
+                insert_timer_in_queue(cpu, timer);
+            }
         }
     }
 

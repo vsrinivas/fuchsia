@@ -886,7 +886,17 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, v
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
-    spin_lock(&thread_lock);
+    /* spin trylocking on the thread lock since the routine that set up the callback,
+     * thread_sleep_etc, may be trying to simultaneously cancel this timer while holding the
+     * thread_lock.
+     */
+    while (unlikely(spin_trylock(&thread_lock))) {
+        /* we failed to grab it, check for cancel */
+        if (timer->cancel) {
+            /* we were cancelled, so bail immediately */
+            return INT_NO_RESCHEDULE;
+        }
+    }
 
     if (t->state != THREAD_SLEEPING) {
         spin_unlock(&thread_lock);
@@ -946,7 +956,6 @@ status_t thread_sleep_etc(lk_time_t delay, bool interruptable)
 
     blocked_status = current_thread->blocked_status;
     if (blocked_status == ERR_INTERRUPTED) {
-        /* TODO: fix race in timer_cancel which may cause it to fire after this */
         timer_cancel(&timer);
     }
 
@@ -1282,7 +1291,17 @@ static enum handler_return wait_queue_timeout_handler(timer_t *timer, lk_time_t 
 
     DEBUG_ASSERT(thread->magic == THREAD_MAGIC);
 
-    spin_lock(&thread_lock);
+    /* spin trylocking on the thread lock since the routine that set up the callback,
+     * wait_queue_block, may be trying to simultaneously cancel this timer while holding the
+     * thread_lock.
+     */
+    while (unlikely(spin_trylock(&thread_lock))) {
+        /* we failed to grab it, check for cancel */
+        if (timer->cancel) {
+            /* we were cancelled, so bail immediately */
+            return INT_NO_RESCHEDULE;
+        }
+    }
 
     enum handler_return ret = INT_NO_RESCHEDULE;
     if (thread_unblock_from_wait_queue(thread, ERR_TIMED_OUT) >= NO_ERROR) {
