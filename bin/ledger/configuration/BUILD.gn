@@ -44,7 +44,7 @@ executable("unittests") {
 }
 
 executable("configuration_writer") {
-  output_name = "ledger_configuration"
+  output_name = "configure_ledger"
 
   sources = [
     "configuration_writer.cc"
