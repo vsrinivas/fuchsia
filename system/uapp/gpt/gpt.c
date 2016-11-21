@@ -14,6 +14,8 @@
 
 #define DEFAULT_BLOCKDEV "/dev/class/block/000"
 
+#define FLAG_HIDDEN ((uint64_t) 0x2)
+
 static int cgetc(void) {
     uint8_t ch;
     for (;;) {
@@ -279,20 +281,22 @@ static bool parse_guid(char* guid, uint8_t* bytes_out) {
 }
 
 /*
- * Edit a partition, changing either its type or ID GUID. path_device should be
- * the path to the device where the GPT can be read. idx_part should be the
- * index of the partition in the GPT that you want to change. guid should be the
- * string/human-readable form of the GUID and should be 36 characters plus a
- * null terminator.
+ * Give a path to a block device and a partition index into a GPT, load the GPT
+ * information into memory and find the requested partition. This does all the
+ * bounds and other error checking. If NO_ERROR is returned, the out parameters
+ * will be set to valid values. If NO_ERROR is returned, the caller should close
+ * fd_out after it is done using the GPT information.
  */
-static mx_status_t edit_partition(char* path_device, long idx_part,
-                                  char* type_or_id, char* guid) {
+static mx_status_t get_gpt_and_part(char* path_device, long idx_part,
+                                    bool warn, int* fd_out,
+                                    gpt_device_t** gpt_out,
+                                    gpt_partition_t** part_out) {
     if (idx_part < 0 || idx_part >= PARTITIONS_COUNT) {
         return ERR_INVALID_ARGS;
     }
 
     int fd = -1;
-    gpt_device_t* gpt = init(path_device, true, &fd);
+    gpt_device_t* gpt = init(path_device, warn, &fd);
     if (gpt == NULL) {
         tear_down_gpt(fd, gpt);
         return ERR_INTERNAL;
@@ -301,7 +305,32 @@ static mx_status_t edit_partition(char* path_device, long idx_part,
     gpt_partition_t* part = gpt->partitions[idx_part];
     if (part == NULL) {
         tear_down_gpt(fd, gpt);
-        return ERR_INVALID_ARGS;
+    }
+
+    *gpt_out = gpt;
+    *part_out = part;
+    *fd_out = fd;
+    return NO_ERROR;
+}
+
+/*
+ * Edit a partition, changing either its type or ID GUID. path_device should be
+ * the path to the device where the GPT can be read. idx_part should be the
+ * index of the partition in the GPT that you want to change. guid should be the
+ * string/human-readable form of the GUID and should be 36 characters plus a
+ * null terminator.
+ */
+static mx_status_t edit_partition(char* path_device, long idx_part,
+                                  char* type_or_id, char* guid) {
+    gpt_device_t* gpt = NULL;
+    gpt_partition_t* part = NULL;
+    int fd = -1;
+
+    mx_status_t rc = get_gpt_and_part(path_device, idx_part, true, &fd, &gpt,
+                                      &part);
+    if (rc != NO_ERROR) {
+        tear_down_gpt(fd, gpt);
+        return rc;
     }
 
     // whether we're setting the type or id GUID
@@ -329,9 +358,38 @@ static mx_status_t edit_partition(char* path_device, long idx_part,
         memcpy(part->guid, guid_bytes, GPT_GUID_LEN);
     }
 
-    commit(gpt, fd);
+    rc = commit(gpt, fd);
     tear_down_gpt(fd, gpt);
-    return NO_ERROR;
+    return rc;
+}
+
+/*
+ * Set whether a partition is visible or not to the EFI firmware. If a
+ * partition is set as hidden, the firmware will not attempt to boot from the
+ * partition.
+ */
+static mx_status_t set_visibility(char* path_device, long idx_part,
+                                  bool visible) {
+    gpt_device_t* gpt = NULL;
+    gpt_partition_t* part = NULL;
+    int fd = -1;
+
+    mx_status_t rc = get_gpt_and_part(path_device, idx_part, true, &fd, &gpt,
+                                      &part);
+    if (rc != NO_ERROR) {
+        tear_down_gpt(fd, gpt);
+        return rc;
+    }
+
+    if (visible) {
+        part->flags &= ~FLAG_HIDDEN;
+    } else {
+        part->flags |= FLAG_HIDDEN;
+    }
+
+    rc = commit(gpt, fd);
+    tear_down_gpt(fd, gpt);
+    return rc;
 }
 
 int main(int argc, char** argv) {
@@ -352,6 +410,20 @@ int main(int argc, char** argv) {
         if (edit_partition(argv[5], strtol(argv[2], NULL, 0), argv[3], argv[4])) {
             printf("Failed to edit partition.\n");
         }
+    } else if (!strcmp(cmd, "visible")) {
+        if (argc < 5) goto usage;
+        bool visible;
+        if (!strcmp(argv[3], "true")) {
+            visible = true;
+        } else if (!strcmp(argv[3], "false")) {
+            visible = false;
+        } else {
+            goto usage;
+        }
+
+        if (set_visibility(argv[4], strtol(argv[2], NULL, 0), visible)) {
+            printf("Error changing visibility.\n");
+        }
     } else {
         goto usage;
     }
@@ -363,5 +435,6 @@ usage:
     printf("add <offset> <blocks> <name> [<dev>]\n");
     printf("remove <n> [<dev>]\n");
     printf("edit <n> type|id <guid> <dev>\n");
+    printf("visible <n> true|false <dev>\n");
     return 0;
 }
