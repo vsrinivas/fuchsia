@@ -66,3 +66,16 @@ executable("selecttest") {
     "magenta",
   ]
 }
+
+executable("udptest") {
+  testonly = true
+
+  sources = [
+    "udptest.c",
+  ]
+
+  libs = [
+    "mxio",
+    "magenta",
+  ]
+}

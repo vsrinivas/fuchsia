@@ -210,6 +210,41 @@ ssize_t net_write(int sockfd, const void* buf, size_t count) {
   return lwip_write(sockfd, buf, count);
 }
 
+ssize_t net_recvfrom(int sockfd, void* buf, size_t count, int flags,
+                     struct sockaddr* addr, socklen_t* addrlen) {
+  struct lwip_sockaddr_storage lwip_addr;
+  lwip_socklen_t lwip_addrlen = sizeof(lwip_addr);
+  int ret = lwip_recvfrom(sockfd, buf, count, flags,
+                          (struct lwip_sockaddr*)&lwip_addr, &lwip_addrlen);
+  if (ret < 0) return ret;  // errno is propagated
+  if (convert_addr_from_lwip((const struct lwip_sockaddr*)&lwip_addr,
+                             lwip_addrlen, addr, addrlen) < 0) {
+    errno = EINVAL;
+    return -1;
+  }
+  return ret;
+}
+
+ssize_t net_sendto(int sockfd, const void* buf, size_t count, int flags,
+                   const struct sockaddr* addr, socklen_t addrlen) {
+  if (addr != NULL && addrlen != 0) {
+    struct lwip_sockaddr_storage lwip_addr;
+    lwip_socklen_t lwip_addrlen = sizeof(lwip_addr);
+    if (convert_addr_to_lwip(addr, addrlen, (struct lwip_sockaddr*)&lwip_addr,
+                             &lwip_addrlen) < 0) {
+      errno = EINVAL;
+      return -1;
+    }
+    return lwip_sendto(sockfd, buf, count, flags,
+                       (struct lwip_sockaddr*)&lwip_addr, lwip_addrlen);
+  } else if (addr == NULL && addrlen == 0) {
+    return lwip_sendto(sockfd, buf, count, flags, NULL, 0);
+  } else {
+    errno = EINVAL;
+    return -1;
+  }
+}
+
 static void convert_optname_to_lwip(int level, int optname, int* lwip_level,
                                    int* lwip_optname) {
   switch (level) {

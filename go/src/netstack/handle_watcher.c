@@ -154,7 +154,8 @@ static void socket_signals_change(iostate_t* ios,
     }
   }
   if (new_sigs) {
-    if ((r = mx_waitset_add(s_waitset, (uint64_t)ios, ios->s, new_sigs)) < 0) {
+    if ((r = mx_waitset_add(s_waitset, (uint64_t)ios, ios->data_h, new_sigs)) <
+        0) {
       error("mx_waitset_add failed (%d)\n", r);
       return;
     }

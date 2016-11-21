@@ -21,7 +21,7 @@ iostate_t* iostate_alloc(void) {
   assert(ios);
   atomic_init(&ios->refcount, 1);
   ios->sockfd = -1;
-  ios->s = MX_HANDLE_INVALID;
+  ios->data_h = MX_HANDLE_INVALID;
   debug_alloc("iostate_alloc: %p: rc=%d\n", ios, ios->refcount);
   return ios;
 }
@@ -39,9 +39,10 @@ void iostate_release(iostate_t* ios) {
               ios->refcount);
   if (refcount == 0) {
     socket_signals_clear(ios, ios->watching_signals);
-    if (ios->s != MX_HANDLE_INVALID) {
-      debug_alloc("mx_handle_close: ios->s 0x%x (ios=%p)\n", ios->s, ios);
-      mx_handle_close(ios->s);
+    if (ios->data_h != MX_HANDLE_INVALID) {
+      debug_alloc("mx_handle_close: ios->data_h 0x%x (ios=%p)\n", ios->data_h,
+                  ios);
+      mx_handle_close(ios->data_h);
     }
     debug_alloc("iostate_release: %p: put rbuf %p\n", ios, ios->rbuf);
     put_rwbuf(ios->rbuf);

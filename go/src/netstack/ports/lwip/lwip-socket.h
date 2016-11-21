@@ -86,6 +86,10 @@ int lwip_accept(int sockfd, struct lwip_sockaddr* addr,
                 lwip_socklen_t* addrlen);
 int lwip_read(int sockfd, void* buf, size_t count);
 int lwip_write(int sockfd, const void* buf, size_t count);
+int lwip_recvfrom(int sockfd, void* buf, size_t count, int flags,
+                  struct lwip_sockaddr* addr, lwip_socklen_t* addrlen);
+int lwip_sendto(int sockfd, const void* buf, size_t count, int flags,
+                const struct lwip_sockaddr* addr, lwip_socklen_t addrlen);
 int lwip_getsockopt(int sockfd, int level, int optname, void* optval,
                     socklen_t* option);
 int lwip_setsockopt(int sockfd, int level, int optname, const void* optval,

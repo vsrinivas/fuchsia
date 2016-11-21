@@ -30,6 +30,12 @@
 #include "apps/netstack/socket_functions.h"
 #include "apps/netstack/trace.h"
 
+enum {
+  HANDLE_TYPE_NONE,
+  HANDLE_TYPE_STREAM,
+  HANDLE_TYPE_DGRAM,
+};
+
 void handle_request_close(iostate_t* ios, mx_signals_t signals) {
   debug("handle_request_close\n");
   handle_request(request_pack(MXRIO_CLOSE, 0, NULL, ios), EVENT_NONE, signals);
@@ -54,19 +60,28 @@ static void schedule_sigconn_w(iostate_t* ios) {
                  request_pack(IO_SIGCONN_W, 0, NULL, ios));
 }
 
-static void schedule_rw(iostate_t* ios) {
-  debug("schedule_rw\n");
-  mx_status_t r =
-    mx_object_signal_peer(ios->s, 0u, MXSIO_SIGNAL_CONNECTED);
-  if (r < 0)
-    error("schedule_rw: mx_object_signal_peer failed (%d)\n", r);
-
+static void schedule_r(iostate_t* ios) {
+  debug("schedule_r\n");
   fd_event_set(ios->sockfd, EVENT_READ);
   wait_queue_put(WAIT_NET, ios->sockfd, request_pack(MXRIO_READ, 0, NULL, ios));
+}
 
+static void schedule_w(iostate_t* ios) {
+  debug("schedule_w\n");
   socket_signals_set(ios, MX_SIGNAL_READABLE);
   wait_queue_put(WAIT_SOCKET, ios->sockfd,
                  request_pack(MXRIO_WRITE, 0, NULL, ios));
+}
+
+// connection-oriented, stream type should call this
+static void schedule_rw(iostate_t* ios) {
+  if (ios->handle_type == HANDLE_TYPE_STREAM) {
+    mx_status_t r =
+        mx_object_signal_peer(ios->data_h, 0u, MXSIO_SIGNAL_CONNECTED);
+    if (r < 0) error("schedule_rw: mx_object_signal_peer failed (%d)\n", r);
+  }
+  schedule_r(ios);
+  schedule_w(ios);
 }
 
 // error codes for a special cases
@@ -100,49 +115,52 @@ void put_rwbuf(rwbuf_t* bufp) {
   rwbuf_head = bufp;
 }
 
-typedef enum handle_type {
-  HANDLE_TYPE_NONE,
-  HANDLE_TYPE_STREAM,
-  HANDLE_TYPE_DGRAM,
-} handle_type_t;
-
-static mx_status_t create_handles(iostate_t* ios, handle_type_t type,
-                                  mx_handle_t* peer_h, mx_handle_t* peer_s) {
-  mx_handle_t h[2];
+static mx_status_t create_handles(iostate_t* ios, mx_handle_t* peer_rio_h,
+                                  mx_handle_t* peer_data_h, int* hcount) {
+  mx_handle_t rio_h[2];
   mx_status_t r;
 
-  if ((r = mx_channel_create(0u, &h[0], &h[1])) < 0) goto fail_channel_create;
+  if ((r = mx_channel_create(0u, &rio_h[0], &rio_h[1])) < 0)
+    goto fail_channel_create;
 
-  mx_handle_t s[2];
-  if (type == HANDLE_TYPE_NONE) {
-    s[0] = s[1] = MX_HANDLE_INVALID;
-  } else if (type == HANDLE_TYPE_STREAM) {
-    if ((r = mx_socket_create(0u, &s[0], &s[1])) < 0) goto fail_socket_create;
+  mx_handle_t data_h[2];
+  if (ios->handle_type == HANDLE_TYPE_STREAM) {
+    if ((r = mx_socket_create(0u, &data_h[0], &data_h[1])) < 0)
+      goto fail_data_h_create;
+    *hcount = 2;
+  } else if (ios->handle_type == HANDLE_TYPE_DGRAM) {
+    if ((r = mx_channel_create(0u, &data_h[0], &data_h[1])) < 0)
+      goto fail_data_h_create;
+    *hcount = 2;
+  } else {
+    // HANDLE_TYPE_NONE
+    data_h[0] = data_h[1] = MX_HANDLE_INVALID;
+    *hcount = 1;
   }
-  ios->s = s[0];
+
+  ios->data_h = data_h[0];
 
   // The dispatcher will own and close the handle if the other end
   // is closed (it also disconnects the handler automatically)
-  if ((r = dispatcher_add(h[0], ios)) < 0) goto fail_watcher_add;
+  if ((r = dispatcher_add(rio_h[0], ios)) < 0) goto fail_watcher_add;
 
-  if (ios->s != MX_HANDLE_INVALID) {
-    // increment the refcount for ios->s
+  if (ios->data_h != MX_HANDLE_INVALID) {
+    // increment the refcount for ios->data_h
     iostate_acquire(ios);
   }
 
-  *peer_h = h[1];
-  *peer_s = s[1];
+  *peer_rio_h = rio_h[1];
+  *peer_data_h = data_h[1];
   return NO_ERROR;
 
 fail_watcher_add:
-  ios->s = 0;
-  iostate_release(ios);
-  mx_handle_close(s[0]);
-  mx_handle_close(s[1]);
+  ios->data_h = MX_HANDLE_INVALID;
+  mx_handle_close(data_h[0]);
+  mx_handle_close(data_h[1]);
 
-fail_socket_create:
-  mx_handle_close(h[0]);
-  mx_handle_close(h[1]);
+fail_data_h_create:
+  mx_handle_close(rio_h[0]);
+  mx_handle_close(rio_h[1]);
 
 fail_channel_create:
   return r;
@@ -236,22 +254,25 @@ mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
 mx_status_t do_none(mxrio_msg_t* msg, iostate_t* ios, int events,
                     mx_signals_t signals) {
   ios = iostate_alloc();  // override
+  ios->handle_type = HANDLE_TYPE_NONE;
 
-  mx_handle_t peer_h, peer_s;
-  // ios->s is set inside create_handles()
-  mx_status_t r = create_handles(ios, HANDLE_TYPE_NONE, &peer_h, &peer_s);
-  debug_alloc("do_none: create_socket: ios=%p: ios->s=0x%x\n", ios, ios->s);
-  if (r >= 0) {
-    msg->handle[0] = peer_h;
-    msg->handle[1] = MX_HANDLE_INVALID;
-    msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
-    msg->hcount = 1;
-  } else {
+  mx_handle_t peer_rio_h, peer_data_h;
+  int hcount;
+  // ios->data_h is set inside create_handles()
+  mx_status_t r = create_handles(ios, &peer_rio_h, &peer_data_h, &hcount);
+  if (r < 0) {
     iostate_release(ios);
     return r;
   }
+  debug_alloc("do_none: create_socket: ios=%p: ios->data_h=0x%x\n", ios,
+              ios->data_h);
 
+  msg->handle[0] = peer_rio_h;
+  msg->handle[1] = peer_data_h;
+  msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
+  msg->hcount = hcount;
   msg->datalen = 0;
+
   return NO_ERROR;
 }
 
@@ -269,12 +290,12 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
     handle_type = HANDLE_TYPE_STREAM;
   } else if (type == SOCK_DGRAM) {
     handle_type = HANDLE_TYPE_DGRAM;
-    return ERR_NOT_SUPPORTED;  // TODO: support UDP
   } else {
     return ERR_NOT_SUPPORTED;
   }
 
   ios = iostate_alloc();  // override
+  ios->handle_type = handle_type;
 
   ios->sockfd = net_socket(domain, type, protocol);
   int errno_ = (ios->sockfd < 0) ? errno : 0;
@@ -295,25 +316,30 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  mx_handle_t peer_h, peer_s;
-  // ios->s is set inside create_handles()
-  mx_status_t r = create_handles(ios, handle_type, &peer_h, &peer_s);
-  debug_alloc("do_socket: create_socket: ios=%p: ios->s=0x%x\n", ios, ios->s);
-  if (r >= 0) {
-    msg->handle[0] = peer_h;
-    msg->handle[1] = peer_s;
-    msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
-    msg->hcount = 2;
-  } else {
+  mx_handle_t peer_rio_h, peer_data_h;
+  int hcount;
+  // ios->data_h is set inside create_handles()
+  mx_status_t r = create_handles(ios, &peer_rio_h, &peer_data_h, &hcount);
+  if (r < 0) {
     iostate_release(ios);
     return r;
   }
+  debug_alloc("do_socket: create_socket: ios=%p: ios->data_h=0x%x\n", ios,
+              ios->data_h);
+
+  msg->handle[0] = peer_rio_h;
+  msg->handle[1] = peer_data_h;
+  msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
+  msg->hcount = hcount;
   msg->datalen = 0;
 
   fd_event_set(ios->sockfd, EVENT_EXCEPT);
   socket_signals_set(ios, MX_SIGNAL_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED |
                      MX_SIGNAL_SIGNALED);
 
+  if (ios->handle_type == HANDLE_TYPE_DGRAM) {
+    schedule_w(ios);
+  }
   return NO_ERROR;
 }
 
@@ -358,8 +384,9 @@ mx_status_t do_connect(mxrio_msg_t* msg, iostate_t* ios, int events,
   if (errno_ != 0) {
     return errno_to_status(errno_);
   }
-  schedule_rw(ios);
-
+  if (ios->handle_type == HANDLE_TYPE_STREAM) {
+    schedule_rw(ios);
+  }
   msg->arg2.off = 0;
   msg->datalen = 0;
   return NO_ERROR;
@@ -368,9 +395,11 @@ mx_status_t do_connect(mxrio_msg_t* msg, iostate_t* ios, int events,
 mx_status_t do_sigconn_w(mxrio_msg_t* msg, iostate_t* ios, int events,
                          mx_signals_t signals) {
   debug_net("do_sigconn_w: events=0x%x\n", events);
-  mx_status_t r =
-      mx_object_signal_peer(ios->s, 0u, MXSIO_SIGNAL_OUTGOING);
-  debug_always("mx_object_signal_peer(set) => %d\n", r);
+  if (ios->handle_type == HANDLE_TYPE_STREAM) {
+    mx_status_t r =
+        mx_object_signal_peer(ios->data_h, 0u, MXSIO_SIGNAL_OUTGOING);
+    debug_always("mx_object_signal_peer(set) => %d\n", r);
+  }
   int val;
   socklen_t vallen = sizeof(val);
   int ret = net_getsockopt(ios->sockfd, SOL_SOCKET, SO_ERROR, &val, &vallen);
@@ -393,6 +422,9 @@ mx_status_t do_bind(mxrio_msg_t* msg, iostate_t* ios, int events,
   debug_net("net_bind => %d (errno=%d)\n", ret, errno_);
   if (errno_ != 0) {
     return errno_to_status(errno_);
+  }
+  if (ios->handle_type == HANDLE_TYPE_DGRAM) {
+    schedule_r(ios);
   }
   msg->datalen = 0;
   msg->arg2.off = 0;
@@ -419,8 +451,11 @@ mx_status_t do_listen(mxrio_msg_t* msg, iostate_t* ios, int events,
 mx_status_t do_sigconn_r(mxrio_msg_t* msg, iostate_t* ios, int events,
                          mx_signals_t signals) {
   debug_net("do_sigconn_r: events=0x%x\n", events);
-  mx_status_t r = mx_object_signal_peer(ios->s, 0u, MXSIO_SIGNAL_INCOMING);
-  debug_always("mx_object_signal_peer(set) => %d\n", r);
+  if (ios->handle_type == HANDLE_TYPE_STREAM) {
+    mx_status_t r =
+        mx_object_signal_peer(ios->data_h, 0u, MXSIO_SIGNAL_INCOMING);
+    debug_always("mx_object_signal_peer(set) => %d\n", r);
+  }
   return NO_ERROR;
 }
 
@@ -436,12 +471,16 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  mx_status_t r = mx_object_signal_peer(ios->s, MXSIO_SIGNAL_INCOMING, 0u);
-  debug_always("mx_object_signal_peer(clear) => %d\n", r);
+  if (ios->handle_type == HANDLE_TYPE_STREAM) {
+    mx_status_t r =
+        mx_object_signal_peer(ios->data_h, MXSIO_SIGNAL_INCOMING, 0u);
+    debug_always("mx_object_signal_peer(clear) => %d\n", r);
+  }
   schedule_sigconn_r(ios);
 
   // TODO: share this code with socket()
   iostate_t* ios_new = iostate_alloc();
+  ios_new->handle_type = ios->handle_type;
   ios_new->sockfd = ret;
 
   int non_blocking = 1;
@@ -454,18 +493,20 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  mx_handle_t peer_h, peer_s;
-  r = create_handles(ios_new, HANDLE_TYPE_STREAM, &peer_h, &peer_s);
-  debug_alloc("do_accept: create_socket: ios=%p: ios->s=0x%x\n", ios, ios->s);
+  mx_handle_t peer_rio_h, peer_data_h;
+  int hcount;
+  mx_status_t r = create_handles(ios_new, &peer_rio_h, &peer_data_h, &hcount);
   if (r < 0) {
     iostate_release(ios_new);
     return r;
-  } else {
-    msg->handle[0] = peer_h;
-    msg->handle[1] = peer_s;
-    msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
-    msg->hcount = 2;
   }
+  debug_alloc("do_accept: create_socket: ios=%p: ios->data_h=0x%x\n", ios,
+              ios->data_h);
+
+  msg->handle[0] = peer_rio_h;
+  msg->handle[1] = peer_data_h;
+  msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
+  msg->hcount = hcount;
   msg->datalen = 0;
 
   fd_event_set(ios_new->sockfd, EVENT_EXCEPT);
@@ -492,16 +533,16 @@ mx_status_t do_ioctl(mxrio_msg_t* msg, iostate_t* ios, int events,
   return r;
 }
 
-mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
-                    mx_signals_t signals) {
-  debug_rw("do_read: rlen=%d net=%d socket=%d events=0x%x signals=0x%x\n",
-           ios->rlen, ios->read_net_read, ios->read_socket_write, events,
-           signals);
+mx_status_t do_read_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
+                           mx_signals_t signals) {
+  debug_rw(
+      "do_read_stream: rlen=%d net=%d socket=%d events=0x%x signals=0x%x\n",
+      ios->rlen, ios->read_net_read, ios->read_socket_write, events, signals);
 
   if (ios->rlen <= 0) {
     if (ios->rbuf == NULL) {
       ios->rbuf = get_rwbuf();
-      debug_alloc("do_read: get rbuf %p\n", ios->rbuf);
+      debug_alloc("do_read_stream: get rbuf %p\n", ios->rbuf);
       assert(ios->rbuf);
     }
     int n = net_read(ios->sockfd, ios->rbuf->data, RWBUF_SIZE);
@@ -511,16 +552,17 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
     if (n == 0) {
     connection_closed:
       // connection is closed
-      info("do_read: net_read: connection closed\n");
-      mx_status_t r = mx_socket_write(ios->s, MX_SOCKET_HALF_CLOSE, NULL, 0u,
-                                      NULL);
+      info("do_read_stream: net_read: connection closed\n");
+      mx_status_t r =
+          mx_socket_write(ios->data_h, MX_SOCKET_HALF_CLOSE, NULL, 0u, NULL);
       if (r < 0) {
         if (r != ERR_REMOTE_CLOSED) {
           error("do_read: MX_SOCKET_HALF_CLOSE failed (status=%d)\n", r);
           return r;
         }
       } else {
-        info("half_close(ios->s 0x%x) => %d (ios=%p)\n", ios->s, r, ios);
+        info("half_close(ios->data_h 0x%x) => %d (ios=%p)\n", ios->data_h, r,
+             ios);
       }
       return NO_ERROR;
     } else if (errno_ == EWOULDBLOCK) {
@@ -529,7 +571,7 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
       return PENDING_NET;
     } else if (errno_ != 0) {
       // TODO: send the error to the client
-      error("do_read: net_read failed (errno=%d)\n", errno_);
+      error("do_read_stream: net_read failed (errno=%d)\n", errno_);
       goto connection_closed;
     }
     ios->rlen = n;
@@ -539,8 +581,9 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
 
   while (ios->roff < ios->rlen) {
     size_t nwritten;
-    mx_status_t r = mx_socket_write(ios->s, 0u, ios->rbuf->data + ios->roff,
-                                    ios->rlen - ios->roff, &nwritten);
+    mx_status_t r =
+        mx_socket_write(ios->data_h, 0u, ios->rbuf->data + ios->roff,
+                        ios->rlen - ios->roff, &nwritten);
     debug_socket("mx_socket_write(%p, %d) => %lu\n",
                  ios->rbuf->data + ios->roff, ios->rlen - ios->roff, nwritten);
     if (r < 0) {
@@ -548,7 +591,7 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
         socket_signals_set(ios, MX_SIGNAL_WRITABLE);
         return PENDING_SOCKET;
       }
-      error("do_read: mx_socket_write failed (%d)\n", r);
+      error("do_read_stream: mx_socket_write failed (%d)\n", r);
       // TODO: send the error to the client
       return r;
     }
@@ -561,21 +604,80 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
   return PENDING_NET;  // schedule next read
 }
 
-mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
-                     mx_signals_t signals) {
-  debug_rw("do_write: wlen=%d socket=%d net=%d events=0x%x signals=0x%x\n",
-           ios->wlen, ios->write_socket_read, ios->write_net_write, events,
-           signals);
+mx_status_t do_read_dgram(mxrio_msg_t* msg, iostate_t* ios, int events,
+                          mx_signals_t signals) {
+  debug("do_read_dgram\n");
+  if (ios->rbuf == NULL) {
+    ios->rbuf = get_rwbuf();
+    debug_alloc("do_read_dgram: get rbuf %p\n", ios->rbuf);
+    assert(ios->rbuf);
+  }
+  mxio_socket_msg_t* m = (mxio_socket_msg_t*)ios->rbuf->data;
+  memset(&m->addr, 0, sizeof(m->addr));
+  m->addrlen = sizeof(m->addr);
+  int n = net_recvfrom(ios->sockfd, m->data, RWBUF_SIZE, 0,
+                       (struct sockaddr*)&m->addr, &m->addrlen);
+  int errno_ = (n < 0) ? errno : 0;
+  ios->last_errno = errno_;
+  debug_net("net_recvfrom => %d (addrlen=%zd) (errno=%d)\n", n, m->addrlen,
+            errno_);
+
+  // n == 0 means payload size is 0 (it doesn't mean disconnect)
+  if (errno_ == EWOULDBLOCK) {
+    debug("read would block\n");
+    fd_event_set(ios->sockfd, EVENT_READ);
+    return PENDING_NET;
+  } else if (errno_ != 0) {
+    // TODO: send the error to the client
+    error("do_read_dgram: net_recvfrom failed (errno=%d)\n", errno_);
+    return NO_ERROR;
+  }
+
+  mx_status_t r = mx_channel_write(ios->data_h, 0u, ios->rbuf->data,
+                                   MXIO_SOCKET_MSG_HEADER_SIZE + n, NULL, 0u);
+  debug_socket("mx_channel_write(%p, %lu) => %d\n", ios->rbuf->data,
+               MXIO_SOCKET_MSG_HEADER_SIZE + n, r);
+  if (r < 0) {
+    // channel doesn't return ERR_SHOULD_WAIT
+    error("do_read_stream: mx_socket_write failed (%d)\n", r);
+    // TODO: send the error to the client
+    return r;
+  }
+
+  ios->rlen = 0;
+  ios->roff = 0;
+  fd_event_set(ios->sockfd, EVENT_READ);
+  return PENDING_NET;  // schedule next read
+}
+
+mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
+                    mx_signals_t signals) {
+  if (ios->handle_type == HANDLE_TYPE_STREAM)
+    return do_read_stream(msg, ios, events, signals);
+  else if (ios->handle_type == HANDLE_TYPE_DGRAM)
+    return do_read_dgram(msg, ios, events, signals);
+  else {
+    error("do_read: unknown handle type %d\n", ios->handle_type);
+    return ERR_NOT_SUPPORTED;
+  }
+}
+
+mx_status_t do_write_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
+                            mx_signals_t signals) {
+  debug_rw(
+      "do_write_stream: "
+      "wlen=%d socket=%d net=%d events=0x%x signals=0x%x\n",
+      ios->wlen, ios->write_socket_read, ios->write_net_write, events, signals);
 
   if (ios->wlen <= 0) {
     if (ios->wbuf == NULL) {
       ios->wbuf = get_rwbuf();
-      debug_alloc("do_write: get wbuf %p\n", ios->wbuf);
+      debug_alloc("do_write_stream: get wbuf %p\n", ios->wbuf);
       assert(ios->wbuf);
     }
     size_t nread;
-    mx_status_t r = mx_socket_read(ios->s, 0u, ios->wbuf->data, RWBUF_SIZE,
-                                   &nread);
+    mx_status_t r =
+        mx_socket_read(ios->data_h, 0u, ios->wbuf->data, RWBUF_SIZE, &nread);
     debug_socket("mx_socket_read => %d (%lu)\n", r, nread);
     if (r == ERR_SHOULD_WAIT) {
       if (signals & MX_SIGNAL_PEER_CLOSED) {
@@ -590,11 +692,11 @@ mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
       handle_request_close(ios, signals);
       return NO_ERROR;
     } else if (r < 0) {
-      error("do_write: mx_socket_read failed (%d)\n", r);
+      error("do_write_stream: mx_socket_read failed (%d)\n", r);
       // half-close the socket to notify the error
       // TODO: use user signal
-      mx_status_t r = mx_socket_write(ios->s, MX_SOCKET_HALF_CLOSE, NULL, 0u,
-                                      NULL);
+      mx_status_t r =
+          mx_socket_write(ios->data_h, MX_SOCKET_HALF_CLOSE, NULL, 0u, NULL);
       info("mx_socket_write(half_close) => %d\n", r);
       return r;
     }
@@ -614,7 +716,7 @@ mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
       return PENDING_NET;
     } else if (errno_ != 0) {
       // TODO: send the error to the client
-      error("do_write: net_write failed (errno=%d)\n", errno_);
+      error("do_write_stream: net_write failed (errno=%d)\n", errno_);
       return NO_ERROR;
     }
     ios->woff += n;
@@ -626,6 +728,67 @@ mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
   socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED |
                      MXSIO_SIGNAL_HALFCLOSED);
   return PENDING_SOCKET;
+}
+
+mx_status_t do_write_dgram(mxrio_msg_t* msg, iostate_t* ios, int events,
+                           mx_signals_t signals) {
+  debug("do_write_dgram\n");
+  if (ios->wbuf == NULL) {
+    ios->wbuf = get_rwbuf();
+    debug_alloc("do_write_dgram: get wbuf %p\n", ios->wbuf);
+    assert(ios->wbuf);
+  }
+  size_t nread;
+  mx_status_t r = mx_channel_read(ios->data_h, 0u, ios->wbuf->data, RWBUF_SIZE,
+                                  (uint32_t*)&nread, NULL, 0, NULL);
+  debug_socket("mx_channel_read => %d (%lu)\n", r, nread);
+  if (r == ERR_SHOULD_WAIT) {
+    if (signals & MX_SIGNAL_PEER_CLOSED) {
+      debug_socket("do_write_dgram: handle_close (channel is closed)\n");
+      handle_request_close(ios, signals);
+      return NO_ERROR;
+    }
+    socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
+    return PENDING_SOCKET;
+  } else if (r == ERR_REMOTE_CLOSED) {
+    handle_request_close(ios, signals);
+    return NO_ERROR;
+  } else if (r < 0) {
+    error("do_write_stream: mx_socket_read failed (%d)\n", r);
+    // TODO: notify error
+    return r;
+  }
+
+  mxio_socket_msg_t* m = (mxio_socket_msg_t*)ios->wbuf->data;
+  if (nread > MXIO_SOCKET_MSG_HEADER_SIZE) {
+    debug("m->addrlen=%d, nread=%lu\n", m->addrlen, nread);
+
+    struct sockaddr* addr =
+        (m->addrlen == 0) ? NULL : (struct sockaddr*)&m->addr;
+    int n =
+        net_sendto(ios->sockfd, m->data, nread - MXIO_SOCKET_MSG_HEADER_SIZE, 0,
+                   addr, m->addrlen);
+    int errno_ = (n < 0) ? errno : 0;
+    ios->last_errno = errno_;
+    debug_net("net_sendto => %d (errno=%d)\n", n, errno_);
+  } else {
+    error("bad socket message\n");
+  }
+
+  socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
+  return PENDING_SOCKET;
+}
+
+mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
+                     mx_signals_t signals) {
+  if (ios->handle_type == HANDLE_TYPE_STREAM)
+    return do_write_stream(msg, ios, events, signals);
+  else if (ios->handle_type == HANDLE_TYPE_DGRAM)
+    return do_write_dgram(msg, ios, events, signals);
+  else {
+    error("do_write: unknown handle type %d\n", ios->handle_type);
+    return ERR_NOT_SUPPORTED;
+  }
 }
 
 mx_status_t do_getaddrinfo(mxrio_msg_t* msg, iostate_t* ios, int events,

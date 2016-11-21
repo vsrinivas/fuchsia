@@ -12,6 +12,10 @@ int net_listen(int sockfd, int backlog);
 int net_accept(int sockfd, struct sockaddr* addr, socklen_t* addrlen);
 ssize_t net_read(int sockfd, void* buf, size_t count);
 ssize_t net_write(int sockfd, const void* buf, size_t count);
+ssize_t net_recvfrom(int sockfd, void* buf, size_t count, int flags,
+                     struct sockaddr* addr, socklen_t* addrlen);
+ssize_t net_sendto(int sockfd, const void* buf, size_t count, int flags,
+                   const struct sockaddr* addr, socklen_t addrlen);
 int net_getsockopt(int sockfd, int level, int optname, void* optval,
                    socklen_t* optlen);
 int net_setsockopt(int sockfd, int level, int optname, const void* optval,
