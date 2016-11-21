@@ -25,6 +25,7 @@ source_set("trace_app") {
   public_deps = [
     "//apps/modular/lib/app",
     "//apps/tracing/lib/trace:reader",
+    "//apps/tracing/lib/trace:internal_fields",
     "//apps/tracing/lib/trace_converters:chromium",
     "//apps/tracing/services",
     "//lib/ftl",
