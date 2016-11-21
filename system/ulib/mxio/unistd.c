@@ -1487,17 +1487,18 @@ int select(int n, fd_set* restrict rfds, fd_set* restrict wfds, fd_set* restrict
 }
 
 int ioctl(int fd, int req, ...) {
-    void* arg;
-    va_list ap;
-    va_start(ap, req);
-    arg = va_arg(ap, void*);
-    va_end(ap);
-
-    const void* in_buf;
-    void* out_buf;
-    size_t in_len, out_len;
-    in_buf = out_buf = arg;
-    in_len = out_len = req & 0xffff;
-
-    return STATUS(mxio_ioctl(fd, req, in_buf, in_len, out_buf, out_len));
+    mxio_t* io;
+    if ((io = fd_to_io(fd)) == NULL) {
+        return ERRNO(EBADF);
+    }
+    mx_status_t r = ERR_NOT_SUPPORTED;
+    if (io->flags & MXIO_FLAG_SOCKET) {
+        va_list ap;
+        va_start(ap, req);
+        void* arg = va_arg(ap, void*);
+        va_end(ap);
+        r = mxio_socket_posix_ioctl(io, req, arg);
+    }
+    mxio_release(io);
+    return STATUS(r);
 }

@@ -143,6 +143,8 @@ static inline void mxio_release(mxio_t* io) {
 // wraps an arbitrary handle with a mxio_t that works with wait hooks
 mxio_t* mxio_waitable_create(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_out, bool shared_handle);
 
+mx_status_t mxio_socket_posix_ioctl(mxio_t* io, int req, void* arg);
+
 // unsupported / do-nothing hooks shared by implementations
 ssize_t mxio_default_read(mxio_t* io, void* _data, size_t len);
 ssize_t mxio_default_read_at(mxio_t* io, void* _data, size_t len, off_t offset);
