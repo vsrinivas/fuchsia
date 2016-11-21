@@ -57,25 +57,32 @@ class LinkImpl : public StoryStorageLinkWatcher {
   // all deleted (and close their connections) when LinkImpl is
   // destroyed.
   LinkImpl(StoryStoragePtr story_storage,
-           const fidl::String& n,
+           const fidl::String& name,
            fidl::InterfaceRequest<Link> link_request);
   ~LinkImpl() override = default;
 
-  void ReadLinkData(const std::function<void()>& done);
+  // Used internally but unlike ReadLinkData() also by StoryImpl in
+  // teardown.
   void WriteLinkData(const std::function<void()>& done);
-  void DatabaseChanged(LinkConnection* src);
+
+  // Used by LinkConnection.
+  void AddDocuments(FidlDocMap docs, LinkConnection* src);
+  void SetAllDocuments(FidlDocMap docs, LinkConnection* src);
+  void AddConnection(LinkConnection* connection);
+  void RemoveConnection(LinkConnection* connection);
+  const FidlDocMap& docs() const { return docs_; }
 
  private:
-  friend class LinkConnection;
+  void DatabaseChanged(LinkConnection* src);
+  void NotifyWatchers(LinkConnection* src);
+  void ReadLinkData(const std::function<void()>& done);
 
   // |StoryStorageLinkWatcher|
   void OnChange(LinkDataPtr link_data) override;
 
-  void NotifyWatchers(LinkConnection* src);
-
-  FidlDocMap docs_map;
-  std::vector<std::unique_ptr<LinkConnection>> impls;
-  const fidl::String name;
+  FidlDocMap docs_;
+  std::vector<std::unique_ptr<LinkConnection>> connections_;
+  const fidl::String name_;
   StoryStoragePtr story_storage_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
@@ -85,7 +92,20 @@ class LinkConnection : public Link {
  public:
   ~LinkConnection() override = default;
 
+  // Creates a new instance on the heap and registers it with the
+  // given LinkImpl, which takes ownership. It cannot be on the stack
+  // because it destroys itself when its fidl connection closes. The
+  // constructor is therefore private and only accessible from here.
+  static void New(LinkImpl* impl, fidl::InterfaceRequest<Link> link_request) {
+    new LinkConnection(impl, std::move(link_request));
+  }
+
+  void NotifyWatchers(const FidlDocMap& docs, const bool self_notify);
+
  private:
+  // Private so it cannot be created on the stack.
+  LinkConnection(LinkImpl* impl, fidl::InterfaceRequest<Link> link_request);
+
   // |Link|
   void AddDocuments(FidlDocMap docs) override;
   void SetAllDocuments(FidlDocMap docs) override;
@@ -94,21 +114,10 @@ class LinkConnection : public Link {
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void Dup(fidl::InterfaceRequest<Link> dup) override;
 
-  friend class LinkImpl;
-
-  // LinkConnection may not be constructed on the stack, so the
-  // constructor is private. It's used only by LinkImpl.
-  LinkConnection(LinkImpl* shared, fidl::InterfaceRequest<Link> link_request);
-
-  void RemoveImpl();
-
   void AddWatcher(fidl::InterfaceHandle<LinkWatcher> watcher,
                   const bool self_notify);
 
-  // Used by LinkImpl.
-  void NotifyWatchers(const FidlDocMap& docs, const bool self_notify);
-
-  LinkImpl* const shared_;
+  LinkImpl* const impl_;
   fidl::Binding<Link> binding_;
 
   // These watchers do not want self notifications.
