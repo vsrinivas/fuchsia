@@ -44,8 +44,8 @@
             "bootfs_path": "test/ledger_glue_unittests"
         },
         {
-            "binary": "ledger_configuration",
-            "bootfs_path": "bin/ledger_configuration"
+            "binary": "configure_ledger",
+            "bootfs_path": "bin/configure_ledger"
         },
         {
             "binary": "ledger_configuration_unittests",
