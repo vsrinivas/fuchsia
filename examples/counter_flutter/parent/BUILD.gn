@@ -4,11 +4,18 @@
 
 import("//flutter/build/flutter_app.gni")
 
-flutter_app("example_flutter_hello_world") {
+group("parent") {
+  deps = [
+    ":example_flutter_counter_parent",
+  ]
+}
+
+flutter_app("example_flutter_counter_parent") {
   main_dart = "lib/main.dart"
   deps = [
     "//apps/modular/lib/app/dart",
     "//apps/modular/services/story:story_dart",
+    "//apps/mozart/lib/flutter",
     "//apps/mozart/services/views:views_dart",
     "//lib/fidl/dart",
     "//lib/flutter/packages/flutter",

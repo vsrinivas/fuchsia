@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/examples/store.h"
+#include "apps/modular/examples/counter_cpp/store.h"
+#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
@@ -19,7 +20,6 @@
 #include "lib/fidl/cpp/bindings/map.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/weak_ptr.h"
-#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
@@ -29,23 +29,22 @@ namespace {
 
 constexpr uint32_t kContentImageResourceId = 1;
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
-constexpr int kTickRotationDegrees = 45;
 constexpr int kValueHandoffDuration = 1;
 
-constexpr char kModuleName[] = "Module1Impl";
+constexpr char kModuleName[] = "Module2Impl";
 
-class Module1View : public mozart::BaseView {
+class Module2View : public mozart::BaseView {
  public:
-  explicit Module1View(
+  explicit Module2View(
       modular::Store* const store,
       mozart::ViewManagerPtr view_manager,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
-                 kModuleName),
+                 "Module2Impl"),
         store_(store) {}
 
-  ~Module1View() override = default;
+  ~Module2View() override = default;
 
   void set_enable_animation(bool value) {
     enable_animation_ = value;
@@ -93,43 +92,40 @@ class Module1View : public mozart::BaseView {
   void DrawContent(SkCanvas* const canvas, const mozart::Size& size) {
     canvas->clear(SK_ColorBLUE);
     canvas->translate(size.width / 2, size.height / 2);
-    canvas->rotate(
-        SkIntToScalar(kTickRotationDegrees * store_->counter.counter));
+    canvas->rotate(SkIntToScalar(45 * store_->counter.counter));
     SkPaint paint;
-    paint.setColor(SK_ColorGREEN);
+    paint.setColor(0xFFFF00FF);
     paint.setAntiAlias(true);
     float d = std::min(size.width, size.height) / 4;
     canvas->drawRect(SkRect::MakeLTRB(-d, -d, d, d), paint);
     canvas->flush();
   }
 
-  modular::Store* const store_;
   mozart::BufferProducer buffer_producer_;
+  modular::Store* const store_;
   bool enable_animation_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Module1View);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Module2View);
 };
 
 // Module implementation that acts as a leaf module. It implements Module.
-class Module1App : public modular::SingleServiceViewApp<modular::Module> {
+class Module2App : public modular::SingleServiceViewApp<modular::Module> {
  public:
-  explicit Module1App()
+  explicit Module2App()
       : store_(kModuleName),
         weak_ptr_factory_(this) {
     FTL_LOG(INFO) << kModuleName;
-
     store_.AddCallback([this] { IncrementCounterAction(); });
-    store_.AddCallback([this] { CheckForDone(); });
   }
 
-  ~Module1App() override = default;
+  ~Module2App() override = default;
 
  private:
   // |SingleServiceViewApp|
   void CreateView(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<modular::ServiceProvider> services) override {
-    view_.reset(new Module1View(
+    view_.reset(new Module2View(
         &store_,
         application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
         std::move(view_owner_request)));
@@ -153,13 +149,8 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
     done();
   }
 
-  void CheckForDone() {
-    if (store_.counter.counter > 10)
-      story_->Done();
-  }
-
   void IncrementCounterAction() {
-    if (store_.counter.sender == kModuleName || store_.counter.counter > 10)
+    if (store_.counter.sender == kModuleName || store_.counter.counter > 11)
       return;
 
     // TODO(jimbe) Enabling animation should be done in its own function, but
@@ -168,7 +159,7 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
       view_->set_enable_animation(true);
       view_->Invalidate();
     }
-    ftl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
+    ftl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr]() {
           FTL_LOG(INFO) << "ControlAnimation() DONE";
@@ -177,7 +168,7 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
 
           if (view_) {
             view_->set_enable_animation(false);
-          };
+          }
           store_.counter.sender = kModuleName;
           store_.counter.counter += 1;
           store_.MarkDirty();
@@ -186,22 +177,22 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
         ftl::TimeDelta::FromSeconds(kValueHandoffDuration));
   }
 
-  std::unique_ptr<Module1View> view_;
+  std::unique_ptr<Module2View> view_;
   fidl::InterfacePtr<modular::Story> story_;
   modular::Store store_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.
-  ftl::WeakPtrFactory<Module1App> weak_ptr_factory_;
+  ftl::WeakPtrFactory<Module2App> weak_ptr_factory_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(Module1App);
+  FTL_DISALLOW_COPY_AND_ASSIGN(Module2App);
 };
 
 }  // namespace
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  Module1App app;
+  Module2App app;
   loop.Run();
   return 0;
 }

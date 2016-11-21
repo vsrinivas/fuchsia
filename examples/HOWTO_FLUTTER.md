@@ -8,7 +8,7 @@ build and included in the bootfs.
 
 ## Hello World Example
 
-(located in `hello_world/`)
+(located in `hello_world_flutter/`)
 
 This example demonstrates how to create a minimal flutter module and implement
 the `Module` interface. It shows a simple flutter text widget displaying
@@ -16,7 +16,7 @@ the `Module` interface. It shows a simple flutter text widget displaying
 
 ## Counter Example
 
-(located in `counter/`)
+(located in `counter_flutter/`)
 
 This example consists of two modules: parent and child. The parent module runs
 as the top-level module and spawns a child module. Each module displays the
@@ -48,7 +48,7 @@ mx console to run the device runner with the dummy user shell:
 
 # Basics
 
-A flutter module is a flutter app which also provides a `Module` service
+A flutter module is a flutter app which provides a `Module` service
 implementation. Roughly, the main function of a flutter module should look like
 the following.
 
@@ -86,14 +86,14 @@ void main() {
 
 When the `Module` implementation wants to update some values in `State` of a
 `StatefulWidget`, it can obtain the `State` object via `GlobalKey`s or other
-means. (See the counter example code)
+means. (See the "counter" example code)
 
 # Importing Packages
 
 ## Adding Dependency to BUILD.gn
 
 To import a dart package written within the fuchsia tree, the dependency should
-be added to the project’s `BUILD.gn`. The `BUILD.gn` file for the hello_world
+be added to the project's `BUILD.gn`. The `BUILD.gn` file for the hello_world
 example this:
 
 ```
@@ -124,10 +124,10 @@ at `//third_party/dart-pkg/pub/<package_name>`.
 
 To use any FIDL generated dart bindings, you need to first look at the
 `BUILD.gn` defining the `fidl` target that contains the desired `.fidl` file.
-For example, let’s say we want to import and use the `module.fidl` file (located
+For example, let's say we want to import and use the `module.fidl` file (located
 in `<fuchsia_root>/apps/modular/services/story`) in our dart code. We should
 first look at the `BUILD.gn` file in the same directory. In this file we can see
-that the `module.fidl` file is included in the `fidl(“story”)` target.
+that the `module.fidl` file is included in the `fidl('story')` target.
 
 ```
 # For consumption outside modular.
@@ -145,8 +145,8 @@ fidl("story") {
 }
 ```
 
-This means that we need to depend on this group of fidl files named “story”. In
-our module’s `BUILD.gn`, we can add the dependency with the following syntax:
+This means that we need to depend on this group of fidl files named 'story'. In
+our module's `BUILD.gn`, we can add the dependency with the following syntax:
 
 ```
 "//<dir>:<fidl_target_name>_dart"
@@ -163,7 +163,7 @@ contained in this `story` fidl target from our code.
 
 Once the desired package is added as a BUILD.gn dependency, the dart files in
 those packages can be imported in our dart code. Importing dart packages in
-fuchsia looks a bit different than normal dart packages. Let’s look at the
+fuchsia looks a bit different than normal dart packages. Let's look at the
 import statements in `main.dart` of the hello_world example.
 
 ```dart

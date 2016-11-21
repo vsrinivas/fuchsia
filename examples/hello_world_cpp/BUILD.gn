@@ -4,7 +4,7 @@
 
 import("//lib/fidl/fidl.gni")
 
-group("hello_app") {
+group("hello_world_cpp") {
   deps = [
     ":hello_app_child",
     ":hello_app_parent",

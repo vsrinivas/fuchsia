@@ -1,0 +1,84 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//flutter/build/flutter_app.gni")
+
+group("counter_cpp") {
+  deps = [
+    ":example_module1",
+    ":example_module2",
+    ":example_recipe",
+  ]
+}
+
+executable("example_module1") {
+  sources = [
+    "example_module1.cc",
+  ]
+
+  deps = [
+    ":store",
+    "//apps/modular/lib/app",
+    "//apps/modular/lib/document_editor",
+    "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/services/document_store",
+    "//apps/modular/services/story",
+    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/views",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/skia",
+  ]
+}
+
+executable("example_module2") {
+  sources = [
+    "example_module2.cc",
+  ]
+
+  deps = [
+    ":store",
+    "//apps/modular/lib/app",
+    "//apps/modular/lib/document_editor",
+    "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/services/document_store",
+    "//apps/modular/services/story",
+    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/views",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/skia",
+  ]
+}
+
+executable("example_recipe") {
+  sources = [
+    "example_recipe.cc",
+  ]
+
+  deps = [
+    "//apps/modular/lib/document_editor",
+    "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/services/document_store",
+    "//apps/modular/services/story",
+    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/views",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/skia",
+  ]
+}
+
+source_set("store") {
+  sources = [
+    "store.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/document_editor",
+    "//apps/modular/services/story",
+  ]
+}

@@ -2,11 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("examples") {
+group("counter_flutter") {
   deps = [
-    "counter_cpp",
-    "counter_flutter",
-    "hello_world_cpp",
-    "hello_world_flutter",
+    "child",
+    "parent",
   ]
 }

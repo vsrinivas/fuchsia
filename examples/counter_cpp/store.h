@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef APPS_MODULAR_EXAMPLES_COUNTER_CPP_STORE_H_
+#define APPS_MODULAR_EXAMPLES_COUNTER_CPP_STORE_H_
+
 #include <iterator>
 
 #include "apps/modular/lib/document_editor/document_editor.h"
@@ -90,4 +93,7 @@ class Store : public LinkWatcher {
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Store);
 };
+
 }  // namespace modular
+
+#endif  // APPS_MODULAR_EXAMPLES_COUNTER_CPP_STORE_H_

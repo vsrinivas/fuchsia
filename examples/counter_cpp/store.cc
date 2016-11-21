@@ -4,7 +4,7 @@
 
 #include <iterator>
 
-#include "apps/modular/examples/store.h"
+#include "apps/modular/examples/counter_cpp/store.h"
 
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/services/story/link.fidl.h"

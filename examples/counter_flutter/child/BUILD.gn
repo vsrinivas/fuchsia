@@ -4,6 +4,12 @@
 
 import("//flutter/build/flutter_app.gni")
 
+group("child") {
+  deps = [
+    ":example_flutter_counter_child",
+  ]
+}
+
 flutter_app("example_flutter_counter_child") {
   main_dart = "lib/main.dart"
   deps = [

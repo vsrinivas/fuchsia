@@ -2,17 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("all") {
-  deps = [
-    ":modular",
-  ]
-}
-
 group("modular") {
   deps = [
-    "examples:all",
+    "examples",
     "lib/app",
-    "services:all",
+    "services",
     "src/application_manager",
     "src/bootstrap",
     "src/device_runner:all",
