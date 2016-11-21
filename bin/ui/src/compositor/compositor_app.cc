@@ -16,7 +16,7 @@ CompositorApp::CompositorApp()
       engine_(new CompositorEngine()) {
   FTL_DCHECK(application_context_);
 
-  tracing::InitializeTracer(application_context_.get(), "compositor", {});
+  tracing::InitializeTracer(application_context_.get(), {"compositor"});
 
   application_context_->outgoing_services()->AddService<mozart::Compositor>(
       [this](fidl::InterfaceRequest<mozart::Compositor> request) {

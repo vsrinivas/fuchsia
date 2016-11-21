@@ -19,7 +19,7 @@ App::App(const ftl::CommandLine& command_line)
           modular::ApplicationContext::CreateFromStartupInfo()) {
   FTL_DCHECK(application_context_);
 
-  tracing::InitializeTracer(application_context_.get(), "root_presenter", {});
+  tracing::InitializeTracer(application_context_.get(), {"root_presenter"});
 
   application_context_->outgoing_services()->AddService<mozart::Presenter>(
       [this](fidl::InterfaceRequest<mozart::Presenter> request) {

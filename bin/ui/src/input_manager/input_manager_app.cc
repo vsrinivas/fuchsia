@@ -15,7 +15,7 @@ InputManagerApp::InputManagerApp()
           modular::ApplicationContext::CreateFromStartupInfo()) {
   FTL_DCHECK(application_context_);
 
-  tracing::InitializeTracer(application_context_.get(), "input_manager", {});
+  tracing::InitializeTracer(application_context_.get(), {"input_manager"});
 
   application_context_->outgoing_services()->AddService<mozart::ViewAssociate>(
       [this](fidl::InterfaceRequest<mozart::ViewAssociate> request) {

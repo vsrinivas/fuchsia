@@ -15,7 +15,7 @@ ViewManagerApp::ViewManagerApp()
           modular::ApplicationContext::CreateFromStartupInfo()) {
   FTL_DCHECK(application_context_);
 
-  tracing::InitializeTracer(application_context_.get(), "view_manager", {});
+  tracing::InitializeTracer(application_context_.get(), {"view_manager"});
 
   mozart::CompositorPtr compositor =
       application_context_->ConnectToEnvironmentService<mozart::Compositor>();
