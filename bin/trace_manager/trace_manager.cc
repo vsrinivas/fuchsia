@@ -48,6 +48,28 @@ void WriteBufferToSocket(const uint8_t* buffer,
   }
 }
 
+void WriteProviderInfoRecordToSocket(uint32_t provider_id,
+                                     std::string provider_name,
+                                     mx::socket& socket) {
+  FTL_DCHECK(provider_name.size() <=
+             ProviderInfoMetadataRecordFields::kMaxNameLength);
+
+  size_t num_words = 1u + BytesToWords(Pad(provider_name.size()));
+  std::vector<uint64_t> record(num_words);
+  record[0] =
+      ProviderInfoMetadataRecordFields::Type::Make(
+          ToUnderlyingType(RecordType::kMetadata)) |
+      ProviderInfoMetadataRecordFields::RecordSize::Make(num_words) |
+      ProviderInfoMetadataRecordFields::MetadataType::Make(
+          ToUnderlyingType(MetadataType::kProviderInfo)) |
+      ProviderInfoMetadataRecordFields::Id::Make(provider_id) |
+      ProviderInfoMetadataRecordFields::NameLength::Make(provider_name.size());
+  memcpy(&record[1], provider_name.c_str(), provider_name.size());
+
+  WriteBufferToSocket(reinterpret_cast<uint8_t*>(record.data()),
+                      WordsToBytes(num_words), socket);
+}
+
 void WriteRecordsToSocket(mx::vmo vmo, size_t vmo_size, mx::socket& socket) {
   FTL_DCHECK(vmo);
   FTL_DCHECK(socket);
@@ -73,8 +95,10 @@ void WriteRecordsToSocket(mx::vmo vmo, size_t vmo_size, mx::socket& socket) {
   const uint64_t* end = start + BytesToWords(buffer.size());
 
   while (current < end) {
-    auto length = RecordFields::RecordSize::Get<size_t>(*current);
-    if (length == 0)
+    RecordHeader header = *current;
+    auto length = RecordFields::RecordSize::Get<size_t>(header);
+    auto type = RecordFields::RecordSize::Get<RecordType>(header);
+    if (length == 0 || type == RecordType::kMetadata)
       break;  // end of stream or corrupt data
     FTL_DCHECK(length <= RecordFields::kMaxRecordSizeWords);
     current += length;
@@ -194,6 +218,7 @@ void TraceManager::StopTracingForProvider(ProviderInfo* info) {
   FTL_DCHECK(info->current_buffer);
   info->provider->Stop([this, info]() {
     FTL_LOG(INFO) << "Provider stopped, write out data";
+    WriteProviderInfoRecordToSocket(info->id, info->label, output_);
     WriteRecordsToSocket(std::move(info->current_buffer), kSharedBufferSize,
                          output_);
     auto it = std::find_if(active_providers_.begin(), active_providers_.end(),

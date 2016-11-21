@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -52,6 +54,19 @@ class TraceContext {
   // Reports a decoding error.
   void ReportError(std::string error) const;
 
+  // Gets the current trace provider id.
+  // Returns 0 if no providers have been registered yet.
+  ProviderId current_provider_id() const { return current_provider_->id; }
+
+  // Gets the name of the current trace provider.
+  // Returns "default" if no providers have been registered yet.
+  const std::string& current_provider_name() const {
+    return current_provider_->name;
+  }
+
+  // Gets the name of the specified provider, or an empty string if none.
+  std::string GetProviderName(ProviderId id) const;
+
   // Decodes a string reference from a chunk.
   bool DecodeStringRef(Chunk& chunk,
                        EncodedStringRef string_ref,
@@ -62,16 +77,29 @@ class TraceContext {
                        EncodedThreadRef thread_ref,
                        ProcessThread* out_process_thread) const;
 
+  // Registers a trace provider with the context.
+  void RegisterProvider(ProviderId id, std::string name);
+
   // Registers a string in the current string table.
   void RegisterString(StringIndex index, std::string string);
 
   // Registers a thread in the current thread table.
   void RegisterThread(ThreadIndex index, const ProcessThread& process_thread);
 
+  // Sets the current provider id.
+  void SetCurrentProvider(ProviderId id);
+
  private:
+  struct ProviderInfo {
+    ProviderId id;
+    std::string name;
+    std::unordered_map<StringIndex, std::string> string_table;
+    std::unordered_map<ThreadIndex, ProcessThread> thread_table;
+  };
+
   ErrorHandler error_handler_;
-  std::unordered_map<StringIndex, std::string> string_table_;
-  std::unordered_map<ThreadIndex, ProcessThread> thread_table_;
+  std::unordered_map<ProviderId, std::unique_ptr<ProviderInfo>> providers_;
+  ProviderInfo* current_provider_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceContext);
 };
@@ -187,6 +215,58 @@ struct Argument {
   ArgumentValue value;
 };
 
+// Metadata type specific data.
+class MetadataData {
+ public:
+  // Provider info event data.
+  struct ProviderInfo {
+    ProviderId id;
+    std::string name;
+  };
+
+  // Provider section event data.
+  struct ProviderSection {
+    ProviderId id;
+  };
+
+  explicit MetadataData(const ProviderInfo& provider_info)
+      : type_(MetadataType::kProviderInfo), provider_info_(provider_info) {}
+
+  explicit MetadataData(const ProviderSection& provider_section)
+      : type_(MetadataType::kProviderSection),
+        provider_section_(provider_section) {}
+
+  const ProviderInfo& GetProviderInfo() const {
+    FTL_DCHECK(type_ == MetadataType::kProviderInfo);
+    return provider_info_;
+  };
+
+  const ProviderSection& GetProviderSection() const {
+    FTL_DCHECK(type_ == MetadataType::kProviderSection);
+    return provider_section_;
+  }
+
+  MetadataData(const MetadataData& other) : type_(other.type_) { Copy(other); }
+
+  ~MetadataData() { Destroy(); }
+
+  MetadataData& operator=(const MetadataData& rhs) {
+    return Destroy().Copy(rhs);
+  }
+
+  MetadataType type() const { return type_; }
+
+ private:
+  MetadataData& Destroy();
+  MetadataData& Copy(const MetadataData& other);
+
+  MetadataType type_;
+  union {
+    ProviderInfo provider_info_;
+    ProviderSection provider_section_;
+  };
+};
+
 // Event type specific data.
 class EventData {
  public:
@@ -257,6 +337,12 @@ class EventData {
 // A decoded record.
 class Record {
  public:
+  // Metadata record data.
+  struct Metadata {
+    MetadataType type() const { return data.type(); }
+    MetadataData data;
+  };
+
   // Initialization record data.
   struct Initialization {
     uint64_t ticks_per_second;
@@ -276,14 +362,17 @@ class Record {
 
   // Event record data.
   struct Event {
-    EventType type() const { return event_data.type(); }
+    EventType type() const { return data.type(); }
     uint64_t timestamp;
     ProcessThread process_thread;
     std::string category;
     std::string name;
     std::vector<Argument> arguments;
-    EventData event_data;
+    EventData data;
   };
+
+  explicit Record(const Metadata& record)
+      : type_(RecordType::kMetadata), metadata_(record) {}
 
   explicit Record(const Initialization& record)
       : type_(RecordType::kInitialization), initialization_(record) {}
@@ -305,6 +394,11 @@ class Record {
   ~Record() { Destroy(); }
 
   Record& operator=(const Record& rhs) { return Destroy().Copy(rhs); }
+
+  const Metadata& GetMetadata() const {
+    FTL_DCHECK(type_ == RecordType::kMetadata);
+    return metadata_;
+  }
 
   const Initialization& GetInitialization() const {
     FTL_DCHECK(type_ == RecordType::kInitialization);
@@ -334,6 +428,7 @@ class Record {
 
   RecordType type_;
   union {
+    Metadata metadata_;
     Initialization initialization_;
     String string_;
     Thread thread_;
@@ -352,6 +447,8 @@ class TraceReader {
   explicit TraceReader(RecordConsumer record_consumer,
                        ErrorHandler error_handler);
 
+  const TraceContext& context() const { return context_; }
+
   // Reads as many records as possible from the chunk, invoking the
   // record consumer for each one.  Returns true if the stream could possibly
   // contain more records if the chunk were extended with new data.
@@ -361,6 +458,8 @@ class TraceReader {
   bool ReadRecords(Chunk& chunk);
 
  private:
+  bool ReadMetadataRecord(Chunk& record,
+                          ::tracing::internal::RecordHeader header);
   bool ReadInitializationRecord(Chunk& record,
                                 ::tracing::internal::RecordHeader header);
   bool ReadStringRecord(Chunk& record,

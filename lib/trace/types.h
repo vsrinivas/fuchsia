@@ -18,6 +18,12 @@ enum class RecordType {
   kEvent = 4
 };
 
+// MetadataType enumerates all known trace metadata types.
+enum class MetadataType {
+  kProviderInfo = 1,
+  kProviderSection = 2,
+};
+
 // Enumerates all known argument types.
 enum class ArgumentType {
   kNull = 0,
@@ -47,6 +53,9 @@ using EncodedStringRef = uint32_t;
 // These are stored as 8-bit values in the trace.
 using ThreadIndex = uint32_t;
 using EncodedThreadRef = uint32_t;
+
+// Trace provider id in a trace session.
+using ProviderId = uint32_t;
 
 // Represents a kernel object id value.
 // This structure is used to distinguish koids from other 64-bit integers.

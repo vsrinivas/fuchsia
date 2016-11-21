@@ -64,12 +64,21 @@ bool Chunk::ReadString(size_t length, ftl::StringView* out_string) {
 }
 
 TraceContext::TraceContext(ErrorHandler error_handler)
-    : error_handler_(error_handler) {}
+    : error_handler_(error_handler) {
+  RegisterProvider(0u, "default");
+}
 
 TraceContext::~TraceContext() {}
 
 void TraceContext::ReportError(std::string error) const {
   error_handler_(std::move(error));
+}
+
+std::string TraceContext::GetProviderName(ProviderId id) const {
+  auto it = providers_.find(id);
+  if (it != providers_.end())
+    return it->second->name;
+  return std::string();
 }
 
 bool TraceContext::DecodeStringRef(Chunk& chunk,
@@ -91,8 +100,8 @@ bool TraceContext::DecodeStringRef(Chunk& chunk,
     return true;
   }
 
-  auto it = string_table_.find(string_ref);
-  if (it == string_table_.end()) {
+  auto it = current_provider_->string_table.find(string_ref);
+  if (it == current_provider_->string_table.end()) {
     ReportError("String ref not in table");
     return false;
   }
@@ -114,8 +123,8 @@ bool TraceContext::DecodeThreadRef(Chunk& chunk,
     return true;
   }
 
-  auto it = thread_table_.find(thread_ref);
-  if (it == thread_table_.end()) {
+  auto it = current_provider_->thread_table.find(thread_ref);
+  if (it == current_provider_->thread_table.end()) {
     ReportError("Thread ref not in table");
     return false;
   }
@@ -123,17 +132,34 @@ bool TraceContext::DecodeThreadRef(Chunk& chunk,
   return true;
 }
 
+void TraceContext::RegisterProvider(ProviderId id, std::string name) {
+  auto provider = std::make_unique<ProviderInfo>();
+  provider->id = id;
+  provider->name = name;
+  current_provider_ = provider.get();
+  providers_.emplace(id, std::move(provider));
+}
+
 void TraceContext::RegisterString(StringIndex index, std::string string) {
   FTL_DCHECK(index != StringRefFields::kInvalidIndex &&
              index <= StringRefFields::kMaxIndex);
-  string_table_[index] = std::move(string);
+  current_provider_->string_table[index] = std::move(string);
 }
 
 void TraceContext::RegisterThread(ThreadIndex index,
                                   const ProcessThread& process_thread) {
   FTL_DCHECK(index != ThreadRefFields::kInline &&
              index <= ThreadRefFields::kMaxIndex);
-  thread_table_[index] = process_thread;
+  current_provider_->thread_table[index] = process_thread;
+}
+
+void TraceContext::SetCurrentProvider(ProviderId id) {
+  auto it = providers_.find(id);
+  if (it != providers_.end()) {
+    current_provider_ = it->second.get();
+    return;
+  }
+  RegisterProvider(id, "");
 }
 
 ArgumentValue& ArgumentValue::Destroy() {
@@ -172,8 +198,42 @@ ArgumentValue& ArgumentValue::Copy(const ArgumentValue& other) {
   return *this;
 }
 
+MetadataData& MetadataData::Destroy() {
+  switch (type_) {
+    case MetadataType::kProviderInfo:
+      provider_info_.~ProviderInfo();
+      break;
+    case MetadataType::kProviderSection:
+      provider_section_.~ProviderSection();
+      break;
+    default:
+      break;
+  }
+
+  return *this;
+}
+
+MetadataData& MetadataData::Copy(const MetadataData& other) {
+  type_ = other.type_;
+  switch (type_) {
+    case MetadataType::kProviderInfo:
+      new (&provider_info_) ProviderInfo(other.provider_info_);
+      break;
+    case MetadataType::kProviderSection:
+      new (&provider_section_) ProviderSection(other.provider_section_);
+      break;
+    default:
+      break;
+  }
+
+  return *this;
+}
+
 Record& Record::Destroy() {
   switch (type_) {
+    case RecordType::kMetadata:
+      metadata_.~Metadata();
+      break;
     case RecordType::kInitialization:
       initialization_.~Initialization();
       break;
@@ -196,6 +256,9 @@ Record& Record::Destroy() {
 Record& Record::Copy(const Record& other) {
   type_ = other.type_;
   switch (type_) {
+    case RecordType::kMetadata:
+      new (&metadata_) Metadata(other.metadata_);
+      break;
     case RecordType::kInitialization:
       new (&initialization_) Initialization(other.initialization_);
       break;
@@ -239,6 +302,9 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
     auto type = RecordFields::Type::Get<RecordType>(pending_header_);
     switch (type) {
       case RecordType::kMetadata: {
+        if (!ReadMetadataRecord(record, pending_header_)) {
+          context_.ReportError("Failed to read metadata record");
+        }
         break;
       }
       case RecordType::kInitialization: {
@@ -274,6 +340,43 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
     }
     pending_header_ = 0u;
   }
+}
+
+bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
+  auto type = MetadataRecordFields::MetadataType::Get<MetadataType>(header);
+
+  switch (type) {
+    case MetadataType::kProviderInfo: {
+      auto id = ProviderInfoMetadataRecordFields::Id::Get<ProviderId>(header);
+      auto name_length =
+          ProviderInfoMetadataRecordFields::NameLength::Get<size_t>(header);
+      ftl::StringView name_view;
+      if (!record.ReadString(name_length, &name_view))
+        return false;
+      std::string name = name_view.ToString();
+
+      context_.RegisterProvider(id, name);
+      record_consumer_(Record(Record::Metadata{
+          MetadataData(MetadataData::ProviderInfo{id, name})}));
+      break;
+    }
+    case MetadataType::kProviderSection: {
+      auto id =
+          ProviderSectionMetadataRecordFields::Id::Get<ProviderId>(header);
+
+      context_.SetCurrentProvider(id);
+      record_consumer_(Record(
+          Record::Metadata{MetadataData(MetadataData::ProviderSection{id})}));
+      break;
+    }
+    default: {
+      // Ignore unknown metadata types for forward compatibility.
+      context_.ReportError(ftl::StringPrintf(
+          "Skipping metadata of unknown type %d", static_cast<uint32_t>(type)));
+      break;
+    }
+  }
+  return true;
 }
 
 bool TraceReader::ReadInitializationRecord(Chunk& record, RecordHeader header) {

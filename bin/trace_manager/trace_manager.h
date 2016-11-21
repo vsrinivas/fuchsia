@@ -40,7 +40,7 @@ class TraceManager : public TraceRegistry, public TraceController {
     mx::vmo current_buffer;
   };
 
-  uint32_t next_provider_id_ = 0u;
+  uint32_t next_provider_id_ = 1u;
 
   // |TraceController| implementation.
   void StartTracing(fidl::Array<fidl::String> categories,

@@ -89,19 +89,19 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
       writer_.Key("ph");
       writer_.String("b");
       writer_.Key("id");
-      writer_.Uint64(event.event_data.GetAsyncBegin().id);
+      writer_.Uint64(event.data.GetAsyncBegin().id);
       break;
     case EventType::kAsyncInstant:
       writer_.Key("ph");
       writer_.String("n");
       writer_.Key("id");
-      writer_.Uint64(event.event_data.GetAsyncInstant().id);
+      writer_.Uint64(event.data.GetAsyncInstant().id);
       break;
     case EventType::kAsyncEnd:
       writer_.Key("ph");
       writer_.String("e");
       writer_.Key("id");
-      writer_.Uint64(event.event_data.GetAsyncEnd().id);
+      writer_.Uint64(event.data.GetAsyncEnd().id);
       break;
     default:
       break;

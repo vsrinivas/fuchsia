@@ -93,6 +93,21 @@ struct RecordFields {
   using RecordSize = Field<4, 15>;
 };
 
+struct MetadataRecordFields : RecordFields {
+  using MetadataType = Field<16, 19>;
+};
+
+struct ProviderInfoMetadataRecordFields : MetadataRecordFields {
+  static constexpr size_t kMaxNameLength = 0xff;
+
+  using Id = Field<20, 51>;
+  using NameLength = Field<52, 59>;
+};
+
+struct ProviderSectionMetadataRecordFields : MetadataRecordFields {
+  using Id = Field<20, 51>;
+};
+
 using InitializationRecordFields = RecordFields;
 
 struct StringRecordFields : RecordFields {
