@@ -9,7 +9,35 @@ source_set("test") {
     "run_all_unittests.cc",
   ]
 
-  deps = [
+  public_deps = [
+    ":lib",
     "//third_party/gtest",
+  ]
+}
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "capture.h",
+  ]
+
+  public_deps = [
+    "//lib/ftl",
+  ]
+}
+
+executable("unittests") {
+  output_name = "ledger_test_unittests"
+
+  testonly = true
+
+  sources = [
+    "capture_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    ":test",
   ]
 }

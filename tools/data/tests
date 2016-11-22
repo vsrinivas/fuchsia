@@ -12,6 +12,7 @@ unittests = [
     '/system/test/ledger_configuration_unittests',
     '/system/test/ledger_glue_unittests',
     '/system/test/ledger_integration_tests',
+    '/system/test/ledger_test_unittests',
     '/system/test/ledger_unittests',
     '/system/test/storage_btree_unittests',
     '/system/test/storage_unittests',

@@ -33,5 +33,6 @@ group("tests") {
     "//apps/ledger/src/firebase:unittests",
     "//apps/ledger/src/gcs:unittests",
     "//apps/ledger/src/glue:unittests",
+    "//apps/ledger/src/test:unittests",
   ]
 }
