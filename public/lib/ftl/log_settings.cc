@@ -4,7 +4,12 @@
 
 #include "lib/ftl/log_settings.h"
 
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+
 #include <algorithm>
+#include <iostream>
 
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"
@@ -22,6 +27,24 @@ void SetLogSettings(const LogSettings& settings) {
   // Validate the new settings as we set them.
   state::g_log_settings.min_log_level =
       std::min(LOG_FATAL, settings.min_log_level);
+
+  if (state::g_log_settings.log_file != settings.log_file) {
+    if (!settings.log_file.empty()) {
+      // Redirect stderr to file.
+      int fd = open(settings.log_file.c_str(), O_WRONLY | O_CREAT | O_APPEND);
+      if (fd < 0) {
+        std::cerr << "Could not open log file: " << settings.log_file << " ("
+                  << strerror(errno) << ")" << std::endl;
+      } else {
+        if (dup2(fd, STDERR_FILENO) < 0)
+          std::cerr << "Could not set stderr to log file: " << settings.log_file
+                    << " (" << strerror(errno) << ")" << std::endl;
+        else
+          state::g_log_settings.log_file = settings.log_file;
+        close(fd);
+      }
+    }
+  }
 }
 
 LogSettings GetLogSettings() {
@@ -59,6 +82,12 @@ bool ParseLogSettings(const ftl::CommandLine& command_line,
       return false;
     }
     settings.min_log_level = level;
+  }
+
+  // --log-file=<file>
+  std::string file;
+  if (command_line.GetOptionValue("log-file", &file)) {
+    settings.log_file = file;
   }
 
   *out_settings = settings;

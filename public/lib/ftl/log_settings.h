@@ -7,6 +7,8 @@
 
 #include "lib/ftl/log_level.h"
 
+#include <string>
+
 namespace ftl {
 
 class CommandLine;
@@ -23,6 +25,12 @@ struct LogSettings {
   // at level -x, so setting the min log level to negative values enables
   // verbose logging.
   LogSeverity min_log_level = LOG_INFO;
+
+  // The name of a file to which the log should be written.
+  // When non-empty, the previous log output is closed and logging is
+  // redirected to the specified file.  It is not possible to revert to
+  // the previous log output through this interface.
+  std::string log_file;
 };
 
 // Gets the active log settings for the current process.
@@ -41,6 +49,7 @@ int GetMinLogLevel();
 //   --verbose=<level> : sets |min_log_level| to -level
 //   --quiet           : sets |min_log_level| to +1 (LOG_WARNING)
 //   --quiet=<level>   : sets |min_log_level| to +level
+//   --log-file=<file> : sets |log_file| to file, uses default output if empty
 //
 // Quiet supersedes verbose if both are specified.
 //
