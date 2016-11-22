@@ -68,24 +68,22 @@ PcieBusDriver::~PcieBusDriver() {
     ecam_regions_.clear();
 }
 
-status_t PcieBusDriver::AddRoot(uint bus_id) {
+status_t PcieBusDriver::AddRoot(mxtl::RefPtr<PcieRoot>&& root) {
+    if (root == nullptr)
+        return ERR_INVALID_ARGS;
+
+    // Make sure that we are not already started.
     if (!IsNotStarted()) {
         TRACEF("Cannot add more PCIe roots once the bus driver has been started!\n");
         return ERR_BAD_STATE;
-    }
-
-    // Allocate the root
-    auto root = PcieRoot::Create(*this, bus_id);
-    if (root == nullptr) {
-        TRACEF("Failed to allocate PCIe root for bus %u\n", bus_id);
-        return ERR_NO_MEMORY;
     }
 
     // Attempt to add it to the collection of roots.
     {
         AutoLock bus_topology_lock(bus_topology_lock_);
         if (!roots_.insert_or_find(mxtl::move(root))) {
-            TRACEF("Failed to add PCIe root for bus %u, root already exists!\n", bus_id);
+            TRACEF("Failed to add PCIe root for bus %u, root already exists!\n",
+                    root->managed_bus_id());
             return ERR_ALREADY_EXISTS;
         }
     }
@@ -207,93 +205,6 @@ mxtl::RefPtr<PcieDevice> PcieBusDriver::GetNthDevice(uint32_t index) {
         }, &state);
 
     return mxtl::move(state.ret);
-}
-
-/*
- * Map from a device's interrupt pin ID to the proper system IRQ ID.  Follow the
- * PCIe graph up to the root, swizzling as we traverse PCIe switches,
- * PCIe-to-PCI bridges, and native PCI-to-PCI bridges.  Once we hit the root,
- * perform the final remapping using the platform supplied remapping routine.
- *
- * Platform independent swizzling behavior is documented in the PCIe base
- * specification in section 2.2.8.1 and Table 2-20.
- *
- * Platform dependent remapping is an exercise for the reader.  FWIW: PC
- * architectures use the _PRT tables in ACPI to perform the remapping.
- */
-uint PcieBusDriver::MapPinToIrq(const PcieDevice&       _dev,
-                                const PcieUpstreamNode& _upstream) {
-    const PcieDevice* dev            = &_dev;
-    const PcieUpstreamNode* upstream = &_upstream;
-
-    DEBUG_ASSERT(dev->legacy_irq_pin() <= PCIE_MAX_LEGACY_IRQ_PINS);
-    DEBUG_ASSERT(dev->legacy_irq_pin());
-    uint pin = dev->legacy_irq_pin() - 1;  // Change to 0s indexing
-
-    /* Hold the bus topology lock while we do this, so we don't need to worry
-     * about stuff disappearing as we walk the tree up */
-    {
-        AutoLock lock(bus_topology_lock_);
-
-        /* Walk up the PCI/PCIe tree, applying the swizzling rules as we go.  Stop
-         * when we reach the device which is hanging off of the root bus/root
-         * complex.  At this point, platform specific swizzling takes over.
-         */
-        while (upstream->type() == PcieUpstreamNode::Type::BRIDGE) {
-            auto bridge = static_cast<const PcieBridge*>(upstream);
-
-            /* We need to swizzle every time we pass through...
-             * 1) A PCI-to-PCI bridge (real or virtual)
-             * 2) A PCIe-to-PCI bridge
-             * 3) The Upstream port of a switch.
-             *
-             * We do NOT swizzle when we pass through...
-             * 1) A root port hanging off the root complex. (any swizzling here is up
-             *    to the platform implementation)
-             * 2) A Downstream switch port.  Since downstream PCIe switch ports are
-             *    only permitted to have a single device located at position 0 on
-             *    their "bus", it does not really matter if we do the swizzle or
-             *    not, since it would turn out to be an identity transformation
-             *    anyway.
-             *
-             * TODO(johngro) : Consider removing this logic.  For both of the cases
-             * where we traverse a node with a type 1 config header but don't apply
-             * the swizzling rules (downstream switch ports and root ports),
-             * application of the swizzle operation should be a no-op because the
-             * device number of the device hanging off the "secondary bus" should
-             * always be zero.  The final step through the root complex, either from
-             * integrated endpoint or root port, is left to the system and does not
-             * pass through this code.
-             */
-            switch (bridge->pcie_device_type()) {
-                /* UNKNOWN devices are devices which did not have a PCI Express
-                 * Capabilities structure in their capabilities list.  Since every
-                 * device we pass through on the way up the tree should be a device
-                 * with a Type 1 header, these should be PCI-to-PCI bridges (real or
-                 * virtual) */
-                case PCIE_DEVTYPE_UNKNOWN:
-                case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:
-                case PCIE_DEVTYPE_PCIE_TO_PCI_BRIDGE:
-                case PCIE_DEVTYPE_PCI_TO_PCIE_BRIDGE:
-                    pin = (pin + dev->dev_id()) % PCIE_MAX_LEGACY_IRQ_PINS;
-                    break;
-
-                default:
-                    break;
-            }
-
-            // Climb one branch higher up the tree
-            dev = static_cast<const PcieDevice*>(bridge);
-            upstream = bridge->upstream_.get();
-        }
-    }   // Leave bus_topology_lock_
-
-    uint irq;
-    __UNUSED status_t status;
-    status = platform_.LegacyIrqSwizzle(dev->bus_id(), dev->dev_id(), dev->func_id(), pin, &irq);
-    DEBUG_ASSERT(status == NO_ERROR);
-
-    return irq;
 }
 
 void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upstream) {

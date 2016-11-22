@@ -21,40 +21,7 @@
 
 class X86PciePlatformSupport : public PciePlatformInterface {
 public:
-    X86PciePlatformSupport() : PciePlatformInterface(MsiSupportLevel::MSI) {
-        for (size_t dev = 0; dev < countof(swizzle_map_); ++dev)
-            for (size_t func = 0; func < countof(swizzle_map_[dev]); ++func)
-                for (size_t pin = 0; pin < countof(swizzle_map_[dev][func]); ++pin)
-                    swizzle_map_[dev][func][pin] = MX_PCI_NO_IRQ_MAPPING;
-    }
-
-    status_t AddLegacySwizzle(uint bus_id,
-                              uint dev_id,
-                              uint func_id,
-                              const SwizzleMapEntry& map_entry) override {
-        if ((bus_id != 0) ||
-            (dev_id >= countof(swizzle_map_)) ||
-            (func_id >= countof(swizzle_map_[0])))
-            return ERR_INVALID_ARGS;
-
-        AutoLock swizzle_lock(swizzle_lock_);
-        static_assert(sizeof(swizzle_map_[dev_id][func_id]) == sizeof(map_entry), "");
-        memcpy(&swizzle_map_[dev_id][func_id], &map_entry, sizeof(map_entry));
-        return NO_ERROR;
-    }
-
-    status_t LegacyIrqSwizzle(uint bus_id, uint dev_id, uint func_id,
-                              uint pin, uint *irq) override {
-        if ((bus_id  != 0) ||
-            (dev_id  >= countof(swizzle_map_)) ||
-            (func_id >= countof(swizzle_map_[dev_id])) ||
-            (pin     >= countof(swizzle_map_[dev_id][func_id])))
-            return ERR_INVALID_ARGS;
-
-        AutoLock swizzle_lock(swizzle_lock_);
-        *irq = swizzle_map_[dev_id][func_id][pin];
-        return (*irq == MX_PCI_NO_IRQ_MAPPING) ? ERR_NOT_FOUND : NO_ERROR;
-    }
+    X86PciePlatformSupport() : PciePlatformInterface(MsiSupportLevel::MSI) { }
 
     status_t AllocMsiBlock(uint requested_irqs,
                            bool can_target_64bit,
@@ -73,10 +40,6 @@ public:
                             void*                   ctx) override {
         x86_register_msi_handler(block, msi_id, handler, ctx);
     }
-
-private:
-    Mutex swizzle_lock_;
-    SwizzleMapEntry swizzle_map_[PCIE_MAX_DEVICES_PER_BUS][PCIE_MAX_FUNCTIONS_PER_DEVICE];
 };
 
 X86PciePlatformSupport platform_pcie_support;

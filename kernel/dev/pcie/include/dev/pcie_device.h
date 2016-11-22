@@ -21,6 +21,7 @@
 #include <kernel/spinlock.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_ptr.h>
+#include <new.h>
 #include <sys/types.h>
 
 /* Fwd decls */
@@ -327,6 +328,7 @@ protected:
     status_t ProbeBarsLocked();
     status_t ProbeBarLocked(uint bar_id);
     status_t ParseCapabilitiesLocked();
+    status_t MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>&& upstream);
     status_t InitLegacyIrqStateLocked(PcieUpstreamNode& upstream);
 
     // BAR allocation
@@ -444,6 +446,7 @@ private:
             // TODO(johngro): clean up the messy list_node initialization below
             // by converting to mxtl intrusive lists.
             uint8_t pin = 0;
+            uint    irq_id = static_cast<uint>(-1);
             struct list_node shared_handler_node = { nullptr, nullptr};
             mxtl::RefPtr<SharedLegacyIrqHandler> shared_handler;
         } legacy;

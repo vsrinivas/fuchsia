@@ -4,10 +4,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-
+//
 #include <assert.h>
 #include <debug.h>
 #include <dev/interrupt.h>
+#include <dev/pcie_bus_driver.h>
+#include <dev/pcie_bridge.h>
+#include <dev/pcie_root.h>
 #include <err.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
@@ -18,7 +21,6 @@
 #include <string.h>
 #include <trace.h>
 
-#include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
 
 #define LOCAL_TRACE 0
@@ -788,10 +790,113 @@ status_t PcieDevice::MaskUnmaskIrq(uint irq_id, bool mask) {
         : ERR_BAD_STATE;
 }
 
+
+// Map from a device's interrupt pin ID to the proper system IRQ ID.  Follow the
+// PCIe graph up to the root, swizzling as we traverse PCIe switches,
+// PCIe-to-PCI bridges, and native PCI-to-PCI bridges.  Once we hit the root,
+// perform the final remapping using the platform supplied remapping routine.
+//
+// Platform independent swizzling behavior is documented in the PCIe base
+// specification in section 2.2.8.1 and Table 2-20.
+//
+// Platform dependent remapping is an exercise for the reader.  FWIW: PC
+// architectures use the _PRT tables in ACPI to perform the remapping.
+//
+status_t PcieDevice::MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>&& upstream) {
+    DEBUG_ASSERT(dev_lock_.IsHeld());
+
+    if (!legacy_irq_pin() || (legacy_irq_pin() > PCIE_MAX_LEGACY_IRQ_PINS))
+        return ERR_BAD_STATE;
+
+    auto dev = mxtl::WrapRefPtr(this);
+    uint pin = legacy_irq_pin() - 1;  // Change to 0s indexing
+
+    // Walk up the PCI/PCIe tree, applying the swizzling rules as we go.  Stop
+    // when we reach the device which is hanging off of the root bus/root
+    // complex.  At this point, platform specific swizzling takes over.
+    while ((upstream != nullptr) &&
+           (upstream->type() == PcieUpstreamNode::Type::BRIDGE)) {
+        // TODO(johngro) : Eliminate the null-check of bridge below.  Currently,
+        // it is needed because we have gcc/g++'s "null-dereference" warning
+        // turned on, and because of the potentially offsetting nature of static
+        // casting, the compiler cannot be sure that bridge is non-null, just
+        // because upstream was non-null (check in the while predicate, above).
+        // Even adding explicit checks to the Downcast method in RefPtr<> does
+        // not seem to satisfy it.
+        //
+        // Some potential future options include...
+        // 1) Change this to DEBUG_ASSERT and turn off the null-dereference
+        //    warning in release builds.
+        // 2) Wait until GCC becomes smart enough to figure this out.
+        // 3) Switch completely to clang (assuming that clang does not have
+        //    similar problems).
+        auto bridge = mxtl::RefPtr<PcieBridge>::Downcast(mxtl::move(upstream));
+        if (bridge == nullptr)
+            return ERR_INTERNAL;
+
+        // We need to swizzle every time we pass through...
+        // 1) A PCI-to-PCI bridge (real or virtual)
+        // 2) A PCIe-to-PCI bridge
+        // 3) The Upstream port of a switch.
+        //
+        // We do NOT swizzle when we pass through...
+        // 1) A root port hanging off the root complex. (any swizzling here is up
+        //    to the platform implementation)
+        // 2) A Downstream switch port.  Since downstream PCIe switch ports are
+        //    only permitted to have a single device located at position 0 on
+        //    their "bus", it does not really matter if we do the swizzle or
+        //    not, since it would turn out to be an identity transformation
+        //    anyway.
+        switch (bridge->pcie_device_type()) {
+            // UNKNOWN devices are devices which did not have a PCI Express
+            // Capabilities structure in their capabilities list.  Since every
+            // device we pass through on the way up the tree should be a device
+            // with a Type 1 header, these should be PCI-to-PCI bridges (real or
+            // virtual)
+            case PCIE_DEVTYPE_UNKNOWN:
+            case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:
+            case PCIE_DEVTYPE_PCIE_TO_PCI_BRIDGE:
+            case PCIE_DEVTYPE_PCI_TO_PCIE_BRIDGE:
+                pin = (pin + dev->dev_id()) % PCIE_MAX_LEGACY_IRQ_PINS;
+                break;
+
+            default:
+                break;
+        }
+
+        // Climb one branch higher up the tree
+        dev = mxtl::move(bridge);
+        upstream = dev->GetUpstream();
+    }
+
+    // If our upstream is ever null as we climb the tree, then something must
+    // have been unplugged as we were climbing.
+    if (upstream == nullptr)
+        return ERR_BAD_STATE;
+
+    // We have hit root of the tree.  Something is very wrong if our
+    // UpstreamNode is not, in fact, a root.
+    if (upstream->type() != PcieUpstreamNode::Type::ROOT) {
+        TRACEF("Failed to map legacy pin to platform IRQ ID for dev "
+               "%02x:%02x.%01x (pin %u).  Top of the device tree "
+               "(managed bus ID 0x%02x) does not appear to be either a root or a "
+               "bridge! (type %u)\n",
+               bus_id_, dev_id_, func_id_, irq_.legacy.pin,
+               upstream->managed_bus_id(), static_cast<uint>(upstream->type()));
+        return ERR_BAD_STATE;
+    }
+
+    // TODO(johngro) : Eliminate the null-check of root below.  See the TODO for
+    // the downcast of upstream -> bridge above for details.
+    auto root = mxtl::RefPtr<PcieRoot>::Downcast(mxtl::move(upstream));
+    if (root == nullptr)
+        return ERR_INTERNAL;
+    return root->Swizzle(dev->dev_id(), dev->func_id(), pin, &irq_.legacy.irq_id);
+}
+
 status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(cfg_);
-    DEBUG_ASSERT(!irq_.legacy.pin);
     DEBUG_ASSERT(irq_.legacy.shared_handler == nullptr);
 
     // Make certain that the device's legacy IRQ (if any) has been disabled.
@@ -802,16 +907,21 @@ status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
     // handler.
     irq_.legacy.pin = pcie_read8(&cfg_->base.interrupt_pin);
     if (irq_.legacy.pin) {
-        uint irq_id;
+        status_t res = MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>(&upstream));
+        if (res != NO_ERROR) {
+            TRACEF("Failed to map legacy pin to platform IRQ ID for "
+                   "dev %02x:%02x.%01x (pin %u)\n",
+                   bus_id_, dev_id_, func_id_,
+                   irq_.legacy.pin);
+            return res;
+        }
 
-        irq_id = bus_drv_.MapPinToIrq(*this, upstream);
-        irq_.legacy.shared_handler = bus_drv_.FindLegacyIrqHandler(irq_id);
-
+        irq_.legacy.shared_handler = bus_drv_.FindLegacyIrqHandler(irq_.legacy.irq_id);
         if (irq_.legacy.shared_handler == nullptr) {
             TRACEF("Failed to find or create shared legacy IRQ handler for "
-                   "dev %02x:%02x.%01x (pin %u, irq_ id %u)\n",
+                   "dev %02x:%02x.%01x (pin %u, irq_id %u)\n",
                    bus_id_, dev_id_, func_id_,
-                   irq_.legacy.pin, irq_id);
+                   irq_.legacy.pin, irq_.legacy.irq_id);
             return ERR_NO_RESOURCES;
         }
     }

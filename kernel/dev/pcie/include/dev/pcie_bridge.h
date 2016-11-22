@@ -37,9 +37,9 @@ public:
     void Unplug() override;
 
     // UpstreamNode overrides
-    RegionAllocator& mmio_lo_regions() override { return mmio_lo_regions_; }
-    RegionAllocator& mmio_hi_regions() override { return mmio_hi_regions_; }
-    RegionAllocator& pio_regions()     override { return pio_regions_; }
+    RegionAllocator& mmio_lo_regions() final { return mmio_lo_regions_; }
+    RegionAllocator& mmio_hi_regions() final { return mmio_hi_regions_; }
+    RegionAllocator& pio_regions()     final { return pio_regions_; }
 
     // Properties
     PcieBusDriver& driver() { return PcieDevice::driver(); }

@@ -44,11 +44,53 @@ static inline void shutdown_early_init_console() {
 static inline void shutdown_early_init_console() { }
 #endif
 
-
 #if WITH_DEV_PCIE
 #include <dev/pcie_bus_driver.h>
+#include <dev/pcie_root.h>
 #include <magenta/pci_device_dispatcher.h>
 #include <magenta/pci_interrupt_dispatcher.h>
+
+// Implementation of a PcieRoot with a look-up table based legacy IRQ swizzler
+// suitable for use with ACPI style swizzle definitions.
+class PcieRootLUTSwizzle : public PcieRoot {
+public:
+    static mxtl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv,
+                                         uint managed_bus_id,
+                                         const mx_pci_irq_swizzle_lut_t& lut) {
+        AllocChecker ac;
+        auto root = mxtl::AdoptRef(new (&ac) PcieRootLUTSwizzle(bus_drv,
+                                                                managed_bus_id,
+                                                                lut));
+        if (!ac.check()) {
+            TRACEF("Out of memory attemping to create PCIe root to manage bus ID 0x%02x\n",
+                    managed_bus_id);
+            return nullptr;
+        }
+
+        return root;
+    }
+
+    status_t Swizzle(uint dev_id, uint func_id, uint pin, uint *irq) override {
+        if ((irq == nullptr) ||
+            (dev_id  >= countof(lut_)) ||
+            (func_id >= countof(lut_[dev_id])) ||
+            (pin     >= countof(lut_[dev_id][func_id])))
+            return ERR_INVALID_ARGS;
+
+        *irq = lut_[dev_id][func_id][pin];
+        return (*irq == MX_PCI_NO_IRQ_MAPPING) ? ERR_NOT_FOUND : NO_ERROR;
+    }
+
+private:
+    PcieRootLUTSwizzle(PcieBusDriver& bus_drv,
+                       uint managed_bus_id,
+                       const mx_pci_irq_swizzle_lut_t& lut)
+        : PcieRoot(bus_drv, managed_bus_id) {
+        ::memcpy(&lut_, &lut, sizeof(lut_));
+    }
+
+    mx_pci_irq_swizzle_lut_t lut_;
+};
 
 mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add) {
     // TODO: finer grained validation
@@ -129,23 +171,6 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> i
         }
     }
 
-    // Populate the platform swizzle map.
-    // TODO(johngro) : Kill this.  See the comment in PciePlatformInterface::AddLegacySwizzle;
-    // Legacy swizzling should be a property of a PCIe/PCI root, not the platform.
-    for (uint dev = 0; dev < countof(arg->dev_pin_to_global_irq); ++dev) {
-        for (uint func = 0; func < countof(arg->dev_pin_to_global_irq[dev]); ++func) {
-            constexpr uint bus = 0;
-            const auto& swiz_map_entry = arg->dev_pin_to_global_irq[dev][func];
-            status_t res = pcie->platform().AddLegacySwizzle(bus, dev, func, swiz_map_entry);
-
-            if (res != NO_ERROR) {
-                TRACEF("Failed to add PCIe legacy swizzle map entry for %02x:%02x.%01x (res %d)\n",
-                        bus, dev, func, res);
-                return res;
-            }
-        }
-    }
-
     // TODO(teisenbe): For now assume there is only one ECAM
     if (win_count != 1) {
         return ERR_INVALID_ARGS;
@@ -212,9 +237,14 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> i
         return ret;
     }
 
-    // TODO(johngro): Relax this assumption when the bus driver supports
-    // multiple roots.
-    ret = pcie->AddRoot(0u);
+    // TODO(johngro): Change the user-mode and devmgr behavior to add all of the
+    // roots in the system.  Do not assume that there is a single root, nor that
+    // it manages bus ID 0.
+    auto root = PcieRootLUTSwizzle::Create(*pcie, 0, arg->dev_pin_to_global_irq);
+    if (root == nullptr)
+        return ERR_NO_MEMORY;
+
+    ret = pcie->AddRoot(mxtl::move(root));
     if (ret != NO_ERROR) {
         TRACEF("Failed to add root complex to PCIe bus driver! (ret %d)\n", ret);
         return ret;

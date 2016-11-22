@@ -8,9 +8,11 @@
 #if WITH_DEV_PCIE
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_platform.h>
+#include <dev/pcie_root.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
 #include <inttypes.h>
 #include <lk/init.h>
+#include <mxtl/ref_ptr.h>
 #include <new.h>
 #include <platform/qemu-virt.h>
 #include <trace.h>
@@ -20,18 +22,6 @@ public:
     QemuPciePlatformSupport(bool has_msi_gic)
         : PciePlatformInterface(has_msi_gic ? MsiSupportLevel::MSI_WITH_MASKING
                                             : MsiSupportLevel::NONE) { }
-
-    status_t LegacyIrqSwizzle(uint bus_id, uint dev_id, uint func_id,
-                              uint pin, uint *irq) override {
-        if (!irq || pin >= PCIE_MAX_LEGACY_IRQ_PINS)
-            return ERR_INVALID_ARGS;
-
-        if (bus_id != 0)
-            return ERR_NOT_FOUND;
-
-        *irq = PCIE_INT_BASE + ((pin + dev_id) % PCIE_MAX_LEGACY_IRQ_PINS);
-        return NO_ERROR;
-    }
 
     status_t AllocMsiBlock(uint requested_irqs,
                            bool can_target_64bit,
@@ -56,6 +46,41 @@ public:
                        bool                    mask) override {
         arm_gicv2m_mask_unmask_msi(block, msi_id, mask);
     }
+};
+
+class QemuPcieRoot : public PcieRoot {
+public:
+    static mxtl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv, uint managed_bus_id) {
+        AllocChecker ac;
+        auto root = mxtl::AdoptRef(new (&ac) QemuPcieRoot(bus_drv, managed_bus_id));
+        if (!ac.check()) {
+            TRACEF("Out of memory attemping to create PCIe root to manage bus ID 0x%02x\n",
+                    managed_bus_id);
+            return nullptr;
+        }
+
+        return root;
+    }
+
+    status_t Swizzle(uint dev_id, uint func_id, uint pin, uint *irq) override {
+        if ((irq == nullptr) ||
+            (dev_id  >= PCIE_MAX_DEVICES_PER_BUS) ||
+            (func_id >= PCIE_MAX_FUNCTIONS_PER_DEVICE) ||
+            (pin     >= PCIE_MAX_LEGACY_IRQ_PINS))
+            return ERR_INVALID_ARGS;
+
+        // TODO(johngro) : Figure out what to do here if QEMU ever starts to
+        // create root complexes which manage a bus other than 0.
+        if (managed_bus_id() != 0)
+            return ERR_NOT_FOUND;
+
+        *irq = PCIE_INT_BASE + ((pin + dev_id) % PCIE_MAX_LEGACY_IRQ_PINS);
+        return NO_ERROR;
+    }
+
+private:
+    QemuPcieRoot(PcieBusDriver& bus_drv, uint managed_bus_id)
+        : PcieRoot(bus_drv, managed_bus_id) { }
 };
 
 static void arm_qemu_pcie_init_hook(uint level) {
@@ -106,13 +131,16 @@ static void arm_qemu_pcie_init_hook(uint level) {
             return;
         }
 
-        /* Add the root complex for bus ID #0. */
-        res = pcie->AddRoot(0);
+        // Create and add the root complex for bus ID #0.
+        auto root = QemuPcieRoot::Create(*pcie, 0);
+        if (root == nullptr)
+            return;
+
+        res = pcie->AddRoot(mxtl::move(root));
         if (res != NO_ERROR) {
             TRACEF("Failed to add PCIe root complex for bus 0! (res %d)\n", res);
             return;
         }
-
         res = pcie->StartBusDriver();
         if (res != NO_ERROR) {
             TRACEF("Failed to start PCIe bus driver! (res %d)\n", res);

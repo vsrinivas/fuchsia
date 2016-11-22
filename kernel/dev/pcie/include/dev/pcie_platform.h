@@ -41,10 +41,21 @@ __END_CDECLS
 
 #include <mxtl/ref_counted.h>
 
+// PciePlatformInterface
+//
+// The definitions of an interface responsible for managing runtime platform
+// resource allocation.  In particular, blocks of MSI interrupts.  Platforms
+// must provide an implementation of this interface to the PcieBusDriver when it
+// gets instantiated.
+//
+// TODO(johngro): If/when the kernel interface to interrupt management becomes
+// more standardized (and includes the concept of MSI IRQ blocks), this
+// interface can be eliminated and the PCI bus driver can interact with the
+// omnipresent interrupt management interface instead of an implementation of
+// this interface.
+//
 class PciePlatformInterface {
 public:
-    using SwizzleMapEntry = uint32_t[PCIE_MAX_LEGACY_IRQ_PINS];
-
     virtual ~PciePlatformInterface() { }
 
     /**
@@ -60,42 +71,6 @@ public:
      */
     bool supports_msi() const { return supports_msi_; }
     bool supports_msi_masking() const { return supports_msi_masking_; }
-
-    /**
-     * Implemented by platforms which can have dynamic swizzle maps.
-     *
-     * TODO(johngro) : Get rid of this, it really does not belong in the
-     * platform interface.  Legacy swizzling can happen any time an interrupt comes
-     * in through a root complex (or root controller in the case of PCI).
-     * Swizzling behavior should be a property of these roots (not a global
-     * property of the platform) and should be supplied by the platform at the
-     * time it adds a root to the bus driver.
-     */
-    virtual status_t AddLegacySwizzle(uint bus_id,
-                                      uint dev_id,
-                                      uint func_id,
-                                      const SwizzleMapEntry& map_entry) {
-        return ERR_NOT_SUPPORTED;
-    }
-
-    /**
-     * Method used for platform-specific legacy IRQ remapping.  All platforms
-     * must implement this.
-     *
-     * @param bus_id  The bus ID of the pcie device/bridge to swizzle for.
-     * @param dev_id  The device ID of the pcie device/bridge to swizzle for.
-     * @param func_id The function ID of the pcie device/bridge to swizzle for.
-     * @param pin     The pin we want to swizzle
-     * @param irq     An output pointer for what IRQ this pin goes to
-     *
-     * @return NO_ERROR if we successfully swizzled
-     * @return ERR_NOT_FOUND if we did not know how to swizzle this pin
-     */
-    virtual status_t LegacyIrqSwizzle(uint bus_id,
-                                      uint dev_id,
-                                      uint func_id,
-                                      uint pin,
-                                      uint *irq) = 0;
 
     /**
      * Method used for platform allocation of blocks of MSI and MSI-X compatible

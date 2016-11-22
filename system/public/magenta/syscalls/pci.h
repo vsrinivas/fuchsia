@@ -29,10 +29,12 @@ typedef struct mx_pcie_get_nth_info {
 
 #define MX_PCI_NO_IRQ_MAPPING UINT32_MAX
 
+// Dimensions: device id, function id, legacy pin number
+// MX_PCI_NO_IRQ_MAPPING if no mapping specified.
+typedef uint32_t mx_pci_irq_swizzle_lut_t[32][8][4];
+
 typedef struct mx_pci_init_arg {
-    // Dimensions: device id, function id, legacy pin number
-    // MX_PCI_NO_IRQ_MAPPING if no mapping specified.
-    uint32_t dev_pin_to_global_irq[32][8][4];
+    mx_pci_irq_swizzle_lut_t dev_pin_to_global_irq;
 
     uint32_t num_irqs;
     struct {

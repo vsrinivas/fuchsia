@@ -97,7 +97,7 @@ public:
     }
 
     // Add a root bus to the driver and attempt to scan it for devices.
-    status_t AddRoot(uint bus_id);
+    status_t AddRoot(mxtl::RefPtr<PcieRoot>&& root);
 
     // Start the driver
     //
@@ -122,8 +122,10 @@ public:
     // Rescan looking for new devices
     status_t RescanDevices();
 
+    // TODO(johngro) : Remove this someday.  Getting the "Nth" device is not a
+    // concept which is going to carry over well to the world of hot-plugable
+    // devices.
     mxtl::RefPtr<PcieDevice> GetNthDevice(uint32_t index);
-    uint MapPinToIrq(const PcieDevice& dev, const PcieUpstreamNode& upstream);
 
     // Topology related stuff
     void LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upstream);
@@ -140,7 +142,7 @@ public:
     RegionAllocator& mmio_hi_regions() { return mmio_hi_regions_; }
     RegionAllocator& pio_regions()     { return pio_regions_; }
 
-    // TODO(johngro) : Make these private when we can.
+    // TODO(johngro) : Make this private when we can.
     mxtl::RefPtr<SharedLegacyIrqHandler> FindLegacyIrqHandler(uint irq_id);
     // TODO(johngro) : end TODO section
 

@@ -19,27 +19,41 @@ class PcieRoot : public mxtl::WAVLTreeContainable<mxtl::RefPtr<PcieRoot>>,
                  public PcieUpstreamNode
 {
 public:
-    static mxtl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv, uint managed_bus_id);
-
     // Disallow copying, assigning and moving.
     DISALLOW_COPY_ASSIGN_AND_MOVE(PcieRoot);
 
     // Implement ref counting, do not let derived classes override.
     PCIE_IMPLEMENT_REFCOUNTED;
 
+    // Properties
     PcieBusDriver& driver() { return bus_drv_; }
-    RegionAllocator& mmio_lo_regions() override { return bus_drv_.mmio_lo_regions(); }
-    RegionAllocator& mmio_hi_regions() override { return bus_drv_.mmio_hi_regions(); }
-    RegionAllocator& pio_regions()     override { return bus_drv_.pio_regions(); }
+    RegionAllocator& mmio_lo_regions() final { return bus_drv_.mmio_lo_regions(); }
+    RegionAllocator& mmio_hi_regions() final { return bus_drv_.mmio_hi_regions(); }
+    RegionAllocator& pio_regions()     final { return bus_drv_.pio_regions(); }
 
+    // Perform the swizzle for the root which this swizzle interface applies to.
+    //
+    // When legacy IRQs traverse PCI/PCIe roots, they are subject to a platform
+    // specific IRQ swizzle operation.  Platforms must supply an implementation
+    // of this method for when they add a root to the bus driver before startup.
+    //
+    // @param dev_id  The device ID of the pcie device/bridge to swizzle for.
+    // @param func_id The function ID of the pcie device/bridge to swizzle for.
+    // @param pin     The pin we want to swizzle
+    // @param irq     An output pointer for what IRQ this pin goes to
+    //
+    // @return NO_ERROR if we successfully swizzled
+    // @return ERR_NOT_FOUND if we did not know how to swizzle this pin
+    virtual status_t Swizzle(uint dev_id, uint func_id, uint pin, uint *irq) = 0;
 
     // WAVL-tree Index
     uint GetKey() const { return managed_bus_id(); }
-    // TODO(johngro) : Move Legacy IRQ swizling support out of PciePlatform and into roots
     // TODO(johngro) : Add support for RCRB (root complex register block)  Consider splitting
     // PcieRoot into PciRoot and PcieRoot (since PciRoots don't have RCRBs)
 
-private:
+protected:
     PcieRoot(PcieBusDriver& bus_drv, uint mbus_id);
+
+private:
     PcieBusDriver& bus_drv_;
 };
