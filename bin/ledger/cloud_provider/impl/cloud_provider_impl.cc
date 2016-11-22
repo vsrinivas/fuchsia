@@ -77,6 +77,11 @@ void CloudProviderImpl::GetCommits(
           callback(Status::UNKNOWN_ERROR, std::vector<Record>());
           return;
         }
+        if (value.IsNull()) {
+          // No commits synced for this page yet.
+          callback(Status::OK, std::vector<Record>());
+          return;
+        }
         if (!value.IsObject()) {
           callback(Status::UNKNOWN_ERROR, std::vector<Record>());
           return;

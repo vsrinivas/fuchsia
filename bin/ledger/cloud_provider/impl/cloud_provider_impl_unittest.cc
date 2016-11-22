@@ -13,6 +13,8 @@
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/status.h"
+#include "apps/ledger/src/test/capture.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
@@ -27,7 +29,7 @@
 namespace cloud_provider {
 namespace {
 
-class CloudProviderImplTest : public ::testing::Test,
+class CloudProviderImplTest : public test::TestWithMessageLoop,
                               public firebase::Firebase,
                               public CommitWatcher {
  public:
@@ -111,8 +113,6 @@ class CloudProviderImplTest : public ::testing::Test,
   std::vector<Commit> commits_;
   std::vector<std::string> server_timestamps_;
   unsigned int commit_watcher_errors_ = 0u;
-
-  mtl::MessageLoop message_loop_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
@@ -307,6 +307,22 @@ TEST_F(CloudProviderImplTest, GetCommits) {
   EXPECT_EQ("commits", get_keys_[0]);
   EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", get_queries_[0]);
   EXPECT_TRUE(callback_called);
+}
+
+TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
+  std::string get_response_content = "null";
+  get_response_ = std::make_unique<rapidjson::Document>();
+  get_response_->Parse(get_response_content.c_str(),
+                       get_response_content.size());
+
+  Status status;
+  std::vector<Record> records;
+  cloud_provider_->GetCommits(
+      ServerTimestampToBytes(42),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &records));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_TRUE(records.empty());
 }
 
 TEST_F(CloudProviderImplTest, AddObject) {
