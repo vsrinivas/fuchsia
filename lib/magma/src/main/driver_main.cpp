@@ -260,17 +260,14 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
 
     // TODO remove when the gfxconsole moves to user space
     intel_i915_enable_backlight(device, true);
-    mx_set_framebuffer(get_root_resource(), device->framebuffer,
-                       static_cast<uint32_t>(device->framebuffer_size), format, width, height,
-                       stride);
 
     device->device.protocol_id = MX_PROTOCOL_DISPLAY;
     device->device.protocol_ops = &intel_i915_display_proto;
     device->parent_device = dev;
     device_add(&device->device, dev);
 
-    xprintf("initialized magma intel display driver, fb=0x%p fbsize=0x%lx\n", device->framebuffer,
-            device->framebuffer_size);
+    DLOG("initialized magma intel display driver, fb=0x%p fbsize=0x%lx", device->framebuffer,
+         device->framebuffer_size);
 
     if (MAGMA_START) {
         std::thread magma_thread(magma_hook, device);
