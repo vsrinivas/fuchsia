@@ -16,7 +16,8 @@ PageManager::PageManager(
     std::unique_ptr<storage::PageStorage> page_storage,
     std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context)
     : page_storage_(std::move(page_storage)),
-      page_sync_context_(std::move(page_sync_context)) {
+      page_sync_context_(std::move(page_sync_context)),
+      sync_backlog_downloaded_(false) {
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
   if (page_sync_context) {
@@ -24,14 +25,22 @@ PageManager::PageManager(
   }
 
   if (page_sync_context_) {
+    page_sync_context_->page_sync->SetOnBacklogDownloaded(
+        [this] { OnSyncBacklogDownloaded(); });
     page_sync_context_->page_sync->Start();
+  } else {
+    sync_backlog_downloaded_ = true;
   }
 }
 
 PageManager::~PageManager() {}
 
 void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request) {
-  pages_.emplace(this, page_storage_.get(), std::move(page_request));
+  if (sync_backlog_downloaded_) {
+    pages_.emplace(this, page_storage_.get(), std::move(page_request));
+  } else {
+    page_requests_.push_back(std::move(page_request));
+  }
 }
 
 void PageManager::BindPageSnapshot(
@@ -43,9 +52,18 @@ void PageManager::BindPageSnapshot(
 
 void PageManager::CheckEmpty() {
   if (on_empty_callback_ && pages_.empty() && snapshots_.empty() &&
+      page_requests_.empty() &&
       (!page_sync_context_ || page_sync_context_->page_sync->IsIdle())) {
     on_empty_callback_();
   }
+}
+
+void PageManager::OnSyncBacklogDownloaded() {
+  sync_backlog_downloaded_ = true;
+  for (auto& request : page_requests_) {
+    BindPage(std::move(request));
+  }
+  page_requests_.clear();
 }
 
 }  // namespace ledger

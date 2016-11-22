@@ -7,10 +7,13 @@
 #include <memory>
 
 #include "apps/ledger/src/app/constants.h"
+#include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
+#include "apps/ledger/src/cloud_sync/test/page_sync_empty_impl.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/storage/test/commit_contents_empty_impl.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -18,7 +21,20 @@
 namespace ledger {
 namespace {
 
-class PageManagerTest : public ::testing::Test {
+class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
+ public:
+  void Start() { start_called = true; }
+
+  void SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded_callback) {
+    this->on_backlog_downloaded_callback =
+        std::move(on_backlog_downloaded_callback);
+  }
+
+  bool start_called = false;
+  ftl::Closure on_backlog_downloaded_callback;
+};
+
+class PageManagerTest : public test::TestWithMessageLoop {
  public:
   PageManagerTest() {}
   ~PageManagerTest() override {}
@@ -30,7 +46,6 @@ class PageManagerTest : public ::testing::Test {
     page_id_ = storage::PageId(kPageIdSize, 'a');
   }
 
-  mtl::MessageLoop message_loop_;
   storage::PageId page_id_;
 
  private:
@@ -53,20 +68,14 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   page_manager.BindPage(GetProxy(&page2));
   page1.reset();
   page2.reset();
-  message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.PostQuitTask(); },
-      ftl::TimeDelta::FromSeconds(1));
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 
   on_empty_called = false;
   PagePtr page3;
   page_manager.BindPage(GetProxy(&page3));
   page3.reset();
-  message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.PostQuitTask(); },
-      ftl::TimeDelta::FromSeconds(1));
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 
   on_empty_called = false;
@@ -76,10 +85,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
           new storage::test::CommitContentsEmptyImpl()),
       GetProxy(&snapshot));
   snapshot.reset();
-  message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.PostQuitTask(); },
-      ftl::TimeDelta::FromSeconds(1));
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 }
 
@@ -97,7 +103,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   });
 
   page_manager.reset();
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(page_closed);
 }
 
@@ -120,7 +126,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
                EXPECT_EQ(Status::OK, status);
                message_loop_.PostQuitTask();
              });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   PageWatcherPtr watcher;
   fidl::InterfaceRequest<PageWatcher> watcher_request = GetProxy(&watcher);
@@ -128,23 +134,60 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   page1.reset();
   page2.reset();
-  message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.PostQuitTask(); },
-      ftl::TimeDelta::FromSeconds(1));
-  message_loop_.Run();
+  EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_FALSE(on_empty_called);
 
   watcher_request.PassChannel();
-  message_loop_.task_runner()->PostDelayedTask(
-      [this]() { message_loop_.PostQuitTask(); },
-      ftl::TimeDelta::FromSeconds(1));
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
 }
+
+TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
+  auto fake_page_sync = std::make_unique<FakePageSync>();
+  auto fake_page_sync_ptr = fake_page_sync.get();
+  auto page_sync_context = std::make_unique<cloud_sync::PageSyncContext>();
+  page_sync_context->page_sync = std::move(fake_page_sync);
+  auto storage = std::make_unique<storage::fake::FakePageStorage>(page_id_);
+
+  EXPECT_FALSE(fake_page_sync_ptr->start_called);
+  EXPECT_FALSE(fake_page_sync_ptr->on_backlog_downloaded_callback);
+
+  PageManager page_manager(std::move(storage), std::move(page_sync_context));
+
+  EXPECT_TRUE(fake_page_sync_ptr->start_called);
+  EXPECT_TRUE(fake_page_sync_ptr->on_backlog_downloaded_callback);
+
+  bool called = false;
+  PagePtr page;
+  page_manager.BindPage(GetProxy(&page));
+  page->GetId([this, &called](fidl::Array<uint8_t> id) {
+    called = true;
+    message_loop_.PostQuitTask();
+  });
+
+  EXPECT_TRUE(RunLoopWithTimeout());
+  EXPECT_FALSE(called);
+
+  fake_page_sync_ptr->on_backlog_downloaded_callback();
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(called);
+
+  // Check that a second call on the same manager is not delayed.
+  called = false;
+  page.reset();
+  page_manager.BindPage(GetProxy(&page));
+  page->GetId([this, &called](fidl::Array<uint8_t> id) {
+    called = true;
+    message_loop_.PostQuitTask();
+  });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(called);
+};
 
 }  // namespace
 }  // namespace ledger

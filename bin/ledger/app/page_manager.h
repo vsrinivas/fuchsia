@@ -51,12 +51,16 @@ class PageManager {
 
  private:
   void CheckEmpty();
+  void OnSyncBacklogDownloaded();
 
   std::unique_ptr<storage::PageStorage> page_storage_;
   std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_;
   AutoCleanableSet<BoundInterface<PageSnapshot, PageSnapshotImpl>> snapshots_;
   AutoCleanableSet<BranchTracker> pages_;
   ftl::Closure on_empty_callback_;
+
+  bool sync_backlog_downloaded_;
+  std::vector<fidl::InterfaceRequest<Page>> page_requests_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageManager);
 };
