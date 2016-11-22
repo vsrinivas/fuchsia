@@ -173,7 +173,8 @@ PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
       page_id_(page_id.ToString()),
       db_(this, page_dir_ + kLevelDbDir),
       objects_dir_(page_dir_ + kObjectDir),
-      staging_dir_(page_dir_ + kStagingDir) {}
+      staging_dir_(page_dir_ + kStagingDir),
+      page_sync_(nullptr) {}
 
 PageStorageImpl::~PageStorageImpl() {}
 
