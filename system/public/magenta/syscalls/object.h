@@ -19,6 +19,7 @@ typedef enum {
     MX_INFO_PROCESS_THREADS,        // mx_koid_t[n]
     MX_INFO_RESOURCE_CHILDREN,      // mx_rrec_t[n]
     MX_INFO_RESOURCE_RECORDS,       // mx_rrec_t[n]
+    MX_INFO_VMAR,                   // mx_info_vmar_t
 } mx_object_info_topic_t;
 
 typedef enum {
@@ -58,6 +59,11 @@ typedef struct mx_info_handle_basic {
 typedef struct mx_info_process {
     int return_code;
 } mx_info_process_t;
+
+typedef struct mx_info_vmar {
+    uintptr_t base;
+    size_t len;
+} mx_info_vmar_t;
 
 
 // Object properties.

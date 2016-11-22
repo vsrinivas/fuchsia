@@ -786,6 +786,37 @@ bool nested_region_perms_test() {
     END_TEST;
 }
 
+bool object_info_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t region;
+    uintptr_t region_addr;
+
+    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), NO_ERROR, "");
+
+    const size_t region_size = PAGE_SIZE * 10;
+
+    ASSERT_EQ(mx_vmar_allocate(vmar, 0, region_size,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
+                               &region, &region_addr),
+              NO_ERROR, "");
+
+    mx_info_vmar_t info;
+    ASSERT_EQ(mx_object_get_info(region, MX_INFO_VMAR, &info, sizeof(info), NULL, NULL),
+              NO_ERROR, "");
+    EXPECT_EQ(info.base, region_addr, "");
+    EXPECT_EQ(info.len, region_size, "");
+
+    EXPECT_EQ(mx_handle_close(region), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(vmar_tests)
@@ -800,6 +831,7 @@ RUN_TEST(invalid_args_test);
 RUN_TEST(rights_drop_test);
 RUN_TEST(protect_test);
 RUN_TEST(nested_region_perms_test);
+RUN_TEST(object_info_test);
 END_TEST_CASE(vmar_tests)
 
 #ifndef BUILD_COMBINED_TESTS

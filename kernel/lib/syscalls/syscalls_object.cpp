@@ -14,6 +14,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
 #include <magenta/thread_dispatcher.h>
+#include <magenta/vm_address_region_dispatcher.h>
 
 #include <mxtl/ref_ptr.h>
 
@@ -158,6 +159,36 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             return status;
+        }
+        case MX_INFO_VMAR: {
+            mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+            mx_rights_t rights;
+            mx_status_t status = up->GetDispatcher<VmAddressRegionDispatcher>(handle,
+                                                                              &vmar, &rights);
+            if (status < 0)
+                return status;
+
+            size_t actual = (buffer_size < sizeof(mx_info_vmar_t)) ? 0 : 1;
+            size_t avail = 1;
+
+            if (actual > 0) {
+                auto real_vmar = vmar->vmar();
+                mx_info_vmar_t info = {
+                    .base = real_vmar->base(),
+                    .len = real_vmar->size(),
+                };
+                if (_buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
+                    return ERR_INVALID_ARGS;
+
+            }
+
+            if (_actual && (_actual.copy_to_user(actual) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (_avail && (_avail.copy_to_user(avail) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (actual == 0)
+                return ERR_BUFFER_TOO_SMALL;
+            return NO_ERROR;
         }
         default:
             return ERR_NOT_SUPPORTED;

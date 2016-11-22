@@ -51,6 +51,9 @@ one for each child Resource of the provided Resource handle.
 **MX_INFO_RESOURCE_RECORDS**  Requires a Resource handle.  Returns an array of *mx_rrec_t*,
 one for each Record associated with the provided Resource handle.
 
+**MX_INFO_VMAR**  Requires a VM Address Region handle.  Always returns a single of *mx_info_vmar_t*,
+record containing the base and length of the region.
+
 
 ## RETURN VALUE
 
