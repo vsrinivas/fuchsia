@@ -127,6 +127,16 @@ class PageStorageTest : public ::testing::Test {
   }
 
  protected:
+  void RunLoopWithTimeout() {
+    message_loop_.task_runner()->PostDelayedTask(
+        [this] {
+          message_loop_.PostQuitTask();
+          FAIL();
+        },
+        ftl::TimeDelta::FromSeconds(1));
+    message_loop_.Run();
+  }
+
   CommitId GetFirstHead() {
     std::vector<CommitId> ids;
     EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&ids));
@@ -139,8 +149,12 @@ class PageStorageTest : public ::testing::Test {
         storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
     CommitId id = commit->GetId();
 
-    EXPECT_EQ(Status::OK,
-              storage_->AddCommitFromSync(id, commit->GetStorageBytes()));
+    storage_->AddCommitFromSync(id, commit->GetStorageBytes(),
+                                [this](Status status) {
+                                  EXPECT_EQ(Status::OK, status);
+                                  message_loop_.PostQuitTask();
+                                });
+    RunLoopWithTimeout();
     return id;
   }
 
@@ -231,8 +245,12 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
       storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
 
-  EXPECT_EQ(Status::OK,
-            storage_->AddCommitFromSync(id, commit->GetStorageBytes()));
+  storage_->AddCommitFromSync(id, commit->GetStorageBytes(),
+                              [this](Status status) {
+                                EXPECT_EQ(Status::OK, status);
+                                message_loop_.PostQuitTask();
+                              });
+  RunLoopWithTimeout();
 
   std::unique_ptr<const Commit> found;
   EXPECT_EQ(Status::OK, storage_->GetCommit(id, &found));

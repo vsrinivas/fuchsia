@@ -43,9 +43,13 @@ class PageStorage {
   virtual Status GetCommit(const CommitId& commit_id,
                            std::unique_ptr<const Commit>* commit) = 0;
 
-  // Adds the given synced |commit| in this |PageStorage|.
-  virtual Status AddCommitFromSync(const CommitId& id,
-                                   std::string storage_bytes) = 0;
+  // Adds a commit of the given |id| to storage. The callback is called when the
+  // storage has finished processing the commit. If the status passed to the
+  // callback is OK, this indicates that storage fetched all referenced objects
+  // and is ready to accept subsequent child commits.
+  virtual void AddCommitFromSync(const CommitId& id,
+                                 std::string storage_bytes,
+                                 std::function<void(Status)> callback) = 0;
   // Starts a new |journal| based on the commit with the given |commit_id|. The
   // base commit must be one of  the head commits. If |implicit| is false all
   // changes will be lost after a crash. Otherwise, changes to implicit

@@ -273,17 +273,16 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit,
   AddCommit(std::move(commit), ChangeSource::LOCAL, callback);
 }
 
-Status PageStorageImpl::AddCommitFromSync(const CommitId& id,
-                                          std::string storage_bytes) {
+void PageStorageImpl::AddCommitFromSync(const CommitId& id,
+                                        std::string storage_bytes,
+                                        std::function<void(Status)> callback) {
   std::unique_ptr<Commit> commit =
       CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
   if (!commit) {
-    return Status::FORMAT_ERROR;
+    callback(Status::FORMAT_ERROR);
+    return;
   }
-  Status status;
-  AddCommit(std::move(commit), ChangeSource::SYNC,
-            [&status](Status commit_status) { status = commit_status; });
-  return status;
+  AddCommit(std::move(commit), ChangeSource::SYNC, std::move(callback));
 }
 
 Status PageStorageImpl::StartCommit(const CommitId& commit_id,

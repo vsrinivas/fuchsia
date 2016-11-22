@@ -48,8 +48,8 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 // Registers the commits marked as synced.
 class TestPageStorage : public storage::test::PageStorageEmptyImpl {
  public:
-  TestPageStorage() = default;
-  ~TestPageStorage() override = default;
+  TestPageStorage(mtl::MessageLoop* message_loop)
+      : message_loop_(message_loop) {}
 
   storage::PageId GetId() override { return page_id_to_return; }
 
@@ -67,13 +67,20 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     return storage::Status::OK;
   }
 
-  storage::Status AddCommitFromSync(const storage::CommitId& id,
-                                    std::string storage_bytes) override {
+  void AddCommitFromSync(
+      const storage::CommitId& id,
+      std::string storage_bytes,
+      std::function<void(storage::Status status)> callback) override {
     if (should_fail_add_commit_from_sync) {
-      return storage::Status::IO_ERROR;
+      message_loop_->task_runner()->PostTask(
+          [this, callback]() { callback(storage::Status::IO_ERROR); });
+      return;
     }
-    received_commits[id] = storage_bytes;
-    return storage::Status::OK;
+    message_loop_->task_runner()->PostTask(
+        [ this, &id, storage_bytes = std::move(storage_bytes), callback ]() {
+          received_commits[id] = storage_bytes;
+          callback(storage::Status::OK);
+        });
   }
 
   storage::Status GetUnsyncedObjects(
@@ -137,6 +144,9 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   bool watcher_removed = false;
   std::unordered_map<storage::CommitId, std::string> received_commits;
   std::string sync_metadata;
+
+ private:
+  mtl::MessageLoop* message_loop_;
 };
 
 // Fake implementation of cloud_provider::CloudProvider. Injects the returned
@@ -223,7 +233,8 @@ class TestBackoff : public backoff::Backoff {
 class PageSyncImplTest : public ::testing::Test {
  public:
   PageSyncImplTest()
-      : cloud_provider_(&message_loop_),
+      : storage_(&message_loop_),
+        cloud_provider_(&message_loop_),
         page_sync_(message_loop_.task_runner(),
                    &storage_,
                    &cloud_provider_,
@@ -590,9 +601,29 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   EXPECT_EQ(0, on_idle_calls);
   EXPECT_FALSE(page_sync_.IsIdle());
 
-  message_loop_.PostQuitTask();
+  // Run the message loop and verify that the sync is idle after all remote
+  // commits are added to storage.
+  message_loop_.SetAfterTaskCallback([this] {
+    if (storage_.received_commits.size() == 2u) {
+      message_loop_.PostQuitTask();
+    }
+  });
   RunLoopWithTimeout();
   EXPECT_EQ(1, on_idle_calls);
+  EXPECT_TRUE(page_sync_.IsIdle());
+
+  // Notify about a new commit to download and verify that the idle callback was
+  // called again on completion.
+  page_sync_.OnRemoteCommit(cloud_provider::Commit("id3", "content3", {}),
+                            "44");
+  EXPECT_FALSE(page_sync_.IsIdle());
+  message_loop_.SetAfterTaskCallback([this] {
+    if (storage_.received_commits.size() == 3u) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  RunLoopWithTimeout();
+  EXPECT_EQ(2, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
 }
 

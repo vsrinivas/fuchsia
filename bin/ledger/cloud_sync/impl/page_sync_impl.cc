@@ -45,8 +45,7 @@ void PageSyncImpl::Start() {
   started_ = true;
   storage_->SetSyncDelegate(this);
 
-  download_in_progress_ = true;
-  TryDownload();
+  TryStartDownload();
 
   // Retrieve the backlog of the existing unsynced commits and enqueue them for
   // upload.
@@ -74,7 +73,8 @@ void PageSyncImpl::SetOnIdle(ftl::Closure on_idle_callback) {
 }
 
 bool PageSyncImpl::IsIdle() {
-  return commit_uploads_.empty() && !download_in_progress_;
+  return commit_uploads_.empty() && download_list_retrieved &&
+         commit_downloads_.empty();
 }
 
 void PageSyncImpl::OnNewCommit(const storage::Commit& commit,
@@ -111,12 +111,13 @@ void PageSyncImpl::GetObject(
 
 void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit commit,
                                   std::string timestamp) {
-  AddRemoteCommit(std::move(commit), std::move(timestamp));
+  EnqueueDownload(
+      cloud_provider::Record(std::move(commit), std::move(timestamp)));
 }
 
 void PageSyncImpl::OnError() {}
 
-void PageSyncImpl::TryDownload() {
+void PageSyncImpl::TryStartDownload() {
   // Retrieve the server-side timestamp of the last commit we received.
   std::string last_commit_ts;
   auto status = storage_->GetSyncMetadata(&last_commit_ts);
@@ -138,7 +139,7 @@ void PageSyncImpl::TryDownload() {
           task_runner_->PostDelayedTask(
               [weak_this = weak_factory_.GetWeakPtr()]() {
                 if (weak_this && !weak_this->errored_) {
-                  weak_this->TryDownload();
+                  weak_this->TryStartDownload();
                 }
               },
               backoff_->GetNext());
@@ -146,12 +147,9 @@ void PageSyncImpl::TryDownload() {
         }
         backoff_->Reset();
         for (auto& record : records) {
-          if (!AddRemoteCommit(std::move(record.commit),
-                               std::move(record.timestamp))) {
-            return;
-          }
+          EnqueueDownload(std::move(record));
         }
-        download_in_progress_ = false;
+        download_list_retrieved = true;
         CheckIdle();
 
         // Register a cloud watcher for the new commits. This currently mixes
@@ -162,20 +160,26 @@ void PageSyncImpl::TryDownload() {
       });
 }
 
-bool PageSyncImpl::AddRemoteCommit(cloud_provider::Commit commit,
-                                   std::string timestamp) {
-  if (storage_->AddCommitFromSync(commit.id, std::move(commit.content)) !=
-      storage::Status::OK) {
-    HandleError("Failed to persist a synced commit.");
-    return false;
-  }
+void PageSyncImpl::EnqueueDownload(cloud_provider::Record record) {
+  // If there are no commits currently being downloaded, start the download
+  // after enqueing this one.
+  const bool start_after_adding = commit_downloads_.empty();
 
-  if (storage_->SetSyncMetadata(timestamp) != storage::Status::OK) {
-    HandleError("Failed to persist the sync metadata.");
-    return false;
-  }
+  commit_downloads_.emplace(
+      storage_, std::move(record),
+      [this] {
+        commit_downloads_.pop();
+        if (!commit_downloads_.empty()) {
+          commit_downloads_.front().Start();
+        } else {
+          CheckIdle();
+        }
+      },
+      [this] { HandleError("Failed to persist a remote commit in storage"); });
 
-  return true;
+  if (start_after_adding) {
+    commit_downloads_.front().Start();
+  }
 }
 
 void PageSyncImpl::EnqueueUpload(

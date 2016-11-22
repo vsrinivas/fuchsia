@@ -11,6 +11,7 @@
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
+#include "apps/ledger/src/cloud_sync/impl/commit_download.h"
 #include "apps/ledger/src/cloud_sync/impl/commit_upload.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
@@ -85,9 +86,9 @@ class PageSyncImpl : public PageSync,
   void OnError() override;
 
  private:
-  void TryDownload();
+  void TryStartDownload();
 
-  bool AddRemoteCommit(cloud_provider::Commit commit, std::string timestamp);
+  void EnqueueDownload(cloud_provider::Record record);
 
   void EnqueueUpload(std::unique_ptr<const storage::Commit> commit);
 
@@ -110,12 +111,15 @@ class PageSyncImpl : public PageSync,
   // Set to true on unrecoverable error. This indicates that PageSyncImpl is in
   // broken state.
   bool errored_ = false;
+  // Set to true when the backlog of commits to retrieve is downloaded. This
+  // ensures that sync is not reported as idle until the commits to be
+  // downloaded are retrieved.
+  bool download_list_retrieved = false;
+
   // A queue of pending commit uploads.
   std::queue<CommitUpload> commit_uploads_;
-  // Tracks whether we have pending download tasks, so that we know when to call
-  // |on_idle_callback_|. Note: this will need to become more elaborate when
-  // AddCommitFromSync() becomes asynchronous.
-  bool download_in_progress_ = false;
+  // A queue of pending commit downloads.
+  std::queue<CommitDownload> commit_downloads_;
 
   // Must be the last member field.
   ftl::WeakPtrFactory<PageSyncImpl> weak_factory_;
