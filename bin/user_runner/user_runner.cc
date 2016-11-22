@@ -113,7 +113,6 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
   void RegisterServices() {
     env_services_.AddService<ledger::Ledger>([this](
         fidl::InterfaceRequest<ledger::Ledger> request) {
-      FTL_DLOG(INFO) << "Servicing Ledger service request";
       // TODO(alhaad): Once supported by Ledger, only create a user scoped
       // ledger here.
       ledger::LedgerRepositoryPtr repository;
@@ -142,8 +141,6 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
 
     env_services_.SetDefaultServiceConnector(
         [this](std::string service_name, mx::channel channel) {
-          FTL_DLOG(INFO) << "Servicing default service request for "
-                         << service_name;
           application_context_->environment_services()->ConnectToService(
               service_name, std::move(channel));
         });
@@ -192,8 +189,6 @@ class UserRunnerImpl : public UserRunner {
       fidl::Array<uint8_t> user_id,
       const fidl::String& user_shell,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
-    FTL_LOG(INFO) << "UserRunnerImpl::Launch()";
-
     user_runner_scope_ = std::make_unique<UserRunnerScope>(application_context_,
                                                            std::move(user_id));
 

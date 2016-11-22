@@ -371,7 +371,9 @@ ledger::PagePtr StoryProviderImpl::GetStoryPage(
   ledger::PagePtr ret;
   ledger_->GetPage(story_page_id.Clone(), GetProxy(&ret),
                    [](ledger::Status status) {
-                     FTL_LOG(INFO) << "GetStoryPage() status " << status;
+                     if (status != ledger::Status::OK) {
+                       FTL_LOG(ERROR) << "GetStoryPage() status " << status;
+                     }
                    });
 
   return ret;

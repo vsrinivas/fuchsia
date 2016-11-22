@@ -114,7 +114,6 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
   explicit Module2App()
       : store_(kModuleName),
         weak_ptr_factory_(this) {
-    FTL_LOG(INFO) << kModuleName;
     store_.AddCallback([this] { IncrementCounterAction(); });
   }
 
@@ -162,15 +161,19 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
     ftl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr]() {
-          FTL_LOG(INFO) << "ControlAnimation() DONE";
-          if (!module_ptr.get())
+          if (!module_ptr.get()) {
             return;
+          }
 
           if (view_) {
             view_->set_enable_animation(false);
           }
+
           store_.counter.sender = kModuleName;
           store_.counter.counter += 1;
+
+          FTL_LOG(INFO) << "Module2Impl COUNT " << store_.counter.counter;
+
           store_.MarkDirty();
           store_.ModelChanged();
         },

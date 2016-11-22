@@ -67,9 +67,7 @@ std::unique_ptr<DocumentEditor> Counter::ToDocument(const std::string& module_na
 namespace modular {
 
 Store::Store(const std::string& module_name)
-    : module_name_(module_name), watcher_binding_(this) {
-  FTL_LOG(INFO) << "Store::Store" << module_name_;
-}
+    : module_name_(module_name), watcher_binding_(this) {}
 
 void Store::Initialize(InterfaceHandle<Link> link) {
   link_.Bind(std::move(link));
@@ -77,9 +75,6 @@ void Store::Initialize(InterfaceHandle<Link> link) {
   InterfaceHandle<LinkWatcher> watcher;
   watcher_binding_.Bind(&watcher);
   link_->Watch(std::move(watcher));
-
-  watcher_binding_.set_connection_error_handler(
-      []() { FTL_LOG(INFO) << "binding_.set_connection_error_handler "; });
 }
 
 void Store::AddCallback(Callback c) {
@@ -93,8 +88,6 @@ void Store::Stop() {
 
 // See comments on Module2Impl in example-module2.cc.
 void Store::Notify(FidlDocMap docs) {
-  FTL_LOG(INFO) << "Store::Notify() " << module_name_ << " " << (int64_t)this
-                << docs;
   ApplyLinkData(std::move(docs));
 }
 
@@ -116,22 +109,22 @@ void Store::ApplyLinkData(FidlDocMap docs) {
 
   // Redundant update, ignore it.
   if (new_counter.counter <= counter.counter) {
-    FTL_LOG(INFO) << "Module1Impl::ApplyLinkData() ************ IGNORE "
-                  << module_name_;
     return;
   }
 
   // If we sent it, then we are getting a message from a restored session.
   // We don't know if it was ever actually delivered, so send it again.
-  if (new_counter.sender == module_name_)
+  if (new_counter.sender == module_name_) {
     MarkDirty();
+  }
   counter = std::move(new_counter);
   ModelChanged();
 }
 
 void Store::ModelChanged() {
-  for (auto& c : callbacks_)
+  for (auto& c : callbacks_) {
     c();
+  }
   SendIfDirty();
 }
 

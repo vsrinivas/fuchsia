@@ -116,8 +116,6 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
   explicit Module1App()
       : store_(kModuleName),
         weak_ptr_factory_(this) {
-    FTL_LOG(INFO) << kModuleName;
-
     store_.AddCallback([this] { IncrementCounterAction(); });
     store_.AddCallback([this] { CheckForDone(); });
   }
@@ -159,8 +157,9 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
   }
 
   void IncrementCounterAction() {
-    if (store_.counter.sender == kModuleName || store_.counter.counter > 10)
+    if (store_.counter.sender == kModuleName || store_.counter.counter > 10) {
       return;
+    }
 
     // TODO(jimbe) Enabling animation should be done in its own function, but
     // it needs a trigger to know when to start.
@@ -171,15 +170,19 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
     ftl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, module_ptr]() {
-          FTL_LOG(INFO) << "ControlAnimation() DONE";
-          if (!module_ptr.get())
+          if (!module_ptr.get()) {
             return;
+          }
 
           if (view_) {
             view_->set_enable_animation(false);
-          };
+          }
+
           store_.counter.sender = kModuleName;
           store_.counter.counter += 1;
+
+          FTL_LOG(INFO) << "Module1Impl COUNT " << store_.counter.counter;
+
           store_.MarkDirty();
           store_.ModelChanged();
         },

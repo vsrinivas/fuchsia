@@ -128,33 +128,26 @@ class DummyUserShellApp
   }
 
   // |StoryWatcher|
-  void OnStart() override { FTL_LOG(INFO) << "DummyUserShell::OnStart()"; }
+  void OnStart() override {}
 
   // |StoryWatcher|
   void OnData() override {
-    FTL_LOG(INFO) << "DummyUserShell::OnData() " << ++data_count_;
-
     // When some data has arrived, we stop the story.
-    if (data_count_ % 5 == 0) {
-      FTL_LOG(INFO) << "DummyUserShell::OnData() Story.Stop()";
+    if (++data_count_ % 5 == 0) {
+      FTL_LOG(INFO) << "DummyUserShell STOP";
 
       story_provider_->GetStoryInfo(story_info_->id, [this](
-                                                         modular::StoryInfoPtr
-                                                             story_info) {
+          modular::StoryInfoPtr story_info) {
         FTL_DCHECK(story_info->is_running == true);
         story_controller_->Stop([this]() {
           TearDownStoryController();
 
           // When the story stops, we start it again.
-          FTL_LOG(INFO) << "DummyUserShell Story.Stop() WAIT for 10s";
           mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
               [this]() {
                 story_provider_->GetStoryInfo(
                     story_info_->id, [this](modular::StoryInfoPtr story_info) {
                       FTL_DCHECK(story_info->is_running == false);
-
-                      FTL_LOG(INFO)
-                          << "DummyUserShell Story.Stop() DONE WAIT for 10s";
                       ResumeStory();
                     });
               },
@@ -165,22 +158,20 @@ class DummyUserShellApp
   }
 
   // |StoryWatcher|
-  void OnStop() override { FTL_LOG(INFO) << "DummyUserShell::OnStop()"; }
+  void OnStop() override {}
 
   // |StoryWatcher|
-  void OnError() override { FTL_LOG(INFO) << "DummyUserShell::OnError()"; }
+  void OnError() override {}
 
   // |StoryWatcher|
   void OnDone() override {
-    FTL_LOG(INFO) << "DummyUserShell::OnDone()";
+    FTL_LOG(INFO) << "DummyUserShell DONE";
     story_controller_->Stop([this]() {
       TearDownStoryController();
 
       // When the story is done, we start the next one.
-      FTL_LOG(INFO) << "DummyUserShell::OnDone() WAIT for 20s";
       mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
           [this]() {
-            FTL_LOG(INFO) << "DummyUserShell::OnDone() DONE WAIT for 20s";
             CreateStory(kFlutterModuleUrl);
           },
           ftl::TimeDelta::FromSeconds(20));
@@ -188,25 +179,16 @@ class DummyUserShellApp
   }
 
   void CreateStory(const fidl::String& url) {
-    FTL_LOG(INFO) << "DummyUserShell::CreateStory() " << url;
+    FTL_LOG(INFO) << "DummyUserShell START " << url;
     story_provider_->CreateStory(url, fidl::GetProxy(&story_controller_));
     story_controller_->GetInfo([this](modular::StoryInfoPtr story_info) {
-      FTL_LOG(INFO) << "DummyUserShell::CreateStory() Story.Getinfo()"
-                    << " url: " << story_info->url << " id: " << story_info->id
-                    << " is_running: " << story_info->is_running;
-
-      // Retain the story info so we can resume it by ID.
       story_info_ = std::move(story_info);
-
       InitStory();
     });
   }
 
   void ResumeStory() {
-    FTL_LOG(INFO) << "DummyUserShell::ResumeStory() "
-                  << " url: " << story_info_->url << " id: " << story_info_->id
-                  << " is_running: " << story_info_->is_running;
-
+    FTL_LOG(INFO) << "DummyUserShell RESUME";
     story_provider_->ResumeStory(story_info_->id,
                                  fidl::GetProxy(&story_controller_));
     InitStory();
@@ -237,7 +219,7 @@ class DummyUserShellApp
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   modular::StoryInfoPtr story_info_;
-  int data_count_ = 0;
+  int data_count_{0};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyUserShellApp);
 };

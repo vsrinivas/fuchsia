@@ -67,7 +67,6 @@ class LinkConnection : public modular::LinkWatcher {
   }
 
   void Notify(modular::FidlDocMap docs) override {
-    FTL_LOG(INFO) << "LinkConnection::Notify()" << docs;
     // We receive an initial update when the Link initializes. It's empty
     // if this is a new session, or it has documents if it's a restored session.
     // In either case, it should be ignored, otherwise we can get multiple
@@ -98,7 +97,7 @@ class ModuleMonitor : public modular::ModuleWatcher {
   }
 
   void OnDone() override {
-    FTL_LOG(INFO) << "RECIPE DONE";
+    FTL_LOG(INFO) << "RecipeImpl DONE";
     story_->Done();
   }
 
