@@ -22,6 +22,10 @@ type Context struct {
 	File *fidl_files.FidlFile
 	// A map of file names to the names map
 	RustNames *map[string]*Names
+	// A map from filename to GN target
+	Map *map[string]string
+	// The root of the source
+	SrcRootPath string
 }
 
 // Describes a field (such as a struct or a union member) to be printed.
@@ -240,6 +244,9 @@ func NewConstantTemplate(context *Context, fidlConstant fidl_types.DeclaredConst
 	}
 	name := fidlToRustName(&fidlConstant.DeclData, context, formatConstName)
 	val := resolveValue(context, fidlConstant.Value)
+	if type_text == "f32" || type_text == "f64" {
+		val = floatifyRustLiteral(val)
+	}
 	return ConstantTemplate{
 		Type:  type_text,
 		Name:  name,
@@ -250,13 +257,6 @@ func NewConstantTemplate(context *Context, fidlConstant fidl_types.DeclaredConst
 func NewUnionTemplate(context *Context, fidlUnion *fidl_types.FidlUnion) UnionTemplate {
 	union_name := fidlToRustName(fidlUnion.DeclData, context, ident)
 
-	// Get all variant names and mangle them as needed if they're keywords.
-	names := make(Names)
-	for _, fidlField := range fidlUnion.Fields {
-		field_name := *fidlField.DeclData.ShortName
-		names[field_name] = field_name
-	}
-
 	var fields []FieldTemplate
 	var tag_enums []EnumValueTemplate
 	for field_i, fidlField := range fidlUnion.Fields {
@@ -264,12 +264,17 @@ func NewUnionTemplate(context *Context, fidlUnion *fidl_types.FidlUnion) UnionTe
 		field_name = formatEnumValue(mangleReservedKeyword(field_name))
 		field_type_text := fidlToRustType(fidlField.Type, context)
 		is_union := fidlTypeIsUnion(fidlField.Type, context)
+		is_nullable := strings.HasPrefix(field_type_text, "Option<")
+		if fidlTypeNeedsBoxing(fidlField.Type, context) && !is_nullable {
+			// Breaks recursion of recursive types.
+			field_type_text = "Box<" + field_type_text + ">"
+		}
 		fields = append(fields, FieldTemplate{
 			Type:       field_type_text,
 			Name:       field_name,
 			Offset:     0,
 			IsUnion:    is_union,
-			IsNullable: strings.HasPrefix(field_type_text, "Option<"),
+			IsNullable: is_nullable,
 		})
 		tag_enums = append(tag_enums, EnumValueTemplate{
 			Name:  field_name,
@@ -449,7 +454,7 @@ func NewStructTemplate(context *Context,
 	}
 }
 
-func NewSourceTemplate(context *Context, srcRootPath string) SourceTemplate {
+func NewSourceTemplate(context *Context) SourceTemplate {
 	var constants []ConstantTemplate
 	if context.File.DeclaredFidlObjects.TopLevelConstants != nil {
 		for _, fidlConstKey := range *(context.File.DeclaredFidlObjects.TopLevelConstants) {

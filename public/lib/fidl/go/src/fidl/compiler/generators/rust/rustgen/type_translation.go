@@ -8,6 +8,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"path/filepath"
 
 	"fidl/compiler/generated/fidl_files"
 	"fidl/compiler/generated/fidl_types"
@@ -186,27 +187,38 @@ func fidlToRustName(decl *fidl_types.DeclarationData, context *Context, fmt func
 		name := removeNamespaceFromIdentifier(context, context.File, *decl.FullIdentifier)
 		return mangleReservedKeyword(fmt(name))
 	}
+	relpath, err := filepath.Rel(context.SrcRootPath, src_file_name)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 	src_file := context.FileGraph.Files[src_file_name]
-	// Figure out the path to the imported item
-	path := rustImportPath(context.File, &src_file)
 	name := removeNamespaceFromIdentifier(context, &src_file, *decl.FullIdentifier)
-	return path + "::" + mangleReservedKeyword(fmt(name))
+	crates, present := (*context.Map)["//" + relpath]
+	if !present {
+		// TODO: probably want to fatal error in this case
+		//logBrokenDep(relpath, context.File.FileName)
+		return "::UNKNOWN_CRATE::" + mangleReservedKeyword(fmt(name))
+	}
+	if len(crates) == 0 {
+		return "::" + mangleReservedKeyword(fmt(name))
+	}
+	return "::" + crates + "::" + mangleReservedKeyword(fmt(name))
 }
 
 func fidlToRustBuiltinValue(val fidl_types.BuiltinConstantValue) string {
 	switch val {
 	case fidl_types.BuiltinConstantValue_DoubleNegativeInfinity:
-		return "std::f64::NEG_INFINITY"
+		return "::std::f64::NEG_INFINITY"
 	case fidl_types.BuiltinConstantValue_FloatNegativeInfinity:
-		return "std::f32::NEG_INFINITY"
+		return "::std::f32::NEG_INFINITY"
 	case fidl_types.BuiltinConstantValue_DoubleInfinity:
-		return "std::f64::INFINITY"
+		return "::std::f64::INFINITY"
 	case fidl_types.BuiltinConstantValue_FloatInfinity:
-		return "std::f32::INFINITY"
+		return "::std::f32::INFINITY"
 	case fidl_types.BuiltinConstantValue_DoubleNan:
-		return "std::f64::NAN"
+		return "::std::f64::NAN"
 	case fidl_types.BuiltinConstantValue_FloatNan:
-		return "std::f32::NAN"
+		return "::std::f32::NAN"
 	}
 	log.Fatal("Unknown builtin constant", val)
 	return ""
@@ -295,7 +307,7 @@ func fidlToRustType(t fidl_types.Type, context *Context) string {
 		resolved_type := context.FileGraph.ResolvedTypes[*typ_ref.TypeKey]
 		type_str := userDefinedTypeToRustType(&resolved_type, context, typ_ref.IsInterfaceRequest)
 		if typ_ref.Nullable {
-			if fidlTypeNeedsBoxing(resolved_type) {
+			if fidlUserTypeNeedsBoxing(resolved_type) {
 				return "Option<Box<" + type_str + ">>"
 			} else {
 				return "Option<" + type_str + ">"
@@ -316,25 +328,25 @@ func fidlToRustLiteral(value fidl_types.LiteralValue) string {
 	case *fidl_types.LiteralValueBoolValue:
 		return strconv.FormatBool(val.(bool))
 	case *fidl_types.LiteralValueDoubleValue:
-		return strconv.FormatFloat(val.(float64), 'e', -1, 64) + "f64"
+		return strconv.FormatFloat(val.(float64), 'g', -1, 64)
 	case *fidl_types.LiteralValueFloatValue:
-		return strconv.FormatFloat(val.(float64), 'e', -1, 32) + "f32"
+		return strconv.FormatFloat(float64(val.(float32)), 'g', -1, 32)
 	case *fidl_types.LiteralValueInt8Value:
-		return strconv.FormatInt(int64(val.(int8)), 10) + "i8"
+		return strconv.FormatInt(int64(val.(int8)), 10)
 	case *fidl_types.LiteralValueInt16Value:
-		return strconv.FormatInt(int64(val.(int16)), 10) + "i16"
+		return strconv.FormatInt(int64(val.(int16)), 10)
 	case *fidl_types.LiteralValueInt32Value:
-		return strconv.FormatInt(int64(val.(int32)), 10) + "i32"
+		return strconv.FormatInt(int64(val.(int32)), 10)
 	case *fidl_types.LiteralValueInt64Value:
-		return strconv.FormatInt(int64(val.(int64)), 10) + "i64"
+		return strconv.FormatInt(int64(val.(int64)), 10)
 	case *fidl_types.LiteralValueUint8Value:
-		return strconv.FormatUint(uint64(val.(uint8)), 10) + "u8"
+		return strconv.FormatUint(uint64(val.(uint8)), 10)
 	case *fidl_types.LiteralValueUint16Value:
-		return strconv.FormatUint(uint64(val.(uint16)), 10) + "u16"
+		return strconv.FormatUint(uint64(val.(uint16)), 10)
 	case *fidl_types.LiteralValueUint32Value:
-		return strconv.FormatUint(uint64(val.(uint32)), 10) + "u32"
+		return strconv.FormatUint(uint64(val.(uint32)), 10)
 	case *fidl_types.LiteralValueUint64Value:
-		return strconv.FormatUint(uint64(val.(uint64)), 10) + "u64"
+		return strconv.FormatUint(uint64(val.(uint64)), 10)
 	case *fidl_types.LiteralValueStringValue:
 		// TODO(raph): Do we have to do any string escaping here?
 		return "\"" + val.(string) + "\""
@@ -343,6 +355,16 @@ func fidlToRustLiteral(value fidl_types.LiteralValue) string {
 	}
 
 	return ""
+}
+
+// Make sure the literal follows the rules for float
+func floatifyRustLiteral(repr string) string {
+	for i := 0; i < len(repr); i++ {
+		if !(repr[i] == '-' || (repr[i] >= '0' && repr[i] <= '9')) {
+			return repr
+		}
+	}
+	return repr + ".0"
 }
 
 func fidlUnionToRustType(u *fidl_types.FidlUnion, context *Context) string {
@@ -496,8 +518,21 @@ func referenceTypeSize(typ fidl_types.TypeReference, context *Context) uint32 {
 	return 0
 }
 
-// Return true if the type is an aggregate type that needs boxing if it's optional
-func fidlTypeNeedsBoxing(typ fidl_types.UserDefinedType) bool {
+func fidlTypeNeedsBoxing(typ fidl_types.Type, context *Context) bool {
+	switch typ.(type) {
+	case *fidl_types.TypeTypeReference:
+		typ_ref := typ.Interface().(fidl_types.TypeReference)
+		resolved_type := context.FileGraph.ResolvedTypes[*typ_ref.TypeKey]
+		return fidlUserTypeNeedsBoxing(resolved_type)
+	}
+	return false
+}
+
+// Return true if the type is an aggregate type that needs boxing if it's optional.
+// Note: this could become considerably more lenient. For example, a struct that
+// contains no references to other structs or unions is ok to not box. In theory,
+// the only time boxing is required is when the type is recursive.
+func fidlUserTypeNeedsBoxing(typ fidl_types.UserDefinedType) bool {
 	switch typ.(type) {
 	case *fidl_types.UserDefinedTypeStructType:
 		return true
@@ -506,3 +541,4 @@ func fidlTypeNeedsBoxing(typ fidl_types.UserDefinedType) bool {
 	}
 	return false
 }
+

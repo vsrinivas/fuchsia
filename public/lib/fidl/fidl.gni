@@ -35,7 +35,7 @@ import("//build/dart/dart_package.gni")
 template("fidl") {
   assert(
       defined(invoker.sources) || defined(invoker.deps) ||
-      defined(invoker.public_deps),
+          defined(invoker.public_deps),
       "\"sources\" or \"deps\" must be defined for the $target_name template.")
 
   cpp_sources_suffix = "cpp_sources"
@@ -43,8 +43,10 @@ template("fidl") {
   cpp_sync_sources_target_name = "${target_name}_${cpp_sources_suffix}_sync"
 
   if (defined(invoker.sources)) {
-    legacy_gen_path = rebase_path("${root_out_dir}/legacy_generators/run_code_generators.py")
+    legacy_gen_path =
+        rebase_path("${root_out_dir}/legacy_generators/run_code_generators.py")
     go_gen_path = rebase_path("${root_out_dir}/fidl-go")
+    rust_gen_path = rebase_path("${root_out_dir}/fidl-rust")
     fidl_tool = rebase_path("${root_out_dir}/fidl")
 
     generator_cpp_outputs = [
@@ -56,16 +58,24 @@ template("fidl") {
       "{{source_gen_dir}}/{{source_file_part}}.h",
       "{{source_gen_dir}}/{{source_file_part}}.cc",
     ]
-    generator_dart_outputs =
-        [ "{{source_gen_dir}}/{{source_file_part}}.dart" ]
+    generator_dart_outputs = [ "{{source_gen_dir}}/{{source_file_part}}.dart" ]
     generator_go_outputs = [ "${root_gen_dir}/go/src/{{source_dir}}/{{source_name_part}}/{{source_name_part}}.core.go" ]
+
     # TODO(vardhan): We can't have both .mojom and .fidl coexist because of
     # this hardcoded '_fidl' suffix. Has to do with python imports not handling
     # '.fidl/.mojom' in names. Investigate putting in a package instead.
     generator_python_outputs =
         [ "{{source_gen_dir}}/{{source_name_part}}_fidl.py" ]
+    generator_rust_outputs =
+        # "{{source_gen_dir}}/${target_name}/src/{{source_name_part}}.rs" would be
+        # a cleaner directory structure for the generated crate, but would require
+        # changes to the generator
+        [ "{{source_gen_dir}}/{{source_name_part}}.rs" ]
   }
   generator_python_zip_output = "$target_out_dir/${target_name}_python.pyzip"
+  generator_rust_crate_output = "$target_gen_dir/${target_name}"
+
+  map_target = "${target_name}_map"
 
   if (defined(invoker.sources)) {
     generator_target_name = target_name + "__generator"
@@ -74,16 +84,19 @@ template("fidl") {
       public_deps = [
         "//lib/fidl/compiler:fidl",
       ]
-      deps = [ "//lib/fidl/compiler:fidl-go", "//lib/fidl/compiler/legacy_generators" ]
+      deps = [
+        ":$map_target",
+        "//lib/fidl/compiler:fidl-go",
+        "//lib/fidl/compiler:fidl-rust",
+        "//lib/fidl/compiler/legacy_generators",
+      ]
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
-        deps += [
-          "//lib/fidl/compiler/interfaces:interfaces",
-        ]
+        deps += [ "//lib/fidl/compiler/interfaces:interfaces" ]
       }
       sources = invoker.sources
-      outputs =
-          generator_cpp_outputs + generator_dart_outputs +
-          generator_python_outputs + generator_go_outputs
+      outputs = generator_cpp_outputs + generator_dart_outputs +
+                generator_python_outputs + generator_go_outputs +
+                generator_rust_outputs
       args = [
         fidl_tool,
         "gen",
@@ -95,7 +108,14 @@ template("fidl") {
         rebase_path(root_gen_dir),
         "--no-gen-imports",
         "--generators",
-        "${legacy_gen_path},${go_gen_path}",
+        "${legacy_gen_path},${go_gen_path},${rust_gen_path}",
+      ]
+
+      # Plumb map to generator (for Rust)
+      args += [
+        "--gen-arg",
+        "map-file=" + rebase_path("${generator_rust_crate_output}_map.txt",
+                                  root_build_dir),
       ]
 
       if (defined(invoker.generate_type_info) && invoker.generate_type_info) {
@@ -105,7 +125,8 @@ template("fidl") {
         ]
       }
 
-      if (defined(ignore_dart_package_annotations) && ignore_dart_package_annotations) {
+      if (defined(ignore_dart_package_annotations) &&
+          ignore_dart_package_annotations) {
         args += [
           "--gen-arg",
           "dart_ignore-package-annotations",
@@ -147,9 +168,7 @@ template("fidl") {
       testonly = invoker.testonly
     }
 
-    public_configs =[
-      "//lib/fidl/build/config:fidl_source",
-    ]
+    public_configs = [ "//lib/fidl/build/config:fidl_source" ]
 
     public_deps = [
       "//lib/fidl/cpp/bindings",
@@ -175,9 +194,7 @@ template("fidl") {
       testonly = invoker.testonly
     }
 
-    public_configs = [
-      "//lib/fidl/build/config:fidl_source",
-    ]
+    public_configs = [ "//lib/fidl/build/config:fidl_source" ]
 
     public_deps = [
       "//lib/fidl/cpp/bindings",
@@ -202,9 +219,7 @@ template("fidl") {
       testonly = invoker.testonly
     }
 
-    public_configs = [
-      "//lib/fidl/build/config:fidl_source",
-    ]
+    public_configs = [ "//lib/fidl/build/config:fidl_source" ]
 
     public_deps = [
       "//lib/fidl/cpp/bindings:serialization",
@@ -282,6 +297,113 @@ template("fidl") {
     }
   }
 
+  action("${target_name}_rust") {
+    script = "//lib/fidl/build/make_crate.py"
+
+    deps = []
+    dep_inputs = []
+
+    if (defined(invoker.sources)) {
+      inputs = process_file_template(invoker.sources, generator_rust_outputs)
+      deps += [ ":$generator_target_name" ]
+    }
+
+    foreach(d, all_deps) {
+      # Resolve the name, so that a target //fidl/something becomes
+      # //fidl/something:something and we can append "_rust" to get the rust
+      # dependency name.
+      full_name = get_label_info(d, "label_no_toolchain")
+      dep_name = get_label_info(d, "name")
+      dep_target_gen_dir = get_label_info(d, "target_gen_dir")
+      deps += [ "${full_name}_rust" ]
+      dep_inputs += [ "$dep_target_gen_dir/${dep_name}" ]
+    }
+
+    output_base = generator_rust_crate_output
+    outputs = [
+      "$output_base/Cargo.toml",
+      "$output_base/src/lib.rs",
+    ]
+
+    rebase_gen_dir = rebase_path(root_gen_dir)
+    if (defined(invoker.sources)) {
+      rebase_inputs = rebase_path(inputs, root_build_dir)
+    }
+    rebase_dep_inputs = rebase_path(dep_inputs, root_gen_dir)
+    rebase_output = rebase_path(output_base, root_gen_dir)
+    rebase_srcroot = rebase_path("//", root_build_dir)
+    args = [
+      "--gen-dir=$rebase_gen_dir",
+      "--dep-inputs=$rebase_dep_inputs",
+      "--output=$rebase_output",
+      "--srcroot=$rebase_srcroot",
+    ]
+    if (defined(invoker.sources)) {
+      args += [ "--inputs=$rebase_inputs" ]
+    }
+  }
+
+  # Creates a map from fidl file to GN build target which supplies it. Used primarily
+  # for resolving dependencies in the Rust binding generation.
+  save_target = target_name
+  action(map_target) {
+    script = "//lib/fidl/build/make_map.py"
+
+    deps = []
+
+    foreach(d, all_deps) {
+      # Resolve the name, so that a target //fidl/something becomes
+      # //fidl/something:something and we can append "_map" to get the map
+      # dependency name.
+      full_name = get_label_info(d, "label_no_toolchain")
+      deps += [ "${full_name}_map" ]
+    }
+
+    if (defined(invoker.deps)) {
+      map_deps = []
+      foreach(d, invoker.deps) {
+        dep_name = get_label_info(d, "name")
+        dep_target_gen_dir = get_label_info(d, "target_gen_dir")
+        map_deps += [ "$dep_target_gen_dir/${dep_name}_map.txt" ]
+      }
+      rebase_map_deps = rebase_path(map_deps, root_build_dir)
+    }
+
+    if (defined(invoker.public_deps)) {
+      map_public_deps = []
+      foreach(d, invoker.public_deps) {
+        dep_name = get_label_info(d, "name")
+        dep_target_gen_dir = get_label_info(d, "target_gen_dir")
+        map_public_deps += [ "$dep_target_gen_dir/${dep_name}_map.txt" ]
+      }
+      rebase_map_public_deps = rebase_path(map_public_deps, root_build_dir)
+    }
+
+    output_fn = "${generator_rust_crate_output}_map.txt"
+    outputs = [
+      output_fn,
+    ]
+
+    if (defined(invoker.sources)) {
+      arg_sources = invoker.sources
+    }
+    rebase_output = rebase_path(output_fn, root_build_dir)
+    target_dir = get_label_info("${save_target}", "label_no_toolchain")
+    args = [
+      "--target=$target_dir",
+      "--output=$rebase_output",
+    ]
+    if (defined(invoker.sources)) {
+      args += [ "--sources=$arg_sources" ]
+    }
+    if (defined(invoker.deps)) {
+      args += [ "--map-deps=$rebase_map_deps" ]
+    }
+    if (defined(invoker.public_deps)) {
+      args += [ "--map-public-deps=$rebase_map_public_deps" ]
+    }
+  }
+
   if (defined(invoker.sources)) {
     # The generated C++ source files. The main reason to introduce this target
     # is so that lib/fidl/cpp/bindings can depend on fidl interfaces without
@@ -300,13 +422,11 @@ template("fidl") {
                 "{{source_gen_dir}}/{{source_file_part}}-common.h",
                 "{{source_gen_dir}}/{{source_file_part}}-internal.h",
               ])
-      public_configs = [
-        "//lib/fidl/build/config:fidl_source",
-      ]
+      public_configs = [ "//lib/fidl/build/config:fidl_source" ]
       deps = [
         ":$generator_target_name",
-        "//lib/fidl/cpp/bindings",
         "//lib/fidl/compiler/interfaces:interfaces__generator",
+        "//lib/fidl/cpp/bindings",
       ]
       foreach(d, all_deps) {
         # Resolve the name, so that a target //mojo/something becomes
@@ -321,15 +441,13 @@ template("fidl") {
       if (defined(invoker.testonly)) {
         testonly = invoker.testonly
       }
-      sources = process_file_template(
-              invoker.sources,
-              [
-                "{{source_gen_dir}}/{{source_file_part}}.h",
-                "{{source_gen_dir}}/{{source_file_part}}.cc",
-              ])
-      public_configs = [
-        "//lib/fidl/cpp/bindings:bindings_config",
-      ]
+      sources =
+          process_file_template(invoker.sources,
+                                [
+                                  "{{source_gen_dir}}/{{source_file_part}}.h",
+                                  "{{source_gen_dir}}/{{source_file_part}}.cc",
+                                ])
+      public_configs = [ "//lib/fidl/cpp/bindings:bindings_config" ]
       deps = [
         ":$generator_target_name",
         ":${cpp_sources_target_name}__common",
@@ -378,8 +496,8 @@ template("fidl") {
   # See //build/dart/dart_package.gni for more details.
   target_label = get_label_info(":$target_name", "label_no_toolchain")
   dart_package_name = exec_script("//build/dart/label_to_package_name.py",
-                                 [ target_label ],
-                                 "trim string")
+                                  [ target_label ],
+                                  "trim string")
 
   # This target is used to generate Dart package information
   dart_package("${target_name}_dart") {
@@ -387,7 +505,9 @@ template("fidl") {
     source_dir = target_gen_dir
     analysis_options = "//lib/fidl/dart/analysis_options_fidl"
 
-    deps = [ "//lib/fidl/dart" ]
+    deps = [
+      "//lib/fidl/dart",
+    ]
     fidl_deps = []
     if (defined(invoker.deps)) {
       fidl_deps += invoker.deps

@@ -42,6 +42,8 @@ func GetCliConfigWithFlagSet(args []string, flagSet *flag.FlagSet) GeneratorConf
 			"By default, code is generated for all specified files and their transitive imports.")
 	flagSet.BoolVar(&config.genTypeInfo, "generate-type-info", false,
 		"Do not generate type information inside the core.")
+	flagSet.StringVar(&config.dependencyMapFile, "map-file", "",
+		"file containing dependency map info.")
 
 	err := flagSet.Parse(args[1:])
 	if err == flag.ErrHelp {
@@ -92,11 +94,12 @@ func decodeFileGraph(in io.Reader) (fileGraph *fidl_files.FidlFileGraph) {
 
 // generatorCliConfig implements GeneratorConfig.
 type generatorCliConfig struct {
-	fileGraph    *fidl_files.FidlFileGraph
-	outputDir    string
-	srcRootPath  string
-	noGenImports bool
-	genTypeInfo  bool
+	fileGraph         *fidl_files.FidlFileGraph
+	outputDir         string
+	srcRootPath       string
+	noGenImports      bool
+	genTypeInfo       bool
+	dependencyMapFile string
 }
 
 // See GeneratorConfig.
@@ -122,4 +125,9 @@ func (c *generatorCliConfig) GenImports() bool {
 // See GeneratorConfig.
 func (c *generatorCliConfig) GenTypeInfo() bool {
 	return c.genTypeInfo
+}
+
+// See GeneratorConfig.
+func (c *generatorCliConfig) DependencyMapFile() string {
+	return c.dependencyMapFile
 }

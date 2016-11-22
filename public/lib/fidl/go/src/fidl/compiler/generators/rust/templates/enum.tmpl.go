@@ -8,7 +8,7 @@ const GenerateEnum = `
 {{/* . (dot) refers to a the Go type |rustgen.EnumTemplate|  */}}
 {{- define "GenerateEnum" -}}
 {{- $enum := . -}}
-type {{$enum.Name}} =
+pub type {{$enum.Name}} =
 {{- if eq $enum.Signed true}} i32
 {{- else}} u32
 {{- end}};

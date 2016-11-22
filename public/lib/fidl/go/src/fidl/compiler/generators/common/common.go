@@ -39,6 +39,13 @@ type GeneratorConfig interface {
 	// typically a serialized mojom describing all data types defined in a mojom,
 	// which can be used for mojom type-introspection.
 	GenTypeInfo() bool
+
+	// Returns the pathname to a file that contains a map of dependencies. Each
+	// line of the map contains the potential target names for one source file.
+	// This info is used in the Rust bindings to infer a crate name for a given
+	// file import. The format of the file is described in more detail in
+	// build/make_map.py.
+	DependencyMapFile() string
 }
 
 // Writer is the interface used by the generators to write their output.

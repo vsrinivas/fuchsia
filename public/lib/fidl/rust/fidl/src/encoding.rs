@@ -506,6 +506,59 @@ impl<T: Decodable> DecodablePtr for Vec<T> {
 impl_encodable_ptr!((T: Encodable) Vec<T>);
 impl_decodable_ptr!((T: Decodable) Vec<T>);
 
+// We only implement fixed size arrays of copyable elements, because it's
+// difficult to move elements in and out safely. In practice, fixed sized
+// arrays are only used for primitives.
+macro_rules! impl_codable_for_fixed_array {
+    ($($len:expr),*) => {
+        $(
+        impl<T: Encodable + Copy> EncodablePtr for [T; $len] {
+            fn body_size(&self) -> usize {
+                8 + T::vec_size($len)
+            }
+
+            fn header_data(&self) -> u32 {
+                $len as u32
+            }
+
+            // TODO: specializing for u8 at least would be nice
+            fn encode_body(self, buf: &mut EncodeBuf, base: usize) {
+                let mut offset = 0;
+                for item in &self {
+                    item.encode(buf, base, offset);
+                    offset += T::size();
+                }
+            }
+        }
+        impl<T: Decodable + Copy + Default> DecodablePtr for [T; $len] {
+            fn decode_body(buf: &mut DecodeBuf, size: u32, val: u32, base: usize) -> Result<Self> {
+                let len = val as usize;
+                if len != $len || size as usize != 8 + T::vec_size($len) {
+                    return Err(Error::Invalid);
+                }
+                let mut result = [Default::default(); $len];
+                for i in 0..$len {
+                    result[i] = try!(T::decode(buf, base, i * T::size()));
+                }
+                Ok(result)
+            }
+        }
+        impl_encodable_ptr!((T: Encodable + Copy) [T; $len]);
+        impl_decodable_ptr!((T: Decodable + Copy + Default) [T; $len]);
+        )*
+    };
+}
+
+// Unfortunately, we cannot be generic over the length of a fixed array
+// even though its part of the type (this will hopefully be added in the
+// future) so for now we implement encodable for only the first 33 fixed
+// size array types.
+impl_codable_for_fixed_array!( 0,  1,  2,  3,  4,  5,  6,  7,
+                               8,  9, 10, 11, 12, 13, 14, 15,
+                              16, 17, 18, 19, 20, 21, 22, 23,
+                              24, 25, 26, 27, 28, 29, 30, 31,
+                              32);
+
 impl DecodablePtr for String {
     fn decode_body(buf: &mut DecodeBuf, size: u32, val: u32, base: usize) -> Result<Self> {
         DecodablePtr::decode_body(buf, size, val, base).and_then(|vec|
@@ -650,6 +703,8 @@ macro_rules! impl_codable_handle {
 impl_codable_handle!(Handle);
 impl_codable_handle!(::magenta::Channel);
 impl_codable_handle!(::magenta::Vmo);
+impl_codable_handle!(::magenta::EventPair);
+impl_codable_handle!(::magenta::Socket);
 // TODO(raph): add other basic handle types 
 
 pub trait CodableUnion : Encodable + Decodable {
