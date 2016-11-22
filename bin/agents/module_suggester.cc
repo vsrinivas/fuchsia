@@ -17,6 +17,7 @@ constexpr char maxwell::agents::ModuleSuggesterAgent::kModuleSuggestionId[];
 // can decide which module to launch, and actually launch it. For now, we just
 // create a proposal with the mail headline.
 const std::string kMailHeadline = "Open Mail";
+const std::string kMailUrl = "file:///system/apps/email_story";
 
 namespace {
 
@@ -53,9 +54,13 @@ class ModuleSuggesterAgentApp : public maxwell::agents::ModuleSuggesterAgent,
       } else {
         auto p = maxwell::suggestion::Proposal::New();
         p->id = kModuleSuggestionId;
-        p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
+        auto create_story = maxwell::suggestion::CreateStory::New();
+        create_story->module_id = kMailUrl;
+        auto action = maxwell::suggestion::Action::New();
+        action->set_create_story(std::move(create_story));
+        p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(1);
+        p->on_selected[0] = std::move(action);
         auto d = maxwell::suggestion::Display::New();
-
         d->headline = kMailHeadline;
         d->subheadline = "";
         d->details = "";

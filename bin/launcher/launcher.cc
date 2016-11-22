@@ -51,6 +51,7 @@ class LauncherApp : public maxwell::Launcher {
     // StartAgent("file:///system/apps/agents/carmen_sandiego");
     // StartAgent("file:///system/apps/agents/ideas");
     StartAgent("file:///system/apps/acquirers/focused_story_ids");
+    StartAgent("file:///system/apps/agents/module_suggester");
   }
 
  private:
