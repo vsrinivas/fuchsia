@@ -87,7 +87,7 @@ void devhost_publish(device_ctx_t* parent, device_ctx_t* ctx) {
         name = NULL;
     }
 
-    if ((status = devfs_add_link(vnp, name, ctx->vnode)) < 0) {
+    if ((status = memfs_add_link(vnp, name, ctx->vnode)) < 0) {
         printf("devmgr: could not link to '%s'\n", ctx->name);
     }
 }

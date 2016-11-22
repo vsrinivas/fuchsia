@@ -88,7 +88,6 @@ mx_handle_t vfs_create_root_handle(vnode_t* vn);
 // device fs
 vnode_t* devfs_get_root(void);
 mx_status_t memfs_create_device_at(vnode_t* parent, vnode_t** out, const char* name, mx_handle_t hdevice);
-mx_status_t devfs_add_link(vnode_t* parent, const char* name, vnode_t* target);
 mx_status_t devfs_remove(vnode_t* vn);
 
 // boot fs
@@ -101,6 +100,7 @@ mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, v
 
 // memory fs
 vnode_t* memfs_get_root(void);
+mx_status_t memfs_add_link(vnode_t* parent, const char* name, vnode_t* target);
 
 // Create the global root to memfs
 vnode_t* vfs_create_global_root(void);
