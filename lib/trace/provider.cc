@@ -9,6 +9,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/handles/object_info.h"
 #include "lib/mtl/vmo/shared_vmo.h"
 
 namespace tracing {
@@ -26,8 +27,13 @@ class TraceProviderImpl : public TraceProvider {
         fidl::GetProxy(&provider);
 
     binding_.Bind(std::move(provider_request));
-    registry_->RegisterTraceProvider(
-        std::move(provider), fidl::String::From(settings.provider_label));
+
+    std::string label = settings.provider_label;
+    if (label.empty())
+      label = mtl::GetCurrentProcessName();
+
+    registry_->RegisterTraceProvider(std::move(provider),
+                                     fidl::String::From(std::move(label)));
   }
 
  private:

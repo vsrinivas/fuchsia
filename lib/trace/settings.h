@@ -12,6 +12,7 @@ namespace tracing {
 // Settings for initializing the tracing subsystem.
 struct TraceSettings {
   // The label to present to the user to identify the provider.
+  // If empty, uses the name of the current process.
   std::string provider_label;
 };
 
