@@ -8,68 +8,15 @@ set -e
 fuchsia_root=`pwd`
 tools_path=$fuchsia_root/buildtools
 magenta_build_dir=$fuchsia_root/out/build-magenta/build-magenta-pc-x86-64
-sysroot_path=$fuchsia_root/out/sysroot
-bootfs_output_dir=$fuchsia_root/out/Debug
-build_dir=$1
-if [ "$build_dir" == "" ]
-    then build_dir=$bootfs_output_dir
-fi
-bootfs_path=$build_dir/bootfs
+build_dir=$fuchsia_root/out/debug-x86-64
 
-bootfs_output_file=$bootfs_output_dir/user.bootfs
-rm -f $bootfs_output_file
-
-echo "fuchsia_root=$fuchsia_root build_dir=$build_dir"
-
-debug=true;
-
-indriver_test=msd_unit_tests;
-
-autorun_magma_sys_tests=true;
-
-$tools_path/gn gen $build_dir --root=$fuchsia_root --dotfile=$fuchsia_root/magma/.gn --check --args="is_debug=$debug magma_indriver_test=\"$indriver_test\""
-
-echo "Building magma_service_driver"
-$tools_path/ninja -C $build_dir magma_service_driver magma_service_driver_test magma_tests mesa_tests
-
-rm -rf $bootfs_path
-mkdir -p $bootfs_path/bin
-
-mkdir -p $bootfs_path/lib
-cp $build_dir/x64-shared/libcrypto.so* $bootfs_path/lib
-cp $build_dir/x64-shared/libssl.so* $bootfs_path/lib
-cp $build_dir/libmagma.so* $bootfs_path/lib
-cp $build_dir/libvulkan.so* $bootfs_path/lib
-
-cp $sysroot_path/x86_64-fuchsia/lib/*libc*.so* $bootfs_path/lib
-cp $sysroot_path/x86_64-fuchsia/lib/*libunwind.so* $bootfs_path/lib
-
-driver_path=$bootfs_path/lib/driver
-mkdir -p $driver_path
-cp $build_dir/x64-shared/libmsd-intel-gen-test.so  $driver_path
-
-autorun_path=$bootfs_path/autorun
-
-if $autorun_magma_sys_tests; then
-	echo "Enabling magma system driver tests to autorun"
-
-	test_executable=bin/magma_sys_unit_tests
-	cp $build_dir/magma_sys_unit_tests $bootfs_path/$test_executable
-
-	echo "echo Running magma system driver unit tests" >> $autorun_path # for sanity
-
-	echo "echo [SYS START=]" >> $autorun_path
-	echo "/boot/$test_executable" >> $autorun_path # run the tests
-	echo "echo [SYS END===]" >> $autorun_path
-	echo "echo [==========]" >> $autorun_path
-fi
-
-mkdir -p $bootfs_output_dir
-$magenta_build_dir/tools/mkbootfs -v -o $bootfs_output_file @$bootfs_path
+cd $fuchsia_root
+$fuchsia_root/packages/gn/gen.py --modules magma-dev
+$fuchsia_root/buildtools/ninja -C $build_dir
 
 echo "Recommended bootserver command:"
 echo ""
-echo "$magenta_build_dir/tools/bootserver $magenta_build_dir/magenta.bin $bootfs_output_file"
+echo "$magenta_build_dir/tools/bootserver $magenta_build_dir/magenta.bin $build_dir/user.bootfs"
 echo ""
 echo "Recommended loglistener command:"
 echo ""

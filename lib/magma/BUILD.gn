@@ -6,7 +6,7 @@ import("//magma/gnbuild/magma.gni")
 
 group("magma_service_driver") {
   deps = [
-    "$msd_intel_gen_build_root($magma_shared_toolchain)",
+    "$msd_intel_gen_build_root",
   ]
 }
 
@@ -14,7 +14,7 @@ group("magma_service_driver_test") {
   testonly = true
 
   deps = [
-    "$msd_intel_gen_build_root:test($magma_shared_toolchain)",
+    "$msd_intel_gen_build_root:test",
   ]
 }
 

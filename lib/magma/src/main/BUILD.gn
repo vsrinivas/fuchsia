@@ -42,20 +42,14 @@ source_set("test_driver") {
 
   defines = []
 
-  if (magma_indriver_test == "msd_unit_tests") {
-    # Don't create the device, let the unit tests create and destroy it.
-    defines += [ "MAGMA_CREATE_DEVICE=0" ]
-    defines += [ "MAGMA_INDRIVER_TEST=1" ]
-    sources += [ "driver_test_gtest.cc" ]
-    deps += [
-      "$magma_build_root/tests/unit_tests:magma_platform_tests",
-      "$magma_build_root/tests/unit_tests:msd_abi_conformance_tests",
-      "$msd_gtest_target",
-      "//third_party/gtest",
-    ]
-  } else if (magma_indriver_test != "") {
-    assert(false)
-  }
+  defines += [ "MAGMA_INDRIVER_TEST=1" ]
+  sources += [ "driver_test_gtest.cc" ]
+  deps += [
+    "$magma_build_root/tests/unit_tests:magma_platform_tests",
+    "$magma_build_root/tests/unit_tests:msd_abi_conformance_tests",
+    "$msd_gtest_target",
+    "//third_party/gtest",
+  ]
 
   libs = [
     "driver",

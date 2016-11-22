@@ -1,0 +1,20 @@
+msleep 5000
+echo [SYS START=]
+/system/test/magma_sys_unit_tests
+echo [SYS END===]
+echo [==========]
+echo [ABI START=]
+/system/test/magma_sys_abi_conformance_tests
+echo [ABI END===]
+echo [==========]
+echo [MESA START]
+/system/test/test_wsi_magma
+/system/test/state_pool
+/system/test/state_pool_free_list_only
+/system/test/state_pool_no_free
+echo [MESA END==]
+echo [==========]
+echo [APP START=]
+/system/test/vkreadback
+echo [APP END===]
+echo [==========]

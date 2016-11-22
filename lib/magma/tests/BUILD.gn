@@ -4,6 +4,15 @@
 
 import("//magma/gnbuild/magma.gni")
 
+copy("autorun") {
+  sources = [
+    "$magma_build_root/scripts/autorun",
+  ]
+  outputs = [
+    "$root_out_dir/autorun",
+  ]
+}
+
 group("tests") {
   testonly = true
 
