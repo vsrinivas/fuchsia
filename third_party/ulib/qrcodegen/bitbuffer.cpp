@@ -23,7 +23,7 @@
  */
 
 #include <cstddef>
-#include "BitBuffer.hpp"
+#include <qrcodegen/bitbuffer.h>
 
 
 qrcodegen::BitBuffer::BitBuffer() :

@@ -27,7 +27,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include "QrSegment.hpp"
+#include <qrcodegen/qrsegment.h>
 
 
 namespace qrcodegen {

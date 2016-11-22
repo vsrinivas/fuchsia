@@ -29,7 +29,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "QrCode.hpp"
+#include <qrcodegen/qrcode.h>
 
 
 // Function prototypes

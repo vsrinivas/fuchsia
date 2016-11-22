@@ -23,8 +23,8 @@
  */
 
 #include <cstddef>
-#include "BitBuffer.hpp"
-#include "QrSegment.hpp"
+#include <qrcodegen/bitbuffer.h>
+#include <qrcodegen/qrsegment.h>
 
 
 qrcodegen::QrSegment::Mode::Mode(int mode, int cc0, int cc1, int cc2) :

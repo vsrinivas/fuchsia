@@ -27,8 +27,8 @@
 #include <cmath>
 #include <cstddef>
 #include <sstream>
-#include "BitBuffer.hpp"
-#include "QrCode.hpp"
+#include <qrcodegen/bitbuffer.h>
+#include <qrcodegen/qrcode.h>
 
 
 qrcodegen::QrCode::Ecc::Ecc(int ord, int fb) :
