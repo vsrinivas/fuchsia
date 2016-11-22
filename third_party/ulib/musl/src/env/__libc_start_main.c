@@ -122,6 +122,15 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
             handle_info[i] = 0;
             break;
 
+        case MX_HND_TYPE_VMAR_ROOT:
+            // As above for PROC_SELF
+            if (__magenta_vmar_root_self != MX_HANDLE_INVALID)
+                _mx_handle_close(__magenta_vmar_root_self);
+            __magenta_vmar_root_self = handles[i];
+            handles[i] = MX_HANDLE_INVALID;
+            handle_info[i] = 0;
+            break;
+
         case MX_HND_TYPE_THREAD_SELF:
             main_thread_handle = handles[i];
             handles[i] = MX_HANDLE_INVALID;

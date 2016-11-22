@@ -14,6 +14,9 @@
 #include <link.h>
 #include <magenta/dlfcn.h>
 #include <magenta/internal.h>
+// TODO(teisenbe): Remove this include once code below no longer uses it (e.g.
+// after we switch to using sub-VMARs).
+#include <magenta/syscalls/object.h>
 #include <magenta/status.h>
 #include <pthread.h>
 #include <setjmp.h>
@@ -492,8 +495,8 @@ static void* choose_load_address(size_t span) {
     // in POSIX terms).  But the kernel currently doesn't allow that, so do
     // a read-only mapping.
     uintptr_t base;
-    mx_status_t status = _mx_process_map_vm(__magenta_process_self, vmo, 0, span, &base,
-                                            MX_VM_FLAG_PERM_READ);
+    mx_status_t status = _mx_vmar_map(__magenta_vmar_root_self, 0, vmo, 0, span,
+                                      MX_VM_FLAG_PERM_READ, &base);
     _mx_handle_close(vmo);
     if (status < 0) {
         error("failed to reserve %zu bytes of address space: %d\n",
@@ -510,7 +513,7 @@ static void* choose_load_address(size_t span) {
     // That is, in the general case of dlopen when there are multiple
     // threads, it's racy.  For the startup case (or any time when there
     // is only one thread), it's fine.
-    status = _mx_process_unmap_vm(__magenta_process_self, base, 0);
+    status = _mx_vmar_unmap(__magenta_vmar_root_self, base, span);
     if (status < 0) {
         error("vm_unmap failed on reservation %#" PRIxPTR "+%zu: %d\n",
               base, span, status);
@@ -530,16 +533,15 @@ static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
     if (status < 0)
         return status;
     uintptr_t window = 0;
-    status = _mx_process_map_vm(__magenta_process_self, vmo,
-                                *off_start, data_size, &window,
-                                MX_VM_FLAG_PERM_READ);
+    status = _mx_vmar_map(__magenta_vmar_root_self, 0, vmo, *off_start,
+                          data_size, MX_VM_FLAG_PERM_READ, &window);
     if (status < 0) {
         _mx_handle_close(copy_vmo);
         return status;
     }
     size_t n;
     status = _mx_vmo_write(copy_vmo, (void*)window, 0, data_size, &n);
-    _mx_process_unmap_vm(__magenta_process_self, window, 0);
+    _mx_vmar_unmap(__magenta_vmar_root_self, window, data_size);
     if (status < 0) {
         mx_handle_close(copy_vmo);
         return status;
@@ -568,8 +570,18 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     size_t tls_image = 0;
     size_t i;
 
+    // Get the VMAR's base so we can perform SPECIFIC mappings below.
+    // TODO(teisenbe): This should be unnecessary once this code is
+    // switched to using subregions.
+    mx_info_vmar_t vmar_info;
+    mx_status_t status = _mx_object_get_info(__magenta_vmar_root_self,
+                                             MX_INFO_VMAR, &vmar_info,
+                                             sizeof(vmar_info), NULL, NULL);
+    if (status < 0)
+        return 0;
+
     size_t l;
-    mx_status_t status = _mx_vmo_read(vmo, buf, 0, sizeof buf, &l);
+    status = _mx_vmo_read(vmo, buf, 0, sizeof buf, &l);
     eh = buf;
     if (status < 0)
         return 0;
@@ -653,7 +665,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         this_min = ph->p_vaddr & -PAGE_SIZE;
         this_max = ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1 & -PAGE_SIZE;
         off_start = ph->p_offset & -PAGE_SIZE;
-        uint32_t mx_flags = MX_VM_FLAG_FIXED;
+        uint32_t mx_flags = MX_VM_FLAG_SPECIFIC;
         mx_flags |= (ph->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0;
         mx_flags |= (ph->p_flags & PF_W) ? MX_VM_FLAG_PERM_WRITE : 0;
         mx_flags |= (ph->p_flags & PF_X) ? MX_VM_FLAG_PERM_EXECUTE : 0;
@@ -686,8 +698,9 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             }
         }
 
-        status = _mx_process_map_vm(__magenta_process_self, map_vmo, off_start,
-                                    map_size, &mapaddr, mx_flags);
+        size_t mapoff = mapaddr - vmar_info.base;
+        status = _mx_vmar_map(__magenta_vmar_root_self, mapoff, map_vmo,
+                              off_start, map_size, mx_flags, &mapaddr);
         if (map_vmo != vmo)
             _mx_handle_close(map_vmo);
         if (status != NO_ERROR)
@@ -704,9 +717,11 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
                 if (status < 0) {
                     goto mx_error;
                 }
-                uintptr_t bss_mapaddr = pgbrk;
-                status = _mx_process_map_vm(__magenta_process_self, bss_vmo, 0, bss_len,
-                                            &bss_mapaddr, mx_flags);
+                uintptr_t bss_mapaddr = 0;
+                size_t bss_mapoff = pgbrk - vmar_info.base;
+                status = _mx_vmar_map(__magenta_vmar_root_self, bss_mapoff,
+                                      bss_vmo, 0, bss_len, mx_flags,
+                                      &bss_mapaddr);
                 _mx_handle_close(bss_vmo);
                 if (status < 0)
                     goto mx_error;
@@ -1519,11 +1534,19 @@ dl_start_return_t __dls3(void* start_arg) {
         case MX_HND_TYPE_PROC_SELF:
             __magenta_process_self = handles[i];
             break;
+        case MX_HND_TYPE_VMAR_ROOT:
+            __magenta_vmar_root_self = handles[i];
+            break;
         default:
             _mx_handle_close(handles[i]);
             break;
         }
     }
+
+    if (__magenta_process_self == MX_HANDLE_INVALID)
+        error("bootstrap message bad no proc self");
+    if (__magenta_vmar_root_self == MX_HANDLE_INVALID)
+        error("bootstrap message bad no root vmar");
 
     // Unpack the environment strings so dls3 can use getenv.
     char* argv[procargs->args_num + 1];
