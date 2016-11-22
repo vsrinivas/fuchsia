@@ -90,6 +90,15 @@ TEST_F(EventTest, AsyncEnd) {
                    "v4");
 }
 
+TEST_F(EventTest, Handle) {
+  TRACE_HANDLE0(mx_process_self());
+  TRACE_HANDLE1(mx_process_self(), "k1", "v1");
+  TRACE_HANDLE2(mx_process_self(), "k1", "v1", "k2", "v2");
+  TRACE_HANDLE3(mx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_HANDLE4(mx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+                "v4");
+}
+
 TEST_F(EventTest, NullArguments) {
   TRACE_DURATION_BEGIN1("cat", "name", "key", nullptr);
 }

@@ -371,6 +371,14 @@ class Record {
     EventData data;
   };
 
+  // Kernel Object record data.
+  struct KernelObject {
+    mx_koid_t koid;
+    mx_obj_type_t object_type;
+    std::string name;
+    std::vector<Argument> arguments;
+  };
+
   explicit Record(const Metadata& record)
       : type_(RecordType::kMetadata), metadata_(record) {}
 
@@ -387,6 +395,11 @@ class Record {
 
   explicit Record(const Event& record) : type_(RecordType::kEvent) {
     new (&event_) Event(record);
+  }
+
+  explicit Record(const KernelObject& record)
+      : type_(RecordType::kKernelObject) {
+    new (&kernel_object_) KernelObject(record);
   }
 
   Record(const Record& other) { Copy(other); }
@@ -420,6 +433,11 @@ class Record {
     return event_;
   }
 
+  const KernelObject& GetKernelObject() const {
+    FTL_DCHECK(type_ == RecordType::kKernelObject);
+    return kernel_object_;
+  }
+
   RecordType type() const { return type_; }
 
  private:
@@ -433,6 +451,7 @@ class Record {
     String string_;
     Thread thread_;
     Event event_;
+    KernelObject kernel_object_;
   };
 };
 
@@ -467,6 +486,8 @@ class TraceReader {
   bool ReadThreadRecord(Chunk& record,
                         ::tracing::internal::RecordHeader header);
   bool ReadEventRecord(Chunk& record, ::tracing::internal::RecordHeader header);
+  bool ReadKernelObjectRecord(Chunk& record,
+                              ::tracing::internal::RecordHeader header);
   bool ReadArguments(Chunk& record,
                      size_t count,
                      std::vector<Argument>* out_arguments);

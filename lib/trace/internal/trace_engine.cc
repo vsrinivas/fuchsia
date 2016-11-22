@@ -42,6 +42,8 @@ struct LocalState {
 };
 thread_local LocalState g_local_state;
 
+constexpr char kProcessArgKey[] = "process";
+
 inline uint64_t GetNanosecondTimestamp() {
   return mx_time_get(MX_CLOCK_MONOTONIC);
 }
@@ -67,6 +69,9 @@ TraceEngine::TraceEngine(ftl::RefPtr<mtl::SharedVmo> shared_vmo,
 
   if (!g_process_koid)
     g_process_koid = mtl::GetCurrentProcessKoid();
+
+  WriteKernelObjectRecordBase(g_process_koid, MX_OBJ_TYPE_PROCESS,
+                              mtl::GetCurrentProcessName().c_str(), 0u, 0u);
 }
 
 TraceEngine::~TraceEngine() {}
@@ -91,6 +96,9 @@ bool TraceEngine::IsCategoryEnabled(const char* category) const {
 
 TraceEngine::StringRef TraceEngine::RegisterString(const char* constant,
                                                    bool check_category) {
+  if (!constant || !*constant)
+    return StringRef::MakeEmpty();
+
   LocalState& state = g_local_state;
 
   if (state.string_generation < generation_) {
@@ -135,7 +143,7 @@ TraceEngine::StringRef TraceEngine::RegisterString(const char* constant,
     return StringRef::MakeEmpty();
   }
 
-  return StringRef::MakeInlined(constant, strlen(constant));
+  return StringRef::MakeInlinedOrEmpty(constant, strlen(constant));
 }
 
 TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
@@ -150,6 +158,14 @@ TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
     if (state.thread_koid == MX_KOID_INVALID) {
       state.thread_koid = mtl::GetCurrentThreadKoid();
     }
+
+    ::tracing::writer::KoidArgument process_arg(
+        RegisterString(kProcessArgKey, false), g_process_koid);
+    Payload payload = WriteKernelObjectRecordBase(
+        state.thread_koid, MX_OBJ_TYPE_THREAD,
+        mtl::GetCurrentThreadName().c_str(), 1u, process_arg.Size());
+    if (payload)
+      payload.WriteValue(process_arg);
 
     ThreadIndex thread_index =
         next_thread_index_.fetch_add(1u, std::memory_order_relaxed);
@@ -237,6 +253,46 @@ TraceEngine::Payload TraceEngine::WriteEventRecordBase(
       .Write(GetNanosecondTimestamp())
       .WriteValue(thread_ref)
       .WriteValue(category_ref)
+      .WriteValue(name_ref);
+  return payload;
+}
+
+TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
+    mx_handle_t handle,
+    size_t argument_count,
+    size_t payload_size) {
+  mx_info_handle_basic_t info;
+  mx_status_t status = mx_object_get_info(handle, MX_INFO_HANDLE_BASIC, &info,
+                                          sizeof(info), nullptr, nullptr);
+  if (status != NO_ERROR)
+    return Payload(nullptr);
+
+  return WriteKernelObjectRecordBase(
+      info.koid, static_cast<mx_obj_type_t>(info.type),
+      mtl::GetObjectName(handle).c_str(), argument_count, payload_size);
+}
+
+TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
+    mx_koid_t koid,
+    mx_obj_type_t object_type,
+    const char* name,
+    size_t argument_count,
+    size_t payload_size) {
+  const StringRef name_ref = StringRef::MakeInlinedOrEmpty(name, strlen(name));
+  const size_t record_size =
+      sizeof(RecordHeader) + WordsToBytes(1) + name_ref.Size() + payload_size;
+  Payload payload = AllocateRecord(record_size);
+  if (!payload)
+    return payload;
+
+  payload
+      .Write(MakeRecordHeader(RecordType::kKernelObject, record_size) |
+             KernelObjectRecordFields::ObjectType::Make(
+                 ToUnderlyingType(object_type)) |
+             KernelObjectRecordFields::NameStringRef::Make(
+                 name_ref.encoded_value()) |
+             KernelObjectRecordFields::ArgumentCount::Make(argument_count))
+      .Write(koid)
       .WriteValue(name_ref);
   return payload;
 }

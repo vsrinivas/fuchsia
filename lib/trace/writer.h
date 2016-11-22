@@ -58,9 +58,9 @@ class Payload {
     return *this;
   }
 
-  Payload& WriteBytes(const void* src, size_t size) {
-    memcpy(ptr_, src, size);
-    ptr_ += size >> 3;
+  Payload& WriteBytes(const void* src, size_t length) {
+    memcpy(ptr_, src, length);
+    ptr_ += ::tracing::internal::BytesToWords(::tracing::internal::Pad(length));
     return *this;
   }
 
@@ -90,17 +90,15 @@ class StringRef {
     return StringRef(::tracing::internal::StringRefFields::kEmpty, nullptr);
   }
 
-  static StringRef MakeInlined(const char* string, size_t length) {
+  static StringRef MakeInlinedOrEmpty(const char* string, size_t length) {
+    if (!length)
+      return MakeEmpty();
     size_t trim = std::min(
         length, size_t(::tracing::internal::StringRefFields::kMaxLength));
     return StringRef(
         static_cast<EncodedStringRef>(
             trim | ::tracing::internal::StringRefFields::kInlineFlag),
         string);
-  }
-
-  static StringRef MakeInlinedOrEmpty(const char* string, size_t length) {
-    return length ? MakeInlined(string, length) : MakeEmpty();
   }
 
   // Constructs a |StringRef| from a std::string.
@@ -292,15 +290,25 @@ class StringArgument : public Argument {
   StringRef const value_ref_;
 };
 
-class RetainedStringArgument : public StringArgument {
+class RetainedStringArgument : public Argument {
  public:
   explicit RetainedStringArgument(StringRef name_ref, std::string value)
-      : StringArgument(std::move(name_ref),
-                       StringRef::MakeInlinedOrEmpty(value)),
-        retained_value_(std::move(value)) {}
+      : Argument(std::move(name_ref)),
+        retained_value_(std::move(value)),
+        value_ref_(StringRef::MakeInlinedOrEmpty(retained_value_)) {}
+
+  size_t Size() const { return Argument::Size() + value_ref_.Size(); }
+
+  void WriteTo(Payload& payload) const {
+    Argument::WriteTo(payload, ArgumentType::kString, Size(),
+                      ::tracing::internal::StringArgumentFields::Index::Make(
+                          value_ref_.encoded_value()));
+    payload.WriteValue(value_ref_);
+  }
 
  private:
-  std::string retained_value_;
+  std::string const retained_value_;
+  StringRef const value_ref_;
 };
 
 class PointerArgument : public Argument {
@@ -387,6 +395,17 @@ class TraceWriter {
                          mx_koid_t process_koid,
                          mx_koid_t thread_koid);
 
+  // Writes a kernel object record about |handle| into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteKernelObjectRecord(mx_handle_t handle, Args&&... args) {
+    if (Payload payload = WriteKernelObjectRecordBase(
+            handle, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...))) {
+      payload.WriteValues(std::forward<Args>(args)...);
+    }
+  }
+
  private:
   // Private friend (instead of protected) to prevent subclassing of
   // TraceWriter by anyone else since it could be unsafe.
@@ -394,6 +413,10 @@ class TraceWriter {
 
   explicit TraceWriter(::tracing::internal::TraceEngine* engine)
       : engine_(engine) {}
+
+  Payload WriteKernelObjectRecordBase(mx_handle_t handle,
+                                      size_t argument_count,
+                                      size_t payload_size);
 
   ::tracing::internal::TraceEngine* const engine_;
 };
@@ -646,6 +669,14 @@ class DurationEventScope {
   TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3)               \
   TRACE_INTERNAL_MAKE_ARG(k4, v4)
 
+#define TRACE_INTERNAL_SIMPLE(stmt)                                         \
+  do {                                                                      \
+    auto TRACE_INTERNAL_WRITER = ::tracing::writer::TraceWriter::Prepare(); \
+    if (TRACE_INTERNAL_WRITER) {                                            \
+      stmt;                                                                 \
+    }                                                                       \
+  } while (0)
+
 #define TRACE_INTERNAL_CATEGORIZED(category, stmt)                    \
   do {                                                                \
     auto TRACE_INTERNAL_WRITER =                                      \
@@ -661,8 +692,8 @@ class DurationEventScope {
                                                     scope_name);               \
   TRACE_INTERNAL_CATEGORIZED(                                                  \
       scope_label.category(),                                                  \
-      TRACE_INTERNAL_WRITER.WriteDurationBeginEventRecord(                     \
-          scope_label.category() args))
+      TRACE_INTERNAL_WRITER.WriteDurationBeginEventRecord(scope_label.name()   \
+                                                              args))
 
 #define TRACE_INTERNAL_DURATION(scope_category, scope_name, args...)          \
   TRACE_INTERNAL_DURATION_SCOPE(TRACE_INTERNAL_SCOPE_LABEL(), scope_category, \
@@ -690,5 +721,9 @@ class DurationEventScope {
 #define TRACE_INTERNAL_ASYNC_END(category, name, id, args...) \
   TRACE_INTERNAL_CATEGORIZED(                                 \
       category, TRACE_INTERNAL_WRITER.WriteAsyncEndEventRecord(name, id args))
+
+#define TRACE_INTERNAL_HANDLE(handle, args...) \
+  TRACE_INTERNAL_SIMPLE(                       \
+      TRACE_INTERNAL_WRITER.WriteKernelObjectRecord(handle args))
 
 #endif  // APPS_TRACING_LIB_TRACE_INTERNAL_WRITER_H_

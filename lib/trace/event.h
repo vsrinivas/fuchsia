@@ -114,4 +114,18 @@
       category, name, id,                                                    \
       TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
 
+// Writes a description of a kernel object indicated by |handle|,
+// including its koid, name, and the supplied arguments.
+#define TRACE_HANDLE0(handle) TRACE_INTERNAL_HANDLE(handle)
+#define TRACE_HANDLE1(handle, k1, v1) \
+  TRACE_INTERNAL_HANDLE(handle, TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
+#define TRACE_HANDLE2(handle, k1, v1, k2, v2) \
+  TRACE_INTERNAL_HANDLE(handle, TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2))
+#define TRACE_HANDLE3(handle, k1, v1, k2, v2, k3, v3) \
+  TRACE_INTERNAL_HANDLE(handle,                       \
+                        TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3))
+#define TRACE_HANDLE4(handle, k1, v1, k2, v2, k3, v3, k4, v4) \
+  TRACE_INTERNAL_HANDLE(                                      \
+      handle, TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
+
 #endif  // APPS_TRACING_LIB_TRACE_H_

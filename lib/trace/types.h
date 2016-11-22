@@ -18,7 +18,8 @@ enum class RecordType {
   kInitialization = 1,
   kString = 2,
   kThread = 3,
-  kEvent = 4
+  kEvent = 4,
+  kKernelObject = 7,
 };
 
 // MetadataType enumerates all known trace metadata types.

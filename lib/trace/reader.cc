@@ -246,6 +246,9 @@ Record& Record::Destroy() {
     case RecordType::kEvent:
       event_.~Event();
       break;
+    case RecordType::kKernelObject:
+      kernel_object_.~KernelObject();
+      break;
     default:
       break;
   }
@@ -270,6 +273,9 @@ Record& Record::Copy(const Record& other) {
       break;
     case RecordType::kEvent:
       new (&event_) Event(other.event_);
+      break;
+    case RecordType::kKernelObject:
+      new (&kernel_object_) KernelObject(other.kernel_object_);
       break;
     default:
       break;
@@ -328,6 +334,12 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
       case RecordType::kEvent: {
         if (!ReadEventRecord(record, pending_header_)) {
           context_.ReportError("Failed to read event record");
+        }
+        break;
+      }
+      case RecordType::kKernelObject: {
+        if (!ReadKernelObjectRecord(record, pending_header_)) {
+          context_.ReportError("Failed to read kernel object record");
         }
         break;
       }
@@ -491,6 +503,27 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
       break;
     }
   }
+  return true;
+}
+
+bool TraceReader::ReadKernelObjectRecord(Chunk& record, RecordHeader header) {
+  auto object_type =
+      KernelObjectRecordFields::ObjectType::Get<mx_obj_type_t>(header);
+  auto name_ref =
+      KernelObjectRecordFields::NameStringRef::Get<EncodedStringRef>(header);
+  auto argument_count =
+      KernelObjectRecordFields::ArgumentCount::Get<size_t>(header);
+
+  mx_koid_t koid;
+  std::string name;
+  std::vector<Argument> arguments;
+  if (!record.Read(&koid) ||
+      !context_.DecodeStringRef(record, name_ref, &name) ||
+      !ReadArguments(record, argument_count, &arguments))
+    return false;
+
+  record_consumer_(
+      Record(Record::KernelObject{koid, object_type, name, arguments}));
   return true;
 }
 

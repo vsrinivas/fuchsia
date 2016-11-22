@@ -24,6 +24,7 @@ class ChromiumExporter {
  private:
   void Start();
   void ExportEvent(const reader::Record::Event& event);
+  void ExportKernelObject(const reader::Record::KernelObject& kernel_object);
 
   std::ofstream file_out_;
   rapidjson::OStreamWrapper wrapper_;

@@ -127,6 +127,12 @@ struct EventRecordFields : RecordFields {
   using NameStringRef = Field<48, 63>;
 };
 
+struct KernelObjectRecordFields : RecordFields {
+  using ObjectType = Field<16, 23>;
+  using NameStringRef = Field<24, 39>;
+  using ArgumentCount = Field<40, 43>;
+};
+
 }  // namspace internal
 }  // namepsace tracing
 

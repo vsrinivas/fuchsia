@@ -79,6 +79,14 @@ void TraceWriter::WriteThreadRecord(ThreadIndex index,
   engine_->WriteThreadRecord(index, process_koid, thread_koid);
 }
 
+Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
+                                                 size_t argument_count,
+                                                 size_t payload_size) {
+  FTL_DCHECK(engine_);
+  return engine_->WriteKernelObjectRecordBase(handle, argument_count,
+                                              payload_size);
+}
+
 CategorizedTraceWriter CategorizedTraceWriter::Prepare(
     const char* category_constant) {
   TraceEngine* engine = g_engine.get();

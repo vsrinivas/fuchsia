@@ -62,6 +62,14 @@ class TraceEngine final {
                                const char* name,
                                size_t argument_count,
                                size_t payload_size);
+  Payload WriteKernelObjectRecordBase(mx_handle_t handle,
+                                      size_t argument_count,
+                                      size_t payload_size);
+  Payload WriteKernelObjectRecordBase(mx_koid_t koid,
+                                      mx_obj_type_t object_type,
+                                      const char* name,
+                                      size_t argument_count,
+                                      size_t payload_size);
 
  private:
   explicit TraceEngine(ftl::RefPtr<mtl::SharedVmo> shared_vmo,

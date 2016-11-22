@@ -14,6 +14,8 @@
 namespace tracing {
 namespace {
 
+constexpr char kProcessArgKey[] = "process";
+
 bool IsEventTypeSupported(EventType type) {
   switch (type) {
     case EventType::kDurationBegin:
@@ -27,6 +29,16 @@ bool IsEventTypeSupported(EventType type) {
   }
 
   return false;
+}
+
+const reader::ArgumentValue* GetArgumentValue(
+    const std::vector<reader::Argument>& arguments,
+    const char* name) {
+  for (const auto& arg : arguments) {
+    if (arg.name == name)
+      return &arg.value;
+  }
+  return nullptr;
 }
 
 }  // namespace
@@ -53,6 +65,9 @@ void ChromiumExporter::ExportRecord(const reader::Record& record) {
   switch (record.type()) {
     case RecordType::kEvent:
       ExportEvent(record.GetEvent());
+      break;
+    case RecordType::kKernelObject:
+      ExportKernelObject(record.GetKernelObject());
       break;
     default:
       break;
@@ -147,6 +162,52 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
   }
 
   writer_.EndObject();
+}
+
+void ChromiumExporter::ExportKernelObject(
+    const reader::Record::KernelObject& kernel_object) {
+  switch (kernel_object.object_type) {
+    case MX_OBJ_TYPE_PROCESS: {
+      writer_.StartObject();
+      writer_.Key("ph");
+      writer_.String("M");
+      writer_.Key("name");
+      writer_.String("process_name");
+      writer_.Key("pid");
+      writer_.Uint64(kernel_object.koid);
+      writer_.Key("args");
+      writer_.StartObject();
+      writer_.Key("name");
+      writer_.String(kernel_object.name.data(), kernel_object.name.size());
+      writer_.EndObject();
+      writer_.EndObject();
+      break;
+    }
+    case MX_OBJ_TYPE_THREAD: {
+      const reader::ArgumentValue* process_arg =
+          GetArgumentValue(kernel_object.arguments, kProcessArgKey);
+      if (!process_arg || process_arg->type() != ArgumentType::kKoid)
+        break;
+      writer_.StartObject();
+      writer_.Key("ph");
+      writer_.String("M");
+      writer_.Key("name");
+      writer_.String("thread_name");
+      writer_.Key("pid");
+      writer_.Uint64(process_arg->GetKoid());
+      writer_.Key("tid");
+      writer_.Uint64(kernel_object.koid);
+      writer_.Key("args");
+      writer_.StartObject();
+      writer_.Key("name");
+      writer_.String(kernel_object.name.data(), kernel_object.name.size());
+      writer_.EndObject();
+      writer_.EndObject();
+      break;
+    }
+    default:
+      break;
+  }
 }
 
 }  // namespace tracing
