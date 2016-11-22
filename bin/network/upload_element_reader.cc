@@ -10,12 +10,13 @@
 
 namespace network {
 
-UploadElementReader::UploadElementReader(mx::datapipe_consumer pipe)
+DatapipeUploadElementReader::DatapipeUploadElementReader(
+    mx::datapipe_consumer pipe)
     : pipe_(std::move(pipe)) {}
 
-UploadElementReader::~UploadElementReader() {}
+DatapipeUploadElementReader::~DatapipeUploadElementReader() {}
 
-mx_status_t UploadElementReader::ReadAll(std::ostream* os) {
+mx_status_t DatapipeUploadElementReader::ReadAll(std::ostream* os) {
   mx_status_t result = NO_ERROR;
 
   while (true) {
@@ -35,7 +36,7 @@ mx_status_t UploadElementReader::ReadAll(std::ostream* os) {
         result = NO_ERROR;
         break;
       }
-      FTL_LOG(ERROR) << "UploadELementReader: result=" << result;
+      FTL_LOG(ERROR) << "DatapipeUploadELementReader: result=" << result;
       break;
     }
 
@@ -43,9 +44,45 @@ mx_status_t UploadElementReader::ReadAll(std::ostream* os) {
     if (!*os) {
       // TODO(toshik): better result code?
       result = ERR_BUFFER_TOO_SMALL;
-      FTL_LOG(ERROR) << "UploadElementReader: result=" << result;
+      FTL_LOG(ERROR) << "DatapipeUploadElementReader: result=" << result;
       break;
     }
+  }
+
+  return result;
+}
+
+VmoUploadElementReader::VmoUploadElementReader(mx::vmo vmo)
+    : vmo_(std::move(vmo)) {}
+
+VmoUploadElementReader::~VmoUploadElementReader() {}
+
+mx_status_t VmoUploadElementReader::ReadAll(std::ostream* os) {
+  mx_status_t result = NO_ERROR;
+
+  uint64_t offset = 0;
+  while (true) {
+    mx_size_t num_bytes = buf_.size();
+    result = vmo_.read(buf_.data(), offset, num_bytes, &num_bytes);
+    if (result != NO_ERROR) {
+      // If the other end closes the data pipe,
+      // we get ERR_REMOTE_CLOSED.
+      if (result == ERR_OUT_OF_RANGE) {
+        result = NO_ERROR;
+        break;
+      }
+      FTL_LOG(ERROR) << "VmoUploadELementReader: result=" << result;
+      break;
+    }
+
+    os->write(buf_.data(), num_bytes);
+    if (!*os) {
+      // TODO(toshik): better result code?
+      result = ERR_BUFFER_TOO_SMALL;
+      FTL_LOG(ERROR) << "VmoUploadElementReader: result=" << result;
+      break;
+    }
+    offset += num_bytes;
   }
 
   return result;

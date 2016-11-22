@@ -7,6 +7,7 @@
 
 #include "lib/ftl/macros.h"
 #include "mx/datapipe.h"
+#include "mx/vmo.h"
 
 #include <array>
 
@@ -16,16 +17,37 @@ class UploadElementReader {
  public:
   static constexpr size_t BUFSIZE = 1024;
 
-  UploadElementReader(mx::datapipe_consumer pipe);
-  ~UploadElementReader();
+  UploadElementReader() {}
+  virtual ~UploadElementReader(){};
 
-  mx_status_t ReadAll(std::ostream* os);
+  virtual mx_status_t ReadAll(std::ostream* os) = 0;
+
+ private:
+  FTL_DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
+};
+
+class DatapipeUploadElementReader : public UploadElementReader {
+ public:
+  DatapipeUploadElementReader(mx::datapipe_consumer pipe);
+  ~DatapipeUploadElementReader() override;
+
+  mx_status_t ReadAll(std::ostream* os) override;
 
  private:
   mx::datapipe_consumer pipe_;
   std::array<char, BUFSIZE> buf_;
+};
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
+class VmoUploadElementReader : public UploadElementReader {
+ public:
+  VmoUploadElementReader(mx::vmo vmo);
+  ~VmoUploadElementReader() override;
+
+  mx_status_t ReadAll(std::ostream* os) override;
+
+ private:
+  mx::vmo vmo_;
+  std::array<char, BUFSIZE> buf_;
 };
 
 }  // namespace network
