@@ -31,16 +31,15 @@ struct bootfile {
 };
 
 struct callback_data {
-    uint8_t* bootfs;
     mx_handle_t vmo;
     unsigned int file_count;
-    mx_status_t (*add_file)(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len);
+    mx_status_t (*add_file)(const char* path, mx_handle_t vmo, mx_off_t off, size_t len);
 };
 
 static void callback(void* arg, const char* path, size_t off, size_t len) {
     struct callback_data* cd = arg;
     //printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
-    cd->add_file(path, cd->vmo, off, cd->bootfs + off, len);
+    cd->add_file(path, cd->vmo, off, len);
     ++cd->file_count;
 }
 

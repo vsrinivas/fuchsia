@@ -126,6 +126,16 @@ mx_status_t dn_lookup_name(const dnode_t* parent, const vnode_t* vn, char* out, 
     return ERR_NOT_FOUND;
 }
 
+// debug printout of file system tree
+void dn_print_children(dnode_t* parent, int indent) {
+    dnode_t* dn;
+    if (indent > 5) return; // error
+    list_for_every_entry(&parent->children, dn, dnode_t, dn_entry) {
+        printf("%*.s %.*s\n", indent*4, " ", DN_NAME_LEN(dn->flags), dn->name);
+        dn_print_children(dn, indent+1);
+    }
+}
+
 mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len) {
     vdircookie_t* c = cookie;
     dnode_t* last = c->p;

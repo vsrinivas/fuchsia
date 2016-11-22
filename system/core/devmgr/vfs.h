@@ -41,7 +41,6 @@ struct vnode {
             mx_handle_t h;
             mx_off_t offset; // offset into object
             mx_off_t length; // extent of data
-            void* data; // TODO(orr): temp to support bootfs
         } vmo;
         struct {
             mx_off_t length;
@@ -58,6 +57,9 @@ typedef struct vnode_watcher {
 #define V_FLAG_DEVICE 1
 #define V_FLAG_REMOTE 2
 #define V_FLAG_VMOFILE 4
+
+// TODO(orr): temp addition until subsequent patch
+extern vnode_ops_t vn_mem_ops_dir;
 
 mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
                      const char** pathout, uint32_t flags, uint32_t mode);
@@ -85,6 +87,11 @@ void vfs_global_init(vnode_t* root);
 mx_handle_t vfs_create_global_root_handle(void);
 mx_handle_t vfs_create_root_handle(vnode_t* vn);
 
+// vmo fs
+ssize_t vmo_read(vnode_t* vn, void* data, size_t len, size_t off);
+mx_status_t vmo_getattr(vnode_t* vn, vnattr_t* attr);
+void vmo_release(vnode_t* vn);
+
 // device fs
 vnode_t* devfs_get_root(void);
 mx_status_t memfs_create_device_at(vnode_t* parent, vnode_t** out, const char* name, mx_handle_t hdevice);
@@ -92,15 +99,25 @@ mx_status_t devfs_remove(vnode_t* vn);
 
 // boot fs
 vnode_t* bootfs_get_root(void);
-mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len);
+mx_status_t bootfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, size_t len);
 
 // system fs
 vnode_t* systemfs_get_root(void);
-mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, void* data, size_t len);
+mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, size_t len);
 
 // memory fs
 vnode_t* memfs_get_root(void);
 mx_status_t memfs_add_link(vnode_t* parent, const char* name, vnode_t* target);
+mx_status_t mem_lookup_none(vnode_t* parent, vnode_t** out, const char* name, size_t len);
+mx_status_t mem_create_none(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode);
+ssize_t mem_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
+ssize_t memfs_read_none(vnode_t* vn, void* data, size_t len, size_t off);
+mx_status_t mem_readdir_none(vnode_t* parent, void* cookie, void* data, size_t len);
+
+// TODO(orr) normally static; temporary exposure, to be undone in subsequent patch
+mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
+                        const char* name, size_t namelen,
+                        uint32_t type);
 
 // Create the global root to memfs
 vnode_t* vfs_create_global_root(void);

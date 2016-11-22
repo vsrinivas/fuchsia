@@ -47,3 +47,5 @@ mx_status_t dn_lookup_name(const dnode_t* dn, const vnode_t* vn, char* out_name,
 void dn_add_child(dnode_t* parent, dnode_t* child);
 
 mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len);
+
+void dn_print_children(dnode_t* parent, int indent);
