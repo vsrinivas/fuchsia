@@ -80,8 +80,10 @@ $ sudo brew services restart dnsmasq
 
 ### Setting up NAT (on Linux)
 
-Optionally you can set up NAT to route the traffic to the external network
-interface (e.g. eth0)
+Optionally you can set up NAT to route the traffic to an external
+network interface. These instructions use *eth0* as the name of that
+interface, but it may vary (to eth1, or something more exoctic) on
+your particular machine.
 
 Execute the following commands as root (you need this every time you reboot the machine).
 
