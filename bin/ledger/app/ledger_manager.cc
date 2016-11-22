@@ -10,7 +10,6 @@
 
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/page_utils.h"
-#include "apps/ledger/src/cloud_sync/impl/page_sync_delegate_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"

@@ -10,8 +10,6 @@ source_set("impl") {
     "commit_upload.h",
     "ledger_sync_impl.cc",
     "ledger_sync_impl.h",
-    "page_sync_delegate_impl.cc",
-    "page_sync_delegate_impl.h",
     "page_sync_impl.cc",
     "page_sync_impl.h",
   ]

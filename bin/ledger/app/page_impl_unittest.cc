@@ -8,7 +8,6 @@
 
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/cloud_sync/impl/page_sync_delegate_impl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
