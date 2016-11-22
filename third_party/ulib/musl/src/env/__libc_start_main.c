@@ -107,6 +107,7 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
     size_t stack_size = 0;
 
     // Find the handles we're interested in among what we were given.
+    mx_handle_t main_thread_handle = MX_HANDLE_INVALID;
     for (uint32_t i = 0; i < nhandles; ++i) {
         switch (MX_HND_INFO_TYPE(handle_info[i])) {
         case MX_HND_TYPE_PROC_SELF:
@@ -117,6 +118,12 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
             if (__magenta_process_self != MX_HANDLE_INVALID)
                 _mx_handle_close(__magenta_process_self);
             __magenta_process_self = handles[i];
+            handles[i] = MX_HANDLE_INVALID;
+            handle_info[i] = 0;
+            break;
+
+        case MX_HND_TYPE_THREAD_SELF:
+            main_thread_handle = handles[i];
             handles[i] = MX_HANDLE_INVALID;
             handle_info[i] = 0;
             break;
@@ -141,7 +148,7 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
     }
 
     atomic_fetch_add(&libc.thread_count, 1);
-    mxr_thread_t* mxr_thread = __mxr_thread_main();
+    mxr_thread_t* mxr_thread = __mxr_thread_main(main_thread_handle);
 
     __environ = envp;
     __init_tls(mxr_thread);

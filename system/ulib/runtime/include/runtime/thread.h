@@ -60,7 +60,7 @@ void mxr_thread_destroy(mxr_thread_t* thread);
 mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread);
 
 // A private entrypoint into mxruntime initialization.
-mxr_thread_t* __mxr_thread_main(void);
+mxr_thread_t* __mxr_thread_main(mx_handle_t main_thread_handle);
 
 #pragma GCC visibility pop
 

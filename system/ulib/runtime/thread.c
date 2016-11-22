@@ -227,10 +227,9 @@ mx_handle_t mxr_thread_get_handle(mxr_thread_t* thread) {
     return thread->handle;
 }
 
-mxr_thread_t* __mxr_thread_main(void) {
+mxr_thread_t* __mxr_thread_main(mx_handle_t main_thread_handle) {
     mxr_thread_t* thread = NULL;
     allocate_thread_page(&thread);
-    // TODO(kulakowski) Once the main thread is passed a handle, save it here.
-    thread->handle = MX_HANDLE_INVALID;
+    thread->handle = main_thread_handle;
     return thread;
 }
