@@ -25,23 +25,24 @@
 #include <cstddef>
 #include <qrcodegen/bitbuffer.h>
 
+namespace qrcodegen {
 
-qrcodegen::BitBuffer::BitBuffer() :
+BitBuffer::BitBuffer() :
     data(),
     bitLength(0) {}
 
 
-int qrcodegen::BitBuffer::getBitLength() const {
+int BitBuffer::getBitLength() const {
     return bitLength;
 }
 
 
-std::vector<uint8_t> qrcodegen::BitBuffer::getBytes() const {
+std::vector<uint8_t> BitBuffer::getBytes() const {
     return data;
 }
 
 
-void qrcodegen::BitBuffer::appendBits(uint32_t val, int len) {
+void BitBuffer::appendBits(uint32_t val, int len) {
     if (len < 0 || len > 32 || (len < 32 && (val >> len) != 0))
         throw "Value out of range";
     size_t newBitLen = bitLength + len;
@@ -52,7 +53,7 @@ void qrcodegen::BitBuffer::appendBits(uint32_t val, int len) {
 }
 
 
-void qrcodegen::BitBuffer::appendData(const QrSegment &seg) {
+void BitBuffer::appendData(const QrSegment &seg) {
     size_t newBitLen = bitLength + seg.bitLength;
     while (data.size() * 8 < newBitLen)
         data.push_back(0);
@@ -61,3 +62,5 @@ void qrcodegen::BitBuffer::appendData(const QrSegment &seg) {
         data.at(bitLength >> 3) |= bit << (7 - (bitLength & 7));
     }
 }
+
+}; // namespace qrcodegen
