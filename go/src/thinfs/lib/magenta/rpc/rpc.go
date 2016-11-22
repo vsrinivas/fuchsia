@@ -9,6 +9,7 @@ package rpc
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"syscall"
@@ -272,7 +273,7 @@ func statShared(msg *rio.Msg, size int64, mtime time.Time, dir bool) mx.Status {
 	return mx.Status(msg.Datalen)
 }
 
-func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cookie int64) mx.Status {
+func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directoryWrapper, cookie int64) mx.Status {
 	inputData := msg.Data[:msg.Datalen]
 	msg.Datalen = 0
 	dir := dw.d
@@ -396,7 +397,14 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, dw *directoryWrapper, cooki
 	case rio.OpIoctl:
 		switch msg.IoctlOp() {
 		case mxio.IoctlDevmgrUnmountFS:
-			return errorToRIO(vfs.fs.Close())
+			// Shut down filesystem
+			err := vfs.fs.Close()
+			if err != nil {
+				println("Error closing FAT: ", err.Error())
+			}
+			// Close reply handle, indicating that the unmounting process is complete
+			rh.Close()
+			os.Exit(0)
 		default:
 			return mx.ErrNotSupported
 		}
@@ -427,7 +435,7 @@ func mxioServer(msg *rio.Msg, rh mx.Handle, cookie int64) mx.Status {
 	case fs.File:
 		return vfs.processOpFile(msg, obj, cookie)
 	case *directoryWrapper:
-		return vfs.processOpDirectory(msg, obj, cookie)
+		return vfs.processOpDirectory(msg, rh, obj, cookie)
 	}
 	return mx.ErrNotSupported
 }
