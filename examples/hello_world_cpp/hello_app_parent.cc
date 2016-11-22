@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/modular/examples/hello_app/hello.fidl.h"
+#include "apps/modular/examples/hello_world_cpp/hello.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "lib/ftl/command_line.h"
