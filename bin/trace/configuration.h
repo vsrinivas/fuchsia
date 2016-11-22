@@ -23,6 +23,7 @@ struct Configuration {
   std::vector<std::string> categories = {};
   std::string output_file_name = "/tmp/trace.json";
   ftl::TimeDelta duration = ftl::TimeDelta::FromSeconds(10);
+  bool list_categories = false;
   bool list_providers = false;
   modular::ApplicationLaunchInfoPtr launch_info;
 };

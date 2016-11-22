@@ -159,12 +159,11 @@ TEST_F(TracingClientTest, ConcurrentTraceRecording) {
   threads_with_enabled_category.emplace_back(
       sampler,
       [](size_t iteration) {
-        TRACE_ASYNC_BEGIN1("disabled", "ASYNC_1_DISABLED", iteration,
-                                 "int", -42);
+        TRACE_ASYNC_BEGIN1("disabled", "ASYNC_1_DISABLED", iteration, "int",
+                           -42);
         TRACE_ASYNC_BEGIN1("two", "ASYNC_1", iteration, "int", -42);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        TRACE_ASYNC_END1("disabled", "ASYNC_1_DISABLED", iteration, "int",
-                               -33);
+        TRACE_ASYNC_END1("disabled", "ASYNC_1_DISABLED", iteration, "int", -33);
         TRACE_ASYNC_END1("two", "ASYNC_1", iteration, "int", -33);
       },
       kTraceEventsPerThread / 2);
@@ -195,11 +194,12 @@ TEST_F(TracingClientTest, ConcurrentTraceRecording) {
             events.Size())
       << trace;
 
-  std::unordered_map<std::string, size_t> event_counters = {{"TRACE_DURATION0", 0},
-                                                            {"TRACE_DURATION1", 0},
-                                                            {"TRACE_DURATION2", 0},
-                                                            {"ASYNC_0", 0},
-                                                            {"ASYNC_1", 0}};
+  std::unordered_map<std::string, size_t> event_counters = {
+      {"TRACE_DURATION0", 0},
+      {"TRACE_DURATION1", 0},
+      {"TRACE_DURATION2", 0},
+      {"ASYNC_0", 0},
+      {"ASYNC_1", 0}};
 
   for (size_t i = 0; i < events.Size(); i++) {
     const auto& event = events[i];

@@ -5,49 +5,32 @@
 #ifndef APPS_TRACING_SRC_TRACE_MANAGER_TRACE_MANAGER_H_
 #define APPS_TRACING_SRC_TRACE_MANAGER_TRACE_MANAGER_H_
 
-#include <atomic>
-#include <chrono>
 #include <list>
-#include <memory>
-#include <unordered_map>
 
 #include "apps/tracing/services/trace_controller.fidl.h"
 #include "apps/tracing/services/trace_registry.fidl.h"
+#include "apps/tracing/src/trace_manager/config.h"
+#include "apps/tracing/src/trace_manager/trace_provider_bundle.h"
+#include "apps/tracing/src/trace_manager/trace_session.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/tasks/one_shot_timer.h"
 
 namespace tracing {
 
 class TraceManager : public TraceRegistry, public TraceController {
  public:
-  TraceManager();
+  explicit TraceManager(const Config& config);
   ~TraceManager() override;
 
  private:
-  enum class ControllerState { kStarted, kStopped };
-
-  struct ProviderInfo {
-    explicit ProviderInfo(TraceProviderPtr provider,
-                          uint32_t id,
-                          std::string label)
-        : provider(std::move(provider)), id(id), label(std::move(label)) {}
-
-    std::string ToString();
-
-    TraceProviderPtr provider;
-    uint32_t id;
-    std::string label;
-    mx::vmo current_buffer;
-  };
-
-  uint32_t next_provider_id_ = 1u;
-
   // |TraceController| implementation.
   void StartTracing(fidl::Array<fidl::String> categories,
                     mx::socket output) override;
   void StopTracing() override;
+  void GetKnownCategories(const GetKnownCategoriesCallback& callback) override;
   void GetRegisteredProviders(
       const GetRegisteredProvidersCallback& callback) override;
 
@@ -57,17 +40,12 @@ class TraceManager : public TraceRegistry, public TraceController {
       const fidl::String& label) override;
 
   void FinalizeTracing();
-  bool StartTracingForProvider(ProviderInfo* provider);
-  void StopTracingForProvider(ProviderInfo* provider);
-  void EraseProvider(TraceProvider* provider);
 
-  ControllerState controller_state_{ControllerState::kStopped};
-
-  fidl::Array<fidl::String> categories_;
-  std::list<ProviderInfo> providers_;
-  std::vector<typename std::list<ProviderInfo>::iterator> active_providers_;
-  mx::socket output_;
-  int generation_ = 0;
+  Config config_;
+  uint32_t next_provider_id_ = 1u;
+  ftl::RefPtr<TraceSession> session_;
+  ftl::OneShotTimer session_finalize_timeout_;
+  std::list<TraceProviderBundle> providers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceManager);
 };

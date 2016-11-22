@@ -36,6 +36,9 @@ Configuration Configuration::ParseOrExit(const ftl::CommandLine& cl) {
     configuration.duration = ftl::TimeDelta::FromSeconds(duration);
   }
 
+  // --list-categories
+  configuration.list_categories = cl.HasOption("list-categories");
+
   // --list-providers
   configuration.list_providers = cl.HasOption("list-providers");
 

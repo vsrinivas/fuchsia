@@ -30,6 +30,9 @@ interface TraceController {
   // output until finished, then closes the output.
   StopTracing();
 
+  // Gets the known categories, as a mapping of name -> description.
+  GetKnownCategories() => (map<string, string> categories);
+
   // Gets the list of registered providers.
   GetRegisteredProviders() => (array<TraceProviderInfo> providers);
 };

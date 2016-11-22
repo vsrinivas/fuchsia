@@ -27,6 +27,7 @@ class TraceApp {
   ~TraceApp();
 
  private:
+  void ListCategories();
   void ListProviders();
   void StartTrace();
   void StopTrace();

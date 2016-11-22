@@ -26,13 +26,31 @@ TraceApp::TraceApp(Configuration configuration)
     exit(1);
   });
 
-  if (configuration_.list_providers)
+  if (configuration_.list_categories)
+    ListCategories();
+  else if (configuration_.list_providers)
     ListProviders();
   else
     StartTrace();
 }
 
 TraceApp::~TraceApp() {}
+
+void TraceApp::ListCategories() {
+  trace_controller_->GetKnownCategories(
+      [](fidl::Map<fidl::String, fidl::String> known_categories) {
+        std::ostringstream out;
+        out << "Known categories" << std::endl;
+        for (auto it = known_categories.begin(); it != known_categories.end();
+             ++it) {
+          out << "  " << it.GetKey().get() << ": " << it.GetValue().get()
+              << std::endl;
+        }
+
+        FTL_LOG(INFO) << out.str();
+        mtl::MessageLoop::GetCurrent()->QuitNow();
+      });
+}
 
 void TraceApp::ListProviders() {
   trace_controller_->GetRegisteredProviders(

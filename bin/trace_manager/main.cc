@@ -14,11 +14,18 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {
+namespace {
+
+constexpr const char kDefaultConfigFile[] =
+    "/system/data/trace_manager/categories.config";
+
+}  // namespace
 
 class TraceManagerApp {
  public:
-  TraceManagerApp()
-      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+  explicit TraceManagerApp(const Config& config)
+      : context_(modular::ApplicationContext::CreateFromStartupInfo()),
+        trace_manager_(config) {
     context_->outgoing_services()->AddService<TraceRegistry>([this](
         fidl::InterfaceRequest<TraceRegistry> request) {
       trace_registry_bindings_.AddBinding(&trace_manager_, std::move(request));
@@ -47,8 +54,17 @@ int main(int argc, char** argv) {
   if (!ftl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
+  auto config_file = command_line.GetOptionValueWithDefault(
+      "config", tracing::kDefaultConfigFile);
+
+  tracing::Config config;
+  if (!config.ReadFrom(config_file)) {
+    FTL_LOG(ERROR) << "Failed to read configuration from " << config_file;
+    exit(1);
+  }
+
   mtl::MessageLoop loop;
-  tracing::TraceManagerApp trace_manager_app;
+  tracing::TraceManagerApp trace_manager_app(config);
   loop.Run();
   return 0;
 }
