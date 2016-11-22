@@ -74,8 +74,8 @@ class UnownedBufferInfo : public BufferInfo {
 
 }  // namespace
 
-BufferPtr BufferOwner::NewBuffer(std::unique_ptr<BufferInfo> resources) {
-  return ftl::AdoptRef(new Buffer(std::move(resources), this));
+BufferPtr BufferOwner::NewBuffer(std::unique_ptr<BufferInfo> info) {
+  return ftl::AdoptRef(new Buffer(std::move(info), this));
 }
 
 Buffer::Buffer(vk::Device device,
@@ -84,29 +84,29 @@ Buffer::Buffer(vk::Device device,
                vk::BufferUsageFlags usage_flags,
                vk::MemoryPropertyFlags memory_property_flags)
     : Resource(nullptr),
-      resources_(std::make_unique<UnownedBufferInfo>(device,
-                                                     allocator,
-                                                     size,
-                                                     usage_flags,
-                                                     memory_property_flags)),
-      buffer_(resources_->GetBuffer()),
-      size_(resources_->GetSize()),
-      ptr_(resources_->GetMappedPointer()),
+      info_(std::make_unique<UnownedBufferInfo>(device,
+                                                allocator,
+                                                size,
+                                                usage_flags,
+                                                memory_property_flags)),
+      buffer_(info_->GetBuffer()),
+      size_(info_->GetSize()),
+      ptr_(info_->GetMappedPointer()),
       owner_(nullptr) {}
 
-Buffer::Buffer(std::unique_ptr<BufferInfo> resources, BufferOwner* owner)
+Buffer::Buffer(std::unique_ptr<BufferInfo> info, BufferOwner* owner)
     : Resource(nullptr),
-      resources_(std::move(resources)),
-      buffer_(resources_->GetBuffer()),
-      size_(resources_->GetSize()),
-      ptr_(resources_->GetMappedPointer()),
+      info_(std::move(info)),
+      buffer_(info_->GetBuffer()),
+      size_(info_->GetSize()),
+      ptr_(info_->GetMappedPointer()),
       owner_(owner) {
   FTL_DCHECK(owner);
 }
 
 Buffer::~Buffer() {
   if (owner_) {
-    owner_->RecycleBuffer(std::move(resources_));
+    owner_->RecycleBuffer(std::move(info_));
   }
 }
 

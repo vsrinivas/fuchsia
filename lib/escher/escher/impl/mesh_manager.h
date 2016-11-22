@@ -11,7 +11,7 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "escher/impl/buffer.h"
+#include "escher/impl/gpu_uploader.h"
 #include "escher/impl/mesh_impl.h"
 #include "escher/shape/mesh_builder.h"
 #include "escher/shape/mesh_builder_factory.h"
@@ -21,6 +21,7 @@
 namespace escher {
 namespace impl {
 class GpuAllocator;
+class GpuUploader;
 
 // Responsible for generating Meshes, tracking their memory use, managing
 // synchronization, etc.
@@ -28,7 +29,9 @@ class GpuAllocator;
 // Not thread-safe.
 class MeshManager : public MeshBuilderFactory {
  public:
-  MeshManager(CommandBufferPool* command_buffer_pool, GpuAllocator* allocator);
+  MeshManager(CommandBufferPool* command_buffer_pool,
+              GpuAllocator* allocator,
+              GpuUploader* uploader);
   ~MeshManager();
 
   // The returned MeshBuilder is not thread-safe.
@@ -39,7 +42,6 @@ class MeshManager : public MeshBuilderFactory {
   const MeshSpecImpl& GetMeshSpecImpl(MeshSpec spec);
 
  private:
-  BufferOLD GetStagingBuffer(uint32_t size);
   void UpdateBusyResources();
 
   class MeshBuilder : public escher::MeshBuilder {
@@ -48,8 +50,8 @@ class MeshManager : public MeshBuilderFactory {
                 const MeshSpec& spec,
                 size_t max_vertex_count,
                 size_t max_index_count,
-                BufferOLD vertex_staging_buffer,
-                BufferOLD index_staging_buffer,
+                GpuUploader::Writer vertex_writer,
+                GpuUploader::Writer index_writer,
                 const MeshSpecImpl& spec_impl);
     ~MeshBuilder() override;
 
@@ -62,8 +64,8 @@ class MeshManager : public MeshBuilderFactory {
     MeshManager* manager_;
     MeshSpec spec_;
     bool is_built_;
-    BufferOLD vertex_staging_buffer_;
-    BufferOLD index_staging_buffer_;
+    GpuUploader::Writer vertex_writer_;
+    GpuUploader::Writer index_writer_;
     const MeshSpecImpl& spec_impl_;
   };
 
@@ -73,9 +75,9 @@ class MeshManager : public MeshBuilderFactory {
 
   CommandBufferPool* command_buffer_pool_;
   GpuAllocator* allocator_;
+  GpuUploader* uploader_;
   vk::Device device_;
   vk::Queue queue_;
-  std::list<BufferOLD> free_staging_buffers_;
 
   std::unordered_map<MeshSpec, std::unique_ptr<MeshSpecImpl>, MeshSpec::Hash>
       spec_cache_;

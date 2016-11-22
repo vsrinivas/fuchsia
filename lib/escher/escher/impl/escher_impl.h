@@ -14,6 +14,7 @@ namespace impl {
 class CommandBufferPool;
 class GlslToSpirvCompiler;
 class GpuAllocator;
+class GpuUploader;
 class ImageCache;
 class MeshManager;
 class PipelineCache;
@@ -27,6 +28,7 @@ class EscherImpl {
   CommandBufferPool* command_buffer_pool();
   CommandBufferPool* transfer_command_buffer_pool();
   GpuAllocator* gpu_allocator();
+  GpuUploader* gpu_uploader();
   PipelineCache* pipeline_cache();
   ImageCache* image_cache();
   MeshManager* mesh_manager();
@@ -45,6 +47,7 @@ class EscherImpl {
   std::unique_ptr<CommandBufferPool> command_buffer_pool_;
   std::unique_ptr<CommandBufferPool> transfer_command_buffer_pool_;
   std::unique_ptr<GpuAllocator> gpu_allocator_;
+  std::unique_ptr<GpuUploader> gpu_uploader_;
   std::unique_ptr<PipelineCache> pipeline_cache_;
   std::unique_ptr<ImageCache> image_cache_;
   std::unique_ptr<MeshManager> mesh_manager_;

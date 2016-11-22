@@ -6,6 +6,7 @@
 
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/gpu_allocator.h"
+#include "escher/impl/gpu_uploader.h"
 #include "escher/impl/vulkan_utils.h"
 #include "escher/util/image_loader.h"
 
@@ -14,16 +15,15 @@ namespace impl {
 
 ImageCache::ImageCache(vk::Device device,
                        vk::PhysicalDevice physical_device,
-                       CommandBufferPool* main_pool,
-                       CommandBufferPool* transfer_pool,
-                       GpuAllocator* allocator)
+                       CommandBufferPool* pool,
+                       GpuAllocator* allocator,
+                       GpuUploader* uploader)
     : device_(device),
       physical_device_(physical_device),
-      main_queue_(main_pool->queue()),
-      transfer_queue_(transfer_pool->queue()),
-      main_command_buffer_pool_(main_pool),
-      transfer_command_buffer_pool_(transfer_pool),
-      allocator_(allocator) {}
+      queue_(pool->queue()),
+      command_buffer_pool_(pool),
+      allocator_(allocator),
+      uploader_(uploader) {}
 
 ImageCache::~ImageCache() {
   FTL_CHECK(image_count_ == 0);
@@ -64,11 +64,11 @@ ImagePtr ImageCache::GetDepthImage(vk::Format format,
 
   auto image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-  auto command_buffer = main_command_buffer_pool_->GetCommandBuffer();
+  auto command_buffer = command_buffer_pool_->GetCommandBuffer();
   command_buffer->TransitionImageLayout(
       image, vk::ImageLayout::eUndefined,
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
-  command_buffer->Submit(main_queue_, nullptr);
+  command_buffer->Submit(queue_, nullptr);
 
   return image;
 }
@@ -91,11 +91,11 @@ ImagePtr ImageCache::NewColorAttachmentImage(
 
   auto image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-  auto command_buffer = main_command_buffer_pool_->GetCommandBuffer();
+  auto command_buffer = command_buffer_pool_->GetCommandBuffer();
   command_buffer->TransitionImageLayout(
       image, vk::ImageLayout::eUndefined,
       vk::ImageLayout::eColorAttachmentOptimal);
-  command_buffer->Submit(main_queue_, nullptr);
+  command_buffer->Submit(queue_, nullptr);
 
   return image;
 }
@@ -116,15 +116,10 @@ ImagePtr ImageCache::NewImageFromPixels(vk::Format format,
       FTL_CHECK(false);
   }
 
-  // Create a command-buffer that will copy the pixels to the final image.
-  // Do this first because it may free up memory that was used by previous
-  // uploads (when finished command-buffers release any resources that they
-  // were retaining).
-  auto command_buffer = transfer_command_buffer_pool_->GetCommandBuffer();
-  SemaphorePtr semaphore = Semaphore::New(device_);
-  command_buffer->AddSignalSemaphore(semaphore);
+  auto writer = uploader_->GetWriter(width * height * bytes_per_pixel);
+  memcpy(writer.ptr(), pixels, width * height * bytes_per_pixel);
 
-  // Create the "transfer source" Image.
+  // Create the new image.
   vk::ImageCreateInfo info;
   info.imageType = vk::ImageType::e2D;
   info.format = format;
@@ -132,61 +127,27 @@ ImagePtr ImageCache::NewImageFromPixels(vk::Format format,
   info.mipLevels = 1;
   info.arrayLayers = 1;
   info.samples = vk::SampleCountFlagBits::e1;
-  info.tiling = vk::ImageTiling::eLinear;
-  info.usage = vk::ImageUsageFlagBits::eTransferSrc;
-  info.initialLayout = vk::ImageLayout::ePreinitialized;
-  info.sharingMode = vk::SharingMode::eExclusive;
-  // TODO: potential performance gains by not using eHostCoherent.  Probably
-  // negligible.  Would involve flushing the data after unmapping it below.
-  auto src_image =
-      NewImage(info, vk::MemoryPropertyFlagBits::eHostVisible |
-                         vk::MemoryPropertyFlagBits::eHostCoherent);
-
-  // Create the image that will be returned from this function.
   info.tiling = vk::ImageTiling::eOptimal;
   info.usage =
       vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
   info.initialLayout = vk::ImageLayout::eUndefined;
-  auto dst_image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
-  dst_image->SetWaitSemaphore(std::move(semaphore));
+  info.sharingMode = vk::SharingMode::eExclusive;
+  auto image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-  // Copy the pixels into the "transfer source" image.
-  uint8_t* mapped = src_image->Map();
-  memcpy(mapped, pixels, width * height * bytes_per_pixel);
-  src_image->Unmap();
+  vk::BufferImageCopy region;
+  region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+  region.imageSubresource.mipLevel = 0;
+  region.imageSubresource.baseArrayLayer = 0;
+  region.imageSubresource.layerCount = 1;
+  region.imageExtent.width = width;
+  region.imageExtent.height = height;
+  region.imageExtent.depth = 1;
+  region.bufferOffset = 0;
 
-  // Write image-copy command, and submit the command buffer.  No barrier is
-  // required since we have added a "wait semaphore" to dst_image.
-  // TODO: if we weren't using a transfer-only queue, it would be more efficient
-  // to use a barrier than a semaphore.
-  vk::ImageSubresourceLayers subresource;
-  subresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-  subresource.baseArrayLayer = 0;
-  subresource.mipLevel = 0;
-  subresource.layerCount = 1;
-  vk::ImageCopy region;
-  region.srcSubresource = subresource;
-  region.dstSubresource = subresource;
-  region.srcOffset = vk::Offset3D{0, 0, 0};
-  region.dstOffset = vk::Offset3D{0, 0, 0};
-  region.extent.width = width;
-  region.extent.height = height;
-  region.extent.depth = 1;
+  writer.WriteImage(image, region, Semaphore::New(device_));
+  writer.Submit();
 
-  command_buffer->TransitionImageLayout(src_image,
-                                        vk::ImageLayout::ePreinitialized,
-                                        vk::ImageLayout::eTransferSrcOptimal);
-  command_buffer->TransitionImageLayout(dst_image, vk::ImageLayout::eUndefined,
-                                        vk::ImageLayout::eTransferDstOptimal);
-  command_buffer->CopyImage(std::move(src_image), dst_image,
-                            vk::ImageLayout::eTransferSrcOptimal,
-                            vk::ImageLayout::eTransferDstOptimal, &region);
-  command_buffer->TransitionImageLayout(
-      dst_image, vk::ImageLayout::eTransferDstOptimal,
-      vk::ImageLayout::eShaderReadOnlyOptimal);
-  command_buffer->Submit(transfer_queue_, nullptr);
-
-  return dst_image;
+  return image;
 }
 
 ImagePtr ImageCache::NewRgbaImage(uint32_t width,

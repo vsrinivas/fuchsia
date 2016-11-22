@@ -16,6 +16,7 @@ namespace escher {
 namespace impl {
 
 class CommandBufferPool;
+class GpuUploader;
 
 // Allow client to obtain new or recycled Images.  All Images obtained from an
 // ImageCache must be destroyed before the ImageCache is destroyed.
@@ -26,9 +27,9 @@ class ImageCache {
   // queue and CommandBufferPool are used to schedule image layout transitions.
   ImageCache(vk::Device device,
              vk::PhysicalDevice physical_device,
-             CommandBufferPool* main_pool,
-             CommandBufferPool* transfer_pool,
-             GpuAllocator* allocator);
+             CommandBufferPool* pool,
+             GpuAllocator* allocator,
+             GpuUploader* uploader);
   ~ImageCache();
   ImagePtr NewImage(const vk::ImageCreateInfo& info,
                     vk::MemoryPropertyFlags memory_flags);
@@ -87,11 +88,10 @@ class ImageCache {
 
   vk::Device device_;
   vk::PhysicalDevice physical_device_;
-  vk::Queue main_queue_;
-  vk::Queue transfer_queue_;
-  CommandBufferPool* main_command_buffer_pool_;
-  CommandBufferPool* transfer_command_buffer_pool_;
+  vk::Queue queue_;
+  CommandBufferPool* command_buffer_pool_;
   GpuAllocator* allocator_;
+  GpuUploader* uploader_;
   uint32_t image_count_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ImageCache);

@@ -28,19 +28,19 @@ class BufferInfo {
 // destroyed.
 class BufferOwner {
  public:
-  virtual void RecycleBuffer(std::unique_ptr<BufferInfo> resources) = 0;
+  virtual void RecycleBuffer(std::unique_ptr<BufferInfo> info) = 0;
 
  protected:
   // Allows subclasses to instantiate buffers.  Owner must be guaranteed to
   // outlive the returned Buffer.
-  BufferPtr NewBuffer(std::unique_ptr<BufferInfo> resources);
+  BufferPtr NewBuffer(std::unique_ptr<BufferInfo> info);
 };
 
 // Escher's standard interface to Vulkan buffer objects.
 class Buffer : public impl::Resource {
  public:
   // Construct an ownerless Buffer.  When the Buffer is destroyed, all resources
-  // immediately destroyed or freed.
+  // are immediately freed/destroyed.
   Buffer(vk::Device device,
          impl::GpuAllocator* allocator,
          vk::DeviceSize size,
@@ -48,7 +48,7 @@ class Buffer : public impl::Resource {
          vk::MemoryPropertyFlags memory_property_flags);
   ~Buffer() override;
 
-  // Return the underlying Vulkan resource.
+  // Return the underlying Vulkan buffer object.
   vk::Buffer get() { return buffer_; }
 
   // Return the size of the buffer.
@@ -61,12 +61,12 @@ class Buffer : public impl::Resource {
  private:
   // Called by BufferOwner::NewBuffer().
   friend class BufferOwner;
-  Buffer(std::unique_ptr<BufferInfo> resources, BufferOwner* owner);
+  Buffer(std::unique_ptr<BufferInfo> info, BufferOwner* owner);
 
   // When the Buffer is destroyed, these resources will either be recycled or
   // immediately destroyed, depending on whether owner_ is nullptr.
-  std::unique_ptr<BufferInfo> resources_;
-  // Underlying Vulkan buffer resource.
+  std::unique_ptr<BufferInfo> info_;
+  // Underlying Vulkan buffer object.
   vk::Buffer buffer_;
   // Size of the buffer.
   vk::DeviceSize size_;

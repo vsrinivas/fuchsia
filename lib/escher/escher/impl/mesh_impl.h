@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "escher/impl/buffer.h"
 #include "escher/shape/mesh.h"
 
 namespace escher {

@@ -7,7 +7,6 @@
 #include <vulkan/vulkan.hpp>
 
 #include "escher/geometry/types.h"
-#include "escher/impl/buffer.h"
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/model_data.h"
 

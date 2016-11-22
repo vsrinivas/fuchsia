@@ -17,9 +17,11 @@ namespace escher {
 namespace impl {
 
 MeshManager::MeshManager(CommandBufferPool* command_buffer_pool,
-                         GpuAllocator* allocator)
+                         GpuAllocator* allocator,
+                         GpuUploader* uploader)
     : command_buffer_pool_(command_buffer_pool),
       allocator_(allocator),
+      uploader_(uploader),
       device_(command_buffer_pool->device()),
       queue_(command_buffer_pool->queue()),
       builder_count_(0),
@@ -30,63 +32,36 @@ MeshManager::~MeshManager() {
   FTL_DCHECK(mesh_count_ == 0);
 }
 
-BufferOLD MeshManager::GetStagingBuffer(uint32_t size) {
-  auto it = free_staging_buffers_.begin();
-  while (it != free_staging_buffers_.end()) {
-    if (it->GetSize() > size) {
-      // Found a large-enough buffer.
-      // TODO: cleanup
-      auto mit = std::make_move_iterator(it);
-      BufferOLD buf(std::move(*mit));
-      free_staging_buffers_.erase(it);
-      return buf;
-    }
-    ++it;
-  }
-  // Couldn't find a large enough buffer, so create a new one.
-  return BufferOLD(device_, allocator_, size,
-                   vk::BufferUsageFlagBits::eTransferSrc,
-                   vk::MemoryPropertyFlagBits::eHostVisible);
-}
-
 MeshBuilderPtr MeshManager::NewMeshBuilder(const MeshSpec& spec,
                                            size_t max_vertex_count,
                                            size_t max_index_count) {
   auto& spec_impl = GetMeshSpecImpl(spec);
   return AdoptRef(new MeshManager::MeshBuilder(
       this, spec, max_vertex_count, max_index_count,
-      GetStagingBuffer(max_vertex_count * spec_impl.binding.stride),
-      GetStagingBuffer(max_index_count * sizeof(uint32_t)), spec_impl));
+      uploader_->GetWriter(max_vertex_count * spec_impl.binding.stride),
+      uploader_->GetWriter(max_index_count * sizeof(uint32_t)), spec_impl));
 }
 
 MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager,
                                       const MeshSpec& spec,
                                       size_t max_vertex_count,
                                       size_t max_index_count,
-                                      BufferOLD vertex_staging_buffer,
-                                      BufferOLD index_staging_buffer,
+                                      GpuUploader::Writer vertex_writer,
+                                      GpuUploader::Writer index_writer,
                                       const MeshSpecImpl& spec_impl)
-    : escher::MeshBuilder(
-          max_vertex_count,
-          max_index_count,
-          spec_impl.binding.stride,
-          reinterpret_cast<uint8_t*>(vertex_staging_buffer.Map()),
-          reinterpret_cast<uint32_t*>(index_staging_buffer.Map())),
+    : escher::MeshBuilder(max_vertex_count,
+                          max_index_count,
+                          spec_impl.binding.stride,
+                          vertex_writer.ptr(),
+                          reinterpret_cast<uint32_t*>(index_writer.ptr())),
       manager_(manager),
       spec_(spec),
       is_built_(false),
-      vertex_staging_buffer_(std::move(vertex_staging_buffer)),
-      index_staging_buffer_(std::move(index_staging_buffer)),
+      vertex_writer_(std::move(vertex_writer)),
+      index_writer_(std::move(index_writer)),
       spec_impl_(spec_impl) {}
 
-MeshManager::MeshBuilder::~MeshBuilder() {
-  if (!is_built_) {
-    // The MeshBuilder was destroyed before Build() was called.
-    manager_->free_staging_buffers_.push_back(
-        std::move(vertex_staging_buffer_));
-    manager_->free_staging_buffers_.push_back(std::move(index_staging_buffer_));
-  }
-}
+MeshManager::MeshBuilder::~MeshBuilder() {}
 
 MeshPtr MeshManager::MeshBuilder::Build() {
   FTL_DCHECK(!is_built_);
@@ -95,51 +70,34 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   }
   is_built_ = true;
 
-  vertex_staging_buffer_.Unmap();
-  index_staging_buffer_.Unmap();
-
   vk::Device device = manager_->device_;
   GpuAllocator* allocator = manager_->allocator_;
 
   // TODO: use eTransferDstOptimal instead of eTransferDst?
   auto vertex_buffer = ftl::MakeRefCounted<Buffer>(
-      device, allocator, vertex_staging_buffer_.GetSize(),
+      device, allocator, vertex_count_ * vertex_stride_,
       vk::BufferUsageFlagBits::eVertexBuffer |
           vk::BufferUsageFlagBits::eTransferDst,
       vk::MemoryPropertyFlagBits::eDeviceLocal);
   auto index_buffer = ftl::MakeRefCounted<Buffer>(
-      device, allocator, index_staging_buffer_.GetSize(),
+      device, allocator, index_count_ * sizeof(uint32_t),
       vk::BufferUsageFlagBits::eIndexBuffer |
           vk::BufferUsageFlagBits::eTransferDst,
       vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-  auto command_buffer = manager_->command_buffer_pool_->GetCommandBuffer();
+  vertex_writer_.WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+                             Semaphore::New(device));
+  vertex_writer_.Submit();
 
-  SemaphorePtr semaphore = Semaphore::New(device);
-  command_buffer->AddSignalSemaphore(semaphore);
-
-  vk::BufferCopy region;
-
-  region.size = vertex_staging_buffer_.GetSize();
-  command_buffer->get().copyBuffer(vertex_staging_buffer_.buffer(),
-                                   vertex_buffer->get(), 1, &region);
-
-  region.size = index_staging_buffer_.GetSize();
-  command_buffer->get().copyBuffer(index_staging_buffer_.buffer(),
-                                   index_buffer->get(), 1, &region);
-
-  // Keep this builder alive until submission has finished.
-  ftl::RefPtr<MeshBuilder> me(this);
-  command_buffer->Submit(manager_->queue_, [me{std::move(me)}]() {
-    auto& bufs = me->manager_->free_staging_buffers_;
-    bufs.push_back(std::move(me->vertex_staging_buffer_));
-    bufs.push_back(std::move(me->index_staging_buffer_));
-  });
+  index_writer_.WriteBuffer(index_buffer, {0, 0, index_buffer->size()},
+                            SemaphorePtr());
+  index_writer_.Submit();
 
   auto mesh = ftl::MakeRefCounted<MeshImpl>(
-      spec_, vertex_count_, index_count_, manager_, std::move(vertex_buffer),
+      spec_, vertex_count_, index_count_, manager_, vertex_buffer,
       std::move(index_buffer), spec_impl_);
-  mesh->SetWaitSemaphore(std::move(semaphore));
+
+  mesh->SetWaitSemaphore(vertex_buffer->TakeWaitSemaphore());
   return mesh;
 }
 
