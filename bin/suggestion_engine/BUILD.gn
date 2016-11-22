@@ -5,7 +5,7 @@
 executable("suggestion_engine") {
   sources = [
     "agent_suggestion_record.h",
-    "next_subscriber.cc",
+    "ask_subscriber.h",
     "next_subscriber.h",
     "proposal_record.h",
     "ranked_suggestion.h",
@@ -16,6 +16,8 @@ executable("suggestion_engine") {
     "suggestion_channel.cc",
     "suggestion_channel.h",
     "suggestion_engine.cc",
+    "windowed_subscriber.cc",
+    "windowed_subscriber.h",
   ]
 
   deps = [

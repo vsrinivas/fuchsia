@@ -10,13 +10,17 @@
 namespace maxwell {
 namespace suggestion {
 
-// Manages a single Next suggestion subscriber.
-class NextSubscriber : public BoundWindowedSubscriber<NextController> {
+// Manages a single Ask suggestion subscriber.
+class AskSubscriber : public BoundWindowedSubscriber<AskController> {
  public:
-  NextSubscriber(
+  AskSubscriber(
       const std::vector<std::unique_ptr<RankedSuggestion>>* ranked_suggestions,
       fidl::InterfaceHandle<Listener> listener)
       : BoundWindowedSubscriber(ranked_suggestions, std::move(listener)) {}
+
+  void SetUserInput(UserInputPtr input) override {
+    // TODO(rosswang)
+  }
 };
 
 }  // namespace suggestion

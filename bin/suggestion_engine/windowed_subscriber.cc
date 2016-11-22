@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
+#include "apps/maxwell/src/suggestion_engine/windowed_subscriber.h"
 
 namespace maxwell {
 namespace suggestion {
 
-void NextSubscriber::SetResultCount(int32_t count) {
-  FTL_LOG(INFO) << "NextSubscriber::SetResultCount(" << count << ")";
+void WindowedSubscriber::SetResultCount(int32_t count) {
+  FTL_LOG(INFO) << "WindowedSubscriber::SetResultCount(" << count << ")";
   if (count < 0)
     count = 0;
 
@@ -41,7 +41,7 @@ void NextSubscriber::SetResultCount(int32_t count) {
 //
 // The mutable content of the RankedSuggestion given here is not used; only the
 // rank and pointer address or ID are considered.
-bool NextSubscriber::IncludeSuggestion(
+bool WindowedSubscriber::IncludeSuggestion(
     const RankedSuggestion& ranked_suggestion) const {
   if (max_results_ == 0)
     return false;
