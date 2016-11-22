@@ -28,16 +28,13 @@ class ChildApplication {
   });
 
   factory ChildApplication.create(String url, {String title}) {
-    final ServiceProviderProxy services = new ServiceProviderProxy();
     final ApplicationControllerProxy controller =
         new ApplicationControllerProxy();
-    final ApplicationLaunchInfo launchInfo = new ApplicationLaunchInfo()
-      ..url = url
-      ..services = services.ctrl.request();
-    _childLauncher.createApplication(launchInfo, controller.ctrl.request());
     return new ChildApplication(
       controller: controller,
-      connection: new ChildViewConnection.connect(services),
+      connection: new ChildViewConnection.launch(url, _childLauncher,
+        controller: controller.ctrl.request()
+      ),
       title: title,
     );
   }

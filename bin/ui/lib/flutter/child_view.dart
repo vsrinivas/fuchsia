@@ -7,6 +7,8 @@ import 'dart:collection';
 import 'dart:mozart.internal';
 
 import 'package:apps.modular.lib.app.dart/app.dart';
+import 'package:apps.modular.services.application/application_controller.fidl.dart';
+import 'package:apps.modular.services.application/application_launcher.fidl.dart';
 import 'package:apps.modular.services.application/service_provider.fidl.dart';
 import 'package:apps.mozart.services.geometry/geometry.fidl.dart' as fidl;
 import 'package:apps.mozart.services.views/view_containers.fidl.dart';
@@ -73,6 +75,17 @@ class _ViewContainerListenerImpl extends ViewContainerListener {
 /// Used with the [ChildView] widget to display a child view.
 class ChildViewConnection {
   ChildViewConnection(this._viewOwner);
+
+  factory ChildViewConnection.launch(String url, ApplicationLauncher launcher, {
+    InterfaceRequest<ApplicationController> controller
+  }) {
+    final ServiceProviderProxy services = new ServiceProviderProxy();
+    final ApplicationLaunchInfo launchInfo = new ApplicationLaunchInfo()
+      ..url = url
+      ..services = services.ctrl.request();
+    launcher.createApplication(launchInfo, controller);
+    return new ChildViewConnection.connect(services);
+  }
 
   factory ChildViewConnection.connect(ServiceProvider services) {
     final ViewProviderProxy viewProvider = new ViewProviderProxy();
