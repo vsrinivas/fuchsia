@@ -353,7 +353,6 @@ function fset() {
   export FUCHSIA_SYSROOT_DIR="${FUCHSIA_OUT_DIR}/sysroot/${FUCHSIA_SYSROOT_TARGET}-fuchsia"
   export FUCHSIA_SYSROOT_REV_CACHE="${FUCHSIA_SYSROOT_DIR}/build.rev"
   export FUCHSIA_SETTINGS="${settings}"
-  export ENVPROMPT_INFO="${ENVPROMPT_INFO}-${FUCHSIA_VARIANT}"
 
   fset-add-ninja-arg -C "${FUCHSIA_BUILD_DIR}"
 
@@ -367,6 +366,7 @@ function fset() {
   fi
 
   # Add --goma or --ccache as appropriate.
+  local builder=
   if [[ "${goma}" -eq 1 ]]; then
     fset-add-gen-arg --goma
     # macOS needs a lower value of -j parameter, because it has a limit on the
@@ -378,9 +378,13 @@ function fset() {
     else
       fset-add-ninja-arg -j 1000
     fi
+    builder="-goma"
   elif [[ "${ccache}" -eq 1 ]]; then
     fset-add-gen-arg --ccache
+    builder="-ccache"
   fi
+
+  export ENVPROMPT_INFO="${ENVPROMPT_INFO}-${FUCHSIA_VARIANT}${builder}"
 }
 
 ### fcheck: checks whether fset was run
