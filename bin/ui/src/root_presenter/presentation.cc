@@ -20,16 +20,33 @@
 #include "third_party/skia/include/core/SkSurface.h"
 
 namespace root_presenter {
-
 namespace {
-constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+
+// View Key: The presentation's own root view.
 constexpr uint32_t kRootViewKey = 1u;
-constexpr uint32_t kMainViewKey = 2u;
-constexpr uint32_t kCursorViewKey = 3u;
+
+// View Key: The presented content view.
+constexpr uint32_t kContentViewKey = 2u;
+
+// Node Id: The root scene node.
+constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+
+// Node Id: The scene node that draws the presented content.
+constexpr uint32_t kContentNodeId = 1u;
+
+// Node Id: The scene node that draws the mouse pointer.
+constexpr uint32_t kCursorNodeId = 2u;
+
+// Resource Id: The root scene of the presented view.
+constexpr uint32_t kContentSceneResourceId = 1u;
+
+// Resource Id: The cursor image.
 constexpr uint32_t kCursorImageResourceId = 2u;
-constexpr uint32_t kMainSceneResourceId = 3u;
+
+// Path of the cursor image to load.
 constexpr char kCursorImage[] = "/system/data/root_presenter/cursor32.png";
-}
+
+}  // namespace
 
 Presentation::Presentation(mozart::Compositor* compositor,
                            mozart::ViewManager* view_manager,
@@ -144,7 +161,7 @@ void Presentation::CreateViewTree() {
   tree_container_->AddChild(kRootViewKey, std::move(root_view_owner_));
   root_view_->CreateScene(GetProxy(&root_scene_));
 
-  // Add main view to root view
+  // Add content view to root view
   root_view_->GetContainer(fidl::GetProxy(&root_container_));
 
   mozart::ViewContainerListenerPtr view_container_listener;
@@ -152,7 +169,7 @@ void Presentation::CreateViewTree() {
       fidl::GetProxy(&view_container_listener));
   root_container_->SetListener(std::move(view_container_listener));
 
-  root_container_->AddChild(kMainViewKey, std::move(view_owner_));
+  root_container_->AddChild(kContentViewKey, std::move(view_owner_));
 
   UpdateRootViewProperties();
 }
@@ -183,85 +200,75 @@ void Presentation::UpdateScene() {
   FTL_DCHECK(root_scene_);
   auto update = mozart::SceneUpdate::New();
 
-  mozart::NodePtr container_node = nullptr;
-  if (layout_changed_) {
-    mozart::RectF extent;
-    extent.width = display_info_->size->width;
-    extent.height = display_info_->size->height;
-    container_node = mozart::Node::New();
-    container_node->content_clip = extent.Clone();
-    container_node->combinator = mozart::Node::Combinator::PRUNE;
+  if (content_view_info_ && !scene_resources_uploaded_) {
+    auto scene_resource = mozart::Resource::New();
+    scene_resource->set_scene(mozart::SceneResource::New());
+    scene_resource->get_scene()->scene_token =
+        content_view_info_->scene_token.Clone();
+    update->resources.insert(kContentSceneResourceId,
+                             std::move(scene_resource));
+    scene_resources_uploaded_ = true;
+    layout_changed_ = true;
   }
 
-  if (main_view_info_) {
-    if (!scene_resources_uploaded_) {
-      // Main Scene Resource
-      auto scene_resource = mozart::Resource::New();
-      scene_resource->set_scene(mozart::SceneResource::New());
-      scene_resource->get_scene()->scene_token =
-          main_view_info_->scene_token.Clone();
-      update->resources.insert(kMainSceneResourceId, std::move(scene_resource));
-      scene_resources_uploaded_ = true;
-    }
+  if (cursor_image_ && !cursor_resources_uploaded_) {
+    mozart::Size size;
+    size.width = 32;
+    size.height = 32;
 
-    if (layout_changed_) {
-      // Main Scene Node
-      auto scene_node = mozart::Node::New();
-      scene_node->op = mozart::NodeOp::New();
-      scene_node->op->set_scene(mozart::SceneNodeOp::New());
-      scene_node->op->get_scene()->scene_resource_id = kMainSceneResourceId;
-      update->nodes.insert(kMainViewKey, std::move(scene_node));
-      container_node->child_node_ids.push_back(kMainViewKey);
-    }
+    mozart::ImagePtr image;
+    sk_sp<SkSurface> surface =
+        mozart::MakeSkSurface(size, &buffer_producer_, &image);
+    FTL_CHECK(surface);
+    SkCanvas* canvas = surface->getCanvas();
+    canvas->drawImage(cursor_image_, 0, 0);
+    canvas->flush();
+
+    auto cursor_resource = mozart::Resource::New();
+    cursor_resource->set_image(mozart::ImageResource::New());
+    cursor_resource->get_image()->image = std::move(image);
+    update->resources.insert(kCursorImageResourceId,
+                             std::move(cursor_resource));
+    cursor_resources_uploaded_ = true;
+    layout_changed_ = true;
   }
 
-  if (cursor_image_) {
-    if (!cursor_resources_uploaded_) {
-      mozart::Size size;
-      size.width = 32;
-      size.height = 32;
+  if (cursor_image_ && show_cursor_) {
+    mozart::RectF cursor;
+    cursor.width = 32.f;
+    cursor.height = 32.f;
 
-      mozart::ImagePtr image;
-      sk_sp<SkSurface> surface =
-          mozart::MakeSkSurface(size, &buffer_producer_, &image);
-      FTL_CHECK(surface);
-      SkCanvas* canvas = surface->getCanvas();
-      canvas->drawImage(cursor_image_, 0, 0);
-      canvas->flush();
+    auto cursor_node = mozart::Node::New();
+    cursor_node->op = mozart::NodeOp::New();
+    cursor_node->op->set_image(mozart::ImageNodeOp::New());
+    cursor_node->op->get_image()->content_rect = cursor.Clone();
+    cursor_node->op->get_image()->image_resource_id = kCursorImageResourceId;
 
-      auto cursor_resource = mozart::Resource::New();
-      cursor_resource->set_image(mozart::ImageResource::New());
-      cursor_resource->get_image()->image = std::move(image);
-      update->resources.insert(kCursorImageResourceId,
-                               std::move(cursor_resource));
-      cursor_resources_uploaded_ = true;
-    }
-
-    if (show_cursor_) {
-      mozart::RectF cursor;
-      cursor.width = 32.f;
-      cursor.height = 32.f;
-
-      auto cursor_node = mozart::Node::New();
-      cursor_node->op = mozart::NodeOp::New();
-      cursor_node->op->set_image(mozart::ImageNodeOp::New());
-      cursor_node->op->get_image()->content_rect = cursor.Clone();
-      cursor_node->op->get_image()->image_resource_id = kCursorImageResourceId;
-
-      cursor_node->content_transform = mozart::Transform::New();
-      SetTranslationTransform(cursor_node->content_transform.get(),
-                              cursor_position_.x, cursor_position_.y, 0.f);
-      update->nodes.insert(kCursorViewKey, std::move(cursor_node));
-      if (layout_changed_) {
-        container_node->child_node_ids.push_back(kCursorViewKey);
-      }
-    }
+    cursor_node->content_transform = mozart::Transform::New();
+    SetTranslationTransform(cursor_node->content_transform.get(),
+                            cursor_position_.x, cursor_position_.y, 0.f);
+    update->nodes.insert(kCursorNodeId, std::move(cursor_node));
   }
 
   if (layout_changed_) {
     auto root_node = mozart::Node::New();
-    update->nodes.insert(kRootViewKey, std::move(container_node));
-    root_node->child_node_ids.push_back(kRootViewKey);
+    root_node->combinator = mozart::Node::Combinator::PRUNE;
+
+    if (content_view_info_) {
+      auto content_node = mozart::Node::New();
+      content_node->op = mozart::NodeOp::New();
+      content_node->op->set_scene(mozart::SceneNodeOp::New());
+      content_node->op->get_scene()->scene_resource_id =
+          kContentSceneResourceId;
+      update->nodes.insert(kContentNodeId, std::move(content_node));
+
+      root_node->child_node_ids.push_back(kContentNodeId);
+    }
+
+    if (cursor_image_ && show_cursor_) {
+      root_node->child_node_ids.push_back(kCursorNodeId);
+    }
+
     update->nodes.insert(kRootNodeId, std::move(root_node));
     layout_changed_ = false;
   }
@@ -278,8 +285,8 @@ void Presentation::OnLayout() {
   properties->view_layout = mozart::ViewLayout::New();
   properties->view_layout->size = display_info_->size.Clone();
 
-  root_container_->SetChildProperties(kMainViewKey, mozart::kSceneVersionNone,
-                                      std::move(properties));
+  root_container_->SetChildProperties(
+      kContentViewKey, mozart::kSceneVersionNone, std::move(properties));
 }
 
 void Presentation::UpdateRootViewProperties() {
@@ -299,13 +306,14 @@ void Presentation::OnChildAttached(uint32_t child_key,
                                    const OnChildAttachedCallback& callback) {
   FTL_DCHECK(child_view_info);
 
-  if (kRootViewKey == child_key) {
-    FTL_VLOG(1) << "OnChildAttached(root): child_view_info=" << child_view_info;
-    root_view_info_ = std::move(child_view_info);
-  } else if (kMainViewKey == child_key) {
-    FTL_VLOG(1) << "OnChildAttached(main): child_view_info=" << child_view_info;
-    main_view_info_ = std::move(child_view_info);
+  if (kContentViewKey == child_key) {
+    FTL_VLOG(1) << "OnChildAttached(content): child_view_info="
+                << child_view_info;
+    content_view_info_ = std::move(child_view_info);
+    layout_changed_ = true;
+    root_view_->Invalidate();
   }
+
   callback();
 }
 
@@ -315,8 +323,8 @@ void Presentation::OnChildUnavailable(
   if (kRootViewKey == child_key) {
     FTL_LOG(ERROR) << "Root view terminated unexpectedly.";
     Shutdown();
-  } else if (kMainViewKey == child_key) {
-    FTL_LOG(ERROR) << "Main view terminated unexpectedly.";
+  } else if (kContentViewKey == child_key) {
+    FTL_LOG(ERROR) << "Content view terminated unexpectedly.";
     Shutdown();
   }
   callback();

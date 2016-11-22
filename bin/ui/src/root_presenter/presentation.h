@@ -76,8 +76,7 @@ class Presentation : public mozart::ViewTreeListener,
   mozart::PointF mouse_coordinates_;
 
   fidl::Binding<mozart::ViewTreeListener> tree_listener_binding_;
-  fidl::Binding<mozart::ViewContainerListener>
-      tree_container_listener_binding_;
+  fidl::Binding<mozart::ViewContainerListener> tree_container_listener_binding_;
   fidl::Binding<mozart::ViewContainerListener> view_container_listener_binding_;
   fidl::Binding<mozart::ViewListener> view_listener_binding_;
 
@@ -86,15 +85,14 @@ class Presentation : public mozart::ViewTreeListener,
   mozart::ViewContainerPtr root_container_;
   mozart::InputDispatcherPtr input_dispatcher_;
 
-  mozart::ViewInfoPtr root_view_info_;
-  mozart::ViewInfoPtr main_view_info_;
+  mozart::ViewInfoPtr content_view_info_;
 
   mozart::FrameTracker frame_tracker_;
   uint32_t scene_version_ = mozart::kSceneVersionNone;
 
-  bool layout_changed_ = true;
   bool cursor_resources_uploaded_ = false;
   bool scene_resources_uploaded_ = false;
+  bool layout_changed_ = true;
   bool show_cursor_ = false;
   mozart::PointF cursor_position_;
   sk_sp<SkImage> cursor_image_;
