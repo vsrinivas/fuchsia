@@ -28,7 +28,7 @@ executable("convert_unittests") {
 
   deps = [
     ":convert",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:main",
     "//third_party/gtest",
   ]
 }

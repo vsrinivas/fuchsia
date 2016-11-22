@@ -45,7 +45,7 @@ executable("unittests") {
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue/data_pipe",
     "//apps/ledger/src/network:fake",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",

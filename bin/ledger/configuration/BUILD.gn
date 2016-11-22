@@ -6,9 +6,9 @@ group("configuration") {
   testonly = true
 
   deps = [
+    ":configuration_writer",
     ":lib",
     ":unittests",
-    ":configuration_writer",
   ]
 }
 
@@ -37,7 +37,7 @@ executable("unittests") {
 
   deps = [
     ":lib",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//third_party/gtest",
   ]
@@ -47,7 +47,7 @@ executable("configuration_writer") {
   output_name = "configure_ledger"
 
   sources = [
-    "configuration_writer.cc"
+    "configuration_writer.cc",
   ]
 
   deps = [

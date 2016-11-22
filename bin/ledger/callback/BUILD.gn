@@ -5,12 +5,12 @@
 source_set("callback") {
   sources = [
     "auto_cleanable.h",
-    "destruction_sentinel.cc",
-    "destruction_sentinel.h",
     "cancellable.cc",
     "cancellable.h",
     "cancellable_helper.cc",
     "cancellable_helper.h",
+    "destruction_sentinel.cc",
+    "destruction_sentinel.h",
     "waiter.h",
   ]
 
@@ -33,7 +33,7 @@ executable("unittests") {
 
   deps = [
     ":callback",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:main",
     "//third_party/gtest",
   ]
 }

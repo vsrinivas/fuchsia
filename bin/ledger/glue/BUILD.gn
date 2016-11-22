@@ -29,7 +29,7 @@ executable("unittests") {
 
   deps = [
     "//apps/ledger/src/glue/data_pipe",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:main",
     "//third_party/gtest",
   ]
 }

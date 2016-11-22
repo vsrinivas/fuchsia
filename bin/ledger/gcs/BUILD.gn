@@ -32,7 +32,7 @@ executable("unittests") {
   deps = [
     ":gcs",
     "//apps/ledger/src/network:fake",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",

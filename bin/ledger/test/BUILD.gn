@@ -6,24 +6,25 @@ source_set("test") {
   testonly = true
 
   sources = [
-    "run_all_unittests.cc",
-  ]
-
-  public_deps = [
-    ":lib",
-    "//third_party/gtest",
-  ]
-}
-
-source_set("lib") {
-  testonly = true
-
-  sources = [
     "capture.h",
   ]
 
   public_deps = [
     "//lib/ftl",
+  ]
+}
+
+# Contains the standard gtest main that runs all tests included in the binary.
+source_set("main") {
+  testonly = true
+
+  sources = [
+    "main.cc",
+  ]
+
+  public_deps = [
+    ":test",
+    "//third_party/gtest",
   ]
 }
 
@@ -37,7 +38,7 @@ executable("unittests") {
   ]
 
   deps = [
-    ":lib",
+    ":main",
     ":test",
   ]
 }

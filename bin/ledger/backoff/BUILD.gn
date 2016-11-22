@@ -26,7 +26,7 @@ executable("unittests") {
 
   deps = [
     ":backoff",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:main",
     "//third_party/gtest",
   ]
 }
