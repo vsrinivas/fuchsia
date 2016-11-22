@@ -20,6 +20,7 @@
 #include "lib/ftl/strings/ascii.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/data_pipe/files.h"
+#include "lib/mtl/vmo/file.h"
 
 namespace gcs {
 
@@ -100,12 +101,17 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     callback(Status::UNKNOWN_ERROR);
     return;
   }
+  mx::vmo vmo;
+  if (!mtl::VmoFromFd(std::move(fd), &vmo)) {
+    callback(Status::UNKNOWN_ERROR);
+    return;
+  }
 
   std::string url =
       "https://storage-upload.googleapis.com/" + bucket_name_ + "/" + key;
 
   auto request_factory = ftl::MakeCopyable([
-    url, source, file_size, task_runner = task_runner_, fd = std::move(fd)
+    url, source, file_size, task_runner = task_runner_, vmo = std::move(vmo)
   ]() {
     network::URLRequestPtr request(network::URLRequest::New());
     request->url = url;
@@ -125,23 +131,11 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     generation_match_header->value = "0";
     request->headers.push_back(std::move(generation_match_header));
 
-    glue::DataPipe data_pipe;
 
-    ftl::UniqueFD new_fd(dup(fd.get()));
-    lseek(new_fd.get(), 0, SEEK_SET);
-    mtl::CopyFromFileDescriptor(
-        std::move(new_fd), std::move(data_pipe.producer_handle), task_runner,
-        [](bool result, ftl::UniqueFD fd) {
-          if (!result) {
-            // An error while reading the file means that
-            // the data sent to the server will not match
-            // the content length header, and the server
-            // will not accept the file.
-            FTL_LOG(ERROR) << "Error when reading the data.";
-          }
-        });
+    mx::vmo duplicated_vmo;
+    vmo.duplicate(MX_RIGHT_READ, &duplicated_vmo);
     request->body = network::URLBody::New();
-    request->body->set_stream(std::move(data_pipe.consumer_handle));
+    request->body->set_buffer(std::move(duplicated_vmo));
     return request;
   });
 

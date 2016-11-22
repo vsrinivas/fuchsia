@@ -16,6 +16,7 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/vmo/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace gcs {
@@ -99,10 +100,10 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_EQ("https://storage-upload.googleapis.com/bucket/hello/world/baz/quz",
             fake_network_service_.GetRequest()->url);
   EXPECT_EQ("PUT", fake_network_service_.GetRequest()->method);
-  EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_stream());
+  EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_buffer());
   std::string sent_content;
-  EXPECT_TRUE(mtl::BlockingCopyToString(
-      std::move(fake_network_service_.GetRequest()->body->get_stream()),
+  EXPECT_TRUE(mtl::StringFromVmo(
+      std::move(fake_network_service_.GetRequest()->body->get_buffer()),
       &sent_content));
   EXPECT_EQ(content, sent_content);
 
