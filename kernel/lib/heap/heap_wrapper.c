@@ -21,8 +21,16 @@
 
 #define LOCAL_TRACE 0
 
+#ifndef HEAP_PANIC_ON_ALLOC_FAIL
+#if LK_DEBUGLEVEL > 2
+#define HEAP_PANIC_ON_ALLOC_FAIL 1
+#else
+#define HEAP_PANIC_ON_ALLOC_FAIL 0
+#endif
+#endif
+
 /* heap tracing */
-#if LK_DEBUGLEVEL > 0
+#if LK_DEBUGLEVEL > 1
 static bool heap_trace = false;
 #else
 #define heap_trace (false)
@@ -170,8 +178,13 @@ void *malloc(size_t size)
     }
 
     void *ptr = HEAP_MALLOC(size);
-    if (heap_trace)
+    if (unlikely(heap_trace))
         printf("caller %p malloc %zu -> %p\n", __GET_CALLER(), size, ptr);
+
+    if (HEAP_PANIC_ON_ALLOC_FAIL && unlikely(!ptr)) {
+        panic("malloc of size %zu failed\n", size);
+    }
+
     return ptr;
 }
 
@@ -187,8 +200,13 @@ void *memalign(size_t boundary, size_t size)
     }
 
     void *ptr = HEAP_MEMALIGN(boundary, size);
-    if (heap_trace)
+    if (unlikely(heap_trace))
         printf("caller %p memalign %zu, %zu -> %p\n", __GET_CALLER(), boundary, size, ptr);
+
+    if (HEAP_PANIC_ON_ALLOC_FAIL && unlikely(!ptr)) {
+        panic("memalign of size %zu align %zu failed\n", size, boundary);
+    }
+
     return ptr;
 }
 
@@ -204,7 +222,7 @@ void *calloc(size_t count, size_t size)
     }
 
     void *ptr = HEAP_CALLOC(count, size);
-    if (heap_trace)
+    if (unlikely(heap_trace))
         printf("caller %p calloc %zu, %zu -> %p\n", __GET_CALLER(), count, size, ptr);
     return ptr;
 }
@@ -221,8 +239,13 @@ void *realloc(void *ptr, size_t size)
     }
 
     void *ptr2 = HEAP_REALLOC(ptr, size);
-    if (heap_trace)
+    if (unlikely(heap_trace))
         printf("caller %p realloc %p, %zu -> %p\n", __GET_CALLER(), ptr, size, ptr2);
+
+    if (HEAP_PANIC_ON_ALLOC_FAIL && unlikely(!ptr2)) {
+        panic("realloc of size %zu old ptr %p failed\n", size, ptr);
+    }
+
     return ptr2;
 }
 
@@ -231,7 +254,7 @@ void free(void *ptr)
     DEBUG_ASSERT(!arch_in_int_handler());
 
     LTRACEF("ptr %p\n", ptr);
-    if (heap_trace)
+    if (unlikely(heap_trace))
         printf("caller %p free %p\n", __GET_CALLER(), ptr);
 
     HEAP_FREE(ptr);
