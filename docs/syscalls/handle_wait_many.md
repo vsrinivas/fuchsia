@@ -62,6 +62,9 @@ have **MX_RIGHT_READ** and may not be waited upon.
 with) before any of the specified signals are observed on any of the
 specified handles. There may still be pending signals.
 
+**ERR_NOT_SUPPORTED**  One of the *items* contains a handle that cannot
+be waited one (for example, a Port handle).
+
 **ERR_NO_MEMORY** (Temporary) failure due to lack of memory.
 
 ## BUGS

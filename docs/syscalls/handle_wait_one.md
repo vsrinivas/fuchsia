@@ -52,6 +52,9 @@ not be waited upon.
 with) before any of the specified *signals* are observed on
 *handle*. There may still be pending signals.
 
+**ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on
+(for example, a Port handle).
+
 ## BUGS
 
 Currently the smallest *timeout* is 1 millisecond. Intervals smaller
