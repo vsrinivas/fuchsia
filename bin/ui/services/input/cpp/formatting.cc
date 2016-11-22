@@ -11,7 +11,6 @@
 namespace mozart {
 
 std::ostream& operator<<(std::ostream& os, const KeyData& value) {
-  os << "{";
   if (value.code_point) {
     os << "{character=" << value.code_point;
   } else {
