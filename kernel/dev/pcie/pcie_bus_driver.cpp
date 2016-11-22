@@ -40,12 +40,11 @@ Mutex PcieBusDriver::driver_lock_;
 
 PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform) : platform_(platform) { }
 PcieBusDriver::~PcieBusDriver() {
-    /* TODO(johngro): For now, if the bus driver is shutting down and unloading,
-     * ASSERT that there are no currently claimed devices out there.  In the the
-     * long run, we need to gracefully handle disconnecting from all user mode
-     * drivers (probably using a simulated hot-unplug) if we unload the bus
-     * driver.
-     */
+    // TODO(johngro): For now, if the bus driver is shutting down and unloading,
+    // ASSERT that there are no currently claimed devices out there.  In the the
+    // long run, we need to gracefully handle disconnecting from all user mode
+    // drivers (probably using a simulated hot-unplug) if we unload the bus
+    // driver.
     ForeachDevice([](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
                       DEBUG_ASSERT(dev);
                       DEBUG_ASSERT(!dev->claimed());
@@ -55,38 +54,133 @@ PcieBusDriver::~PcieBusDriver() {
     /* Shut off all of our IRQs and free all of our bookkeeping */
     ShutdownIrqs();
 
-    /* Free the device tree */
-    if (root_complex_ != nullptr) {
-        root_complex_->UnplugDownstream();
-        root_complex_.reset();
-    }
+    // Free the device tree
+    ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+                     root->UnplugDownstream();
+                     return true;
+                   }, nullptr);
+    roots_.clear();
 
     // Release the region bookkeeping memory.
     region_bookkeeping_.reset();
 
     // Unmap and free all of our mapped ECAM regions.
-    {
-        AutoLock ecam_region_lock(ecam_region_lock_);
-        ecam_regions_.clear();
-    }
+    ecam_regions_.clear();
 }
 
 status_t PcieBusDriver::AddRoot(uint bus_id) {
-    // TODO(johngro): Get rid of the singleton root_complex_ member are replace it with a
-    // collection.
-    if (bus_id != 0) {
-        TRACEF("PCIe bus driver currently only supports adding bus ID #0 as the root bus\n");
-        return ERR_INVALID_ARGS;
-    }
-
-    if (started_)  {
-        TRACEF("Failed to start PCIe bus driver; driver already started\n");
+    if (!IsNotStarted()) {
+        TRACEF("Cannot add more PCIe roots once the bus driver has been started!\n");
         return ERR_BAD_STATE;
     }
 
-    /* Scan the bus and start up any drivers who claim devices we discover */
-    ScanDevices();
-    started_ = true;
+    // Allocate the root
+    auto root = PcieRoot::Create(*this, bus_id);
+    if (root == nullptr) {
+        TRACEF("Failed to allocate PCIe root for bus %u\n", bus_id);
+        return ERR_NO_MEMORY;
+    }
+
+    // Attempt to add it to the collection of roots.
+    {
+        AutoLock bus_topology_lock(bus_topology_lock_);
+        if (!roots_.insert_or_find(mxtl::move(root))) {
+            TRACEF("Failed to add PCIe root for bus %u, root already exists!\n", bus_id);
+            return ERR_ALREADY_EXISTS;
+        }
+    }
+
+    return NO_ERROR;
+}
+
+status_t PcieBusDriver::RescanDevices() {
+    if (!IsOperational()) {
+        TRACEF("Cannot rescan devices until the bus driver is operational!\n");
+        return ERR_BAD_STATE;
+    }
+
+    AutoLock lock(bus_rescan_lock_);
+
+    // Scan each root looking for for devices and other bridges.
+    ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+                     root->ScanDownstream();
+                     return true;
+                   }, nullptr);
+
+    // Attempt to allocate any unallocated BARs
+    ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+                     root->AllocateDownstreamBars();
+                     return true;
+                   }, nullptr);
+
+    return NO_ERROR;
+}
+
+bool PcieBusDriver::IsNotStarted(bool allow_quirks_phase) const {
+    AutoLock start_lock(start_lock_);
+
+    if ((state_ != State::NOT_STARTED) &&
+        (!allow_quirks_phase || (state_ != State::STARTING_RUNNING_QUIRKS)))
+        return false;
+
+    return true;
+}
+
+bool PcieBusDriver::AdvanceState(State expected, State next) {
+    AutoLock start_lock(start_lock_);
+
+    if (state_ != expected) {
+        TRACEF("Failed to advance PCIe bus driver state to %u.  "
+               "Expected state (%u) does not match current state (%u)\n",
+               static_cast<uint>(next),
+               static_cast<uint>(expected),
+               static_cast<uint>(state_));
+        return false;
+    }
+
+    state_ = next;
+    return true;
+}
+
+status_t PcieBusDriver::StartBusDriver() {
+    if (!AdvanceState(State::NOT_STARTED, State::STARTING_SCANNING))
+        return ERR_BAD_STATE;
+
+    {
+        AutoLock lock(bus_rescan_lock_);
+
+        // Scan each root looking for for devices and other bridges.
+        ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+                         root->ScanDownstream();
+                         return true;
+                       }, nullptr);
+
+        if (!AdvanceState(State::STARTING_SCANNING, State::STARTING_RUNNING_QUIRKS))
+            return ERR_BAD_STATE;
+
+        // Run registered quirk handlers for any newly discovered devices.
+        ForeachDevice([](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
+            PcieBusDriver::RunQuirks(dev);
+            return true;
+        }, nullptr);
+
+        // Indicate to the registered quirks handlers that we are finished with the
+        // quirks phase.
+        PcieBusDriver::RunQuirks(nullptr);
+
+        if (!AdvanceState(State::STARTING_RUNNING_QUIRKS, State::STARTING_RESOURCE_ALLOCATION))
+            return ERR_BAD_STATE;
+
+        // Attempt to allocate any unallocated BARs
+        ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx) -> bool {
+                         root->AllocateDownstreamBars();
+                         return true;
+                       }, nullptr);
+    }
+
+    if (!AdvanceState(State::STARTING_RESOURCE_ALLOCATION, State::OPERATIONAL))
+        return ERR_BAD_STATE;
+
     return NO_ERROR;
 }
 
@@ -277,20 +371,62 @@ mxtl::RefPtr<PcieDevice> PcieBusDriver::GetRefedDevice(uint bus_id,
     return mxtl::move(state.ret);
 }
 
-void PcieBusDriver::ForeachDevice(ForeachCallback cbk, void* ctx) {
+void PcieBusDriver::ForeachRoot(ForeachRootCallback cbk, void* ctx) {
     DEBUG_ASSERT(cbk);
 
-    // Grab a reference to the root complex if we can
-    AutoLock lock(bus_topology_lock_);
-    auto root_complex = mxtl::WrapRefPtr(static_cast<PcieUpstreamNode*>(root_complex_.get()));
-    lock.release();
+    // Iterate over the roots, calling the registered callback for each one.
+    // Hold a reference to each root while we do this, but do not hold the
+    // topology lock.  Note that this requires some slightly special handling
+    // when it comes to advancing the iterator as the root we are holding the
+    // reference to could (in theory) be removed from the collection during the
+    // callback..
+    bus_topology_lock_.Acquire();
 
-    if (root_complex == nullptr) {
-        TRACEF("No root complex!");
-        return;
+    auto iter = roots_.begin();
+    while (iter.IsValid()) {
+        // Grab our ref.
+        auto root_ref = iter.CopyPointer();
+
+        // Perform our callback.
+        bus_topology_lock_.Release();
+        bool keep_going = cbk(root_ref, ctx);
+        bus_topology_lock_.Acquire();
+        if (!keep_going)
+            break;
+
+        // If the root is still in the collection, simply advance the iterator.
+        // Otherwise, find the root (if any) with the next higher managed bus
+        // id.
+        if (root_ref->InContainer()) {
+            ++iter;
+        } else {
+            iter = roots_.upper_bound(root_ref->GetKey());
+        }
     }
 
-    ForeachDownstreamDevice(root_complex, 0, cbk, ctx);
+    bus_topology_lock_.Release();
+}
+
+void PcieBusDriver::ForeachDevice(ForeachDeviceCallback cbk, void* ctx) {
+    DEBUG_ASSERT(cbk);
+
+    struct ForeachDeviceCtx {
+        PcieBusDriver* driver;
+        ForeachDeviceCallback dev_cbk;
+        void* dev_ctx;
+    };
+
+    ForeachDeviceCtx foreach_device_ctx = {
+        .driver = this,
+        .dev_cbk = cbk,
+        .dev_ctx = ctx,
+    };
+
+    ForeachRoot([](const mxtl::RefPtr<PcieRoot>& root, void* ctx_) -> bool {
+                     auto ctx = static_cast<ForeachDeviceCtx*>(ctx_);
+                     return ctx->driver->ForeachDownstreamDevice(
+                             root, 0, ctx->dev_cbk, ctx->dev_ctx);
+                   }, &foreach_device_ctx);
 }
 
 status_t PcieBusDriver::AllocBookkeeping() {
@@ -308,40 +444,12 @@ status_t PcieBusDriver::AllocBookkeeping() {
     mmio_hi_regions_.SetRegionPool(region_bookkeeping_);
     pio_regions_.SetRegionPool(region_bookkeeping_);
 
-    // Allocate the root complex
-    //
-    // TODO(johngro) : move this.  Root allocation should happen during AddRoot,
-    // not here.
-    root_complex_ = PcieRoot::Create(*this, 0);
-    if (root_complex_ == nullptr)
-        return ERR_NO_MEMORY;
-
     return NO_ERROR;
-}
-
-void PcieBusDriver::ScanDevices() {
-    AutoLock lock(bus_rescan_lock_);
-
-    // Scan the root complex looking for for devices and other bridges.
-    DEBUG_ASSERT(root_complex_ != nullptr);
-    root_complex_->ScanDownstream();
-
-    // Run registered quirk handlers for any newly discovered devices.
-    ForeachDevice([](const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
-        PcieBusDriver::RunQuirks(dev);
-        return true;
-    }, nullptr);
-
-    // Indicate to the registered quirks handlers that we are finished with the quirks phase.
-    PcieBusDriver::RunQuirks(nullptr);
-
-    // Attempt to allocate any unallocated BARs
-    root_complex_->AllocateDownstreamBars();
 }
 
 bool PcieBusDriver::ForeachDownstreamDevice(const mxtl::RefPtr<PcieUpstreamNode>& upstream,
                                             uint                                  level,
-                                            ForeachCallback                       cbk,
+                                            ForeachDeviceCallback                 cbk,
                                             void*                                 ctx) {
     DEBUG_ASSERT(upstream && cbk);
     bool keep_going = true;
@@ -377,6 +485,11 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
                                              uint64_t size,
                                              PcieAddrSpace aspace,
                                              bool add_op) {
+    if (!IsNotStarted(true)) {
+        TRACEF("Cannot add/subtract bus regions once the bus driver has been started!\n");
+        return ERR_BAD_STATE;
+    }
+
     if (!size)
         return ERR_INVALID_ARGS;
 
@@ -492,6 +605,11 @@ pcie_config_t* PcieBusDriver::GetConfig(uint bus_id,
 }
 
 status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {
+    if (!IsNotStarted()) {
+        TRACEF("Cannot add/subtract ECAM regions once the bus driver has been started!\n");
+        return ERR_BAD_STATE;
+    }
+
     // Sanity check the region first.
     if (ecam.bus_start > ecam.bus_end)
         return ERR_INVALID_ARGS;

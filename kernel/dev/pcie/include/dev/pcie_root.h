@@ -12,9 +12,12 @@
 #include <dev/pcie_upstream_node.h>
 #include <magenta/compiler.h>
 #include <mxtl/macros.h>
+#include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_ptr.h>
 
-class PcieRoot : public PcieUpstreamNode {
+class PcieRoot : public mxtl::WAVLTreeContainable<mxtl::RefPtr<PcieRoot>>,
+                 public PcieUpstreamNode
+{
 public:
     static mxtl::RefPtr<PcieRoot> Create(PcieBusDriver& bus_drv, uint managed_bus_id);
 
@@ -29,6 +32,9 @@ public:
     RegionAllocator& mmio_hi_regions() override { return bus_drv_.mmio_hi_regions(); }
     RegionAllocator& pio_regions()     override { return bus_drv_.pio_regions(); }
 
+
+    // WAVL-tree Index
+    uint GetKey() const { return managed_bus_id(); }
     // TODO(johngro) : Move Legacy IRQ swizling support out of PciePlatform and into roots
     // TODO(johngro) : Add support for RCRB (root complex register block)  Consider splitting
     // PcieRoot into PciRoot and PcieRoot (since PciRoots don't have RCRBs)

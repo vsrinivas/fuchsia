@@ -208,7 +208,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> i
 
     ret = pcie->AddEcamRegion(ecam);
     if (ret != NO_ERROR) {
-        TRACEF("Failed to add ECAM region to PCIe bus driver!\n");
+        TRACEF("Failed to add ECAM region to PCIe bus driver! (ret %d)\n", ret);
         return ret;
     }
 
@@ -216,7 +216,13 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> i
     // multiple roots.
     ret = pcie->AddRoot(0u);
     if (ret != NO_ERROR) {
-        TRACEF("Failed to add root complex to PCIe bus driver!\n");
+        TRACEF("Failed to add root complex to PCIe bus driver! (ret %d)\n", ret);
+        return ret;
+    }
+
+    ret = pcie->StartBusDriver();
+    if (ret != NO_ERROR) {
+        TRACEF("Failed to start PCIe bus driver! (ret %d)\n", ret);
         return ret;
     }
 

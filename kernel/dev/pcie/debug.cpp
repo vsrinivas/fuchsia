@@ -676,9 +676,7 @@ int PcieDebugConsole::CmdPciRescan(int argc, const cmd_args *argv) {
     if (bus_drv == nullptr)
         return ERR_BAD_STATE;
 
-    bus_drv->ScanDevices();
-
-    return NO_ERROR;
+    return bus_drv->RescanDevices();
 }
 
 STATIC_COMMAND_START

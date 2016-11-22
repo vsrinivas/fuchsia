@@ -99,6 +99,29 @@ public:
     // Add a root bus to the driver and attempt to scan it for devices.
     status_t AddRoot(uint bus_id);
 
+    // Start the driver
+    //
+    // Notes about startup:
+    // Before starting the bus driver, platforms must add all of the resources
+    // to be used by the driver during operation.  Once started, the set of
+    // resources used by the driver may not be modified.  Resources which must
+    // be supplied include...
+    //
+    // ++ ECAM regions for memory mapped config sections.  See AddEcamRegion
+    // ++ Bus regions for both MMIO and PIO bus access.    See (Add|Subtract)BusRegion
+    // ++ Roots.                                           See AddRoot
+    //
+    // Resources may be added in any order.
+    //
+    // Once all of the resources have been added, StartBusDriver will scan for
+    // devices under each of the added roots, run all registered quirks and
+    // attempt to allocated bus/IRQ resources for discovered devices.
+    //
+    status_t StartBusDriver();
+
+    // Rescan looking for new devices
+    status_t RescanDevices();
+
     mxtl::RefPtr<PcieDevice> GetNthDevice(uint32_t index);
     uint MapPinToIrq(const PcieDevice& dev, const PcieUpstreamNode& upstream);
 
@@ -141,8 +164,18 @@ private:
     static constexpr size_t REGION_BOOKKEEPING_SLAB_SIZE = 16  << 10;
     static constexpr size_t REGION_BOOKKEEPING_MAX_MEM   = 128 << 10;
 
-    using ForeachCallback = bool (*)(const mxtl::RefPtr<PcieDevice>& dev,
-                                     void* ctx, uint level);
+    using RootCollection = mxtl::WAVLTree<uint, mxtl::RefPtr<PcieRoot>>;
+    using ForeachRootCallback = bool (*)(const mxtl::RefPtr<PcieRoot>& root, void* ctx);
+    using ForeachDeviceCallback = bool (*)(const mxtl::RefPtr<PcieDevice>& dev,
+                                           void* ctx, uint level);
+
+    enum class State {
+        NOT_STARTED                  = 0,
+        STARTING_SCANNING            = 1,
+        STARTING_RUNNING_QUIRKS      = 2,
+        STARTING_RESOURCE_ALLOCATION = 3,
+        OPERATIONAL                  = 4,
+    };
 
     class MappedEcamRegion : public mxtl::WAVLTreeContainable<mxtl::unique_ptr<MappedEcamRegion>> {
     public:
@@ -163,12 +196,16 @@ private:
 
     explicit PcieBusDriver(PciePlatformInterface& platform);
 
-    void     ScanDevices();
+    bool     AdvanceState(State expected, State next);
+    bool     IsNotStarted(bool allow_quirks_phase = false) const;
+    bool     IsOperational() const { smp_rmb(); return state_ == State::OPERATIONAL; }
+
     status_t AllocBookkeeping();
-    void     ForeachDevice(ForeachCallback cbk, void* ctx);
+    void     ForeachRoot(ForeachRootCallback cbk, void* ctx);
+    void     ForeachDevice(ForeachDeviceCallback cbk, void* ctx);
     bool     ForeachDownstreamDevice(const mxtl::RefPtr<PcieUpstreamNode>& upstream,
                                      uint                                  level,
-                                     ForeachCallback                       cbk,
+                                     ForeachDeviceCallback                 cbk,
                                      void*                                 ctx);
     status_t AddSubtractBusRegion(uint64_t base, uint64_t size,
                                   PcieAddrSpace aspace, bool add_op);
@@ -178,10 +215,11 @@ private:
 
     static void RunQuirks(const mxtl::RefPtr<PcieDevice>& device);
 
-    bool                                started_ = false;
+    State                               state_ = State::NOT_STARTED;
     Mutex                               bus_topology_lock_;
     Mutex                               bus_rescan_lock_;
-    mxtl::RefPtr<PcieRoot>              root_complex_;
+    mutable Mutex                       start_lock_;
+    RootCollection                      roots_;
 
     RegionAllocator::RegionPool::RefPtr region_bookkeeping_;
     RegionAllocator                     mmio_lo_regions_;

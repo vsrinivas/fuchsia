@@ -81,31 +81,45 @@ static void arm_qemu_pcie_init_hook(uint level) {
             .bus_end   = static_cast<uint8_t>(PCIE_ECAM_SIZE / PCIE_ECAM_BYTE_PER_BUS) - 1,
         };
         res = pcie->AddEcamRegion(ecam);
-        if (res != NO_ERROR)
+        if (res != NO_ERROR) {
             TRACEF("Failed to add ECAM region to PCIe bus driver!\n");
+            return;
+        }
 
         constexpr uint64_t MMIO_BASE = PCIE_MMIO_BASE_PHYS;
         constexpr uint64_t MMIO_SIZE = PCIE_MMIO_SIZE;
         res = pcie->AddBusRegion(MMIO_BASE, MMIO_SIZE, PcieAddrSpace::MMIO);
-        if (res != NO_ERROR)
+        if (res != NO_ERROR) {
             TRACEF("WARNING - Failed to add initial PCIe MMIO region "
                    "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",
                    MMIO_BASE, MMIO_BASE + MMIO_SIZE, res);
+            return;
+        }
 
         constexpr uint64_t PIO_BASE = PCIE_PIO_BASE_PHYS;
         constexpr uint64_t PIO_SIZE = PCIE_PIO_SIZE;
         res = pcie->AddBusRegion(PIO_BASE, PIO_SIZE, PcieAddrSpace::PIO);
-        if (res != NO_ERROR)
+        if (res != NO_ERROR) {
             TRACEF("WARNING - Failed to add initial PCIe PIO region "
                    "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",
                    PIO_BASE, PIO_BASE + PIO_SIZE, res);
+            return;
+        }
 
         /* Add the root complex for bus ID #0. */
-        status_t status = pcie->AddRoot(0);
-        if (status != NO_ERROR)
-            TRACEF("Failed to start PCIe bus driver! (status = %d)\n", status);
+        res = pcie->AddRoot(0);
+        if (res != NO_ERROR) {
+            TRACEF("Failed to add PCIe root complex for bus 0! (res %d)\n", res);
+            return;
+        }
+
+        res = pcie->StartBusDriver();
+        if (res != NO_ERROR) {
+            TRACEF("Failed to start PCIe bus driver! (res %d)\n", res);
+            return;
+        }
     } else {
-        TRACEF("Failed to initialize PCI bus driver (res = %d).  "
+        TRACEF("Failed to initialize PCI bus driver (res %d).  "
                "PCI will be non-functional.\n", res);
     }
 }
