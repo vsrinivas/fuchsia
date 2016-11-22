@@ -46,8 +46,8 @@ class CaptureLambda<T1, T...> {
 
 }  // namespace internal
 
-// Take a callback, and a list of pointers. Returns a lambda that takes a list
-// of object, save these in the pointed variables and run the callback.
+// Takes a callback, and a list of pointers. Returns a lambda that takes a list
+// of objects, saves these in the pointed variables and runs the callback.
 template <typename... T>
 auto Capture(ftl::Closure callback, T*... ptrs) {
   return internal::CaptureLambda<T...>(std::move(callback), ptrs...);
