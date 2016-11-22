@@ -80,6 +80,17 @@ function mgo() {
   cd "${MAGENTA_DIR}/$1"
 }
 
+if [[ -z "${ZSH_VERSION}" ]]; then
+  function _mgo() {
+    local cur
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=($(ls -dp1 ${MAGENTA_DIR}/${cur}* 2>/dev/null | \
+      sed -n "s|^${MAGENTA_DIR}/\(.*/\)\$|\1|p" | xargs echo))
+  }
+  complete -o nospace -F _mgo mgo
+fi
+
 ### mset: set magenta build properties
 
 function mset-usage() {
@@ -265,6 +276,17 @@ function fgo() {
 
   cd "${FUCHSIA_DIR}/$1"
 }
+
+if [[ -z "${ZSH_VERSION}" ]]; then
+  function _fgo() {
+    local cur
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=($(ls -dp1 ${FUCHSIA_DIR}/${cur}* 2>/dev/null | \
+      sed -n "s|^${FUCHSIA_DIR}/\(.*/\)\$|\1|p" | xargs echo))
+  }
+  complete -o nospace -F _fgo fgo
+fi
 
 ### fset: set fuchsia build properties
 
