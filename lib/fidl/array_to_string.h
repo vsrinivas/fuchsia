@@ -16,7 +16,7 @@ inline std::string to_string(fidl::Array<uint8_t>& data) {
   ret.reserve(data.size());
 
   for (uint8_t val : data) {
-    ret += std::to_string(val);
+    ret += static_cast<char>(val);
   }
 
   return ret;

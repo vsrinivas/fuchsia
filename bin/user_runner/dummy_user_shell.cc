@@ -10,15 +10,12 @@
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -101,9 +98,11 @@ class DummyUserShellView : public mozart::BaseView {
 
 class DummyUserShellApp
     : public modular::StoryWatcher,
+      public modular::StoryProviderWatcher,
       public modular::SingleServiceViewApp<modular::UserShell> {
  public:
-  DummyUserShellApp() : story_watcher_binding_(this) {}
+  DummyUserShellApp()
+      : story_provider_watcher_binding_(this), story_watcher_binding_(this) {}
   ~DummyUserShellApp() override = default;
 
  private:
@@ -125,6 +124,23 @@ class DummyUserShellApp
                       focus_controller_request) override {
     story_provider_.Bind(std::move(story_provider));
     CreateStory(kExampleRecipeUrl);
+
+    fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher;
+    story_provider_watcher_binding_.Bind(GetProxy(&watcher));
+    story_provider_->Watch(std::move(watcher));
+  }
+
+  // |StoryProviderWatcher|
+  void OnDelete(const ::fidl::String& story_id) override {
+    FTL_VLOG(1) << "DummyUserShellApp::OnDelete() " << story_id;
+  }
+
+  // |StoryProviderWatcher|
+  void OnChange(modular::StoryInfoPtr story_info) override {
+    FTL_VLOG(1) << "DummyUserShellApp::OnChange() "
+                << " id " << story_info->id << " is_running "
+                << story_info->is_running << " state " << story_info->state
+                << " url " << story_info->url;
   }
 
   // |StoryWatcher|
@@ -132,28 +148,8 @@ class DummyUserShellApp
 
   // |StoryWatcher|
   void OnData() override {
-    // When some data has arrived, we stop the story.
     if (++data_count_ % 5 == 0) {
-      FTL_LOG(INFO) << "DummyUserShell STOP";
-
-      story_provider_->GetStoryInfo(story_info_->id, [this](
-          modular::StoryInfoPtr story_info) {
-        FTL_DCHECK(story_info->is_running == true);
-        story_controller_->Stop([this]() {
-          TearDownStoryController();
-
-          // When the story stops, we start it again.
-          mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-              [this]() {
-                story_provider_->GetStoryInfo(
-                    story_info_->id, [this](modular::StoryInfoPtr story_info) {
-                      FTL_DCHECK(story_info->is_running == false);
-                      ResumeStory();
-                    });
-              },
-              ftl::TimeDelta::FromSeconds(10));
-        });
-      });
+      StopExampleStory();
     }
   }
 
@@ -171,9 +167,7 @@ class DummyUserShellApp
 
       // When the story is done, we start the next one.
       mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this]() {
-            CreateStory(kFlutterModuleUrl);
-          },
+          [this]() { CreateStory(kFlutterModuleUrl); },
           ftl::TimeDelta::FromSeconds(20));
     });
   }
@@ -213,8 +207,34 @@ class DummyUserShellApp
     story_controller_.reset();
   }
 
+  // Every five counter increments, we dehydrate and rehydrate the story.
+  void StopExampleStory() {
+    FTL_LOG(INFO) << "DummyUserShell STOP";
+
+    story_provider_->GetStoryInfo(
+        story_info_->id, [this](modular::StoryInfoPtr story_info) {
+          FTL_DCHECK(story_info->is_running == true);
+          story_controller_->Stop([this]() {
+            TearDownStoryController();
+
+            // When the story stops, we start it again.
+            mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+                [this]() {
+                  story_provider_->GetStoryInfo(
+                      story_info_->id,
+                      [this](modular::StoryInfoPtr story_info) {
+                        FTL_DCHECK(story_info->is_running == false);
+                        ResumeStory();
+                      });
+                },
+                ftl::TimeDelta::FromSeconds(10));
+          });
+        });
+  }
+
   std::unique_ptr<DummyUserShellView> view_;
 
+  fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;

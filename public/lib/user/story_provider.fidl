@@ -37,6 +37,9 @@ interface StoryProvider {
   // information about the stories can be retrieved using
   // GetStoryInfo(), or by ResumeStoryBy()+StoryController.GetInfo().
   PreviousStories() => (array<string> story_ids);
+
+  // Registers a listener for changes in the story collection.
+  Watch(StoryProviderWatcher watcher);
 };
 
 // Used by the client of StoryProvider (UserShell) to interact with a
@@ -86,4 +89,21 @@ interface StoryWatcher {
 
   // The root module could not be started.
   OnError();
+};
+
+// This interface is meant to be implemented by a client of StoryProvider.
+//
+// These calls are for a story event happening on ANY device, not just the
+// current device.
+//
+// No service name: created by the client.
+//
+// TODO(jimbe) Need a way to determine which device the action happened on.
+interface StoryProviderWatcher {
+  // The StoryInfo changed. |story_info.state| will be NEW if this story was
+  // just created.
+  OnChange(StoryInfo story_info);
+
+  // A Story was deleted
+  OnDelete(string story_id);
 };

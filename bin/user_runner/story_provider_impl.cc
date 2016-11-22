@@ -4,13 +4,14 @@
 
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 
-#include "apps/modular/lib/app/connect.h"
+#include <unordered_set>
+
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/src/user_runner/story_controller_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
-#include "lib/ftl/functional/make_copyable.h"
+#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 
 namespace modular {
 namespace {
@@ -130,8 +131,9 @@ class WriteStoryDataCall : public Transaction {
         ledger_(ledger),
         story_data_(std::move(story_data)),
         result_(result) {
-    ledger_->GetRootPage(GetProxy(&root_page_), [this](ledger::Status status) {
+    FTL_DCHECK(!story_data_.is_null());
 
+    ledger_->GetRootPage(GetProxy(&root_page_), [this](ledger::Status status) {
       const size_t size = story_data_->GetSerializedSize();
       fidl::Array<uint8_t> value = fidl::Array<uint8_t>::New(size);
       story_data_->Serialize(value.data(), size);
@@ -267,7 +269,6 @@ class ResumeStoryCall : public Transaction {
                 StoryControllerImpl::New(
                     std::move(story_data_), story_provider_impl_,
                     std::move(launcher), std::move(story_controller_request_));
-
                 Done();
               });
         });
@@ -337,20 +338,43 @@ class PreviousStoriesCall : public Transaction {
 
 }  // namespace
 
-// TODO(alhaad): The current implementation makes no use of |PageWatcher| and
-// assumes that only one device can access a user's ledger. Re-visit this
-// assumption.
+// TODO(alhaad): The current implementation assumes that only one device can
+// access a user's ledger. Re-visit this assumption.
 StoryProviderImpl::StoryProviderImpl(
     ApplicationEnvironmentPtr environment,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
     fidl::InterfaceRequest<StoryProvider> story_provider_request)
     : environment_(std::move(environment)),
       binding_(this, std::move(story_provider_request)),
-      storage_(new Storage) {
+      storage_(new Storage),
+      page_watcher_binding_(this) {
   ledger_.Bind(std::move(ledger));
+
+  ledger::PagePtr root_page;
+  ledger_->GetRootPage(GetProxy(&root_page), [this](ledger::Status status) {
+    if (status != ledger::Status::OK) {
+      FTL_LOG(ERROR)
+          << "StoryProviderImpl() failed call to Ledger.GetRootPage() "
+          << status;
+    }
+  });
+  fidl::InterfaceHandle<ledger::PageWatcher> watcher;
+  page_watcher_binding_.Bind(GetProxy(&watcher));
+  root_page->Watch(std::move(watcher), [](ledger::Status status) {
+    if (status != ledger::Status::OK) {
+      FTL_LOG(ERROR) << "StoryProviderImpl() failed call to Ledger.Watch() "
+                     << status;
+    }
+  });
 }
 
 // |StoryProvider|
+void StoryProviderImpl::Watch(
+    fidl::InterfaceHandle<StoryProviderWatcher> watcher) {
+  watchers_.AddInterfacePtr(
+      StoryProviderWatcherPtr::Create(std::move(watcher)));
+}
+
 void StoryProviderImpl::GetStoryInfo(
     const fidl::String& story_id,
     const GetStoryInfoCallback& story_data_callback) {
@@ -363,7 +387,8 @@ void StoryProviderImpl::GetStoryInfo(
 void StoryProviderImpl::GetStoryData(
     const fidl::String& story_id,
     const std::function<void(StoryDataPtr)>& result) {
-  new GetStoryDataCall(&transaction_container_, ledger_.get(), story_id, result);
+  new GetStoryDataCall(&transaction_container_, ledger_.get(), story_id,
+                       result);
 }
 
 ledger::PagePtr StoryProviderImpl::GetStoryPage(
@@ -415,6 +440,38 @@ void StoryProviderImpl::ResumeStory(
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
   new PreviousStoriesCall(&transaction_container_, ledger_.get(), callback);
+}
+
+// |PageWatcher|
+void StoryProviderImpl::OnInitialState(
+    fidl::InterfaceHandle<ledger::PageSnapshot> page,
+    const OnInitialStateCallback& cb) {
+  cb();
+}
+
+// |PageWatcher|
+void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
+                                 const OnChangeCallback& cb) {
+  FTL_DCHECK(!page.is_null());
+  FTL_DCHECK(!page->changes.is_null());
+
+  for (auto& entry : page->changes) {
+    if (entry->new_value.is_null()) {
+      const fidl::String story_id = to_string(entry->key);
+      watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
+        watcher->OnDelete(story_id);
+      });
+    } else {
+      auto story_data = StoryData::New();
+      auto& bytes = entry->new_value->get_bytes();
+      story_data->Deserialize(bytes.data(), bytes.size());
+      watchers_.ForAllPtrs([&story_data](StoryProviderWatcher* const watcher) {
+        watcher->OnChange(story_data->story_info.Clone());
+      });
+    }
+  }
+
+  cb();
 }
 
 }  // namespace modular

@@ -18,6 +18,7 @@
 #include "apps/modular/src/user_runner/transaction.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/ftl/macros.h"
@@ -26,7 +27,7 @@ namespace modular {
 class ApplicationContext;
 class StoryControllerImpl;
 
-class StoryProviderImpl : public StoryProvider {
+class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
  public:
   StoryProviderImpl(
       ApplicationEnvironmentPtr environment,
@@ -72,10 +73,19 @@ class StoryProviderImpl : public StoryProvider {
   // |StoryProvider|
   void ResumeStory(const fidl::String& story_id,
                    fidl::InterfaceRequest<StoryController>
-                   story_controller_request) override;
+                       story_controller_request) override;
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override;
+
+  // |StoryProvider|
+  void Watch(fidl::InterfaceHandle<StoryProviderWatcher> watcher) override;
+
+  // |PageWatcher|
+  void OnInitialState(fidl::InterfaceHandle<ledger::PageSnapshot> page,
+                      const OnInitialStateCallback& cb) override;
+  void OnChange(ledger::PageChangePtr page,
+                const OnChangeCallback& cb) override;
 
   ApplicationEnvironmentPtr environment_;
   StrongBinding<StoryProvider> binding_;
@@ -85,6 +95,9 @@ class StoryProviderImpl : public StoryProvider {
   std::unordered_set<std::string> story_ids_;
   TransactionContainer transaction_container_;
   std::shared_ptr<Storage> storage_;
+  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
+
+  fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };
