@@ -148,6 +148,9 @@ private:
     // cleanup dpc structure
     dpc_t cleanup_dpc_ = {};
 
+    // Used to protect thread name read/writes
+    SpinLock name_lock_;
+
     // LK thread structure
     // put last to ease debugging since this is a pretty large structure
     // TODO(dje): Revisit eventually: How large? And how frequently are members

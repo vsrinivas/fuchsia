@@ -231,6 +231,9 @@ private:
 
     uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;
 
+    // Used to protect name read/writes
+    mutable SpinLock name_lock_;
+
     // The user-friendly process name. For debug purposes only.
     // This includes the trailing NUL.
     char name_[MX_MAX_NAME_LEN] = {};
