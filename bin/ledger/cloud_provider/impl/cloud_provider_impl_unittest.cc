@@ -226,6 +226,21 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedSingle) {
   EXPECT_EQ(expected_timestamp, server_timestamps_[0]);
 }
 
+// Verifies that the initial response when there is no matching commits is
+// ignored.
+TEST_F(CloudProviderImplTest, WatchWhenThereIsNothingToWatch) {
+  cloud_provider_->WatchCommits("", this);
+
+  std::string put_content = "null";
+  rapidjson::Document document;
+  document.Parse(put_content.c_str(), put_content.size());
+  ASSERT_FALSE(document.HasParseError());
+
+  watch_client_->OnPut("/", document);
+  EXPECT_EQ(0u, commit_watcher_errors_);
+  EXPECT_TRUE(commits_.empty());
+}
+
 // Verifies that malformed commit notifications are reported through OnError()
 // callback and that processing further notifications is stopped.
 TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
@@ -319,7 +334,8 @@ TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
   std::vector<Record> records;
   cloud_provider_->GetCommits(
       ServerTimestampToBytes(42),
-      test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &records));
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                    &records));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(records.empty());

@@ -35,6 +35,12 @@ void WatchClientImpl::OnPut(const std::string& path,
     return;
   }
 
+  if (path == "/" && value.IsNull()) {
+    // If there are no matching commits, the first response after setting up the
+    // watcher is null. Don't panic.
+    return;
+  }
+
   if (!value.IsObject()) {
     HandleDecodingError(path, value, "received data is not a dictionary");
     return;
