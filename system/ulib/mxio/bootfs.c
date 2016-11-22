@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <magenta/bootdata.h>
+#include <magenta/syscalls.h>
 #include <magenta/types.h>
 
 #define BOOTFS_MAX_NAME_LEN 256
@@ -28,26 +29,64 @@ static const char FSMAGIC[16] = "[BOOTFS]\0\0\0\0\0\0\0\0";
 #define FSIZ 1
 #define FOFF 2
 
-void bootfs_parse(void* _data, size_t len,
+struct bootfs_magic {
+    bootdata_t boothdr;
+    char fsmagic[16];
+};
+
+void bootfs_parse(mx_handle_t vmo, size_t len,
                   void (*cb)(void*, const char* fn, size_t off, size_t len),
                   void* cb_arg) {
-    uint8_t* data = _data;
-    uint8_t* end = data + len;
+    mx_off_t rlen;
+    mx_off_t off = 0;
+    struct bootfs_magic boot_data;
+    mx_status_t r = mx_vmo_read(vmo, &boot_data, off, sizeof(boot_data), &rlen);
+    if (r < 0 || rlen < sizeof(boot_data)) {
+        printf("bootfs_parse: couldn't read boot_data - %ld\n", rlen);
+        return;
+    }
+
+    if (boot_data.boothdr.magic != BOOTDATA_MAGIC) {
+        printf("parse_boot: bad boot magic\n");
+        return;
+    }
+
+    // This field is obsolete, so skip if it doesn't match
+    if (!memcmp(boot_data.fsmagic, FSMAGIC, sizeof(FSMAGIC))) {
+        off += sizeof(boot_data);
+    } else {
+        off += sizeof(boot_data.boothdr);
+    }
+
+    uint8_t _buffer[4096];
+    uint8_t* data = _buffer;
+    uint8_t* end = data; // force initial read
+
     char name[BOOTFS_MAX_NAME_LEN];
     uint32_t header[3];
 
-    if (*(uint64_t*)data != BOOTDATA_MAGIC) {
-        return;
-    }
-    data += sizeof(bootdata_t);
+    for (;;) {
+        if ((end - data) < (int)sizeof(header)) {
+            // read in another xxx headers
+            off += data - _buffer; // advance past processed headers
+            r = mx_vmo_read(vmo, _buffer, off, sizeof(_buffer), &rlen);
+            if (r < 0) {
+                break;
+            }
+            data = _buffer;
+            end = data+rlen;
+            if ((end - data) < (int)sizeof(header)) {
+                break;
+            }
+        }
 
-    // This field is obsolete, so skip if it doesn't match
-    if (!memcmp(data, FSMAGIC, sizeof(FSMAGIC))) {
-        data += sizeof(FSMAGIC);
-    }
-
-    while ((end - data) > (int)sizeof(header)) {
         memcpy(header, data, sizeof(header));
+        if (data + sizeof(header) + header[NLEN] > end) {
+            // read only part of the last file name:
+            // back up end and induce a fresh, new read
+            end = data;
+            continue;
+        }
         data += sizeof(header);
 
         // check for end marker

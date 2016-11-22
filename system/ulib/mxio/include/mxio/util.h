@@ -24,10 +24,9 @@ mx_status_t mxio_clone_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* typ
 mx_status_t mxio_pipe_pair_raw(mx_handle_t* handles, uint32_t* types);
 mx_status_t mxio_transfer_fd(int fd, int newfd, mx_handle_t* handles, uint32_t* types);
 
-void bootfs_parse(void* _data, size_t len,
+void bootfs_parse(mx_handle_t vmo, size_t len,
                   void (*cb)(void*, const char* fn, size_t off, size_t len),
                   void* cb_arg);
-
 
 // used for bootstrap
 void mxio_install_root(mxio_t* root);
