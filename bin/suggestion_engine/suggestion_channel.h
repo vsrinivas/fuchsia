@@ -13,7 +13,6 @@ class SuggestionChannel;
 }  // namespace maxwell
 
 #include "apps/maxwell/src/bound_set.h"
-#include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/agent_suggestion_record.h"
 
 namespace maxwell {
@@ -32,21 +31,13 @@ class SuggestionChannel {
     return &ranked_suggestions_;
   }
 
-  void AddSubscriber(std::unique_ptr<NextSubscriber> subscriber) {
-    subscribers_.emplace(std::move(subscriber));
-  }
+ protected:
+  virtual void DispatchOnAddSuggestion(
+      const RankedSuggestion& ranked_suggestion) = 0;
+  virtual void DispatchOnRemoveSuggestion(
+      const RankedSuggestion& ranked_suggestion) = 0;
 
  private:
-  void DispatchOnAddSuggestion(const RankedSuggestion& ranked_suggestion) {
-    for (auto& subscriber : subscribers_)
-      subscriber->OnAddSuggestion(ranked_suggestion);
-  }
-
-  void DispatchOnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) {
-    for (auto& subscriber : subscribers_)
-      subscriber->OnRemoveSuggestion(ranked_suggestion);
-  }
-
   // Current justification: ranking is not implemented; proposals ranked in
   // insertion order.
   //
@@ -56,10 +47,32 @@ class SuggestionChannel {
   // take advantage of dynamic reordering, but this is sufficiently general to
   // not require a specialized impl using std::set.
   std::vector<std::unique_ptr<RankedSuggestion>> ranked_suggestions_;
-  // TODO(rosswang): polymorph this to handle ask subscribers as well
-  maxwell::BindingSet<NextController,
-                      std::unique_ptr<NextSubscriber>,
-                      NextSubscriber::GetBinding>
+};
+
+template <class Subscriber, class Controller>
+class BoundSuggestionChannel : public SuggestionChannel {
+ public:
+  void AddSubscriber(std::unique_ptr<Subscriber> subscriber) {
+    subscribers_.emplace(std::move(subscriber));
+  }
+
+ protected:
+  void DispatchOnAddSuggestion(
+      const RankedSuggestion& ranked_suggestion) override {
+    for (auto& subscriber : subscribers_)
+      subscriber->OnAddSuggestion(ranked_suggestion);
+  }
+
+  void DispatchOnRemoveSuggestion(
+      const RankedSuggestion& ranked_suggestion) override {
+    for (auto& subscriber : subscribers_)
+      subscriber->OnRemoveSuggestion(ranked_suggestion);
+  }
+
+ private:
+  maxwell::BindingSet<Controller,
+                      std::unique_ptr<Subscriber>,
+                      Subscriber::GetBinding>
       subscribers_;
 };
 

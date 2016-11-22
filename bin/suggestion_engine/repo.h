@@ -8,7 +8,7 @@
 
 #include "apps/maxwell/src/suggestion_engine/proposal_record.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
+#include "apps/maxwell/src/suggestion_engine/next_channel.h"
 
 namespace maxwell {
 namespace suggestion {
@@ -51,7 +51,7 @@ class Repo {
       sources_;
   // indexed by suggestion ID
   std::unordered_map<std::string, ProposalRecordPtr> suggestions_;
-  SuggestionChannel next_channel_;
+  NextChannel next_channel_;
 
   uint64_t id_;
 };
