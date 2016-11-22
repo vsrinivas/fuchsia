@@ -13,5 +13,11 @@
             "binary": "trace_tests",
             "bootfs_path": "apps/trace_tests"
         }
+    ],
+    "resources": [
+        {
+            "file": "apps/tracing/src/trace_manager/categories.config",
+            "bootfs_path": "data/trace_manager/categories.config"
+        }
     ]
 }
