@@ -52,8 +52,18 @@ def _ParseCLIArgs():
 # We assume this script is located in the Mojo SDK in tools/bindings.
 # If __file__ is a link, we look for the real location of the script.
 BINDINGS_DIR = os.path.dirname(os.path.realpath(os.path.abspath(__file__)))
-
 sys.path.insert(0, os.path.join(BINDINGS_DIR, "pylib"))
+# Find the source root (which has a third_party/ dir)
+root = BINDINGS_DIR
+while root != os.path.dirname(root):
+    third_party_dir = os.path.join(root, 'third_party')
+    if os.path.exists(third_party_dir):
+        sys.path.insert(0, third_party_dir)
+        break
+    root = os.path.dirname(root)
+else:
+    print("Couldn't find third_party")
+    sys.exit(1)
 
 
 from mojom.generate.generated import fidl_files_fidl
