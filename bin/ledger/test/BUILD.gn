@@ -7,6 +7,7 @@ source_set("test") {
 
   sources = [
     "capture.h",
+    "test_with_message_loop.cc",
     "test_with_message_loop.h",
   ]
 
@@ -38,6 +39,7 @@ executable("unittests") {
 
   sources = [
     "capture_unittest.cc",
+    "test_with_message_loop_unittest.cc",
   ]
 
   deps = [

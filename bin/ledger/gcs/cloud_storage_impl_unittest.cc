@@ -84,7 +84,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
     status = s;
     message_loop_.PostQuitTask();
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("https://storage-upload.googleapis.com/bucket/hello/world/baz/quz",
@@ -122,7 +122,7 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
     status = s;
     message_loop_.PostQuitTask();
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OBJECT_ALREADY_EXIST, status);
 }
@@ -138,7 +138,7 @@ TEST_F(CloudStorageImplTest, TestDownload) {
     status = s;
     message_loop_.PostQuitTask();
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(
@@ -162,7 +162,7 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
     status = s;
     message_loop_.PostQuitTask();
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::UNKNOWN_ERROR, status);
 }

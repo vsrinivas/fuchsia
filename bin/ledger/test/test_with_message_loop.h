@@ -17,16 +17,10 @@ class TestWithMessageLoop : public ::testing::Test {
   TestWithMessageLoop() {}
 
  protected:
-  void RunLoopWithTimeout(
-      ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1)) {
-    message_loop_.task_runner()->PostDelayedTask(
-        [this] {
-          message_loop_.PostQuitTask();
-          FAIL();
-        },
-        timeout);
-    message_loop_.Run();
-  }
+  // Run the loop for at most |timeout|. Returns |true| if the timeout has been
+  // reached.
+  bool RunLoopWithTimeout(
+      ftl::TimeDelta timeout = ftl::TimeDelta::FromSeconds(1));
 
   mtl::MessageLoop message_loop_;
 

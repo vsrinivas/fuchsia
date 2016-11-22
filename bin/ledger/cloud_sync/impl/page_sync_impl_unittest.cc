@@ -271,7 +271,7 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
       message_loop_.PostQuitTask();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id1", cloud_provider_.received_commits[0].id);
@@ -309,7 +309,7 @@ TEST_F(PageSyncImplTest, UploadNewCommits) {
       message_loop_.PostQuitTask();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id1", cloud_provider_.received_commits[0].id);
@@ -337,7 +337,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
       message_loop_.PostQuitTask();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, cloud_provider_.received_commits.size());
   EXPECT_EQ("id1", cloud_provider_.received_commits[0].id);
@@ -365,7 +365,7 @@ TEST_F(PageSyncImplTest, RetryUpload) {
       message_loop_.PostQuitTask();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   // Verify that the commit is still not marked as synced in storage.
   EXPECT_TRUE(storage_.commits_marked_as_synced.empty());
@@ -393,14 +393,14 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
       message_loop_.QuitNow();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0, on_idle_calls);
   EXPECT_FALSE(page_sync_.IsIdle());
 
   // Let the confirmation be delivered and verify that the idle callback was
   // called.
   message_loop_.PostQuitTask();
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
 
@@ -416,12 +416,12 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
       message_loop_.QuitNow();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1, on_idle_calls);
   EXPECT_FALSE(page_sync_.IsIdle());
 
   message_loop_.PostQuitTask();
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(2, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
 }
@@ -463,7 +463,7 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
       message_loop_.QuitNow();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0, on_backlog_downloaded_calls);
 
   message_loop_.SetAfterTaskCallback([this] {
@@ -471,7 +471,7 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
       message_loop_.PostQuitTask();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -492,7 +492,7 @@ TEST_F(PageSyncImplTest, DownloadEmptyBacklog) {
     message_loop_.PostQuitTask();
   });
   page_sync_.Start();
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1, on_backlog_downloaded_calls);
   EXPECT_EQ(1, on_idle_calls);
 }
@@ -514,7 +514,7 @@ TEST_F(PageSyncImplTest, ReceiveNotifications) {
       message_loop_.PostQuitTask();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -539,7 +539,7 @@ TEST_F(PageSyncImplTest, DownloadBacklogThenReceiveNotifications) {
       message_loop_.QuitNow();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -550,7 +550,7 @@ TEST_F(PageSyncImplTest, DownloadBacklogThenReceiveNotifications) {
       message_loop_.QuitNow();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
@@ -571,7 +571,7 @@ TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
       message_loop_.QuitNow();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0u, storage_.received_commits.size());
 
   cloud_provider_.should_fail_get_commits = false;
@@ -580,7 +580,7 @@ TEST_F(PageSyncImplTest, RetryDownloadBacklog) {
       message_loop_.QuitNow();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
@@ -603,7 +603,7 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
       message_loop_.PostQuitTask();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(cloud_provider_.watcher_removed);
   EXPECT_TRUE(error_callback_called_);
@@ -630,7 +630,7 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
       message_loop_.PostQuitTask();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
 
@@ -644,7 +644,7 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
       message_loop_.PostQuitTask();
     }
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(2, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
 }

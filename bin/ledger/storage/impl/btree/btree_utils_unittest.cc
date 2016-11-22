@@ -299,7 +299,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
     EXPECT_EQ(Status::OK, s);
     message_loop_.PostQuitTask();
   });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   std::vector<ObjectId> object_requests;
   std::copy(fake_storage_.object_requests.begin(),

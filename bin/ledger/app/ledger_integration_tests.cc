@@ -710,7 +710,7 @@ TEST_F(LedgerApplicationTest, PageWatcherSimple) {
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
             [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, watcher.changes_seen);
   PageChangePtr change = watcher.GetLastPageChange();
@@ -744,7 +744,7 @@ TEST_F(LedgerApplicationTest, PageWatcherTransaction) {
 
   page->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page.WaitForIncomingResponse());
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, watcher.changes_seen);
   PageChangePtr change = watcher.GetLastPageChange();
@@ -871,8 +871,8 @@ TEST_F(LedgerApplicationTest, PageWatcher1Change2Pages) {
              [](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
-  RunLoopWithTimeout();
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   ASSERT_EQ(1u, watcher1.changes_seen);
   PageChangePtr change = watcher1.GetLastPageChange();

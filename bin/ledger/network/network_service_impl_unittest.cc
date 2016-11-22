@@ -199,7 +199,7 @@ TEST_F(NetworkServiceImplTest, SimpleRequest) {
         message_loop_.PostQuitTask();
       });
   EXPECT_FALSE(callback_destroyed);
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(response);
   EXPECT_TRUE(callback_destroyed);
@@ -227,7 +227,7 @@ TEST_F(NetworkServiceImplTest, CancelRequest) {
 
   message_loop_.task_runner()->PostTask([cancel] { cancel->Cancel(); });
   cancel = nullptr;
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(received_response);
   EXPECT_TRUE(callback_destroyed);
 }
@@ -248,7 +248,7 @@ TEST_F(NetworkServiceImplTest, NetworkDeleted) {
         response = std::move(received_response);
         message_loop_.PostQuitTask();
       });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(response);
   EXPECT_EQ(2, request_count);
@@ -272,7 +272,7 @@ TEST_F(NetworkServiceImplTest, Redirection) {
         response = std::move(received_response);
         message_loop_.PostQuitTask();
       });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(response);
   EXPECT_EQ(2, request_count);
@@ -296,7 +296,7 @@ TEST_F(NetworkServiceImplTest, CancelOnCallback) {
         request = nullptr;
       });
   EXPECT_FALSE(response);
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(response);
 }

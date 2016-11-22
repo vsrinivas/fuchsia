@@ -79,7 +79,7 @@ TEST_F(CommitDownloadTest, AddCommit) {
       [this, &error_calls] { error_calls++; });
   commit_download.Start();
 
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1, done_calls);
   EXPECT_EQ(0, error_calls);
   EXPECT_EQ(1u, storage_.received_commits.size());
@@ -101,7 +101,7 @@ TEST_F(CommitDownloadTest, FailToAddCommit) {
   storage_.should_fail_add_commit_from_sync = true;
   commit_download.Start();
 
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0, done_calls);
   EXPECT_EQ(1, error_calls);
   EXPECT_TRUE(storage_.received_commits.empty());

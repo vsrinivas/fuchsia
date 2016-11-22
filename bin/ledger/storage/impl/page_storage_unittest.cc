@@ -157,7 +157,7 @@ class PageStorageTest : public test::TestWithMessageLoop {
                                   EXPECT_EQ(Status::OK, status);
                                   message_loop_.PostQuitTask();
                                 });
-    RunLoopWithTimeout();
+    EXPECT_FALSE(RunLoopWithTimeout());
     return id;
   }
 
@@ -292,7 +292,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
                                 EXPECT_EQ(Status::OK, status);
                                 message_loop_.PostQuitTask();
                               });
-  RunLoopWithTimeout();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(2u, sync.object_requests.size());
   EXPECT_TRUE(sync.object_requests.find(root_id) != sync.object_requests.end());
   EXPECT_TRUE(sync.object_requests.find(eager_value.object_id) !=
