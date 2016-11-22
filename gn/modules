@@ -4,6 +4,10 @@
     ],
     "binaries": [
         {
+            "binary": "color.flx",
+            "bootfs_path": "apps/color"
+        },
+        {
             "binary": "email_list.flx",
             "bootfs_path": "apps/email_list"
         },
