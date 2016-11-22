@@ -18,7 +18,7 @@ namespace storage {
 
 // An iterator over the differences between an ordered pair of BTrees,
 // represented by thier roots. Differences are computed in the |left| to |right|
-// direction.
+// direction (|left| is the base for the diff, |right| the target).
 class DiffIterator : public Iterator<const EntryChange> {
  public:
   DiffIterator(std::unique_ptr<const TreeNode> left,
@@ -36,15 +36,9 @@ class DiffIterator : public Iterator<const EntryChange> {
  private:
   void BuildEntryChange();
 
-  // Advances the iterator to the next change.
-  void Advance();
-
-  // Stores the changes of the B-Trees at the current position of the iterator.
-  // This is used as a staging area for operator* and operator-> calls. Many
-  // changes can occur in one step of the underlying iterators, so we need to
-  // store all changes instead of only one, even if only one change is returned
-  // by operator* and operator->.
-  std::queue<EntryChange> changes_;
+  // Stores the change of the B-Trees at the current position of the iterator.
+  // This is used as a staging area for operator* and operator-> calls.
+  std::unique_ptr<EntryChange> change_;
 
   // TODO(etiennej): We are going for the simplest, most naive implementation as
   // to unblock further work. Better implementations may want to inspect the

@@ -14,9 +14,13 @@ DiffIterator::DiffIterator(std::unique_ptr<const TreeNode> left,
                            std::unique_ptr<const TreeNode> right)
     : left_(std::make_unique<BTreeIterator>(std::move(left))),
       right_(std::make_unique<BTreeIterator>(std::move(right))) {
+  if (!Valid()) {
+    return;
+  }
+
   if (left_->Valid() && right_->Valid() && **left_ == **right_) {
-    Advance();
-  } else if (left_->Valid() || right_->Valid()) {
+    Next();
+  } else {
     BuildEntryChange();
   }
 }
@@ -25,20 +29,8 @@ DiffIterator::~DiffIterator() {}
 
 DiffIterator& DiffIterator::Next() {
   FTL_DCHECK(Valid());
-  FTL_DCHECK(!changes_.empty());
 
-  changes_.pop();
-
-  if (!changes_.empty()) {
-    return *this;
-  }
-
-  Advance();
-
-  return *this;
-}
-
-void DiffIterator::Advance() {
+  // Unconditionnaly advance by one step.
   if (left_->Valid() && !right_->Valid()) {
     left_->Next();
   } else if (right_->Valid() && !left_->Valid()) {
@@ -52,6 +44,8 @@ void DiffIterator::Advance() {
     right_->Next();
   }
 
+  // While the two iterators point to the same data, advance until finding a
+  // difference.
   while (left_->Valid() && right_->Valid() && **left_ == **right_) {
     left_->Next();
     right_->Next();
@@ -59,6 +53,7 @@ void DiffIterator::Advance() {
   if (Valid()) {
     BuildEntryChange();
   }
+  return *this;
 }
 
 bool DiffIterator::Valid() const {
@@ -77,35 +72,17 @@ void DiffIterator::BuildEntryChange() {
   FTL_DCHECK(Valid());
   if ((left_->Valid() && !right_->Valid()) ||
       (left_->Valid() && right_->Valid() && (*left_)->key < (*right_)->key)) {
-    EntryChange entry_change;
-    entry_change.entry = **left_;
-    entry_change.deleted = true;
-    changes_.push(entry_change);
-  } else if ((right_->Valid() && !left_->Valid()) ||
-             (left_->Valid() && right_->Valid() &&
-              (*left_)->key > (*right_)->key)) {
-    EntryChange entry_change;
-    entry_change.entry = **right_;
-    entry_change.deleted = false;
-    changes_.push(entry_change);
+    change_.reset(new EntryChange{**left_, true});
   } else {
-    EntryChange entry_change1;
-    entry_change1.entry = **left_;
-    entry_change1.deleted = true;
-    changes_.push(entry_change1);
-
-    EntryChange entry_change2;
-    entry_change2.entry = **right_;
-    entry_change2.deleted = false;
-    changes_.push(entry_change2);
+    change_.reset(new EntryChange{**right_, false});
   }
 }
 const EntryChange& DiffIterator::operator*() const {
-  return changes_.front();
+  return *change_;
 }
 
 const EntryChange* DiffIterator::operator->() const {
-  return &(changes_.front());
+  return change_.get();
 }
 
 }  // namespace storage

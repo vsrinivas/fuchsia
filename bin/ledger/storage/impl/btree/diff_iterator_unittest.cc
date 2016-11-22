@@ -70,23 +70,25 @@ TEST_F(DiffIteratorTest, IterateOneNode) {
   Entry entry3 = Entry{"key3", RandomId(), KeyPriority::LAZY};
   Entry entry4 = Entry{"key4", RandomId(), KeyPriority::LAZY};
   Entry entry5 = Entry{"key5", RandomId(), KeyPriority::LAZY};
+  Entry entry6 = Entry{"key6", RandomId(), KeyPriority::LAZY};
   ObjectId node_id1;
   EXPECT_EQ(Status::OK,
-            TreeNode::FromEntries(
-                &fake_storage_,
-                std::vector<Entry>{entry1, entry2, entry3, entry4, entry5},
-                std::vector<ObjectId>(6), &node_id1));
+            TreeNode::FromEntries(&fake_storage_,
+                                  std::vector<Entry>{entry1, entry2, entry3,
+                                                     entry4, entry5, entry6},
+                                  std::vector<ObjectId>(7), &node_id1));
 
   Entry entry11 = Entry{"key11", RandomId(), KeyPriority::EAGER};
   Entry entry22 = Entry{"key22", RandomId(), KeyPriority::EAGER};
   Entry entry4bis = Entry{entry4.key, RandomId(), entry4.priority};
   Entry entry5bis = Entry{entry5.key, entry5.object_id, KeyPriority::EAGER};
+  Entry entry6bis = Entry{"key6b", RandomId(), KeyPriority::LAZY};
   ObjectId node_id2;
-  EXPECT_EQ(Status::OK,
-            TreeNode::FromEntries(&fake_storage_,
-                                  std::vector<Entry>{entry1, entry11, entry22,
-                                                     entry4bis, entry5bis},
-                                  std::vector<ObjectId>(6), &node_id2));
+  EXPECT_EQ(Status::OK, TreeNode::FromEntries(
+                            &fake_storage_,
+                            std::vector<Entry>{entry1, entry11, entry22,
+                                               entry4bis, entry5bis, entry6bis},
+                            std::vector<ObjectId>(7), &node_id2));
 
   std::unique_ptr<const TreeNode> left;
   EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, node_id1, &left));
@@ -116,22 +118,22 @@ TEST_F(DiffIteratorTest, IterateOneNode) {
 
   it.Next();
   EXPECT_TRUE(it.Valid());
-  EXPECT_EQ(entry4, it->entry);
-  EXPECT_TRUE(it->deleted);
-
-  it.Next();
-  EXPECT_TRUE(it.Valid());
   EXPECT_EQ(entry4bis, it->entry);
   EXPECT_FALSE(it->deleted);
 
   it.Next();
   EXPECT_TRUE(it.Valid());
-  EXPECT_EQ(entry5, it->entry);
+  EXPECT_EQ(entry5bis, it->entry);
+  EXPECT_FALSE(it->deleted);
+
+  it.Next();
+  EXPECT_TRUE(it.Valid());
+  EXPECT_EQ(entry6, it->entry);
   EXPECT_TRUE(it->deleted);
 
   it.Next();
   EXPECT_TRUE(it.Valid());
-  EXPECT_EQ(entry5bis, it->entry);
+  EXPECT_EQ(entry6bis, it->entry);
   EXPECT_FALSE(it->deleted);
 
   it.Next();
