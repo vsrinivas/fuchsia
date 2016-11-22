@@ -65,13 +65,13 @@ static mx_status_t txn_unmount(mx_handle_t srv) {
     memset(&msg, 0, MXRIO_HDR_SZ);
     msg.op = MXRIO_IOCTL;
     msg.arg2.op = IOCTL_DEVMGR_UNMOUNT_FS;
-    if ((r = mxrio_txn_handoff(srv, rchannel0, &msg)) < 0) {
+    if ((r = mxrio_txn_handoff(srv, rchannel1, &msg)) < 0) {
         mx_handle_close(rchannel0);
         mx_handle_close(rchannel1);
         return r;
     }
-    r = mx_handle_wait_one(rchannel1, MX_SIGNAL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
-    mx_handle_close(rchannel1);
+    r = mx_handle_wait_one(rchannel0, MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
+    mx_handle_close(rchannel0);
     return r;
 }
 
