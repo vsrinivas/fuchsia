@@ -4,14 +4,6 @@
 
 #pragma once
 
-namespace maxwell {
-namespace suggestion {
-
-class SuggestionChannel;
-
-}  // namespace suggestion
-}  // namespace maxwell
-
 #include "apps/maxwell/src/bound_set.h"
 #include "apps/maxwell/src/suggestion_engine/agent_suggestion_record.h"
 
