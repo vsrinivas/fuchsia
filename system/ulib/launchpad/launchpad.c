@@ -49,6 +49,8 @@ struct launchpad {
 
 // We always install the process handle as the first in the message.
 #define lp_proc(lp) ((lp)->handles[0])
+// We always install the vmar handle as the second in the message.
+#define lp_vmar(lp) ((lp)->handles[1])
 
 static void close_handles(mx_handle_t* handles, size_t count) {
     for (size_t i = 0; i < count; ++i) {
@@ -69,6 +71,7 @@ void launchpad_destroy(launchpad_t* lp) {
 }
 
 mx_status_t launchpad_create_with_process(mx_handle_t proc,
+                                          mx_handle_t vmar,
                                           launchpad_t** result) {
     launchpad_t* lp = calloc(1, sizeof(*lp));
     if (lp == NULL)
@@ -77,12 +80,17 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
     lp->stack_size = MAGENTA_DEFAULT_STACK_SIZE;
 
     mx_status_t status = launchpad_add_handle(lp, proc, MX_HND_TYPE_PROC_SELF);
-    if (status == NO_ERROR) {
-        *result = lp;
-    } else {
-        launchpad_destroy(lp);
-    }
+    if (status != NO_ERROR)
+        goto cleanup;
 
+    status = launchpad_add_handle(lp, vmar, MX_HND_TYPE_VMAR_ROOT);
+    if (status != NO_ERROR)
+        goto cleanup;
+
+    *result = lp;
+    return NO_ERROR;
+cleanup:
+    launchpad_destroy(lp);
     return status;
 }
 
@@ -98,10 +106,7 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t tra
     if (status < 0)
         goto cleanup;
 
-    // TODO(teisenbe): Hold on to vmar instead of just closing it
-    mx_handle_close(vmar);
-
-    status = launchpad_create_with_process(proc, &lp);
+    status = launchpad_create_with_process(proc, vmar, &lp);
     if (status != NO_ERROR)
         goto cleanup;
 
@@ -117,6 +122,8 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t tra
 cleanup:
     if (transfered_job != MX_HANDLE_INVALID)
         mx_handle_close(transfered_job);
+    if (vmar != MX_HANDLE_INVALID)
+        mx_handle_close(vmar);
     if (proc != MX_HANDLE_INVALID)
         mx_handle_close(proc);
     if (lp != NULL)
@@ -278,7 +285,7 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     elf_load_info_t* elf;
     mx_status_t status = elf_load_start(vmo, &elf);
     if (status == NO_ERROR)
-        status = elf_load_finish(lp_proc(lp), elf, vmo, &lp->base, &lp->entry);
+        status = elf_load_finish(lp_vmar(lp), elf, vmo, &lp->base, &lp->entry);
     if (status == NO_ERROR)
         check_elf_stack_size(lp, elf);
     elf_load_destroy(elf);
@@ -301,7 +308,7 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
     elf_load_info_t* elf;
     mx_status_t status = elf_load_start(vmo, &elf);
     if (status == NO_ERROR)
-        status = elf_load_finish(lp_proc(lp), elf, vmo, base, entry);
+        status = elf_load_finish(lp_vmar(lp), elf, vmo, base, entry);
     elf_load_destroy(elf);
 
     return status;
@@ -394,7 +401,7 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
     elf_load_info_t* elf;
     status = elf_load_start(interp_vmo, &elf);
     if (status == NO_ERROR) {
-        status = elf_load_finish(lp_proc(lp), elf, interp_vmo,
+        status = elf_load_finish(lp_vmar(lp), elf, interp_vmo,
                                  &lp->base, &lp->entry);
         elf_load_destroy(elf);
     }
@@ -424,7 +431,7 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
         status = elf_load_get_interp(elf, vmo, &interp, &interp_len);
         if (status == NO_ERROR) {
             if (interp == NULL) {
-                status = elf_load_finish(lp_proc(lp), elf, vmo,
+                status = elf_load_finish(lp_vmar(lp), elf, vmo,
                                          &lp->base, &lp->entry);
                 if (status == NO_ERROR) {
                     lp->loader_message = false;

@@ -33,28 +33,26 @@ static noreturn void do_shutdown(mx_handle_t log, mx_handle_t rroot) {
         __builtin_trap();
 }
 
-static void load_child_process(mx_handle_t log, mx_handle_t proc_self,
+static void load_child_process(mx_handle_t log, mx_handle_t vmar_self,
                                const struct options* o,
                                mx_handle_t bootfs_vmo, mx_handle_t vdso_vmo,
-                               mx_handle_t proc, mx_handle_t to_child,
-                               mx_vaddr_t* entry, mx_vaddr_t* vdso_base,
-                               size_t* stack_size) {
-    // TODO(teisenbe): elf_load_bootfs needs to take in vmar_self rather
-    // than proc_self.  Update this once we update the elf loader.
+                               mx_handle_t proc, mx_handle_t vmar,
+                               mx_handle_t to_child, mx_vaddr_t* entry,
+                               mx_vaddr_t* vdso_base, size_t* stack_size) {
 
     // Examine the bootfs image and find the requested file in it.
     struct bootfs bootfs;
-    bootfs_mount(proc_self, log, bootfs_vmo, &bootfs);
+    bootfs_mount(vmar_self, log, bootfs_vmo, &bootfs);
 
     // This will handle a PT_INTERP by doing a second lookup in bootfs.
-    *entry = elf_load_bootfs(log, proc_self, &bootfs, proc,
+    *entry = elf_load_bootfs(log, vmar_self, &bootfs, proc, vmar,
                              o->value[OPTION_FILENAME], to_child, stack_size);
 
     // All done with bootfs!
-    bootfs_unmount(proc_self, log, &bootfs);
+    bootfs_unmount(vmar_self, log, &bootfs);
 
     // Now load the vDSO into the child, so it has access to system calls.
-    *vdso_base = elf_load_vmo(log, proc_self, proc, vdso_vmo);
+    *vdso_base = elf_load_vmo(log, vmar_self, vmar, vdso_vmo);
 }
 
 // This is the main logic:
@@ -146,7 +144,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // Hang on to our own process handle.  If we closed it, our process
     // would be killed.  Exiting will clean it up.
-    const mx_handle_t proc_self = *proc_handle_loc;
+    __UNUSED const mx_handle_t proc_self = *proc_handle_loc;
     const mx_handle_t vmar_self = *vmar_root_handle_loc;
 
     // Hang on to the resource root handle.
@@ -181,8 +179,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     mx_vaddr_t entry, vdso_base;
     size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
-    load_child_process(log, proc_self, &o, bootfs_vmo, vdso_vmo, proc, to_child,
-                       &entry, &vdso_base, &stack_size);
+    load_child_process(log, vmar_self, &o, bootfs_vmo, vdso_vmo, proc, vmar,
+                       to_child, &entry, &vdso_base, &stack_size);
 
     // Allocate the stack for the child.
     stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;

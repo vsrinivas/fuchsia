@@ -43,11 +43,14 @@ int main(void) {
         return 1;
     }
 
+    // TODO(teisenbe): We need to actually route a vmar to here
+#if 0
+
     // Load up the launchpad with the injected program.  This works just
     // like normal program launching, but it goes into a process that
     // already exists (and has another program running in it!).
     launchpad_t* lp;
-    status = launchpad_create_with_process(proc, &lp);
+    status = launchpad_create_with_process(proc, vmar, &lp);
     if (status != NO_ERROR) {
         fprintf(stderr, "launchpad_create_with_process: %d\n", status);
         return 1;
@@ -95,4 +98,6 @@ int main(void) {
     launchpad_destroy(lp);
 
     return 0;
+#endif
+    return 1;
 }
