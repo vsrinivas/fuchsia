@@ -84,6 +84,14 @@ Status FakePageStorage::StartCommit(const CommitId& commit_id,
   return Status::OK;
 }
 
+Status FakePageStorage::AddCommitWatcher(CommitWatcher* watcher) {
+  return Status::OK;
+}
+
+Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
+  return Status::OK;
+}
+
 void FakePageStorage::AddObjectFromLocal(
     mx::datapipe_consumer data,
     int64_t size,

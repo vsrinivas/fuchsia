@@ -31,6 +31,8 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   Status StartCommit(const CommitId& commit_id,
                      JournalType journal_type,
                      std::unique_ptr<Journal>* journal) override;
+  Status AddCommitWatcher(CommitWatcher* watcher) override;
+  Status RemoveCommitWatcher(CommitWatcher* watcher) override;
   void AddObjectFromLocal(
       mx::datapipe_consumer data,
       int64_t size,
