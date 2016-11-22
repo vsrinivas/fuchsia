@@ -8,8 +8,8 @@ shared_ldflags = "-Wl,--no-undefined"
 
 shared_library("msd-intel-gen") {
   deps = [
-    "$magma_build_root/src/main",
-    "src",
+    "$magma_build_root/src/main($magma_shared_toolchain)",
+    "src($magma_shared_toolchain)",
   ]
 
   ldflags = [ "$shared_ldflags" ]
@@ -21,8 +21,8 @@ shared_library("test") {
   output_name = "msd-intel-gen-test"
 
   deps = [
-    "$magma_build_root/src/main:test_driver",
-    "src",
+    "$magma_build_root/src/main:test_driver($magma_shared_toolchain)",
+    "src($magma_shared_toolchain)",
   ]
 
   ldflags = [ "$shared_ldflags" ]
