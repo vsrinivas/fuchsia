@@ -88,3 +88,15 @@ source_set("thread") {
     "magenta:thread",
   ]
 }
+
+source_set("event") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_event.h",
+  ]
+
+  deps = [
+    "magenta:event",
+  ]
+}
