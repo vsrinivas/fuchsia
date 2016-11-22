@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -207,78 +209,68 @@ ssize_t net_write(int sockfd, const void* buf, size_t count) {
   return lwip_write(sockfd, buf, count);
 }
 
-int net_getsockopt(int sockfd, int level, int optname, void* optval,
-                   socklen_t* optlen) {
-  int lwip_level;
-  int lwip_optname;
+static void convert_optname_to_lwip(int level, int optname, int* lwip_level,
+                                   int* lwip_optname) {
   switch (level) {
     case SOL_SOCKET:
-      lwip_level = 0xfff;
+      *lwip_level = 0xfff;
+      switch (optname) {
+      case SO_ERROR:
+        *lwip_optname = 0x1007;
+        break;
+      case SO_REUSEADDR:
+        *lwip_optname = 0x0004;
+        break;
+      case SO_KEEPALIVE:
+        *lwip_optname = 0x0008;
+        break;
+      case SO_BROADCAST:
+        *lwip_optname = 0x0020;
+        break;
+      }
       break;
-    default:
-      error("net_getsockopt: unknown level %d\n", level);
-      errno = EINVAL;
-      return -1;
+    case SOL_TCP:
+      *lwip_level = level;
+      switch (optname) {
+      case TCP_NODELAY:
+        *lwip_optname = 1;
+        break;
+      }
+      break;
   }
+}
+
+int net_getsockopt(int sockfd, int level, int optname, void* optval,
+                   socklen_t* optlen) {
   debug_port("net_getsockopt: level=%d optname=%d *optlen=%d\n", level, optname,
              *optlen);
-  // lwip_getsockopt() doesn't adjust optlen so we have to do it here
-  switch (optname) {
-    case SO_ERROR:
-      lwip_optname = 0x1007;
-      *optlen = sizeof(int);
-      break;
-    case SO_REUSEADDR:
-      lwip_optname = 0x0004;
-      *optlen = sizeof(int);
-      break;
-    case SO_KEEPALIVE:
-      lwip_optname = 0x0008;
-      *optlen = sizeof(int);
-      break;
-    case SO_BROADCAST:
-      lwip_optname = 0x0020;
-      *optlen = sizeof(int);
-      break;
-    default:
-      error("net_getsockopt: unknown optname %d\n", optname);
-      errno = EINVAL;
-      return -1;
+  int lwip_level = -1;
+  int lwip_optname = -1;
+  convert_optname_to_lwip(level, optname, &lwip_level, &lwip_optname);
+  if (lwip_level < 0 || lwip_optname < 0) {
+    error("net_getsockopt: unknown level %d, optname %d\n", level, optname);
+    errno = EINVAL;
+    return -1;
   }
+
+  // lwip_getsockopt() doesn't adjust optlen so we have to do it here
+  *optlen = sizeof(int);
+
   return lwip_getsockopt(sockfd, lwip_level, lwip_optname, optval, optlen);
 }
 
 int net_setsockopt(int sockfd, int level, int optname, const void* optval,
                    socklen_t optlen) {
-  int lwip_level;
-  int lwip_optname;
-  switch (level) {
-    case SOL_SOCKET:
-      lwip_level = 0xfff;
-      break;
-    default:
-      error("net_setsockopt: unknown level %d\n", level);
-      errno = EINVAL;
-      return -1;
+  debug_port("net_setsockopt: level=%d optname=%d\n", level, optname);
+  int lwip_level = -1;
+  int lwip_optname = -1;
+  convert_optname_to_lwip(level, optname, &lwip_level, &lwip_optname);
+  if (lwip_level < 0 || lwip_optname < 0) {
+    error("net_setsockopt: unknown level %d, optname %d\n", level, optname);
+    errno = EINVAL;
+    return -1;
   }
-  switch (optname) {
-    case SO_ERROR:
-      lwip_optname = 0x1007;
-      break;
-    case SO_REUSEADDR:
-      lwip_optname = 0x0004;
-      break;
-    case SO_KEEPALIVE:
-      lwip_optname = 0x0008;
-      break;
-    case SO_BROADCAST:
-      lwip_optname = 0x0020;
-      break;
-    default:
-      error("net_setsockopt: unknown optname %d\n", optname);
-      errno = EINVAL;
-      return -1;
-  }
+
   return lwip_setsockopt(sockfd, lwip_level, lwip_optname, optval, optlen);
 }
 
