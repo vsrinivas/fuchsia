@@ -4,14 +4,43 @@
 
 #include "apps/tracing/lib/trace/internal/trace_engine.h"
 
+#include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
+
+#include <tuple>
+#include <unordered_map>
 #include <utility>
 
 #include "lib/ftl/logging.h"
-#include "magenta/syscalls.h"
+#include "lib/mtl/handles/object_info.h"
 
 namespace tracing {
 namespace internal {
 namespace {
+
+std::atomic<uint32_t> g_next_generation{1u};
+mx_koid_t g_process_koid;
+
+using StringSpec = uint32_t;
+constexpr StringSpec kStringIndexMask = 0x7fff;
+constexpr StringSpec kIndexedFlag = 0x10000;
+constexpr StringSpec kInlinedFlag = 0x20000;
+constexpr StringSpec kCategoryEnabledFlag = 0x40000;
+constexpr StringSpec kCategoryDisabledFlag = 0x80000;
+
+struct LocalState {
+  // String table state.
+  // Note: Strings are hashed by pointer not by content.
+  uint32_t string_generation = 0u;
+  std::unordered_map<const char*, StringSpec> string_table;
+
+  // Thread table state.
+  uint32_t thread_generation = 0u;
+  mx_koid_t thread_koid = MX_KOID_INVALID;
+  TraceEngine::ThreadRef thread_ref =
+      TraceEngine::ThreadRef::MakeInlined(MX_KOID_INVALID, MX_KOID_INVALID);
+};
+thread_local LocalState g_local_state;
 
 inline uint64_t GetNanosecondTimestamp() {
   return mx_time_get(MX_CLOCK_MONOTONIC);
@@ -26,11 +55,19 @@ inline uint64_t MakeRecordHeader(RecordType type, size_t size) {
 
 TraceEngine::TraceEngine(ftl::RefPtr<mtl::SharedVmo> shared_vmo,
                          std::vector<std::string> enabled_categories)
-    : shared_vmo_(std::move(shared_vmo)),
-      string_table_(std::move(enabled_categories)),
+    : generation_(g_next_generation.fetch_add(1u, std::memory_order_relaxed)),
+      shared_vmo_(std::move(shared_vmo)),
       buffer_start_(reinterpret_cast<uintptr_t>(shared_vmo_->Map())),
       buffer_end_(buffer_start_ + shared_vmo_->vmo_size()),
-      buffer_current_(buffer_start_) {}
+      buffer_current_(buffer_start_),
+      enabled_categories_(std::move(enabled_categories)) {
+  for (const auto& category : enabled_categories_) {
+    enabled_category_set_.emplace(category);
+  }
+
+  if (!g_process_koid)
+    g_process_koid = mtl::GetCurrentProcessKoid();
+}
 
 TraceEngine::~TraceEngine() {}
 
@@ -47,21 +84,88 @@ std::unique_ptr<TraceEngine> TraceEngine::Create(
       new TraceEngine(std::move(shared_vmo), std::move(enabled_categories)));
 }
 
-TraceEngine::StringRef TraceEngine::RegisterString(const char* string) {
-  return string_table_.RegisterString(this, string);
-}
-
 bool TraceEngine::IsCategoryEnabled(const char* category) const {
-  return string_table_.IsCategoryEnabled(category);
+  return enabled_category_set_.empty() ||
+         enabled_category_set_.count(ftl::StringView(category)) > 0;
 }
 
-bool TraceEngine::PrepareCategory(const char* category,
-                                  StringRef* out_category_ref) {
-  return string_table_.PrepareCategory(this, category, out_category_ref);
+TraceEngine::StringRef TraceEngine::RegisterString(const char* string,
+                                                   bool check_category) {
+  LocalState& state = g_local_state;
+
+  if (state.string_generation < generation_) {
+    state.string_generation = generation_;
+    state.string_table.clear();
+  }
+
+  if (state.string_generation == generation_) {
+    auto it = state.string_table.find(string);
+    if (it == state.string_table.end()) {
+      std::tie(it, std::ignore) = state.string_table.emplace(string, 0u);
+    }
+
+    if (check_category && (!(it->second & kCategoryEnabledFlag))) {
+      if (it->second & kCategoryDisabledFlag) {
+        return StringRef::MakeEmpty();
+      }
+      if (!IsCategoryEnabled(string)) {
+        it->second |= kCategoryDisabledFlag;
+        return StringRef::MakeEmpty();
+      }
+      it->second |= kCategoryEnabledFlag;
+    }
+
+    if (it->second & kIndexedFlag) {
+      return StringRef::MakeIndexed(it->second & kStringIndexMask);
+    }
+
+    if (!(it->second & kInlinedFlag)) {
+      StringIndex string_index =
+          next_string_index_.fetch_add(1u, std::memory_order_relaxed);
+      if (string_index <= StringRefFields::kMaxIndex) {
+        WriteStringRecord(string_index, string);
+        it->second |= string_index | kIndexedFlag;
+        return StringRef::MakeIndexed(string_index);
+      }
+      next_string_index_.store(StringRefFields::kMaxIndex + 1u,
+                               std::memory_order_relaxed);
+      it->second |= kInlinedFlag;
+    }
+  } else if (check_category && !IsCategoryEnabled(string)) {
+    return StringRef::MakeEmpty();
+  }
+
+  return StringRef::MakeInlined(string, strlen(string));
 }
 
 TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
-  return thread_table_.RegisterCurrentThread(this);
+  LocalState& state = g_local_state;
+
+  if (state.thread_generation == generation_) {
+    return state.thread_ref;
+  }
+
+  if (state.thread_generation < generation_) {
+    state.thread_generation = generation_;
+    if (state.thread_koid == MX_KOID_INVALID) {
+      state.thread_koid = mtl::GetCurrentThreadKoid();
+    }
+
+    ThreadIndex thread_index =
+        next_thread_index_.fetch_add(1u, std::memory_order_relaxed);
+    if (thread_index <= ThreadRefFields::kMaxIndex) {
+      WriteThreadRecord(thread_index, g_process_koid, state.thread_koid);
+      state.thread_ref = ThreadRef::MakeIndexed(thread_index);
+    } else {
+      next_thread_index_.store(ThreadRefFields::kMaxIndex + 1,
+                               std::memory_order_relaxed);
+      state.thread_ref =
+          ThreadRef::MakeInlined(g_process_koid, state.thread_koid);
+    }
+    return state.thread_ref;
+  }
+
+  return ThreadRef::MakeInlined(g_process_koid, state.thread_koid);
 }
 
 void TraceEngine::WriteInitializationRecord(uint64_t ticks_per_second) {
@@ -113,8 +217,8 @@ TraceEngine::Payload TraceEngine::WriteEventRecord(
     const char* name,
     size_t argument_count,
     size_t payload_size) {
-  const StringRef name_ref = string_table_.RegisterString(this, name);
-  const ThreadRef thread_ref = thread_table_.RegisterCurrentThread(this);
+  const StringRef name_ref = RegisterString(name, false);
+  const ThreadRef thread_ref = RegisterCurrentThread();
   const size_t record_size = sizeof(RecordHeader) + WordsToBytes(1) +
                              thread_ref.Size() + category_ref.Size() +
                              name_ref.Size() + payload_size;

@@ -54,7 +54,7 @@ TraceWriter TraceWriter::Prepare() {
 
 StringRef TraceWriter::RegisterString(const char* string) {
   FTL_DCHECK(engine_);
-  return engine_->RegisterString(string);
+  return engine_->RegisterString(string, false);
 }
 
 ThreadRef TraceWriter::RegisterCurrentThread() {
@@ -82,8 +82,8 @@ void TraceWriter::WriteThreadRecord(ThreadIndex index,
 CategorizedTraceWriter CategorizedTraceWriter::Prepare(const char* category) {
   TraceEngine* engine = g_engine.get();
   if (engine) {
-    StringRef category_ref;
-    if (engine->PrepareCategory(category, &category_ref))
+    StringRef category_ref = engine->RegisterString(category, true);
+    if (!category_ref.is_empty())
       return CategorizedTraceWriter(engine, category_ref);
   }
   return CategorizedTraceWriter(nullptr, StringRef::MakeEmpty());

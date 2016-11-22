@@ -89,9 +89,6 @@ class Payload {
 // string table index.
 class StringRef {
  public:
-  // Constructs an uninitialized instance.
-  StringRef() {}
-
   static StringRef MakeEmpty() {
     return StringRef(::tracing::internal::StringRefFields::kEmpty, nullptr);
   }
@@ -158,9 +155,6 @@ class StringRef {
 // thread table index.
 class ThreadRef {
  public:
-  // Constructs an uninitialized instance.
-  ThreadRef() {}
-
   static ThreadRef MakeInlined(uint64_t process_koid, uint64_t thread_koid) {
     return ThreadRef(::tracing::internal::ThreadRefFields::kInline,
                      process_koid, thread_koid);

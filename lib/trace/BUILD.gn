@@ -5,11 +5,6 @@
 source_set("trace") {
   sources = [
     "event.h",
-    "internal/lookup_table.h",
-    "internal/string_table.cc",
-    "internal/string_table.h",
-    "internal/thread_table.cc",
-    "internal/thread_table.h",
     "internal/trace_engine.cc",
     "internal/trace_engine.h",
     "writer.h",
