@@ -3,26 +3,25 @@
         "boringssl"
     ],
     "labels": [
+        "//magma:magma",
         "//magma:magma_service_driver",
         "//magma:magma_service_driver_test",
         "//magma:magma_tests",
-        "//magma:mesa_tests"
+        "//magma:mesa_tests",
+        "//magma/tests:autorun",
+        "//third_party/mesa:magma_vulkan"
     ],
     "binaries": [
         {
-            "binary": "x64-shared/libmsd-intel-gen.so",
-            "bootfs_path": "lib/driver/msd-intel-gen.so"
-        },
-        {
-            "binary": "x64-shared/libmsd-intel-gen-test.so",
+            "binary": "libmsd-intel-gen-test.so",
             "bootfs_path": "lib/driver/msd-intel-gen-test.so"
         },
         {
-            "binary": "x64-shared/libmagma.so",
+            "binary": "libmagma.so",
             "bootfs_path": "lib/libmagma.so"
         },
         {
-            "binary": "x64-shared/libvulkan.so",
+            "binary": "libvulkan.so",
             "bootfs_path": "lib/libvulkan.so"
         },
         {
@@ -52,6 +51,10 @@
         {
             "binary": "state_pool_no_free",
             "bootfs_path": "test/state_pool_no_free"
+        },
+        {
+            "binary": "autorun",
+            "bootfs_path": "autorun"
         }
     ]
 }
