@@ -22,6 +22,7 @@ else
   export FUCHSIA_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fi
 export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
+export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
 export MAGENTA_DIR="${FUCHSIA_DIR}/magenta"
 
 ### envhelp: print usage for command or list of commands
@@ -114,8 +115,9 @@ function mset() {
       return 1
   esac
 
-  export MAGENTA_BUILD_DIR="${MAGENTA_DIR}/build-${MAGENTA_PROJECT}"
-  export MAGENTA_TOOLS_DIR="${MAGENTA_DIR}/build-${MAGENTA_PROJECT}/tools"
+  export MAGENTA_BUILD_ROOT="${FUCHSIA_OUT_DIR}/build-magenta"
+  export MAGENTA_BUILD_DIR="${MAGENTA_BUILD_ROOT}/build-${MAGENTA_PROJECT}"
+  export MAGENTA_TOOLS_DIR="${MAGENTA_BUILD_ROOT}/tools"
   export MAGENTA_BUILD_REV_CACHE="${MAGENTA_BUILD_DIR}/build.rev";
   export MAGENTA_SETTINGS="${settings}"
   export ENVPROMPT_INFO="${MAGENTA_ARCH}"
@@ -154,7 +156,8 @@ function mbuild() {
   mcheck || return 1
 
   echo "Building magenta..." \
-    && "${MAGENTA_DIR}/scripts/make-parallel" -C "${MAGENTA_DIR}" "${MAGENTA_PROJECT}" "$@" \
+    && "${MAGENTA_DIR}/scripts/make-parallel" -C "${MAGENTA_DIR}" \
+         "BUILDROOT=${MAGENTA_BUILD_ROOT}" "${MAGENTA_PROJECT}" "$@" \
     && (mrev > "${MAGENTA_BUILD_REV_CACHE}")
 }
 
@@ -208,7 +211,7 @@ END
 function mrun() {
   mcheck || return 1
 
-  "${MAGENTA_DIR}/scripts/run-magenta" -a "${MAGENTA_ARCH}" "$@"
+  "${MAGENTA_DIR}/scripts/run-magenta" -o "${MAGENTA_BUILD_DIR}" -a "${MAGENTA_ARCH}" "$@"
 }
 
 ### msymbolize: symbolizes stack traces
@@ -346,7 +349,6 @@ function fset() {
     shift
   done
 
-  export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
   export FUCHSIA_BUILD_DIR="${FUCHSIA_OUT_DIR}/${FUCHSIA_VARIANT}-${FUCHSIA_GEN_TARGET}"
   export FUCHSIA_BUILD_NINJA="${FUCHSIA_BUILD_DIR}/build.ninja"
   export FUCHSIA_GEN_ARGS_CACHE="${FUCHSIA_BUILD_DIR}/build.gen-args"
@@ -466,8 +468,7 @@ END
 function fbuild-sysroot() {
   fcheck || return 1
 
-  mbuild-if-changed \
-    && echo "Building sysroot..." \
+  echo "Building sysroot..." \
     && (fgo && "./scripts/build-sysroot.sh" -t "${FUCHSIA_SYSROOT_TARGET}" "$@") \
     && (mrev > "${FUCHSIA_SYSROOT_REV_CACHE}")
 }
