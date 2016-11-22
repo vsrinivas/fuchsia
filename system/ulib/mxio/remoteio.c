@@ -874,3 +874,15 @@ mx_status_t mxio_socket_posix_ioctl(mxio_t* io, int req, void* arg) {
         return ERR_NOT_SUPPORTED;
     }
 }
+
+mx_status_t mxio_socket_shutdown(mxio_t* io, int how) {
+    mxrio_t* rio = (mxrio_t*)io;
+    if (how == SHUT_RD || how == SHUT_RDWR) {
+        // TODO: turn on a flag to prevent all read attempts
+    }
+    if (how == SHUT_WR || how == SHUT_RDWR) {
+        // TODO: turn on a flag to prevent all write attempts
+        mx_object_signal_peer(rio->h2, 0u, MXSIO_SIGNAL_HALFCLOSED);
+    }
+    return NO_ERROR;
+}

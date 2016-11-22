@@ -140,6 +140,7 @@ static inline void mxio_release(mxio_t* io) {
 mxio_t* mxio_waitable_create(mx_handle_t h, mx_signals_t signals_in, mx_signals_t signals_out, bool shared_handle);
 
 mx_status_t mxio_socket_posix_ioctl(mxio_t* io, int req, void* arg);
+mx_status_t mxio_socket_shutdown(mxio_t* io, int how);
 
 // unsupported / do-nothing hooks shared by implementations
 ssize_t mxio_default_read(mxio_t* io, void* _data, size_t len);
