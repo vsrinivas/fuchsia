@@ -460,7 +460,21 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
       cloud_provider::Commit("id1", "content1", {}), "42"));
   cloud_provider_.records_to_return.push_back(cloud_provider::Record(
       cloud_provider::Commit("id2", "content2", {}), "43"));
+
+  int on_backlog_downloaded_calls = 0;
+  page_sync_.SetOnBacklogDownloaded(
+      [&on_backlog_downloaded_calls] { on_backlog_downloaded_calls++; });
   page_sync_.Start();
+
+  // Stop the loop after delivering the first commit and verify that the backlog
+  // completion callback is not called yet.
+  message_loop_.SetAfterTaskCallback([this] {
+    if (storage_.received_commits.size() == 1u) {
+      message_loop_.QuitNow();
+    }
+  });
+  RunLoopWithTimeout();
+  EXPECT_EQ(0, on_backlog_downloaded_calls);
 
   message_loop_.SetAfterTaskCallback([this] {
     if (storage_.received_commits.size() == 2u) {
@@ -473,6 +487,24 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
   EXPECT_EQ("43", storage_.sync_metadata);
+  EXPECT_EQ(1, on_backlog_downloaded_calls);
+}
+
+// Verifies that callbacks are correctly run after downloading an empty backlog
+// of remote commits.
+TEST_F(PageSyncImplTest, DownloadEmptyBacklog) {
+  int on_backlog_downloaded_calls = 0;
+  int on_idle_calls = 0;
+  page_sync_.SetOnBacklogDownloaded(
+      [&on_backlog_downloaded_calls] { on_backlog_downloaded_calls++; });
+  page_sync_.SetOnIdle([this, &on_idle_calls] {
+    on_idle_calls++;
+    message_loop_.PostQuitTask();
+  });
+  page_sync_.Start();
+  RunLoopWithTimeout();
+  EXPECT_EQ(1, on_backlog_downloaded_calls);
+  EXPECT_EQ(1, on_idle_calls);
 }
 
 // Verifies that commit notifications about new commits in cloud provider are

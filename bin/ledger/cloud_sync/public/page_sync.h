@@ -27,13 +27,22 @@ class PageSync {
   virtual void Start() = 0;
 
   // Sets a callback that will be called after Start() every time when PageSync
-  // becomes idle, that is: finished uploading alll unsynced local artifacts to
-  // the cloud and not downloading any remote artifacts.
+  // becomes idle, that is: finished uploading all unsynced local artifacts to
+  // the cloud and not downloading any remote artifacts. Can be set at most once
+  // and only before calling Start().
   virtual void SetOnIdle(ftl::Closure on_idle_callback) = 0;
 
   // Returns true iff PageSync is idle, that is with no pending upload or
   // download work.
   virtual bool IsIdle() = 0;
+
+  // Sets a callback that will be called at most once after Start(), when all
+  // remote commits added to the cloud between the last sync and starting the
+  // current sync are added to storage. This can be used by the client to delay
+  // exposing the local page until it catches up with the cloud. Can be set at
+  // most once and only before calling Start().
+  virtual void SetOnBacklogDownloaded(
+      ftl::Closure on_backlog_downloaded_callback) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageSync);

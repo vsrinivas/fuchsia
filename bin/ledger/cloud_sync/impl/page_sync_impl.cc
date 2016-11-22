@@ -69,12 +69,20 @@ void PageSyncImpl::Start() {
 
 void PageSyncImpl::SetOnIdle(ftl::Closure on_idle_callback) {
   FTL_DCHECK(!on_idle_callback_);
+  FTL_DCHECK(!started_);
   on_idle_callback_ = std::move(on_idle_callback);
 }
 
 bool PageSyncImpl::IsIdle() {
-  return commit_uploads_.empty() && download_list_retrieved &&
+  return commit_uploads_.empty() && download_list_retrieved_ &&
          commit_downloads_.empty();
+}
+
+void PageSyncImpl::SetOnBacklogDownloaded(
+    ftl::Closure on_backlog_downloaded_callback) {
+  FTL_DCHECK(!on_backlog_downloaded_callback_);
+  FTL_DCHECK(!started_);
+  on_backlog_downloaded_callback_ = on_backlog_downloaded_callback;
 }
 
 void PageSyncImpl::OnNewCommit(const storage::Commit& commit,
@@ -112,7 +120,7 @@ void PageSyncImpl::GetObject(
 void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit commit,
                                   std::string timestamp) {
   EnqueueDownload(
-      cloud_provider::Record(std::move(commit), std::move(timestamp)));
+      cloud_provider::Record(std::move(commit), std::move(timestamp)), nullptr);
 }
 
 void PageSyncImpl::OnError() {}
@@ -146,10 +154,21 @@ void PageSyncImpl::TryStartDownload() {
           return;
         }
         backoff_->Reset();
-        for (auto& record : records) {
-          EnqueueDownload(std::move(record));
+
+        if (records.empty()) {
+          // If there is no commits to add, announce that we're done.
+          BacklogDownloaded();
+        } else {
+          // If not, fire the backlog download callback when the last of the
+          // initial downloads completes.
+          for (size_t i = 0; i < records.size() - 1; i++) {
+            EnqueueDownload(std::move(records[i]), nullptr);
+          }
+          EnqueueDownload(std::move(records.back()),
+                          [this] { BacklogDownloaded(); });
         }
-        download_list_retrieved = true;
+
+        download_list_retrieved_ = true;
         CheckIdle();
 
         // Register a cloud watcher for the new commits. This currently mixes
@@ -160,14 +179,17 @@ void PageSyncImpl::TryStartDownload() {
       });
 }
 
-void PageSyncImpl::EnqueueDownload(cloud_provider::Record record) {
+void PageSyncImpl::EnqueueDownload(cloud_provider::Record record,
+                                   ftl::Closure on_done) {
   // If there are no commits currently being downloaded, start the download
   // after enqueing this one.
   const bool start_after_adding = commit_downloads_.empty();
 
   commit_downloads_.emplace(
-      storage_, std::move(record),
-      [this] {
+      storage_, std::move(record), [ this, on_done = std::move(on_done) ] {
+        if (on_done) {
+          on_done();
+        }
         commit_downloads_.pop();
         if (!commit_downloads_.empty()) {
           commit_downloads_.front().Start();
@@ -231,6 +253,12 @@ void PageSyncImpl::HandleError(const char error_description[]) {
 void PageSyncImpl::CheckIdle() {
   if (on_idle_callback_ && IsIdle()) {
     on_idle_callback_();
+  }
+}
+
+void PageSyncImpl::BacklogDownloaded() {
+  if (on_backlog_downloaded_callback_) {
+    on_backlog_downloaded_callback_();
   }
 }
 

@@ -68,6 +68,9 @@ class PageSyncImpl : public PageSync,
 
   bool IsIdle() override;
 
+  void SetOnBacklogDownloaded(
+      ftl::Closure on_backlog_downloaded_callback) override;
+
   // storage::CommitWatcher:
   void OnNewCommit(const storage::Commit& commit,
                    storage::ChangeSource source) override;
@@ -88,13 +91,15 @@ class PageSyncImpl : public PageSync,
  private:
   void TryStartDownload();
 
-  void EnqueueDownload(cloud_provider::Record record);
+  void EnqueueDownload(cloud_provider::Record record, ftl::Closure on_done);
 
   void EnqueueUpload(std::unique_ptr<const storage::Commit> commit);
 
   void HandleError(const char error_description[]);
 
   void CheckIdle();
+
+  void BacklogDownloaded();
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
@@ -103,6 +108,7 @@ class PageSyncImpl : public PageSync,
   const ftl::Closure error_callback_;
 
   ftl::Closure on_idle_callback_;
+  ftl::Closure on_backlog_downloaded_callback_;
   // Ensures that each instance is started only once.
   bool started_ = false;
   // Track which watchers are set, so that we know which to unset on hard error.
@@ -114,7 +120,7 @@ class PageSyncImpl : public PageSync,
   // Set to true when the backlog of commits to retrieve is downloaded. This
   // ensures that sync is not reported as idle until the commits to be
   // downloaded are retrieved.
-  bool download_list_retrieved = false;
+  bool download_list_retrieved_ = false;
 
   // A queue of pending commit uploads.
   std::queue<CommitUpload> commit_uploads_;
