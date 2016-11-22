@@ -11,6 +11,7 @@
 #include "apps/ledger/src/storage/impl/btree/entry_change_iterator.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/types.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -38,7 +39,7 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
   std::set<ObjectId> object_requests;
 };
 
-class BTreeUtilsTest : public ::testing::Test {
+class BTreeUtilsTest : public ::test::TestWithMessageLoop {
  public:
   BTreeUtilsTest() : fake_storage_("page_id") {}
 
@@ -48,16 +49,6 @@ class BTreeUtilsTest : public ::testing::Test {
   void SetUp() override {
     ::testing::Test::SetUp();
     std::srand(0);
-  }
-
-  void RunLoopWithTimeout() {
-    message_loop_.task_runner()->PostDelayedTask(
-        [this] {
-          message_loop_.PostQuitTask();
-          FAIL();
-        },
-        ftl::TimeDelta::FromSeconds(1));
-    message_loop_.Run();
   }
 
   std::vector<EntryChange> CreateEntryChanges(int size) {
@@ -98,7 +89,6 @@ class BTreeUtilsTest : public ::testing::Test {
 
  protected:
   TrackGetObjectFakePageStorage fake_storage_;
-  mtl::MessageLoop message_loop_;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(BTreeUtilsTest);

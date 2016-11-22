@@ -9,6 +9,7 @@
 
 #include <mx/datapipe.h>
 
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -131,7 +132,7 @@ class DestroyWatcher : public ftl::RefCountedThreadSafe<DestroyWatcher> {
   FRIEND_REF_COUNTED_THREAD_SAFE(DestroyWatcher);
 };
 
-class NetworkServiceImplTest : public ::testing::Test {
+class NetworkServiceImplTest : public test::TestWithMessageLoop {
  public:
   NetworkServiceImplTest()
       : network_service_([this] { return NewNetworkService(); }) {}
@@ -164,16 +165,6 @@ class NetworkServiceImplTest : public ::testing::Test {
     return request;
   }
 
-  void RunLoopWithTimeout() {
-    loop_.task_runner()->PostDelayedTask(
-        [this] {
-          loop_.PostQuitTask();
-          FAIL();
-        },
-        ftl::TimeDelta::FromSeconds(1));
-    loop_.Run();
-  }
-
  private:
   network::NetworkServicePtr NewNetworkService() {
     network::NetworkServicePtr result;
@@ -186,7 +177,6 @@ class NetworkServiceImplTest : public ::testing::Test {
   }
 
  protected:
-  mtl::MessageLoop loop_;
   NetworkServiceImpl network_service_;
   std::unique_ptr<FakeNetworkService> fake_network_service_;
   network::URLResponsePtr response_;
@@ -206,7 +196,7 @@ TEST_F(NetworkServiceImplTest, SimpleRequest) {
         &response
       ](network::URLResponsePtr received_response) {
         response = std::move(received_response);
-        loop_.PostQuitTask();
+        message_loop_.PostQuitTask();
       });
   EXPECT_FALSE(callback_destroyed);
   RunLoopWithTimeout();
@@ -228,14 +218,14 @@ TEST_F(NetworkServiceImplTest, CancelRequest) {
         this, &received_response,
         destroy_watcher = DestroyWatcher::Create([this, &callback_destroyed] {
           callback_destroyed = true;
-          loop_.PostQuitTask();
+          message_loop_.PostQuitTask();
         })
       ](network::URLResponsePtr) {
         received_response = true;
-        loop_.PostQuitTask();
+        message_loop_.PostQuitTask();
       });
 
-  loop_.task_runner()->PostTask([cancel] { cancel->Cancel(); });
+  message_loop_.task_runner()->PostTask([cancel] { cancel->Cancel(); });
   cancel = nullptr;
   RunLoopWithTimeout();
   EXPECT_FALSE(received_response);
@@ -256,7 +246,7 @@ TEST_F(NetworkServiceImplTest, NetworkDeleted) {
       },
       [this, &response](network::URLResponsePtr received_response) {
         response = std::move(received_response);
-        loop_.PostQuitTask();
+        message_loop_.PostQuitTask();
       });
   RunLoopWithTimeout();
 
@@ -280,7 +270,7 @@ TEST_F(NetworkServiceImplTest, Redirection) {
       },
       [this, &response](network::URLResponsePtr received_response) {
         response = std::move(received_response);
-        loop_.PostQuitTask();
+        message_loop_.PostQuitTask();
       });
   RunLoopWithTimeout();
 
@@ -301,7 +291,7 @@ TEST_F(NetworkServiceImplTest, CancelOnCallback) {
       [this, &request,
        &response](network::URLResponsePtr received_response) mutable {
         response = std::move(received_response);
-        loop_.PostQuitTask();
+        message_loop_.PostQuitTask();
         request->Cancel();
         request = nullptr;
       });

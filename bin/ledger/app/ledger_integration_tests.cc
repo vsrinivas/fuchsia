@@ -8,6 +8,7 @@
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
@@ -121,7 +122,7 @@ class LedgerRepositoryFactoryContainer {
   fidl::Binding<LedgerRepositoryFactory> factory_binding_;
 };
 
-class LedgerApplicationTest : public ::testing::Test {
+class LedgerApplicationTest : public test::TestWithMessageLoop {
  public:
   LedgerApplicationTest() {}
   ~LedgerApplicationTest() override {}
@@ -150,16 +151,6 @@ class LedgerApplicationTest : public ::testing::Test {
     ::testing::Test::TearDown();
   }
 
-  void RunLoopWithTimeout() {
-    loop_.task_runner()->PostDelayedTask(
-        [this] {
-          loop_.PostQuitTask();
-          FAIL();
-        },
-        ftl::TimeDelta::FromSeconds(1));
-    loop_.Run();
-  }
-
   LedgerPtr GetTestLedger();
   PagePtr GetTestPage();
   PagePtr GetPage(const fidl::Array<uint8_t>& page_id, Status expected_status);
@@ -172,7 +163,6 @@ class LedgerApplicationTest : public ::testing::Test {
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   std::thread thread_;
-  mtl::MessageLoop loop_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerApplicationTest);

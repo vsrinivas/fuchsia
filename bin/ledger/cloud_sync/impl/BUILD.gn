@@ -46,6 +46,7 @@ executable("unittests") {
     ":impl",
     "//apps/ledger/src/cloud_provider/test",
     "//apps/ledger/src/storage/test",
+    "//apps/ledger/src/test",
     "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//lib/mtl",

@@ -12,6 +12,7 @@
 #include "apps/ledger/src/glue/data_pipe/data_pipe.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/network/network_service_impl.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
@@ -22,7 +23,7 @@
 namespace firebase {
 namespace {
 
-class FirebaseImplTest : public ::testing::Test, public WatchClient {
+class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
  public:
   FirebaseImplTest()
       : fake_network_service_(message_loop_.task_runner()),
@@ -33,16 +34,6 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
   // Allows to step through the watch events one by one. Needs to be called each
   // time before starting the message loop.
   void QuitLoopOnNextEvent() { quit_loop_on_next_event_ = true; }
-
-  void RunLoopWithTimeout() {
-    message_loop_.task_runner()->PostDelayedTask(
-        [this] {
-          message_loop_.PostQuitTask();
-          FAIL();
-        },
-        ftl::TimeDelta::FromSeconds(1));
-    message_loop_.Run();
-  }
 
   // WatchClient:
   void OnPut(const std::string& path, const rapidjson::Value& value) override {
@@ -102,7 +93,6 @@ class FirebaseImplTest : public ::testing::Test, public WatchClient {
 
   unsigned int error_count_ = 0u;
 
-  mtl::MessageLoop message_loop_;
   ledger::FakeNetworkService fake_network_service_;
   FirebaseImpl firebase_;
 

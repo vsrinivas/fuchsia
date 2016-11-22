@@ -100,6 +100,7 @@ executable("unittests") {
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
+    "//apps/ledger/src/test",
     "//apps/ledger/src/test:main",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

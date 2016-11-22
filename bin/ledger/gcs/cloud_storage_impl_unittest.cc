@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "apps/ledger/src/network/fake_network_service.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/file.h"
@@ -16,8 +17,8 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/data_pipe/strings.h"
-#include "lib/mtl/vmo/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace gcs {
 namespace {
@@ -33,7 +34,7 @@ network::HttpHeaderPtr GetHeader(
   return nullptr;
 }
 
-class CloudStorageImplTest : public ::testing::Test {
+class CloudStorageImplTest : public test::TestWithMessageLoop {
  public:
   CloudStorageImplTest()
       : fake_network_service_(message_loop_.task_runner()),
@@ -41,16 +42,6 @@ class CloudStorageImplTest : public ::testing::Test {
   ~CloudStorageImplTest() override {}
 
  protected:
-  void RunLoopWithTimeout() {
-    message_loop_.task_runner()->PostDelayedTask(
-        [this] {
-          message_loop_.PostQuitTask();
-          FAIL();
-        },
-        ftl::TimeDelta::FromSeconds(1));
-    message_loop_.Run();
-  }
-
   void SetResponse(const std::string& body,
                    int64_t content_length,
                    uint32_t status_code) {
@@ -75,7 +66,6 @@ class CloudStorageImplTest : public ::testing::Test {
   }
 
   files::ScopedTempDir tmp_dir_;
-  mtl::MessageLoop message_loop_;
   ledger::FakeNetworkService fake_network_service_;
   CloudStorageImpl gcs_;
 

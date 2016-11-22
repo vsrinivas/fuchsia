@@ -41,6 +41,7 @@ executable("unittests") {
 
   deps = [
     ":network",
+    "//apps/ledger/src/test",
     "//apps/ledger/src/test:main",
     "//lib/mtl",
     "//lib/mtl/waiter",

@@ -14,6 +14,7 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
@@ -230,7 +231,7 @@ class TestBackoff : public backoff::Backoff {
   int* get_next_count_;
 };
 
-class PageSyncImplTest : public ::testing::Test {
+class PageSyncImplTest : public test::TestWithMessageLoop {
  public:
   PageSyncImplTest()
       : storage_(&message_loop_),
@@ -246,17 +247,6 @@ class PageSyncImplTest : public ::testing::Test {
   ~PageSyncImplTest() override {}
 
  protected:
-  void RunLoopWithTimeout() {
-    message_loop_.task_runner()->PostDelayedTask(
-        [this] {
-          message_loop_.PostQuitTask();
-          FAIL();
-        },
-        ftl::TimeDelta::FromSeconds(1));
-    message_loop_.Run();
-  }
-
-  mtl::MessageLoop message_loop_;
   TestPageStorage storage_;
   TestCloudProvider cloud_provider_;
   int backoff_get_next_calls_ = 0;

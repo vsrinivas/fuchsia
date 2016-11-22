@@ -14,6 +14,7 @@
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/constants.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
@@ -119,7 +120,7 @@ class ObjectData {
   const std::string object_id;
 };
 
-class PageStorageTest : public ::testing::Test {
+class PageStorageTest : public test::TestWithMessageLoop {
  public:
   PageStorageTest() {}
 
@@ -135,16 +136,6 @@ class PageStorageTest : public ::testing::Test {
   }
 
  protected:
-  void RunLoopWithTimeout() {
-    message_loop_.task_runner()->PostDelayedTask(
-        [this] {
-          message_loop_.PostQuitTask();
-          FAIL();
-        },
-        ftl::TimeDelta::FromSeconds(1));
-    message_loop_.Run();
-  }
-
   CommitId GetFirstHead() {
     std::vector<CommitId> ids;
     EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&ids));
@@ -222,7 +213,6 @@ class PageStorageTest : public ::testing::Test {
     message_loop_.Run();
   }
 
-  mtl::MessageLoop message_loop_;
   files::ScopedTempDir tmp_dir_;
 
  protected:
