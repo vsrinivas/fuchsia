@@ -1,8 +1,13 @@
 {
     "labels": [
-        "//apps/moterm"
+        "//apps/moterm",
+        "//apps/shell"
     ],
     "binaries": [
+        {
+            "binary": "fsh",
+            "bootfs_path": "apps/fsh"
+        },
         {
             "binary": "moterm",
             "bootfs_path": "apps/moterm"
