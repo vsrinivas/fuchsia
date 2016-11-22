@@ -70,6 +70,8 @@ typedef struct mx_info_process {
 #define MX_PROP_DATAPIPE_READ_THRESHOLD     3u
 // Argument is an mx_size_t.
 #define MX_PROP_DATAPIPE_WRITE_THRESHOLD    4u
+// Argument is a char[MX_MAX_NAME_LEN]
+#define MX_PROP_NAME                        5u
 
 // Policies for MX_PROP_BAD_HANDLE_POLICY:
 #define MX_POLICY_BAD_HANDLE_IGNORE         0u

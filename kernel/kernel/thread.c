@@ -1163,13 +1163,15 @@ thread_t *thread_create_idle_thread(uint cpu_num)
  * Returns "kernel" if there is no owner.
  */
 
-const char* thread_owner_name(thread_t *t)
+void thread_owner_name(thread_t *t, char out_name[THREAD_NAME_LENGTH])
 {
 #if WITH_LIB_MAGENTA
-    if (t->user_thread)
-        return magenta_thread_process_name(t->user_thread);
+    if (t->user_thread) {
+        magenta_thread_process_name(t->user_thread, out_name);
+        return;
+    }
 #endif
-    return "kernel";
+    memcpy(out_name, "kernel", 7);
 }
 
 static const char *thread_state_to_str(enum thread_state state)
@@ -1206,8 +1208,11 @@ void dump_thread(thread_t *t, bool full_dump)
         runtime += current_time_hires() - t->last_started_running_ns;
     }
 
+    char oname[THREAD_NAME_LENGTH];
+    thread_owner_name(t, oname);
+
     if (full_dump) {
-        dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, thread_owner_name(t), t->name);
+        dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name);
 #if WITH_SMP
         dprintf(INFO, "\tstate %s, curr_cpu %d, pinned_cpu %d, priority %d, remaining quantum %d\n",
                 thread_state_to_str(t->state), t->curr_cpu, t->pinned_cpu, t->priority, t->remaining_quantum);
@@ -1233,7 +1238,7 @@ void dump_thread(thread_t *t, bool full_dump)
         arch_dump_thread(t);
     } else {
         printf("thr %p st %4s pri %2d pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n",
-               t, thread_state_to_str(t->state), t->priority, t->user_pid, t->user_tid, thread_owner_name(t), t->name);
+               t, thread_state_to_str(t->state), t->priority, t->user_pid, t->user_tid, oname, t->name);
     }
 }
 

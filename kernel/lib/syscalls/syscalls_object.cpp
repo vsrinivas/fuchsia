@@ -227,6 +227,15 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
+        case MX_PROP_NAME: {
+            if (size < MX_MAX_NAME_LEN)
+                return ERR_BUFFER_TOO_SMALL;
+            char name[MX_MAX_NAME_LEN];
+            dispatcher->get_name(name);
+            if (_value.copy_array_to_user(name, MX_MAX_NAME_LEN) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return NO_ERROR;
+        }
         default:
             return ERR_INVALID_ARGS;
     }
@@ -287,6 +296,15 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_INVALID_ARGS;
             status = producer_dispatcher->SetWriteThreshold(threshold);
             break;
+        }
+        case MX_PROP_NAME: {
+            if (size >= MX_MAX_NAME_LEN)
+                size = MX_MAX_NAME_LEN - 1;
+
+            char name[MX_MAX_NAME_LEN - 1];
+            if (_value.copy_array_from_user(name, size) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            return dispatcher->set_name(name, size);
         }
     }
 

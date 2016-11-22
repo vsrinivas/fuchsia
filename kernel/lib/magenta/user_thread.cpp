@@ -79,7 +79,7 @@ UserThread::~UserThread() {
 }
 
 // complete initialization of the thread object outside of the constructor
-status_t UserThread::Initialize(mxtl::StringPiece name) {
+status_t UserThread::Initialize(const char* name, size_t len) {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(state_lock_);
@@ -89,11 +89,12 @@ status_t UserThread::Initialize(mxtl::StringPiece name) {
     // Make sure LK's max name length agrees with ours.
     static_assert(THREAD_NAME_LENGTH == MX_MAX_NAME_LEN, "name length issue");
 
+    if (len >= MX_MAX_NAME_LEN)
+        len = MX_MAX_NAME_LEN - 1;
+
     char thread_name[THREAD_NAME_LENGTH];
-    // Leave room for trailing NUL, which |name| does not have.
-    size_t name_len = mxtl::min(sizeof(thread_name) - 1, name.length());
-    memcpy(thread_name, name.data(), name_len);
-    thread_name[name_len] = '\0';
+    memset(thread_name + len, 0, MX_MAX_NAME_LEN - len);
+    memcpy(thread_name, name, len);
 
     // create an underlying LK thread
     thread_t* lkthread = thread_create_etc(&thread_, thread_name, StartRoutine, this, LOW_PRIORITY,
@@ -121,6 +122,21 @@ status_t UserThread::Initialize(mxtl::StringPiece name) {
     SetState(State::INITIALIZED);
 
     return NO_ERROR;
+}
+
+status_t UserThread::set_name(const char* name, size_t len) {
+    if (len >= MX_MAX_NAME_LEN)
+        len = MX_MAX_NAME_LEN - 1;
+
+    AutoLock lock(state_lock_);
+    memcpy(thread_.name, name, len);
+    memset(thread_.name + len, 0, MX_MAX_NAME_LEN - len);
+    return NO_ERROR;
+}
+
+void UserThread::get_name(char out_name[MX_MAX_NAME_LEN]) {
+    AutoLock lock(state_lock_);
+    memcpy(out_name, thread_.name, MX_MAX_NAME_LEN);
 }
 
 // start a thread
@@ -425,12 +441,9 @@ status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_
     }
 }
 
-const char* magenta_thread_process_name(void* user_thread) {
+void magenta_thread_process_name(void* user_thread, char out_name[MX_MAX_NAME_LEN]) {
     UserThread* ut = reinterpret_cast<UserThread*>(user_thread);
-    const char* name = ut->process()->name().data();
-    if (*name != '\0')
-        return name;
-    return "unnamed";
+    ut->process()->get_name(out_name);
 }
 
 const char* StateToString(UserThread::State state) {

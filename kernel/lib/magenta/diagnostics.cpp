@@ -119,6 +119,8 @@ void DumpProcessList() {
     printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vm #mp #ev #ip #dp [  job:name]\n", "id");
 
     for (const auto& process : ProcessDispatcher::global_process_list_) {
+        char pname[MX_MAX_NAME_LEN];
+        process.get_name(pname);
         printf("%8" PRIu64 "-%c %3u %4zu %s  [%5" PRIu64 ":%s]\n",
                process.get_koid(),
                StateChar(process),
@@ -126,7 +128,7 @@ void DumpProcessList() {
                process.PageCount(),
                DumpHandleTypeCount_NoLock(process),
                process.get_inner_koid(),
-               process.name().data());
+               pname);
     }
 }
 

@@ -151,10 +151,12 @@ status_t magenta_exception_handler(uint exception_type,
     if (!processed) {
         // only print this if an exception handler wasn't involved
         // in handling the exception
+        char pname[MX_MAX_NAME_LEN];
+        process->get_name(pname);
         printf("KERN: %s in magenta thread '%s' in process '%s' at IP %#"
                PRIxPTR "\n",
-               excp_type_to_string(exception_type), thread->name().data(),
-               process->name().data(), ip);
+               excp_type_to_string(exception_type), thread->name(),
+               pname, ip);
 
         arch_dump_exception_context(context);
     }

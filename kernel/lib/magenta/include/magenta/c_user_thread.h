@@ -13,6 +13,6 @@ __BEGIN_CDECLS
 // This is the interface for LK's thread_owner_name to return the
 // name of the thread's process.
 // This function is defined in user_thread.cpp.
-const char* magenta_thread_process_name(void* user_thread);
+void magenta_thread_process_name(void* user_thread, char out_name[THREAD_NAME_LENGTH]);
 
 __END_CDECLS

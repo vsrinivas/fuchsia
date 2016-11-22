@@ -123,7 +123,9 @@ public:
     State state() const { return state_; }
     mxtl::RefPtr<VmAspace> aspace() { return aspace_; }
     mxtl::RefPtr<JobDispatcher> job() { return job_; }
-    const mxtl::StringPiece name() const { return name_; }
+
+    void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
+    status_t set_name(const char* name, size_t len) final;
 
     void Exit(int retcode);
     void Kill();
@@ -218,7 +220,7 @@ private:
 
     // our state
     State state_ = State::INITIAL;
-    Mutex state_lock_;
+    mutable Mutex state_lock_;
 
     // process return code
     int retcode_ = 0;

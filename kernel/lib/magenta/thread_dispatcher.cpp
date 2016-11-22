@@ -15,7 +15,7 @@
 
 constexpr mx_rights_t kDefaultThreadRights =
     MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
-    MX_RIGHT_GET_PROPERTY;
+    MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY;
 
 // static
 status_t ThreadDispatcher::Create(mxtl::RefPtr<UserThread> thread, mxtl::RefPtr<Dispatcher>* dispatcher,
@@ -55,4 +55,12 @@ status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
 
 void ThreadDispatcher::ResetExceptionPort() {
     return thread_->ResetExceptionPort();
+}
+
+void ThreadDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
+    thread_->get_name(out_name);
+}
+
+status_t ThreadDispatcher::set_name(const char* name, size_t len) {
+    return thread_->set_name(name, len);
 }

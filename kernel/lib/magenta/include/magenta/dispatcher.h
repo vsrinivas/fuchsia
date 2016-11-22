@@ -79,6 +79,14 @@ public:
 
     virtual mx_koid_t get_inner_koid() const { return 0ULL; }
 
+    // get_name() will return a null-terminated name of MX_MAX_NAME_LEN - 1 or fewer
+    // characters.  For objects that don't have names it will be "".
+    virtual void get_name(char out_name[MX_MAX_NAME_LEN]) const { out_name[0] = 0; }
+
+    // set_name() will truncate to MX_MAX_NAME_LEN - 1 and ensure there is a
+    // terminating null
+    virtual status_t set_name(const char* name, size_t len) { return ERR_NOT_SUPPORTED; }
+
 protected:
     static mx_koid_t GenerateKernelObjectId();
 

@@ -109,6 +109,21 @@ ProcessDispatcher::~ProcessDispatcher() {
     LTRACE_EXIT_OBJ;
 }
 
+void ProcessDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {
+    AutoLock lock(state_lock_);
+    memcpy(out_name, name_, MX_MAX_NAME_LEN);
+}
+
+status_t ProcessDispatcher::set_name(const char* name, size_t len) {
+    if (len >= MX_MAX_NAME_LEN)
+        len = MX_MAX_NAME_LEN - 1;
+
+    AutoLock lock(state_lock_);
+    memcpy(name_, name, len);
+    memset(name_ + len, 0, MX_MAX_NAME_LEN - len);
+    return NO_ERROR;
+}
+
 status_t ProcessDispatcher::Initialize() {
     LTRACE_ENTRY_OBJ;
 
@@ -378,7 +393,7 @@ status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t fl
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    status_t result = ut->Initialize(name);
+    status_t result = ut->Initialize(name.data(), name.length());
     if (result != NO_ERROR)
         return result;
 
@@ -536,7 +551,9 @@ mx_status_t ProcessDispatcher::BadHandle(mx_handle_t handle_value,
 
     // TODO(cpu): Generate an exception when exception handling lands.
     if (get_bad_handle_policy() == MX_POLICY_BAD_HANDLE_EXIT) {
-        printf("\n[fatal: %s used a bad handle]\n", name().data());
+        char name[MX_MAX_NAME_LEN];
+        get_name(name);
+        printf("\n[fatal: %s used a bad handle]\n", name);
         Exit(error);
     }
     return error;

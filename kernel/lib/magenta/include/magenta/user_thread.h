@@ -48,7 +48,7 @@ public:
 
     // Performs initialization on a newly constructed UserThread
     // If this fails, then the object is invalid and should be deleted
-    status_t Initialize(mxtl::StringPiece name);
+    status_t Initialize(const char* name, size_t len);
     status_t Start(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg2,
                    bool initial_thread);
     void Exit() __NO_RETURN;
@@ -63,7 +63,10 @@ public:
 
     FutexNode* futex_node() { return &futex_node_; }
     StateTracker* state_tracker() { return &state_tracker_; }
-    const mxtl::StringPiece name() const { return thread_.name; }
+    const char* name() const { return thread_.name; }
+    status_t set_name(const char* name, size_t len);
+    void get_name(char out_name[MX_MAX_NAME_LEN]);
+
     State state() const { return state_; }
 
     status_t SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<ExceptionPort> eport);
