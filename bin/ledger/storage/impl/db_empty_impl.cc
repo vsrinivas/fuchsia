@@ -99,7 +99,8 @@ Status DbEmptyImpl::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {
 Status DbEmptyImpl::MarkCommitIdSynced(const CommitId& commit_id) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::MarkCommitIdUnsynced(const CommitId& commit_id) {
+Status DbEmptyImpl::MarkCommitIdUnsynced(const CommitId& commit_id,
+                                         int64_t timestamp) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {

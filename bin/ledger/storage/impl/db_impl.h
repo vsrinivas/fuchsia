@@ -5,6 +5,8 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_DB_IMPL_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_DB_IMPL_H_
 
+#include <utility>
+
 #include "apps/ledger/src/storage/impl/db.h"
 
 #include "leveldb/db.h"
@@ -63,7 +65,8 @@ class DbImpl : public DB {
       std::unique_ptr<Iterator<const EntryChange>>* entries) override;
   Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override;
   Status MarkCommitIdSynced(const CommitId& commit_id) override;
-  Status MarkCommitIdUnsynced(const CommitId& commit_id) override;
+  Status MarkCommitIdUnsynced(const CommitId& commit_id,
+                              int64_t timestamp) override;
   Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override;
   Status GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) override;
   Status MarkObjectIdSynced(ObjectIdView object_id) override;
@@ -77,6 +80,9 @@ class DbImpl : public DB {
  private:
   Status GetByPrefix(const leveldb::Slice& prefix,
                      std::vector<std::string>* key_suffixes);
+  Status GetEntriesByPrefix(
+      const leveldb::Slice& prefix,
+      std::vector<std::pair<std::string, std::string>>* key_value_pairs);
   Status DeleteByPrefix(const leveldb::Slice& prefix);
   Status Get(convert::ExtendedStringView key, std::string* value);
   Status Put(convert::ExtendedStringView key, ftl::StringView value);

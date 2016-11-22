@@ -485,8 +485,8 @@ void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
     callback(s);
     return;
   }
-
   ObjectId root_id = commit->GetRootId();
+  int64_t timestamp = commit->GetTimestamp();
 
   auto finish_commit = [
     this, batch = std::move(batch), source, commit = std::move(commit), callback
@@ -532,7 +532,7 @@ void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
   };
 
   if (source == ChangeSource::LOCAL) {
-    s = db_.MarkCommitIdUnsynced(std::move(commit_id));
+    s = db_.MarkCommitIdUnsynced(commit_id, timestamp);
     finish_commit(s);
   } else {
     btree::GetObjectsFromSync(root_id, this,

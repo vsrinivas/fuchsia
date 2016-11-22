@@ -59,7 +59,8 @@ class DbEmptyImpl : public DB {
                           std::vector<std::string>* values) override;
   Status GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) override;
   Status MarkCommitIdSynced(const CommitId& commit_id) override;
-  Status MarkCommitIdUnsynced(const CommitId& commit_id) override;
+  Status MarkCommitIdUnsynced(const CommitId& commit_id,
+                              int64_t timestamp) override;
   Status IsCommitSynced(const CommitId& commit_id, bool* is_synced) override;
   Status GetUnsyncedObjectIds(std::vector<ObjectId>* object_ids) override;
   Status MarkObjectIdSynced(ObjectIdView object_id) override;

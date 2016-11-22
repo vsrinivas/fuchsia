@@ -190,7 +190,7 @@ TEST_F(DBTest, UnsyncedCommits) {
   EXPECT_EQ(Status::OK, db_.GetUnsyncedCommitIds(&commit_ids));
   EXPECT_TRUE(commit_ids.empty());
 
-  EXPECT_EQ(Status::OK, db_.MarkCommitIdUnsynced(commit_id));
+  EXPECT_EQ(Status::OK, db_.MarkCommitIdUnsynced(commit_id, 0));
   EXPECT_EQ(Status::OK, db_.GetUnsyncedCommitIds(&commit_ids));
   EXPECT_EQ(1u, commit_ids.size());
   EXPECT_EQ(commit_id, commit_ids[0]);
@@ -203,6 +203,23 @@ TEST_F(DBTest, UnsyncedCommits) {
   EXPECT_TRUE(commit_ids.empty());
   EXPECT_EQ(Status::OK, db_.IsCommitSynced(commit_id, &is_synced));
   EXPECT_TRUE(is_synced);
+}
+
+TEST_F(DBTest, OrderUnsyncedCommitsByTimestamp) {
+  CommitId commit_ids[] = {RandomId(kCommitIdSize), RandomId(kCommitIdSize),
+                           RandomId(kCommitIdSize)};
+  // Add three unsynced commits with timestamps 200, 300 and 100.
+  EXPECT_EQ(Status::OK, db_.MarkCommitIdUnsynced(commit_ids[0], 200));
+  EXPECT_EQ(Status::OK, db_.MarkCommitIdUnsynced(commit_ids[1], 300));
+  EXPECT_EQ(Status::OK, db_.MarkCommitIdUnsynced(commit_ids[2], 100));
+
+  // The result should be ordered by the given timestamps.
+  std::vector<CommitId> found_ids;
+  EXPECT_EQ(Status::OK, db_.GetUnsyncedCommitIds(&found_ids));
+  EXPECT_EQ(3u, found_ids.size());
+  EXPECT_EQ(found_ids[0], commit_ids[2]);
+  EXPECT_EQ(found_ids[1], commit_ids[0]);
+  EXPECT_EQ(found_ids[2], commit_ids[1]);
 }
 
 TEST_F(DBTest, UnsyncedObjects) {

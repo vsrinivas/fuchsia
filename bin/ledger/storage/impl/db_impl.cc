@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/storage/impl/db_impl.h"
 
+#include <algorithm>
 #include <string>
 
 #include "apps/ledger/src/convert/convert.h"
@@ -382,15 +383,34 @@ Status DbImpl::GetJournalValues(const JournalId& journal_id,
 }
 
 Status DbImpl::GetUnsyncedCommitIds(std::vector<CommitId>* commit_ids) {
-  return GetByPrefix(convert::ToSlice(kUnsyncedCommitPrefix), commit_ids);
+  std::vector<std::pair<std::string, std::string>> entries;
+  Status s =
+      GetEntriesByPrefix(convert::ToSlice(kUnsyncedCommitPrefix), &entries);
+  if (s != Status::OK) {
+    return s;
+  }
+  std::sort(entries.begin(), entries.end(),
+            [](std::pair<std::string, std::string> a,
+               std::pair<std::string, std::string> b) {
+              return ftl::StringToNumber<int64_t>(a.second) <
+                     ftl::StringToNumber<int64_t>(b.second);
+            });
+  std::vector<CommitId> result;
+  for (std::pair<std::string, std::string>& entry : entries) {
+    result.push_back(entry.first);
+  }
+  commit_ids->swap(result);
+  return Status::OK;
 }
 
 Status DbImpl::MarkCommitIdSynced(const CommitId& commit_id) {
   return Delete(GetUnsyncedCommitKeyFor(commit_id));
 }
 
-Status DbImpl::MarkCommitIdUnsynced(const CommitId& commit_id) {
-  return Put(GetUnsyncedCommitKeyFor(commit_id), "");
+Status DbImpl::MarkCommitIdUnsynced(const CommitId& commit_id,
+                                    int64_t timestamp) {
+  return Put(GetUnsyncedCommitKeyFor(commit_id),
+             ftl::NumberToString(timestamp));
 }
 
 Status DbImpl::IsCommitSynced(const CommitId& commit_id, bool* is_synced) {
@@ -462,6 +482,25 @@ Status DbImpl::GetByPrefix(const leveldb::Slice& prefix,
     return Status::INTERNAL_IO_ERROR;
   }
   key_suffixes->swap(result);
+  return Status::OK;
+}
+
+Status DbImpl::GetEntriesByPrefix(
+    const leveldb::Slice& prefix,
+    std::vector<std::pair<std::string, std::string>>* key_value_pairs) {
+  std::vector<std::pair<std::string, std::string>> result;
+  std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
+  for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
+       it->Next()) {
+    leveldb::Slice key = it->key();
+    key.remove_prefix(prefix.size());
+    result.push_back(std::pair<std::string, std::string>(
+        key.ToString(), it->value().ToString()));
+  }
+  if (!it->status().ok()) {
+    return Status::INTERNAL_IO_ERROR;
+  }
+  key_value_pairs->swap(result);
   return Status::OK;
 }
 
