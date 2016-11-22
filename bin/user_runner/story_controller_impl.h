@@ -17,7 +17,7 @@
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
 
@@ -52,7 +52,8 @@ class StoryControllerImpl : public StoryController,
 
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
-  void SetInfoExtra(const fidl::String& name, const fidl::String& value,
+  void SetInfoExtra(const fidl::String& name,
+                    const fidl::String& value,
                     const SetInfoExtraCallback& callback) override;
   void Start(
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
@@ -86,7 +87,7 @@ class StoryControllerImpl : public StoryController,
   StrongBinding<StoryController> binding_;
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
   fidl::Binding<LinkWatcher> link_changed_binding_;
-  std::vector<StoryWatcherPtr> story_watchers_;
+  fidl::InterfacePtrSet<StoryWatcher> story_watchers_;
   StoryPtr story_;
   StoryContextPtr story_context_;
   LinkPtr root_;

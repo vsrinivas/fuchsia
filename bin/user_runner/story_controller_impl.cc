@@ -4,10 +4,10 @@
 
 #include "apps/modular/src/user_runner/story_controller_impl.h"
 
+#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "lib/ftl/logging.h"
-#include "apps/modular/lib/app/connect.h"
 
 namespace modular {
 
@@ -58,7 +58,7 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
 // |StoryController|
 void StoryControllerImpl::Watch(
     fidl::InterfaceHandle<StoryWatcher> story_watcher) {
-  story_watchers_.emplace_back(
+  story_watchers_.AddInterfacePtr(
       StoryWatcherPtr::Create(std::move(story_watcher)));
 }
 
@@ -96,9 +96,9 @@ void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
 }
 
 void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
-  for (auto& story_watcher : story_watchers_) {
-    (story_watcher.get()->*method)();
-  }
+  story_watchers_.ForAllPtrs([method] (StoryWatcher* const watcher) {
+    (watcher->*method)();
+  });
 }
 
 void StoryControllerImpl::StartStory(
