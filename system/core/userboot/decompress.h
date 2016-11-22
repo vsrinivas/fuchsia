@@ -12,6 +12,6 @@
 // If the VMO holds a compressed bootdata, returns a handle to a new VMO with
 // the decompressed data and consumes the original VMO handle. Otherwise returns
 // the original handle.
-mx_handle_t decompress_vmo(mx_handle_t log, mx_handle_t proc_self, mx_handle_t vmo);
+mx_handle_t decompress_vmo(mx_handle_t log, mx_handle_t vmar, mx_handle_t vmo);
 
 #pragma GCC visibility pop

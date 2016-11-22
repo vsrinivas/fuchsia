@@ -77,7 +77,7 @@ static void check_lz4_frame(mx_handle_t log, const lz4_frame_desc* fd, size_t ex
     // TODO: header checksum
 }
 
-static mx_handle_t decompress_bootfs_vmo(mx_handle_t log, mx_handle_t proc_self, const uint8_t* data) {
+static mx_handle_t decompress_bootfs_vmo(mx_handle_t log, mx_handle_t vmar, const uint8_t* data) {
     const bootdata_t* hdr = (bootdata_t*)data;
 
     // Skip past the bootdata header
@@ -104,9 +104,9 @@ static mx_handle_t decompress_bootfs_vmo(mx_handle_t log, mx_handle_t proc_self,
     }
 
     uintptr_t dst_addr = 0;
-    status = mx_process_map_vm(proc_self, dst_vmo, 0, newsize, &dst_addr,
-            MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE);
-    check(log, status, "mx_process_map_vm failed on bootfs vmo during decompression\n");
+    status = mx_vmar_map(vmar, 0, dst_vmo, 0, newsize,
+            MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE, &dst_addr);
+    check(log, status, "mx_vmar_map failed on bootfs vmo during decompression\n");
 
     size_t remaining = newsize;
     uint8_t* dst = (uint8_t*)dst_addr;
@@ -160,12 +160,12 @@ static mx_handle_t decompress_bootfs_vmo(mx_handle_t log, mx_handle_t proc_self,
                 "bootdata size error; outsize does not match decompressed size\n");
     }
 
-    status = mx_process_unmap_vm(proc_self, dst_addr, 0);
-    check(log, status, "mx_process_unmap_vm after decompress failed\n");
+    status = mx_vmar_unmap(vmar, dst_addr, newsize);
+    check(log, status, "mx_vmar_unmap after decompress failed\n");
     return dst_vmo;
 }
 
-mx_handle_t decompress_vmo(mx_handle_t log, mx_handle_t proc_self, mx_handle_t vmo) {
+mx_handle_t decompress_vmo(mx_handle_t log, mx_handle_t vmar, mx_handle_t vmo) {
     uint64_t size;
     mx_status_t status = mx_vmo_get_size(vmo, &size);
     check(log, status, "mx_vmo_get_size failed on bootfs vmo\n");
@@ -179,8 +179,8 @@ mx_handle_t decompress_vmo(mx_handle_t log, mx_handle_t proc_self, mx_handle_t v
     }
 
     uintptr_t addr = 0;
-    status = mx_process_map_vm(proc_self, vmo, 0, (size_t)size, &addr, MX_VM_FLAG_PERM_READ);
-    check(log, status, "mx_process_map_vm failed on bootfs vmo\n");
+    status = mx_vmar_map(vmar, 0, vmo, 0, (size_t)size, MX_VM_FLAG_PERM_READ, &addr);
+    check(log, status, "mx_vmar_map failed on bootfs vmo\n");
 
     const bootdata_t* hdr = (bootdata_t*)addr;
     if (hdr->magic != BOOTDATA_MAGIC) {
@@ -191,7 +191,7 @@ mx_handle_t decompress_vmo(mx_handle_t log, mx_handle_t proc_self, mx_handle_t v
     switch (hdr->type) {
     case BOOTDATA_TYPE_BOOTFS:
         if (hdr->flags & BOOTDATA_BOOTFS_FLAG_COMPRESSED) {
-            mx_handle_t newvmo = decompress_bootfs_vmo(log, proc_self, (const uint8_t*)addr);
+            mx_handle_t newvmo = decompress_bootfs_vmo(log, vmar, (const uint8_t*)addr);
             mx_handle_close(vmo);
             ret = newvmo;
         }
@@ -200,8 +200,8 @@ mx_handle_t decompress_vmo(mx_handle_t log, mx_handle_t proc_self, mx_handle_t v
         print(log, "unknown bootdata type, not attempting decompression\n", NULL);
         break;
     }
-    status = mx_process_unmap_vm(proc_self, addr, 0);
-    check(log, status, "mx_process_unmap_vm failed\n");
+    status = mx_vmar_unmap(vmar, addr, size);
+    check(log, status, "mx_vmar_unmap failed\n");
 
     return ret;
 }

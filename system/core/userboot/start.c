@@ -39,6 +39,9 @@ static void load_child_process(mx_handle_t log, mx_handle_t proc_self,
                                mx_handle_t proc, mx_handle_t to_child,
                                mx_vaddr_t* entry, mx_vaddr_t* vdso_base,
                                size_t* stack_size) {
+    // TODO(teisenbe): elf_load_bootfs needs to take in vmar_self rather
+    // than proc_self.  Update this once we update the elf loader.
+
     // Examine the bootfs image and find the requested file in it.
     struct bootfs bootfs;
     bootfs_mount(proc_self, log, bootfs_vmo, &bootfs);
@@ -98,6 +101,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     mx_handle_t vdso_vmo = MX_HANDLE_INVALID;
     mx_handle_t job = MX_HANDLE_INVALID;
     mx_handle_t* proc_handle_loc = NULL;
+    mx_handle_t* vmar_root_handle_loc = NULL;
     mx_handle_t* thread_handle_loc = NULL;
     mx_handle_t* stack_vmo_handle_loc = NULL;
     for (uint32_t i = 0; i < nhandles; ++i) {
@@ -111,6 +115,9 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
             break;
         case MX_HND_TYPE_PROC_SELF:
             proc_handle_loc = &handles[i];
+            break;
+        case MX_HND_TYPE_VMAR_ROOT:
+            vmar_root_handle_loc = &handles[i];
             break;
         case MX_HND_TYPE_THREAD_SELF:
             thread_handle_loc = &handles[i];
@@ -133,11 +140,14 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (resource_root == MX_HANDLE_INVALID)
         fail(log, ERR_INVALID_ARGS, "no resource handle in bootstrap message\n");
     if (job == MX_HANDLE_INVALID)
-        fail(log, ERR_INVALID_ARGS, "no job handlke in bootstrap message\n");
+        fail(log, ERR_INVALID_ARGS, "no job handle in bootstrap message\n");
+    if (vmar_root_handle_loc == NULL)
+        fail(log, ERR_INVALID_ARGS, "no vmar root handle in bootstrap message\n");
 
     // Hang on to our own process handle.  If we closed it, our process
     // would be killed.  Exiting will clean it up.
     const mx_handle_t proc_self = *proc_handle_loc;
+    const mx_handle_t vmar_self = *vmar_root_handle_loc;
 
     // Hang on to the resource root handle.
     mx_handle_t root_resource_handle;
@@ -148,7 +158,7 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     // Decompress any bootfs VMOs if necessary
     for (uint32_t i = 0; i < nhandles; ++i) {
         if (MX_HND_INFO_TYPE(handle_info[i]) == MX_HND_TYPE_BOOTFS_VMO) {
-            handles[i] = decompress_vmo(log, proc_self, handles[i]);
+            handles[i] = decompress_vmo(log, vmar_self, handles[i]);
             if (MX_HND_INFO_ARG(handle_info[i]) == 0) {
                 bootfs_vmo = handles[i];
             }
@@ -168,8 +178,6 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     status = mx_process_create(job, filename, strlen(filename), 0, &proc, &vmar);
     if (status < 0)
         fail(log, status, "mx_process_create failed\n");
-    // TODO(teisenbe): Don't close this.  Just closing for now to not leak it.
-    mx_handle_close(vmar);
 
     mx_vaddr_t entry, vdso_base;
     size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
@@ -183,9 +191,9 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (status < 0)
         fail(log, status, "mx_vmo_create failed for child stack\n");
     mx_vaddr_t stack_base;
-    status = mx_process_map_vm(proc, stack_vmo, 0, stack_size, &stack_base,
-                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-    check(log, status, "mx_process_map_vm failed for child stack\n");
+    status = mx_vmar_map(vmar, 0, stack_vmo, 0, stack_size,
+                         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &stack_base);
+    check(log, status, "mx_vmar_map failed for child stack\n");
     uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
     if (stack_vmo_handle_loc != NULL) {
         // This is our own stack VMO handle, but we don't need it for anything.
@@ -216,6 +224,10 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
             fail(log, status,
                  "mx_handle_duplicate failed on child thread handle\n");
     }
+
+    // Reuse the slot for the child's root VMAR handle.  We don't need to hold
+    // a reference to this, so just pass ours to the child.
+    *vmar_root_handle_loc = vmar;
 
     // Now send the bootstrap message, consuming both our VMO handles. We also
     // send the job handle, which in the future means that we can't create more

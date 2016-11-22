@@ -13,20 +13,20 @@
 
 #pragma GCC visibility pop
 
-void bootfs_mount(mx_handle_t proc_self, mx_handle_t log, mx_handle_t vmo, struct bootfs *fs) {
+void bootfs_mount(mx_handle_t vmar, mx_handle_t log, mx_handle_t vmo, struct bootfs *fs) {
     uint64_t size;
     mx_status_t status = mx_vmo_get_size(vmo, &size);
     check(log, status, "mx_vmo_get_size failed on bootfs vmo\n");
     uintptr_t addr = 0;
-    status = mx_process_map_vm(proc_self, vmo, 0, size, &addr, MX_VM_FLAG_PERM_READ);
-    check(log, status, "mx_process_map_vm failed on bootfs vmo\n");
+    status = mx_vmar_map(vmar, 0, vmo, 0, size, MX_VM_FLAG_PERM_READ, &addr);
+    check(log, status, "mx_vmar_map failed on bootfs vmo\n");
     fs->contents =  (const void*)addr;
     fs->len = size;
 }
 
-void bootfs_unmount(mx_handle_t proc_self, mx_handle_t log, struct bootfs *fs) {
-    mx_status_t status = mx_process_unmap_vm(proc_self, (uintptr_t)fs->contents, 0);
-    check(log, status, "mx_process_unmap_vm failed\n");
+void bootfs_unmount(mx_handle_t vmar, mx_handle_t log, struct bootfs *fs) {
+    mx_status_t status = mx_vmar_unmap(vmar, (uintptr_t)fs->contents, 0);
+    check(log, status, "mx_vmar_unmap failed\n");
 }
 
 struct bootfs_magic {
