@@ -89,7 +89,7 @@ bool TraceEngine::IsCategoryEnabled(const char* category) const {
          enabled_category_set_.count(ftl::StringView(category)) > 0;
 }
 
-TraceEngine::StringRef TraceEngine::RegisterString(const char* string,
+TraceEngine::StringRef TraceEngine::RegisterString(const char* constant,
                                                    bool check_category) {
   LocalState& state = g_local_state;
 
@@ -99,16 +99,16 @@ TraceEngine::StringRef TraceEngine::RegisterString(const char* string,
   }
 
   if (state.string_generation == generation_) {
-    auto it = state.string_table.find(string);
+    auto it = state.string_table.find(constant);
     if (it == state.string_table.end()) {
-      std::tie(it, std::ignore) = state.string_table.emplace(string, 0u);
+      std::tie(it, std::ignore) = state.string_table.emplace(constant, 0u);
     }
 
     if (check_category && (!(it->second & kCategoryEnabledFlag))) {
       if (it->second & kCategoryDisabledFlag) {
         return StringRef::MakeEmpty();
       }
-      if (!IsCategoryEnabled(string)) {
+      if (!IsCategoryEnabled(constant)) {
         it->second |= kCategoryDisabledFlag;
         return StringRef::MakeEmpty();
       }
@@ -123,7 +123,7 @@ TraceEngine::StringRef TraceEngine::RegisterString(const char* string,
       StringIndex string_index =
           next_string_index_.fetch_add(1u, std::memory_order_relaxed);
       if (string_index <= StringRefFields::kMaxIndex) {
-        WriteStringRecord(string_index, string);
+        WriteStringRecord(string_index, constant);
         it->second |= string_index | kIndexedFlag;
         return StringRef::MakeIndexed(string_index);
       }
@@ -131,11 +131,11 @@ TraceEngine::StringRef TraceEngine::RegisterString(const char* string,
                                std::memory_order_relaxed);
       it->second |= kInlinedFlag;
     }
-  } else if (check_category && !IsCategoryEnabled(string)) {
+  } else if (check_category && !IsCategoryEnabled(constant)) {
     return StringRef::MakeEmpty();
   }
 
-  return StringRef::MakeInlined(string, strlen(string));
+  return StringRef::MakeInlined(constant, strlen(constant));
 }
 
 TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
@@ -178,10 +178,10 @@ void TraceEngine::WriteInitializationRecord(uint64_t ticks_per_second) {
       .Write(ticks_per_second);
 }
 
-void TraceEngine::WriteStringRecord(StringIndex index, const char* string) {
+void TraceEngine::WriteStringRecord(StringIndex index, const char* value) {
   FTL_DCHECK(index != StringRefFields::kInvalidIndex);
 
-  const size_t length = strlen(string);
+  const size_t length = strlen(value);
   const size_t record_size = sizeof(RecordHeader) + Pad(length);
   Payload payload = AllocateRecord(record_size);
   if (!payload)
@@ -191,12 +191,12 @@ void TraceEngine::WriteStringRecord(StringIndex index, const char* string) {
       .Write(MakeRecordHeader(RecordType::kString, record_size) |
              StringRecordFields::StringIndex::Make(index) |
              StringRecordFields::StringLength::Make(length))
-      .WriteBytes(string, length);
+      .WriteBytes(value, length);
 }
 
 void TraceEngine::WriteThreadRecord(ThreadIndex index,
-                                    uint64_t process_koid,
-                                    uint64_t thread_koid) {
+                                    mx_koid_t process_koid,
+                                    mx_koid_t thread_koid) {
   FTL_DCHECK(index != ThreadRefFields::kInline);
 
   const size_t record_size = sizeof(RecordHeader) + WordsToBytes(2);
@@ -211,7 +211,7 @@ void TraceEngine::WriteThreadRecord(ThreadIndex index,
       .Write(thread_koid);
 }
 
-TraceEngine::Payload TraceEngine::WriteEventRecord(
+TraceEngine::Payload TraceEngine::WriteEventRecordBase(
     EventType type,
     const StringRef& category_ref,
     const char* name,

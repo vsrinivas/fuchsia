@@ -52,9 +52,9 @@ TraceWriter TraceWriter::Prepare() {
   return TraceWriter(g_engine.get());
 }
 
-StringRef TraceWriter::RegisterString(const char* string) {
+StringRef TraceWriter::RegisterString(const char* constant) {
   FTL_DCHECK(engine_);
-  return engine_->RegisterString(string, false);
+  return engine_->RegisterString(constant, false);
 }
 
 ThreadRef TraceWriter::RegisterCurrentThread() {
@@ -67,35 +67,36 @@ void TraceWriter::WriteInitializationRecord(uint64_t ticks_per_second) {
   engine_->WriteInitializationRecord(ticks_per_second);
 }
 
-void TraceWriter::WriteStringRecord(StringIndex index, const char* string) {
+void TraceWriter::WriteStringRecord(StringIndex index, const char* value) {
   FTL_DCHECK(engine_);
-  engine_->WriteStringRecord(index, string);
+  engine_->WriteStringRecord(index, value);
 }
 
 void TraceWriter::WriteThreadRecord(ThreadIndex index,
-                                    uint64_t process_koid,
-                                    uint64_t thread_koid) {
+                                    mx_koid_t process_koid,
+                                    mx_koid_t thread_koid) {
   FTL_DCHECK(engine_);
   engine_->WriteThreadRecord(index, process_koid, thread_koid);
 }
 
-CategorizedTraceWriter CategorizedTraceWriter::Prepare(const char* category) {
+CategorizedTraceWriter CategorizedTraceWriter::Prepare(
+    const char* category_constant) {
   TraceEngine* engine = g_engine.get();
   if (engine) {
-    StringRef category_ref = engine->RegisterString(category, true);
+    StringRef category_ref = engine->RegisterString(category_constant, true);
     if (!category_ref.is_empty())
       return CategorizedTraceWriter(engine, category_ref);
   }
   return CategorizedTraceWriter(nullptr, StringRef::MakeEmpty());
 }
 
-Payload CategorizedTraceWriter::WriteEventRecord(EventType type,
-                                                 const char* name,
-                                                 size_t argument_count,
-                                                 size_t payload_size) {
+Payload CategorizedTraceWriter::WriteEventRecordBase(EventType type,
+                                                     const char* name,
+                                                     size_t argument_count,
+                                                     size_t payload_size) {
   FTL_DCHECK(engine_);
-  return engine_->WriteEventRecord(type, category_ref_, name, argument_count,
-                                   payload_size);
+  return engine_->WriteEventRecordBase(type, category_ref_, name,
+                                       argument_count, payload_size);
 }
 
 }  // namespace writer

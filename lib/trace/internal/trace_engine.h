@@ -44,23 +44,24 @@ class TraceEngine final {
   bool IsCategoryEnabled(const char* category) const;
 
   // Registers the string and returns its string ref.
+  // The |constant| is not copied; it must outlive the trace engine.
   // If |check_category| is true, returns an empty string ref if the string
   // is not one of the enabled categories.
-  StringRef RegisterString(const char* string, bool check_category);
+  StringRef RegisterString(const char* constant, bool check_category);
 
   // Registers the current thread and returns its thread ref.
   ThreadRef RegisterCurrentThread();
 
   void WriteInitializationRecord(uint64_t ticks_per_second);
-  void WriteStringRecord(StringIndex index, const char* string);
+  void WriteStringRecord(StringIndex index, const char* value);
   void WriteThreadRecord(ThreadIndex index,
-                         uint64_t process_koid,
-                         uint64_t thread_koid);
-  Payload WriteEventRecord(EventType type,
-                           const StringRef& category_ref,
-                           const char* name,
-                           size_t argument_count,
-                           size_t payload_size);
+                         mx_koid_t process_koid,
+                         mx_koid_t thread_koid);
+  Payload WriteEventRecordBase(EventType type,
+                               const StringRef& category_ref,
+                               const char* name,
+                               size_t argument_count,
+                               size_t payload_size);
 
  private:
   explicit TraceEngine(ftl::RefPtr<mtl::SharedVmo> shared_vmo,

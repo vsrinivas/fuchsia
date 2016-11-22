@@ -34,9 +34,6 @@ void StopTracing();
 
 // Returns true if the tracer has been initialized by a call to |StartTracing|
 // and the specified |category| has been enabled.
-//
-// |category| must be a string constant such as would be passed to
-// |PrepareCategory| or |WriteEventRecord|.
 bool IsTracingEnabledForCategory(const char* category);
 
 // Provides support for writing sequences of 64-bit words into a buffer.
@@ -155,7 +152,7 @@ class StringRef {
 // thread table index.
 class ThreadRef {
  public:
-  static ThreadRef MakeInlined(uint64_t process_koid, uint64_t thread_koid) {
+  static ThreadRef MakeInlined(mx_koid_t process_koid, mx_koid_t thread_koid) {
     return ThreadRef(::tracing::internal::ThreadRefFields::kInline,
                      process_koid, thread_koid);
   }
@@ -169,8 +166,8 @@ class ThreadRef {
   }
 
   EncodedThreadRef encoded_value() const { return encoded_value_; }
-  uint64_t inline_process_koid() const { return inline_process_koid_; }
-  uint64_t inline_thread_koid() const { return inline_thread_koid_; }
+  mx_koid_t inline_process_koid() const { return inline_process_koid_; }
+  mx_koid_t inline_thread_koid() const { return inline_thread_koid_; }
 
   size_t Size() const { return is_inlined() ? 2 * sizeof(uint64_t) : 0; }
 
@@ -181,15 +178,15 @@ class ThreadRef {
 
  private:
   explicit ThreadRef(EncodedThreadRef encoded_value,
-                     uint64_t inline_process_koid,
-                     uint64_t inline_thread_koid)
+                     mx_koid_t inline_process_koid,
+                     mx_koid_t inline_thread_koid)
       : encoded_value_(encoded_value),
         inline_process_koid_(inline_process_koid),
         inline_thread_koid_(inline_thread_koid) {}
 
   EncodedThreadRef encoded_value_;
-  uint64_t inline_process_koid_;
-  uint64_t inline_thread_koid_;
+  mx_koid_t inline_process_koid_;
+  mx_koid_t inline_thread_koid_;
 };
 
 // Represents a named argument and value pair.
@@ -324,7 +321,7 @@ class PointerArgument : public Argument {
 
 class KoidArgument : public Argument {
  public:
-  explicit KoidArgument(StringRef name_ref, uint64_t koid)
+  explicit KoidArgument(StringRef name_ref, mx_koid_t koid)
       : Argument(std::move(name_ref)), koid_(koid) {}
 
   size_t Size() const { return Argument::Size() + sizeof(uint64_t); }
@@ -335,7 +332,7 @@ class KoidArgument : public Argument {
   }
 
  private:
-  uint64_t const koid_;
+  mx_koid_t const koid_;
 };
 
 // Gets the total size of a list of arguments.
@@ -369,7 +366,8 @@ class TraceWriter {
   explicit operator bool() const { return engine_; }
 
   // Registers a constant string in the string table.
-  StringRef RegisterString(const char* string);
+  // The |constant| is not copied; it must outlive the trace engine.
+  StringRef RegisterString(const char* constant);
 
   // Registers the current thread in the thread table.
   ThreadRef RegisterCurrentThread();
@@ -379,14 +377,15 @@ class TraceWriter {
   void WriteInitializationRecord(uint64_t ticks_per_second);
 
   // Writes a string record into the trace buffer.
+  // The |value| will be copied into the string record.
   // Discards the record if it cannot be written.
-  void WriteStringRecord(StringIndex index, const char* string);
+  void WriteStringRecord(StringIndex index, const char* value);
 
   // Writes a thread record into the trace buffer.
   // Discards the record if it cannot be written.
   void WriteThreadRecord(ThreadIndex index,
-                         uint64_t process_koid,
-                         uint64_t thread_koid);
+                         mx_koid_t process_koid,
+                         mx_koid_t thread_koid);
 
  private:
   // Private friend (instead of protected) to prevent subclassing of
@@ -405,16 +404,16 @@ class CategorizedTraceWriter final : public TraceWriter {
   // Prepares to write trace records for a specified event category.
   // If tracing is enabled for the category, returns a valid |TraceWriter|
   // which is bound to the category.
-  static CategorizedTraceWriter Prepare(const char* category);
+  // The |category_constant| is not copied; it must outlive the trace engine.
+  static CategorizedTraceWriter Prepare(const char* category_constant);
 
-  // Writes a duration begin event record with arguments into the trace
-  // buffer.
+  // Writes a duration begin event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
   void WriteDurationBeginEventRecord(const char* name, Args&&... args) {
-    if (Payload payload =
-            WriteEventRecord(EventType::kDurationBegin, name, sizeof...(Args),
-                             SizeArguments(std::forward<Args>(args)...))) {
+    if (Payload payload = WriteEventRecordBase(
+            EventType::kDurationBegin, name, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...))) {
       payload.WriteValues(std::forward<Args>(args)...);
     }
   }
@@ -424,8 +423,8 @@ class CategorizedTraceWriter final : public TraceWriter {
   template <typename... Args>
   void WriteDurationEndEventRecord(const char* name, Args&&... args) {
     if (Payload payload =
-            WriteEventRecord(EventType::kDurationEnd, name, sizeof...(Args),
-                             SizeArguments(std::forward<Args>(args)...))) {
+            WriteEventRecordBase(EventType::kDurationEnd, name, sizeof...(Args),
+                                 SizeArguments(std::forward<Args>(args)...))) {
       payload.WriteValues(std::forward<Args>(args)...);
     }
   }
@@ -436,7 +435,7 @@ class CategorizedTraceWriter final : public TraceWriter {
   void WriteAsyncBeginEventRecord(const char* name,
                                   uint64_t id,
                                   Args&&... args) {
-    if (Payload payload = WriteEventRecord(
+    if (Payload payload = WriteEventRecordBase(
             EventType::kAsyncStart, name, sizeof...(Args),
             SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
       payload.WriteValues(std::forward<Args>(args)...).Write(id);
@@ -449,7 +448,7 @@ class CategorizedTraceWriter final : public TraceWriter {
   void WriteAsyncInstantEventRecord(const char* name,
                                     uint64_t id,
                                     Args&&... args) {
-    if (Payload payload = WriteEventRecord(
+    if (Payload payload = WriteEventRecordBase(
             EventType::kAsyncInstant, name, sizeof...(Args),
             SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
       payload.WriteValues(std::forward<Args>(args)...).Write(id);
@@ -460,7 +459,7 @@ class CategorizedTraceWriter final : public TraceWriter {
   // Discards the record if it cannot be written.
   template <typename... Args>
   void WriteAsyncEndEventRecord(const char* name, uint64_t id, Args&&... args) {
-    if (Payload payload = WriteEventRecord(
+    if (Payload payload = WriteEventRecordBase(
             EventType::kAsyncEnd, name, sizeof...(Args),
             SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
       payload.WriteValues(std::forward<Args>(args)...).Write(id);
@@ -472,10 +471,10 @@ class CategorizedTraceWriter final : public TraceWriter {
                                   const StringRef& category_ref)
       : TraceWriter(engine), category_ref_(category_ref) {}
 
-  Payload WriteEventRecord(EventType type,
-                           const char* name,
-                           size_t argument_count,
-                           size_t payload_size);
+  Payload WriteEventRecordBase(EventType type,
+                               const char* name,
+                               size_t argument_count,
+                               size_t payload_size);
 
   StringRef const category_ref_;
 };

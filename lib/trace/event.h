@@ -7,7 +7,7 @@
 
 #include "apps/tracing/lib/trace/writer.h"
 
-// Converts a |uint64_t| koid value into one which can be passed as an
+// Converts a |mx_koid_t| koid value into one which can be passed as an
 // argument to the trace macros to distinguish it from other 64-bit integers.
 #define TRACE_KOID(value) ::tracing::Koid(value)
 

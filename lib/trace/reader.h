@@ -123,7 +123,7 @@ class ArgumentValue {
     return ArgumentValue(PointerTag(), value);
   }
 
-  static ArgumentValue MakeKoid(uint64_t value) {
+  static ArgumentValue MakeKoid(mx_koid_t value) {
     return ArgumentValue(KoidTag(), value);
   }
 
@@ -164,7 +164,7 @@ class ArgumentValue {
     return uint64_;
   }
 
-  uint64_t GetKoid() const {
+  mx_koid_t GetKoid() const {
     FTL_DCHECK(type_ == ArgumentType::kKoid);
     return uint64_;
   }
@@ -190,7 +190,7 @@ class ArgumentValue {
   explicit ArgumentValue(PointerTag, uintptr_t pointer)
       : type_(ArgumentType::kPointer), uint64_(pointer) {}
 
-  explicit ArgumentValue(KoidTag, uint64_t koid)
+  explicit ArgumentValue(KoidTag, mx_koid_t koid)
       : type_(ArgumentType::kKoid), uint64_(koid) {}
 
   ArgumentValue& Destroy();

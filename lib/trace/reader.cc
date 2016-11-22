@@ -573,7 +573,7 @@ bool TraceReader::ReadArguments(Chunk& record,
         break;
       }
       case ArgumentType::kKoid: {
-        uint64_t value;
+        mx_koid_t value;
         if (!arg.Read(&value)) {
           context_.ReportError("Failed to read koid argument value");
           return false;
