@@ -30,6 +30,18 @@
         {
             "binary": "modules_gallery.flx",
             "bootfs_path": "apps/modules_gallery"
+        },
+        {
+            "binary": "youtube_story.flx",
+            "bootfs_path": "apps/youtube_story"
+        },
+        {
+            "binary": "youtube_thumbnail.flx",
+            "bootfs_path": "apps/youtube_thumbnail"
+        },
+        {
+            "binary": "youtube_video.flx",
+            "bootfs_path": "apps/youtube_video"
         }
   ]
 }
