@@ -48,6 +48,9 @@ void URLLoaderImpl::QueryStatus(const QueryStatusCallback& callback) {
 void URLLoaderImpl::SendError(int error_code) {
   URLResponsePtr response(URLResponse::New());
   response->error = MakeNetworkError(error_code);
+  if (current_url_.is_valid()) {
+    response->url = current_url_.spec();
+  }
   SendResponse(std::move(response));
 }
 
@@ -83,8 +86,8 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   asio::io_service io_service;
   bool redirect = false;
 
-  url::GURL url(url_str);
-  if (!url.is_valid()) {
+  current_url_ = url::GURL(url_str);
+  if (!current_url_.is_valid()) {
     FTL_LOG(ERROR) << "url parse error";
     SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
     return;
@@ -96,26 +99,26 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       redirect = false;
     }
 
-    if (url.SchemeIs("https")) {
+    if (current_url_.SchemeIs("https")) {
 #ifdef NETWORK_SERVICE_USE_HTTPS
       asio::ssl::context ctx(asio::ssl::context::sslv23);
       ctx.set_default_verify_paths();
 
       HTTPClient<asio::ssl::stream<tcp::socket>> c(this, io_service, ctx);
       mx_status_t result = c.CreateRequest(
-          url.host(), url.path() + (url.has_query() ? "?" + url.query() : ""),
+          current_url_.host(), current_url_.path() + (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, element_readers);
       if (result != NO_ERROR) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }
-      c.Start(url.host(), url.has_port() ? url.port() : "https");
+      c.Start(current_url_.host(), current_url_.has_port() ? current_url_.port() : "https");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
         redirect = true;
-        url = url::GURL(c.redirect_location_);
-        if (!url.is_valid()) {
+        current_url_ = url::GURL(c.redirect_location_);
+        if (!current_url_.is_valid()) {
           FTL_LOG(ERROR) << "url parse error";
           SendError(network::NETWORK_ERR_INVALID_RESPONSE);
           break;
@@ -127,22 +130,22 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
       SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
       break;
 #endif
-    } else if (url.SchemeIs("http")) {
+    } else if (current_url_.SchemeIs("http")) {
       HTTPClient<tcp::socket> c(this, io_service);
       mx_status_t result = c.CreateRequest(
-          url.host(), url.path() + (url.has_query() ? "?" + url.query() : ""),
+          current_url_.host(), current_url_.path() + (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, element_readers);
       if (result != NO_ERROR) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }
-      c.Start(url.host(), url.has_port() ? url.port() : "http");
+      c.Start(current_url_.host(), current_url_.has_port() ? current_url_.port() : "http");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
         redirect = true;
-        url = url::GURL(c.redirect_location_);
-        if (!url.is_valid()) {
+        current_url_ = url::GURL(c.redirect_location_);
+        if (!current_url_.is_valid()) {
           FTL_LOG(ERROR) << "url parse error";
           SendError(network::NETWORK_ERR_INVALID_RESPONSE);
           break;

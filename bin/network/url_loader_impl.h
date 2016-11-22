@@ -8,6 +8,7 @@
 #include "apps/network/services/url_loader.fidl.h"
 
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/url/gurl.h"
 
 namespace network {
 
@@ -37,6 +38,7 @@ class URLLoaderImpl : public URLLoader {
 
   Callback callback_;
   // bool auto_follow_redirects_;
+  url::GURL current_url_;
   URLLoaderStatusPtr last_status_;
   fidl::Binding<URLLoader> binding_;
 };
