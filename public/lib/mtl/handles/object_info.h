@@ -13,6 +13,12 @@ namespace mtl {
 // Returns |MX_KOID_INVALID| if the handle is invalid.
 mx_koid_t GetKoid(mx_handle_t handle);
 
+// Gets the kernel object id of the current process.
+mx_koid_t GetCurrentProcessKoid();
+
+// Gets the kernel object id of the current thread.
+mx_koid_t GetCurrentThreadKoid();
+
 }  // namespace mtl
 
 #endif  // LIB_MTL_OBJECT_INFO_H_

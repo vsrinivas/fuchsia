@@ -4,6 +4,8 @@
 
 #include "lib/mtl/handles/object_info.h"
 
+#include <thread>
+
 #include <magenta/syscalls/object.h>
 #include <mx/event.h>
 
@@ -33,6 +35,22 @@ TEST(GetKoid, ValidHandlesForSameObject) {
 
   EXPECT_NE(MX_KOID_INVALID, GetKoid(event1.get()));
   EXPECT_EQ(GetKoid(event1.get()), GetKoid(event2.get()));
+}
+
+TEST(GetCurrentProcessKoid, ValidKoid) {
+  EXPECT_NE(MX_KOID_INVALID, GetCurrentProcessKoid());
+}
+
+TEST(GetCurrentThreadKoid, ValidKoid) {
+  mx_koid_t self_koid = GetCurrentThreadKoid();
+  EXPECT_NE(MX_KOID_INVALID, self_koid);
+
+  mx_koid_t thread_koid = MX_KOID_INVALID;
+  std::thread thread([&thread_koid] { thread_koid = GetCurrentThreadKoid(); });
+  thread.join();
+
+  EXPECT_NE(MX_KOID_INVALID, thread_koid);
+  EXPECT_NE(self_koid, thread_koid);
 }
 
 }  // namespace
