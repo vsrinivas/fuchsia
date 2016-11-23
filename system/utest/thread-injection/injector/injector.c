@@ -23,13 +23,13 @@ int main(void) {
     }
 
     // Read the message from the main test program, so we have
-    // its process handle and know where its bits are.
+    // its process and VMAR handles and know where its bits are.
     struct helper_data data;
     uint32_t bytes = sizeof(data);
-    mx_handle_t proc;
-    uint32_t nhandles = 1;
+    mx_handle_t handles[2];
+    uint32_t nhandles = countof(handles);
     mx_status_t status = mx_channel_read(h, 0, &data, bytes, &bytes,
-                                         &proc, nhandles, &nhandles);
+                                         handles, nhandles, &nhandles);
     if (status < 0) {
         fprintf(stderr, "mx_channel_read: %d\n", h);
         return 1;
@@ -38,13 +38,14 @@ int main(void) {
         fprintf(stderr, "read %u bytes instead of %zu\n", bytes, sizeof(data));
         return 1;
     }
-    if (nhandles != 1) {
-        fprintf(stderr, "read %u handles instead of 1\n", nhandles);
+    if (nhandles != countof(handles)) {
+        fprintf(stderr, "read %u handles instead of %zu\n", nhandles,
+                countof(handles));
         return 1;
     }
 
-    // TODO(teisenbe): We need to actually route a vmar to here
-#if 0
+    const mx_handle_t proc = handles[0];
+    const mx_handle_t vmar = handles[1];
 
     // Load up the launchpad with the injected program.  This works just
     // like normal program launching, but it goes into a process that
@@ -98,6 +99,4 @@ int main(void) {
     launchpad_destroy(lp);
 
     return 0;
-#endif
-    return 1;
 }

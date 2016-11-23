@@ -46,12 +46,22 @@ int thread_injection_test(void) {
         .futex_addr = &my_futex,
         .bootstrap = channelh[0],
     };
-    status = mx_handle_duplicate(mx_process_self(), MX_RIGHT_SAME_RIGHTS, &proc);
+    mx_handle_t handles[2];
+
+    status = mx_handle_duplicate(mx_process_self(), MX_RIGHT_SAME_RIGHTS,
+                                 &handles[0]);
     snprintf(msg, sizeof(msg), "mx_handle_duplicate failed on %#x: %d",
              mx_process_self(), status);
     ASSERT_EQ(status, 0, msg);
 
-    status = mx_channel_write(channelh[0], 0, &data, sizeof(data), &proc, 1);
+    status = mx_handle_duplicate(mx_vmar_root_self(), MX_RIGHT_SAME_RIGHTS,
+                                 &handles[1]);
+    snprintf(msg, sizeof(msg), "mx_handle_duplicate failed on %#x: %d",
+             mx_vmar_root_self(), status);
+    ASSERT_EQ(status, 0, msg);
+
+    status = mx_channel_write(channelh[0], 0, &data, sizeof(data), handles,
+                              countof(handles));
     snprintf(msg, sizeof(msg), "mx_channel_write failed: %d", status);
     ASSERT_EQ(status, 0, msg);
 
