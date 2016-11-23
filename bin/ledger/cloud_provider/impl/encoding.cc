@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/cloud_provider/impl/encoding.h"
 
+#include <algorithm>
+
 #include "apps/ledger/src/cloud_provider/impl/timestamp_conversions.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "lib/ftl/logging.h"
@@ -120,6 +122,12 @@ bool DecodeMultipleCommitsFromValue(const rapidjson::Value& value,
     FTL_DCHECK(record);
     records.push_back(std::move(*record));
   }
+
+  std::sort(records.begin(), records.end(),
+            [](const Record& lhs, const Record& rhs) {
+              return BytesToServerTimestamp(lhs.timestamp) <
+                     BytesToServerTimestamp(rhs.timestamp);
+            });
 
   output_records->swap(records);
   return true;

@@ -308,10 +308,11 @@ TEST_F(CloudProviderImplTest, GetCommits) {
     const Commit expected_commit_2("id2", "bazinga",
                                    std::map<ObjectId, Data>{});
     EXPECT_EQ(2u, records.size());
-    EXPECT_EQ(expected_commit_1, records[0].commit);
-    EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[0].timestamp);
-    EXPECT_EQ(expected_commit_2, records[1].commit);
-    EXPECT_EQ(ServerTimestampToBytes(42), records[1].timestamp);
+    // Verify that commits are ordered by timestamp.
+    EXPECT_EQ(expected_commit_2, records[0].commit);
+    EXPECT_EQ(ServerTimestampToBytes(42), records[0].timestamp);
+    EXPECT_EQ(expected_commit_1, records[1].commit);
+    EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[1].timestamp);
   };
 
   cloud_provider_->GetCommits(ServerTimestampToBytes(42), callback);

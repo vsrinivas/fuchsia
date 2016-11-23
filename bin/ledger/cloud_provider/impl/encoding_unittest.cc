@@ -59,17 +59,17 @@ TEST(EncodingTest, Decode) {
 
 TEST(EncodingTest, DecodeMultiple) {
   std::string json =
-      "{\"id1V\":"
+      "{\"id2V\":"
       "{\"content\":\"xyzV\","
-      "\"id\":\"id1V\","
+      "\"id\":\"id2V\","
       "\"objects\":{"
       "\"object_aV\":\"aV\","
       "\"object_bV\":\"bV\"},"
       "\"timestamp\":1472722368296"
       "},"
-      "\"id2V\":"
+      "\"id1V\":"
       "{\"content\":\"bazingaV\","
-      "\"id\":\"id2V\","
+      "\"id\":\"id1V\","
       "\"timestamp\":42"
       "}}";
 
@@ -77,17 +77,18 @@ TEST(EncodingTest, DecodeMultiple) {
   EXPECT_TRUE(DecodeMultipleCommits(json, &records));
   EXPECT_EQ(2u, records.size());
 
+  // Records should be ordered by timestamp.
   EXPECT_EQ("id1", records[0].commit.id);
-  EXPECT_EQ("xyz", records[0].commit.content);
-  EXPECT_EQ(2u, records[0].commit.storage_objects.size());
-  EXPECT_EQ("a", records[0].commit.storage_objects.at("object_a"));
-  EXPECT_EQ("b", records[0].commit.storage_objects.at("object_b"));
-  EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[0].timestamp);
+  EXPECT_EQ("bazinga", records[0].commit.content);
+  EXPECT_EQ(0u, records[0].commit.storage_objects.size());
+  EXPECT_EQ(ServerTimestampToBytes(42), records[0].timestamp);
 
   EXPECT_EQ("id2", records[1].commit.id);
-  EXPECT_EQ("bazinga", records[1].commit.content);
-  EXPECT_EQ(0u, records[1].commit.storage_objects.size());
-  EXPECT_EQ(ServerTimestampToBytes(42), records[1].timestamp);
+  EXPECT_EQ("xyz", records[1].commit.content);
+  EXPECT_EQ(2u, records[1].commit.storage_objects.size());
+  EXPECT_EQ("a", records[1].commit.storage_objects.at("object_a"));
+  EXPECT_EQ("b", records[1].commit.storage_objects.at("object_b"));
+  EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[1].timestamp);
 }
 
 // Verifies that encoding and JSON parsing we use work with zero bytes within
