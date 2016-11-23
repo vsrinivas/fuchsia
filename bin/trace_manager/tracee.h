@@ -15,27 +15,39 @@
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
+#include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/tasks/message_loop_handler.h"
 
 namespace tracing {
 
-class Tracee {
+class Tracee : private mtl::MessageLoopHandler {
  public:
   explicit Tracee(TraceProviderBundle* bundle);
+  ~Tracee();
 
   bool operator==(TraceProviderBundle* bundle) const;
 
-  bool Start(size_t buffer_size, fidl::Array<fidl::String> categories);
-  void Stop(ftl::Closure stop_callback);
-  bool WriteRecords(mx::socket& socket) const;
+  bool Start(size_t buffer_size,
+             fidl::Array<fidl::String> categories,
+             ftl::Closure stop_callback);
+  void Stop();
+  bool WriteRecords(const mx::socket& socket) const;
 
   TraceProviderBundle* bundle() const { return bundle_; }
 
  private:
-  bool WriteProviderInfoRecord(mx::socket& socket) const;
+  // |mtl::MessageLoopHandler|
+  void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
+  void OnHandleError(mx_handle_t handle, mx_status_t error) override;
+
+  bool WriteProviderInfoRecord(const mx::socket& socket) const;
 
   TraceProviderBundle* bundle_;
-  mx::vmo vmo_;
-  size_t vmo_size_ = 0u;
+  mx::vmo buffer_vmo_;
+  size_t buffer_vmo_size_ = 0u;
+  mx::eventpair fence_;
+  ftl::Closure stop_callback_;
+  mtl::MessageLoop::HandlerKey fence_handler_key_{};
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Tracee);
 };

@@ -55,38 +55,68 @@ inline uint64_t MakeRecordHeader(RecordType type, size_t size) {
 
 }  // namespace
 
-TraceEngine::TraceEngine(ftl::RefPtr<mtl::SharedVmo> shared_vmo,
+TraceEngine::TraceEngine(ftl::RefPtr<mtl::SharedVmo> buffer,
+                         mx::eventpair fence,
                          std::vector<std::string> enabled_categories)
     : generation_(g_next_generation.fetch_add(1u, std::memory_order_relaxed)),
-      shared_vmo_(std::move(shared_vmo)),
-      buffer_start_(reinterpret_cast<uintptr_t>(shared_vmo_->Map())),
-      buffer_end_(buffer_start_ + shared_vmo_->vmo_size()),
+      buffer_(std::move(buffer)),
+      buffer_start_(reinterpret_cast<uintptr_t>(buffer_->Map())),
+      buffer_end_(buffer_start_ + buffer_->vmo_size()),
       buffer_current_(buffer_start_),
-      enabled_categories_(std::move(enabled_categories)) {
+      fence_(std::move(fence)),
+      enabled_categories_(std::move(enabled_categories)),
+      task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      weak_ptr_factory_(this) {
+  FTL_DCHECK(task_runner_);
+
   for (const auto& category : enabled_categories_) {
     enabled_category_set_.emplace(category);
   }
 
   if (!g_process_koid)
     g_process_koid = mtl::GetCurrentProcessKoid();
-
-  WriteKernelObjectRecordBase(g_process_koid, MX_OBJ_TYPE_PROCESS,
-                              mtl::GetCurrentProcessName().c_str(), 0u, 0u);
 }
 
-TraceEngine::~TraceEngine() {}
+TraceEngine::~TraceEngine() {
+  FTL_DCHECK(!fence_handler_key_);
+}
 
 std::unique_ptr<TraceEngine> TraceEngine::Create(
-    mx::vmo vmo,
+    mx::vmo buffer,
+    mx::eventpair fence,
     std::vector<std::string> enabled_categories) {
-  auto shared_vmo = ftl::MakeRefCounted<mtl::SharedVmo>(
-      std::move(vmo), MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
-  if (!shared_vmo->Map()) {
-    FTL_LOG(ERROR) << "Failed to create trace engine: vmo could not be mapped";
+  FTL_DCHECK(buffer);
+  FTL_DCHECK(fence);
+  FTL_DCHECK(mtl::MessageLoop::GetCurrent());
+
+  auto buffer_shared_vmo = ftl::MakeRefCounted<mtl::SharedVmo>(
+      std::move(buffer), MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+  if (!buffer_shared_vmo->Map()) {
+    FTL_LOG(ERROR) << "Could not map trace buffer.";
     return nullptr;
   }
   return std::unique_ptr<TraceEngine>(
-      new TraceEngine(std::move(shared_vmo), std::move(enabled_categories)));
+      new TraceEngine(std::move(buffer_shared_vmo), std::move(fence),
+                      std::move(enabled_categories)));
+}
+
+void TraceEngine::StartTracing(TraceFinishedCallback finished_callback) {
+  FTL_DCHECK(finished_callback);
+  FTL_DCHECK(!finished_callback_);
+  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+
+  FTL_VLOG(1) << "Started tracing...";
+  finished_callback_ = std::move(finished_callback);
+
+  WriteKernelObjectRecordBase(g_process_koid, MX_OBJ_TYPE_PROCESS,
+                              mtl::GetCurrentProcessName().c_str(), 0u, 0u);
+
+  fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+      this, fence_.get(), MX_EPAIR_CLOSED);
+}
+
+void TraceEngine::StopTracing() {
+  StopTracing(TraceDisposition::kFinishedNormally, false);
 }
 
 bool TraceEngine::IsCategoryEnabled(const char* category) const {
@@ -298,10 +328,68 @@ TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
 }
 
 TraceEngine::Payload TraceEngine::AllocateRecord(size_t num_bytes) {
-  uintptr_t record_start = buffer_current_.fetch_add(num_bytes);
-  if (record_start + num_bytes > buffer_end_)
-    return Payload(nullptr);
-  return Payload(reinterpret_cast<uint64_t*>(record_start));
+  uintptr_t record_start =
+      buffer_current_.fetch_add(num_bytes, std::memory_order_relaxed);
+  if (record_start + num_bytes <= buffer_end_)
+    return Payload(reinterpret_cast<uint64_t*>(record_start));
+
+  StopTracing(TraceDisposition::kBufferExhausted, false);
+  return Payload(nullptr);
+}
+
+void TraceEngine::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+  FTL_DCHECK(pending & MX_EPAIR_CLOSED);
+
+  StopTracing(TraceDisposition::kConnectionLost, true);
+}
+
+void TraceEngine::OnHandleError(mx_handle_t handle, mx_status_t error) {
+  FTL_DCHECK(error == ERR_BAD_STATE);
+
+  StopTracing(TraceDisposition::kConnectionLost, true);
+}
+
+void TraceEngine::StopTracing(TraceDisposition disposition, bool immediate) {
+  // Prevent wrapping.
+  buffer_current_.store(buffer_end_, std::memory_order_relaxed);
+
+  // We can't close the fence until all trace writers have released
+  // their references to the trace engine since they may still have
+  // partially written records.  So we set a flag while we await our doom.
+  if (state_.exchange(State::kAwaitingFinish) == State::kAwaitingFinish)
+    return;
+
+  // Finish cleanup on message loop.
+  if (immediate) {
+    StopTracingOnMessageLoop(disposition);
+  } else {
+    task_runner_->PostTask(
+        [ weak = weak_ptr_factory_.GetWeakPtr(), disposition ] {
+          if (weak)
+            weak->StopTracingOnMessageLoop(disposition);
+        });
+  }
+}
+
+void TraceEngine::StopTracingOnMessageLoop(TraceDisposition disposition) {
+  FTL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+
+  mtl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
+  fence_handler_key_ = 0u;
+
+  switch (disposition) {
+    case TraceDisposition::kFinishedNormally:
+      FTL_VLOG(1) << "Trace finished normally";
+      break;
+    case TraceDisposition::kConnectionLost:
+      FTL_LOG(WARNING) << "Trace aborted: connection lost";
+      break;
+    case TraceDisposition::kBufferExhausted:
+      FTL_LOG(WARNING) << "Trace aborted: buffer exhausted";
+      break;
+  }
+
+  finished_callback_(disposition);
 }
 
 }  // namespace internal

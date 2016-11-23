@@ -29,8 +29,16 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   }
 
   tracees_.emplace_back(bundle);
-  if (!tracees_.back().Start(trace_buffer_size_, categories_.Clone()))
+  if (!tracees_.back().Start(
+          trace_buffer_size_, categories_.Clone(),
+          [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ]() {
+            if (weak) {
+              weak->FinishProvider(bundle);
+              weak->FinishSessionIfEmpty();
+            }
+          })) {
     tracees_.pop_back();
+  }
 }
 
 void TraceSession::RemoveDeadProvider(TraceProviderBundle* bundle) {
@@ -40,15 +48,10 @@ void TraceSession::RemoveDeadProvider(TraceProviderBundle* bundle) {
 void TraceSession::Stop(ftl::Closure done_callback,
                         const ftl::TimeDelta& timeout) {
   done_callback_ = std::move(done_callback);
+
   // Walk through all remaining tracees and send out their buffers.
   for (auto it = tracees_.begin(); it != tracees_.end(); ++it) {
-    it->Stop(
-        [ weak = weak_ptr_factory_.GetWeakPtr(), bundle = it->bundle() ]() {
-          if (weak) {
-            weak->FinishProvider(bundle);
-            weak->FinishSessionIfEmpty();
-          }
-        });
+    it->Stop();
   }
 
   session_finalize_timeout_.Start(
@@ -58,6 +61,8 @@ void TraceSession::Stop(ftl::Closure done_callback,
           weak->done_callback_();
       },
       timeout);
+
+  FinishSessionIfEmpty();
 }
 
 void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
@@ -78,7 +83,7 @@ void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
 }
 
 void TraceSession::FinishSessionIfEmpty() {
-  if (tracees_.empty()) {
+  if (tracees_.empty() && done_callback_) {
     session_finalize_timeout_.Stop();
     done_callback_();
   }

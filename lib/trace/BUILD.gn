@@ -15,7 +15,6 @@ source_set("trace") {
     ":internal_fields",
     "//lib/ftl",
     "//lib/mtl",
-    "//lib/mtl/vmo",
   ]
 
   public_deps = [
@@ -26,6 +25,8 @@ source_set("trace") {
 
 source_set("provider") {
   sources = [
+    "internal/trace_provider_impl.cc",
+    "internal/trace_provider_impl.h",
     "provider.h",
     "provider.cc",
     "settings.h",
@@ -93,6 +94,7 @@ executable("trace_tests") {
     ":trace",
     ":types",
     "//apps/tracing/services",
+    "//lib/mtl",
     "//lib/mtl/test",
     "//third_party/gtest",
     "//third_party/rapidjson",

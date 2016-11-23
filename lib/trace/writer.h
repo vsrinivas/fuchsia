@@ -7,10 +7,12 @@
 
 #include <stdint.h>
 
+#include <functional>
 #include <string>
 #include <type_traits>
 #include <utility>
 
+#include <mx/eventpair.h>
 #include <mx/vmo.h>
 
 #include "apps/tracing/lib/trace/internal/fields.h"
@@ -20,17 +22,65 @@
 namespace tracing {
 namespace internal {
 class TraceEngine;
+void ReleaseEngine();
 }  // namespace internal
 namespace writer {
 
-// Sets up the Writer API to use |buffer| as destination for
-// incoming trace records.
-void StartTracing(mx::vmo current,
-                  mx::vmo next,
-                  std::vector<std::string> enabled_categories);
+// Describes the final disposition of tracing when it stopped.
+enum class TraceDisposition {
+  // The trace was stopped using |StopTracing| and finished normally
+  // without errors.
+  kFinishedNormally,
 
-// Tears down the Writer API and frees up all allocated resources.
+  // The trace was aborted due to a loss of connection with the trace manager.
+  kConnectionLost,
+
+  // The trace was aborted due the trace buffer becoming completely full.
+  kBufferExhausted,
+};
+
+// Callback which is invoked when tracing stops.
+using TraceFinishedCallback = std::function<void(TraceDisposition)>;
+
+// Starts writing trace records into the specified buffer.
+//
+// |buffer| and |fence| must be valid handles which were provided to
+// |TraceProvider.StartTracing| by the |TraceRegistry|.  See |TraceProvider|
+// for a description of the use of these handles.
+//
+// If |enabled_categories| is empty then all events will be written to the
+// trace regardless of their category.  Otherwise only those events whose
+// category exactly matches one of the strings in |enabled_categories| will
+// be written to the trace.
+//
+// The |finished_callback| will be posted to the current message loop when
+// tracing stops and indicate the disposition of the trace.
+//
+// This function must be called on a thread which has a message loop since
+// tracing requires the loop to handle incoming events.
+//
+// Returns true if tracing started successfully, false if the trace buffer
+// could not be mapped.
+bool StartTracing(mx::vmo buffer,
+                  mx::eventpair fence,
+                  std::vector<std::string> enabled_categories,
+                  TraceFinishedCallback finished_callback);
+
+// Stops tracing.
+//
+// Stopping tracing is completed asynchronously once all active |TraceWriter|
+// instances have been released (including those which may be in use on
+// other threads).
+//
+// Once finished, the |TraceFinishedCallback| provided to |StartTracing|
+// will be posted to the message loop on which |StartTracing| was called.
+//
+// It is not safe to call |StartTracing| again until the finished callback
+// is posted.
 void StopTracing();
+
+// Returns true if tracing is active.
+bool IsTracing();
 
 // Returns true if the tracer has been initialized by a call to |StartTracing|
 // and the specified |category| has been enabled.
@@ -362,8 +412,12 @@ class TraceWriter {
   //
   // Note: This is non-virtual to avoid initialization of a vtable.
   // The only subclass is |CategorizedTraceWriter| which only adds POD members
-  // and is final.
-  ~TraceWriter();
+  // and is final.  Keeping this inline to avoid a function call when tracing
+  // is inactive.
+  ~TraceWriter() {
+    if (engine_)
+      ::tracing::internal::ReleaseEngine();
+  }
 
   // Prepares to write trace records.
   // If tracing is enabled, returns a valid |TraceWriter|.

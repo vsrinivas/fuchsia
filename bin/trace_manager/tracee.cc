@@ -14,7 +14,7 @@ namespace {
 // on |socket| should happen, true otherwise.
 bool WriteBufferToSocket(const uint8_t* buffer,
                          size_t len,
-                         mx::socket& socket) {
+                         const mx::socket& socket) {
   mx_size_t offset = 0;
   while (offset < len) {
     mx_status_t status = NO_ERROR;
@@ -51,52 +51,97 @@ bool WriteBufferToSocket(const uint8_t* buffer,
 
 Tracee::Tracee(TraceProviderBundle* bundle) : bundle_(bundle) {}
 
+Tracee::~Tracee() {
+  if (fence_handler_key_) {
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
+  }
+}
+
 bool Tracee::operator==(TraceProviderBundle* bundle) const {
   return bundle_ == bundle;
 }
 
-bool Tracee::Start(size_t buffer_size, fidl::Array<fidl::String> categories) {
-  FTL_DCHECK(!vmo_);
-  vmo_size_ = buffer_size;
+bool Tracee::Start(size_t buffer_size,
+                   fidl::Array<fidl::String> categories,
+                   ftl::Closure stop_callback) {
+  FTL_DCHECK(!buffer_vmo_);
+  FTL_DCHECK(stop_callback);
 
-  mx::vmo duped;
-  if (mx::vmo::create(buffer_size, 0, &vmo_) < 0) {
-    FTL_LOG(ERROR) << "Failed to create shared buffer";
+  mx::vmo buffer_vmo;
+  mx_status_t status = mx::vmo::create(buffer_size, 0u, &buffer_vmo);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "Failed to create trace buffer: status=" << status;
     return false;
   }
 
-  if (vmo_.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ |
-                         MX_RIGHT_WRITE | MX_RIGHT_MAP,
-                     &duped) < 0) {
-    FTL_LOG(ERROR) << "Failed to dup shared buffer for provider";
+  mx::vmo buffer_vmo_for_provider;
+  status =
+      buffer_vmo.duplicate(MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
+                               MX_RIGHT_READ | MX_RIGHT_WRITE | MX_RIGHT_MAP,
+                           &buffer_vmo_for_provider);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "Failed to duplicate trace buffer for provider: status="
+                   << status;
     return false;
   }
 
-  bundle_->provider->Start(std::move(duped), mx::vmo(), std::move(categories));
+  mx::eventpair fence, fence_for_provider;
+  status = mx::eventpair::create(0u, &fence, &fence_for_provider);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "Failed to create trace buffer fence: status=" << status;
+    return false;
+  }
+
+  bundle_->provider->Start(std::move(buffer_vmo_for_provider),
+                           std::move(fence_for_provider),
+                           std::move(categories));
+
+  buffer_vmo_ = std::move(buffer_vmo);
+  buffer_vmo_size_ = buffer_size;
+  fence_ = std::move(fence);
+  stop_callback_ = std::move(stop_callback);
+  fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+      this, fence_.get(), MX_EPAIR_CLOSED);
   return true;
 }
 
-void Tracee::Stop(ftl::Closure stop_callback) {
-  bundle_->provider->Stop([stop_callback]() { stop_callback(); });
+void Tracee::Stop() {
+  bundle_->provider->Stop();
 }
 
-bool Tracee::WriteRecords(mx::socket& socket) const {
+void Tracee::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
+  FTL_DCHECK(pending & MX_EPAIR_CLOSED);
+  FTL_DCHECK(stop_callback_);
+
+  mtl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
+  fence_handler_key_ = 0u;
+
+  ftl::Closure stop_callback = std::move(stop_callback_);
+  stop_callback();
+}
+
+void Tracee::OnHandleError(mx_handle_t handle, mx_status_t error) {
+  FTL_DCHECK(error == ERR_BAD_STATE);
+}
+
+bool Tracee::WriteRecords(const mx::socket& socket) const {
   FTL_DCHECK(socket);
-  FTL_DCHECK(vmo_);
+  FTL_DCHECK(buffer_vmo_);
 
   if (!WriteProviderInfoRecord(socket)) {
     FTL_LOG(ERROR) << "Failed to write provider info record to trace.";
     return false;
   }
 
-  std::vector<uint8_t> buffer(vmo_size_);
+  std::vector<uint8_t> buffer(buffer_vmo_size_);
 
   mx_size_t actual = 0;
-  if ((vmo_.read(buffer.data(), 0, vmo_size_, &actual) != NO_ERROR) ||
-      (actual != vmo_size_)) {
-    FTL_LOG(WARNING) << "Failed to read data from vmo: "
+  if ((buffer_vmo_.read(buffer.data(), 0, buffer_vmo_size_, &actual) !=
+       NO_ERROR) ||
+      (actual != buffer_vmo_size_)) {
+    FTL_LOG(WARNING) << "Failed to read data from buffer_vmo: "
                      << "actual size=" << actual
-                     << ", expected size=" << vmo_size_;
+                     << ", expected size=" << buffer_vmo_size_;
   }
 
   const uint64_t* start = reinterpret_cast<const uint64_t*>(buffer.data());
@@ -116,7 +161,7 @@ bool Tracee::WriteRecords(mx::socket& socket) const {
                              internal::WordsToBytes(current - start), socket);
 }
 
-bool Tracee::WriteProviderInfoRecord(mx::socket& socket) const {
+bool Tracee::WriteProviderInfoRecord(const mx::socket& socket) const {
   FTL_DCHECK(bundle_->label.size() <=
              internal::ProviderInfoMetadataRecordFields::kMaxNameLength);
 

@@ -4,77 +4,15 @@
 
 #include "apps/tracing/lib/trace/provider.h"
 
-#include "apps/tracing/lib/trace/writer.h"
-#include "apps/tracing/services/trace_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "apps/tracing/lib/trace/internal/trace_provider_impl.h"
 #include "lib/ftl/logging.h"
-#include "lib/mtl/handles/object_info.h"
-#include "lib/mtl/vmo/shared_vmo.h"
+
+using namespace tracing::internal;
 
 namespace tracing {
 namespace {
 
-class TraceProviderImpl : public TraceProvider {
- public:
-  // Initializes a new instance, registering itself with |registry|.
-  TraceProviderImpl(TraceRegistryPtr registry, const TraceSettings& settings)
-      : state_(State::kStopped),
-        binding_(this),
-        registry_(std::move(registry)) {
-    TraceProviderPtr provider;
-    fidl::InterfaceRequest<TraceProvider> provider_request =
-        fidl::GetProxy(&provider);
-
-    binding_.Bind(std::move(provider_request));
-
-    std::string label = settings.provider_label;
-    if (label.empty())
-      label = mtl::GetCurrentProcessName();
-
-    registry_->RegisterTraceProvider(std::move(provider),
-                                     fidl::String::From(std::move(label)));
-  }
-
- private:
-  // |TraceProvider| implementation
-  //
-  // Preprocesses |categories| and builds a lookup-table
-  // for fast checks if a trace event should be traced or not.
-  void Start(mx::vmo initial_buffer,
-             mx::vmo next_buffer,
-             ::fidl::Array<::fidl::String> categories) override {
-    FTL_VLOG(2) << "TraceProvider::Start called";
-
-    if (state_ != State::kStopped)
-      return;
-
-    state_ = State::kStarted;
-    writer::StartTracing(std::move(initial_buffer), mx::vmo(),
-                         categories.To<std::vector<std::string>>());
-  }
-
-  void Stop(const StopCallback& cb) override {
-    FTL_VLOG(2) << "TraceProvider::Stop called";
-
-    if (state_ == State::kStarted) {
-      state_ = State::kStopped;
-      writer::StopTracing();
-    }
-
-    cb();
-  }
-
-  void RecycleBuffer() override {}
-
-  enum class State { kStarted, kStopped };
-  State state_;
-  fidl::Binding<TraceProvider> binding_;
-  TraceRegistryPtr registry_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(TraceProviderImpl);
-};
-
-// gTracer is the singleton |Tracer| instance.
+// The singleton |TraceProviderImpl| instance.
 TraceProviderImpl* g_tracer = nullptr;
 
 }  // namespace

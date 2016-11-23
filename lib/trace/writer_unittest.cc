@@ -4,14 +4,13 @@
 
 #include "apps/tracing/lib/trace/writer.h"
 
-#include <mx/vmo.h>
-
 #include <memory>
 #include <thread>
 #include <vector>
 
 #include "gtest/gtest.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace tracing {
 namespace writer {
@@ -19,12 +18,22 @@ namespace {
 
 struct WriterTest : public ::testing::Test {
   WriterTest() {
-    mx::vmo vmo;
-    assert(NO_ERROR == mx::vmo::create(100000, 0u, &vmo));
-    StartTracing(std::move(vmo), mx::vmo(), {"cat"});
+    mx::vmo buffer;
+    mx::eventpair fence;
+    assert(NO_ERROR == mx::vmo::create(100000, 0u, &buffer));
+    assert(NO_ERROR == mx::eventpair::create(0u, &fence, &control_));
+    StartTracing(std::move(buffer), std::move(fence), {"cat"},
+                 [this](TraceDisposition disposition) { loop_.QuitNow(); });
   }
 
-  ~WriterTest() { StopTracing(); }
+  ~WriterTest() {
+    StopTracing();
+    loop_.Run();
+  }
+
+ private:
+  mtl::MessageLoop loop_;
+  mx::eventpair control_;
 };
 
 TEST_F(WriterTest, StringRegistrationAndRetrieval) {

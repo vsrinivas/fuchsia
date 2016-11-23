@@ -4,49 +4,35 @@
 
 module tracing;
 
-// The provider interface implemented by applications
-// (or by libraries they use) and registered with the TraceRegistry.
-// The Trace Manager calls into this interface to perform tracing.
+// The provider interface which applications must implement and register
+// with the |TraceRegistry| to participate in tracing.
 //
-// Invariant: At most one trace can be running at a time.  If the trace
-// provider receives an invalid request, it should close the connection.
+// See //apps/tracing/lib/trace/provider.h for a C++ implementation of
+// this interface which can easily be configured by an application.
 [ServiceName="tracing::TraceProvider"]
 interface TraceProvider {
-  // Starts tracing the specified categories into the provided VMO buffers,
-  // beginning with the |initial_buffer|.
+  // Starts writing trace records for events in the specified |categories|
+  // into |buffer| using |fence| for signaling.
   //
-  // When double-buffering is enabled, the trace manager will provide a
-  // |next_buffer| into which the trace provider should continue to write
-  // traces without interruption when the |initial_buffer| becomes full.
+  // When the trace provider fills the buffer completely, it must stop tracing
+  // and close both |buffer| and |fence| to indicate to the trace manager
+  // that tracing is finished.
   //
-  // Each time the trace provider fills a buffer, it should set the
-  // |MX_USER_SIGNAL_0| signal bit on that buffer to inform the trace manager
-  // that the buffer has filled up.  The trace manager may then copy the data
-  // out of the buffer, reset the signal bit, and call |RecycleBuffer| to
-  // let the trace provider know that it can reuse the buffer.
+  // When the trace provider observes |MX_EPAIR_CLOSED| on |fence|, it must
+  // assume the trace manager has terminated abnormally (since |Stop| was
+  // not received as usual) and stop tracing automatically.
   //
-  // If the trace provider fills all of its buffers before they can be recycled,
-  // it should stop tracing altogether.
-  Start(handle<vmo> initial_buffer,
-    handle<vmo>? next_buffer,
-    array<string> categories);
-
-  // Informs the provider that the trace manager has finished consuming the
-  // data in the previous buffer so it is now available to be reused.
+  // At most one trace can be running at a time.  If the trace provider
+  // receives a request to start tracing while already tracing, it must
+  // stop the previous trace then start the new one.
   //
-  // This should be called in response to receiving |MX_USER_SIGNAL_0|
-  // on a prior buffer in order to ensure that tracing can continue
-  // uninterrupted.  This is essentially a double-buffering scheme.
-  //
-  // It is invalid for the trace manager to invoke this method unless the
-  // provider sent a signal indicating that the previous buffer was full.
-  //
-  // The trace provider should clear the buffer before recycling it.
-  RecycleBuffer();
+  // TODO(jeffbrown): Implement half-full signal and streaming protocol.
+  Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories);
 
   // Stops tracing.
   //
-  // The provider should invoke the callback once it has finished writing its
-  // traces and released the current and next buffers.
-  Stop() => ();
+  // Once the provider has finished writing any final events to the trace
+  // buffer, it must close both |buffer| and |fence| to indicate to the trace
+  // manager that tracing is finished.
+  Stop();
 };
