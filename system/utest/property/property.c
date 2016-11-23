@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <magenta/compiler.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -14,23 +15,6 @@
 #include <mxio/util.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
-
-static mx_handle_t get_main_thread(void)
-{
-    static mx_handle_t main_thread = MX_HANDLE_INVALID;
-
-    // This is the only way to get the handle of the main thread,
-    // and it is a one-shot deal.
-    if (main_thread == MX_HANDLE_INVALID)
-        main_thread = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_THREAD_SELF, 0));
-    if (main_thread == MX_HANDLE_INVALID)
-    {
-        unittest_printf_critical("Unable to obtain main thread handle.\n");
-        exit(1);
-    }
-
-    return main_thread;
-}
 
 static bool get_rights(mx_handle_t handle, mx_rights_t* rights)
 {
@@ -111,7 +95,7 @@ static bool thread_name_test(void)
 {
     BEGIN_TEST;
 
-    mx_handle_t main_thread = get_main_thread();
+    mx_handle_t main_thread = thrd_get_mx_handle(thrd_current());
     unittest_printf("thread handle %d\n", main_thread);
     bool success = test_name_property(main_thread);
     if (!success)
