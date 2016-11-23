@@ -49,6 +49,18 @@ void ModelRenderer::Draw(Stage& stage,
                          CommandBuffer* command_buffer) {
   vk::CommandBuffer vk_command_buffer = command_buffer->get();
 
+  auto& volume = stage.viewing_volume();
+
+  vk::Viewport viewport;
+  viewport.width = volume.width();
+  viewport.height = volume.height();
+  // TODO: replace these with values from ViewingVolume.  Need to also
+  // consider how this works with hacked Z-value in vertex shader (i.e. unhack
+  // that at the same time).
+  viewport.minDepth = 0.f;
+  viewport.maxDepth = 1.f;
+  vk_command_buffer.setViewport(0, 1, &viewport);
+
   auto& objects = model.objects();
 
   ModelUniformWriter writer(objects.size(), model_data_->device(),
@@ -71,9 +83,8 @@ void ModelRenderer::Draw(Stage& stage,
   // used once the uniforms have been flushed to the GPU.
   FTL_DCHECK(per_object_bindings_.empty());
   {
-    // TODO: read screen width from stage.
-    constexpr float kHalfWidthRecip = 2.f / 1024.f;
-    constexpr float kHalfHeightRecip = 2.f / 1024.f;
+    const float half_width_recip = 2.f / volume.width();
+    const float half_height_recip = 2.f / volume.height();
 
     ModelData::PerObject per_object;
     auto& scale_x = per_object.transform[0][0];
@@ -84,10 +95,10 @@ void ModelRenderer::Draw(Stage& stage,
     auto& color = per_object.color;
     for (const Object& o : objects) {
       // Push uniforms for scale/translation and color.
-      scale_x = o.width() * kHalfWidthRecip;
-      scale_y = o.height() * kHalfHeightRecip;
-      translate_x = o.position().x * kHalfWidthRecip - 1.f;
-      translate_y = o.position().y * kHalfHeightRecip - 1.f;
+      scale_x = o.width() * half_width_recip;
+      scale_y = o.height() * half_height_recip;
+      translate_x = o.position().x * half_width_recip - 1.f;
+      translate_y = o.position().y * half_height_recip - 1.f;
       translate_z = o.position().z;
       color = vec4(o.material()->color(), 1.f);  // always opaque
 

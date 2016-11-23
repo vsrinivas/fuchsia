@@ -19,18 +19,35 @@
 #include "escher/vk/vulkan_swapchain_helper.h"
 #include "ftl/logging.h"
 
+static constexpr int kDemoWidth = 2160;
+static constexpr int kDemoHeight = 1440;
+bool g_show_debug_info = false;
+
 static void key_callback(GLFWwindow* window,
                          int key,
                          int scancode,
                          int action,
                          int mods) {
-  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-    glfwSetWindowShouldClose(window, GLFW_TRUE);
+  // We only care about presses, not releases.
+  if (action == GLFW_PRESS) {
+    switch (key) {
+      case GLFW_KEY_ESCAPE:
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+        break;
+      case GLFW_KEY_D:
+        g_show_debug_info = !g_show_debug_info;
+        break;
+      default:
+        break;
+    }
+  }
 }
 
 std::unique_ptr<Demo> create_demo() {
   Demo::WindowParams window_params;
   window_params.window_name = "Escher Waterfall Demo (Vulkan)";
+  window_params.width = kDemoWidth;
+  window_params.height = kDemoHeight;
 
   Demo::InstanceParams instance_params;
 
@@ -54,12 +71,14 @@ int main(int argc, char** argv) {
     escher::VulkanContext vulkan_context = demo->GetVulkanContext();
 
     escher::Escher escher(vulkan_context, demo->GetVulkanSwapchain());
+    auto renderer = escher.NewPaperRenderer();
     escher::VulkanSwapchainHelper swapchain_helper(demo->GetVulkanSwapchain(),
-                                                   escher.NewPaperRenderer());
+                                                   renderer);
 
     vec2 focus;
     escher::Stage stage;
-    stage.Resize(escher::SizeI(1024, 1024), 1.0, escher::SizeI(0, 0));
+    stage.Resize(escher::SizeI(kDemoWidth, kDemoHeight), 1.0,
+                 escher::SizeI(0, 0));
     stage.set_brightness(0.0);
     float brightness_change = 0.0;
 
@@ -72,7 +91,7 @@ int main(int argc, char** argv) {
     // escher::Model model = scene.GetModel(stage.viewing_volume(), focus);
 
     auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
-        escher.NewCheckerboardImage(16, 16), vulkan_context.device,
+        escher.NewCheckerboardImage(32, 24), vulkan_context.device,
         vk::Filter::eNearest);
 
     auto blue = ftl::MakeRefCounted<escher::Material>();
@@ -87,7 +106,7 @@ int main(int argc, char** argv) {
     purple->set_color(vec3(0.588f, 0.239f, 0.729f));
 
     Object rectangle(
-        Object::NewRect(vec2(112.f, 112.f), vec2(800.f, 800.f), 8.f, purple));
+        Object::NewRect(vec2(80.f, 80.f), vec2(2000.f, 1280.f), 8.f, purple));
     Object circle1(Object::NewCircle(vec2(612.f, 212.f), 200.f, 5.f, blue));
     Object circle2(Object::NewCircle(vec2(412.f, 800.f), 200.f, 5.f, blue));
     Object circle3(Object::NewCircle(vec2(162.f, 412.f), 120.f, 3.f, blue));
@@ -122,6 +141,8 @@ int main(int argc, char** argv) {
     escher::Model model(objects);
 
     while (!glfwWindowShouldClose(demo->GetWindow())) {
+      renderer->set_show_debug_info(g_show_debug_info);
+
       if ((frame_count % 200) == 0) {
         stage.set_brightness(0.0);
         brightness_change = 0.01;

@@ -306,14 +306,25 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
   // mobile devices.
   auto pre_transform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
 
-  // Pick the first available surface format.
-  std::vector<vk::SurfaceFormatKHR> surface_formats;
+  // Pick a format and color-space for the swap-chain.
+  vk::Format format = vk::Format::eUndefined;
+  vk::ColorSpaceKHR color_space = vk::ColorSpaceKHR::eSrgbNonlinear;
   {
     auto result = physical_device_.getSurfaceFormatsKHR(surface_);
     VK_CHECK_RESULT(result);
-    surface_formats = std::move(result.value);
+    for (auto& sf : result.value) {
+      if (sf.colorSpace != color_space)
+        continue;
+      if (sf.format == vk::Format::eB8G8R8A8Srgb) {
+        // eB8G8R8A8Srgb is our favorite!
+        format = sf.format;
+      } else if (format == vk::Format::eUndefined) {
+        // Anything is better than eUndefined.
+        format = sf.format;
+      }
+    }
   }
-  FTL_CHECK(surface_formats.size() > 0);
+  FTL_CHECK(format != vk::Format::eUndefined);
 
   // TODO: old_swapchain will come into play (I think) when we support
   // resizing
@@ -326,8 +337,8 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
     vk::SwapchainCreateInfoKHR info;
     info.surface = surface_;
     info.minImageCount = swapchain_image_count_;
-    info.imageFormat = surface_formats[0].format;
-    info.imageColorSpace = surface_formats[0].colorSpace;
+    info.imageFormat = format;
+    info.imageColorSpace = color_space;
     info.imageExtent = swapchain_extent;
     info.imageArrayLayers = 1;  // TODO: what is this?
     // Using eTransferDst allows us to blit debug info onto the surface.
@@ -363,8 +374,7 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
     escher_images.reserve(images.size());
     for (auto& im : images) {
       escher_images.push_back(ftl::MakeRefCounted<escher::Image>(
-          im, surface_formats[0].format, swapchain_extent.width,
-          swapchain_extent.height));
+          im, format, swapchain_extent.width, swapchain_extent.height));
 
       vk::ImageSubresourceRange range;
       range.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -373,7 +383,7 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
 
       vk::ImageViewCreateInfo info;
       info.viewType = vk::ImageViewType::e2D;
-      info.format = surface_formats[0].format;
+      info.format = format;
       info.subresourceRange = range;
       info.image = im;
 
@@ -382,9 +392,9 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
 
       image_views.push_back(result.value);
     }
-    swapchain_ = escher::VulkanSwapchain(swapchain, escher_images, image_views,
-                                         swapchain_extent.width,
-                                         swapchain_extent.height);
+    swapchain_ = escher::VulkanSwapchain(
+        swapchain, escher_images, image_views, swapchain_extent.width,
+        swapchain_extent.height, format, color_space);
   }
 }
 

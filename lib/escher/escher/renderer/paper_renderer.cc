@@ -35,7 +35,7 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
       model_renderer_(std::make_unique<impl::ModelRenderer>(
           escher,
           model_data_.get(),
-          vk::Format::eB8G8R8A8Unorm,
+          vk::Format::eB8G8R8A8Srgb,
           ESCHER_CHECKED_VK_RESULT(
               impl::GetSupportedDepthFormat(context_.physical_device)))),
       clear_values_({vk::ClearColorValue(
@@ -118,24 +118,30 @@ void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer,
   model_renderer_->Draw(stage, model, command_buffer);
   command_buffer->EndRenderPass();
 
-  vk::ImageBlit blit;
-  blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eDepth;
-  blit.srcSubresource.mipLevel = 0;
-  blit.srcSubresource.baseArrayLayer = 0;
-  blit.srcSubresource.layerCount = 1;
-  blit.srcOffsets[0] = vk::Offset3D{0, 0, 0};
-  blit.srcOffsets[1] = vk::Offset3D{1024, 1024, 1};
-  blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
-  blit.dstSubresource.mipLevel = 0;
-  blit.dstSubresource.baseArrayLayer = 0;
-  blit.dstSubresource.layerCount = 1;
-  blit.dstOffsets[0] = vk::Offset3D{0, 0, 0};
-  blit.dstOffsets[1] = vk::Offset3D{256, 256, 1};
-  command_buffer->get().blitImage(
-      framebuffer->get_image(1)->get(),
-      vk::ImageLayout::eDepthStencilAttachmentOptimal,
-      framebuffer->get_image(0)->get(),
-      vk::ImageLayout::eColorAttachmentOptimal, 1, &blit, vk::Filter::eLinear);
+  if (show_debug_info_) {
+    int32_t width = framebuffer->width();
+    int32_t height = framebuffer->height();
+
+    vk::ImageBlit blit;
+    blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eDepth;
+    blit.srcSubresource.mipLevel = 0;
+    blit.srcSubresource.baseArrayLayer = 0;
+    blit.srcSubresource.layerCount = 1;
+    blit.srcOffsets[0] = vk::Offset3D{0, 0, 0};
+    blit.srcOffsets[1] = vk::Offset3D{width, height, 1};
+    blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+    blit.dstSubresource.mipLevel = 0;
+    blit.dstSubresource.baseArrayLayer = 0;
+    blit.dstSubresource.layerCount = 1;
+    blit.dstOffsets[0] = vk::Offset3D{0, 0, 0};
+    blit.dstOffsets[1] = vk::Offset3D{width / 4, height / 4, 1};
+    command_buffer->get().blitImage(
+        framebuffer->get_image(1)->get(),
+        vk::ImageLayout::eDepthStencilAttachmentOptimal,
+        framebuffer->get_image(0)->get(),
+        vk::ImageLayout::eColorAttachmentOptimal, 1, &blit,
+        vk::Filter::eLinear);
+  }
 
   // ModelRenderer's lighting render-pass leaves the color-attachment format
   // as eColorAttachmentOptimal, since it's not clear how it will be used

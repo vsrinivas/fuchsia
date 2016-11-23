@@ -97,6 +97,10 @@ EscherImpl::~EscherImpl() {
   gpu_allocator_.reset();
 }
 
+const VulkanContext& EscherImpl::vulkan_context() {
+  return vulkan_context_;
+}
+
 CommandBufferPool* EscherImpl::command_buffer_pool() {
   return command_buffer_pool_.get();
 }
@@ -123,10 +127,6 @@ GpuAllocator* EscherImpl::gpu_allocator() {
 
 GpuUploader* EscherImpl::gpu_uploader() {
   return gpu_uploader_.get();
-}
-
-const VulkanContext& EscherImpl::vulkan_context() {
-  return vulkan_context_;
 }
 
 }  // namespace impl

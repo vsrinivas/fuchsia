@@ -25,6 +25,7 @@ class EscherImpl {
   EscherImpl(const VulkanContext& context, const VulkanSwapchain& swapchain);
   ~EscherImpl();
 
+  const VulkanContext& vulkan_context();
   CommandBufferPool* command_buffer_pool();
   CommandBufferPool* transfer_command_buffer_pool();
   GpuAllocator* gpu_allocator();
@@ -33,8 +34,6 @@ class EscherImpl {
   ImageCache* image_cache();
   MeshManager* mesh_manager();
   GlslToSpirvCompiler* glsl_compiler();
-
-  const VulkanContext& vulkan_context();
 
   void IncrementRendererCount() { ++renderer_count_; }
   void DecrementRendererCount() { --renderer_count_; }

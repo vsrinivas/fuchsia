@@ -21,6 +21,9 @@ class PaperRenderer : public Renderer {
   // frames.
   FramebufferPtr NewFramebuffer(const ImagePtr& image) override;
 
+  // Set whether one or more debug-overlays is to be show.
+  void set_show_debug_info(bool b) { show_debug_info_ = b; }
+
  private:
   friend class Escher;
   PaperRenderer(impl::EscherImpl* escher);
@@ -39,6 +42,7 @@ class PaperRenderer : public Renderer {
   std::unique_ptr<impl::ModelData> model_data_;
   std::unique_ptr<impl::ModelRenderer> model_renderer_;
   std::vector<vk::ClearValue> clear_values_;
+  bool show_debug_info_ = false;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(PaperRenderer);
   FTL_DISALLOW_COPY_AND_ASSIGN(PaperRenderer);

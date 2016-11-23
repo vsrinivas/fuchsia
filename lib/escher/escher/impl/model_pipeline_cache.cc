@@ -251,19 +251,19 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   depth_stencil_info.depthBoundsTestEnable = false;
   depth_stencil_info.stencilTestEnable = false;
 
-  // TODO: make viewport a dynamic pipeline property that is updated each frame.
+  // This is set dynamically during rendering.
   vk::Viewport viewport;
   viewport.x = 0.0f;
   viewport.y = 0.0f;
-  viewport.width = 1024.f;
-  viewport.height = 1024.f;
+  viewport.width = 0.f;
+  viewport.height = 0.f;
   viewport.minDepth = 0.0f;
-  viewport.maxDepth = 1.0f;
+  viewport.maxDepth = 0.0f;
 
-  // TODO: make viewport a dynamic pipeline property that is updated each frame.
+  // This is set dynamically during rendering.
   vk::Rect2D scissor;
   scissor.offset = vk::Offset2D{0, 0};
-  scissor.extent = vk::Extent2D{1024, 1024};
+  scissor.extent = vk::Extent2D{0, 0};
 
   vk::PipelineViewportStateCreateInfo viewport_state;
   viewport_state.viewportCount = 1;
@@ -300,6 +300,13 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   color_blending.blendConstants[2] = 0.0f;
   color_blending.blendConstants[3] = 0.0f;
 
+  vk::PipelineDynamicStateCreateInfo dynamic_state;
+  const uint32_t kDynamicStateCount = 2;
+  vk::DynamicState dynamic_states[] = {vk::DynamicState::eViewport,
+                                       vk::DynamicState::eScissor};
+  dynamic_state.dynamicStateCount = kDynamicStateCount;
+  dynamic_state.pDynamicStates = dynamic_states;
+
   vk::PipelineLayoutCreateInfo pipeline_layout_info;
   pipeline_layout_info.setLayoutCount =
       static_cast<uint32_t>(descriptor_set_layouts.size());
@@ -319,6 +326,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
   pipeline_info.pDepthStencilState = &depth_stencil_info;
   pipeline_info.pMultisampleState = &multisampling;
   pipeline_info.pColorBlendState = &color_blending;
+  pipeline_info.pDynamicState = &dynamic_state;
   pipeline_info.layout = pipeline_layout;
   pipeline_info.renderPass = render_pass;
   pipeline_info.subpass = 0;

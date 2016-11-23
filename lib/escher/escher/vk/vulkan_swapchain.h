@@ -19,17 +19,23 @@ struct VulkanSwapchain {
   std::vector<vk::ImageView> image_views;
   uint32_t width;
   uint32_t height;
+  vk::Format format;
+  vk::ColorSpaceKHR color_space;
 
   VulkanSwapchain(vk::SwapchainKHR swapchain_in,
                   std::vector<ImagePtr> images_in,
                   std::vector<vk::ImageView> image_views_in,
                   uint32_t width_in,
-                  uint32_t height_in)
+                  uint32_t height_in,
+                  vk::Format format_in,
+                  vk::ColorSpaceKHR color_space_in)
       : swapchain(swapchain_in),
         images(std::move(images_in)),
         image_views(std::move(image_views_in)),
         width(width_in),
-        height(height_in) {}
+        height(height_in),
+        format(format_in),
+        color_space(color_space_in) {}
 
   VulkanSwapchain() : width(UINT32_MAX), height(UINT32_MAX) {}
 };
