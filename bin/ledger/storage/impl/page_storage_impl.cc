@@ -278,13 +278,19 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit,
 void PageStorageImpl::AddCommitFromSync(const CommitId& id,
                                         std::string storage_bytes,
                                         std::function<void(Status)> callback) {
-  std::unique_ptr<Commit> commit =
+  std::unique_ptr<const Commit> commit =
       CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
   if (!commit) {
     callback(Status::FORMAT_ERROR);
     return;
   }
-  AddCommit(std::move(commit), ChangeSource::SYNC, std::move(callback));
+  // Get all objects from sync and then add the commit object.
+  btree::GetObjectsFromSync(
+      commit->GetRootId(), this, ftl::MakeCopyable([
+        this, commit = std::move(commit), callback = std::move(callback)
+      ](Status s) mutable {
+        AddCommit(std::move(commit), ChangeSource::SYNC, std::move(callback));
+      }));
 }
 
 Status PageStorageImpl::StartCommit(const CommitId& commit_id,
@@ -479,65 +485,54 @@ void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
                                 std::function<void(Status)> callback) {
   // Apply all changes atomically.
   std::unique_ptr<DB::Batch> batch = db_.StartBatch();
-  CommitId commit_id = commit->GetId();
-  Status s = db_.AddCommitStorageBytes(commit_id, commit->GetStorageBytes());
+  Status s =
+      db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes());
   if (s != Status::OK) {
     callback(s);
     return;
   }
-  ObjectId root_id = commit->GetRootId();
-  int64_t timestamp = commit->GetTimestamp();
-
-  auto finish_commit = [
-    this, batch = std::move(batch), source, commit = std::move(commit), callback
-  ](Status s) {
-    if (s != Status::OK) {
-      callback(s);
-      return;
-    }
-
-    // Update heads.
-    s = db_.AddHead(commit->GetId());
-    if (s != Status::OK) {
-      callback(s);
-      return;
-    }
-
-    // Commits must arrive in order: Check that the parents are stored in DB and
-    // remove them from the heads if they are present.
-    for (const CommitId& parent_id : commit->GetParentIds()) {
-      std::unique_ptr<const Commit> parent_commit;
-      s = GetCommit(parent_id, &parent_commit);
-      if (s != Status::OK) {
-        FTL_LOG(ERROR) << "Failed to find parent commit \"" << parent_id
-                       << "\" of commit \"" << commit->GetId() << "\"";
-        if (s == Status::NOT_FOUND) {
-          callback(Status::ILLEGAL_STATE);
-        } else {
-          callback(Status::INTERNAL_IO_ERROR);
-        }
-        return;
-      }
-      db_.RemoveHead(parent_id);
-    }
-
-    s = batch->Execute();
-    if (s != Status::OK) {
-      callback(s);
-      return;
-    }
-
-    callback(Status::OK);
-    NotifyWatchers(*(commit.get()), source);
-  };
 
   if (source == ChangeSource::LOCAL) {
-    s = db_.MarkCommitIdUnsynced(commit_id, timestamp);
-    finish_commit(s);
-  } else {
-    btree::GetObjectsFromSync(root_id, this,
-                              ftl::MakeCopyable(std::move(finish_commit)));
+    s = db_.MarkCommitIdUnsynced(commit->GetId(), commit->GetTimestamp());
+    if (s != Status::OK) {
+      callback(s);
+      return;
+    }
   }
+
+  // Update heads.
+  s = db_.AddHead(commit->GetId());
+  if (s != Status::OK) {
+    callback(s);
+    return;
+  }
+
+  // Commits must arrive in order: Check that the parents are stored in DB and
+  // remove them from the heads if they are present.
+  for (const CommitId& parent_id : commit->GetParentIds()) {
+    std::unique_ptr<const Commit> parent_commit;
+    s = GetCommit(parent_id, &parent_commit);
+    if (s != Status::OK) {
+      FTL_LOG(ERROR) << "Failed to find parent commit \"" << parent_id
+                     << "\" of commit \"" << commit->GetId() << "\"";
+      if (s == Status::NOT_FOUND) {
+        callback(Status::ILLEGAL_STATE);
+      } else {
+        callback(Status::INTERNAL_IO_ERROR);
+      }
+      return;
+    }
+    db_.RemoveHead(parent_id);
+  }
+
+  s = batch->Execute();
+  if (s != Status::OK) {
+    callback(s);
+    return;
+  }
+
+  callback(Status::OK);
+  NotifyWatchers(*(commit.get()), source);
 }
 
 void PageStorageImpl::AddObject(
