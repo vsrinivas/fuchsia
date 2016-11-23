@@ -24,7 +24,8 @@
 
 #pragma once
 
-#include <cstdint>
+#include <stdint.h>
+
 #include <vector>
 #include <qrcodegen/qrsegment.h>
 

@@ -23,41 +23,44 @@
  */
 
 #include <string.h>
-#include <algorithm>
-#include <climits>
+
 #include <cmath>
-#include <cstddef>
-#include <sstream>
 #include <qrcodegen/bitbuffer.h>
 #include <qrcodegen/qrcode.h>
 
 namespace qrcodegen {
 
-QrCode::Ecc::Ecc(int ord, int fb) :
-    ordinal(ord),
-    formatBits(fb) {}
 
+int eccOrdinal(QrCode::Ecc ecc) {
+    if (ecc > QrCode::Ecc::HIGH)
+        return 0;
+    return ecc;
+}
 
-const QrCode::Ecc QrCode::Ecc::LOW     (0, 1);
-const QrCode::Ecc QrCode::Ecc::MEDIUM  (1, 0);
-const QrCode::Ecc QrCode::Ecc::QUARTILE(2, 3);
-const QrCode::Ecc QrCode::Ecc::HIGH    (3, 2);
+int eccFormatBits(QrCode::Ecc ecc) {
+    switch (ecc) {
+    case QrCode::Ecc::LOW: return 1;
+    case QrCode::Ecc::MEDIUM: return 0;
+    case QrCode::Ecc::QUARTILE: return 3;
+    case QrCode::Ecc::HIGH: return 2;
+    default: return 1;
+    }
+}
 
-
-QrCode QrCode::encodeText(const char *text, const Ecc &ecl) {
+void QrCode::encodeText(const char *text, Ecc ecl) {
     std::vector<QrSegment> segs(QrSegment::makeSegments(text));
     return encodeSegments(segs, ecl);
 }
 
 
-QrCode QrCode::encodeBinary(const std::vector<uint8_t> &data, const Ecc &ecl) {
+void QrCode::encodeBinary(const std::vector<uint8_t> &data, Ecc ecl) {
     std::vector<QrSegment> segs;
     segs.push_back(QrSegment::makeBytes(data));
     return encodeSegments(segs, ecl);
 }
 
 
-QrCode QrCode::encodeSegments(const std::vector<QrSegment> &segs, const Ecc &ecl,
+void QrCode::encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
         int minVersion, int maxVersion, int mask, bool boostEcl) {
     if (!(1 <= minVersion && minVersion <= maxVersion && maxVersion <= 40) || mask < -1 || mask > 7)
         throw "Invalid value";
@@ -76,15 +79,18 @@ QrCode QrCode::encodeSegments(const std::vector<QrSegment> &segs, const Ecc &ecl
         throw "Assertion error";
 
     // Increase the error correction level while the data still fits in the current version number
-    const Ecc *newEcl = &ecl;
+    Ecc newEcl = ecl;
     if (boostEcl) {
-        if (dataUsedBits <= getNumDataCodewords(version, Ecc::MEDIUM  ) * 8)  newEcl = &Ecc::MEDIUM  ;
-        if (dataUsedBits <= getNumDataCodewords(version, Ecc::QUARTILE) * 8)  newEcl = &Ecc::QUARTILE;
-        if (dataUsedBits <= getNumDataCodewords(version, Ecc::HIGH    ) * 8)  newEcl = &Ecc::HIGH    ;
+        if (dataUsedBits <= getNumDataCodewords(version, Ecc::MEDIUM  ) * 8)
+            newEcl = Ecc::MEDIUM;
+        if (dataUsedBits <= getNumDataCodewords(version, Ecc::QUARTILE) * 8)
+            newEcl = Ecc::QUARTILE;
+        if (dataUsedBits <= getNumDataCodewords(version, Ecc::HIGH    ) * 8)
+            newEcl = Ecc::HIGH;
     }
 
     // Create the data bit string by concatenating all segments
-    int dataCapacityBits = getNumDataCodewords(version, *newEcl) * 8;
+    int dataCapacityBits = getNumDataCodewords(version, newEcl) * 8;
     BitBuffer bb;
     for (size_t i = 0; i < segs.size(); i++) {
         const QrSegment &seg(segs.at(i));
@@ -104,19 +110,23 @@ QrCode QrCode::encodeSegments(const std::vector<QrSegment> &segs, const Ecc &ecl
         throw "Assertion error";
 
     // Create the QR Code symbol
-    return QrCode(version, *newEcl, bb.getBytes(), mask);
+    draw(version, newEcl, bb.getBytes(), mask);
 }
 
 
-QrCode::QrCode(int ver, const Ecc &ecl, const std::vector<uint8_t> &dataCodewords, int mask) :
-        // Initialize scalar fields
-        version(ver),
-        size(1 <= ver && ver <= 40 ? ver * 4 + 17 : -1),  // Avoid signed overflow undefined behavior
-        errorCorrectionLevel(ecl) {
+QrCode::QrCode() : version(0), size(0), errorCorrectionLevel(Ecc::LOW) {
+}
+
+void QrCode::draw(int ver, Ecc ecl, const std::vector<uint8_t> &dataCodewords, int mask) {
 
     // Check arguments
-    if (ver < 1 || ver > 40 || mask < -1 || mask > 7)
+    if (ver < 1 || ver > 40 || mask < -1 || mask > 7 || ecl < 0 || ecl > 3)
         throw "Value out of range";
+
+    // Initialize scalar fields
+    version = ver;
+    size = (1 <= ver && ver <= 40 ? ver * 4 + 17 : -1),  // Avoid signed overflow undefined behavior
+    errorCorrectionLevel = ecl;
 
     memset(module_, 0, sizeof(module_));
     memset(isfunc_, 0, sizeof(isfunc_));
@@ -128,56 +138,20 @@ QrCode::QrCode(int ver, const Ecc &ecl, const std::vector<uint8_t> &dataCodeword
 }
 
 
-QrCode::QrCode(const QrCode &qr, int mask) :
-        // Copy scalar fields
-        version(qr.version),
-        size(qr.size),
-        errorCorrectionLevel(qr.errorCorrectionLevel) {
 
+void QrCode::changeMask(int newmask) {
     // Check arguments
-    if (mask < -1 || mask > 7)
+    if (newmask < -1 || newmask > 7)
         throw "Mask value out of range";
 
-    // Handle grid fields
-    memcpy(module_, qr.module_, sizeof(module_));
-    memcpy(isfunc_, qr.isfunc_, sizeof(isfunc_));
-
     // Handle masking
-    applyMask(qr.mask);  // Undo old mask
-    this->mask = handleConstructorMasking(mask);
+    applyMask(mask);  // Undo old mask
+    this->mask = handleConstructorMasking(newmask);
 }
 
 
 int QrCode::getMask() const {
     return mask;
-}
-
-
-std::string QrCode::toSvgString(int border) const {
-    if (border < 0)
-        throw "Border must be non-negative";
-    std::ostringstream sb;
-    sb << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-    sb << "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n";
-    sb << "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 ";
-    sb << (size + border * 2) << " " << (size + border * 2) << "\">\n";
-    sb << "\t<rect width=\"100%\" height=\"100%\" fill=\"#FFFFFF\" stroke-width=\"0\"/>\n";
-    sb << "\t<path d=\"";
-    bool head = true;
-    for (int y = -border; y < size + border; y++) {
-        for (int x = -border; x < size + border; x++) {
-            if (getPixel(x, y) == 1) {
-                if (head)
-                    head = false;
-                else
-                    sb << " ";
-                sb << "M" << (x + border) << "," << (y + border) << "h1v1h-1z";
-            }
-        }
-    }
-    sb << "\" fill=\"#000000\" stroke-width=\"0\"/>\n";
-    sb << "</svg>\n";
-    return sb.str();
 }
 
 
@@ -213,7 +187,7 @@ void QrCode::drawFunctionPatterns() {
 
 void QrCode::drawFormatBits(int mask) {
     // Calculate error correction code and pack bits
-    int data = errorCorrectionLevel.formatBits << 3 | mask;  // errCorrLvl is uint2, mask is uint3
+    int data = eccFormatBits(errorCorrectionLevel) << 3 | mask;  // errCorrLvl is uint2, mask is uint3
     int rem = data;
     for (int i = 0; i < 10; i++)
         rem = (rem << 1) ^ ((rem >> 9) * 0x537);
@@ -293,8 +267,8 @@ void QrCode::drawDataWords(const std::vector<uint8_t> &data) {
         throw "Invalid argument";
 
     // Calculate parameter numbers
-    int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[errorCorrectionLevel.ordinal][version];
-    int totalEcc = NUM_ERROR_CORRECTION_CODEWORDS[errorCorrectionLevel.ordinal][version];
+    int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[errorCorrectionLevel][version];
+    int totalEcc = NUM_ERROR_CORRECTION_CODEWORDS[errorCorrectionLevel][version];
     if (totalEcc % numBlocks != 0)
         throw "Assertion error";
     int blockEccLen = totalEcc / numBlocks;
@@ -527,7 +501,7 @@ int QrCode::getNumRawDataModules(int ver) {
 int QrCode::getNumDataCodewords(int ver, const Ecc &ecl) {
     if (ver < 1 || ver > 40)
         throw "Version number out of range";
-    return getNumRawDataModules(ver) / 8 - NUM_ERROR_CORRECTION_CODEWORDS[ecl.ordinal][ver];
+    return getNumRawDataModules(ver) / 8 - NUM_ERROR_CORRECTION_CODEWORDS[ecl][ver];
 }
 
 

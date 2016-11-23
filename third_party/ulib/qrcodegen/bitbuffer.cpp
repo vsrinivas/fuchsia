@@ -22,7 +22,9 @@
  *   Software.
  */
 
-#include <cstddef>
+#include <stdint.h>
+#include <stdlib.h>
+
 #include <qrcodegen/bitbuffer.h>
 
 namespace qrcodegen {

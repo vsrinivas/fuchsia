@@ -52,11 +52,11 @@ int main(int argc, char **argv) {
 // Creates a single QR Code, then prints it to the console.
 static void doBasicDemo() {
     const char *text = "Hello, world!";  // User-supplied text
-    const qrcodegen::QrCode::Ecc &errCorLvl = qrcodegen::QrCode::Ecc::LOW;  // Error correction level
+    const qrcodegen::QrCode::Ecc errCorLvl = qrcodegen::QrCode::Ecc::LOW;  // Error correction level
 
     // Make and print the QR Code symbol
-    const qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(text, errCorLvl);
-    std::cout << qr.toSvgString(4) << std::endl;
+    qrcodegen::QrCode qr;
+    qr.encodeText(text, errCorLvl);
     printQr(qr);
 }
 
@@ -64,26 +64,36 @@ static void doBasicDemo() {
 // Creates a variety of QR Codes that exercise different features of the library, and prints each one to the console.
 static void doVarietyDemo() {
     // Project Nayuki URL
-    const qrcodegen::QrCode qr0 = qrcodegen::QrCode::encodeText("https://www.nayuki.io/", qrcodegen::QrCode::Ecc::HIGH);
-    printQr(qrcodegen::QrCode(qr0, 3));  // Change mask, forcing to mask #3
+    qrcodegen::QrCode qr0;
+    qr0.encodeText("https://www.nayuki.io/", qrcodegen::QrCode::Ecc::HIGH);
+    qr0.changeMask(3);  // Change mask, forcing to mask #3
+    printQr(qr0);
 
     // Numeric mode encoding (3.33 bits per digit)
-    const qrcodegen::QrCode qr1 = qrcodegen::QrCode::encodeText("314159265358979323846264338327950288419716939937510", qrcodegen::QrCode::Ecc::MEDIUM);
+    qrcodegen::QrCode qr1;
+    qr1.encodeText("314159265358979323846264338327950288419716939937510", qrcodegen::QrCode::Ecc::MEDIUM);
     printQr(qr1);
 
     // Alphanumeric mode encoding (5.5 bits per character)
-    const qrcodegen::QrCode qr2 = qrcodegen::QrCode::encodeText("DOLLAR-AMOUNT:$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/", qrcodegen::QrCode::Ecc::HIGH);
+    qrcodegen::QrCode qr2;
+    qr2.encodeText("DOLLAR-AMOUNT:$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/", qrcodegen::QrCode::Ecc::HIGH);
     printQr(qr2);
 
     // Unicode text as UTF-8, and different masks
-    const qrcodegen::QrCode qr3 = qrcodegen::QrCode::encodeText("\xE3\x81\x93\xE3\x82\x93\xE3\x81\xAB\xE3\x81\xA1wa\xE3\x80\x81\xE4\xB8\x96\xE7\x95\x8C\xEF\xBC\x81\x20\xCE\xB1\xCE\xB2\xCE\xB3\xCE\xB4", qrcodegen::QrCode::Ecc::QUARTILE);
-    printQr(qrcodegen::QrCode(qr3, 0));
-    printQr(qrcodegen::QrCode(qr3, 1));
-    printQr(qrcodegen::QrCode(qr3, 5));
-    printQr(qrcodegen::QrCode(qr3, 7));
+    qrcodegen::QrCode qr3;
+    qr3.encodeText("\xE3\x81\x93\xE3\x82\x93\xE3\x81\xAB\xE3\x81\xA1wa\xE3\x80\x81\xE4\xB8\x96\xE7\x95\x8C\xEF\xBC\x81\x20\xCE\xB1\xCE\xB2\xCE\xB3\xCE\xB4", qrcodegen::QrCode::Ecc::QUARTILE);
+    qr3.changeMask(0);
+    printQr(qr3);
+    qr3.changeMask(1);
+    printQr(qr3);
+    qr3.changeMask(5);
+    printQr(qr3);
+    qr3.changeMask(7);
+    printQr(qr3);
 
     // Moderately large QR Code using longer text (from Lewis Carroll's Alice in Wonderland)
-    const qrcodegen::QrCode qr4 = qrcodegen::QrCode::encodeText(
+    qrcodegen::QrCode qr4;
+    qr4.encodeText(
         "Alice was beginning to get very tired of sitting by her sister on the bank, "
         "and of having nothing to do: once or twice she had peeped into the book her sister was reading, "
         "but it had no pictures or conversations in it, 'and what is the use of a book,' thought Alice "
@@ -100,7 +110,8 @@ static void doSegmentDemo() {
     // Illustration "silver"
     const char *silver0 = "THE SQUARE ROOT OF 2 IS 1.";
     const char *silver1 = "41421356237309504880168872420969807856967187537694807317667973799";
-    const qrcodegen::QrCode qr0 = qrcodegen::QrCode::encodeText(
+    qrcodegen::QrCode qr0;
+    qr0.encodeText(
         (std::string(silver0) + silver1).c_str(),
         qrcodegen::QrCode::Ecc::LOW);
     printQr(qr0);
@@ -108,14 +119,16 @@ static void doSegmentDemo() {
     std::vector<qrcodegen::QrSegment> segs;
     segs.push_back(qrcodegen::QrSegment::makeAlphanumeric(silver0));
     segs.push_back(qrcodegen::QrSegment::makeNumeric(silver1));
-    const qrcodegen::QrCode qr1 = qrcodegen::QrCode::encodeSegments(segs, qrcodegen::QrCode::Ecc::LOW);
+    qrcodegen::QrCode qr1;
+    qr1.encodeSegments(segs, qrcodegen::QrCode::Ecc::LOW);
     printQr(qr1);
 
     // Illustration "golden"
     const char *golden0 = "Golden ratio \xCF\x86 = 1.";
     const char *golden1 = "6180339887498948482045868343656381177203091798057628621354486227052604628189024497072072041893911374";
     const char *golden2 = "......";
-    const qrcodegen::QrCode qr2 = qrcodegen::QrCode::encodeText(
+    qrcodegen::QrCode qr2;
+    qr2.encodeText(
         (std::string(golden0) + golden1 + golden2).c_str(),
         qrcodegen::QrCode::Ecc::LOW);
     printQr(qr2);
@@ -127,7 +140,8 @@ static void doSegmentDemo() {
     segs.push_back(qrcodegen::QrSegment::makeBytes(bytes));
     segs.push_back(qrcodegen::QrSegment::makeNumeric(golden1));
     segs.push_back(qrcodegen::QrSegment::makeAlphanumeric(golden2));
-    const qrcodegen::QrCode qr3 = qrcodegen::QrCode::encodeSegments(segs, qrcodegen::QrCode::Ecc::LOW);
+    qrcodegen::QrCode qr3;
+    qr3.encodeSegments(segs, qrcodegen::QrCode::Ecc::LOW);
     printQr(qr3);
 }
 

@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
+#include <stdint.h>
+
 #include <vector>
 #include <qrcodegen/qrsegment.h>
 
@@ -48,55 +48,12 @@ public:
     /*
      * Represents the error correction level used in a QR Code symbol.
      */
-    class Ecc final {
-        // Constants declared in ascending order of error protection.
-    public:
-        const static Ecc LOW, MEDIUM, QUARTILE, HIGH;
-
-        // Fields.
-    public:
-        const int ordinal;  // (Public) In the range 0 to 3 (unsigned 2-bit integer).
-        const int formatBits;  // (Package-private) In the range 0 to 3 (unsigned 2-bit integer).
-
-        // Constructor.
-    private:
-        Ecc(int ord, int fb);
+    enum Ecc {
+        LOW = 0,
+        MEDIUM = 1,
+        QUARTILE = 2,
+        HIGH = 3,
     };
-
-
-
-    /*---- Public static factory functions ----*/
-public:
-
-    /*
-     * Returns a QR Code symbol representing the given Unicode text string at the given error correction level.
-     * As a conservative upper bound, this function is guaranteed to succeed for strings that have 738 or fewer Unicode
-     * code points (not UTF-16 code units). The smallest possible QR Code version is automatically chosen for the output.
-     * The ECC level of the result may be higher than the ecl argument if it can be done without increasing the version.
-     */
-    static QrCode encodeText(const char *text, const Ecc &ecl);
-
-
-    /*
-     * Returns a QR Code symbol representing the given binary data string at the given error correction level.
-     * This function always encodes using the binary segment mode, not any text mode. The maximum number of
-     * bytes allowed is 2953. The smallest possible QR Code version is automatically chosen for the output.
-     * The ECC level of the result may be higher than the ecl argument if it can be done without increasing the version.
-     */
-    static QrCode encodeBinary(const std::vector<uint8_t> &data, const Ecc &ecl);
-
-
-    /*
-     * Returns a QR Code symbol representing the specified data segments with the specified encoding parameters.
-     * The smallest possible QR Code version within the specified range is automatically chosen for the output.
-     * This function allows the user to create a custom sequence of segments that switches
-     * between modes (such as alphanumeric and binary) to encode text more efficiently.
-     * This function is considered to be lower level than simply encoding text or binary data.
-     */
-    static QrCode encodeSegments(const std::vector<QrSegment> &segs, const Ecc &ecl,
-        int minVersion=1, int maxVersion=40, int mask=-1, bool boostEcl=true);  // All optional parameters
-
-
 
     /*---- Instance fields ----*/
 
@@ -104,14 +61,14 @@ public:
 public:
 
     /* This QR Code symbol's version number, which is always between 1 and 40 (inclusive). */
-    const int version;
+    int version;
 
     /* The width and height of this QR Code symbol, measured in modules.
      * Always equal to version &times; 4 + 17, in the range 21 to 177. */
-    const int size;
+    int size;
 
     /* The error correction level used in this QR Code symbol. */
-    const Ecc &errorCorrectionLevel;
+    Ecc errorCorrectionLevel;
 
     /* The mask pattern used in this QR Code symbol, in the range 0 to 7 (i.e. unsigned 3-bit integer).
      * Note that even if a constructor was called with automatic masking requested
@@ -132,20 +89,20 @@ private:
     /*---- Constructors ----*/
 public:
 
+    QrCode();
+
     /*
-     * Creates a new QR Code symbol with the given version number, error correction level, binary data array,
+     * Render a QR Code symbol with the given version number, error correction level, binary data array,
      * and mask number. This is a cumbersome low-level constructor that should not be invoked directly by the user.
      * To go one level up, see the encodeSegments() function.
      */
-    QrCode(int ver, const Ecc &ecl, const std::vector<uint8_t> &dataCodewords, int mask);
+    void draw(int ver, Ecc ecl, const std::vector<uint8_t> &dataCodewords, int mask);
 
 
     /*
-     * Creates a new QR Code symbol based on the given existing object, but with a potentially
-     * different mask pattern. The version, error correction level, codewords, etc. of the newly
-     * created object are all identical to the argument object; only the mask may differ.
+     * Change the mask pattern of the QrCode
      */
-    QrCode(const QrCode &qr, int mask);
+    void changeMask(int mask);
 
 
 
@@ -166,12 +123,36 @@ public:
             return 0;  // Infinite white border
     };
 
+
     /*
-     * Based on the given number of border modules to add as padding, this returns a
-     * string whose contents represents an SVG XML file that depicts this QR Code symbol.
-     * Note that Unix newlines (\n) are always used, regardless of the platform.
+     * Encode a QR Code symbol representing the given Unicode text string at the given error correction level.
+     * As a conservative upper bound, this function is guaranteed to succeed for strings that have 738 or fewer Unicode
+     * code points (not UTF-16 code units). The smallest possible QR Code version is automatically chosen for the output.
+     * The ECC level of the result may be higher than the ecl argument if it can be done without increasing the version.
      */
-    std::string toSvgString(int border) const;
+    void encodeText(const char *text, Ecc ecl);
+
+
+    /*
+     * Encode a QR Code symbol representing the given binary data string at the given error correction level.
+     * This function always encodes using the binary segment mode, not any text mode. The maximum number of
+     * bytes allowed is 2953. The smallest possible QR Code version is automatically chosen for the output.
+     * The ECC level of the result may be higher than the ecl argument if it can be done without increasing the version.
+     */
+    void encodeBinary(const std::vector<uint8_t> &data, Ecc ecl);
+
+
+    /*
+     * Encode a QR Code symbol representing the specified data segments with the specified encoding parameters.
+     * The smallest possible QR Code version within the specified range is automatically chosen for the output.
+     * This function allows the user to create a custom sequence of segments that switches
+     * between modes (such as alphanumeric and binary) to encode text more efficiently.
+     * This function is considered to be lower level than simply encoding text or binary data.
+     */
+    void encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
+        int minVersion=1, int maxVersion=40, int mask=-1, bool boostEcl=true);  // All optional parameters
+
+
 
 
 

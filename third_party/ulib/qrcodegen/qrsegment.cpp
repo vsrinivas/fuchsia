@@ -22,7 +22,6 @@
  *   Software.
  */
 
-#include <cstddef>
 #include <qrcodegen/bitbuffer.h>
 #include <qrcodegen/qrsegment.h>
 
