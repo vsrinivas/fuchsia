@@ -33,6 +33,7 @@ inline fidl::Array<uint8_t> to_array(const std::string& val) {
 
 inline fidl::Array<fidl::String> to_array(const std::vector<std::string>& val) {
   fidl::Array<fidl::String> ret;
+  ret.resize(0); // mark as not null
   for (const std::string& s : val) {
     ret.push_back(s);
   }

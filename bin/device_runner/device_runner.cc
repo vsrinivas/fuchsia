@@ -70,13 +70,10 @@ class Settings {
  private:
   void ParseShellArgs(const std::string& value, std::vector<std::string>* args) {
     bool escape = false;
-    std::string::const_iterator start = value.end();
+    std::string arg;
     for (std::string::const_iterator i = value.begin(); i != value.end(); ++i) {
-      if (start == value.end()) {
-        start = i;
-      }
-
       if (escape) {
+        arg.push_back(*i);
         escape = false;
         continue;
       }
@@ -87,13 +84,20 @@ class Settings {
       }
 
       if (*i == ',') {
-        args->push_back(std::string(start, i));
-        start = value.end();
+        args->push_back(arg);
+        arg.clear();
+        continue;
       }
+
+      arg.push_back(*i);
     }
 
-    if (start != value.end()) {
-      args->push_back(std::string(start, value.end()));
+    if (!arg.empty()) {
+      args->push_back(arg);
+    }
+
+    for (auto& s : *args) {
+      FTL_LOG(INFO) << "ARG " << s;
     }
   }
 };
