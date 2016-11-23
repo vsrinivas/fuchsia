@@ -17,4 +17,4 @@ This repository contains documentation for Fuchsia.
   + [Intel NUC?](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/nuc.md)
   + [Raspberry Pi 3?](https://fuchsia.googlesource.com/magenta/+/master/docs/targets/rpi3.md)
 
-+ [How do I write a flutter module?](https://fuchsia.googlesource.com/modular/+/master/examples/flutter/README.md)
++ [How do I write a flutter module?](https://fuchsia.googlesource.com/modular/+/master/examples/HOWTO_FLUTTER.md)
