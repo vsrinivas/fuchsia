@@ -11,7 +11,7 @@ class FocusAcquirer {
  public:
   virtual ~FocusAcquirer() {}
 
-  static constexpr char kLabel[] = "/focus_acquirer";
+  static constexpr char kLabel[] = "/modular_state";
   static constexpr char kSchema[] = "int";
 };
 

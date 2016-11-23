@@ -59,11 +59,8 @@ class ModularAcquirerApp : public ModularAcquirer,
 
  private:
   inline void PublishModularState() {
-    std::ostringstream json;
-    json << "{ \"modular_state\": " << modular_state << " }";
-    FTL_VLOG(1) << ": " << json.str();
-
-    out_->Update(json.str());
+    FTL_VLOG(1) << ": " << modular_state_;
+    out_->Update(std::to_string(modular_state_));
   }
 
   void PublishingTick() {
@@ -94,7 +91,7 @@ class ModularAcquirerApp : public ModularAcquirer,
   // TODO(afergan): Once we figure out all of the possible states of
   // user_runner or  SysUI (on the timeline, running a story, etc.), turn this
   // into an enum.
-  int modular_state = 0;
+  int modular_state_ = 0;
 };
 
 }  // namespace

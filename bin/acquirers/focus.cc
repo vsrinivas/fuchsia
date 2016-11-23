@@ -45,16 +45,18 @@ class FocusAcquirerApp : public modular::FocusListener,
 
     cx->Publish(FocusAcquirer::kLabel, FocusAcquirer::kSchema,
                 std::move(ctl_handle), GetProxy(&out_));
+    PublishFocusState();
   }
 
   void OnFocusChanged(fidl::Array<fidl::String> ids) override {
-    focused_story_ids.clear();
+    focused_story_ids_.clear();
     for (std::string str : ids) {
-      focused_story_ids.push_back(str);
+      focused_story_ids_.push_back(str);
     }
+
     PublishFocusState();
     FTL_LOG(INFO) << "Focus changed -- there are now "
-                  << focused_story_ids.size() << " active story ids.";
+                  << focused_story_ids_.size() << " active story ids.";
   }
 
   void OnHasSubscribers() override {
@@ -66,25 +68,23 @@ class FocusAcquirerApp : public modular::FocusListener,
   }
 
  private:
-  inline void PublishFocusState() {
+  void PublishFocusState() {
     // TODO(afergan): Since right now we are not doing anything with the
     // focused stories, we just change the modular_state to reflect if there
     // are any focused stories. If we need to keep track of the actual story
     // ids, publish the vector to the context service.
 
-    std::ostringstream json;
-    json << "{ \"modular_state\": " << (focused_story_ids.size() ? 1 : 0)
-         << " }";
-    FTL_VLOG(1) << ": " << json.str();
+    int modular_state = focused_story_ids_.size() ? 1 : 0;
 
-    out_->Update(json.str());
+    out_->Update(std::to_string(modular_state));
+    FTL_VLOG(1) << ": " << modular_state;
   }
 
   std::unique_ptr<modular::ApplicationContext> app_ctx_;
 
   fidl::Binding<maxwell::context::PublisherController> ctl_;
   maxwell::context::PublisherLinkPtr out_;
-  std::vector<std::string> focused_story_ids;
+  std::vector<std::string> focused_story_ids_;
   fidl::Binding<modular::FocusListener> focus_listener_;
 };
 

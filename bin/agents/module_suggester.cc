@@ -33,47 +33,39 @@ class ModuleSuggesterAgentApp : public maxwell::agents::ModuleSuggesterAgent,
              maxwell::suggestion::SuggestionAgentClient>()) {
     fidl::InterfaceHandle<maxwell::context::SubscriberLink> in_handle;
     in_.Bind(&in_handle);
-    maxwell_context_->Subscribe("/modular_status", "json:int",
-                                std::move(in_handle));
+    maxwell_context_->Subscribe("/modular_state", "int", std::move(in_handle));
   }
 
   void OnUpdate(maxwell::context::UpdatePtr update) override {
     FTL_LOG(INFO) << "OnUpdate from " << update->source << ": "
                   << update->json_value;
 
-    rapidjson::Document d;
-    d.Parse(update->json_value.data());
+    const int modular_state = std::stoi(update->json_value.data());
 
-    if (d.IsInt()) {
-      const int modular_state = d.GetInt();
+    if (modular_state > 0) {
+      out_->Remove(kModuleSuggestionId);
+    } else {
+      auto p = maxwell::suggestion::Proposal::New();
+      p->id = kModuleSuggestionId;
+      auto create_story = maxwell::suggestion::CreateStory::New();
+      create_story->module_id = kMailUrl;
+      auto action = maxwell::suggestion::Action::New();
+      action->set_create_story(std::move(create_story));
+      p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(1);
+      p->on_selected[0] = std::move(action);
+      auto d = maxwell::suggestion::Display::New();
+      d->headline = kMailHeadline;
+      d->subheadline = "";
+      d->details = "";
+      d->color = 0x00aaaa00;  // argb yellow
+      d->icon_urls = fidl::Array<fidl::String>::New(1);
+      d->icon_urls[0] = "";
+      d->image_url = "";
+      d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
 
-      std::string module_suggestion;
+      p->display = std::move(d);
 
-      if (modular_state > 0) {
-        out_->Remove(kModuleSuggestionId);
-      } else {
-        auto p = maxwell::suggestion::Proposal::New();
-        p->id = kModuleSuggestionId;
-        auto create_story = maxwell::suggestion::CreateStory::New();
-        create_story->module_id = kMailUrl;
-        auto action = maxwell::suggestion::Action::New();
-        action->set_create_story(std::move(create_story));
-        p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(1);
-        p->on_selected[0] = std::move(action);
-        auto d = maxwell::suggestion::Display::New();
-        d->headline = kMailHeadline;
-        d->subheadline = "";
-        d->details = "";
-        d->color = 0x00aaaa00;  // argb yellow
-        d->icon_urls = fidl::Array<fidl::String>::New(1);
-        d->icon_urls[0] = "";
-        d->image_url = "";
-        d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
-
-        p->display = std::move(d);
-
-        out_->Propose(std::move(p));
-      }
+      out_->Propose(std::move(p));
     }
   }
 
