@@ -23,6 +23,8 @@ final String _kCounterValueKey = 'counter-key';
 
 ModuleImpl _module;
 
+ChildViewConnection _conn;
+
 void _log(String msg) {
   print('[Counter Parent] $msg');
 }
@@ -59,6 +61,8 @@ class ModuleImpl extends Module {
 
   final StoryProxy _story = new StoryProxy();
   final LinkProxy _link = new LinkProxy();
+  final LinkProxy _linkForChild = new LinkProxy();
+  final LinkWatcherImpl _linkWatcher = new LinkWatcherImpl();
 
   void bind(InterfaceRequest<Module> request) {
     _binding.bind(this, request);
@@ -77,29 +81,27 @@ class ModuleImpl extends Module {
     _link.ctrl.bind(linkHandle);
 
     // Register the link watcher.
-    _link.watchAll(new LinkWatcherImpl().getHandle());
+    _link.watchAll(_linkWatcher.getHandle());
 
     // Duplicate the link handle to pass it down to the sub-module.
-    LinkProxy linkForFolderList = new LinkProxy();
-    _link.dup(linkForFolderList.ctrl.request());
+    _link.dup(_linkForChild.ctrl.request());
 
-    ModuleControllerProxy moduleController = new ModuleControllerProxy();
-    ViewOwnerProxy viewOwner = new ViewOwnerProxy();
+    InterfacePair<ModuleController> moduleControllerPair =
+        new InterfacePair<ModuleController>();
+    InterfacePair<ViewOwner> viewOwnerPair = new InterfacePair<ViewOwner>();
 
     // Start the folder list module.
     _story.startModule(
       'file:///system/apps/example_flutter_counter_child',
-      linkForFolderList.ctrl.unbind(),
+      _linkForChild.ctrl.unbind(),
       null,
       null,
-      moduleController.ctrl.request(),
-      viewOwner.ctrl.request(),
+      moduleControllerPair.passRequest(),
+      viewOwnerPair.passRequest(),
     );
 
-    _homeKey.currentState?.setState(() {
-      _homeKey.currentState._connFolderList =
-          new ChildViewConnection(viewOwner.ctrl.unbind());
-    });
+    _conn = new ChildViewConnection(viewOwnerPair.passHandle());
+    _homeKey.currentState?.updateUI();
   }
 
   @override
@@ -107,6 +109,10 @@ class ModuleImpl extends Module {
     _log('ModuleImpl::stop call');
 
     // Do some clean up here.
+    _linkWatcher.close();
+    _linkForChild.ctrl.close();
+    _link.ctrl.close();
+    _story.ctrl.close();
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
@@ -129,7 +135,6 @@ class _HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<_HomeScreen> {
-  ChildViewConnection _connFolderList;
   Document _exampleDoc;
 
   int get _currentValue {
@@ -163,10 +168,10 @@ class _HomeScreenState extends State<_HomeScreen> {
       ),
     ];
 
-    if (_connFolderList != null) {
+    if (_conn != null) {
       children.add(new Flexible(
         flex: 1,
-        child: new ChildView(connection: _connFolderList),
+        child: new ChildView(connection: _conn),
       ));
     }
 
@@ -176,6 +181,11 @@ class _HomeScreenState extends State<_HomeScreen> {
         child: new Column(children: children),
       ),
     );
+  }
+
+  /// Convenient method for others to trigger UI update.
+  void updateUI() {
+    setState(() {});
   }
 
   void _handleIncrease() {
@@ -194,8 +204,7 @@ void main() {
   _context.outgoingServices.addServiceForName(
     (InterfaceRequest<Module> request) {
       _log('Received binding request for Module');
-      _module = new ModuleImpl();
-      _module.bind(request);
+      _module = new ModuleImpl()..bind(request);
     },
     Module.serviceName,
   );
@@ -204,5 +213,6 @@ void main() {
     title: 'Counter Parent',
     home: new _HomeScreen(key: _homeKey),
     theme: new ThemeData(primarySwatch: Colors.orange),
+    debugShowCheckedModeBanner: false,
   ));
 }

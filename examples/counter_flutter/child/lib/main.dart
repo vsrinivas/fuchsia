@@ -32,6 +32,13 @@ class LinkWatcherImpl extends LinkWatcher {
   /// The returned handle should only be used once.
   InterfaceHandle<LinkWatcher> getHandle() => _binding.wrap(this);
 
+  /// Closes the binding.
+  void close() {
+    if (_binding.isBound) {
+      _binding.close();
+    }
+  }
+
   /// A callback called whenever the associated [Link] has new changes.
   @override
   void notify(Map<String, Document> docs) {
@@ -54,8 +61,8 @@ class LinkWatcherImpl extends LinkWatcher {
 class ModuleImpl extends Module {
   final ModuleBinding _binding = new ModuleBinding();
 
-  final StoryProxy _story = new StoryProxy();
   final LinkProxy _link = new LinkProxy();
+  final LinkWatcherImpl _linkWatcher = new LinkWatcherImpl();
 
   void bind(InterfaceRequest<Module> request) {
     _binding.bind(this, request);
@@ -71,11 +78,10 @@ class ModuleImpl extends Module {
     _log('ModuleImpl::initialize call');
 
     // Bind the provided handles to our proxy objects.
-    _story.ctrl.bind(storyHandle);
     _link.ctrl.bind(linkHandle);
 
     // Register the link watcher.
-    _link.watchAll(new LinkWatcherImpl().getHandle());
+    _link.watchAll(_linkWatcher.getHandle());
 
     _setValue(42);
   }
@@ -85,6 +91,8 @@ class ModuleImpl extends Module {
     _log('ModuleImpl::stop call');
 
     // Do some clean up here.
+    _linkWatcher.close();
+    _link.ctrl.close();
 
     // Invoke the callback to signal that the clean-up process is done.
     callback();
@@ -164,8 +172,7 @@ void main() {
   _context.outgoingServices.addServiceForName(
     (InterfaceRequest<Module> request) {
       _log('Received binding request for Module');
-      _module = new ModuleImpl();
-      _module.bind(request);
+      _module = new ModuleImpl()..bind(request);
     },
     Module.serviceName,
   );
@@ -174,5 +181,6 @@ void main() {
     title: 'Counter Child',
     home: new _HomeScreen(key: _homeKey),
     theme: new ThemeData(primarySwatch: Colors.blue),
+    debugShowCheckedModeBanner: false,
   ));
 }

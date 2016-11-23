@@ -29,22 +29,18 @@ modules. The main purpose of this example is to demonstrate the followings:
 
 ## Running the Examples on Fuchsia
 
-To run these modules directly without a user shell, you first need to edit the
-dummy user shell code (located at `src/user_runner/dummy_user_shell.cc`) so that
-it points to the module you want to run. Change the following line:
+You can run an example module without going through the full-blown user shell.
+The available URLs for for flutter module examples are:
 
-    constexpr char kExampleRecipeUrl[] = "file:///system/apps/example_recipe";
+* `example_flutter_hello_world`
+* `example_flutter_counter_parent`
 
-and change the url to the desired module url. The available URLs for flutter
-module examples are:
+After a successful build of fuchsia, type the following command from the mx
+console to run the device runner with the dev user shell:
 
-* `file:///system/apps/example_flutter_hello_world`
-* `file:///system/apps/example_flutter_counter_parent`
-
-After changing this line, build fuchsia, and type the following command from the
-mx console to run the device runner with the dummy user shell:
-
-    @ bootstrap device_runner --user-shell=dummy_user_shell
+```
+@ bootstrap device_runner --user-shell=dev_user_shell --user-shell-args=--root-module=example_flutter_hello_world
+```
 
 # Basics
 
@@ -53,7 +49,11 @@ implementation. Roughly, the main function of a flutter module should look like
 the following.
 
 ```dart
-ApplicationContext _context = new ApplicationContext.fromStartupInfo();
+final ApplicationContext _context = new ApplicationContext.fromStartupInfo();
+
+// Keep this module reference as a global variable to keep it for the lifetime
+// of this module.
+ModuleImpl _module;
 
 class ModuleImpl extends Module {
   final ModuleBinding _binding = new ModuleBinding();
@@ -74,7 +74,7 @@ class ModuleImpl extends Module {
 void main() {
   _context.outgoingServices.addServiceForName(
     (InterfaceRequest<Module> request) {
-      new ModuleImpl().bind(request);
+      _module = new ModuleImpl()..bind(request);
     },
     Module.serviceName,
   );
@@ -188,8 +188,39 @@ The best place to start is the dartdoc comments in this file:
 https://fuchsia.googlesource.com/fidl/+/master/dart/src/bindings/interface.dart
 
 Also, refer to the example flutter module code to see how the
-`InterfaceHandle<Foo>`, `InterfaceRequest<Foo>`, `FooProxy` classes are used.
+`InterfaceHandle<Foo>`, `InterfaceRequest<Foo>`, `InterfacePair<Foo>`,
+`FooProxy` classes are used.
 
+## Things to Watch Out For
+
+### Handles can only be used once
+
+Once an `InterfaceHandle<Foo>` is bound to a proxy, the handle cannot be used in
+other places. Often, in case you have to share the same service with multiple
+parties (e.g. sharing the same `Link` service across multiple modules), the
+service will provide a way to obtain a duplicate handle (e.g. `Link::Dup()`).
+
+You can also call `unbind()` method on `ProxyController` to get the usable
+`InterfaceHandle<Foo>` back, which then can be used by someone else.
+
+### Proxies and Bindings should be Closed Properly
+
+You need to explicitly close `FooProxy` and `FooBinding` objects that are bound
+to channels, when they are no longer in use. You do not need to explicitly close
+`InterfaceRequest<Foo>` or `InterfaceHandle<Foo>` objects, as those objects
+represent unbound channels.
+
+If you don't close or unbind these objects and they get picked up by the garbage
+collector, then FIDL will terminate the process and (in debug builds) log the
+Dart stack for when the object was bound. The only exception to this rule is for
+*static* objects that live as long as the isolate itself. The system is able to
+close these objects automatically for you as part of an orderly shutdown of the
+isolate.
+
+If you are writing a Flutter widget, you can override the `dispose()` function
+on `State` to get notified when you're no longer part of the tree. That's a
+common time to close the proxies used by that object as they are often no longer
+needed.
 
 # Other Useful Tips
 
