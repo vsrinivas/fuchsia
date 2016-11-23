@@ -45,4 +45,8 @@ std::string GetCurrentThreadName() {
   return GetObjectName(thrd_get_mx_handle(thrd_current()));
 }
 
+mx_status_t SetCurrentThreadName(const std::string& name) {
+  return SetObjectName(thrd_get_mx_handle(thrd_current()), name);
+}
+
 }  // namespace mtl

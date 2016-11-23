@@ -75,15 +75,13 @@ TEST(ObjectInfo, GetCurrentThreadKoid) {
 }
 
 TEST(ObjectInfo, GetAndSetNameOfCurrentThread) {
-  mx_handle_t thread_handle = thrd_get_mx_handle(thrd_current());
-  std::string old_name = GetObjectName(thread_handle);
+  std::string old_name = GetCurrentThreadName();
   std::string new_name = "set-thread-name-test";
 
-  EXPECT_EQ(NO_ERROR, SetObjectName(thread_handle, new_name));
-  EXPECT_EQ(new_name, GetObjectName(thread_handle));
+  EXPECT_EQ(NO_ERROR, SetCurrentThreadName(new_name));
   EXPECT_EQ(new_name, GetCurrentThreadName());
 
-  SetObjectName(thread_handle, old_name);
+  SetCurrentThreadName(old_name);
 }
 
 }  // namespace

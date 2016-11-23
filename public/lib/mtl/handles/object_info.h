@@ -34,6 +34,10 @@ mx_koid_t GetCurrentThreadKoid();
 // Gets the current thread name.
 std::string GetCurrentThreadName();
 
+// Sets the name of the current thread.
+// Note: The kernel truncates names to |MX_MAX_NAME_LEN|.
+mx_status_t SetCurrentThreadName(const std::string& name);
+
 }  // namespace mtl
 
 #endif  // LIB_MTL_OBJECT_INFO_H_
