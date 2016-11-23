@@ -35,6 +35,9 @@ const char kAppId[] = "modular_user_runner";
 const char kLedgerBaseDir[] = "/data/ledger/";
 const char kHexadecimalCharacters[] = "0123456789abcdef";
 const char kEnvironmentLabelPrefix[] = "user-";
+// This is the prefix for the ApplicationEnvironment under which all stories run
+// for a user.
+const char kStoriesEnvironmentLabelPrefix[] = "stories-";
 
 std::string ToHex(const fidl::Array<uint8_t>& user_id) {
   std::string result;
@@ -78,6 +81,8 @@ std::string LedgerStatusToString(ledger::Status status) {
 // Creates an ApplicationEnvironment at the UserRunner scope. This environment
 // provides services like Ledger as an environment service to applications
 // running in its scope like User Shell, Story Runner.
+// TODO(vardhan): A device runner should be responsible for creating this
+// environment (in which it will run a UserRunner).
 class UserRunnerScope : public ApplicationEnvironmentHost {
  public:
   UserRunnerScope(std::shared_ptr<ApplicationContext> application_context,
@@ -174,6 +179,45 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
 };
 
+// This environment host is used to run all the stories, and runs under the
+// UserRunner's scope. Its ServiceProvider forwards all requests to its parent's
+// ServiceProvider (|UserRunnerScope|).
+class UserStoriesEnvHost : public ApplicationEnvironmentHost {
+ public:
+  UserStoriesEnvHost(ApplicationEnvironmentPtr parent_env,
+                     fidl::Array<uint8_t> user_id)
+      : binding_(this), parent_env_(std::move(parent_env)) {
+    // Set up a new ApplicationEnvironment under which we run all stories.
+    ApplicationEnvironmentHostPtr env_host;
+    binding_.Bind(fidl::GetProxy(&env_host));
+    parent_env_->CreateNestedEnvironment(
+        std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_),
+        kStoriesEnvironmentLabelPrefix + ToHex(std::move(user_id)));
+  }
+
+  ApplicationEnvironmentPtr GetEnvironment() {
+    ApplicationEnvironmentPtr env;
+    env_->Duplicate(fidl::GetProxy(&env));
+    return env;
+  }
+
+ private:
+  // |ApplicationEnvironmentHost|:
+  void GetApplicationEnvironmentServices(
+      fidl::InterfaceRequest<ServiceProvider> environment_services) override {
+    parent_env_->GetServices(std::move(environment_services));
+  }
+
+  fidl::Binding<ApplicationEnvironmentHost> binding_;
+
+  ApplicationEnvironmentPtr env_;
+  ApplicationEnvironmentPtr parent_env_;
+  ApplicationEnvironmentControllerPtr env_controller_;
+  ServiceProviderImpl env_services_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(UserStoriesEnvHost);
+};
+
 class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(std::shared_ptr<ApplicationContext> application_context,
@@ -191,18 +235,25 @@ class UserRunnerImpl : public UserRunner {
       fidl::Array<fidl::String> user_shell_args,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
     user_runner_scope_ = std::make_unique<UserRunnerScope>(application_context_,
-                                                           std::move(user_id));
+                                                           user_id.Clone());
+    
+    ApplicationEnvironmentPtr user_runner_env
+        = user_runner_scope_->GetEnvironment();
+
+    ServiceProviderPtr user_runner_env_services;
+    user_runner_env->GetServices(
+        GetProxy(&user_runner_env_services));
+
+    stories_env_host_ = std::make_unique<UserStoriesEnvHost>(
+        std::move(user_runner_env), user_id.Clone());
 
     RunUserShell(user_shell, user_shell_args,
                  std::move(view_owner_request));
 
-    ServiceProviderPtr environment_services;
-    user_runner_scope_->GetEnvironment()->GetServices(
-        GetProxy(&environment_services));
     fidl::InterfaceHandle<StoryProvider> story_provider;
     auto story_provider_impl = new StoryProviderImpl(
-        user_runner_scope_->GetEnvironment(),
-        ConnectToService<ledger::Ledger>(environment_services.get()),
+        stories_env_host_->GetEnvironment(),
+        ConnectToService<ledger::Ledger>(user_runner_env_services.get()),
         GetProxy(&story_provider));
 
     auto maxwell_services =
@@ -269,6 +320,7 @@ class UserRunnerImpl : public UserRunner {
 
   // The application environment hosted by user runner.
   std::unique_ptr<UserRunnerScope> user_runner_scope_;
+  std::unique_ptr<UserStoriesEnvHost> stories_env_host_;
 
   UserShellPtr user_shell_;
 
