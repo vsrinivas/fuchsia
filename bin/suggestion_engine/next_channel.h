@@ -19,22 +19,13 @@ class NextChannel : public SuggestionChannel {
 
  protected:
   void DispatchOnAddSuggestion(
-      const RankedSuggestion& ranked_suggestion) override {
-    for (auto& subscriber : subscribers_)
-      subscriber->OnAddSuggestion(ranked_suggestion);
-  }
+      const RankedSuggestion& ranked_suggestion) override;
 
   void DispatchOnRemoveSuggestion(
-      const RankedSuggestion& ranked_suggestion) override {
-    for (auto& subscriber : subscribers_)
-      subscriber->OnRemoveSuggestion(ranked_suggestion);
-  }
+      const RankedSuggestion& ranked_suggestion) override;
 
  private:
-  maxwell::BindingSet<NextController,
-                      std::unique_ptr<NextSubscriber>,
-                      NextSubscriber::GetBinding>
-      subscribers_;
+  maxwell::BoundNonMovableSet<NextSubscriber> subscribers_;
 };
 
 }  // namespace suggestion

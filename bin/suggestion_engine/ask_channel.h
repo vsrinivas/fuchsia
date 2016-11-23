@@ -5,18 +5,37 @@
 #pragma once
 
 #include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 
 namespace maxwell {
 namespace suggestion {
 
-class AskSubscriber;
-
+// A suggestion channel for Ask (query-based) suggestions.
+//
+// Query-based suggestions are informed by a user-driven query in addition to
+// context information. If such a query is not present, however, the experience
+// is similar to Next.
 class AskChannel : public SuggestionChannel {
  public:
-  // The given subscriber must outlive this channel. It is anticipated that it
-  // will in fact own this channel.
-  AskChannel(AskSubscriber* subscriber) : subscriber_(subscriber) {}
+  // This constructor leaks |this| to the constructed dedicated subscriber, but
+  // the subscriber constructor only makes use of non-virtual members of the
+  // SuggestionChannel base class.
+  AskChannel(fidl::InterfaceHandle<Listener> listener,
+             fidl::InterfaceRequest<AskController> controller)
+      : subscriber_(this, std::move(listener), std::move(controller)) {}
+
+  void SetQuery(const std::string& query);
+
+  // FIDL methods, for use with BoundSet without having to expose subscriber_.
+  // TODO(rosswang): Might it be worth making these an interface?
+
+  bool is_bound() const { return subscriber_.is_bound(); }
+
+  void set_connection_error_handler(const ftl::Closure& error_handler) {
+    subscriber_.set_connection_error_handler(error_handler);
+  }
+
+  // End FIDL methods.
 
  protected:
   void DispatchOnAddSuggestion(
@@ -26,7 +45,7 @@ class AskChannel : public SuggestionChannel {
       const RankedSuggestion& ranked_suggestion) override;
 
  private:
-  AskSubscriber* const subscriber_;
+  AskSubscriber subscriber_;
 };
 
 }  // namespace suggestion

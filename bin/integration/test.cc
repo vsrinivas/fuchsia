@@ -60,7 +60,7 @@ void Sleep(const ftl::TimeDelta& duration) {
 }
 
 void Sleep() {
-  Sleep(ftl::TimeDelta::FromSeconds(1));
+  Sleep(ftl::TimeDelta::FromMilliseconds(1500));
 }
 
 MaxwellTestBase::MaxwellTestBase()

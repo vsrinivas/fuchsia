@@ -52,8 +52,8 @@ void Sleep(const ftl::TimeDelta& duration);
 // Sleep for a default reasonable time for apps to start up.
 void Sleep();
 
-// 2s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
-constexpr auto kSignalDeadline = ftl::TimeDelta::FromSeconds(2);
+// 5s timeout for asyncs on signals (e.g. WaitForIncomingMethodCall).
+constexpr auto kSignalDeadline = ftl::TimeDelta::FromSeconds(5);
 
 // In practice, 100 ms is actually a bit short, so this may occasionally falsely
 // succeed tests that should fail. Flakiness should thus be considered failure.
@@ -61,7 +61,7 @@ constexpr auto kAsyncCheckSteady = ftl::TimeDelta::FromMilliseconds(100);
 constexpr auto kAsyncCheckMax = ftl::TimeDelta::FromSeconds(5);
 
 // Does a weak stability check on an async condition by waiting until the given
-// condition is true (max 2s) and then ensuring that the condition remains true
+// condition is true (max 5s) and then ensuring that the condition remains true
 // (for 100 ms).
 //
 // If the condition becomes true briefly but not over a 100 ms polling period,

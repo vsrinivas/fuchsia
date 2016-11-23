@@ -6,10 +6,10 @@
 
 #include <unordered_map>
 
+#include "apps/maxwell/src/suggestion_engine/ask_channel.h"
+#include "apps/maxwell/src/suggestion_engine/next_channel.h"
 #include "apps/maxwell/src/suggestion_engine/proposal_record.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
-#include "apps/maxwell/src/suggestion_engine/next_channel.h"
-#include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 
 namespace maxwell {
 namespace suggestion {
@@ -32,13 +32,19 @@ class Repo {
     return next_channel_.ranked_suggestions();
   }
 
-  void AddNextSubscriber(std::unique_ptr<NextSubscriber> subscriber) {
-    next_channel_.AddSubscriber(std::move(subscriber));
+  void SubscribeToNext(fidl::InterfaceHandle<Listener> listener,
+                       fidl::InterfaceRequest<NextController> controller) {
+    next_channel_.AddSubscriber(std::make_unique<NextSubscriber>(
+        next_channel_.ranked_suggestions(), std::move(listener),
+        std::move(controller)));
   }
 
-  void AddAskSubscriber(std::unique_ptr<AskSubscriber> subscriber) {
-    // TODO(rosswang): bootstrap
-    asks_.emplace(std::move(subscriber));
+  void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
+                   fidl::InterfaceRequest<AskController> controller) {
+    // TODO(rosswang): Bootstrap with existing next suggestions
+
+    ask_channels_.emplace(std::make_unique<AskChannel>(std::move(listener),
+                                                       std::move(controller)));
   }
 
   // Non-mutating indexer; returns NULL if no such suggestion exists.
@@ -59,10 +65,7 @@ class Repo {
   // indexed by suggestion ID
   std::unordered_map<std::string, ProposalRecordPtr> suggestions_;
   NextChannel next_channel_;
-  maxwell::BindingSet<AskController,
-                      std::unique_ptr<AskSubscriber>,
-                      AskSubscriber::GetBinding>
-      asks_;
+  maxwell::BoundNonMovableSet<AskChannel> ask_channels_;
 };
 
 }  // namespace suggestion

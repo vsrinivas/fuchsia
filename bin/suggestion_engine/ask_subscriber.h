@@ -4,27 +4,24 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/ask_channel.h"
 #include "apps/maxwell/src/suggestion_engine/windowed_subscriber.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
 
 namespace maxwell {
 namespace suggestion {
 
+class AskChannel;
+
 // Manages a single Ask suggestion subscriber.
 class AskSubscriber : public BoundWindowedSubscriber<AskController> {
  public:
-  AskSubscriber(fidl::InterfaceHandle<Listener> listener)
-      : BoundWindowedSubscriber(std::move(listener)), channel_(this) {
-    SetRankedSuggestions(channel_.ranked_suggestions());
-  }
+  AskSubscriber(AskChannel* channel,
+                fidl::InterfaceHandle<Listener> listener,
+                fidl::InterfaceRequest<AskController> controller);
 
-  void SetUserInput(UserInputPtr input) override {
-    // TODO(rosswang)
-  }
+  void SetUserInput(UserInputPtr input) override;
 
  private:
-  AskChannel channel_;
+  AskChannel* channel_;
 };
 
 }  // namespace suggestion

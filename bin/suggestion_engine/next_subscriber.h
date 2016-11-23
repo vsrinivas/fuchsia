@@ -5,21 +5,12 @@
 #pragma once
 
 #include "apps/maxwell/src/suggestion_engine/windowed_subscriber.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
 
 namespace maxwell {
 namespace suggestion {
 
 // Manages a single Next suggestion subscriber.
-class NextSubscriber : public BoundWindowedSubscriber<NextController> {
- public:
-  NextSubscriber(
-      const WindowedSubscriber::RankedSuggestions* ranked_suggestions,
-      fidl::InterfaceHandle<Listener> listener)
-      : BoundWindowedSubscriber(std::move(listener)) {
-    SetRankedSuggestions(ranked_suggestions);
-  }
-};
+typedef BoundWindowedSubscriber<NextController> NextSubscriber;
 
 }  // namespace suggestion
 }  // namespace maxwell

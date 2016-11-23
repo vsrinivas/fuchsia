@@ -30,27 +30,24 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   // SuggestionProvider
 
-  void SubscribeToInterruptions(fidl::InterfaceHandle<Listener> listener) {
+  void SubscribeToInterruptions(
+      fidl::InterfaceHandle<Listener> listener) override {
     // TODO(rosswang): no interruptions yet
   }
 
-  void SubscribeToNext(fidl::InterfaceHandle<Listener> listener,
-                       fidl::InterfaceRequest<NextController> controller) {
-    auto sub = std::make_unique<NextSubscriber>(repo_.next_ranked_suggestions(),
-                                                std::move(listener));
-    sub->Bind(std::move(controller));
-    repo_.AddNextSubscriber(std::move(sub));
+  void SubscribeToNext(
+      fidl::InterfaceHandle<Listener> listener,
+      fidl::InterfaceRequest<NextController> controller) override {
+    repo_.SubscribeToNext(std::move(listener), std::move(controller));
   }
 
   void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
-                   fidl::InterfaceRequest<AskController> controller) {
-    auto sub = std::make_unique<AskSubscriber>(std::move(listener));
-    sub->Bind(std::move(controller));
-    repo_.AddAskSubscriber(std::move(sub));
+                   fidl::InterfaceRequest<AskController> controller) override {
+    repo_.InitiateAsk(std::move(listener), std::move(controller));
   }
 
   void NotifyInteraction(const fidl::String& suggestion_uuid,
-                         InteractionPtr interaction) {
+                         InteractionPtr interaction) override {
     const ProposalRecord* proposal_record = repo_[suggestion_uuid];
 
     std::ostringstream log_detail;
@@ -103,12 +100,12 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   void RegisterSuggestionAgent(
       const fidl::String& url,
-      fidl::InterfaceRequest<SuggestionAgentClient> client) {
+      fidl::InterfaceRequest<SuggestionAgentClient> client) override {
     repo_.GetOrCreateSourceClient(url)->AddBinding(std::move(client));
   }
 
   void SetStoryProvider(
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider) {
+      fidl::InterfaceHandle<modular::StoryProvider> story_provider) override {
     story_provider_.Bind(std::move(story_provider));
   }
 

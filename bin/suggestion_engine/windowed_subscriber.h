@@ -18,16 +18,10 @@ class WindowedSubscriber {
  public:
   typedef std::vector<std::unique_ptr<RankedSuggestion>> RankedSuggestions;
 
-  WindowedSubscriber(fidl::InterfaceHandle<Listener> listener)
-      : listener_(ListenerPtr::Create(std::move(listener))) {}
-
-  // Lazy initializer for ranked suggestions. This method must be called before
-  // any substantial methods on this class are called. Ideally it would be part
-  // of construction, but it is kept lazy to facilitate subscriber impls that
-  // own their own channels.
-  void SetRankedSuggestions(const RankedSuggestions* ranked_suggestions) {
-    ranked_suggestions_ = ranked_suggestions;
-  }
+  WindowedSubscriber(const RankedSuggestions* ranked_suggestions,
+                     fidl::InterfaceHandle<Listener> listener)
+      : ranked_suggestions_(ranked_suggestions),
+        listener_(ListenerPtr::Create(std::move(listener))) {}
 
   void SetResultCount(int32_t count);
 
@@ -50,6 +44,16 @@ class WindowedSubscriber {
       DispatchRemove(ranked_suggestion);
     }
   }
+
+  // FIDL methods, for use with BoundSet without having to expose listener_.
+
+  bool is_bound() const { return listener_.is_bound(); }
+
+  void set_connection_error_handler(const ftl::Closure& error_handler) {
+    listener_.set_connection_error_handler(error_handler);
+  }
+
+  // End FIDL methods.
 
  private:
   static SuggestionPtr CreateSuggestion(
@@ -81,7 +85,7 @@ class WindowedSubscriber {
   // An upper bound on the number of suggestions to offer this subscriber, as
   // given by SetResultCount.
   int32_t max_results_ = 0;
-  const RankedSuggestions* ranked_suggestions_;
+  const RankedSuggestions* const ranked_suggestions_;
   ListenerPtr listener_;
 };
 
@@ -89,18 +93,11 @@ class WindowedSubscriber {
 template <class Controller>
 class BoundWindowedSubscriber : public Controller, public WindowedSubscriber {
  public:
-  template <class Impl = BoundWindowedSubscriber>
-  static fidl::Binding<Controller>* GetBinding(
-      std::unique_ptr<Impl>* subscriber) {
-    return &(*subscriber)->binding_;
-  }
-
-  BoundWindowedSubscriber(fidl::InterfaceHandle<Listener> listener)
-      : WindowedSubscriber(std::move(listener)), binding_(this) {}
-
-  void Bind(fidl::InterfaceRequest<Controller> request) {
-    binding_.Bind(std::move(request));
-  }
+  BoundWindowedSubscriber(const RankedSuggestions* ranked_suggestions,
+                          fidl::InterfaceHandle<Listener> listener,
+                          fidl::InterfaceRequest<Controller> controller)
+      : WindowedSubscriber(ranked_suggestions, std::move(listener)),
+        binding_(this, std::move(controller)) {}
 
   void SetResultCount(int32_t count) override {
     WindowedSubscriber::SetResultCount(count);

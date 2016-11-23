@@ -128,6 +128,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     return listener_.GetOnlySuggestion();
   }
 
+  void KillController() { ctl_.reset(); }
+
   void StartSuggestionAgent(const std::string& url) {
     auto agent_host =
         std::make_unique<maxwell::ApplicationEnvironmentHostImpl>();
@@ -341,6 +343,17 @@ TEST_F(SuggestionEngineTest, RemoveBeforeSubscribe) {
 
   SetResultCount(10);
   CHECK_RESULT_COUNT(0);
+}
+
+TEST_F(SuggestionEngineTest, SubscribeBeyondController) {
+  Proposinator p(suggestion_engine_);
+
+  SetResultCount(10);
+  KillController();
+  Sleep();
+  p.Propose("1");
+  p.Propose("2");
+  CHECK_RESULT_COUNT(2);
 }
 
 class TestStoryProvider : public modular::StoryProvider {

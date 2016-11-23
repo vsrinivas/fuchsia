@@ -9,14 +9,18 @@
 namespace maxwell {
 namespace suggestion {
 
+void AskChannel::SetQuery(const std::string& query) {
+  // TODO(rosswang)
+}
+
 void AskChannel::DispatchOnAddSuggestion(
     const RankedSuggestion& ranked_suggestion) {
-  subscriber_->OnAddSuggestion(ranked_suggestion);
+  subscriber_.OnAddSuggestion(ranked_suggestion);
 }
 
 void AskChannel::DispatchOnRemoveSuggestion(
     const RankedSuggestion& ranked_suggestion) {
-  subscriber_->OnRemoveSuggestion(ranked_suggestion);
+  subscriber_.OnRemoveSuggestion(ranked_suggestion);
 }
 
 }  // namespace suggestion
