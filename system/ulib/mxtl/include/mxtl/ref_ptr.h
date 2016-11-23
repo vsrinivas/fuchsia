@@ -14,15 +14,15 @@ namespace mxtl {
 template <typename T, typename Deleter = default_delete<T>>
 class RefPtr;
 
-template <typename T>
-RefPtr<T> AdoptRef(T* ptr);
-
-template <typename T, typename Deleter>
+template <typename T, typename Deleter = default_delete<T>>
 RefPtr<T, Deleter> AdoptRef(T* ptr);
 
+template <typename T, typename Deleter = default_delete<T>>
+RefPtr<T, Deleter> WrapRefPtr(T* ptr);
+
 namespace internal {
-template <typename T>
-inline RefPtr<T> MakeRefPtrNoAdopt(T* ptr);
+template <typename T, typename Deleter = default_delete<T>>
+RefPtr<T, Deleter> MakeRefPtrNoAdopt(T* ptr);
 } // namespace internal
 
 // RefPtr<T> holds a reference to an intrusively-refcounted object of type
@@ -109,10 +109,10 @@ public:
 
     // Construct via explicit downcast.
     // ptr must be the same object as base.ptr_.
-    template <typename baseT>
-    explicit RefPtr(T* ptr, RefPtr<baseT, Deleter>&& base)
+    template <typename BaseType, typename BaseDeleter = default_delete<BaseType>>
+    RefPtr(T* ptr, RefPtr<BaseType, BaseDeleter>&& base)
         : ptr_(ptr) {
-        ASSERT(static_cast<baseT*>(ptr_) == base.ptr_);
+        ASSERT(static_cast<BaseType*>(ptr_) == base.ptr_);
         base.ptr_ = nullptr;
     }
 
@@ -161,9 +161,9 @@ public:
 private:
     template <typename U, typename D>
     friend class RefPtr;
-    friend RefPtr<T> AdoptRef<T>(T*);
     friend RefPtr<T, Deleter> AdoptRef<T, Deleter>(T*);
-    friend RefPtr<T> internal::MakeRefPtrNoAdopt<T>(T*);
+    friend RefPtr<T, Deleter> AdoptRef<T, Deleter>(T*);
+    friend RefPtr<T, Deleter> internal::MakeRefPtrNoAdopt<T, Deleter>(T*);
 
     enum AdoptTag { ADOPT };
     enum NoAdoptTag { NO_ADOPT };
@@ -199,22 +199,12 @@ static inline bool operator!=(decltype(nullptr), const RefPtr<T, Deleter>& ptr) 
 //   if (!h)
 //      // Deal with allocation failure here
 //   h->DoStuff();
-template <typename T>
-inline RefPtr<T> AdoptRef(T* ptr) {
-    return RefPtr<T>(ptr, RefPtr<T>::ADOPT);
-}
-
 template <typename T, typename Deleter>
 inline RefPtr<T, Deleter> AdoptRef(T* ptr) {
     return RefPtr<T, Deleter>(ptr, RefPtr<T, Deleter>::ADOPT);
 }
 
 // Convenience wrappers to construct a RefPtr with argument type deduction.
-template <typename T>
-inline RefPtr<T> WrapRefPtr(T* ptr) {
-    return RefPtr<T>(ptr);
-}
-
 template <typename T, typename Deleter>
 inline RefPtr<T, Deleter> WrapRefPtr(T* ptr) {
     return RefPtr<T, Deleter>(ptr);
@@ -224,11 +214,10 @@ namespace internal {
 // Constructs a RefPtr from a T* without attempt to either AddRef or Adopt the
 // pointer.  Used by the internals of some intrusive container classes to store
 // sentinels (special invalid pointers) in RefPtr<>s.
-template <typename T>
-inline RefPtr<T> MakeRefPtrNoAdopt(T* ptr) {
-    return RefPtr<T>(ptr, RefPtr<T>::NO_ADOPT);
+template <typename T, typename Deleter>
+inline RefPtr<T, Deleter> MakeRefPtrNoAdopt(T* ptr) {
+    return RefPtr<T, Deleter>(ptr, RefPtr<T, Deleter>::NO_ADOPT);
 }
 
 } // namespace internal
-
 } // namespace mxtl
