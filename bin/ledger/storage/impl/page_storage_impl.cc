@@ -68,10 +68,8 @@ Status StagingToDestination(size_t expected_size,
       // If rename failed, the file might have been saved by another call.
       if (!files::GetFileSize(destination_path, &size) ||
           size != expected_size) {
-        // If size is not the correct one, something is really wrong.
-        FTL_LOG(ERROR) << "Internal error. Path \"" << destination_path
-                       << "\" has wrong size. Expected: " << expected_size
-                       << ", but found: " << size;
+        FTL_LOG(ERROR) << "Internal error. Failed to rename \n\"" << source_path
+                       << "\" to \n\"" << destination_path << "\"";
         return Status::INTERNAL_IO_ERROR;
       }
     }
