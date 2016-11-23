@@ -93,7 +93,6 @@ void __private_cond_signal(void* condvar, int n);
 
 int __libc_sigaction(int, const struct sigaction*, struct sigaction*);
 int __libc_sigprocmask(int, const sigset_t*, sigset_t*);
-void __unmapself(void*, size_t);
 
 void __vm_wait(void);
 void __vm_lock(void);

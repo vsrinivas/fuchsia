@@ -1102,7 +1102,6 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/setjmp/aarch64/setjmp.s \
     $(LOCAL_DIR)/src/signal/aarch64/restore.s \
     $(LOCAL_DIR)/src/signal/aarch64/sigsetjmp.s \
-    $(LOCAL_DIR)/src/thread/aarch64/__unmapself.s \
     $(LOCAL_DIR)/src/thread/aarch64/syscall_cp.s \
     $(LOCAL_DIR)/third_party/math/acosl.c \
     $(LOCAL_DIR)/third_party/math/asinl.c \
@@ -1145,7 +1144,6 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/setjmp/arm/setjmp.s \
     $(LOCAL_DIR)/src/signal/arm/restore.s \
     $(LOCAL_DIR)/src/signal/arm/sigsetjmp.s \
-    $(LOCAL_DIR)/src/thread/arm/__unmapself.s \
     $(LOCAL_DIR)/src/thread/arm/syscall_cp.s \
     $(LOCAL_DIR)/third_party/math/acosl.c \
     $(LOCAL_DIR)/third_party/math/asinl.c \
@@ -1198,7 +1196,6 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/src/process/x86_64/vfork.s \
     $(LOCAL_DIR)/src/signal/x86_64/restore.s \
     $(LOCAL_DIR)/src/signal/x86_64/sigsetjmp.s \
-    $(LOCAL_DIR)/third_party/arch/x86_64/__unmapself.s \
     $(LOCAL_DIR)/src/thread/x86_64/syscall_cp.s \
     $(LOCAL_DIR)/third_party/arch/x86_64/longjmp.s \
     $(LOCAL_DIR)/third_party/arch/x86_64/setjmp.s \
