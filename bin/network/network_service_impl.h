@@ -7,6 +7,7 @@
 
 #include "apps/network/services/network_service.fidl.h"
 
+#include <list>
 #include <memory>
 
 #include "apps/network/url_loader_impl.h"
@@ -46,9 +47,10 @@ class NetworkServiceImpl : public NetworkService {
   void CreateHostResolver(mx::channel host_resolver) override;
 
  private:
+  class UrlLoaderContainer;
+
   fidl::BindingSet<NetworkService> bindings_;
-  fidl::BindingSet<URLLoader, std::unique_ptr<URLLoaderImpl>>
-      url_loader_bindings_;
+  std::list<UrlLoaderContainer> loaders_;
 };
 
 }  // namespace network

@@ -14,11 +14,8 @@ namespace network {
 
 class URLLoaderImpl : public URLLoader {
  public:
-  URLLoaderImpl(fidl::InterfaceRequest<URLLoader> request);
+  URLLoaderImpl();
   ~URLLoaderImpl() override;
-
-  // Called when the associated NetworkContext is going away.
-  void Cleanup();
 
  private:
   template <typename T>
@@ -40,7 +37,6 @@ class URLLoaderImpl : public URLLoader {
   // bool auto_follow_redirects_;
   url::GURL current_url_;
   URLLoaderStatusPtr last_status_;
-  fidl::Binding<URLLoader> binding_;
 };
 
 }  // namespace network

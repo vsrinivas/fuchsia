@@ -18,14 +18,9 @@
 
 namespace network {
 
-URLLoaderImpl::URLLoaderImpl(fidl::InterfaceRequest<URLLoader> request)
-    : binding_(this, std::move(request)) {}
+URLLoaderImpl::URLLoaderImpl() {}
 
 URLLoaderImpl::~URLLoaderImpl() {}
-
-void URLLoaderImpl::Cleanup() {
-  delete this;
-}
 
 void URLLoaderImpl::Start(URLRequestPtr request, const Callback& callback) {
   callback_ = callback;
