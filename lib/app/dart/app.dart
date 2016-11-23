@@ -39,6 +39,13 @@ class ApplicationContext {
 
     return context;
   }
+
+  void close() {
+    environment.ctrl.close();
+    launcher.ctrl.close();
+    environmentServices.ctrl.close();
+    outgoingServices.close();
+  }
 }
 
 void connectToService(ServiceProvider serviceProvider,
@@ -64,6 +71,10 @@ class ServiceProviderImpl extends ServiceProvider {
 
   void bind(InterfaceRequest<ServiceProvider> interfaceRequest) {
     _binding.bind(this, interfaceRequest);
+  }
+
+  void close() {
+    _binding.close();
   }
 
   DefaultServiceConnector defaultConnector;
