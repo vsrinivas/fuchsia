@@ -19,6 +19,7 @@
 #include <magenta/cpp.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 
 #include <mxtl/array.h>
 
@@ -267,7 +268,21 @@ static int dso_lookup_for_unw(dsoinfo_t* dso_list, unw_word_t pc,
 void backtrace(mx_handle_t process, mx_handle_t thread,
                uintptr_t pc, uintptr_t sp, uintptr_t fp,
                bool use_libunwind) {
-    dsoinfo_t* dso_list = dso_fetch_list(process, "app");
+    // Prepend "app:" to the name we print for the process binary to tell the
+    // reader (and the symbolize script!) that the name is the process's.
+    // The name property is only 32 characters which may be insufficient.
+    // N.B. The symbolize script looks for "app" and "app:".
+#define PROCESS_NAME_PREFIX "app:"
+#define PROCESS_NAME_PREFIX_LEN (sizeof(PROCESS_NAME_PREFIX) - 1)
+    char name[MX_MAX_NAME_LEN + PROCESS_NAME_PREFIX_LEN];
+    strcpy(name, PROCESS_NAME_PREFIX);
+    auto status = mx_object_get_property(process, MX_PROP_NAME, name + PROCESS_NAME_PREFIX_LEN,
+                                         sizeof(name) - PROCESS_NAME_PREFIX_LEN);
+    if (status != NO_ERROR) {
+        print_mx_error("mx_object_get_property, falling back to \"app\" for program name", status);
+        strlcpy(name, "app", sizeof(name));
+    }
+    dsoinfo_t* dso_list = dso_fetch_list(process, name);
 
     dso_print_list(dso_list);
 

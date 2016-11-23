@@ -76,8 +76,11 @@ def find_dso_full_path(dso, exe_name, name_to_buildid, build_dirs):
         if found_path:
             name_to_full_path[dso] = found_path
             return found_path
-    # The name 'app' indicates the real app name is unknown
-    if dso == "app":
+    # The name 'app' indicates the real app name is unknown.
+    # If the process has a name property that will be printed, but
+    # it has a max of 32 characters so it may be insufficient.
+    # Crashlogger prefixes such names with "app:" for our benefit.
+    if dso == "app" or dso.startswith("app:"):
         return find_file_in_build_dir(exe_name, build_dirs)
     # First, try an exact match for the filename
     found_path = find_file_in_build_dir(dso, build_dirs)
