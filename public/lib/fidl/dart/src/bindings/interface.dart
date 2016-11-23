@@ -64,6 +64,12 @@ class InterfaceHandle<T> {
     _channel = null;
     return result;
   }
+
+  /// Closes the underlying channel.
+  void close() {
+    _channel?.close();
+    _channel = null;
+  }
 }
 
 /// A channel over which messages from interface T can be received.
@@ -122,6 +128,12 @@ class InterfaceRequest<T> {
     final core.Channel result = _channel;
     _channel = null;
     return result;
+  }
+
+  /// Closes the underlying channel.
+  void close() {
+    _channel?.close();
+    _channel = null;
   }
 }
 
@@ -212,11 +224,12 @@ abstract class Binding<T> {
 
   /// Close the bound channel.
   ///
-  /// The object must have previously been bound (e.g., using [bind]).
+  /// This function does nothing if the object is not bound.
   void close() {
-    assert(isBound);
-    _reader.close();
-    _impl = null;
+    if (isBound) {
+      _reader.close();
+      _impl = null;
+    }
   }
 
   /// The implementation of [T] bound using this object.
@@ -374,11 +387,12 @@ class ProxyController<T> {
   ///
   /// The proxy must have previously been bound (e.g., using [bind]).
   void close() {
-    assert(isBound);
-    if (_pendingResponsesCount > 0)
-      proxyError('The proxy is closed.');
-    _reset();
-    _reader.close();
+    if (isBound) {
+      if (_pendingResponsesCount > 0)
+        proxyError('The proxy is closed.');
+      _reset();
+      _reader.close();
+    }
   }
 
   /// Called whenever this object receives a response on a bound channel.

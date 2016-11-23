@@ -6,7 +6,6 @@ library core;
 
 import 'dart:async';
 import 'dart:fidl.internal';
-import 'dart:isolate';
 import 'dart:typed_data';
 
 export 'dart:fidl.internal' show Handle;
