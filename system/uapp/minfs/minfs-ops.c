@@ -756,7 +756,8 @@ static mx_status_t fs_readdir(vnode_t* vn, void* cookie, void* dirents, size_t l
             }
             if (de->ino) {
                 mx_status_t status;
-                if ((status = vfs_fill_dirent(out, len, de->name, de->namelen, de->type)) < 0) {
+                size_t len_remaining = len - (size_t)((void*)out - dirents);
+                if ((status = vfs_fill_dirent(out, len_remaining, de->name, de->namelen, de->type)) < 0) {
                     // no more space
                     vn_put_block(vn, blk);
                     goto done;
@@ -778,7 +779,9 @@ done:
     dc->index = idx;
     dc->size = sz;
     dc->seqno = vn->inode.seq_num;
-    return ((void*) out) - dirents;
+    size_t r = ((void*) out) - dirents;
+    assert(r <= len); // Otherwise, we're overflowing the input buffer.
+    return r;
 
 fail:
     // mark dircookie so further reads return 0
