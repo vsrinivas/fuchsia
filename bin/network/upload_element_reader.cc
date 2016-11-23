@@ -65,8 +65,6 @@ mx_status_t VmoUploadElementReader::ReadAll(std::ostream* os) {
     mx_size_t num_bytes = buf_.size();
     result = vmo_.read(buf_.data(), offset, num_bytes, &num_bytes);
     if (result != NO_ERROR) {
-      // If the other end closes the data pipe,
-      // we get ERR_REMOTE_CLOSED.
       if (result == ERR_OUT_OF_RANGE) {
         result = NO_ERROR;
         break;
