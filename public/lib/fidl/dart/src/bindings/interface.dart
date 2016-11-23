@@ -125,6 +125,29 @@ class InterfaceRequest<T> {
   }
 }
 
+class InterfacePair<T> {
+  InterfacePair() {
+    core.ChannelPair pair = new core.ChannelPair();
+    request = new InterfaceRequest<T>(pair.channel0);
+    handle = new InterfaceHandle<T>(pair.channel1, 0);
+  }
+
+  InterfaceRequest<T> request;
+  InterfaceHandle<T> handle;
+
+  InterfaceRequest<T> passRequest() {
+    final InterfaceRequest<T> result = request;
+    request = null;
+    return result;
+  }
+
+  InterfaceHandle<T> passHandle() {
+    final InterfaceHandle<T> result = handle;
+    handle = null;
+    return result;
+  }
+}
+
 /// Listens for messages and dispatches them to an implementation of T.
 abstract class Binding<T> {
   /// Creates a binding object in an unbound state.
@@ -185,6 +208,15 @@ abstract class Binding<T> {
         new InterfaceRequest<T>(_reader.unbind());
     _impl = null;
     return result;
+  }
+
+  /// Close the bound channel.
+  ///
+  /// The object must have previously been bound (e.g., using [bind]).
+  void close() {
+    assert(isBound);
+    _reader.close();
+    _impl = null;
   }
 
   /// The implementation of [T] bound using this object.
