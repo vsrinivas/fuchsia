@@ -47,9 +47,7 @@ class Module1View : public mozart::BaseView {
 
   ~Module1View() override = default;
 
-  void set_enable_animation(bool value) {
-    enable_animation_ = value;
-  }
+  void set_enable_animation(bool value) { enable_animation_ = value; }
 
  private:
   // Copied from
@@ -85,6 +83,7 @@ class Module1View : public mozart::BaseView {
     }
     scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
+    buffer_producer_.Tick();
 
     if (enable_animation_)
       Invalidate();
@@ -113,9 +112,7 @@ class Module1View : public mozart::BaseView {
 // Module implementation that acts as a leaf module. It implements Module.
 class Module1App : public modular::SingleServiceViewApp<modular::Module> {
  public:
-  explicit Module1App()
-      : store_(kModuleName),
-        weak_ptr_factory_(this) {
+  explicit Module1App() : store_(kModuleName), weak_ptr_factory_(this) {
     store_.AddCallback([this] { IncrementCounterAction(); });
     store_.AddCallback([this] { CheckForDone(); });
   }
@@ -128,8 +125,8 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<modular::ServiceProvider> services) override {
     view_.reset(new Module1View(
-        &store_,
-        application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
+        &store_, application_context()
+                     ->ConnectToEnvironmentService<mozart::ViewManager>(),
         std::move(view_owner_request)));
   }
 
