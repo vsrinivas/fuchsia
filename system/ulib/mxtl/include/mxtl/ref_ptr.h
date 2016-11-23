@@ -44,6 +44,9 @@ RefPtr<T, Deleter> MakeRefPtrNoAdopt(T* ptr);
 template <typename T, typename Deleter>
 class RefPtr final {
 public:
+    using ObjType = T;
+    using DeleterType = Deleter;
+
     // Constructors
     constexpr RefPtr()
         : ptr_(nullptr) {}
@@ -114,6 +117,28 @@ public:
         : ptr_(ptr) {
         ASSERT(static_cast<BaseType*>(ptr_) == base.ptr_);
         base.ptr_ = nullptr;
+    }
+
+    // Downcast via static method invocation.  Depeding on use case, the syntax
+    // should look something like...
+    //
+    // mxtl::RefPtr<MyBase> foo = MakeBase();
+    // auto bar_copy = mxtl::RefPtr<MyDerived>::Downcast(foo);
+    // auto bar_move = mxtl::RefPtr<MyDerived>::Downcast(mxtl::move(foo));
+    // auto baz_copy = mxtl::RefPtr<MyDerived, CustomDeleter>::Downcast(foo);
+    // auto baz_move = mxtl::RefPtr<MyDerived, CustomDeleter>::Downcast(mxtl::move(foo));
+    //
+    template <typename BaseRefPtr>
+    static RefPtr Downcast(BaseRefPtr base) {
+        // Make certain that BaseRefPtr is some form of RefPtr<T, Deleter>
+        static_assert(is_same<BaseRefPtr, RefPtr<typename BaseRefPtr::ObjType,
+                                                 typename BaseRefPtr::DeleterType>>::value,
+                     "BaseRefPtr must be a RefPtr<T, Deleter>!");
+
+        if (base != nullptr)
+            return internal::MakeRefPtrNoAdopt<T, Deleter>(static_cast<T*>(base.leak_ref()));
+
+        return nullptr;
     }
 
     ~RefPtr() {
@@ -218,6 +243,6 @@ template <typename T, typename Deleter>
 inline RefPtr<T, Deleter> MakeRefPtrNoAdopt(T* ptr) {
     return RefPtr<T, Deleter>(ptr, RefPtr<T, Deleter>::NO_ADOPT);
 }
-
 } // namespace internal
+
 } // namespace mxtl
