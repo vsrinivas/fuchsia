@@ -139,6 +139,8 @@ template("dart_package") {
                rebase_path(analyzer_main),
                "--dart",
                rebase_path(dart_binary),
+               "--package-name",
+               package_name,
       ]
 
       if (defined(invoker.analysis_options)) {
