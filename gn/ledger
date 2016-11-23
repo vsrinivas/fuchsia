@@ -16,6 +16,10 @@
             "bootfs_path": "test/convert_unittests"
         },
         {
+            "binary": "debug_cloud_sync",
+            "bootfs_path": "apps/debug_cloud_sync"
+        },
+        {
             "binary": "firebase_unittests",
             "bootfs_path": "test/firebase_unittests"
         },
