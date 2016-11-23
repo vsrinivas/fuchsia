@@ -185,14 +185,16 @@ class UserRunnerImpl : public UserRunner {
 
  private:
   // |UserRunner|:
-  void Launch(
+  void Initialize(
       fidl::Array<uint8_t> user_id,
       const fidl::String& user_shell,
+      fidl::Array<fidl::String> user_shell_args,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
     user_runner_scope_ = std::make_unique<UserRunnerScope>(application_context_,
                                                            std::move(user_id));
 
-    RunUserShell(user_shell.get(), std::move(view_owner_request));
+    RunUserShell(user_shell, user_shell_args,
+                 std::move(view_owner_request));
 
     ServiceProviderPtr environment_services;
     user_runner_scope_->GetEnvironment()->GetServices(
@@ -204,7 +206,7 @@ class UserRunnerImpl : public UserRunner {
         GetProxy(&story_provider));
 
     auto maxwell_services =
-        GetServiceProvider("file:///system/apps/maxwell_launcher");
+        GetServiceProvider("file:///system/apps/maxwell_launcher", nullptr);
 
     auto maxwell_launcher =
         ConnectToService<maxwell::Launcher>(maxwell_services.get());
@@ -226,28 +228,33 @@ class UserRunnerImpl : public UserRunner {
                             std::move(focus_controller_request));
   }
 
-  ServiceProviderPtr GetServiceProvider(const std::string& url) {
+  ServiceProviderPtr GetServiceProvider(const fidl::String& url,
+                                        const fidl::Array<fidl::String>* const args) {
     auto launch_info = ApplicationLaunchInfo::New();
 
-    ServiceProviderPtr app_services;
-    launch_info->services = GetProxy(&app_services);
+    ServiceProviderPtr services;
+    launch_info->services = GetProxy(&services);
     launch_info->url = url;
+    if (args != nullptr) {
+      launch_info->arguments = args->Clone();
+    }
 
     ApplicationLauncherPtr launcher;
     user_runner_scope_->GetEnvironment()->GetApplicationLauncher(
         fidl::GetProxy(&launcher));
     launcher->CreateApplication(std::move(launch_info), nullptr);
 
-    return app_services;
+    return services;
   }
 
   // This method starts UserShell in a new process, connects to its
   // |ViewProvider| interface, passes a |ViewOwner| request, gets
   // |ServiceProvider| and finally connects to UserShell.
   void RunUserShell(
-      const std::string& user_shell,
+      const fidl::String& user_shell,
+      const fidl::Array<fidl::String>& user_shell_args,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-    auto app_services = GetServiceProvider(user_shell);
+    auto app_services = GetServiceProvider(user_shell, &user_shell_args);
 
     mozart::ViewProviderPtr view_provider;
     ConnectToService(app_services.get(), GetProxy(&view_provider));

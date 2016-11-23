@@ -10,5 +10,5 @@ import "apps/modular/services/device/device_runner.fidl";
 // |DeviceRunner| could be passed to it on startup.
 [ServiceName="modular.DeviceShell"]
 interface DeviceShell {
-  SetDeviceRunner(DeviceRunner service);
+  Initialize(DeviceRunner service);
 };

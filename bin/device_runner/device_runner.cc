@@ -31,106 +31,142 @@ namespace modular {
 
 namespace {
 
+constexpr char kUserRunnerUrl[] = "file:///system/apps/user_runner";
+
 class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
+    device_shell = command_line.GetOptionValueWithDefault(
+        "device-shell", "file:///system/apps/dummy_device_shell");
     user_shell = command_line.GetOptionValueWithDefault(
         "user-shell", "file:///system/apps/armadillo_user_shell");
+
+    ParseShellArgs(command_line.GetOptionValueWithDefault(
+        "device-shell-args", ""), &device_shell_args);
+
+    ParseShellArgs(command_line.GetOptionValueWithDefault(
+        "user-shell-args", ""), &user_shell_args);
   }
 
   static std::string GetUsage() {
-    return R"USAGE(device_runner --user-shell=USER_SHELL
+    return R"USAGE(device_runner
+      --device-shell=DEVICE_SHELL
+      --device-shell-args=SHELL_ARGS
+      --user-shell=USER_SHELL
+      --user-shell-args=SHELL_ARGS
+    DEVICE_SHELL: URL of the device shell to run.
+                Defaults to "file:///system/apps/dummy_device_shell".
     USER_SHELL: URL of the user shell to run.
-                Defaults to "file:///system/apps/armadillo_user_shell".)USAGE";
+                Defaults to "file:///system/apps/armadillo_user_shell".
+                For integration testing use "dummy_user_shell".
+    SHELL_ARGS: Comma separated list of arguments. Backslash escapes comma.)USAGE";
   }
 
+  std::string device_shell;
+  std::vector<std::string> device_shell_args;
   std::string user_shell;
-};
-
-class DeviceRunnerImpl : public DeviceRunner {
- public:
-  DeviceRunnerImpl(const Settings& settings,
-                   ApplicationLauncherPtr launcher,
-                   fidl::InterfaceRequest<DeviceRunner> service)
-      : settings_(settings),
-        launcher_(std::move(launcher)),
-        binding_(this, std::move(service)) {}
-
-  ~DeviceRunnerImpl() override = default;
+  std::vector<std::string> user_shell_args;
 
  private:
-  void Login(const fidl::String& username,
-             fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
-    FTL_LOG(INFO) << "DeviceRunnerImpl::Login() " << username;
-    auto launch_info = ApplicationLaunchInfo::New();
-    launch_info->url = "file:///system/apps/user_runner";
-    ServiceProviderPtr services;
-    launch_info->services = GetProxy(&services);
-    launcher_->CreateApplication(std::move(launch_info),
-                                 GetProxy(&user_runner_controller_));
+  void ParseShellArgs(const std::string& value, std::vector<std::string>* args) {
+    bool escape = false;
+    std::string::const_iterator start = value.end();
+    for (std::string::const_iterator i = value.begin(); i != value.end(); ++i) {
+      if (start == value.end()) {
+        start = i;
+      }
 
-    ConnectToService(services.get(), GetProxy(&user_runner_));
-    user_runner_->Launch(to_array(username), settings_.user_shell,
-                         std::move(view_owner_request));
+      if (escape) {
+        escape = false;
+        continue;
+      }
+
+      if (*i == '\\') {
+        escape = true;
+        continue;
+      }
+
+      if (*i == ',') {
+        args->push_back(std::string(start, i));
+        start = value.end();
+      }
+    }
+
+    if (start != value.end()) {
+      args->push_back(std::string(start, value.end()));
+    }
   }
-
-  Settings settings_;
-  ApplicationLauncherPtr launcher_;
-  StrongBinding<DeviceRunner> binding_;
-
-  ApplicationControllerPtr user_runner_controller_;
-  // Interface pointer to the |UserRunner| handle exposed by the User Runner.
-  // Currently, we maintain a single instance which means that subsequent
-  // logins override previous ones.
-  UserRunnerPtr user_runner_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerImpl);
 };
 
-class DeviceRunnerApp {
+}  // namespace
+
+class DeviceRunnerApp : public DeviceRunner {
  public:
   DeviceRunnerApp(const Settings& settings)
-      : context_(ApplicationContext::CreateFromStartupInfo()) {
-    FTL_LOG(INFO) << "DeviceRunnerApp::DeviceRunnerApp()";
-
+      : settings_(settings),
+        context_(ApplicationContext::CreateFromStartupInfo()),
+        device_runner_binding_(this) {
     auto launch_info = ApplicationLaunchInfo::New();
-    launch_info->url = "file:///system/apps/dummy_device_shell";
-    ServiceProviderPtr app_services;
-    launch_info->services = GetProxy(&app_services);
+    launch_info->url = settings_.device_shell;
+    launch_info->arguments = to_array(settings_.device_shell_args);
+
+    ServiceProviderPtr services;
+    launch_info->services = GetProxy(&services);
     context_->launcher()->CreateApplication(
         std::move(launch_info), GetProxy(&device_shell_controller_));
 
     mozart::ViewProviderPtr view_provider;
-    ConnectToService(app_services.get(), GetProxy(&view_provider));
+    ConnectToService(services.get(), GetProxy(&view_provider));
 
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
     view_provider->CreateView(GetProxy(&root_view), nullptr);
     context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
-    ConnectToService(app_services.get(), GetProxy(&device_shell_));
+    ConnectToService(services.get(), GetProxy(&device_shell_));
 
-    ApplicationLauncherPtr launcher;
-    context_->environment()->GetApplicationLauncher(GetProxy(&launcher));
     fidl::InterfaceHandle<DeviceRunner> device_runner_handle;
-    new DeviceRunnerImpl(settings, std::move(launcher),
-                         GetProxy(&device_runner_handle));
-    device_shell_->SetDeviceRunner(std::move(device_runner_handle));
+    device_runner_binding_.Bind(GetProxy(&device_runner_handle));
+    device_shell_->Initialize(std::move(device_runner_handle));
   }
 
  private:
+  // |DeviceRunner|
+  void Login(
+      const fidl::String& username,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
+    auto launch_info = ApplicationLaunchInfo::New();
+    launch_info->url = kUserRunnerUrl;
+
+    ServiceProviderPtr services;
+    launch_info->services = GetProxy(&services);
+    context_->launcher()->CreateApplication(
+        std::move(launch_info),
+        GetProxy(&user_runner_controller_));
+
+    ConnectToService(services.get(), GetProxy(&user_runner_));
+    user_runner_->Initialize(to_array(username), settings_.user_shell,
+                             to_array(settings_.user_shell_args),
+                             std::move(view_owner_request));
+  }
+
+  const Settings settings_;
+
   std::unique_ptr<ApplicationContext> context_;
+  fidl::Binding<DeviceRunner> device_runner_binding_;
+
   ApplicationControllerPtr device_shell_controller_;
   DeviceShellPtr device_shell_;
+
+  ApplicationControllerPtr user_runner_controller_;
+  UserRunnerPtr user_runner_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
 
-}  // namespace
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  FTL_LOG(INFO) << "device runner main";
-
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.HasOption("--help")) {
     std::cout << modular::Settings::GetUsage() << std::endl;

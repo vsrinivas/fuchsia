@@ -6,6 +6,7 @@
 #define APPS_MODULAR_LIB_FIDL_ARRAY_TO_STRING_H_
 
 #include <string>
+#include <vector>
 
 #include "lib/fidl/cpp/bindings/array.h"
 
@@ -26,6 +27,14 @@ inline fidl::Array<uint8_t> to_array(const std::string& val) {
   fidl::Array<uint8_t> ret;
   for (char c : val) {
     ret.push_back(c);
+  }
+  return ret;
+}
+
+inline fidl::Array<fidl::String> to_array(const std::vector<std::string>& val) {
+  fidl::Array<fidl::String> ret;
+  for (const std::string& s : val) {
+    ret.push_back(s);
   }
   return ret;
 }

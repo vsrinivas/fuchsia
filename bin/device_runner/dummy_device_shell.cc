@@ -34,7 +34,7 @@ class DummyDeviceShellApp :
   }
 
   // |DeviceShell|
-  void SetDeviceRunner(
+  void Initialize(
       fidl::InterfaceHandle<modular::DeviceRunner> device_runner) override {
     device_runner_.Bind(std::move(device_runner));
     Connect();
@@ -54,7 +54,6 @@ class DummyDeviceShellApp :
 }  // namespace
 
 int main(int argc, const char** argv) {
-  FTL_LOG(INFO) << "dummy_device_shell main";
   mtl::MessageLoop loop;
   DummyDeviceShellApp app;
   loop.Run();

@@ -16,6 +16,8 @@
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/command_line.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -24,14 +26,23 @@
 
 namespace {
 
-constexpr char kExampleRecipeUrl[] = "file:///system/apps/example_recipe";
-// constexpr char kExampleRecipeUrl[] =
-// "file:///system/apps/example_flutter_counter_parent";
-constexpr char kFlutterModuleUrl[] =
-    "file:///system/apps/example_flutter_hello_world";
-
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr uint32_t kViewResourceIdBase = 100;
+
+class Settings {
+ public:
+  explicit Settings(const ftl::CommandLine& command_line) {
+    // Good other value to use for dev:
+    // "file:///system/apps/example_flutter_counter_parent"
+    first_module = command_line.GetOptionValueWithDefault(
+        "first-module", "file:///system/apps/example_recipe");
+    second_module = command_line.GetOptionValueWithDefault(
+        "second-module", "file:///system/apps/example_flutter_hello_world");
+  }
+
+  std::string first_module;
+  std::string second_module;
+};
 
 class DummyUserShellView : public mozart::BaseView {
  public:
@@ -101,8 +112,10 @@ class DummyUserShellApp
       public modular::StoryProviderWatcher,
       public modular::SingleServiceViewApp<modular::UserShell> {
  public:
-  DummyUserShellApp()
-      : story_provider_watcher_binding_(this), story_watcher_binding_(this) {}
+  explicit DummyUserShellApp(const Settings& settings)
+      : settings_(settings),
+        story_provider_watcher_binding_(this),
+        story_watcher_binding_(this) {}
   ~DummyUserShellApp() override = default;
 
  private:
@@ -123,7 +136,7 @@ class DummyUserShellApp
                   fidl::InterfaceRequest<modular::FocusController>
                       focus_controller_request) override {
     story_provider_.Bind(std::move(story_provider));
-    CreateStory(kExampleRecipeUrl);
+    CreateStory(settings_.first_module);
 
     fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher;
     story_provider_watcher_binding_.Bind(GetProxy(&watcher));
@@ -167,7 +180,7 @@ class DummyUserShellApp
 
       // When the story is done, we start the next one.
       mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this]() { CreateStory(kFlutterModuleUrl); },
+          [this]() { CreateStory(settings_.second_module); },
           ftl::TimeDelta::FromSeconds(20));
     });
   }
@@ -232,10 +245,10 @@ class DummyUserShellApp
         });
   }
 
-  std::unique_ptr<DummyUserShellView> view_;
-
+  const Settings settings_;
   fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
+  std::unique_ptr<DummyUserShellView> view_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   modular::StoryInfoPtr story_info_;
@@ -247,8 +260,11 @@ class DummyUserShellApp
 }  // namespace
 
 int main(int argc, const char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  Settings settings(command_line);
+
   mtl::MessageLoop loop;
-  DummyUserShellApp app;
+  DummyUserShellApp app(settings);
   loop.Run();
   return 0;
 }
