@@ -14,10 +14,52 @@ int next_id{};
 
 // Returns ID of the document created for the object.
 fidl::String ConvertObject(LinkData* const ret, const rapidjson::Value::ConstObject& src) {
-  auto doc = document_store::Document::New();
-  auto docid = doc->docid = std::string("doc") + std::to_string(next_id++);
+  constexpr char id[] = "@id";
+
+  // If a JSON object defines the @id property, then it's the @id of
+  // the corresponding Document.
+  //
+  // Notice that there is no difference in expressing a document and a
+  // reference to it. It just works as two JSON Objects with the
+  // same @id:
+  //
+  // {
+  //   "foo": {
+  //     "@id": "http://foo.com/1",
+  //     "content": "foo content"
+  //   },
+  //   "foo-ref": {
+  //     "@id": "http://foo.com/1"
+  //   }
+  // }
+  //
+  // Here, the value of both foo and foo-ref is the same Document,
+  // referenced by the the same ID.
+  std::string docid;
+  if (src.HasMember(id)) {
+    if (src[id].IsString()) {
+      docid = src[id].GetString();
+    } else {
+      FTL_LOG(ERROR) << id << " property value must be a string. Ignoring.";
+    }
+  }
+
+  if (docid.empty()) {
+    docid = std::string("doc") + std::to_string(next_id++);
+  }
+
+  if (ret->find(docid) == ret->end()) {
+    ret->insert(docid, document_store::Document::New());
+    ret->at(docid)->docid = docid;
+  }
+
+  document_store::Document* const doc = ret->at(docid).get();
 
   for (auto& property : src) {
+    if (property.name == id) {
+      continue;
+    }
+
     switch (property.value.GetType()) {
       case rapidjson::kNullType: {
         auto val = document_store::Value::New();
@@ -48,7 +90,8 @@ fidl::String ConvertObject(LinkData* const ret, const rapidjson::Value::ConstObj
       }
 
       case rapidjson::kArrayType:
-        FTL_DCHECK(false) << "Cannot store a JSON Array in a Link value.";
+        FTL_LOG(ERROR) << "Cannot store a JSON Array in a Link value. "
+                       << "Ignoring property: " << property.name.GetString();
         break;
 
       case rapidjson::kStringType: {
@@ -71,7 +114,6 @@ fidl::String ConvertObject(LinkData* const ret, const rapidjson::Value::ConstObj
     }
   }
 
-  ret->insert(docid, std::move(doc));
   return docid;
 }
 

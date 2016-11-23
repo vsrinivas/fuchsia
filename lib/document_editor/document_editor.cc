@@ -152,18 +152,28 @@ std::ostream& operator<<(std::ostream& os, Value* const v) {
 }
 
 std::ostream& operator<<(std::ostream& os, const FidlDocMap& docs) {
-  if (docs.size() == 0)
+  if (docs.size() == 0) {
     os << " NO DOCUMENTS";
+  }
   for (auto it = docs.cbegin(); it != docs.cend(); ++it) {
     if (it != docs.cbegin()) {
       os << std::endl << "--------";
     }
     os << std::endl << "  @id: " << it.GetKey();
-    if (it.GetValue()->properties.size() == 0)
+    if (it.GetValue()->properties.size() == 0) {
       os << std::endl << "  (No properties)";
+    }
     return os << std::dec << it.GetValue()->properties;
   }
   return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const document_store::Document& doc) {
+  return os << doc.properties;
+}
+
+std::ostream& operator<<(std::ostream& os, const document_store::Document* const doc) {
+  return os << doc->properties;
 }
 
 StatementPtr NewStatement(const std::string& docid,
@@ -175,4 +185,5 @@ StatementPtr NewStatement(const std::string& docid,
   statement->value = std::move(value);
   return statement;
 }
-}
+
+}  // namespace modular

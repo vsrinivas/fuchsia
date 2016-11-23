@@ -98,8 +98,9 @@ class DocumentEditor {
 };
 
 std::ostream& operator<<(std::ostream& os, const FidlDocMap& docs);
-std::ostream& operator<<(std::ostream& os,
-                         const document_store::DocumentPtr& doc);
+std::ostream& operator<<(std::ostream& os, const document_store::Document& doc);
+std::ostream& operator<<(std::ostream& os, const document_store::Document* doc);
+std::ostream& operator<<(std::ostream& os, const FidlPropertyMap& props);
 std::ostream& operator<<(std::ostream& os, document_store::Value* v);
 
 // Create a StatementPtr based on the given triple.
