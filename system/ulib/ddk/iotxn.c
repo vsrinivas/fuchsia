@@ -186,7 +186,7 @@ mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t 
     // found one that fits, skip allocation
     if (found) {
         list_delete(&txn->node);
-        memset(&txn, 0, sizeof(iotxn_t) + priv->buffer_size);
+        memset(txn, 0, sizeof(iotxn_t) + priv->buffer_size);
         priv->flags &= ~IOTXN_FLAG_FREE;
         mtx_unlock(&free_list_mutex);
         goto out;
