@@ -1,6 +1,7 @@
-#include "syscall.h"
+#include <errno.h>
 #include <signal.h>
 
 int kill(pid_t pid, int sig) {
-    return syscall(SYS_kill, pid, sig);
+    errno = EPERM;
+    return -1;
 }
