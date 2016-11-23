@@ -45,6 +45,13 @@ class ChildApplication {
     );
   }
 
+  void close() {
+    if (controller != null) {
+      controller.kill(() {});
+      controller.ctrl.close();
+    }
+  }
+
   final ApplicationControllerProxy controller;
   final ChildViewConnection connection;
   final String title;
@@ -58,7 +65,9 @@ void addWindowForChildApplication(ChildApplication application) {
     key: new ObjectKey(application),
     title: application.title,
     child: new ChildView(connection: application.connection),
-  ));
+  ), onClose: () {
+    application.close();
+  });
 }
 
 class PresenterImpl extends Presenter {
@@ -89,7 +98,7 @@ class ApplicationEnvironmentHostImpl extends ApplicationEnvironmentHost {
   @override
   void getApplicationEnvironmentServices(
       InterfaceRequest<ServiceProvider> services) {
-    new ServiceProviderImpl()
+    ServiceProviderImpl impl = new ServiceProviderImpl()
       ..bind(services)
       ..addServiceForName((request) {
         new PresenterImpl().bind(request);
@@ -98,7 +107,12 @@ class ApplicationEnvironmentHostImpl extends ApplicationEnvironmentHost {
         _context.environmentServices
             .connectToService(serviceName, request.passChannel());
       };
+    // TODO(abarth): Add a proper BindingSet to the FIDL Dart bindings so we
+    // accumulate all these service provider impls.
+    _serviceProviders.add(impl);
   }
+
+  List<ServiceProviderImpl> _serviceProviders = <ServiceProviderImpl>[];
 }
 
 final ApplicationEnvironmentHostImpl _environmentHost =

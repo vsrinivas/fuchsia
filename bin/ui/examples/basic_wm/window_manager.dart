@@ -201,6 +201,7 @@ class WindowManager extends StatefulWidget {
 
 class WindowManagerState extends State<WindowManager> {
   List<Widget> _windows = <Widget>[];
+  Map<Widget, VoidCallback> _closeCallbacks = <Widget, VoidCallback>{};
 
   @override
   void initState() {
@@ -208,9 +209,20 @@ class WindowManagerState extends State<WindowManager> {
     _windows.addAll(config.initialWindows);
   }
 
-  void addWindow(Widget window) {
+  @override
+  void dispose() {
+    super.dispose();
+    for (VoidCallback callback in _closeCallbacks.values.toList()) {
+      if (callback != null)
+        callback();
+    }
+  }
+
+  void addWindow(Widget window, { VoidCallback onClose }) {
     setState(() {
       _windows.add(window);
+      if (onClose != null)
+        _closeCallbacks[window] = onClose;
     });
   }
 
@@ -218,6 +230,9 @@ class WindowManagerState extends State<WindowManager> {
     setState(() {
       _windows.remove(window);
     });
+    VoidCallback callback = _closeCallbacks.remove(window);
+    if (callback != null)
+      callback();
   }
 
   void activateWindow(Widget window) {

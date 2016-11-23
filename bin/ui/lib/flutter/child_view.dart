@@ -74,7 +74,9 @@ class _ViewContainerListenerImpl extends ViewContainerListener {
 ///
 /// Used with the [ChildView] widget to display a child view.
 class ChildViewConnection {
-  ChildViewConnection(this._viewOwner);
+  ChildViewConnection(this._viewOwner) {
+    assert(_viewOwner != null);
+  }
 
   factory ChildViewConnection.launch(String url, ApplicationLauncher launcher, {
     InterfaceRequest<ApplicationController> controller
@@ -83,16 +85,24 @@ class ChildViewConnection {
     final ApplicationLaunchInfo launchInfo = new ApplicationLaunchInfo()
       ..url = url
       ..services = services.ctrl.request();
-    launcher.createApplication(launchInfo, controller);
-    return new ChildViewConnection.connect(services);
+    try {
+      launcher.createApplication(launchInfo, controller);
+      return new ChildViewConnection.connect(services);
+    } finally {
+      services.ctrl.close();
+    }
   }
 
   factory ChildViewConnection.connect(ServiceProvider services) {
     final ViewProviderProxy viewProvider = new ViewProviderProxy();
     connectToService(services, viewProvider.ctrl);
-    final ViewOwnerProxy viewOwner = new ViewOwnerProxy();
-    viewProvider.createView(viewOwner.ctrl.request(), null);
-    return new ChildViewConnection(viewOwner.ctrl.unbind());
+    try {
+      final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
+      viewProvider.createView(viewOwner.passRequest(), null);
+      return new ChildViewConnection(viewOwner.passHandle());
+    } finally {
+      viewProvider.ctrl.close();
+    }
   }
 
   InterfaceHandle<ViewOwner> _viewOwner;
