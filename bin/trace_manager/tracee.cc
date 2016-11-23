@@ -9,12 +9,14 @@
 namespace tracing {
 namespace {
 
-// Writes |len| bytes from |buffer| to |socket|.
-// Returns false to indicate that no further operations
-// on |socket| should happen, true otherwise.
-bool WriteBufferToSocket(const uint8_t* buffer,
-                         size_t len,
-                         const mx::socket& socket) {
+// Writes |len| bytes from |buffer| to |socket|. Returns
+// TransferStatus::kComplete if the entire buffer has been
+// successfully transferred. A return value of
+// TransferStatus::kReceiverDead indicates that the peer was closed
+// during the transfer.
+Tracee::TransferStatus WriteBufferToSocket(const uint8_t* buffer,
+                                           size_t len,
+                                           const mx::socket& socket) {
   mx_size_t offset = 0;
   while (offset < len) {
     mx_status_t status = NO_ERROR;
@@ -27,7 +29,7 @@ bool WriteBufferToSocket(const uint8_t* buffer,
                                  MX_TIME_INFINITE, &pending);
         if (status < 0) {
           FTL_LOG(ERROR) << "Wait on socket failed: " << status;
-          return false;
+          return Tracee::TransferStatus::kCorrupted;
         }
 
         if (pending & MX_SIGNAL_WRITABLE)
@@ -35,16 +37,16 @@ bool WriteBufferToSocket(const uint8_t* buffer,
 
         if (pending & MX_SIGNAL_PEER_CLOSED) {
           FTL_LOG(ERROR) << "Peer closed while writing to socket";
-          return false;
+          return Tracee::TransferStatus::kReceiverDead;
         }
       }
 
-      return false;
+      return Tracee::TransferStatus::kCorrupted;
     }
     offset += actual;
   }
 
-  return true;
+  return Tracee::TransferStatus::kComplete;
 }
 
 }  // namespace
@@ -124,13 +126,16 @@ void Tracee::OnHandleError(mx_handle_t handle, mx_status_t error) {
   FTL_DCHECK(error == ERR_BAD_STATE);
 }
 
-bool Tracee::WriteRecords(const mx::socket& socket) const {
+Tracee::TransferStatus Tracee::TransferRecords(const mx::socket& socket) const {
   FTL_DCHECK(socket);
   FTL_DCHECK(buffer_vmo_);
 
-  if (!WriteProviderInfoRecord(socket)) {
+  Tracee::TransferStatus transfer_status = TransferStatus::kComplete;
+
+  if ((transfer_status = WriteProviderInfoRecord(socket)) !=
+      TransferStatus::kComplete) {
     FTL_LOG(ERROR) << "Failed to write provider info record to trace.";
-    return false;
+    return transfer_status;
   }
 
   std::vector<uint8_t> buffer(buffer_vmo_size_);
@@ -161,7 +166,8 @@ bool Tracee::WriteRecords(const mx::socket& socket) const {
                              internal::WordsToBytes(current - start), socket);
 }
 
-bool Tracee::WriteProviderInfoRecord(const mx::socket& socket) const {
+Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
+    const mx::socket& socket) const {
   FTL_DCHECK(bundle_->label.size() <=
              internal::ProviderInfoMetadataRecordFields::kMaxNameLength);
 

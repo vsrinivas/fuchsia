@@ -40,7 +40,8 @@ void TraceManager::StartTracing(fidl::Array<fidl::String> categories,
   FTL_VLOG(1) << "Starting trace";
 
   session_ = ftl::MakeRefCounted<TraceSession>(
-      std::move(output), std::move(categories), kTraceBufferSize);
+      std::move(output), std::move(categories), kTraceBufferSize,
+      [this]() { session_ = nullptr; });
 
   for (auto& bundle : providers_) {
     FTL_VLOG(1) << "  for provider " << bundle;

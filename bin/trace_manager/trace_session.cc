@@ -11,11 +11,13 @@ namespace tracing {
 
 TraceSession::TraceSession(mx::socket destination,
                            fidl::Array<fidl::String> categories,
-                           size_t trace_buffer_size)
+                           size_t trace_buffer_size,
+                           ftl::Closure abort_handler)
     : destination_(std::move(destination)),
       categories_(std::move(categories)),
       trace_buffer_size_(trace_buffer_size),
       buffer_(trace_buffer_size_),
+      abort_handler_(std::move(abort_handler)),
       weak_ptr_factory_(this) {}
 
 TraceSession::~TraceSession() {
@@ -23,10 +25,8 @@ TraceSession::~TraceSession() {
 }
 
 void TraceSession::AddProvider(TraceProviderBundle* bundle) {
-  if (done_callback_) {
-    FTL_LOG(WARNING) << "Stop has already been requested";
+  if (!(state_ == State::kReady || state_ == State::kStarted))
     return;
-  }
 
   tracees_.emplace_back(bundle);
   if (!tracees_.back().Start(
@@ -38,15 +38,23 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
             }
           })) {
     tracees_.pop_back();
+  } else {
+    TransitionToState(State::kStarted);
   }
 }
 
 void TraceSession::RemoveDeadProvider(TraceProviderBundle* bundle) {
+  if (!(state_ == State::kStarted || state_ == State::kStopping))
+    return;
   FinishProvider(bundle);
 }
 
 void TraceSession::Stop(ftl::Closure done_callback,
                         const ftl::TimeDelta& timeout) {
+  if (!(state_ == State::kReady || state_ == State::kStarted))
+    return;
+
+  TransitionToState(State::kStopping);
   done_callback_ = std::move(done_callback);
 
   // Walk through all remaining tracees and send out their buffers.
@@ -65,28 +73,53 @@ void TraceSession::Stop(ftl::Closure done_callback,
   FinishSessionIfEmpty();
 }
 
+void TraceSession::Abort() {
+  TransitionToState(State::kStopped);
+  tracees_.clear();
+  abort_handler_();
+}
+
 void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
   auto it =
       std::find_if(tracees_.begin(), tracees_.end(),
                    [bundle](const auto& tracee) { return tracee == bundle; });
 
   if (it != tracees_.end()) {
-    if (destination_ && !it->WriteRecords(destination_)) {
-      // TODO: We should revisit error reporting here and:
-      //   - make the return type of Tracee::WriteRecords more expressive
-      //   - let calling code know that an unrecoverable error occured.
-      FTL_LOG(ERROR) << "Could not write to socket, aborting trace";
-      destination_.reset();
+    if (destination_) {
+      switch (it->TransferRecords(destination_)) {
+        case Tracee::TransferStatus::kComplete:
+          break;
+        case Tracee::TransferStatus::kCorrupted:
+          FTL_LOG(ERROR) << "Encountered unrecoverable error writing socket, "
+                            "aborting trace";
+          Abort();
+          return;
+        case Tracee::TransferStatus::kReceiverDead:
+          FTL_LOG(ERROR) << "Peer is closed, aborting trace";
+          Abort();
+          return;
+        default:
+          break;
+      }
     }
     tracees_.erase(it);
   }
+
+  FinishSessionIfEmpty();
 }
 
 void TraceSession::FinishSessionIfEmpty() {
-  if (tracees_.empty() && done_callback_) {
+  if (state_ == State::kStopping && tracees_.empty()) {
+    TransitionToState(State::kStopped);
     session_finalize_timeout_.Stop();
     done_callback_();
   }
+}
+
+void TraceSession::TransitionToState(State new_state) {
+  FTL_VLOG(2) << "Transitioning from " << static_cast<uint32_t>(state_)
+              << " to " << static_cast<uint32_t>(new_state);
+  state_ = new_state;
 }
 
 }  // namespace tracing

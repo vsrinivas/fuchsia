@@ -34,9 +34,13 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
   // to |destination|. Every provider active in this
   // session is handed |categories| and a vmo of size
   // |trace_buffer_size| when started.
+  //
+  // |abort_handler| is invoked whenever the session encounters
+  // unrecoverable errors that render the session dead.
   explicit TraceSession(mx::socket destination,
                         fidl::Array<fidl::String> categories,
-                        size_t trace_buffer_size);
+                        size_t trace_buffer_size,
+                        ftl::Closure abort_handler);
   // Frees all allocated resources and closes the outgoing
   // connection.
   ~TraceSession();
@@ -53,9 +57,15 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
   void Stop(ftl::Closure done_callback, const ftl::TimeDelta& timeout);
 
  private:
+  enum class State { kReady, kStarted, kStopping, kStopped };
+
+  void Abort();
   void FinishProvider(TraceProviderBundle* bundle);
   void FinishSessionIfEmpty();
 
+  void TransitionToState(State state);
+
+  State state_ = State::kReady;
   mx::socket destination_;
   fidl::Array<fidl::String> categories_;
   size_t trace_buffer_size_;
@@ -63,6 +73,7 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
   std::list<Tracee> tracees_;
   ftl::OneShotTimer session_finalize_timeout_;
   ftl::Closure done_callback_;
+  ftl::Closure abort_handler_;
 
   ftl::WeakPtrFactory<TraceSession> weak_ptr_factory_;
   FTL_DISALLOW_COPY_AND_ASSIGN(TraceSession);
