@@ -22,12 +22,49 @@
  *   Software.
  */
 
+#include <assert.h>
 #include <string.h>
 
 #include <qrcodegen/qrcode.h>
 
 namespace qrcodegen {
 
+class BitBufferFiller {
+public:
+    BitBufferFiller(uint8_t* buffer, size_t len) :
+        data_(buffer), maxbits_(len * 8), bitlen_(0), valid_(true) {
+        memset(buffer, 0, len);
+    }
+
+    size_t bitlen() { return bitlen_; }
+    bool valid() { return valid_; }
+
+    void appendBits(uint32_t val, size_t len) {
+        if ((maxbits_ - bitlen_) < len) {
+            valid_ = false;
+            return;
+        }
+
+        for (int i = (int)len - 1; i >= 0; i--) {
+            data_[bitlen_ >> 3] |= static_cast<uint8_t>(((val >> i) & 1) << (7 - (bitlen_ & 7)));
+            ++bitlen_;
+        }
+    }
+
+    void appendData(const void* data, size_t len) {
+        const uint8_t* bytes = static_cast<const uint8_t*>(data);
+        while (len > 0) {
+            appendBits(*bytes++, 8);
+            len--;
+        }
+    }
+
+private:
+    uint8_t* data_;
+    size_t maxbits_;
+    size_t bitlen_;
+    bool valid_;
+};
 
 int eccOrdinal(Ecc ecc) {
     if (ecc > Ecc::HIGH)
@@ -119,6 +156,55 @@ Error QrCode::encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
 #endif
 #endif
 
+Error QrCode::encodeBinary(const void* data, size_t datalen, Ecc ecl,
+        int minVersion, int maxVersion, int mask) {
+    if (!(1 <= minVersion && minVersion <= maxVersion && maxVersion <= 40) || mask < -1 || mask > 7)
+        return Error::InvalidArgs;
+
+    // Find the minimal version number to use
+    int version;
+    size_t sizeBits;
+    size_t dataUsedBits;
+    size_t dataCapacityBits;
+    for (version = minVersion; version <= maxVersion; version++) {
+        sizeBits = (version < 10) ? 8 : 16;
+        dataUsedBits = 4 + sizeBits + datalen * 8;
+        dataCapacityBits = getNumDataCodewords(version, ecl) * 8;
+        if (dataUsedBits <= dataCapacityBits)
+            goto match;
+    }
+    return Error::OutOfSpace;
+
+match:
+    // we use the module_ array (which will be erased and
+    // redrawn in draw() as temporary storage here).
+    static_assert(sizeof(module_) >= kMaxDataWords, "");
+
+    BitBufferFiller bb(module_, kMaxDataWords);
+
+    // Header: Mode(4bits) = BYTE(4), Count(16bits) = datalen
+    bb.appendBits(4, 4);
+    bb.appendBits(static_cast<uint32_t>(datalen), sizeBits);
+    bb.appendData(data, datalen);
+
+    // Add terminator and pad up to a byte if applicable
+    size_t leftover = dataCapacityBits - bb.bitlen();
+    bb.appendBits(0, (leftover > 4) ? 4 : leftover);
+    bb.appendBits(0, (8 - bb.bitlen() % 8) % 8);
+
+    // Pad with alternate bytes until data capacity is reached
+    for (uint8_t padByte = 0xEC; bb.bitlen() < dataCapacityBits; padByte ^= 0xEC ^ 0x11)
+        bb.appendBits(padByte, 8);
+
+    if (!bb.valid())
+        return Error::BadData;
+    if (bb.bitlen() % 8 != 0)
+        return Error::Internal;
+
+    // Create the QR Code symbol
+    return draw(version, ecl, module_, bb.bitlen() / 8, mask);
+}
+
 QrCode::QrCode() : version_(1), size_(21), ecc_(Ecc::LOW) {
 }
 
@@ -133,14 +219,25 @@ Error QrCode::draw(int ver, Ecc ecl, const uint8_t* data, size_t len, int mask) 
     size_ = (1 <= ver && ver <= 40 ? ver * 4 + 17 : -1),  // Avoid signed overflow undefined behavior
     ecc_ = ecl;
 
+    Error e;
+    if ((e = computeCodewords(data, len)))
+        return e;
+
+    // only clear these *after* the computation
+    // as they may be used as input buffers
     memset(module_, 0, sizeof(module_));
     memset(isfunc_, 0, sizeof(isfunc_));
 
     // Draw function patterns, draw all codewords, do masking
-    drawFunctionPatterns();
-    drawDataWords(data, len);
-    handleConstructorMasking(mask);
-
+    if ((e = drawFunctionPatterns())) {
+        return e;
+    }
+    if ((e = drawCodewords())) {
+        return e;
+    }
+    if ((e = handleConstructorMasking(mask))) {
+        return e;
+    }
     return Error::None;
 }
 
@@ -290,7 +387,7 @@ void QrCode::setFunctionModule(int x, int y, bool isBlack) {
 }
 
 
-Error QrCode::drawDataWords(const uint8_t* data, size_t len) {
+Error QrCode::computeCodewords(const uint8_t* data, size_t len) {
     if (len != static_cast<unsigned int>(getNumDataCodewords(version_, ecc_)))
         return Error::InvalidArgs;
 
@@ -310,8 +407,10 @@ Error QrCode::drawDataWords(const uint8_t* data, size_t len) {
     if ((e = rsg_.init(blockEccLen)))
         return e;
 
-    uint8_t outdata[fullBlockLen * numBlocks];
-    uint8_t* outptr = outdata;
+    if (static_cast<size_t>(fullBlockLen * numBlocks) > sizeof(codewords_))
+        return Error::Internal;
+
+    uint8_t* outptr = codewords_;
 
     for (int i = 0, k = 0; i < numBlocks; i++) {
         int blocklen = shortBlockLen - blockEccLen + (i < numShortBlocks ? 0 : 1);
@@ -328,17 +427,19 @@ Error QrCode::drawDataWords(const uint8_t* data, size_t len) {
         k += blocklen;
     }
 
-    Codebits codebits(outdata, numBlocks, fullBlockLen, numShortBlocks, shortBlockLen - blockEccLen);
+    Codebits codebits(codewords_, numBlocks, fullBlockLen, numShortBlocks, shortBlockLen - blockEccLen);
+    codebits_ = codebits;
 
-    return drawCodewords(codebits);
+    return Error::None;
 }
 
 
-Error QrCode::drawCodewords(Codebits& codebits) {
-    if (codebits.size() != static_cast<unsigned int>(getNumRawDataModules(version_) / 8))
+Error QrCode::drawCodewords() {
+    if (codebits_.size() != static_cast<unsigned int>(getNumRawDataModules(version_) / 8))
         return Error::InvalidArgs;
 
-    size_t count = codebits.maxbits();
+    size_t count = codebits_.maxbits();
+
     // Do the funny zigzag scan
     for (int right = size_ - 1; right >= 1; right -= 2) {  // Index of right column in each column pair
         if (right == 6)
@@ -349,7 +450,7 @@ Error QrCode::drawCodewords(Codebits& codebits) {
                 bool upwards = ((right & 2) == 0) ^ (x < 6);
                 int y = upwards ? size_ - 1 - vert : vert;  // Actual y coordinate
                 if (!isFunction(x,y) && (count > 0)) {
-                    setModule(x, y, codebits.next());
+                    setModule(x, y, codebits_.next());
                     count--;
                 }
                 // If there are any remainder bits (0 to 7), they are already

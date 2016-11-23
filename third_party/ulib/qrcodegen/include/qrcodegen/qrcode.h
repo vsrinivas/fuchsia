@@ -87,7 +87,58 @@ private:
     static Error multiply(uint8_t x, uint8_t y, uint8_t& out);
 };
 
-class Codebits;
+/*
+ * Helper to iterate over the bits in an array of data and ecc blocks
+ * The data consists of a set of blocks of data and ecc data.
+ * The short blocks have a dummy byte after the data and before the ecc
+ * data that must be skipped.
+ * The bitstream is built from block1 byte1, block2 byte1, ... blockN byte1,
+ * block1 byte2, block2 byte2, ... blockN byte2, skipping the dummy byte
+ * on short blocks, until all bits have been streamed out.
+ */
+
+class Codebits {
+public:
+    Codebits(uint8_t* data, size_t blocks, size_t blocklen,
+             size_t shortblocks, size_t skipbyte) :
+        data_(data), i_(0), j_(0), imax_(blocklen), jmax_(blocks),
+        shortblocks_(shortblocks), skip_(skipbyte), mask_(0), bits_(0) {
+    }
+    Codebits() {}
+
+    size_t maxbits() const {
+        return (jmax_ * imax_ - shortblocks_) * 8;
+    }
+    size_t size() const {
+        return (jmax_ * imax_ - shortblocks_);
+    }
+    bool next() {
+        while (mask_ == 0) {
+            if (i_ < imax_) {
+                if ((i_ != skip_) || (j_ >= shortblocks_)) {
+                    mask_ = 0x80;
+                    bits_ = data_[j_ * imax_ + i_];
+                }
+                if (++j_ == jmax_) {
+                    j_ = 0;
+                    ++i_;
+                }
+            } else {
+                return false;
+            }
+        }
+        bool res = ((bits_ & mask_) != 0);
+        mask_ >>= 1;
+        return res;
+    }
+
+private:
+    uint8_t* data_;
+    size_t i_, j_;
+    size_t imax_, jmax_, shortblocks_, skip_;
+    unsigned mask_, bits_;
+};
+
 
 /*
  * Represents an immutable square grid of black and white cells for a QR Code symbol, and
@@ -161,10 +212,15 @@ public:
      * between modes (such as alphanumeric and binary) to encode text more efficiently.
      * This function is considered to be lower level than simply encoding text or binary data.
      */
-    Error encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
-        int minVersion=1, int maxVersion=40, int mask=-1, bool boostEcl=true);  // All optional parameters
+    Error encodeSegments(const std::vector<QrSegment> &segs,
+                         Ecc ecl, int minVersion=1, int maxVersion=40,
+                         int mask=-1, bool boostEcl=true);
 #endif
 #endif
+
+    Error encodeBinary(const void* data, size_t datalen,
+                       Ecc ecl=Ecc::LOW, int minVersion=1, int maxVersion=40,
+                       int mask=-1);
 
 
 private:
@@ -177,8 +233,19 @@ private:
     static constexpr size_t kMaxHeight = 177;
     static constexpr size_t kStride = (kMaxWidth + 7) / 8;
 
-    uint8_t module_[kStride * kMaxHeight]; // The modules of this QR Code symbol (false = white, true = black)
-    uint8_t isfunc_[kStride * kMaxHeight]; // Indicates function modules that are not subjected to masking
+    static constexpr size_t kMaxCodeWords = 3706;
+    static constexpr size_t kMaxDataWords = 2956;
+    static constexpr size_t kMaxBinaryData = 2953;
+
+    // The modules of this QR Code symbol (false = white, true = black)
+    uint8_t module_[kStride * kMaxHeight];
+
+    // Indicates function modules that are not subjected to masking
+    uint8_t isfunc_[kStride * kMaxHeight];
+
+    // Assembly buffer
+    uint8_t codewords_[kMaxCodeWords];
+    Codebits codebits_;
 
     ReedSolomonGenerator rsg_;
 
@@ -231,11 +298,13 @@ private:
 private:
 
     // Computes the error correction codewords and then calls drawCodewords()
-    Error drawDataWords(const uint8_t* data, size_t len);
+    // codebits_ is ready for use on success
+    Error computeCodewords(const uint8_t* data, size_t len);
 
     // Draws the given sequence of 8-bit codewords (data and error correction) onto the entire
     // data area of this QR Code symbol. Function modules need to be marked off before this is called.
-    Error drawCodewords(Codebits& codebits);
+    // Codewords are provided by codebits_
+    Error drawCodewords();
 
     // XORs the data modules in this QR Code with the given mask pattern. Due to XOR's mathematical
     // properties, calling applyMask(m) twice with the same value is equivalent to no change at all.
@@ -278,58 +347,6 @@ private:
 
     static const int16_t NUM_ERROR_CORRECTION_CODEWORDS[4][41];
     static const int8_t NUM_ERROR_CORRECTION_BLOCKS[4][41];
-};
-
-
-/*
- * Helper to iterate over the bits in an array of data and ecc blocks
- * The data consists of a set of blocks of data and ecc data.
- * The short blocks have a dummy byte after the data and before the ecc
- * data that must be skipped.
- * The bitstream is built from block1 byte1, block2 byte1, ... blockN byte1,
- * block1 byte2, block2 byte2, ... blockN byte2, skipping the dummy byte
- * on short blocks, until all bits have been streamed out.
- */
-
-class Codebits {
-public:
-    Codebits(uint8_t* data, size_t blocks, size_t blocklen,
-             size_t shortblocks, size_t skipbyte) :
-        data_(data), i_(0), j_(0), imax_(blocklen), jmax_(blocks),
-        shortblocks_(shortblocks), skip_(skipbyte), mask_(0), bits_(0) {
-    }
-
-    size_t maxbits() const {
-        return (jmax_ * imax_ - shortblocks_) * 8;
-    }
-    size_t size() const {
-        return (jmax_ * imax_ - shortblocks_);
-    }
-    bool next() {
-        while (mask_ == 0) {
-            if (i_ < imax_) {
-                if ((i_ != skip_) || (j_ >= shortblocks_)) {
-                    mask_ = 0x80;
-                    bits_ = data_[j_ * imax_ + i_];
-                }
-                if (++j_ == jmax_) {
-                    j_ = 0;
-                    ++i_;
-                }
-            } else {
-                return false;
-            }
-        }
-        bool res = ((bits_ & mask_) != 0);
-        mask_ >>= 1;
-        return res;
-    }
-
-private:
-    const uint8_t* data_;
-    size_t i_, j_;
-    const size_t imax_, jmax_, shortblocks_, skip_;
-    unsigned mask_, bits_;
 };
 
 }
