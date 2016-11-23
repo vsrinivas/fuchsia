@@ -17,6 +17,7 @@
 #include <magenta/syscalls/debug.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/syscalls/port.h>
+#include <magenta/threads.h>
 #include <mxio/util.h>
 
 #include "backtrace.h"
@@ -329,7 +330,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    mx_handle_t thread_self = mxio_get_startup_handle(MX_HND_TYPE_THREAD_SELF);
+    mx_handle_t thread_self = thrd_get_mx_handle(thrd_current());
     if (thread_self < 0) {
         print_mx_error("unable to get thread self", thread_self);
         return 1;
