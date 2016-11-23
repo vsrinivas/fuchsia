@@ -4,6 +4,10 @@
     ],
     "binaries": [
         {
+            "binary": "dev_user_shell",
+            "bootfs_path": "apps/dev_user_shell"
+        },
+        {
             "binary": "device_runner",
             "bootfs_path": "apps/device_runner"
         },
