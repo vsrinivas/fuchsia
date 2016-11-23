@@ -18,6 +18,7 @@ fidl("views") {
   ]
 
   public_deps = [
+    "//apps/modular/services/application:service_provider",
     "//apps/mozart/services/composition",
     "//apps/mozart/services/geometry",
   ]
