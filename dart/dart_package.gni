@@ -25,6 +25,14 @@
 #     includes things like actions that generate Dart code. It typically doesn't
 #     need to be set.
 #
+#   analysis_options (optional)
+#     By default, a script to run the analyzer on the contents of the package is
+#     generated in the output directory. This parameter contains the path to an
+#     analysis options file for this target.
+#
+#   disable_analysis (optional)
+#     Prevents the analysis script from being generated.
+#
 # Example of usage:
 #
 #   dart_package("baz") {
@@ -45,30 +53,30 @@ template("dart_package") {
     assert(false, "Must specify either a package_name or infer_package_name")
   }
 
+  dart_deps = []
+  if (defined(invoker.deps)) {
+    dart_deps += invoker.deps
+  }
+
+  dot_packages_file = "$target_gen_dir/$target_name.packages"
+
+  source_dir = "."
+  if (defined(invoker.source_dir)) {
+    source_dir = invoker.source_dir
+  }
+
   action(target_name) {
     script = "//build/dart/gen_dot_packages.py"
-
-    dart_deps = []
-    if (defined(invoker.deps)) {
-      dart_deps += invoker.deps
-    }
 
     deps = dart_deps
     if (defined(invoker.non_dart_deps)) {
       deps += invoker.non_dart_deps
     }
 
-    dot_packages_file = "$target_gen_dir/$target_name.packages"
-
     outputs = [
       dot_packages_file,
     ]
     depfile = "$dot_packages_file.d"
-
-    source_dir = "."
-    if (defined(invoker.source_dir)) {
-      source_dir = invoker.source_dir
-    }
 
     args = [
              "--out",
@@ -85,5 +93,60 @@ template("dart_package") {
              rebase_path(depfile),
              "--deps",
            ] + dart_deps
+  }
+
+  if (!defined(invoker.disable_analysis) || !invoker.disable_analysis) {
+    analyzer_name = "${target_name}_analyzer_sh"
+    invocation_file_name = "$target_name.analyzer.sh"
+
+    action(analyzer_name) {
+      script = "//build/dart/gen_analyzer_invocation.py"
+
+      invocation_file = "$target_gen_dir/$invocation_file_name"
+
+      dart_binary_label = "//dart/runtime/bin:dart_no_observatory($host_toolchain)"
+      dart_binary_dir = get_label_info(dart_binary_label, "root_out_dir")
+      dart_binary = "$dart_binary_dir/dart_no_observatory"
+
+      analyzer_base_label = "//dart/pkg/analyzer_cli"
+      analyzer_label = "$analyzer_base_label($host_toolchain)"
+      analyzer_gen_dir = get_label_info(analyzer_label, "target_gen_dir")
+      analyzer_name = get_label_info(analyzer_label, "name")
+      analyzer_packages = "$analyzer_gen_dir/$analyzer_name.packages"
+      analyzer_main = "$analyzer_base_label/bin/analyzer.dart"
+
+      deps = dart_deps + [
+        analyzer_label,
+        dart_binary_label,
+      ]
+
+      outputs = [
+        invocation_file
+      ]
+
+      args = [
+               "--out",
+               rebase_path(invocation_file),
+               "--source-dir",
+               rebase_path(source_dir),
+               "--dot-packages",
+               rebase_path(dot_packages_file),
+               "--root-build-dir",
+               rebase_path(root_build_dir),
+               "--analyzer-packages",
+               rebase_path(analyzer_packages),
+               "--analyzer-main",
+               rebase_path(analyzer_main),
+               "--dart",
+               rebase_path(dart_binary),
+      ]
+
+      if (defined(invoker.analysis_options)) {
+        args += [
+                  "--options",
+                  rebase_path(invoker.analysis_options),
+        ]
+      }
+    }
   }
 }
