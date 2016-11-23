@@ -109,13 +109,16 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
 
       HTTPClient<asio::ssl::stream<tcp::socket>> c(this, io_service, ctx);
       mx_status_t result = c.CreateRequest(
-          current_url_.host(), current_url_.path() + (current_url_.has_query() ? "?" + current_url_.query() : ""),
+          current_url_.host(),
+          current_url_.path() +
+              (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, element_readers);
       if (result != NO_ERROR) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }
-      c.Start(current_url_.host(), current_url_.has_port() ? current_url_.port() : "https");
+      c.Start(current_url_.host(),
+              current_url_.has_port() ? current_url_.port() : "https");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {
@@ -136,13 +139,16 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
     } else if (current_url_.SchemeIs("http")) {
       HTTPClient<tcp::socket> c(this, io_service);
       mx_status_t result = c.CreateRequest(
-          current_url_.host(), current_url_.path() + (current_url_.has_query() ? "?" + current_url_.query() : ""),
+          current_url_.host(),
+          current_url_.path() +
+              (current_url_.has_query() ? "?" + current_url_.query() : ""),
           method, extra_headers, element_readers);
       if (result != NO_ERROR) {
         SendError(network::NETWORK_ERR_INVALID_ARGUMENT);
         break;
       }
-      c.Start(current_url_.host(), current_url_.has_port() ? current_url_.port() : "http");
+      c.Start(current_url_.host(),
+              current_url_.has_port() ? current_url_.port() : "http");
       io_service.run();
 
       if (c.status_code_ == 301 || c.status_code_ == 302) {

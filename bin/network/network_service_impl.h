@@ -47,7 +47,8 @@ class NetworkServiceImpl : public NetworkService {
 
  private:
   fidl::BindingSet<NetworkService> bindings_;
-  fidl::BindingSet<URLLoader, std::unique_ptr<URLLoaderImpl>> url_loader_bindings_;
+  fidl::BindingSet<URLLoader, std::unique_ptr<URLLoaderImpl>>
+      url_loader_bindings_;
 };
 
 }  // namespace network

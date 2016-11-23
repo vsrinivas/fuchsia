@@ -24,9 +24,9 @@ void NetworkServiceImpl::AddBinding(
 }
 
 void NetworkServiceImpl::CreateURLLoader(
-                                         fidl::InterfaceRequest<URLLoader> loader) {
-    auto impl = std::make_unique<URLLoaderImpl>(std::move(loader));
-    url_loader_bindings_.AddBinding(std::move(impl));
+    fidl::InterfaceRequest<URLLoader> loader) {
+  auto impl = std::make_unique<URLLoaderImpl>(std::move(loader));
+  url_loader_bindings_.AddBinding(std::move(impl));
 }
 
 void NetworkServiceImpl::GetCookieStore(mx::channel cookie_store) {

@@ -73,9 +73,9 @@ class ResponsePrinter {
 class PostFileApp {
  public:
   PostFileApp(const std::vector<std::string>& args)
-    : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
+      : context_(modular::ApplicationContext::CreateFromStartupInfo()) {
     network_service_ =
-      context_->ConnectToEnvironmentService<network::NetworkService>();
+        context_->ConnectToEnvironmentService<network::NetworkService>();
 
     Start(args);
   }
@@ -111,7 +111,7 @@ class PostFileApp {
     mx::datapipe_consumer consumer;
     mx::datapipe_producer producer;
     mx_status_t status =
-      mx::datapipe<void>::create(1u, 0u, 0u, &producer, &consumer);
+        mx::datapipe<void>::create(1u, 0u, 0u, &producer, &consumer);
     if (status != NO_ERROR) {
       printf("cannot create datapipe\n");
       return;
@@ -121,8 +121,7 @@ class PostFileApp {
     request->body->set_stream(std::move(consumer));
 
     auto task_runner = mtl::MessageLoop::GetCurrent()->task_runner();
-    mtl::CopyFromFileDescriptor(std::move(fd), std::move(producer),
-                                task_runner,
+    mtl::CopyFromFileDescriptor(std::move(fd), std::move(producer), task_runner,
                                 [](bool result, ftl::UniqueFD fd) {
                                   if (!result) {
                                     printf("file read error\n");
