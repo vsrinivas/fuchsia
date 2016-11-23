@@ -119,9 +119,12 @@ private:
 
     // Private grids of modules/pixels (conceptually immutable)
 private:
-    std::vector<std::vector<bool>> modules;     // The modules of this QR Code symbol (false = white, true = black)
-    std::vector<std::vector<bool>> isFunction;  // Indicates function modules that are not subjected to masking
+    static constexpr size_t kMaxWidth = 177;
+    static constexpr size_t kMaxHeight = 177;
+    static constexpr size_t kStride = (kMaxWidth + 7) / 8;
 
+    uint8_t module_[kStride * kMaxHeight]; // The modules of this QR Code symbol (false = white, true = black)
+    uint8_t isfunc_[kStride * kMaxHeight]; // Indicates function modules that are not subjected to masking
 
 
     /*---- Constructors ----*/
@@ -154,8 +157,12 @@ public:
      * Returns the color of the module (pixel) at the given coordinates, which is either 0 for white or 1 for black. The top
      * left corner has the coordinates (x=0, y=0). If the given coordinates are out of bounds, then 0 (white) is returned.
      */
-    int getModule(int x, int y) const;
-
+    int getPixel(int x, int y) const {
+        if (0 <= x && x < size && 0 <= y && y < size)
+            return (module_[y * kStride + (x >> 3)] & (1 << (x & 7))) != 0;
+        else
+            return 0;  // Infinite white border
+    };
 
     /*
      * Based on the given number of border modules to add as padding, this returns a
@@ -168,6 +175,31 @@ public:
 
     /*---- Private helper methods for constructor: Drawing function modules ----*/
 private:
+
+    /*
+     * Internal accessors.  x,y must be within range.
+     */
+    bool getModule(int x, int y) const {
+        return (module_[y * kStride + (x >> 3)] & (1 << (x & 7))) != 0;
+    };
+
+    bool isFunction(int x, int y) const {
+        return (isfunc_[y * kStride + (x >> 3)] & (1 << (x & 7))) != 0;
+    }
+
+    void setModule(int x, int y, bool yes) {
+        if (yes) {
+            module_[y * kStride + (x >> 3)] |= (1 << (x & 7));
+        } else {
+            module_[y * kStride + (x >> 3)] &= ~(1 << (x & 7));
+        }
+    }
+
+    void setFunction(int x, int y) {
+        isfunc_[y * kStride + (x >> 3)] |= (1 << (x & 7));
+    }
+
+
 
     void drawFunctionPatterns();
 

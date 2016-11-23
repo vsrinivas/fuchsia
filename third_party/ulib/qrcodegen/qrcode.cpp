@@ -118,11 +118,8 @@ QrCode::QrCode(int ver, const Ecc &ecl, const std::vector<uint8_t> &dataCodeword
     if (ver < 1 || ver > 40 || mask < -1 || mask > 7)
         throw "Value out of range";
 
-    std::vector<bool> row(size);
-    for (int i = 0; i < size; i++) {
-        modules.push_back(row);
-        isFunction.push_back(row);
-    }
+    memset(module_, 0, sizeof(module_));
+    memset(isfunc_, 0, sizeof(isfunc_));
 
     // Draw function patterns, draw all codewords, do masking
     drawFunctionPatterns();
@@ -143,8 +140,8 @@ QrCode::QrCode(const QrCode &qr, int mask) :
         throw "Mask value out of range";
 
     // Handle grid fields
-    modules = qr.modules;
-    isFunction = qr.isFunction;
+    memcpy(module_, qr.module_, sizeof(module_));
+    memcpy(isfunc_, qr.isfunc_, sizeof(isfunc_));
 
     // Handle masking
     applyMask(qr.mask);  // Undo old mask
@@ -154,14 +151,6 @@ QrCode::QrCode(const QrCode &qr, int mask) :
 
 int QrCode::getMask() const {
     return mask;
-}
-
-
-int QrCode::getModule(int x, int y) const {
-    if (0 <= x && x < size && 0 <= y && y < size)
-        return modules.at(y).at(x) ? 1 : 0;
-    else
-        return 0;  // Infinite white border
 }
 
 
@@ -178,7 +167,7 @@ std::string QrCode::toSvgString(int border) const {
     bool head = true;
     for (int y = -border; y < size + border; y++) {
         for (int x = -border; x < size + border; x++) {
-            if (getModule(x, y) == 1) {
+            if (getPixel(x, y) == 1) {
                 if (head)
                     head = false;
                 else
@@ -295,8 +284,8 @@ void QrCode::drawAlignmentPattern(int x, int y) {
 
 
 void QrCode::setFunctionModule(int x, int y, bool isBlack) {
-    modules.at(y).at(x) = isBlack;
-    isFunction.at(y).at(x) = true;
+    setModule(x, y, isBlack);
+    setFunction(x, y);
 }
 
 
@@ -368,8 +357,8 @@ void QrCode::drawCodewords(const std::vector<uint8_t> &data) {
                 int x = right - j;  // Actual x coordinate
                 bool upwards = ((right & 2) == 0) ^ (x < 6);
                 int y = upwards ? size - 1 - vert : vert;  // Actual y coordinate
-                if (!isFunction.at(y).at(x) && i < data.size() * 8) {
-                    modules.at(y).at(x) = ((data.at(i >> 3) >> (7 - (i & 7))) & 1) != 0;
+                if (!isFunction(x,y) && i < data.size() * 8) {
+                    setModule(x, y, ((data.at(i >> 3) >> (7 - (i & 7))) & 1) != 0);
                     i++;
                 }
                 // If there are any remainder bits (0 to 7), they are already
@@ -399,7 +388,9 @@ void QrCode::applyMask(int mask) {
                 case 7:  invert = ((x + y) % 2 + x * y % 3) % 2 == 0;  break;
                 default:  throw "Assertion error";
             }
-            modules.at(y).at(x) = modules.at(y).at(x) ^ (invert & !isFunction.at(y).at(x));
+            if (!isFunction(x, y) && invert) {
+                setModule(x, y, !getModule(x, y));
+            }
         }
     }
 }
@@ -432,10 +423,10 @@ int QrCode::getPenaltyScore() const {
 
     // Adjacent modules in row having same color
     for (int y = 0; y < size; y++) {
-        bool colorX = modules.at(y).at(0);
+        bool colorX = getModule(0, y);
         for (int x = 1, runX = 1; x < size; x++) {
-            if (modules.at(y).at(x) != colorX) {
-                colorX = modules.at(y).at(x);
+            if (getModule(x, y) != colorX) {
+                colorX = getModule(x, y);
                 runX = 1;
             } else {
                 runX++;
@@ -448,10 +439,10 @@ int QrCode::getPenaltyScore() const {
     }
     // Adjacent modules in column having same color
     for (int x = 0; x < size; x++) {
-        bool colorY = modules.at(0).at(x);
+        bool colorY = getModule(x, 0);
         for (int y = 1, runY = 1; y < size; y++) {
-            if (modules.at(y).at(x) != colorY) {
-                colorY = modules.at(y).at(x);
+            if (getModule(x, y) != colorY) {
+                colorY = getModule(x, y);
                 runY = 1;
             } else {
                 runY++;
@@ -466,10 +457,10 @@ int QrCode::getPenaltyScore() const {
     // 2*2 blocks of modules having same color
     for (int y = 0; y < size - 1; y++) {
         for (int x = 0; x < size - 1; x++) {
-            bool  color = modules.at(y).at(x);
-            if (  color == modules.at(y).at(x + 1) &&
-                  color == modules.at(y + 1).at(x) &&
-                  color == modules.at(y + 1).at(x + 1))
+            bool  color = getModule(x, y);
+            if (  color == getModule(x + 1, y) &&
+                  color == getModule(x, y + 1) &&
+                  color == getModule(x + 1, y + 1))
                 result += PENALTY_N2;
         }
     }
@@ -477,7 +468,7 @@ int QrCode::getPenaltyScore() const {
     // Finder-like pattern in rows
     for (int y = 0; y < size; y++) {
         for (int x = 0, bits = 0; x < size; x++) {
-            bits = ((bits << 1) & 0x7FF) | (modules.at(y).at(x) ? 1 : 0);
+            bits = ((bits << 1) & 0x7FF) | (getModule(x, y) ? 1 : 0);
             if (x >= 10 && (bits == 0x05D || bits == 0x5D0))  // Needs 11 bits accumulated
                 result += PENALTY_N3;
         }
@@ -485,7 +476,7 @@ int QrCode::getPenaltyScore() const {
     // Finder-like pattern in columns
     for (int x = 0; x < size; x++) {
         for (int y = 0, bits = 0; y < size; y++) {
-            bits = ((bits << 1) & 0x7FF) | (modules.at(y).at(x) ? 1 : 0);
+            bits = ((bits << 1) & 0x7FF) | (getModule(x, y) ? 1 : 0);
             if (y >= 10 && (bits == 0x05D || bits == 0x5D0))  // Needs 11 bits accumulated
                 result += PENALTY_N3;
         }
@@ -495,7 +486,7 @@ int QrCode::getPenaltyScore() const {
     int black = 0;
     for (int y = 0; y < size; y++) {
         for (int x = 0; x < size; x++) {
-            if (modules.at(y).at(x))
+            if (getModule(x, y))
                 black++;
         }
     }

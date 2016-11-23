@@ -137,7 +137,7 @@ static void printQr(const qrcodegen::QrCode &qr) {
     int border = 4;
     for (int y = -border; y < qr.size + border; y++) {
         for (int x = -border; x < qr.size + border; x++) {
-            std::cout << (qr.getModule(x, y) == 1 ? "##" : "  ");
+            std::cout << (qr.getPixel(x, y) == 1 ? "##" : "  ");
         }
         std::cout << std::endl;
     }
