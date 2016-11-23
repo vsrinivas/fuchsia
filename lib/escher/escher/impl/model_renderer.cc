@@ -99,7 +99,10 @@ void ModelRenderer::Draw(Stage& stage,
       scale_y = o.height() * half_height_recip;
       translate_x = o.position().x * half_width_recip - 1.f;
       translate_y = o.position().y * half_height_recip - 1.f;
-      translate_z = o.position().z;
+      // Convert "height above the stage" into "distance from the camera",
+      // normalized to the range (0,1).  This is passed unaltered through the
+      // vertex shader.
+      translate_z = 1.f - (volume.far() + o.position().z / volume.depth());
       color = vec4(o.material()->color(), 1.f);  // always opaque
 
       // Find the texture to use, either the object's material's texture, or

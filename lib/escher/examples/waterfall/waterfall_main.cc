@@ -19,6 +19,11 @@
 
 static constexpr int kDemoWidth = 2160;
 static constexpr int kDemoHeight = 1440;
+
+// Material design places objects from 0.0f to 24.0f.
+static constexpr float kNear = 24.f;
+static constexpr float kFar = 0.f;
+
 bool g_show_debug_info = false;
 int g_current_scene = 0;
 
@@ -75,6 +80,8 @@ int main(int argc, char** argv) {
     escher::Stage stage;
     stage.Resize(escher::SizeI(kDemoWidth, kDemoHeight), 1.0,
                  escher::SizeI(0, 0));
+    stage.set_viewing_volume(
+        escher::ViewingVolume(kDemoWidth, kDemoHeight, kNear, kFar));
     stage.set_brightness(0.0);
 
     // AppTestScene scene;

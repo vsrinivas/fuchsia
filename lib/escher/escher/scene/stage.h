@@ -23,9 +23,7 @@ class Stage {
               SizeI viewport_offset = SizeI(0, 0));
 
   const ViewingVolume& viewing_volume() const { return viewing_volume_; };
-  void set_viewing_volume(ViewingVolume value) {
-    viewing_volume_ = std::move(value);
-  }
+  void set_viewing_volume(ViewingVolume value);
 
   const SizeI& physical_size() const { return physical_size_; }
   void set_physical_size(SizeI value) { physical_size_ = std::move(value); }

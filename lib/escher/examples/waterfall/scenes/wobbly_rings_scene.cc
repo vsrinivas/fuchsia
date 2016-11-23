@@ -50,11 +50,11 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
   Object rectangle(
-      Object::NewRect(vec2(112.f, 112.f), vec2(800.f, 800.f), 8.f, purple_));
-  Object circle1(Object::NewCircle(vec2(612.f, 212.f), 200.f, 5.f, blue_));
-  Object circle2(Object::NewCircle(vec2(412.f, 800.f), 200.f, 5.f, blue_));
-  Object circle3(Object::NewCircle(vec2(162.f, 412.f), 120.f, 3.f, blue_));
-  Object circle4(Object::NewCircle(vec2(850.f, 600.f), 120.f, 3.f, blue_));
+      Object::NewRect(vec2(112.f, 112.f), vec2(800.f, 800.f), 2.f, purple_));
+  Object circle1(Object::NewCircle(vec2(612.f, 212.f), 200.f, 8.f, blue_));
+  Object circle2(Object::NewCircle(vec2(412.f, 800.f), 200.f, 8.f, blue_));
+  Object circle3(Object::NewCircle(vec2(162.f, 412.f), 120.f, 15.f, blue_));
+  Object circle4(Object::NewCircle(vec2(850.f, 600.f), 120.f, 15.f, blue_));
 
   // Create meshes for fancy wobble effect.
   MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
@@ -72,11 +72,11 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   float y_pos_offset = sin(current_time_sec) * 100.;
   vec3 ring_pos(512.f + x_pos_offset, 512.f + y_pos_offset, 0);
 
-  Object ring1(ring_mesh1, ring_pos + vec3(0, 0, 6.f), pink_);
+  Object ring1(ring_mesh1, ring_pos + vec3(0, 0, 4.f), pink_);
   ring1.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring2(ring_mesh2, ring_pos + vec3(0, 0, 4.f), green_);
+  Object ring2(ring_mesh2, ring_pos + vec3(0, 0, 12.f), green_);
   ring2.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring3(ring_mesh3, ring_pos + vec3(0, 0, 2.f), blue_green_);
+  Object ring3(ring_mesh3, ring_pos + vec3(0, 0, 24.f), blue_green_);
   ring3.set_shape_modifiers(ShapeModifier::kWobble);
 
   constexpr float TWO_PI = 6.28318530718f;

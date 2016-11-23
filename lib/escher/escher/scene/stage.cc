@@ -4,6 +4,8 @@
 
 #include "escher/scene/stage.h"
 
+#include "ftl/logging.h"
+
 namespace escher {
 
 Stage::Stage() {}
@@ -18,6 +20,13 @@ void Stage::Resize(SizeI size,
   viewport_offset_ = SizeI(viewport_offset.width() * device_pixel_ratio,
                            viewport_offset.height() * device_pixel_ratio);
   viewing_volume_ = viewing_volume_.CopyWith(size.width(), size.height());
+}
+
+void Stage::set_viewing_volume(ViewingVolume value) {
+  // The camera is looking down, so the things on the "floor" of the stage
+  // are farthest, and also "lowest" (i.e. they have the smaller z-value).
+  FTL_DCHECK(value.near() > value.far());
+  viewing_volume_ = std::move(value);
 }
 
 }  // namespace escher

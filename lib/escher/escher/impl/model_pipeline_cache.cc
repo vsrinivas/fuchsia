@@ -38,8 +38,6 @@ constexpr char g_vertex_src[] = R"GLSL(
   void main() {
     // Halfway between min and max depth.
     gl_Position = transform * vec4(inPosition, 0, 1);
-    // Divide by 25 to convert 'Material Stage' depth to range 0-1.
-    gl_Position.z *= 0.04;
     fragUV = inUV;
   }
   )GLSL";
@@ -124,9 +122,6 @@ constexpr char g_vertex_wobble_src[] = R"GLSL(
       //               EvalSineParams(sine_params_2);
       float offset_scale = EvalSineParams_0() + EvalSineParams_1() + EvalSineParams_2();
       gl_Position = transform * vec4(inPosition + offset_scale * inPositionOffset, 0, 1);
-
-      // Divide by 25 to convert 'Material Stage' depth to range 0-1.
-      gl_Position.z *= 0.04;
       fragUV = inUV;
     }
     )GLSL";
