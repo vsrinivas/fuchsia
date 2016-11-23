@@ -151,6 +151,7 @@ void MotermView::OnDraw() {
   // Publish the updated scene contents.
   scene()->Update(std::move(update));
   scene()->Publish(CreateSceneMetadata());
+  buffer_producer_.Tick();
 }
 
 // |BaseView|:
