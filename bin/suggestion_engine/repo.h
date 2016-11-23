@@ -49,8 +49,9 @@ class Repo {
 
  private:
   std::string RandomUuid() {
+    static uint64_t id = 0;
     // TODO(rosswang): real UUIDs
-    return std::to_string(id_++);
+    return std::to_string(id++);
   }
 
   std::unordered_map<std::string, std::unique_ptr<SuggestionAgentClientImpl>>
@@ -62,8 +63,6 @@ class Repo {
                       std::unique_ptr<AskSubscriber>,
                       AskSubscriber::GetBinding>
       asks_;
-
-  uint64_t id_;
 };
 
 }  // namespace suggestion
