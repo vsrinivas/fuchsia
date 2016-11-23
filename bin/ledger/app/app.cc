@@ -18,6 +18,7 @@
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/files/file.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -36,12 +37,18 @@ class App {
             modular::ApplicationContext::CreateFromStartupInfo()) {
     FTL_DCHECK(application_context_);
 
+    std::string configuration_file =
+        configuration::kDefaultConfigurationFile.ToString();
     configuration::Configuration configuration;
-    if (configuration::ConfigurationEncoder::Decode(
-            configuration::kDefaultConfigurationFile.ToString(),
-            &configuration)) {
-      FTL_LOG(INFO) << "Read the configuration file at "
-                    << configuration::kDefaultConfigurationFile;
+    if (files::IsFile(configuration_file)) {
+      if (configuration::ConfigurationEncoder::Decode(configuration_file,
+                                                      &configuration)) {
+        FTL_LOG(INFO) << "Read the configuration file at "
+                      << configuration::kDefaultConfigurationFile;
+      }
+    } else {
+      FTL_LOG(WARNING)
+          << "No configuration file for Ledger. Using default configuration";
     }
 
     if (configuration.use_sync) {
