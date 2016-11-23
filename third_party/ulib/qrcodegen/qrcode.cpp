@@ -123,8 +123,7 @@ QrCode::QrCode(int ver, const Ecc &ecl, const std::vector<uint8_t> &dataCodeword
 
     // Draw function patterns, draw all codewords, do masking
     drawFunctionPatterns();
-    const std::vector<uint8_t> allCodewords(appendErrorCorrection(dataCodewords));
-    drawCodewords(allCodewords);
+    drawDataWords(dataCodewords);
     this->mask = handleConstructorMasking(mask);
 }
 
@@ -289,7 +288,7 @@ void QrCode::setFunctionModule(int x, int y, bool isBlack) {
 }
 
 
-std::vector<uint8_t> QrCode::appendErrorCorrection(const std::vector<uint8_t> &data) const {
+void QrCode::drawDataWords(const std::vector<uint8_t> &data) {
     if (data.size() != static_cast<unsigned int>(getNumDataCodewords(version, errorCorrectionLevel)))
         throw "Invalid argument";
 
@@ -328,26 +327,16 @@ std::vector<uint8_t> QrCode::appendErrorCorrection(const std::vector<uint8_t> &d
         k += blocklen;
     }
 
-    // Interleave (not concatenate) the bytes from every block into a single sequence
-    std::vector<uint8_t> result;
-    for (int i = 0; i < fullBlockLen; i++) {
-        for (int j = 0; j < numBlocks; j++) {
-            // Skip the padding byte in short blocks
-            if (i != (shortBlockLen - blockEccLen) || j >= numShortBlocks)
-                result.push_back(outdata[j * fullBlockLen + i]);
-        }
-    }
-    if (result.size() != static_cast<unsigned int>(getNumRawDataModules(version) / 8))
-        throw "Assertion error";
-    return result;
+    Codebits codebits(outdata, numBlocks, fullBlockLen, numShortBlocks, shortBlockLen - blockEccLen);
+    drawCodewords(codebits);
 }
 
 
-void QrCode::drawCodewords(const std::vector<uint8_t> &data) {
-    if (data.size() != static_cast<unsigned int>(getNumRawDataModules(version) / 8))
+void QrCode::drawCodewords(Codebits& codebits) {
+    if (codebits.size() != static_cast<unsigned int>(getNumRawDataModules(version) / 8))
         throw "Invalid argument";
 
-    size_t i = 0;  // Bit index into the data
+    size_t count = codebits.maxbits();
     // Do the funny zigzag scan
     for (int right = size - 1; right >= 1; right -= 2) {  // Index of right column in each column pair
         if (right == 6)
@@ -357,16 +346,16 @@ void QrCode::drawCodewords(const std::vector<uint8_t> &data) {
                 int x = right - j;  // Actual x coordinate
                 bool upwards = ((right & 2) == 0) ^ (x < 6);
                 int y = upwards ? size - 1 - vert : vert;  // Actual y coordinate
-                if (!isFunction(x,y) && i < data.size() * 8) {
-                    setModule(x, y, ((data.at(i >> 3) >> (7 - (i & 7))) & 1) != 0);
-                    i++;
+                if (!isFunction(x,y) && (count > 0)) {
+                    setModule(x, y, codebits.next());
+                    count--;
                 }
                 // If there are any remainder bits (0 to 7), they are already
                 // set to 0/false/white when the grid of modules was initialized
             }
         }
     }
-    if (static_cast<unsigned int>(i) != data.size() * 8)
+    if (count != 0)
         throw "Assertion error";
 }
 

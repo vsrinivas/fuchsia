@@ -32,6 +32,8 @@
 
 namespace qrcodegen {
 
+class Codebits;
+
 /*
  * Represents an immutable square grid of black and white cells for a QR Code symbol, and
  * provides static functions to create a QR Code from user-supplied textual or binary data.
@@ -230,14 +232,13 @@ private:
     /*---- Private helper methods for constructor: Codewords and masking ----*/
 private:
 
-    // Returns a new byte string representing the given data with the appropriate error correction
-    // codewords appended to it, based on this object's version and error correction level.
-    std::vector<uint8_t> appendErrorCorrection(const std::vector<uint8_t> &data) const;
+    // Computes the error correction codewords and then calls drawCodewords()
+    void drawDataWords(const std::vector<uint8_t> &data);
 
 
     // Draws the given sequence of 8-bit codewords (data and error correction) onto the entire
     // data area of this QR Code symbol. Function modules need to be marked off before this is called.
-    void drawCodewords(const std::vector<uint8_t> &data);
+    void drawCodewords(Codebits& codebits);
 
 
     // XORs the data modules in this QR Code with the given mask pattern. Due to XOR's mathematical
@@ -293,6 +294,57 @@ private:
     static const int8_t NUM_ERROR_CORRECTION_BLOCKS[4][41];
 };
 
+
+/*
+ * Helper to iterate over the bits in an array of data and ecc blocks
+ * The data consists of a set of blocks of data and ecc data.
+ * The short blocks have a dummy byte after the data and before the ecc
+ * data that must be skipped.
+ * The bitstream is built from block1 byte1, block2 byte1, ... blockN byte1,
+ * block1 byte2, block2 byte2, ... blockN byte2, skipping the dummy byte
+ * on short blocks, until all bits have been streamed out.
+ */
+
+class Codebits {
+public:
+    Codebits(uint8_t* data, size_t blocks, size_t blocklen,
+             size_t shortblocks, size_t skipbyte) :
+        data_(data), i_(0), j_(0), imax_(blocklen), jmax_(blocks),
+        shortblocks_(shortblocks), skip_(skipbyte), mask_(0), bits_(0) {
+    }
+
+    size_t maxbits() const {
+        return (jmax_ * imax_ - shortblocks_) * 8;
+    }
+    size_t size() const {
+        return (jmax_ * imax_ - shortblocks_);
+    }
+    bool next() {
+        while (mask_ == 0) {
+            if (i_ < imax_) {
+                if ((i_ != skip_) || (j_ >= shortblocks_)) {
+                    mask_ = 0x80;
+                    bits_ = data_[j_ * imax_ + i_];
+                }
+                if (++j_ == jmax_) {
+                    j_ = 0;
+                    ++i_;
+                }
+            } else {
+                return false;
+            }
+        }
+        bool res = ((bits_ & mask_) != 0);
+        mask_ >>= 1;
+        return res;
+    }
+
+private:
+    const uint8_t* data_;
+    size_t i_, j_;
+    const size_t imax_, jmax_, shortblocks_, skip_;
+    unsigned mask_, bits_;
+};
 
 /*
  * Computes the Reed-Solomon error correction codewords for a sequence of data codewords
