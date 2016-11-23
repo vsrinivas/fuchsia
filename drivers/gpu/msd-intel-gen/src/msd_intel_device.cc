@@ -346,7 +346,9 @@ int MsdIntelDevice::DeviceThreadLoop()
     magma::Monitor::Lock lock(monitor_);
     lock.Acquire();
 
-    constexpr uint32_t kTimeoutMs = 10;
+    // Reduced timeout to 1ms because to allow for prompt context scheduling
+    // given the lack of interrupt telling us when the execlist submit port is ready.
+    constexpr uint32_t kTimeoutMs = 1;
     std::chrono::high_resolution_clock::time_point time_point =
         std::chrono::high_resolution_clock::now() + std::chrono::milliseconds(kTimeoutMs);
 

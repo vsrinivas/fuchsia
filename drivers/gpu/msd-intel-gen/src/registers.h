@@ -117,6 +117,37 @@ public:
     }
 };
 
+class ExeclistStatus {
+public:
+    static constexpr uint32_t kOffset = 0x234;
+    static constexpr uint32_t kExeclistCurrentPointerShift = 0;
+    static constexpr uint32_t kExeclistWritePointerShift = 1;
+    static constexpr uint32_t kExeclistQueueFullShift = 2;
+
+    static uint64_t read(RegisterIo* reg_io, uint64_t mmio_base)
+    {
+        // Hmm 64-bit read would be better but kOffset is not 64bit aligned
+        uint64_t status = reg_io->Read32(mmio_base + kOffset);
+        status = (status << 32) | reg_io->Read32(mmio_base + kOffset + 4);
+        return status;
+    }
+
+    static uint32_t execlist_current_pointer(uint64_t status)
+    {
+        return (status >> kExeclistCurrentPointerShift) & 0x1;
+    }
+
+    static uint32_t execlist_write_pointer(uint64_t status)
+    {
+        return (status >> kExeclistWritePointerShift) & 0x1;
+    }
+
+    static bool execlist_queue_full(uint64_t status)
+    {
+        return (status >> kExeclistQueueFullShift) & 0x1;
+    }
+};
+
 class ActiveHeadPointer {
 public:
     static constexpr uint32_t kOffset = 0x74;

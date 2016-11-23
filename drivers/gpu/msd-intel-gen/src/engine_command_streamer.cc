@@ -305,15 +305,15 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
     return true;
 }
 
-bool EngineCommandStreamer::SubmitContext(MsdIntelContext* context)
+bool EngineCommandStreamer::SubmitContext(MsdIntelContext* context, uint32_t tail)
 {
-    if (!UpdateContext(context))
+    if (!UpdateContext(context, tail))
         return DRETF(false, "UpdateContext failed");
     SubmitExeclists(context);
     return true;
 }
 
-bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context)
+bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context, uint32_t tail)
 {
     gpu_addr_t gpu_addr;
     if (!context->GetRingbufferGpuAddress(id(), &gpu_addr))
@@ -324,8 +324,6 @@ bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context)
         return DRETF(false, "failed to map context page 1");
 
     RegisterStateHelper helper(id(), mmio_base_, reinterpret_cast<uint32_t*>(cpu_addr));
-
-    uint32_t tail = context->get_ringbuffer(id())->tail();
 
     DLOG("UpdateContext ringbuffer gpu_addr 0x%lx tail 0x%x", gpu_addr, tail);
 
@@ -346,6 +344,8 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context)
         DASSERT(false);
         gpu_addr = kInvalidGpuAddr;
     }
+
+    DLOG("SubmitExeclists context descriptor id 0x%lx", gpu_addr >> 12);
 
     // Use significant bits of context gpu_addr as globally unique context id
     DASSERT(PAGE_SIZE == 4096);
@@ -432,19 +432,47 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
     if (!WriteSequenceNumber(context, sequence_number))
         return DRETF(false, "failed to finish batch buffer");
 
-    if (!SubmitContext(context))
-        return DRETF(false, "SubmitContext failed");
-
     uint32_t ringbuffer_offset = context->get_ringbuffer(id())->tail();
 
     mapped_batch->SetSequenceNumber(sequence_number);
 
-    inflight_command_sequences_.emplace(
-        InflightCommandSequence(sequence_number, ringbuffer_offset, std::move(mapped_batch)));
+    pending_command_sequences_.emplace(sequence_number, ringbuffer_offset, std::move(mapped_batch));
 
     *sequence_number_out = sequence_number;
 
+    ScheduleContext();
+
     return true;
+}
+
+void RenderEngineCommandStreamer::ScheduleContext()
+{
+    if (pending_command_sequences_.empty())
+        return;
+
+    uint64_t status = registers::ExeclistStatus::read(register_io(), mmio_base());
+
+    if (registers::ExeclistStatus::execlist_write_pointer(status) ==
+            registers::ExeclistStatus::execlist_current_pointer(status) &&
+        registers::ExeclistStatus::execlist_queue_full(status)) {
+        DLOG("execlist queue full: status 0x%lx", status);
+        return;
+    }
+
+    auto context = pending_command_sequences_.front().GetContext();
+
+    auto current_context = inflight_command_sequences_.empty()
+                               ? nullptr
+                               : inflight_command_sequences_.front().GetContext();
+
+    if (!current_context || current_context == context) {
+        uint32_t tail = pending_command_sequences_.front().ringbuffer_offset();
+        DLOG("Submitting context for sequence_number 0x%x",
+             pending_command_sequences_.front().sequence_number());
+        inflight_command_sequences_.emplace(std::move(pending_command_sequences_.front()));
+        pending_command_sequences_.pop();
+        SubmitContext(context, tail);
+    }
 }
 
 bool RenderEngineCommandStreamer::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
@@ -499,6 +527,8 @@ void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(
     uint32_t last_completed_sequence = status_page->read_sequence_number();
     DLOG("last_completed_sequence 0x%x", last_completed_sequence);
 
+    bool progress = false;
+
     // pop all completed command buffers
     while (!inflight_command_sequences_.empty() &&
            inflight_command_sequences_.front().sequence_number() <= last_completed_sequence) {
@@ -513,9 +543,13 @@ void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(
         sequence.GetContext()->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
 
         inflight_command_sequences_.pop();
+        progress = true;
     }
 
     *last_completed_sequence_number_out = last_completed_sequence;
+
+    if (progress)
+        ScheduleContext();
 }
 
 bool EngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags)

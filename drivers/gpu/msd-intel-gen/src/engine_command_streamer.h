@@ -46,8 +46,8 @@ public:
     virtual bool WaitIdle() = 0;
 
 protected:
-    bool SubmitContext(MsdIntelContext* context);
-    bool UpdateContext(MsdIntelContext* context);
+    bool SubmitContext(MsdIntelContext* context, uint32_t tail);
+    bool UpdateContext(MsdIntelContext* context, uint32_t tail);
     void SubmitExeclists(MsdIntelContext* context);
     bool PipeControl(MsdIntelContext* context, uint32_t flags);
 
@@ -107,6 +107,7 @@ private:
     bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
                           AddressSpaceId address_space_id);
     bool WriteSequenceNumber(MsdIntelContext* context, uint32_t sequence_number);
+    void ScheduleContext();
 
     class InflightCommandSequence {
     public:
@@ -125,12 +126,20 @@ private:
 
         MappedBatch* mapped_batch() { return mapped_batch_.get(); }
 
+        InflightCommandSequence(InflightCommandSequence&& seq)
+        {
+            sequence_number_ = seq.sequence_number_;
+            ringbuffer_offset_ = seq.ringbuffer_offset_;
+            mapped_batch_ = std::move(seq.mapped_batch_);
+        }
+
     private:
         uint32_t sequence_number_;
         uint32_t ringbuffer_offset_;
         std::unique_ptr<MappedBatch> mapped_batch_;
     };
 
+    std::queue<InflightCommandSequence> pending_command_sequences_;
     std::queue<InflightCommandSequence> inflight_command_sequences_;
 
     friend class TestEngineCommandStreamer;
