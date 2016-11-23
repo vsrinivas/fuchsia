@@ -78,7 +78,8 @@ void FramebufferOutput::Initialize(ftl::Closure error_callback) {
 
   error_callback_ = error_callback;
 
-  rasterizer_thread_ = mtl::CreateThread(&rasterizer_task_runner_);
+  rasterizer_thread_ =
+      mtl::CreateThread(&rasterizer_task_runner_, "rasterizer");
 
   // Safe to post "this" because we wait for this task to complete.
   ftl::ManualResetWaitableEvent wait;

@@ -48,7 +48,8 @@ NoodlesView::NoodlesView(
       frame_queue_(std::make_shared<FrameQueue>()),
       rasterizer_delegate_(new RasterizerDelegate(frame_queue_)) {
   // TODO(jeffbrown): Give this thread a name.
-  rasterizer_thread_ = mtl::CreateThread(&rasterizer_task_runner_);
+  rasterizer_thread_ =
+      mtl::CreateThread(&rasterizer_task_runner_, "rasterizer");
 
   rasterizer_task_runner_->PostTask(ftl::MakeCopyable([
     d = rasterizer_delegate_.get(), scene = TakeScene().PassInterfaceHandle()
