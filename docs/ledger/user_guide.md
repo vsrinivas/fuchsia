@@ -8,15 +8,32 @@ setup](https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md).
 
 ## Sync
 
-By default Ledger runs without sync.
+By default Ledger runs without sync. To enable sync, follow the instructions
+below.
 
-To enable sync, you will need an instance of the Firebase Real-Time Database.
-You can get one at https://firebase.google.com/.
+### Prerequisities
+
+Follow the instructions in
+[netstack](https://fuchsia.googlesource.com/netstack/+/master/README.md) to
+ensure that your Fuchsia has Internet access.
+
+Run `wget` to verify that it worked:
+
+```
+@ bootstrap /system/test/wget http://example.com
+```
+
+You should see the HTML content of the `example.com` placeholder page.
+
+### Setup
+
+To use sync, you will need an instance of the Firebase Real-Time Database. You
+can get one at https://firebase.google.com/.
 
 Ledger does not currently support authorization, so the database needs to be
 public-readable and public-writable (better not to store anything private
-there). You also need to set up indexes that allow Ledger to perform queries on
-synced metadata. Go to the [Firebase
+there). You also need to **set up indexes** that allow Ledger to perform queries
+on synced metadata. Go to the [Firebase
 Console](https://console.firebase.google.com/) and set the following in
 `Database / Rules`:
 
@@ -51,7 +68,20 @@ firebase database "ABC.firebaseio.com")
 one instance of the database between multiple users declaring different
 identities.
 
-To disable sync, run the configuration script again with no sync parameters:
+### Diagnose
+
+If something seems off with sync, run the following command:
+
+```
+@ bootstrap debug_cloud_sync
+```
+
+If the provided information is not enough to resolve the problem, please file a
+bug and attach the output.
+
+### Switching it Off
+
+To disable sync, run the configuration script with no sync parameters:
 
 ```
 /system/bin/configure_ledger
