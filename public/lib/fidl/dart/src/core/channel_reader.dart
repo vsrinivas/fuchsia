@@ -17,8 +17,6 @@ class ChannelReaderError {
 typedef void ChannelReaderErrorHandler(ChannelReaderError error);
 
 class ChannelReader {
-  static const int _kSignals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
-
   Channel get channel => _channel;
   Channel _channel;
 
@@ -33,24 +31,34 @@ class ChannelReader {
     if (isBound)
       throw new FidlApiError('ChannelReader is already bound.');
     _channel = channel;
-    _waiter = new HandleWaiter(channel.handle, _kSignals);
-    _waiter.start(_handleEvent);
+    _waiter ??= new HandleWaiter();
+    _asyncWait();
   }
 
   Channel unbind() {
     if (!isBound)
       throw new FidlApiError("ChannelReader is not bound");
-    _waiter.stop();
+    _waiter.cancelWait();
     final Channel result = _channel;
     _channel = null;
-    _waiter = null;
     return result;
   }
 
   void close() {
-    _waiter?.close();
+    if (!isBound)
+      return;
+    _waiter.cancelWait();
+    _channel.close();
     _channel = null;
-    _waiter = null;
+  }
+
+  void _asyncWait() {
+    _waiter.asyncWait(
+      channel.handle,
+      MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+      MX_TIME_INFINITE,
+      _handleWaitComplete
+    );
   }
 
   void _errorSoon(ChannelReaderError error) {
@@ -67,11 +75,13 @@ class ChannelReader {
   @override
   String toString() => 'ChannelReader($_channel)';
 
-  void _handleEvent(int pendingSignals) {
-    if (!isBound) {
-      // The actual close of the underlying stream happens asynchronously
-      // after the call to close. However, we start to ignore incoming events
-      // immediately.
+  void _handleWaitComplete(int status, int pending) {
+    assert(isBound);
+    if (status != NO_ERROR) {
+      close();
+      _errorSoon(new ChannelReaderError(
+          'Wait completed with status ${getStringForStatus(status)} ($status)',
+          null));
       return;
     }
     // This callback is running in the handler for a RawReceivePort. All
@@ -83,12 +93,12 @@ class ChannelReader {
     // onError callback and are rethrown, investigate allowing an implementer to
     // provide a filter function (possibly initialized with a sensible default).
     try {
-      if ((pendingSignals & MX_SIGNAL_READABLE) != 0) {
+      if ((pending & MX_SIGNAL_READABLE) != 0) {
         if (onReadable != null)
           onReadable();
         if (isBound)
-          _waiter.next();
-      } else if ((pendingSignals & MX_SIGNAL_PEER_CLOSED) != 0) {
+          _asyncWait();
+      } else if ((pending & MX_SIGNAL_PEER_CLOSED) != 0) {
         close();
         _errorSoon(null);
       }

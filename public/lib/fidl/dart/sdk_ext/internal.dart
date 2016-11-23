@@ -10,5 +10,5 @@ import 'dart:isolate';
 import 'dart:nativewrappers';
 import 'dart:typed_data';
 
-part 'src/handle_watcher.dart';
+part 'src/handle_waiter.dart';
 part 'src/natives.dart';

@@ -12,14 +12,23 @@
 #include <vector>
 
 #include "dart/runtime/include/dart_api.h"
-#include "lib/fidl/dart/sdk_ext/src/handle_watcher.h"
+#include "lib/fidl/dart/sdk_ext/src/handle_waiter.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
+#include "lib/tonic/dart_library_natives.h"
 
 namespace fidl {
 namespace dart {
 namespace {
+
+static tonic::DartLibraryNatives* g_natives;
+
+tonic::DartLibraryNatives* InitNatives() {
+  tonic::DartLibraryNatives* natives = new tonic::DartLibraryNatives();
+  HandleWaiter::RegisterNatives(natives);
+  return natives;
+}
 
 constexpr int kNumberOfNativeFields = 2;
 
@@ -34,16 +43,15 @@ struct HandlePeer {
 #define DECLARE_FUNCTION(name, count) \
   extern void name(Dart_NativeArguments args);
 
-#define FIDL_NATIVE_LIST(V)          \
-  V(MxChannel_Create, 1)             \
-  V(MxChannel_Write, 5)              \
-  V(MxChannel_Read, 5)               \
-  V(MxChannel_QueryAndRead, 3)       \
-  V(MxTime_Get, 1)                   \
-  V(MxHandle_Close, 1)               \
-  V(MxHandle_RegisterFinalizer, 2)   \
-  V(MxHandle_UnregisterFinalizer, 1) \
-  V(MxHandleWatcher_SendControlData, 5)
+#define FIDL_NATIVE_LIST(V)        \
+  V(MxChannel_Create, 1)           \
+  V(MxChannel_Write, 5)            \
+  V(MxChannel_Read, 5)             \
+  V(MxChannel_QueryAndRead, 3)     \
+  V(MxTime_Get, 1)                 \
+  V(MxHandle_Close, 1)             \
+  V(MxHandle_RegisterFinalizer, 2) \
+  V(MxHandle_UnregisterFinalizer, 1)
 
 FIDL_NATIVE_LIST(DECLARE_FUNCTION);
 
@@ -70,18 +78,22 @@ Dart_NativeFunction NativeLookup(Dart_Handle name,
       return entry.function;
     }
   }
-  return nullptr;
+  if (!g_natives)
+    g_natives = InitNatives();
+  return g_natives->GetNativeFunction(name, argument_count, auto_setup_scope);
 }
 
-const uint8_t* NativeSymbol(Dart_NativeFunction nf) {
+const uint8_t* NativeSymbol(Dart_NativeFunction native_function) {
   size_t num_entries = arraysize(Entries);
   for (size_t i = 0; i < num_entries; ++i) {
     const struct NativeEntries& entry = Entries[i];
-    if (entry.function == nf) {
+    if (entry.function == native_function) {
       return reinterpret_cast<const uint8_t*>(entry.name);
     }
   }
-  return nullptr;
+  if (!g_natives)
+    g_natives = InitNatives();
+  return g_natives->GetSymbol(native_function);
 }
 
 static void SetNullReturn(Dart_NativeArguments arguments) {
@@ -449,35 +461,6 @@ void MxChannel_QueryAndRead(Dart_NativeArguments arguments) {
   Dart_ListSetAt(result, 2, dart_handles);
   Dart_ListSetAt(result, 3, Dart_NewInteger(blen));
   Dart_ListSetAt(result, 4, Dart_NewInteger(hlen));
-}
-
-void MxHandleWatcher_SendControlData(Dart_NativeArguments arguments) {
-  int64_t control_handle = 0;
-  int64_t command_code;
-  int64_t handle_or_deadline = 0;
-  CHECK_INTEGER_ARGUMENT(arguments, 0, &control_handle, InvalidArgument);
-  CHECK_INTEGER_ARGUMENT(arguments, 1, &command_code, InvalidArgument);
-  CHECK_INTEGER_ARGUMENT(arguments, 2, &handle_or_deadline, InvalidArgument);
-
-  Dart_Handle send_port_handle = Dart_GetNativeArgument(arguments, 3);
-  Dart_Port send_port_id = ILLEGAL_PORT;
-  if (!Dart_IsNull(send_port_handle)) {
-    Dart_Handle result = Dart_SendPortGetId(send_port_handle, &send_port_id);
-    if (Dart_IsError(result)) {
-      SetInvalidArgumentReturn(arguments);
-      return;
-    }
-  }
-
-  int64_t signals = 0;
-  CHECK_INTEGER_ARGUMENT(arguments, 4, &signals, InvalidArgument);
-
-  HandleWatcherCommand command = HandleWatcherCommand::FromDart(
-      command_code, handle_or_deadline, send_port_id, signals);
-  mx_status_t rv = mx_channel_write(control_handle, 0,
-                                    reinterpret_cast<const void*>(&command),
-                                    sizeof(command), nullptr, 0);
-  Dart_SetIntegerReturnValue(arguments, static_cast<int64_t>(rv));
 }
 
 }  // namespace dart
