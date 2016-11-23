@@ -4,13 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void _panic(void* caller, const char* fmt, ...) {
-    printf("panic (caller %p): ", caller);
+void _warn_unsupported(void* caller, const char* fmt, ...) {
+    fprintf(stderr, "warning (caller %p): ", caller);
 
     va_list ap;
     va_start(ap, fmt);
-    vprintf(fmt, ap);
+    vfprintf(stderr, fmt, ap);
     va_end(ap);
-
-    abort();
 }

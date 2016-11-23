@@ -3,6 +3,6 @@
 
 int regexec(const regex_t* preg, const char* string, size_t nmatch,
             regmatch_t pmatch[], int eflags) {
-    panic("\nFATAL: regexec Not Supported\n");
-    return 0;
+    warn_unsupported("\nWARNING: regcomp Not Supported\n");
+    return REG_NOMATCH;
 }
