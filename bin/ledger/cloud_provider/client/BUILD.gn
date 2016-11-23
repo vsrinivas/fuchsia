@@ -1,0 +1,23 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("client") {
+  output_name = "debug_cloud_sync"
+
+  sources = [
+    "client.cc",
+    "client.h",
+  ]
+
+  deps = [
+    "//apps/ledger/src/cloud_provider/impl",
+    "//apps/ledger/src/configuration:lib",
+    "//apps/ledger/src/firebase",
+    "//apps/ledger/src/glue",
+    "//apps/modular/lib/app",
+    "//apps/network/services",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
