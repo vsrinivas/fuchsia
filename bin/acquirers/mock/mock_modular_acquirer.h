@@ -15,7 +15,7 @@ namespace acquirers {
 class MockModularAcquirer : public ModularAcquirer,
                             public context::PublisherController {
  public:
-  MockModularAcquirer(const context::ContextEnginePtr& context_engine);
+  MockModularAcquirer(context::ContextEngine* context_engine);
   void Publish(int modular_state);
   void OnHasSubscribers() override;
   void OnNoSubscribers() override;

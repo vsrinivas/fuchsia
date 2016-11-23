@@ -13,7 +13,7 @@ namespace acquirers {
 
 class MockGps : public GpsAcquirer, public context::PublisherController {
  public:
-  MockGps(const context::ContextEnginePtr& context_engine);
+  MockGps(context::ContextEngine* context_engine);
   void Publish(float latitude, float longitude);
   void OnHasSubscribers() override;
   void OnNoSubscribers() override;

@@ -10,8 +10,7 @@ namespace acquirers {
 constexpr char ModularAcquirer::kLabel[];
 constexpr char ModularAcquirer::kSchema[];
 
-MockModularAcquirer::MockModularAcquirer(
-    const context::ContextEnginePtr& context_engine)
+MockModularAcquirer::MockModularAcquirer(context::ContextEngine* context_engine)
     : ctl_(this) {
   maxwell::context::ContextAcquirerClientPtr cx;
   context_engine->RegisterContextAcquirer("MockModularAcquirer", GetProxy(&cx));

@@ -10,7 +10,7 @@ namespace acquirers {
 constexpr char GpsAcquirer::kLabel[];
 constexpr char GpsAcquirer::kSchema[];
 
-MockGps::MockGps(const context::ContextEnginePtr& context_engine) : ctl_(this) {
+MockGps::MockGps(context::ContextEngine* context_engine) : ctl_(this) {
   maxwell::context::ContextAcquirerClientPtr cx;
   context_engine->RegisterContextAcquirer("MockGps", GetProxy(&cx));
 

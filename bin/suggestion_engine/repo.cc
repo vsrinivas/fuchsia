@@ -24,10 +24,15 @@ void Repo::AddSuggestion(std::unique_ptr<ProposalRecord> proposal,
   agent_suggestion_record->suggestion_prototype =
       &*suggestions_.emplace(RandomUuid(), std::move(proposal)).first;
 
-  // TODO(rosswang): channel routing
+  // TODO(rosswang): proper channel routing. For now, add to all channels
   agent_suggestion_record->ranks_by_channel[&next_channel_] =
       next_channel_.OnAddSuggestion(
           agent_suggestion_record->suggestion_prototype);
+  for (auto& ask_channel : ask_channels_) {
+    agent_suggestion_record->ranks_by_channel[ask_channel.get()] =
+        ask_channel->OnAddSuggestion(
+            agent_suggestion_record->suggestion_prototype);
+  }
 }
 
 }  // namespace suggestion

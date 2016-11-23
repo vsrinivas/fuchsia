@@ -38,8 +38,8 @@ class TestListener : public maxwell::context::SubscriberLink {
 class ContextEngineTest : public ContextEngineTestBase {
  public:
   ContextEngineTest() {
-    context_engine_->RegisterSuggestionAgent("ContextEngineTest",
-                                             GetProxy(&out_));
+    context_engine()->RegisterSuggestionAgent("ContextEngineTest",
+                                              GetProxy(&out_));
   }
 
  protected:
@@ -49,7 +49,7 @@ class ContextEngineTest : public ContextEngineTestBase {
 }  // namespace
 
 TEST_F(ContextEngineTest, DirectSubscription) {
-  maxwell::acquirers::MockGps gps(context_engine_);
+  maxwell::acquirers::MockGps gps(context_engine());
   {
     TestListener listener;
     out_->Subscribe(maxwell::acquirers::MockGps::kLabel,
@@ -61,14 +61,14 @@ TEST_F(ContextEngineTest, DirectSubscription) {
 }
 
 TEST_F(ContextEngineTest, NoSpontaneousTransitiveSubscription) {
-  maxwell::acquirers::MockGps gps(context_engine_);
+  maxwell::acquirers::MockGps gps(context_engine());
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");
   Sleep();
   ASYNC_CHECK(!gps.has_subscribers());
 }
 
 TEST_F(ContextEngineTest, TransitiveSubscription) {
-  maxwell::acquirers::MockGps gps(context_engine_);
+  maxwell::acquirers::MockGps gps(context_engine());
   StartContextAgent("file:///system/apps/agents/carmen_sandiego");
   {
     TestListener listener;
@@ -97,7 +97,7 @@ TEST_F(ContextEngineTest, PublishAfterSubscribe) {
                   listener.PassBoundHandle());
   Sleep();
 
-  maxwell::acquirers::MockGps gps(context_engine_);
+  maxwell::acquirers::MockGps gps(context_engine());
   ASYNC_CHECK(gps.has_subscribers());
 
   gps.Publish(90, 0);
@@ -106,7 +106,7 @@ TEST_F(ContextEngineTest, PublishAfterSubscribe) {
 }
 
 TEST_F(ContextEngineTest, SubscribeAfterPublish) {
-  maxwell::acquirers::MockGps gps(context_engine_);
+  maxwell::acquirers::MockGps gps(context_engine());
   gps.Publish(90, 0);
   Sleep();
 
@@ -119,7 +119,7 @@ TEST_F(ContextEngineTest, SubscribeAfterPublish) {
 }
 
 TEST_F(ContextEngineTest, MultipleSubscribers) {
-  maxwell::acquirers::MockGps gps(context_engine_);
+  maxwell::acquirers::MockGps gps(context_engine());
   TestListener listeners[2];
   for (auto& listener : listeners)
     out_->Subscribe(maxwell::acquirers::MockGps::kLabel,

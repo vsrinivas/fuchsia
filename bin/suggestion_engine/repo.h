@@ -28,10 +28,6 @@ class Repo {
 
   void RemoveSuggestion(const std::string& id) { suggestions_.erase(id); }
 
-  auto next_ranked_suggestions() const {
-    return next_channel_.ranked_suggestions();
-  }
-
   void SubscribeToNext(fidl::InterfaceHandle<Listener> listener,
                        fidl::InterfaceRequest<NextController> controller) {
     next_channel_.AddSubscriber(std::make_unique<NextSubscriber>(
@@ -41,10 +37,15 @@ class Repo {
 
   void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
                    fidl::InterfaceRequest<AskController> controller) {
-    // TODO(rosswang): Bootstrap with existing next suggestions
+    auto ask = std::make_unique<AskChannel>(std::move(listener),
+                                            std::move(controller));
 
-    ask_channels_.emplace(std::make_unique<AskChannel>(std::move(listener),
-                                                       std::move(controller)));
+    // Bootstrap with existing next suggestions
+    for (auto& suggestion : *next_channel_.ranked_suggestions()) {
+      ask->OnAddSuggestion(suggestion->prototype);
+    }
+
+    ask_channels_.emplace(std::move(ask));
   }
 
   // Non-mutating indexer; returns NULL if no such suggestion exists.

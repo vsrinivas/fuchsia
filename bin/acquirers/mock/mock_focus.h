@@ -17,7 +17,7 @@ namespace acquirers {
 class MockFocusAcquirer : public FocusAcquirer,
                           public context::PublisherController {
  public:
-  MockFocusAcquirer(const context::ContextEnginePtr& context_engine);
+  MockFocusAcquirer(context::ContextEngine* context_engine);
 
   // Publishes whether |ids| is empty.
   template <class Collection>

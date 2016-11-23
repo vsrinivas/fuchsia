@@ -23,5 +23,10 @@ class ContextEngineTestBase : public MaxwellTestBase {
     StartAgent(url, std::move(agent_host));
   }
 
+  maxwell::context::ContextEngine* context_engine() {
+    return context_engine_.get();
+  }
+
+ private:
   const maxwell::context::ContextEnginePtr context_engine_;
 };

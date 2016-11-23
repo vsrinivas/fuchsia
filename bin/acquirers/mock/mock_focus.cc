@@ -12,8 +12,7 @@ namespace acquirers {
 constexpr char FocusAcquirer::kLabel[];
 constexpr char FocusAcquirer::kSchema[];
 
-MockFocusAcquirer::MockFocusAcquirer(
-    const context::ContextEnginePtr& context_engine)
+MockFocusAcquirer::MockFocusAcquirer(context::ContextEngine* context_engine)
     : ctl_(this) {
   maxwell::context::ContextAcquirerClientPtr cx;
   context_engine->RegisterContextAcquirer("MockFocusAcquirer", GetProxy(&cx));
