@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
 // Creates a single QR Code, then prints it to the console.
 static void doBasicDemo() {
     const char *text = "Hello, world!";  // User-supplied text
-    const qrcodegen::QrCode::Ecc errCorLvl = qrcodegen::QrCode::Ecc::LOW;  // Error correction level
+    const qrcodegen::Ecc errCorLvl = qrcodegen::Ecc::LOW;  // Error correction level
 
     // Make and print the QR Code symbol
     qrcodegen::QrCode qr;
@@ -65,23 +65,23 @@ static void doBasicDemo() {
 static void doVarietyDemo() {
     // Project Nayuki URL
     qrcodegen::QrCode qr0;
-    qr0.encodeText("https://www.nayuki.io/", qrcodegen::QrCode::Ecc::HIGH);
+    qr0.encodeText("https://www.nayuki.io/", qrcodegen::Ecc::HIGH);
     qr0.changeMask(3);  // Change mask, forcing to mask #3
     printQr(qr0);
 
     // Numeric mode encoding (3.33 bits per digit)
     qrcodegen::QrCode qr1;
-    qr1.encodeText("314159265358979323846264338327950288419716939937510", qrcodegen::QrCode::Ecc::MEDIUM);
+    qr1.encodeText("314159265358979323846264338327950288419716939937510", qrcodegen::Ecc::MEDIUM);
     printQr(qr1);
 
     // Alphanumeric mode encoding (5.5 bits per character)
     qrcodegen::QrCode qr2;
-    qr2.encodeText("DOLLAR-AMOUNT:$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/", qrcodegen::QrCode::Ecc::HIGH);
+    qr2.encodeText("DOLLAR-AMOUNT:$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/", qrcodegen::Ecc::HIGH);
     printQr(qr2);
 
     // Unicode text as UTF-8, and different masks
     qrcodegen::QrCode qr3;
-    qr3.encodeText("\xE3\x81\x93\xE3\x82\x93\xE3\x81\xAB\xE3\x81\xA1wa\xE3\x80\x81\xE4\xB8\x96\xE7\x95\x8C\xEF\xBC\x81\x20\xCE\xB1\xCE\xB2\xCE\xB3\xCE\xB4", qrcodegen::QrCode::Ecc::QUARTILE);
+    qr3.encodeText("\xE3\x81\x93\xE3\x82\x93\xE3\x81\xAB\xE3\x81\xA1wa\xE3\x80\x81\xE4\xB8\x96\xE7\x95\x8C\xEF\xBC\x81\x20\xCE\xB1\xCE\xB2\xCE\xB3\xCE\xB4", qrcodegen::Ecc::QUARTILE);
     qr3.changeMask(0);
     printQr(qr3);
     qr3.changeMask(1);
@@ -100,7 +100,7 @@ static void doVarietyDemo() {
         "'without pictures or conversations?' So she was considering in her own mind (as well as she could, "
         "for the hot day made her feel very sleepy and stupid), whether the pleasure of making a "
         "daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly "
-        "a White Rabbit with pink eyes ran close by her.", qrcodegen::QrCode::Ecc::HIGH);
+        "a White Rabbit with pink eyes ran close by her.", qrcodegen::Ecc::HIGH);
     printQr(qr4);
 }
 
@@ -113,14 +113,14 @@ static void doSegmentDemo() {
     qrcodegen::QrCode qr0;
     qr0.encodeText(
         (std::string(silver0) + silver1).c_str(),
-        qrcodegen::QrCode::Ecc::LOW);
+        qrcodegen::Ecc::LOW);
     printQr(qr0);
 
     std::vector<qrcodegen::QrSegment> segs;
     segs.push_back(qrcodegen::QrSegment::makeAlphanumeric(silver0));
     segs.push_back(qrcodegen::QrSegment::makeNumeric(silver1));
     qrcodegen::QrCode qr1;
-    qr1.encodeSegments(segs, qrcodegen::QrCode::Ecc::LOW);
+    qr1.encodeSegments(segs, qrcodegen::Ecc::LOW);
     printQr(qr1);
 
     // Illustration "golden"
@@ -130,7 +130,7 @@ static void doSegmentDemo() {
     qrcodegen::QrCode qr2;
     qr2.encodeText(
         (std::string(golden0) + golden1 + golden2).c_str(),
-        qrcodegen::QrCode::Ecc::LOW);
+        qrcodegen::Ecc::LOW);
     printQr(qr2);
 
     segs.clear();
@@ -141,7 +141,7 @@ static void doSegmentDemo() {
     segs.push_back(qrcodegen::QrSegment::makeNumeric(golden1));
     segs.push_back(qrcodegen::QrSegment::makeAlphanumeric(golden2));
     qrcodegen::QrCode qr3;
-    qr3.encodeSegments(segs, qrcodegen::QrCode::Ecc::LOW);
+    qr3.encodeSegments(segs, qrcodegen::Ecc::LOW);
     printQr(qr3);
 }
 
@@ -149,9 +149,9 @@ static void doSegmentDemo() {
 // Prints the given QR Code to the console.
 static void printQr(const qrcodegen::QrCode &qr) {
     int border = 4;
-    for (int y = -border; y < qr.size + border; y++) {
-        for (int x = -border; x < qr.size + border; x++) {
-            std::cout << (qr.getPixel(x, y) == 1 ? "##" : "  ");
+    for (int y = -border; y < qr.size() + border; y++) {
+        for (int x = -border; x < qr.size() + border; x++) {
+            std::cout << (qr.pixel(x, y) == 1 ? "##" : "  ");
         }
         std::cout << std::endl;
     }

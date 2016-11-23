@@ -29,18 +29,18 @@
 namespace qrcodegen {
 
 
-int eccOrdinal(QrCode::Ecc ecc) {
-    if (ecc > QrCode::Ecc::HIGH)
+int eccOrdinal(Ecc ecc) {
+    if (ecc > Ecc::HIGH)
         return 0;
     return ecc;
 }
 
-int eccFormatBits(QrCode::Ecc ecc) {
+int eccFormatBits(Ecc ecc) {
     switch (ecc) {
-    case QrCode::Ecc::LOW: return 1;
-    case QrCode::Ecc::MEDIUM: return 0;
-    case QrCode::Ecc::QUARTILE: return 3;
-    case QrCode::Ecc::HIGH: return 2;
+    case Ecc::LOW: return 1;
+    case Ecc::MEDIUM: return 0;
+    case Ecc::QUARTILE: return 3;
+    case Ecc::HIGH: return 2;
     default: return 1;
     }
 }
@@ -119,7 +119,7 @@ Error QrCode::encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
 #endif
 #endif
 
-QrCode::QrCode() : version(1), size(21), errorCorrectionLevel(Ecc::LOW) {
+QrCode::QrCode() : version_(1), size_(21), ecc_(Ecc::LOW) {
 }
 
 Error QrCode::draw(int ver, Ecc ecl, const uint8_t* data, size_t len, int mask) {
@@ -129,9 +129,9 @@ Error QrCode::draw(int ver, Ecc ecl, const uint8_t* data, size_t len, int mask) 
         return Error::InvalidArgs;
 
     // Initialize scalar fields
-    version = ver;
-    size = (1 <= ver && ver <= 40 ? ver * 4 + 17 : -1),  // Avoid signed overflow undefined behavior
-    errorCorrectionLevel = ecl;
+    version_ = ver;
+    size_ = (1 <= ver && ver <= 40 ? ver * 4 + 17 : -1),  // Avoid signed overflow undefined behavior
+    ecc_ = ecl;
 
     memset(module_, 0, sizeof(module_));
     memset(isfunc_, 0, sizeof(isfunc_));
@@ -146,39 +146,34 @@ Error QrCode::draw(int ver, Ecc ecl, const uint8_t* data, size_t len, int mask) 
 
 
 
-Error QrCode::changeMask(int newmask) {
+Error QrCode::changeMask(int mask) {
     // Check arguments
-    if (newmask < -1 || newmask > 7)
+    if (mask < -1 || mask > 7)
         return Error::InvalidArgs;
 
     // Handle masking
-    applyMask(mask);  // Undo old mask
-    handleConstructorMasking(newmask);
+    applyMask(mask_);  // Undo old mask
+    handleConstructorMasking(mask);
 
     return Error::None;
 }
 
 
-int QrCode::getMask() const {
-    return mask;
-}
-
-
 Error QrCode::drawFunctionPatterns() {
     // Draw the horizontal and vertical timing patterns
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < size_; i++) {
         setFunctionModule(6, i, i % 2 == 0);
         setFunctionModule(i, 6, i % 2 == 0);
     }
 
     // Draw 3 finder patterns (all corners except bottom right; overwrites some timing modules)
     drawFinderPattern(3, 3);
-    drawFinderPattern(size - 4, 3);
-    drawFinderPattern(3, size - 4);
+    drawFinderPattern(size_ - 4, 3);
+    drawFinderPattern(3, size_ - 4);
 
     // Draw the numerous alignment patterns
     int offsets[kMaxAlignMarks];
-    int numAlign = getAlignmentPatternPositions(version, offsets);
+    int numAlign = getAlignmentPatternPositions(version_, offsets);
     for (int i = 0; i < numAlign; i++) {
         for (int j = 0; j < numAlign; j++) {
             if ((i == 0 && j == 0) || (i == 0 && j == numAlign - 1) || (i == numAlign - 1 && j == 0))
@@ -201,7 +196,7 @@ Error QrCode::drawFunctionPatterns() {
 
 Error QrCode::drawFormatBits(int mask) {
     // Calculate error correction code and pack bits
-    int data = eccFormatBits(errorCorrectionLevel) << 3 | mask;  // errCorrLvl is uint2, mask is uint3
+    int data = eccFormatBits(ecc_) << 3 | mask;  // errCorrLvl is uint2, mask is uint3
     int rem = data;
     for (int i = 0; i < 10; i++)
         rem = (rem << 1) ^ ((rem >> 9) * 0x537);
@@ -221,31 +216,31 @@ Error QrCode::drawFormatBits(int mask) {
 
     // Draw second copy
     for (int i = 0; i <= 7; i++)
-        setFunctionModule(size - 1 - i, 8, ((data >> i) & 1) != 0);
+        setFunctionModule(size_ - 1 - i, 8, ((data >> i) & 1) != 0);
     for (int i = 8; i < 15; i++)
-        setFunctionModule(8, size - 15 + i, ((data >> i) & 1) != 0);
-    setFunctionModule(8, size - 8, true);
+        setFunctionModule(8, size_ - 15 + i, ((data >> i) & 1) != 0);
+    setFunctionModule(8, size_ - 8, true);
 
     return Error::None;
 }
 
 
 Error QrCode::drawVersion() {
-    if (version < 7)
+    if (version_ < 7)
         return Error::None;
 
     // Calculate error correction code and pack bits
-    int rem = version;  // version is uint6, in the range [7, 40]
+    int rem = version_;  // version is uint6, in the range [7, 40]
     for (int i = 0; i < 12; i++)
         rem = (rem << 1) ^ ((rem >> 11) * 0x1F25);
-    int data = version << 12 | rem;  // uint18
+    int data = version_ << 12 | rem;  // uint18
     if (data >> 18 != 0)
         return Error::Internal;
 
     // Draw two copies
     for (int i = 0; i < 18; i++) {
         bool bit = ((data >> i) & 1) != 0;
-        int a = size - 11 + i % 3, b = i / 3;
+        int a = size_ - 11 + i % 3, b = i / 3;
         setFunctionModule(a, b, bit);
         setFunctionModule(b, a, bit);
     }
@@ -274,7 +269,7 @@ void QrCode::drawFinderPattern(int x, int y) {
         for (int j = -4; j <= 4; j++) {
             int dist = max(abs(i), abs(j));  // Chebyshev/infinity norm
             int xx = x + j, yy = y + i;
-            if (0 <= xx && xx < size && 0 <= yy && yy < size)
+            if (0 <= xx && xx < size_ && 0 <= yy && yy < size_)
                 setFunctionModule(xx, yy, dist != 2 && dist != 4);
         }
     }
@@ -296,23 +291,23 @@ void QrCode::setFunctionModule(int x, int y, bool isBlack) {
 
 
 Error QrCode::drawDataWords(const uint8_t* data, size_t len) {
-    if (len != static_cast<unsigned int>(getNumDataCodewords(version, errorCorrectionLevel)))
+    if (len != static_cast<unsigned int>(getNumDataCodewords(version_, ecc_)))
         return Error::InvalidArgs;
 
     // Calculate parameter numbers
-    int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[errorCorrectionLevel][version];
-    int totalEcc = NUM_ERROR_CORRECTION_CODEWORDS[errorCorrectionLevel][version];
+    int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[ecc_][version_];
+    int totalEcc = NUM_ERROR_CORRECTION_CODEWORDS[ecc_][version_];
     if (totalEcc % numBlocks != 0)
         return Error::Internal;
 
     int blockEccLen = totalEcc / numBlocks;
-    int numShortBlocks = numBlocks - getNumRawDataModules(version) / 8 % numBlocks;
-    int shortBlockLen = getNumRawDataModules(version) / 8 / numBlocks;
+    int numShortBlocks = numBlocks - getNumRawDataModules(version_) / 8 % numBlocks;
+    int shortBlockLen = getNumRawDataModules(version_) / 8 / numBlocks;
     int fullBlockLen = shortBlockLen + 1;
 
     // Split data into blocks and append ECC to each block
     Error e;
-    if ((e = rsg.init(blockEccLen)))
+    if ((e = rsg_.init(blockEccLen)))
         return e;
 
     uint8_t outdata[fullBlockLen * numBlocks];
@@ -327,7 +322,7 @@ Error QrCode::drawDataWords(const uint8_t* data, size_t len) {
         if (i < numShortBlocks)
             *outptr++ = 0;
 
-        rsg.getRemainder(data + k, blocklen, outptr);
+        rsg_.getRemainder(data + k, blocklen, outptr);
         outptr += blockEccLen;
 
         k += blocklen;
@@ -340,19 +335,19 @@ Error QrCode::drawDataWords(const uint8_t* data, size_t len) {
 
 
 Error QrCode::drawCodewords(Codebits& codebits) {
-    if (codebits.size() != static_cast<unsigned int>(getNumRawDataModules(version) / 8))
+    if (codebits.size() != static_cast<unsigned int>(getNumRawDataModules(version_) / 8))
         return Error::InvalidArgs;
 
     size_t count = codebits.maxbits();
     // Do the funny zigzag scan
-    for (int right = size - 1; right >= 1; right -= 2) {  // Index of right column in each column pair
+    for (int right = size_ - 1; right >= 1; right -= 2) {  // Index of right column in each column pair
         if (right == 6)
             right = 5;
-        for (int vert = 0; vert < size; vert++) {  // Vertical counter
+        for (int vert = 0; vert < size_; vert++) {  // Vertical counter
             for (int j = 0; j < 2; j++) {
                 int x = right - j;  // Actual x coordinate
                 bool upwards = ((right & 2) == 0) ^ (x < 6);
-                int y = upwards ? size - 1 - vert : vert;  // Actual y coordinate
+                int y = upwards ? size_ - 1 - vert : vert;  // Actual y coordinate
                 if (!isFunction(x,y) && (count > 0)) {
                     setModule(x, y, codebits.next());
                     count--;
@@ -372,8 +367,8 @@ Error QrCode::drawCodewords(Codebits& codebits) {
 Error QrCode::applyMask(int mask) {
     if (mask < 0 || mask > 7)
         return Error::InvalidArgs;
-    for (int y = 0; y < size; y++) {
-        for (int x = 0; x < size; x++) {
+    for (int y = 0; y < size_; y++) {
+        for (int x = 0; x < size_; x++) {
             bool invert;
             switch (mask) {
                 case 0:  invert = (x + y) % 2 == 0;                    break;
@@ -395,8 +390,8 @@ Error QrCode::applyMask(int mask) {
 }
 
 
-Error QrCode::handleConstructorMasking(int newmask) {
-    if (newmask == -1) {  // Automatically choose best mask
+Error QrCode::handleConstructorMasking(int mask) {
+    if (mask == -1) {  // Automatically choose best mask
         int32_t minPenalty = INT32_MAX;
         for (int i = 0; i < 8; i++) {
             Error e;
@@ -406,7 +401,7 @@ Error QrCode::handleConstructorMasking(int newmask) {
                 return e;
             int penalty = getPenaltyScore();
             if (penalty < minPenalty) {
-                newmask = i;
+                mask = i;
                 minPenalty = penalty;
             }
             // Undoes the mask due to XOR
@@ -414,18 +409,18 @@ Error QrCode::handleConstructorMasking(int newmask) {
                 return e;
         }
     }
-    if (newmask < 0 || newmask > 7)
+    if (mask < 0 || mask > 7)
         return Error::Internal;
 
     Error e;
     // Overwrite old format bits
-    if ((e = drawFormatBits(newmask)))
+    if ((e = drawFormatBits(mask)))
         return e;
     // Apply the final choice of mask
-    if ((e = applyMask(newmask)))
+    if ((e = applyMask(mask)))
         return e;
 
-    mask = newmask;
+    mask_ = mask;
     return Error::None;
 }
 
@@ -434,9 +429,9 @@ int QrCode::getPenaltyScore() const {
     int result = 0;
 
     // Adjacent modules in row having same color
-    for (int y = 0; y < size; y++) {
+    for (int y = 0; y < size_; y++) {
         bool colorX = getModule(0, y);
-        for (int x = 1, runX = 1; x < size; x++) {
+        for (int x = 1, runX = 1; x < size_; x++) {
             if (getModule(x, y) != colorX) {
                 colorX = getModule(x, y);
                 runX = 1;
@@ -450,9 +445,9 @@ int QrCode::getPenaltyScore() const {
         }
     }
     // Adjacent modules in column having same color
-    for (int x = 0; x < size; x++) {
+    for (int x = 0; x < size_; x++) {
         bool colorY = getModule(x, 0);
-        for (int y = 1, runY = 1; y < size; y++) {
+        for (int y = 1, runY = 1; y < size_; y++) {
             if (getModule(x, y) != colorY) {
                 colorY = getModule(x, y);
                 runY = 1;
@@ -467,8 +462,8 @@ int QrCode::getPenaltyScore() const {
     }
 
     // 2*2 blocks of modules having same color
-    for (int y = 0; y < size - 1; y++) {
-        for (int x = 0; x < size - 1; x++) {
+    for (int y = 0; y < size_ - 1; y++) {
+        for (int x = 0; x < size_ - 1; x++) {
             bool  color = getModule(x, y);
             if (  color == getModule(x + 1, y) &&
                   color == getModule(x, y + 1) &&
@@ -478,16 +473,16 @@ int QrCode::getPenaltyScore() const {
     }
 
     // Finder-like pattern in rows
-    for (int y = 0; y < size; y++) {
-        for (int x = 0, bits = 0; x < size; x++) {
+    for (int y = 0; y < size_; y++) {
+        for (int x = 0, bits = 0; x < size_; x++) {
             bits = ((bits << 1) & 0x7FF) | (getModule(x, y) ? 1 : 0);
             if (x >= 10 && (bits == 0x05D || bits == 0x5D0))  // Needs 11 bits accumulated
                 result += PENALTY_N3;
         }
     }
     // Finder-like pattern in columns
-    for (int x = 0; x < size; x++) {
-        for (int y = 0, bits = 0; y < size; y++) {
+    for (int x = 0; x < size_; x++) {
+        for (int y = 0, bits = 0; y < size_; y++) {
             bits = ((bits << 1) & 0x7FF) | (getModule(x, y) ? 1 : 0);
             if (y >= 10 && (bits == 0x05D || bits == 0x5D0))  // Needs 11 bits accumulated
                 result += PENALTY_N3;
@@ -496,13 +491,13 @@ int QrCode::getPenaltyScore() const {
 
     // Balance of black and white modules
     int black = 0;
-    for (int y = 0; y < size; y++) {
-        for (int x = 0; x < size; x++) {
+    for (int y = 0; y < size_; y++) {
+        for (int x = 0; x < size_; x++) {
             if (getModule(x, y))
                 black++;
         }
     }
-    int total = size * size;
+    int total = size_ * size_;
     // Find smallest k such that (45-5k)% <= dark/total <= (55+5k)%
     for (int k = 0; black*20 < (9-k)*total || black*20 > (11+k)*total; k++)
         result += PENALTY_N4;

@@ -44,6 +44,14 @@ enum Error {
     BadData = 4,
 };
 
+/* Represents the error correction level used in a QR Code symbol. */
+enum Ecc {
+    LOW = 0,
+    MEDIUM = 1,
+    QUARTILE = 2,
+    HIGH = 3,
+};
+
 /*
  * Computes the Reed-Solomon error correction codewords for a sequence of data codewords
  * at a given degree. Objects are immutable, and the state only depends on the degree.
@@ -73,7 +81,6 @@ public:
      */
     Error getRemainder(const uint8_t* data, size_t len, uint8_t* result) const;
 
-
 private:
     // Returns the product of the two given field elements modulo GF(2^8/0x11D). The arguments and result
     // are unsigned 8-bit integers. This could be implemented as a lookup table of 256*256 entries of uint8.
@@ -89,54 +96,6 @@ class Codebits;
  * from 1 to 40, all 4 error correction levels, and only 3 character encoding modes.
  */
 class QrCode final {
-
-    /*---- Public helper enumeration ----*/
-public:
-
-    /*
-     * Represents the error correction level used in a QR Code symbol.
-     */
-    enum Ecc {
-        LOW = 0,
-        MEDIUM = 1,
-        QUARTILE = 2,
-        HIGH = 3,
-    };
-
-    /*---- Instance fields ----*/
-
-    // Public immutable scalar parameters
-public:
-
-    /* This QR Code symbol's version number, which is always between 1 and 40 (inclusive). */
-    int version;
-
-    /* The width and height of this QR Code symbol, measured in modules.
-     * Always equal to version &times; 4 + 17, in the range 21 to 177. */
-    int size;
-
-    /* The error correction level used in this QR Code symbol. */
-    Ecc errorCorrectionLevel;
-
-    ReedSolomonGenerator rsg;
-
-    /* The mask pattern used in this QR Code symbol, in the range 0 to 7 (i.e. unsigned 3-bit integer).
-     * Note that even if a constructor was called with automatic masking requested
-     * (mask = -1), the resulting object will still have a mask value between 0 and 7. */
-private:
-    int mask;
-
-    // Private grids of modules/pixels (conceptually immutable)
-private:
-    static constexpr size_t kMaxWidth = 177;
-    static constexpr size_t kMaxHeight = 177;
-    static constexpr size_t kStride = (kMaxWidth + 7) / 8;
-
-    uint8_t module_[kStride * kMaxHeight]; // The modules of this QR Code symbol (false = white, true = black)
-    uint8_t isfunc_[kStride * kMaxHeight]; // Indicates function modules that are not subjected to masking
-
-
-    /*---- Constructors ----*/
 public:
 
     QrCode();
@@ -148,31 +107,34 @@ public:
      */
     Error draw(int ver, Ecc ecl, const uint8_t* data, size_t len, int mask);
 
-
-    /*
-     * Change the mask pattern of the QrCode
-     */
+    /* Change the mask pattern of the QrCode */
     Error changeMask(int mask);
 
+    /* This QR Code symbol's version number, which is always between 1 and 40 (inclusive). */
+    int version() const { return version_; }
 
+    /* The width and height of this QR Code symbol, measured in modules.
+     * Always equal to version &times; 4 + 17, in the range 21 to 177. */
+    int size() const { return size_; }
 
-    /*---- Public instance methods ----*/
-public:
+    /* The error correction level used in this QR Code symbol. */
+    int ecc() const { return ecc_; }
 
-    int getMask() const;
-
+    /* The mask pattern used in this QR Code symbol, in the range 0 to 7 (i.e. unsigned 3-bit integer).
+     * Note that even if a constructor was called with automatic masking requested
+     * (mask = -1), the resulting object will still have a mask value between 0 and 7. */
+    int mask() const { return mask_; }
 
     /*
      * Returns the color of the module (pixel) at the given coordinates, which is either 0 for white or 1 for black. The top
      * left corner has the coordinates (x=0, y=0). If the given coordinates are out of bounds, then 0 (white) is returned.
      */
-    int getPixel(int x, int y) const {
-        if (0 <= x && x < size && 0 <= y && y < size)
+    int pixel(int x, int y) const {
+        if (0 <= x && x < size_ && 0 <= y && y < size_)
             return (module_[y * kStride + (x >> 3)] & (1 << (x & 7))) != 0;
         else
             return 0;  // Infinite white border
     };
-
 
 #ifndef __Fuchsia__
 #ifndef _KERNEL
@@ -184,7 +146,6 @@ public:
      */
     Error encodeText(const char *text, Ecc ecl);
 
-
     /*
      * Encode a QR Code symbol representing the given binary data string at the given error correction level.
      * This function always encodes using the binary segment mode, not any text mode. The maximum number of
@@ -192,7 +153,6 @@ public:
      * The ECC level of the result may be higher than the ecl argument if it can be done without increasing the version.
      */
     Error encodeBinary(const std::vector<uint8_t> &data, Ecc ecl);
-
 
     /*
      * Encode a QR Code symbol representing the specified data segments with the specified encoding parameters.
@@ -207,8 +167,21 @@ public:
 #endif
 
 
-    /*---- Private helper methods for constructor: Drawing function modules ----*/
 private:
+    int version_;
+    int size_;
+    int mask_;
+    Ecc ecc_;
+
+    static constexpr size_t kMaxWidth = 177;
+    static constexpr size_t kMaxHeight = 177;
+    static constexpr size_t kStride = (kMaxWidth + 7) / 8;
+
+    uint8_t module_[kStride * kMaxHeight]; // The modules of this QR Code symbol (false = white, true = black)
+    uint8_t isfunc_[kStride * kMaxHeight]; // Indicates function modules that are not subjected to masking
+
+    ReedSolomonGenerator rsg_;
+
 
     /*
      * Internal accessors.  x,y must be within range.
@@ -233,28 +206,21 @@ private:
         isfunc_[y * kStride + (x >> 3)] |= static_cast<uint8_t>(1 << (x & 7));
     }
 
-
-
     Error drawFunctionPatterns();
-
 
     // Draws two copies of the format bits (with its own error correction code)
     // based on the given mask and this object's error correction level field.
     Error drawFormatBits(int mask);
 
-
     // Draws two copies of the version bits (with its own error correction code),
     // based on this object's version field (which only has an effect for 7 <= version <= 40).
     Error drawVersion();
 
-
     // Draws a 9*9 finder pattern including the border separator, with the center module at (x, y).
     void drawFinderPattern(int x, int y);
 
-
     // Draws a 5*5 alignment pattern, with the center module at (x, y).
     void drawAlignmentPattern(int x, int y);
-
 
     // Sets the color of a module and marks it as a function module.
     // Only used by the constructor. Coordinates must be in range.
@@ -267,11 +233,9 @@ private:
     // Computes the error correction codewords and then calls drawCodewords()
     Error drawDataWords(const uint8_t* data, size_t len);
 
-
     // Draws the given sequence of 8-bit codewords (data and error correction) onto the entire
     // data area of this QR Code symbol. Function modules need to be marked off before this is called.
     Error drawCodewords(Codebits& codebits);
-
 
     // XORs the data modules in this QR Code with the given mask pattern. Due to XOR's mathematical
     // properties, calling applyMask(m) twice with the same value is equivalent to no change at all.
@@ -279,21 +243,15 @@ private:
     // well-formed QR Code symbol needs exactly one mask applied (not zero, not two, etc.).
     Error applyMask(int mask);
 
-
     // A messy helper function for the constructors. This QR Code must be in an unmasked state when this
     // method is called. The given argument is the requested mask, which is -1 for auto or 0 to 7 for fixed.
     // This method applies and returns the actual mask chosen, from 0 to 7.
     Error handleConstructorMasking(int mask);
 
-
     // Calculates and returns the penalty score based on state of this QR Code's current modules.
     // This is used by the automatic mask choice algorithm to find the mask pattern that yields the lowest score.
     int getPenaltyScore() const;
 
-
-
-    /*---- Private static helper functions ----*/
-private:
 
     // Returns a set of positions of the alignment patterns in ascending order. These positions are
     // used on both the x and y axes. Each value in the resulting array is in the range [0, 177).
@@ -301,21 +259,16 @@ private:
     static constexpr size_t kMaxAlignMarks = 7;
     static int getAlignmentPatternPositions(int ver, int out[kMaxAlignMarks]);
 
-
     // Returns the number of raw data modules (bits) available at the given version number.
     // These data modules are used for both user data codewords and error correction codewords.
     // This stateless pure function could be implemented as a 40-entry lookup table.
     static int getNumRawDataModules(int ver);
-
 
     // Returns the number of 8-bit data (i.e. not error correction) codewords contained in any
     // QR Code of the given version number and error correction level, with remainder bits discarded.
     // This stateless pure function could be implemented as a (40*4)-cell lookup table.
     static int getNumDataCodewords(int ver, const Ecc &ecl);
 
-
-    /*---- Private tables of constants ----*/
-private:
 
     // For use in getPenaltyScore(), when evaluating which mask is best.
     static const int PENALTY_N1;
