@@ -25,7 +25,7 @@
 
 #define LOCAL_TRACE 0
 
-constexpr uint32_t kMaxWaitHandleCount = 256u;
+constexpr uint32_t kMaxWaitHandleCount = 1024u;
 
 // Note: This is used for quite a few InlineArrays (simultaneously) in sys_handle_wait_many.
 constexpr size_t kWaitManyInlineCount = 8u;
