@@ -32,7 +32,7 @@ group("gtest") {
   testonly = true
 
   deps = [
-    "tests/unit_tests:msd_unit_tests",
+    "tests:gtest",
   ]
 }
 
