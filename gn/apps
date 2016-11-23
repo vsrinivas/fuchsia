@@ -6,6 +6,10 @@
     ],
     "binaries": [
         {
+            "binary": "acquirers/focus",
+            "bootfs_path": "apps/acquirers/focus"
+        },
+        {
             "binary": "acquirers/gps",
             "bootfs_path": "apps/acquirers/gps"
         },
@@ -16,6 +20,10 @@
         {
             "binary": "agents/ideas",
             "bootfs_path": "apps/agents/ideas"
+        },
+        {
+            "binary": "agents/module_suggester",
+            "bootfs_path": "apps/agents/module_suggester"
         },
         {
             "binary": "context_engine",
