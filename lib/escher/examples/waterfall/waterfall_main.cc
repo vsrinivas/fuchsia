@@ -48,6 +48,7 @@ std::unique_ptr<Demo> create_demo() {
   window_params.window_name = "Escher Waterfall Demo (Vulkan)";
   window_params.width = kDemoWidth;
   window_params.height = kDemoHeight;
+  window_params.desired_swapchain_image_count = 2;
 
   Demo::InstanceParams instance_params;
 

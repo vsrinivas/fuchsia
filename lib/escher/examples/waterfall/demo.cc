@@ -297,8 +297,10 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
 
   // Determine number of images in the swapchain.
   swapchain_image_count_ = window_params.desired_swapchain_image_count;
-  if (surface_caps.maxImageCount > 0 &&  // 0 means "no limit"
-      surface_caps.maxImageCount > swapchain_image_count_) {
+  if (surface_caps.minImageCount > swapchain_image_count_) {
+    swapchain_image_count_ = surface_caps.minImageCount;
+  } else if (surface_caps.maxImageCount < swapchain_image_count_ &&
+             surface_caps.maxImageCount != 0) {  // 0 means "no limit"
     swapchain_image_count_ = surface_caps.maxImageCount;
   }
 
