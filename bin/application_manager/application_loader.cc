@@ -37,8 +37,11 @@ std::tuple<ftl::UniqueFD, std::string> ApplicationLoader::Open(
         }
       }
     }
-    if (fd.is_valid())
+    if (fd.is_valid()) {
       return std::make_tuple(std::move(fd), std::move(path));
+    } else {
+      FTL_LOG(ERROR) << "Could not load url: " << url;
+    }
   }
 
   return std::make_tuple(ftl::UniqueFD(), std::string());
