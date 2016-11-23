@@ -70,9 +70,9 @@ static mx_status_t allocate_stack(size_t stack_size, size_t guard_size, uintptr_
     if (status < 0)
         return status;
 
-    status = _mx_process_map_vm(
-        _mx_process_self(), thread_stack_vmo, 0, stack_size, stack_out,
-        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    status = _mx_vmar_map(
+        _mx_vmar_root_self(), 0, thread_stack_vmo, 0, stack_size,
+        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, stack_out);
     _mx_handle_close(thread_stack_vmo);
 
     return status;

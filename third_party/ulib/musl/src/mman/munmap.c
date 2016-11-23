@@ -13,7 +13,7 @@ int __munmap(void* start, size_t len) {
     /* NOTE: this currently unmaps the entire region that start was mapped into.
      * magenta does not yet support partial unmapping.
      */
-    mx_status_t status = _mx_process_unmap_vm(_mx_process_self(), ptr, 0);
+    mx_status_t status = _mx_vmar_unmap(_mx_vmar_root_self(), ptr, 0);
     if (status < 0) {
         errno = EINVAL;
         return -1;

@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <stdint.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -48,20 +49,33 @@ void* __mmap(void* start, size_t len, int prot, int flags, int fd, off_t off) {
         // round up to page size
         len = (len + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
-        mx_handle_t vmo;
-        if (_mx_vmo_create(len, 0, &vmo) < 0)
-            return MAP_FAILED;
-
         // build magenta flags for this
         uint32_t mx_flags = 0;
         mx_flags |= (prot & PROT_READ) ? MX_VM_FLAG_PERM_READ : 0;
         mx_flags |= (prot & PROT_WRITE) ? MX_VM_FLAG_PERM_WRITE : 0;
         mx_flags |= (prot & PROT_EXEC) ? MX_VM_FLAG_PERM_EXECUTE : 0;
-        mx_flags |= (flags & MAP_FIXED) ? MX_VM_FLAG_FIXED : 0;
 
-        uintptr_t ptr = (uintptr_t)start;
-        mx_status_t status = _mx_process_map_vm(_mx_process_self(), vmo, 0, len,
-                                                &ptr, mx_flags);
+        size_t offset = 0;
+        if (flags & MAP_FIXED) {
+            mx_flags |= MX_VM_FLAG_SPECIFIC;
+
+            mx_info_vmar_t info;
+            mx_status_t status = mx_object_get_info(_mx_vmar_root_self(),
+                                                    MX_INFO_VMAR, &info,
+                                                    sizeof(info), NULL, NULL);
+            if (status < 0 || (uintptr_t)start < info.base) {
+                return MAP_FAILED;
+            }
+            offset = (uintptr_t)start - info.base;
+        }
+
+        mx_handle_t vmo;
+        if (_mx_vmo_create(len, 0, &vmo) < 0)
+            return MAP_FAILED;
+
+        uintptr_t ptr = 0;
+        mx_status_t status = _mx_vmar_map(_mx_vmar_root_self(), offset, vmo, 0,
+                                          len, mx_flags, &ptr);
         _mx_handle_close(vmo);
         // TODO: map this as shared if we ever implement forking
         if (status < 0) {
