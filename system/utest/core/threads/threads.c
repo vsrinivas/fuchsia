@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stddef.h>
+#include <unistd.h>
 
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
@@ -67,9 +68,36 @@ static bool test_thread_start_on_initial_thread(void) {
     END_TEST;
 }
 
+// Test that we don't get an assertion failure (and kernel panic) if we
+// pass a zero instruction pointer when starting a thread (in this case via
+// mx_process_start()).
+static bool test_thread_start_with_zero_instruction_pointer(void) {
+    BEGIN_TEST;
+
+    static const char kProcessName[] = "Test process";
+    static const char kThreadName[] = "Test thread";
+    mx_handle_t process;
+    mx_handle_t thread;
+    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+                                0, &process), NO_ERROR, "");
+    ASSERT_EQ(mx_thread_create(process, kThreadName, sizeof(kThreadName) - 1,
+                               0, &thread), NO_ERROR, "");
+    ASSERT_EQ(mx_process_start(process, thread, 0, 0, thread, 0), NO_ERROR, "");
+
+    // Give crashlogger a little time to print info about the new thread
+    // (since it will start and crash), otherwise that output gets
+    // interleaved with the test runner's output.
+    mx_nanosleep(MX_MSEC(100));
+
+    ASSERT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(threads_tests)
 RUN_TEST(threads_test)
 RUN_TEST(test_thread_start_on_initial_thread)
+RUN_TEST(test_thread_start_with_zero_instruction_pointer)
 END_TEST_CASE(threads_tests)
 
 #ifndef BUILD_COMBINED_TESTS

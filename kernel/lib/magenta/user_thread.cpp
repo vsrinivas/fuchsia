@@ -289,9 +289,6 @@ int UserThread::StartRoutine(void* arg) {
 
     UserThread* t = (UserThread*)arg;
 
-    // check that the entry point makes sense and we haven't forgotten to set it
-    DEBUG_ASSERT(t->user_entry_);
-
     // Notify debugger if attached.
     // This is done by first obtaining our own reference to the port so the
     // test can be done safely. Note that this function doesn't return so we
