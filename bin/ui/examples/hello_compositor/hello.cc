@@ -114,6 +114,7 @@ class HelloApp {
     metadata->version = kSceneVersion;
     metadata->presentation_time = frame_tracker_.frame_info().presentation_time;
     scene_->Publish(std::move(metadata));
+    buffer_producer_.Tick();
 
     // Schedule the next frame of the animation.
     ScheduleDraw();

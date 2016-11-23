@@ -65,6 +65,8 @@ void Rasterizer::PublishFrame(std::unique_ptr<Frame> frame) {
   if (surface) {
     frame->Paint(surface->getCanvas());
   }
+
+  buffer_producer_.Tick();
 }
 
 }  // namespace examples

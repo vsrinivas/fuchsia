@@ -142,6 +142,7 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
     // Publish the updated scene contents.
     scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
+    buffer_producer_.Tick();
   }
 
   void DrawContent(SkCanvas* canvas, const mozart::Size& size) {

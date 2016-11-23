@@ -79,6 +79,7 @@ class SpinningSquareView : public mozart::BaseView {
     // Publish the updated scene contents.
     scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
+    buffer_producer_.Tick();
 
     // Schedule the next frame of the animation.
     Invalidate();

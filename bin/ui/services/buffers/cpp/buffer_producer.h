@@ -41,6 +41,11 @@ class BufferProducer : private mtl::MessageLoopHandler {
   // Returns nullptr if the buffer cannot be produced.
   std::unique_ptr<ProducedBufferHolder> ProduceBuffer(size_t size);
 
+  // Notifies the buffer producer that a cycle has completed (e.g., an entire
+  // frame has been produced). The buffer producer will use this signal as a
+  // time scale for pruning its internal cache.
+  void Tick();
+
  private:
   // |mtl::MessageLoopHandler|
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
@@ -56,15 +61,23 @@ class BufferProducer : private mtl::MessageLoopHandler {
     std::shared_ptr<mx::eventpair> production_fence;
   };
 
-  struct CompareSharedVmoSize {
-    bool operator()(const ftl::RefPtr<mtl::SharedVmo>& a,
-                    const ftl::RefPtr<mtl::SharedVmo>& b) {
-      return a->vmo_size() < b->vmo_size();
+  struct BufferInfo {
+    BufferInfo(uint32_t tick_count, ftl::RefPtr<mtl::SharedVmo> vmo)
+        : tick_count(tick_count), vmo(std::move(vmo)) {}
+
+    uint32_t tick_count;
+    ftl::RefPtr<mtl::SharedVmo> vmo;
+  };
+
+  struct CompareBufferInfo {
+    bool operator()(const std::unique_ptr<BufferInfo>& a,
+                    const std::unique_ptr<BufferInfo>& b) {
+      return a->vmo->vmo_size() < b->vmo->vmo_size();
     }
   };
 
   std::unordered_map<mx_handle_t, FlightInfo> buffers_in_flight_;
-  std::multiset<ftl::RefPtr<mtl::SharedVmo>, CompareSharedVmoSize>
+  std::multiset<std::unique_ptr<BufferInfo>, CompareBufferInfo>
       available_buffers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BufferProducer);

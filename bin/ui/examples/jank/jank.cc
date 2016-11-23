@@ -131,6 +131,7 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
 
     scene()->Update(std::move(update));
     scene()->Publish(CreateSceneMetadata());
+    buffer_producer_.Tick();
 
     Invalidate();
 

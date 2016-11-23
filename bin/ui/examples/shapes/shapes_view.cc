@@ -67,6 +67,7 @@ void ShapesView::OnDraw() {
 
   // Publish the scene update, taking care to supply the expected scene version.
   scene()->Publish(CreateSceneMetadata());
+  buffer_producer_.Tick();
 }
 
 void ShapesView::DrawContent(const mozart::Size& size, SkCanvas* canvas) {

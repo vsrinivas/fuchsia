@@ -9,6 +9,8 @@
 namespace mozart {
 namespace {
 
+constexpr uint32_t kMaxTickBeforeDiscard = 3;
+
 // Establishes a constraint on whether a VMO should be reused for an
 // allocation of the specified size, taking into account wasted space.
 bool ShouldRecycle(size_t vmo_size, size_t needed_size) {
@@ -50,8 +52,8 @@ BufferProducer::~BufferProducer() {
     static_cast<ProducedVmo*>(flight_info.shared_vmo.get())->Release();
   }
 
-  for (auto& shared_vmo : available_buffers_) {
-    static_cast<ProducedVmo*>(shared_vmo.get())->Release();
+  for (auto& buffer_info : available_buffers_) {
+    static_cast<ProducedVmo*>(buffer_info->vmo.get())->Release();
   }
 }
 
@@ -83,14 +85,26 @@ std::unique_ptr<ProducedBufferHolder> BufferProducer::ProduceBuffer(
       std::move(consumption_fence)));
 }
 
+void BufferProducer::Tick() {
+  for (auto it = available_buffers_.begin(); it != available_buffers_.end();
+       ++it) {
+    (*it)->tick_count++;
+    if ((*it)->tick_count >= kMaxTickBeforeDiscard) {
+      it = available_buffers_.erase(it);
+      if (it == available_buffers_.end())
+        break;
+    }
+  }
+}
+
 ftl::RefPtr<mtl::SharedVmo> BufferProducer::GetSharedVmo(size_t size) {
   for (auto it = available_buffers_.begin(); it != available_buffers_.end();
        ++it) {
-    size_t vmo_size = (*it)->vmo_size();
+    size_t vmo_size = (*it)->vmo->vmo_size();
     if (vmo_size >= size) {
       if (!ShouldRecycle(vmo_size, size))
         break;  // too wasteful to use a buffer of this size or larger
-      auto shared_vmo = std::move(*it);
+      auto shared_vmo = std::move((*it)->vmo);
       available_buffers_.erase(it);
       return shared_vmo;
     }
@@ -136,10 +150,10 @@ void BufferProducer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   FTL_DCHECK(it != buffers_in_flight_.end());
 
   // Add the newly available buffer to the pool.
-  // TODO(jeffbrown): Figure out when and how to trim the pool.
   const FlightInfo& flight_info = it->second;
   mtl::MessageLoop::GetCurrent()->RemoveHandler(flight_info.handler_key);
-  available_buffers_.insert(std::move(flight_info.shared_vmo));
+  available_buffers_.insert(
+      std::make_unique<BufferInfo>(0u, std::move(flight_info.shared_vmo)));
 
   buffers_in_flight_.erase(it);
 }
@@ -164,8 +178,7 @@ void ProducedBufferHolder::SetReadySignal() {
   if (ready_)
     return;
 
-  mx_status_t status =
-      production_fence_->signal_peer(0u, MX_EPAIR_SIGNALED);
+  mx_status_t status = production_fence_->signal_peer(0u, MX_EPAIR_SIGNALED);
   FTL_DCHECK(status == NO_ERROR);
   ready_ = true;
 }
