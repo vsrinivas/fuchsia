@@ -43,12 +43,19 @@ class Proposinator {
   void Propose(const std::string& id,
                fidl::Array<maxwell::suggestion::ActionPtr> actions =
                    fidl::Array<maxwell::suggestion::ActionPtr>::New(0)) {
+    Propose(id, id, std::move(actions));
+  }
+
+  void Propose(const std::string& id,
+               const std::string& headline,
+               fidl::Array<maxwell::suggestion::ActionPtr> actions =
+                   fidl::Array<maxwell::suggestion::ActionPtr>::New(0)) {
     auto p = maxwell::suggestion::Proposal::New();
     p->id = id;
     p->on_selected = std::move(actions);
     auto d = maxwell::suggestion::Display::New();
 
-    d->headline = id;
+    d->headline = headline;
     d->subheadline = "";
     d->details = "";
     d->color = 0x00aa00aa;  // argb purple
@@ -432,21 +439,70 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   ASYNC_EQ("foo://bar", last_created_story());
 }
 
-TEST_F(SuggestionEngineTest, DefaultAsk) {
+class AskTest : public SuggestionEngineTest {
+ public:
+  AskTest() : binding_(&listener_) {}
+
+  void InitiateAsk() {
+    fidl::InterfaceHandle<maxwell::suggestion::Listener> handle;
+    binding_.Bind(&handle);
+    suggestion_provider()->InitiateAsk(std::move(handle), GetProxy(&ctl_));
+  }
+
+  void SetQuery(const std::string& query) {
+    auto input = maxwell::suggestion::UserInput::New();
+    input->set_text(query);
+    ctl_->SetUserInput(std::move(input));
+  }
+
+  void SetResultCount(int32_t count) { ctl_->SetResultCount(count); }
+
+  int suggestion_count() const { return listener_.suggestion_count(); }
+
+  TestSuggestionListener* listener() { return &listener_; }
+
+ private:
+  TestSuggestionListener listener_;
+  fidl::Binding<maxwell::suggestion::Listener> binding_;
+  maxwell::suggestion::AskControllerPtr ctl_;
+};
+
+TEST_F(AskTest, DefaultAsk) {
   Proposinator p(suggestion_engine());
 
   p.Propose("1");
   Sleep();
 
-  TestSuggestionListener listener;
-  fidl::InterfaceHandle<maxwell::suggestion::Listener> handle;
-  fidl::Binding<maxwell::suggestion::Listener> binding(&listener, &handle);
-  maxwell::suggestion::AskControllerPtr ctl;
-  suggestion_provider()->InitiateAsk(std::move(handle), GetProxy(&ctl));
+  InitiateAsk();
 
-  ctl->SetResultCount(10);
-  ASYNC_EQ(1, listener.suggestion_count());
+  SetResultCount(10);
+  CHECK_RESULT_COUNT(1);
 
   p.Propose("2");
-  ASYNC_EQ(2, listener.suggestion_count());
+  CHECK_RESULT_COUNT(2);
+}
+
+TEST_F(AskTest, AskExactMatch) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("Mozart's Ghost");
+  p.Propose("The Hottest Band on the Internet");
+
+  InitiateAsk();
+  SetResultCount(10);
+  SetQuery("The Hottest Band on the Internet");
+  CHECK_RESULT_COUNT(1);
+  EXPECT_EQ("The Hottest Band on the Internet",
+            listener()->GetOnlySuggestion()->display->headline);
+
+  SetQuery("Mozart's Ghost");
+  ASYNC_CHECK(listener()->suggestion_count() == 1 &&
+              "Mozart's Ghost" ==
+                  listener()->GetOnlySuggestion()->display->headline);
+
+  p.Propose("Mozart's Ghost", "Gatekeeper");
+  CHECK_RESULT_COUNT(0);
+
+  p.Propose("The Hottest Band on the Internet", "Mozart's Ghost");
+  CHECK_RESULT_COUNT(1);
 }

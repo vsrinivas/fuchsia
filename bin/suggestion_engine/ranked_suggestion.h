@@ -10,7 +10,7 @@ namespace maxwell {
 namespace suggestion {
 
 struct RankedSuggestion {
-  SuggestionPrototype* prototype;
+  const SuggestionPrototype* prototype;
   float rank;
 };
 

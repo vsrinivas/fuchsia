@@ -35,5 +35,22 @@ void Repo::AddSuggestion(std::unique_ptr<ProposalRecord> proposal,
   }
 }
 
+void Repo::InitiateAsk(fidl::InterfaceHandle<Listener> listener,
+                       fidl::InterfaceRequest<AskController> controller) {
+  auto ask =
+      std::make_unique<AskChannel>(std::move(listener), std::move(controller));
+
+  // Bootstrap with existing next suggestions
+  for (auto& suggestion : *next_channel_.ranked_suggestions()) {
+    // TODO(rosswang): flatten record structures instead
+    auto& proposal_record = suggestion->prototype->second;
+    proposal_record->source->GetByProposalId(proposal_record->proposal->id)
+        ->ranks_by_channel[ask.get()] =
+        ask->OnAddSuggestion(suggestion->prototype);
+  }
+
+  ask_channels_.emplace(std::move(ask));
+}
+
 }  // namespace suggestion
 }  // namespace maxwell

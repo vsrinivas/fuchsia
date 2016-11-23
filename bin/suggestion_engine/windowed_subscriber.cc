@@ -34,6 +34,18 @@ void WindowedSubscriber::SetResultCount(int32_t count) {
   max_results_ = count;
 }
 
+void WindowedSubscriber::Invalidate() {
+  listener_->OnRemoveAll();
+
+  fidl::Array<SuggestionPtr> window;
+  for (int32_t i = 0;
+       i < max_results_ && (unsigned)i < ranked_suggestions_->size(); i++) {
+    window.push_back(CreateSuggestion(*(*ranked_suggestions_)[i]));
+  }
+
+  listener_->OnAdd(std::move(window));
+}
+
 // A suggestion should be included if its sorted index (by rank) is less than
 // max_results_. We don't have to do a full iteration here since we can just
 // compare the rank with the tail for all but the edge case where ranks are

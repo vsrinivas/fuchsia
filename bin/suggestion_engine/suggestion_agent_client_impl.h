@@ -35,6 +35,11 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
   void Remove(const fidl::String& proposal_id) override;
   void GetAll(const GetAllCallback& callback) override;
 
+  // TEMPORARY; TODO(rosswang): flatten record structures instead
+  AgentSuggestionRecord* GetByProposalId(const std::string& proposal_id) {
+    return &proposals_[proposal_id];
+  }
+
  private:
   class BindingSet : public maxwell::BindingSet<SuggestionAgentClient> {
    public:

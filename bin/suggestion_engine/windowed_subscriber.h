@@ -45,6 +45,9 @@ class WindowedSubscriber {
     }
   }
 
+  // Notifies the listener that all elements should be updated.
+  void Invalidate();
+
   // FIDL methods, for use with BoundSet without having to expose listener_.
 
   bool is_bound() const { return listener_.is_bound(); }

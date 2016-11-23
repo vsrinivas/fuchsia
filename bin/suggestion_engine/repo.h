@@ -36,17 +36,7 @@ class Repo {
   }
 
   void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
-                   fidl::InterfaceRequest<AskController> controller) {
-    auto ask = std::make_unique<AskChannel>(std::move(listener),
-                                            std::move(controller));
-
-    // Bootstrap with existing next suggestions
-    for (auto& suggestion : *next_channel_.ranked_suggestions()) {
-      ask->OnAddSuggestion(suggestion->prototype);
-    }
-
-    ask_channels_.emplace(std::move(ask));
-  }
+                   fidl::InterfaceRequest<AskController> controller);
 
   // Non-mutating indexer; returns NULL if no such suggestion exists.
   const ProposalRecord* operator[](const std::string& suggestion_id) const {

@@ -17,15 +17,25 @@ class NextChannel : public SuggestionChannel {
     subscribers_.emplace(std::move(subscriber));
   }
 
- protected:
-  void DispatchOnAddSuggestion(
-      const RankedSuggestion& ranked_suggestion) override;
-
-  void DispatchOnRemoveSuggestion(
-      const RankedSuggestion& ranked_suggestion) override;
+  RankedSuggestion* OnAddSuggestion(
+      const SuggestionPrototype* prototype) override;
+  void OnChangeSuggestion(RankedSuggestion* ranked_suggestion) override;
+  void OnRemoveSuggestion(const RankedSuggestion* ranked_suggestion) override;
+  const RankedSuggestions* ranked_suggestions() const override;
 
  private:
+  void DispatchOnAddSuggestion(const RankedSuggestion& ranked_suggestion) {
+    for (auto& subscriber : subscribers_)
+      subscriber->OnAddSuggestion(ranked_suggestion);
+  }
+
+  void DispatchOnRemoveSuggestion(const RankedSuggestion& ranked_suggestion) {
+    for (auto& subscriber : subscribers_)
+      subscriber->OnRemoveSuggestion(ranked_suggestion);
+  }
+
   maxwell::BoundNonMovableSet<NextSubscriber> subscribers_;
+  RankedSuggestions ranked_suggestions_;
 };
 
 }  // namespace suggestion
