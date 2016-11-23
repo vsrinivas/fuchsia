@@ -5,6 +5,7 @@
 executable("suggestion_engine") {
   sources = [
     "agent_suggestion_record.h",
+    "ask_channel.cc",
     "ask_channel.h",
     "ask_subscriber.h",
     "next_channel.h",

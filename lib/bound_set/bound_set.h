@@ -14,8 +14,8 @@
 namespace maxwell {
 
 // General implementation intended to cover InterfacePtr.
-template <typename T>
-T GetFidlType(T t) {
+template <typename T, typename U>
+T GetFidlType(U t) {
   return t;
 }
 

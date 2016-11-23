@@ -4,6 +4,7 @@
 
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/bound_set.h"
+#include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/repo.h"
 #include "apps/modular/lib/app/application_context.h"
@@ -35,15 +36,17 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   void SubscribeToNext(fidl::InterfaceHandle<Listener> listener,
                        fidl::InterfaceRequest<NextController> controller) {
-    std::unique_ptr<NextSubscriber> sub(new NextSubscriber(
-        repo_.next_ranked_suggestions(), std::move(listener)));
+    auto sub = std::make_unique<NextSubscriber>(repo_.next_ranked_suggestions(),
+                                                std::move(listener));
     sub->Bind(std::move(controller));
     repo_.AddNextSubscriber(std::move(sub));
   }
 
   void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
                    fidl::InterfaceRequest<AskController> controller) {
-    // TODO(rosswang): no ask handlers yet
+    auto sub = std::make_unique<AskSubscriber>(std::move(listener));
+    sub->Bind(std::move(controller));
+    repo_.AddAskSubscriber(std::move(sub));
   }
 
   void NotifyInteraction(const fidl::String& suggestion_uuid,

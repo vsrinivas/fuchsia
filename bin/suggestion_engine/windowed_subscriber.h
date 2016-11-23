@@ -16,11 +16,18 @@ namespace suggestion {
 // ranked suggestions.
 class WindowedSubscriber {
  public:
-  WindowedSubscriber(
-      const std::vector<std::unique_ptr<RankedSuggestion>>* ranked_suggestions,
-      fidl::InterfaceHandle<Listener> listener)
-      : ranked_suggestions_(ranked_suggestions),
-        listener_(ListenerPtr::Create(std::move(listener))) {}
+  typedef std::vector<std::unique_ptr<RankedSuggestion>> RankedSuggestions;
+
+  WindowedSubscriber(fidl::InterfaceHandle<Listener> listener)
+      : listener_(ListenerPtr::Create(std::move(listener))) {}
+
+  // Lazy initializer for ranked suggestions. This method must be called before
+  // any substantial methods on this class are called. Ideally it would be part
+  // of construction, but it is kept lazy to facilitate subscriber impls that
+  // own their own channels.
+  void SetRankedSuggestions(const RankedSuggestions* ranked_suggestions) {
+    ranked_suggestions_ = ranked_suggestions;
+  }
 
   void SetResultCount(int32_t count);
 
@@ -74,7 +81,7 @@ class WindowedSubscriber {
   // An upper bound on the number of suggestions to offer this subscriber, as
   // given by SetResultCount.
   int32_t max_results_ = 0;
-  const std::vector<std::unique_ptr<RankedSuggestion>>* ranked_suggestions_;
+  const RankedSuggestions* ranked_suggestions_;
   ListenerPtr listener_;
 };
 
@@ -88,11 +95,8 @@ class BoundWindowedSubscriber : public Controller, public WindowedSubscriber {
     return &(*subscriber)->binding_;
   }
 
-  BoundWindowedSubscriber(
-      const std::vector<std::unique_ptr<RankedSuggestion>>* ranked_suggestions,
-      fidl::InterfaceHandle<Listener> listener)
-      : WindowedSubscriber(ranked_suggestions, std::move(listener)),
-        binding_(this) {}
+  BoundWindowedSubscriber(fidl::InterfaceHandle<Listener> listener)
+      : WindowedSubscriber(std::move(listener)), binding_(this) {}
 
   void Bind(fidl::InterfaceRequest<Controller> request) {
     binding_.Bind(std::move(request));

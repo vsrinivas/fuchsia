@@ -9,6 +9,7 @@
 #include "apps/maxwell/src/suggestion_engine/proposal_record.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
+#include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 
 namespace maxwell {
 namespace suggestion {
@@ -35,6 +36,11 @@ class Repo {
     next_channel_.AddSubscriber(std::move(subscriber));
   }
 
+  void AddAskSubscriber(std::unique_ptr<AskSubscriber> subscriber) {
+    // TODO(rosswang): bootstrap
+    asks_.emplace(std::move(subscriber));
+  }
+
   // Non-mutating indexer; returns NULL if no such suggestion exists.
   const ProposalRecord* operator[](const std::string& suggestion_id) const {
     auto it = suggestions_.find(suggestion_id);
@@ -52,6 +58,10 @@ class Repo {
   // indexed by suggestion ID
   std::unordered_map<std::string, ProposalRecordPtr> suggestions_;
   NextChannel next_channel_;
+  maxwell::BindingSet<AskController,
+                      std::unique_ptr<AskSubscriber>,
+                      AskSubscriber::GetBinding>
+      asks_;
 
   uint64_t id_;
 };
