@@ -66,18 +66,22 @@ int main(int argc, const char** argv) {
     }
   }
 
+  if (config.use_sync && (config.sync_params.firebase_id.empty() ||
+                          config.sync_params.firebase_prefix.empty())) {
+    FTL_LOG(ERROR) << "Please specify both --firebase_id and --firebase_prefix";
+    return 1;
+  }
+
   if (config_path.empty()) {
     FTL_LOG(ERROR) << "Please specify a non-empty directory path to write to.";
     return 1;
   }
 
-
   std::string config_path_string = config_path.ToString();
   if (!files::CreateDirectory(files::GetDirectoryName(config_path_string))) {
     FTL_LOG(ERROR) << "Unable to create directory for file " << config_path;
   }
-  if (!configuration::ConfigurationEncoder::Write(config_path_string,
-                                                  config)) {
+  if (!configuration::ConfigurationEncoder::Write(config_path_string, config)) {
     FTL_LOG(ERROR) << "Unable to write to file " << config_path;
     return 1;
   }
