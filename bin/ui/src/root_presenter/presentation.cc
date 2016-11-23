@@ -252,7 +252,6 @@ void Presentation::UpdateScene() {
 
   if (layout_changed_) {
     auto root_node = mozart::Node::New();
-    root_node->combinator = mozart::Node::Combinator::PRUNE;
 
     if (content_view_info_) {
       auto content_node = mozart::Node::New();
