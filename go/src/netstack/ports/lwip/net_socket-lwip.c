@@ -337,6 +337,10 @@ int net_ioctl(int sockfd, int request, ...) {
 
 int net_close(int sockfd) { return lwip_close(sockfd); }
 
+int net_shutdown(int sockfd, int how) {
+  return lwip_shutdown(sockfd, how);
+}
+
 static int convert_gai_error(int lwip_error) {
   switch (lwip_error) {
     case LWIP_EAI_NONAME:

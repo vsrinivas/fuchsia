@@ -12,12 +12,13 @@
 
 #define NSOCKETS 64
 
-#define IO_SIGCONN_R (MXRIO_NUM_OPS + 0)
-#define IO_SIGCONN_W (MXRIO_NUM_OPS + 1)
-#define NUM_OPS (MXRIO_NUM_OPS + 2)
+#define IO_HALFCLOSE (MXRIO_NUM_OPS + 0)
+#define IO_SIGCONN_R (MXRIO_NUM_OPS + 1)
+#define IO_SIGCONN_W (MXRIO_NUM_OPS + 2)
+#define NUM_OPS (MXRIO_NUM_OPS + 3)
 
 #define IO_OPNAMES \
-  { "sigconn_r", "sigconn_w" }
+  { "halfclose", "sigconn_r", "sigconn_w" }
 
 const char* getopname(int op);
 

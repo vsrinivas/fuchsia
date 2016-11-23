@@ -30,9 +30,14 @@
 #include "apps/netstack/socket_functions.h"
 #include "apps/netstack/trace.h"
 
-void handle_close(iostate_t* ios, mx_signals_t signals) {
-  debug("handle_close\n");
+void handle_request_close(iostate_t* ios, mx_signals_t signals) {
+  debug("handle_request_close\n");
   handle_request(request_pack(MXRIO_CLOSE, 0, NULL, ios), EVENT_NONE, signals);
+}
+
+void handle_request_halfclose(iostate_t* ios, mx_signals_t signals) {
+  debug("handle_request_halfclose\n");
+  handle_request(request_pack(IO_HALFCLOSE, 0, NULL, ios), EVENT_NONE, signals);
 }
 
 static void schedule_sigconn_r(iostate_t* ios) {
@@ -302,7 +307,8 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
   msg->datalen = 0;
 
   fd_event_set(ios->sockfd, EVENT_EXCEPT);
-  socket_signals_set(ios, MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNALED);
+  socket_signals_set(ios, MX_SIGNAL_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED |
+                     MX_SIGNAL_SIGNALED);
 
   return NO_ERROR;
 }
@@ -322,6 +328,15 @@ mx_status_t do_close(mxrio_msg_t* msg, iostate_t* ios, int events,
     ios->sockfd = -1;
   }
   iostate_release(ios);
+  return NO_ERROR;
+}
+
+mx_status_t do_halfclose(mxrio_msg_t* msg, iostate_t* ios, int events,
+                         mx_signals_t signals) {
+  debug("do_halfclose\n");
+  int r = net_shutdown(ios->sockfd, SHUT_WR);
+  debug_net("net_shutdown => %d (errno=%d)\n", r, errno);
+  socket_signals_set(ios, MX_SIGNAL_PEER_CLOSED);
   return NO_ERROR;
 }
 
@@ -449,7 +464,8 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
   msg->datalen = 0;
 
   fd_event_set(ios_new->sockfd, EVENT_EXCEPT);
-  socket_signals_set(ios_new, MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNALED);
+  socket_signals_set(ios_new, MX_SIGNAL_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED |
+                     MX_SIGNAL_SIGNALED);
 
   schedule_rw(ios_new);
   return NO_ERROR;
@@ -556,13 +572,14 @@ mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
     if (r == ERR_SHOULD_WAIT) {
       if (signals & MX_SIGNAL_PEER_CLOSED) {
         debug_socket("do_write: handle_close (socket is closed)\n");
-        handle_close(ios, signals);
+        handle_request_close(ios, signals);
         return NO_ERROR;
       }
-      socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
+      socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED |
+                         MXSIO_SIGNAL_HALFCLOSED);
       return PENDING_SOCKET;
     } else if (r == ERR_REMOTE_CLOSED) {
-      handle_close(ios, signals);
+      handle_request_close(ios, signals);
       return NO_ERROR;
     } else if (r < 0) {
       error("do_write: mx_socket_read failed (%d)\n", r);
@@ -598,7 +615,8 @@ mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
   ios->wlen = 0;
   ios->woff = 0;
 
-  socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
+  socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED |
+                     MXSIO_SIGNAL_HALFCLOSED);
   return PENDING_SOCKET;
 }
 
@@ -755,6 +773,7 @@ static do_func_t do_funcs[] = {
         [MXRIO_WRITE] = do_write,
         [MXRIO_READ] = do_read,
         [MXRIO_CLOSE] = do_close,
+        [IO_HALFCLOSE] = do_halfclose,
         [IO_SIGCONN_R] = do_sigconn_r,
         [IO_SIGCONN_W] = do_sigconn_w,
 };
@@ -831,6 +850,7 @@ void handle_request(request_t* rq, int events, mx_signals_t signals) {
       case MXRIO_READ:
       case MXRIO_WRITE:
       case MXRIO_CLOSE:
+      case IO_HALFCLOSE:
       case IO_SIGCONN_R:
       case IO_SIGCONN_W:
         // Don't call send_status()

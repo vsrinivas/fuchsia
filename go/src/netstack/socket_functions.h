@@ -10,7 +10,8 @@
 #include "apps/netstack/iostate.h"
 #include "apps/netstack/request_queue.h"
 
-void handle_close(iostate_t* ios, mx_signals_t signals);
+void handle_request_close(iostate_t* ios, mx_signals_t signals);
+void handle_request_halfclose(iostate_t* ios, mx_signals_t signals);
 void put_rwbuf(rwbuf_t* bufp);
 void handle_request(request_t* rq, int events, mx_signals_t signals);
 

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <mxio/remoteio.h>
+#include <mxio/socket.h>
 
 #include <magenta/syscalls.h>
 
@@ -102,12 +103,13 @@ mx_status_t handle_watcher_schedule_request(void) {
     }
     iostate_t* ios = (iostate_t*)results[i].cookie;
     mx_signals_t satisfied = results[i].observed;
-    debug_socket("watcher: [%d] sockfd=%d, satisfied=0x%x (%s%s%s%s)\n", i,
+    debug_socket("watcher: [%d] sockfd=%d, satisfied=0x%x (%s%s%s%s%s)\n", i,
                  ios->sockfd, satisfied,
                  (satisfied & MX_SIGNAL_READABLE) ? "R" : "",
                  (satisfied & MX_SIGNAL_WRITABLE) ? "W" : "",
                  (satisfied & MX_SIGNAL_PEER_CLOSED) ? "C" : "",
-                 (satisfied & MX_SIGNAL_SIGNALED) ? "S" : "");
+                 (satisfied & MX_SIGNAL_SIGNALED) ? "S" : "",
+                 (satisfied & MXSIO_SIGNAL_HALFCLOSED) ? "H" : "");
 
     mx_signals_t watching_signals = ios->watching_signals;
     // socket_signals_clear will change ios->watching_signals
@@ -116,7 +118,11 @@ mx_status_t handle_watcher_schedule_request(void) {
     if ((satisfied & MX_SIGNAL_PEER_CLOSED) &&
         !(satisfied & MX_SIGNAL_READABLE)) {
       // peer closed and no outstanding data to read
-      handle_close(ios, satisfied);
+      handle_request_close(ios, satisfied);
+    } else if ((satisfied & MXSIO_SIGNAL_HALFCLOSED) &&
+               !(satisfied & MX_SIGNAL_READABLE)) {
+      // peer half closed and no outstanding data to read
+      handle_request_halfclose(ios, satisfied);
     } else if (satisfied & watching_signals) {
       request_queue_t q;
       request_queue_init(&q);
@@ -205,8 +211,8 @@ static int handle_watcher_loop(void* arg) {
 
     // wait at most two handles
     debug("handle_watcher_loop: waiting\n");
-    uint32_t num_results = 2u;
-    mx_waitset_result_t results[2];
+    uint32_t num_results = NSOCKETS;
+    mx_waitset_result_t results[NSOCKETS];
     if ((r = mx_waitset_wait(s_waitset, MX_TIME_INFINITE, results, &num_results)) < 0) {
       return r;
     }
@@ -215,6 +221,10 @@ static int handle_watcher_loop(void* arg) {
     c = 0;
     for (int i = 0; i < (int)num_results; i++) {
       if (results[i].cookie != CTRL_COOKIE) {
+        if (results[i].observed == 0) { // should not happen
+          debug("handle_watcher_loop: no observed signals. skip\n");
+          continue;
+        }
         c = 1;
         break;
       }

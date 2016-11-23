@@ -20,6 +20,7 @@ int net_getpeername(int sockfd, struct sockaddr* addr, socklen_t* addrlen);
 int net_getsockname(int sockfd, struct sockaddr* addr, socklen_t* addrlen);
 int net_ioctl(int sockfd, int request, ...);
 int net_close(int sockfd);
+int net_shutdown(int sockfd, int how);
 int net_getaddrinfo(const char* node, const char* service,
                     const struct addrinfo* sys_hints,
                     struct addrinfo** sys_res_p);

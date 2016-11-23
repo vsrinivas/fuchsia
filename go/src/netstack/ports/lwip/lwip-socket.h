@@ -67,6 +67,7 @@ int lwip_getsockname(int sockfd, struct lwip_sockaddr* addr,
                      lwip_socklen_t* addrlen);
 int lwip_ioctl(int sockfd, int request, void* argp);
 int lwip_close(int sockfd);
+int lwip_shutdown(int sockfd, int how);
 
 int lwip_getaddrinfo(const char* node, const char* service,
                      const struct addrinfo* hints, struct addrinfo** res);
