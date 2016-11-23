@@ -26,9 +26,13 @@
 
 #include <stdint.h>
 
+#ifndef __Fuchsia__
+#ifndef _KERNEL
 #include <vector>
+#include <qrcodegen/bitbuffer.h>
 #include <qrcodegen/qrsegment.h>
-
+#endif
+#endif
 
 namespace qrcodegen {
 
@@ -170,6 +174,8 @@ public:
     };
 
 
+#ifndef __Fuchsia__
+#ifndef _KERNEL
     /*
      * Encode a QR Code symbol representing the given Unicode text string at the given error correction level.
      * As a conservative upper bound, this function is guaranteed to succeed for strings that have 738 or fewer Unicode
@@ -197,9 +203,8 @@ public:
      */
     Error encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
         int minVersion=1, int maxVersion=40, int mask=-1, bool boostEcl=true);  // All optional parameters
-
-
-
+#endif
+#endif
 
 
     /*---- Private helper methods for constructor: Drawing function modules ----*/
@@ -218,14 +223,14 @@ private:
 
     void setModule(int x, int y, bool yes) {
         if (yes) {
-            module_[y * kStride + (x >> 3)] |= (1 << (x & 7));
+            module_[y * kStride + (x >> 3)] |= static_cast<uint8_t>(1 << (x & 7));
         } else {
-            module_[y * kStride + (x >> 3)] &= ~(1 << (x & 7));
+            module_[y * kStride + (x >> 3)] &= static_cast<uint8_t>(~(1 << (x & 7)));
         }
     }
 
     void setFunction(int x, int y) {
-        isfunc_[y * kStride + (x >> 3)] |= (1 << (x & 7));
+        isfunc_[y * kStride + (x >> 3)] |= static_cast<uint8_t>(1 << (x & 7));
     }
 
 

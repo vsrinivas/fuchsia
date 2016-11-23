@@ -24,8 +24,6 @@
 
 #include <string.h>
 
-#include <cmath>
-#include <qrcodegen/bitbuffer.h>
 #include <qrcodegen/qrcode.h>
 
 namespace qrcodegen {
@@ -46,6 +44,9 @@ int eccFormatBits(QrCode::Ecc ecc) {
     default: return 1;
     }
 }
+
+#ifndef __Fuchsia__
+#ifndef _KERNEL
 
 Error QrCode::encodeText(const char *text, Ecc ecl) {
     std::vector<QrSegment> segs(QrSegment::makeSegments(text));
@@ -115,7 +116,8 @@ Error QrCode::encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
     // Create the QR Code symbol
     return draw(version, newEcl, bb.getBytes().data(), bb.getBytes().size(), mask);
 }
-
+#endif
+#endif
 
 QrCode::QrCode() : version(1), size(21), errorCorrectionLevel(Ecc::LOW) {
 }
@@ -251,11 +253,26 @@ Error QrCode::drawVersion() {
     return Error::None;
 }
 
+static int max(int a, int b) {
+    if (a > b) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+static int abs(int n) {
+    if (n < 0) {
+        return -n;
+    } else {
+        return n;
+    }
+}
 
 void QrCode::drawFinderPattern(int x, int y) {
     for (int i = -4; i <= 4; i++) {
         for (int j = -4; j <= 4; j++) {
-            int dist = std::max(std::abs(i), std::abs(j));  // Chebyshev/infinity norm
+            int dist = max(abs(i), abs(j));  // Chebyshev/infinity norm
             int xx = x + j, yy = y + i;
             if (0 <= xx && xx < size && 0 <= yy && yy < size)
                 setFunctionModule(xx, yy, dist != 2 && dist != 4);
@@ -267,7 +284,7 @@ void QrCode::drawFinderPattern(int x, int y) {
 void QrCode::drawAlignmentPattern(int x, int y) {
     for (int i = -2; i <= 2; i++) {
         for (int j = -2; j <= 2; j++)
-            setFunctionModule(x + j, y + i, std::max(std::abs(i), std::abs(j)) != 1);
+            setFunctionModule(x + j, y + i, max(abs(i), abs(j)) != 1);
     }
 }
 
