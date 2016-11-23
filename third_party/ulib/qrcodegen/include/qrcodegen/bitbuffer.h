@@ -42,7 +42,7 @@ private:
 
     std::vector<uint8_t> data;
     int bitLength;
-
+    bool valid;
 
 
     /*---- Constructor ----*/
@@ -52,6 +52,7 @@ public:
     BitBuffer();
 
 
+    bool isValid() { return valid; }
 
     /*---- Methods ----*/
 public:

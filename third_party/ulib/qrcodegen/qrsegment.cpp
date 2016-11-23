@@ -39,7 +39,7 @@ int QrSegment::Mode::numCharCountBits(int ver) const {
     if      ( 1 <= ver && ver <=  9)  return numBitsCharCount[0];
     else if (10 <= ver && ver <= 26)  return numBitsCharCount[1];
     else if (27 <= ver && ver <= 40)  return numBitsCharCount[2];
-    else  throw "Version number out of range";
+    else  return -1;
 }
 
 
@@ -62,8 +62,9 @@ QrSegment QrSegment::makeNumeric(const char *digits) {
     int charCount = 0;
     for (; *digits != '\0'; digits++, charCount++) {
         char c = *digits;
+        //TODO: Report error on bogus input?
         if (c < '0' || c > '9')
-            throw "String contains non-numeric characters";
+            continue;
         accumData = accumData * 10 + (c - '0');
         accumCount++;
         if (accumCount == 3) {
@@ -85,8 +86,9 @@ QrSegment QrSegment::makeAlphanumeric(const char *text) {
     int charCount = 0;
     for (; *text != '\0'; text++, charCount++) {
         char c = *text;
+        //TODO: Report error on bogus input?
         if (c < ' ' || c > 'Z')
-            throw "String contains unencodable characters in alphanumeric mode";
+            continue;
         accumData = accumData * 45 + ALPHANUMERIC_ENCODING_TABLE[c - ' '];
         accumCount++;
         if (accumCount == 2) {
@@ -124,18 +126,29 @@ QrSegment::QrSegment(const Mode &md, int numCh, const std::vector<uint8_t> &b, i
         numChars(numCh),
         data(b),
         bitLength(bitLen) {
-    if (numCh < 0 || bitLen < 0 || b.size() != static_cast<unsigned int>((bitLen + 7) / 8))
-        throw "Invalid value";
 }
 
 
+bool QrSegment::isValid() const {
+    if (numChars < 0 || bitLength < 0 ||
+        data.size() != static_cast<unsigned int>((bitLength + 7) / 8)) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 int QrSegment::getTotalBits(const std::vector<QrSegment> &segs, int version) {
     if (version < 1 || version > 40)
-        throw "Version number out of range";
+        return -1;
     int result = 0;
     for (size_t i = 0; i < segs.size(); i++) {
         const QrSegment &seg(segs.at(i));
+        if (!seg.isValid())
+            return -1;
         int ccbits = seg.mode.numCharCountBits(version);
+        if (ccbits < 0)
+            return ccbits;
         // Fail if segment length value doesn't fit in the length field's bit-width
         if (seg.numChars >= (1 << ccbits))
             return -1;

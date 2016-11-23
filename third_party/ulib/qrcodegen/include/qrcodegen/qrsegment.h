@@ -147,7 +147,6 @@ public:
     /* The length of this segment's encoded data, measured in bits. Satisfies ceil(bitLength / 8) = data.size(). */
     const int bitLength;
 
-
     /*---- Constructor ----*/
 public:
 
@@ -160,6 +159,7 @@ public:
     // Package-private helper function.
     static int getTotalBits(const std::vector<QrSegment> &segs, int version);
 
+    bool isValid() const;
 
     /*---- Private constant ----*/
 private:

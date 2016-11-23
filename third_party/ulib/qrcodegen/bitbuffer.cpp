@@ -31,7 +31,8 @@ namespace qrcodegen {
 
 BitBuffer::BitBuffer() :
     data(),
-    bitLength(0) {}
+    bitLength(0),
+    valid(true) {}
 
 
 int BitBuffer::getBitLength() const {
@@ -45,8 +46,10 @@ std::vector<uint8_t> BitBuffer::getBytes() const {
 
 
 void BitBuffer::appendBits(uint32_t val, int len) {
-    if (len < 0 || len > 32 || (len < 32 && (val >> len) != 0))
-        throw "Value out of range";
+    if (len < 0 || len > 32 || (len < 32 && (val >> len) != 0)) {
+        valid = false;
+        return;
+    }
     size_t newBitLen = bitLength + len;
     while (data.size() * 8 < newBitLen)
         data.push_back(0);

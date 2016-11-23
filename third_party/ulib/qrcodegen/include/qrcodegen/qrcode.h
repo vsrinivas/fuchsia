@@ -32,6 +32,50 @@
 
 namespace qrcodegen {
 
+enum Error {
+    None = 0,
+    Internal = 1,
+    InvalidArgs = 2,
+    OutOfSpace = 3,
+    BadData = 4,
+};
+
+/*
+ * Computes the Reed-Solomon error correction codewords for a sequence of data codewords
+ * at a given degree. Objects are immutable, and the state only depends on the degree.
+ * This class exists because the divisor polynomial does not need to be recalculated for every input.
+ */
+class ReedSolomonGenerator final {
+private:
+    static constexpr size_t kMaxDegree = 255;
+
+    // Coefficients of the divisor polynomial, stored from highest to lowest power, excluding the leading term which
+    // is always 1. For example the polynomial x^3 + 255x^2 + 8x + 93 is stored as the uint8 array {255, 8, 93}.
+    uint8_t coefficients_[kMaxDegree];
+    size_t degree_;
+
+public:
+    ReedSolomonGenerator() : degree_(0) {}
+
+    /*
+     * Initialize a Reed-Solomon ECC generator for the given degree. This could be implemented
+     * as a lookup table over all possible parameter values, instead of as an algorithm.
+     */
+    Error init(size_t degree);
+
+    /*
+     * Computes and returns the Reed-Solomon error correction codewords for the given sequence of data codewords.
+     * The returned object is always a new byte array. This method does not alter this object's state (because it is immutable).
+     */
+    Error getRemainder(const uint8_t* data, size_t len, uint8_t* result) const;
+
+
+private:
+    // Returns the product of the two given field elements modulo GF(2^8/0x11D). The arguments and result
+    // are unsigned 8-bit integers. This could be implemented as a lookup table of 256*256 entries of uint8.
+    static Error multiply(uint8_t x, uint8_t y, uint8_t& out);
+};
+
 class Codebits;
 
 /*
@@ -70,6 +114,8 @@ public:
     /* The error correction level used in this QR Code symbol. */
     Ecc errorCorrectionLevel;
 
+    ReedSolomonGenerator rsg;
+
     /* The mask pattern used in this QR Code symbol, in the range 0 to 7 (i.e. unsigned 3-bit integer).
      * Note that even if a constructor was called with automatic masking requested
      * (mask = -1), the resulting object will still have a mask value between 0 and 7. */
@@ -96,13 +142,13 @@ public:
      * and mask number. This is a cumbersome low-level constructor that should not be invoked directly by the user.
      * To go one level up, see the encodeSegments() function.
      */
-    void draw(int ver, Ecc ecl, const std::vector<uint8_t> &dataCodewords, int mask);
+    Error draw(int ver, Ecc ecl, const uint8_t* data, size_t len, int mask);
 
 
     /*
      * Change the mask pattern of the QrCode
      */
-    void changeMask(int mask);
+    Error changeMask(int mask);
 
 
 
@@ -130,7 +176,7 @@ public:
      * code points (not UTF-16 code units). The smallest possible QR Code version is automatically chosen for the output.
      * The ECC level of the result may be higher than the ecl argument if it can be done without increasing the version.
      */
-    void encodeText(const char *text, Ecc ecl);
+    Error encodeText(const char *text, Ecc ecl);
 
 
     /*
@@ -139,7 +185,7 @@ public:
      * bytes allowed is 2953. The smallest possible QR Code version is automatically chosen for the output.
      * The ECC level of the result may be higher than the ecl argument if it can be done without increasing the version.
      */
-    void encodeBinary(const std::vector<uint8_t> &data, Ecc ecl);
+    Error encodeBinary(const std::vector<uint8_t> &data, Ecc ecl);
 
 
     /*
@@ -149,7 +195,7 @@ public:
      * between modes (such as alphanumeric and binary) to encode text more efficiently.
      * This function is considered to be lower level than simply encoding text or binary data.
      */
-    void encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
+    Error encodeSegments(const std::vector<QrSegment> &segs, Ecc ecl,
         int minVersion=1, int maxVersion=40, int mask=-1, bool boostEcl=true);  // All optional parameters
 
 
@@ -184,17 +230,17 @@ private:
 
 
 
-    void drawFunctionPatterns();
+    Error drawFunctionPatterns();
 
 
     // Draws two copies of the format bits (with its own error correction code)
     // based on the given mask and this object's error correction level field.
-    void drawFormatBits(int mask);
+    Error drawFormatBits(int mask);
 
 
     // Draws two copies of the version bits (with its own error correction code),
     // based on this object's version field (which only has an effect for 7 <= version <= 40).
-    void drawVersion();
+    Error drawVersion();
 
 
     // Draws a 9*9 finder pattern including the border separator, with the center module at (x, y).
@@ -214,25 +260,25 @@ private:
 private:
 
     // Computes the error correction codewords and then calls drawCodewords()
-    void drawDataWords(const std::vector<uint8_t> &data);
+    Error drawDataWords(const uint8_t* data, size_t len);
 
 
     // Draws the given sequence of 8-bit codewords (data and error correction) onto the entire
     // data area of this QR Code symbol. Function modules need to be marked off before this is called.
-    void drawCodewords(Codebits& codebits);
+    Error drawCodewords(Codebits& codebits);
 
 
     // XORs the data modules in this QR Code with the given mask pattern. Due to XOR's mathematical
     // properties, calling applyMask(m) twice with the same value is equivalent to no change at all.
     // This means it is possible to apply a mask, undo it, and try another mask. Note that a final
     // well-formed QR Code symbol needs exactly one mask applied (not zero, not two, etc.).
-    void applyMask(int mask);
+    Error applyMask(int mask);
 
 
     // A messy helper function for the constructors. This QR Code must be in an unmasked state when this
     // method is called. The given argument is the requested mask, which is -1 for auto or 0 to 7 for fixed.
     // This method applies and returns the actual mask chosen, from 0 to 7.
-    int handleConstructorMasking(int mask);
+    Error handleConstructorMasking(int mask);
 
 
     // Calculates and returns the penalty score based on state of this QR Code's current modules.
@@ -247,7 +293,8 @@ private:
     // Returns a set of positions of the alignment patterns in ascending order. These positions are
     // used on both the x and y axes. Each value in the resulting array is in the range [0, 177).
     // This stateless pure function could be implemented as table of 40 variable-length lists of unsigned bytes.
-    static std::vector<int> getAlignmentPatternPositions(int ver);
+    static constexpr size_t kMaxAlignMarks = 7;
+    static int getAlignmentPatternPositions(int ver, int out[kMaxAlignMarks]);
 
 
     // Returns the number of raw data modules (bits) available at the given version number.
@@ -325,52 +372,6 @@ private:
     size_t i_, j_;
     const size_t imax_, jmax_, shortblocks_, skip_;
     unsigned mask_, bits_;
-};
-
-/*
- * Computes the Reed-Solomon error correction codewords for a sequence of data codewords
- * at a given degree. Objects are immutable, and the state only depends on the degree.
- * This class exists because the divisor polynomial does not need to be recalculated for every input.
- */
-class ReedSolomonGenerator final {
-
-private:
-
-    static constexpr size_t kMaxDegree = 255;
-
-    // Coefficients of the divisor polynomial, stored from highest to lowest power, excluding the leading term which
-    // is always 1. For example the polynomial x^3 + 255x^2 + 8x + 93 is stored as the uint8 array {255, 8, 93}.
-    uint8_t coefficients_[kMaxDegree];
-    size_t degree_;
-
-    /*-- Constructor --*/
-public:
-
-    ReedSolomonGenerator() : degree_(0) {}
-
-    /*
-     * Initialize a Reed-Solomon ECC generator for the given degree. This could be implemented
-     * as a lookup table over all possible parameter values, instead of as an algorithm.
-     */
-    bool init(size_t degree);
-
-    /*-- Method --*/
-public:
-
-    /*
-     * Computes and returns the Reed-Solomon error correction codewords for the given sequence of data codewords.
-     * The returned object is always a new byte array. This method does not alter this object's state (because it is immutable).
-     */
-    void getRemainder(const uint8_t* data, size_t len, uint8_t* result) const;
-
-
-    /*-- Static function --*/
-private:
-
-    // Returns the product of the two given field elements modulo GF(2^8/0x11D). The arguments and result
-    // are unsigned 8-bit integers. This could be implemented as a lookup table of 256*256 entries of uint8.
-    static uint8_t multiply(uint8_t x, uint8_t y);
-
 };
 
 }
