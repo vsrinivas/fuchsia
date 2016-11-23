@@ -408,7 +408,7 @@ class SuggestionInteractionTest : public NextTest {
   SuggestionInteractionTest() : story_provider_binding_(&story_provider_) {
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
     story_provider_binding_.Bind(&story_provider_handle);
-    suggestion_engine()->SetStoryProvider(std::move(story_provider_handle));
+    suggestion_engine()->Initialize(std::move(story_provider_handle));
   }
 
  protected:

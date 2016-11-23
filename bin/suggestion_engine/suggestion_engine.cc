@@ -110,7 +110,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
     repo_.GetOrCreateSourceClient(url)->AddBinding(std::move(client));
   }
 
-  void SetStoryProvider(
+  void Initialize(
       fidl::InterfaceHandle<modular::StoryProvider> story_provider) override {
     story_provider_.Bind(std::move(story_provider));
   }

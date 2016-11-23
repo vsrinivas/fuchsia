@@ -11,8 +11,9 @@ import "apps/modular/services/user/story_provider.fidl";
 // Administrative interface for Suggestion Engine.
 [ServiceName="maxwell.suggestion.SuggestionEngine"]
 interface SuggestionEngine {
+  // Initializes the SuggestionEngine and provides dependencies.
+  Initialize(modular.StoryProvider story_provider);
+
   // Registers a component that produces suggestions.
   RegisterSuggestionAgent(string url, SuggestionAgentClient& client);
-  // Sets a story provider to be used to create and affect stories.
-  SetStoryProvider(modular.StoryProvider story_provider);
 };

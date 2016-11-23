@@ -42,7 +42,7 @@ class LauncherApp : public maxwell::Launcher {
   void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
                   fidl::InterfaceHandle<modular::FocusController>
                       focus_controller) override {
-    suggestion_engine_->SetStoryProvider(std::move(story_provider));
+    suggestion_engine_->Initialize(std::move(story_provider));
 
     focus_controller_.Bind(std::move(focus_controller));
 
