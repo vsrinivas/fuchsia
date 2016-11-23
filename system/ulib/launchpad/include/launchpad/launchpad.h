@@ -46,6 +46,10 @@ void launchpad_destroy(launchpad_t* lp);
 // and callers must not close it or transfer it away.
 mx_handle_t launchpad_get_process_handle(launchpad_t* lp);
 
+// Fetch the process's root VMAR handle.  The launchpad still owns this handle
+// and callers must not close it or transfer it away.
+mx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp);
+
 // Add one or more handles to be passed in the bootstrap message.
 // The launchpad takes ownership of the handles; they will be closed
 // by launchpad_destroy or transferred by launchpad_start.

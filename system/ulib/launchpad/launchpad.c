@@ -140,6 +140,10 @@ mx_handle_t launchpad_get_process_handle(launchpad_t* lp) {
     return lp_proc(lp);
 }
 
+mx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp) {
+    return lp_vmar(lp);
+}
+
 mx_status_t launchpad_arguments(launchpad_t* lp,
                                 int argc, const char* const* argv) {
     if (argc < 0)
@@ -571,24 +575,34 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t tochannel) {
     // This loop should be completely unrolled.  But using a switch here
     // gives us compiler warnings if we forget to handle any of the special
     // types listed in the enum.
-    mx_handle_t handles[HND_SPECIAL_COUNT + 1];
+    mx_handle_t handles[HND_SPECIAL_COUNT + 2];
     size_t nhandles = 0;
     for (enum special_handles i = 0; i <= HND_SPECIAL_COUNT; ++i) {
         uint32_t id = 0; // -Wall
         switch (i) {
         case HND_SPECIAL_COUNT:;
-            // Duplicate the process handle so we can send it in the
-            // loader message and still have it later.
+            // Duplicate the process and root vmar handle so we can send it in
+            // the loader message and still have them later.
             mx_handle_t proc;
+            mx_handle_t vmar;
             mx_status_t status = mx_handle_duplicate(lp_proc(lp),
                                                      MX_RIGHT_SAME_RIGHTS, &proc);
             if (status < 0) {
                 free(msg);
                 return status;
             }
+
+            status = mx_handle_duplicate(lp_vmar(lp), MX_RIGHT_SAME_RIGHTS, &vmar);
+            if (status < 0) {
+                mx_handle_close(proc);
+                free(msg);
+                return status;
+            }
             handles[nhandles] = proc;
             msg->handle_info[nhandles] = MX_HND_TYPE_PROC_SELF;
-            ++nhandles;
+            handles[nhandles + 1] = vmar;
+            msg->handle_info[nhandles + 1] = MX_HND_TYPE_VMAR_ROOT;
+            nhandles += 2;
             continue;
 
         case HND_LOADER_SVC:
@@ -614,9 +628,10 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t tochannel) {
             lp->special_handles[i] = MX_HANDLE_INVALID;
         lp->loader_message = false;
     } else {
-        // Close the process handle we duplicated.
+        // Close the process and vmar handles we duplicated.
         // The others remain live in the launchpad.
         mx_handle_close(handles[nhandles - 1]);
+        mx_handle_close(handles[nhandles - 2]);
     }
 
     free(msg);
@@ -691,9 +706,9 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         if (status < 0)
             return status;
         mx_vaddr_t stack_base;
-        status = mx_process_map_vm(
-            lp_proc(lp), stack_vmo, 0, lp->stack_size, &stack_base,
-            MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+        status = mx_vmar_map(lp_vmar(lp), 0, stack_vmo, 0, lp->stack_size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                              &stack_base);
         if (status == NO_ERROR) {
             DEBUG_ASSERT(lp->stack_size % PAGE_SIZE == 0);
             *sp = compute_initial_stack_pointer(stack_base, lp->stack_size);

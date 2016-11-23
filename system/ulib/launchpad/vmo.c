@@ -39,7 +39,7 @@ static ssize_t my_pread (int fd, void* buf, size_t nbytes, off_t offset) {
 #define MAX_WINDOW ((size_t)64 << 20)
 
 mx_handle_t launchpad_vmo_from_fd(int fd) {
-    mx_handle_t current_proc_handle = mx_process_self();
+    mx_handle_t current_vmar_handle = mx_vmar_root_self();
 
     struct stat st;
     if (fstat(fd, &st) < 0)
@@ -88,9 +88,9 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
             size_t chunk = size < MAX_WINDOW ? size : MAX_WINDOW;
             size_t window = (chunk + PAGE_SIZE - 1) & -PAGE_SIZE;
             uintptr_t start = 0;
-            mx_status_t status = mx_process_map_vm(
-                current_proc_handle, vmo, offset, window, &start,
-                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+            mx_status_t status = mx_vmar_map(
+                current_vmar_handle, 0, vmo, offset, window,
+                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &start);
             if (status < 0) {
                 mx_handle_close(vmo);
                 return status;
@@ -99,12 +99,12 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
             while (chunk > 0) {
                 ssize_t nread = my_pread(fd, buffer, chunk, offset);
                 if (nread < 0) {
-                    mx_process_unmap_vm(current_proc_handle, start, 0);
+                    mx_vmar_unmap(current_vmar_handle, start, window);
                     mx_handle_close(vmo);
                     return ERR_IO;
                 }
                 if (nread == 0) {
-                    mx_process_unmap_vm(current_proc_handle, start, 0);
+                    mx_vmar_unmap(current_vmar_handle, start, window);
                     mx_handle_close(vmo);
                     errno = ESPIPE;
                     return ERR_IO;
@@ -114,7 +114,7 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
                 size -= nread;
                 chunk -= nread;
             }
-            mx_process_unmap_vm(current_proc_handle, start, 0);
+            mx_vmar_unmap(current_vmar_handle, start, window);
         }
     }
 
