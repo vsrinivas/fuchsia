@@ -26,6 +26,9 @@ enum class Status {
   UNKNOWN_ERROR
 };
 
+ftl::StringView StatusToString(Status status);
+std::ostream& operator<<(std::ostream& os, Status status);
+
 }  // namespace cloud_provider
 
 #endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_PUBLIC_TYPES_H_

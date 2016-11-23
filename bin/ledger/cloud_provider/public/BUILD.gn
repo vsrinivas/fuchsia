@@ -10,6 +10,7 @@ source_set("public") {
     "commit_watcher.h",
     "record.cc",
     "record.h",
+    "types.cc",
     "types.h",
   ]
 

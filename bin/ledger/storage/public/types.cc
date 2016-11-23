@@ -15,4 +15,33 @@ bool operator!=(const Entry& lhs, const Entry& rhs) {
   return !(lhs == rhs);
 }
 
-}  // namespace
+ftl::StringView StatusToString(Status status) {
+  switch (status) {
+    case Status::OK:
+      return "OK";
+    case Status::IO_ERROR:
+      return "IO_ERROR";
+    case Status::NOT_FOUND:
+      return "NOT_FOUND";
+    case Status::NO_SUCH_CHILD:
+      return "NO_SUCH_CHILD";
+    case Status::FORMAT_ERROR:
+      return "FORMAT_ERROR";
+    case Status::ILLEGAL_STATE:
+      return "ILLEGAL_STATE";
+    case Status::INTERNAL_IO_ERROR:
+      return "INTERNAL_IO_ERROR";
+    case Status::OBJECT_ID_MISMATCH:
+      return "OBJECT_ID_MISMATCH";
+    case Status::NOT_CONNECTED_ERROR:
+      return "NOT_CONNECTED_ERROR";
+    case Status::NOT_IMPLEMENTED:
+      return "NOT_IMPLEMENTED";
+  }
+}
+
+std::ostream& operator<<(std::ostream& os, Status status) {
+  return os << StatusToString(status);
+}
+
+}  // namespace storage

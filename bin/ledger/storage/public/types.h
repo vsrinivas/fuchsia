@@ -5,9 +5,11 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_PUBLIC_TYPES_H_
 #define APPS_LEDGER_SRC_STORAGE_PUBLIC_TYPES_H_
 
+#include <ostream>
 #include <string>
 
 #include "apps/ledger/src/convert/convert.h"
+#include "lib/ftl/strings/string_view.h"
 
 namespace storage {
 
@@ -63,6 +65,9 @@ enum class Status {
   // Temporary status.
   NOT_IMPLEMENTED,
 };
+
+ftl::StringView StatusToString(Status status);
+std::ostream& operator<<(std::ostream& os, Status status);
 
 }  // namespace storage
 #endif  // APPS_LEDGER_SRC_STORAGE_PUBLIC_TYPES_H_
