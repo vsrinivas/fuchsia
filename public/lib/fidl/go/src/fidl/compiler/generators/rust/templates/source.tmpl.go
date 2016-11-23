@@ -12,25 +12,6 @@ const GenerateSourceFile = `
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
-use mojo::bindings::decoding;
-use mojo::bindings::decoding::{Decoder, ValidationError};
-use mojo::bindings::encoding;
-use mojo::bindings::encoding::{Context, DataHeaderValue, DATA_HEADER_SIZE, Encoder};
-use mojo::bindings::message;
-use mojo::bindings::message::MessageHeader;
-use mojo::bindings::mojom;
-use mojo::bindings::mojom::{MojomEncodable, MojomPointer, MojomStruct,
-                            MojomUnion, MojomMessage, MojomInterface,
-			    MojomInterfaceSend, MojomInterfaceRecv,
-			    MojomMessageOption, UNION_SIZE};
-
-use mojo::system;
-use mojo::system::{CastHandle, UntypedHandle};
-use mojo::system::channel;
-
-use std::collections::HashMap;
-use std::vec::Vec;
-
 // Top-level constants:
 {{range $const := .Constants -}}
 pub const {{$const.Name}}: {{$const.Type}} = {{$const.Value}};

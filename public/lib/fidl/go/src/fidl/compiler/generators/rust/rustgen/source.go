@@ -31,12 +31,15 @@ type FieldTemplate struct {
 	Name string
 	// The minimum version necessary for the container to have this field.
 	MinVersion uint32
+	Offset     uint32
+	IsUnion    bool
+	IsNullable bool
 }
 
 // Describes a struct version with a version and a size.
 type StructVersion struct {
-	Version  uint32
-	Size uint32
+	Version uint32
+	Size    uint32
 }
 type StructVersions []StructVersion
 
@@ -70,7 +73,7 @@ type UnionTemplate struct {
 type EnumValueTemplate struct {
 	// Generated Rust name of the enum name.
 	Name string
-	// Integer value of the enum; if the enum value was defined in the mojom IDL
+	// Integer value of the enum; if the enum value was defined in the fidl IDL
 	// as a reference, the value generated here will be the reduced int value.
 	Value int64
 }
@@ -83,12 +86,13 @@ type EnumTemplate struct {
 }
 
 type EndpointTemplate struct {
-	Name string
+	Name      string
 	Interface string
 }
 
 type InterfaceMessageTemplate struct {
-	Name string
+	Name    string
+	RawName string
 	// This is the ordinal name (denoted by '@x' in the IDL).
 	MessageOrdinal uint32
 	MinVersion     uint32
@@ -109,7 +113,7 @@ type InterfaceTemplate struct {
 }
 
 // The type, name and initial value of the constant.
-// Describes mojom constants declared top level, in structs, and in
+// Describes fidl constants declared top level, in structs, and in
 // interfaces.
 type ConstantTemplate struct {
 	Type  string
@@ -143,28 +147,34 @@ func (a StructVersions) Len() int           { return len(a) }
 func (a StructVersions) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a StructVersions) Less(i, j int) bool { return a[i].Version < a[j].Version }
 
-// The follow type allows us to sort fields in packing-order, which is defined
-// by the byte+bit-offsets already provided to us by the mojom parser.
-type MojomSortableStructFields []fidl_types.StructField
+type SortableOrdinals []uint32
 
-func (a MojomSortableStructFields) Len() int { return len(a) }
-func (a MojomSortableStructFields) Swap(i, j int) {
+func (a SortableOrdinals) Len() int           { return len(a) }
+func (a SortableOrdinals) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a SortableOrdinals) Less(i, j int) bool { return a[i] < a[j] }
+
+// The following type allows us to sort fields in packing-order, which is defined
+// by the byte+bit-offsets already provided to us by the fidl parser.
+type FidlSortableStructFields []fidl_types.StructField
+
+func (a FidlSortableStructFields) Len() int { return len(a) }
+func (a FidlSortableStructFields) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
-func (a MojomSortableStructFields) Less(i, j int) bool {
+func (a FidlSortableStructFields) Less(i, j int) bool {
 	if a[i].Offset == a[j].Offset {
 		return a[i].Bit < a[j].Bit
 	}
 	return a[i].Offset < a[j].Offset
 }
 
-func NewEnumTemplate(context *Context, mojomEnum *fidl_types.FidlEnum) EnumTemplate {
-	enumName := mojomToRustName(mojomEnum.DeclData, context)
+func NewEnumTemplate(context *Context, fidlEnum *fidl_types.FidlEnum) EnumTemplate {
+	enumName := fidlToRustName(fidlEnum.DeclData, context, ident)
 
 	var values []EnumValueTemplate
-	for _, enumVal := range mojomEnum.Values {
+	for _, enumVal := range fidlEnum.Values {
 		values = append(values, EnumValueTemplate{
-			Name:  *enumVal.DeclData.ShortName,
+			Name:  formatEnumValue(*enumVal.DeclData.ShortName),
 			Value: int64(enumVal.IntValue),
 		})
 	}
@@ -183,7 +193,7 @@ func NewEnumTemplate(context *Context, mojomEnum *fidl_types.FidlEnum) EnumTempl
 func resolveValue(context *Context, value fidl_types.Value) string {
 	switch value.(type) {
 	case *fidl_types.ValueLiteralValue:
-		return mojomToRustLiteral(value.Interface().(fidl_types.LiteralValue))
+		return fidlToRustLiteral(value.Interface().(fidl_types.LiteralValue))
 
 	case *fidl_types.ValueConstantReference:
 		const_key := value.Interface().(fidl_types.ConstantReference).ConstantKey
@@ -208,7 +218,7 @@ func resolveValue(context *Context, value fidl_types.Value) string {
 		}
 
 	case *fidl_types.ValueBuiltinValue:
-		return mojomToRustBuiltinValue(value.Interface().(fidl_types.BuiltinConstantValue))
+		return fidlToRustBuiltinValue(value.Interface().(fidl_types.BuiltinConstantValue))
 
 	default:
 		log.Fatal("Shouldn't be here. Unknown value type for:", value)
@@ -217,23 +227,19 @@ func resolveValue(context *Context, value fidl_types.Value) string {
 	return ""
 }
 
-func NewConstantTemplate(context *Context, mojomConstant fidl_types.DeclaredConstant) ConstantTemplate {
+func NewConstantTemplate(context *Context, fidlConstant fidl_types.DeclaredConstant) ConstantTemplate {
 	var type_text string
-	switch mojomConstant.Type.(type) {
+	switch fidlConstant.Type.(type) {
 	// We can't type string constants as a 'String' since it
 	// involves some setup and prevents immediate consumption.
 	// &'static str should suffice.
 	case *fidl_types.TypeStringType:
 		type_text = "&'static str"
 	default:
-		type_text = mojomToRustType(mojomConstant.Type, context)
+		type_text = fidlToRustType(fidlConstant.Type, context)
 	}
-	// Rust constants are always uppercase
-	name := strings.ToUpper(mojomToRustName(&mojomConstant.DeclData, context))
-	if isReservedKeyword(name) {
-		log.Fatalf("Generated constant name '%s' is a reserved Rust keyword", name)
-	}
-	val := resolveValue(context, mojomConstant.Value)
+	name := fidlToRustName(&fidlConstant.DeclData, context, formatConstName)
+	val := resolveValue(context, fidlConstant.Value)
 	return ConstantTemplate{
 		Type:  type_text,
 		Name:  name,
@@ -241,26 +247,29 @@ func NewConstantTemplate(context *Context, mojomConstant fidl_types.DeclaredCons
 	}
 }
 
-func NewUnionTemplate(context *Context, mojomUnion *fidl_types.FidlUnion) UnionTemplate {
-	union_name := mojomToRustName(mojomUnion.DeclData, context)
+func NewUnionTemplate(context *Context, fidlUnion *fidl_types.FidlUnion) UnionTemplate {
+	union_name := fidlToRustName(fidlUnion.DeclData, context, ident)
 
 	// Get all variant names and mangle them as needed if they're keywords.
 	names := make(Names)
-	for _, mojomField := range mojomUnion.Fields {
-		field_name := *mojomField.DeclData.ShortName
+	for _, fidlField := range fidlUnion.Fields {
+		field_name := *fidlField.DeclData.ShortName
 		names[field_name] = field_name
 	}
-	names.MangleKeywords()
 
 	var fields []FieldTemplate
 	var tag_enums []EnumValueTemplate
-	for field_i, mojomField := range mojomUnion.Fields {
-		field_name := *mojomField.DeclData.ShortName
-		field_name = names[field_name]
-		field_type_text := mojomToRustType(mojomField.Type, context)
+	for field_i, fidlField := range fidlUnion.Fields {
+		field_name := *fidlField.DeclData.ShortName
+		field_name = formatEnumValue(mangleReservedKeyword(field_name))
+		field_type_text := fidlToRustType(fidlField.Type, context)
+		is_union := fidlTypeIsUnion(fidlField.Type, context)
 		fields = append(fields, FieldTemplate{
-			Type: field_type_text,
-			Name: field_name,
+			Type:       field_type_text,
+			Name:       field_name,
+			Offset:     0,
+			IsUnion:    is_union,
+			IsNullable: strings.HasPrefix(field_type_text, "Option<"),
 		})
 		tag_enums = append(tag_enums, EnumValueTemplate{
 			Name:  field_name,
@@ -272,7 +281,7 @@ func NewUnionTemplate(context *Context, mojomUnion *fidl_types.FidlUnion) UnionT
 		Name:   union_name,
 		Fields: fields,
 		TagsEnum: EnumTemplate{
-			Name:   union_name + "Tag",
+			Name:   union_name + "_Tag",
 			Values: tag_enums,
 			Signed: false,
 		},
@@ -282,59 +291,70 @@ func NewUnionTemplate(context *Context, mojomUnion *fidl_types.FidlUnion) UnionT
 func generateContainedDeclarations(context *Context,
 	decls *fidl_types.ContainedDeclarations) (constants []ConstantTemplate, enums []EnumTemplate) {
 	if decls.Constants != nil {
-		for _, mojomConstKey := range *decls.Constants {
+		for _, fidlConstKey := range *decls.Constants {
 			constants = append(constants,
-				NewConstantTemplate(context, context.FileGraph.ResolvedConstants[mojomConstKey]))
+				NewConstantTemplate(context, context.FileGraph.ResolvedConstants[fidlConstKey]))
 		}
 	}
 
 	if decls.Enums != nil {
-		for _, mojomEnumKey := range *decls.Enums {
-			mojom_enum := context.FileGraph.ResolvedTypes[mojomEnumKey].Interface().(fidl_types.FidlEnum)
-			enums = append(enums, NewEnumTemplate(context, &mojom_enum))
+		for _, fidlEnumKey := range *decls.Enums {
+			fidl_enum := context.FileGraph.ResolvedTypes[fidlEnumKey].Interface().(fidl_types.FidlEnum)
+			enums = append(enums, NewEnumTemplate(context, &fidl_enum))
 		}
 	}
 	return
 }
 
-func NewInterfaceTemplate(context *Context, mojomInterface *fidl_types.FidlInterface) InterfaceTemplate {
-	interface_name := mojomToRustName(mojomInterface.DeclData, context)
+func NewInterfaceTemplate(context *Context, fidlInterface *fidl_types.FidlInterface) InterfaceTemplate {
+	interface_name := fidlToRustName(fidlInterface.DeclData, context, ident)
 	var service_name string
-	if mojomInterface.ServiceName != nil {
-		service_name = *mojomInterface.ServiceName
+	if fidlInterface.ServiceName != nil {
+		service_name = *fidlInterface.ServiceName
 	}
 	client := EndpointTemplate{
-		Name: interface_name + "Client",
+		Name:      interface_name + "_Client",
 		Interface: interface_name,
 	}
 	server := EndpointTemplate{
-		Name: interface_name + "Server",
+		Name:      interface_name + "_Server",
 		Interface: interface_name,
 	}
 
 	// Generate templates for the containing constants and enums
 	var constants []ConstantTemplate
 	var enums []EnumTemplate
-	if decls := mojomInterface.DeclData.ContainedDeclarations; decls != nil {
+	if decls := fidlInterface.DeclData.ContainedDeclarations; decls != nil {
 		constants, enums = generateContainedDeclarations(context, decls)
 	}
 
 	var msgs []InterfaceMessageTemplate
-	for _, mojomMethod := range mojomInterface.Methods {
-		msg_name := assertNotReservedKeyword(interface_name + *mojomMethod.DeclData.ShortName)
-		req_struct := NewStructTemplate(context, &mojomMethod.Parameters)
-		req_struct.Name = interface_name + req_struct.Name
+	ordinals := make([]uint32, len(fidlInterface.Methods))
+	i := 0
+	for k := range fidlInterface.Methods {
+		ordinals[i] = k
+		i++
+	}
+	sort.Sort(SortableOrdinals(ordinals))
+	for _, ordinal := range ordinals {
+		fidlMethod := fidlInterface.Methods[ordinal]
+		raw_name := formatMethodName(*fidlMethod.DeclData.ShortName)
+		msg_name := mangleReservedKeyword(raw_name)
+
+		req_struct := NewStructTemplate(context, &fidlMethod.Parameters)
+		req_struct.Name = interface_name + "_" + req_struct.Name
 
 		var resp_struct StructTemplate
-		if mojomMethod.ResponseParams != nil {
-			resp_struct = NewStructTemplate(context, mojomMethod.ResponseParams)
-			resp_struct.Name = interface_name + resp_struct.Name
+		if fidlMethod.ResponseParams != nil {
+			resp_struct = NewStructTemplate(context, fidlMethod.ResponseParams)
+			resp_struct.Name = interface_name + "_" + resp_struct.Name
 		}
 
 		msgs = append(msgs, InterfaceMessageTemplate{
 			Name:           msg_name,
-			MessageOrdinal: mojomMethod.Ordinal,
-			MinVersion:     mojomMethod.MinVersion,
+			RawName:        raw_name,
+			MessageOrdinal: fidlMethod.Ordinal,
+			MinVersion:     fidlMethod.MinVersion,
 			RequestStruct:  req_struct,
 			ResponseStruct: resp_struct,
 		})
@@ -342,9 +362,9 @@ func NewInterfaceTemplate(context *Context, mojomInterface *fidl_types.FidlInter
 	return InterfaceTemplate{
 		Name:        interface_name,
 		ServiceName: service_name,
-		Client:	     client,
+		Client:      client,
 		Server:      server,
-		Version:     mojomInterface.CurrentVersion,
+		Version:     fidlInterface.CurrentVersion,
 		Enums:       enums,
 		Constants:   constants,
 		Messages:    msgs,
@@ -355,40 +375,35 @@ func NewInterfaceTemplate(context *Context, mojomInterface *fidl_types.FidlInter
 // functions, be a method for InterfaceTemplate so that we don't have to pass
 // around |fileGraph| all over the place.
 func NewStructTemplate(context *Context,
-	mojomStruct *fidl_types.FidlStruct) StructTemplate {
-
-	// Sort fields by packing order (by offset,bit).
-	sortedFields := mojomStruct.Fields
-	sort.Sort(MojomSortableStructFields(sortedFields))
-
-	// Get all field names and mangle them appropriately
-	names := make(Names)
-	for _, mojomField := range sortedFields {
-		field_name := *mojomField.DeclData.ShortName
-		names[field_name] = field_name
-	}
-	names.MangleKeywords()
+	fidlStruct *fidl_types.FidlStruct) StructTemplate {
 
 	// Generate the printable fields.
 	var fields []FieldTemplate
-	for _, mojomField := range sortedFields {
-		field_name := *mojomField.DeclData.ShortName
-		field_name = names[field_name]
-		field_type_text := mojomToRustType(mojomField.Type, context)
+	for _, fidlField := range fidlStruct.Fields {
+		field_name := *fidlField.DeclData.ShortName
+		field_name = mangleReservedKeyword(field_name)
+		field_type_text := fidlToRustType(fidlField.Type, context)
+		offset := fidlField.Offset
+		if fidlTypeIsBool(fidlField.Type) {
+			offset = offset*8 + uint32(fidlField.Bit)
+		}
+		is_union := fidlTypeIsUnion(fidlField.Type, context)
 		fields = append(fields, FieldTemplate{
-			Type: field_type_text,
-			Name: field_name,
-			MinVersion: mojomField.MinVersion,
+			Type:       field_type_text,
+			Name:       field_name,
+			Offset:     offset,
+			IsUnion:    is_union,
+			MinVersion: fidlField.MinVersion,
 		})
 	}
 	var size uint32
 	var version uint32
 	var versions StructVersions
-	if mojomStruct.VersionInfo != nil {
-		for _, structVersion := range *mojomStruct.VersionInfo {
+	if fidlStruct.VersionInfo != nil {
+		for _, structVersion := range *fidlStruct.VersionInfo {
 			versions = append(versions, StructVersion{
-				Version:  structVersion.VersionNumber,
-				Size: structVersion.NumBytes,
+				Version: structVersion.VersionNumber,
+				Size:    structVersion.NumBytes,
 			})
 		}
 		// Sort by verion number in increasing order.
@@ -401,25 +416,28 @@ func NewStructTemplate(context *Context,
 	}
 	// If for some reason version information isn't available, try to
 	// compute the size of the struct anyway.
-	if size == 0 && len(sortedFields) > 0 {
+	if size == 0 && len(fidlStruct.Fields) > 0 {
+		// Sort fields by packing order (by offset,bit).
+		sortedFields := fidlStruct.Fields
+		sort.Sort(FidlSortableStructFields(sortedFields))
 		final_field := sortedFields[len(sortedFields)-1]
 		size = final_field.Offset
 		if final_field.Bit > 0 {
 			size += 1
 		} else {
-			size += mojomTypeSize(final_field.Type, context)
+			size += fidlTypeSize(final_field.Type, context)
 		}
-		size = mojomAlignToBytes(size, 8)
+		size = fidlAlignToBytes(size, 8)
 	}
 
 	// Generate templates for the containing constants and enums
 	var constants []ConstantTemplate
 	var enums []EnumTemplate
-	if decls := mojomStruct.DeclData.ContainedDeclarations; decls != nil {
+	if decls := fidlStruct.DeclData.ContainedDeclarations; decls != nil {
 		constants, enums = generateContainedDeclarations(context, decls)
 	}
 
-	name := mojomToRustName(mojomStruct.DeclData, context)
+	name := fidlToRustName(fidlStruct.DeclData, context, ident)
 	return StructTemplate{
 		Name:      name,
 		Size:      size,
@@ -434,50 +452,49 @@ func NewStructTemplate(context *Context,
 func NewSourceTemplate(context *Context, srcRootPath string) SourceTemplate {
 	var constants []ConstantTemplate
 	if context.File.DeclaredFidlObjects.TopLevelConstants != nil {
-		for _, mojomConstKey := range *(context.File.DeclaredFidlObjects.TopLevelConstants) {
-			mojomConst := context.FileGraph.ResolvedConstants[mojomConstKey]
-			constants = append(constants, NewConstantTemplate(context, mojomConst))
+		for _, fidlConstKey := range *(context.File.DeclaredFidlObjects.TopLevelConstants) {
+			fidlConst := context.FileGraph.ResolvedConstants[fidlConstKey]
+			constants = append(constants, NewConstantTemplate(context, fidlConst))
 		}
 	}
 
 	var enums []EnumTemplate
 	if context.File.DeclaredFidlObjects.TopLevelEnums != nil {
-		for _, mojomEnumKey := range *(context.File.DeclaredFidlObjects.TopLevelEnums) {
-			mojomEnum := context.FileGraph.ResolvedTypes[mojomEnumKey].Interface().(fidl_types.FidlEnum)
-			enums = append(enums, NewEnumTemplate(context, &mojomEnum))
+		for _, fidlEnumKey := range *(context.File.DeclaredFidlObjects.TopLevelEnums) {
+			fidlEnum := context.FileGraph.ResolvedTypes[fidlEnumKey].Interface().(fidl_types.FidlEnum)
+			enums = append(enums, NewEnumTemplate(context, &fidlEnum))
 		}
 	}
 
 	var unions []UnionTemplate
 	if context.File.DeclaredFidlObjects.Unions != nil {
-		for _, mojomUnionKey := range *(context.File.DeclaredFidlObjects.Unions) {
-			mojomUnion := context.FileGraph.ResolvedTypes[mojomUnionKey].Interface().(fidl_types.FidlUnion)
-			unions = append(unions, NewUnionTemplate(context, &mojomUnion))
+		for _, fidlUnionKey := range *(context.File.DeclaredFidlObjects.Unions) {
+			fidlUnion := context.FileGraph.ResolvedTypes[fidlUnionKey].Interface().(fidl_types.FidlUnion)
+			unions = append(unions, NewUnionTemplate(context, &fidlUnion))
 		}
 	}
 
 	var structs []StructTemplate
 	if context.File.DeclaredFidlObjects.Structs != nil {
-		for _, mojomStructKey := range *(context.File.DeclaredFidlObjects.Structs) {
-			mojomStruct := context.FileGraph.ResolvedTypes[mojomStructKey].Interface().(fidl_types.FidlStruct)
-			structs = append(structs, NewStructTemplate(context, &mojomStruct))
+		for _, fidlStructKey := range *(context.File.DeclaredFidlObjects.Structs) {
+			fidlStruct := context.FileGraph.ResolvedTypes[fidlStructKey].Interface().(fidl_types.FidlStruct)
+			structs = append(structs, NewStructTemplate(context, &fidlStruct))
 		}
 	}
 
 	var interfaces []InterfaceTemplate
 	if context.File.DeclaredFidlObjects.Interfaces != nil {
-		for _, mojomIfaceKey := range *(context.File.DeclaredFidlObjects.Interfaces) {
-			mojomIface := context.FileGraph.ResolvedTypes[mojomIfaceKey].Interface().(fidl_types.FidlInterface)
-			interfaces = append(interfaces, NewInterfaceTemplate(context, &mojomIface))
+		for _, fidlIfaceKey := range *(context.File.DeclaredFidlObjects.Interfaces) {
+			fidlIface := context.FileGraph.ResolvedTypes[fidlIfaceKey].Interface().(fidl_types.FidlInterface)
+			interfaces = append(interfaces, NewInterfaceTemplate(context, &fidlIface))
 		}
 	}
 
 	return SourceTemplate{
-		Constants:   constants,
-		Structs:     structs,
-		Unions:      unions,
-		Enums:       enums,
-		Interfaces:  interfaces,
+		Constants:  constants,
+		Structs:    structs,
+		Unions:     unions,
+		Enums:      enums,
+		Interfaces: interfaces,
 	}
 }
-
