@@ -58,15 +58,39 @@ mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
     return magenta_sleep(nanoseconds);
 }
 
+static int64_t utc_offset;
+
 uint64_t sys_time_get(uint32_t clock_id) {
     switch (clock_id) {
     case MX_CLOCK_MONOTONIC:
         return current_time_hires();
+    case MX_CLOCK_UTC:
+        return current_time_hires() + utc_offset;
     default:
         //TODO: figure out the best option here
         return 0u;
     }
 }
+
+mx_status_t sys_clock_adjust(mx_handle_t hrsrc, uint32_t clock_id, int64_t offset) {
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
+
+    switch (clock_id) {
+    case MX_CLOCK_MONOTONIC:
+        return ERR_ACCESS_DENIED;
+    case MX_CLOCK_UTC:
+        //TODO: not atomic on ARM32
+        utc_offset = offset;
+        return NO_ERROR;
+    default:
+        return ERR_INVALID_ARGS;
+    }
+}
+
 
 mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> out) {
     LTRACEF("options 0x%x\n", options);

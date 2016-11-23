@@ -288,6 +288,10 @@ syscall set_framebuffer
         width: uint32_t, height: uint32_t, stride: uint32_t)
     returns (mx_status_t);
 
+syscall clock_adjust
+    (handle: mx_handle_t, clock_id: uint32_t, offset: int64_t)
+    returns (mx_status_t);
+
 # temporary pci syscalls
 # TODO: remove when the pci driver moves to user space
 

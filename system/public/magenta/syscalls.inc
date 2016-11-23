@@ -265,6 +265,8 @@ MAGENTA_SYSCALL_DEF(4, 4, 190, mx_status_t, bootloader_fb_get_info, uint32_t* fo
 MAGENTA_SYSCALL_DEF(7, 7, 191, mx_status_t, set_framebuffer, mx_handle_t handle,
                     void* vaddr, uint32_t len, uint32_t format,
                     uint32_t width, uint32_t height, uint32_t stride)
+MAGENTA_SYSCALL_DEF(4, 4, 192, mx_status_t, clock_adjust, mx_handle_t handle,
+                    uint32_t clock_id, int64_t offset);
 
 // DDK Syscalls: PCI
 MAGENTA_SYSCALL_DEF(3, 3, 200, mx_handle_t, pci_get_nth_device, mx_handle_t handle,
