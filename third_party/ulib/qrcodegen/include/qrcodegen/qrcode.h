@@ -269,23 +269,25 @@ private:
  */
 class ReedSolomonGenerator final {
 
-    /*-- Immutable field --*/
 private:
+
+    static constexpr size_t kMaxDegree = 255;
 
     // Coefficients of the divisor polynomial, stored from highest to lowest power, excluding the leading term which
     // is always 1. For example the polynomial x^3 + 255x^2 + 8x + 93 is stored as the uint8 array {255, 8, 93}.
-    std::vector<uint8_t> coefficients;
-
+    uint8_t coefficients_[kMaxDegree];
+    size_t degree_;
 
     /*-- Constructor --*/
 public:
 
+    ReedSolomonGenerator() : degree_(0) {}
+
     /*
-     * Creates a Reed-Solomon ECC generator for the given degree. This could be implemented
+     * Initialize a Reed-Solomon ECC generator for the given degree. This could be implemented
      * as a lookup table over all possible parameter values, instead of as an algorithm.
      */
-    ReedSolomonGenerator(int degree);
-
+    bool init(size_t degree);
 
     /*-- Method --*/
 public:
@@ -294,7 +296,7 @@ public:
      * Computes and returns the Reed-Solomon error correction codewords for the given sequence of data codewords.
      * The returned object is always a new byte array. This method does not alter this object's state (because it is immutable).
      */
-    std::vector<uint8_t> getRemainder(const std::vector<uint8_t> &data) const;
+    void getRemainder(const uint8_t* data, size_t len, uint8_t* result) const;
 
 
     /*-- Static function --*/

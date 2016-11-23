@@ -22,6 +22,7 @@
  *   Software.
  */
 
+#include <string.h>
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -311,28 +312,40 @@ std::vector<uint8_t> QrCode::appendErrorCorrection(const std::vector<uint8_t> &d
     int blockEccLen = totalEcc / numBlocks;
     int numShortBlocks = numBlocks - getNumRawDataModules(version) / 8 % numBlocks;
     int shortBlockLen = getNumRawDataModules(version) / 8 / numBlocks;
+    int fullBlockLen = shortBlockLen + 1;
 
     // Split data into blocks and append ECC to each block
-    std::vector<std::vector<uint8_t>> blocks;
-    const ReedSolomonGenerator rs(blockEccLen);
+    ReedSolomonGenerator rs;
+    if (!rs.init(blockEccLen))
+        throw "RSG init failure";
+
+    const uint8_t* indata = data.data();
+
+    uint8_t outdata[fullBlockLen * numBlocks];
+    uint8_t* outptr = outdata;
+
     for (int i = 0, k = 0; i < numBlocks; i++) {
-        std::vector<uint8_t> dat;
-        dat.insert(dat.begin(), data.begin() + k, data.begin() + (k + shortBlockLen - blockEccLen + (i < numShortBlocks ? 0 : 1)));
-        k += dat.size();
-        const std::vector<uint8_t> ecc(rs.getRemainder(dat));
+        int blocklen = shortBlockLen - blockEccLen + (i < numShortBlocks ? 0 : 1);
+
+        memcpy(outptr, indata + k, blocklen);
+        outptr += blocklen;
+
         if (i < numShortBlocks)
-            dat.push_back(0);
-        dat.insert(dat.end(), ecc.begin(), ecc.end());
-        blocks.push_back(dat);
+            *outptr++ = 0;
+
+        rs.getRemainder(indata + k, blocklen, outptr);
+        outptr += blockEccLen;
+
+        k += blocklen;
     }
 
     // Interleave (not concatenate) the bytes from every block into a single sequence
     std::vector<uint8_t> result;
-    for (int i = 0; static_cast<unsigned int>(i) < blocks.at(0).size(); i++) {
-        for (int j = 0; static_cast<unsigned int>(j) < blocks.size(); j++) {
+    for (int i = 0; i < fullBlockLen; i++) {
+        for (int j = 0; j < numBlocks; j++) {
             // Skip the padding byte in short blocks
-            if (i != shortBlockLen - blockEccLen || j >= numShortBlocks)
-                result.push_back(blocks.at(j).at(i));
+            if (i != (shortBlockLen - blockEccLen) || j >= numShortBlocks)
+                result.push_back(outdata[j * fullBlockLen + i]);
         }
     }
     if (result.size() != static_cast<unsigned int>(getNumRawDataModules(version) / 8))
@@ -565,42 +578,42 @@ const int8_t QrCode::NUM_ERROR_CORRECTION_BLOCKS[4][41] = {
 };
 
 
-ReedSolomonGenerator::ReedSolomonGenerator(int degree) :
-        coefficients() {
-    if (degree < 1 || degree > 255)
-        throw "Degree out of range";
+bool ReedSolomonGenerator::init(size_t degree) {
+    if (degree < 1 || degree > kMaxDegree)
+        return false;
+
+    degree_ = degree;
 
     // Start with the monomial x^0
-    coefficients.resize(degree);
-    coefficients.at(degree - 1) = 1;
+    memset(coefficients_, 0, degree - 1);
+    coefficients_[degree - 1] = 1;
 
     // Compute the product polynomial (x - r^0) * (x - r^1) * (x - r^2) * ... * (x - r^{degree-1}),
     // drop the highest term, and store the rest of the coefficients in order of descending powers.
     // Note that r = 0x02, which is a generator element of this field GF(2^8/0x11D).
     int root = 1;
-    for (int i = 0; i < degree; i++) {
+    for (size_t i = 0; i < degree; i++) {
         // Multiply the current product by (x - r^i)
-        for (size_t j = 0; j < coefficients.size(); j++) {
-            coefficients.at(j) = multiply(coefficients.at(j), static_cast<uint8_t>(root));
-            if (j + 1 < coefficients.size())
-                coefficients.at(j) ^= coefficients.at(j + 1);
+        for (size_t j = 0; j < degree; j++) {
+            coefficients_[j] = multiply(coefficients_[j], static_cast<uint8_t>(root));
+            if (j + 1 < degree)
+                coefficients_[j] ^= coefficients_[j + 1];
         }
         root = (root << 1) ^ ((root >> 7) * 0x11D);  // Multiply by 0x02 mod GF(2^8/0x11D)
     }
+    return true;
 }
 
-
-std::vector<uint8_t> ReedSolomonGenerator::getRemainder(const std::vector<uint8_t> &data) const {
+void ReedSolomonGenerator::getRemainder(const uint8_t* data, size_t len, uint8_t* result) const {
     // Compute the remainder by performing polynomial division
-    std::vector<uint8_t> result(coefficients.size());
-    for (size_t i = 0; i < data.size(); i++) {
-        uint8_t factor = data.at(i) ^ result.at(0);
-        result.erase(result.begin());
-        result.push_back(0);
-        for (size_t j = 0; j < result.size(); j++)
-            result.at(j) ^= multiply(coefficients.at(j), factor);
+    memset(result, 0, degree_);
+    for (size_t i = 0; i < len; i++) {
+        uint8_t factor = data[i] ^ result[0];
+        memmove(result, result + 1, degree_ - 1);
+        result[degree_ - 1] = 0;
+        for (size_t j = 0; j < degree_; j++)
+            result[j] ^= multiply(coefficients_[j], factor);
     }
-    return result;
 }
 
 
