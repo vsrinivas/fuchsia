@@ -4,15 +4,18 @@
 
 source_set("sdk_ext") {
   sources = [
-    "src/handle_watcher.cc",
-    "src/handle_watcher.h",
+    "src/handle_waiter.cc",
+    "src/handle_waiter.h",
     "src/natives.cc",
     "src/natives.h",
   ]
 
   deps = [
     "//dart/runtime:libdart",
+    "//lib/fidl/c/waiter",
+    "//lib/fidl/cpp/waiter",
     "//lib/ftl",
+    "//lib/tonic",
     "//magenta/system/ulib/mx",
   ]
 }
