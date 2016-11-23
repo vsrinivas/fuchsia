@@ -122,9 +122,8 @@ constexpr char g_vertex_wobble_src[] = R"GLSL(
       // float scale = EvalSineParams(sine_params_0) +
       //               EvalSineParams(sine_params_1) +
       //               EvalSineParams(sine_params_2);
-      float scale = EvalSineParams_0() + EvalSineParams_1() + EvalSineParams_2();
-      vec2 move = vec2(cos(time * 0.4f) * 200.f, sin(time) * 100.f);
-      gl_Position = transform * vec4(inPosition + move + scale * inPositionOffset, 0, 1);
+      float offset_scale = EvalSineParams_0() + EvalSineParams_1() + EvalSineParams_2();
+      gl_Position = transform * vec4(inPosition + offset_scale * inPositionOffset, 0, 1);
 
       // Divide by 25 to convert 'Material Stage' depth to range 0-1.
       gl_Position.z *= 0.04;

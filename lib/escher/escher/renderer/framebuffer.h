@@ -61,4 +61,6 @@ class Framebuffer : public impl::Resource {
   FTL_DISALLOW_COPY_AND_ASSIGN(Framebuffer);
 };
 
+typedef ftl::RefPtr<Framebuffer> FramebufferPtr;
+
 }  // namespace escher

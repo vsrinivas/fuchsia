@@ -34,6 +34,7 @@ struct VulkanSwapchain;
 typedef ftl::RefPtr<Buffer> BufferPtr;
 typedef ftl::RefPtr<Framebuffer> FramebufferPtr;
 typedef ftl::RefPtr<Image> ImagePtr;
+typedef ftl::RefPtr<Material> MaterialPtr;
 typedef ftl::RefPtr<Mesh> MeshPtr;
 typedef ftl::RefPtr<MeshBuilder> MeshBuilderPtr;
 typedef ftl::RefPtr<PaperRenderer> PaperRendererPtr;

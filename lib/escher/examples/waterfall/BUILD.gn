@@ -11,6 +11,9 @@ if (is_linux) {
       "demo.cc",
       #"scenes/app_test_scene.cc",
       #"scenes/shadow_test_scene.cc",
+      "scenes/demo_scene.cc",
+      "scenes/scene.cc",
+      "scenes/wobbly_rings_scene.cc",
       "vulkan_proc_addrs.cc",
       "waterfall_main.cc",
     ]

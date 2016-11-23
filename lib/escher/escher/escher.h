@@ -10,6 +10,7 @@
 #include "escher/status.h"
 #include "escher/shape/mesh_builder_factory.h"
 #include "ftl/macros.h"
+#include "ftl/memory/ref_ptr.h"
 
 namespace escher {
 
