@@ -58,7 +58,6 @@ void WatchClientImpl::OnPut(const std::string& path,
       commit_watcher_->OnRemoteCommit(std::move(record.commit),
                                       std::move(record.timestamp));
     }
-    HandleError();
     return;
   }
 

@@ -196,6 +196,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
   EXPECT_EQ(ServerTimestampToBytes(42), server_timestamps_[0]);
   EXPECT_EQ(expected_n2, commits_[1]);
   EXPECT_EQ(ServerTimestampToBytes(43), server_timestamps_[1]);
+  EXPECT_EQ(0u, commit_watcher_errors_);
 }
 
 // Tests handling a server event containing a single commit.
