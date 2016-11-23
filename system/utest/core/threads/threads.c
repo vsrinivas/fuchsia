@@ -25,8 +25,8 @@ bool threads_test(void) {
     ASSERT_GT(thread_stack_vmo, 0, "");
 
     uintptr_t stack = 0u;
-    ASSERT_EQ(mx_process_map_vm(mx_process_self(), thread_stack_vmo, 0, stack_size, &stack,
-                                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE), NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, thread_stack_vmo, 0, stack_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &stack), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(thread_stack_vmo), NO_ERROR, "");
 
     mxr_thread_t* thread = NULL;

@@ -52,7 +52,7 @@ int vmo_run_benchmark() {
     mx_vmo_create(size, 0, &vmo);
 
     uintptr_t ptr;
-    mx_process_map_vm(mx_process_self(), vmo, 0, size, &ptr, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr);
 
     t = time_it([&](){
         for (size_t i = 0; i < size; i += PAGE_SIZE) {

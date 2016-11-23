@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 #include <sys/mman.h>
 
@@ -42,32 +43,42 @@ bool address_space_limits_test() {
     uintptr_t noncanon_addr =
         ((uintptr_t) 1) << (x86_linear_address_width() - 1);
 
+    mx_info_vmar_t vmar_info;
+    mx_status_t status = mx_object_get_info(mx_vmar_root_self(), MX_INFO_VMAR,
+                                            &vmar_info, sizeof(vmar_info),
+                                            NULL, NULL);
+    EXPECT_EQ(NO_ERROR, status, "get_info");
+
     // Check that we cannot map a page ending at |noncanon_addr|.
-    uintptr_t addr = noncanon_addr - page_size;
-    mx_status_t status = mx_process_map_vm(
-        mx_process_self(), vmo, 0, page_size, &addr,
-        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
+    size_t offset = noncanon_addr - page_size - vmar_info.base;
+    uintptr_t addr;
+    status = mx_vmar_map(
+        mx_vmar_root_self(), offset, vmo, 0, page_size,
+        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+        &addr);
     EXPECT_EQ(ERR_INVALID_ARGS, status, "vm_map");
 
     // Check that we can map at the next address down.  This helps to
     // verify that the previous check didn't fail for some unexpected
     // reason.
-    addr = noncanon_addr - page_size * 2;
-    status = mx_process_map_vm(
-        mx_process_self(), vmo, 0, page_size, &addr,
-        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
+    offset = noncanon_addr - page_size * 2 - vmar_info.base;
+    status = mx_vmar_map(
+        mx_vmar_root_self(), offset, vmo, 0, page_size,
+        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+        &addr);
     EXPECT_EQ(NO_ERROR, status, "vm_map");
 
-    // Check that MX_VM_FLAG_FIXED fails on already-mapped locations.
+    // Check that MX_VM_FLAG_SPECIFIC fails on already-mapped locations.
     // Otherwise, the previous mapping could have overwritten
     // something that was in use, which could cause problems later.
-    status = mx_process_map_vm(
-        mx_process_self(), vmo, 0, page_size, &addr,
-        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_FIXED);
+    status = mx_vmar_map(
+        mx_vmar_root_self(), offset, vmo, 0, page_size,
+        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+        &addr);
     EXPECT_EQ(ERR_NO_MEMORY, status, "vm_map");
 
     // Clean up.
-    status = mx_process_unmap_vm(mx_process_self(), addr, 0);
+    status = mx_vmar_unmap(mx_vmar_root_self(), addr, page_size);
     EXPECT_EQ(NO_ERROR, status, "vm_unmap");
     status = mx_handle_close(vmo);
     EXPECT_EQ(NO_ERROR, status, "handle_close");
