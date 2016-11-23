@@ -105,7 +105,7 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     // found one that fits, skip allocation
     if (found) {
         list_delete(&clone->node);
-        priv->flags &= ~IOTXN_FLAG_FREE;
+        cpriv->flags &= ~IOTXN_FLAG_FREE;
         if (cpriv->buffer_size) memset(cpriv + sizeof(iotxn_priv_t), 0, cpriv->buffer_size);
         mtx_unlock(&clone_list_mutex);
         goto out;
