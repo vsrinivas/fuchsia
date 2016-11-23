@@ -378,7 +378,7 @@ template("fidl") {
     infer_package_name = true
     source_dir = target_gen_dir
 
-    deps = []
+    deps = [ "//lib/fidl/dart" ]
     fidl_deps = []
     if (defined(invoker.deps)) {
       fidl_deps += invoker.deps
