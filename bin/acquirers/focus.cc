@@ -27,11 +27,18 @@ class FocusAcquirerApp : public modular::FocusListener,
  public:
   FocusAcquirerApp()
       : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()),
-        ctl_(this) {
+        ctl_(this),
+        focus_listener_(this) {
     srand(time(NULL));
 
     auto cx = app_ctx_->ConnectToEnvironmentService<
         maxwell::context::ContextAcquirerClient>();
+
+    auto focus_controller_handle =
+        app_ctx_->ConnectToEnvironmentService<modular::FocusController>();
+    fidl::InterfaceHandle<modular::FocusListener> focus_listener_handle;
+    focus_listener_.Bind(&focus_listener_handle);
+    focus_controller_handle->Watch(std::move(focus_listener_handle));
 
     fidl::InterfaceHandle<maxwell::context::PublisherController> ctl_handle;
     ctl_.Bind(&ctl_handle);
@@ -78,6 +85,7 @@ class FocusAcquirerApp : public modular::FocusListener,
   fidl::Binding<maxwell::context::PublisherController> ctl_;
   maxwell::context::PublisherLinkPtr out_;
   std::vector<std::string> focused_story_ids;
+  fidl::Binding<modular::FocusListener> focus_listener_;
 };
 
 }  // namespace
