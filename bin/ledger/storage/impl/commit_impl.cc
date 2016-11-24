@@ -34,7 +34,7 @@ std::string TimestampToBytes(int64_t timestamp) {
 }
 
 int64_t BytesToTimestamp(std::string bytes) {
-  return *reinterpret_cast<const uint64_t*>(bytes.data());
+  return *reinterpret_cast<const int64_t*>(bytes.data());
 }
 
 }  // namespace
