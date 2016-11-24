@@ -10,9 +10,10 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS += \
     lib/gfx \
-    lib/gfxconsole
+    lib/gfxconsole \
+    lib/qrcodegen
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/udisplay.c
+	$(LOCAL_DIR)/udisplay.cpp
 
 include make/module.mk

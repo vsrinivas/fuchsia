@@ -235,7 +235,7 @@ static void dlog_reader_init_unsafe(dlog_reader_t* rdr) {
 }
 #endif
 
-void dlog_bluescreen(void) {
+void dlog_bluescreen_init(void) {
     udisplay_bind_gfxconsole();
 
     DLOG.paused = true;

@@ -16,6 +16,7 @@ __BEGIN_CDECLS
 status_t gfxconsole_display_get_info(struct display_info *info);
 void gfxconsole_start(gfx_surface *surface, gfx_surface *hw_surface);
 void gfxconsole_bind_display(struct display_info *info, void *raw_sw_fb);
+void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color);
 
 __END_CDECLS
 

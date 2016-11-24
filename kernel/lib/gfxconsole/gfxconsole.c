@@ -63,6 +63,10 @@ static void draw_char(char c)
                    gfxconsole.front_color, gfxconsole.back_color);
 }
 
+void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color) {
+    gfx_putpixel(gfxconsole.surface, x, y, color);
+}
+
 static bool gfxconsole_putc(char c)
 {
     static enum { NORMAL, ESCAPE } state = NORMAL;

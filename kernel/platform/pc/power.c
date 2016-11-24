@@ -44,7 +44,7 @@ void platform_panic_start(void) {
 
     if (atomic_swap(&panic_started, 1) == 0) {
 #if WITH_LIB_DEBUGLOG
-        dlog_bluescreen();
+        dlog_bluescreen_init();
 #endif
     }
 }
@@ -72,6 +72,10 @@ void platform_halt(
             halt_other_cpus();
             break;
     }
+
+#if WITH_LIB_DEBUGLOG
+    dlog_bluescreen_halt();
+#endif
 
     printf("Halted\n");
 

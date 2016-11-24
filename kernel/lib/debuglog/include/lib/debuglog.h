@@ -78,6 +78,14 @@ static inline status_t dlog_read_user(dlog_reader_t* rdr, uint32_t flags, void* 
 }
 void dlog_wait(dlog_reader_t* rdr);
 
-void dlog_bluescreen(void);
+// bluescreen_init should be called at the "start" of a fatal fault or
+// panic to ensure that the fault output (via kernel printf/dprintf)
+// is captured or displayed to the user
+void dlog_bluescreen_init(void);
+
+// bluescreen_halt should be called from inside platform_halt to allow
+// the bluescreen service to finalize the display of the panic data
+// (for example, creating a qrcode)
+void dlog_bluescreen_halt(void);
 
 __END_CDECLS
