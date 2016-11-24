@@ -2,21 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("focus") {
-  sources = [
-    "mock_focus.cc",
-    "mock_focus.h",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/src/acquirers:focus",
-    "//apps/modular/lib/app",
-    "//apps/modular/services/user",
-    "//lib/mtl",
-  ]
-}
-
 source_set("gps") {
   sources = [
     "mock_gps.cc",
@@ -26,20 +11,6 @@ source_set("gps") {
   deps = [
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/acquirers:gps",
-    "//apps/modular/lib/app",
-    "//lib/mtl",
-  ]
-}
-
-source_set("modular_acquirer") {
-  sources = [
-    "mock_modular_acquirer.cc",
-    "mock_modular_acquirer.h",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/context",
-    "//apps/maxwell/src/acquirers:modular_acquirer",
     "//apps/modular/lib/app",
     "//lib/mtl",
   ]
