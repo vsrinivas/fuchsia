@@ -9,9 +9,11 @@
 
 #include <set>
 
+#include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/impl/db_impl.h"
 #include "apps/ledger/src/storage/public/page_sync_delegate.h"
 #include "lib/ftl/memory/ref_ptr.h"
+#include "lib/ftl/strings/string_view.h"
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace storage {
@@ -85,6 +87,7 @@ class PageStorageImpl : public PageStorage {
   Status GetSyncMetadata(std::string* sync_state) override;
 
  private:
+  friend class PageStorageImplAccessorForTest;
   class FileWriter;
 
   void AddCommit(std::unique_ptr<const Commit> commit,
@@ -99,7 +102,7 @@ class PageStorageImpl : public PageStorage {
       ObjectIdView object_id,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback);
-  std::string GetFilePath(ObjectIdView object_id);
+  std::string GetFilePath(ObjectIdView object_id) const;
 
   // Notifies the registered watchers with the given |commit|.
   void NotifyWatchers(const Commit& commit, ChangeSource source);

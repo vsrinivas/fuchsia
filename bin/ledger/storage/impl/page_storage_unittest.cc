@@ -25,22 +25,21 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace storage {
+
+class PageStorageImplAccessorForTest {
+ public:
+  static std::string GetFilePath(const PageStorageImpl& storage,
+                                 ObjectIdView object_id) {
+    return storage.GetFilePath(object_id);
+  }
+};
+
 namespace {
 
 std::string RandomId(size_t size) {
   std::string result;
   result.resize(size);
   glue::RandBytes(&result[0], size);
-  return result;
-}
-
-std::string ToHex(const std::string& string) {
-  std::string result;
-  for (char c : string) {
-    if (c >= 0 && c < 16)
-      result += "0";
-    result += NumberToString(static_cast<uint8_t>(c), ftl::Base::k16);
-  }
   return result;
 }
 
@@ -136,6 +135,10 @@ class PageStorageTest : public test::TestWithMessageLoop {
   }
 
  protected:
+  std::string GetFilePath(ObjectIdView object_id) {
+    return PageStorageImplAccessorForTest::GetFilePath(*storage_, object_id);
+  }
+
   CommitId GetFirstHead() {
     std::vector<CommitId> ids;
     EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&ids));
@@ -214,8 +217,6 @@ class PageStorageTest : public test::TestWithMessageLoop {
   }
 
   files::ScopedTempDir tmp_dir_;
-
- protected:
   std::unique_ptr<PageStorageImpl> storage_;
 
  private:
@@ -279,7 +280,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   sync.AddObject(root_id, root_data.ToString());
 
   // Remove the root from the local storage. The two values were never added.
-  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(root_id);
+  std::string file_path = GetFilePath(root_id);
   files::DeletePath(file_path, false);
 
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
@@ -433,7 +434,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
 
   EXPECT_EQ(data.object_id, object_id);
 
-  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(object_id);
+  std::string file_path = GetFilePath(object_id);
   std::string file_content;
   EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
   EXPECT_EQ(data.value, file_content);
@@ -477,7 +478,7 @@ TEST_F(PageStorageTest, AddObjectFromSync) {
                               });
   message_loop_.Run();
 
-  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(data.object_id);
+  std::string file_path = GetFilePath(data.object_id);
   std::string file_content;
   EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
   EXPECT_EQ(data.value, file_content);
@@ -511,7 +512,7 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
 
 TEST_F(PageStorageTest, GetObject) {
   ObjectData data("Some data");
-  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(data.object_id);
+  std::string file_path = GetFilePath(data.object_id);
   ASSERT_TRUE(files::WriteFile(file_path, data.value.data(), data.size));
 
   Status status;
@@ -574,7 +575,7 @@ TEST_F(PageStorageTest, AddObjectSynchronous) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(data.object_id, object->GetId());
 
-  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(data.object_id);
+  std::string file_path = GetFilePath(data.object_id);
   std::string file_content;
   EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
   EXPECT_EQ(data.value, file_content);
@@ -582,7 +583,7 @@ TEST_F(PageStorageTest, AddObjectSynchronous) {
 
 TEST_F(PageStorageTest, GetObjectSynchronous) {
   ObjectData data("Some data");
-  std::string file_path = tmp_dir_.path() + "/objects/" + ToHex(data.object_id);
+  std::string file_path = GetFilePath(data.object_id);
   ASSERT_TRUE(files::WriteFile(file_path, data.value.data(), data.size));
 
   std::unique_ptr<const Object> object;

@@ -25,6 +25,7 @@
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/strings/concatenate.h"
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
 
 namespace storage {
@@ -49,6 +50,16 @@ std::string ToHex(convert::ExtendedStringView string) {
   return result;
 }
 
+std::string GetFilePath(ftl::StringView objects_dir,
+                        convert::ExtendedStringView object_id) {
+  std::string hex = ToHex(object_id);
+
+  FTL_DCHECK(hex.size() > 2);
+  ftl::StringView hex_view = hex;
+  return ftl::Concatenate(
+      {objects_dir, "/", hex_view.substr(0, 2), "/", hex_view.substr(2)});
+}
+
 Status StagingToDestination(size_t expected_size,
                             std::string source_path,
                             std::string destination_path) {
@@ -66,6 +77,12 @@ Status StagingToDestination(size_t expected_size,
     // Source path already existed at destination. Clear the source.
     files::DeletePath(source_path, false);
     return Status::OK;
+  }
+
+  std::string destination_dir = files::GetDirectoryName(destination_path);
+  if (!files::IsDirectory(destination_dir) &&
+      !files::CreateDirectory(destination_dir)) {
+    return Status::INTERNAL_IO_ERROR;
   }
 
   if (rename(source_path.c_str(), destination_path.c_str()) != 0) {
@@ -145,7 +162,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
     std::string object_id;
     hash_.Finish(&object_id);
 
-    std::string final_path = object_dir_ + "/" + ToHex(object_id);
+    std::string final_path = storage::GetFilePath(object_dir_, object_id);
     Status status =
         StagingToDestination(size_, file_path_, std::move(final_path));
     if (status != Status::OK) {
@@ -610,8 +627,8 @@ void PageStorageImpl::GetObjectFromSync(
   });
 }
 
-std::string PageStorageImpl::GetFilePath(ObjectIdView object_id) {
-  return objects_dir_ + "/" + ToHex(object_id);
+std::string PageStorageImpl::GetFilePath(ObjectIdView object_id) const {
+  return storage::GetFilePath(objects_dir_, object_id);
 }
 
 bool PageStorageImpl::ObjectIsUntracked(ObjectIdView object_id) {
