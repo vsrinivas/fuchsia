@@ -638,6 +638,21 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
                             data[j].object_id) != objects.end());
     }
   }
+
+  // Mark the 2nd object as synced. We now expect to find the 2 unsynced values
+  // and the (also unsynced) root node.
+  EXPECT_EQ(Status::OK, storage_->MarkObjectSynced(data[1].object_id));
+  std::vector<ObjectId> objects;
+  EXPECT_EQ(Status::OK, storage_->GetUnsyncedObjects(commits[2], &objects));
+  EXPECT_EQ(3u, objects.size());
+  std::unique_ptr<const Commit> commit;
+  EXPECT_EQ(Status::OK, storage_->GetCommit(commits[2], &commit));
+  EXPECT_TRUE(std::find(objects.begin(), objects.end(), commit->GetRootId()) !=
+              objects.end());
+  EXPECT_TRUE(std::find(objects.begin(), objects.end(), data[0].object_id) !=
+              objects.end());
+  EXPECT_TRUE(std::find(objects.begin(), objects.end(), data[2].object_id) !=
+              objects.end());
 }
 
 TEST_F(PageStorageTest, UntrackedObjectsSimple) {

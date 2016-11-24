@@ -385,7 +385,7 @@ Status PageStorageImpl::GetUnsyncedObjects(const CommitId& commit_id,
 }
 
 Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
-  return Status::NOT_IMPLEMENTED;
+  return db_.MarkObjectIdSynced(object_id);
 }
 
 void PageStorageImpl::AddObjectFromSync(
