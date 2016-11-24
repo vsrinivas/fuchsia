@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <magenta/syscalls.h>
+
 // defined in cpp_specific.cpp.
 int cpp_out_of_mem(void);
 
@@ -82,6 +84,25 @@ int oom(volatile unsigned int* unused) {
     return cpp_out_of_mem();
 }
 
+#include <unistd.h>
+
+// volatile to ensure compiler doesn't optimize the allocs away
+volatile char* mem_alloc;
+
+int mem(volatile unsigned int* arg) {
+    int count = 0;
+    for (;;) {
+        mem_alloc = malloc(1024*1024);
+        memset((void*)mem_alloc, 0xa5, 1024*1024);
+        count++;
+        if ((count % 128) == 0) {
+            mx_nanosleep(MX_MSEC(250));
+            write(1, ".", 1);
+        }
+    }
+
+}
+
 command_t commands[] = {
     {"write0", blind_write, "write to address 0x0"},
     {"read0", blind_read, "read address 0x0"},
@@ -91,6 +112,7 @@ command_t commands[] = {
     {"und", undefined, "undefined instruction"},
     {"nx_run", nx_run, "run in no-execute memory"},
     {"oom", oom, "out of memory c++ death"},
+    {"mem", mem, "out of memory"},
     {NULL, NULL, NULL}};
 
 int main(int argc, char** argv) {

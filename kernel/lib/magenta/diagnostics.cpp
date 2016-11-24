@@ -185,6 +185,29 @@ void KillProcess(mx_koid_t id) {
     }
 }
 
+static size_t mwd_limit = 32 * 256;
+static bool mwd_running;
+
+void MemoryUsageScanner() {
+    AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
+
+    for (const auto& process : ProcessDispatcher::global_process_list_) {
+        size_t pages = process.PageCount();
+        if (pages > mwd_limit) {
+            char pname[MX_MAX_NAME_LEN];
+            process.get_name(pname);
+            printf("MemoryHog! %s: %zu MB\n", pname, pages / 256);
+        }
+    }
+}
+
+static int mwd_thread(void* arg) {
+    for (;;) {
+        thread_sleep(1000);
+        MemoryUsageScanner();
+    }
+}
+
 static int cmd_diagnostics(int argc, const cmd_args* argv) {
     int rc = 0;
 
@@ -193,12 +216,24 @@ static int cmd_diagnostics(int argc, const cmd_args* argv) {
         printf("not enough arguments:\n");
     usage:
         printf("%s ps         : list processes\n", argv[0].str);
+        printf("%s mwd <mb>   : memory watchdog\n", argv[0].str);
         printf("%s ht   <pid> : dump process handles\n", argv[0].str);
         printf("%s kill <pid> : kill process\n", argv[0].str);
         return -1;
     }
 
-    if (strcmp(argv[1].str, "ps") == 0) {
+    if (strcmp(argv[1].str, "mwd") == 0) {
+        if (argc == 3) {
+            mwd_limit = argv[2].u * 256;
+        }
+        if (!mwd_running) {
+            thread_t* t = thread_create("mwd", mwd_thread, NULL, DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+            if (t) {
+                mwd_running = true;
+                thread_resume(t);
+            }
+        }
+    } else if (strcmp(argv[1].str, "ps") == 0) {
         if ((argc == 3) && (strcmp(argv[2].str, "help") == 0)) {
             DumpProcessListKeyMap();
         } else {

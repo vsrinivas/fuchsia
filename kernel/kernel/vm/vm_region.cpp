@@ -231,6 +231,7 @@ status_t VmRegion::PageFault(vaddr_t va, uint pf_flags) {
     auto status = object_->FaultPageLocked(vmo_offset, pf_flags, &new_pa);
     if (status < 0) {
         TRACEF("ERROR: failed to fault in or grab existing page\n");
+        TRACEF("%p '%s', vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, name_, vmo_offset, pf_flags);
         return status;
     }
 
