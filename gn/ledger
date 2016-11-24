@@ -78,6 +78,10 @@
         {
             "binary": "storage_btree_unittests",
             "bootfs_path": "test/storage_btree_unittests"
+        },
+        {
+            "binary": "todo",
+            "bootfs_path": "apps/todo"
         }
     ]
 }
