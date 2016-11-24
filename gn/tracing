@@ -11,7 +11,11 @@
         },
         {
             "binary": "trace_tests",
-            "bootfs_path": "apps/trace_tests"
+            "bootfs_path": "test/trace_tests"
+        },
+        {
+            "binary": "trace_stub_tests",
+            "bootfs_path": "test/trace_stub_tests"
         }
     ],
     "resources": [
