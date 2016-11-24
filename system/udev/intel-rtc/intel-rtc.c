@@ -122,6 +122,16 @@ static ssize_t intel_rtc_get(void* buf, size_t count) {
     return sizeof(rtc_t);
 }
 
+static bool rtc_is_invalid(const rtc_t* rtc) {
+    return rtc->seconds > 59 ||
+        rtc->minutes > 59 ||
+        rtc->hours > 23 ||
+        rtc->day > 31 ||
+        rtc->month > 12 ||
+        rtc->year < 2000 ||
+        rtc->year > 2099;
+}
+
 static ssize_t intel_rtc_set(const void* buf, size_t count) {
     if (count < sizeof(rtc_t)) {
         return ERR_BUFFER_TOO_SMALL;
@@ -130,17 +140,27 @@ static ssize_t intel_rtc_set(const void* buf, size_t count) {
     memcpy(&rtc, buf, sizeof(rtc_t));
 
     // An invalid time was supplied.
-    if (rtc.seconds > 59 ||
-        rtc.minutes > 59 ||
-        rtc.hours > 23 ||
-        rtc.day > 31 ||
-        rtc.month > 12 ||
-        rtc.year < 2000 || rtc.year > 2099) {
+    if (rtc_is_invalid(&rtc)) {
         return ERR_OUT_OF_RANGE;
     }
 
     write_time(&rtc);
     return sizeof(rtc_t);
+}
+
+static void sanitize_rtc(void) {
+    // January 1, 2016 00:00:00
+    static const rtc_t default_rtc = {
+        .day = 1,
+        .month = 1,
+        .year = 2016,
+    };
+    rtc_t rtc;
+
+    intel_rtc_get(&rtc, sizeof(&rtc));
+    if (rtc_is_invalid(&rtc) || rtc.year < 2010 || rtc.year > 2020) {
+        intel_rtc_set(&default_rtc, sizeof(&default_rtc));
+    }
 }
 
 // Implement ioctl protocol.
@@ -183,6 +203,9 @@ static mx_status_t intel_rtc_init(mx_driver_t* drv) {
         free(dev);
         return status;
     }
+
+    sanitize_rtc();
+
     return NO_ERROR;
 #else
     return ERR_NOT_SUPPORTED;
