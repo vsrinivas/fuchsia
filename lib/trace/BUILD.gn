@@ -2,19 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Declares common trace data types.
+source_set("types") {
+  sources = [
+    "types.h",
+  ]
+}
+
+# Declares the trace macros and writer API and offers only a do-nothing stub
+# implementation with weak linkage.
+#
+# To enable tracing in your application also include the 'provider' target
+# in your application and make sure to register a TraceProvider when your
+# application starts up.
+#
+# This target only depends on ftl, standard library, and system headers
+# so that it can safely be referenced from most low-level libraries with
+# minimum impact.
 source_set("trace") {
   sources = [
     "event.h",
-    "internal/trace_engine.cc",
-    "internal/trace_engine.h",
+    "writer_stub.cc",
     "writer.h",
-    "writer.cc",
   ]
 
   deps = [
     ":internal_fields",
     "//lib/ftl",
-    "//lib/mtl",
   ]
 
   public_deps = [
@@ -23,6 +37,30 @@ source_set("trace") {
   ]
 }
 
+# Implements the trace writer API.
+# This target includes the trace engine which needs a message loop to operate.
+source_set("writer") {
+  sources = [
+    "internal/trace_engine.cc",
+    "internal/trace_engine.h",
+    "writer.cc",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//lib/mtl/handles",
+    "//lib/mtl/tasks",
+    "//lib/mtl/vmo",
+  ]
+
+  public_deps = [
+    ":trace",
+  ]
+}
+
+# Implements the trace provider API.
+# This target includes the fidl-based TraceProvider front-end together
+# with the trace writer.
 source_set("provider") {
   sources = [
     "internal/trace_provider_impl.cc",
@@ -41,10 +79,11 @@ source_set("provider") {
   ]
 
   public_deps = [
-    ":trace",
+    ":writer",
   ]
 }
 
+# Implements the trace reader API.
 source_set("reader") {
   sources = [
     "reader.h",
@@ -61,6 +100,7 @@ source_set("reader") {
   ]
 }
 
+# Declares internal fields which describe the trace format.
 source_set("internal_fields") {
   sources = [
     "internal/fields.h",
@@ -68,12 +108,6 @@ source_set("internal_fields") {
 
   public_deps = [
     ":types",
-  ]
-}
-
-source_set("types") {
-  sources = [
-    "types.h",
   ]
 }
 
@@ -98,5 +132,19 @@ executable("trace_tests") {
     "//lib/mtl/test",
     "//third_party/gtest",
     "//third_party/rapidjson",
+  ]
+}
+
+executable("trace_stub_tests") {
+  testonly = true
+
+  sources = [
+    "writer_stub_unittest.cc",
+  ]
+
+  deps = [
+    ":trace",
+    "//lib/mtl/test",
+    "//third_party/gtest",
   ]
 }
