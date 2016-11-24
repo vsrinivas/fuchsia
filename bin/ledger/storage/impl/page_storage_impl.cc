@@ -38,7 +38,7 @@ const char kStagingDir[] = "/staging";
 
 const char kHexDigits[] = "0123456789ABCDEF";
 
-const size_t kDefaultNodeSize = 1024u;
+const size_t kDefaultNodeSize = 64u;
 
 std::string ToHex(convert::ExtendedStringView string) {
   std::string result;
