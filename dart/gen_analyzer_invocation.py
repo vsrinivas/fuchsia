@@ -43,7 +43,13 @@ def main():
   analyzer_content = '''#!/bin/sh
 
 echo "Package : %s"
-%s --packages=%s %s --packages=%s %s %s
+%s \\
+  --packages=%s \\
+  %s \\
+  --packages=%s \\
+  %s \\
+  %s \\
+  "$@"
 ''' % (args.package_name, args.dart, args.analyzer_packages, args.analyzer_main,
        args.dot_packages, options, args.source_dir)
 
