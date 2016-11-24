@@ -7,6 +7,8 @@
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/repo.h"
+#include "apps/maxwell/src/suggestion_engine/timeline_stories_filter.h"
+#include "apps/maxwell/src/suggestion_engine/timeline_stories_watcher.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
@@ -41,17 +43,17 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   void SubscribeToNext(
       fidl::InterfaceHandle<Listener> listener,
       fidl::InterfaceRequest<NextController> controller) override {
-    repo_.SubscribeToNext(std::move(listener), std::move(controller));
+    repo_->SubscribeToNext(std::move(listener), std::move(controller));
   }
 
   void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
                    fidl::InterfaceRequest<AskController> controller) override {
-    repo_.InitiateAsk(std::move(listener), std::move(controller));
+    repo_->InitiateAsk(std::move(listener), std::move(controller));
   }
 
   void NotifyInteraction(const fidl::String& suggestion_uuid,
                          InteractionPtr interaction) override {
-    const ProposalRecord* proposal_record = repo_[suggestion_uuid];
+    const ProposalRecord* proposal_record = (*repo_)[suggestion_uuid];
 
     std::ostringstream log_detail;
     if (proposal_record)
@@ -114,12 +116,20 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   void RegisterSuggestionAgent(
       const fidl::String& url,
       fidl::InterfaceRequest<SuggestionAgentClient> client) override {
-    repo_.GetOrCreateSourceClient(url)->AddBinding(std::move(client));
+    repo_->GetOrCreateSourceClient(url)->AddBinding(std::move(client));
   }
 
   void Initialize(
       fidl::InterfaceHandle<modular::StoryProvider> story_provider) override {
     story_provider_.Bind(std::move(story_provider));
+
+    timeline_stories_watcher_.reset(
+        new TimelineStoriesWatcher(&story_provider_));
+    timeline_stories_watcher_->SetWatcher(
+        []() { FTL_LOG(INFO) << "Something changed."; });
+
+    repo_.reset(
+        new Repo(TimelineStoriesFilter(timeline_stories_watcher_.get())));
   }
 
   // end SuggestionEngine
@@ -133,7 +143,18 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   modular::StoryProviderPtr story_provider_;
   fidl::InterfacePtr<modular::FocusController> focus_controller_ptr_;
 
-  Repo repo_;
+  // Watches for changes in StoryInfo from the StoryProvider, acts as a filter
+  // for Proposals on all channels, and notifies when there are changes so that
+  // we can re-filter Proposals.
+  //
+  // Initialized late in Initialize().
+  std::unique_ptr<TimelineStoriesWatcher> timeline_stories_watcher_;
+
+  // TODO(thatguy): All Channels also get a ReevaluateFilters method, which
+  // would remove Suggestions that are now filtered or add
+  // new ones that are no longer filtered.
+
+  std::unique_ptr<Repo> repo_;
 };
 
 }  // suggestion

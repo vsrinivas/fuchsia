@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "apps/maxwell/src/suggestion_engine/ask_channel.h"
+#include "apps/maxwell/src/suggestion_engine/filter.h"
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
 #include "apps/maxwell/src/suggestion_engine/proposal_record.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
@@ -17,6 +18,8 @@ namespace suggestion {
 
 class Repo {
  public:
+  Repo(ProposalRecordFilter filter) : filter_(filter) {}
+
   SuggestionAgentClientImpl* GetOrCreateSourceClient(
       const std::string& component_url);
 
@@ -72,6 +75,8 @@ class Repo {
   NextChannel next_channel_;
   maxwell::BoundNonMovableSet<AskChannel> ask_channels_;
   fidl::InterfacePtrSet<AskHandler> ask_handlers_;
+
+  ProposalRecordFilter filter_;
 };
 
 }  // namespace suggestion

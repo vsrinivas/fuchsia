@@ -11,6 +11,7 @@
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
 #include "apps/maxwell/src/integration/test_suggestion_listener.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
@@ -108,9 +109,47 @@ class NProposals : public Proposinator,
   int n_ = 0;
 };
 
+class TestStoryProvider : public modular::StoryProvider {
+ public:
+  void CreateStory(
+      const fidl::String& url,
+      fidl::InterfaceRequest<modular::StoryController> story) override {
+    last_created_story_ = url;
+  }
+
+  void Watch(
+      fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {
+    watchers_.AddInterfacePtr(
+        modular::StoryProviderWatcherPtr::Create(std::move(watcher)));
+  }
+
+  void DeleteStory(const fidl::String& story_id,
+                   const DeleteStoryCallback& callback) override {}
+  void GetStoryInfo(const fidl::String& story_id,
+                    const GetStoryInfoCallback& callback) override {}
+  void ResumeStory(
+      const fidl::String& story_id,
+      fidl::InterfaceRequest<modular::StoryController> story) override {}
+  void PreviousStories(const PreviousStoriesCallback& callback) override {}
+
+  std::string last_created_story() const { return last_created_story_; }
+
+  // Methods to allow notification of watchers.
+  void NotifyStoryChanged(modular::StoryInfoPtr story_info) {
+    watchers_.ForAllPtrs([&story_info](modular::StoryProviderWatcher* watcher) {
+      watcher->OnChange(story_info->Clone());
+    });
+  }
+
+ private:
+  std::string last_created_story_;
+
+  fidl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
+};
+
 class SuggestionEngineTest : public ContextEngineTestBase {
  public:
-  SuggestionEngineTest() {
+  SuggestionEngineTest() : story_provider_binding_(&story_provider_) {
     modular::ServiceProviderPtr suggestion_services =
         StartServiceProvider("file:///system/apps/suggestion_engine");
     suggestion_engine_ =
@@ -119,6 +158,11 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     suggestion_provider_ =
         modular::ConnectToService<maxwell::suggestion::SuggestionProvider>(
             suggestion_services.get());
+
+    // Initialize the SuggestionEngine.
+    fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
+    story_provider_binding_.Bind(&story_provider_handle);
+    suggestion_engine()->Initialize(std::move(story_provider_handle));
   }
 
  protected:
@@ -129,6 +173,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   maxwell::suggestion::SuggestionProvider* suggestion_provider() {
     return suggestion_provider_.get();
   }
+
+  TestStoryProvider* story_provider() { return &story_provider_; }
 
   void StartSuggestionAgent(const std::string& url) {
     auto agent_host =
@@ -166,6 +212,9 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 
   maxwell::suggestion::SuggestionEnginePtr suggestion_engine_;
   maxwell::suggestion::SuggestionProviderPtr suggestion_provider_;
+
+  TestStoryProvider story_provider_;
+  fidl::Binding<modular::StoryProvider> story_provider_binding_;
 };
 
 class NextTest : public SuggestionEngineTest {
@@ -377,49 +426,7 @@ TEST_F(NextTest, SubscribeBeyondController) {
   CHECK_RESULT_COUNT(2);
 }
 
-class TestStoryProvider : public modular::StoryProvider {
- public:
-  void CreateStory(
-      const fidl::String& url,
-      fidl::InterfaceRequest<modular::StoryController> story) override {
-    last_created_story_ = url;
-  }
-
-  void Watch(
-      fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {}
-
-  void DeleteStory(const fidl::String& story_id,
-                   const DeleteStoryCallback& callback) override {}
-  void GetStoryInfo(const fidl::String& story_id,
-                    const GetStoryInfoCallback& callback) override {}
-  void ResumeStory(
-      const fidl::String& story_id,
-      fidl::InterfaceRequest<modular::StoryController> story) override {}
-  void PreviousStories(const PreviousStoriesCallback& callback) override {}
-
-  std::string last_created_story() const { return last_created_story_; }
-
- private:
-  std::string last_created_story_;
-};
-
-class SuggestionInteractionTest : public NextTest {
- public:
-  SuggestionInteractionTest() : story_provider_binding_(&story_provider_) {
-    fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
-    story_provider_binding_.Bind(&story_provider_handle);
-    suggestion_engine()->Initialize(std::move(story_provider_handle));
-  }
-
- protected:
-  std::string last_created_story() const {
-    return story_provider_.last_created_story();
-  }
-
- private:
-  TestStoryProvider story_provider_;
-  fidl::Binding<modular::StoryProvider> story_provider_binding_;
-};
+class SuggestionInteractionTest : public NextTest {};
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   Proposinator p(suggestion_engine());
@@ -436,7 +443,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
 
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
-  ASYNC_EQ("foo://bar", last_created_story());
+  ASYNC_EQ("foo://bar", story_provider()->last_created_story());
 }
 
 class AskTest : public SuggestionEngineTest {
@@ -714,4 +721,66 @@ TEST_F(AskTest, ReactiveAsk) {
   p.Commit();
 
   CHECK_RESULT_COUNT(1);
+}
+
+class SuggestionFilteringTest : public NextTest {};
+
+TEST_F(SuggestionFilteringTest, Baseline) {
+  // Show that without any existing Stories, we see Proposals to launch
+  // any story.
+  Proposinator p(suggestion_engine());
+  SetResultCount(10);
+
+  auto create_story = maxwell::suggestion::CreateStory::New();
+  create_story->module_id = "foo://bar";
+  auto action = maxwell::suggestion::Action::New();
+  action->set_create_story(std::move(create_story));
+  fidl::Array<maxwell::suggestion::ActionPtr> actions;
+  actions.push_back(std::move(action));
+  p.Propose("1", std::move(actions));
+  CHECK_RESULT_COUNT(1);
+}
+
+TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
+  // Show that with an existing Story for a URL, we see Proposals to launch
+  // other URLs.
+  Proposinator p(suggestion_engine());
+  SetResultCount(10);
+
+  // First notify watchers of the StoryProvider that a story
+  // already exists.
+  auto story_info = modular::StoryInfo::New();
+  story_info->url = "foo://bazzle_dazzle";
+  story_provider()->NotifyStoryChanged(std::move(story_info));
+
+  auto create_story = maxwell::suggestion::CreateStory::New();
+  create_story->module_id = "foo://bar";
+  auto action = maxwell::suggestion::Action::New();
+  action->set_create_story(std::move(create_story));
+  fidl::Array<maxwell::suggestion::ActionPtr> actions;
+  actions.push_back(std::move(action));
+  p.Propose("1", std::move(actions));
+  CHECK_RESULT_COUNT(1);
+}
+
+TEST_F(SuggestionFilteringTest, FilterOnPropose) {
+  // If a Story already exists, then Proposals that want to create
+  // that same story are filtered when they are proposed.
+  Proposinator p(suggestion_engine());
+  SetResultCount(10);
+
+  // First notify watchers of the StoryProvider that this story
+  // already exists.
+  auto story_info = modular::StoryInfo::New();
+  story_info->url = "foo://bar";
+  story_provider()->NotifyStoryChanged(std::move(story_info));
+
+  auto create_story = maxwell::suggestion::CreateStory::New();
+  create_story->module_id = "foo://bar";
+  auto action = maxwell::suggestion::Action::New();
+  action->set_create_story(std::move(create_story));
+  fidl::Array<maxwell::suggestion::ActionPtr> actions;
+  actions.push_back(std::move(action));
+  p.Propose("1", std::move(actions));
+  CHECK_RESULT_COUNT(0);
 }

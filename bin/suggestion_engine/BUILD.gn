@@ -12,7 +12,6 @@ executable("suggestion_engine") {
     "next_channel.cc",
     "next_channel.h",
     "next_subscriber.h",
-    "proposal_record.h",
     "ranked_suggestion.h",
     "repo.cc",
     "repo.h",
@@ -25,10 +24,61 @@ executable("suggestion_engine") {
   ]
 
   deps = [
+    ":filter",
+    ":proposal_record",
+    ":timeline_stories_filter",
+    ":timeline_stories_watcher",
     "//apps/maxwell/services/suggestion",
     "//apps/maxwell/src:bound_set",
     "//apps/modular/lib/app",
     "//apps/modular/services/user",
     "//lib/mtl",
+  ]
+}
+
+source_set("proposal_record") {
+  sources = [
+    "proposal_record.h",
+  ]
+
+  deps = [
+    "//apps/maxwell/services/suggestion",
+    "//lib/ftl",
+  ]
+}
+
+source_set("timeline_stories_filter") {
+  sources = [
+    "timeline_stories_filter.h",
+    "timeline_stories_filter.cc",
+  ]
+
+  deps = [
+    ":proposal_record",
+    ":timeline_stories_watcher",
+    "//apps/maxwell/services/suggestion",
+    "//lib/ftl",
+  ]
+}
+
+source_set("timeline_stories_watcher") {
+  sources = [
+    "timeline_stories_watcher.h",
+    "timeline_stories_watcher.cc",
+  ]
+
+  deps = [
+    "//apps/modular/services/user",
+    "//lib/ftl",
+  ]
+}
+
+source_set("filter") {
+  sources = [
+    "filter.h",
+  ]
+
+  deps = [
+    ":proposal_record",
   ]
 }
