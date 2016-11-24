@@ -26,6 +26,19 @@ WobblyRingsScene::WobblyRingsScene(escher::VulkanContext* vulkan_context,
     : Scene(vulkan_context, escher) {}
 
 void WobblyRingsScene::Init() {
+  // Create meshes for fancy wobble effect.
+  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
+                MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
+  ring_mesh1_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 300.f,
+                                    250.f, 18.f, -15.f);
+  ring_mesh2_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 200.f,
+                                    150.f, 11.f, -8.f);
+  ring_mesh3_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 100.f,
+                                    50.f, 5.f, -2.f);
+  wobbly_rect_mesh_ = escher::NewRectangleMesh(
+      escher(), spec, 8, vec2(2160.f, 1400.f), vec2(0.f, 0.f), 18.f, 0.f);
+
+  // Create materials.
   auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
       escher()->NewCheckerboardImage(16, 16), vulkan_context()->device,
       vk::Filter::eNearest);
@@ -49,22 +62,10 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
                                         escher::Stage* stage) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
-  Object rectangle(
-      Object::NewRect(vec2(0.f, 0.f), vec2(2160.f, 1440.f), 2.f, purple_));
   Object circle1(Object::NewCircle(vec2(612.f, 212.f), 200.f, 8.f, blue_));
   Object circle2(Object::NewCircle(vec2(412.f, 800.f), 200.f, 8.f, blue_));
   Object circle3(Object::NewCircle(vec2(162.f, 412.f), 120.f, 15.f, blue_));
   Object circle4(Object::NewCircle(vec2(850.f, 600.f), 120.f, 15.f, blue_));
-
-  // Create meshes for fancy wobble effect.
-  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
-                MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
-  auto ring_mesh1 = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f),
-                                        300.f, 250.f, 18.f, -15.f);
-  auto ring_mesh2 = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f),
-                                        200.f, 150.f, 11.f, -8.f);
-  auto ring_mesh3 = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f),
-                                        100.f, 50.f, 5.f, -2.f);
 
   // Animate the position of the rings, using a cos and sin function applied
   // to time
@@ -72,11 +73,11 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   float y_pos_offset = sin(current_time_sec) * 100.;
   vec3 ring_pos(512.f + x_pos_offset, 512.f + y_pos_offset, 0);
 
-  Object ring1(ring_mesh1, ring_pos + vec3(0, 0, 4.f), pink_);
+  Object ring1(ring_mesh1_, ring_pos + vec3(0, 0, 4.f), pink_);
   ring1.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring2(ring_mesh2, ring_pos + vec3(0, 0, 12.f), green_);
+  Object ring2(ring_mesh2_, ring_pos + vec3(0, 0, 12.f), green_);
   ring2.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring3(ring_mesh3, ring_pos + vec3(0, 0, 24.f), blue_green_);
+  Object ring3(ring_mesh3_, ring_pos + vec3(0, 0, 24.f), blue_green_);
   ring3.set_shape_modifiers(ShapeModifier::kWobble);
 
   constexpr float TWO_PI = 6.28318530718f;
@@ -86,6 +87,11 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   ring1.set_shape_modifier_data(wobble_data);
   ring2.set_shape_modifier_data(wobble_data);
   ring3.set_shape_modifier_data(wobble_data);
+
+  // Create a wobbly rectangle
+  Object rectangle(wobbly_rect_mesh_, vec3(0.f, 40.f, 2.f), purple_);
+  rectangle.set_shape_modifiers(ShapeModifier::kWobble);
+  rectangle.set_shape_modifier_data(wobble_data);
 
   std::vector<Object> objects{circle1,   circle2, circle3, circle4,
                               rectangle, ring1,   ring2,   ring3};

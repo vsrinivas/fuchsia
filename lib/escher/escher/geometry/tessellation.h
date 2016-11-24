@@ -40,6 +40,20 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory,
                       float radius,
                       float offset_magnitude = 0.f);
 
+// Tessellate a basic rectangle
+MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory);
+
+// Tessellate a rectangle with multiple vertices along the top and bottom edges.
+// Increasing subdivisions by 1 doubles the number of vertices. If the spec
+// has kPositionOffset, the top offset points up and the bottom points down.
+MeshPtr NewRectangleMesh(MeshBuilderFactory* factory,
+                         const MeshSpec& spec,
+                         int subdivisions,
+                         vec2 size,
+                         vec2 top_left = vec2(0.f, 0.f),
+                         float top_offset_magnitude = 0.f,
+                         float bottom_offset_magnitude = 0.f);
+
 // Tessellate a ring whose area is bounded by an inner and an outer circle.
 // Increasing subdivisions by 1 doubles the number of vertices.  If the spec
 // has kPositionOffset, the outer offset points outward (away from the center of

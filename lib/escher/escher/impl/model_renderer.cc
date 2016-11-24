@@ -207,34 +207,11 @@ const MeshPtr& ModelRenderer::GetMeshForShape(const Shape& shape) const {
 }
 
 MeshPtr ModelRenderer::CreateRectangle() {
-  // TODO: create rectangle, not triangle.
-  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kUV};
-
-  // In each vertex, the first two floats represent the position and the second
-  // two are UV coordinates.
-  vec4 v0(0.f, 0.f, 0.f, 0.f);
-  vec4 v1(1.f, 0.f, 1.f, 0.f);
-  vec4 v2(1.f, 1.f, 1.f, 1.f);
-  vec4 v3(0.f, 1.f, 0.f, 1.f);
-
-  MeshBuilderPtr builder = mesh_manager_->NewMeshBuilder(spec, 4, 6);
-  return builder->AddVertex(v0)
-      .AddVertex(v1)
-      .AddVertex(v2)
-      .AddVertex(v3)
-      .AddIndex(0)
-      .AddIndex(1)
-      .AddIndex(2)
-      .AddIndex(0)
-      .AddIndex(2)
-      .AddIndex(3)
-      .Build();
+  return NewSimpleRectangleMesh(mesh_manager_);
 }
 
 MeshPtr ModelRenderer::CreateCircle() {
-  MeshSpec spec;
-  spec.flags |= MeshAttribute::kPosition;
-  spec.flags |= MeshAttribute::kUV;
+  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kUV};
 
   return NewCircleMesh(mesh_manager_, spec, 4, vec2(0.5f, 0.5f), 0.5f);
 }

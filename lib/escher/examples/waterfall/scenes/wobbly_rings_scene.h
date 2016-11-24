@@ -23,6 +23,11 @@ class WobblyRingsScene : public Scene {
  private:
   std::unique_ptr<escher::Model> model_;
 
+  escher::MeshPtr ring_mesh1_;
+  escher::MeshPtr ring_mesh2_;
+  escher::MeshPtr ring_mesh3_;
+  escher::MeshPtr wobbly_rect_mesh_;
+
   escher::MaterialPtr blue_;
   escher::MaterialPtr pink_;
   escher::MaterialPtr green_;
