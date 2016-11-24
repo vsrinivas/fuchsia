@@ -19,12 +19,12 @@ PageSyncImpl::PageSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                            storage::PageStorage* storage,
                            cloud_provider::CloudProvider* cloud_provider,
                            std::unique_ptr<backoff::Backoff> backoff,
-                           ftl::Closure error_callback)
+                           ftl::Closure on_error)
     : task_runner_(task_runner),
       storage_(storage),
       cloud_provider_(cloud_provider),
       backoff_(std::move(backoff)),
-      error_callback_(error_callback),
+      on_error_(on_error),
       weak_factory_(this) {
   FTL_DCHECK(storage);
   FTL_DCHECK(cloud_provider);
@@ -67,10 +67,10 @@ void PageSyncImpl::Start() {
   local_watch_set_ = true;
 }
 
-void PageSyncImpl::SetOnIdle(ftl::Closure on_idle_callback) {
-  FTL_DCHECK(!on_idle_callback_);
+void PageSyncImpl::SetOnIdle(ftl::Closure on_idle) {
+  FTL_DCHECK(!on_idle_);
   FTL_DCHECK(!started_);
-  on_idle_callback_ = std::move(on_idle_callback);
+  on_idle_ = std::move(on_idle);
 }
 
 bool PageSyncImpl::IsIdle() {
@@ -78,11 +78,10 @@ bool PageSyncImpl::IsIdle() {
          commit_downloads_.empty();
 }
 
-void PageSyncImpl::SetOnBacklogDownloaded(
-    ftl::Closure on_backlog_downloaded_callback) {
-  FTL_DCHECK(!on_backlog_downloaded_callback_);
+void PageSyncImpl::SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) {
+  FTL_DCHECK(!on_backlog_downloaded_);
   FTL_DCHECK(!started_);
-  on_backlog_downloaded_callback_ = on_backlog_downloaded_callback;
+  on_backlog_downloaded_ = on_backlog_downloaded;
 }
 
 void PageSyncImpl::OnNewCommit(const storage::Commit& commit,
@@ -246,19 +245,19 @@ void PageSyncImpl::HandleError(const char error_description[]) {
     cloud_provider_->UnwatchCommits(this);
   }
   storage_->SetSyncDelegate(nullptr);
-  error_callback_();
+  on_error_();
   errored_ = true;
 }
 
 void PageSyncImpl::CheckIdle() {
-  if (on_idle_callback_ && IsIdle()) {
-    on_idle_callback_();
+  if (on_idle_ && IsIdle()) {
+    on_idle_();
   }
 }
 
 void PageSyncImpl::BacklogDownloaded() {
-  if (on_backlog_downloaded_callback_) {
-    on_backlog_downloaded_callback_();
+  if (on_backlog_downloaded_) {
+    on_backlog_downloaded_();
   }
 }
 

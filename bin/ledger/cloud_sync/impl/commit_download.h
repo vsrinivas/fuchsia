@@ -25,7 +25,7 @@ class CommitDownload {
  public:
   CommitDownload(storage::PageStorage* storage,
                  cloud_provider::Record record,
-                 ftl::Closure done_callback,
+                 ftl::Closure on_done,
                  ftl::Closure error_callback);
   ~CommitDownload();
 
@@ -35,8 +35,8 @@ class CommitDownload {
  private:
   storage::PageStorage* const storage_;
   cloud_provider::Record record_;
-  ftl::Closure done_callback_;
-  ftl::Closure error_callback_;
+  ftl::Closure on_done_;
+  ftl::Closure on_error_;
   bool started_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CommitDownload);

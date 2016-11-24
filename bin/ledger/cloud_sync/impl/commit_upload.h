@@ -24,27 +24,26 @@ namespace cloud_sync {
 // uploaded. The entire commit is marked as synced once all objects are uploaded
 // and the commit itself is uploaded.
 //
-// Usage: call Start() to kick off the upload. |done_callback| is called after
-// upload is successfully completed. |error_callback| will be called at most
-// once after each Start() call when an error occurs. After |error_callback| is
-// called the client can call Start() again to retry the upload.
+// Usage: call Start() to kick off the upload. |on_done| is called after upload
+// is successfully completed. |on_error| will be called at most once after each
+// Start() call when an error occurs. After |on_error| is called the client can
+// call Start() again to retry the upload.
 //
-// Lifetime: if CommitUpload is deleted between Start() and |done_callback|
-// being called, it has to be deleted along with |storage| and |cloud_provider|,
-// which otherwise can retain callbacks for pending uploads. This isn't a
-// problem as long as the lifetime of page storage and page sync is managed
-// together.
+// Lifetime: if CommitUpload is deleted between Start() and |on_done| being
+// called, it has to be deleted along with |storage| and |cloud_provider|, which
+// otherwise can retain callbacks for pending uploads. This isn't a problem as
+// long as the lifetime of page storage and page sync is managed together.
 class CommitUpload {
  public:
   CommitUpload(storage::PageStorage* storage,
                cloud_provider::CloudProvider* cloud_provider,
                std::unique_ptr<const storage::Commit> commit,
-               ftl::Closure done_callback,
-               ftl::Closure error_callback);
+               ftl::Closure on_done,
+               ftl::Closure on_error);
   ~CommitUpload();
 
-  // Starts a new upload attempt. Results are reported through |done_callback|
-  // and |error_callback| passed in the constructor. After |error_callback| is
+  // Starts a new upload attempt. Results are reported through |on_done|
+  // and |on_error| passed in the constructor. After |on_error| is
   // called the client can retry by calling Start() again.
   void Start();
 
@@ -58,14 +57,14 @@ class CommitUpload {
   storage::PageStorage* storage_;
   cloud_provider::CloudProvider* cloud_provider_;
   std::unique_ptr<const storage::Commit> commit_;
-  ftl::Closure done_callback_;
-  ftl::Closure error_callback_;
+  ftl::Closure on_done_;
+  ftl::Closure on_error_;
   // Incremented on every upload attempt / Start() call. Tracked to detect stale
   // callbacks executing for the previous upload attempts.
   int current_attempt_ = 0;
   // True iff the current upload attempt is active, ie. didn't error yet.
   // Tracked to guard against starting a new upload attempt before the previous
-  // one fails and to avoid duplicate |error_callback| calls for a single upload
+  // one fails and to avoid duplicate |on_error| calls for a single upload
   // attempt. This is not reset after completing the upload, so that it's an
   // error to call .Start() on an upload that is complete.
   bool active_or_finished_ = false;

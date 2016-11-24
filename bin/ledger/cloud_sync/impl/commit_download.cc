@@ -10,12 +10,12 @@ namespace cloud_sync {
 
 CommitDownload::CommitDownload(storage::PageStorage* storage,
                                cloud_provider::Record record,
-                               ftl::Closure done_callback,
-                               ftl::Closure error_callback)
+                               ftl::Closure on_done,
+                               ftl::Closure on_error)
     : storage_(storage),
       record_(std::move(record)),
-      done_callback_(std::move(done_callback)),
-      error_callback_(std::move(error_callback)) {
+      on_done_(std::move(on_done)),
+      on_error_(std::move(on_error)) {
   FTL_DCHECK(storage);
 }
 
@@ -28,17 +28,17 @@ void CommitDownload::Start() {
       record_.commit.id, std::move(record_.commit.content),
       [this](storage::Status status) {
         if (status != storage::Status::OK) {
-          error_callback_();
+          on_error_();
           return;
         }
 
         if (storage_->SetSyncMetadata(std::move(record_.timestamp)) !=
             storage::Status::OK) {
-          error_callback_();
+          on_error_();
           return;
         }
 
-        done_callback_();
+        on_done_();
       });
 }
 

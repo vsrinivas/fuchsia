@@ -14,13 +14,13 @@ namespace cloud_sync {
 CommitUpload::CommitUpload(storage::PageStorage* storage,
                            cloud_provider::CloudProvider* cloud_provider,
                            std::unique_ptr<const storage::Commit> commit,
-                           ftl::Closure done_callback,
-                           ftl::Closure error_callback)
+                           ftl::Closure on_done,
+                           ftl::Closure on_error)
     : storage_(storage),
       cloud_provider_(cloud_provider),
       commit_(std::move(commit)),
-      done_callback_(done_callback),
-      error_callback_(error_callback) {
+      on_done_(on_done),
+      on_error_(on_error) {
   FTL_DCHECK(storage);
   FTL_DCHECK(cloud_provider);
 }
@@ -85,7 +85,7 @@ void CommitUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
     if (status != cloud_provider::Status::OK) {
       if (active_or_finished_) {
         active_or_finished_ = false;
-        error_callback_();
+        on_error_();
       }
       return;
     }
@@ -110,11 +110,11 @@ void CommitUpload::UploadCommit() {
     FTL_DCHECK(active_or_finished_);
     if (status != cloud_provider::Status::OK) {
       active_or_finished_ = false;
-      error_callback_();
+      on_error_();
       return;
     }
     storage_->MarkCommitSynced(commit_id);
-    done_callback_();
+    on_done_();
   });
 }
 

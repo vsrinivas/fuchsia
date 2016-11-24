@@ -58,18 +58,17 @@ class PageSyncImpl : public PageSync,
                storage::PageStorage* storage,
                cloud_provider::CloudProvider* cloud_provider,
                std::unique_ptr<backoff::Backoff> backoff,
-               ftl::Closure error_callback);
+               ftl::Closure on_error);
   ~PageSyncImpl() override;
 
   // PageSync:
   void Start() override;
 
-  void SetOnIdle(ftl::Closure on_idle_callback) override;
+  void SetOnIdle(ftl::Closure on_idle) override;
 
   bool IsIdle() override;
 
-  void SetOnBacklogDownloaded(
-      ftl::Closure on_backlog_downloaded_callback) override;
+  void SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) override;
 
   // storage::CommitWatcher:
   void OnNewCommit(const storage::Commit& commit,
@@ -105,10 +104,10 @@ class PageSyncImpl : public PageSync,
   storage::PageStorage* const storage_;
   cloud_provider::CloudProvider* const cloud_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
-  const ftl::Closure error_callback_;
+  const ftl::Closure on_error_;
 
-  ftl::Closure on_idle_callback_;
-  ftl::Closure on_backlog_downloaded_callback_;
+  ftl::Closure on_idle_;
+  ftl::Closure on_backlog_downloaded_;
   // Ensures that each instance is started only once.
   bool started_ = false;
   // Track which watchers are set, so that we know which to unset on hard error.
