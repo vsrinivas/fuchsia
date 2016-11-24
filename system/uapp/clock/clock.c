@@ -67,7 +67,8 @@ int set_rtc(const char* time) {
     if (rtc_fd < 0) {
         return -1;
     }
-    return ioctl_rtc_set(rtc_fd, &rtc);
+    ssize_t written = ioctl_rtc_set(rtc_fd, &rtc);
+    return (written == sizeof(rtc)) ? 0 : written;
 }
 
 int main(int argc, char** argv) {
