@@ -37,7 +37,7 @@ enum class State {
 State g_state = State::kStopped;  // guarded by g_mutex
 
 // The owner of the engine which keeps it alive until all refs released.
-std::unique_ptr<TraceEngine> g_owned_engine;  // guarded by g_mutex
+TraceEngine* g_owned_engine;  // guarded by g_mutex
 
 // Pending finish callback state.
 writer::TraceFinishedCallback g_finished_callback;  // guarded by g_mutex
@@ -91,7 +91,8 @@ void ReleaseEngine() {
     finished_callback = std::move(g_finished_callback),
     trace_disposition = g_trace_disposition
   ] { finished_callback(trace_disposition); });
-  g_owned_engine.reset();
+  delete g_owned_engine;
+  g_owned_engine = nullptr;
   g_state = State::kStopped;
 }
 
@@ -108,13 +109,15 @@ bool StartTracing(mx::vmo buffer,
 
   std::lock_guard<std::mutex> lock(g_mutex);
   FTL_CHECK(g_state == State::kStopped);
+  FTL_DCHECK(!g_owned_engine);
 
   // Start the engine.
-  g_owned_engine = TraceEngine::Create(std::move(buffer), std::move(fence),
-                                       std::move(enabled_categories));
-  if (!g_owned_engine)
+  auto engine = TraceEngine::Create(std::move(buffer), std::move(fence),
+                                    std::move(enabled_categories));
+  if (!engine)
     return false;
 
+  g_owned_engine = engine.release();
   g_owned_engine->StartTracing([](TraceDisposition disposition) {
     {
       std::lock_guard<std::mutex> lock(g_mutex);
@@ -138,7 +141,7 @@ bool StartTracing(mx::vmo buffer,
 
   // Acquire the initial reference to the engine.
   g_active_refs.fetch_add(1u, std::memory_order_acq_rel);
-  g_active_engine.store(g_owned_engine.get(), std::memory_order_relaxed);
+  g_active_engine.store(g_owned_engine, std::memory_order_relaxed);
   return true;
 }
 
