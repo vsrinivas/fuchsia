@@ -1,9 +1,19 @@
 # trace - collects and converts trace data
 
-trace enables tracing of an application. trace's runtime behavior can 
-be tuned with the following flags:
+trace enables tracing of an application. It exposes the following
+command line interface (invoke trace with --help to get an overview):
+Run program before starting trace.  The program is terminated when tracing ends unless --detach is specified.
+```{shell}
+trace [options] command [command-specific options]
+  --help: Produce this help message
 
- - --categories=[""]               comma-separated list of categories enabled for tracing
- - --output-file=[/tmp/trace.json] output file name
- - --buffer-size=[2]               buffer size in MB
- - --duration=[10]                 trace duration in [s]
+  list-categories - list all known categories
+  list-providers - list all registered providers
+  record - starts tracing and records data
+    --categories=[""]: Categories that should be enabled for tracing
+    --detach: Don't stop the traced program when tracing finished
+    --decouple: Don't stop tracing when the traced program exits
+    --duration=[10s]: Trace will be active for this long
+    --output-file=[/tmp/trace.json]: Trace data is stored in this file
+	[command args]: Run program before starting trace. The program is terminated when tracing ends unless --detach is specified
+```

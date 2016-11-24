@@ -14,10 +14,16 @@ executable("trace") {
 
 source_set("trace_app") {
   sources = [
-    "configuration.cc",
-    "configuration.h",
-    "trace_app.cc",
-    "trace_app.h",
+    "app.h",
+    "app.cc",
+    "command.h",
+    "command.cc",
+    "commands/list_categories.h",
+    "commands/list_categories.cc",
+    "commands/list_providers.h",
+    "commands/list_providers.cc",
+    "commands/record.h",
+    "commands/record.cc",
     "tracer.cc",
     "tracer.h,"
   ]
