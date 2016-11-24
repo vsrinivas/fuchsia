@@ -457,6 +457,22 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
     return false;
 
   switch (type) {
+    case EventType::kInstant: {
+      uint64_t scope;
+      if (!record.Read(&scope))
+        return false;
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments),
+          EventData(EventData::Instant{static_cast<EventScope>(scope)})}));
+      break;
+    }
+    case EventType::kCounter: {
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments), EventData(EventData::Counter{})}));
+      break;
+    }
     case EventType::kDurationBegin: {
       record_consumer_(Record(Record::Event{
           timestamp, process_thread, std::move(category), std::move(name),

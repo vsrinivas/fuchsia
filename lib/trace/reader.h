@@ -270,6 +270,14 @@ class MetadataData {
 // Event type specific data.
 class EventData {
  public:
+  // Instant event data.
+  struct Instant {
+    EventScope scope;
+  };
+
+  // Counter event data.
+  struct Counter {};
+
   // Duration begin event data.
   struct DurationBegin {};
 
@@ -291,6 +299,12 @@ class EventData {
     uint64_t id;
   };
 
+  explicit EventData(const Instant& instant)
+      : type_(EventType::kInstant), instant_(instant) {}
+
+  explicit EventData(const Counter& counter)
+      : type_(EventType::kCounter), counter_(counter) {}
+
   explicit EventData(const DurationBegin& duration_begin)
       : type_(EventType::kDurationBegin), duration_begin_(duration_begin) {}
 
@@ -305,6 +319,11 @@ class EventData {
 
   explicit EventData(const AsyncEnd& async_end)
       : type_(EventType::kAsyncEnd), async_end_(async_end) {}
+
+  const Instant& GetInstant() const {
+    FTL_DCHECK(type_ == EventType::kInstant);
+    return instant_;
+  }
 
   const AsyncBegin& GetAsyncBegin() const {
     FTL_DCHECK(type_ == EventType::kAsyncStart);
@@ -326,6 +345,8 @@ class EventData {
  private:
   EventType type_;
   union {
+    Instant instant_;
+    Counter counter_;
     DurationBegin duration_begin_;
     DurationEnd duration_end_;
     AsyncBegin async_begin_;

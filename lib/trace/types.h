@@ -41,11 +41,20 @@ enum class ArgumentType {
 
 // EventType enumerates all known trace event types.
 enum class EventType {
-  kDurationBegin = 1,
-  kDurationEnd = 2,
-  kAsyncStart = 3,
-  kAsyncInstant = 4,
-  kAsyncEnd = 5,
+  kInstant = 0,
+  kCounter = 1,
+  kDurationBegin = 2,
+  kDurationEnd = 3,
+  kAsyncStart = 4,
+  kAsyncInstant = 5,
+  kAsyncEnd = 6,
+};
+
+// Specifies the scope of instant events.
+enum class EventScope {
+  kThread = 0,
+  kProcess = 1,
+  kGlobal = 2,
 };
 
 // String index in a string table and in encoded form.

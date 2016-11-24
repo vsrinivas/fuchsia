@@ -16,8 +16,14 @@ namespace {
 
 constexpr char kProcessArgKey[] = "process";
 
+constexpr double NanosecondsToMicroseconds(uint64_t micros) {
+  return micros * 0.001;
+}
+
 bool IsEventTypeSupported(EventType type) {
   switch (type) {
+    case EventType::kInstant:
+    case EventType::kCounter:
     case EventType::kDurationBegin:
     case EventType::kDurationEnd:
     case EventType::kAsyncStart:
@@ -85,13 +91,34 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
   writer_.Key("name");
   writer_.String(event.name.data(), event.name.size());
   writer_.Key("ts");
-  writer_.Uint64(event.timestamp / 1000);
+  writer_.Double(NanosecondsToMicroseconds(event.timestamp));
   writer_.Key("pid");
   writer_.Uint64(event.process_thread.process_koid);
   writer_.Key("tid");
   writer_.Uint64(event.process_thread.thread_koid);
 
   switch (event.type()) {
+    case EventType::kInstant:
+      writer_.Key("ph");
+      writer_.String("i");
+      writer_.Key("s");
+      switch (event.data.GetInstant().scope) {
+        case EventScope::kGlobal:
+          writer_.String("g");
+          break;
+        case EventScope::kProcess:
+          writer_.String("p");
+          break;
+        case EventScope::kThread:
+        default:
+          writer_.String("t");
+          break;
+      }
+      break;
+    case EventType::kCounter:
+      writer_.Key("ph");
+      writer_.String("C");
+      break;
     case EventType::kDurationBegin:
       writer_.Key("ph");
       writer_.String("B");

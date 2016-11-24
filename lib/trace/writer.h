@@ -11,6 +11,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <mx/eventpair.h>
 #include <mx/vmo.h>
@@ -80,7 +81,7 @@ bool StartTracing(mx::vmo buffer,
 void StopTracing();
 
 // Returns true if tracing is active.
-bool IsTracing();
+bool IsTracingEnabled();
 
 // Returns true if the tracer has been initialized by a call to |StartTracing|
 // and the specified |category| has been enabled.
@@ -484,6 +485,31 @@ class CategorizedTraceWriter final : public TraceWriter {
   // The |category_constant| is not copied; it must outlive the trace engine.
   static CategorizedTraceWriter Prepare(const char* category_constant);
 
+  // Writes an instant event record with arguments into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteInstantEventRecord(const char* name,
+                               EventScope scope,
+                               Args&&... args) {
+    if (Payload payload = WriteEventRecordBase(
+            EventType::kInstant, name, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
+      payload.WriteValues(std::forward<Args>(args)...)
+          .Write(::tracing::internal::ToUnderlyingType(scope));
+    }
+  }
+
+  // Writes a counter event record with arguments into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteCounterEventRecord(const char* name, Args&&... args) {
+    if (Payload payload =
+            WriteEventRecordBase(EventType::kCounter, name, sizeof...(Args),
+                                 SizeArguments(std::forward<Args>(args)...))) {
+      payload.WriteValues(std::forward<Args>(args)...);
+    }
+  }
+
   // Writes a duration begin event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
@@ -703,6 +729,7 @@ class DurationEventScope {
 }  // namespace writer
 }  // namespace tracing
 
+#define TRACE_INTERNAL_ENABLED() ::tracing::writer::IsTracingEnabled()
 #define TRACE_INTERNAL_CATEGORY_ENABLED(category) \
   ::tracing::writer::IsTracingEnabledForCategory(category)
 
@@ -748,6 +775,15 @@ class DurationEventScope {
       scope_label.category(),                                                  \
       TRACE_INTERNAL_WRITER.WriteDurationBeginEventRecord(scope_label.name()   \
                                                               args))
+
+#define TRACE_INTERNAL_INSTANT(category, name, scope, args...) \
+  TRACE_INTERNAL_CATEGORIZED(                                  \
+      category,                                                \
+      TRACE_INTERNAL_WRITER.WriteInstantEventRecord(name, scope args))
+
+#define TRACE_INTERNAL_COUNTER(category, name, args...) \
+  TRACE_INTERNAL_CATEGORIZED(                           \
+      category, TRACE_INTERNAL_WRITER.WriteCounterEventRecord(name args))
 
 #define TRACE_INTERNAL_DURATION(scope_category, scope_name, args...)          \
   TRACE_INTERNAL_DURATION_SCOPE(TRACE_INTERNAL_SCOPE_LABEL(), scope_category, \
