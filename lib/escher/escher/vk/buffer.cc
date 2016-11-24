@@ -20,7 +20,7 @@ class UnownedBufferInfo : public BufferInfo {
                     vk::DeviceSize size,
                     vk::BufferUsageFlags usage_flags,
                     vk::MemoryPropertyFlags memory_property_flags)
-      : device_(device), size_(size) {
+      : device_(device), size_(size), mapped_ptr_(nullptr) {
     // Determine whether we will need to map the memory of the new buffer.
     bool needs_mapped_ptr = false;
     if (memory_property_flags & vk::MemoryPropertyFlagBits::eHostVisible) {
