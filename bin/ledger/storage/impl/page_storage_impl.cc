@@ -252,9 +252,7 @@ Status PageStorageImpl::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
 
 Status PageStorageImpl::GetCommit(const CommitId& commit_id,
                                   std::unique_ptr<const Commit>* commit) {
-  static std::string first_commit_id =
-      std::string(kFirstPageCommitId, kCommitIdSize);
-  if (commit_id == first_commit_id) {
+  if (IsFirstCommit(commit_id)) {
     *commit = CommitImpl::Empty(this);
     return Status::OK;
   }
@@ -280,6 +278,12 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit,
 void PageStorageImpl::AddCommitFromSync(const CommitId& id,
                                         std::string storage_bytes,
                                         std::function<void(Status)> callback) {
+  if (ContainsCommit(id) == Status::OK) {
+    // The commit is already downloaded.
+    callback(Status::OK);
+    return;
+  }
+
   std::unique_ptr<const Commit> commit =
       CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
   if (!commit) {
@@ -512,8 +516,7 @@ void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
   // Commits must arrive in order: Check that the parents are stored in DB and
   // remove them from the heads if they are present.
   for (const CommitId& parent_id : commit->GetParentIds()) {
-    std::unique_ptr<const Commit> parent_commit;
-    s = GetCommit(parent_id, &parent_commit);
+    s = ContainsCommit(parent_id);
     if (s != Status::OK) {
       FTL_LOG(ERROR) << "Failed to find parent commit \"" << parent_id
                      << "\" of commit \"" << commit->GetId() << "\"";
@@ -535,6 +538,20 @@ void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
 
   callback(Status::OK);
   NotifyWatchers(*(commit.get()), source);
+}
+
+Status PageStorageImpl::ContainsCommit(const CommitId& id) {
+  if (IsFirstCommit(id)) {
+    return Status::OK;
+  }
+  std::string bytes;
+  return db_.GetCommitStorageBytes(id, &bytes);
+}
+
+bool PageStorageImpl::IsFirstCommit(const CommitId& id) {
+  static std::string first_commit_id =
+      std::string(kFirstPageCommitId, kCommitIdSize);
+  return id == first_commit_id;
 }
 
 void PageStorageImpl::AddObject(

@@ -90,6 +90,8 @@ class PageStorageImpl : public PageStorage {
   void AddCommit(std::unique_ptr<const Commit> commit,
                  ChangeSource source,
                  std::function<void(Status)> callback);
+  Status ContainsCommit(const CommitId& id);
+  bool IsFirstCommit(const CommitId& id);
   void AddObject(mx::datapipe_consumer data,
                  int64_t size,
                  const std::function<void(Status, ObjectId)>& callback);

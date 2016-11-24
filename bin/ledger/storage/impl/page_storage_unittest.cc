@@ -286,6 +286,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
       storage_.get(), root_id, {GetFirstHead()});
   CommitId id = commit->GetId();
 
+  // Adding the commit should only request the tree node and the eager value.
   sync.object_requests.clear();
   storage_->AddCommitFromSync(id, commit->GetStorageBytes(),
                               [this](Status status) {
@@ -297,6 +298,16 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   EXPECT_TRUE(sync.object_requests.find(root_id) != sync.object_requests.end());
   EXPECT_TRUE(sync.object_requests.find(eager_value.object_id) !=
               sync.object_requests.end());
+
+  // Adding the same commit twice should not request any objects from sync.
+  sync.object_requests.clear();
+  storage_->AddCommitFromSync(id, commit->GetStorageBytes(),
+                              [this](Status status) {
+                                EXPECT_EQ(Status::OK, status);
+                                message_loop_.PostQuitTask();
+                              });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(sync.object_requests.empty());
 
   std::unique_ptr<const Commit> found;
   EXPECT_EQ(Status::OK, storage_->GetCommit(id, &found));
