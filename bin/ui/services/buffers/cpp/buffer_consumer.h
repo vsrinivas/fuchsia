@@ -21,7 +21,7 @@
 namespace mozart {
 
 class ConsumedBufferHolder;
-struct ConsumedBufferRegistry;
+class ConsumedBufferRegistry;
 
 // Assists with consuming buffers and monitoring their fences.
 //
@@ -47,7 +47,7 @@ class BufferConsumer : private mtl::MessageLoopHandler {
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
-  ftl::RefPtr<mtl::SharedVmo> GetSharedVmo(mx::vmo vmo);
+  void TracePooledBufferCount() const;
 
   uint32_t const map_flags_;
 

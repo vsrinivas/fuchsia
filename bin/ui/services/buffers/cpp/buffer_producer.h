@@ -52,32 +52,25 @@ class BufferProducer : private mtl::MessageLoopHandler {
 
   ftl::RefPtr<mtl::SharedVmo> GetSharedVmo(size_t size);
   ftl::RefPtr<mtl::SharedVmo> CreateSharedVmo(size_t size);
+  void TracePooledBufferCount() const;
 
   uint32_t const map_flags_;
 
-  struct FlightInfo {
+  struct PendingBufferInfo {
     mtl::MessageLoop::HandlerKey handler_key;
     ftl::RefPtr<mtl::SharedVmo> shared_vmo;
     std::shared_ptr<mx::eventpair> production_fence;
   };
 
-  struct BufferInfo {
-    BufferInfo(uint32_t tick_count, ftl::RefPtr<mtl::SharedVmo> vmo)
-        : tick_count(tick_count), vmo(std::move(vmo)) {}
-
-    uint32_t tick_count;
-    ftl::RefPtr<mtl::SharedVmo> vmo;
-  };
-
-  struct CompareBufferInfo {
-    bool operator()(const std::unique_ptr<BufferInfo>& a,
-                    const std::unique_ptr<BufferInfo>& b) {
-      return a->vmo->vmo_size() < b->vmo->vmo_size();
+  struct CompareVmosBySize {
+    bool operator()(const ftl::RefPtr<mtl::SharedVmo>& a,
+                    const ftl::RefPtr<mtl::SharedVmo>& b) {
+      return a->vmo_size() < b->vmo_size();
     }
   };
 
-  std::unordered_map<mx_handle_t, FlightInfo> buffers_in_flight_;
-  std::multiset<std::unique_ptr<BufferInfo>, CompareBufferInfo>
+  std::unordered_map<mx_handle_t, PendingBufferInfo> pending_buffers_;
+  std::multiset<ftl::RefPtr<mtl::SharedVmo>, CompareVmosBySize>
       available_buffers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(BufferProducer);

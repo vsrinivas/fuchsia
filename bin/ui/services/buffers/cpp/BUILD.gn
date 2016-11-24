@@ -15,6 +15,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
+    "//apps/tracing/lib/trace",
     "//apps/mozart/services/buffers",
     "//lib/ftl",
     "//lib/mtl",

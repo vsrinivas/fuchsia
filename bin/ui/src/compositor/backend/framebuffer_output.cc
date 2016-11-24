@@ -125,10 +125,12 @@ void FramebufferOutput::SubmitFrame(ftl::RefPtr<RenderFrame> frame) {
       TRACE_ASYNC_END0("gfx", "SubmitFrame", frame_number_ - 1);
     }
     next_frame_ = frame;
+    TracePendingFrames();
     return;
   }
 
   frame_in_progress_ = true;
+  TracePendingFrames();
   PostFrameToRasterizer(std::move(frame));
 }
 
@@ -184,8 +186,10 @@ void FramebufferOutput::PrepareNextFrame() {
 
   if (next_frame_) {
     PostFrameToRasterizer(std::move(next_frame_));
+    TracePendingFrames();
   } else {
     frame_in_progress_ = false;
+    TracePendingFrames();
     if (scheduled_frame_callback_)
       RunScheduledFrameCallback();
   }
@@ -205,6 +209,11 @@ void FramebufferOutput::RunScheduledFrameCallback() {
   FrameCallback callback;
   scheduled_frame_callback_.swap(callback);
   callback(timing);
+}
+
+void FramebufferOutput::TracePendingFrames() {
+  TRACE_COUNTER2("gfx", "FramebufferOutput/pending", "in_progress",
+                 frame_in_progress_ ? 1 : 0, "next", next_frame_ ? 1 : 0);
 }
 
 FramebufferOutput::Rasterizer::Rasterizer(FramebufferOutput* output)

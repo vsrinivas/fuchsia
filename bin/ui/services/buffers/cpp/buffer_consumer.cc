@@ -4,17 +4,29 @@
 
 #include "apps/mozart/services/buffers/cpp/buffer_consumer.h"
 
+#include <atomic>
+
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/handles/object_info.h"
 
 namespace mozart {
 namespace {
 
+std::atomic<int32_t> g_consumed_buffer_count;
+
+void TraceConsumedBufferCount(int32_t delta) {
+  int32_t count =
+      g_consumed_buffer_count.fetch_add(delta, std::memory_order_relaxed) +
+      delta;
+  TRACE_COUNTER1("gfx", "BufferProducer/alloc", "consumed_buffers", count);
+}
+
 class ConsumedVmo : public mtl::SharedVmo {
  public:
   explicit ConsumedVmo(mx::vmo vmo,
                        uint32_t map_flags,
-                       mx_koid_t koid,
+                       mx_koid_t vmo_koid,
                        std::weak_ptr<ConsumedBufferRegistry> weak_registry);
   ~ConsumedVmo() override;
 
@@ -23,7 +35,7 @@ class ConsumedVmo : public mtl::SharedVmo {
   void RemoveRetention(mx_koid_t retention_koid);
 
  private:
-  mx_koid_t koid_;
+  mx_koid_t vmo_koid_;
   std::weak_ptr<ConsumedBufferRegistry> weak_registry_;
   std::unordered_map<mx_koid_t, mx::eventpair> retentions_;
 
@@ -38,16 +50,31 @@ struct RetentionInfo {
 
 }  // namespace
 
-struct ConsumedBufferRegistry {
-  // Maps VMO koids to instances.  The registry does not retain ownership of
-  // these instances because they are retained by clients of the registry.
-  std::mutex mutex;
-  std::unordered_map<mx_koid_t, mtl::SharedVmo*> vmos;
+// Maps VMO koids to instances.  The registry does not retain ownership of
+// these instances because they are retained by clients of the registry.
+class ConsumedBufferRegistry {
+ public:
+  ConsumedBufferRegistry();
+  ~ConsumedBufferRegistry();
+
+  static std::shared_ptr<ConsumedBufferRegistry> Create() {
+    auto shared = std::make_shared<ConsumedBufferRegistry>();
+    shared->weak_ = shared;
+    return shared;
+  }
+
+  ftl::RefPtr<mtl::SharedVmo> GetSharedVmo(mx::vmo vmo, uint32_t map_flags);
+  void ReleaseVmo(mx_koid_t vmo_koid);
+
+ private:
+  std::weak_ptr<ConsumedBufferRegistry> weak_;
+
+  std::mutex mutex_;
+  std::unordered_map<mx_koid_t, mtl::SharedVmo*> vmos_;
 };
 
 BufferConsumer::BufferConsumer(uint32_t map_flags)
-    : map_flags_(map_flags),
-      registry_(std::make_shared<ConsumedBufferRegistry>()) {}
+    : map_flags_(map_flags), registry_(ConsumedBufferRegistry::Create()) {}
 
 BufferConsumer::~BufferConsumer() {
   for (auto& pair : retained_buffers_) {
@@ -62,7 +89,7 @@ std::unique_ptr<ConsumedBufferHolder> BufferConsumer::ConsumeBuffer(
   if (!buffer)
     return nullptr;
 
-  auto shared_vmo = GetSharedVmo(std::move(buffer->vmo));
+  auto shared_vmo = registry_->GetSharedVmo(std::move(buffer->vmo), map_flags_);
   if (!shared_vmo)
     return nullptr;
 
@@ -81,6 +108,7 @@ std::unique_ptr<ConsumedBufferHolder> BufferConsumer::ConsumeBuffer(
       retained_buffers_.emplace(
           retention_handle,
           RetentionInfo{handler_key, shared_vmo, retention_koid});
+      TracePooledBufferCount();
     }
   }
 
@@ -90,25 +118,6 @@ std::unique_ptr<ConsumedBufferHolder> BufferConsumer::ConsumeBuffer(
 
   return std::unique_ptr<ConsumedBufferHolder>(
       new ConsumedBufferHolder(std::move(shared_vmo), std::move(fence)));
-}
-
-ftl::RefPtr<mtl::SharedVmo> BufferConsumer::GetSharedVmo(mx::vmo vmo) {
-  if (!vmo)
-    return nullptr;
-
-  mx_koid_t vmo_koid = mtl::GetKoid(vmo.get());
-  if (vmo_koid == MX_KOID_INVALID)
-    return nullptr;
-
-  std::lock_guard<std::mutex> lock(registry_->mutex);
-  auto it = registry_->vmos.find(vmo_koid);
-  if (it != registry_->vmos.end())
-    return ftl::Ref(it->second);
-
-  auto instance = ftl::MakeRefCounted<ConsumedVmo>(std::move(vmo), map_flags_,
-                                                   vmo_koid, registry_);
-  registry_->vmos.emplace(vmo_koid, instance.get());
-  return instance;
 }
 
 void BufferConsumer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
@@ -122,14 +131,19 @@ void BufferConsumer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   mtl::MessageLoop::GetCurrent()->RemoveHandler(retention_info.handler_key);
   static_cast<ConsumedVmo*>(retention_info.shared_vmo.get())
       ->RemoveRetention(retention_info.retention_koid);
-
   retained_buffers_.erase(it);
+  TracePooledBufferCount();
 }
 
 void BufferConsumer::OnHandleError(mx_handle_t handle, mx_status_t error) {
   FTL_CHECK(false) << "A handle error occurred while waiting, this should"
                       "never happen: error="
                    << error;
+}
+
+void BufferConsumer::TracePooledBufferCount() const {
+  TRACE_COUNTER1("gfx", "BufferConsumer/pool", "retained_buffers",
+                 retained_buffers_.size());
 }
 
 ConsumedBufferHolder::ConsumedBufferHolder(
@@ -141,20 +155,51 @@ ConsumedBufferHolder::ConsumedBufferHolder(
 
 ConsumedBufferHolder::~ConsumedBufferHolder() {}
 
+ConsumedBufferRegistry::ConsumedBufferRegistry() {}
+
+ConsumedBufferRegistry::~ConsumedBufferRegistry() {}
+
+ftl::RefPtr<mtl::SharedVmo> ConsumedBufferRegistry::GetSharedVmo(
+    mx::vmo vmo,
+    uint32_t map_flags) {
+  if (!vmo)
+    return nullptr;
+
+  mx_koid_t vmo_koid = mtl::GetKoid(vmo.get());
+  if (vmo_koid == MX_KOID_INVALID)
+    return nullptr;
+
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto it = vmos_.find(vmo_koid);
+  if (it != vmos_.end())
+    return ftl::Ref(it->second);
+
+  auto instance = ftl::MakeRefCounted<ConsumedVmo>(std::move(vmo), map_flags,
+                                                   vmo_koid, weak_);
+  vmos_.emplace(vmo_koid, instance.get());
+  return instance;
+}
+
+void ConsumedBufferRegistry::ReleaseVmo(mx_koid_t vmo_koid) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  vmos_.erase(vmo_koid);
+}
+
 ConsumedVmo::ConsumedVmo(mx::vmo vmo,
                          uint32_t map_flags,
-                         mx_koid_t koid,
+                         mx_koid_t vmo_koid,
                          std::weak_ptr<ConsumedBufferRegistry> weak_registry)
     : SharedVmo(std::move(vmo), map_flags),
-      koid_(koid),
-      weak_registry_(std::move(weak_registry)) {}
+      vmo_koid_(vmo_koid),
+      weak_registry_(std::move(weak_registry)) {
+  TraceConsumedBufferCount(1);
+}
 
 ConsumedVmo::~ConsumedVmo() {
   auto registry = weak_registry_.lock();
-  if (registry) {
-    std::lock_guard<std::mutex> lock(registry->mutex);
-    registry->vmos.erase(koid_);
-  }
+  if (registry)
+    registry->ReleaseVmo(vmo_koid_);
+  TraceConsumedBufferCount(-1);
 }
 
 void ConsumedVmo::Release() {

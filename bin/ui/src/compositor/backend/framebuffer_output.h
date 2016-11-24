@@ -44,6 +44,7 @@ class FramebufferOutput : public Output {
                        ftl::TimePoint finish_time);
   void PrepareNextFrame();
   void RunScheduledFrameCallback();
+  void TracePendingFrames();
 
   ftl::RefPtr<ftl::TaskRunner> compositor_task_runner_;
   ftl::Closure error_callback_;

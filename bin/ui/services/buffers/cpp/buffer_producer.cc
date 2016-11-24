@@ -4,12 +4,24 @@
 
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 
+#include <atomic>
+
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 namespace mozart {
 namespace {
 
 constexpr uint32_t kMaxTickBeforeDiscard = 3;
+
+std::atomic<int32_t> g_produced_buffer_count;
+
+void TraceProducedBufferCount(int32_t delta) {
+  int32_t count =
+      g_produced_buffer_count.fetch_add(delta, std::memory_order_relaxed) +
+      delta;
+  TRACE_COUNTER1("gfx", "BufferProducer/alloc", "produced_buffers", count);
+}
 
 // Establishes a constraint on whether a VMO should be reused for an
 // allocation of the specified size, taking into account wasted space.
@@ -34,9 +46,13 @@ class ProducedVmo : public mtl::SharedVmo {
     retention_.reset();
   }
 
+  uint32_t Tick() { return ++tick_count_; }
+  void ResetTicks() { tick_count_ = 0u; }
+
  private:
   mx::eventpair retainer_;
   mx::eventpair retention_;
+  uint32_t tick_count_ = 0u;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ProducedVmo);
 };
@@ -46,14 +62,14 @@ class ProducedVmo : public mtl::SharedVmo {
 BufferProducer::BufferProducer(uint32_t map_flags) : map_flags_(map_flags) {}
 
 BufferProducer::~BufferProducer() {
-  for (auto& pair : buffers_in_flight_) {
-    const FlightInfo& flight_info = pair.second;
-    mtl::MessageLoop::GetCurrent()->RemoveHandler(flight_info.handler_key);
-    static_cast<ProducedVmo*>(flight_info.shared_vmo.get())->Release();
+  for (auto& pair : pending_buffers_) {
+    const PendingBufferInfo& info = pair.second;
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(info.handler_key);
+    static_cast<ProducedVmo*>(info.shared_vmo.get())->Release();
   }
 
-  for (auto& buffer_info : available_buffers_) {
-    static_cast<ProducedVmo*>(buffer_info->vmo.get())->Release();
+  for (auto& shared_vmo : available_buffers_) {
+    static_cast<ProducedVmo*>(shared_vmo.get())->Release();
   }
 }
 
@@ -69,6 +85,7 @@ std::unique_ptr<ProducedBufferHolder> BufferProducer::ProduceBuffer(
       mx::eventpair::create(0u, production_fence.get(), &consumption_fence);
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "Failed to create eventpair for fence: status=" << status;
+    TracePooledBufferCount();
     return nullptr;
   }
 
@@ -76,9 +93,10 @@ std::unique_ptr<ProducedBufferHolder> BufferProducer::ProduceBuffer(
       mtl::MessageLoop::GetCurrent()->AddHandler(this, production_fence->get(),
                                                  MX_SIGNAL_PEER_CLOSED);
 
-  buffers_in_flight_.emplace(
+  pending_buffers_.emplace(
       production_fence->get(),
-      FlightInfo{handler_key, shared_vmo, production_fence});
+      PendingBufferInfo{handler_key, shared_vmo, production_fence});
+  TracePooledBufferCount();
 
   return std::unique_ptr<ProducedBufferHolder>(new ProducedBufferHolder(
       std::move(shared_vmo), std::move(production_fence),
@@ -88,8 +106,8 @@ std::unique_ptr<ProducedBufferHolder> BufferProducer::ProduceBuffer(
 void BufferProducer::Tick() {
   for (auto it = available_buffers_.begin(); it != available_buffers_.end();
        ++it) {
-    (*it)->tick_count++;
-    if ((*it)->tick_count >= kMaxTickBeforeDiscard) {
+    auto produced_vmo = static_cast<ProducedVmo*>(it->get());
+    if (produced_vmo->Tick() >= kMaxTickBeforeDiscard) {
       it = available_buffers_.erase(it);
       if (it == available_buffers_.end())
         break;
@@ -100,11 +118,11 @@ void BufferProducer::Tick() {
 ftl::RefPtr<mtl::SharedVmo> BufferProducer::GetSharedVmo(size_t size) {
   for (auto it = available_buffers_.begin(); it != available_buffers_.end();
        ++it) {
-    size_t vmo_size = (*it)->vmo->vmo_size();
+    size_t vmo_size = (*it)->vmo_size();
     if (vmo_size >= size) {
       if (!ShouldRecycle(vmo_size, size))
         break;  // too wasteful to use a buffer of this size or larger
-      auto shared_vmo = std::move((*it)->vmo);
+      auto shared_vmo = std::move(*it);
       available_buffers_.erase(it);
       return shared_vmo;
     }
@@ -146,16 +164,22 @@ ftl::RefPtr<mtl::SharedVmo> BufferProducer::CreateSharedVmo(size_t size) {
 void BufferProducer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   FTL_DCHECK(pending & MX_SIGNAL_PEER_CLOSED);
 
-  auto it = buffers_in_flight_.find(handle);
-  FTL_DCHECK(it != buffers_in_flight_.end());
+  auto it = pending_buffers_.find(handle);
+  FTL_DCHECK(it != pending_buffers_.end());
 
   // Add the newly available buffer to the pool.
-  const FlightInfo& flight_info = it->second;
-  mtl::MessageLoop::GetCurrent()->RemoveHandler(flight_info.handler_key);
-  available_buffers_.insert(
-      std::make_unique<BufferInfo>(0u, std::move(flight_info.shared_vmo)));
+  const PendingBufferInfo& info = it->second;
+  mtl::MessageLoop::GetCurrent()->RemoveHandler(info.handler_key);
+  static_cast<ProducedVmo*>(info.shared_vmo.get())->ResetTicks();
+  available_buffers_.insert(std::move(info.shared_vmo));
+  pending_buffers_.erase(it);
+  TracePooledBufferCount();
+}
 
-  buffers_in_flight_.erase(it);
+void BufferProducer::TracePooledBufferCount() const {
+  TRACE_COUNTER2("gfx", "BufferProducer/pool", "pending_buffers",
+                 pending_buffers_.size(), "available_buffers",
+                 available_buffers_.size());
 }
 
 ProducedBufferHolder::ProducedBufferHolder(
@@ -209,8 +233,12 @@ ProducedVmo::ProducedVmo(mx::vmo vmo,
       retention_(std::move(retention)) {
   FTL_DCHECK(retainer_);
   FTL_DCHECK(retention_);
+
+  TraceProducedBufferCount(1);
 }
 
-ProducedVmo::~ProducedVmo() {}
+ProducedVmo::~ProducedVmo() {
+  TraceProducedBufferCount(-1);
+}
 
 }  // namespace mozart
