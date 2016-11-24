@@ -63,16 +63,20 @@ Status StagingToDestination(size_t expected_size,
 
       return Status::INTERNAL_IO_ERROR;
     }
-  } else {
-    if (rename(source_path.c_str(), destination_path.c_str()) != 0) {
-      // If rename failed, the file might have been saved by another call.
-      if (!files::GetFileSize(destination_path, &size) ||
-          size != expected_size) {
-        FTL_LOG(ERROR) << "Internal error. Failed to rename \n\"" << source_path
-                       << "\" to \n\"" << destination_path << "\"";
-        return Status::INTERNAL_IO_ERROR;
-      }
+    // Source path already existed at destination. Clear the source.
+    files::DeletePath(source_path, false);
+    return Status::OK;
+  }
+
+  if (rename(source_path.c_str(), destination_path.c_str()) != 0) {
+    // If rename failed, the file might have been saved by another call.
+    if (!files::GetFileSize(destination_path, &size) || size != expected_size) {
+      FTL_LOG(ERROR) << "Internal error. Failed to rename \n\"" << source_path
+                     << "\" to \n\"" << destination_path << "\"";
+      return Status::INTERNAL_IO_ERROR;
     }
+    // Source path already existed at destination. Clear the source.
+    files::DeletePath(source_path, false);
   }
   return Status::OK;
 }
