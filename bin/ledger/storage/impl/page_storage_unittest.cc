@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include <dirent.h>
+
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
@@ -16,6 +18,7 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
@@ -35,6 +38,32 @@ class PageStorageImplAccessorForTest {
 };
 
 namespace {
+
+void SafeCloseDir(DIR* dir) {
+    if (dir) closedir(dir);
+}
+
+bool IsDirectoryEmpty(const std::string& directory) {
+  std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(opendir(directory.c_str()),
+                                                    SafeCloseDir);
+  if (!dir.get())
+    return true;
+
+ for (struct dirent* entry = readdir(dir.get()); entry != nullptr;
+       entry = readdir(dir.get())) {
+    char* name = entry->d_name;
+    if (name[0]) {
+      if (name[0] == '.') {
+        if (!name[1] || (name[1] == '.' && !name[2])) {
+          // . or ..
+          continue;
+        }
+      }
+    }
+    return false;
+  }
+  return true;
+}
 
 std::string RandomId(size_t size) {
   std::string result;
@@ -127,11 +156,20 @@ class PageStorageTest : public test::TestWithMessageLoop {
 
   // Test:
   void SetUp() override {
+    test::TestWithMessageLoop::SetUp();
+
     PageId id = RandomId(16);
     storage_ = std::make_unique<PageStorageImpl>(message_loop_.task_runner(),
                                                  tmp_dir_.path(), id);
     EXPECT_EQ(Status::OK, storage_->Init());
     EXPECT_EQ(id, storage_->GetId());
+  }
+  void TearDown() override {
+    std::string staging_directory = tmp_dir_.path() + "/staging";
+    EXPECT_TRUE(files::IsDirectory(staging_directory));
+    EXPECT_TRUE(IsDirectoryEmpty(staging_directory));
+
+    test::TestWithMessageLoop::TearDown();
   }
 
  protected:
