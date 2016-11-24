@@ -13,10 +13,6 @@
             "bootfs_path": "apps/flutter_runner"
         },
         {
-            "binary": "flutter_wtf_unittests",
-            "bootfs_path": "bin/flutter_wtf_unittests"
-        },
-        {
             "binary": "hello_flutter.flx",
             "bootfs_path": "apps/hello_flutter"
         },
