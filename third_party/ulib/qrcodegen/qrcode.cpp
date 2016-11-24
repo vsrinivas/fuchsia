@@ -125,7 +125,7 @@ QrCode::QrCode() : version_(1), size_(21), ecc_(Ecc::LOW) {
 Error QrCode::draw(int ver, Ecc ecl, const uint8_t* data, size_t len, int mask) {
 
     // Check arguments
-    if (ver < 1 || ver > 40 || mask < -1 || mask > 7 || ecl < 0 || ecl > 3)
+    if (ver < 1 || ver > 40 || mask < -1 || mask > 7 || ecl > 3)
         return Error::InvalidArgs;
 
     // Initialize scalar fields

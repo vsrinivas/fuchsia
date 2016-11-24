@@ -36,7 +36,7 @@
 
 namespace qrcodegen {
 
-enum Error {
+enum Error : unsigned int {
     None = 0,
     Internal = 1,
     InvalidArgs = 2,
@@ -45,7 +45,7 @@ enum Error {
 };
 
 /* Represents the error correction level used in a QR Code symbol. */
-enum Ecc {
+enum Ecc : unsigned int {
     LOW = 0,
     MEDIUM = 1,
     QUARTILE = 2,
