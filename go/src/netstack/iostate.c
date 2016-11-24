@@ -38,8 +38,7 @@ void iostate_release(iostate_t* ios) {
   debug_alloc("iostate_release: %p: (%p %p) rc=%d\n", ios, ios->rbuf, ios->wbuf,
               ios->refcount);
   if (refcount == 0) {
-    socket_signals_clear(ios, MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE |
-                                  MX_SIGNAL_PEER_CLOSED | MX_SIGNAL_SIGNALED);
+    socket_signals_clear(ios, ios->watching_signals);
     info("mx_handle_close: ios->s 0x%x (ios=%p)\n", ios->s, ios);
     mx_handle_close(ios->s);
     debug_alloc("iostate_release: %p: put rbuf %p\n", ios, ios->rbuf);
