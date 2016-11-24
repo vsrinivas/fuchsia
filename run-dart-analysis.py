@@ -13,19 +13,21 @@ import sys
 
 def gn_describe(out, path):
   gn = os.path.join(paths.FUCHSIA_ROOT, 'packages', 'gn', 'gn.py')
-  data = subprocess.check_output([gn, 'desc', out, path, '--format=json'])
+  data = subprocess.check_output([gn, 'desc', out, path, '--format=json'], cwd=paths.FUCHSIA_ROOT)
   return json.loads(data)
 
 
 def main():
-  parser = argparse.ArgumentParser('Run Dart analysis for Dart build targets')
+  parser = argparse.ArgumentParser('''Run Dart analysis for Dart build targets
+Extra flags will be passed to the analyzer.
+''')
   parser.add_argument('--out',
                       help='Path to the base output directory, e.g. out/debug-x86-64',
                       required=True)
   parser.add_argument('--tree',
                       help='Restrict analysis to a source subtree, e.g. //apps/sysui/*',
                       default='*')
-  args = parser.parse_args()
+  args, extras = parser.parse_known_args()
 
   scripts = []
   targets = gn_describe(args.out, args.tree)
@@ -44,7 +46,7 @@ def main():
   has_errors = False
   for script in scripts:
     print '----------------------------------------------------------'
-    has_errors |= subprocess.call([script], stdout=sys.stdout, stderr=sys.stderr) != 0
+    has_errors |= subprocess.call([script] + extras, stdout=sys.stdout, stderr=sys.stderr) != 0
     print ''
 
   if has_errors:
