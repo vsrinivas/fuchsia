@@ -48,7 +48,7 @@ that occurred after the timeout but before the syscall returned.
 
 ## ERRORS
 
-**ERR_INVALID_ARGS**  *items* isn't a valid pointer.
+**ERR_INVALID_ARGS**  *items* isn't a valid pointer or if *count* is too large.
 
 **ERR_BAD_HANDLE**  one of *items* contains an invalid handle.
 
