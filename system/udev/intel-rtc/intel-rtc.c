@@ -12,6 +12,7 @@
 #include <magenta/types.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <threads.h>
 
@@ -20,6 +21,55 @@
 
 #define RTC_IDX_REG 0x70
 #define RTC_DATA_REG 0x71
+
+// This is run on boot (after validation of the RTC) and whenever the
+// RTC is adjusted.
+static void set_utc_offset(rtc_t* rtc) {
+    // Start with seconds from the Unix epoch to 2016/1/1T00:00:00.
+    uint64_t seconds_to_new_year = 1451606400;
+
+    // Leading 0 allows using the 1-indexed month values from rtc.
+    static uint64_t days_in_month[] = {
+        0,
+        31, // January
+        29, // February
+        31, // March
+        30, // April
+        31, // May
+        30, // June
+        31, // July
+        31, // August
+        30, // September
+        31, // October
+        30, // November
+        31, // December
+    };
+
+    // First add all the prior complete months.
+    uint64_t days_this_year = 0;
+    for (size_t month = 1; month < rtc->month; month++) {
+        days_this_year += days_in_month[month];
+    }
+
+    // Add all the prior complete days.
+    days_this_year += rtc->day - 1;
+
+    // Hours, minutes, and seconds are 0 indexed.
+    uint64_t hours_this_year = days_this_year * 24 + rtc->hours;
+    uint64_t minutes_this_year = hours_this_year * 60 + rtc->minutes;
+    uint64_t seconds_this_year = minutes_this_year * 60 + rtc->seconds;
+
+    uint64_t rtc_seconds = seconds_to_new_year + seconds_this_year;
+    uint64_t rtc_nanoseconds = rtc_seconds * 1000000000;
+
+    uint64_t monotonic_nanoseconds = mx_time_get(MX_CLOCK_MONOTONIC);
+    int64_t offset = rtc_nanoseconds - monotonic_nanoseconds;
+
+    mx_status_t status = mx_clock_adjust(get_root_resource(), MX_CLOCK_UTC, offset);
+    if (status != NO_ERROR) {
+        fprintf(stderr, "The RTC driver was unable to set the UTC clock!\n");
+    }
+}
 
 static mtx_t lock = MTX_INIT;
 
@@ -145,21 +195,25 @@ static ssize_t intel_rtc_set(const void* buf, size_t count) {
     }
 
     write_time(&rtc);
+    // TODO(kulakowski) This isn't the place for this long term.
+    set_utc_offset(&rtc);
     return sizeof(rtc_t);
 }
 
-static void sanitize_rtc(void) {
+// Validate that the RTC is set to a valid time, and to a relatively
+// sane one. Report the validated or reset time back via rtc.
+static void sanitize_rtc(rtc_t* rtc) {
     // January 1, 2016 00:00:00
     static const rtc_t default_rtc = {
         .day = 1,
         .month = 1,
         .year = 2016,
     };
-    rtc_t rtc;
 
-    intel_rtc_get(&rtc, sizeof(&rtc));
-    if (rtc_is_invalid(&rtc) || rtc.year < 2010 || rtc.year > 2020) {
+    intel_rtc_get(rtc, sizeof(*rtc));
+    if (rtc_is_invalid(rtc) || rtc->year < 2010 || rtc->year > 2020) {
         intel_rtc_set(&default_rtc, sizeof(&default_rtc));
+        *rtc = default_rtc;
     }
 }
 
@@ -204,7 +258,9 @@ static mx_status_t intel_rtc_init(mx_driver_t* drv) {
         return status;
     }
 
-    sanitize_rtc();
+    rtc_t rtc;
+    sanitize_rtc(&rtc);
+    set_utc_offset(&rtc);
 
     return NO_ERROR;
 #else
