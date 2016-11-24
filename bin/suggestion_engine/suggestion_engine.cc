@@ -8,6 +8,7 @@
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/repo.h"
 #include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -26,6 +27,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
         [this](fidl::InterfaceRequest<SuggestionProvider> request) {
           suggestion_provider_bindings_.AddBinding(this, std::move(request));
         });
+    focus_controller_ptr_ =
+        app_context_->ConnectToEnvironmentService<modular::FocusController>();
   }
 
   // SuggestionProvider
@@ -78,6 +81,9 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                                              GetProxy(&story));
                 FTL_LOG(INFO) << "Creating story with module "
                               << create_story->module_id;
+                story->GetInfo([this](modular::StoryInfoPtr story_info) {
+                  focus_controller_ptr_->FocusStory(story_info->id);
+                });
               } else {
                 FTL_LOG(WARNING) << "Unable to add module; no story provider";
               }
@@ -118,6 +124,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
 
   modular::StoryProviderPtr story_provider_;
+  fidl::InterfacePtr<modular::FocusController> focus_controller_ptr_;
 
   Repo repo_;
 };
