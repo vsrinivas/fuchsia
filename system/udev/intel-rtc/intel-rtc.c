@@ -22,6 +22,8 @@
 #define RTC_IDX_REG 0x70
 #define RTC_DATA_REG 0x71
 
+#define RTC_HOUR_PM_BIT 0x80
+
 // This is run on boot (after validation of the RTC) and whenever the
 // RTC is adjusted.
 static void set_utc_offset(rtc_t* rtc) {
@@ -105,52 +107,130 @@ enum intel_rtc_register_b {
     REG_B_UPDATE_CYCLE_INHIBIT_BIT = 1 << 7,
 };
 
-static uint8_t read_reg(enum intel_rtc_registers reg) {
+static uint8_t to_bcd(uint8_t binary) {
+    return ((binary / 10) << 4) | (binary % 10);
+}
+
+static uint8_t from_bcd(uint8_t bcd) {
+    return ((bcd >> 4) * 10) + (bcd & 0xf);
+}
+
+static uint8_t read_reg_raw(enum intel_rtc_registers reg) {
     outp(RTC_IDX_REG, reg);
     return inp(RTC_DATA_REG);
 }
 
-static void write_reg(enum intel_rtc_registers reg, uint8_t val) {
+static void write_reg_raw(enum intel_rtc_registers reg, uint8_t val) {
     outp(RTC_IDX_REG, reg);
     outp(RTC_DATA_REG, val);
 }
 
-// Set the hour format to 24 hours, and the data mode to binary, rather than
-// binary-coded decimal.
-static void set_rtc_mode(void) {
-    write_reg(REG_B, read_reg(REG_B) | REG_B_HOUR_FORMAT_BIT | REG_B_DATA_MODE_BIT);
+static uint8_t read_reg(enum intel_rtc_registers reg, bool reg_is_binary) {
+    uint8_t data = read_reg_raw(reg);
+    return reg_is_binary ? data : from_bcd(data);
+}
+
+static void write_reg(enum intel_rtc_registers reg, uint8_t val, bool reg_is_binary) {
+    write_reg_raw(reg, reg_is_binary ? val : to_bcd(val));
+}
+
+// The high bit (RTC_HOUR_PM_BIT) is special for hours when not using
+// the 24 hour time encoding. In that case, it is set for PM and unset
+// for AM. This is true for both BCD and binary encodings of the
+// value, so it has to be masked out first.
+
+static uint8_t read_reg_hour(bool reg_is_binary, bool reg_is_24_hour) {
+    uint8_t data = read_reg_raw(REG_HOURS);
+
+    bool pm = data & RTC_HOUR_PM_BIT;
+    data &= ~RTC_HOUR_PM_BIT;
+
+    uint8_t hour = reg_is_binary ? data : from_bcd(data);
+
+    if (reg_is_24_hour) {
+        return hour;
+    }
+
+    if (pm) {
+        hour += 12;
+    }
+
+    // Adjust noon and midnight.
+    switch (hour) {
+    case 24: // 12 PM
+        return 12;
+    case 12: // 12 AM
+        return 0;
+    default:
+        return hour;
+    }
+}
+
+static void write_reg_hour(uint8_t hour, bool reg_is_binary, bool reg_is_24_hour) {
+    bool pm = hour > 11;
+
+    if (!reg_is_24_hour) {
+        if (pm) {
+            hour -= 12;
+        }
+        if (hour == 0) {
+            hour = 12;
+        }
+    }
+
+    uint8_t data = reg_is_binary ? hour : to_bcd(hour);
+
+    if (pm && !reg_is_24_hour) {
+        data |= RTC_HOUR_PM_BIT;
+    }
+
+    write_reg_raw(REG_HOURS, data);
+}
+
+// Retrieve the hour format and data mode bits. Note that on some
+// platforms (including the acer) these bits can not be reliably
+// written. So we must instead parse and provide the data in whatever
+// format is given to us.
+static void rtc_mode(bool* reg_is_24_hour, bool* reg_is_binary) {
+    uint8_t reg_b = read_reg_raw(REG_B);
+    *reg_is_24_hour = reg_b & REG_B_HOUR_FORMAT_BIT;
+    *reg_is_binary = reg_b & REG_B_DATA_MODE_BIT;
 }
 
 static void read_time(rtc_t* rtc) {
     mtx_lock(&lock);
-    set_rtc_mode();
+    bool reg_is_24_hour;
+    bool reg_is_binary;
+    rtc_mode(&reg_is_24_hour, &reg_is_binary);
 
-    rtc->seconds = read_reg(REG_SECONDS);
-    rtc->minutes = read_reg(REG_MINUTES);
-    rtc->hours = read_reg(REG_HOURS);
+    rtc->seconds = read_reg(REG_SECONDS, reg_is_binary);
+    rtc->minutes = read_reg(REG_MINUTES, reg_is_binary);
+    rtc->hours = read_reg_hour(reg_is_binary, reg_is_24_hour);
 
-    rtc->day = read_reg(REG_DAY_OF_MONTH);
-    rtc->month = read_reg(REG_MONTH);
-    rtc->year = read_reg(REG_YEAR) + 2000;
+    rtc->day = read_reg(REG_DAY_OF_MONTH, reg_is_binary);
+    rtc->month = read_reg(REG_MONTH, reg_is_binary);
+    rtc->year = read_reg(REG_YEAR, reg_is_binary) + 2000;
 
     mtx_unlock(&lock);
 }
 
 static void write_time(const rtc_t* rtc) {
     mtx_lock(&lock);
-    set_rtc_mode();
+    bool reg_is_24_hour;
+    bool reg_is_binary;
+    rtc_mode(&reg_is_24_hour, &reg_is_binary);
 
-    write_reg(REG_B, read_reg(REG_B) | REG_B_UPDATE_CYCLE_INHIBIT_BIT);
+    write_reg_raw(REG_B, read_reg_raw(REG_B) | REG_B_UPDATE_CYCLE_INHIBIT_BIT);
 
-    write_reg(REG_SECONDS, rtc->seconds);
-    write_reg(REG_MINUTES, rtc->minutes);
-    write_reg(REG_HOURS, rtc->hours);
+    write_reg(REG_SECONDS, rtc->seconds, reg_is_binary);
+    write_reg(REG_MINUTES, rtc->minutes, reg_is_binary);
+    write_reg_hour(rtc->hours, reg_is_binary, reg_is_24_hour);
 
-    write_reg(REG_DAY_OF_MONTH, rtc->day);
-    write_reg(REG_MONTH, rtc->month);
-    write_reg(REG_YEAR, rtc->year - 2000);
+    write_reg(REG_DAY_OF_MONTH, rtc->day, reg_is_binary);
+    write_reg(REG_MONTH, rtc->month, reg_is_binary);
+    write_reg(REG_YEAR, rtc->year - 2000, reg_is_binary);
 
-    write_reg(REG_B, read_reg(REG_B) & ~REG_B_UPDATE_CYCLE_INHIBIT_BIT);
+    write_reg_raw(REG_B, read_reg_raw(REG_B) & ~REG_B_UPDATE_CYCLE_INHIBIT_BIT);
 
     mtx_unlock(&lock);
 }
