@@ -44,8 +44,16 @@
             "bootfs_path": "apps/interactive_receipt"
         },
         {
+            "binary": "map.flx",
+            "bootfs_path": "apps/map"
+        },
+        {
             "binary": "modules_gallery.flx",
             "bootfs_path": "apps/modules_gallery"
+        },
+        {
+            "binary": "usps.flx",
+            "bootfs_path": "apps/usps"
         },
         {
             "binary": "youtube_story.flx",
