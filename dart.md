@@ -40,7 +40,7 @@ providing the necessary package coverage for the entire tree.
 Additionally, projects may request third-party dependencies to be imported
 through the following procedure:
 1. create a `dart_dependencies.yaml` file in the project
-1. add some dependencies in that file:
+1. add the desired dependencies in that file:
 ```
 name: my_project
 dependencies:
@@ -60,11 +60,31 @@ out/<build-type>/gen/path/to/package/package.analyzer.sh
 ```
 Running this script will perform an analysis of the target's sources.
 
+Analysis options for a given target may be set on the target itself in BUILD.gn:
+```
+dart_package("foo") {
+  analysis_options = "//path/to/my/.analysis_options"
+}
+```
+
+Analysis may likewise be disabled altogether with:
+```
+dart_package("foo") {
+  disable_analysis = true
+}
+```
+
 The `//scripts/run-dart-analysis.py` script makes it easy to run the analysis over
 multiple targets:
 ```sh
 scripts/run-dart-analysis.py --out out/<build-type> --tree //apps/sysui/*
 ```
+
+Regular analyzer flags may also be passed:
+```sh
+scripts/run-dart-analysis.py --out out/<build-type> --fatal-warnings --lints
+```
+This holds true for the individual analysis scripts.
 
 
 ## FIDL
