@@ -29,6 +29,11 @@ int64_t CommitEmptyImpl::GetTimestamp() const {
   return 0;
 }
 
+uint64_t CommitEmptyImpl::GetGeneration() const {
+  FTL_NOTIMPLEMENTED();
+  return 0;
+}
+
 std::unique_ptr<CommitContents> CommitEmptyImpl::GetContents() const {
   FTL_NOTIMPLEMENTED();
   return nullptr;

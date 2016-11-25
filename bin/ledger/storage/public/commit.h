@@ -33,6 +33,10 @@ class Commit {
   // TODO(nellyv): Replace return value with a time/clock type.
   virtual int64_t GetTimestamp() const = 0;
 
+  // Returns the generation of this commit (ie. the number of commits to the
+  // root).
+  virtual uint64_t GetGeneration() const = 0;
+
   // Returns the contents of this commit.
   virtual std::unique_ptr<CommitContents> GetContents() const = 0;
 

@@ -220,7 +220,7 @@ Status PageStorageImpl::Init() {
     return s;
   }
   if (heads.empty()) {
-    s = db_.AddHead(std::string(kFirstPageCommitId, kCommitIdSize));
+    s = db_.AddHead(kFirstPageCommitId);
     if (s != Status::OK) {
       return s;
     }
@@ -592,9 +592,7 @@ Status PageStorageImpl::ContainsCommit(const CommitId& id) {
 }
 
 bool PageStorageImpl::IsFirstCommit(const CommitId& id) {
-  static std::string first_commit_id =
-      std::string(kFirstPageCommitId, kCommitIdSize);
-  return id == first_commit_id;
+  return id == kFirstPageCommitId;
 }
 
 void PageStorageImpl::AddObject(

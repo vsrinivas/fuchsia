@@ -10,6 +10,8 @@ source_set("test") {
     "commit_contents_empty_impl.h",
     "commit_empty_impl.cc",
     "commit_empty_impl.h",
+    "commit_random_impl.cc",
+    "commit_random_impl.h",
     "page_storage_empty_impl.cc",
     "page_storage_empty_impl.h",
   ]
@@ -19,6 +21,7 @@ source_set("test") {
   ]
 
   deps = [
+    "//apps/ledger/src/glue",
     "//lib/ftl",
   ]
 }

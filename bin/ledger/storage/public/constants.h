@@ -5,15 +5,20 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_PUBLIC_CONSTANTS_H_
 #define APPS_LEDGER_SRC_STORAGE_PUBLIC_CONSTANTS_H_
 
+#include "lib/ftl/strings/string_view.h"
+
 namespace storage {
 
 // The size of a commit id in number of bytes.
-extern const unsigned long kCommitIdSize;
+constexpr unsigned long kCommitIdSize = 32;
 
 // The size of an object id in number of bytes.
-extern const unsigned long kObjectIdSize;
+constexpr unsigned long kObjectIdSize = 32;
 
-extern const char kFirstPageCommitId[];
+constexpr char kFirstPageCommitIdArray[kCommitIdSize] = {0};
+
+constexpr const ftl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
+                                                   kCommitIdSize);
 
 }  // namespace storage
 
