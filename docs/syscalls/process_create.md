@@ -29,6 +29,9 @@ When the last handle to a process is closed, the process is destroyed.
 Process handles may be waited on and will assert the signal
 *MX_SIGNAL_SIGNALED* when the process exits.
 
+*job* is the controlling [job object](../objects/job.md) for the new
+process, which will become a child of that job.
+
 ## RETURN VALUE
 
 **process_create**() returns NO_ERROR and a handle to the new process
@@ -51,4 +54,5 @@ or *flags* was non-zero.
 [process_start](process_start.md),
 [thread_create](thread_create.md),
 [thread_exit](thread_exit.md),
-[thread_start](thread_start.md).
+[thread_start](thread_start.md),
+[job_create](job_create.md).
