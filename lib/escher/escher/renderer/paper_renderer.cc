@@ -49,7 +49,12 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
                          std::array<float, 4>{{0.012, 0.047, 0.427, 1.f}}),
                      vk::ClearDepthStencilValue(1.f, 0)}) {}
 
-PaperRenderer::~PaperRenderer() {}
+PaperRenderer::~PaperRenderer() {
+  escher_->command_buffer_pool()->Cleanup();
+  if (escher_->transfer_command_buffer_pool()) {
+    escher_->transfer_command_buffer_pool()->Cleanup();
+  }
+}
 
 void PaperRenderer::UpdateSsdoFramebuffer(const FramebufferPtr& framebuffer) {
   uint32_t width = framebuffer->width();
@@ -60,7 +65,6 @@ void PaperRenderer::UpdateSsdoFramebuffer(const FramebufferPtr& framebuffer) {
     // We already have a suitable framebuffer.
     return;
   }
-  FTL_DLOG(INFO) << "PaperRenderer creating temp framebuffer";
 
   // Using eTransferSrc allows us to blit from the image: useful for debugging.
   ImagePtr color_image = escher_->image_cache()->NewColorAttachmentImage(

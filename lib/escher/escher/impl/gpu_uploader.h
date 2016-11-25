@@ -88,6 +88,9 @@ class GpuUploader : BufferOwner {
     vk::DeviceSize GetSize() override;
     uint8_t* GetMappedPointer() override;
 
+    // Not part of public BufferInfo interface.  Called by GpuUploader.
+    void DestroyBuffer(vk::Device device);
+
     vk::Buffer buffer;
     vk::DeviceSize size;
     uint8_t* ptr;

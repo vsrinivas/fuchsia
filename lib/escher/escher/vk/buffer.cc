@@ -58,6 +58,7 @@ class UnownedBufferInfo : public BufferInfo {
       FTL_CHECK(mem_->offset() == 0);
       device_.unmapMemory(mem_->base());
     }
+    device_.destroyBuffer(buffer_);
   }
 
   vk::Buffer GetBuffer() override { return buffer_; }

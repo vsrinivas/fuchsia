@@ -88,13 +88,11 @@ EscherImpl::EscherImpl(const VulkanContext& context,
 EscherImpl::~EscherImpl() {
   FTL_DCHECK(renderer_count_ == 0);
 
+  vulkan_context_.device.waitIdle();
+
   command_buffer_pool_->Cleanup();
   if (transfer_command_buffer_pool_)
     transfer_command_buffer_pool_->Cleanup();
-
-  vulkan_context_.device.waitIdle();
-  mesh_manager_.reset();
-  gpu_allocator_.reset();
 }
 
 const VulkanContext& EscherImpl::vulkan_context() {

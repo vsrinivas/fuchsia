@@ -130,6 +130,13 @@ uint8_t* GpuUploader::TransferBufferInfo::GetMappedPointer() {
   return ptr;
 }
 
+void GpuUploader::TransferBufferInfo::DestroyBuffer(vk::Device device) {
+  if (buffer) {
+    device.destroyBuffer(buffer);
+    buffer = nullptr;
+  }
+}
+
 GpuUploader::GpuUploader(CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator)
     : command_buffer_pool_(command_buffer_pool),
@@ -140,6 +147,16 @@ GpuUploader::GpuUploader(CommandBufferPool* command_buffer_pool,
       allocation_count_(0) {}
 
 GpuUploader::~GpuUploader() {
+  current_buffer_ = nullptr;
+
+  // Destroy all free buffers (which should include the formerly-current
+  // buffer that was just released).
+  while (!free_buffers_.empty()) {
+    auto info = std::move(free_buffers_.back());
+    free_buffers_.pop_back();
+    static_cast<TransferBufferInfo*>(info.get())->DestroyBuffer(device_);
+    --allocation_count_;
+  }
   FTL_DCHECK(allocation_count_ == 0);
 }
 
@@ -182,6 +199,7 @@ void GpuUploader::PrepareForWriterOfSize(vk::DeviceSize size) {
       return;
     }
     // Destroy buffer if it is too small.
+    static_cast<TransferBufferInfo*>(info.get())->DestroyBuffer(device_);
     --allocation_count_;
   }
 
