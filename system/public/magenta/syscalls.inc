@@ -66,7 +66,7 @@ MAGENTA_SYSCALL_DEF(3, 3, 12, mx_status_t, handle_replace, mx_handle_t handle,
 MAGENTA_SYSCALL_DEF(4, 5, 13, mx_status_t, handle_wait_one, mx_handle_t handle, mx_signals_t waitfor,
                     mx_time_t timeout, USER_PTR(mx_signals_t) observed)
 MAGENTA_SYSCALL_DEF(3, 4, 14, mx_status_t, handle_wait_many, USER_PTR(mx_wait_item_t) items,
-                    uint32_t count, mx_time_t timeout);
+                    uint32_t count, mx_time_t timeout)
 
 // Generic object operations
 MAGENTA_SYSCALL_DEF(3, 3, 20, mx_status_t, object_signal, mx_handle_t handle,
@@ -129,7 +129,7 @@ MAGENTA_SYSCALL_DEF(6, 7, 53, mx_status_t, process_map_vm, mx_handle_t proc_hand
 MAGENTA_SYSCALL_DEF(3, 3, 54, mx_status_t, process_unmap_vm, mx_handle_t proc_handle,
                     uintptr_t address, mx_size_t len)
 MAGENTA_SYSCALL_DEF(4, 4, 55, mx_status_t, process_protect_vm, mx_handle_t proc_handle,
-                    uintptr_t address, mx_size_t len, uint32_t prot);
+                    uintptr_t address, mx_size_t len, uint32_t prot)
 MAGENTA_SYSCALL_DEF(5, 5, 56, mx_status_t, process_read_memory, mx_handle_t proc, uintptr_t vaddr,
                     USER_PTR(void) buffer, mx_size_t len, USER_PTR(mx_size_t) actual)
 MAGENTA_SYSCALL_DEF(5, 5, 57, mx_status_t, process_write_memory, mx_handle_t proc, uintptr_t vaddr,
@@ -140,8 +140,8 @@ MAGENTA_SYSCALL_DEF(3, 3, 60, mx_status_t, job_create, mx_handle_t parent_job,
                     uint32_t options, USER_PTR(mx_handle_t) out)
 
 // Tasks (Thread, Process, or Job)
-MAGENTA_SYSCALL_DEF(2, 2, 61, mx_status_t, task_resume, mx_handle_t task_handle, uint32_t options);
-MAGENTA_SYSCALL_DEF(1, 1, 62, mx_status_t, task_kill, mx_handle_t task_handle);
+MAGENTA_SYSCALL_DEF(2, 2, 61, mx_status_t, task_resume, mx_handle_t task_handle, uint32_t options)
+MAGENTA_SYSCALL_DEF(1, 1, 62, mx_status_t, task_kill, mx_handle_t task_handle)
 
 // Synchronization
 MAGENTA_SYSCALL_DEF(2, 2, 70, mx_status_t, event_create, uint32_t options, USER_PTR(mx_handle_t) out)
@@ -186,9 +186,9 @@ MAGENTA_SYSCALL_DEF(6, 8, 105, mx_status_t, vmo_op_range, mx_handle_t handle, ui
 
 // Random Numbers
 MAGENTA_SYSCALL_DEF(3, 3, 110, mx_status_t, cprng_draw,
-                    USER_PTR(void) buffer, mx_size_t len, USER_PTR(mx_size_t) actual);
+                    USER_PTR(void) buffer, mx_size_t len, USER_PTR(mx_size_t) actual)
 MAGENTA_SYSCALL_DEF(2, 2, 111, mx_status_t, cprng_add_entropy,
-                    USER_PTR(const void) buffer, mx_size_t len);
+                    USER_PTR(const void) buffer, mx_size_t len)
 
 // Data Pipes
 MAGENTA_SYSCALL_DEF(4, 4, 120, mx_handle_t, datapipe_create, uint32_t options, mx_size_t element_size,
@@ -266,7 +266,7 @@ MAGENTA_SYSCALL_DEF(7, 7, 191, mx_status_t, set_framebuffer, mx_handle_t handle,
                     void* vaddr, uint32_t len, uint32_t format,
                     uint32_t width, uint32_t height, uint32_t stride)
 MAGENTA_SYSCALL_DEF(4, 4, 192, mx_status_t, clock_adjust, mx_handle_t handle,
-                    uint32_t clock_id, int64_t offset);
+                    uint32_t clock_id, int64_t offset)
 
 // DDK Syscalls: PCI
 MAGENTA_SYSCALL_DEF(3, 3, 200, mx_handle_t, pci_get_nth_device, mx_handle_t handle,
