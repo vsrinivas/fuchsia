@@ -212,7 +212,8 @@ void FramebufferOutput::RunScheduledFrameCallback() {
 }
 
 void FramebufferOutput::TracePendingFrames() {
-  TRACE_COUNTER2("gfx", "FramebufferOutput/pending", "in_progress",
+  TRACE_COUNTER2("gfx", "FramebufferOutput/pending",
+                 reinterpret_cast<uintptr_t>(this), "in_progress",
                  frame_in_progress_ ? 1 : 0, "next", next_frame_ ? 1 : 0);
 }
 

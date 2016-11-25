@@ -20,7 +20,7 @@ void TraceProducedBufferCount(int32_t delta) {
   int32_t count =
       g_produced_buffer_count.fetch_add(delta, std::memory_order_relaxed) +
       delta;
-  TRACE_COUNTER1("gfx", "BufferProducer/alloc", "produced_buffers", count);
+  TRACE_COUNTER1("gfx", "BufferProducer/alloc", 0u, "produced_buffers", count);
 }
 
 // Establishes a constraint on whether a VMO should be reused for an
@@ -177,7 +177,8 @@ void BufferProducer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 }
 
 void BufferProducer::TracePooledBufferCount() const {
-  TRACE_COUNTER2("gfx", "BufferProducer/pool", "pending_buffers",
+  TRACE_COUNTER2("gfx", "BufferProducer/pool",
+                 reinterpret_cast<uintptr_t>(this), "pending_buffers",
                  pending_buffers_.size(), "available_buffers",
                  available_buffers_.size());
 }
