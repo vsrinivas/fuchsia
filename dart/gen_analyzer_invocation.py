@@ -6,6 +6,7 @@
 import argparse
 import os
 import stat
+import string
 import sys
 
 def main():
@@ -26,6 +27,8 @@ def main():
                       required=True)
   parser.add_argument('--dart', help='Path to the Dart executable',
                       required=True)
+  parser.add_argument('--dart-sdk', help='Path to the Dart SDK',
+                      required=True)
   parser.add_argument('--package-name', help='Name of the analyzed package',
                       required=True)
   parser.add_argument('--options', help='Path to analysis options')
@@ -36,25 +39,22 @@ def main():
   if not os.path.exists(analyzer_path):
     os.makedirs(analyzer_path)
 
-  options = ''
-  if args.options:
-    options = '--options=%s' % args.options
+  script_template = string.Template('''#!/bin/sh
 
-  analyzer_content = '''#!/bin/sh
-
-echo "Package : %s"
-%s \\
-  --packages=%s \\
-  %s \\
-  --packages=%s \\
-  %s \\
-  %s \\
-  "$@"
-''' % (args.package_name, args.dart, args.analyzer_packages, args.analyzer_main,
-       args.dot_packages, options, args.source_dir)
-
+echo "Package : $package_name"
+$dart \\
+  --packages=$analyzer_packages \\
+  $analyzer_main \\
+  --packages=$dot_packages \\
+  --dart-sdk=$dart_sdk \\
+  $options_argument \\
+  $source_dir \\
+  "$$@"
+''')
   with open(analyzer_file, 'w') as file:
-      file.write(analyzer_content)
+      file.write(script_template.substitute(
+          args.__dict__,
+          options_argument = '--options='+args.options if args.options else ''))
   permissions = (stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR |
                  stat.S_IRGRP | stat.S_IWGRP | stat.S_IXGRP |
                  stat.S_IROTH)

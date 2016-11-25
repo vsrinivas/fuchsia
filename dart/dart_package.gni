@@ -141,6 +141,8 @@ template("dart_package") {
                rebase_path(dart_binary),
                "--package-name",
                package_name,
+               "--dart-sdk",
+               rebase_path("//dart/sdk")
       ]
 
       if (defined(invoker.analysis_options)) {
