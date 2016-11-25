@@ -68,20 +68,21 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     return storage::Status::OK;
   }
 
-  void AddCommitFromSync(
-      const storage::CommitId& id,
-      std::string storage_bytes,
+  void AddCommitsFromSync(
+      std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
       std::function<void(storage::Status status)> callback) override {
     if (should_fail_add_commit_from_sync) {
       message_loop_->task_runner()->PostTask(
           [this, callback]() { callback(storage::Status::IO_ERROR); });
       return;
     }
-    message_loop_->task_runner()->PostTask(
-        [ this, &id, storage_bytes = std::move(storage_bytes), callback ]() {
-          received_commits[id] = storage_bytes;
+    message_loop_->task_runner()->PostTask(ftl::MakeCopyable(
+        [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() {
+          for (auto& commit : ids_and_bytes) {
+            received_commits[std::move(commit.id)] = std::move(commit.bytes);
+          }
           callback(storage::Status::OK);
-        });
+        }));
   }
 
   storage::Status GetUnsyncedObjects(

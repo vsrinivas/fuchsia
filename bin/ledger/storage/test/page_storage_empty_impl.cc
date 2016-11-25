@@ -30,9 +30,8 @@ Status PageStorageEmptyImpl::GetCommit(const CommitId& commit_id,
   return Status::NOT_IMPLEMENTED;
 }
 
-void PageStorageEmptyImpl::AddCommitFromSync(
-    const CommitId& id,
-    std::string storage_bytes,
+void PageStorageEmptyImpl::AddCommitsFromSync(
+    std::vector<CommitIdAndBytes> ids_and_bytes,
     std::function<void(Status)> callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);

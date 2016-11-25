@@ -24,9 +24,11 @@ CommitDownload::~CommitDownload() {}
 void CommitDownload::Start() {
   FTL_DCHECK(!started_);
   started_ = true;
-  storage_->AddCommitFromSync(
-      record_.commit.id, std::move(record_.commit.content),
-      [this](storage::Status status) {
+  std::vector<storage::PageStorage::CommitIdAndBytes> commits;
+  commits.push_back(storage::PageStorage::CommitIdAndBytes(
+      std::move(record_.commit.id), std::move(record_.commit.content)));
+  storage_->AddCommitsFromSync(
+      std::move(commits), [this](storage::Status status) {
         if (status != storage::Status::OK) {
           on_error_();
           return;

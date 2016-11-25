@@ -30,6 +30,7 @@ source_set("lib") {
   ]
 
   deps = [
+    "//apps/ledger/src/callback",
     "//apps/ledger/src/glue",
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",

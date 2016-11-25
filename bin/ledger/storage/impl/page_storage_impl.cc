@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <iterator>
 
+#include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/btree/btree_utils.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
@@ -292,28 +293,50 @@ void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit,
   AddCommit(std::move(commit), ChangeSource::LOCAL, callback);
 }
 
-void PageStorageImpl::AddCommitFromSync(const CommitId& id,
-                                        std::string storage_bytes,
-                                        std::function<void(Status)> callback) {
-  if (ContainsCommit(id) == Status::OK) {
-    // The commit is already downloaded.
+void PageStorageImpl::AddCommitsFromSync(
+    std::vector<CommitIdAndBytes> ids_and_bytes,
+    std::function<void(Status)> callback) {
+  std::vector<std::unique_ptr<const Commit>> commits;
+  commits.reserve(ids_and_bytes.size());
+
+  for (auto& id_and_bytes : ids_and_bytes) {
+    ObjectId id = std::move(id_and_bytes.id);
+    std::string storage_bytes = std::move(id_and_bytes.bytes);
+    if (ContainsCommit(id) == Status::OK) {
+      continue;
+    }
+
+    std::unique_ptr<const Commit> commit =
+        CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
+    if (!commit) {
+      FTL_LOG(ERROR) << "Unable to add commit. Id: " << ToHex(id);
+      callback(Status::FORMAT_ERROR);
+      return;
+    }
+    commits.push_back(std::move(commit));
+  }
+
+  if (commits.empty()) {
     callback(Status::OK);
     return;
   }
 
-  std::unique_ptr<const Commit> commit =
-      CommitImpl::FromStorageBytes(this, id, std::move(storage_bytes));
-  if (!commit) {
-    callback(Status::FORMAT_ERROR);
-    return;
+  callback::StatusWaiter<Status> waiter(Status::OK);
+  // Get all objects from sync and then add the commit objects.
+  // TODO(qsr): Only request objects for leaf commits.
+  for (const auto& commit : commits) {
+    btree::GetObjectsFromSync(commit->GetRootId(), this, waiter.NewCallback());
   }
-  // Get all objects from sync and then add the commit object.
-  btree::GetObjectsFromSync(
-      commit->GetRootId(), this, ftl::MakeCopyable([
-        this, commit = std::move(commit), callback = std::move(callback)
-      ](Status s) mutable {
-        AddCommit(std::move(commit), ChangeSource::SYNC, std::move(callback));
-      }));
+
+  waiter.Finalize(ftl::MakeCopyable([
+    this, commits = std::move(commits), callback = std::move(callback)
+  ](Status status) mutable {
+    callback::StatusWaiter<Status> waiter(Status::OK);
+    for (auto& commit : commits) {
+      AddCommit(std::move(commit), ChangeSource::SYNC, waiter.NewCallback());
+    }
+    waiter.Finalize(std::move(callback));
+  }));
 }
 
 Status PageStorageImpl::StartCommit(const CommitId& commit_id,

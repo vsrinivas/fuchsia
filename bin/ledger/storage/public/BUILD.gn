@@ -13,6 +13,7 @@ source_set("public") {
     "journal.h",
     "ledger_storage.h",
     "object.h",
+    "page_storage.cc",
     "page_storage.h",
     "page_sync_delegate.h",
     "types.cc",

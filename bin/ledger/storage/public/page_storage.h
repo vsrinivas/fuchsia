@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <memory>
+#include <utility>
 
 #include <mx/datapipe.h>
 
@@ -24,6 +25,19 @@ namespace storage {
 // |PageStorage| manages the local storage of a single page.
 class PageStorage {
  public:
+  struct CommitIdAndBytes {
+    CommitIdAndBytes(CommitId id, std::string bytes);
+    CommitIdAndBytes(CommitIdAndBytes&&);
+
+    CommitIdAndBytes& operator=(CommitIdAndBytes&&);
+
+    CommitId id;
+    std::string bytes;
+
+   private:
+    FTL_DISALLOW_COPY_AND_ASSIGN(CommitIdAndBytes);
+  };
+
   PageStorage() {}
   virtual ~PageStorage() {}
 
@@ -43,13 +57,12 @@ class PageStorage {
   virtual Status GetCommit(const CommitId& commit_id,
                            std::unique_ptr<const Commit>* commit) = 0;
 
-  // Adds a commit of the given |id| to storage. The callback is called when the
-  // storage has finished processing the commit. If the status passed to the
-  // callback is OK, this indicates that storage fetched all referenced objects
-  // and is ready to accept subsequent child commits.
-  virtual void AddCommitFromSync(const CommitId& id,
-                                 std::string storage_bytes,
-                                 std::function<void(Status)> callback) = 0;
+  // Adds a list of commits with the given ids and bytes to storage. The
+  // callback is called when the storage has finished processing the commits. If
+  // the status passed to the callback is OK, this indicates that storage
+  // fetched all referenced objects and is ready to accept subsequent commits.
+  virtual void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
+                                  std::function<void(Status)> callback) = 0;
   // Starts a new |journal| based on the commit with the given |commit_id|. The
   // base commit must be one of  the head commits. If |implicit| is false all
   // changes will be lost after a crash. Otherwise, changes to implicit

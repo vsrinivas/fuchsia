@@ -9,6 +9,7 @@
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -25,20 +26,21 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   TestPageStorage(mtl::MessageLoop* message_loop)
       : message_loop_(message_loop) {}
 
-  void AddCommitFromSync(
-      const storage::CommitId& id,
-      std::string storage_bytes,
+  void AddCommitsFromSync(
+      std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       std::function<void(storage::Status status)> callback) override {
     if (should_fail_add_commit_from_sync) {
       message_loop_->task_runner()->PostTask(
           [this, callback]() { callback(storage::Status::IO_ERROR); });
       return;
     }
-    message_loop_->task_runner()->PostTask(
-        [ this, &id, storage_bytes = std::move(storage_bytes), callback ]() {
-          received_commits[id] = storage_bytes;
+    message_loop_->task_runner()->PostTask(ftl::MakeCopyable(
+        [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() {
+          for (auto& commit : ids_and_bytes) {
+            received_commits[std::move(commit.id)] = std::move(commit.bytes);
+          }
           callback(storage::Status::OK);
-        });
+        }));
   }
 
   storage::Status SetSyncMetadata(ftl::StringView sync_state) override {

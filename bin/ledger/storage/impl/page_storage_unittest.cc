@@ -72,6 +72,14 @@ std::string RandomId(size_t size) {
   return result;
 }
 
+std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
+    const Commit& commit) {
+  std::vector<PageStorage::CommitIdAndBytes> result;
+  result.push_back(
+      PageStorage::CommitIdAndBytes(commit.GetId(), commit.GetStorageBytes()));
+  return result;
+}
+
 class FakeCommitWatcher : public CommitWatcher {
  public:
   FakeCommitWatcher() {}
@@ -193,11 +201,11 @@ class PageStorageTest : public test::TestWithMessageLoop {
         storage_.get(), root_id, {GetFirstHead()});
     CommitId id = commit->GetId();
 
-    storage_->AddCommitFromSync(id, commit->GetStorageBytes(),
-                                [this](Status status) {
-                                  EXPECT_EQ(Status::OK, status);
-                                  message_loop_.PostQuitTask();
-                                });
+    storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
+                                 [this](Status status) {
+                                   EXPECT_EQ(Status::OK, status);
+                                   message_loop_.PostQuitTask();
+                                 });
     EXPECT_FALSE(RunLoopWithTimeout());
     return id;
   }
@@ -327,11 +335,11 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 
   // Adding the commit should only request the tree node and the eager value.
   sync.object_requests.clear();
-  storage_->AddCommitFromSync(id, commit->GetStorageBytes(),
-                              [this](Status status) {
-                                EXPECT_EQ(Status::OK, status);
-                                message_loop_.PostQuitTask();
-                              });
+  storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
+                               [this](Status status) {
+                                 EXPECT_EQ(Status::OK, status);
+                                 message_loop_.PostQuitTask();
+                               });
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(2u, sync.object_requests.size());
   EXPECT_TRUE(sync.object_requests.find(root_id) != sync.object_requests.end());
@@ -340,11 +348,11 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 
   // Adding the same commit twice should not request any objects from sync.
   sync.object_requests.clear();
-  storage_->AddCommitFromSync(id, commit->GetStorageBytes(),
-                              [this](Status status) {
-                                EXPECT_EQ(Status::OK, status);
-                                message_loop_.PostQuitTask();
-                              });
+  storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit),
+                               [this](Status status) {
+                                 EXPECT_EQ(Status::OK, status);
+                                 message_loop_.PostQuitTask();
+                               });
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(sync.object_requests.empty());
 
