@@ -61,9 +61,14 @@ ChromiumExporter::ChromiumExporter(std::ostream& out)
 
 ChromiumExporter::~ChromiumExporter() {
   writer_.EndArray();
+  writer_.EndObject();
 }
 
 void ChromiumExporter::Start() {
+  writer_.StartObject();
+  writer_.Key("displayTimeUnit");
+  writer_.String("ms");
+  writer_.Key("traceEvents");
   writer_.StartArray();
 }
 
