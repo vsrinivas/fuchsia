@@ -551,6 +551,7 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
 TEST_F(PageStorageTest, GetObject) {
   ObjectData data("Some data");
   std::string file_path = GetFilePath(data.object_id);
+  ASSERT_TRUE(files::CreateDirectory(files::GetDirectoryName(file_path)));
   ASSERT_TRUE(files::WriteFile(file_path, data.value.data(), data.size));
 
   Status status;
@@ -622,6 +623,7 @@ TEST_F(PageStorageTest, AddObjectSynchronous) {
 TEST_F(PageStorageTest, GetObjectSynchronous) {
   ObjectData data("Some data");
   std::string file_path = GetFilePath(data.object_id);
+  ASSERT_TRUE(files::CreateDirectory(files::GetDirectoryName(file_path)));
   ASSERT_TRUE(files::WriteFile(file_path, data.value.data(), data.size));
 
   std::unique_ptr<const Object> object;
