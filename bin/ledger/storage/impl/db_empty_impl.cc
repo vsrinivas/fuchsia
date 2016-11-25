@@ -26,7 +26,7 @@ std::unique_ptr<DbEmptyImpl::Batch> DbEmptyImpl::StartBatch() {
 Status DbEmptyImpl::GetHeads(std::vector<CommitId>* heads) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::AddHead(const CommitId& head) {
+Status DbEmptyImpl::AddHead(CommitIdView head) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::RemoveHead(const CommitId& head) {

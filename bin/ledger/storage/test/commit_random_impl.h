@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_STORAGE_FAKE_FAKE_COMMIT_H_
-#define APPS_LEDGER_SRC_STORAGE_FAKE_FAKE_COMMIT_H_
+#ifndef APPS_LEDGER_SRC_STORAGE_TEST_COMMIT_RANDOM_IMPL_H_
+#define APPS_LEDGER_SRC_STORAGE_TEST_COMMIT_RANDOM_IMPL_H_
 
 #include <memory>
 #include <string>
+#include <vector>
 
-#include "apps/ledger/src/storage/fake/fake_journal.h"
-#include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/public/commit.h"
+#include "apps/ledger/src/storage/public/commit_contents.h"
 
 namespace storage {
-namespace fake {
+namespace test {
 
-// A |FakeCommit| is a commit based on a |FakeJournalDelegate|.
-class FakeCommit : public Commit {
+// Implementaton of Commit returning random values (fixed for each instance).
+class CommitRandomImpl : public Commit {
  public:
-  explicit FakeCommit(FakeJournalDelegate* journal);
-  ~FakeCommit() override;
+  CommitRandomImpl();
+  ~CommitRandomImpl() override = default;
 
   // Commit:
   std::unique_ptr<Commit> Clone() const override;
@@ -39,11 +39,17 @@ class FakeCommit : public Commit {
   std::string GetStorageBytes() const override;
 
  private:
-  FakeJournalDelegate* journal_;
-  FTL_DISALLOW_COPY_AND_ASSIGN(FakeCommit);
+  CommitRandomImpl(const CommitRandomImpl&);
+
+  CommitId id_;
+  int64_t timestamp_;
+  uint64_t generation_;
+  ObjectId root_node_id_;
+  std::vector<CommitId> parent_ids_;
+  std::string storage_bytes_;
 };
 
-}  // namespace fake
+}  // namespace test
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_FAKE_FAKE_COMMIT_H_
+#endif  // APPS_LEDGER_SRC_STORAGE_TEST_COMMIT_RANDOM_IMPL_H_
