@@ -10,8 +10,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
 #include <algorithm>
 #include <iterator>
+#include <map>
 
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
@@ -40,6 +42,10 @@ const char kStagingDir[] = "/staging";
 const char kHexDigits[] = "0123456789ABCDEF";
 
 const size_t kDefaultNodeSize = 64u;
+
+bool StringPointerComparator(const std::string* str1, const std::string* str2) {
+  return *str1 < *str2;
+}
 
 std::string ToHex(convert::ExtendedStringView string) {
   std::string result;
@@ -300,6 +306,9 @@ void PageStorageImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> ids_and_bytes,
     std::function<void(Status)> callback) {
   std::vector<std::unique_ptr<const Commit>> commits;
+
+  std::map<const CommitId*, const Commit*, decltype(&StringPointerComparator)>
+      leaves(&StringPointerComparator);
   commits.reserve(ids_and_bytes.size());
 
   for (auto& id_and_bytes : ids_and_bytes) {
@@ -316,6 +325,12 @@ void PageStorageImpl::AddCommitsFromSync(
       callback(Status::FORMAT_ERROR);
       return;
     }
+
+    // Remove parents from leaves.
+    for (const auto& parent_id : commit->GetParentIds()) {
+      leaves.erase(&parent_id);
+    }
+    leaves[&commit->GetId()] = commit.get();
     commits.push_back(std::move(commit));
   }
 
@@ -326,9 +341,9 @@ void PageStorageImpl::AddCommitsFromSync(
 
   callback::StatusWaiter<Status> waiter(Status::OK);
   // Get all objects from sync and then add the commit objects.
-  // TODO(qsr): Only request objects for leaf commits.
-  for (const auto& commit : commits) {
-    btree::GetObjectsFromSync(commit->GetRootId(), this, waiter.NewCallback());
+  for (const auto& leaf : leaves) {
+    btree::GetObjectsFromSync(leaf.second->GetRootId(), this,
+                              waiter.NewCallback());
   }
 
   waiter.Finalize(ftl::MakeCopyable([
@@ -538,10 +553,8 @@ void PageStorageImpl::AddCommits(
     std::function<void(Status)> callback) {
   // Apply all changes atomically.
   std::unique_ptr<DB::Batch> batch = db_.StartBatch();
-  auto comparator = [](CommitId const* id1, CommitId const* id2) {
-    return *id1 < *id2;
-  };
-  std::set<CommitId const*, decltype(comparator)> added_commits(comparator);
+  std::set<const CommitId*, decltype(&StringPointerComparator)> added_commits(
+      &StringPointerComparator);
 
   for (const auto& commit : commits) {
     Status s =

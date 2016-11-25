@@ -888,15 +888,11 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
 
-  // TODO(qsr): Only 4 objects will be requested when storage filter non leaves
-  // commit.
-  EXPECT_EQ(6u, sync.object_requests.size());
+  EXPECT_EQ(4u, sync.object_requests.size());
   EXPECT_NE(
       sync.object_requests.find(object_ids[0]), sync.object_requests.end());
-  // TODO(qsr): This object will not be requested when storage filter non
-  // leaves commit.
-  EXPECT_NE(
-      sync.object_requests.find(object_ids[1]), sync.object_requests.end());
+  EXPECT_EQ(sync.object_requests.find(object_ids[1]),
+            sync.object_requests.end());
   EXPECT_NE(
       sync.object_requests.find(object_ids[2]), sync.object_requests.end());
 }
