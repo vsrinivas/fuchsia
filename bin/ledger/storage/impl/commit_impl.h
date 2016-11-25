@@ -24,7 +24,7 @@ class CommitImpl : public Commit {
   static std::unique_ptr<Commit> FromContentAndParents(
       PageStorage* page_storage,
       ObjectIdView root_node_id,
-      std::vector<std::unique_ptr<const Commit>> parent_commits);
+      std::vector<CommitId> parent_ids);
 
   // Factory method for creating an empty |CommitImpl| object, i.e. without
   // parents and with empty contents.
@@ -35,7 +35,6 @@ class CommitImpl : public Commit {
   CommitId GetId() const override;
   std::vector<CommitId> GetParentIds() const override;
   int64_t GetTimestamp() const override;
-  uint64_t GetGeneration() const override;
   std::unique_ptr<CommitContents> GetContents() const override;
   ObjectId GetRootId() const override;
   std::string GetStorageBytes() const override;
@@ -44,9 +43,8 @@ class CommitImpl : public Commit {
   // Creates a new |CommitImpl| object with the given contents. |timestamp| is
   // the number of nanoseconds since epoch.
   CommitImpl(PageStorage* page_storage,
-             CommitId id,
+             const CommitId& id,
              int64_t timestamp,
-             uint64_t generation,
              ObjectIdView root_node_id,
              const std::vector<CommitId>& parent_ids,
              std::string storage_bytes);
@@ -54,7 +52,6 @@ class CommitImpl : public Commit {
   PageStorage* page_storage_;
   CommitId id_;
   int64_t timestamp_;
-  uint64_t generation_;
   ObjectId root_node_id_;
   std::vector<CommitId> parent_ids_;
   std::string storage_bytes_;

@@ -30,8 +30,6 @@ class FakeCommit : public Commit {
 
   int64_t GetTimestamp() const override;
 
-  uint64_t GetGeneration() const override;
-
   std::unique_ptr<CommitContents> GetContents() const override;
 
   ObjectId GetRootId() const override;

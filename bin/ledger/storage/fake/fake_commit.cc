@@ -114,10 +114,6 @@ int64_t FakeCommit::GetTimestamp() const {
   return 0;
 }
 
-uint64_t FakeCommit::GetGeneration() const {
-  return 0;
-}
-
 std::unique_ptr<CommitContents> FakeCommit::GetContents() const {
   return std::make_unique<FakeCommitContents>(journal_);
 }

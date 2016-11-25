@@ -53,7 +53,7 @@ class DB {
   virtual Status GetHeads(std::vector<CommitId>* heads) = 0;
 
   // Adds the given |head| in the set of commit heads.
-  virtual Status AddHead(CommitIdView head) = 0;
+  virtual Status AddHead(const CommitId& head) = 0;
 
   // Removes the given |head| from the head commits.
   virtual Status RemoveHead(const CommitId& head) = 0;

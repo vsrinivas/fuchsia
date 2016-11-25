@@ -7,7 +7,6 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/storage/test/commit_random_impl.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 
@@ -46,18 +45,16 @@ class CommitImplTest : public ::testing::Test {
 TEST_F(CommitImplTest, CommitStorageBytes) {
   ObjectId root_node_id = RandomId(kObjectIdSize);
 
-  std::vector<std::unique_ptr<const Commit>> parents;
-  parents.emplace_back(new test::CommitRandomImpl());
+  std::vector<CommitId> parents;
+  parents.push_back(RandomId(kCommitIdSize));
 
   // A commit with one parent.
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
-      &page_storage_, root_node_id, std::move(parents));
+      &page_storage_, root_node_id, std::vector<CommitId>(parents));
   CheckCommitStorageBytes(commit);
 
   // A commit with two parents.
-  parents = std::vector<std::unique_ptr<const Commit>>();
-  parents.emplace_back(new test::CommitRandomImpl());
-  parents.emplace_back(new test::CommitRandomImpl());
+  parents.push_back(RandomId(kCommitIdSize));
   std::unique_ptr<Commit> commit2 = CommitImpl::FromContentAndParents(
       &page_storage_, root_node_id, std::move(parents));
   CheckCommitStorageBytes(commit2);

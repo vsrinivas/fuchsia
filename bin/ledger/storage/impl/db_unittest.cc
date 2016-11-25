@@ -15,7 +15,6 @@
 #include "apps/ledger/src/storage/impl/journal_db_impl.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "apps/ledger/src/storage/test/commit_random_impl.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
@@ -99,8 +98,8 @@ TEST_F(DBTest, HeadCommits) {
 }
 
 TEST_F(DBTest, Commits) {
-  std::vector<std::unique_ptr<const Commit>> parents;
-  parents.emplace_back(new test::CommitRandomImpl());
+  std::vector<CommitId> parents;
+  parents.push_back(RandomId(kCommitIdSize));
 
   std::unique_ptr<Commit> stored_commit;
   std::string storage_bytes;

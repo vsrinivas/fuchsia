@@ -147,30 +147,18 @@ void JournalDBImpl::Commit(
     return;
   }
 
-  const ObjectId& base_root_id = base_commit->GetRootId();
   btree::ApplyChanges(
-      page_storage_, base_root_id, node_size, std::move(entries),
-      ftl::MakeCopyable([
-        this, callback, base_commit = std::move(base_commit)
-      ](Status status, ObjectId object_id,
-        std::unordered_set<ObjectId> new_nodes) mutable {
+      page_storage_, base_commit->GetRootId(), node_size, std::move(entries),
+      [this, callback](Status status, ObjectId object_id,
+                       std::unordered_set<ObjectId> new_nodes) {
         if (status != Status::OK) {
           callback(status, "");
           return;
         }
 
-        std::vector<std::unique_ptr<const storage::Commit>> parents;
-        parents.emplace_back(std::move(base_commit));
-
+        std::vector<CommitId> parents({base_});
         if (other_) {
-          std::unique_ptr<const storage::Commit> other_commit;
-          Status commit_status =
-              page_storage_->GetCommit(*other_, &other_commit);
-          if (commit_status != Status::OK) {
-            callback(commit_status, "");
-            return;
-          }
-          parents.emplace_back(std::move(other_commit));
+          parents.push_back(*other_);
         }
 
         std::unique_ptr<storage::Commit> commit =
@@ -223,7 +211,7 @@ void JournalDBImpl::Commit(
               db_->RemoveJournal(id_);
               callback(Status::OK, id);
             }));
-      }));
+      });
 }
 
 Status JournalDBImpl::Rollback() {

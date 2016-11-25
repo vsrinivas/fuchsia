@@ -46,7 +46,7 @@ constexpr ftl::StringView kNodeSizeKey = "node-size";
 
 constexpr ftl::StringView kSyncMetadata = "sync-metadata";
 
-std::string GetHeadKeyFor(CommitIdView head) {
+std::string GetHeadKeyFor(const CommitId& head) {
   return ftl::Concatenate({kHeadPrefix, head});
 }
 
@@ -237,7 +237,7 @@ Status DbImpl::GetHeads(std::vector<CommitId>* heads) {
   return GetByPrefix(convert::ToSlice(kHeadPrefix), heads);
 }
 
-Status DbImpl::AddHead(CommitIdView head) {
+Status DbImpl::AddHead(const CommitId& head) {
   return Put(GetHeadKeyFor(head), "");
 }
 

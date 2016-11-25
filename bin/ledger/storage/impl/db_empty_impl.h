@@ -24,7 +24,7 @@ class DbEmptyImpl : public DB {
 
   std::unique_ptr<Batch> StartBatch() override;
   Status GetHeads(std::vector<CommitId>* heads) override;
-  Status AddHead(CommitIdView head) override;
+  Status AddHead(const CommitId& head) override;
   Status RemoveHead(const CommitId& head) override;
   Status ContainsHead(const CommitId& commit_id) override;
   Status GetCommitStorageBytes(const CommitId& commit_id,
