@@ -102,7 +102,7 @@ std::unique_ptr<Commit> FakeCommit::Clone() const {
   return std::make_unique<FakeCommit>(journal_);
 }
 
-CommitId FakeCommit::GetId() const {
+const CommitId& FakeCommit::GetId() const {
   return journal_->GetId();
 }
 

@@ -31,7 +31,7 @@ class PageStorageImpl : public PageStorage {
   Status Init();
 
   // Adds the given locally created |commit| in this |PageStorage|.
-  void AddCommitFromLocal(std::unique_ptr<Commit> commit,
+  void AddCommitFromLocal(std::unique_ptr<const Commit> commit,
                           std::function<void(Status)> callback);
 
   // Returns true if the given |object_id| is untracked, i.e. has been  created
@@ -89,9 +89,9 @@ class PageStorageImpl : public PageStorage {
   friend class PageStorageImplAccessorForTest;
   class FileWriter;
 
-  void AddCommit(std::unique_ptr<const Commit> commit,
-                 ChangeSource source,
-                 std::function<void(Status)> callback);
+  void AddCommits(std::vector<std::unique_ptr<const Commit>> commits,
+                  ChangeSource source,
+                  std::function<void(Status)> callback);
   Status ContainsCommit(const CommitId& id);
   bool IsFirstCommit(const CommitId& id);
   void AddObject(mx::datapipe_consumer data,

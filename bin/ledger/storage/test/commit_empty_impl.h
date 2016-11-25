@@ -25,7 +25,7 @@ class CommitEmptyImpl : public Commit {
   // Commit:
   std::unique_ptr<Commit> Clone() const override;
 
-  CommitId GetId() const override;
+  const CommitId& GetId() const override;
 
   std::vector<CommitId> GetParentIds() const override;
 

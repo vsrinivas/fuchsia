@@ -39,7 +39,7 @@ class JournalDBImpl : public Journal {
                                         const CommitId& other);
 
   // Returns the id of this journal.
-  JournalId GetId() const;
+  const JournalId& GetId() const;
 
   // Journal :
   Status Put(convert::ExtendedStringView key,

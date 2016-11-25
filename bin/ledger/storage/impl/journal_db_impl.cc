@@ -56,7 +56,7 @@ std::unique_ptr<Journal> JournalDBImpl::Merge(PageStorageImpl* page_storage,
   return journal;
 }
 
-JournalId JournalDBImpl::GetId() const {
+const JournalId& JournalDBImpl::GetId() const {
   return id_;
 }
 

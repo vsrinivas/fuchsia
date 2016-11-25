@@ -14,9 +14,10 @@ std::unique_ptr<Commit> CommitEmptyImpl::Clone() const {
   return nullptr;
 }
 
-CommitId CommitEmptyImpl::GetId() const {
+const CommitId& CommitEmptyImpl::GetId() const {
+  static std::string id = "NOT_IMPLEMENTED";
   FTL_NOTIMPLEMENTED();
-  return "NOT_IMPLEMENTED";
+  return id;
 }
 
 std::vector<CommitId> CommitEmptyImpl::GetParentIds() const {

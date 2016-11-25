@@ -30,7 +30,7 @@ class TestCommit : public storage::test::CommitEmptyImpl {
   TestCommit() = default;
   ~TestCommit() override = default;
 
-  storage::CommitId GetId() const override { return id; }
+  const storage::CommitId& GetId() const override { return id; }
 
   std::string GetStorageBytes() const override { return storage_bytes; }
 

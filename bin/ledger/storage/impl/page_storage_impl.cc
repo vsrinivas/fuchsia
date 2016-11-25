@@ -288,9 +288,12 @@ Status PageStorageImpl::GetCommit(const CommitId& commit_id,
   return Status::OK;
 }
 
-void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<Commit> commit,
+void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,
                                          std::function<void(Status)> callback) {
-  AddCommit(std::move(commit), ChangeSource::LOCAL, callback);
+  std::vector<std::unique_ptr<const Commit>> commits;
+  commits.reserve(1);
+  commits.push_back(std::move(commit));
+  AddCommits(std::move(commits), ChangeSource::LOCAL, callback);
 }
 
 void PageStorageImpl::AddCommitsFromSync(
@@ -331,11 +334,12 @@ void PageStorageImpl::AddCommitsFromSync(
   waiter.Finalize(ftl::MakeCopyable([
     this, commits = std::move(commits), callback = std::move(callback)
   ](Status status) mutable {
-    callback::StatusWaiter<Status> waiter(Status::OK);
-    for (auto& commit : commits) {
-      AddCommit(std::move(commit), ChangeSource::SYNC, waiter.NewCallback());
+    if (status != Status::OK) {
+      callback(status);
+      return;
     }
-    waiter.Finalize(std::move(callback));
+
+    AddCommits(std::move(commits), ChangeSource::SYNC, callback);
   }));
 }
 
@@ -439,8 +443,9 @@ void PageStorageImpl::AddObjectFromSync(
               if (status != Status::OK) {
                 callback(status);
               } else if (found_id != object_id) {
-                FTL_LOG(ERROR) << "Object ID mismatch. Given ID: " << object_id
-                               << ". Found: " << found_id;
+                FTL_LOG(ERROR)
+                    << "Object ID mismatch. Given ID: " << ToHex(object_id)
+                    << ". Found: " << ToHex(found_id);
                 files::DeletePath(GetFilePath(found_id), false);
                 callback(Status::OBJECT_ID_MISMATCH);
               } else {
@@ -527,59 +532,69 @@ void PageStorageImpl::NotifyWatchers(
   }
 }
 
-void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
-                                ChangeSource source,
-                                std::function<void(Status)> callback) {
+void PageStorageImpl::AddCommits(
+    std::vector<std::unique_ptr<const Commit>> commits,
+    ChangeSource source,
+    std::function<void(Status)> callback) {
   // Apply all changes atomically.
   std::unique_ptr<DB::Batch> batch = db_.StartBatch();
-  Status s =
-      db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes());
-  if (s != Status::OK) {
-    callback(s);
-    return;
-  }
+  auto comparator = [](CommitId const* id1, CommitId const* id2) {
+    return *id1 < *id2;
+  };
+  std::set<CommitId const*, decltype(comparator)> added_commits(comparator);
 
-  if (source == ChangeSource::LOCAL) {
-    s = db_.MarkCommitIdUnsynced(commit->GetId(), commit->GetTimestamp());
+  for (const auto& commit : commits) {
+    Status s =
+        db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes());
     if (s != Status::OK) {
       callback(s);
       return;
     }
-  }
 
-  // Update heads.
-  s = db_.AddHead(commit->GetId());
-  if (s != Status::OK) {
-    callback(s);
-    return;
-  }
-
-  // Commits must arrive in order: Check that the parents are stored in DB and
-  // remove them from the heads if they are present.
-  for (const CommitId& parent_id : commit->GetParentIds()) {
-    s = ContainsCommit(parent_id);
-    if (s != Status::OK) {
-      FTL_LOG(ERROR) << "Failed to find parent commit \"" << parent_id
-                     << "\" of commit \"" << commit->GetId() << "\"";
-      if (s == Status::NOT_FOUND) {
-        callback(Status::ILLEGAL_STATE);
-      } else {
-        callback(Status::INTERNAL_IO_ERROR);
+    if (source == ChangeSource::LOCAL) {
+      s = db_.MarkCommitIdUnsynced(commit->GetId(), commit->GetTimestamp());
+      if (s != Status::OK) {
+        callback(s);
+        return;
       }
+    }
+
+    // Update heads.
+    s = db_.AddHead(commit->GetId());
+    if (s != Status::OK) {
+      callback(s);
       return;
     }
-    db_.RemoveHead(parent_id);
+
+    // Commits must arrive in order: Check that the parents are stored in DB and
+    // remove them from the heads if they are present.
+    for (const CommitId& parent_id : commit->GetParentIds()) {
+      if (added_commits.count(&parent_id) == 0) {
+        s = ContainsCommit(parent_id);
+        if (s != Status::OK) {
+          FTL_LOG(ERROR) << "Failed to find parent commit \""
+                         << ToHex(parent_id) << "\" of commit \""
+                         << ToHex(commit->GetId()) << "\"";
+          if (s == Status::NOT_FOUND) {
+            callback(Status::ILLEGAL_STATE);
+          } else {
+            callback(Status::INTERNAL_IO_ERROR);
+          }
+          return;
+        }
+      }
+      db_.RemoveHead(parent_id);
+    }
+
+    added_commits.insert(&commit->GetId());
   }
 
-  s = batch->Execute();
+  Status s = batch->Execute();
+  callback(s);
   if (s != Status::OK) {
-    callback(s);
     return;
   }
 
-  callback(Status::OK);
-  std::vector<std::unique_ptr<const Commit>> commits;
-  commits.push_back(std::move(commit));
   NotifyWatchers(std::move(commits), source);
 }
 

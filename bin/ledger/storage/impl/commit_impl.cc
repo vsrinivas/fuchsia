@@ -129,7 +129,7 @@ std::unique_ptr<Commit> CommitImpl::Clone() const {
                      std::string(storage_bytes_)));
 }
 
-CommitId CommitImpl::GetId() const {
+const CommitId& CommitImpl::GetId() const {
   return id_;
 }
 

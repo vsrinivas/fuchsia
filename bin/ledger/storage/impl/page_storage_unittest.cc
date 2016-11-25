@@ -8,6 +8,7 @@
 
 #include <dirent.h>
 
+#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
@@ -198,7 +199,7 @@ class PageStorageTest : public test::TestWithMessageLoop {
     EXPECT_EQ(Status::OK,
               TreeNode::FromEntries(storage_.get(), std::vector<Entry>(),
                                     std::vector<ObjectId>(1), &root_id));
-    std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+    std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
         storage_.get(), root_id, {GetFirstHead()});
     CommitId id = commit->GetId();
 
@@ -277,7 +278,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
             storage_->GetCommit(RandomId(kCommitIdSize), &lookup_commit));
   EXPECT_FALSE(lookup_commit);
 
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes();
@@ -292,7 +293,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
 
 TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   // Try to add a commit before its parent and see the error.
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomId(kObjectIdSize), {RandomId(kCommitIdSize)});
 
   storage_->AddCommitFromLocal(std::move(commit), [](Status status) {
@@ -330,7 +331,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   std::string file_path = GetFilePath(root_id);
   files::DeletePath(file_path, false);
 
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), root_id, {GetFirstHead()});
   CommitId id = commit->GetId();
 
@@ -375,7 +376,7 @@ TEST_F(PageStorageTest, SyncCommits) {
   EXPECT_TRUE(commits.empty());
 
   // After adding a commit it should marked as unsynced.
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
   std::string storage_bytes = commit->GetStorageBytes();
@@ -400,7 +401,7 @@ TEST_F(PageStorageTest, HeadCommits) {
 
   // Adding a new commit with the previous head as its parent should replace the
   // old head.
-  std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomId(kObjectIdSize), {GetFirstHead()});
   CommitId id = commit->GetId();
 
@@ -833,6 +834,71 @@ TEST_F(PageStorageTest, SyncMetadata) {
   EXPECT_EQ(Status::OK, storage_->SetSyncMetadata("bazinga"));
   EXPECT_EQ(Status::OK, storage_->GetSyncMetadata(&sync_state));
   EXPECT_EQ("bazinga", sync_state);
+}
+
+TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
+  FakeSyncDelegate sync;
+  storage_->SetSyncDelegate(&sync);
+
+  // Buil the commit Tree with:
+  //         0
+  //         |
+  //         1  2
+  std::vector<ObjectId> object_ids;
+  object_ids.resize(3);
+  for (size_t i = 0; i < object_ids.size(); ++i) {
+    ObjectData value("value" + std::to_string(i));
+    std::vector<Entry> entries = {Entry{"key" + std::to_string(i),
+                                        value.object_id,
+                                        storage::KeyPriority::EAGER}};
+    ASSERT_EQ(Status::OK,
+              TreeNode::FromEntries(storage_.get(), entries,
+                                    std::vector<ObjectId>(entries.size() + 1),
+                                    &object_ids[i]));
+     sync.AddObject(value.object_id, value.value);
+     std::unique_ptr<const Object> root_object;
+     ASSERT_EQ(Status::OK,
+               storage_->GetObjectSynchronous(object_ids[i], &root_object));
+     ftl::StringView root_data;
+     ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
+     sync.AddObject(object_ids[i], root_data.ToString());
+
+     // Remove the root from the local storage. The value was never added.
+     std::string file_path = GetFilePath(object_ids[i]);
+     files::DeletePath(file_path, false);
+  }
+
+  std::unique_ptr<const Commit> commit0 = CommitImpl::FromContentAndParents(
+      storage_.get(), object_ids[0], {GetFirstHead()});
+  std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
+      storage_.get(), object_ids[1], {GetFirstHead()});
+  std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
+      storage_.get(), object_ids[2], {commit1->GetId()});
+
+  std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
+  commits_and_bytes.emplace_back(commit0->GetId(), commit0->GetStorageBytes());
+  commits_and_bytes.emplace_back(commit1->GetId(), commit1->GetStorageBytes());
+  commits_and_bytes.emplace_back(commit2->GetId(), commit2->GetStorageBytes());
+
+  Status status;
+  storage_->AddCommitsFromSync(std::move(commits_and_bytes),
+                               test::Capture([this] {
+                                  message_loop_.PostQuitTask();
+                               }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+
+  // TODO(qsr): Only 4 objects will be requested when storage filter non leaves
+  // commit.
+  EXPECT_EQ(6u, sync.object_requests.size());
+  EXPECT_NE(
+      sync.object_requests.find(object_ids[0]), sync.object_requests.end());
+  // TODO(qsr): This object will not be requested when storage filter non
+  // leaves commit.
+  EXPECT_NE(
+      sync.object_requests.find(object_ids[1]), sync.object_requests.end());
+  EXPECT_NE(
+      sync.object_requests.find(object_ids[2]), sync.object_requests.end());
 }
 
 }  // namespace

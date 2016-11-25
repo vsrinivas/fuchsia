@@ -28,7 +28,7 @@ class FakeJournalDelegate {
   FakeJournalDelegate();
   ~FakeJournalDelegate();
 
-  CommitId GetId() const { return id_; }
+  const CommitId& GetId() const { return id_; }
 
   Status SetValue(convert::ExtendedStringView key,
                   ObjectIdView value,

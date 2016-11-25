@@ -24,7 +24,7 @@ class Commit {
   virtual std::unique_ptr<Commit> Clone() const = 0;
 
   // Returns the id of this commit.
-  virtual CommitId GetId() const = 0;
+  virtual const CommitId& GetId() const = 0;
 
   // Returns the ids of this commit's parents.
   virtual std::vector<CommitId> GetParentIds() const = 0;
