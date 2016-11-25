@@ -121,8 +121,9 @@ void PageSyncImpl::GetObject(
 
 void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit commit,
                                   std::string timestamp) {
-  EnqueueDownload(
-      cloud_provider::Record(std::move(commit), std::move(timestamp)), nullptr);
+  std::vector<cloud_provider::Record> records;
+  records.emplace_back(std::move(commit), std::move(timestamp));
+  EnqueueDownload(std::move(records), nullptr);
 }
 
 void PageSyncImpl::OnError() {}
@@ -163,11 +164,7 @@ void PageSyncImpl::TryStartDownload() {
         } else {
           // If not, fire the backlog download callback when the last of the
           // initial downloads completes.
-          for (size_t i = 0; i < records.size() - 1; i++) {
-            EnqueueDownload(std::move(records[i]), nullptr);
-          }
-          EnqueueDownload(std::move(records.back()),
-                          [this] { BacklogDownloaded(); });
+          EnqueueDownload(std::move(records), [this] { BacklogDownloaded(); });
         }
 
         download_list_retrieved_ = true;
@@ -181,14 +178,14 @@ void PageSyncImpl::TryStartDownload() {
       });
 }
 
-void PageSyncImpl::EnqueueDownload(cloud_provider::Record record,
+void PageSyncImpl::EnqueueDownload(std::vector<cloud_provider::Record> records,
                                    ftl::Closure on_done) {
   // If there are no commits currently being downloaded, start the download
   // after enqueing this one.
   const bool start_after_adding = commit_downloads_.empty();
 
   commit_downloads_.emplace(
-      storage_, std::move(record), [ this, on_done = std::move(on_done) ] {
+      storage_, std::move(records), [ this, on_done = std::move(on_done) ] {
         if (on_done) {
           on_done();
         }

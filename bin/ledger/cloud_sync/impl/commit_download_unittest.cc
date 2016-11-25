@@ -71,9 +71,10 @@ class CommitDownloadTest : public test::TestWithMessageLoop {
 TEST_F(CommitDownloadTest, AddCommit) {
   int done_calls = 0;
   int error_calls = 0;
+  std::vector<cloud_provider::Record> records;
+  records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "42");
   CommitDownload commit_download(
-      &storage_, cloud_provider::Record(
-                     cloud_provider::Commit("id1", "content1", {}), "42"),
+      &storage_, std::move(records),
       [this, &done_calls] {
         done_calls++;
         message_loop_.PostQuitTask();
@@ -89,12 +90,37 @@ TEST_F(CommitDownloadTest, AddCommit) {
   EXPECT_EQ("42", storage_.sync_metadata);
 }
 
+TEST_F(CommitDownloadTest, AddMultipleCommit) {
+  int done_calls = 0;
+  int error_calls = 0;
+  std::vector<cloud_provider::Record> records;
+  records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "42");
+  records.emplace_back(cloud_provider::Commit("id2", "content2", {}), "43");
+  CommitDownload commit_download(
+      &storage_, std::move(records),
+      [this, &done_calls] {
+        done_calls++;
+        message_loop_.PostQuitTask();
+      },
+      [this, &error_calls] { error_calls++; });
+  commit_download.Start();
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1, done_calls);
+  EXPECT_EQ(0, error_calls);
+  EXPECT_EQ(2u, storage_.received_commits.size());
+  EXPECT_EQ("content1", storage_.received_commits["id1"]);
+  EXPECT_EQ("content2", storage_.received_commits["id2"]);
+  EXPECT_EQ("43", storage_.sync_metadata);
+}
+
 TEST_F(CommitDownloadTest, FailToAddCommit) {
   int done_calls = 0;
   int error_calls = 0;
+  std::vector<cloud_provider::Record> records;
+  records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "42");
   CommitDownload commit_download(
-      &storage_, cloud_provider::Record(
-                     cloud_provider::Commit("id1", "content1", {}), "42"),
+      &storage_, std::move(records),
       [this, &done_calls] { done_calls++; },
       [this, &error_calls] {
         error_calls++;

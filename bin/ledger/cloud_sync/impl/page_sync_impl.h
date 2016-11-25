@@ -91,7 +91,8 @@ class PageSyncImpl : public PageSync,
  private:
   void TryStartDownload();
 
-  void EnqueueDownload(cloud_provider::Record record, ftl::Closure on_done);
+  void EnqueueDownload(std::vector<cloud_provider::Record> record,
+                       ftl::Closure on_done);
 
   void EnqueueUpload(std::unique_ptr<const storage::Commit> commit);
 

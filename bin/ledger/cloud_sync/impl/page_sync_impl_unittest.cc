@@ -465,19 +465,9 @@ TEST_F(PageSyncImplTest, DownloadBacklog) {
       [&on_backlog_downloaded_calls] { on_backlog_downloaded_calls++; });
   page_sync_.Start();
 
-  // Stop the loop after delivering the first commit and verify that the backlog
-  // completion callback is not called yet.
   message_loop_.SetAfterTaskCallback([this] {
-    if (storage_.received_commits.size() == 1u) {
+    if (storage_.received_commits.size() != 0u) {
       message_loop_.QuitNow();
-    }
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(0, on_backlog_downloaded_calls);
-
-  message_loop_.SetAfterTaskCallback([this] {
-    if (storage_.received_commits.size() == 2u) {
-      message_loop_.PostQuitTask();
     }
   });
   EXPECT_FALSE(RunLoopWithTimeout());

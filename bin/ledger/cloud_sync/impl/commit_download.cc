@@ -9,11 +9,11 @@
 namespace cloud_sync {
 
 CommitDownload::CommitDownload(storage::PageStorage* storage,
-                               cloud_provider::Record record,
+                               std::vector<cloud_provider::Record> records,
                                ftl::Closure on_done,
                                ftl::Closure on_error)
     : storage_(storage),
-      record_(std::move(record)),
+      records_(std::move(records)),
       on_done_(std::move(on_done)),
       on_error_(std::move(on_error)) {
   FTL_DCHECK(storage);
@@ -25,8 +25,10 @@ void CommitDownload::Start() {
   FTL_DCHECK(!started_);
   started_ = true;
   std::vector<storage::PageStorage::CommitIdAndBytes> commits;
-  commits.push_back(storage::PageStorage::CommitIdAndBytes(
-      std::move(record_.commit.id), std::move(record_.commit.content)));
+  for (auto& record : records_) {
+    commits.push_back(storage::PageStorage::CommitIdAndBytes(
+        std::move(record.commit.id), std::move(record.commit.content)));
+  }
   storage_->AddCommitsFromSync(
       std::move(commits), [this](storage::Status status) {
         if (status != storage::Status::OK) {
@@ -34,7 +36,7 @@ void CommitDownload::Start() {
           return;
         }
 
-        if (storage_->SetSyncMetadata(std::move(record_.timestamp)) !=
+        if (storage_->SetSyncMetadata(std::move(records_.back().timestamp)) !=
             storage::Status::OK) {
           on_error_();
           return;
