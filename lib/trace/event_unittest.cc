@@ -67,10 +67,10 @@ TEST_F(EventTest, Instant) {
 }
 
 TEST_F(EventTest, Counter) {
-  TRACE_COUNTER1("cat", "name", "k1", 1);
-  TRACE_COUNTER2("cat", "name", "k1", 1, "k2", 2);
-  TRACE_COUNTER3("cat", "name", "k1", 1, "k2", 2, "k3", 3);
-  TRACE_COUNTER4("cat", "name", "k1", 1, "k2", 2, "k3", 3, "k4", 4);
+  TRACE_COUNTER1("cat", "name", 1, "k1", 1);
+  TRACE_COUNTER2("cat", "name", 1, "k1", 1, "k2", 2);
+  TRACE_COUNTER3("cat", "name", 1, "k1", 1, "k2", 2, "k3", 3);
+  TRACE_COUNTER4("cat", "name", 1, "k1", 1, "k2", 2, "k3", 3, "k4", 4);
 }
 
 TEST_F(EventTest, Duration) {

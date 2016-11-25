@@ -502,11 +502,11 @@ class CategorizedTraceWriter final : public TraceWriter {
   // Writes a counter event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteCounterEventRecord(const char* name, Args&&... args) {
-    if (Payload payload =
-            WriteEventRecordBase(EventType::kCounter, name, sizeof...(Args),
-                                 SizeArguments(std::forward<Args>(args)...))) {
-      payload.WriteValues(std::forward<Args>(args)...);
+  void WriteCounterEventRecord(const char* name, uint64_t id, Args&&... args) {
+    if (Payload payload = WriteEventRecordBase(
+            EventType::kCounter, name, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
+      payload.WriteValues(std::forward<Args>(args)...).Write(id);
     }
   }
 
@@ -781,9 +781,9 @@ class DurationEventScope {
       category,                                                \
       TRACE_INTERNAL_WRITER.WriteInstantEventRecord(name, scope args))
 
-#define TRACE_INTERNAL_COUNTER(category, name, args...) \
-  TRACE_INTERNAL_CATEGORIZED(                           \
-      category, TRACE_INTERNAL_WRITER.WriteCounterEventRecord(name args))
+#define TRACE_INTERNAL_COUNTER(category, name, id, args...) \
+  TRACE_INTERNAL_CATEGORIZED(                               \
+      category, TRACE_INTERNAL_WRITER.WriteCounterEventRecord(name, id args))
 
 #define TRACE_INTERNAL_DURATION(scope_category, scope_name, args...)          \
   TRACE_INTERNAL_DURATION_SCOPE(TRACE_INTERNAL_SCOPE_LABEL(), scope_category, \

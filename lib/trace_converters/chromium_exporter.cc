@@ -123,6 +123,12 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
     case EventType::kCounter:
       writer_.Key("ph");
       writer_.String("C");
+      if (event.data.GetCounter().id) {
+        writer_.Key("id");
+        writer_.String(
+            ftl::StringPrintf("0x%" PRIx64, event.data.GetCounter().id)
+                .c_str());
+      }
       break;
     case EventType::kDurationBegin:
       writer_.Key("ph");

@@ -45,19 +45,21 @@
       category, name, scope,                                                  \
       TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
 
-// Writes a counter event.  The arguments to this event are numeric samples
-// which may be presented by the visualizer as a stack area chart.
-#define TRACE_COUNTER1(category, name, k1, v1) \
-  TRACE_INTERNAL_COUNTER(category, name, TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
-#define TRACE_COUNTER2(category, name, k1, v1, k2, v2) \
-  TRACE_INTERNAL_COUNTER(category, name,               \
+// Writes a counter event with the specified id.  The arguments to this
+// event are numeric samples which may be presented by the visualizer as a
+// stack area chart.
+#define TRACE_COUNTER1(category, name, id, k1, v1) \
+  TRACE_INTERNAL_COUNTER(category, name, id, TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
+#define TRACE_COUNTER2(category, name, id, k1, v1, k2, v2) \
+  TRACE_INTERNAL_COUNTER(category, name, id,               \
                          TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2))
-#define TRACE_COUNTER3(category, name, k1, v1, k2, v2, k3, v3) \
-  TRACE_INTERNAL_COUNTER(category, name,                       \
+#define TRACE_COUNTER3(category, name, id, k1, v1, k2, v2, k3, v3) \
+  TRACE_INTERNAL_COUNTER(category, name, id,                       \
                          TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3))
-#define TRACE_COUNTER4(category, name, k1, v1, k2, v2, k3, v3, k4, v4) \
-  TRACE_INTERNAL_COUNTER(category, name, TRACE_INTERNAL_MAKE_ARGS4(    \
-                                             k1, v1, k2, v2, k3, v3, k4, v4))
+#define TRACE_COUNTER4(category, name, id, k1, v1, k2, v2, k3, v3, k4, v4) \
+  TRACE_INTERNAL_COUNTER(                                                  \
+      category, name, id,                                                  \
+      TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
 
 // Writes a duration event which ends when the current scope exits.
 #define TRACE_DURATION0(category, name) TRACE_INTERNAL_DURATION(category, name)

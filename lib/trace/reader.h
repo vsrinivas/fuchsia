@@ -276,7 +276,9 @@ class EventData {
   };
 
   // Counter event data.
-  struct Counter {};
+  struct Counter {
+    uint64_t id;
+  };
 
   // Duration begin event data.
   struct DurationBegin {};
@@ -323,6 +325,21 @@ class EventData {
   const Instant& GetInstant() const {
     FTL_DCHECK(type_ == EventType::kInstant);
     return instant_;
+  }
+
+  const Counter& GetCounter() const {
+    FTL_DCHECK(type_ == EventType::kCounter);
+    return counter_;
+  }
+
+  const DurationBegin& GetDurationBegin() const {
+    FTL_DCHECK(type_ == EventType::kDurationBegin);
+    return duration_begin_;
+  }
+
+  const DurationEnd& GetDurationEnd() const {
+    FTL_DCHECK(type_ == EventType::kDurationEnd);
+    return duration_end_;
   }
 
   const AsyncBegin& GetAsyncBegin() const {
