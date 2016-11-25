@@ -32,14 +32,19 @@
 
 #define LOCAL_TRACE 0
 
-// This handle limit relects the fact that VMOs have an internal array
-// with entry per memory page. When we switch to a tree of ranges we can
-// up this limit.
-constexpr size_t kMaxHandleCount = 32 * 1024;
+#if ARCH_X86_64 || ARCH_ARM64
+constexpr size_t kMaxHandleCount = 256 * 1024u;
+#else
+// TODO: The handle table design might be innapropiate for a 2GB address space.
+constexpr size_t kMaxHandleCount = 16 * 1024u;
+#endif
+
+constexpr size_t kHighHandleCount = (kMaxHandleCount * 8) / 7;
 
 // The handle arena and its mutex.
 mutex_t handle_mutex = MUTEX_INITIAL_VALUE(handle_mutex);
 mxtl::TypedArena<Handle> handle_arena;
+size_t outstanding_handles = 0u;
 
 // The system exception port.
 static mxtl::RefPtr<ExceptionPort> system_exception_port;
@@ -53,13 +58,21 @@ void magenta_init(uint level) {
     root_job = JobDispatcher::CreateRootJob();
 }
 
+static void high_handle_count(size_t count) {
+    printf("warning!! high handle count: %zu handles\n", outstanding_handles);
+}
+
 Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights) {
     AutoLock lock(&handle_mutex);
+    if (++outstanding_handles > kHighHandleCount)
+        high_handle_count(outstanding_handles);
     return handle_arena.New(mxtl::move(dispatcher), rights);
 }
 
 Handle* DupHandle(Handle* source, mx_rights_t rights) {
     AutoLock lock(&handle_mutex);
+    if (++outstanding_handles > kHighHandleCount)
+        high_handle_count(outstanding_handles);
     return handle_arena.New(source, rights);
 }
 
@@ -91,6 +104,7 @@ void DeleteHandle(Handle* handle) {
     memset(handle, 0, sizeof(Handle));
 
     AutoLock lock(&handle_mutex);
+    --outstanding_handles;
     handle_arena.RawFree(handle);
 }
 
