@@ -103,8 +103,9 @@ class PageStorageImpl : public PageStorage {
           callback);
   std::string GetFilePath(ObjectIdView object_id) const;
 
-  // Notifies the registered watchers with the given |commit|.
-  void NotifyWatchers(const Commit& commit, ChangeSource source);
+  // Notifies the registered watchers with the given |commits|.
+  void NotifyWatchers(const std::vector<std::unique_ptr<const Commit>>& commits,
+                      ChangeSource source);
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   std::string page_dir_;

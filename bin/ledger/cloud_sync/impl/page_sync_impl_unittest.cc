@@ -31,6 +31,14 @@ class TestCommit : public storage::test::CommitEmptyImpl {
       : id(id), content(content) {}
   ~TestCommit() override = default;
 
+  static std::vector<std::unique_ptr<const Commit>> AsList(
+      storage::CommitId id,
+      std::string content) {
+    std::vector<std::unique_ptr<const Commit>> result;
+    result.push_back(std::make_unique<TestCommit>(id, content));
+    return result;
+  }
+
   std::unique_ptr<Commit> Clone() const override {
     return std::make_unique<TestCommit>(id, content);
   }
@@ -291,19 +299,19 @@ TEST_F(PageSyncImplTest, UploadNewCommits) {
   page_sync_.Start();
   storage_.new_commits_to_return["id1"] =
       std::make_unique<const TestCommit>("id1", "content1");
-  page_sync_.OnNewCommit(TestCommit("id1", "content1"),
-                         storage::ChangeSource::LOCAL);
+  page_sync_.OnNewCommits(TestCommit::AsList("id1", "content1"),
+                          storage::ChangeSource::LOCAL);
 
   // The commit coming from sync should be ignored.
   storage_.new_commits_to_return["id2"] =
       std::make_unique<const TestCommit>("id2", "content2");
-  page_sync_.OnNewCommit(TestCommit("id2", "content2"),
-                         storage::ChangeSource::SYNC);
+  page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
+                          storage::ChangeSource::SYNC);
 
   storage_.new_commits_to_return["id3"] =
       std::make_unique<const TestCommit>("id3", "content3");
-  page_sync_.OnNewCommit(TestCommit("id3", "content3"),
-                         storage::ChangeSource::LOCAL);
+  page_sync_.OnNewCommits(TestCommit::AsList("id3", "content3"),
+                          storage::ChangeSource::LOCAL);
 
   message_loop_.SetAfterTaskCallback([this] {
     if (cloud_provider_.received_commits.size() == 2u) {
@@ -330,8 +338,8 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
 
   storage_.new_commits_to_return["id2"] =
       std::make_unique<const TestCommit>("id2", "content2");
-  page_sync_.OnNewCommit(TestCommit("id2", "content2"),
-                         storage::ChangeSource::LOCAL);
+  page_sync_.OnNewCommits(TestCommit::AsList("id2", "content2"),
+                          storage::ChangeSource::LOCAL);
 
   message_loop_.SetAfterTaskCallback([this] {
     if (cloud_provider_.received_commits.size() == 2u) {
@@ -409,8 +417,8 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
   // called again on completion.
   storage_.new_commits_to_return["id3"] =
       std::make_unique<const TestCommit>("id3", "content3");
-  page_sync_.OnNewCommit(TestCommit("id3", "content3"),
-                         storage::ChangeSource::LOCAL);
+  page_sync_.OnNewCommits(TestCommit::AsList("id3", "content3"),
+                          storage::ChangeSource::LOCAL);
   EXPECT_FALSE(page_sync_.IsIdle());
   message_loop_.SetAfterTaskCallback([this] {
     if (cloud_provider_.received_commits.size() == 3u) {

@@ -50,8 +50,9 @@ class BranchTracker : public storage::CommitWatcher {
   class PageWatcherContainer;
 
   // storage::CommitWatcher:
-  void OnNewCommit(const storage::Commit& commit,
-                   storage::ChangeSource source) override;
+  void OnNewCommits(
+      const std::vector<std::unique_ptr<const storage::Commit>>& commits,
+      storage::ChangeSource source) override;
 
   void CheckEmpty();
 

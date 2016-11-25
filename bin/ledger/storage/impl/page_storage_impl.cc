@@ -519,10 +519,11 @@ Status PageStorageImpl::GetSyncMetadata(std::string* sync_state) {
   return db_.GetSyncMetadata(sync_state);
 }
 
-void PageStorageImpl::NotifyWatchers(const Commit& commit,
-                                     ChangeSource source) {
+void PageStorageImpl::NotifyWatchers(
+    const std::vector<std::unique_ptr<const Commit>>& commits,
+    ChangeSource source) {
   for (CommitWatcher* watcher : watchers_) {
-    watcher->OnNewCommit(commit, source);
+    watcher->OnNewCommits(commits, source);
   }
 }
 
@@ -577,7 +578,9 @@ void PageStorageImpl::AddCommit(std::unique_ptr<const Commit> commit,
   }
 
   callback(Status::OK);
-  NotifyWatchers(*(commit.get()), source);
+  std::vector<std::unique_ptr<const Commit>> commits;
+  commits.push_back(std::move(commit));
+  NotifyWatchers(std::move(commits), source);
 }
 
 Status PageStorageImpl::ContainsCommit(const CommitId& id) {

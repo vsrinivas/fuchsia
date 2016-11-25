@@ -71,8 +71,9 @@ class PageSyncImpl : public PageSync,
   void SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) override;
 
   // storage::CommitWatcher:
-  void OnNewCommit(const storage::Commit& commit,
-                   storage::ChangeSource source) override;
+  void OnNewCommits(
+      const std::vector<std::unique_ptr<const storage::Commit>>& commits,
+      storage::ChangeSource source) override;
 
   // storage::PageSyncDelegate:
   void GetObject(

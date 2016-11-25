@@ -84,9 +84,10 @@ class FakeCommitWatcher : public CommitWatcher {
  public:
   FakeCommitWatcher() {}
 
-  void OnNewCommit(const Commit& commit, ChangeSource source) override {
+  void OnNewCommits(const std::vector<std::unique_ptr<const Commit>>& commits,
+                    ChangeSource source) override {
     ++commit_count;
-    last_commit_id = commit.GetId();
+    last_commit_id = commits.back()->GetId();
     last_source = source;
   }
 

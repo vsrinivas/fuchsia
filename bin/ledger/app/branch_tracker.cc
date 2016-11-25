@@ -192,20 +192,27 @@ void BranchTracker::SetBranchHead(const storage::CommitId& commit_id) {
   }
 }
 
-void BranchTracker::OnNewCommit(const storage::Commit& commit,
-                                storage::ChangeSource source) {
-  if (commit.GetId() == current_commit_) {
-    return;
+void BranchTracker::OnNewCommits(
+    const std::vector<std::unique_ptr<const storage::Commit>>& commits,
+    storage::ChangeSource source) {
+  bool changed = false;
+  for (const auto& commit : commits) {
+    if (commit->GetId() == current_commit_) {
+      continue;
+    }
+    // This assumes commits are received in (partial) order. If the commit
+    // doesn't have current_commit_ as a parent it is not part of this branch
+    // and should be ignored.
+    std::vector<storage::CommitId> parent_ids = commit->GetParentIds();
+    if (std::find(parent_ids.begin(), parent_ids.end(), current_commit_) ==
+        parent_ids.end()) {
+      continue;
+    }
+    changed = true;
+    current_commit_ = commit->GetId();
   }
-  // This assumes commits are received in (partial) order.
-  std::vector<storage::CommitId> parent_ids = commit.GetParentIds();
-  if (std::find(parent_ids.begin(), parent_ids.end(), current_commit_) ==
-      parent_ids.end()) {
-    return;
-  }
-  current_commit_ = commit.GetId();
 
-  if (transaction_in_progress_) {
+  if (!changed || transaction_in_progress_) {
     return;
   }
   for (auto& watcher : watchers_) {

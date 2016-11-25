@@ -84,15 +84,18 @@ void PageSyncImpl::SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) {
   on_backlog_downloaded_ = on_backlog_downloaded;
 }
 
-void PageSyncImpl::OnNewCommit(const storage::Commit& commit,
-                               storage::ChangeSource source) {
+void PageSyncImpl::OnNewCommits(
+    const std::vector<std::unique_ptr<const storage::Commit>>& commits,
+    storage::ChangeSource source) {
   // Only upload the locally created commits.
   // TODO(ppi): revisit this when we have p2p sync, too.
   if (source != storage::ChangeSource::LOCAL) {
     return;
   }
 
-  EnqueueUpload(commit.Clone());
+  for (const auto& commit : commits) {
+    EnqueueUpload(commit->Clone());
+  }
 }
 
 void PageSyncImpl::GetObject(
