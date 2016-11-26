@@ -276,6 +276,43 @@ public:
     }
 };
 
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.559-566
+class DisplayPlaneControl {
+public:
+    enum Plane { PIPE_A_PLANE_1 };
+
+    static constexpr uint32_t kOffsetPipeAPlane1 = 0x70180;
+    static constexpr uint32_t kAsyncAddressAutoUpdateEnableBit = 1 << 9;
+
+    static uint32_t read(RegisterIo* reg_io, Plane plane)
+    {
+        switch (plane) {
+        case PIPE_A_PLANE_1:
+            return reg_io->Read32(kOffsetPipeAPlane1);
+        }
+    }
+
+    static void write(RegisterIo* reg_io, Plane plane, uint32_t val)
+    {
+        switch (plane) {
+        case PIPE_A_PLANE_1:
+            reg_io->Write32(kOffsetPipeAPlane1, val);
+            break;
+        }
+    }
+
+    static void enable_update_on_vblank(RegisterIo* reg_io, Plane plane, bool enable)
+    {
+        uint32_t val = read(reg_io, plane);
+        if (enable) {
+            val &= ~kAsyncAddressAutoUpdateEnableBit;
+        } else {
+            val |= kAsyncAddressAutoUpdateEnableBit;
+        }
+        write(reg_io, plane, val);
+    }
+};
+
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.444
 class DisplayPipeInterrupt {
 public:

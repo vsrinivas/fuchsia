@@ -477,7 +477,6 @@ void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
     for (auto iter = display_mappings_.begin(); iter != display_mappings_.end(); iter++) {
         if ((*iter)->buffer() == buffer.get()) {
             mapping = *iter;
-            display_mappings_.erase(iter);
             break;
         }
     }
@@ -489,55 +488,62 @@ void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
                 (*callback)(DRET_MSG(-ENOMEM, "Couldn't map buffer to gtt"), data);
             return;
         }
+        display_mappings_.push_front(mapping);
     }
 
-    gpu_addr_t gpu_addr_gtt = mapping->gpu_addr();
+    // Controls whether the plane surface update happens immediately or on the next vblank.
+    constexpr bool kUpdateOnVblank = true;
 
-    // Writing the plane surface address triggers an update on the next vertical blank.
-    // A page flip event tells us when that has happened.
-    registers::DisplayPipeInterrupt::update_mask_bits(
-        register_io(), registers::DisplayPipeInterrupt::PIPE_A,
-        registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, true);
+    // Controls whether we wait for the flip to complete.
+    // Waiting for flip completion seems to imply waiting for the vsync/vblank as well.
+    // Note, if not waiting for flip complete you need to be careful of mapping lifetime.
+    // For simplicity we just maintain all display buffer mappings forever but we should
+    // have the upper layers import/release display buffers.
+    constexpr bool kWaitForFlip = true;
+
+    registers::DisplayPlaneControl::enable_update_on_vblank(
+        register_io(), registers::DisplayPlaneControl::PIPE_A_PLANE_1, kUpdateOnVblank);
 
     registers::DisplayPlaneSurfaceAddress::write(
-        register_io(), registers::DisplayPlaneSurfaceAddress::PIPE_A_PLANE_1, gpu_addr_gtt);
+        register_io(), registers::DisplayPlaneSurfaceAddress::PIPE_A_PLANE_1, mapping->gpu_addr());
 
-    constexpr uint32_t kRetryMsMax = 100;
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    while (true) {
-        bool flip_done = false;
-
-        registers::DisplayPipeInterrupt::process_identity_bits(
+    if (kWaitForFlip) {
+        registers::DisplayPipeInterrupt::update_mask_bits(
             register_io(), registers::DisplayPipeInterrupt::PIPE_A,
-            registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, &flip_done);
-        if (flip_done)
-            break;
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> elapsed = end - start;
-        if (elapsed.count() > kRetryMsMax) {
-            DLOG("Timeout waiting for page flip event");
-            if (callback)
-                (*callback)(-ETIMEDOUT, data);
-            return;
-        }
-        std::this_thread::yield();
-    }
+            registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, true);
 
-    registers::DisplayPipeInterrupt::update_mask_bits(
-        register_io(), registers::DisplayPipeInterrupt::PIPE_A,
-        registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, false);
+        constexpr uint32_t kRetryMsMax = 100;
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        while (true) {
+            bool flip_done = false;
+
+            registers::DisplayPipeInterrupt::process_identity_bits(
+                register_io(), registers::DisplayPipeInterrupt::PIPE_A,
+                registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, &flip_done);
+            if (flip_done)
+                break;
+            auto end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double, std::milli> elapsed = end - start;
+            if (elapsed.count() > kRetryMsMax) {
+                DLOG("Timeout waiting for page flip event");
+                if (callback)
+                    (*callback)(-ETIMEDOUT, data);
+                return;
+            }
+            std::this_thread::yield();
+        }
+
+        registers::DisplayPipeInterrupt::update_mask_bits(
+            register_io(), registers::DisplayPipeInterrupt::PIPE_A,
+            registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, false);
+    }
 
     if (flip_callback_) {
         DLOG("making flip callback now");
         (*flip_callback_)(0, flip_data_);
     }
-
-    if (display_mappings_.size() > 2)
-        display_mappings_.erase(display_mappings_.end());
-
-    display_mappings_.push_front(mapping);
 
     flip_callback_ = callback;
     flip_data_ = data;
