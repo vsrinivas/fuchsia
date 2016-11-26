@@ -56,6 +56,10 @@ class TraceEngine final : private mtl::MessageLoopHandler {
     return task_runner_;
   }
 
+  const std::vector<std::string>& enabled_categories() const {
+    return enabled_categories_;
+  }
+
   void StartTracing(TraceFinishedCallback finished_callback);
   void StopTracing();
 

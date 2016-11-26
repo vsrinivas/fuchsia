@@ -36,6 +36,20 @@ __WEAK bool IsTracingEnabledForCategory(const char* category) {
   return false;
 }
 
+__WEAK std::vector<std::string> GetEnabledCategories() {
+  return std::vector<std::string>();
+}
+
+__WEAK TraceState GetTraceState() {
+  return TraceState::kFinished;
+}
+
+__WEAK TraceHandlerKey AddTraceHandler(TraceHandler handler) {
+  return 0u;
+}
+
+__WEAK void RemoveTraceHandler(TraceHandlerKey handler_key) {}
+
 __WEAK TraceWriter TraceWriter::Prepare() {
   return TraceWriter(nullptr);
 }

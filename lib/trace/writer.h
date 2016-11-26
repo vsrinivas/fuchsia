@@ -78,14 +78,70 @@ bool StartTracing(mx::vmo buffer,
 //
 // It is not safe to call |StartTracing| again until the finished callback
 // is posted.
+//
+// This method must be called on the same thread as |StartTracing| was.
 void StopTracing();
 
 // Returns true if tracing is active.
+//
+// This method is thread-safe.
 bool IsTracingEnabled();
 
 // Returns true if the tracer has been initialized by a call to |StartTracing|
 // and the specified |category| has been enabled.
+//
+// This method is thread-safe.
 bool IsTracingEnabledForCategory(const char* category);
+
+// Gets the list of enabled categories.
+// Returns an empty list if tracing is disabled.
+//
+// This method is thread-safe.
+std::vector<std::string> GetEnabledCategories();
+
+// Describes the state of the trace system.
+enum class TraceState {
+  // Trace has started.
+  // Trace handlers should initialize themselves.
+  kStarted,
+  // Trace is stopping.
+  // Trace handlers should finish writing pending events before returning.
+  kStopping,
+  // Trace has stopped.
+  // Trace handlers can no longer write any new events.
+  // The tracing system is waiting for all existing |TraceWriter| instances
+  // to be released before finishing the trace.
+  kStopped,
+  // Trace has finished completely.
+  // It is now OK to start a new trace session.
+  kFinished,
+};
+
+// Gets the current trace state.
+// To determine if trace events are currently being collected use
+// |IsTracingEnabled| or |IsTracingEnabledForCategory| instead.
+//
+// This method is thread-safe.
+TraceState GetTraceState();
+
+// Trace handlers are given an opportunity to directly participate in the
+// tracing lifecycle.  This mechanism can be useful for controlling
+// heavy-weight tracing functions which require explicit coordination
+// to start and stop.
+using TraceHandler = std::function<void(TraceState)>;
+using TraceHandlerKey = uint64_t;
+
+// Adds a trace handler.
+// The handler will be notified of all future change to the tracing state.
+// Callbacks will occur on the thread which originally called |StartTracing|.
+//
+// This method is thread-safe.
+TraceHandlerKey AddTraceHandler(TraceHandler handler);
+
+// Removes a trace handler.
+//
+// This method is thread-safe.
+void RemoveTraceHandler(TraceHandlerKey handler_key);
 
 // Provides support for writing sequences of 64-bit words into a buffer.
 class Payload {
@@ -407,6 +463,8 @@ constexpr size_t SizeArguments(Head&& head, Tail&&... tail) {
 // Scope for writing one or more related trace records.
 // The trace infrastructure keeps track of how many pending trace writers
 // exist and waits for them to be destroyed before shutting them down.
+//
+// Instances of this class are thread-safe.
 class TraceWriter {
  public:
   // Releases the trace writer.
@@ -477,6 +535,8 @@ class TraceWriter {
 };
 
 // Writes events in a particular category.
+//
+// Instances of this class are thread-safe.
 class CategorizedTraceWriter final : public TraceWriter {
  public:
   // Prepares to write trace records for a specified event category.

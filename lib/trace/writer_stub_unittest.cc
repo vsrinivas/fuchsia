@@ -18,6 +18,10 @@ TEST(WriterStubTest, AllFunctionsDoNothing) {
   EXPECT_FALSE(IsTracingEnabledForCategory("cat"));
   EXPECT_FALSE(TraceWriter::Prepare());
   EXPECT_FALSE(CategorizedTraceWriter::Prepare("cat"));
+  EXPECT_TRUE(GetEnabledCategories().empty());
+  EXPECT_EQ(TraceState::kFinished, GetTraceState());
+  TraceHandlerKey handler_key = AddTraceHandler([](TraceState state) {});
+  RemoveTraceHandler(handler_key);
 }
 
 }  // namespace

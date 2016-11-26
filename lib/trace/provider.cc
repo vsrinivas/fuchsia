@@ -18,8 +18,9 @@ TraceProviderImpl* g_tracer = nullptr;
 }  // namespace
 
 bool InitializeTracerFromCommandLine(modular::ApplicationContext* app_context,
-                                     const ftl::CommandLine& command_line) {
-  TraceSettings settings;
+                                     const ftl::CommandLine& command_line,
+                                     const TraceSettings default_settings) {
+  TraceSettings settings = default_settings;
   if (!ParseTraceSettings(command_line, &settings))
     return false;
   InitializeTracer(app_context, settings);

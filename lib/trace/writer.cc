@@ -5,10 +5,12 @@
 #include "apps/tracing/lib/trace/writer.h"
 
 #include <atomic>
+#include <unordered_map>
 
 #include "apps/tracing/lib/trace/internal/trace_engine.h"
 #include "lib/ftl/logging.h"
 
+using namespace ::tracing::writer;
 using namespace ::tracing::internal;
 
 namespace tracing {
@@ -22,26 +24,17 @@ namespace {
 
 std::mutex g_mutex;
 
-// The current state of tracing.
-enum class State {
-  // No tracing happening.
-  kStopped,
-  // Tracing has started.
-  kStarted,
-  // Tracing has been stopped by client.
-  kStopping,
-  // Tracing has finished as far as the trace engine is concerned but we
-  // are waiting release of all handles before cleaning up.
-  kAwaitingRelease
-};
-State g_state = State::kStopped;  // guarded by g_mutex
+// The current state.
+// This is only ever modified on the engine thread while holding the mutex.
+TraceState g_state = TraceState::kFinished;  // guarded by g_mutex
+bool g_finished_posted = false;              // guarded by g_mutex
 
 // The owner of the engine which keeps it alive until all refs released.
 TraceEngine* g_owned_engine;  // guarded by g_mutex
 
 // Pending finish callback state.
-writer::TraceFinishedCallback g_finished_callback;  // guarded by g_mutex
-writer::TraceDisposition g_trace_disposition;       // guarded by g_mutex
+TraceFinishedCallback g_finished_callback;  // guarded by g_mutex
+TraceDisposition g_trace_disposition;       // guarded by g_mutex
 
 // The currently active trace engine.
 // - Setting and clearing the active engine only happens with the mutex held.
@@ -49,6 +42,74 @@ writer::TraceDisposition g_trace_disposition;       // guarded by g_mutex
 //   only after incrementing the reference count to acquire it.
 std::atomic<TraceEngine*> g_active_engine{nullptr};
 std::atomic<uint32_t> g_active_refs{0u};
+
+// The list of registered trace handlers.
+using TraceHandlerMap = std::unordered_map<TraceHandlerKey, TraceHandler>;
+TraceHandlerMap g_handlers;               // guarded by g_mutex
+TraceHandlerKey g_last_handler_key = 0u;  // guarded by g_mutex
+
+// Notifies handlers of state changes.
+void NotifyHandlers(const TraceHandlerMap& handlers, TraceState state) {
+  for (const auto& pair : handlers)
+    pair.second(state);
+}
+
+// Called on the engine thread when tracing has completely finished.
+void FinishedTracing() {
+  FTL_VLOG(1) << "FinishedTracing";
+  FTL_DCHECK(g_active_engine.load(std::memory_order_relaxed) == nullptr);
+
+  TraceHandlerMap handlers;
+  TraceFinishedCallback finished_callback;
+  TraceDisposition trace_disposition;
+  {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    FTL_DCHECK(g_state == TraceState::kStopped);
+    FTL_DCHECK(g_owned_engine);
+    FTL_DCHECK(g_owned_engine->task_runner()->RunsTasksOnCurrentThread());
+    FTL_DCHECK(g_finished_posted);
+
+    g_finished_posted = false;
+    g_state = TraceState::kFinished;
+    delete g_owned_engine;
+    g_owned_engine = nullptr;
+
+    handlers = g_handlers;
+    finished_callback = std::move(g_finished_callback);
+    trace_disposition = g_trace_disposition;
+  }
+
+  NotifyHandlers(handlers, TraceState::kFinished);
+  finished_callback(trace_disposition);
+}
+
+// Called on the engine thread when the engine has stopped accepting
+// new trace events.
+void StoppedTracing(TraceDisposition trace_disposition) {
+  FTL_VLOG(1) << "StoppedTracing: trace_disposition="
+              << static_cast<int>(trace_disposition);
+  TraceHandlerMap handlers;
+  {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    FTL_DCHECK(g_state == TraceState::kStarted ||
+               g_state == TraceState::kStopping);
+    FTL_DCHECK(g_owned_engine);
+    FTL_DCHECK(g_owned_engine->task_runner()->RunsTasksOnCurrentThread());
+
+    // Clear the engine so no new references to it will be taken.
+    g_active_engine.store(nullptr, std::memory_order_relaxed);
+
+    // Wait for the last reference to the engine to be released before
+    // delivering the finished callback to the client.
+    g_trace_disposition = trace_disposition;
+    g_state = TraceState::kStopped;
+    handlers = g_handlers;
+  }
+
+  // Release initial reference to trace engine and await finished.
+  NotifyHandlers(handlers, TraceState::kStopped);
+  ReleaseEngine();
+}
 
 // Acquires a reference to the engine, incrementing the reference count.
 TraceEngine* AcquireEngine() {
@@ -72,28 +133,24 @@ TraceEngine* AcquireEngine() {
   return nullptr;
 }
 
+// Called when the last reference has been released.
+void ReleasedLastReference() {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (g_state == TraceState::kStopped && !g_finished_posted) {
+    FTL_DCHECK(g_owned_engine);
+    g_finished_posted = true;
+    g_owned_engine->task_runner()->PostTask([] { FinishedTracing(); });
+  }
+}
+
 }  // namespace
 
 // Releases a reference to the engine, decrementing the reference count
 // and finishing tracing when the count hits zero.
 void ReleaseEngine() {
-  if (g_active_refs.fetch_sub(1u, std::memory_order_acq_rel) != 1u)
-    return;
-
-  std::lock_guard<std::mutex> lock(g_mutex);
-  if (g_state != State::kAwaitingRelease)
-    return;
-
-  // Post the finished callback and destroy the engine.
-  FTL_DCHECK(g_active_engine.load(std::memory_order_relaxed) == nullptr);
-  FTL_DCHECK(g_owned_engine);
-  g_owned_engine->task_runner()->PostTask([
-    finished_callback = std::move(g_finished_callback),
-    trace_disposition = g_trace_disposition
-  ] { finished_callback(trace_disposition); });
-  delete g_owned_engine;
-  g_owned_engine = nullptr;
-  g_state = State::kStopped;
+  if (g_active_refs.fetch_sub(1u, std::memory_order_acq_rel) == 1u) {
+    ReleasedLastReference();
+  }
 }
 
 }  // namespace internal
@@ -104,57 +161,67 @@ bool StartTracing(mx::vmo buffer,
                   mx::eventpair fence,
                   std::vector<std::string> enabled_categories,
                   TraceFinishedCallback finished_callback) {
+  FTL_VLOG(1) << "StartTracing";
   FTL_DCHECK(buffer);
   FTL_DCHECK(fence);
 
-  std::lock_guard<std::mutex> lock(g_mutex);
-  FTL_CHECK(g_state == State::kStopped);
-  FTL_DCHECK(!g_owned_engine);
+  TraceHandlerMap handlers;
+  {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    FTL_CHECK(g_state == TraceState::kFinished)
+        << "Cannot start new trace session until previous session has "
+           "completely finished";
+    FTL_DCHECK(!g_owned_engine);
+    FTL_DCHECK(!g_finished_posted);
 
-  // Start the engine.
-  auto engine = TraceEngine::Create(std::move(buffer), std::move(fence),
-                                    std::move(enabled_categories));
-  if (!engine)
-    return false;
+    // Start the engine.
+    auto engine = TraceEngine::Create(std::move(buffer), std::move(fence),
+                                      std::move(enabled_categories));
+    if (!engine)
+      return false;
 
-  g_owned_engine = engine.release();
-  g_owned_engine->StartTracing([](TraceDisposition disposition) {
-    {
-      std::lock_guard<std::mutex> lock(g_mutex);
-      FTL_CHECK(g_state == State::kStarted || g_state == State::kStopping);
+    g_owned_engine = engine.release();
+    g_owned_engine->StartTracing(
+        [](TraceDisposition disposition) { StoppedTracing(disposition); });
+    g_finished_callback = std::move(finished_callback);
+    g_state = TraceState::kStarted;
 
-      // Clear the engine so no new references to it will be taken.
-      if (g_state == State::kStarted)
-        g_active_engine.store(nullptr, std::memory_order_relaxed);
+    // Acquire the initial reference to the engine.
+    g_active_refs.fetch_add(1u, std::memory_order_acq_rel);
+    g_active_engine.store(g_owned_engine, std::memory_order_relaxed);
+    handlers = g_handlers;
+  }
 
-      // Wait for the last reference to the engine to be released before
-      // delivering the finished callback to the client.
-      g_trace_disposition = disposition;
-      g_state = State::kAwaitingRelease;
-    }
-
-    // Release initial reference.
-    ReleaseEngine();
-  });
-  g_finished_callback = std::move(finished_callback);
-  g_state = State::kStarted;
-
-  // Acquire the initial reference to the engine.
-  g_active_refs.fetch_add(1u, std::memory_order_acq_rel);
-  g_active_engine.store(g_owned_engine, std::memory_order_relaxed);
+  NotifyHandlers(handlers, TraceState::kStarted);
   return true;
 }
 
 void StopTracing() {
-  std::lock_guard<std::mutex> lock(g_mutex);
-  if (g_state != State::kStarted)
-    return;
+  FTL_VLOG(1) << "StopTracing";
+
+  // Set stopping state.
+  TraceHandlerMap handlers;
+  {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    if (g_state != TraceState::kStarted)
+      return;
+
+    FTL_DCHECK(g_owned_engine);
+    FTL_DCHECK(g_owned_engine->task_runner()->RunsTasksOnCurrentThread());
+    g_state = TraceState::kStopping;
+    handlers = g_handlers;
+  }
+
+  // Give trace handlers a shot to finish writing events before we
+  // actually stop the engine.
+  NotifyHandlers(handlers, TraceState::kStopping);
 
   // Clear the engine so no new references to it will be taken.
-  // When the engine has stopped, it will invoke the finished callback.
+  // When the engine has stopped, it will invoke the stop callback.
+  // It's safe to use |g_owned_engine| here because the stop and finished
+  // callbacks cannot run until this function returns.
   g_active_engine.store(nullptr, std::memory_order_relaxed);
   g_owned_engine->StopTracing();
-  g_state = State::kStopping;
 }
 
 bool IsTracingEnabled() {
@@ -163,11 +230,41 @@ bool IsTracingEnabled() {
 
 bool IsTracingEnabledForCategory(const char* category) {
   TraceEngine* engine = AcquireEngine();
-  if (!engine)
-    return false;
-  bool result = engine->IsCategoryEnabled(category);
-  ReleaseEngine();
+  if (engine) {
+    bool result = engine->IsCategoryEnabled(category);
+    ReleaseEngine();
+    return result;
+  }
+  return false;
+}
+
+TraceState GetTraceState() {
+  // TODO(jeffbrown): We could make this lock-free if desired but there
+  // doesn't seem to be much point.
+  std::lock_guard<std::mutex> lock(g_mutex);
+  return g_state;
+}
+
+std::vector<std::string> GetEnabledCategories() {
+  std::vector<std::string> result;
+  TraceEngine* engine = AcquireEngine();
+  if (engine) {
+    result = engine->enabled_categories();
+    ReleaseEngine();
+  }
   return result;
+}
+
+TraceHandlerKey AddTraceHandler(TraceHandler handler) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  TraceHandlerKey handler_key = ++g_last_handler_key;
+  g_handlers.emplace(handler_key, handler);
+  return handler_key;
+}
+
+void RemoveTraceHandler(TraceHandlerKey handler_key) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  g_handlers.erase(handler_key);
 }
 
 TraceWriter TraceWriter::Prepare() {

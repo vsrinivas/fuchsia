@@ -14,8 +14,10 @@ namespace tracing {
 // Parses and applies settings from standard command-line options.
 // Returns false and leaves the trace subsystem uninitialized if
 // there was an error parsing the options.
-bool InitializeTracerFromCommandLine(modular::ApplicationContext* app_context,
-                                     const ftl::CommandLine& command_line);
+bool InitializeTracerFromCommandLine(
+    modular::ApplicationContext* app_context,
+    const ftl::CommandLine& command_line,
+    const TraceSettings default_settings = TraceSettings());
 
 // Initializes the global |Tracer| and registers its underlying
 // |TraceProvider| with the system default trace provider registry service.
