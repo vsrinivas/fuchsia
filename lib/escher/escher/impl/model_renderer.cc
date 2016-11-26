@@ -4,6 +4,7 @@
 
 #include "escher/impl/model_renderer.h"
 
+#include <glm/gtx/transform.hpp>
 #include "escher/geometry/tessellation.h"
 #include "escher/impl/command_buffer.h"
 #include "escher/impl/escher_impl.h"
@@ -103,7 +104,12 @@ void ModelRenderer::Draw(Stage& stage,
     auto& translate_y = per_object.transform[3][1];
     auto& translate_z = per_object.transform[3][2];
     auto& color = per_object.color;
+    auto& value_to_clear1 = per_object.transform[0][1];
+    auto& value_to_clear2 = per_object.transform[1][0];
     for (const Object& o : objects) {
+      // These two values might have been set by a previous rotation transform
+      // and need to be cleared.
+      value_to_clear1 = value_to_clear2 = 0.f;
       // Push uniforms for scale/translation and color.
       scale_x = o.width() * half_width_recip;
       scale_y = o.height() * half_height_recip;
@@ -113,6 +119,23 @@ void ModelRenderer::Draw(Stage& stage,
       // normalized to the range (0,1).  This is passed unaltered through the
       // vertex shader.
       translate_z = 1.f - (volume.far() + o.position().z * depth_range_recip);
+
+      if (o.rotation() != 0.f) {
+        float pre_rot_translation_x = -o.rotation_point().x;
+        float pre_rot_translation_y = -o.rotation_point().y;
+
+        per_object.transform = glm::translate(
+            per_object.transform,
+            glm::vec3(-pre_rot_translation_x, -pre_rot_translation_y, 0.f));
+
+        per_object.transform = glm::rotate(per_object.transform, o.rotation(),
+                                           glm::vec3(0.f, 0.f, 1.f));
+
+        per_object.transform = glm::translate(
+            per_object.transform,
+            glm::vec3(pre_rot_translation_x, pre_rot_translation_y, 0.f));
+      }
+
       color = vec4(o.material()->color(), 1.f);  // always opaque
 
       // Find the texture to use, either the object's material's texture, or

@@ -6,14 +6,22 @@
 
 namespace escher {
 
-Object::Object(MeshPtr mesh, const vec3& position, MaterialPtr material)
+Object::Object(MeshPtr mesh,
+               const vec3& position,
+               MaterialPtr material,
+               vec2 scale)
     : shape_(std::move(mesh)),
       material_(std::move(material)),
       position_(position),
-      size_(vec2(1.f, 1.f)) {}
+      size_(scale),
+      rotation_(0.f),
+      rotation_point_(vec2(0.f, 0.f)) {}
 
 Object::Object(const Shape& shape, const MaterialPtr& material)
-    : shape_(shape), material_(material) {}
+    : shape_(shape),
+      material_(material),
+      rotation_(0.f),
+      rotation_point_(vec2(0.f, 0.f)) {}
 
 Object::~Object() {}
 

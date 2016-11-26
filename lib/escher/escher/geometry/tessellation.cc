@@ -248,7 +248,6 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory,
                          const MeshSpec& spec,
                          int subdivisions,
                          vec2 size,
-
                          vec2 top_left,
                          float top_offset_magnitude,
                          float bottom_offset_magnitude) {

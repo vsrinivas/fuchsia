@@ -41,9 +41,11 @@ escher::Model* DemoScene::Update(const escher::Stopwatch& stopwatch,
                                  escher::Stage* stage) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
   float t = sin(current_time_sec);
-  Object rectangle(Object::NewRect(vec2(112.f + 100 * t, 112.f),
-                                   vec2(abs(800.f * t), abs(800.f * t)), 8.f,
-                                   purple_));
+  vec2 rect_size = vec2(abs(800.f * t), abs(800.f * t));
+  Object rectangle(
+      Object::NewRect(vec2(112.f + 100 * t, 112.f), rect_size, 8.f, purple_));
+  rectangle.set_rotation(current_time_sec * 0.5);
+  rectangle.set_rotation_point(vec2(0.5f, 0.5f));
   std::vector<Object> objects{rectangle};
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));
   model_->set_blur_plane_height(12.0f);
