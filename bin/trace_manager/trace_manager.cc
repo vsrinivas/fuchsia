@@ -65,7 +65,7 @@ void TraceManager::StopTracing() {
 void TraceManager::GetKnownCategories(
     const GetKnownCategoriesCallback& callback) {
   callback(
-      fidl::Map<fidl::String, fidl::String>::From(config_.known_categories));
+      fidl::Map<fidl::String, fidl::String>::From(config_.known_categories()));
 }
 
 void TraceManager::GetRegisteredProviders(

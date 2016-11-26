@@ -17,7 +17,7 @@ namespace tracing {
 namespace {
 
 constexpr const char kDefaultConfigFile[] =
-    "/system/data/trace_manager/categories.config";
+    "/system/data/trace_manager/tracing.config";
 
 }  // namespace
 

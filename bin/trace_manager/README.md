@@ -46,3 +46,16 @@ $ fbuild
 $ ftrace --help
 $ ftrace --bootstrap launch noodles_view
 ```
+
+## Configuration
+
+The tracing configuration is a JSON file consisting of a list of known
+category names and descriptions.
+
+    {
+      "categories": {
+        "category1": "description1",
+        "category2": "description2"
+        ]
+      }
+    }
