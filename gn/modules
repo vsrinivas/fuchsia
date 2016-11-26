@@ -56,6 +56,10 @@
             "bootfs_path": "apps/usps"
         },
         {
+            "binary": "youtube_related_videos.flx",
+            "bootfs_path": "apps/youtube_related_videos"
+        },
+        {
             "binary": "youtube_story.flx",
             "bootfs_path": "apps/youtube_story"
         },
