@@ -32,10 +32,8 @@ void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   if (!tracees_.back().Start(
           trace_buffer_size_, categories_.Clone(),
           [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ]() {
-            if (weak) {
+            if (weak)
               weak->FinishProvider(bundle);
-              weak->FinishSessionIfEmpty();
-            }
           })) {
     tracees_.pop_back();
   } else {
