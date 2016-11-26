@@ -490,8 +490,14 @@ class TraceWriter {
   // The |constant| is not copied; it must outlive the trace engine.
   StringRef RegisterString(const char* constant);
 
+  // Registers a non-constant string which must be copied into the string table.
+  StringRef RegisterStringCopy(const std::string& string);
+
   // Registers the current thread in the thread table.
   ThreadRef RegisterCurrentThread();
+
+  // Registers the specified thread in the thread table.
+  ThreadRef RegisterThread(const ProcessThread& process_thread);
 
   // Writes an initialization record into the trace buffer.
   // Discards the record if it cannot be written.

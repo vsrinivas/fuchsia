@@ -59,7 +59,18 @@ __WEAK StringRef TraceWriter::RegisterString(const char* constant) {
   return StringRef::MakeEmpty();
 }
 
+__WEAK StringRef TraceWriter::RegisterStringCopy(const std::string& string) {
+  FTL_DCHECK(false);
+  return StringRef::MakeEmpty();
+}
+
 __WEAK ThreadRef TraceWriter::RegisterCurrentThread() {
+  FTL_DCHECK(false);
+  return ThreadRef::MakeInlined(0u, 0u);
+}
+
+__WEAK ThreadRef
+TraceWriter::RegisterThread(const ProcessThread& process_thread) {
   FTL_DCHECK(false);
   return ThreadRef::MakeInlined(0u, 0u);
 }

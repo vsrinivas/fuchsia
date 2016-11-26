@@ -78,6 +78,9 @@ struct Koid {
 
   explicit operator bool() const { return value; }
 
+  bool operator==(const Koid& other) const { return value == other.value; }
+  bool operator!=(const Koid& other) const { return !(*this == other); }
+
   mx_koid_t value;
 };
 
@@ -89,10 +92,31 @@ struct ProcessThread {
 
   explicit operator bool() const { return thread_koid && process_koid; }
 
+  bool operator==(const ProcessThread& other) const {
+    return process_koid == other.process_koid &&
+           thread_koid == other.thread_koid;
+  }
+  bool operator!=(const ProcessThread& other) const {
+    return !(*this == other);
+  }
+
   mx_koid_t process_koid;
   mx_koid_t thread_koid;
 };
 
 }  // namepsace tracing
+
+// Inject custom std::hash<> function object for |ProcessThread|.
+namespace std {
+template <>
+struct hash<tracing::ProcessThread> {
+  using argument_type = tracing::ProcessThread;
+  using result_type = std::size_t;
+
+  result_type operator()(const argument_type& process_thread) const {
+    return process_thread.process_koid * 33 ^ process_thread.thread_koid;
+  }
+};
+}  // namespace std
 
 #endif  // APPS_TRACING_LIB_TRACE_TYPES_H_

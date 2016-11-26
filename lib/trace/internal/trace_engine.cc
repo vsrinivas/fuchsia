@@ -176,6 +176,34 @@ TraceEngine::StringRef TraceEngine::RegisterString(const char* constant,
   return StringRef::MakeInlinedOrEmpty(constant, strlen(constant));
 }
 
+TraceEngine::StringRef TraceEngine::RegisterStringCopy(
+    const std::string& string) {
+  if (string.empty())
+    return StringRef::MakeEmpty();
+
+  std::lock_guard<std::mutex> lock(table_mutex_);
+  auto it = copied_string_table_.find(string);
+  if (it != copied_string_table_.end())
+    return it->second;
+
+  StringIndex string_index =
+      next_string_index_.fetch_add(1u, std::memory_order_relaxed);
+  if (string_index <= StringRefFields::kMaxIndex) {
+    WriteStringRecord(string_index, string.c_str());
+    std::tie(it, std::ignore) = copied_string_table_.emplace(
+        string, StringRef::MakeIndexed(string_index));
+  } else {
+    next_string_index_.store(StringRefFields::kMaxIndex + 1u,
+                             std::memory_order_relaxed);
+    copied_string_content_.push_back(std::make_unique<std::string>(string));
+    std::tie(it, std::ignore) = copied_string_table_.emplace(
+        *copied_string_content_.back(),
+        StringRef::MakeInlinedOrEmpty(copied_string_content_.back()->c_str(),
+                                      string.size()));
+  }
+  return it->second;
+}
+
 TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
   LocalState& state = g_local_state;
 
@@ -212,6 +240,30 @@ TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
   }
 
   return ThreadRef::MakeInlined(g_process_koid, state.thread_koid);
+}
+
+TraceEngine::ThreadRef TraceEngine::RegisterThread(
+    const ProcessThread& process_thread) {
+  std::lock_guard<std::mutex> lock(table_mutex_);
+  auto it = process_thread_table_.find(process_thread);
+  if (it != process_thread_table_.end())
+    return it->second;
+
+  ThreadIndex thread_index =
+      next_thread_index_.fetch_add(1u, std::memory_order_relaxed);
+  if (thread_index <= ThreadRefFields::kMaxIndex) {
+    WriteThreadRecord(thread_index, process_thread.process_koid,
+                      process_thread.thread_koid);
+    std::tie(it, std::ignore) = process_thread_table_.emplace(
+        process_thread, ThreadRef::MakeIndexed(thread_index));
+  } else {
+    next_thread_index_.store(ThreadRefFields::kMaxIndex + 1,
+                             std::memory_order_relaxed);
+    std::tie(it, std::ignore) = process_thread_table_.emplace(
+        process_thread, ThreadRef::MakeInlined(process_thread.process_koid,
+                                               process_thread.thread_koid));
+  }
+  return it->second;
 }
 
 void TraceEngine::WriteInitializationRecord(uint64_t ticks_per_second) {

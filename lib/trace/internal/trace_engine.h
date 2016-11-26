@@ -9,9 +9,11 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "apps/tracing/lib/trace/writer.h"
 #include "lib/ftl/strings/string_view.h"
@@ -72,8 +74,14 @@ class TraceEngine final : private mtl::MessageLoopHandler {
   // is not one of the enabled categories.
   StringRef RegisterString(const char* constant, bool check_category);
 
+  // Registers a non-constant string which must be copied into the string table.
+  StringRef RegisterStringCopy(const std::string& string);
+
   // Registers the current thread and returns its thread ref.
   ThreadRef RegisterCurrentThread();
+
+  // Registers process and thread id.
+  ThreadRef RegisterThread(const ProcessThread& process_thread);
 
   void WriteInitializationRecord(uint64_t ticks_per_second);
   void WriteStringRecord(StringIndex index, const char* value);
@@ -131,6 +139,14 @@ class TraceEngine final : private mtl::MessageLoopHandler {
 
   enum class State { kCollecting, kAwaitingFinish };
   std::atomic<State> state_{State::kCollecting};
+
+  std::mutex table_mutex_;
+  std::unordered_map<std::string, StringRef>
+      copied_string_table_;  // guarded by table_mutex_
+  std::vector<std::unique_ptr<std::string>>
+      copied_string_content_;  // guarded by table_mutex_
+  std::unordered_map<ProcessThread, ThreadRef>
+      process_thread_table_;  // guarded by table_mutex_
 
   ftl::WeakPtrFactory<TraceEngine> weak_ptr_factory_;
 

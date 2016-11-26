@@ -276,9 +276,19 @@ StringRef TraceWriter::RegisterString(const char* constant) {
   return engine_->RegisterString(constant, false);
 }
 
+StringRef TraceWriter::RegisterStringCopy(const std::string& string) {
+  FTL_DCHECK(engine_);
+  return engine_->RegisterStringCopy(string);
+}
+
 ThreadRef TraceWriter::RegisterCurrentThread() {
   FTL_DCHECK(engine_);
   return engine_->RegisterCurrentThread();
+}
+
+ThreadRef TraceWriter::RegisterThread(const ProcessThread& process_thread) {
+  FTL_DCHECK(engine_);
+  return engine_->RegisterThread(process_thread);
 }
 
 void TraceWriter::WriteInitializationRecord(uint64_t ticks_per_second) {
