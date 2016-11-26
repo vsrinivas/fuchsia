@@ -7,7 +7,8 @@ group("tracing") {
     "//apps/tracing/lib/trace",
     "//apps/tracing/lib/trace_converters",
     "//apps/tracing/services",
-    "//apps/tracing/src/trace_manager",
+    "//apps/tracing/src/ktrace_provider",
     "//apps/tracing/src/trace",
+    "//apps/tracing/src/trace_manager",
   ]
 }

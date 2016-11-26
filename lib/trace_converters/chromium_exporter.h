@@ -6,6 +6,8 @@
 #define APPS_TRACING_LIB_TRACE_CONVERTERS_CHROMIUM_EXPORTER_H_
 
 #include <fstream>
+#include <tuple>
+#include <unordered_map>
 
 #include "apps/tracing/lib/trace/reader.h"
 #include "third_party/rapidjson/rapidjson/ostreamwrapper.h"
@@ -23,6 +25,7 @@ class ChromiumExporter {
 
  private:
   void Start();
+  void Stop();
   void ExportEvent(const reader::Record::Event& event);
   void ExportKernelObject(const reader::Record::KernelObject& kernel_object);
 
@@ -31,6 +34,9 @@ class ChromiumExporter {
   rapidjson::Writer<rapidjson::OStreamWrapper> writer_;
 
   double tick_scale_ = 0.001;
+
+  std::unordered_map<mx_koid_t, std::string> processes_;
+  std::unordered_map<mx_koid_t, std::tuple<mx_koid_t, std::string>> threads_;
 };
 
 }  // namespace tracing

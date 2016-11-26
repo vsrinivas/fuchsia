@@ -56,8 +56,7 @@ ChromiumExporter::ChromiumExporter(std::ostream& out)
 }
 
 ChromiumExporter::~ChromiumExporter() {
-  writer_.EndArray();
-  writer_.EndObject();
+  Stop();
 }
 
 void ChromiumExporter::Start() {
@@ -66,6 +65,46 @@ void ChromiumExporter::Start() {
   writer_.String("ms");
   writer_.Key("traceEvents");
   writer_.StartArray();
+}
+
+void ChromiumExporter::Stop() {
+  for (const auto& pair : processes_) {
+    writer_.StartObject();
+    writer_.Key("ph");
+    writer_.String("M");
+    writer_.Key("name");
+    writer_.String("process_name");
+    writer_.Key("pid");
+    writer_.Uint64(pair.first);
+    writer_.Key("args");
+    writer_.StartObject();
+    writer_.Key("name");
+    writer_.String(pair.second.data(), pair.second.size());
+    writer_.EndObject();
+    writer_.EndObject();
+  }
+
+  for (const auto& pair : threads_) {
+    writer_.StartObject();
+    writer_.Key("ph");
+    writer_.String("M");
+    writer_.Key("name");
+    writer_.String("thread_name");
+    writer_.Key("pid");
+    writer_.Uint64(std::get<0>(pair.second));
+    writer_.Key("tid");
+    writer_.Uint64(pair.first);
+    writer_.Key("args");
+    writer_.StartObject();
+    writer_.Key("name");
+    writer_.String(std::get<1>(pair.second).data(),
+                   std::get<1>(pair.second).size());
+    writer_.EndObject();
+    writer_.EndObject();
+  }
+
+  writer_.EndArray();
+  writer_.EndObject();
 }
 
 void ChromiumExporter::ExportRecord(const reader::Record& record) {
@@ -203,21 +242,19 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
 
 void ChromiumExporter::ExportKernelObject(
     const reader::Record::KernelObject& kernel_object) {
+  // The same kernel objects may appear repeatedly within the trace as
+  // they are logged by multiple trace providers.  Stash the best quality
+  // information to be output at the end of the trace.  In particular, note
+  // that the ktrace provider may truncate names, so we try to pick the
+  // longest one to preserve.
   switch (kernel_object.object_type) {
     case MX_OBJ_TYPE_PROCESS: {
-      writer_.StartObject();
-      writer_.Key("ph");
-      writer_.String("M");
-      writer_.Key("name");
-      writer_.String("process_name");
-      writer_.Key("pid");
-      writer_.Uint64(kernel_object.koid);
-      writer_.Key("args");
-      writer_.StartObject();
-      writer_.Key("name");
-      writer_.String(kernel_object.name.data(), kernel_object.name.size());
-      writer_.EndObject();
-      writer_.EndObject();
+      auto it = processes_.find(kernel_object.koid);
+      if (it == processes_.end()) {
+        processes_.emplace(kernel_object.koid, kernel_object.name);
+      } else if (kernel_object.name.size() > it->second.size()) {
+        it->second = kernel_object.name;
+      }
       break;
     }
     case MX_OBJ_TYPE_THREAD: {
@@ -225,22 +262,15 @@ void ChromiumExporter::ExportKernelObject(
           GetArgumentValue(kernel_object.arguments, kProcessArgKey);
       if (!process_arg || process_arg->type() != ArgumentType::kKoid)
         break;
-      writer_.StartObject();
-      writer_.Key("ph");
-      writer_.String("M");
-      writer_.Key("name");
-      writer_.String("thread_name");
-      writer_.Key("pid");
-      writer_.Uint64(process_arg->GetKoid());
-      writer_.Key("tid");
-      writer_.Uint64(kernel_object.koid);
-      writer_.Key("args");
-      writer_.StartObject();
-      writer_.Key("name");
-      writer_.String(kernel_object.name.data(), kernel_object.name.size());
-      writer_.EndObject();
-      writer_.EndObject();
-      break;
+      mx_koid_t process_koid = process_arg->GetKoid();
+      auto it = threads_.find(kernel_object.koid);
+      if (it == threads_.end()) {
+        threads_.emplace(kernel_object.koid,
+                         std::make_tuple(process_koid, kernel_object.name));
+      } else if (kernel_object.name.size() > std::get<1>(it->second).size() &&
+                 process_koid == std::get<0>(it->second)) {
+        it->second = std::make_tuple(process_koid, kernel_object.name);
+      }
     }
     default:
       break;
