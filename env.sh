@@ -345,7 +345,7 @@ function fset() {
         export FUCHSIA_VARIANT=release
         ;;
       --modules)
-        if [[ $# -lt 1 ]]; then
+        if [[ $# -lt 2 ]]; then
           fset-usage
           return 1
         fi
@@ -612,44 +612,21 @@ function freboot() {
   fi
 
   fcheck || return 1
+  echo "Rebooting system..."
   netruncmd : "dm reboot"
 }
 
 ### ftrace: collects and presents traces
-# TODO(jeffbrown): Make this more robust overall, probably shouldn't
-# bootstrap every time a program is supplied.  We could make this more
-# self-contained too instead of relying on chrome://tracing.  At the least
-# it would be nice to figure out how to provide a direct link to load the
-# trace.
 
 function ftrace-usage() {
   cat >&2 <<END
-Usage: ftrace [program and args...]
-Runs a trace and downloads the resulting trace file.
-If a program is specified, it is bootstrapped with tracing attached, otherwise
-tracing is started within the existing bootstrap environment.
+Usage: ftrace [--help] [extra trace.sh args...]
+Starts a trace.
 END
 }
 
 function ftrace() {
   fcheck || return 1
 
-  local command=
-  if [[ $# -eq 0 ]]; then
-    command="@boot trace"
-  else
-    command="@ bootstrap trace $*"
-  fi
-
-  local delay=20
-  local trace_file="trace_$(date +%Y-%m-%d_at_%H.%M.%S).json"
-
-  rm -f "${trace_file}"
-  echo "Starting trace..." \
-    && netruncmd : "${command}" \
-    && echo "Sleeping ${delay} seconds..." \
-    && sleep "${delay}" \
-    && echo "Downloading trace..." \
-    && netcp :/tmp/trace.json "${trace_file}" \
-    && echo "Use chrome://tracing to view ${trace_file}"
+  "${FUCHSIA_DIR}/apps/tracing/scripts/trace.sh" "$@"
 }
