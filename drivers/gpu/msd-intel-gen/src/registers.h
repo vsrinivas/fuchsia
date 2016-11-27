@@ -127,8 +127,8 @@ public:
     static uint64_t read(RegisterIo* reg_io, uint64_t mmio_base)
     {
         // Hmm 64-bit read would be better but kOffset is not 64bit aligned
-        uint64_t status = reg_io->Read32(mmio_base + kOffset);
-        status = (status << 32) | reg_io->Read32(mmio_base + kOffset + 4);
+        uint64_t status = reg_io->Read32(mmio_base + kOffset + 4);
+        status = (status << 32) | reg_io->Read32(mmio_base + kOffset);
         return status;
     }
 
