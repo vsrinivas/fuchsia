@@ -81,7 +81,7 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
-trace="trace --duration=${duration} $*"
+trace="trace record --duration=${duration} $*"
 command=
 if [[ -n "${bootstrap}" ]]; then
   command="@ bootstrap ${trace}"
