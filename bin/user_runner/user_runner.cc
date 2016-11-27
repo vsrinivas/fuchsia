@@ -182,9 +182,9 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
 // This environment host is used to run all the stories, and runs under the
 // UserRunner's scope. Its ServiceProvider forwards all requests to its parent's
 // ServiceProvider (|UserRunnerScope|).
-class UserStoriesEnvHost : public ApplicationEnvironmentHost {
+class UserStoriesScope : public ApplicationEnvironmentHost {
  public:
-  UserStoriesEnvHost(ApplicationEnvironmentPtr parent_env,
+  UserStoriesScope(ApplicationEnvironmentPtr parent_env,
                      fidl::Array<uint8_t> user_id)
       : binding_(this), parent_env_(std::move(parent_env)) {
     // Set up a new ApplicationEnvironment under which we run all stories.
@@ -215,7 +215,7 @@ class UserStoriesEnvHost : public ApplicationEnvironmentHost {
   ApplicationEnvironmentControllerPtr env_controller_;
   ServiceProviderImpl env_services_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserStoriesEnvHost);
+  FTL_DISALLOW_COPY_AND_ASSIGN(UserStoriesScope);
 };
 
 class UserRunnerImpl : public UserRunner {
@@ -244,7 +244,7 @@ class UserRunnerImpl : public UserRunner {
     user_runner_env->GetServices(
         GetProxy(&user_runner_env_services));
 
-    stories_env_host_ = std::make_unique<UserStoriesEnvHost>(
+    stories_env_host_ = std::make_unique<UserStoriesScope>(
         std::move(user_runner_env), user_id.Clone());
 
     RunUserShell(user_shell, user_shell_args,
@@ -320,7 +320,7 @@ class UserRunnerImpl : public UserRunner {
 
   // The application environment hosted by user runner.
   std::unique_ptr<UserRunnerScope> user_runner_scope_;
-  std::unique_ptr<UserStoriesEnvHost> stories_env_host_;
+  std::unique_ptr<UserStoriesScope> stories_env_host_;
 
   UserShellPtr user_shell_;
 
