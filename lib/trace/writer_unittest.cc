@@ -93,25 +93,33 @@ TEST_F(WriterTest, BulkThreadRegistration) {
 }
 
 TEST_F(WriterTest, EventWriting) {
-  CategorizedTraceWriter writer = CategorizedTraceWriter::Prepare("cat");
+  TraceWriter writer = TraceWriter::Prepare();
+  ThreadRef thread_ref = writer.RegisterCurrentThread();
+  StringRef category_ref = writer.RegisterString("cat", true);
+  StringRef name_ref = writer.RegisterString("name");
 
-  writer.WriteDurationBeginEventRecord("name");
-  writer.WriteDurationEndEventRecord("name");
-  writer.WriteAsyncBeginEventRecord("name", 42);
-  writer.WriteAsyncInstantEventRecord("name", 42);
-  writer.WriteAsyncEndEventRecord("name", 42);
+  writer.WriteDurationBeginEventRecord(thread_ref, category_ref, name_ref);
+  writer.WriteDurationEndEventRecord(thread_ref, category_ref, name_ref);
+  writer.WriteAsyncBeginEventRecord(thread_ref, category_ref, name_ref, 42);
+  writer.WriteAsyncInstantEventRecord(thread_ref, category_ref, name_ref, 42);
+  writer.WriteAsyncEndEventRecord(thread_ref, category_ref, name_ref, 42);
 }
 
 TEST_F(WriterTest, EventWritingMultiThreaded) {
   std::vector<std::thread> threads;
   for (size_t i = 0; i < 10; i++)
     threads.emplace_back([]() {
-      CategorizedTraceWriter writer = CategorizedTraceWriter::Prepare("cat");
-      writer.WriteDurationBeginEventRecord("name");
-      writer.WriteDurationEndEventRecord("name");
-      writer.WriteAsyncBeginEventRecord("name", 42);
-      writer.WriteAsyncInstantEventRecord("name", 42);
-      writer.WriteAsyncEndEventRecord("name", 42);
+      TraceWriter writer = TraceWriter::Prepare();
+      ThreadRef thread_ref = writer.RegisterCurrentThread();
+      StringRef category_ref = writer.RegisterString("cat", true);
+      StringRef name_ref = writer.RegisterString("name");
+
+      writer.WriteDurationBeginEventRecord(thread_ref, category_ref, name_ref);
+      writer.WriteDurationEndEventRecord(thread_ref, category_ref, name_ref);
+      writer.WriteAsyncBeginEventRecord(thread_ref, category_ref, name_ref, 42);
+      writer.WriteAsyncInstantEventRecord(thread_ref, category_ref, name_ref,
+                                          42);
+      writer.WriteAsyncEndEventRecord(thread_ref, category_ref, name_ref, 42);
     });
 
   for (auto& thread : threads)
@@ -120,11 +128,15 @@ TEST_F(WriterTest, EventWritingMultiThreaded) {
 }
 
 TEST_F(WriterTest, EventWritingWithArguments) {
-  CategorizedTraceWriter writer = CategorizedTraceWriter::Prepare("cat");
+  TraceWriter writer = TraceWriter::Prepare();
+  ThreadRef thread_ref = writer.RegisterCurrentThread();
+  StringRef category_ref = writer.RegisterString("cat", true);
+  StringRef name_ref = writer.RegisterString("name");
   int i = 0;
 
   writer.WriteDurationBeginEventRecord(
-      "name", MakeArgument(writer, "int32", int32_t(42)),
+      thread_ref, category_ref, name_ref,
+      MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
       MakeArgument(writer, "cstring", "constant"),
@@ -133,7 +145,8 @@ TEST_F(WriterTest, EventWritingWithArguments) {
       MakeArgument(writer, "koid", Koid(1 << 10)));
 
   writer.WriteDurationEndEventRecord(
-      "name", MakeArgument(writer, "int32", int32_t(42)),
+      thread_ref, category_ref, name_ref,
+      MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
       MakeArgument(writer, "cstring", "constant"),
@@ -142,7 +155,8 @@ TEST_F(WriterTest, EventWritingWithArguments) {
       MakeArgument(writer, "koid", Koid(1 << 10)));
 
   writer.WriteAsyncBeginEventRecord(
-      "name", 42, MakeArgument(writer, "int32", int32_t(42)),
+      thread_ref, category_ref, name_ref, 42,
+      MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
       MakeArgument(writer, "cstring", "constant"),
@@ -151,7 +165,8 @@ TEST_F(WriterTest, EventWritingWithArguments) {
       MakeArgument(writer, "koid", Koid(1 << 10)));
 
   writer.WriteAsyncInstantEventRecord(
-      "name", 42, MakeArgument(writer, "int32", int32_t(42)),
+      thread_ref, category_ref, name_ref, 42,
+      MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
       MakeArgument(writer, "cstring", "constant"),
@@ -160,7 +175,8 @@ TEST_F(WriterTest, EventWritingWithArguments) {
       MakeArgument(writer, "koid", Koid(1 << 10)));
 
   writer.WriteAsyncEndEventRecord(
-      "name", 42, MakeArgument(writer, "int32", int32_t(42)),
+      thread_ref, category_ref, name_ref, 42,
+      MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
       MakeArgument(writer, "cstring", "constant"),
@@ -174,11 +190,15 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
 
   for (size_t i = 0; i < 10; i++) {
     threads.emplace_back([]() {
-      CategorizedTraceWriter writer = CategorizedTraceWriter::Prepare("cat");
+      TraceWriter writer = TraceWriter::Prepare();
+      ThreadRef thread_ref = writer.RegisterCurrentThread();
+      StringRef category_ref = writer.RegisterString("cat", true);
+      StringRef name_ref = writer.RegisterString("name");
       int i = 0;
 
       writer.WriteDurationBeginEventRecord(
-          "name", MakeArgument(writer, "int32", int32_t(42)),
+          thread_ref, category_ref, name_ref,
+          MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),
           MakeArgument(writer, "cstring", "constant"),
@@ -187,7 +207,8 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
           MakeArgument(writer, "koid", Koid(1 << 10)));
 
       writer.WriteDurationEndEventRecord(
-          "name", MakeArgument(writer, "int32", int32_t(42)),
+          thread_ref, category_ref, name_ref,
+          MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),
           MakeArgument(writer, "cstring", "constant"),
@@ -196,7 +217,8 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
           MakeArgument(writer, "koid", Koid(1 << 10)));
 
       writer.WriteAsyncBeginEventRecord(
-          "name", 42, MakeArgument(writer, "int32", int32_t(42)),
+          thread_ref, category_ref, name_ref, 42,
+          MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),
           MakeArgument(writer, "cstring", "constant"),
@@ -205,7 +227,8 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
           MakeArgument(writer, "koid", Koid(1 << 10)));
 
       writer.WriteAsyncInstantEventRecord(
-          "name", 42, MakeArgument(writer, "int32", int32_t(42)),
+          thread_ref, category_ref, name_ref, 42,
+          MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),
           MakeArgument(writer, "cstring", "constant"),
@@ -214,7 +237,8 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
           MakeArgument(writer, "koid", Koid(1 << 10)));
 
       writer.WriteAsyncEndEventRecord(
-          "name", 42, MakeArgument(writer, "int32", int32_t(42)),
+          thread_ref, category_ref, name_ref, 42,
+          MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),
           MakeArgument(writer, "cstring", "constant"),

@@ -65,23 +65,18 @@ class TraceEngine final : private mtl::MessageLoopHandler {
   void StartTracing(TraceFinishedCallback finished_callback);
   void StopTracing();
 
-  // Returns true if the specified category is enabled.
   bool IsCategoryEnabled(const char* category) const;
 
-  // Registers the string and returns its string ref.
-  // The |constant| is not copied; it must outlive the trace engine.
-  // If |check_category| is true, returns an empty string ref if the string
-  // is not one of the enabled categories.
   StringRef RegisterString(const char* constant, bool check_category);
-
-  // Registers a non-constant string which must be copied into the string table.
   StringRef RegisterStringCopy(const std::string& string);
-
-  // Registers the current thread and returns its thread ref.
   ThreadRef RegisterCurrentThread();
+  ThreadRef RegisterThread(mx_koid_t process_koid, mx_koid_t thread_koid);
 
-  // Registers process and thread id.
-  ThreadRef RegisterThread(const ProcessThread& process_thread);
+  void WriteProcessDescription(mx_koid_t process_koid,
+                               const std::string& process_name);
+  void WriteThreadDescription(mx_koid_t process_koid,
+                              mx_koid_t thread_koid,
+                              const std::string& thread_name);
 
   void WriteInitializationRecord(uint64_t ticks_per_second);
   void WriteStringRecord(StringIndex index, const char* value);
@@ -89,8 +84,9 @@ class TraceEngine final : private mtl::MessageLoopHandler {
                          mx_koid_t process_koid,
                          mx_koid_t thread_koid);
   Payload WriteEventRecordBase(EventType type,
+                               const ThreadRef& thread_ref,
                                const StringRef& category_ref,
-                               const char* name,
+                               const StringRef& name_ref,
                                size_t argument_count,
                                size_t payload_size);
   Payload WriteKernelObjectRecordBase(mx_handle_t handle,
@@ -98,7 +94,7 @@ class TraceEngine final : private mtl::MessageLoopHandler {
                                       size_t payload_size);
   Payload WriteKernelObjectRecordBase(mx_koid_t koid,
                                       mx_obj_type_t object_type,
-                                      const char* name,
+                                      const StringRef& name_ref,
                                       size_t argument_count,
                                       size_t payload_size);
 
@@ -111,6 +107,8 @@ class TraceEngine final : private mtl::MessageLoopHandler {
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
   void OnHandleError(mx_handle_t handle, mx_status_t error) override;
 
+  ThreadRef RegisterThreadInternal(mx_koid_t process_koid,
+                                   mx_koid_t thread_koid);
   Payload AllocateRecord(size_t num_bytes);
 
   void StopTracing(TraceDisposition disposition, bool immediate);

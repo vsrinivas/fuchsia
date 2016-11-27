@@ -37,8 +37,7 @@ struct LocalState {
   // Thread table state.
   uint32_t thread_generation = 0u;
   mx_koid_t thread_koid = MX_KOID_INVALID;
-  TraceEngine::ThreadRef thread_ref =
-      TraceEngine::ThreadRef::MakeInlined(MX_KOID_INVALID, MX_KOID_INVALID);
+  TraceEngine::ThreadRef thread_ref = TraceEngine::ThreadRef::MakeUnknown();
 };
 thread_local LocalState g_local_state;
 
@@ -108,8 +107,7 @@ void TraceEngine::StartTracing(TraceFinishedCallback finished_callback) {
   FTL_VLOG(1) << "Started tracing...";
   finished_callback_ = std::move(finished_callback);
 
-  WriteKernelObjectRecordBase(g_process_koid, MX_OBJ_TYPE_PROCESS,
-                              mtl::GetCurrentProcessName().c_str(), 0u, 0u);
+  WriteProcessDescription(g_process_koid, mtl::GetCurrentProcessName());
 
   fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
       this, fence_.get(), MX_EPAIR_CLOSED);
@@ -217,53 +215,61 @@ TraceEngine::ThreadRef TraceEngine::RegisterCurrentThread() {
       state.thread_koid = mtl::GetCurrentThreadKoid();
     }
 
-    ::tracing::writer::KoidArgument process_arg(
-        RegisterString(kProcessArgKey, false), g_process_koid);
-    Payload payload = WriteKernelObjectRecordBase(
-        state.thread_koid, MX_OBJ_TYPE_THREAD,
-        mtl::GetCurrentThreadName().c_str(), 1u, process_arg.Size());
-    if (payload)
-      payload.WriteValue(process_arg);
-
-    ThreadIndex thread_index =
-        next_thread_index_.fetch_add(1u, std::memory_order_relaxed);
-    if (thread_index <= ThreadRefFields::kMaxIndex) {
-      WriteThreadRecord(thread_index, g_process_koid, state.thread_koid);
-      state.thread_ref = ThreadRef::MakeIndexed(thread_index);
-    } else {
-      next_thread_index_.store(ThreadRefFields::kMaxIndex + 1,
-                               std::memory_order_relaxed);
-      state.thread_ref =
-          ThreadRef::MakeInlined(g_process_koid, state.thread_koid);
-    }
+    WriteThreadDescription(g_process_koid, state.thread_koid,
+                           mtl::GetCurrentThreadName());
+    state.thread_ref =
+        RegisterThreadInternal(g_process_koid, state.thread_koid);
     return state.thread_ref;
   }
 
   return ThreadRef::MakeInlined(g_process_koid, state.thread_koid);
 }
 
-TraceEngine::ThreadRef TraceEngine::RegisterThread(
-    const ProcessThread& process_thread) {
+TraceEngine::ThreadRef TraceEngine::RegisterThread(mx_koid_t process_koid,
+                                                   mx_koid_t thread_koid) {
+  ProcessThread process_thread{process_koid, thread_koid};
+
   std::lock_guard<std::mutex> lock(table_mutex_);
   auto it = process_thread_table_.find(process_thread);
-  if (it != process_thread_table_.end())
-    return it->second;
+  if (it == process_thread_table_.end()) {
+    std::tie(it, std::ignore) = process_thread_table_.emplace(
+        process_thread, RegisterThreadInternal(process_koid, thread_koid));
+  }
+  return it->second;
+}
 
+TraceEngine::ThreadRef TraceEngine::RegisterThreadInternal(
+    mx_koid_t process_koid,
+    mx_koid_t thread_koid) {
   ThreadIndex thread_index =
       next_thread_index_.fetch_add(1u, std::memory_order_relaxed);
   if (thread_index <= ThreadRefFields::kMaxIndex) {
-    WriteThreadRecord(thread_index, process_thread.process_koid,
-                      process_thread.thread_koid);
-    std::tie(it, std::ignore) = process_thread_table_.emplace(
-        process_thread, ThreadRef::MakeIndexed(thread_index));
-  } else {
-    next_thread_index_.store(ThreadRefFields::kMaxIndex + 1,
-                             std::memory_order_relaxed);
-    std::tie(it, std::ignore) = process_thread_table_.emplace(
-        process_thread, ThreadRef::MakeInlined(process_thread.process_koid,
-                                               process_thread.thread_koid));
+    WriteThreadRecord(thread_index, process_koid, thread_koid);
+    return ThreadRef::MakeIndexed(thread_index);
   }
-  return it->second;
+
+  next_thread_index_.store(ThreadRefFields::kMaxIndex + 1,
+                           std::memory_order_relaxed);
+  return ThreadRef::MakeInlined(process_koid, thread_koid);
+}
+
+void TraceEngine::WriteProcessDescription(mx_koid_t process_koid,
+                                          const std::string& process_name) {
+  WriteKernelObjectRecordBase(process_koid, MX_OBJ_TYPE_PROCESS,
+                              StringRef::MakeInlinedOrEmpty(process_name), 0u,
+                              0u);
+}
+
+void TraceEngine::WriteThreadDescription(mx_koid_t process_koid,
+                                         mx_koid_t thread_koid,
+                                         const std::string& thread_name) {
+  ::tracing::writer::KoidArgument process_arg(
+      RegisterString(kProcessArgKey, false), process_koid);
+  Payload payload = WriteKernelObjectRecordBase(
+      thread_koid, MX_OBJ_TYPE_THREAD,
+      StringRef::MakeInlinedOrEmpty(thread_name), 1u, process_arg.Size());
+  if (payload)
+    payload.WriteValue(process_arg);
 }
 
 void TraceEngine::WriteInitializationRecord(uint64_t ticks_per_second) {
@@ -311,12 +317,11 @@ void TraceEngine::WriteThreadRecord(ThreadIndex index,
 
 TraceEngine::Payload TraceEngine::WriteEventRecordBase(
     EventType type,
+    const ThreadRef& thread_ref,
     const StringRef& category_ref,
-    const char* name,
+    const StringRef& name_ref,
     size_t argument_count,
     size_t payload_size) {
-  const StringRef name_ref = RegisterString(name, false);
-  const ThreadRef thread_ref = RegisterCurrentThread();
   const size_t record_size = sizeof(RecordHeader) + WordsToBytes(1) +
                              thread_ref.Size() + category_ref.Size() +
                              name_ref.Size() + payload_size;
@@ -351,16 +356,16 @@ TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
 
   return WriteKernelObjectRecordBase(
       info.koid, static_cast<mx_obj_type_t>(info.type),
-      mtl::GetObjectName(handle).c_str(), argument_count, payload_size);
+      StringRef::MakeInlinedOrEmpty(mtl::GetObjectName(handle)), argument_count,
+      payload_size);
 }
 
 TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
     mx_koid_t koid,
     mx_obj_type_t object_type,
-    const char* name,
+    const StringRef& name_ref,
     size_t argument_count,
     size_t payload_size) {
-  const StringRef name_ref = StringRef::MakeInlinedOrEmpty(name, strlen(name));
   const size_t record_size =
       sizeof(RecordHeader) + WordsToBytes(1) + name_ref.Size() + payload_size;
   Payload payload = AllocateRecord(record_size);

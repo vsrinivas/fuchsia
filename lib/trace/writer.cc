@@ -271,9 +271,10 @@ TraceWriter TraceWriter::Prepare() {
   return TraceWriter(AcquireEngine());
 }
 
-StringRef TraceWriter::RegisterString(const char* constant) {
+StringRef TraceWriter::RegisterString(const char* constant,
+                                      bool check_category) {
   FTL_DCHECK(engine_);
-  return engine_->RegisterString(constant, false);
+  return engine_->RegisterString(constant, check_category);
 }
 
 StringRef TraceWriter::RegisterStringCopy(const std::string& string) {
@@ -286,9 +287,10 @@ ThreadRef TraceWriter::RegisterCurrentThread() {
   return engine_->RegisterCurrentThread();
 }
 
-ThreadRef TraceWriter::RegisterThread(const ProcessThread& process_thread) {
+ThreadRef TraceWriter::RegisterThread(mx_koid_t process_koid,
+                                      mx_koid_t thread_koid) {
   FTL_DCHECK(engine_);
-  return engine_->RegisterThread(process_thread);
+  return engine_->RegisterThread(process_koid, thread_koid);
 }
 
 void TraceWriter::WriteInitializationRecord(uint64_t ticks_per_second) {
@@ -308,6 +310,19 @@ void TraceWriter::WriteThreadRecord(ThreadIndex index,
   engine_->WriteThreadRecord(index, process_koid, thread_koid);
 }
 
+void TraceWriter::WriteProcessDescription(mx_koid_t process_koid,
+                                          const std::string& process_name) {
+  FTL_DCHECK(engine_);
+  engine_->WriteProcessDescription(process_koid, process_name);
+}
+
+void TraceWriter::WriteThreadDescription(mx_koid_t process_koid,
+                                         mx_koid_t thread_koid,
+                                         const std::string& thread_name) {
+  FTL_DCHECK(engine_);
+  engine_->WriteThreadDescription(process_koid, thread_koid, thread_name);
+}
+
 Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
                                                  size_t argument_count,
                                                  size_t payload_size) {
@@ -316,24 +331,14 @@ Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
                                               payload_size);
 }
 
-CategorizedTraceWriter CategorizedTraceWriter::Prepare(
-    const char* category_constant) {
-  TraceEngine* engine = AcquireEngine();
-  if (engine) {
-    StringRef category_ref = engine->RegisterString(category_constant, true);
-    if (!category_ref.is_empty())
-      return CategorizedTraceWriter(engine, category_ref);
-    ReleaseEngine();
-  }
-  return CategorizedTraceWriter(nullptr, StringRef::MakeEmpty());
-}
-
-Payload CategorizedTraceWriter::WriteEventRecordBase(EventType type,
-                                                     const char* name,
-                                                     size_t argument_count,
-                                                     size_t payload_size) {
+Payload TraceWriter::WriteEventRecordBase(EventType type,
+                                          const ThreadRef& thread_ref,
+                                          const StringRef& category_ref,
+                                          const StringRef& name_ref,
+                                          size_t argument_count,
+                                          size_t payload_size) {
   FTL_DCHECK(engine_);
-  return engine_->WriteEventRecordBase(type, category_ref_, name,
+  return engine_->WriteEventRecordBase(type, thread_ref, category_ref, name_ref,
                                        argument_count, payload_size);
 }
 
