@@ -56,20 +56,12 @@ class PaperRenderer : public Renderer {
                         Stage& stage,
                         Model& model);
 
-  // Called once per frame to verify that the SSDO-specific framebuffer is
-  // compatible with the one passed to DrawFrame().  In the common case, this is
-  // true, and no work is done.  Otherwise, a suitable new Framebuffer is
-  // constructed.
-  void UpdateSsdoFramebuffer(const FramebufferPtr& framebuffer);
-
   MeshPtr full_screen_;
   impl::ImageCache* image_cache_;
   vk::Format depth_format_;
   std::unique_ptr<impl::ModelData> model_data_;
   std::unique_ptr<impl::ModelRenderer> model_renderer_;
-  std::unique_ptr<impl::SsdoSampler> ssdo_sampler_;
-  FramebufferPtr ssdo_framebuffer_;
-  TexturePtr ssdo_texture_;
+  std::unique_ptr<impl::SsdoSampler> ssdo_;
   std::vector<vk::ClearValue> clear_values_;
   bool show_debug_info_ = false;
 

@@ -354,8 +354,11 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
     info.imageExtent = swapchain_extent;
     info.imageArrayLayers = 1;  // TODO: what is this?
     // Using eTransferDst allows us to blit debug info onto the surface.
+    // Using eSampled allows us to save memory by using the color attachment
+    // for intermediate computation.
     info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment |
-                      vk::ImageUsageFlagBits::eTransferDst;
+                      vk::ImageUsageFlagBits::eTransferDst |
+                      vk::ImageUsageFlagBits::eSampled;
     info.queueFamilyIndexCount = 1;
     info.pQueueFamilyIndices = &queue_family_index_;
     info.preTransform = pre_transform;

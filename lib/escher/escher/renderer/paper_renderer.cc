@@ -20,6 +20,57 @@
 
 namespace escher {
 
+namespace {
+
+class PaperFramebuffer : public Framebuffer {
+ public:
+  PaperFramebuffer(impl::EscherImpl* escher,
+                   uint32_t width,
+                   uint32_t height,
+                   std::vector<ImagePtr> images,
+                   vk::RenderPass render_pass,
+                   FramebufferPtr main_color_fb,
+                   FramebufferPtr aux_color_fb,
+                   TexturePtr depth_texture,
+                   TexturePtr main_color_texture,
+                   TexturePtr aux_color_texture,
+                   const PaperRenderer* renderer_in)
+      : Framebuffer(escher, width, height, std::move(images), render_pass),
+        renderer(renderer_in),
+        main_color_fb_(main_color_fb),
+        aux_color_fb_(aux_color_fb),
+        depth_texture_(depth_texture),
+        main_color_texture_(main_color_texture),
+        aux_color_texture_(aux_color_texture) {}
+
+  const FramebufferPtr& main_color_fb() const { return main_color_fb_; }
+  const FramebufferPtr& aux_color_fb() const { return aux_color_fb_; }
+  const TexturePtr& depth_texture() const { return depth_texture_; }
+  const TexturePtr& main_color_texture() const { return main_color_texture_; }
+  const TexturePtr& aux_color_texture() const { return aux_color_texture_; }
+
+  // Used to verify that only the renderer that created the framebuffer can
+  // use it.
+  const PaperRenderer* renderer;
+
+ private:
+  // Framebuffer which first holds the sampled (unfiltered) SSDO illumination
+  // data, and then finally the fully-filtered SSDO illumination data.
+  FramebufferPtr main_color_fb_;
+  // Framebuffer which holds the horizontally-filtered SSDO illumination data.
+  // This serves as the input to the vertical filter, which writes into
+  // main_color_fb_.
+  FramebufferPtr aux_color_fb_;
+  // Depth texture, used to sample the depth-buffer in order to generate the
+  // sampled (unfiltered) SSDO illumination data.
+  TexturePtr depth_texture_;
+  // Color texture.
+  TexturePtr main_color_texture_;
+  TexturePtr aux_color_texture_;
+};
+
+}  // namespace
+
 PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
     : Renderer(escher),
       full_screen_(NewFullScreenMesh(escher->mesh_manager())),
@@ -39,7 +90,7 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
           vk::Format::eB8G8R8A8Srgb,
           ESCHER_CHECKED_VK_RESULT(
               impl::GetSupportedDepthFormat(context_.physical_device)))),
-      ssdo_sampler_(std::make_unique<impl::SsdoSampler>(
+      ssdo_(std::make_unique<impl::SsdoSampler>(
           context_.device,
           full_screen_,
           escher->image_cache()->NewNoiseImage(impl::SsdoSampler::kNoiseSize,
@@ -56,98 +107,36 @@ PaperRenderer::~PaperRenderer() {
   }
 }
 
-void PaperRenderer::UpdateSsdoFramebuffer(const FramebufferPtr& framebuffer) {
-  uint32_t width = framebuffer->width();
-  uint32_t height = framebuffer->height();
-
-  if (ssdo_framebuffer_ && width == ssdo_framebuffer_->width() &&
-      height == ssdo_framebuffer_->height()) {
-    // We already have a suitable framebuffer.
-    return;
-  }
-
-  // Using eTransferSrc allows us to blit from the image: useful for debugging.
-  ImagePtr color_image = escher_->image_cache()->NewColorAttachmentImage(
-      width, height,
-      vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
-
-  // Create the texture first, which saves us the trouble of creating a
-  // separate ImageView for the Framebuffer (note: this also means that the
-  // Framebuffer is not responsible for destroying it).
-  ssdo_texture_ = ftl::MakeRefCounted<Texture>(color_image, context_.device,
-                                               vk::Filter::eNearest);
-
-  // Create Framebuffer with the attachment that we generated above.
-  vk::FramebufferCreateInfo info;
-  info.renderPass = ssdo_sampler_->render_pass();
-  info.attachmentCount = 1;
-  auto color_image_view = ssdo_texture_->image_view();
-  info.pAttachments = &color_image_view;
-  info.width = width;
-  info.height = height;
-  info.layers = 1;
-  auto fb = ESCHER_CHECKED_VK_RESULT(context_.device.createFramebuffer(info));
-
-  ssdo_framebuffer_ =
-      CreateFramebuffer(fb, width, height, {color_image}, {}, nullptr);
-}
-
-FramebufferPtr PaperRenderer::NewFramebuffer(const ImagePtr& color_image) {
-  vk::Device device = context_.device;
-  uint32_t width = color_image->width();
-  uint32_t height = color_image->height();
+FramebufferPtr PaperRenderer::NewFramebuffer(const ImagePtr& main_color_image) {
+  uint32_t width = main_color_image->width();
+  uint32_t height = main_color_image->height();
 
   ImagePtr depth_image = image_cache_->GetDepthImage(
       depth_format_, width, height,
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
 
-  // Create ImageViews for all images, including the color image that we didn't
-  // create.
-  vk::ImageView color_image_view, depth_image_view;
-  {
-    vk::ImageViewCreateInfo info;
-    info.viewType = vk::ImageViewType::e2D;
-    info.subresourceRange.baseMipLevel = 0;
-    info.subresourceRange.levelCount = 1;
-    info.subresourceRange.baseArrayLayer = 0;
-    info.subresourceRange.layerCount = 1;
+  ImagePtr aux_color_image = escher_->image_cache()->NewColorAttachmentImage(
+      width, height,
+      vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
 
-    // color_image
-    info.format = color_image->format();
-    info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-    info.image = color_image->get();
-    color_image_view = ESCHER_CHECKED_VK_RESULT(device.createImageView(info));
-
-    // depth_image
-    info.format = depth_format_;
-    info.subresourceRange.aspectMask =
-        vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
-    info.image = depth_image->get();
-    depth_image_view = ESCHER_CHECKED_VK_RESULT(device.createImageView(info));
-  }
-
-  // Create Framebuffer with the attachments that we generated above.
-  vk::FramebufferCreateInfo framebuffer_create_info;
-  std::vector<vk::ImageView> views{color_image_view, depth_image_view};
-  framebuffer_create_info.renderPass = model_renderer_->depth_prepass();
-  framebuffer_create_info.attachmentCount = static_cast<uint32_t>(views.size());
-  framebuffer_create_info.pAttachments = views.data();
-  framebuffer_create_info.width = width;
-  framebuffer_create_info.height = height;
-  framebuffer_create_info.layers = 1;
-
-  // Create two frame buffers, one that references both the color and depth
-  // images, and one that references only the color image.
-  auto main_fb = ESCHER_CHECKED_VK_RESULT(
-      device.createFramebuffer(framebuffer_create_info));
-  framebuffer_create_info.renderPass = ssdo_sampler_->render_pass();
-  framebuffer_create_info.attachmentCount = 1;
-  auto extra_fb = ESCHER_CHECKED_VK_RESULT(
-      device.createFramebuffer(framebuffer_create_info));
-
-  auto extra = CreateFramebuffer(extra_fb, width, height, {color_image}, {});
-  return CreateFramebuffer(main_fb, width, height, {color_image, depth_image},
-                           views, extra);
+  return ftl::MakeRefCounted<PaperFramebuffer>(
+      escher_, width, height,
+      std::vector<ImagePtr>{main_color_image, depth_image},
+      model_renderer_->depth_prepass(),
+      ftl::MakeRefCounted<Framebuffer>(escher_, width, height,
+                                       std::vector<ImagePtr>{main_color_image},
+                                       ssdo_->render_pass()),
+      ftl::MakeRefCounted<Framebuffer>(escher_, width, height,
+                                       std::vector<ImagePtr>{aux_color_image},
+                                       ssdo_->render_pass()),
+      ftl::MakeRefCounted<Texture>(depth_image, context_.device,
+                                   vk::Filter::eNearest,
+                                   vk::ImageAspectFlagBits::eDepth),
+      ftl::MakeRefCounted<Texture>(main_color_image, context_.device,
+                                   vk::Filter::eNearest),
+      ftl::MakeRefCounted<Texture>(aux_color_image, context_.device,
+                                   vk::Filter::eNearest),
+      this);
 }
 
 void PaperRenderer::DrawDepthPrePass(const FramebufferPtr& framebuffer,
@@ -163,43 +152,82 @@ void PaperRenderer::DrawDepthPrePass(const FramebufferPtr& framebuffer,
   command_buffer->EndRenderPass();
 }
 
-void PaperRenderer::DrawSsdoPasses(const FramebufferPtr& framebuffer,
+void PaperRenderer::DrawSsdoPasses(const FramebufferPtr& framebuffer_in,
                                    Stage& stage) {
   auto command_buffer = current_frame();
-  command_buffer->AddUsedResource(framebuffer);
+  command_buffer->AddUsedResource(framebuffer_in);
+
+  auto framebuffer = static_cast<PaperFramebuffer*>(framebuffer_in.get());
+  FTL_DCHECK(framebuffer->renderer == this);
 
   // Prepare to sample from the depth buffer.
-  // TODO: ideally we would not create a new texture every frame.
-  auto depth_texture = ftl::MakeRefCounted<Texture>(
-      framebuffer->get_image(kFramebufferDepthAttachmentIndex), context_.device,
-      vk::Filter::eNearest, vk::ImageAspectFlagBits::eDepth);
+  auto& depth_texture = framebuffer->depth_texture();
   command_buffer->AddUsedResource(depth_texture);
 
   command_buffer->TransitionImageLayout(
       depth_texture->image(), vk::ImageLayout::eDepthStencilAttachmentOptimal,
       vk::ImageLayout::eShaderReadOnlyOptimal);
 
-  impl::SsdoSampler::PushConstants push_constants(stage);
-  ssdo_sampler_->Draw(command_buffer, ssdo_framebuffer_, depth_texture,
-                      &push_constants, clear_values_);
+  impl::SsdoSampler::SamplerConfig sampler_config(stage);
+  ssdo_->Sample(command_buffer, framebuffer->aux_color_fb(), depth_texture,
+                &sampler_config, clear_values_);
 
   // Now that we have finished sampling the depth buffer, transition it for
   // reuse as a depth buffer in the lighting pass.
   command_buffer->TransitionImageLayout(
       depth_texture->image(), vk::ImageLayout::eShaderReadOnlyOptimal,
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+  // Do two filter passes, one horizontal and one vertical.
+  constexpr bool kSkipFiltering = false;
+  if (!kSkipFiltering) {
+    {
+      auto& aux_color_texture = framebuffer->aux_color_texture();
+      command_buffer->AddUsedResource(aux_color_texture);
+
+      impl::SsdoSampler::FilterConfig filter_config;
+      filter_config.stride = vec2(1.f / stage.viewing_volume().width(), 0.f);
+      filter_config.scene_depth = stage.viewing_volume().depth_range();
+      ssdo_->Filter(command_buffer, framebuffer->main_color_fb(),
+                    aux_color_texture, &filter_config, clear_values_);
+
+      command_buffer->TransitionImageLayout(
+          aux_color_texture->image(), vk::ImageLayout::eShaderReadOnlyOptimal,
+          vk::ImageLayout::eColorAttachmentOptimal);
+    }
+    {
+      auto& main_color_texture = framebuffer->main_color_texture();
+      command_buffer->AddUsedResource(main_color_texture);
+
+      impl::SsdoSampler::FilterConfig filter_config;
+      filter_config.stride = vec2(0.f, 1.f / stage.viewing_volume().height());
+      filter_config.scene_depth = stage.viewing_volume().depth_range();
+      ssdo_->Filter(command_buffer, framebuffer->aux_color_fb(),
+                    main_color_texture, &filter_config, clear_values_);
+
+      command_buffer->TransitionImageLayout(
+          main_color_texture->image(), vk::ImageLayout::eShaderReadOnlyOptimal,
+          vk::ImageLayout::eColorAttachmentOptimal);
+    }
+  }
 }
 
-void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer,
+void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer_in,
                                      Stage& stage,
                                      Model& model) {
   auto command_buffer = current_frame();
-  command_buffer->AddUsedResource(framebuffer);
+  command_buffer->AddUsedResource(framebuffer_in);
+
+  auto framebuffer = static_cast<PaperFramebuffer*>(framebuffer_in.get());
+  FTL_DCHECK(framebuffer->renderer == this);
 
   model_renderer_->hack_use_depth_prepass = false;
-  command_buffer->BeginRenderPass(model_renderer_->lighting_pass(), framebuffer,
-                                  clear_values_);
-  model_renderer_->Draw(stage, model, command_buffer, ssdo_texture_);
+  command_buffer->BeginRenderPass(model_renderer_->lighting_pass(),
+                                  framebuffer_in, clear_values_);
+
+  model_renderer_->Draw(stage, model, command_buffer,
+                        framebuffer->aux_color_texture());
+
   command_buffer->EndRenderPass();
 
   if (show_debug_info_) {
@@ -220,18 +248,18 @@ void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer,
     blit.dstOffsets[0] = vk::Offset3D{width * 3 / 4, 0, 0};
     blit.dstOffsets[1] = vk::Offset3D{width, height / 4, 1};
     command_buffer->get().blitImage(
-        ssdo_framebuffer_->get_image(0)->get(),
+        framebuffer->aux_color_texture()->image()->get(),
         vk::ImageLayout::eShaderReadOnlyOptimal,
-        framebuffer->get_image(kFramebufferColorAttachmentIndex)->get(),
+        framebuffer->main_color_texture()->image()->get(),
         vk::ImageLayout::eColorAttachmentOptimal, 1, &blit,
         vk::Filter::eLinear);
     blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eDepth;
     blit.dstOffsets[0] = vk::Offset3D{width * 3 / 4, height / 4, 0};
     blit.dstOffsets[1] = vk::Offset3D{width, height / 2, 1};
     command_buffer->get().blitImage(
-        framebuffer->get_image(kFramebufferDepthAttachmentIndex)->get(),
+        framebuffer->depth_texture()->image()->get(),
         vk::ImageLayout::eShaderReadOnlyOptimal,
-        framebuffer->get_image(kFramebufferColorAttachmentIndex)->get(),
+        framebuffer->main_color_texture()->image()->get(),
         vk::ImageLayout::eColorAttachmentOptimal, 1, &blit,
         vk::Filter::eLinear);
   }
@@ -244,7 +272,8 @@ void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer,
   // desired output format, but for now we'll assume that the image is being
   // presented immediately.
   command_buffer->TransitionImageLayout(
-      framebuffer->get_image(0), vk::ImageLayout::eColorAttachmentOptimal,
+      framebuffer->main_color_texture()->image(),
+      vk::ImageLayout::eColorAttachmentOptimal,
       vk::ImageLayout::ePresentSrcKHR);
 }
 
@@ -257,7 +286,6 @@ void PaperRenderer::DrawFrame(Stage& stage,
   DrawDepthPrePass(framebuffer, stage, model);
   SubmitPartialFrame();
 
-  UpdateSsdoFramebuffer(framebuffer);
   DrawSsdoPasses(framebuffer, stage);
   SubmitPartialFrame();
 

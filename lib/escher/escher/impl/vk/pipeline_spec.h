@@ -14,6 +14,10 @@ class PipelineSpec {
  public:
   PipelineSpec(size_t type, std::vector<uint8_t> data);
 
+  // TODO: remove this constructor once we start using this class with a
+  // pipeline cache.
+  PipelineSpec();
+
   struct Hash {
     size_t operator()(const PipelineSpec& spec) const { return spec.hash_; }
   };

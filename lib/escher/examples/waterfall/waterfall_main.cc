@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
         escher::ViewingVolume(kDemoWidth, kDemoHeight, kNear, kFar));
     // TODO: perhaps lights should be initialized by the various demo scenes.
     stage.set_key_light(escher::DirectionalLight(
-        escher::vec2(0.25f * M_PI, 0.25f * M_PI), 0.25f * M_PI, 1.f));
+        escher::vec2(-0.25f * M_PI, 0.25f * M_PI), 0.25f * M_PI, 1.f));
     stage.set_fill_light(escher::AmbientLight(0.3f));
 
     escher::Stopwatch stopwatch;

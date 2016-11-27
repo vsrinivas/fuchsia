@@ -40,13 +40,6 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
   void EndFrame(const SemaphorePtr& frame_done,
                 FrameRetiredCallback frame_retired_callback);
 
-  FramebufferPtr CreateFramebuffer(vk::Framebuffer,
-                                   uint32_t width,
-                                   uint32_t height,
-                                   std::vector<ImagePtr> images,
-                                   std::vector<vk::ImageView> image_views,
-                                   FramebufferPtr extra_framebuffer = nullptr);
-
   impl::CommandBuffer* current_frame() { return current_frame_; }
 
   impl::EscherImpl* const escher_;

@@ -16,6 +16,8 @@ namespace impl {
 class GlslToSpirvCompiler;
 class Pipeline;
 
+// TODO: document.
+// TODO: rename to indicate that it both samples and filters.
 class SsdoSampler {
  public:
   // Must match the fragment shader in ssdo_sampler.cc
@@ -23,12 +25,17 @@ class SsdoSampler {
 
   const static vk::Format kColorFormat = vk::Format::eB8G8R8A8Srgb;
 
-  struct PushConstants {
+  struct SamplerConfig {
     vec4 key_light;
     vec3 viewing_volume;
 
-    // Convenient way to populate PushConstants from a Stage.
-    PushConstants(const Stage& stage);
+    // Convenient way to populate SamplerConfig from a Stage.
+    SamplerConfig(const Stage& stage);
+  };
+
+  struct FilterConfig {
+    vec2 stride;
+    float scene_depth;
   };
 
   static const vk::DescriptorSetLayoutCreateInfo&
@@ -40,11 +47,17 @@ class SsdoSampler {
               GlslToSpirvCompiler* compiler);
   ~SsdoSampler();
 
-  void Draw(CommandBuffer* command_buffer,
-            const FramebufferPtr& framebuffer,
-            const TexturePtr& depth_texture,
-            const PushConstants* push_constants,
-            const std::vector<vk::ClearValue>& clear_values);
+  void Sample(CommandBuffer* command_buffer,
+              const FramebufferPtr& framebuffer,
+              const TexturePtr& depth_texture,
+              const SamplerConfig* push_constants,
+              const std::vector<vk::ClearValue>& clear_values);
+
+  void Filter(CommandBuffer* command_buffer,
+              const FramebufferPtr& framebuffer,
+              const TexturePtr& unfiltered_illumination,
+              const FilterConfig* push_constants,
+              const std::vector<vk::ClearValue>& clear_values);
 
   // TODO: This is exposed so that PaperRenderer can use it to create
   // Framebuffers, but it would be nice to find a way to remove this.
@@ -56,7 +69,8 @@ class SsdoSampler {
   MeshPtr full_screen_;
   TexturePtr noise_texture_;
   vk::RenderPass render_pass_;
-  std::unique_ptr<ModelPipeline> pipeline_;
+  PipelinePtr sampler_pipeline_;
+  PipelinePtr filter_pipeline_;
 };
 
 }  // namespace impl

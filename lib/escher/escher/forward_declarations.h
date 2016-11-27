@@ -56,10 +56,12 @@ class ModelData;
 class ModelPipeline;
 class ModelPipelineCache;
 class ModelRenderer;
+class Pipeline;
 class Resource;
 class SsdoSampler;
 
 typedef ftl::RefPtr<GpuMem> GpuMemPtr;
+typedef ftl::RefPtr<Pipeline> PipelinePtr;
 typedef ftl::RefPtr<Resource> ResourcePtr;
 
 }  // namespace impl

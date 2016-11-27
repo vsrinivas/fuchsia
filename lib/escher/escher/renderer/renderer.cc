@@ -48,16 +48,4 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
   current_frame_ = nullptr;
 }
 
-FramebufferPtr Renderer::CreateFramebuffer(
-    vk::Framebuffer fb,
-    uint32_t width,
-    uint32_t height,
-    std::vector<ImagePtr> images,
-    std::vector<vk::ImageView> image_views,
-    FramebufferPtr extra_framebuffer) {
-  return AdoptRef(new Framebuffer(fb, escher_, this, width, height,
-                                  std::move(images), std::move(image_views),
-                                  std::move(extra_framebuffer)));
-}
-
 }  // namespace escher

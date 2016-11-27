@@ -7,6 +7,8 @@
 namespace escher {
 namespace impl {
 
+PipelineSpec::PipelineSpec() : type_(0), hash_(0) {}
+
 PipelineSpec::PipelineSpec(size_t type, std::vector<uint8_t> data)
     : type_(type), data_(data) {
   hash_ = type_;

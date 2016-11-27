@@ -205,8 +205,8 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
   }
   command_buffer_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
                                   vk::PipelineStageFlagBits::eTopOfPipe,
-                                  vk::DependencyFlags(), 0, nullptr, 0, nullptr,
-                                  1, &barrier);
+                                  vk::DependencyFlagBits::eByRegion, 0, nullptr,
+                                  0, nullptr, 1, &barrier);
 
   AddUsedResource(std::move(image));
 }
@@ -226,7 +226,7 @@ void CommandBuffer::BeginRenderPass(
   info.renderArea.extent.height = height;
   info.clearValueCount = static_cast<uint32_t>(clear_values.size());
   info.pClearValues = clear_values.data();
-  info.framebuffer = framebuffer->framebuffer();
+  info.framebuffer = framebuffer->get();
 
   command_buffer_.beginRenderPass(&info, vk::SubpassContents::eInline);
 
