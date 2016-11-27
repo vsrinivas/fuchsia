@@ -23,6 +23,8 @@ class WindowedSubscriber {
       : ranked_suggestions_(ranked_suggestions),
         listener_(ListenerPtr::Create(std::move(listener))) {}
 
+  virtual ~WindowedSubscriber() = default;
+
   void SetResultCount(int32_t count);
 
   void OnAddSuggestion(const RankedSuggestion& ranked_suggestion) {

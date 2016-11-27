@@ -22,11 +22,16 @@ class TestSuggestionListener : public maxwell::suggestion::Listener {
   // ownership of the pointer.
   const maxwell::suggestion::Suggestion* GetOnlySuggestion() const {
     EXPECT_EQ(1, suggestion_count());
-    return suggestions_.begin()->second.get();
+    return ordered_suggestions_.front();
+  }
+
+  const maxwell::suggestion::Suggestion* operator[](int index) const {
+    return ordered_suggestions_[index];
   }
 
  private:
   int naive_suggestion_count_ = 0;
   std::unordered_map<std::string, maxwell::suggestion::SuggestionPtr>
-      suggestions_;
+      suggestions_by_id_;
+  std::vector<maxwell::suggestion::Suggestion*> ordered_suggestions_;
 };

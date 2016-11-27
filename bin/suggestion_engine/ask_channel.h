@@ -32,7 +32,7 @@ class AskChannel : public SuggestionChannel {
   void OnRemoveSuggestion(const RankedSuggestion* ranked_suggestion) override;
   const RankedSuggestions* ranked_suggestions() const override;
 
-  void SetQuery(const std::string& query);
+  void SetQuery(std::string query);
 
   // FIDL methods, for use with BoundSet without having to expose subscriber_.
   // TODO(rosswang): Might it be worth making these an interface?
@@ -46,7 +46,20 @@ class AskChannel : public SuggestionChannel {
   // End FIDL methods.
 
  private:
-  bool IncludeSuggestion(const SuggestionPrototype* prototype) const;
+  // Ranks a suggestion prototype. If the suggestion should be included, a
+  // meaningful rank is returned. Otherwise, |kExcludeRank| (see *.cc) is
+  // returned.
+  //
+  // Note that these ranks may not be the ones ultimately published to
+  // subscribers since ambiguous (equal) ranks for an equidistant Rank result
+  // can lead to nondeterministic UI behavior unless the UI itself implements a
+  // disambiguator.
+  //
+  // TODO(rosswang): This is not the case yet; these ranks may be ambiguous.
+  // Rather than have complex logic to deal with this at all layers, let's
+  // revise the interface to side-step this issue.
+  float Rank(const SuggestionPrototype* prototype) const;
+
   // TEMPORARY by-insertion-order ranking
   float next_rank() const {
     return include_.empty() ? 0 : include_.back()->rank + 1;

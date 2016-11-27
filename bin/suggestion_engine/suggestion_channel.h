@@ -21,6 +21,8 @@ class SuggestionChannel {
   // not require a specialized impl using std::set.
   typedef std::vector<std::unique_ptr<RankedSuggestion>> RankedSuggestions;
 
+  virtual ~SuggestionChannel() = default;
+
   virtual RankedSuggestion* OnAddSuggestion(
       const SuggestionPrototype* prototype) = 0;
   virtual void OnChangeSuggestion(RankedSuggestion* ranked_suggestion) = 0;

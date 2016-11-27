@@ -482,7 +482,7 @@ TEST_F(AskTest, DefaultAsk) {
   CHECK_RESULT_COUNT(2);
 }
 
-TEST_F(AskTest, AskExactMatch) {
+TEST_F(AskTest, AskIncludeExclude) {
   Proposinator p(suggestion_engine());
 
   p.Propose("Mozart's Ghost");
@@ -505,4 +505,43 @@ TEST_F(AskTest, AskExactMatch) {
 
   p.Propose("The Hottest Band on the Internet", "Mozart's Ghost");
   CHECK_RESULT_COUNT(1);
+}
+
+#define HEADLINE_EQ(expected, index) \
+  EXPECT_EQ(expected, (*listener())[index]->display->headline)
+
+TEST_F(AskTest, AskRanking) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("View E-mail");
+  p.Propose("Compose E-mail");
+  p.Propose("Reply to E-mail");
+  p.Propose("Send E-vites");
+  p.Propose("E-mail Guests");
+
+  InitiateAsk();
+  SetResultCount(10);
+
+  CHECK_RESULT_COUNT(5);
+  HEADLINE_EQ("View E-mail", 0);
+  HEADLINE_EQ("Compose E-mail", 1);
+  HEADLINE_EQ("Reply to E-mail", 2);
+  HEADLINE_EQ("Send E-vites", 3);
+  HEADLINE_EQ("E-mail Guests", 4);
+
+  SetQuery("e-mail");
+  CHECK_RESULT_COUNT(4);
+  HEADLINE_EQ("View E-mail", 0);
+  HEADLINE_EQ("E-mail Guests", 1);
+  HEADLINE_EQ("Compose E-mail", 2);
+  HEADLINE_EQ("Reply to E-mail", 3);
+
+  SetResultCount(2);
+  CHECK_RESULT_COUNT(2);
+  HEADLINE_EQ("View E-mail", 0);
+  HEADLINE_EQ("E-mail Guests", 1);
+
+  SetQuery("Compose");
+  CHECK_RESULT_COUNT(1);
+  HEADLINE_EQ("Compose E-mail", 0);
 }
