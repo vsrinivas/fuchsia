@@ -76,8 +76,13 @@ void WatchClientImpl::OnPut(const std::string& path,
                                   std::move(record->timestamp));
 }
 
-void WatchClientImpl::OnError() {
-  FTL_LOG(ERROR) << "Firebase client signalled an unknown error.";
+void WatchClientImpl::OnMalformedEvent() {
+  FTL_LOG(ERROR) << "received malformed event";
+  HandleError();
+}
+
+void WatchClientImpl::OnConnectionError() {
+  FTL_LOG(ERROR) << "network error";
   HandleError();
 }
 

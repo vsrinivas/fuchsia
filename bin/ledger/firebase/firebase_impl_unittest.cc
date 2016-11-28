@@ -45,18 +45,19 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
     patch_data_.push_back(rapidjson::Value(value, document_.GetAllocator()));
   }
 
-  void OnCancel() override {
-    cancel_count_++;
-  }
+  void OnCancel() override { cancel_count_++; }
 
   void OnAuthRevoked(const std::string& reason) override {
     auth_revoked_count_++;
     auth_revoked_reasons_.push_back(reason);
   }
 
-  void OnError() override { error_count_++; }
+  void OnMalformedEvent() override { malformed_event_count_++; }
 
-  void OnDone() override { message_loop_.PostQuitTask(); }
+  void OnConnectionError() override {
+    connection_error_count_++;
+    message_loop_.PostQuitTask();
+  }
 
   void SetPipeResponse(mx::datapipe_consumer body, uint32_t status_code) {
     network::URLResponsePtr server_response = network::URLResponse::New();
@@ -83,7 +84,9 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
   std::vector<std::string> auth_revoked_reasons_;
   unsigned int auth_revoked_count_ = 0u;
 
-  unsigned int error_count_ = 0u;
+  unsigned int malformed_event_count_ = 0u;
+
+  unsigned int connection_error_count_ = 0u;
 
   ledger::FakeNetworkService fake_network_service_;
   FirebaseImpl firebase_;
@@ -235,7 +238,7 @@ TEST_F(FirebaseImplTest, WatchPut) {
   EXPECT_EQ(0u, patch_count_);
   EXPECT_EQ(0u, cancel_count_);
   EXPECT_EQ(0u, auth_revoked_count_);
-  EXPECT_EQ(0u, error_count_);
+  EXPECT_EQ(0u, malformed_event_count_);
 
   EXPECT_EQ("/", put_paths_[0]);
   EXPECT_EQ("Alice", put_data_[0]);
@@ -262,7 +265,7 @@ TEST_F(FirebaseImplTest, WatchPatch) {
   EXPECT_EQ(1u, patch_count_);
   EXPECT_EQ(0u, cancel_count_);
   EXPECT_EQ(0u, auth_revoked_count_);
-  EXPECT_EQ(0u, error_count_);
+  EXPECT_EQ(0u, malformed_event_count_);
 
   EXPECT_EQ("/bla/", patch_paths_[0]);
   EXPECT_EQ("Alice", patch_data_[0]["name1"]);
@@ -283,7 +286,7 @@ TEST_F(FirebaseImplTest, WatchKeepAlive) {
   EXPECT_EQ(0u, patch_count_);
   EXPECT_EQ(0u, cancel_count_);
   EXPECT_EQ(0u, auth_revoked_count_);
-  EXPECT_EQ(0u, error_count_);
+  EXPECT_EQ(0u, malformed_event_count_);
 }
 
 TEST_F(FirebaseImplTest, WatchCancel) {
@@ -300,7 +303,7 @@ TEST_F(FirebaseImplTest, WatchCancel) {
   EXPECT_EQ(0u, patch_count_);
   EXPECT_EQ(1u, cancel_count_);
   EXPECT_EQ(0u, auth_revoked_count_);
-  EXPECT_EQ(0u, error_count_);
+  EXPECT_EQ(0u, malformed_event_count_);
 }
 
 TEST_F(FirebaseImplTest, WatchAuthRevoked) {
@@ -317,7 +320,7 @@ TEST_F(FirebaseImplTest, WatchAuthRevoked) {
   EXPECT_EQ(0u, patch_count_);
   EXPECT_EQ(0u, cancel_count_);
   EXPECT_EQ(1u, auth_revoked_count_);
-  EXPECT_EQ(0u, error_count_);
+  EXPECT_EQ(0u, malformed_event_count_);
 
   EXPECT_EQ("bazinga!", auth_revoked_reasons_[0]);
 }
@@ -336,7 +339,7 @@ TEST_F(FirebaseImplTest, WatchErrorUnknownEvent) {
   EXPECT_EQ(0u, patch_count_);
   EXPECT_EQ(0u, cancel_count_);
   EXPECT_EQ(0u, auth_revoked_count_);
-  EXPECT_EQ(1u, error_count_);
+  EXPECT_EQ(1u, malformed_event_count_);
 }
 
 TEST_F(FirebaseImplTest, WatchHttpError) {
@@ -349,7 +352,8 @@ TEST_F(FirebaseImplTest, WatchHttpError) {
   EXPECT_EQ(0u, patch_count_);
   EXPECT_EQ(0u, cancel_count_);
   EXPECT_EQ(0u, auth_revoked_count_);
-  EXPECT_EQ(1u, error_count_);
+  EXPECT_EQ(0u, malformed_event_count_);
+  EXPECT_EQ(1u, connection_error_count_);
 }
 
 TEST_F(FirebaseImplTest, UnWatch) {
@@ -373,7 +377,8 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, patch_count_);
   EXPECT_EQ(0u, cancel_count_);
   EXPECT_EQ(0u, auth_revoked_count_);
-  EXPECT_EQ(0u, error_count_);
+  EXPECT_EQ(0u, malformed_event_count_);
+  EXPECT_EQ(0u, connection_error_count_);
 
   EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
   message_loop_.SetAfterTaskCallback([this] {
@@ -387,7 +392,8 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, patch_count_);
   EXPECT_EQ(0u, cancel_count_);
   EXPECT_EQ(0u, auth_revoked_count_);
-  EXPECT_EQ(0u, error_count_);
+  EXPECT_EQ(0u, malformed_event_count_);
+  EXPECT_EQ(0u, connection_error_count_);
 
   // Unregister the watch client and make sure that we are *not* notified about
   // the next event.
@@ -404,7 +410,8 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, patch_count_);
   EXPECT_EQ(0u, cancel_count_);
   EXPECT_EQ(0u, auth_revoked_count_);
-  EXPECT_EQ(0u, error_count_);
+  EXPECT_EQ(0u, malformed_event_count_);
+  EXPECT_EQ(0u, connection_error_count_);
 }
 
 }  // namespace

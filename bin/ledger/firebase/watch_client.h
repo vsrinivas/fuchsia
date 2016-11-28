@@ -21,12 +21,15 @@ class WatchClient {
   virtual void OnCancel() {}
   virtual void OnAuthRevoked(const std::string& reason) {}
 
-  // Called when an error occurs when processing an event. Further events will
-  // continue to be processed after this call, until OnDone() is called.
-  virtual void OnError() {}
+  // Called when a Firebase event of incorrect format is received. Such
+  // notification is ignored, further events continue to be processed after this
+  // call. (but the client might choose to close the stream themselves)
+  virtual void OnMalformedEvent() {}
 
-  // Called when the server closes the stream of events.
-  virtual void OnDone() {}
+  // Called when the stream of events can't be established, or is interrupted,
+  // or the server closes the connection. No further calls will be made on this
+  // WatchClient.
+  virtual void OnConnectionError() {}
 };
 
 }  // namespace firebase

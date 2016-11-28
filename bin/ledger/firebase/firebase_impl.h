@@ -76,7 +76,12 @@ class FirebaseImpl : public Firebase {
   void OnStreamEvent(WatchClient* watch_client,
                      Status status,
                      const std::string& event,
-                     const std::string& data);
+                     const std::string& payload);
+
+  void HandleMalformedEvent(WatchClient* watch_client,
+                            const std::string& event,
+                            const std::string& payload,
+                            const char error_description[]);
 
   ledger::NetworkService* const network_service_;
   // Api url against which requests are made, without a trailing slash.

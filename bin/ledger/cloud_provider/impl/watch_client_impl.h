@@ -25,7 +25,8 @@ class WatchClientImpl : public firebase::WatchClient {
 
   // firebase::WatchClient:
   void OnPut(const std::string& path, const rapidjson::Value& value) override;
-  void OnError() override;
+  void OnMalformedEvent() override;
+  void OnConnectionError() override;
 
  private:
   void HandleDecodingError(const std::string& path,

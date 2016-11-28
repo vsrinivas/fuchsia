@@ -179,13 +179,13 @@ void FirebaseImpl::OnResponse(
     const std::string& status_line = response->status_line;
     FTL_DCHECK(response->body->is_stream());
     auto& drainer = drainers_.emplace();
-    drainer.Start(
-        std::move(response->body->get_stream()),
-        [this, callback, url, status_line](const std::string& body) {
-          FTL_LOG(ERROR) << url << " error " << status_line << ":" << std::endl
-                         << body;
-          callback(Status::UNKNOWN_ERROR, "");
-        });
+    drainer.Start(std::move(response->body->get_stream()),
+                  [this, callback, url, status_line](const std::string& body) {
+                    FTL_LOG(ERROR) << url << " error " << status_line << ":"
+                                   << std::endl
+                                   << body;
+                    callback(Status::UNKNOWN_ERROR, "");
+                  });
     return;
   }
 
@@ -201,8 +201,7 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
   if (response->error) {
     FTL_LOG(ERROR) << response->url << " error "
                    << response->error->description;
-    watch_client->OnError();
-    watch_client->OnDone();
+    watch_client->OnConnectionError();
     watch_data_.erase(watch_client);
     return;
   }
@@ -219,8 +218,7 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
         [this, watch_client, url, status_line](const std::string& body) {
           FTL_LOG(ERROR) << url << " error " << status_line << ":" << std::endl
                          << body;
-          watch_client->OnError();
-          watch_client->OnDone();
+          watch_client->OnConnectionError();
           watch_data_.erase(watch_client);
         });
     return;
@@ -238,40 +236,56 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
 
 void FirebaseImpl::OnStreamComplete(WatchClient* watch_client) {
   watch_data_[watch_client]->event_stream.reset();
-  watch_client->OnDone();
+  watch_client->OnConnectionError();
   watch_data_.erase(watch_client);
 }
 
 void FirebaseImpl::OnStreamEvent(WatchClient* watch_client,
                                  Status status,
                                  const std::string& event,
-                                 const std::string& data) {
+                                 const std::string& payload) {
   if (event == "put" || event == "patch") {
-    rapidjson::Document document;
-    document.Parse(data.c_str(), data.size());
-    if (document.HasParseError()) {
-      watch_client->OnError();
+    rapidjson::Document parsed_payload;
+    parsed_payload.Parse(payload.c_str(), payload.size());
+    if (parsed_payload.HasParseError()) {
+      HandleMalformedEvent(watch_client, event, payload,
+                           "failed to parse the event payload");
       return;
     }
 
     // Both 'put' and 'patch' events must carry a dictionary of "path" and
     // "data".
-    if (!document.IsObject() || !document.HasMember("path") ||
-        !document["path"].IsString() || !document.HasMember("data")) {
-      watch_client->OnError();
+    if (!parsed_payload.IsObject()) {
+      HandleMalformedEvent(watch_client, event, payload,
+                           "event payload doesn't appear to be an object");
+      return;
+    }
+    if (!parsed_payload.HasMember("path") ||
+        !parsed_payload["path"].IsString()) {
+      HandleMalformedEvent(watch_client, event, payload,
+                           "event payload doesn't contain the `path` string");
+      return;
+    }
+    if (!parsed_payload.HasMember("data")) {
+      HandleMalformedEvent(watch_client, event, payload,
+                           "event payload doesn't contain the `data` member");
       return;
     }
 
     if (event == "put") {
-      watch_client->OnPut(document["path"].GetString(), document["data"]);
+      watch_client->OnPut(parsed_payload["path"].GetString(),
+                          parsed_payload["data"]);
     } else if (event == "patch") {
       // In case of patch, data must be a dictionary itself.
-      if (!document["data"].IsObject()) {
-        watch_client->OnError();
+      if (!parsed_payload["data"].IsObject()) {
+        HandleMalformedEvent(
+            watch_client, event, payload,
+            "event payload `data` member doesn't appear to be an object");
         return;
       }
 
-      watch_client->OnPatch(document["path"].GetString(), document["data"]);
+      watch_client->OnPatch(parsed_payload["path"].GetString(),
+                            parsed_payload["data"]);
     } else {
       FTL_NOTREACHED();
     }
@@ -280,22 +294,35 @@ void FirebaseImpl::OnStreamEvent(WatchClient* watch_client,
   } else if (event == "cancel") {
     watch_client->OnCancel();
   } else if (event == "auth_revoked") {
-    rapidjson::Document document;
-    document.Parse(data.c_str(), data.size());
-    if (document.HasParseError()) {
-      watch_client->OnError();
+    rapidjson::Document parsed_payload;
+    parsed_payload.Parse(payload.c_str(), payload.size());
+    if (parsed_payload.HasParseError()) {
+      HandleMalformedEvent(watch_client, event, payload,
+                           "can't parse the event payload.");
       return;
     }
 
     std::string reason;
-    if (!document.IsString()) {
-      watch_client->OnError();
+    if (!parsed_payload.IsString()) {
+      HandleMalformedEvent(watch_client, event, payload,
+                           "event payload doesn't appear to be a string");
       return;
     }
-    watch_client->OnAuthRevoked(document.GetString());
+    watch_client->OnAuthRevoked(parsed_payload.GetString());
   } else {
-    watch_client->OnError();
+    HandleMalformedEvent(watch_client, event, payload,
+                         "unrecognized event type");
   }
+}
+
+void FirebaseImpl::HandleMalformedEvent(WatchClient* watch_client,
+                                        const std::string& event,
+                                        const std::string& payload,
+                                        const char error_description[]) {
+  FTL_LOG(ERROR) << "Error processing a Firebase event: " << error_description;
+  FTL_LOG(ERROR) << "Event: " << event;
+  FTL_LOG(ERROR) << "Data: " << payload;
+  watch_client->OnMalformedEvent();
 }
 
 }  // namespace firebase
