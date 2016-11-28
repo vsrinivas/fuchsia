@@ -816,9 +816,15 @@ TEST_F(LedgerApplicationTest, PageWatcherParallel) {
       [] { mtl::MessageLoop::GetCurrent()->QuitNow(); },
       ftl::TimeDelta::FromSeconds(1));
   mtl::MessageLoop::GetCurrent()->Run();
-  // Each change is seen once, and by the correct watcher only.
-  EXPECT_EQ(1u, watcher1.changes_seen);
+  // A merge happens now. Only the first watcher should see a change.
+  EXPECT_EQ(2u, watcher1.changes_seen);
   EXPECT_EQ(1u, watcher2.changes_seen);
+
+  change = watcher1.GetLastPageChange();
+  EXPECT_EQ(1u, change->changes.size());
+  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Bob",
+            convert::ToString(change->changes[0]->new_value->get_bytes()));
 }
 
 TEST_F(LedgerApplicationTest, PageWatcherEmptyTransaction) {
@@ -886,6 +892,97 @@ TEST_F(LedgerApplicationTest, PageWatcher1Change2Pages) {
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Alice",
+            convert::ToString(change->changes[0]->new_value->get_bytes()));
+}
+
+TEST_F(LedgerApplicationTest, Merging) {
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  PageWatcherPtr watcher1_ptr;
+  Watcher watcher1(GetProxy(&watcher1_ptr),
+                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  page1->Watch(std::move(watcher1_ptr),
+               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  PageWatcherPtr watcher2_ptr;
+  Watcher watcher2(GetProxy(&watcher2_ptr),
+                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  page2->Watch(std::move(watcher2_ptr),
+               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  // Verify that each change is seen by the right watcher.
+  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  mtl::MessageLoop::GetCurrent()->Run();
+  EXPECT_EQ(1u, watcher1.changes_seen);
+  PageChangePtr change = watcher1.GetLastPageChange();
+  EXPECT_EQ(2u, change->changes.size());
+  EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Paris",
+            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
+  EXPECT_EQ("Alice",
+            convert::ToString(change->changes[1]->new_value->get_bytes()));
+
+  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  mtl::MessageLoop::GetCurrent()->Run();
+
+  EXPECT_EQ(1u, watcher2.changes_seen);
+  change = watcher2.GetLastPageChange();
+  EXPECT_EQ(2u, change->changes.size());
+  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Bob",
+            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
+  EXPECT_EQ("0123456789",
+            convert::ToString(change->changes[1]->new_value->get_bytes()));
+
+  mtl::MessageLoop::GetCurrent()->Run();
+  mtl::MessageLoop::GetCurrent()->Run();
+  // Each change is seen once, and by the correct watcher only.
+  EXPECT_EQ(2u, watcher1.changes_seen);
+  change = watcher1.GetLastPageChange();
+  EXPECT_EQ(2u, change->changes.size());
+  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Bob",
+            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
+  EXPECT_EQ("0123456789",
+            convert::ToString(change->changes[1]->new_value->get_bytes()));
+
+  EXPECT_EQ(2u, watcher2.changes_seen);
+  change = watcher2.GetLastPageChange();
+  EXPECT_EQ(1u, change->changes.size());
+  EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Paris",
             convert::ToString(change->changes[0]->new_value->get_bytes()));
 }
 

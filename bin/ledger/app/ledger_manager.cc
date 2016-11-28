@@ -198,8 +198,9 @@ std::unique_ptr<PageManager> LedgerManager::NewPageManager(
       FTL_LOG(ERROR) << "Page Sync stopped due to unrecoverable error.";
     });
   }
-  return std::make_unique<PageManager>(std::move(page_storage),
-                                       std::move(page_sync));
+  return std::make_unique<PageManager>(
+      std::move(page_storage), std::move(page_sync),
+      merge_manager_.GetMergeResolver(page_storage.get()));
 }
 
 void LedgerManager::CheckEmpty() {

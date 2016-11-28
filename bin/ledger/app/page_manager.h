@@ -10,6 +10,7 @@
 
 #include "apps/ledger/src/app/branch_tracker.h"
 #include "apps/ledger/src/app/fidl/bound_interface.h"
+#include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
@@ -33,7 +34,8 @@ class PageManager {
   // Both |page_storage| and |page_sync| are owned by PageManager and are
   // deleted when it goes away.
   PageManager(std::unique_ptr<storage::PageStorage> page_storage,
-              std::unique_ptr<cloud_sync::PageSyncContext> page_sync);
+              std::unique_ptr<cloud_sync::PageSyncContext> page_sync,
+              std::unique_ptr<MergeResolver> merge_resolver);
   ~PageManager();
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
@@ -55,6 +57,7 @@ class PageManager {
 
   std::unique_ptr<storage::PageStorage> page_storage_;
   std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context_;
+  std::unique_ptr<MergeResolver> merge_resolver_;
   callback::AutoCleanableSet<BoundInterface<PageSnapshot, PageSnapshotImpl>>
       snapshots_;
   callback::AutoCleanableSet<BranchTracker> pages_;

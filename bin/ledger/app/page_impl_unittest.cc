@@ -7,6 +7,8 @@
 #include <memory>
 
 #include "apps/ledger/src/app/constants.h"
+#include "apps/ledger/src/app/merging/dummy_merger.h"
+#include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
@@ -35,7 +37,12 @@ class PageImplTest : public ::testing::Test {
     auto fake_storage =
         std::make_unique<storage::fake::FakePageStorage>(page_id1_);
     fake_storage_ = fake_storage.get();
-    manager_ = std::make_unique<PageManager>(std::move(fake_storage), nullptr);
+    auto merger = std::make_unique<DummyMerger>();
+    auto resolver =
+        std::make_unique<MergeResolver>(fake_storage_, std::move(merger));
+
+    manager_ = std::make_unique<PageManager>(std::move(fake_storage), nullptr,
+                                             std::move(resolver));
     manager_->BindPage(page_ptr_.NewRequest());
   }
 

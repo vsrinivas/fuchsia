@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include "apps/ledger/src/app/ledger_impl.h"
+#include "apps/ledger/src/app/merging/ledger_merge_manager.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -63,6 +64,7 @@ class LedgerManager : public LedgerImpl::Delegate {
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<cloud_sync::LedgerSync> sync_;
   LedgerImpl ledger_impl_;
+  LedgerMergeManager merge_manager_;
   fidl::BindingSet<Ledger> bindings_;
 
   // Mapping from page id to the manager of that page.

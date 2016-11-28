@@ -86,6 +86,9 @@ class CancellableImpl final : public Cancellable {
   ftl::Closure on_done_;
 };
 
+// Creates a cancellable that is already done.
+ftl::RefPtr<callback::Cancellable> CreateDoneCancellable();
+
 }  // namespace callback
 
 #endif  // APPS_LEDGER_SRC_CALLBACK_CANCELLABLE_HELPER_H_

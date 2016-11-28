@@ -40,6 +40,15 @@ source_set("lib") {
     "ledger_repository_factory_impl.h",
     "ledger_repository_impl.cc",
     "ledger_repository_impl.h",
+    "merging/dummy_merger.cc",
+    "merging/dummy_merger.h",
+    "merging/last_one_wins_merger.cc",
+    "merging/last_one_wins_merger.h",
+    "merging/ledger_merge_manager.cc",
+    "merging/ledger_merge_manager.h",
+    "merging/merge_resolver.cc",
+    "merging/merge_resolver.h",
+    "merging/merge_strategy.h",
     "page_impl.cc",
     "page_impl.h",
     "page_manager.cc",
@@ -86,6 +95,7 @@ source_set("unittests") {
 
   sources = [
     "ledger_manager_unittest.cc",
+    "merging/merge_resolver_unittest.cc",
     "page_impl_unittest.cc",
     "page_manager_unittest.cc",
   ]
@@ -97,6 +107,7 @@ source_set("unittests") {
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/fake:lib",
+    "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
