@@ -157,7 +157,8 @@ mozart::ResourcePtr VideoRendererImpl::View::DrawVideoTexture(
   image->pixel_format = mozart::Image::PixelFormat::B8G8R8A8;
   image->alpha_format = mozart::Image::AlphaFormat::OPAQUE;
   image->buffer = mozart::Buffer::New();
-  image->buffer->vmo = buffer_.GetDuplicateVmo();
+  image->buffer->vmo = buffer_.GetDuplicateVmo(
+      MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_MAP);
 
   video_frame_source_->GetRgbaFrame(
       static_cast<uint8_t*>(buffer_.PtrFromOffset(0)), size, presentation_time);
@@ -172,7 +173,8 @@ void VideoRendererImpl::View::EnsureBuffer(const mozart::Size& size) {
   if (!buffer_.initialized() || buffer_size_ != size) {
     buffer_.Reset();
     mx_status_t status =
-        buffer_.InitNew(size.height * size.width * sizeof(uint32_t));
+        buffer_.InitNew(size.height * size.width * sizeof(uint32_t),
+                        MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
     FTL_DCHECK(status == NO_ERROR);
     buffer_size_ = size;
     std::memset(buffer_.PtrFromOffset(0), 0, buffer_.size());

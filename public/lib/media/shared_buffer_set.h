@@ -55,7 +55,9 @@ class SharedBufferSet {
     uint64_t offset_;
   };
 
-  SharedBufferSet();
+  // Constructs a SharedBufferSet. |local_map_flags| specifies flags used to
+  // map vmos for local access.
+  SharedBufferSet(uint32_t local_map_flags);
 
   virtual ~SharedBufferSet();
 
@@ -64,10 +66,12 @@ class SharedBufferSet {
 
   // Creates a new buffer of the indicated size. If successful, delivers the
   // buffer id assigned to the buffer and a vmo to the buffer via
-  // |buffer_id_out| and |vmo_out|.
+  // |buffer_id_out| and |out_vmo|. |vmo_rights| specifies the rights for
+  // |out_vmo|.
   mx_status_t CreateNewBuffer(uint64_t size,
                               uint32_t* buffer_id_out,
-                              mx::vmo* vmo_out);
+                              mx_rights_t vmo_rights,
+                              mx::vmo* out_vmo);
 
   // Removes a buffer.
   void RemoveBuffer(uint32_t buffer_id);
@@ -93,6 +97,7 @@ class SharedBufferSet {
   // Adds a buffer to |buffers_| and |buffer_ids_by_base_address_|.
   void AddBuffer(uint32_t buffer_id, MappedSharedBuffer* mapped_shared_buffer);
 
+  uint32_t local_map_flags_;
   std::vector<std::unique_ptr<MappedSharedBuffer>> buffers_;
   std::map<uint8_t*, uint32_t> buffer_ids_by_base_address_;
 };

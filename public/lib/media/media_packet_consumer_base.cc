@@ -307,7 +307,7 @@ MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
 
 MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
     MediaPacketConsumerBase* owner)
-    : owner_(owner) {
+    : owner_(owner), buffer_set_(MX_VM_FLAG_PERM_READ) {
 #ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif

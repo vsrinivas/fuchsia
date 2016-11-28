@@ -6,7 +6,9 @@
 
 namespace media {
 
-SharedBufferSetAllocator::SharedBufferSetAllocator() {}
+SharedBufferSetAllocator::SharedBufferSetAllocator(uint32_t local_map_flags,
+                                                   mx_rights_t remote_rights)
+    : SharedBufferSet(local_map_flags), remote_rights_(remote_rights) {}
 
 SharedBufferSetAllocator::~SharedBufferSetAllocator() {}
 
@@ -167,8 +169,9 @@ void SharedBufferSetAllocator::ReleaseSlicedRegion(const Locator& locator) {
 uint32_t SharedBufferSetAllocator::CreateBuffer(bool whole, uint64_t size) {
   uint32_t buffer_id;
   mx::vmo vmo;
-  mx_status_t status = CreateNewBuffer(
-      size * kSlicedBufferInitialSizeMultiplier, &buffer_id, &vmo);
+  mx_status_t status =
+      CreateNewBuffer(size * kSlicedBufferInitialSizeMultiplier, &buffer_id,
+                      remote_rights_, &vmo);
   if (status != NO_ERROR) {
     return kNullBufferId;
   }

@@ -8,7 +8,10 @@
 
 namespace media {
 
-MediaPacketProducerBase::MediaPacketProducerBase() {
+MediaPacketProducerBase::MediaPacketProducerBase()
+    : allocator_(MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                 MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ |
+                     MX_RIGHT_MAP) {
   // No demand initially.
   demand_.min_packets_outstanding = 0;
   demand_.min_pts = MediaPacket::kNoTimestamp;

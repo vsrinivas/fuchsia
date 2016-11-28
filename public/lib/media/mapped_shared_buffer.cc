@@ -20,7 +20,7 @@ MappedSharedBuffer::~MappedSharedBuffer() {
   Reset();
 }
 
-mx_status_t MappedSharedBuffer::InitNew(uint64_t size) {
+mx_status_t MappedSharedBuffer::InitNew(uint64_t size, uint32_t map_flags) {
   FTL_DCHECK(size > 0);
 
   mx::vmo vmo;
@@ -38,14 +38,14 @@ mx_status_t MappedSharedBuffer::InitNew(uint64_t size) {
     return status;
   }
 
-  return InitInternal(std::move(vmo));
+  return InitInternal(std::move(vmo), map_flags);
 }
 
-mx_status_t MappedSharedBuffer::InitFromVmo(mx::vmo vmo) {
-  return InitInternal(std::move(vmo));
+mx_status_t MappedSharedBuffer::InitFromVmo(mx::vmo vmo, uint32_t map_flags) {
+  return InitInternal(std::move(vmo), map_flags);
 }
 
-mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo) {
+mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo, uint32_t map_flags) {
   uint64_t size;
   mx_status_t status = vmo.get_size(&size);
   if (status != NO_ERROR) {
@@ -63,9 +63,7 @@ mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo) {
 
   // TODO(dalesat): Map only for required operations (read or write).
   uintptr_t mapped_buffer = 0u;
-  status =
-      mx::process::self().map_vm(vmo, 0u, size, &mapped_buffer,
-                                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+  status = mx::process::self().map_vm(vmo, 0u, size, &mapped_buffer, map_flags);
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "mx::process::map_vm failed, status " << status;
     return status;
@@ -94,11 +92,10 @@ uint64_t MappedSharedBuffer::size() const {
   return size_;
 }
 
-mx::vmo MappedSharedBuffer::GetDuplicateVmo() const {
+mx::vmo MappedSharedBuffer::GetDuplicateVmo(mx_rights_t rights) const {
   FTL_DCHECK(initialized());
   mx::vmo vmo;
-  // TODO(dalesat): Limit rights depending on usage.
-  mx_status_t status = vmo_.duplicate(MX_RIGHT_SAME_RIGHTS, &vmo);
+  mx_status_t status = vmo_.duplicate(rights, &vmo);
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "mx::handle::duplicate failed, status " << status;
   }

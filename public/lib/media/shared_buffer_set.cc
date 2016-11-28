@@ -10,7 +10,8 @@
 
 namespace media {
 
-SharedBufferSet::SharedBufferSet() {}
+SharedBufferSet::SharedBufferSet(uint32_t local_map_flags)
+    : local_map_flags_(local_map_flags) {}
 
 SharedBufferSet::~SharedBufferSet() {}
 
@@ -22,7 +23,8 @@ mx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, mx::vmo vmo) {
   }
 
   MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
-  mx_status_t status = mapped_shared_buffer->InitFromVmo(std::move(vmo));
+  mx_status_t status =
+      mapped_shared_buffer->InitFromVmo(std::move(vmo), local_map_flags_);
 
   if (status == NO_ERROR) {
     AddBuffer(buffer_id, mapped_shared_buffer);
@@ -33,19 +35,20 @@ mx_status_t SharedBufferSet::AddBuffer(uint32_t buffer_id, mx::vmo vmo) {
 
 mx_status_t SharedBufferSet::CreateNewBuffer(uint64_t size,
                                              uint32_t* buffer_id_out,
-                                             mx::vmo* vmo_out) {
+                                             mx_rights_t vmo_rights,
+                                             mx::vmo* out_vmo) {
   FTL_DCHECK(size != 0);
   FTL_DCHECK(buffer_id_out != nullptr);
-  FTL_DCHECK(vmo_out != nullptr);
+  FTL_DCHECK(out_vmo != nullptr);
 
   uint32_t buffer_id = AllocateBufferId();
 
   MappedSharedBuffer* mapped_shared_buffer = new MappedSharedBuffer();
-  mx_status_t status = mapped_shared_buffer->InitNew(size);
+  mx_status_t status = mapped_shared_buffer->InitNew(size, local_map_flags_);
 
   if (status == NO_ERROR) {
     *buffer_id_out = buffer_id;
-    *vmo_out = mapped_shared_buffer->GetDuplicateVmo();
+    *out_vmo = mapped_shared_buffer->GetDuplicateVmo(vmo_rights);
     AddBuffer(buffer_id, mapped_shared_buffer);
   }
 

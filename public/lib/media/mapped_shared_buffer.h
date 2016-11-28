@@ -29,10 +29,10 @@ class MappedSharedBuffer {
   virtual ~MappedSharedBuffer();
 
   // Initializes by creating a new shared buffer of the indicated size.
-  mx_status_t InitNew(uint64_t size);
+  mx_status_t InitNew(uint64_t size, uint32_t map_flags);
 
   // Initializes from a vmo to an existing shared buffer.
-  mx_status_t InitFromVmo(mx::vmo vmo);
+  mx_status_t InitFromVmo(mx::vmo vmo, uint32_t map_flags);
 
   // Indicates whether the buffer is initialized.
   bool initialized() const;
@@ -44,7 +44,7 @@ class MappedSharedBuffer {
   uint64_t size() const;
 
   // Gets a duplicate vmo for the shared buffer.
-  mx::vmo GetDuplicateVmo() const;
+  mx::vmo GetDuplicateVmo(mx_rights_t rights) const;
 
   // Validates an offset and size.
   bool Validate(uint64_t offset, uint64_t size);
@@ -56,7 +56,7 @@ class MappedSharedBuffer {
   uint64_t OffsetFromPtr(void* payload_ptr) const;
 
  protected:
-  mx_status_t InitInternal(mx::vmo vmo);
+  mx_status_t InitInternal(mx::vmo vmo, uint32_t map_flags);
 
   // Does nothing. Called when initialization is complete. Subclasses may
   // override.

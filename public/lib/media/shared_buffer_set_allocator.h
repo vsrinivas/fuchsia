@@ -97,7 +97,10 @@ namespace media {
 //
 class SharedBufferSetAllocator : public SharedBufferSet {
  public:
-  SharedBufferSetAllocator();
+  // Constructs a SharedBufferSetAllocator. |local_map_flags| specifies flags
+  // used to map vmos for local access. |remote_rights| specifies the rights
+  // applies to vmos sent to the remote party via buffer updates.
+  SharedBufferSetAllocator(uint32_t local_map_flags, mx_rights_t remote_rights);
 
   ~SharedBufferSetAllocator() override;
 
@@ -175,6 +178,7 @@ class SharedBufferSetAllocator : public SharedBufferSet {
   void MaybeDeleteSlicedBuffer(uint32_t id)
       FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
+  mx_rights_t remote_rights_;
   mutable ftl::Mutex mutex_;
   std::vector<Buffer> buffers_ FTL_GUARDED_BY(mutex_);
   std::multimap<uint64_t, uint32_t> free_whole_buffer_ids_by_size_
