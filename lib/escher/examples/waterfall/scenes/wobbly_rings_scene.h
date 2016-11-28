@@ -14,7 +14,7 @@ class WobblyRingsScene : public Scene {
                    escher::Escher* escher);
   ~WobblyRingsScene();
 
-  void Init() override;
+  void Init(escher::Stage* stage) override;
 
   escher::Model* Update(const escher::Stopwatch& stopwatch,
                         uint64_t frame_count,

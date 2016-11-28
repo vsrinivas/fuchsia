@@ -21,11 +21,13 @@ using escher::MeshSpec;
 using escher::Object;
 using escher::ShapeModifier;
 
+const float kRectYPos = 40.f;
+
 WobblyRingsScene::WobblyRingsScene(escher::VulkanContext* vulkan_context,
                                    escher::Escher* escher)
     : Scene(vulkan_context, escher) {}
 
-void WobblyRingsScene::Init() {
+void WobblyRingsScene::Init(escher::Stage* stage) {
   // Create meshes for fancy wobble effect.
   MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
                 MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
@@ -35,8 +37,13 @@ void WobblyRingsScene::Init() {
                                     150.f, 11.f, -8.f);
   ring_mesh3_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 100.f,
                                     50.f, 5.f, -2.f);
+
+  // Make this mesh the size of the stage
+  float screenWidth = stage->viewing_volume().width();
+  float screenHeight = stage->viewing_volume().height();
   wobbly_rect_mesh_ = escher::NewRectangleMesh(
-      escher(), spec, 8, vec2(2160.f, 1400.f), vec2(0.f, 0.f), 18.f, 0.f);
+      escher(), spec, 8, vec2(screenWidth, screenHeight - kRectYPos),
+      vec2(0.f, 0.f), 18.f, 0.f);
 
   // Create materials.
   auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
@@ -89,7 +96,7 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   ring3.set_shape_modifier_data(wobble_data);
 
   // Create a wobbly rectangle
-  Object rectangle(wobbly_rect_mesh_, vec3(0.f, 40.f, 2.f), purple_);
+  Object rectangle(wobbly_rect_mesh_, vec3(0.f, kRectYPos, 2.f), purple_);
   rectangle.set_shape_modifiers(ShapeModifier::kWobble);
   rectangle.set_shape_modifier_data(wobble_data);
 

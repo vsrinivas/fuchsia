@@ -290,13 +290,20 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
   // FIFO mode is always available, but we will try to find a more efficient
   // mode.
   vk::PresentModeKHR swapchain_present_mode = vk::PresentModeKHR::eFifo;
+// TODO: Find out why these modes are causing lower performance on Skylake
+#if 0
   for (auto& mode : present_modes) {
     if (mode == vk::PresentModeKHR::eMailbox) {
       // Best choice: lowest-latency non-tearing mode.
       swapchain_present_mode = vk::PresentModeKHR::eMailbox;
       break;
     }
+    if (mode == vk::PresentModeKHR::eImmediate) {
+      // Satisfactory choice: fastest, but tears.
+      swapchain_present_mode = vk::PresentModeKHR::eImmediate;
+    }
   }
+#endif
 
   // Determine number of images in the swapchain.
   swapchain_image_count_ = window_params.desired_swapchain_image_count;

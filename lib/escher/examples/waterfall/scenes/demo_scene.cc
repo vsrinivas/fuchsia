@@ -25,7 +25,7 @@ DemoScene::DemoScene(escher::VulkanContext* vulkan_context,
                      escher::Escher* escher)
     : Scene(vulkan_context, escher) {}
 
-void DemoScene::Init() {
+void DemoScene::Init(escher::Stage* stage) {
   auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
       escher()->NewCheckerboardImage(16, 16), vulkan_context()->device,
       vk::Filter::eNearest);

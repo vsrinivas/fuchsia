@@ -17,7 +17,7 @@ class Scene {
 
   // Convenience method for initializing scene. Use this to create meshes,
   // materials, and other long-lived objects.
-  virtual void Init() = 0;
+  virtual void Init(escher::Stage* stage) = 0;
 
   // Returns a |Model| for the specified time and frame_count, and gives
   // subclasses a chance to update properties on |stage| (mainly brightness).

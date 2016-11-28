@@ -13,7 +13,7 @@ class DemoScene : public Scene {
   DemoScene(escher::VulkanContext* vulkan_context, escher::Escher* escher);
   ~DemoScene();
 
-  void Init() override;
+  void Init(escher::Stage* stage) override;
 
   escher::Model* Update(const escher::Stopwatch& stopwatch,
                         uint64_t frame_count,

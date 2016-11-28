@@ -18,8 +18,8 @@
 #include "escher/vk/vulkan_swapchain_helper.h"
 #include "ftl/logging.h"
 
-static constexpr int kDemoWidth = 2160;
-static constexpr int kDemoHeight = 1440;
+static constexpr int kDemoWidth = 1600;
+static constexpr int kDemoHeight = 1024;
 
 // Material design places objects from 0.0f to 24.0f.
 static constexpr float kNear = 24.f;
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
     scenes.emplace_back(new WobblyRingsScene(&vulkan_context, &escher));
     scenes.emplace_back(new DemoScene(&vulkan_context, &escher));
     for (auto& scene : scenes) {
-      scene->Init();
+      scene->Init(&stage);
     }
 
     while (!glfwWindowShouldClose(demo->GetWindow())) {
