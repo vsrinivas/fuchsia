@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
+#include "apps/maxwell/src/suggestion_engine/repo.h"
 
 namespace maxwell {
 namespace suggestion {
@@ -148,6 +149,12 @@ const AskChannel::RankedSuggestions* AskChannel::ranked_suggestions() const {
 }
 
 void AskChannel::SetQuery(std::string query) {
+  // TODO(rosswang): do we also want to dedup to agents? We almost certainly
+  // don't want to pre-normalize, which is kinda contrary with deduping
+  auto user_input = UserInput::New();
+  user_input->set_text(query);
+  repo_->DispatchAsk(std::move(user_input));
+
   // TODO(rosswang): locale/unicode
   std::transform(query.begin(), query.end(), query.begin(), ::tolower);
 

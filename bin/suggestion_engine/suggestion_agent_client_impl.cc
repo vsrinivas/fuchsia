@@ -40,7 +40,7 @@ void SuggestionAgentClientImpl::GetAll(const GetAllCallback& callback) {
 
 void SuggestionAgentClientImpl::RegisterAskHandler(
     fidl::InterfaceHandle<AskHandler> ask_handler) {
-  // TODO
+  repo_->AddAskHandler(std::move(ask_handler));
 }
 
 void SuggestionAgentClientImpl::BindingSet::OnConnectionError(

@@ -71,7 +71,7 @@ class Proposinator {
 
   void Remove(const std::string& id) { out_->Remove(id); }
 
- private:
+ protected:
   maxwell::suggestion::SuggestionAgentClientPtr out_;
 };
 
@@ -544,4 +544,47 @@ TEST_F(AskTest, AskRanking) {
   SetQuery("Compose");
   CHECK_RESULT_COUNT(1);
   HEADLINE_EQ("Compose E-mail", 0);
+}
+
+class AskProposinator : public Proposinator,
+                        public maxwell::suggestion::AskHandler {
+ public:
+  AskProposinator(maxwell::suggestion::SuggestionEngine* suggestion_engine,
+                  const fidl::String& url = "AskProposinator")
+      : Proposinator(suggestion_engine, url), ask_binding_(this) {
+    fidl::InterfaceHandle<AskHandler> ask_handle;
+    ask_binding_.Bind(&ask_handle);
+    out_->RegisterAskHandler(std::move(ask_handle));
+  }
+
+  void Ask(maxwell::suggestion::UserInputPtr query,
+           const AskCallback& callback) override {
+    query_ = std::move(query);
+    ask_callback_ = callback;
+    ask_proposals_.resize(0);
+  }
+
+  void Commit() { ask_callback_(std::move(ask_proposals_)); }
+
+  fidl::String query() const { return query_ ? query_->get_text() : NULL; }
+
+ private:
+  fidl::Binding<AskHandler> ask_binding_;
+  maxwell::suggestion::UserInputPtr query_;
+  fidl::Array<maxwell::suggestion::ProposalPtr> ask_proposals_;
+  AskCallback ask_callback_;
+};
+
+TEST_F(AskTest, ReactiveAsk) {
+  AskProposinator p(suggestion_engine());
+
+  InitiateAsk();
+  SetResultCount(10);
+  SetQuery("Hello");
+
+  ASYNC_EQ("Hello", p.query());
+  p.Propose("Hello, Ask?");  // TODO(rosswang): Test attributed Ask.
+  p.Commit();
+
+  CHECK_RESULT_COUNT(1);
 }

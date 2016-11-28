@@ -37,8 +37,8 @@ void Repo::AddSuggestion(std::unique_ptr<ProposalRecord> proposal,
 
 void Repo::InitiateAsk(fidl::InterfaceHandle<Listener> listener,
                        fidl::InterfaceRequest<AskController> controller) {
-  auto ask =
-      std::make_unique<AskChannel>(std::move(listener), std::move(controller));
+  auto ask = std::make_unique<AskChannel>(this, std::move(listener),
+                                          std::move(controller));
 
   // Bootstrap with existing next suggestions
   for (auto& suggestion : *next_channel_.ranked_suggestions()) {

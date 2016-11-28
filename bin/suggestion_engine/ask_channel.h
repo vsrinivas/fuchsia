@@ -12,6 +12,8 @@
 namespace maxwell {
 namespace suggestion {
 
+class Repo;
+
 // A suggestion channel for Ask (query-based) suggestions.
 //
 // Query-based suggestions are informed by a user-driven query in addition to
@@ -22,9 +24,11 @@ class AskChannel : public SuggestionChannel {
   // This constructor leaks |this| to the constructed dedicated subscriber, but
   // the subscriber constructor only makes use of non-virtual members of the
   // SuggestionChannel base class.
-  AskChannel(fidl::InterfaceHandle<Listener> listener,
+  AskChannel(Repo* repo,
+             fidl::InterfaceHandle<Listener> listener,
              fidl::InterfaceRequest<AskController> controller)
-      : subscriber_(this, std::move(listener), std::move(controller)) {}
+      : repo_(repo),
+        subscriber_(this, std::move(listener), std::move(controller)) {}
 
   RankedSuggestion* OnAddSuggestion(
       const SuggestionPrototype* prototype) override;
@@ -65,6 +69,7 @@ class AskChannel : public SuggestionChannel {
     return include_.empty() ? 0 : include_.back()->rank + 1;
   }
 
+  Repo* repo_;
   AskSubscriber subscriber_;
   std::string query_;
   RankedSuggestions include_;

@@ -43,7 +43,8 @@ void WindowedSubscriber::Invalidate() {
     window.push_back(CreateSuggestion(*(*ranked_suggestions_)[i]));
   }
 
-  listener_->OnAdd(std::move(window));
+  if (window)  // after OnRemoveAll, no point in adding if no window
+    listener_->OnAdd(std::move(window));
 }
 
 // A suggestion should be included if its sorted index (by rank) is less than

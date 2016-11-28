@@ -10,6 +10,7 @@
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
 #include "apps/maxwell/src/suggestion_engine/proposal_record.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 namespace maxwell {
 namespace suggestion {
@@ -38,6 +39,19 @@ class Repo {
   void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
                    fidl::InterfaceRequest<AskController> controller);
 
+  void AddAskHandler(fidl::InterfaceHandle<AskHandler> ask_handler) {
+    ask_handlers_.AddInterfacePtr(
+        AskHandlerPtr::Create(std::move(ask_handler)));
+  }
+
+  void DispatchAsk(UserInputPtr query) {
+    ask_handlers_.ForAllPtrs([&query](AskHandler* handler) {
+      handler->Ask(query.Clone(), [](fidl::Array<ProposalPtr> proposals) {
+        // TODO(rosswang)
+      });
+    });
+  }
+
   // Non-mutating indexer; returns NULL if no such suggestion exists.
   const ProposalRecord* operator[](const std::string& suggestion_id) const {
     auto it = suggestions_.find(suggestion_id);
@@ -57,6 +71,7 @@ class Repo {
   std::unordered_map<std::string, ProposalRecordPtr> suggestions_;
   NextChannel next_channel_;
   maxwell::BoundNonMovableSet<AskChannel> ask_channels_;
+  fidl::InterfacePtrSet<AskHandler> ask_handlers_;
 };
 
 }  // namespace suggestion
