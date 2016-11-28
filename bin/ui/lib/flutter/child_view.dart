@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:mozart.internal';
+import 'dart:ui' as ui;
 
 import 'package:apps.modular.lib.app.dart/app.dart';
 import 'package:apps.modular.services.application/application_controller.fidl.dart';
@@ -225,8 +226,10 @@ class _RenderChildView extends RenderBox {
   _RenderChildView({
     ChildViewConnection connection,
     double scale,
-  }) : _scale = scale {
+    bool hittable: true,
+  }) : _scale = scale, _hittable = hittable {
     assert(scale != null);
+    assert(hittable != null);
     this.connection = connection;
   }
 
@@ -265,6 +268,19 @@ class _RenderChildView extends RenderBox {
     if (_connection != null)
       markNeedsLayout();
   }
+
+  /// Whether this child should be included during hit testing.
+  bool get hittable => _hittable;
+  bool _hittable;
+  set hittable (bool value) {
+    assert(value != null);
+    if (value == _hittable)
+      return;
+    _hittable = value;
+    if (_connection != null)
+      markNeedsPaint();
+  }
+
 
   @override
   void attach(PipelineOwner owner) {
@@ -345,23 +361,86 @@ class _RenderChildView extends RenderBox {
   }
 }
 
+/// A layer that represents content from another process.
+class ChildSceneLayer extends Layer {
+  /// Creates a layer that displays content rendered by another process.
+  ///
+  /// All of the arguments must not be null.
+  ChildSceneLayer({
+    this.offset: Offset.zero,
+    this.devicePixelRatio: 1.0,
+    this.physicalWidth: 0,
+    this.physicalHeight: 0,
+    this.sceneToken: 0,
+    this.hittable: true,
+  });
+
+  /// Offset from parent in the parent's coordinate system.
+  Offset offset;
+
+  /// The number of physical pixels the child should produce for each logical pixel.
+  double devicePixelRatio;
+
+  /// The horizontal extent of the child, in physical pixels.
+  int physicalWidth;
+
+  /// The vertical extent of the child, in physical pixels.
+  int physicalHeight;
+
+  /// The composited scene that will contain the content rendered by the child.
+  int sceneToken;
+
+  /// Whether this child should be included during hit testing.
+  ///
+  /// Defaults to true.
+  bool hittable;
+
+  @override
+  void addToScene(ui.SceneBuilder builder, Offset layerOffset) {
+    builder.addChildScene(
+      offset: offset + layerOffset,
+      devicePixelRatio: devicePixelRatio,
+      physicalWidth: physicalWidth,
+      physicalHeight: physicalHeight,
+      sceneToken: sceneToken,
+      hittable: hittable,
+    );
+  }
+
+  @override
+  void debugFillDescription(List<String> description) {
+    super.debugFillDescription(description);
+    description.add('offset: $offset');
+    description.add('physicalWidth: $physicalWidth');
+    description.add('physicalHeight: $physicalHeight');
+    description.add('sceneToken: $sceneToken');
+  }
+}
+
+
 /// A widget that is replaced by content from another process.
 ///
 /// Requires a [MediaQuery] ancestor to provide appropriate media information to
 /// the child.
 class ChildView extends LeafRenderObjectWidget {
   /// Creates a widget that is replaced by content from another process.
-  ChildView({ ChildViewConnection connection })
+  ChildView({ ChildViewConnection connection, this.hittable: true })
     : connection = connection, super(key: new GlobalObjectKey(connection));
 
   /// A connection to the child whose content will replace this widget.
   final ChildViewConnection connection;
 
+  /// Whether this child should be included during hit testing.
+  ///
+  /// Defaults to true.
+  bool hittable;
+
   @override
   _RenderChildView createRenderObject(BuildContext context) {
     return new _RenderChildView(
       connection: connection,
-      scale: MediaQuery.of(context).devicePixelRatio
+      scale: MediaQuery.of(context).devicePixelRatio,
+      hittable: hittable,
     );
   }
 
@@ -369,6 +448,7 @@ class ChildView extends LeafRenderObjectWidget {
   void updateRenderObject(BuildContext context, _RenderChildView renderObject) {
     renderObject
       ..connection = connection
-      ..scale = MediaQuery.of(context).devicePixelRatio;
+      ..scale = MediaQuery.of(context).devicePixelRatio
+      ..hittable = hittable;
   }
 }
