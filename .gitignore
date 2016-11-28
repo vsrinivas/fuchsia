@@ -7,6 +7,8 @@
 /linux64/gn.stamp
 /linux64/go
 /linux64/go.stamp
+/linux64/godepfile
+/linux64/godepfile.stamp
 /linux64/loglistener
 /linux64/loglistener.stamp
 /linux64/mkbootfs
@@ -21,6 +23,8 @@
 /mac/gn.stamp
 /mac/go
 /mac/go.stamp
+/mac/godepfile
+/mac/godepfile.stamp
 /mac64/loglistener
 /mac64/loglistener.stamp
 /mac64/mkbootfs

@@ -97,12 +97,17 @@ function download_go() {
   download_tarball go "go/${HOST_PLATFORM}" "${SCRIPT_ROOT}/${HOST_PLATFORM}"
 }
 
+function download_godepfile() {
+  download_tool godepfile "${FUCHSIA_URL_BASE}/godepfile/${HOST_PLATFORM}"
+}
+
 function download_all() {
   download_ninja
   download_gn
   download_cmake
   download_toolchain
   download_go
+  download_godepfile
 }
 
 function echo_error() {
@@ -135,6 +140,11 @@ case ${i} in
     ;;
   --go)
     download_go
+    has_arguments="true"
+    shift
+    ;;
+  --godepfile)
+    download_godepfile
     has_arguments="true"
     shift
     ;;
