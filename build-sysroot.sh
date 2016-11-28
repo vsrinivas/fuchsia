@@ -31,7 +31,6 @@ readonly CMAKE_HOST_TOOLS="\
   -DCMAKE_STRIP=false"
 
 readonly CMAKE_SHARED_FLAGS="\
-  -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
   -DCMAKE_INSTALL_PREFIX='' \
   -DCMAKE_TOOLCHAIN_FILE=${ROOT_DIR}/third_party/llvm/cmake/platforms/Fuchsia.cmake \
@@ -45,26 +44,34 @@ usage() {
 }
 
 build() {
-  local target="$1" outdir="$2" destdir="$3" clean="$4"
+  local target="$1" outdir="$2" destdir="$3" clean="$4" release="$5"
   local sysroot="${destdir}/${target}-fuchsia"
   local magenta_buildroot="${outdir}/build-magenta"
 
   if [[ "${clean}" = "true" ]]; then
-    rm -rf -- "${outdir}/build-libunwind-${target}" "${outdir}/build-libcxxabi-${target}" "${outdir}/build-libcxx-${target}"
+    rm -rf -- "${magenta_buildroot}" "${outdir}/build-libunwind-${target}" "${outdir}/build-libcxxabi-${target}" "${outdir}/build-libcxx-${target}"
   fi
 
   case "${target}" in
-    x86_64) local magenta_target="magenta-pc-x86-64" ;;
-    aarch64) local magenta_target="magenta-qemu-arm64" ;;
-    *) echo "unknown target '${target}'" 1>&2 && exit 1;;
+    "x86_64") local magenta_target="magenta-pc-x86-64" ;;
+    "aarch64") local magenta_target="magenta-qemu-arm64" ;;
+    "*") echo "unknown target '${target}'" 1>&2 && exit 1;;
   esac
+
+  if [[ "${release}" = "true" ]]; then
+    local cmake_build_type_flags="${CMAKE_SHARED_FLAGS:-} -DCMAKE_BUILD_TYPE=Release"
+    local magenta_build_type_flags="DEBUG=0"
+  else
+    local cmake_build_type_flags="${CMAKE_SHARED_FLAGS:-} -DCMAKE_BUILD_TYPE=Debug"
+    local magenta_build_type_flags=""
+  fi
 
   rm -rf -- "${sysroot}" && mkdir -p -- "${sysroot}"
 
   pushd "${ROOT_DIR}/magenta"
   rm -rf -- "${magenta_buildroot}/build-${magenta_target}/sysroot"
   # build the sysroot for the target architecture
-  make -j ${JOBS} BUILDROOT=${magenta_buildroot} ${magenta_target}
+  make -j ${JOBS} ${magenta_build_type_flags:-} BUILDROOT=${magenta_buildroot} ${magenta_target}
   # build host tools
   make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
   popd
@@ -79,6 +86,7 @@ build() {
   [[ -f "${outdir}/build-libunwind-${target}/build.ninja" ]] || CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/runtimes/libcxx/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
+    ${cmake_build_type_flags:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
     -DCMAKE_SHARED_LINKER_FLAGS="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-${target}.a" \
     -DLIBUNWIND_ENABLE_SHARED=ON \
@@ -94,6 +102,7 @@ build() {
   [[ -f "${outdir}/build-libcxxabi-${target}/build.ninja" ]] || ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
+    ${cmake_build_type_flags:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
     -DCMAKE_SHARED_LINKER_FLAGS="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-${target}.a" \
     -DLIBCXXABI_TARGET_TRIPLE="${target}-fuchsia" \
@@ -111,6 +120,7 @@ build() {
   [[ -f "${outdir}/build-libcxx-${target}/build.ninja" ]] || ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
+    ${cmake_build_type_flags:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
     -DCMAKE_SHARED_LINKER_FLAGS="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-${target}.a" \
     -DLIBCXX_CXX_ABI=libcxxabi \
@@ -133,17 +143,19 @@ declare CLEAN="${CLEAN:-false}"
 declare TARGET="${TARGET:-x86_64}"
 declare OUTDIR="${OUTDIR:-${ROOT_DIR}/out}"
 declare DESTDIR="${DESTDIR:-${OUTDIR}/sysroot}"
+declare RELEASE="${RELEASE:-false}"
 
-while getopts "cd:t:o:" opt; do
+while getopts "cd:t:o:r" opt; do
   case "${opt}" in
     c) CLEAN="true" ;;
     d) DESTDIR="${OPTARG}" ;;
     o) OUTDIR="${OPTARG}" ;;
+    r) RELEASE="true" ;;
     t) TARGET="${OPTARG}" ;;
     *) usage;;
   esac
 done
 
-readonly CLEAN TARGET OUTDIR DESTDIR
+readonly CLEAN TARGET OUTDIR DESTDIR RELEASE
 
-build "${TARGET}" "${OUTDIR}" "${DESTDIR}" "${CLEAN}"
+build "${TARGET}" "${OUTDIR}" "${DESTDIR}" "${CLEAN}" "${RELEASE}"
