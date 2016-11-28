@@ -21,6 +21,8 @@ executable("user_runner") {
     "transaction.cc",
     "transaction.h",
     "user_runner.cc",
+    "user_ledger_repository_factory.h",
+    "user_ledger_repository_factory.cc",
   ]
 
   deps = [

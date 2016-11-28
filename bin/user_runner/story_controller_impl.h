@@ -16,6 +16,7 @@
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
+#include "apps/modular/src/user_runner/user_ledger_repository_factory.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -33,10 +34,12 @@ class StoryControllerImpl : public StoryController,
       StoryDataPtr story_data,
       StoryProviderImpl* story_provider_impl,
       ApplicationLauncherPtr launcher,
-      fidl::InterfaceRequest<StoryController> story_controller_request) {
+      fidl::InterfaceRequest<StoryController> story_controller_request,
+      UserLedgerRepositoryFactory* ledger_repo_factory) {
     return new StoryControllerImpl(std::move(story_data), story_provider_impl,
                                    std::move(launcher),
-                                   std::move(story_controller_request));
+                                   std::move(story_controller_request),
+                                   ledger_repo_factory);
   }
 
   ~StoryControllerImpl() override = default;
@@ -48,7 +51,8 @@ class StoryControllerImpl : public StoryController,
       StoryDataPtr story_data,
       StoryProviderImpl* story_provider_impl,
       ApplicationLauncherPtr launcher,
-      fidl::InterfaceRequest<StoryController> story_controller_request);
+      fidl::InterfaceRequest<StoryController> story_controller_request,
+      UserLedgerRepositoryFactory* user_ledger_repository);
 
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
@@ -92,6 +96,8 @@ class StoryControllerImpl : public StoryController,
   StoryContextPtr story_context_;
   LinkPtr root_;
   ModuleControllerPtr module_;
+
+  UserLedgerRepositoryFactory* ledger_repository_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };

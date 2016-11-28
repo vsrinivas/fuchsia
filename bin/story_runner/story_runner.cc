@@ -9,6 +9,7 @@
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -36,9 +37,12 @@ class StoryRunnerApp : public StoryRunner {
   void CreateStory(
       fidl::InterfaceHandle<Resolver> resolver,
       fidl::InterfaceHandle<StoryStorage> story_storage,
-      fidl::InterfaceRequest<StoryContext> story_context_request) override {
+      fidl::InterfaceRequest<StoryContext> story_context_request,
+      fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repo)
+        override {
     new StoryImpl(application_context_, std::move(resolver),
-                  std::move(story_storage), std::move(story_context_request));
+                  std::move(story_storage), std::move(story_context_request),
+                  std::move(user_ledger_repo));
   }
 
   fidl::BindingSet<StoryRunner> bindings_;

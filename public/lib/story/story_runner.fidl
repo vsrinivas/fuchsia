@@ -7,6 +7,7 @@ module modular;
 import "apps/modular/services/story/resolver.fidl";
 import "apps/modular/services/story/story.fidl";
 import "apps/modular/services/story/story_storage.fidl";
+import "apps/ledger/services/ledger.fidl";
 
 // A service to create Story instances configured with services they
 // need. To the client of this service, the story is exposed through
@@ -18,7 +19,8 @@ import "apps/modular/services/story/story_storage.fidl";
 [ServiceName="modular.StoryRunner"]  // Created by story_runner app.
 interface StoryRunner {
   CreateStory(Resolver resolver, StoryStorage story_storage,
-              StoryContext& story_context);
+              StoryContext& story_context,
+              ledger.LedgerRepository user_repository);
 };
 
 // This interface is exposed to clients of the StoryRunner. It allows

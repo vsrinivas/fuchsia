@@ -14,8 +14,9 @@ fidl("story") {
   ]
 
   deps = [
-    "//apps/modular/services/document_store",
+    "//apps/ledger/services",
     "//apps/modular/services/application:service_provider",
+    "//apps/modular/services/document_store",
     "//apps/mozart/services/views",
   ]
 }
@@ -35,6 +36,7 @@ fidl("private") {
   deps = [
     "//apps/modular/services/document_store",
     "//apps/mozart/services/views",
+    "//apps/ledger/services",
   ]
 
   visibility = [

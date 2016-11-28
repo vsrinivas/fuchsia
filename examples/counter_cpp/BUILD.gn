@@ -60,7 +60,9 @@ executable("example_recipe") {
   ]
 
   deps = [
+    "//apps/ledger/services",
     "//apps/modular/lib/document_editor",
+    "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/document_store",
     "//apps/modular/services/story",

@@ -5,7 +5,9 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the story.
 
+#include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/lib/document_editor/document_editor.h"
+#include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
@@ -30,6 +32,9 @@
 
 namespace {
 
+using modular::to_array;
+using modular::to_string;
+
 constexpr uint32_t kViewResourceIdBase = 100;
 constexpr uint32_t kViewResourceIdSpacing = 100;
 
@@ -49,6 +54,8 @@ constexpr char kIsALabel[] = "isA";
 
 // Predefined Values
 constexpr char kIsAValue[] = "http://schema.domokit.org/PingPongPacket";
+
+constexpr char kLedgerCounterKey[] = "counter_key";
 
 using document_store::Document;
 using document_store::DocumentPtr;
@@ -383,6 +390,57 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         module1_link_->SetAllDocuments(std::move(docs));
       }
     });
+
+    // This snippet of code demonstrates using the module's Ledger. Each time
+    // this module is initialized, it updates a counter in the root page.
+    // 1. Get the module's ledger.
+    story_->GetLedger(GetProxy(&module_ledger_),
+        [this](ledger::Status status) {
+      FTL_CHECK(status == ledger::Status::OK);
+      // 2. Get the root page of the ledger.
+      module_ledger_->GetRootPage(
+          GetProxy(&module_root_page_),
+          [this](ledger::Status status) {
+        FTL_CHECK(status == ledger::Status::OK);
+        // 3. Get a snapshot of the root page.
+        module_root_page_->GetSnapshot(GetProxy(&page_snapshot_),
+            [this](ledger::Status status) mutable {
+          FTL_CHECK(status == ledger::Status::OK);
+          // 4. Read the counter from the root page.
+          page_snapshot_->Get(to_array(kLedgerCounterKey),
+              [this](ledger::Status status, ledger::ValuePtr value) {
+            // 5. If counter doesn't exist, initialize. Otherwise, increment.
+            if (status == ledger::Status::KEY_NOT_FOUND) {
+              FTL_LOG(INFO) << "No counter in root page. Initializing to 1.";
+              fidl::Array<uint8_t> data;
+              data.push_back(1);
+              module_root_page_->Put(
+                to_array(kLedgerCounterKey),
+                std::move(data),
+                [](ledger::Status status) {
+                  FTL_CHECK(status == ledger::Status::OK);
+                });
+            } else {
+              FTL_CHECK(status == ledger::Status::OK);
+              FTL_CHECK(value->is_bytes());
+              fidl::Array<uint8_t> counter_data
+                  = value->get_bytes().Clone();
+              FTL_LOG(INFO)
+                  << "Retrieved counter from root page: "
+                  << static_cast<uint32_t>(counter_data[0])
+                  << ". Incrementing.";
+              counter_data[0]++;
+              module_root_page_->Put(
+                to_array(kLedgerCounterKey),
+                std::move(counter_data),
+                [](ledger::Status status) {
+                  FTL_CHECK(status == ledger::Status::OK);
+                });
+            }
+          });
+        });
+      });
+    });
   }
 
   // |Module|
@@ -401,6 +459,12 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
   modular::LinkPtr link_;
   modular::StoryPtr story_;
+
+  // The following ledger interfaces are stored here to make life-time
+  // management easier when chaining together lambda callbacks.
+  ledger::LedgerPtr module_ledger_;
+  ledger::PagePtr module_root_page_;
+  ledger::PageSnapshotPtr page_snapshot_;
 
   modular::ModuleControllerPtr module1_;
   modular::LinkPtr module1_link_;

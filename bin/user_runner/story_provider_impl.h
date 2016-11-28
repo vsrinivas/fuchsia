@@ -16,6 +16,7 @@
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/transaction.h"
+#include "apps/modular/src/user_runner/user_ledger_repository_factory.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -32,7 +33,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   StoryProviderImpl(
       ApplicationEnvironmentPtr environment,
       fidl::InterfaceHandle<ledger::Ledger> ledger,
-      fidl::InterfaceRequest<StoryProvider> story_provider_request);
+      fidl::InterfaceRequest<StoryProvider> story_provider_request,
+      UserLedgerRepositoryFactory* ledger_repo_factory);
 
   ~StoryProviderImpl() override = default;
 
@@ -98,6 +100,9 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
+
+  // Owned by UserRunner.
+  UserLedgerRepositoryFactory* ledger_repo_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

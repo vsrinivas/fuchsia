@@ -4,6 +4,7 @@
 
 module modular;
 
+import "apps/ledger/services/ledger.fidl";
 import "apps/modular/services/application/service_provider.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/story/module_controller.fidl";
@@ -44,6 +45,12 @@ interface Story {
               ServiceProvider&? incoming_services,
               ModuleController& module_controller,
               mozart.ViewOwner& view_owner);
+
+  // Gets the Ledger associated with this module. This ledger instance is unique
+  // to this module under this user, regardless of which story is run. If
+  // GetLedger() is called by a non-module (i.e., via StoryContext.GetStory()),
+  // the request is closed and a ledger.UNKNOWN_ERROR status is returned.
+  GetLedger(ledger.Ledger& module_ledger) => (ledger.Status status);
 
   // The module holding this handle to the Story declares it's done
   // and wants to be torn down. The story implementation notifies all
