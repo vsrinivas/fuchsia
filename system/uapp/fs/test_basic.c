@@ -27,6 +27,9 @@ int test_basic(void) {
     TRY(unlink("::file.txt"));
     TRY(mkdir("::emptydir", 0755));
     fd1 = TRY(open("::emptydir", O_RDWR, 0644));
+    EXPECT_FAIL(read(fd1, NULL, 0));
+    EXPECT_FAIL(write(fd1, "Don't write to directories", 26));
+    EXPECT_FAIL(ftruncate(fd1, 0));
     EXPECT_FAIL(unlink("::emptydir"));
     close(fd1);
     TRY(unlink("::emptydir"));
