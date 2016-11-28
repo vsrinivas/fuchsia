@@ -12,6 +12,7 @@
 #include "apps/mozart/services/composition/nodes.fidl.h"
 #include "apps/mozart/src/compositor/graph/paint_context.h"
 #include "apps/mozart/src/compositor/graph/snapshot.h"
+#include "apps/tracing/lib/trace/dump.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 
@@ -59,6 +60,9 @@ class Node : public ftl::RefCountedThreadSafe<Node> {
   // Gets a descriptive label.
   std::string FormattedLabel(const SceneContent* content) const;
 
+  // Dumps a description of the resource.
+  virtual void Dump(tracing::Dump* dump) const;
+
   // Called by the scene content builder to traverse the node's dependencies
   // recursively and ensure they are included in the scene's local content.
   // Returns true if successful, false if the node contains linkage errors.
@@ -91,6 +95,8 @@ class Node : public ftl::RefCountedThreadSafe<Node> {
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(Node);
   virtual ~Node();
+
+  void DumpCommon(tracing::Dump* dump) const;
 
   // Applies a unary function to the children selected by the node's
   // combinator rule during a snapshot.
@@ -145,6 +151,8 @@ class RectNode : public Node {
   const mozart::RectF& content_rect() const { return content_rect_; }
   const mozart::Color& color() const { return color_; }
 
+  void Dump(tracing::Dump* dump) const override;
+
  protected:
   ~RectNode() override;
 
@@ -180,6 +188,7 @@ class ImageNode : public Node {
   uint32_t image_resource_id() const { return image_resource_id_; }
   const mozart::Blend* blend() const { return blend_.get(); }
 
+  void Dump(tracing::Dump* dump) const override;
   bool RecordContent(SceneContentBuilder* builder) const override;
 
  protected:
@@ -215,8 +224,8 @@ class SceneNode : public Node {
   uint32_t scene_resource_id() const { return scene_resource_id_; }
   uint32_t scene_version() const { return scene_version_; }
 
+  void Dump(tracing::Dump* dump) const override;
   bool RecordContent(SceneContentBuilder* builder) const override;
-
   Snapshot::Disposition RecordSnapshot(const SceneContent* content,
                                        SnapshotBuilder* builder) const override;
 
@@ -256,6 +265,8 @@ class LayerNode : public Node {
 
   const mozart::RectF& layer_rect() const { return layer_rect_; }
   const mozart::Blend* blend() const { return blend_.get(); }
+
+  void Dump(tracing::Dump* dump) const override;
 
  protected:
   ~LayerNode() override;

@@ -4,6 +4,7 @@
 
 #include "apps/mozart/src/compositor/graph/resources.h"
 
+#include "apps/mozart/services/composition/cpp/formatting.h"
 #include "lib/ftl/logging.h"
 
 namespace compositor {
@@ -21,6 +22,10 @@ Resource::Type SceneResource::type() const {
   return Type::kScene;
 }
 
+void SceneResource::Dump(tracing::Dump* dump) const {
+  dump->out() << "SceneResource {scene_token=" << scene_token_ << "}";
+}
+
 ImageResource::ImageResource(ftl::RefPtr<RenderImage> image)
     : image_(std::move(image)) {
   FTL_DCHECK(image_);
@@ -30,6 +35,11 @@ ImageResource::~ImageResource() {}
 
 Resource::Type ImageResource::type() const {
   return Type::kImage;
+}
+
+void ImageResource::Dump(tracing::Dump* dump) const {
+  dump->out() << "ImageResource {width=" << image_->width()
+              << ", height=" << image_->height() << "}";
 }
 
 }  // namespace compositor

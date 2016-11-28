@@ -17,6 +17,9 @@ CompositorApp::CompositorApp()
   FTL_DCHECK(application_context_);
 
   tracing::InitializeTracer(application_context_.get(), {"compositor"});
+  tracing::SetDumpCallback([this](std::unique_ptr<tracing::Dump> dump) {
+    engine_->Dump(std::move(dump));
+  });
 
   application_context_->outgoing_services()->AddService<mozart::Compositor>(
       [this](fidl::InterfaceRequest<mozart::Compositor> request) {
@@ -26,6 +29,8 @@ CompositorApp::CompositorApp()
       });
 }
 
-CompositorApp::~CompositorApp() {}
+CompositorApp::~CompositorApp() {
+  tracing::SetDumpCallback(tracing::DumpCallback());
+}
 
 }  // namespace compositor

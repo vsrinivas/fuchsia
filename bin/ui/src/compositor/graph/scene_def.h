@@ -17,6 +17,7 @@
 #include "apps/mozart/src/compositor/graph/resources.h"
 #include "apps/mozart/src/compositor/graph/scene_content.h"
 #include "apps/mozart/src/compositor/graph/scene_label.h"
+#include "apps/tracing/lib/trace/dump.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 
@@ -52,6 +53,9 @@ class SceneDef {
   // Gets the scene label.
   const SceneLabel& label() const { return label_; }
   std::string FormattedLabel() const { return label_.FormattedLabel(); }
+
+  // Dump scene content.
+  void Dump(tracing::Dump* dump, const std::string& prefix);
 
   // Enqueues a pending update event to the scene graph.
   void EnqueueUpdate(mozart::SceneUpdatePtr update);

@@ -37,6 +37,29 @@ CompositorEngine::CompositorEngine()
 
 CompositorEngine::~CompositorEngine() {}
 
+void CompositorEngine::Dump(std::unique_ptr<tracing::Dump> dump) {
+  FTL_DCHECK(dump);
+
+  dump->out() << "Compositor dump..." << std::endl;
+
+  dump->out() << std::endl << "RENDERERS" << std::endl;
+  for (RendererState* renderer : renderers_) {
+    dump->out() << "  " << renderer->FormattedLabel() << std::endl;
+    dump->out() << "    root_scene=" << renderer->root_scene() << std::endl;
+    dump->out() << "    root_scene_version=" << renderer->root_scene_version()
+                << std::endl;
+    dump->out() << "    root_scene_viewport=" << renderer->root_scene_viewport()
+                << std::endl;
+  }
+
+  dump->out() << std::endl << "SCENES" << std::endl;
+  for (auto item : scenes_by_token_) {
+    SceneDef* scene_def = item.second->scene_def();
+    dump->out() << "  " << scene_def->FormattedLabel() << std::endl;
+    scene_def->Dump(dump.get(), "    ");
+  }
+}
+
 mozart::SceneTokenPtr CompositorEngine::CreateScene(
     fidl::InterfaceRequest<mozart::Scene> scene_request,
     const fidl::String& label) {
@@ -395,7 +418,7 @@ void CompositorEngine::ComposeRenderer(RendererState* renderer_state,
   FTL_VLOG(2) << "ComposeRenderer: renderer_state=" << renderer_state;
 
   TRACE_DURATION1("gfx", "CompositorEngine::ComposeRenderer", "renderer",
-               renderer_state->FormattedLabel());
+                  renderer_state->FormattedLabel());
 
   ftl::TimePoint composition_time = ftl::TimePoint();
   PresentRenderer(renderer_state, frame_info.presentation_time);
@@ -409,7 +432,7 @@ void CompositorEngine::PresentRenderer(RendererState* renderer_state,
   FTL_VLOG(2) << "PresentRenderer: renderer_state=" << renderer_state;
 
   TRACE_DURATION1("gfx", "CompositorEngine::PresentRenderer", "renderer",
-               renderer_state->FormattedLabel());
+                  renderer_state->FormattedLabel());
 
   // TODO(jeffbrown): Be more selective and do this work only for scenes
   // associated with the renderer that actually have pending updates.
@@ -430,7 +453,7 @@ void CompositorEngine::SnapshotRenderer(RendererState* renderer_state) {
   FTL_VLOG(2) << "SnapshotRenderer: renderer_state=" << renderer_state;
 
   TRACE_DURATION1("gfx", "CompositorEngine::SnapshotRenderer", "renderer",
-               renderer_state->FormattedLabel());
+                  renderer_state->FormattedLabel());
 
   if (FTL_VLOG_IS_ON(2)) {
     std::ostringstream block_log;
@@ -471,7 +494,7 @@ void CompositorEngine::PaintRenderer(RendererState* renderer_state,
   FTL_VLOG(2) << "PaintRenderer: renderer_state=" << renderer_state;
 
   TRACE_DURATION1("gfx", "CompositorEngine::PaintRenderer", "renderer",
-               renderer_state->FormattedLabel());
+                  renderer_state->FormattedLabel());
 
   RenderFrame::Metadata frame_metadata(frame_info, composition_time);
 

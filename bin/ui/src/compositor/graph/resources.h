@@ -7,6 +7,7 @@
 
 #include "apps/mozart/services/composition/resources.fidl.h"
 #include "apps/mozart/src/compositor/render/render_image.h"
+#include "apps/tracing/lib/trace/dump.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
 #include "lib/mtl/vmo/shared_vmo.h"
@@ -26,6 +27,9 @@ class Resource : public ftl::RefCountedThreadSafe<Resource> {
   // Gets the resource type.
   virtual Type type() const = 0;
 
+  // Dumps a description of the resource.
+  virtual void Dump(tracing::Dump* dump) const = 0;
+
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(Resource);
   virtual ~Resource();
@@ -40,6 +44,7 @@ class SceneResource : public Resource {
   explicit SceneResource(const mozart::SceneToken& scene_token);
 
   Type type() const override;
+  void Dump(tracing::Dump* dump) const override;
 
   const mozart::SceneToken& scene_token() const { return scene_token_; }
 
@@ -58,6 +63,7 @@ class ImageResource : public Resource {
   explicit ImageResource(ftl::RefPtr<RenderImage> image);
 
   Type type() const override;
+  void Dump(tracing::Dump* dump) const override;
 
   // The referenced image, never null.
   const ftl::RefPtr<RenderImage>& image() const { return image_; }

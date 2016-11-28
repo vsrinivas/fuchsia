@@ -23,6 +23,22 @@ SceneDef::SceneDef(const SceneLabel& label) : label_(label) {}
 
 SceneDef::~SceneDef() {}
 
+void SceneDef::Dump(tracing::Dump* dump, const std::string& prefix) {
+  dump->out() << prefix << "resources:" << std::endl;
+  for (const auto pair : resources_) {
+    dump->out() << prefix << "  " << pair.first << ": ";
+    pair.second->Dump(dump);
+    dump->out() << std::endl;
+  }
+
+  dump->out() << prefix << "nodes:" << std::endl;
+  for (const auto pair : nodes_) {
+    dump->out() << prefix << "  " << pair.first << ": ";
+    pair.second->Dump(dump);
+    dump->out() << std::endl;
+  }
+}
+
 void SceneDef::EnqueueUpdate(mozart::SceneUpdatePtr update) {
   FTL_DCHECK(update);
   pending_updates_.push_back(std::move(update));

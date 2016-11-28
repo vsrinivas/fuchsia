@@ -14,6 +14,7 @@
 #include "apps/mozart/src/compositor/renderer_state.h"
 #include "apps/mozart/src/compositor/scene_state.h"
 #include "apps/mozart/src/compositor/scheduler.h"
+#include "apps/tracing/lib/trace/dump.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/tasks/task_runner.h"
@@ -31,6 +32,9 @@ class CompositorEngine {
 
   // Callback for receiving display information.
   using DisplayCallback = std::function<void(mozart::DisplayInfoPtr)>;
+
+  // Dump compositor state.
+  void Dump(std::unique_ptr<tracing::Dump> dump);
 
   // COMPOSITOR REQUESTS
 

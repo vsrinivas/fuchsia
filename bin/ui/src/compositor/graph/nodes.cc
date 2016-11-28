@@ -58,6 +58,27 @@ std::string Node::FormattedLabel(const SceneContent* content) const {
   return content->FormattedLabelForNode(node_id_);
 }
 
+void Node::Dump(tracing::Dump* dump) const {
+  dump->out() << "Node {";
+  DumpCommon(dump);
+  dump->out() << "}";
+}
+
+void Node::DumpCommon(tracing::Dump* dump) const {
+  dump->out() << "content_transform=";
+  if (content_transform_) {
+    dump->out() << fidl::ConvertTo<mozart::TransformPtr>(
+        content_transform_->forward());
+  } else {
+    dump->out() << "null";
+  }
+
+  dump->out() << ", content_clip=" << content_clip_
+              << ", hit_test_behavior=" << hit_test_behavior_
+              << ", combinator=" << &combinator_ << ", child_node_ids="
+              << fidl::ConvertTo<fidl::Array<uint32_t>>(child_node_ids_);
+}
+
 bool Node::RecordContent(SceneContentBuilder* builder) const {
   FTL_DCHECK(builder);
 
@@ -338,6 +359,12 @@ RectNode::RectNode(uint32_t node_id,
 
 RectNode::~RectNode() {}
 
+void RectNode::Dump(tracing::Dump* dump) const {
+  dump->out() << "RectNode {";
+  DumpCommon(dump);
+  dump->out() << ", color=" << color_ << "}";
+}
+
 void RectNode::PaintInner(const SceneContent* content,
                           const Snapshot* snapshot,
                           PaintContext* context) const {
@@ -374,6 +401,15 @@ ImageNode::ImageNode(uint32_t node_id,
       blend_(std::move(blend)) {}
 
 ImageNode::~ImageNode() {}
+
+void ImageNode::Dump(tracing::Dump* dump) const {
+  dump->out() << "ImageNode {";
+  DumpCommon(dump);
+  dump->out() << ", content_rect=" << content_rect_
+              << ", image_rect=" << image_rect_
+              << ", image_resource_id=" << image_resource_id_
+              << ", blend=" << blend_ << "}";
+}
 
 bool ImageNode::RecordContent(SceneContentBuilder* builder) const {
   FTL_DCHECK(builder);
@@ -426,6 +462,13 @@ SceneNode::SceneNode(uint32_t node_id,
       scene_version_(scene_version) {}
 
 SceneNode::~SceneNode() {}
+
+void SceneNode::Dump(tracing::Dump* dump) const {
+  dump->out() << "SceneNode {";
+  DumpCommon(dump);
+  dump->out() << ", scene_resource_id=" << scene_resource_id_
+              << ", scene_version=" << scene_version_ << "}";
+}
 
 bool SceneNode::RecordContent(SceneContentBuilder* builder) const {
   FTL_DCHECK(builder);
@@ -509,6 +552,12 @@ LayerNode::LayerNode(uint32_t node_id,
       blend_(std::move(blend)) {}
 
 LayerNode::~LayerNode() {}
+
+void LayerNode::Dump(tracing::Dump* dump) const {
+  dump->out() << "LayerNode {";
+  DumpCommon(dump);
+  dump->out() << ", layer_rect=" << layer_rect_ << ", blend=" << blend_ << "}";
+}
 
 void LayerNode::PaintInner(const SceneContent* content,
                            const Snapshot* snapshot,
