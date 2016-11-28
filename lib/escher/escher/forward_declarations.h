@@ -28,6 +28,7 @@ class Semaphore;
 class Shape;
 class Stage;
 class Texture;
+class TimestampProfiler;
 struct VulkanContext;
 struct VulkanSwapchain;
 
@@ -41,6 +42,7 @@ typedef ftl::RefPtr<PaperRenderer> PaperRendererPtr;
 typedef ftl::RefPtr<Renderer> RendererPtr;
 typedef ftl::RefPtr<Semaphore> SemaphorePtr;
 typedef ftl::RefPtr<Texture> TexturePtr;
+typedef ftl::RefPtr<TimestampProfiler> TimestampProfilerPtr;
 
 namespace impl {
 class CommandBuffer;

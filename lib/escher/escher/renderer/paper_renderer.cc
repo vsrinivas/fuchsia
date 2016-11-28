@@ -73,10 +73,11 @@ void PaperRenderer::DrawSsdoPasses(const TexturePtr& depth_in,
   auto command_buffer = current_frame();
 
   // Prepare to sample from the depth buffer.
-  command_buffer->AddUsedResource(depth_in);
   command_buffer->TransitionImageLayout(
       depth_in->image(), vk::ImageLayout::eDepthStencilAttachmentOptimal,
       vk::ImageLayout::eShaderReadOnlyOptimal);
+
+  AddTimestamp("finished layout transition before SSDO sampling");
 
   auto fb_out = ftl::MakeRefCounted<Framebuffer>(
       escher_, width, height, std::vector<ImagePtr>{color_out},
@@ -92,11 +93,15 @@ void PaperRenderer::DrawSsdoPasses(const TexturePtr& depth_in,
   impl::SsdoSampler::SamplerConfig sampler_config(stage);
   ssdo_->Sample(command_buffer, fb_out, depth_in, &sampler_config);
 
+  AddTimestamp("finished SSDO sampling");
+
   // Now that we have finished sampling the depth buffer, transition it for
   // reuse as a depth buffer in the lighting pass.
   command_buffer->TransitionImageLayout(
       depth_in->image(), vk::ImageLayout::eShaderReadOnlyOptimal,
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
+
+  AddTimestamp("finished layout transition before SSDO filtering");
 
   // Do two filter passes, one horizontal and one vertical.
   constexpr bool kSkipFiltering = false;
@@ -114,6 +119,8 @@ void PaperRenderer::DrawSsdoPasses(const TexturePtr& depth_in,
       command_buffer->TransitionImageLayout(
           color_out, vk::ImageLayout::eShaderReadOnlyOptimal,
           vk::ImageLayout::eColorAttachmentOptimal);
+
+      AddTimestamp("finished SSDO filter pass 1");
     }
     {
       auto color_aux_tex = ftl::MakeRefCounted<Texture>(
@@ -128,6 +135,8 @@ void PaperRenderer::DrawSsdoPasses(const TexturePtr& depth_in,
       command_buffer->TransitionImageLayout(
           color_aux, vk::ImageLayout::eShaderReadOnlyOptimal,
           vk::ImageLayout::eColorAttachmentOptimal);
+
+      AddTimestamp("finished SSDO filter pass 2");
     }
   }
 }
@@ -196,6 +205,8 @@ void PaperRenderer::DrawDebugOverlays(const ImagePtr& output,
         depth->get(), vk::ImageLayout::eShaderReadOnlyOptimal, output->get(),
         vk::ImageLayout::eColorAttachmentOptimal, 1, &blit,
         vk::Filter::eLinear);
+
+    AddTimestamp("finished blitting debug overlay");
   }
 }
 
@@ -211,6 +222,9 @@ void PaperRenderer::DrawFrame(Stage& stage,
   uint32_t height = color_image_out->height();
 
   BeginFrame();
+
+  // How much overlap between the previous frame and this one?
+  AddTimestamp("previous frame completely finished");
 
   ImagePtr depth_image = image_cache_->NewDepthImage(
       depth_format_, width, height,
@@ -229,6 +243,8 @@ void PaperRenderer::DrawFrame(Stage& stage,
 
     DrawDepthPrePass(prepass_fb, stage, model);
     SubmitPartialFrame();
+
+    AddTimestamp("finished depth pre-pass");
   }
 
   // Compute the illumination and store the result in a texture.
@@ -259,7 +275,6 @@ void PaperRenderer::DrawFrame(Stage& stage,
     current_frame()->AddUsedResource(depth_texture);
 
     DrawSsdoPasses(depth_texture, illum1, illum2, stage);
-
     SubmitPartialFrame();
 
     illumination_texture = ftl::MakeRefCounted<Texture>(illum1, context_.device,
@@ -299,6 +314,8 @@ void PaperRenderer::DrawFrame(Stage& stage,
 
     DrawLightingPass(multisample_fb, illumination_texture, stage, model);
 
+    AddTimestamp("finished lighting pass");
+
     // TODO: do this during lighting sub-pass by adding a resolve attachment.
     vk::ImageResolve resolve;
     vk::ImageSubresourceLayers layers;
@@ -317,6 +334,8 @@ void PaperRenderer::DrawFrame(Stage& stage,
         vk::ImageLayout::eColorAttachmentOptimal, resolve);
   }
 
+  AddTimestamp("finished multisample resolve");
+
   DrawDebugOverlays(color_image_out, depth_image,
                     illumination_texture->image());
 
@@ -329,6 +348,8 @@ void PaperRenderer::DrawFrame(Stage& stage,
   current_frame()->TransitionImageLayout(
       color_image_out, vk::ImageLayout::eColorAttachmentOptimal,
       vk::ImageLayout::ePresentSrcKHR);
+
+  AddTimestamp("finished transition to presentation layout");
 
   EndFrame(frame_done, frame_retired_callback);
 }

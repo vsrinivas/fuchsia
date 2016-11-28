@@ -26,6 +26,8 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
 
   const VulkanContext& vulkan_context() { return context_; }
 
+  void set_enable_profiling(bool enabled) { enable_profiling_ = enabled; }
+
  protected:
   explicit Renderer(impl::EscherImpl* escher);
   virtual ~Renderer();
@@ -35,6 +37,10 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
   void SubmitPartialFrame();
   void EndFrame(const SemaphorePtr& frame_done,
                 FrameRetiredCallback frame_retired_callback);
+
+  // If profiling is enabled, then when the current frame is completed, all
+  // timestamps from this frame will be printed out.
+  void AddTimestamp(const char* name);
 
   impl::CommandBuffer* current_frame() { return current_frame_; }
 
@@ -46,6 +52,10 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
   impl::CommandBuffer* current_frame_ = nullptr;
 
   uint64_t frame_number_ = 0;
+
+  bool enable_profiling_ = false;
+  // Created in BeginFrame() when profiling is enabled.
+  TimestampProfilerPtr profiler_;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Renderer);
   FTL_DISALLOW_COPY_AND_ASSIGN(Renderer);

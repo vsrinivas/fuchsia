@@ -36,6 +36,7 @@ static constexpr float kFar = 0.f;
 bool g_show_debug_info = false;
 bool g_enable_lighting = true;
 int g_current_scene = 0;
+bool g_profile_one_frame = false;
 
 std::unique_ptr<Demo> CreateDemo(bool use_fullscreen) {
   Demo::WindowParams window_params;
@@ -72,6 +73,7 @@ int main(int argc, char** argv) {
   demo->SetKeyCallback("SPACE",
                        [&]() { g_enable_lighting = !g_enable_lighting; });
   demo->SetKeyCallback("D", [&]() { g_show_debug_info = !g_show_debug_info; });
+  demo->SetKeyCallback("P", [&]() { g_profile_one_frame = true; });
   demo->SetKeyCallback("1", [&]() { g_current_scene = 1; });
   demo->SetKeyCallback("2", [&]() { g_current_scene = 2; });
   demo->SetKeyCallback("3", [&]() { g_current_scene = 3; });
@@ -155,6 +157,8 @@ int main(int argc, char** argv) {
 
       renderer->set_show_debug_info(g_show_debug_info);
       renderer->set_enable_lighting(g_enable_lighting);
+      renderer->set_enable_profiling(g_profile_one_frame);
+      g_profile_one_frame = false;
 
       swapchain_helper.DrawFrame(stage, *model);
 

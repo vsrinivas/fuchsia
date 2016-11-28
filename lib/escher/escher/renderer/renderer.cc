@@ -7,6 +7,7 @@
 #include "escher/impl/command_buffer_pool.h"
 #include "escher/impl/escher_impl.h"
 #include "escher/impl/vulkan_utils.h"
+#include "escher/profiling/timestamp_profiler.h"
 #include "escher/renderer/framebuffer.h"
 #include "escher/renderer/image.h"
 
@@ -28,6 +29,14 @@ void Renderer::BeginFrame() {
   FTL_DCHECK(!current_frame_);
   ++frame_number_;
   current_frame_ = pool_->GetCommandBuffer();
+
+  FTL_DCHECK(!profiler_);
+  if (enable_profiling_ && escher_->supports_timer_queries()) {
+    profiler_ = ftl::MakeRefCounted<TimestampProfiler>(context_.device);
+    profiler_->AddTimestamp(current_frame_,
+                            vk::PipelineStageFlagBits::eTopOfPipe,
+                            "start of frame");
+  }
 }
 
 void Renderer::SubmitPartialFrame() {
@@ -40,8 +49,42 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
                         FrameRetiredCallback frame_retired_callback) {
   FTL_DCHECK(current_frame_);
   current_frame_->AddSignalSemaphore(frame_done);
-  current_frame_->Submit(context_.queue, std::move(frame_retired_callback));
+  if (profiler_) {
+    // Avoid implicit reference to this in closure.
+    TimestampProfilerPtr profiler = std::move(profiler_);
+    auto frame_number = frame_number_;
+    current_frame_->Submit(context_.queue, [frame_retired_callback, profiler,
+                                            frame_number]() {
+      if (frame_retired_callback) {
+        frame_retired_callback();
+      }
+      FTL_LOG(INFO) << "------------------------------------------------------";
+
+      FTL_LOG(INFO) << "Timestamps for frame #" << frame_number;
+      FTL_LOG(INFO) << "total\t|\tsince previous (all times in microseconds)";
+      FTL_LOG(INFO) << "------------------------------------------------------";
+      auto timestamps = profiler->GetQueryResults();
+      uint64_t start_time = timestamps[0].time;
+      timestamps[0].time = 0;
+      for (size_t i = 1; i < timestamps.size(); ++i) {
+        auto& time = timestamps[i].time;
+        time = (time - start_time) / 1000;
+        FTL_LOG(INFO) << time << " \t|\t" << (time - timestamps[i - 1].time)
+                      << "   \t" << timestamps[i].name;
+      }
+    });
+  } else {
+    current_frame_->Submit(context_.queue, std::move(frame_retired_callback));
+  }
   current_frame_ = nullptr;
+}
+
+void Renderer::AddTimestamp(const char* name) {
+  FTL_DCHECK(current_frame_);
+  if (profiler_) {
+    profiler_->AddTimestamp(current_frame_,
+                            vk::PipelineStageFlagBits::eBottomOfPipe, name);
+  }
 }
 
 }  // namespace escher

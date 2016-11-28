@@ -36,6 +36,8 @@ class EscherImpl {
   MeshManager* mesh_manager();
   GlslToSpirvCompiler* glsl_compiler();
 
+  bool supports_timer_queries() const { return supports_timer_queries_; }
+
   void IncrementRendererCount() { ++renderer_count_; }
   void DecrementRendererCount() { --renderer_count_; }
 
@@ -55,6 +57,8 @@ class EscherImpl {
 
   std::atomic<uint32_t> renderer_count_;
   std::atomic<uint32_t> resource_count_;
+
+  bool supports_timer_queries_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(EscherImpl);
 };

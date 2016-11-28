@@ -12,6 +12,7 @@
 #include "escher/impl/mesh_manager.h"
 #include "escher/impl/naive_gpu_allocator.h"
 #include "escher/impl/vk/pipeline_cache.h"
+#include "escher/profiling/timestamp_profiler.h"
 #include "escher/util/cplusplus.h"
 
 namespace escher {
@@ -82,6 +83,12 @@ EscherImpl::EscherImpl(const VulkanContext& context)
   FTL_DCHECK(context.queue);
   // TODO: additional validation, e.g. ensure that queue supports both graphics
   // and compute.
+
+  auto queue_properties =
+      context.physical_device
+          .getQueueFamilyProperties()[context.queue_family_index];
+  supports_timer_queries_ =
+      TimestampProfiler::SupportsQueueFamily(queue_properties);
 }
 
 EscherImpl::~EscherImpl() {
