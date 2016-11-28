@@ -57,7 +57,7 @@ class EntryMapIterator : public Iterator<const storage::Entry> {
   std::map<std::string, fake::FakeJournalDelegate::Entry>::const_iterator end_;
 };
 
-class FakeCommitContents : public CommitContents {
+class FakeCommitContents : public CommitContentsEmptyImpl {
  public:
   FakeCommitContents(FakeJournalDelegate* journal) : journal_(journal) {}
   ~FakeCommitContents() {}
@@ -76,18 +76,6 @@ class FakeCommitContents : public CommitContents {
       it->Next();
     }
     return it;
-  }
-
-  void diff(
-      std::unique_ptr<CommitContents> other,
-      std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
-          callback) const override {
-    callback(Status::NOT_IMPLEMENTED, nullptr);
-  }
-
-  ObjectId GetBaseObjectId() const override {
-    FTL_NOTIMPLEMENTED();
-    return nullptr;
   }
 
  private:
