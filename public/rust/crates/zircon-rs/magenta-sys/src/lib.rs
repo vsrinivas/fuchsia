@@ -204,5 +204,4 @@ extern {
     pub fn mx_vmo_get_size(handle: mx_handle_t, size: *mut u64) -> mx_status_t;
     pub fn mx_vmo_set_size(handle: mx_handle_t, size: u64) -> mx_status_t;
     // todo: vmo_op_range
-
 }

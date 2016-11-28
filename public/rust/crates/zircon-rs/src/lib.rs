@@ -14,6 +14,12 @@ use std::mem;
 
 use conv::{ValueInto, ValueFrom, UnwrapOrSaturate};
 
+mod eventpair;
+mod socket;
+
+pub use eventpair::EventPair;
+pub use socket::Socket;
+
 use magenta_sys as sys;
 
 type Time = sys::mx_time_t;
@@ -29,7 +35,7 @@ const INVALID_HANDLE: sys::mx_handle_t = 0;
 /// [errors.md](https://fuchsia.googlesource.com/magenta/+/master/docs/errors.md)
 /// in the Magenta documentation for more information about the meaning of these
 /// codes.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[repr(i32)]
 // Auto-generated using tools/gen_status.py
 pub enum Status {
@@ -198,8 +204,6 @@ pub use magenta_sys::{
 };
 
 /// Options for creating a channel.
-///
-/// A special type of channel is a 
 #[repr(u32)]
 pub enum ChannelOpts {
     /// A normal channel.
@@ -816,6 +820,42 @@ impl Vmo {
     pub fn set_size(&self, size: u64) -> Result<(), Status> {
         let status = unsafe { sys::mx_vmo_set_size(self.raw_handle(), size) };
         into_result(status, || ())
+    }
+}
+
+// Data pipes (just a stub for now)
+
+/// An object representing a Magenta
+/// [data pipe](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/datapipe_create.md)
+/// producer.
+///
+/// As essentially a subtype of `Handle`, it can be freely interconverted.
+pub struct DataPipeProducer(Handle);
+
+impl HandleBase for DataPipeProducer {
+    fn get_ref(&self) -> HandleRef {
+        self.0.get_ref()
+    }
+
+    fn from_handle(handle: Handle) -> Self {
+        DataPipeProducer(handle)
+    }
+}
+
+/// An object representing a Magenta
+/// [data pipe](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/datapipe_create.md)
+/// consumer.
+///
+/// As essentially a subtype of `Handle`, it can be freely interconverted.
+pub struct DataPipeConsumer(Handle);
+
+impl HandleBase for DataPipeConsumer {
+    fn get_ref(&self) -> HandleRef {
+        self.0.get_ref()
+    }
+
+    fn from_handle(handle: Handle) -> Self {
+        DataPipeConsumer(handle)
     }
 }
 
