@@ -31,16 +31,11 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
   ~FirebaseImplTest() override {}
 
  protected:
-  // Allows to step through the watch events one by one. Needs to be called each
-  // time before starting the message loop.
-  void QuitLoopOnNextEvent() { quit_loop_on_next_event_ = true; }
-
   // WatchClient:
   void OnPut(const std::string& path, const rapidjson::Value& value) override {
     put_count_++;
     put_paths_.push_back(path);
     put_data_.push_back(rapidjson::Value(value, document_.GetAllocator()));
-    QuitLoopIfNeeded();
   }
 
   void OnPatch(const std::string& path,
@@ -48,18 +43,15 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
     patch_count_++;
     patch_paths_.push_back(path);
     patch_data_.push_back(rapidjson::Value(value, document_.GetAllocator()));
-    QuitLoopIfNeeded();
   }
 
   void OnCancel() override {
     cancel_count_++;
-    QuitLoopIfNeeded();
   }
 
   void OnAuthRevoked(const std::string& reason) override {
     auth_revoked_count_++;
     auth_revoked_reasons_.push_back(reason);
-    QuitLoopIfNeeded();
   }
 
   void OnError() override { error_count_++; }
@@ -97,15 +89,6 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
   FirebaseImpl firebase_;
 
  private:
-  void QuitLoopIfNeeded() {
-    if (quit_loop_on_next_event_) {
-      message_loop_.PostQuitTask();
-      quit_loop_on_next_event_ = false;
-    }
-  }
-
-  bool quit_loop_on_next_event_ = false;
-
   // Used for its allocator which we use to make copies of rapidjson Values.
   rapidjson::Document document_;
   FTL_DISALLOW_COPY_AND_ASSIGN(FirebaseImplTest);
@@ -379,7 +362,11 @@ TEST_F(FirebaseImplTest, UnWatch) {
   firebase_.Watch("/", "", this);
 
   EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
-  QuitLoopOnNextEvent();
+  message_loop_.SetAfterTaskCallback([this] {
+    if (put_count_ == 1u) {
+      message_loop_.QuitNow();
+    }
+  });
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, put_count_);
@@ -389,7 +376,11 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, error_count_);
 
   EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
-  QuitLoopOnNextEvent();
+  message_loop_.SetAfterTaskCallback([this] {
+    if (put_count_ == 2u) {
+      message_loop_.QuitNow();
+    }
+  });
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, put_count_);
@@ -398,11 +389,10 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, auth_revoked_count_);
   EXPECT_EQ(0u, error_count_);
 
-  // Unregister the watch client and make sure that we are not notified about
+  // Unregister the watch client and make sure that we are *not* notified about
   // the next event.
   firebase_.UnWatch(this);
   EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
-  QuitLoopOnNextEvent();
 
   // TODO(ppi): how to avoid the wait?
   message_loop_.task_runner()->PostDelayedTask(
