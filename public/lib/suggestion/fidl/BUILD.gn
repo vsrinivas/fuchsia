@@ -6,6 +6,7 @@ import("//lib/fidl/fidl.gni")
 
 fidl("suggestion") {
   sources = [
+    "ask_handler.fidl",
     "proposal.fidl",
     "suggestion_agent_client.fidl",
     "suggestion_engine.fidl",
@@ -24,5 +25,6 @@ fidl("suggestion_provider") {
   sources = [
     "display.fidl",
     "suggestion_provider.fidl",
+    "user_input.fidl",
   ]
 }

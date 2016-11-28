@@ -4,14 +4,11 @@
 
 module maxwell.suggestion;
 
-import "proposal.fidl";
+import "apps/maxwell/services/suggestion/ask_handler.fidl";
+import "apps/maxwell/services/suggestion/proposal.fidl";
 
-// A service and supporting structures enabling Agents to contribute Proposals
-// to the Suggestion engine.
-//
-// NOTE: Some future-thinking features are represented here and commented out
-// to give a sense for the likely future direction of this service, and are left
-// here for informational purposes at this time.
+// A service enabling Agents to contribute Proposals proactively to the
+// Suggestion engine.
 [ServiceName="maxwell.suggestion.SuggestionAgentClient"]
 interface SuggestionAgentClient {
   // Includes the given |proposal| in the list from this Agent. Proposals are
@@ -24,4 +21,15 @@ interface SuggestionAgentClient {
 
   // Returns a list of all Proposals created by the identified Agent.
   GetAll() => (array<Proposal> proposals);
+
+  // TODO(rosswang): It is also conceivable that AskHandler? might be an
+  // argument to RegisterSuggestionAgent. That may more closely mimic the
+  // eventual Component model and is a shallower nesting. However, having it
+  // here offers greater flexibility, simplifies #include structure, and
+  // simplifies logic both in the launcher and agent. Otherwise, the launcher
+  // would have to obtain the AskHandler outgoing service and somehow make it
+  // available to the agent environment host, which is messy since the
+  // environment services are typically asked for before outgoing services are
+  // even available.
+  RegisterAskHandler(AskHandler ask_handler);
 };

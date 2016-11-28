@@ -4,7 +4,8 @@
 
 module maxwell.suggestion;
 
-import "display.fidl";
+import "apps/maxwell/services/suggestion/display.fidl";
+import "apps/maxwell/services/suggestion/user_input.fidl";
 
 // Allows clients to subscribe to different Suggestion "channels" and iterate
 // through the results. Supports both passive consumption of Suggestions based
@@ -89,13 +90,6 @@ struct Interaction {
 
   // TODO(thatguy): Include parameters for each type of interaction where
   // applicable. Consider making this a union in lieu of the struct/enum combo.
-};
-
-union UserInput {
-  string text;
-  // Picture
-  // Doodle
-  // Live camera stream
 };
 
 struct Suggestion {

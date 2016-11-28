@@ -38,6 +38,11 @@ void SuggestionAgentClientImpl::GetAll(const GetAllCallback& callback) {
   // TODO
 }
 
+void SuggestionAgentClientImpl::RegisterAskHandler(
+    fidl::InterfaceHandle<AskHandler> ask_handler) {
+  // TODO
+}
+
 void SuggestionAgentClientImpl::BindingSet::OnConnectionError(
     fidl::Binding<SuggestionAgentClient>* binding) {
   maxwell::BindingSet<SuggestionAgentClient>::OnConnectionError(binding);

@@ -34,6 +34,8 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
   void Propose(ProposalPtr proposal) override;
   void Remove(const fidl::String& proposal_id) override;
   void GetAll(const GetAllCallback& callback) override;
+  void RegisterAskHandler(
+      fidl::InterfaceHandle<AskHandler> ask_handler) override;
 
   // TEMPORARY; TODO(rosswang): flatten record structures instead
   AgentSuggestionRecord* GetByProposalId(const std::string& proposal_id) {
