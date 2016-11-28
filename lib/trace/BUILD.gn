@@ -5,6 +5,8 @@
 # Declares common trace data types.
 source_set("types") {
   sources = [
+    "ticks.cc",
+    "ticks.h",
     "types.h",
   ]
 }

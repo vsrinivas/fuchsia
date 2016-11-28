@@ -19,12 +19,7 @@
 #define TRACE_INTERNAL_SCOPE_LABEL() TRACE_INTERNAL_SCOPE_LABEL_(__COUNTER__)
 
 #define TRACE_INTERNAL_WRITER __trace_writer
-#define TRACE_INTERNAL_EVENT_THREAD_REF __trace_event_thread_ref
 #define TRACE_INTERNAL_EVENT_CATEGORY_REF __trace_event_category_ref
-#define TRACE_INTERNAL_EVENT_NAME_REF __trace_event_name_ref
-#define TRACE_INTERNAL_EVENT_SPEC                                     \
-  TRACE_INTERNAL_EVENT_THREAD_REF, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-      TRACE_INTERNAL_EVENT_NAME_REF
 
 #define TRACE_INTERNAL_MAKE_ARG(key, value) \
   , MakeArgument(TRACE_INTERNAL_WRITER, key, value)
@@ -46,42 +41,43 @@
   } while (0)
 
 // TODO(jeffbrown): Determine whether we should try to do anything to
-// reduce the code expansion here.
-#define TRACE_INTERNAL_EVENT(category, name, stmt)                          \
+// further reduce the code expansion here.  The current goal is to avoid
+// evaluating and expanding arguments unless the category is enabled.
+#define TRACE_INTERNAL_EVENT(category, stmt)                                \
   do {                                                                      \
     auto TRACE_INTERNAL_WRITER = ::tracing::writer::TraceWriter::Prepare(); \
     if (TRACE_INTERNAL_WRITER) {                                            \
-      ::tracing::writer::StringRef TRACE_INTERNAL_EVENT_CATEGORY_REF =      \
+      auto TRACE_INTERNAL_EVENT_CATEGORY_REF =                              \
           TRACE_INTERNAL_WRITER.RegisterString(category, true);             \
       if (!TRACE_INTERNAL_EVENT_CATEGORY_REF.is_empty()) {                  \
-        ::tracing::writer::StringRef TRACE_INTERNAL_EVENT_NAME_REF =        \
-            TRACE_INTERNAL_WRITER.RegisterString(name);                     \
-        ::tracing::writer::ThreadRef TRACE_INTERNAL_EVENT_THREAD_REF =      \
-            TRACE_INTERNAL_WRITER.RegisterCurrentThread();                  \
         stmt;                                                               \
       }                                                                     \
     }                                                                       \
   } while (0)
 
-#define TRACE_INTERNAL_INSTANT(category, name, scope, args...)        \
-  TRACE_INTERNAL_EVENT(category, name,                                \
-                       TRACE_INTERNAL_WRITER.WriteInstantEventRecord( \
-                           TRACE_INTERNAL_EVENT_SPEC, scope args))
+#define TRACE_INTERNAL_INSTANT(category, name, scope, args...)                \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteInstantEventRecord(                 \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name, scope args))
 
-#define TRACE_INTERNAL_COUNTER(category, name, id, args...)           \
-  TRACE_INTERNAL_EVENT(category, name,                                \
-                       TRACE_INTERNAL_WRITER.WriteCounterEventRecord( \
-                           TRACE_INTERNAL_EVENT_SPEC, id args))
+#define TRACE_INTERNAL_COUNTER(category, name, id, args...)                   \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteCounterEventRecord(                 \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name, id args))
 
-#define TRACE_INTERNAL_DURATION_BEGIN(category, name, args...)              \
-  TRACE_INTERNAL_EVENT(category, name,                                      \
-                       TRACE_INTERNAL_WRITER.WriteDurationBeginEventRecord( \
-                           TRACE_INTERNAL_EVENT_SPEC args))
+#define TRACE_INTERNAL_DURATION_BEGIN(category, name, args...)                \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteDurationBeginEventRecord(           \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name args))
 
-#define TRACE_INTERNAL_DURATION_END(category, name, args...)              \
-  TRACE_INTERNAL_EVENT(category, name,                                    \
-                       TRACE_INTERNAL_WRITER.WriteDurationEndEventRecord( \
-                           TRACE_INTERNAL_EVENT_SPEC args))
+#define TRACE_INTERNAL_DURATION_END(category, name, args...)                  \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteDurationEndEventRecord(             \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name args))
 
 #define TRACE_INTERNAL_DURATION_SCOPE(scope_label, scope_category, scope_name, \
                                       args...)                                 \
@@ -94,20 +90,23 @@
   TRACE_INTERNAL_DURATION_SCOPE(TRACE_INTERNAL_SCOPE_LABEL(), category, name, \
                                 args)
 
-#define TRACE_INTERNAL_ASYNC_BEGIN(category, name, id, args...)          \
-  TRACE_INTERNAL_EVENT(category, name,                                   \
-                       TRACE_INTERNAL_WRITER.WriteAsyncBeginEventRecord( \
-                           TRACE_INTERNAL_EVENT_SPEC, id args))
+#define TRACE_INTERNAL_ASYNC_BEGIN(category, name, id, args...)               \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteAsyncBeginEventRecord(              \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name, id args))
 
-#define TRACE_INTERNAL_ASYNC_INSTANT(category, name, id, args...)          \
-  TRACE_INTERNAL_EVENT(category, name,                                     \
-                       TRACE_INTERNAL_WRITER.WriteAsyncInstantEventRecord( \
-                           TRACE_INTERNAL_EVENT_SPEC, id args))
+#define TRACE_INTERNAL_ASYNC_INSTANT(category, name, id, args...)             \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteAsyncInstantEventRecord(            \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name, id args))
 
-#define TRACE_INTERNAL_ASYNC_END(category, name, id, args...)          \
-  TRACE_INTERNAL_EVENT(category, name,                                 \
-                       TRACE_INTERNAL_WRITER.WriteAsyncEndEventRecord( \
-                           TRACE_INTERNAL_EVENT_SPEC, id args))
+#define TRACE_INTERNAL_ASYNC_END(category, name, id, args...)                 \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteAsyncEndEventRecord(                \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name, id args))
 
 #define TRACE_INTERNAL_HANDLE(handle, args...) \
   TRACE_INTERNAL_SIMPLE(                       \
@@ -115,6 +114,90 @@
 
 namespace tracing {
 namespace internal {
+
+template <typename... Args>
+void WriteInstantEventRecord(::tracing::writer::TraceWriter& writer,
+                             const ::tracing::writer::StringRef& category_ref,
+                             const char* name,
+                             ::tracing::EventScope scope,
+                             Args&&... args) {
+  writer.WriteInstantEventRecord(::tracing::GetTicksNow(),
+                                 writer.RegisterCurrentThread(), category_ref,
+                                 writer.RegisterString(name), scope,
+                                 std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void WriteCounterEventRecord(::tracing::writer::TraceWriter& writer,
+                             const ::tracing::writer::StringRef& category_ref,
+                             const char* name,
+                             uint64_t id,
+                             Args&&... args) {
+  writer.WriteCounterEventRecord(::tracing::GetTicksNow(),
+                                 writer.RegisterCurrentThread(), category_ref,
+                                 writer.RegisterString(name), id,
+                                 std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void WriteDurationBeginEventRecord(
+    ::tracing::writer::TraceWriter& writer,
+    const ::tracing::writer::StringRef& category_ref,
+    const char* name,
+    Args&&... args) {
+  writer.WriteDurationBeginEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(),
+      category_ref, writer.RegisterString(name), std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void WriteDurationEndEventRecord(
+    ::tracing::writer::TraceWriter& writer,
+    const ::tracing::writer::StringRef& category_ref,
+    const char* name,
+    Args&&... args) {
+  writer.WriteDurationEndEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(),
+      category_ref, writer.RegisterString(name), std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void WriteAsyncBeginEventRecord(
+    ::tracing::writer::TraceWriter& writer,
+    const ::tracing::writer::StringRef& category_ref,
+    const char* name,
+    uint64_t id,
+    Args&&... args) {
+  writer.WriteAsyncBeginEventRecord(::tracing::GetTicksNow(),
+                                    writer.RegisterCurrentThread(),
+                                    category_ref, writer.RegisterString(name),
+                                    id, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void WriteAsyncInstantEventRecord(
+    ::tracing::writer::TraceWriter& writer,
+    const ::tracing::writer::StringRef& category_ref,
+    const char* name,
+    uint64_t id,
+    Args&&... args) {
+  writer.WriteAsyncInstantEventRecord(::tracing::GetTicksNow(),
+                                      writer.RegisterCurrentThread(),
+                                      category_ref, writer.RegisterString(name),
+                                      id, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void WriteAsyncEndEventRecord(::tracing::writer::TraceWriter& writer,
+                              const ::tracing::writer::StringRef& category_ref,
+                              const char* name,
+                              uint64_t id,
+                              Args&&... args) {
+  writer.WriteAsyncEndEventRecord(::tracing::GetTicksNow(),
+                                  writer.RegisterCurrentThread(), category_ref,
+                                  writer.RegisterString(name), id,
+                                  std::forward<Args>(args)...);
+}
 
 // When destroyed, writes a duration end event.
 // Note: This implementation only acquires the |TraceWriter| at the end of

@@ -515,21 +515,6 @@ class TraceWriter final {
                               mx_koid_t thread_koid,
                               const std::string& thread_name);
 
-  // Writes an initialization record into the trace buffer.
-  // Discards the record if it cannot be written.
-  void WriteInitializationRecord(uint64_t ticks_per_second);
-
-  // Writes a string record into the trace buffer.
-  // The |value| will be copied into the string record.
-  // Discards the record if it cannot be written.
-  void WriteStringRecord(StringIndex index, const char* value);
-
-  // Writes a thread record into the trace buffer.
-  // Discards the record if it cannot be written.
-  void WriteThreadRecord(ThreadIndex index,
-                         mx_koid_t process_koid,
-                         mx_koid_t thread_koid);
-
   // Writes a kernel object record about |handle| into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
@@ -544,13 +529,14 @@ class TraceWriter final {
   // Writes an instant event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteInstantEventRecord(const ThreadRef& thread_ref,
+  void WriteInstantEventRecord(Ticks event_time,
+                               const ThreadRef& thread_ref,
                                const StringRef& category_ref,
                                const StringRef& name_ref,
                                EventScope scope,
                                Args&&... args) {
     if (Payload payload = WriteEventRecordBase(
-            EventType::kInstant, thread_ref, category_ref, name_ref,
+            EventType::kInstant, event_time, thread_ref, category_ref, name_ref,
             sizeof...(Args),
             SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
       payload.WriteValues(std::forward<Args>(args)...)
@@ -561,13 +547,14 @@ class TraceWriter final {
   // Writes a counter event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteCounterEventRecord(const ThreadRef& thread_ref,
+  void WriteCounterEventRecord(Ticks event_time,
+                               const ThreadRef& thread_ref,
                                const StringRef& category_ref,
                                const StringRef& name_ref,
                                uint64_t id,
                                Args&&... args) {
     if (Payload payload = WriteEventRecordBase(
-            EventType::kCounter, thread_ref, category_ref, name_ref,
+            EventType::kCounter, event_time, thread_ref, category_ref, name_ref,
             sizeof...(Args),
             SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
       payload.WriteValues(std::forward<Args>(args)...).Write(id);
@@ -577,13 +564,15 @@ class TraceWriter final {
   // Writes a duration begin event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteDurationBeginEventRecord(const ThreadRef& thread_ref,
+  void WriteDurationBeginEventRecord(Ticks event_time,
+                                     const ThreadRef& thread_ref,
                                      const StringRef& category_ref,
                                      const StringRef& name_ref,
                                      Args&&... args) {
     if (Payload payload = WriteEventRecordBase(
-            EventType::kDurationBegin, thread_ref, category_ref, name_ref,
-            sizeof...(Args), SizeArguments(std::forward<Args>(args)...))) {
+            EventType::kDurationBegin, event_time, thread_ref, category_ref,
+            name_ref, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...))) {
       payload.WriteValues(std::forward<Args>(args)...);
     }
   }
@@ -591,13 +580,15 @@ class TraceWriter final {
   // Writes a duration end event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteDurationEndEventRecord(const ThreadRef& thread_ref,
+  void WriteDurationEndEventRecord(Ticks event_time,
+                                   const ThreadRef& thread_ref,
                                    const StringRef& category_ref,
                                    const StringRef& name_ref,
                                    Args&&... args) {
     if (Payload payload = WriteEventRecordBase(
-            EventType::kDurationEnd, thread_ref, category_ref, name_ref,
-            sizeof...(Args), SizeArguments(std::forward<Args>(args)...))) {
+            EventType::kDurationEnd, event_time, thread_ref, category_ref,
+            name_ref, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...))) {
       payload.WriteValues(std::forward<Args>(args)...);
     }
   }
@@ -605,14 +596,15 @@ class TraceWriter final {
   // Writes an asynchronous begin event record into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteAsyncBeginEventRecord(const ThreadRef& thread_ref,
+  void WriteAsyncBeginEventRecord(Ticks event_time,
+                                  const ThreadRef& thread_ref,
                                   const StringRef& category_ref,
                                   const StringRef& name_ref,
                                   uint64_t id,
                                   Args&&... args) {
     if (Payload payload = WriteEventRecordBase(
-            EventType::kAsyncStart, thread_ref, category_ref, name_ref,
-            sizeof...(Args),
+            EventType::kAsyncStart, event_time, thread_ref, category_ref,
+            name_ref, sizeof...(Args),
             SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
       payload.WriteValues(std::forward<Args>(args)...).Write(id);
     }
@@ -621,14 +613,15 @@ class TraceWriter final {
   // Writes an asynchronous instant event record into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteAsyncInstantEventRecord(const ThreadRef& thread_ref,
+  void WriteAsyncInstantEventRecord(Ticks event_time,
+                                    const ThreadRef& thread_ref,
                                     const StringRef& category_ref,
                                     const StringRef& name_ref,
                                     uint64_t id,
                                     Args&&... args) {
     if (Payload payload = WriteEventRecordBase(
-            EventType::kAsyncInstant, thread_ref, category_ref, name_ref,
-            sizeof...(Args),
+            EventType::kAsyncInstant, event_time, thread_ref, category_ref,
+            name_ref, sizeof...(Args),
             SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
       payload.WriteValues(std::forward<Args>(args)...).Write(id);
     }
@@ -637,14 +630,15 @@ class TraceWriter final {
   // Writes an asynchronous end event record into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteAsyncEndEventRecord(const ThreadRef& thread_ref,
+  void WriteAsyncEndEventRecord(Ticks event_time,
+                                const ThreadRef& thread_ref,
                                 const StringRef& category_ref,
                                 const StringRef& name_ref,
                                 uint64_t id,
                                 Args&&... args) {
     if (Payload payload = WriteEventRecordBase(
-            EventType::kAsyncEnd, thread_ref, category_ref, name_ref,
-            sizeof...(Args),
+            EventType::kAsyncEnd, event_time, thread_ref, category_ref,
+            name_ref, sizeof...(Args),
             SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
       payload.WriteValues(std::forward<Args>(args)...).Write(id);
     }
@@ -657,7 +651,8 @@ class TraceWriter final {
   Payload WriteKernelObjectRecordBase(mx_handle_t handle,
                                       size_t argument_count,
                                       size_t payload_size);
-  Payload WriteEventRecordBase(EventType type,
+  Payload WriteEventRecordBase(EventType event_type,
+                               Ticks event_time,
                                const ThreadRef& thread_ref,
                                const StringRef& category_ref,
                                const StringRef& name_ref,

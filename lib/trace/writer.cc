@@ -293,23 +293,6 @@ ThreadRef TraceWriter::RegisterThread(mx_koid_t process_koid,
   return engine_->RegisterThread(process_koid, thread_koid);
 }
 
-void TraceWriter::WriteInitializationRecord(uint64_t ticks_per_second) {
-  FTL_DCHECK(engine_);
-  engine_->WriteInitializationRecord(ticks_per_second);
-}
-
-void TraceWriter::WriteStringRecord(StringIndex index, const char* value) {
-  FTL_DCHECK(engine_);
-  engine_->WriteStringRecord(index, value);
-}
-
-void TraceWriter::WriteThreadRecord(ThreadIndex index,
-                                    mx_koid_t process_koid,
-                                    mx_koid_t thread_koid) {
-  FTL_DCHECK(engine_);
-  engine_->WriteThreadRecord(index, process_koid, thread_koid);
-}
-
 void TraceWriter::WriteProcessDescription(mx_koid_t process_koid,
                                           const std::string& process_name) {
   FTL_DCHECK(engine_);
@@ -331,15 +314,17 @@ Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
                                               payload_size);
 }
 
-Payload TraceWriter::WriteEventRecordBase(EventType type,
+Payload TraceWriter::WriteEventRecordBase(EventType event_type,
+                                          Ticks event_time,
                                           const ThreadRef& thread_ref,
                                           const StringRef& category_ref,
                                           const StringRef& name_ref,
                                           size_t argument_count,
                                           size_t payload_size) {
   FTL_DCHECK(engine_);
-  return engine_->WriteEventRecordBase(type, thread_ref, category_ref, name_ref,
-                                       argument_count, payload_size);
+  return engine_->WriteEventRecordBase(event_type, event_time, thread_ref,
+                                       category_ref, name_ref, argument_count,
+                                       payload_size);
 }
 
 }  // namespace writer

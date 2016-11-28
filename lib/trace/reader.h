@@ -383,7 +383,7 @@ class Record {
 
   // Initialization record data.
   struct Initialization {
-    uint64_t ticks_per_second;
+    Ticks ticks_per_second;
   };
 
   // String record data.
@@ -401,7 +401,7 @@ class Record {
   // Event record data.
   struct Event {
     EventType type() const { return data.type(); }
-    uint64_t timestamp;
+    Ticks timestamp;
     ProcessThread process_thread;
     std::string category;
     std::string name;

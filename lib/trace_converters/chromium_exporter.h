@@ -29,6 +29,8 @@ class ChromiumExporter {
   std::ofstream file_out_;
   rapidjson::OStreamWrapper wrapper_;
   rapidjson::Writer<rapidjson::OStreamWrapper> writer_;
+
+  double tick_scale_ = 0.001;
 };
 
 }  // namespace tracing

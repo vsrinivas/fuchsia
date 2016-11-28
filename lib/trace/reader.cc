@@ -392,8 +392,8 @@ bool TraceReader::ReadMetadataRecord(Chunk& record, RecordHeader header) {
 }
 
 bool TraceReader::ReadInitializationRecord(Chunk& record, RecordHeader header) {
-  uint64_t ticks_per_second;
-  if (!record.Read(&ticks_per_second))
+  Ticks ticks_per_second;
+  if (!record.Read(&ticks_per_second) || !ticks_per_second)
     return false;
 
   record_consumer_(Record(Record::Initialization{ticks_per_second}));
@@ -444,7 +444,7 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
   auto name_ref =
       EventRecordFields::NameStringRef::Get<EncodedStringRef>(header);
 
-  uint64_t timestamp;
+  Ticks timestamp;
   ProcessThread process_thread;
   std::string category;
   std::string name;

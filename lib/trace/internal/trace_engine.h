@@ -78,12 +78,13 @@ class TraceEngine final : private mtl::MessageLoopHandler {
                               mx_koid_t thread_koid,
                               const std::string& thread_name);
 
-  void WriteInitializationRecord(uint64_t ticks_per_second);
+  void WriteInitializationRecord(Ticks ticks_per_second);
   void WriteStringRecord(StringIndex index, const char* value);
   void WriteThreadRecord(ThreadIndex index,
                          mx_koid_t process_koid,
                          mx_koid_t thread_koid);
-  Payload WriteEventRecordBase(EventType type,
+  Payload WriteEventRecordBase(EventType event_type,
+                               Ticks event_time,
                                const ThreadRef& thread_ref,
                                const StringRef& category_ref,
                                const StringRef& name_ref,

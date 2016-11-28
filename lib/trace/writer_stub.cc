@@ -89,21 +89,6 @@ __WEAK void TraceWriter::WriteThreadDescription(
   FTL_DCHECK(false);
 }
 
-__WEAK void TraceWriter::WriteInitializationRecord(uint64_t ticks_per_second) {
-  FTL_DCHECK(false);
-}
-
-__WEAK void TraceWriter::WriteStringRecord(StringIndex index,
-                                           const char* value) {
-  FTL_DCHECK(false);
-}
-
-__WEAK void TraceWriter::WriteThreadRecord(ThreadIndex index,
-                                           mx_koid_t process_koid,
-                                           mx_koid_t thread_koid) {
-  FTL_DCHECK(false);
-}
-
 __WEAK Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
                                                         size_t argument_count,
                                                         size_t payload_size) {
@@ -112,6 +97,7 @@ __WEAK Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
 }
 
 __WEAK Payload TraceWriter::WriteEventRecordBase(EventType type,
+                                                 Ticks event_time,
                                                  const ThreadRef& thread_ref,
                                                  const StringRef& category_ref,
                                                  const StringRef& name_ref,

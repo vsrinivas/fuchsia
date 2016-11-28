@@ -98,11 +98,16 @@ TEST_F(WriterTest, EventWriting) {
   StringRef category_ref = writer.RegisterString("cat", true);
   StringRef name_ref = writer.RegisterString("name");
 
-  writer.WriteDurationBeginEventRecord(thread_ref, category_ref, name_ref);
-  writer.WriteDurationEndEventRecord(thread_ref, category_ref, name_ref);
-  writer.WriteAsyncBeginEventRecord(thread_ref, category_ref, name_ref, 42);
-  writer.WriteAsyncInstantEventRecord(thread_ref, category_ref, name_ref, 42);
-  writer.WriteAsyncEndEventRecord(thread_ref, category_ref, name_ref, 42);
+  writer.WriteDurationBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                       name_ref);
+  writer.WriteDurationEndEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                     name_ref);
+  writer.WriteAsyncBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                    name_ref, 42);
+  writer.WriteAsyncInstantEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                      name_ref, 42);
+  writer.WriteAsyncEndEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                  name_ref, 42);
 }
 
 TEST_F(WriterTest, EventWritingMultiThreaded) {
@@ -114,12 +119,16 @@ TEST_F(WriterTest, EventWritingMultiThreaded) {
       StringRef category_ref = writer.RegisterString("cat", true);
       StringRef name_ref = writer.RegisterString("name");
 
-      writer.WriteDurationBeginEventRecord(thread_ref, category_ref, name_ref);
-      writer.WriteDurationEndEventRecord(thread_ref, category_ref, name_ref);
-      writer.WriteAsyncBeginEventRecord(thread_ref, category_ref, name_ref, 42);
-      writer.WriteAsyncInstantEventRecord(thread_ref, category_ref, name_ref,
-                                          42);
-      writer.WriteAsyncEndEventRecord(thread_ref, category_ref, name_ref, 42);
+      writer.WriteDurationBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                           name_ref);
+      writer.WriteDurationEndEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                         name_ref);
+      writer.WriteAsyncBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                        name_ref, 42);
+      writer.WriteAsyncInstantEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                          name_ref, 42);
+      writer.WriteAsyncEndEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                      name_ref, 42);
     });
 
   for (auto& thread : threads)
@@ -135,7 +144,7 @@ TEST_F(WriterTest, EventWritingWithArguments) {
   int i = 0;
 
   writer.WriteDurationBeginEventRecord(
-      thread_ref, category_ref, name_ref,
+      GetTicksNow(), thread_ref, category_ref, name_ref,
       MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
@@ -145,7 +154,7 @@ TEST_F(WriterTest, EventWritingWithArguments) {
       MakeArgument(writer, "koid", Koid(1 << 10)));
 
   writer.WriteDurationEndEventRecord(
-      thread_ref, category_ref, name_ref,
+      GetTicksNow(), thread_ref, category_ref, name_ref,
       MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
@@ -155,7 +164,7 @@ TEST_F(WriterTest, EventWritingWithArguments) {
       MakeArgument(writer, "koid", Koid(1 << 10)));
 
   writer.WriteAsyncBeginEventRecord(
-      thread_ref, category_ref, name_ref, 42,
+      GetTicksNow(), thread_ref, category_ref, name_ref, 42,
       MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
@@ -165,7 +174,7 @@ TEST_F(WriterTest, EventWritingWithArguments) {
       MakeArgument(writer, "koid", Koid(1 << 10)));
 
   writer.WriteAsyncInstantEventRecord(
-      thread_ref, category_ref, name_ref, 42,
+      GetTicksNow(), thread_ref, category_ref, name_ref, 42,
       MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
@@ -175,7 +184,7 @@ TEST_F(WriterTest, EventWritingWithArguments) {
       MakeArgument(writer, "koid", Koid(1 << 10)));
 
   writer.WriteAsyncEndEventRecord(
-      thread_ref, category_ref, name_ref, 42,
+      GetTicksNow(), thread_ref, category_ref, name_ref, 42,
       MakeArgument(writer, "int32", int32_t(42)),
       MakeArgument(writer, "int64", int64_t(-42)),
       MakeArgument(writer, "double", 42.42),
@@ -197,7 +206,7 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
       int i = 0;
 
       writer.WriteDurationBeginEventRecord(
-          thread_ref, category_ref, name_ref,
+          GetTicksNow(), thread_ref, category_ref, name_ref,
           MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),
@@ -207,7 +216,7 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
           MakeArgument(writer, "koid", Koid(1 << 10)));
 
       writer.WriteDurationEndEventRecord(
-          thread_ref, category_ref, name_ref,
+          GetTicksNow(), thread_ref, category_ref, name_ref,
           MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),
@@ -217,7 +226,7 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
           MakeArgument(writer, "koid", Koid(1 << 10)));
 
       writer.WriteAsyncBeginEventRecord(
-          thread_ref, category_ref, name_ref, 42,
+          GetTicksNow(), thread_ref, category_ref, name_ref, 42,
           MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),
@@ -227,7 +236,7 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
           MakeArgument(writer, "koid", Koid(1 << 10)));
 
       writer.WriteAsyncInstantEventRecord(
-          thread_ref, category_ref, name_ref, 42,
+          GetTicksNow(), thread_ref, category_ref, name_ref, 42,
           MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),
@@ -237,7 +246,7 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
           MakeArgument(writer, "koid", Koid(1 << 10)));
 
       writer.WriteAsyncEndEventRecord(
-          thread_ref, category_ref, name_ref, 42,
+          GetTicksNow(), thread_ref, category_ref, name_ref, 42,
           MakeArgument(writer, "int32", int32_t(42)),
           MakeArgument(writer, "int64", int64_t(-42)),
           MakeArgument(writer, "double", 42.42),

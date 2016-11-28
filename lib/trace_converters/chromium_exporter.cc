@@ -16,10 +16,6 @@ namespace {
 
 constexpr char kProcessArgKey[] = "process";
 
-constexpr double NanosecondsToMicroseconds(uint64_t micros) {
-  return micros * 0.001;
-}
-
 bool IsEventTypeSupported(EventType type) {
   switch (type) {
     case EventType::kInstant:
@@ -74,6 +70,9 @@ void ChromiumExporter::Start() {
 
 void ChromiumExporter::ExportRecord(const reader::Record& record) {
   switch (record.type()) {
+    case RecordType::kInitialization:
+      tick_scale_ = 1000000.0 / record.GetInitialization().ticks_per_second;
+      break;
     case RecordType::kEvent:
       ExportEvent(record.GetEvent());
       break;
@@ -96,7 +95,7 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
   writer_.Key("name");
   writer_.String(event.name.data(), event.name.size());
   writer_.Key("ts");
-  writer_.Double(NanosecondsToMicroseconds(event.timestamp));
+  writer_.Double(event.timestamp * tick_scale_);
   writer_.Key("pid");
   writer_.Uint64(event.process_thread.process_koid);
   writer_.Key("tid");

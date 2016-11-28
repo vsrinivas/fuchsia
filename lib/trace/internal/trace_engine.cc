@@ -4,7 +4,6 @@
 
 #include "apps/tracing/lib/trace/internal/trace_engine.h"
 
-#include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 
 #include <tuple>
@@ -42,10 +41,6 @@ struct LocalState {
 thread_local LocalState g_local_state;
 
 constexpr char kProcessArgKey[] = "process";
-
-inline uint64_t GetNanosecondTimestamp() {
-  return mx_time_get(MX_CLOCK_MONOTONIC);
-}
 
 inline uint64_t MakeRecordHeader(RecordType type, size_t size) {
   return RecordFields::Type::Make(ToUnderlyingType(type)) |
@@ -107,6 +102,7 @@ void TraceEngine::StartTracing(TraceFinishedCallback finished_callback) {
   FTL_VLOG(1) << "Started tracing...";
   finished_callback_ = std::move(finished_callback);
 
+  WriteInitializationRecord(GetTicksPerSecond());
   WriteProcessDescription(g_process_koid, mtl::GetCurrentProcessName());
 
   fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
@@ -272,7 +268,7 @@ void TraceEngine::WriteThreadDescription(mx_koid_t process_koid,
     payload.WriteValue(process_arg);
 }
 
-void TraceEngine::WriteInitializationRecord(uint64_t ticks_per_second) {
+void TraceEngine::WriteInitializationRecord(Ticks ticks_per_second) {
   const size_t record_size = sizeof(RecordHeader) + WordsToBytes(1);
   Payload payload = AllocateRecord(record_size);
   if (!payload)
@@ -316,7 +312,8 @@ void TraceEngine::WriteThreadRecord(ThreadIndex index,
 }
 
 TraceEngine::Payload TraceEngine::WriteEventRecordBase(
-    EventType type,
+    EventType event_type,
+    Ticks event_time,
     const ThreadRef& thread_ref,
     const StringRef& category_ref,
     const StringRef& name_ref,
@@ -331,13 +328,13 @@ TraceEngine::Payload TraceEngine::WriteEventRecordBase(
 
   payload
       .Write(MakeRecordHeader(RecordType::kEvent, record_size) |
-             EventRecordFields::EventType::Make(ToUnderlyingType(type)) |
+             EventRecordFields::EventType::Make(ToUnderlyingType(event_type)) |
              EventRecordFields::ArgumentCount::Make(argument_count) |
              EventRecordFields::ThreadRef::Make(thread_ref.encoded_value()) |
              EventRecordFields::CategoryStringRef::Make(
                  category_ref.encoded_value()) |
              EventRecordFields::NameStringRef::Make(name_ref.encoded_value()))
-      .Write(GetNanosecondTimestamp())
+      .Write(event_time)
       .WriteValue(thread_ref)
       .WriteValue(category_ref)
       .WriteValue(name_ref);

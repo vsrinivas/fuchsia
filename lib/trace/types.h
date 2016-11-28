@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
+#include "apps/tracing/lib/trace/ticks.h"
+
 namespace tracing {
 
 // Enumerates all known record types.
