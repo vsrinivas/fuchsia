@@ -52,6 +52,10 @@
             "bootfs_path": "apps/modules_gallery"
         },
         {
+            "binary": "music_story.flx",
+            "bootfs_path": "apps/music_story"
+        },
+        {
             "binary": "usps.flx",
             "bootfs_path": "apps/usps"
         },
