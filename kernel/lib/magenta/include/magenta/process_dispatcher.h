@@ -169,7 +169,7 @@ private:
     friend uint32_t BuildHandleStats(const ProcessDispatcher&, uint32_t*, size_t);
     friend void DumpProcessHandles(mx_koid_t id);
     friend void KillProcess(mx_koid_t id);
-    friend void MemoryUsageScanner();
+    friend void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 
     ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job, mxtl::StringPiece name, uint32_t flags);
 

@@ -145,6 +145,9 @@ size_t pmm_free(struct list_node* list) __NONNULL((1));
 /* Helper routine for the above. */
 size_t pmm_free_page(vm_page_t* page) __NONNULL((1));
 
+/* Return count of unallocated physical pages in system */
+size_t pmm_count_free_pages(void);
+
 /* Allocate a run of pages out of the kernel area and return the pointer in kernel space.
  * If the optional list is passed, append the allocate page structures to the tail of the list.
  * If the optional physical address pointer is passed, return the address.

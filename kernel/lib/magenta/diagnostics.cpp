@@ -188,15 +188,15 @@ void KillProcess(mx_koid_t id) {
 static size_t mwd_limit = 32 * 256;
 static bool mwd_running;
 
-void MemoryUsageScanner() {
+void DumpProcessMemoryUsage(const char* prefix, size_t limit) {
     AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
 
     for (const auto& process : ProcessDispatcher::global_process_list_) {
         size_t pages = process.PageCount();
-        if (pages > mwd_limit) {
+        if (pages > limit) {
             char pname[MX_MAX_NAME_LEN];
             process.get_name(pname);
-            printf("MemoryHog! %s: %zu MB\n", pname, pages / 256);
+            printf("%s%s: %zu MB\n", prefix, pname, pages / 256);
         }
     }
 }
@@ -204,7 +204,7 @@ void MemoryUsageScanner() {
 static int mwd_thread(void* arg) {
     for (;;) {
         thread_sleep(1000);
-        MemoryUsageScanner();
+        DumpProcessMemoryUsage("MemoryHog! ", mwd_limit);
     }
 }
 

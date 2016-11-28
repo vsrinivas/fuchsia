@@ -133,6 +133,8 @@ void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace) {
     vmm_context_switch(reinterpret_cast<VmAspace*>(oldspace), reinterpret_cast<VmAspace*>(newaspace));
 }
 
+void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
+
 status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
 #if TRACE_PAGE_FAULT || LOCAL_TRACE
     thread_t* current_thread = get_current_thread();
@@ -151,7 +153,12 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
         return ERR_NOT_FOUND;
 
     // page fault it
-    return aspace->PageFault(addr, flags);
+    status_t status = aspace->PageFault(addr, flags);
+    if (status == ERR_NOT_FOUND) {
+        printf("PageFault: %zu free pages\n", pmm_count_free_pages());
+        DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8*256);
+    }
+    return status;
 }
 
 void vmm_set_active_aspace(vmm_aspace_t* aspace) {

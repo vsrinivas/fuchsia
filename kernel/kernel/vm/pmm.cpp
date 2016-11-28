@@ -307,6 +307,15 @@ void pmm_dump_free() {
     printf(" %zu free MBs\n", megabytes_free);
 }
 
+size_t pmm_count_free_pages() {
+    size_t free = 0u;
+    AutoLock al(arena_lock);
+    for (const auto& a : arena_list) {
+        free += a.free_count();
+    }
+    return free;
+}
+
 extern "C"
 enum handler_return pmm_dump_timer(struct timer *t, lk_time_t, void *) {
     pmm_dump_free();
