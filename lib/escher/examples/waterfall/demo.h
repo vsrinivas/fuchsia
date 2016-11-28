@@ -20,6 +20,7 @@ class Demo {
     int height = 1024;
     std::string window_name;
     uint32_t desired_swapchain_image_count = 2;
+    bool use_fullscreen = false;
   };
 
   struct InstanceParams {

@@ -141,8 +141,11 @@ void Demo::CreateInstance(InstanceParams params) {
 
 void Demo::CreateWindowAndSurface(const WindowParams& params) {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+  GLFWmonitor* monitor =
+      params.use_fullscreen ? glfwGetPrimaryMonitor() : nullptr;
   window_ = glfwCreateWindow(params.width, params.height,
-                             params.window_name.c_str(), NULL, NULL);
+                             params.window_name.c_str(), monitor, NULL);
   FTL_CHECK(window_);
 
   VkSurfaceKHR surface;

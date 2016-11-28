@@ -51,20 +51,36 @@ static void key_callback(GLFWwindow* window,
   }
 }
 
-std::unique_ptr<Demo> create_demo() {
+std::unique_ptr<Demo> create_demo(bool use_fullscreen) {
   Demo::WindowParams window_params;
   window_params.window_name = "Escher Waterfall Demo (Vulkan)";
   window_params.width = kDemoWidth;
   window_params.height = kDemoHeight;
   window_params.desired_swapchain_image_count = 2;
+  window_params.use_fullscreen = use_fullscreen;
 
   Demo::InstanceParams instance_params;
+
+  if (use_fullscreen) {
+    FTL_LOG(INFO) << "Using fullscreen window: " << window_params.width << "x"
+                  << window_params.height;
+  } else {
+    FTL_LOG(INFO) << "Using 'windowed' window: " << window_params.width << "x"
+                  << window_params.height;
+  }
 
   return std::make_unique<Demo>(instance_params, window_params);
 }
 
 int main(int argc, char** argv) {
-  auto demo = create_demo();
+  bool use_fullscreen = false;
+  for (int i = 1; i < argc; ++i) {
+    if (!strcmp("--fullscreen", argv[i])) {
+      use_fullscreen = true;
+    }
+  }
+
+  auto demo = create_demo(use_fullscreen);
   glfwSetKeyCallback(demo->GetWindow(), key_callback);
 
   escher::GlslangInitializeProcess();
