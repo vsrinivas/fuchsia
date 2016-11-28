@@ -15,6 +15,7 @@ namespace tracing {
 namespace {
 
 constexpr char kProcessArgKey[] = "process";
+constexpr mx_koid_t kNoProcess = 0u;
 
 bool IsEventTypeSupported(EventType type) {
   switch (type) {
@@ -69,36 +70,59 @@ void ChromiumExporter::Start() {
 
 void ChromiumExporter::Stop() {
   for (const auto& pair : processes_) {
+    const mx_koid_t process_koid = pair.first;
+    const std::string& name = pair.second;
+
     writer_.StartObject();
     writer_.Key("ph");
     writer_.String("M");
     writer_.Key("name");
     writer_.String("process_name");
     writer_.Key("pid");
-    writer_.Uint64(pair.first);
+    writer_.Uint64(process_koid);
     writer_.Key("args");
     writer_.StartObject();
     writer_.Key("name");
-    writer_.String(pair.second.data(), pair.second.size());
+    writer_.String(name.data(), name.size());
     writer_.EndObject();
     writer_.EndObject();
+
+    // Sort kernel threads to the top of the process list.
+    if (process_koid == kNoProcess) {
+      writer_.StartObject();
+      writer_.Key("ph");
+      writer_.String("M");
+      writer_.Key("name");
+      writer_.String("process_sort_index");
+      writer_.Key("pid");
+      writer_.Uint64(process_koid);
+      writer_.Key("args");
+      writer_.StartObject();
+      writer_.Key("sort_index");
+      writer_.Int64(-1);
+      writer_.EndObject();
+      writer_.EndObject();
+    }
   }
 
   for (const auto& pair : threads_) {
+    const mx_koid_t thread_koid = pair.first;
+    const mx_koid_t process_koid = std::get<0>(pair.second);
+    const std::string& name = std::get<1>(pair.second);
+
     writer_.StartObject();
     writer_.Key("ph");
     writer_.String("M");
     writer_.Key("name");
     writer_.String("thread_name");
     writer_.Key("pid");
-    writer_.Uint64(std::get<0>(pair.second));
+    writer_.Uint64(process_koid);
     writer_.Key("tid");
-    writer_.Uint64(pair.first);
+    writer_.Uint64(thread_koid);
     writer_.Key("args");
     writer_.StartObject();
     writer_.Key("name");
-    writer_.String(std::get<1>(pair.second).data(),
-                   std::get<1>(pair.second).size());
+    writer_.String(name.data(), name.size());
     writer_.EndObject();
     writer_.EndObject();
   }
