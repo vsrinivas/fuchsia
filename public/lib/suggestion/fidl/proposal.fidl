@@ -1,0 +1,49 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module maxwell.suggestion;
+
+import "display.fidl";
+
+struct Proposal {
+  string id;  // namespaced internally to the proposing Agent. A URI?
+
+  // The Proposal is only considered valid if all of |preconditions| are
+  // evaluated to true.
+  // array<Precondition> preconditions;
+
+  // The Proposal is considered expired if *any* of the |expiry_conditions|
+  // are true.
+  // array<ExpiryCondition> expiry_conditions;
+
+  // The list of actions to take when the user selects the assocated Suggestion.
+  array<Action> on_selected;
+
+  Display display;
+};
+
+/*
+union Precondition {
+  DateTime after_time;
+  GeoArea geo_fence;
+}
+*/
+
+/*
+union ExpiryCondition {
+  DateTime expiry_time;
+}
+*/
+
+union Action {
+  CreateStory create_story;
+
+  // TODO(thatguy): Add other actions.
+};
+
+struct CreateStory {
+  string module_id;
+
+  // TODO(thatguy): Make this useful.
+};

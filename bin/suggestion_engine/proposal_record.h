@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/services/suggestion/suggestion_agent_client.fidl.h"
+#include "apps/maxwell/services/suggestion/proposal.fidl.h"
 #include "lib/ftl/time/time_point.h"
 
 namespace maxwell {

@@ -6,6 +6,7 @@ import("//lib/fidl/fidl.gni")
 
 fidl("suggestion") {
   sources = [
+    "proposal.fidl",
     "suggestion_agent_client.fidl",
     "suggestion_engine.fidl",
   ]

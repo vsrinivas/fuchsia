@@ -4,7 +4,7 @@
 
 module maxwell.suggestion;
 
-import "display.fidl";
+import "proposal.fidl";
 
 // A service and supporting structures enabling Agents to contribute Proposals
 // to the Suggestion engine.
@@ -24,46 +24,4 @@ interface SuggestionAgentClient {
 
   // Returns a list of all Proposals created by the identified Agent.
   GetAll() => (array<Proposal> proposals);
-};
-
-struct Proposal {
-  string id;  // namespaced internally to the proposing Agent. A URI?
-
-  // The Proposal is only considered valid if all of |preconditions| are
-  // evaluated to true.
-  // array<Precondition> preconditions;
-
-  // The Proposal is considered expired if *any* of the |expiry_conditions|
-  // are true.
-  // array<ExpiryCondition> expiry_conditions;
-
-  // The list of actions to take when the user selects the assocated Suggestion.
-  array<Action> on_selected;
-
-  Display display;
-};
-
-/*
-union Precondition {
-  DateTime after_time;
-  GeoArea geo_fence;
-}
-*/
-
-/*
-union ExpiryCondition {
-  DateTime expiry_time;
-}
-*/
-
-union Action {
-  CreateStory create_story;
-
-  // TODO(thatguy): Add other actions.
-};
-
-struct CreateStory {
-  string module_id;
-
-  // TODO(thatguy): Make this useful.
 };
