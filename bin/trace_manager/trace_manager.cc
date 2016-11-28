@@ -75,6 +75,18 @@ void TraceManager::StopTracing() {
       kStopTimeout);
 }
 
+void TraceManager::DumpProvider(uint32_t provider_id, mx::socket output) {
+  for (const auto& provider : providers_) {
+    if (provider.id == provider_id) {
+      FTL_LOG(INFO) << "Dumping provider: " << provider;
+      provider.provider->Dump(std::move(output));
+      return;
+    }
+  }
+  FTL_LOG(ERROR) << "Failed to dump provider " << provider_id
+                 << ", provider not found";
+}
+
 void TraceManager::GetKnownCategories(
     const GetKnownCategoriesCallback& callback) {
   callback(

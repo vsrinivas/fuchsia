@@ -31,6 +31,7 @@ class TraceManager : public TraceRegistry, public TraceController {
   // |TraceController| implementation.
   void StartTracing(TraceOptionsPtr options, mx::socket output) override;
   void StopTracing() override;
+  void DumpProvider(uint32_t provider_id, mx::socket output) override;
   void GetKnownCategories(const GetKnownCategoriesCallback& callback) override;
   void GetRegisteredProviders(
       const GetRegisteredProvidersCallback& callback) override;

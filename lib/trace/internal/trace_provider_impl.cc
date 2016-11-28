@@ -32,6 +32,10 @@ TraceProviderImpl::~TraceProviderImpl() {
   Stop();
 }
 
+void TraceProviderImpl::SetDumpCallback(DumpCallback callback) {
+  dump_callback_ = callback;
+}
+
 void TraceProviderImpl::Start(mx::vmo buffer,
                               mx::eventpair fence,
                               ::fidl::Array<::fidl::String> categories) {
@@ -50,6 +54,12 @@ void TraceProviderImpl::Stop() {
   if (state_ == State::kStarted) {
     state_ = State::kStopping;
     writer::StopTracing();
+  }
+}
+
+void TraceProviderImpl::Dump(mx::socket output) {
+  if (dump_callback_) {
+    dump_callback_(std::make_unique<tracing::Dump>(std::move(output)));
   }
 }
 

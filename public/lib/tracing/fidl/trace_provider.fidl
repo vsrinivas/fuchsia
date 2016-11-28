@@ -35,4 +35,8 @@ interface TraceProvider {
   // buffer, it must close both |buffer| and |fence| to indicate to the trace
   // manager that tracing is finished.
   Stop();
+
+  // Dumps the internal state of the trace provider to |output| in a
+  // human-readable form.
+  Dump(handle<socket> output);
 };

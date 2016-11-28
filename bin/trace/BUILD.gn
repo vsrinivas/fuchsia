@@ -14,18 +14,20 @@ executable("trace") {
 
 source_set("trace_app") {
   sources = [
-    "app.h",
     "app.cc",
-    "command.h",
+    "app.h",
     "command.cc",
-    "commands/list_categories.h",
+    "command.h",
+    "commands/dump_provider.cc",
+    "commands/dump_provider.h",
     "commands/list_categories.cc",
-    "commands/list_providers.h",
+    "commands/list_categories.h",
     "commands/list_providers.cc",
-    "commands/record.h",
+    "commands/list_providers.h",
     "commands/record.cc",
-    "tracer.cc",
-    "tracer.h,"
+    "commands/record.h",
+    "tracer.h",
+    "tracer.cc"
   ]
 
   public_deps = [

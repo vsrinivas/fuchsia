@@ -6,6 +6,7 @@
 #define APPS_TRACING_LIB_TRACE_PROVIDER_H_
 
 #include "apps/modular/lib/app/application_context.h"
+#include "apps/tracing/lib/trace/dump.h"
 #include "apps/tracing/lib/trace/settings.h"
 #include "apps/tracing/services/trace_registry.fidl.h"
 
@@ -32,6 +33,10 @@ void InitializeTracer(TraceRegistryPtr registry, const TraceSettings& settings);
 // Destroys the global Tracer if one has been initialized with
 // |InitializeTracer|.
 void DestroyTracer();
+
+// Sets the dump state callback.
+// This must only be called after the tracer has been initialized.
+void SetDumpCallback(DumpCallback callback);
 
 }  // namespace tracing
 

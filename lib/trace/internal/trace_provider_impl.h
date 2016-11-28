@@ -10,9 +10,11 @@
 #include <vector>
 
 #include <mx/eventpair.h>
+#include <mx/socket.h>
 #include <mx/vmo.h>
 
 #include "apps/tracing/lib/trace/settings.h"
+#include "apps/tracing/lib/trace/provider.h"
 #include "apps/tracing/services/trace_provider.fidl.h"
 #include "apps/tracing/services/trace_registry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -27,12 +29,15 @@ class TraceProviderImpl : public TraceProvider {
   TraceProviderImpl(TraceRegistryPtr registry, const TraceSettings& settings);
   ~TraceProviderImpl() override;
 
+  void SetDumpCallback(DumpCallback callback);
+
  private:
   // |TraceProvider|
   void Start(mx::vmo buffer,
              mx::eventpair fence,
              ::fidl::Array<::fidl::String> categories) override;
   void Stop() override;
+  void Dump(mx::socket output) override;
 
   void StartPendingTrace();
   void FinishedTrace();
@@ -42,6 +47,8 @@ class TraceProviderImpl : public TraceProvider {
 
   enum class State { kStarted, kStopping, kStopped };
   State state_ = State::kStopped;
+
+  DumpCallback dump_callback_;
 
   struct PendingTrace {
     mx::vmo buffer;

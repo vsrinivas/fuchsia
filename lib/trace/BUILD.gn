@@ -70,10 +70,12 @@ source_set("provider") {
   sources = [
     "internal/trace_provider_impl.cc",
     "internal/trace_provider_impl.h",
-    "provider.h",
+    "dump.cc",
+    "dump.h",
     "provider.cc",
-    "settings.h",
+    "provider.h",
     "settings.cc",
+    "settings.h",
   ]
 
   deps = [
@@ -91,8 +93,8 @@ source_set("provider") {
 # Implements the trace reader API.
 source_set("reader") {
   sources = [
-    "reader.h",
     "reader.cc",
+    "reader.h",
   ]
 
   deps = [

@@ -7,6 +7,7 @@
 
 #include "apps/tracing/src/trace/app.h"
 
+#include "apps/tracing/src/trace/commands/dump_provider.h"
 #include "apps/tracing/src/trace/commands/list_categories.h"
 #include "apps/tracing/src/trace/commands/list_providers.h"
 #include "apps/tracing/src/trace/commands/record.h"
@@ -14,6 +15,7 @@
 namespace tracing {
 
 App::App(modular::ApplicationContext* context) : Command(context) {
+  RegisterCommand(DumpProvider::Describe());
   RegisterCommand(ListCategories::Describe());
   RegisterCommand(ListProviders::Describe());
   RegisterCommand(Record::Describe());

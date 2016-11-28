@@ -44,4 +44,10 @@ void DestroyTracer() {
   g_tracer = nullptr;
 }
 
+void SetDumpCallback(DumpCallback callback) {
+  FTL_CHECK(g_tracer)
+      << "Trace must be initialized before setting dump callback";
+  g_tracer->SetDumpCallback(std::move(callback));
+}
+
 }  // namespace tracing
