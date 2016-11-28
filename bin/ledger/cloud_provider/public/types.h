@@ -22,6 +22,7 @@ enum class Status {
   OK,
   ARGUMENT_ERROR,
   NETWORK_ERROR,
+  NOT_FOUND,
   INTERNAL_ERROR,
   UNKNOWN_ERROR
 };

@@ -14,6 +14,8 @@ ftl::StringView StatusToString(Status status) {
       return "ARGUMENT_ERROR";
     case Status::NETWORK_ERROR:
       return "NETWORK_ERROR";
+    case Status::NOT_FOUND:
+      return "NOT_FOUND";
     case Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
     case Status::UNKNOWN_ERROR:

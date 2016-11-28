@@ -107,8 +107,6 @@ void PageSyncImpl::GetObject(
       object_id, [callback](cloud_provider::Status status, uint64_t size,
                             mx::datapipe_consumer data) {
         if (status != cloud_provider::Status::OK) {
-          // TODO(ppi), LE-82: distinguish network errors or not found once the
-          // cloud provider can do this.
           FTL_LOG(WARNING) << "Fetching remote object failed with status: "
                            << status;
           callback(storage::Status::IO_ERROR, 0, mx::datapipe_consumer());

@@ -133,18 +133,23 @@ void CloudProviderImpl::GetObject(
   firebase_->Get(
       GetObjectPath(object_id), "",
       [callback](firebase::Status status, const rapidjson::Value& value) {
-        if (status == firebase::Status::OK) {
-          std::string data;
-          if (!value.IsString() ||
-              !firebase::Decode(value.GetString(), &data)) {
-            callback(Status::INTERNAL_ERROR, 0u, mx::datapipe_consumer());
-            return;
-          }
-          callback(Status::OK, data.size(),
-                   mtl::WriteStringToConsumerHandle(data));
-        } else {
+        if (status != firebase::Status::OK) {
           callback(Status::NETWORK_ERROR, 0u, mx::datapipe_consumer());
+          return;
         }
+
+        if (value.IsNull()) {
+          callback(Status::NOT_FOUND, 0u, mx::datapipe_consumer());
+          return;
+        }
+
+        std::string data;
+        if (!value.IsString() || !firebase::Decode(value.GetString(), &data)) {
+          callback(Status::INTERNAL_ERROR, 0u, mx::datapipe_consumer());
+          return;
+        }
+        callback(Status::OK, data.size(),
+                 mtl::WriteStringToConsumerHandle(data));
       });
 }
 

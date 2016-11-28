@@ -387,5 +387,22 @@ TEST_F(CloudProviderImplTest, GetObject) {
   EXPECT_EQ("objects/object_idV", get_keys_[0]);
 }
 
+TEST_F(CloudProviderImplTest, GetObjectNotFound) {
+  std::string get_response_content = "null";
+  get_response_.reset(new rapidjson::Document());
+  get_response_->Parse(get_response_content.c_str(),
+                       get_response_content.size());
+
+  Status status;
+  uint64_t size;
+  mx::datapipe_consumer data;
+  cloud_provider_->GetObject(
+      "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &size, &data));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(0u, size);
+}
+
 }  // namespace
 }  // namespace cloud_provider
