@@ -226,10 +226,10 @@ class _RenderChildView extends RenderBox {
   _RenderChildView({
     ChildViewConnection connection,
     double scale,
-    bool hittable: true,
-  }) : _scale = scale, _hittable = hittable {
+    bool hitTestable: true,
+  }) : _scale = scale, _hitTestable = hitTestable {
     assert(scale != null);
-    assert(hittable != null);
+    assert(hitTestable != null);
     this.connection = connection;
   }
 
@@ -270,13 +270,13 @@ class _RenderChildView extends RenderBox {
   }
 
   /// Whether this child should be included during hit testing.
-  bool get hittable => _hittable;
-  bool _hittable;
-  set hittable (bool value) {
+  bool get hitTestable => _hitTestable;
+  bool _hitTestable;
+  set hitTestable (bool value) {
     assert(value != null);
-    if (value == _hittable)
+    if (value == _hitTestable)
       return;
-    _hittable = value;
+    _hitTestable = value;
     if (_connection != null)
       markNeedsPaint();
   }
@@ -341,7 +341,8 @@ class _RenderChildView extends RenderBox {
         devicePixelRatio: scale,
         physicalWidth: _physicalWidth,
         physicalHeight: _physicalHeight,
-        sceneToken: _connection._viewInfo.sceneToken.value
+        sceneToken: _connection._viewInfo.sceneToken.value,
+        hitTestable: hitTestable,
       ));
     }
     assert(() {
@@ -372,7 +373,7 @@ class ChildSceneLayer extends Layer {
     this.physicalWidth: 0,
     this.physicalHeight: 0,
     this.sceneToken: 0,
-    this.hittable: true,
+    this.hitTestable: true,
   });
 
   /// Offset from parent in the parent's coordinate system.
@@ -393,7 +394,7 @@ class ChildSceneLayer extends Layer {
   /// Whether this child should be included during hit testing.
   ///
   /// Defaults to true.
-  bool hittable;
+  bool hitTestable;
 
   @override
   void addToScene(ui.SceneBuilder builder, Offset layerOffset) {
@@ -403,7 +404,7 @@ class ChildSceneLayer extends Layer {
       physicalWidth: physicalWidth,
       physicalHeight: physicalHeight,
       sceneToken: sceneToken,
-      hittable: hittable,
+      hitTestable: hitTestable,
     );
   }
 
@@ -424,7 +425,7 @@ class ChildSceneLayer extends Layer {
 /// the child.
 class ChildView extends LeafRenderObjectWidget {
   /// Creates a widget that is replaced by content from another process.
-  ChildView({ ChildViewConnection connection, this.hittable: true })
+  ChildView({ ChildViewConnection connection, this.hitTestable: true })
     : connection = connection, super(key: new GlobalObjectKey(connection));
 
   /// A connection to the child whose content will replace this widget.
@@ -433,14 +434,14 @@ class ChildView extends LeafRenderObjectWidget {
   /// Whether this child should be included during hit testing.
   ///
   /// Defaults to true.
-  bool hittable;
+  bool hitTestable;
 
   @override
   _RenderChildView createRenderObject(BuildContext context) {
     return new _RenderChildView(
       connection: connection,
       scale: MediaQuery.of(context).devicePixelRatio,
-      hittable: hittable,
+      hitTestable: hitTestable,
     );
   }
 
@@ -449,6 +450,6 @@ class ChildView extends LeafRenderObjectWidget {
     renderObject
       ..connection = connection
       ..scale = MediaQuery.of(context).devicePixelRatio
-      ..hittable = hittable;
+      ..hitTestable = hitTestable;
   }
 }
