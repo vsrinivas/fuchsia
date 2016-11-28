@@ -425,7 +425,11 @@ static mx_status_t _mem_create(vnode_t* parent, mnode_t** out,
     xprintf("mem_create: vn=%p, parent=%p name='%.*s'\n",
             mem, parent, (int)namelen, name);
 
-    mem->vn.ops = &vn_mem_ops;
+    if (isdir) {
+        mem->vn.ops = &vn_mem_ops_dir;
+    } else {
+        mem->vn.ops = &vn_mem_ops;
+    }
     mem->vn.pdata = mem;
     list_initialize(&mem->vn.dn_list);
     list_initialize(&mem->vn.watch_list);
