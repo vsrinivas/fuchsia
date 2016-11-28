@@ -61,6 +61,7 @@ bool CommandBuffer::Submit(vk::Queue queue,
 
 void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore,
                                      vk::PipelineStageFlags stage) {
+  FTL_DCHECK(is_active_);
   if (semaphore) {
     // Build up list that will be used when frame is submitted.
     wait_semaphores_for_submit_.push_back(semaphore->value());
@@ -76,6 +77,7 @@ void CommandBuffer::TakeWaitSemaphore(const ResourcePtr& resource,
 }
 
 void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
+  FTL_DCHECK(is_active_);
   if (semaphore) {
     // Build up list that will be used when frame is submitted.
     signal_semaphores_for_submit_.push_back(semaphore->value());
@@ -85,6 +87,7 @@ void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
 }
 
 void CommandBuffer::AddUsedResource(ResourcePtr resource) {
+  FTL_DCHECK(is_active_);
   used_resources_.push_back(std::move(resource));
 }
 
@@ -119,6 +122,10 @@ void CommandBuffer::CopyImage(ImagePtr src_image,
 void CommandBuffer::TransitionImageLayout(ImagePtr image,
                                           vk::ImageLayout old_layout,
                                           vk::ImageLayout new_layout) {
+  // TODO: These are conservative values that we should try to improve on below.
+  vk::PipelineStageFlags src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
+  vk::PipelineStageFlags dst_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
+
   vk::ImageMemoryBarrier barrier;
   barrier.oldLayout = old_layout;
   barrier.newLayout = new_layout;
@@ -167,27 +174,49 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
     }
   } else if (new_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
     barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+    // TODO: This is conservative.  Not sure if we can even sample textures in
+    // tessellation shaders.  If necessary, we could adjust that API so that the
+    // caller provides explicit knowledge of which stages to use.
+    dst_stage_mask = vk::PipelineStageFlagBits::eVertexShader |
+                     vk::PipelineStageFlagBits::eTessellationControlShader |
+                     vk::PipelineStageFlagBits::eTessellationEvaluationShader |
+                     vk::PipelineStageFlagBits::eGeometryShader |
+                     vk::PipelineStageFlagBits::eFragmentShader;
     if (old_layout == vk::ImageLayout::eTransferDstOptimal) {
       barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+      src_stage_mask = vk::PipelineStageFlagBits::eTransfer;
+      // This is an exception to the dst_stage_mask chosen above.  Because this
+      // is a transfer operation and the data will be used next on a different
+      // queue, a semaphore is required anyway, so eBottomOfPipe is safe.
+      dst_stage_mask = vk::PipelineStageFlagBits::eBottomOfPipe;
     } else if (old_layout == vk::ImageLayout::eColorAttachmentOptimal) {
       barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+      src_stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     } else if (old_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
       barrier.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+      src_stage_mask = vk::PipelineStageFlagBits::eLateFragmentTests;
     } else {
       // Don't know what to do.
       success = false;
     }
   } else if (old_layout == vk::ImageLayout::eShaderReadOnlyOptimal) {
     barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
+    // TODO: This is conservative.  Not sure if we can even sample textures in
+    // tessellation shaders.  If necessary, we could adjust that API so that the
+    // caller provides explicit knowledge of which stages to use.
+    src_stage_mask = vk::PipelineStageFlagBits::eVertexShader |
+                     vk::PipelineStageFlagBits::eTessellationControlShader |
+                     vk::PipelineStageFlagBits::eTessellationEvaluationShader |
+                     vk::PipelineStageFlagBits::eGeometryShader |
+                     vk::PipelineStageFlagBits::eFragmentShader;
     if (new_layout == vk::ImageLayout::eColorAttachmentOptimal) {
       barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
                               vk::AccessFlagBits::eColorAttachmentWrite;
+      dst_stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     } else if (new_layout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
       barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
                               vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-    } else if (new_layout == vk::ImageLayout::ePresentSrcKHR) {
-      // TODO: eMemoryRead may not be the best choice.  What is?
-      barrier.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+      dst_stage_mask = vk::PipelineStageFlagBits::eEarlyFragmentTests;
     } else {
       // Don't know what to do.
       success = false;
@@ -195,8 +224,9 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
   } else if (new_layout == vk::ImageLayout::ePresentSrcKHR &&
              old_layout == vk::ImageLayout::eColorAttachmentOptimal) {
     barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-    // TODO: eMemoryRead may not be the best choice.  What is?
     barrier.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+    src_stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dst_stage_mask = vk::PipelineStageFlagBits::eTransfer;
   } else {
     // Don't know what to do.
     success = false;
@@ -208,8 +238,8 @@ void CommandBuffer::TransitionImageLayout(ImagePtr image,
     FTL_DCHECK(false);
     return;
   }
-  command_buffer_.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                                  vk::PipelineStageFlagBits::eTopOfPipe,
+
+  command_buffer_.pipelineBarrier(src_stage_mask, dst_stage_mask,
                                   vk::DependencyFlagBits::eByRegion, 0, nullptr,
                                   0, nullptr, 1, &barrier);
 
@@ -228,6 +258,7 @@ void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
                                     const FramebufferPtr& framebuffer,
                                     const vk::ClearValue* clear_values,
                                     size_t clear_value_count) {
+  FTL_DCHECK(is_active_);
   uint32_t width = framebuffer->width();
   uint32_t height = framebuffer->height();
 
