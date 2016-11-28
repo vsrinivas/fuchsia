@@ -11,9 +11,12 @@
 #include <new.h>
 #include <stdio.h>
 #include <string.h>
+#include <trace.h>
 
 #include <kernel/vm.h>
 #include <kernel/vm/vm_aspace.h>
+
+#define LOCAL_TRACE 0
 
 namespace mxtl {
 
@@ -23,8 +26,7 @@ Arena::Arena()
       c_top_(nullptr),
       d_start_(nullptr),
       d_top_(nullptr),
-      d_end_(nullptr),
-      p_top_(nullptr) {
+      d_end_(nullptr) {
 }
 
 Arena::~Arena() {
@@ -40,6 +42,8 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     if (!count)
         return ERR_INVALID_ARGS;
 
+    LTRACEF("Arena name %s, ob_size %zu, count %zu\n", name, ob_size, count);
+
     ob_size_ = ob_size;
 
     char vname[24 + 8] = {};
@@ -49,38 +53,66 @@ status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
     void* start = nullptr;
     status_t st;
 
-    auto kspace = vmm_get_kernel_aspace();
+    auto kspace = VmAspace::kernel_aspace();
 
-    // Allocate the control zone, ddemand paged.
+    // Allocate the control zone
+    const size_t control_mem_sz = count * sizeof(Node);
+
+    control_vmo_ = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, control_mem_sz);
+    if (!control_vmo_)
+        return ERR_NO_MEMORY;
+
+    // commit the entire object first
+    uint64_t committed;
+    st = control_vmo_->CommitRange(0, control_mem_sz, &committed);
+    if (st < 0 || committed != control_mem_sz) {
+        return ERR_NO_MEMORY;
+    }
+
+    // map it
     sprintf(vname, "%s_ctrl", name);
-    st = vmm_alloc(kspace, vname, count * sizeof(Node), &start, PAGE_SIZE_SHIFT,
-                   0, 0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+    st = kspace->MapObject(control_vmo_, vname, 0, control_mem_sz, &start,
+                           PAGE_SIZE_SHIFT, 0, 0,
+                           ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
     if (st < 0)
         return st;
+
+    LTRACEF("control zone at %p, size %zu\n", start, control_mem_sz);
 
     c_start_ = reinterpret_cast<char*>(start);
     c_top_ = c_start_;
 
-    // Allocate the data zone, demand-paged (although we do manual range commits).
+    // Allocate the data zone
     auto data_mem_sz = count * ob_size;
 
     sprintf(vname, "%s_data", name);
     vmo_ = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, data_mem_sz);
     if (!vmo_) {
-        vmm_free_region(kspace, reinterpret_cast<vaddr_t>(c_start_));
+        kspace->FreeRegion(reinterpret_cast<vaddr_t>(c_start_));
         return ERR_NO_MEMORY;
     }
 
-    st = vmm_aspace_to_obj(kspace)->MapObject(
+    // commit the entire object first
+    st = vmo_->CommitRange(0, data_mem_sz, &committed);
+    if (st < 0 || committed != data_mem_sz) {
+        kspace->FreeRegion(reinterpret_cast<vaddr_t>(c_start_));
+        return ERR_NO_MEMORY;
+    }
+
+    // map it
+    st = kspace->MapObject(
             vmo_, vname, 0u, data_mem_sz, &start, PAGE_SIZE_SHIFT,
             0, 0, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
 
-    if (st < 0)
+    if (st < 0) {
+        kspace->FreeRegion(reinterpret_cast<vaddr_t>(c_start_));
         return st;
+    }
+
+    LTRACEF("data zone at %p, size %zu\n", start, data_mem_sz);
 
     d_start_ = reinterpret_cast<char*>(start);
     d_top_ = d_start_;
-    p_top_ = d_top_;
 
     d_end_ = d_start_ + count * ob_size;
 
@@ -95,7 +127,6 @@ void* Arena::Alloc() {
         c_top_ -= sizeof(Node);
         return node->slot;
     } else if (d_top_ < d_end_) {
-        CommitMemoryAheadIfNeeded();
         auto slot = d_top_;
         d_top_ += ob_size_;
         return slot;
@@ -111,31 +142,6 @@ void Arena::Free(void* addr) {
     auto node = new (reinterpret_cast<void*>(c_top_)) Node{addr};
     c_top_ += sizeof(Node);
     free_.push_front(node);
-}
-
-size_t Arena::Trim() {
-    // TODO(cpu). Impement this. The general idea is:
-    // 1 - find max |slot| in the |free_| list.
-    // 2 - compute pages bettween max of #1 and |d_end_|
-    // 3-  free pages, adjust d_end_, etc;
-    return 0u;
-}
-
-void Arena::CommitMemoryAheadIfNeeded() {
-   if ((p_top_ - d_top_) >= PAGE_SIZE)
-        return;
-
-    // The top of the used range is close to the edge of commited memory,
-    // rather than suffer a page fault, we commit ahead 4 pages or less
-    // if we are near the end.
-
-    auto len = vmo_->CommitRange(p_top_ - d_start_, 4 * PAGE_SIZE, nullptr);
-    if (len < 0) {
-        // it seems we ran out of physical memory.
-        panic("failed to commit arena pages\n");
-    }
-
-    p_top_ += len;
 }
 
 }

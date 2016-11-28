@@ -34,8 +34,6 @@ public:
     status_t Init(const char* name, size_t ob_size, size_t max_count);
     void* Alloc();
     void Free(void* addr);
-    size_t Trim();
-
     bool in_range(void* addr) const {
         return ((addr >= static_cast<void*>(d_start_)) &&
                 (addr < static_cast<void*>(d_top_)));
@@ -53,8 +51,6 @@ private:
         void* slot;
     };
 
-    void CommitMemoryAheadIfNeeded();
-
     SinglyLinkedList<Node*> free_;
 
     size_t ob_size_;
@@ -68,8 +64,8 @@ private:
     char* d_end_;
 
     // Memory management.
+    mxtl::RefPtr<VmObject> control_vmo_;
     mxtl::RefPtr<VmObject> vmo_;
-    char* p_top_;
 };
 
 template <typename T>
