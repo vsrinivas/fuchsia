@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/src/storage/test/commit_contents_empty_impl.h"
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/public/commit.h"
 
@@ -57,7 +58,7 @@ class EntryMapIterator : public Iterator<const storage::Entry> {
   std::map<std::string, fake::FakeJournalDelegate::Entry>::const_iterator end_;
 };
 
-class FakeCommitContents : public CommitContentsEmptyImpl {
+class FakeCommitContents : public test::CommitContentsEmptyImpl {
  public:
   FakeCommitContents(FakeJournalDelegate* journal) : journal_(journal) {}
   ~FakeCommitContents() {}
