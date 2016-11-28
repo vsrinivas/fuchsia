@@ -6,34 +6,8 @@ group("ledger") {
   testonly = true
 
   deps = [
-    ":tests",
     "//apps/ledger/examples",
     "//apps/ledger/services",
-    "//apps/ledger/src/app",
-    "//apps/ledger/src/backoff",
-    "//apps/ledger/src/callback",
-    "//apps/ledger/src/cloud_provider",
-    "//apps/ledger/src/cloud_sync",
-    "//apps/ledger/src/configuration",
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/environment",
-    "//apps/ledger/src/firebase",
-    "//apps/ledger/src/gcs",
-    "//apps/ledger/src/glue",
-    "//apps/ledger/src/network",
-    "//apps/ledger/src/storage",
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    "//apps/ledger/src/backoff:unittests",
-    "//apps/ledger/src/callback:unittests",
-    "//apps/ledger/src/firebase:unittests",
-    "//apps/ledger/src/gcs:unittests",
-    "//apps/ledger/src/glue:unittests",
-    "//apps/ledger/src/test:unittests",
+    "//apps/ledger/src",
   ]
 }
