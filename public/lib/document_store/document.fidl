@@ -23,6 +23,7 @@ union Value {
   double float_value;
   array<uint8> binary;
   string iri;
+  bool bool_value;
   // Represents an empty value.
   bool empty;
 };

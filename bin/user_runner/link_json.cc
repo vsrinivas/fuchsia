@@ -70,14 +70,14 @@ fidl::String ConvertObject(LinkData* const ret, const rapidjson::Value::ConstObj
 
       case rapidjson::kFalseType: {
         auto val = document_store::Value::New();
-        val->set_int_value(0);
+        val->set_bool_value(false);
         doc->properties[property.name.GetString()] = std::move(val);
         break;
       }
 
       case rapidjson::kTrueType: {
         auto val = document_store::Value::New();
-        val->set_int_value(1);
+        val->set_bool_value(true);
         doc->properties[property.name.GetString()] = std::move(val);
         break;
       }

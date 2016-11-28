@@ -18,6 +18,7 @@ enum class ValuePrefix : uint8_t {
   INT = 'i',
   FLOAT = 'f',
   BINARY = 'b',
+  BOOL = 't',
   EMPTY = 'e',
 };
 
@@ -69,6 +70,15 @@ void SerializeEmpty(fidl::Array<uint8_t>* serialized) {
   serialized->data()[0] = static_cast<uint8_t>(ValuePrefix::EMPTY);
 }
 
+void SerializeBool(const bool value, fidl::Array<uint8_t>* serialized) {
+  *serialized = fidl::Array<uint8_t>::New(2);
+  uint8_t* raw = serialized->data();
+
+  raw[0] = static_cast<uint8_t>(ValuePrefix::EMPTY);
+
+  *reinterpret_cast<bool*>(raw + 1) = value;
+}
+
 // Serialize a value for storage on the ledger.
 void SerializeValue(const ValuePtr& value, fidl::Array<uint8_t>* serialized) {
   fidl::String string;
@@ -89,11 +99,14 @@ void SerializeValue(const ValuePtr& value, fidl::Array<uint8_t>* serialized) {
     case Value::Tag::BINARY:
       SerializeBinary(value->get_binary(), serialized);
       return;
+    case Value::Tag::BOOL_VALUE:
+      SerializeBool(value->get_bool_value(), serialized);
+      return;
     case Value::Tag::EMPTY:
       SerializeEmpty(serialized);
       return;
-    default:
-      FTL_LOG(FATAL) << "Unsupported data type.";
+    case Value::Tag::__UNKNOWN__:
+      FTL_LOG(FATAL) << "Unsupported data type!";
   };
 }
 
@@ -144,6 +157,17 @@ bool DeserializeFloat(const fidl::Array<uint8_t>& serialized, ValuePtr* value) {
   return true;
 }
 
+bool DeserializeBool(const fidl::Array<uint8_t>& serialized, ValuePtr* value) {
+  if (serialized.size() != 2) {
+    return false;
+  }
+
+  (*value)->set_bool_value(
+      *reinterpret_cast<const bool*>(serialized.data() + 1));
+
+  return true;
+}
+
 // Deserialize a value stored on the ledger.
 bool DeserializeValue(const fidl::Array<uint8_t>& serialized, ValuePtr* value) {
   *value = Value::New();
@@ -162,6 +186,8 @@ bool DeserializeValue(const fidl::Array<uint8_t>& serialized, ValuePtr* value) {
       return DeserializeInt(serialized, value);
     case ValuePrefix::FLOAT:
       return DeserializeFloat(serialized, value);
+    case ValuePrefix::BOOL:
+      return DeserializeBool(serialized, value);
     case ValuePrefix::EMPTY:
       (*value)->set_empty(true);
       return true;
