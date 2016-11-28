@@ -14,7 +14,15 @@ namespace network {
 
 class URLLoaderImpl : public URLLoader {
  public:
-  URLLoaderImpl();
+  // Coordinates requests to limit the number of concurrent active requests.
+  class Coordinator {
+   public:
+    virtual ~Coordinator() {}
+    virtual void RequestNetworkSlot(
+        std::function<void(ftl::Closure)> slot_request) = 0;
+  };
+
+  URLLoaderImpl(Coordinator* coordinator);
   ~URLLoaderImpl() override;
 
  private:
@@ -33,6 +41,7 @@ class URLLoaderImpl : public URLLoader {
   void SendResponse(URLResponsePtr response);
   void StartInternal(URLRequestPtr request);
 
+  Coordinator* coordinator_;
   Callback callback_;
   // bool auto_follow_redirects_;
   url::GURL current_url_;

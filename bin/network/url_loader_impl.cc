@@ -13,18 +13,24 @@
 #include "apps/network/http_client.h"
 #include "apps/network/net_adapters.h"
 #include "apps/network/net_errors.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/url/gurl.h"
 
 namespace network {
 
-URLLoaderImpl::URLLoaderImpl() {}
+URLLoaderImpl::URLLoaderImpl(Coordinator* coordinator)
+    : coordinator_(coordinator) {}
 
 URLLoaderImpl::~URLLoaderImpl() {}
 
 void URLLoaderImpl::Start(URLRequestPtr request, const Callback& callback) {
-  callback_ = callback;
-  StartInternal(std::move(request));
+  callback_ = std::move(callback);
+  coordinator_->RequestNetworkSlot(ftl::MakeCopyable(
+      [ this, request = std::move(request) ](ftl::Closure on_inactive) mutable {
+        StartInternal(std::move(request));
+        on_inactive();
+      }));
 }
 
 void URLLoaderImpl::FollowRedirect(const Callback& callback) {

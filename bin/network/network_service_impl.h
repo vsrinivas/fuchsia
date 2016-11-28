@@ -9,6 +9,7 @@
 
 #include <list>
 #include <memory>
+#include <queue>
 
 #include "apps/network/url_loader_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -18,7 +19,8 @@
 
 namespace network {
 
-class NetworkServiceImpl : public NetworkService {
+class NetworkServiceImpl : public NetworkService,
+                           public URLLoaderImpl::Coordinator {
  public:
   NetworkServiceImpl();
   ~NetworkServiceImpl() override;
@@ -26,7 +28,7 @@ class NetworkServiceImpl : public NetworkService {
   void AddBinding(fidl::InterfaceRequest<NetworkService> request);
 
   // NetworkService methods:
-  void CreateURLLoader(fidl::InterfaceRequest<URLLoader> loader) override;
+  void CreateURLLoader(fidl::InterfaceRequest<URLLoader> request) override;
   void GetCookieStore(mx::channel cookie_store) override;
   void CreateWebSocket(mx::channel socket) override;
   void CreateTCPBoundSocket(
@@ -49,8 +51,16 @@ class NetworkServiceImpl : public NetworkService {
  private:
   class UrlLoaderContainer;
 
+  // URLLoaderImpl::Coordinator:
+  void RequestNetworkSlot(
+      std::function<void(ftl::Closure)> slot_request) override;
+
+  void OnSlotReturned();
+
+  size_t available_slots_;
   fidl::BindingSet<NetworkService> bindings_;
   std::list<UrlLoaderContainer> loaders_;
+  std::queue<std::function<void(ftl::Closure)>> slot_requests_;
 };
 
 }  // namespace network
