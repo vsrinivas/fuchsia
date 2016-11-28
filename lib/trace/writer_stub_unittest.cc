@@ -20,7 +20,43 @@ TEST(WriterStubTest, AllFunctionsDoNothing) {
   EXPECT_EQ(TraceState::kFinished, GetTraceState());
   TraceHandlerKey handler_key = AddTraceHandler([](TraceState state) {});
   RemoveTraceHandler(handler_key);
-  EXPECT_FALSE(TraceWriter::Prepare());
+
+  auto writer = TraceWriter::Prepare();
+  EXPECT_FALSE(writer);
+  if (writer) {
+    // These methods will not be reached but their symbols must be present.
+    writer.RegisterString("", false);
+    writer.RegisterStringCopy(std::string());
+    writer.RegisterCurrentThread();
+    writer.RegisterThread(0, 0);
+    writer.WriteProcessDescription(0, std::string());
+    writer.WriteThreadDescription(0, 0, std::string());
+    writer.WriteKernelObjectRecord(0);
+    writer.WriteContextSwitchRecord(0, 0, ThreadState::kDead,
+                                    ThreadRef::MakeUnknown(),
+                                    ThreadRef::MakeUnknown());
+    writer.WriteInstantEventRecord(0, ThreadRef::MakeUnknown(),
+                                   StringRef::MakeEmpty(),
+                                   StringRef::MakeEmpty(), EventScope::kThread);
+    writer.WriteCounterEventRecord(0, ThreadRef::MakeUnknown(),
+                                   StringRef::MakeEmpty(),
+                                   StringRef::MakeEmpty(), 0);
+    writer.WriteDurationBeginEventRecord(0, ThreadRef::MakeUnknown(),
+                                         StringRef::MakeEmpty(),
+                                         StringRef::MakeEmpty());
+    writer.WriteDurationEndEventRecord(0, ThreadRef::MakeUnknown(),
+                                       StringRef::MakeEmpty(),
+                                       StringRef::MakeEmpty());
+    writer.WriteAsyncBeginEventRecord(0, ThreadRef::MakeUnknown(),
+                                      StringRef::MakeEmpty(),
+                                      StringRef::MakeEmpty(), 0);
+    writer.WriteAsyncInstantEventRecord(0, ThreadRef::MakeUnknown(),
+                                        StringRef::MakeEmpty(),
+                                        StringRef::MakeEmpty(), 0);
+    writer.WriteAsyncEndEventRecord(0, ThreadRef::MakeUnknown(),
+                                    StringRef::MakeEmpty(),
+                                    StringRef::MakeEmpty(), 0);
+  }
 }
 
 }  // namespace

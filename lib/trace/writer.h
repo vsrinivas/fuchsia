@@ -526,6 +526,14 @@ class TraceWriter final {
     }
   }
 
+  // Writes a context switch record into the trace buffer.
+  // Discards the record if it cannot be written.
+  void WriteContextSwitchRecord(Ticks event_time,
+                                CpuNumber cpu_number,
+                                ThreadState outgoing_thread_state,
+                                const ThreadRef& outgoing_thread_ref,
+                                const ThreadRef& incoming_thread_ref);
+
   // Writes an instant event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>

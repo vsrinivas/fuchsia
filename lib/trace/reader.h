@@ -417,6 +417,14 @@ class Record {
     std::vector<Argument> arguments;
   };
 
+  // Context Switch record data.
+  struct ContextSwitch {
+    CpuNumber cpu_number;
+    ThreadState outgoing_thread_state;
+    ProcessThread outgoing_thread;
+    ProcessThread incoming_thread;
+  };
+
   explicit Record(const Metadata& record)
       : type_(RecordType::kMetadata), metadata_(record) {}
 
@@ -438,6 +446,11 @@ class Record {
   explicit Record(const KernelObject& record)
       : type_(RecordType::kKernelObject) {
     new (&kernel_object_) KernelObject(record);
+  }
+
+  explicit Record(const ContextSwitch& record)
+      : type_(RecordType::kContextSwitch) {
+    new (&context_switch_) ContextSwitch(record);
   }
 
   Record(const Record& other) { Copy(other); }
@@ -476,6 +489,11 @@ class Record {
     return kernel_object_;
   }
 
+  const ContextSwitch& GetContextSwitch() const {
+    FTL_DCHECK(type_ == RecordType::kContextSwitch);
+    return context_switch_;
+  }
+
   RecordType type() const { return type_; }
 
  private:
@@ -490,6 +508,7 @@ class Record {
     Thread thread_;
     Event event_;
     KernelObject kernel_object_;
+    ContextSwitch context_switch_;
   };
 };
 
@@ -526,6 +545,8 @@ class TraceReader {
   bool ReadEventRecord(Chunk& record, ::tracing::internal::RecordHeader header);
   bool ReadKernelObjectRecord(Chunk& record,
                               ::tracing::internal::RecordHeader header);
+  bool ReadContextSwitchRecord(Chunk& record,
+                               ::tracing::internal::RecordHeader header);
   bool ReadArguments(Chunk& record,
                      size_t count,
                      std::vector<Argument>* out_arguments);

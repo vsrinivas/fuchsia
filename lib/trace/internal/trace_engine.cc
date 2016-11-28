@@ -381,6 +381,33 @@ TraceEngine::Payload TraceEngine::WriteKernelObjectRecordBase(
   return payload;
 }
 
+void TraceEngine::WriteContextSwitchRecord(
+    Ticks event_time,
+    CpuNumber cpu_number,
+    ThreadState outgoing_thread_state,
+    const ThreadRef& outgoing_thread_ref,
+    const ThreadRef& incoming_thread_ref) {
+  const size_t record_size = sizeof(RecordHeader) + WordsToBytes(1) +
+                             outgoing_thread_ref.Size() +
+                             incoming_thread_ref.Size();
+  Payload payload = AllocateRecord(record_size);
+  if (!payload)
+    return;
+
+  payload
+      .Write(MakeRecordHeader(RecordType::kContextSwitch, record_size) |
+             ContextSwitchRecordFields::CpuNumber::Make(cpu_number) |
+             ContextSwitchRecordFields::OutgoingThreadState::Make(
+                 ToUnderlyingType(outgoing_thread_state)) |
+             ContextSwitchRecordFields::OutgoingThreadRef::Make(
+                 outgoing_thread_ref.encoded_value()) |
+             ContextSwitchRecordFields::IncomingThreadRef::Make(
+                 incoming_thread_ref.encoded_value()))
+      .Write(event_time)
+      .WriteValue(outgoing_thread_ref)
+      .WriteValue(incoming_thread_ref);
+}
+
 TraceEngine::Payload TraceEngine::AllocateRecord(size_t num_bytes) {
   uintptr_t record_start =
       buffer_current_.fetch_add(num_bytes, std::memory_order_relaxed);

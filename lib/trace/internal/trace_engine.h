@@ -98,6 +98,11 @@ class TraceEngine final : private mtl::MessageLoopHandler {
                                       const StringRef& name_ref,
                                       size_t argument_count,
                                       size_t payload_size);
+  void WriteContextSwitchRecord(Ticks event_time,
+                                CpuNumber cpu_number,
+                                ThreadState outgoing_thread_state,
+                                const ThreadRef& outgoing_thread_ref,
+                                const ThreadRef& incoming_thread_ref);
 
  private:
   explicit TraceEngine(ftl::RefPtr<mtl::SharedVmo> buffer,

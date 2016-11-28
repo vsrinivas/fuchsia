@@ -133,6 +133,13 @@ struct KernelObjectRecordFields : RecordFields {
   using ArgumentCount = Field<40, 43>;
 };
 
+struct ContextSwitchRecordFields : RecordFields {
+  using CpuNumber = Field<16, 23>;
+  using OutgoingThreadState = Field<24, 27>;
+  using OutgoingThreadRef = Field<28, 35>;
+  using IncomingThreadRef = Field<36, 43>;
+};
+
 }  // namspace internal
 }  // namepsace tracing
 

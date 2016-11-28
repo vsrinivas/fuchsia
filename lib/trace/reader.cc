@@ -249,6 +249,9 @@ Record& Record::Destroy() {
     case RecordType::kKernelObject:
       kernel_object_.~KernelObject();
       break;
+    case RecordType::kContextSwitch:
+      context_switch_.~ContextSwitch();
+      break;
     default:
       break;
   }
@@ -276,6 +279,9 @@ Record& Record::Copy(const Record& other) {
       break;
     case RecordType::kKernelObject:
       new (&kernel_object_) KernelObject(other.kernel_object_);
+      break;
+    case RecordType::kContextSwitch:
+      new (&context_switch_) ContextSwitch(other.context_switch_);
       break;
     default:
       break;
@@ -340,6 +346,12 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
       case RecordType::kKernelObject: {
         if (!ReadKernelObjectRecord(record, pending_header_)) {
           context_.ReportError("Failed to read kernel object record");
+        }
+        break;
+      }
+      case RecordType::kContextSwitch: {
+        if (!ReadContextSwitchRecord(record, pending_header_)) {
+          context_.ReportError("Failed to read context switch record");
         }
         break;
       }
@@ -543,6 +555,32 @@ bool TraceReader::ReadKernelObjectRecord(Chunk& record, RecordHeader header) {
 
   record_consumer_(
       Record(Record::KernelObject{koid, object_type, name, arguments}));
+  return true;
+}
+
+bool TraceReader::ReadContextSwitchRecord(Chunk& record, RecordHeader header) {
+  auto cpu_number =
+      ContextSwitchRecordFields::CpuNumber::Get<CpuNumber>(header);
+  auto outgoing_thread_state =
+      ContextSwitchRecordFields::OutgoingThreadState::Get<ThreadState>(header);
+  auto outgoing_thread_ref =
+      ContextSwitchRecordFields::OutgoingThreadRef::Get<EncodedThreadRef>(
+          header);
+  auto incoming_thread_ref =
+      ContextSwitchRecordFields::IncomingThreadRef::Get<EncodedThreadRef>(
+          header);
+
+  uint64_t timestamp;
+  ProcessThread outgoing_thread;
+  ProcessThread incoming_thread;
+  if (!record.Read(&timestamp) ||
+      !context_.DecodeThreadRef(record, outgoing_thread_ref,
+                                &outgoing_thread) ||
+      !context_.DecodeThreadRef(record, incoming_thread_ref, &incoming_thread))
+    return false;
+
+  record_consumer_(Record(Record::ContextSwitch{
+      cpu_number, outgoing_thread_state, outgoing_thread, incoming_thread}));
   return true;
 }
 

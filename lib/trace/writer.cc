@@ -314,6 +314,18 @@ Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
                                               payload_size);
 }
 
+void TraceWriter::WriteContextSwitchRecord(
+    Ticks event_time,
+    CpuNumber cpu_number,
+    ThreadState outgoing_thread_state,
+    const ThreadRef& outgoing_thread_ref,
+    const ThreadRef& incoming_thread_ref) {
+  FTL_DCHECK(engine_);
+  engine_->WriteContextSwitchRecord(event_time, cpu_number,
+                                    outgoing_thread_state, outgoing_thread_ref,
+                                    incoming_thread_ref);
+}
+
 Payload TraceWriter::WriteEventRecordBase(EventType event_type,
                                           Ticks event_time,
                                           const ThreadRef& thread_ref,

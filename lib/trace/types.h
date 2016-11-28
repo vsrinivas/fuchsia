@@ -14,6 +14,9 @@
 
 namespace tracing {
 
+// Cpu number, zero-based.
+using CpuNumber = uint32_t;
+
 // Enumerates all known record types.
 enum class RecordType {
   kMetadata = 0,
@@ -22,6 +25,7 @@ enum class RecordType {
   kThread = 3,
   kEvent = 4,
   kKernelObject = 7,
+  kContextSwitch = 8,
 };
 
 // MetadataType enumerates all known trace metadata types.
@@ -71,6 +75,17 @@ using EncodedThreadRef = uint32_t;
 
 // Trace provider id in a trace session.
 using ProviderId = uint32_t;
+
+// Thread states used to describe context switches.
+// The values must match those defined in the kernel's thread_state enum.
+enum class ThreadState {
+  kSuspended = 0,
+  kReady = 1,
+  kRunning = 2,
+  kBlocked = 3,
+  kSleeping = 4,
+  kDead = 5,
+};
 
 // Represents a kernel object id value.
 // This structure is used to distinguish koids from other 64-bit integers.

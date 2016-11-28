@@ -96,6 +96,15 @@ __WEAK Payload TraceWriter::WriteKernelObjectRecordBase(mx_handle_t handle,
   return Payload(nullptr);
 }
 
+__WEAK void TraceWriter::WriteContextSwitchRecord(
+    Ticks event_time,
+    CpuNumber cpu_number,
+    ThreadState outgoing_thread_state,
+    const ThreadRef& outgoing_thread_ref,
+    const ThreadRef& incoming_thread_ref) {
+  FTL_DCHECK(engine_);
+}
+
 __WEAK Payload TraceWriter::WriteEventRecordBase(EventType type,
                                                  Ticks event_time,
                                                  const ThreadRef& thread_ref,
