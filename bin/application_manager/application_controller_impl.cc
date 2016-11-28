@@ -8,6 +8,7 @@
 
 #include "apps/modular/src/application_manager/application_environment_impl.h"
 #include "lib/ftl/functional/closure.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
 
@@ -20,6 +21,8 @@ ApplicationControllerImpl::ApplicationControllerImpl(
       environment_(environment),
       process_(std::move(process)),
       path_(std::move(path)) {
+  termination_handler_ = mtl::MessageLoop::GetCurrent()->AddHandler(
+      this, process_.get(), MX_TASK_TERMINATED);
   if (request.is_pending()) {
     binding_.Bind(std::move(request));
     binding_.set_connection_error_handler([this] {
@@ -30,11 +33,14 @@ ApplicationControllerImpl::ApplicationControllerImpl(
   }
 }
 
-ApplicationControllerImpl::~ApplicationControllerImpl() = default;
+ApplicationControllerImpl::~ApplicationControllerImpl() {
+  RemoveTerminationHandlerIfNeeded();
+}
 
 void ApplicationControllerImpl::Kill(const KillCallback& callback) {
   std::unique_ptr<ApplicationControllerImpl> self =
       environment_->ExtractApplication(this);
+  RemoveTerminationHandlerIfNeeded();
   process_.kill();
   process_.reset();
   callback();
@@ -43,6 +49,22 @@ void ApplicationControllerImpl::Kill(const KillCallback& callback) {
 
 void ApplicationControllerImpl::Detach() {
   binding_.set_connection_error_handler(ftl::Closure());
+}
+
+void ApplicationControllerImpl::OnHandleReady(mx_handle_t handle,
+                                              mx_signals_t pending) {
+  FTL_DCHECK(handle == process_.get());
+  FTL_DCHECK(pending & MX_TASK_TERMINATED);
+  environment_->ExtractApplication(this);
+  // The temporary object returnd by ExtractApplication destructor destroys
+  // |this| at the end of the previous statement.
+}
+
+void ApplicationControllerImpl::RemoveTerminationHandlerIfNeeded() {
+  if (termination_handler_) {
+    mtl::MessageLoop::GetCurrent()->RemoveHandler(termination_handler_);
+    termination_handler_ = 0u;
+  }
 }
 
 }  // namespace modular
