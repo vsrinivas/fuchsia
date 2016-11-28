@@ -2,6 +2,10 @@
     "labels": [ "//apps/tracing" ],
     "binaries": [
         {
+            "binary": "ktrace_provider",
+            "bootfs_path": "apps/ktrace_provider"
+        },
+        {
             "binary": "trace",
             "bootfs_path": "apps/trace"
         },
