@@ -569,6 +569,9 @@ static mx_status_t fs_close(vnode_t* vn) {
 
 static ssize_t fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
     trace(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", vn, vn->ino, len, off);
+    if (vn->inode.magic == MINFS_MAGIC_DIR) {
+        return ERR_NOT_FILE;
+    }
 
     // clip to EOF
     if (off >= vn->inode.size) {
@@ -608,6 +611,9 @@ static ssize_t fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
 
 static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     trace(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", vn, vn->ino, len, off);
+    if (vn->inode.magic == MINFS_MAGIC_DIR) {
+        return ERR_NOT_FILE;
+    }
     if (len == 0) {
         return 0;
     }
@@ -867,6 +873,10 @@ static mx_status_t fs_unlink(vnode_t* vn, const char* name, size_t len) {
 }
 
 static mx_status_t fs_truncate(vnode_t* vn, size_t len) {
+    if (vn->inode.magic == MINFS_MAGIC_DIR) {
+        return ERR_NOT_FILE;
+    }
+
     mx_status_t r = 0;
     if (len < vn->inode.size) {
         // Truncate should make the file shorter
