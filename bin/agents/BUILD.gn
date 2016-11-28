@@ -53,11 +53,6 @@ executable("module_suggester") {
 
   sources = [
     "module_suggester.cc",
-    "module_suggester.h",
-  ]
-
-  public_deps = [
-    "//third_party/rapidjson",
   ]
 
   deps = [

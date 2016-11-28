@@ -2,27 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/agents/module_suggester.h"
-
-#include <rapidjson/document.h>
-
 #include "apps/maxwell/services/context/client.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_agent_client.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-constexpr char maxwell::agents::ModuleSuggesterAgent::kModuleSuggestionId[];
+namespace {
+
+constexpr char kNextProposalId[] = "module suggestion";
 
 // TODO(afergan): Once we can populate modular_state with actual data, we
 // can decide which module to launch, and actually launch it. For now, we just
 // create a proposal with the mail headline.
-const std::string kMailHeadline = "Open Mail";
-const std::string kMailUrl = "file:///system/apps/email_story";
+constexpr char kMailHeadline[] = "Open Mail";
+constexpr char kMailUrl[] = "file:///system/apps/email_story";
 
-namespace {
-
-class ModuleSuggesterAgentApp : public maxwell::agents::ModuleSuggesterAgent,
-                                public maxwell::context::SubscriberLink {
+class ModuleSuggesterAgentApp : public maxwell::context::SubscriberLink {
  public:
   ModuleSuggesterAgentApp()
       : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
@@ -43,10 +38,10 @@ class ModuleSuggesterAgentApp : public maxwell::agents::ModuleSuggesterAgent,
     const int modular_state = std::stoi(update->json_value.data());
 
     if (modular_state > 0) {
-      out_->Remove(kModuleSuggestionId);
+      out_->Remove(kNextProposalId);
     } else {
       auto p = maxwell::suggestion::Proposal::New();
-      p->id = kModuleSuggestionId;
+      p->id = kNextProposalId;
       auto create_story = maxwell::suggestion::CreateStory::New();
       create_story->module_id = kMailUrl;
       auto action = maxwell::suggestion::Action::New();
