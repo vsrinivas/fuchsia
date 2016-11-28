@@ -26,7 +26,15 @@ std::string SanitizeLabel(const fidl::String& label) {
 
 }  // namespace
 
-TraceManager::TraceManager(const Config& config) : config_(config) {}
+TraceManager::TraceManager(modular::ApplicationContext* context,
+                           const Config& config)
+    : context_(context), config_(config) {
+  // TODO(jeffbrown): We should do this in StartTracing() and take care
+  // to restart any crashed providers.  We should also wait briefly to ensure
+  // that these providers have registered themselves before replying that
+  // tracing has started.
+  StartConfiguredProviders();
+}
 
 TraceManager::~TraceManager() = default;
 
@@ -99,6 +107,19 @@ void TraceManager::RegisterTraceProvider(
 
   if (session_)
     session_->AddProvider(&(*it));
+}
+
+void TraceManager::StartConfiguredProviders() {
+  for (const auto& pair : config_.providers()) {
+    // TODO(jeffbrown): Only do this if the provider isn't already running.
+    // Also keep track of the provider so we can kill it when the trace
+    // manager exits or restart it if needed.
+    FTL_VLOG(1) << "Starting configured provider: " << pair.first;
+    auto launch_info = modular::ApplicationLaunchInfo::New();
+    launch_info->url = pair.second->url;
+    launch_info->arguments = pair.second->arguments.Clone();
+    context_->launcher()->CreateApplication(std::move(launch_info), nullptr);
+  }
 }
 
 }  // namespace tracing

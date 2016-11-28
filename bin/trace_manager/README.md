@@ -57,5 +57,8 @@ category names and descriptions.
         "category1": "description1",
         "category2": "description2"
         ]
+      },
+      "providers": {
+        "provider-label": "file:///provider-to-start-automatically"
       }
     }

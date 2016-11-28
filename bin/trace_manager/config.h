@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 
+#include "apps/modular/services/application/application_launcher.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace tracing {
@@ -18,17 +19,24 @@ class Config {
   ~Config();
 
   // Tries to parse configuration from |command_line|.
-  // Exits the process with error in case of issues.
+  // Returns false if an error occurs.
   bool ReadFrom(const std::string& config_file);
 
   // All categories known to the |TraceManager|, with every
   // category being described by a short string.
-  std::map<std::string, std::string> known_categories() const {
+  const std::map<std::string, std::string>& known_categories() const {
     return known_categories_;
+  }
+
+  // Well-known providers to start automatically.
+  const std::map<std::string, modular::ApplicationLaunchInfoPtr>& providers()
+      const {
+    return providers_;
   }
 
  private:
   std::map<std::string, std::string> known_categories_;
+  std::map<std::string, modular::ApplicationLaunchInfoPtr> providers_;
 };
 
 }  // namespace tracing

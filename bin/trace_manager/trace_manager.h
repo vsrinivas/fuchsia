@@ -7,6 +7,7 @@
 
 #include <list>
 
+#include "apps/modular/lib/app/application_context.h"
 #include "apps/tracing/services/trace_controller.fidl.h"
 #include "apps/tracing/services/trace_registry.fidl.h"
 #include "apps/tracing/src/trace_manager/config.h"
@@ -22,7 +23,8 @@ namespace tracing {
 
 class TraceManager : public TraceRegistry, public TraceController {
  public:
-  explicit TraceManager(const Config& config);
+  explicit TraceManager(modular::ApplicationContext* context,
+                        const Config& config);
   ~TraceManager() override;
 
  private:
@@ -40,8 +42,11 @@ class TraceManager : public TraceRegistry, public TraceController {
       const fidl::String& label) override;
 
   void FinalizeTracing();
+  void StartConfiguredProviders();
 
-  Config config_;
+  modular::ApplicationContext* const context_;
+  const Config& config_;
+
   uint32_t next_provider_id_ = 1u;
   ftl::RefPtr<TraceSession> session_;
   ftl::OneShotTimer session_finalize_timeout_;

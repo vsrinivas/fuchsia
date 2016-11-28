@@ -14,6 +14,7 @@ namespace tracing {
 namespace {
 
 constexpr char kCategories[] = "categories";
+constexpr char kProviders[] = "providers";
 
 }  // namespace
 
@@ -31,8 +32,6 @@ bool Config::ReadFrom(const std::string& config_file) {
     return false;
   }
 
-  Config config;
-
   auto categories_it = document.FindMember(kCategories);
   if (categories_it != document.MemberEnd()) {
     const auto& value = categories_it->value;
@@ -45,11 +44,39 @@ bool Config::ReadFrom(const std::string& config_file) {
         FTL_LOG(ERROR) << "Expecting both name and value to be strings";
         return false;
       }
-      config.known_categories_[it->name.GetString()] = it->value.GetString();
+      known_categories_[it->name.GetString()] = it->value.GetString();
     }
   }
 
-  *this = config;
+  auto provider_it = document.FindMember(kProviders);
+  if (provider_it != document.MemberEnd()) {
+    const auto& value = provider_it->value;
+    if (!value.IsObject())
+      return false;
+    for (const auto& reg : value.GetObject()) {
+      if (!reg.name.IsString())
+        return false;
+
+      auto launch_info = modular::ApplicationLaunchInfo::New();
+      if (reg.value.IsString()) {
+        launch_info->url = reg.value.GetString();
+      } else if (reg.value.IsArray()) {
+        const auto& array = reg.value.GetArray();
+        if (array.Empty() || !array[0].IsString())
+          return false;
+        launch_info->url = array[0].GetString();
+        for (size_t i = 1; i < array.Size(); ++i) {
+          if (!array[i].IsString())
+            return false;
+          launch_info->arguments.push_back(array[i].GetString());
+        }
+      } else {
+        return false;
+      }
+      providers_.emplace(reg.name.GetString(), std::move(launch_info));
+    }
+  }
+
   return true;
 }
 
