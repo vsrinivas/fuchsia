@@ -104,8 +104,9 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
     auto from = find(&include_, ranked_suggestion);
 
     if (rank != kExcludeRank) {
-      auto to = find_for_insert(&include_, rank);
-      if (from != to) {
+      // TODO(rosswang): Test and verify general goodness
+      if (rank != ranked_suggestion->rank) {
+        auto to = find_for_insert(&include_, rank);
         if (from < to)
           std::rotate(from, from + 1, to + 1);  // c a b => a b c
         else                                    // if (from > to)
@@ -125,6 +126,7 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
     // previously excluded
     if (rank != kExcludeRank) {
       auto from = exclude_.find(ranked_suggestion->prototype->first);
+      assert(from != exclude_.end());
       ranked_suggestion->rank = rank;
       include_.emplace(find_for_insert(&include_, rank),
                        std::move(from->second));

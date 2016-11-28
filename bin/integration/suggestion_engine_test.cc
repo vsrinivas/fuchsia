@@ -507,6 +507,61 @@ TEST_F(AskTest, AskIncludeExclude) {
   CHECK_RESULT_COUNT(1);
 }
 
+TEST_F(AskTest, AskIncludeExcludeFlip) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("Mozart's Ghost");
+  InitiateAsk();
+  SetResultCount(10);
+
+  CHECK_RESULT_COUNT(1);
+  SetQuery("Mo");
+  CHECK_RESULT_COUNT(1);
+  SetQuery("Mox");
+  CHECK_RESULT_COUNT(0);
+  SetQuery("Mo");
+  CHECK_RESULT_COUNT(1);
+  SetQuery("Mox");
+  CHECK_RESULT_COUNT(0);
+}
+
+TEST_F(AskTest, RemoveAskFallback) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("Esc");
+  InitiateAsk();
+  SetResultCount(10);
+  CHECK_RESULT_COUNT(1);
+
+  p.Remove("Esc");
+  CHECK_RESULT_COUNT(0);
+}
+
+// Historical failure case
+TEST_F(AskTest, MovingParts) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("E-mail");
+  InitiateAsk();
+  SetResultCount(10);
+  CHECK_RESULT_COUNT(1);
+
+  SetQuery("T");
+  p.Propose("YouTube");
+  p.Propose("Terminal");
+  CHECK_RESULT_COUNT(2);
+
+  SetQuery("Te");
+  p.Propose("YouTube");
+  p.Propose("Terminal");
+  CHECK_RESULT_COUNT(1);
+
+  SetQuery("T");
+  p.Propose("YouTube");
+  p.Propose("Terminal");
+  CHECK_RESULT_COUNT(2);
+}
+
 #define HEADLINE_EQ(expected, index) \
   EXPECT_EQ(expected, (*listener())[index]->display->headline)
 
