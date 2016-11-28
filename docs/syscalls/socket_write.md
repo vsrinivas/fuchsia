@@ -36,7 +36,7 @@ endpoint of the socket will fail with **ERR_BAD_STATE**.
 **ERR_WRONG_TYPE**  *handle* is not a socket handle.
 
 **ERR_INVALID_ARGS**  *buffer* is an invalid pointer, or
-**MX_SOCKET_HALF_CLOSED** was passed to *flags* but *size* was
+**MX_SOCKET_HALF_CLOSE** was passed to *flags* but *size* was
 not 0.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE**.
