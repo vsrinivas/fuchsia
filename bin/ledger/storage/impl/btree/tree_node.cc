@@ -349,11 +349,13 @@ Status TreeNode::Mutation::Finish(size_t max_size,
   // No parent node, create a new one.
   std::unique_ptr<const TreeNode> new_node;
   ObjectId tmp_node_id;
-  FTL_DCHECK(TreeNode::FromEntries(node_.page_storage_, std::vector<Entry>(),
-                                   std::vector<ObjectId>{ObjectId()},
-                                   &tmp_node_id) == Status::OK);
-  FTL_DCHECK(TreeNode::FromId(node_.page_storage_, tmp_node_id, &new_node) ==
-             Status::OK);
+  Status s =
+      TreeNode::FromEntries(node_.page_storage_, std::vector<Entry>(),
+                            std::vector<ObjectId>{ObjectId()}, &tmp_node_id);
+  FTL_DCHECK(s == Status::OK);
+  s = TreeNode::FromId(node_.page_storage_, tmp_node_id, &new_node);
+  FTL_DCHECK(s == Status::OK);
+
   // new_entries could contain more than max_size elements, so we can't directly
   // create the root using FromEntries. We use a mutation instead.
   TreeNode::Mutation mutation = new_node->StartMutation();
