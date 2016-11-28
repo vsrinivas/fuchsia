@@ -79,18 +79,26 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   void AddCommitsFromSync(
       std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
       std::function<void(storage::Status status)> callback) override {
+    add_commits_from_sync_calls++;
+
     if (should_fail_add_commit_from_sync) {
       message_loop_->task_runner()->PostTask(
           [this, callback]() { callback(storage::Status::IO_ERROR); });
       return;
     }
-    message_loop_->task_runner()->PostTask(ftl::MakeCopyable(
+
+    ftl::Closure confirm = ftl::MakeCopyable(
         [ this, ids_and_bytes = std::move(ids_and_bytes), callback ]() {
           for (auto& commit : ids_and_bytes) {
             received_commits[std::move(commit.id)] = std::move(commit.bytes);
           }
           callback(storage::Status::OK);
-        }));
+        });
+    if (should_delay_add_commit_confirmation) {
+      delayed_add_commit_confirmations.push_back(move(confirm));
+      return;
+    }
+    message_loop_->task_runner()->PostTask(confirm);
   }
 
   storage::Status GetUnsyncedObjects(
@@ -148,6 +156,9 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   bool should_fail_get_unsynced_commits = false;
   bool should_fail_get_commit = false;
   bool should_fail_add_commit_from_sync = false;
+  bool should_delay_add_commit_confirmation = false;
+  std::vector<ftl::Closure> delayed_add_commit_confirmations;
+  unsigned int add_commits_from_sync_calls = 0u;
 
   std::set<storage::CommitId> commits_marked_as_synced;
   bool watcher_set = false;
@@ -521,39 +532,54 @@ TEST_F(PageSyncImplTest, ReceiveNotifications) {
   EXPECT_EQ("43", storage_.sync_metadata);
 }
 
-// Verify that the backlog commits are downloaded before receiving notifications
-// about the new ones.
-TEST_F(PageSyncImplTest, DownloadBacklogThenReceiveNotifications) {
+// Verifies that if multiple remote commits are received while one batch is
+// already being downloaded, the new remote commits are added to storage in one
+// request.
+TEST_F(PageSyncImplTest, CoalesceMultipleNotifications) {
   EXPECT_EQ(0u, storage_.received_commits.size());
-  EXPECT_EQ("", storage_.sync_metadata);
 
-  cloud_provider_.records_to_return.push_back(cloud_provider::Record(
+  cloud_provider_.notifications_to_deliver.push_back(cloud_provider::Record(
       cloud_provider::Commit("id1", "content1", {}), "42"));
   cloud_provider_.notifications_to_deliver.push_back(cloud_provider::Record(
       cloud_provider::Commit("id2", "content2", {}), "43"));
+  cloud_provider_.notifications_to_deliver.push_back(cloud_provider::Record(
+      cloud_provider::Commit("id3", "content3", {}), "44"));
+
+  // Make the storage delay requests to add remote commits.
+  storage_.should_delay_add_commit_confirmation = true;
   page_sync_.Start();
+  bool posted_quit_task = false;
+  message_loop_.SetAfterTaskCallback([this, &posted_quit_task] {
+    if (posted_quit_task) {
+      return;
+    }
 
+    if (storage_.delayed_add_commit_confirmations.size() == 1u) {
+      message_loop_.PostQuitTask();
+      posted_quit_task = true;
+    }
+  });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, storage_.delayed_add_commit_confirmations.size());
+
+  // Fire the delayed confirmation.
+  storage_.should_delay_add_commit_confirmation = false;
+  storage_.delayed_add_commit_confirmations.front()();
   message_loop_.SetAfterTaskCallback([this] {
-    if (storage_.received_commits.size() == 1u) {
-      message_loop_.QuitNow();
+    if (storage_.received_commits.size() == 3u) {
+      message_loop_.PostQuitTask();
     }
   });
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(1u, storage_.received_commits.size());
+  // Verify that all three commits were delivered in total of two calls to
+  // storage.
+  EXPECT_EQ(3u, storage_.received_commits.size());
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
-  EXPECT_EQ("42", storage_.sync_metadata);
-
-  message_loop_.SetAfterTaskCallback([this] {
-    if (storage_.received_commits.size() == 2u) {
-      message_loop_.QuitNow();
-    }
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
-
-  EXPECT_EQ(2u, storage_.received_commits.size());
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
-  EXPECT_EQ("43", storage_.sync_metadata);
+  EXPECT_EQ("content3", storage_.received_commits["id3"]);
+  EXPECT_EQ("44", storage_.sync_metadata);
+  EXPECT_EQ(2u, storage_.add_commits_from_sync_calls);
 }
 
 // Verifies that failing attempts to download the backlog of unsynced commits

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/commit_download.h"
+#include "apps/ledger/src/cloud_sync/impl/batch_download.h"
 
 #include <unordered_map>
 
@@ -56,31 +56,30 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   mtl::MessageLoop* message_loop_;
 };
 
-class CommitDownloadTest : public test::TestWithMessageLoop {
+class BatchDownloadTest : public test::TestWithMessageLoop {
  public:
-  CommitDownloadTest() : storage_(&message_loop_) {}
-  ~CommitDownloadTest() override {}
+  BatchDownloadTest() : storage_(&message_loop_) {}
+  ~BatchDownloadTest() override {}
 
  protected:
   TestPageStorage storage_;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommitDownloadTest);
+  FTL_DISALLOW_COPY_AND_ASSIGN(BatchDownloadTest);
 };
 
-TEST_F(CommitDownloadTest, AddCommit) {
+TEST_F(BatchDownloadTest, AddCommit) {
   int done_calls = 0;
   int error_calls = 0;
   std::vector<cloud_provider::Record> records;
   records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "42");
-  CommitDownload commit_download(
-      &storage_, std::move(records),
-      [this, &done_calls] {
-        done_calls++;
-        message_loop_.PostQuitTask();
-      },
-      [this, &error_calls] { error_calls++; });
-  commit_download.Start();
+  BatchDownload batch_download(&storage_, std::move(records),
+                               [this, &done_calls] {
+                                 done_calls++;
+                                 message_loop_.PostQuitTask();
+                               },
+                               [this, &error_calls] { error_calls++; });
+  batch_download.Start();
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1, done_calls);
@@ -90,20 +89,19 @@ TEST_F(CommitDownloadTest, AddCommit) {
   EXPECT_EQ("42", storage_.sync_metadata);
 }
 
-TEST_F(CommitDownloadTest, AddMultipleCommit) {
+TEST_F(BatchDownloadTest, AddMultipleCommits) {
   int done_calls = 0;
   int error_calls = 0;
   std::vector<cloud_provider::Record> records;
   records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "42");
   records.emplace_back(cloud_provider::Commit("id2", "content2", {}), "43");
-  CommitDownload commit_download(
-      &storage_, std::move(records),
-      [this, &done_calls] {
-        done_calls++;
-        message_loop_.PostQuitTask();
-      },
-      [this, &error_calls] { error_calls++; });
-  commit_download.Start();
+  BatchDownload batch_download(&storage_, std::move(records),
+                               [this, &done_calls] {
+                                 done_calls++;
+                                 message_loop_.PostQuitTask();
+                               },
+                               [this, &error_calls] { error_calls++; });
+  batch_download.Start();
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1, done_calls);
@@ -114,20 +112,19 @@ TEST_F(CommitDownloadTest, AddMultipleCommit) {
   EXPECT_EQ("43", storage_.sync_metadata);
 }
 
-TEST_F(CommitDownloadTest, FailToAddCommit) {
+TEST_F(BatchDownloadTest, FailToAddCommit) {
   int done_calls = 0;
   int error_calls = 0;
   std::vector<cloud_provider::Record> records;
   records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "42");
-  CommitDownload commit_download(
-      &storage_, std::move(records),
-      [this, &done_calls] { done_calls++; },
-      [this, &error_calls] {
-        error_calls++;
-        message_loop_.PostQuitTask();
-      });
+  BatchDownload batch_download(&storage_, std::move(records),
+                               [this, &done_calls] { done_calls++; },
+                               [this, &error_calls] {
+                                 error_calls++;
+                                 message_loop_.PostQuitTask();
+                               });
   storage_.should_fail_add_commit_from_sync = true;
-  commit_download.Start();
+  batch_download.Start();
 
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(0, done_calls);

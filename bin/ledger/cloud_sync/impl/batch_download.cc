@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_sync/impl/commit_download.h"
+#include "apps/ledger/src/cloud_sync/impl/batch_download.h"
 
 #include <utility>
 
 namespace cloud_sync {
 
-CommitDownload::CommitDownload(storage::PageStorage* storage,
-                               std::vector<cloud_provider::Record> records,
-                               ftl::Closure on_done,
-                               ftl::Closure on_error)
+BatchDownload::BatchDownload(storage::PageStorage* storage,
+                             std::vector<cloud_provider::Record> records,
+                             ftl::Closure on_done,
+                             ftl::Closure on_error)
     : storage_(storage),
       records_(std::move(records)),
       on_done_(std::move(on_done)),
@@ -19,9 +19,9 @@ CommitDownload::CommitDownload(storage::PageStorage* storage,
   FTL_DCHECK(storage);
 }
 
-CommitDownload::~CommitDownload() {}
+BatchDownload::~BatchDownload() {}
 
-void CommitDownload::Start() {
+void BatchDownload::Start() {
   FTL_DCHECK(!started_);
   started_ = true;
   std::vector<storage::PageStorage::CommitIdAndBytes> commits;
@@ -42,6 +42,7 @@ void CommitDownload::Start() {
           return;
         }
 
+        // Can be deleted within.
         on_done_();
       });
 }

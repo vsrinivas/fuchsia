@@ -11,7 +11,7 @@
 #include "apps/ledger/src/backoff/backoff.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
-#include "apps/ledger/src/cloud_sync/impl/commit_download.h"
+#include "apps/ledger/src/cloud_sync/impl/batch_download.h"
 #include "apps/ledger/src/cloud_sync/impl/commit_upload.h"
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
@@ -91,8 +91,10 @@ class PageSyncImpl : public PageSync,
  private:
   void TryStartDownload();
 
-  void EnqueueDownload(std::vector<cloud_provider::Record> record,
-                       ftl::Closure on_done);
+  void EnqueueDownload(std::vector<cloud_provider::Record> record);
+
+  void StartDownload(std::vector<cloud_provider::Record> record,
+                     ftl::Closure on_done);
 
   void EnqueueUpload(std::unique_ptr<const storage::Commit> commit);
 
@@ -125,8 +127,10 @@ class PageSyncImpl : public PageSync,
 
   // A queue of pending commit uploads.
   std::queue<CommitUpload> commit_uploads_;
-  // A queue of pending commit downloads.
-  std::queue<CommitDownload> commit_downloads_;
+  // The current batch of remote commits being downloaded.
+  std::unique_ptr<BatchDownload> batch_download_;
+  // Pending remote commits to download.
+  std::vector<cloud_provider::Record> commits_to_download_;
 
   // Must be the last member field.
   ftl::WeakPtrFactory<PageSyncImpl> weak_factory_;

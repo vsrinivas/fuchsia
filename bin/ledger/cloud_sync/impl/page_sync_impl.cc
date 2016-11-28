@@ -75,7 +75,7 @@ void PageSyncImpl::SetOnIdle(ftl::Closure on_idle) {
 
 bool PageSyncImpl::IsIdle() {
   return commit_uploads_.empty() && download_list_retrieved_ &&
-         commit_downloads_.empty();
+         !batch_download_ && commits_to_download_.empty();
 }
 
 void PageSyncImpl::SetOnBacklogDownloaded(ftl::Closure on_backlog_downloaded) {
@@ -121,7 +121,7 @@ void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit commit,
                                   std::string timestamp) {
   std::vector<cloud_provider::Record> records;
   records.emplace_back(std::move(commit), std::move(timestamp));
-  EnqueueDownload(std::move(records), nullptr);
+  EnqueueDownload(std::move(records));
 }
 
 void PageSyncImpl::OnError() {}
@@ -157,12 +157,12 @@ void PageSyncImpl::TryStartDownload() {
         backoff_->Reset();
 
         if (records.empty()) {
-          // If there is no commits to add, announce that we're done.
+          // If there is no remote commits to add, announce that we're done.
           BacklogDownloaded();
         } else {
-          // If not, fire the backlog download callback when the last of the
-          // initial downloads completes.
-          EnqueueDownload(std::move(records), [this] { BacklogDownloaded(); });
+          // If not, fire the backlog download callback when the remote commits
+          // are downloaded.
+          StartDownload(std::move(records), [this] { BacklogDownloaded(); });
         }
 
         download_list_retrieved_ = true;
@@ -176,29 +176,39 @@ void PageSyncImpl::TryStartDownload() {
       });
 }
 
-void PageSyncImpl::EnqueueDownload(std::vector<cloud_provider::Record> records,
-                                   ftl::Closure on_done) {
-  // If there are no commits currently being downloaded, start the download
-  // after enqueing this one.
-  const bool start_after_adding = commit_downloads_.empty();
+void PageSyncImpl::EnqueueDownload(
+    std::vector<cloud_provider::Record> records) {
+  if (batch_download_) {
+    // If there is already a commit batch being downloaded, save the new commits
+    // to be downloaded when it is done.
+    std::move(std::begin(records), std::end(records),
+              std::back_inserter(commits_to_download_));
+    return;
+  }
 
-  commit_downloads_.emplace(
+  StartDownload(std::move(records), nullptr);
+}
+
+void PageSyncImpl::StartDownload(std::vector<cloud_provider::Record> records,
+                                 ftl::Closure on_done) {
+  FTL_DCHECK(!batch_download_);
+  batch_download_ = std::make_unique<BatchDownload>(
       storage_, std::move(records), [ this, on_done = std::move(on_done) ] {
         if (on_done) {
           on_done();
         }
-        commit_downloads_.pop();
-        if (!commit_downloads_.empty()) {
-          commit_downloads_.front().Start();
-        } else {
+        batch_download_.reset();
+
+        if (commits_to_download_.empty()) {
           CheckIdle();
+          return;
         }
+        auto commits = std::move(commits_to_download_);
+        commits_to_download_.clear();
+        StartDownload(std::move(commits), nullptr);
       },
       [this] { HandleError("Failed to persist a remote commit in storage"); });
-
-  if (start_after_adding) {
-    commit_downloads_.front().Start();
-  }
+  batch_download_->Start();
 }
 
 void PageSyncImpl::EnqueueUpload(

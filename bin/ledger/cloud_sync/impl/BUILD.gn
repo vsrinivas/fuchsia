@@ -4,8 +4,8 @@
 
 source_set("impl") {
   sources = [
-    "commit_download.cc",
-    "commit_download.h",
+    "batch_download.cc",
+    "batch_download.h",
     "commit_upload.cc",
     "commit_upload.h",
     "ledger_sync_impl.cc",
@@ -35,7 +35,7 @@ executable("unittests") {
   testonly = true
 
   sources = [
-    "commit_download_unittest.cc",
+    "batch_download_unittest.cc",
     "commit_upload_unittest.cc",
     "page_sync_impl_unittest.cc",
   ]

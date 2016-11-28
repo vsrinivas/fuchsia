@@ -11,23 +11,21 @@
 
 namespace cloud_sync {
 
-// Adds a remote commit to storage.
+// Adds a batch of remote commits to storage.
 //
-// Sync does not explicitly download objects associated with commits. This class
-// only makes a request to add the given remote commit to storage and handles
-// the status once the operation completes. After CommitDownload makes the
-// storage request and before the operation is confirmed, storage fetches the
-// objects associated with the commit.
+// Given a list of commit metadata, this class makes a request to add them to
+// storage, and waits until storage confirms that the operation completed before
+// calling |on_done|.
 //
-// The operation is not retryable, and errors reported through |error_callback|
-// are not recoverable.
-class CommitDownload {
+// The operation is not retryable, and errors reported through |on_error| are
+// not recoverable.
+class BatchDownload {
  public:
-  CommitDownload(storage::PageStorage* storage,
-                 std::vector<cloud_provider::Record> records,
-                 ftl::Closure on_done,
-                 ftl::Closure error_callback);
-  ~CommitDownload();
+  BatchDownload(storage::PageStorage* storage,
+                std::vector<cloud_provider::Record> records,
+                ftl::Closure on_done,
+                ftl::Closure on_error);
+  ~BatchDownload();
 
   // Can be called only once.
   void Start();
@@ -39,7 +37,7 @@ class CommitDownload {
   ftl::Closure on_error_;
   bool started_ = false;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CommitDownload);
+  FTL_DISALLOW_COPY_AND_ASSIGN(BatchDownload);
 };
 
 }  // namespace cloud_sync
