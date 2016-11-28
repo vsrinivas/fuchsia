@@ -17,7 +17,7 @@ namespace tracing {
 namespace {
 
 // Note: Buffer needs to be big enough to store records of maximum size.
-constexpr size_t kBufferSize = RecordFields::kMaxRecordSizeBytes * 4;
+constexpr size_t kReadBufferSize = RecordFields::kMaxRecordSizeBytes * 4;
 
 }  // namespace
 
@@ -29,7 +29,7 @@ Tracer::~Tracer() {
   CloseSocket();
 }
 
-void Tracer::Start(std::vector<std::string> categories,
+void Tracer::Start(TraceOptionsPtr options,
                    RecordConsumer record_consumer,
                    ErrorHandler error_handler,
                    ftl::Closure done_callback) {
@@ -46,10 +46,9 @@ void Tracer::Start(std::vector<std::string> categories,
     return;
   }
 
-  controller_->StartTracing(fidl::Array<fidl::String>::From(categories),
-                            std::move(outgoing_socket));
+  controller_->StartTracing(std::move(options), std::move(outgoing_socket));
 
-  buffer_.reserve(kBufferSize);
+  buffer_.reserve(kReadBufferSize);
   reader_.reset(new reader::TraceReader(record_consumer, error_handler));
 
   handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(

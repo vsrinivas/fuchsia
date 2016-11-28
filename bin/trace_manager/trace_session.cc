@@ -64,7 +64,7 @@ void TraceSession::Stop(ftl::Closure done_callback,
       mtl::MessageLoop::GetCurrent()->task_runner().get(),
       [weak = weak_ptr_factory_.GetWeakPtr()]() {
         if (weak)
-          weak->done_callback_();
+          weak->FinishSessionDueToTimeout();
       },
       timeout);
 
@@ -110,6 +110,17 @@ void TraceSession::FinishSessionIfEmpty() {
   if (state_ == State::kStopping && tracees_.empty()) {
     TransitionToState(State::kStopped);
     session_finalize_timeout_.Stop();
+    done_callback_();
+  }
+}
+
+void TraceSession::FinishSessionDueToTimeout() {
+  if (state_ == State::kStopping && !tracees_.empty()) {
+    TransitionToState(State::kStopped);
+    for (auto& tracee : tracees_) {
+      FTL_LOG(WARNING) << "Timed out waiting for trace provider '"
+                       << tracee.bundle()->label << "' to finish";
+    }
     done_callback_();
   }
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <iostream>
 
 #include "apps/tracing/lib/trace/internal/fields.h"
@@ -13,8 +14,9 @@ using namespace tracing::internal;
 namespace tracing {
 namespace {
 
-const ftl::TimeDelta kStopTimeout = ftl::TimeDelta::FromSeconds(5);
-static constexpr size_t kTraceBufferSize = 3 * 1024 * 1024;
+const ftl::TimeDelta kStopTimeout = ftl::TimeDelta::FromSeconds(20);
+static constexpr uint32_t kMinBufferSizeMegabytes = 1;
+static constexpr uint32_t kMaxBufferSizeMegabytes = 32;
 
 std::string SanitizeLabel(const fidl::String& label) {
   std::string result =
@@ -38,18 +40,21 @@ TraceManager::TraceManager(modular::ApplicationContext* context,
 
 TraceManager::~TraceManager() = default;
 
-void TraceManager::StartTracing(fidl::Array<fidl::String> categories,
-                                mx::socket output) {
+void TraceManager::StartTracing(TraceOptionsPtr options, mx::socket output) {
   if (session_) {
     FTL_LOG(ERROR) << "Trace already in progress";
     return;
   }
 
-  FTL_VLOG(1) << "Starting trace";
+  uint32_t buffer_size_megabytes = std::min(
+      std::max(options->buffer_size_megabytes_hint, kMinBufferSizeMegabytes),
+      kMaxBufferSizeMegabytes);
+  FTL_LOG(INFO) << "Starting trace with " << buffer_size_megabytes
+                << " MB buffers";
 
   session_ = ftl::MakeRefCounted<TraceSession>(
-      std::move(output), std::move(categories), kTraceBufferSize,
-      [this]() { session_ = nullptr; });
+      std::move(output), std::move(options->categories),
+      buffer_size_megabytes * 1024 * 1024, [this]() { session_ = nullptr; });
 
   for (auto& bundle : providers_) {
     FTL_VLOG(1) << "  for provider " << bundle;
@@ -61,10 +66,10 @@ void TraceManager::StopTracing() {
   if (!session_)
     return;
 
-  FTL_VLOG(1) << "Stopping trace";
+  FTL_LOG(INFO) << "Stopping trace";
   session_->Stop(
       [this]() {
-        FTL_VLOG(1) << "Stopped trace";
+        FTL_LOG(INFO) << "Stopped trace";
         session_ = nullptr;
       },
       kStopTimeout);

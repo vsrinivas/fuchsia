@@ -29,6 +29,7 @@ class Record : public CommandWithTraceController {
     std::vector<std::string> categories = {};
     bool detach = false;
     bool decouple = false;
+    uint32_t buffer_size_megabytes_hint = 4;
     modular::ApplicationLaunchInfoPtr launch_info;
   };
 

@@ -29,8 +29,7 @@ class TraceManager : public TraceRegistry, public TraceController {
 
  private:
   // |TraceController| implementation.
-  void StartTracing(fidl::Array<fidl::String> categories,
-                    mx::socket output) override;
+  void StartTracing(TraceOptionsPtr options, mx::socket output) override;
   void StopTracing() override;
   void GetKnownCategories(const GetKnownCategoriesCallback& callback) override;
   void GetRegisteredProviders(

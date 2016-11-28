@@ -32,7 +32,7 @@ class Tracer : private mtl::MessageLoopHandler {
   // Starts tracing.
   // Streams records |record_consumer| and errors to |error_handler|.
   // Invokes |done_callback| when tracing stops.
-  void Start(std::vector<std::string> categories,
+  void Start(TraceOptionsPtr options,
              RecordConsumer record_consumer,
              ErrorHandler error_handler,
              ftl::Closure done_callback);

@@ -7,7 +7,7 @@ module tracing;
 // The controller interface used by the trace tool to start/stop tracing.
 [ServiceName="tracing::TraceController"]
 interface TraceController {
-  // Requests to start tracing the specified categories.
+  // Requests to start tracing with the specified |options|.
   //
   // The trace controller emits trace data to |output| as a sequence of
   // binary formatted trace records.  Traces obtained from different providers
@@ -22,7 +22,7 @@ interface TraceController {
   // themselves.  For example, it should not try to check argument lengths in
   // events.  This ensures that the trace format can be extended without needing
   // to modify the trace controller.
-  StartTracing(array<string> categories, handle<socket> output);
+  StartTracing(TraceOptions options, handle<socket> output);
 
   // Requests to stop tracing.
   //
@@ -35,6 +35,15 @@ interface TraceController {
 
   // Gets the list of registered providers.
   GetRegisteredProviders() => (array<TraceProviderInfo> providers);
+};
+
+// Provides options for the trace.
+struct TraceOptions {
+  // The trace categories to record, or an empty array for all.
+  array<string> categories;
+
+  // Suggested size of trace buffer which each provider should receive.
+  uint32 buffer_size_megabytes_hint = 4;
 };
 
 // Information about a registered trace provider.

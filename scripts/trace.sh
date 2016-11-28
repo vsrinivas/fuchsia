@@ -38,6 +38,8 @@ Runs a trace and downloads the resulting trace file.
   --no-html : Does not automatically convert JSON trace file to HTML.
               The JSON file should be viewed using chrome://tracing manually.
 
+  --buffer-size MB : Suggested trace buffer size for each provider in megabytes.
+                     Defaults to 4 megabytes.
 
 If a program is specified, it is started immediately after tracing begins.
 END
@@ -47,6 +49,7 @@ duration=10
 html=1
 bootstrap=
 env=boot
+buffer_size=4
 while [[ $# -ne 0 ]]; do
   case $1 in
     --duration)
@@ -71,6 +74,14 @@ while [[ $# -ne 0 ]]; do
     --no-html)
       html=
       ;;
+    --buffer-size)
+      if [[ $# -lt 2 ]]; then
+        usage
+        exit 1
+      fi
+      buffer_size=$2
+      shift
+      ;;
     --help)
       usage
       exit 0
@@ -81,7 +92,7 @@ while [[ $# -ne 0 ]]; do
   shift
 done
 
-trace="trace record --duration=${duration} $*"
+trace="trace record --duration=${duration} --buffer-size=${buffer_size} $*"
 command=
 if [[ -n "${bootstrap}" ]]; then
   command="@ bootstrap ${trace}"
@@ -89,8 +100,8 @@ else
   command="@${env} ${trace}"
 fi
 
-# add 10 seconds for startup / shutdown lag
-delay=$(( $duration + 10 ))
+# since we can't observe trace completion, add a delay to compensate for lag
+delay=$(( $duration + 30 ))
 trace_file="trace_$(date +%Y-%m-%d_at_%H.%M.%S).json"
 
 rm -f "${trace_file}"

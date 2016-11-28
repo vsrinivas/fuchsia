@@ -62,6 +62,7 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
   void Abort();
   void FinishProvider(TraceProviderBundle* bundle);
   void FinishSessionIfEmpty();
+  void FinishSessionDueToTimeout();
 
   void TransitionToState(State state);
 

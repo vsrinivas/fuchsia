@@ -41,8 +41,21 @@ bool Record::Options::Setup(const ftl::CommandLine& command_line) {
 
   // --detach
   detach = command_line.HasOption("detach");
+
   // --decouple
   decouple = command_line.HasOption("decouple");
+
+  // --buffer-size=<megabytes>
+  if (command_line.HasOption("buffer-size", &index)) {
+    uint32_t megabytes;
+    if (!ftl::StringToNumberWithError(command_line.options()[index].value,
+                                      &megabytes)) {
+      FTL_LOG(ERROR) << "Failed to parse command-line option buffer-size: "
+                     << command_line.options()[index].value;
+      return false;
+    }
+    buffer_size_megabytes_hint = megabytes;
+  }
 
   // <command> <args...>
   const auto& positional_args = command_line.positional_args();
@@ -65,11 +78,13 @@ Command::Info Record::Describe() {
       "record",
       "starts tracing and records data",
       {{"output-file=[/tmp/trace.json]", "Trace data is stored in this file"},
-       {"duration=[10s]", "Trace will be active for this long"},
+       {"duration=[10]", "Trace will be active for this many seconds"},
        {"categories=[\"\"]", "Categories that should be enabled for tracing"},
        {"detach=[false]",
         "Don't stop the traced program when tracing finished"},
        {"decouple=[false]", "Don't stop tracing when the traced program exits"},
+       {"buffer-size=[4]",
+        "Maximum size of trace buffer for each provider in megabytes"},
        {"[command args]",
         "Run program before starting trace. The program is terminated when "
         "tracing ends unless --detach is specified"}}};
@@ -105,8 +120,15 @@ void Record::Run(const ftl::CommandLine& command_line) {
       options_.duration);
 
   tracing_ = true;
+
+  auto trace_options = TraceOptions::New();
+  trace_options->categories =
+      fidl::Array<fidl::String>::From(options_.categories);
+  trace_options->buffer_size_megabytes_hint =
+      options_.buffer_size_megabytes_hint;
+
   tracer_->Start(
-      std::move(options_.categories),
+      std::move(trace_options),
       [this](const reader::Record& record) { exporter_->ExportRecord(record); },
       [](std::string error) { err() << error; }, [this] { DoneTrace(); });
 
