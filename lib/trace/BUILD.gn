@@ -9,6 +9,8 @@ source_set("types") {
     "ticks.h",
     "types.h",
   ]
+
+  deps = [ "//lib/ftl" ]
 }
 
 # Declares the trace macros and writer API and offers only a do-nothing stub
