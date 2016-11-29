@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//apps/ledger"
+        "//apps/ledger",
+        "//apps/ledger/src:tests"
     ],
     "binaries": [
         {
