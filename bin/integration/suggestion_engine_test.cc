@@ -572,6 +572,28 @@ TEST_F(AskTest, ChangeSameRank) {
   CHECK_RESULT_COUNT(0);
 }
 
+TEST_F(AskTest, ChangeAmbiguousRank) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("E-mail");
+  p.Propose("E-vite");
+  p.Propose("E-card");
+  p.Propose("Music");
+  InitiateAsk();
+  SetResultCount(10);
+  CHECK_RESULT_COUNT(4);
+
+  SetQuery("E");
+  CHECK_RESULT_COUNT(3);
+  p.Propose("E-vite", "E-pass");
+  p.Propose("E-mail", "Comms");
+  p.Propose("E-vite", "RSVP");
+  CHECK_RESULT_COUNT(1);  // historical assertion failure by now
+  // Note that we can't just have removed one and checked that because on
+  // assertion failure, one remove will have happened (at least as of the
+  // 11/29/17 codebase).
+}
+
 TEST_F(AskTest, ChangeWorseSameOrder) {
   Proposinator p(suggestion_engine());
 

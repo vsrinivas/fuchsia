@@ -29,12 +29,18 @@ auto find_for_insert(AskChannel::RankedSuggestions* suggestions, float rank) {
 
 auto find(AskChannel::RankedSuggestions* suggestions,
           const RankedSuggestion* suggestion) {
-  auto it = std::lower_bound(
-      suggestions->begin(), suggestions->end(), suggestion,
-      [](const std::unique_ptr<RankedSuggestion>& a,
-         const RankedSuggestion* b) { return a->rank < b->rank; });
-  FTL_CHECK(it->get() == suggestion);
-  return it;
+  for (auto it = std::lower_bound(
+           suggestions->begin(), suggestions->end(), suggestion,
+           [](const std::unique_ptr<RankedSuggestion>&a,
+              const RankedSuggestion*b) { return a->rank < b->rank; });
+       it != suggestions->end(); ++it) {
+    // could also bound by upper_bound, but not worth it
+    if (it->get() == suggestion) {
+      return it;
+    }
+  }
+  FTL_LOG(FATAL) << "RankedSuggestion not found";
+  return suggestions->end();
 }
 
 void stable_sort(AskChannel::RankedSuggestions* suggestions) {
