@@ -75,11 +75,9 @@ std::string LedgerStatusToString(ledger::Status status) {
 class UserRunnerScope : public ApplicationEnvironmentHost {
  public:
   UserRunnerScope(std::shared_ptr<ApplicationContext> application_context,
-                  const fidl::Array<uint8_t>& user_id,
-                  ledger::LedgerRepositoryPtr ledger_repository)
+                  const fidl::Array<uint8_t>& user_id)
       : application_context_(application_context),
-        binding_(this),
-        ledger_repository_(std::move(ledger_repository)) {
+        binding_(this) {
     // Set up ApplicationEnvironment.
     ApplicationEnvironmentHostPtr env_host;
     binding_.Bind(fidl::GetProxy(&env_host));
@@ -105,20 +103,6 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
   }
 
   void RegisterServices() {
-    // TODO(vardhan): Don't expose the Ledger through the environment.
-    env_services_.AddService<ledger::Ledger>([this](
-        fidl::InterfaceRequest<ledger::Ledger> request) {
-      ledger_repository_->GetLedger(
-          to_array(kAppId), std::move(request), [this](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              FTL_LOG(ERROR) << "UserRunnerScope::"
-                                "GetApplicationEnvironmentServices():"
-                             << " LedgerRepositoryFactory.GetLedger() failed:"
-                             << " " << LedgerStatusToString(status) << ".";
-            }
-          });
-    });
-
     env_services_.SetDefaultServiceConnector(
         [this](std::string service_name, mx::channel channel) {
           application_context_->environment_services()->ConnectToService(
@@ -132,8 +116,6 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
   ApplicationEnvironmentPtr env_;
   ApplicationEnvironmentControllerPtr env_controller_;
   ServiceProviderImpl env_services_;
-
-  ledger::LedgerRepositoryPtr ledger_repository_;
 };
 
 // This environment host is used to run all the stories, and runs under the
@@ -142,14 +124,14 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
 class UserStoriesScope : public ApplicationEnvironmentHost {
  public:
   UserStoriesScope(ApplicationEnvironmentPtr parent_env,
-                   fidl::Array<uint8_t> user_id)
+                   const fidl::Array<uint8_t>& user_id)
       : binding_(this), parent_env_(std::move(parent_env)) {
     // Set up a new ApplicationEnvironment under which we run all stories.
     ApplicationEnvironmentHostPtr env_host;
     binding_.Bind(fidl::GetProxy(&env_host));
     parent_env_->CreateNestedEnvironment(
         std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_),
-        kStoriesEnvironmentLabelPrefix + to_hex_string(std::move(user_id)));
+        kStoriesEnvironmentLabelPrefix + to_hex_string(user_id));
   }
 
   ApplicationEnvironmentPtr GetEnvironment() {
@@ -213,23 +195,28 @@ class UserRunnerImpl : public UserRunner {
     SetupLedgerRepository(user_id);
 
     user_runner_scope_ = std::make_unique<UserRunnerScope>(application_context_,
-        user_id, ledger_repository_factory_->Clone());
-
-    ApplicationEnvironmentPtr user_runner_env =
-        user_runner_scope_->GetEnvironment();
-
-    ServiceProviderPtr user_runner_env_services;
-    user_runner_env->GetServices(GetProxy(&user_runner_env_services));
+        user_id);
 
     stories_scope_ = std::make_unique<UserStoriesScope>(
-        std::move(user_runner_env), user_id.Clone());
+        user_runner_scope_->GetEnvironment(), user_id);
 
     RunUserShell(user_shell, user_shell_args, std::move(view_owner_request));
 
+    ledger::LedgerRepositoryPtr ledger_repository
+        = ledger_repository_factory_->Clone();
+    ledger::LedgerPtr ledger;
+    ledger_repository->GetLedger(
+        to_array(kAppId), GetProxy(&ledger), [](ledger::Status status) {
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "UserRunnerImpl::Initialize: "
+                          " LedgerRepository.GetLedger() failed: "
+                       << LedgerStatusToString(status);
+      }
+    });
+
     fidl::InterfaceHandle<StoryProvider> story_provider;
     auto story_provider_impl = new StoryProviderImpl(
-        stories_scope_->GetEnvironment(),
-        ConnectToService<ledger::Ledger>(user_runner_env_services.get()),
+        stories_scope_->GetEnvironment(), std::move(ledger),
         GetProxy(&story_provider), ledger_repository_factory_.get());
 
     auto maxwell_services =
