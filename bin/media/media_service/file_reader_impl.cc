@@ -149,8 +149,7 @@ void FileReaderImpl::WriteToProducer() {
       return;
     }
 
-    // TODO(dalesat): Don't really know what error we're going to get here.
-    if (status == ERR_UNAVAILABLE) {
+    if (status == ERR_REMOTE_CLOSED) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
       datapipe_producer_.reset();
