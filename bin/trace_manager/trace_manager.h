@@ -42,7 +42,7 @@ class TraceManager : public TraceRegistry, public TraceController {
       const fidl::String& label) override;
 
   void FinalizeTracing();
-  void StartConfiguredProviders();
+  void LaunchConfiguredProviders();
 
   modular::ApplicationContext* const context_;
   const Config& config_;

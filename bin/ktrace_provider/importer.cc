@@ -16,6 +16,7 @@ namespace {
 
 constexpr mx_koid_t kNoProcess = 0u;
 constexpr mx_koid_t kKernelThreadFlag = 0x100000000;
+constexpr uint32_t kProbeFlag = 0x800;
 
 constexpr uint64_t ToUInt64(uint32_t lo, uint32_t hi) {
   return (static_cast<uint64_t>(hi) << 32) | lo;
@@ -90,7 +91,7 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
     }
   }
 
-  if (KTRACE_EVENT(record->tag) & 0x800)
+  if (KTRACE_EVENT(record->tag) & kProbeFlag)
     return ImportProbeRecord(record, record_size);
 
   return ImportUnknownRecord(record, record_size);

@@ -39,7 +39,7 @@ Ticks GetTicksNow() {
 }
 
 Ticks GetTicksPerSecond() {
-  return 1000000000u;
+  return 1'000'000'000u;
 }
 
 #endif

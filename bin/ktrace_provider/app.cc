@@ -20,6 +20,8 @@ constexpr char kDefaultProviderLabel[] = "ktrace";
 constexpr char kCategory[] = "kernel";
 constexpr char kDmctlDev[] = "/dev/class/misc/dmctl";
 constexpr char kTraceDev[] = "/dev/class/misc/ktrace";
+constexpr char kKTraceOff[] = "ktraceoff";
+constexpr char kKTraceOn[] = "ktraceon";
 
 }  // namespace
 
@@ -67,14 +69,14 @@ void App::UpdateState(tracing::writer::TraceState state) {
 }
 
 void App::RestartTracing() {
-  SendDevMgrCommand("ktraceoff");
-  trace_running_ = SendDevMgrCommand("ktraceon");
+  SendDevMgrCommand(kKTraceOff);
+  trace_running_ = SendDevMgrCommand(kKTraceOn);
 }
 
 void App::StopTracing() {
   if (trace_running_) {
     trace_running_ = false;
-    SendDevMgrCommand("ktraceoff");
+    SendDevMgrCommand(kKTraceOff);
   }
 }
 

@@ -35,7 +35,7 @@ TraceManager::TraceManager(modular::ApplicationContext* context,
   // to restart any crashed providers.  We should also wait briefly to ensure
   // that these providers have registered themselves before replying that
   // tracing has started.
-  StartConfiguredProviders();
+  LaunchConfiguredProviders();
 }
 
 TraceManager::~TraceManager() = default;
@@ -126,7 +126,7 @@ void TraceManager::RegisterTraceProvider(
     session_->AddProvider(&(*it));
 }
 
-void TraceManager::StartConfiguredProviders() {
+void TraceManager::LaunchConfiguredProviders() {
   for (const auto& pair : config_.providers()) {
     // TODO(jeffbrown): Only do this if the provider isn't already running.
     // Also keep track of the provider so we can kill it when the trace

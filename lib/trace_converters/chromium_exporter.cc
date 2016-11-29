@@ -134,7 +134,8 @@ void ChromiumExporter::Stop() {
 void ChromiumExporter::ExportRecord(const reader::Record& record) {
   switch (record.type()) {
     case RecordType::kInitialization:
-      tick_scale_ = 1000000.0 / record.GetInitialization().ticks_per_second;
+      // Compute scale factor for ticks to microseconds.
+      tick_scale_ = 1'000'000.0 / record.GetInitialization().ticks_per_second;
       break;
     case RecordType::kEvent:
       ExportEvent(record.GetEvent());
@@ -291,8 +292,8 @@ void ChromiumExporter::ExportKernelObject(
       if (it == threads_.end()) {
         threads_.emplace(kernel_object.koid,
                          std::make_tuple(process_koid, kernel_object.name));
-      } else if (kernel_object.name.size() > std::get<1>(it->second).size() &&
-                 process_koid == std::get<0>(it->second)) {
+      } else if (process_koid == std::get<0>(it->second) &&
+                 kernel_object.name.size() > std::get<1>(it->second).size()) {
         it->second = std::make_tuple(process_koid, kernel_object.name);
       }
     }
