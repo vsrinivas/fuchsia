@@ -184,7 +184,11 @@ void URLLoaderImpl::HTTPClient<ssl_socket_t>::OnResolve(
     const asio::error_code& err,
     tcp::resolver::iterator endpoint_iterator) {
   if (!err) {
+#ifdef NETWORK_SERVICE_DISABLE_CERT_VERIFY
+    socket_.set_verify_mode(asio::ssl::verify_none);
+#else
     socket_.set_verify_mode(asio::ssl::verify_peer);
+#endif
     socket_.set_verify_callback(
         std::bind(&HTTPClient<ssl_socket_t>::OnVerifyCertificate, this,
                   std::placeholders::_1, std::placeholders::_2));

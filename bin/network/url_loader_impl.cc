@@ -106,8 +106,9 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
     if (current_url_.SchemeIs("https")) {
 #ifdef NETWORK_SERVICE_USE_HTTPS
       asio::ssl::context ctx(asio::ssl::context::sslv23);
+#ifndef NETWORK_SERVICE_DISABLE_CERT_VERIFY
       ctx.set_default_verify_paths();
-
+#endif
       HTTPClient<asio::ssl::stream<tcp::socket>> c(this, io_service, ctx);
       mx_status_t result = c.CreateRequest(
           current_url_.host(),

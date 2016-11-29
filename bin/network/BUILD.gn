@@ -7,6 +7,7 @@ executable("network") {
   defines = [
     "NETWORK_SERVICE_USE_HTTPS",
     "NETWORK_SERVICE_HTTPS_CERT_HACK",
+    "NETWORK_SERVICE_DISABLE_CERT_VERIFY",
   ]
 
   sources = [
