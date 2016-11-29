@@ -9,6 +9,7 @@
 
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
+#include "escher/examples/waterfall/scenes/wobbly_ocean_scene.h"
 #include "escher/examples/waterfall/scenes/ring_tricks3.h"
 #include "escher/examples/waterfall/scenes/ring_tricks2.h"
 #include "escher/examples/waterfall/scenes/ring_tricks1.h"
@@ -133,6 +134,7 @@ int main(int argc, char** argv) {
 
     scenes.emplace_back(new RingTricks2(&vulkan_context, &escher));
     scenes.emplace_back(new UberScene3(&vulkan_context, &escher));
+    scenes.emplace_back(new WobblyOceanScene(&vulkan_context, &escher));
     scenes.emplace_back(new WobblyRingsScene(
         &vulkan_context, &escher, vec3(0.012, 0.047, 0.427),
         vec3(0.929f, 0.678f, 0.925f), vec3(0.259f, 0.956f, 0.667),
@@ -144,7 +146,7 @@ int main(int argc, char** argv) {
 
     const int kNumColorsInScheme = 4;
     vec3 color_schemes[4][kNumColorsInScheme]{
-        {vec3(0.905, 0.394, 0.366), vec3(0.868, 0.888, 0.438),
+        {vec3(0.565, 0.565, 0.560), vec3(0.868, 0.888, 0.438),
          vec3(0.905, 0.394, 0.366), vec3(0.365, 0.376, 0.318)},
         {vec3(0.299, 0.263, 0.209), vec3(0.986, 0.958, 0.553),
          vec3(0.773, 0.750, 0.667), vec3(0.643, 0.785, 0.765)},

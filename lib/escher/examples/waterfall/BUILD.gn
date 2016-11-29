@@ -11,6 +11,7 @@ if (is_linux) {
       "demo.cc",
       #"scenes/app_test_scene.cc",
       #"scenes/shadow_test_scene.cc",
+      "scenes/wobbly_ocean_scene.cc",
       "scenes/ring_tricks3.cc",
       "scenes/ring_tricks2.cc",
       "scenes/ring_tricks1.cc",
