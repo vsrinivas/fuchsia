@@ -117,7 +117,8 @@
     "cmd": [
       "make",
       "-j48",
-      "magenta-pc-x86-64"
+      "magenta-pc-x86-64",
+      "USE_CLANG=true"
     ],
     "cwd": "[SLAVE_BUILD]/magenta",
     "name": "build.build",

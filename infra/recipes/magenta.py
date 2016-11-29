@@ -30,12 +30,15 @@ PROPERTIES = {
     'manifest': Property(kind=str, help='Jiri manifest to use'),
     'remote': Property(kind=str, help='Remote manifest repository'),
     'target': Property(kind=str, help='Target to build'),
+    'toolchain': Property(kind=str, help='Toolchain to use'),
 }
 
 
 def RunSteps(api, category, patch_gerrit_url, patch_project, patch_ref,
-             patch_storage, patch_repository_url, manifest, remote, target):
+             patch_storage, patch_repository_url, manifest, remote, target,
+             toolchain):
     assert target in TARGETS, 'unsupported target'
+    assert toolchain in ['gcc', 'clang'], 'unsupported toolchain'
 
     api.jiri.ensure_jiri()
 
@@ -57,9 +60,10 @@ def RunSteps(api, category, patch_gerrit_url, patch_project, patch_ref,
 
     with api.step.nest('build'):
         api.step('cleanup', ['make', 'spotless'], cwd=api.path['checkout'])
-        api.step('build',
-                ['make', '-j%s' % multiprocessing.cpu_count(), target],
-                cwd=api.path['checkout'])
+        build_args = ['make', '-j%s' % multiprocessing.cpu_count(), target]
+        if toolchain == 'clang':
+            build_args.append('USE_CLANG=true')
+        api.step('build', build_args, cwd=api.path['checkout'])
 
 
 def GenTests(api):
@@ -67,6 +71,7 @@ def GenTests(api):
         manifest='magenta',
         remote='https://fuchsia.googlesource.com/manifest',
         target='magenta-pc-x86-64',
+        toolchain='clang',
     )
     yield api.test('cq_try') + api.properties.tryserver(
         gerrit_project='magenta',
@@ -74,4 +79,5 @@ def GenTests(api):
         manifest='magenta',
         remote='https://fuchsia.googlesource.com/manifest',
         target='magenta-pc-x86-64',
+        toolchain='clang',
     )
