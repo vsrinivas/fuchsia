@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
     for (auto& color_scheme : color_schemes) {
       // Convert colors from sRGB
       for (int i = 0; i < kNumColorsInScheme; i++) {
-        color_scheme[i] = escher::LinearToSrgb(color_scheme[i]);
+        color_scheme[i] = escher::SrgbToLinear(color_scheme[i]);
       }
       // Create a new scheme with each color scheme
       scenes.emplace_back(new WobblyRingsScene(
