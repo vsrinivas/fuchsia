@@ -131,11 +131,16 @@ int main(int argc, char** argv) {
     // Create list of scenes
     std::vector<std::unique_ptr<Scene>> scenes;
 
+    scenes.emplace_back(new RingTricks2(&vulkan_context, &escher));
+    scenes.emplace_back(new UberScene3(&vulkan_context, &escher));
     scenes.emplace_back(new WobblyRingsScene(
         &vulkan_context, &escher, vec3(0.012, 0.047, 0.427),
         vec3(0.929f, 0.678f, 0.925f), vec3(0.259f, 0.956f, 0.667),
         vec3(0.039f, 0.788f, 0.788f), vec3(0.188f, 0.188f, 0.788f),
         vec3(0.588f, 0.239f, 0.729f)));
+    scenes.emplace_back(new UberScene2(&vulkan_context, &escher));
+    scenes.emplace_back(new RingTricks3(&vulkan_context, &escher));
+    // scenes.emplace_back(new RingTricks1(&vulkan_context, &escher));
 
     const int kNumColorsInScheme = 4;
     vec3 color_schemes[4][kNumColorsInScheme]{
@@ -148,24 +153,17 @@ int main(int argc, char** argv) {
         {vec3(0.170, 0.255, 0.276), vec3(0.300, 0.541, 0.604),
          vec3(0.637, 0.725, 0.747), vec3(0.670, 0.675, 0.674)},
     };
-
     for (auto& color_scheme : color_schemes) {
       // Convert colors from sRGB
       for (int i = 0; i < kNumColorsInScheme; i++) {
         color_scheme[i] = escher::SrgbToLinear(color_scheme[i]);
       }
+
       // Create a new scheme with each color scheme
       scenes.emplace_back(new WobblyRingsScene(
           &vulkan_context, &escher, color_scheme[0], color_scheme[1],
           color_scheme[1], color_scheme[1], color_scheme[2], color_scheme[3]));
     }
-
-    scenes.emplace_back(new UberScene2(&vulkan_context, &escher));
-    scenes.emplace_back(new UberScene3(&vulkan_context, &escher));
-    scenes.emplace_back(new RingTricks1(&vulkan_context, &escher));
-    scenes.emplace_back(new RingTricks2(&vulkan_context, &escher));
-    scenes.emplace_back(new RingTricks3(&vulkan_context, &escher));
-
     for (auto& scene : scenes) {
       scene->Init(&stage);
     }

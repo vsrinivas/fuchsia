@@ -100,7 +100,6 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   Object ring2(ring_mesh2_, ring_pos + vec3(0, 0, 12.f), ring2_color_);
   ring2.set_shape_modifiers(ShapeModifier::kWobble);
   Object ring3(ring_mesh3_, ring_pos + vec3(0, 0, 24.f), ring3_color_);
-  ring3.set_rotation(current_time_sec);
   ring3.set_shape_modifiers(ShapeModifier::kWobble);
 
   constexpr float TWO_PI = 6.28318530718f;
@@ -112,12 +111,8 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   ring3.set_shape_modifier_data(wobble_data);
 
   // Create a wobbly rectangle
-  float screenWidth = stage->viewing_volume().width();
-  float screenHeight = stage->viewing_volume().height();
   Object rectangle(wobbly_rect_mesh_, vec3(0.f, kRectYPos, 2.f),
                    checkerboard_material_);
-  rectangle.set_rotation(current_time_sec * 0.125f);
-  rectangle.set_rotation_point(vec2(screenWidth / 2.f, screenHeight / 2.f));
   rectangle.set_shape_modifiers(ShapeModifier::kWobble);
   rectangle.set_shape_modifier_data(wobble_data);
 
