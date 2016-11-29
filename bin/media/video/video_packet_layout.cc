@@ -131,6 +131,13 @@ VideoPacketLayout::VideoPacketLayout(PixelFormat pixel_format,
   // in services/media/framework/types/video_stream_type.cc.
   FTL_DCHECK(static_cast<size_t>(kUPlaneIndex) < plane_count_);
   size_ += line_stride_[kUPlaneIndex] + kFrameSizePadding;
+
+  if (pixel_format == PixelFormat::YV12) {
+    // YV12 has planes in YVU order. Swap U and V values.
+    // TODO(dalesat): Build this info into the table.
+    std::swap(line_stride_[kUPlaneIndex], line_stride_[kVPlaneIndex]);
+    std::swap(plane_offset_[kUPlaneIndex], plane_offset_[kVPlaneIndex]);
+  }
 }
 
 VideoPacketLayout::~VideoPacketLayout() {}
