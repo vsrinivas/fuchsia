@@ -84,7 +84,7 @@
 + [cprng_add_entropy](syscalls/cprng_add_entropy.md)
 
 ## Time
-+ [nanosleep](syscalls/nano_sleep.md) - sleep for some number of nanoseconds
++ [nanosleep](syscalls/nanosleep.md) - sleep for some number of nanoseconds
 + [time_get](syscalls/time_get.md) - read a system clock
 
 ## Data Pipes
