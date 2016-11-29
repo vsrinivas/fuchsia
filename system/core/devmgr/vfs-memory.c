@@ -20,7 +20,7 @@
 
 #define MXDEBUG 0
 
-#define MAXBLOCKS 4096
+#define MAXBLOCKS 8192
 #define BLOCKSIZE 8192
 
 typedef struct mnode mnode_t;
