@@ -20,6 +20,10 @@
             "bootfs_path": "bin/netstack"
         },
         {
+            "binary": "netstack_debug",
+            "bootfs_path": "bin/netstack_debug"
+        },
+        {
             "binary": "polltest",
             "bootfs_path": "test/polltest"
         },
