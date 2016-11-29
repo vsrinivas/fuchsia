@@ -9,22 +9,31 @@
 
 #include "apps/ledger/src/glue/crypto/base64.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
+#include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/concatenate.h"
 
 namespace storage {
 
 namespace {
-const char kVersion[] = "0.0.1";
 
 // Encodes opaque bytes in a way that is usable as a directory name.
 std::string GetDirectoryName(ftl::StringView bytes) {
   // TODO(ppi): switch to a method that needs only one pass.
   std::string encoded;
   glue::Base64Encode(bytes, &encoded);
-  std::replace(std::begin(encoded), std::end(encoded), '/', '_');
-  std::replace(std::begin(encoded), std::end(encoded), '+', '.');
+  for (auto it = encoded.begin(); it != encoded.end(); ++it) {
+    switch (*it) {
+      case '/':
+        *it = '_';
+        break;
+      case '+':
+        *it = '.';
+        break;
+    }
+  }
   return encoded;
 }
 }
@@ -33,8 +42,8 @@ LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                      const std::string& base_storage_dir,
                                      const std::string& ledger_name)
     : task_runner_(std::move(task_runner)) {
-  storage_dir_ =
-      base_storage_dir + "/" + kVersion + "/" + GetDirectoryName(ledger_name);
+  storage_dir_ = ftl::Concatenate({base_storage_dir, "/", kSerializationVersion,
+                                   "/", GetDirectoryName(ledger_name)});
 }
 
 LedgerStorageImpl::~LedgerStorageImpl() {}
@@ -93,7 +102,7 @@ bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
 
 std::string LedgerStorageImpl::GetPathFor(PageIdView page_id) {
   FTL_DCHECK(!page_id.empty());
-  return storage_dir_ + "/" + GetDirectoryName(page_id);
+  return ftl::Concatenate({storage_dir_, "/", GetDirectoryName(page_id)});
 }
 
 }  // namespace storage

@@ -15,10 +15,13 @@ constexpr unsigned long kCommitIdSize = 32;
 // The size of an object id in number of bytes.
 constexpr unsigned long kObjectIdSize = 32;
 
+// The id of the first commit of a page.
 constexpr char kFirstPageCommitIdArray[kCommitIdSize] = {0};
-
 constexpr const ftl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
                                                    kCommitIdSize);
+
+// The serialization version of the ledger.
+constexpr const ftl::StringView kSerializationVersion = "1";
 
 }  // namespace storage
 

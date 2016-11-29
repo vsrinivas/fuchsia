@@ -9,6 +9,7 @@
 #include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
+#include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/strings/concatenate.h"
 
 namespace cloud_sync {
@@ -16,9 +17,9 @@ namespace cloud_sync {
 std::string GetFirebasePrefix(ftl::StringView user_prefix,
                               ftl::StringView app_id,
                               ftl::StringView page_id) {
-  return ftl::Concatenate({firebase::EncodeKey(user_prefix), "/",
-                           firebase::EncodeKey(app_id), "/",
-                           firebase::EncodeKey(page_id)});
+  return ftl::Concatenate(
+      {firebase::EncodeKey(user_prefix), "/", storage::kSerializationVersion,
+       "/", firebase::EncodeKey(app_id), "/", firebase::EncodeKey(page_id)});
 }
 
 LedgerSyncImpl::LedgerSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
