@@ -19,7 +19,8 @@ SuggestionAgentClientImpl* Repo::GetOrCreateSourceClient(
 void Repo::AddSuggestion(std::unique_ptr<ProposalRecord> proposal,
                          AgentSuggestionRecord* agent_suggestion_record) {
   // Assert source registered; this isn't strictly necessary but makes sense.
-  assert(sources_[proposal->source->component_url()].get() == proposal->source);
+  FTL_CHECK(sources_[proposal->source->component_url()].get() ==
+            proposal->source);
 
   agent_suggestion_record->suggestion_prototype =
       &*suggestions_.emplace(RandomUuid(), std::move(proposal)).first;

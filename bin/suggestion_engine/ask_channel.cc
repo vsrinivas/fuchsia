@@ -4,7 +4,6 @@
 
 #include "apps/maxwell/src/suggestion_engine/ask_channel.h"
 
-#include <cassert>
 #include <utility>
 
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
@@ -34,7 +33,7 @@ auto find(AskChannel::RankedSuggestions* suggestions,
       suggestions->begin(), suggestions->end(), suggestion,
       [](const std::unique_ptr<RankedSuggestion>& a,
          const RankedSuggestion* b) { return a->rank < b->rank; });
-  assert(it->get() == suggestion);
+  FTL_CHECK(it->get() == suggestion);
   return it;
 }
 
@@ -112,7 +111,7 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
         else                                    // if (from > to)
           std::rotate(to, from, from + 1);      // b c a => a b c
 
-        assert(to->get() == ranked_suggestion);
+        FTL_CHECK(to->get() == ranked_suggestion);
         ranked_suggestion->rank = rank;
       }  // else keep it stable
 
@@ -126,7 +125,7 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
     // previously excluded
     if (rank != kExcludeRank) {
       auto from = exclude_.find(ranked_suggestion->prototype->first);
-      assert(from != exclude_.end());
+      FTL_CHECK(from != exclude_.end());
       ranked_suggestion->rank = rank;
       include_.emplace(find_for_insert(&include_, rank),
                        std::move(from->second));

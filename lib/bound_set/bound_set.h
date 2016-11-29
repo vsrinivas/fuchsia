@@ -4,12 +4,11 @@
 
 #pragma once
 
-#include <assert.h>
-
 #include <vector>
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/ftl/logging.h"
 
 namespace maxwell {
 
@@ -78,7 +77,7 @@ class BoundSet {
     elements_.emplace_back(std::forward<_Args>(__args)...);
     T* const c = &elements_.back();
     FidlType* const m = GetFidlType(c);
-    assert(m->is_bound());
+    FTL_CHECK(m->is_bound());
     UniqueType const id = Identify(m);
     // Set the connection error handler for the newly added item to be a
     // function that will erase it from the vector.
@@ -103,7 +102,7 @@ class BoundSet {
  protected:
   virtual void OnConnectionError(UniqueType id) {
     auto it = Find(id);
-    assert(it != elements_.end());
+    FTL_CHECK(it != elements_.end());
     elements_.erase(it);
   }
 

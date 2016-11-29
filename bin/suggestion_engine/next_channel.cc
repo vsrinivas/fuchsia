@@ -38,7 +38,7 @@ void NextChannel::OnRemoveSuggestion(
       [](const std::unique_ptr<RankedSuggestion>& a,
          const RankedSuggestion& b) { return a->rank < b.rank; });
 
-  assert(it->get() == ranked_suggestion);
+  FTL_CHECK(it->get() == ranked_suggestion);
 
   ranked_suggestions_.erase(it);
 }
