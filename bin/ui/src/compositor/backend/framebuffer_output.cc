@@ -338,7 +338,7 @@ void FramebufferOutput::Rasterizer::DrawFrame(ftl::RefPtr<RenderFrame> frame,
     output_weak = output_->weak_ptr_factory_.GetWeakPtr(), frame_number,
     submit_time, start_time, finish_time
   ] {
-    TRACE_ASYNC_END0("gfx", "DrawFrame", frame_number);
+    TRACE_ASYNC_END0("gfx", "Rasterize", frame_number);
 
     if (output_weak) {
       output_weak->OnFrameFinished(frame_number, submit_time, start_time,

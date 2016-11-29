@@ -19,7 +19,7 @@ void TraceConsumedBufferCount(int32_t delta) {
   int32_t count =
       g_consumed_buffer_count.fetch_add(delta, std::memory_order_relaxed) +
       delta;
-  TRACE_COUNTER1("gfx", "BufferProducer/alloc", 0u, "consumed_buffers", count);
+  TRACE_COUNTER1("gfx", "BufferConsumer/alloc", 0u, "consumed_buffers", count);
 }
 
 class ConsumedVmo : public mtl::SharedVmo {
