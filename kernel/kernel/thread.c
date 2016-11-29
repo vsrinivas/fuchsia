@@ -1542,3 +1542,30 @@ status_t thread_unblock_from_wait_queue(thread_t *t, status_t wait_queue_error)
     return NO_ERROR;
 }
 
+#if WITH_PANIC_BACKTRACE
+static status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t sz)
+{
+    if ((ptr < t->stack) || (ptr > (t->stack + t->stack_size - sizeof(void*)))) {
+        return ERR_NOT_FOUND;
+    }
+    memcpy(out, ptr, sz);
+    return NO_ERROR;
+}
+
+void thread_print_backtrace(thread_t* t, void* fp)
+{
+    void* pc;
+    if (t == NULL) {
+        return;
+    }
+    for (int n = 0; n < 10; n++) {
+        if (thread_read_stack(t, fp + 8, &pc, sizeof(void*))) {
+            break;
+        }
+        printf("bt#%02d: %p\n", n, pc);
+        if (thread_read_stack(t, fp, &fp, sizeof(void*))) {
+            break;
+        }
+    }
+}
+#endif

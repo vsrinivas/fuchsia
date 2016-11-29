@@ -74,6 +74,9 @@ void platform_halt(
     }
 
 #if WITH_LIB_DEBUGLOG
+#if WITH_PANIC_BACKTRACE
+    thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
+#endif
     dlog_bluescreen_halt();
 #endif
 

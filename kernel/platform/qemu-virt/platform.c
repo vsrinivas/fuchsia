@@ -19,6 +19,7 @@
 #include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
+#include <kernel/thread.h>
 #include <platform.h>
 #include <platform/gic.h>
 #include <dev/interrupt.h>
@@ -209,6 +210,9 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
         ulong psci_call_num = 0x84000000 + 8; /* SYSTEM_SHUTDOWN */
         psci_call(psci_call_num, 0, 0, 0);
     } else {
+#if WITH_PANIC_BACKTRACE
+    thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
+#endif
 #if ENABLE_PANIC_SHELL
         dprintf(ALWAYS, "HALT: starting debug shell... (reason = %u)\n", reason);
         arch_disable_ints();
