@@ -100,16 +100,25 @@ void put_rwbuf(rwbuf_t* bufp) {
   rwbuf_head = bufp;
 }
 
-static mx_status_t create_handles(iostate_t* ios, mx_handle_t* peer_h,
-                                  mx_handle_t* peer_s) {
+typedef enum handle_type {
+  HANDLE_TYPE_NONE,
+  HANDLE_TYPE_STREAM,
+  HANDLE_TYPE_DGRAM,
+} handle_type_t;
+
+static mx_status_t create_handles(iostate_t* ios, handle_type_t type,
+                                  mx_handle_t* peer_h, mx_handle_t* peer_s) {
   mx_handle_t h[2];
   mx_status_t r;
 
   if ((r = mx_channel_create(0u, &h[0], &h[1])) < 0) goto fail_channel_create;
 
   mx_handle_t s[2];
-  if ((r = mx_socket_create(0u, &s[0], &s[1])) < 0) goto fail_socket_create;
-
+  if (type == HANDLE_TYPE_NONE) {
+    s[0] = s[1] = MX_HANDLE_INVALID;
+  } else if (type == HANDLE_TYPE_STREAM) {
+    if ((r = mx_socket_create(0u, &s[0], &s[1])) < 0) goto fail_socket_create;
+  }
   ios->s = s[0];
 
   // The dispatcher will own and close the handle if the other end
@@ -136,12 +145,6 @@ fail_socket_create:
 fail_channel_create:
   return r;
 }
-
-enum {
-  HANDLE_TYPE_NONE,
-  HANDLE_TYPE_STREAM,
-  HANDLE_TYPE_DGRAM,
-};
 
 static mx_status_t errno_to_status(int errno_) {
   switch (errno_) {
@@ -232,15 +235,15 @@ mx_status_t do_none(mxrio_msg_t* msg, iostate_t* ios, int events,
                     mx_signals_t signals) {
   ios = iostate_alloc();  // override
 
-  // TODO: we don't need socket
   mx_handle_t peer_h, peer_s;
   // ios->s is set inside create_handles()
-  mx_status_t r = create_handles(ios, &peer_h, &peer_s);
+  mx_status_t r = create_handles(ios, HANDLE_TYPE_NONE, &peer_h, &peer_s);
+  debug_alloc("do_none: create_socket: ios=%p: ios->s=0x%x\n", ios, ios->s);
   if (r >= 0) {
     msg->handle[0] = peer_h;
-    msg->handle[1] = peer_s;
+    msg->handle[1] = MX_HANDLE_INVALID;
     msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
-    msg->hcount = 2;
+    msg->hcount = 1;
   } else {
     iostate_release(ios);
     return r;
@@ -290,11 +293,10 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  // TODO: change the handle type according to HANDLE_TYPE
-
   mx_handle_t peer_h, peer_s;
   // ios->s is set inside create_handles()
-  mx_status_t r = create_handles(ios, &peer_h, &peer_s);
+  mx_status_t r = create_handles(ios, handle_type, &peer_h, &peer_s);
+  debug_alloc("do_socket: create_socket: ios=%p: ios->s=0x%x\n", ios, ios->s);
   if (r >= 0) {
     msg->handle[0] = peer_h;
     msg->handle[1] = peer_s;
@@ -451,7 +453,8 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
   }
 
   mx_handle_t peer_h, peer_s;
-  r = create_handles(ios_new, &peer_h, &peer_s);
+  r = create_handles(ios_new, HANDLE_TYPE_STREAM, &peer_h, &peer_s);
+  debug_alloc("do_accept: create_socket: ios=%p: ios->s=0x%x\n", ios, ios->s);
   if (r < 0) {
     iostate_release(ios_new);
     return r;
