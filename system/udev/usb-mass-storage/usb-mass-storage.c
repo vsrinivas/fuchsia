@@ -33,6 +33,16 @@
 # define DEBUG_PRINT(x) do {} while (0)
 #endif
 
+// used to implement IOCTL_DEVICE_SYNC
+typedef struct {
+    // iotxn we are waiting to complete
+    iotxn_t* iotxn;
+    // completion for IOCTL_DEVICE_SYNC to wait on
+    completion_t completion;
+    // node for ums_t.sync_nodes list
+    list_node_t node;
+} ums_sync_node_t;
+
 typedef struct {
     mx_device_t device;
     mx_device_t* udev;
@@ -57,6 +67,9 @@ typedef struct {
 
     // list of queued io transactions
     list_node_t queued_iotxns;
+
+    // list of active ums_sync_node_t
+    list_node_t sync_nodes;
 
     // list of received packets not yet read by upper layer
     list_node_t completed_reads;
@@ -274,8 +287,18 @@ static void ums_csw_complete(iotxn_t* csw_request, void* cookie) {
     ums_t* msd = (ums_t*)cookie;
 
     // TODO: handle error case for CSW by setting iotxn to error and returning
-    list_node_t* iotxn_node = list_remove_head(&msd->queued_iotxns);
-    iotxn_t* curr_txn = containerof(iotxn_node, iotxn_t, node);
+    iotxn_t* curr_txn = list_remove_head_type(&msd->queued_iotxns, iotxn_t, node);
+
+    // unblock calls to IOCTL_DEVICE_SYNC that are waiting for curr_txn to complete
+    mtx_lock(&msd->mutex);
+    ums_sync_node_t* sync_node;
+    list_for_every_entry(&msd->sync_nodes, sync_node, ums_sync_node_t, node) {
+        if (sync_node->iotxn == curr_txn) {
+            list_delete(&sync_node->node);
+            completion_signal(&sync_node->completion);
+        }
+    }
+    mtx_unlock(&msd->mutex);
 
     csw_status_t csw_error = ums_verify_csw(msd, csw_request);
     if (csw_error) {
@@ -492,7 +515,7 @@ static mx_status_t ums_read_capacity16(ums_t* msd, uint8_t* out_data) {
     return status;
 }
 
-mx_status_t ums_read(mx_device_t* device, iotxn_t* txn) {
+static mx_status_t ums_read(mx_device_t* device, iotxn_t* txn) {
     if (txn->length > UINT32_MAX) return ERR_INVALID_ARGS;
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
@@ -556,7 +579,7 @@ mx_status_t ums_read(mx_device_t* device, iotxn_t* txn) {
     return ums_queue_csw(msd);
 }
 
-mx_status_t ums_write(mx_device_t* device, iotxn_t* txn) {
+static mx_status_t ums_write(mx_device_t* device, iotxn_t* txn) {
     if (txn->length > UINT32_MAX) return ERR_INVALID_ARGS;
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
@@ -625,7 +648,7 @@ mx_status_t ums_write(mx_device_t* device, iotxn_t* txn) {
     return ums_queue_csw(msd);
 }
 
-mx_status_t ums_toggle_removable(mx_device_t* device, bool removable) {
+static mx_status_t ums_toggle_removable(mx_device_t* device, bool removable) {
     ums_t* msd = get_ums(device);
     mx_status_t status = NO_ERROR;
 
@@ -719,8 +742,20 @@ static ssize_t ums_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
          return sizeof(*blksize);
     }
     case IOCTL_DEVICE_SYNC: {
-        // TODO(smklein): Implement
-        return ERR_NOT_SUPPORTED;
+        ums_sync_node_t node;
+
+        mtx_lock(&msd->mutex);
+        if (list_is_empty(&msd->queued_iotxns)) {
+            mtx_unlock(&msd->mutex);
+            return NO_ERROR;
+        }
+        // queue a stack allocated sync node on ums_t.sync_nodes
+        node.iotxn = list_peek_tail_type(&msd->queued_iotxns, iotxn_t, node);
+        completion_reset(&node.completion);
+        list_add_head(&msd->sync_nodes, &node.node);
+        mtx_unlock(&msd->mutex);
+
+        return completion_wait(&node.completion, MX_TIME_INFINITE);
     }
     default:
         return ERR_NOT_SUPPORTED;
@@ -869,6 +904,7 @@ static mx_status_t ums_bind(mx_driver_t* driver, mx_device_t* device) {
     list_initialize(&msd->queued_iotxns);
     list_initialize(&msd->completed_reads);
     list_initialize(&msd->completed_csws);
+    list_initialize(&msd->sync_nodes);
 
     msd->udev = device;
     msd->driver = driver;
