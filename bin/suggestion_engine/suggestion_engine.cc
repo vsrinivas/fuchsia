@@ -82,9 +82,16 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                                              GetProxy(&story_controller));
                 FTL_LOG(INFO) << "Creating story with module "
                               << create_story->module_id;
+                char hex_color[11];
+                sprintf(hex_color, "0x%x",
+                        proposal_record->proposal->display->color);
+                story_controller->SetInfoExtra(fidl::String("color"),
+                                               fidl::String(hex_color), [] {});
                 const auto& initial_data = create_story->initial_data;
                 if (initial_data) {
                   modular::LinkPtr link;
+                  // TODO(afergan): This won't work until CreateStory() supports
+                  // initial Link data (FW-66).
                   story_controller->GetLink(GetProxy(&link));
                   link->AddDocuments(initial_data.Clone());
                 }
