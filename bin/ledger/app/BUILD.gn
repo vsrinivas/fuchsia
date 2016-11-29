@@ -3,13 +3,9 @@
 # found in the LICENSE file.
 
 group("app") {
-  testonly = true
 
   deps = [
-    ":application_tests",
-    ":integration_tests",
     ":ledger_app",
-    ":unittests",
   ]
 }
 
@@ -78,6 +74,16 @@ executable("ledger_app") {
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+    ":integration_tests",
+    ":application_tests",
   ]
 }
 

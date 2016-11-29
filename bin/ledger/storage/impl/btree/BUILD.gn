@@ -3,11 +3,9 @@
 # found in the LICENSE file.
 
 group("btree") {
-  testonly = true
 
   deps = [
     ":lib",
-    ":unittests",
   ]
 }
 

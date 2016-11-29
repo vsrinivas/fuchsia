@@ -3,11 +3,17 @@
 # found in the LICENSE file.
 
 group("cloud_sync") {
-  testonly = true
 
   deps = [
     "//apps/ledger/src/cloud_sync/impl",
-    "//apps/ledger/src/cloud_sync/impl:unittests",
     "//apps/ledger/src/cloud_sync/public",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "//apps/ledger/src/cloud_sync/impl:unittests",
   ]
 }

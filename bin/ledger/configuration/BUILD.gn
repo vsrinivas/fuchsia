@@ -3,12 +3,10 @@
 # found in the LICENSE file.
 
 group("configuration") {
-  testonly = true
 
   deps = [
     ":configuration_writer",
     ":lib",
-    ":unittests",
   ]
 }
 

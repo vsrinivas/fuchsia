@@ -3,13 +3,19 @@
 # found in the LICENSE file.
 
 group("cloud_provider") {
-  testonly = true
 
   deps = [
     "//apps/ledger/src/cloud_provider/client",
     "//apps/ledger/src/cloud_provider/impl",
-    "//apps/ledger/src/cloud_provider/impl:unittests",
     "//apps/ledger/src/cloud_provider/public",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "//apps/ledger/src/cloud_provider/impl:unittests",
     "//apps/ledger/src/cloud_provider/test",
   ]
 }

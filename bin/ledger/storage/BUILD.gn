@@ -3,12 +3,18 @@
 # found in the LICENSE file.
 
 group("storage") {
+
+  deps = [
+    "//apps/ledger/src/storage/impl",
+    "//apps/ledger/src/storage/public",
+  ]
+}
+
+group("tests") {
   testonly = true
 
   deps = [
     "//apps/ledger/src/storage/fake",
-    "//apps/ledger/src/storage/impl",
-    "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
   ]
 }
