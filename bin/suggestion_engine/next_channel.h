@@ -5,6 +5,7 @@
 #pragma once
 
 #include "apps/maxwell/src/bound_set.h"
+#include "apps/maxwell/src/suggestion_engine/filter.h"
 #include "apps/maxwell/src/suggestion_engine/next_subscriber.h"
 #include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
 
@@ -13,6 +14,8 @@ namespace suggestion {
 
 class NextChannel : public SuggestionChannel {
  public:
+  NextChannel(ProposalFilter filter) : filter_(filter) {}
+
   void AddSubscriber(std::unique_ptr<NextSubscriber> subscriber) {
     subscribers_.emplace(std::move(subscriber));
   }
@@ -33,6 +36,8 @@ class NextChannel : public SuggestionChannel {
     for (auto& subscriber : subscribers_)
       subscriber->OnRemoveSuggestion(ranked_suggestion);
   }
+
+  ProposalFilter filter_;
 
   maxwell::BoundNonMovableSet<NextSubscriber> subscribers_;
   RankedSuggestions ranked_suggestions_;

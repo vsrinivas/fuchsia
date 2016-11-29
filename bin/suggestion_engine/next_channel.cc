@@ -9,6 +9,13 @@ namespace suggestion {
 
 RankedSuggestion* NextChannel::OnAddSuggestion(
     const SuggestionPrototype* prototype) {
+  // TODO(rosswang): remove existing if they match filter
+  if (filter_ && !filter_(*prototype->second->proposal)) {
+    FTL_LOG(INFO) << "Filtering Proposal in Next: "
+                  << prototype->second->proposal->id;
+    return nullptr;
+  }
+
   // TODO(rosswang): rank
   const float next_rank =
       ranked_suggestions_.empty() ? 0 : ranked_suggestions_.back()->rank + 1;

@@ -18,7 +18,7 @@ namespace suggestion {
 
 class Repo {
  public:
-  Repo(ProposalFilter filter) : filter_(filter) {}
+  Repo(ProposalFilter filter) : next_channel_(filter) {}
 
   SuggestionAgentClientImpl* GetOrCreateSourceClient(
       const std::string& component_url);
@@ -61,8 +61,6 @@ class Repo {
     return it == suggestions_.end() ? NULL : it->second.get();
   }
 
-  ProposalFilter filter() const { return filter_; }
-
  private:
   std::string RandomUuid() {
     static uint64_t id = 0;
@@ -77,8 +75,6 @@ class Repo {
   NextChannel next_channel_;
   maxwell::BoundNonMovableSet<AskChannel> ask_channels_;
   fidl::InterfacePtrSet<AskHandler> ask_handlers_;
-
-  ProposalFilter filter_;
 };
 
 }  // namespace suggestion
