@@ -6,6 +6,8 @@
 
 #include <mx/process.h>
 
+#include "lib/ftl/logging.h"
+
 namespace mtl {
 
 static_assert(sizeof(mx_size_t) == sizeof(uint64_t), "64-bit architecture");
@@ -20,15 +22,22 @@ SharedVmo::SharedVmo(mx::vmo vmo, uint32_t map_flags)
 }
 
 SharedVmo::~SharedVmo() {
-  if (mapping_)
-    mx::process::self().unmap_vm(mapping_, vmo_size_);
+  if (mapping_) {
+    mx_status_t status = mx::process::self().unmap_vm(mapping_, 0u);
+    FTL_CHECK(status == NO_ERROR);
+  }
 }
 
 void* SharedVmo::Map() {
   if (vmo_ && map_flags_) {
     std::call_once(mapping_once_flag_, [this] {
       // If an error occurs, then |mapping_| will remain 0.
-      mx::process::self().map_vm(vmo_, 0u, vmo_size_, &mapping_, map_flags_);
+      mx_status_t status = mx::process::self().map_vm(vmo_, 0u, vmo_size_,
+                                                      &mapping_, map_flags_);
+      if (status != NO_ERROR) {
+        FTL_LOG(ERROR) << "Failed to map vmo: vmo_size=" << vmo_size_
+                       << ", map_flags=" << map_flags_ << ", status=" << status;
+      }
     });
   }
   return reinterpret_cast<void*>(mapping_);
