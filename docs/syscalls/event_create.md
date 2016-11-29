@@ -15,7 +15,7 @@ mx_status_t mx_event_create(uint32_t options, mx_handle_t* out);
 ## DESCRIPTION
 
 **event_create**() creates an event, which is an object that is signalable. That
-is, its *MX_SIGNAL_SIGNALn* (where *n* is 0 through 4) signals can be
+is, its *MX_USER_SIGNAL_n* (where *n* is 0 through 7) signals can be
 manipulated using **object_signal**().
 
 The newly-created handle will have the *MX_RIGHT_TRANSER*, *MX_RIGHT_DUPLICATE*,

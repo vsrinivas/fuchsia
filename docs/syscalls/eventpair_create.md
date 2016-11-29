@@ -24,7 +24,7 @@ unsatisfiable.
 
 The newly-created handles will have the *MX_RIGHT_TRANSER*,
 *MX_RIGHT_DUPLICATE*, *MX_RIGHT_READ*, and *MX_RIGHT_WRITE* rights. The
-*MX_SIGNAL_SIGNALn* (where *n* is 0 through 4) signals may be set using
+*MX_USER_SIGNAL_n* (where *n* is 0 through 7) signals may be set using
 **object_signal**() with the behavior described above.
 
 Currently, no flags are supported, so *flags* must be set to 0.
