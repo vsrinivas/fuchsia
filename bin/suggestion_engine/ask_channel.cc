@@ -103,15 +103,19 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
     auto from = find(&include_, ranked_suggestion);
 
     if (rank != kExcludeRank) {
-      // TODO(rosswang): Test and verify general goodness
       if (rank != ranked_suggestion->rank) {
         auto to = find_for_insert(&include_, rank);
         if (from < to)
-          std::rotate(from, from + 1, to + 1);  // c a b => a b c
-        else                                    // if (from > to)
-          std::rotate(to, from, from + 1);      // b c a => a b c
+          --to;  // since we're rotating rather than inserting
 
-        FTL_CHECK(to->get() == ranked_suggestion);
+        if (from != to) {
+          if (from < to)
+            std::rotate(from, from + 1, to + 1);  // c a b => a b c
+          else                                    // if (from > to)
+            std::rotate(to, from, from + 1);      // b c a => a b c
+
+          FTL_CHECK(to->get() == ranked_suggestion);
+        }  // else keep it stable
         ranked_suggestion->rank = rank;
       }  // else keep it stable
 

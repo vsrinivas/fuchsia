@@ -29,6 +29,12 @@ class TestSuggestionListener : public maxwell::suggestion::Listener {
     return ordered_suggestions_[index];
   }
 
+  const maxwell::suggestion::Suggestion* operator[](
+      const std::string& id) const {
+    auto it = suggestions_by_id_.find(id);
+    return it == suggestions_by_id_.end() ? NULL : it->second.get();
+  }
+
  private:
   int naive_suggestion_count_ = 0;
   std::unordered_map<std::string, maxwell::suggestion::SuggestionPtr>

@@ -482,6 +482,10 @@ TEST_F(AskTest, DefaultAsk) {
   CHECK_RESULT_COUNT(2);
 }
 
+#define CHECK_ONLY_HEADLINE(h)                       \
+  ASYNC_CHECK(listener()->suggestion_count() == 1 && \
+              listener()->GetOnlySuggestion()->display->headline == h)
+
 TEST_F(AskTest, AskIncludeExclude) {
   Proposinator p(suggestion_engine());
 
@@ -491,14 +495,10 @@ TEST_F(AskTest, AskIncludeExclude) {
   InitiateAsk();
   SetResultCount(10);
   SetQuery("The Hottest Band on the Internet");
-  CHECK_RESULT_COUNT(1);
-  EXPECT_EQ("The Hottest Band on the Internet",
-            listener()->GetOnlySuggestion()->display->headline);
+  CHECK_ONLY_HEADLINE("The Hottest Band on the Internet");
 
   SetQuery("Mozart's Ghost");
-  ASYNC_CHECK(listener()->suggestion_count() == 1 &&
-              "Mozart's Ghost" ==
-                  listener()->GetOnlySuggestion()->display->headline);
+  CHECK_ONLY_HEADLINE("Mozart's Ghost");
 
   p.Propose("Mozart's Ghost", "Gatekeeper");
   CHECK_RESULT_COUNT(0);
@@ -537,8 +537,7 @@ TEST_F(AskTest, RemoveAskFallback) {
   CHECK_RESULT_COUNT(0);
 }
 
-// Historical failure case
-TEST_F(AskTest, MovingParts) {
+TEST_F(AskTest, ChangeFallback) {
   Proposinator p(suggestion_engine());
 
   p.Propose("E-mail");
@@ -546,20 +545,71 @@ TEST_F(AskTest, MovingParts) {
   SetResultCount(10);
   CHECK_RESULT_COUNT(1);
 
-  SetQuery("T");
-  p.Propose("YouTube");
-  p.Propose("Terminal");
+  p.Propose("E-mail", "E-vite");
+  CHECK_ONLY_HEADLINE("E-vite");
+
+  // Make sure we're still alive; historical crash above
+  SetQuery("X");
+  CHECK_RESULT_COUNT(0);
+}
+
+TEST_F(AskTest, ChangeSameRank) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("E-mail");
+  p.Propose("Music");
+  InitiateAsk();
+  SetResultCount(10);
   CHECK_RESULT_COUNT(2);
 
-  SetQuery("Te");
-  p.Propose("YouTube");
-  p.Propose("Terminal");
+  SetQuery("E");
   CHECK_RESULT_COUNT(1);
+  p.Propose("E-mail", "E-vite");  // E-mail and E-vite are equidistant from E
+  CHECK_ONLY_HEADLINE("E-vite");
 
-  SetQuery("T");
-  p.Propose("YouTube");
-  p.Propose("Terminal");
+  // Make sure we're still alive; historical crash above
+  SetQuery("X");
+  CHECK_RESULT_COUNT(0);
+}
+
+TEST_F(AskTest, ChangeWorseSameOrder) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("E-mail");
+  p.Propose("Music");
+  InitiateAsk();
+  SetResultCount(10);
   CHECK_RESULT_COUNT(2);
+
+  SetQuery("E");
+  CHECK_RESULT_COUNT(1);
+  p.Propose("E-mail", "Messaging");  // Messaging is a worse match than E-mail
+  CHECK_ONLY_HEADLINE("Messaging");
+
+  // Make sure we're still alive; historical crash above
+  SetQuery("X");
+  CHECK_RESULT_COUNT(0);
+}
+
+TEST_F(AskTest, ChangeSuboptimal) {
+  Proposinator p(suggestion_engine());
+
+  p.Propose("E-mail");
+  p.Propose("Evisceration");
+  p.Propose("Magic");
+  InitiateAsk();
+  SetResultCount(10);
+  CHECK_RESULT_COUNT(3);
+
+  SetQuery("E");
+  CHECK_RESULT_COUNT(2);
+  p.Propose("Evisceration", "Incarceration");  // both are worse than E-mail
+  ASYNC_CHECK(suggestion_count() == 2 &&
+              (*listener())[1]->display->headline == "Incarceration");
+
+  // Make sure we're still alive; historical crash above
+  SetQuery("X");
+  CHECK_RESULT_COUNT(0);
 }
 
 #define HEADLINE_EQ(expected, index) \
