@@ -9,6 +9,12 @@
 
 #include "escher/escher.h"
 #include "escher/escher_process_init.h"
+#include "escher/examples/waterfall/scenes/ring_tricks3.h"
+#include "escher/examples/waterfall/scenes/ring_tricks2.h"
+#include "escher/examples/waterfall/scenes/ring_tricks1.h"
+#include "escher/examples/waterfall/scenes/uber_scene3.h"
+#include "escher/examples/waterfall/scenes/uber_scene2.h"
+#include "escher/examples/waterfall/scenes/uber_scene.h"
 #include "escher/examples/waterfall/scenes/demo_scene.h"
 #include "escher/examples/waterfall/scenes/wobbly_rings_scene.h"
 #include "escher/geometry/types.h"
@@ -123,8 +129,14 @@ int main(int argc, char** argv) {
 
     // Create list of scenes
     std::vector<std::unique_ptr<Scene>> scenes;
+
     scenes.emplace_back(new WobblyRingsScene(&vulkan_context, &escher));
     scenes.emplace_back(new DemoScene(&vulkan_context, &escher));
+    scenes.emplace_back(new UberScene2(&vulkan_context, &escher));
+    scenes.emplace_back(new UberScene3(&vulkan_context, &escher));
+    scenes.emplace_back(new RingTricks1(&vulkan_context, &escher));
+    scenes.emplace_back(new RingTricks2(&vulkan_context, &escher));
+    scenes.emplace_back(new RingTricks3(&vulkan_context, &escher));
     for (auto& scene : scenes) {
       scene->Init(&stage);
     }
