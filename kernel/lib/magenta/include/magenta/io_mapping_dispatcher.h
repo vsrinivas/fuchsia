@@ -45,6 +45,7 @@ protected:
 private:
     mxtl::RefPtr<VmAspace> aspace_;
     paddr_t                 paddr_;
+    mxtl::RefPtr<VmMapping> mapping_;
     vaddr_t                 vaddr_ = 0;
     size_t                  size_;
 };

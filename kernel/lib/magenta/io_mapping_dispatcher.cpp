@@ -45,13 +45,13 @@ void IoMappingDispatcher::Close() {
 }
 
 void IoMappingDispatcher::Cleanup() {
-    if (vaddr_) {
-        DEBUG_ASSERT(aspace_);
-        aspace_->FreeRegion(vaddr_);
+    if (mapping_) {
+        mapping_->Unmap();
     }
 
     vaddr_ = 0;
     aspace_.reset();
+    mapping_.reset();
 }
 
 bool IoMappingDispatcher::closed() const {
@@ -63,6 +63,9 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
                                    uint vmm_flags, uint arch_mmu_flags) {
     DEBUG_ASSERT(closed());
 
+    // TODO(teisenbe): Remove vmm_flags
+    DEBUG_ASSERT(!vmm_flags);
+
     if (!IS_ALIGNED(paddr, PAGE_SIZE) ||
         !IS_ALIGNED(size,  PAGE_SIZE) ||
         !size)
@@ -73,15 +76,28 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
     if (!aspace_)
         return ERR_INTERNAL;
 
+    mxtl::RefPtr<VmObject> vmo(VmObjectPhysical::Create(paddr, size));
+    if (!vmo)
+        return ERR_NO_MEMORY;
+
     paddr_ = paddr;
     size_  = size;
 
-    return aspace_->AllocPhysical(dbg_name,
-                                  size,
-                                  reinterpret_cast<void**>(&vaddr_),
-                                  PAGE_SIZE_SHIFT,
-                                  0,
-                                  paddr,
-                                  vmm_flags,
-                                  arch_mmu_flags);
+    auto root_vmar = aspace_->root_vmar();
+    status_t res = root_vmar->CreateVmMapping(0, size, PAGE_SIZE_SHIFT, 0,
+                                              mxtl::move(vmo), 0, arch_mmu_flags,
+                                              dbg_name, &mapping_);
+    if (res != NO_ERROR)
+        return res;
+
+    // Force the entries into the page tables
+    res = mapping_->MapRange(0, size, false);
+    if (res < 0) {
+        mapping_->Unmap();
+        mapping_.reset();
+        return res;
+    }
+
+    vaddr_ = mapping_->base();
+    return NO_ERROR;
 }

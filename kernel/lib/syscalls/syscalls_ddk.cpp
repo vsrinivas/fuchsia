@@ -41,15 +41,6 @@ static_assert(MX_CACHE_POLICY_UNCACHED_DEVICE == ARCH_MMU_FLAG_UNCACHED_DEVICE,
 static_assert(MX_CACHE_POLICY_WRITE_COMBINING == ARCH_MMU_FLAG_WRITE_COMBINING,
               "Cache policy constant mismatch - WRITE_COMBINING");
 
-// HACK: move the mmio mappings to a high address to get out of the way of DSOs and other user data.
-// Will go away once these mappings move into a generic VMO map call.
-static const vaddr_t mmio_map_base_address =
-#if _LP64
-    0x7ff0'0000'0000ULL;
-#else
-    0x20000000UL;
-#endif
-
 mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t flags) {
     LTRACEF("vector %u flags 0x%x\n", vector, flags);
 
@@ -113,7 +104,6 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     if (!out_vaddr)
         return ERR_INVALID_ARGS;
 
-    void* vaddr = (void *)mmio_map_base_address;
     uint arch_mmu_flags =
         ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
         ARCH_MMU_FLAG_PERM_USER;
@@ -134,17 +124,32 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
         default: return ERR_INVALID_ARGS;
     }
 
+    mxtl::RefPtr<VmObject> vmo(VmObjectPhysical::Create(paddr, len));
+    if (!vmo) {
+        return ERR_NO_MEMORY;
+    }
+
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
-    status_t res = aspace->AllocPhysical("user_mmio", len, &vaddr,
-                                         PAGE_SIZE_SHIFT, 0, (paddr_t)paddr,
-                                         VMM_FLAG_VALLOC_BASE,  // vmm flags
-                                         arch_mmu_flags);
+    auto vmar = aspace->root_vmar();
 
-    if (res != NO_ERROR)
+    mxtl::RefPtr<VmMapping> mapping;
+    status_t res = vmar->CreateVmMapping(0, len, PAGE_SIZE_SHIFT, VMAR_FLAG_MAP_HIGH,
+                                         mxtl::move(vmo), 0, arch_mmu_flags, "user_mmio",
+                                         &mapping);
+
+    if (res != NO_ERROR) {
         return res;
+    }
 
-    if (out_vaddr.copy_to_user(vaddr) != NO_ERROR) {
-        aspace->FreeRegion(reinterpret_cast<vaddr_t>(vaddr));
+    // Force the entries into the page tables
+    status = mapping->MapRange(0, len, false);
+    if (status < 0) {
+        mapping->Unmap();
+        return status;
+    }
+
+    if (out_vaddr.copy_to_user(reinterpret_cast<void*>(mapping->base())) != NO_ERROR) {
+        mapping->Unmap();
         return ERR_INVALID_ARGS;
     }
 

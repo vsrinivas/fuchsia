@@ -60,11 +60,14 @@ public:
 
     size_t AllocatedPages() const;
 
+    // Convenience method for traversing the tree of VMARs to find the deepest
+    // VMAR in the tree that includes *va*.
+    mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t va);
+
     // legacy functions to assist in the transition to VMARs
     // These all assume a flat VMAR structure in which all VMOs are mapped
-    // as children of the root.
+    // as children of the root.  They will all assert if used on user aspaces
     // TODO(teisenbe): remove uses of these in favor of new VMAR interfaces
-
     status_t MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint64_t offset, size_t size,
                        void** ptr, uint8_t align_pow2, size_t min_alloc_gap, uint vmm_flags,
                        uint arch_mmu_flags);
@@ -77,7 +80,6 @@ public:
     status_t Alloc(const char* name, size_t size, void** ptr, uint8_t align_pow2,
                    size_t min_alloc_gap, uint vmm_flags, uint arch_mmu_flags);
     status_t FreeRegion(vaddr_t va);
-    mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t va);
 
 protected:
     // Share the aspace lock with VmAddressRegion/VmMapping so they can serialize

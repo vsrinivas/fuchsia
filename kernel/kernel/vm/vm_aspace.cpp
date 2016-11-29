@@ -240,6 +240,8 @@ status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint6
             "ptr %p align %hhu vmm_flags %#x arch_mmu_flags %#x\n",
             this, name, vmo.get(), offset, size, ptr ? *ptr : 0, align_pow2, vmm_flags, arch_mmu_flags);
 
+    DEBUG_ASSERT(!is_user() || !(arch_mmu_flags & ARCH_MMU_FLAG_PERM_USER));
+
     size = ROUNDUP(size, PAGE_SIZE);
     if (size == 0)
         return ERR_INVALID_ARGS;
@@ -436,6 +438,8 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
 }
 
 status_t VmAspace::FreeRegion(vaddr_t va) {
+    DEBUG_ASSERT(!is_user());
+
     mxtl::RefPtr<VmAddressRegionOrMapping> r = root_vmar_->FindRegion(va);
     if (!r) {
         return ERR_NOT_FOUND;
