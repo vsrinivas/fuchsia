@@ -27,7 +27,11 @@ struct ProposalContent {
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
     {{"Terminal", {"file:///system/apps/moterm", 0x00008000 /* green */}},
      {"YouTube", {"file:///system/apps/youtube_story", 0x00ff0000 /* red */}},
-     {"Music", {"file:///system/apps/music_story", 0x00ff8000 /* orange */}}});
+     {"Music", {"file:///system/apps/music_story", 0x00ff8000 /* orange */}},
+     {"Spinning Square",
+      {"file:///system/apps/spinning_square_view", 0x000000ff}},
+     {"Noodles", {"file:///system/apps/noodles_view", 0x00ffff00}},
+     {"Color", {"file:///system/apps/color", 0x00ffffff}}});
 
 class ModuleSuggesterAgentApp : public maxwell::context::SubscriberLink,
                                 public maxwell::suggestion::AskHandler {
