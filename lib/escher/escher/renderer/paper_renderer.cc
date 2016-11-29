@@ -221,13 +221,17 @@ void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer_in,
   auto framebuffer = static_cast<PaperFramebuffer*>(framebuffer_in.get());
   FTL_DCHECK(framebuffer->renderer == this);
 
+  // When we disable lighting, we don't do the SSDO sample/filter passes.
+  // Since we no longer have the resulting texture containing illumination data,
+  // we use a single-pixel white texture to light everything 100%.
+  auto& illumination_texture = enable_lighting_
+                                   ? framebuffer->aux_color_texture()
+                                   : model_renderer_->white_texture();
+
   model_renderer_->hack_use_depth_prepass = false;
   command_buffer->BeginRenderPass(model_renderer_->lighting_pass(),
                                   framebuffer_in, clear_values_);
-
-  model_renderer_->Draw(stage, model, command_buffer,
-                        framebuffer->aux_color_texture());
-
+  model_renderer_->Draw(stage, model, command_buffer, illumination_texture);
   command_buffer->EndRenderPass();
 
   if (show_debug_info_) {
@@ -286,8 +290,10 @@ void PaperRenderer::DrawFrame(Stage& stage,
   DrawDepthPrePass(framebuffer, stage, model);
   SubmitPartialFrame();
 
-  DrawSsdoPasses(framebuffer, stage);
-  SubmitPartialFrame();
+  if (enable_lighting_) {
+    DrawSsdoPasses(framebuffer, stage);
+    SubmitPartialFrame();
+  }
 
   DrawLightingPass(framebuffer, stage, model);
   EndFrame(frame_done, frame_retired_callback);

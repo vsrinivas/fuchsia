@@ -24,6 +24,9 @@ class PaperRenderer : public Renderer {
   // Set whether one or more debug-overlays is to be show.
   void set_show_debug_info(bool b) { show_debug_info_ = b; }
 
+  // Set whether SSDO lighting model is used.
+  void set_enable_lighting(bool b) { enable_lighting_ = b; }
+
  private:
   friend class Escher;
   PaperRenderer(impl::EscherImpl* escher);
@@ -64,6 +67,7 @@ class PaperRenderer : public Renderer {
   std::unique_ptr<impl::SsdoSampler> ssdo_;
   std::vector<vk::ClearValue> clear_values_;
   bool show_debug_info_ = false;
+  bool enable_lighting_ = true;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(PaperRenderer);
   FTL_DISALLOW_COPY_AND_ASSIGN(PaperRenderer);

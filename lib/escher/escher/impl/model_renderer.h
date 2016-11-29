@@ -34,6 +34,9 @@ class ModelRenderer {
   vk::RenderPass depth_prepass() const { return depth_prepass_; }
   vk::RenderPass lighting_pass() const { return lighting_pass_; }
 
+  // Returns a single-pixel white texture.  Do with it what you will.
+  const TexturePtr& white_texture() const { return white_texture_; }
+
  private:
   const MeshPtr& GetMeshForShape(const Shape& shape) const;
   void CreateRenderPasses(vk::Format color_format, vk::Format depth_format);

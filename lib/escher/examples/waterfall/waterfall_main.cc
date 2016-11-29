@@ -25,7 +25,8 @@ static constexpr int kDemoHeight = 1024;
 static constexpr float kNear = 24.f;
 static constexpr float kFar = 0.f;
 
-bool g_show_debug_info = true;
+bool g_show_debug_info = false;
+bool g_enable_lighting = true;
 int g_current_scene = 0;
 
 static void key_callback(GLFWwindow* window,
@@ -43,8 +44,21 @@ static void key_callback(GLFWwindow* window,
         g_show_debug_info = !g_show_debug_info;
         break;
       case GLFW_KEY_SPACE:
-        g_current_scene++;
+        g_enable_lighting = !g_enable_lighting;
         break;
+      case GLFW_KEY_0:
+        g_current_scene = 10;
+        break;
+      case GLFW_KEY_1:
+      case GLFW_KEY_2:
+      case GLFW_KEY_3:
+      case GLFW_KEY_4:
+      case GLFW_KEY_5:
+      case GLFW_KEY_6:
+      case GLFW_KEY_7:
+      case GLFW_KEY_8:
+      case GLFW_KEY_9:
+        g_current_scene = key - GLFW_KEY_0 - 1;
       default:
         break;
     }
@@ -121,6 +135,7 @@ int main(int argc, char** argv) {
       escher::Model* model = scene->Update(stopwatch, frame_count, &stage);
 
       renderer->set_show_debug_info(g_show_debug_info);
+      renderer->set_enable_lighting(g_enable_lighting);
 
       swapchain_helper.DrawFrame(stage, *model);
 
