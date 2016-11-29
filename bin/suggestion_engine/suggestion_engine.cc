@@ -130,8 +130,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
     timeline_stories_watcher_.reset(
         new TimelineStoriesWatcher(&story_provider_));
-    timeline_stories_watcher_->SetWatcher(
-        []() { FTL_LOG(INFO) << "Something changed."; });
+    // timeline_stories_watcher_->SetWatcher(
+    //     []() { FTL_LOG(INFO) << "Something changed."; });
 
     repo_.reset(
         new Repo(TimelineStoriesFilter(timeline_stories_watcher_.get())));

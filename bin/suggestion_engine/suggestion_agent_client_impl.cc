@@ -10,6 +10,7 @@ namespace suggestion {
 void SuggestionAgentClientImpl::Propose(ProposalPtr proposal) {
   // TODO(rosswang): remove existing if they match filter
   if (repo_->filter() && !repo_->filter()(*proposal)) {
+    FTL_LOG(INFO) << "Filtering Proposal: " << proposal->id;
     return;
   }
 
