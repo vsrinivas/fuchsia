@@ -25,7 +25,7 @@ public:
     // Called whenever the state changes, to give it the new state. Returns true if a thread was
     // awoken.
     // WARNING: This is called under StateTracker's mutex
-    virtual bool OnStateChange(mx_signals_t new_state);
+    virtual bool OnStateChange(mx_signals_t new_state) = 0;
 
     // Called when |handle| (which refers to a handle to the object that owns the StateTracker) is
     // being destroyed/"closed"/transferred. (The object itself, and thus the StateTracker too, may
