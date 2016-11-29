@@ -127,6 +127,33 @@ TEST_F(EventTest, AsyncEnd) {
                    "v4");
 }
 
+TEST_F(EventTest, FlowBegin) {
+  TRACE_FLOW_BEGIN0("cat", "name", 1);
+  TRACE_FLOW_BEGIN1("cat", "name", 1, "k1", "v1");
+  TRACE_FLOW_BEGIN2("cat", "name", 1, "k1", "v1", "k2", "v2");
+  TRACE_FLOW_BEGIN3("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_FLOW_BEGIN4("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+                    "v4");
+}
+
+TEST_F(EventTest, FlowStep) {
+  TRACE_FLOW_STEP0("cat", "name", 1);
+  TRACE_FLOW_STEP1("cat", "name", 1, "k1", "v1");
+  TRACE_FLOW_STEP2("cat", "name", 1, "k1", "v1", "k2", "v2");
+  TRACE_FLOW_STEP3("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_FLOW_STEP4("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+                   "v4");
+}
+
+TEST_F(EventTest, FlowEnd) {
+  TRACE_FLOW_END0("cat", "name", 1);
+  TRACE_FLOW_END1("cat", "name", 1, "k1", "v1");
+  TRACE_FLOW_END2("cat", "name", 1, "k1", "v1", "k2", "v2");
+  TRACE_FLOW_END3("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_FLOW_END4("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+                  "v4");
+}
+
 TEST_F(EventTest, Handle) {
   TRACE_HANDLE0(mx_process_self());
   TRACE_HANDLE1(mx_process_self(), "k1", "v1");

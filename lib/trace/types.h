@@ -54,6 +54,9 @@ enum class EventType {
   kAsyncStart = 4,
   kAsyncInstant = 5,
   kAsyncEnd = 6,
+  kFlowBegin = 7,
+  kFlowStep = 8,
+  kFlowEnd = 9,
 };
 
 // Specifies the scope of instant events.

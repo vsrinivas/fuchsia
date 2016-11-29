@@ -527,6 +527,33 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
           std::move(arguments), EventData(EventData::AsyncEnd{id})}));
       break;
     }
+    case EventType::kFlowBegin: {
+      uint64_t id;
+      if (!record.Read(&id))
+        return false;
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments), EventData(EventData::FlowBegin{id})}));
+      break;
+    }
+    case EventType::kFlowStep: {
+      uint64_t id;
+      if (!record.Read(&id))
+        return false;
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments), EventData(EventData::FlowStep{id})}));
+      break;
+    }
+    case EventType::kFlowEnd: {
+      uint64_t id;
+      if (!record.Read(&id))
+        return false;
+      record_consumer_(Record(Record::Event{
+          timestamp, process_thread, std::move(category), std::move(name),
+          std::move(arguments), EventData(EventData::FlowEnd{id})}));
+      break;
+    }
     default: {
       // Ignore unknown event types for forward compatibility.
       context_.ReportError(ftl::StringPrintf(

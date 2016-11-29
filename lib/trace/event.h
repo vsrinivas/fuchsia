@@ -143,7 +143,7 @@
       category, name, id,                                                    \
       TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
 
-// Writes an asynchronous instant event with the specified id.
+// Writes an asynchronous end event with the specified id.
 #define TRACE_ASYNC_END0(category, name, id) \
   TRACE_INTERNAL_ASYNC_END(category, name, id)
 #define TRACE_ASYNC_END1(category, name, id, k1, v1) \
@@ -158,6 +158,56 @@
 #define TRACE_ASYNC_END4(category, name, id, k1, v1, k2, v2, k3, v3, k4, v4) \
   TRACE_INTERNAL_ASYNC_END(                                                  \
       category, name, id,                                                    \
+      TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
+
+// Writes a flow begin event with the specified id.
+#define TRACE_FLOW_BEGIN0(category, name, id) \
+  TRACE_INTERNAL_FLOW_BEGIN(category, name, id)
+#define TRACE_FLOW_BEGIN1(category, name, id, k1, v1) \
+  TRACE_INTERNAL_FLOW_BEGIN(category, name, id,       \
+                            TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
+#define TRACE_FLOW_BEGIN2(category, name, id, k1, v1, k2, v2) \
+  TRACE_INTERNAL_FLOW_BEGIN(category, name, id,               \
+                            TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2))
+#define TRACE_FLOW_BEGIN3(category, name, id, k1, v1, k2, v2, k3, v3) \
+  TRACE_INTERNAL_FLOW_BEGIN(category, name, id,                       \
+                            TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3))
+#define TRACE_FLOW_BEGIN4(category, name, id, k1, v1, k2, v2, k3, v3, k4, v4) \
+  TRACE_INTERNAL_FLOW_BEGIN(                                                  \
+      category, name, id,                                                     \
+      TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
+
+// Writes a flow step event with the specified id.
+#define TRACE_FLOW_STEP0(category, name, id) \
+  TRACE_INTERNAL_FLOW_STEP(category, name, id)
+#define TRACE_FLOW_STEP1(category, name, id, k1, v1) \
+  TRACE_INTERNAL_FLOW_STEP(category, name, id,       \
+                           TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
+#define TRACE_FLOW_STEP2(category, name, id, k1, v1, k2, v2) \
+  TRACE_INTERNAL_FLOW_STEP(category, name, id,               \
+                           TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2))
+#define TRACE_FLOW_STEP3(category, name, id, k1, v1, k2, v2, k3, v3) \
+  TRACE_INTERNAL_FLOW_STEP(category, name, id,                       \
+                           TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3))
+#define TRACE_FLOW_STEP4(category, name, id, k1, v1, k2, v2, k3, v3, k4, v4) \
+  TRACE_INTERNAL_FLOW_STEP(                                                  \
+      category, name, id,                                                    \
+      TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
+
+// Writes a flow end event with the specified id.
+#define TRACE_FLOW_END0(category, name, id) \
+  TRACE_INTERNAL_FLOW_END(category, name, id)
+#define TRACE_FLOW_END1(category, name, id, k1, v1) \
+  TRACE_INTERNAL_FLOW_END(category, name, id, TRACE_INTERNAL_MAKE_ARGS1(k1, v1))
+#define TRACE_FLOW_END2(category, name, id, k1, v1, k2, v2) \
+  TRACE_INTERNAL_FLOW_END(category, name, id,               \
+                          TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2))
+#define TRACE_FLOW_END3(category, name, id, k1, v1, k2, v2, k3, v3) \
+  TRACE_INTERNAL_FLOW_END(category, name, id,                       \
+                          TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3))
+#define TRACE_FLOW_END4(category, name, id, k1, v1, k2, v2, k3, v3, k4, v4) \
+  TRACE_INTERNAL_FLOW_END(                                                  \
+      category, name, id,                                                   \
       TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4))
 
 // Writes a description of a kernel object indicated by |handle|,

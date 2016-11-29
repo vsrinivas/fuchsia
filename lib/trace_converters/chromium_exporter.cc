@@ -26,6 +26,9 @@ bool IsEventTypeSupported(EventType type) {
     case EventType::kAsyncStart:
     case EventType::kAsyncInstant:
     case EventType::kAsyncEnd:
+    case EventType::kFlowBegin:
+    case EventType::kFlowStep:
+    case EventType::kFlowEnd:
       return true;
     default:
       break;
@@ -218,6 +221,26 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
       writer_.String("e");
       writer_.Key("id");
       writer_.Uint64(event.data.GetAsyncEnd().id);
+      break;
+    case EventType::kFlowBegin:
+      writer_.Key("ph");
+      writer_.String("s");
+      writer_.Key("id");
+      writer_.Uint64(event.data.GetFlowBegin().id);
+      break;
+    case EventType::kFlowStep:
+      writer_.Key("ph");
+      writer_.String("t");
+      writer_.Key("id");
+      writer_.Uint64(event.data.GetFlowStep().id);
+      break;
+    case EventType::kFlowEnd:
+      writer_.Key("ph");
+      writer_.String("f");
+      writer_.Key("bp");
+      writer_.String("e");
+      writer_.Key("id");
+      writer_.Uint64(event.data.GetFlowEnd().id);
       break;
     default:
       break;

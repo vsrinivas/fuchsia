@@ -108,6 +108,24 @@
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
                     name, id args))
 
+#define TRACE_INTERNAL_FLOW_BEGIN(category, name, id, args...)                \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteFlowBeginEventRecord(               \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name, id args))
+
+#define TRACE_INTERNAL_FLOW_STEP(category, name, id, args...)                 \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteFlowStepEventRecord(                \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name, id args))
+
+#define TRACE_INTERNAL_FLOW_END(category, name, id, args...)                  \
+  TRACE_INTERNAL_EVENT(                                                       \
+      category, ::tracing::internal::WriteFlowEndEventRecord(                 \
+                    TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
+                    name, id args))
+
 #define TRACE_INTERNAL_HANDLE(handle, args...) \
   TRACE_INTERNAL_SIMPLE(                       \
       TRACE_INTERNAL_WRITER.WriteKernelObjectRecord(handle args))
@@ -190,6 +208,39 @@ void WriteAsyncEndEventRecord(::tracing::writer::TraceWriter& writer,
                               uint64_t id,
                               Args&&... args) {
   writer.WriteAsyncEndEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), id, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void WriteFlowBeginEventRecord(::tracing::writer::TraceWriter& writer,
+                               const ::tracing::writer::StringRef& category_ref,
+                               const char* name,
+                               uint64_t id,
+                               Args&&... args) {
+  writer.WriteFlowBeginEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), id, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void WriteFlowStepEventRecord(::tracing::writer::TraceWriter& writer,
+                              const ::tracing::writer::StringRef& category_ref,
+                              const char* name,
+                              uint64_t id,
+                              Args&&... args) {
+  writer.WriteFlowStepEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), id, std::forward<Args>(args)...);
+}
+
+template <typename... Args>
+void WriteFlowEndEventRecord(::tracing::writer::TraceWriter& writer,
+                             const ::tracing::writer::StringRef& category_ref,
+                             const char* name,
+                             uint64_t id,
+                             Args&&... args) {
+  writer.WriteFlowEndEventRecord(
       ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
       writer.RegisterString(name), id, std::forward<Args>(args)...);
 }

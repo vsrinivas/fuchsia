@@ -301,6 +301,21 @@ class EventData {
     uint64_t id;
   };
 
+  // Flow begin event data.
+  struct FlowBegin {
+    uint64_t id;
+  };
+
+  // Flow step event data.
+  struct FlowStep {
+    uint64_t id;
+  };
+
+  // Flow end event data.
+  struct FlowEnd {
+    uint64_t id;
+  };
+
   explicit EventData(const Instant& instant)
       : type_(EventType::kInstant), instant_(instant) {}
 
@@ -321,6 +336,15 @@ class EventData {
 
   explicit EventData(const AsyncEnd& async_end)
       : type_(EventType::kAsyncEnd), async_end_(async_end) {}
+
+  explicit EventData(const FlowBegin& flow_begin)
+      : type_(EventType::kFlowBegin), flow_begin_(flow_begin) {}
+
+  explicit EventData(const FlowStep& flow_step)
+      : type_(EventType::kFlowStep), flow_step_(flow_step) {}
+
+  explicit EventData(const FlowEnd& flow_end)
+      : type_(EventType::kFlowEnd), flow_end_(flow_end) {}
 
   const Instant& GetInstant() const {
     FTL_DCHECK(type_ == EventType::kInstant);
@@ -357,6 +381,21 @@ class EventData {
     return async_end_;
   }
 
+  const FlowBegin& GetFlowBegin() const {
+    FTL_DCHECK(type_ == EventType::kFlowBegin);
+    return flow_begin_;
+  }
+
+  const FlowStep& GetFlowStep() const {
+    FTL_DCHECK(type_ == EventType::kFlowStep);
+    return flow_step_;
+  }
+
+  const FlowEnd& GetFlowEnd() const {
+    FTL_DCHECK(type_ == EventType::kFlowEnd);
+    return flow_end_;
+  }
+
   EventType type() const { return type_; }
 
  private:
@@ -369,6 +408,9 @@ class EventData {
     AsyncBegin async_begin_;
     AsyncInstant async_instant_;
     AsyncEnd async_end_;
+    FlowBegin flow_begin_;
+    FlowStep flow_step_;
+    FlowEnd flow_end_;
   };
 };
 

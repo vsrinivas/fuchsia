@@ -652,6 +652,57 @@ class TraceWriter final {
     }
   }
 
+  // Writes a flow begin event record into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteFlowBeginEventRecord(Ticks event_time,
+                                 const ThreadRef& thread_ref,
+                                 const StringRef& category_ref,
+                                 const StringRef& name_ref,
+                                 uint64_t id,
+                                 Args&&... args) {
+    if (Payload payload = WriteEventRecordBase(
+            EventType::kFlowBegin, event_time, thread_ref, category_ref,
+            name_ref, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
+      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+    }
+  }
+
+  // Writes a flow step event record into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteFlowStepEventRecord(Ticks event_time,
+                                const ThreadRef& thread_ref,
+                                const StringRef& category_ref,
+                                const StringRef& name_ref,
+                                uint64_t id,
+                                Args&&... args) {
+    if (Payload payload = WriteEventRecordBase(
+            EventType::kFlowStep, event_time, thread_ref, category_ref,
+            name_ref, sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
+      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+    }
+  }
+
+  // Writes a flow end event record into the trace buffer.
+  // Discards the record if it cannot be written.
+  template <typename... Args>
+  void WriteFlowEndEventRecord(Ticks event_time,
+                               const ThreadRef& thread_ref,
+                               const StringRef& category_ref,
+                               const StringRef& name_ref,
+                               uint64_t id,
+                               Args&&... args) {
+    if (Payload payload = WriteEventRecordBase(
+            EventType::kFlowEnd, event_time, thread_ref, category_ref, name_ref,
+            sizeof...(Args),
+            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
+      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+    }
+  }
+
  private:
   explicit TraceWriter(::tracing::internal::TraceEngine* engine)
       : engine_(engine) {}
