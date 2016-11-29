@@ -44,7 +44,7 @@ extern "C" void arm_syscall_handler(struct arm_fault_frame* frame) {
 
     /* check for magic value to differentiate our syscalls */
     if (unlikely((syscall_num & 0xf0f00000) != 0xf0f00000)) {
-        TRACEF("syscall does not have magenta magic, 0x%x @ PC 0x%x\n", syscall_num, frame->pc);
+        LTRACEF("syscall does not have magenta magic, 0x%x @ PC 0x%x\n", syscall_num, frame->pc);
 
         ret = ERR_BAD_SYSCALL;
         goto out;
@@ -101,8 +101,8 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 
     /* check for magic value to differentiate our syscalls */
     if (unlikely(syscall_imm != 0xf0f)) {
-        TRACEF("syscall does not have magenta magic, %#" PRIx64
-               " @ PC %#" PRIx64 "\n", syscall_num, pc);
+        LTRACEF("syscall does not have magenta magic, %#" PRIx64
+                " @ PC %#" PRIx64 "\n", syscall_num, pc);
         frame->r[0] = ERR_BAD_SYSCALL;
         return;
     }
@@ -160,8 +160,8 @@ uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t ar
 
     /* check for magic value to differentiate our syscalls */
     if (unlikely((syscall_num >> 32) != 0xff00ff)) {
-        TRACEF("syscall does not have magenta magic, %#" PRIx64
-               " @ IP %#" PRIx64 "\n", syscall_num, ip);
+        LTRACEF("syscall does not have magenta magic, %#" PRIx64
+                " @ IP %#" PRIx64 "\n", syscall_num, ip);
         return ERR_BAD_SYSCALL;
     }
     syscall_num &= 0xffffffff;
