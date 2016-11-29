@@ -11,27 +11,46 @@
 
 namespace {
 
-constexpr char kNextProposalId[] = "module suggestion";
-
-// TODO(afergan): Once we can populate modular_state with actual data, we
-// can decide which module to launch, and actually launch it. For now, we just
-// create a proposal with the mail headline.
-constexpr char kMailHeadline[] = "Open Mail";
-constexpr char kMailUrl[] = "file:///system/apps/email_story";
-
 struct ProposalContent {
   std::string url;
   int32_t color;
 };
 
+const std::unordered_map<std::string, ProposalContent> kNextStories(
+    {{"Open Mail", {"file:///system/apps/email_story", 0x00aaaa00 /* yellow */}},
+     {"Spinning Square",
+      {"file:///system/apps/spinning_square_view", 0x000000ff}}
+    });
+
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
     {{"Terminal", {"file:///system/apps/moterm", 0x00008000 /* green */}},
      {"YouTube", {"file:///system/apps/youtube_story", 0x00ff0000 /* red */}},
      {"Music", {"file:///system/apps/music_story", 0x00ff8000 /* orange */}},
-     {"Spinning Square",
-      {"file:///system/apps/spinning_square_view", 0x000000ff}},
      {"Noodles", {"file:///system/apps/noodles_view", 0x00ffff00}},
      {"Color", {"file:///system/apps/color", 0x00ffffff}}});
+
+maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
+    const ProposalContent& content) {
+  auto p = maxwell::suggestion::Proposal::New();
+  p->id = label;
+  auto create_story = maxwell::suggestion::CreateStory::New();
+  create_story->module_id = content.url;
+  auto action = maxwell::suggestion::Action::New();
+  action->set_create_story(std::move(create_story));
+  p->on_selected.push_back(std::move(action));
+  auto d = maxwell::suggestion::Display::New();
+  d->headline = label;
+  d->subheadline = "";
+  d->details = "";
+  d->color = content.color;
+  d->icon_urls.push_back("");
+  d->image_url = "";
+  d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
+
+  p->display = std::move(d);
+
+  return p;
+}
 
 class ModuleSuggesterAgentApp : public maxwell::context::SubscriberLink,
                                 public maxwell::suggestion::AskHandler {
@@ -58,28 +77,14 @@ class ModuleSuggesterAgentApp : public maxwell::context::SubscriberLink,
 
     const int modular_state = std::stoi(update->json_value.data());
 
-    if (modular_state > 0) {
-      out_->Remove(kNextProposalId);
+    if (modular_state == 0) {
+      for (const auto& entry : kNextStories) {
+        out_->Propose(MkProposal(entry.first, entry.second));
+      }
     } else {
-      auto p = maxwell::suggestion::Proposal::New();
-      p->id = kNextProposalId;
-      auto create_story = maxwell::suggestion::CreateStory::New();
-      create_story->module_id = kMailUrl;
-      auto action = maxwell::suggestion::Action::New();
-      action->set_create_story(std::move(create_story));
-      p->on_selected.push_back(std::move(action));
-      auto d = maxwell::suggestion::Display::New();
-      d->headline = kMailHeadline;
-      d->subheadline = "";
-      d->details = "";
-      d->color = 0x00aaaa00;  // argb yellow
-      d->icon_urls.push_back("");
-      d->image_url = "";
-      d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
-
-      p->display = std::move(d);
-
-      out_->Propose(std::move(p));
+      for (const auto& entry : kNextStories) {
+        out_->Remove(entry.first);
+      }
     }
   }
 
@@ -88,25 +93,7 @@ class ModuleSuggesterAgentApp : public maxwell::context::SubscriberLink,
     if (query->is_text() && query->get_text() != "") {
       // Propose everything; let the Next filter do the filtering HACK(rosswang)
       for (const auto& entry : kAskOnlyStories) {
-        auto p = maxwell::suggestion::Proposal::New();
-        p->id = entry.first;
-        auto create_story = maxwell::suggestion::CreateStory::New();
-        create_story->module_id = entry.second.url;
-        auto action = maxwell::suggestion::Action::New();
-        action->set_create_story(std::move(create_story));
-        p->on_selected.push_back(std::move(action));
-        auto d = maxwell::suggestion::Display::New();
-        d->headline = entry.first;
-        d->subheadline = "";
-        d->details = "";
-        d->color = entry.second.color;
-        d->icon_urls.push_back("");
-        d->image_url = "";
-        d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
-
-        p->display = std::move(d);
-
-        out_->Propose(std::move(p));
+        out_->Propose(MkProposal(entry.first, entry.second));
       }
     } else {
       for (const auto& entry : kAskOnlyStories) {
