@@ -47,7 +47,7 @@ static mx_status_t vmo_remap(uintptr_t old_mapping, mx_size_t old_len, mx_size_t
 // TODO(kulakowski) mremap is a Linux extension. So far as I can see,
 // it's used internally be realloc, but nothing else directly in
 // Fuchsia. Consider not exposing it.
-void* __mremap(void* old_addr, size_t old_len, size_t new_len, int flags, ...) {
+void* __fake_mremap(void* old_addr, size_t old_len, size_t new_len, int flags, ...) {
     if (flags & MREMAP_FIXED) {
         if (!(flags & MREMAP_MAYMOVE)) {
             // MREMAP_FIXED requires MREMAP_MAYMOVE to also be specified.
@@ -100,4 +100,3 @@ void* __mremap(void* old_addr, size_t old_len, size_t new_len, int flags, ...) {
     return (void*)new_mapping;
 }
 
-weak_alias(__mremap, mremap);

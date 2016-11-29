@@ -16,7 +16,7 @@
 
 void* __mmap(void*, size_t, int, int, int, off_t);
 int __munmap(void*, size_t);
-void* __mremap(void*, size_t, size_t, int, ...);
+void* __fake_mremap(void*, size_t, size_t, int, ...);
 int __madvise(void*, size_t, int);
 
 struct bin {
@@ -370,7 +370,7 @@ void* realloc(void* p, size_t n) {
         newlen = (newlen + PAGE_SIZE - 1) & -PAGE_SIZE;
         if (oldlen == newlen)
             return p;
-        base = __mremap(base, oldlen, newlen, MREMAP_MAYMOVE);
+        base = __fake_mremap(base, oldlen, newlen, MREMAP_MAYMOVE);
         if (base == (void*)-1)
             return newlen < oldlen ? p : 0;
         self = (void*)(base + extra);
