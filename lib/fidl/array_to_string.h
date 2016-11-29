@@ -23,6 +23,17 @@ inline std::string to_string(fidl::Array<uint8_t>& data) {
   return ret;
 }
 
+inline std::string to_hex_string(const fidl::Array<uint8_t>& data) {
+  constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
+  std::string ret;
+  ret.reserve(data.size() * 2);
+  for (size_t i = 0; i < data.size(); ++i) {
+    ret.push_back(kHexadecimalCharacters[data[i] >> 4]);
+    ret.push_back(kHexadecimalCharacters[data[i] & 0xf]);
+  }
+  return ret;
+}
+
 inline fidl::Array<uint8_t> to_array(const std::string& val) {
   fidl::Array<uint8_t> ret;
   for (char c : val) {
@@ -33,7 +44,7 @@ inline fidl::Array<uint8_t> to_array(const std::string& val) {
 
 inline fidl::Array<fidl::String> to_array(const std::vector<std::string>& val) {
   fidl::Array<fidl::String> ret;
-  ret.resize(0); // mark as not null
+  ret.resize(0);  // mark as not null
   for (const std::string& s : val) {
     ret.push_back(s);
   }

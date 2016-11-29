@@ -4,6 +4,8 @@
 
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 
+#include <stdlib.h>
+#include <time.h>
 #include <unordered_set>
 
 #include "apps/modular/lib/app/connect.h"
@@ -12,9 +14,15 @@
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 namespace modular {
 namespace {
+
+void InitStoryId() {
+  // If rand() is not seeded, it always returns the same sequence of numbers.
+  srand(time(nullptr));
+}
 
 // Generates a unique randomly generated string of |length| size to be
 // used as a story id.
@@ -191,10 +199,9 @@ class CreateStoryCall : public Transaction {
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
           ApplicationLauncherPtr launcher;
           environment_->GetApplicationLauncher(fidl::GetProxy(&launcher));
-          StoryControllerImpl::New(std::move(story_data_), story_provider_impl_,
-                                   std::move(launcher),
-                                   std::move(story_controller_request_),
-                                   ledger_repo_factory_);
+          StoryControllerImpl::New(
+              std::move(story_data_), story_provider_impl_, std::move(launcher),
+              std::move(story_controller_request_), ledger_repo_factory_);
           Done();
         });
       });
@@ -292,7 +299,6 @@ class ResumeStoryCall : public Transaction {
   StoryDataPtr story_data_;
   ledger::PagePtr story_page_;
 
-
   FTL_DISALLOW_COPY_AND_ASSIGN(ResumeStoryCall);
 };
 
@@ -355,7 +361,7 @@ StoryProviderImpl::StoryProviderImpl(
     fidl::InterfaceRequest<StoryProvider> story_provider_request,
     UserLedgerRepositoryFactory* ledger_repo_factory)
     : environment_(std::move(environment)),
-      binding_(this, std::move(story_provider_request)),
+      binding_(this),
       storage_(new Storage),
       page_watcher_binding_(this),
       ledger_repo_factory_(ledger_repo_factory) {
@@ -371,6 +377,7 @@ StoryProviderImpl::StoryProviderImpl(
           << status;
     }
   });
+
   fidl::InterfaceHandle<ledger::PageWatcher> watcher;
   page_watcher_binding_.Bind(GetProxy(&watcher));
   root_page->Watch(std::move(watcher), [](ledger::Status status) {
@@ -379,6 +386,23 @@ StoryProviderImpl::StoryProviderImpl(
                      << status;
     }
   });
+
+  // We must initialize story_ids_ with the IDs of currently existing
+  // stories *before* we can process any calls that might create a new
+  // story. Hence we bind the interface request only after this call
+  // completes.
+  new PreviousStoriesCall(
+      &transaction_container_, ledger_.get(), ftl::MakeCopyable([
+        this, story_provider_request = std::move(story_provider_request)
+      ](fidl::Array<fidl::String> stories) mutable {
+        for (auto& story_id : stories) {
+          story_ids_.insert(story_id.get());
+        }
+
+        InitStoryId();  // So MakeStoryId() returns something more random.
+
+        binding_.Bind(std::move(story_provider_request));
+      }));
 }
 
 // |StoryProvider|
@@ -428,10 +452,9 @@ void StoryProviderImpl::CreateStory(
     const fidl::String& url,
     fidl::InterfaceRequest<StoryController> story_controller_request) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
-  new CreateStoryCall(&transaction_container_, ledger_.get(),
-                      environment_.get(), this, url, story_id,
-                      std::move(story_controller_request),
-                      ledger_repo_factory_);
+  new CreateStoryCall(
+      &transaction_container_, ledger_.get(), environment_.get(), this, url,
+      story_id, std::move(story_controller_request), ledger_repo_factory_);
 }
 
 // |StoryProvider|
@@ -445,10 +468,9 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 void StoryProviderImpl::ResumeStory(
     const fidl::String& story_id,
     fidl::InterfaceRequest<StoryController> story_controller_request) {
-  new ResumeStoryCall(&transaction_container_, ledger_.get(),
-                      environment_.get(), this, story_id,
-                      std::move(story_controller_request),
-                      ledger_repo_factory_);
+  new ResumeStoryCall(
+      &transaction_container_, ledger_.get(), environment_.get(), this,
+      story_id, std::move(story_controller_request), ledger_repo_factory_);
 }
 
 // |StoryProvider|
@@ -461,6 +483,8 @@ void StoryProviderImpl::PreviousStories(
 void StoryProviderImpl::OnInitialState(
     fidl::InterfaceHandle<ledger::PageSnapshot> page,
     const OnInitialStateCallback& cb) {
+  // TODO(mesch): Consider to initialize story_ids_ here, but the
+  // current place may be better anyway.
   cb();
 }
 
@@ -480,6 +504,10 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
       auto story_data = StoryData::New();
       auto& bytes = entry->new_value->get_bytes();
       story_data->Deserialize(bytes.data(), bytes.size());
+
+      // If this is a new story, guard against double using its key.
+      story_ids_.insert(story_data->story_info->id.get());
+
       watchers_.ForAllPtrs([&story_data](StoryProviderWatcher* const watcher) {
         watcher->OnChange(story_data->story_info.Clone());
       });

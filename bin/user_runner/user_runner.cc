@@ -33,21 +33,10 @@ namespace {
 
 const char kAppId[] = "modular_user_runner";
 const char kLedgerBaseDir[] = "/data/ledger/";
-const char kHexadecimalCharacters[] = "0123456789abcdef";
 const char kEnvironmentLabelPrefix[] = "user-";
 // This is the prefix for the ApplicationEnvironment under which all stories run
 // for a user.
 const char kStoriesEnvironmentLabelPrefix[] = "stories-";
-
-std::string ToHex(const fidl::Array<uint8_t>& user_id) {
-  std::string result;
-  result.resize(user_id.size() * 2);
-  for (size_t index = 0; index < user_id.size(); ++index) {
-    result[2 * index] = kHexadecimalCharacters[user_id[index] >> 4];
-    result[2 * index + 1] = kHexadecimalCharacters[user_id[index] & 0xf];
-  }
-  return result;
-}
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -96,7 +85,7 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
     binding_.Bind(fidl::GetProxy(&env_host));
     application_context_->environment()->CreateNestedEnvironment(
         std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_),
-        kEnvironmentLabelPrefix + ToHex(user_id));
+        kEnvironmentLabelPrefix + to_hex_string(user_id));
 
     // Register and set up Services hosted in this environment.
     RegisterServices();
@@ -153,14 +142,14 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
 class UserStoriesScope : public ApplicationEnvironmentHost {
  public:
   UserStoriesScope(ApplicationEnvironmentPtr parent_env,
-                     fidl::Array<uint8_t> user_id)
+                   fidl::Array<uint8_t> user_id)
       : binding_(this), parent_env_(std::move(parent_env)) {
     // Set up a new ApplicationEnvironment under which we run all stories.
     ApplicationEnvironmentHostPtr env_host;
     binding_.Bind(fidl::GetProxy(&env_host));
     parent_env_->CreateNestedEnvironment(
         std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_),
-        kStoriesEnvironmentLabelPrefix + ToHex(std::move(user_id)));
+        kStoriesEnvironmentLabelPrefix + to_hex_string(std::move(user_id)));
   }
 
   ApplicationEnvironmentPtr GetEnvironment() {
@@ -211,7 +200,8 @@ class UserRunnerImpl : public UserRunner {
     ledger::LedgerRepositoryFactoryPtr ledger_repo_factory;
     ConnectToService(app_services.get(), GetProxy(&ledger_repo_factory));
     user_ledger_factory_ = std::make_unique<UserLedgerRepositoryFactory>(
-        kLedgerBaseDir + ToHex(user_id), std::move(ledger_repo_factory));
+        kLedgerBaseDir + to_hex_string(user_id),
+        std::move(ledger_repo_factory));
   }
 
   // |UserRunner|:
@@ -222,28 +212,25 @@ class UserRunnerImpl : public UserRunner {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
     SetupLedgerRepository(user_id);
 
-    user_runner_scope_ = std::make_unique<UserRunnerScope>(application_context_,
-        user_id, user_ledger_factory_->Clone());
+    user_runner_scope_ = std::make_unique<UserRunnerScope>(
+        application_context_, user_id, user_ledger_factory_->Clone());
 
-    ApplicationEnvironmentPtr user_runner_env
-        = user_runner_scope_->GetEnvironment();
+    ApplicationEnvironmentPtr user_runner_env =
+        user_runner_scope_->GetEnvironment();
 
     ServiceProviderPtr user_runner_env_services;
-    user_runner_env->GetServices(
-        GetProxy(&user_runner_env_services));
+    user_runner_env->GetServices(GetProxy(&user_runner_env_services));
 
     stories_env_host_ = std::make_unique<UserStoriesScope>(
         std::move(user_runner_env), user_id.Clone());
 
-    RunUserShell(user_shell, user_shell_args,
-                 std::move(view_owner_request));
+    RunUserShell(user_shell, user_shell_args, std::move(view_owner_request));
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
     auto story_provider_impl = new StoryProviderImpl(
         stories_env_host_->GetEnvironment(),
         ConnectToService<ledger::Ledger>(user_runner_env_services.get()),
-        GetProxy(&story_provider),
-        user_ledger_factory_.get());
+        GetProxy(&story_provider), user_ledger_factory_.get());
 
     auto maxwell_services =
         GetServiceProvider("file:///system/apps/maxwell_launcher", nullptr);
@@ -268,8 +255,9 @@ class UserRunnerImpl : public UserRunner {
                             std::move(focus_controller_request));
   }
 
-  ServiceProviderPtr GetServiceProvider(const fidl::String& url,
-                                        const fidl::Array<fidl::String>* const args) {
+  ServiceProviderPtr GetServiceProvider(
+      const fidl::String& url,
+      const fidl::Array<fidl::String>* const args) {
     auto launch_info = ApplicationLaunchInfo::New();
 
     ServiceProviderPtr services;

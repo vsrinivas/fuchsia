@@ -6,6 +6,8 @@
 // This takes |recipe_url| as a command line argument and passes it to the
 // Story Manager.
 
+#include <memory>
+
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
@@ -136,11 +138,31 @@ class DummyUserShellApp
                   fidl::InterfaceRequest<modular::FocusController>
                       focus_controller_request) override {
     story_provider_.Bind(std::move(story_provider));
-    CreateStory(settings_.first_module);
 
     fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher;
     story_provider_watcher_binding_.Bind(GetProxy(&watcher));
     story_provider_->Watch(std::move(watcher));
+
+    story_provider_->PreviousStories([this](fidl::Array<fidl::String> stories) {
+      if (stories.size() > 0) {
+        std::shared_ptr<unsigned int> count = std::make_shared<unsigned int>(0);
+        for (auto& story_id : stories) {
+          story_provider_->GetStoryInfo(story_id, [
+            this, story_id, count, max = stories.size()
+          ](modular::StoryInfoPtr story_info) {
+            ++*count;
+            FTL_LOG(INFO) << "Previous story " << *count << " of " << max << " "
+                          << story_id << " " << story_info->url;
+
+            if (*count == max) {
+              CreateStory(settings_.first_module);
+            }
+          });
+        }
+      } else {
+        CreateStory(settings_.first_module);
+      }
+    });
   }
 
   // |StoryProviderWatcher|
@@ -186,10 +208,11 @@ class DummyUserShellApp
   }
 
   void CreateStory(const fidl::String& url) {
-    FTL_LOG(INFO) << "DummyUserShell START " << url;
     story_provider_->CreateStory(url, fidl::GetProxy(&story_controller_));
     story_controller_->GetInfo([this](modular::StoryInfoPtr story_info) {
       story_info_ = std::move(story_info);
+      FTL_LOG(INFO) << "DummyUserShell START " << story_info_->id << " "
+                    << story_info_->url;
       InitStory();
     });
   }
