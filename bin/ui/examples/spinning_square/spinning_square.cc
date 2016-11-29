@@ -25,6 +25,9 @@ constexpr uint32_t kContentImageResourceId = 1;
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 
 constexpr float kSpeed = 0.25f;
+constexpr SkColor kForegroundColor = 0xfff50057;  // Pink A400
+constexpr SkColor kBackgroundColor = 0xff673ab7;  // Deep Purple 500
+
 }  // namespace
 
 class SpinningSquareView : public mozart::BaseView {
@@ -86,7 +89,7 @@ class SpinningSquareView : public mozart::BaseView {
   }
 
   void DrawContent(SkCanvas* canvas, const mozart::Size& size) {
-    canvas->clear(SK_ColorBLUE);
+    canvas->clear(kBackgroundColor);
     canvas->translate(size.width / 2, size.height / 2);
     float t =
         fmod(frame_tracker().presentation_time().ToEpochDelta().ToSecondsF() *
@@ -94,7 +97,7 @@ class SpinningSquareView : public mozart::BaseView {
              1.f);
     canvas->rotate(360.f * t);
     SkPaint paint;
-    paint.setColor(0xFFFF00FF);
+    paint.setColor(kForegroundColor);
     paint.setAntiAlias(true);
     float d = std::min(size.width, size.height) / 4;
     canvas->drawRect(SkRect::MakeLTRB(-d, -d, d, d), paint);
