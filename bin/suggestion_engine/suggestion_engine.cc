@@ -68,7 +68,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
     if (proposal_record) {
       if (interaction->type == InteractionType::SELECTED) {
-        modular::StoryControllerPtr story;
+        modular::StoryControllerPtr story_controller;
         // TODO(rosswang): If we're asked to add multiple modules, we probably
         // want to add them to the same story. We can't do that yet, but we need
         // to receive a StoryController anyway (not optional atm.).
@@ -78,12 +78,19 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
               const auto& create_story = action->get_create_story();
               if (story_provider_) {
                 story_provider_->CreateStory(create_story->module_id,
-                                             GetProxy(&story));
+                                             GetProxy(&story_controller));
                 FTL_LOG(INFO) << "Creating story with module "
                               << create_story->module_id;
-                story->GetInfo([this](modular::StoryInfoPtr story_info) {
-                  focus_controller_ptr_->FocusStory(story_info->id);
-                });
+                story_controller->GetInfo(
+                    [this](modular::StoryInfoPtr story_info) {
+                      focus_controller_ptr_->FocusStory(story_info->id);
+                    });
+                const auto& initial_data = create_story->initial_data;
+                if (initial_data) {
+                  modular::LinkPtr link;
+                  story_controller->GetLink(GetProxy(&link));
+                  link->AddDocuments(initial_data.Clone());
+                }
               } else {
                 FTL_LOG(WARNING) << "Unable to add module; no story provider";
               }

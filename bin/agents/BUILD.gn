@@ -59,6 +59,7 @@ executable("module_suggester") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/app",
+    "//apps/modular/services/document_store",
     "//lib/mtl",
   ]
 }

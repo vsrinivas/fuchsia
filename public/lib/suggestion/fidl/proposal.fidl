@@ -5,6 +5,7 @@
 module maxwell.suggestion;
 
 import "apps/maxwell/services/suggestion/display.fidl";
+import "apps/modular/services/document_store/document.fidl";
 
 // NOTE: Some future-thinking features are represented here and commented out
 // to give a sense for the likely future direction of this service, and are left
@@ -21,7 +22,8 @@ struct Proposal {
   // are true.
   // array<ExpiryCondition> expiry_conditions;
 
-  // The list of actions to take when the user selects the assocated Suggestion.
+  // The list of actions to take when the user selects the associated
+  // Suggestion.
   array<Action> on_selected;
 
   Display display;
@@ -49,5 +51,7 @@ union Action {
 struct CreateStory {
   string module_id;
 
-  // TODO(thatguy): Make this useful.
+  // If set, calls Link.AddDocuments() on the new Story's Link immediately after
+  // the Story creation.
+  map<string, document_store.Document>? initial_data;
 };
