@@ -21,6 +21,8 @@ MediaPacketProducerBase::~MediaPacketProducerBase() {
 #ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif
+  // Reset the consumer first so all our callbacks get deleted.
+  consumer_ = nullptr;
 }
 
 void MediaPacketProducerBase::Connect(

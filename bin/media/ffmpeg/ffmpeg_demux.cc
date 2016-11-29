@@ -90,7 +90,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
               pts_rate,
               false,
               static_cast<size_t>(av_packet->size),
-              av_packet->data),
+              av_packet->size == 0 ? nullptr : av_packet->data),
           av_packet_(std::move(av_packet)) {
       FTL_DCHECK(av_packet_->size >= 0);
     }
