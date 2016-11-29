@@ -86,7 +86,9 @@ class PageSyncImpl : public PageSync,
   void OnRemoteCommit(cloud_provider::Commit commit,
                       std::string timestamp) override;
 
-  void OnError() override;
+  void OnConnectionError() override;
+
+  void OnMalformedNotification() override;
 
  private:
   void TryStartDownload();
@@ -95,6 +97,8 @@ class PageSyncImpl : public PageSync,
 
   void StartDownload(std::vector<cloud_provider::Record> record,
                      ftl::Closure on_done);
+
+  void SetRemoteWatcher();
 
   void EnqueueUpload(std::unique_ptr<const storage::Commit> commit);
 

@@ -190,6 +190,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
 
   void WatchCommits(const std::string& min_timestamp,
                     cloud_provider::CommitWatcher* watcher) override {
+    watch_commits_calls++;
     for (auto& record : notifications_to_deliver) {
       message_loop_->task_runner()->PostTask(ftl::MakeCopyable([
         watcher, commit = std::move(record.commit),
@@ -226,6 +227,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
   std::vector<cloud_provider::Record> notifications_to_deliver;
   cloud_provider::Status commit_status_to_return = cloud_provider::Status::OK;
 
+  unsigned int watch_commits_calls = 0u;
   unsigned int get_commits_calls = 0u;
   std::vector<cloud_provider::Commit> received_commits;
   bool watcher_removed = false;
@@ -530,6 +532,29 @@ TEST_F(PageSyncImplTest, ReceiveNotifications) {
   EXPECT_EQ("content1", storage_.received_commits["id1"]);
   EXPECT_EQ("content2", storage_.received_commits["id2"]);
   EXPECT_EQ("43", storage_.sync_metadata);
+}
+
+// Verify that we retry setting the remote watcher on connection errors.
+TEST_F(PageSyncImplTest, RetryRemoteWatcher) {
+  page_sync_.Start();
+  EXPECT_EQ(0u, storage_.received_commits.size());
+
+  message_loop_.SetAfterTaskCallback([this] {
+    if (cloud_provider_.watch_commits_calls == 1u) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, cloud_provider_.watch_commits_calls);
+
+  page_sync_.OnConnectionError();
+  message_loop_.SetAfterTaskCallback([this] {
+    if (cloud_provider_.watch_commits_calls == 2u) {
+      message_loop_.PostQuitTask();
+    }
+  });
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(2u, cloud_provider_.watch_commits_calls);
 }
 
 // Verifies that if multiple remote commits are received while one batch is

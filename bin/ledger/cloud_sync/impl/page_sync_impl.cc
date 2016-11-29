@@ -124,7 +124,25 @@ void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit commit,
   EnqueueDownload(std::move(records));
 }
 
-void PageSyncImpl::OnError() {}
+void PageSyncImpl::OnConnectionError() {
+  FTL_DCHECK(remote_watch_set_);
+  // Reset the watcher and schedule a retry.
+  cloud_provider_->UnwatchCommits(this);
+  remote_watch_set_ = false;
+  FTL_LOG(WARNING)
+      << "Connection error in the remote commit watcher, retrying.";
+  task_runner_->PostDelayedTask(
+      [weak_this = weak_factory_.GetWeakPtr()]() {
+        if (weak_this && !weak_this->errored_) {
+          weak_this->SetRemoteWatcher();
+        }
+      },
+      backoff_->GetNext());
+}
+
+void PageSyncImpl::OnMalformedNotification() {
+  HandleError("Received a malformed remote commit notification.");
+}
 
 void PageSyncImpl::TryStartDownload() {
   // Retrieve the server-side timestamp of the last commit we received.
@@ -140,9 +158,9 @@ void PageSyncImpl::TryStartDownload() {
 
   // TODO(ppi): handle pagination when the response is huge.
   cloud_provider_->GetCommits(
-      last_commit_ts,
-      [this, last_commit_ts](cloud_provider::Status cloud_status,
-                             std::vector<cloud_provider::Record> records) {
+      std::move(last_commit_ts),
+      [this](cloud_provider::Status cloud_status,
+             std::vector<cloud_provider::Record> records) {
         if (cloud_status != cloud_provider::Status::OK) {
           // Fetching the remote commits failed, schedule a retry.
           task_runner_->PostDelayedTask(
@@ -167,12 +185,7 @@ void PageSyncImpl::TryStartDownload() {
 
         download_list_retrieved_ = true;
         CheckIdle();
-
-        // Register a cloud watcher for the new commits. This currently mixes
-        // connection errors with data errors in one OnError() callback, see
-        // LE-76. TODO(ppi): Retry setting the watcher on connection errors.
-        cloud_provider_->WatchCommits(last_commit_ts, this);
-        remote_watch_set_ = true;
+        SetRemoteWatcher();
       });
 }
 
@@ -209,6 +222,20 @@ void PageSyncImpl::StartDownload(std::vector<cloud_provider::Record> records,
       },
       [this] { HandleError("Failed to persist a remote commit in storage"); });
   batch_download_->Start();
+}
+
+void PageSyncImpl::SetRemoteWatcher() {
+  FTL_DCHECK(!remote_watch_set_);
+  // Retrieve the server-side timestamp of the last commit we received.
+  std::string last_commit_ts;
+  auto status = storage_->GetSyncMetadata(&last_commit_ts);
+  if (status != storage::Status::OK && status != storage::Status::NOT_FOUND) {
+    HandleError("Failed to retrieve the sync metadata.");
+    return;
+  }
+
+  cloud_provider_->WatchCommits(last_commit_ts, this);
+  remote_watch_set_ = true;
 }
 
 void PageSyncImpl::EnqueueUpload(

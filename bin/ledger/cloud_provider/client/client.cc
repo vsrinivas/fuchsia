@@ -80,9 +80,15 @@ void ClientApp::OnRemoteCommit(Commit commit, std::string timestamp) {
   }
 }
 
-void ClientApp::OnError() {
+void ClientApp::OnConnectionError() {
   if (on_error_) {
-    on_error_();
+    on_error_("connection error");
+  }
+}
+
+void ClientApp::OnMalformedNotification() {
+  if (on_error_) {
+    on_error_("malformed notification");
   }
 }
 
@@ -207,10 +213,10 @@ void ClientApp::CheckWatchExistingCommits(Commit expected_commit) {
         ok("watch for existing commits");
         CheckWatchNewCommits();
       });
-  on_error_ = [this] {
+  on_error_ = [this](ftl::StringView description) {
     on_remote_commit_ = nullptr;
     on_error_ = nullptr;
-    error("watch for existing commits", "unknown error");
+    error("watch for existing commits", description);
   };
   cloud_provider_->WatchCommits("", this);
 }
@@ -233,10 +239,10 @@ void ClientApp::CheckWatchNewCommits() {
     ok("watch for new commits", delta);
     Done();
   });
-  on_error_ = [this] {
+  on_error_ = [this](ftl::StringView description) {
     on_remote_commit_ = nullptr;
     on_error_ = nullptr;
-    error("watch for new commits", "unknown error");
+    error("watch for new commits", description);
   };
 
   cloud_provider_->AddCommit(

@@ -77,13 +77,15 @@ void WatchClientImpl::OnPut(const std::string& path,
 }
 
 void WatchClientImpl::OnMalformedEvent() {
-  FTL_LOG(ERROR) << "received malformed event";
+  // Firebase already prints out debug info before calling here.
   HandleError();
+  commit_watcher_->OnMalformedNotification();
 }
 
 void WatchClientImpl::OnConnectionError() {
-  FTL_LOG(ERROR) << "network error";
+  // Firebase already prints out debug info before calling here.
   HandleError();
+  commit_watcher_->OnConnectionError();
 }
 
 void WatchClientImpl::HandleDecodingError(const std::string& path,
@@ -98,13 +100,13 @@ void WatchClientImpl::HandleDecodingError(const std::string& path,
   FTL_LOG(ERROR) << "Content: " << buffer.GetString();
 
   HandleError();
+  commit_watcher_->OnMalformedNotification();
 }
 
 void WatchClientImpl::HandleError() {
   FTL_DCHECK(!errored_);
   errored_ = true;
   firebase_->UnWatch(this);
-  commit_watcher_->OnError();
 }
 
 }  // namespace cloud_provider

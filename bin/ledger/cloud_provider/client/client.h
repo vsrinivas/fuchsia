@@ -27,7 +27,9 @@ class ClientApp : public CommitWatcher {
   // CommitWatcher:
   void OnRemoteCommit(Commit commit, std::string timestamp) override;
 
-  void OnError() override;
+  void OnConnectionError() override;
+
+  void OnMalformedNotification() override;
 
   void Start();
 
@@ -51,7 +53,7 @@ class ClientApp : public CommitWatcher {
   std::unique_ptr<firebase::Firebase> firebase_;
   std::unique_ptr<CloudProvider> cloud_provider_;
   std::function<void(Commit, std::string)> on_remote_commit_;
-  ftl::Closure on_error_;
+  std::function<void(ftl::StringView)> on_error_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ClientApp);
 };

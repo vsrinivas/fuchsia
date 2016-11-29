@@ -20,9 +20,14 @@ class CommitWatcher {
   // parameter.
   virtual void OnRemoteCommit(Commit commit, std::string timestamp) = 0;
 
-  // Called when an unrecoverable error occurs. No further commit notifications
-  // are delivered after this call is received.
-  virtual void OnError() = 0;
+  // Called upon failure to establish a network connection, or when such
+  // connection breaks. No further commit notifications are delivered after this
+  // call is received.
+  virtual void OnConnectionError() = 0;
+
+  // Called when the watcher fails to decode the received notification. No
+  // further commit notifications are delivered after this call is received.
+  virtual void OnMalformedNotification() = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);
