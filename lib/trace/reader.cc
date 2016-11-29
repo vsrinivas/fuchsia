@@ -524,7 +524,7 @@ bool TraceReader::ReadEventRecord(Chunk& record, RecordHeader header) {
         return false;
       record_consumer_(Record(Record::Event{
           timestamp, process_thread, std::move(category), std::move(name),
-          std::move(arguments), EventData(EventData::AsyncBegin{id})}));
+          std::move(arguments), EventData(EventData::AsyncEnd{id})}));
       break;
     }
     default: {
