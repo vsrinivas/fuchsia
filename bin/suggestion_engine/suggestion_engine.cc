@@ -82,6 +82,12 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                                              GetProxy(&story_controller));
                 FTL_LOG(INFO) << "Creating story with module "
                               << create_story->module_id;
+                const auto& initial_data = create_story->initial_data;
+                if (initial_data) {
+                  modular::LinkPtr link;
+                  story_controller->GetLink(GetProxy(&link));
+                  link->AddDocuments(initial_data.Clone());
+                }
                 story_controller->GetInfo(ftl::MakeCopyable(
                     // TODO(thatguy): We should not be std::move()ing
                     // story_controller *while we're calling it*.
@@ -90,12 +96,6 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                       FTL_LOG(INFO) << "Focusing!";
                       focus_controller_ptr_->FocusStory(story_info->id);
                     }));
-                const auto& initial_data = create_story->initial_data;
-                if (initial_data) {
-                  modular::LinkPtr link;
-                  story_controller->GetLink(GetProxy(&link));
-                  link->AddDocuments(initial_data.Clone());
-                }
               } else {
                 FTL_LOG(WARNING) << "Unable to add module; no story provider";
               }

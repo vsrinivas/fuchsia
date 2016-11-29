@@ -10,6 +10,7 @@
 #include "apps/maxwell/src/agents/ideas.h"
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
 #include "apps/maxwell/src/integration/test_suggestion_listener.h"
+#include "apps/modular/src/document_store/documents.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
@@ -440,6 +441,33 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   auto create_story = maxwell::suggestion::CreateStory::New();
   create_story->module_id = "foo://bar";
   auto action = maxwell::suggestion::Action::New();
+  action->set_create_story(std::move(create_story));
+  fidl::Array<maxwell::suggestion::ActionPtr> actions;
+  actions.push_back(std::move(action));
+  p.Propose("1", std::move(actions));
+  CHECK_RESULT_COUNT(1);
+
+  auto suggestion_id = GetOnlySuggestion()->uuid;
+  AcceptSuggestion(suggestion_id);
+  ASYNC_EQ("foo://bar", story_provider()->last_created_story());
+}
+
+TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
+  Proposinator p(suggestion_engine());
+  SetResultCount(10);
+
+  auto create_story = maxwell::suggestion::CreateStory::New();
+  create_story->module_id = "foo://bar";
+  auto action = maxwell::suggestion::Action::New();
+
+  document_store::DocumentPtr doc(document_store::Document::New());
+  doc->docid = "foo";
+  doc->properties["bar"] = document_store::Value::New();
+  doc->properties["bar"]->set_string_value("some data");
+  auto initial_data = fidl::Map<fidl::String, document_store::DocumentPtr>();
+  initial_data[fidl::String("bazzle")] = std::move(doc);
+  create_story->initial_data = std::move(initial_data);
+
   action->set_create_story(std::move(create_story));
   fidl::Array<maxwell::suggestion::ActionPtr> actions;
   actions.push_back(std::move(action));
