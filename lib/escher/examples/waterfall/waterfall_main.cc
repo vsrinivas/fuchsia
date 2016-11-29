@@ -28,7 +28,7 @@ static constexpr int kDemoWidth = 1600;
 static constexpr int kDemoHeight = 1024;
 
 // Material design places objects from 0.0f to 24.0f.
-static constexpr float kNear = 24.f;
+static constexpr float kNear = 100.f;
 static constexpr float kFar = 0.f;
 
 bool g_show_debug_info = false;
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
         escher::ViewingVolume(kDemoWidth, kDemoHeight, kNear, kFar));
     // TODO: perhaps lights should be initialized by the various demo scenes.
     stage.set_key_light(escher::DirectionalLight(
-        escher::vec2(-0.25f * M_PI, 0.25f * M_PI), 0.25f * M_PI, 1.f));
+        escher::vec2(1.5f * M_PI, 1.5f * M_PI), 0.15f * M_PI, 1.f));
     stage.set_fill_light(escher::AmbientLight(0.3f));
 
     escher::Stopwatch stopwatch;
