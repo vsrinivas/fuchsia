@@ -125,8 +125,10 @@ static mx_status_t create_handles(iostate_t* ios, handle_type_t type,
   // is closed (it also disconnects the handler automatically)
   if ((r = dispatcher_add(h[0], ios)) < 0) goto fail_watcher_add;
 
-  // increment the refcount for ios->s
-  iostate_acquire(ios);
+  if (ios->s != MX_HANDLE_INVALID) {
+    // increment the refcount for ios->s
+    iostate_acquire(ios);
+  }
 
   *peer_h = h[1];
   *peer_s = s[1];

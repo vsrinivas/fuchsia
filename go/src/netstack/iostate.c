@@ -39,8 +39,10 @@ void iostate_release(iostate_t* ios) {
               ios->refcount);
   if (refcount == 0) {
     socket_signals_clear(ios, ios->watching_signals);
-    info("mx_handle_close: ios->s 0x%x (ios=%p)\n", ios->s, ios);
-    mx_handle_close(ios->s);
+    if (ios->s != MX_HANDLE_INVALID) {
+      debug_alloc("mx_handle_close: ios->s 0x%x (ios=%p)\n", ios->s, ios);
+      mx_handle_close(ios->s);
+    }
     debug_alloc("iostate_release: %p: put rbuf %p\n", ios, ios->rbuf);
     put_rwbuf(ios->rbuf);
     debug_alloc("iostate_release: %p: put wbuf %p\n", ios, ios->wbuf);
