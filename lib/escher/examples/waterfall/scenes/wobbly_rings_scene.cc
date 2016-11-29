@@ -24,8 +24,26 @@ using escher::ShapeModifier;
 const float kRectYPos = 40.f;
 
 WobblyRingsScene::WobblyRingsScene(escher::VulkanContext* vulkan_context,
-                                   escher::Escher* escher)
-    : Scene(vulkan_context, escher) {}
+                                   escher::Escher* escher,
+                                   vec3 clear_color,
+                                   vec3 ring1_color,
+                                   vec3 ring2_color,
+                                   vec3 ring3_color,
+                                   vec3 circle_color,
+                                   vec3 checkerboard_color)
+    : Scene(vulkan_context, escher), clear_color_(clear_color) {
+  ring1_color_ = ftl::MakeRefCounted<escher::Material>();
+  ring2_color_ = ftl::MakeRefCounted<escher::Material>();
+  ring3_color_ = ftl::MakeRefCounted<escher::Material>();
+  circle_color_ = ftl::MakeRefCounted<escher::Material>();
+  checkerboard_material_ = ftl::MakeRefCounted<escher::Material>();
+
+  ring1_color_->set_color(ring1_color);
+  ring2_color_->set_color(ring2_color);
+  ring3_color_->set_color(ring3_color);
+  circle_color_->set_color(circle_color);
+  checkerboard_material_->set_color(checkerboard_color);
+}
 
 void WobblyRingsScene::Init(escher::Stage* stage) {
   // Create meshes for fancy wobble effect.
@@ -49,17 +67,9 @@ void WobblyRingsScene::Init(escher::Stage* stage) {
   auto checkerboard = ftl::MakeRefCounted<escher::Texture>(
       escher()->NewCheckerboardImage(16, 16), vulkan_context()->device,
       vk::Filter::eNearest);
-
-  blue_ = ftl::MakeRefCounted<escher::Material>();
-  pink_ = ftl::MakeRefCounted<escher::Material>();
-  green_ = ftl::MakeRefCounted<escher::Material>();
-  blue_green_ = ftl::MakeRefCounted<escher::Material>();
-  purple_ = ftl::MakeRefCounted<escher::Material>(checkerboard);
-  blue_->set_color(vec3(0.188f, 0.188f, 0.788f));
-  pink_->set_color(vec3(0.929f, 0.678f, 0.925f));
-  green_->set_color(vec3(0.259f, 0.956f, 0.667));
-  blue_green_->set_color(vec3(0.039f, 0.788f, 0.788f));
-  purple_->set_color(vec3(0.588f, 0.239f, 0.729f));
+  auto checkerboard_color = checkerboard_material_->color();
+  checkerboard_material_ = ftl::MakeRefCounted<escher::Material>(checkerboard);
+  checkerboard_material_->set_color(checkerboard_color);
 }
 
 WobblyRingsScene::~WobblyRingsScene() {}
@@ -67,12 +77,17 @@ WobblyRingsScene::~WobblyRingsScene() {}
 escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
                                         uint64_t frame_count,
                                         escher::Stage* stage) {
+  stage->set_clear_color(clear_color_);
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
-  Object circle1(Object::NewCircle(vec2(612.f, 212.f), 200.f, 8.f, blue_));
-  Object circle2(Object::NewCircle(vec2(412.f, 800.f), 200.f, 8.f, blue_));
-  Object circle3(Object::NewCircle(vec2(162.f, 412.f), 120.f, 15.f, blue_));
-  Object circle4(Object::NewCircle(vec2(850.f, 600.f), 120.f, 15.f, blue_));
+  Object circle1(
+      Object::NewCircle(vec2(612.f, 212.f), 200.f, 8.f, circle_color_));
+  Object circle2(
+      Object::NewCircle(vec2(412.f, 800.f), 200.f, 8.f, circle_color_));
+  Object circle3(
+      Object::NewCircle(vec2(162.f, 412.f), 120.f, 15.f, circle_color_));
+  Object circle4(
+      Object::NewCircle(vec2(850.f, 600.f), 120.f, 15.f, circle_color_));
 
   // Animate the position of the rings, using a cos and sin function applied
   // to time
@@ -80,11 +95,11 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   float y_pos_offset = sin(current_time_sec) * 100.;
   vec3 ring_pos(512.f + x_pos_offset, 512.f + y_pos_offset, 0);
 
-  Object ring1(ring_mesh1_, ring_pos + vec3(0, 0, 4.f), pink_);
+  Object ring1(ring_mesh1_, ring_pos + vec3(0, 0, 4.f), ring1_color_);
   ring1.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring2(ring_mesh2_, ring_pos + vec3(0, 0, 12.f), green_);
+  Object ring2(ring_mesh2_, ring_pos + vec3(0, 0, 12.f), ring2_color_);
   ring2.set_shape_modifiers(ShapeModifier::kWobble);
-  Object ring3(ring_mesh3_, ring_pos + vec3(0, 0, 24.f), blue_green_);
+  Object ring3(ring_mesh3_, ring_pos + vec3(0, 0, 24.f), ring3_color_);
   ring3.set_rotation(current_time_sec);
   ring3.set_shape_modifiers(ShapeModifier::kWobble);
 
@@ -99,7 +114,8 @@ escher::Model* WobblyRingsScene::Update(const escher::Stopwatch& stopwatch,
   // Create a wobbly rectangle
   float screenWidth = stage->viewing_volume().width();
   float screenHeight = stage->viewing_volume().height();
-  Object rectangle(wobbly_rect_mesh_, vec3(0.f, kRectYPos, 2.f), purple_);
+  Object rectangle(wobbly_rect_mesh_, vec3(0.f, kRectYPos, 2.f),
+                   checkerboard_material_);
   rectangle.set_rotation(current_time_sec * 0.125f);
   rectangle.set_rotation_point(vec2(screenWidth / 2.f, screenHeight / 2.f));
   rectangle.set_shape_modifiers(ShapeModifier::kWobble);

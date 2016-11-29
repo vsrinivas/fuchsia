@@ -18,6 +18,7 @@
 #include "escher/examples/waterfall/scenes/demo_scene.h"
 #include "escher/examples/waterfall/scenes/wobbly_rings_scene.h"
 #include "escher/geometry/types.h"
+#include "escher/material/color_utils.h"
 #include "escher/renderer/paper_renderer.h"
 #include "escher/scene/stage.h"
 #include "escher/util/stopwatch.h"
@@ -130,13 +131,41 @@ int main(int argc, char** argv) {
     // Create list of scenes
     std::vector<std::unique_ptr<Scene>> scenes;
 
-    scenes.emplace_back(new WobblyRingsScene(&vulkan_context, &escher));
-    scenes.emplace_back(new DemoScene(&vulkan_context, &escher));
+    scenes.emplace_back(new WobblyRingsScene(
+        &vulkan_context, &escher, vec3(0.012, 0.047, 0.427),
+        vec3(0.929f, 0.678f, 0.925f), vec3(0.259f, 0.956f, 0.667),
+        vec3(0.039f, 0.788f, 0.788f), vec3(0.188f, 0.188f, 0.788f),
+        vec3(0.588f, 0.239f, 0.729f)));
+
+    const int kNumColorsInScheme = 4;
+    vec3 color_schemes[4][kNumColorsInScheme]{
+        {vec3(0.905, 0.394, 0.366), vec3(0.868, 0.888, 0.438),
+         vec3(0.905, 0.394, 0.366), vec3(0.365, 0.376, 0.318)},
+        {vec3(0.299, 0.263, 0.209), vec3(0.986, 0.958, 0.553),
+         vec3(0.773, 0.750, 0.667), vec3(0.643, 0.785, 0.765)},
+        {vec3(0.171, 0.245, 0.120), vec3(0.427, 0.458, 0.217),
+         vec3(0.750, 0.736, 0.527), vec3(0.366, 0.310, 0.280)},
+        {vec3(0.170, 0.255, 0.276), vec3(0.300, 0.541, 0.604),
+         vec3(0.637, 0.725, 0.747), vec3(0.670, 0.675, 0.674)},
+    };
+
+    for (auto& color_scheme : color_schemes) {
+      // Convert colors from sRGB
+      for (int i = 0; i < kNumColorsInScheme; i++) {
+        color_scheme[i] = escher::LinearToSrgb(color_scheme[i]);
+      }
+      // Create a new scheme with each color scheme
+      scenes.emplace_back(new WobblyRingsScene(
+          &vulkan_context, &escher, color_scheme[0], color_scheme[1],
+          color_scheme[1], color_scheme[1], color_scheme[2], color_scheme[3]));
+    }
+
     scenes.emplace_back(new UberScene2(&vulkan_context, &escher));
     scenes.emplace_back(new UberScene3(&vulkan_context, &escher));
     scenes.emplace_back(new RingTricks1(&vulkan_context, &escher));
     scenes.emplace_back(new RingTricks2(&vulkan_context, &escher));
     scenes.emplace_back(new RingTricks3(&vulkan_context, &escher));
+
     for (auto& scene : scenes) {
       scene->Init(&stage);
     }

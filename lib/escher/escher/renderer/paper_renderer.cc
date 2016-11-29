@@ -229,6 +229,13 @@ void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer_in,
                                    : model_renderer_->white_texture();
 
   model_renderer_->hack_use_depth_prepass = false;
+
+  // Update the clear color from the stage
+  vec3 clear_color = stage.clear_color();
+  clear_values_[0] = vk::ClearColorValue(
+      std::array<float, 4>{{clear_color.x, clear_color.y, clear_color.z, 1.f}});
+
+  // Render
   command_buffer->BeginRenderPass(model_renderer_->lighting_pass(),
                                   framebuffer_in, clear_values_);
   model_renderer_->Draw(stage, model, command_buffer, illumination_texture);

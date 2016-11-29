@@ -36,12 +36,16 @@ class Stage {
 
   const SizeI& viewport_offset() const { return viewport_offset_; }
 
+  const vec3& clear_color() const { return clear_color_; };
+  void set_clear_color(vec3 clear_color) { clear_color_ = clear_color; };
+
  private:
   SizeI physical_size_;
   SizeI viewport_offset_;
   ViewingVolume viewing_volume_;
   DirectionalLight key_light_;
   AmbientLight fill_light_;
+  vec3 clear_color_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Stage);
 };

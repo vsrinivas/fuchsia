@@ -84,6 +84,8 @@ static_library("escher") {
     "impl/vk/pipeline_spec.h",
     "impl/vulkan_utils.cc",
     "impl/vulkan_utils.h",
+    "material/color_utils.h",
+    "material/color_utils.cc",
     "material/material.h",
     "material/material.cc",
     "renderer/framebuffer.cc",
