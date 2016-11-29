@@ -12,11 +12,11 @@ import subprocess
 import sys
 
 
-def gn_desc(outdir):
+def gn_desc(outdir, path):
     '''Run `gn desc` over the whole tree'''
     return json.loads(subprocess.check_output(
         [os.path.join(paths.FUCHSIA_ROOT, 'packages', 'gn', 'gn.py'), 'desc',
-         outdir, '*', '--format=json']))
+         outdir, path, '--format=json']))
 
 
 def main():
@@ -38,6 +38,9 @@ def main():
                         action="store_const",
                         const="release",
                         help="use release build")
+    parser.add_argument("--tree", "-t",
+                        help="Add symlinks only to a subtree",
+                        default="*")
     args = parser.parse_args()
 
     build_type = '%s-%s' % (args.variant, args.arch)
@@ -47,27 +50,13 @@ def main():
         sys.exit(2)
     success = True
 
-    for target, props in gn_desc(outdir).items():
+    for target, props in gn_desc(outdir, args.tree).items():
         # Only look at scripts that run the Dart or Flutter snapshotters
         if props.get('type') != 'action': continue
-        if not props.get('script') in {
-            '//flutter/build/snapshot.py', '//out/%s/host_x64/dart_snapshotter'
-            % build_type
-        }:
+        if props.get('script') != '//build/dart/gen_dot_packages.py':
             continue
 
-        # Look for the --packages args to the snapshotters
-        args = props['args']
-        if '--packages' in args:
-            packages = args[args.index('--packages') + 1]
-        else:
-            for arg in args:
-                if arg.startswith('--packages='):
-                    packages = arg[len('--packages='):]
-                    break
-            else:
-                raise RuntimeError('--packages= not found in %r for %s' %
-                                   (args, target))
+        packages = os.path.join(paths.FUCHSIA_ROOT, props.get('outputs')[0][2:])
 
         # work out where the target is actually located
         target_dir = os.path.join(paths.FUCHSIA_ROOT, target.split(':')[0][2:])
