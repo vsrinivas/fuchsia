@@ -42,7 +42,7 @@ void DumpProvider::Run(const ftl::CommandLine& command_line) {
   uint32_t provider_id;
   if (!ftl::StringToNumberWithError(command_line.positional_args()[0],
                                     &provider_id)) {
-    err() << "Failed to parse provider id";
+    err() << "Failed to parse provider id" << std::endl;
     return;
   }
 
@@ -57,16 +57,23 @@ void DumpProvider::Run(const ftl::CommandLine& command_line) {
     mx_signals_t pending;
     status = incoming.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                kReadTimeout.ToNanoseconds(), &pending);
+    if (status == ERR_TIMED_OUT) {
+      err() << "Timed out after " << kReadTimeout.ToSecondsF()
+            << " seconds waiting for provider to write data" << std::endl;
+      break;
+    }
     FTL_CHECK(status == NO_ERROR);
 
     if (!(pending & MX_SOCKET_READABLE))
-      break;
+      break;  // done reading
 
     mx_size_t actual;
     status = incoming.read(0u, buffer.data(), buffer.size(), &actual);
     FTL_CHECK(status == NO_ERROR);
 
     out().write(reinterpret_cast<const char*>(buffer.data()), actual);
+    if (out().bad())
+      break;  // can't write anymore
   }
   out() << std::endl;
 

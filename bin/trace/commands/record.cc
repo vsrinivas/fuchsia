@@ -102,7 +102,8 @@ void Record::Run(const ftl::CommandLine& command_line) {
   std::ofstream out_file(options_.output_file_name,
                          std::ios_base::out | std::ios_base::trunc);
   if (!out_file.is_open()) {
-    err() << "Failed to open " << options_.output_file_name << " for writing";
+    err() << "Failed to open " << options_.output_file_name << " for writing"
+          << std::endl;
     exit(1);
   }
 
@@ -110,7 +111,7 @@ void Record::Run(const ftl::CommandLine& command_line) {
   tracer_.reset(new Tracer(trace_controller().get()));
 
   out() << "Starting trace; will stop in " << options_.duration.ToSecondsF()
-        << " seconds...";
+        << " seconds..." << std::endl;
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [weak = weak_ptr_factory_.GetWeakPtr()] {
@@ -137,7 +138,7 @@ void Record::Run(const ftl::CommandLine& command_line) {
     context()->launcher()->CreateApplication(
         std::move(options_.launch_info), GetProxy(&application_controller_));
     application_controller_.set_connection_error_handler([this] {
-      out() << "Application terminated";
+      out() << "Application terminated" << std::endl;
       if (!options_.decouple)
         StopTrace();
     });
@@ -148,7 +149,7 @@ void Record::Run(const ftl::CommandLine& command_line) {
 
 void Record::StopTrace() {
   if (tracing_) {
-    out() << "Stopping trace...";
+    out() << "Stopping trace..." << std::endl;
     tracing_ = false;
     tracer_->Stop();
   }
@@ -158,7 +159,7 @@ void Record::DoneTrace() {
   tracer_.reset();
   exporter_.reset();
 
-  out() << "Trace file written to " << options_.output_file_name;
+  out() << "Trace file written to " << options_.output_file_name << std::endl;
   mtl::MessageLoop::GetCurrent()->QuitNow();
 }
 
