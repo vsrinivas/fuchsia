@@ -15,12 +15,17 @@ namespace {
 constexpr uint32_t kMaxTickBeforeDiscard = 3;
 
 std::atomic<int32_t> g_produced_buffer_count;
+std::atomic<int64_t> g_produced_buffer_total_bytes;
 
-void TraceProducedBufferCount(int32_t delta) {
-  int32_t count =
-      g_produced_buffer_count.fetch_add(delta, std::memory_order_relaxed) +
-      delta;
+void TraceProducedBufferTally(int32_t count_delta, int64_t total_bytes_delta) {
+  int32_t count = g_produced_buffer_count.fetch_add(count_delta,
+                                                    std::memory_order_relaxed) +
+                  count_delta;
+  int64_t total_bytes = g_produced_buffer_total_bytes.fetch_add(
+                            total_bytes_delta, std::memory_order_relaxed) +
+                        total_bytes_delta;
   TRACE_COUNTER1("gfx", "BufferProducer/alloc", 0u, "produced_buffers", count);
+  TRACE_COUNTER1("gfx", "BufferProducer/size", 0u, "total_bytes", total_bytes);
 }
 
 // Establishes a constraint on whether a VMO should be reused for an
@@ -235,11 +240,11 @@ ProducedVmo::ProducedVmo(mx::vmo vmo,
   FTL_DCHECK(retainer_);
   FTL_DCHECK(retention_);
 
-  TraceProducedBufferCount(1);
+  TraceProducedBufferTally(1, vmo_size());
 }
 
 ProducedVmo::~ProducedVmo() {
-  TraceProducedBufferCount(-1);
+  TraceProducedBufferTally(-1, -static_cast<int64_t>(vmo_size()));
 }
 
 }  // namespace mozart

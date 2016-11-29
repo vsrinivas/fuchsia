@@ -14,12 +14,17 @@ namespace mozart {
 namespace {
 
 std::atomic<int32_t> g_consumed_buffer_count;
+std::atomic<int64_t> g_consumed_buffer_total_bytes;
 
-void TraceConsumedBufferCount(int32_t delta) {
-  int32_t count =
-      g_consumed_buffer_count.fetch_add(delta, std::memory_order_relaxed) +
-      delta;
+void TraceConsumedBufferTally(int32_t count_delta, int64_t total_bytes_delta) {
+  int32_t count = g_consumed_buffer_count.fetch_add(count_delta,
+                                                    std::memory_order_relaxed) +
+                  count_delta;
+  int64_t total_bytes = g_consumed_buffer_total_bytes.fetch_add(
+                            total_bytes_delta, std::memory_order_relaxed) +
+                        total_bytes_delta;
   TRACE_COUNTER1("gfx", "BufferConsumer/alloc", 0u, "consumed_buffers", count);
+  TRACE_COUNTER1("gfx", "BufferConsumer/size", 0u, "total_bytes", total_bytes);
 }
 
 class ConsumedVmo : public mtl::SharedVmo {
@@ -193,14 +198,14 @@ ConsumedVmo::ConsumedVmo(mx::vmo vmo,
     : SharedVmo(std::move(vmo), map_flags),
       vmo_koid_(vmo_koid),
       weak_registry_(std::move(weak_registry)) {
-  TraceConsumedBufferCount(1);
+  TraceConsumedBufferTally(1, vmo_size());
 }
 
 ConsumedVmo::~ConsumedVmo() {
   auto registry = weak_registry_.lock();
   if (registry)
     registry->ReleaseVmo(vmo_koid_);
-  TraceConsumedBufferCount(-1);
+  TraceConsumedBufferTally(-1, -static_cast<int64_t>(vmo_size()));
 }
 
 void ConsumedVmo::Release() {

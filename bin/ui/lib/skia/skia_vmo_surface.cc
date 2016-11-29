@@ -6,6 +6,9 @@
 
 #include <mx/process.h>
 
+#include <atomic>
+
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
@@ -14,14 +17,23 @@ static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
 namespace mozart {
 namespace {
 
+std::atomic<int32_t> g_count;
+
+void TraceCount(int32_t delta) {
+  int32_t count = g_count.fetch_add(delta, std::memory_order_relaxed) + delta;
+  TRACE_COUNTER1("gfx", "SkSurfaceVmo", 0u, "count", count);
+}
+
 void ReleaseBuffer(void* pixels, void* context) {
   delete static_cast<ProducedBufferHolder*>(context);
+  TraceCount(-1);
 }
 
 void UnmapMemory(void* pixels, void* context) {
   mx_status_t status =
       mx::process::self().unmap_vm(reinterpret_cast<uintptr_t>(pixels), 0u);
   FTL_CHECK(status == NO_ERROR);
+  TraceCount(-1);
 }
 
 sk_sp<SkSurface> MakeSkSurfaceInternal(
@@ -43,6 +55,7 @@ sk_sp<SkSurface> MakeSkSurfaceInternal(
     return nullptr;
   }
 
+  TraceCount(1);
   buffer_holder.release();  // now owned by SkSurface
   return surface;
 }
@@ -170,10 +183,12 @@ sk_sp<SkSurface> MakeSkSurfaceFromVMO(const SkImageInfo& info,
       info, reinterpret_cast<void*>(buffer), row_bytes, &UnmapMemory, nullptr);
   if (!surface) {
     FTL_LOG(ERROR) << "Could not create SkSurface";
-    mx::process::self().unmap_vm(buffer, 0u);
+    status = mx::process::self().unmap_vm(buffer, 0u);
+    FTL_CHECK(status == NO_ERROR);
     return nullptr;
   }
 
+  TraceCount(1);
   return surface;
 }
 

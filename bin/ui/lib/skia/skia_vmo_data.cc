@@ -6,6 +6,9 @@
 
 #include <mx/process.h>
 
+#include <atomic>
+
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
@@ -14,10 +17,18 @@ static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
 namespace mozart {
 namespace {
 
+std::atomic<int32_t> g_count;
+
+void TraceCount(int32_t delta) {
+  int32_t count = g_count.fetch_add(delta, std::memory_order_relaxed) + delta;
+  TRACE_COUNTER1("gfx", "SkDataVmo", 0u, "count", count);
+}
+
 void UnmapMemory(const void* buffer, void* context) {
   mx_status_t status =
       mx::process::self().unmap_vm(reinterpret_cast<uintptr_t>(buffer), 0u);
   FTL_CHECK(status == NO_ERROR);
+  TraceCount(-1);
 }
 
 }  // namespace
@@ -34,8 +45,17 @@ sk_sp<SkData> MakeSkDataFromVMO(const mx::vmo& vmo) {
   if (status != NO_ERROR)
     return nullptr;
 
-  return SkData::MakeWithProc(reinterpret_cast<void*>(buffer), size,
-                              &UnmapMemory, nullptr);
+  sk_sp<SkData> data = SkData::MakeWithProc(reinterpret_cast<void*>(buffer),
+                                            size, &UnmapMemory, nullptr);
+  if (!data) {
+    FTL_LOG(ERROR) << "Could not create SkData";
+    status = mx::process::self().unmap_vm(buffer, 0u);
+    FTL_CHECK(status == NO_ERROR);
+    return nullptr;
+  }
+
+  TraceCount(1);
+  return data;
 }
 
 }  // namespace mozart

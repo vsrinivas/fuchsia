@@ -4,6 +4,9 @@
 
 #include "apps/mozart/lib/skia/skia_vmo_image.h"
 
+#include <atomic>
+
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
 static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
@@ -12,8 +15,16 @@ static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
 namespace mozart {
 namespace {
 
+std::atomic<int32_t> g_count;
+
+void TraceCount(int32_t delta) {
+  int32_t count = g_count.fetch_add(delta, std::memory_order_relaxed) + delta;
+  TRACE_COUNTER1("gfx", "SkImageVmo", 0u, "count", count);
+}
+
 void ReleaseBuffer(const void* pixels, void* context) {
   delete static_cast<ConsumedBufferHolder*>(context);
+  TraceCount(-1);
 }
 
 sk_sp<SkImage> MakeSkImageInternal(
@@ -44,6 +55,7 @@ sk_sp<SkImage> MakeSkImageInternal(
     return nullptr;
   }
 
+  TraceCount(1);
   *out_fence = buffer_holder->TakeFence();
   buffer_holder.release();  // now owned by SkImage
   return image;
