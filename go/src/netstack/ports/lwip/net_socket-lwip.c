@@ -266,6 +266,13 @@ int net_getsockopt(int sockfd, int level, int optname, void* optval,
 int net_setsockopt(int sockfd, int level, int optname, const void* optval,
                    socklen_t optlen) {
   debug_port("net_setsockopt: level=%d optname=%d\n", level, optname);
+
+  if (level == SOL_SOCKET && optname == SO_DEBUG) {
+    // SO_DEBUG is not implemented in lwip. Use this to display stats.
+    net_debug();
+    return 0;
+  }
+
   int lwip_level = -1;
   int lwip_optname = -1;
   convert_optname_to_lwip(level, optname, &lwip_level, &lwip_optname);
@@ -273,12 +280,6 @@ int net_setsockopt(int sockfd, int level, int optname, const void* optval,
     error("net_setsockopt: unknown level %d, optname %d\n", level, optname);
     errno = EINVAL;
     return -1;
-  }
-
-  if (lwip_optname == LWIP_SO_DEBUG) {
-    // SO_DEBUG is not implemented in lwip. Use this to display stats.
-    net_debug();
-    return 0;
   }
 
   return lwip_setsockopt(sockfd, lwip_level, lwip_optname, optval, optlen);
