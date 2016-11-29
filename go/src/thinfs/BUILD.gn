@@ -4,7 +4,6 @@
 
 action("thinfs") {
   thinfs_path = "$root_out_dir/thinfs"
-  depfile_path = "${thinfs_path}.d"
 
   outputs = [ thinfs_path ]
 
@@ -12,6 +11,7 @@ action("thinfs") {
     # TODO(smklein): Delete this conditional (obliterating the 'else' case)
     # once the ARM64 build is fixed.
     script = "scripts/build_fuchsia.py"
+    depfile_path = "${thinfs_path}.d"
     depfile = depfile_path
 
     args = [
