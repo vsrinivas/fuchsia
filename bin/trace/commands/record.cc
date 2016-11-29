@@ -78,7 +78,9 @@ Command::Info Record::Describe() {
       "record",
       "starts tracing and records data",
       {{"output-file=[/tmp/trace.json]", "Trace data is stored in this file"},
-       {"duration=[10]", "Trace will be active for this many seconds"},
+       {"duration=[10s]",
+        "Trace will be active for this long after the session has been "
+        "started"},
        {"categories=[\"\"]", "Categories that should be enabled for tracing"},
        {"detach=[false]",
         "Don't stop the traced program when tracing finished"},
@@ -110,16 +112,6 @@ void Record::Run(const ftl::CommandLine& command_line) {
   exporter_.reset(new ChromiumExporter(std::move(out_file)));
   tracer_.reset(new Tracer(trace_controller().get()));
 
-  out() << "Starting trace; will stop in " << options_.duration.ToSecondsF()
-        << " seconds..." << std::endl;
-
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [weak = weak_ptr_factory_.GetWeakPtr()] {
-        if (weak)
-          weak->StopTrace();
-      },
-      options_.duration);
-
   tracing_ = true;
 
   auto trace_options = TraceOptions::New();
@@ -131,20 +123,13 @@ void Record::Run(const ftl::CommandLine& command_line) {
   tracer_->Start(
       std::move(trace_options),
       [this](const reader::Record& record) { exporter_->ExportRecord(record); },
-      [](std::string error) { err() << error; }, [this] { DoneTrace(); });
-
-  if (options_.launch_info) {
-    out() << "Launching " << options_.launch_info->url;
-    context()->launcher()->CreateApplication(
-        std::move(options_.launch_info), GetProxy(&application_controller_));
-    application_controller_.set_connection_error_handler([this] {
-      out() << "Application terminated" << std::endl;
-      if (!options_.decouple)
-        StopTrace();
-    });
-    if (options_.detach)
-      application_controller_->Detach();
-  }
+      [](std::string error) { err() << error; },
+      [this] {
+        if (options_.launch_info)
+          LaunchApp();
+        StartTimer();
+      },
+      [this] { DoneTrace(); });
 }
 
 void Record::StopTrace() {
@@ -161,6 +146,30 @@ void Record::DoneTrace() {
 
   out() << "Trace file written to " << options_.output_file_name << std::endl;
   mtl::MessageLoop::GetCurrent()->QuitNow();
+}
+
+void Record::LaunchApp() {
+  out() << "Launching " << options_.launch_info->url;
+  context()->launcher()->CreateApplication(std::move(options_.launch_info),
+                                           GetProxy(&application_controller_));
+  application_controller_.set_connection_error_handler([this] {
+    out() << "Application terminated";
+    if (!options_.decouple)
+      StopTrace();
+  });
+  if (options_.detach)
+    application_controller_->Detach();
+}
+
+void Record::StartTimer() {
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      [weak = weak_ptr_factory_.GetWeakPtr()] {
+        if (weak)
+          weak->StopTrace();
+      },
+      options_.duration);
+  out() << "Starting trace; will stop in " << options_.duration.ToSecondsF()
+        << " seconds..." << std::endl;
 }
 
 }  // namespace tracing

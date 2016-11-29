@@ -40,7 +40,9 @@ TraceManager::TraceManager(modular::ApplicationContext* context,
 
 TraceManager::~TraceManager() = default;
 
-void TraceManager::StartTracing(TraceOptionsPtr options, mx::socket output) {
+void TraceManager::StartTracing(TraceOptionsPtr options,
+                                mx::socket output,
+                                const StartTracingCallback& start_callback) {
   if (session_) {
     FTL_LOG(ERROR) << "Trace already in progress";
     return;
@@ -60,6 +62,10 @@ void TraceManager::StartTracing(TraceOptionsPtr options, mx::socket output) {
     FTL_VLOG(1) << "  for provider " << bundle;
     session_->AddProvider(&bundle);
   }
+
+  session_->WaitForProvidersToStart(
+      start_callback,
+      ftl::TimeDelta::FromMilliseconds(options->start_timeout_milliseconds));
 }
 
 void TraceManager::StopTracing() {
