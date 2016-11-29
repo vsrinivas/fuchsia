@@ -28,7 +28,7 @@ namespace cloud_provider {
 namespace {
 
 std::string RandomString() {
-  return std::to_string(rand());
+  return std::to_string(glue::RandUint64());
 }
 
 void ok(ftl::StringView what, ftl::StringView message = "") {
@@ -263,7 +263,6 @@ void ClientApp::Done() {
 }  // namespace cloud_provider
 
 int main(int argc, const char** argv) {
-  srand(time(0));
   ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   mtl::MessageLoop loop;
 
