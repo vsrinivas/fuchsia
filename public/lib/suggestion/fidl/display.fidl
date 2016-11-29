@@ -23,7 +23,7 @@ struct Display {
 
   // Color in which the Suggestion should be displayed
   // Format is 0xaarrggbb
-  int32 color;
+  uint32 color;
 
   // List of icon URLs that can be displayed with the Suggestion
   array<string> icon_urls;

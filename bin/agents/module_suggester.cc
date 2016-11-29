@@ -16,29 +16,26 @@ using namespace document_store;
 
 struct ProposalContent {
   std::string url;
-  int32_t color;
+  uint32_t color;
   std::string module_data;
 };
 
 const std::unordered_map<std::string, ProposalContent> kNextStories(
     {{"Open Mail",
-      {"file:///system/apps/email_story", 0x00aaaa00 /* yellow */, ""}},
-     {"Spinning Square",
-      {"file:///system/apps/color", 0x000000ff /*blue*/, ""}},
-     {"Teal A400", {"file:///system/apps/color", 0x00ffffff, "0xFF1DE9B6"}}});
+      {"file:///system/apps/email_story", 0xff4885ed, ""}},
+      {"Video Player", {"file:///system/apps/video_player", 0xff9575cd, ""}}});
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
-    {{"Terminal", {"file:///system/apps/moterm", 0x00008000 /* green */, ""}},
+    {{"Terminal", {"file:///system/apps/moterm", 0xff000000, ""}},
      {"YouTube",
-      {"file:///system/apps/youtube_story", 0x00ff0000 /* red */, ""}},
+      {"file:///system/apps/youtube_story", 0xffc4302b, ""}},
      {"Music",
-      {"file:///system/apps/music_story", 0x00ff8000 /* orange */, ""}},
-     {"Noodles", {"file:///system/apps/noodles_view", 0x00ffff00, ""}},
-     {"Color", {"file:///system/apps/color", 0x00ffffff, ""}},
-     {"Red 500", {"file:///system/apps/color", 0x00ffffff, "0xFFF44336"}},
-     {"Deep Purple 800",
-      {"file:///system/apps/color", 0x00ffffff, "0xFF4527A0"}},
-     {"Green 500", {"file:///system/apps/color", 0x00ffffff, "0xFF4CAF50"}}});
+      {"file:///system/apps/music_story", 0xfffd8c00, ""}},
+     {"Noodles", {"file:///system/apps/noodles_view", 0xff76ff03, ""}},
+     {"Color", {"file:///system/apps/color", 0xff311b92, ""}},
+     {"Spinning Square",
+      {"file:///system/apps/spinning_square_view", 0xfff50057, ""}},
+     {"Paint", {"file:///system/apps/paint_view", 0xffff0000, ""}}});
 
 maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
                                             const ProposalContent& content) {
