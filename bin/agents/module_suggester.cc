@@ -7,34 +7,59 @@
 #include "apps/maxwell/services/context/client.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_agent_client.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/src/document_store/documents.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 
+using namespace document_store;
+
 struct ProposalContent {
   std::string url;
   int32_t color;
+  std::string module_data;
 };
 
 const std::unordered_map<std::string, ProposalContent> kNextStories(
-    {{"Open Mail", {"file:///system/apps/email_story", 0x00aaaa00 /* yellow */}},
+    {{"Open Mail",
+      {"file:///system/apps/email_story", 0x00aaaa00 /* yellow */, ""}},
      {"Spinning Square",
-      {"file:///system/apps/spinning_square_view", 0x000000ff}}
-    });
+      {"file:///system/apps/color", 0x000000ff /*blue*/, ""}},
+     {"Teal A400", {"file:///system/apps/color", 0x00ffffff, "0xFF1DE9B6"}}});
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
-    {{"Terminal", {"file:///system/apps/moterm", 0x00008000 /* green */}},
-     {"YouTube", {"file:///system/apps/youtube_story", 0x00ff0000 /* red */}},
-     {"Music", {"file:///system/apps/music_story", 0x00ff8000 /* orange */}},
-     {"Noodles", {"file:///system/apps/noodles_view", 0x00ffff00}},
-     {"Color", {"file:///system/apps/color", 0x00ffffff}}});
+    {{"Terminal", {"file:///system/apps/moterm", 0x00008000 /* green */, ""}},
+     {"YouTube",
+      {"file:///system/apps/youtube_story", 0x00ff0000 /* red */, ""}},
+     {"Music",
+      {"file:///system/apps/music_story", 0x00ff8000 /* orange */, ""}},
+     {"Noodles", {"file:///system/apps/noodles_view", 0x00ffff00, ""}},
+     {"Color", {"file:///system/apps/color", 0x00ffffff, ""}},
+     {"Red 500", {"file:///system/apps/color", 0x00ffffff, "0xFFF44336"}},
+     {"Deep Purple 800",
+      {"file:///system/apps/color", 0x00ffffff, "0xFF4527A0"}},
+     {"Green 500", {"file:///system/apps/color", 0x00ffffff, "0xFF4CAF50"}}});
 
 maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
-    const ProposalContent& content) {
+                                            const ProposalContent& content) {
   auto p = maxwell::suggestion::Proposal::New();
+
   p->id = label;
   auto create_story = maxwell::suggestion::CreateStory::New();
   create_story->module_id = content.url;
+  const auto& data = content.module_data;
+  if (data.size() > 0) {
+    DocumentPtr doc(Document::New());
+    doc->docid = label;
+    // TODO(afergan): Don't hardcode the doc id key or initial_data map key.
+    // TODO(afergan, azani): Right now we pass the colors as Strings because
+    // document_store::Value does not support hexadecimal.
+    doc->properties["Color"] = Value::New();
+    doc->properties["Color"]->set_string_value(data);
+    auto map = fidl::Map<fidl::String, DocumentPtr>();
+    map[fidl::String("Color")] = std::move(doc);
+    create_story->initial_data = std::move(map);
+  }
   auto action = maxwell::suggestion::Action::New();
   action->set_create_story(std::move(create_story));
   p->on_selected.push_back(std::move(action));
@@ -46,7 +71,6 @@ maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
   d->icon_urls.push_back("");
   d->image_url = "";
   d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
-
   p->display = std::move(d);
 
   return p;
