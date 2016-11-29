@@ -18,7 +18,7 @@ those userspace processes, not the kernel itself.
 If this option is set, the crashlogger is not started. You should leave this
 option off unless you suspect the crashlogger is causing problems.
 
-## driver.<name>.disable
+## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the
 magenta\_driver\_info, and can be found as the second argument to the
@@ -26,11 +26,11 @@ MAGENTA\_DRIVER\_BEGIN macro.
 
 Example: `driver.usb-audio.disable`
 
-## kernel.watchdog=<bool>
+## kernel.watchdog=\<bool>
 If this option is set (disabled by default), the system will attempt
 to detect hangs/crashes and reboot upon detection.
 
-## gfxconsole.early=<bool>
+## gfxconsole.early=\<bool>
 
 This option (disabled by default) requests that the kernel start a graphics
 console during early boot (if possible), to display kernel debug print
@@ -40,27 +40,27 @@ graphics console driver takes over.
 The early kernel console can be slow on some platforms, so if it is not
 needed for debugging it may speed up boot to disable it.
 
-## gfxconsole.font=<name>
+## gfxconsole.font=\<name>
 
 This option asks the graphics console to use a specific font.  Currently
 only "9x16" (the default) and "18x32" (a double-size font) are supported.
 
-## smp.maxcpus=<num>
+## smp.maxcpus=\<num>
 
 This option caps the number of CPUs to initialize.  It cannot be greater than
 *SMP\_MAX\_CPUS* for a specific architecture.
 
-## smp.ht=<bool>
+## smp.ht=\<bool>
 
 This option can be used to disable the initialization of hyperthread logical
 CPUs.  Defaults to true.
 
-## timer.wallclock=<name>
+## timer.wallclock=\<name>
 
 This option can be used to force the selection of a particular wall clock.  It
 only is used on pc builds.  Options are "tsc", "hpet", and "pit".
 
-## userboot=<path>
+## userboot=\<path>
 
 This option instructs the userboot process (the first userspace process) to
 execute the specified binary within the bootfs, instead of following the
@@ -74,13 +74,28 @@ unit tests).
 If this option is set, userboot will attempt to power off the machine
 when the process it launches exits.
 
-## startup.keep-log-visible=<bool>
+## startup.keep-log-visible=\<bool>
 
 If this option is set, devmgr will not activate the first interactive
 console. It is useful for scenarios in which user input handling (and
 the ability to switch vcs) is not available. Defaults to false.
 
-# How to get pass the commandline to the kernel
+# Additional Gigaboot Commandline Options
+
+## bootloader.timeout=\<num>
+This option sets the boot timeout in the bootloader, with a default of 3
+seconds. Set to zero to skip the boot menu.
+
+## bootloader.fbres=\<w>x\<h>
+This option sets the framebuffer resolution. Use the bootloader menu to display
+available resolutions for the device.
+
+Example: `bootloader.fbres=640x480`
+
+## bootloader.default=\<network|local>
+This option sets the default boot device to netboot or local magenta.bin.
+
+# How to pass the commandline to the kernel
 
 ## in Qemu, using scripts/run-magenta*
 

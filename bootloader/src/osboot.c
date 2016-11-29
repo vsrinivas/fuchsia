@@ -73,11 +73,12 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
 
 static char cmdline[4096];
 
-// Wait for a keypress from a set of valid keys. If timeout_s < INT_MAX, the
+// Wait for a keypress from a set of valid keys. If 0 < timeout_s < INT_MAX, the
 // first key in the set of valid keys will be returned after timeout_s seconds
 // if no other valid key is pressed.
 char key_prompt(char* valid_keys, int timeout_s) {
     if (strlen(valid_keys) < 1) return 0;
+    if (timeout_s <= 0) return valid_keys[0];
 
     efi_event TimerEvent;
     efi_event WaitList[2];
@@ -335,6 +336,10 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     printf("Framebuffer base is at %" PRIx64 "\n\n",
            gop->Mode->FrameBufferBase);
 
+    // Default boot defaults to network
+    char defboot[8] = "network";
+    cmdline_get(cmdline, "bootloader.default", defboot, sizeof(defboot));
+
     // See if there's a network interface
     bool have_network = netboot_init() == 0;
 
@@ -352,11 +357,22 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     int key_idx = 0;
 
     // The first entry in valid_keys will be the default after the timeout.
-    if (have_network) {
-        valid_keys[key_idx++] = 'n';
-    }
-    if (kernel != NULL) {
-        valid_keys[key_idx++] = 'm';
+    // Use the value of bootloader.default to determine the first entry. If
+    // bootloader.default is not set, use "network".
+    if (!memcmp(defboot, "local", 5)) {
+        if (kernel != NULL) {
+            valid_keys[key_idx++] = 'm';
+        }
+        if (have_network) {
+            valid_keys[key_idx++] = 'n';
+        }
+    } else {
+        if (have_network) {
+            valid_keys[key_idx++] = 'n';
+        }
+        if (kernel != NULL) {
+            valid_keys[key_idx++] = 'm';
+        }
     }
     valid_keys[key_idx++] = 'b';
 
