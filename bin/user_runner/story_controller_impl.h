@@ -35,11 +35,11 @@ class StoryControllerImpl : public StoryController,
       StoryProviderImpl* story_provider_impl,
       ApplicationLauncherPtr launcher,
       fidl::InterfaceRequest<StoryController> story_controller_request,
-      UserLedgerRepositoryFactory* ledger_repo_factory) {
+      UserLedgerRepositoryFactory* ledger_repository_factory) {
     return new StoryControllerImpl(std::move(story_data), story_provider_impl,
                                    std::move(launcher),
                                    std::move(story_controller_request),
-                                   ledger_repo_factory);
+                                   ledger_repository_factory);
   }
 
   ~StoryControllerImpl() override = default;
@@ -52,7 +52,7 @@ class StoryControllerImpl : public StoryController,
       StoryProviderImpl* story_provider_impl,
       ApplicationLauncherPtr launcher,
       fidl::InterfaceRequest<StoryController> story_controller_request,
-      UserLedgerRepositoryFactory* user_ledger_repository);
+      UserLedgerRepositoryFactory* ledger_repository_factory);
 
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
@@ -97,7 +97,7 @@ class StoryControllerImpl : public StoryController,
   LinkPtr root_;
   ModuleControllerPtr module_;
 
-  UserLedgerRepositoryFactory* ledger_repository_factory_;
+  UserLedgerRepositoryFactory* const ledger_repository_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };

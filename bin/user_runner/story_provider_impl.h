@@ -34,7 +34,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
       ApplicationEnvironmentPtr environment,
       fidl::InterfaceHandle<ledger::Ledger> ledger,
       fidl::InterfaceRequest<StoryProvider> story_provider_request,
-      UserLedgerRepositoryFactory* ledger_repo_factory);
+      UserLedgerRepositoryFactory* ledger_repository_factory);
 
   ~StoryProviderImpl() override = default;
 
@@ -102,7 +102,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
   // Owned by UserRunner.
-  UserLedgerRepositoryFactory* ledger_repo_factory_;
+  UserLedgerRepositoryFactory* const ledger_repository_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

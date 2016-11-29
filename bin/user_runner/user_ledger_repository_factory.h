@@ -26,7 +26,7 @@ class UserLedgerRepositoryFactory {
 
  private:
   std::string user_repository_path_;
-  ledger::LedgerRepositoryFactoryPtr ledger_repo_factory_;
+  ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserLedgerRepositoryFactory);
 };

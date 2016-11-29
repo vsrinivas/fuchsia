@@ -10,11 +10,11 @@ UserLedgerRepositoryFactory::UserLedgerRepositoryFactory(
   const std::string& user_repository_path,
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory)
     : user_repository_path_(user_repository_path),
-      ledger_repo_factory_(std::move(ledger_repository_factory)) {}
+      ledger_repository_factory_(std::move(ledger_repository_factory)) {}
 
 ledger::LedgerRepositoryPtr UserLedgerRepositoryFactory::Clone() {
   ledger::LedgerRepositoryPtr repo;
-  ledger_repo_factory_->GetRepository(
+  ledger_repository_factory_->GetRepository(
         user_repository_path_, GetProxy(&repo),
         [this](ledger::Status status) {
           if (status != ledger::Status::OK) {

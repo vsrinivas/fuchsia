@@ -175,7 +175,7 @@ class CreateStoryCall : public Transaction {
       const fidl::String& url,
       const std::string& story_id,
       fidl::InterfaceRequest<StoryController> story_controller_request,
-      UserLedgerRepositoryFactory* ledger_repo_factory)
+      UserLedgerRepositoryFactory* ledger_repository_factory)
       : Transaction(container),
         ledger_(ledger),
         environment_(environment),
@@ -183,7 +183,7 @@ class CreateStoryCall : public Transaction {
         url_(url),
         story_id_(story_id),
         story_controller_request_(std::move(story_controller_request)),
-        ledger_repo_factory_(ledger_repo_factory) {
+        ledger_repository_factory_(ledger_repository_factory) {
     ledger_->NewPage(GetProxy(&story_page_), [this](ledger::Status status) {
       story_page_->GetId([this](fidl::Array<uint8_t> story_page_id) {
         story_data_ = StoryData::New();
@@ -201,7 +201,7 @@ class CreateStoryCall : public Transaction {
           environment_->GetApplicationLauncher(fidl::GetProxy(&launcher));
           StoryControllerImpl::New(
               std::move(story_data_), story_provider_impl_, std::move(launcher),
-              std::move(story_controller_request_), ledger_repo_factory_);
+              std::move(story_controller_request_), ledger_repository_factory_);
           Done();
         });
       });
@@ -215,7 +215,7 @@ class CreateStoryCall : public Transaction {
   const fidl::String url_;
   const std::string story_id_;
   fidl::InterfaceRequest<StoryController> story_controller_request_;
-  UserLedgerRepositoryFactory* const ledger_repo_factory_;  // not owned
+  UserLedgerRepositoryFactory* const ledger_repository_factory_;  // not owned
 
   ledger::PagePtr story_page_;
   StoryDataPtr story_data_;
@@ -263,14 +263,14 @@ class ResumeStoryCall : public Transaction {
       StoryProviderImpl* const story_provider_impl,
       const fidl::String& story_id,
       fidl::InterfaceRequest<StoryController> story_controller_request,
-      UserLedgerRepositoryFactory* ledger_repo_factory)
+      UserLedgerRepositoryFactory* ledger_repository_factory)
       : Transaction(container),
         ledger_(ledger),
         environment_(environment),
         story_provider_impl_(story_provider_impl),
         story_id_(story_id),
         story_controller_request_(std::move(story_controller_request)),
-        ledger_repo_factory_(ledger_repo_factory) {
+        ledger_repository_factory_(ledger_repository_factory) {
     story_provider_impl_->GetStoryData(
         story_id_, [this](StoryDataPtr story_data) {
           story_data_ = std::move(story_data);
@@ -282,7 +282,7 @@ class ResumeStoryCall : public Transaction {
                 StoryControllerImpl::New(
                     std::move(story_data_), story_provider_impl_,
                     std::move(launcher), std::move(story_controller_request_),
-                    ledger_repo_factory_);
+                    ledger_repository_factory_);
                 Done();
               });
         });
@@ -294,7 +294,7 @@ class ResumeStoryCall : public Transaction {
   StoryProviderImpl* const story_provider_impl_;  // not owned
   const fidl::String story_id_;
   fidl::InterfaceRequest<StoryController> story_controller_request_;
-  UserLedgerRepositoryFactory* const ledger_repo_factory_;  // not owned
+  UserLedgerRepositoryFactory* const ledger_repository_factory_;  // not owned
 
   StoryDataPtr story_data_;
   ledger::PagePtr story_page_;
@@ -359,13 +359,13 @@ StoryProviderImpl::StoryProviderImpl(
     ApplicationEnvironmentPtr environment,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
     fidl::InterfaceRequest<StoryProvider> story_provider_request,
-    UserLedgerRepositoryFactory* ledger_repo_factory)
+    UserLedgerRepositoryFactory* ledger_repository_factory)
     : environment_(std::move(environment)),
       binding_(this),
       storage_(new Storage),
       page_watcher_binding_(this),
-      ledger_repo_factory_(ledger_repo_factory) {
-  FTL_DCHECK(ledger_repo_factory_);
+      ledger_repository_factory_(ledger_repository_factory) {
+  FTL_DCHECK(ledger_repository_factory_);
 
   ledger_.Bind(std::move(ledger));
 
@@ -454,7 +454,8 @@ void StoryProviderImpl::CreateStory(
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   new CreateStoryCall(
       &transaction_container_, ledger_.get(), environment_.get(), this, url,
-      story_id, std::move(story_controller_request), ledger_repo_factory_);
+      story_id, std::move(story_controller_request),
+      ledger_repository_factory_);
 }
 
 // |StoryProvider|
@@ -470,7 +471,8 @@ void StoryProviderImpl::ResumeStory(
     fidl::InterfaceRequest<StoryController> story_controller_request) {
   new ResumeStoryCall(
       &transaction_container_, ledger_.get(), environment_.get(), this,
-      story_id, std::move(story_controller_request), ledger_repo_factory_);
+      story_id, std::move(story_controller_request),
+      ledger_repository_factory_);
 }
 
 // |StoryProvider|

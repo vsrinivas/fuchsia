@@ -197,11 +197,11 @@ class UserRunnerImpl : public UserRunner {
     application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                         nullptr);
 
-    ledger::LedgerRepositoryFactoryPtr ledger_repo_factory;
-    ConnectToService(app_services.get(), GetProxy(&ledger_repo_factory));
-    user_ledger_factory_ = std::make_unique<UserLedgerRepositoryFactory>(
+    ledger::LedgerRepositoryFactoryPtr ledger_repository_factory;
+    ConnectToService(app_services.get(), GetProxy(&ledger_repository_factory));
+    ledger_repository_factory_ = std::make_unique<UserLedgerRepositoryFactory>(
         kLedgerBaseDir + to_hex_string(user_id),
-        std::move(ledger_repo_factory));
+        std::move(ledger_repository_factory));
   }
 
   // |UserRunner|:
@@ -212,8 +212,8 @@ class UserRunnerImpl : public UserRunner {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
     SetupLedgerRepository(user_id);
 
-    user_runner_scope_ = std::make_unique<UserRunnerScope>(
-        application_context_, user_id, user_ledger_factory_->Clone());
+    user_runner_scope_ = std::make_unique<UserRunnerScope>(application_context_,
+        user_id, ledger_repository_factory_->Clone());
 
     ApplicationEnvironmentPtr user_runner_env =
         user_runner_scope_->GetEnvironment();
@@ -221,16 +221,16 @@ class UserRunnerImpl : public UserRunner {
     ServiceProviderPtr user_runner_env_services;
     user_runner_env->GetServices(GetProxy(&user_runner_env_services));
 
-    stories_env_host_ = std::make_unique<UserStoriesScope>(
+    stories_scope_ = std::make_unique<UserStoriesScope>(
         std::move(user_runner_env), user_id.Clone());
 
     RunUserShell(user_shell, user_shell_args, std::move(view_owner_request));
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
     auto story_provider_impl = new StoryProviderImpl(
-        stories_env_host_->GetEnvironment(),
+        stories_scope_->GetEnvironment(),
         ConnectToService<ledger::Ledger>(user_runner_env_services.get()),
-        GetProxy(&story_provider), user_ledger_factory_.get());
+        GetProxy(&story_provider), ledger_repository_factory_.get());
 
     auto maxwell_services =
         GetServiceProvider("file:///system/apps/maxwell_launcher", nullptr);
@@ -295,11 +295,11 @@ class UserRunnerImpl : public UserRunner {
   std::shared_ptr<ApplicationContext> application_context_;
   StrongBinding<UserRunner> binding_;
 
-  std::unique_ptr<UserLedgerRepositoryFactory> user_ledger_factory_;
+  std::unique_ptr<UserLedgerRepositoryFactory> ledger_repository_factory_;
 
   // The application environment hosted by user runner.
   std::unique_ptr<UserRunnerScope> user_runner_scope_;
-  std::unique_ptr<UserStoriesScope> stories_env_host_;
+  std::unique_ptr<UserStoriesScope> stories_scope_;
 
   UserShellPtr user_shell_;
 
