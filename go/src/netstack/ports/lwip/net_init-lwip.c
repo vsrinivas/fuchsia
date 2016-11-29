@@ -7,6 +7,7 @@
 #include "third_party/lwip/src/include/lwip/inet.h"
 #include "third_party/lwip/src/include/lwip/netif.h"
 #include "third_party/lwip/src/include/lwip/tcpip.h"
+#include "third_party/lwip/src/include/lwip/stats.h"
 
 // initialize a lwip network interface
 
@@ -98,4 +99,8 @@ int net_init(void) {
   lwip_debug_flags = LWIP_DBG_ON;
 #endif
   return lwip_netif_init();
+}
+
+void net_debug(void) {
+  stats_display();
 }

@@ -5,6 +5,35 @@
 #ifndef APPS_NETSTACK_PORTS_LWIP_LWIP_SOCKET_H_
 #define APPS_NETSTACK_PORTS_LWIP_LWIP_SOCKET_H_
 
+// options for socket level
+#define LWIP_SOL_SOCKET  0xfff
+
+#define LWIP_SO_REUSEADDR   0x0004
+#define LWIP_SO_KEEPALIVE   0x0008
+#define LWIP_SO_BROADCAST   0x0020
+
+#define LWIP_SO_DEBUG       0x0001
+#define LWIP_SO_ACCEPTCONN  0x0002
+#define LWIP_SO_DONTROUTE   0x0010
+#define LWIP_SO_USELOOPBACK 0x0040
+#define LWIP_SO_LINGER      0x0080
+#define LWIP_SO_DONTLINGER  ((int)(~LWIP_SO_LINGER))
+#define LWIP_SO_OOBINLINE   0x0100
+#define LWIP_SO_REUSEPORT   0x0200
+#define LWIP_SO_SNDBUF      0x1001
+#define LWIP_SO_RCVBUF      0x1002
+#define LWIP_SO_SNDLOWAT    0x1003
+#define LWIP_SO_RCVLOWAT    0x1004
+#define LWIP_SO_SNDTIMEO    0x1005
+#define LWIP_SO_RCVTIMEO    0x1006
+#define LWIP_SO_ERROR       0x1007
+#define LWIP_SO_TYPE        0x1008
+#define LWIP_SO_CONTIMEO    0x1009
+#define LWIP_SO_NO_CHECK    0x100a
+
+// options for TCP level
+#define LWIP_TCP_NODELAY    0x01
+
 // The definitions here are identical to the ones in lwip/sockets.h
 // except the "lwip_" prefix.
 

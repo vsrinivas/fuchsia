@@ -19,6 +19,7 @@
 #include "apps/netstack/net_socket.h"
 #include "apps/netstack/ports/lwip/lwip-netdb.h"
 #include "apps/netstack/ports/lwip/lwip-socket.h"
+#include "apps/netstack/ports/lwip/net_debug.h"
 #include "apps/netstack/trace.h"
 
 // Network Socket Layer for lwip
@@ -213,19 +214,22 @@ static void convert_optname_to_lwip(int level, int optname, int* lwip_level,
                                    int* lwip_optname) {
   switch (level) {
     case SOL_SOCKET:
-      *lwip_level = 0xfff;
+      *lwip_level = LWIP_SOL_SOCKET;
       switch (optname) {
       case SO_ERROR:
-        *lwip_optname = 0x1007;
+        *lwip_optname = LWIP_SO_ERROR;
         break;
       case SO_REUSEADDR:
-        *lwip_optname = 0x0004;
+        *lwip_optname = LWIP_SO_REUSEADDR;
         break;
       case SO_KEEPALIVE:
-        *lwip_optname = 0x0008;
+        *lwip_optname = LWIP_SO_KEEPALIVE;
         break;
       case SO_BROADCAST:
-        *lwip_optname = 0x0020;
+        *lwip_optname = LWIP_SO_BROADCAST;
+        break;
+      case SO_DEBUG:
+        *lwip_optname = LWIP_SO_DEBUG;
         break;
       }
       break;
@@ -233,7 +237,7 @@ static void convert_optname_to_lwip(int level, int optname, int* lwip_level,
       *lwip_level = level;
       switch (optname) {
       case TCP_NODELAY:
-        *lwip_optname = 1;
+        *lwip_optname = LWIP_TCP_NODELAY;
         break;
       }
       break;
@@ -269,6 +273,12 @@ int net_setsockopt(int sockfd, int level, int optname, const void* optval,
     error("net_setsockopt: unknown level %d, optname %d\n", level, optname);
     errno = EINVAL;
     return -1;
+  }
+
+  if (lwip_optname == LWIP_SO_DEBUG) {
+    // SO_DEBUG is not implemented in lwip. Use this to display stats.
+    net_debug();
+    return 0;
   }
 
   return lwip_setsockopt(sockfd, lwip_level, lwip_optname, optval, optlen);
