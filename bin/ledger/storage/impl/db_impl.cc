@@ -107,6 +107,17 @@ std::string NewJournalId(JournalType journal_type) {
   return id;
 }
 
+Status ConvertStatus(leveldb::Status s) {
+  if (s.IsNotFound()) {
+    return Status::NOT_FOUND;
+  }
+  if (!s.ok()) {
+    FTL_LOG(ERROR) << "LevelDB error: " << s.ToString();
+    return Status::INTERNAL_IO_ERROR;
+  }
+  return Status::OK;
+}
+
 class JournalEntryIterator : public Iterator<const EntryChange> {
  public:
   JournalEntryIterator(std::unique_ptr<leveldb::Iterator> it,
@@ -479,7 +490,7 @@ Status DbImpl::GetByPrefix(const leveldb::Slice& prefix,
     result.push_back(key.ToString());
   }
   if (!it->status().ok()) {
-    return Status::INTERNAL_IO_ERROR;
+    return ConvertStatus(it->status());
   }
   key_suffixes->swap(result);
   return Status::OK;
@@ -498,7 +509,7 @@ Status DbImpl::GetEntriesByPrefix(
         key.ToString(), it->value().ToString()));
   }
   if (!it->status().ok()) {
-    return Status::INTERNAL_IO_ERROR;
+    return ConvertStatus(it->status());
   }
   key_value_pairs->swap(result);
   return Status::OK;
@@ -510,18 +521,11 @@ Status DbImpl::DeleteByPrefix(const leveldb::Slice& prefix) {
        it->Next()) {
     Delete(it->key());
   }
-  return it->status().ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
+  return ConvertStatus(it->status());
 }
 
 Status DbImpl::Get(convert::ExtendedStringView key, std::string* value) {
-  leveldb::Status s = db_->Get(read_options_, key, value);
-  if (s.IsNotFound()) {
-    return Status::NOT_FOUND;
-  }
-  if (!s.ok()) {
-    return Status::INTERNAL_IO_ERROR;
-  }
-  return Status::OK;
+  return ConvertStatus(db_->Get(read_options_, key, value));
 }
 
 Status DbImpl::Put(convert::ExtendedStringView key, ftl::StringView value) {
@@ -529,8 +533,7 @@ Status DbImpl::Put(convert::ExtendedStringView key, ftl::StringView value) {
     batch_->Put(key, convert::ToSlice(value));
     return Status::OK;
   }
-  leveldb::Status s = db_->Put(write_options_, key, convert::ToSlice(value));
-  return s.ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
+  return ConvertStatus(db_->Put(write_options_, key, convert::ToSlice(value)));
 }
 
 Status DbImpl::Delete(convert::ExtendedStringView key) {
@@ -538,8 +541,7 @@ Status DbImpl::Delete(convert::ExtendedStringView key) {
     batch_->Delete(key);
     return Status::OK;
   }
-  leveldb::Status s = db_->Delete(write_options_, key);
-  return s.ok() ? Status::OK : Status::INTERNAL_IO_ERROR;
+  return ConvertStatus(db_->Delete(write_options_, key));
 }
 
 }  // namespace storage
