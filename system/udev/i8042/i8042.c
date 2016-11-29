@@ -469,7 +469,8 @@ static void i8042_process_mouse(i8042_device_t* dev, uint8_t data, unsigned int 
     case 2: {
         int state = dev->report.mouse.buttons;
         int d = data;
-        dev->report.mouse.rel_y = d - ((state << 3) & 0x100);
+        // PS/2 maps the y-axis backwards so invert the rel_y value
+        dev->report.mouse.rel_y = ((state << 3) & 0x100) - d;
         dev->report.mouse.buttons &= 0x7;
 
         hid_io_queue(&dev->hiddev, (const uint8_t*)&dev->report.mouse, sizeof(dev->report.mouse));
