@@ -154,10 +154,12 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
 
     // page fault it
     status_t status = aspace->PageFault(addr, flags);
+#if WITH_LIB_MAGENTA
     if (status == ERR_NOT_FOUND) {
         printf("PageFault: %zu free pages\n", pmm_count_free_pages());
         DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8*256);
     }
+#endif
     return status;
 }
 
