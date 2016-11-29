@@ -162,7 +162,12 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     // Initialize the SuggestionEngine.
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
     story_provider_binding_.Bind(&story_provider_handle);
-    suggestion_engine()->Initialize(std::move(story_provider_handle));
+
+    // Hack to get an unbound FocusController for Initialize().
+    fidl::InterfaceHandle<modular::FocusController> focus_controller_handle;
+    fidl::GetProxy(&focus_controller_handle);
+    suggestion_engine()->Initialize(std::move(story_provider_handle),
+                                    std::move(focus_controller_handle));
   }
 
  protected:

@@ -42,9 +42,14 @@ class LauncherApp : public maxwell::Launcher {
   void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
                   fidl::InterfaceHandle<modular::FocusController>
                       focus_controller) override {
-    suggestion_engine_->Initialize(std::move(story_provider));
-
     focus_controller_.Bind(std::move(focus_controller));
+
+    fidl::InterfaceHandle<modular::FocusController> focus_controller_dup;
+    auto focus_controller_request = fidl::GetProxy(&focus_controller_dup);
+    focus_controller_->Duplicate(std::move(focus_controller_request));
+
+    suggestion_engine_->Initialize(std::move(story_provider),
+                                   std::move(focus_controller_dup));
 
     // TODO(rosswang): Search the ComponentIndex and iterate through results.
     // StartAgent("file:///system/apps/acquirers/gps");

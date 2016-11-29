@@ -13,6 +13,7 @@
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 namespace maxwell {
 namespace suggestion {
@@ -29,8 +30,6 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
         [this](fidl::InterfaceRequest<SuggestionProvider> request) {
           suggestion_provider_bindings_.AddBinding(this, std::move(request));
         });
-    focus_controller_ptr_ =
-        app_context_->ConnectToEnvironmentService<modular::FocusController>();
   }
 
   // SuggestionProvider
@@ -70,23 +69,27 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
     if (proposal_record) {
       if (interaction->type == InteractionType::SELECTED) {
-        modular::StoryControllerPtr story_controller;
         // TODO(rosswang): If we're asked to add multiple modules, we probably
         // want to add them to the same story. We can't do that yet, but we need
         // to receive a StoryController anyway (not optional atm.).
         for (const auto& action : proposal_record->proposal->on_selected) {
           switch (action->which()) {
             case Action::Tag::CREATE_STORY: {
+              modular::StoryControllerPtr story_controller;
               const auto& create_story = action->get_create_story();
               if (story_provider_) {
                 story_provider_->CreateStory(create_story->module_id,
                                              GetProxy(&story_controller));
                 FTL_LOG(INFO) << "Creating story with module "
                               << create_story->module_id;
-                story_controller->GetInfo(
-                    [this](modular::StoryInfoPtr story_info) {
+                story_controller->GetInfo(ftl::MakeCopyable(
+                    // TODO(thatguy): We should not be std::move()ing
+                    // story_controller *while we're calling it*.
+                    [ this, controller = std::move(story_controller) ](
+                        modular::StoryInfoPtr story_info) {
+                      FTL_LOG(INFO) << "Focusing!";
                       focus_controller_ptr_->FocusStory(story_info->id);
-                    });
+                    }));
                 const auto& initial_data = create_story->initial_data;
                 if (initial_data) {
                   modular::LinkPtr link;
@@ -119,9 +122,11 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
     repo_->GetOrCreateSourceClient(url)->AddBinding(std::move(client));
   }
 
-  void Initialize(
-      fidl::InterfaceHandle<modular::StoryProvider> story_provider) override {
+  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+                  fidl::InterfaceHandle<modular::FocusController>
+                      focus_controller) override {
     story_provider_.Bind(std::move(story_provider));
+    focus_controller_ptr_.Bind(std::move(focus_controller));
 
     timeline_stories_watcher_.reset(
         new TimelineStoriesWatcher(&story_provider_));
