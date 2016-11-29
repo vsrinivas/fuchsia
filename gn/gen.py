@@ -8,6 +8,7 @@ import json
 import gn
 import os
 import paths
+import subprocess
 import sys
 
 
@@ -25,6 +26,8 @@ def main():
     parser.add_argument("--goma", help="use goma", metavar="GOMADIR",
                         nargs='?', const=True, default=False)
     parser.add_argument("--ccache", "-c", help="use ccache",
+                        action="store_true")
+    parser.add_argument("--omit-tests", help="omit tests from the output",
                         action="store_true")
     (args, passthrough) = parser.parse_known_args()
     if args.release:
@@ -54,6 +57,16 @@ def main():
         gn_args += " use_ccache=true"
     if args.gn_args:
         gn_args += " " + " ".join(args.gn_args)
+
+    if args.omit_tests:
+        target = "//packages/gn:default"
+        desc_cmd = [
+            "desc", outdir_path, target, "deps",
+            "--all", "--testonly=true", "--format=json", "--as=output"
+        ]
+        output = subprocess.check_output(gn.GN_ARGS + desc_cmd + [gn_args])
+        tests = json.loads(output)[target]["deps"]
+        gn_args += " omit_files=\"" + ','.join(tests) + "\""
 
     gn_command += [gn_args]
     if passthrough:

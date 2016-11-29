@@ -8,15 +8,18 @@ import subprocess
 import sys
 import paths
 
+
+DOTFILE_PATH = os.path.join(paths.SCRIPT_DIR, ".gn")
+GN_ARGS = [
+    paths.GN_PATH,
+    "--root=%s" % paths.FUCHSIA_ROOT,
+    "--dotfile=%s" % DOTFILE_PATH,
+    "--script-executable=/usr/bin/env"
+]
+
+
 def run(args):
-    dotfile_path = os.path.join(paths.SCRIPT_DIR, ".gn")
-    gn_args = [
-        paths.GN_PATH,
-        "--root=%s" % paths.FUCHSIA_ROOT,
-        "--dotfile=%s" % dotfile_path,
-        "--script-executable=/usr/bin/env"
-        ] + args
-    return subprocess.call(gn_args)
+    return subprocess.call(GN_ARGS + args)
 
 if __name__ == "__main__":
     sys.exit(run(sys.argv[1:]))

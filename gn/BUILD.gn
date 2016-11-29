@@ -5,6 +5,8 @@
 declare_args() {
   # list of modules
   modules = "default"
+  # list of files omitted from user.bootfs
+  omit_files = ""
   # if true, mkbootfs will compress the user.bootfs
   compress_bootfs = true
 }
@@ -30,6 +32,8 @@ action("mkbootfs") {
                                manifest_file,
                                "--modules",
                                modules,
+                               "--omit-files",
+                               omit_files,
                                "--build-root",
                                rebase_path(root_build_dir),
                                "--depfile",

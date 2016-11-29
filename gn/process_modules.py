@@ -20,17 +20,22 @@ class Amalgamation:
         self.config_paths = []
         self.component_urls = []
         self.build_root = ""
+        self.omit_files = []
 
     def add_config(self, config, config_path):
         self.config_paths.append(config_path)
         for label in config.get("labels", []):
             self.labels.append(label)
         for b in config.get("binaries", []):
+            if b["binary"] in self.omit_files:
+                continue
             file = {}
             file["file"] = os.path.join(self.build_root, b["binary"])
             file["bootfs_path"] = b["bootfs_path"]
             self.files.append(file)
         for r in config.get("resources", []):
+            if r["file"] in self.omit_files:
+                continue
             file = {}
             file["file"] = os.path.join(paths.FUCHSIA_ROOT, r["file"])
             file["bootfs_path"] = r["bootfs_path"]
@@ -46,9 +51,10 @@ class Amalgamation:
                 })
 
 
-def resolve_imports(import_queue, build_root):
+def resolve_imports(import_queue, omit_files, build_root):
     imported = set(import_queue)
     amalgamation = Amalgamation()
+    amalgamation.omit_files = omit_files
     amalgamation.build_root = build_root
     while import_queue:
         config_name = import_queue.pop()
@@ -74,13 +80,14 @@ def main():
                                      + "list of GN targets for a list of Fuchsia modules")
     parser.add_argument("--manifest", help="path to manifest file to generate")
     parser.add_argument("--modules", help="list of modules", default="default")
+    parser.add_argument("--omit-files", help="list of files omitted from user.bootfs", default="")
     parser.add_argument("--build-root", help="path to root of build directory")
     parser.add_argument("--depfile", help="path to depfile to generate")
     parser.add_argument("--component-index", help="path to component index to generate")
     parser.add_argument("--arch", help="architecture being targetted")
     args = parser.parse_args()
 
-    amalgamation = resolve_imports(args.modules.split(","), args.build_root)
+    amalgamation = resolve_imports(args.modules.split(","), args.omit_files.split(","), args.build_root)
     if not amalgamation:
         return 1
 
