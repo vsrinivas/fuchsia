@@ -35,9 +35,9 @@ static mx_status_t vmo_remap(uintptr_t old_mapping, mx_size_t old_len, mx_size_t
 
     memcpy((void*)*new_mapping, (void*)old_mapping, old_len);
 
-    status = _mx_process_unmap_vm(_mx_process_self(), old_mapping, 0);
+    status = _mx_process_unmap_vm(_mx_process_self(), old_mapping, 0u);
     if (status != NO_ERROR) {
-        _mx_process_unmap_vm(_mx_process_self(), *new_mapping, new_len);
+        _mx_process_unmap_vm(_mx_process_self(), *new_mapping, 0u);
         return status;
     }
 
