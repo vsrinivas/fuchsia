@@ -20,9 +20,9 @@ class TimelineStoriesFilter {
   explicit TimelineStoriesFilter(
       TimelineStoriesWatcher* timeline_stories_watcher);
 
-  // "is a" ProposalRecordFilter by virtue of this method. Returns false if
+  // "is a" ProposalFilter by virtue of this method. Returns false if
   // this Proposal should be excluded.
-  bool operator()(const ProposalRecord& proposal);
+  bool operator()(const Proposal& proposal);
 
  private:
   TimelineStoriesWatcher* timeline_stories_watcher_;

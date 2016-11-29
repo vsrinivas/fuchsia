@@ -731,6 +731,8 @@ TEST_F(AskTest, ReactiveAsk) {
 class SuggestionFilteringTest : public NextTest {};
 
 TEST_F(SuggestionFilteringTest, Baseline) {
+  Sleep();  // TEMPORARY; wait for init
+
   // Show that without any existing Stories, we see Proposals to launch
   // any story.
   Proposinator p(suggestion_engine());
@@ -747,6 +749,8 @@ TEST_F(SuggestionFilteringTest, Baseline) {
 }
 
 TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
+  Sleep();  // TEMPORARY; wait for init
+
   // Show that with an existing Story for a URL, we see Proposals to launch
   // other URLs.
   Proposinator p(suggestion_engine());
@@ -756,6 +760,9 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   // already exists.
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bazzle_dazzle";
+  story_info->id = "";
+  story_info->state = modular::StoryState::NEW;
+  story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info));
 
   auto create_story = maxwell::suggestion::CreateStory::New();
@@ -769,6 +776,8 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
 }
 
 TEST_F(SuggestionFilteringTest, FilterOnPropose) {
+  Sleep();  // TEMPORARY; wait for init
+
   // If a Story already exists, then Proposals that want to create
   // that same story are filtered when they are proposed.
   Proposinator p(suggestion_engine());
@@ -778,6 +787,9 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   // already exists.
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bar";
+  story_info->id = "";
+  story_info->state = modular::StoryState::NEW;
+  story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info));
 
   auto create_story = maxwell::suggestion::CreateStory::New();
@@ -787,5 +799,35 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   fidl::Array<maxwell::suggestion::ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
-  CHECK_RESULT_COUNT(0);
+  p.Propose("2");
+  CHECK_RESULT_COUNT(1);
+}
+
+TEST_F(SuggestionFilteringTest, ChangeFiltered) {
+  Sleep();  // TEMPORARY; wait for init
+
+  Proposinator p(suggestion_engine());
+  SetResultCount(10);
+
+  auto story_info = modular::StoryInfo::New();
+  story_info->url = "foo://bar";
+  story_info->id = "";
+  story_info->state = modular::StoryState::NEW;
+  story_info->extra.mark_non_null();
+  story_provider()->NotifyStoryChanged(std::move(story_info));
+
+  auto create_story = maxwell::suggestion::CreateStory::New();
+  create_story->module_id = "foo://bar";
+  auto action = maxwell::suggestion::Action::New();
+  action->set_create_story(std::move(create_story));
+  fidl::Array<maxwell::suggestion::ActionPtr> actions;
+  actions.push_back(std::move(action));
+
+  p.Propose("1", actions.Clone());
+  p.Propose("1", std::move(actions));
+
+  // historically crashed by now
+  p.Propose("2");
+
+  CHECK_RESULT_COUNT(1);
 }

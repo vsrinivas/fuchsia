@@ -8,6 +8,11 @@ namespace maxwell {
 namespace suggestion {
 
 void SuggestionAgentClientImpl::Propose(ProposalPtr proposal) {
+  // TODO(rosswang): remove existing if they match filter
+  if (repo_->filter() && !repo_->filter()(*proposal)) {
+    return;
+  }
+
   const size_t old_size = proposals_.size();
   AgentSuggestionRecord* record = &proposals_[proposal->id];
 

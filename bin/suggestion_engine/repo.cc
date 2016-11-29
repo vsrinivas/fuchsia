@@ -22,13 +22,6 @@ void Repo::AddSuggestion(std::unique_ptr<ProposalRecord> proposal,
   FTL_CHECK(sources_[proposal->source->component_url()].get() ==
             proposal->source);
 
-  // Optionally filter this Proposal out.
-  // TODO(thatguy): This doesn't allow for a change in the filter conditions
-  // to reintroduce Proposals that become valid.
-  if (filter_ && !filter_(*proposal)) {
-    return;
-  }
-
   agent_suggestion_record->suggestion_prototype =
       &*suggestions_.emplace(RandomUuid(), std::move(proposal)).first;
 
