@@ -60,7 +60,7 @@ Status LedgerStorageImpl::CreatePageStorage(
                                                   GetPathFor(page_id), page_id);
   Status s = result->Init();
   if (s != Status::OK) {
-    FTL_LOG(ERROR) << "Failed to initialize PageStorage.";
+    FTL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << s;
     return s;
   }
   *page_storage = std::move(result);
