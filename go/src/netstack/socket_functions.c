@@ -515,10 +515,13 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
       mx_status_t r = mx_socket_write(ios->s, MX_SOCKET_HALF_CLOSE, NULL, 0u,
                                       NULL);
       if (r < 0) {
-        error("do_read: MX_SOCKET_HALF_CLOSE failed\n");
-        return r;
+        if (r != ERR_REMOTE_CLOSED) {
+          error("do_read: MX_SOCKET_HALF_CLOSE failed (status=%d)\n", r);
+          return r;
+        }
+      } else {
+        info("half_close(ios->s 0x%x) => %d (ios=%p)\n", ios->s, r, ios);
       }
-      info("half_close(ios->s 0x%x) => %d (ios=%p)\n", ios->s, r, ios);
       return NO_ERROR;
     } else if (errno_ == EWOULDBLOCK) {
       debug("read would block\n");
