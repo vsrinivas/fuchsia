@@ -28,18 +28,24 @@ UberScene::UberScene(escher::VulkanContext* vulkan_context,
 void UberScene::Init(escher::Stage* stage) {
   blue_ = ftl::MakeRefCounted<escher::Material>();
   red_ = ftl::MakeRefCounted<escher::Material>();
-  pink_ = ftl::MakeRefCounted<escher::Material>();
-  green_ = ftl::MakeRefCounted<escher::Material>();
-  blue_green_ = ftl::MakeRefCounted<escher::Material>();
-  purple_ = ftl::MakeRefCounted<escher::Material>();
   bg_ = ftl::MakeRefCounted<escher::Material>();
-  blue_->set_color(vec3(0.188f, 0.188f, 0.788f));
-  red_->set_color(vec3(0.98f, 0.15f, 0.15f));
-  pink_->set_color(vec3(0.929f, 0.678f, 0.925f));
-  green_->set_color(vec3(0.259f, 0.956f, 0.667));
-  blue_green_->set_color(vec3(0.039f, 0.788f, 0.788f));
   purple_->set_color(vec3(0.588f, 0.239f, 0.729f));
   bg_->set_color(vec3(0.8f, 0.8f, 0.8f));
+
+  // Create meshes for fancy wobble effect.
+  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
+                MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
+  ring_mesh1_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 300.f,
+                                    250.f, 18.f, -15.f);
+
+  ring_mesh2_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 500.f,
+                                    400.f, 18.f, -15.f);
+
+  ring_mesh3_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 500.f,
+                                    350.f, 18.f, -15.f);
+
+  ring_mesh4_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 150.f,
+                                    100.f, 18.f, -15.f);
 }
 
 UberScene::~UberScene() {}
@@ -177,68 +183,52 @@ escher::Model* UberScene::Update(const escher::Stopwatch& stopwatch,
   Object rectangle(Object::NewRect(
       vec2(0.f, 0.f), vec2(screen_width, screen_height), 1.f, bg_));
 
-  // Create meshes for fancy wobble effect.
-  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
-                MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
-
-  auto ring_mesh1 = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f),
-                                        300.f, 250.f, 18.f, -15.f);
-
-  auto ring_mesh2 = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f),
-                                        500.f, 400.f, 18.f, -15.f);
-
-  auto ring_mesh3 = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f),
-                                        500.f, 350.f, 18.f, -15.f);
-
-  auto ring_mesh4 = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f),
-                                        150.f, 100.f, 18.f, -15.f);
-
   vec3 ring1_pos(250., screen_height * 0.5, 10.f);
-  Object ring1(ring_mesh1, ring1_pos, purple_);
+  Object ring1(ring_mesh1_, ring1_pos, purple_);
   ring1.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring2_pos(screen_width - 250., screen_height * 0.5, 10.f);
-  Object ring2(ring_mesh1, ring2_pos, purple_);
+  Object ring2(ring_mesh1_, ring2_pos, purple_);
   ring2.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring1a_pos(250., screen_height * 0.5, 22.f);
-  Object ring1a(ring_mesh4, ring1a_pos, purple_);
+  Object ring1a(ring_mesh4_, ring1a_pos, purple_);
   ring1a.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring2a_pos(screen_width - 250., screen_height * 0.5, 22.f);
-  Object ring2a(ring_mesh4, ring2a_pos, purple_);
+  Object ring2a(ring_mesh4_, ring2a_pos, purple_);
   ring2a.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring3_pos(250., screen_height * 0.5, 1.f);
-  Object ring3(ring_mesh2, ring3_pos, purple_);
+  Object ring3(ring_mesh2_, ring3_pos, purple_);
   ring3.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring4_pos(screen_width - 250., screen_height * 0.5, 1.f);
-  Object ring4(ring_mesh2, ring4_pos, purple_);
+  Object ring4(ring_mesh2_, ring4_pos, purple_);
   ring4.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring5_pos(screen_width * 0.5, 0.0, 2.f);
-  Object ring5(ring_mesh3, ring5_pos, purple_);
+  Object ring5(ring_mesh3_, ring5_pos, purple_);
   ring5.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring6_pos(screen_width * 0.5, screen_height, 2.f);
-  Object ring6(ring_mesh3, ring6_pos, purple_);
+  Object ring6(ring_mesh3_, ring6_pos, purple_);
   ring6.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring7_pos(screen_width * 0.5, 0.0, 15.f);
-  Object ring7(ring_mesh1, ring7_pos, purple_);
+  Object ring7(ring_mesh1_, ring7_pos, purple_);
   ring7.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring8_pos(screen_width * 0.5, screen_height, 15.f);
-  Object ring8(ring_mesh1, ring8_pos, purple_);
+  Object ring8(ring_mesh1_, ring8_pos, purple_);
   ring8.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring7a_pos(screen_width * 0.5, 0.0, 22.f);
-  Object ring7a(ring_mesh4, ring7a_pos, purple_);
+  Object ring7a(ring_mesh4_, ring7a_pos, purple_);
   ring7a.set_shape_modifiers(ShapeModifier::kWobble);
 
   vec3 ring8a_pos(screen_width * 0.5, screen_height, 22.f);
-  Object ring8a(ring_mesh4, ring8a_pos, purple_);
+  Object ring8a(ring_mesh4_, ring8a_pos, purple_);
   ring8a.set_shape_modifiers(ShapeModifier::kWobble);
 
   std::vector<Object> objects{

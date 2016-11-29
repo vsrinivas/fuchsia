@@ -22,16 +22,10 @@ class UberScene3 : public Scene {
  private:
   std::unique_ptr<escher::Model> model_;
 
-  escher::MaterialPtr blue_;
-  escher::MaterialPtr red_;
-  escher::MaterialPtr pink_;
-  escher::MaterialPtr green_;
-  escher::MaterialPtr blue_green_;
-  escher::MaterialPtr purple_;
   escher::MaterialPtr bg_;
 
-  escher::MaterialPtr mc1_;
-  escher::MaterialPtr mc2_;
+  escher::MaterialPtr color1_;
+  escher::MaterialPtr color2_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UberScene3);
 };

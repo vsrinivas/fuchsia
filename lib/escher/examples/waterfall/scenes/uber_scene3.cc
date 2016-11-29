@@ -26,26 +26,12 @@ UberScene3::UberScene3(escher::VulkanContext* vulkan_context,
     : Scene(vulkan_context, escher) {}
 
 void UberScene3::Init(escher::Stage* stage) {
-  blue_ = ftl::MakeRefCounted<escher::Material>();
-  red_ = ftl::MakeRefCounted<escher::Material>();
-  pink_ = ftl::MakeRefCounted<escher::Material>();
-  green_ = ftl::MakeRefCounted<escher::Material>();
-  blue_green_ = ftl::MakeRefCounted<escher::Material>();
-  purple_ = ftl::MakeRefCounted<escher::Material>();
   bg_ = ftl::MakeRefCounted<escher::Material>();
-  mc1_ = ftl::MakeRefCounted<escher::Material>();
-  mc2_ = ftl::MakeRefCounted<escher::Material>();
-
-  blue_->set_color(vec3(0.188f, 0.188f, 0.788f));
-  red_->set_color(vec3(0.98f, 0.15f, 0.15f));
-  pink_->set_color(vec3(0.929f, 0.678f, 0.925f));
-  green_->set_color(vec3(0.259f, 0.956f, 0.667));
-  blue_green_->set_color(vec3(0.039f, 0.788f, 0.788f));
-  purple_->set_color(vec3(0.588f, 0.239f, 0.729f));
+  color1_ = ftl::MakeRefCounted<escher::Material>();
+  color2_ = ftl::MakeRefCounted<escher::Material>();
   bg_->set_color(vec3(0.8f, 0.8f, 0.8f));
-
-  mc1_->set_color(vec3(157.f / 255.f, 183.f / 255.f, 189.f / 255.f));
-  mc2_->set_color(vec3(63.f / 255.f, 138.f / 255.f, 153.f / 255.f));
+  color1_->set_color(vec3(157.f / 255.f, 183.f / 255.f, 189.f / 255.f));
+  color2_->set_color(vec3(63.f / 255.f, 138.f / 255.f, 153.f / 255.f));
 }
 
 UberScene3::~UberScene3() {}
@@ -118,12 +104,13 @@ escher::Model* UberScene3::Update(const escher::Stopwatch& stopwatch,
 
       Object circle(Object::NewCircle(
           vec2(hex_current_x_pos, hex_current_y_pos),
-          hex_circle_radius * circle_scale, circle_elevation, mc2_));
+          hex_circle_radius * circle_scale, circle_elevation, color2_));
       objects.push_back(circle);
 
-      Object circle_bg(Object::NewCircle(
-          vec2(hex_current_x_pos, hex_current_y_pos),
-          hex_circle_radius * circle_scale_alt, circle_elevation - 4.f, mc1_));
+      Object circle_bg(
+          Object::NewCircle(vec2(hex_current_x_pos, hex_current_y_pos),
+                            hex_circle_radius * circle_scale_alt,
+                            circle_elevation - 4.f, color1_));
       objects.push_back(circle_bg);
 
       circle_index++;

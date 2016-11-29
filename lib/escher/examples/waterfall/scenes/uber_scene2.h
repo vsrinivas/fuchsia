@@ -24,11 +24,14 @@ class UberScene2 : public Scene {
 
   escher::MaterialPtr blue_;
   escher::MaterialPtr red_;
-  escher::MaterialPtr pink_;
-  escher::MaterialPtr green_;
-  escher::MaterialPtr blue_green_;
   escher::MaterialPtr purple_;
   escher::MaterialPtr bg_;
+
+  escher::MeshPtr ring_mesh1_;
+  escher::MeshPtr ring_mesh2_;
+  escher::MeshPtr ring_mesh3_;
+  escher::MeshPtr ring_mesh4_;
+  escher::MeshPtr ring_mesh5_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UberScene2);
 };
