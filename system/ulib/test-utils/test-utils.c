@@ -264,3 +264,12 @@ void tu_handle_get_basic_info(mx_handle_t handle, mx_info_handle_basic_t* info)
     if (status < 0)
         tu_fatal(__func__, status);
 }
+
+mx_handle_t tu_get_thread(mx_handle_t proc, mx_koid_t tid)
+{
+    mx_handle_t thread;
+    mx_status_t status = mx_object_get_child(proc, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    if (status != NO_ERROR)
+        tu_fatal(__func__, status);
+    return thread;
+}

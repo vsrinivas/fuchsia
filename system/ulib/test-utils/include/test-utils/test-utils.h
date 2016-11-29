@@ -119,4 +119,8 @@ void tu_set_exception_port(mx_handle_t handle, mx_handle_t eport, uint64_t key, 
 
 void tu_handle_get_basic_info(mx_handle_t handle, mx_info_handle_basic_t* info);
 
+// Return a handle of thread |tid|.
+
+mx_handle_t tu_get_thread(mx_handle_t proc, mx_koid_t tid);
+
 __END_CDECLS
