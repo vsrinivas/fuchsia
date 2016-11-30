@@ -2,17 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("gdbserver") {
-  testonly = true
-
-  deps = [
-    ":bin",
-    ":gdbserver_unittests",
-    "test_apps",
-  ]
-}
-
-executable("bin") {
+executable("gdbserver") {
   output_name = "debugserver"
 
   sources = [
@@ -65,6 +55,15 @@ executable("bin") {
   libs = [
     "launchpad",
     "magenta",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":gdbserver_unittests",
+    "test_apps",
   ]
 }
 

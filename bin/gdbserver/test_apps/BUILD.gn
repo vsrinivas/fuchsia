@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 group("test_apps") {
+  testonly = true
+
   deps = [
     ":crash_test",
     ":exit_test",
@@ -11,18 +13,24 @@ group("test_apps") {
 }
 
 executable("exit_test") {
+  testonly = true
+
   sources = [
     "exit_test.c",
   ]
 }
 
 executable("crash_test") {
+  testonly = true
+
   sources = [
     "crash_test.c",
   ]
 }
 
 executable("loop_test") {
+  testonly = true
+
   sources = [
     "loop_test.c",
   ]
