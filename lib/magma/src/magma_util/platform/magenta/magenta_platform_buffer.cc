@@ -390,9 +390,8 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size)
 
     mx::vmo vmo;
     mx_status_t status = mx::vmo::create(size, 0, &vmo);
-    if (status != NO_ERROR) {
-        return DRETP(nullptr, "failed to allocate vmo size %lld: %d", size);
-    }
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "failed to allocate vmo size %lld: %d", size, status);
 
     DLOG("allocated vmo size %ld handle 0x%x", size, vmo.get());
     return std::unique_ptr<PlatformBuffer>(new MagentaPlatformBuffer(std::move(vmo), size));
