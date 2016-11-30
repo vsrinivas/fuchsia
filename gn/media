@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//apps/media"
+        "//apps/media",
+        "//apps/media:apptests"
     ],
     "binaries": [
         {
