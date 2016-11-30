@@ -5,6 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/io-buffer.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/ethernet.h>
 #include <hw/pci.h>
@@ -35,6 +36,7 @@ struct ethernet_device {
     mx_handle_t irqh;
     bool edge_triggered_irq;
     thrd_t thread;
+    io_buffer_t buffer;
 };
 
 #define get_eth_device(d) containerof(d, ethernet_device_t, dev)
@@ -201,14 +203,13 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
         goto fail;
     }
 
-    mx_paddr_t iophys;
-    void* iomem;
-    if ((r = mx_alloc_device_memory(get_root_resource(), ETH_ALLOC, &iophys, &iomem)) < 0) {
-        printf("eth: cannot alloc buffers %d\n", r);
+    r = io_buffer_init(&edev->buffer, ETH_ALLOC, IO_BUFFER_RW);
+    if (r < 0) {
+        printf("eth: cannot alloc io-buffer %d\n", r);
         goto fail;
     }
 
-    eth_setup_buffers(&edev->eth, iomem, iophys);
+    eth_setup_buffers(&edev->eth, io_buffer_virt(&edev->buffer), io_buffer_phys(&edev->buffer));
     eth_init_hw(&edev->eth);
 
     device_init(&edev->dev, drv, "intel-ethernet", &device_ops);
@@ -224,6 +225,7 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
     return NO_ERROR;
 
 fail:
+    io_buffer_release(&edev->buffer);
     if (edev->ioh) {
         edev->pci->enable_bus_master(edev->pcidev, true);
         mx_handle_close(edev->irqh);
