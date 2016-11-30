@@ -19,7 +19,9 @@ invalid.
 
 ## SUPPORTED CLOCK IDS
 
-*MX_CLOCK_MONOTONIC** number of nanoseconds since the system was powered on.
+*MX_CLOCK_MONOTONIC* number of nanoseconds since the system was powered on.
+
+*MX_CLOCK_UTC* number of wall clock nanoseconds since the Unix epoch (midnight on January 1 1970) in UTC
 
 ## RETURN VALUE
 
@@ -28,4 +30,3 @@ invalid.
 ## ERRORS
 
 ## BUGS
-
