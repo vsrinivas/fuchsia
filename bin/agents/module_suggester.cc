@@ -22,20 +22,31 @@ struct ProposalContent {
 
 const std::unordered_map<std::string, ProposalContent> kNextStories(
     {{"Open Mail",
-      {"file:///system/apps/email_story", 0xff4885ed, ""}},
-      {"Video Player", {"file:///system/apps/video_player", 0xff9575cd, ""}}});
+      {"file:///system/apps/email_story", 0xff4285f4 /*blue from Inbox*/, ""}},
+     {"Video Player",
+      {"file:///system/apps/video_player", 0xff9575cd /*Deep Purple 300*/,
+       ""}}});
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
-    {{"Terminal", {"file:///system/apps/moterm", 0xff000000, ""}},
+    {{"Terminal", {"file:///system/apps/moterm", 0xff000000 /*black*/, ""}},
      {"YouTube",
-      {"file:///system/apps/youtube_story", 0xffc4302b, ""}},
+      {"file:///system/apps/youtube_story",
+       0xffe52d27 /*YouTube red from color spec*/, ""}},
      {"Music",
-      {"file:///system/apps/music_story", 0xfffd8c00, ""}},
-     {"Noodles", {"file:///system/apps/noodles_view", 0xff76ff03, ""}},
-     {"Color", {"file:///system/apps/color", 0xff311b92, ""}},
+      {"file:///system/apps/music_story",
+       0xffff8c00 /*Google Play Music logo orange*/, ""}},
+     {"Noodles",
+      {"file:///system/apps/noodles_view", 0xff76ff03 /*Light Green A400*/,
+       ""}},
+     {"Color",
+      {"file:///system/apps/color", 0xff1DE9B6 /*Teal A400 from module*/, ""}},
      {"Spinning Square",
-      {"file:///system/apps/spinning_square_view", 0xfff50057, ""}},
-     {"Paint", {"file:///system/apps/paint_view", 0xffff0000, ""}}});
+      {"file:///system/apps/spinning_square_view",
+       0xfff50057 /*Pink A400 from module foreground color*/, ""}},
+     {"Paint",
+      {"file:///system/apps/paint_view", 0xffff0000 /*red from module*/, ""}},
+     {"Hello Material",
+      {"file:///system/apps/hello_material", 0xff4caf50 /*Green 500*/, ""}}});
 
 maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
                                             const ProposalContent& content) {
