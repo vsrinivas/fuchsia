@@ -167,6 +167,12 @@ ARCH_CFLAGS :=
 ARCH_CPPFLAGS :=
 ARCH_ASMFLAGS :=
 
+# Host compile flags
+HOST_COMPILEFLAGS :=
+HOST_CFLAGS :=
+HOST_CPPFLAGS :=
+HOST_ASMFLAGS :=
+
 # top level rule
 all:: $(OUTLKBIN) $(OUTLKELF)-gdb.py
 
@@ -443,7 +449,8 @@ HOST_USE_CLANG ?= $(shell which $(HOST_TOOLCHAIN_PREFIX)clang)
 HOST_PLATFORM := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ifneq ($(HOST_USE_CLANG),)
 HOST_CC      := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)clang
-HOST_AR      := $(HOST_TOOLCHAIN_PREFIX)llvm-lib
+HOST_CXX     := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)clang++
+HOST_AR      := $(HOST_TOOLCHAIN_PREFIX)llvm-ar
 HOST_OBJDUMP := $(HOST_TOOLCHAIN_PREFIX)llvm-objdump
 HOST_READELF := $(HOST_TOOLCHAIN_PREFIX)llvm-readobj
 HOST_CPPFILT := $(HOST_TOOLCHAIN_PREFIX)llvm-cxxfilt
@@ -455,6 +462,7 @@ ifeq ($(FOUND_HOST_GCC),)
 $(error cannot find toolchain, please set HOST_TOOLCHAIN_PREFIX or add it to your path)
 endif
 HOST_CC      := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)gcc
+HOST_CXX     := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)g++
 HOST_AR      := $(HOST_TOOLCHAIN_PREFIX)ar
 HOST_OBJDUMP := $(HOST_TOOLCHAIN_PREFIX)objdump
 HOST_READELF := $(HOST_TOOLCHAIN_PREFIX)readelf
@@ -465,6 +473,17 @@ HOST_LD      := $(HOST_TOOLCHAIN_PREFIX)ld
 endif
 HOST_OBJCOPY := $(HOST_TOOLCHAIN_PREFIX)objcopy
 HOST_STRIP   := $(HOST_TOOLCHAIN_PREFIX)strip
+
+ifneq ($(HOST_USE_CLANG),)
+ifeq ($(HOST_PLATFORM),darwin)
+HOST_SYSROOT ?= $(shell xcrun --show-sdk-path)
+endif
+endif
+
+ifneq ($(HOST_SYSROOT),)
+HOST_CFLAGS += --sysroot=$(HOST_SYSROOT)
+HOST_CPPFLAGS += --sysroot=$(HOST_SYSROOT)
+endif
 
 include system/uapp/minfs/build.mk
 # host tools

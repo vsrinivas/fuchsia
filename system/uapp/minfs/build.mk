@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-CFLAGS := -Wall -std=c11 -g -O0
+CFLAGS := $(HOST_CFLAGS) -Wall -std=c11 -g -O0
 CFLAGS += -Werror-implicit-function-declaration
 CFLAGS += -Wstrict-prototypes -Wwrite-strings
 CFLAGS += -Isystem/ulib/system/include
