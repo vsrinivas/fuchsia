@@ -144,6 +144,7 @@ typedef uint32_t mx_rights_t;
 #define MX_VM_FLAG_PERM_WRITE     (1u << 2)
 #define MX_VM_FLAG_PERM_EXECUTE   (1u << 3)
 #define MX_VM_FLAG_ALLOC_BASE     (1u << 4)
+#define MX_VM_FLAG_DMA            (1u << 5)
 
 // flags to channel routines
 #define MX_FLAG_REPLY_CHANNEL            (1u << 0)

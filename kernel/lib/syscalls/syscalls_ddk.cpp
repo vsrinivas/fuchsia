@@ -15,6 +15,7 @@
 #include <dev/interrupt.h>
 #include <dev/udisplay.h>
 #include <kernel/vm.h>
+#include <kernel/vm/vm_object.h>
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
@@ -25,6 +26,7 @@
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/pci.h>
 #include <magenta/user_copy.h>
+#include <magenta/vm_object_dispatcher.h>
 
 #include "syscalls_priv.h"
 
@@ -190,6 +192,54 @@ mx_status_t sys_alloc_device_memory(mx_handle_t hrsrc, uint32_t len,
         return ERR_INVALID_ARGS;
     }
 
+    return NO_ERROR;
+}
+
+mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, mx_size_t size,
+                                      user_ptr<mx_handle_t> out) {
+    LTRACEF("size 0x%zu\n", size);
+
+    if (size == 0) return ERR_INVALID_ARGS;
+
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(hrsrc)) < 0) {
+        return status;
+    }
+
+    size = ROUNDUP_PAGE_SIZE(size);
+    // create a vm object
+    mxtl::RefPtr<VmObject> vmo = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size);
+    if (!vmo)
+        return ERR_NO_MEMORY;
+
+    // always immediately commit memory to the object
+    uint64_t committed;
+    status = vmo->CommitRangeContiguous(0, size, &committed, PAGE_SIZE_SHIFT);
+    if (status < 0 || (size_t)committed < size) {
+        LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
+                (size_t)committed / PAGE_SIZE);
+        return ERR_NO_MEMORY;
+    }
+
+    // create a Vm Object dispatcher
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    mx_rights_t rights;
+    mx_status_t result = VmObjectDispatcher::Create(mxtl::move(vmo), &dispatcher, &rights);
+    if (result != NO_ERROR)
+        return result;
+
+    // create a handle and attach the dispatcher to it
+    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    if (!handle)
+        return ERR_NO_MEMORY;
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    up->AddHandle(mxtl::move(handle));
     return NO_ERROR;
 }
 

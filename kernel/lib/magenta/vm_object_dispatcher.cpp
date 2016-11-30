@@ -142,6 +142,14 @@ mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_
     if (flags & MX_VM_FLAG_PERM_EXECUTE) {
         arch_mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
     }
+    if (flags & MX_VM_FLAG_DMA) {
+#if ARCH_X86_64
+        arch_mmu_flags |= ARCH_MMU_FLAG_CACHED;
+#else
+// for now assume other architectures require uncached device memory
+        arch_mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
+#endif
+    }
 
     // test against READ/WRITE/EXECUTE rights
     if ((flags & MX_VM_FLAG_PERM_READ) && !(vmo_rights & MX_RIGHT_READ)) {

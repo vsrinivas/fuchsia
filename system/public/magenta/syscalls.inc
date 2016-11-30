@@ -258,6 +258,8 @@ MAGENTA_SYSCALL_DEF(4, 4, 182, mx_status_t, alloc_device_memory, mx_handle_t han
                     uint32_t len, mx_paddr_t *out_paddr, void **out_vaddr)
 MAGENTA_SYSCALL_DEF(3, 3, 183, mx_status_t, io_mapping_get_info, mx_handle_t handle,
                     void** out_vaddr, uint64_t* out_size)
+MAGENTA_SYSCALL_DEF(3, 3, 184, mx_status_t, vmo_create_contiguous, mx_handle_t rsrc_handle,
+                    mx_size_t size, USER_PTR(mx_handle_t) out)
 
 // DDK Syscalls: Misc Info
 MAGENTA_SYSCALL_DEF(4, 4, 190, mx_status_t, bootloader_fb_get_info, uint32_t* format,
