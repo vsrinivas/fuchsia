@@ -254,11 +254,9 @@ MAGENTA_SYSCALL_DEF(3, 3, 180, mx_status_t, mmap_device_io, mx_handle_t handle,
 MAGENTA_SYSCALL_DEF(5, 5, 181, mx_status_t, mmap_device_memory, mx_handle_t handle,
                     mx_paddr_t paddr, uint32_t len, mx_cache_policy_t cache_policy,
                     USER_PTR(void *) out_vaddr)
-MAGENTA_SYSCALL_DEF(4, 4, 182, mx_status_t, alloc_device_memory, mx_handle_t handle,
-                    uint32_t len, mx_paddr_t *out_paddr, void **out_vaddr)
-MAGENTA_SYSCALL_DEF(3, 3, 183, mx_status_t, io_mapping_get_info, mx_handle_t handle,
+MAGENTA_SYSCALL_DEF(3, 3, 182, mx_status_t, io_mapping_get_info, mx_handle_t handle,
                     void** out_vaddr, uint64_t* out_size)
-MAGENTA_SYSCALL_DEF(3, 3, 184, mx_status_t, vmo_create_contiguous, mx_handle_t rsrc_handle,
+MAGENTA_SYSCALL_DEF(3, 3, 183, mx_status_t, vmo_create_contiguous, mx_handle_t rsrc_handle,
                     mx_size_t size, USER_PTR(mx_handle_t) out)
 
 // DDK Syscalls: Misc Info

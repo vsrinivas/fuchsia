@@ -151,50 +151,6 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     return NO_ERROR;
 }
 
-mx_status_t sys_alloc_device_memory(mx_handle_t hrsrc, uint32_t len,
-                                    mx_paddr_t* out_paddr, void** out_vaddr) {
-    LTRACEF("len 0x%x\n", len);
-
-    // TODO: finer grained validation
-    mx_status_t status;
-    if ((status = validate_resource_handle(hrsrc)) < 0) {
-        return status;
-    }
-
-    if (!out_paddr)
-        return ERR_INVALID_ARGS;
-    if (!out_vaddr)
-        return ERR_INVALID_ARGS;
-
-    void* vaddr = (void *)mmio_map_base_address;
-    auto aspace = ProcessDispatcher::GetCurrent()->aspace();
-    uint arch_mmu_flags =
-        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE |
-        ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_UNCACHED_DEVICE;
-
-    status_t res = aspace->AllocContiguous("user_mmio", len, &vaddr,
-                                           PAGE_SIZE_SHIFT, 0, VMM_FLAG_COMMIT | VMM_FLAG_VALLOC_BASE,
-                                           arch_mmu_flags);
-    if (res != NO_ERROR)
-        return res;
-
-#if ARCH_ARM64
-    /* TODO - need to fix potential race condition where another thread could unmap this memory
-     *    between the allocation and this cache clean, which would cause a fatal page fault
-     */
-    arch_clean_invalidate_cache_range((addr_t)vaddr, len);
-#endif
-
-    paddr_t paddr = vaddr_to_paddr(vaddr);
-    if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_vaddr), &vaddr, sizeof(void*)) != NO_ERROR ||
-        copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_paddr), &paddr, sizeof(void*)) != NO_ERROR) {
-        aspace->FreeRegion(reinterpret_cast<vaddr_t>(vaddr));
-        return ERR_INVALID_ARGS;
-    }
-
-    return NO_ERROR;
-}
-
 mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, mx_size_t size,
                                       user_ptr<mx_handle_t> out) {
     LTRACEF("size 0x%zu\n", size);

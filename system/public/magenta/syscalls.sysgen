@@ -399,12 +399,12 @@ syscall mmap_device_memory
         cache_policy: mx_cache_policy_t, out_vaddr: any[1] OUT)
     returns (mx_status_t);
 
-syscall alloc_device_memory
-    (handle: mx_handle_t, len: uint32_t, out_paddr: mx_paddr_t[1] OUT, out_vaddr: any[1] OUT)
-    returns (mx_status_t);
-
 syscall io_mapping_get_info
     (handle: mx_handle_t, out_vaddr: any[1] OUT, out_size: uint64_t[1] OUT)
+    returns (mx_status_t);
+
+syscall vmo_create_contiguous
+    (rsrc_handle: mx_handle_t, size: mx_size_t, out: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
 # DDK Syscalls: Misc Info
