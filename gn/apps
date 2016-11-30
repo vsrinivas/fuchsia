@@ -2,7 +2,8 @@
     "labels": [
         "//apps/dart_content_handler",
         "//apps/dart_content_handler/examples",
-        "//apps/maxwell"
+        "//apps/maxwell",
+        "//apps/maxwell/src/integration"
     ],
     "binaries": [
         {
