@@ -22,13 +22,13 @@ struct ProposalContent {
 
 const std::unordered_map<std::string, ProposalContent> kNextStories(
     {{"Open Mail",
-      {"file:///system/apps/email_story", 0xff4285f4 /*blue from Inbox*/, ""}},
+      {"file:///system/apps/email_story", 0xff4285f4 /*Blue from Inbox*/, ""}},
      {"Video Player",
       {"file:///system/apps/video_player", 0xff9575cd /*Deep Purple 300*/,
        ""}}});
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
-    {{"Terminal", {"file:///system/apps/moterm", 0xff000000 /*black*/, ""}},
+    {{"Terminal", {"file:///system/apps/moterm", 0xff212121 /*Grey 900*/, ""}},
      {"YouTube",
       {"file:///system/apps/youtube_story",
        0xffe52d27 /*YouTube red from color spec*/, ""}},
@@ -36,15 +36,15 @@ const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
       {"file:///system/apps/music_story",
        0xffff8c00 /*Google Play Music logo orange*/, ""}},
      {"Noodles",
-      {"file:///system/apps/noodles_view", 0xff76ff03 /*Light Green A400*/,
+      {"file:///system/apps/noodles_view", 0xff212121 /*Grey 900*/,
        ""}},
      {"Color",
-      {"file:///system/apps/color", 0xff1DE9B6 /*Teal A400 from module*/, ""}},
+      {"file:///system/apps/color", 0xff5affd6 /*Custom turquoise*/, ""}},
      {"Spinning Square",
       {"file:///system/apps/spinning_square_view",
-       0xfff50057 /*Pink A400 from module foreground color*/, ""}},
+       0xff512da8 /*Deep Purple 700*/, ""}},
      {"Paint",
-      {"file:///system/apps/paint_view", 0xffff0000 /*red from module*/, ""}},
+      {"file:///system/apps/paint_view", 0xffad1457 /*Blue Grey 50*/, ""}},
      {"Hello Material",
       {"file:///system/apps/hello_material", 0xff4caf50 /*Green 500*/, ""}}});
 
