@@ -30,7 +30,7 @@ FlogLoggerImpl::FlogLoggerImpl(fidl::InterfaceRequest<FlogLogger> request,
       label_(label),
       fd_(directory->GetFile(log_id, label, true)) {
   fidl::internal::MessageValidatorList validators;
-  router_.reset(new fidl::internal::Router(request.PassMessagePipe(),
+  router_.reset(new fidl::internal::Router(request.PassChannel(),
                                            std::move(validators),
                                            fidl::GetDefaultAsyncWaiter()));
   router_->set_incoming_receiver(this);
