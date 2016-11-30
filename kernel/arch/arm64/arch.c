@@ -48,6 +48,16 @@ static void arm64_cpu_early_init(void)
         arm64_el3_to_el1();
     }
 
+    /* set some control bits in sctlr */
+    uint64_t sctlr = ARM64_READ_SYSREG(sctlr_el1);
+    sctlr |= (1<<26);  /* UCI - Allow certain cache ops in EL0 */
+    sctlr |= (1<<15);  /* UCT - Allow EL0 access to CTR register */
+    sctlr |= (1<<14);  /* DZE - Allow EL0 to use DC ZVA */
+    sctlr |= (1<<4);   /* SA0 - Enable Stack Alignment Check EL0 */
+    sctlr |= (1<<3);   /* SA  - Enable Stack Alignment Check EL1 */
+    sctlr &= ~(1<<1);  /* AC  - Disable Alignment Checking for EL1 EL0 */
+    ARM64_WRITE_SYSREG(sctlr_el1, sctlr);
+
     arch_enable_fiqs();
 
     /* enable cycle counter */
