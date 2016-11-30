@@ -27,38 +27,6 @@
 
 #define LOCAL_TRACE 0
 
-namespace {
-
-// Method for converting process handles into VMAR dispatchers for temporary
-// syscall compatibility interfaces.
-mx_status_t proc_handle_to_vmar_dispatcher(mx_handle_t handle,
-                                           mxtl::RefPtr<VmAddressRegionDispatcher>* vmar,
-                                           mx_rights_t* rights) {
-
-    auto up = ProcessDispatcher::GetCurrent();
-
-    // As a temporary compatibility measure, treat a process handle as a
-    // root VMAR handle.
-    mxtl::RefPtr<ProcessDispatcher> proc;
-    mx_rights_t proc_rights;
-    mx_status_t status = up->GetDispatcher(handle, &proc, &proc_rights);
-    if (status != NO_ERROR)
-        return status;
-
-    // Creating a new dispatcher is a little weird here, but fine (has no
-    // effect on the underlying object other than creating a reference).
-    mxtl::RefPtr<Dispatcher> new_dispatcher;
-    status = VmAddressRegionDispatcher::Create(proc->aspace()->root_vmar(), &new_dispatcher,
-                                               rights);
-    if (status != NO_ERROR)
-        return status;
-
-    *vmar = DownCastDispatcher<VmAddressRegionDispatcher>(mxtl::move(new_dispatcher));
-    return NO_ERROR;
-}
-
-} // namespace
-
 mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
                     size_t offset, size_t size, uint32_t flags,
                     user_ptr<mx_handle_t> child_vmar, user_ptr<uintptr_t> child_addr) {
@@ -138,24 +106,8 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_rights_t vmar_rights;
     mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, &vmar_rights);
-    if (status != NO_ERROR) {
-        // TODO(teisenbe): always bail here once we get rid of the compat layer
-        if (status != ERR_WRONG_TYPE)
-            return status;
-
-        status = proc_handle_to_vmar_dispatcher(vmar_handle, &vmar, &vmar_rights);
-        if (status != NO_ERROR)
-            return status;
-
-        // When acting in this compatibility case, the caller will be providing
-        // absolute rather than relative addresses, so we should adjust.
-        if (vmar_offset != 0) {
-            if (vmar_offset < vmar->vmar()->base()) {
-                return ERR_INVALID_ARGS;
-            }
-            vmar_offset -= vmar->vmar()->base();
-        }
-    }
+    if (status != NO_ERROR)
+        return status;
 
     // lookup the VMO dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
@@ -225,15 +177,8 @@ mx_status_t sys_vmar_unmap(mx_handle_t vmar_handle, uintptr_t addr, size_t len) 
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_rights_t vmar_rights;
     mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, &vmar_rights);
-    if (status != NO_ERROR) {
-        // TODO(teisenbe): always bail here once we get rid of the compat layer
-        if (status != ERR_WRONG_TYPE)
-            return status;
-
-        status = proc_handle_to_vmar_dispatcher(vmar_handle, &vmar, &vmar_rights);
-        if (status != NO_ERROR)
-            return status;
-    }
+    if (status != NO_ERROR)
+        return status;
 
     if (addr < vmar->vmar()->base())
         return ERR_INVALID_ARGS;
@@ -249,15 +194,8 @@ mx_status_t sys_vmar_protect(mx_handle_t vmar_handle, uintptr_t addr, size_t len
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_rights_t vmar_rights;
     mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, &vmar_rights);
-    if (status != NO_ERROR) {
-        // TODO(teisenbe): always bail here once we get rid of the compat layer
-        if (status != ERR_WRONG_TYPE)
-            return status;
-
-        status = proc_handle_to_vmar_dispatcher(vmar_handle, &vmar, &vmar_rights);
-        if (status != NO_ERROR)
-            return status;
-    }
+    if (status != NO_ERROR)
+        return status;
 
     if (!VmAddressRegionDispatcher::is_valid_mapping_protection(prot))
         return ERR_INVALID_ARGS;

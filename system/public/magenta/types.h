@@ -180,9 +180,6 @@ typedef uint32_t mx_rights_t;
 #define MX_VM_FLAG_DMA              (1u << 9)
 
 // compatibility flag for vmar routines
-// TODO(teisenbe): Convert all callers to using SPECIFIC instead, and remove
-// this
-#define MX_VM_FLAG_FIXED MX_VM_FLAG_SPECIFIC
 // TODO(teisenbe): Move all users of this to using subregions.
 #define MX_VM_FLAG_ALLOC_BASE      (1u << 10)
 
