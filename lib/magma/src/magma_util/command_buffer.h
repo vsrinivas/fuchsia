@@ -30,6 +30,12 @@ public:
         return reinterpret_cast<magma_system_command_buffer*>(vaddr_)->num_resources;
     }
 
+    uint32_t batch_start_offset() const
+    {
+        DASSERT(vaddr_);
+        return reinterpret_cast<magma_system_command_buffer*>(vaddr_)->batch_start_offset;
+    }
+
     class ExecResource {
     public:
         ExecResource(magma_system_exec_resource* resource,

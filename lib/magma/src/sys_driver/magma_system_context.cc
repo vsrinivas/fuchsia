@@ -92,6 +92,13 @@ bool MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer>
         id_set.insert(id);
         system_resources.push_back(buf);
         msd_resources.push_back(buf->msd_buf());
+
+        if (i == cmd_buf->batch_buffer_resource_index()) {
+            // validate batch start
+            if (cmd_buf->batch_start_offset() >= buf->size())
+                return DRETF(false, "invalid batch start offset 0x%x",
+                             cmd_buf->batch_start_offset());
+        }
     }
 
     // validate relocations

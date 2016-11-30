@@ -39,6 +39,7 @@ struct magma_system_exec_resource {
 // A batch buffer to be executed plus the resources required to execute it
 struct magma_system_command_buffer {
     uint32_t batch_buffer_resource_index; // resource index of the batch buffer to execute
+    uint32_t batch_start_offset; // relative to the starting offset of the buffer
     uint32_t num_resources;
 };
 

@@ -32,6 +32,13 @@ TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidBatchBufferIndex)
     EXPECT_FALSE(cmd_buf->Execute());
 }
 
+TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidBatchStartOffset)
+{
+    auto cmd_buf = CommandBufferHelper::Create();
+    cmd_buf->abi_cmd_buf()->batch_start_offset = UINT32_MAX;
+    EXPECT_FALSE(cmd_buf->Execute());
+}
+
 TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidExecResourceHandle)
 {
     auto cmd_buf = CommandBufferHelper::Create();

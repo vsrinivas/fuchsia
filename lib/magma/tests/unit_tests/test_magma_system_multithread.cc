@@ -101,6 +101,7 @@ public:
 
         auto command_buffer = reinterpret_cast<struct magma_system_command_buffer*>(vaddr);
         command_buffer->batch_buffer_resource_index = 0;
+        command_buffer->batch_start_offset = 0;
         command_buffer->num_resources = 1;
 
         auto exec_resource =
