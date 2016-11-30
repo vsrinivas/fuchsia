@@ -18,35 +18,42 @@ struct ProposalContent {
   std::string url;
   uint32_t color;
   std::string module_data;
+  std::string icon;
 };
 
 const std::unordered_map<std::string, ProposalContent> kNextStories(
     {{"Open Mail",
-      {"file:///system/apps/email_story", 0xff4285f4 /*Blue from Inbox*/, ""}},
+      {"file:///system/apps/email_story", 0xff4285f4 /*Blue from Inbox*/, "",
+       ""}},
      {"Video Player",
-      {"file:///system/apps/video_player", 0xff9575cd /*Deep Purple 300*/,
+      {"file:///system/apps/video_player", 0xff9575cd /*Deep Purple 300*/, "",
        ""}}});
 
 const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
-    {{"Terminal", {"file:///system/apps/moterm", 0xff212121 /*Grey 900*/, ""}},
+    {{"Terminal",
+      {"file:///system/apps/moterm", 0xff212121 /*Grey 900*/, "", ""}},
      {"YouTube",
       {"file:///system/apps/youtube_story",
-       0xffe52d27 /*YouTube red from color spec*/, ""}},
+       0xffe52d27 /*YouTube red from color spec*/, "",
+       "http://s-media-cache-ak0.pinimg.com/originals/bf/66/4b/"
+       "bf664b1b730ac0423225c0c3526a44ef.jpg"}},
      {"Music",
       {"file:///system/apps/music_story",
-       0xffff8c00 /*Google Play Music logo orange*/, ""}},
+       0xffff8c00 /*Google Play Music logo orange*/, "",
+       "http://www.technobuffalo.com/wp-content/uploads/2016/03/"
+       "kanye-west-1280x640.jpg"}},
      {"Noodles",
-      {"file:///system/apps/noodles_view", 0xff212121 /*Grey 900*/,
-       ""}},
+      {"file:///system/apps/noodles_view", 0xff212121 /*Grey 900*/, "", ""}},
      {"Color",
-      {"file:///system/apps/color", 0xff5affd6 /*Custom turquoise*/, ""}},
+      {"file:///system/apps/color", 0xff5affd6 /*Custom turquoise*/, "", ""}},
      {"Spinning Square",
       {"file:///system/apps/spinning_square_view",
-       0xff512da8 /*Deep Purple 700*/, ""}},
+       0xff512da8 /*Deep Purple 700*/, "", ""}},
      {"Paint",
-      {"file:///system/apps/paint_view", 0xffad1457 /*Blue Grey 50*/, ""}},
+      {"file:///system/apps/paint_view", 0xffad1457 /*Blue Grey 50*/, "", ""}},
      {"Hello Material",
-      {"file:///system/apps/hello_material", 0xff4caf50 /*Green 500*/, ""}}});
+      {"file:///system/apps/hello_material", 0xff4caf50 /*Green 500*/, "",
+       ""}}});
 
 maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
                                             const ProposalContent& content) {
@@ -77,7 +84,7 @@ maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
   d->details = "";
   d->color = content.color;
   d->icon_urls.push_back("");
-  d->image_url = "";
+  d->image_url = content.icon;
   d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
   p->display = std::move(d);
 
