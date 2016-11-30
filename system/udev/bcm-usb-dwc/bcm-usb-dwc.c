@@ -675,6 +675,8 @@ mx_status_t dwc_hub_device_added(mx_device_t* hci_device, uint32_t hub_address, 
     do_dwc_iotxn_queue(dwc, set_addr);
     completion_wait(&completion, MX_TIME_INFINITE);
 
+    mx_nanosleep(MX_MSEC(10));
+
     set_addr->ops->release(set_addr);
     get_desc->ops->release(get_desc);
 
@@ -1340,11 +1342,11 @@ static bool handle_normal_channel_halted(uint channel,
                 return true;
             }
 
-            req->next_data_toggle = chanptr->transfer.packet_id;
 
             if (req->short_attempt && req->bytes_queued == 0 &&
                 (usb_ep_type(&ep->desc) != USB_ENDPOINT_INTERRUPT)) {
                 req->complete_split = false;
+                req->next_data_toggle = chanptr->transfer.packet_id;
 
                 // Requeue the request, don't release the channel.
                 mtx_lock(&ep->pending_request_mtx);
@@ -1361,6 +1363,7 @@ static bool handle_normal_channel_halted(uint channel,
 
                 if (req->ctrl_phase == CTRL_PHASE_SETUP) {
                     req->bytes_transferred = 0;
+                    req->next_data_toggle = DWC_TOGGLE_DATA1;
                 }
 
                 req->ctrl_phase++;
@@ -1445,7 +1448,17 @@ static bool handle_channel_halted_interrupt(uint channel,
         uint8_t bInterval = ep->desc.bInterval;
         mx_time_t sleep_ns;
 
-        release_channel(channel, dwc);
+        req->next_data_toggle = chanptr->transfer.packet_id;
+
+        if (usb_ep_type(&ep->desc) != USB_ENDPOINT_CONTROL) {
+            release_channel(channel, dwc);
+        } else {
+            // Only release the channel if we're in the SETUP phase. The later
+            // phases assume that the channel is already held when they retry.
+            if (req->ctrl_phase == CTRL_PHASE_SETUP) {
+                release_channel(channel, dwc);
+            }
+        }
 
         if (ep->parent->speed == USB_SPEED_HIGH) {
             sleep_ns = (1 << (bInterval - 1)) * 125000;
@@ -1453,8 +1466,14 @@ static bool handle_channel_halted_interrupt(uint channel,
             sleep_ns = MX_MSEC(bInterval);
         }
 
+        if (!sleep_ns) {
+            sleep_ns = MX_MSEC(1);
+        }
+
         mx_nanosleep(sleep_ns);
         await_sof_if_necessary(channel, req, ep, dwc);
+
+        req->complete_split = false;
 
         // Requeue the transfer and signal the endpoint.
         mtx_lock(&ep->pending_request_mtx);
@@ -1467,7 +1486,7 @@ static bool handle_channel_halted_interrupt(uint channel,
             req->complete_split = false;
         }
 
-        // Wait half a frame to retry a NYET, otherwise wait for the start
+        // Wait half a microframe to retry a NYET, otherwise wait for the start
         // of the next frame.
         if (usb_ep_type(&ep->desc) != USB_ENDPOINT_INTERRUPT) {
             mx_nanosleep(62500);
