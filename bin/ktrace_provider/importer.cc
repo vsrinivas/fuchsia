@@ -31,6 +31,11 @@ Importer::Importer(TraceWriter& writer)
       irq_category_ref_(writer_.RegisterString("kernel:irq")),
       probe_category_ref_(writer_.RegisterString("kernel:probe")),
       syscall_category_ref_(writer_.RegisterString("kernel:syscall")),
+      channel_category_ref_(writer_.RegisterString("kernel:channel")),
+      channel_read_name_ref_(writer_.RegisterString("read")),
+      channel_write_name_ref_(writer_.RegisterString("write")),
+      num_bytes_name_ref_(writer_.RegisterString("num_bytes")),
+      num_handles_name_ref_(writer_.RegisterString("num_handles")),
       page_fault_name_ref_(writer_.RegisterString("page_fault")),
       vaddr_name_ref_(writer_.RegisterString("vaddr")),
       flags_name_ref_(writer_.RegisterString("flags")),
@@ -368,7 +373,12 @@ bool Importer::HandleContextSwitch(Ticks event_time,
 bool Importer::HandleObjectDelete(Ticks event_time,
                                   mx_koid_t thread,
                                   mx_koid_t object) {
-  return false;
+  auto it = channels_.ids_.find(object);
+  if (it != channels_.ids_.end()) {
+    channels_.message_counters_.erase(it->second);
+  }
+
+  return true;
 }
 
 bool Importer::HandleThreadCreate(Ticks event_time,
@@ -412,7 +422,16 @@ bool Importer::HandleChannelCreate(Ticks event_time,
                                    mx_koid_t channel0,
                                    mx_koid_t channel1,
                                    uint32_t flags) {
-  return false;
+  if (channels_.ids_.count(channel0) != 0 ||
+      channels_.ids_.count(channel1) != 0) {
+    FTL_LOG(WARNING)
+        << "Channel creation for an already known channel was requested, "
+        << "ignoring the request.";
+    return false;
+  }
+
+  channels_.ids_[channel0] = channels_.ids_[channel1] = channels_.next_id_++;
+  return true;
 }
 
 bool Importer::HandleChannelWrite(Ticks event_time,
@@ -420,7 +439,19 @@ bool Importer::HandleChannelWrite(Ticks event_time,
                                   mx_koid_t channel,
                                   uint32_t num_bytes,
                                   uint32_t num_handles) {
-  return false;
+  auto it = channels_.ids_.find(channel);
+  if (it == channels_.ids_.end())
+    return false;
+
+  auto counter = std::get<Channels::kWriteCounterIndex>(
+      channels_.message_counters_[it->second])++;
+  writer_.WriteFlowBeginEventRecord(
+      event_time, GetThreadRef(thread), channel_category_ref_,
+      channel_write_name_ref_, counter,
+      Int32Argument(num_bytes_name_ref_, static_cast<int32_t>(num_bytes)),
+      Int32Argument(num_handles_name_ref_, static_cast<int32_t>(num_handles)));
+
+  return true;
 }
 
 bool Importer::HandleChannelRead(Ticks event_time,
@@ -428,7 +459,20 @@ bool Importer::HandleChannelRead(Ticks event_time,
                                  mx_koid_t channel,
                                  uint32_t num_bytes,
                                  uint32_t num_handles) {
-  return false;
+  auto it = channels_.ids_.find(channel);
+  if (it == channels_.ids_.end())
+    return false;
+
+  auto counter = std::get<Channels::kReadCounterIndex>(
+      channels_.message_counters_[it->second])++;
+
+  writer_.WriteFlowEndEventRecord(
+      event_time, GetThreadRef(thread), channel_category_ref_,
+      channel_read_name_ref_, counter,
+      writer::MakeArgument(writer_, "num_bytes", num_bytes),
+      writer::MakeArgument(writer_, "num_handles", num_handles));
+
+  return true;
 }
 
 bool Importer::HandlePortWait(Ticks event_time,

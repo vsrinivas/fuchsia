@@ -9,6 +9,7 @@
 #include "stdint.h"
 
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -153,6 +154,11 @@ class Importer {
   StringRef const irq_category_ref_;
   StringRef const probe_category_ref_;
   StringRef const syscall_category_ref_;
+  StringRef const channel_category_ref_;
+  StringRef const channel_read_name_ref_;
+  StringRef const channel_write_name_ref_;
+  StringRef const num_bytes_name_ref_;
+  StringRef const num_handles_name_ref_;
   StringRef const page_fault_name_ref_;
   StringRef const vaddr_name_ref_;
   StringRef const flags_name_ref_;
@@ -169,6 +175,19 @@ class Importer {
   std::unordered_map<uint32_t, StringRef> irq_names_;
   std::unordered_map<uint32_t, StringRef> probe_names_;
   std::unordered_map<uint32_t, StringRef> syscall_names_;
+
+  struct Channels {
+    using ChannelId = uint64_t;
+    using MessageCounter = uint64_t;
+
+    static constexpr size_t kReadCounterIndex = 0;
+    static constexpr size_t kWriteCounterIndex = 1;
+
+    ChannelId next_id_ = 0;
+    std::unordered_map<mx_koid_t, ChannelId> ids_;
+    std::unordered_map<ChannelId, std::tuple<MessageCounter, MessageCounter>>
+        message_counters_;
+  } channels_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Importer);
 };
