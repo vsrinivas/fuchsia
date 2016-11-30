@@ -13,8 +13,8 @@
 #include <mx/vmo.h>
 
 #include "apps/tracing/services/trace_provider.fidl.h"
-#include "apps/tracing/src/trace_manager/tracee.h"
 #include "apps/tracing/src/trace_manager/trace_provider_bundle.h"
+#include "apps/tracing/src/trace_manager/tracee.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/ftl/functional/closure.h"

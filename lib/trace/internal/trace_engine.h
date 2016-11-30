@@ -12,16 +12,16 @@
 #include <mutex>
 #include <set>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "apps/tracing/lib/trace/writer.h"
-#include "lib/ftl/strings/string_view.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
-#include "lib/mtl/vmo/shared_vmo.h"
+#include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
+#include "lib/mtl/vmo/shared_vmo.h"
 
 namespace tracing {
 namespace internal {

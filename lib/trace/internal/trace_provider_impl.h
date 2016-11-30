@@ -13,8 +13,8 @@
 #include <mx/socket.h>
 #include <mx/vmo.h>
 
-#include "apps/tracing/lib/trace/settings.h"
 #include "apps/tracing/lib/trace/provider.h"
+#include "apps/tracing/lib/trace/settings.h"
 #include "apps/tracing/services/trace_provider.fidl.h"
 #include "apps/tracing/services/trace_registry.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"

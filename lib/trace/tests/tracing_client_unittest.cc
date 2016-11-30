@@ -16,10 +16,10 @@
 #include "mojo/public/cpp/system/macros.h"
 #include "mojo/public/cpp/utility/run_loop.h"
 
-#include "lib/trace_event/trace_event.h"
-#include "mojo/services/tracing/interfaces/tracing.mojom.h"
-#include "mojo/services/tracing/interfaces/trace_provider_registry.mojom.h"
 #include "gtest/gtest.h"
+#include "lib/trace_event/trace_event.h"
+#include "mojo/services/tracing/interfaces/trace_provider_registry.mojom.h"
+#include "mojo/services/tracing/interfaces/tracing.mojom.h"
 
 #include "rapidjson/document.h"
 #include "rapidjson/ostreamwrapper.h"

@@ -9,8 +9,8 @@
 #include "stdint.h"
 
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "apps/tracing/lib/trace/writer.h"
 #include "apps/tracing/src/ktrace_provider/tags.h"

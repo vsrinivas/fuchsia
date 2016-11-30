@@ -4,8 +4,8 @@
 
 #include "apps/tracing/lib/trace/settings.h"
 
-#include "lib/ftl/command_line.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/command_line.h"
 
 namespace tracing {
 namespace {

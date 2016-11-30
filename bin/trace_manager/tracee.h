@@ -38,7 +38,9 @@ class Tracee : private mtl::MessageLoopHandler {
 
   bool operator==(TraceProviderBundle* bundle) const;
 
-  bool Start(size_t buffer_size, fidl::Array<fidl::String> categories, ftl::Closure stop_callback);
+  bool Start(size_t buffer_size,
+             fidl::Array<fidl::String> categories,
+             ftl::Closure stop_callback);
   void Stop();
   TransferStatus TransferRecords(const mx::socket& socket) const;
 

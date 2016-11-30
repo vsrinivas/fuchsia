@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/src/trace_manager/trace_session.h"
+#include "apps/tracing/lib/trace/internal/fields.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 

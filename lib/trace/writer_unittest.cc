@@ -119,14 +119,14 @@ TEST_F(WriterTest, EventWritingMultiThreaded) {
       StringRef category_ref = writer.RegisterString("cat", true);
       StringRef name_ref = writer.RegisterString("name");
 
-      writer.WriteDurationBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
-                                           name_ref);
-      writer.WriteDurationEndEventRecord(GetTicksNow(), thread_ref, category_ref,
-                                         name_ref);
+      writer.WriteDurationBeginEventRecord(GetTicksNow(), thread_ref,
+                                           category_ref, name_ref);
+      writer.WriteDurationEndEventRecord(GetTicksNow(), thread_ref,
+                                         category_ref, name_ref);
       writer.WriteAsyncBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
                                         name_ref, 42);
-      writer.WriteAsyncInstantEventRecord(GetTicksNow(), thread_ref, category_ref,
-                                          name_ref, 42);
+      writer.WriteAsyncInstantEventRecord(GetTicksNow(), thread_ref,
+                                          category_ref, name_ref, 42);
       writer.WriteAsyncEndEventRecord(GetTicksNow(), thread_ref, category_ref,
                                       name_ref, 42);
     });

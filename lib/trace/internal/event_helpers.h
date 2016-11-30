@@ -121,10 +121,9 @@ void WriteInstantEventRecord(::tracing::writer::TraceWriter& writer,
                              const char* name,
                              ::tracing::EventScope scope,
                              Args&&... args) {
-  writer.WriteInstantEventRecord(::tracing::GetTicksNow(),
-                                 writer.RegisterCurrentThread(), category_ref,
-                                 writer.RegisterString(name), scope,
-                                 std::forward<Args>(args)...);
+  writer.WriteInstantEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), scope, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
@@ -133,10 +132,9 @@ void WriteCounterEventRecord(::tracing::writer::TraceWriter& writer,
                              const char* name,
                              uint64_t id,
                              Args&&... args) {
-  writer.WriteCounterEventRecord(::tracing::GetTicksNow(),
-                                 writer.RegisterCurrentThread(), category_ref,
-                                 writer.RegisterString(name), id,
-                                 std::forward<Args>(args)...);
+  writer.WriteCounterEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), id, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
@@ -146,8 +144,8 @@ void WriteDurationBeginEventRecord(
     const char* name,
     Args&&... args) {
   writer.WriteDurationBeginEventRecord(
-      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(),
-      category_ref, writer.RegisterString(name), std::forward<Args>(args)...);
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), std::forward<Args>(args)...);
 }
 
 template <typename... Args>
@@ -157,8 +155,8 @@ void WriteDurationEndEventRecord(
     const char* name,
     Args&&... args) {
   writer.WriteDurationEndEventRecord(
-      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(),
-      category_ref, writer.RegisterString(name), std::forward<Args>(args)...);
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), std::forward<Args>(args)...);
 }
 
 template <typename... Args>
@@ -168,10 +166,9 @@ void WriteAsyncBeginEventRecord(
     const char* name,
     uint64_t id,
     Args&&... args) {
-  writer.WriteAsyncBeginEventRecord(::tracing::GetTicksNow(),
-                                    writer.RegisterCurrentThread(),
-                                    category_ref, writer.RegisterString(name),
-                                    id, std::forward<Args>(args)...);
+  writer.WriteAsyncBeginEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), id, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
@@ -181,10 +178,9 @@ void WriteAsyncInstantEventRecord(
     const char* name,
     uint64_t id,
     Args&&... args) {
-  writer.WriteAsyncInstantEventRecord(::tracing::GetTicksNow(),
-                                      writer.RegisterCurrentThread(),
-                                      category_ref, writer.RegisterString(name),
-                                      id, std::forward<Args>(args)...);
+  writer.WriteAsyncInstantEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), id, std::forward<Args>(args)...);
 }
 
 template <typename... Args>
@@ -193,10 +189,9 @@ void WriteAsyncEndEventRecord(::tracing::writer::TraceWriter& writer,
                               const char* name,
                               uint64_t id,
                               Args&&... args) {
-  writer.WriteAsyncEndEventRecord(::tracing::GetTicksNow(),
-                                  writer.RegisterCurrentThread(), category_ref,
-                                  writer.RegisterString(name), id,
-                                  std::forward<Args>(args)...);
+  writer.WriteAsyncEndEventRecord(
+      ::tracing::GetTicksNow(), writer.RegisterCurrentThread(), category_ref,
+      writer.RegisterString(name), id, std::forward<Args>(args)...);
 }
 
 // When destroyed, writes a duration end event.
