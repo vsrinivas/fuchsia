@@ -131,13 +131,7 @@ void PageSyncImpl::OnConnectionError() {
   remote_watch_set_ = false;
   FTL_LOG(WARNING)
       << "Connection error in the remote commit watcher, retrying.";
-  task_runner_->PostDelayedTask(
-      [weak_this = weak_factory_.GetWeakPtr()]() {
-        if (weak_this && !weak_this->errored_) {
-          weak_this->SetRemoteWatcher();
-        }
-      },
-      backoff_->GetNext());
+  Retry([this] { SetRemoteWatcher(); });
 }
 
 void PageSyncImpl::OnMalformedNotification() {
@@ -163,13 +157,7 @@ void PageSyncImpl::TryStartDownload() {
              std::vector<cloud_provider::Record> records) {
         if (cloud_status != cloud_provider::Status::OK) {
           // Fetching the remote commits failed, schedule a retry.
-          task_runner_->PostDelayedTask(
-              [weak_this = weak_factory_.GetWeakPtr()]() {
-                if (weak_this && !weak_this->errored_) {
-                  weak_this->TryStartDownload();
-                }
-              },
-              backoff_->GetNext());
+          Retry([this] { TryStartDownload(); });
           return;
         }
         backoff_->Reset();
@@ -244,31 +232,36 @@ void PageSyncImpl::EnqueueUpload(
   // enqueing this one.
   const bool start_after_adding = commit_uploads_.empty();
 
-  commit_uploads_.emplace(storage_, cloud_provider_, std::move(commit),
-                          [this] {
-                            // Upload succeeded, reset the backoff delay.
-                            backoff_->Reset();
+  commit_uploads_.emplace(
+      storage_, cloud_provider_, std::move(commit),
+      [this] {
+        // Upload succeeded, reset the backoff delay.
+        backoff_->Reset();
 
-                            commit_uploads_.pop();
-                            if (!commit_uploads_.empty()) {
-                              commit_uploads_.front().Start();
-                            } else {
-                              CheckIdle();
-                            }
-                          },
-                          [this] {
-                            task_runner_->PostDelayedTask(
-                                [weak_this = weak_factory_.GetWeakPtr()]() {
-                                  if (weak_this && !weak_this->errored_) {
-                                    weak_this->commit_uploads_.front().Start();
-                                  }
-                                },
-                                backoff_->GetNext());
-                          });
+        commit_uploads_.pop();
+        if (!commit_uploads_.empty()) {
+          commit_uploads_.front().Start();
+        } else {
+          CheckIdle();
+        }
+      },
+      [this] { Retry([this] { commit_uploads_.front().Start(); }); });
 
   if (start_after_adding) {
     commit_uploads_.front().Start();
   }
+}
+
+void PageSyncImpl::Retry(ftl::Closure callable) {
+  task_runner_->PostDelayedTask(
+      [
+        weak_this = weak_factory_.GetWeakPtr(), callable = std::move(callable)
+      ]() {
+        if (weak_this && !weak_this->errored_) {
+          callable();
+        }
+      },
+      backoff_->GetNext());
 }
 
 void PageSyncImpl::HandleError(const char error_description[]) {

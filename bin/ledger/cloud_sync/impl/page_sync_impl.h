@@ -108,6 +108,10 @@ class PageSyncImpl : public PageSync,
 
   void BacklogDownloaded();
 
+  // Schedules the given closure to execute after the delay determined by
+  // |backoff_|, but only if |this| still is valid and |errored_| is not set.
+  void Retry(ftl::Closure callable);
+
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   storage::PageStorage* const storage_;
   cloud_provider::CloudProvider* const cloud_provider_;
