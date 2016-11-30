@@ -233,6 +233,16 @@ void KillProcess(mx_koid_t id) {
     pd->Kill();
 }
 
+void DumpProcessAddressSpace(mx_koid_t id) {
+    auto pd = ProcessDispatcher::LookupProcessById(id);
+    if (!pd) {
+        printf("process not found!\n");
+        return;
+    }
+
+    pd->aspace()->Dump();
+}
+
 static size_t mwd_limit = 32 * 256;
 static bool mwd_running;
 
@@ -264,10 +274,11 @@ static int cmd_diagnostics(int argc, const cmd_args* argv) {
         printf("not enough arguments:\n");
     usage:
         printf("%s ps         : list processes\n", argv[0].str);
-        printf("%s mwd <mb>   : memory watchdog\n", argv[0].str);
+        printf("%s mwd  <mb>  : memory watchdog\n", argv[0].str);
         printf("%s ht   <pid> : dump process handles\n", argv[0].str);
         printf("%s jb   <pid> : list job tree\n", argv[0].str);
         printf("%s kill <pid> : kill process\n", argv[0].str);
+        printf("%s asd  <pid> : dump process address space\n", argv[0].str);
         return -1;
     }
 
@@ -300,6 +311,10 @@ static int cmd_diagnostics(int argc, const cmd_args* argv) {
         if (argc < 3)
             goto usage;
         KillProcess(argv[2].u);
+    } else if (strcmp(argv[1].str, "asd") == 0) {
+        if (argc < 3)
+            goto usage;
+        DumpProcessAddressSpace(argv[2].u);
     } else {
         printf("unrecognized subcommand\n");
         goto usage;
