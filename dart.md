@@ -10,9 +10,12 @@ platforms.
 Instead of relying on
 [`pub`](https://www.dartlang.org/tools/pub/get-started) to manage dependencies,
 sources of third-party packages we depend on are checked into the tree under
-[`third_party/dart-pkg`](https://fuchsia.googlesource.com/third_party/dart-pkg/+/master).
+[`//third_party/dart-pkg`](https://fuchsia.googlesource.com/third_party/dart-pkg/+/master).
 This is to ensure we use consistent versions of our dependencies across multiple
 builds.
+
+Likewise, no build output is placed in the source tree as everything goes under
+`out/`.
 
 
 ## Targets
@@ -29,7 +32,7 @@ See the definitions of each of these targets for how to use them.
 
 ## Managing third-party dependencies
 
-[`third-party/dart-pkg`](https://fuchsia.googlesource.com/third_party/dart-pkg/+/master)
+[`//third-party/dart-pkg`](https://fuchsia.googlesource.com/third_party/dart-pkg/+/master)
 is kept up-to-date with
 [a script](https://fuchsia.googlesource.com/scripts/+/master/update_dart_packages.py)
 that relies on `pub` to resolve versions and fetch sources for the packages that
@@ -102,6 +105,19 @@ and import the resulting Dart sources with:
 ```
 import "package:foo.bar.blah/baz.dart";
 ```
+
+
+## IDEs
+
+Most IDEs need to find a `.packages` file at the package root in order to be
+able to resolve packages. On Fuchsia, those files are placed in the `out/`
+directory. As a temporary workaround, run `//scripts/symlink-dot-packages.py` to
+create symlinks in the source tree:
+```
+scripts/symlink-dot-packages.py --tree //apps/sysui/*
+```
+You may also want to update your project's `.gitignore` file to ignore these
+symlinks.
 
 
 ## Known issues
