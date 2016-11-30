@@ -1,0 +1,40 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_package.gni")
+
+# Defines a Dart test package
+#
+# Parameters
+#
+#   deps (optional)
+#     List of labels for Dart packages this package depends on.
+#
+# Example of usage:
+#
+#   dart_test("baz_test") {
+#     source_dir = "."
+#     deps = [
+#       "//foo/baz",
+#       "//third_party/dart-pkg/pub/test",
+#     ]
+#   }
+template("dart_test") {
+
+  template_name = target_name
+
+  dart_package(template_name) {
+    infer_package_name = true
+
+    source_dir = "test"
+    if (defined(invoker.source_dir)) {
+      source_dir = invoker.source_dir
+    }
+
+    deps = []
+    if (defined(invoker.deps)) {
+      deps = invoker.deps
+    }
+  }
+}
