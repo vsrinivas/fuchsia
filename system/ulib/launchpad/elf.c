@@ -67,7 +67,7 @@ mx_status_t elf_load_get_interp(elf_load_info_t* info, mx_handle_t vmo,
 mx_status_t elf_load_finish(mx_handle_t vmar, elf_load_info_t* info,
                             mx_handle_t vmo,
                             mx_vaddr_t* base, mx_vaddr_t* entry) {
-    return elf_load_map_segments(mx_process_self(), vmar,
+    return elf_load_map_segments(mx_vmar_root_self(), vmar,
                                  &info->header, info->phdrs, vmo, base, entry);
 }
 
