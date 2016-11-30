@@ -103,18 +103,28 @@ void PageSyncImpl::GetObject(
     std::function<void(storage::Status status,
                        uint64_t size,
                        mx::datapipe_consumer data)> callback) {
-  cloud_provider_->GetObject(
-      object_id, [callback](cloud_provider::Status status, uint64_t size,
-                            mx::datapipe_consumer data) {
-        if (status != cloud_provider::Status::OK) {
-          FTL_LOG(WARNING) << "Fetching remote object failed with status: "
-                           << status;
-          callback(storage::Status::IO_ERROR, 0, mx::datapipe_consumer());
-          return;
-        }
+  cloud_provider_->GetObject(object_id, [
+    this, object_id = object_id.ToString(), callback
+  ](cloud_provider::Status status, uint64_t size, mx::datapipe_consumer data) {
+    if (status == cloud_provider::Status::NETWORK_ERROR) {
+      FTL_LOG(WARNING)
+          << "GetObject() failed due to a connection error, retrying.";
+      Retry([
+        this, object_id = std::move(object_id), callback = std::move(callback)
+      ] { GetObject(object_id, callback); });
+      return;
+    }
 
-        callback(storage::Status::OK, size, std::move(data));
-      });
+    backoff_->Reset();
+    if (status != cloud_provider::Status::OK) {
+      FTL_LOG(WARNING) << "Fetching remote object failed with status: "
+                       << status;
+      callback(storage::Status::IO_ERROR, 0, mx::datapipe_consumer());
+      return;
+    }
+
+    callback(storage::Status::OK, size, std::move(data));
+  });
 }
 
 void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit commit,

@@ -14,10 +14,12 @@
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/test/commit_empty_impl.h"
 #include "apps/ledger/src/storage/test/page_storage_empty_impl.h"
+#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
+#include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace cloud_sync {
@@ -222,13 +224,38 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
     });
   }
 
+  void GetObject(
+      cloud_provider::ObjectIdView object_id,
+      std::function<void(cloud_provider::Status status,
+                         uint64_t size,
+                         mx::datapipe_consumer data)> callback) override {
+    get_object_calls++;
+    if (should_fail_get_object) {
+      message_loop_->task_runner()->PostTask([this, callback]() {
+        callback(cloud_provider::Status::NETWORK_ERROR, 0,
+                 mx::datapipe_consumer());
+      });
+      return;
+    }
+
+    message_loop_->task_runner()->PostTask(
+        [ this, object_id = object_id.ToString(), callback ]() {
+          callback(
+              cloud_provider::Status::OK, objects_to_return[object_id].size(),
+              mtl::WriteStringToConsumerHandle(objects_to_return[object_id]));
+        });
+  }
+
   bool should_fail_get_commits = false;
+  bool should_fail_get_object = false;
   std::vector<cloud_provider::Record> records_to_return;
   std::vector<cloud_provider::Record> notifications_to_deliver;
   cloud_provider::Status commit_status_to_return = cloud_provider::Status::OK;
+  std::unordered_map<std::string, std::string> objects_to_return;
 
   unsigned int watch_commits_calls = 0u;
   unsigned int get_commits_calls = 0u;
+  unsigned int get_object_calls = 0u;
   std::vector<cloud_provider::Commit> received_commits;
   bool watcher_removed = false;
 
@@ -697,6 +724,54 @@ TEST_F(PageSyncImplTest, DownloadIdleCallback) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(2, on_idle_calls);
   EXPECT_TRUE(page_sync_.IsIdle());
+}
+
+// Verifies that sync correctly fetches objects from the cloud provider.
+TEST_F(PageSyncImplTest, GetObject) {
+  cloud_provider_.objects_to_return["object_id"] = "content";
+  page_sync_.Start();
+
+  storage::Status status;
+  uint64_t size;
+  mx::datapipe_consumer data;
+  page_sync_.GetObject(storage::ObjectIdView("object_id"),
+                       test::Capture([this] { message_loop_.PostQuitTask(); },
+                                     &status, &size, &data));
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(7u, size);
+  std::string content;
+  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &content));
+  EXPECT_EQ("content", content);
+}
+
+// Verifies that sync retries GetObject() attempts upon connection error.
+TEST_F(PageSyncImplTest, RetryGetObject) {
+  cloud_provider_.should_fail_get_object = true;
+  page_sync_.Start();
+
+  message_loop_.SetAfterTaskCallback([this] {
+    // Allow the operation to succeed after looping through five attempts.
+    if (cloud_provider_.get_object_calls == 5u) {
+      cloud_provider_.should_fail_get_object = false;
+      cloud_provider_.objects_to_return["object_id"] = "content";
+    }
+  });
+  storage::Status status;
+  uint64_t size;
+  mx::datapipe_consumer data;
+  page_sync_.GetObject(storage::ObjectIdView("object_id"),
+                       test::Capture([this] { message_loop_.PostQuitTask(); },
+                                     &status, &size, &data));
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(6u, cloud_provider_.get_object_calls);
+  EXPECT_EQ(storage::Status::OK, status);
+  EXPECT_EQ(7u, size);
+  std::string content;
+  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &content));
+  EXPECT_EQ("content", content);
 }
 
 }  // namespace
