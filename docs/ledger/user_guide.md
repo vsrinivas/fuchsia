@@ -43,10 +43,12 @@ Console](https://console.firebase.google.com/) and set the following in
     ".read": true,
     ".write": true,
     "$user": {
-      "$app": {
-        "$page": {
-          "commits": {
-            ".indexOn": ["timestamp"]
+      "$version" {
+        "$app": {
+          "$page": {
+            "commits": {
+              ".indexOn": ["timestamp"]
+            }
           }
         }
       }
