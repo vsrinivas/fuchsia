@@ -14,10 +14,12 @@
 namespace media {
 
 // Implements MediaPacketProducer to forward a stream across fidl.
-class FidlPacketProducer : private MediaPacketProducerBase,
-                           public MediaPacketProducer,
-                           public ActiveSink,
-                           public PayloadAllocator {
+class FidlPacketProducer
+    : public MediaPacketProducerBase,
+      public MediaPacketProducer,
+      public ActiveSink,
+      public PayloadAllocator,
+      public std::enable_shared_from_this<FidlPacketProducer> {
  public:
   using FlushConnectionCallback = std::function<void()>;
 

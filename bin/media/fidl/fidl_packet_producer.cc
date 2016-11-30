@@ -50,10 +50,15 @@ Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
     return end_of_stream ? Demand::kNegative : CurrentDemand();
   }
 
-  task_runner_->PostTask(
-      ftl::MakeCopyable([ this, packet = std::move(packet) ]() mutable {
-        SendPacket(std::move(packet));
-      }));
+  task_runner_->PostTask(ftl::MakeCopyable([
+    weak_this = std::weak_ptr<FidlPacketProducer>(shared_from_this()),
+    packet = std::move(packet)
+  ]() mutable {
+    auto shared_this = weak_this.lock();
+    if (shared_this) {
+      shared_this->SendPacket(std::move(packet));
+    }
+  }));
 
   return end_of_stream ? Demand::kNegative : CurrentDemand(1);
 }
