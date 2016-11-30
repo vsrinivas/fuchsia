@@ -19,18 +19,10 @@ mx_status_t process::create(const job& job, const char* name, uint32_t name_len,
     mx_status_t status = mx_process_create(job.get(), name, name_len, flags, &proc_h, &vmar_h);
     if (status < 0) {
         proc->reset(MX_HANDLE_INVALID);
-        // TODO(teisenbe): Change this to assume vmar is non-null once we no
-        // longer need compat with old interface.
-        if (vmar) {
-            vmar->reset(MX_HANDLE_INVALID);
-        }
+        vmar->reset(MX_HANDLE_INVALID);
     } else {
         proc->reset(proc_h);
-        if (vmar) {
-            vmar->reset(vmar_h);
-        } else {
-            mx_handle_close(vmar_h);
-        }
+        vmar->reset(vmar_h);
     }
     return status;
 }
