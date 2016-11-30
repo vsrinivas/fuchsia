@@ -41,7 +41,9 @@ class LedgerRepositoryImpl : public LedgerRepository {
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   const std::string base_storage_dir_;
   ledger::Environment* const environment_;
-  AutoCleanableMap<std::string, LedgerManager, convert::StringViewComparator>
+  callback::AutoCleanableMap<std::string,
+                             LedgerManager,
+                             convert::StringViewComparator>
       ledger_managers_;
   fidl::BindingSet<LedgerRepository> bindings_;
   ftl::Closure on_empty_callback_;

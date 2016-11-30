@@ -13,7 +13,7 @@
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/logging.h"
 
-namespace ledger {
+namespace callback {
 
 // List that will delete its elements when they call their on_empty_callback.
 // The elements must have a setter method:

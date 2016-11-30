@@ -58,7 +58,7 @@ class BranchTracker : public storage::CommitWatcher {
 
   storage::PageStorage* storage_;
   BoundInterface<Page, PageImpl> interface_;
-  AutoCleanableSet<PageWatcherContainer> watchers_;
+  callback::AutoCleanableSet<PageWatcherContainer> watchers_;
   ftl::Closure on_empty_callback_;
 
   bool transaction_in_progress_;

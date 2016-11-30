@@ -33,7 +33,7 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ledger::Environment* const environment_;
-  AutoCleanableMap<std::string, LedgerRepositoryImpl> repositories_;
+  callback::AutoCleanableMap<std::string, LedgerRepositoryImpl> repositories_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryImpl);
 };

@@ -66,9 +66,9 @@ class LedgerManager : public LedgerImpl::Delegate {
   fidl::BindingSet<Ledger> bindings_;
 
   // Mapping from page id to the manager of that page.
-  AutoCleanableMap<storage::PageId,
-                   PageManagerContainer,
-                   convert::StringViewComparator>
+  callback::AutoCleanableMap<storage::PageId,
+                             PageManagerContainer,
+                             convert::StringViewComparator>
       page_managers_;
   ftl::Closure on_empty_callback_;
 

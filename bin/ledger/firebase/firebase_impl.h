@@ -88,7 +88,7 @@ class FirebaseImpl : public Firebase {
   const std::string api_url_;
 
   callback::CancellableContainer requests_;
-  ledger::AutoCleanableSet<glue::DataPipeDrainerClient> drainers_;
+  callback::AutoCleanableSet<glue::DataPipeDrainerClient> drainers_;
 
   struct WatchData;
   std::map<WatchClient*, std::unique_ptr<WatchData>> watch_data_;

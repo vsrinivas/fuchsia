@@ -28,7 +28,7 @@ class NetworkServiceImpl : public NetworkService {
 
   std::function<network::NetworkServicePtr()> network_service_factory_;
   network::NetworkServicePtr network_service_;
-  ledger::AutoCleanableSet<RunningRequest> running_requests_;
+  callback::AutoCleanableSet<RunningRequest> running_requests_;
 };
 
 }  // namespace ledger

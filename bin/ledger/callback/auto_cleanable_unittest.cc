@@ -5,7 +5,7 @@
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "gtest/gtest.h"
 
-namespace ledger {
+namespace callback {
 namespace {
 
 class Cleanable {
