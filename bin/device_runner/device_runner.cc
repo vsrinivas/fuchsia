@@ -28,9 +28,9 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
-
 namespace {
 
+constexpr char kEnvironmentLabelPrefix[] = "user-";
 constexpr char kUserRunnerUrl[] = "file:///system/apps/user_runner";
 
 class Settings {
@@ -102,13 +102,46 @@ class Settings {
   }
 };
 
-}  // namespace
+class UserRunnerScope : public ApplicationEnvironmentHost {
+ public:
+  UserRunnerScope(std::shared_ptr<ApplicationContext> app_context,
+                  const fidl::Array<uint8_t>& user_id)
+      : app_context_(app_context),
+        binding_(this) {
+    // Set up ApplicationEnvironment.
+    ApplicationEnvironmentHostPtr env_host;
+    binding_.Bind(fidl::GetProxy(&env_host));
+    app_context_->environment()->CreateNestedEnvironment(
+        std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_),
+        kEnvironmentLabelPrefix + to_hex_string(user_id));
+  }
+
+  ApplicationEnvironmentPtr GetEnvironment() {
+    ApplicationEnvironmentPtr env;
+    env_->Duplicate(fidl::GetProxy(&env));
+    return env;
+  }
+
+ private:
+  // |ApplicationEnvironmentHost|:
+  void GetApplicationEnvironmentServices(
+      fidl::InterfaceRequest<ServiceProvider> environment_services) override {
+    // For now, we just pass requests to our parent environment.
+    app_context_->environment()->GetServices(std::move(environment_services));
+  }
+
+  std::shared_ptr<ApplicationContext> app_context_;
+  fidl::Binding<ApplicationEnvironmentHost> binding_;
+
+  ApplicationEnvironmentPtr env_;
+  ApplicationEnvironmentControllerPtr env_controller_;
+};
 
 class DeviceRunnerApp : public DeviceRunner {
  public:
   DeviceRunnerApp(const Settings& settings)
       : settings_(settings),
-        context_(ApplicationContext::CreateFromStartupInfo()),
+        app_context_(ApplicationContext::CreateFromStartupInfo()),
         device_runner_binding_(this) {
     auto launch_info = ApplicationLaunchInfo::New();
     launch_info->url = settings_.device_shell;
@@ -116,7 +149,7 @@ class DeviceRunnerApp : public DeviceRunner {
 
     ServiceProviderPtr services;
     launch_info->services = services.NewRequest();
-    context_->launcher()->CreateApplication(
+    app_context_->launcher()->CreateApplication(
         std::move(launch_info), device_shell_controller_.NewRequest());
 
     mozart::ViewProviderPtr view_provider;
@@ -124,7 +157,7 @@ class DeviceRunnerApp : public DeviceRunner {
 
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
     view_provider->CreateView(root_view.NewRequest(), nullptr);
-    context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
+    app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
     ConnectToService(services.get(), device_shell_.NewRequest());
@@ -139,35 +172,47 @@ class DeviceRunnerApp : public DeviceRunner {
   void Login(
       const fidl::String& username,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
+    fidl::Array<uint8_t> user_id = to_array(username);
+
+    // 1. Create a child environment for the UserRunner.
+    user_runner_scope_ = std::make_unique<UserRunnerScope>(app_context_,
+        user_id);
+    ApplicationLauncherPtr launcher;
+    user_runner_scope_->GetEnvironment()->GetApplicationLauncher(
+        fidl::GetProxy(&launcher));
+
+    // 2. Launch UserRunner under the new environment.
     auto launch_info = ApplicationLaunchInfo::New();
     launch_info->url = kUserRunnerUrl;
-
     ServiceProviderPtr services;
     launch_info->services = services.NewRequest();
-    context_->launcher()->CreateApplication(
+    launcher->CreateApplication(
         std::move(launch_info),
         user_runner_controller_.NewRequest());
 
+    // 3. Initialize the UserRunner service.
     ConnectToService(services.get(), user_runner_.NewRequest());
-    user_runner_->Initialize(to_array(username), settings_.user_shell,
+    user_runner_->Initialize(std::move(user_id), settings_.user_shell,
                              to_array(settings_.user_shell_args),
                              std::move(view_owner_request));
   }
 
   const Settings settings_;
 
-  std::unique_ptr<ApplicationContext> context_;
+  std::shared_ptr<ApplicationContext> app_context_;
   fidl::Binding<DeviceRunner> device_runner_binding_;
 
   ApplicationControllerPtr device_shell_controller_;
   DeviceShellPtr device_shell_;
 
+  std::unique_ptr<UserRunnerScope> user_runner_scope_;
   ApplicationControllerPtr user_runner_controller_;
   UserRunnerPtr user_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
 
+}  // namespace
 }  // namespace modular
 
 int main(int argc, const char** argv) {

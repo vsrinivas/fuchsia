@@ -33,7 +33,6 @@ namespace {
 
 const char kAppId[] = "modular_user_runner";
 const char kLedgerBaseDir[] = "/data/ledger/";
-const char kEnvironmentLabelPrefix[] = "user-";
 // This is the prefix for the ApplicationEnvironment under which all stories run
 // for a user.
 const char kStoriesEnvironmentLabelPrefix[] = "stories-";
@@ -67,60 +66,9 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 }  // namespace
 
-// Creates an ApplicationEnvironment at the UserRunner scope. This environment
-// provides services like Ledger as an environment service to applications
-// running in its scope like User Shell, Story Runner.
-// TODO(vardhan): A device runner should be responsible for creating this
-// environment (in which it will run a UserRunner).
-class UserRunnerScope : public ApplicationEnvironmentHost {
- public:
-  UserRunnerScope(std::shared_ptr<ApplicationContext> application_context,
-                  const fidl::Array<uint8_t>& user_id)
-      : application_context_(application_context),
-        binding_(this) {
-    // Set up ApplicationEnvironment.
-    ApplicationEnvironmentHostPtr env_host;
-    binding_.Bind(env_host.NewRequest());
-    application_context_->environment()->CreateNestedEnvironment(
-        std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
-        kEnvironmentLabelPrefix + to_hex_string(user_id));
-
-    // Register and set up Services hosted in this environment.
-    RegisterServices();
-  }
-
-  ApplicationEnvironmentPtr GetEnvironment() {
-    ApplicationEnvironmentPtr env;
-    env_->Duplicate(env.NewRequest());
-    return env;
-  }
-
- private:
-  // |ApplicationEnvironmentHost|:
-  void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<ServiceProvider> environment_services) override {
-    env_services_.AddBinding(std::move(environment_services));
-  }
-
-  void RegisterServices() {
-    env_services_.SetDefaultServiceConnector(
-        [this](std::string service_name, mx::channel channel) {
-          application_context_->environment_services()->ConnectToService(
-              service_name, std::move(channel));
-        });
-  }
-
-  std::shared_ptr<ApplicationContext> application_context_;
-  fidl::Binding<ApplicationEnvironmentHost> binding_;
-
-  ApplicationEnvironmentPtr env_;
-  ApplicationEnvironmentControllerPtr env_controller_;
-  ServiceProviderImpl env_services_;
-};
-
 // This environment host is used to run all the stories, and runs under the
 // UserRunner's scope. Its ServiceProvider forwards all requests to its parent's
-// ServiceProvider (|UserRunnerScope|).
+// ServiceProvider.
 class UserStoriesScope : public ApplicationEnvironmentHost {
  public:
   UserStoriesScope(ApplicationEnvironmentPtr parent_env,
@@ -194,11 +142,10 @@ class UserRunnerImpl : public UserRunner {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
     SetupLedgerRepository(user_id);
 
-    user_runner_scope_ = std::make_unique<UserRunnerScope>(application_context_,
-        user_id);
-
+    ApplicationEnvironmentPtr parent_env;
+    application_context_->environment()->Duplicate(GetProxy(&parent_env));
     stories_scope_ = std::make_unique<UserStoriesScope>(
-        user_runner_scope_->GetEnvironment(), user_id);
+        std::move(parent_env), user_id);
 
     RunUserShell(user_shell, user_shell_args, std::move(view_owner_request));
 
@@ -254,7 +201,7 @@ class UserRunnerImpl : public UserRunner {
     }
 
     ApplicationLauncherPtr launcher;
-    user_runner_scope_->GetEnvironment()->GetApplicationLauncher(
+    application_context_->environment()->GetApplicationLauncher(
         launcher.NewRequest());
     launcher->CreateApplication(std::move(launch_info), nullptr);
 
@@ -284,7 +231,6 @@ class UserRunnerImpl : public UserRunner {
   std::unique_ptr<UserLedgerRepositoryFactory> ledger_repository_factory_;
 
   // The application environment hosted by user runner.
-  std::unique_ptr<UserRunnerScope> user_runner_scope_;
   std::unique_ptr<UserStoriesScope> stories_scope_;
 
   UserShellPtr user_shell_;
