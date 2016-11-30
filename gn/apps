@@ -11,10 +11,6 @@
             "bootfs_path": "apps/acquirers/focus"
         },
         {
-            "binary": "acquirers/gps",
-            "bootfs_path": "apps/acquirers/gps"
-        },
-        {
             "binary": "agents/carmen_sandiego",
             "bootfs_path": "apps/agents/carmen_sandiego"
         },
