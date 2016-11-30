@@ -5,6 +5,7 @@
 #include "apps/ledger/src/cloud_provider/client/client.h"
 
 #include <iostream>
+#include <unordered_set>
 
 #include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
@@ -15,13 +16,9 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/network/services/network_service.fidl.h"
-#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_view.h"
-#include "lib/ftl/time/time_delta.h"
-#include "lib/ftl/time/time_point.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "lib/mtl/vmo/strings.h"
 
 namespace cloud_provider {
 
@@ -29,34 +26,6 @@ namespace {
 
 std::string RandomString() {
   return std::to_string(glue::RandUint64());
-}
-
-void ok(ftl::StringView what, ftl::StringView message = "") {
-  std::cout << " > [OK] " << what;
-  if (message.size()) {
-    std::cout << ": " << message;
-  }
-  std::cout << std::endl;
-}
-
-void ok(ftl::StringView what, ftl::TimeDelta request_time) {
-  std::cout << " > [OK] " << what << ": request time "
-            << request_time.ToMilliseconds() << " ms" << std::endl;
-}
-
-void error(ftl::StringView what, ftl::StringView message) {
-  std::cout << " > [FAILED] " << what;
-  if (message.size()) {
-    std::cout << " " << message;
-  }
-  std::cout << std::endl;
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
-}
-
-void error(ftl::StringView what, Status status) {
-  std::cout << " > [FAILED] " << what << ": cloud provider status " << status
-            << std::endl;
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 std::string GetFirebasePrefix(ftl::StringView user_prefix,
@@ -71,49 +40,65 @@ std::string GetFirebasePrefix(ftl::StringView user_prefix,
 ClientApp::ClientApp(ftl::CommandLine command_line)
     : command_line_(std::move(command_line)),
       context_(modular::ApplicationContext::CreateFromStartupInfo()) {
-  Start();
-}
-
-void ClientApp::OnRemoteCommit(Commit commit, std::string timestamp) {
-  if (on_remote_commit_) {
-    on_remote_commit_(std::move(commit), std::move(timestamp));
+  if (Initialize()) {
+    Start();
   }
 }
 
-void ClientApp::OnConnectionError() {
-  if (on_error_) {
-    on_error_("connection error");
-  }
+void ClientApp::PrintUsage() {
+  std::cout << "Usage: cloud_sync <COMMAND>" << std::endl;
+  std::cout << "Commands:" << std::endl;
+  std::cout << " - `doctor` - checks up the cloud sync configuration (default)"
+            << std::endl;
 }
 
-void ClientApp::OnMalformedNotification() {
-  if (on_error_) {
-    on_error_("malformed notification");
+std::unique_ptr<Command> ClientApp::CommandFromArgs(
+    const std::vector<std::string>& args) {
+  if (args.empty()) {
+    return nullptr;
   }
+
+  // `doctor` is the default command.
+  if (args.empty() || (args[0] == "doctor" && args.size() == 1)) {
+    return std::make_unique<DoctorCommand>(cloud_provider_.get());
+  }
+
+  return nullptr;
 }
 
-void ClientApp::Start() {
-  std::cout << "--- Debug Cloud Sync ---" << std::endl;
+bool ClientApp::Initialize() {
+  std::unordered_set<std::string> valid_commands = {"doctor"};
+  const std::vector<std::string>& args = command_line_.positional_args();
+  if (args.size() && valid_commands.count(args[0]) == 0) {
+    PrintUsage();
+    return false;
+  }
 
   configuration::Configuration configuration;
   if (!configuration::ConfigurationEncoder::Decode(
           configuration::kDefaultConfigurationFile.ToString(),
           &configuration)) {
-    error("ledger configuration",
-          ftl::Concatenate({"not able to read file at ",
-                            configuration::kDefaultConfigurationFile}));
-    return;
+    std::cout << "Error: unable to read Ledger configuration at: "
+              << configuration::kDefaultConfigurationFile << std::endl;
+    std::cout << "Hint: run `configure_ledger --help` to learn about "
+              << "configuration options." << std::endl;
+    return false;
   }
-  ok("ledger configuration");
 
   if (!configuration.use_sync) {
-    error("sync enabled", "sync is disabled");
-    return;
+    std::cout << "Error: Cloud sync is disabled in the Ledger configuration."
+              << std::endl;
+    std::cout << "Hint: pass --firebase_id and --firebase_prefix to "
+              << "`configure_ledger`" << std::endl;
+    return false;
   }
 
-  ok("sync enabled",
-     ftl::Concatenate({"syncing to ", configuration.sync_params.firebase_id,
-                       " / ", configuration.sync_params.firebase_prefix}));
+  std::cout << "Cloud Sync Settings:" << std::endl;
+  std::cout << " - firebase id: " << configuration.sync_params.firebase_id
+            << std::endl;
+  std::cout << " - firebase prefix: "
+            << configuration.sync_params.firebase_prefix << std::endl;
+  std::cout << std::endl;
 
   network_service_ = std::make_unique<ledger::NetworkServiceImpl>([this] {
     return context_->ConnectToEnvironmentService<network::NetworkService>();
@@ -125,139 +110,13 @@ void ClientApp::Start() {
                         RandomString()));
   cloud_provider_ = std::make_unique<CloudProviderImpl>(firebase_.get());
 
-  CheckObjects();
+  command_ = CommandFromArgs(args);
+  return true;
 }
 
-void ClientApp::CheckObjects() {
-  std::string id = RandomString();
-  std::string content = RandomString();
-  mx::vmo data;
-  auto result = mtl::VmoFromString(content, &data);
-  FTL_DCHECK(result);
-
-  ftl::TimePoint request_start = ftl::TimePoint::Now();
-  cloud_provider_->AddObject(
-      id, std::move(data), [this, id, content, request_start](Status status) {
-
-        if (status != Status::OK) {
-          error("upload test object", status);
-          return;
-        }
-        ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-        ok("upload test object", delta);
-        CheckGetObject(id, content);
-      });
-}
-
-void ClientApp::CheckGetObject(std::string id, std::string content) {
-  ftl::TimePoint request_start = ftl::TimePoint::Now();
-  cloud_provider_->GetObject(
-      id, [this, request_start](Status status, uint64_t size,
-                                mx::datapipe_consumer data) {
-        if (status != Status::OK) {
-          error("retrieve test object", status);
-          return;
-        }
-
-        ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-        ok("retrieve test object", delta);
-        CheckCommits();
-      });
-}
-
-void ClientApp::CheckCommits() {
-  Commit commit(RandomString(), RandomString(), {});
-  ftl::TimePoint request_start = ftl::TimePoint::Now();
-  cloud_provider_->AddCommit(
-      commit,
-      ftl::MakeCopyable(
-          [ this, commit = commit.Clone(), request_start ](Status status) {
-            if (status != Status::OK) {
-              error("upload test commit", status);
-              return;
-            }
-            ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-            ok("upload test commit", delta);
-            CheckGetCommits(commit.Clone());
-          }));
-}
-
-void ClientApp::CheckGetCommits(Commit commit) {
-  ftl::TimePoint request_start = ftl::TimePoint::Now();
-  cloud_provider_->GetCommits(
-      "", ftl::MakeCopyable([ this, commit = std::move(commit), request_start ](
-              Status status, std::vector<Record> records) {
-        if (status != Status::OK) {
-          error("retrieve test commits", status);
-          return;
-        }
-
-        ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-        ok("retrieve test commits", delta);
-        CheckWatchExistingCommits(commit.Clone());
-      }));
-}
-
-void ClientApp::CheckWatchExistingCommits(Commit expected_commit) {
-  on_remote_commit_ =
-      ftl::MakeCopyable([ this, expected_commit = std::move(expected_commit) ](
-          Commit commit, std::string timestamp) {
-        on_error_ = nullptr;
-        if (commit.id != expected_commit.id ||
-            commit.content != expected_commit.content) {
-          error("watch for existing commits", "received a wrong commit");
-          on_remote_commit_ = nullptr;
-          return;
-        }
-        on_remote_commit_ = nullptr;
-        ok("watch for existing commits");
-        CheckWatchNewCommits();
-      });
-  on_error_ = [this](ftl::StringView description) {
-    on_remote_commit_ = nullptr;
-    on_error_ = nullptr;
-    error("watch for existing commits", description);
-  };
-  cloud_provider_->WatchCommits("", this);
-}
-
-void ClientApp::CheckWatchNewCommits() {
-  Commit commit(RandomString(), RandomString(), {});
-  on_remote_commit_ = ftl::MakeCopyable([
-    this, expected_commit = commit.Clone(),
-    request_start = ftl::TimePoint::Now()
-  ](Commit commit, std::string timestamp) {
-    on_error_ = nullptr;
-    if (commit.id != expected_commit.id ||
-        commit.content != expected_commit.content) {
-      error("watch for new commits", "received a wrong commit");
-      on_remote_commit_ = nullptr;
-      return;
-    }
-    ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-    on_remote_commit_ = nullptr;
-    ok("watch for new commits", delta);
-    Done();
-  });
-  on_error_ = [this](ftl::StringView description) {
-    on_remote_commit_ = nullptr;
-    on_error_ = nullptr;
-    error("watch for new commits", description);
-  };
-
-  cloud_provider_->AddCommit(
-      commit, ftl::MakeCopyable(
-                  [ this, expected_commit = commit.Clone() ](Status status) {
-                    if (status != Status::OK) {
-                      error("watch for new commits", status);
-                      return;
-                    }
-                  }));
-}
-
-void ClientApp::Done() {
-  std::cout << "You're all set!" << std::endl;
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
+void ClientApp::Start() {
+  FTL_DCHECK(command_);
+  command_->Start([] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 }
 
 }  // namespace cloud_provider

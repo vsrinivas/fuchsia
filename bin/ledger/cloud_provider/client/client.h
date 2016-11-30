@@ -7,10 +7,11 @@
 
 #include <memory>
 #include <string>
-#include <utility>
+#include <vector>
 
+#include "apps/ledger/src/cloud_provider/client/command.h"
+#include "apps/ledger/src/cloud_provider/client/doctor_command.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
-#include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/modular/lib/app/application_context.h"
@@ -19,41 +20,26 @@
 
 namespace cloud_provider {
 
-class ClientApp : public CommitWatcher {
+class ClientApp {
  public:
   ClientApp(ftl::CommandLine command_line);
 
  private:
-  // CommitWatcher:
-  void OnRemoteCommit(Commit commit, std::string timestamp) override;
+  std::unique_ptr<Command> CommandFromArgs(
+      const std::vector<std::string>& args);
 
-  void OnConnectionError() override;
+  void PrintUsage();
 
-  void OnMalformedNotification() override;
+  bool Initialize();
 
   void Start();
-
-  void CheckObjects();
-
-  void CheckGetObject(std::string id, std::string content);
-
-  void CheckCommits();
-
-  void CheckGetCommits(Commit commit);
-
-  void CheckWatchExistingCommits(Commit expected_commit);
-
-  void CheckWatchNewCommits();
-
-  void Done();
 
   ftl::CommandLine command_line_;
   std::unique_ptr<modular::ApplicationContext> context_;
   std::unique_ptr<ledger::NetworkService> network_service_;
   std::unique_ptr<firebase::Firebase> firebase_;
   std::unique_ptr<CloudProvider> cloud_provider_;
-  std::function<void(Commit, std::string)> on_remote_commit_;
-  std::function<void(ftl::StringView)> on_error_;
+  std::unique_ptr<Command> command_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ClientApp);
 };

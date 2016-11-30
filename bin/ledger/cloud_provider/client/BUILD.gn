@@ -3,11 +3,14 @@
 # found in the LICENSE file.
 
 executable("client") {
-  output_name = "debug_cloud_sync"
+  output_name = "cloud_sync"
 
   sources = [
     "client.cc",
     "client.h",
+    "command.h",
+    "doctor_command.cc",
+    "doctor_command.h",
   ]
 
   deps = [

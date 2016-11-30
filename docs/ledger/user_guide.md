@@ -60,7 +60,7 @@ Console](https://console.firebase.google.com/) and set the following in
 In order to point Ledger to your database, run the configuration script:
 
 ```
-/system/bin/configure_ledger --firebase_id=<DATABASE_ID> --firebase_prefix=<USER_IDENTITY>
+configure_ledger --firebase_id=<DATABASE_ID> --firebase_prefix=<USER_IDENTITY>
 ```
 
 `DATABASE_ID` is the identifier of your Firebase project. (it's "ABC" for a
@@ -75,7 +75,7 @@ identities.
 If something seems off with sync, run the following command:
 
 ```
-@ bootstrap debug_cloud_sync
+@ bootstrap cloud_sync doctor
 ```
 
 If the provided information is not enough to resolve the problem, please file a
@@ -86,5 +86,5 @@ bug and attach the output.
 To disable sync, run the configuration script with no sync parameters:
 
 ```
-/system/bin/configure_ledger
+configure_ledger
 ```
