@@ -59,8 +59,12 @@ void stable_sort(AskChannel::RankedSuggestions* suggestions) {
 // TODO(rosswang): Allow intersections and more generally edit distance with
 // substring discounting.
 float AskChannel::Rank(const SuggestionPrototype* prototype) const {
-  if (query_.empty())
+  if (query_.empty()) {
+    if (repo_->filter() && !repo_->filter()(*prototype->second->proposal)) {
+      return kExcludeRank;
+    }
     return next_rank();
+  }
 
   std::string text = prototype->second->proposal->display->headline;
   std::transform(text.begin(), text.end(), text.begin(), ::tolower);
