@@ -10,6 +10,7 @@
 #include <runtime/mutex.h>
 #include <runtime/tls.h>
 #include <stddef.h>
+#include <unistd.h>
 
 // An mxr_thread_t starts its life JOINABLE.
 // - If someone calls mxr_thread_join on it, it transitions to JOINED.
@@ -56,8 +57,7 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
 
     uintptr_t mapping = 0;
     uint32_t flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
-    status = _mx_process_map_vm(mx_process_self(), vmo, 0, len,
-                                            &mapping, flags);
+    status = _mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, len, flags, &mapping);
     _mx_handle_close(vmo);
     if (status != NO_ERROR)
         return status;
@@ -72,7 +72,11 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
 static mx_status_t deallocate_thread_page(mxr_thread_t* thread) {
     CHECK_THREAD(thread);
     uintptr_t mapping = (uintptr_t)thread;
-    return _mx_process_unmap_vm(mx_process_self(), mapping, 0u);
+
+    const int page_size = getpagesize();
+    const size_t len = (sizeof(mxr_thread_t) + page_size - 1) &
+            ~(page_size - 1);
+    return _mx_vmar_unmap(mx_vmar_root_self(), mapping, len);
 }
 
 static mx_status_t thread_cleanup(mxr_thread_t* thread) {

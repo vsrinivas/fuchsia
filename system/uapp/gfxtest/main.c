@@ -31,13 +31,15 @@ int main(int argc, char* argv[]) {
 
     size_t size = fb.info.stride * fb.info.pixelsize * fb.info.height;
     uintptr_t fbo;
-    mx_status_t status = mx_process_map_vm(mx_process_self(), fb.vmo, 0, size, &fbo, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_status_t status = mx_vmar_map(mx_vmar_root_self(), 0, fb.vmo, 0, size,
+                                     MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &fbo);
     if (status < 0) {
         printf("failed to map fb (%d)\n", status);
         return -1;
     }
 
-    gfx_surface* gfx = gfx_create_surface((void*)fbo, fb.info.width, fb.info.height, fb.info.stride, fb.info.format, 0);
+    gfx_surface* gfx = gfx_create_surface((void*)fbo, fb.info.width, fb.info.height, fb.info.stride,
+                                          fb.info.format, 0);
     if (!gfx) {
         printf("failed to create gfx surface\n");
         return -1;

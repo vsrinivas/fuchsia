@@ -200,7 +200,9 @@ int main(int argc, char* argv[]) {
 
     size_t size = fb.info.stride * fb.info.pixelsize * fb.info.height;
     uintptr_t fbo;
-    mx_status_t status = _mx_process_map_vm(mx_process_self(), fb.vmo, 0, size, &fbo, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+
+    mx_status_t status = _mx_vmar_map(mx_vmar_root_self(), 0, fb.vmo, 0, size,
+                                      MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &fbo);
     if (status < 0) {
         printf("couldn't map fb: %d\n", status);
         return -1;
@@ -305,7 +307,7 @@ int main(int argc, char* argv[]) {
     free(buf);
     free(rpt_desc);
     close(touchfd);
-    _mx_process_unmap_vm(mx_process_self(), fbo, size);
+    _mx_vmar_unmap(mx_vmar_root_self(), fbo, size);
     close(vcfd);
     return 0;
 }

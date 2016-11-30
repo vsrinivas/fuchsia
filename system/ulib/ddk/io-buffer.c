@@ -8,27 +8,17 @@
 #include <limits.h>
 #include <stdio.h>
 
-// HACK: move the mmio mappings to a high address to get out of the way of DSOs and other user data.
-// Will go away once these mappings move into a generic VMO map call.
-static const mx_vaddr_t mmio_map_base_address =
-#if _LP64
-    0x7ff000000000ULL;
-#else
-    0x20000000UL;
-#endif
-
 static mx_status_t io_buffer_init_common(io_buffer_t* buffer, mx_handle_t vmo_handle, size_t size,
                                          mx_off_t offset, uint32_t flags) {
     mx_vaddr_t virt;
 
     flags |= MX_VM_FLAG_DMA;
     // Temporary hack to ensure our mapping does not conflict with DSO loading
-    virt = mmio_map_base_address;
     flags |= MX_VM_FLAG_ALLOC_BASE;
 
-    mx_status_t status = mx_process_map_vm(mx_process_self(), vmo_handle, 0, size, &virt, flags);
+    mx_status_t status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
     if (status != NO_ERROR) {
-        printf("io_buffer: mx_process_map_vm failed %d size: %zu\n", status, size);
+        printf("io_buffer: mx_vmar_map failed %d size: %zu\n", status, size);
         mx_handle_close(vmo_handle);
         return status;
     }
