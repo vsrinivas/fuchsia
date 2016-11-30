@@ -30,6 +30,8 @@ group("tests") {
 executable("unittests") {
   testonly = true
 
+  output_name = "convert_unittests"
+
   sources = [
     "convert_unittest.cc",
   ]
