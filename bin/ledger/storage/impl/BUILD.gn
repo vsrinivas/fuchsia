@@ -29,7 +29,7 @@ source_set("lib") {
 
   deps = [
     "//apps/ledger/src/callback",
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",
     "//lib/fidl/cpp/bindings",
@@ -60,7 +60,7 @@ executable("unittests") {
   deps = [
     ":lib",
     "//apps/ledger/src/cloud_sync/impl",
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",

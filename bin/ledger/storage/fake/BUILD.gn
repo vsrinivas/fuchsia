@@ -31,7 +31,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//lib/fidl/cpp/bindings",
     "//lib/mtl",
   ]

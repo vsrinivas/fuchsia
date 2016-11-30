@@ -10,7 +10,7 @@ source_set("backoff") {
   ]
 
   public_deps = [
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//lib/ftl",
   ]
 }

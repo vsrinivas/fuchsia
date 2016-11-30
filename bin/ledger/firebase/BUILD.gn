@@ -22,7 +22,7 @@ source_set("firebase") {
   ]
 
   deps = [
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/glue/data_pipe",
     "//lib/ftl",
     "//lib/mtl",

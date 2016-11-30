@@ -29,7 +29,7 @@ source_set("lib") {
 
   deps = [
     "//apps/ledger/src/callback",
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/public",
     "//lib/ftl",
     "//third_party/rapidjson",
@@ -52,7 +52,7 @@ executable("unittests") {
 
   deps = [
     ":lib",
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test:lib",

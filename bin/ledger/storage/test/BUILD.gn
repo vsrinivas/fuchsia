@@ -21,7 +21,7 @@ source_set("test") {
   ]
 
   deps = [
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//lib/ftl",
   ]
 }

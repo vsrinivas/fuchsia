@@ -17,7 +17,7 @@ executable("client") {
     "//apps/ledger/src/cloud_provider/impl",
     "//apps/ledger/src/configuration:lib",
     "//apps/ledger/src/firebase",
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//apps/modular/lib/app",
     "//apps/network/services",
     "//lib/ftl",

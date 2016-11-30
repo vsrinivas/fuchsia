@@ -2,22 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("glue") {
-  sources = [
-    "crypto/base64.cc",
-    "crypto/base64.h",
-    "crypto/hash.cc",
-    "crypto/hash.h",
-    "crypto/rand.cc",
-    "crypto/rand.h",
-  ]
-
-  deps = [
-    "//lib/ftl",
-    "//third_party/boringssl",
-  ]
-}
-
 group("tests") {
   testonly = true
 

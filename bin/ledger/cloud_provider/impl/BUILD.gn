@@ -21,7 +21,7 @@ source_set("impl") {
 
   deps = [
     "//apps/ledger/src/firebase",
-    "//apps/ledger/src/glue",
+    "//apps/ledger/src/glue/crypto",
     "//lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
