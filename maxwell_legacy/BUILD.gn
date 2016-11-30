@@ -3,13 +3,10 @@
 # found in the LICENSE file.
 
 group("maxwell") {
-  testonly = true
-
   deps = [
     "src/acquirers",
     "src/agents",
     "src/context_engine",
-    "src/integration",
     "src/launcher",
     "src/resolver",
     "src/suggestion_engine",
