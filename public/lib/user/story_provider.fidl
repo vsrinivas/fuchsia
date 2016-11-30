@@ -60,7 +60,7 @@ interface StoryController {
   // Gets a connection to the Link to the root module. Only available
   // while the story is running, otherwise gets closed.
   GetLink(Link& link);
-  
+
   // Stops this |Story| if it is running, else does nothing. Returns
   // when the story is stopped.
   Stop() => ();

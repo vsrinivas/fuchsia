@@ -45,6 +45,13 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
     aux_bindings_.AddBinding(this, std::move(request));
   }
 
+  // Used by Create and Resume implementations. Takes ownership of the
+  // controller.
+  void AddController(const std::string& story_id, StoryControllerImpl* story_controller);
+
+  // Removes story controller impls no longer needed.
+  void PurgeControllers();
+
   // Obtains the StoryData for an existing story from the ledger.
   void GetStoryData(const fidl::String& story_id,
                     const std::function<void(StoryDataPtr)>& result);
@@ -89,6 +96,12 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& cb) override;
 
+  // Used by CreateStory() and ResumeStory(). Followed eventually by
+  // AddController().
+  void ReserveController(
+      const std::string& story_id,
+      fidl::InterfaceRequest<StoryController> story_controller_request);
+
   ApplicationEnvironmentPtr environment_;
   StrongBinding<StoryProvider> binding_;
   fidl::BindingSet<StoryProvider> aux_bindings_;
@@ -100,6 +113,22 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
+
+  // Between a request coming in for a controller and the controller
+  // being created, more requests may come in. To handle this
+  // condition correctly, a request issued for a controller is marked
+  // by an instance of this struct, and its completion is marked by
+  // setting the controller.
+  //
+  // Instances of this struct are held in a unique_ptr<> to be sure
+  // that we never need to move them.
+  struct StoryControllerEntry {
+    std::vector<fidl::InterfaceRequest<StoryController>> requests;
+    std::unique_ptr<StoryControllerImpl> impl;
+    bool deleted{};
+  };
+  std::unordered_map<std::string,
+                     std::unique_ptr<StoryControllerEntry>> story_controllers_;
 
   // Owned by UserRunner.
   UserLedgerRepositoryFactory* const ledger_repository_factory_;

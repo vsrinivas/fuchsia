@@ -43,18 +43,19 @@ constexpr uint32_t kViewNodeIdBase = 100;
 constexpr uint32_t kViewNodeIdSpacing = 100;
 constexpr uint32_t kViewSceneNodeIdOffset = 1;
 
-// Subjects
+// Link data subjects
 constexpr char kDocId[] =
     "http://google.com/id/dc7cade7-7be0-4e23-924d-df67e15adae5";
 
-// Property labels
+// Link data property labels
 constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
 constexpr char kSenderLabel[] = "http://schema.org/sender";
 constexpr char kIsALabel[] = "isA";
 
-// Predefined Values
+// Link data property values
 constexpr char kIsAValue[] = "http://schema.domokit.org/PingPongPacket";
 
+// Ledger keys
 constexpr char kLedgerCounterKey[] = "counter_key";
 
 using document_store::Document;
@@ -329,6 +330,13 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
       override {
     story_.Bind(std::move(story));
     link_.Bind(std::move(link));
+
+    // Read initial Link data. We expect the shell to tell us what it
+    // is.
+    link_->Query([this](
+        fidl::Map<fidl::String, document_store::DocumentPtr> value) {
+      FTL_LOG(INFO) << "example_recipe link: " << value;
+    });
 
     story_->CreateLink("module1", GetProxy(&module1_link_));
     story_->CreateLink("module2", GetProxy(&module2_link_));

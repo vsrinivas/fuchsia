@@ -15,15 +15,22 @@ StoryControllerImpl::StoryControllerImpl(
     StoryDataPtr story_data,
     StoryProviderImpl* const story_provider_impl,
     ApplicationLauncherPtr launcher,
-    fidl::InterfaceRequest<StoryController> story_controller_request,
     UserLedgerRepositoryFactory* ledger_repository_factory)
     : story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
       launcher_(std::move(launcher)),
-      binding_(this, std::move(story_controller_request)),
       module_watcher_binding_(this),
       link_changed_binding_(this),
-      ledger_repository_factory_(ledger_repository_factory) {}
+      ledger_repository_factory_(ledger_repository_factory) {
+  bindings_.set_on_empty_set_handler([this]() {
+    story_provider_impl_->PurgeControllers();
+  });
+}
+
+void StoryControllerImpl::Connect(
+    fidl::InterfaceRequest<StoryController> story_controller_request) {
+  bindings_.AddBinding(this, std::move(story_controller_request));
+}
 
 // |StoryController|
 void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
@@ -142,6 +149,13 @@ void StoryControllerImpl::StartStory(
   story_context_->GetStory(GetProxy(&story_));
   story_->CreateLink("root", GetProxy(&root_));
 
+  // Connect pending requests to the new root_, so that it can be
+  // configured before the new module uses it.
+  for (auto& root_request : root_requests_) {
+    root_->Dup(std::move(root_request));
+  }
+  root_requests_.clear();
+
   fidl::InterfaceHandle<Link> link;
   root_->Dup(GetProxy(&link));
   story_->StartModule(story_data_->story_info->url, std::move(link), nullptr, nullptr,
@@ -163,6 +177,8 @@ void StoryControllerImpl::StartStory(
 void StoryControllerImpl::GetLink(fidl::InterfaceRequest<Link> link_request) {
   if (root_.is_bound()) {
     root_->Dup(std::move(link_request));
+  } else {
+    root_requests_.emplace_back(std::move(link_request));
   }
 }
 

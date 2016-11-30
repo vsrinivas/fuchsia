@@ -10,6 +10,7 @@
 
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/app/connect.h"
+#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
@@ -30,6 +31,11 @@ namespace {
 
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr uint32_t kViewResourceIdBase = 100;
+
+constexpr char kUserShell[] = "https://fuchsia.googlesource.com/modular/"
+    "services/user/user_shell.fidl#modular.UserShell";
+constexpr char kDummyUserShell[] = "https://fuchsia.googlesource.com/modular/"
+    "src/user_runner/dummy_user_shell.cc";
 
 class Settings {
  public:
@@ -225,6 +231,17 @@ class DummyUserShellApp
   }
 
   void InitStory() {
+    story_controller_->GetLink(GetProxy(&root_));
+
+    // NOTE(mesch): Totally tentative. Tell the root module under what
+    // user shell it's running.
+    modular::FidlDocMap docs;
+    modular::DocumentEditor(story_info_->url)
+        .SetProperty(
+            kUserShell, modular::DocumentEditor::NewStringValue(kDummyUserShell))
+        .Insert(&docs);
+    root_->AddDocuments(std::move(docs));
+
     fidl::InterfaceHandle<StoryWatcher> story_watcher;
     story_watcher_binding_.Bind(fidl::GetProxy(&story_watcher));
     story_controller_->Watch(std::move(story_watcher));
@@ -241,6 +258,7 @@ class DummyUserShellApp
   void TearDownStoryController() {
     story_watcher_binding_.Close();
     story_controller_.reset();
+    root_.reset();
   }
 
   // Every five counter increments, we dehydrate and rehydrate the story.
@@ -274,6 +292,7 @@ class DummyUserShellApp
   std::unique_ptr<DummyUserShellView> view_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
+  modular::LinkPtr root_;
   modular::StoryInfoPtr story_info_;
   int data_count_{0};
 

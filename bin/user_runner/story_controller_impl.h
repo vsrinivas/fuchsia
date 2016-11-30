@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "apps/modular/lib/document_editor/document_editor.h"
-#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/story_data.fidl.h"
@@ -18,6 +17,7 @@
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/user_ledger_repository_factory.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
@@ -34,15 +34,17 @@ class StoryControllerImpl : public StoryController,
       StoryDataPtr story_data,
       StoryProviderImpl* story_provider_impl,
       ApplicationLauncherPtr launcher,
-      fidl::InterfaceRequest<StoryController> story_controller_request,
-      UserLedgerRepositoryFactory* ledger_repository_factory) {
+      UserLedgerRepositoryFactory* const ledger_repository_factory) {
     return new StoryControllerImpl(std::move(story_data), story_provider_impl,
                                    std::move(launcher),
-                                   std::move(story_controller_request),
                                    ledger_repository_factory);
   }
 
   ~StoryControllerImpl() override = default;
+
+  void Connect(fidl::InterfaceRequest<StoryController> story_controller_request);
+
+  size_t bindings_size() const { return bindings_.size(); }
 
  private:
   // Constructor is private to ensure (by way of New()) that instances
@@ -51,7 +53,6 @@ class StoryControllerImpl : public StoryController,
       StoryDataPtr story_data,
       StoryProviderImpl* story_provider_impl,
       ApplicationLauncherPtr launcher,
-      fidl::InterfaceRequest<StoryController> story_controller_request,
       UserLedgerRepositoryFactory* ledger_repository_factory);
 
   // |StoryController|
@@ -88,13 +89,16 @@ class StoryControllerImpl : public StoryController,
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
   ApplicationLauncherPtr launcher_;
 
-  StrongBinding<StoryController> binding_;
+  fidl::BindingSet<StoryController> bindings_;
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
   fidl::Binding<LinkWatcher> link_changed_binding_;
   fidl::InterfacePtrSet<StoryWatcher> story_watchers_;
   StoryPtr story_;
   StoryContextPtr story_context_;
   LinkPtr root_;
+  // If requests for root_ arrive before we have it, we store these
+  // requests here.
+  std::vector<fidl::InterfaceRequest<Link>> root_requests_;
   ModuleControllerPtr module_;
 
   UserLedgerRepositoryFactory* const ledger_repository_factory_;
