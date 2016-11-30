@@ -89,9 +89,9 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
     server_timestamps_.push_back(std::move(timestamp));
   }
 
-  void OnConnectionError() override { connection_error_calls++; }
+  void OnConnectionError() override { connection_error_calls_++; }
 
-  void OnMalformedNotification() override { malformed_notification_calls++; }
+  void OnMalformedNotification() override { malformed_notification_calls_++; }
 
  protected:
   const std::unique_ptr<CloudProviderImpl> cloud_provider_;
@@ -114,8 +114,8 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
   // registered as a CommitWatcher.
   std::vector<Commit> commits_;
   std::vector<std::string> server_timestamps_;
-  unsigned int connection_error_calls = 0u;
-  unsigned int malformed_notification_calls = 0u;
+  unsigned int connection_error_calls_ = 0u;
+  unsigned int malformed_notification_calls_ = 0u;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImplTest);
@@ -199,7 +199,7 @@ TEST_F(CloudProviderImplTest, WatchAndGetNotifiedMultiple) {
   EXPECT_EQ(ServerTimestampToBytes(42), server_timestamps_[0]);
   EXPECT_EQ(expected_n2, commits_[1]);
   EXPECT_EQ(ServerTimestampToBytes(43), server_timestamps_[1]);
-  EXPECT_EQ(0u, malformed_notification_calls);
+  EXPECT_EQ(0u, malformed_notification_calls_);
 }
 
 // Tests handling a server event containing a single commit.
@@ -241,7 +241,7 @@ TEST_F(CloudProviderImplTest, WatchWhenThereIsNothingToWatch) {
   ASSERT_FALSE(document.HasParseError());
 
   watch_client_->OnPut("/", document);
-  EXPECT_EQ(0u, malformed_notification_calls);
+  EXPECT_EQ(0u, malformed_notification_calls_);
   EXPECT_TRUE(commits_.empty());
 }
 
@@ -250,7 +250,7 @@ TEST_F(CloudProviderImplTest, WatchWhenThereIsNothingToWatch) {
 // is stopped.
 TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
   rapidjson::Document document;
-  EXPECT_EQ(0u, malformed_notification_calls);
+  EXPECT_EQ(0u, malformed_notification_calls_);
   EXPECT_EQ(0u, unwatch_count_);
 
   // Not a dictionary.
@@ -258,7 +258,7 @@ TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
   ASSERT_FALSE(document.HasParseError());
   cloud_provider_->WatchCommits("", this);
   watch_client_->OnPut("/commits/commit_idV", document);
-  EXPECT_EQ(1u, malformed_notification_calls);
+  EXPECT_EQ(1u, malformed_notification_calls_);
   EXPECT_EQ(1u, unwatch_count_);
 
   // Missing fields.
@@ -266,7 +266,7 @@ TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
   ASSERT_FALSE(document.HasParseError());
   cloud_provider_->WatchCommits("", this);
   watch_client_->OnPut("/commits/commit_idV", document);
-  EXPECT_EQ(2u, malformed_notification_calls);
+  EXPECT_EQ(2u, malformed_notification_calls_);
   EXPECT_EQ(2u, unwatch_count_);
 
   // Timestamp is not a number.
@@ -279,19 +279,19 @@ TEST_F(CloudProviderImplTest, WatchMalformedCommits) {
   ASSERT_FALSE(document.HasParseError());
   cloud_provider_->WatchCommits("", this);
   watch_client_->OnPut("/commits/commit_idV", document);
-  EXPECT_EQ(3u, malformed_notification_calls);
+  EXPECT_EQ(3u, malformed_notification_calls_);
 }
 
 // Verifies that connection errors are reported through the OnConnectionError()
 // callback.
 TEST_F(CloudProviderImplTest, WatchConnectionError) {
   rapidjson::Document document;
-  EXPECT_EQ(0u, connection_error_calls);
+  EXPECT_EQ(0u, connection_error_calls_);
   EXPECT_EQ(0u, unwatch_count_);
 
   cloud_provider_->WatchCommits("", this);
   watch_client_->OnConnectionError();
-  EXPECT_EQ(1u, connection_error_calls);
+  EXPECT_EQ(1u, connection_error_calls_);
   EXPECT_EQ(1u, unwatch_count_);
 }
 
