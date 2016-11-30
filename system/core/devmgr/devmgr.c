@@ -59,7 +59,10 @@ static const uint8_t gpt_magic[16] = {
 
 static bool switch_to_first_vc(void) {
     char* v = getenv("startup.keep-log-visible");
-    return v ? strcmp(v, "true") != 0 : true;
+    if (!v) return true;
+    // If this flag is disabled, meaning any of the following strcmps returns 0,
+    // then we switch. Otherwise we stay on the kernel logs.
+    return !strcmp(v, "0") || !strcmp(v, "false") || !strcmp(v, "off");
 }
 
 // Mount a handle to a remote filesystem on a directory.
