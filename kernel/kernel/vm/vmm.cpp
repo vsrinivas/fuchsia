@@ -155,7 +155,11 @@ status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
     // page fault it
     status_t status = aspace->PageFault(addr, flags);
 #if WITH_LIB_MAGENTA
-    if (status == ERR_NOT_FOUND) {
+    // If it's a user fault, dump info about process memory usage.
+    // If it's a kernel fault, the kernel could possibly already
+    // hold locks on VMOs, Aspaces, etc, so we can't safely do
+    // this.
+    if ((status == ERR_NOT_FOUND) && (flags & VMM_PF_FLAG_USER)) {
         printf("PageFault: %zu free pages\n", pmm_count_free_pages());
         DumpProcessMemoryUsage("PageFault: MemoryUsed: ", 8*256);
     }
