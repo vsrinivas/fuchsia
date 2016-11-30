@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//apps/sysui"
+        "//apps/sysui",
+        "//apps/sysui:test"
     ],
     "binaries": [
         {
