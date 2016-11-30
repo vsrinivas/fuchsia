@@ -11,7 +11,11 @@ Cancellable::Cancellable() {}
 Cancellable::~Cancellable() {}
 
 AutoCancel::AutoCancel(ftl::RefPtr<Cancellable> cancellable)
-    : cancellable_(cancellable) {}
+    : cancellable_(cancellable) {
+  if (cancellable_) {
+    cancellable_->SetOnDone([this] { OnDone(); });
+  }
+}
 
 AutoCancel::~AutoCancel() {
   if (cancellable_)
@@ -24,33 +28,21 @@ void AutoCancel::Reset(ftl::RefPtr<Cancellable> cancellable) {
   if (cancellable_)
     cancellable_->Cancel();
   cancellable_ = cancellable;
+  if (cancellable_)
+    cancellable_->SetOnDone([this] { OnDone(); });
 }
 
-CancellableContainer::CancellableContainer() {}
-
-CancellableContainer::~CancellableContainer() {
-  for (const auto& cancellable : cancellables_) {
-    cancellable->Cancel();
+void AutoCancel::set_on_empty(ftl::Closure callback) {
+  FTL_DCHECK(!on_empty_);
+  on_empty_ = callback;
+  if (cancellable_->IsDone()) {
+    OnDone();
   }
 }
 
-void CancellableContainer::Reset() {
-  for (const auto& cancellable : cancellables_) {
-    cancellable->Cancel();
-  }
-  cancellables_.clear();
-}
-
-void CancellableContainer::AddCancellable(
-    ftl::RefPtr<Cancellable> cancellable) {
-  if (!cancellable->IsDone()) {
-    cancellables_.insert(cancellable);
-    // Do not keep a ftl::RefPtr<Cancellable> in the callback, otherwise
-    // cancellable will own itself and will never be deleted.
-    cancellable->SetOnDone([ this, cancellable = cancellable.get() ] {
-      cancellables_.erase(ftl::RefPtr<Cancellable>(cancellable));
-    });
+void AutoCancel::OnDone() {
+  if (on_empty_) {
+    on_empty_();
   }
 }
-
 }  // namespace callback

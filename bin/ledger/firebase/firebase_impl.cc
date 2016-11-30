@@ -157,7 +157,7 @@ void FirebaseImpl::Request(
     const std::string& method,
     const std::string& message,
     const std::function<void(Status status, std::string response)>& callback) {
-  requests_.AddCancellable(network_service_->Request(
+  requests_.emplace(network_service_->Request(
       MakeRequest(url, method, message),
       [this, callback](network::URLResponsePtr response) {
         OnResponse(callback, std::move(response));

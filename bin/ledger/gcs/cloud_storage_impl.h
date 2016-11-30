@@ -8,6 +8,7 @@
 #include <functional>
 #include <vector>
 
+#include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/network/network_service.h"
 #include "lib/ftl/tasks/task_runner.h"

@@ -16,11 +16,15 @@ class FakeCancellable : public Cancellable {
 
   FakeCancellable(bool* destructed) : destructed_(destructed) {}
 
-  void Cancel() override { ++nb_cancel; }
+  void Cancel() override {
+    if (is_done_)
+      return;
+    ++nb_cancel;
+  }
 
   bool IsDone() override {
     ++nb_is_done;
-    return false;
+    return is_done_;
   }
 
   void SetOnDone(ftl::Closure callback) override {
@@ -28,9 +32,15 @@ class FakeCancellable : public Cancellable {
     this->callback = callback;
   }
 
+  void Do() {
+    is_done_ = true;
+    if (callback)
+      callback();
+  }
   int nb_cancel = 0;
   int nb_is_done = 0;
   int nb_on_done = 0;
+
   ftl::Closure callback;
 
  private:
@@ -39,6 +49,7 @@ class FakeCancellable : public Cancellable {
       *destructed_ = true;
   }
 
+  bool is_done_ = false;
   bool* destructed_;
 };
 
@@ -82,8 +93,8 @@ TEST(CancellableContainer, CancelOnDestruction) {
   EXPECT_EQ(0, cancellable2->nb_on_done);
   {
     CancellableContainer container;
-    container.AddCancellable(cancellable1);
-    container.AddCancellable(cancellable2);
+    container.emplace(cancellable1);
+    container.emplace(cancellable2);
 
     EXPECT_EQ(0, cancellable1->nb_cancel);
     EXPECT_EQ(1, cancellable1->nb_on_done);
@@ -105,18 +116,13 @@ TEST(CancellableContainer, CancelOnReset) {
   EXPECT_EQ(0, cancellable2->nb_on_done);
 
   CancellableContainer container;
-  container.AddCancellable(cancellable1);
-  container.AddCancellable(cancellable2);
+  container.emplace(cancellable1);
+  container.emplace(cancellable2);
 
   EXPECT_EQ(0, cancellable1->nb_cancel);
   EXPECT_EQ(1, cancellable1->nb_on_done);
   EXPECT_EQ(0, cancellable2->nb_cancel);
   EXPECT_EQ(1, cancellable2->nb_on_done);
-
-  container.Reset();
-
-  EXPECT_EQ(1, cancellable1->nb_cancel);
-  EXPECT_EQ(1, cancellable2->nb_cancel);
 }
 
 TEST(CancellableContainer, ClearOnDone) {
@@ -130,15 +136,15 @@ TEST(CancellableContainer, ClearOnDone) {
   EXPECT_EQ(0, cancellable2->nb_on_done);
   {
     CancellableContainer container;
-    container.AddCancellable(cancellable1);
-    container.AddCancellable(cancellable2);
+    container.emplace(cancellable1);
+    container.emplace(cancellable2);
 
     EXPECT_EQ(0, cancellable1->nb_cancel);
     EXPECT_EQ(1, cancellable1->nb_on_done);
     EXPECT_EQ(0, cancellable2->nb_cancel);
     EXPECT_EQ(1, cancellable2->nb_on_done);
 
-    cancellable1->callback();
+    cancellable1->Do();
     EXPECT_EQ(0, cancellable1->nb_cancel);
     cancellable1 = nullptr;
     // Check that container doesn't keep a reference to cancellable1 once it is

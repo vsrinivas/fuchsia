@@ -7,6 +7,7 @@
 
 #include <set>
 
+#include "apps/ledger/src/callback/auto_cleanable.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_counted.h"
@@ -14,7 +15,7 @@
 
 namespace callback {
 
-class CancellableContainer;
+class AutoCancel;
 
 // Cancellable can be used by any service that starts an asynchronous task to
 // allow clients to cancel the operation. The contract is the following: When
@@ -39,7 +40,7 @@ class Cancellable : public ftl::RefCountedThreadSafe<Cancellable> {
   virtual void SetOnDone(ftl::Closure callback) = 0;
 
  private:
-  friend CancellableContainer;
+  friend AutoCancel;
 
   FRIEND_REF_COUNTED_THREAD_SAFE(Cancellable);
 };
@@ -54,8 +55,15 @@ class AutoCancel {
   // Cancel any wrapped |Cancellable| and starts wrapping |cancellable|.
   void Reset(ftl::RefPtr<Cancellable> cancellable = nullptr);
 
+  // The client can call the |set_on_empty| method once. |callback| will then be
+  // executed when the underlying Cancellable finishes.
+  void set_on_empty(ftl::Closure callback);
+
  private:
+  void OnDone();
+
   ftl::RefPtr<Cancellable> cancellable_;
+  ftl::Closure on_empty_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(AutoCancel);
 };
@@ -63,23 +71,7 @@ class AutoCancel {
 // RAII container for multiple |Cancellable|. The |Cancellable|s will be
 // canceled when this object is deleted. The |Cancellable| objects will also be
 // deleted when they complete.
-class CancellableContainer {
- public:
-  CancellableContainer();
-  ~CancellableContainer();
-
-  // Cancels all wrapped |Cancellable|s.
-  void Reset();
-
-  // Starts wrapping |cancellable|. The |OnDone| method from |cancellable|
-  // should not have been called prior to being added to the container.
-  void AddCancellable(ftl::RefPtr<Cancellable> cancellable);
-
- private:
-  std::set<ftl::RefPtr<Cancellable>> cancellables_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(CancellableContainer);
-};
+using CancellableContainer = AutoCleanableSet<AutoCancel>;
 
 }  // namespace callback
 
