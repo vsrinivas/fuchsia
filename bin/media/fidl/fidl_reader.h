@@ -5,6 +5,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 
 #include <mx/datapipe.h>
 
@@ -16,7 +17,8 @@
 namespace media {
 
 // Reads raw data from a SeekingReader service.
-class FidlReader : public Reader {
+class FidlReader : public Reader,
+                   public std::enable_shared_from_this<FidlReader> {
  public:
   // Creates an FidlReader. Must be called on a fidl thread.
   static std::shared_ptr<Reader> Create(

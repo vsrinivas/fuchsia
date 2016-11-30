@@ -53,7 +53,13 @@ void FidlReader::ReadAt(size_t position,
   read_at_callback_ = callback;
 
   // ReadAt may be called on non-fidl threads, so we use the runner.
-  task_runner_->PostTask([this]() { ContinueReadAt(); });
+  task_runner_->PostTask([weak_this =
+                              std::weak_ptr<FidlReader>(shared_from_this())]() {
+    auto shared_this = weak_this.lock();
+    if (shared_this) {
+      shared_this->ContinueReadAt();
+    }
+  });
 }
 
 void FidlReader::ContinueReadAt() {
