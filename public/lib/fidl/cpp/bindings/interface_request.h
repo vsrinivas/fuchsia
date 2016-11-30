@@ -68,9 +68,6 @@ class InterfaceRequest {
   // Removes the channel from the request and returns it.
   mx::channel PassChannel() { return std::move(handle_); }
 
-  // TODO(abarth): Remove this method.
-  mx::channel PassMessagePipe() { return PassChannel(); }
-
  private:
   mx::channel handle_;
 
