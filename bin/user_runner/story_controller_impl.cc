@@ -27,7 +27,11 @@ StoryControllerImpl::StoryControllerImpl(
 
 // |StoryController|
 void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
-  callback(story_data_->story_info->Clone());
+  story_provider_impl_->GetStoryData(
+      story_data_->story_info->id, [this, callback](StoryDataPtr story_data) {
+        story_data_ = std::move(story_data);
+        callback(story_data_->story_info->Clone());
+      });
 }
 
 // |StoryController|
