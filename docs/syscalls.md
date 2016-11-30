@@ -8,11 +8,11 @@
 + [handle_wait_one](syscalls/handle_wait_one.md) - wait for signals on one handle
 
 ## Objects
-+ object_bind_exception_port - attach an exception port to a task
-+ object_get_child - find the child of an object by its koid
++ [object_bind_exception_port](syscalls/object_bind_exception_port.md) - attach an exception port to a task
++ [object_get_child](syscalls/object_get_child.md) - find the child of an object by its koid
 + [object_get_info](syscalls/object_get_info.md) - obtain information about an object
-+ object_get_property - read an object property
-+ object_set_property - modify an object property
++ [object_get_property](syscalls/object_get_property.md) - read an object property
++ [object_set_property](syscalls/object_set_property.md) - modify an object property
 + [object_signal](syscalls/object_signal.md) - set or clear the user signals on an object
 + [object_signal_peer](syscalls/object_signal_peer.md) - set or clear the user signals in the opposite end
 
@@ -28,17 +28,18 @@
 + [process_create](syscalls/process_create.md) - create a new process within a job
 + [process_map_vm](syscalls/process_map_vm.md) - map a VMO into a process
 + [process_protect_vm](syscalls/process_protect_vm.md) - adjust memory access permissions
-+ process_read_memory - read from a process's address space
++ [process_read_memory](syscalls/process_read_memory.md) - read from a process's address space
 + [process_start](syscalls/process_start.md) - cause a new process to start executing
 + [process_unmap_vm](syscalls/process_unmap_vm.md) - unmap a memory region from a process
-+ process_write_memory - write to a process's address space
++ [process_write_memory](syscalls/process_write_memory.md) - write to a process's address space
++ [process_exit](syscalls/process_exit.md) - exit the current process
 
 ## Jobs
-+ job_create - create a new job within a job
++ [job_create](syscalls/job_create.md) - create a new job within a job
 
 ## Tasks (Task, Process, or Job)
-+ task_resume - cause a suspended task to continue running
-+ task_kill - cause a task to stop running
++ [task_resume](syscalls/task_resume.md) - cause a suspended task to continue running
++ [task_kill](syscalls/task_kill.md) - cause a task to stop running
 
 ## Channels
 + [channel_create](syscalls/channel_create.md) - create a new channel
@@ -95,10 +96,6 @@
 + [datapipe_read](syscalls/datapipe_read.md)
 + [datapipe_begin_read](syscalls/datapipe_begin_read.md)
 + [datapipe_end_read](syscalls/datapipe_end_read.md)
-
-## Information
-+ version_get - get kernel version string
-+ num_cpus - get number of cores
 
 ## Logging
 + log_create - create a kernel managed log reader or writer
