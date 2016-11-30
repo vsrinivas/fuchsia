@@ -19,6 +19,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/process.cc \
     $(LOCAL_DIR)/socket.cc \
     $(LOCAL_DIR)/thread.cc \
+    $(LOCAL_DIR)/vmar.cc \
     $(LOCAL_DIR)/vmo.cc \
     $(LOCAL_DIR)/waitset.cc \
 

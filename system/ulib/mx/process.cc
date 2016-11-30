@@ -8,21 +8,30 @@
 
 #include <mx/job.h>
 #include <mx/thread.h>
+#include <mx/vmar.h>
 
 namespace mx {
 
 mx_status_t process::create(const job& job, const char* name, uint32_t name_len, uint32_t flags,
-                            process* result) {
+                            process* proc, vmar* vmar) {
     mx_handle_t proc_h;
     mx_handle_t vmar_h;
     mx_status_t status = mx_process_create(job.get(), name, name_len, flags, &proc_h, &vmar_h);
     if (status < 0) {
-        result->reset(MX_HANDLE_INVALID);
+        proc->reset(MX_HANDLE_INVALID);
+        // TODO(teisenbe): Change this to assume vmar is non-null once we no
+        // longer need compat with old interface.
+        if (vmar) {
+            vmar->reset(MX_HANDLE_INVALID);
+        }
     } else {
-        result->reset(proc_h);
+        proc->reset(proc_h);
+        if (vmar) {
+            vmar->reset(vmar_h);
+        } else {
+            mx_handle_close(vmar_h);
+        }
     }
-    // TODO(teisenbe): Hold on to vmar_h instead of just closing it
-    mx_handle_close(vmar_h);
     return status;
 }
 

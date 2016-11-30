@@ -10,12 +10,14 @@
 #include <mx/eventpair.h>
 #include <mx/handle.h>
 #include <mx/socket.h>
+#include <mx/vmar.h>
 
 #include <mxtl/type_support.h>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
 
+#include <unistd.h>
 #include <unittest/unittest.h>
 
 static mx_status_t validate_handle(mx_handle_t handle) {
@@ -134,6 +136,19 @@ static bool eventpair_test() {
     END_TEST;
 }
 
+static bool vmar_test() {
+    BEGIN_TEST;
+    mx::vmar vmar;
+    const size_t size = getpagesize();
+    uintptr_t addr;
+    ASSERT_EQ(mx::vmar::root_self().allocate(0u, size, MX_VM_FLAG_CAN_MAP_READ, &vmar, &addr),
+              NO_ERROR, "");
+    ASSERT_EQ(validate_handle(vmar.get()), NO_ERROR, "");
+    ASSERT_EQ(vmar.destroy(), NO_ERROR, "");
+    // TODO(teisenbe): test more.
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(libmx_tests)
 RUN_TEST(handle_invalid_test)
 RUN_TEST(handle_close_test)
@@ -145,6 +160,7 @@ RUN_TEST(event_duplicate_test)
 RUN_TEST(channel_test)
 RUN_TEST(socket_test)
 RUN_TEST(eventpair_test)
+RUN_TEST(vmar_test)
 END_TEST_CASE(libmx_tests)
 
 int main(int argc, char** argv) {

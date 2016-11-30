@@ -18,6 +18,7 @@ class waitset;
 // - thread
 // - process
 // - job
+// - vmar
 // - vmo
 template <typename T> struct handle_traits {
     static const bool supports_duplication = true;
