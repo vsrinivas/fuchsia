@@ -54,7 +54,7 @@ bool Initialize(modular::ServiceProvider* services) {
   icu_data::ICUDataProviderPtr icu_data_provider;
   services->ConnectToService(
       icu_data::ICUDataProvider::Name_,
-      fidl::GetProxy(&icu_data_provider).PassMessagePipe());
+      fidl::GetProxy(&icu_data_provider).PassChannel());
 
   icu_data::ICUDataPtr response;
   icu_data_provider->ICUDataWithSha1(
