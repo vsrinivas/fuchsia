@@ -178,6 +178,7 @@ static int wait_inferior_thread_func(void* arg)
     mx_handle_t* args = arg;
     mx_handle_t inferior = args[0];
     mx_handle_t eport = args[1];
+    free(args);
 
     bool pass = wait_inferior_thread_worker(inferior, eport);
 
@@ -201,10 +202,14 @@ static int watchdog_thread_func(void* arg)
 static thrd_t start_wait_inf_thread(mx_handle_t inferior)
 {
     mx_handle_t eport = attach_inferior(inferior);
-    mx_handle_t wait_inf_args[2] = { inferior, eport };
+    mx_handle_t* wait_inf_args = calloc(2, sizeof(mx_handle_t));
+
+    wait_inf_args[0] = inferior;
+    wait_inf_args[1] = eport;
+
     thrd_t wait_inferior_thread;
     // |inferior| is loaned to the thread, whereas |eport| is transfered to the thread.
-    tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, (void*) &wait_inf_args[0], "wait-inf thread");
+    tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, (void*)wait_inf_args, "wait-inf thread");
     return wait_inferior_thread;
 }
 
