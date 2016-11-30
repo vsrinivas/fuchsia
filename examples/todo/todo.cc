@@ -103,7 +103,7 @@ ledger::LedgerPtr TodoApp::GetLedger() {
                             fidl::GetProxy(&repository_factory));
 
   ledger::LedgerRepositoryPtr repository;
-  repository_factory->GetRepository("/data/ledger/todo_user/",
+  repository_factory->GetRepository("/data/ledger/todo_user",
                                     GetProxy(&repository),
                                     HandleResponse("GetRepository"));
 

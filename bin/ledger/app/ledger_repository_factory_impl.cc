@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 
+#include "lib/ftl/files/path.h"
+
 namespace ledger {
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
@@ -17,12 +19,13 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     const fidl::String& repository_path,
     fidl::InterfaceRequest<LedgerRepository> repository_request,
     const GetRepositoryCallback& callback) {
-  auto it = repositories_.find(repository_path);
+  std::string sanitized_path =
+      files::SimplifyPath(std::move(repository_path.get()));
+  auto it = repositories_.find(sanitized_path);
   if (it == repositories_.end()) {
     auto result = repositories_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(repository_path.get()),
-        std::forward_as_tuple(task_runner_, repository_path.get(),
-                              environment_));
+        std::piecewise_construct, std::forward_as_tuple(sanitized_path),
+        std::forward_as_tuple(task_runner_, sanitized_path, environment_));
     FTL_DCHECK(result.second);
     it = result.first;
   }
