@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -24,6 +25,7 @@
 
 static uint32_t cookie = 1;
 static char* appname;
+static struct in6_addr allowed_addr;
 static const char spinner[] = {'|', '/', '-', '\\'};
 static const int MAX_READ_RETRIES = 10;
 static const int MAX_SEND_RETRIES = 10000;
@@ -405,7 +407,9 @@ void usage(void) {
     fprintf(stderr,
             "usage:   %s [ <option> ]* <kernel> [ <ramdisk> ] [ -- [ <kerneloption> ]* ]\n"
             "\n"
-            "options: -1  only boot once, then exit\n",
+            "options:\n"
+            "  -1  only boot once, then exit\n"
+            "  -a  only boot device with this IPv6 address\n",
             appname);
     exit(1);
 }
@@ -448,6 +452,17 @@ int main(int argc, char** argv) {
             }
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
+        } else if (!strcmp(argv[1], "-a")) {
+            if (argc <= 1) {
+                fprintf(stderr, "'-a' option requires a valid ipv6 address\n");
+                return -1;
+            }
+            if (inet_pton(AF_INET6, argv[2], &allowed_addr) != 1) {
+                fprintf(stderr, "%s: invalid ipv6 address specified\n", argv[2]);
+                return -1;
+            }
+            argc--;
+            argv++;
         } else if (!strcmp(argv[1], "--")) {
             while (argc > 2) {
                 size_t len = strlen(argv[2]);
@@ -508,8 +523,12 @@ int main(int argc, char** argv) {
         }
         if (r < sizeof(nbmsg))
             continue;
-        if ((ra.sin6_addr.s6_addr[0] != 0xFE) || (ra.sin6_addr.s6_addr[1] != 0x80)) {
-            fprintf(stderr, "ignoring non-link-local message\n");
+        if (!IN6_IS_ADDR_LINKLOCAL(&ra.sin6_addr)) {
+            fprintf(stderr, "%s: ignoring non-link-local message\n", appname);
+            continue;
+        }
+        if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) && !IN6_ARE_ADDR_EQUAL(&allowed_addr, &ra.sin6_addr)) {
+            fprintf(stderr, "%s: ignoring message not from allowed address '%s'\n", appname, inet_ntop(AF_INET6, &allowed_addr, tmp, sizeof(tmp)));
             continue;
         }
         if (msg->magic != NB_MAGIC)
