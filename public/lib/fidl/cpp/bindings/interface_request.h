@@ -87,7 +87,8 @@ InterfaceRequest<Interface> GetProxy(InterfaceHandle<Interface>* handle) {
   mx::channel endpoint0;
   mx::channel endpoint1;
   mx::channel::create(0, &endpoint0, &endpoint1);
-  *handle = InterfaceHandle<Interface>(std::move(endpoint0), 0u);
+  *handle = InterfaceHandle<Interface>(std::move(endpoint0),
+                                       Interface::Version_);
   return InterfaceRequest<Interface>(std::move(endpoint1));
 }
 
@@ -133,8 +134,6 @@ InterfaceRequest<Interface> GetProxy(InterfaceHandle<Interface>* handle) {
 //   InterfaceRequest<Source> source_request = GetProxy(&source);
 //   collector->RegisterSource(std::move(source));
 //   CreateSource(std::move(source_request));  // Create implementation locally.
-//
-// TODO(vardhan): Move this function into interface_ptr.h
 template <typename Interface>
 InterfaceRequest<Interface> GetProxy(InterfacePtr<Interface>* ptr) {
   InterfaceHandle<Interface> iface_handle;

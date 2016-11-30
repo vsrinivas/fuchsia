@@ -184,14 +184,14 @@ TEST_F(InterfacePtrTest, IsBound) {
   math::CalculatorPtr calc;
   EXPECT_FALSE(calc.is_bound());
   EXPECT_FALSE(calc);
-  MathCalculatorImpl calc_impl(GetProxy(&calc));
+  MathCalculatorImpl calc_impl(calc.NewRequest());
   EXPECT_TRUE(calc.is_bound());
   EXPECT_TRUE(calc);
 }
 
 TEST_F(InterfacePtrTest, EndToEnd) {
   math::CalculatorPtr calc;
-  MathCalculatorImpl calc_impl(GetProxy(&calc));
+  MathCalculatorImpl calc_impl(calc.NewRequest());
 
   // Suppose this is instantiated in a process that has pipe1_.
   MathCalculatorUI calculator_ui(std::move(calc));
@@ -206,7 +206,7 @@ TEST_F(InterfacePtrTest, EndToEnd) {
 
 TEST_F(InterfacePtrTest, EndToEnd_Synchronous) {
   math::CalculatorPtr calc;
-  MathCalculatorImpl calc_impl(GetProxy(&calc));
+  MathCalculatorImpl calc_impl(calc.NewRequest());
 
   // Suppose this is instantiated in a process that has pipe1_.
   MathCalculatorUI calculator_ui(std::move(calc));
@@ -236,7 +236,7 @@ TEST_F(InterfacePtrTest, EndToEnd_Synchronous) {
 TEST_F(InterfacePtrTest, Movable) {
   math::CalculatorPtr a;
   math::CalculatorPtr b;
-  MathCalculatorImpl calc_impl(GetProxy(&b));
+  MathCalculatorImpl calc_impl(b.NewRequest());
 
   EXPECT_TRUE(!a);
   EXPECT_FALSE(!b);
@@ -284,7 +284,7 @@ TEST_F(InterfacePtrTest, BindInvalidHandle) {
 
 TEST_F(InterfacePtrTest, EncounteredError) {
   math::CalculatorPtr proxy;
-  MathCalculatorImpl calc_impl(GetProxy(&proxy));
+  MathCalculatorImpl calc_impl(proxy.NewRequest());
 
   MathCalculatorUI calculator_ui(std::move(proxy));
 
@@ -310,7 +310,7 @@ TEST_F(InterfacePtrTest, EncounteredError) {
 
 TEST_F(InterfacePtrTest, EncounteredErrorCallback) {
   math::CalculatorPtr proxy;
-  MathCalculatorImpl calc_impl(GetProxy(&proxy));
+  MathCalculatorImpl calc_impl(proxy.NewRequest());
 
   bool encountered_error = false;
   proxy.set_connection_error_handler(
@@ -344,7 +344,7 @@ TEST_F(InterfacePtrTest, EncounteredErrorCallback) {
 
 TEST_F(InterfacePtrTest, DestroyInterfacePtrOnMethodResponse) {
   math::CalculatorPtr proxy;
-  MathCalculatorImpl calc_impl(GetProxy(&proxy));
+  MathCalculatorImpl calc_impl(proxy.NewRequest());
 
   EXPECT_EQ(0, SelfDestructingMathCalculatorUI::num_instances());
 
@@ -359,7 +359,7 @@ TEST_F(InterfacePtrTest, DestroyInterfacePtrOnMethodResponse) {
 
 TEST_F(InterfacePtrTest, NestedDestroyInterfacePtrOnMethodResponse) {
   math::CalculatorPtr proxy;
-  MathCalculatorImpl calc_impl(GetProxy(&proxy));
+  MathCalculatorImpl calc_impl(proxy.NewRequest());
 
   EXPECT_EQ(0, SelfDestructingMathCalculatorUI::num_instances());
 
@@ -374,7 +374,7 @@ TEST_F(InterfacePtrTest, NestedDestroyInterfacePtrOnMethodResponse) {
 
 TEST_F(InterfacePtrTest, ReentrantWaitForIncomingMethodCall) {
   sample::ServicePtr proxy;
-  ReentrantServiceImpl impl(GetProxy(&proxy));
+  ReentrantServiceImpl impl(proxy.NewRequest());
 
   proxy->Frobinate(nullptr, sample::Service::BazOptions::REGULAR, nullptr,
                    [](uint32_t){});
@@ -569,15 +569,15 @@ class AImpl : public A {
 
 TEST_F(InterfacePtrTest, Scoping) {
   APtr a;
-  AImpl a_impl(GetProxy(&a));
+  AImpl a_impl(a.NewRequest());
 
   EXPECT_FALSE(a_impl.d_called());
 
   {
     BPtr b;
-    a->GetB(GetProxy(&b));
+    a->GetB(b.NewRequest());
     CPtr c;
-    b->GetC(GetProxy(&c));
+    b->GetC(c.NewRequest());
     c->D();
   }
 

@@ -10,6 +10,8 @@
 #include <functional>
 #include <utility>
 
+#include <mx/channel.h>
+
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/internal/interface_ptr_internal.h"
 #include "lib/fidl/cpp/bindings/macros.h"
@@ -19,6 +21,9 @@
 #include "lib/ftl/time/time_delta.h"
 
 namespace fidl {
+
+template <typename Interface>
+class InterfaceRequest;
 
 // A pointer to a local proxy of a remote Interface implementation. Uses a
 // channel to communicate with the remote implementation, and automatically
@@ -71,6 +76,33 @@ class InterfacePtr {
     if (info.is_valid())
       ptr.Bind(std::move(info), waiter);
     return ptr;
+  }
+
+
+  // Creates a new pair of channels, one end bound to this InterfacePtr<>, and
+  // returns the other inside as a InterfaceRequest<>. InterfaceRequest<> should
+  // be passed to whatever will provide the implementation.
+  //
+  // Example.  Given the following interface:
+  //
+  //   interface Database {
+  //     OpenTable(Table& table);
+  //   }
+  //
+  // The client would have code similar to the following:
+  //
+  //   DatabasePtr database = ...;  // Connect to database.
+  //   TablePtr table;
+  //   database->OpenTable(table.NewRequest());
+  //
+  // Upon return from .NewRequest(), |table| is ready to have methods called
+  // on it.
+  InterfaceRequest<Interface> NewRequest() {
+    mx::channel endpoint0;
+    mx::channel endpoint1;
+    mx::channel::create(0, &endpoint0, &endpoint1);
+    Bind(InterfaceHandle<Interface>(std::move(endpoint0), Interface::Version_));
+    return InterfaceRequest<Interface>(std::move(endpoint1));
   }
 
   // Binds the InterfacePtr to a remote implementation of Interface. The
