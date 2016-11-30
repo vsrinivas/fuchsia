@@ -645,6 +645,46 @@ vnode_t* devfs_get_root(void) {
     return &vnd_root;
 }
 
+static dnode_t bootfs_root_dn = {
+    .name = "boot",
+    .flags = 4,
+    .children = LIST_INITIAL_VALUE(bootfs_root_dn.children),
+    .parent = &bootfs_root_dn,
+};
+
+static vnode_t bootfs_root = {
+    .ops = &vn_mem_ops_dir,
+    .refcount = 1,
+    .dnode = &bootfs_root_dn,
+    .dn_list = LIST_INITIAL_VALUE(bootfs_root.dn_list),
+    .watch_list = LIST_INITIAL_VALUE(bootfs_root.watch_list),
+};
+
+static dnode_t systemfs_root_dn = {
+    .name = "system",
+    .flags = 6,
+    .children = LIST_INITIAL_VALUE(systemfs_root_dn.children),
+    .parent = &systemfs_root_dn,
+};
+
+static vnode_t systemfs_root = {
+    .ops = &vn_mem_ops_dir,
+    .refcount = 1,
+    .dnode = &systemfs_root_dn,
+    .dn_list = LIST_INITIAL_VALUE(systemfs_root.dn_list),
+    .watch_list = LIST_INITIAL_VALUE(systemfs_root.watch_list),
+};
+
+vnode_t* bootfs_get_root(void) {
+    bootfs_root_dn.vnode = &bootfs_root;
+    return &bootfs_root;
+}
+
+vnode_t* systemfs_get_root(void) {
+    systemfs_root_dn.vnode = &systemfs_root;
+    return &systemfs_root;
+}
+
 static void memfs_mount(vnode_t* parent, vnode_t* subtree) {
     if (subtree->dnode->parent) {
         // subtrees will have "parent" set while they are stand-alone
