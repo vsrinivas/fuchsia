@@ -20,6 +20,7 @@ class waitset;
 // - thread
 // - process
 // - job
+// - vmo
 template <typename T> struct handle_traits {
     static const bool supports_duplication = true;
     static const bool supports_user_signal = true;
@@ -57,12 +58,6 @@ template <> struct handle_traits<log> {
 };
 
 template <> struct handle_traits<socket> {
-    static const bool supports_duplication = true;
-    static const bool supports_user_signal = true;
-    static const bool has_peer_handle = true;
-};
-
-template <> struct handle_traits<vmo> {
     static const bool supports_duplication = true;
     static const bool supports_user_signal = true;
     static const bool has_peer_handle = true;
