@@ -89,6 +89,7 @@ private:
     // valid only when prepared_to_execute_ is true
     std::shared_ptr<ClientContext> locked_context_;
     uint32_t batch_buffer_index_;
+    uint32_t batch_start_offset_;
     EngineCommandStreamerId engine_id_;
     uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
     // ---------------------------- //

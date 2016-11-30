@@ -65,7 +65,7 @@ bool CommandBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* g
     DASSERT(prepared_to_execute_);
     if (address_space_id != exec_resource_mappings_[batch_buffer_index_]->address_space_id())
         return DRETF(false, "wrong address space");
-    *gpu_addr_out = exec_resource_mappings_[batch_buffer_index_]->gpu_addr();
+    *gpu_addr_out = exec_resource_mappings_[batch_buffer_index_]->gpu_addr() + batch_start_offset_;
     return true;
 }
 
@@ -103,6 +103,7 @@ bool CommandBuffer::PrepareForExecution(EngineCommandStreamer* engine,
         return DRETF(false, "failed to patch relocations");
 
     batch_buffer_index_ = batch_buffer_resource_index();
+    batch_start_offset_ = batch_start_offset();
 
     prepared_to_execute_ = true;
     engine_id_ = engine->id();

@@ -97,6 +97,9 @@ public:
         auto engine = MsdIntelDevice::cast(helper_->dev()->msd_dev())->render_engine_cs();
         auto address_space = exec_address_space();
 
+        uint32_t batch_start_offset = 0x10;
+        helper_->abi_cmd_buf()->batch_start_offset = batch_start_offset;
+
         ASSERT_TRUE(cmd_buf_->PrepareForExecution(engine, address_space));
 
         ClientContext* ctx = static_cast<ClientContext*>(cmd_buf_->GetContext());
@@ -104,6 +107,7 @@ public:
 
         gpu_addr_t gpu_addr;
         EXPECT_TRUE(cmd_buf_->GetGpuAddress(address_space->id(), &gpu_addr));
+        EXPECT_EQ(batch_start_offset, gpu_addr & (PAGE_SIZE - 1));
 
         // Check that context is initialized correctly
         EXPECT_TRUE(ctx->IsInitializedForEngine(engine->id()));
