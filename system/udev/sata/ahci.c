@@ -6,6 +6,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/io-buffer.h>
 #include <ddk/protocol/pci.h>
 
 #include <hexdump/hexdump.h>
@@ -72,6 +73,7 @@ typedef struct ahci_port {
     iotxn_t* commands[AHCI_MAX_COMMANDS]; // commands in flight
 
     list_node_t txn_list;
+    io_buffer_t buffer;
 } ahci_port_t;
 
 typedef struct ahci_device {
@@ -342,14 +344,15 @@ static mx_status_t ahci_port_initialize(ahci_port_t* port) {
     }
 
     // allocate memory for the command list, FIS receive area, command table and PRDT
-    size_t mem_sz = sizeof(ahci_fis_t) + sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS + (sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS) * AHCI_MAX_COMMANDS;
-    mx_paddr_t mem_phys;
-    void* mem;
-    mx_status_t status = mx_alloc_device_memory(get_root_resource(), mem_sz, &mem_phys, &mem);
+    size_t mem_sz = sizeof(ahci_fis_t) + sizeof(ahci_cl_t) * AHCI_MAX_COMMANDS
+                    + (sizeof(ahci_ct_t) + sizeof(ahci_prd_t) * AHCI_MAX_PRDS) * AHCI_MAX_COMMANDS;
+    mx_status_t status = io_buffer_init(&port->buffer, mem_sz, IO_BUFFER_RW);
     if (status < 0) {
         xprintf("ahci.%d: error %d allocating dma memory\n", port->nr, status);
         return status;
     }
+    mx_paddr_t mem_phys = io_buffer_phys(&port->buffer);
+    void* mem = io_buffer_virt(&port->buffer);
 
     // clear memory area
     // order is command list (1024-byte aligned)
