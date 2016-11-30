@@ -3,13 +3,10 @@
 # found in the LICENSE file.
 
 group("agents") {
-  deps = [
-    ":carmen_sandiego",
-    ":ideas",
-  ]
 }
 
 executable("carmen_sandiego") {
+  testonly = true
   output_name = "agents/carmen_sandiego"
 
   sources = [
@@ -29,6 +26,7 @@ executable("carmen_sandiego") {
 }
 
 executable("ideas") {
+  testonly = true
   output_name = "agents/ideas"
 
   sources = [

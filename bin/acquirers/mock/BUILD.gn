@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 source_set("gps") {
+  testonly = true
+
   sources = [
     "mock_gps.cc",
     "mock_gps.h",

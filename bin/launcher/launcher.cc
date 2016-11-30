@@ -52,9 +52,6 @@ class LauncherApp : public maxwell::Launcher {
                                    std::move(focus_controller_dup));
 
     // TODO(rosswang): Search the ComponentIndex and iterate through results.
-    // StartAgent("file:///system/apps/acquirers/gps");
-    // StartAgent("file:///system/apps/agents/carmen_sandiego");
-    // StartAgent("file:///system/apps/agents/ideas");
     StartAgent("file:///system/apps/acquirers/focus");
     StartAgent("file:///system/apps/agents/module_suggester");
   }

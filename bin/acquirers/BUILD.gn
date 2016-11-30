@@ -3,9 +3,6 @@
 # found in the LICENSE file.
 
 group("acquirers") {
-  deps = [
-    ":gps",
-  ]
 }
 
 executable("focus") {
@@ -24,17 +21,10 @@ executable("focus") {
   ]
 }
 
-executable("gps") {
-  output_name = "acquirers/gps"
+source_set("gps") {
+  testonly = true
 
   sources = [
-    "gps.cc",
     "gps.h",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/context",
-    "//apps/modular/lib/app",
-    "//lib/mtl",
   ]
 }
