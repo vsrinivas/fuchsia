@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//bin/gdbserver"
+        "//bin/gdbserver",
+        "//bin/gdbserver:tests"
     ],
     "binaries": [
         {
