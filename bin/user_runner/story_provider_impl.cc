@@ -439,7 +439,8 @@ void StoryProviderImpl::PurgeControllers() {
   // than to handle the on empty callback from the binding set.
   std::vector<std::string> disconnected;
   for (auto& entry : story_controllers_) {
-    if (entry.second->impl->bindings_size() == 0 ||
+    if ((entry.second->impl.get() != nullptr &&
+         entry.second->impl->bindings_size() == 0) ||
         (entry.second->deleted && entry.second->requests.size() == 0)) {
       disconnected.push_back(entry.first);
     }
