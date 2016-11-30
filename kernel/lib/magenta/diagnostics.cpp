@@ -24,7 +24,7 @@ void DumpProcessListKeyMap() {
     printf("#pr : number of process handles\n");
     printf("#th : number of thread handles\n");
     printf("#vm : number of vm map handles\n");
-    printf("#mp : number of message pipe handles\n");
+    printf("#ch : number of channel handles\n");
     printf("#ev : number of event and event pair handles\n");
     printf("#ip : number of io port handles\n");
     printf("#dp : number of data pipe handles (both)\n");
@@ -54,8 +54,8 @@ const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_CHANNEL: return "channel";
         case MX_OBJ_TYPE_EVENT: return "event";
         case MX_OBJ_TYPE_IOPORT: return "io-port";
-        case MX_OBJ_TYPE_DATA_PIPE_PRODUCER: return "data-pipe-con";
-        case MX_OBJ_TYPE_DATA_PIPE_CONSUMER: return "data-pipe-prod";
+        case MX_OBJ_TYPE_DATA_PIPE_PRODUCER: return "data-pipe-prod";
+        case MX_OBJ_TYPE_DATA_PIPE_CONSUMER: return "data-pipe-con";
         case MX_OBJ_TYPE_INTERRUPT: return "interrupt";
         case MX_OBJ_TYPE_IOMAP: return "io-map";
         case MX_OBJ_TYPE_PCI_DEVICE: return "pci-device";
@@ -116,7 +116,7 @@ char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
 
 void DumpProcessList() {
     AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
-    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vm #mp #ev #ip #dp [  job:name]\n", "id");
+    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vm #ch #ev #ip #dp [  job:name]\n", "id");
 
     for (const auto& process : ProcessDispatcher::global_process_list_) {
         char pname[MX_MAX_NAME_LEN];
