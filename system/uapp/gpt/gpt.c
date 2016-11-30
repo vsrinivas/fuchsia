@@ -305,6 +305,7 @@ static mx_status_t get_gpt_and_part(char* path_device, long idx_part,
     gpt_partition_t* part = gpt->partitions[idx_part];
     if (part == NULL) {
         tear_down_gpt(fd, gpt);
+        return ERR_INTERNAL;
     }
 
     *gpt_out = gpt;
@@ -329,7 +330,6 @@ static mx_status_t edit_partition(char* path_device, long idx_part,
     mx_status_t rc = get_gpt_and_part(path_device, idx_part, true, &fd, &gpt,
                                       &part);
     if (rc != NO_ERROR) {
-        tear_down_gpt(fd, gpt);
         return rc;
     }
 
@@ -377,7 +377,6 @@ static mx_status_t set_visibility(char* path_device, long idx_part,
     mx_status_t rc = get_gpt_and_part(path_device, idx_part, true, &fd, &gpt,
                                       &part);
     if (rc != NO_ERROR) {
-        tear_down_gpt(fd, gpt);
         return rc;
     }
 
