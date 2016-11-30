@@ -3,12 +3,9 @@
 # found in the LICENSE file.
 
 group("netstack") {
-  testonly = true
-
   deps = [
     ":app",
     "//apps/netstack/apps:netstack_debug",
-    "//apps/netstack/tests",
   ]
 }
 
