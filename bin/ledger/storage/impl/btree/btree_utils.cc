@@ -5,6 +5,7 @@
 #include "apps/ledger/src/storage/impl/btree/btree_utils.h"
 
 #include "apps/ledger/src/callback/waiter.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 namespace storage {
 namespace btree {
@@ -50,57 +51,83 @@ Status GetObjectsFromChild(const TreeNode& node,
   return GetObjects(std::move(child), objects);
 }
 
-// Recursively retrieves all tree nodes and the eager objects they contain
-// starting from |node|.
-void GetObjectsFromSync(std::unique_ptr<const TreeNode> node,
-                        PageStorage* page_storage,
-                        std::function<void(Status)> callback) {
-  // For each object to be downloaded store whether it is a tree node or not.
-  std::vector<bool> is_node;
+// Iterates through the nodes of the subtree with |node| as root and calls
+// |on_next| on each entry found with a key equal to or greater than |min_key|.
+void ForEachEntryIn(PageStorage* page_storage,
+                    std::unique_ptr<const TreeNode> node,
+                    std::string min_key,
+                    std::function<bool(EntryAndNodeId)> on_next,
+                    std::function<void(Status)> on_done) {
   auto waiter = callback::Waiter<Status, const Object>::Create(Status::OK);
-  for (int i = 0; i <= node->GetKeyCount(); ++i) {
-    if (!node->GetChildId(i).empty()) {
-      page_storage->GetObject(node->GetChildId(i), waiter->NewCallback());
-      is_node.push_back(true);
-    }
-    if (i == node->GetKeyCount()) {
-      break;
+
+  int start_index;
+  Status key_found = node->FindKeyOrChild(min_key, &start_index);
+
+  // If the key is found call on_next with the corresponding entry. Otherwise,
+  // handle directly the next child, which is already pointed by start_index.
+  if (key_found != Status::NOT_FOUND) {
+    if (key_found != Status::OK) {
+      on_done(key_found);
+      return;
     }
     Entry entry;
-    Status s = node->GetEntry(i, &entry);
+    Status s = node->GetEntry(start_index, &entry);
     if (s != Status::OK) {
-      callback(s);
+      on_done(s);
       return;
     }
-    if (entry.priority == KeyPriority::EAGER) {
-      page_storage->GetObject(entry.object_id, waiter->NewCallback());
-      is_node.push_back(false);
+    EntryAndNodeId next{entry, node->GetId()};
+    if (!on_next(next)) {
+      on_done(s);
+      return;
+    }
+    ++start_index;
+  }
+
+  for (int i = start_index; i <= node->GetKeyCount(); ++i) {
+    if (!node->GetChildId(i).empty()) {
+      page_storage->GetObject(node->GetChildId(i), waiter->NewCallback());
+    } else {
+      waiter->NewCallback()(Status::OK, nullptr);
     }
   }
-  waiter->Finalize([
-    page_storage, is_node = std::move(is_node), callback = std::move(callback)
+  waiter->Finalize(ftl::MakeCopyable([
+    parent = std::move(node), start_index, min_key = std::move(min_key),
+    page_storage, on_next = std::move(on_next), on_done = std::move(on_done)
   ](Status s, std::vector<std::unique_ptr<const Object>> objects) {
     if (s != Status::OK) {
-      callback(s);
+      on_done(s);
       return;
     }
-    FTL_DCHECK(objects.size() == is_node.size());
     callback::StatusWaiter<Status> children_waiter(Status::OK);
     for (size_t i = 0; i < objects.size(); ++i) {
-      if (!is_node[i]) {
-        continue;
+      if (objects[i] != nullptr) {
+        std::unique_ptr<const TreeNode> node;
+        s = TreeNode::FromObject(page_storage, std::move(objects[i]), &node);
+        if (s != Status::OK) {
+          on_done(s);
+          return;
+        }
+        ForEachEntryIn(page_storage, std::move(node), min_key, on_next,
+                       children_waiter.NewCallback());
       }
-      std::unique_ptr<const TreeNode> node;
-      s = TreeNode::FromObject(page_storage, std::move(objects[i]), &node);
+      if (i == objects.size() - 1) {
+        break;
+      }
+      Entry entry;
+      s = parent->GetEntry(start_index + i, &entry);
       if (s != Status::OK) {
-        callback(s);
+        on_done(s);
         return;
       }
-      GetObjectsFromSync(std::move(node), page_storage,
-                         children_waiter.NewCallback());
+      EntryAndNodeId next{entry, parent->GetId()};
+      if (!on_next(next)) {
+        on_done(Status::OK);
+        return;
+      }
     }
-    children_waiter.Finalize(callback);
-  });
+    children_waiter.Finalize(on_done);
+  }));
 }
 
 // Recursively merge |left| and |right| nodes. |new_id| will contain the ID of
@@ -313,22 +340,55 @@ Status GetObjects(ObjectIdView root_id,
 void GetObjectsFromSync(ObjectIdView root_id,
                         PageStorage* page_storage,
                         std::function<void(Status)> callback) {
+  ftl::RefPtr<callback::Waiter<Status, const Object>> waiter_ =
+      callback::Waiter<Status, const Object>::Create(Status::OK);
+
+  auto on_next = [page_storage, waiter_](const EntryAndNodeId& e) {
+    if (e.entry.priority == KeyPriority::EAGER) {
+      page_storage->GetObject(e.entry.object_id, waiter_->NewCallback());
+    }
+    return true;
+  };
+  auto on_done = [ callback = std::move(callback), waiter_ ](Status status) {
+    if (status != Status::OK) {
+      callback(status);
+      return;
+    }
+    waiter_->Finalize([callback = std::move(callback)](
+        Status s, std::vector<std::unique_ptr<const Object>> objects) {
+      callback(s);
+    });
+  };
+  ForEachEntry(page_storage, root_id, "", std::move(on_next),
+               std::move(on_done));
+}
+
+void ForEachEntry(PageStorage* page_storage,
+                  ObjectIdView root_id,
+                  std::string min_key,
+                  std::function<bool(EntryAndNodeId)> on_next,
+                  std::function<void(Status)> on_done) {
   FTL_DCHECK(!root_id.empty());
   page_storage->GetObject(
-      root_id, [page_storage, callback](Status status,
-                                        std::unique_ptr<const Object> object) {
+      root_id, ftl::MakeCopyable([
+        min_key = std::move(min_key), page_storage,
+        on_next = std::move(on_next), on_done = std::move(on_done)
+      ](Status status, std::unique_ptr<const Object> object) mutable {
         if (status != Status::OK) {
-          callback(status);
+          on_done(status);
           return;
         }
         std::unique_ptr<const TreeNode> root;
         status = TreeNode::FromObject(page_storage, std::move(object), &root);
         if (status != Status::OK) {
-          callback(status);
+          on_done(status);
           return;
         }
-        GetObjectsFromSync(std::move(root), page_storage, std::move(callback));
-      });
+        ForEachEntryIn(page_storage, std::move(root), std::move(min_key),
+                       std::move(on_next),
+                       ftl::MakeCopyable([on_done = std::move(on_done)](
+                           Status s) { on_done(s); }));
+      }));
 }
 
 }  // namespace btree

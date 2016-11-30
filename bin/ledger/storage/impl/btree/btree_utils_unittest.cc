@@ -52,7 +52,7 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
   }
 
   std::vector<EntryChange> CreateEntryChanges(int size) {
-    FTL_CHECK(size >= 0 && size < 100);
+    FTL_CHECK(size >= 0 && size <= 100);
     std::vector<EntryChange> result;
     for (int i = 0; i < size; ++i) {
       std::unique_ptr<const Object> object;
@@ -318,6 +318,43 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
       EXPECT_TRUE(objects.find(id) != objects.end());
     }
   }
+}
+
+TEST_F(BTreeUtilsTest, ForEachAllEntries) {
+  // Create a tree from entries with keys from 00-99.
+  std::vector<EntryChange> entries = CreateEntryChanges(100);
+  ObjectId root_id = CreateTree(entries);
+
+  int current_key = 0;
+  auto on_next = [&current_key](const btree::EntryAndNodeId& e) {
+    EXPECT_EQ(ftl::StringPrintf("key%02d", current_key), e.entry.key);
+    current_key++;
+    return true;
+  };
+  auto on_done = [](Status status) { EXPECT_EQ(Status::OK, status); };
+  btree::ForEachEntry(&fake_storage_, root_id, "", on_next, on_done);
+}
+
+TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
+  // Create a tree from entries with keys from 00-99.
+  std::vector<EntryChange> entries = CreateEntryChanges(100);
+  ObjectId root_id = CreateTree(entries);
+
+  // Find all entries with "key3" prefix in the key.
+  std::string prefix = "key3";
+  int current_key = 30;
+  auto on_next = [&current_key, &prefix](const btree::EntryAndNodeId& e) {
+    if (e.entry.key.substr(0, prefix.length()) != prefix) {
+      return false;
+    }
+    EXPECT_EQ(ftl::StringPrintf("key%02d", current_key++), e.entry.key);
+    return true;
+  };
+  auto on_done = [&current_key](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_EQ(40, current_key);
+  };
+  btree::ForEachEntry(&fake_storage_, root_id, prefix, on_next, on_done);
 }
 
 }  // namespace
