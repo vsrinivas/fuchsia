@@ -4,6 +4,8 @@
 
 #include "apps/media/src/video/video_converter.h"
 
+#include "apps/media/src/fidl/fidl_type_conversions.h"
+
 namespace media {
 
 VideoConverter::VideoConverter() {
@@ -63,27 +65,24 @@ void VideoConverter::BuildColorspaceTable() {
 
 void VideoConverter::SetMediaType(const MediaTypePtr& media_type) {
   FTL_DCHECK(media_type);
-  FTL_DCHECK(media_type->medium == MediaTypeMedium::VIDEO);
-  FTL_DCHECK(media_type->encoding == MediaType::kVideoEncodingUncompressed);
-  FTL_DCHECK(media_type->details);
 
-  const VideoMediaTypeDetailsPtr& details = media_type->details->get_video();
-  FTL_DCHECK(details);
-  FTL_DCHECK(details->pixel_format == PixelFormat::YV12)
+  stream_type_ = media_type.To<std::unique_ptr<StreamType>>();
+  FTL_DCHECK(stream_type_->medium() == StreamType::Medium::kVideo);
+  video_stream_type_ = stream_type_->video();
+  FTL_DCHECK(video_stream_type_ != nullptr);
+
+  FTL_DCHECK(video_stream_type_->pixel_format() ==
+             VideoStreamType::PixelFormat::kYv12)
       << "only YV12 video conversion is currently implemented";
 
-  layout_ =
-      VideoPacketLayout(details->pixel_format, details->width, details->height,
-                        details->coded_width, details->coded_height);
-
-  media_type_set_ = true;
+  layout_.Build(*video_stream_type_);
 }
 
 mozart::Size VideoConverter::GetSize() {
   mozart::Size size;
-  if (media_type_set_) {
-    size.width = layout_.width();
-    size.height = layout_.height();
+  if (video_stream_type_ != nullptr) {
+    size.width = video_stream_type_->width();
+    size.height = video_stream_type_->height();
   } else {
     size.width = 0;
     size.height = 0;
@@ -101,11 +100,11 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
   FTL_DCHECK(view_height != 0);
   FTL_DCHECK(payload != nullptr);
   FTL_DCHECK(payload_size != 0);
-  FTL_DCHECK(media_type_set_)
+  FTL_DCHECK(video_stream_type_ != nullptr)
       << "need to call SetMediaType before ConvertFrame";
 
-  uint32_t height = std::min(layout_.height(), view_height);
-  uint32_t width = std::min(layout_.width(), view_width);
+  uint32_t height = std::min(video_stream_type_->height(), view_height);
+  uint32_t width = std::min(video_stream_type_->width(), view_width);
 
   // YV12 frames have three separate planes. The Y plane has 8-bit Y values for
   // each pixel. The U and V planes have 8-bit U and V values for 2x2 grids of
@@ -113,23 +112,17 @@ void VideoConverter::ConvertFrame(uint8_t* rgba_buffer,
   // inner and outer loops below are unrolled to deal with the 2x2 logic.
 
   size_t dest_line_stride = view_width;
-  size_t y_line_stride =
-      layout_.line_stride_for_plane(VideoPacketLayout::kYPlaneIndex);
-  size_t u_line_stride =
-      layout_.line_stride_for_plane(VideoPacketLayout::kUPlaneIndex);
-  size_t v_line_stride =
-      layout_.line_stride_for_plane(VideoPacketLayout::kVPlaneIndex);
+  size_t y_line_stride = layout_.line_stride_for_y_plane();
+  size_t u_line_stride = layout_.line_stride_for_u_plane();
+  size_t v_line_stride = layout_.line_stride_for_v_plane();
 
   uint32_t* dest_line = reinterpret_cast<uint32_t*>(rgba_buffer);
   uint8_t* y_line =
-      reinterpret_cast<uint8_t*>(payload) +
-      layout_.plane_offset_for_plane(VideoPacketLayout::kYPlaneIndex);
+      reinterpret_cast<uint8_t*>(payload) + layout_.plane_offset_for_y_plane();
   uint8_t* u_line =
-      reinterpret_cast<uint8_t*>(payload) +
-      layout_.plane_offset_for_plane(VideoPacketLayout::kUPlaneIndex);
+      reinterpret_cast<uint8_t*>(payload) + layout_.plane_offset_for_u_plane();
   uint8_t* v_line =
-      reinterpret_cast<uint8_t*>(payload) +
-      layout_.plane_offset_for_plane(VideoPacketLayout::kVPlaneIndex);
+      reinterpret_cast<uint8_t*>(payload) + layout_.plane_offset_for_v_plane();
 
   for (uint32_t line = 0; line < height; ++line) {
     ConvertLine(dest_line, y_line, u_line, v_line, width);

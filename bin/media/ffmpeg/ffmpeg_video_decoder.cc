@@ -124,12 +124,11 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
 
   VideoStreamType::FrameLayout frame_layout;
 
-  VideoStreamType::InfoForPixelFormat(
-      PixelFormatFromAVPixelFormat(av_codec_context->pix_fmt))
-      .BuildFrameLayout(coded_size, &frame_layout);
+  frame_layout.Build(PixelFormatFromAVPixelFormat(av_codec_context->pix_fmt),
+                     coded_size);
 
   uint8_t* buffer = static_cast<uint8_t*>(
-      self->allocator_->AllocatePayloadBuffer(frame_layout.size));
+      self->allocator_->AllocatePayloadBuffer(frame_layout.size()));
 
   // TODO(dalesat): For investigation purposes only...remove one day.
   if (self->first_frame_) {
@@ -154,14 +153,15 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
   }
 
   if (buffer == nullptr) {
-    FTL_LOG(ERROR) << "failed to allocate buffer of size " << frame_layout.size;
+    FTL_LOG(ERROR) << "failed to allocate buffer of size "
+                   << frame_layout.size();
     return -1;
   }
 
   // Decoders require a zeroed buffer.
-  std::memset(buffer, 0, frame_layout.size);
+  std::memset(buffer, 0, frame_layout.size());
 
-  for (size_t plane = 0; plane < frame_layout.plane_count; ++plane) {
+  for (size_t plane = 0; plane < frame_layout.plane_count(); ++plane) {
     av_frame->data[plane] = buffer + frame_layout.plane_offset_for_plane(plane);
     av_frame->linesize[plane] = frame_layout.line_stride_for_plane(plane);
   }
@@ -174,7 +174,7 @@ int FfmpegVideoDecoder::AllocateBufferForAvFrame(
   av_frame->reordered_opaque = av_codec_context->reordered_opaque;
 
   FTL_DCHECK(av_frame->data[0] == buffer);
-  av_frame->buf[0] = av_buffer_create(buffer, frame_layout.size,
+  av_frame->buf[0] = av_buffer_create(buffer, frame_layout.size(),
                                       ReleaseBufferForAvFrame, self->allocator_,
                                       0);  // flags
 

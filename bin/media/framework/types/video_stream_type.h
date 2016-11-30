@@ -62,12 +62,6 @@ class VideoStreamType : public StreamType {
 
   static const size_t kFrameSizeAlignment = 16;
   static const size_t kFrameSizePadding = 16;
-  static const size_t kYPlaneIndex = 0;
-  static const size_t kARGBPlaneIndex = 0;
-  static const size_t kUPlaneIndex = 1;
-  static const size_t kUVPlaneIndex = 1;
-  static const size_t kVPlaneIndex = 2;
-  static const size_t kAPlaneIndex = 3;
   static const size_t kMaxPlaneIndex = 3;
 
   // Width and height.
@@ -82,36 +76,117 @@ class VideoStreamType : public StreamType {
     size_t height_;
   };
 
+  // Specifies indices for each video plane.
+  struct PlaneIndices {
+    static const size_t kNone = kMaxPlaneIndex + 1;
+    size_t argb_ = kNone;
+    size_t y_ = kNone;
+    size_t u_ = kNone;
+    size_t v_ = kNone;
+    size_t uv_ = kNone;
+    size_t a_ = kNone;
+  };
+
   // Describes the layout of a frame of a particular extent.
   struct FrameLayout {
+    void Build(const VideoStreamType& stream_type);
+
+    void Build(PixelFormat pixel_format, const Extent& coded_size);
+
+    size_t plane_count() const { return plane_count_; }
+
+    size_t size() const { return size_; }
+
     size_t line_stride_for_plane(size_t plane) {
-      FTL_DCHECK(plane < plane_count);
-      return line_stride[plane];
+      FTL_DCHECK(plane < plane_count_);
+      return line_stride_[plane];
     }
 
     size_t plane_offset_for_plane(size_t plane) {
-      FTL_DCHECK(plane < plane_count);
-      return plane_offset[plane];
+      FTL_DCHECK(plane < plane_count_);
+      return plane_offset_[plane];
     }
 
-    size_t plane_count;
-    size_t line_stride[kMaxPlaneIndex + 1];
-    size_t plane_offset[kMaxPlaneIndex + 1];
-    size_t size;
+    size_t line_stride_for_argb_plane() {
+      FTL_DCHECK(plane_indices_.argb_ < plane_count_);
+      return line_stride_for_plane(plane_indices_.argb_);
+    }
+
+    size_t line_stride_for_y_plane() {
+      FTL_DCHECK(plane_indices_.y_ < plane_count_);
+      return line_stride_for_plane(plane_indices_.y_);
+    }
+
+    size_t line_stride_for_u_plane() {
+      FTL_DCHECK(plane_indices_.u_ < plane_count_);
+      return line_stride_for_plane(plane_indices_.u_);
+    }
+
+    size_t line_stride_for_v_plane() {
+      FTL_DCHECK(plane_indices_.v_ < plane_count_);
+      return line_stride_for_plane(plane_indices_.v_);
+    }
+
+    size_t line_stride_for_uv_plane() {
+      FTL_DCHECK(plane_indices_.uv_ < plane_count_);
+      return line_stride_for_plane(plane_indices_.uv_);
+    }
+
+    size_t line_stride_for_a_plane() {
+      FTL_DCHECK(plane_indices_.a_ < plane_count_);
+      return line_stride_for_plane(plane_indices_.a_);
+    }
+
+    size_t plane_offset_for_argb_plane() {
+      FTL_DCHECK(plane_indices_.argb_ < plane_count_);
+      return plane_offset_for_plane(plane_indices_.argb_);
+    }
+
+    size_t plane_offset_for_y_plane() {
+      FTL_DCHECK(plane_indices_.y_ < plane_count_);
+      return plane_offset_for_plane(plane_indices_.y_);
+    }
+
+    size_t plane_offset_for_u_plane() {
+      FTL_DCHECK(plane_indices_.u_ < plane_count_);
+      return plane_offset_for_plane(plane_indices_.u_);
+    }
+
+    size_t plane_offset_for_v_plane() {
+      FTL_DCHECK(plane_indices_.v_ < plane_count_);
+      return plane_offset_for_plane(plane_indices_.v_);
+    }
+
+    size_t plane_offset_for_uv_plane() {
+      FTL_DCHECK(plane_indices_.uv_ < plane_count_);
+      return plane_offset_for_plane(plane_indices_.uv_);
+    }
+
+    size_t plane_offset_for_a_plane() {
+      FTL_DCHECK(plane_indices_.a_ < plane_count_);
+      return plane_offset_for_plane(plane_indices_.a_);
+    }
+
+   private:
+    size_t plane_count_;
+    PlaneIndices plane_indices_;
+    size_t line_stride_[kMaxPlaneIndex + 1];
+    size_t plane_offset_[kMaxPlaneIndex + 1];
+    size_t size_;
   };
 
   // Information regarding a pixel format.
   struct PixelFormatInfo {
     // Returns the number of bytes per element for the specified plane.
     size_t bytes_per_element_for_plane(size_t plane) const {
-      FTL_DCHECK(plane < plane_count);
-      return bytes_per_element[plane];
+      FTL_DCHECK(plane < plane_count_);
+      return bytes_per_element_[plane];
     }
 
     // Returns the sample size of the specified plane.
     const Extent& sample_size_for_plane(size_t plane) const {
-      FTL_DCHECK(plane < plane_count);
-      return sample_size[plane];
+      FTL_DCHECK(plane < plane_count_);
+      return sample_size_[plane];
     }
 
     // Returns the row count for the specified plane.
@@ -133,9 +208,10 @@ class VideoStreamType : public StreamType {
     void BuildFrameLayout(const Extent& coded_size,
                           FrameLayout* frame_layout) const;
 
-    const size_t plane_count;
-    const size_t bytes_per_element[kMaxPlaneIndex + 1];
-    const Extent sample_size[kMaxPlaneIndex + 1];
+    const size_t plane_count_;
+    const PlaneIndices plane_indices_;
+    const size_t bytes_per_element_[kMaxPlaneIndex + 1];
+    const Extent sample_size_[kMaxPlaneIndex + 1];
   };
 
   // Gets information for the specified pixel format.
@@ -184,6 +260,12 @@ class VideoStreamType : public StreamType {
   uint32_t coded_width() const { return coded_width_; }
 
   uint32_t coded_height() const { return coded_height_; }
+
+  // TODO(dalesat): Move line_stride_ and plane_offset_ here.
+  // FrameLayout.Build has way too much ffmpeg-specific logic in it. Decoders
+  // should keep these issues to themselves and publish their consequences as
+  // line stride and plane offset in the stream type. We can probably dispense
+  // with the FrameLayout class altogether and move its methods into this class.
 
   const PixelFormatInfo& GetPixelFormatInfo() const {
     return InfoForPixelFormat(pixel_format_);

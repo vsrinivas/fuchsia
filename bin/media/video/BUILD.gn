@@ -8,13 +8,13 @@ source_set("video") {
     "video_converter.h",
     "video_frame_source.cc",
     "video_frame_source.h",
-    "video_packet_layout.cc",
-    "video_packet_layout.h",
   ]
 
   deps = [
     "//apps/media/lib",
     "//apps/media/services",
+    "//apps/media/src/fidl",
+    "//apps/media/src/framework",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/geometry/cpp",
     "//lib/ftl",

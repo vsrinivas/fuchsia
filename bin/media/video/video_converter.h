@@ -6,7 +6,8 @@
 
 #include <memory>
 
-#include "apps/media/src/video/video_packet_layout.h"
+#include "apps/media/services/media_transport.fidl.h"
+#include "apps/media/src/framework/types/video_stream_type.h"
 #include "apps/mozart/services/geometry/geometry.fidl.h"
 
 namespace media {
@@ -42,8 +43,9 @@ class VideoConverter {
                    uint8_t* v_pixel,
                    uint32_t width);
 
-  bool media_type_set_ = false;
-  VideoPacketLayout layout_;
+  std::unique_ptr<StreamType> stream_type_;
+  const VideoStreamType* video_stream_type_ = nullptr;
+  VideoStreamType::FrameLayout layout_;
   std::unique_ptr<uint32_t[]> colorspace_table_;
 };
 
