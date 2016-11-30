@@ -18,6 +18,14 @@ source_set("glue") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+}
+
 executable("unittests") {
   testonly = true
 

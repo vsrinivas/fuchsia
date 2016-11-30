@@ -65,7 +65,7 @@ executable("unittests") {
     "//apps/ledger/src/storage/impl/btree:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//lib/mtl",

@@ -26,17 +26,17 @@ group("tests") {
 
   deps = [
     "//apps/ledger/src/app:tests",
-    "//apps/ledger/src/backoff:unittests",
-    "//apps/ledger/src/callback:unittests",
+    "//apps/ledger/src/backoff:tests",
+    "//apps/ledger/src/callback:tests",
     "//apps/ledger/src/cloud_provider:tests",
     "//apps/ledger/src/cloud_sync:tests",
-    "//apps/ledger/src/configuration:unittests",
-    "//apps/ledger/src/convert:convert_unittests",
-    "//apps/ledger/src/firebase:unittests",
-    "//apps/ledger/src/gcs:unittests",
-    "//apps/ledger/src/glue:unittests",
-    "//apps/ledger/src/network:unittests",
+    "//apps/ledger/src/configuration:tests",
+    "//apps/ledger/src/convert:tests",
+    "//apps/ledger/src/firebase:tests",
+    "//apps/ledger/src/gcs:tests",
+    "//apps/ledger/src/glue:tests",
+    "//apps/ledger/src/network:tests",
     "//apps/ledger/src/storage:tests",
-    "//apps/ledger/src/test:unittests",
+    "//apps/ledger/src/test:tests",
   ]
 }

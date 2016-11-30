@@ -10,6 +10,14 @@ group("configuration") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+}
+
 source_set("lib") {
   sources = [
     "configuration.cc",

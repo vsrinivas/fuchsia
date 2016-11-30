@@ -29,6 +29,14 @@ source_set("impl") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+}
+
 executable("unittests") {
   output_name = "cloud_sync_unittests"
 
@@ -44,7 +52,7 @@ executable("unittests") {
     ":impl",
     "//apps/ledger/src/cloud_provider/test",
     "//apps/ledger/src/storage/test",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//lib/mtl",

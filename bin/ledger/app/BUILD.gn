@@ -2,10 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("app") {
+executable("app") {
+  output_name = "ledger"
+  sources = [
+    "app.cc",
+  ]
 
   deps = [
-    ":ledger_app",
+    ":lib",
+    "//apps/ledger/services",
+    "//apps/ledger/src/configuration:lib",
+    "//apps/ledger/src/environment",
+    "//apps/ledger/src/network",
+    "//apps/ledger/src/storage/impl:lib",
+    "//apps/ledger/src/storage/public",
+    "//apps/modular/lib/app",
+    "//apps/network/services",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+    "//lib/mtl",
   ]
 }
 
@@ -55,28 +70,6 @@ source_set("lib") {
   ]
 }
 
-executable("ledger_app") {
-  output_name = "ledger"
-  sources = [
-    "app.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//apps/ledger/services",
-    "//apps/ledger/src/configuration:lib",
-    "//apps/ledger/src/environment",
-    "//apps/ledger/src/network",
-    "//apps/ledger/src/storage/impl:lib",
-    "//apps/ledger/src/storage/public",
-    "//apps/modular/lib/app",
-    "//apps/network/services",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
-    "//lib/mtl",
-  ]
-}
-
 group("tests") {
   testonly = true
 
@@ -107,7 +100,7 @@ executable("unittests") {
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test:main",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
@@ -131,6 +124,7 @@ executable("integration_tests") {
     "//apps/ledger/src/convert",
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
+    "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test:main",
     "//lib/fidl/cpp/bindings",
     "//lib/mtl",
@@ -157,6 +151,6 @@ executable("application_tests") {
   ]
 
   data_deps = [
-    ":ledger_app",
+    ":app",
   ]
 }

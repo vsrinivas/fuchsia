@@ -55,7 +55,7 @@ executable("unittests") {
     "//apps/ledger/src/glue",
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test:main",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

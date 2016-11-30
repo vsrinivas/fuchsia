@@ -19,6 +19,14 @@ source_set("callback") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+}
+
 executable("unittests") {
   testonly = true
 

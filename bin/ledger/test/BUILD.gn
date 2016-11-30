@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("test") {
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+}
+
+source_set("lib") {
   testonly = true
 
   sources = [
@@ -27,7 +35,6 @@ source_set("main") {
   ]
 
   public_deps = [
-    ":test",
     "//third_party/gtest",
   ]
 }
@@ -43,7 +50,7 @@ executable("unittests") {
   ]
 
   deps = [
+    ":lib",
     ":main",
-    ":test",
   ]
 }

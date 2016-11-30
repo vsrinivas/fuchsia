@@ -28,6 +28,14 @@ source_set("impl") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+ ]
+}
+
 executable("unittests") {
   output_name = "cloud_provider_unittests"
 
@@ -42,6 +50,7 @@ executable("unittests") {
   deps = [
     ":impl",
     "//apps/ledger/src/firebase",
+    "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//lib/mtl",

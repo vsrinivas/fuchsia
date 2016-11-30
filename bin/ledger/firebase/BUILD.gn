@@ -29,6 +29,14 @@ source_set("firebase") {
   ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+}
+
 executable("unittests") {
   output_name = "firebase_unittests"
 
@@ -45,7 +53,7 @@ executable("unittests") {
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue/data_pipe",
     "//apps/ledger/src/network:fake",
-    "//apps/ledger/src/test",
+    "//apps/ledger/src/test:lib",
     "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//lib/mtl",

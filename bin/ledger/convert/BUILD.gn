@@ -19,7 +19,15 @@ source_set("convert") {
   ]
 }
 
-executable("convert_unittests") {
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+}
+
+executable("unittests") {
   testonly = true
 
   sources = [
