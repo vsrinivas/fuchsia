@@ -27,9 +27,23 @@ namespace examples {
 
 namespace {
 constexpr uint32_t kVideoChildKey = 0u;
-constexpr uint32_t kSceneResourceId = 1u;
-constexpr uint32_t kSkiaImageResourceId = 2u;
+
+constexpr uint32_t kVideoResourceId = 1u;
+constexpr uint32_t kControlsResourceId = 2u;
+
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
+constexpr uint32_t kVideoNodeId = 1u;
+constexpr uint32_t kControlsNodeId = 2u;
+
+constexpr float kMargin = 4.0f;
+constexpr float kControlsHeight = 36.0f;
+constexpr float kSymbolWidth = 24.0f;
+constexpr float kSymbolHeight = 24.0f;
+constexpr float kSymbolPadding = 12.0f;
+
+constexpr SkColor kProgressBarForegroundColor = 0xff673ab7;  // Deep Purple 500
+constexpr SkColor kProgressBarBackgroundColor = 0xffb39ddb;  // Deep Purple 200
+constexpr SkColor kProgressBarSymbolColor = 0xffffffff;
 
 // Determines whether the rectangle contains the point x,y.
 bool Contains(const mozart::RectF& rect, float x, float y) {
@@ -74,10 +88,10 @@ VideoPlayerView::VideoPlayerView(
   // We start with a non-zero size so we get a progress bar regardless of
   // whether we get video.
   video_size_.width = 640u;
-  video_size_.height = 1u;
+  video_size_.height = 100u;
   video_renderer_->GetVideoSize([this](mozart::SizePtr video_size) {
-    FTL_DLOG(INFO) << "video_size " << video_size->width << "x"
-                   << video_size->height;
+    FTL_LOG(INFO) << "video_size " << video_size->width << "x"
+                  << video_size->height;
     video_size_ = *video_size;
     Invalidate();
   });
@@ -184,6 +198,8 @@ void VideoPlayerView::OnDraw() {
   }
 
   auto update = mozart::SceneUpdate::New();
+  update->clear_nodes = true;
+  update->clear_resources = true;
 
   const mozart::Size& view_size = *properties()->view_layout->size;
 
@@ -191,63 +207,107 @@ void VideoPlayerView::OnDraw() {
     // Nothing to show yet.
     update->nodes.insert(kRootNodeId, mozart::Node::New());
   } else {
-    auto children = fidl::Array<uint32_t>::New(0);
+    // Compute maximum size of video content after reserving space
+    // for decorations.
+    mozart::Size max_content_size;
+    max_content_size.width = view_size.width - kMargin * 2;
+    max_content_size.height = view_size.height - kControlsHeight - kMargin * 3;
 
-    // Shrink-to-fit the video horizontally, if necessary, otherwise center it.
-    float width_scale = static_cast<float>(view_size.width) /
-                        static_cast<float>(video_size_.width);
-    float height_scale = static_cast<float>(view_size.height) /
-                         static_cast<float>(video_size_.height);
-    float scale = std::min(width_scale, height_scale);
-    float translate_x = 0.0f;
-
-    if (scale > 1.0f) {
-      scale = 1.0f;
-      translate_x = (view_size.width - video_size_.width) / 2.0f;
+    // Shrink video to fit if needed.
+    mozart::Rect content_rect;
+    if (max_content_size.width * video_size_.height <
+        max_content_size.height * video_size_.width) {
+      content_rect.width = max_content_size.width;
+      content_rect.height =
+          video_size_.height * max_content_size.width / video_size_.width;
+    } else {
+      content_rect.width =
+          video_size_.width * max_content_size.height / video_size_.height;
+      content_rect.height = max_content_size.height;
     }
+    float content_scale =
+        static_cast<float>(content_rect.width) / video_size_.width;
 
-    mozart::TransformPtr transform = mozart::Translate(
-        mozart::CreateScaleTransform(scale, scale), translate_x, kMargin);
+    // Add back in the decorations and center within view.
+    mozart::Rect ui_rect;
+    ui_rect.width = content_rect.width;
+    ui_rect.height = content_rect.height + kControlsHeight + kMargin;
+    ui_rect.x = (view_size.width - ui_rect.width) / 2;
+    ui_rect.y = (view_size.height - ui_rect.height) / 2;
 
-    // Use the transform to position the progress bar under the video.
-    mozart::PointF progress_bar_left;
-    progress_bar_left.x = 0.0f;
-    progress_bar_left.y = video_size_.height;
-    progress_bar_left = TransformPoint(*transform, progress_bar_left);
+    // Position the video.
+    content_rect.x = ui_rect.x;
+    content_rect.y = ui_rect.y;
 
-    mozart::PointF progress_bar_right;
-    progress_bar_right.x = video_size_.width;
-    progress_bar_right.y = video_size_.height;
-    progress_bar_right = TransformPoint(*transform, progress_bar_right);
+    // Position the controls.
+    mozart::Rect controls_rect;
+    controls_rect.x = content_rect.x;
+    controls_rect.y = content_rect.y + content_rect.height + kMargin;
+    controls_rect.width = content_rect.width;
+    controls_rect.height = kControlsHeight;
 
-    progress_bar_rect_.x = progress_bar_left.x;
-    progress_bar_rect_.y = progress_bar_left.y + kMargin;
-    progress_bar_rect_.width = progress_bar_right.x - progress_bar_left.x;
-    progress_bar_rect_.height = kProgressBarHeight;
-
-    // Create the image node and apply the transform to it to scale and
-    // position it properly.
-    auto video_node = MakeVideoNode(std::move(transform), update);
-    update->nodes.insert(children.size() + 1, std::move(video_node));
-    children.push_back(children.size() + 1);
-
-    // Create a node in which to do skia drawing.
-    mozart::RectF skia_rect = progress_bar_rect_;
-    skia_rect.height =
-        kProgressBarHeight + kSymbolVerticalSpacing + kSymbolHeight;
-
-    update->nodes.insert(
-        children.size() + 1,
-        MakeSkiaNode(kSkiaImageResourceId, skia_rect,
-                     [this](const mozart::Size& size, SkCanvas* canvas) {
-                       DrawSkiaContent(size, canvas);
-                     },
-                     update));
-    children.push_back(children.size() + 1);
+    // Position the progress bar (for input).
+    progress_bar_rect_.x = controls_rect.x + kSymbolWidth + kSymbolPadding * 2;
+    progress_bar_rect_.y = controls_rect.y;
+    progress_bar_rect_.width =
+        controls_rect.width - (kSymbolWidth + kSymbolPadding * 2);
+    progress_bar_rect_.height = controls_rect.height;
 
     // Create the root node.
     auto root = mozart::Node::New();
-    root->child_node_ids = std::move(children);
+
+    // Draw the video.
+    if (video_view_info_) {
+      auto video_resource = mozart::Resource::New();
+      video_resource->set_scene(mozart::SceneResource::New());
+      video_resource->get_scene()->scene_token =
+          video_view_info_->scene_token.Clone();
+      update->resources.insert(kVideoResourceId, std::move(video_resource));
+
+      auto video_node = mozart::Node::New();
+      video_node->content_transform = mozart::Translate(
+          mozart::CreateScaleTransform(content_scale, content_scale),
+          content_rect.x, content_rect.y);
+      video_node->op = mozart::NodeOp::New();
+      video_node->op->set_scene(mozart::SceneNodeOp::New());
+      video_node->op->get_scene()->scene_resource_id = kVideoResourceId;
+      video_node->op->get_scene()->scene_version = scene_version_;
+      update->nodes.insert(kVideoNodeId, std::move(video_node));
+
+      root->child_node_ids.push_back(kVideoNodeId);
+    }
+
+    // Draw the progress bar.
+    mozart::ImagePtr controls_image;
+    SkISize controls_size =
+        SkISize::Make(controls_rect.width, controls_rect.height);
+    sk_sp<SkSurface> controls_surface = mozart::MakeSkSurface(
+        controls_size, &buffer_producer_, &controls_image);
+    FTL_CHECK(controls_surface);
+    DrawControls(controls_surface->getCanvas(), controls_size);
+
+    auto controls_resource = mozart::Resource::New();
+    controls_resource->set_image(mozart::ImageResource::New());
+    controls_resource->get_image()->image = std::move(controls_image);
+    update->resources.insert(kControlsResourceId, std::move(controls_resource));
+
+    auto controls_node = mozart::Node::New();
+    controls_node->content_transform =
+        mozart::CreateTranslationTransform(controls_rect.x, controls_rect.y);
+    controls_node->op = mozart::NodeOp::New();
+    controls_node->op->set_image(mozart::ImageNodeOp::New());
+    controls_node->op->get_image()->content_rect = mozart::RectF::New();
+    controls_node->op->get_image()->content_rect->x = 0;
+    controls_node->op->get_image()->content_rect->y = 0;
+    controls_node->op->get_image()->content_rect->width = controls_rect.width;
+    controls_node->op->get_image()->content_rect->height = controls_rect.height;
+    controls_node->op->get_image()->image_resource_id = kControlsResourceId;
+    update->nodes.insert(kControlsNodeId, std::move(controls_node));
+
+    root->child_node_ids.push_back(kControlsNodeId);
+
+    // Finish up the root node.
+    root->hit_test_behavior = mozart::HitTestBehavior::New();
     update->nodes.insert(kRootNodeId, std::move(root));
   }
 
@@ -278,106 +338,44 @@ void VideoPlayerView::OnChildUnavailable(uint32_t child_key) {
   Invalidate();
 }
 
-mozart::NodePtr VideoPlayerView::MakeSkiaNode(
-    uint32_t resource_id,
-    const mozart::RectF rect,
-    const std::function<void(const mozart::Size&, SkCanvas*)> content_drawer,
-    const mozart::SceneUpdatePtr& update) {
-  FTL_DCHECK(update);
-
-  mozart::Size size;
-  size.width = rect.width;
-  size.height = rect.height;
-
-  mozart::ImagePtr image;
-  sk_sp<SkSurface> surface =
-      mozart::MakeSkSurface(size, &buffer_producer_, &image);
-  FTL_DCHECK(surface);
-  content_drawer(size, surface->getCanvas());
-  auto content_resource = mozart::Resource::New();
-  content_resource->set_image(mozart::ImageResource::New());
-  content_resource->get_image()->image = std::move(image);
-  update->resources.insert(resource_id, std::move(content_resource));
-
-  auto skia_node = mozart::Node::New();
-  skia_node->content_transform =
-      mozart::CreateTranslationTransform(rect.x, rect.y);
-  skia_node->op = mozart::NodeOp::New();
-  skia_node->op->set_image(mozart::ImageNodeOp::New());
-  skia_node->op->get_image()->content_rect = mozart::RectF::New();
-  skia_node->op->get_image()->content_rect->x = 0.0f;
-  skia_node->op->get_image()->content_rect->y = 0.0f;
-  skia_node->op->get_image()->content_rect->width = size.width;
-  skia_node->op->get_image()->content_rect->height = size.height;
-  skia_node->op->get_image()->image_resource_id = resource_id;
-
-  return skia_node;
-}
-
-mozart::NodePtr VideoPlayerView::MakeVideoNode(
-    mozart::TransformPtr transform,
-    const mozart::SceneUpdatePtr& update) {
-  if (!video_view_info_) {
-    return mozart::Node::New();
-  }
-
-  auto scene_resource = mozart::Resource::New();
-  scene_resource->set_scene(mozart::SceneResource::New());
-  scene_resource->get_scene()->scene_token =
-      video_view_info_->scene_token.Clone();
-  update->resources.insert(kSceneResourceId, std::move(scene_resource));
-
-  auto video_node = mozart::Node::New();
-  video_node->content_transform = std::move(transform);
-  video_node->hit_test_behavior = mozart::HitTestBehavior::New();
-  video_node->op = mozart::NodeOp::New();
-  video_node->op->set_scene(mozart::SceneNodeOp::New());
-  video_node->op->get_scene()->scene_resource_id = kSceneResourceId;
-  video_node->op->get_scene()->scene_version = scene_version_;
-
-  return video_node;
-}
-
-void VideoPlayerView::DrawSkiaContent(const mozart::Size& size,
-                                      SkCanvas* canvas) {
+void VideoPlayerView::DrawControls(SkCanvas* canvas, const SkISize& size) {
   canvas->clear(SK_ColorBLACK);
 
-  // Draw the progress bar (blue on gray).
+  // Draw the progress bar itself (blue on gray).
+  float progress_bar_left = kSymbolWidth + kSymbolPadding * 2;
+  float progress_bar_width = size.width() - kSymbolWidth - kSymbolPadding * 2;
   SkPaint paint;
-  paint.setColor(kColorGray);
-  canvas->drawRect(SkRect::MakeWH(size.width, kProgressBarHeight), paint);
+  paint.setColor(kProgressBarBackgroundColor);
+  canvas->drawRect(
+      SkRect::MakeXYWH(progress_bar_left, 0, progress_bar_width, size.height()),
+      paint);
 
-  paint.setColor(kColorBlue);
-  canvas->drawRect(SkRect::MakeWH(size.width * progress(), kProgressBarHeight),
-                   paint);
+  paint.setColor(kProgressBarForegroundColor);
+  canvas->drawRect(
+      SkRect::MakeXYWH(progress_bar_left, 0, progress_bar_width * progress(),
+                       size.height()),
+      paint);
 
-  paint.setColor(kColorGray);
-
+  paint.setColor(kProgressBarSymbolColor);
+  float symbol_left = kSymbolPadding;
+  float symbol_top = (size.height() - kSymbolHeight) / 2.0f;
   if (state_ == State::kPlaying) {
     // Playing...draw a pause symbol.
-    canvas->drawRect(
-        SkRect::MakeXYWH((size.width - kSymbolWidth) / 2.0f,
-                         kProgressBarHeight + kSymbolVerticalSpacing,
-                         kSymbolWidth / 3.0f, kSymbolHeight),
-        paint);
+    canvas->drawRect(SkRect::MakeXYWH(symbol_left, symbol_top,
+                                      kSymbolWidth / 3.0f, kSymbolHeight),
+                     paint);
 
     canvas->drawRect(
-        SkRect::MakeXYWH((size.width + kSymbolWidth / 3.0f) / 2.0f,
-                         kProgressBarHeight + kSymbolVerticalSpacing,
+        SkRect::MakeXYWH(symbol_left + 2 * kSymbolWidth / 3.0f, symbol_top,
                          kSymbolWidth / 3.0f, kSymbolHeight),
         paint);
   } else {
     // Playing...draw a play symbol.
     SkPath path;
-    path.moveTo((size.width - kSymbolWidth) / 2.0f,
-                kProgressBarHeight + kSymbolVerticalSpacing);
-    path.lineTo((size.width - kSymbolWidth) / 2.0f,
-                kProgressBarHeight + kSymbolVerticalSpacing + kSymbolHeight);
-    path.lineTo(
-        (size.width - kSymbolWidth) / 2.0f + kSymbolWidth,
-        kProgressBarHeight + kSymbolVerticalSpacing + kSymbolHeight / 2);
-    path.lineTo((size.width - kSymbolWidth) / 2.0f,
-                kProgressBarHeight + kSymbolVerticalSpacing);
+    path.moveTo(symbol_left, symbol_top);
+    path.lineTo(symbol_left, symbol_top + kSymbolHeight);
+    path.lineTo(symbol_left + kSymbolWidth, symbol_top + kSymbolHeight / 2.0f);
+    path.lineTo(symbol_left, symbol_top);
     canvas->drawPath(path, paint);
   }
 }

@@ -31,13 +31,6 @@ class VideoPlayerView : public mozart::BaseView, public mozart::InputListener {
   ~VideoPlayerView() override;
 
  private:
-  static constexpr float kMargin = 3.0f;
-  static constexpr float kProgressBarHeight = 40.0f;
-  static constexpr float kSymbolVerticalSpacing = 20.0f;
-  static constexpr float kSymbolWidth = 30.0f;
-  static constexpr float kSymbolHeight = 40.0f;
-  static constexpr uint32_t kColorGray = 0xffaaaaaa;
-  static constexpr uint32_t kColorBlue = 0xff5555ff;
   enum class State { kPaused, kPlaying, kEnded };
 
   // |BaseView|:
@@ -51,19 +44,8 @@ class VideoPlayerView : public mozart::BaseView, public mozart::InputListener {
   void OnEvent(mozart::EventPtr event,
                const OnEventCallback& callback) override;
 
-  // Creates a node for the skia drawing.
-  mozart::NodePtr MakeSkiaNode(
-      uint32_t resource_id,
-      const mozart::RectF rect,
-      const std::function<void(const mozart::Size&, SkCanvas*)> content_drawer,
-      const mozart::SceneUpdatePtr& update);
-
-  // Creates a node for the video view.
-  mozart::NodePtr MakeVideoNode(mozart::TransformPtr transform,
-                                const mozart::SceneUpdatePtr& update);
-
   // Draws the progress bar, etc, into the provided canvas.
-  void DrawSkiaContent(const mozart::Size& size, SkCanvas* canvas);
+  void DrawControls(SkCanvas* canvas, const SkISize& size);
 
   // Handles a status update from the player. When called with the default
   // argument values, initiates status updates.
