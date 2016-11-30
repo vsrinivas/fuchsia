@@ -88,6 +88,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
         : Packet(
               (av_packet->pts == AV_NOPTS_VALUE) ? kUnknownPts : av_packet->pts,
               pts_rate,
+              av_packet->flags & AV_PKT_FLAG_KEY,
               false,
               static_cast<size_t>(av_packet->size),
               av_packet->size == 0 ? nullptr : av_packet->data),

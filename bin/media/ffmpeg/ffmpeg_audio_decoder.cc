@@ -98,12 +98,13 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
 
     return Packet::Create(
         pts, pts_rate_,
+        false,  // Not a keyframe
         false,  // The base class is responsible for end-of-stream.
         payload_size, payload_buffer, allocator);
   } else {
     // We don't need to interleave. The interleaved frames are in a buffer that
     // was allocated from the correct allocator.
-    return DecoderPacket::Create(pts, pts_rate_,
+    return DecoderPacket::Create(pts, pts_rate_, false,
                                  av_buffer_ref(av_frame.buf[0]));
   }
 }

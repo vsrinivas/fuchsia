@@ -78,7 +78,7 @@ PacketPtr FfmpegVideoDecoder::CreateOutputPacket(const AVFrame& av_frame,
   // Recover the pts deposited in Decode.
   next_pts_ = av_frame.reordered_opaque;
 
-  return DecoderPacket::Create(next_pts_, pts_rate_,
+  return DecoderPacket::Create(next_pts_, pts_rate_, av_frame.key_frame,
                                av_buffer_ref(av_frame.buf[0]));
 }
 

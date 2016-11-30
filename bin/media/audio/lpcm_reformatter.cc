@@ -235,7 +235,7 @@ bool LpcmReformatterImpl<TIn, TOut>::TransformPacket(
   uint64_t in_size = input->size();
   if (in_size == 0) {
     // Zero-sized input packet. Make a copy.
-    *output = Packet::Create(input->pts(), input->pts_rate(),
+    *output = Packet::Create(input->pts(), input->pts_rate(), false,
                              input->end_of_stream(), 0, nullptr, nullptr);
     return true;
   }
@@ -266,7 +266,7 @@ bool LpcmReformatterImpl<TIn, TOut>::TransformPacket(
     ++out_channel;
   }
 
-  *output = Packet::Create(input->pts(), input->pts_rate(),
+  *output = Packet::Create(input->pts(), input->pts_rate(), false,
                            input->end_of_stream(), out_size, buffer, allocator);
 
   return true;

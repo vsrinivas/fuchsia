@@ -71,6 +71,7 @@ FidlPacketConsumer::PacketImpl::PacketImpl(
     : Packet(supplied_packet->packet()->pts,
              TimelineRate(supplied_packet->packet()->pts_rate_ticks,
                           supplied_packet->packet()->pts_rate_seconds),
+             supplied_packet->packet()->keyframe,
              supplied_packet->packet()->end_of_stream,
              supplied_packet->payload_size(),
              supplied_packet->payload()),

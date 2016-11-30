@@ -76,6 +76,10 @@ void FfmpegDecoderBase::PrepareInputPacket(const PacketPtr& input) {
   av_packet_.data = reinterpret_cast<uint8_t*>(input->payload());
   av_packet_.size = input->size();
   av_packet_.pts = input->pts();
+
+  if (input->keyframe()) {
+    av_packet_.flags |= AV_PKT_FLAG_KEY;
+  }
 }
 
 bool FfmpegDecoderBase::UnprepareInputPacket(const PacketPtr& input,

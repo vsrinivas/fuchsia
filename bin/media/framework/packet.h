@@ -37,6 +37,7 @@ class Packet {
   // If payload is not nullptr, an allocator must be provided.
   static PacketPtr Create(int64_t pts,
                           TimelineRate pts_rate,
+                          bool keyframe,
                           bool end_of_stream,
                           size_t size,
                           void* payload,
@@ -47,6 +48,7 @@ class Packet {
   // packet is released.
   static PacketPtr CreateNoAllocator(int64_t pts,
                                      TimelineRate pts_rate,
+                                     bool keyframe,
                                      bool end_of_stream,
                                      size_t size,
                                      void* payload);
@@ -63,6 +65,9 @@ class Packet {
   // a time value from seconds to PTS ticks, use seconds * pts_rate(). To
   // convert a time value from PTS ticks to seconds, use seconds / pts_rate().
   TimelineRate pts_rate() const { return pts_rate_; }
+
+  // Indicates whether this is a keyframe.
+  bool keyframe() const { return keyframe_; }
 
   // Indicates whether this is the last packet in the stream.
   bool end_of_stream() const { return end_of_stream_; }
@@ -87,6 +92,7 @@ class Packet {
  protected:
   Packet(int64_t pts,
          TimelineRate pts_rate,
+         bool keyframe,
          bool end_of_stream,
          size_t size,
          void* payload);
@@ -98,6 +104,7 @@ class Packet {
  private:
   int64_t pts_;
   TimelineRate pts_rate_;
+  bool keyframe_;
   bool end_of_stream_;
   size_t size_;
   void* payload_;

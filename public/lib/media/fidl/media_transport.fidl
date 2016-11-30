@@ -27,6 +27,9 @@ struct MediaPacket {
   // PTS ticks. See pts_rate_ticks for more info.
   uint32 pts_rate_seconds;
 
+  // Indicates whether this packet is a keyframe.
+  bool keyframe;
+
   // Indicates whether this is the last packet in the stream.
   bool end_of_stream;
 

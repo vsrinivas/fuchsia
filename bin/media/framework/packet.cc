@@ -11,11 +11,13 @@ namespace media {
 
 Packet::Packet(int64_t pts,
                TimelineRate pts_rate,
+               bool keyframe,
                bool end_of_stream,
                size_t size,
                void* payload)
     : pts_(pts),
       pts_rate_(pts_rate),
+      keyframe_(keyframe),
       end_of_stream_(end_of_stream),
       size_(size),
       payload_(payload) {
@@ -47,11 +49,12 @@ class PacketImpl : public Packet {
  public:
   PacketImpl(int64_t pts,
              TimelineRate pts_rate,
+             bool keyframe,
              bool end_of_stream,
              size_t size,
              void* payload,
              PayloadAllocator* allocator)
-      : Packet(pts, pts_rate, end_of_stream, size, payload),
+      : Packet(pts, pts_rate, keyframe, end_of_stream, size, payload),
         allocator_(allocator) {}
 
  protected:
@@ -75,28 +78,31 @@ class PacketImpl : public Packet {
 // static
 PacketPtr Packet::Create(int64_t pts,
                          TimelineRate pts_rate,
+                         bool keyframe,
                          bool end_of_stream,
                          size_t size,
                          void* payload,
                          PayloadAllocator* allocator) {
   FTL_DCHECK(payload == nullptr || allocator != nullptr);
-  return PacketPtr(
-      new PacketImpl(pts, pts_rate, end_of_stream, size, payload, allocator));
+  return PacketPtr(new PacketImpl(pts, pts_rate, keyframe, end_of_stream, size,
+                                  payload, allocator));
 }
 
 // static
 PacketPtr Packet::CreateNoAllocator(int64_t pts,
                                     TimelineRate pts_rate,
+                                    bool keyframe,
                                     bool end_of_stream,
                                     size_t size,
                                     void* payload) {
-  return PacketPtr(
-      new PacketImpl(pts, pts_rate, end_of_stream, size, payload, nullptr));
+  return PacketPtr(new PacketImpl(pts, pts_rate, keyframe, end_of_stream, size,
+                                  payload, nullptr));
 }
 
 // static
 PacketPtr Packet::CreateEndOfStream(int64_t pts, TimelineRate pts_rate) {
   return PacketPtr(new PacketImpl(pts, pts_rate,
+                                  false,      // keyframe
                                   true,       // end_of_stream
                                   0,          // size
                                   nullptr,    // payload

@@ -245,7 +245,7 @@ class Bench : public PayloadAllocator {
         *inputs_[input_index];
     size_t size = frame_count * input.in_channel_count() * sizeof(TInSample);
     PacketPtr packet =
-        Packet::Create(pts, TimelineRate(48000, 1), end_of_stream, size,
+        Packet::Create(pts, TimelineRate(48000, 1), false, end_of_stream, size,
                        AllocatePayloadBuffer(size), this);
     FillBuffer(static_cast<TInSample*>(packet->payload()),
                input.in_channel_count(), frame_count, pts, sample_func);

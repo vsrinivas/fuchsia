@@ -53,6 +53,7 @@ class MediaPacketProducerBase {
                      size_t size,
                      int64_t pts,
                      TimelineRate pts_rate,
+                     bool keyframe,
                      bool end_of_stream,
                      const ProducePacketCallback& callback);
 

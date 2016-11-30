@@ -57,6 +57,7 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
 
   os << "&" << std::hex << uint64_t(value.get()) << std::dec;
   os << "/pts:" << value->pts() << "(" << value->pts_rate() << ")";
+  os << "/key:" << (value->keyframe() ? "t" : "f");
   os << "/eos:" << (value->end_of_stream() ? "t" : "f");
   os << "/size:" << value->size();
   os << "/payload:" << std::hex << uint64_t(value->payload()) << std::dec;

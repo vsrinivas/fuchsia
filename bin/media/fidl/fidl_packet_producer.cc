@@ -97,7 +97,7 @@ void FidlPacketProducer::SendPacket(PacketPtr packet) {
   FTL_DCHECK(packet);
 
   ProducePacket(packet->payload(), packet->size(), packet->pts(),
-                packet->pts_rate(), packet->end_of_stream(),
+                packet->pts_rate(), packet->keyframe(), packet->end_of_stream(),
                 ftl::MakeCopyable([ this, packet = std::move(packet) ]() {
                   FTL_DCHECK(demand_callback_);
                   demand_callback_(CurrentDemand());

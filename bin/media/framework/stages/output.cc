@@ -63,7 +63,7 @@ void Output::SupplyPacket(PacketPtr packet, Engine* engine) const {
     }
 
     packet =
-        Packet::Create(packet->pts(), packet->pts_rate(),
+        Packet::Create(packet->pts(), packet->pts_rate(), packet->keyframe(),
                        packet->end_of_stream(), size, buffer, copy_allocator_);
   }
 
