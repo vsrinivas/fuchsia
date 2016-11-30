@@ -58,9 +58,6 @@ typedef struct vnode_watcher {
 #define V_FLAG_REMOTE 2
 #define V_FLAG_VMOFILE 4
 
-// TODO(orr): temp addition until subsequent patch
-extern vnode_ops_t vn_mem_ops_dir;
-
 mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
                      const char** pathout, uint32_t flags, uint32_t mode);
 mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,

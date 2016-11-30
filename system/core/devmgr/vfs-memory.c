@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magenta/assert.h>
 #include <magenta/device/devmgr.h>
 #include <magenta/listnode.h>
 
@@ -478,8 +479,7 @@ static vnode_ops_t vn_vmo_ops = {
     .sync = memfs_sync,
 };
 
-// TODO(orr): return to static in subsequent patch
-vnode_ops_t vn_mem_ops_dir = {
+static vnode_ops_t vn_mem_ops_dir = {
     .release = dir_release,
     .open = memfs_open,
     .close = memfs_close,
@@ -509,21 +509,7 @@ static vnode_ops_t vn_device_ops = {
     .unlink = mem_unlink_none,
     .truncate = mem_truncate_none,
     .rename = mem_rename_none,
-};
-
-static dnode_t mem_root_dn = {
-    .name = "tmp",
-    .flags = 3,
-    .children = LIST_INITIAL_VALUE(mem_root_dn.children),
-    .parent = &mem_root_dn,
-};
-
-static vnode_t mem_root = {
-    .ops = &vn_mem_ops_dir,
-    .refcount = 2, // One for 'created', one for 'unlinkable'
-    .dnode = &mem_root_dn,
-    .dn_list = LIST_INITIAL_VALUE(mem_root.dn_list),
-    .watch_list = LIST_INITIAL_VALUE(mem_root.watch_list),
+    .sync = memfs_sync,
 };
 
 // common memfs node creation
@@ -601,112 +587,115 @@ mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
     return NO_ERROR;
 }
 
-vnode_t* memfs_get_root(void) {
-    mem_root_dn.vnode = &mem_root;
-    return &mem_root;
-}
-
 mx_status_t memfs_lookup_name(const vnode_t* vn, char* out_name, size_t out_len) {
     return dn_lookup_name(vn->dnode->parent, vn, out_name, out_len);
 }
 
-static dnode_t vfs_root_dn = {
-    .name = "<root>",
-    .flags = 6,
-    .children = LIST_INITIAL_VALUE(vfs_root_dn.children),
-    .parent = &vfs_root_dn,
-};
+mx_status_t memfs_create_fs(const char* name, vnode_t** out) {
+    uint32_t namelen = strlen(name);
+    dnode_t* dn = calloc(1, sizeof(dnode_t)+namelen+1);
+    if (dn == NULL) {
+        return ERR_NO_MEMORY;
+    }
+    memcpy(dn->name, name, namelen+1);
+    dn->flags = namelen;
+    list_initialize(&dn->children);
+    dn->parent = dn; // until we mount, we are our own parent
 
-static vnode_t vfs_root = {
-    .ops = &vn_mem_ops_dir,
-    .refcount = 1,
-    .dnode = &vfs_root_dn,
-    .dn_list = LIST_INITIAL_VALUE(vfs_root.dn_list),
-    .watch_list = LIST_INITIAL_VALUE(vfs_root.watch_list),
-};
+    vnode_t* fs = calloc(1, sizeof(vnode_t));
+    if (fs == NULL) {
+        return ERR_NO_MEMORY;
+    }
+    fs->ops = &vn_mem_ops_dir;  // default: root node is a dir
+    fs->refcount = 1;
+    fs->dnode = dn;
+    list_initialize(&fs->dn_list);
+    list_initialize(&fs->watch_list);
 
-static dnode_t vnd_root_dn = {
-    .name = "dev",
-    .flags = 3,
-    .children = LIST_INITIAL_VALUE(vnd_root_dn.children),
-    .parent = &vnd_root_dn,
-};
+    dn->vnode = fs;
+    *out = fs;
+    return NO_ERROR;
+}
 
-static vnode_t vnd_root = {
-    .ops = &vn_device_ops,
-    .refcount = 1,
-    .dnode = &vnd_root_dn,
-    .dn_list = LIST_INITIAL_VALUE(vnd_root.dn_list),
-    .watch_list = LIST_INITIAL_VALUE(vnd_root.watch_list),
-};
+static vnode_t* mem_root = NULL;
+vnode_t* memfs_get_root(void) {
+    if (mem_root == NULL) {
+        mx_status_t r = memfs_create_fs("tmp", &mem_root);
+        if (r < 0) {
+            printf("fatal error %d allocating 'tmp' file system\n", r);
+            panic();
+        }
+        mem_root->refcount += 1; // one for 'created'; one for 'unlinkable'
+    }
+    return mem_root;
+}
 
+static vnode_t* devfs_root = NULL;
 vnode_t* devfs_get_root(void) {
-    vnd_root_dn.vnode = &vnd_root;
-    return &vnd_root;
+    if (devfs_root == NULL) {
+        mx_status_t r = memfs_create_fs("dev", &devfs_root);
+        if (r < 0) {
+            printf("fatal error %d allocating 'device' file system\n", r);
+            panic();
+        }
+        devfs_root->ops = &vn_device_ops; // override
+    }
+    return devfs_root;
 }
 
-static dnode_t bootfs_root_dn = {
-    .name = "boot",
-    .flags = 4,
-    .children = LIST_INITIAL_VALUE(bootfs_root_dn.children),
-    .parent = &bootfs_root_dn,
-};
-
-static vnode_t bootfs_root = {
-    .ops = &vn_mem_ops_dir,
-    .refcount = 1,
-    .dnode = &bootfs_root_dn,
-    .dn_list = LIST_INITIAL_VALUE(bootfs_root.dn_list),
-    .watch_list = LIST_INITIAL_VALUE(bootfs_root.watch_list),
-};
-
-static dnode_t systemfs_root_dn = {
-    .name = "system",
-    .flags = 6,
-    .children = LIST_INITIAL_VALUE(systemfs_root_dn.children),
-    .parent = &systemfs_root_dn,
-};
-
-static vnode_t systemfs_root = {
-    .ops = &vn_mem_ops_dir,
-    .refcount = 1,
-    .dnode = &systemfs_root_dn,
-    .dn_list = LIST_INITIAL_VALUE(systemfs_root.dn_list),
-    .watch_list = LIST_INITIAL_VALUE(systemfs_root.watch_list),
-};
-
+static vnode_t* bootfs_root = NULL;
 vnode_t* bootfs_get_root(void) {
-    bootfs_root_dn.vnode = &bootfs_root;
-    return &bootfs_root;
+    if (bootfs_root == NULL) {
+        mx_status_t r = memfs_create_fs("boot", &bootfs_root);
+        if (r < 0) {
+            printf("fatal error %d allocating 'boot' file system\n", r);
+            panic();
+        }
+    }
+    return bootfs_root;
 }
 
+static vnode_t* systemfs_root = NULL;
 vnode_t* systemfs_get_root(void) {
-    systemfs_root_dn.vnode = &systemfs_root;
-    return &systemfs_root;
+    if (systemfs_root == NULL) {
+        mx_status_t r = memfs_create_fs("system", &systemfs_root);
+        if (r < 0) {
+            printf("fatal error %d allocating 'system' file system\n", r);
+            panic();
+        }
+    }
+    return systemfs_root;
 }
 
 static void memfs_mount(vnode_t* parent, vnode_t* subtree) {
     if (subtree->dnode->parent) {
-        // subtrees will have "parent" set while they are stand-alone
+        // subtrees will have "parent" set, either to themselves
+        // while they are standalone, or to their mount parent
         subtree->dnode->parent = NULL;
     }
     dn_add_child(parent->dnode, subtree->dnode);
 }
 
-// Hardcoded initialization function to access global root directory
-// precondition: vfs_root is a viable root directory
+// Hardcoded initialization function to create/access global root directory
+static vnode_t* vfs_root = NULL;
 vnode_t* vfs_create_global_root(void) {
-    if (vfs_root_dn.vnode == NULL) {
-        vfs_root_dn.vnode = &vfs_root;
-        memfs_mount(&vfs_root, devfs_get_root());
-        memfs_mount(&vfs_root, bootfs_get_root());
-        memfs_mount(&vfs_root, memfs_get_root());
-        memfs_mount(&vfs_root, systemfs_get_root());
+    if (vfs_root == NULL) {
+        mx_status_t r = memfs_create_fs("<root>", &vfs_root);
+        if (r < 0) {
+            printf("fatal error %d allocating root file system\n", r);
+            panic();
+        }
+
+        memfs_mount(vfs_root, devfs_get_root());
+        memfs_mount(vfs_root, bootfs_get_root());
+        memfs_mount(vfs_root, memfs_get_root());
+        memfs_mount(vfs_root, systemfs_get_root());
+
+        memfs_create_directory("/data", 0);
+        memfs_create_directory("/volume", 0);
+        memfs_create_directory("/dev/socket", 0);
     }
-    memfs_create_directory("/data", 0);
-    memfs_create_directory("/volume", 0);
-    memfs_create_directory("/dev/socket", 0);
-    return &vfs_root;
+    return vfs_root;
 }
 
 // precondition: no ref taken on parent
@@ -813,7 +802,7 @@ mx_status_t memfs_create_from_vmo(const char* path, uint32_t flags,
     const char* pathout;
     vnode_t* parent;
 
-    if ((r = vfs_walk(&vfs_root, &parent, path, &pathout)) < 0) {
+    if ((r = vfs_walk(vfs_root, &parent, path, &pathout)) < 0) {
         return r;
     }
 
@@ -854,7 +843,7 @@ mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,
     const char* pathout;
     vnode_t* parent;
 
-    if ((r = vfs_walk(&vfs_root, &parent, path, &pathout)) != NO_ERROR) {
+    if ((r = vfs_walk(vfs_root, &parent, path, &pathout)) != NO_ERROR) {
         return r;
     }
 
@@ -908,7 +897,7 @@ mx_status_t memfs_create_directory(const char* path, uint32_t flags) {
     const char* pathout;
     vnode_t* parent;
 
-    if ((r = vfs_walk(&vfs_root, &parent, path, &pathout)) < 0) {
+    if ((r = vfs_walk(vfs_root, &parent, path, &pathout)) < 0) {
         return r;
     }
     if (strcmp(pathout, "") == 0) {
