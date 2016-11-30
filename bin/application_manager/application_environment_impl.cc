@@ -47,7 +47,7 @@ mx::process CreateProcess(
                          environment.PassHandle());
   if (launch_info->services) {
     startup_handles.insert(MX_HND_TYPE_APPLICATION_SERVICES,
-                           launch_info->services.PassMessagePipe());
+                           launch_info->services.PassChannel());
   }
 
   std::vector<uint32_t> ids;

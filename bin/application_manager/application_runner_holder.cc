@@ -20,7 +20,7 @@ ApplicationRunnerHolder::ApplicationRunnerHolder(
     ApplicationControllerPtr controller)
     : services_(std::move(services)), controller_(std::move(controller)) {
   services_->ConnectToService(ApplicationRunner::Name_,
-                              fidl::GetProxy(&runner_).PassMessagePipe());
+                              fidl::GetProxy(&runner_).PassChannel());
 }
 
 ApplicationRunnerHolder::~ApplicationRunnerHolder() = default;

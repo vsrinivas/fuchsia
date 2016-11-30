@@ -21,7 +21,7 @@ inline fidl::InterfacePtr<Interface> ConnectToService(
     const std::string& interface_name = Interface::Name_) {
   fidl::InterfacePtr<Interface> interface_ptr;
   service_provider->ConnectToService(
-      interface_name, GetProxy(&interface_ptr).PassMessagePipe());
+      interface_name, GetProxy(&interface_ptr).PassChannel());
   return interface_ptr;
 }
 
@@ -33,7 +33,7 @@ inline void ConnectToService(
     fidl::InterfaceRequest<Interface> interface_request,
     const std::string& interface_name = Interface::Name_) {
   service_provider->ConnectToService(interface_name,
-                                     interface_request.PassMessagePipe());
+                                     interface_request.PassChannel());
 }
 
 }  // namespace modular
