@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//apps/netstack"
+        "//apps/netstack",
+        "//apps/netstack/tests"
     ],
     "binaries": [
         {
