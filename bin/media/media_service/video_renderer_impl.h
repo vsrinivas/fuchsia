@@ -13,6 +13,7 @@
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/video/video_frame_source.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
+#include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace media {
@@ -55,11 +56,7 @@ class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
     mozart::ResourcePtr DrawVideoTexture(const mozart::Size& size,
                                          int64_t presentation_time);
 
-    // Ensures that buffer_ points to a buffer of the indicated size.
-    void EnsureBuffer(const mozart::Size& size);
-
-    MappedSharedBuffer buffer_;
-    mozart::Size buffer_size_;
+    mozart::BufferProducer buffer_producer_;
     std::shared_ptr<VideoFrameSource> video_frame_source_;
     TimelineFunction timeline_function_;
 

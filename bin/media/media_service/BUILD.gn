@@ -42,6 +42,7 @@ executable("media_service") {
     "//apps/media/src/video",
     "//apps/modular/lib/app",
     "//apps/mozart/lib/view_framework",
+    "//apps/mozart/services/buffers/cpp",
     "//apps/mozart/services/views",
     "//apps/network/services",
     "//lib/ftl",
