@@ -126,13 +126,13 @@ struct ContainerPtrTraits<::mxtl::unique_ptr<T, Deleter>> {
 };
 
 // Traits for managing ref_counted pointers.
-template <typename T>
-struct ContainerPtrTraits<::mxtl::RefPtr<T>> {
+template <typename T, typename Deleter>
+struct ContainerPtrTraits<::mxtl::RefPtr<T, Deleter>> {
     using ValueType       = T;
     using RefType         = T&;
     using ConstRefType    = const T&;
-    using PtrType         = ::mxtl::RefPtr<T>;
-    using ConstPtrType    = ::mxtl::RefPtr<const T>;
+    using PtrType         = ::mxtl::RefPtr<T, Deleter>;
+    using ConstPtrType    = ::mxtl::RefPtr<const T, Deleter>;
     using RawPtrType      = T*;
     using ConstRawPtrType = const T*;
 
