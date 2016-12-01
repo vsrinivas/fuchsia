@@ -30,7 +30,7 @@ fi
 
 set -ex
 
-gcc -E -x c -o builtins.def builtins.def.in -DJOBS=0 -DSMALL=1
+gcc -E -x c -o builtins.def builtins.def.in -DJOBS=0
 
 sh mktokens
 sh mkbuiltins builtins.def

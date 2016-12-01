@@ -81,23 +81,13 @@ extern struct var varinit[];
 #else
 #define vifs varinit[0]
 #endif
-#define vmail (&vifs)[1]
-#define vmpath (&vmail)[1]
-#define vpath (&vmpath)[1]
+#define vpath (&vifs)[1]
 #define vps1 (&vpath)[1]
 #define vps2 (&vps1)[1]
 #define vps4 (&vps2)[1]
 #define voptind (&vps4)[1]
 #ifdef WITH_LINENO
 #define vlineno (&voptind)[1]
-#endif
-#ifndef SMALL
-#ifdef WITH_LINENO
-#define vterm (&vlineno)[1]
-#else
-#define vterm (&voptind)[1]
-#endif
-#define vhistsize (&vterm)[1]
 #endif
 
 #ifdef IFS_BROKEN
@@ -128,10 +118,6 @@ extern char linenovar[];
 #define ps4val()	(vps4.text + 4)
 #define optindval()	(voptind.text + 7)
 #define linenoval()	(vlineno.text + 7)
-#ifndef SMALL
-#define histsizeval()	(vhistsize.text + 9)
-#define termval()	(vterm.text + 5)
-#endif
 
 #if ATTY
 #define attyset()	((vatty.flags & VUNSET) == 0)

@@ -54,10 +54,6 @@ bgcmd		-u bg
 fgcmd		-u fg
 #endif
 
-#ifndef SMALL
-histcmd		-u fc
-#endif
-
 breakcmd	-s break -s continue
 cdcmd		-u cd chdir
 commandcmd	-u command

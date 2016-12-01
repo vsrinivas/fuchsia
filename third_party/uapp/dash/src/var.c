@@ -56,9 +56,6 @@
 #include "mystring.h"
 #include "parser.h"
 #include "show.h"
-#ifndef SMALL
-#include "myhistedit.h"
-#endif
 #include "system.h"
 
 
@@ -101,10 +98,6 @@ struct var varinit[] = {
 	{ 0,	VSTRFIXED|VTEXTFIXED,		defoptindvar,	getoptsreset },
 #ifdef WITH_LINENO
 	{ 0,	VSTRFIXED|VTEXTFIXED,		linenovar,	0 },
-#endif
-#ifndef SMALL
-	{ 0,	VSTRFIXED|VTEXTFIXED|VUNSET,	"TERM\0",	0 },
-	{ 0,	VSTRFIXED|VTEXTFIXED|VUNSET,	"HISTSIZE\0",	sethistsize },
 #endif
 };
 

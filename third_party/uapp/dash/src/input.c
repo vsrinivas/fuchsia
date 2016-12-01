@@ -38,6 +38,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef USE_LINENOISE
+#include <linenoise/linenoise.h>
+#endif
+
 /*
  * This file implements the input routines used by the parser.
  */
@@ -54,9 +58,6 @@
 #include "alias.h"
 #include "parser.h"
 #include "main.h"
-#ifndef SMALL
-#include "myhistedit.h"
-#endif
 
 #define EOF_NLEFT -99		/* value of parsenleft when EOF pushed back */
 #define IBUFSIZ (BUFSIZ + 1)
@@ -67,8 +68,10 @@ MKINIT char basebuf[IBUFSIZ];	/* buffer for top level input file */
 struct parsefile *parsefile = &basepf;	/* current input file */
 int whichprompt;		/* 1 == PS1, 2 == PS2 */
 
-#ifndef SMALL
-EditLine *el;			/* cookie for editline package */
+#ifdef USE_LINENOISE
+static char *pending_line;
+static size_t pending_line_index;
+static size_t pending_line_length;
 #endif
 
 STATIC void pushfile(void);
@@ -142,27 +145,32 @@ preadfd(void)
 	parsefile->nextc = buf;
 
 retry:
-#ifndef SMALL
-	if (parsefile->fd == 0 && el) {
-		static const char *rl_cp;
-		static int el_len;
-
-		if (rl_cp == NULL)
-			rl_cp = el_gets(el, &el_len);
-		if (rl_cp == NULL)
+#ifdef USE_LINENOISE
+	if (parsefile->fd == 0 && iflag) {
+		if (pending_line == NULL) {
+			pending_line = linenoise(getprompt(NULL));
+			if (pending_line) {
+				pending_line_index = 0u;
+				pending_line_length = strlen(pending_line);
+				pending_line[pending_line_length] = '\n';
+				pending_line_length += 1;
+			}
+		}
+		if (pending_line == NULL)
 			nr = 0;
 		else {
-			nr = el_len;
+			nr = pending_line_length - pending_line_index;
 			if (nr > IBUFSIZ - 1)
 				nr = IBUFSIZ - 1;
-			memcpy(buf, rl_cp, nr);
-			if (nr != el_len) {
-				el_len -= nr;
-				rl_cp += nr;
-			} else
-				rl_cp = 0;
+			memcpy(buf, pending_line + pending_line_index, nr);
+			pending_line_index += nr;
+			if (pending_line_index == pending_line_length) {
+				linenoiseFree(pending_line);
+				pending_line = NULL;
+				pending_line_index = 0u;
+				pending_line_length = 0u;
+			}
 		}
-
 	} else
 #endif
 		nr = read(parsefile->fd, buf, IBUFSIZ - 1);
@@ -199,7 +207,7 @@ static int preadbuffer(void)
 {
 	char *q;
 	int more;
-#ifndef SMALL
+#ifdef USE_LINENOISE
 	int something;
 #endif
 	char savec;
@@ -233,7 +241,7 @@ again:
 	q = parsefile->nextc;
 
 	/* delete nul characters */
-#ifndef SMALL
+#ifdef USE_LINENOISE
 	something = 0;
 #endif
 	for (;;) {
@@ -252,7 +260,7 @@ again:
 				break;
 			}
 
-#ifndef SMALL
+#ifdef USE_LINENOISE
 			switch (c) {
 			default:
 				something = 1;
@@ -276,13 +284,21 @@ again:
 	savec = *q;
 	*q = '\0';
 
-#ifndef SMALL
-	if (parsefile->fd == 0 && hist && something) {
-		HistEvent he;
-		INTOFF;
-		history(hist, &he, whichprompt == 1? H_ENTER : H_APPEND,
-			parsefile->nextc);
-		INTON;
+#ifdef USE_LINENOISE
+	if (parsefile->fd == 0 && iflag && something) {
+		// linenoise doesn't expect the command terminator at the end of the history
+		// entry.
+		char command_terminator = q[-1];
+		q[-1] = '\0';
+
+		// TODO(abarth): If whichprompt != 1, we should append this value to an
+		// existing history entry. However, linenoise doesn't support editing the
+		// history entries, so we'll probably need to refactor the input system to
+		// get this behavior right.
+		linenoiseHistoryAdd(parsefile->nextc);
+
+		// Restore the command terminator.
+		q[-1] = command_terminator;
 	}
 #endif
 

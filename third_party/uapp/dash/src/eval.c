@@ -61,9 +61,6 @@
 #include "error.h"
 #include "show.h"
 #include "mystring.h"
-#ifndef SMALL
-#include "myhistedit.h"
-#endif
 
 
 int evalskip;			/* set if we are skipping commands */
@@ -209,9 +206,6 @@ evaltree(union node *n, int flags)
 
 	dotrap();
 
-#ifndef SMALL
-	displayhist = 1;	/* show history substitutions done with fc */
-#endif
 	TRACE(("pid %d, evaltree(%p: %d, %d) called\n",
 	    getpid(), n, n->type, flags));
 	switch (n->type) {

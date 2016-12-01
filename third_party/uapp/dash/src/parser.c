@@ -55,9 +55,6 @@
 #include "show.h"
 #include "builtins.h"
 #include "system.h"
-#ifndef SMALL
-#include "myhistedit.h"
-#endif
 
 /*
  * Shell command parser.
@@ -1505,10 +1502,10 @@ setprompt(int which)
 	needprompt = 0;
 	whichprompt = which;
 
-#ifdef SMALL
-	show = 1;
+#ifdef USE_LINENOISE
+	show = 0;
 #else
-	show = !el;
+	show = 1;
 #endif
 	if (show) {
 		pushstackmark(&smark, stackblocksize());

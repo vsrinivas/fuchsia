@@ -22,7 +22,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/eval.c \
     $(LOCAL_DIR)/src/exec.c \
     $(LOCAL_DIR)/src/expand.c \
-    $(LOCAL_DIR)/src/histedit.c \
     $(LOCAL_DIR)/src/init.c \
     $(LOCAL_DIR)/src/input.c \
     $(LOCAL_DIR)/src/jobs.c \
@@ -46,10 +45,11 @@ MODULE_SRCS += \
 
 MODULE_NAME := sh
 
-MODULE_STATIC_LIBS := ulib/hexdump
+MODULE_STATIC_LIBS := ulib/hexdump ulib/linenoise
 MODULE_LIBS := ulib/mxio ulib/magenta ulib/launchpad ulib/musl
 
-MODULE_CFLAGS := -D_GNU_SOURCE -DBSD -DIFS_BROKEN -DJOBS=0 -DSHELL -DSMALL
+MODULE_CFLAGS := -D_GNU_SOURCE -DBSD -DIFS_BROKEN -DJOBS=0 -DSHELL \
+                 -DUSE_LINENOISE
 MODULE_CFLAGS += -include $(LOCAL_DIR)/config.h -I$(LOCAL_DIR)/src
 
 # TODO: Fix Warnings

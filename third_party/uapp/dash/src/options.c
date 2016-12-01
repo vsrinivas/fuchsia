@@ -50,9 +50,6 @@
 #include "memalloc.h"
 #include "error.h"
 #include "mystring.h"
-#ifndef SMALL
-#include "myhistedit.h"
-#endif
 #include "show.h"
 
 char *arg0;			/* value of $0 */
@@ -183,9 +180,6 @@ optschanged(void)
 	opentrace();
 #endif
 	setinteractive(iflag);
-#ifndef SMALL
-	histedit();
-#endif
 	setjobctl(mflag);
 }
 
