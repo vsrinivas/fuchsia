@@ -8,18 +8,18 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userapp
 
-MODULE_NAME := fs_tests
+MODULE_NAME := fs-tests
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/wrap.c \
-    $(LOCAL_DIR)/test_append.c \
-    $(LOCAL_DIR)/test_maxfile.c \
-    $(LOCAL_DIR)/test_rw_workers.c \
-    $(LOCAL_DIR)/test_basic.c \
-    $(LOCAL_DIR)/test_rename.c \
-    $(LOCAL_DIR)/test_sync.c \
-    $(LOCAL_DIR)/test_truncate.c \
+    $(LOCAL_DIR)/test-append.c \
+    $(LOCAL_DIR)/test-maxfile.c \
+    $(LOCAL_DIR)/test-rw-workers.c \
+    $(LOCAL_DIR)/test-basic.c \
+    $(LOCAL_DIR)/test-rename.c \
+    $(LOCAL_DIR)/test-sync.c \
+    $(LOCAL_DIR)/test-truncate.c \
 
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
 MODULE_LDFLAGS += --wrap rename --wrap truncate
