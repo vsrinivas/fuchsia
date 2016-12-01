@@ -16,7 +16,6 @@
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace maxwell {
-namespace suggestion {
 
 class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
  public:
@@ -169,12 +168,11 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   std::unique_ptr<Repo> repo_;
 };
 
-}  // suggestion
 }  // maxwell
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  maxwell::suggestion::SuggestionEngineApp app;
+  maxwell::SuggestionEngineApp app;
   loop.Run();
   return 0;
 }

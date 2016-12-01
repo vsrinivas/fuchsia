@@ -8,7 +8,6 @@
 #include "lib/ftl/time/time_point.h"
 
 namespace maxwell {
-namespace suggestion {
 
 class SuggestionAgentClientImpl;
 
@@ -28,5 +27,4 @@ typedef std::unique_ptr<ProposalRecord> ProposalRecordPtr;
 // second: proposal record ptr
 typedef std::pair<const std::string, ProposalRecordPtr> SuggestionPrototype;
 
-}  // suggestion
 }  // maxwell

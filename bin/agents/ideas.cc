@@ -25,7 +25,7 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
                 ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
         in_(this),
         out_(app_context_->ConnectToEnvironmentService<
-             maxwell::suggestion::SuggestionAgentClient>()) {
+             maxwell::SuggestionAgentClient>()) {
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
     maxwell_context_->Subscribe("/location/region", "json:string",
@@ -54,10 +54,10 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
       if (idea.empty()) {
         out_->Remove(kIdeaId);
       } else {
-        auto p = maxwell::suggestion::Proposal::New();
+        auto p = maxwell::Proposal::New();
         p->id = kIdeaId;
-        p->on_selected = fidl::Array<maxwell::suggestion::ActionPtr>::New(0);
-        auto d = maxwell::suggestion::Display::New();
+        p->on_selected = fidl::Array<maxwell::ActionPtr>::New(0);
+        auto d = maxwell::SuggestionDisplay::New();
 
         d->headline = idea;
         d->subheadline = "";
@@ -66,7 +66,7 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
         d->icon_urls = fidl::Array<fidl::String>::New(1);
         d->icon_urls[0] = "";
         d->image_url = "";
-        d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
+        d->image_type = maxwell::SuggestionImageType::PERSON;
 
         p->display = std::move(d);
 
@@ -80,7 +80,7 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
 
   maxwell::ContextSubscriberPtr maxwell_context_;
   fidl::Binding<maxwell::ContextSubscriberLink> in_;
-  maxwell::suggestion::SuggestionAgentClientPtr out_;
+  maxwell::SuggestionAgentClientPtr out_;
 };
 
 }  // namespace

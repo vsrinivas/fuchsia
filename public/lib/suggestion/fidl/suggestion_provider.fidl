@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.suggestion;
+module maxwell;
 
-import "apps/maxwell/services/suggestion/display.fidl";
+import "apps/maxwell/services/suggestion/suggestion_display.fidl";
 import "apps/maxwell/services/suggestion/user_input.fidl";
 
 // Allows clients to subscribe to different Suggestion "channels" and iterate
 // through the results. Supports both passive consumption of Suggestions based
 // on contextual changes, as well as Suggestions derived from user-driven
 // "Asks".
-[ServiceName="maxwell.suggestion.SuggestionProvider"]
+[ServiceName="maxwell.SuggestionProvider"]
 interface SuggestionProvider {
   // Creates a subscription to the "interruptions" category of Suggestions.
   // Interruptions are delivered immediately once they become available, and are
@@ -101,5 +101,5 @@ struct Suggestion {
   float rank;
 
   // Display properties of the Suggestion
-  Display display;
+  SuggestionDisplay display;
 };

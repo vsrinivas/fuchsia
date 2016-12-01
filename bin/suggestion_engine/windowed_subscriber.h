@@ -9,7 +9,6 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
-namespace suggestion {
 
 // Manages a single Next or Ask suggestion subscriber, translating raw
 // suggestion lifecycle events into windowed suggestion lists using a vector of
@@ -112,5 +111,4 @@ class BoundWindowedSubscriber : public Controller, public WindowedSubscriber {
   fidl::Binding<Controller> binding_;
 };
 
-}  // namespace suggestion
 }  // namespace maxwell

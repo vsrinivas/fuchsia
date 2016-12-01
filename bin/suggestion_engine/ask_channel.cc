@@ -10,7 +10,6 @@
 #include "apps/maxwell/src/suggestion_engine/repo.h"
 
 namespace maxwell {
-namespace suggestion {
 
 namespace {
 
@@ -216,5 +215,4 @@ void AskChannel::SetQuery(std::string query) {
   }
 }
 
-}  // namespace suggestion
 }  // namespace maxwell

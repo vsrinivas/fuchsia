@@ -7,7 +7,6 @@
 #include "apps/maxwell/src/suggestion_engine/windowed_subscriber.h"
 
 namespace maxwell {
-namespace suggestion {
 
 class AskChannel;
 
@@ -24,5 +23,4 @@ class AskSubscriber : public BoundWindowedSubscriber<AskController> {
   AskChannel* channel_;
 };
 
-}  // namespace suggestion
 }  // namespace maxwell

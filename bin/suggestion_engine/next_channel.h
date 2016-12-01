@@ -10,7 +10,6 @@
 #include "apps/maxwell/src/suggestion_engine/suggestion_channel.h"
 
 namespace maxwell {
-namespace suggestion {
 
 class NextChannel : public SuggestionChannel {
  public:
@@ -43,5 +42,4 @@ class NextChannel : public SuggestionChannel {
   RankedSuggestions ranked_suggestions_;
 };
 
-}  // namespace suggestion
 }  // namespace maxwell

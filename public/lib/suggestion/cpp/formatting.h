@@ -8,11 +8,8 @@
 #include "lib/fidl/cpp/bindings/formatting.h"
 
 namespace maxwell {
-namespace suggestion {
 
-std::ostream& operator<<(std::ostream& os,
-                         const maxwell::suggestion::Display& o);
+std::ostream& operator<<(std::ostream& os, const SuggestionDisplay& o);
 std::ostream& operator<<(std::ostream& os, const Suggestion& o);
 
-}  // namespace suggestion
 }  // namespace maxwell

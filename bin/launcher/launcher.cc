@@ -22,19 +22,16 @@ class LauncherApp : public maxwell::Launcher {
         agent_launcher_(app_context_->environment().get()) {
     suggestion_services_ =
         StartServiceProvider("file:///system/apps/suggestion_engine");
-    suggestion_engine_ =
-        modular::ConnectToService<maxwell::suggestion::SuggestionEngine>(
-            suggestion_services_.get());
+    suggestion_engine_ = modular::ConnectToService<maxwell::SuggestionEngine>(
+        suggestion_services_.get());
 
     app_context_->outgoing_services()->AddService<maxwell::Launcher>(
         [this](fidl::InterfaceRequest<maxwell::Launcher> request) {
           launcher_bindings_.AddBinding(this, std::move(request));
         });
-    app_context_->outgoing_services()
-        ->AddService<maxwell::suggestion::SuggestionProvider>([this](
-            fidl::InterfaceRequest<maxwell::suggestion::SuggestionProvider>
-                request) {
-          modular::ConnectToService<maxwell::suggestion::SuggestionProvider>(
+    app_context_->outgoing_services()->AddService<maxwell::SuggestionProvider>(
+        [this](fidl::InterfaceRequest<maxwell::SuggestionProvider> request) {
+          modular::ConnectToService<maxwell::SuggestionProvider>(
               suggestion_services_.get(), std::move(request));
         });
   }
@@ -88,12 +85,10 @@ class LauncherApp : public maxwell::Launcher {
         fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
       context_engine_->RegisterSuggestionAgent(url, std::move(request));
     });
-    agent_host->AddService<maxwell::suggestion::SuggestionAgentClient>(
-        [this,
-         url](fidl::InterfaceRequest<maxwell::suggestion::SuggestionAgentClient>
-                  request) {
-          suggestion_engine_->RegisterSuggestionAgent(url, std::move(request));
-        });
+    agent_host->AddService<maxwell::SuggestionAgentClient>([this, url](
+        fidl::InterfaceRequest<maxwell::SuggestionAgentClient> request) {
+      suggestion_engine_->RegisterSuggestionAgent(url, std::move(request));
+    });
 
     agent_host->AddService<modular::FocusController>(
         [this](fidl::InterfaceRequest<modular::FocusController> request) {
@@ -109,7 +104,7 @@ class LauncherApp : public maxwell::Launcher {
 
   maxwell::ContextEnginePtr context_engine_;
   modular::ServiceProviderPtr suggestion_services_;
-  maxwell::suggestion::SuggestionEnginePtr suggestion_engine_;
+  maxwell::SuggestionEnginePtr suggestion_engine_;
 
   maxwell::AgentLauncher agent_launcher_;
 

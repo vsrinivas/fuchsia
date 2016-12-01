@@ -7,7 +7,6 @@
 #include "apps/maxwell/src/suggestion_engine/timeline_stories_watcher.h"
 
 namespace maxwell {
-namespace suggestion {
 
 TimelineStoriesFilter::TimelineStoriesFilter(
     TimelineStoriesWatcher* timeline_stories_watcher)
@@ -31,5 +30,4 @@ bool TimelineStoriesFilter::operator()(const Proposal& proposal) {
   return true;
 }
 
-}  // namespace suggestion
 }  // namespace maxwell

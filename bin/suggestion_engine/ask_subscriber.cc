@@ -7,7 +7,6 @@
 #include "apps/maxwell/src/suggestion_engine/ask_channel.h"
 
 namespace maxwell {
-namespace suggestion {
 
 AskSubscriber::AskSubscriber(AskChannel* channel,
                              fidl::InterfaceHandle<Listener> listener,
@@ -21,5 +20,4 @@ void AskSubscriber::SetUserInput(UserInputPtr input) {
   channel_->SetQuery(input->get_text());
 }
 
-}  // namespace suggestion
 }  // namespace maxwell

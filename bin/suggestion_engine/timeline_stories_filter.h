@@ -10,8 +10,6 @@ namespace maxwell {
 
 class TimelineStoriesWatcher;
 
-namespace suggestion {
-
 // Filters Proposals that are trying to launch a Story that already exists
 // in the user's timeline.
 class TimelineStoriesFilter {
@@ -28,5 +26,4 @@ class TimelineStoriesFilter {
   TimelineStoriesWatcher* timeline_stories_watcher_;
 };
 
-}  // namespace suggestion
 }  // namespace maxwell

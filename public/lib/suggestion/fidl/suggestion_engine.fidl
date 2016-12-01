@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.suggestion;
+module maxwell;
 
 import "apps/maxwell/services/suggestion/suggestion_agent_client.fidl";
 import "apps/maxwell/services/suggestion/suggestion_provider.fidl"; // convenience import
@@ -10,7 +10,7 @@ import "apps/modular/services/user/story_provider.fidl";
 import "apps/modular/services/user/focus.fidl";
 
 // Administrative interface for Suggestion Engine.
-[ServiceName="maxwell.suggestion.SuggestionEngine"]
+[ServiceName="maxwell.SuggestionEngine"]
 interface SuggestionEngine {
   // Initializes the SuggestionEngine and provides dependencies.
   Initialize(modular.StoryProvider story_provider, modular.FocusController focus_controller);

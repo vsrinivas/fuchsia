@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.suggestion;
+module maxwell;
 
 import "apps/maxwell/services/suggestion/proposal.fidl";
 import "apps/maxwell/services/suggestion/user_input.fidl";

@@ -10,7 +10,6 @@
 #include "apps/maxwell/src/suggestion_engine/ask_subscriber.h"
 
 namespace maxwell {
-namespace suggestion {
 
 class Repo;
 
@@ -84,5 +83,4 @@ class AskChannel : public SuggestionChannel {
   std::unordered_map<std::string, std::unique_ptr<RankedSuggestion>> exclude_;
 };
 
-}  // namespace suggestion
 }  // namespace maxwell

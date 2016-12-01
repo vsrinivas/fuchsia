@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.suggestion;
+module maxwell;
 
 import "apps/maxwell/services/suggestion/ask_handler.fidl";
 import "apps/maxwell/services/suggestion/proposal.fidl";
 
 // A service enabling Agents to contribute Proposals proactively to the
 // Suggestion engine.
-[ServiceName="maxwell.suggestion.SuggestionAgentClient"]
+[ServiceName="maxwell.SuggestionAgentClient"]
 interface SuggestionAgentClient {
   // Includes the given |proposal| in the list from this Agent. Proposals are
   // identified by |proposal.id|, and are namespaced by the Agent's ID.

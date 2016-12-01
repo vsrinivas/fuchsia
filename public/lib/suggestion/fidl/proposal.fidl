@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.suggestion;
+module maxwell;
 
-import "apps/maxwell/services/suggestion/display.fidl";
+import "apps/maxwell/services/suggestion/suggestion_display.fidl";
 import "apps/modular/services/document_store/document.fidl";
 
 // NOTE: Some future-thinking features are represented here and commented out
@@ -26,7 +26,7 @@ struct Proposal {
   // Suggestion.
   array<Action> on_selected;
 
-  Display display;
+  SuggestionDisplay display;
 };
 
 /*

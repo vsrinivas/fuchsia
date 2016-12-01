@@ -7,12 +7,10 @@
 #include "apps/maxwell/src/suggestion_engine/proposal_record.h"
 
 namespace maxwell {
-namespace suggestion {
 
 struct RankedSuggestion {
   const SuggestionPrototype* prototype;
   float rank;
 };
 
-}  // suggestion
 }  // maxwell

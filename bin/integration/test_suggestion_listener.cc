@@ -6,13 +6,13 @@
 
 #include "apps/maxwell/lib/suggestion/formatting.h"
 
-bool suggestion_less(const maxwell::suggestion::Suggestion* a,
-                     const maxwell::suggestion::Suggestion* b) {
+bool suggestion_less(const maxwell::Suggestion* a,
+                     const maxwell::Suggestion* b) {
   return a->rank < b->rank;
 }
 
 void TestSuggestionListener::OnAdd(
-    fidl::Array<maxwell::suggestion::SuggestionPtr> suggestions) {
+    fidl::Array<maxwell::SuggestionPtr> suggestions) {
   FTL_LOG(INFO) << "OnAdd(" << suggestions << ")";
   naive_suggestion_count_ += suggestions.size();
 

@@ -14,7 +14,6 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 namespace maxwell {
-namespace suggestion {
 
 class Repo {
  public:
@@ -81,5 +80,4 @@ class Repo {
   ProposalFilter filter_;
 };
 
-}  // namespace suggestion
 }  // namespace maxwell

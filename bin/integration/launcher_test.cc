@@ -25,14 +25,13 @@ TEST_F(MaxwellTestBase, Launcher) {
   launcher->Initialize(std::move(story_provider_handle),
                        std::move(focus_controller_handle));
 
-  maxwell::suggestion::SuggestionProviderPtr client =
-      modular::ConnectToService<maxwell::suggestion::SuggestionProvider>(
+  maxwell::SuggestionProviderPtr client =
+      modular::ConnectToService<maxwell::SuggestionProvider>(
           launcher_services.get());
   TestSuggestionListener listener;
-  fidl::InterfaceHandle<maxwell::suggestion::Listener> listener_handle;
-  fidl::Binding<maxwell::suggestion::Listener> binding(&listener,
-                                                       &listener_handle);
-  maxwell::suggestion::NextControllerPtr ctl;
+  fidl::InterfaceHandle<maxwell::Listener> listener_handle;
+  fidl::Binding<maxwell::Listener> binding(&listener, &listener_handle);
+  maxwell::NextControllerPtr ctl;
 
   client->SubscribeToNext(std::move(listener_handle), GetProxy(&ctl));
 

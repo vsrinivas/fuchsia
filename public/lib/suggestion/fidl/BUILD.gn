@@ -23,7 +23,7 @@ fidl("suggestion") {
 
 fidl("suggestion_provider") {
   sources = [
-    "display.fidl",
+    "suggestion_display.fidl",
     "suggestion_provider.fidl",
     "user_input.fidl",
   ]

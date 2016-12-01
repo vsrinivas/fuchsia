@@ -5,7 +5,6 @@
 #include "apps/maxwell/src/suggestion_engine/windowed_subscriber.h"
 
 namespace maxwell {
-namespace suggestion {
 
 void WindowedSubscriber::SetResultCount(int32_t count) {
   FTL_LOG(INFO) << "WindowedSubscriber::SetResultCount(" << count << ")";
@@ -88,5 +87,4 @@ bool WindowedSubscriber::IncludeSuggestion(
   return false;
 }
 
-}  // namespace suggestion
 }  // namespace maxwell

@@ -5,10 +5,8 @@
 #include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
 
 namespace maxwell {
-namespace suggestion {
 
 void SuggestionAgentClientImpl::Propose(ProposalPtr proposal) {
-
   const size_t old_size = proposals_.size();
   AgentSuggestionRecord* record = &proposals_[proposal->id];
 
@@ -68,5 +66,4 @@ void SuggestionAgentClientImpl::EraseSelf() {
   repo_->RemoveSourceClient(component_url_);
 }
 
-}  // namespace suggestion
 }  // namespace maxwell

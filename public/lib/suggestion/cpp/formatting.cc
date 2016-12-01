@@ -5,10 +5,8 @@
 #include "apps/maxwell/lib/suggestion/formatting.h"
 
 namespace maxwell {
-namespace suggestion {
 
-std::ostream& operator<<(std::ostream& os,
-                         const maxwell::suggestion::Display& o) {
+std::ostream& operator<<(std::ostream& os, const SuggestionDisplay& o) {
   return os << "{ headline: " << o.headline
             << ", subheadline: " << o.subheadline << ", details: " << o.details
             << "}";
@@ -19,5 +17,4 @@ std::ostream& operator<<(std::ostream& os, const Suggestion& o) {
             << ", display: " << o.display << "}";
 }
 
-}  // namespace suggestion
 }  // namespace maxwell

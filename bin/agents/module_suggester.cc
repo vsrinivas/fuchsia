@@ -58,12 +58,12 @@ const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
      {"Green 500",
       {"file:///system/apps/color", 0xff4caf50, "0xFF4CAF50", ""}}});
 
-maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
-                                            const ProposalContent& content) {
-  auto p = maxwell::suggestion::Proposal::New();
+maxwell::ProposalPtr MkProposal(const std::string& label,
+                                const ProposalContent& content) {
+  auto p = maxwell::Proposal::New();
 
   p->id = label;
-  auto create_story = maxwell::suggestion::CreateStory::New();
+  auto create_story = maxwell::CreateStory::New();
   create_story->module_id = content.url;
   const auto& data = content.module_data;
   if (data.size() > 0) {
@@ -78,24 +78,24 @@ maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
     map[fidl::String("Color")] = std::move(doc);
     create_story->initial_data = std::move(map);
   }
-  auto action = maxwell::suggestion::Action::New();
+  auto action = maxwell::Action::New();
   action->set_create_story(std::move(create_story));
   p->on_selected.push_back(std::move(action));
-  auto d = maxwell::suggestion::Display::New();
+  auto d = maxwell::SuggestionDisplay::New();
   d->headline = label;
   d->subheadline = "";
   d->details = "";
   d->color = content.color;
   d->icon_urls.push_back("");
   d->image_url = content.icon;
-  d->image_type = maxwell::suggestion::SuggestionImageType::PERSON;
+  d->image_type = maxwell::SuggestionImageType::PERSON;
   p->display = std::move(d);
 
   return p;
 }
 
 class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
-                                public maxwell::suggestion::AskHandler {
+                                public maxwell::AskHandler {
  public:
   ModuleSuggesterAgentApp()
       : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
@@ -104,12 +104,12 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
                 ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
         in_(this),
         out_(app_context_->ConnectToEnvironmentService<
-             maxwell::suggestion::SuggestionAgentClient>()),
+             maxwell::SuggestionAgentClient>()),
         ask_(this) {
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
     maxwell_context_->Subscribe("/modular_state", "int", std::move(in_handle));
-    fidl::InterfaceHandle<maxwell::suggestion::AskHandler> ask_handle;
+    fidl::InterfaceHandle<maxwell::AskHandler> ask_handle;
     ask_.Bind(&ask_handle);
     out_->RegisterAskHandler(std::move(ask_handle));
   }
@@ -130,8 +130,7 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
     }
   }
 
-  void Ask(maxwell::suggestion::UserInputPtr query,
-           const AskCallback& callback) override {
+  void Ask(maxwell::UserInputPtr query, const AskCallback& callback) override {
     if (query->is_text() && query->get_text() != "") {
       // Propose everything; let the Next filter do the filtering HACK(rosswang)
       for (const auto& entry : kAskOnlyStories) {
@@ -143,8 +142,7 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
       }
     }
 
-    callback(fidl::Array<maxwell::suggestion::ProposalPtr>::New(
-        0));  // TODO(rosswang)
+    callback(fidl::Array<maxwell::ProposalPtr>::New(0));  // TODO(rosswang)
   }
 
  private:
@@ -152,8 +150,8 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
 
   maxwell::ContextSubscriberPtr maxwell_context_;
   fidl::Binding<maxwell::ContextSubscriberLink> in_;
-  maxwell::suggestion::SuggestionAgentClientPtr out_;
-  fidl::Binding<maxwell::suggestion::AskHandler> ask_;
+  maxwell::SuggestionAgentClientPtr out_;
+  fidl::Binding<maxwell::AskHandler> ask_;
 };
 
 }  // namespace

@@ -7,10 +7,8 @@
 #include "apps/maxwell/src/suggestion_engine/proposal_record.h"
 
 namespace maxwell {
-namespace suggestion {
 
 // Should return false if the given Proposal should be filtered.
 typedef std::function<bool(const Proposal&)> ProposalFilter;
 
-}  // namespace suggestion
 }  // namespace maxwell

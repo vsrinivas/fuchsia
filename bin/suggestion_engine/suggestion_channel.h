@@ -7,7 +7,6 @@
 #include "apps/maxwell/src/suggestion_engine/agent_suggestion_record.h"
 
 namespace maxwell {
-namespace suggestion {
 
 class SuggestionChannel {
  public:
@@ -34,5 +33,4 @@ class SuggestionChannel {
   virtual const RankedSuggestions* ranked_suggestions() const = 0;
 };
 
-}  // namespace suggestion
 }  // namespace maxwell

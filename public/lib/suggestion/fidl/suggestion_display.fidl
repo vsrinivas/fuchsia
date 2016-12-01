@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.suggestion;
+module maxwell;
 
 enum SuggestionImageType {
   PERSON,
@@ -11,7 +11,7 @@ enum SuggestionImageType {
 
 // TODO(thatguy): This will likely be a union eventually, with different
 // display descriptions for different kinds of Suggestions.
-struct Display {
+struct SuggestionDisplay {
   // Title text for this Suggestion
   string headline;
 

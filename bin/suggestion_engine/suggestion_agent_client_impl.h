@@ -12,7 +12,6 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
-namespace suggestion {
 
 class Repo;
 
@@ -70,5 +69,4 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
   BindingSet bindings_;
 };
 
-}  // namespace suggestion
 }  // namespace maxwell

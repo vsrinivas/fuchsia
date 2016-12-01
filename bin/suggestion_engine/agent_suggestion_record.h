@@ -9,7 +9,6 @@
 #include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
 
 namespace maxwell {
-namespace suggestion {
 
 class SuggestionChannel;
 
@@ -21,5 +20,4 @@ struct AgentSuggestionRecord {
   std::unordered_map<SuggestionChannel*, RankedSuggestion*> ranks_by_channel;
 };
 
-}  // suggestion
 }  // maxwell

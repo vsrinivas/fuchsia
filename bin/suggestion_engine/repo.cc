@@ -5,7 +5,6 @@
 #include "apps/maxwell/src/suggestion_engine/repo.h"
 
 namespace maxwell {
-namespace suggestion {
 
 SuggestionAgentClientImpl* Repo::GetOrCreateSourceClient(
     const std::string& component_url) {
@@ -55,5 +54,4 @@ void Repo::InitiateAsk(fidl::InterfaceHandle<Listener> listener,
   ask_channels_.emplace(std::move(ask));
 }
 
-}  // namespace suggestion
 }  // namespace maxwell

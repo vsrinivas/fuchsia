@@ -5,7 +5,6 @@
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
 
 namespace maxwell {
-namespace suggestion {
 
 RankedSuggestion* NextChannel::OnAddSuggestion(
     const SuggestionPrototype* prototype) {
@@ -54,5 +53,4 @@ const NextChannel::RankedSuggestions* NextChannel::ranked_suggestions() const {
   return &ranked_suggestions_;
 }
 
-}  // namespace suggestion
 }  // namespace maxwell
