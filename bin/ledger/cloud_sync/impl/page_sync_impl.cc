@@ -45,7 +45,7 @@ void PageSyncImpl::Start() {
   started_ = true;
   storage_->SetSyncDelegate(this);
 
-  TryStartDownload();
+  DownloadBacklog();
 
   // Retrieve the backlog of the existing unsynced commits and enqueue them for
   // upload.
@@ -131,7 +131,15 @@ void PageSyncImpl::OnRemoteCommit(cloud_provider::Commit commit,
                                   std::string timestamp) {
   std::vector<cloud_provider::Record> records;
   records.emplace_back(std::move(commit), std::move(timestamp));
-  EnqueueDownload(std::move(records));
+  if (batch_download_) {
+    // If there is already a commit batch being downloaded, save the new commits
+    // to be downloaded when it is done.
+    std::move(std::begin(records), std::end(records),
+              std::back_inserter(commits_to_download_));
+    return;
+  }
+
+  DownloadBatch(std::move(records), nullptr);
 }
 
 void PageSyncImpl::OnConnectionError() {
@@ -148,7 +156,7 @@ void PageSyncImpl::OnMalformedNotification() {
   HandleError("Received a malformed remote commit notification.");
 }
 
-void PageSyncImpl::TryStartDownload() {
+void PageSyncImpl::DownloadBacklog() {
   // Retrieve the server-side timestamp of the last commit we received.
   std::string last_commit_ts;
   auto status = storage_->GetSyncMetadata(&last_commit_ts);
@@ -167,7 +175,7 @@ void PageSyncImpl::TryStartDownload() {
              std::vector<cloud_provider::Record> records) {
         if (cloud_status != cloud_provider::Status::OK) {
           // Fetching the remote commits failed, schedule a retry.
-          Retry([this] { TryStartDownload(); });
+          Retry([this] { DownloadBacklog(); });
           return;
         }
         backoff_->Reset();
@@ -178,7 +186,7 @@ void PageSyncImpl::TryStartDownload() {
         } else {
           // If not, fire the backlog download callback when the remote commits
           // are downloaded.
-          StartDownload(std::move(records), [this] { BacklogDownloaded(); });
+          DownloadBatch(std::move(records), [this] { BacklogDownloaded(); });
         }
 
         download_list_retrieved_ = true;
@@ -187,20 +195,7 @@ void PageSyncImpl::TryStartDownload() {
       });
 }
 
-void PageSyncImpl::EnqueueDownload(
-    std::vector<cloud_provider::Record> records) {
-  if (batch_download_) {
-    // If there is already a commit batch being downloaded, save the new commits
-    // to be downloaded when it is done.
-    std::move(std::begin(records), std::end(records),
-              std::back_inserter(commits_to_download_));
-    return;
-  }
-
-  StartDownload(std::move(records), nullptr);
-}
-
-void PageSyncImpl::StartDownload(std::vector<cloud_provider::Record> records,
+void PageSyncImpl::DownloadBatch(std::vector<cloud_provider::Record> records,
                                  ftl::Closure on_done) {
   FTL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
@@ -216,7 +211,7 @@ void PageSyncImpl::StartDownload(std::vector<cloud_provider::Record> records,
         }
         auto commits = std::move(commits_to_download_);
         commits_to_download_.clear();
-        StartDownload(std::move(commits), nullptr);
+        DownloadBatch(std::move(commits), nullptr);
       },
       [this] { HandleError("Failed to persist a remote commit in storage"); });
   batch_download_->Start();

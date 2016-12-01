@@ -91,11 +91,12 @@ class PageSyncImpl : public PageSync,
   void OnMalformedNotification() override;
 
  private:
-  void TryStartDownload();
+  // Downloads the initial backlog of remote commits, and sets up the remote
+  // watcher upon success.
+  void DownloadBacklog();
 
-  void EnqueueDownload(std::vector<cloud_provider::Record> record);
-
-  void StartDownload(std::vector<cloud_provider::Record> record,
+  // Downloads the given batch of commits.
+  void DownloadBatch(std::vector<cloud_provider::Record> record,
                      ftl::Closure on_done);
 
   void SetRemoteWatcher();
