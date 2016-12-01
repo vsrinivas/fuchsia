@@ -12,12 +12,12 @@ The stub currently communicates with GDB over a TCP connection using BSD sockets
 and thus requires a working Fuchsia network stack and a network connection
 between the target and host environments. Follow the general network set up
 instructions (click
-[here](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md#Enabling-Networking-under-Qemu-x86_64-only)
+[here](https://fuchsia.googlesource.com/magenta/+/master/docs/qemu.md#Enabling-Networking-under-Qemu-x86_64-only)
 for enabling network under QEMU)
 
 **N.B.** If using QEMU make sure you are using version 2.5.0 or later.
 
-See [this document](https://docs.google.com/a/google.com/document/d/1wKQbLgxKBsdlXX9iPSw4MHnTYN4Lx2xjzyoWyth-uy4/edit?usp=sharing) for setting up `netstack`.
+See [this document](https://fuchsia.googlesource.com/netstack/+/master/README.md) for setting up `netstack`.
 
 ## Debugging a program
 
@@ -34,6 +34,9 @@ ip6_addr[0]: FE80::5054::FF:FE12:3456
 
 `192.168.3.53` is the address that we will use to connect from the host gdb
 later.
+
+**N.B.** This step is only necessary if qemu is started with netsvc disabled.
+Look for the log messages below in the system boot logs.
 
 Next, run the stub with your port number of choice (e.g. 7000) and a path to a
 binary (the stub currently supports debugging a single inferior during its life
