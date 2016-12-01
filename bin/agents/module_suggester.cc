@@ -50,8 +50,13 @@ const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
      {"Paint",
       {"file:///system/apps/paint_view", 0xffad1457 /*Blue Grey 50*/, "", ""}},
      {"Hello Material",
-      {"file:///system/apps/hello_material", 0xff4caf50 /*Green 500*/, "",
-       ""}}});
+      {"file:///system/apps/hello_material", 0xff4caf50 /*Green 500*/, "", ""}},
+     {"Teal A400", {"file:///system/apps/color", 0xff1de9b6, "0xFF1DE9B6", ""}},
+     {"Red 500", {"file:///system/apps/color", 0xfff44336, "0xFFF44336", ""}},
+     {"Deep Purple 800",
+      {"file:///system/apps/color", 0xff4527a0, "0xFF4527A0", ""}},
+     {"Green 500",
+      {"file:///system/apps/color", 0xff4caf50, "0xFF4CAF50", ""}}});
 
 maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
                                             const ProposalContent& content) {
