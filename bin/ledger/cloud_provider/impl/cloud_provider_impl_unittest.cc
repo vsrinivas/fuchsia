@@ -126,14 +126,12 @@ TEST_F(CloudProviderImplTest, AddCommit) {
       "commit_id", "some_content",
       std::map<ObjectId, Data>{{"object_a", "data_a"}, {"object_b", "data_b"}});
 
-  bool callback_called = false;
-  cloud_provider_->AddCommit(commit, [&callback_called](Status status) {
-    EXPECT_EQ(Status::OK, status);
-    callback_called = true;
-  });
-  message_loop_.Run();
+  Status status;
+  cloud_provider_->AddCommit(
+      commit, test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, put_keys_.size());
   EXPECT_EQ(put_keys_.size(), put_data_.size());
   EXPECT_EQ("commits/commit_idV", put_keys_[0]);
@@ -314,33 +312,29 @@ TEST_F(CloudProviderImplTest, GetCommits) {
   get_response_->Parse(get_response_content.c_str(),
                        get_response_content.size());
 
-  bool callback_called = false;
-  auto callback = [&callback_called](Status status,
-                                     const std::vector<Record>& records) {
-    EXPECT_EQ(Status::OK, status);
-    callback_called = true;
-
-    const Commit expected_commit_1(
-        "id1", "xyz",
-        std::map<ObjectId, Data>{{"object_a", "a"}, {"object_b", "b"}});
-    const Commit expected_commit_2("id2", "bazinga",
-                                   std::map<ObjectId, Data>{});
-    EXPECT_EQ(2u, records.size());
-    // Verify that commits are ordered by timestamp.
-    EXPECT_EQ(expected_commit_2, records[0].commit);
-    EXPECT_EQ(ServerTimestampToBytes(42), records[0].timestamp);
-    EXPECT_EQ(expected_commit_1, records[1].commit);
-    EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[1].timestamp);
-  };
-
-  cloud_provider_->GetCommits(ServerTimestampToBytes(42), callback);
-  message_loop_.Run();
+  Status status;
+  std::vector<Record> records;
+  cloud_provider_->GetCommits(
+      ServerTimestampToBytes(42),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                    &records));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  const Commit expected_commit_1(
+      "id1", "xyz",
+      std::map<ObjectId, Data>{{"object_a", "a"}, {"object_b", "b"}});
+  const Commit expected_commit_2("id2", "bazinga", std::map<ObjectId, Data>{});
+  EXPECT_EQ(2u, records.size());
+  // Verify that commits are ordered by timestamp.
+  EXPECT_EQ(expected_commit_2, records[0].commit);
+  EXPECT_EQ(ServerTimestampToBytes(42), records[0].timestamp);
+  EXPECT_EQ(expected_commit_1, records[1].commit);
+  EXPECT_EQ(ServerTimestampToBytes(1472722368296), records[1].timestamp);
 
   EXPECT_EQ(1u, get_keys_.size());
   EXPECT_EQ(1u, get_queries_.size());
   EXPECT_EQ("commits", get_keys_[0]);
   EXPECT_EQ("orderBy=\"timestamp\"&startAt=42", get_queries_[0]);
-  EXPECT_TRUE(callback_called);
 }
 
 TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
@@ -356,6 +350,7 @@ TEST_F(CloudProviderImplTest, GetCommitsWhenThereAreNone) {
       test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                     &records));
   EXPECT_FALSE(RunLoopWithTimeout());
+
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(records.empty());
 }
@@ -364,15 +359,13 @@ TEST_F(CloudProviderImplTest, AddObject) {
   mx::vmo data;
   ASSERT_TRUE(mtl::VmoFromString("bazinga", &data));
 
-  bool callback_called = false;
-  cloud_provider_->AddObject("object_id", std::move(data),
-                             [&callback_called](Status status) {
-                               EXPECT_EQ(Status::OK, status);
-                               callback_called = true;
-                             });
-  message_loop_.Run();
+  Status status;
+  cloud_provider_->AddObject(
+      "object_id", std::move(data),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, put_keys_.size());
   EXPECT_EQ(put_keys_.size(), put_data_.size());
   EXPECT_EQ("objects/object_idV", put_keys_[0]);
@@ -385,21 +378,21 @@ TEST_F(CloudProviderImplTest, GetObject) {
   get_response_->Parse(get_response_content.c_str(),
                        get_response_content.size());
 
-  bool callback_called = false;
+  Status status;
+  uint64_t size;
+  mx::datapipe_consumer data;
   cloud_provider_->GetObject(
-      "object_id", [&callback_called](Status status, uint64_t size,
-                                      mx::datapipe_consumer data) {
-        EXPECT_EQ(Status::OK, status);
-        std::string data_str;
-        EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &data_str));
-        EXPECT_EQ("bazinga", data_str);
-        EXPECT_EQ(7u, data_str.size());
-        EXPECT_EQ(7u, size);
-        callback_called = true;
-      });
-  message_loop_.Run();
+      "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
+                                 &status, &size, &data));
+  EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(Status::OK, status);
+  std::string data_str;
+  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &data_str));
+  EXPECT_EQ("bazinga", data_str);
+  EXPECT_EQ(7u, data_str.size());
+  EXPECT_EQ(7u, size);
+
   EXPECT_EQ(1u, get_keys_.size());
   EXPECT_EQ("objects/object_idV", get_keys_[0]);
 }
@@ -417,6 +410,7 @@ TEST_F(CloudProviderImplTest, GetObjectNotFound) {
       "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
                                  &status, &size, &data));
   EXPECT_FALSE(RunLoopWithTimeout());
+
   EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_EQ(0u, size);
 }
