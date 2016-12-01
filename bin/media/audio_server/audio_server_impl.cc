@@ -6,7 +6,7 @@
 
 #include "apps/media/lib/flog.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
-#include "apps/media/src/audio_server/audio_track_impl.h"
+#include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace media {
@@ -46,13 +46,13 @@ AudioServerImpl::~AudioServerImpl() {
 void AudioServerImpl::Shutdown() {
   shutting_down_ = true;
 
-  while (tracks_.size()) {
-    // Tracks remove themselves from the server's set of active tracks as they
-    // shutdown.  Assert that the set's size is shrinking by one each time we
-    // shut down a track so we know that we are making progress.
-    size_t size_before = tracks_.size();
-    (*tracks_.begin())->Shutdown();
-    size_t size_after = tracks_.size();
+  while (renderers_.size()) {
+    // Renderers remove themselves from the server's set of active renderers as
+    // they shutdown.  Assert that the set's size is shrinking by one each time
+    // we shut down a renderer so we know that we are making progress.
+    size_t size_before = renderers_.size();
+    (*renderers_.begin())->Shutdown();
+    size_t size_after = renderers_.size();
     FTL_DCHECK(size_after < size_before);
   }
 
@@ -60,11 +60,11 @@ void AudioServerImpl::Shutdown() {
   DoPacketCleanup();
 }
 
-void AudioServerImpl::CreateTrack(
-    fidl::InterfaceRequest<AudioTrack> track,
-    fidl::InterfaceRequest<MediaRenderer> renderer) {
-  tracks_.insert(
-      AudioTrackImpl::Create(std::move(track), std::move(renderer), this));
+void AudioServerImpl::CreateRenderer(
+    fidl::InterfaceRequest<AudioRenderer> audio_renderer,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer) {
+  renderers_.insert(AudioRendererImpl::Create(std::move(audio_renderer),
+                                              std::move(media_renderer), this));
 }
 
 void AudioServerImpl::DoPacketCleanup() {

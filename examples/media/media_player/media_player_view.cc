@@ -10,8 +10,8 @@
 
 #include "apps/media/examples/media_player/media_player_params.h"
 #include "apps/media/lib/timeline.h"
+#include "apps/media/services/audio_renderer.fidl.h"
 #include "apps/media/services/audio_server.fidl.h"
-#include "apps/media/services/audio_track.fidl.h"
 #include "apps/media/services/media_service.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
@@ -71,10 +71,10 @@ MediaPlayerView::MediaPlayerView(
       application_context->ConnectToEnvironmentService<media::AudioServer>();
 
   // Get an audio renderer.
-  media::AudioTrackPtr audio_track;
+  media::AudioRendererPtr audio_renderer;
   media::MediaRendererPtr audio_media_renderer;
-  audio_service->CreateTrack(GetProxy(&audio_track),
-                             GetProxy(&audio_media_renderer));
+  audio_service->CreateRenderer(GetProxy(&audio_renderer),
+                                GetProxy(&audio_media_renderer));
 
   // Get a video renderer.
   media::MediaRendererPtr video_media_renderer;

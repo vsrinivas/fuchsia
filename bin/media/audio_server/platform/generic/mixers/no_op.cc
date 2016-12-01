@@ -4,7 +4,7 @@
 
 #include "apps/media/src/audio_server/platform/generic/mixers/no_op.h"
 
-#include "apps/media/src/audio_server/audio_track_impl.h"
+#include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {

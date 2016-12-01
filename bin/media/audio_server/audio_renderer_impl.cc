@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/audio_track_impl.h"
+#include "apps/media/src/audio_server/audio_renderer_impl.h"
 
 #include <algorithm>
 #include <limits>
@@ -11,15 +11,15 @@
 #include "apps/media/lib/timeline_function.h"
 #include "apps/media/lib/timeline_rate.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
+#include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
 #include "apps/media/src/audio_server/audio_server_impl.h"
-#include "apps/media/src/audio_server/audio_track_to_output_link.h"
 #include "lib/ftl/arraysize.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
 namespace audio {
 
-constexpr size_t AudioTrackImpl::PTS_FRACTIONAL_BITS;
+constexpr size_t AudioRendererImpl::PTS_FRACTIONAL_BITS;
 
 // TODO(johngro): If there is ever a better way to do this type of static-table
 // initialization using fidl generated structs, we should switch to it.
@@ -46,24 +46,24 @@ static const struct {
     },
 };
 
-AudioTrackImpl::AudioTrackImpl(
-    fidl::InterfaceRequest<AudioTrack> track_request,
-    fidl::InterfaceRequest<MediaRenderer> renderer_request,
+AudioRendererImpl::AudioRendererImpl(
+    fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
     AudioServerImpl* owner)
     : owner_(owner),
-      track_binding_(this, std::move(track_request)),
-      renderer_binding_(this, std::move(renderer_request)),
+      audio_renderer_binding_(this, std::move(audio_renderer_request)),
+      media_renderer_binding_(this, std::move(media_renderer_request)),
       pipe_(this, owner) {
   FTL_CHECK(nullptr != owner_);
 
-  track_binding_.set_connection_error_handler([this]() -> void {
-    if (!renderer_binding_.is_bound()) {
+  audio_renderer_binding_.set_connection_error_handler([this]() -> void {
+    if (!audio_renderer_binding_.is_bound()) {
       Shutdown();
     }
   });
 
-  renderer_binding_.set_connection_error_handler([this]() -> void {
-    if (!track_binding_.is_bound()) {
+  media_renderer_binding_.set_connection_error_handler([this]() -> void {
+    if (!media_renderer_binding_.is_bound()) {
       Shutdown();
     }
   });
@@ -74,32 +74,33 @@ AudioTrackImpl::AudioTrackImpl(
       });
 }
 
-AudioTrackImpl::~AudioTrackImpl() {
+AudioRendererImpl::~AudioRendererImpl() {
   // assert that we have been cleanly shutdown already.
-  FTL_DCHECK(!track_binding_.is_bound());
-  FTL_DCHECK(!renderer_binding_.is_bound());
+  FTL_DCHECK(!audio_renderer_binding_.is_bound());
+  FTL_DCHECK(!media_renderer_binding_.is_bound());
 }
 
-AudioTrackImplPtr AudioTrackImpl::Create(
-    fidl::InterfaceRequest<AudioTrack> track_request,
-    fidl::InterfaceRequest<MediaRenderer> renderer_request,
+AudioRendererImplPtr AudioRendererImpl::Create(
+    fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
     AudioServerImpl* owner) {
-  AudioTrackImplPtr ret(new AudioTrackImpl(std::move(track_request),
-                                           std::move(renderer_request), owner));
+  AudioRendererImplPtr ret(
+      new AudioRendererImpl(std::move(audio_renderer_request),
+                            std::move(media_renderer_request), owner));
   ret->weak_this_ = ret;
   return ret;
 }
 
-void AudioTrackImpl::Shutdown() {
-  if (track_binding_.is_bound()) {
-    track_binding_.set_connection_error_handler(nullptr);
-    track_binding_.Close();
+void AudioRendererImpl::Shutdown() {
+  if (audio_renderer_binding_.is_bound()) {
+    audio_renderer_binding_.set_connection_error_handler(nullptr);
+    audio_renderer_binding_.Close();
   }
 
   // If we are unbound, then we have already been shut down and are just waiting
   // for the service to destroy us.  Run some FTL_DCHECK sanity checks and get
   // out.
-  if (!renderer_binding_.is_bound()) {
+  if (!media_renderer_binding_.is_bound()) {
     FTL_DCHECK(!pipe_.is_bound());
     FTL_DCHECK(!timeline_control_point_.is_bound());
     FTL_DCHECK(!outputs_.size());
@@ -107,8 +108,8 @@ void AudioTrackImpl::Shutdown() {
   }
 
   // Close the connection to our client
-  renderer_binding_.set_connection_error_handler(nullptr);
-  renderer_binding_.Close();
+  media_renderer_binding_.set_connection_error_handler(nullptr);
+  media_renderer_binding_.Close();
 
   // reset all of our internal state and close any other client connections in
   // the process.
@@ -117,11 +118,11 @@ void AudioTrackImpl::Shutdown() {
   outputs_.clear();
 
   FTL_DCHECK(owner_);
-  AudioTrackImplPtr thiz = weak_this_.lock();
-  owner_->RemoveTrack(thiz);
+  AudioRendererImplPtr thiz = weak_this_.lock();
+  owner_->RemoveRenderer(thiz);
 }
 
-void AudioTrackImpl::GetSupportedMediaTypes(
+void AudioRendererImpl::GetSupportedMediaTypes(
     const GetSupportedMediaTypesCallback& cbk) {
   // Build a minimal descriptor
   //
@@ -162,10 +163,10 @@ void AudioTrackImpl::GetSupportedMediaTypes(
   cbk(std::move(supported_media_types));
 }
 
-void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
+void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
   // Are we already configured?
   if (pipe_.is_bound()) {
-    FTL_LOG(ERROR) << "Attempting to reconfigure a configured audio track.";
+    FTL_LOG(ERROR) << "Attempting to reconfigure a configured audio renderer.";
     Shutdown();
     return;
   }
@@ -174,8 +175,9 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
   if ((media_type->medium != MediaTypeMedium::AUDIO) ||
       (media_type->encoding != MediaType::kAudioEncodingLpcm) ||
       (!media_type->details->is_audio())) {
-    FTL_LOG(ERROR) << "Unsupported configuration requested in "
-                      "AudioTrack::Configure.  Media type must be LPCM audio.";
+    FTL_LOG(ERROR)
+        << "Unsupported configuration requested in "
+           "AudioRenderer::Configure.  Media type must be LPCM audio.";
     Shutdown();
     return;
   }
@@ -198,7 +200,7 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
 
   if (i >= arraysize(kSupportedAudioTypeSets)) {
     FTL_LOG(ERROR) << "Unsupported LPCM configuration requested in "
-                   << "AudioTrack::Configure.  "
+                   << "AudioRenderer::Configure.  "
                    << "(format = " << cfg->sample_format
                    << ", channels = " << static_cast<uint32_t>(cfg->channels)
                    << ", frames_per_second = " << cfg->frames_per_second << ")";
@@ -245,37 +247,38 @@ void AudioTrackImpl::SetMediaType(MediaTypePtr media_type) {
   // interfaces are seriailzed by nature of the fidl framework, and none of the
   // output manager's threads should ever need to manipulate the set.  Cleanup
   // of outputs which have gone away is currently handled in a lazy fashion when
-  // the track fails to promote its weak reference during an operation involving
-  // its outputs.
+  // the renderer fails to promote its weak reference during an operation
+  // involving its outputs.
   //
   // TODO(johngro): someday, we will need to deal with recalculating properties
-  // which depend on a track's current set of outputs (for example, the minimum
-  // latency).  This will probably be done using a dirty flag in the track
+  // which depend on a renderer's current set of outputs (for example, the
+  // minimum
+  // latency).  This will probably be done using a dirty flag in the renderer
   // implementations, and scheduling a job to recalculate the properties for the
-  // dirty tracks and notify the users as appropriate.
+  // dirty renderers and notify the users as appropriate.
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
-  AudioTrackImplPtr strong_this(weak_this_.lock());
+  AudioRendererImplPtr strong_this(weak_this_.lock());
   FTL_DCHECK(strong_this);
   FTL_DCHECK(owner_);
-  owner_->GetOutputManager().SelectOutputsForTrack(strong_this);
+  owner_->GetOutputManager().SelectOutputsForRenderer(strong_this);
 }
 
-void AudioTrackImpl::GetPacketConsumer(
+void AudioRendererImpl::GetPacketConsumer(
     fidl::InterfaceRequest<MediaPacketConsumer> consumer_request) {
   // Bind our pipe to the interface request.
   pipe_.Bind(std::move(consumer_request));
 }
 
-void AudioTrackImpl::GetTimelineControlPoint(
+void AudioRendererImpl::GetTimelineControlPoint(
     fidl::InterfaceRequest<MediaTimelineControlPoint> req) {
   timeline_control_point_.Bind(std::move(req));
 }
 
-void AudioTrackImpl::SetGain(float db_gain) {
-  if (db_gain >= AudioTrack::kMaxGain) {
+void AudioRendererImpl::SetGain(float db_gain) {
+  if (db_gain >= AudioRenderer::kMaxGain) {
     FTL_LOG(ERROR) << "Gain value too large (" << db_gain
-                   << ") for audio track.";
+                   << ") for audio renderer.";
     Shutdown();
     return;
   }
@@ -288,7 +291,7 @@ void AudioTrackImpl::SetGain(float db_gain) {
   }
 }
 
-void AudioTrackImpl::AddOutput(AudioTrackToOutputLinkPtr link) {
+void AudioRendererImpl::AddOutput(AudioRendererToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
   FTL_DCHECK(link);
   auto res = outputs_.emplace(link);
@@ -296,7 +299,7 @@ void AudioTrackImpl::AddOutput(AudioTrackToOutputLinkPtr link) {
   link->UpdateGain();
 }
 
-void AudioTrackImpl::RemoveOutput(AudioTrackToOutputLinkPtr link) {
+void AudioRendererImpl::RemoveOutput(AudioRendererToOutputLinkPtr link) {
   // TODO(johngro): assert that we are on the main message loop thread.
   FTL_DCHECK(link);
 
@@ -311,8 +314,8 @@ void AudioTrackImpl::RemoveOutput(AudioTrackToOutputLinkPtr link) {
   }
 }
 
-void AudioTrackImpl::SnapshotRateTrans(TimelineFunction* out,
-                                       uint32_t* generation) {
+void AudioRendererImpl::SnapshotRateTrans(TimelineFunction* out,
+                                          uint32_t* generation) {
   TimelineFunction timeline_function;
   timeline_control_point_.SnapshotCurrentFunction(
       Timeline::local_now(), &timeline_function, generation);
@@ -328,7 +331,7 @@ void AudioTrackImpl::SnapshotRateTrans(TimelineFunction* out,
                           rate_in_frames_per_ns.subject_delta());
 }
 
-void AudioTrackImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
+void AudioRendererImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
   FTL_DCHECK(packet);
   for (const auto& output : outputs_) {
     FTL_DCHECK(output);
@@ -345,7 +348,7 @@ void AudioTrackImpl::OnPacketReceived(AudioPipe::AudioPacketRefPtr packet) {
   }
 }
 
-bool AudioTrackImpl::OnFlushRequested(
+bool AudioRendererImpl::OnFlushRequested(
     const MediaPacketConsumer::FlushCallback& cbk) {
   for (const auto& output : outputs_) {
     FTL_DCHECK(output);

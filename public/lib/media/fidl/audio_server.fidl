@@ -4,10 +4,10 @@
 
 module media;
 
-import "apps/media/services/audio_track.fidl";
+import "apps/media/services/audio_renderer.fidl";
 import "apps/media/services/media_renderer.fidl";
 
 [ServiceName="media::AudioServer"]
 interface AudioServer {
-  CreateTrack(AudioTrack& track, MediaRenderer& renderer);
+  CreateRenderer(AudioRenderer& audio_renderer, MediaRenderer& media_renderer);
 };

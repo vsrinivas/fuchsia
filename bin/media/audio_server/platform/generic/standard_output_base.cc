@@ -6,8 +6,8 @@
 
 #include <limits>
 
-#include "apps/media/src/audio_server/audio_track_impl.h"
-#include "apps/media/src/audio_server/audio_track_to_output_link.h"
+#include "apps/media/src/audio_server/audio_renderer_impl.h"
+#include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
 #include "apps/media/src/audio_server/platform/generic/mixer.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
@@ -19,29 +19,29 @@ static constexpr ftl::TimeDelta kMaxTrimPeriod =
     ftl::TimeDelta::FromMilliseconds(10);
 constexpr uint32_t StandardOutputBase::MixJob::kInvalidGeneration;
 
-StandardOutputBase::TrackBookkeeping::TrackBookkeeping() {}
-StandardOutputBase::TrackBookkeeping::~TrackBookkeeping() {}
+StandardOutputBase::RendererBookkeeping::RendererBookkeeping() {}
+StandardOutputBase::RendererBookkeeping::~RendererBookkeeping() {}
 
 StandardOutputBase::StandardOutputBase(AudioOutputManager* manager)
     : AudioOutput(manager) {
-  setup_mix_ = [this](const AudioTrackImplPtr& track,
-                      TrackBookkeeping* info) -> bool {
-    return SetupMix(track, info);
+  setup_mix_ = [this](const AudioRendererImplPtr& renderer,
+                      RendererBookkeeping* info) -> bool {
+    return SetupMix(renderer, info);
   };
 
-  process_mix_ = [this](const AudioTrackImplPtr& track, TrackBookkeeping* info,
+  process_mix_ = [this](const AudioRendererImplPtr& renderer, RendererBookkeeping* info,
                         const AudioPipe::AudioPacketRefPtr& pkt_ref) -> bool {
-    return ProcessMix(track, info, pkt_ref);
+    return ProcessMix(renderer, info, pkt_ref);
   };
 
-  setup_trim_ = [this](const AudioTrackImplPtr& track,
-                       TrackBookkeeping* info) -> bool {
-    return SetupTrim(track, info);
+  setup_trim_ = [this](const AudioRendererImplPtr& renderer,
+                       RendererBookkeeping* info) -> bool {
+    return SetupTrim(renderer, info);
   };
 
-  process_trim_ = [this](const AudioTrackImplPtr& track, TrackBookkeeping* info,
+  process_trim_ = [this](const AudioRendererImplPtr& renderer, RendererBookkeeping* info,
                          const AudioPipe::AudioPacketRefPtr& pkt_ref) -> bool {
-    return ProcessTrim(track, info, pkt_ref);
+    return ProcessTrim(renderer, info, pkt_ref);
   };
 
   next_sched_time_ = ftl::TimePoint::Now();
@@ -88,9 +88,9 @@ void StandardOutputBase::Process() {
                              output_formatter_->channels();
       ::memset(mix_buf_.get(), 0, bytes_to_zero);
 
-      // Mix each track into the intermediate buffer, then clip/format into the
+      // Mix each renderer into the intermediate buffer, then clip/format into the
       // final buffer.
-      ForeachTrack(setup_mix_, process_mix_);
+      ForeachRenderer(setup_mix_, process_mix_);
       output_formatter_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
                                        cur_mix_job_.buf_frames);
 
@@ -104,11 +104,11 @@ void StandardOutputBase::Process() {
     return;
   }
 
-  // If we mixed nothing this time, make sure that we trim all of our track
+  // If we mixed nothing this time, make sure that we trim all of our renderer
   // queues.  No matter what is going on with the output hardware, we are not
   // allowed to hold onto the queued data past its presentation time.
   if (!mixed) {
-    ForeachTrack(setup_trim_, process_trim_);
+    ForeachRenderer(setup_trim_, process_trim_);
   }
 
   // Figure out when we should wake up to do more work again.  No matter how
@@ -120,9 +120,9 @@ void StandardOutputBase::Process() {
 }
 
 MediaResult StandardOutputBase::InitializeLink(
-    const AudioTrackToOutputLinkPtr& link) {
-  TrackBookkeeping* bk = AllocBookkeeping();
-  AudioTrackToOutputLink::BookkeepingPtr ref(bk);
+    const AudioRendererToOutputLinkPtr& link) {
+  RendererBookkeeping* bk = AllocBookkeeping();
+  AudioRendererToOutputLink::BookkeepingPtr ref(bk);
 
   // We should never fail to allocate our bookkeeping.  The only way this can
   // happen is if we have a badly behaved implementation.
@@ -130,15 +130,15 @@ MediaResult StandardOutputBase::InitializeLink(
     return MediaResult::INTERNAL_ERROR;
   }
 
-  // We cannot proceed if our track has somehow managed to go away already.
-  AudioTrackImplPtr track = link->GetTrack();
-  if (!track) {
+  // We cannot proceed if our renderer has somehow managed to go away already.
+  AudioRendererImplPtr renderer = link->GetRenderer();
+  if (!renderer) {
     return MediaResult::INVALID_ARGUMENT;
   }
 
   // Pick a mixer based on the input and output formats.
   bk->mixer =
-      Mixer::Select(track->Format(),
+      Mixer::Select(renderer->Format(),
                     output_formatter_ ? &output_formatter_->format() : nullptr);
   if (bk->mixer == nullptr) {
     return MediaResult::UNSUPPORTED_CONFIG;
@@ -150,8 +150,8 @@ MediaResult StandardOutputBase::InitializeLink(
   return MediaResult::OK;
 }
 
-StandardOutputBase::TrackBookkeeping* StandardOutputBase::AllocBookkeeping() {
-  return new TrackBookkeeping();
+StandardOutputBase::RendererBookkeeping* StandardOutputBase::AllocBookkeeping() {
+  return new RendererBookkeeping();
 }
 
 void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
@@ -164,33 +164,33 @@ void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
   mix_buf_.reset(new int32_t[mix_buf_frames_ * output_formatter_->channels()]);
 }
 
-void StandardOutputBase::ForeachTrack(const TrackSetupTask& setup,
-                                      const TrackProcessTask& process) {
+void StandardOutputBase::ForeachRenderer(const RendererSetupTask& setup,
+                                      const RendererProcessTask& process) {
   for (auto iter = links_.begin(); iter != links_.end();) {
     if (shutting_down()) {
       return;
     }
 
-    // Is the track still around?  If so, process it.  Otherwise, remove the
-    // track entry and move on.
-    const AudioTrackToOutputLinkPtr& link = *iter;
-    AudioTrackImplPtr track(link->GetTrack());
+    // Is the renderer still around?  If so, process it.  Otherwise, remove the
+    // renderer entry and move on.
+    const AudioRendererToOutputLinkPtr& link = *iter;
+    AudioRendererImplPtr renderer(link->GetRenderer());
 
     auto tmp_iter = iter++;
-    if (!track) {
+    if (!renderer) {
       links_.erase(tmp_iter);
       continue;
     }
 
     // It would be nice to be able to use a dynamic cast for this, but currently
     // we are building with no-rtti
-    TrackBookkeeping* info =
-        static_cast<TrackBookkeeping*>(link->output_bookkeeping().get());
+    RendererBookkeeping* info =
+        static_cast<RendererBookkeeping*>(link->output_bookkeeping().get());
     FTL_DCHECK(info);
 
-    // Make sure that the mapping between the track's frame time domain and
+    // Make sure that the mapping between the renderer's frame time domain and
     // local time is up to date.
-    info->UpdateTrackTrans(track);
+    info->UpdateRendererTrans(renderer);
 
     bool setup_done = false;
     AudioPipe::AudioPacketRefPtr pkt_ref;
@@ -209,10 +209,10 @@ void StandardOutputBase::ForeachTrack(const TrackSetupTask& setup,
         break;
       }
 
-      // If we have not set up for this track yet, do so.  If the setup fails
-      // for any reason, stop processing packets for this track.
+      // If we have not set up for this renderer yet, do so.  If the setup fails
+      // for any reason, stop processing packets for this renderer.
       if (!setup_done) {
-        setup_done = setup(track, info);
+        setup_done = setup(renderer, info);
         if (!setup_done) {
           break;
         }
@@ -221,28 +221,28 @@ void StandardOutputBase::ForeachTrack(const TrackSetupTask& setup,
       // Capture the amplitude to apply for the next bit of audio.
       info->amplitude_scale = link->amplitude_scale();
 
-      // Now process the packet which is at the front of the track's queue.  If
+      // Now process the packet which is at the front of the renderer's queue.  If
       // the packet has been entirely consumed, pop it off the front and proceed
       // to the next one.  Otherwise, we are finished.
-      if (!process(track, info, pkt_ref)) {
+      if (!process(renderer, info, pkt_ref)) {
         break;
       }
       link->UnlockPendingQueueFront(&pkt_ref, true);
     }
 
-    // Unlock the queue and proceed to the next track.
+    // Unlock the queue and proceed to the next renderer.
     link->UnlockPendingQueueFront(&pkt_ref, false);
 
     // Note: there is no point in doing this for the trim task, but it dosn't
     // hurt anything, and its easier then introducing another function to the
-    // ForeachTrack arguments to run after each track is processed just for the
+    // ForeachRenderer arguments to run after each renderer is processed just for the
     // purpose of setting this flag.
     cur_mix_job_.accumulate = true;
   }
 }
 
-bool StandardOutputBase::SetupMix(const AudioTrackImplPtr& track,
-                                  TrackBookkeeping* info) {
+bool StandardOutputBase::SetupMix(const AudioRendererImplPtr& renderer,
+                                  RendererBookkeeping* info) {
   // If we need to recompose our transformation from output frame space to input
   // fractional frames, do so now.
   FTL_DCHECK(info);
@@ -253,8 +253,8 @@ bool StandardOutputBase::SetupMix(const AudioTrackImplPtr& track,
 }
 
 bool StandardOutputBase::ProcessMix(
-    const AudioTrackImplPtr& track,
-    TrackBookkeeping* info,
+    const AudioRendererImplPtr& renderer,
+    RendererBookkeeping* info,
     const AudioPipe::AudioPacketRefPtr& packet) {
   // Sanity check our parameters.
   FTL_DCHECK(info);
@@ -268,16 +268,16 @@ bool StandardOutputBase::ProcessMix(
   FTL_DCHECK(info->mixer);
   Mixer& mixer = *(info->mixer);
 
-  // If this track is currently paused (or being sampled extremely slowly), our
+  // If this renderer is currently paused (or being sampled extremely slowly), our
   // step size will be zero.  We know that this packet will be relevant at some
   // point in the future, but right now it contributes nothing.  Tell the
-  // ForeachTrack loop that we are done and to hold onto this packet for now.
+  // ForeachRenderer loop that we are done and to hold onto this packet for now.
   if (!info->step_size) {
     return false;
   }
 
   // Have we produced all that we are supposed to?  If so, hold the current
-  // packet and move on to the next track.
+  // packet and move on to the next renderer.
   if (cur_mix_job_.frames_produced >= cur_mix_job_.buf_frames) {
     return false;
   }
@@ -287,8 +287,8 @@ bool StandardOutputBase::ProcessMix(
                  (cur_mix_job_.frames_produced * output_formatter_->channels());
 
   // Figure out where the first and last sampling points of this job are,
-  // expressed in fractional track frames.
-  int64_t first_sample_ftf = info->out_frames_to_track_frames(
+  // expressed in fractional renderer frames.
+  int64_t first_sample_ftf = info->out_frames_to_renderer_frames(
       cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced);
 
   FTL_DCHECK(frames_left);
@@ -375,10 +375,10 @@ bool StandardOutputBase::ProcessMix(
   return true;
 }
 
-bool StandardOutputBase::SetupTrim(const AudioTrackImplPtr& track,
-                                   TrackBookkeeping* info) {
+bool StandardOutputBase::SetupTrim(const AudioRendererImplPtr& renderer,
+                                   RendererBookkeeping* info) {
   // Compute the cutoff time we will use to decide wether or not to trim
-  // packets.  ForeachTracks has already updated our transformation, no need
+  // packets.  ForeachRenderers has already updated our transformation, no need
   // for us to do so here.
   FTL_DCHECK(info);
 
@@ -391,14 +391,14 @@ bool StandardOutputBase::SetupTrim(const AudioTrackImplPtr& track,
   // which should be impossible unless the user has defined a playback rate
   // where the ratio between media time ticks and local time ticks is
   // greater than one.
-  trim_threshold_ = info->lt_to_track_frames(local_now_ticks);
+  trim_threshold_ = info->lt_to_renderer_frames(local_now_ticks);
 
   return true;
 }
 
 bool StandardOutputBase::ProcessTrim(
-    const AudioTrackImplPtr& track,
-    TrackBookkeeping* info,
+    const AudioRendererImplPtr& renderer,
+    RendererBookkeeping* info,
     const AudioPipe::AudioPacketRefPtr& pkt_ref) {
   FTL_DCHECK(pkt_ref);
 
@@ -410,34 +410,34 @@ bool StandardOutputBase::ProcessTrim(
   return true;
 }
 
-void StandardOutputBase::TrackBookkeeping::UpdateTrackTrans(
-    const AudioTrackImplPtr& track) {
+void StandardOutputBase::RendererBookkeeping::UpdateRendererTrans(
+    const AudioRendererImplPtr& renderer) {
   TimelineFunction tmp;
   uint32_t gen;
 
-  FTL_DCHECK(track);
-  track->SnapshotRateTrans(&tmp, &gen);
+  FTL_DCHECK(renderer);
+  renderer->SnapshotRateTrans(&tmp, &gen);
 
   // If the local time -> media time transformation has not changed since the
   // last time we examines it, just get out now.
-  if (lt_to_track_frames_gen == gen) {
+  if (lt_to_renderer_frames_gen == gen) {
     return;
   }
 
-  // The transformation has changed, re-compute the local time -> track frame
+  // The transformation has changed, re-compute the local time -> renderer frame
   // transformation.
-  lt_to_track_frames = TimelineFunction(
+  lt_to_renderer_frames = TimelineFunction(
       tmp.reference_time(),
-      tmp.subject_time() * track->FractionalFrameToMediaTimeRatio(),
-      TimelineRate::Product(track->FractionalFrameToMediaTimeRatio(),
+      tmp.subject_time() * renderer->FractionalFrameToMediaTimeRatio(),
+      TimelineRate::Product(renderer->FractionalFrameToMediaTimeRatio(),
                             tmp.rate()));
 
-  // Update the generation, and invalidate the output to track generation.
-  lt_to_track_frames_gen = gen;
-  out_frames_to_track_frames_gen = MixJob::kInvalidGeneration;
+  // Update the generation, and invalidate the output to renderer generation.
+  lt_to_renderer_frames_gen = gen;
+  out_frames_to_renderer_frames_gen = MixJob::kInvalidGeneration;
 }
 
-void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
+void StandardOutputBase::RendererBookkeeping::UpdateOutputTrans(
     const MixJob& job) {
   // We should not be here unless we have a valid mix job.  From our point of
   // view, this means that we have a job which supplies a valid transformation
@@ -447,40 +447,40 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
 
   // If our generations match, we don't need to re-compute anything.  Just use
   // what we have already.
-  if (out_frames_to_track_frames_gen == job.local_to_output_gen) {
+  if (out_frames_to_renderer_frames_gen == job.local_to_output_gen) {
     return;
   }
 
-  // Assert that we have a good mapping from local time to fractional track
+  // Assert that we have a good mapping from local time to fractional renderer
   // frames.
   //
   // TODO(johngro): Don't assume that 0 means invalid.  Make it a proper
   // constant defined somewhere.
-  FTL_DCHECK(lt_to_track_frames_gen);
+  FTL_DCHECK(lt_to_renderer_frames_gen);
 
   // Compose the job supplied transformation from local to output with the
-  // track supplied mapping from local to fraction input frames to produce a
+  // renderer supplied mapping from local to fraction input frames to produce a
   // transformation which maps from output frames to fractional input frames.
   //
   // TODO(dalesat): Use the Compose operation of TimelineFunction instead of
   // doing it by hand here.
   //
   // For now, we punt, do it by hand and just assume that everything went well.
-  TimelineFunction& dst = out_frames_to_track_frames;
+  TimelineFunction& dst = out_frames_to_renderer_frames;
 
   // Distribute the intermediate offset entirely to the fractional frame domain
   // for now.  We can do better by extracting portions of the intermedate
   // offset that can be scaled by the ratios on either side of with without
   // loss, but for now this should be close enough.
   int64_t intermediate = job.local_to_output->reference_time() -
-                         lt_to_track_frames.reference_time();
-  int64_t track_frame_offset;
+                         lt_to_renderer_frames.reference_time();
+  int64_t renderer_frame_offset;
 
   // TODO(dalesat): Use TimelineRate::Scale which allows us to scale using just
   // just a ratio without needing to create a linear transform with empty
   // offsets.
-  TimelineFunction tmp(lt_to_track_frames.rate());
-  track_frame_offset = tmp(intermediate);
+  TimelineFunction tmp(lt_to_renderer_frames.rate());
+  renderer_frame_offset = tmp(intermediate);
 
   // TODO(johngro): Add options to allow us to invert one or both of the ratios
   // during composition instead of needing to make a temporary ratio to
@@ -490,8 +490,8 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
 
   dst = TimelineFunction(
       job.local_to_output->subject_time(),
-      lt_to_track_frames.subject_time() + track_frame_offset,
-      TimelineRate::Product(tmp_ratio, lt_to_track_frames.rate()));
+      lt_to_renderer_frames.subject_time() + renderer_frame_offset,
+      TimelineRate::Product(tmp_ratio, lt_to_renderer_frames.rate()));
 
   // Finally, compute the step size in fractional frames.  IOW, every time we
   // move forward one output frame, how many fractional frames of input do we
@@ -515,7 +515,7 @@ void StandardOutputBase::TrackBookkeeping::UpdateOutputTrans(
   }
 
   // Done, update our generation.
-  out_frames_to_track_frames_gen = job.local_to_output_gen;
+  out_frames_to_renderer_frames_gen = job.local_to_output_gen;
 }
 
 }  // namespace audio

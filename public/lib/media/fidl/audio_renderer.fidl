@@ -4,16 +4,17 @@
 
 module media;
 
-interface AudioTrack {
-  // A special value which will always cause a track to become explicitly muted.
+interface AudioRenderer {
+  // A special value which will always cause an audio renderer to become
+  // explicitly muted.
   const float kMutedGain = -160.0;
 
   // The maximum permitted above-unity gain.
   const float kMaxGain = 20.0;
 
-  // Sets the current gain/attenuation of the track, expressed in dB.  Legal
+  // Sets the current gain/attenuation of the renderer, expressed in dB.  Legal
   // values are in the range [-inf, 20.0].  Any value less than or equal to the
-  // constant kMutedGain will result in the track becoming explicitly muted
+  // constant kMutedGain will result in the renderer becoming explicitly muted
   // (regardless of its underlying resolution or intensity).
   SetGain(float db_gain);
 };

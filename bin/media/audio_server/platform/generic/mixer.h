@@ -8,7 +8,7 @@
 
 #include "apps/media/services/media_types.fidl.h"
 #include "apps/media/src/audio_server/audio_pipe.h"
-#include "apps/media/src/audio_server/audio_track_impl.h"
+#include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "apps/media/src/audio_server/gain.h"
 
 namespace media {
@@ -20,7 +20,7 @@ using MixerPtr = std::unique_ptr<Mixer>;
 class Mixer {
  public:
   static constexpr uint32_t FRAC_ONE = 1u
-                                       << AudioTrackImpl::PTS_FRACTIONAL_BITS;
+                                       << AudioRendererImpl::PTS_FRACTIONAL_BITS;
   static constexpr uint32_t FRAC_MASK = FRAC_ONE - 1u;
   virtual ~Mixer();
 
@@ -58,10 +58,10 @@ class Mixer {
   // the destination buffer.
   //
   // @param frac_src_frames
-  // The total number of fractional track frames contained by the source buffer.
+  // The total number of fractional renderer frames contained by the source buffer.
   //
   // @param frac_src_offset
-  // A pointer to the offset (expressed in fractional track frames) at which the
+  // A pointer to the offset (expressed in fractional renderer frames) at which the
   // first frame to be mixed with the destination buffer should be sampled.
   // When Mix has finished, frac_src_offset will be updated to indicate the
   // offset of the sampling position of the next frame to be mixed with the
@@ -82,7 +82,7 @@ class Mixer {
   // @param amplitude_scale
   // The scale factor for the amplitude to be applied when mixing.  Currently,
   // this is expressed as a 4.28 fixed point integer.  See the
-  // AudioTrackToOutputLink class for details.
+  // AudioRendererToOutputLink class for details.
   //
   // @param accumulate
   // When true, the mixer will accumulate into the destination buffer (read,
@@ -110,7 +110,7 @@ class Mixer {
   virtual void Reset() {}
 
   // The positive and negative widths of the filter for this mixer, expressed in
-  // fractional input track units.  To be clear...
+  // fractional input renderer units.  To be clear...
   //
   // Let:
   // P = pos_filter_width()

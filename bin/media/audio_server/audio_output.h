@@ -10,7 +10,7 @@
 #include <thread>
 
 #include "apps/media/src/audio_server/audio_pipe.h"
-#include "apps/media/src/audio_server/audio_track_impl.h"
+#include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
 #include "lib/ftl/synchronization/mutex.h"
 #include "lib/ftl/synchronization/thread_annotations.h"
@@ -24,15 +24,15 @@ class AudioOutput {
  public:
   virtual ~AudioOutput();
 
-  // AddTrack/RemoveTrack
+  // AddRenderer/RemoveRenderer
   //
-  // Adds or removes a track to/from the set of current set of tracks serviced
-  // by this output.  Called only from the main message loop.  Obtains the
-  // processing_lock and may block for the time it takes the derived class to
-  // run its processing task if the task is in progress when the method was
+  // Adds or removes a renderer to/from the set of current set of renderers
+  // serviced by this output.  Called only from the main message loop.  Obtains
+  // the processing_lock and may block for the time it takes the derived class
+  // to run its processing task if the task is in progress when the method was
   // called.
-  MediaResult AddTrackLink(AudioTrackToOutputLinkPtr link);
-  MediaResult RemoveTrackLink(const AudioTrackToOutputLinkPtr& link);
+  MediaResult AddRendererLink(AudioRendererToOutputLinkPtr link);
+  MediaResult RemoveRendererLink(const AudioRendererToOutputLinkPtr& link);
 
   // Accessor for the current value of the dB gain for the output.
   float DbGain() const { return db_gain_; }
@@ -59,7 +59,7 @@ class AudioOutput {
   // Called at shutdown on the AudioServer's main message loop thread to allow
   // derived classes to clean up any allocated resources.  All pending
   // processing callbacks have either been nerfed or run till completion.  All
-  // AudioTrack tracks have been disconnected.  No locks are being held.
+  // AudioRenderer renderers have been disconnected.  No locks are being held.
   virtual void Cleanup();
 
   // Process
@@ -77,14 +77,14 @@ class AudioOutput {
 
   // InitializeLink
   //
-  // Called on the AudioServer's main message loop any time a track is being
+  // Called on the AudioServer's main message loop any time a renderer is being
   // added to this output.  Outputs should allocate and initialize any
   // bookkeeping they will need to perform mixing on behalf of the newly added
-  // track.
+  // renderer.
   //
   // @return MediaResult::OK if initialization succeeded, or an appropriate
   // error code otherwise.
-  virtual MediaResult InitializeLink(const AudioTrackToOutputLinkPtr& link);
+  virtual MediaResult InitializeLink(const AudioRendererToOutputLinkPtr& link);
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -106,8 +106,8 @@ class AudioOutput {
   // Kick off the process of shooting ourselves in the head.  Note, after this
   // method has been called, no new callbacks may be scheduled.  As soon as the
   // main message loop finds out about our shutdown request, it will complete
-  // the process of shutting us down, unlinking us from our tracks and calling
-  // the Cleanup method.
+  // the process of shutting us down, unlinking us from our renderers and
+  // calling the Cleanup method.
   void ShutdownSelf() FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // shutting_down
@@ -119,14 +119,14 @@ class AudioOutput {
   }
 
   // TODO(johngro): Order this by priority.  Figure out how we are going to be
-  // able to quickly find a track with a specific priority in order to optimize
-  // changes of priority.  Perhaps uniquify the priorities by assigning a
-  // sequence number to the lower bits (avoiding collisions when assigning new
+  // able to quickly find a renderer with a specific priority in order to
+  // optimize changes of priority.  Perhaps uniquify the priorities by assigning
+  // a sequence number to the lower bits (avoiding collisions when assigning new
   // priorities will be the trick).
   //
-  // Right now, we have no priorities, so this is just a set of track/output
+  // Right now, we have no priorities, so this is just a set of renderer/output
   // links.
-  AudioTrackToOutputLinkSet links_;
+  AudioRendererToOutputLinkSet links_;
   AudioOutputManager* manager_;
 
   ftl::Mutex mutex_;
@@ -157,7 +157,7 @@ class AudioOutput {
   // Called from the AudioOutputManager on the main message loop
   // thread.  Makes certain that the process of shutdown has started,
   // synchronizes with any processing tasks which were executing at the time,
-  // then finishes the shutdown process by unlinking from all tracks and
+  // then finishes the shutdown process by unlinking from all renderers and
   // cleaning up all resources.
   void Shutdown();
 
@@ -168,7 +168,7 @@ class AudioOutput {
   // TODO(johngro): Someday, when we expose output enumeration and control
   // from
   // the audio service, add the ability to change this value and update the
-  // assocated track-to-output-link amplitude scale factors.
+  // assocated renderer-to-output-link amplitude scale factors.
   float db_gain_ = 0.0;
 
   // TODO(johngro): Eliminate the shutting down flag and just use the

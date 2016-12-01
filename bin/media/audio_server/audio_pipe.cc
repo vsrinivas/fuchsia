@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "apps/media/src/audio_server/audio_server_impl.h"
-#include "apps/media/src/audio_server/audio_track_impl.h"
+#include "apps/media/src/audio_server/audio_renderer_impl.h"
 
 namespace media {
 namespace audio {
@@ -34,7 +34,7 @@ AudioPipe::AudioPacketRef::~AudioPacketRef() {
   server_->SchedulePacketCleanup(std::move(supplied_packet_));
 }
 
-AudioPipe::AudioPipe(AudioTrackImpl* owner, AudioServerImpl* server)
+AudioPipe::AudioPipe(AudioRendererImpl* owner, AudioServerImpl* server)
     : owner_(owner), server_(server) {
   FTL_DCHECK(owner_);
   FTL_DCHECK(server_);
@@ -78,7 +78,7 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   }
 
   static constexpr uint32_t kMaxFrames = std::numeric_limits<uint32_t>::max() >>
-                                         AudioTrackImpl::PTS_FRACTIONAL_BITS;
+                                         AudioRendererImpl::PTS_FRACTIONAL_BITS;
   uint32_t frame_count = (supplied_packet->payload_size() / frame_size);
   if (frame_count > kMaxFrames) {
     FTL_LOG(ERROR) << "Audio frame count (" << frame_count
@@ -103,13 +103,13 @@ void AudioPipe::OnPacketSupplied(SuppliedPacketPtr supplied_packet) {
   // The end pts is the value we will use for the next packet's start PTS, if
   // the user does not provide an explicit PTS.
   int64_t pts_delta = (static_cast<int64_t>(frame_count)
-                       << AudioTrackImpl::PTS_FRACTIONAL_BITS);
+                       << AudioRendererImpl::PTS_FRACTIONAL_BITS);
   next_pts_ = start_pts + pts_delta;
   next_pts_known_ = true;
 
   owner_->OnPacketReceived(AudioPacketRefPtr(
       new AudioPacketRef(std::move(supplied_packet), server_,
-                         frame_count << AudioTrackImpl::PTS_FRACTIONAL_BITS,
+                         frame_count << AudioRendererImpl::PTS_FRACTIONAL_BITS,
                          start_pts, next_pts_, frame_count)));
 
   if (prime_callback_ &&

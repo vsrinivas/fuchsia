@@ -8,7 +8,7 @@
 
 #include "apps/media/src/audio_server/audio_output.h"
 #include "apps/media/src/audio_server/audio_server_impl.h"
-#include "apps/media/src/audio_server/audio_track_to_output_link.h"
+#include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
 #include "apps/media/src/audio_server/platform/generic/throttle_output.h"
 #include "apps/media/src/audio_server/platform/usb/usb_output_enum.h"
 
@@ -87,24 +87,24 @@ void AudioOutputManager::ShutdownOutput(AudioOutputPtr output) {
   }
 }
 
-void AudioOutputManager::SelectOutputsForTrack(AudioTrackImplPtr track) {
-  // TODO(johngro): Someday, base this on policy.  For now, every track gets
+void AudioOutputManager::SelectOutputsForRenderer(AudioRendererImplPtr renderer) {
+  // TODO(johngro): Someday, base this on policy.  For now, every renderer gets
   // assigned to every output in the system.
-  FTL_DCHECK(track);
+  FTL_DCHECK(renderer);
 
   // TODO(johngro): Add some way to assert that we are executing on the main
   // message loop thread.
 
   for (auto output : outputs_) {
-    auto link = AudioTrackToOutputLink::New(track, output);
+    auto link = AudioRendererToOutputLink::New(renderer, output);
     FTL_DCHECK(output);
     FTL_DCHECK(link);
 
     // If we cannot add this link to the output, it's because the output is in
     // the process of shutting down (we didn't want to hang out with that guy
     // anyway)
-    if (output->AddTrackLink(link) == MediaResult::OK) {
-      track->AddOutput(link);
+    if (output->AddRendererLink(link) == MediaResult::OK) {
+      renderer->AddOutput(link);
     }
   }
 }

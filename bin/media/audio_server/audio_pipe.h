@@ -27,7 +27,7 @@ class AudioPipe : public MediaPacketConsumerBase {
 
     // Accessors for starting and ending presentation time stamps expressed in
     // units of audio frames (note, not media time), as signed 51.12 fixed point
-    // integers (see AudioTrackImpl:PTS_FRACTIONAL_BITS).  At 192KHz, this
+    // integers (see AudioRendererImpl:PTS_FRACTIONAL_BITS).  At 192KHz, this
     // allows for ~372.7 years of usable range when starting from a media time
     // of 0.
     //
@@ -41,10 +41,10 @@ class AudioPipe : public MediaPacketConsumerBase {
     // after the final frame in the packet would be presented.
     //
     // TODO(johngro): Reconsider this.  It may be best to keep things expressed
-    // simply in media time instead of converting to fractional units of track
-    // frames.  If/when outputs move away from a single fixed step size for
-    // output sampling, it will probably be best to just convert this back to
-    // media time.
+    // simply in media time instead of converting to fractional units of
+    // renderer frames.  If/when outputs move away from a single fixed step size
+    // for output sampling, it will probably be best to just convert this back
+    // to media time.
     const int64_t& start_pts() const { return start_pts_; }
     const int64_t& end_pts() const { return end_pts_; }
 
@@ -72,7 +72,7 @@ class AudioPipe : public MediaPacketConsumerBase {
     uint32_t frame_count_;
   };
 
-  AudioPipe(AudioTrackImpl* owner, AudioServerImpl* server);
+  AudioPipe(AudioRendererImpl* owner, AudioServerImpl* server);
   ~AudioPipe() override;
 
   // Indicates the priming was requested. The pipe is responsible for calling
@@ -86,7 +86,7 @@ class AudioPipe : public MediaPacketConsumerBase {
  private:
   static constexpr uint32_t kDemandMinPacketsOutstanding = 4;
 
-  AudioTrackImpl* owner_;
+  AudioRendererImpl* owner_;
   AudioServerImpl* server_;
 
   MediaTimelineControlPoint::PrimeCallback prime_callback_;

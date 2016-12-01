@@ -13,8 +13,8 @@ namespace audio {
 class AudioOutput;
 class AudioOutputManager;
 class AudioServerImpl;
-class AudioTrackImpl;
-class AudioTrackToOutputLink;
+class AudioRendererImpl;
+class AudioRendererToOutputLink;
 
 using AudioOutputPtr = std::shared_ptr<AudioOutput>;
 using AudioOutputSet =
@@ -23,17 +23,18 @@ using AudioOutputWeakPtr = std::weak_ptr<AudioOutput>;
 using AudioOutputWeakSet =
     std::set<AudioOutputWeakPtr, std::owner_less<AudioOutputWeakPtr>>;
 
-using AudioTrackImplPtr = std::shared_ptr<AudioTrackImpl>;
-using AudioTrackImplSet =
-    std::set<AudioTrackImplPtr, std::owner_less<AudioTrackImplPtr>>;
-using AudioTrackImplWeakPtr = std::weak_ptr<AudioTrackImpl>;
-using AudioTrackImplWeakSet =
-    std::set<AudioTrackImplWeakPtr, std::owner_less<AudioTrackImplWeakPtr>>;
+using AudioRendererImplPtr = std::shared_ptr<AudioRendererImpl>;
+using AudioRendererImplSet =
+    std::set<AudioRendererImplPtr, std::owner_less<AudioRendererImplPtr>>;
+using AudioRendererImplWeakPtr = std::weak_ptr<AudioRendererImpl>;
+using AudioRendererImplWeakSet =
+    std::set<AudioRendererImplWeakPtr,
+             std::owner_less<AudioRendererImplWeakPtr>>;
 
-using AudioTrackToOutputLinkPtr = std::shared_ptr<AudioTrackToOutputLink>;
-using AudioTrackToOutputLinkSet =
-    std::set<AudioTrackToOutputLinkPtr,
-             std::owner_less<AudioTrackToOutputLinkPtr>>;
+using AudioRendererToOutputLinkPtr = std::shared_ptr<AudioRendererToOutputLink>;
+using AudioRendererToOutputLinkSet =
+    std::set<AudioRendererToOutputLinkPtr,
+             std::owner_less<AudioRendererToOutputLinkPtr>>;
 
 }  // namespace audio
 }  // namespace media

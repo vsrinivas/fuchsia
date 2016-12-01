@@ -5,7 +5,7 @@
 #include "apps/media/src/audio_server/audio_output.h"
 
 #include "apps/media/src/audio_server/audio_output_manager.h"
-#include "apps/media/src/audio_server/audio_track_to_output_link.h"
+#include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -36,7 +36,7 @@ AudioOutput::~AudioOutput() {
   }
 }
 
-MediaResult AudioOutput::AddTrackLink(AudioTrackToOutputLinkPtr link) {
+MediaResult AudioOutput::AddRendererLink(AudioRendererToOutputLinkPtr link) {
   MediaResult res = InitializeLink(link);
 
   if (res == MediaResult::OK) {
@@ -52,15 +52,15 @@ MediaResult AudioOutput::AddTrackLink(AudioTrackToOutputLinkPtr link) {
     auto insert_result = links_.emplace(link);
     FTL_DCHECK(insert_result.second);
   } else {
-    // TODO(johngro): Output didn't like this track for some reason...  Should
+    // TODO(johngro): Output didn't like this renderer for some reason... Should
     // probably log something about this.
   }
 
   return res;
 }
 
-MediaResult AudioOutput::RemoveTrackLink(
-    const AudioTrackToOutputLinkPtr& link) {
+MediaResult AudioOutput::RemoveRendererLink(
+    const AudioRendererToOutputLinkPtr& link) {
   ftl::MutexLocker locker(&mutex_);
 
   if (shutting_down_) {
@@ -82,7 +82,8 @@ MediaResult AudioOutput::Init() {
 
 void AudioOutput::Cleanup() {}
 
-MediaResult AudioOutput::InitializeLink(const AudioTrackToOutputLinkPtr& link) {
+MediaResult AudioOutput::InitializeLink(
+    const AudioRendererToOutputLinkPtr& link) {
   FTL_DCHECK(link);
   return MediaResult::OK;
 }
@@ -194,13 +195,14 @@ void AudioOutput::Shutdown() {
     BeginShutdown();
   }
 
-  // Unlink ourselves from all of our tracks.  Then go ahead and clear the track
+  // Unlink ourselves from all of our renderers.  Then go ahead and clear the
+  // renderer
   // set.
   for (const auto& link : links_) {
     FTL_DCHECK(link);
-    AudioTrackImplPtr track = link->GetTrack();
-    if (track) {
-      track->RemoveOutput(link);
+    AudioRendererImplPtr renderer = link->GetRenderer();
+    if (renderer) {
+      renderer->RemoveOutput(link);
     }
   }
   links_.clear();

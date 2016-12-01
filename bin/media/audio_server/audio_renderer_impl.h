@@ -9,7 +9,7 @@
 
 #include "apps/media/lib/timeline_function.h"
 #include "apps/media/lib/timeline_rate.h"
-#include "apps/media/services/audio_track.fidl.h"
+#include "apps/media/services/audio_renderer.fidl.h"
 #include "apps/media/services/media_renderer.fidl.h"
 #include "apps/media/src/audio_server/audio_pipe.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
@@ -19,25 +19,26 @@
 namespace media {
 namespace audio {
 
-class AudioTrackImpl : public AudioTrack, public MediaRenderer {
+class AudioRendererImpl : public AudioRenderer, public MediaRenderer {
  public:
   // TODO(johngro): Find a better place for this constant.  It affects the
-  // behavior of more than just the Audio Track implementation.
+  // behavior of more than just the Audio Renderer implementation.
   static constexpr size_t PTS_FRACTIONAL_BITS = 12;
 
-  ~AudioTrackImpl() override;
-  static AudioTrackImplPtr Create(
-      fidl::InterfaceRequest<AudioTrack> track_request,
-      fidl::InterfaceRequest<MediaRenderer> renderer_request,
+  ~AudioRendererImpl() override;
+  static AudioRendererImplPtr Create(
+      fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
+      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
       AudioServerImpl* owner);
 
-  // Shutdown the audio track, unlinking it from all outputs, closing
+  // Shutdown the audio renderer, unlinking it from all outputs, closing
   // connections to all clients and removing it from its owner server's list.
   void Shutdown();
 
-  // Methods used by the output manager to link this track to different outputs.
-  void AddOutput(AudioTrackToOutputLinkPtr link);
-  void RemoveOutput(AudioTrackToOutputLinkPtr link);
+  // Methods used by the output manager to link this renderer to different
+  // outputs.
+  void AddOutput(AudioRendererToOutputLinkPtr link);
+  void RemoveOutput(AudioRendererToOutputLinkPtr link);
 
   // Accessors used by AudioOutputs during mixing to access parameters which are
   // important for the mixing process.
@@ -54,11 +55,12 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
  private:
   friend class AudioPipe;
 
-  AudioTrackImpl(fidl::InterfaceRequest<AudioTrack> track_request,
-                 fidl::InterfaceRequest<MediaRenderer> renderer_request,
-                 AudioServerImpl* owner);
+  AudioRendererImpl(
+      fidl::InterfaceRequest<AudioRenderer> audio_renderer_request,
+      fidl::InterfaceRequest<MediaRenderer> media_renderer_request,
+      AudioServerImpl* owner);
 
-  // Implementation of AudioTrack interface.
+  // Implementation of AudioRenderer interface.
   void SetGain(float db_gain) override;
 
   // MediaRenderer implementation.
@@ -76,21 +78,21 @@ class AudioTrackImpl : public AudioTrack, public MediaRenderer {
   // (inheriting for one or more base classes consisting only of pure virtual
   // methods) is allowed.  Consider defining an interface for AudioPipe
   // encapsulation so that AudioPipe does not have to know that we are an
-  // AudioTrackImpl (just that we implement its interface).
+  // AudioRendererImpl (just that we implement its interface).
   void OnPacketReceived(AudioPipe::AudioPacketRefPtr packet);
   bool OnFlushRequested(const MediaPacketConsumer::FlushCallback& cbk);
 
-  AudioTrackImplWeakPtr weak_this_;
+  AudioRendererImplWeakPtr weak_this_;
   AudioServerImpl* owner_;
-  fidl::Binding<AudioTrack> track_binding_;
-  fidl::Binding<MediaRenderer> renderer_binding_;
+  fidl::Binding<AudioRenderer> audio_renderer_binding_;
+  fidl::Binding<MediaRenderer> media_renderer_binding_;
   AudioPipe pipe_;
   TimelineControlPoint timeline_control_point_;
   TimelineRate frames_per_ns_;
   TimelineRate frame_to_media_ratio_;
   uint32_t bytes_per_frame_ = 1;
   AudioMediaTypeDetailsPtr format_;
-  AudioTrackToOutputLinkSet outputs_;
+  AudioRendererToOutputLinkSet outputs_;
   float db_gain_ = 0.0;
 };
 

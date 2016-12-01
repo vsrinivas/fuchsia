@@ -2,65 +2,67 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/src/audio_server/audio_track_to_output_link.h"
+#include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
 
 #include "apps/media/src/audio_server/audio_output.h"
-#include "apps/media/src/audio_server/audio_track_impl.h"
+#include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
 namespace audio {
 
-AudioTrackToOutputLink::Bookkeeping::~Bookkeeping() {}
+AudioRendererToOutputLink::Bookkeeping::~Bookkeeping() {}
 
-AudioTrackToOutputLink::AudioTrackToOutputLink(AudioTrackImplWeakPtr track,
-                                               AudioOutputWeakPtr output)
-    : track_(track), output_(output), pending_queue_(new PacketQueue) {}
+AudioRendererToOutputLink::AudioRendererToOutputLink(
+    AudioRendererImplWeakPtr renderer,
+    AudioOutputWeakPtr output)
+    : renderer_(renderer), output_(output), pending_queue_(new PacketQueue) {}
 
-AudioTrackToOutputLink::~AudioTrackToOutputLink() {
+AudioRendererToOutputLink::~AudioRendererToOutputLink() {
   ReleaseQueue(pending_queue_);
 }
 
-void AudioTrackToOutputLink::UpdateGain() {
-  AudioTrackImplPtr track(GetTrack());
+void AudioRendererToOutputLink::UpdateGain() {
+  AudioRendererImplPtr renderer(GetRenderer());
   AudioOutputPtr output(GetOutput());
 
   // If either side of this relationship is going away, then we are shutting
   // down.  Don't bother to re-calculate the amplitude scale factor.
-  if (!track || !output) {
+  if (!renderer || !output) {
     return;
   }
 
-  // Obtain the track gain and, if it is at or below the muted threshold, force
-  // the track to be muted and get out.
-  double db_gain = track->DbGain();
-  if (db_gain <= AudioTrack::kMutedGain) {
+  // Obtain the renderer gain and, if it is at or below the muted threshold,
+  // force the renderer to be muted and get out.
+  double db_gain = renderer->DbGain();
+  if (db_gain <= AudioRenderer::kMutedGain) {
     gain_.ForceMute();
     return;
   }
 
   // Add in the output gain and clamp to the maximum allowed total gain.
   db_gain += output->DbGain();
-  if (db_gain > AudioTrack::kMaxGain) {
-    db_gain = AudioTrack::kMaxGain;
+  if (db_gain > AudioRenderer::kMaxGain) {
+    db_gain = AudioRenderer::kMaxGain;
   }
 
   gain_.Set(db_gain);
 }
 
-AudioTrackToOutputLinkPtr AudioTrackToOutputLink::New(
-    AudioTrackImplWeakPtr track,
+AudioRendererToOutputLinkPtr AudioRendererToOutputLink::New(
+    AudioRendererImplWeakPtr renderer,
     AudioOutputWeakPtr output) {
-  return AudioTrackToOutputLinkPtr(new AudioTrackToOutputLink(track, output));
+  return AudioRendererToOutputLinkPtr(
+      new AudioRendererToOutputLink(renderer, output));
 }
 
-void AudioTrackToOutputLink::PushToPendingQueue(
+void AudioRendererToOutputLink::PushToPendingQueue(
     const AudioPipe::AudioPacketRefPtr& pkt) {
   ftl::MutexLocker locker(&pending_queue_mutex_);
   pending_queue_->emplace_back(pkt);
 }
 
-void AudioTrackToOutputLink::FlushPendingQueue() {
+void AudioRendererToOutputLink::FlushPendingQueue() {
   // Create a new (empty) queue before obtaining any locks.  This will allow us
   // to quickly swap the empty queue for the current queue and get out of all
   // the locks, and then release the packets at our leisure instead of
@@ -68,9 +70,9 @@ void AudioTrackToOutputLink::FlushPendingQueue() {
   // packets.
   //
   // Note: the safety of this technique depends on Flush only ever being called
-  // from the AudioTrack, and the AudioTrack's actions being serialized on the
-  // AudioServer's message loop thread.  If multiple flushes are allowed to be
-  // invoked simultaneously, or if a packet is permitted to be added to the
+  // from the AudioRenderer, and the AudioRenderer's actions being serialized on
+  // the AudioServer's message loop thread.  If multiple flushes are allowed to
+  // be invoked simultaneously, or if a packet is permitted to be added to the
   // queue while a flush operation is in progress, it is possible to return
   // packets to the user in an order different than the one that they were
   // queued in.
@@ -93,7 +95,7 @@ void AudioTrackToOutputLink::FlushPendingQueue() {
   ReleaseQueue(new_queue);
 }
 
-AudioPipe::AudioPacketRefPtr AudioTrackToOutputLink::LockPendingQueueFront(
+AudioPipe::AudioPacketRefPtr AudioRendererToOutputLink::LockPendingQueueFront(
     bool* was_flushed) {
   flush_mutex_.Lock();
 
@@ -111,7 +113,7 @@ AudioPipe::AudioPacketRefPtr AudioTrackToOutputLink::LockPendingQueueFront(
   }
 }
 
-void AudioTrackToOutputLink::UnlockPendingQueueFront(
+void AudioRendererToOutputLink::UnlockPendingQueueFront(
     AudioPipe::AudioPacketRefPtr* pkt,
     bool release_packet) {
   {
@@ -135,7 +137,7 @@ void AudioTrackToOutputLink::UnlockPendingQueueFront(
   flush_mutex_.Unlock();
 }
 
-void AudioTrackToOutputLink::ReleaseQueue(const PacketQueuePtr& queue) {
+void AudioRendererToOutputLink::ReleaseQueue(const PacketQueuePtr& queue) {
   if (!queue) {
     return;
   }

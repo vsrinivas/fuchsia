@@ -8,7 +8,7 @@
 #include <limits>
 
 #include "lib/ftl/logging.h"
-#include "apps/media/src/audio_server/audio_track_impl.h"
+#include "apps/media/src/audio_server/audio_renderer_impl.h"
 #include "apps/media/src/audio_server/platform/generic/mixers/mixer_utils.h"
 
 namespace media {
@@ -74,7 +74,7 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
       uint32_t src_iter;
       int32_t* out;
 
-      src_iter = (soff >> AudioTrackImpl::PTS_FRACTIONAL_BITS) * SChCount;
+      src_iter = (soff >> AudioRendererImpl::PTS_FRACTIONAL_BITS) * SChCount;
       out = dst + (doff * DChCount);
 
       for (size_t dst_iter = 0; dst_iter < DChCount; ++dst_iter) {

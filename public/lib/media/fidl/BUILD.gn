@@ -6,8 +6,8 @@ import("//lib/fidl/fidl.gni")
 
 fidl("services") {
   sources = [
+    "audio_renderer.fidl",
     "audio_server.fidl",
-    "audio_track.fidl",
     "logs/media_decoder_channel.fidl",
     "logs/media_demux_channel.fidl",
     "logs/media_packet_consumer_channel.fidl",

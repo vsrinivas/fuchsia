@@ -40,9 +40,9 @@ class AudioOutputManager {
   // Very Seriously Wrong.
   void Shutdown();
 
-  // Select the initial set of outputs for a track which has just been
+  // Select the initial set of outputs for a renderer which has just been
   // configured.
-  void SelectOutputsForTrack(AudioTrackImplPtr track);
+  void SelectOutputsForRenderer(AudioRendererImplPtr renderer);
 
   // Schedule a closure to run on our encapsulating server's main message loop.
   void ScheduleMessageLoopTask(const ftl::Closure& task);

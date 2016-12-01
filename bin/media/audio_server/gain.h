@@ -22,9 +22,9 @@ class Gain {
   // constructor
   Gain();
 
-  // Audio gains for tracks and outputs are expressed as floating point in
-  // decibels.  Track and output gains are combined and the stored in the track
-  // to output link as a 4.28 fixed point amplitude scale factor.
+  // Audio gains for renderers and outputs are expressed as floating point in
+  // decibels.  Renderer and output gains are combined and the stored in the
+  // renderer to output link as a 4.28 fixed point amplitude scale factor.
   static constexpr unsigned int FRACTIONAL_BITS = 28;
   static constexpr AScale UNITY = (static_cast<AScale>(1u) << FRACTIONAL_BITS);
 

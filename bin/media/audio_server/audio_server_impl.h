@@ -7,8 +7,8 @@
 #include <list>
 #include <set>
 
+#include "apps/media/services/audio_renderer.fidl.h"
 #include "apps/media/services/audio_server.fidl.h"
-#include "apps/media/services/audio_track.fidl.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
 #include "apps/media/src/audio_server/fwd_decls.h"
 #include "apps/modular/lib/app/application_context.h"
@@ -27,11 +27,12 @@ class AudioServerImpl : public AudioServer {
   ~AudioServerImpl() override;
 
   // AudioServer
-  void CreateTrack(fidl::InterfaceRequest<AudioTrack> track,
-                   fidl::InterfaceRequest<MediaRenderer> renderer) override;
+  void CreateRenderer(
+      fidl::InterfaceRequest<AudioRenderer> audio_renderer,
+      fidl::InterfaceRequest<MediaRenderer> media_renderer) override;
 
   // Called (indirectly) by AudioOutputs to schedule the callback for a
-  // MediaPacked which was queued to an AudioTrack via. a media pipe.
+  // MediaPacked which was queued to an AudioRenderer via. a media pipe.
   //
   // TODO(johngro): This bouncing through thread contexts is inefficient and
   // will increase the latency requirements for clients (its going to take them
@@ -49,10 +50,10 @@ class AudioServerImpl : public AudioServer {
     task_runner_->PostTask(task);
   }
 
-  // Removes a track from the set of active tracks.
-  void RemoveTrack(AudioTrackImplPtr track) {
+  // Removes a renderer from the set of active renderers.
+  void RemoveRenderer(AudioRendererImplPtr renderer) {
     size_t removed;
-    removed = tracks_.erase(track);
+    removed = renderers_.erase(renderer);
     FTL_DCHECK(removed);
   }
 
@@ -77,8 +78,8 @@ class AudioServerImpl : public AudioServer {
   // State for dealing with outputs.
   AudioOutputManager output_manager_;
 
-  // State for dealing with tracks.
-  std::set<AudioTrackImplPtr> tracks_;
+  // State for dealing with renderers.
+  std::set<AudioRendererImplPtr> renderers_;
 
   // State for dealing with cleanup tasks.
   ftl::Mutex cleanup_queue_mutex_;
