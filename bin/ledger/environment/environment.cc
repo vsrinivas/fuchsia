@@ -12,9 +12,11 @@ namespace ledger {
 namespace {}  // namespace
 
 Environment::Environment(configuration::Configuration configuration,
+                         ftl::RefPtr<ftl::TaskRunner> main_runner,
                          NetworkService* network_service,
                          ftl::RefPtr<ftl::TaskRunner> io_runner)
     : configuration_(std::move(configuration)),
+      main_runner_(std::move(main_runner)),
       network_service_(network_service),
       io_runner_(std::move(io_runner)) {}
 

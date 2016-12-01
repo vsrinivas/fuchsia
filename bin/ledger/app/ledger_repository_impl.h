@@ -12,14 +12,12 @@
 #include "apps/ledger/src/environment/environment.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
 
 namespace ledger {
 
 class LedgerRepositoryImpl : public LedgerRepository {
  public:
-  LedgerRepositoryImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                       const std::string& base_storage_dir,
+  LedgerRepositoryImpl(const std::string& base_storage_dir,
                        ledger::Environment* environment);
   ~LedgerRepositoryImpl() override;
 
@@ -38,7 +36,6 @@ class LedgerRepositoryImpl : public LedgerRepository {
 
   void CheckEmpty();
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   const std::string base_storage_dir_;
   ledger::Environment* const environment_;
   callback::AutoCleanableMap<std::string,

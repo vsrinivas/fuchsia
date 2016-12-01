@@ -62,7 +62,10 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
 class DBTest : public ::testing::Test {
  public:
   DBTest()
-      : page_storage_(message_loop_.task_runner(), tmp_dir_.path(), "page_id"),
+      : page_storage_(message_loop_.task_runner(),
+                      message_loop_.task_runner(),
+                      tmp_dir_.path(),
+                      "page_id"),
         db_(&page_storage_, tmp_dir_.path()) {}
 
   ~DBTest() override {}

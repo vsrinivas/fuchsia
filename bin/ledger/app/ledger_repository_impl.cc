@@ -11,13 +11,9 @@
 
 namespace ledger {
 
-LedgerRepositoryImpl::LedgerRepositoryImpl(
-    ftl::RefPtr<ftl::TaskRunner> task_runner,
-    const std::string& base_storage_dir,
-    ledger::Environment* environment)
-    : task_runner_(task_runner),
-      base_storage_dir_(base_storage_dir),
-      environment_(environment) {
+LedgerRepositoryImpl::LedgerRepositoryImpl(const std::string& base_storage_dir,
+                                           ledger::Environment* environment)
+    : base_storage_dir_(base_storage_dir), environment_(environment) {
   bindings_.set_on_empty_set_handler([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
 }
@@ -43,11 +39,12 @@ void LedgerRepositoryImpl::GetLedger(
     std::string name_as_string = convert::ToString(ledger_name);
     std::unique_ptr<storage::LedgerStorage> ledger_storage =
         std::make_unique<storage::LedgerStorageImpl>(
-            task_runner_, base_storage_dir_, name_as_string);
+            environment_->main_runner(), environment_->GetIORunner(),
+            base_storage_dir_, name_as_string);
     std::unique_ptr<cloud_sync::LedgerSync> ledger_sync;
     if (environment_->configuration().use_sync) {
       ledger_sync = std::make_unique<cloud_sync::LedgerSyncImpl>(
-          task_runner_, environment_, name_as_string);
+          environment_, name_as_string);
     }
     auto result = ledger_managers_.emplace(
         std::piecewise_construct,

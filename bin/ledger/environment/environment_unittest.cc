@@ -12,12 +12,13 @@ namespace {
 
 TEST(Environment, NoIOThread) {
   // Check that the environment without an io_thread can be deleted correctly.
-  Environment env(configuration::Configuration(), nullptr);
+  Environment env(configuration::Configuration(), nullptr, nullptr);
 }
 
 TEST(Environment, GivenIOThread) {
   mtl::MessageLoop loop;
-  Environment env(configuration::Configuration(), nullptr, loop.task_runner());
+  Environment env(configuration::Configuration(), nullptr, nullptr,
+                  loop.task_runner());
 
   EXPECT_EQ(loop.task_runner(), env.GetIORunner());
 }
@@ -25,14 +26,11 @@ TEST(Environment, GivenIOThread) {
 TEST(Environment, DefaultIOThread) {
   int value = 0;
   {
-  Environment env(configuration::Configuration(), nullptr);
-  auto io_runner = env.GetIORunner();
-  io_runner->PostTask([&value] {
-    value = 1;
-  });
+    Environment env(configuration::Configuration(), nullptr, nullptr);
+    auto io_runner = env.GetIORunner();
+    io_runner->PostTask([&value] { value = 1; });
   }
   EXPECT_EQ(1, value);
-
 }
 
 }  // namespace

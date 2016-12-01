@@ -38,10 +38,11 @@ std::string GetDirectoryName(ftl::StringView bytes) {
 }
 }
 
-LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> main_runner,
+                                     ftl::RefPtr<ftl::TaskRunner> io_runner,
                                      const std::string& base_storage_dir,
                                      const std::string& ledger_name)
-    : task_runner_(std::move(task_runner)) {
+    : main_runner_(std::move(main_runner)), io_runner_(std::move(io_runner)) {
   storage_dir_ = ftl::Concatenate({base_storage_dir, "/", kSerializationVersion,
                                    "/", GetDirectoryName(ledger_name)});
 }
@@ -56,7 +57,7 @@ Status LedgerStorageImpl::CreatePageStorage(
     FTL_LOG(ERROR) << "Failed to create the storage directory in " << path;
     return Status::INTERNAL_IO_ERROR;
   }
-  auto result = std::make_unique<PageStorageImpl>(task_runner_,
+  auto result = std::make_unique<PageStorageImpl>(main_runner_, io_runner_,
                                                   GetPathFor(page_id), page_id);
   Status s = result->Init();
   if (s != Status::OK) {
@@ -73,7 +74,7 @@ void LedgerStorageImpl::GetPageStorage(
   std::string path = GetPathFor(page_id);
   if (files::IsDirectory(path)) {
     auto result = std::make_unique<PageStorageImpl>(
-        task_runner_, GetPathFor(page_id), page_id);
+        main_runner_, io_runner_, GetPathFor(page_id), page_id);
     Status status = result->Init();
     if (status != Status::OK) {
       callback(status, nullptr);

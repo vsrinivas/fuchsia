@@ -19,11 +19,13 @@ namespace ledger {
 class Environment {
  public:
   Environment(configuration::Configuration configuration,
+              ftl::RefPtr<ftl::TaskRunner> main_runner,
               NetworkService* network_service,
               ftl::RefPtr<ftl::TaskRunner> io_runner = nullptr);
   ~Environment();
 
   const configuration::Configuration& configuration() { return configuration_; }
+  const ftl::RefPtr<ftl::TaskRunner> main_runner() { return main_runner_; }
   NetworkService* network_service() { return network_service_; }
 
   // Returns a TaskRunner allowing to access the I/O thread. The I/O thread
@@ -32,7 +34,9 @@ class Environment {
 
  private:
   const configuration::Configuration configuration_;
+  ftl::RefPtr<ftl::TaskRunner> main_runner_;
   NetworkService* const network_service_;
+
   std::thread io_thread_;
   ftl::RefPtr<ftl::TaskRunner> io_runner_;
 

@@ -4,9 +4,12 @@
 
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 
-#include <memory>
-
 #include <dirent.h>
+
+#include <chrono>
+#include <memory>
+#include <mutex>
+#include <thread>
 
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
@@ -24,10 +27,12 @@
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/mtl/data_pipe/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "lib/mtl/threading/create_thread.h"
 
 namespace storage {
 
@@ -170,16 +175,22 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
   void SetUp() override {
     ::test::TestWithMessageLoop::SetUp();
 
+    io_thread_ = mtl::CreateThread(&io_runner_, "io thread");
+
     PageId id = RandomId(16);
-    storage_ = std::make_unique<PageStorageImpl>(message_loop_.task_runner(),
-                                                 tmp_dir_.path(), id);
+    storage_ = std::make_unique<PageStorageImpl>(
+        message_loop_.task_runner(), io_runner_, tmp_dir_.path(), id);
     EXPECT_EQ(Status::OK, storage_->Init());
     EXPECT_EQ(id, storage_->GetId());
   }
+
   void TearDown() override {
     std::string staging_directory = tmp_dir_.path() + "/staging";
     EXPECT_TRUE(files::IsDirectory(staging_directory));
     EXPECT_TRUE(IsDirectoryEmpty(staging_directory));
+
+    io_runner_->PostTask([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+    io_thread_.join();
 
     ::test::TestWithMessageLoop::TearDown();
   }
@@ -270,6 +281,8 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     message_loop_.Run();
   }
 
+  std::thread io_thread_;
+  ftl::RefPtr<ftl::TaskRunner> io_runner_;
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<PageStorageImpl> storage_;
 
@@ -503,6 +516,20 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
   EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
   EXPECT_EQ(data.value, file_content);
   EXPECT_TRUE(storage_->ObjectIsUntracked(object_id));
+}
+
+TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
+  ObjectData data("Some data");
+
+  ObjectId object_id;
+  storage_->AddObjectFromLocal(
+      mtl::WriteStringToConsumerHandle(data.value), data.size,
+      [this, &object_id](Status returned_status, ObjectId returned_object_id) {
+      });
+
+  // Checking that we do not crash when deleting the storage while an AddObject
+  // call is in progress.
+  storage_.reset();
 }
 
 TEST_F(PageStorageTest, AddObjectFromLocalNegativeSize) {
@@ -936,6 +963,27 @@ TEST_F(PageStorageTest, Generation) {
     storage_->GetCommit(commit_id3, &commit3);
     EXPECT_EQ(3u, commit3->GetGeneration());
   });
+}
+
+TEST_F(PageStorageTest, DeletionOnIOThread) {
+  std::timed_mutex mutex;
+  // Need a local io_thread because mutex must outlive it.
+  std::thread io_thread;
+  ftl::RefPtr<ftl::TaskRunner> io_runner;
+  io_thread = mtl::CreateThread(&io_runner);
+  io_runner->PostTask([] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  bool called = false;
+  io_runner->PostTask(ftl::MakeCopyable([
+    guard = std::make_unique<std::lock_guard<std::timed_mutex>>(mutex), &called
+  ] { called = true; }));
+
+  if (mutex.try_lock_for(std::chrono::seconds(1))) {
+    mutex.unlock();
+  } else {
+    ADD_FAILURE() << "Mutex should have been acquired.";
+  }
+  EXPECT_FALSE(called);
+  io_thread.join();
 }
 
 }  // namespace

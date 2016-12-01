@@ -28,6 +28,8 @@
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/logging.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/strings/concatenate.h"
 #include "lib/mtl/data_pipe/data_pipe_drainer.h"
 
@@ -105,18 +107,17 @@ Status StagingToDestination(size_t expected_size,
   return Status::OK;
 }
 
-}  // namespace
-
-class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
+class FileWriterOnIOThread : public mtl::DataPipeDrainer::Client {
  public:
-  FileWriter(const std::string& staging_dir, const std::string& object_dir)
+  FileWriterOnIOThread(const std::string& staging_dir,
+                       const std::string& object_dir)
       : staging_dir_(staging_dir),
         object_dir_(object_dir),
         drainer_(this),
         expected_size_(0),
         size_(0u) {}
 
-  ~FileWriter() override {
+  ~FileWriterOnIOThread() override {
     // Cleanup staging file.
     if (!file_path_.empty()) {
       fd_.reset();
@@ -141,6 +142,8 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
     drainer_.Start(std::move(source));
   }
 
+ private:
+  // mtl::DataPipeDrainer::Client
   void OnDataAvailable(const void* data, size_t num_bytes) override {
     size_ += num_bytes;
     hash_.Update(data, num_bytes);
@@ -152,6 +155,7 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
     }
   }
 
+  // mtl::DataPipeDrainer::Client
   void OnDataComplete() override {
     if (fsync(fd_.get()) != 0) {
       FTL_LOG(ERROR) << "Unable to save to disk.";
@@ -180,10 +184,9 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
     callback_(Status::OK, std::move(object_id));
   }
 
- private:
   const std::string& staging_dir_;
   const std::string& object_dir_;
-  std::function<void(Status, const ObjectId&)> callback_;
+  std::function<void(Status, ObjectId)> callback_;
   mtl::DataPipeDrainer drainer_;
   std::string file_path_;
   ftl::UniqueFD fd_;
@@ -192,10 +195,89 @@ class PageStorageImpl::FileWriter : public mtl::DataPipeDrainer::Client {
   uint64_t size_;
 };
 
+}  // namespace
+
+class PageStorageImpl::FileWriter {
+ public:
+  FileWriter(ftl::RefPtr<ftl::TaskRunner> main_runner,
+             ftl::RefPtr<ftl::TaskRunner> io_runner,
+             const std::string& staging_dir,
+             const std::string& object_dir)
+      : main_runner_(std::move(main_runner)),
+        io_runner_(std::move(io_runner)),
+        file_writer_on_io_thread_(
+            std::make_unique<FileWriterOnIOThread>(staging_dir, object_dir)),
+        weak_ptr_factory_(this) {
+    FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  }
+
+  ~FileWriter() {
+    FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+
+    if (!io_runner_->RunsTasksOnCurrentThread()) {
+      io_runner_->PostTask(ftl::MakeCopyable([
+        this,
+        guard = std::make_unique<std::lock_guard<std::mutex>>(deletion_mutex_)
+      ] { file_writer_on_io_thread_.reset(); }));
+      std::lock_guard<std::mutex> wait_for_deletion(deletion_mutex_);
+    }
+  }
+
+  void Start(mx::datapipe_consumer source,
+             int64_t expected_size,
+             std::function<void(Status, ObjectId)> callback) {
+    FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+
+    if (io_runner_->RunsTasksOnCurrentThread()) {
+      file_writer_on_io_thread_->Start(std::move(source), expected_size,
+                                       std::move(callback));
+      return;
+    }
+    callback_ = std::move(callback);
+    io_runner_->PostTask(ftl::MakeCopyable([
+      this, weak_this = weak_ptr_factory_.GetWeakPtr(),
+      source = std::move(source), expected_size
+    ]() mutable {
+      // Called on the io runner.
+
+      // |this| cannot be deleted here, because if the destructor of FileWriter
+      // has been called after Start and before this has been run, it is still
+      // waiting on the lock to be released as the posts are run in-order.
+      file_writer_on_io_thread_->Start(std::move(source), expected_size, [
+        weak_this, main_runner = main_runner_
+      ](Status status, ObjectId object_id) {
+        // Called on the io runner.
+
+        main_runner->PostTask(
+            [ weak_this, status, object_id = std::move(object_id) ]() {
+              // Called on the main runner.
+
+              if (weak_this) {
+                weak_this->callback_(status, std::move(object_id));
+              }
+            });
+      });
+    }));
+  }
+
+ private:
+  std::mutex deletion_mutex_;
+  ftl::RefPtr<ftl::TaskRunner> main_runner_;
+  ftl::RefPtr<ftl::TaskRunner> io_runner_;
+
+  std::function<void(Status, ObjectId)> callback_;
+
+  std::unique_ptr<FileWriterOnIOThread> file_writer_on_io_thread_;
+
+  ftl::WeakPtrFactory<FileWriter> weak_ptr_factory_;
+};
+
 PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                                 ftl::RefPtr<ftl::TaskRunner> io_runner,
                                  std::string page_dir,
                                  PageIdView page_id)
-    : task_runner_(task_runner),
+    : main_runner_(task_runner),
+      io_runner_(io_runner),
       page_dir_(page_dir),
       page_id_(page_id.ToString()),
       db_(this, page_dir_ + kLevelDbDir),
@@ -490,7 +572,7 @@ void PageStorageImpl::GetObject(
     return;
   }
 
-  task_runner_->PostTask([
+  main_runner_->PostTask([
     callback, object_id = convert::ToString(object_id),
     file_path = std::move(file_path)
   ]() mutable {
@@ -627,7 +709,8 @@ void PageStorageImpl::AddObject(
     mx::datapipe_consumer data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
-  auto file_writer = std::make_unique<FileWriter>(staging_dir_, objects_dir_);
+  auto file_writer = std::make_unique<FileWriter>(main_runner_, io_runner_,
+                                                  staging_dir_, objects_dir_);
   FileWriter* file_writer_ptr = file_writer.get();
   writers_.push_back(std::move(file_writer));
 

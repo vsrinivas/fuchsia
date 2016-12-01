@@ -20,7 +20,8 @@ namespace storage {
 
 class PageStorageImpl : public PageStorage {
  public:
-  PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
+  PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> main_runner,
+                  ftl::RefPtr<ftl::TaskRunner> io_runner,
                   std::string page_dir,
                   PageIdView page_id);
   ~PageStorageImpl() override;
@@ -107,7 +108,8 @@ class PageStorageImpl : public PageStorage {
   void NotifyWatchers(const std::vector<std::unique_ptr<const Commit>>& commits,
                       ChangeSource source);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  ftl::RefPtr<ftl::TaskRunner> main_runner_;
+  ftl::RefPtr<ftl::TaskRunner> io_runner_;
   std::string page_dir_;
   PageId page_id_;
   DbImpl db_;

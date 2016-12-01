@@ -32,7 +32,7 @@ namespace ledger {
 // separate processes when the app becomes multi-instance.
 class App {
  public:
-  App()
+  App(ftl::RefPtr<ftl::TaskRunner> main_runner)
       : application_context_(
             modular::ApplicationContext::CreateFromStartupInfo()) {
     FTL_DCHECK(application_context_);
@@ -58,10 +58,11 @@ class App {
       });
     }
     environment_ = std::make_unique<Environment>(std::move(configuration),
+                                                 std::move(main_runner),
                                                  network_service_.get());
 
-    factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
-        mtl::MessageLoop::GetCurrent()->task_runner(), environment_.get());
+    factory_impl_ =
+        std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());
 
     application_context_->outgoing_services()
         ->AddService<LedgerRepositoryFactory>([this](
@@ -86,7 +87,7 @@ class App {
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
-  ledger::App app;
+  ledger::App app(loop.task_runner());
 
   loop.Run();
   return 0;

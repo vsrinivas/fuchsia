@@ -22,12 +22,9 @@ std::string GetFirebasePrefix(ftl::StringView user_prefix,
        "/", firebase::EncodeKey(app_id), "/", firebase::EncodeKey(page_id)});
 }
 
-LedgerSyncImpl::LedgerSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                               ledger::Environment* environment,
+LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
                                ftl::StringView app_id)
-    : task_runner_(task_runner),
-      environment_(environment),
-      app_id_(app_id.ToString()) {}
+    : environment_(environment), app_id_(app_id.ToString()) {}
 
 LedgerSyncImpl::~LedgerSyncImpl() {}
 
@@ -48,7 +45,7 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   result->cloud_provider = std::make_unique<cloud_provider::CloudProviderImpl>(
       result->firebase.get());
   result->page_sync = std::make_unique<PageSyncImpl>(
-      task_runner_, page_storage, result->cloud_provider.get(),
+      environment_->main_runner(), page_storage, result->cloud_provider.get(),
       std::make_unique<backoff::ExponentialBackoff>(), error_callback);
   return result;
 }

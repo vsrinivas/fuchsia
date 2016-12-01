@@ -9,16 +9,12 @@
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/network/network_service.h"
-#include "lib/ftl/memory/ref_ptr.h"
-#include "lib/ftl/tasks/task_runner.h"
 
 namespace cloud_sync {
 
 class LedgerSyncImpl : public LedgerSync {
  public:
-  LedgerSyncImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
-                 ledger::Environment* environment,
-                 ftl::StringView app_id);
+  LedgerSyncImpl(ledger::Environment* environment, ftl::StringView app_id);
   ~LedgerSyncImpl();
 
   std::unique_ptr<PageSyncContext> CreatePageContext(
@@ -26,7 +22,6 @@ class LedgerSyncImpl : public LedgerSync {
       ftl::Closure error_callback) override;
 
  private:
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ledger::Environment* environment_;
   const std::string app_id_;
 };

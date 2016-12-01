@@ -17,7 +17,10 @@ namespace {
 class LedgerStorageTest : public ::testing::Test {
  public:
   LedgerStorageTest()
-      : storage_(message_loop_.task_runner(), tmp_dir_.path(), "test_app") {}
+      : storage_(message_loop_.task_runner(),
+                 message_loop_.task_runner(),
+                 tmp_dir_.path(),
+                 "test_app") {}
 
   ~LedgerStorageTest() override {}
 
