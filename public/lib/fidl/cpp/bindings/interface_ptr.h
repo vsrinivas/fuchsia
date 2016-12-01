@@ -78,9 +78,8 @@ class InterfacePtr {
     return ptr;
   }
 
-
   // Creates a new pair of channels, one end bound to this InterfacePtr<>, and
-  // returns the other inside as a InterfaceRequest<>. InterfaceRequest<> should
+  // returns the other end as a InterfaceRequest<>. InterfaceRequest<> should
   // be passed to whatever will provide the implementation.
   //
   // Example.  Given the following interface:
@@ -113,11 +112,11 @@ class InterfacePtr {
   // Calling with an invalid |info| (containing an invalid channel handle)
   // has the same effect as reset(). In this case, the InterfacePtr is not
   // considered as bound.
-  void Bind(InterfaceHandle<Interface> info,
+  void Bind(InterfaceHandle<Interface> handle,
             const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
     reset();
-    if (info.is_valid())
-      internal_state_.Bind(std::move(info), waiter);
+    if (handle.is_valid())
+      internal_state_.Bind(std::move(handle), waiter);
   }
 
   // Returns whether or not this InterfacePtr is bound to a channel.

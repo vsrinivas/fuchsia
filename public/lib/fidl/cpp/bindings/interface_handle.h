@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <utility>
 
+#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/macros.h"
 #include "lib/ftl/macros.h"
 
@@ -26,8 +27,8 @@ class SynchronousInterfacePtr;
 template <typename Interface>
 class InterfaceHandle {
  public:
-  InterfaceHandle() : version_(0u) {}
-  InterfaceHandle(std::nullptr_t) : version_(0u) {}
+  InterfaceHandle() : version_(Interface::Version_) {}
+  InterfaceHandle(std::nullptr_t) : version_(Interface::Version_) {}
 
   InterfaceHandle(mx::channel handle, uint32_t version)
       : handle_(std::move(handle)), version_(version) {}
@@ -63,6 +64,17 @@ class InterfaceHandle {
     }
 
     return *this;
+  }
+
+  // Creates a new pair of channels, one end bound to this InterfaceHandle<>,
+  // and returns the other end as a InterfaceRequest<>. InterfaceRequest<>
+  // should be passed to whatever will provide the implementation, and this
+  // InterfaceHandle<> should be passed to whatever will construct a proxy to
+  // the implementation (presumably using an InterfacePtr<> or equivalent).
+  InterfaceRequest<Interface> NewRequest() {
+    mx::channel request_endpoint;
+    mx::channel::create(0, &handle_, &request_endpoint);
+    return InterfaceRequest<Interface>(std::move(request_endpoint));
   }
 
   // Tests as true if we have a valid handle.
