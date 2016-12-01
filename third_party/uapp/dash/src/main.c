@@ -41,7 +41,6 @@
 
 #include "shell.h"
 #include "main.h"
-#include "mail.h"
 #include "options.h"
 #include "output.h"
 #include "parser.h"
@@ -209,10 +208,8 @@ cmdloop(int top)
 		if (jobctl)
 			showjobs(out2, SHOW_CHANGED);
 		inter = 0;
-		if (iflag && top) {
+		if (iflag && top)
 			inter++;
-			chkmail();
-		}
 		n = parsecmd(inter);
 		/* showtree(n); DEBUG */
 		if (n == NEOF) {

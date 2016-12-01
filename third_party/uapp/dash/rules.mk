@@ -26,7 +26,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/init.c \
     $(LOCAL_DIR)/src/input.c \
     $(LOCAL_DIR)/src/jobs.c \
-    $(LOCAL_DIR)/src/mail.c \
     $(LOCAL_DIR)/src/main.c \
     $(LOCAL_DIR)/src/memalloc.c \
     $(LOCAL_DIR)/src/miscbltin.c \

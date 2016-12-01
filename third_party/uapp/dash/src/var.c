@@ -50,7 +50,6 @@
 #include "exec.h"
 #include "syntax.h"
 #include "options.h"
-#include "mail.h"
 #include "var.h"
 #include "memalloc.h"
 #include "error.h"
@@ -95,8 +94,6 @@ struct var varinit[] = {
 #else
 	{ 0,	VSTRFIXED|VTEXTFIXED|VUNSET,	"IFS\0",	0 },
 #endif
-	{ 0,	VSTRFIXED|VTEXTFIXED|VUNSET,	"MAIL\0",	changemail },
-	{ 0,	VSTRFIXED|VTEXTFIXED|VUNSET,	"MAILPATH\0",	changemail },
 	{ 0,	VSTRFIXED|VTEXTFIXED,		defpathvar,	changepath },
 	{ 0,	VSTRFIXED|VTEXTFIXED,		"PS1=$ ",	0 },
 	{ 0,	VSTRFIXED|VTEXTFIXED,		"PS2=> ",	0 },
