@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/alias.c \
     $(LOCAL_DIR)/src/arith_yacc.c \
     $(LOCAL_DIR)/src/arith_yylex.c \
+    $(LOCAL_DIR)/src/bltin/magenta.c \
     $(LOCAL_DIR)/src/bltin/printf.c \
     $(LOCAL_DIR)/src/bltin/test.c \
     $(LOCAL_DIR)/src/bltin/times.c \
@@ -46,6 +47,7 @@ MODULE_SRCS += \
 
 MODULE_NAME := sh
 
+MODULE_STATIC_LIBS := ulib/hexdump
 MODULE_LIBS := ulib/mxio ulib/magenta ulib/launchpad ulib/musl
 
 MODULE_CFLAGS := -D_GNU_SOURCE -DBSD -DIFS_BROKEN -DJOBS=0 -DSHELL -DSMALL

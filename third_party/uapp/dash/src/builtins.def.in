@@ -92,3 +92,15 @@ ulimitcmd	ulimit
 #endif
 testcmd		test [
 killcmd		-u kill
+
+/* mini-versions of standard unix tools */
+mxc_ls		ls
+mxc_cp		cp
+mxc_mkdir	mkdir
+mxc_rm		rm
+
+/* not-so-standard tools */
+mxc_dump	dump
+mxc_list	list
+mxc_msleep	msleep
+mxc_dm		dm

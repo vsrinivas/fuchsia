@@ -36,6 +36,14 @@ int waitcmd(int, char **);
 int aliascmd(int, char **);
 int testcmd(int, char **);
 int killcmd(int, char **);
+int mxc_ls(int, char **);
+int mxc_cp(int, char **);
+int mxc_mkdir(int, char **);
+int mxc_rm(int, char **);
+int mxc_dump(int, char **);
+int mxc_list(int, char **);
+int mxc_msleep(int, char **);
+int mxc_dm(int, char **);
 
 const struct builtincmd builtincmd[] = {
 	{ ".", dotcmd, 3 },
@@ -47,6 +55,9 @@ const struct builtincmd builtincmd[] = {
 	{ "chdir", cdcmd, 0 },
 	{ "command", commandcmd, 2 },
 	{ "continue", breakcmd, 3 },
+	{ "cp", mxc_cp, 0 },
+	{ "dm", mxc_dm, 0 },
+	{ "dump", mxc_dump, 0 },
 	{ "echo", echocmd, 0 },
 	{ "eval", NULL, 3 },
 	{ "exec", execcmd, 3 },
@@ -57,12 +68,17 @@ const struct builtincmd builtincmd[] = {
 	{ "hash", hashcmd, 0 },
 	{ "jobs", jobscmd, 2 },
 	{ "kill", killcmd, 2 },
+	{ "list", mxc_list, 0 },
 	{ "local", localcmd, 7 },
+	{ "ls", mxc_ls, 0 },
+	{ "mkdir", mxc_mkdir, 0 },
+	{ "msleep", mxc_msleep, 0 },
 	{ "printf", printfcmd, 0 },
 	{ "pwd", pwdcmd, 0 },
 	{ "read", readcmd, 2 },
 	{ "readonly", exportcmd, 7 },
 	{ "return", returncmd, 3 },
+	{ "rm", mxc_rm, 0 },
 	{ "set", setcmd, 3 },
 	{ "shift", shiftcmd, 3 },
 	{ "test", testcmd, 0 },
