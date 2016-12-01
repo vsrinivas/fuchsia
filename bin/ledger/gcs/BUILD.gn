@@ -20,17 +20,7 @@ source_set("gcs") {
   ]
 }
 
-group("tests") {
-  testonly = true
-
-  deps = [
-    ":unittests",
-  ]
-}
-
-executable("unittests") {
-  output_name = "gcs_unittests"
-
+source_set("unittests") {
   testonly = true
 
   sources = [
@@ -41,7 +31,6 @@ executable("unittests") {
     ":gcs",
     "//apps/ledger/src/network:fake",
     "//apps/ledger/src/test:lib",
-    "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",

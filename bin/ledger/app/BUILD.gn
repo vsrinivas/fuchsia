@@ -74,15 +74,12 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":unittests",
     ":integration_tests",
     ":application_tests",
   ]
 }
 
-executable("unittests") {
-  output_name = "ledger_unittests"
-
+source_set("unittests") {
   testonly = true
 
   sources = [
@@ -101,7 +98,6 @@ executable("unittests") {
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
-    "//apps/ledger/src/test:main",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",

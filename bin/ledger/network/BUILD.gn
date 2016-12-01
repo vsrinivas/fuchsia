@@ -17,14 +17,6 @@ source_set("network") {
   ]
 }
 
-group("tests") {
-  testonly = true
-
-  deps = [
-    ":unittests",
-  ]
-}
-
 source_set("fake") {
   testonly = true
 
@@ -38,10 +30,8 @@ source_set("fake") {
   ]
 }
 
-executable("unittests") {
+source_set("unittests") {
   testonly = true
-
-  output_name = "ledger_network_unittests"
 
   sources = [
     "network_service_impl_unittest.cc",
@@ -50,7 +40,6 @@ executable("unittests") {
   deps = [
     ":network",
     "//apps/ledger/src/test:lib",
-    "//apps/ledger/src/test:main",
     "//lib/mtl",
     "//lib/mtl/waiter",
     "//third_party/gtest",

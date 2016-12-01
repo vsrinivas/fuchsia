@@ -15,18 +15,8 @@ source_set("backoff") {
   ]
 }
 
-group("tests") {
+source_set("unittests") {
   testonly = true
-
-  deps = [
-    ":unittests",
-  ]
-}
-
-executable("unittests") {
-  testonly = true
-
-  output_name = "ledger_backoff_unittests"
 
   sources = [
     "exponential_backoff_unittest.cc",
@@ -34,7 +24,6 @@ executable("unittests") {
 
   deps = [
     ":backoff",
-    "//apps/ledger/src/test:main",
     "//third_party/gtest",
   ]
 }

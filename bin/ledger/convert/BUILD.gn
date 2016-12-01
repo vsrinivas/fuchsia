@@ -19,18 +19,8 @@ source_set("convert") {
   ]
 }
 
-group("tests") {
+source_set("unittests") {
   testonly = true
-
-  deps = [
-    ":unittests",
-  ]
-}
-
-executable("unittests") {
-  testonly = true
-
-  output_name = "convert_unittests"
 
   sources = [
     "convert_unittest.cc",
@@ -38,7 +28,6 @@ executable("unittests") {
 
   deps = [
     ":convert",
-    "//apps/ledger/src/test:main",
     "//third_party/gtest",
   ]
 }

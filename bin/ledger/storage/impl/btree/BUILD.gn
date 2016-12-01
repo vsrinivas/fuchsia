@@ -36,9 +36,7 @@ source_set("lib") {
   ]
 }
 
-executable("unittests") {
-  output_name = "storage_btree_unittests"
-
+source_set("unittests") {
   testonly = true
 
   sources = [
@@ -56,7 +54,6 @@ executable("unittests") {
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/test:lib",
-    "//apps/ledger/src/test:main",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//third_party/gtest",

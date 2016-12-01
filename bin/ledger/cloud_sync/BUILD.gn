@@ -9,11 +9,3 @@ group("cloud_sync") {
     "//apps/ledger/src/cloud_sync/public",
   ]
 }
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    "//apps/ledger/src/cloud_sync/impl:tests",
-  ]
-}

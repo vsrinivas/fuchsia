@@ -10,14 +10,6 @@ group("configuration") {
   ]
 }
 
-group("tests") {
-  testonly = true
-
-  deps = [
-    ":unittests",
-  ]
-}
-
 source_set("lib") {
   sources = [
     "configuration.cc",
@@ -32,23 +24,6 @@ source_set("lib") {
   ]
 }
 
-executable("unittests") {
-  output_name = "ledger_configuration_unittests"
-
-  testonly = true
-
-  sources = [
-    "configuration_encoder_unittest.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//apps/ledger/src/test:main",
-    "//lib/ftl",
-    "//third_party/gtest",
-  ]
-}
-
 executable("configuration_writer") {
   output_name = "configure_ledger"
 
@@ -59,5 +34,19 @@ executable("configuration_writer") {
   deps = [
     ":lib",
     "//lib/ftl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "configuration_encoder_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//lib/ftl",
+    "//third_party/gtest",
   ]
 }

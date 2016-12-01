@@ -42,9 +42,7 @@ source_set("lib") {
   ]
 }
 
-executable("unittests") {
-  output_name = "storage_unittests"
-
+source_set("unittests") {
   testonly = true
 
   sources = [
@@ -66,7 +64,6 @@ executable("unittests") {
     "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
-    "//apps/ledger/src/test:main",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/gtest",

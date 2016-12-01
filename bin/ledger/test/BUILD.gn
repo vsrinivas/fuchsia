@@ -2,14 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("tests") {
-  testonly = true
-
-  deps = [
-    ":unittests",
-  ]
-}
-
 source_set("lib") {
   testonly = true
 
@@ -39,9 +31,7 @@ source_set("main") {
   ]
 }
 
-executable("unittests") {
-  output_name = "ledger_test_unittests"
-
+source_set("unittests") {
   testonly = true
 
   sources = [
@@ -51,6 +41,5 @@ executable("unittests") {
 
   deps = [
     ":lib",
-    ":main",
   ]
 }

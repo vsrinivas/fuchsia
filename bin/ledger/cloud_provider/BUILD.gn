@@ -10,12 +10,3 @@ group("cloud_provider") {
     "//apps/ledger/src/cloud_provider/public",
   ]
 }
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    "//apps/ledger/src/cloud_provider/impl:tests",
-    "//apps/ledger/src/cloud_provider/test",
-  ]
-}
