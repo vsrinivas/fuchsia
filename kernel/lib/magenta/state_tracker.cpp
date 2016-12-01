@@ -9,7 +9,7 @@
 #include <kernel/auto_lock.h>
 #include <magenta/wait_event.h>
 
-mx_status_t StateTracker::AddObserver(StateObserver* observer) {
+void StateTracker::AddObserver(StateObserver* observer) {
     DEBUG_ASSERT(observer != nullptr);
 
     bool awoke_threads = false;
@@ -21,7 +21,6 @@ mx_status_t StateTracker::AddObserver(StateObserver* observer) {
     }
     if (awoke_threads)
         thread_preempt(false);
-    return NO_ERROR;
 }
 
 void StateTracker::RemoveObserver(StateObserver* observer) {

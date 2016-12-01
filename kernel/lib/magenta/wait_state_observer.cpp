@@ -29,12 +29,13 @@ mx_status_t WaitStateObserver::Begin(WaitEvent* event,
     wakeup_reasons_ = 0u;
 
     auto state_tracker = dispatcher_->get_state_tracker();
-    mx_status_t result = (state_tracker != nullptr)
-            ? state_tracker->AddObserver(this) : ERR_NOT_SUPPORTED;
-
-    if (result != NO_ERROR)
+    if (state_tracker == nullptr) {
         dispatcher_.reset();
-    return result;
+        return ERR_NOT_SUPPORTED;
+    }
+
+    state_tracker->AddObserver(this);
+    return NO_ERROR;
 }
 
 mx_signals_t WaitStateObserver::End() {

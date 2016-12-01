@@ -248,22 +248,11 @@ status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* hand
     // set its state to REMOVE_REQUESTED).
 
     // We need to call this outside the lock.
-    auto result = state_tracker->AddObserver(e);
-    if (result != NO_ERROR) {
-        AutoLock lock(&mutex_);
-        DEBUG_ASSERT(e->GetState_NoLock() == Entry::State::ADD_PENDING);
-        DEBUG_ASSERT(entry == nullptr);
+    state_tracker->AddObserver(e);
 
-        entry = entries_.erase(*e);
-        DEBUG_ASSERT(e == entry.get());
-
-        // entry destructs as it goes out of scope.
-        return result;
-    }
-
-    // Otherwise, AddObserver() calls e->OnInitialize(), which sets |e|'s state to ADDED. WARNING:
+    // AddObserver() calls e->OnInitialize(), which sets |e|'s state to ADDED. WARNING:
     // That state change means that RemoveEntry() may actually call RemoveObserver(), so we must not
-    // do any work after calling AddObserver() in the success case!
+    // do any work after calling AddObserver()!
     return NO_ERROR;
 }
 

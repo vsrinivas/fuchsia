@@ -30,7 +30,7 @@ public:
     }
 
     // Add an observer.
-    mx_status_t AddObserver(StateObserver* observer);
+    void AddObserver(StateObserver* observer);
 
     // Remove an observer (which must have been added).
     void RemoveObserver(StateObserver* observer);
