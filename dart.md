@@ -20,12 +20,14 @@ Likewise, no build output is placed in the source tree as everything goes under
 
 ## Targets
 
-There are three gn targets for building Dart:
+There are four gn targets for building Dart:
 - [`dart_package`](https://fuchsia.googlesource.com/build/+/master/dart/dart_package.gni)
-  defines a library that can be used by other Dart targets
-- `dart_app` defines a Dart executable (coming soon™)
+  defines a library that can be used by other Dart targets;
+- `dart_app` defines a Dart executable (coming soon™);
 - [`flutter_app`](https://github.com/flutter/engine/blob/master/build/flutter_app.gni)
-  defines a [Flutter](https://flutter.io/) application
+  defines a [Flutter](https://flutter.io/) application;
+- [`dart_test`](https://fuchsia.googlesource.com/build/+/master/dart/dart_test.gni)
+defines a group of test.
 
 See the definitions of each of these targets for how to use them.
 
@@ -90,6 +92,12 @@ scripts/run-dart-analysis.py --out out/<build-type> --fatal-warnings --lints
 This holds true for the individual analysis scripts.
 
 
+## Testing
+
+For now `dart_test` targets are not operational. They do however allow test code
+to be analyzed.
+
+
 ## FIDL
 
 [FIDL](https://fuchsia.googlesource.com/fidl/+/master/fidl.gni) targets generate
@@ -140,3 +148,9 @@ location (respectively in the output directory and the source tree).
 
 The current workaround is to always specify a package name for Dart targets
 coexisting with FIDL targets.
+
+#### Location of `dart_test` targets
+
+The current implementation of `dart_package` forces test targets to be defined
+in their own build file. The best location for that file is the test directory
+itself.
