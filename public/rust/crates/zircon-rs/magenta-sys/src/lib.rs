@@ -142,6 +142,9 @@ pub const MX_CHANNEL_CREATE_REPLY_CHANNEL: u32 = 1 << 0;
 // clock ids
 pub const MX_CLOCK_MONOTONIC: u32 = 0;
 
+// Socket flags and limits.
+pub const MX_SOCKET_HALF_CLOSE: u32 = 1;
+
 #[repr(C)]
 pub struct mx_wait_item_t {
     pub handle: mx_handle_t,
@@ -204,4 +207,12 @@ extern {
     pub fn mx_vmo_get_size(handle: mx_handle_t, size: *mut u64) -> mx_status_t;
     pub fn mx_vmo_set_size(handle: mx_handle_t, size: u64) -> mx_status_t;
     // todo: vmo_op_range
+
+    // Sockets
+    pub fn mx_socket_create(options: u32, out0: *mut mx_handle_t, out1: *mut mx_handle_t)
+        -> mx_status_t;
+    pub fn mx_socket_write(handle: mx_handle_t, options: u32, buffer: *const u8, len: usize,
+        actual: *mut usize) -> mx_status_t;
+    pub fn mx_socket_read(handle: mx_handle_t, options: u32, buffer: *mut u8, len: usize,
+        actual: *mut usize) -> mx_status_t;
 }

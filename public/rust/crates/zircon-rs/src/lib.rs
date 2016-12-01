@@ -18,7 +18,7 @@ mod eventpair;
 mod socket;
 
 pub use eventpair::EventPair;
-pub use socket::Socket;
+pub use socket::{Socket, SocketOpts, SocketReadOpts, SocketWriteOpts};
 
 use magenta_sys as sys;
 
