@@ -11,5 +11,25 @@ source_set("environment") {
   public_deps = [
     "//apps/ledger/src/configuration:lib",
     "//apps/ledger/src/network",
+    "//lib/ftl",
+  ]
+
+  deps = [
+    "//lib/mtl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "environment_unittest.cc",
+  ]
+
+  deps = [
+    ":environment",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/gtest",
   ]
 }
