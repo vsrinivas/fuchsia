@@ -20,11 +20,11 @@
             "bootfs_path": "apps/email_nav"
         },
         {
-            "binary": "email_service.flx",
+            "binary": "email_service_app.flx",
             "bootfs_path": "apps/email_service"
         },
         {
-            "binary": "email_session.flx",
+            "binary": "email_session_app.flx",
             "bootfs_path": "apps/email_session"
         },
         {
