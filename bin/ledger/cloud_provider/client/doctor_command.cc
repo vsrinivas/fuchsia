@@ -22,32 +22,33 @@ std::string RandomString() {
   return std::to_string(glue::RandUint64());
 }
 
-void ok(ftl::StringView what, ftl::StringView message = "") {
-  std::cout << " > [OK] " << what;
+void what(ftl::StringView what) {
+  std::cout << " > " << what << std::endl;
+}
+
+void ok(ftl::StringView message = "") {
+  std::cout << "   [OK] ";
   if (message.size()) {
-    std::cout << ": " << message;
+    std::cout << message;
   }
   std::cout << std::endl;
 }
 
-void ok(ftl::StringView what, ftl::TimeDelta request_time) {
-  std::cout << " > [OK] " << what << ": request time "
-            << request_time.ToMilliseconds() << " ms" << std::endl;
+void ok(ftl::TimeDelta request_time) {
+  std::cout << "   [OK] request time " << request_time.ToMilliseconds() << " ms"
+            << std::endl;
 }
 
-void error(ftl::StringView what, ftl::StringView message) {
-  std::cout << " > [FAILED] " << what;
+void error(ftl::StringView message) {
+  std::cout << "   [FAILED] ";
   if (message.size()) {
     std::cout << " " << message;
   }
   std::cout << std::endl;
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
-void error(ftl::StringView what, Status status) {
-  std::cout << " > [FAILED] " << what << ": cloud provider status " << status
-            << std::endl;
-  mtl::MessageLoop::GetCurrent()->PostQuitTask();
+void error(Status status) {
+  std::cout << "   [FAILED] with cloud provider status " << status << std::endl;
 }
 
 }  // namespace
@@ -84,6 +85,7 @@ void DoctorCommand::OnMalformedNotification() {
 }
 
 void DoctorCommand::CheckObjects() {
+  what("upload test object");
   std::string id = RandomString();
   std::string content = RandomString();
   mx::vmo data;
@@ -95,34 +97,36 @@ void DoctorCommand::CheckObjects() {
       id, std::move(data), [this, id, content, request_start](Status status) {
 
         if (status != Status::OK) {
-          error("upload test object", status);
+          error(status);
           on_done_();
           return;
         }
         ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-        ok("upload test object", delta);
+        ok(delta);
         CheckGetObject(id, content);
       });
 }
 
 void DoctorCommand::CheckGetObject(std::string id, std::string content) {
+  what("retrieve test object");
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->GetObject(
       id, [this, request_start](Status status, uint64_t size,
                                 mx::datapipe_consumer data) {
         if (status != Status::OK) {
-          error("retrieve test object", status);
+          error(status);
           on_done_();
           return;
         }
 
         ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-        ok("retrieve test object", delta);
+        ok(delta);
         CheckCommits();
       });
 }
 
 void DoctorCommand::CheckCommits() {
+  what("upload test commit");
   Commit commit(RandomString(), RandomString(), {});
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->AddCommit(
@@ -130,59 +134,62 @@ void DoctorCommand::CheckCommits() {
       ftl::MakeCopyable(
           [ this, commit = commit.Clone(), request_start ](Status status) {
             if (status != Status::OK) {
-              error("upload test commit", status);
+              error(status);
               on_done_();
               return;
             }
             ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-            ok("upload test commit", delta);
+            ok(delta);
             CheckGetCommits(commit.Clone());
           }));
 }
 
 void DoctorCommand::CheckGetCommits(Commit commit) {
+  what("retrieve test commits");
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->GetCommits(
       "", ftl::MakeCopyable([ this, commit = std::move(commit), request_start ](
               Status status, std::vector<Record> records) {
         if (status != Status::OK) {
-          error("retrieve test commits", status);
+          error(status);
           on_done_();
           return;
         }
 
         ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-        ok("retrieve test commits", delta);
+        ok(delta);
         CheckWatchExistingCommits(commit.Clone());
       }));
 }
 
 void DoctorCommand::CheckWatchExistingCommits(Commit expected_commit) {
+  what("watch for existing commits");
   on_remote_commit_ =
       ftl::MakeCopyable([ this, expected_commit = std::move(expected_commit) ](
           Commit commit, std::string timestamp) {
         on_error_ = nullptr;
         if (commit.id != expected_commit.id ||
             commit.content != expected_commit.content) {
-          error("watch for existing commits", "received a wrong commit");
+          error("received a wrong commit");
           on_done_();
           on_remote_commit_ = nullptr;
           return;
         }
         on_remote_commit_ = nullptr;
-        ok("watch for existing commits");
+        ok();
         CheckWatchNewCommits();
       });
   on_error_ = [this](ftl::StringView description) {
     on_remote_commit_ = nullptr;
     on_error_ = nullptr;
-    error("watch for existing commits", description);
+    error(description);
     on_done_();
   };
   cloud_provider_->WatchCommits("", this);
 }
 
 void DoctorCommand::CheckWatchNewCommits() {
+  what("watch for new commits");
   Commit commit(RandomString(), RandomString(), {});
   on_remote_commit_ = ftl::MakeCopyable([
     this, expected_commit = commit.Clone(),
@@ -191,20 +198,20 @@ void DoctorCommand::CheckWatchNewCommits() {
     on_error_ = nullptr;
     if (commit.id != expected_commit.id ||
         commit.content != expected_commit.content) {
-      error("watch for new commits", "received a wrong commit");
+      error("received a wrong commit");
       on_done_();
       on_remote_commit_ = nullptr;
       return;
     }
     ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
     on_remote_commit_ = nullptr;
-    ok("watch for new commits", delta);
+    ok(delta);
     Done();
   });
   on_error_ = [this](ftl::StringView description) {
     on_remote_commit_ = nullptr;
     on_error_ = nullptr;
-    error("watch for new commits", description);
+    error(description);
     on_done_();
   };
 
@@ -212,7 +219,7 @@ void DoctorCommand::CheckWatchNewCommits() {
       commit, ftl::MakeCopyable(
                   [ this, expected_commit = commit.Clone() ](Status status) {
                     if (status != Status::OK) {
-                      error("watch for new commits", status);
+                      error(status);
                       on_done_();
                       return;
                     }
