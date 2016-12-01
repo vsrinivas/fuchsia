@@ -100,6 +100,11 @@ std::vector<uint8_t> DecodeByteArrayString(const ftl::StringView& string) {
   return result;
 }
 
+std::string DecodeString(const ftl::StringView& string) {
+  std::vector<uint8_t> charvec = DecodeByteArrayString(string);
+  return std::string(charvec.begin(), charvec.end());
+}
+
 std::string EscapeNonPrintableString(const ftl::StringView& data) {
   std::string result;
   for (char c : data) {

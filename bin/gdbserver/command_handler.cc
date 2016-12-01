@@ -29,10 +29,15 @@ const char kAttached[] = "Attached";
 const char kCurrentThreadId[] = "C";
 const char kFirstThreadInfo[] = "fThreadInfo";
 const char kNonStop[] = "NonStop";
+const char kRcmd[] = "Rcmd,";
 const char kRun[] = "Run;";
 const char kSubsequentThreadInfo[] = "sThreadInfo";
 const char kSupported[] = "Supported";
 const char kXfer[] = "Xfer";
+
+// qRcmd commands
+const char kExit[] = "exit";
+const char kQuit[] = "quit";
 
 // This always returns true so that command handlers can simple call "return
 // ReplyOK()" rather than "ReplyOK(); return true;
@@ -543,6 +548,10 @@ bool CommandHandler::Handle_q(const ftl::StringView& prefix,
   if (prefix == kFirstThreadInfo)
     return HandleQueryThreadInfo(true, callback);
 
+  // The qRcmd packet is different than most. It uses , as a delimiter, not :.
+  if (StartsWith(prefix, kRcmd))
+    return HandleQueryRcmd(prefix.substr(std::strlen(kRcmd)), callback);
+
   if (prefix == kSubsequentThreadInfo)
     return HandleQueryThreadInfo(false, callback);
 
@@ -673,6 +682,19 @@ bool CommandHandler::HandleQueryCurrentThreadId(
 
   std::string reply = "QC" + thread_id;
   callback(reply);
+  return true;
+}
+
+bool CommandHandler::HandleQueryRcmd(const ftl::StringView& command,
+                                     const ResponseCallback& callback) {
+  auto cmd = util::DecodeString(command);
+
+  // We support both because qemu uses "quit" and GNU gdbserver uses "exit".
+  if (cmd == kQuit || cmd == kExit) {
+    ReplyOK(callback);
+    server_->PostQuitMessageLoop(true);
+  }
+
   return true;
 }
 

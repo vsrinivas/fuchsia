@@ -68,6 +68,9 @@ class CommandHandler final {
   // qC
   bool HandleQueryCurrentThreadId(const ftl::StringView& params,
                                   const ResponseCallback& callback);
+  // qRcmd
+  bool HandleQueryRcmd(const ftl::StringView& command,
+                       const ResponseCallback& callback);
   // qSupported
   bool HandleQuerySupported(const ftl::StringView& params,
                             const ResponseCallback& callback);

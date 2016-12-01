@@ -237,6 +237,11 @@ void Server::QuitMessageLoop(bool status) {
   message_loop_.QuitNow();
 }
 
+void Server::PostQuitMessageLoop(bool status) {
+  run_status_ = status;
+  message_loop_.PostQuitTask();
+}
+
 void Server::OnBytesRead(const ftl::StringView& bytes_read) {
   // If this is a packet acknowledgment then ignore it and read again.
   // TODO(armansito): Re-send previous packet if we got "-".

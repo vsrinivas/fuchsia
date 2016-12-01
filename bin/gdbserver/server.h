@@ -86,6 +86,12 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
           ftl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds),
       size_t retry_count = 0);
 
+  // Call this to schedule termination of gdbserver.
+  // Any outstanding messages will be sent first.
+  // N.B. The Server will exit its main loop asynchronously so any
+  // subsequently posted tasks will be dropped.
+  void PostQuitMessageLoop(bool status);
+
  private:
   // Maximum number of characters in the outbound buffer.
   constexpr static size_t kMaxBufferSize = 4096;

@@ -107,6 +107,11 @@ TEST(UtilTest, DecodeByteArrayString) {
             DecodeByteArrayString("0a0b0c0d0e0f107fff"));
 }
 
+TEST(UtilTest, DecodeString) {
+  EXPECT_EQ(std::string(""), DecodeString(""));
+  EXPECT_EQ(std::string("\x0a" "bc" "\xff"), DecodeString("0a6263ff"));
+}
+
 TEST(UtilTest, EscapeNonPrintableString) {
   const char kPrintableChars[] =
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
