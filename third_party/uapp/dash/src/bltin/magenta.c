@@ -125,7 +125,7 @@ int mxc_list(int argc, char** argv) {
 
     fp = fopen(argv[1], "r");
     if (fp == NULL) {
-        printf("error: cannot open '%s'\n", argv[1]);
+        fprintf(stderr, "error: cannot open '%s'\n", argv[1]);
         return -1;
     }
     while (fgets(line, 1024, fp) != NULL) {
@@ -264,23 +264,30 @@ err:
     return -1;
 }
 
+static int send_dmctl(const char* command, size_t length) {
+    int fd = open("/dev/class/misc/dmctl", O_WRONLY);
+    if (fd < 0) {
+        fprintf(stderr, "error: cannot open dmctl: %d\n", fd);
+        return fd;
+    }
+
+    int r = write(fd, command, length);
+    close(fd);
+
+    if (r < 0) {
+        fprintf(stderr, "error: cannot write dmctl: %d\n", r);
+        return r;
+    }
+
+    return 0;
+}
+
 int mxc_dm(int argc, char** argv) {
     if (argc != 2) {
         printf("usage: dm <command>\n");
         return -1;
     }
-    int fd = open("/dev/class/misc/dmctl", O_RDWR);
-    if (fd >= 0) {
-        int r = write(fd, argv[1], strlen(argv[1]));
-        if (r < 0) {
-            fprintf(stderr, "error: cannot write dmctl: %d\n", r);
-        }
-        close(fd);
-        return r;
-    } else {
-        fprintf(stderr, "error: cannot open dmctl: %d\n", fd);
-        return fd;
-    }
+    return send_dmctl(argv[1], strlen(argv[1]));
 }
 
 static char* join(char* buffer, size_t buffer_length, int argc, char** argv) {
@@ -321,19 +328,22 @@ int mxc_k(int argc, char** argv) {
         size_t prefix_length = strlen(prefix);
         char* command_end = join(buffer + prefix_length, sizeof(buffer) - prefix_length, argc - 1, &argv[1]);
         if (!command_end) {
-            printf("error: kernel debug command too long\n");
+            fprintf(stderr, "error: kernel debug command too long\n");
             return -1;
         }
         command_length = command_end - buffer;
     }
 
-    int fd = open("/dev/class/misc/dmctl", O_WRONLY);
-    if (fd < 0) {
-        printf("error: unable to open dmctl\n");
+    return send_dmctl(buffer, command_length);
+}
+
+int mxc_at(int argc, char** argv) {
+    char command[1024];
+    char* command_end = join(command, sizeof(command), argc, argv);
+    if (!command_end) {
+        fprintf(stderr, "error: application environment command too long\n");
         return -1;
     }
 
-    write(fd, buffer, command_length);
-    close(fd);
-    return 0;
+    return send_dmctl(command, command_end - command);
 }
