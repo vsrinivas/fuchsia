@@ -51,11 +51,21 @@ void error(Status status) {
   std::cout << "   [FAILED] with cloud provider status " << status << std::endl;
 }
 
+void hint(ftl::StringView hint) {
+  std::cout << "   hint: " << hint << std::endl;
+  std::cout
+      << "   see also the User Guide at "
+      << "https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md"
+      << std::endl;
+}
+
 }  // namespace
 
-DoctorCommand::DoctorCommand(CloudProvider* cloud_provider)
-    : cloud_provider_(cloud_provider) {
-  FTL_DCHECK(cloud_provider);
+DoctorCommand::DoctorCommand(ledger::NetworkService* network_service,
+                             CloudProvider* cloud_provider)
+    : network_service_(network_service), cloud_provider_(cloud_provider) {
+  FTL_DCHECK(network_service_);
+  FTL_DCHECK(cloud_provider_);
 }
 
 DoctorCommand::~DoctorCommand() {}
@@ -63,7 +73,7 @@ DoctorCommand::~DoctorCommand() {}
 void DoctorCommand::Start(ftl::Closure on_done) {
   std::cout << "Sync Checkup" << std::endl;
   on_done_ = std::move(on_done);
-  CheckObjects();
+  CheckHttpConnectivity();
 }
 
 void DoctorCommand::OnRemoteCommit(Commit commit, std::string timestamp) {
@@ -84,8 +94,63 @@ void DoctorCommand::OnMalformedNotification() {
   }
 }
 
+void DoctorCommand::CheckHttpConnectivity() {
+  what("http - fetch http://example.com");
+
+  auto request = network_service_->Request(
+      [] {
+        auto url_request = network::URLRequest::New();
+        url_request->url = "http://example.com";
+        return url_request;
+      },
+      [ this, request_start =
+                  ftl::TimePoint::Now() ](network::URLResponsePtr response) {
+        if (response->status_code != 200 || response->error) {
+          error("network error " + response->error->description.get() +
+                ", status code " + std::to_string(response->status_code));
+          hint(
+              "It looks like your Fuchsia doesn't have connectivity to the "
+              "internets outside. Make sure to follow the instructions in "
+              "https://fuchsia.googlesource.com/netstack/+/master/README.md");
+          on_done_();
+          return;
+        }
+
+        ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
+        ok(delta);
+        CheckHttpsConnectivity();
+      });
+}
+
+void DoctorCommand::CheckHttpsConnectivity() {
+  what("https - fetch https://example.com");
+
+  auto request = network_service_->Request(
+      [] {
+        auto url_request = network::URLRequest::New();
+        url_request->url = "https://example.com";
+        return url_request;
+      },
+      [ this, request_start =
+                  ftl::TimePoint::Now() ](network::URLResponsePtr response) {
+        if (response->status_code != 200 || response->error) {
+          error("network error " + response->error->description.get() +
+                ", status code " + std::to_string(response->status_code));
+          hint(
+              "It looks like the http*s* request failed even though http seems "
+              "to work. Please file a Userspace bug for the network stack.");
+          on_done_();
+          return;
+        }
+
+        ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
+        ok(delta);
+        CheckObjects();
+      });
+}
+
 void DoctorCommand::CheckObjects() {
-  what("upload test object");
+  what("Firebase - upload test object");
   std::string id = RandomString();
   std::string content = RandomString();
   mx::vmo data;
@@ -108,7 +173,7 @@ void DoctorCommand::CheckObjects() {
 }
 
 void DoctorCommand::CheckGetObject(std::string id, std::string content) {
-  what("retrieve test object");
+  what("Firebase - retrieve test object");
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->GetObject(
       id, [this, request_start](Status status, uint64_t size,
@@ -126,7 +191,7 @@ void DoctorCommand::CheckGetObject(std::string id, std::string content) {
 }
 
 void DoctorCommand::CheckCommits() {
-  what("upload test commit");
+  what("Firebase - upload test commit");
   Commit commit(RandomString(), RandomString(), {});
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->AddCommit(
@@ -145,7 +210,7 @@ void DoctorCommand::CheckCommits() {
 }
 
 void DoctorCommand::CheckGetCommits(Commit commit) {
-  what("retrieve test commits");
+  what("Firebase - retrieve test commits");
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->GetCommits(
       "", ftl::MakeCopyable([ this, commit = std::move(commit), request_start ](
@@ -163,7 +228,7 @@ void DoctorCommand::CheckGetCommits(Commit commit) {
 }
 
 void DoctorCommand::CheckWatchExistingCommits(Commit expected_commit) {
-  what("watch for existing commits");
+  what("Firebase - watch for existing commits");
   on_remote_commit_ =
       ftl::MakeCopyable([ this, expected_commit = std::move(expected_commit) ](
           Commit commit, std::string timestamp) {
@@ -189,7 +254,7 @@ void DoctorCommand::CheckWatchExistingCommits(Commit expected_commit) {
 }
 
 void DoctorCommand::CheckWatchNewCommits() {
-  what("watch for new commits");
+  what("Firebase - watch for new commits");
   Commit commit(RandomString(), RandomString(), {});
   on_remote_commit_ = ftl::MakeCopyable([
     this, expected_commit = commit.Clone(),

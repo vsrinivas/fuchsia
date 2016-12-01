@@ -8,13 +8,15 @@
 #include "apps/ledger/src/cloud_provider/client/command.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
 #include "apps/ledger/src/cloud_provider/public/commit_watcher.h"
+#include "apps/ledger/src/network/network_service.h"
 
 namespace cloud_provider {
 
 // Command that runs a series of check-ups for the sync configuration.
 class DoctorCommand : public Command, public CommitWatcher {
  public:
-  DoctorCommand(CloudProvider* cloud_provider);
+  DoctorCommand(ledger::NetworkService* network_service,
+                CloudProvider* cloud_provider);
   ~DoctorCommand();
 
   // Command:
@@ -27,6 +29,10 @@ class DoctorCommand : public Command, public CommitWatcher {
   void OnConnectionError() override;
 
   void OnMalformedNotification() override;
+
+  void CheckHttpConnectivity();
+
+  void CheckHttpsConnectivity();
 
   void CheckObjects();
 
@@ -42,6 +48,7 @@ class DoctorCommand : public Command, public CommitWatcher {
 
   void Done();
 
+  ledger::NetworkService* const network_service_;
   CloudProvider* const cloud_provider_;
   ftl::Closure on_done_;
   std::function<void(Commit, std::string)> on_remote_commit_;

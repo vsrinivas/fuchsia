@@ -60,7 +60,8 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
 
   // `doctor` is the default command.
   if (args.empty() || (args[0] == "doctor" && args.size() == 1)) {
-    return std::make_unique<DoctorCommand>(cloud_provider_.get());
+    return std::make_unique<DoctorCommand>(network_service_.get(),
+                                           cloud_provider_.get());
   }
 
   return nullptr;
