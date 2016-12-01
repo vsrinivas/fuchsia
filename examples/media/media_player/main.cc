@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/examples/video_player/video_player_view.h"
+#include "apps/media/examples/media_player/media_player_view.h"
 #include "apps/mozart/lib/view_framework/view_provider_app.h"
 #include "lib/ftl/command_line.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
   ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  examples::VideoPlayerParams params(command_line);
+  examples::MediaPlayerParams params(command_line);
   if (!params.is_valid()) {
     return 1;
   }
@@ -17,7 +17,7 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
   mozart::ViewProviderApp app([&params](mozart::ViewContext view_context) {
-    return std::make_unique<examples::VideoPlayerView>(
+    return std::make_unique<examples::MediaPlayerView>(
         std::move(view_context.view_manager),
         std::move(view_context.view_owner_request),
         view_context.application_context, params);

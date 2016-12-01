@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/examples/video_player/video_player_view.h"
+#include "apps/media/examples/media_player/media_player_view.h"
 
 #include <hid/usages.h>
 
 #include <iomanip>
 
-#include "apps/media/examples/video_player/video_player_params.h"
+#include "apps/media/examples/media_player/media_player_params.h"
 #include "apps/media/lib/timeline.h"
 #include "apps/media/services/audio_server.fidl.h"
 #include "apps/media/services/audio_track.fidl.h"
@@ -52,14 +52,14 @@ bool Contains(const mozart::RectF& rect, float x, float y) {
 }
 }  // namespace
 
-VideoPlayerView::VideoPlayerView(
+MediaPlayerView::MediaPlayerView(
     mozart::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     modular::ApplicationContext* application_context,
-    const VideoPlayerParams& params)
+    const MediaPlayerParams& params)
     : mozart::BaseView(std::move(view_manager),
                        std::move(view_owner_request),
-                       "Video Player"),
+                       "Media Player"),
       input_handler_(GetViewServiceProvider(), this) {
   FTL_DCHECK(params.is_valid());
   FTL_DCHECK(!params.path().empty());
@@ -115,9 +115,9 @@ VideoPlayerView::VideoPlayerView(
   HandleStatusUpdates();
 }
 
-VideoPlayerView::~VideoPlayerView() {}
+MediaPlayerView::~MediaPlayerView() {}
 
-void VideoPlayerView::OnEvent(mozart::EventPtr event,
+void MediaPlayerView::OnEvent(mozart::EventPtr event,
                               const OnEventCallback& callback) {
   FTL_DCHECK(event);
   bool handled = false;
@@ -164,7 +164,7 @@ void VideoPlayerView::OnEvent(mozart::EventPtr event,
   callback(handled);
 }
 
-void VideoPlayerView::OnLayout() {
+void MediaPlayerView::OnLayout() {
   FTL_DCHECK(properties());
 
   auto view_properties = mozart::ViewProperties::New();
@@ -184,7 +184,7 @@ void VideoPlayerView::OnLayout() {
                                          std::move(view_properties));
 }
 
-void VideoPlayerView::OnDraw() {
+void MediaPlayerView::OnDraw() {
   FTL_DCHECK(properties());
 
   prev_frame_time_ = frame_time_;
@@ -320,7 +320,7 @@ void VideoPlayerView::OnDraw() {
   }
 }
 
-void VideoPlayerView::OnChildAttached(uint32_t child_key,
+void MediaPlayerView::OnChildAttached(uint32_t child_key,
                                       mozart::ViewInfoPtr child_view_info) {
   FTL_DCHECK(child_key == kVideoChildKey);
 
@@ -328,7 +328,7 @@ void VideoPlayerView::OnChildAttached(uint32_t child_key,
   Invalidate();
 }
 
-void VideoPlayerView::OnChildUnavailable(uint32_t child_key) {
+void MediaPlayerView::OnChildUnavailable(uint32_t child_key) {
   FTL_DCHECK(child_key == kVideoChildKey);
   FTL_LOG(ERROR) << "Video view died unexpectedly";
 
@@ -338,7 +338,7 @@ void VideoPlayerView::OnChildUnavailable(uint32_t child_key) {
   Invalidate();
 }
 
-void VideoPlayerView::DrawControls(SkCanvas* canvas, const SkISize& size) {
+void MediaPlayerView::DrawControls(SkCanvas* canvas, const SkISize& size) {
   canvas->clear(SK_ColorBLACK);
 
   // Draw the progress bar itself (blue on gray).
@@ -380,7 +380,7 @@ void VideoPlayerView::DrawControls(SkCanvas* canvas, const SkISize& size) {
   }
 }
 
-void VideoPlayerView::HandleStatusUpdates(uint64_t version,
+void MediaPlayerView::HandleStatusUpdates(uint64_t version,
                                           media::MediaPlayerStatusPtr status) {
   if (status) {
     // Process status received from the player.
@@ -444,7 +444,7 @@ void VideoPlayerView::HandleStatusUpdates(uint64_t version,
       });
 }
 
-void VideoPlayerView::TogglePlayPause() {
+void MediaPlayerView::TogglePlayPause() {
   switch (state_) {
     case State::kPaused:
       media_player_->Play();
@@ -461,7 +461,7 @@ void VideoPlayerView::TogglePlayPause() {
   }
 }
 
-float VideoPlayerView::progress() const {
+float MediaPlayerView::progress() const {
   if (!metadata_ || metadata_->duration == 0) {
     return 0.0f;
   }

@@ -7,7 +7,7 @@
 #include <memory>
 #include <queue>
 
-#include "apps/media/examples/video_player/video_player_params.h"
+#include "apps/media/examples/media_player/media_player_params.h"
 #include "apps/media/lib/mapped_shared_buffer.h"
 #include "apps/media/lib/timeline_function.h"
 #include "apps/media/services/media_player.fidl.h"
@@ -21,14 +21,14 @@
 
 namespace examples {
 
-class VideoPlayerView : public mozart::BaseView, public mozart::InputListener {
+class MediaPlayerView : public mozart::BaseView, public mozart::InputListener {
  public:
-  VideoPlayerView(mozart::ViewManagerPtr view_manager,
+  MediaPlayerView(mozart::ViewManagerPtr view_manager,
                   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
                   modular::ApplicationContext* application_context,
-                  const VideoPlayerParams& params);
+                  const MediaPlayerParams& params);
 
-  ~VideoPlayerView() override;
+  ~MediaPlayerView() override;
 
  private:
   enum class State { kPaused, kPlaying, kEnded };
@@ -87,7 +87,7 @@ class VideoPlayerView : public mozart::BaseView, public mozart::InputListener {
   int64_t frame_time_;
   int64_t prev_frame_time_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(VideoPlayerView);
+  FTL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerView);
 };
 
 }  // namespace examples

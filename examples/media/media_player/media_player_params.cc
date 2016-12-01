@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/examples/video_player/video_player_params.h"
+#include "apps/media/examples/media_player/media_player_params.h"
 
 #include "lib/ftl/strings/split_string.h"
 
 namespace examples {
 
-VideoPlayerParams::VideoPlayerParams(const ftl::CommandLine& command_line) {
+MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
   if (!command_line.GetOptionValue("path", &path_)) {

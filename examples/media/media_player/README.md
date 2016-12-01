@@ -1,20 +1,20 @@
-# Video Player Example App
+# Media Player Example App
 
 This directory contains an application that uses apps/media and apps/mozart to
-create a video player.
+create a media player.
 
 ## USAGE
 
-The video player currently uses a file reader only, so you'll need to have an
+The media player currently uses a file reader only, so you'll need to have an
 accessible file. Here's an example command line:
 
   @ bootstrap -
-  @boot launch video_player --path=/data/vid.ogv
+  @boot launch media_player --path=/data/vid.ogv
 
 In the future, we'll support a network reader as well.
 
 It's important to use @boot as shown above rather than creating a new
-bootstrap environment for each invocation of video_player. Each instance of
+bootstrap environment for each invocation of media_player. Each instance of
 the bootstrap environment will create its own instance of audio_server, and
 multiple audio_servers will conflict when trying to access devices.
 
@@ -23,9 +23,15 @@ requires a touch to focus the keyboard. Touching anywhere but the progress bar
 toggles between play and pause. Touching the progress bar does a seek to that
 point. The space bar toggles between play and pause. 'q' quits.
 
+## AUDIO SUPPORT
+
+Audio output works on e.g. Acer with a supported USB audio device. We currently
+have no drivers for non-USB audio devices. The media player will play audio-only
+files.
+
 ## HOW TO GET CONTENT ONTO YOUR MACHINE
 
-The video player works best pulling content from a minfs volume, typically
+The media player works best pulling content from a minfs volume, typically
 mounted as /data. To get this volume set up, see the "Target Device" section
 of https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md.
 
@@ -46,3 +52,16 @@ In any case, make sure you specify a file name in /data when you cp. If you
 just cp to /data, the root directory gets overwritten and life is bad.
 
     cp /volume/fat-0/vid.ogv /data/vid.ogv
+
+## FORMAT SUPPORT
+
+* Containers
+  * MATROSKA (MKV)
+  * OGG
+  * WAV
+* Encodings
+  * THEORA
+  * VP3
+  * VP8
+  * VORBIS
+  * PCM (various)

@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("video_player") {
+executable("media_player") {
   sources = [
     "main.cc",
-    "video_player_params.cc",
-    "video_player_params.h",
-    "video_player_view.cc",
-    "video_player_view.h",
+    "media_player_params.cc",
+    "media_player_params.h",
+    "media_player_view.cc",
+    "media_player_view.h",
   ]
 
   deps = [

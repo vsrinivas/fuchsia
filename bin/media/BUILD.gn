@@ -20,7 +20,7 @@ group("services") {
 
 group("examples") {
   deps = [
-    "//apps/media/examples/video_player",
+    "//apps/media/examples/media_player",
   ]
 }
 

@@ -11,9 +11,9 @@
 
 namespace examples {
 
-class VideoPlayerParams {
+class MediaPlayerParams {
  public:
-  VideoPlayerParams(const ftl::CommandLine& command_line);
+  MediaPlayerParams(const ftl::CommandLine& command_line);
 
   bool is_valid() const { return is_valid_; }
 
@@ -23,7 +23,7 @@ class VideoPlayerParams {
   bool is_valid_;
   std::string path_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(VideoPlayerParams);
+  FTL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerParams);
 };
 
 }  // namespace examples
