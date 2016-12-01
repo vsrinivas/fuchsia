@@ -13,6 +13,6 @@ import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
 [ServiceName="modular.UserShell"]  // Created by user shell applications.
 interface UserShell {
   Initialize(StoryProvider story_provider,
-    maxwell.suggestion.SuggestionProvider suggestion_provider,
+    maxwell.SuggestionProvider suggestion_provider,
     FocusController& focus_controller_request);
 };

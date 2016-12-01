@@ -63,7 +63,7 @@ class DevUserShellApp
 
   // |UserShell|
   void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-                  fidl::InterfaceHandle<maxwell::suggestion::SuggestionProvider>
+                  fidl::InterfaceHandle<maxwell::SuggestionProvider>
                       suggestion_provider,
                   fidl::InterfaceRequest<modular::FocusController>
                   focus_controller_request) override {

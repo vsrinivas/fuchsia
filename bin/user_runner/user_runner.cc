@@ -234,8 +234,7 @@ class UserRunnerImpl : public UserRunner {
                                  std::move(focus_controller));
 
     auto suggestion_provider =
-        ConnectToService<maxwell::suggestion::SuggestionProvider>(
-            maxwell_services.get());
+        ConnectToService<maxwell::SuggestionProvider>(maxwell_services.get());
 
     user_shell_->Initialize(std::move(story_provider),
                             std::move(suggestion_provider),
