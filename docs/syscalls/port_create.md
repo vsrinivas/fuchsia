@@ -34,6 +34,8 @@ success. In the event of failure, an error value is returned.
 
 **ERR_INVALID_ARGS**  *options* has an invalid value.
 
+**ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL.
+
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
 ## SEE ALSO
