@@ -5,28 +5,8 @@
     ],
     "binaries": [
         {
-            "binary": "cloud_provider_unittests",
-            "bootfs_path": "test/cloud_provider_unittests"
-        },
-        {
             "binary": "cloud_sync",
             "bootfs_path": "apps/cloud_sync"
-        },
-        {
-            "binary": "cloud_sync_unittests",
-            "bootfs_path": "test/cloud_sync_unittests"
-        },
-        {
-            "binary": "convert_unittests",
-            "bootfs_path": "test/convert_unittests"
-        },
-        {
-            "binary": "firebase_unittests",
-            "bootfs_path": "test/firebase_unittests"
-        },
-        {
-            "binary": "gcs_unittests",
-            "bootfs_path": "test/gcs_unittests"
         },
         {
             "binary": "ledger",
@@ -37,52 +17,20 @@
             "bootfs_path": "apps/ledger_apptests"
         },
         {
-            "binary": "ledger_backoff_unittests",
-            "bootfs_path": "test/ledger_backoff_unittests"
-        },
-        {
-            "binary": "ledger_callback_unittests",
-            "bootfs_path": "test/ledger_callback_unittests"
-        },
-        {
-            "binary": "ledger_glue_unittests",
-            "bootfs_path": "test/ledger_glue_unittests"
-        },
-        {
-            "binary": "ledger_test_unittests",
-            "bootfs_path": "test/ledger_test_unittests"
+            "binary": "todo",
+            "bootfs_path": "apps/todo"
         },
         {
             "binary": "configure_ledger",
             "bootfs_path": "bin/configure_ledger"
         },
         {
-            "binary": "ledger_configuration_unittests",
-            "bootfs_path": "test/ledger_configuration_unittests"
-        },
-        {
             "binary": "ledger_integration_tests",
             "bootfs_path": "test/ledger_integration_tests"
         },
         {
-            "binary": "ledger_network_unittests",
-            "bootfs_path": "test/ledger_network_unittests"
-        },
-        {
-            "binary": "ledger_unittests",
+            "binary": "ledger_integration_tests",
             "bootfs_path": "test/ledger_unittests"
-        },
-        {
-            "binary": "storage_unittests",
-            "bootfs_path": "test/storage_unittests"
-        },
-        {
-            "binary": "storage_btree_unittests",
-            "bootfs_path": "test/storage_btree_unittests"
-        },
-        {
-            "binary": "todo",
-            "bootfs_path": "apps/todo"
         }
     ]
 }
