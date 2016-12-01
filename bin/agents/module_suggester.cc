@@ -12,8 +12,6 @@
 
 namespace {
 
-using namespace document_store;
-
 struct ProposalContent {
   std::string url;
   uint32_t color;
@@ -64,14 +62,14 @@ maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
   create_story->module_id = content.url;
   const auto& data = content.module_data;
   if (data.size() > 0) {
-    DocumentPtr doc(Document::New());
+    auto doc = document_store::Document::New();
     doc->docid = label;
     // TODO(afergan): Don't hardcode the doc id key or initial_data map key.
     // TODO(afergan, azani): Right now we pass the colors as Strings because
     // document_store::Value does not support hexadecimal.
-    doc->properties["Color"] = Value::New();
+    doc->properties["Color"] = document_store::Value::New();
     doc->properties["Color"]->set_string_value(data);
-    auto map = fidl::Map<fidl::String, DocumentPtr>();
+    fidl::Map<fidl::String, document_store::DocumentPtr> map;
     map[fidl::String("Color")] = std::move(doc);
     create_story->initial_data = std::move(map);
   }
