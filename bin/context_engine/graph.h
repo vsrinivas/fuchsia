@@ -11,7 +11,6 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace maxwell {
-namespace context {
 
 // The context graph consists of component nodes and data nodes. Component nodes
 // represent Fuchsia components, such as acquirers, agents, and modules. Data
@@ -53,9 +52,9 @@ class ComponentNode {
 //
 // TOOD(rosswang): Allow decomposed and fuzzy lookup.
 //
-// The PublisherLink impl could be a separate class, but it is 1:1 with
+// The ContextPublisherLink impl could be a separate class, but it is 1:1 with
 // the DataNode so it seems reasonable to have them be one and the same.
-class DataNode : public PublisherLink {
+class DataNode : public ContextPublisherLink {
  public:
   DataNode(ComponentNode* const component,
            const std::string& label,
@@ -67,21 +66,22 @@ class DataNode : public PublisherLink {
         subscribers_(this) {}
 
   void Update(const fidl::String& json_value) override;
-  void Subscribe(SubscriberLinkPtr link);
+  void Subscribe(ContextSubscriberLinkPtr link);
 
-  void SetPublisher(fidl::InterfaceHandle<PublisherController> controller,
-                    fidl::InterfaceRequest<PublisherLink> link);
+  void SetPublisher(
+      fidl::InterfaceHandle<ContextPublisherController> controller,
+      fidl::InterfaceRequest<ContextPublisherLink> link);
 
   const std::string label;
   const std::string schema;
 
  private:
-  class SubscriberSet : public BoundPtrSet<SubscriberLink> {
+  class SubscriberSet : public BoundPtrSet<ContextSubscriberLink> {
    public:
     SubscriberSet(DataNode* node) : node_(node) {}
 
    protected:
-    void OnConnectionError(SubscriberLink* interface_ptr) override;
+    void OnConnectionError(ContextSubscriberLink* interface_ptr) override;
 
    private:
     DataNode* node_;
@@ -90,8 +90,8 @@ class DataNode : public PublisherLink {
   ComponentNode* const component_;
   std::string json_value_;
 
-  PublisherControllerPtr publisher_controller_;
-  fidl::Binding<PublisherLink> publisher_;
+  ContextPublisherControllerPtr publisher_controller_;
+  fidl::Binding<ContextPublisherLink> publisher_;
   SubscriberSet subscribers_;
 
   FIDL_MOVE_ONLY_TYPE(DataNode);
@@ -106,5 +106,4 @@ inline DataNode* ComponentNode::EmplaceDataNode(const std::string& label,
               .first->second;
 }
 
-}  // namespace context
 }  // namespace maxwell

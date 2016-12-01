@@ -14,16 +14,17 @@ constexpr char maxwell::acquirers::GpsAcquirer::kSchema[];
 
 namespace {
 
-class CarmenSandiegoApp : public maxwell::context::PublisherController,
-                          public maxwell::context::SubscriberLink {
+class CarmenSandiegoApp : public maxwell::ContextPublisherController,
+                          public maxwell::ContextSubscriberLink {
  public:
   CarmenSandiegoApp()
       : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
-        maxwell_context_(app_context_->ConnectToEnvironmentService<
-                         maxwell::context::ContextAgentClient>()),
+        maxwell_context_(
+            app_context_
+                ->ConnectToEnvironmentService<maxwell::ContextPubSub>()),
         ctl_(this),
         in_(this) {
-    fidl::InterfaceHandle<maxwell::context::PublisherController> ctl_handle;
+    fidl::InterfaceHandle<maxwell::ContextPublisherController> ctl_handle;
     ctl_.Bind(&ctl_handle);
     // TODO(rosswang): V0 does not support semantic differentiation by source,
     // so the labels have to be explicitly different. In the future, these could
@@ -33,7 +34,7 @@ class CarmenSandiegoApp : public maxwell::context::PublisherController,
   }
 
   void OnHasSubscribers() override {
-    fidl::InterfaceHandle<maxwell::context::SubscriberLink> in_handle;
+    fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
     maxwell_context_->Subscribe(maxwell::acquirers::GpsAcquirer::kLabel,
                                 maxwell::acquirers::GpsAcquirer::kSchema,
@@ -45,7 +46,7 @@ class CarmenSandiegoApp : public maxwell::context::PublisherController,
     out_->Update(NULL);
   }
 
-  void OnUpdate(maxwell::context::UpdatePtr update) override {
+  void OnUpdate(maxwell::ContextUpdatePtr update) override {
     FTL_VLOG(1) << "OnUpdate from " << update->source << ": "
                 << update->json_value;
 
@@ -77,10 +78,10 @@ class CarmenSandiegoApp : public maxwell::context::PublisherController,
  private:
   std::unique_ptr<modular::ApplicationContext> app_context_;
 
-  maxwell::context::ContextAgentClientPtr maxwell_context_;
-  fidl::Binding<maxwell::context::PublisherController> ctl_;
-  fidl::Binding<maxwell::context::SubscriberLink> in_;
-  maxwell::context::PublisherLinkPtr out_;
+  maxwell::ContextPubSubPtr maxwell_context_;
+  fidl::Binding<maxwell::ContextPublisherController> ctl_;
+  fidl::Binding<maxwell::ContextSubscriberLink> in_;
+  maxwell::ContextPublisherLinkPtr out_;
 };
 
 }  // namespace

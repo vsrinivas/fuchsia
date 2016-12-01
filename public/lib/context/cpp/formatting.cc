@@ -5,12 +5,10 @@
 #include "apps/maxwell/lib/context/formatting.h"
 
 namespace maxwell {
-namespace context {
 
-std::ostream& operator<<(std::ostream& os, const Update& o) {
+std::ostream& operator<<(std::ostream& os, const ContextUpdate& o) {
   return os << "{ source: " << o.source << ", json_value: " << o.json_value
             << "}";
 }
 
-}  // namespace context
 }  // namespace maxwell

@@ -9,7 +9,6 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace maxwell {
-namespace context {
 namespace {
 
 template <typename Interface>
@@ -20,8 +19,8 @@ class PublisherClient : public virtual Interface {
 
   void Publish(const fidl::String& label,
                const fidl::String& schema,
-               fidl::InterfaceHandle<PublisherController> controller,
-               fidl::InterfaceRequest<PublisherLink> link) override {
+               fidl::InterfaceHandle<ContextPublisherController> controller,
+               fidl::InterfaceRequest<ContextPublisherLink> link) override {
     DataNode* output = component_->EmplaceDataNode(label, schema);
     repo_->Index(output);
     output->SetPublisher(std::move(controller), std::move(link));
@@ -43,10 +42,12 @@ class SubscriberClient : public virtual Interface {
   // backpressure, we'll probably add a callback, or add a reactive pull API.
   // TODO(rosswang): open-ended subscribe; right now, we just choose the first
   // match and ignore all others.
-  virtual void Subscribe(const fidl::String& label,
-                         const fidl::String& schema,
-                         fidl::InterfaceHandle<SubscriberLink> link_handle) {
-    SubscriberLinkPtr link = SubscriberLinkPtr::Create(std::move(link_handle));
+  virtual void Subscribe(
+      const fidl::String& label,
+      const fidl::String& schema,
+      fidl::InterfaceHandle<ContextSubscriberLink> link_handle) {
+    ContextSubscriberLinkPtr link =
+        ContextSubscriberLinkPtr::Create(std::move(link_handle));
     // TODO(rosswang): add a meta-query for whether any known publishers exist.
     repo_->Query(label, schema, std::move(link));
   }
@@ -55,16 +56,16 @@ class SubscriberClient : public virtual Interface {
   Repo* repo_;
 };
 
-typedef PublisherClient<ContextAcquirerClient> ContextAcquirerClientImpl;
+typedef PublisherClient<ContextPublisher> ContextPublisherImpl;
 
-class ContextAgentClientImpl : public SubscriberClient<ContextAgentClient>,
-                               public PublisherClient<ContextAgentClient> {
+class ContextPubSubImpl : public SubscriberClient<ContextPubSub>,
+                          public PublisherClient<ContextPubSub> {
  public:
-  ContextAgentClientImpl(ComponentNode* component, Repo* repo)
+  ContextPubSubImpl(ComponentNode* component, Repo* repo)
       : SubscriberClient(repo), PublisherClient(component, repo) {}
 };
 
-typedef SubscriberClient<SuggestionAgentClient> SuggestionAgentClientImpl;
+typedef SubscriberClient<ContextSubscriber> ContextSubscriberImpl;
 
 class ContextEngineApp : public ContextEngine {
  public:
@@ -78,25 +79,25 @@ class ContextEngineApp : public ContextEngine {
 
   void RegisterContextAcquirer(
       const fidl::String& url,
-      fidl::InterfaceRequest<ContextAcquirerClient> client) override {
-    caq_bindings_.AddBinding(std::make_unique<ContextAcquirerClientImpl>(
-                                 new ComponentNode(url), &repo_),
-                             std::move(client));
+      fidl::InterfaceRequest<ContextPublisher> client) override {
+    caq_bindings_.AddBinding(
+        std::make_unique<ContextPublisherImpl>(new ComponentNode(url), &repo_),
+        std::move(client));
   }
 
   void RegisterContextAgent(
       const fidl::String& url,
-      fidl::InterfaceRequest<ContextAgentClient> client) override {
-    cag_bindings_.AddBinding(std::make_unique<ContextAgentClientImpl>(
-                                 new ComponentNode(url), &repo_),
-                             std::move(client));
+      fidl::InterfaceRequest<ContextPubSub> client) override {
+    cag_bindings_.AddBinding(
+        std::make_unique<ContextPubSubImpl>(new ComponentNode(url), &repo_),
+        std::move(client));
   }
 
   void RegisterSuggestionAgent(
       const fidl::String& url,
-      fidl::InterfaceRequest<SuggestionAgentClient> client) override {
-    sag_bindings_.AddBinding(
-        std::make_unique<SuggestionAgentClientImpl>(&repo_), std::move(client));
+      fidl::InterfaceRequest<ContextSubscriber> client) override {
+    sag_bindings_.AddBinding(std::make_unique<ContextSubscriberImpl>(&repo_),
+                             std::move(client));
   }
 
  private:
@@ -109,18 +110,17 @@ class ContextEngineApp : public ContextEngine {
   Repo repo_;
 
   fidl::BindingSet<ContextEngine> bindings_;
-  UptrBindingSet<ContextAcquirerClient> caq_bindings_;
-  UptrBindingSet<ContextAgentClient> cag_bindings_;
-  UptrBindingSet<SuggestionAgentClient> sag_bindings_;
+  UptrBindingSet<ContextPublisher> caq_bindings_;
+  UptrBindingSet<ContextPubSub> cag_bindings_;
+  UptrBindingSet<ContextSubscriber> sag_bindings_;
 };
 
 }  // namespace
-}  // namespace context
 }  // namespace maxwell
 
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
-  maxwell::context::ContextEngineApp app;
+  maxwell::ContextEngineApp app;
   loop.Run();
   return 0;
 }

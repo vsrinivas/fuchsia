@@ -5,7 +5,6 @@
 #include "apps/maxwell/src/context_engine/repo.h"
 
 namespace maxwell {
-namespace context {
 
 void Repo::Index(DataNode* data_node) {
   by_label_and_schema_[data_node->label].emplace(data_node->schema, data_node);
@@ -26,7 +25,7 @@ void Repo::Index(DataNode* data_node) {
 
 void Repo::Query(const std::string& label,
                  const std::string& schema,
-                 SubscriberLinkPtr subscriber) {
+                 ContextSubscriberLinkPtr subscriber) {
   auto repo_by_schema = by_label_and_schema_.find(label);
   if (repo_by_schema == by_label_and_schema_.end()) {
     queries_.emplace(label, schema, std::move(subscriber));
@@ -40,5 +39,4 @@ void Repo::Query(const std::string& label,
   }
 }
 
-}  // namespace context
 }  // namespace maxwell

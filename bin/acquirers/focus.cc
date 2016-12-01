@@ -23,7 +23,7 @@ constexpr char FocusAcquirer::kSchema[];
 namespace {
 
 class FocusAcquirerApp : public modular::FocusListener,
-                         public maxwell::context::PublisherController {
+                         public maxwell::ContextPublisherController {
  public:
   FocusAcquirerApp()
       : app_ctx_(modular::ApplicationContext::CreateFromStartupInfo()),
@@ -31,8 +31,8 @@ class FocusAcquirerApp : public modular::FocusListener,
         focus_listener_(this) {
     srand(time(NULL));
 
-    auto cx = app_ctx_->ConnectToEnvironmentService<
-        maxwell::context::ContextAcquirerClient>();
+    auto cx =
+        app_ctx_->ConnectToEnvironmentService<maxwell::ContextPublisher>();
 
     auto focus_controller_handle =
         app_ctx_->ConnectToEnvironmentService<modular::FocusController>();
@@ -40,7 +40,7 @@ class FocusAcquirerApp : public modular::FocusListener,
     focus_listener_.Bind(&focus_listener_handle);
     focus_controller_handle->Watch(std::move(focus_listener_handle));
 
-    fidl::InterfaceHandle<maxwell::context::PublisherController> ctl_handle;
+    fidl::InterfaceHandle<maxwell::ContextPublisherController> ctl_handle;
     ctl_.Bind(&ctl_handle);
 
     cx->Publish(FocusAcquirer::kLabel, FocusAcquirer::kSchema,
@@ -82,8 +82,8 @@ class FocusAcquirerApp : public modular::FocusListener,
 
   std::unique_ptr<modular::ApplicationContext> app_ctx_;
 
-  fidl::Binding<maxwell::context::PublisherController> ctl_;
-  maxwell::context::PublisherLinkPtr out_;
+  fidl::Binding<maxwell::ContextPublisherController> ctl_;
+  maxwell::ContextPublisherLinkPtr out_;
   std::vector<std::string> focused_story_ids_;
   fidl::Binding<modular::FocusListener> focus_listener_;
 };

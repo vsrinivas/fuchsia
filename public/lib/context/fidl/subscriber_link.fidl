@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.context;
+module maxwell;
 
 // An attributed link that listens to updates to a context label with a bound
 // schema.
-interface SubscriberLink {
+interface ContextSubscriberLink {
   // Receives an update for a context label.
-  OnUpdate(Update update);
+  OnUpdate(ContextUpdate update);
 };
 
-struct Update {
+struct ContextUpdate {
   string source;
   // TODO(thatguy): timestamp
 

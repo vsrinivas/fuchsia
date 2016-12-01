@@ -10,29 +10,29 @@
 
 namespace {
 
-class TestListener : public maxwell::context::SubscriberLink {
+class TestListener : public maxwell::ContextSubscriberLink {
  public:
   TestListener() : binding_(this) {}
 
-  void OnUpdate(maxwell::context::UpdatePtr update) override {
+  void OnUpdate(maxwell::ContextUpdatePtr update) override {
     FTL_LOG(INFO) << "OnUpdate(" << update << ")";
     last_update_ = std::move(update);
   }
 
   void WaitForUpdate() { binding_.WaitForIncomingMethodCall(kSignalDeadline); }
 
-  maxwell::context::UpdatePtr PopLast() { return std::move(last_update_); }
+  maxwell::ContextUpdatePtr PopLast() { return std::move(last_update_); }
 
   // Binds and passes a handle that can be used to subscribe this listener.
-  fidl::InterfaceHandle<maxwell::context::SubscriberLink> PassBoundHandle() {
-    fidl::InterfaceHandle<maxwell::context::SubscriberLink> handle;
+  fidl::InterfaceHandle<maxwell::ContextSubscriberLink> PassBoundHandle() {
+    fidl::InterfaceHandle<maxwell::ContextSubscriberLink> handle;
     binding_.Bind(GetProxy(&handle));
     return handle;
   }
 
  private:
-  maxwell::context::UpdatePtr last_update_;
-  fidl::Binding<maxwell::context::SubscriberLink> binding_;
+  maxwell::ContextUpdatePtr last_update_;
+  fidl::Binding<maxwell::ContextSubscriberLink> binding_;
 };
 
 class ContextEngineTest : public ContextEngineTestBase {
@@ -43,7 +43,7 @@ class ContextEngineTest : public ContextEngineTestBase {
   }
 
  protected:
-  maxwell::context::SuggestionAgentClientPtr out_;
+  maxwell::ContextSubscriberPtr out_;
 };
 
 }  // namespace
@@ -78,7 +78,7 @@ TEST_F(ContextEngineTest, TransitiveSubscription) {
 
     gps.Publish(90, 0);
     listener.WaitForUpdate();
-    maxwell::context::UpdatePtr update = listener.PopLast();
+    maxwell::ContextUpdatePtr update = listener.PopLast();
     EXPECT_EQ("file:///system/apps/agents/carmen_sandiego", update->source);
     EXPECT_EQ("\"The Arctic\"", update->json_value);
 

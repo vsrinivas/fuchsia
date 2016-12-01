@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.context;
+module maxwell;
 
 import "subscriber_link.fidl";
 
@@ -15,10 +15,10 @@ interface ContextQuery {
   // https://fuchsia-review.googlesource.com/c/11130/
   //              array<proposal_service.ExpiryCondition> expiry_conditions);
   // TODO(afergan): Add queryLinks interface.
-  // queryLinks(Query query, SubscriberLinkQueryWatcher watcher) =>
+  // queryLinks(Query query, ContextSubscriberLinkQueryWatcher watcher) =>
   //                (array<LinkService> initialMatches);
   // queryGraph(Query query) => (GraphSnapshot graph);
-  // TODO(afergan) => (SubscriberLinkQueryWatcher watcher);
+  // TODO(afergan) => (ContextSubscriberLinkQueryWatcher watcher);
 };
 
 union Query {
@@ -84,8 +84,8 @@ union DataPathTerm {
 
 enum WildcardTerm { Any, AnyStory, AnyData };
 
-interface SubscriberLinkQueryWatcher {
-  OnConditionsTrue(string uuid, SubscriberLink match);
+interface ContextSubscriberLinkQueryWatcher {
+  OnConditionsTrue(string uuid, ContextSubscriberLink match);
   OnMatchLost(string uuid);
   // TODO(afergan): Update.json_value => null;
   // TODO(afergan): Subscription.Pause() ?

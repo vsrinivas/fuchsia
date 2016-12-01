@@ -10,11 +10,11 @@ namespace acquirers {
 constexpr char GpsAcquirer::kLabel[];
 constexpr char GpsAcquirer::kSchema[];
 
-MockGps::MockGps(context::ContextEngine* context_engine) : ctl_(this) {
-  maxwell::context::ContextAcquirerClientPtr cx;
+MockGps::MockGps(ContextEngine* context_engine) : ctl_(this) {
+  maxwell::ContextPublisherPtr cx;
   context_engine->RegisterContextAcquirer("MockGps", GetProxy(&cx));
 
-  fidl::InterfaceHandle<context::PublisherController> ctl_handle;
+  fidl::InterfaceHandle<ContextPublisherController> ctl_handle;
   ctl_.Bind(&ctl_handle);
 
   cx->Publish(kLabel, kSchema, std::move(ctl_handle), GetProxy(&out_));

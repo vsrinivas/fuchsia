@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.context;
+module maxwell;
 
 // Optional listener interface that a context publisher can implement to be
 // informed by Context Service that one or more subscribers has subscribed to
 // the bound label and schema. This is recommended for acquirers and agents.
-interface PublisherController {
+interface ContextPublisherController {
   // Indicates that one or more subscribers has subscribed to the context
   // published by this context publisher.
   OnHasSubscribers();
@@ -21,7 +21,7 @@ interface PublisherController {
 
 // An attributed link that allows a context publisher to write to a context
 // label with a bound schema.
-interface PublisherLink {
+interface ContextPublisherLink {
   // Writes attributed context data to the bound label. To remove the context,
   // write null. Invalid JSON, including the empty string, should not be passed.
   // TODO(rosswang): Validate JSON or expand formats.

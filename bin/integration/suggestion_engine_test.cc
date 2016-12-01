@@ -21,8 +21,8 @@ namespace {
 // context agent that publishes an int n
 class NPublisher {
  public:
-  NPublisher(maxwell::context::ContextEngine* context_engine) {
-    maxwell::context::ContextAcquirerClientPtr out;
+  NPublisher(maxwell::ContextEngine* context_engine) {
+    maxwell::ContextPublisherPtr out;
     context_engine->RegisterContextAcquirer("NPublisher", GetProxy(&out));
     out->Publish("n", "int", NULL, GetProxy(&pub_));
   }
@@ -30,7 +30,7 @@ class NPublisher {
   void Publish(int n) { pub_->Update(std::to_string(n)); }
 
  private:
-  maxwell::context::PublisherLinkPtr pub_;
+  maxwell::ContextPublisherLinkPtr pub_;
 };
 
 class Proposinator {
@@ -78,21 +78,20 @@ class Proposinator {
 };
 
 // maintains the number of proposals specified by the context field "n"
-class NProposals : public Proposinator,
-                   public maxwell::context::SubscriberLink {
+class NProposals : public Proposinator, public maxwell::ContextSubscriberLink {
  public:
-  NProposals(maxwell::context::ContextEngine* context_engine,
+  NProposals(maxwell::ContextEngine* context_engine,
              maxwell::suggestion::SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), link_binding_(this) {
     context_engine->RegisterSuggestionAgent("NProposals",
                                             GetProxy(&context_client_));
 
-    fidl::InterfaceHandle<maxwell::context::SubscriberLink> link_handle;
+    fidl::InterfaceHandle<maxwell::ContextSubscriberLink> link_handle;
     link_binding_.Bind(&link_handle);
     context_client_->Subscribe("n", "int", std::move(link_handle));
   }
 
-  void OnUpdate(maxwell::context::UpdatePtr update) override {
+  void OnUpdate(maxwell::ContextUpdatePtr update) override {
     int n = std::stoi(update->json_value);
 
     for (int i = n_; i < n; i++)
@@ -104,8 +103,8 @@ class NProposals : public Proposinator,
   }
 
  private:
-  maxwell::context::SuggestionAgentClientPtr context_client_;
-  fidl::Binding<maxwell::context::SubscriberLink> link_binding_;
+  maxwell::ContextSubscriberPtr context_client_;
+  fidl::Binding<maxwell::ContextSubscriberLink> link_binding_;
 
   int n_ = 0;
 };
@@ -185,9 +184,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   void StartSuggestionAgent(const std::string& url) {
     auto agent_host =
         std::make_unique<maxwell::ApplicationEnvironmentHostImpl>();
-    agent_host->AddService<maxwell::context::SuggestionAgentClient>([this, url](
-        fidl::InterfaceRequest<maxwell::context::SuggestionAgentClient>
-            request) {
+    agent_host->AddService<maxwell::ContextSubscriber>([this, url](
+        fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
       context_engine()->RegisterSuggestionAgent(url, std::move(request));
     });
     agent_host->AddService<maxwell::suggestion::SuggestionAgentClient>(

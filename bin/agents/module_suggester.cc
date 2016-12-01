@@ -94,18 +94,19 @@ maxwell::suggestion::ProposalPtr MkProposal(const std::string& label,
   return p;
 }
 
-class ModuleSuggesterAgentApp : public maxwell::context::SubscriberLink,
+class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
                                 public maxwell::suggestion::AskHandler {
  public:
   ModuleSuggesterAgentApp()
       : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
-        maxwell_context_(app_context_->ConnectToEnvironmentService<
-                         maxwell::context::SuggestionAgentClient>()),
+        maxwell_context_(
+            app_context_
+                ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
         in_(this),
         out_(app_context_->ConnectToEnvironmentService<
              maxwell::suggestion::SuggestionAgentClient>()),
         ask_(this) {
-    fidl::InterfaceHandle<maxwell::context::SubscriberLink> in_handle;
+    fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
     maxwell_context_->Subscribe("/modular_state", "int", std::move(in_handle));
     fidl::InterfaceHandle<maxwell::suggestion::AskHandler> ask_handle;
@@ -113,7 +114,7 @@ class ModuleSuggesterAgentApp : public maxwell::context::SubscriberLink,
     out_->RegisterAskHandler(std::move(ask_handle));
   }
 
-  void OnUpdate(maxwell::context::UpdatePtr update) override {
+  void OnUpdate(maxwell::ContextUpdatePtr update) override {
     const int modular_state = std::stoi(update->json_value.data());
     FTL_LOG(INFO) << "OnUpdate from " << update->source << ": "
                   << update->json_value << " = (int) " << modular_state;
@@ -149,8 +150,8 @@ class ModuleSuggesterAgentApp : public maxwell::context::SubscriberLink,
  private:
   std::unique_ptr<modular::ApplicationContext> app_context_;
 
-  maxwell::context::SuggestionAgentClientPtr maxwell_context_;
-  fidl::Binding<maxwell::context::SubscriberLink> in_;
+  maxwell::ContextSubscriberPtr maxwell_context_;
+  fidl::Binding<maxwell::ContextSubscriberLink> in_;
   maxwell::suggestion::SuggestionAgentClientPtr out_;
   fidl::Binding<maxwell::suggestion::AskHandler> ask_;
 };

@@ -9,24 +9,22 @@
 class ContextEngineTestBase : public MaxwellTestBase {
  public:
   ContextEngineTestBase()
-      : context_engine_(ConnectToService<maxwell::context::ContextEngine>(
+      : context_engine_(ConnectToService<maxwell::ContextEngine>(
             "file:///system/apps/context_engine")) {}
 
  protected:
   void StartContextAgent(const std::string& url) {
     auto agent_host =
         std::make_unique<maxwell::ApplicationEnvironmentHostImpl>();
-    agent_host->AddService<maxwell::context::ContextAgentClient>([this, url](
-        fidl::InterfaceRequest<maxwell::context::ContextAgentClient> request) {
-      context_engine_->RegisterContextAgent(url, std::move(request));
-    });
+    agent_host->AddService<maxwell::ContextPubSub>(
+        [this, url](fidl::InterfaceRequest<maxwell::ContextPubSub> request) {
+          context_engine_->RegisterContextAgent(url, std::move(request));
+        });
     StartAgent(url, std::move(agent_host));
   }
 
-  maxwell::context::ContextEngine* context_engine() {
-    return context_engine_.get();
-  }
+  maxwell::ContextEngine* context_engine() { return context_engine_.get(); }
 
  private:
-  const maxwell::context::ContextEnginePtr context_engine_;
+  const maxwell::ContextEnginePtr context_engine_;
 };

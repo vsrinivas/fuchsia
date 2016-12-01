@@ -2,54 +2,55 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module maxwell.context;
+module maxwell;
 
 import "publisher_link.fidl";
 import "subscriber_link.fidl";
 
-// Client that should be requested by context acquirers. All context written by
-// this client is attributed to the bound acquirer.
+// Client that should be requested by context publishers. All context written by
+// this client is attributed to the bound component.
 //
 // Context may be pushed at any time, but Context Service will notify the
 // publisher as to whether any subscribers exist. The publisher is free to not
 // publish until subscribers exist, and to delete context once the last
 // subscriber is removed.
-[ServiceName="maxwell.context.ContextAcquirerClient"]
-interface ContextAcquirerClient {
+[ServiceName="maxwell.ContextPublisher"]
+interface ContextPublisher {
   // Registers a potential context publisher and attains a publisher link for
   // it. When the existence or nonexistence of subscribers changes, the
-  // publisher is notified through the provided PublisherController.
-  Publish(string label, string schema, PublisherController? controller,
-          PublisherLink& link);
+  // publisher is notified through the provided ContextPublisherController.
+  Publish(string label, string schema, ContextPublisherController? controller,
+          ContextPublisherLink& link);
 };
 
-// Client that should be requested by context agents. All context read or
-// written by this client is attributed to the bound agent.
-[ServiceName="maxwell.context.ContextAgentClient"]
-interface ContextAgentClient {
+// Client that should be requested by components interested in both publishing
+// and subscribing to context. All context read or written by this client is
+// attributed to the bound component.
+[ServiceName="maxwell.ContextPubSub"]
+interface ContextPubSub {
   // Registers a potential context publisher and attains a publisher link for
   // it. When the existence or nonexistence of subscribers changes, the
-  // publisher is notified through the provided PublisherController.
+  // publisher is notified through the provided ContextPublisherController.
   //
   // If the label/schema pair for this client has already been registered, the
   // new controller and link replace the old. The new controller is notified of
   // any existing subscribers, but no effort is made to notify the old
   // controller beyond closing the pipe.
-  Publish(string label, string schema, PublisherController? controller,
-          PublisherLink& link);
+  Publish(string label, string schema, ContextPublisherController? controller,
+          ContextPublisherLink& link);
 
   // Registers a listener to a context label. Upon subscribing, the subscriber
   // is immediately updated with the last known value of the context unless the
   // publisher had invalidated it.
-  Subscribe(string label, string schema, SubscriberLink link);
+  Subscribe(string label, string schema, ContextSubscriberLink link);
   // TODO(thatguy) => (Subscription subscription);
 };
 
-// Client that should be requested by suggestion agents. All context read by
-// this client is attributed to the bound agent.
-[ServiceName="maxwell.context.SuggestionAgentClient"]
-interface SuggestionAgentClient {
+// Client that should be requested by context subscribers. All context read by
+// this client is attributed to the bound component.
+[ServiceName="maxwell.ContextSubscriber"]
+interface ContextSubscriber {
   // Registers a listener to a context label.
-  Subscribe(string label, string schema, SubscriberLink link);
+  Subscribe(string label, string schema, ContextSubscriberLink link);
   // TODO(thatguy) => (Subscription subscription);
 };

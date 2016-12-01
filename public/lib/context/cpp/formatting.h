@@ -8,9 +8,7 @@
 #include "lib/fidl/cpp/bindings/formatting.h"
 
 namespace maxwell {
-namespace context {
 
-std::ostream& operator<<(std::ostream& os, const Update& o);
+std::ostream& operator<<(std::ostream& os, const ContextUpdate& o);
 
-}  // namespace context
 }  // namespace maxwell

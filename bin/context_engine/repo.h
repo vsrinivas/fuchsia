@@ -10,20 +10,19 @@
 #include "apps/maxwell/src/context_engine/graph.h"
 
 namespace maxwell {
-namespace context {
 
 // TODO(rosswang): V.5 query richness.
 struct SimpleQuery {
   SimpleQuery(const std::string& label,
               const std::string& schema,
-              SubscriberLinkPtr subscriber)
+              ContextSubscriberLinkPtr subscriber)
       : label(label), schema(schema), subscriber(std::move(subscriber)) {}
 
   std::string label;
   std::string schema;
-  SubscriberLinkPtr subscriber;
+  ContextSubscriberLinkPtr subscriber;
 
-  static SubscriberLinkPtr* GetPtr(SimpleQuery* element) {
+  static ContextSubscriberLinkPtr* GetPtr(SimpleQuery* element) {
     return &element->subscriber;
   }
 };
@@ -57,10 +56,10 @@ class Repo {
   void Index(DataNode* data_node);
   void Query(const std::string& label,
              const std::string& schema,
-             SubscriberLinkPtr subscriber);
+             ContextSubscriberLinkPtr subscriber);
 
  private:
-  typedef BoundPtrSet<SubscriberLink, SimpleQuery, SimpleQuery::GetPtr>
+  typedef BoundPtrSet<ContextSubscriberLink, SimpleQuery, SimpleQuery::GetPtr>
       QuerySet;
 
   // TODO(rosswang): Is there a good way to not require a separate index
@@ -78,5 +77,4 @@ class Repo {
   FTL_DISALLOW_COPY_AND_ASSIGN(Repo);
 };
 
-}  // namespace context
 }  // namespace maxwell

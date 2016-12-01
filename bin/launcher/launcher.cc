@@ -17,7 +17,7 @@ class LauncherApp : public maxwell::Launcher {
  public:
   LauncherApp()
       : app_context_(modular::ApplicationContext::CreateFromStartupInfo()),
-        context_engine_(ConnectToService<maxwell::context::ContextEngine>(
+        context_engine_(ConnectToService<maxwell::ContextEngine>(
             "file:///system/apps/context_engine")),
         agent_launcher_(app_context_->environment().get()) {
     suggestion_services_ =
@@ -76,18 +76,16 @@ class LauncherApp : public maxwell::Launcher {
     auto agent_host =
         std::make_unique<maxwell::ApplicationEnvironmentHostImpl>();
 
-    agent_host->AddService<maxwell::context::ContextAcquirerClient>([this, url](
-        fidl::InterfaceRequest<maxwell::context::ContextAcquirerClient>
-            request) {
-      context_engine_->RegisterContextAcquirer(url, std::move(request));
-    });
-    agent_host->AddService<maxwell::context::ContextAgentClient>([this, url](
-        fidl::InterfaceRequest<maxwell::context::ContextAgentClient> request) {
-      context_engine_->RegisterContextAgent(url, std::move(request));
-    });
-    agent_host->AddService<maxwell::context::SuggestionAgentClient>([this, url](
-        fidl::InterfaceRequest<maxwell::context::SuggestionAgentClient>
-            request) {
+    agent_host->AddService<maxwell::ContextPublisher>(
+        [this, url](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
+          context_engine_->RegisterContextAcquirer(url, std::move(request));
+        });
+    agent_host->AddService<maxwell::ContextPubSub>(
+        [this, url](fidl::InterfaceRequest<maxwell::ContextPubSub> request) {
+          context_engine_->RegisterContextAgent(url, std::move(request));
+        });
+    agent_host->AddService<maxwell::ContextSubscriber>([this, url](
+        fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
       context_engine_->RegisterSuggestionAgent(url, std::move(request));
     });
     agent_host->AddService<maxwell::suggestion::SuggestionAgentClient>(
@@ -109,7 +107,7 @@ class LauncherApp : public maxwell::Launcher {
 
   fidl::BindingSet<maxwell::Launcher> launcher_bindings_;
 
-  maxwell::context::ContextEnginePtr context_engine_;
+  maxwell::ContextEnginePtr context_engine_;
   modular::ServiceProviderPtr suggestion_services_;
   maxwell::suggestion::SuggestionEnginePtr suggestion_engine_;
 
