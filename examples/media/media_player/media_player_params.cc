@@ -11,8 +11,15 @@ namespace examples {
 MediaPlayerParams::MediaPlayerParams(const ftl::CommandLine& command_line) {
   is_valid_ = false;
 
-  if (!command_line.GetOptionValue("path", &path_)) {
-    FTL_LOG(ERROR) << "Path must be supplied, e.g. --path=/data/vid.ogv";
+  bool path_found = command_line.GetOptionValue("path", &path_);
+  bool url_found = command_line.GetOptionValue("url", &url_);
+
+  if (path_found == url_found) {
+    FTL_LOG(ERROR) << "Either a path or a url must be supplied, for example";
+    FTL_LOG(ERROR) << "    @boot launch media_player --path=/data/video.ogv";
+    FTL_LOG(ERROR) << "or";
+    FTL_LOG(ERROR)
+        << "    @boot launch media_player --url=http://service/audio.ogg";
     return;
   }
 

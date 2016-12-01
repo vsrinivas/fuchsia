@@ -61,7 +61,6 @@ MediaPlayerView::MediaPlayerView(
                        "Media Player"),
       input_handler_(GetViewServiceProvider(), this) {
   FTL_DCHECK(params.is_valid());
-  FTL_DCHECK(!params.path().empty());
 
   media::MediaServicePtr media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
@@ -92,9 +91,14 @@ MediaPlayerView::MediaPlayerView(
     Invalidate();
   });
 
-  // Get a file reader.
+  // Get a reader.
   media::SeekingReaderPtr reader;
-  media_service->CreateFileReader(params.path(), reader.NewRequest());
+  if (!params.url().empty()) {
+    media_service->CreateNetworkReader(params.url(), reader.NewRequest());
+  } else {
+    FTL_DCHECK(!params.path().empty());
+    media_service->CreateFileReader(params.path(), reader.NewRequest());
+  }
 
   // Create a player from all that stuff.
   media_service->CreatePlayer(

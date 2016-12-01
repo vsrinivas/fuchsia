@@ -44,9 +44,19 @@ NetworkReaderImpl::NetworkReaderImpl(
   url_loader_->Start(
       std::move(url_request), [this](network::URLResponsePtr response) {
         // TODO(dalesat): Handle redirects.
+        if (response->error) {
+          FTL_LOG(ERROR) << "HEAD response error " << response->error->code
+                         << " " << (response->error->description
+                                        ? response->error->description
+                                        : "<no description>");
+          result_ = MediaResult::UNKNOWN_ERROR;
+          ready_.Occur();
+          return;
+        }
+
         if (response->status_code != kStatusOk) {
-          FTL_LOG(WARNING) << "HEAD response status code "
-                           << response->status_code;
+          FTL_LOG(ERROR) << "HEAD response status code "
+                         << response->status_code;
           result_ = response->status_code == kStatusNotFound
                         ? MediaResult::NOT_FOUND
                         : MediaResult::UNKNOWN_ERROR;
