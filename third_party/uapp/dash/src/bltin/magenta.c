@@ -283,3 +283,57 @@ int mxc_dm(int argc, char** argv) {
     }
 }
 
+static char* join(char* buffer, size_t buffer_length, int argc, char** argv) {
+    size_t total_length = 0u;
+    for (int i = 0; i < argc; ++i) {
+        if (i > 0) {
+            if (total_length + 1 > buffer_length)
+                return NULL;
+            buffer[total_length++] = ' ';
+        }
+        const char* arg = argv[i];
+        size_t arg_length = strlen(arg);
+        if (total_length + arg_length + 1 > buffer_length)
+            return NULL;
+        strncat(buffer + total_length, arg, buffer_length - total_length - 1);
+        total_length += arg_length;
+    }
+    return buffer + total_length;
+}
+
+int mxc_k(int argc, char** argv) {
+    if (argc <= 1) {
+        printf("usage: k <command>\n");
+        return -1;
+    }
+
+    const char* prefix = "kerneldebug ";
+    char buffer[256];
+
+    size_t command_length = 0u;
+    // If we detect someone trying to use the LK poweroff/reboot,
+    // divert it to devmgr backed one instead.
+    if (!strcmp(argv[1], "poweroff") || !strcmp(argv[1], "reboot")) {
+        strcpy(buffer, argv[1]);
+        command_length = strlen(buffer);
+    } else {
+        strcpy(buffer, prefix);
+        size_t prefix_length = strlen(prefix);
+        char* command_end = join(buffer + prefix_length, sizeof(buffer) - prefix_length, argc - 1, &argv[1]);
+        if (!command_end) {
+            printf("error: kernel debug command too long\n");
+            return -1;
+        }
+        command_length = command_end - buffer;
+    }
+
+    int fd = open("/dev/class/misc/dmctl", O_WRONLY);
+    if (fd < 0) {
+        printf("error: unable to open dmctl\n");
+        return -1;
+    }
+
+    write(fd, buffer, command_length);
+    close(fd);
+    return 0;
+}

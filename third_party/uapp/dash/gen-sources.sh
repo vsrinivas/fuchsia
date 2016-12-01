@@ -11,22 +11,13 @@
 #  * src/init.c
 #  * src/nodes.h
 #  * src/nodes.c
-#  * src/signames.c
+#  * src/signames.c (if you uncomment the lines at the end)
 #  * src/syntax.h
 #  * src/syntax.c
 #  * src/token.h
 #  * src/token_vars.h
-#
-# This script requires mksignames.c, which is not part of this repository.
-# Consider using the mksignames.c from upstream dash.
 
 cd src
-
-if [ ! -f "mksignames.c" ]
-then
-  echo "Missing mksignames.c."
-  exit 1
-fi
 
 set -ex
 
@@ -38,19 +29,22 @@ sh mkbuiltins builtins.def
 gcc mkinit.c -o mkinit
 gcc mknodes.c -o mknodes
 gcc mksyntax.c -o mksyntax
-gcc mksignames.c -o mksignames
 
 DASH_CFILES="alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
-  histedit.c input.c jobs.c mail.c main.c memalloc.c miscbltin.c \
+  input.c jobs.c main.c memalloc.c miscbltin.c \
   mystring.c options.c parser.c redir.c show.c trap.c output.c \
   bltin/printf.c system.c bltin/test.c bltin/times.c var.c"
 
 ./mkinit $DASH_CFILES
 ./mknodes nodetypes nodes.c.pat
 ./mksyntax
-./mksignames
 
 rm mkinit
 rm mknodes
 rm mksyntax
-rm mksignames
+
+# Uncomment the following lines to generate signames.c:
+#
+#   gcc mksignames.c -o mksignames
+#   ./mksignames
+#   rm mksignames

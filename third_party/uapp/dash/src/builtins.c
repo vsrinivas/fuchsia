@@ -44,6 +44,7 @@ int mxc_dump(int, char **);
 int mxc_list(int, char **);
 int mxc_msleep(int, char **);
 int mxc_dm(int, char **);
+int mxc_k(int, char **);
 
 const struct builtincmd builtincmd[] = {
 	{ ".", dotcmd, 3 },
@@ -67,6 +68,7 @@ const struct builtincmd builtincmd[] = {
 	{ "getopts", getoptscmd, 2 },
 	{ "hash", hashcmd, 0 },
 	{ "jobs", jobscmd, 2 },
+	{ "k", mxc_k, 0 },
 	{ "kill", killcmd, 2 },
 	{ "list", mxc_list, 0 },
 	{ "local", localcmd, 7 },

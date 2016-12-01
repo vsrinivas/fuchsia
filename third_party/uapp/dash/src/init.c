@@ -47,12 +47,6 @@
 #define QUOTES_ESC	(EXP_FULL | EXP_CASE | EXP_QPAT)
 #undef  QUOTES_KEEPNUL
 #define QUOTES_KEEPNUL	EXP_TILDE
-#undef  MAXHISTLOOPS
-#define MAXHISTLOOPS	4	/* max recursions through fc */
-#undef  DEFEDITOR
-#define DEFEDITOR	"ed"	/* default editor *should* be $EDITOR */
-#undef  editing
-#define editing (Eflag || Vflag)
 #undef  EOF_NLEFT
 #define EOF_NLEFT -99		/* value of parsenleft when EOF pushed back */
 #undef  IBUFSIZ
@@ -69,8 +63,6 @@
 #define DOWAIT_BLOCK 1
 #undef  DOWAIT_WAITCMD
 #define DOWAIT_WAITCMD 2
-#undef  MAXMBOXES
-#define MAXMBOXES 10
 #undef  PROFILE
 #define PROFILE 0
 #undef  MINSIZE
