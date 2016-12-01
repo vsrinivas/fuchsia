@@ -32,6 +32,7 @@
  * SUCH DAMAGE.
  */
 
+#include <magenta/syscalls.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
@@ -852,6 +853,7 @@ bail:
 			break;
 		}
 		exitstatus = process_await_termination(process);
+		mx_handle_close(process);
 		break;
 	}
 	case CMDBUILTIN:
