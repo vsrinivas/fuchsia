@@ -46,7 +46,7 @@ void IoMappingDispatcher::Close() {
 
 void IoMappingDispatcher::Cleanup() {
     if (mapping_) {
-        mapping_->Unmap();
+        mapping_->Destroy();
     }
 
     vaddr_ = 0;
@@ -93,7 +93,7 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
     // Force the entries into the page tables
     res = mapping_->MapRange(0, size, false);
     if (res < 0) {
-        mapping_->Unmap();
+        mapping_->Destroy();
         mapping_.reset();
         return res;
     }

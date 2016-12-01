@@ -270,8 +270,11 @@ public:
     // Map in pages from the underlying vm object, optionally committing pages as it goes
     status_t MapRange(size_t offset, size_t len, bool commit);
 
-    // Unmap the region of memory in the container address space
-    status_t Unmap();
+    // Unmap a subset of the region of memory in the containing address space,
+    // returning it to the parent region to allocate.  If all of the memory is unmapped,
+    // Destroy()s this mapping.  If a subrange of the mapping is specified, the
+    // mapping may be split.
+    status_t Unmap(vaddr_t base, size_t size);
 
     // Change access permissions for this mapping.  It is an error to specify a
     // caching mode in the flags.  This will persist the caching mode the
@@ -310,8 +313,9 @@ private:
     // Version of Destroy() that does not acquire the aspace lock
     status_t DestroyLocked() override;
 
-    // Version of Unmap() that does not acquire the aspace lock
-    status_t UnmapLocked();
+    // Implementation for Unmap().  This does not acquire the aspace lock, and
+    // supports partial unmapping.
+    status_t UnmapLocked(vaddr_t base, size_t size);
 
     // Version of AllocatedPages() that does not acquire the aspace lock
     size_t AllocatedPagesLocked() const override;

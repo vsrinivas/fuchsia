@@ -88,17 +88,61 @@ status_t VmMapping::Protect(uint arch_mmu_flags) {
     return NO_ERROR;
 }
 
-status_t VmMapping::Unmap() {
-    return Destroy();
+status_t VmMapping::Unmap(vaddr_t base, size_t size) {
+    LTRACEF("%p %s %#" PRIxPTR " %#" PRIxPTR "\n", this, name_, base, size);
+
+    if (!IS_PAGE_ALIGNED(base)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    size = ROUNDUP(size, PAGE_SIZE);
+
+    mxtl::RefPtr<VmAspace> aspace(aspace_);
+    if (!aspace) {
+        return ERR_BAD_STATE;
+    }
+
+    AutoLock guard(aspace->lock());
+    if (state_ != LifeCycleState::ALIVE) {
+        return ERR_BAD_STATE;
+    }
+
+    // TODO(teisenbe): Remove this when we no longer need compatibility
+    // for the size = 0 case.  We should instead reject size=0 as invalid
+    if (base == base_ && size == 0) {
+        size = size_;
+    }
+
+    if (base < base_) {
+        return ERR_INVALID_ARGS;
+    }
+    const size_t offset = base - base_;
+    if (offset >= size_ || size_ - offset < size) {
+        return ERR_INVALID_ARGS;
+    }
+
+    // If we're unmapping everything, destroy this mapping
+    if (base == base_ && size == size_) {
+        return DestroyLocked();
+    }
+
+    return UnmapLocked(base, size);
 }
 
-status_t VmMapping::UnmapLocked() {
+status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     DEBUG_ASSERT(magic_ == kMagic);
     DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(size) && IS_PAGE_ALIGNED(base));
+    DEBUG_ASSERT(base >= base_ && base - base_ < size_);
+    DEBUG_ASSERT(size_ - (base - base_) >= size);
+    DEBUG_ASSERT(parent_);
 
     if (state_ != LifeCycleState::ALIVE) {
         return ERR_BAD_STATE;
     }
+
+    // If our parent VMAR is DEAD, then we can only unmap everything.
+    DEBUG_ASSERT(parent_->state_ != LifeCycleState::DEAD || (base == base_ && size == size_));
 
     LTRACEF("%p '%s'\n", this, name_);
 
@@ -106,11 +150,50 @@ status_t VmMapping::UnmapLocked() {
     DEBUG_ASSERT(object_);
     AutoLock al(object_->lock());
 
-    // unmap the section of address space we cover
-    status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), base_, size_ / PAGE_SIZE);
+    // Check if unmapping from one of the ends
+    if (base_ == base || base + size == base_ + size_) {
+        status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), base, size / PAGE_SIZE);
+        if (status < 0) {
+            return status;
+        }
+
+        if (base_ == base && size_ != size) {
+            // We need to remove ourselves from tree before updating base_,
+            // since base_ is the tree key.
+            mxtl::RefPtr<VmAddressRegionOrMapping> ref(parent_->subregions_.erase(*this));
+            base_ += size;
+            object_offset_ += size;
+            parent_->subregions_.insert(mxtl::move(ref));
+        }
+        size_ -= size;
+
+        return NO_ERROR;
+    }
+
+    // We're unmapping from the center, so we need to split the mapping
+    DEBUG_ASSERT(parent_->state_ == LifeCycleState::ALIVE);
+
+    const uint64_t vmo_offset = object_offset_ + (base + size) - base_;
+    const vaddr_t new_base = base + size;
+    const size_t new_size = (base_ + size_) - new_base;
+
+    AllocChecker ac;
+    mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
+            new (&ac) VmMapping(*parent_, new_base, new_size, flags_, object_, vmo_offset,
+                                arch_mmu_flags_, name_)));
+    if (!ac.check()) {
+        return ERR_NO_MEMORY;
+    }
+
+    // Unmap the middle segment
+    status_t status = arch_mmu_unmap(&aspace_->arch_aspace(), base, size / PAGE_SIZE);
     if (status < 0) {
         return status;
     }
+
+    // Turn us into the left half
+    size_ = base - base_;
+    mapping->ActivateLocked();
     return NO_ERROR;
 }
 
@@ -217,7 +300,7 @@ status_t VmMapping::DestroyLocked() {
     // subregions_.erase below).
     mxtl::RefPtr<VmMapping> self(this);
 
-    status_t status = UnmapLocked();
+    status_t status = UnmapLocked(base_, size_);
     if (status != NO_ERROR) {
         return status;
     }

@@ -176,10 +176,14 @@ mx_status_t VmAddressRegionDispatcher::Map(size_t vmar_offset, mxtl::RefPtr<VmOb
     return NO_ERROR;
 }
 
-mx_status_t VmAddressRegionDispatcher::Protect(size_t offset, size_t len, uint32_t flags) {
+mx_status_t VmAddressRegionDispatcher::Protect(vaddr_t base, size_t len, uint32_t flags) {
     // TODO(teisenbe): Consider supporting splitting mappings; it's unclear if
     // there's a usecase for that versus just creating multiple mappings to
     // start with.
+
+    if (!IS_PAGE_ALIGNED(base)) {
+        return ERR_INVALID_ARGS;
+    }
 
     if (!is_valid_mapping_protection(flags))
         return ERR_INVALID_ARGS;
@@ -196,7 +200,7 @@ mx_status_t VmAddressRegionDispatcher::Protect(size_t offset, size_t len, uint32
 
     mxtl::RefPtr<VmMapping> mapping(nullptr);
     {
-        mxtl::RefPtr<VmAddressRegionOrMapping> child = vmar_->FindRegion(vmar_->base() + offset);
+        mxtl::RefPtr<VmAddressRegionOrMapping> child = vmar_->FindRegion(base);
         if (!child) {
             return ERR_NOT_FOUND;
         }
@@ -210,10 +214,8 @@ mx_status_t VmAddressRegionDispatcher::Protect(size_t offset, size_t len, uint32
     // For now, require that the request be for an entire VmMapping.
     // Additionally, special case len=0 to mean the whole region.
     // TODO(teisenbe): Remove this
-    DEBUG_ASSERT(mapping->base() >= vmar_->base());
-    size_t mapping_offset = mapping->base() - vmar_->base();
     if (len != 0) {
-        if (mapping_offset != offset || mapping->size() != ROUNDUP(len, PAGE_SIZE)) {
+        if (mapping->base() != base || mapping->size() != ROUNDUP(len, PAGE_SIZE)) {
             return ERR_INVALID_ARGS;
         }
     }
@@ -221,11 +223,15 @@ mx_status_t VmAddressRegionDispatcher::Protect(size_t offset, size_t len, uint32
     return mapping->Protect(arch_mmu_flags);
 }
 
-mx_status_t VmAddressRegionDispatcher::Unmap(size_t offset, size_t len) {
+mx_status_t VmAddressRegionDispatcher::Unmap(vaddr_t base, size_t len) {
+    if (!IS_PAGE_ALIGNED(base)) {
+        return ERR_INVALID_ARGS;
+    }
+
     // TODO(teisenbe): This should actually allow spanning multiple regions.
     mxtl::RefPtr<VmMapping> mapping(nullptr);
     {
-        mxtl::RefPtr<VmAddressRegionOrMapping> child = vmar_->FindRegion(vmar_->base() + offset);
+        mxtl::RefPtr<VmAddressRegionOrMapping> child = vmar_->FindRegion(base);
         if (!child) {
             return ERR_NOT_FOUND;
         }
@@ -236,19 +242,7 @@ mx_status_t VmAddressRegionDispatcher::Unmap(size_t offset, size_t len) {
         return ERR_NOT_FOUND;
     }
 
-    // For now, require that the request be for an entire
-    // VmMapping/VmAddressRegion, and if len=0, interpret as a request
-    // to unmap the entire entry that contains the offset
-    // TODO(teisenbe): Remove this
-    DEBUG_ASSERT(mapping->base() >= vmar_->base());
-    size_t mapping_offset = mapping->base() - vmar_->base();
-    if (len != 0) {
-        if (mapping_offset != offset || mapping->size() != ROUNDUP(len, PAGE_SIZE)) {
-            return ERR_INVALID_ARGS;
-        }
-    }
-
-    return mapping->Unmap();
+    return mapping->Unmap(base, len);
 }
 
 bool VmAddressRegionDispatcher::is_valid_mapping_protection(uint32_t flags) {

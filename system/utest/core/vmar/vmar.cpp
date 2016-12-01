@@ -24,6 +24,25 @@ const uint32_t kRwxMapPerm =
 const uint32_t kRwxAllocPerm =
         MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE | MX_VM_FLAG_CAN_MAP_EXECUTE;
 
+
+// Helper routine for other tests.  If bit i (< *page_count*) in *bitmap* is set, then
+// checks that *base* + i * PAGE_SIZE is mapped.  Otherwise checks that it is not mapped.
+bool check_pages_mapped(mx_handle_t process, uintptr_t base, uint64_t bitmap, size_t page_count) {
+    uint8_t buf[1];
+    size_t len;
+
+    size_t i = 0;
+    while (bitmap && i < page_count) {
+        mx_status_t expected = (bitmap & 1) ? NO_ERROR : ERR_NO_MEMORY;
+        if (mx_process_read_memory(process, base + i * PAGE_SIZE, buf, 1, &len) != expected) {
+            return false;
+        }
+        ++i;
+        bitmap >>= 1;
+    }
+    return true;
+}
+
 bool destroy_root_test() {
     BEGIN_TEST;
 
@@ -854,6 +873,72 @@ bool object_info_test() {
     END_TEST;
 }
 
+// Verify that we can split a single mapping with an unmap call
+bool unmap_split_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t vmo;
+    uintptr_t mapping_addr[3];
+
+    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), NO_ERROR, "");
+
+    ASSERT_EQ(mx_vmo_create(4 * PAGE_SIZE, 0, &vmo), NO_ERROR, "");
+
+    // Set up mappings to test on
+    for (uintptr_t& addr : mapping_addr) {
+        EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                              &addr),
+                  NO_ERROR, "");
+    }
+
+    // Unmap from the left
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1100, 4), "");
+    // Unmap the rest
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + 2 * PAGE_SIZE, 2 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000, 4), "");
+
+    // Unmap from the right
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 2 * PAGE_SIZE, 2 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[1], 0b0011, 4), "");
+    // Unmap the rest
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1], 2 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[1], 0b0000, 4), "");
+
+    // Unmap from the center
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[2] + PAGE_SIZE, 2 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[2], 0b1001, 4), "");
+    // Unmap the rest
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[2], PAGE_SIZE), NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[2] + 3 * PAGE_SIZE, PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[2], 0b0000, 4), "");
+
+    mx_info_vmar_t info;
+    ASSERT_EQ(mx_object_get_info(vmar, MX_INFO_VMAR, &info, sizeof(info), NULL, NULL),
+              NO_ERROR, "");
+
+    // Make sure we can map over these again
+    for (uintptr_t addr : mapping_addr) {
+        const size_t offset = addr - info.base;
+        EXPECT_EQ(mx_vmar_map(vmar, offset, vmo, 0, 4 * PAGE_SIZE,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                              &addr),
+                  NO_ERROR, "");
+        EXPECT_TRUE(check_pages_mapped(process, addr, 0b1111, 4), "");
+        EXPECT_EQ(mx_vmar_unmap(vmar, addr, 4 * PAGE_SIZE), NO_ERROR, "");
+    }
+
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(vmar_tests)
@@ -870,6 +955,7 @@ RUN_TEST(rights_drop_test);
 RUN_TEST(protect_test);
 RUN_TEST(nested_region_perms_test);
 RUN_TEST(object_info_test);
+RUN_TEST(unmap_split_test);
 END_TEST_CASE(vmar_tests)
 
 #ifndef BUILD_COMBINED_TESTS
