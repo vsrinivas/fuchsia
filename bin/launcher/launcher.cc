@@ -85,8 +85,8 @@ class LauncherApp : public maxwell::Launcher {
         fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
       context_engine_->RegisterSuggestionAgent(url, std::move(request));
     });
-    agent_host->AddService<maxwell::SuggestionAgentClient>([this, url](
-        fidl::InterfaceRequest<maxwell::SuggestionAgentClient> request) {
+    agent_host->AddService<maxwell::ProposalPublisher>([this, url](
+        fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
       suggestion_engine_->RegisterSuggestionAgent(url, std::move(request));
     });
 

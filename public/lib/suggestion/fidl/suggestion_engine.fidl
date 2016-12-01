@@ -4,7 +4,7 @@
 
 module maxwell;
 
-import "apps/maxwell/services/suggestion/suggestion_agent_client.fidl";
+import "apps/maxwell/services/suggestion/proposal_publisher.fidl";
 import "apps/maxwell/services/suggestion/suggestion_provider.fidl"; // convenience import
 import "apps/modular/services/user/story_provider.fidl";
 import "apps/modular/services/user/focus.fidl";
@@ -16,5 +16,5 @@ interface SuggestionEngine {
   Initialize(modular.StoryProvider story_provider, modular.FocusController focus_controller);
 
   // Registers a component that produces suggestions.
-  RegisterSuggestionAgent(string url, SuggestionAgentClient& client);
+  RegisterSuggestionAgent(string url, ProposalPublisher& client);
 };

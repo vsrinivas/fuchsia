@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/services/suggestion/suggestion_agent_client.fidl.h"
+#include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/maxwell/src/suggestion_engine/agent_suggestion_record.h"
 #include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
 #include "apps/maxwell/src/suggestion_engine/repo.h"
@@ -15,17 +15,17 @@ namespace maxwell {
 
 class Repo;
 
-// SuggestionAgentClientImpl tracks proposals and their resulting suggestions
+// ProposalPublisherImpl tracks proposals and their resulting suggestions
 // from a single suggestion agent. Source entries are created on demand and kept
 // alive as long as any proposals or publisher bindings exist.
-class SuggestionAgentClientImpl : public SuggestionAgentClient {
+class ProposalPublisherImpl : public ProposalPublisher {
  public:
-  SuggestionAgentClientImpl(Repo* repo, const std::string& component_url)
+  ProposalPublisherImpl(Repo* repo, const std::string& component_url)
       : repo_(repo), component_url_(component_url), bindings_(this) {}
 
-  void AddBinding(fidl::InterfaceRequest<SuggestionAgentClient> request) {
+  void AddBinding(fidl::InterfaceRequest<ProposalPublisher> request) {
     bindings_.emplace(
-        new fidl::Binding<SuggestionAgentClient>(this, std::move(request)));
+        new fidl::Binding<ProposalPublisher>(this, std::move(request)));
   }
 
   std::string component_url() const { return component_url_; }
@@ -42,16 +42,15 @@ class SuggestionAgentClientImpl : public SuggestionAgentClient {
   }
 
  private:
-  class BindingSet : public maxwell::BindingSet<SuggestionAgentClient> {
+  class BindingSet : public maxwell::BindingSet<ProposalPublisher> {
    public:
-    BindingSet(SuggestionAgentClientImpl* impl) : impl_(impl) {}
+    BindingSet(ProposalPublisherImpl* impl) : impl_(impl) {}
 
    protected:
-    void OnConnectionError(
-        fidl::Binding<SuggestionAgentClient>* binding) override;
+    void OnConnectionError(fidl::Binding<ProposalPublisher>* binding) override;
 
    private:
-    SuggestionAgentClientImpl* const impl_;
+    ProposalPublisherImpl* const impl_;
   };
 
   void OnNewProposal(ProposalPtr proposal, AgentSuggestionRecord* record);

@@ -12,11 +12,11 @@ executable("suggestion_engine") {
     "next_channel.cc",
     "next_channel.h",
     "next_subscriber.h",
+    "proposal_publisher_impl.cc",
+    "proposal_publisher_impl.h",
     "ranked_suggestion.h",
     "repo.cc",
     "repo.h",
-    "suggestion_agent_client_impl.cc",
-    "suggestion_agent_client_impl.h",
     "suggestion_channel.h",
     "suggestion_engine.cc",
     "windowed_subscriber.cc",
@@ -49,8 +49,8 @@ source_set("proposal_record") {
 
 source_set("timeline_stories_filter") {
   sources = [
-    "timeline_stories_filter.h",
     "timeline_stories_filter.cc",
+    "timeline_stories_filter.h",
   ]
 
   deps = [
@@ -63,8 +63,8 @@ source_set("timeline_stories_filter") {
 
 source_set("timeline_stories_watcher") {
   sources = [
-    "timeline_stories_watcher.h",
     "timeline_stories_watcher.cc",
+    "timeline_stories_watcher.h",
   ]
 
   deps = [

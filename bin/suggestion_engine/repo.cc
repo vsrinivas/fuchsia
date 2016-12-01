@@ -6,11 +6,11 @@
 
 namespace maxwell {
 
-SuggestionAgentClientImpl* Repo::GetOrCreateSourceClient(
+ProposalPublisherImpl* Repo::GetOrCreateSourceClient(
     const std::string& component_url) {
-  std::unique_ptr<SuggestionAgentClientImpl>& source = sources_[component_url];
+  std::unique_ptr<ProposalPublisherImpl>& source = sources_[component_url];
   if (!source)  // create if it didn't already exist
-    source.reset(new SuggestionAgentClientImpl(this, component_url));
+    source.reset(new ProposalPublisherImpl(this, component_url));
 
   return source.get();
 }

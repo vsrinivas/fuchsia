@@ -9,15 +9,15 @@
 
 namespace maxwell {
 
-class SuggestionAgentClientImpl;
+class ProposalPublisherImpl;
 
 struct ProposalRecord {
-  ProposalRecord(SuggestionAgentClientImpl* source, ProposalPtr proposal)
+  ProposalRecord(ProposalPublisherImpl* source, ProposalPtr proposal)
       : source(source),
         timestamp(ftl::TimePoint::Now()),
         proposal(std::move(proposal)) {}
 
-  SuggestionAgentClientImpl* source;
+  ProposalPublisherImpl* source;
   ftl::TimePoint timestamp;
   ProposalPtr proposal;
 };

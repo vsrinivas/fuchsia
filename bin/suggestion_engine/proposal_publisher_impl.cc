@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
+#include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
 
 namespace maxwell {
 
-void SuggestionAgentClientImpl::Propose(ProposalPtr proposal) {
+void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
   const size_t old_size = proposals_.size();
   AgentSuggestionRecord* record = &proposals_[proposal->id];
 
@@ -17,7 +17,7 @@ void SuggestionAgentClientImpl::Propose(ProposalPtr proposal) {
     OnChangeProposal(std::move(proposal), record);
 }
 
-void SuggestionAgentClientImpl::Remove(const fidl::String& proposal_id) {
+void ProposalPublisherImpl::Remove(const fidl::String& proposal_id) {
   const auto record = proposals_.find(proposal_id);
 
   if (record != proposals_.end()) {
@@ -33,26 +33,25 @@ void SuggestionAgentClientImpl::Remove(const fidl::String& proposal_id) {
   }
 }
 
-void SuggestionAgentClientImpl::GetAll(const GetAllCallback& callback) {
+void ProposalPublisherImpl::GetAll(const GetAllCallback& callback) {
   // TODO
 }
 
-void SuggestionAgentClientImpl::RegisterAskHandler(
+void ProposalPublisherImpl::RegisterAskHandler(
     fidl::InterfaceHandle<AskHandler> ask_handler) {
   repo_->AddAskHandler(std::move(ask_handler));
 }
 
-void SuggestionAgentClientImpl::BindingSet::OnConnectionError(
-    fidl::Binding<SuggestionAgentClient>* binding) {
-  maxwell::BindingSet<SuggestionAgentClient>::OnConnectionError(binding);
+void ProposalPublisherImpl::BindingSet::OnConnectionError(
+    fidl::Binding<ProposalPublisher>* binding) {
+  maxwell::BindingSet<ProposalPublisher>::OnConnectionError(binding);
 
   if (impl_->ShouldEraseSelf())
     impl_->EraseSelf();
 }
 
-void SuggestionAgentClientImpl::OnChangeProposal(
-    ProposalPtr proposal,
-    AgentSuggestionRecord* record) {
+void ProposalPublisherImpl::OnChangeProposal(ProposalPtr proposal,
+                                             AgentSuggestionRecord* record) {
   // TODO(rosswang): dedup
 
   record->suggestion_prototype->second->proposal = std::move(proposal);
@@ -62,7 +61,7 @@ void SuggestionAgentClientImpl::OnChangeProposal(
   }
 }
 
-void SuggestionAgentClientImpl::EraseSelf() {
+void ProposalPublisherImpl::EraseSelf() {
   repo_->RemoveSourceClient(component_url_);
 }
 

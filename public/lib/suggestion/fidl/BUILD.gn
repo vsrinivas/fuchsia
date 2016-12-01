@@ -8,7 +8,7 @@ fidl("suggestion") {
   sources = [
     "ask_handler.fidl",
     "proposal.fidl",
-    "suggestion_agent_client.fidl",
+    "proposal_publisher.fidl",
     "suggestion_engine.fidl",
   ]
 

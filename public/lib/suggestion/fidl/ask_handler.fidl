@@ -24,7 +24,7 @@ interface AskHandler {
   // likewise be auto-dismissed).
   //
   // Alternately, the client is free to call Propose on its
-  // SuggestionAgentClient to make persistent Proposals. However, these
+  // ProposalPublisher to make persistent Proposals. However, these
   // proposals may be subject to more stringent filtering by the Suggestion
   // Engine. TODO(rosswang): spec/revisit.
   Ask(UserInput query) => (array<Proposal> proposals);

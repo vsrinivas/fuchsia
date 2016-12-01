@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include "apps/maxwell/services/context/client.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_agent_client.fidl.h"
+#include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/src/document_store/documents.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -103,8 +103,8 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
             app_context_
                 ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
         in_(this),
-        out_(app_context_->ConnectToEnvironmentService<
-             maxwell::SuggestionAgentClient>()),
+        out_(app_context_
+                 ->ConnectToEnvironmentService<maxwell::ProposalPublisher>()),
         ask_(this) {
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
@@ -150,7 +150,7 @@ class ModuleSuggesterAgentApp : public maxwell::ContextSubscriberLink,
 
   maxwell::ContextSubscriberPtr maxwell_context_;
   fidl::Binding<maxwell::ContextSubscriberLink> in_;
-  maxwell::SuggestionAgentClientPtr out_;
+  maxwell::ProposalPublisherPtr out_;
   fidl::Binding<maxwell::AskHandler> ask_;
 };
 

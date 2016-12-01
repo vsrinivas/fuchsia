@@ -74,7 +74,7 @@ class Proposinator {
   void Remove(const std::string& id) { out_->Remove(id); }
 
  protected:
-  maxwell::SuggestionAgentClientPtr out_;
+  maxwell::ProposalPublisherPtr out_;
 };
 
 // maintains the number of proposals specified by the context field "n"
@@ -187,8 +187,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
         fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
       context_engine()->RegisterSuggestionAgent(url, std::move(request));
     });
-    agent_host->AddService<maxwell::SuggestionAgentClient>([this, url](
-        fidl::InterfaceRequest<maxwell::SuggestionAgentClient> request) {
+    agent_host->AddService<maxwell::ProposalPublisher>([this, url](
+        fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
       suggestion_engine_->RegisterSuggestionAgent(url, std::move(request));
     });
     StartAgent(url, std::move(agent_host));

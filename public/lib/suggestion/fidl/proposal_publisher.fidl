@@ -9,8 +9,8 @@ import "apps/maxwell/services/suggestion/proposal.fidl";
 
 // A service enabling Agents to contribute Proposals proactively to the
 // Suggestion engine.
-[ServiceName="maxwell.SuggestionAgentClient"]
-interface SuggestionAgentClient {
+[ServiceName="maxwell.ProposalPublisher"]
+interface ProposalPublisher {
   // Includes the given |proposal| in the list from this Agent. Proposals are
   // identified by |proposal.id|, and are namespaced by the Agent's ID.
   // If a Proposal with the same id is already present, it is overwritten.

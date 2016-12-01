@@ -7,7 +7,7 @@
 #include <rapidjson/document.h>
 
 #include "apps/maxwell/services/context/client.fidl.h"
-#include "apps/maxwell/services/suggestion/suggestion_agent_client.fidl.h"
+#include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -24,8 +24,8 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
             app_context_
                 ->ConnectToEnvironmentService<maxwell::ContextSubscriber>()),
         in_(this),
-        out_(app_context_->ConnectToEnvironmentService<
-             maxwell::SuggestionAgentClient>()) {
+        out_(app_context_
+                 ->ConnectToEnvironmentService<maxwell::ProposalPublisher>()) {
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> in_handle;
     in_.Bind(&in_handle);
     maxwell_context_->Subscribe("/location/region", "json:string",
@@ -80,7 +80,7 @@ class IdeasAgentApp : public maxwell::agents::IdeasAgent,
 
   maxwell::ContextSubscriberPtr maxwell_context_;
   fidl::Binding<maxwell::ContextSubscriberLink> in_;
-  maxwell::SuggestionAgentClientPtr out_;
+  maxwell::ProposalPublisherPtr out_;
 };
 
 }  // namespace

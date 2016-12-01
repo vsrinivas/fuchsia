@@ -10,7 +10,7 @@
 #include "apps/maxwell/src/suggestion_engine/filter.h"
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
 #include "apps/maxwell/src/suggestion_engine/proposal_record.h"
-#include "apps/maxwell/src/suggestion_engine/suggestion_agent_client_impl.h"
+#include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 namespace maxwell {
@@ -19,7 +19,7 @@ class Repo {
  public:
   Repo(ProposalFilter filter) : next_channel_(filter), filter_(filter) {}
 
-  SuggestionAgentClientImpl* GetOrCreateSourceClient(
+  ProposalPublisherImpl* GetOrCreateSourceClient(
       const std::string& component_url);
 
   void RemoveSourceClient(const std::string& component_url) {
@@ -69,7 +69,7 @@ class Repo {
     return std::to_string(id++);
   }
 
-  std::unordered_map<std::string, std::unique_ptr<SuggestionAgentClientImpl>>
+  std::unordered_map<std::string, std::unique_ptr<ProposalPublisherImpl>>
       sources_;
   // indexed by suggestion ID
   std::unordered_map<std::string, ProposalRecordPtr> suggestions_;

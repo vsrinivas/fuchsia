@@ -124,7 +124,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   void RegisterSuggestionAgent(
       const fidl::String& url,
-      fidl::InterfaceRequest<SuggestionAgentClient> client) override {
+      fidl::InterfaceRequest<ProposalPublisher> client) override {
     repo_->GetOrCreateSourceClient(url)->AddBinding(std::move(client));
   }
 
