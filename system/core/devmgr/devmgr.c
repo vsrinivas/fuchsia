@@ -132,7 +132,7 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
 }
 
 static const char* argv_netsvc[] = { "/boot/bin/netsvc" };
-static const char* argv_mxsh[] = { "/boot/bin/mxsh" };
+static const char* argv_sh[] = { "/boot/bin/sh" };
 static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun", "/system/autorun" };
 static const char* argv_appmgr[] = { "/system/bin/application_manager" };
 
@@ -166,12 +166,12 @@ int service_starter(void* arg) {
 
 #if !_MX_KERNEL_HAS_SHELL
 static int console_starter(void* arg) {
-    // if no kernel shell on serial uart, start a mxsh there
+    // if no kernel shell on serial uart, start a sh there
     printf("devmgr: shell startup\n");
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open("/dev/class/misc/console", O_RDWR)) >= 0) {
-            devmgr_launch(svcs_job_handle, "mxsh:console", countof(argv_mxsh), argv_mxsh, fd, 0, 0);
+            devmgr_launch(svcs_job_handle, "sh:console", countof(argv_sh), argv_sh, fd, 0, 0);
             break;
         }
         mx_nanosleep(MX_MSEC(100));
@@ -201,7 +201,7 @@ static mx_status_t console_device_added(int dirfd, const char* name, void* cooki
             if (i == 0 && switch_to_first_vc()) {
                 ioctl_console_set_active_vc(fd);
             }
-            devmgr_launch(svcs_job_handle, "mxsh:vc", 1, argv_mxsh, fd, 0, 0);
+            devmgr_launch(svcs_job_handle, "sh:vc", countof(argv_sh), argv_sh, fd, 0, 0);
         }
     }
 
