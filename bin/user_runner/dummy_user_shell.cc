@@ -149,6 +149,11 @@ class DummyUserShellApp
     story_provider_watcher_binding_.Bind(GetProxy(&watcher));
     story_provider_->Watch(std::move(watcher));
 
+    story_provider_->GetStoryInfo(
+        "X", [](modular::StoryInfoPtr story_info) {
+               FTL_LOG(INFO) << "StoryInfo for X is null: " << story_info.is_null();
+             });
+
     story_provider_->PreviousStories([this](fidl::Array<fidl::String> stories) {
       if (stories.size() > 0) {
         std::shared_ptr<unsigned int> count = std::make_shared<unsigned int>(0);
@@ -157,16 +162,21 @@ class DummyUserShellApp
             this, story_id, count, max = stories.size()
           ](modular::StoryInfoPtr story_info) {
             ++*count;
-            FTL_LOG(INFO) << "Previous story " << *count << " of " << max << " "
-                          << story_id << " " << story_info->url;
+            if (!story_info.is_null()) {
+              FTL_LOG(INFO) << "Previous story " << *count << " of " << max << " "
+                            << story_id << " " << story_info->url;
+            } else {
+              FTL_LOG(INFO) << "Previous story " << *count << " of " << max << " "
+                            << story_id << " was deleted";
+            }
 
             if (*count == max) {
-              CreateStory(settings_.first_module);
+              CreateStory(settings_.first_module, true);
             }
           });
         }
       } else {
-        CreateStory(settings_.first_module);
+        CreateStory(settings_.first_module, true);
       }
     });
   }
@@ -208,18 +218,29 @@ class DummyUserShellApp
 
       // When the story is done, we start the next one.
       mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this]() { CreateStory(settings_.second_module); },
+          [this]() { CreateStory(settings_.second_module, false); },
           ftl::TimeDelta::FromSeconds(20));
     });
   }
 
-  void CreateStory(const fidl::String& url) {
+  void CreateStory(const fidl::String& url, const bool keep) {
     story_provider_->CreateStory(url, fidl::GetProxy(&story_controller_));
-    story_controller_->GetInfo([this](modular::StoryInfoPtr story_info) {
+    story_controller_->GetInfo([this, keep](modular::StoryInfoPtr story_info) {
       story_info_ = std::move(story_info);
       FTL_LOG(INFO) << "DummyUserShell START " << story_info_->id << " "
                     << story_info_->url;
       InitStory();
+
+      if (!keep) {
+        mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+            [this]() {
+              FTL_LOG(INFO) << "DummyUserShell DELETE " << story_info_->id;
+              story_provider_->DeleteStory(story_info_->id, [this]() {
+                  FTL_LOG(INFO) << "DummyUserShell DELETE DONE";
+                });
+            },
+            ftl::TimeDelta::FromSeconds(20));
+      }
     });
   }
 
@@ -267,6 +288,7 @@ class DummyUserShellApp
 
     story_provider_->GetStoryInfo(
         story_info_->id, [this](modular::StoryInfoPtr story_info) {
+          FTL_DCHECK(!story_info.is_null());
           FTL_DCHECK(story_info->is_running == true);
           story_controller_->Stop([this]() {
             TearDownStoryController();
@@ -277,6 +299,7 @@ class DummyUserShellApp
                   story_provider_->GetStoryInfo(
                       story_info_->id,
                       [this](modular::StoryInfoPtr story_info) {
+                        FTL_DCHECK(!story_info.is_null());
                         FTL_DCHECK(story_info->is_running == false);
                         ResumeStory();
                       });

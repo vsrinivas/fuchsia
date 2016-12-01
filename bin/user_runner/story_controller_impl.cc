@@ -62,6 +62,11 @@ void StoryControllerImpl::Start(
 
 // |StoryController|
 void StoryControllerImpl::Stop(const StopCallback& done) {
+  if (!story_data_->story_info->is_running) {
+    done();
+    return;
+  }
+
   TearDownStory([this, done]() {
     NotifyStoryWatchers(&StoryWatcher::OnStop);
     done();

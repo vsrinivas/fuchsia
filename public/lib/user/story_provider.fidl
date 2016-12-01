@@ -9,33 +9,39 @@ import "apps/modular/services/user/story_info.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // UserRunner implementation creates an instance of this service and
-// passes it to the UserShell service so it can create a new story by
-// URL and to get a list of previously run stories which can be
-// resumed.
+// passes it to the UserShell service so it can operate on stories for
+// the user.
 //
-// TODO(mesch): If |StoryProvider| is closed, all associated |Story|
-// objects will have an undefined behavior. Actually they will crash
-// because the user runner impl gets deleted and the story impl still
-// accesses it. Apply same pattern as for Story/Module/Link here.
+// If |StoryProvider| is closed, all associated |StoryController|
+// instances are closed too. However, running stories are not properly
+// stopped, so it's a bad idea to close the story provider connection
+// while a story is still running.
 interface StoryProvider {
-  // Creates a new story by running the module at |url|. Gives control
-  // over the newly created story through a StoryController.
+  // Creates a new story running the module at |url|. Gives control
+  // over the newly created story through a StoryController. The
+  // module won't actually be run until Start() is invoked on the
+  // story controller.
   CreateStory(string url, StoryController& story);
 
-  // Delete an existing story from the list of known stories. Returns when the
-  // request has been submitted to the Ledger.
+  // Deletes an existing story from the list of known stories. Returns
+  // when the delete notification is received from the Ledger. If the
+  // story deleted is running, it is first stopped and its story
+  // controller disconnected. If the story ID doesn't exist, silently
+  // does nothing.
   DeleteStory(string story_id) => ();
 
-  // Request detail information on the given story.
-  GetStoryInfo(string story_id) => (StoryInfo info);
+  // Request detail information on the given story. If the story
+  // doesn't exist, returns null.
+  GetStoryInfo(string story_id) => (StoryInfo? info);
 
   // Obtains a controller for a previously run story identified by its
-  // story ID. Obtaining the controller doesn't run it yet.
+  // story ID. Obtaining the controller doesn't run it yet. If the
+  // story doesn't exist, the interface request is closed.
   ResumeStory(string story_id, StoryController& story);
 
-  // Returns IDs of all previously run stories for the user. More
-  // information about the stories can be retrieved using
-  // GetStoryInfo(), or by ResumeStoryBy()+StoryController.GetInfo().
+  // Returns IDs of known stories. More information about the stories
+  // can be retrieved using GetStoryInfo(), or by ResumeStory(), then
+  // StoryController.GetInfo().
   PreviousStories() => (array<string> story_ids);
 
   // Registers a listener for changes in the story collection.
@@ -45,7 +51,7 @@ interface StoryProvider {
 // Used by the client of StoryProvider (UserShell) to interact with a
 // single story. Created by StoryProvider.
 interface StoryController {
-  // Gets all information associated with the story.
+  // Gets information associated with the story.
   GetInfo() => (StoryInfo info);
 
   // Stores extra information associated with the story, like title,
@@ -58,10 +64,11 @@ interface StoryController {
   Start(mozart.ViewOwner& view_owner);
 
   // Gets a connection to the Link to the root module. Only available
-  // while the story is running, otherwise gets closed.
+  // when the story is running. If requested earlier, gets queued
+  // until the story is started.
   GetLink(Link& link);
 
-  // Stops this |Story| if it is running, else does nothing. Returns
+  // Stops this story if it is running, else does nothing. Returns
   // when the story is stopped.
   Stop() => ();
 
@@ -91,10 +98,10 @@ interface StoryWatcher {
   OnError();
 };
 
-// This interface is meant to be implemented by a client of StoryProvider.
+// This interface is implemented by clients of StoryProvider.
 //
-// These calls are for a story event happening on ANY device, not just the
-// current device.
+// These calls are for a story event happening on ANY device, not just
+// the current device.
 //
 // No service name: created by the client.
 //

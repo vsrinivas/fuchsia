@@ -38,9 +38,9 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   ~StoryProviderImpl() override = default;
 
-  // Adds a non-lifecycle-governing binding to this |StoryProvider|. (The
-  // principal binding established in the constructor governs the lifespan of
-  // this instance.)
+  // Adds a non-lifecycle-governing binding to this |StoryProvider|.
+  // The principal binding established in the constructor governs the
+  // lifespan of this instance.
   void AddAuxiliaryBinding(fidl::InterfaceRequest<StoryProvider> request) {
     aux_bindings_.AddBinding(this, std::move(request));
   }
@@ -49,7 +49,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // controller.
   void AddController(const std::string& story_id, StoryControllerImpl* story_controller);
 
-  // Removes story controller impls no longer needed.
+  // Removes story controller impls no longer needed. Also called by
+  // the empty binding set handler of StoryControllerImpl.
   void PurgeControllers();
 
   // Obtains the StoryData for an existing story from the ledger.
@@ -66,7 +67,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
  private:
   // |StoryProvider|
-  // Obtains the StoryInfo for an existing story from the ledger.
   void GetStoryInfo(const fidl::String& story_id,
                     const GetStoryInfoCallback& story_info_callback) override;
 
@@ -93,14 +93,26 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // |PageWatcher|
   void OnInitialState(fidl::InterfaceHandle<ledger::PageSnapshot> page,
                       const OnInitialStateCallback& cb) override;
+
+  // |PageWatcher|
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& cb) override;
 
   // Used by CreateStory() and ResumeStory(). Followed eventually by
-  // AddController().
-  void ReserveController(
+  // AddController(). See impl for details.
+  void PendControllerAdd(
       const std::string& story_id,
       fidl::InterfaceRequest<StoryController> story_controller_request);
+
+  // Used by DeleteStory(). Followed eventually by
+  // DisposeController(). See impl for details.
+  void PendControllerDelete(
+      const std::string& story_id,
+      const std::function<void()>& delete_callback);
+
+  // Properly disposes the story controller for the given story by
+  // first stopping its story if its running. See impl for details.
+  void DisposeController(const fidl::String& story_id);
 
   ApplicationEnvironmentPtr environment_;
   StrongBinding<StoryProvider> binding_;
@@ -120,12 +132,19 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // by an instance of this struct, and its completion is marked by
   // setting the controller.
   //
+  // Likewise, between a request to delete a controller and it being
+  // stopped and ready to delete, more requests can come in, which are
+  // queued up in the same way. Requests to delete trump requests to
+  // connect, so if a connect request is received while a delete is
+  // pending, it won't get connected.
+  //
   // Instances of this struct are held in a unique_ptr<> to be sure
   // that we never need to move them.
   struct StoryControllerEntry {
     std::vector<fidl::InterfaceRequest<StoryController>> requests;
     std::unique_ptr<StoryControllerImpl> impl;
     bool deleted{};
+    std::vector<DeleteStoryCallback> deleted_callbacks;
   };
   std::unordered_map<std::string,
                      std::unique_ptr<StoryControllerEntry>> story_controllers_;

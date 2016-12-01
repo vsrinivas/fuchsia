@@ -42,8 +42,9 @@ class StoryControllerImpl : public StoryController,
 
   ~StoryControllerImpl() override = default;
 
+  // Used by StoryProviderImpl.
   void Connect(fidl::InterfaceRequest<StoryController> story_controller_request);
-
+  void StopController(const StopCallback& done) { Stop(done); }
   size_t bindings_size() const { return bindings_.size(); }
 
  private:
