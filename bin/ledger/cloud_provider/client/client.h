@@ -12,6 +12,7 @@
 #include "apps/ledger/src/cloud_provider/client/command.h"
 #include "apps/ledger/src/cloud_provider/client/doctor_command.h"
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
+#include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/modular/lib/app/application_context.h"
@@ -35,6 +36,7 @@ class ClientApp {
   void Start();
 
   ftl::CommandLine command_line_;
+  configuration::Configuration configuration_;
   std::unique_ptr<modular::ApplicationContext> context_;
   std::unique_ptr<ledger::NetworkService> network_service_;
   std::unique_ptr<firebase::Firebase> firebase_;

@@ -8,6 +8,7 @@
 
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_view.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
@@ -59,12 +60,20 @@ void hint(ftl::StringView hint) {
       << std::endl;
 }
 
+std::string FirebaseUrlFromId(const std::string& firebase_id) {
+  return ftl::Concatenate({"https://", firebase_id, ".firebaseio.com/.json"});
+}
+
 }  // namespace
 
 DoctorCommand::DoctorCommand(ledger::NetworkService* network_service,
+                             const std::string& firebase_id,
                              CloudProvider* cloud_provider)
-    : network_service_(network_service), cloud_provider_(cloud_provider) {
+    : network_service_(network_service),
+      firebase_id_(firebase_id),
+      cloud_provider_(cloud_provider) {
   FTL_DCHECK(network_service_);
+  FTL_DCHECK(!firebase_id_.empty());
   FTL_DCHECK(cloud_provider_);
 }
 
@@ -163,6 +172,12 @@ void DoctorCommand::CheckObjects() {
 
         if (status != Status::OK) {
           error(status);
+          hint(ftl::Concatenate(
+              {"It seems that we can't access the Firebase instance. "
+               "Please verify that you can access ",
+               FirebaseUrlFromId(firebase_id_),
+               " on your host machine. If not, refer to the User Guide for the "
+               "recommended Firebase configuration."}));
           on_done_();
           return;
         }
@@ -217,6 +232,12 @@ void DoctorCommand::CheckGetCommits(Commit commit) {
               Status status, std::vector<Record> records) {
         if (status != Status::OK) {
           error(status);
+          hint(
+              "It seems that we can't query Firebase for commits. "
+              "This might indicate that database indices are not configured "
+              "or their configuration is out of date. "
+              "Please refer to the User Guide for the recommended Firebase "
+              "configuration.");
           on_done_();
           return;
         }

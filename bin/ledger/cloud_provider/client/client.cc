@@ -60,8 +60,9 @@ std::unique_ptr<Command> ClientApp::CommandFromArgs(
 
   // `doctor` is the default command.
   if (args.empty() || (args[0] == "doctor" && args.size() == 1)) {
-    return std::make_unique<DoctorCommand>(network_service_.get(),
-                                           cloud_provider_.get());
+    return std::make_unique<DoctorCommand>(
+        network_service_.get(), configuration_.sync_params.firebase_id,
+        cloud_provider_.get());
   }
 
   return nullptr;
@@ -75,10 +76,9 @@ bool ClientApp::Initialize() {
     return false;
   }
 
-  configuration::Configuration configuration;
   if (!configuration::ConfigurationEncoder::Decode(
           configuration::kDefaultConfigurationFile.ToString(),
-          &configuration)) {
+          &configuration_)) {
     std::cout << "Error: unable to read Ledger configuration at: "
               << configuration::kDefaultConfigurationFile << std::endl;
     std::cout << "Hint: run `configure_ledger --help` to learn about "
@@ -86,7 +86,7 @@ bool ClientApp::Initialize() {
     return false;
   }
 
-  if (!configuration.use_sync) {
+  if (!configuration_.use_sync) {
     std::cout << "Error: Cloud sync is disabled in the Ledger configuration."
               << std::endl;
     std::cout << "Hint: pass --firebase_id and --firebase_prefix to "
@@ -95,10 +95,10 @@ bool ClientApp::Initialize() {
   }
 
   std::cout << "Cloud Sync Settings:" << std::endl;
-  std::cout << " - firebase id: " << configuration.sync_params.firebase_id
+  std::cout << " - firebase id: " << configuration_.sync_params.firebase_id
             << std::endl;
   std::cout << " - firebase prefix: "
-            << configuration.sync_params.firebase_prefix << std::endl;
+            << configuration_.sync_params.firebase_prefix << std::endl;
   std::cout << std::endl;
 
   network_service_ = std::make_unique<ledger::NetworkServiceImpl>([this] {
@@ -106,8 +106,8 @@ bool ClientApp::Initialize() {
   });
 
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
-      network_service_.get(), configuration.sync_params.firebase_id,
-      GetFirebasePrefix(configuration.sync_params.firebase_prefix,
+      network_service_.get(), configuration_.sync_params.firebase_id,
+      GetFirebasePrefix(configuration_.sync_params.firebase_prefix,
                         RandomString()));
   cloud_provider_ = std::make_unique<CloudProviderImpl>(firebase_.get());
 

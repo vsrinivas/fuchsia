@@ -16,6 +16,7 @@ namespace cloud_provider {
 class DoctorCommand : public Command, public CommitWatcher {
  public:
   DoctorCommand(ledger::NetworkService* network_service,
+                const std::string& firebase_id,
                 CloudProvider* cloud_provider);
   ~DoctorCommand();
 
@@ -49,6 +50,7 @@ class DoctorCommand : public Command, public CommitWatcher {
   void Done();
 
   ledger::NetworkService* const network_service_;
+  std::string firebase_id_;
   CloudProvider* const cloud_provider_;
   ftl::Closure on_done_;
   std::function<void(Commit, std::string)> on_remote_commit_;
