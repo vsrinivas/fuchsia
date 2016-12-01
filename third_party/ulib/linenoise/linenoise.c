@@ -308,7 +308,7 @@ static int getColumns(int ifd, int ofd) {
     ioctl_console_dimensions_t dims;
     ssize_t r = mxio_ioctl(0, IOCTL_CONSOLE_GET_DIMENSIONS, NULL, 0, &dims,
         sizeof(dims));
-    if (r == sizeof(dims)) {
+    if (r != sizeof(dims)) {
 #else
     struct winsize ws;
 
@@ -824,7 +824,7 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
 
     if (write(l.ofd,prompt,l.plen) == -1) return -1;
     while(1) {
-        int c;
+        char c;
         int nread;
         char seq[3];
 
@@ -835,11 +835,12 @@ static int linenoiseEdit(int stdin_fd, int stdout_fd, char *buf, size_t buflen, 
          * there was an error reading from fd. Otherwise it will return the
          * character that should be handled next. */
         if (c == 9 && completionCallback != NULL) {
-            c = completeLine(&l);
+            int r = completeLine(&l);
             /* Return on errors */
-            if (c < 0) return l.len;
+            if (r < 0) return l.len;
             /* Read next character when 0 */
-            if (c == 0) continue;
+            if (r == 0) continue;
+            c = r;
         }
 
         switch(c) {
