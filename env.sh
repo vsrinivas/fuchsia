@@ -630,3 +630,37 @@ function ftrace() {
 
   "${FUCHSIA_DIR}/apps/tracing/scripts/trace.sh" "$@"
 }
+
+### fmkbootloader: builds the Fuchsia bootloader and places it on an external
+### drive
+
+function fmkbootloader-usage() {
+  cat >&2 <<END
+Usage: fmkbootloader <root of external drive>
+Builds Fuchsia bootloader and copies it to a drive of your choice.
+END
+}
+
+function fmkbootloader() {
+  if [[ $# -ne 1 ]]; then
+    fmkbootloader-usage
+    return 1
+  fi
+
+  fcheck || return 1
+
+  if [[ ! -d $1 ]]; then
+    echo >&2 "Drive at $1 does not appear to be mounted."
+    return 1
+  fi
+
+  local TARGET_DIR=$1/EFI/BOOT
+  (
+    set -e
+    mbuild
+    mkdir -p ${TARGET_DIR}
+    cp ${MAGENTA_BUILD_DIR}/bootloader/bootx64.efi \
+      ${TARGET_DIR}/BOOTX64.EFI
+  ) && \
+    echo "Bootloader loaded to $1"
+}
