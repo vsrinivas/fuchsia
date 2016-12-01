@@ -8,5 +8,6 @@ group("examples") {
     "counter_flutter",
     "hello_world_cpp",
     "hello_world_flutter",
+    "https_flutter",
   ]
 }
