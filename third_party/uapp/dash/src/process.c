@@ -23,6 +23,50 @@ static mx_handle_t get_mxio_job(void) {
     return job;
 }
 
+static mx_handle_t get_application_environment(void) {
+    static mx_handle_t application_environment;
+    if (!application_environment) {
+        application_environment =
+            mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
+    }
+    return application_environment;
+}
+
+typedef struct {
+    uint32_t header_size;
+    uint32_t header_version;
+    uint32_t message_ordinal;
+    uint32_t message_flags;
+    uint32_t message_size;
+    uint32_t message_version;
+    uint32_t handle;
+    uint32_t padding;
+} dup_message_t;
+
+static mx_status_t duplicate_application_environment(mx_handle_t application_environment, mx_handle_t* dup_handle) {
+    dup_message_t dm;
+    dm.header_size = 16;
+    dm.header_version = 0;
+    dm.message_ordinal = 0; // must match application_environment.fidl
+    dm.message_flags = 0;
+    dm.message_size = 16;
+    dm.message_version = 0;
+    dm.handle = 0;
+    dm.padding = 0;
+
+    mx_handle_t request_handle;
+    mx_status_t status;
+    if ((status = mx_channel_create(0, &request_handle, dup_handle)))
+        return status;
+
+    if ((status = mx_channel_write(application_environment, 0, &dm, sizeof(dm), &request_handle, 1))) {
+        mx_handle_close(request_handle);
+        mx_handle_close(*dup_handle);
+        *dup_handle = MX_HANDLE_INVALID;
+    }
+    return status;
+}
+
 static mx_status_t prepare_launch(launchpad_t* lp, const char* filename, int argc, const char* const* argv) {
     mx_status_t status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
     if (status != NO_ERROR)
@@ -55,6 +99,18 @@ static mx_status_t prepare_launch(launchpad_t* lp, const char* filename, int arg
     launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
     launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
     launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+
+    mx_handle_t application_environment = get_application_environment();
+    if (application_environment != MX_HANDLE_INVALID) {
+        mx_handle_t application_environment_for_child;
+        status = duplicate_application_environment(
+                application_environment, &application_environment_for_child);
+        if (status != NO_ERROR)
+            return status;
+        launchpad_add_handle(lp, application_environment_for_child,
+            MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
+    }
+
     return status;
 }
 
