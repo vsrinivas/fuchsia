@@ -12,7 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/mkfs_msdos.c \
     $(LOCAL_DIR)/newfs_msdos.c \
 
-MODULE_NAME := mkfs_msdosfs
+MODULE_NAME := mkfs-msdosfs
 
 MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 

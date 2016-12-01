@@ -15,7 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/fat.c \
     $(LOCAL_DIR)/main.c \
 
-MODULE_NAME := fsck_msdosfs
+MODULE_NAME := fsck-msdosfs
 
 MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
 
