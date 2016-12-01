@@ -35,6 +35,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/output.c \
     $(LOCAL_DIR)/src/output.h \
     $(LOCAL_DIR)/src/parser.c \
+    $(LOCAL_DIR)/src/process.c \
     $(LOCAL_DIR)/src/redir.c \
     $(LOCAL_DIR)/src/show.c \
     $(LOCAL_DIR)/src/signames.c \

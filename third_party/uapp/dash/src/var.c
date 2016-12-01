@@ -74,7 +74,7 @@ struct localvar_list {
 MKINIT struct localvar_list *localvar_stack;
 
 const char defpathvar[] =
-	"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
+	"PATH=/system/bin:/boot/bin";
 #ifdef IFS_BROKEN
 const char defifsvar[] = "IFS= \t\n";
 #else

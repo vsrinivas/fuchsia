@@ -90,8 +90,13 @@ extern char nullstr[1];		/* null string */
 #define __builtin_expect(x, expected_value) (x)
 #endif
 
+#ifndef likely
 #define likely(x)	__builtin_expect(!!(x),1)
+#endif
+
+#ifndef unlikely
 #define unlikely(x)	__builtin_expect(!!(x),0)
+#endif
 
 /*
  * Hack to calculate maximum length.

@@ -181,6 +181,9 @@ clear_traps(void)
 void
 setsignal(int signo)
 {
+#ifdef __Fuchsia__
+	return;
+#endif
 	int action;
 	char *t, tsig;
 	struct sigaction act;

@@ -41,6 +41,7 @@
  * Evaluate a command.
  */
 
+#include "process.h"
 #include "shell.h"
 #include "nodes.h"
 #include "syntax.h"
@@ -706,7 +707,6 @@ evalcommand(union node *cmd, int flags)
 	int pip[2];
 #endif
 	struct cmdentry cmdentry;
-	struct job *jp;
 	char *lastarg;
 	const char *path;
 	int spclbltin;
@@ -850,22 +850,16 @@ bail:
 
 	/* Execute the command. */
 	switch (cmdentry.cmdtype) {
-	default:
-		/* Fork off a child process if necessary. */
-		if (!(flags & EV_EXIT) || have_traps()) {
-			INTOFF;
-			jp = makejob(cmd, 1);
-			if (forkshell(jp, cmd, FORK_FG) != 0) {
-				status = waitforjob(jp);
-				INTON;
-				break;
-			}
-			FORCEINTON;
+	default: {
+		mx_handle_t process = MX_HANDLE_INVALID;
+		exitstatus = process_launch(argc, (const char* const*)argv, path, cmdentry.u.index, &process);
+		if (exitstatus) {
+			sh_error("Cannot create child process");
+			break;
 		}
-		listsetvar(varlist.list, VEXPORT|VSTACK);
-		shellexec(argv, path, cmdentry.u.index);
-		/* NOTREACHED */
-
+		exitstatus = process_await_termination(process);
+		break;
+	}
 	case CMDBUILTIN:
 		if (spclbltin > 0 || argc == 0) {
 			poplocalvars(1);
