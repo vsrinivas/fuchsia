@@ -4,6 +4,7 @@
 
 module media;
 
+import "apps/media/services/audio_renderer.fidl";
 import "apps/media/services/media_types.fidl";
 import "apps/media/services/media_player.fidl";
 import "apps/media/services/media_sink.fidl";
@@ -50,6 +51,10 @@ interface MediaService {
 
   // Creates a file reader.
   CreateFileReader(string path, SeekingReader& reader);
+
+  // Creates an audio renderer.
+  CreateAudioRenderer(AudioRenderer& audio_renderer,
+                      MediaRenderer& media_renderer);
 
   // Creates a video renderer.
   CreateVideoRenderer(VideoRenderer& video_renderer,

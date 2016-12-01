@@ -4,6 +4,7 @@
 
 #include "apps/media/src/media_service/media_service_impl.h"
 
+#include "apps/media/services/audio_server.fidl.h"
 #include "apps/media/src/media_service/file_reader_impl.h"
 #include "apps/media/src/media_service/media_decoder_impl.h"
 #include "apps/media/src/media_service/media_demux_impl.h"
@@ -76,6 +77,16 @@ void MediaServiceImpl::CreateFileReader(
     const fidl::String& path,
     fidl::InterfaceRequest<SeekingReader> reader) {
   AddProduct(FileReaderImpl::Create(path, std::move(reader), this));
+}
+
+void MediaServiceImpl::CreateAudioRenderer(
+    fidl::InterfaceRequest<AudioRenderer> audio_renderer,
+    fidl::InterfaceRequest<MediaRenderer> media_renderer) {
+  AudioServerPtr audio_service =
+      application_context()->ConnectToEnvironmentService<media::AudioServer>();
+
+  audio_service->CreateRenderer(std::move(audio_renderer),
+                                std::move(media_renderer));
 }
 
 void MediaServiceImpl::CreateVideoRenderer(

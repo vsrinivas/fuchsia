@@ -11,7 +11,6 @@
 #include "apps/media/examples/media_player/media_player_params.h"
 #include "apps/media/lib/timeline.h"
 #include "apps/media/services/audio_renderer.fidl.h"
-#include "apps/media/services/audio_server.fidl.h"
 #include "apps/media/services/media_service.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
@@ -67,14 +66,11 @@ MediaPlayerView::MediaPlayerView(
   media::MediaServicePtr media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
 
-  media::AudioServerPtr audio_service =
-      application_context->ConnectToEnvironmentService<media::AudioServer>();
-
   // Get an audio renderer.
   media::AudioRendererPtr audio_renderer;
   media::MediaRendererPtr audio_media_renderer;
-  audio_service->CreateRenderer(audio_renderer.NewRequest(),
-                                audio_media_renderer.NewRequest());
+  media_service->CreateAudioRenderer(audio_renderer.NewRequest(),
+                                     audio_media_renderer.NewRequest());
 
   // Get a video renderer.
   media::MediaRendererPtr video_media_renderer;
