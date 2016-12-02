@@ -170,6 +170,9 @@ class WriteStoryDataCall : public Transaction {
 
 class CreateStoryCall : public Transaction {
  public:
+  using FidlStringMap = StoryProviderImpl::FidlStringMap;
+  using FidlDocMap = StoryProviderImpl::FidlDocMap;
+
   CreateStoryCall(
       TransactionContainer* const container,
       ledger::Ledger* const ledger,
@@ -177,6 +180,8 @@ class CreateStoryCall : public Transaction {
       StoryProviderImpl* const story_provider_impl,
       const fidl::String& url,
       const std::string& story_id,
+      FidlStringMap extra_info,
+      FidlDocMap root_docs,
       UserLedgerRepositoryFactory* ledger_repository_factory)
       : Transaction(container),
         ledger_(ledger),
@@ -184,6 +189,8 @@ class CreateStoryCall : public Transaction {
         story_provider_impl_(story_provider_impl),
         url_(url),
         story_id_(story_id),
+        extra_info_(std::move(extra_info)),
+        root_docs_(std::move(root_docs)),
         ledger_repository_factory_(ledger_repository_factory) {
     ledger_->NewPage(GetProxy(&story_page_), [this](ledger::Status status) {
       story_page_->GetId([this](fidl::Array<uint8_t> story_page_id) {
@@ -195,14 +202,17 @@ class CreateStoryCall : public Transaction {
         story_info->id = story_id_;
         story_info->is_running = false;
         story_info->state = StoryState::NEW;
+        story_info->extra = std::move(extra_info_);
         story_info->extra.mark_non_null();
 
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
           ApplicationLauncherPtr launcher;
           environment_->GetApplicationLauncher(fidl::GetProxy(&launcher));
-          story_provider_impl_->AddController(story_id_, StoryControllerImpl::New(
+          auto* const story_controller = StoryControllerImpl::New(
               std::move(story_data_), story_provider_impl_, std::move(launcher),
-              ledger_repository_factory_));
+              ledger_repository_factory_);
+          story_controller->set_root_docs(std::move(root_docs_));
+          story_provider_impl_->AddController(story_id_, story_controller);
           Done();
         });
       });
@@ -215,6 +225,8 @@ class CreateStoryCall : public Transaction {
   StoryProviderImpl* const story_provider_impl_;  // not owned
   const fidl::String url_;
   const std::string story_id_;
+  FidlStringMap extra_info_;
+  FidlDocMap root_docs_;
   UserLedgerRepositoryFactory* const ledger_repository_factory_;  // not owned
 
   ledger::PagePtr story_page_;
@@ -541,8 +553,25 @@ void StoryProviderImpl::CreateStory(
   PendControllerAdd(story_id, std::move(story_controller_request));
   new CreateStoryCall(
       &transaction_container_, ledger_.get(), environment_.get(), this, url,
-      story_id, ledger_repository_factory_);
+      story_id, FidlStringMap(), FidlDocMap(), ledger_repository_factory_);
 }
+
+// |StoryProvider|
+void StoryProviderImpl::CreateStoryWithInfo(
+    const fidl::String& url,
+    FidlStringMap extra_info,
+    FidlDocMap root_docs,
+    fidl::InterfaceRequest<StoryController>
+    story_controller_request) {
+  const std::string story_id = MakeStoryId(&story_ids_, 10);
+  PendControllerAdd(story_id, std::move(story_controller_request));
+  new CreateStoryCall(
+      &transaction_container_, ledger_.get(), environment_.get(), this, url,
+      story_id, std::move(extra_info), std::move(root_docs),
+      ledger_repository_factory_);
+}
+
+
 
 // |StoryProvider|
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,

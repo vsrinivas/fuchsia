@@ -46,6 +46,7 @@ class StoryControllerImpl : public StoryController,
   void Connect(fidl::InterfaceRequest<StoryController> story_controller_request);
   void StopController(const StopCallback& done) { Stop(done); }
   size_t bindings_size() const { return bindings_.size(); }
+  void set_root_docs(FidlDocMap root_docs) { root_docs_ = std::move(root_docs); }
 
  private:
   // Constructor is private to ensure (by way of New()) that instances
@@ -100,6 +101,9 @@ class StoryControllerImpl : public StoryController,
   // If requests for root_ arrive before we have it, we store these
   // requests here.
   std::vector<fidl::InterfaceRequest<Link>> root_requests_;
+  // These docs are added to the root link before any requests are connected.
+  FidlDocMap root_docs_;
+
   ModuleControllerPtr module_;
 
   UserLedgerRepositoryFactory* const ledger_repository_factory_;

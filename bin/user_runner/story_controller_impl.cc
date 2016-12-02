@@ -154,6 +154,10 @@ void StoryControllerImpl::StartStory(
   story_context_->GetStory(GetProxy(&story_));
   story_->CreateLink("root", GetProxy(&root_));
 
+  if (!root_docs_.is_null()) {
+    root_->AddDocuments(std::move(root_docs_));
+  }
+
   // Connect pending requests to the new root_, so that it can be
   // configured before the new module uses it.
   for (auto& root_request : root_requests_) {

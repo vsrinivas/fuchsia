@@ -23,6 +23,14 @@ interface StoryProvider {
   // story controller.
   CreateStory(string url, StoryController& story);
 
+  // Like CreateStory, but with extra info and with values for the
+  // root link atomically set. Otherwise, if SetInfoExtra() is called
+  // separately on story controller, separate notifications are
+  // generated, which is inconvenient.
+  CreateStoryWithInfo(string url, map<string, string>? extra_info,
+                      map<string, document_store.Document>? root_docs,
+                      StoryController& story);
+
   // Deletes an existing story from the list of known stories. Returns
   // when the delete notification is received from the Ledger. If the
   // story deleted is running, it is first stopped and its story

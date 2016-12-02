@@ -224,7 +224,15 @@ class DummyUserShellApp
   }
 
   void CreateStory(const fidl::String& url, const bool keep) {
-    story_provider_->CreateStory(url, fidl::GetProxy(&story_controller_));
+    modular::FidlDocMap docs;
+    modular::DocumentEditor(url)
+        .SetProperty("created-with-info",
+                     modular::DocumentEditor::NewStringValue("yes"))
+        .Insert(&docs);
+
+    using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
+    story_provider_->CreateStoryWithInfo(url, FidlStringMap(), std::move(docs),
+                                         fidl::GetProxy(&story_controller_));
     story_controller_->GetInfo([this, keep](modular::StoryInfoPtr story_info) {
       story_info_ = std::move(story_info);
       FTL_LOG(INFO) << "DummyUserShell START " << story_info_->id << " "

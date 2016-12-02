@@ -65,6 +65,9 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
 
+  using FidlDocMap = fidl::Map<fidl::String, document_store::DocumentPtr>;
+  using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
+
  private:
   // |StoryProvider|
   void GetStoryInfo(const fidl::String& story_id,
@@ -74,6 +77,13 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   void CreateStory(const fidl::String& url,
                    fidl::InterfaceRequest<StoryController>
                        story_controller_request) override;
+
+  // |StoryProvider|
+  void CreateStoryWithInfo(const fidl::String& url,
+                           FidlStringMap extra_info,
+                           FidlDocMap root_docs,
+                           fidl::InterfaceRequest<StoryController>
+                           story_controller_request) override;
 
   // |StoryProvider|
   void DeleteStory(const fidl::String& story_id,
