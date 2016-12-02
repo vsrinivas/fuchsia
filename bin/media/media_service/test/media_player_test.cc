@@ -49,18 +49,18 @@ class MediaPlayerTester {
 
     SeekingReaderPtr fake_reader_ptr;
     fidl::InterfaceRequest<SeekingReader> reader_request =
-        GetProxy(&fake_reader_ptr);
+        fake_reader_ptr.NewRequest();
     fake_reader_.Bind(std::move(reader_request));
 
     MediaRendererPtr fake_renderer_ptr;
     fidl::InterfaceRequest<MediaRenderer> renderer_request =
-        GetProxy(&fake_renderer_ptr);
+        fake_renderer_ptr.NewRequest();
     fake_renderer_.Bind(std::move(renderer_request));
 
     FTL_LOG(INFO) << "creating player";
     media_service->CreatePlayer(std::move(fake_reader_ptr),
                                 std::move(fake_renderer_ptr), nullptr,
-                                GetProxy(&media_player_));
+                                media_player_.NewRequest());
     FTL_LOG(INFO) << "player created " << (media_player_ ? "ok" : "NULL PTR");
 
     HandleStatusUpdates();

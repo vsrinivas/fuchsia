@@ -59,7 +59,7 @@ void FlogViewer::ProcessLog(uint32_t log_id) {
   FTL_DCHECK(log_id != 0);
   FTL_DCHECK(service_);
 
-  service_->CreateReader(GetProxy(&reader_), log_id);
+  service_->CreateReader(reader_.NewRequest(), log_id);
 
   std::cout << std::endl;
   ProcessEntries(0);

@@ -192,7 +192,7 @@ MediaTimelineControllerImpl::ControlPointState::ControlPointState(
     MediaTimelineControllerImpl* parent,
     MediaTimelineControlPointPtr point)
     : parent_(parent), control_point_(std::move(point)) {
-  control_point_->GetTimelineConsumer(GetProxy(&consumer_));
+  control_point_->GetTimelineConsumer(consumer_.NewRequest());
 }
 
 MediaTimelineControllerImpl::ControlPointState::~ControlPointState() {}

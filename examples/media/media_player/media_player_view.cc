@@ -73,16 +73,16 @@ MediaPlayerView::MediaPlayerView(
   // Get an audio renderer.
   media::AudioRendererPtr audio_renderer;
   media::MediaRendererPtr audio_media_renderer;
-  audio_service->CreateRenderer(GetProxy(&audio_renderer),
-                                GetProxy(&audio_media_renderer));
+  audio_service->CreateRenderer(audio_renderer.NewRequest(),
+                                audio_media_renderer.NewRequest());
 
   // Get a video renderer.
   media::MediaRendererPtr video_media_renderer;
-  media_service->CreateVideoRenderer(GetProxy(&video_renderer_),
-                                     GetProxy(&video_media_renderer));
+  media_service->CreateVideoRenderer(video_renderer_.NewRequest(),
+                                     video_media_renderer.NewRequest());
 
   mozart::ViewOwnerPtr video_view_owner;
-  video_renderer_->CreateView(fidl::GetProxy(&video_view_owner));
+  video_renderer_->CreateView(video_view_owner.NewRequest());
   GetViewContainer()->AddChild(kVideoChildKey, std::move(video_view_owner));
 
   // We start with a non-zero size so we get a progress bar regardless of
@@ -98,12 +98,12 @@ MediaPlayerView::MediaPlayerView(
 
   // Get a file reader.
   media::SeekingReaderPtr reader;
-  media_service->CreateFileReader(params.path(), GetProxy(&reader));
+  media_service->CreateFileReader(params.path(), reader.NewRequest());
 
   // Create a player from all that stuff.
   media_service->CreatePlayer(
       std::move(reader), std::move(audio_media_renderer),
-      std::move(video_media_renderer), GetProxy(&media_player_));
+      std::move(video_media_renderer), media_player_.NewRequest());
 
   // Get the first frames queued up so we can show something.
   media_player_->Pause();

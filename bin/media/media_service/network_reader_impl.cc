@@ -35,7 +35,7 @@ NetworkReaderImpl::NetworkReaderImpl(
   network::NetworkServicePtr network_service =
       owner->ConnectToEnvironmentService<network::NetworkService>();
 
-  network_service->CreateURLLoader(GetProxy(&url_loader_));
+  network_service->CreateURLLoader(url_loader_.NewRequest());
 
   network::URLRequestPtr url_request(network::URLRequest::New());
   url_request->url = url_;

@@ -18,7 +18,7 @@ void Flog::Initialize(modular::ApplicationContext* application_context,
   // TODO(dalesat): Need a thread-safe proxy.
 
   FlogLoggerPtr flog_logger;
-  flog_service->CreateLogger(GetProxy(&flog_logger), label);
+  flog_service->CreateLogger(flog_logger.NewRequest(), label);
   logger_ = std::move(flog_logger);
 }
 

@@ -75,7 +75,7 @@ MediaSinkImpl::MediaSinkImpl(fidl::InterfaceHandle<MediaRenderer> renderer,
 
     renderer_->SetMediaType(MediaType::From(std::move(producer_stream_type)));
     MediaPacketConsumerPtr consumer;
-    renderer_->GetPacketConsumer(GetProxy(&consumer));
+    renderer_->GetPacketConsumer(consumer.NewRequest());
     producer_->Connect(std::move(consumer), [this]() {
       graph_.Prepare();
       ready_.Occur();

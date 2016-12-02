@@ -47,12 +47,12 @@ MediaPlayerImpl::MediaPlayerImpl(
 
   media_service_ = owner->ConnectToEnvironmentService<MediaService>();
 
-  media_service_->CreateDemux(std::move(reader), GetProxy(&demux_));
+  media_service_->CreateDemux(std::move(reader), demux_.NewRequest());
   HandleDemuxStatusUpdates();
 
-  media_service_->CreateTimelineController(GetProxy(&timeline_controller_));
-  timeline_controller_->GetControlPoint(GetProxy(&timeline_control_point_));
-  timeline_control_point_->GetTimelineConsumer(GetProxy(&timeline_consumer_));
+  media_service_->CreateTimelineController(timeline_controller_.NewRequest());
+  timeline_controller_->GetControlPoint(timeline_control_point_.NewRequest());
+  timeline_control_point_->GetTimelineConsumer(timeline_consumer_.NewRequest());
   HandleTimelineControlPointStatusUpdates();
 
   audio_renderer_ = std::move(audio_renderer);
@@ -321,7 +321,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
                                     const std::function<void()>& callback) {
   FTL_DCHECK(media_service_);
 
-  demux_->GetPacketProducer(index, GetProxy(&stream->encoded_producer_));
+  demux_->GetPacketProducer(index, stream->encoded_producer_.NewRequest());
 
   if (input_media_type->encoding != MediaType::kAudioEncodingLpcm &&
       input_media_type->encoding != MediaType::kVideoEncodingUncompressed) {
@@ -330,10 +330,10 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
     // Compressed media. Insert a decoder in front of the sink. The sink would
     // add its own internal decoder, but we want to test the decoder.
     media_service_->CreateDecoder(input_media_type.Clone(),
-                                  GetProxy(&stream->decoder_));
+                                  stream->decoder_.NewRequest());
 
     MediaPacketConsumerPtr decoder_consumer;
-    stream->decoder_->GetPacketConsumer(GetProxy(&decoder_consumer));
+    stream->decoder_->GetPacketConsumer(decoder_consumer.NewRequest());
 
     callback_joiner->Spawn();
     stream->encoded_producer_->Connect(std::move(decoder_consumer),
@@ -345,7 +345,7 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
     callback_joiner->Spawn();
     stream->decoder_->GetOutputType([this, stream, callback_joiner](
         MediaTypePtr output_type) {
-      stream->decoder_->GetPacketProducer(GetProxy(&stream->decoded_producer_));
+      stream->decoder_->GetPacketProducer(stream->decoded_producer_.NewRequest());
       CreateSink(stream, output_type, callback_joiner->NewCallback());
       callback_joiner->Complete();
     });
@@ -369,15 +369,15 @@ void MediaPlayerImpl::CreateSink(Stream* stream,
 
   media_service_->CreateSink(std::move(stream->renderer_),
                              input_media_type.Clone(),
-                             GetProxy(&stream->sink_));
+                             stream->sink_.NewRequest());
 
   MediaTimelineControlPointPtr timeline_control_point;
-  stream->sink_->GetTimelineControlPoint(GetProxy(&timeline_control_point));
+  stream->sink_->GetTimelineControlPoint(timeline_control_point.NewRequest());
 
   timeline_controller_->AddControlPoint(std::move(timeline_control_point));
 
   MediaPacketConsumerPtr consumer;
-  stream->sink_->GetPacketConsumer(GetProxy(&consumer));
+  stream->sink_->GetPacketConsumer(consumer.NewRequest());
 
   stream->decoded_producer_->Connect(std::move(consumer),
                                      [this, callback, stream]() {
