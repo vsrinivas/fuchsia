@@ -36,7 +36,7 @@ class PageImplTest : public ::testing::Test {
         std::make_unique<storage::fake::FakePageStorage>(page_id1_);
     fake_storage_ = fake_storage.get();
     manager_ = std::make_unique<PageManager>(std::move(fake_storage), nullptr);
-    manager_->BindPage(GetProxy(&page_ptr_));
+    manager_->BindPage(page_ptr_.NewRequest());
   }
 
   storage::PageId page_id1_;
@@ -437,7 +437,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
   message_loop_.Run();
 
   fidl::Array<EntryPtr> actual_entries;
@@ -483,7 +483,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
   message_loop_.Run();
 
   fidl::Array<fidl::Array<uint8_t>> actual_keys;
@@ -519,7 +519,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
   message_loop_.Run();
 
   ValuePtr actual_value;
@@ -556,7 +556,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
   message_loop_.Run();
 
   ValuePtr actual_value;
@@ -591,7 +591,7 @@ TEST_F(PageImplTest, SnapshotGetPartial) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(GetProxy(&snapshot), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
   message_loop_.Run();
 
   Status status;
@@ -612,7 +612,7 @@ TEST_F(PageImplTest, SnapshotGetPartial) {
 
 TEST_F(PageImplTest, ParallelPut) {
   PagePtr page_ptr2;
-  manager_->BindPage(GetProxy(&page_ptr2));
+  manager_->BindPage(page_ptr2.NewRequest());
 
   std::string key("some_key");
   std::string value1("a small value");
@@ -648,9 +648,9 @@ TEST_F(PageImplTest, ParallelPut) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(GetProxy(&snapshot1), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot1.NewRequest(), callback_getsnapshot);
   message_loop_.Run();
-  page_ptr2->GetSnapshot(GetProxy(&snapshot2), callback_getsnapshot);
+  page_ptr2->GetSnapshot(snapshot2.NewRequest(), callback_getsnapshot);
   message_loop_.Run();
 
   std::string actual_value1;

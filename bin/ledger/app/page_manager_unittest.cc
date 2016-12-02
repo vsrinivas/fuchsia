@@ -64,8 +64,8 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   EXPECT_FALSE(on_empty_called);
   PagePtr page1;
   PagePtr page2;
-  page_manager.BindPage(GetProxy(&page1));
-  page_manager.BindPage(GetProxy(&page2));
+  page_manager.BindPage(page1.NewRequest());
+  page_manager.BindPage(page2.NewRequest());
   page1.reset();
   page2.reset();
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -73,7 +73,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
 
   on_empty_called = false;
   PagePtr page3;
-  page_manager.BindPage(GetProxy(&page3));
+  page_manager.BindPage(page3.NewRequest());
   page3.reset();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
@@ -83,7 +83,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   page_manager.BindPageSnapshot(
       std::unique_ptr<storage::CommitContents>(
           new storage::test::CommitContentsEmptyImpl()),
-      GetProxy(&snapshot));
+      snapshot.NewRequest());
   snapshot.reset();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
@@ -95,7 +95,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
       std::make_unique<PageManager>(std::move(storage), nullptr);
 
   PagePtr page;
-  page_manager->BindPage(GetProxy(&page));
+  page_manager->BindPage(page.NewRequest());
   bool page_closed = false;
   page.set_connection_error_handler([this, &page_closed] {
     page_closed = true;
@@ -119,8 +119,8 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   EXPECT_FALSE(on_empty_called);
   PagePtr page1;
   PagePtr page2;
-  page_manager.BindPage(GetProxy(&page1));
-  page_manager.BindPage(GetProxy(&page2));
+  page_manager.BindPage(page1.NewRequest());
+  page_manager.BindPage(page2.NewRequest());
   page1->Put(convert::ToArray("key1"), convert::ToArray("value1"),
              [this](Status status) {
                EXPECT_EQ(Status::OK, status);
@@ -129,7 +129,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   PageWatcherPtr watcher;
-  fidl::InterfaceRequest<PageWatcher> watcher_request = GetProxy(&watcher);
+  fidl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
   page1->Watch(std::move(watcher), [this](Status status) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
@@ -163,7 +163,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
 
   bool called = false;
   PagePtr page;
-  page_manager.BindPage(GetProxy(&page));
+  page_manager.BindPage(page.NewRequest());
   page->GetId([this, &called](fidl::Array<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();
@@ -180,7 +180,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   // Check that a second call on the same manager is not delayed.
   called = false;
   page.reset();
-  page_manager.BindPage(GetProxy(&page));
+  page_manager.BindPage(page.NewRequest());
   page->GetId([this, &called](fidl::Array<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();

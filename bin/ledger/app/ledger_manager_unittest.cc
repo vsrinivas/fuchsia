@@ -99,13 +99,13 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   LedgerManager ledger_manager(std::move(storage), nullptr);
 
   LedgerPtr ledger;
-  ledger_manager.BindLedger(GetProxy(&ledger));
+  ledger_manager.BindLedger(ledger.NewRequest());
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 
   PagePtr page;
-  ledger->NewPage(GetProxy(&page),
+  ledger->NewPage(page.NewRequest(),
                   [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
@@ -115,7 +115,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   storage_ptr->ClearCalls();
 
   storage_ptr->get_page_fails = true;
-  ledger->GetRootPage(GetProxy(&page),
+  ledger->GetRootPage(page.NewRequest(),
                       [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
@@ -125,7 +125,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   storage_ptr->ClearCalls();
 
   storage::PageId id = RandomId();
-  ledger->GetPage(convert::ToArray(id), GetProxy(&page),
+  ledger->GetPage(convert::ToArray(id), page.NewRequest(),
                   [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   // TODO(etiennej): Once LE-87 is fixed, the number of create page calls
@@ -156,7 +156,7 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
           nullptr);
 
   LedgerPtr ledger;
-  ledger_manager->BindLedger(GetProxy(&ledger));
+  ledger_manager->BindLedger(ledger.NewRequest());
   bool ledger_closed = false;
   ledger.set_connection_error_handler([this, &ledger_closed] {
     ledger_closed = true;
@@ -175,18 +175,18 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
   FakeLedgerStorage* storage_ptr = storage.get();
   LedgerManager ledger_manager(std::move(storage), nullptr);
   LedgerPtr ledger;
-  ledger_manager.BindLedger(GetProxy(&ledger));
+  ledger_manager.BindLedger(ledger.NewRequest());
   PagePtr page;
   storage::PageId id = RandomId();
 
   uint8_t calls = 0;
-  ledger->GetPage(convert::ToArray(id), GetProxy(&page),
+  ledger->GetPage(convert::ToArray(id), page.NewRequest(),
                   [this, &calls](Status) {
                     calls++;
                     message_loop_.PostQuitTask();
                   });
   page.reset();
-  ledger->GetPage(convert::ToArray(id), GetProxy(&page),
+  ledger->GetPage(convert::ToArray(id), page.NewRequest(),
                   [this, &calls](Status) {
                     calls++;
                     message_loop_.PostQuitTask();

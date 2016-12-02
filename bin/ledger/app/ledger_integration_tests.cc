@@ -54,7 +54,7 @@ fidl::Array<uint8_t> PageGetId(PagePtr* page) {
 
 PageSnapshotPtr PageGetSnapshot(PagePtr* page) {
   PageSnapshotPtr snapshot;
-  (*page)->GetSnapshot(GetProxy(&snapshot),
+  (*page)->GetSnapshot(snapshot.NewRequest(),
                        [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page->WaitForIncomingResponse());
   return snapshot;
@@ -133,7 +133,7 @@ class LedgerApplicationTest : public test::TestWithMessageLoop {
     ::testing::Test::SetUp();
     thread_ = mtl::CreateThread(&task_runner_);
     task_runner_->PostTask(ftl::MakeCopyable(
-        [ this, request = GetProxy(&ledger_repository_factory_) ]() mutable {
+        [ this, request = ledger_repository_factory_.NewRequest() ]() mutable {
           factory_container_ =
               std::make_unique<LedgerRepositoryFactoryContainer>(
                   task_runner_, tmp_dir_.path(), std::move(request));
@@ -202,13 +202,13 @@ LedgerPtr LedgerApplicationTest::GetTestLedger() {
   Status status;
   LedgerRepositoryPtr repository;
   ledger_repository_factory_->GetRepository(
-      tmp_dir_.path(), GetProxy(&repository),
+      tmp_dir_.path(), repository.NewRequest(),
       [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
 
   LedgerPtr ledger;
-  repository->GetLedger(RandomArray(1), GetProxy(&ledger),
+  repository->GetLedger(RandomArray(1), ledger.NewRequest(),
                         [&status](Status s) { status = s; });
   EXPECT_TRUE(repository.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
@@ -219,7 +219,7 @@ PagePtr LedgerApplicationTest::GetTestPage() {
   fidl::InterfaceHandle<Page> page;
   Status status;
 
-  ledger_->NewPage(GetProxy(&page), [&status](Status s) { status = s; });
+  ledger_->NewPage(page.NewRequest(), [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
 
@@ -231,7 +231,7 @@ PagePtr LedgerApplicationTest::GetPage(const fidl::Array<uint8_t>& page_id,
   PagePtr page_ptr;
   Status status;
 
-  ledger_->GetPage(page_id.Clone(), GetProxy(&page_ptr),
+  ledger_->GetPage(page_id.Clone(), page_ptr.NewRequest(),
                    [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(expected_status, status);
@@ -257,7 +257,7 @@ TEST_F(LedgerApplicationTest, GetLedger) {
 TEST_F(LedgerApplicationTest, GetRootPage) {
   Status status;
   PagePtr page;
-  ledger_->GetRootPage(GetProxy(&page), [&status](Status s) { status = s; });
+  ledger_->GetRootPage(page.NewRequest(), [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
 }
@@ -330,7 +330,7 @@ TEST_F(LedgerApplicationTest, MultipleLedgerConnections) {
   // Create a page on the first connection.
   PagePtr page;
   Status status;
-  ledger_connection_1->NewPage(GetProxy(&page),
+  ledger_connection_1->NewPage(page.NewRequest(),
                                [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_connection_1.WaitForIncomingResponse());
   EXPECT_EQ(Status::OK, status);
@@ -700,7 +700,7 @@ TEST_F(LedgerApplicationTest, PageGetById) {
 TEST_F(LedgerApplicationTest, PageWatcherSimple) {
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
-  Watcher watcher(GetProxy(&watcher_ptr),
+  Watcher watcher(watcher_ptr.NewRequest(),
                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
 
   page->Watch(std::move(watcher_ptr),
@@ -723,7 +723,7 @@ TEST_F(LedgerApplicationTest, PageWatcherSimple) {
 TEST_F(LedgerApplicationTest, PageWatcherTransaction) {
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
-  Watcher watcher(GetProxy(&watcher_ptr),
+  Watcher watcher(watcher_ptr.NewRequest(),
                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
 
   page->Watch(std::move(watcher_ptr),
@@ -765,14 +765,14 @@ TEST_F(LedgerApplicationTest, PageWatcherParallel) {
   PagePtr page2 = GetPage(test_page_id, Status::OK);
 
   PageWatcherPtr watcher1_ptr;
-  Watcher watcher1(GetProxy(&watcher1_ptr),
+  Watcher watcher1(watcher1_ptr.NewRequest(),
                    [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   page1->Watch(std::move(watcher1_ptr),
                [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   PageWatcherPtr watcher2_ptr;
-  Watcher watcher2(GetProxy(&watcher2_ptr),
+  Watcher watcher2(watcher2_ptr.NewRequest(),
                    [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   page2->Watch(std::move(watcher2_ptr),
                [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -824,7 +824,7 @@ TEST_F(LedgerApplicationTest, PageWatcherParallel) {
 TEST_F(LedgerApplicationTest, PageWatcherEmptyTransaction) {
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
-  Watcher watcher(GetProxy(&watcher_ptr),
+  Watcher watcher(watcher_ptr.NewRequest(),
                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
 
   page->Watch(std::move(watcher_ptr),
@@ -854,14 +854,14 @@ TEST_F(LedgerApplicationTest, PageWatcher1Change2Pages) {
   PagePtr page2 = GetPage(test_page_id, Status::OK);
 
   PageWatcherPtr watcher1_ptr;
-  Watcher watcher1(GetProxy(&watcher1_ptr),
+  Watcher watcher1(watcher1_ptr.NewRequest(),
                    [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   page1->Watch(std::move(watcher1_ptr),
                [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   PageWatcherPtr watcher2_ptr;
-  Watcher watcher2(GetProxy(&watcher2_ptr),
+  Watcher watcher2(watcher2_ptr.NewRequest(),
                    [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   page2->Watch(std::move(watcher2_ptr),
                [](Status status) { EXPECT_EQ(Status::OK, status); });

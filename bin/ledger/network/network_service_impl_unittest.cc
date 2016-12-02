@@ -169,7 +169,7 @@ class NetworkServiceImplTest : public test::TestWithMessageLoop {
   network::NetworkServicePtr NewNetworkService() {
     network::NetworkServicePtr result;
     fake_network_service_ =
-        std::make_unique<FakeNetworkService>(GetProxy(&result));
+        std::make_unique<FakeNetworkService>(result.NewRequest());
     if (response_) {
       fake_network_service_->SetResponse(std::move(response_));
     }

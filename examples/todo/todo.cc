@@ -65,10 +65,10 @@ TodoApp::TodoApp(ftl::CommandLine command_line)
       context_(modular::ApplicationContext::CreateFromStartupInfo()),
       page_watcher_binding_(this) {
   ledger::LedgerPtr ledger = GetLedger();
-  ledger->GetRootPage(GetProxy(&page_), HandleResponse("GetRootPage"));
+  ledger->GetRootPage(page_.NewRequest(), HandleResponse("GetRootPage"));
 
   ledger::PageWatcherPtr page_watcher;
-  page_watcher_binding_.Bind(GetProxy(&page_watcher));
+  page_watcher_binding_.Bind(page_watcher.NewRequest());
   page_->Watch(std::move(page_watcher), HandleResponse("Watch"));
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { Act(); });
@@ -96,26 +96,26 @@ ledger::LedgerPtr TodoApp::GetLedger() {
   modular::ServiceProviderPtr child_services;
   auto launch_info = modular::ApplicationLaunchInfo::New();
   launch_info->url = "file:///system/apps/ledger";
-  launch_info->services = fidl::GetProxy(&child_services);
+  launch_info->services = child_services.NewRequest();
   context_->launcher()->CreateApplication(std::move(launch_info),
-                                          fidl::GetProxy(&ledger_controller_));
+                                          ledger_controller_.NewRequest());
   modular::ConnectToService(child_services.get(),
-                            fidl::GetProxy(&repository_factory));
+                            repository_factory.NewRequest());
 
   ledger::LedgerRepositoryPtr repository;
   repository_factory->GetRepository("/data/ledger/todo_user",
-                                    GetProxy(&repository),
+                                    repository.NewRequest(),
                                     HandleResponse("GetRepository"));
 
   ledger::LedgerPtr ledger;
-  repository->GetLedger(ToArray("todo"), GetProxy(&ledger),
+  repository->GetLedger(ToArray("todo"), ledger.NewRequest(),
                         HandleResponse("GetLedger"));
   return ledger;
 }
 
 void TodoApp::List() {
   ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(GetProxy(&snapshot), HandleResponse("GetSnapshot"));
+  page_->GetSnapshot(snapshot.NewRequest(), HandleResponse("GetSnapshot"));
 
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
@@ -139,7 +139,7 @@ void TodoApp::List() {
 
 void TodoApp::GetKeys(std::function<void(fidl::Array<Key>)> callback) {
   ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(GetProxy(&snapshot), HandleResponse("GetSnapshot"));
+  page_->GetSnapshot(snapshot.NewRequest(), HandleResponse("GetSnapshot"));
 
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetKeys(nullptr, nullptr, ftl::MakeCopyable([

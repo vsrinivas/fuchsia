@@ -47,10 +47,10 @@ class LedgerAppTest : public ::testing::Test {
 
     auto launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = "file:///system/apps/ledger";
-    launch_info->services = fidl::GetProxy(&child_services);
+    launch_info->services = child_services.NewRequest();
     context_->launcher()->CreateApplication(
         std::move(launch_info),
-        fidl::GetProxy(&ledger_repository_factory_controller_));
+        ledger_repository_factory_controller_.NewRequest());
     modular::ConnectToService(
         child_services.get(),
         fidl::GetSynchronousProxy(&ledger_repository_factory));

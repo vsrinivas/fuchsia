@@ -61,7 +61,7 @@ void PageImpl::Watch(fidl::InterfaceHandle<PageWatcher> watcher,
                      const WatchCallback& callback) {
   PageWatcherPtr watcher_ptr = PageWatcherPtr::Create(std::move(watcher));
   PageSnapshotPtr snapshot;
-  GetSnapshot(GetProxy(&snapshot), callback);
+  GetSnapshot(snapshot.NewRequest(), callback);
   branch_tracker_->RegisterPageWatcher(std::move(watcher_ptr), std::move(snapshot));
 }
 
