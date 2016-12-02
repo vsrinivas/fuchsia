@@ -37,7 +37,8 @@ __BEGIN_CDECLS
 #define VNODE_BASE_FIELDS \
     vnode_ops_t* ops; \
     uint32_t flags; \
-    uint32_t refcount;
+    uint32_t refcount; \
+    mx_handle_t remote;
 
 typedef struct vnode vnode_t;
 typedef struct vnode_ops vnode_ops_t;

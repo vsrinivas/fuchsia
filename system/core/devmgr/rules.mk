@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/shared.c \
     $(LOCAL_DIR)/vfs-boot.c \
     $(LOCAL_DIR)/vfs.c \
+    $(LOCAL_DIR)/vfs-devmgr.c \
     $(LOCAL_DIR)/vfs-device.c \
     $(LOCAL_DIR)/vfs-memory.c \
     $(LOCAL_DIR)/vfs-mount.c \

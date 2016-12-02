@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "dnode.h"
+#include "memfs-private.h"
+#include "vfs.h"
+
 #include <magenta/device/devmgr.h>
 #include <magenta/listnode.h>
 
 #include <ddk/device.h>
 
 #include <mxio/debug.h>
+#include <mxio/remoteio.h>
 #include <mxio/vfs.h>
 
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-
-#include "vfs.h"
-#include "dnode.h"
 
 // Non-intrusive node in linked list of vnodes acting as mount points
 typedef struct mount_node {

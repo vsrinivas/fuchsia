@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 
-#include "vfs.h"
 #include "dnode.h"
 #include "devmgr.h"
+#include "memfs-private.h"
+#include "vfs.h"
 
 #include <magenta/listnode.h>
 

@@ -3,11 +3,8 @@
 // found in the LICENSE file.
 
 #include "devmgr.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
+#include "memfs-private.h"
+#include "vfs.h"
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -23,7 +20,11 @@
 
 #include <magenta/listnode.h>
 
-#include "vfs.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+
 
 // vnodes for root driver and protocols
 static vnode_t* vnroot;

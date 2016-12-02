@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "devmgr.h"
+#include "memfs-private.h"
+#include "vfs.h"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -20,7 +22,6 @@
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 
-#include "vfs.h"
 
 typedef struct bootfile bootfile_t;
 struct bootfile {

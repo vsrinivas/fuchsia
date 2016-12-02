@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <magenta/assert.h>
+#include "dnode.h"
+#include "memfs-private.h"
+#include "vfs.h"
+
 #include <magenta/device/devmgr.h>
 #include <magenta/listnode.h>
 
@@ -15,9 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-
-#include "vfs.h"
-#include "dnode.h"
 
 #define MXDEBUG 0
 

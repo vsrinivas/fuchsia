@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vfs.h"
 #include "devmgr.h"
 #include "dnode.h"
+#include "memfs-private.h"
+#include "vfs.h"
 
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>
