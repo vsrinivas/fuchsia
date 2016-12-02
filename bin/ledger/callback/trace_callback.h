@@ -5,6 +5,8 @@
 #ifndef APPS_LEDGER_SRC_CALLBACK_TRACE_CALLBACK_H_
 #define APPS_LEDGER_SRC_CALLBACK_TRACE_CALLBACK_H_
 
+#include <utility>
+
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/functional/make_copyable.h"
 
@@ -19,29 +21,33 @@ void TraceAsyncBegin(const char* category,
                      T... args);
 
 template <>
-void TraceAsyncBegin(const char* category, const char* name, uint64_t id) {
+inline void TraceAsyncBegin(const char* category,
+                            const char* name,
+                            uint64_t id) {
   TRACE_ASYNC_BEGIN0(category, name, id);
 }
 
 template <typename K1, typename V1>
-void TraceAsyncBegin(const char* category,
-                     const char* name,
-                     uint64_t id,
-                     K1&& k1,
-                     V1&& v1) {
-  TRACE_ASYNC_BEGIN1(category, name, id, std::forward(k1), std::forward(v1));
+inline void TraceAsyncBegin(const char* category,
+                            const char* name,
+                            uint64_t id,
+                            K1&& k1,
+                            V1&& v1) {
+  TRACE_ASYNC_BEGIN1(category, name, id, std::forward<K1>(k1),
+                     std::forward<V1>(v1));
 }
 
 template <typename K1, typename V1, typename K2, typename V2>
-void TraceAsyncBegin(const char* category,
-                     const char* name,
-                     uint64_t id,
-                     K1&& k1,
-                     V1&& v1,
-                     K2&& k2,
-                     V2&& v2) {
-  TRACE_ASYNC_BEGIN2(category, name, id, std::forward(k1), std::forward(v1),
-                     std::forward(k2), std::forward(v2));
+inline void TraceAsyncBegin(const char* category,
+                            const char* name,
+                            uint64_t id,
+                            K1&& k1,
+                            V1&& v1,
+                            K2&& k2,
+                            V2&& v2) {
+  TRACE_ASYNC_BEGIN2(category, name, id, std::forward<K1>(k1),
+                     std::forward<V1>(v1), std::forward<K2>(k2),
+                     std::forward<V2>(v2));
 }
 
 template <typename K1,
@@ -50,18 +56,19 @@ template <typename K1,
           typename V2,
           typename K3,
           typename V3>
-void TraceAsyncBegin(const char* category,
-                     const char* name,
-                     uint64_t id,
-                     K1&& k1,
-                     V1&& v1,
-                     K2&& k2,
-                     V2&& v2,
-                     K3&& k3,
-                     V3&& v3) {
-  TRACE_ASYNC_BEGIN3(category, name, id, std::forward(k1), std::forward(v1),
-                     std::forward(k2), std::forward(v2), std::forward(k3),
-                     std::forward(v3));
+inline void TraceAsyncBegin(const char* category,
+                            const char* name,
+                            uint64_t id,
+                            K1&& k1,
+                            V1&& v1,
+                            K2&& k2,
+                            V2&& v2,
+                            K3&& k3,
+                            V3&& v3) {
+  TRACE_ASYNC_BEGIN3(category, name, id, std::forward<K1>(k1),
+                     std::forward<V1>(v1), std::forward<K2>(k2),
+                     std::forward<V2>(v2), std::forward<K3>(k3),
+                     std::forward<V3>(v3));
 }
 
 template <typename K1,
@@ -72,20 +79,21 @@ template <typename K1,
           typename V3,
           typename K4,
           typename V4>
-void TraceAsyncBegin(const char* category,
-                     const char* name,
-                     uint64_t id,
-                     K1&& k1,
-                     V1&& v1,
-                     K2&& k2,
-                     V2&& v2,
-                     K3&& k3,
-                     V3&& v3,
-                     K4&& k4,
-                     V4&& v4) {
-  TRACE_ASYNC_BEGIN4(category, name, id, std::forward(k1), std::forward(v1),
-                     std::forward(k2), std::forward(v2), std::forward(k3),
-                     std::forward(v3), std::forward(k4), std::forward(v4));
+inline void TraceAsyncBegin(const char* category,
+                            const char* name,
+                            uint64_t id,
+                            K1&& k1,
+                            V1&& v1,
+                            K2&& k2,
+                            V2&& v2,
+                            K3&& k3,
+                            V3&& v3,
+                            K4&& k4,
+                            V4&& v4) {
+  TRACE_ASYNC_BEGIN4(
+      category, name, id, std::forward<K1>(k1), std::forward<V1>(v1),
+      std::forward<K2>(k2), std::forward<V2>(v2), std::forward<K3>(k3),
+      std::forward<V3>(v3), std::forward<K4>(k4), std::forward<V4>(v4));
 }
 
 template <typename C, typename... TraceArgType>
@@ -98,15 +106,29 @@ class TracingLambda {
       : id_(reinterpret_cast<uintptr_t>(this)),
         category_(category),
         name_(name),
-        callback_(std::move(callback)) {
+        callback_(std::move(callback)),
+        did_run_(false) {
     TraceAsyncBegin(category_, name_, id_, std::forward<TraceArgType>(args)...);
   }
 
-  TracingLambda(TracingLambda&&) = default;
-  TracingLambda& operator=(TracingLambda&&) = default;
+  ~TracingLambda() {
+    if (!did_run_) {
+      TRACE_ASYNC_END1(category_, name_, id_, "NotRun", true);
+    }
+  }
+
+  TracingLambda(TracingLambda&& other)
+      : id_(other.id_),
+        category_(other.category_),
+        name_(other.name_),
+        callback_(std::move(other.callback_)),
+        did_run_(other.did_run_) {
+    other.did_run_ = true;
+  }
 
   template <typename... ArgType>
-  auto operator()(ArgType&&... args) const {
+  auto operator()(ArgType&&... args) {
+    did_run_ = true;
     auto id = id_;
     auto category = category_;
     auto name = name_;
@@ -119,6 +141,7 @@ class TracingLambda {
   const char* const category_;
   const char* const name_;
   const C callback_;
+  bool did_run_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(TracingLambda);
 };
