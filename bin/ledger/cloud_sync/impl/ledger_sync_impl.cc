@@ -6,21 +6,12 @@
 
 #include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
+#include "apps/ledger/src/cloud_sync/impl/firebase_paths.h"
 #include "apps/ledger/src/cloud_sync/impl/page_sync_impl.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
-#include "apps/ledger/src/storage/public/constants.h"
-#include "lib/ftl/strings/concatenate.h"
 
 namespace cloud_sync {
-
-std::string GetFirebasePrefix(ftl::StringView user_prefix,
-                              ftl::StringView app_id,
-                              ftl::StringView page_id) {
-  return ftl::Concatenate(
-      {firebase::EncodeKey(user_prefix), "/", storage::kSerializationVersion,
-       "/", firebase::EncodeKey(app_id), "/", firebase::EncodeKey(page_id)});
-}
 
 LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
                                ftl::StringView app_id)
@@ -39,7 +30,7 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   result->firebase = std::make_unique<firebase::FirebaseImpl>(
       environment_->network_service(),
       environment_->configuration().sync_params.firebase_id,
-      GetFirebasePrefix(
+      GetFirebasePathForPage(
           environment_->configuration().sync_params.firebase_prefix, app_id_,
           page_storage->GetId()));
   result->cloud_provider = std::make_unique<cloud_provider::CloudProviderImpl>(

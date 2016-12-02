@@ -9,6 +9,7 @@
 
 #include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
+#include "apps/ledger/src/cloud_sync/impl/firebase_paths.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/configuration/configuration_encoder.h"
 #include "apps/ledger/src/firebase/encoding.h"
@@ -26,13 +27,6 @@ namespace {
 
 std::string RandomString() {
   return std::to_string(glue::RandUint64());
-}
-
-std::string GetFirebasePrefix(ftl::StringView user_prefix,
-                              ftl::StringView page_id) {
-  return ftl::Concatenate({firebase::EncodeKey(user_prefix), "/",
-                           firebase::EncodeKey("debug_cloud_sync"), "/",
-                           firebase::EncodeKey(page_id)});
 }
 
 }  // namespace
@@ -107,8 +101,8 @@ bool ClientApp::Initialize() {
 
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_.get(), configuration_.sync_params.firebase_id,
-      GetFirebasePrefix(configuration_.sync_params.firebase_prefix,
-                        RandomString()));
+      GetFirebasePathForPage(configuration_.sync_params.firebase_prefix,
+                             "cloud_sync_client", RandomString()));
   cloud_provider_ =
       std::make_unique<cloud_provider::CloudProviderImpl>(firebase_.get());
 
