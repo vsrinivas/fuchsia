@@ -117,6 +117,14 @@ class TestStoryProvider : public modular::StoryProvider {
     last_created_story_ = url;
   }
 
+  void CreateStoryWithInfo(
+      const fidl::String& url,
+      fidl::Map<fidl::String, fidl::String> extra_info,
+      fidl::Map<fidl::String, document_store::DocumentPtr> root_docs,
+      fidl::InterfaceRequest<modular::StoryController> story) override {
+    last_created_story_ = url;
+  }
+
   void Watch(
       fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {
     watchers_.AddInterfacePtr(
