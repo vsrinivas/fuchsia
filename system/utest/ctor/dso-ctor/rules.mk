@@ -6,13 +6,13 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := usertest
+MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/ctor.cpp
+    $(LOCAL_DIR)/dso-ctor.cpp
 
-MODULE_NAME := ctor-test
+MODULE_LIBS := ulib/unittest ulib/musl
 
-MODULE_LIBS := ulib/unittest ulib/mxio ulib/musl utest/ctor/dso-ctor
+MODULE_SO_NAME := dso-ctor
 
 include make/module.mk
