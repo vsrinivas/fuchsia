@@ -10,11 +10,14 @@
 #include "apps/maxwell/src/agents/ideas.h"
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
 #include "apps/maxwell/src/integration/test_suggestion_listener.h"
+#include "apps/modular/lib/testing/story_provider_mock.h"
 #include "apps/modular/src/document_store/documents.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
+
+using modular::StoryProviderMock;
 
 namespace {
 
@@ -110,52 +113,6 @@ class NProposals : public Proposinator, public maxwell::ContextSubscriberLink {
   int n_ = 0;
 };
 
-class TestStoryProvider : public modular::StoryProvider {
- public:
-  void CreateStory(
-      const fidl::String& url,
-      fidl::InterfaceRequest<modular::StoryController> story) override {
-    last_created_story_ = url;
-  }
-
-  void CreateStoryWithInfo(
-      const fidl::String& url,
-      fidl::Map<fidl::String, fidl::String> extra_info,
-      fidl::Map<fidl::String, document_store::DocumentPtr> root_docs,
-      fidl::InterfaceRequest<modular::StoryController> story) override {
-    last_created_story_ = url;
-  }
-
-  void Watch(
-      fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {
-    watchers_.AddInterfacePtr(
-        modular::StoryProviderWatcherPtr::Create(std::move(watcher)));
-  }
-
-  void DeleteStory(const fidl::String& story_id,
-                   const DeleteStoryCallback& callback) override {}
-  void GetStoryInfo(const fidl::String& story_id,
-                    const GetStoryInfoCallback& callback) override {}
-  void ResumeStory(
-      const fidl::String& story_id,
-      fidl::InterfaceRequest<modular::StoryController> story) override {}
-  void PreviousStories(const PreviousStoriesCallback& callback) override {}
-
-  std::string last_created_story() const { return last_created_story_; }
-
-  // Methods to allow notification of watchers.
-  void NotifyStoryChanged(modular::StoryInfoPtr story_info) {
-    watchers_.ForAllPtrs([&story_info](modular::StoryProviderWatcher* watcher) {
-      watcher->OnChange(story_info->Clone());
-    });
-  }
-
- private:
-  std::string last_created_story_;
-
-  fidl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
-};
-
 class SuggestionEngineTest : public ContextEngineTestBase {
  public:
   SuggestionEngineTest() : story_provider_binding_(&story_provider_) {
@@ -187,7 +144,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     return suggestion_provider_.get();
   }
 
-  TestStoryProvider* story_provider() { return &story_provider_; }
+  StoryProviderMock* story_provider() { return &story_provider_; }
 
   void StartSuggestionAgent(const std::string& url) {
     auto agent_host =
@@ -223,7 +180,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   maxwell::SuggestionEnginePtr suggestion_engine_;
   maxwell::SuggestionProviderPtr suggestion_provider_;
 
-  TestStoryProvider story_provider_;
+  StoryProviderMock story_provider_;
   fidl::Binding<modular::StoryProvider> story_provider_binding_;
 };
 
