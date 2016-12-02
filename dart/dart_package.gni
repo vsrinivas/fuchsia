@@ -45,9 +45,9 @@ template("dart_package") {
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
   } else if (defined(invoker.infer_package_name) && invoker.infer_package_name) {
-    target_dir = get_label_info(target_name, "dir")
+    target_label = get_label_info(":$target_name", "label_no_toolchain")
     package_name = exec_script("//build/dart/label_to_package_name.py",
-                               [ target_dir ],
+                               [ target_label ],
                                "trim string")
   } else {
     assert(false, "Must specify either a package_name or infer_package_name")
