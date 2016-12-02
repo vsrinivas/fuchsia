@@ -55,6 +55,7 @@ int evalstring(char *, int);
 union node;	/* BLETCH for ansi C */
 int evaltree(union node *, int);
 void evalbackcmd(union node *, struct backcmd *);
+void evaltreenr(union node *, int) __attribute__ ((__noreturn__));
 
 extern int evalskip;
 

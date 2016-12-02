@@ -86,6 +86,8 @@ static void parsefield(void);
 static void output(char *);
 static void outsizes(FILE *);
 static void outfunc(FILE *, int);
+static void outencode(FILE *);
+static void outdecode(FILE *);
 static void indent(int, FILE *);
 static int nextfield(char *);
 static void skipbl(void);
@@ -223,6 +225,7 @@ output(char *file)
 	if ((cfile = fopen("nodes.c", "w")) == NULL)
 		error("Can't create nodes.c");
 	fputs(writer, hfile);
+	fputs("#include <magenta/types.h>\n\n", hfile);
 	for (i = 0 ; i < ntypes ; i++)
 		fprintf(hfile, "#define %s %d\n", nodename[i], i);
 	fputs("\n\n\n", hfile);
@@ -249,6 +252,8 @@ output(char *file)
 	fputs("};\n\n\n", hfile);
 	fputs("struct funcnode *copyfunc(union node *);\n", hfile);
 	fputs("void freefunc(struct funcnode *);\n", hfile);
+	fputs("mx_status_t codec_encode(union node *node, mx_handle_t *vmo);\n", hfile);
+	fputs("union node* codec_decode(char *buffer, size_t length);\n", hfile);
 
 	fputs(writer, cfile);
 	while (fgets(line, sizeof line, patfile) != NULL) {
@@ -259,6 +264,10 @@ output(char *file)
 			outfunc(cfile, 1);
 		else if (strcmp(p, "%COPY\n") == 0)
 			outfunc(cfile, 0);
+		else if (strcmp(p, "%ENCODE\n") == 0)
+			outencode(cfile);
+		else if (strcmp(p, "%DECODE\n") == 0)
+			outdecode(cfile);
 		else
 			fputs(line, cfile);
 	}
@@ -287,55 +296,55 @@ outfunc(FILE *cfile, int calcsize)
 	struct field *fp;
 	int i;
 
-	fputs("      if (n == NULL)\n", cfile);
+	fputs("\tif (n == NULL)\n", cfile);
 	if (calcsize)
-		fputs("	    return;\n", cfile);
+		fputs("\t\treturn;\n", cfile);
 	else
-		fputs("	    return NULL;\n", cfile);
+		fputs("\t\treturn NULL;\n", cfile);
 	if (calcsize)
-		fputs("      funcblocksize += nodesize[n->type];\n", cfile);
+		fputs("\tfuncblocksize += nodesize[n->type];\n", cfile);
 	else {
-		fputs("      new = funcblock;\n", cfile);
-		fputs("      funcblock = (char *) funcblock + nodesize[n->type];\n", cfile);
+		fputs("\tnew = funcblock;\n", cfile);
+		fputs("\tfuncblock = (char *) funcblock + nodesize[n->type];\n", cfile);
 	}
-	fputs("      switch (n->type) {\n", cfile);
+	fputs("\tswitch (n->type) {\n", cfile);
 	for (sp = str ; sp < &str[nstr] ; sp++) {
 		for (i = 0 ; i < ntypes ; i++) {
 			if (nodestr[i] == sp)
-				fprintf(cfile, "      case %s:\n", nodename[i]);
+				fprintf(cfile, "\tcase %s:\n", nodename[i]);
 		}
 		for (i = sp->nfields ; --i >= 1 ; ) {
 			fp = &sp->field[i];
 			switch (fp->type) {
 			case T_NODE:
 				if (calcsize) {
-					indent(12, cfile);
+					indent(16, cfile);
 					fprintf(cfile, "calcsize(n->%s.%s);\n",
 						sp->tag, fp->name);
 				} else {
-					indent(12, cfile);
+					indent(16, cfile);
 					fprintf(cfile, "new->%s.%s = copynode(n->%s.%s);\n",
 						sp->tag, fp->name, sp->tag, fp->name);
 				}
 				break;
 			case T_NODELIST:
 				if (calcsize) {
-					indent(12, cfile);
+					indent(16, cfile);
 					fprintf(cfile, "sizenodelist(n->%s.%s);\n",
 						sp->tag, fp->name);
 				} else {
-					indent(12, cfile);
+					indent(16, cfile);
 					fprintf(cfile, "new->%s.%s = copynodelist(n->%s.%s);\n",
 						sp->tag, fp->name, sp->tag, fp->name);
 				}
 				break;
 			case T_STRING:
 				if (calcsize) {
-					indent(12, cfile);
+					indent(16, cfile);
 					fprintf(cfile, "funcstringsize += strlen(n->%s.%s) + 1;\n",
 						sp->tag, fp->name);
 				} else {
-					indent(12, cfile);
+					indent(16, cfile);
 					fprintf(cfile, "new->%s.%s = nodesavestr(n->%s.%s);\n",
 						sp->tag, fp->name, sp->tag, fp->name);
 				}
@@ -343,19 +352,108 @@ outfunc(FILE *cfile, int calcsize)
 			case T_INT:
 			case T_OTHER:
 				if (! calcsize) {
-					indent(12, cfile);
+					indent(16, cfile);
 					fprintf(cfile, "new->%s.%s = n->%s.%s;\n",
 						sp->tag, fp->name, sp->tag, fp->name);
 				}
 				break;
 			}
 		}
-		indent(12, cfile);
+		indent(16, cfile);
 		fputs("break;\n", cfile);
 	}
-	fputs("      };\n", cfile);
+	fputs("\t};\n", cfile);
 	if (! calcsize)
-		fputs("      new->type = n->type;\n", cfile);
+		fputs("\tnew->type = n->type;\n", cfile);
+}
+
+
+static void
+outencode(FILE *cfile)
+{
+	struct str *sp;
+	struct field *fp;
+	int i;
+
+	fputs("\tif (n == NULL)\n", cfile);
+	fputs("\t\treturn;\n", cfile);
+	fputs("\tswitch (n->type) {\n", cfile);
+	for (sp = str ; sp < &str[nstr] ; sp++) {
+		for (i = 0 ; i < ntypes ; i++) {
+			if (nodestr[i] == sp)
+				fprintf(cfile, "\tcase %s:\n", nodename[i]);
+		}
+		indent(16, cfile);
+		fprintf(cfile, "writenode(n, sizeof(struct %s), nodesize[n->type]);\n", sp->tag);
+		for (i = sp->nfields ; --i >= 1 ; ) {
+			fp = &sp->field[i];
+			switch (fp->type) {
+			case T_NODE:
+				indent(16, cfile);
+				fprintf(cfile, "encodenode(n->%s.%s);\n", sp->tag, fp->name);
+				break;
+			case T_NODELIST:
+				indent(16, cfile);
+				fprintf(cfile, "encodenodelist(n->%s.%s);\n", sp->tag, fp->name);
+				break;
+			case T_STRING:
+				indent(16, cfile);
+				fprintf(cfile, "encodestring(n->%s.%s);\n", sp->tag, fp->name);
+				break;
+			case T_INT:
+			case T_OTHER:
+				break;
+			}
+		}
+		indent(16, cfile);
+		fputs("break;\n", cfile);
+	}
+	fputs("\t};\n", cfile);
+}
+
+
+static void
+outdecode(FILE *cfile)
+{
+	struct str *sp;
+	struct field *fp;
+	int i;
+
+	fputs("\tif (*npp == NULL)\n", cfile);
+	fputs("\t\treturn;\n", cfile);
+	fputs("\t*npp = funcblock;\n", cfile);
+	fputs("\tunion node *n = *npp;\n", cfile);
+	fputs("\tfuncblock = (char *) funcblock + nodesize[n->type];\n", cfile);
+	fputs("\tswitch (n->type) {\n", cfile);
+	for (sp = str ; sp < &str[nstr] ; sp++) {
+		for (i = 0 ; i < ntypes ; i++) {
+			if (nodestr[i] == sp)
+				fprintf(cfile, "\tcase %s:\n", nodename[i]);
+		}
+		for (i = sp->nfields ; --i >= 1 ; ) {
+			fp = &sp->field[i];
+			switch (fp->type) {
+			case T_NODE:
+				indent(16, cfile);
+				fprintf(cfile, "decodenode(&n->%s.%s);\n", sp->tag, fp->name);
+				break;
+			case T_NODELIST:
+				indent(16, cfile);
+				fprintf(cfile, "decodenodelist(&n->%s.%s);\n", sp->tag, fp->name);
+				break;
+			case T_STRING:
+				indent(16, cfile);
+				fprintf(cfile, "n->%s.%s = decodestring();\n", sp->tag, fp->name);
+				break;
+			case T_INT:
+			case T_OTHER:
+				break;
+			}
+		}
+		indent(16, cfile);
+		fputs("break;\n", cfile);
+	}
+	fputs("\t};\n", cfile);
 }
 
 

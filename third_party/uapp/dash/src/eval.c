@@ -76,10 +76,6 @@ int back_exitstatus;		/* exit status of backquoted command */
 int savestatus = -1;		/* exit status of last command outside traps */
 
 
-#if !defined(__alpha__) || (defined(__GNUC__) && __GNUC__ >= 3)
-STATIC
-#endif
-void evaltreenr(union node *, int) __attribute__ ((__noreturn__));
 STATIC int evalloop(union node *, int);
 STATIC int evalfor(union node *, int);
 STATIC int evalcase(union node *, int);
@@ -315,9 +311,6 @@ exexit:
 }
 
 
-#if !defined(__alpha__) || (defined(__GNUC__) && __GNUC__ >= 3)
-STATIC
-#endif
 void evaltreenr(union node *n, int flags)
 #ifdef HAVE_ATTRIBUTE_ALIAS
 	__attribute__ ((alias("evaltree")));
@@ -467,36 +460,34 @@ out:
 STATIC int
 evalsubshell(union node *n, int flags)
 {
-	struct job *jp;
-	int backgnd = (n->type == NBACKGND);
-	int status;
+	if (n->type == NBACKGND) {
+		// TODO(abarth): Support background jobs.
+		sh_error("Backgound jobs not yet supported.");
+		return -1;
+	}
 
 	errlinno = lineno = n->nredir.linno;
 	if (funcline)
 		lineno -= funcline - 1;
 
 	expredir(n->nredir.redirect);
-	if (!backgnd && flags & EV_EXIT && !have_traps())
-		goto nofork;
-	INTOFF;
-	jp = makejob(n, 1);
-	if (forkshell(jp, n, backgnd) == 0) {
-		INTON;
-		flags |= EV_EXIT;
-		if (backgnd)
-			flags &=~ EV_TESTED;
-nofork:
+	if (flags & EV_EXIT && !have_traps()) {
 		redirect(n->nredir.redirect, 0);
 		evaltreenr(n->nredir.n, flags);
 		/* never returns */
 	}
-	status = 0;
-	if (! backgnd)
-		status = waitforjob(jp);
-	INTON;
-	return status;
-}
 
+	mx_handle_t process;
+	mx_status_t status = process_subshell(n, &process);
+	if (status != NO_ERROR) {
+		sh_error("Failed to create subshell");
+		return status;
+	}
+
+	int result = process_await_termination(process);
+	mx_handle_close(process);
+	return result;
+}
 
 
 /*

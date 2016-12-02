@@ -15,6 +15,7 @@
 #include "nodes.h"
 #include "exec.h"
 #include "process.h"
+#include "options.h"
 
 static mx_handle_t get_mxio_job(void) {
     static mx_handle_t job;
@@ -67,6 +68,15 @@ static mx_status_t duplicate_application_environment(mx_handle_t application_env
     return status;
 }
 
+static mx_status_t clone_application_environment(mx_handle_t* application_environment_for_child) {
+    mx_handle_t application_environment = get_application_environment();
+    if (application_environment == MX_HANDLE_INVALID) {
+        *application_environment_for_child = MX_HANDLE_INVALID;
+        return NO_ERROR;
+    }
+    return duplicate_application_environment(application_environment, application_environment_for_child);
+}
+
 static mx_status_t prepare_launch(launchpad_t* lp, const char* filename, int argc, const char* const* argv) {
     mx_status_t status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
     if (status != NO_ERROR)
@@ -100,14 +110,13 @@ static mx_status_t prepare_launch(launchpad_t* lp, const char* filename, int arg
     launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
     launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
 
-    mx_handle_t application_environment = get_application_environment();
+    mx_handle_t application_environment = MX_HANDLE_INVALID;
+    status = clone_application_environment(&application_environment);
+    if (status != NO_ERROR)
+        return status;
+
     if (application_environment != MX_HANDLE_INVALID) {
-        mx_handle_t application_environment_for_child;
-        status = duplicate_application_environment(
-                application_environment, &application_environment_for_child);
-        if (status != NO_ERROR)
-            return status;
-        launchpad_add_handle(lp, application_environment_for_child,
+        launchpad_add_handle(lp, application_environment,
             MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
     }
 
@@ -166,6 +175,46 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
     default:
         return 2;
     }
+}
+
+mx_status_t process_subshell(union node* n, mx_handle_t* process) {
+    if (!arg0)
+        return ERR_NOT_FOUND;
+
+    mx_handle_t ast_vmo = MX_HANDLE_INVALID;
+    mx_status_t status = codec_encode(n, &ast_vmo);
+    if (status != NO_ERROR)
+        return status;
+
+    mx_handle_t application_environment = MX_HANDLE_INVALID;
+    status = clone_application_environment(&application_environment);
+    if (status != NO_ERROR) {
+        mx_handle_close(ast_vmo);
+        return status;
+    }
+
+    mx_handle_t handles[2];
+    uint32_t ids[2];
+
+    size_t count = 0;
+    handles[count] = ast_vmo;
+    ids[count] = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
+    ++count;
+
+    if (application_environment != MX_HANDLE_INVALID) {
+        handles[count] = application_environment;
+        ids[count] = MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0);
+        ++count;
+    }
+
+    // TODO(abarth): Handle the redirects properly (i.e., implement
+    // redirect(n->nredir.redirect) using launchpad);
+    mx_handle_t result = launchpad_launch_mxio_etc(arg0, 1,
+        (const char* const*)&arg0, (const char* const*)environ, count, handles, ids);
+    if (result < 0)
+        return result;
+    *process = result;
+    return NO_ERROR;
 }
 
 int process_await_termination(mx_handle_t process) {

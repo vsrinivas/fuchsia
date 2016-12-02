@@ -38,7 +38,9 @@
  *	@(#)nodes.c.pat	8.2 (Berkeley) 5/4/95
  */
 
+#include <magenta/syscalls.h>
 #include <stdlib.h>
+
 /*
  * Routine for dealing with parsed shell commands.
  */
@@ -49,6 +51,7 @@
 #include "machdep.h"
 #include "mystring.h"
 #include "system.h"
+#include "error.h"
 
 
 int     funcblocksize;		/* size of structures in function */
@@ -92,7 +95,14 @@ STATIC union node *copynode(union node *);
 STATIC struct nodelist *copynodelist(struct nodelist *);
 STATIC char *nodesavestr(char *);
 
+STATIC void writenode(union node *n, size_t node_size, size_t block_size);
+STATIC void encodenode(union node *);
+STATIC void encodenodelist(struct nodelist *);
+STATIC void encodestring(const char *);
 
+STATIC void decodenode(union node **);
+STATIC void decodenodelist(struct nodelist **);
+STATIC char *decodestring();
 
 /*
  * Make a copy of a parse tree.
@@ -122,82 +132,82 @@ STATIC void
 calcsize(n)
 	union node *n;
 {
-      if (n == NULL)
-	    return;
-      funcblocksize += nodesize[n->type];
-      switch (n->type) {
-      case NCMD:
-	    calcsize(n->ncmd.redirect);
-	    calcsize(n->ncmd.args);
-	    calcsize(n->ncmd.assign);
-	    break;
-      case NPIPE:
-	    sizenodelist(n->npipe.cmdlist);
-	    break;
-      case NREDIR:
-      case NBACKGND:
-      case NSUBSHELL:
-	    calcsize(n->nredir.redirect);
-	    calcsize(n->nredir.n);
-	    break;
-      case NAND:
-      case NOR:
-      case NSEMI:
-      case NWHILE:
-      case NUNTIL:
-	    calcsize(n->nbinary.ch2);
-	    calcsize(n->nbinary.ch1);
-	    break;
-      case NIF:
-	    calcsize(n->nif.elsepart);
-	    calcsize(n->nif.ifpart);
-	    calcsize(n->nif.test);
-	    break;
-      case NFOR:
-	    funcstringsize += strlen(n->nfor.var) + 1;
-	    calcsize(n->nfor.body);
-	    calcsize(n->nfor.args);
-	    break;
-      case NCASE:
-	    calcsize(n->ncase.cases);
-	    calcsize(n->ncase.expr);
-	    break;
-      case NCLIST:
-	    calcsize(n->nclist.body);
-	    calcsize(n->nclist.pattern);
-	    calcsize(n->nclist.next);
-	    break;
-      case NDEFUN:
-	    calcsize(n->ndefun.body);
-	    funcstringsize += strlen(n->ndefun.text) + 1;
-	    break;
-      case NARG:
-	    sizenodelist(n->narg.backquote);
-	    funcstringsize += strlen(n->narg.text) + 1;
-	    calcsize(n->narg.next);
-	    break;
-      case NTO:
-      case NCLOBBER:
-      case NFROM:
-      case NFROMTO:
-      case NAPPEND:
-	    calcsize(n->nfile.fname);
-	    calcsize(n->nfile.next);
-	    break;
-      case NTOFD:
-      case NFROMFD:
-	    calcsize(n->ndup.vname);
-	    calcsize(n->ndup.next);
-	    break;
-      case NHERE:
-      case NXHERE:
-	    calcsize(n->nhere.doc);
-	    calcsize(n->nhere.next);
-	    break;
-      case NNOT:
-	    calcsize(n->nnot.com);
-	    break;
-      };
+	if (n == NULL)
+		return;
+	funcblocksize += nodesize[n->type];
+	switch (n->type) {
+	case NCMD:
+		calcsize(n->ncmd.redirect);
+		calcsize(n->ncmd.args);
+		calcsize(n->ncmd.assign);
+		break;
+	case NPIPE:
+		sizenodelist(n->npipe.cmdlist);
+		break;
+	case NREDIR:
+	case NBACKGND:
+	case NSUBSHELL:
+		calcsize(n->nredir.redirect);
+		calcsize(n->nredir.n);
+		break;
+	case NAND:
+	case NOR:
+	case NSEMI:
+	case NWHILE:
+	case NUNTIL:
+		calcsize(n->nbinary.ch2);
+		calcsize(n->nbinary.ch1);
+		break;
+	case NIF:
+		calcsize(n->nif.elsepart);
+		calcsize(n->nif.ifpart);
+		calcsize(n->nif.test);
+		break;
+	case NFOR:
+		funcstringsize += strlen(n->nfor.var) + 1;
+		calcsize(n->nfor.body);
+		calcsize(n->nfor.args);
+		break;
+	case NCASE:
+		calcsize(n->ncase.cases);
+		calcsize(n->ncase.expr);
+		break;
+	case NCLIST:
+		calcsize(n->nclist.body);
+		calcsize(n->nclist.pattern);
+		calcsize(n->nclist.next);
+		break;
+	case NDEFUN:
+		calcsize(n->ndefun.body);
+		funcstringsize += strlen(n->ndefun.text) + 1;
+		break;
+	case NARG:
+		sizenodelist(n->narg.backquote);
+		funcstringsize += strlen(n->narg.text) + 1;
+		calcsize(n->narg.next);
+		break;
+	case NTO:
+	case NCLOBBER:
+	case NFROM:
+	case NFROMTO:
+	case NAPPEND:
+		calcsize(n->nfile.fname);
+		calcsize(n->nfile.next);
+		break;
+	case NTOFD:
+	case NFROMFD:
+		calcsize(n->ndup.vname);
+		calcsize(n->ndup.next);
+		break;
+	case NHERE:
+	case NXHERE:
+		calcsize(n->nhere.doc);
+		calcsize(n->nhere.next);
+		break;
+	case NNOT:
+		calcsize(n->nnot.com);
+		break;
+	};
 }
 
 
@@ -221,94 +231,94 @@ copynode(n)
 {
 	union node *new;
 
-      if (n == NULL)
-	    return NULL;
-      new = funcblock;
-      funcblock = (char *) funcblock + nodesize[n->type];
-      switch (n->type) {
-      case NCMD:
-	    new->ncmd.redirect = copynode(n->ncmd.redirect);
-	    new->ncmd.args = copynode(n->ncmd.args);
-	    new->ncmd.assign = copynode(n->ncmd.assign);
-	    new->ncmd.linno = n->ncmd.linno;
-	    break;
-      case NPIPE:
-	    new->npipe.cmdlist = copynodelist(n->npipe.cmdlist);
-	    new->npipe.backgnd = n->npipe.backgnd;
-	    break;
-      case NREDIR:
-      case NBACKGND:
-      case NSUBSHELL:
-	    new->nredir.redirect = copynode(n->nredir.redirect);
-	    new->nredir.n = copynode(n->nredir.n);
-	    new->nredir.linno = n->nredir.linno;
-	    break;
-      case NAND:
-      case NOR:
-      case NSEMI:
-      case NWHILE:
-      case NUNTIL:
-	    new->nbinary.ch2 = copynode(n->nbinary.ch2);
-	    new->nbinary.ch1 = copynode(n->nbinary.ch1);
-	    break;
-      case NIF:
-	    new->nif.elsepart = copynode(n->nif.elsepart);
-	    new->nif.ifpart = copynode(n->nif.ifpart);
-	    new->nif.test = copynode(n->nif.test);
-	    break;
-      case NFOR:
-	    new->nfor.var = nodesavestr(n->nfor.var);
-	    new->nfor.body = copynode(n->nfor.body);
-	    new->nfor.args = copynode(n->nfor.args);
-	    new->nfor.linno = n->nfor.linno;
-	    break;
-      case NCASE:
-	    new->ncase.cases = copynode(n->ncase.cases);
-	    new->ncase.expr = copynode(n->ncase.expr);
-	    new->ncase.linno = n->ncase.linno;
-	    break;
-      case NCLIST:
-	    new->nclist.body = copynode(n->nclist.body);
-	    new->nclist.pattern = copynode(n->nclist.pattern);
-	    new->nclist.next = copynode(n->nclist.next);
-	    break;
-      case NDEFUN:
-	    new->ndefun.body = copynode(n->ndefun.body);
-	    new->ndefun.text = nodesavestr(n->ndefun.text);
-	    new->ndefun.linno = n->ndefun.linno;
-	    break;
-      case NARG:
-	    new->narg.backquote = copynodelist(n->narg.backquote);
-	    new->narg.text = nodesavestr(n->narg.text);
-	    new->narg.next = copynode(n->narg.next);
-	    break;
-      case NTO:
-      case NCLOBBER:
-      case NFROM:
-      case NFROMTO:
-      case NAPPEND:
-	    new->nfile.fname = copynode(n->nfile.fname);
-	    new->nfile.fd = n->nfile.fd;
-	    new->nfile.next = copynode(n->nfile.next);
-	    break;
-      case NTOFD:
-      case NFROMFD:
-	    new->ndup.vname = copynode(n->ndup.vname);
-	    new->ndup.dupfd = n->ndup.dupfd;
-	    new->ndup.fd = n->ndup.fd;
-	    new->ndup.next = copynode(n->ndup.next);
-	    break;
-      case NHERE:
-      case NXHERE:
-	    new->nhere.doc = copynode(n->nhere.doc);
-	    new->nhere.fd = n->nhere.fd;
-	    new->nhere.next = copynode(n->nhere.next);
-	    break;
-      case NNOT:
-	    new->nnot.com = copynode(n->nnot.com);
-	    break;
-      };
-      new->type = n->type;
+	if (n == NULL)
+		return NULL;
+	new = funcblock;
+	funcblock = (char *) funcblock + nodesize[n->type];
+	switch (n->type) {
+	case NCMD:
+		new->ncmd.redirect = copynode(n->ncmd.redirect);
+		new->ncmd.args = copynode(n->ncmd.args);
+		new->ncmd.assign = copynode(n->ncmd.assign);
+		new->ncmd.linno = n->ncmd.linno;
+		break;
+	case NPIPE:
+		new->npipe.cmdlist = copynodelist(n->npipe.cmdlist);
+		new->npipe.backgnd = n->npipe.backgnd;
+		break;
+	case NREDIR:
+	case NBACKGND:
+	case NSUBSHELL:
+		new->nredir.redirect = copynode(n->nredir.redirect);
+		new->nredir.n = copynode(n->nredir.n);
+		new->nredir.linno = n->nredir.linno;
+		break;
+	case NAND:
+	case NOR:
+	case NSEMI:
+	case NWHILE:
+	case NUNTIL:
+		new->nbinary.ch2 = copynode(n->nbinary.ch2);
+		new->nbinary.ch1 = copynode(n->nbinary.ch1);
+		break;
+	case NIF:
+		new->nif.elsepart = copynode(n->nif.elsepart);
+		new->nif.ifpart = copynode(n->nif.ifpart);
+		new->nif.test = copynode(n->nif.test);
+		break;
+	case NFOR:
+		new->nfor.var = nodesavestr(n->nfor.var);
+		new->nfor.body = copynode(n->nfor.body);
+		new->nfor.args = copynode(n->nfor.args);
+		new->nfor.linno = n->nfor.linno;
+		break;
+	case NCASE:
+		new->ncase.cases = copynode(n->ncase.cases);
+		new->ncase.expr = copynode(n->ncase.expr);
+		new->ncase.linno = n->ncase.linno;
+		break;
+	case NCLIST:
+		new->nclist.body = copynode(n->nclist.body);
+		new->nclist.pattern = copynode(n->nclist.pattern);
+		new->nclist.next = copynode(n->nclist.next);
+		break;
+	case NDEFUN:
+		new->ndefun.body = copynode(n->ndefun.body);
+		new->ndefun.text = nodesavestr(n->ndefun.text);
+		new->ndefun.linno = n->ndefun.linno;
+		break;
+	case NARG:
+		new->narg.backquote = copynodelist(n->narg.backquote);
+		new->narg.text = nodesavestr(n->narg.text);
+		new->narg.next = copynode(n->narg.next);
+		break;
+	case NTO:
+	case NCLOBBER:
+	case NFROM:
+	case NFROMTO:
+	case NAPPEND:
+		new->nfile.fname = copynode(n->nfile.fname);
+		new->nfile.fd = n->nfile.fd;
+		new->nfile.next = copynode(n->nfile.next);
+		break;
+	case NTOFD:
+	case NFROMFD:
+		new->ndup.vname = copynode(n->ndup.vname);
+		new->ndup.dupfd = n->ndup.dupfd;
+		new->ndup.fd = n->ndup.fd;
+		new->ndup.next = copynode(n->ndup.next);
+		break;
+	case NHERE:
+	case NXHERE:
+		new->nhere.doc = copynode(n->nhere.doc);
+		new->nhere.fd = n->nhere.fd;
+		new->nhere.next = copynode(n->nhere.next);
+		break;
+	case NNOT:
+		new->nnot.com = copynode(n->nnot.com);
+		break;
+	};
+	new->type = n->type;
 	return new;
 }
 
@@ -345,7 +355,231 @@ nodesavestr(s)
 	return rtn;
 }
 
+STATIC void writenode(union node *n, size_t node_size, size_t block_size)
+{
+	if (block_size > funcblocksize) {
+		sh_error("Unable to encode AST");
+		exraise(-1);
+	}
+	memcpy(funcblock, n, node_size);
+	funcblock = (char *) funcblock + block_size;
+	funcblocksize -= block_size;
+}
 
+STATIC void
+encodenode(union node *n)
+{
+	if (n == NULL)
+		return;
+	switch (n->type) {
+	case NCMD:
+		writenode(n, sizeof(struct ncmd), nodesize[n->type]);
+		encodenode(n->ncmd.redirect);
+		encodenode(n->ncmd.args);
+		encodenode(n->ncmd.assign);
+		break;
+	case NPIPE:
+		writenode(n, sizeof(struct npipe), nodesize[n->type]);
+		encodenodelist(n->npipe.cmdlist);
+		break;
+	case NREDIR:
+	case NBACKGND:
+	case NSUBSHELL:
+		writenode(n, sizeof(struct nredir), nodesize[n->type]);
+		encodenode(n->nredir.redirect);
+		encodenode(n->nredir.n);
+		break;
+	case NAND:
+	case NOR:
+	case NSEMI:
+	case NWHILE:
+	case NUNTIL:
+		writenode(n, sizeof(struct nbinary), nodesize[n->type]);
+		encodenode(n->nbinary.ch2);
+		encodenode(n->nbinary.ch1);
+		break;
+	case NIF:
+		writenode(n, sizeof(struct nif), nodesize[n->type]);
+		encodenode(n->nif.elsepart);
+		encodenode(n->nif.ifpart);
+		encodenode(n->nif.test);
+		break;
+	case NFOR:
+		writenode(n, sizeof(struct nfor), nodesize[n->type]);
+		encodestring(n->nfor.var);
+		encodenode(n->nfor.body);
+		encodenode(n->nfor.args);
+		break;
+	case NCASE:
+		writenode(n, sizeof(struct ncase), nodesize[n->type]);
+		encodenode(n->ncase.cases);
+		encodenode(n->ncase.expr);
+		break;
+	case NCLIST:
+		writenode(n, sizeof(struct nclist), nodesize[n->type]);
+		encodenode(n->nclist.body);
+		encodenode(n->nclist.pattern);
+		encodenode(n->nclist.next);
+		break;
+	case NDEFUN:
+		writenode(n, sizeof(struct ndefun), nodesize[n->type]);
+		encodenode(n->ndefun.body);
+		encodestring(n->ndefun.text);
+		break;
+	case NARG:
+		writenode(n, sizeof(struct narg), nodesize[n->type]);
+		encodenodelist(n->narg.backquote);
+		encodestring(n->narg.text);
+		encodenode(n->narg.next);
+		break;
+	case NTO:
+	case NCLOBBER:
+	case NFROM:
+	case NFROMTO:
+	case NAPPEND:
+		writenode(n, sizeof(struct nfile), nodesize[n->type]);
+		encodenode(n->nfile.fname);
+		encodenode(n->nfile.next);
+		break;
+	case NTOFD:
+	case NFROMFD:
+		writenode(n, sizeof(struct ndup), nodesize[n->type]);
+		encodenode(n->ndup.vname);
+		encodenode(n->ndup.next);
+		break;
+	case NHERE:
+	case NXHERE:
+		writenode(n, sizeof(struct nhere), nodesize[n->type]);
+		encodenode(n->nhere.doc);
+		encodenode(n->nhere.next);
+		break;
+	case NNOT:
+		writenode(n, sizeof(struct nnot), nodesize[n->type]);
+		encodenode(n->nnot.com);
+		break;
+	};
+}
+
+STATIC void
+encodenodelist(struct nodelist *lp)
+{
+	while (lp) {
+		memcpy(funcblock, lp, sizeof(struct nodelist));
+		funcblock = (char *) funcblock + SHELL_ALIGN(sizeof(struct nodelist));
+		encodenode(lp->n);
+		lp = lp->next;
+	}
+}
+
+STATIC void
+encodestring(const char *s)
+{
+	funcstring = stpcpy(funcstring, s) + 1;
+}
+
+
+STATIC void
+decodenode(union node **npp)
+{
+	if (*npp == NULL)
+		return;
+	*npp = funcblock;
+	union node *n = *npp;
+	funcblock = (char *) funcblock + nodesize[n->type];
+	switch (n->type) {
+	case NCMD:
+		decodenode(&n->ncmd.redirect);
+		decodenode(&n->ncmd.args);
+		decodenode(&n->ncmd.assign);
+		break;
+	case NPIPE:
+		decodenodelist(&n->npipe.cmdlist);
+		break;
+	case NREDIR:
+	case NBACKGND:
+	case NSUBSHELL:
+		decodenode(&n->nredir.redirect);
+		decodenode(&n->nredir.n);
+		break;
+	case NAND:
+	case NOR:
+	case NSEMI:
+	case NWHILE:
+	case NUNTIL:
+		decodenode(&n->nbinary.ch2);
+		decodenode(&n->nbinary.ch1);
+		break;
+	case NIF:
+		decodenode(&n->nif.elsepart);
+		decodenode(&n->nif.ifpart);
+		decodenode(&n->nif.test);
+		break;
+	case NFOR:
+		n->nfor.var = decodestring();
+		decodenode(&n->nfor.body);
+		decodenode(&n->nfor.args);
+		break;
+	case NCASE:
+		decodenode(&n->ncase.cases);
+		decodenode(&n->ncase.expr);
+		break;
+	case NCLIST:
+		decodenode(&n->nclist.body);
+		decodenode(&n->nclist.pattern);
+		decodenode(&n->nclist.next);
+		break;
+	case NDEFUN:
+		decodenode(&n->ndefun.body);
+		n->ndefun.text = decodestring();
+		break;
+	case NARG:
+		decodenodelist(&n->narg.backquote);
+		n->narg.text = decodestring();
+		decodenode(&n->narg.next);
+		break;
+	case NTO:
+	case NCLOBBER:
+	case NFROM:
+	case NFROMTO:
+	case NAPPEND:
+		decodenode(&n->nfile.fname);
+		decodenode(&n->nfile.next);
+		break;
+	case NTOFD:
+	case NFROMFD:
+		decodenode(&n->ndup.vname);
+		decodenode(&n->ndup.next);
+		break;
+	case NHERE:
+	case NXHERE:
+		decodenode(&n->nhere.doc);
+		decodenode(&n->nhere.next);
+		break;
+	case NNOT:
+		decodenode(&n->nnot.com);
+		break;
+	};
+}
+
+STATIC void
+decodenodelist(struct nodelist **lpp)
+{
+	while (*lpp) {
+		*lpp = funcblock;
+		funcblock = (char *) funcblock + SHELL_ALIGN(sizeof(struct nodelist));
+		struct nodelist *lp = *lpp;
+		decodenode(&lp->n);
+		lpp = &lp->next;
+	}
+}
+
+STATIC char *
+decodestring()
+{
+	char *result = funcstring;
+	funcstring += strlen(result) + 1;
+	return result;
+}
 
 /*
  * Free a parse tree.
@@ -357,3 +591,51 @@ freefunc(struct funcnode *f)
 	if (f && --f->count < 0)
 		ckfree(f);
 }
+
+static const size_t kHeaderSize = SHELL_ALIGN(sizeof(funcblocksize));
+
+// The encoded format contains three segments:
+//
+// * A 32 bit integer that contains the length in bytes of the next segment.
+// * A sequence of nodes in a pre-order traversal of the node tree.
+//   - The encoded size of each node is determined by its type.
+//   - Pointer fields in each node contain zero if that pointer should decode
+//     a NULL. Otherwise, if the pointer should decode as non-NULL, the field
+//     contains an arbitrary non-zero value. (These values are the address of
+//     the node or the string in the encoding process, which isn't meaningful to
+//     the decoding progress).
+// * A sequence of null-terminated strings, in the order the strings are
+//   encountered in a pre-order traversal of the node tree.
+
+mx_status_t
+codec_encode(union node *node, mx_handle_t *vmo)
+{
+	funcblocksize = 0;
+	funcstringsize = 0;
+	calcsize(node);
+	const size_t size = kHeaderSize + funcblocksize + funcstringsize;
+	char buffer[size];
+	memcpy(buffer, &funcblocksize, sizeof(funcblocksize));
+	funcblock = buffer + kHeaderSize;
+	funcstring = buffer + kHeaderSize + funcblocksize;
+	encodenode(node);
+	mx_status_t status = mx_vmo_create(size, 0, vmo);
+	if (status != NO_ERROR)
+		return status;
+	mx_size_t actual;
+	return mx_vmo_write(*vmo, buffer, 0, size, &actual);
+}
+
+union node *codec_decode(char *buffer, size_t length)
+{
+	// TODO(abarth): Validate the length.
+	memcpy(&funcblocksize, buffer, sizeof(funcblocksize));
+	funcblock = buffer + kHeaderSize;
+	funcstring = buffer + kHeaderSize + funcblocksize;
+	union node dummy;
+	// We need to use a real union node address to avoid undefined behavior.
+	union node *node = &dummy;
+	decodenode(&node);
+	return node;
+}
+

@@ -32,12 +32,15 @@
  * SUCH DAMAGE.
  */
 
+#include <magenta/processargs.h>
+#include <magenta/syscalls.h>
+#include <mxio/util.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
-
 
 #include "shell.h"
 #include "main.h"
@@ -73,6 +76,7 @@ extern int etext();
 
 STATIC void read_profile(const char *);
 STATIC char *find_dot_file(char *);
+STATIC void evalifsubshell();
 static int cmdloop(int);
 int main(int, char **);
 
@@ -135,6 +139,7 @@ main(int argc, char **argv)
 			goto state4;
 	}
 	handler = &jmploc;
+	evalifsubshell();
 #ifdef DEBUG
 	opentrace();
 	trputs("Shell args:  ");  trargs(argv);
@@ -183,6 +188,30 @@ state4:	/* XXX ??? - why isn't this before the "if" statement */
 	}
 #endif
 	exitshell();
+	/* NOTREACHED */
+}
+
+STATIC void
+evalifsubshell()
+{
+	mx_handle_t ast_vmo = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+	if (ast_vmo == MX_HANDLE_INVALID)
+		return;
+
+	uint64_t size;
+	mx_status_t status = mx_vmo_get_size(ast_vmo, &size);
+	if (status != NO_ERROR)
+		exit(status);
+
+	char buffer[size];
+
+	mx_size_t num_read;
+	status = mx_vmo_read(ast_vmo, buffer, 0, size, &num_read);
+	if (status < 0 || (size_t)num_read != size)
+		exit(status);
+
+	union node *n = codec_decode(buffer, size);
+	evaltreenr(n, EV_EXIT);
 	/* NOTREACHED */
 }
 
