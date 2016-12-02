@@ -97,6 +97,8 @@ class InterfacePtr {
   // Upon return from .NewRequest(), |table| is ready to have methods called
   // on it.
   InterfaceRequest<Interface> NewRequest() {
+    FTL_DCHECK(!is_bound()) << "An existing handle is already bound.";
+
     mx::channel endpoint0;
     mx::channel endpoint1;
     mx::channel::create(0, &endpoint0, &endpoint1);

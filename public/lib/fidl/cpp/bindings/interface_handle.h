@@ -72,6 +72,8 @@ class InterfaceHandle {
   // InterfaceHandle<> should be passed to whatever will construct a proxy to
   // the implementation (presumably using an InterfacePtr<> or equivalent).
   InterfaceRequest<Interface> NewRequest() {
+    FTL_DCHECK(!is_valid()) << "An existing handle is already bound.";
+
     mx::channel request_endpoint;
     mx::channel::create(0, &handle_, &request_endpoint);
     return InterfaceRequest<Interface>(std::move(request_endpoint));
