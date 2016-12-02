@@ -6,6 +6,7 @@
 
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "apps/ledger/src/callback/destruction_sentinel.h"
+#include "apps/ledger/src/callback/trace_callback.h"
 #include "lib/ftl/strings/ascii.h"
 
 namespace ledger {
@@ -66,25 +67,31 @@ class NetworkServiceImpl::RunningRequest {
       request->url = next_url_;
 
     network_service_->CreateURLLoader(url_loader_.NewRequest());
-    url_loader_->Start(
-        std::move(request), [this](network::URLResponsePtr response) {
-          url_loader_.reset();
 
-          if (response->error) {
-            callback_(std::move(response));
-            return;
-          }
+    const std::string& url = request->url.get();
+    url_loader_->Start(std::move(request),
+                       callback::TraceCallback(
+                           [this](network::URLResponsePtr response) {
+                             url_loader_.reset();
 
-          // 307 and 308 are redirects for which the HTTP method must not
-          // change.
-          if (response->status_code == 307 || response->status_code == 308) {
-            HandleRedirect(std::move(response));
-            return;
-          }
+                             if (response->error) {
+                               callback_(std::move(response));
+                               return;
+                             }
 
-          callback_(std::move(response));
-          return;
-        });
+                             // 307 and 308 are redirects for which the HTTP
+                             // method must not
+                             // change.
+                             if (response->status_code == 307 ||
+                                 response->status_code == 308) {
+                               HandleRedirect(std::move(response));
+                               return;
+                             }
+
+                             callback_(std::move(response));
+                             return;
+                           },
+                           "network", "url_loader_start", "url", url));
 
     url_loader_.set_connection_error_handler([this]() {
       // If the connection to the url loader failed, restart the request.
@@ -151,7 +158,8 @@ ftl::RefPtr<callback::Cancellable> NetworkServiceImpl::Request(
   auto cancellable = callback::CancellableImpl::Create(
       [this, &request]() { request.Cancel(); });
 
-  request.set_callback(cancellable->WrapCallback(std::move(callback)));
+  request.set_callback(cancellable->WrapCallback(
+      callback::TraceCallback(std::move(callback), "network", "request")));
   request.SetNetworkService(GetNetworkService());
 
   return cancellable;
