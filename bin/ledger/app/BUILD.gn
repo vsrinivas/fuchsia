@@ -18,6 +18,7 @@ executable("app") {
     "//apps/ledger/src/storage/public",
     "//apps/modular/lib/app",
     "//apps/network/services",
+    "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
@@ -65,6 +66,7 @@ source_set("lib") {
     "//apps/ledger/src/network",
     "//apps/ledger/src/storage/impl:lib",
     "//apps/ledger/src/storage/public",
+    "//apps/tracing/lib/trace:provider",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
   ]

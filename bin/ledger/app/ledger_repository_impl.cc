@@ -8,6 +8,7 @@
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/impl/ledger_storage_impl.h"
+#include "apps/tracing/lib/trace/event.h"
 
 namespace ledger {
 
@@ -29,6 +30,8 @@ void LedgerRepositoryImpl::GetLedger(
     fidl::Array<uint8_t> ledger_name,
     fidl::InterfaceRequest<Ledger> ledger_request,
     const GetLedgerCallback& callback) {
+  TRACE_DURATION0("repository", "get_ledger");
+
   if (ledger_name.size() == 0) {
     callback(Status::AUTHENTICATION_ERROR);
     return;

@@ -11,10 +11,12 @@ source_set("callback") {
     "cancellable_helper.h",
     "destruction_sentinel.cc",
     "destruction_sentinel.h",
+    "trace_callback.h",
     "waiter.h",
   ]
 
   deps = [
+    "//apps/tracing/lib/trace:provider",
     "//lib/ftl",
   ]
 }

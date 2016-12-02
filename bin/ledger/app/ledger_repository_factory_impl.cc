@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/files/path.h"
 
 namespace ledger {
@@ -18,6 +19,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     const fidl::String& repository_path,
     fidl::InterfaceRequest<LedgerRepository> repository_request,
     const GetRepositoryCallback& callback) {
+  TRACE_DURATION0("repository_factory", "get_repository");
   std::string sanitized_path =
       files::SimplifyPath(std::move(repository_path.get()));
   auto it = repositories_.find(sanitized_path);

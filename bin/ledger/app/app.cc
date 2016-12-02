@@ -14,11 +14,12 @@
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/network/services/network_service.fidl.h"
+#include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/files/directory.h"
+#include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/files/file.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -36,6 +37,8 @@ class App {
       : application_context_(
             modular::ApplicationContext::CreateFromStartupInfo()) {
     FTL_DCHECK(application_context_);
+
+    tracing::InitializeTracer(application_context_.get(), {"ledger"});
 
     std::string configuration_file =
         configuration::kDefaultConfigurationFile.ToString();
