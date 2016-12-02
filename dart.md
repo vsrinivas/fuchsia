@@ -23,7 +23,8 @@ Likewise, no build output is placed in the source tree as everything goes under
 There are four gn targets for building Dart:
 - [`dart_package`](https://fuchsia.googlesource.com/build/+/master/dart/dart_package.gni)
   defines a library that can be used by other Dart targets;
-- `dart_app` defines a Dart executable (coming soon™);
+- [`dart_app`](https://fuchsia.googlesource.com/dart_content_handler/+/master/dart_app.gni)
+defines a Dart executable;
 - [`flutter_app`](https://github.com/flutter/engine/blob/master/build/flutter_app.gni)
   defines a [Flutter](https://flutter.io/) application;
 - [`dart_test`](https://fuchsia.googlesource.com/build/+/master/dart/dart_test.gni)
@@ -132,22 +133,13 @@ symlinks.
 
 #### Multiple FIDL targets in a single BUILD file
 
-Package names for Dart bindings are inferred from the location of the source
-.fidl files. Multiple FIDL targets in a same BUILD file will therefore share a
-package name, which may result in issues - most notably when analyzing the
-resulting Dart code. This is currently not a build issue as the generated code
-for the targets is located in the same directory. This is a known issue which
-will be fixed at some point.
-
-#### Mixing FIDL targets and Dart targets
-
-If a FIDL target coexists with another Dart target whose package name
-is inferred rather than explicitly specified, the build will fail as these two
-targets will attempt to map the same package name to two different source
-location (respectively in the output directory and the source tree).
-
-The current workaround is to always specify a package name for Dart targets
-coexisting with FIDL targets.
+If two FIDL targets coexist in a single BUILD file, their respective, generated
+files will currently be placed in the same subdirectory of the output directory.
+This means that files belonging to one target will be available to clients of
+the other target, and this will likely confuse the analyzer.
+This should not be a build issue now but could become one once the generated
+Dart files are placed in separate directories if clients do not correctly set up
+their dependencies.
 
 #### Location of `dart_test` targets
 
