@@ -12,7 +12,7 @@ constexpr char GpsAcquirer::kSchema[];
 
 MockGps::MockGps(ContextEngine* context_engine) : ctl_(this) {
   maxwell::ContextPublisherPtr cx;
-  context_engine->RegisterContextAcquirer("MockGps", cx.NewRequest());
+  context_engine->RegisterPublisher("MockGps", cx.NewRequest());
 
   fidl::InterfaceHandle<ContextPublisherController> ctl_handle;
   ctl_.Bind(&ctl_handle);

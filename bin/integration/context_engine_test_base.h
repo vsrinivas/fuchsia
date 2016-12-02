@@ -18,7 +18,7 @@ class ContextEngineTestBase : public MaxwellTestBase {
         std::make_unique<maxwell::ApplicationEnvironmentHostImpl>();
     agent_host->AddService<maxwell::ContextPubSub>(
         [this, url](fidl::InterfaceRequest<maxwell::ContextPubSub> request) {
-          context_engine_->RegisterContextAgent(url, std::move(request));
+          context_engine_->RegisterPubSub(url, std::move(request));
         });
     StartAgent(url, std::move(agent_host));
   }

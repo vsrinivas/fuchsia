@@ -12,13 +12,13 @@ import "client.fidl";
 interface ContextEngine {
   // Registers a component that publishes context based on sensors and/or
   // network access. Such apps have publish-only access to Context Service.
-  RegisterContextAcquirer(string url, ContextPublisher& client);
+  RegisterPublisher(string url, ContextPublisher& client);
 
   // Registers a component that infers higher level context from other available
   // context. Such apps have pub-sub access to Context Service.
-  RegisterContextAgent(string url, ContextPubSub& client);
+  RegisterPubSub(string url, ContextPubSub& client);
 
   // Registers a component that produces suggestions based on available context.
   // Such apps have subscribe-only access to Context Service.
-  RegisterSuggestionAgent(string url, ContextSubscriber& client);
+  RegisterSubscriber(string url, ContextSubscriber& client);
 };

@@ -26,7 +26,7 @@ class NPublisher {
  public:
   NPublisher(maxwell::ContextEngine* context_engine) {
     maxwell::ContextPublisherPtr out;
-    context_engine->RegisterContextAcquirer("NPublisher", out.NewRequest());
+    context_engine->RegisterPublisher("NPublisher", out.NewRequest());
     out->Publish("n", "int", NULL, pub_.NewRequest());
   }
 
@@ -87,8 +87,8 @@ class NProposals : public Proposinator, public maxwell::ContextSubscriberLink {
   NProposals(maxwell::ContextEngine* context_engine,
              maxwell::SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), link_binding_(this) {
-    context_engine->RegisterSuggestionAgent("NProposals",
-                                            context_client_.NewRequest());
+    context_engine->RegisterSubscriber("NProposals",
+                                       context_client_.NewRequest());
 
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> link_handle;
     link_binding_.Bind(&link_handle);
@@ -151,7 +151,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
         std::make_unique<maxwell::ApplicationEnvironmentHostImpl>();
     agent_host->AddService<maxwell::ContextSubscriber>([this, url](
         fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
-      context_engine()->RegisterSuggestionAgent(url, std::move(request));
+      context_engine()->RegisterSubscriber(url, std::move(request));
     });
     agent_host->AddService<maxwell::ProposalPublisher>([this, url](
         fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {

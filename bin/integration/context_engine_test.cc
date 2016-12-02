@@ -38,8 +38,8 @@ class TestListener : public maxwell::ContextSubscriberLink {
 class ContextEngineTest : public ContextEngineTestBase {
  public:
   ContextEngineTest() {
-    context_engine()->RegisterSuggestionAgent("ContextEngineTest",
-                                              out_.NewRequest());
+    context_engine()->RegisterSubscriber("ContextEngineTest",
+                                         out_.NewRequest());
   }
 
  protected:

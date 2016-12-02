@@ -77,7 +77,7 @@ class ContextEngineApp : public ContextEngine {
         });
   }
 
-  void RegisterContextAcquirer(
+  void RegisterPublisher(
       const fidl::String& url,
       fidl::InterfaceRequest<ContextPublisher> client) override {
     caq_bindings_.AddBinding(
@@ -85,15 +85,14 @@ class ContextEngineApp : public ContextEngine {
         std::move(client));
   }
 
-  void RegisterContextAgent(
-      const fidl::String& url,
-      fidl::InterfaceRequest<ContextPubSub> client) override {
+  void RegisterPubSub(const fidl::String& url,
+                      fidl::InterfaceRequest<ContextPubSub> client) override {
     cag_bindings_.AddBinding(
         std::make_unique<ContextPubSubImpl>(new ComponentNode(url), &repo_),
         std::move(client));
   }
 
-  void RegisterSuggestionAgent(
+  void RegisterSubscriber(
       const fidl::String& url,
       fidl::InterfaceRequest<ContextSubscriber> client) override {
     sag_bindings_.AddBinding(std::make_unique<ContextSubscriberImpl>(&repo_),
