@@ -373,9 +373,17 @@ template("fidl") {
     }
   }
 
+  # Compute the Dart package name in advance to ensure it does not contain the
+  # "_dart" suffix.
+  # See //build/dart/dart_package.gni for more details.
+  target_label = get_label_info(":$target_name", "label_no_toolchain")
+  dart_package_name = exec_script("//build/dart/label_to_package_name.py",
+                                 [ target_label ],
+                                 "trim string")
+
   # This target is used to generate Dart package information
   dart_package("${target_name}_dart") {
-    infer_package_name = true
+    package_name = dart_package_name
     source_dir = target_gen_dir
 
     deps = [ "//lib/fidl/dart" ]
