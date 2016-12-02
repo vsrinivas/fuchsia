@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,12 +38,12 @@ struct bootfs_magic {
 void bootfs_parse(mx_handle_t vmo, size_t len,
                   void (*cb)(void*, const char* fn, size_t off, size_t len),
                   void* cb_arg) {
-    mx_off_t rlen;
+    mx_size_t rlen;
     mx_off_t off = 0;
     struct bootfs_magic boot_data;
     mx_status_t r = mx_vmo_read(vmo, &boot_data, off, sizeof(boot_data), &rlen);
     if (r < 0 || rlen < sizeof(boot_data)) {
-        printf("bootfs_parse: couldn't read boot_data - %ld\n", rlen);
+        printf("bootfs_parse: couldn't read boot_data - %#" PRIxPTR "\n", rlen);
         return;
     }
 
