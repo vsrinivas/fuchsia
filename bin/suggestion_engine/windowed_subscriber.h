@@ -18,9 +18,9 @@ class WindowedSubscriber {
   typedef std::vector<std::unique_ptr<RankedSuggestion>> RankedSuggestions;
 
   WindowedSubscriber(const RankedSuggestions* ranked_suggestions,
-                     fidl::InterfaceHandle<Listener> listener)
+                     fidl::InterfaceHandle<SuggestionListener> listener)
       : ranked_suggestions_(ranked_suggestions),
-        listener_(ListenerPtr::Create(std::move(listener))) {}
+        listener_(SuggestionListenerPtr::Create(std::move(listener))) {}
 
   virtual ~WindowedSubscriber() = default;
 
@@ -90,7 +90,7 @@ class WindowedSubscriber {
   // given by SetResultCount.
   int32_t max_results_ = 0;
   const RankedSuggestions* const ranked_suggestions_;
-  ListenerPtr listener_;
+  SuggestionListenerPtr listener_;
 };
 
 // Convenience template baking a controller interface into WindowedSubscriber.
@@ -98,7 +98,7 @@ template <class Controller>
 class BoundWindowedSubscriber : public Controller, public WindowedSubscriber {
  public:
   BoundWindowedSubscriber(const RankedSuggestions* ranked_suggestions,
-                          fidl::InterfaceHandle<Listener> listener,
+                          fidl::InterfaceHandle<SuggestionListener> listener,
                           fidl::InterfaceRequest<Controller> controller)
       : WindowedSubscriber(ranked_suggestions, std::move(listener)),
         binding_(this, std::move(controller)) {}

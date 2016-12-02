@@ -31,14 +31,14 @@ class Repo {
 
   void RemoveSuggestion(const std::string& id) { suggestions_.erase(id); }
 
-  void SubscribeToNext(fidl::InterfaceHandle<Listener> listener,
+  void SubscribeToNext(fidl::InterfaceHandle<SuggestionListener> listener,
                        fidl::InterfaceRequest<NextController> controller) {
     next_channel_.AddSubscriber(std::make_unique<NextSubscriber>(
         next_channel_.ranked_suggestions(), std::move(listener),
         std::move(controller)));
   }
 
-  void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
+  void InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
                    fidl::InterfaceRequest<AskController> controller);
 
   void AddAskHandler(fidl::InterfaceHandle<AskHandler> ask_handler) {

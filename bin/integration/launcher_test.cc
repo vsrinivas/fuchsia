@@ -29,8 +29,9 @@ TEST_F(MaxwellTestBase, Launcher) {
       modular::ConnectToService<maxwell::SuggestionProvider>(
           launcher_services.get());
   TestSuggestionListener listener;
-  fidl::InterfaceHandle<maxwell::Listener> listener_handle;
-  fidl::Binding<maxwell::Listener> binding(&listener, &listener_handle);
+  fidl::InterfaceHandle<maxwell::SuggestionListener> listener_handle;
+  fidl::Binding<maxwell::SuggestionListener> binding(&listener,
+                                                     &listener_handle);
   maxwell::NextControllerPtr ctl;
 
   client->SubscribeToNext(std::move(listener_handle), ctl.NewRequest());

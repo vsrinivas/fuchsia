@@ -24,7 +24,7 @@ class AskChannel : public SuggestionChannel {
   // the subscriber constructor only makes use of non-virtual members of the
   // SuggestionChannel base class.
   AskChannel(Repo* repo,
-             fidl::InterfaceHandle<Listener> listener,
+             fidl::InterfaceHandle<SuggestionListener> listener,
              fidl::InterfaceRequest<AskController> controller)
       : repo_(repo),
         subscriber_(this, std::move(listener), std::move(controller)) {}

@@ -14,7 +14,7 @@ class AskChannel;
 class AskSubscriber : public BoundWindowedSubscriber<AskController> {
  public:
   AskSubscriber(AskChannel* channel,
-                fidl::InterfaceHandle<Listener> listener,
+                fidl::InterfaceHandle<SuggestionListener> listener,
                 fidl::InterfaceRequest<AskController> controller);
 
   void SetUserInput(UserInputPtr input) override;

@@ -9,7 +9,7 @@
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "gtest/gtest.h"
 
-class TestSuggestionListener : public maxwell::Listener {
+class TestSuggestionListener : public maxwell::SuggestionListener {
  public:
   void OnAdd(fidl::Array<maxwell::SuggestionPtr> suggestions) override;
   void OnRemove(const fidl::String& uuid) override;

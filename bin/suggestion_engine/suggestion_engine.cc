@@ -34,17 +34,17 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
   // SuggestionProvider
 
   void SubscribeToInterruptions(
-      fidl::InterfaceHandle<Listener> listener) override {
+      fidl::InterfaceHandle<SuggestionListener> listener) override {
     // TODO(rosswang): no interruptions yet
   }
 
   void SubscribeToNext(
-      fidl::InterfaceHandle<Listener> listener,
+      fidl::InterfaceHandle<SuggestionListener> listener,
       fidl::InterfaceRequest<NextController> controller) override {
     repo_->SubscribeToNext(std::move(listener), std::move(controller));
   }
 
-  void InitiateAsk(fidl::InterfaceHandle<Listener> listener,
+  void InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
                    fidl::InterfaceRequest<AskController> controller) override {
     repo_->InitiateAsk(std::move(listener), std::move(controller));
   }

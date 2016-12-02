@@ -37,7 +37,8 @@ class Proposinator {
  public:
   Proposinator(maxwell::SuggestionEngine* suggestion_engine,
                const fidl::String& url = "Proposinator") {
-    suggestion_engine->RegisterSuggestionAgent("Proposinator", out_.NewRequest());
+    suggestion_engine->RegisterSuggestionAgent("Proposinator",
+                                               out_.NewRequest());
   }
 
   virtual ~Proposinator() = default;
@@ -229,7 +230,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 class NextTest : public SuggestionEngineTest {
  public:
   NextTest() : listener_binding_(&listener_) {
-    fidl::InterfaceHandle<maxwell::Listener> listener_handle;
+    fidl::InterfaceHandle<maxwell::SuggestionListener> listener_handle;
     listener_binding_.Bind(&listener_handle);
     suggestion_provider()->SubscribeToNext(std::move(listener_handle),
                                            ctl_.NewRequest());
@@ -247,7 +248,7 @@ class NextTest : public SuggestionEngineTest {
 
  private:
   TestSuggestionListener listener_;
-  fidl::Binding<maxwell::Listener> listener_binding_;
+  fidl::Binding<maxwell::SuggestionListener> listener_binding_;
   maxwell::NextControllerPtr ctl_;
 };
 
@@ -487,7 +488,7 @@ class AskTest : public SuggestionEngineTest {
   AskTest() : binding_(&listener_) {}
 
   void InitiateAsk() {
-    fidl::InterfaceHandle<maxwell::Listener> handle;
+    fidl::InterfaceHandle<maxwell::SuggestionListener> handle;
     binding_.Bind(&handle);
     suggestion_provider()->InitiateAsk(std::move(handle), ctl_.NewRequest());
   }
@@ -506,7 +507,7 @@ class AskTest : public SuggestionEngineTest {
 
  private:
   TestSuggestionListener listener_;
-  fidl::Binding<maxwell::Listener> binding_;
+  fidl::Binding<maxwell::SuggestionListener> binding_;
   maxwell::AskControllerPtr ctl_;
 };
 

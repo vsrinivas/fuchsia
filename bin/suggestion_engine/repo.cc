@@ -37,7 +37,7 @@ void Repo::AddSuggestion(std::unique_ptr<ProposalRecord> proposal,
   }
 }
 
-void Repo::InitiateAsk(fidl::InterfaceHandle<Listener> listener,
+void Repo::InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
                        fidl::InterfaceRequest<AskController> controller) {
   auto ask = std::make_unique<AskChannel>(this, std::move(listener),
                                           std::move(controller));

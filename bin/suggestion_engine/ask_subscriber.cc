@@ -9,7 +9,7 @@
 namespace maxwell {
 
 AskSubscriber::AskSubscriber(AskChannel* channel,
-                             fidl::InterfaceHandle<Listener> listener,
+                             fidl::InterfaceHandle<SuggestionListener> listener,
                              fidl::InterfaceRequest<AskController> controller)
     : BoundWindowedSubscriber(channel->ranked_suggestions(),
                               std::move(listener),

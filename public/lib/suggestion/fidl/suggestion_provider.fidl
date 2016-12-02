@@ -21,7 +21,7 @@ interface SuggestionProvider {
   //
   // Any user interactions received by the client should be forwarded to the
   // SuggestionService by calling NotifyInteraction().
-  SubscribeToInterruptions(Listener listener);
+  SubscribeToInterruptions(SuggestionListener listener);
 
   // Creates a subscription to "Next" Suggestions, with changes sent to
   // |listener|, and binds |controller| to a service that offers control over
@@ -29,7 +29,7 @@ interface SuggestionProvider {
   //
   // Closing the |controller| pipe or the |listener| pipe terminates the
   // subscription.
-  SubscribeToNext(Listener listener, NextController& controller);
+  SubscribeToNext(SuggestionListener listener, NextController& controller);
 
   // Should be called when the user initiates an "Ask". Results are sent to
   // |listener|, and changes to user input as well as paging controls are made
@@ -37,7 +37,7 @@ interface SuggestionProvider {
   //
   // Closing the |listener| pipe or the |controller| pipe signals to the
   // SuggestionService that the "Ask" has been completed or canceled.
-  InitiateAsk(Listener listener, AskController& controller);
+  InitiateAsk(SuggestionListener listener, AskController& controller);
 
   // Notifies the suggestion engine that the user has interacted with the given
   // Suggestion in the manner described in |interaction|.
@@ -67,7 +67,7 @@ interface NextController {
   SetResultCount(int32 count);
 };
 
-interface Listener {
+interface SuggestionListener {
   // TODO(thatguy): Figure out what's the best pattern to use here, to make sure
   // that UI updates are smooth.
   // TODO(anwilson): Sit down with thatguy@ and hash this out.
