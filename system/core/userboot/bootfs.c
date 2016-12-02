@@ -24,8 +24,12 @@ void bootfs_mount(mx_handle_t vmar, mx_handle_t log, mx_handle_t vmo, struct boo
     fs->len = size;
 }
 
-void bootfs_unmount(mx_handle_t vmar, mx_handle_t log, struct bootfs *fs) {
-    mx_status_t status = mx_vmar_unmap(vmar, (uintptr_t)fs->contents, 0);
+void bootfs_unmount(mx_handle_t vmar, mx_handle_t log, mx_handle_t vmo, struct bootfs *fs) {
+    uint64_t size;
+    mx_status_t status = mx_vmo_get_size(vmo, &size);
+    check(log, status, "mx_vmo_get_size failed on bootfs vmo\n");
+
+    status = mx_vmar_unmap(vmar, (uintptr_t)fs->contents, size);
     check(log, status, "mx_vmar_unmap failed\n");
 }
 

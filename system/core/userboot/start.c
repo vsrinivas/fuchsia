@@ -49,7 +49,7 @@ static void load_child_process(mx_handle_t log, mx_handle_t vmar_self,
                              o->value[OPTION_FILENAME], to_child, stack_size);
 
     // All done with bootfs!
-    bootfs_unmount(vmar_self, log, &bootfs);
+    bootfs_unmount(vmar_self, log, bootfs_vmo, &bootfs);
 
     // Now load the vDSO into the child, so it has access to system calls.
     *vdso_base = elf_load_vmo(log, vmar_self, vmar, vdso_vmo);

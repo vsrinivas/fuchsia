@@ -583,16 +583,15 @@ bool invalid_args_test() {
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 0, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
               ERR_INVALID_ARGS, "");
-    /* TODO(teisenbe): Re-enable these once we disable the unmap/protect len=0 compat feature
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
               NO_ERROR, "");
     EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 0), ERR_INVALID_ARGS, "");
-    EXPECT_EQ(mx_vmar_protect(vmar, map_addr, 0, MX_VM_FLAG_PERM_READ),
-              ERR_INVALID_ARGS, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), ERR_INVALID_ARGS, "");
-    */
+    // TODO(teisenbe): Re-enable these once we disable the protect len=0 compat feature
+    //EXPECT_EQ(mx_vmar_protect(vmar, map_addr, 0, MX_VM_FLAG_PERM_READ),
+    //          ERR_INVALID_ARGS, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), NO_ERROR, "");
 
     // Flags with invalid bits set
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, 4 * PAGE_SIZE,

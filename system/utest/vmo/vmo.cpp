@@ -131,7 +131,7 @@ bool vmo_map_test() {
 
     for (auto p: ptr) {
         if (p) {
-            status = mx_vmar_unmap(mx_vmar_root_self(), p, 0);
+            status = mx_vmar_unmap(mx_vmar_root_self(), p, PAGE_SIZE);
             EXPECT_EQ(NO_ERROR, status, "unmap");
         }
     }

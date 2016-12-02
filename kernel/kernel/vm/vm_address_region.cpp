@@ -491,7 +491,7 @@ void VmAddressRegion::Activate() {
 status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
     DEBUG_ASSERT(magic_ == kMagic);
 
-    if (!IS_PAGE_ALIGNED(base)) {
+    if (size == 0 || !IS_PAGE_ALIGNED(base)) {
         return ERR_INVALID_ARGS;
     }
 

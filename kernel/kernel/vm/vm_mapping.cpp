@@ -108,13 +108,7 @@ status_t VmMapping::Unmap(vaddr_t base, size_t size) {
         return ERR_BAD_STATE;
     }
 
-    // TODO(teisenbe): Remove this when we no longer need compatibility
-    // for the size = 0 case.  We should instead reject size=0 as invalid
-    if (base == base_ && size == 0) {
-        size = size_;
-    }
-
-    if (!is_in_range(base, size)) {
+    if (size == 0 || !is_in_range(base, size)) {
         return ERR_INVALID_ARGS;
     }
 
