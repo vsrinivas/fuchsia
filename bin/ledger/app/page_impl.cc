@@ -13,7 +13,9 @@
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/app/page_utils.h"
+#include "apps/ledger/src/callback/trace_callback.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/data_pipe/strings.h"
@@ -29,6 +31,8 @@ PageImpl::~PageImpl() {}
 
 // GetId() => (array<uint8> id);
 void PageImpl::GetId(const GetIdCallback& callback) {
+  TRACE_DURATION0("page", "get_id");
+
   callback(convert::ToArray(storage_->GetId()));
 }
 
@@ -45,6 +49,8 @@ const storage::CommitId& PageImpl::GetCurrentCommitId() {
 void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     const GetSnapshotCallback& callback) {
+  TRACE_DURATION0("page", "get_snapshot");
+
   std::unique_ptr<const storage::Commit> commit;
   storage::Status status = storage_->GetCommit(GetCurrentCommitId(), &commit);
   if (status != storage::Status::OK) {
@@ -59,9 +65,11 @@ void PageImpl::GetSnapshot(
 // Watch(PageWatcher watcher) => (Status status);
 void PageImpl::Watch(fidl::InterfaceHandle<PageWatcher> watcher,
                      const WatchCallback& callback) {
+  auto timed_callback =
+      callback::TraceCallback(std::move(callback), "page", "watch");
   PageWatcherPtr watcher_ptr = PageWatcherPtr::Create(std::move(watcher));
   PageSnapshotPtr snapshot;
-  GetSnapshot(snapshot.NewRequest(), callback);
+  GetSnapshot(snapshot.NewRequest(), std::move(timed_callback));
   branch_tracker_->RegisterPageWatcher(std::move(watcher_ptr), std::move(snapshot));
 }
 
@@ -119,7 +127,8 @@ void PageImpl::CommitJournal(std::unique_ptr<storage::Journal> journal,
 void PageImpl::Put(fidl::Array<uint8_t> key,
                    fidl::Array<uint8_t> value,
                    const PutCallback& callback) {
-  PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
+  PutWithPriority(std::move(key), std::move(value), Priority::EAGER,
+                  std::move(callback));
 }
 
 // PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
@@ -128,14 +137,18 @@ void PageImpl::PutWithPriority(fidl::Array<uint8_t> key,
                                fidl::Array<uint8_t> value,
                                Priority priority,
                                const PutWithPriorityCallback& callback) {
+  auto timed_callback =
+      callback::TraceCallback(std::move(callback), "page", "put_with_priority");
+
   // TODO(etiennej): Use asynchronous write, otherwise the run loop may block
   // until the pipe is drained.
   mx::datapipe_consumer data_pipe =
       mtl::WriteStringToConsumerHandle(convert::ToStringView(value));
   storage_->AddObjectFromLocal(
-      std::move(data_pipe), value.size(),
-      ftl::MakeCopyable([ this, key = std::move(key), priority, callback ](
-          storage::Status status, storage::ObjectId object_id) {
+      std::move(data_pipe), value.size(), ftl::MakeCopyable([
+        this, key = std::move(key), priority,
+        callback = std::move(timed_callback)
+      ](storage::Status status, storage::ObjectId object_id) {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status));
           return;
@@ -154,11 +167,14 @@ void PageImpl::PutReference(fidl::Array<uint8_t> key,
                             ReferencePtr reference,
                             Priority priority,
                             const PutReferenceCallback& callback) {
+  auto timed_callback =
+      callback::TraceCallback(std::move(callback), "page", "put_reference");
+
   storage::ObjectIdView object_id(reference->opaque_id);
   PutInCommit(key, object_id,
               priority == Priority::EAGER ? storage::KeyPriority::EAGER
                                           : storage::KeyPriority::LAZY,
-              callback);
+              std::move(timed_callback));
 }
 
 void PageImpl::PutInCommit(convert::ExtendedStringView key,
@@ -180,7 +196,7 @@ void PageImpl::Delete(fidl::Array<uint8_t> key,
         return PageUtils::ConvertStatus(journal->Delete(key),
                                         Status::KEY_NOT_FOUND);
       },
-      callback);
+      callback::TraceCallback(std::move(callback), "page", "delete"));
 }
 
 // CreateReference(int64 size, handle<data_pipe_producer> data)
@@ -190,7 +206,9 @@ void PageImpl::CreateReference(int64_t size,
                                const CreateReferenceCallback& callback) {
   storage_->AddObjectFromLocal(
       std::move(data), size,
-      [callback](storage::Status status, storage::ObjectId object_id) {
+      [callback = callback::TraceCallback(std::move(callback), "page",
+                                          "create_reference")](
+          storage::Status status, storage::ObjectId object_id) {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status), nullptr);
           return;
@@ -205,7 +223,9 @@ void PageImpl::CreateReference(int64_t size,
 // GetReference(Reference reference) => (Status status, Value? value);
 void PageImpl::GetReference(ReferencePtr reference,
                             const GetReferenceCallback& callback) {
-  PageUtils::GetReferenceAsValuePtr(storage_, reference->opaque_id, callback);
+  PageUtils::GetReferenceAsValuePtr(
+      storage_, reference->opaque_id,
+      callback::TraceCallback(std::move(callback), "page", "get_reference"));
 }
 
 // GetPartialReference(Reference reference, int64 offset, int64 max_size)
@@ -215,12 +235,16 @@ void PageImpl::GetPartialReference(
     int64_t offset,
     int64_t max_size,
     const GetPartialReferenceCallback& callback) {
-  PageUtils::GetPartialReferenceAsBuffer(storage_, reference->opaque_id, offset,
-                                         max_size, callback);
+  PageUtils::GetPartialReferenceAsBuffer(
+      storage_, reference->opaque_id, offset, max_size,
+      callback::TraceCallback(std::move(callback), "page",
+                              "get_partial_reference"));
 }
 
 // StartTransaction() => (Status status);
 void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
+  TRACE_DURATION0("page", "start_transaction");
+
   if (journal_) {
     callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
     return;
@@ -235,17 +259,22 @@ void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
 
 // Commit() => (Status status);
 void PageImpl::Commit(const CommitCallback& callback) {
+  auto timed_callback =
+      callback::TraceCallback(std::move(callback), "page", "put_with_priority");
+
   if (!journal_) {
-    callback(Status::NO_TRANSACTION_IN_PROGRESS);
+    timed_callback(Status::NO_TRANSACTION_IN_PROGRESS);
     return;
   }
   journal_parent_commit_.clear();
-  CommitJournal(std::move(journal_), callback);
+  CommitJournal(std::move(journal_), std::move(timed_callback));
   branch_tracker_->SetTransactionInProgress(false);
 }
 
 // Rollback() => (Status status);
 void PageImpl::Rollback(const RollbackCallback& callback) {
+  TRACE_DURATION0("page", "rollback");
+
   if (!journal_) {
     callback(Status::NO_TRANSACTION_IN_PROGRESS);
     return;
