@@ -48,7 +48,7 @@ void ViewAssociateTable::RegisterViewAssociate(
 
   // Connect the associate to our view inspector.
   mozart::ViewInspectorPtr inspector_ptr;
-  data->inspector_binding.Bind(GetProxy(&inspector_ptr));
+  data->inspector_binding.Bind(inspector_ptr.NewRequest());
   data->associate->Connect(std::move(inspector_ptr), [
     this, index = pending_connection_count_
   ](mozart::ViewAssociateInfoPtr info) {

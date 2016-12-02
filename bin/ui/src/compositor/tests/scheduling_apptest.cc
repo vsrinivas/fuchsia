@@ -27,7 +27,7 @@ class SchedulingTest : public fidl::test::ApplicationTestBase {
     fidl::test::ApplicationTestBase::SetUp();
 
     fidl::ConnectToService(shell(), "mojo:native_viewport_service",
-                           GetProxy(&viewport_));
+                           viewport_.NewRequest());
     auto size = mozart::Size::New();
     size->width = 320;
     size->height = 640;
@@ -39,12 +39,12 @@ class SchedulingTest : public fidl::test::ApplicationTestBase {
     viewport_->Show();
 
     fidl::ContextProviderPtr context_provider;
-    viewport_->GetContextProvider(GetProxy(&context_provider));
+    viewport_->GetContextProvider(context_provider.NewRequest());
 
     fidl::ConnectToService(shell(), "mojo:compositor_service",
                            fidl::GetSynchronousProxy(&compositor_));
     compositor_->CreateRenderer(std::move(context_provider),
-                                fidl::GetProxy(&renderer_), "SchedulingTest");
+                                renderer_.NewRequest(), "SchedulingTest");
   }
 
   void TestScheduler(SynchronousFrameSchedulerPtr scheduler) {
@@ -90,7 +90,7 @@ TEST_F(SchedulingTest, RendererScheduler) {
 TEST_F(SchedulingTest, OrphanedSceneScheduler) {
   ScenePtr scene;
   SceneTokenPtr scene_token;
-  compositor_->CreateScene(fidl::GetProxy(&scene), "SchedulingTest",
+  compositor_->CreateScene(scene.NewRequest(), "SchedulingTest",
                            &scene_token);
 
   SynchronousFrameSchedulerPtr scheduler;
@@ -104,7 +104,7 @@ TEST_F(SchedulingTest, OrphanedSceneScheduler) {
 TEST_F(SchedulingTest, RootSceneScheduler) {
   ScenePtr scene;
   SceneTokenPtr scene_token;
-  compositor_->CreateScene(fidl::GetProxy(&scene), "SchedulingTest",
+  compositor_->CreateScene(scene.NewRequest(), "SchedulingTest",
                            &scene_token);
 
   auto viewport = mozart::Rect::New();

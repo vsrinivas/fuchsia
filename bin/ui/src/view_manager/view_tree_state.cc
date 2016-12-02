@@ -44,7 +44,7 @@ void ViewTreeState::SetRenderer(mozart::RendererPtr renderer) {
   renderer_ = std::move(renderer);
   frame_scheduler_.reset();
   if (renderer_)
-    renderer_->GetScheduler(GetProxy(&frame_scheduler_));
+    renderer_->GetScheduler(frame_scheduler_.NewRequest());
 
   ClearHitTesterCallbacks(true /*renderer_changed*/);
 }

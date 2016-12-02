@@ -36,7 +36,7 @@ TEST_F(ViewAssociateTableTest, RegisterViewAssociateThenCloseIt) {
     mozart::ViewAssociatePtr associate;
     MockViewAssociate mock_view_associate;
     fidl::Binding<mozart::ViewAssociate> view_associate_binding(
-        &mock_view_associate, fidl::GetProxy(&associate));
+        &mock_view_associate, associate.NewRequest());
 
     // call ViewAssociateTable::RegisterViewAssociate
     EXPECT_EQ((size_t)0, view_associate_table.associate_count());
@@ -44,7 +44,7 @@ TEST_F(ViewAssociateTableTest, RegisterViewAssociateThenCloseIt) {
     mozart::ViewAssociateOwnerPtr view_associate_owner;
     view_associate_table.RegisterViewAssociate(
         &mock_view_inspector, std::move(associate),
-        fidl::GetProxy(&view_associate_owner), "test_view_associate");
+        view_associate_owner.NewRequest(), "test_view_associate");
     KICK_MESSAGE_LOOP_WHILE(view_associate_table.associate_count() != 1);
     EXPECT_EQ((size_t)1, view_associate_table.associate_count());
   }

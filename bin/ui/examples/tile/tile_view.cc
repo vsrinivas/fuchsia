@@ -66,18 +66,18 @@ void TileView::ConnectViews() {
 
     auto launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = url;
-    launch_info->services = GetProxy(&services);
+    launch_info->services = services.NewRequest();
 
     // |env_launcher_| launches the app with our nested environment.
     env_launcher_->CreateApplication(std::move(launch_info),
-                                     GetProxy(&controller));
+                                     controller.NewRequest());
 
     // Get the view provider back from the launched app.
     auto view_provider =
         modular::ConnectToService<mozart::ViewProvider>(services.get());
 
     fidl::InterfaceHandle<mozart::ViewOwner> child_view_owner;
-    view_provider->CreateView(fidl::GetProxy(&child_view_owner), nullptr);
+    view_provider->CreateView(child_view_owner.NewRequest(), nullptr);
 
     // Add the view, which increments child_key_.
     PresentHelper(std::move(child_view_owner), url, std::move(controller));
@@ -94,10 +94,10 @@ void TileView::GetApplicationEnvironmentServices(
 // environment
 void TileView::CreateNestedEnvironment() {
   modular::ApplicationEnvironmentHostPtr env_host;
-  env_host_binding_.Bind(GetProxy(&env_host));
+  env_host_binding_.Bind(env_host.NewRequest());
   application_context_->environment()->CreateNestedEnvironment(
-      std::move(env_host), GetProxy(&env_), GetProxy(&env_controller_), "tile");
-  env_->GetApplicationLauncher(GetProxy(&env_launcher_));
+      std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(), "tile");
+  env_->GetApplicationLauncher(env_launcher_.NewRequest());
 
   // Add a binding for the presenter service
   env_services_.AddService<mozart::Presenter>(

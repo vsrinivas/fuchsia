@@ -53,7 +53,7 @@ void ViewTreeHitTesterClient::UpdateHitTester() {
   FTL_DCHECK(!hit_tester_);
 
   view_inspector_client_->view_inspector()->GetHitTester(
-      view_tree_token_.Clone(), fidl::GetProxy(&hit_tester_),
+      view_tree_token_.Clone(), hit_tester_.NewRequest(),
       [ this, weak = weak_factory_.GetWeakPtr() ](bool renderer_changed) {
         if (weak)
           weak->OnHitTesterInvalidated(renderer_changed);

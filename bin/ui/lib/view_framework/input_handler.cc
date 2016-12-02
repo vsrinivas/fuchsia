@@ -15,10 +15,10 @@ InputHandler::InputHandler(modular::ServiceProvider* service_provider,
   FTL_DCHECK(service_provider);
   FTL_DCHECK(listener);
 
-  modular::ConnectToService(service_provider, GetProxy(&connection_));
+  modular::ConnectToService(service_provider, connection_.NewRequest());
 
   InputListenerPtr listener_ptr;
-  listener_binding_.Bind(GetProxy(&listener_ptr));
+  listener_binding_.Bind(listener_ptr.NewRequest());
   connection_->SetListener(std::move(listener_ptr));
 }
 

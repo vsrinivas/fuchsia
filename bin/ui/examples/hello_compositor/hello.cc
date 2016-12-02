@@ -32,14 +32,14 @@ class HelloApp {
             modular::ApplicationContext::CreateFromStartupInfo()) {
     compositor_ =
         application_context_->ConnectToEnvironmentService<mozart::Compositor>();
-    compositor_->CreateRenderer(GetProxy(&renderer_),
+    compositor_->CreateRenderer(renderer_.NewRequest(),
                                 "Hello Compositor Renderer");
 
     renderer_->GetDisplayInfo([this](mozart::DisplayInfoPtr display_info) {
       FTL_DCHECK(display_info);
       display_info_ = std::move(display_info);
 
-      compositor_->CreateScene(GetProxy(&scene_), "Hello Compositor Scene",
+      compositor_->CreateScene(scene_.NewRequest(), "Hello Compositor Scene",
                                [this](mozart::SceneTokenPtr scene_token) {
                                  auto viewport = mozart::Rect::New();
                                  viewport->width = display_info_->size->width;
@@ -49,7 +49,7 @@ class HelloApp {
                                                          std::move(viewport));
                                });
 
-      scene_->GetScheduler(fidl::GetProxy(&frame_scheduler_));
+      scene_->GetScheduler(frame_scheduler_.NewRequest());
       ScheduleDraw();
     });
   }

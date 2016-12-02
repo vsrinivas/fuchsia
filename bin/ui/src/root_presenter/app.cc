@@ -49,7 +49,7 @@ void App::Present(fidl::InterfaceHandle<mozart::ViewOwner> view_owner_handle) {
 
 void App::InitializeServices() {
   if (!compositor_) {
-    application_context_->ConnectToEnvironmentService(GetProxy(&compositor_));
+    application_context_->ConnectToEnvironmentService(compositor_.NewRequest());
     compositor_.set_connection_error_handler([this] {
       FTL_LOG(ERROR) << "Compositor died, destroying view trees.";
       Reset();
@@ -57,7 +57,7 @@ void App::InitializeServices() {
   }
 
   if (!view_manager_) {
-    application_context_->ConnectToEnvironmentService(GetProxy(&view_manager_));
+    application_context_->ConnectToEnvironmentService(view_manager_.NewRequest());
     view_manager_.set_connection_error_handler([this] {
       FTL_LOG(ERROR) << "ViewManager died, destroying view trees.";
       Reset();

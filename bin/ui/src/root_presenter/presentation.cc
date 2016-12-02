@@ -70,7 +70,7 @@ Presentation::~Presentation() {}
 void Presentation::Present(ftl::Closure shutdown_callback) {
   shutdown_callback_ = std::move(shutdown_callback);
 
-  compositor_->CreateRenderer(GetProxy(&renderer_), "Presentation");
+  compositor_->CreateRenderer(renderer_.NewRequest(), "Presentation");
   renderer_.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "Renderer died unexpectedly.";
     Shutdown();
@@ -117,8 +117,8 @@ void Presentation::CreateViewTree() {
 
   // Register the view tree.
   mozart::ViewTreeListenerPtr tree_listener;
-  tree_listener_binding_.Bind(fidl::GetProxy(&tree_listener));
-  view_manager_->CreateViewTree(fidl::GetProxy(&tree_),
+  tree_listener_binding_.Bind(tree_listener.NewRequest());
+  view_manager_->CreateViewTree(tree_.NewRequest(),
                                 std::move(tree_listener), "Presentation");
   tree_.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "View tree connection error.";
@@ -126,19 +126,19 @@ void Presentation::CreateViewTree() {
   });
 
   // Prepare the view container for the root.
-  tree_->GetContainer(fidl::GetProxy(&tree_container_));
+  tree_->GetContainer(tree_container_.NewRequest());
   tree_container_.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "Tree view container connection error.";
     Shutdown();
   });
   mozart::ViewContainerListenerPtr tree_container_listener;
   tree_container_listener_binding_.Bind(
-      fidl::GetProxy(&tree_container_listener));
+      tree_container_listener.NewRequest());
   tree_container_->SetListener(std::move(tree_container_listener));
 
   // Get view tree services.
   modular::ServiceProviderPtr tree_service_provider;
-  tree_->GetServiceProvider(fidl::GetProxy(&tree_service_provider));
+  tree_->GetServiceProvider(tree_service_provider.NewRequest());
   input_dispatcher_ = modular::ConnectToService<mozart::InputDispatcher>(
       tree_service_provider.get());
   input_dispatcher_.set_connection_error_handler([this] {
@@ -154,19 +154,19 @@ void Presentation::CreateViewTree() {
 
   // Create root view
   mozart::ViewListenerPtr root_view_listener;
-  view_listener_binding_.Bind(GetProxy(&root_view_listener));
-  view_manager_->CreateView(fidl::GetProxy(&root_view_),
-                            fidl::GetProxy(&root_view_owner_),
+  view_listener_binding_.Bind(root_view_listener.NewRequest());
+  view_manager_->CreateView(root_view_.NewRequest(),
+                            root_view_owner_.NewRequest(),
                             std::move(root_view_listener), "RootView");
   tree_container_->AddChild(kRootViewKey, std::move(root_view_owner_));
-  root_view_->CreateScene(GetProxy(&root_scene_));
+  root_view_->CreateScene(root_scene_.NewRequest());
 
   // Add content view to root view
-  root_view_->GetContainer(fidl::GetProxy(&root_container_));
+  root_view_->GetContainer(root_container_.NewRequest());
 
   mozart::ViewContainerListenerPtr view_container_listener;
   view_container_listener_binding_.Bind(
-      fidl::GetProxy(&view_container_listener));
+      view_container_listener.NewRequest());
   root_container_->SetListener(std::move(view_container_listener));
 
   root_container_->AddChild(kContentViewKey, std::move(view_owner_));

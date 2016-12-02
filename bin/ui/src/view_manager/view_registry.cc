@@ -541,7 +541,7 @@ void ViewRegistry::AttachResolvedViewAndNotify(ViewStub* view_stub,
   // getting the scene token.
   mozart::ScenePtr stub_scene;
   compositor_->CreateScene(
-      fidl::GetProxy(&stub_scene),
+      stub_scene.NewRequest(),
       ftl::StringPrintf("*%s", view_state->label().c_str()),
       [ this,
         weak = view_stub->GetWeakPtr() ](mozart::SceneTokenPtr scene_token) {

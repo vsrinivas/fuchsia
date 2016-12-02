@@ -33,15 +33,15 @@ int main(int argc, const char** argv) {
   launch_info->url = positional_args[0];
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info->arguments.push_back(positional_args[i]);
-  launch_info->services = GetProxy(&services);
+  launch_info->services = services.NewRequest();
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       nullptr);
 
   // Create the view.
   fidl::InterfacePtr<mozart::ViewProvider> view_provider;
-  modular::ConnectToService(services.get(), GetProxy(&view_provider));
+  modular::ConnectToService(services.get(), view_provider.NewRequest());
   fidl::InterfaceHandle<mozart::ViewOwner> view_owner;
-  view_provider->CreateView(fidl::GetProxy(&view_owner), nullptr);
+  view_provider->CreateView(view_owner.NewRequest(), nullptr);
 
   // Ask the presenter to display it.
   auto presenter =

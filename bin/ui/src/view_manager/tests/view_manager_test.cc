@@ -33,7 +33,7 @@ class ViewManagerTest : public ViewManagerTestBase {
 
     // Connect to view manager
     fidl::ConnectToService(shell(), "mojo:view_manager_service",
-                           fidl::GetProxy(&view_manager_));
+                           view_manager_.NewRequest());
   }
 
  protected:
@@ -52,12 +52,12 @@ TEST_F(ViewManagerTest, CreateAView) {
   mozart::ViewListenerPtr view_listener;
   MockViewListener mock_view_listener;
   fidl::Binding<mozart::ViewListener> view_listener_binding(
-      &mock_view_listener, fidl::GetProxy(&view_listener));
+      &mock_view_listener, view_listener.NewRequest());
 
   // Create a view
   mozart::ViewPtr view;
   mozart::ViewOwnerPtr view_owner;
-  view_manager_->CreateView(fidl::GetProxy(&view), fidl::GetProxy(&view_owner),
+  view_manager_->CreateView(view.NewRequest(), view_owner.NewRequest(),
                             std::move(view_listener), "test_view");
 
   // Call View::GetToken. Check that you get the callback.
@@ -78,29 +78,29 @@ TEST_F(ViewManagerTest, CreateAChildView) {
   mozart::ViewListenerPtr parent_view_listener;
   MockViewListener parent_mock_view_listener;
   fidl::Binding<mozart::ViewListener> child_view_listener_binding(
-      &parent_mock_view_listener, fidl::GetProxy(&parent_view_listener));
+      &parent_mock_view_listener, parent_view_listener.NewRequest());
 
   // Create a parent view
   mozart::ViewPtr parent_view;
   mozart::ViewOwnerPtr parent_view_owner;
   view_manager_->CreateView(
-      fidl::GetProxy(&parent_view), fidl::GetProxy(&parent_view_owner),
+      parent_view.NewRequest(), parent_view_owner.NewRequest(),
       std::move(parent_view_listener), "parent_test_view");
 
   mozart::ViewContainerPtr parent_view_container;
-  parent_view->GetContainer(fidl::GetProxy(&parent_view_container));
+  parent_view->GetContainer(parent_view_container.NewRequest());
 
   // Create and bind a mock view listener for a child view
   mozart::ViewListenerPtr child_view_listener;
   MockViewListener child_mock_view_listener;
   fidl::Binding<mozart::ViewListener> parent_view_listener_binding(
-      &child_mock_view_listener, fidl::GetProxy(&child_view_listener));
+      &child_mock_view_listener, child_view_listener.NewRequest());
 
   // Create a child view
   mozart::ViewPtr child_view;
   mozart::ViewOwnerPtr child_view_owner;
-  view_manager_->CreateView(fidl::GetProxy(&child_view),
-                            fidl::GetProxy(&child_view_owner),
+  view_manager_->CreateView(child_view.NewRequest(),
+                            child_view_owner.NewRequest(),
                             std::move(child_view_listener), "test_view");
 
   // Add the view to the parent
@@ -108,7 +108,7 @@ TEST_F(ViewManagerTest, CreateAChildView) {
 
   // Remove the view from the parent
   mozart::ViewOwnerPtr new_child_view_owner;
-  parent_view_container->RemoveChild(0, fidl::GetProxy(&new_child_view_owner));
+  parent_view_container->RemoveChild(0, new_child_view_owner.NewRequest());
 
   // If we had a ViewContainerListener, we would still not get a OnViewAttached
   // since the view hasn't had enough time to be resolved
@@ -131,14 +131,14 @@ TEST_F(ViewManagerTest, ConnectAMockViewAssociate) {
   fidl::InterfaceHandle<mozart::ViewAssociate> associate;
   MockViewAssociate mock_view_associate;
   fidl::Binding<mozart::ViewAssociate> view_associate_binding(
-      &mock_view_associate, fidl::GetProxy(&associate));
+      &mock_view_associate, associate.NewRequest());
 
   // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
   // should be called back
   EXPECT_EQ(0, mock_view_associate.connect_invokecount);
   mozart::ViewAssociateOwnerPtr view_associate_owner;
   view_manager_->RegisterViewAssociate(std::move(associate),
-                                       fidl::GetProxy(&view_associate_owner),
+                                       view_associate_owner.NewRequest(),
                                        "test_view_associate");
 
   KICK_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
@@ -155,14 +155,14 @@ TEST_F(ViewManagerTest, DisconnectAMockViewAssociate) {
     fidl::InterfaceHandle<mozart::ViewAssociate> associate;
     MockViewAssociate mock_view_associate;
     fidl::Binding<mozart::ViewAssociate> view_associate_binding(
-        &mock_view_associate, fidl::GetProxy(&associate));
+        &mock_view_associate, associate.NewRequest());
 
     // Call ViewManager::RegisterViewAssociate. MockViewAssociate::Connect
     // should be called back
     EXPECT_EQ(0, mock_view_associate.connect_invokecount);
 
     view_manager_->RegisterViewAssociate(std::move(associate),
-                                         fidl::GetProxy(&view_associate_owner),
+                                         view_associate_owner.NewRequest(),
                                          "test_view_associate_xyz");
 
     // set a callback for errors
@@ -191,7 +191,7 @@ TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
   fidl::InterfaceHandle<mozart::ViewAssociate> associate;
   MockViewAssociate mock_view_associate;
   fidl::Binding<mozart::ViewAssociate> view_associate_binding(
-      &mock_view_associate, fidl::GetProxy(&associate));
+      &mock_view_associate, associate.NewRequest());
 
   // set a callback for errors
   int connection_error_callback_invokecount = 0;
@@ -209,7 +209,7 @@ TEST_F(ViewManagerTest, DisconnectAViewAssociateOwner) {
     EXPECT_EQ(0, mock_view_associate.connect_invokecount);
 
     view_manager_->RegisterViewAssociate(std::move(associate),
-                                         fidl::GetProxy(&view_associate_owner),
+                                         view_associate_owner.NewRequest(),
                                          "test_view_associate_xyz");
 
     KICK_MESSAGE_LOOP_WHILE(mock_view_associate.connect_invokecount != 1);
