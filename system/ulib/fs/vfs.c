@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "trace.h"
-#include "vfs.h"
+#include <fs/trace.h>
+#include <fs/vfs.h>
 
 #include <fcntl.h>
 #include <string.h>

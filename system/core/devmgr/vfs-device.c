@@ -7,7 +7,8 @@
 #include "devmgr.h"
 #include "device-internal.h"
 #include "memfs-private.h"
-#include "vfs.h"
+
+#include <fs/vfs.h>
 
 #include <ddk/device.h>
 
@@ -16,7 +17,6 @@
 #include <magenta/syscalls.h>
 
 #include <mxio/debug.h>
-#include <mxio/vfs.h>
 
 #include <stdlib.h>
 #include <string.h>

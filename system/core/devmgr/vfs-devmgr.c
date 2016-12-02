@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "trace.h"
 #include "devmgr.h"
 #include "memfs-private.h"
 
 #include <ddk/device.h>
+
+#include <fs/trace.h>
 
 #include <magenta/listnode.h>
 

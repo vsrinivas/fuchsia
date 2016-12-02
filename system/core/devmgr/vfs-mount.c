@@ -4,7 +4,8 @@
 
 #include "dnode.h"
 #include "memfs-private.h"
-#include "vfs.h"
+
+#include <fs/vfs.h>
 
 #include <magenta/device/devmgr.h>
 #include <magenta/listnode.h>

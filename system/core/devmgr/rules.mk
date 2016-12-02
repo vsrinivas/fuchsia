@@ -19,7 +19,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr-rpc-server.c \
     $(LOCAL_DIR)/shared.c \
     $(LOCAL_DIR)/vfs-boot.c \
-    $(LOCAL_DIR)/vfs.c \
     $(LOCAL_DIR)/vfs-devmgr.c \
     $(LOCAL_DIR)/vfs-device.c \
     $(LOCAL_DIR)/vfs-memory.c \
@@ -36,7 +35,8 @@ MODULE_STATIC_LIBS := \
     ulib/gpt \
     ulib/launchpad \
     ulib/elfload \
-    ulib/mxio
+    ulib/mxio \
+    ulib/fs
 
 MODULE_LIBS := ulib/magenta ulib/musl
 

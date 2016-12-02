@@ -5,7 +5,8 @@
 #include "devmgr.h"
 #include "dnode.h"
 #include "memfs-private.h"
-#include "vfs.h"
+
+#include <fs/vfs.h>
 
 #include <mxio/debug.h>
 #include <mxio/dispatcher.h>

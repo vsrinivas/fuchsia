@@ -4,14 +4,8 @@
 
 #include "devmgr.h"
 #include "memfs-private.h"
-#include "vfs.h"
 
-#include <fcntl.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <fs/vfs.h>
 
 #include <launchpad/launchpad.h>
 
@@ -22,6 +16,12 @@
 #include <mxio/remoteio.h>
 #include <mxio/util.h>
 
+#include <fcntl.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 typedef struct bootfile bootfile_t;
 struct bootfile {
