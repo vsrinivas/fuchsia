@@ -2,4 +2,4 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-int test_vk_cube();
+int test_vk_cube(int argc, char** argv);

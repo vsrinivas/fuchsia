@@ -2941,7 +2941,7 @@ int cube_main(int argc, char **argv) {
     return validation_error;
 }
 
-int test_vk_cube()
+int test_vk_cube(int argc, char** argv)
 {
-    return cube_main(0, nullptr);
+    return cube_main(argc, argv);
 }

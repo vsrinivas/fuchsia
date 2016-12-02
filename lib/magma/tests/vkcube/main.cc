@@ -5,4 +5,4 @@ extern "C" {
 #include "vkcube.h"
 }
 
-int main(void) { return test_vk_cube(); }
+int main(int argc, char** argv) { return test_vk_cube(argc, argv); }
