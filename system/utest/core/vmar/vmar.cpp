@@ -254,15 +254,16 @@ bool destroyed_vmar_test() {
                       ERR_NO_MEMORY, "");
         }
 
-        // All mapping-modifying operations on region[0] and region[1] should fail with
-        // ERR_NOT_FOUND, all other operations on them should fail with ERR_BAD_STATE
+        // All operations on region[0] and region[1] should fail with ERR_BAD_STATE
         EXPECT_EQ(mx_vmar_destroy(region[i]), ERR_BAD_STATE, "");
         EXPECT_EQ(mx_vmar_allocate(region[i], 0, PAGE_SIZE,
                                    MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,
                                    &region[1], &region_addr[2]),
                   ERR_BAD_STATE, "");
         EXPECT_EQ(mx_vmar_unmap(region[i], map_addr[i], PAGE_SIZE),
-                  ERR_NOT_FOUND, "");
+                  ERR_BAD_STATE, "");
+        // TODO(teisenbe): This should be ERR_BAD_STATE, but currently the
+        // dispatcher layer can't distinguish a DEAD vmar from an empty one.
         EXPECT_EQ(mx_vmar_protect(region[i], map_addr[i], PAGE_SIZE, MX_VM_FLAG_PERM_READ),
                   ERR_NOT_FOUND, "");
         EXPECT_EQ(mx_vmar_map(region[i], 0, vmo, 0, PAGE_SIZE, MX_VM_FLAG_PERM_READ, &map_addr[i]),
@@ -952,6 +953,166 @@ bool unmap_split_test() {
     END_TEST;
 }
 
+// Verify that we can unmap multiple ranges simultaneously
+bool unmap_multiple_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t vmo;
+    mx_handle_t subregion;
+    uintptr_t mapping_addr[3];
+    uintptr_t subregion_addr;
+
+    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), NO_ERROR, "");
+
+    const size_t mapping_size = 4 * PAGE_SIZE;
+    ASSERT_EQ(mx_vmo_create(mapping_size, 0, &vmo), NO_ERROR, "");
+
+    // Create two mappings
+    for (size_t i = 0; i < 2; ++i) {
+        ASSERT_EQ(mx_vmar_map(vmar, i * mapping_size, vmo, 0, mapping_size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                              &mapping_addr[i]),
+                  NO_ERROR, "");
+    }
+    EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[1], "");
+    // Unmap from the right of the first and the left of the second
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + 2 * PAGE_SIZE, 3 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1110'0011, 8), "");
+    // Unmap the rest
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 1 * PAGE_SIZE, 3 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000, 8), "");
+
+    // Create two mappings with a gap, and verify we can unmap them
+    for (size_t i = 0; i < 2; ++i) {
+        ASSERT_EQ(mx_vmar_map(vmar, 2 * i * mapping_size, vmo, 0, mapping_size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                              &mapping_addr[i]),
+                  NO_ERROR, "");
+    }
+    EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[1], "");
+    // Unmap all of the left one and some of the right one
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * mapping_size + PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1110'0000'0000, 12), "");
+    // Unmap the rest
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 1 * PAGE_SIZE, 3 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+
+    // Create two mappings with a subregion between, should be able to unmap
+    // them (and destroy the subregion in the process).
+    for (size_t i = 0; i < 2; ++i) {
+        ASSERT_EQ(mx_vmar_map(vmar, 2 * i * mapping_size, vmo, 0, mapping_size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                              &mapping_addr[i]),
+                  NO_ERROR, "");
+    }
+    ASSERT_EQ(mx_vmar_allocate(vmar, mapping_size, mapping_size,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
+                               MX_VM_FLAG_CAN_MAP_SPECIFIC | MX_VM_FLAG_SPECIFIC,
+                               &subregion, &subregion_addr),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(subregion, 0, vmo, 0, PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              NO_ERROR, "");
+    EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[1], "");
+    EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[2], "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0001'1111, 12), "");
+    // Unmap all of the left one and some of the right one
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 2 * mapping_size + PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1110'0000'0000, 12), "");
+    // Try to map in the subregion again, should fail due to being destroyed
+    ASSERT_EQ(mx_vmar_map(subregion, PAGE_SIZE, vmo, 0, PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              ERR_BAD_STATE, "");
+    // Unmap the rest
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1] + 1 * PAGE_SIZE, 3 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+    EXPECT_EQ(mx_handle_close(subregion), NO_ERROR, "");
+
+    // Create two mappings with a subregion after.  Partial unmap of the
+    // subregion should fail, full unmap should succeed.
+    for (size_t i = 0; i < 2; ++i) {
+        ASSERT_EQ(mx_vmar_map(vmar, i * mapping_size, vmo, 0, mapping_size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                              &mapping_addr[i]),
+                  NO_ERROR, "");
+    }
+    ASSERT_EQ(mx_vmar_allocate(vmar, 2 * mapping_size, mapping_size,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
+                               MX_VM_FLAG_CAN_MAP_SPECIFIC | MX_VM_FLAG_SPECIFIC,
+                               &subregion, &subregion_addr),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(subregion, 0, vmo, 0, PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              NO_ERROR, "");
+    EXPECT_EQ(mapping_addr[0] + mapping_size, mapping_addr[1], "");
+    EXPECT_EQ(mapping_addr[0] + 2 * mapping_size, mapping_addr[2], "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0001'1111'1111, 12), "");
+    // Unmap some of the left one through to all but the last page of the subregion
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + PAGE_SIZE, 3 * mapping_size - 2 * PAGE_SIZE),
+              ERR_INVALID_ARGS, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0001'1111'1111, 12), "");
+    // Try again, but unmapping all of the subregion
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0] + PAGE_SIZE, 3 * mapping_size - PAGE_SIZE),
+              NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0001, 12), "");
+    // Try to map in the subregion again, should fail due to being destroyed
+    ASSERT_EQ(mx_vmar_map(subregion, PAGE_SIZE, vmo, 0, PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              ERR_BAD_STATE, "");
+    // Unmap the rest
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+    EXPECT_EQ(mx_handle_close(subregion), NO_ERROR, "");
+
+    // Create two mappings with a subregion before.  Partial unmap of the
+    // subregion should fail, full unmap should succeed.
+    for (size_t i = 0; i < 2; ++i) {
+        ASSERT_EQ(mx_vmar_map(vmar, (i + 1) * mapping_size, vmo, 0, mapping_size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                              &mapping_addr[i]),
+                  NO_ERROR, "");
+    }
+    ASSERT_EQ(mx_vmar_allocate(vmar, 0, mapping_size,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
+                               MX_VM_FLAG_CAN_MAP_SPECIFIC | MX_VM_FLAG_SPECIFIC,
+                               &subregion, &subregion_addr),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(subregion, mapping_size - PAGE_SIZE, vmo, 0, PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              NO_ERROR, "");
+    EXPECT_EQ(subregion_addr + mapping_size, mapping_addr[0], "");
+    EXPECT_EQ(subregion_addr + 2 * mapping_size, mapping_addr[1], "");
+    EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b1111'1111'1000, 12), "");
+    // Try to unmap everything except the first page of the subregion
+    EXPECT_EQ(mx_vmar_unmap(vmar, subregion_addr + PAGE_SIZE, 3 * mapping_size - PAGE_SIZE),
+              ERR_INVALID_ARGS, "");
+    EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b1111'1111'1000, 12), "");
+    // Try again, but unmapping all of the subregion
+    EXPECT_EQ(mx_vmar_unmap(vmar, subregion_addr, 3 * mapping_size), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, subregion_addr, 0b0000'0000'0000, 12), "");
+    // Try to map in the subregion again, should fail due to being destroyed
+    ASSERT_EQ(mx_vmar_map(subregion, PAGE_SIZE, vmo, 0, PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              ERR_BAD_STATE, "");
+    EXPECT_EQ(mx_handle_close(subregion), NO_ERROR, "");
+
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(vmar_tests)
@@ -969,6 +1130,7 @@ RUN_TEST(protect_test);
 RUN_TEST(nested_region_perms_test);
 RUN_TEST(object_info_test);
 RUN_TEST(unmap_split_test);
+RUN_TEST(unmap_multiple_test);
 END_TEST_CASE(vmar_tests)
 
 #ifndef BUILD_COMBINED_TESTS

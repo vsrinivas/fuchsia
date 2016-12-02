@@ -125,6 +125,11 @@ protected:
     // regions *flags_*
     bool is_valid_mapping_flags(uint arch_mmu_flags);
 
+    bool is_in_range(vaddr_t base, size_t size) const {
+        const size_t offset = base - base_;
+        return base >= base_ && offset < size_ && size_ - offset >= size;
+    }
+
     // Version of Destroy() that does not acquire the aspace lock
     virtual status_t DestroyLocked() = 0;
 
@@ -188,6 +193,12 @@ public:
     // Find the child region that contains the given addr.  If addr is in a gap,
     // returns nullptr.  This is a non-recursive search.
     mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
+
+    // Unmap a subset of the region of memory in the containing address space,
+    // returning it to this region to allocate.  If a subregion is entirely in
+    // the range, that subregion is destroyed.  If a subregion is partially in
+    // the range, Unmap() will fail.
+    status_t Unmap(vaddr_t base, size_t size);
 
     bool is_mapping() const override { return false; }
 

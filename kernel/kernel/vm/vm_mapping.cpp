@@ -113,11 +113,7 @@ status_t VmMapping::Unmap(vaddr_t base, size_t size) {
         size = size_;
     }
 
-    if (base < base_) {
-        return ERR_INVALID_ARGS;
-    }
-    const size_t offset = base - base_;
-    if (offset >= size_ || size_ - offset < size) {
+    if (!is_in_range(base, size)) {
         return ERR_INVALID_ARGS;
     }
 

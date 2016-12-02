@@ -487,3 +487,82 @@ void VmAddressRegion::Activate() {
     state_ = LifeCycleState::ALIVE;
     parent_->subregions_.insert(mxtl::RefPtr<VmAddressRegionOrMapping>(this));
 }
+
+status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
+    DEBUG_ASSERT(magic_ == kMagic);
+
+    if (!IS_PAGE_ALIGNED(base)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    size = ROUNDUP(size, PAGE_SIZE);
+
+    AutoLock guard(aspace_->lock());
+    if (state_ != LifeCycleState::ALIVE) {
+        return ERR_BAD_STATE;
+    }
+
+    if (!is_in_range(base, size)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    if (subregions_.is_empty()) {
+        return NO_ERROR;
+    }
+
+    const vaddr_t end_addr = base + size;
+    const auto end = subregions_.lower_bound(end_addr);
+
+    // Find the first region with a base greater than *base*.  If a region
+    // exists for *base*, it will be immediately before it.
+    auto begin = --subregions_.upper_bound(base);
+    if (!begin.IsValid()) {
+        begin = subregions_.begin();
+    }
+
+    // Check if we're partially spanning a subregion and bail if we are
+    for (auto itr = begin; itr != end; ++itr) {
+        const vaddr_t itr_end = itr->base() + itr->size();
+        if (!itr->is_mapping() && (itr->base() < base || itr_end > end_addr)) {
+            return ERR_INVALID_ARGS;
+        }
+    }
+
+    for (auto itr = begin; itr != end;) {
+        // Create a copy of the iterator, in case we destroy this element
+        auto curr = itr++;
+
+        const vaddr_t curr_end = curr->base() + curr->size();
+        if (curr->is_mapping()) {
+            const vaddr_t unmap_base = mxtl::max(curr->base(), base);
+            const vaddr_t unmap_end = mxtl::min(curr_end, end_addr);
+            const size_t unmap_size = unmap_end - unmap_base;
+
+            // If we're unmapping the entire region, just call Destroy
+            if (unmap_base == curr->base() && unmap_size == curr->size()) {
+                __UNUSED status_t status = curr->as_vm_mapping()->DestroyLocked();
+                DEBUG_ASSERT(status == NO_ERROR);
+                continue;
+            }
+
+            // VmMapping::Unmap should only fail if it needs to allocate, which only
+            // happens if it is unmapping from the middle of a region.  That can only
+            // happen if there is only one region being operated on here, so we
+            // can just forward along the error without having to rollback.
+            // TODO(teisenbe): Technically arch_mmu_unmap() itself can also
+            // fail.  We need to rework the system so that is no longer
+            // possible.
+            status_t status = curr->as_vm_mapping()->UnmapLocked(unmap_base, unmap_size);
+            DEBUG_ASSERT(status == NO_ERROR || curr == begin);
+            if (status != NO_ERROR) {
+                return status;
+            }
+        } else {
+            DEBUG_ASSERT(curr->base() >= base && curr_end <= end_addr);
+            __UNUSED status_t status = curr->DestroyLocked();
+            DEBUG_ASSERT(status == NO_ERROR);
+        }
+    }
+
+    return NO_ERROR;
+}
