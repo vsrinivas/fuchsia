@@ -44,6 +44,9 @@ class DoctorCommand : public Command, public cloud_provider::CommitWatcher {
 
   void CheckGetCommits(cloud_provider::Commit commit);
 
+  void CheckGetCommitsByTimestamp(cloud_provider::Commit expected_commit,
+                                  std::string timestamp);
+
   void CheckWatchExistingCommits(cloud_provider::Commit expected_commit);
 
   void CheckWatchNewCommits();

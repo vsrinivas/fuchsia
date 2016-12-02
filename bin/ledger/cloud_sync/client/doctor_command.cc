@@ -19,6 +19,13 @@ namespace cloud_sync {
 
 namespace {
 
+constexpr ftl::StringView kIndexConfigurationHint =
+    "It seems that we can't query Firebase for commits. "
+    "This might indicate that database indices are not configured "
+    "or their configuration is out of date. "
+    "Please refer to the User Guide for the recommended Firebase "
+    "configuration.";
+
 std::string RandomString() {
   return std::to_string(glue::RandUint64());
 }
@@ -227,7 +234,7 @@ void DoctorCommand::CheckCommits() {
 }
 
 void DoctorCommand::CheckGetCommits(cloud_provider::Commit commit) {
-  what("Firebase - retrieve test commits");
+  what("Firebase - retrieve all commits");
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->GetCommits(
       "", ftl::MakeCopyable([ this, commit = std::move(commit), request_start ](
@@ -235,12 +242,37 @@ void DoctorCommand::CheckGetCommits(cloud_provider::Commit commit) {
               std::vector<cloud_provider::Record> records) {
         if (status != cloud_provider::Status::OK) {
           error(status);
-          hint(
-              "It seems that we can't query Firebase for commits. "
-              "This might indicate that database indices are not configured "
-              "or their configuration is out of date. "
-              "Please refer to the User Guide for the recommended Firebase "
-              "configuration.");
+          hint(kIndexConfigurationHint);
+          on_done_();
+          return;
+        }
+
+        if (records.size() != 1) {
+          error("Wrong number of commits received: " +
+                std::to_string(records.size()));
+          on_done_();
+          return;
+        }
+
+        ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
+        ok(delta);
+        CheckGetCommitsByTimestamp(commit.Clone(), records.front().timestamp);
+      }));
+}
+
+void DoctorCommand::CheckGetCommitsByTimestamp(
+    cloud_provider::Commit expected_commit,
+    std::string timestamp) {
+  what("Firebase - retrieve commits by timestamp");
+  cloud_provider_->GetCommits(
+      timestamp, ftl::MakeCopyable([
+        this, commit = std::move(expected_commit),
+        request_start = ftl::TimePoint::Now()
+      ](cloud_provider::Status status,
+                 std::vector<cloud_provider::Record> records) {
+        if (status != cloud_provider::Status::OK) {
+          error(status);
+          hint(kIndexConfigurationHint);
           on_done_();
           return;
         }
