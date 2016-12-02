@@ -44,7 +44,7 @@ class FocusAcquirerApp : public modular::FocusListener,
     ctl_.Bind(&ctl_handle);
 
     cx->Publish(FocusAcquirer::kLabel, FocusAcquirer::kSchema,
-                std::move(ctl_handle), GetProxy(&out_));
+                std::move(ctl_handle), out_.NewRequest());
     PublishFocusState();
   }
 

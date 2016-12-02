@@ -19,11 +19,11 @@ void AgentLauncher::StartAgent(
 
   modular::ApplicationEnvironmentPtr agent_env;
   environment_->CreateNestedEnvironment(std::move(agent_host_handle),
-                                        GetProxy(&agent_env), NULL,
+                                        agent_env.NewRequest(), NULL,
                                         kEnvironmentLabel);
 
   modular::ApplicationLauncherPtr agent_launcher;
-  agent_env->GetApplicationLauncher(GetProxy(&agent_launcher));
+  agent_env->GetApplicationLauncher(agent_launcher.NewRequest());
 
   auto launch_info = modular::ApplicationLaunchInfo::New();
   launch_info->url = url;

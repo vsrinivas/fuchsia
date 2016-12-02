@@ -23,8 +23,8 @@ class NPublisher {
  public:
   NPublisher(maxwell::ContextEngine* context_engine) {
     maxwell::ContextPublisherPtr out;
-    context_engine->RegisterContextAcquirer("NPublisher", GetProxy(&out));
-    out->Publish("n", "int", NULL, GetProxy(&pub_));
+    context_engine->RegisterContextAcquirer("NPublisher", out.NewRequest());
+    out->Publish("n", "int", NULL, pub_.NewRequest());
   }
 
   void Publish(int n) { pub_->Update(std::to_string(n)); }
@@ -37,7 +37,7 @@ class Proposinator {
  public:
   Proposinator(maxwell::SuggestionEngine* suggestion_engine,
                const fidl::String& url = "Proposinator") {
-    suggestion_engine->RegisterSuggestionAgent("Proposinator", GetProxy(&out_));
+    suggestion_engine->RegisterSuggestionAgent("Proposinator", out_.NewRequest());
   }
 
   virtual ~Proposinator() = default;
@@ -84,7 +84,7 @@ class NProposals : public Proposinator, public maxwell::ContextSubscriberLink {
              maxwell::SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), link_binding_(this) {
     context_engine->RegisterSuggestionAgent("NProposals",
-                                            GetProxy(&context_client_));
+                                            context_client_.NewRequest());
 
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> link_handle;
     link_binding_.Bind(&link_handle);
@@ -172,7 +172,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 
     // Hack to get an unbound FocusController for Initialize().
     fidl::InterfaceHandle<modular::FocusController> focus_controller_handle;
-    fidl::GetProxy(&focus_controller_handle);
+    focus_controller_handle.NewRequest();
     suggestion_engine()->Initialize(std::move(story_provider_handle),
                                     std::move(focus_controller_handle));
   }
@@ -232,7 +232,7 @@ class NextTest : public SuggestionEngineTest {
     fidl::InterfaceHandle<maxwell::Listener> listener_handle;
     listener_binding_.Bind(&listener_handle);
     suggestion_provider()->SubscribeToNext(std::move(listener_handle),
-                                           GetProxy(&ctl_));
+                                           ctl_.NewRequest());
   }
 
  protected:
@@ -489,7 +489,7 @@ class AskTest : public SuggestionEngineTest {
   void InitiateAsk() {
     fidl::InterfaceHandle<maxwell::Listener> handle;
     binding_.Bind(&handle);
-    suggestion_provider()->InitiateAsk(std::move(handle), GetProxy(&ctl_));
+    suggestion_provider()->InitiateAsk(std::move(handle), ctl_.NewRequest());
   }
 
   void SetQuery(const std::string& query) {

@@ -20,8 +20,8 @@ TEST_F(MaxwellTestBase, Launcher) {
   //
   // If any clients of the Launcher make use of either interface they won't
   // get a response because FIDL will buffer the requests indefinitely.
-  fidl::GetProxy(&story_provider_handle);
-  fidl::GetProxy(&focus_controller_handle);
+  story_provider_handle.NewRequest();
+  focus_controller_handle.NewRequest();
   launcher->Initialize(std::move(story_provider_handle),
                        std::move(focus_controller_handle));
 
@@ -33,7 +33,7 @@ TEST_F(MaxwellTestBase, Launcher) {
   fidl::Binding<maxwell::Listener> binding(&listener, &listener_handle);
   maxwell::NextControllerPtr ctl;
 
-  client->SubscribeToNext(std::move(listener_handle), GetProxy(&ctl));
+  client->SubscribeToNext(std::move(listener_handle), ctl.NewRequest());
 
   ctl->SetResultCount(10);
   // TODO(afergan): Test this again once we are using the focus acquirer agent.

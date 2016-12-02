@@ -30,7 +30,7 @@ class CarmenSandiegoApp : public maxwell::ContextPublisherController,
     // so the labels have to be explicitly different. In the future, these could
     // all be refinements on "location"
     maxwell_context_->Publish("/location/region", "json:string",
-                              std::move(ctl_handle), GetProxy(&out_));
+                              std::move(ctl_handle), out_.NewRequest());
   }
 
   void OnHasSubscribers() override {

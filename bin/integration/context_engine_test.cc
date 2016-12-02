@@ -26,7 +26,7 @@ class TestListener : public maxwell::ContextSubscriberLink {
   // Binds and passes a handle that can be used to subscribe this listener.
   fidl::InterfaceHandle<maxwell::ContextSubscriberLink> PassBoundHandle() {
     fidl::InterfaceHandle<maxwell::ContextSubscriberLink> handle;
-    binding_.Bind(GetProxy(&handle));
+    binding_.Bind(handle.NewRequest());
     return handle;
   }
 
@@ -39,7 +39,7 @@ class ContextEngineTest : public ContextEngineTestBase {
  public:
   ContextEngineTest() {
     context_engine()->RegisterSuggestionAgent("ContextEngineTest",
-                                              GetProxy(&out_));
+                                              out_.NewRequest());
   }
 
  protected:

@@ -12,12 +12,12 @@ constexpr char GpsAcquirer::kSchema[];
 
 MockGps::MockGps(ContextEngine* context_engine) : ctl_(this) {
   maxwell::ContextPublisherPtr cx;
-  context_engine->RegisterContextAcquirer("MockGps", GetProxy(&cx));
+  context_engine->RegisterContextAcquirer("MockGps", cx.NewRequest());
 
   fidl::InterfaceHandle<ContextPublisherController> ctl_handle;
   ctl_.Bind(&ctl_handle);
 
-  cx->Publish(kLabel, kSchema, std::move(ctl_handle), GetProxy(&out_));
+  cx->Publish(kLabel, kSchema, std::move(ctl_handle), out_.NewRequest());
 }
 
 void MockGps::Publish(float latitude, float longitude) {

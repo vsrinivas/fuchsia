@@ -42,7 +42,7 @@ class LauncherApp : public maxwell::Launcher {
     focus_controller_.Bind(std::move(focus_controller));
 
     fidl::InterfaceHandle<modular::FocusController> focus_controller_dup;
-    auto focus_controller_request = fidl::GetProxy(&focus_controller_dup);
+    auto focus_controller_request = focus_controller_dup.NewRequest();
     focus_controller_->Duplicate(std::move(focus_controller_request));
 
     suggestion_engine_->Initialize(std::move(story_provider),
@@ -58,7 +58,7 @@ class LauncherApp : public maxwell::Launcher {
     modular::ServiceProviderPtr services;
     auto launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = url;
-    launch_info->services = GetProxy(&services);
+    launch_info->services = services.NewRequest();
     app_context_->launcher()->CreateApplication(std::move(launch_info), NULL);
     return services;
   }
