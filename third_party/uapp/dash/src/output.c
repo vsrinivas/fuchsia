@@ -58,6 +58,7 @@
 
 #include "shell.h"
 #include "syntax.h"
+#include "options.h"
 #include "output.h"
 #include "memalloc.h"
 #include "error.h"
@@ -346,6 +347,21 @@ out:
 }
 #endif
 
+
+void settitle(const char* title) {
+	if (!iflag || !isatty(0))
+		return;
+	char str[16];
+	int n = snprintf(str, sizeof(str) - 1, "\033]2;%s", title);
+	if (n < 0) {
+		return; // error
+	} else if ((size_t)n >= sizeof(str) - 1) {
+		n = sizeof(str) - 2; // truncated
+	}
+	str[n] = '\007';
+	str[n+1] = '\0';
+	out2str(str);
+}
 
 
 /*

@@ -122,7 +122,6 @@ RESET {
 #endif
 
 
-
 /*
  * The eval commmand.
  */
@@ -847,13 +846,15 @@ bail:
 	switch (cmdentry.cmdtype) {
 	default: {
 		mx_handle_t process = MX_HANDLE_INVALID;
-		exitstatus = process_launch(argc, (const char* const*)argv, path, cmdentry.u.index, &process);
-		if (exitstatus) {
+		status = process_launch(argc, (const char* const*)argv, path, cmdentry.u.index, &process);
+		if (status) {
 			sh_error("Cannot create child process");
 			break;
 		}
-		exitstatus = process_await_termination(process);
+		settitle(argv[0]);
+		status = process_await_termination(process);
 		mx_handle_close(process);
+		settitle("sh");
 		break;
 	}
 	case CMDBUILTIN:

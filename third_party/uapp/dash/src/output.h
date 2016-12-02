@@ -89,6 +89,8 @@ int __closememout(void);
 #endif
 #endif
 
+void settitle(const char* title);
+
 static inline void
 freestdout()
 {

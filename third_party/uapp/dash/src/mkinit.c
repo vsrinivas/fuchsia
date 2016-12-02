@@ -151,8 +151,8 @@ main(int argc, char **argv)
 {
 	char **ap;
 
-	header_files[0] = "\"shell.h\"";
-	header_files[1] = "\"mystring.h\"";
+	header_files[0] = "\"mystring.h\"";
+	header_files[1] = "\"shell.h\"";
 	header_files[2] = "\"init.h\"";
 	for (ap = argv + 1 ; *ap ; ap++)
 		readfile(*ap);

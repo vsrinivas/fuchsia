@@ -150,6 +150,7 @@ state1:
 		state = 2;
 		read_profile("$HOME/.profile");
 	}
+	settitle("sh");
 state2:
 	state = 3;
 	if (
