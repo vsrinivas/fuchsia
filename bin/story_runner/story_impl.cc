@@ -98,7 +98,7 @@ void StoryImpl::Dispose(ModuleControllerImpl* const module_controller_impl) {
 void StoryImpl::CreateLink(const fidl::String& name,
                            fidl::InterfaceRequest<Link> link) {
   StoryStoragePtr story_storage_dup;
-  story_storage_->Dup(GetProxy(&story_storage_dup));
+  story_storage_->Dup(story_storage_dup.NewRequest());
   links_.emplace_back(
       new LinkImpl(std::move(story_storage_dup), name, std::move(link)));
 }
@@ -121,21 +121,21 @@ void StoryImpl::StartModule(
         auto launch_info = ApplicationLaunchInfo::New();
 
         ServiceProviderPtr app_services;
-        launch_info->services = GetProxy(&app_services);
+        launch_info->services = app_services.NewRequest();
         launch_info->url = module_url;
 
         application_context_->launcher()->CreateApplication(
             std::move(launch_info), nullptr);
 
         mozart::ViewProviderPtr view_provider;
-        ConnectToService(app_services.get(), fidl::GetProxy(&view_provider));
+        ConnectToService(app_services.get(), view_provider.NewRequest());
         view_provider->CreateView(std::move(view_owner_request), nullptr);
 
         ModulePtr module;
-        ConnectToService(app_services.get(), fidl::GetProxy(&module));
+        ConnectToService(app_services.get(), module.NewRequest());
 
         fidl::InterfaceHandle<Story> self;
-        fidl::InterfaceRequest<Story> self_request = GetProxy(&self);
+        fidl::InterfaceRequest<Story> self_request = self.NewRequest();
 
         module->Initialize(std::move(self), std::move(link),
             std::move(outgoing_services), std::move(incoming_services));

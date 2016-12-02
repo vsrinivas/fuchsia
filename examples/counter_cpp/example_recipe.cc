@@ -70,7 +70,7 @@ class LinkConnection : public modular::LinkWatcher {
   LinkConnection(modular::Link* const src, modular::Link* const dst)
       : src_binding_(this), src_(src), dst_(dst) {
     fidl::InterfaceHandle<modular::LinkWatcher> watcher;
-    src_binding_.Bind(GetProxy(&watcher));
+    src_binding_.Bind(watcher.NewRequest());
     src_->Watch(std::move(watcher));
   }
 
@@ -100,7 +100,7 @@ class ModuleMonitor : public modular::ModuleWatcher {
                 modular::Story* const story)
       : binding_(this), story_(story) {
     fidl::InterfaceHandle<modular::ModuleWatcher> watcher;
-    binding_.Bind(GetProxy(&watcher));
+    binding_.Bind(watcher.NewRequest());
     module_client->Watch(std::move(watcher));
   }
 
@@ -338,25 +338,25 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
       FTL_LOG(INFO) << "example_recipe link: " << value;
     });
 
-    story_->CreateLink("module1", GetProxy(&module1_link_));
-    story_->CreateLink("module2", GetProxy(&module2_link_));
+    story_->CreateLink("module1", module1_link_.NewRequest());
+    story_->CreateLink("module2", module2_link_.NewRequest());
 
     fidl::InterfaceHandle<modular::Link> module1_link_handle;
-    module1_link_->Dup(GetProxy(&module1_link_handle));
+    module1_link_->Dup(module1_link_handle.NewRequest());
 
     fidl::InterfaceHandle<modular::Link> module2_link_handle;
-    module2_link_->Dup(GetProxy(&module2_link_handle));
+    module2_link_->Dup(module2_link_handle.NewRequest());
 
     fidl::InterfaceHandle<mozart::ViewOwner> module1_view;
     story_->StartModule("file:///system/apps/example_module1",
                         std::move(module1_link_handle), nullptr, nullptr,
-                        GetProxy(&module1_), GetProxy(&module1_view));
+                        module1_.NewRequest(), module1_view.NewRequest());
     ConnectView(std::move(module1_view));
 
     fidl::InterfaceHandle<mozart::ViewOwner> module2_view;
     story_->StartModule("file:///system/apps/example_module2",
                         std::move(module2_link_handle), nullptr, nullptr,
-                        GetProxy(&module2_), GetProxy(&module2_view));
+                        module2_.NewRequest(), module2_view.NewRequest());
     ConnectView(std::move(module2_view));
 
     connections_.emplace_back(
@@ -402,16 +402,16 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     // This snippet of code demonstrates using the module's Ledger. Each time
     // this module is initialized, it updates a counter in the root page.
     // 1. Get the module's ledger.
-    story_->GetLedger(GetProxy(&module_ledger_),
+    story_->GetLedger(module_ledger_.NewRequest(),
         [this](ledger::Status status) {
       FTL_CHECK(status == ledger::Status::OK);
       // 2. Get the root page of the ledger.
       module_ledger_->GetRootPage(
-          GetProxy(&module_root_page_),
+          module_root_page_.NewRequest(),
           [this](ledger::Status status) {
         FTL_CHECK(status == ledger::Status::OK);
         // 3. Get a snapshot of the root page.
-        module_root_page_->GetSnapshot(GetProxy(&page_snapshot_),
+        module_root_page_->GetSnapshot(page_snapshot_.NewRequest(),
             [this](ledger::Status status) mutable {
           FTL_CHECK(status == ledger::Status::OK);
           // 4. Read the counter from the root page.

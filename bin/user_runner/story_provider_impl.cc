@@ -77,7 +77,7 @@ class GetStoryDataCall : public Transaction {
         ledger_(ledger),
         story_id_(story_id),
         result_(result) {
-    ledger_->GetRootPage(GetProxy(&root_page_), [this](ledger::Status status) {
+    ledger_->GetRootPage(root_page_.NewRequest(), [this](ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
                        << " Ledger.GetRootPage() " << status;
@@ -87,7 +87,7 @@ class GetStoryDataCall : public Transaction {
       }
 
       root_page_->GetSnapshot(
-          GetProxy(&root_snapshot_), [this](ledger::Status status) {
+          root_snapshot_.NewRequest(), [this](ledger::Status status) {
             if (status != ledger::Status::OK) {
               FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
                              << " Page.GetSnapshot() " << status;
@@ -144,7 +144,7 @@ class WriteStoryDataCall : public Transaction {
         result_(result) {
     FTL_DCHECK(!story_data_.is_null());
 
-    ledger_->GetRootPage(GetProxy(&root_page_), [this](ledger::Status status) {
+    ledger_->GetRootPage(root_page_.NewRequest(), [this](ledger::Status status) {
       const size_t size = story_data_->GetSerializedSize();
       fidl::Array<uint8_t> value = fidl::Array<uint8_t>::New(size);
       story_data_->Serialize(value.data(), size);
@@ -192,7 +192,7 @@ class CreateStoryCall : public Transaction {
         extra_info_(std::move(extra_info)),
         root_docs_(std::move(root_docs)),
         ledger_repository_factory_(ledger_repository_factory) {
-    ledger_->NewPage(GetProxy(&story_page_), [this](ledger::Status status) {
+    ledger_->NewPage(story_page_.NewRequest(), [this](ledger::Status status) {
       story_page_->GetId([this](fidl::Array<uint8_t> story_page_id) {
         story_data_ = StoryData::New();
         story_data_->story_page_id = std::move(story_page_id);
@@ -207,7 +207,7 @@ class CreateStoryCall : public Transaction {
 
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
           ApplicationLauncherPtr launcher;
-          environment_->GetApplicationLauncher(fidl::GetProxy(&launcher));
+          environment_->GetApplicationLauncher(launcher.NewRequest());
           auto* const story_controller = StoryControllerImpl::New(
               std::move(story_data_), story_provider_impl_, std::move(launcher),
               ledger_repository_factory_);
@@ -247,7 +247,7 @@ class DeleteStoryCall : public Transaction {
         ledger_(ledger),
         story_id_(story_id),
         result_(result) {
-    ledger_->GetRootPage(GetProxy(&root_page_), [this](ledger::Status status) {
+    ledger_->GetRootPage(root_page_.NewRequest(), [this](ledger::Status status) {
       root_page_->Delete(to_array(story_id_),
                          [this](ledger::Status ledger_status) {
                            result_();
@@ -290,10 +290,10 @@ class ResumeStoryCall : public Transaction {
           }
           story_data_ = std::move(story_data);
           ledger_->GetPage(
-              story_data_->story_page_id.Clone(), GetProxy(&story_page_),
+              story_data_->story_page_id.Clone(), story_page_.NewRequest(),
               [this](ledger::Status status) {
                 ApplicationLauncherPtr launcher;
-                environment_->GetApplicationLauncher(fidl::GetProxy(&launcher));
+                environment_->GetApplicationLauncher(launcher.NewRequest());
                 story_provider_impl_->AddController(story_id_, StoryControllerImpl::New(
                     std::move(story_data_), story_provider_impl_,
                     std::move(launcher), ledger_repository_factory_));
@@ -323,9 +323,9 @@ class PreviousStoriesCall : public Transaction {
                       ledger::Ledger* const ledger,
                       Result result)
       : Transaction(container), ledger_(ledger), result_(result) {
-    ledger_->GetRootPage(GetProxy(&root_page_), [this](ledger::Status status) {
+    ledger_->GetRootPage(root_page_.NewRequest(), [this](ledger::Status status) {
       root_page_->GetSnapshot(
-          GetProxy(&root_snapshot_), [this](ledger::Status status) {
+          root_snapshot_.NewRequest(), [this](ledger::Status status) {
             root_snapshot_->GetEntries(
                 nullptr, nullptr, [this](ledger::Status status,
                                          fidl::Array<ledger::EntryPtr> entries,
@@ -381,7 +381,7 @@ StoryProviderImpl::StoryProviderImpl(
   ledger_.Bind(std::move(ledger));
 
   ledger::PagePtr root_page;
-  ledger_->GetRootPage(GetProxy(&root_page), [this](ledger::Status status) {
+  ledger_->GetRootPage(root_page.NewRequest(), [this](ledger::Status status) {
     if (status != ledger::Status::OK) {
       FTL_LOG(ERROR)
           << "StoryProviderImpl() failed call to Ledger.GetRootPage() "
@@ -390,7 +390,7 @@ StoryProviderImpl::StoryProviderImpl(
   });
 
   fidl::InterfaceHandle<ledger::PageWatcher> watcher;
-  page_watcher_binding_.Bind(GetProxy(&watcher));
+  page_watcher_binding_.Bind(watcher.NewRequest());
   root_page->Watch(std::move(watcher), [](ledger::Status status) {
     if (status != ledger::Status::OK) {
       FTL_LOG(ERROR) << "StoryProviderImpl() failed call to Ledger.Watch() "
@@ -529,7 +529,7 @@ void StoryProviderImpl::GetStoryData(
 ledger::PagePtr StoryProviderImpl::GetStoryPage(
     const fidl::Array<uint8_t>& story_page_id) {
   ledger::PagePtr ret;
-  ledger_->GetPage(story_page_id.Clone(), GetProxy(&ret),
+  ledger_->GetPage(story_page_id.Clone(), ret.NewRequest(),
                    [](ledger::Status status) {
                      if (status != ledger::Status::OK) {
                        FTL_LOG(ERROR) << "GetStoryPage() status " << status;

@@ -127,32 +127,32 @@ void StoryControllerImpl::StartStory(
 
   auto story_runner_launch_info = ApplicationLaunchInfo::New();
   ServiceProviderPtr story_runner_app_services;
-  story_runner_launch_info->services = GetProxy(&story_runner_app_services);
+  story_runner_launch_info->services = story_runner_app_services.NewRequest();
   story_runner_launch_info->url = "file:///system/apps/story_runner";
   launcher_->CreateApplication(std::move(story_runner_launch_info), nullptr);
   StoryRunnerPtr story_runner;
-  ConnectToService(story_runner_app_services.get(), GetProxy(&story_runner));
+  ConnectToService(story_runner_app_services.get(), story_runner.NewRequest());
 
   auto resolver_launch_info = ApplicationLaunchInfo::New();
   ServiceProviderPtr resolver_app_services;
-  resolver_launch_info->services = GetProxy(&resolver_app_services);
+  resolver_launch_info->services = resolver_app_services.NewRequest();
   resolver_launch_info->url = "file:///system/apps/resolver";
   launcher_->CreateApplication(std::move(resolver_launch_info), nullptr);
   ResolverPtr resolver;
-  ConnectToService(resolver_app_services.get(), GetProxy(&resolver));
+  ConnectToService(resolver_app_services.get(), resolver.NewRequest());
 
   StoryStoragePtr story_storage;
   story_storage_impl_.reset(new StoryStorageImpl(
       story_provider_impl_->storage(),
       story_provider_impl_->GetStoryPage(story_data_->story_page_id),
-      story_data_->story_info->id, GetProxy(&story_storage)));
+      story_data_->story_info->id, story_storage.NewRequest()));
 
   story_runner->CreateStory(std::move(resolver), std::move(story_storage),
-                            GetProxy(&story_context_),
+                            story_context_.NewRequest(),
                             ledger_repository_factory_->Clone());
 
-  story_context_->GetStory(GetProxy(&story_));
-  story_->CreateLink("root", GetProxy(&root_));
+  story_context_->GetStory(story_.NewRequest());
+  story_->CreateLink("root", root_.NewRequest());
 
   if (!root_docs_.is_null()) {
     root_->AddDocuments(std::move(root_docs_));
@@ -166,20 +166,20 @@ void StoryControllerImpl::StartStory(
   root_requests_.clear();
 
   fidl::InterfaceHandle<Link> link;
-  root_->Dup(GetProxy(&link));
+  root_->Dup(link.NewRequest());
   story_->StartModule(story_data_->story_info->url, std::move(link), nullptr, nullptr,
-                      GetProxy(&module_), std::move(view_owner_request));
+                      module_.NewRequest(), std::move(view_owner_request));
 
   story_data_->story_info->is_running = true;
   story_data_->story_info->state = StoryState::RUNNING;
   WriteStoryData([](){});
 
   fidl::InterfaceHandle<ModuleWatcher> module_watcher;
-  module_watcher_binding_.Bind(GetProxy(&module_watcher));
+  module_watcher_binding_.Bind(module_watcher.NewRequest());
   module_->Watch(std::move(module_watcher));
 
   fidl::InterfaceHandle<LinkWatcher> link_changed;
-  link_changed_binding_.Bind(GetProxy(&link_changed));
+  link_changed_binding_.Bind(link_changed.NewRequest());
   root_->Watch(std::move(link_changed));
 }
 

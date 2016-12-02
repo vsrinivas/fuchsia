@@ -29,11 +29,11 @@ App::App(Params* params)
 
   // Set up environment for the programs we will run.
   modular::ApplicationEnvironmentHostPtr env_host;
-  env_host_binding_.Bind(GetProxy(&env_host));
+  env_host_binding_.Bind(env_host.NewRequest());
   application_context_->environment()->CreateNestedEnvironment(
-      std::move(env_host), GetProxy(&env_), GetProxy(&env_controller_),
+      std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
       params->label());
-  env_->GetApplicationLauncher(GetProxy(&env_launcher_));
+  env_->GetApplicationLauncher(env_launcher_.NewRequest());
 
   // Register services.
   for (auto& pair : params->TakeServices())
@@ -68,9 +68,9 @@ void App::RegisterSingleton(std::string service_name,
           auto dup_launch_info = modular::ApplicationLaunchInfo::New();
           dup_launch_info->url = launch_info->url;
           dup_launch_info->arguments = launch_info->arguments.Clone();
-          dup_launch_info->services = GetProxy(&service_provider);
+          dup_launch_info->services = service_provider.NewRequest();
           env_launcher_->CreateApplication(std::move(dup_launch_info),
-                                           GetProxy(&controller));
+                                           controller.NewRequest());
           service_provider.set_connection_error_handler(
               [ this, url = launch_info->url, &controller ] {
                 FTL_LOG(ERROR) << "Singleton " << url << " died";
@@ -112,11 +112,11 @@ void App::InitViewManager() {
   FTL_VLOG(1) << "Starting view manager";
   auto launch_info = modular::ApplicationLaunchInfo::New();
   launch_info->url = kViewManagerUrl;
-  launch_info->services = GetProxy(&view_manager_services_);
+  launch_info->services = view_manager_services_.NewRequest();
   env_launcher_->CreateApplication(std::move(launch_info),
-                                   GetProxy(&view_manager_controller_));
+                                   view_manager_controller_.NewRequest());
   modular::ConnectToService(view_manager_services_.get(),
-                            GetProxy(&view_manager_));
+                            view_manager_.NewRequest());
   view_manager_.set_connection_error_handler([this] {
     FTL_LOG(ERROR) << "View manager died";
     ResetViewManager();
@@ -129,16 +129,16 @@ void App::InitViewManager() {
     modular::ApplicationControllerPtr controller;
     auto launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = url;
-    launch_info->services = GetProxy(&services);
+    launch_info->services = services.NewRequest();
     env_launcher_->CreateApplication(std::move(launch_info),
-                                     GetProxy(&controller));
+                                     controller.NewRequest());
     auto view_associate =
         modular::ConnectToService<mozart::ViewAssociate>(services.get());
 
     // Wire up the associate to the ViewManager.
     mozart::ViewAssociateOwnerPtr owner;
     view_manager_->RegisterViewAssociate(std::move(view_associate),
-                                         GetProxy(&owner), url);
+                                         owner.NewRequest(), url);
     owner.set_connection_error_handler([this, url] {
       FTL_LOG(ERROR) << "View associate " << url << " died";
       ResetViewManager();
@@ -162,7 +162,7 @@ void App::LaunchApplication(modular::ApplicationLaunchInfoPtr launch_info) {
 
   modular::ApplicationControllerPtr controller;
   env_launcher_->CreateApplication(std::move(launch_info),
-                                   GetProxy(&controller));
+                                   controller.NewRequest());
   controller.set_connection_error_handler([] {
     FTL_LOG(INFO) << "Bootstrapped application terminated.";
     exit(0);

@@ -15,7 +15,7 @@ UserLedgerRepositoryFactory::UserLedgerRepositoryFactory(
 ledger::LedgerRepositoryPtr UserLedgerRepositoryFactory::Clone() {
   ledger::LedgerRepositoryPtr repo;
   ledger_repository_factory_->GetRepository(
-        user_repository_path_, GetProxy(&repo),
+        user_repository_path_, repo.NewRequest(),
         [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
             // TODO(vardhan): Make LedgerStatusToString() available.

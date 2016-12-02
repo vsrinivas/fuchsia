@@ -242,9 +242,9 @@ void ApplicationEnvironmentImpl::CreateApplication(
       ApplicationControllerPtr runner_controller;
       auto runner_launch_info = ApplicationLaunchInfo::New();
       runner_launch_info->url = runner;
-      runner_launch_info->services = fidl::GetProxy(&runner_services);
+      runner_launch_info->services = runner_services.NewRequest();
       CreateApplication(std::move(runner_launch_info),
-                        fidl::GetProxy(&runner_controller));
+                        runner_controller.NewRequest());
 
       runner_controller.set_connection_error_handler(
           [this, runner]() { runners_.erase(runner); });

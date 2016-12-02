@@ -16,8 +16,8 @@ ApplicationContext::ApplicationContext(
     : environment_(ApplicationEnvironmentPtr::Create(std::move(environment))),
       outgoing_services_(std::move(outgoing_services)) {
   if (environment_) {
-    environment_->GetServices(GetProxy(&environment_services_));
-    environment_->GetApplicationLauncher(GetProxy(&launcher_));
+    environment_->GetServices(environment_services_.NewRequest());
+    environment_->GetApplicationLauncher(launcher_.NewRequest());
   }
 }
 

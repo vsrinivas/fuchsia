@@ -52,13 +52,13 @@ class DocumentStoreImpl : public DocumentStore {
   // Snapshots allow reading from the document store.
   void GetSnapshot(const GetSnapshotCallback& callback) override {
     ledger::PageSnapshotPtr ledger_snapshot;
-    page_->GetSnapshot(GetProxy(&ledger_snapshot),
+    page_->GetSnapshot(ledger_snapshot.NewRequest(),
                        [](ledger::Status ledger_status) {
                          FTL_CHECK(ledger_status == ledger::Status::OK);
                        });
     auto impl = new SnapshotImpl(std::move(ledger_snapshot));
     fidl::InterfaceHandle<Snapshot> docstore_snapshot_handle;
-    auto request = fidl::GetProxy(&docstore_snapshot_handle);
+    auto request = docstore_snapshot_handle.NewRequest();
     impl->Bind(std::move(request));
     callback(std::move(docstore_snapshot_handle));
   }
@@ -70,7 +70,7 @@ class DocumentStoreImpl : public DocumentStore {
     // we give each of our transactions its own page so they don't step on each
     // other.
     fidl::InterfaceHandle<ledger::Page> page_handle;
-    auto request = GetProxy(&page_handle);
+    auto request = page_handle.NewRequest();
     get_page_(page_id_.Clone(), std::move(request), ftl::MakeCopyable([
                 this, callback, page_handle = std::move(page_handle)
               ](ledger::Status ledger_status) mutable {
@@ -80,7 +80,7 @@ class DocumentStoreImpl : public DocumentStore {
                   // TODO(azani): Return an error if status is an error.
                   fidl::InterfaceHandle<Transaction> transaction_handle;
                   if (Status::OK == status) {
-                    auto request = fidl::GetProxy(&transaction_handle);
+                    auto request = transaction_handle.NewRequest();
                     impl->Bind(std::move(request));
                   }
                   callback(std::move(transaction_handle));
@@ -121,7 +121,7 @@ class DocumentStoreFactoryImpl : public DocumentStoreFactory {
   // Creates a new document store.
   void NewDocumentStore(const NewDocumentStoreCallback& callback) override {
     fidl::InterfaceHandle<ledger::Page> page_handle;
-    auto request = GetProxy(&page_handle);
+    auto request = page_handle.NewRequest();
     ledger_->NewPage(std::move(request), ftl::MakeCopyable([
                        this, callback, page_handle = std::move(page_handle)
                      ](ledger::Status ledger_status) mutable {
@@ -139,7 +139,7 @@ class DocumentStoreFactoryImpl : public DocumentStoreFactory {
   void GetDocumentStore(fidl::Array<uint8_t> page_id,
                         const GetDocumentStoreCallback& callback) override {
     fidl::InterfaceHandle<ledger::Page> page_handle;
-    auto request = GetProxy(&page_handle);
+    auto request = page_handle.NewRequest();
     ledger_->GetPage(std::move(page_id), std::move(request), ftl::MakeCopyable([
                        this, callback, page_handle = std::move(page_handle)
                      ](ledger::Status ledger_status) mutable {
@@ -181,7 +181,7 @@ class DocumentStoreFactoryImpl : public DocumentStoreFactory {
     auto impl = new DocumentStoreImpl(std::move(page), page_getter);
     impl->GetId([this, impl, callback](fidl::Array<uint8_t> page_id) {
       fidl::InterfaceHandle<DocumentStore> docstore_handle;
-      auto request = fidl::GetProxy(&docstore_handle);
+      auto request = docstore_handle.NewRequest();
       // TODO(azani): We may leak memory here if page_handle breaks in the
       // middle of GetId. This seems unlikely, fix later.
       impl->SetPageId(std::move(page_id));

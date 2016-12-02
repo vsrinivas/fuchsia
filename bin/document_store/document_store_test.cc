@@ -68,10 +68,10 @@ class DocumentStoreTest {
         ledger_repository_factory;
     auto launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = "file:///system/apps/ledger";
-    launch_info->services = fidl::GetProxy(&child_services);
+    launch_info->services = child_services.NewRequest();
     context_->launcher()->CreateApplication(
         std::move(launch_info),
-        fidl::GetProxy(&ledger_repository_factory_controller_));
+        ledger_repository_factory_controller_.NewRequest());
     modular::ConnectToService(
         child_services.get(),
         fidl::GetSynchronousProxy(&ledger_repository_factory));
@@ -91,7 +91,7 @@ class DocumentStoreTest {
     ledger::LedgerPtr ledger;
 
     FTL_CHECK(ledger_repository->GetLedger(std::move(ledger_name),
-                                           GetProxy(&ledger), &ledger_status));
+                                           ledger.NewRequest(), &ledger_status));
     FTL_LOG(INFO) << "Got a ledger with status: " << ledger_status;
     FTL_CHECK(!ledger.encountered_error());
     FTL_CHECK(ledger_status == ledger::Status::OK);
@@ -99,9 +99,9 @@ class DocumentStoreTest {
     // Test that it is possible to connect to the document store factory.
     launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = "file:///system/apps/document_store";
-    launch_info->services = fidl::GetProxy(&child_services);
+    launch_info->services = child_services.NewRequest();
     context_->launcher()->CreateApplication(
-        std::move(launch_info), fidl::GetProxy(&docstore_factory_controller_));
+        std::move(launch_info), docstore_factory_controller_.NewRequest());
     modular::ConnectToService(child_services.get(),
                               fidl::GetSynchronousProxy(&docstore_factory_));
     FTL_LOG(INFO) << "Connected to mojo:document_store";

@@ -146,7 +146,7 @@ class DummyUserShellApp
     story_provider_.Bind(std::move(story_provider));
 
     fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher;
-    story_provider_watcher_binding_.Bind(GetProxy(&watcher));
+    story_provider_watcher_binding_.Bind(watcher.NewRequest());
     story_provider_->Watch(std::move(watcher));
 
     story_provider_->GetStoryInfo(
@@ -232,7 +232,7 @@ class DummyUserShellApp
 
     using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
     story_provider_->CreateStoryWithInfo(url, FidlStringMap(), std::move(docs),
-                                         fidl::GetProxy(&story_controller_));
+                                         story_controller_.NewRequest());
     story_controller_->GetInfo([this, keep](modular::StoryInfoPtr story_info) {
       story_info_ = std::move(story_info);
       FTL_LOG(INFO) << "DummyUserShell START " << story_info_->id << " "
@@ -255,12 +255,12 @@ class DummyUserShellApp
   void ResumeStory() {
     FTL_LOG(INFO) << "DummyUserShell RESUME";
     story_provider_->ResumeStory(story_info_->id,
-                                 fidl::GetProxy(&story_controller_));
+                                 story_controller_.NewRequest());
     InitStory();
   }
 
   void InitStory() {
-    story_controller_->GetLink(GetProxy(&root_));
+    story_controller_->GetLink(root_.NewRequest());
 
     // NOTE(mesch): Totally tentative. Tell the root module under what
     // user shell it's running.
@@ -272,11 +272,11 @@ class DummyUserShellApp
     root_->AddDocuments(std::move(docs));
 
     fidl::InterfaceHandle<StoryWatcher> story_watcher;
-    story_watcher_binding_.Bind(fidl::GetProxy(&story_watcher));
+    story_watcher_binding_.Bind(story_watcher.NewRequest());
     story_controller_->Watch(std::move(story_watcher));
 
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
-    story_controller_->Start(fidl::GetProxy(&story_view));
+    story_controller_->Start(story_view.NewRequest());
 
     // Show the new story, if we have a view.
     if (view_) {

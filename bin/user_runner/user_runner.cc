@@ -80,9 +80,9 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
         binding_(this) {
     // Set up ApplicationEnvironment.
     ApplicationEnvironmentHostPtr env_host;
-    binding_.Bind(fidl::GetProxy(&env_host));
+    binding_.Bind(env_host.NewRequest());
     application_context_->environment()->CreateNestedEnvironment(
-        std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_),
+        std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
         kEnvironmentLabelPrefix + to_hex_string(user_id));
 
     // Register and set up Services hosted in this environment.
@@ -91,7 +91,7 @@ class UserRunnerScope : public ApplicationEnvironmentHost {
 
   ApplicationEnvironmentPtr GetEnvironment() {
     ApplicationEnvironmentPtr env;
-    env_->Duplicate(fidl::GetProxy(&env));
+    env_->Duplicate(env.NewRequest());
     return env;
   }
 
@@ -128,15 +128,15 @@ class UserStoriesScope : public ApplicationEnvironmentHost {
       : binding_(this), parent_env_(std::move(parent_env)) {
     // Set up a new ApplicationEnvironment under which we run all stories.
     ApplicationEnvironmentHostPtr env_host;
-    binding_.Bind(fidl::GetProxy(&env_host));
+    binding_.Bind(env_host.NewRequest());
     parent_env_->CreateNestedEnvironment(
-        std::move(env_host), fidl::GetProxy(&env_), GetProxy(&env_controller_),
+        std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
         kStoriesEnvironmentLabelPrefix + to_hex_string(user_id));
   }
 
   ApplicationEnvironmentPtr GetEnvironment() {
     ApplicationEnvironmentPtr env;
-    env_->Duplicate(fidl::GetProxy(&env));
+    env_->Duplicate(env.NewRequest());
     return env;
   }
 
@@ -171,7 +171,7 @@ class UserRunnerImpl : public UserRunner {
     auto launch_info = ApplicationLaunchInfo::New();
 
     ServiceProviderPtr app_services;
-    launch_info->services = GetProxy(&app_services);
+    launch_info->services = app_services.NewRequest();
     launch_info->url = "file:///system/apps/ledger";
 
     // Note that |LedgerRepositoryFactory| is started in the device runner's
@@ -180,7 +180,7 @@ class UserRunnerImpl : public UserRunner {
                                                         nullptr);
 
     ledger::LedgerRepositoryFactoryPtr ledger_repository_factory;
-    ConnectToService(app_services.get(), GetProxy(&ledger_repository_factory));
+    ConnectToService(app_services.get(), ledger_repository_factory.NewRequest());
     ledger_repository_factory_ = std::make_unique<UserLedgerRepositoryFactory>(
         kLedgerBaseDir + to_hex_string(user_id),
         std::move(ledger_repository_factory));
@@ -206,7 +206,7 @@ class UserRunnerImpl : public UserRunner {
         = ledger_repository_factory_->Clone();
     ledger::LedgerPtr ledger;
     ledger_repository->GetLedger(
-        to_array(kAppId), GetProxy(&ledger), [](ledger::Status status) {
+        to_array(kAppId), ledger.NewRequest(), [](ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "UserRunnerImpl::Initialize: "
                           " LedgerRepository.GetLedger() failed: "
@@ -217,7 +217,7 @@ class UserRunnerImpl : public UserRunner {
     fidl::InterfaceHandle<StoryProvider> story_provider;
     auto story_provider_impl = new StoryProviderImpl(
         stories_scope_->GetEnvironment(), std::move(ledger),
-        GetProxy(&story_provider), ledger_repository_factory_.get());
+        story_provider.NewRequest(), ledger_repository_factory_.get());
 
     auto maxwell_services =
         GetServiceProvider("file:///system/apps/maxwell_launcher", nullptr);
@@ -225,11 +225,11 @@ class UserRunnerImpl : public UserRunner {
     auto maxwell_launcher =
         ConnectToService<maxwell::Launcher>(maxwell_services.get());
     fidl::InterfaceHandle<StoryProvider> story_provider_aux;
-    story_provider_impl->AddAuxiliaryBinding(GetProxy(&story_provider_aux));
+    story_provider_impl->AddAuxiliaryBinding(story_provider_aux.NewRequest());
 
     // The FocusController is implemented by the UserShell.
     fidl::InterfaceHandle<FocusController> focus_controller;
-    auto focus_controller_request = fidl::GetProxy(&focus_controller);
+    auto focus_controller_request = focus_controller.NewRequest();
     maxwell_launcher->Initialize(std::move(story_provider_aux),
                                  std::move(focus_controller));
 
@@ -247,7 +247,7 @@ class UserRunnerImpl : public UserRunner {
     auto launch_info = ApplicationLaunchInfo::New();
 
     ServiceProviderPtr services;
-    launch_info->services = GetProxy(&services);
+    launch_info->services = services.NewRequest();
     launch_info->url = url;
     if (args != nullptr) {
       launch_info->arguments = args->Clone();
@@ -255,7 +255,7 @@ class UserRunnerImpl : public UserRunner {
 
     ApplicationLauncherPtr launcher;
     user_runner_scope_->GetEnvironment()->GetApplicationLauncher(
-        fidl::GetProxy(&launcher));
+        launcher.NewRequest());
     launcher->CreateApplication(std::move(launch_info), nullptr);
 
     return services;
@@ -271,11 +271,11 @@ class UserRunnerImpl : public UserRunner {
     auto app_services = GetServiceProvider(user_shell, &user_shell_args);
 
     mozart::ViewProviderPtr view_provider;
-    ConnectToService(app_services.get(), GetProxy(&view_provider));
+    ConnectToService(app_services.get(), view_provider.NewRequest());
     view_provider->CreateView(std::move(view_owner_request), nullptr);
 
     // Use this service provider to get |UserShell| interface.
-    ConnectToService(app_services.get(), GetProxy(&user_shell_));
+    ConnectToService(app_services.get(), user_shell_.NewRequest());
   }
 
   std::shared_ptr<ApplicationContext> application_context_;

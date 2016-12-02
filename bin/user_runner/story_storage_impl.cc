@@ -25,7 +25,7 @@ class ReadLinkDataCall : public Transaction {
         link_id_(link_id),
         result_(result) {
     page_->GetSnapshot(
-        GetProxy(&page_snapshot_), [this](ledger::Status status) {
+        page_snapshot_.NewRequest(), [this](ledger::Status status) {
           page_snapshot_->Get(
               to_array(link_id_),
               [this](ledger::Status status, ledger::ValuePtr value) {
@@ -99,7 +99,7 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
   bindings_.AddBinding(this, std::move(request));
 
   fidl::InterfaceHandle<ledger::PageWatcher> watcher;
-  page_watcher_binding_.Bind(GetProxy(&watcher));
+  page_watcher_binding_.Bind(watcher.NewRequest());
   if (story_page_.is_bound()) {
     story_page_->Watch(std::move(watcher), [](ledger::Status status) {});
   }

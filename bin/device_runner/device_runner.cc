@@ -115,22 +115,22 @@ class DeviceRunnerApp : public DeviceRunner {
     launch_info->arguments = to_array(settings_.device_shell_args);
 
     ServiceProviderPtr services;
-    launch_info->services = GetProxy(&services);
+    launch_info->services = services.NewRequest();
     context_->launcher()->CreateApplication(
-        std::move(launch_info), GetProxy(&device_shell_controller_));
+        std::move(launch_info), device_shell_controller_.NewRequest());
 
     mozart::ViewProviderPtr view_provider;
-    ConnectToService(services.get(), GetProxy(&view_provider));
+    ConnectToService(services.get(), view_provider.NewRequest());
 
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
-    view_provider->CreateView(GetProxy(&root_view), nullptr);
+    view_provider->CreateView(root_view.NewRequest(), nullptr);
     context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
-    ConnectToService(services.get(), GetProxy(&device_shell_));
+    ConnectToService(services.get(), device_shell_.NewRequest());
 
     fidl::InterfaceHandle<DeviceRunner> device_runner_handle;
-    device_runner_binding_.Bind(GetProxy(&device_runner_handle));
+    device_runner_binding_.Bind(device_runner_handle.NewRequest());
     device_shell_->Initialize(std::move(device_runner_handle));
   }
 
@@ -143,12 +143,12 @@ class DeviceRunnerApp : public DeviceRunner {
     launch_info->url = kUserRunnerUrl;
 
     ServiceProviderPtr services;
-    launch_info->services = GetProxy(&services);
+    launch_info->services = services.NewRequest();
     context_->launcher()->CreateApplication(
         std::move(launch_info),
-        GetProxy(&user_runner_controller_));
+        user_runner_controller_.NewRequest());
 
-    ConnectToService(services.get(), GetProxy(&user_runner_));
+    ConnectToService(services.get(), user_runner_.NewRequest());
     user_runner_->Initialize(to_array(username), settings_.user_shell,
                              to_array(settings_.user_shell_args),
                              std::move(view_owner_request));

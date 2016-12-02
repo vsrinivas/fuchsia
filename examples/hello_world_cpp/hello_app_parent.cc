@@ -31,11 +31,11 @@ class HelloAppParent {
       for (size_t i = 1; i < args.size(); ++i)
         launch_info->arguments.push_back(args[i]);
     }
-    launch_info->services = fidl::GetProxy(&child_services_);
+    launch_info->services = child_services_.NewRequest();
     context_->launcher()->CreateApplication(std::move(launch_info),
-                                            fidl::GetProxy(&child_));
+                                            child_.NewRequest());
 
-    modular::ConnectToService(child_services_.get(), fidl::GetProxy(&hello_));
+    modular::ConnectToService(child_services_.get(), hello_.NewRequest());
 
     DoIt("hello");
     DoIt("goodbye");

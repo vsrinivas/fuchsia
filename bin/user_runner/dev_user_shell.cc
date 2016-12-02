@@ -82,17 +82,17 @@ class DevUserShellApp
                   << " " << settings_.root_link;
 
     story_provider_->CreateStory(settings_.root_module,
-                                 fidl::GetProxy(&story_controller_));
+                                 story_controller_.NewRequest());
 
     fidl::InterfaceHandle<StoryWatcher> story_watcher;
-    story_watcher_binding_.Bind(fidl::GetProxy(&story_watcher));
+    story_watcher_binding_.Bind(story_watcher.NewRequest());
     story_controller_->Watch(std::move(story_watcher));
 
     story_controller_->Start(std::move(view_owner_request_));
 
     if (!settings_.root_link.empty()) {
       modular::LinkPtr root;
-      story_controller_->GetLink(GetProxy(&root));
+      story_controller_->GetLink(root.NewRequest());
 
       rapidjson::Document document;
       document.Parse(settings_.root_link.c_str());

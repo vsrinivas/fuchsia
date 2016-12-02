@@ -90,7 +90,7 @@ class TransactionImpl : public Transaction {
         return;
       }
       page_->GetSnapshot(
-          GetProxy(&snapshot_), [this, callback](ledger::Status ledger_status) {
+          snapshot_.NewRequest(), [this, callback](ledger::Status ledger_status) {
             if (ledger::Status::OK != ledger_status) {
               snapshot_.reset();
             }

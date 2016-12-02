@@ -64,7 +64,7 @@ class ApplicationContext {
       const std::string& interface_name = Interface::Name_) {
     fidl::InterfacePtr<Interface> interface_ptr;
     environment_services_->ConnectToService(
-        interface_name, GetProxy(&interface_ptr).PassChannel());
+        interface_name, interface_ptr.NewRequest().PassChannel());
     return interface_ptr;
   }
 
