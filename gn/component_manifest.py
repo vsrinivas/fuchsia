@@ -6,6 +6,7 @@ import json
 import os
 import urlparse
 import re
+import sys
 
 __all__ = ['ComponentManifest', 'url_to_path']
 
@@ -23,7 +24,11 @@ class ComponentManifest(object):
     def __init__(self, path):
         self.path = path
         self.manifest_dir = os.path.dirname(path)
-        self.json = json.load(open(path))
+        try:
+            f = open(path)
+        except IOError as e:
+            sys.exit('Error opening manifest file: %s' % e)
+        self.json = json.load(f)
         if FUCHSIA_COMPONENT not in self.json:
             raise Exception('%s missing %s facet' % (path, FUCHSIA_COMPONENT))
         if 'url' not in self.json[FUCHSIA_COMPONENT]:
