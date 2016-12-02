@@ -69,7 +69,7 @@ mx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags) {
 
 mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle, mx_off_t offset,
                                uint32_t flags) {
-    size_t size;
+    uint64_t size;
 
     if (flags != IO_BUFFER_RO && flags != IO_BUFFER_RW) {
         return ERR_INVALID_ARGS;
