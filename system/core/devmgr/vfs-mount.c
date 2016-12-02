@@ -75,14 +75,13 @@ static mx_status_t txn_unmount(mx_handle_t srv) {
     return r;
 }
 
-mx_status_t do_unmount(mount_node_t* mount_point) {
+static mx_status_t do_unmount(mount_node_t* mount_point) {
     mx_status_t status = NO_ERROR;
     if ((status = txn_unmount(mount_point->vn->remote)) < 0) {
         printf("Unexpected error unmounting filesystem: %d\n", status);
     }
     mx_handle_close(mount_point->vn->remote);
     mount_point->vn->remote = 0;
-    list_delete(&mount_point->node);
     free(mount_point);
     return status;
 }
@@ -92,28 +91,35 @@ mx_status_t do_unmount(mount_node_t* mount_point) {
 mx_status_t vfs_uninstall_remote(vnode_t* vn) {
     mount_node_t* mount_point;
     mount_node_t* tmp;
-    mx_status_t status = ERR_NOT_FOUND;
+    mx_status_t status = NO_ERROR;
     mtx_lock(&vfs_lock);
     list_for_every_entry_safe (&remote_list, mount_point, tmp, mount_node_t, node) {
         if (mount_point->vn == vn) {
-            status = do_unmount(mount_point);
+            list_delete(&mount_point->node);
             goto done;
         }
     }
+    status = ERR_NOT_FOUND;
 done:
     mtx_unlock(&vfs_lock);
-    return status;
+    if (status != NO_ERROR) {
+        return status;
+    }
+    return do_unmount(mount_point);
 }
 
 // Uninstall all remote filesystems. Acts like 'vfs_uninstall_remote' for all
 // known remotes.
 mx_status_t vfs_uninstall_all() {
     mount_node_t* mount_point;
-    mount_node_t* tmp;
-    mtx_lock(&vfs_lock);
-    list_for_every_entry_safe (&remote_list, mount_point, tmp, mount_node_t, node) {
-        do_unmount(mount_point);
+    for (;;) {
+        mtx_lock(&vfs_lock);
+        mount_point = list_remove_head_type(&remote_list, mount_node_t, node);
+        mtx_unlock(&vfs_lock);
+        if (mount_point) {
+            do_unmount(mount_point);
+        } else {
+            return NO_ERROR;
+        }
     }
-    mtx_unlock(&vfs_lock);
-    return NO_ERROR;
 }
