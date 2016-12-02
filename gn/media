@@ -43,6 +43,10 @@
         {
             "binary": "media_util_apptests",
             "bootfs_path": "apps/media_util_apptests"
+        },
+        {
+            "binary": "vu_meter",
+            "bootfs_path": "apps/vu_meter"
         }
     ]
 }
