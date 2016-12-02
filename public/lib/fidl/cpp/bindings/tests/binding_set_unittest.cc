@@ -42,7 +42,7 @@ TEST(BindingSetTest, FullLifeCycle) {
   EXPECT_EQ(0u, binding_set.size());
   for (size_t i = 0; i < kNumObjects; i++) {
     if (i % 2 == 0)
-      binding_set.AddBinding(&impls[i], GetProxy(&interface_pointers[i]));
+      binding_set.AddBinding(&impls[i], interface_pointers[i].NewRequest());
     else
       interface_pointers[i] =
           fidl::InterfacePtr<MinimalInterface>::Create(

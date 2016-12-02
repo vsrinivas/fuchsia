@@ -414,7 +414,7 @@ TEST(ArrayTest, Serialization_ArrayOfInterfacePtr) {
 
   // 3.  Should serialize successfully if InterfacePtr is valid.
   TestInterfacePtr iface_ptr;
-  auto iface_req = GetProxy(&iface_ptr);
+  auto iface_req = iface_ptr.NewRequest();
 
   iface_array[0] = std::move(iface_ptr);
   EXPECT_TRUE(iface_array[0]);
@@ -472,7 +472,7 @@ TEST(ArrayTest, Serialization_StructWithArrayOfInterfacePtr) {
 
   //  2. Adding in a struct with a valid InterfacePtr<> will let it serialize.
   TestInterfacePtr iface_ptr;
-  auto iface_req = GetProxy(&iface_ptr);
+  auto iface_req = iface_ptr.NewRequest();
 
   StructWithInterfacePtr iface_struct(StructWithInterface::New());
   iface_struct->iptr = std::move(iface_ptr);
@@ -521,7 +521,7 @@ TEST(ArrayTest, Serialization_StructWithArrayOfIntefaceRequest) {
 
   //  2. Adding in a valid InterfacePtr<> will let it serialize.
   TestInterfacePtr iface_ptr;
-  struct_arr_iface_req.req_array[0] = GetProxy(&iface_ptr);
+  struct_arr_iface_req.req_array[0] = iface_ptr.NewRequest();
   EXPECT_TRUE(struct_arr_iface_req.req_array[0].is_pending());
 
   EXPECT_EQ(

@@ -22,7 +22,7 @@ class VersioningApplicationTest : public ApplicationTestBase {
     ApplicationTestBase::SetUp();
 
     ConnectToService(shell(), "mojo:versioning_test_service",
-                     GetProxy(&database_));
+                     database_.NewRequest());
   }
 
   HumanResourceDatabasePtr database_;

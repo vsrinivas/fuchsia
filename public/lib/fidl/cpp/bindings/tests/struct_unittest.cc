@@ -269,7 +269,7 @@ TEST(StructTest, Serialization_InterfaceRequest) {
             Serialize_(&iface_req_struct, &buf, &data));
 
   SomeInterfacePtr i_ptr;
-  iface_req_struct.req = GetProxy(&i_ptr);
+  iface_req_struct.req = i_ptr.NewRequest();
   EXPECT_TRUE(iface_req_struct.req.is_pending());
 
   EXPECT_EQ(fidl::internal::ValidationError::NONE,

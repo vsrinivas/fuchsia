@@ -124,7 +124,7 @@ class BindingCallbackTest : public testing::Test {
 TEST_F(BindingCallbackTest, Basic) {
   // Create the ServerImpl and the Binding.
   InterfaceImpl server_impl;
-  Binding<sample::Provider> binding(&server_impl, GetProxy(&interface_ptr_));
+  Binding<sample::Provider> binding(&server_impl, interface_ptr_.NewRequest());
 
   // Initialize the test values.
   server_impl.resetLastServerValueSeen();
@@ -172,7 +172,7 @@ TEST_F(BindingCallbackTest, DeleteBindingThenRunCallback) {
   InterfaceImpl server_impl;
   {
     // Create the binding in an inner scope so it can be deleted first.
-    Binding<sample::Provider> binding(&server_impl, GetProxy(&interface_ptr_));
+    Binding<sample::Provider> binding(&server_impl, interface_ptr_.NewRequest());
 
     // Initialize the test values.
     server_impl.resetLastServerValueSeen();
@@ -210,7 +210,7 @@ TEST_F(BindingCallbackTest, DeleteBindingThenDeleteCallback) {
   InterfaceImpl server_impl;
   {
     // Create the binding in an inner scope so it can be deleted first.
-    Binding<sample::Provider> binding(&server_impl, GetProxy(&interface_ptr_));
+    Binding<sample::Provider> binding(&server_impl, interface_ptr_.NewRequest());
 
     // Initialize the test values.
     server_impl.resetLastServerValueSeen();
@@ -237,7 +237,7 @@ TEST_F(BindingCallbackTest, DeleteBindingThenDeleteCallback) {
 TEST_F(BindingCallbackTest, CloseBindingBeforeDeletingCallback) {
   // Create the ServerImpl and the Binding.
   InterfaceImpl server_impl;
-  Binding<sample::Provider> binding(&server_impl, GetProxy(&interface_ptr_));
+  Binding<sample::Provider> binding(&server_impl, interface_ptr_.NewRequest());
 
   // Initialize the test values.
   server_impl.resetLastServerValueSeen();
@@ -268,7 +268,7 @@ TEST_F(BindingCallbackTest, CloseBindingBeforeDeletingCallback) {
 TEST_F(BindingCallbackTest, DeleteCallbackBeforeBindingDeathTest) {
   // Create the ServerImpl and the Binding.
   InterfaceImpl server_impl;
-  Binding<sample::Provider> binding(&server_impl, GetProxy(&interface_ptr_));
+  Binding<sample::Provider> binding(&server_impl, interface_ptr_.NewRequest());
 
   // Initialize the test values.
   server_impl.resetLastServerValueSeen();

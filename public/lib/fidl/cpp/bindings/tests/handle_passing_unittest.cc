@@ -178,7 +178,7 @@ struct DoStuffCallback {
 
 TEST_F(HandlePassingTest, Basic) {
   sample::FactoryPtr factory;
-  SampleFactoryImpl factory_impl(GetProxy(&factory));
+  SampleFactoryImpl factory_impl(factory.NewRequest());
 
   mx::channel pipe0_handle0, pipe0_handle1;
   mx::channel::create(0, &pipe0_handle0, &pipe0_handle1);
@@ -189,7 +189,7 @@ TEST_F(HandlePassingTest, Basic) {
   EXPECT_TRUE(WriteTextMessage(pipe1_handle1, kText2));
 
   imported::ImportedInterfacePtr imported;
-  ImportedInterfaceImpl imported_impl(GetProxy(&imported));
+  ImportedInterfaceImpl imported_impl(imported.NewRequest());
 
   sample::RequestPtr request(sample::Request::New());
   request->x = 1;
@@ -212,7 +212,7 @@ TEST_F(HandlePassingTest, Basic) {
 
 TEST_F(HandlePassingTest, PassInvalid) {
   sample::FactoryPtr factory;
-  SampleFactoryImpl factory_impl(GetProxy(&factory));
+  SampleFactoryImpl factory_impl(factory.NewRequest());
 
   sample::RequestPtr request(sample::Request::New());
   request->x = 1;
@@ -244,7 +244,7 @@ struct DoStuff2Callback {
 // Verifies DataPipeConsumer can be passed and read from.
 TEST_F(HandlePassingTest, DataPipe) {
   sample::FactoryPtr factory;
-  SampleFactoryImpl factory_impl(GetProxy(&factory));
+  SampleFactoryImpl factory_impl(factory.NewRequest());
 
   // Writes a string to a data pipe and passes the data pipe (consumer) to the
   // factory.
@@ -274,7 +274,7 @@ TEST_F(HandlePassingTest, DataPipe) {
 
 TEST_F(HandlePassingTest, PipesAreClosed) {
   sample::FactoryPtr factory;
-  SampleFactoryImpl factory_impl(GetProxy(&factory));
+  SampleFactoryImpl factory_impl(factory.NewRequest());
 
   mx::channel handle0, handle1;
   mx::channel::create(0, &handle0, &handle1);
@@ -301,12 +301,12 @@ TEST_F(HandlePassingTest, PipesAreClosed) {
 
 TEST_F(HandlePassingTest, CreateNamedObject) {
   sample::FactoryPtr factory;
-  SampleFactoryImpl factory_impl(GetProxy(&factory));
+  SampleFactoryImpl factory_impl(factory.NewRequest());
 
   sample::NamedObjectPtr object1;
   EXPECT_FALSE(object1);
 
-  InterfaceRequest<sample::NamedObject> object1_request = GetProxy(&object1);
+  InterfaceRequest<sample::NamedObject> object1_request = object1.NewRequest();
   EXPECT_TRUE(object1_request.is_pending());
   factory->CreateNamedObject(std::move(object1_request));
   EXPECT_FALSE(object1_request.is_pending());  // We've passed the request.
@@ -315,7 +315,7 @@ TEST_F(HandlePassingTest, CreateNamedObject) {
   object1->SetName("object1");
 
   sample::NamedObjectPtr object2;
-  factory->CreateNamedObject(GetProxy(&object2));
+  factory->CreateNamedObject(object2.NewRequest());
   object2->SetName("object2");
 
   std::string name1;

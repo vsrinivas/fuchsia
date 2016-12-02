@@ -60,7 +60,7 @@ using BindingTest = BindingTestBase;
 TEST_F(BindingTest, Close) {
   bool called = false;
   sample::ServicePtr ptr;
-  auto request = GetProxy(&ptr);
+  auto request = ptr.NewRequest();
   ptr.set_connection_error_handler([&called]() { called = true; });
   ServiceImpl impl;
   Binding<sample::Service> binding(&impl, std::move(request));
@@ -76,7 +76,7 @@ TEST_F(BindingTest, DestroyClosesMessagePipe) {
   bool encountered_error = false;
   ServiceImpl impl;
   sample::ServicePtr ptr;
-  auto request = GetProxy(&ptr);
+  auto request = ptr.NewRequest();
   ptr.set_connection_error_handler(
       [&encountered_error]() { encountered_error = true; });
   bool called = false;
@@ -109,7 +109,7 @@ TEST_F(BindingTest, ConnectionError) {
   {
     ServiceImpl impl;
     sample::ServicePtr ptr;
-    Binding<sample::Service> binding(&impl, GetProxy(&ptr));
+    Binding<sample::Service> binding(&impl, ptr.NewRequest());
     binding.set_connection_error_handler([&called]() { called = true; });
     ptr.reset();
     EXPECT_FALSE(called);
@@ -126,7 +126,7 @@ TEST_F(BindingTest, ConnectionError) {
 TEST_F(BindingTest, CloseDoesntCallConnectionErrorHandler) {
   ServiceImpl impl;
   sample::ServicePtr ptr;
-  Binding<sample::Service> binding(&impl, GetProxy(&ptr));
+  Binding<sample::Service> binding(&impl, ptr.NewRequest());
   bool called = false;
   binding.set_connection_error_handler([&called]() { called = true; });
   binding.Close();
@@ -159,7 +159,7 @@ TEST_F(BindingTest, SelfDeleteOnConnectionError) {
   bool was_deleted = false;
   sample::ServicePtr ptr;
   // This should delete itself on connection error.
-  new ServiceImplWithBinding(&was_deleted, GetProxy(&ptr));
+  new ServiceImplWithBinding(&was_deleted, ptr.NewRequest());
   ptr.reset();
   EXPECT_FALSE(was_deleted);
   PumpMessages();
@@ -170,7 +170,7 @@ TEST_F(BindingTest, SelfDeleteOnConnectionError) {
 TEST_F(BindingTest, Unbind) {
   ServiceImpl impl;
   sample::ServicePtr ptr;
-  Binding<sample::Service> binding(&impl, GetProxy(&ptr));
+  Binding<sample::Service> binding(&impl, ptr.NewRequest());
 
   bool called = false;
   auto called_cb = [&called](int32_t result) { called = true; };

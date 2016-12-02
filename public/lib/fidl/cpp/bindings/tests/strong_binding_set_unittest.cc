@@ -47,7 +47,7 @@ TEST(StrongBindingSetTest, FullLifeCycle) {
   EXPECT_EQ(0u, binding_set.size());
   for (size_t i = 0; i < kNumObjects; i++) {
     impls[i] = new MinimalInterfaceImpl(&deleted_flags[i]);
-    binding_set.AddBinding(impls[i], GetProxy(&intrfc_ptrs[i]));
+    binding_set.AddBinding(impls[i], intrfc_ptrs[i].NewRequest());
   }
   EXPECT_EQ(kNumObjects, binding_set.size());
 

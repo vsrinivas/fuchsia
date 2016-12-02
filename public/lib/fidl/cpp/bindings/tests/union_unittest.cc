@@ -1182,7 +1182,7 @@ TEST(UnionTest, InterfaceInUnion) {
   ClearAsyncWaiter();
   SmallCacheImpl impl;
   SmallCachePtr ptr;
-  Binding<SmallCache> bindings(&impl, GetProxy(&ptr));
+  Binding<SmallCache> bindings(&impl, ptr.NewRequest());
 
   HandleUnionPtr handle(HandleUnion::New());
   handle->set_f_small_cache(std::move(ptr));
@@ -1197,7 +1197,7 @@ TEST(UnionTest, InterfaceInUnion) {
 TEST(UnionTest, InterfaceInUnionSerialization) {
   SmallCacheImpl impl;
   SmallCachePtr ptr;
-  Binding<SmallCache> bindings(&impl, GetProxy(&ptr));
+  Binding<SmallCache> bindings(&impl, ptr.NewRequest());
 
   HandleUnionPtr handle(HandleUnion::New());
   handle->set_f_small_cache(std::move(ptr));
@@ -1238,7 +1238,7 @@ TEST(UnionTest, UnionInInterface) {
   ClearAsyncWaiter();
   UnionInterfaceImpl impl;
   UnionInterfacePtr ptr;
-  Binding<UnionInterface> bindings(&impl, GetProxy(&ptr));
+  Binding<UnionInterface> bindings(&impl, ptr.NewRequest());
 
   PodUnionPtr pod(PodUnion::New());
   pod->set_f_int16(16);

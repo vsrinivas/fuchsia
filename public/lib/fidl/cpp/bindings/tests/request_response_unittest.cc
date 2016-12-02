@@ -89,7 +89,7 @@ class RequestResponseTest : public testing::Test {
 
 TEST_F(RequestResponseTest, EchoString) {
   sample::ProviderPtr provider;
-  ProviderImpl provider_impl(GetProxy(&provider));
+  ProviderImpl provider_impl(provider.NewRequest());
 
   std::string buf;
   provider->EchoString(String::From("hello"), StringRecorder(&buf));
@@ -101,7 +101,7 @@ TEST_F(RequestResponseTest, EchoString) {
 
 TEST_F(RequestResponseTest, EchoStrings) {
   sample::ProviderPtr provider;
-  ProviderImpl provider_impl(GetProxy(&provider));
+  ProviderImpl provider_impl(provider.NewRequest());
 
   std::string buf;
   provider->EchoStrings(String::From("hello"), String::From(" world"),
@@ -114,7 +114,7 @@ TEST_F(RequestResponseTest, EchoStrings) {
 
 TEST_F(RequestResponseTest, EchoMessagePipeHandle) {
   sample::ProviderPtr provider;
-  ProviderImpl provider_impl(GetProxy(&provider));
+  ProviderImpl provider_impl(provider.NewRequest());
 
   mx::channel handle0, handle1;
   mx::channel::create(0, &handle0, &handle1);
@@ -131,7 +131,7 @@ TEST_F(RequestResponseTest, EchoMessagePipeHandle) {
 
 TEST_F(RequestResponseTest, EchoEnum) {
   sample::ProviderPtr provider;
-  ProviderImpl provider_impl(GetProxy(&provider));
+  ProviderImpl provider_impl(provider.NewRequest());
 
   sample::Enum value;
   provider->EchoEnum(sample::Enum::VALUE, EnumRecorder(&value));

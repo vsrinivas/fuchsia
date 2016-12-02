@@ -43,7 +43,7 @@ TEST(InterfacePtrSetTest, FullLifeCycle) {
   // together.
   std::unique_ptr<MinimalInterfaceImpl> impls[kNumObjects];
   for (size_t i = 0; i < kNumObjects; i++) {
-    impls[i].reset(new MinimalInterfaceImpl(GetProxy(&intrfc_ptrs[i])));
+    impls[i].reset(new MinimalInterfaceImpl(intrfc_ptrs[i].NewRequest()));
   }
 
   // Move all 10 InterfacePtrs into the set.
