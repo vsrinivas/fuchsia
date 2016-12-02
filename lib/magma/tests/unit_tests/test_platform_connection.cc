@@ -29,14 +29,14 @@ public:
     {
         auto buf = magma::PlatformBuffer::Create(1);
         test_buffer_id = buf->id();
-        EXPECT_TRUE(ipc_connection_->ImportBuffer(std::move(buf)));
+        EXPECT_TRUE(ipc_connection_->ImportBuffer(buf.get()));
         EXPECT_EQ(ipc_connection_->GetError(), 0);
     }
     void TestReleaseBuffer()
     {
         auto buf = magma::PlatformBuffer::Create(1);
         test_buffer_id = buf->id();
-        EXPECT_TRUE(ipc_connection_->ImportBuffer(std::move(buf)));
+        EXPECT_TRUE(ipc_connection_->ImportBuffer(buf.get()));
         EXPECT_TRUE(ipc_connection_->ReleaseBuffer(test_buffer_id));
         EXPECT_EQ(ipc_connection_->GetError(), 0);
     }

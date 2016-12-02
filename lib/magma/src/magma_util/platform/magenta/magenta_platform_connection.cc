@@ -308,13 +308,10 @@ public:
     MagentaPlatformIpcConnection(mx::channel channel) : channel_(std::move(channel)) {}
 
     // Imports a buffer for use in the system driver
-    bool ImportBuffer(std::unique_ptr<PlatformBuffer> buffer) override
+    bool ImportBuffer(PlatformBuffer* buffer) override
     {
         if (!buffer)
             return DRETF(false, "attempting to import null buffer");
-
-        if (buffer_map_.find(buffer->id()) != buffer_map_.end())
-            return DRETF(false, "attempting to import buffer twice");
 
         uint32_t duplicate_handle;
         if (!buffer->duplicate_handle(&duplicate_handle))
@@ -329,7 +326,6 @@ public:
             return DRETF(false, "failed to write to channel");
         }
 
-        buffer_map_.insert(std::make_pair(buffer->id(), std::move(buffer)));
         return true;
     }
 
@@ -337,29 +333,13 @@ public:
     // returns false if the buffer with |buffer_id| has not been imported
     bool ReleaseBuffer(uint64_t buffer_id) override
     {
-        auto iter = buffer_map_.find(buffer_id);
-        if (iter == buffer_map_.end())
-            return DRETF(false, "attempting to release invalid buffer handle");
-
         ReleaseBufferOp op;
         op.buffer_id = buffer_id;
         mx_status_t status = channel_.write(0, &op, sizeof(op), nullptr, 0);
         if (status != NO_ERROR)
             return DRETF(false, "failed to write to channel");
 
-        buffer_map_.erase(iter);
-
         return true;
-    }
-
-    // Returns the PlatformBuffer for |buffer_id|
-    // Returns nullptr if |buffer_id| is invalid
-    PlatformBuffer* LookupBuffer(uint64_t buffer_id) override
-    {
-        auto iter = buffer_map_.find(buffer_id);
-        if (iter == buffer_map_.end())
-            return nullptr;
-        return iter->second.get();
     }
 
     // Creates a context and returns the context id
@@ -527,7 +507,6 @@ private:
     };
 
     mx::channel channel_;
-    std::map<uint64_t, std::unique_ptr<PlatformBuffer>> buffer_map_;
     std::map<uint64_t, pageflip_closure> pageflip_closure_map_;
     uint32_t next_context_id_{};
     int32_t error_{};

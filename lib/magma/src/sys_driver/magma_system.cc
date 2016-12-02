@@ -59,117 +59,114 @@ void magma_system_destroy_context(magma_system_connection* connection, uint32_t 
 }
 
 int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, uint64_t* size_out,
-                           uint64_t* buffer_id_out)
+                           magma_buffer_t* buffer_out)
 {
-    auto buf = magma::PlatformBuffer::Create(size);
-    if (!buf)
+    auto platform_buffer = magma::PlatformBuffer::Create(size);
+    if (!platform_buffer)
         return DRET(-ENOMEM);
 
-    *size_out = buf->size();
-    *buffer_id_out = buf->id();
-
-    if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(std::move(buf)))
+    if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get()))
         return DRET(-EINVAL);
+
+    *size_out = platform_buffer->size();
+    *buffer_out =
+        reinterpret_cast<magma_buffer_t>(platform_buffer.release()); // Ownership passed across abi
 
     return 0;
 }
 
-void magma_system_free(magma_system_connection* connection, uint64_t buffer_id)
+void magma_system_free(magma_system_connection* connection, magma_buffer_t buffer)
 {
-    magma::PlatformIpcConnection::cast(connection)->ReleaseBuffer(buffer_id);
+    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+    magma::PlatformIpcConnection::cast(connection)->ReleaseBuffer(platform_buffer->id());
+    delete platform_buffer;
+}
+
+uint64_t magma_system_get_buffer_id(magma_buffer_t buffer)
+{
+    return reinterpret_cast<magma::PlatformBuffer*>(buffer)->id();
 }
 
 int32_t magma_system_import(magma_system_connection* connection, uint32_t buffer_handle,
-                            uint64_t* buffer_id_out)
+                            magma_buffer_t* buffer_out)
 {
-    uint64_t id;
-    if (!magma::PlatformBuffer::IdFromHandle(buffer_handle, &id))
-        return DRET(-EINVAL);
+    auto platform_buffer = magma::PlatformBuffer::Import(buffer_handle);
 
-    auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(id);
-    if (!buf) {
-        // if we dont have the buffer already create it
-        auto new_buf = magma::PlatformBuffer::Import(buffer_handle);
-        if (!new_buf)
-            return DRET(-EINVAL);
-        if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(std::move(new_buf)))
-            return DRET(-EINVAL);
-        buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(id);
-        DASSERT(buf);
-    }
+    if (!platform_buffer)
+        return DRET_MSG(-EINVAL, "PlatformBuffer::Import failed");
 
-    // TODO(MA-104) Use 64 bit buffer ids everywhere
-    DASSERT(buf->id() <= UINT32_MAX);
-    *buffer_id_out = buf->id();
+    if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get()))
+        return DRET_MSG(-EINVAL, "ImportBuffer failed");
+
+    *buffer_out = reinterpret_cast<magma_buffer_t>(platform_buffer.release());
 
     return 0;
 }
 
-int32_t magma_system_export(magma_system_connection* connection, uint64_t buffer_id,
+int32_t magma_system_export(magma_system_connection* connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out)
 {
+    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
-    auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(buffer_id);
-    if (!buf)
-        return DRET(-EINVAL);
-
-    if (!buf->duplicate_handle(buffer_handle_out))
+    if (!platform_buffer->duplicate_handle(buffer_handle_out))
         return DRET(-EINVAL);
 
     return 0;
 }
 
-void magma_system_set_tiling_mode(magma_system_connection* connection, uint64_t buffer_id,
+void magma_system_set_tiling_mode(magma_system_connection* connection, magma_buffer_t buffer,
                                   uint32_t tiling_mode)
 {
     DLOG("magma_system_set_tiling_mode unimplemented");
 }
 
-int32_t magma_system_map(magma_system_connection* connection, uint64_t buffer_id, void** addr_out)
+int32_t magma_system_map(magma_system_connection* connection, magma_buffer_t buffer,
+                         void** addr_out)
 {
-    auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(buffer_id);
-    if (!buf)
-        return DRET(-EINVAL);
+    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
-    if (!buf->MapCpu(addr_out))
+    if (!platform_buffer->MapCpu(addr_out))
         return DRET(-EINVAL);
 
     return 0;
 }
 
-int32_t magma_system_unmap(magma_system_connection* connection, uint64_t buffer_id, void* addr)
+int32_t magma_system_unmap(magma_system_connection* connection, magma_buffer_t buffer, void* addr)
 {
-    auto buf = magma::PlatformIpcConnection::cast(connection)->LookupBuffer(buffer_id);
-    if (!buf)
-        return DRET(-EINVAL);
+    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
-    if (!buf->UnmapCpu())
+    if (!platform_buffer->UnmapCpu())
         return DRET(-EINVAL);
 
     return 0;
 }
 
-void magma_system_set_domain(magma_system_connection* connection, uint64_t buffer_id,
+void magma_system_set_domain(magma_system_connection* connection, magma_buffer_t buffer,
                              uint32_t read_domains, uint32_t write_domain)
 {
     DLOG("magma_system_set_tiling_mode unimplemented");
 }
 
 void magma_system_submit_command_buffer(magma_system_connection* connection,
-                                        uint64_t command_buffer_id, uint32_t context_id)
+                                        magma_buffer_t command_buffer, uint32_t context_id)
 {
+    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(command_buffer);
+
     magma::PlatformIpcConnection::cast(connection)
-        ->ExecuteCommandBuffer(command_buffer_id, context_id);
+        ->ExecuteCommandBuffer(platform_buffer->id(), context_id);
 }
 
-void magma_system_wait_rendering(magma_system_connection* connection, uint64_t buffer_id)
+void magma_system_wait_rendering(magma_system_connection* connection, magma_buffer_t buffer)
 {
-    magma::PlatformIpcConnection::cast(connection)->WaitRendering(buffer_id);
+    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
+
+    magma::PlatformIpcConnection::cast(connection)->WaitRendering(platform_buffer->id());
 }
 
-void magma_system_display_page_flip(magma_system_connection* connection, uint64_t buffer_id,
+void magma_system_display_page_flip(magma_system_connection* connection, magma_buffer_t buffer,
                                     magma_system_pageflip_callback_t callback, void* data)
 {
+    auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
-    magma::PlatformIpcConnection::cast(connection)->PageFlip(buffer_id, callback, data);
+    magma::PlatformIpcConnection::cast(connection)->PageFlip(platform_buffer->id(), callback, data);
 }

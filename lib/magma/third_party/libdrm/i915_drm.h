@@ -707,7 +707,7 @@ struct drm_i915_gem_exec_object2 {
      * User's handle for a buffer to be bound into the GTT for this
      * operation.
      */
-    __u32 handle;
+    __u64 handle; // magma uses 64bit buffer 'handles'
 
     /** Number of relocations to be performed on this buffer */
     __u32 relocation_count;

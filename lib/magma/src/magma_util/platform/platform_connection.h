@@ -13,6 +13,7 @@
 
 namespace magma {
 
+// Any implementation of PlatformIpcConnection shall be threadsafe.
 class PlatformIpcConnection : public magma_system_connection {
 public:
     virtual ~PlatformIpcConnection() {}
@@ -20,13 +21,10 @@ public:
     static std::unique_ptr<PlatformIpcConnection> Create(uint32_t device_handle);
 
     // Imports a buffer for use in the system driver
-    virtual bool ImportBuffer(std::unique_ptr<PlatformBuffer> buffer) = 0;
+    virtual bool ImportBuffer(PlatformBuffer* buffer) = 0;
     // Destroys the buffer with |buffer_id| within this connection
     // returns false if |buffer_id| has not been imported
     virtual bool ReleaseBuffer(uint64_t buffer_id) = 0;
-    // Returns the PlatformBuffer for |buffer_id|
-    // Returns nullptr if |buffer_id| is invalid
-    virtual PlatformBuffer* LookupBuffer(uint64_t buffer_id) = 0;
 
     // Creates a context and returns the context id
     virtual void CreateContext(uint32_t* context_id_out) = 0;

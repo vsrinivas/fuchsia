@@ -16,6 +16,8 @@ struct magma_system_connection {
     uint32_t magic_;
 };
 
+typedef uintptr_t magma_buffer_t;
+
 // Functions on this interface that return integers return 0 on success unless otherwise noted
 // Error codes can be found in errno.h
 
@@ -37,43 +39,46 @@ void magma_system_create_context(struct magma_system_connection* connection,
 void magma_system_destroy_context(struct magma_system_connection* connection, uint32_t context_id);
 
 int32_t magma_system_alloc(struct magma_system_connection* connection, uint64_t size,
-                           uint64_t* size_out, uint64_t* buffer_id_out);
-void magma_system_free(struct magma_system_connection* connection, uint64_t buffer_id);
+                           uint64_t* size_out, magma_buffer_t* buffer_out);
+void magma_system_free(struct magma_system_connection* connection, magma_buffer_t buffer);
 
-void magma_system_set_tiling_mode(struct magma_system_connection* connection, uint64_t buffer_id,
+uint64_t magma_system_get_buffer_id(magma_buffer_t buffer);
+
+void magma_system_set_tiling_mode(struct magma_system_connection* connection, magma_buffer_t buffer,
                                   uint32_t tiling_mode);
 
-int32_t magma_system_map(struct magma_system_connection* connection, uint64_t buffer_id,
+int32_t magma_system_map(struct magma_system_connection* connection, magma_buffer_t buffer,
                          void** addr_out);
-int32_t magma_system_unmap(struct magma_system_connection* connection, uint64_t buffer_id,
+int32_t magma_system_unmap(struct magma_system_connection* connection, magma_buffer_t buffer,
                            void* addr);
 
-void magma_system_set_domain(struct magma_system_connection* connection, uint64_t buffer_id,
+void magma_system_set_domain(struct magma_system_connection* connection, magma_buffer_t buffer,
                              uint32_t read_domains, uint32_t write_domain);
 
 // Executes a command buffer.
-// Note that the buffer referred to by |command_buffer_id| must contain a valid
+// Note that the buffer referred to by |command_buffer| must contain a valid
 // magma_system_command_buffer and all associated data structures
 void magma_system_submit_command_buffer(struct magma_system_connection* connection,
-                                        uint64_t command_buffer_id, uint32_t context_id);
+                                        magma_buffer_t command_buffer, uint32_t context_id);
 
-void magma_system_wait_rendering(struct magma_system_connection* connection, uint64_t buffer_id);
+void magma_system_wait_rendering(struct magma_system_connection* connection, magma_buffer_t buffer);
 
-// makes the buffer returned by |buffer_id| able to be imported via |buffer_handle_out|
-int32_t magma_system_export(magma_system_connection* connection, uint64_t buffer_id,
+// makes the buffer returned by |buffer| able to be imported via |buffer_handle_out|
+int32_t magma_system_export(struct magma_system_connection* connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out);
 
-// imports the buffer referred to by |buffer_handle| and makes it accessible via |buffer_id_out|
+// imports the buffer referred to by |buffer_handle| and makes it accessible via |buffer_out|
 int32_t magma_system_import(struct magma_system_connection* connection, uint32_t buffer_handle,
-                            uint64_t* buffer_id_out);
+                            magma_buffer_t* buffer_out);
 
 // Provides a buffer to be scanned out on the next vblank event.
 // |callback| will be called with |data| as its second argument when the buffer
-// referred to by |buffer_id| is no longer being displayed and is safe to be
+// referred to by |buffer| is no longer being displayed and is safe to be
 // reused. The first argument to |callback| indicates an error with the page
 // flip, where 0 indicates success
 // This will fail if |connection| was not created with |MAGMA_SYSTEM_CAPABILITY_DISPLAY|
-void magma_system_display_page_flip(struct magma_system_connection* connection, uint64_t buffer_id,
+void magma_system_display_page_flip(struct magma_system_connection* connection,
+                                    magma_buffer_t buffer,
                                     magma_system_pageflip_callback_t callback, void* data);
 
 #if defined(__cplusplus)

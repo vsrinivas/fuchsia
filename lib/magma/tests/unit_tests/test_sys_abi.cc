@@ -88,6 +88,40 @@ public:
         EXPECT_EQ(magma_system_get_error(connection_), 0);
     }
 
+    void Export(uint32_t* handle_out, uint64_t* id_out)
+    {
+        ASSERT_NE(connection_, nullptr);
+
+        uint64_t size = PAGE_SIZE;
+        magma_buffer_t buffer;
+
+        EXPECT_EQ(magma_system_alloc(connection_, size, &size, &buffer), 0);
+
+        *id_out = magma_system_get_buffer_id(buffer);
+
+        EXPECT_EQ(magma_system_export(connection_, buffer, handle_out), 0);
+    }
+
+    void Import(uint32_t handle, uint64_t id)
+    {
+        ASSERT_NE(connection_, nullptr);
+
+        magma_buffer_t buffer;
+        EXPECT_EQ(magma_system_import(connection_, handle, &buffer), 0);
+        EXPECT_EQ(magma_system_get_buffer_id(buffer), id);
+
+        // import twice for funsies
+        EXPECT_EQ(magma_system_import(connection_, handle, &buffer), 0);
+    }
+
+    static void ImportExport(TestConnection* test1, TestConnection* test2)
+    {
+        uint32_t handle;
+        uint64_t id;
+        test1->Export(&handle, &id);
+        test2->Import(handle, id);
+    }
+
 private:
     magma_system_connection* connection_;
 };
@@ -120,4 +154,11 @@ TEST(MagmaSystemAbi, WaitRendering)
 {
     TestConnection test;
     test.WaitRendering();
+}
+
+TEST(MagmaSystemAbi, ImportExport)
+{
+    TestConnection test1;
+    TestConnection test2;
+    TestConnection::ImportExport(&test1, &test2);
 }
