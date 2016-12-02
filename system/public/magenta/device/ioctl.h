@@ -14,6 +14,10 @@
 // a single handle, optionally followed by plain data
 #define IOCTL_KIND_GET_HANDLE       0x1
 
+// GET_TWO_HANDLES ioctls accept plain data and return
+// two handles, optionally followed by plain data
+#define IOCTL_KIND_GET_TWO_HANDLES  0x2
+
 // core device/devmgr ioctl families
 #define IOCTL_FAMILY_RESERVED       0x00
 #define IOCTL_FAMILY_DEVICE         0x01

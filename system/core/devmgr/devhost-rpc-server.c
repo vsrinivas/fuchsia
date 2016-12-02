@@ -369,9 +369,17 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
         memcpy(in_buf, msg->data, len);
         mx_status_t r = do_ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
         if (r >= 0) {
-            if (IOCTL_KIND(msg->arg2.op) == IOCTL_KIND_GET_HANDLE) {
-                msg->hcount = 1;
-                memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
+            switch (IOCTL_KIND(msg->arg2.op)) {
+                case IOCTL_KIND_DEFAULT:
+                    break;
+                case IOCTL_KIND_GET_HANDLE:
+                    msg->hcount = 1;
+                    memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
+                    break;
+                case IOCTL_KIND_GET_TWO_HANDLES:
+                    msg->hcount = 2;
+                    memcpy(msg->handle, msg->data, 2 * sizeof(mx_handle_t));
+                    break;
             }
             msg->datalen = r;
             msg->arg2.off = ios->io_off;

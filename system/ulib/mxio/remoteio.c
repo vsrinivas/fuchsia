@@ -273,6 +273,9 @@ static ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
     if ((IOCTL_KIND(op) == IOCTL_KIND_GET_HANDLE) && (out_len < sizeof(mx_handle_t))) {
         return ERR_INVALID_ARGS;
     }
+    if ((IOCTL_KIND(op) == IOCTL_KIND_GET_TWO_HANDLES) && (out_len < 2 * sizeof(mx_handle_t))) {
+        return ERR_INVALID_ARGS;
+    }
 
     memset(&msg, 0, MXRIO_HDR_SZ);
     msg.op = MXRIO_IOCTL;
@@ -291,17 +294,29 @@ static ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
     }
 
     memcpy(out_buf, msg.data, copy_len);
-    if (IOCTL_KIND(op) == IOCTL_KIND_GET_HANDLE) {
-        if (msg.hcount > 0) {
-            memcpy(out_buf, msg.handle, sizeof(mx_handle_t));
-            discard_handles(msg.handle + 1, msg.hcount - 1);
-        } else {
-            mx_handle_t zero = 0;
-            memcpy(out_buf, &zero, sizeof(mx_handle_t));
-        }
-    } else {
-        discard_handles(msg.handle, msg.hcount);
+
+    int handles = 0;
+    switch (IOCTL_KIND(op)) {
+        case IOCTL_KIND_GET_HANDLE:
+            handles = (msg.hcount > 0 ? 1 : 0);
+            if (handles) {
+                memcpy(out_buf, msg.handle, sizeof(mx_handle_t));
+            } else {
+                memset(out_buf, 0, sizeof(mx_handle_t));
+            }
+            break;
+        case IOCTL_KIND_GET_TWO_HANDLES:
+            handles = (msg.hcount > 2 ? 2 : msg.hcount);
+            if (handles) {
+                memcpy(out_buf, msg.handle, handles * sizeof(mx_handle_t));
+            }
+            if (handles < 2) {
+                memset(out_buf, 0, (2 - handles) * sizeof(mx_handle_t));
+            }
+            break;
     }
+    discard_handles(msg.handle + handles, msg.hcount - handles);
+
     return r;
 }
 
