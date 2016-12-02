@@ -293,8 +293,6 @@ include top/rules.mk
 # modules in the ALLMODULES list
 include make/recurse.mk
 
-# host tools
-include system/tools/build.mk
 
 ifneq ($(EXTRA_IDFILES),)
 $(BUILDDIR)/ids.txt: $(EXTRA_IDFILES)
@@ -416,6 +414,41 @@ endif
 
 # try to have the compiler output colorized error messages if available
 export GCC_COLORS ?= 1
+
+# setup host toolchain
+# default to prebuilt clang
+FOUND_HOST_GCC ?= $(shell which $(HOST_TOOLCHAIN_PREFIX)gcc)
+HOST_TOOLCHAIN_PREFIX ?= $(CLANG_TOOLCHAIN_PREFIX)
+HOST_USE_CLANG ?= $(shell which $(HOST_TOOLCHAIN_PREFIX)clang)
+HOST_PLATFORM := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ifneq ($(HOST_USE_CLANG),)
+HOST_CC      := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)clang
+HOST_AR      := $(HOST_TOOLCHAIN_PREFIX)llvm-lib
+HOST_OBJDUMP := $(HOST_TOOLCHAIN_PREFIX)llvm-objdump
+HOST_READELF := $(HOST_TOOLCHAIN_PREFIX)llvm-readobj
+HOST_CPPFILT := $(HOST_TOOLCHAIN_PREFIX)llvm-cxxfilt
+HOST_SIZE    := $(HOST_TOOLCHAIN_PREFIX)llvm-size
+HOST_NM      := $(HOST_TOOLCHAIN_PREFIX)llvm-nm
+HOST_LD      := $(HOST_TOOLCHAIN_PREFIX)lld-link
+else
+ifeq ($(FOUND_HOST_GCC),)
+$(error cannot find toolchain, please set HOST_TOOLCHAIN_PREFIX or add it to your path)
+endif
+HOST_CC      := $(CCACHE) $(HOST_TOOLCHAIN_PREFIX)gcc
+HOST_AR      := $(HOST_TOOLCHAIN_PREFIX)ar
+HOST_OBJDUMP := $(HOST_TOOLCHAIN_PREFIX)objdump
+HOST_READELF := $(HOST_TOOLCHAIN_PREFIX)readelf
+HOST_CPPFILT := $(HOST_TOOLCHAIN_PREFIX)c++filt
+HOST_SIZE    := $(HOST_TOOLCHAIN_PREFIX)size
+HOST_NM      := $(HOST_TOOLCHAIN_PREFIX)nm
+HOST_LD      := $(HOST_TOOLCHAIN_PREFIX)ld
+endif
+HOST_OBJCOPY := $(HOST_TOOLCHAIN_PREFIX)objcopy
+HOST_STRIP   := $(HOST_TOOLCHAIN_PREFIX)strip
+
+include system/uapp/minfs/build.mk
+# host tools
+include system/tools/build.mk
 
 # the logic to compile and link stuff is in here
 include make/build.mk

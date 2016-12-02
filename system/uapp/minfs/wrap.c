@@ -100,7 +100,8 @@ int FN(open)(const char* path, int flags, mode_t mode) {
     int fd;
     for (fd = 0; fd < MAXFD; fd++) {
         if (fdtab[fd].vn == NULL) {
-            mx_status_t status = vfs_open(fake_root, &fdtab[fd].vn, path + PREFIX_SIZE, flags, mode);
+            const char* pathout = NULL;
+            mx_status_t status = vfs_open(fake_root, &fdtab[fd].vn, path + PREFIX_SIZE, &pathout, flags, mode);
             if (status < 0) {
                 STATUS(status);
             }
@@ -210,7 +211,7 @@ int FN(unlink)(const char* path) {
 int FL(rename)(const char* oldpath, const char* newpath);
 int FN(rename)(const char* oldpath, const char* newpath) {
     PATH_WRAP(oldpath, rename, oldpath, newpath);
-    mx_status_t status = vfs_rename(fake_root, oldpath + PREFIX_SIZE, newpath + PREFIX_SIZE);
+    mx_status_t status = vfs_rename(fake_root, oldpath + PREFIX_SIZE, newpath + PREFIX_SIZE, 0);
     STATUS(status);
 }
 
@@ -226,8 +227,3 @@ int FN(stat)(const char* fn, struct stat* s) {
     STATUS(status);
 }
 
-static int __getdirents(int fd, void* dirents, size_t len) {
-    file_t* f;
-    FILE_GET(f, fd);
-    STATUS(f->vn->ops->readdir(f->vn, &f->dircookie, dirents, len));
-}

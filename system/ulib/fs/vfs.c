@@ -12,6 +12,10 @@
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 
+#ifndef __Fuchsia__
+#define O_NOREMOTE 0100000000
+#endif
+
 struct vnode {
     VNODE_BASE_FIELDS
 };
@@ -154,6 +158,7 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
     return NO_ERROR;
 }
 
+#ifdef __Fuchsia__
 static mx_status_t txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
                                       const char* oldpath, const char* newpath) {
     mxrio_msg_t msg;
@@ -168,11 +173,12 @@ static mx_status_t txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
     msg.datalen = oldlen + newlen + 2;
     return mxrio_txn_handoff(srv, rh, &msg);
 }
+#endif
 
 mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
                        mx_handle_t rh) {
     vnode_t* oldparent, *newparent;
-    mx_status_t r, r_old, r_new;
+    mx_status_t r = 0, r_old, r_new;
     if ((r_old = vfs_walk(vndir, &oldparent, oldpath, &oldpath)) < 0) {
         return r_old;
     } else if ((r_new = vfs_walk(vndir, &newparent, newpath, &newpath)) < 0) {
@@ -190,11 +196,13 @@ mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
         r = vndir->ops->rename(oldparent, newparent, oldpath, strlen(oldpath),
                             newpath, strlen(newpath));
     } else {
+#ifdef __Fuchsia__
         // Remote filesystem.
         r = txn_handoff_rename(r_old, rh, oldpath, newpath);
         if (r >= 0) {
             r = ERR_DISPATCHER_INDIRECT;
         }
+#endif
     }
 
     vn_release(oldparent);
