@@ -175,6 +175,9 @@ void PageSyncImpl::DownloadBacklog() {
              std::vector<cloud_provider::Record> records) {
         if (cloud_status != cloud_provider::Status::OK) {
           // Fetching the remote commits failed, schedule a retry.
+          FTL_LOG(WARNING)
+              << "Fetching the backlog of remote objects failed due to a "
+              << "connection error, status: " << cloud_status << ", retrying.";
           Retry([this] { DownloadBacklog(); });
           return;
         }
@@ -250,7 +253,12 @@ void PageSyncImpl::EnqueueUpload(
           CheckIdle();
         }
       },
-      [this] { Retry([this] { commit_uploads_.front().Start(); }); });
+      [this] {
+        FTL_LOG(WARNING)
+            << "Uploading a commit and its associated objects failed "
+            << "due to a connection error, retrying.";
+        Retry([this] { commit_uploads_.front().Start(); });
+      });
 
   if (start_after_adding) {
     commit_uploads_.front().Start();
