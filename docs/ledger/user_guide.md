@@ -43,7 +43,7 @@ Console](https://console.firebase.google.com/) and set the following in
     ".read": true,
     ".write": true,
     "$user": {
-      "$version" {
+      "$version": {
         "$app": {
           "$page": {
             "commits": {
