@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,9 +12,7 @@
 
 #include "minfs.h"
 #include "minfs-private.h"
-
-#define error(fmt...) fprintf(stderr, fmt)
-#define warn(fmt...) fprintf(stderr, fmt)
+#include "trace.h"
 
 #define BLOCK_FLAGS 0xF
 

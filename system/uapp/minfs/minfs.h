@@ -107,3 +107,101 @@ typedef struct {
 //  1GB ->  128K blocks ->  16K bitmap (2K qword)
 //  4GB ->  512K blocks ->  64K bitmap (8K qword)
 // 32GB -> 4096K blocks -> 512K bitmap (64K qwords)
+
+
+
+// Allocation Bitmap (bitmap.c)
+
+typedef struct bitmap bitmap_t;
+struct bitmap {
+    uint32_t bitcount;
+    uint32_t mapcount;
+    uint64_t *map;
+    uint64_t *end;
+};
+
+
+/* orr
+static inline void* bitmap_data(bitmap_t* bm) {
+    return bm->map;
+}
+
+#define BITMAP_FAIL (0xFFFFFFFF)
+
+// find an available bit, set it, return that bitnumber
+// returns BITMAP_FAIL if no bit is found
+uint32_t bitmap_alloc(bitmap_t* bm, uint32_t minbit);
+*/
+
+
+mx_status_t bitmap_init(bitmap_t* bm, uint32_t maxbits);
+void bitmap_destroy(bitmap_t* bm);
+
+// This will never fail if the new maxbits is no larger
+// that the original maxbits.  The underlying storage will
+// not be reduced (so this is useful for creating a bitmap
+// to match a particular storage size and then adjust it
+// to a maximum allowed bit smaller than the storage)
+mx_status_t bitmap_resize(bitmap_t* bm, uint32_t maxbits);
+
+static inline void bitmap_set(bitmap_t* bm, uint32_t n) {
+    if (n < bm->bitcount) {
+        bm->map[n >> 6] |= (1ULL << (n & 63));
+    }
+}
+
+static inline void bitmap_clr(bitmap_t* bm, uint32_t n) {
+    if (n < bm->bitcount) {
+        bm->map[n >> 6] &= ~((1ULL << (n & 63)));
+    }
+}
+
+static inline bool bitmap_get(bitmap_t* bm, uint32_t n) {
+    if (n < bm->bitcount) {
+        return (bm->map[n >> 6] & (1ULL << (n & 63))) != 0;
+    } else {
+        return 0;
+    }
+}
+
+static inline void* bitmap_data(bitmap_t* bm) {
+    return bm->map;
+}
+
+#define BITMAP_FAIL (0xFFFFFFFF)
+
+// find an available bit, set it, return that bitnumber
+// returns BITMAP_FAIL if no bit is found
+uint32_t bitmap_alloc(bitmap_t* bm, uint32_t minbit);
+
+
+// Block Cache (bcache.c)
+
+typedef struct bcache bcache_t;
+typedef struct block block_t;
+
+int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize, uint32_t num);
+int bcache_close(bcache_t* bc);
+
+#define BLOCK_DIRTY 1
+
+// acquire a block, reading from disk if necessary,
+// returning a handle and a pointer to the data
+block_t* bcache_get(bcache_t* bc, uint32_t bno, void** bdata);
+
+// acquire a block, not reading from disk, marking dirty,
+// and clearing to all 0s
+block_t* bcache_get_zero(bcache_t* bc, uint32_t bno, void** block);
+
+// release a block back to the cache
+// flags *must* contain BLOCK_DIRTY if it was modified
+void bcache_put(bcache_t* bc, block_t* blk, uint32_t flags);
+
+mx_status_t bcache_read(bcache_t* bc, uint32_t bno, void* data, uint32_t off, uint32_t len);
+
+mx_status_t bcache_sync(bcache_t* bc);
+
+uint32_t bcache_max_block(bcache_t* bc);
+
+// drop all non-busy, non-dirty blocks
+void bcache_invalidate(bcache_t* bc);

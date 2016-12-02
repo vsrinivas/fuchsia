@@ -112,7 +112,8 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         }
         path[len] = 0;
         mx_status_t r;
-        if ((r = vfs_open(vn, &vn, path, arg, msg->arg2.mode)) < 0) {
+        const char* pathout;
+        if ((r = vfs_open(vn, &vn, path, &pathout, arg, msg->arg2.mode)) < 0) {
             return r;
         }
         if ((msg->handle[0] = vfs_create_handle(vn, arg)) < 0) {
@@ -301,7 +302,7 @@ static mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
         if (data_end <= newpath) {
             return ERR_INVALID_ARGS;
         }
-        return vfs_rename(vn, oldpath, newpath);
+        return vfs_rename(vn, oldpath, newpath, 0);
     }
     case MXRIO_SYNC: {
         return vn->ops->sync(vn);

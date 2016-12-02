@@ -6,6 +6,9 @@
 
 #include "vfs.h"
 #include "minfs.h"
+#include "misc.h"
+
+#define panic(fmt...) do { fprintf(stderr, fmt); __builtin_trap(); } while (0)
 
 #define MINFS_HASH_BITS (8)
 #define MINFS_BUCKETS (1 << MINFS_HASH_BITS)
@@ -96,3 +99,6 @@ static inline void* minfs_bitmap_block(bitmap_t* bm, uint32_t* blkno, uint32_t b
         return bitmap_data(bm) + (MINFS_BLOCK_SIZE * n);
     }
 }
+
+// vfs dispatch
+mx_handle_t vfs_rpc_server(vnode_t* vn);
