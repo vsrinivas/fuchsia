@@ -7,6 +7,8 @@
 
 #include "magma_util/macros.h"
 
+namespace magma {
+
 class AddressSpaceAllocator {
 public:
     // Constructs an address space ranging from address base to address base + size.
@@ -37,5 +39,7 @@ private:
     uint64_t base_;
     size_t size_;
 };
+
+} // namespace magma
 
 #endif // ADDRESS_SPACE_ALLOCATOR_H

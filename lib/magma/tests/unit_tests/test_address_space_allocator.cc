@@ -14,15 +14,18 @@ namespace {
 
 class Region {
 public:
-    Region(AddressSpaceAllocator* allocator, uint64_t addr) : allocator_(allocator), addr_(addr) {}
+    Region(magma::AddressSpaceAllocator* allocator, uint64_t addr)
+        : allocator_(allocator), addr_(addr)
+    {
+    }
     ~Region() { EXPECT_EQ(true, allocator_->Free(addr_)); }
 
-    AddressSpaceAllocator* allocator_;
+    magma::AddressSpaceAllocator* allocator_;
     uint64_t addr_;
 };
 } // namespace
 
-static void test_simple_allocator(SimpleAllocator* allocator, uint8_t align_pow2)
+static void test_simple_allocator(magma::SimpleAllocator* allocator, uint8_t align_pow2)
 {
     DLOG("test_simple_allocator align_pow2 0x%x\n", align_pow2);
 
@@ -95,7 +98,7 @@ static void test_simple_allocator(SimpleAllocator* allocator, uint8_t align_pow2
     }
 }
 
-static void stress_test_allocator(AddressSpaceAllocator* allocator, uint8_t align_pow2,
+static void stress_test_allocator(magma::AddressSpaceAllocator* allocator, uint8_t align_pow2,
                                   unsigned int num_iterations, size_t max_alloc_size)
 {
     unsigned int num_init = allocator->size() / max_alloc_size * 3 / 2;
@@ -130,13 +133,14 @@ static void stress_test_allocator(AddressSpaceAllocator* allocator, uint8_t alig
 
 TEST(AddressSpaceAllocator, SimpleAllocator)
 {
-    test_simple_allocator(SimpleAllocator::Create(0, 4 * PAGE_SIZE).get(), 0);
+    test_simple_allocator(magma::SimpleAllocator::Create(0, 4 * PAGE_SIZE).get(), 0);
 
     const size_t _4g = 4ULL * 1024 * 1024 * 1024;
-    test_simple_allocator(SimpleAllocator::Create(0, _4g).get(), 0);
-    test_simple_allocator(SimpleAllocator::Create(0, _4g).get(), 1);
-    test_simple_allocator(SimpleAllocator::Create(0, _4g).get(), 12);
-    test_simple_allocator(SimpleAllocator::Create(0, _4g).get(), 13);
+    test_simple_allocator(magma::SimpleAllocator::Create(0, _4g).get(), 0);
+    test_simple_allocator(magma::SimpleAllocator::Create(0, _4g).get(), 1);
+    test_simple_allocator(magma::SimpleAllocator::Create(0, _4g).get(), 12);
+    test_simple_allocator(magma::SimpleAllocator::Create(0, _4g).get(), 13);
 
-    stress_test_allocator(SimpleAllocator::Create(0, _4g).get(), 0, 100000, 16ULL * 1024 * 1024);
+    stress_test_allocator(magma::SimpleAllocator::Create(0, _4g).get(), 0, 100000,
+                          16ULL * 1024 * 1024);
 }

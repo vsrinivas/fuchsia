@@ -8,6 +8,8 @@
 #include "address_space_allocator.h"
 #include <list>
 
+namespace magma {
+
 class SimpleAllocator : public AddressSpaceAllocator {
 public:
     static std::unique_ptr<SimpleAllocator> Create(uint64_t base, size_t size);
@@ -37,5 +39,7 @@ private:
 
     std::list<SimpleAllocator::Region> regions_;
 };
+
+} // namespace magma
 
 #endif // SIMPLE_ALLOCATOR_H

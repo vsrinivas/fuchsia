@@ -18,7 +18,7 @@ group("magma_util") {
     "$magma_build_root:magma_src_include_config",
   ]
 
-  deps = [
+  public_deps = [
     ":common",
     ":system",
   ]
@@ -63,7 +63,9 @@ source_set("thread") {
     "thread.h",
   ]
 
-  deps = [ "platform:thread" ]
+  deps = [
+    "platform:thread",
+  ]
 }
 
 source_set("system") {
@@ -76,6 +78,10 @@ source_set("system") {
     "address_space_allocator.h",
     "simple_allocator.cc",
     "simple_allocator.h",
+  ]
+
+  public_deps = [
+    ":common",
   ]
 }
 

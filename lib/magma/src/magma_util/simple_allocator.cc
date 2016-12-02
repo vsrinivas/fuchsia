@@ -18,6 +18,8 @@
 #error Must define PAGE_SIZE_POW2
 #endif
 
+namespace magma {
+
 // Returns true if the gap is good and addr_out is set.
 // Otherwise false is returned and continue_search should be checked.
 bool SimpleAllocator::CheckGap(SimpleAllocator::Region* prev, SimpleAllocator::Region* next,
@@ -150,3 +152,5 @@ std::list<SimpleAllocator::Region>::iterator SimpleAllocator::FindRegion(uint64_
 
     return regions_.end();
 }
+
+} // namespace magma
