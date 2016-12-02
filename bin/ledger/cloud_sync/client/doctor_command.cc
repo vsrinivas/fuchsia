@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/client/doctor_command.h"
+#include "apps/ledger/src/cloud_sync/client/doctor_command.h"
 
 #include <iostream>
 
@@ -15,7 +15,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
-namespace cloud_provider {
+namespace cloud_sync {
 
 namespace {
 
@@ -48,7 +48,7 @@ void error(ftl::StringView message) {
   std::cout << std::endl;
 }
 
-void error(Status status) {
+void error(cloud_provider::Status status) {
   std::cout << "   [FAILED] with cloud provider status " << status << std::endl;
 }
 
@@ -68,7 +68,7 @@ std::string FirebaseUrlFromId(const std::string& firebase_id) {
 
 DoctorCommand::DoctorCommand(ledger::NetworkService* network_service,
                              const std::string& firebase_id,
-                             CloudProvider* cloud_provider)
+                             cloud_provider::CloudProvider* cloud_provider)
     : network_service_(network_service),
       firebase_id_(firebase_id),
       cloud_provider_(cloud_provider) {
@@ -85,7 +85,8 @@ void DoctorCommand::Start(ftl::Closure on_done) {
   CheckHttpConnectivity();
 }
 
-void DoctorCommand::OnRemoteCommit(Commit commit, std::string timestamp) {
+void DoctorCommand::OnRemoteCommit(cloud_provider::Commit commit,
+                                   std::string timestamp) {
   if (on_remote_commit_) {
     on_remote_commit_(std::move(commit), std::move(timestamp));
   }
@@ -168,9 +169,10 @@ void DoctorCommand::CheckObjects() {
 
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->AddObject(
-      id, std::move(data), [this, id, content, request_start](Status status) {
+      id, std::move(data),
+      [this, id, content, request_start](cloud_provider::Status status) {
 
-        if (status != Status::OK) {
+        if (status != cloud_provider::Status::OK) {
           error(status);
           hint(ftl::Concatenate(
               {"It seems that we can't access the Firebase instance. "
@@ -191,9 +193,9 @@ void DoctorCommand::CheckGetObject(std::string id, std::string content) {
   what("Firebase - retrieve test object");
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->GetObject(
-      id, [this, request_start](Status status, uint64_t size,
+      id, [this, request_start](cloud_provider::Status status, uint64_t size,
                                 mx::datapipe_consumer data) {
-        if (status != Status::OK) {
+        if (status != cloud_provider::Status::OK) {
           error(status);
           on_done_();
           return;
@@ -207,30 +209,31 @@ void DoctorCommand::CheckGetObject(std::string id, std::string content) {
 
 void DoctorCommand::CheckCommits() {
   what("Firebase - upload test commit");
-  Commit commit(RandomString(), RandomString(), {});
+  cloud_provider::Commit commit(RandomString(), RandomString(), {});
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->AddCommit(
       commit,
-      ftl::MakeCopyable(
-          [ this, commit = commit.Clone(), request_start ](Status status) {
-            if (status != Status::OK) {
-              error(status);
-              on_done_();
-              return;
-            }
-            ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-            ok(delta);
-            CheckGetCommits(commit.Clone());
-          }));
+      ftl::MakeCopyable([ this, commit = commit.Clone(),
+                          request_start ](cloud_provider::Status status) {
+        if (status != cloud_provider::Status::OK) {
+          error(status);
+          on_done_();
+          return;
+        }
+        ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
+        ok(delta);
+        CheckGetCommits(commit.Clone());
+      }));
 }
 
-void DoctorCommand::CheckGetCommits(Commit commit) {
+void DoctorCommand::CheckGetCommits(cloud_provider::Commit commit) {
   what("Firebase - retrieve test commits");
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->GetCommits(
       "", ftl::MakeCopyable([ this, commit = std::move(commit), request_start ](
-              Status status, std::vector<Record> records) {
-        if (status != Status::OK) {
+              cloud_provider::Status status,
+              std::vector<cloud_provider::Record> records) {
+        if (status != cloud_provider::Status::OK) {
           error(status);
           hint(
               "It seems that we can't query Firebase for commits. "
@@ -248,11 +251,12 @@ void DoctorCommand::CheckGetCommits(Commit commit) {
       }));
 }
 
-void DoctorCommand::CheckWatchExistingCommits(Commit expected_commit) {
+void DoctorCommand::CheckWatchExistingCommits(
+    cloud_provider::Commit expected_commit) {
   what("Firebase - watch for existing commits");
   on_remote_commit_ =
       ftl::MakeCopyable([ this, expected_commit = std::move(expected_commit) ](
-          Commit commit, std::string timestamp) {
+          cloud_provider::Commit commit, std::string timestamp) {
         on_error_ = nullptr;
         if (commit.id != expected_commit.id ||
             commit.content != expected_commit.content) {
@@ -276,11 +280,11 @@ void DoctorCommand::CheckWatchExistingCommits(Commit expected_commit) {
 
 void DoctorCommand::CheckWatchNewCommits() {
   what("Firebase - watch for new commits");
-  Commit commit(RandomString(), RandomString(), {});
+  cloud_provider::Commit commit(RandomString(), RandomString(), {});
   on_remote_commit_ = ftl::MakeCopyable([
     this, expected_commit = commit.Clone(),
     request_start = ftl::TimePoint::Now()
-  ](Commit commit, std::string timestamp) {
+  ](cloud_provider::Commit commit, std::string timestamp) {
     on_error_ = nullptr;
     if (commit.id != expected_commit.id ||
         commit.content != expected_commit.content) {
@@ -302,14 +306,14 @@ void DoctorCommand::CheckWatchNewCommits() {
   };
 
   cloud_provider_->AddCommit(
-      commit, ftl::MakeCopyable(
-                  [ this, expected_commit = commit.Clone() ](Status status) {
-                    if (status != Status::OK) {
-                      error(status);
-                      on_done_();
-                      return;
-                    }
-                  }));
+      commit, ftl::MakeCopyable([ this, expected_commit = commit.Clone() ](
+                  cloud_provider::Status status) {
+        if (status != cloud_provider::Status::OK) {
+          error(status);
+          on_done_();
+          return;
+        }
+      }));
 }
 
 void DoctorCommand::Done() {
@@ -317,4 +321,4 @@ void DoctorCommand::Done() {
   on_done_();
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_sync

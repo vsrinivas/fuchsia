@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_CLIENT_COMMAND_H_
-#define APPS_LEDGER_SRC_CLOUD_PROVIDER_CLIENT_COMMAND_H_
+#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_COMMAND_H_
+#define APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_COMMAND_H_
 
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
 
-namespace cloud_provider {
+namespace cloud_sync {
 
 class Command {
  public:
@@ -21,6 +21,6 @@ class Command {
   FTL_DISALLOW_COPY_AND_ASSIGN(Command);
 };
 
-}  // namespace cloud_provider
+}  // namespace cloud_sync
 
-#endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_CLIENT_COMMAND_H_
+#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_CLIENT_COMMAND_H_

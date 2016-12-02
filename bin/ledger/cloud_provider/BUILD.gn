@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("cloud_provider") {
-
   deps = [
-    "//apps/ledger/src/cloud_provider/client",
     "//apps/ledger/src/cloud_provider/impl",
     "//apps/ledger/src/cloud_provider/public",
   ]

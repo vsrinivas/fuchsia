@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 group("cloud_sync") {
-
   deps = [
+    "//apps/ledger/src/cloud_sync/client",
     "//apps/ledger/src/cloud_sync/impl",
     "//apps/ledger/src/cloud_sync/public",
   ]

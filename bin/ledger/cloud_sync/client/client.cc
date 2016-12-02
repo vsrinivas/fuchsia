@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/cloud_provider/client/client.h"
+#include "apps/ledger/src/cloud_sync/client/client.h"
 
 #include <iostream>
 #include <unordered_set>
@@ -20,7 +20,7 @@
 #include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-namespace cloud_provider {
+namespace cloud_sync {
 
 namespace {
 
@@ -109,7 +109,8 @@ bool ClientApp::Initialize() {
       network_service_.get(), configuration_.sync_params.firebase_id,
       GetFirebasePrefix(configuration_.sync_params.firebase_prefix,
                         RandomString()));
-  cloud_provider_ = std::make_unique<CloudProviderImpl>(firebase_.get());
+  cloud_provider_ =
+      std::make_unique<cloud_provider::CloudProviderImpl>(firebase_.get());
 
   command_ = CommandFromArgs(args);
   return true;
@@ -120,13 +121,13 @@ void ClientApp::Start() {
   command_->Start([] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); });
 }
 
-}  // namespace cloud_provider
+}  // namespace cloud_sync
 
 int main(int argc, const char** argv) {
   ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   mtl::MessageLoop loop;
 
-  cloud_provider::ClientApp app(std::move(command_line));
+  cloud_sync::ClientApp app(std::move(command_line));
 
   loop.Run();
   return 0;
