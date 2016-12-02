@@ -37,25 +37,25 @@ EFI_BOOTLOADER  := $(BUILDDIR)/bootloader/bootx64.efi
 
 # Bootloader sources
 EFI_SOURCES := \
+    $(LOCAL_DIR)/src/osboot.c \
     $(LOCAL_DIR)/src/cmdline.c \
-    $(LOCAL_DIR)/src/framebuffer.c \
-    $(LOCAL_DIR)/src/inet6.c \
     $(LOCAL_DIR)/src/magenta.c \
     $(LOCAL_DIR)/src/netboot.c \
     $(LOCAL_DIR)/src/netifc.c \
-    $(LOCAL_DIR)/src/osboot.c \
-    $(LOCAL_DIR)/src/pci.c
+    $(LOCAL_DIR)/src/inet6.c \
+    $(LOCAL_DIR)/src/pci.c \
+    $(LOCAL_DIR)/src/framebuffer.c \
 
 # libxefi sources
 EFI_SOURCES += \
+    $(LOCAL_DIR)/lib/efi/guids.c \
+    $(LOCAL_DIR)/lib/xefi.c \
+    $(LOCAL_DIR)/lib/loadfile.c \
     $(LOCAL_DIR)/lib/console-printf.c \
     $(LOCAL_DIR)/lib/ctype.c \
-    $(LOCAL_DIR)/lib/efi/guids.c \
-    $(LOCAL_DIR)/lib/loadfile.c \
     $(LOCAL_DIR)/lib/printf.c \
     $(LOCAL_DIR)/lib/stdlib.c \
     $(LOCAL_DIR)/lib/string.c \
-    $(LOCAL_DIR)/lib/xefi.c
 
 EFI_OBJS := $(patsubst $(LOCAL_DIR)/%.c,$(BUILDDIR)/bootloader/%.o,$(EFI_SOURCES))
 EFI_DEPS := $(patsubst %.o,%.d,$(EFI_OBJS))
