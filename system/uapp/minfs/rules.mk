@@ -16,7 +16,6 @@ MODULE_SRCS := \
 MODULE_SRCS += \
     $(LOCAL_DIR)/bitmap.c \
     $(LOCAL_DIR)/bcache.c \
-    $(LOCAL_DIR)/vfs.c \
     $(LOCAL_DIR)/rpc.c \
 
 # minfs implementation
@@ -24,6 +23,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/minfs.c \
     $(LOCAL_DIR)/minfs-ops.c \
     $(LOCAL_DIR)/minfs-check.c \
+
+MODULE_STATIC_LIBS := ulib/fs
 
 MODULE_LIBS := ulib/magenta ulib/mxio ulib/musl
 

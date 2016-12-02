@@ -6,7 +6,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "vfs.h"
+#include <fs/vfs.h>
+
 #include "minfs.h"
 
 mx_status_t bitmap_init(bitmap_t* bm, uint32_t max) {

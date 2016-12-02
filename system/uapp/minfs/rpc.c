@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fs/vfs.h>
+
 #include <mxio/dispatcher.h>
 #include <mxio/io.h>
 #include <mxio/remoteio.h>
@@ -18,7 +20,6 @@
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
 
-#include "vfs.h"
 
 struct vnode {
     VNODE_BASE_FIELDS

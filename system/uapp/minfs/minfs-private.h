@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include "vfs.h"
 #include "minfs.h"
 #include "misc.h"
+
+#include <fs/vfs.h>
 
 #define panic(fmt...) do { fprintf(stderr, fmt); __builtin_trap(); } while (0)
 

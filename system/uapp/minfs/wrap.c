@@ -12,8 +12,9 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
+#include <fs/vfs.h>
+
 #include <mxio/vfs.h>
-#include "vfs.h"
 
 struct vnode {
     VNODE_BASE_FIELDS

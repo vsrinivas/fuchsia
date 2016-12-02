@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <magenta/types.h>
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>

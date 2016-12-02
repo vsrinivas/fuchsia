@@ -7,12 +7,13 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fs/trace.h>
+
 #include <magenta/device/device.h>
 #include <magenta/listnode.h>
 
 #include "minfs.h"
 #include "minfs-private.h"
-#include "trace.h"
 
 #define BLOCK_FLAGS 0xF
 
