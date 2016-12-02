@@ -2,6 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+ARCH      := $(shell arch)
+USE_CLANG := true
+
+LK_ROOT         := ../../..
+LKMAKEROOT      := $(LK_ROOT)
+-include $(LK_ROOT)/prebuilt/config.mk
+
+-include local.mk
+include $(LK_ROOT)/kernel/make/macros.mk
+
+FUCHSIA_ROOT    := $(LK_ROOT)/..
+
+TOOLCHAIN := $(FUCHSIA_ROOT)/buildtools/toolchain/clang+llvm-$(ARCH)-linux/bin/
+CC        := $(TOOLCHAIN)clang
+LD        := $(TOOLCHAIN)lld-link
+READELF   := $(TOOLCHAIN)llvm-readobj
+OBJCOPY   := $(TOOLCHAIN)objcopy
+AR        := $(TOOLCHAIN)llvm-lib
+NM        := $(TOOLCHAIN)llvm-nm
+
 CFLAGS := -Wall -std=c11 -g -O0
 CFLAGS += -Werror-implicit-function-declaration
 CFLAGS += -Wstrict-prototypes -Wwrite-strings
