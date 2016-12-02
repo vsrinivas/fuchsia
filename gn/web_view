@@ -13,9 +13,9 @@
         }
     ],
     "resources": [
-      {
-          "file": "apps/web_view/fonts.conf",
-          "bootfs_path": "fonts/fonts.conf"
-      }
+        {
+            "file": "apps/web_view/fonts.conf",
+            "bootfs_path": "fonts/fonts.conf"
+        }
     ]
 }
