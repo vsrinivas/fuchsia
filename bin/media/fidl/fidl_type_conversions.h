@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/media/services/media_common.fidl.h"
 #include "apps/media/services/media_metadata.fidl.h"
+#include "apps/media/services/media_result.fidl.h"
 #include "apps/media/services/media_types.fidl.h"
 #include "apps/media/src/framework/metadata.h"
 #include "apps/media/src/framework/result.h"

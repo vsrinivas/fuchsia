@@ -6,7 +6,7 @@
 
 #include "apps/media/lib/timeline.h"
 #include "apps/media/lib/timeline_function.h"
-#include "apps/media/services/media_common.fidl.h"
+#include "apps/media/services/media_result.fidl.h"
 #include "apps/media/services/media_types.fidl.h"
 #include "apps/media/src/audio_server/audio_output.h"
 #include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
@@ -78,23 +78,26 @@ class StandardOutputBase : public AudioOutput {
   OutputFormatterPtr output_formatter_;
 
  private:
-  using RendererSetupTask = std::function<bool(const AudioRendererImplPtr& renderer,
-                                            RendererBookkeeping* info)>;
+  using RendererSetupTask =
+      std::function<bool(const AudioRendererImplPtr& renderer,
+                         RendererBookkeeping* info)>;
   using RendererProcessTask =
       std::function<bool(const AudioRendererImplPtr& renderer,
                          RendererBookkeeping* info,
                          const AudioPipe::AudioPacketRefPtr& pkt_ref)>;
 
   void ForeachRenderer(const RendererSetupTask& setup,
-                    const RendererProcessTask& process)
+                       const RendererProcessTask& process)
       FTL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  bool SetupMix(const AudioRendererImplPtr& renderer, RendererBookkeeping* info);
+  bool SetupMix(const AudioRendererImplPtr& renderer,
+                RendererBookkeeping* info);
   bool ProcessMix(const AudioRendererImplPtr& renderer,
                   RendererBookkeeping* info,
                   const AudioPipe::AudioPacketRefPtr& pkt_ref);
 
-  bool SetupTrim(const AudioRendererImplPtr& renderer, RendererBookkeeping* info);
+  bool SetupTrim(const AudioRendererImplPtr& renderer,
+                 RendererBookkeeping* info);
   bool ProcessTrim(const AudioRendererImplPtr& renderer,
                    RendererBookkeeping* info,
                    const AudioPipe::AudioPacketRefPtr& pkt_ref);
@@ -111,8 +114,8 @@ class StandardOutputBase : public AudioOutput {
   // 1) We support 24 bit audio.  Right now, with a 16 bit max, we can
   //    accumulate for up to a maximum of 2^16-1 renderers without needing to do
   //    anything special about about clipping.  With 24 bit audio, this number
-  //    will drop to only 255 simultanious renderers.  It is unclear if this is a
-  //    reasonable system-wide limitation or not.
+  //    will drop to only 255 simultanious renderers.  It is unclear if this is
+  //    a reasonable system-wide limitation or not.
   // 2) We support floating point audio.
   std::unique_ptr<int32_t[]> mix_buf_;
   uint32_t mix_buf_frames_ = 0;

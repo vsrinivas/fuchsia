@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "apps/media/services/media_common.fidl.h"
+#include "apps/media/services/media_result.fidl.h"
 #include "apps/media/services/media_source.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/services/media_types.fidl.h"

@@ -4,7 +4,7 @@
 
 module media;
 
-import "apps/media/services/media_common.fidl";
+import "apps/media/services/media_result.fidl";
 import "apps/media/services/media_types.fidl";
 
 // Describes a fragment of media content, including metadata and a locator for
