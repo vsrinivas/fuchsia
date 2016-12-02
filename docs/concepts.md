@@ -22,7 +22,7 @@ System calls fall into three broad categories, from an access standpoint:
 
 1. Calls which have no limitations, of which there are only a very few, for
 example [*mx_time_get*](syscalls/time_get.md)
-and [*mx_nano_sleep*](syscalls/nano_sleep.md) may be called by any thread.
+and [*mx_nanosleep*](syscalls/nanosleep.md) may be called by any thread.
 2. Calls which take a Handle as the first parameter, denoting the Object they act upon,
 which are the vast majority, for example [*mx_channel_write*](syscalls/channel_write.md)
 and [*mx_port_bind()*](syscalls/port_bind.md).
