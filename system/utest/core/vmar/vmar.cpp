@@ -846,6 +846,10 @@ bool nested_region_perms_test() {
     EXPECT_EQ(mx_vmar_map(region[0], PAGE_SIZE, vmo, 0, PAGE_SIZE,
                           MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_PERM_READ, &map_addr),
               ERR_ACCESS_DENIED, "");
+    EXPECT_EQ(mx_vmar_map(region[0], PAGE_SIZE, vmo, 0, PAGE_SIZE,
+                          MX_VM_FLAG_SPECIFIC_OVERWRITE | MX_VM_FLAG_PERM_READ,
+                          &map_addr),
+              ERR_ACCESS_DENIED, "");
     EXPECT_EQ(mx_vmar_destroy(region[0]), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(region[0]), NO_ERROR, "");
 
@@ -1112,6 +1116,94 @@ bool unmap_multiple_test() {
     END_TEST;
 }
 
+// Verify that we can overwrite subranges and multiple ranges simultaneously
+bool map_specific_overwrite_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t vmo, vmo2;
+    mx_handle_t subregion;
+    uintptr_t mapping_addr[2];
+    uintptr_t subregion_addr;
+    uint8_t buf[1];
+    size_t len;
+
+    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), NO_ERROR, "");
+
+    const size_t mapping_size = 4 * PAGE_SIZE;
+    ASSERT_EQ(mx_vmo_create(mapping_size * 2, 0, &vmo), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_create(mapping_size * 2, 0, &vmo2), NO_ERROR, "");
+
+    // Tag each page of the VMOs so we can identify which mappings are from
+    // which.
+    for (size_t i = 0; i < mapping_size / PAGE_SIZE; ++i) {
+        buf[0] = 1;
+        ASSERT_EQ(mx_vmo_write(vmo, buf, i * PAGE_SIZE, 1, &len), NO_ERROR, "");
+        buf[0] = 2;
+        ASSERT_EQ(mx_vmo_write(vmo2, buf, i * PAGE_SIZE, 1, &len), NO_ERROR, "");
+    }
+
+    // Create a single mapping and overwrite it
+    ASSERT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[0]),
+              NO_ERROR, "");
+    // Try over mapping with SPECIFIC but not SPECIFIC_OVERWRITE
+    EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo2, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
+                          MX_VM_FLAG_SPECIFIC, &mapping_addr[1]),
+              ERR_NO_MEMORY, "");
+    // Try again with SPECIFIC_OVERWRITE
+    EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo2, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
+                          MX_VM_FLAG_SPECIFIC_OVERWRITE, &mapping_addr[1]),
+              NO_ERROR, "");
+    EXPECT_EQ(mapping_addr[0], mapping_addr[1], "");
+    for (size_t i = 0; i < mapping_size / PAGE_SIZE; ++i) {
+        EXPECT_EQ(mx_process_read_memory(process, mapping_addr[0] + i * PAGE_SIZE, buf, 1, &len),
+                  NO_ERROR, "");
+        EXPECT_EQ(buf[0], 2u, "");
+    }
+
+    // Overmap the middle of it
+    EXPECT_EQ(mx_vmar_map(vmar, 2 * PAGE_SIZE, vmo, 0, 2 * PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
+                          MX_VM_FLAG_SPECIFIC_OVERWRITE, &mapping_addr[0]),
+              NO_ERROR, "");
+    EXPECT_EQ(mapping_addr[0], mapping_addr[1] + PAGE_SIZE, "");
+    for (size_t i = 0; i < mapping_size / PAGE_SIZE; ++i) {
+        EXPECT_EQ(mx_process_read_memory(process, mapping_addr[1] + i * PAGE_SIZE, buf, 1, &len),
+                  NO_ERROR, "");
+        EXPECT_EQ(buf[0], (i == 0 || i == 3) ? 2u : 1u, "");
+    }
+
+    // Create an adjacent sub-region, try to overmap it
+    ASSERT_EQ(mx_vmar_allocate(vmar, PAGE_SIZE + mapping_size, mapping_size,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
+                               MX_VM_FLAG_SPECIFIC,
+                               &subregion, &subregion_addr),
+              NO_ERROR, "");
+    EXPECT_EQ(subregion_addr, mapping_addr[1] + mapping_size, "");
+    EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo2, 0, 2 * mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE |
+                          MX_VM_FLAG_SPECIFIC_OVERWRITE, &mapping_addr[0]),
+              ERR_INVALID_ARGS, "");
+    // Tear it all down
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[1], 2 * mapping_size),
+              NO_ERROR, "");
+
+    EXPECT_EQ(mx_handle_close(subregion), NO_ERROR, "");
+
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo2), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(vmar_tests)
@@ -1130,6 +1222,7 @@ RUN_TEST(nested_region_perms_test);
 RUN_TEST(object_info_test);
 RUN_TEST(unmap_split_test);
 RUN_TEST(unmap_multiple_test);
+RUN_TEST(map_specific_overwrite_test);
 END_TEST_CASE(vmar_tests)
 
 #ifndef BUILD_COMBINED_TESTS

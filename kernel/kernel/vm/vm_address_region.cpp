@@ -97,7 +97,8 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
         return ERR_ACCESS_DENIED;
     }
 
-    bool is_specific = !!(vmar_flags & VMAR_FLAG_SPECIFIC);
+    bool is_specific_overwrite  = static_cast<bool>(vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE);
+    bool is_specific = static_cast<bool>(vmar_flags & VMAR_FLAG_SPECIFIC) || is_specific_overwrite;
     if (!is_specific && offset != 0) {
         return ERR_INVALID_ARGS;
     }
@@ -116,7 +117,15 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
         if (!IS_PAGE_ALIGNED(new_base)) {
             return ERR_INVALID_ARGS;
         }
+        if (align_pow2 > 0 && (new_base & ((1ULL << align_pow2) - 1))) {
+            return ERR_INVALID_ARGS;
+        }
         if (!IsRangeAvailableLocked(new_base, size)) {
+            if (is_specific_overwrite) {
+                return VmAddressRegion::OverwriteVmMapping(new_base, size, vmar_flags,
+                                                           vmo, vmo_offset, arch_mmu_flags,
+                                                           name, out);
+            }
             return ERR_NO_MEMORY;
         }
     } else {
@@ -192,7 +201,8 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
     LTRACEF("%p %#zx %#zx %x\n", this, mapping_offset, size, vmar_flags);
 
     // Check that only allowed flags have been set
-    if (vmar_flags & ~(VMAR_FLAG_SPECIFIC | VMAR_CAN_RWX_FLAGS | VMAR_FLAG_MAP_HIGH)) {
+    if (vmar_flags & ~(VMAR_FLAG_SPECIFIC | VMAR_FLAG_SPECIFIC_OVERWRITE |
+                       VMAR_CAN_RWX_FLAGS | VMAR_FLAG_MAP_HIGH)) {
         return ERR_INVALID_ARGS;
     }
 
@@ -230,6 +240,34 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
     }
     // TODO(teisenbe): optimize this
     *out = res->as_vm_mapping();
+    return NO_ERROR;
+}
+
+status_t VmAddressRegion::OverwriteVmMapping(vaddr_t base, size_t size, uint32_t vmar_flags,
+                            mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                            uint arch_mmu_flags, const char* name,
+                            mxtl::RefPtr<VmAddressRegionOrMapping>* out) {
+    DEBUG_ASSERT(magic_ == kMagic);
+    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(vmo);
+    DEBUG_ASSERT(vmar_flags & VMAR_FLAG_SPECIFIC_OVERWRITE);
+
+    AllocChecker ac;
+    mxtl::RefPtr<VmAddressRegionOrMapping> vmar;
+    vmar = mxtl::AdoptRef(new (&ac)
+                          VmMapping(*this, base, size, vmar_flags,
+                                    mxtl::move(vmo), vmo_offset, arch_mmu_flags, name));
+    if (!ac.check()) {
+        return ERR_NO_MEMORY;
+    }
+
+    status_t status = UnmapInternalLocked(base, size, false /* can_destroy_regions */);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    vmar->Activate();
+    *out = mxtl::move(vmar);
     return NO_ERROR;
 }
 
@@ -509,6 +547,12 @@ status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
         return ERR_BAD_STATE;
     }
 
+    return UnmapInternalLocked(base, size, true /* can_destroy_regions */);
+}
+
+status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions) {
+    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+
     if (!is_in_range(base, size)) {
         return ERR_INVALID_ARGS;
     }
@@ -527,10 +571,12 @@ status_t VmAddressRegion::Unmap(vaddr_t base, size_t size) {
         begin = subregions_.begin();
     }
 
-    // Check if we're partially spanning a subregion and bail if we are
+    // Check if we're partially spanning a subregion, or aren't allowed to
+    // destroy regions and are spanning a region, and bail if we are
     for (auto itr = begin; itr != end; ++itr) {
         const vaddr_t itr_end = itr->base() + itr->size();
-        if (!itr->is_mapping() && (itr->base() < base || itr_end > end_addr)) {
+        if (!itr->is_mapping() && (!can_destroy_regions ||
+                                   itr->base() < base || itr_end > end_addr)) {
             return ERR_INVALID_ARGS;
         }
     }

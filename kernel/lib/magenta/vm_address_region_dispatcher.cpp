@@ -62,6 +62,10 @@ status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mm
         vmar |= VMAR_FLAG_SPECIFIC;
         flags &= ~MX_VM_FLAG_SPECIFIC;
     }
+    if (flags & MX_VM_FLAG_SPECIFIC_OVERWRITE) {
+        vmar |= VMAR_FLAG_SPECIFIC_OVERWRITE;
+        flags &= ~MX_VM_FLAG_SPECIFIC_OVERWRITE;
+    }
     if (flags & MX_VM_FLAG_CAN_MAP_SPECIFIC) {
         vmar |= VMAR_FLAG_CAN_MAP_SPECIFIC;
         flags &= ~MX_VM_FLAG_CAN_MAP_SPECIFIC;
