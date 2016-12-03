@@ -16,5 +16,5 @@ interface SuggestionEngine {
   Initialize(modular.StoryProvider story_provider, modular.FocusController focus_controller);
 
   // Registers a component that produces suggestions.
-  RegisterSuggestionAgent(string url, ProposalPublisher& client);
+  RegisterPublisher(string url, ProposalPublisher& client);
 };

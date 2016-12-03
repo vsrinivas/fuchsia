@@ -87,7 +87,7 @@ class LauncherApp : public maxwell::Launcher {
     });
     agent_host->AddService<maxwell::ProposalPublisher>([this, url](
         fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
-      suggestion_engine_->RegisterSuggestionAgent(url, std::move(request));
+      suggestion_engine_->RegisterPublisher(url, std::move(request));
     });
 
     agent_host->AddService<modular::FocusController>(

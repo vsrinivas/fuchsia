@@ -23,13 +23,12 @@ interface ProposalPublisher {
   GetAll() => (array<Proposal> proposals);
 
   // TODO(rosswang): It is also conceivable that AskHandler? might be an
-  // argument to RegisterSuggestionAgent. That may more closely mimic the
-  // eventual Component model and is a shallower nesting. However, having it
-  // here offers greater flexibility, simplifies #include structure, and
-  // simplifies logic both in the launcher and agent. Otherwise, the launcher
-  // would have to obtain the AskHandler outgoing service and somehow make it
-  // available to the agent environment host, which is messy since the
-  // environment services are typically asked for before outgoing services are
-  // even available.
+  // argument to RegisterPublisher. That may more closely mimic the eventual
+  // Component model and is a shallower nesting. However, having it here offers
+  // greater flexibility, simplifies #include structure, and simplifies logic
+  // both in the launcher and agent. Otherwise, the launcher would have to
+  // obtain the AskHandler outgoing service and somehow make it available to the
+  // agent environment host, which is messy since the environment services are
+  // typically asked for before outgoing services are even available.
   RegisterAskHandler(AskHandler ask_handler);
 };

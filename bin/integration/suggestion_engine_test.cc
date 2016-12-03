@@ -40,8 +40,7 @@ class Proposinator {
  public:
   Proposinator(maxwell::SuggestionEngine* suggestion_engine,
                const fidl::String& url = "Proposinator") {
-    suggestion_engine->RegisterSuggestionAgent("Proposinator",
-                                               out_.NewRequest());
+    suggestion_engine->RegisterPublisher("Proposinator", out_.NewRequest());
   }
 
   virtual ~Proposinator() = default;
@@ -155,7 +154,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     });
     agent_host->AddService<maxwell::ProposalPublisher>([this, url](
         fidl::InterfaceRequest<maxwell::ProposalPublisher> request) {
-      suggestion_engine_->RegisterSuggestionAgent(url, std::move(request));
+      suggestion_engine_->RegisterPublisher(url, std::move(request));
     });
     StartAgent(url, std::move(agent_host));
   }
