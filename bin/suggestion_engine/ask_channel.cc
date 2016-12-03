@@ -59,13 +59,13 @@ void stable_sort(AskChannel::RankedSuggestions* suggestions) {
 // substring discounting.
 float AskChannel::Rank(const SuggestionPrototype* prototype) const {
   if (query_.empty()) {
-    if (repo_->filter() && !repo_->filter()(*prototype->second->proposal)) {
+    if (repo_->filter() && !repo_->filter()(*prototype->proposal)) {
       return kExcludeRank;
     }
     return next_rank();
   }
 
-  std::string text = prototype->second->proposal->display->headline;
+  std::string text = prototype->proposal->display->headline;
   std::transform(text.begin(), text.end(), text.begin(), ::tolower);
   auto pos = text.find(query_);
   if (pos == std::string::npos)
@@ -90,8 +90,9 @@ RankedSuggestion* AskChannel::OnAddSuggestion(
 
     return new_entry.get();
   } else {
-    auto& new_entry = exclude_.emplace(prototype->first, new RankedSuggestion())
-                          .first->second;
+    auto& new_entry =
+        exclude_.emplace(prototype->suggestion_id, new RankedSuggestion())
+            .first->second;
     new_entry->rank = kExcludeRank;
     new_entry->prototype = prototype;
 
@@ -131,13 +132,14 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
       subscriber_.OnAddSuggestion(*ranked_suggestion);
     } else {
       ranked_suggestion->rank = kExcludeRank;
-      exclude_.emplace(ranked_suggestion->prototype->first, std::move(*from));
+      exclude_.emplace(ranked_suggestion->prototype->suggestion_id,
+                       std::move(*from));
       include_.erase(from);
     }
   } else {
     // previously excluded
     if (rank != kExcludeRank) {
-      auto from = exclude_.find(ranked_suggestion->prototype->first);
+      auto from = exclude_.find(ranked_suggestion->prototype->suggestion_id);
       FTL_CHECK(from != exclude_.end());
       ranked_suggestion->rank = rank;
       include_.emplace(find_for_insert(&include_, rank),
@@ -151,7 +153,7 @@ void AskChannel::OnChangeSuggestion(RankedSuggestion* ranked_suggestion) {
 
 void AskChannel::OnRemoveSuggestion(const RankedSuggestion* ranked_suggestion) {
   if (ranked_suggestion->rank == kExcludeRank) {
-    exclude_.erase(ranked_suggestion->prototype->first);
+    exclude_.erase(ranked_suggestion->prototype->suggestion_id);
   } else {
     subscriber_.OnRemoveSuggestion(*ranked_suggestion);
     include_.erase(find(&include_, ranked_suggestion));
@@ -205,7 +207,7 @@ void AskChannel::SetQuery(std::string query) {
 
     // Update excluded
     for (auto& ranked_suggestion : to_exclude) {
-      exclude_.emplace(ranked_suggestion->prototype->first,
+      exclude_.emplace(ranked_suggestion->prototype->suggestion_id,
                        std::move(ranked_suggestion));
     }
 

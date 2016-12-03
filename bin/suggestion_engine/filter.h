@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/proposal_record.h"
+#include "apps/maxwell/services/suggestion/proposal.fidl.h"
 
 namespace maxwell {
 
-// Should return false if the given Proposal should be filtered.
+// Should return true if the given Proposal should be included.
 typedef std::function<bool(const Proposal&)> ProposalFilter;
 
 }  // namespace maxwell

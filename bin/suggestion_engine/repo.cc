@@ -15,26 +15,29 @@ ProposalPublisherImpl* Repo::GetOrCreateSourceClient(
   return source.get();
 }
 
-void Repo::AddSuggestion(std::unique_ptr<ProposalRecord> proposal,
-                         AgentSuggestionRecord* agent_suggestion_record) {
+SuggestionPrototype* Repo::AddSuggestion(ProposalPublisherImpl* source,
+                                         ProposalPtr proposal) {
   // Assert source registered; this isn't strictly necessary but makes sense.
-  FTL_CHECK(sources_[proposal->source->component_url()].get() ==
-            proposal->source);
+  FTL_CHECK(sources_[source->component_url()].get() == source);
 
-  agent_suggestion_record->suggestion_prototype =
-      &*suggestions_.emplace(RandomUuid(), std::move(proposal)).first;
+  std::string id = RandomUuid();
+  SuggestionPrototype* prototype = &suggestions_[id];
+  prototype->suggestion_id = id;
+  prototype->source = source;
+  prototype->timestamp = ftl::TimePoint::Now();
+  prototype->proposal = std::move(proposal);
 
   // TODO(rosswang): proper channel routing. For now, add to all channels
-  auto next_entry = next_channel_.OnAddSuggestion(
-      agent_suggestion_record->suggestion_prototype);
+  auto next_entry = next_channel_.OnAddSuggestion(prototype);
   if (next_entry) {
-    agent_suggestion_record->ranks_by_channel[&next_channel_] = next_entry;
+    prototype->ranks_by_channel[&next_channel_] = next_entry;
   }
   for (auto& ask_channel : ask_channels_) {
-    agent_suggestion_record->ranks_by_channel[ask_channel.get()] =
-        ask_channel->OnAddSuggestion(
-            agent_suggestion_record->suggestion_prototype);
+    prototype->ranks_by_channel[ask_channel.get()] =
+        ask_channel->OnAddSuggestion(prototype);
   }
+
+  return prototype;
 }
 
 void Repo::InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
@@ -43,12 +46,12 @@ void Repo::InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
                                           std::move(controller));
 
   // Bootstrap with existing next suggestions
-  for (auto& suggestion : *next_channel_.ranked_suggestions()) {
-    // TODO(rosswang): flatten record structures instead
-    auto& proposal_record = suggestion->prototype->second;
-    proposal_record->source->GetByProposalId(proposal_record->proposal->id)
-        ->ranks_by_channel[ask.get()] =
-        ask->OnAddSuggestion(suggestion->prototype);
+  for (auto& ranked_suggestion : *next_channel_.ranked_suggestions()) {
+    // const_cast is okay because Repo owns all prototypes mutably.
+    auto suggestion_prototype =
+        const_cast<SuggestionPrototype*>(ranked_suggestion->prototype);
+    suggestion_prototype->ranks_by_channel[ask.get()] =
+        ask->OnAddSuggestion(suggestion_prototype);
   }
 
   ask_channels_.emplace(std::move(ask));

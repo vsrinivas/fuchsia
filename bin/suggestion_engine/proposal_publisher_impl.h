@@ -5,7 +5,6 @@
 #pragma once
 
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
-#include "apps/maxwell/src/suggestion_engine/agent_suggestion_record.h"
 #include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
 #include "apps/maxwell/src/suggestion_engine/repo.h"
 #include "apps/maxwell/src/bound_set.h"
@@ -36,11 +35,6 @@ class ProposalPublisherImpl : public ProposalPublisher {
   void RegisterAskHandler(
       fidl::InterfaceHandle<AskHandler> ask_handler) override;
 
-  // TEMPORARY; TODO(rosswang): flatten record structures instead
-  AgentSuggestionRecord* GetByProposalId(const std::string& proposal_id) {
-    return &proposals_[proposal_id];
-  }
-
  private:
   class BindingSet : public maxwell::BindingSet<ProposalPublisher> {
    public:
@@ -53,8 +47,8 @@ class ProposalPublisherImpl : public ProposalPublisher {
     ProposalPublisherImpl* const impl_;
   };
 
-  void OnNewProposal(ProposalPtr proposal, AgentSuggestionRecord* record);
-  void OnChangeProposal(ProposalPtr proposal, AgentSuggestionRecord* record);
+  void OnChangeProposal(ProposalPtr proposal,
+                        SuggestionPrototype* suggestion_prototype);
 
   bool ShouldEraseSelf() const {
     return proposals_.empty() && bindings_.empty();
@@ -64,7 +58,7 @@ class ProposalPublisherImpl : public ProposalPublisher {
   Repo* const repo_;
   const std::string component_url_;
   // indexed by proposal ID
-  std::unordered_map<std::string, AgentSuggestionRecord> proposals_;
+  std::unordered_map<std::string, SuggestionPrototype*> proposals_;
   BindingSet bindings_;
 };
 

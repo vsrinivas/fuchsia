@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/maxwell/src/suggestion_engine/agent_suggestion_record.h"
+#include "apps/maxwell/src/suggestion_engine/ranked_suggestion.h"
 
 namespace maxwell {
 

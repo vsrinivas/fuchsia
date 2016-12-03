@@ -9,9 +9,9 @@ namespace maxwell {
 RankedSuggestion* NextChannel::OnAddSuggestion(
     const SuggestionPrototype* prototype) {
   // TODO(rosswang): remove existing if they match filter
-  if (filter_ && !filter_(*prototype->second->proposal)) {
-    FTL_LOG(INFO) << "Filtering Proposal in Next: "
-                  << prototype->second->proposal->id;
+  if (filter_ && !filter_(*prototype->proposal)) {
+    FTL_LOG(INFO) << "Filtering " << short_proposal_str(*prototype)
+                  << " in Next";
     return nullptr;
   }
 

@@ -25,7 +25,8 @@ void WindowedSubscriber::SetResultCount(int32_t count) {
       listener_->OnRemoveAll();
     } else if (target < prev) {
       for (size_t i = prev - 1; i >= target; i--) {
-        listener_->OnRemove((*ranked_suggestions_)[i]->prototype->first);
+        listener_->OnRemove(
+            (*ranked_suggestions_)[i]->prototype->suggestion_id);
       }
     }
   }

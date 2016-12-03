@@ -4,7 +4,6 @@
 
 executable("suggestion_engine") {
   sources = [
-    "agent_suggestion_record.h",
     "ask_channel.cc",
     "ask_channel.h",
     "ask_subscriber.cc",
@@ -19,13 +18,14 @@ executable("suggestion_engine") {
     "repo.h",
     "suggestion_channel.h",
     "suggestion_engine.cc",
+    "suggestion_prototype.cc",
+    "suggestion_prototype.h",
     "windowed_subscriber.cc",
     "windowed_subscriber.h",
   ]
 
   deps = [
     ":filter",
-    ":proposal_record",
     ":timeline_stories_filter",
     ":timeline_stories_watcher",
     "//apps/maxwell/services/suggestion",
@@ -36,17 +36,6 @@ executable("suggestion_engine") {
   ]
 }
 
-source_set("proposal_record") {
-  sources = [
-    "proposal_record.h",
-  ]
-
-  deps = [
-    "//apps/maxwell/services/suggestion",
-    "//lib/ftl",
-  ]
-}
-
 source_set("timeline_stories_filter") {
   sources = [
     "timeline_stories_filter.cc",
@@ -54,7 +43,6 @@ source_set("timeline_stories_filter") {
   ]
 
   deps = [
-    ":proposal_record",
     ":timeline_stories_watcher",
     "//apps/maxwell/services/suggestion",
     "//lib/ftl",
@@ -79,6 +67,6 @@ source_set("filter") {
   ]
 
   deps = [
-    ":proposal_record",
+    "//apps/maxwell/services/suggestion",
   ]
 }

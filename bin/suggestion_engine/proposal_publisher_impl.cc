@@ -7,26 +7,24 @@
 namespace maxwell {
 
 void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
-  const size_t old_size = proposals_.size();
-  AgentSuggestionRecord* record = &proposals_[proposal->id];
+  SuggestionPrototype*& suggestion_prototype = proposals_[proposal->id];
 
-  if (proposals_.size() > old_size)
-    repo_->AddSuggestion(
-        std::make_unique<ProposalRecord>(this, std::move(proposal)), record);
+  if (suggestion_prototype)
+    OnChangeProposal(std::move(proposal), suggestion_prototype);
   else
-    OnChangeProposal(std::move(proposal), record);
+    suggestion_prototype = repo_->AddSuggestion(this, std::move(proposal));
 }
 
 void ProposalPublisherImpl::Remove(const fidl::String& proposal_id) {
-  const auto record = proposals_.find(proposal_id);
+  const auto it = proposals_.find(proposal_id);
 
-  if (record != proposals_.end()) {
-    for (auto& channel_rank : record->second.ranks_by_channel) {
+  if (it != proposals_.end()) {
+    for (auto& channel_rank : it->second->ranks_by_channel) {
       channel_rank.first->OnRemoveSuggestion(channel_rank.second);
     }
 
-    repo_->RemoveSuggestion(record->second.suggestion_prototype->first);
-    proposals_.erase(record);
+    repo_->RemoveSuggestion(it->second->suggestion_id);
+    proposals_.erase(it);
 
     if (ShouldEraseSelf())
       EraseSelf();
@@ -50,13 +48,14 @@ void ProposalPublisherImpl::BindingSet::OnConnectionError(
     impl_->EraseSelf();
 }
 
-void ProposalPublisherImpl::OnChangeProposal(ProposalPtr proposal,
-                                             AgentSuggestionRecord* record) {
+void ProposalPublisherImpl::OnChangeProposal(
+    ProposalPtr proposal,
+    SuggestionPrototype* suggestion_prototype) {
   // TODO(rosswang): dedup
 
-  record->suggestion_prototype->second->proposal = std::move(proposal);
+  suggestion_prototype->proposal = std::move(proposal);
 
-  for (auto& channel_rank : record->ranks_by_channel) {
+  for (auto& channel_rank : suggestion_prototype->ranks_by_channel) {
     channel_rank.first->OnChangeSuggestion(channel_rank.second);
   }
 }

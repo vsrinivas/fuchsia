@@ -9,7 +9,7 @@
 #include "apps/maxwell/src/suggestion_engine/ask_channel.h"
 #include "apps/maxwell/src/suggestion_engine/filter.h"
 #include "apps/maxwell/src/suggestion_engine/next_channel.h"
-#include "apps/maxwell/src/suggestion_engine/proposal_record.h"
+#include "apps/maxwell/src/suggestion_engine/suggestion_prototype.h"
 #include "apps/maxwell/src/suggestion_engine/proposal_publisher_impl.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
@@ -26,9 +26,10 @@ class Repo {
     sources_.erase(component_url);
   }
 
-  void AddSuggestion(std::unique_ptr<ProposalRecord> proposal,
-                     AgentSuggestionRecord* agent_suggestion_record);
-
+  // Should only be called from ProposalPublisherImpl
+  SuggestionPrototype* AddSuggestion(ProposalPublisherImpl* source,
+                                     ProposalPtr proposal);
+  // Should only be called from ProposalPublisherImpl
   void RemoveSuggestion(const std::string& id) { suggestions_.erase(id); }
 
   void SubscribeToNext(fidl::InterfaceHandle<SuggestionListener> listener,
@@ -55,9 +56,10 @@ class Repo {
   }
 
   // Non-mutating indexer; returns NULL if no such suggestion exists.
-  const ProposalRecord* operator[](const std::string& suggestion_id) const {
+  const SuggestionPrototype* operator[](
+      const std::string& suggestion_id) const {
     auto it = suggestions_.find(suggestion_id);
-    return it == suggestions_.end() ? NULL : it->second.get();
+    return it == suggestions_.end() ? NULL : &it->second;
   }
 
   ProposalFilter filter() { return filter_; }
@@ -72,7 +74,7 @@ class Repo {
   std::unordered_map<std::string, std::unique_ptr<ProposalPublisherImpl>>
       sources_;
   // indexed by suggestion ID
-  std::unordered_map<std::string, ProposalRecordPtr> suggestions_;
+  std::unordered_map<std::string, SuggestionPrototype> suggestions_;
   NextChannel next_channel_;
   maxwell::BoundNonMovableSet<AskChannel> ask_channels_;
   fidl::InterfacePtrSet<AskHandler> ask_handlers_;

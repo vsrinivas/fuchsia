@@ -63,10 +63,9 @@ class WindowedSubscriber {
   static SuggestionPtr CreateSuggestion(
       const RankedSuggestion& suggestion_data) {
     auto suggestion = Suggestion::New();
-    suggestion->uuid = suggestion_data.prototype->first;
+    suggestion->uuid = suggestion_data.prototype->suggestion_id;
     suggestion->rank = suggestion_data.rank;
-    suggestion->display =
-        suggestion_data.prototype->second->proposal->display->Clone();
+    suggestion->display = suggestion_data.prototype->proposal->display->Clone();
     return suggestion;
   }
 
@@ -81,7 +80,7 @@ class WindowedSubscriber {
   }
 
   void DispatchRemove(const RankedSuggestion& ranked_suggestion) {
-    listener_->OnRemove(ranked_suggestion.prototype->first);
+    listener_->OnRemove(ranked_suggestion.prototype->suggestion_id);
   }
 
   bool IncludeSuggestion(const RankedSuggestion& suggestion) const;

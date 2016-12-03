@@ -51,27 +51,24 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   void NotifyInteraction(const fidl::String& suggestion_uuid,
                          InteractionPtr interaction) override {
-    const ProposalRecord* proposal_record = (*repo_)[suggestion_uuid];
+    const SuggestionPrototype* suggestion_prototype = (*repo_)[suggestion_uuid];
 
-    std::ostringstream log_detail;
-    if (proposal_record)
-      log_detail << "proposal " << proposal_record->proposal->id << " from "
-                 << proposal_record->source->component_url();
-    else
-      log_detail << "invalid";
+    std::string log_detail = suggestion_prototype
+                                 ? short_proposal_str(*suggestion_prototype)
+                                 : "invalid";
 
     FTL_LOG(INFO) << (interaction->type == InteractionType::SELECTED
                           ? "Accepted"
                           : "Dismissed")
-                  << " suggestion " << suggestion_uuid << " ("
-                  << log_detail.str() << ")";
+                  << " suggestion " << suggestion_uuid << " (" << log_detail
+                  << ")";
 
-    if (proposal_record) {
+    if (suggestion_prototype) {
       if (interaction->type == InteractionType::SELECTED) {
         // TODO(rosswang): If we're asked to add multiple modules, we probably
         // want to add them to the same story. We can't do that yet, but we need
         // to receive a StoryController anyway (not optional atm.).
-        for (const auto& action : proposal_record->proposal->on_selected) {
+        for (const auto& action : suggestion_prototype->proposal->on_selected) {
           switch (action->which()) {
             case Action::Tag::CREATE_STORY: {
               modular::StoryControllerPtr story_controller;
@@ -83,7 +80,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                               << create_story->module_id;
                 char hex_color[11];
                 sprintf(hex_color, "0x%x",
-                        proposal_record->proposal->display->color);
+                        suggestion_prototype->proposal->display->color);
                 story_controller->SetInfoExtra(fidl::String("color"),
                                                fidl::String(hex_color), [] {});
                 const auto& initial_data = create_story->initial_data;
@@ -114,7 +111,7 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
         }
       }
 
-      proposal_record->source->Remove(proposal_record->proposal->id);
+      suggestion_prototype->source->Remove(suggestion_prototype->proposal->id);
     }
   }
 
