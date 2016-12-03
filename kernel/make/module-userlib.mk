@@ -35,9 +35,6 @@ ifneq ($(MODULE_SO_NAME),)
 MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
 MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)
 
-# Include this in every link.
-MODULE_EXTRA_OBJS += scripts/dso_handle.ld
-
 $(MODULE_LIBNAME).so: _OBJS := $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 $(MODULE_LIBNAME).so: _LIBS := $(MODULE_ALIBS) $(MODULE_SOLIBS)
 $(MODULE_LIBNAME).so: _SONAME := lib$(MODULE_SO_NAME).so

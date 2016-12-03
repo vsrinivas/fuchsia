@@ -30,9 +30,6 @@ endif
 MODULE_ALIBS := $(foreach lib,$(MODULE_STATIC_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).a)
 MODULE_SOLIBS := $(foreach lib,$(MODULE_LIBS),$(call TOBUILDDIR,$(lib))/lib$(notdir $(lib)).so.abi)
 
-# Include this in every link.
-MODULE_EXTRA_OBJS += scripts/dso_handle.ld
-
 $(MODULE_USERAPP_OBJECT): _OBJS := $(USER_CRT1_OBJ) $(MODULE_OBJS) $(MODULE_EXTRA_OBJS)
 $(MODULE_USERAPP_OBJECT): _LIBS := $(MODULE_ALIBS) $(MODULE_SOLIBS)
 $(MODULE_USERAPP_OBJECT): _LDFLAGS := $(MODULE_LDFLAGS) $(USERAPP_LDFLAGS)

@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <threads.h>
 
+void* __dso_handle = NULL;
+
 /* Ensure that at least 32 atexit handlers can be registered without malloc */
 #define COUNT 32
 
@@ -63,24 +65,6 @@ static void call(void* p) {
     ((void (*)(void))(uintptr_t)p)();
 }
 
-// In an implementation where dlclose actually unloads a module and runs
-// its destructors, the third argument to __cxa_atexit must differ between
-// modules (that is, between the main executable and between each DSO) so
-// that dlclose can run the subset of destructors registered by that one
-// DSO's code.  For C++ static destructors, the compiler generates the call:
-//     __cxa_atexit(&destructor, &instance, &__dso_handle);
-// __dso_handle is defined with __attribute__((visibility("hidden"))) in
-// a special object crtbegin.o that is included implicitly in every link.
-// For the C atexit API to do the equivalent, atexit must be defined in
-// a small static library that is linked into things that dynamically link
-// in -lc; that's the only way for &__dso_handle to refer to the different
-// instance of that symbol in each module.
-//
-// Our dlclose doesn't actually do anything, so we never need to run a
-// subset of destructors before we run them all at actual process exit.
-// Hence, the third argument to __cxa_atexit is ignored and it doesn't
-// matter what we pass it; thus, we can include atexit in the -lc DSO
-// as we do here.
 int atexit(void (*func)(void)) {
-    return __cxa_atexit(call, (void*)(uintptr_t)func, NULL);
+    return __cxa_atexit(call, (void*)(uintptr_t)func, __dso_handle);
 }

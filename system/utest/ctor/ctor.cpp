@@ -3,22 +3,13 @@
 // found in the LICENSE file.
 
 #include <unittest/unittest.h>
-#include <sched.h>
 #include <stdbool.h>
-
-#include "dso-ctor/dso-ctor.h"
+#include <stdint.h>
 
 static bool global_ctor_ran;
 
 static struct Global {
     Global() { global_ctor_ran = true; }
-    ~Global() {
-        // This is just some random nonempty thing that the compiler
-        // can definitely never decide to optimize away.  We can't
-        // easily test that the destructor got run, but we can ensure
-        // that using a static destructor compiles and links correctly.
-        sched_yield();
-    }
 } global;
 
 bool check_ctor() {
@@ -38,7 +29,6 @@ bool check_initializer() {
 BEGIN_TEST_CASE(ctors)
 RUN_TEST(check_ctor)
 RUN_TEST(check_initializer)
-RUN_TEST(check_dso_ctor)
 END_TEST_CASE(ctors)
 
 int main(int argc, char** argv) {
