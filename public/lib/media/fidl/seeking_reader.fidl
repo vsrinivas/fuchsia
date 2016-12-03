@@ -18,12 +18,11 @@ interface SeekingReader {
   // A |size| value of |kUnknownSize| if the size of the content isn't known.
   Describe() => (MediaResult result, uint64 size, bool can_seek);
 
-  // Reads into a data pipe starting at a specified position. If the reader
+  // Reads into a socket starting at a specified position. If the reader
   // can't seek, position must be 0. The |result| callback parameter is |OK|
   // unless there was a problem performing the read. Other possible values:
   // |NOT_FOUND|        - The content could not be found.
   // |INVALID_ARGUMENT| - The reader can't seek and |position| was non-zero.
   // |UNKNOWN_ERROR|    - Some other error occurred.
-  ReadAt(uint64 position) =>
-      (MediaResult result, handle<data_pipe_consumer>? data_pipe);
+  ReadAt(uint64 position) => (MediaResult result, handle<socket>? socket);
 };

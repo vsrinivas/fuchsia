@@ -4,7 +4,7 @@
 
 #include "apps/media/src/media_service/network_reader_impl.h"
 
-#include <mx/datapipe.h>
+#include <mx/socket.h>
 
 #include "apps/modular/lib/app/connect.h"
 #include "apps/network/services/network_service.fidl.h"
@@ -87,12 +87,12 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
                                const ReadAtCallback& callback) {
   ready_.When([this, position, callback]() {
     if (result_ != MediaResult::OK) {
-      callback(result_, mx::datapipe_consumer());
+      callback(result_, mx::socket());
       return;
     }
 
     if (!can_seek_ && position != 0) {
-      callback(MediaResult::INVALID_ARGUMENT, mx::datapipe_consumer());
+      callback(MediaResult::INVALID_ARGUMENT, mx::socket());
       return;
     }
 
@@ -119,14 +119,13 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
             FTL_LOG(WARNING) << "GET response status code "
                              << response->status_code;
             result_ = MediaResult::UNKNOWN_ERROR;
-            callback(result_, mx::datapipe_consumer());
+            callback(result_, mx::socket());
             return;
           }
 
           FTL_DCHECK(response->body);
           FTL_DCHECK(response->body->get_stream());
-          // TODO(dalesat): Renable when audio is using sockets.
-          // callback(result_, std::move(response->body->get_stream()));
+          callback(result_, std::move(response->body->get_stream()));
         });
   });
 }

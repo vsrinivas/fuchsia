@@ -32,7 +32,10 @@ FakeRenderer::FakeRenderer()
       control_point_binding_(this),
       timeline_consumer_binding_(this) {}
 
-FakeRenderer::~FakeRenderer() {}
+FakeRenderer::~FakeRenderer() {
+  SendStatusUpdates();
+  ClearPendingTimelineFunction(false);
+}
 
 void FakeRenderer::Bind(
     fidl::InterfaceRequest<MediaRenderer> renderer_request) {

@@ -4,7 +4,7 @@
 
 #include "apps/media/src/media_service/test/fake_wav_reader.h"
 
-#include <mx/datapipe.h>
+#include <mx/socket.h>
 
 namespace media {
 
@@ -53,23 +53,30 @@ void FakeWavReader::Describe(const DescribeCallback& callback) {
 }
 
 void FakeWavReader::ReadAt(uint64_t position, const ReadAtCallback& callback) {
-  mx::datapipe_consumer datapipe_consumer;
-  mx_status_t status = mx::datapipe<void>::create(
-      1u, kDatapipeCapacity, 0u, &datapipe_producer_, &datapipe_consumer);
+  if (socket_) {
+    if (wait_id_ != 0) {
+      fidl::GetDefaultAsyncWaiter()->CancelWait(wait_id_);
+      wait_id_ = 0;
+    }
+    socket_.reset();
+  }
+
+  mx::socket other_socket;
+  mx_status_t status = mx::socket::create(0u, &socket_, &other_socket);
   FTL_DCHECK(status == NO_ERROR);
-  callback(MediaResult::OK, std::move(datapipe_consumer));
+  callback(MediaResult::OK, std::move(other_socket));
 
   position_ = position;
 
-  WriteToProducer();
+  WriteToSocket();
 }
 
-void FakeWavReader::WriteToProducer() {
+void FakeWavReader::WriteToSocket() {
   while (true) {
     uint8_t byte = GetByte(position_);
     mx_size_t byte_count;
 
-    mx_status_t status = datapipe_producer_.write(0u, &byte, 1u, &byte_count);
+    mx_status_t status = socket_.write(0u, &byte, 1u, &byte_count);
     if (status == NO_ERROR) {
       FTL_DCHECK(byte_count == 1);
       ++position_;
@@ -77,22 +84,20 @@ void FakeWavReader::WriteToProducer() {
     }
 
     if (status == ERR_SHOULD_WAIT) {
-      fidl::GetDefaultAsyncWaiter()->AsyncWait(
-          datapipe_producer_.get(), MX_SIGNAL_WRITABLE, MX_TIME_INFINITE,
-          FakeWavReader::WriteToProducerStatic, this);
+      wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
+          socket_.get(), MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+          MX_TIME_INFINITE, FakeWavReader::WriteToSocketStatic, this);
       return;
     }
 
-    // TODO(dalesat): Don't really know what error we're going to get here.
-    if (status == ERR_UNAVAILABLE) {
+    if (status == ERR_REMOTE_CLOSED) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
-      datapipe_producer_.reset();
+      socket_.reset();
       return;
     }
 
-    FTL_DCHECK(false) << "mx::datapipe_producer::write failed, status "
-                      << status;
+    FTL_DCHECK(false) << "mx::socket::write failed, status " << status;
   }
 }
 
@@ -127,10 +132,11 @@ uint8_t FakeWavReader::GetByte(size_t position) {
 }
 
 // static
-void FakeWavReader::WriteToProducerStatic(mx_status_t status,
-                                          mx_signals_t pending,
-                                          void* closure) {
+void FakeWavReader::WriteToSocketStatic(mx_status_t status,
+                                        mx_signals_t pending,
+                                        void* closure) {
   FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(closure);
+  reader->wait_id_ = 0;
   if (status == ERR_BAD_STATE) {
     // Run loop has aborted...the app is shutting down.
     return;
@@ -138,11 +144,11 @@ void FakeWavReader::WriteToProducerStatic(mx_status_t status,
 
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "AsyncWait failed " << status;
-    reader->datapipe_producer_.reset();
+    reader->socket_.reset();
     return;
   }
 
-  reader->WriteToProducer();
+  reader->WriteToSocket();
 }
 
 }  // namespace media

@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include <mx/datapipe.h>
+#include <mx/socket.h>
 
 #include "apps/media/services/seeking_reader.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -42,7 +42,6 @@ class FakeWavReader : public SeekingReader {
   static constexpr size_t kFormatChunkSize = 24;
   static constexpr size_t kDataChunkHeaderSize = 8;
   static constexpr size_t kChunkSizeDeficit = 8;
-  static constexpr mx_size_t kDatapipeCapacity = 65536;
 
   static constexpr uint64_t kDefaultSize = 64 * 1024;
   static constexpr uint16_t kAudioEncoding = 1;        // PCM
@@ -50,13 +49,13 @@ class FakeWavReader : public SeekingReader {
   static constexpr uint32_t kFramesPerSecond = 48000;  // 48kHz
   static constexpr uint16_t kBitsPerSample = 16;       // 16-bit samples
 
-  // Callback function for WriteToProducer's async wait.
-  static void WriteToProducerStatic(mx_status_t status,
-                                    mx_signals_t pending,
-                                    void* closure);
+  // Callback function for WriteToSocket's async wait.
+  static void WriteToSocketStatic(mx_status_t status,
+                                  mx_signals_t pending,
+                                  void* closure);
 
-  // Writes data to datapipe_producer_ starting at postion_;
-  void WriteToProducer();
+  // Writes data to socket_ starting at postion_;
+  void WriteToSocket();
 
   // Writes the header to header_.
   void WriteHeader();
@@ -76,7 +75,8 @@ class FakeWavReader : public SeekingReader {
   fidl::Binding<SeekingReader> binding_;
   std::vector<uint8_t> header_;
   uint64_t size_ = kDefaultSize;
-  mx::datapipe_producer datapipe_producer_;
+  mx::socket socket_;
+  FidlAsyncWaitID wait_id_ = 0;
   uint64_t position_;
 };
 

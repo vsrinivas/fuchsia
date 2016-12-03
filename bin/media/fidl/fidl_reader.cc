@@ -77,13 +77,13 @@ void FidlReader::ContinueReadAt() {
 
     read_at_bytes_remaining_ = read_at_bytes_to_read_;
 
-    if (read_at_position_ == datapipe_consumer_position_) {
-      ReadResponseBody();
+    if (read_at_position_ == socket_position_) {
+      ReadFromSocket();
       return;
     }
 
-    datapipe_consumer_.reset();
-    datapipe_consumer_position_ = kUnknownSize;
+    socket_.reset();
+    socket_position_ = kUnknownSize;
 
     if (!can_seek_ && read_at_position_ != 0) {
       CompleteReadAt(Result::kInvalidArgument);
@@ -91,47 +91,49 @@ void FidlReader::ContinueReadAt() {
     }
 
     seeking_reader_->ReadAt(
-        read_at_position_,
-        [this](MediaResult result, mx::datapipe_consumer datapipe_consumer) {
+        read_at_position_, [this](MediaResult result, mx::socket socket) {
           result_ = Convert(result);
           if (result_ != Result::kOk) {
             CompleteReadAt(result_);
             return;
           }
 
-          datapipe_consumer_ = std::move(datapipe_consumer);
-          datapipe_consumer_position_ = read_at_position_;
-          ReadResponseBody();
+          socket_ = std::move(socket);
+          socket_position_ = read_at_position_;
+          ReadFromSocket();
         });
   });
 }
 
-void FidlReader::ReadResponseBody() {
-  FTL_DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
-  mx_size_t byte_count;
-  mx_status_t status = datapipe_consumer_.read(
-      0u, read_at_buffer_, read_at_bytes_remaining_, &byte_count);
+void FidlReader::ReadFromSocket() {
+  while (true) {
+    FTL_DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
+    mx_size_t byte_count = 0;
+    mx_status_t status = socket_.read(0u, read_at_buffer_,
+                                      read_at_bytes_remaining_, &byte_count);
 
-  if (status == ERR_SHOULD_WAIT) {
-    byte_count = 0;
-  } else if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx::datapipe_consumer::read failed, status " << status;
-    FailReadAt(status);
-    return;
+    if (status == ERR_SHOULD_WAIT) {
+      fidl::GetDefaultAsyncWaiter()->AsyncWait(
+          socket_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+          MX_TIME_INFINITE, FidlReader::ReadFromSocketStatic, this);
+      break;
+    }
+
+    if (status != NO_ERROR) {
+      FTL_LOG(ERROR) << "mx::socket::read failed, status " << status;
+      FailReadAt(status);
+      break;
+    }
+
+    read_at_buffer_ += byte_count;
+    read_at_bytes_remaining_ -= byte_count;
+    socket_position_ += byte_count;
+
+    if (read_at_bytes_remaining_ == 0) {
+      CompleteReadAt(Result::kOk, read_at_bytes_to_read_);
+      break;
+    }
   }
-
-  read_at_buffer_ += byte_count;
-  read_at_bytes_remaining_ -= byte_count;
-  datapipe_consumer_position_ += byte_count;
-
-  if (read_at_bytes_remaining_ == 0) {
-    CompleteReadAt(Result::kOk, read_at_bytes_to_read_);
-    return;
-  }
-
-  fidl::GetDefaultAsyncWaiter()->AsyncWait(
-      datapipe_consumer_.get(), MX_SIGNAL_READABLE, MX_TIME_INFINITE,
-      FidlReader::ReadResponseBodyStatic, this);
 }
 
 void FidlReader::CompleteReadAt(Result result, size_t bytes_read) {
@@ -145,15 +147,15 @@ void FidlReader::FailReadAt(mx_status_t status) {
   // TODO(dalesat): Expect some statuses here.
   FTL_DCHECK(false) << "Unexpected status " << status;
   result_ = Result::kUnknownError;
-  datapipe_consumer_.reset();
-  datapipe_consumer_position_ = kUnknownSize;
+  socket_.reset();
+  socket_position_ = kUnknownSize;
   CompleteReadAt(result_);
 }
 
 // static
-void FidlReader::ReadResponseBodyStatic(mx_status_t status,
-                                        mx_signals_t pending,
-                                        void* closure) {
+void FidlReader::ReadFromSocketStatic(mx_status_t status,
+                                      mx_signals_t pending,
+                                      void* closure) {
   FidlReader* reader = reinterpret_cast<FidlReader*>(closure);
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "AsyncWait failed, status " << status;
@@ -161,7 +163,7 @@ void FidlReader::ReadResponseBodyStatic(mx_status_t status,
     return;
   }
 
-  reader->ReadResponseBody();
+  reader->ReadFromSocket();
 }
 
 }  // namespace media

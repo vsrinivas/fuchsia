@@ -7,7 +7,7 @@
 #include <atomic>
 #include <memory>
 
-#include <mx/datapipe.h>
+#include <mx/socket.h>
 
 #include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/src/demux/reader.h"
@@ -37,12 +37,10 @@ class FidlReader : public Reader,
               const ReadAtCallback& callback) override;
 
  private:
-  static constexpr size_t kDataPipeCapacity = 32u * 1024u;
-
-  // Calls ReadResponseBody.
-  static void ReadResponseBodyStatic(mx_status_t status,
-                                     mx_signals_t pending,
-                                     void* closure);
+  // Calls ReadFromSocket.
+  static void ReadFromSocketStatic(mx_status_t status,
+                                   mx_signals_t pending,
+                                   void* closure);
 
   FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader);
 
@@ -50,8 +48,8 @@ class FidlReader : public Reader,
   // constructed (a fidl thread).
   void ContinueReadAt();
 
-  // Reads from response_body_ into response_body_buffer_.
-  void ReadResponseBody();
+  // Reads from socket_ into read_at_buffer_.
+  void ReadFromSocket();
 
   // Completes a ReadAt operation by calling the read_at_callback_.
   void CompleteReadAt(Result result, size_t bytes_read = 0);
@@ -72,8 +70,8 @@ class FidlReader : public Reader,
   mx_size_t read_at_bytes_to_read_;
   mx_size_t read_at_bytes_remaining_;
   ReadAtCallback read_at_callback_;
-  mx::datapipe_consumer datapipe_consumer_;
-  size_t datapipe_consumer_position_ = kUnknownSize;
+  mx::socket socket_;
+  size_t socket_position_ = kUnknownSize;
 };
 
 }  // namespace media

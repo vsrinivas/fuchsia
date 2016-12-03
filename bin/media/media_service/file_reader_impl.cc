@@ -53,78 +53,80 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
   FTL_DCHECK(position < size_);
 
   if (result_ != MediaResult::OK) {
-    callback(result_, mx::datapipe_consumer());
+    callback(result_, mx::socket());
     return;
   }
 
-  if (datapipe_producer_) {
-    FTL_DCHECK(wait_id_ != 0);
-    fidl::GetDefaultAsyncWaiter()->CancelWait(wait_id_);
-    wait_id_ = 0;
-    datapipe_producer_.reset();
+  if (socket_) {
+    if (wait_id_ != 0) {
+      fidl::GetDefaultAsyncWaiter()->CancelWait(wait_id_);
+      wait_id_ = 0;
+    }
+    socket_.reset();
   }
 
   off_t seek_result = lseek(fd_.get(), position, SEEK_SET);
   if (seek_result < 0) {
     // TODO(dalesat): More specific error code.
+    FTL_LOG(INFO) << "seek failed, result " << seek_result;
     result_ = MediaResult::UNKNOWN_ERROR;
-    callback(result_, mx::datapipe_consumer());
+    callback(result_, mx::socket());
     return;
   }
 
-  mx::datapipe_consumer datapipe_consumer;
-  mx_status_t status = mx::datapipe<void>::create(
-      1u, kDatapipeCapacity, 0u, &datapipe_producer_, &datapipe_consumer);
+  mx::socket other_socket;
+  mx_status_t status = mx::socket::create(0u, &socket_, &other_socket);
   if (status != NO_ERROR) {
     // TODO(dalesat): More specific error code.
+    FTL_LOG(ERROR) << "mx::socket::create failed, status " << status;
     result_ = MediaResult::UNKNOWN_ERROR;
-    callback(result_, mx::datapipe_consumer());
+    callback(result_, mx::socket());
     return;
   }
 
   remaining_buffer_bytes_count_ = 0;
   reached_end_ = false;
 
-  WriteToProducer();
+  WriteToSocket();
 
   if (result_ != MediaResult::OK) {
-    // Error occurred during WriteToProducer.
-    callback(result_, mx::datapipe_consumer());
+    // Error occurred during WriteToSocket.
+    FTL_LOG(INFO) << "error occurred during WriteToSocket, result_ " << result_;
+    callback(result_, mx::socket());
     return;
   }
 
-  callback(result_, std::move(datapipe_consumer));
+  callback(result_, std::move(other_socket));
 }
 
 // static
-void FileReaderImpl::WriteToProducerStatic(mx_status_t status,
-                                           mx_signals_t pending,
-                                           void* closure) {
+void FileReaderImpl::WriteToSocketStatic(mx_status_t status,
+                                         mx_signals_t pending,
+                                         void* closure) {
   FileReaderImpl* reader = reinterpret_cast<FileReaderImpl*>(closure);
   reader->wait_id_ = 0;
   if (status == ERR_BAD_STATE) {
     // Run loop has aborted...the app is shutting down.
-    reader->datapipe_producer_.reset();
+    reader->socket_.reset();
     return;
   }
 
   if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx::datapipe_producer::write failed, status " << status;
-    reader->datapipe_producer_.reset();
+    FTL_LOG(ERROR) << "mx::socket::write failed, status " << status;
+    reader->socket_.reset();
     return;
   }
 
-  reader->WriteToProducer();
+  reader->WriteToSocket();
 }
 
-void FileReaderImpl::WriteToProducer() {
+void FileReaderImpl::WriteToSocket() {
   while (true) {
     if (remaining_buffer_bytes_count_ == 0 && !reached_end_) {
       ReadFromFile();
     }
 
     if (remaining_buffer_bytes_count_ == 0) {
-      datapipe_producer_.reset();
       return;
     }
 
@@ -132,8 +134,8 @@ void FileReaderImpl::WriteToProducer() {
 
     mx_size_t byte_count;
     mx_status_t status =
-        datapipe_producer_.write(0u, remaining_buffer_bytes_,
-                                 remaining_buffer_bytes_count_, &byte_count);
+        socket_.write(0u, remaining_buffer_bytes_,
+                      remaining_buffer_bytes_count_, &byte_count);
 
     if (status == NO_ERROR) {
       FTL_DCHECK(byte_count != 0);
@@ -144,20 +146,20 @@ void FileReaderImpl::WriteToProducer() {
 
     if (status == ERR_SHOULD_WAIT) {
       wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
-          datapipe_producer_.get(), MX_SIGNAL_WRITABLE, MX_TIME_INFINITE,
-          FileReaderImpl::WriteToProducerStatic, this);
+          socket_.get(), MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+          MX_TIME_INFINITE, FileReaderImpl::WriteToSocketStatic, this);
       return;
     }
 
     if (status == ERR_REMOTE_CLOSED) {
       // Consumer end was closed. This is normal behavior, depending on what
       // the consumer is up to.
-      datapipe_producer_.reset();
+      socket_.reset();
       return;
     }
 
-    FTL_LOG(ERROR) << "mx::datapipe_producer::write failed, status " << status;
-    datapipe_producer_.reset();
+    FTL_LOG(ERROR) << "mx::socket::write failed, status " << status;
+    socket_.reset();
     // TODO(dalesat): More specific error code.
     result_ = MediaResult::UNKNOWN_ERROR;
     return;

@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <mx/datapipe.h>
+#include <mx/socket.h>
 
 #include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/src/media_service/media_service_impl.h"
@@ -33,19 +33,18 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
 
  private:
   static constexpr mx_size_t kBufferSize = 8192;
-  static constexpr mx_size_t kDatapipeCapacity = 65536;
 
   FileReaderImpl(const fidl::String& path,
                  fidl::InterfaceRequest<SeekingReader> request,
                  MediaServiceImpl* owner);
 
-  // Callback function for WriteToProducer's async wait.
-  static void WriteToProducerStatic(mx_status_t status,
-                                    mx_signals_t pending,
-                                    void* closure);
+  // Callback function for WriteToSocket's async wait.
+  static void WriteToSocketStatic(mx_status_t status,
+                                  mx_signals_t pending,
+                                  void* closure);
 
-  // Writes data to producer_handle_;
-  void WriteToProducer();
+  // Writes data to socket_;
+  void WriteToSocket();
 
   // Reads from the file into buffer_;
   void ReadFromFile();
@@ -53,7 +52,7 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
   ftl::UniqueFD fd_;
   MediaResult result_ = MediaResult::OK;
   uint64_t size_ = kUnknownSize;
-  mx::datapipe_producer datapipe_producer_;
+  mx::socket socket_;
   FidlAsyncWaitID wait_id_ = 0;
   std::vector<char> buffer_;
   mx_size_t remaining_buffer_bytes_count_ = 0;

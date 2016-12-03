@@ -288,8 +288,7 @@ std::ostream& operator<<(std::ostream& os, const network::URLBodyPtr& value) {
     return os << "<nullptr>" << std::endl;
   } else {
     if (value->is_stream()) {
-      return os << "mx::datapipe_consumer stream: " << value->get_stream()
-                << std::endl;
+      return os << "mx::socket stream: " << value->get_stream() << std::endl;
     } else if (value->is_buffer()) {
       return os << "mx::vmo buffer: " << value->get_buffer() << std::endl;
     } else {
@@ -332,7 +331,7 @@ std::ostream& operator<<(std::ostream& os,
 
   os << indent;
   os << begl << "network::NetworkErrorPtr error: " << value->error;
-  os << begl << "mx::datapipe_consumer body: " << value->body << std::endl;
+  os << begl << "mx::socket body: " << value->body << std::endl;
   os << begl << "fidl::String url: " << value->url << std::endl;
   os << begl << "uint32_t status_code: " << value->status_code << std::endl;
   os << begl << "fidl::String status_line: " << value->status_line << std::endl;
