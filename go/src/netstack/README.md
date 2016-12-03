@@ -57,7 +57,8 @@ $ brew install dnsmasq
 You need these 2 lines in your dnsmasq.conf. You can delete everything else.
 
 On Ubuntu, edit /etc/dnsmasq.conf.
-On Mac, edit /usr/local/etc/dnsmasq.conf (or $HOMEBREW_PREFIX/etc/dnsmasq.conf if you changed the installation dir).
+On Mac, edit /usr/local/etc/dnsmasq.conf
+(or $HOMEBREW_PREFIX/etc/dnsmasq.conf if you changed the installation dir).
 
 ```
 interface=qemu
@@ -85,7 +86,8 @@ network interface. These instructions use *eth0* as the name of that
 interface, but it may vary (to eth1, or something more exoctic) on
 your particular machine.
 
-Execute the following commands as root (you need this every time you reboot the machine).
+Execute the following commands as root (you need this every time you
+reboot the machine).
 
 ```
 echo 1 > /proc/sys/net/ipv4/ip_forward
@@ -108,10 +110,12 @@ On the console, the IP address acquired from DHCP will be reported
 [00004.917] U netstack: ip4_addr: 192.168.3.53
 ```
 
-## Using netstack on NUC connecting to Linux Desktop
+## Using netstack on Hardware connecting to Linux Desktop
 
-If you are connecting the Ethernet cable from NUC to a USB Ethernet adapter
-on Linux Desktop, you can use a set-up similar to the qemu case.
+If you are connecting the Ethernet cable from NUC or Acer to a USB
+Ethernet adapter on Linux Desktop, you can use a set-up similar to the
+qemu case (if you connect your hardware directly to your Ethernet
+network, this step is not neccesary)
 
 Choose an IPv4 subnet to use, for example, 192.168.2.0/24.
 Assign 192.168.2.1 to the USB Ethernet adapter (e.g. eth5)
@@ -124,7 +128,20 @@ Add these 2 lines to dnsmasq.conf.
 
 ```
 interface=eth5
-dhcp-range=qemu,192.168.2.50,192.168.2.150,24h
+dhcp-range=eth5,192.168.2.50,192.168.2.150,24h
+```
+
+On Ubuntu, make sure that NetworkManager doesn't control this interface.
+You can modify /etc/NetworkManager/NetworkManager.conf to ignore the device
+by specifying its MAC address (e.g. 12:34:56:78:9a:bc).
+
+```
+...
+[ifupdown]
+managed=false
+
+[keyfile]
+unmanaged-devices=mac:12:34:56:78:9a:bc
 ```
 
 ## Start netstack manually
