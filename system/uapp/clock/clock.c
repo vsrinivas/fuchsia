@@ -73,9 +73,9 @@ int set_rtc(const char* time) {
 
 int main(int argc, char** argv) {
     const char* cmd = basename(argv[0]);
-    struct option opts[] = {
+    static const struct option opts[] = {
         {"set", required_argument, NULL, 's'},
-        {0},
+        {},
     };
     for (int opt; (opt = getopt_long(argc, argv, "", opts, NULL)) != -1;) {
         switch (opt) {
