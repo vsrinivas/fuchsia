@@ -14,11 +14,9 @@ namespace modular {
 StoryControllerImpl::StoryControllerImpl(
     StoryDataPtr story_data,
     StoryProviderImpl* const story_provider_impl,
-    ApplicationLauncherPtr launcher,
     UserLedgerRepositoryFactory* ledger_repository_factory)
     : story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
-      launcher_(std::move(launcher)),
       module_watcher_binding_(this),
       link_changed_binding_(this),
       ledger_repository_factory_(ledger_repository_factory) {
@@ -121,25 +119,11 @@ void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
 
 void StoryControllerImpl::StartStory(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  // NOTE(mesch): We start a new application for each of the services
-  // we need here. Instead, we could have started the application once
-  // at startup and just request a new service instance here.
-
-  auto story_runner_launch_info = ApplicationLaunchInfo::New();
-  ServiceProviderPtr story_runner_app_services;
-  story_runner_launch_info->services = story_runner_app_services.NewRequest();
-  story_runner_launch_info->url = "file:///system/apps/story_runner";
-  launcher_->CreateApplication(std::move(story_runner_launch_info), nullptr);
   StoryRunnerPtr story_runner;
-  ConnectToService(story_runner_app_services.get(), story_runner.NewRequest());
+  story_provider_impl_->ConnectToStoryRunner(story_runner.NewRequest());
 
-  auto resolver_launch_info = ApplicationLaunchInfo::New();
-  ServiceProviderPtr resolver_app_services;
-  resolver_launch_info->services = resolver_app_services.NewRequest();
-  resolver_launch_info->url = "file:///system/apps/resolver";
-  launcher_->CreateApplication(std::move(resolver_launch_info), nullptr);
   ResolverPtr resolver;
-  ConnectToService(resolver_app_services.get(), resolver.NewRequest());
+  story_provider_impl_->ConnectToResolver(resolver.NewRequest());
 
   StoryStoragePtr story_storage;
   story_storage_impl_.reset(new StoryStorageImpl(

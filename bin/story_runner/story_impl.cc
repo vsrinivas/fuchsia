@@ -118,14 +118,20 @@ void StoryImpl::StartModule(
         module_controller_request = std::move(module_controller_request),
         view_owner_request = std::move(view_owner_request)
       ](fidl::String module_url) mutable {
+        // We currently require a 1:1 relationship between module
+        // application instances and Module service instances, because
+        // flutter only allows one ViewOwner per flutter application,
+        // and we need one ViewOnwer instance per Module instance.
+
         auto launch_info = ApplicationLaunchInfo::New();
 
         ServiceProviderPtr app_services;
         launch_info->services = app_services.NewRequest();
         launch_info->url = module_url;
 
+        ApplicationControllerPtr application_controller;
         application_context_->launcher()->CreateApplication(
-            std::move(launch_info), nullptr);
+            std::move(launch_info), application_controller.NewRequest());
 
         mozart::ViewProviderPtr view_provider;
         ConnectToService(app_services.get(), view_provider.NewRequest());
@@ -141,6 +147,8 @@ void StoryImpl::StartModule(
             std::move(outgoing_services), std::move(incoming_services));
 
         Connection connection;
+
+        connection.application_controller = std::move(application_controller);
 
         connection.module_controller_impl.reset(
             new ModuleControllerImpl(this, module_url, std::move(module),

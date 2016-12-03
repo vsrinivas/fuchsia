@@ -10,6 +10,8 @@
 
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
+#include "apps/modular/services/story/module_controller.fidl.h"
+#include "apps/modular/services/story/story.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/story_data.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
@@ -33,10 +35,8 @@ class StoryControllerImpl : public StoryController,
   static StoryControllerImpl* New(
       StoryDataPtr story_data,
       StoryProviderImpl* story_provider_impl,
-      ApplicationLauncherPtr launcher,
       UserLedgerRepositoryFactory* const ledger_repository_factory) {
     return new StoryControllerImpl(std::move(story_data), story_provider_impl,
-                                   std::move(launcher),
                                    ledger_repository_factory);
   }
 
@@ -54,7 +54,6 @@ class StoryControllerImpl : public StoryController,
   StoryControllerImpl(
       StoryDataPtr story_data,
       StoryProviderImpl* story_provider_impl,
-      ApplicationLauncherPtr launcher,
       UserLedgerRepositoryFactory* ledger_repository_factory);
 
   // |StoryController|
@@ -89,7 +88,6 @@ class StoryControllerImpl : public StoryController,
   StoryProviderImpl* const story_provider_impl_;
   std::shared_ptr<StoryStorageImpl::Storage> storage_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
-  ApplicationLauncherPtr launcher_;
 
   fidl::BindingSet<StoryController> bindings_;
   fidl::Binding<ModuleWatcher> module_watcher_binding_;

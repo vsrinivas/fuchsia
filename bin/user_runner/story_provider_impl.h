@@ -12,6 +12,7 @@
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
+#include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/story_data.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
@@ -64,6 +65,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   using Storage = StoryStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
+  void ConnectToStoryRunner(fidl::InterfaceRequest<StoryRunner> request);
+  void ConnectToResolver(fidl::InterfaceRequest<Resolver> request);
 
   using FidlDocMap = fidl::Map<fidl::String, document_store::DocumentPtr>;
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
@@ -128,6 +131,16 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   StrongBinding<StoryProvider> binding_;
   fidl::BindingSet<StoryProvider> aux_bindings_;
   ledger::LedgerPtr ledger_;
+
+  // The apps that provide the services below which were started by
+  // this service instance through launcher_. We retain their
+  // controllers, such that when this service terminates (though it
+  // current doesn't) it terminates those apps as well.
+  fidl::InterfacePtrSet<ApplicationController> apps_;
+
+  ApplicationLauncherPtr launcher_;
+  ServiceProviderPtr story_runner_services_;
+  ServiceProviderPtr resolver_services_;
 
   std::unordered_set<std::string> story_ids_;
   TransactionContainer transaction_container_;
