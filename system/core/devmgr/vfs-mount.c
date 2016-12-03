@@ -72,7 +72,12 @@ static mx_status_t txn_unmount(mx_handle_t srv) {
         mx_handle_close(rchannel1);
         return r;
     }
-    r = mx_handle_wait_one(rchannel0, MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
+    r = mx_handle_wait_one(rchannel0, MX_CHANNEL_PEER_CLOSED | MX_CHANNEL_READABLE,
+                           MX_TIME_INFINITE, NULL);
+    // At the moment, we don't actually care what the response is from the
+    // filesystem server (or even if it supports the unmount operation). As soon
+    // as ANY response comes back, either in the form of a closed reply handle
+    // or a visible response, shut down.
     mx_handle_close(rchannel0);
     return r;
 }
