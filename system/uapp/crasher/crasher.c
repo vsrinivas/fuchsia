@@ -35,8 +35,16 @@ int ro_write(volatile unsigned int* addr) {
 }
 
 int nx_run(volatile unsigned int* addr) {
-    // test that we cannot execute NX memory
-    static uint8_t codebuf[16];
+    // Test that we cannot execute NX memory.  Use stack memory for this
+    // because using a static means the compiler might generate a direct
+    // branch to the symbol rather than computing the function pointer
+    // address in a register as the code looks like it would do, and
+    // declaring a static writable variable that the compiler can see
+    // nobody writes leaves the compiler free to morph it into a static
+    // const variable, which gets put into a mergeable rodata section, and
+    // the Gold linker for aarch64 cannot handle a branch into a mergeable
+    // section.
+    uint8_t codebuf[16] = {};
     void (*func)(void) = (void*)codebuf;
     func();
     return 0;
