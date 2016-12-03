@@ -54,6 +54,12 @@ MODULE_CFLAGS += -include $(LOCAL_DIR)/config.h -I$(LOCAL_DIR)/src
 
 # TODO: Fix Warnings
 MODULE_CFLAGS += -Wno-error -Wno-strict-prototypes -Wno-sign-compare
-MODULE_CFLAGS += -Wno-discarded-qualifiers -Wno-logical-not-parentheses
+ifeq ($(call TOBOOL,$(USE_CLANG)),false)
+MODULE_CFLAGS += -Wno-discarded-qualifiers
+else
+MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
+MODULE_CFLAGS += -Wno-gnu-designator -Wno-format-security -Wno-string-plus-int
+endif
+MODULE_CFLAGS += -Wno-logical-not-parentheses
 
 include make/module.mk
