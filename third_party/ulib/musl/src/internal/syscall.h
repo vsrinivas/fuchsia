@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sys/syscall.h>
+#include <threads.h>
 #include <unistd.h>
 
 #ifndef SYSCALL_RLIM_INFINITY
@@ -13,10 +14,13 @@
 
 typedef long syscall_arg_t;
 
-long __linux_syscall(const char* fn, int ln, syscall_arg_t nr, ...);
+long __linux_syscall(const char* fn, int ln, once_flag* once, syscall_arg_t nr, ...);
 long __syscall_ret(unsigned long r);
 
-#define __syscall(nr...) __linux_syscall(__FILE__, __LINE__, nr)
+#define __syscall(nr...) ({                         \
+    static once_flag once;                          \
+    __linux_syscall(__FILE__, __LINE__, &once, nr); \
+})
 
 #define __SYSCALL_NARGS_X(a, b, c, d, e, f, g, h, n, ...) n
 #define __SYSCALL_NARGS(...) __SYSCALL_NARGS_X(__VA_ARGS__, 7, 6, 5, 4, 3, 2, 1, 0, )
