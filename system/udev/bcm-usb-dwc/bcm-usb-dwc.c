@@ -1584,7 +1584,9 @@ static int endpoint_request_scheduler_thread(void* arg) {
             channel = acquire_channel_blocking(dwc);
             dwc_start_transfer(channel, req, self);
         } else if (usb_ep_type(&self->desc) == USB_ENDPOINT_INTERRUPT) {
+            req->next_data_toggle = next_data_toggle;
             channel = acquire_channel_blocking(dwc);
+            await_sof_if_necessary(channel, req, self, dwc);
             dwc_start_transfer(channel, req, self);
         }
 
