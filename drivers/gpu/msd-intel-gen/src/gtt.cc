@@ -42,7 +42,7 @@ bool Gtt::Init(uint64_t gtt_size, magma::PlatformDevice* platform_device)
 bool Gtt::InitPageTables(uint64_t start)
 {
     // leave space for a guard page
-    allocator_ = SimpleAllocator::Create(start, size_ - PAGE_SIZE);
+    allocator_ = magma::SimpleAllocator::Create(start, size_ - PAGE_SIZE);
     if (!allocator_)
         return DRETF(false, "failed to create allocator");
 

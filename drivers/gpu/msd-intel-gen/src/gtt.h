@@ -51,7 +51,7 @@ private:
     Gtt::Owner* owner_;
     std::unique_ptr<magma::PlatformMmio> mmio_;
     std::unique_ptr<magma::PlatformBuffer> scratch_;
-    std::unique_ptr<AddressSpaceAllocator> allocator_;
+    std::unique_ptr<magma::AddressSpaceAllocator> allocator_;
     uint64_t scratch_gpu_addr_;
     uint64_t size_;
 
