@@ -206,7 +206,7 @@ status_t ResourceDispatcher::AddRecord(mx_rrec_t* tmpl) {
     return AddRecord(mxtl::move(rec));
 }
 
-status_t ResourceDispatcher::AddRecords(user_ptr<mx_rrec_t> records, size_t count) {
+status_t ResourceDispatcher::AddRecords(user_ptr<const mx_rrec_t> records, size_t count) {
     for (uint32_t n = 1; n < count; n++) {
         status_t status;
         mxtl::unique_ptr<ResourceRecord> rec;

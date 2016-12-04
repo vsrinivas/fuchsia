@@ -7,7 +7,7 @@
 #include <magenta/compiler.h>
 #include "private.h"
 
-unsigned int _mx_num_cpus(void) {
+uint32_t _mx_num_cpus(void) {
     return DATA_CONSTANTS.max_num_cpus;
 }
 

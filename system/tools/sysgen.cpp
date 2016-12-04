@@ -344,7 +344,9 @@ bool vet_identifier(const string& iden, const FileCtx& fc) {
     }
 
     if (iden == "syscall" ||
-        iden == "returns" || iden == "noreturn" ||
+        iden == "returns" ||
+        iden == "noreturn" ||
+        iden == "vdsocall" ||
         iden == "IN" || iden == "OUT" || iden == "INOUT") {
         fc.print_error("identifier cannot be keyword or attribute", iden);
         return false;
@@ -496,7 +498,10 @@ const GenParams gen_params[] = {
         "void",             // no args special type.
         4u,                 // argument indent.
         c_overrides,
-        {{Syscall::NORETURN, "__attribute__((noreturn))"}},
+        {
+            {Syscall::NORETURN, "__attribute__((noreturn))"},
+            {Syscall::VDSOPURE, "__attribute__((leaf, const))"}
+        },
     },
     // The kernel header, C++.  (KernelHeaderCPP)
     {
@@ -659,10 +664,16 @@ bool process_syscall(SygenGenerator* parser, TokenStream& ts) {
     if (!parse_argpack(ts, &syscall.arg_spec))
         return false;
 
-    auto return_spec = ts.next();
+    auto attrib = ts.next();
+    auto return_spec = attrib;
+
+    if (attrib == "vdsocall") {
+        syscall.attributes.push_back(Syscall::Atrributes::VDSOPURE);
+        return_spec = ts.next();
+    }
 
     if (return_spec == "noreturn") {
-        // nothing else follows except terminator.
+        // nothing else follows "noreturn" except terminator.
         syscall.attributes.push_back(Syscall::Atrributes::NORETURN);
     } else if (return_spec == "returns") {
         ts.next();

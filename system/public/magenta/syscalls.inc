@@ -54,7 +54,7 @@ MAGENTA_SYSCALL_DEF(0, 0, 0, mx_time_t, time_get, uint32_t clock_id)
 MAGENTA_SYSCALL_DEF(1, 2, 1, mx_status_t, nanosleep, mx_time_t nanoseconds)
 
 // Global system information
-MAGENTA_VDSOCALL_DEF_WITH_ATTRS(unsigned int, num_cpus, (leaf, const), void)
+MAGENTA_VDSOCALL_DEF_WITH_ATTRS(uint32_t, num_cpus, (leaf, const), void)
 MAGENTA_VDSOCALL_DEF(mx_status_t, version_get, USER_PTR(char) version, uint32_t version_len)
 
 // Generic handle operations
@@ -117,7 +117,7 @@ MAGENTA_SYSCALL_DEF(4, 4, 44, mx_status_t, thread_write_state, mx_handle_t handl
 
 // Processes
 MAGENTA_SYSCALL_DEF_WITH_ATTRS(1, 1, 50, void, process_exit, (noreturn), int retcode)
-MAGENTA_SYSCALL_DEF(5, 5, 51, mx_handle_t, process_create, mx_handle_t job,
+MAGENTA_SYSCALL_DEF(5, 5, 51, mx_status_t, process_create, mx_handle_t job,
                     USER_PTR(const char) name, uint32_t name_len, uint32_t options,
                     USER_PTR(mx_handle_t) out)
 MAGENTA_SYSCALL_DEF(6, 6, 52, mx_status_t, process_start, mx_handle_t process_handle,
@@ -225,7 +225,7 @@ MAGENTA_SYSCALL_DEF(4, 4, 140, mx_status_t, ktrace_read, mx_handle_t handle,
                     USER_PTR(void) data, uint32_t offset, uint32_t len,
                     USER_PTR(uint32_t) actual)
 MAGENTA_SYSCALL_DEF(4, 4, 141, mx_status_t, ktrace_control, mx_handle_t handle,
-                    uint32_t action, uint32_t options, USER_PTR(void))
+                    uint32_t action, uint32_t options, USER_PTR(void) ptr)
 MAGENTA_SYSCALL_DEF(4, 4, 142, mx_status_t, ktrace_write, mx_handle_t handle,
                     uint32_t id, uint32_t arg0, uint32_t arg1)
 
@@ -237,9 +237,10 @@ MAGENTA_SYSCALL_DEF(2, 2, 152, mx_handle_t, debug_transfer_handle,
                     mx_handle_t proc, mx_handle_t handle)
 
 // Legacy LK debug syscalls.
-MAGENTA_SYSCALL_DEF(3, 3, 160, mx_status_t, debug_read, mx_handle_t, void* buffer, uint32_t length)
+MAGENTA_SYSCALL_DEF(3, 3, 160, mx_status_t, debug_read, mx_handle_t handle,
+                    void* buffer, uint32_t length)
 MAGENTA_SYSCALL_DEF(2, 2, 161, mx_status_t, debug_write, const void* buffer, uint32_t length)
-MAGENTA_SYSCALL_DEF(3, 3, 162, mx_status_t, debug_send_command, mx_handle_t,
+MAGENTA_SYSCALL_DEF(3, 3, 162, mx_status_t, debug_send_command, mx_handle_t resource_handle,
                     const void* buffer, uint32_t length)
 
 // DDK Syscalls: Interrupts
@@ -277,7 +278,7 @@ MAGENTA_SYSCALL_DEF(1, 1, 203, mx_status_t, pci_reset_device, mx_handle_t handle
 MAGENTA_SYSCALL_DEF(3, 3, 204, mx_handle_t, pci_map_mmio, mx_handle_t handle,
                     uint32_t bar_num, mx_cache_policy_t cache_policy)
 MAGENTA_SYSCALL_DEF(5, 5, 205, mx_status_t, pci_io_write, mx_handle_t handle,
-                    uint32_t bar_num, uint32_t offset, uint32_t len, const uint32_t value)
+                    uint32_t bar_num, uint32_t offset, uint32_t len, uint32_t value)
 MAGENTA_SYSCALL_DEF(5, 5, 206, mx_status_t, pci_io_read, mx_handle_t handle,
                     uint32_t bar_num, uint32_t offset, uint32_t len, uint32_t* out_value)
 MAGENTA_SYSCALL_DEF(2, 2, 207, mx_handle_t, pci_map_interrupt, mx_handle_t handle, int32_t which_irq)
@@ -287,7 +288,7 @@ MAGENTA_SYSCALL_DEF(4, 4, 209, mx_status_t, pci_query_irq_mode_caps, mx_handle_t
 MAGENTA_SYSCALL_DEF(4, 4, 210, mx_status_t, pci_set_irq_mode, mx_handle_t handle,
                     uint32_t mode, uint32_t requested_irq_count)
 MAGENTA_SYSCALL_DEF(3, 3, 211, mx_status_t, pci_init, mx_handle_t handle,
-                    USER_PTR(mx_pci_init_arg_t) init_buf, uint32_t len)
+                    USER_PTR(const mx_pci_init_arg_t) init_buf, uint32_t len)
 MAGENTA_SYSCALL_DEF(5, 7, 212, mx_status_t, pci_add_subtract_io_range, mx_handle_t handle,
                     bool mmio, uint64_t base, uint64_t len, bool add)
 
@@ -297,7 +298,7 @@ MAGENTA_SYSCALL_DEF(1, 1, 221, mx_status_t, acpi_cache_flush, mx_handle_t handle
 
 // Resources
 MAGENTA_SYSCALL_DEF(5, 5, 300, mx_status_t, resource_create, mx_handle_t parent_handle,
-                    USER_PTR(mx_rrec_t) records, uint32_t count,
+                    USER_PTR(const mx_rrec_t) records, uint32_t count,
                     USER_PTR(mx_handle_t) resource_out, USER_PTR(mx_handle_t) msgpipe_out)
 MAGENTA_SYSCALL_DEF(4, 4, 301, mx_status_t, resource_get_handle, mx_handle_t handle,
                     uint32_t index, uint32_t options, USER_PTR(mx_handle_t) out)

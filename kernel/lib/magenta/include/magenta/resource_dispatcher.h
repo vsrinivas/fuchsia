@@ -38,7 +38,7 @@ public:
     // Records may be added until MakeRoot() or AddChild() are called,
     // at which point the Resource is validated, and if valid, sealed
     // against further modifications.
-    status_t AddRecords(user_ptr<mx_rrec_t> records, size_t count);
+    status_t AddRecords(user_ptr<const mx_rrec_t> records, size_t count);
     status_t AddRecord(mx_rrec_t* record);
 
     // Create a Dispatcher for the indicated Record

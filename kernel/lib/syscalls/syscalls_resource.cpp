@@ -23,7 +23,7 @@
 // If records[0].options MX_ROPT_SELF_CHANNEL, a new ipc channel is returned
 // via new_channel_handle and ipc connections may be accepted via this pipe.
 // parent_handle must have RIGHT_WRITE
-mx_status_t sys_resource_create(mx_handle_t handle, user_ptr<mx_rrec_t> records, uint32_t count,
+mx_status_t sys_resource_create(mx_handle_t handle, user_ptr<const mx_rrec_t> records, uint32_t count,
                                 user_ptr<mx_handle_t> rsrc_out, user_ptr<mx_handle_t> channel_out) {
     auto up = ProcessDispatcher::GetCurrent();
 
