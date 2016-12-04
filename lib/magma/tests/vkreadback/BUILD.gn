@@ -14,3 +14,14 @@ executable("vkreadback") {
     "$mesa_build_root:magma_vulkan",
   ]
 }
+
+executable("mt_create_vkdevice_loop") {
+  sources = [
+    "mt_create_vkdevice_loop.cc",
+  ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+    "$mesa_build_root:magma_vulkan",
+  ]
+}
