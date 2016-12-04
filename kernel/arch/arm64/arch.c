@@ -24,6 +24,11 @@
 
 #define LOCAL_TRACE 0
 
+enum {
+    PMCR_EL0_ENABLE_BIT         = 1 << 0,
+    PMCR_EL0_LONG_COUNTER_BIT   = 1 << 6,
+};
+
 #if WITH_SMP
 /* smp boot lock */
 static spin_lock_t arm_boot_cpu_lock = 1;
@@ -61,8 +66,11 @@ static void arm64_cpu_early_init(void)
     arch_enable_fiqs();
 
     /* enable cycle counter */
-    ARM64_WRITE_SYSREG(pmcr_el0, 1UL);
+    ARM64_WRITE_SYSREG(pmcr_el0, PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT);
     ARM64_WRITE_SYSREG(pmcntenset_el0, (1UL << 31));
+
+    /* enable user space access to cycle counter */
+    ARM64_WRITE_SYSREG(pmuserenr_el0, 1UL);
 }
 
 void arch_early_init(void)

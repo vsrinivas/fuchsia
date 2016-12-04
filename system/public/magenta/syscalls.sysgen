@@ -38,6 +38,10 @@ syscall nanosleep
     (nanoseconds: mx_time_t)
     returns (mx_status_t);
 
+syscall ticks_get vdsocall
+    ()
+    returns (uint64_t);
+
 # Global system information
 
 syscall num_cpus vdsocall leafc ()

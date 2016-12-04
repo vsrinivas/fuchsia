@@ -7,6 +7,8 @@ mx_time_t sys_time_get(
 mx_status_t sys_nanosleep(
     mx_time_t nanoseconds);
 
+uint64_t sys_ticks_get();
+
 uint32_t sys_num_cpus();
 
 mx_status_t sys_version_get(

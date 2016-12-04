@@ -95,6 +95,7 @@
 ## Time
 + [nanosleep](syscalls/nanosleep.md) - sleep for some number of nanoseconds
 + [time_get](syscalls/time_get.md) - read a system clock
++ [ticks_get](syscalls/ticks_get.md) - read high-precision timer ticks
 
 ## Logging
 + log_create - create a kernel managed log reader or writer

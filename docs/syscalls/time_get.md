@@ -14,7 +14,7 @@ mx_time_t mx_time_get(uint32_t clock_id)
 
 ## DESCRIPTION
 
-**mx_current_time**() returns the current time of *clock_id*, or 0 if *clock_id* is
+**mx_time_get**() returns the current time of *clock_id*, or 0 if *clock_id* is
 invalid.
 
 ## SUPPORTED CLOCK IDS
