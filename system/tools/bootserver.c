@@ -517,7 +517,7 @@ int main(int argc, char** argv) {
         if (msg->cmd != NB_ADVERTISE)
             continue;
         if (msg->arg != NB_VERSION_CURRENT) {
-            fprintf(stderr, "%s: Incompatible version 0x%08X of booloader detected from [%s]%d, please upgrade your bootloader\n", appname, msg->arg,
+            fprintf(stderr, "%s: Incompatible version 0x%08X of bootloader detected from [%s]%d, please upgrade your bootloader\n", appname, msg->arg,
                     inet_ntop(AF_INET6, &ra.sin6_addr, tmp, sizeof(tmp)),
                     ntohs(ra.sin6_port));
             if (once) {
