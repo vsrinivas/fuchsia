@@ -20,11 +20,9 @@ namespace cloud_sync {
 namespace {
 
 constexpr ftl::StringView kIndexConfigurationHint =
-    "It seems that we can't query Firebase for commits. "
-    "This might indicate that database indices are not configured "
-    "or their configuration is out of date. "
-    "Please refer to the User Guide for the recommended Firebase "
-    "configuration.";
+    "A Firebase commit query failed. "
+    "Database index configuration might be incorrect or out of date. "
+    "Please refer to the User Guide for the recommended setup. ";
 
 std::string RandomString() {
   return std::to_string(glue::RandUint64());
