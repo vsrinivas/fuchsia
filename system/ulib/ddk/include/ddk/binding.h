@@ -69,6 +69,17 @@ __BEGIN_CDECLS;
 #define BIND_PCI_SUBCLASS     0x0103
 #define BIND_PCI_INTERFACE    0x0104
 #define BIND_PCI_REVISION     0x0105
+#define BIND_PCI_BDF_ADDR     0x0106
+
+// pci binding variable utils
+#define BIND_PCI_BDF_PACK(bus, dev, func) \
+    ((((uint32_t)(bus)  & 0xFF) << 8) |   \
+     (((uint32_t)(dev)  & 0x1F) << 3) |   \
+      ((uint32_t)(func) & 0x07))
+
+#define BIND_PCI_BDF_UNPACK_BUS(bdf) (((uint32_t)(bdf) >> 8) & 0xFF)
+#define BIND_PCI_BDF_UNPACK_DEV(bdf) (((uint32_t)(bdf) >> 3) & 0x1F)
+#define BIND_PCI_BDF_UNPACK_FUNC(bdf) ((uint32_t)(bdf) & 0x07)
 
 // usb binding variables at 0x02XX
 #define BIND_USB_VID          0x0200

@@ -57,13 +57,23 @@ static mx_status_t kpci_init_child(mx_driver_t* drv, mx_device_t** out, uint32_t
     device->index = index;
     *out = &device->device;
 
-    device->props[0] = (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_PCI };
-    device->props[1] = (mx_device_prop_t){ BIND_PCI_VID, 0, info.vendor_id };
-    device->props[2] = (mx_device_prop_t){ BIND_PCI_DID, 0, info.device_id };
-    device->props[3] = (mx_device_prop_t){ BIND_PCI_CLASS, 0, info.base_class };
-    device->props[4] = (mx_device_prop_t){ BIND_PCI_SUBCLASS, 0, info.sub_class };
-    device->props[5] = (mx_device_prop_t){ BIND_PCI_INTERFACE, 0, info.program_interface };
-    device->props[6] = (mx_device_prop_t){ BIND_PCI_REVISION, 0, info.revision_id };
+    mx_device_prop_t device_props[] = {
+        (mx_device_prop_t){ BIND_PROTOCOL, 0, MX_PROTOCOL_PCI },
+        (mx_device_prop_t){ BIND_PCI_VID, 0, info.vendor_id },
+        (mx_device_prop_t){ BIND_PCI_DID, 0, info.device_id },
+        (mx_device_prop_t){ BIND_PCI_CLASS, 0, info.base_class },
+        (mx_device_prop_t){ BIND_PCI_SUBCLASS, 0, info.sub_class },
+        (mx_device_prop_t){ BIND_PCI_INTERFACE, 0, info.program_interface },
+        (mx_device_prop_t){ BIND_PCI_REVISION, 0, info.revision_id },
+        (mx_device_prop_t){ BIND_PCI_BDF_ADDR, 0, BIND_PCI_BDF_PACK(info.bus_id,
+                                                                    info.dev_id,
+                                                                    info.func_id) },
+    };
+
+    static_assert(sizeof(device_props) == sizeof(device->props),
+                 "Invalid number of PCI properties in kpci_device_t!");
+
+    memcpy(device->props, device_props, sizeof(device->props));
     device->device.props = device->props;
     device->device.prop_count = countof(device->props);
 
