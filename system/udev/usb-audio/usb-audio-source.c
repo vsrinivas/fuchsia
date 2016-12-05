@@ -67,7 +67,7 @@ static void usb_audio_source_read_complete(iotxn_t* txn, void* cookie) {
     }
 
     mtx_lock(&source->mutex);
-    if (source->open) {
+    if (!source->open) {
         list_add_tail(&source->free_read_reqs, &txn->node);
     } else if (txn->status == NO_ERROR && txn->actual > 0) {
         list_add_tail(&source->completed_reads, &txn->node);
