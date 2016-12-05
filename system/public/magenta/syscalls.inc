@@ -256,7 +256,7 @@ MAGENTA_SYSCALL_DEF(5, 5, 181, mx_status_t, mmap_device_memory, mx_handle_t hand
                     mx_paddr_t paddr, uint32_t len, mx_cache_policy_t cache_policy,
                     USER_PTR(void *) out_vaddr)
 MAGENTA_SYSCALL_DEF(3, 3, 182, mx_status_t, io_mapping_get_info, mx_handle_t handle,
-                    void** out_vaddr, uint64_t* out_size)
+                    USER_PTR(uintptr_t) out_vaddr, USER_PTR(uint64_t) out_size)
 MAGENTA_SYSCALL_DEF(3, 3, 183, mx_status_t, vmo_create_contiguous, mx_handle_t rsrc_handle,
                     mx_size_t size, USER_PTR(mx_handle_t) out)
 

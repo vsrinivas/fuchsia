@@ -42,13 +42,15 @@ static mx_handle_t pci_map_mmio(mx_device_t* dev,
     if (mmio_handle < 0)
         return mmio_handle;
 
-    mx_status_t status = mx_io_mapping_get_info(mmio_handle, vaddr, size);
+    uintptr_t tmp;
+    mx_status_t status = mx_io_mapping_get_info(mmio_handle, &tmp, size);
     if (status != NO_ERROR) {
         assert(status < 0);
         mx_handle_close(mmio_handle);
         return status;
     }
 
+    *vaddr = (void*)(tmp);
     return mmio_handle;
 }
 
@@ -68,8 +70,8 @@ static mx_handle_t pci_get_config(mx_device_t* dev, const pci_config_t** config)
     if (cfg_handle < 0)
         return cfg_handle;
 
-    void* vaddr = NULL;
-    uint64_t size;
+    uintptr_t vaddr = 0;
+    uint64_t  size;
 
     mx_status_t status = mx_io_mapping_get_info(cfg_handle, &vaddr, &size);
     if (status != NO_ERROR) {

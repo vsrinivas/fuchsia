@@ -250,7 +250,9 @@ mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, void* vaddr, uint32_t len, ui
  * @param out_vaddr Mapped virtual address for the I/O range.
  * @param out_len Mapped size of the I/O range.
  */
-mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64_t* out_size) {
+mx_status_t sys_io_mapping_get_info(mx_handle_t handle,
+                                    user_ptr<uintptr_t> out_vaddr,
+                                    user_ptr<uint64_t> out_size) {
     LTRACEF("handle %d\n", handle);
 
     if (!out_vaddr || !out_size)
@@ -269,14 +271,14 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle, void** out_vaddr, uint64
     if (ProcessDispatcher::GetCurrent()->aspace() != io_mapping->aspace())
         return ERR_ACCESS_DENIED;
 
-    void*    vaddr = reinterpret_cast<void*>(io_mapping->vaddr());
-    uint64_t size  = io_mapping->size();
+    uintptr_t vaddr = reinterpret_cast<uintptr_t>(io_mapping->vaddr());
+    uint64_t  size  = io_mapping->size();
 
-    status = copy_to_user_unsafe(out_vaddr, &vaddr, sizeof(*out_vaddr));
+    status = out_vaddr.copy_to_user(vaddr);
     if (status != NO_ERROR)
         return status;
 
-    return copy_to_user_unsafe(out_size, &size, sizeof(*out_size));
+    return out_size.copy_to_user(size);
 }
 
 #if ARCH_X86

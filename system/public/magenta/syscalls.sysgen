@@ -152,7 +152,7 @@ syscall process_start
 
 syscall process_map_vm
     (proc_handle: mx_handle_t, vmo_handle: mx_handle_t,
-        offset: uint64_t, len: mx_size_t, ptr: uintptr_t[1] OUT, options: uint32_t)
+        offset: uint64_t, len: mx_size_t, ptr: uintptr_t[1] INOUT, options: uint32_t)
     returns (mx_status_t);
 
 syscall process_unmap_vm
@@ -405,7 +405,7 @@ syscall mmap_device_memory
     returns (mx_status_t);
 
 syscall io_mapping_get_info
-    (handle: mx_handle_t, out_vaddr: any[1] OUT, out_size: uint64_t[1] OUT)
+    (handle: mx_handle_t, out_vaddr: uintptr_t[1] OUT, out_size: uint64_t[1] OUT)
     returns (mx_status_t);
 
 syscall vmo_create_contiguous
