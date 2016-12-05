@@ -18,8 +18,7 @@ const int32_t kInvalidResponseErrorCode = -320;
 class NetworkServiceImpl::RunningRequest {
  public:
   RunningRequest(std::function<network::URLRequestPtr()> request_factory)
-      : request_factory_(std::move(request_factory)),
-        redirect_count_(0u) {}
+      : request_factory_(std::move(request_factory)), redirect_count_(0u) {}
 
   void Cancel() {
     FTL_DCHECK(on_empty_callback_);
@@ -29,8 +28,10 @@ class NetworkServiceImpl::RunningRequest {
   // Set the network service to use. This will start (or restart) the request.
   void SetNetworkService(network::NetworkService* network_service) {
     network_service_ = network_service;
-    // Restart the request, as any fidl callback is now pending forever.
-    Start();
+    if (network_service) {
+      // Restart the request, as any fidl callback is now pending forever.
+      Start();
+    }
   }
 
   void set_callback(std::function<void(network::URLResponsePtr)> callback) {
@@ -144,8 +145,11 @@ class NetworkServiceImpl::RunningRequest {
 };
 
 NetworkServiceImpl::NetworkServiceImpl(
+    ftl::RefPtr<ftl::TaskRunner> task_runner,
     std::function<network::NetworkServicePtr()> network_service_factory)
-    : network_service_factory_(network_service_factory) {}
+    : task_runner_(task_runner),
+      network_service_factory_(network_service_factory),
+      weak_factory_(this) {}
 
 NetworkServiceImpl::~NetworkServiceImpl() {}
 
@@ -160,7 +164,9 @@ ftl::RefPtr<callback::Cancellable> NetworkServiceImpl::Request(
 
   request.set_callback(cancellable->WrapCallback(
       callback::TraceCallback(std::move(callback), "network", "request")));
-  request.SetNetworkService(GetNetworkService());
+  if (!in_backoff_) {
+    request.SetNetworkService(GetNetworkService());
+  }
 
   return cancellable;
 }
@@ -169,21 +175,36 @@ network::NetworkService* NetworkServiceImpl::GetNetworkService() {
   if (!network_service_) {
     network_service_ = network_service_factory_();
     network_service_.set_connection_error_handler([this]() {
-      // TODO(qsr): LE-77: Handle multiple failures with:
-      // 1) backoff.
-      // 2) notification to the user.
-      network_service_.reset();
-      if (running_requests_.empty()) {
-        return;
-      }
-      network::NetworkService* network_service = GetNetworkService();
+      FTL_LOG(WARNING) << "Network service crashed or not configured "
+                       << "in environment, trying to reconnect.";
+      FTL_DCHECK(!in_backoff_);
+      in_backoff_ = true;
       for (auto& request : running_requests_) {
-        request.SetNetworkService(network_service);
+        request.SetNetworkService(nullptr);
       }
+      network_service_.reset();
+      task_runner_->PostDelayedTask(
+          [weak_this = weak_factory_.GetWeakPtr()]() {
+            if (weak_this) {
+              weak_this->RetryGetNetworkService();
+            }
+          },
+          backoff_.GetNext());
     });
   }
 
   return network_service_.get();
+}
+
+void NetworkServiceImpl::RetryGetNetworkService() {
+  in_backoff_ = false;
+  if (running_requests_.empty()) {
+    return;
+  }
+  network::NetworkService* network_service = GetNetworkService();
+  for (auto& request : running_requests_) {
+    request.SetNetworkService(network_service);
+  }
 }
 
 }  // namespace ledger

@@ -10,6 +10,7 @@ source_set("network") {
   ]
 
   public_deps = [
+    "//apps/ledger/src/backoff",
     "//apps/ledger/src/callback",
     "//apps/network/services",
     "//lib/ftl",

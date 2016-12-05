@@ -55,10 +55,11 @@ class App {
     }
 
     if (configuration.use_sync) {
-      network_service_ = std::make_unique<ledger::NetworkServiceImpl>([this] {
-        return application_context_
-            ->ConnectToEnvironmentService<network::NetworkService>();
-      });
+      network_service_ =
+          std::make_unique<ledger::NetworkServiceImpl>(main_runner, [this] {
+            return application_context_
+                ->ConnectToEnvironmentService<network::NetworkService>();
+          });
     }
     environment_ = std::make_unique<Environment>(std::move(configuration),
                                                  std::move(main_runner),

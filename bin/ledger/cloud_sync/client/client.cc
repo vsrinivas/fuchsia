@@ -91,9 +91,10 @@ bool ClientApp::Initialize() {
             << configuration_.sync_params.firebase_prefix << std::endl;
   std::cout << std::endl;
 
-  network_service_ = std::make_unique<ledger::NetworkServiceImpl>([this] {
-    return context_->ConnectToEnvironmentService<network::NetworkService>();
-  });
+  network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
+      mtl::MessageLoop::GetCurrent()->task_runner(), [this] {
+        return context_->ConnectToEnvironmentService<network::NetworkService>();
+      });
 
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_.get(), configuration_.sync_params.firebase_id,

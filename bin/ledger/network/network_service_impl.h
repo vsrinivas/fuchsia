@@ -5,15 +5,19 @@
 #ifndef APPS_LEDGER_SRC_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define APPS_LEDGER_SRC_NETWORK_NETWORK_SERVICE_IMPL_H_
 
+#include "apps/ledger/src/backoff/exponential_backoff.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/network/network_service.h"
 #include "apps/network/services/network_service.fidl.h"
+#include "lib/ftl/memory/weak_ptr.h"
+#include "lib/ftl/tasks/task_runner.h"
 
 namespace ledger {
 
 class NetworkServiceImpl : public NetworkService {
  public:
   NetworkServiceImpl(
+      ftl::RefPtr<ftl::TaskRunner> task_runner,
       std::function<network::NetworkServicePtr()> network_service_factory);
   ~NetworkServiceImpl() override;
 
@@ -26,9 +30,17 @@ class NetworkServiceImpl : public NetworkService {
 
   network::NetworkService* GetNetworkService();
 
+  void RetryGetNetworkService();
+
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  backoff::ExponentialBackoff backoff_;
+  bool in_backoff_ = false;
   std::function<network::NetworkServicePtr()> network_service_factory_;
   network::NetworkServicePtr network_service_;
   callback::AutoCleanableSet<RunningRequest> running_requests_;
+
+  // Must be the last member field.
+  ftl::WeakPtrFactory<NetworkServiceImpl> weak_factory_;
 };
 
 }  // namespace ledger

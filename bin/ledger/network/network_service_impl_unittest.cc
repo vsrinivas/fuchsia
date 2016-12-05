@@ -135,7 +135,8 @@ class DestroyWatcher : public ftl::RefCountedThreadSafe<DestroyWatcher> {
 class NetworkServiceImplTest : public test::TestWithMessageLoop {
  public:
   NetworkServiceImplTest()
-      : network_service_([this] { return NewNetworkService(); }) {}
+      : network_service_(message_loop_.task_runner(),
+                         [this] { return NewNetworkService(); }) {}
 
   void SetPipeResponse(mx::datapipe_consumer body, uint32_t status_code) {
     network::URLResponsePtr server_response = network::URLResponse::New();
