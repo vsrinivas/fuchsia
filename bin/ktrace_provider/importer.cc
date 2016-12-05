@@ -344,8 +344,9 @@ bool Importer::HandlePageFault(Ticks event_time,
   if (!thread_ref.is_unknown()) {
     writer_.WriteInstantEventRecord(
         event_time, thread_ref, irq_category_ref_, page_fault_name_ref_,
-        EventScope::kThread, PointerArgument(vaddr_name_ref_, virtual_address),
-        Int32Argument(flags_name_ref_, flags));
+        EventScope::kThread,
+        ToArgumentList(PointerArgument(vaddr_name_ref_, virtual_address),
+                       Int32Argument(flags_name_ref_, flags)));
   }
   return true;
 }
@@ -448,8 +449,10 @@ bool Importer::HandleChannelWrite(Ticks event_time,
   writer_.WriteFlowBeginEventRecord(
       event_time, GetThreadRef(thread), channel_category_ref_,
       channel_write_name_ref_, counter,
-      Int32Argument(num_bytes_name_ref_, static_cast<int32_t>(num_bytes)),
-      Int32Argument(num_handles_name_ref_, static_cast<int32_t>(num_handles)));
+      ToArgumentList(
+          Int32Argument(num_bytes_name_ref_, static_cast<int32_t>(num_bytes)),
+          Int32Argument(num_handles_name_ref_,
+                        static_cast<int32_t>(num_handles))));
 
   return true;
 }
@@ -469,8 +472,9 @@ bool Importer::HandleChannelRead(Ticks event_time,
   writer_.WriteFlowEndEventRecord(
       event_time, GetThreadRef(thread), channel_category_ref_,
       channel_read_name_ref_, counter,
-      writer::MakeArgument(writer_, "num_bytes", num_bytes),
-      writer::MakeArgument(writer_, "num_handles", num_handles));
+      ToArgumentList(
+          writer::MakeArgument(writer_, "num_bytes", num_bytes),
+          writer::MakeArgument(writer_, "num_handles", num_handles)));
 
   return true;
 }
@@ -532,7 +536,8 @@ bool Importer::HandleProbe(Ticks event_time,
   writer_.WriteInstantEventRecord(
       event_time, GetThreadRef(thread), probe_category_ref_,
       GetNameRef(probe_names_, "probe", probe), EventScope::kThread,
-      Int32Argument(arg0_name_ref_, arg0), Int32Argument(arg1_name_ref_, arg1));
+      ToArgumentList(Int32Argument(arg0_name_ref_, arg0),
+                     Int32Argument(arg1_name_ref_, arg1)));
   return true;
 }
 

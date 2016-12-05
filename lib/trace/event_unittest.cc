@@ -55,142 +55,141 @@ TEST_F(EventTest, CategoryEnabled) {
 }
 
 TEST_F(EventTest, Instant) {
-  TRACE_INSTANT0("cat", "name", TRACE_SCOPE_GLOBAL);
-  TRACE_INSTANT0("cat", "name", TRACE_SCOPE_PROCESS);
-  TRACE_INSTANT0("cat", "name", TRACE_SCOPE_THREAD);
-  TRACE_INSTANT1("cat", "name", TRACE_SCOPE_THREAD, "k1", "v1");
-  TRACE_INSTANT2("cat", "name", TRACE_SCOPE_THREAD, "k1", "v1", "k2", "v2");
-  TRACE_INSTANT3("cat", "name", TRACE_SCOPE_THREAD, "k1", "v1", "k2", "v2",
-                 "k3", "v3");
-  TRACE_INSTANT4("cat", "name", TRACE_SCOPE_THREAD, "k1", "v1", "k2", "v2",
-                 "k3", "v3", "k4", "v4");
+  TRACE_INSTANT("cat", "name", TRACE_SCOPE_GLOBAL);
+  TRACE_INSTANT("cat", "name", TRACE_SCOPE_PROCESS);
+  TRACE_INSTANT("cat", "name", TRACE_SCOPE_THREAD);
+  TRACE_INSTANT("cat", "name", TRACE_SCOPE_THREAD, "k1", "v1");
+  TRACE_INSTANT("cat", "name", TRACE_SCOPE_THREAD, "k1", "v1", "k2", "v2");
+  TRACE_INSTANT("cat", "name", TRACE_SCOPE_THREAD, "k1", "v1", "k2", "v2", "k3",
+                "v3");
+  TRACE_INSTANT("cat", "name", TRACE_SCOPE_THREAD, "k1", "v1", "k2", "v2", "k3",
+                "v3", "k4", "v4");
 }
 
 TEST_F(EventTest, Counter) {
-  TRACE_COUNTER1("cat", "name", 1, "k1", 1);
-  TRACE_COUNTER2("cat", "name", 1, "k1", 1, "k2", 2);
-  TRACE_COUNTER3("cat", "name", 1, "k1", 1, "k2", 2, "k3", 3);
-  TRACE_COUNTER4("cat", "name", 1, "k1", 1, "k2", 2, "k3", 3, "k4", 4);
+  TRACE_COUNTER("cat", "name", 1, "k1", 1);
+  TRACE_COUNTER("cat", "name", 1, "k1", 1, "k2", 2);
+  TRACE_COUNTER("cat", "name", 1, "k1", 1, "k2", 2, "k3", 3);
+  TRACE_COUNTER("cat", "name", 1, "k1", 1, "k2", 2, "k3", 3, "k4", 4);
 }
 
 TEST_F(EventTest, Duration) {
-  TRACE_DURATION0("cat", "name");
-  TRACE_DURATION1("cat", "name", "k1", "v1");
-  TRACE_DURATION2("cat", "name", "k1", "v1", "k2", "v2");
-  TRACE_DURATION3("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_DURATION4("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3", "k4",
-                  "v4");
+  TRACE_DURATION("cat", "name");
+  TRACE_DURATION("cat", "name", "k1", "v1");
+  TRACE_DURATION("cat", "name", "k1", "v1", "k2", "v2");
+  TRACE_DURATION("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_DURATION("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4");
 }
 
 TEST_F(EventTest, DurationBegin) {
-  TRACE_DURATION_BEGIN0("cat", "name");
-  TRACE_DURATION_BEGIN1("cat", "name", "k1", "v1");
-  TRACE_DURATION_BEGIN2("cat", "name", "k1", "v1", "k2", "v2");
-  TRACE_DURATION_BEGIN3("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_DURATION_BEGIN4("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3", "k4",
-                        "v4");
+  TRACE_DURATION_BEGIN("cat", "name");
+  TRACE_DURATION_BEGIN("cat", "name", "k1", "v1");
+  TRACE_DURATION_BEGIN("cat", "name", "k1", "v1", "k2", "v2");
+  TRACE_DURATION_BEGIN("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_DURATION_BEGIN("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+                       "v4");
 }
 
 TEST_F(EventTest, DurationEnd) {
-  TRACE_DURATION_END0("cat", "name");
-  TRACE_DURATION_END1("cat", "name", "k1", "v1");
-  TRACE_DURATION_END2("cat", "name", "k1", "v1", "k2", "v2");
-  TRACE_DURATION_END3("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_DURATION_END4("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3", "k4",
-                      "v4");
-}
-
-TEST_F(EventTest, AsyncBegin) {
-  TRACE_ASYNC_BEGIN0("cat", "name", 1);
-  TRACE_ASYNC_BEGIN1("cat", "name", 1, "k1", "v1");
-  TRACE_ASYNC_BEGIN2("cat", "name", 1, "k1", "v1", "k2", "v2");
-  TRACE_ASYNC_BEGIN3("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_ASYNC_BEGIN4("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+  TRACE_DURATION_END("cat", "name");
+  TRACE_DURATION_END("cat", "name", "k1", "v1");
+  TRACE_DURATION_END("cat", "name", "k1", "v1", "k2", "v2");
+  TRACE_DURATION_END("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_DURATION_END("cat", "name", "k1", "v1", "k2", "v2", "k3", "v3", "k4",
                      "v4");
 }
 
-TEST_F(EventTest, AsyncInstant) {
-  TRACE_ASYNC_INSTANT0("cat", "name", 1);
-  TRACE_ASYNC_INSTANT1("cat", "name", 1, "k1", "v1");
-  TRACE_ASYNC_INSTANT2("cat", "name", 1, "k1", "v1", "k2", "v2");
-  TRACE_ASYNC_INSTANT3("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_ASYNC_INSTANT4("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3",
-                       "k4", "v4");
-}
-
-TEST_F(EventTest, AsyncEnd) {
-  TRACE_ASYNC_END0("cat", "name", 1);
-  TRACE_ASYNC_END1("cat", "name", 1, "k1", "v1");
-  TRACE_ASYNC_END2("cat", "name", 1, "k1", "v1", "k2", "v2");
-  TRACE_ASYNC_END3("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_ASYNC_END4("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
-                   "v4");
-}
-
-TEST_F(EventTest, FlowBegin) {
-  TRACE_FLOW_BEGIN0("cat", "name", 1);
-  TRACE_FLOW_BEGIN1("cat", "name", 1, "k1", "v1");
-  TRACE_FLOW_BEGIN2("cat", "name", 1, "k1", "v1", "k2", "v2");
-  TRACE_FLOW_BEGIN3("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_FLOW_BEGIN4("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+TEST_F(EventTest, AsyncBegin) {
+  TRACE_ASYNC_BEGIN("cat", "name", 1);
+  TRACE_ASYNC_BEGIN("cat", "name", 1, "k1", "v1");
+  TRACE_ASYNC_BEGIN("cat", "name", 1, "k1", "v1", "k2", "v2");
+  TRACE_ASYNC_BEGIN("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_ASYNC_BEGIN("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
                     "v4");
 }
 
-TEST_F(EventTest, FlowStep) {
-  TRACE_FLOW_STEP0("cat", "name", 1);
-  TRACE_FLOW_STEP1("cat", "name", 1, "k1", "v1");
-  TRACE_FLOW_STEP2("cat", "name", 1, "k1", "v1", "k2", "v2");
-  TRACE_FLOW_STEP3("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_FLOW_STEP4("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
-                   "v4");
+TEST_F(EventTest, AsyncInstant) {
+  TRACE_ASYNC_INSTANT("cat", "name", 1);
+  TRACE_ASYNC_INSTANT("cat", "name", 1, "k1", "v1");
+  TRACE_ASYNC_INSTANT("cat", "name", 1, "k1", "v1", "k2", "v2");
+  TRACE_ASYNC_INSTANT("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_ASYNC_INSTANT("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3",
+                      "k4", "v4");
 }
 
-TEST_F(EventTest, FlowEnd) {
-  TRACE_FLOW_END0("cat", "name", 1);
-  TRACE_FLOW_END1("cat", "name", 1, "k1", "v1");
-  TRACE_FLOW_END2("cat", "name", 1, "k1", "v1", "k2", "v2");
-  TRACE_FLOW_END3("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_FLOW_END4("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+TEST_F(EventTest, AsyncEnd) {
+  TRACE_ASYNC_END("cat", "name", 1);
+  TRACE_ASYNC_END("cat", "name", 1, "k1", "v1");
+  TRACE_ASYNC_END("cat", "name", 1, "k1", "v1", "k2", "v2");
+  TRACE_ASYNC_END("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_ASYNC_END("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
                   "v4");
 }
 
+TEST_F(EventTest, FlowBegin) {
+  TRACE_FLOW_BEGIN("cat", "name", 1);
+  TRACE_FLOW_BEGIN("cat", "name", 1, "k1", "v1");
+  TRACE_FLOW_BEGIN("cat", "name", 1, "k1", "v1", "k2", "v2");
+  TRACE_FLOW_BEGIN("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_FLOW_BEGIN("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+                   "v4");
+}
+
+TEST_F(EventTest, FlowStep) {
+  TRACE_FLOW_STEP("cat", "name", 1);
+  TRACE_FLOW_STEP("cat", "name", 1, "k1", "v1");
+  TRACE_FLOW_STEP("cat", "name", 1, "k1", "v1", "k2", "v2");
+  TRACE_FLOW_STEP("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_FLOW_STEP("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+                  "v4");
+}
+
+TEST_F(EventTest, FlowEnd) {
+  TRACE_FLOW_END("cat", "name", 1);
+  TRACE_FLOW_END("cat", "name", 1, "k1", "v1");
+  TRACE_FLOW_END("cat", "name", 1, "k1", "v1", "k2", "v2");
+  TRACE_FLOW_END("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_FLOW_END("cat", "name", 1, "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+                 "v4");
+}
+
 TEST_F(EventTest, Handle) {
-  TRACE_HANDLE0(mx_process_self());
-  TRACE_HANDLE1(mx_process_self(), "k1", "v1");
-  TRACE_HANDLE2(mx_process_self(), "k1", "v1", "k2", "v2");
-  TRACE_HANDLE3(mx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3");
-  TRACE_HANDLE4(mx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3", "k4",
-                "v4");
+  TRACE_HANDLE(mx_process_self());
+  TRACE_HANDLE(mx_process_self(), "k1", "v1");
+  TRACE_HANDLE(mx_process_self(), "k1", "v1", "k2", "v2");
+  TRACE_HANDLE(mx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3");
+  TRACE_HANDLE(mx_process_self(), "k1", "v1", "k2", "v2", "k3", "v3", "k4",
+               "v4");
 }
 
 TEST_F(EventTest, NullArguments) {
-  TRACE_DURATION_BEGIN1("cat", "name", "key", nullptr);
+  TRACE_DURATION_BEGIN("cat", "name", "key", nullptr);
 }
 
 TEST_F(EventTest, IntegralArguments) {
-  TRACE_DURATION_BEGIN1("cat", "name", "key", bool(true));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", bool(false));
+  TRACE_DURATION_BEGIN("cat", "name", "key", bool(true));
+  TRACE_DURATION_BEGIN("cat", "name", "key", bool(false));
 
-  TRACE_DURATION_BEGIN1("cat", "name", "key", int8_t(INT8_MIN));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", int8_t(INT8_MAX));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", int16_t(INT16_MIN));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", int16_t(INT16_MAX));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", int32_t(INT32_MIN));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", int32_t(INT32_MAX));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint32_t(0));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint32_t(UINT32_MAX));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", int64_t(INT64_MIN));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", int64_t(INT64_MAX));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint64_t(0));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint64_t(UINT64_MAX));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint8_t(0));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint8_t(UINT8_MAX));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint16_t(0));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint16_t(UINT16_MAX));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint32_t(0));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint32_t(UINT32_MAX));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint64_t(0));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", uint64_t(UINT64_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", int8_t(INT8_MIN));
+  TRACE_DURATION_BEGIN("cat", "name", "key", int8_t(INT8_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", int16_t(INT16_MIN));
+  TRACE_DURATION_BEGIN("cat", "name", "key", int16_t(INT16_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", int32_t(INT32_MIN));
+  TRACE_DURATION_BEGIN("cat", "name", "key", int32_t(INT32_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint32_t(0));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint32_t(UINT32_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", int64_t(INT64_MIN));
+  TRACE_DURATION_BEGIN("cat", "name", "key", int64_t(INT64_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint64_t(0));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint64_t(UINT64_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint8_t(0));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint8_t(UINT8_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint16_t(0));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint16_t(UINT16_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint32_t(0));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint32_t(UINT32_MAX));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint64_t(0));
+  TRACE_DURATION_BEGIN("cat", "name", "key", uint64_t(UINT64_MAX));
 }
 
 TEST_F(EventTest, EnumArguments) {
@@ -203,19 +202,19 @@ TEST_F(EventTest, EnumArguments) {
   enum class Int64Enum : int64_t { kZero, kOne };
   enum class UInt64Enum : uint64_t { kZero, kOne };
 
-  TRACE_DURATION_BEGIN1("cat", "name", "key", Int8Enum::kOne);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", UInt8Enum::kOne);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", Int16Enum::kOne);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", UInt16Enum::kOne);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", Int32Enum::kOne);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", UInt32Enum::kOne);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", Int64Enum::kOne);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", UInt64Enum::kOne);
+  TRACE_DURATION_BEGIN("cat", "name", "key", Int8Enum::kOne);
+  TRACE_DURATION_BEGIN("cat", "name", "key", UInt8Enum::kOne);
+  TRACE_DURATION_BEGIN("cat", "name", "key", Int16Enum::kOne);
+  TRACE_DURATION_BEGIN("cat", "name", "key", UInt16Enum::kOne);
+  TRACE_DURATION_BEGIN("cat", "name", "key", Int32Enum::kOne);
+  TRACE_DURATION_BEGIN("cat", "name", "key", UInt32Enum::kOne);
+  TRACE_DURATION_BEGIN("cat", "name", "key", Int64Enum::kOne);
+  TRACE_DURATION_BEGIN("cat", "name", "key", UInt64Enum::kOne);
 }
 
 TEST_F(EventTest, FloatArguments) {
-  TRACE_DURATION_BEGIN1("cat", "name", "key", float(1.f));
-  TRACE_DURATION_BEGIN1("cat", "name", "key", double(1.));
+  TRACE_DURATION_BEGIN("cat", "name", "key", float(1.f));
+  TRACE_DURATION_BEGIN("cat", "name", "key", double(1.));
 }
 
 TEST_F(EventTest, StringArguments) {
@@ -224,10 +223,10 @@ TEST_F(EventTest, StringArguments) {
   const char kCharArray[] = "char[n]";
   std::string kString = "std::string";
 
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kNull);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kConstChar);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kCharArray);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kString);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kNull);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kConstChar);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kCharArray);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kString);
 }
 
 TEST_F(EventTest, PointerArguments) {
@@ -240,18 +239,18 @@ TEST_F(EventTest, PointerArguments) {
   volatile void* kVolatilePtr = &kNull;
   const volatile void* kConstVolatilePtr = &kNull;
 
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kNull);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kConstNull);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kVolatileNull);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kConstVolatileNull);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kPtr);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kConstPtr);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kVolatilePtr);
-  TRACE_DURATION_BEGIN1("cat", "name", "key", kConstVolatilePtr);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kNull);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kConstNull);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kVolatileNull);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kConstVolatileNull);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kPtr);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kConstPtr);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kVolatilePtr);
+  TRACE_DURATION_BEGIN("cat", "name", "key", kConstVolatilePtr);
 }
 
 TEST_F(EventTest, KoidArguments) {
-  TRACE_DURATION_BEGIN1("cat", "name", "key", TRACE_KOID(42u));
+  TRACE_DURATION_BEGIN("cat", "name", "key", TRACE_KOID(42u));
 }
 
 }  // namespace

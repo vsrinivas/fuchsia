@@ -16,6 +16,18 @@ namespace tracing {
 namespace writer {
 namespace {
 
+auto NewArgumentList(TraceWriter& writer) {
+  int i = 0;
+  return MakeArgumentList(writer,
+                          "int32", int32_t(42),
+                          "int64", int64_t(-42),
+                          "double", 42.42,
+                          "cstring", "constant",
+                          "dstring", std::string("dynamic"),
+                          "pointer", &i,
+                          "koid", Koid(1 << 10));
+}
+
 struct WriterTest : public ::testing::Test {
   WriterTest() {
     mx::vmo buffer;
@@ -154,84 +166,30 @@ TEST_F(WriterTest, EventWritingWithArguments) {
   ThreadRef thread_ref = writer.RegisterCurrentThread();
   StringRef category_ref = writer.RegisterString("cat", true);
   StringRef name_ref = writer.RegisterString("name");
-  int i = 0;
 
-  writer.WriteDurationBeginEventRecord(
-      GetTicksNow(), thread_ref, category_ref, name_ref,
-      MakeArgument(writer, "int32", int32_t(42)),
-      MakeArgument(writer, "int64", int64_t(-42)),
-      MakeArgument(writer, "double", 42.42),
-      MakeArgument(writer, "cstring", "constant"),
-      MakeArgument(writer, "dstring", std::string("dynamic")),
-      MakeArgument(writer, "pointer", &i),
-      MakeArgument(writer, "koid", Koid(1 << 10)));
+  writer.WriteDurationBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                       name_ref, NewArgumentList(writer));
 
-  writer.WriteDurationEndEventRecord(
-      GetTicksNow(), thread_ref, category_ref, name_ref,
-      MakeArgument(writer, "int32", int32_t(42)),
-      MakeArgument(writer, "int64", int64_t(-42)),
-      MakeArgument(writer, "double", 42.42),
-      MakeArgument(writer, "cstring", "constant"),
-      MakeArgument(writer, "dstring", std::string("dynamic")),
-      MakeArgument(writer, "pointer", &i),
-      MakeArgument(writer, "koid", Koid(1 << 10)));
+  writer.WriteDurationEndEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                     name_ref, NewArgumentList(writer));
 
-  writer.WriteAsyncBeginEventRecord(
-      GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-      MakeArgument(writer, "int32", int32_t(42)),
-      MakeArgument(writer, "int64", int64_t(-42)),
-      MakeArgument(writer, "double", 42.42),
-      MakeArgument(writer, "cstring", "constant"),
-      MakeArgument(writer, "dstring", std::string("dynamic")),
-      MakeArgument(writer, "pointer", &i),
-      MakeArgument(writer, "koid", Koid(1 << 10)));
+  writer.WriteAsyncBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                    name_ref, 42, NewArgumentList(writer));
 
-  writer.WriteAsyncInstantEventRecord(
-      GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-      MakeArgument(writer, "int32", int32_t(42)),
-      MakeArgument(writer, "int64", int64_t(-42)),
-      MakeArgument(writer, "double", 42.42),
-      MakeArgument(writer, "cstring", "constant"),
-      MakeArgument(writer, "dstring", std::string("dynamic")),
-      MakeArgument(writer, "pointer", &i),
-      MakeArgument(writer, "koid", Koid(1 << 10)));
+  writer.WriteAsyncInstantEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                      name_ref, 42, NewArgumentList(writer));
 
-  writer.WriteAsyncEndEventRecord(
-      GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-      MakeArgument(writer, "int32", int32_t(42)),
-      MakeArgument(writer, "int64", int64_t(-42)),
-      MakeArgument(writer, "double", 42.42),
-      MakeArgument(writer, "cstring", "constant"),
-      MakeArgument(writer, "dstring", std::string("dynamic")),
-      MakeArgument(writer, "pointer", &i),
-      MakeArgument(writer, "koid", Koid(1 << 10)));
+  writer.WriteAsyncEndEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                  name_ref, 42, NewArgumentList(writer));
 
-  writer.WriteFlowBeginEventRecord(
-      GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-      MakeArgument(writer, "int64", int64_t(-42)),
-      MakeArgument(writer, "double", 42.42),
-      MakeArgument(writer, "cstring", "constant"),
-      MakeArgument(writer, "dstring", std::string("dynamic")),
-      MakeArgument(writer, "pointer", &i),
-      MakeArgument(writer, "koid", Koid(1 << 10)));
+  writer.WriteFlowBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                   name_ref, 42, NewArgumentList(writer));
 
-  writer.WriteFlowStepEventRecord(
-      GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-      MakeArgument(writer, "int64", int64_t(-42)),
-      MakeArgument(writer, "double", 42.42),
-      MakeArgument(writer, "cstring", "constant"),
-      MakeArgument(writer, "dstring", std::string("dynamic")),
-      MakeArgument(writer, "pointer", &i),
-      MakeArgument(writer, "koid", Koid(1 << 10)));
+  writer.WriteFlowStepEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                  name_ref, 42, NewArgumentList(writer));
 
-  writer.WriteFlowEndEventRecord(
-      GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-      MakeArgument(writer, "int64", int64_t(-42)),
-      MakeArgument(writer, "double", 42.42),
-      MakeArgument(writer, "cstring", "constant"),
-      MakeArgument(writer, "dstring", std::string("dynamic")),
-      MakeArgument(writer, "pointer", &i),
-      MakeArgument(writer, "koid", Koid(1 << 10)));
+  writer.WriteFlowEndEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                 name_ref, 42, NewArgumentList(writer));
 }
 
 TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
@@ -243,84 +201,33 @@ TEST_F(WriterTest, EventWritingWithArgumentsMultiThreaded) {
       ThreadRef thread_ref = writer.RegisterCurrentThread();
       StringRef category_ref = writer.RegisterString("cat", true);
       StringRef name_ref = writer.RegisterString("name");
-      int i = 0;
 
-      writer.WriteDurationBeginEventRecord(
-          GetTicksNow(), thread_ref, category_ref, name_ref,
-          MakeArgument(writer, "int32", int32_t(42)),
-          MakeArgument(writer, "int64", int64_t(-42)),
-          MakeArgument(writer, "double", 42.42),
-          MakeArgument(writer, "cstring", "constant"),
-          MakeArgument(writer, "dstring", std::string("dynamic")),
-          MakeArgument(writer, "pointer", &i),
-          MakeArgument(writer, "koid", Koid(1 << 10)));
+      writer.WriteDurationBeginEventRecord(GetTicksNow(), thread_ref,
+                                           category_ref, name_ref,
+                                           NewArgumentList(writer));
 
-      writer.WriteDurationEndEventRecord(
-          GetTicksNow(), thread_ref, category_ref, name_ref,
-          MakeArgument(writer, "int32", int32_t(42)),
-          MakeArgument(writer, "int64", int64_t(-42)),
-          MakeArgument(writer, "double", 42.42),
-          MakeArgument(writer, "cstring", "constant"),
-          MakeArgument(writer, "dstring", std::string("dynamic")),
-          MakeArgument(writer, "pointer", &i),
-          MakeArgument(writer, "koid", Koid(1 << 10)));
+      writer.WriteDurationEndEventRecord(GetTicksNow(), thread_ref,
+                                         category_ref, name_ref,
+                                         NewArgumentList(writer));
 
-      writer.WriteAsyncBeginEventRecord(
-          GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-          MakeArgument(writer, "int32", int32_t(42)),
-          MakeArgument(writer, "int64", int64_t(-42)),
-          MakeArgument(writer, "double", 42.42),
-          MakeArgument(writer, "cstring", "constant"),
-          MakeArgument(writer, "dstring", std::string("dynamic")),
-          MakeArgument(writer, "pointer", &i),
-          MakeArgument(writer, "koid", Koid(1 << 10)));
+      writer.WriteAsyncBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                        name_ref, 42, NewArgumentList(writer));
 
-      writer.WriteAsyncInstantEventRecord(
-          GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-          MakeArgument(writer, "int32", int32_t(42)),
-          MakeArgument(writer, "int64", int64_t(-42)),
-          MakeArgument(writer, "double", 42.42),
-          MakeArgument(writer, "cstring", "constant"),
-          MakeArgument(writer, "dstring", std::string("dynamic")),
-          MakeArgument(writer, "pointer", &i),
-          MakeArgument(writer, "koid", Koid(1 << 10)));
+      writer.WriteAsyncInstantEventRecord(GetTicksNow(), thread_ref,
+                                          category_ref, name_ref, 42,
+                                          NewArgumentList(writer));
 
-      writer.WriteAsyncEndEventRecord(
-          GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-          MakeArgument(writer, "int32", int32_t(42)),
-          MakeArgument(writer, "int64", int64_t(-42)),
-          MakeArgument(writer, "double", 42.42),
-          MakeArgument(writer, "cstring", "constant"),
-          MakeArgument(writer, "dstring", std::string("dynamic")),
-          MakeArgument(writer, "pointer", &i),
-          MakeArgument(writer, "koid", Koid(1 << 10)));
+      writer.WriteAsyncEndEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                      name_ref, 42, NewArgumentList(writer));
 
-      writer.WriteFlowBeginEventRecord(
-          GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-          MakeArgument(writer, "int64", int64_t(-42)),
-          MakeArgument(writer, "double", 42.42),
-          MakeArgument(writer, "cstring", "constant"),
-          MakeArgument(writer, "dstring", std::string("dynamic")),
-          MakeArgument(writer, "pointer", &i),
-          MakeArgument(writer, "koid", Koid(1 << 10)));
+      writer.WriteFlowBeginEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                       name_ref, 42, NewArgumentList(writer));
 
-      writer.WriteFlowStepEventRecord(
-          GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-          MakeArgument(writer, "int64", int64_t(-42)),
-          MakeArgument(writer, "double", 42.42),
-          MakeArgument(writer, "cstring", "constant"),
-          MakeArgument(writer, "dstring", std::string("dynamic")),
-          MakeArgument(writer, "pointer", &i),
-          MakeArgument(writer, "koid", Koid(1 << 10)));
+      writer.WriteFlowStepEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                      name_ref, 42, NewArgumentList(writer));
 
-      writer.WriteFlowEndEventRecord(
-          GetTicksNow(), thread_ref, category_ref, name_ref, 42,
-          MakeArgument(writer, "int64", int64_t(-42)),
-          MakeArgument(writer, "double", 42.42),
-          MakeArgument(writer, "cstring", "constant"),
-          MakeArgument(writer, "dstring", std::string("dynamic")),
-          MakeArgument(writer, "pointer", &i),
-          MakeArgument(writer, "koid", Koid(1 << 10)));
+      writer.WriteFlowEndEventRecord(GetTicksNow(), thread_ref, category_ref,
+                                     name_ref, 42, NewArgumentList(writer));
     });
   }
 

@@ -21,16 +21,8 @@
 #define TRACE_INTERNAL_WRITER __trace_writer
 #define TRACE_INTERNAL_EVENT_CATEGORY_REF __trace_event_category_ref
 
-#define TRACE_INTERNAL_MAKE_ARG(key, value) \
-  , MakeArgument(TRACE_INTERNAL_WRITER, key, value)
-#define TRACE_INTERNAL_MAKE_ARGS1(k1, v1) TRACE_INTERNAL_MAKE_ARG(k1, v1)
-#define TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2) \
-  TRACE_INTERNAL_MAKE_ARGS1(k1, v1) TRACE_INTERNAL_MAKE_ARG(k2, v2)
-#define TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3) \
-  TRACE_INTERNAL_MAKE_ARGS2(k1, v1, k2, v2) TRACE_INTERNAL_MAKE_ARG(k3, v3)
-#define TRACE_INTERNAL_MAKE_ARGS4(k1, v1, k2, v2, k3, v3, k4, v4) \
-  TRACE_INTERNAL_MAKE_ARGS3(k1, v1, k2, v2, k3, v3)               \
-  TRACE_INTERNAL_MAKE_ARG(k4, v4)
+#define TRACE_INTERNAL_MAKE_ARGS(args...) \
+  ::tracing::writer::MakeArgumentList(TRACE_INTERNAL_WRITER, ##args)
 
 #define TRACE_INTERNAL_SIMPLE(stmt)                                         \
   do {                                                                      \
@@ -55,80 +47,80 @@
     }                                                                       \
   } while (0)
 
-#define TRACE_INTERNAL_INSTANT(category, name, scope, args...)                \
+#define TRACE_INTERNAL_INSTANT(category, name, scope, args)                   \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteInstantEventRecord(                 \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name, scope args))
+                    name, scope, args))
 
-#define TRACE_INTERNAL_COUNTER(category, name, id, args...)                   \
+#define TRACE_INTERNAL_COUNTER(category, name, id, args)                      \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteCounterEventRecord(                 \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name, id args))
+                    name, id, args))
 
-#define TRACE_INTERNAL_DURATION_BEGIN(category, name, args...)                \
+#define TRACE_INTERNAL_DURATION_BEGIN(category, name, args)                   \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteDurationBeginEventRecord(           \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name args))
+                    name, args))
 
-#define TRACE_INTERNAL_DURATION_END(category, name, args...)                  \
+#define TRACE_INTERNAL_DURATION_END(category, name, args)                     \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteDurationEndEventRecord(             \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name args))
+                    name, args))
 
 #define TRACE_INTERNAL_DURATION_SCOPE(scope_label, scope_category, scope_name, \
-                                      args...)                                 \
+                                      args)                                    \
   ::tracing::internal::DurationEventScope scope_label(scope_category,          \
                                                       scope_name);             \
   TRACE_INTERNAL_DURATION_BEGIN(scope_label.category(), scope_label.name(),    \
                                 args)
 
-#define TRACE_INTERNAL_DURATION(category, name, args...)                      \
+#define TRACE_INTERNAL_DURATION(category, name, args)                         \
   TRACE_INTERNAL_DURATION_SCOPE(TRACE_INTERNAL_SCOPE_LABEL(), category, name, \
                                 args)
 
-#define TRACE_INTERNAL_ASYNC_BEGIN(category, name, id, args...)               \
+#define TRACE_INTERNAL_ASYNC_BEGIN(category, name, id, args)                  \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteAsyncBeginEventRecord(              \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name, id args))
+                    name, id, args))
 
-#define TRACE_INTERNAL_ASYNC_INSTANT(category, name, id, args...)             \
+#define TRACE_INTERNAL_ASYNC_INSTANT(category, name, id, args)                \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteAsyncInstantEventRecord(            \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name, id args))
+                    name, id, args))
 
-#define TRACE_INTERNAL_ASYNC_END(category, name, id, args...)                 \
+#define TRACE_INTERNAL_ASYNC_END(category, name, id, args)                    \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteAsyncEndEventRecord(                \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name, id args))
+                    name, id, args))
 
-#define TRACE_INTERNAL_FLOW_BEGIN(category, name, id, args...)                \
+#define TRACE_INTERNAL_FLOW_BEGIN(category, name, id, args)                   \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteFlowBeginEventRecord(               \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name, id args))
+                    name, id, args))
 
-#define TRACE_INTERNAL_FLOW_STEP(category, name, id, args...)                 \
+#define TRACE_INTERNAL_FLOW_STEP(category, name, id, args)                    \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteFlowStepEventRecord(                \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name, id args))
+                    name, id, args))
 
-#define TRACE_INTERNAL_FLOW_END(category, name, id, args...)                  \
+#define TRACE_INTERNAL_FLOW_END(category, name, id, args)                     \
   TRACE_INTERNAL_EVENT(                                                       \
       category, ::tracing::internal::WriteFlowEndEventRecord(                 \
                     TRACE_INTERNAL_WRITER, TRACE_INTERNAL_EVENT_CATEGORY_REF, \
-                    name, id args))
+                    name, id, args))
 
-#define TRACE_INTERNAL_HANDLE(handle, args...) \
-  TRACE_INTERNAL_SIMPLE(                       \
-      TRACE_INTERNAL_WRITER.WriteKernelObjectRecord(handle args))
+#define TRACE_INTERNAL_HANDLE(handle, args) \
+  TRACE_INTERNAL_SIMPLE(                    \
+      TRACE_INTERNAL_WRITER.WriteKernelObjectRecord(handle, args))
 
 namespace tracing {
 namespace internal {
@@ -255,7 +247,9 @@ class DurationEventScope {
   explicit DurationEventScope(const char* category, const char* name)
       : category_(category), name_(name) {}
 
-  ~DurationEventScope() { TRACE_INTERNAL_DURATION_END(category_, name_); }
+  ~DurationEventScope() {
+    TRACE_INTERNAL_DURATION_END(category_, name_, TRACE_INTERNAL_MAKE_ARGS());
+  }
 
   const char* category() const { return category_; }
   const char* name() const { return name_; }

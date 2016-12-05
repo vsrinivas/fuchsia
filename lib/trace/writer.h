@@ -182,14 +182,6 @@ class Payload {
     return *this;
   }
 
-  template <typename Head, typename... Tail>
-  Payload& WriteValues(Head&& head, Tail&&... tail) {
-    WriteValue(head);
-    return WriteValues(std::forward<Tail>(tail)...);
-  }
-
-  Payload& WriteValues() { return *this; }
-
  private:
   uint64_t* ptr_;
 };
@@ -492,6 +484,40 @@ class KoidArgument : public Argument {
   mx_koid_t const koid_;
 };
 
+// Represents a list of arguments.
+template <typename... Args>
+class ArgumentList;
+
+template <>
+class ArgumentList<> {
+ public:
+  constexpr size_t Size() const { return 0u; }
+
+  constexpr size_t ElementCount() const { return 0u; }
+
+  constexpr void WriteTo(Payload& payload) const {}
+};
+
+template <typename Arg, typename ArgList>
+class ArgumentList<Arg, ArgList> {
+ public:
+  explicit constexpr ArgumentList(Arg arg, ArgList next)
+      : arg_(std::move(arg)), next_(std::move(next)) {}
+
+  constexpr size_t Size() const { return arg_.Size() + next_.Size(); }
+
+  constexpr size_t ElementCount() const { return 1 + next_.ElementCount(); }
+
+  void WriteTo(Payload& payload) const {
+    arg_.WriteTo(payload);
+    next_.WriteTo(payload);
+  }
+
+ private:
+  const Arg arg_;
+  const ArgList next_;
+};
+
 // Gets the total size of a list of arguments.
 constexpr size_t SizeArguments() {
   return 0;
@@ -554,11 +580,11 @@ class TraceWriter final {
   // Writes a kernel object record about |handle| into the trace buffer.
   // Discards the record if it cannot be written.
   template <typename... Args>
-  void WriteKernelObjectRecord(mx_handle_t handle, Args&&... args) {
+  void WriteKernelObjectRecord(mx_handle_t handle,
+                               const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteKernelObjectRecordBase(
-            handle, sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...))) {
-      payload.WriteValues(std::forward<Args>(args)...);
+            handle, args.ElementCount(), args.Size())) {
+      payload.WriteValue(args);
     }
   }
 
@@ -578,13 +604,12 @@ class TraceWriter final {
                                const StringRef& category_ref,
                                const StringRef& name_ref,
                                EventScope scope,
-                               Args&&... args) {
+                               const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kInstant, event_time, thread_ref, category_ref, name_ref,
-            sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-      payload.WriteValues(std::forward<Args>(args)...)
-          .Write(::tracing::internal::ToUnderlyingType(scope));
+            args.ElementCount(), args.Size() + sizeof(uint64_t))) {
+      payload.WriteValue(args).Write(
+          ::tracing::internal::ToUnderlyingType(scope));
     }
   }
 
@@ -596,12 +621,11 @@ class TraceWriter final {
                                const StringRef& category_ref,
                                const StringRef& name_ref,
                                uint64_t id,
-                               Args&&... args) {
+                               const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kCounter, event_time, thread_ref, category_ref, name_ref,
-            sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+            args.ElementCount(), args.Size() + sizeof(uint64_t))) {
+      payload.WriteValue(args).Write(id);
     }
   }
 
@@ -612,12 +636,11 @@ class TraceWriter final {
                                      const ThreadRef& thread_ref,
                                      const StringRef& category_ref,
                                      const StringRef& name_ref,
-                                     Args&&... args) {
+                                     const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kDurationBegin, event_time, thread_ref, category_ref,
-            name_ref, sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...))) {
-      payload.WriteValues(std::forward<Args>(args)...);
+            name_ref, args.ElementCount(), args.Size())) {
+      payload.WriteValue(args);
     }
   }
 
@@ -628,12 +651,11 @@ class TraceWriter final {
                                    const ThreadRef& thread_ref,
                                    const StringRef& category_ref,
                                    const StringRef& name_ref,
-                                   Args&&... args) {
+                                   const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kDurationEnd, event_time, thread_ref, category_ref,
-            name_ref, sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...))) {
-      payload.WriteValues(std::forward<Args>(args)...);
+            name_ref, args.ElementCount(), args.Size())) {
+      payload.WriteValue(args);
     }
   }
 
@@ -645,12 +667,11 @@ class TraceWriter final {
                                   const StringRef& category_ref,
                                   const StringRef& name_ref,
                                   uint64_t id,
-                                  Args&&... args) {
+                                  const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kAsyncStart, event_time, thread_ref, category_ref,
-            name_ref, sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+            name_ref, args.ElementCount(), args.Size() + sizeof(uint64_t))) {
+      payload.WriteValue(args).Write(id);
     }
   }
 
@@ -662,12 +683,11 @@ class TraceWriter final {
                                     const StringRef& category_ref,
                                     const StringRef& name_ref,
                                     uint64_t id,
-                                    Args&&... args) {
+                                    const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kAsyncInstant, event_time, thread_ref, category_ref,
-            name_ref, sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+            name_ref, args.ElementCount(), args.Size() + sizeof(uint64_t))) {
+      payload.WriteValue(args).Write(id);
     }
   }
 
@@ -679,12 +699,11 @@ class TraceWriter final {
                                 const StringRef& category_ref,
                                 const StringRef& name_ref,
                                 uint64_t id,
-                                Args&&... args) {
+                                const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kAsyncEnd, event_time, thread_ref, category_ref,
-            name_ref, sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+            name_ref, args.ElementCount(), args.Size() + sizeof(uint64_t))) {
+      payload.WriteValue(args).Write(id);
     }
   }
 
@@ -696,12 +715,11 @@ class TraceWriter final {
                                  const StringRef& category_ref,
                                  const StringRef& name_ref,
                                  uint64_t id,
-                                 Args&&... args) {
+                                 const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kFlowBegin, event_time, thread_ref, category_ref,
-            name_ref, sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+            name_ref, args.ElementCount(), args.Size() + sizeof(uint64_t))) {
+      payload.WriteValue(args).Write(id);
     }
   }
 
@@ -713,12 +731,11 @@ class TraceWriter final {
                                 const StringRef& category_ref,
                                 const StringRef& name_ref,
                                 uint64_t id,
-                                Args&&... args) {
+                                const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kFlowStep, event_time, thread_ref, category_ref,
-            name_ref, sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+            name_ref, args.ElementCount(), args.Size() + sizeof(uint64_t))) {
+      payload.WriteValue(args).Write(id);
     }
   }
 
@@ -730,12 +747,11 @@ class TraceWriter final {
                                const StringRef& category_ref,
                                const StringRef& name_ref,
                                uint64_t id,
-                               Args&&... args) {
+                               const ArgumentList<Args...>& args = {}) {
     if (Payload payload = WriteEventRecordBase(
             EventType::kFlowEnd, event_time, thread_ref, category_ref, name_ref,
-            sizeof...(Args),
-            SizeArguments(std::forward<Args>(args)...) + sizeof(uint64_t))) {
-      payload.WriteValues(std::forward<Args>(args)...).Write(id);
+            args.ElementCount(), args.Size() + sizeof(uint64_t))) {
+      payload.WriteValue(args).Write(id);
     }
   }
 
@@ -909,6 +925,83 @@ typename ArgumentMaker<T>::ResultType MakeArgument(TraceWriter& writer,
                                                    const char* name,
                                                    const T& value) {
   return ArgumentMaker<T>::Make(writer, writer.RegisterString(name), value);
+}
+
+// Computes the ArgumentList<> type associated with a sequence of alternating
+// key and value types.
+template <typename... Args>
+struct ComputeArgumentListTypeFromPairs {};
+
+template <>
+struct ComputeArgumentListTypeFromPairs<> {
+  using ResultType = ArgumentList<>;
+};
+
+template <typename KT, typename VT, typename... Args>
+struct ComputeArgumentListTypeFromPairs<KT, VT, Args...> {
+  using ResultType = ArgumentList<
+      typename ArgumentMaker<typename std::decay<VT>::type>::ResultType,
+      typename ComputeArgumentListTypeFromPairs<Args...>::ResultType>;
+};
+
+// Builds an ArgumentList from a sequence of alternating keys and values.
+template <typename... Args>
+inline typename ComputeArgumentListTypeFromPairs<Args...>::ResultType
+MakeArgumentList(TraceWriter& writer, Args&&... args);
+
+template <>
+inline ArgumentList<> MakeArgumentList(TraceWriter& writer) {
+  return ArgumentList<>();
+}
+
+template <typename KT, typename VT, typename... Args>
+inline ArgumentList<
+    typename ArgumentMaker<typename std::decay<VT>::type>::ResultType,
+    typename ComputeArgumentListTypeFromPairs<Args...>::ResultType>
+MakeArgumentList(TraceWriter& writer, KT&& name, VT&& value, Args&&... args) {
+  static_assert(std::is_same<typename std::decay<KT>::type, const char*>::value,
+                "The key must be a constant string.");
+  return ArgumentList<
+      typename ArgumentMaker<typename std::decay<VT>::type>::ResultType,
+      typename ComputeArgumentListTypeFromPairs<Args...>::ResultType>(
+      MakeArgument(writer, std::forward<KT>(name), std::forward<VT>(value)),
+      MakeArgumentList(writer, std::forward<Args>(args)...));
+}
+
+// Compute the ArgumentList<> type associated with a sequence of Argument.
+template <typename... Args>
+struct ComputeArgumentListTypeFromArgs;
+
+template <>
+struct ComputeArgumentListTypeFromArgs<> {
+  using ResultType = ArgumentList<>;
+};
+
+template <typename Arg, typename... Args>
+struct ComputeArgumentListTypeFromArgs<Arg, Args...> {
+  using ResultType = ArgumentList<
+      Arg,
+      typename ComputeArgumentListTypeFromArgs<Args...>::ResultType>;
+};
+
+// Builds an ArgumentList from a sequence of Argument.
+template <typename... Args>
+typename ComputeArgumentListTypeFromArgs<Args...>::ResultType ToArgumentList(
+    Args&&... args);
+
+template <>
+inline ArgumentList<> ToArgumentList() {
+  return ArgumentList<>();
+}
+
+template <typename Arg, typename... Args>
+inline ArgumentList<
+    Arg,
+    typename ComputeArgumentListTypeFromArgs<Args...>::ResultType>
+ToArgumentList(Arg&& arg, Args&&... args) {
+  return ArgumentList<
+      Arg, typename ComputeArgumentListTypeFromArgs<Args...>::ResultType>(
+      std::forward<Arg>(arg), ToArgumentList(std::forward<Args>(args)...));
 }
 
 }  // namespace writer
