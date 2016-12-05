@@ -47,6 +47,14 @@ bool IsValidValue(const std::string s) {
   }
 
   for (const char& c : s) {
+    if (0 <= c && c <= 31) {
+      return false;
+    }
+
+    if (c == 127) {
+      return false;
+    }
+
     if (c == '\"' || c == '\\') {
       return false;
     }
@@ -84,6 +92,12 @@ TEST(EncodingTest, BackAndForth) {
   EXPECT_EQ(s, ret_value);
 
   s = "\xFF";
+  EXPECT_TRUE(Decode(EncodeKey(s), &ret_key));
+  EXPECT_EQ(s, ret_key);
+  EXPECT_TRUE(Decode(EncodeValue(s), &ret_value));
+  EXPECT_EQ(s, ret_value);
+
+  s = "\x01";
   EXPECT_TRUE(Decode(EncodeKey(s), &ret_key));
   EXPECT_EQ(s, ret_key);
   EXPECT_TRUE(Decode(EncodeValue(s), &ret_value));
@@ -175,6 +189,12 @@ TEST(EncodingTest, ValidValues) {
   std::string decoded;
 
   original = "\x02, \x7F, \x18, \x1D are ok, [], $ and / too!";
+  encoded = EncodeValue(original);
+  EXPECT_TRUE(IsValidValue(encoded));
+  EXPECT_TRUE(Decode(encoded, &decoded));
+  EXPECT_EQ(original, decoded);
+
+  original = "\x01\x00\x02"_s;
   encoded = EncodeValue(original);
   EXPECT_TRUE(IsValidValue(encoded));
   EXPECT_TRUE(Decode(encoded, &decoded));

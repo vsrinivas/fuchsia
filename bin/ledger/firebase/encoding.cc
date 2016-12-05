@@ -12,17 +12,19 @@ namespace firebase {
 namespace {
 
 // Characters that are not allowed to appear in a Firebase key (but may appear
-// in the leaf). See
-// https://www.firebase.com/docs/rest/guide/understanding-data.html#section-limitations
-const char kIllegalKeyChars[] =
-    ".$#[]/+"
-    "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F"
-    "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F"
-    "\x7F";
+// in a leaf value). See
+// https://firebase.google.com/docs/database/rest/structure-data.
+const char kIllegalKeyChars[] = ".$#[]/+";
 const size_t kIllegalKeyCharsCount = sizeof(kIllegalKeyChars) - 1;
 
-// Characters not allowed neither as keys nor values.
-const char kIllegalChars[] = "\x00\"\\";
+// Characters not allowed neither as keys nor values. Firebase documentation
+// doesn't imply that control characters 0-31 are not allowed in *values*, but
+// experimentation suggests so.
+const char kIllegalChars[] =
+    "\"\\"
+    "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F"
+    "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F"
+    "\x7F";
 const size_t kIllegalCharsCount = sizeof(kIllegalChars) - 1;
 
 bool IsValidValue(const std::string& s) {
