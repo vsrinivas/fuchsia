@@ -98,12 +98,13 @@ struct {
     {"minfs", "/data/magenta-fs-test", mount_minfs, unmount_minfs},
 };
 
+int test_append(void);
+int test_basic(void);
+int test_directory(void);
 int test_maxfile(void);
 int test_rw_workers(void);
-int test_basic(void);
 int test_rename(void);
 int test_sync(void);
-int test_append(void);
 int test_truncate(void);
 
 struct {
@@ -111,9 +112,10 @@ struct {
     int (*test)(void);
 } FS_TESTS[] = {
     {"append", test_append},
+    {"basic", test_basic},
+    {"directory", test_directory},
     {"maxfile", test_maxfile},
     {"rw_workers", test_rw_workers},
-    {"basic", test_basic},
     {"rename", test_rename},
     {"sync", test_sync},
     {"truncate", test_truncate},

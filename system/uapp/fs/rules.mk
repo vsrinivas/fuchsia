@@ -14,9 +14,10 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/wrap.c \
     $(LOCAL_DIR)/test-append.c \
+    $(LOCAL_DIR)/test-basic.c \
+    $(LOCAL_DIR)/test-directory.c \
     $(LOCAL_DIR)/test-maxfile.c \
     $(LOCAL_DIR)/test-rw-workers.c \
-    $(LOCAL_DIR)/test-basic.c \
     $(LOCAL_DIR)/test-rename.c \
     $(LOCAL_DIR)/test-sync.c \
     $(LOCAL_DIR)/test-truncate.c \
