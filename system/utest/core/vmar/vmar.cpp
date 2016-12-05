@@ -262,10 +262,8 @@ bool destroyed_vmar_test() {
                   ERR_BAD_STATE, "");
         EXPECT_EQ(mx_vmar_unmap(region[i], map_addr[i], PAGE_SIZE),
                   ERR_BAD_STATE, "");
-        // TODO(teisenbe): This should be ERR_BAD_STATE, but currently the
-        // dispatcher layer can't distinguish a DEAD vmar from an empty one.
         EXPECT_EQ(mx_vmar_protect(region[i], map_addr[i], PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-                  ERR_NOT_FOUND, "");
+                  ERR_BAD_STATE, "");
         EXPECT_EQ(mx_vmar_map(region[i], 0, vmo, 0, PAGE_SIZE, MX_VM_FLAG_PERM_READ, &map_addr[i]),
                   ERR_BAD_STATE, "");
     }
@@ -1204,6 +1202,210 @@ bool map_specific_overwrite_test() {
     END_TEST;
 }
 
+// Verify that we can split a single mapping with a protect call
+bool protect_split_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t vmo;
+    uintptr_t mapping_addr;
+
+    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), NO_ERROR, "");
+
+    ASSERT_EQ(mx_vmo_create(4 * PAGE_SIZE, 0, &vmo), NO_ERROR, "");
+
+    // Protect from the left
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                          &mapping_addr),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr, 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
+              NO_ERROR, "");
+    // TODO(teisenbe): Test to validate perms changed, need to export more debug
+    // info
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b1111, 4), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr, 4 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4), "");
+
+    // Protect from the right
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                          &mapping_addr),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr + 2 * PAGE_SIZE,
+                              2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
+              NO_ERROR, "");
+    // TODO(teisenbe): Test to validate perms changed, need to export more debug
+    // info
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b1111, 4), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr, 4 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4), "");
+
+    // Protect from the center
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                          &mapping_addr),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr + PAGE_SIZE,
+                              2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
+              NO_ERROR, "");
+    // TODO(teisenbe): Test to validate perms changed, need to export more debug
+    // info
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b1111, 4), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr, 4 * PAGE_SIZE), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr, 0b0000, 4), "");
+
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
+// Validate that protect can be used across multiple mappings.  Make sure intersecting a subregion
+// or gap fails
+bool protect_multiple_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t vmo, vmo2;
+    mx_handle_t subregion;
+    uintptr_t mapping_addr[3];
+    uintptr_t subregion_addr;
+
+    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), NO_ERROR, "");
+    const size_t mapping_size = 4 * PAGE_SIZE;
+    ASSERT_EQ(mx_vmo_create(mapping_size, 0, &vmo), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_duplicate(vmo, MX_RIGHT_MAP | MX_RIGHT_READ, &vmo2), NO_ERROR, "");
+
+    // Protect from the right on the first mapping, all of the second mapping,
+    // and from the left on the third mapping.
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[0]),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(vmar, mapping_size, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[1]),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
+              NO_ERROR, "");
+    // TODO(teisenbe): Test to validate perms changed, need to export more debug
+    // info
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+
+    // Same thing, but map middle region with a VMO without the WRITE right
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[0]),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(vmar, mapping_size, vmo2, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[1]),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE),
+              ERR_ACCESS_DENIED, "");
+    // TODO(teisenbe): Test to validate no perms changed, need to export more debug
+    // info
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+
+    // Try to protect across a gap
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[0]),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
+              ERR_NOT_FOUND, "");
+    // TODO(teisenbe): Test to validate no perms changed, need to export more debug
+    // info
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0000'1111, 12), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+
+    // Try to protect across an empty subregion
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[0]),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_allocate(vmar, mapping_size, mapping_size,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
+                               MX_VM_FLAG_SPECIFIC,
+                               &subregion, &subregion_addr),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
+              ERR_INVALID_ARGS, "");
+    // TODO(teisenbe): Test to validate no perms changed, need to export more debug
+    // info
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'0000'1111, 12), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+    EXPECT_EQ(mx_handle_close(subregion), NO_ERROR, "");
+
+    // Try to protect across a subregion filled with mappings
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[0]),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_allocate(vmar, mapping_size, mapping_size,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE |
+                               MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_CAN_MAP_SPECIFIC,
+                               &subregion, &subregion_addr),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(subregion, 0, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[1]),
+              NO_ERROR, "");
+    ASSERT_EQ(mx_vmar_map(vmar, 2 * mapping_size, vmo, 0, mapping_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &mapping_addr[2]),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_protect(vmar, mapping_addr[0] + PAGE_SIZE,
+                              3 * mapping_size - 2 * PAGE_SIZE, MX_VM_FLAG_PERM_READ),
+              ERR_INVALID_ARGS, "");
+    // TODO(teisenbe): Test to validate no perms changed, need to export more debug
+    // info
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b1111'1111'1111, 12), "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, mapping_addr[0], 3 * mapping_size), NO_ERROR, "");
+    EXPECT_TRUE(check_pages_mapped(process, mapping_addr[0], 0b0000'0000'0000, 12), "");
+    EXPECT_EQ(mx_handle_close(subregion), NO_ERROR, "");
+
+    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo2), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(vmar_tests)
@@ -1223,6 +1425,8 @@ RUN_TEST(object_info_test);
 RUN_TEST(unmap_split_test);
 RUN_TEST(unmap_multiple_test);
 RUN_TEST(map_specific_overwrite_test);
+RUN_TEST(protect_split_test);
+RUN_TEST(protect_multiple_test);
 END_TEST_CASE(vmar_tests)
 
 #ifndef BUILD_COMBINED_TESTS

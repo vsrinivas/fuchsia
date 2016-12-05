@@ -57,21 +57,39 @@ void VmMapping::Dump(uint depth, bool verbose) const {
         object_->Dump(depth + 1, false);
 }
 
-status_t VmMapping::Protect(uint arch_mmu_flags) {
+status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == kMagic);
-LTRACEF("%p %s %#" PRIxPTR " %#x %#x\n", this, name_, base_, flags_, arch_mmu_flags);
+    LTRACEF("%p %s %#" PRIxPTR " %#x %#x\n", this, name_, base_, flags_, new_arch_mmu_flags);
 
-AutoLock guard(aspace_->lock());
+    if (!IS_PAGE_ALIGNED(base)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    size = ROUNDUP(size, PAGE_SIZE);
+
+    AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
         return ERR_BAD_STATE;
     }
 
-    // Do not allow changing caching
-    if (arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) {
+    if (size == 0 || !is_in_range(base, size)) {
         return ERR_INVALID_ARGS;
     }
 
-    if (!is_valid_mapping_flags(arch_mmu_flags)) {
+    return ProtectLocked(base, size, new_arch_mmu_flags);
+}
+
+
+status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
+    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+    DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(base) && IS_PAGE_ALIGNED(size));
+
+    // Do not allow changing caching
+    if (new_arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) {
+        return ERR_INVALID_ARGS;
+    }
+
+    if (!is_valid_mapping_flags(new_arch_mmu_flags)) {
         return ERR_ACCESS_DENIED;
     }
 
@@ -80,12 +98,96 @@ AutoLock guard(aspace_->lock());
     AutoLock al(object_->lock());
 
     // Persist our current caching mode
-    arch_mmu_flags_ = arch_mmu_flags | (arch_mmu_flags_ & ARCH_MMU_FLAG_CACHE_MASK);
+    new_arch_mmu_flags |= (arch_mmu_flags_ & ARCH_MMU_FLAG_CACHE_MASK);
 
-    auto err = arch_mmu_protect(&aspace_->arch_aspace(), base_, size_ / PAGE_SIZE, arch_mmu_flags_);
-    LTRACEF("arch_mmu_protect returns %d\n", err);
-    // TODO: deal with error mapping here
+    // If we're not actually changing permissions, return fast.
+    if (new_arch_mmu_flags == arch_mmu_flags_) {
+        return NO_ERROR;
+    }
 
+    // TODO(teisenbe): deal with error mapping on arch_mmu_protect fail
+
+    // If we're changing the whole mapping, just make the change.
+    if (base_ == base && size_ == size) {
+        status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
+                                           new_arch_mmu_flags);
+        LTRACEF("arch_mmu_protect returns %d\n", status);
+        arch_mmu_flags_ = new_arch_mmu_flags;
+        return NO_ERROR;
+    }
+
+    // Handle changing from the left
+    if (base_ == base) {
+        // Create a new mapping for the right half (has old perms)
+        AllocChecker ac;
+        mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
+                new (&ac) VmMapping(*parent_, base + size, size_ - size, flags_,
+                                    object_, object_offset_ + size, arch_mmu_flags_, name_)));
+        if (!ac.check()) {
+            return ERR_NO_MEMORY;
+        }
+
+        status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
+                                           new_arch_mmu_flags);
+        LTRACEF("arch_mmu_protect returns %d\n", status);
+        arch_mmu_flags_ = new_arch_mmu_flags;
+
+        size_ = size;
+        mapping->ActivateLocked();
+        return NO_ERROR;
+    }
+
+    // Handle changing from the right
+    if (base_ + size_ == base + size) {
+        // Create a new mapping for the right half (has new perms)
+        AllocChecker ac;
+
+        mxtl::RefPtr<VmMapping> mapping(mxtl::AdoptRef(
+                new (&ac) VmMapping(*parent_, base, size, flags_,
+                                    object_, object_offset_ + base - base_,
+                                    new_arch_mmu_flags, name_)));
+        if (!ac.check()) {
+            return ERR_NO_MEMORY;
+        }
+
+        status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
+                                           new_arch_mmu_flags);
+        LTRACEF("arch_mmu_protect returns %d\n", status);
+
+        size_ -= size;
+        mapping->ActivateLocked();
+        return NO_ERROR;
+    }
+
+    // We're unmapping from the center, so we need to create two new mappings
+    const size_t left_size = base - base_;
+    const size_t right_size = (base_ + size_) - (base + size);
+    const uint64_t center_vmo_offset = object_offset_ + base - base_;
+    const uint64_t right_vmo_offset = center_vmo_offset + size;
+
+    AllocChecker ac;
+    mxtl::RefPtr<VmMapping> center_mapping(mxtl::AdoptRef(
+            new (&ac) VmMapping(*parent_, base, size, flags_,
+                                object_, center_vmo_offset, new_arch_mmu_flags, name_)));
+    if (!ac.check()) {
+        return ERR_NO_MEMORY;
+    }
+    mxtl::RefPtr<VmMapping> right_mapping(mxtl::AdoptRef(
+            new (&ac) VmMapping(*parent_, base + size, right_size, flags_,
+                                object_, right_vmo_offset, arch_mmu_flags_, name_)));
+    if (!ac.check()) {
+        return ERR_NO_MEMORY;
+    }
+
+    status_t status = arch_mmu_protect(&aspace_->arch_aspace(), base, size / PAGE_SIZE,
+                                       new_arch_mmu_flags);
+    LTRACEF("arch_mmu_protect returns %d\n", status);
+
+    // Turn us into the left half
+    size_ = left_size;
+
+    center_mapping->ActivateLocked();
+    right_mapping->ActivateLocked();
     return NO_ERROR;
 }
 

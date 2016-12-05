@@ -619,3 +619,86 @@ status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size, bool ca
 
     return NO_ERROR;
 }
+
+status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
+    DEBUG_ASSERT(magic_ == kMagic);
+
+    if (size == 0 || !IS_PAGE_ALIGNED(base)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    size = ROUNDUP(size, PAGE_SIZE);
+
+    mxtl::RefPtr<VmAspace> aspace(aspace_);
+    if (!aspace) {
+        return ERR_BAD_STATE;
+    }
+
+    AutoLock guard(aspace->lock());
+    if (state_ != LifeCycleState::ALIVE) {
+        return ERR_BAD_STATE;
+    }
+
+    if (!is_in_range(base, size)) {
+        return ERR_INVALID_ARGS;
+    }
+
+    if (subregions_.is_empty()) {
+        return ERR_NOT_FOUND;
+    }
+
+    const vaddr_t end_addr = base + size;
+    const auto end = subregions_.lower_bound(end_addr);
+
+    // Find the first region with a base greater than *base*.  If a region
+    // exists for *base*, it will be immediately before it.  If *base* isn't in
+    // that entry, bail since it's unmapped.
+    auto begin = --subregions_.upper_bound(base);
+    if (!begin.IsValid() || begin->base() + begin->size() <= base) {
+        return ERR_NOT_FOUND;
+    }
+
+    // Check if we're overlapping a subregion, or a part of the range is not
+    // mapped, or the new permissions are invalid for some mapping in the range.
+    vaddr_t last_mapped = begin->base();
+    for (auto itr = begin; itr != end; ++itr) {
+        if (!itr->is_mapping()) {
+            return ERR_INVALID_ARGS;
+        }
+        if (itr->base() != last_mapped) {
+            return ERR_NOT_FOUND;
+        }
+        if (!itr->is_valid_mapping_flags(new_arch_mmu_flags)) {
+            return ERR_ACCESS_DENIED;
+        }
+
+        last_mapped = itr->base() + itr->size();
+    }
+    if (last_mapped < base + size) {
+        return ERR_NOT_FOUND;
+    }
+
+    for (auto itr = begin; itr != end;) {
+        DEBUG_ASSERT(itr->is_mapping());
+
+        auto next = itr;
+        ++next;
+
+        const vaddr_t curr_end = itr->base() + itr->size();
+        const vaddr_t protect_base = mxtl::max(itr->base(), base);
+        const vaddr_t protect_end = mxtl::min(curr_end, end_addr);
+        const size_t protect_size = protect_end - protect_base;
+
+        status_t status = itr->as_vm_mapping()->ProtectLocked(protect_base, protect_size,
+                                                              new_arch_mmu_flags);
+        if (status != NO_ERROR) {
+            // TODO(teisenbe): Try to work out a way to guarantee success, or
+            // provide a full unwind?
+            return status;
+        }
+
+        itr = mxtl::move(next);
+    }
+
+    return NO_ERROR;
+}

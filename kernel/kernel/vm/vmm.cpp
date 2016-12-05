@@ -77,7 +77,7 @@ status_t vmm_protect_region(vmm_aspace_t* _aspace, vaddr_t va, uint arch_mmu_fla
     if (!vm_mapping)
         return ERR_NOT_FOUND;
 
-    return vm_mapping->Protect(arch_mmu_flags);
+    return vm_mapping->Protect(vm_mapping->base(), vm_mapping->size(), arch_mmu_flags);
 }
 
 status_t vmm_free_region(vmm_aspace_t* _aspace, vaddr_t vaddr) {
