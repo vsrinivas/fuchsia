@@ -48,10 +48,6 @@ void ClientApp::PrintUsage() {
 
 std::unique_ptr<Command> ClientApp::CommandFromArgs(
     const std::vector<std::string>& args) {
-  if (args.empty()) {
-    return nullptr;
-  }
-
   // `doctor` is the default command.
   if (args.empty() || (args[0] == "doctor" && args.size() == 1)) {
     return std::make_unique<DoctorCommand>(
@@ -107,6 +103,11 @@ bool ClientApp::Initialize() {
       std::make_unique<cloud_provider::CloudProviderImpl>(firebase_.get());
 
   command_ = CommandFromArgs(args);
+  if (command_ == nullptr) {
+    std::cout << "Failed to initialize the selected command." << std::endl;
+    PrintUsage();
+    return false;
+  }
   return true;
 }
 
