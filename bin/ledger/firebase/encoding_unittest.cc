@@ -146,7 +146,7 @@ TEST(EncodingTest, Values) {
   EXPECT_EQ("qwerty123V", EncodeValue("qwerty123"));
   EXPECT_EQ("abc/V", EncodeValue("abc/"));
   EXPECT_EQ("#[]!V", EncodeValue("#[]!"));
-  EXPECT_EQ("\x7FV", EncodeValue("\x7F"));
+  EXPECT_EQ("fw==B", EncodeValue("\x7F"));
   EXPECT_EQ("-w==B", EncodeValue("\xFF"));
   EXPECT_EQ("Ig==B", EncodeValue("\""));
   EXPECT_EQ("Iy9cIT9bXQ==B", EncodeValue("#/\\!?[]"));
