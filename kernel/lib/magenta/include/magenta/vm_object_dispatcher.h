@@ -23,6 +23,7 @@ public:
 
     ~VmObjectDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_VMEM; }
+    StateTracker* get_state_tracker() final { return &state_tracker_; }
 
     mx_status_t Read(user_ptr<void> user_data, mx_size_t length,
                      uint64_t offset, mx_size_t* actual);
@@ -42,4 +43,5 @@ private:
     explicit VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo);
 
     mxtl::RefPtr<VmObject> vmo_;
+    StateTracker state_tracker_;
 };

@@ -34,7 +34,7 @@ status_t VmObjectDispatcher::Create(mxtl::RefPtr<VmObject> vmo,
 }
 
 VmObjectDispatcher::VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo)
-    : vmo_(vmo) {}
+    : vmo_(vmo), state_tracker_(0u) {}
 
 VmObjectDispatcher::~VmObjectDispatcher() {}
 
