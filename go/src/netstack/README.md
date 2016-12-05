@@ -131,7 +131,7 @@ interface=eth5
 dhcp-range=eth5,192.168.2.50,192.168.2.150,24h
 ```
 
-On Ubuntu, make sure that NetworkManager doesn't control this interface.
+On Ubuntu, make sure that NetworkManager doesn't manage this interface.
 You can modify /etc/NetworkManager/NetworkManager.conf to ignore the device
 by specifying its MAC address (e.g. 12:34:56:78:9a:bc).
 
@@ -142,6 +142,18 @@ managed=false
 
 [keyfile]
 unmanaged-devices=mac:12:34:56:78:9a:bc
+```
+
+Once NetworkManager stops managing your interface, you will need to
+bring up the interface manually. Also you need to re-assign the IPv6
+link-local address to the inteface if you want to use loglistner (if
+you don't remember its ipv6 link-local address, you can calculate
+it [here](http://ben.akrin.com/?p=1347) from the MAC address of the
+USB Ethernet adapter).
+
+```
+$ sudo ifconfig eth5 up
+$ sudo ip address add dev eth5 scope link ${ipv6_link_local_address}
 ```
 
 ## Start netstack manually
