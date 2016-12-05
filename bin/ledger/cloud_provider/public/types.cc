@@ -18,13 +18,28 @@ ftl::StringView StatusToString(Status status) {
       return "NOT_FOUND";
     case Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
-    case Status::UNKNOWN_ERROR:
-      return "UNKNOWN_ERROR";
+    case Status::PARSE_ERROR:
+      return "PARSE_ERROR";
+    case Status::SERVER_ERROR:
+      return "SERVER_ERROR";
   }
 }
 
 std::ostream& operator<<(std::ostream& os, Status status) {
   return os << StatusToString(status);
+}
+
+Status ConvertFirebaseStatus(firebase::Status firebase_status) {
+  switch (firebase_status) {
+    case firebase::Status::OK:
+      return Status::OK;
+    case firebase::Status::NETWORK_ERROR:
+      return Status::NETWORK_ERROR;
+    case firebase::Status::PARSE_ERROR:
+      return Status::PARSE_ERROR;
+    case firebase::Status::SERVER_ERROR:
+      return Status::SERVER_ERROR;
+  }
 }
 
 }  // namespace cloud_provider

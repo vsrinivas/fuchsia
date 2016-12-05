@@ -404,7 +404,7 @@ TEST_F(PageSyncImplTest, RetryUpload) {
   storage_.unsynced_commits_to_return.push_back(
       std::make_unique<const TestCommit>("id1", "content1"));
   cloud_provider_.commit_status_to_return =
-      cloud_provider::Status::UNKNOWN_ERROR;
+      cloud_provider::Status::NETWORK_ERROR;
   page_sync_.Start();
 
   // Test cloud provider logs every commit, even if it reports that upload

@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include "apps/ledger/src/firebase/status.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace cloud_provider {
@@ -21,14 +22,17 @@ using Data = std::string;
 enum class Status {
   OK,
   ARGUMENT_ERROR,
+  INTERNAL_ERROR,
   NETWORK_ERROR,
   NOT_FOUND,
-  INTERNAL_ERROR,
-  UNKNOWN_ERROR
+  PARSE_ERROR,
+  SERVER_ERROR,
 };
 
 ftl::StringView StatusToString(Status status);
 std::ostream& operator<<(std::ostream& os, Status status);
+
+Status ConvertFirebaseStatus(firebase::Status firebase_status);
 
 }  // namespace cloud_provider
 

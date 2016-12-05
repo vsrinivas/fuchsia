@@ -257,7 +257,7 @@ TEST_F(CommitUploadTest, FailedObjectUpload) {
                              });
 
   cloud_provider_.object_status_to_return =
-      cloud_provider::Status::UNKNOWN_ERROR;
+      cloud_provider::Status::NETWORK_ERROR;
   commit_upload.Start();
   message_loop_.Run();
   EXPECT_EQ(0u, done_calls);
@@ -295,7 +295,7 @@ TEST_F(CommitUploadTest, FailedCommitUpload) {
                              });
 
   cloud_provider_.commit_status_to_return =
-      cloud_provider::Status::UNKNOWN_ERROR;
+      cloud_provider::Status::NETWORK_ERROR;
   commit_upload.Start();
   message_loop_.Run();
   EXPECT_EQ(0u, done_calls);
@@ -338,7 +338,7 @@ TEST_F(CommitUploadTest, ErrorAndRetry) {
                              });
 
   cloud_provider_.object_status_to_return =
-      cloud_provider::Status::UNKNOWN_ERROR;
+      cloud_provider::Status::NETWORK_ERROR;
   commit_upload.Start();
   message_loop_.Run();
   EXPECT_EQ(0u, done_calls);

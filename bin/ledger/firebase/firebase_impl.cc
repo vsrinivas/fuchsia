@@ -80,7 +80,7 @@ void FirebaseImpl::Get(
     rapidjson::Document document;
     document.Parse(response.c_str(), response.size());
     if (document.HasParseError()) {
-      callback(Status::UNKNOWN_ERROR, rapidjson::Value());
+      callback(Status::PARSE_ERROR, rapidjson::Value());
       return;
     }
 
@@ -170,7 +170,7 @@ void FirebaseImpl::OnResponse(
   if (response->error) {
     FTL_LOG(ERROR) << response->url << " error "
                    << response->error->description;
-    callback(Status::UNKNOWN_ERROR, "");
+    callback(Status::NETWORK_ERROR, "");
     return;
   }
 
@@ -184,7 +184,7 @@ void FirebaseImpl::OnResponse(
                     FTL_LOG(ERROR) << url << " error " << status_line << ":"
                                    << std::endl
                                    << body;
-                    callback(Status::UNKNOWN_ERROR, "");
+                    callback(Status::SERVER_ERROR, "");
                   });
     return;
   }

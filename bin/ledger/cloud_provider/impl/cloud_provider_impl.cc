@@ -48,11 +48,7 @@ void CloudProviderImpl::AddCommit(const Commit& commit,
 
   firebase_->Put(GetCommitPath(commit), encoded_commit,
                  [callback](firebase::Status status) {
-                   if (status == firebase::Status::OK) {
-                     callback(Status::OK);
-                   } else {
-                     callback(Status::UNKNOWN_ERROR);
-                   }
+                   callback(ConvertFirebaseStatus(status));
                  });
 }
 
@@ -74,7 +70,7 @@ void CloudProviderImpl::GetCommits(
       kCommitRoot.ToString(), GetTimestampQuery(min_timestamp),
       [callback](firebase::Status status, const rapidjson::Value& value) {
         if (status != firebase::Status::OK) {
-          callback(Status::UNKNOWN_ERROR, std::vector<Record>());
+          callback(ConvertFirebaseStatus(status), std::vector<Record>());
           return;
         }
         if (value.IsNull()) {
@@ -83,12 +79,12 @@ void CloudProviderImpl::GetCommits(
           return;
         }
         if (!value.IsObject()) {
-          callback(Status::UNKNOWN_ERROR, std::vector<Record>());
+          callback(Status::PARSE_ERROR, std::vector<Record>());
           return;
         }
         std::vector<Record> records;
         if (!DecodeMultipleCommitsFromValue(value, &records)) {
-          callback(Status::UNKNOWN_ERROR, std::vector<Record>());
+          callback(Status::PARSE_ERROR, std::vector<Record>());
           return;
         }
         callback(Status::OK, std::move(records));
@@ -117,11 +113,7 @@ void CloudProviderImpl::AddObject(ObjectIdView object_id,
 
   firebase_->Put(GetObjectPath(object_id), encoded,
                  [callback](firebase::Status status) {
-                   if (status == firebase::Status::OK) {
-                     callback(Status::OK);
-                   } else {
-                     callback(Status::NETWORK_ERROR);
-                   }
+                   callback(ConvertFirebaseStatus(status));
                  });
 }
 
@@ -134,7 +126,7 @@ void CloudProviderImpl::GetObject(
       GetObjectPath(object_id), "",
       [callback](firebase::Status status, const rapidjson::Value& value) {
         if (status != firebase::Status::OK) {
-          callback(Status::NETWORK_ERROR, 0u, mx::datapipe_consumer());
+          callback(ConvertFirebaseStatus(status), 0u, mx::datapipe_consumer());
           return;
         }
 
@@ -145,7 +137,7 @@ void CloudProviderImpl::GetObject(
 
         std::string data;
         if (!value.IsString() || !firebase::Decode(value.GetString(), &data)) {
-          callback(Status::INTERNAL_ERROR, 0u, mx::datapipe_consumer());
+          callback(Status::PARSE_ERROR, 0u, mx::datapipe_consumer());
           return;
         }
         callback(Status::OK, data.size(),

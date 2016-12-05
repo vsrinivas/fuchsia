@@ -11,6 +11,7 @@ source_set("firebase") {
     "firebase.h",
     "firebase_impl.cc",
     "firebase_impl.h",
+    "status.cc",
     "status.h",
     "watch_client.h",
   ]
