@@ -537,6 +537,12 @@ status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
     memset(out_caps, 0, sizeof(*out_caps));
 
     switch (mode) {
+    // All devices always support "DISABLED".  No need to set the max_irqs to
+    // zero or the PVM supported flag to false, the memset has taken care of
+    // this for us already.
+    case PCIE_IRQ_MODE_DISABLED:
+        return NO_ERROR;
+
     case PCIE_IRQ_MODE_LEGACY:
         if (!irq_.legacy.pin)
             return ERR_NOT_SUPPORTED;

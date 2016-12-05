@@ -97,7 +97,7 @@ private:
     Mutex lock_;
     mxtl::RefPtr<PciDeviceWrapper> device_;
 
-    uint irqs_supported_ = 0;
+    uint irqs_avail_cnt_ = 0;
     bool irqs_maskable_  = false;
 };
 

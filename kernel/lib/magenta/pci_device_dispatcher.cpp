@@ -151,7 +151,7 @@ status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
 
     if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
     if ((which_irq < 0) ||
-        (static_cast<uint32_t>(which_irq) >= irqs_supported_)) return ERR_INVALID_ARGS;
+        (static_cast<uint32_t>(which_irq) >= irqs_avail_cnt_)) return ERR_INVALID_ARGS;
 
     // Attempt to create the dispatcher.  It will take care of things like checking for
     // duplicate registration.
@@ -190,19 +190,31 @@ status_t PciDeviceDispatcher::SetIrqMode(mx_pci_irq_mode_t mode, uint32_t reques
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());
 
-    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+    // Are we not claimed yet?
+    if (!device_->claimed())
+        return ERR_BAD_STATE;
+
+    if (mode == MX_PCIE_IRQ_MODE_DISABLED)
+        requested_irq_count = 0;
 
     status_t ret;
     ret = device_->device()->SetIrqMode(static_cast<pcie_irq_mode_t>(mode),
                                         requested_irq_count);
     if (ret == NO_ERROR) {
         pcie_irq_mode_caps_t caps;
-        __UNUSED status_t tmp;
-        tmp = device_->device()->QueryIrqModeCapabilities(static_cast<pcie_irq_mode_t>(mode),
+        ret = device_->device()->QueryIrqModeCapabilities(static_cast<pcie_irq_mode_t>(mode),
                                                           &caps);
-        DEBUG_ASSERT(tmp == NO_ERROR);
-        irqs_supported_ = caps.max_irqs;
-        irqs_maskable_  = caps.per_vector_masking_supported;
+
+        // The only way for QueryIrqMode to fail at this point should be for the
+        // device to have become unplugged.
+        if (ret == NO_ERROR) {
+            irqs_avail_cnt_ = requested_irq_count;
+            irqs_maskable_  = caps.per_vector_masking_supported;
+        } else {
+            device_->device()->SetIrqMode(PCIE_IRQ_MODE_DISABLED, 0);
+            irqs_avail_cnt_ = 0;
+            irqs_maskable_  = false;
+        }
     }
 
     return ret;
