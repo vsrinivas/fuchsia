@@ -160,10 +160,12 @@ class DeviceRunnerApp : public DeviceRunner {
         user_runner_controller_.NewRequest());
 
     // 3. Initialize the UserRunner service.
-    ConnectToService(services.get(), user_runner_.NewRequest());
-    user_runner_->Initialize(std::move(user_id), settings_.user_shell,
-                             to_array(settings_.user_shell_args),
-                             std::move(view_owner_request));
+    UserRunnerFactoryPtr user_runner_factory;
+    ConnectToService(services.get(), user_runner_factory.NewRequest());
+    user_runner_factory->Create(std::move(user_id), settings_.user_shell,
+                                to_array(settings_.user_shell_args),
+                                std::move(view_owner_request),
+                                user_runner_.NewRequest());
   }
 
   const Settings settings_;

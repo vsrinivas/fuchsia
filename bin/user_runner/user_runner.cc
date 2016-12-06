@@ -22,7 +22,7 @@
 #include "apps/modular/src/user_runner/user_ledger_repository_factory.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/ftl/logging.h"
@@ -70,30 +70,15 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 class UserRunnerImpl : public UserRunner {
  public:
-  UserRunnerImpl(std::shared_ptr<ApplicationContext> application_context,
-                 fidl::InterfaceRequest<UserRunner> user_runner_request)
-      : application_context_(application_context),
-        binding_(this, std::move(user_runner_request)) {}
-
-  ~UserRunnerImpl() override = default;
-
- private:
-  void SetupLedgerRepository(const fidl::Array<uint8_t>& user_id) {
-    auto app_services = GetServiceProvider("file:///system/apps/ledger", nullptr);
-
-    ledger::LedgerRepositoryFactoryPtr ledger_repository_factory;
-    ConnectToService(app_services.get(), ledger_repository_factory.NewRequest());
-    ledger_repository_factory_ = std::make_unique<UserLedgerRepositoryFactory>(
-        kLedgerBaseDir + to_hex_string(user_id),
-        std::move(ledger_repository_factory));
-  }
-
-  // |UserRunner|:
-  void Initialize(
+  UserRunnerImpl(
+      std::shared_ptr<ApplicationContext> application_context,
       fidl::Array<uint8_t> user_id,
       const fidl::String& user_shell,
       fidl::Array<fidl::String> user_shell_args,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<UserRunner> user_runner_request)
+      : application_context_(application_context),
+        binding_(this, std::move(user_runner_request)) {
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
 
     SetupLedgerRepository(user_id);
@@ -147,6 +132,19 @@ class UserRunnerImpl : public UserRunner {
                             std::move(focus_controller_request));
   }
 
+  ~UserRunnerImpl() override = default;
+
+ private:
+  void SetupLedgerRepository(const fidl::Array<uint8_t>& user_id) {
+    auto app_services = GetServiceProvider("file:///system/apps/ledger", nullptr);
+
+    ledger::LedgerRepositoryFactoryPtr ledger_repository_factory;
+    ConnectToService(app_services.get(), ledger_repository_factory.NewRequest());
+    ledger_repository_factory_ = std::make_unique<UserLedgerRepositoryFactory>(
+        kLedgerBaseDir + to_hex_string(user_id),
+        std::move(ledger_repository_factory));
+  }
+
   ServiceProviderPtr GetServiceProvider(
       const fidl::String& url,
       const fidl::Array<fidl::String>* const args) {
@@ -197,18 +195,31 @@ class UserRunnerImpl : public UserRunner {
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };
 
-class UserRunnerApp {
+class UserRunnerApp : public UserRunnerFactory {
  public:
   UserRunnerApp()
       : application_context_(ApplicationContext::CreateFromStartupInfo()) {
-    application_context_->outgoing_services()->AddService<UserRunner>(
-        [this](fidl::InterfaceRequest<UserRunner> request) {
-          new UserRunnerImpl(application_context_, std::move(request));
+    application_context_->outgoing_services()->AddService<UserRunnerFactory>(
+        [this](fidl::InterfaceRequest<UserRunnerFactory> request) {
+          bindings_.AddBinding(this, std::move(request));
         });
   }
 
  private:
+  // |UserRunnerFactory|
+  void Create(
+      fidl::Array<uint8_t> user_id,
+      const fidl::String& user_shell,
+      fidl::Array<fidl::String> user_shell_args,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<UserRunner> user_runner_request) override {
+    new UserRunnerImpl(application_context_,
+                       std::move(user_id), user_shell, std::move(user_shell_args),
+                       std::move(view_owner_request), std::move(user_runner_request));
+  }
+
   std::shared_ptr<ApplicationContext> application_context_;
+  fidl::BindingSet<UserRunnerFactory> bindings_;
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerApp);
 };
 

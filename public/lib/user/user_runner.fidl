@@ -8,11 +8,16 @@ import "apps/mozart/services/views/view_token.fidl";
 
 // DeviceRunner requests an instance of this service in order to
 // launch and display a User Runner per user.
-[ServiceName="modular.UserRunner"]  // Created by user_runner application.
-interface UserRunner {
+[ServiceName="modular.UserRunnerFactory"]  // Created by user_runner application.
+interface UserRunnerFactory {
   // Launches a user runner instance for a user identified by
   // |user_id|.
-  Initialize(array<uint8> user_id, string user_shell,
-             array<string> user_shell_args,
-             mozart.ViewOwner& view_owner);
+  Create(array<uint8> user_id, string user_shell,
+         array<string> user_shell_args,
+         mozart.ViewOwner& view_owner,
+         UserRunner& user_runner);
 };
+
+// This interface is empty, but it still allows a UserRunnerFactory
+// client to monitor the life cycle of its service instance.
+interface UserRunner {};
