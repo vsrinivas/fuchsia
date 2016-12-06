@@ -23,6 +23,7 @@ public:
 
     virtual ~ResourceDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_RESOURCE; }
+    StateTracker* get_state_tracker()  final { return &state_tracker_; }
     status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // MakeRoot() validates the resource as the parent of a tree.
@@ -80,6 +81,7 @@ private:
     bool valid_;
 
     HandleUniquePtr inbound_;
+    StateTracker state_tracker_;
     mxtl::unique_ptr<PortClient> iopc_;
 
     char name_[MX_MAX_NAME_LEN];

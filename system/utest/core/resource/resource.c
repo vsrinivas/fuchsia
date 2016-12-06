@@ -92,6 +92,18 @@ static bool test_resource_actions(void) {
     END_TEST;
 }
 
+static mx_status_t check_signals(mx_handle_t h, mx_signals_t expected) {
+    mx_signals_t observed;
+    mx_status_t status = mx_handle_wait_one(h, 0u, 0u, &observed);
+    if (status != ERR_TIMED_OUT) {
+        return status;
+    }
+    if (expected != observed) {
+        return ERR_BAD_STATE;
+    }
+    return NO_ERROR;
+}
+
 static bool test_resource_connect(void) {
     BEGIN_TEST;
 
@@ -102,12 +114,16 @@ static bool test_resource_connect(void) {
     // no handle in the queue means we must wait for one
     ASSERT_EQ(mx_resource_accept(rrh, &h), ERR_SHOULD_WAIT, "");
 
+    // should initially be writable (connect queue empty);
+    ASSERT_EQ(check_signals(rrh, MX_RESOURCE_WRITABLE), NO_ERROR, "");
+
     mx_handle_t c0, c1;
     ASSERT_EQ(mx_channel_create(0, &c0, &c1), NO_ERROR, "");
     // verify that non-channel handle is rejected
     ASSERT_EQ(mx_resource_connect(rrh, rrh), ERR_WRONG_TYPE, "");
     // verify that a channel handle is accepted
     ASSERT_EQ(mx_resource_connect(rrh, c0), NO_ERROR, "");
+    ASSERT_EQ(check_signals(rrh, MX_RESOURCE_READABLE), NO_ERROR, "");
     // verify that the accepted handle is gone and a bad handle is rejected
     ASSERT_EQ(mx_resource_connect(rrh, c0), ERR_BAD_HANDLE, "");
     // the connect queue is only one deep, so this must fail
@@ -118,6 +134,7 @@ static bool test_resource_connect(void) {
     ASSERT_EQ(mx_resource_accept(rrh, &c), NO_ERROR, "");
     // but must fail when there isn't
     ASSERT_EQ(mx_resource_accept(rrh, &h), ERR_SHOULD_WAIT, "");
+    ASSERT_EQ(check_signals(rrh, MX_RESOURCE_WRITABLE), NO_ERROR, "");
 
     END_TEST;
 }

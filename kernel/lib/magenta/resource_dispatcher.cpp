@@ -55,7 +55,8 @@ status_t ResourceDispatcher::Create(mxtl::RefPtr<ResourceDispatcher>* dispatcher
 }
 
 ResourceDispatcher::ResourceDispatcher(const char* name, uint16_t subtype) :
-    num_children_(0), num_records_(0), subtype_(subtype), valid_(false) {
+    num_children_(0), num_records_(0), subtype_(subtype), valid_(false),
+    state_tracker_(MX_RESOURCE_WRITABLE) {
     size_t len = strlen(name);
     if (len >= MX_MAX_NAME_LEN)
         len = MX_MAX_NAME_LEN - 1;
@@ -350,6 +351,8 @@ mx_status_t ResourceDispatcher::Connect(HandleUniquePtr* handle) {
 
     inbound_ = mxtl::move(*handle);
 
+    state_tracker_.UpdateState(MX_RESOURCE_WRITABLE, MX_RESOURCE_READABLE);
+
     return NO_ERROR;
 }
 
@@ -360,6 +363,8 @@ mx_status_t ResourceDispatcher::Accept(HandleUniquePtr* handle) {
         return ERR_SHOULD_WAIT;
 
     *handle = mxtl::move(inbound_);
+
+    state_tracker_.UpdateState(MX_RESOURCE_READABLE, MX_RESOURCE_WRITABLE);
 
     return NO_ERROR;
 }
