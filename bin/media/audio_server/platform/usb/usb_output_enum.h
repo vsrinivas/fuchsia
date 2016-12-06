@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "apps/media/src/audio/usb_audio_enum.h"
 #include "apps/media/src/audio_server/audio_output.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
 
@@ -22,9 +23,7 @@ class UsbOutputEnum {
   AudioOutputPtr GetDefaultOutput(AudioOutputManager* manager);
 
  private:
-  static const std::string kAudioDeviceClassPath;
-
-  std::vector<std::string> output_device_paths_;
+  UsbAudioEnum usb_audio_enum_;
 };
 
 }  // namespace audio

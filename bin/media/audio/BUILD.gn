@@ -17,6 +17,8 @@ source_set("audio") {
     "mixer_input_impl.cc",
     "mixer_input_impl.h",
     "mixer.h",
+    "usb_audio_enum.cc",
+    "usb_audio_enum.h",
   ]
 
   deps = [
