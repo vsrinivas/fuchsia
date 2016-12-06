@@ -35,6 +35,7 @@ class Tracer : private mtl::MessageLoopHandler {
   void Start(TraceOptionsPtr options,
              RecordConsumer record_consumer,
              ErrorHandler error_handler,
+             ftl::Closure start_callback,
              ftl::Closure done_callback);
 
   // Stops the trace.
@@ -54,6 +55,7 @@ class Tracer : private mtl::MessageLoopHandler {
   enum class State { kStopped, kStarted, kStopping };
 
   State state_ = State::kStopped;
+  ftl::Closure start_callback_;
   ftl::Closure done_callback_;
   mx::socket socket_;
   mtl::MessageLoop::HandlerKey handler_key_;

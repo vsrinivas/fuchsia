@@ -45,6 +45,10 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
   // connection.
   ~TraceSession();
 
+  // Invokes |callback| when all providers in this session have acknowledged
+  // the start request, or after |timeout| has elapsed.
+  void WaitForProvidersToStart(ftl::Closure callback, ftl::TimeDelta timeout);
+
   // Starts |provider| and adds it to this session.
   void AddProvider(TraceProviderBundle* provider);
   // Stops |provider|, streaming out all of its trace records.
@@ -59,7 +63,9 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
  private:
   enum class State { kReady, kStarted, kStopping, kStopped };
 
+  void NotifyStarted();
   void Abort();
+  void NotifyProviderStarted();
   void FinishProvider(TraceProviderBundle* bundle);
   void FinishSessionIfEmpty();
   void FinishSessionDueToTimeout();
@@ -71,8 +77,10 @@ class TraceSession : public ftl::RefCountedThreadSafe<TraceSession> {
   fidl::Array<fidl::String> categories_;
   size_t trace_buffer_size_;
   std::vector<uint8_t> buffer_;
-  std::list<Tracee> tracees_;
+  std::list<std::unique_ptr<Tracee>> tracees_;
+  ftl::OneShotTimer session_start_timeout_;
   ftl::OneShotTimer session_finalize_timeout_;
+  ftl::Closure start_callback_;
   ftl::Closure done_callback_;
   ftl::Closure abort_handler_;
 

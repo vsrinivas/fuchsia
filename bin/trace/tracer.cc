@@ -32,11 +32,13 @@ Tracer::~Tracer() {
 void Tracer::Start(TraceOptionsPtr options,
                    RecordConsumer record_consumer,
                    ErrorHandler error_handler,
+                   ftl::Closure start_callback,
                    ftl::Closure done_callback) {
   FTL_DCHECK(state_ == State::kStopped);
 
   state_ = State::kStarted;
   done_callback_ = std::move(done_callback);
+  start_callback_ = std::move(start_callback);
 
   mx::socket outgoing_socket;
   mx_status_t status = mx::socket::create(0u, &socket_, &outgoing_socket);
@@ -46,7 +48,8 @@ void Tracer::Start(TraceOptionsPtr options,
     return;
   }
 
-  controller_->StartTracing(std::move(options), std::move(outgoing_socket));
+  controller_->StartTracing(std::move(options), std::move(outgoing_socket),
+                            [this]() { start_callback_(); });
 
   buffer_.reserve(kReadBufferSize);
   reader_.reset(new reader::TraceReader(record_consumer, error_handler));

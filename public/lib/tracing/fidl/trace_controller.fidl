@@ -9,6 +9,9 @@ module tracing;
 interface TraceController {
   // Requests to start tracing with the specified |options|.
   //
+  // The trace controller acknowledges the request when all
+  // registered providers have been started or after |options.start_timeout_milliseconds| milliseconds.
+  //
   // The trace controller emits trace data to |output| as a sequence of
   // binary formatted trace records.  Traces obtained from different providers
   // are delimited by metadata records within the stream.
@@ -22,7 +25,7 @@ interface TraceController {
   // themselves.  For example, it should not try to check argument lengths in
   // events.  This ensures that the trace format can be extended without needing
   // to modify the trace controller.
-  StartTracing(TraceOptions options, handle<socket> output);
+  StartTracing(TraceOptions options, handle<socket> output) => ();
 
   // Requests to stop tracing.
   //
@@ -48,6 +51,9 @@ struct TraceOptions {
 
   // Suggested size of trace buffer which each provider should receive.
   uint32 buffer_size_megabytes_hint = 4;
+
+  // Acknowledge start request after at most |start_timeout_milliseconds|.
+  uint64 start_timeout_milliseconds = 5000;
 };
 
 // Information about a registered trace provider.

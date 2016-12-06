@@ -38,12 +38,12 @@ void TraceProviderImpl::SetDumpCallback(DumpCallback callback) {
 
 void TraceProviderImpl::Start(mx::vmo buffer,
                               mx::eventpair fence,
-                              ::fidl::Array<::fidl::String> categories) {
+                              ::fidl::Array<::fidl::String> categories,
+                              const StartCallback& callback) {
   Stop();
   pending_trace_.reset(
       new PendingTrace{std::move(buffer), std::move(fence),
-                       categories.To<std::vector<std::string>>()});
-
+                       categories.To<std::vector<std::string>>(), callback});
   if (state_ == State::kStopped)
     StartPendingTrace();
 }
@@ -68,21 +68,26 @@ void TraceProviderImpl::StartPendingTrace() {
   FTL_DCHECK(state_ == State::kStopped);
 
   auto pending_trace = std::move(pending_trace_);
-  if (!writer::StartTracing(std::move(pending_trace->buffer),
-                            std::move(pending_trace->fence),
-                            std::move(pending_trace->enabled_categories),
-                            [weak = weak_ptr_factory_.GetWeakPtr()](
-                                tracing::writer::TraceDisposition disposition) {
-                              FTL_VLOG(2) << "Trace finished: disposition="
-                                          << ToUnderlyingType(disposition);
-                              if (weak)
-                                weak->FinishedTrace();
-                            })) {
-    FTL_VLOG(2) << "Failed to start pending trace";
-    return;
+
+  bool result = writer::StartTracing(
+      std::move(pending_trace->buffer), std::move(pending_trace->fence),
+      std::move(pending_trace->enabled_categories),
+      [weak = weak_ptr_factory_.GetWeakPtr()](
+          tracing::writer::TraceDisposition disposition) {
+        FTL_VLOG(2) << "Trace finished: disposition="
+                    << ToUnderlyingType(disposition);
+        if (weak)
+          weak->FinishedTrace();
+      });
+
+  if (result) {
+    state_ = State::kStarted;
+    FTL_VLOG(2) << "Successfully started pending trace";
+  } else {
+    FTL_LOG(WARNING) << "Failed to start pending trace";
   }
 
-  state_ = State::kStarted;
+  pending_trace->start_callback(result);
 }
 
 void TraceProviderImpl::FinishedTrace() {

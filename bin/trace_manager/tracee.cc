@@ -51,7 +51,8 @@ Tracee::TransferStatus WriteBufferToSocket(const uint8_t* buffer,
 
 }  // namespace
 
-Tracee::Tracee(TraceProviderBundle* bundle) : bundle_(bundle) {}
+Tracee::Tracee(TraceProviderBundle* bundle)
+    : bundle_(bundle), weak_ptr_factory_(this) {}
 
 Tracee::~Tracee() {
   if (fence_handler_key_) {
@@ -65,9 +66,12 @@ bool Tracee::operator==(TraceProviderBundle* bundle) const {
 
 bool Tracee::Start(size_t buffer_size,
                    fidl::Array<fidl::String> categories,
-                   ftl::Closure stop_callback) {
+                   ftl::Closure stop_callback,
+                   ProviderStartedCallback start_callback) {
+  FTL_DCHECK(state_ == State::kReady);
   FTL_DCHECK(!buffer_vmo_);
   FTL_DCHECK(stop_callback);
+  FTL_DCHECK(start_callback);
 
   mx::vmo buffer_vmo;
   mx_status_t status = mx::vmo::create(buffer_size, 0u, &buffer_vmo);
@@ -94,13 +98,18 @@ bool Tracee::Start(size_t buffer_size,
     return false;
   }
 
-  bundle_->provider->Start(std::move(buffer_vmo_for_provider),
-                           std::move(fence_for_provider),
-                           std::move(categories));
+  bundle_->provider->Start(
+      std::move(buffer_vmo_for_provider), std::move(fence_for_provider),
+      std::move(categories),
+      [weak = weak_ptr_factory_.GetWeakPtr()](bool success) {
+        if (weak)
+          weak->OnProviderStarted(success);
+      });
 
   buffer_vmo_ = std::move(buffer_vmo);
   buffer_vmo_size_ = buffer_size;
   fence_ = std::move(fence);
+  start_callback_ = std::move(start_callback);
   stop_callback_ = std::move(stop_callback);
   fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
       this, fence_.get(), MX_EPAIR_CLOSED);
@@ -108,11 +117,36 @@ bool Tracee::Start(size_t buffer_size,
 }
 
 void Tracee::Stop() {
+  if (state_ != State::kStarted && state_ != State::kStartAcknowledged)
+    return;
   bundle_->provider->Stop();
+  TransitionToState(State::kStopping);
+}
+
+void Tracee::TransitionToState(State new_state) {
+  FTL_VLOG(2) << "Transitioning to state: " << new_state;
+  state_ = new_state;
+}
+
+void Tracee::OnProviderStarted(bool success) {
+  if (state_ != State::kReady)
+    return;
+
+  TransitionToState(success ? State::kStarted : State::kStartAcknowledged);
+  // We only invoke the callback if this instance
+  // is still alive. If it is not, we are in the
+  // situation that a call to Stop has overtaken the
+  // call to Start().
+  // TODO(tvoss): Is this situation actually
+  // possible?
+  auto start_callback = std::move(start_callback_);
+  start_callback(success);
 }
 
 void Tracee::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   FTL_DCHECK(pending & MX_EPAIR_CLOSED);
+  FTL_DCHECK(state_ == State::kStarted || state_ == State::kStartAcknowledged ||
+             state_ == State::kStopping);
   FTL_DCHECK(stop_callback_);
 
   mtl::MessageLoop::GetCurrent()->RemoveHandler(fence_handler_key_);
@@ -120,10 +154,14 @@ void Tracee::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 
   ftl::Closure stop_callback = std::move(stop_callback_);
   stop_callback();
+  TransitionToState(State::kStopped);
 }
 
 void Tracee::OnHandleError(mx_handle_t handle, mx_status_t error) {
   FTL_DCHECK(error == ERR_BAD_STATE);
+  FTL_DCHECK(state_ == State::kStarted || state_ == State::kStartAcknowledged ||
+             state_ == State::kStopping);
+  TransitionToState(State::kStopped);
 }
 
 Tracee::TransferStatus Tracee::TransferRecords(const mx::socket& socket) const {
@@ -186,6 +224,28 @@ Tracee::TransferStatus Tracee::WriteProviderInfoRecord(
   memcpy(&record[1], bundle_->label.c_str(), bundle_->label.size());
   return WriteBufferToSocket(reinterpret_cast<uint8_t*>(record.data()),
                              internal::WordsToBytes(num_words), socket);
+}
+
+std::ostream& operator<<(std::ostream& out, Tracee::State state) {
+  switch (state) {
+    case Tracee::State::kReady:
+      out << "ready";
+      break;
+    case Tracee::State::kStarted:
+      out << "started";
+      break;
+    case Tracee::State::kStartAcknowledged:
+      out << "start ack'd";
+      break;
+    case Tracee::State::kStopping:
+      out << "stopping";
+      break;
+    case Tracee::State::kStopped:
+      out << "stopped";
+      break;
+  }
+
+  return out;
 }
 
 }  // namespace tracing

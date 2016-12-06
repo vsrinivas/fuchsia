@@ -35,7 +35,8 @@ class TraceProviderImpl : public TraceProvider {
   // |TraceProvider|
   void Start(mx::vmo buffer,
              mx::eventpair fence,
-             ::fidl::Array<::fidl::String> categories) override;
+             ::fidl::Array<::fidl::String> categories,
+             const StartCallback& callback) override;
   void Stop() override;
   void Dump(mx::socket output) override;
 
@@ -54,6 +55,7 @@ class TraceProviderImpl : public TraceProvider {
     mx::vmo buffer;
     mx::eventpair fence;
     std::vector<std::string> enabled_categories;
+    StartCallback start_callback;
   };
   std::unique_ptr<PendingTrace> pending_trace_;
 

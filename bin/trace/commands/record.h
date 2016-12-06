@@ -41,6 +41,8 @@ class Record : public CommandWithTraceController {
  private:
   void StopTrace();
   void DoneTrace();
+  void LaunchApp();
+  void StartTimer();
 
   modular::ApplicationControllerPtr application_controller_;
   std::unique_ptr<ChromiumExporter> exporter_;

@@ -26,8 +26,12 @@ interface TraceProvider {
   // receives a request to start tracing while already tracing, it must
   // stop the previous trace then start the new one.
   //
+  // Returns the result of the operation in |success|, true indicates that
+  // the provider is tracing now, false indicates that tracing could
+  // not be started. In the latter case, the trace provider remains in the stopped state.
+  //
   // TODO(jeffbrown): Implement half-full signal and streaming protocol.
-  Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories);
+  Start(handle<vmo> buffer, handle<eventpair> fence, array<string> categories) => (bool success);
 
   // Stops tracing.
   //

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <numeric>
+
+#include "apps/tracing/lib/trace/internal/fields.h"
 #include "apps/tracing/src/trace_manager/trace_session.h"
 #include "apps/tracing/lib/trace/internal/fields.h"
 #include "lib/ftl/logging.h"
@@ -24,16 +27,34 @@ TraceSession::~TraceSession() {
   destination_.reset();
 }
 
+void TraceSession::WaitForProvidersToStart(ftl::Closure callback,
+                                           ftl::TimeDelta timeout) {
+  start_callback_ = std::move(callback);
+  session_start_timeout_.Start(
+      mtl::MessageLoop::GetCurrent()->task_runner().get(),
+      [weak = weak_ptr_factory_.GetWeakPtr()]() {
+        if (weak) {
+          FTL_LOG(WARNING) << "Waiting for start timed out.";
+          weak->NotifyStarted();
+        }
+      },
+      std::move(timeout));
+}
+
 void TraceSession::AddProvider(TraceProviderBundle* bundle) {
   if (!(state_ == State::kReady || state_ == State::kStarted))
     return;
 
-  tracees_.emplace_back(bundle);
-  if (!tracees_.back().Start(
+  tracees_.emplace_back(std::make_unique<Tracee>(bundle));
+  if (!tracees_.back()->Start(
           trace_buffer_size_, categories_.Clone(),
           [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ]() {
             if (weak)
               weak->FinishProvider(bundle);
+          },
+          [ weak = weak_ptr_factory_.GetWeakPtr(), bundle ](bool success) {
+            if (weak)
+              weak->NotifyProviderStarted();
           })) {
     tracees_.pop_back();
   } else {
@@ -56,9 +77,8 @@ void TraceSession::Stop(ftl::Closure done_callback,
   done_callback_ = std::move(done_callback);
 
   // Walk through all remaining tracees and send out their buffers.
-  for (auto it = tracees_.begin(); it != tracees_.end(); ++it) {
-    it->Stop();
-  }
+  for (const auto& tracee : tracees_)
+    tracee->Stop();
 
   session_finalize_timeout_.Start(
       mtl::MessageLoop::GetCurrent()->task_runner().get(),
@@ -71,20 +91,41 @@ void TraceSession::Stop(ftl::Closure done_callback,
   FinishSessionIfEmpty();
 }
 
+void TraceSession::NotifyStarted() {
+  if (start_callback_) {
+    session_start_timeout_.Stop();
+    auto start_callback = std::move(start_callback_);
+    start_callback();
+  }
+}
+
 void TraceSession::Abort() {
   TransitionToState(State::kStopped);
   tracees_.clear();
   abort_handler_();
 }
 
+void TraceSession::NotifyProviderStarted() {
+  bool all_started = std::accumulate(
+      tracees_.begin(), tracees_.end(), true,
+      [](bool value, const auto& tracee) {
+        return value && (tracee->state() == Tracee::State::kStarted ||
+                         tracee->state() == Tracee::State::kStartAcknowledged);
+
+      });
+
+  if (all_started)
+    NotifyStarted();
+}
+
 void TraceSession::FinishProvider(TraceProviderBundle* bundle) {
   auto it =
       std::find_if(tracees_.begin(), tracees_.end(),
-                   [bundle](const auto& tracee) { return tracee == bundle; });
+                   [bundle](const auto& tracee) { return *tracee == bundle; });
 
   if (it != tracees_.end()) {
     if (destination_) {
-      switch (it->TransferRecords(destination_)) {
+      switch ((*it)->TransferRecords(destination_)) {
         case Tracee::TransferStatus::kComplete:
           break;
         case Tracee::TransferStatus::kCorrupted:
@@ -115,11 +156,14 @@ void TraceSession::FinishSessionIfEmpty() {
 }
 
 void TraceSession::FinishSessionDueToTimeout() {
+  // We do not consider pending_start_tracees_ here as we only
+  // stop them as a best effort.
   if (state_ == State::kStopping && !tracees_.empty()) {
     TransitionToState(State::kStopped);
     for (auto& tracee : tracees_) {
-      FTL_LOG(WARNING) << "Timed out waiting for trace provider '"
-                       << tracee.bundle()->label << "' to finish";
+      if (tracee->state() != Tracee::State::kStopped)
+        FTL_LOG(WARNING) << "Timed out waiting for trace provider '"
+                         << tracee->bundle()->label << "' to finish";
     }
     done_callback_();
   }
