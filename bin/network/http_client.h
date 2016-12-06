@@ -82,7 +82,7 @@ class URLLoaderImpl::HTTPClient {
   std::string http_version_;
   std::string status_message_;
 
-  mx::datapipe_producer response_body_stream_;
+  mx::socket response_body_stream_;
 };
 
 template <typename T>
@@ -324,35 +324,28 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendBody() {
     std::istream response_stream(&response_buf_);
     mx_size_t done = 0;
     do {
-      mx_size_t todo = size - done;
-      mx_size_t num_bytes;
-      uintptr_t addr = 0u;
-
+      char buffer[64 * 1024];
+      mx_size_t todo = std::min(sizeof(buffer), size - done);
+      FTL_DCHECK(todo > 0);
+      response_stream.read(buffer, todo);
+      mx_size_t written;
       mx_status_t result =
-          response_body_stream_.begin_write(0u, &addr, &num_bytes);
+          response_body_stream_.write(0, buffer, todo, &written);
       if (result == ERR_SHOULD_WAIT) {
         result = response_body_stream_.wait_one(
             MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, MX_TIME_INFINITE,
             nullptr);
         if (result == NO_ERROR)
-          continue;  // retry now that the data pipe is ready
+          continue;  // retry now that the socket is ready
       }
       if (result != NO_ERROR) {
-        // If the other end closes the data pipe, ERR_REMOTE_CLOSED
+        // If the other end closes the socket, ERR_REMOTE_CLOSED
         // can happen.
         if (result != ERR_REMOTE_CLOSED)
           FTL_LOG(ERROR) << "SendBody: result=" << result;
         return result;
       }
-
-      if (num_bytes < todo)
-        todo = num_bytes;
-
-      if (todo)
-        response_stream.read((char*)addr, todo);
-
-      response_body_stream_.end_write(todo);
-      done += todo;
+      done += written;
     } while (done < size);
   }
   return NO_ERROR;
@@ -407,12 +400,12 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
         response->headers.push_back(std::move(hdr));
       }
 
-      mx::datapipe_consumer consumer;
-      mx::datapipe_producer producer;
+      mx::socket consumer;
+      mx::socket producer;
       mx_status_t status =
-          mx::datapipe<void>::create(1u, 0u, 0u, &producer, &consumer);
+          mx::socket::create(0u, &producer, &consumer);
       if (status != NO_ERROR) {
-        FTL_LOG(ERROR) << "Unable to create datapipe:"
+        FTL_LOG(ERROR) << "Unable to create socket:"
                        << mx_status_get_string(status);
         return;
       }

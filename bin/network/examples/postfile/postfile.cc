@@ -14,7 +14,7 @@
 #include "lib/ftl/files/file_descriptor.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/files/unique_fd.h"
-#include "lib/mtl/data_pipe/files.h"
+#include "lib/mtl/socket/files.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace examples {
@@ -44,7 +44,7 @@ class ResponsePrinter {
     }
   }
 
-  void PrintResponseBody(mx::datapipe_consumer body) const {
+  void PrintResponseBody(mx::socket body) const {
     // Read response body in blocking fashion.
     printf(">>> Body <<<\n");
 
@@ -108,12 +108,12 @@ class PostFileApp {
     header->value = "multipart/form-data; boundary=" + boundary;
     request->headers.push_back(std::move(header));
 
-    mx::datapipe_consumer consumer;
-    mx::datapipe_producer producer;
+    mx::socket consumer;
+    mx::socket producer;
     mx_status_t status =
-        mx::datapipe<void>::create(1u, 0u, 0u, &producer, &consumer);
+        mx::socket::create(0u, &producer, &consumer);
     if (status != NO_ERROR) {
-      printf("cannot create datapipe\n");
+      printf("cannot create socket\n");
       return;
     }
 

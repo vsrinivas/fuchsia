@@ -25,8 +25,8 @@ interface NetworkService {
 
   // This is not implemented
   CreateTCPConnectedSocket(NetAddress remote_address,
-                           handle<data_pipe_consumer> send_stream,
-                           handle<data_pipe_producer> receive_stream,
+                           handle<socket> send_stream,
+                           handle<socket> receive_stream,
                            handle<channel> client_socket)
       => (NetworkError result,
           NetAddress? local_address);

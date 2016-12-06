@@ -15,7 +15,7 @@
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
-#include "mx/datapipe.h"
+#include "mx/socket.h"
 
 namespace network {
 
@@ -37,8 +37,8 @@ class NetworkServiceImpl : public NetworkService,
       const CreateTCPBoundSocketCallback& callback) override;
   void CreateTCPConnectedSocket(
       NetAddressPtr remote_address,
-      mx::datapipe_consumer send_stream,
-      mx::datapipe_producer receive_stream,
+      mx::socket send_stream,
+      mx::socket receive_stream,
       mx::channel client_socket,
       const CreateTCPConnectedSocketCallback& callback) override;
   void CreateUDPSocket(mx::channel socket) override;

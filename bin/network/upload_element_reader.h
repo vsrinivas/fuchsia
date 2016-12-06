@@ -6,7 +6,7 @@
 #define APPS_NETWORK_UPLOAD_ELEMENT_READER_H_
 
 #include "lib/ftl/macros.h"
-#include "mx/datapipe.h"
+#include "mx/socket.h"
 #include "mx/vmo.h"
 
 #include <array>
@@ -26,15 +26,15 @@ class UploadElementReader {
   FTL_DISALLOW_COPY_AND_ASSIGN(UploadElementReader);
 };
 
-class DatapipeUploadElementReader : public UploadElementReader {
+class SocketUploadElementReader : public UploadElementReader {
  public:
-  DatapipeUploadElementReader(mx::datapipe_consumer pipe);
-  ~DatapipeUploadElementReader() override;
+  SocketUploadElementReader(mx::socket socket);
+  ~SocketUploadElementReader() override;
 
   mx_status_t ReadAll(std::ostream* os) override;
 
  private:
-  mx::datapipe_consumer pipe_;
+  mx::socket socket_;
   std::array<char, BUFSIZE> buf_;
 };
 

@@ -10,33 +10,33 @@
 
 namespace network {
 
-DatapipeUploadElementReader::DatapipeUploadElementReader(
-    mx::datapipe_consumer pipe)
-    : pipe_(std::move(pipe)) {}
+SocketUploadElementReader::SocketUploadElementReader(
+    mx::socket socket)
+    : socket_(std::move(socket)) {}
 
-DatapipeUploadElementReader::~DatapipeUploadElementReader() {}
+SocketUploadElementReader::~SocketUploadElementReader() {}
 
-mx_status_t DatapipeUploadElementReader::ReadAll(std::ostream* os) {
+mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
   mx_status_t result = NO_ERROR;
 
   while (true) {
     mx_size_t num_bytes = buf_.size();
-    result = pipe_.read(0u, buf_.data(), num_bytes, &num_bytes);
+    result = socket_.read(0u, buf_.data(), num_bytes, &num_bytes);
     if (result == ERR_SHOULD_WAIT) {
-      result = pipe_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+      result = socket_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
                               MX_TIME_INFINITE, nullptr);
       if (result == NO_ERROR)
-        continue;  // retry now that the data pipe is ready
+        continue;  // retry now that the socket is ready
     }
 
     if (result != NO_ERROR) {
-      // If the other end closes the data pipe,
+      // If the other end closes the socket,
       // we get ERR_REMOTE_CLOSED.
       if (result == ERR_REMOTE_CLOSED) {
         result = NO_ERROR;
         break;
       }
-      FTL_LOG(ERROR) << "DatapipeUploadELementReader: result=" << result;
+      FTL_LOG(ERROR) << "SocketUploadELementReader: result=" << result;
       break;
     }
 
@@ -44,7 +44,7 @@ mx_status_t DatapipeUploadElementReader::ReadAll(std::ostream* os) {
     if (!*os) {
       // TODO(toshik): better result code?
       result = ERR_BUFFER_TOO_SMALL;
-      FTL_LOG(ERROR) << "DatapipeUploadElementReader: result=" << result;
+      FTL_LOG(ERROR) << "SocketUploadElementReader: result=" << result;
       break;
     }
   }

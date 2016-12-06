@@ -186,8 +186,8 @@ void NetworkServiceImpl::CreateTCPBoundSocket(
 
 void NetworkServiceImpl::CreateTCPConnectedSocket(
     NetAddressPtr remote_address,
-    mx::datapipe_consumer send_stream,
-    mx::datapipe_producer receive_stream,
+    mx::socket send_stream,
+    mx::socket receive_stream,
     mx::channel client_socket,
     const CreateTCPConnectedSocketCallback& callback) {
   FTL_NOTIMPLEMENTED();

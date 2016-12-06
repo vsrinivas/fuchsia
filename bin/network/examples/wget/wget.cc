@@ -36,7 +36,7 @@ class ResponsePrinter {
     }
   }
 
-  void PrintResponseBody(mx::datapipe_consumer body) const {
+  void PrintResponseBody(mx::socket body) const {
     // Read response body in blocking fashion.
     printf(">>> Body <<<\n");
 

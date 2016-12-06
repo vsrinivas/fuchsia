@@ -49,7 +49,7 @@ struct URLRequest {
   // to "POST" or "PUT".
   URLBody? body;
 
-  // The buffer size of the data pipe returned in URLResponse's |body| member.
+  // The buffer size of the socket returned in URLResponse's |body| member.
   // A value of 0 indicates that the default buffer size should be used.  This
   // value is just a suggestion. The URLLoader may choose to ignore this value.
   uint32 response_body_buffer_size = 0;

@@ -79,7 +79,7 @@ void URLLoaderImpl::StartInternal(URLRequestPtr request) {
   if (request->body) {
     // TODO(kulakowski) Implement responses into a shared_buffer
     if (request->body->is_stream()) {
-      element_readers.push_back(std::make_unique<DatapipeUploadElementReader>(
+      element_readers.push_back(std::make_unique<SocketUploadElementReader>(
           std::move(request->body->get_stream())));
     } else {
       element_readers.push_back(std::make_unique<VmoUploadElementReader>(
