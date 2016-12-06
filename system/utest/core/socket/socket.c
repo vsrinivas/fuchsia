@@ -297,12 +297,36 @@ static bool socket_bytes_outstanding_half_close(void) {
     END_TEST;
 }
 
+static bool socket_short_write(void) {
+    BEGIN_TEST;
+
+    mx_status_t status;
+
+    mx_handle_t h0, h1;
+    status = mx_socket_create(0, &h0, &h1);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    // TODO(qsr): Request socket buffer and use (socket_buffer + 1).
+    const size_t buffer_size = 256 * 1024 + 1;
+    char* buffer = malloc(buffer_size);
+    mx_size_t written = 0;
+    status = mx_socket_write(h0, 0u, buffer, buffer_size, &written);
+    EXPECT_LT(written, buffer_size, "");
+
+    free(buffer);
+    mx_handle_close(h0);
+    mx_handle_close(h1);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(socket_tests)
 RUN_TEST(socket_basic)
 RUN_TEST(socket_signals)
 RUN_TEST(socket_half_close)
 RUN_TEST(socket_bytes_outstanding)
 RUN_TEST(socket_bytes_outstanding_half_close)
+RUN_TEST(socket_short_write)
 END_TEST_CASE(socket_tests)
 
 #ifndef BUILD_COMBINED_TESTS

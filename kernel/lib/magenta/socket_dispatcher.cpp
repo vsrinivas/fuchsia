@@ -81,8 +81,17 @@ mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool fro
 
     while (pos < len && (free() > 0)) {
         if (head_ >= tail_) {
-            write_len = MIN(valpow2(len_pow2_) - head_, len - pos);
+            if (tail_ == 0) {
+                // Special case - if tail is at position 0, we can't write all
+                // the way to the end of the buffer. Otherwise, head ends up at
+                // 0, head == tail, and buffer is considered "empty" again.
+                write_len = MIN(valpow2(len_pow2_) - head_ - 1, len - pos);
+            } else {
+                // Write to the end of the buffer.
+                write_len = MIN(valpow2(len_pow2_) - head_, len - pos);
+            }
         } else {
+            // Write from head to tail-1.
             write_len = MIN(tail_ - head_ - 1, len - pos);
         }
 
