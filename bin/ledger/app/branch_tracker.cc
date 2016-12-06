@@ -14,11 +14,13 @@ namespace ledger {
 class BranchTracker::PageWatcherContainer {
  public:
   PageWatcherContainer(PageWatcherPtr watcher,
+                       PageManager* page_manager,
                        storage::PageStorage* storage,
                        std::unique_ptr<const storage::Commit> base_commit,
                        PageSnapshotPtr snapshot)
       : change_in_flight_(true),
         last_commit_(std::move(base_commit)),
+        manager_(page_manager),
         storage_(storage),
         interface_(std::move(watcher)) {
     interface_->OnInitialState(std::move(snapshot), [this]() {
@@ -134,13 +136,19 @@ class BranchTracker::PageWatcherContainer {
                       convert::ToArray(object_contents));
                 }
 
-                interface_->OnChange(std::move(page_change), ftl::MakeCopyable([
-                                       this, new_commit = std::move(new_commit)
-                                     ]() mutable {
-                                       change_in_flight_ = false;
-                                       last_commit_.swap(new_commit);
-                                       SendCommit();
-                                     }));
+                interface_->OnChange(
+                    std::move(page_change), ftl::MakeCopyable([
+                      this, new_commit = std::move(new_commit)
+                    ](fidl::InterfaceRequest<PageSnapshot>
+                                                snapshot_request) mutable {
+                      if (snapshot_request) {
+                        manager_->BindPageSnapshot(new_commit->GetContents(),
+                                                   std::move(snapshot_request));
+                      }
+                      change_in_flight_ = false;
+                      last_commit_.swap(new_commit);
+                      SendCommit();
+                    }));
               });
           waiter->Finalize(result_callback);
         });
@@ -150,6 +158,7 @@ class BranchTracker::PageWatcherContainer {
   bool change_in_flight_;
   std::unique_ptr<const storage::Commit> last_commit_;
   std::unique_ptr<const storage::Commit> current_commit_;
+  PageManager* manager_;
   storage::PageStorage* storage_;
   PageWatcherPtr interface_;
 };
@@ -157,7 +166,8 @@ class BranchTracker::PageWatcherContainer {
 BranchTracker::BranchTracker(PageManager* manager,
                              storage::PageStorage* storage,
                              fidl::InterfaceRequest<Page> request)
-    : storage_(storage),
+    : manager_(manager),
+      storage_(storage),
       interface_(std::move(request), storage, manager, this),
       transaction_in_progress_(false) {
   interface_.set_on_empty([this] {
@@ -237,7 +247,7 @@ void BranchTracker::RegisterPageWatcher(PageWatcherPtr page_watcher_ptr,
   std::unique_ptr<const storage::Commit> base_commit;
   storage::Status status = storage_->GetCommit(current_commit_, &base_commit);
   FTL_DCHECK(status == storage::Status::OK);
-  watchers_.emplace(std::move(page_watcher_ptr), storage_,
+  watchers_.emplace(std::move(page_watcher_ptr), manager_, storage_,
                     std::move(base_commit), std::move(snapshot_ptr));
 }
 

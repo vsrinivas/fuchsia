@@ -198,6 +198,7 @@ class Watcher : public PageWatcher {
   PageChangePtr GetLastPageChange() { return last_page_change_.Clone(); }
 
   uint changes_seen = 0;
+  PageSnapshotPtr last_snapshot_;
 
  private:
   // PageWatcher:
@@ -210,7 +211,7 @@ class Watcher : public PageWatcher {
                 const OnChangeCallback& callback) override {
     changes_seen++;
     last_page_change_ = std::move(page_change);
-    callback();
+    callback(last_snapshot_.NewRequest());
     change_callback_();
   }
 
@@ -738,6 +739,29 @@ TEST_F(LedgerApplicationTest, PageWatcherSimple) {
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Alice",
             convert::ToString(change->changes[0]->new_value->get_bytes()));
+}
+
+TEST_F(LedgerApplicationTest, PageWatcherSnapshot) {
+  PagePtr page = GetTestPage();
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(watcher_ptr.NewRequest(),
+                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+
+  page->Watch(std::move(watcher_ptr),
+              [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(1u, watcher.changes_seen);
+  fidl::Array<EntryPtr> entries =
+      SnapshotGetEntries(&(watcher.last_snapshot_), convert::ToArray(""));
+  EXPECT_EQ(1u, entries.size());
+  EXPECT_EQ("name", convert::ToString(entries[0]->key));
+  EXPECT_EQ("Alice", convert::ToString(entries[0]->value));
 }
 
 TEST_F(LedgerApplicationTest, PageWatcherTransaction) {

@@ -252,7 +252,11 @@ struct PageChange {
 // itself, as well as other clients or synced from other devices.
 interface PageWatcher {
   OnInitialState(PageSnapshot snapshot) => ();
-  OnChange(PageChange page_change) => ();
+  // Called for changes made on the page. No new OnChange() call will be made
+  // while the previous one is still active. If the client is interested in the
+  // full content of the page at the time of the change, it can request a
+  // PageSnapshot in the callback. This request is optional.
+  OnChange(PageChange page_change) => (PageSnapshot&? snapshot);
 };
 
 // This interface lets clients control the conflict resolution policy of the

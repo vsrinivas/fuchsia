@@ -84,7 +84,7 @@ void TodoApp::OnInitialState(
 void TodoApp::OnChange(ledger::PageChangePtr page_change,
                        const OnChangeCallback& callback) {
   List();
-  callback();
+  callback(nullptr);
 }
 
 ledger::LedgerPtr TodoApp::GetLedger() {

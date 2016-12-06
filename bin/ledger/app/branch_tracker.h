@@ -56,6 +56,7 @@ class BranchTracker : public storage::CommitWatcher {
 
   void CheckEmpty();
 
+  PageManager* manager_;
   storage::PageStorage* storage_;
   BoundInterface<Page, PageImpl> interface_;
   callback::AutoCleanableSet<PageWatcherContainer> watchers_;
