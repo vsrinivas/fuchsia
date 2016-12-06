@@ -719,7 +719,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
     }
   }
 
-  cb();
+  cb(nullptr);
 }
 
 }  // namespace modular

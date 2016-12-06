@@ -176,7 +176,7 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
       }
     }
   }
-  cb();
+  cb(nullptr);
 }
 
 }  // namespace modular
