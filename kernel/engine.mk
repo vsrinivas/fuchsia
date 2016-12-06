@@ -88,9 +88,7 @@ GLOBAL_COMPILEFLAGS := $(GLOBAL_DEBUGFLAGS) -finline -include $(GLOBAL_CONFIG_HE
 GLOBAL_COMPILEFLAGS += -Wall -Wextra -Wno-multichar -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-label -Werror=return-type
 GLOBAL_COMPILEFLAGS += -fno-common
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-GLOBAL_COMPILEFLAGS += \
-    -Wno-address-of-packed-member \
-    -Wno-error
+GLOBAL_COMPILEFLAGS += -Wno-address-of-packed-member
 # TODO(mcgrathr): This avoids complaints about the 'leaf' attribute, which
 # GCC supports as an optimization hint but Clang does not grok.  This can
 # be removed when https://llvm.org/bugs/show_bug.cgi?id=30980 is fixed.
