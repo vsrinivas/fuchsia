@@ -18,7 +18,7 @@
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 
 namespace ledger {
 
@@ -141,11 +141,10 @@ void PageImpl::PutWithPriority(fidl::Array<uint8_t> key,
       callback::TraceCallback(std::move(callback), "page", "put_with_priority");
 
   // TODO(etiennej): Use asynchronous write, otherwise the run loop may block
-  // until the pipe is drained.
-  mx::datapipe_consumer data_pipe =
-      mtl::WriteStringToConsumerHandle(convert::ToStringView(value));
+  // until the socket is drained.
+  mx::socket socket = mtl::WriteStringToSocket(convert::ToStringView(value));
   storage_->AddObjectFromLocal(
-      std::move(data_pipe), value.size(), ftl::MakeCopyable([
+      std::move(socket), value.size(), ftl::MakeCopyable([
         this, key = std::move(key), priority,
         callback = std::move(timed_callback)
       ](storage::Status status, storage::ObjectId object_id) {
@@ -199,10 +198,10 @@ void PageImpl::Delete(fidl::Array<uint8_t> key,
       callback::TraceCallback(std::move(callback), "page", "delete"));
 }
 
-// CreateReference(int64 size, handle<data_pipe_producer> data)
+// CreateReference(int64 size, handle<socket> data)
 //   => (Status status, Reference reference);
 void PageImpl::CreateReference(int64_t size,
-                               mx::datapipe_consumer data,
+                               mx::socket data,
                                const CreateReferenceCallback& callback) {
   storage_->AddObjectFromLocal(
       std::move(data), size,

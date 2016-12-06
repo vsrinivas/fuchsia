@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "apps/ledger/src/cloud_provider/public/cloud_provider.h"
-#include "mx/datapipe.h"
+#include "mx/socket.h"
 #include "mx/vmo.h"
 
 namespace cloud_provider {
@@ -41,9 +41,8 @@ class CloudProviderEmptyImpl : public CloudProvider {
 
   void GetObject(
       ObjectIdView object_id,
-      std::function<void(Status status,
-                         uint64_t size,
-                         mx::datapipe_consumer data)> callback) override;
+      std::function<void(Status status, uint64_t size, mx::socket data)>
+          callback) override;
 };
 
 }  // namespace test

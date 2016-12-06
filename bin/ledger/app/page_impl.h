@@ -73,7 +73,7 @@ class PageImpl : public Page {
               const DeleteCallback& callback) override;
 
   void CreateReference(int64_t size,
-                       mx::datapipe_consumer data,
+                       mx::socket data,
                        const CreateReferenceCallback& callback) override;
 
   void GetReference(ReferencePtr reference,

@@ -31,7 +31,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/strings/concatenate.h"
-#include "lib/mtl/data_pipe/data_pipe_drainer.h"
+#include "lib/mtl/socket/socket_drainer.h"
 
 namespace storage {
 
@@ -107,7 +107,7 @@ Status StagingToDestination(size_t expected_size,
   return Status::OK;
 }
 
-class FileWriterOnIOThread : public mtl::DataPipeDrainer::Client {
+class FileWriterOnIOThread : public mtl::SocketDrainer::Client {
  public:
   FileWriterOnIOThread(const std::string& staging_dir,
                        const std::string& object_dir)
@@ -125,7 +125,7 @@ class FileWriterOnIOThread : public mtl::DataPipeDrainer::Client {
     }
   }
 
-  void Start(mx::datapipe_consumer source,
+  void Start(mx::socket source,
              int64_t expected_size,
              std::function<void(Status, ObjectId)> callback) {
     expected_size_ = expected_size;
@@ -143,7 +143,7 @@ class FileWriterOnIOThread : public mtl::DataPipeDrainer::Client {
   }
 
  private:
-  // mtl::DataPipeDrainer::Client
+  // mtl::SocketDrainer::Client
   void OnDataAvailable(const void* data, size_t num_bytes) override {
     size_ += num_bytes;
     hash_.Update(data, num_bytes);
@@ -155,7 +155,7 @@ class FileWriterOnIOThread : public mtl::DataPipeDrainer::Client {
     }
   }
 
-  // mtl::DataPipeDrainer::Client
+  // mtl::SocketDrainer::Client
   void OnDataComplete() override {
     if (fsync(fd_.get()) != 0) {
       FTL_LOG(ERROR) << "Unable to save to disk.";
@@ -187,7 +187,7 @@ class FileWriterOnIOThread : public mtl::DataPipeDrainer::Client {
   const std::string& staging_dir_;
   const std::string& object_dir_;
   std::function<void(Status, ObjectId)> callback_;
-  mtl::DataPipeDrainer drainer_;
+  mtl::SocketDrainer drainer_;
   std::string file_path_;
   ftl::UniqueFD fd_;
   glue::SHA256StreamingHash hash_;
@@ -223,7 +223,7 @@ class PageStorageImpl::FileWriter {
     }
   }
 
-  void Start(mx::datapipe_consumer source,
+  void Start(mx::socket source,
              int64_t expected_size,
              std::function<void(Status, ObjectId)> callback) {
     FTL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
@@ -531,7 +531,7 @@ Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
 
 void PageStorageImpl::AddObjectFromSync(
     ObjectIdView object_id,
-    mx::datapipe_consumer data,
+    mx::socket data,
     size_t size,
     const std::function<void(Status)>& callback) {
   AddObject(std::move(data), size,
@@ -552,7 +552,7 @@ void PageStorageImpl::AddObjectFromSync(
 }
 
 void PageStorageImpl::AddObjectFromLocal(
-    mx::datapipe_consumer data,
+    mx::socket data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   AddObject(std::move(data), size, [ this, callback = std::move(callback) ](
@@ -706,7 +706,7 @@ bool PageStorageImpl::IsFirstCommit(const CommitId& id) {
 }
 
 void PageStorageImpl::AddObject(
-    mx::datapipe_consumer data,
+    mx::socket data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   auto file_writer = std::make_unique<FileWriter>(main_runner_, io_runner_,
@@ -742,7 +742,7 @@ void PageStorageImpl::GetObjectFromSync(
   }
   page_sync_->GetObject(object_id, [
     this, callback = std::move(callback), object_id = object_id.ToString()
-  ](Status status, uint64_t size, mx::datapipe_consumer data) {
+  ](Status status, uint64_t size, mx::socket data) {
     if (status != Status::OK) {
       callback(status, nullptr);
       return;

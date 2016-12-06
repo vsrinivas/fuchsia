@@ -14,7 +14,7 @@
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/watch_client.h"
-#include "mx/datapipe.h"
+#include "mx/socket.h"
 #include "mx/vmo.h"
 
 namespace cloud_provider {
@@ -43,9 +43,8 @@ class CloudProviderImpl : public CloudProvider {
 
   void GetObject(
       ObjectIdView object_id,
-      std::function<void(Status status,
-                         uint64_t size,
-                         mx::datapipe_consumer data)> callback) override;
+      std::function<void(Status status, uint64_t size, mx::socket data)>
+          callback) override;
 
  private:
   // Returns the Firebase query filtering the commits so that only commits not

@@ -147,8 +147,8 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   storage_ptr->ClearCalls();
 }
 
-// Verifies that deleting the LedgerManager closes the message pipes connected
-// to LedgerImpl.
+// Verifies that deleting the LedgerManager closes the channels connected to
+// LedgerImpl.
 TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   std::unique_ptr<LedgerManager> ledger_manager =
       std::make_unique<LedgerManager>(

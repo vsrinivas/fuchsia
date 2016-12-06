@@ -76,11 +76,10 @@ class PageSyncImpl : public PageSync,
       storage::ChangeSource source) override;
 
   // storage::PageSyncDelegate:
-  void GetObject(
-      storage::ObjectIdView object_id,
-      std::function<void(storage::Status status,
-                         uint64_t size,
-                         mx::datapipe_consumer data)> callback) override;
+  void GetObject(storage::ObjectIdView object_id,
+                 std::function<void(storage::Status status,
+                                    uint64_t size,
+                                    mx::socket data)> callback) override;
 
   // cloud_provider::CommitWatcher:
   void OnRemoteCommit(cloud_provider::Commit commit,

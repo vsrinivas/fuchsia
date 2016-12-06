@@ -9,7 +9,7 @@
 
 #include <rapidjson/document.h>
 
-#include "apps/ledger/src/glue/data_pipe/data_pipe.h"
+#include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
@@ -17,7 +17,7 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace firebase {
@@ -59,7 +59,7 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
     message_loop_.PostQuitTask();
   }
 
-  void SetPipeResponse(mx::datapipe_consumer body, uint32_t status_code) {
+  void SetSocketResponse(mx::socket body, uint32_t status_code) {
     network::URLResponsePtr server_response = network::URLResponse::New();
     server_response->body = network::URLBody::New();
     server_response->body->set_stream(std::move(body));
@@ -68,7 +68,7 @@ class FirebaseImplTest : public test::TestWithMessageLoop, public WatchClient {
   }
 
   void SetStringResponse(const std::string& body, uint32_t status_code) {
-    SetPipeResponse(mtl::WriteStringToConsumerHandle(body), status_code);
+    SetSocketResponse(mtl::WriteStringToSocket(body), status_code);
   }
 
   std::vector<std::string> put_paths_;
@@ -361,11 +361,11 @@ TEST_F(FirebaseImplTest, UnWatch) {
       "event: put\n"
       "data: {\"path\":\"/\",\"data\":\"Alice\"}\n"
       "\n");
-  glue::DataPipe data_pipe;
-  SetPipeResponse(std::move(data_pipe.consumer_handle), 200);
+  glue::SocketPair socket;
+  SetSocketResponse(std::move(socket.socket1), 200);
   firebase_.Watch("/", "", this);
 
-  EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
+  EXPECT_TRUE(mtl::BlockingCopyFromString(event, socket.socket2));
   message_loop_.SetAfterTaskCallback([this] {
     if (put_count_ == 1u) {
       message_loop_.QuitNow();
@@ -380,7 +380,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_EQ(0u, malformed_event_count_);
   EXPECT_EQ(0u, connection_error_count_);
 
-  EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
+  EXPECT_TRUE(mtl::BlockingCopyFromString(event, socket.socket2));
   message_loop_.SetAfterTaskCallback([this] {
     if (put_count_ == 2u) {
       message_loop_.QuitNow();
@@ -398,7 +398,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   // Unregister the watch client and make sure that we are *not* notified about
   // the next event.
   firebase_.UnWatch(this);
-  EXPECT_TRUE(mtl::BlockingCopyFromString(event, data_pipe.producer_handle));
+  EXPECT_TRUE(mtl::BlockingCopyFromString(event, socket.socket2));
 
   // TODO(ppi): how to avoid the wait?
   message_loop_.task_runner()->PostDelayedTask(

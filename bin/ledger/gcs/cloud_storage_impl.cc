@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include "apps/ledger/src/glue/data_pipe/data_pipe.h"
+#include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/files/eintr_wrapper.h"
 #include "lib/ftl/files/file.h"
@@ -19,7 +19,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/ascii.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/mtl/data_pipe/files.h"
+#include "lib/mtl/socket/files.h"
 #include "lib/mtl/vmo/file.h"
 
 namespace gcs {

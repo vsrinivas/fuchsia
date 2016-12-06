@@ -18,10 +18,10 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/ref_ptr.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
-#include "mx/datapipe.h"
+#include "mx/socket.h"
 #include "mx/vmo.h"
 
 #include <rapidjson/document.h>
@@ -380,7 +380,7 @@ TEST_F(CloudProviderImplTest, GetObject) {
 
   Status status;
   uint64_t size;
-  mx::datapipe_consumer data;
+  mx::socket data;
   cloud_provider_->GetObject(
       "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
                                  &status, &size, &data));
@@ -405,7 +405,7 @@ TEST_F(CloudProviderImplTest, GetObjectNotFound) {
 
   Status status;
   uint64_t size;
-  mx::datapipe_consumer data;
+  mx::socket data;
   cloud_provider_->GetObject(
       "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
                                  &status, &size, &data));

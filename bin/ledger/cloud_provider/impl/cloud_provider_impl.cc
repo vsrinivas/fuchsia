@@ -12,7 +12,7 @@
 #include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_view.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/vmo/strings.h"
 
 namespace cloud_provider {
@@ -119,29 +119,27 @@ void CloudProviderImpl::AddObject(ObjectIdView object_id,
 
 void CloudProviderImpl::GetObject(
     ObjectIdView object_id,
-    std::function<void(Status status,
-                       uint64_t size,
-                       mx::datapipe_consumer data)> callback) {
+    std::function<void(Status status, uint64_t size, mx::socket data)>
+        callback) {
   firebase_->Get(
       GetObjectPath(object_id), "",
       [callback](firebase::Status status, const rapidjson::Value& value) {
         if (status != firebase::Status::OK) {
-          callback(ConvertFirebaseStatus(status), 0u, mx::datapipe_consumer());
+          callback(ConvertFirebaseStatus(status), 0u, mx::socket());
           return;
         }
 
         if (value.IsNull()) {
-          callback(Status::NOT_FOUND, 0u, mx::datapipe_consumer());
+          callback(Status::NOT_FOUND, 0u, mx::socket());
           return;
         }
 
         std::string data;
         if (!value.IsString() || !firebase::Decode(value.GetString(), &data)) {
-          callback(Status::PARSE_ERROR, 0u, mx::datapipe_consumer());
+          callback(Status::PARSE_ERROR, 0u, mx::socket());
           return;
         }
-        callback(Status::OK, data.size(),
-                 mtl::WriteStringToConsumerHandle(data));
+        callback(Status::OK, data.size(), mtl::WriteStringToSocket(data));
       });
 }
 

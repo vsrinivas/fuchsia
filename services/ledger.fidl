@@ -69,7 +69,7 @@ interface Ledger {
 };
 
 // A value that can be either directly represented by |bytes|, or that is too
-// big to be sent over a message pipe and is then represented by the shared
+// big to be sent over a channel and is then represented by the shared
 // buffer |buffer|.
 union Value {
   array<uint8> bytes;
@@ -130,10 +130,10 @@ interface Page {
   // References.
   // Creates a new reference. The object is not part of any commit. It must be
   // associated with a key using |PutReference()|. The content of the reference
-  // will be the content of the data pipe. If |size| is not negative, the
+  // will be the content of the socket. If |size| is not negative, the
   // content size must be equal to |size|, otherwise the call will fail. If
   // |size| is negative, no validation is done.
-  CreateReference(int64 size, handle<data_pipe_consumer> data)
+  CreateReference(int64 size, handle<socket> data)
       => (Status status, Reference? reference);
   // Returns the value of the given reference.
   GetReference(Reference reference) => (Status status, Value? value);

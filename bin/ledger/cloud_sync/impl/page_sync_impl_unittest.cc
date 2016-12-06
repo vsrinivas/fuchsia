@@ -19,7 +19,7 @@
 #include "gtest/gtest.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace cloud_sync {
@@ -224,25 +224,23 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
     });
   }
 
-  void GetObject(
-      cloud_provider::ObjectIdView object_id,
-      std::function<void(cloud_provider::Status status,
-                         uint64_t size,
-                         mx::datapipe_consumer data)> callback) override {
+  void GetObject(cloud_provider::ObjectIdView object_id,
+                 std::function<void(cloud_provider::Status status,
+                                    uint64_t size,
+                                    mx::socket data)> callback) override {
     get_object_calls++;
     if (should_fail_get_object) {
       message_loop_->task_runner()->PostTask([this, callback]() {
-        callback(cloud_provider::Status::NETWORK_ERROR, 0,
-                 mx::datapipe_consumer());
+        callback(cloud_provider::Status::NETWORK_ERROR, 0, mx::socket());
       });
       return;
     }
 
     message_loop_->task_runner()->PostTask(
         [ this, object_id = object_id.ToString(), callback ]() {
-          callback(
-              cloud_provider::Status::OK, objects_to_return[object_id].size(),
-              mtl::WriteStringToConsumerHandle(objects_to_return[object_id]));
+          callback(cloud_provider::Status::OK,
+                   objects_to_return[object_id].size(),
+                   mtl::WriteStringToSocket(objects_to_return[object_id]));
         });
   }
 
@@ -733,7 +731,7 @@ TEST_F(PageSyncImplTest, GetObject) {
 
   storage::Status status;
   uint64_t size;
-  mx::datapipe_consumer data;
+  mx::socket data;
   page_sync_.GetObject(storage::ObjectIdView("object_id"),
                        test::Capture([this] { message_loop_.PostQuitTask(); },
                                      &status, &size, &data));
@@ -760,7 +758,7 @@ TEST_F(PageSyncImplTest, RetryGetObject) {
   });
   storage::Status status;
   uint64_t size;
-  mx::datapipe_consumer data;
+  mx::socket data;
   page_sync_.GetObject(storage::ObjectIdView("object_id"),
                        test::Capture([this] { message_loop_.PostQuitTask(); },
                                      &status, &size, &data));

@@ -199,7 +199,7 @@ void DoctorCommand::CheckGetObject(std::string id, std::string content) {
   ftl::TimePoint request_start = ftl::TimePoint::Now();
   cloud_provider_->GetObject(
       id, [this, request_start](cloud_provider::Status status, uint64_t size,
-                                mx::datapipe_consumer data) {
+                                mx::socket data) {
         if (status != cloud_provider::Status::OK) {
           error(status);
           on_done_();

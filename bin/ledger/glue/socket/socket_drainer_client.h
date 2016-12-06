@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_GLUE_DATA_PIPE_DATA_PIPE_DRAINER_CLIENT_H_
-#define APPS_LEDGER_SRC_GLUE_DATA_PIPE_DATA_PIPE_DRAINER_CLIENT_H_
+#ifndef APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_DRAINER_CLIENT_H_
+#define APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_DRAINER_CLIENT_H_
 
 #include <functional>
 #include <memory>
@@ -11,17 +11,17 @@
 
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/data_pipe/data_pipe_drainer.h"
+#include "lib/mtl/socket/socket_drainer.h"
 
 namespace glue {
 
-class DataPipeDrainerClient : public mtl::DataPipeDrainer::Client {
+class SocketDrainerClient : public mtl::SocketDrainer::Client {
  public:
-  DataPipeDrainerClient();
+  SocketDrainerClient();
 
-  ~DataPipeDrainerClient() override;
+  ~SocketDrainerClient() override;
 
-  void Start(mx::datapipe_consumer source,
+  void Start(mx::socket source,
              const std::function<void(std::string)>& callback);
 
   void set_on_empty(ftl::Closure on_empty_callback) {
@@ -35,12 +35,12 @@ class DataPipeDrainerClient : public mtl::DataPipeDrainer::Client {
 
   std::function<void(std::string)> callback_;
   std::string data_;
-  mtl::DataPipeDrainer drainer_;
+  mtl::SocketDrainer drainer_;
   ftl::Closure on_empty_callback_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(DataPipeDrainerClient);
+  FTL_DISALLOW_COPY_AND_ASSIGN(SocketDrainerClient);
 };
 
 }  // namespace glue
 
-#endif  // APPS_LEDGER_SRC_GLUE_DATA_PIPE_DATA_PIPE_DRAINER_CLIENT_H_
+#endif  // APPS_LEDGER_SRC_GLUE_SOCKET_SOCKET_DRAINER_CLIENT_H_

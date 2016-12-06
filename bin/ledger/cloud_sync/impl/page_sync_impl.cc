@@ -100,12 +100,11 @@ void PageSyncImpl::OnNewCommits(
 
 void PageSyncImpl::GetObject(
     storage::ObjectIdView object_id,
-    std::function<void(storage::Status status,
-                       uint64_t size,
-                       mx::datapipe_consumer data)> callback) {
+    std::function<void(storage::Status status, uint64_t size, mx::socket data)>
+        callback) {
   cloud_provider_->GetObject(object_id, [
     this, object_id = object_id.ToString(), callback
-  ](cloud_provider::Status status, uint64_t size, mx::datapipe_consumer data) {
+  ](cloud_provider::Status status, uint64_t size, mx::socket data) {
     if (status == cloud_provider::Status::NETWORK_ERROR) {
       FTL_LOG(WARNING)
           << "GetObject() failed due to a connection error, retrying.";
@@ -119,7 +118,7 @@ void PageSyncImpl::GetObject(
     if (status != cloud_provider::Status::OK) {
       FTL_LOG(WARNING) << "Fetching remote object failed with status: "
                        << status;
-      callback(storage::Status::IO_ERROR, 0, mx::datapipe_consumer());
+      callback(storage::Status::IO_ERROR, 0, mx::socket());
       return;
     }
 

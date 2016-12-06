@@ -8,6 +8,8 @@
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/glue/socket/socket_pair.h"
+#include "apps/ledger/src/glue/socket/socket_writer.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -15,7 +17,7 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/time/time_delta.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 #include "lib/mtl/vmo/strings.h"
@@ -138,6 +140,7 @@ class LedgerApplicationTest : public test::TestWithMessageLoop {
               std::make_unique<LedgerRepositoryFactoryContainer>(
                   task_runner_, tmp_dir_.path(), std::move(request));
         }));
+    socket_thread_ = mtl::CreateThread(&socket_task_runner_);
     ledger_ = GetTestLedger();
     std::srand(0);
   }
@@ -148,7 +151,23 @@ class LedgerApplicationTest : public test::TestWithMessageLoop {
       factory_container_.reset();
     });
     thread_.join();
+
+    socket_task_runner_->PostTask(
+        [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+    socket_thread_.join();
+
     ::testing::Test::TearDown();
+  }
+
+  mx::socket StreamDataToSocket(std::string data) {
+    glue::SocketPair sockets;
+    socket_task_runner_->PostTask(ftl::MakeCopyable([
+      socket = std::move(sockets.socket1), data = std::move(data)
+    ]() mutable {
+      auto writer = new glue::SocketWriter();
+      writer->Start(std::move(data), std::move(socket));
+    }));
+    return std::move(sockets.socket2);
   }
 
   LedgerPtr GetTestLedger();
@@ -164,6 +183,8 @@ class LedgerApplicationTest : public test::TestWithMessageLoop {
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   std::thread thread_;
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
+  std::thread socket_thread_;
+  ftl::RefPtr<ftl::TaskRunner> socket_task_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerApplicationTest);
 };
@@ -579,7 +600,7 @@ TEST_F(LedgerApplicationTest, PageCreateReferenceNegativeSize) {
 
   PagePtr page = GetTestPage();
 
-  page->CreateReference(-1, mtl::WriteStringToConsumerHandle(big_data),
+  page->CreateReference(-1, StreamDataToSocket(big_data),
                         [this](Status status, ReferencePtr ref) {
                           EXPECT_EQ(Status::OK, status);
                         });
@@ -591,7 +612,7 @@ TEST_F(LedgerApplicationTest, PageCreateReferenceWrongSize) {
 
   PagePtr page = GetTestPage();
 
-  page->CreateReference(123, mtl::WriteStringToConsumerHandle(big_data),
+  page->CreateReference(123, StreamDataToSocket(big_data),
                         [this](Status status, ReferencePtr ref) {
                           EXPECT_EQ(Status::IO_ERROR, status);
                         });
@@ -605,8 +626,7 @@ TEST_F(LedgerApplicationTest, PageCreatePutLargeReference) {
 
   // Stream the data into the reference.
   ReferencePtr reference;
-  page->CreateReference(big_data.size(),
-                        mtl::WriteStringToConsumerHandle(big_data),
+  page->CreateReference(big_data.size(), StreamDataToSocket(big_data),
                         [this, &reference](Status status, ReferencePtr ref) {
                           EXPECT_EQ(Status::OK, status);
                           reference = std::move(ref);
@@ -644,7 +664,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotClosePageGet) {
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
 
-  // Close the pipe. PageSnapshotPtr should remain valid.
+  // Close the channel. PageSnapshotPtr should remain valid.
   page.reset();
 
   ValuePtr value;

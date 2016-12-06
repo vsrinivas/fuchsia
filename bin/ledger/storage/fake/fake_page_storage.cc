@@ -11,7 +11,7 @@
 #include "apps/ledger/src/storage/fake/fake_commit.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/public/constants.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 
 namespace storage {
 namespace fake {
@@ -93,7 +93,7 @@ Status FakePageStorage::RemoveCommitWatcher(CommitWatcher* watcher) {
 }
 
 void FakePageStorage::AddObjectFromLocal(
-    mx::datapipe_consumer data,
+    mx::socket data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   std::string value;

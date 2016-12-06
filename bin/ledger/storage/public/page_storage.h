@@ -9,7 +9,7 @@
 #include <memory>
 #include <utility>
 
-#include <mx/datapipe.h>
+#include <mx/socket.h>
 
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
@@ -108,7 +108,7 @@ class PageStorage {
   // returned in case of missmatch.
   virtual void AddObjectFromSync(
       ObjectIdView object_id,
-      mx::datapipe_consumer data,
+      mx::socket data,
       size_t size,
       const std::function<void(Status)>& callback) = 0;
   // Adds the given local object and passes the new object's id to the callback.
@@ -116,7 +116,7 @@ class PageStorage {
   // otherwise the call will fail and return |IO_ERROR| in the callback. If
   // |size| is negative, no validation is done.
   virtual void AddObjectFromLocal(
-      mx::datapipe_consumer data,
+      mx::socket data,
       int64_t size,
       const std::function<void(Status, ObjectId)>& callback) = 0;
   // Finds the Object associated with the given |object_id|. The result or an

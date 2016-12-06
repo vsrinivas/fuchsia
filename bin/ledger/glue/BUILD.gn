@@ -6,11 +6,11 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "data_pipe/data_pipe_writer_unittest.cc",
+    "socket/socket_writer_unittest.cc",
   ]
 
   deps = [
-    "//apps/ledger/src/glue/data_pipe",
+    "//apps/ledger/src/glue/socket",
     "//third_party/gtest",
   ]
 }

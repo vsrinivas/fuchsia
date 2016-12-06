@@ -93,7 +93,7 @@ Status PageStorageEmptyImpl::MarkObjectSynced(ObjectIdView object_id) {
 
 void PageStorageEmptyImpl::AddObjectFromSync(
     ObjectIdView object_id,
-    mx::datapipe_consumer data,
+    mx::socket data,
     size_t size,
     const std::function<void(Status)>& callback) {
   FTL_NOTIMPLEMENTED();
@@ -101,7 +101,7 @@ void PageStorageEmptyImpl::AddObjectFromSync(
 }
 
 void PageStorageEmptyImpl::AddObjectFromLocal(
-    mx::datapipe_consumer data,
+    mx::socket data,
     int64_t size,
     const std::function<void(Status, ObjectId)>& callback) {
   FTL_NOTIMPLEMENTED();

@@ -16,7 +16,7 @@
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/status.h"
 #include "apps/ledger/src/firebase/watch_client.h"
-#include "apps/ledger/src/glue/data_pipe/data_pipe_drainer_client.h"
+#include "apps/ledger/src/glue/socket/socket_drainer_client.h"
 #include "apps/ledger/src/network/network_service.h"
 
 #include <rapidjson/document.h>
@@ -88,7 +88,7 @@ class FirebaseImpl : public Firebase {
   const std::string api_url_;
 
   callback::CancellableContainer requests_;
-  callback::AutoCleanableSet<glue::DataPipeDrainerClient> drainers_;
+  callback::AutoCleanableSet<glue::SocketDrainerClient> drainers_;
 
   struct WatchData;
   std::map<WatchClient*, std::unique_ptr<WatchData>> watch_data_;

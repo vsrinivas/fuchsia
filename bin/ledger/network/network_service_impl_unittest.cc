@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include <mx/datapipe.h>
+#include <mx/socket.h>
 
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/network/services/network_service.fidl.h"
@@ -15,7 +15,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
@@ -28,10 +28,10 @@ const char kRedirectUrl[] = "http://example.com/redirect";
 // is moved out in ::Start().
 class FakeURLLoader : public network::URLLoader {
  public:
-  FakeURLLoader(fidl::InterfaceRequest<network::URLLoader> message_pipe,
+  FakeURLLoader(fidl::InterfaceRequest<network::URLLoader> request,
                 network::URLResponsePtr response_to_return,
                 network::URLRequestPtr* request_received)
-      : binding_(this, std::move(message_pipe)),
+      : binding_(this, std::move(request)),
         response_to_return_(std::move(response_to_return)),
         request_received_(request_received) {
     FTL_DCHECK(response_to_return_);
@@ -89,8 +89,8 @@ class FakeNetworkService : public network::NetworkService {
   }
   void CreateTCPConnectedSocket(
       network::NetAddressPtr remote_address,
-      mx::datapipe_consumer send_stream,
-      mx::datapipe_producer receive_stream,
+      mx::socket send_stream,
+      mx::socket receive_stream,
       mx::channel client_socket,
       const CreateTCPConnectedSocketCallback& callback) override {
     FTL_DCHECK(false);
@@ -138,7 +138,7 @@ class NetworkServiceImplTest : public test::TestWithMessageLoop {
       : network_service_(message_loop_.task_runner(),
                          [this] { return NewNetworkService(); }) {}
 
-  void SetPipeResponse(mx::datapipe_consumer body, uint32_t status_code) {
+  void SetSocketResponse(mx::socket body, uint32_t status_code) {
     network::URLResponsePtr server_response = network::URLResponse::New();
     server_response->body = network::URLBody::New();
     server_response->body->set_stream(std::move(body));
@@ -155,7 +155,7 @@ class NetworkServiceImplTest : public test::TestWithMessageLoop {
   }
 
   void SetStringResponse(const std::string& body, uint32_t status_code) {
-    SetPipeResponse(mtl::WriteStringToConsumerHandle(body), status_code);
+    SetSocketResponse(mtl::WriteStringToSocket(body), status_code);
   }
 
   network::URLRequestPtr NewRequest(const std::string& method,

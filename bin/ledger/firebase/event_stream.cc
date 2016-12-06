@@ -16,12 +16,12 @@ EventStream::EventStream() {}
 EventStream::~EventStream() {}
 
 void EventStream::Start(
-    mx::datapipe_consumer source,
+    mx::socket source,
     const std::function<EventCallback>& event_callback,
     const std::function<CompletionCallback>& completion_callback) {
   event_callback_ = event_callback;
   completion_callback_ = completion_callback;
-  drainer_ = std::make_unique<mtl::DataPipeDrainer>(this);
+  drainer_ = std::make_unique<mtl::SocketDrainer>(this);
   drainer_->Start(std::move(source));
 }
 

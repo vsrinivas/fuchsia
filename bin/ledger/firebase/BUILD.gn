@@ -25,7 +25,7 @@ source_set("firebase") {
   deps = [
     "//apps/ledger/src/callback",
     "//apps/ledger/src/glue/crypto",
-    "//apps/ledger/src/glue/data_pipe",
+    "//apps/ledger/src/glue/socket",
     "//lib/ftl",
     "//lib/mtl",
   ]
@@ -43,7 +43,7 @@ source_set("unittests") {
   deps = [
     ":firebase",
     "//apps/ledger/src/convert",
-    "//apps/ledger/src/glue/data_pipe",
+    "//apps/ledger/src/glue/socket",
     "//apps/ledger/src/network:fake",
     "//apps/ledger/src/test:lib",
     "//lib/ftl",

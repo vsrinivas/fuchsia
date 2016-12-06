@@ -60,12 +60,12 @@ class PageStorageEmptyImpl : public PageStorage {
   Status MarkObjectSynced(ObjectIdView object_id) override;
 
   void AddObjectFromSync(ObjectIdView object_id,
-                         mx::datapipe_consumer data,
+                         mx::socket data,
                          size_t size,
                          const std::function<void(Status)>& callback) override;
 
   void AddObjectFromLocal(
-      mx::datapipe_consumer data,
+      mx::socket data,
       int64_t size,
       const std::function<void(Status, ObjectId)>& callback) override;
 

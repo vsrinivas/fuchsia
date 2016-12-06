@@ -2,29 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/glue/data_pipe/data_pipe_drainer_client.h"
+#include "apps/ledger/src/glue/socket/socket_drainer_client.h"
 
 #include <utility>
 
 namespace glue {
 
-DataPipeDrainerClient::DataPipeDrainerClient() : drainer_(this) {}
+SocketDrainerClient::SocketDrainerClient() : drainer_(this) {}
 
-DataPipeDrainerClient::~DataPipeDrainerClient() {}
+SocketDrainerClient::~SocketDrainerClient() {}
 
-void DataPipeDrainerClient::Start(
-    mx::datapipe_consumer source,
+void SocketDrainerClient::Start(
+    mx::socket source,
     const std::function<void(std::string)>& callback) {
   callback_ = callback;
   drainer_.Start(std::move(source));
 }
 
-void DataPipeDrainerClient::OnDataAvailable(const void* data,
-                                            size_t num_bytes) {
+void SocketDrainerClient::OnDataAvailable(const void* data, size_t num_bytes) {
   data_.append(static_cast<const char*>(data), num_bytes);
 }
 
-void DataPipeDrainerClient::OnDataComplete() {
+void SocketDrainerClient::OnDataComplete() {
   ftl::Closure on_empty_callback = std::move(on_empty_callback_);
   callback_(data_);
   // This class might be deleted here. Do not access any field.

@@ -8,10 +8,10 @@
 #include <string>
 #include <utility>
 
-#include "apps/ledger/src/glue/data_pipe/data_pipe.h"
+#include "apps/ledger/src/glue/socket/socket_pair.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace firebase {
@@ -25,10 +25,10 @@ class EventStreamTest : public ::testing::Test {
   // ApplicationTestBase:
   void SetUp() override {
     ::testing::Test::SetUp();
-    glue::DataPipe data_pipe;
-    producer_handle_ = std::move(data_pipe.producer_handle);
+    glue::SocketPair socket;
+    producer_socket_ = std::move(socket.socket1);
     event_stream_ = std::make_unique<EventStream>();
-    event_stream_->Start(std::move(data_pipe.consumer_handle),
+    event_stream_->Start(std::move(socket.socket2),
                          [this](Status status, const std::string& event,
                                 const std::string& data) {
                            status_.push_back(status);
@@ -42,7 +42,7 @@ class EventStreamTest : public ::testing::Test {
   }
 
   void TearDown() override {
-    producer_handle_.reset();
+    producer_socket_.reset();
     ::testing::Test::TearDown();
   }
 
@@ -53,7 +53,7 @@ class EventStreamTest : public ::testing::Test {
   void Done() { event_stream_->OnDataComplete(); }
 
   mtl::MessageLoop message_loop_;
-  mx::datapipe_producer producer_handle_;
+  mx::socket producer_socket_;
   std::unique_ptr<EventStream> event_stream_;
   std::vector<Status> status_;
   std::vector<std::string> events_;
@@ -175,10 +175,10 @@ TEST_F(EventStreamTest, MultipleEvents) {
   EXPECT_EQ("50", data_[2]);
 }
 
-TEST_F(EventStreamTest, DeleteOneEvent) {
+TEST_F(EventStreamTest, DeleteOnEvent) {
   delete_on_event_ = true;
   mtl::BlockingCopyFromString("event: abc\ndata: bazinga\n\n",
-                              producer_handle_);
+                              producer_socket_);
   message_loop_.task_runner()->PostTask([this]() {
     message_loop_.PostQuitTask();
   });

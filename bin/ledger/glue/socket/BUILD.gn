@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("data_pipe") {
+source_set("socket") {
   sources = [
-    "data_pipe.h",
-    "data_pipe_drainer_client.cc",
-    "data_pipe_drainer_client.h",
-    "data_pipe_writer.cc",
-    "data_pipe_writer.h",
+    "socket_drainer_client.cc",
+    "socket_drainer_client.h",
+    "socket_pair.h",
+    "socket_writer.cc",
+    "socket_writer.h",
   ]
 
   public_deps = [

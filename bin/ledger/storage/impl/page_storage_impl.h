@@ -68,11 +68,11 @@ class PageStorageImpl : public PageStorage {
                             std::vector<ObjectId>* objects) override;
   Status MarkObjectSynced(ObjectIdView object_id) override;
   void AddObjectFromSync(ObjectIdView object_id,
-                         mx::datapipe_consumer data,
+                         mx::socket data,
                          size_t size,
                          const std::function<void(Status)>& callback) override;
   void AddObjectFromLocal(
-      mx::datapipe_consumer data,
+      mx::socket data,
       int64_t size,
       const std::function<void(Status, ObjectId)>& callback) override;
   void GetObject(
@@ -95,7 +95,7 @@ class PageStorageImpl : public PageStorage {
                   std::function<void(Status)> callback);
   Status ContainsCommit(const CommitId& id);
   bool IsFirstCommit(const CommitId& id);
-  void AddObject(mx::datapipe_consumer data,
+  void AddObject(mx::socket data,
                  int64_t size,
                  const std::function<void(Status, ObjectId)>& callback);
   void GetObjectFromSync(

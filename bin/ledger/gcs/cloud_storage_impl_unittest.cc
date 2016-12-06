@@ -16,7 +16,7 @@
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -47,7 +47,7 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
                    uint32_t status_code) {
     network::URLResponsePtr server_response = network::URLResponse::New();
     server_response->body = network::URLBody::New();
-    server_response->body->set_stream(mtl::WriteStringToConsumerHandle(body));
+    server_response->body->set_stream(mtl::WriteStringToSocket(body));
     server_response->status_code = status_code;
 
     network::HttpHeaderPtr content_length_header = network::HttpHeader::New();

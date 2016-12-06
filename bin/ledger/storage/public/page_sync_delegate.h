@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include <mx/datapipe.h>
+#include <mx/socket.h>
 
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/macros.h"
@@ -22,13 +22,12 @@ class PageSyncDelegate {
   virtual ~PageSyncDelegate() {}
 
   // Retrieves the object of the given id from the cloud. The size of the object
-  // is passed to the callback along with the data pipe handle, so that the
-  // client can verify that all data was streamed when draining the pipe.
+  // is passed to the callback along with the socket handle, so that the
+  // client can verify that all data was streamed when draining the socket.
   virtual void GetObject(
       ObjectIdView object_id,
-      std::function<void(Status status,
-                         uint64_t size,
-                         mx::datapipe_consumer data)> callback) = 0;
+      std::function<void(Status status, uint64_t size, mx::socket data)>
+          callback) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageSyncDelegate);

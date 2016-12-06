@@ -25,8 +25,8 @@ namespace ledger {
 // particular user and a particular client app.
 //
 // LedgerManager owns all per-ledger-instance objects: LedgerStorage and a Mojo
-// LedgerImpl. It is safe to delete it at any point - this closes all message
-// pipes, deletes the LedgerImpl and tears down the storage.
+// LedgerImpl. It is safe to delete it at any point - this closes all channels,
+// deletes the LedgerImpl and tears down the storage.
 class LedgerManager : public LedgerImpl::Delegate {
  public:
   LedgerManager(std::unique_ptr<storage::LedgerStorage> storage,

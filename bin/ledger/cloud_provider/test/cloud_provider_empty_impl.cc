@@ -38,9 +38,8 @@ void CloudProviderEmptyImpl::AddObject(ObjectIdView object_id,
 
 void CloudProviderEmptyImpl::GetObject(
     ObjectIdView object_id,
-    std::function<void(Status status,
-                       uint64_t size,
-                       mx::datapipe_consumer data)> callback) {
+    std::function<void(Status status, uint64_t size, mx::socket data)>
+        callback) {
   FTL_NOTIMPLEMENTED();
 }
 

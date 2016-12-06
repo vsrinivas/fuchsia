@@ -6,9 +6,9 @@
 
 #include <utility>
 
-#include "apps/ledger/src/glue/data_pipe/data_pipe.h"
-#include "apps/ledger/src/glue/data_pipe/data_pipe_drainer_client.h"
-#include "apps/ledger/src/glue/data_pipe/data_pipe_writer.h"
+#include "apps/ledger/src/glue/socket/socket_drainer_client.h"
+#include "apps/ledger/src/glue/socket/socket_pair.h"
+#include "apps/ledger/src/glue/socket/socket_writer.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/ascii.h"
 
@@ -27,12 +27,12 @@ std::function<network::URLRequestPtr()> MakeRequest(
     request->method = method;
     request->auto_follow_redirects = true;
     if (!message.empty()) {
-      glue::DataPipe data_pipe;
+      glue::SocketPair socket;
       // Deletes itself.
-      glue::DataPipeWriter* writer = new glue::DataPipeWriter();
-      writer->Start(message, std::move(data_pipe.producer_handle));
+      glue::SocketWriter* writer = new glue::SocketWriter();
+      writer->Start(message, std::move(socket.socket1));
       request->body = network::URLBody::New();
-      request->body->set_stream(std::move(data_pipe.consumer_handle));
+      request->body->set_stream(std::move(socket.socket2));
     }
     if (stream_request) {
       auto accept_header = network::HttpHeader::New();
@@ -52,7 +52,7 @@ struct FirebaseImpl::WatchData {
 
   callback::AutoCancel request;
   std::unique_ptr<EventStream> event_stream;
-  std::unique_ptr<glue::DataPipeDrainerClient> drainer;
+  std::unique_ptr<glue::SocketDrainerClient> drainer;
 };
 
 FirebaseImpl::WatchData::WatchData() {}
@@ -212,7 +212,7 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
     const std::string& url = response->url;
     const std::string& status_line = response->status_line;
     watch_data_[watch_client]->drainer =
-        std::make_unique<glue::DataPipeDrainerClient>();
+        std::make_unique<glue::SocketDrainerClient>();
     watch_data_[watch_client]->drainer->Start(
         std::move(response->body->get_stream()),
         [this, watch_client, url, status_line](const std::string& body) {

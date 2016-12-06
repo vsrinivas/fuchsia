@@ -30,7 +30,7 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_number_conversions.h"
-#include "lib/mtl/data_pipe/strings.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
@@ -110,14 +110,14 @@ class FakeSyncDelegate : public PageSyncDelegate {
     id_to_value_[object_id.ToString()] = value;
   }
 
-  void GetObject(ObjectIdView object_id,
-                 std::function<void(Status status,
-                                    uint64_t size,
-                                    mx::datapipe_consumer data)> callback) {
+  void GetObject(
+      ObjectIdView object_id,
+      std::function<void(Status status, uint64_t size, mx::socket data)>
+          callback) {
     std::string id = object_id.ToString();
     std::string& value = id_to_value_[id];
     object_requests.insert(id);
-    callback(Status::OK, value.size(), mtl::WriteStringToConsumerHandle(value));
+    callback(Status::OK, value.size(), mtl::WriteStringToSocket(value));
   }
 
   std::set<ObjectId> object_requests;
@@ -272,7 +272,7 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
   void TryAddFromLocal(const std::string& content,
                        const ObjectId& expected_id) {
     storage_->AddObjectFromLocal(
-        mtl::WriteStringToConsumerHandle(content), content.size(),
+        mtl::WriteStringToSocket(content), content.size(),
         [this, &expected_id](Status returned_status, ObjectId object_id) {
           EXPECT_EQ(Status::OK, returned_status);
           EXPECT_EQ(expected_id, object_id);
@@ -501,7 +501,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
 
   ObjectId object_id;
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(data.value), data.size,
+      mtl::WriteStringToSocket(data.value), data.size,
       [this, &object_id](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::OK, returned_status);
         object_id = std::move(returned_object_id);
@@ -523,7 +523,7 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
 
   ObjectId object_id;
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(data.value), data.size,
+      mtl::WriteStringToSocket(data.value), data.size,
       [this, &object_id](Status returned_status, ObjectId returned_object_id) {
       });
 
@@ -536,7 +536,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalNegativeSize) {
   ObjectData data("Some data");
 
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(data.value), -1,
+      mtl::WriteStringToSocket(data.value), -1,
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::OK, returned_status);
         message_loop_.PostQuitTask();
@@ -549,7 +549,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
   ObjectData data("Some data");
 
   storage_->AddObjectFromLocal(
-      mtl::WriteStringToConsumerHandle(data.value), 123,
+      mtl::WriteStringToSocket(data.value), 123,
       [this](Status returned_status, ObjectId returned_object_id) {
         EXPECT_EQ(Status::IO_ERROR, returned_status);
         message_loop_.PostQuitTask();
@@ -562,8 +562,8 @@ TEST_F(PageStorageTest, AddObjectFromSync) {
   ObjectData data("Some data");
 
   storage_->AddObjectFromSync(data.object_id,
-                              mtl::WriteStringToConsumerHandle(data.value),
-                              data.size, [this](Status returned_status) {
+                              mtl::WriteStringToSocket(data.value), data.size,
+                              [this](Status returned_status) {
                                 EXPECT_EQ(Status::OK, returned_status);
                                 message_loop_.PostQuitTask();
                               });
@@ -580,12 +580,12 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
   ObjectData data("Some data");
   ObjectId wrong_id = RandomId(kObjectIdSize);
 
-  storage_->AddObjectFromSync(
-      wrong_id, mtl::WriteStringToConsumerHandle(data.value), data.size,
-      [this](Status returned_status) {
-        EXPECT_EQ(Status::OBJECT_ID_MISMATCH, returned_status);
-        message_loop_.PostQuitTask();
-      });
+  storage_->AddObjectFromSync(wrong_id, mtl::WriteStringToSocket(data.value),
+                              data.size, [this](Status returned_status) {
+                                EXPECT_EQ(Status::OBJECT_ID_MISMATCH,
+                                          returned_status);
+                                message_loop_.PostQuitTask();
+                              });
   message_loop_.Run();
 }
 
@@ -593,7 +593,7 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
   ObjectData data("Some data");
 
   storage_->AddObjectFromSync(data.object_id,
-                              mtl::WriteStringToConsumerHandle(data.value), 123,
+                              mtl::WriteStringToSocket(data.value), 123,
                               [this](Status returned_status) {
                                 EXPECT_EQ(Status::IO_ERROR, returned_status);
                                 message_loop_.PostQuitTask();
