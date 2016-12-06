@@ -66,7 +66,6 @@ private:
     void AddChildJob(JobDispatcher* job);
     void RemoveChildJob(JobDispatcher* job);
 
-    const uint32_t flags_;
     StateTracker state_tracker_;
     const mxtl::RefPtr<JobDispatcher> parent_;
 

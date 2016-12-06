@@ -39,9 +39,9 @@ status_t JobDispatcher::Create(uint32_t flags,
     return NO_ERROR;
 }
 
-JobDispatcher::JobDispatcher(uint32_t flags, mxtl::RefPtr<JobDispatcher> parent)
-    : flags_(flags),
-      parent_(mxtl::move(parent)),
+JobDispatcher::JobDispatcher(uint32_t /*flags*/,
+                             mxtl::RefPtr<JobDispatcher> parent)
+    : parent_(mxtl::move(parent)),
       process_count_(0u), job_count_(0u) {
     state_tracker_.set_initial_signals_state(0u);
 }

@@ -174,9 +174,8 @@ status_t SocketDispatcher::Create(uint32_t flags,
     return NO_ERROR;
 }
 
-SocketDispatcher::SocketDispatcher(uint32_t flags)
-    : flags_(flags),
-      half_closed_{false, false} {
+SocketDispatcher::SocketDispatcher(uint32_t /*flags*/)
+    : half_closed_{false, false} {
 
     state_tracker_.set_initial_signals_state(MX_SOCKET_WRITABLE);
 }

@@ -86,9 +86,8 @@ mx_status_t PortDispatcher::Create(uint32_t options,
     return NO_ERROR;
 }
 
-PortDispatcher::PortDispatcher(uint32_t options)
-    : options_(options),
-      no_clients_(false) {
+PortDispatcher::PortDispatcher(uint32_t /*options*/)
+    : no_clients_(false) {
     event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 }
 

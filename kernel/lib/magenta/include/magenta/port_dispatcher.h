@@ -88,8 +88,6 @@ private:
     PortDispatcher(uint32_t options);
     void FreePackets_NoLock();
 
-    const uint32_t options_;
-
     Mutex lock_;
     bool no_clients_;
     mxtl::DoublyLinkedList<IOP_Packet*> packets_;

@@ -70,7 +70,6 @@ private:
     status_t  UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t HalfCloseOther();
 
-    const uint32_t flags_;
     StateTracker state_tracker_;
 
     // The |lock_| protects all members below.
