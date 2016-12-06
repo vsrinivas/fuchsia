@@ -115,7 +115,8 @@ void NetworkReaderImpl::ReadAt(uint64_t position,
 
           FTL_DCHECK(response->body);
           FTL_DCHECK(response->body->get_stream());
-          callback(result_, std::move(response->body->get_stream()));
+          // TODO(dalesat): Renable when audio is using sockets.
+          // callback(result_, std::move(response->body->get_stream()));
         });
   });
 }
