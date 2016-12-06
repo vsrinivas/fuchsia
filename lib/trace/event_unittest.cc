@@ -177,8 +177,12 @@ TEST_F(EventTest, IntegralArguments) {
   TRACE_DURATION_BEGIN1("cat", "name", "key", int16_t(INT16_MAX));
   TRACE_DURATION_BEGIN1("cat", "name", "key", int32_t(INT32_MIN));
   TRACE_DURATION_BEGIN1("cat", "name", "key", int32_t(INT32_MAX));
+  TRACE_DURATION_BEGIN1("cat", "name", "key", uint32_t(0));
+  TRACE_DURATION_BEGIN1("cat", "name", "key", uint32_t(UINT32_MAX));
   TRACE_DURATION_BEGIN1("cat", "name", "key", int64_t(INT64_MIN));
   TRACE_DURATION_BEGIN1("cat", "name", "key", int64_t(INT64_MAX));
+  TRACE_DURATION_BEGIN1("cat", "name", "key", uint64_t(0));
+  TRACE_DURATION_BEGIN1("cat", "name", "key", uint64_t(UINT64_MAX));
   TRACE_DURATION_BEGIN1("cat", "name", "key", uint8_t(0));
   TRACE_DURATION_BEGIN1("cat", "name", "key", uint8_t(UINT8_MAX));
   TRACE_DURATION_BEGIN1("cat", "name", "key", uint16_t(0));

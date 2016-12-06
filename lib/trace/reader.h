@@ -33,6 +33,7 @@ class Chunk {
   // words to satisfy the request.
   bool Read(uint64_t* out_value);
   bool ReadInt64(int64_t* out_value);
+  bool ReadUint64(uint64_t* out_value);
   bool ReadDouble(double* out_value);
   bool ReadString(size_t length, ftl::StringView* out_string);
   bool ReadChunk(size_t num_words, Chunk* out_chunk);
@@ -111,7 +112,15 @@ class ArgumentValue {
 
   static ArgumentValue MakeInt32(int32_t value) { return ArgumentValue(value); }
 
+  static ArgumentValue MakeUint32(uint32_t value) {
+    return ArgumentValue(value);
+  }
+
   static ArgumentValue MakeInt64(int64_t value) { return ArgumentValue(value); }
+
+  static ArgumentValue MakeUint64(uint64_t value) {
+    return ArgumentValue(value);
+  }
 
   static ArgumentValue MakeDouble(double value) { return ArgumentValue(value); }
 
@@ -144,9 +153,19 @@ class ArgumentValue {
     return int32_;
   }
 
+  uint32_t GetUint32() const {
+    FTL_DCHECK(type_ == ArgumentType::kUint32);
+    return uint32_;
+  }
+
   int64_t GetInt64() const {
     FTL_DCHECK(type_ == ArgumentType::kInt64);
     return int64_;
+  }
+
+  uint64_t GetUint64() const {
+    FTL_DCHECK(type_ == ArgumentType::kUint64);
+    return uint64_;
   }
 
   double GetDouble() const {
@@ -178,8 +197,14 @@ class ArgumentValue {
   explicit ArgumentValue(int32_t int32)
       : type_(ArgumentType::kInt32), int32_(int32) {}
 
+  explicit ArgumentValue(uint32_t uint32)
+      : type_(ArgumentType::kUint32), uint32_(uint32) {}
+
   explicit ArgumentValue(int64_t int64)
       : type_(ArgumentType::kInt64), int64_(int64) {}
+
+  explicit ArgumentValue(uint64_t uint64)
+      : type_(ArgumentType::kUint64), uint64_(uint64) {}
 
   explicit ArgumentValue(double d) : type_(ArgumentType::kDouble), double_(d) {}
 
@@ -199,10 +224,11 @@ class ArgumentValue {
   ArgumentType type_;
   union {
     int32_t int32_;
+    uint32_t uint32_;
     int64_t int64_;
+    uint64_t uint64_;
     double double_;
     std::string string_;
-    uint64_t uint64_;
   };
 };
 

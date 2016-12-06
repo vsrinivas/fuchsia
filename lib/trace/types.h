@@ -38,11 +38,13 @@ enum class MetadataType {
 enum class ArgumentType {
   kNull = 0,
   kInt32 = 1,
-  kInt64 = 2,
-  kDouble = 3,
-  kString = 4,
-  kPointer = 5,
-  kKoid = 6,
+  kUint32 = 2,
+  kInt64 = 3,
+  kUint64 = 4,
+  kDouble = 5,
+  kString = 6,
+  kPointer = 7,
+  kKoid = 8,
 };
 
 // EventType enumerates all known trace event types.

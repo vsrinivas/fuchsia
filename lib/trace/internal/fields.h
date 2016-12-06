@@ -78,6 +78,10 @@ struct Int32ArgumentFields : ArgumentFields {
   using Value = Field<32, 63>;
 };
 
+struct Uint32ArgumentFields : ArgumentFields {
+  using Value = Field<32, 63>;
+};
+
 struct StringArgumentFields : ArgumentFields {
   using Index = Field<32, 47>;
 };
