@@ -72,12 +72,8 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     contents(journal.get());
     storage::Status actual_status;
     storage::CommitId actual_commit_id;
-    journal->Commit([this, &actual_status, &actual_commit_id](
-        storage::Status status, const storage::CommitId& commit_id) {
-      actual_status = std::move(status);
-      actual_commit_id = commit_id;
-      message_loop_.PostQuitTask();
-    });
+    journal->Commit(test::Capture([this] { message_loop_.PostQuitTask(); },
+                                  &actual_status, &actual_commit_id));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, actual_status);
     return actual_commit_id;

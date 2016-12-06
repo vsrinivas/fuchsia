@@ -27,5 +27,20 @@ TEST(Capture, CaptureVariable) {
   EXPECT_EQ("world", *a3);
 }
 
+TEST(Capture, CaptureConstReference) {
+  int a1 = 0;
+  int a2 = 0;
+  bool called = false;
+
+  std::function<void(int, const int&)> capture =
+      Capture([&called] { called = true; }, &a1, &a2);
+
+  capture(1, 2);
+
+  EXPECT_TRUE(called);
+  EXPECT_EQ(1, a1);
+  EXPECT_EQ(2, a2);
+}
+
 }  // namespace test
 }  // namespace
