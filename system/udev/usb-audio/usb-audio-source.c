@@ -109,15 +109,20 @@ static mx_status_t usb_audio_source_release(mx_device_t* device) {
     return NO_ERROR;
 }
 
-static mx_status_t usb_audio_source_start_locked(usb_audio_source_t* source) {
+static mx_status_t usb_audio_source_start(usb_audio_source_t* source) {
     if (source->dead) {
         return ERR_REMOTE_CLOSED;
     }
-    if (source->started) {
+    mtx_lock(&source->mutex);
+    bool was_started = source->started;
+    source->started = true;
+    mtx_unlock(&source->mutex);
+    if (was_started) {
         return NO_ERROR;
     }
+
     // switch to alternate interface if necessary
-    if (!source->started && source->alternate_setting != 0) {
+    if (source->alternate_setting != 0) {
         usb_set_interface(source->usb_device, source->interface_number, source->alternate_setting);
     }
 
@@ -126,23 +131,32 @@ static mx_status_t usb_audio_source_start_locked(usb_audio_source_t* source) {
     while ((txn = list_remove_head_type(&source->completed_reads, iotxn_t, node)) != NULL) {
         iotxn_queue(source->usb_device, txn);
     }
+    source->completed_read_count = 0;
     while ((txn = list_remove_head_type(&source->free_read_reqs, iotxn_t, node)) != NULL) {
         iotxn_queue(source->usb_device, txn);
     }
 
-    source->started = true;
     return NO_ERROR;
 }
 
-static mx_status_t usb_audio_source_stop_locked(usb_audio_source_t* source) {
+static mx_status_t usb_audio_source_stop(usb_audio_source_t* source) {
     if (source->dead) {
         return ERR_REMOTE_CLOSED;
     }
+
+    mtx_lock(&source->mutex);
+    bool was_started = source->started;
+    source->started = false;
+    mtx_unlock(&source->mutex);
+    if (!was_started) {
+        return NO_ERROR;
+    }
+
     // switch back to primary interface
-    if (source->started && source->alternate_setting != 0) {
+    if (source->alternate_setting != 0) {
         usb_set_interface(source->usb_device, source->interface_number, 0);
     }
-    source->started = false;
+
     return NO_ERROR;
 }
 
@@ -168,6 +182,7 @@ static mx_status_t usb_audio_source_close(mx_device_t* dev, uint32_t flags) {
     mtx_lock(&source->mutex);
     source->open = false;
     mtx_unlock(&source->mutex);
+    usb_audio_source_stop(source);
 
     return NO_ERROR;
 }
@@ -277,18 +292,10 @@ static ssize_t usb_audio_source_ioctl(mx_device_t* dev, uint32_t op, const void*
         }
         return status;
     }
-    case IOCTL_AUDIO_START: {
-        mtx_lock(&source->mutex);
-        mx_status_t result = usb_audio_source_start_locked(source);
-        mtx_unlock(&source->mutex);
-        return result;
-    }
-    case IOCTL_AUDIO_STOP: {
-        mtx_lock(&source->mutex);
-        mx_status_t result = usb_audio_source_stop_locked(source);
-        mtx_unlock(&source->mutex);
-        return result;
-    }
+    case IOCTL_AUDIO_START:
+        return usb_audio_source_start(source);
+    case IOCTL_AUDIO_STOP:
+        return usb_audio_source_stop(source);
     }
 
     return ERR_NOT_SUPPORTED;

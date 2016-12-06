@@ -123,27 +123,46 @@ static uint64_t get_usb_current_frame(usb_audio_sink_t* sink) {
     return result;
 }
 
-static mx_status_t usb_audio_sink_start_locked(usb_audio_sink_t* sink) {
+static mx_status_t usb_audio_sink_start(usb_audio_sink_t* sink) {
     if (sink->dead) {
         return ERR_REMOTE_CLOSED;
     }
+
+    mtx_lock(&sink->mutex);
+    bool was_started = sink->started;
+    sink->started = true;
+    mtx_unlock(&sink->mutex);
+    if (was_started) {
+        return NO_ERROR;
+    }
+
     // switch to alternate interface if necessary
-    if (!sink->started && sink->alternate_setting != 0) {
+    if (sink->alternate_setting != 0) {
         usb_set_interface(sink->usb_device, sink->interface_number, sink->alternate_setting);
     }
-    sink->started = true;
+    sink->start_usb_frame = 0;
+    sink->cur_txn = NULL;
+
     return NO_ERROR;
 }
 
-static mx_status_t usb_audio_sink_stop_locked(usb_audio_sink_t* sink) {
+static mx_status_t usb_audio_sink_stop(usb_audio_sink_t* sink) {
     if (sink->dead) {
         return ERR_REMOTE_CLOSED;
     }
+
+    mtx_lock(&sink->mutex);
+    bool was_started = sink->started;
+    sink->started = false;
+    mtx_unlock(&sink->mutex);
+    if (!was_started) {
+        return NO_ERROR;
+    }
+
     // switch back to primary interface
-    if (sink->started && sink->alternate_setting != 0) {
+    if (sink->alternate_setting != 0) {
         usb_set_interface(sink->usb_device, sink->interface_number, 0);
     }
-    sink->started = false;
     return NO_ERROR;
 }
 
@@ -168,8 +187,8 @@ static mx_status_t usb_audio_sink_close(mx_device_t* dev, uint32_t flags) {
 
     mtx_lock(&sink->mutex);
     sink->open = false;
-    usb_audio_sink_stop_locked(sink);
     mtx_unlock(&sink->mutex);
+    usb_audio_sink_stop(sink);
 
     return NO_ERROR;
 }
@@ -303,18 +322,10 @@ static ssize_t usb_audio_sink_ioctl(mx_device_t* dev, uint32_t op, const void* i
         }
         return status;
     }
-    case IOCTL_AUDIO_START: {
-        mtx_lock(&sink->mutex);
-        mx_status_t result = usb_audio_sink_start_locked(sink);
-        mtx_unlock(&sink->mutex);
-        return result;
-    }
-    case IOCTL_AUDIO_STOP: {
-        mtx_lock(&sink->mutex);
-        mx_status_t result = usb_audio_sink_stop_locked(sink);
-        mtx_unlock(&sink->mutex);
-        return result;
-    }
+    case IOCTL_AUDIO_START:
+        return usb_audio_sink_start(sink);
+    case IOCTL_AUDIO_STOP:
+        return usb_audio_sink_stop(sink);
     }
 
     return ERR_NOT_SUPPORTED;
