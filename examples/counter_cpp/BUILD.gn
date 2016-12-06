@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//flutter/build/flutter_app.gni")
+import("//lib/fidl/fidl.gni")
 
 group("counter_cpp") {
   deps = [
@@ -18,6 +19,7 @@ executable("example_module1") {
   ]
 
   deps = [
+    ":calculator",
     ":store",
     "//apps/modular/lib/app",
     "//apps/modular/lib/document_editor",
@@ -60,6 +62,7 @@ executable("example_recipe") {
   ]
 
   deps = [
+    ":calculator",
     "//apps/ledger/services",
     "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:array_to_string",
@@ -83,4 +86,8 @@ source_set("store") {
     "//apps/modular/lib/document_editor",
     "//apps/modular/services/story",
   ]
+}
+
+fidl("calculator") {
+  sources = ["calculator.fidl"]
 }

@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "apps/modular/examples/counter_cpp/calculator.fidl.h"
 #include "apps/modular/examples/counter_cpp/store.h"
+#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
@@ -17,6 +19,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/map.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/ftl/time/time_delta.h"
@@ -139,6 +142,23 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
       override {
     story_.Bind(std::move(story));
     store_.Initialize(std::move(link));
+
+    // This exercises the incoming services we get from the recipe.
+    FTL_CHECK(incoming_services.is_valid());
+    auto recipe_services =
+        modular::ServiceProviderPtr::Create(std::move(incoming_services));
+
+    auto adder_service = modular::ConnectToService<modular::examples::Adder>(
+        recipe_services.get());
+    adder_service.set_connection_error_handler([]() {
+      FTL_CHECK(false) << "Uh oh, Connection to Adder closed by the recipe.";
+    });
+    adder_service->Add(
+        4, 4, ftl::MakeCopyable([adder_service =
+                                     std::move(adder_service)](int32_t result) {
+          FTL_CHECK(result == 8);
+          FTL_LOG(INFO) << "Incoming Adder service: 4 + 4 is 8.";
+        }));
   }
 
   // |Module|
@@ -187,7 +207,7 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
   }
 
   std::unique_ptr<Module1View> view_;
-  fidl::InterfacePtr<modular::Story> story_;
+  modular::StoryPtr story_;
   modular::Store store_;
 
   // Note: This should remain the last member so it'll be destroyed and

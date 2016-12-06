@@ -6,6 +6,7 @@
 // creates other Modules in the story.
 
 #include "apps/ledger/services/ledger.fidl.h"
+#include "apps/modular/examples/counter_cpp/calculator.fidl.h"
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
@@ -18,6 +19,7 @@
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -34,6 +36,7 @@ namespace {
 
 using modular::to_array;
 using modular::to_string;
+using modular::examples::Adder;
 
 constexpr uint32_t kViewResourceIdBase = 100;
 constexpr uint32_t kViewResourceIdSpacing = 100;
@@ -288,6 +291,19 @@ class RecipeView : public mozart::BaseView {
   FTL_DISALLOW_COPY_AND_ASSIGN(RecipeView);
 };
 
+class AdderImpl : public modular::examples::Adder {
+ public:
+  AdderImpl() {}
+
+ private:
+  // |Adder| impl:
+  void Add(int32_t a, int32_t b, const AddCallback& result) override {
+    result(a + b);
+  }
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(AdderImpl);
+};
+
 // Module implementation that acts as a recipe. There is one instance
 // per application; the story runner creates new application instances
 // to run more module instances.
@@ -347,9 +363,17 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     fidl::InterfaceHandle<modular::Link> module2_link_handle;
     module2_link_->Dup(module2_link_handle.NewRequest());
 
+    modular::ServiceProviderPtr services_for_module1;
+    outgoing_services_.AddBinding(services_for_module1.NewRequest());
+    outgoing_services_.AddService<modular::examples::Adder>(
+        [this](fidl::InterfaceRequest<modular::examples::Adder> req) {
+      adder_clients_.AddBinding(&adder_service_, std::move(req));
+    });
+
     fidl::InterfaceHandle<mozart::ViewOwner> module1_view;
     story_->StartModule("file:///system/apps/example_module1",
-                        std::move(module1_link_handle), nullptr, nullptr,
+                        std::move(module1_link_handle),
+                        std::move(services_for_module1), nullptr,
                         module1_.NewRequest(), module1_view.NewRequest());
     ConnectView(std::move(module1_view));
 
@@ -467,6 +491,12 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
   modular::LinkPtr link_;
   modular::StoryPtr story_;
+
+  // This is a ServiceProvider we expose to one of our child modules, to
+  // demonstrate the use of a service exchange.
+  fidl::BindingSet<modular::examples::Adder> adder_clients_;
+  AdderImpl adder_service_;
+  modular::ServiceProviderImpl outgoing_services_;
 
   // The following ledger interfaces are stored here to make life-time
   // management easier when chaining together lambda callbacks.
