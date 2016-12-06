@@ -79,14 +79,7 @@ class UserRunnerImpl : public UserRunner {
 
  private:
   void SetupLedgerRepository(const fidl::Array<uint8_t>& user_id) {
-    auto launch_info = ApplicationLaunchInfo::New();
-
-    ServiceProviderPtr app_services;
-    launch_info->services = app_services.NewRequest();
-    launch_info->url = "file:///system/apps/ledger";
-
-    application_context_->launcher()->CreateApplication(std::move(launch_info),
-                                                        nullptr);
+    auto app_services = GetServiceProvider("file:///system/apps/ledger", nullptr);
 
     ledger::LedgerRepositoryFactoryPtr ledger_repository_factory;
     ConnectToService(app_services.get(), ledger_repository_factory.NewRequest());
@@ -166,7 +159,10 @@ class UserRunnerImpl : public UserRunner {
       launch_info->arguments = args->Clone();
     }
 
-    application_context_->launcher()->CreateApplication(std::move(launch_info), nullptr);
+    ApplicationControllerPtr ctrl;
+    application_context_->launcher()->CreateApplication(
+        std::move(launch_info), ctrl.NewRequest());
+    application_controllers_.emplace_back(std::move(ctrl));
 
     return services;
   }
@@ -193,6 +189,10 @@ class UserRunnerImpl : public UserRunner {
   std::unique_ptr<UserLedgerRepositoryFactory> ledger_repository_factory_;
   std::unique_ptr<Scope> stories_scope_;
   UserShellPtr user_shell_;
+
+  // Keep connections to applications started here around so they are
+  // killed when this instance is deleted.
+  std::vector<ApplicationControllerPtr> application_controllers_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);
 };
