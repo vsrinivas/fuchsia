@@ -10,3 +10,8 @@ module modular.examples;
 interface Adder {
   Add(int32 a, int32 b) => (int32 c);
 };
+
+[ServiceName="https://fuchsia.googlesource.com/modular/+/master/examples/counter_cpp/calculator.fidl#Multiplier"]
+interface Multiplier {
+  Multiply(int32 a, int32 b) => (int32 c);
+};

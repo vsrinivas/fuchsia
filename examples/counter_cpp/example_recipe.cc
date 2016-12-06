@@ -7,6 +7,7 @@
 
 #include "apps/ledger/services/ledger.fidl.h"
 #include "apps/modular/examples/counter_cpp/calculator.fidl.h"
+#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
@@ -18,13 +19,13 @@
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/map.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -363,6 +364,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     fidl::InterfaceHandle<modular::Link> module2_link_handle;
     module2_link_->Dup(module2_link_handle.NewRequest());
 
+    // Provide services for Module 1.
     modular::ServiceProviderPtr services_for_module1;
     outgoing_services_.AddBinding(services_for_module1.NewRequest());
     outgoing_services_.AddService<modular::examples::Adder>(
@@ -370,12 +372,29 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
       adder_clients_.AddBinding(&adder_service_, std::move(req));
     });
 
+    modular::ServiceProviderPtr services_from_module1;
     fidl::InterfaceHandle<mozart::ViewOwner> module1_view;
     story_->StartModule("file:///system/apps/example_module1",
                         std::move(module1_link_handle),
-                        std::move(services_for_module1), nullptr,
+                        std::move(services_for_module1),
+                        services_from_module1.NewRequest(),
                         module1_.NewRequest(), module1_view.NewRequest());
     ConnectView(std::move(module1_view));
+
+    // Consume services from Module 1.
+    auto multiplier_service =
+        modular::ConnectToService<modular::examples::Multiplier>(
+            services_from_module1.get());
+    multiplier_service.set_connection_error_handler([]() {
+      FTL_CHECK(false)
+          << "Uh oh, Connection to Multiplier closed by the module 1.";
+    });
+    multiplier_service->Multiply(
+        4, 4, ftl::MakeCopyable([multiplier_service = std::move(
+                                     multiplier_service)](int32_t result) {
+          FTL_CHECK(result == 16);
+          FTL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
+        }));
 
     fidl::InterfaceHandle<mozart::ViewOwner> module2_view;
     story_->StartModule("file:///system/apps/example_module2",

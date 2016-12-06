@@ -112,6 +112,19 @@ class Module1View : public mozart::BaseView {
   FTL_DISALLOW_COPY_AND_ASSIGN(Module1View);
 };
 
+class MultiplierImpl : public modular::examples::Multiplier {
+ public:
+  MultiplierImpl() {}
+
+ private:
+  // |Multiplier| impl:
+  void Multiply(int32_t a, int32_t b, const MultiplyCallback& result) override {
+    result(a * b);
+  }
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(MultiplierImpl);
+};
+
 // Module implementation that acts as a leaf module. It implements Module.
 class Module1App : public modular::SingleServiceViewApp<modular::Module> {
  public:
@@ -140,8 +153,18 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
       fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services)
       override {
+    FTL_CHECK(incoming_services.is_valid());
+    FTL_CHECK(outgoing_services.is_pending());
+
     story_.Bind(std::move(story));
     store_.Initialize(std::move(link));
+
+    // Provide services to the recipe module.
+    outgoing_services_.AddBinding(std::move(outgoing_services));
+    outgoing_services_.AddService<modular::examples::Multiplier>(
+        [this](fidl::InterfaceRequest<modular::examples::Multiplier> req) {
+      multiplier_clients_.AddBinding(&multiplier_service_, std::move(req));
+    });
 
     // This exercises the incoming services we get from the recipe.
     FTL_CHECK(incoming_services.is_valid());
@@ -205,6 +228,12 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
         },
         ftl::TimeDelta::FromSeconds(kValueHandoffDuration));
   }
+
+  // This is a ServiceProvider we expose to our parent (recipe) module, to
+  // demonstrate the use of a service exchange.
+  fidl::BindingSet<modular::examples::Multiplier> multiplier_clients_;
+  MultiplierImpl multiplier_service_;
+  modular::ServiceProviderImpl outgoing_services_;
 
   std::unique_ptr<Module1View> view_;
   modular::StoryPtr story_;
