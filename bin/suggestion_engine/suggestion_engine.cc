@@ -51,7 +51,8 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
 
   void NotifyInteraction(const fidl::String& suggestion_uuid,
                          InteractionPtr interaction) override {
-    const SuggestionPrototype* suggestion_prototype = (*repo_)[suggestion_uuid];
+    std::unique_ptr<SuggestionPrototype> suggestion_prototype =
+        repo_->Extract(suggestion_uuid);
 
     std::string log_detail = suggestion_prototype
                                  ? short_proposal_str(*suggestion_prototype)
@@ -68,29 +69,27 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
         // TODO(rosswang): If we're asked to add multiple modules, we probably
         // want to add them to the same story. We can't do that yet, but we need
         // to receive a StoryController anyway (not optional atm.).
-        for (const auto& action : suggestion_prototype->proposal->on_selected) {
+        for (auto& action : suggestion_prototype->proposal->on_selected) {
           switch (action->which()) {
             case Action::Tag::CREATE_STORY: {
               modular::StoryControllerPtr story_controller;
               const auto& create_story = action->get_create_story();
+
               if (story_provider_) {
-                story_provider_->CreateStory(create_story->module_id,
-                                             story_controller.NewRequest());
-                FTL_LOG(INFO) << "Creating story with module "
-                              << create_story->module_id;
+                // TODO(afergan): Make this more robust later. For now, we
+                // always assume that there's extra info and that it's a color.
+                fidl::Map<fidl::String, fidl::String> extra_info;
                 char hex_color[11];
                 sprintf(hex_color, "0x%x",
                         suggestion_prototype->proposal->display->color);
-                story_controller->SetInfoExtra(fidl::String("color"),
-                                               fidl::String(hex_color), [] {});
-                const auto& initial_data = create_story->initial_data;
-                if (initial_data) {
-                  modular::LinkPtr link;
-                  // TODO(afergan): This won't work until CreateStory() supports
-                  // initial Link data (FW-66).
-                  story_controller->GetLink(link.NewRequest());
-                  link->AddDocuments(initial_data.Clone());
-                }
+                extra_info["color"] = hex_color;
+                auto& initial_data = create_story->initial_data;
+                story_provider_->CreateStoryWithInfo(
+                    create_story->module_id, std::move(extra_info),
+                    std::move(initial_data), story_controller.NewRequest());
+                FTL_LOG(INFO) << "Creating story with module "
+                              << create_story->module_id;
+
                 story_controller->GetInfo(ftl::MakeCopyable(
                     // TODO(thatguy): We should not be std::move()ing
                     // story_controller *while we're calling it*.
@@ -110,8 +109,6 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
           }
         }
       }
-
-      suggestion_prototype->source->Remove(suggestion_prototype->proposal->id);
     }
   }
 
