@@ -12,7 +12,7 @@
 #include <magenta/vm_object_dispatcher.h>
 
 RoDso::RoDso(const char* name, const void* image, size_t size,
-             size_t code_start)
+             uintptr_t code_start)
     : name_(name), code_start_(code_start), size_(size) {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(code_start));
