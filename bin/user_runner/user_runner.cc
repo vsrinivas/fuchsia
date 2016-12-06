@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Implementation of the user runner mojo app.
+// Implementation of the user runner app.
 
 #include <memory>
 
@@ -12,10 +12,12 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
+#include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "apps/modular/src/user_runner/user_ledger_repository_factory.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
@@ -33,9 +35,9 @@ namespace {
 
 const char kAppId[] = "modular_user_runner";
 const char kLedgerBaseDir[] = "/data/ledger/";
-// This is the prefix for the ApplicationEnvironment under which all stories run
-// for a user.
-const char kStoriesEnvironmentLabelPrefix[] = "stories-";
+// This is the prefix for the ApplicationEnvironment under which all
+// stories run for a user.
+const char kStoriesScopeLabelPrefix[] = "stories-";
 
 std::string LedgerStatusToString(ledger::Status status) {
   switch (status) {
@@ -66,45 +68,6 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 }  // namespace
 
-// This environment host is used to run all the stories, and runs under the
-// UserRunner's scope. Its ServiceProvider forwards all requests to its parent's
-// ServiceProvider.
-class UserStoriesScope : public ApplicationEnvironmentHost {
- public:
-  UserStoriesScope(ApplicationEnvironmentPtr parent_env,
-                   const fidl::Array<uint8_t>& user_id)
-      : binding_(this), parent_env_(std::move(parent_env)) {
-    // Set up a new ApplicationEnvironment under which we run all stories.
-    ApplicationEnvironmentHostPtr env_host;
-    binding_.Bind(env_host.NewRequest());
-    parent_env_->CreateNestedEnvironment(
-        std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(),
-        kStoriesEnvironmentLabelPrefix + to_hex_string(user_id));
-  }
-
-  ApplicationEnvironmentPtr GetEnvironment() {
-    ApplicationEnvironmentPtr env;
-    env_->Duplicate(env.NewRequest());
-    return env;
-  }
-
- private:
-  // |ApplicationEnvironmentHost|:
-  void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<ServiceProvider> environment_services) override {
-    parent_env_->GetServices(std::move(environment_services));
-  }
-
-  fidl::Binding<ApplicationEnvironmentHost> binding_;
-
-  ApplicationEnvironmentPtr env_;
-  ApplicationEnvironmentPtr parent_env_;
-  ApplicationEnvironmentControllerPtr env_controller_;
-  ServiceProviderImpl env_services_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(UserStoriesScope);
-};
-
 class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(std::shared_ptr<ApplicationContext> application_context,
@@ -122,8 +85,6 @@ class UserRunnerImpl : public UserRunner {
     launch_info->services = app_services.NewRequest();
     launch_info->url = "file:///system/apps/ledger";
 
-    // Note that |LedgerRepositoryFactory| is started in the device runner's
-    // environment.
     application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                         nullptr);
 
@@ -140,12 +101,14 @@ class UserRunnerImpl : public UserRunner {
       const fidl::String& user_shell,
       fidl::Array<fidl::String> user_shell_args,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
+    const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
+
     SetupLedgerRepository(user_id);
 
     ApplicationEnvironmentPtr parent_env;
-    application_context_->environment()->Duplicate(GetProxy(&parent_env));
-    stories_scope_ = std::make_unique<UserStoriesScope>(
-        std::move(parent_env), user_id);
+    application_context_->environment()->Duplicate(parent_env.NewRequest());
+    stories_scope_ = std::make_unique<Scope>(
+        std::move(parent_env), label);
 
     RunUserShell(user_shell, user_shell_args, std::move(view_owner_request));
 
@@ -161,9 +124,12 @@ class UserRunnerImpl : public UserRunner {
       }
     });
 
+    ApplicationEnvironmentPtr env;
+    stories_scope_->environment()->Duplicate(env.NewRequest());
+
     fidl::InterfaceHandle<StoryProvider> story_provider;
     auto story_provider_impl = new StoryProviderImpl(
-        stories_scope_->GetEnvironment(), std::move(ledger),
+        std::move(env), std::move(ledger),
         story_provider.NewRequest(), ledger_repository_factory_.get());
 
     auto maxwell_services =
@@ -200,10 +166,7 @@ class UserRunnerImpl : public UserRunner {
       launch_info->arguments = args->Clone();
     }
 
-    ApplicationLauncherPtr launcher;
-    application_context_->environment()->GetApplicationLauncher(
-        launcher.NewRequest());
-    launcher->CreateApplication(std::move(launch_info), nullptr);
+    application_context_->launcher()->CreateApplication(std::move(launch_info), nullptr);
 
     return services;
   }
@@ -227,12 +190,8 @@ class UserRunnerImpl : public UserRunner {
 
   std::shared_ptr<ApplicationContext> application_context_;
   StrongBinding<UserRunner> binding_;
-
   std::unique_ptr<UserLedgerRepositoryFactory> ledger_repository_factory_;
-
-  // The application environment hosted by user runner.
-  std::unique_ptr<UserStoriesScope> stories_scope_;
-
+  std::unique_ptr<Scope> stories_scope_;
   UserShellPtr user_shell_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(UserRunnerImpl);

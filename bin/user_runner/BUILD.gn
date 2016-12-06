@@ -31,6 +31,7 @@ executable("user_runner") {
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/app",
     "//apps/modular/lib/fidl:array_to_string",
+    "//apps/modular/lib/fidl:scope",
     "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/document_store",
     "//apps/modular/services/story:private",

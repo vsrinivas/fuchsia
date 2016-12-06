@@ -16,6 +16,9 @@
 
 namespace modular {
 
+// This class works around the absence of a Dup() method in LedgerRepository. If
+// we need another connection to the ledger repository of the same user, we just
+// open a ledger repository of the same user on the ledger repository factory.
 class UserLedgerRepositoryFactory {
  public:
   explicit UserLedgerRepositoryFactory(

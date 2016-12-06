@@ -37,3 +37,15 @@ source_set("strong_binding") {
     "//lib/ftl",
   ]
 }
+
+source_set("scope") {
+  sources = [
+    "scope.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/app",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+  ]
+}
