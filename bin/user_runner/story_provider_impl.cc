@@ -531,7 +531,8 @@ ledger::PagePtr StoryProviderImpl::GetStoryPage(
   return ret;
 }
 
-void StoryProviderImpl::ConnectToStoryRunner(fidl::InterfaceRequest<StoryRunner> request) {
+void StoryProviderImpl::ConnectToStoryRunnerFactory(
+    fidl::InterfaceRequest<StoryRunnerFactory> request) {
   if (!story_runner_services_.is_bound()) {
     auto story_runner_launch_info = ApplicationLaunchInfo::New();
     story_runner_launch_info->services = story_runner_services_.NewRequest();

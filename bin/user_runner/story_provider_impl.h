@@ -65,7 +65,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   using Storage = StoryStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
-  void ConnectToStoryRunner(fidl::InterfaceRequest<StoryRunner> request);
+  void ConnectToStoryRunnerFactory(fidl::InterfaceRequest<StoryRunnerFactory> request);
   void ConnectToResolver(fidl::InterfaceRequest<Resolver> request);
 
   using FidlDocMap = fidl::Map<fidl::String, document_store::DocumentPtr>;

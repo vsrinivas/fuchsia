@@ -39,7 +39,7 @@ interface Module {
   // that something in the system has requested it to stop. What can
   // cause a request to a module to Stop():
   //
-  // (1) StoryContext.Stop() is called to stop the whole Story. A
+  // (1) StoryRunner.Stop() is called to stop the whole Story. A
   //     plausible occasion for this to happen is that the root module
   //     has signalled that it's Done().
   //

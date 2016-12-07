@@ -76,13 +76,13 @@ StoryImpl::StoryImpl(
     std::shared_ptr<ApplicationContext> application_context,
     fidl::InterfaceHandle<Resolver> resolver,
     fidl::InterfaceHandle<StoryStorage> story_storage,
-    fidl::InterfaceRequest<StoryContext> story_context_request,
-    fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repository)
+    fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repository,
+    fidl::InterfaceRequest<StoryRunner> story_runner_request)
       : binding_(this), application_context_(application_context) {
   resolver_.Bind(std::move(resolver));
   story_storage_.Bind(std::move(story_storage));
-  binding_.Bind(std::move(story_context_request));
   user_ledger_repository_.Bind(std::move(user_ledger_repository));
+  binding_.Bind(std::move(story_runner_request));
 }
 
 void StoryImpl::Dispose(ModuleControllerImpl* const module_controller_impl) {
@@ -170,7 +170,7 @@ void StoryImpl::GetLedger(
   user_ledger_repository_->GetLedger(to_array(module_name), std::move(req), result);
 }
 
-// |StoryContext|
+// |StoryRunner|
 void StoryImpl::GetStory(fidl::InterfaceRequest<Story> story_request) {
   Connection connection;
 
@@ -180,7 +180,7 @@ void StoryImpl::GetStory(fidl::InterfaceRequest<Story> story_request) {
   connections_.emplace_back(std::move(connection));
 }
 
-// |StoryContext|
+// |StoryRunner|
 void StoryImpl::Stop(const StopCallback& done) {
   teardown_.push_back(done);
 

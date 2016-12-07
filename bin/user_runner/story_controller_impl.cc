@@ -119,8 +119,8 @@ void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
 
 void StoryControllerImpl::StartStory(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  StoryRunnerPtr story_runner;
-  story_provider_impl_->ConnectToStoryRunner(story_runner.NewRequest());
+  StoryRunnerFactoryPtr story_runner_factory;
+  story_provider_impl_->ConnectToStoryRunnerFactory(story_runner_factory.NewRequest());
 
   ResolverPtr resolver;
   story_provider_impl_->ConnectToResolver(resolver.NewRequest());
@@ -131,11 +131,12 @@ void StoryControllerImpl::StartStory(
       story_provider_impl_->GetStoryPage(story_data_->story_page_id),
       story_data_->story_info->id, story_storage.NewRequest()));
 
-  story_runner->CreateStory(std::move(resolver), std::move(story_storage),
-                            story_context_.NewRequest(),
-                            ledger_repository_factory_->Clone());
+  story_runner_factory->Create(
+      std::move(resolver), std::move(story_storage),
+      ledger_repository_factory_->Clone(),
+      story_runner_.NewRequest());
 
-  story_context_->GetStory(story_.NewRequest());
+  story_runner_->GetStory(story_.NewRequest());
   story_->CreateLink("root", root_.NewRequest());
 
   if (!root_docs_.is_null()) {
@@ -176,7 +177,7 @@ void StoryControllerImpl::GetLink(fidl::InterfaceRequest<Link> link_request) {
 }
 
 void StoryControllerImpl::TearDownStory(std::function<void()> done) {
-  story_context_->Stop([this, done]() {
+  story_runner_->Stop([this, done]() {
     story_data_->story_info->is_running = false;
     story_data_->story_info->state = StoryState::STOPPED;
     WriteStoryData([this, done]() {

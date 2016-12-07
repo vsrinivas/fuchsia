@@ -23,29 +23,31 @@ namespace modular {
 // The StoryRunnerApp provides the StoryRunner service. The story
 // factory doesn't need separate instances because it doesn't have
 // state or parameters, so the StoryRunnerApp implements it directly.
-class StoryRunnerApp : public StoryRunner {
+class StoryRunnerApp : public StoryRunnerFactory {
  public:
   StoryRunnerApp()
       : application_context_(ApplicationContext::CreateFromStartupInfo()) {
-    application_context_->outgoing_services()->AddService<StoryRunner>(
-        [this](fidl::InterfaceRequest<StoryRunner> request) {
+    application_context_->outgoing_services()->AddService<StoryRunnerFactory>(
+        [this](fidl::InterfaceRequest<StoryRunnerFactory> request) {
           bindings_.AddBinding(this, std::move(request));
         });
   }
 
  private:
-  void CreateStory(
+  // |StoryRunnerFactory|
+  void Create(
       fidl::InterfaceHandle<Resolver> resolver,
       fidl::InterfaceHandle<StoryStorage> story_storage,
-      fidl::InterfaceRequest<StoryContext> story_context_request,
-      fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repo)
-        override {
-    new StoryImpl(application_context_, std::move(resolver),
-                  std::move(story_storage), std::move(story_context_request),
-                  std::move(user_ledger_repo));
+      fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repo,
+      fidl::InterfaceRequest<StoryRunner> story_runner_request) override {
+    new StoryImpl(application_context_,
+                  std::move(resolver),
+                  std::move(story_storage),
+                  std::move(user_ledger_repo),
+                  std::move(story_runner_request));
   }
 
-  fidl::BindingSet<StoryRunner> bindings_;
+  fidl::BindingSet<StoryRunnerFactory> bindings_;
   std::shared_ptr<ApplicationContext> application_context_;
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryRunnerApp);
 };

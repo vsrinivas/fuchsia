@@ -93,8 +93,8 @@ class StoryControllerImpl : public StoryController,
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
   fidl::Binding<LinkWatcher> link_changed_binding_;
   fidl::InterfacePtrSet<StoryWatcher> story_watchers_;
+  StoryRunnerPtr story_runner_;
   StoryPtr story_;
-  StoryContextPtr story_context_;
   LinkPtr root_;
   // If requests for root_ arrive before we have it, we store these
   // requests here.

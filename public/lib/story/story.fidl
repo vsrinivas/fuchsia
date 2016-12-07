@@ -48,7 +48,7 @@ interface Story {
 
   // Gets the Ledger associated with this module. This ledger instance is unique
   // to this module under this user, regardless of which story is run. If
-  // GetLedger() is called by a non-module (i.e., via StoryContext.GetStory()),
+  // GetLedger() is called by a non-module (i.e., via StoryRunner.GetStory()),
   // the request is closed and a ledger.UNKNOWN_ERROR status is returned.
   GetLedger(ledger.Ledger& module_ledger) => (ledger.Status status);
 

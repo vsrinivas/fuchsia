@@ -42,7 +42,7 @@ class StoryConnection : public Story {
  public:
   // If this Story handle is for a module started by
   // Story.StartModule(), there is also a module_controller_impl. If
-  // requested through StoryContext.GetStory(), module_controller_impl
+  // requested through StoryRunner.GetStory(), module_controller_impl
   // is nullptr.
   StoryConnection(StoryImpl* story_impl,
                   const std::string& module_url,
@@ -80,15 +80,15 @@ class StoryConnection : public Story {
 };
 
 // The actual implementation of the Story service. Called from
-// StoryConnection above. Also implements StoryContext.
-class StoryImpl : public StoryContext {
+// StoryConnection above. Also implements StoryRunner.
+class StoryImpl : public StoryRunner {
  public:
   StoryImpl(
       std::shared_ptr<ApplicationContext> application_context,
       fidl::InterfaceHandle<Resolver> resolver,
       fidl::InterfaceHandle<StoryStorage> story_storage,
-      fidl::InterfaceRequest<StoryContext> story_context_request,
-      fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repository);
+      fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repository,
+      fidl::InterfaceRequest<StoryRunner> story_runner_request);
 
   // These methods are called by StoryConnection.
   void CreateLink(const fidl::String& name, fidl::InterfaceRequest<Link> link);
@@ -108,7 +108,7 @@ class StoryImpl : public StoryContext {
   // Deletes itself on Stop().
   ~StoryImpl() override = default;
 
-  // |StoryContext|
+  // |StoryRunner|
   void GetStory(fidl::InterfaceRequest<Story> story_request) override;
   void Stop(const StopCallback& done) override;
 
@@ -122,7 +122,7 @@ class StoryImpl : public StoryContext {
     ApplicationControllerPtr application_controller;
   };
 
-  fidl::Binding<StoryContext> binding_;
+  fidl::Binding<StoryRunner> binding_;
   std::shared_ptr<ApplicationContext> application_context_;
   fidl::InterfacePtr<Resolver> resolver_;
   StoryStoragePtr story_storage_;
