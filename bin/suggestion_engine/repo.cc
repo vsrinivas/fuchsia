@@ -15,19 +15,9 @@ ProposalPublisherImpl* Repo::GetOrCreateSourceClient(
   return source.get();
 }
 
-SuggestionPrototype* Repo::AddSuggestion(ProposalPublisherImpl* source,
-                                         ProposalPtr proposal) {
-  // Assert source registered; this isn't strictly necessary but makes sense.
-  FTL_CHECK(sources_[source->component_url()].get() == source);
-
-  std::string id = RandomUuid();
-  SuggestionPrototype* prototype = &suggestions_[id];
-  prototype->suggestion_id = id;
-  prototype->source = source;
-  prototype->timestamp = ftl::TimePoint::Now();
-  prototype->proposal = std::move(proposal);
-
-  // TODO(rosswang): proper channel routing. For now, add to all channels
+void Repo::AddSuggestion(SuggestionPrototype* prototype) {
+  prototype->suggestion_id = RandomUuid();
+  // TODO(rosswang): proper channel routing. For now, add to all channels.
   auto next_entry = next_channel_.OnAddSuggestion(prototype);
   if (next_entry) {
     prototype->ranks_by_channel[&next_channel_] = next_entry;
@@ -36,8 +26,6 @@ SuggestionPrototype* Repo::AddSuggestion(ProposalPublisherImpl* source,
     prototype->ranks_by_channel[ask_channel.get()] =
         ask_channel->OnAddSuggestion(prototype);
   }
-
-  return prototype;
 }
 
 void Repo::InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,

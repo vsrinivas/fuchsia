@@ -27,8 +27,7 @@ class Repo {
   }
 
   // Should only be called from ProposalPublisherImpl
-  SuggestionPrototype* AddSuggestion(ProposalPublisherImpl* source,
-                                     ProposalPtr proposal);
+  void AddSuggestion(SuggestionPrototype* prototype);
   // Should only be called from ProposalPublisherImpl
   void RemoveSuggestion(const std::string& id) { suggestions_.erase(id); }
 
@@ -55,11 +54,23 @@ class Repo {
     });
   }
 
+  std::unique_ptr<SuggestionPrototype> Extract(const std::string& id) {
+    auto it = suggestions_.find(id);
+    if (it == suggestions_.end()) {
+      return NULL;
+    } else {
+      std::unique_ptr<SuggestionPrototype> suggestion =
+          std::unique_ptr<SuggestionPrototype>(std::move(it->second));
+      suggestions_.erase(id);
+      return suggestion;
+    }
+  }
+
   // Non-mutating indexer; returns NULL if no such suggestion exists.
   const SuggestionPrototype* operator[](
       const std::string& suggestion_id) const {
     auto it = suggestions_.find(suggestion_id);
-    return it == suggestions_.end() ? NULL : &it->second;
+    return it == suggestions_.end() ? NULL : it->second;
   }
 
   ProposalFilter filter() { return filter_; }
@@ -74,7 +85,7 @@ class Repo {
   std::unordered_map<std::string, std::unique_ptr<ProposalPublisherImpl>>
       sources_;
   // indexed by suggestion ID
-  std::unordered_map<std::string, SuggestionPrototype> suggestions_;
+  std::unordered_map<std::string, SuggestionPrototype*> suggestions_;
   NextChannel next_channel_;
   maxwell::BoundNonMovableSet<AskChannel> ask_channels_;
   fidl::InterfacePtrSet<AskHandler> ask_handlers_;

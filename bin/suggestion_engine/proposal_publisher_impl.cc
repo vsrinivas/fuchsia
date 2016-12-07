@@ -7,23 +7,30 @@
 namespace maxwell {
 
 void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
-  SuggestionPrototype*& suggestion_prototype = proposals_[proposal->id];
+  SuggestionPrototype& suggestion_prototype = proposals_[proposal->id];
 
-  if (suggestion_prototype)
-    OnChangeProposal(std::move(proposal), suggestion_prototype);
-  else
-    suggestion_prototype = repo_->AddSuggestion(this, std::move(proposal));
+  if (suggestion_prototype.source) {
+    // Asseert that we are registered; this isn't strictly necessary but makes
+    // sense.
+    FTL_DCHECK(suggestion_prototype.source == this);
+    OnChangeProposal(std::move(proposal), &suggestion_prototype);
+  } else {
+    suggestion_prototype.source = this;
+    suggestion_prototype.timestamp = ftl::TimePoint::Now();
+    suggestion_prototype.proposal = std::move(proposal);
+    repo_->AddSuggestion(&suggestion_prototype);
+  }
 }
 
 void ProposalPublisherImpl::Remove(const fidl::String& proposal_id) {
   const auto it = proposals_.find(proposal_id);
 
   if (it != proposals_.end()) {
-    for (auto& channel_rank : it->second->ranks_by_channel) {
+    for (auto channel_rank : it->second.ranks_by_channel) {
       channel_rank.first->OnRemoveSuggestion(channel_rank.second);
     }
 
-    repo_->RemoveSuggestion(it->second->suggestion_id);
+    repo_->RemoveSuggestion(it->second.suggestion_id);
     proposals_.erase(it);
 
     if (ShouldEraseSelf())
