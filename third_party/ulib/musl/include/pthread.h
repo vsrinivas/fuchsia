@@ -151,7 +151,8 @@ int pthread_attr_setstacksize(pthread_attr_t*, size_t);
 int pthread_attr_getdetachstate(const pthread_attr_t*, int*);
 int pthread_attr_setdetachstate(pthread_attr_t*, int);
 int pthread_attr_getstack(const pthread_attr_t* __restrict, void** __restrict, size_t* __restrict);
-int pthread_attr_setstack(pthread_attr_t*, void*, size_t);
+int pthread_attr_setstack(pthread_attr_t*, void*, size_t)
+    __attribute__((__deprecated__("pthread_attr_setstack is not available in Fuchsia; perhaps pthread_attr_setstacksize and/or pthread_attr_setguardsize is sufficient for your needs?")));
 int pthread_attr_getscope(const pthread_attr_t* __restrict, int* __restrict);
 int pthread_attr_setscope(pthread_attr_t*, int);
 int pthread_attr_getschedpolicy(const pthread_attr_t* __restrict, int* __restrict);

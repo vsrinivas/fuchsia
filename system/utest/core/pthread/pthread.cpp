@@ -239,28 +239,6 @@ static bool pthread_big_stack_size() {
     END_TEST;
 }
 
-static bool pthread_big_provided_stack() {
-    BEGIN_TEST;
-
-    void* stack = malloc(stack_size);
-    EXPECT_NEQ(stack, nullptr, "failed to allocate stack");
-
-    pthread_t thread;
-    pthread_attr_t attr;
-    int result = pthread_attr_init(&attr);
-    ASSERT_EQ(result, 0, "failed to initialize pthread attributes");
-    result = pthread_attr_setstack(&attr, stack, stack_size);
-    ASSERT_EQ(result, 0, "failed to set stack size");
-    result = pthread_create(&thread, &attr, bigger_stack_thread, nullptr);
-    ASSERT_EQ(result, 0, "failed to start thread");
-    result = pthread_join(thread, nullptr);
-    ASSERT_EQ(result, 0, "failed to join thread");
-
-    free(stack);
-
-    END_TEST;
-}
-
 static bool pthread_getstack_check() {
     BEGIN_TEST;
 
@@ -344,7 +322,6 @@ BEGIN_TEST_CASE(pthread_tests)
 RUN_TEST(pthread_test)
 RUN_TEST(pthread_self_main_thread_test)
 RUN_TEST(pthread_big_stack_size)
-RUN_TEST(pthread_big_provided_stack)
 RUN_TEST(pthread_getstack_main_thread)
 RUN_TEST(pthread_getstack_other_thread)
 END_TEST_CASE(pthread_tests)

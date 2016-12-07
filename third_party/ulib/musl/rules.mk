@@ -74,7 +74,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/pthread/pthread_attr_setschedparam.c \
     $(LOCAL_DIR)/pthread/pthread_attr_setschedpolicy.c \
     $(LOCAL_DIR)/pthread/pthread_attr_setscope.c \
-    $(LOCAL_DIR)/pthread/pthread_attr_setstack.c \
     $(LOCAL_DIR)/pthread/pthread_attr_setstacksize.c \
     $(LOCAL_DIR)/pthread/pthread_barrier_destroy.c \
     $(LOCAL_DIR)/pthread/pthread_barrier_init.c \
