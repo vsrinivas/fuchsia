@@ -16,6 +16,8 @@
 namespace debugserver {
 namespace util {
 
+class Memory;
+
 // The escape character used in the GDB Remote Protocol.
 constexpr char kEscapeChar = '}';
 
@@ -153,6 +155,8 @@ size_t JoinStrings(const std::deque<std::string>& strings,
 bool FindUnescapedChar(const char val,
                        const ftl::StringView& packet,
                        size_t* out_index);
+
+bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max);
 
 }  // namespace util
 }  // namespace debugserver

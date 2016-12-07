@@ -12,6 +12,8 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 
+#include "memory.h"
+
 namespace debugserver {
 namespace util {
 namespace {
@@ -339,6 +341,20 @@ bool FindUnescapedChar(const char val,
     *out_index = i;
 
   return found;
+}
+
+bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max) {
+  while (max > 1) {
+    if (!m.Read(vaddr, ptr, 1)) {
+      *ptr = '\0';
+      return false;
+    }
+    ptr++;
+    vaddr++;
+    max--;
+  }
+  *ptr = '\0';
+  return true;
 }
 
 }  // namespace util
