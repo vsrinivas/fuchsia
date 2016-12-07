@@ -47,6 +47,7 @@ typedef struct mxio_ops {
 #define MXIO_FLAG_SOCKET_CONNECTING ((int32_t)1 << 4)
 #define MXIO_FLAG_SOCKET_CONNECTED ((int32_t)1 << 5)
 #define MXIO_FLAG_NONBLOCK ((int32_t)1 << 6)
+#define MXIO_FLAG_PIPE ((int32_t)1 << 7)
 
 // The subset of mxio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.c ensure we aren't colliding.
@@ -110,6 +111,8 @@ mx_status_t mxio_close(mxio_t* io);
 
 // wraps a socket with an mxio_t using simple io
 mxio_t* mxio_pipe_create(mx_handle_t h);
+
+mx_status_t mxio_pipe_posix_ioctl(mxio_t* io, int req, void* arg);
 
 // wraps a vmo, offset, length with an mxio_t providing a readonly file
 mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len);

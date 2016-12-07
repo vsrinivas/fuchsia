@@ -1498,6 +1498,12 @@ int ioctl(int fd, int req, ...) {
         void* arg = va_arg(ap, void*);
         va_end(ap);
         r = mxio_socket_posix_ioctl(io, req, arg);
+    } else if (io->flags & MXIO_FLAG_PIPE) {
+        va_list ap;
+        va_start(ap, req);
+        void* arg = va_arg(ap, void*);
+        va_end(ap);
+        r = mxio_pipe_posix_ioctl(io, req, arg);
     }
     mxio_release(io);
     return STATUS(r);

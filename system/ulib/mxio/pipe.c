@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sys/ioctl.h>
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -167,6 +168,7 @@ mxio_t* mxio_pipe_create(mx_handle_t h) {
         return NULL;
     p->io.ops = &mx_pipe_ops;
     p->io.magic = MXIO_MAGIC;
+    p->io.flags |= MXIO_FLAG_PIPE;
     atomic_init(&p->io.refcount, 1);
     p->h = h;
     return &p->io;
@@ -229,4 +231,21 @@ fail:
     mx_handle_close(h0);
     mx_handle_close(h1);
     return r;
+}
+
+mx_status_t mxio_pipe_posix_ioctl(mxio_t* io, int req, void* arg) {
+    mx_pipe_t* p = (void*)io;
+    switch (req) {
+    case FIONREAD: {
+        mx_status_t r;
+        size_t avail;
+        if ((r = mx_socket_read(p->h, 0, NULL, 0, &avail)) < 0) {
+            return r;
+        }
+        *(int*)arg = avail;
+        return NO_ERROR;
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
 }

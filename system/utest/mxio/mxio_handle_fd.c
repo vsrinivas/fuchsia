@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/epoll.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
@@ -88,9 +90,48 @@ bool close_test(void) {
     END_TEST;
 }
 
+bool pipe_test(void) {
+    BEGIN_TEST;
+
+    int fds[2];
+    int status = pipe(fds);
+    ASSERT_EQ(status, 0, "pipe() failed");
+
+    status = fcntl(fds[0], F_GETFL);
+    ASSERT_GE(status, 0, "fcntl(F_GETFL) failed");
+
+    status |= O_NONBLOCK;
+    status = fcntl(fds[0], F_SETFL, status);
+    ASSERT_GE(status, 0, "fcntl(FSETFL, O_NONBLOCK) failed");
+
+    int message[2] = {-6, 1};
+    ssize_t written = write(fds[1], message, sizeof(message));
+    ASSERT_GE(written, 0, "write() failed");
+    ASSERT_EQ((uint32_t)written, sizeof(message),
+              "write() should have written the whole message.");
+
+    int available = 0;
+    status = ioctl(fds[0], FIONREAD, &available);
+    ASSERT_GE(status, 0, "ioctl(FIONREAD) failed");
+    EXPECT_EQ((uint32_t)available, sizeof(message),
+              "ioctl(FIONREAD) queried wrong number of bytes");
+
+    int read_message[2];
+    ssize_t bytes_read = read(fds[0], read_message, sizeof(read_message));
+    ASSERT_GE(bytes_read, 0, "read() failed");
+    ASSERT_EQ((uint32_t)bytes_read, sizeof(read_message),
+              "read() read wrong number of bytes");
+
+    EXPECT_EQ(read_message[0], message[0], "read() read wrong value");
+    EXPECT_EQ(read_message[1], message[1], "read() read wrong value");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(mxio_handle_fd_test)
 RUN_TEST(epoll_test);
 RUN_TEST(close_test);
+RUN_TEST(pipe_test);
 END_TEST_CASE(mxio_handle_fd_test)
 
 int main(int argc, char** argv) {
