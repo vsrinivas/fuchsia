@@ -8,22 +8,29 @@ chrome://tracing format.
 The `trace` app takes care of starting and stopping tracing sessions and
 persisting incoming trace data to disk for later retrieval with `netcp`.
 
-`trace` supports the following command line arguments (with default values in brackets):
-  - `--trace-file[=/tmp/trace.json]`: Trace data is stored here.
-  - `--duration[=10] in seconds`: The trace session will last this long.
-  - `--buffer-size[=2*1024*1024]`: The data pipe receiving trace data will buffer this much data.
-  - `--categories[=""]`: Enable all these categories. An empty list
-    enables all categories. Should be a comma-separated list of names.
+```{shell}
+trace [options] command [command-specific options]
+  --help: Produce this help message
 
+  list-categories - list all known categories
+  list-providers - list all registered providers
+  record - starts tracing and records data
+    --categories=[""]: Categories that should be enabled for tracing
+    --detach: Don't stop the traced program when tracing finished
+    --decouple: Don't stop tracing when the traced program exits
+    --duration=[10s]: Trace will be active for this long
+    --output-file=[/tmp/trace.json]: Trace data is stored in this file
+	[command args]: Run program before starting trace. The program is terminated when tracing ends unless --detach is specified
+```
 Any remaining arguments are interpreted as a program to run.
 
 An example invocation for tracing to `/tmp/trace.json` for 15 seconds,
 capturing only categories `gfx` and `flutter` looks like:
 ```
-> @ bootstrap trace --trace-file=/tmp/trace.json --duration=15 --categories=gfx,flutter launch noodles_view
+> @ bootstrap trace record --trace-file=/tmp/trace.json --duration=15 --categories=gfx,flutter launch noodles_view
 ```
 
-Assuming that networking is configured correctly (see [Getting Started](../magenta/docs/getting_started.md)),
+Assuming that networking is configured correctly (see [Getting Started](https://fuchsia.googlesource.com/magenta/+/master/docs/getting_started.md)),
 the resulting trace can then be retrieved from the device with `netcp` as in:
 ```
 $ netcp :/tmp/trace.json trace.json
