@@ -62,7 +62,7 @@ static void* start(void* arg) {
 
     pthread_barrier_wait(&args->b);
     if ((id = self->timer_id) >= 0) {
-        __syscall(SYS_rt_sigprocmask, SIG_UNBLOCK, SIGTIMER_SET, 0, _NSIG / 8);
+        __rt_sigprocmask(SIG_UNBLOCK, SIGTIMER_SET, 0, _NSIG / 8);
         __wait(&self->timer_id, 0, id);
         __syscall(SYS_timer_delete, id);
     }

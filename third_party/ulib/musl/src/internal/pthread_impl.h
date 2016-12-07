@@ -1,6 +1,7 @@
 #pragma once
 
 #include "atomic.h"
+#include "ksigaction.h"
 #include "libc.h"
 #include "syscall.h"
 #include <errno.h>
@@ -109,6 +110,38 @@ void __inhibit_ptc(void);
 void __block_all_sigs(void*);
 void __block_app_sigs(void*);
 void __restore_sigs(void*);
+
+static inline int __sigaltstack(const stack_t* restrict ss, stack_t* restrict old) {
+    return 0;
+}
+
+static inline int __rt_sigprocmask(int how, const sigset_t* restrict set,
+                                   sigset_t* restrict old_set, size_t sigmask_size) {
+    return 0;
+}
+
+static inline int __rt_sigaction(int sig, const struct k_sigaction* restrict action,
+                                 struct k_sigaction* restrict old_action,
+                                 size_t sigaction_mask_size) {
+    return 0;
+}
+
+static inline int __rt_sigpending(sigset_t* set, size_t sigset_size) {
+    return 0;
+}
+
+static inline int __rt_sigsuspend(const sigset_t* set, size_t sigset_size) {
+    return 0;
+}
+
+static inline int __rt_sigtimedwait(const sigset_t* restrict set, siginfo_t* restrict info,
+                                    const struct timespec* restrict timeout, size_t sigset_size) {
+    return 0;
+}
+
+static inline int __rt_sigqueueinfo(pid_t pid, int sig, siginfo_t* info) {
+    return 0;
+}
 
 #define DEFAULT_STACK_SIZE 81920
 #define DEFAULT_GUARD_SIZE PAGE_SIZE

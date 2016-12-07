@@ -22,11 +22,6 @@ int __libc_sigaction(int sig, const struct sigaction* restrict sa, struct sigact
             a_or_l(handler_set + (sig - 1) / (8 * sizeof(long)),
                    1UL << (sig - 1) % (8 * sizeof(long)));
 
-// TODO(kulakowski) Signals: We don't have them, but for
-// now it's cheap to keep around notes of where they had
-// to be handled, in case we ever have a mechanism with
-// similar implications for our threading implementation.
-#if 0
             /* If pthread_create has not yet been called,
              * implementation-internal signals might not
              * yet have been unblocked. They must be
@@ -36,19 +31,19 @@ int __libc_sigaction(int sig, const struct sigaction* restrict sa, struct sigact
              * blocked) as part of the ucontext_t passed
              * to the signal handler. */
 
-            static int unmask_done;
-            if (!libc.threaded && !unmask_done) {
-                __syscall(SYS_rt_sigprocmask, SIG_UNBLOCK, SIGPT_SET, 0, _NSIG / 8);
-                unmask_done = 1;
-            }
-#endif
+            // TODO(kulakowski) wat
+            /* static int unmask_done; */
+            /* if (!libc.threaded && !unmask_done) { */
+            /*     __rt_sigprocmask(SIG_UNBLOCK, SIGPT_SET, 0, _NSIG / 8); */
+            /*     unmask_done = 1; */
+            /* } */
         }
         ksa.handler = sa->sa_handler;
         ksa.flags = sa->sa_flags | SA_RESTORER;
         ksa.restorer = (sa->sa_flags & SA_SIGINFO) ? __restore_rt : __restore;
         memcpy(&ksa.mask, &sa->sa_mask, sizeof ksa.mask);
     }
-    if (syscall(SYS_rt_sigaction, sig, sa ? &ksa : 0, old ? &ksa_old : 0, sizeof ksa.mask))
+    if (__rt_sigaction(sig, sa ? &ksa : 0, old ? &ksa_old : 0, sizeof ksa.mask))
         return -1;
     if (old) {
         old->sa_handler = ksa_old.handler;

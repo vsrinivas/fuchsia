@@ -1,6 +1,7 @@
-#include "syscall.h"
 #include <signal.h>
 
+#include "pthread_impl.h"
+
 int sigpending(sigset_t* set) {
-    return syscall(SYS_rt_sigpending, set, _NSIG / 8);
+    return __rt_sigpending(set, _NSIG / 8);
 }

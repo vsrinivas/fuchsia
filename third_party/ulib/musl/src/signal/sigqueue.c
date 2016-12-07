@@ -15,7 +15,7 @@ int sigqueue(pid_t pid, int sig, const union sigval value) {
     si.si_uid = getuid();
     __block_app_sigs(&set);
     si.si_pid = getpid();
-    r = syscall(SYS_rt_sigqueueinfo, pid, sig, &si);
+    r = __rt_sigqueueinfo(pid, sig, &si);
     __restore_sigs(&set);
     return r;
 }

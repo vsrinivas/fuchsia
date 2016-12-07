@@ -36,15 +36,8 @@
 #define SYS_sched_get_priority_max 159
 #define SYS_sched_get_priority_min 160
 #define SYS_sched_rr_get_interval 161
-#define SYS_rt_sigaction 174
-#define SYS_rt_sigprocmask 175
-#define SYS_rt_sigpending 176
-#define SYS_rt_sigtimedwait 177
-#define SYS_rt_sigqueueinfo 178
-#define SYS_rt_sigsuspend 179
 #define SYS_pread64 180
 #define SYS_pwrite64 181
-#define SYS_sigaltstack 186
 #define SYS_ugetrlimit 191
 #define SYS_mincore 219
 #define SYS_madvise 220

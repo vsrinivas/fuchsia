@@ -50,13 +50,6 @@
 #define SYS_sched_rr_get_interval 127
 #define SYS_kill 129
 #define SYS_tkill 130
-#define SYS_sigaltstack 132
-#define SYS_rt_sigsuspend 133
-#define SYS_rt_sigaction 134
-#define SYS_rt_sigprocmask 135
-#define SYS_rt_sigpending 136
-#define SYS_rt_sigtimedwait 137
-#define SYS_rt_sigqueueinfo 138
 #define SYS_setpriority 140
 #define SYS_getpriority 141
 #define SYS_times 153

@@ -1,7 +1,8 @@
 #include "libc.h"
-#include "syscall.h"
+#include "pthread_impl.h"
+
 #include <signal.h>
 
 int sigsuspend(const sigset_t* mask) {
-    return syscall(SYS_rt_sigsuspend, mask, _NSIG / 8);
+    return __rt_sigsuspend(mask, _NSIG / 8);
 }

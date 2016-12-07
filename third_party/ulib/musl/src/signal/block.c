@@ -1,8 +1,9 @@
-#include "syscall.h"
 #include <limits.h>
 #include <signal.h>
 
-static const unsigned long all_mask[] = {
+#include "pthread_impl.h"
+
+static const sigset_t all_mask = {
 #if ULONG_MAX == 0xffffffff && _NSIG == 129
     -1UL, -1UL, -1UL, -1UL
 #elif ULONG_MAX == 0xffffffff
@@ -12,7 +13,7 @@ static const unsigned long all_mask[] = {
 #endif
 };
 
-static const unsigned long app_mask[] = {
+static const sigset_t app_mask = {
 #if ULONG_MAX == 0xffffffff
 #if _NSIG == 65
     0x7fffffff, 0xfffffffc
@@ -29,13 +30,13 @@ static const unsigned long app_mask[] = {
 };
 
 void __block_all_sigs(void* set) {
-    __syscall(SYS_rt_sigprocmask, SIG_BLOCK, &all_mask, set, _NSIG / 8);
+    __rt_sigprocmask(SIG_BLOCK, &all_mask, set, _NSIG / 8);
 }
 
 void __block_app_sigs(void* set) {
-    __syscall(SYS_rt_sigprocmask, SIG_BLOCK, &app_mask, set, _NSIG / 8);
+    __rt_sigprocmask(SIG_BLOCK, &app_mask, set, _NSIG / 8);
 }
 
 void __restore_sigs(void* set) {
-    __syscall(SYS_rt_sigprocmask, SIG_SETMASK, set, 0, _NSIG / 8);
+    __rt_sigprocmask(SIG_SETMASK, set, 0, _NSIG / 8);
 }

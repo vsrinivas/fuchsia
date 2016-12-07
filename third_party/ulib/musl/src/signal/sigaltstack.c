@@ -1,6 +1,7 @@
-#include "syscall.h"
 #include <errno.h>
 #include <signal.h>
+
+#include "pthread_impl.h"
 
 int sigaltstack(const stack_t* restrict ss, stack_t* restrict old) {
     if (ss) {
@@ -13,5 +14,5 @@ int sigaltstack(const stack_t* restrict ss, stack_t* restrict old) {
             return -1;
         }
     }
-    return syscall(SYS_sigaltstack, ss, old);
+    return __sigaltstack(ss, old);
 }

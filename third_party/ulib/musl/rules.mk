@@ -35,6 +35,7 @@ LOCAL_CFLAGS := \
     -Wno-missing-braces \
     -Wno-type-limits \
     -Werror=strict-prototypes \
+    -Werror=incompatible-pointer-types \
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 LOCAL_CFLAGS += \

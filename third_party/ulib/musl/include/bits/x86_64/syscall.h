@@ -1,6 +1,4 @@
 #define SYS_close 3
-#define SYS_rt_sigaction 13
-#define SYS_rt_sigprocmask 14
 #define SYS_ioctl 16
 #define SYS_pread64 17
 #define SYS_pwrite64 18
@@ -31,11 +29,6 @@
 #define SYS_getrusage 98
 #define SYS_times 100
 #define SYS_ptrace 101
-#define SYS_rt_sigpending 127
-#define SYS_rt_sigtimedwait 128
-#define SYS_rt_sigqueueinfo 129
-#define SYS_rt_sigsuspend 130
-#define SYS_sigaltstack 131
 #define SYS_statfs 137
 #define SYS_fstatfs 138
 #define SYS_getpriority 140
