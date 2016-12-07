@@ -21,7 +21,7 @@
 
 #define MAGENTA_SYSCALL_MAGIC 0x00ff00ff00000000
 
-.macro _syscall nargs, name, n
+.macro m_syscall nargs, name, n
 .globl _\name
 .type _\name,STT_FUNC
 _\name:
@@ -77,7 +77,7 @@ _\name:
 .size \name, . - _\name
 .endm
 
-#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) _syscall nargs64, mx_##name, n
+#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs64, mx_##name, n
 #define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
 
 #include <magenta/syscalls.inc>

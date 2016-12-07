@@ -8,7 +8,7 @@
 
 .cfi_sections .eh_frame, .debug_frame
 
-.macro syscall name, n
+.macro m_syscall name, n
 .globl _\name
 .type _\name,STT_FUNC
 _\name:
@@ -24,7 +24,7 @@ _\name:
 .size \name, . - _\name
 .endm
 
-#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) syscall mx_##name, n
+#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall mx_##name, n
 #define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
 
 #include <magenta/syscalls.inc>
