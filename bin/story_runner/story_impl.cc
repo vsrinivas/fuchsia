@@ -105,7 +105,7 @@ void StoryImpl::CreateLink(const fidl::String& name,
                            fidl::InterfaceRequest<Link> link) {
   StoryStoragePtr story_storage_dup;
   story_storage_->Dup(story_storage_dup.NewRequest());
-  auto* link_impl =
+  auto* const link_impl =
       new LinkImpl(std::move(story_storage_dup), name, std::move(link));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(

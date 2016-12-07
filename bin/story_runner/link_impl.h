@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "apps/modular/lib/document_editor/document_editor.h"
+#include "apps/modular/lib/fidl/bottleneck.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/story_storage.fidl.h"
@@ -81,6 +82,7 @@ class LinkImpl : public StoryStorageLinkWatcher {
   void DatabaseChanged(LinkConnection* src);
   void NotifyWatchers(LinkConnection* src);
   void ReadLinkData(const std::function<void()>& done);
+  void WriteLinkDataImpl(const std::function<void()>& done);
 
   // |StoryStorageLinkWatcher|
   void OnChange(LinkDataPtr link_data) override;
@@ -90,6 +92,8 @@ class LinkImpl : public StoryStorageLinkWatcher {
   const fidl::String name_;
   StoryStoragePtr story_storage_;
   std::function<void()> orphaned_handler_;
+
+  Bottleneck write_link_data_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };

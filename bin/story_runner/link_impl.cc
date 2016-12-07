@@ -26,7 +26,8 @@ using document_store::ValuePtr;
 LinkImpl::LinkImpl(StoryStoragePtr story_storage,
                    const fidl::String& name,
                    fidl::InterfaceRequest<Link> link_request)
-    : name_(name), story_storage_(std::move(story_storage)) {
+    : name_(name), story_storage_(std::move(story_storage)),
+      write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
   ReadLinkData(ftl::MakeCopyable([
     this, link_request = std::move(link_request)
   ]() mutable { LinkConnection::New(this, std::move(link_request)); }));
@@ -95,6 +96,10 @@ void LinkImpl::ReadLinkData(const std::function<void()>& done) {
 }
 
 void LinkImpl::WriteLinkData(const std::function<void()>& done) {
+  write_link_data_(done);
+}
+
+void LinkImpl::WriteLinkDataImpl(const std::function<void()>& done) {
   auto link_data = LinkData::New();
   link_data->docs = docs_.Clone();
   story_storage_->WriteLinkData(name_, std::move(link_data), done);

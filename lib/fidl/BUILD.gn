@@ -2,6 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("array_to_string") {
+  sources = [
+    "array_to_string.h",
+  ]
+
+  deps = [
+    "//lib/fidl/cpp/bindings",
+  ]
+}
+
+source_set("bottleneck") {
+  sources = [
+    "bottleneck.h",
+    "bottleneck.cc",
+  ]
+}
+
+source_set("scope") {
+  sources = [
+    "scope.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/app",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+  ]
+}
+
 source_set("single_service_view_app") {
   sources = [
     "single_service_view_app.h",
@@ -17,16 +46,6 @@ source_set("single_service_view_app") {
   ]
 }
 
-source_set("array_to_string") {
-  sources = [
-    "array_to_string.h",
-  ]
-
-  deps = [
-    "//lib/fidl/cpp/bindings",
-  ]
-}
-
 source_set("strong_binding") {
   sources = [
     "strong_binding.h",
@@ -38,14 +57,3 @@ source_set("strong_binding") {
   ]
 }
 
-source_set("scope") {
-  sources = [
-    "scope.h",
-  ]
-
-  deps = [
-    "//apps/modular/lib/app",
-    "//lib/fidl/cpp/bindings",
-    "//lib/ftl",
-  ]
-}
