@@ -73,9 +73,7 @@ class LinkConnection : public modular::LinkWatcher {
  public:
   LinkConnection(modular::Link* const src, modular::Link* const dst)
       : src_binding_(this), src_(src), dst_(dst) {
-    fidl::InterfaceHandle<modular::LinkWatcher> watcher;
-    src_binding_.Bind(watcher.NewRequest());
-    src_->Watch(std::move(watcher));
+    src_->Watch(src_binding_.NewBinding());
   }
 
   void Notify(modular::FidlDocMap docs) override {
@@ -103,9 +101,7 @@ class ModuleMonitor : public modular::ModuleWatcher {
   ModuleMonitor(modular::ModuleController* const module_client,
                 modular::Story* const story)
       : binding_(this), story_(story) {
-    fidl::InterfaceHandle<modular::ModuleWatcher> watcher;
-    binding_.Bind(watcher.NewRequest());
-    module_client->Watch(std::move(watcher));
+    module_client->Watch(binding_.NewBinding());
   }
 
   void OnDone() override {

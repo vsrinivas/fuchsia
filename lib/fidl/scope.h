@@ -26,10 +26,9 @@ class Scope : public ApplicationEnvironmentHost {
         const std::string& label)
       : binding_(this),
         parent_env_(std::move(parent_env)) {
-    ApplicationEnvironmentHostPtr env_host;
-    binding_.Bind(env_host.NewRequest());
-    parent_env_->CreateNestedEnvironment(
-        std::move(env_host), env_.NewRequest(), env_controller_.NewRequest(), label);
+    parent_env_->CreateNestedEnvironment(binding_.NewBinding(),
+                                         env_.NewRequest(),
+                                         env_controller_.NewRequest(), label);
   }
 
   ApplicationEnvironmentPtr& environment() { return env_; }
