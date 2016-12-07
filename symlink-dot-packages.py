@@ -69,16 +69,15 @@ def main():
             success = False
             continue
 
-        if os.path.exists(symlink):
-            if stat.S_ISLNK(os.lstat(symlink).st_mode):
-                if os.readlink(symlink) != packages:
-                    print 'UPDATING: %s' % symlink
-                    os.unlink(symlink)
-                    os.symlink(packages, symlink)
-                else:
-                    print 'OK:       %s' % symlink
+        if os.path.islink(symlink):
+            if os.readlink(symlink) != packages:
+                print 'UPDATING: %s' % symlink
+                os.unlink(symlink)
+                os.symlink(packages, symlink)
             else:
-                print 'IGNORING: %s' % symlink
+                print 'OK:       %s' % symlink
+        elif os.path.exists(symlink):
+            print 'IGNORING: %s' % symlink
         else:
             print 'LINKING:  %s' % symlink
             os.symlink(packages, symlink)
