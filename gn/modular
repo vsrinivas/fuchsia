@@ -40,6 +40,10 @@
             "bootfs_path": "apps/example_flutter_hello_world"
         },
         {
+            "binary": "example_flutter_https.flx",
+            "bootfs_path": "apps/example_flutter_https"
+        },
+        {
             "binary": "example_module1",
             "bootfs_path": "apps/example_module1"
         },
