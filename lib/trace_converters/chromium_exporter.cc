@@ -255,9 +255,17 @@ void ChromiumExporter::ExportEvent(const reader::Record::Event& event) {
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.Int(arg.value.GetInt32());
           break;
+        case ArgumentType::kUint32:
+          writer_.Key(arg.name.data(), arg.name.size());
+          writer_.Uint(arg.value.GetUint32());
+          break;
         case ArgumentType::kInt64:
           writer_.Key(arg.name.data(), arg.name.size());
           writer_.Int64(arg.value.GetInt64());
+          break;
+        case ArgumentType::kUint64:
+          writer_.Key(arg.name.data(), arg.name.size());
+          writer_.Uint64(arg.value.GetUint64());
           break;
         case ArgumentType::kDouble:
           writer_.Key(arg.name.data(), arg.name.size());
