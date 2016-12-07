@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
 
 #include "lib/ftl/strings/string_view.h"
@@ -155,6 +156,13 @@ size_t JoinStrings(const std::deque<std::string>& strings,
 bool FindUnescapedChar(const char val,
                        const ftl::StringView& packet,
                        size_t* out_index);
+
+// Return the name of exception |type| as a C string.
+const char* ExceptionName(mx_excp_type_t type);
+
+// Return the string representation of an exception.
+std::string ExceptionToString(mx_excp_type_t type,
+                              const mx_exception_context_t& context);
 
 bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max);
 

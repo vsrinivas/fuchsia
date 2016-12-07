@@ -173,15 +173,16 @@ bool ParseThreadId(const ftl::StringView& bytes,
     break;
   }
 
-  // Didn't find a dot.
-  if (!found_dot)
-    return false;
+  // If there's no dot then tid is set to -1 (meaning all threads).
+  if (!found_dot) {
+    *out_tid = -1;
+    return ftl::StringToNumberWithError<int64_t>(bytes.substr(1, dot - 1),
+                                                 out_pid, ftl::Base::k16);
+  }
 
   if (!ftl::StringToNumberWithError<int64_t>(bytes.substr(1, dot - 1), out_pid,
-                                             ftl::Base::k16)) {
-    FTL_LOG(ERROR) << "Could not parse process id: " << bytes;
+                                             ftl::Base::k16))
     return false;
-  }
 
   return ftl::StringToNumberWithError<int64_t>(bytes.substr(dot + 1), out_tid,
                                                ftl::Base::k16);
@@ -341,6 +342,31 @@ bool FindUnescapedChar(const char val,
     *out_index = i;
 
   return found;
+}
+
+const char* ExceptionName(mx_excp_type_t type) {
+#define CASE_TO_STR(x) \
+  case x:              \
+    return #x
+  switch (type) {
+    CASE_TO_STR(MX_EXCP_GENERAL);
+    CASE_TO_STR(MX_EXCP_FATAL_PAGE_FAULT);
+    CASE_TO_STR(MX_EXCP_UNDEFINED_INSTRUCTION);
+    CASE_TO_STR(MX_EXCP_SW_BREAKPOINT);
+    CASE_TO_STR(MX_EXCP_HW_BREAKPOINT);
+    CASE_TO_STR(MX_EXCP_START);
+    CASE_TO_STR(MX_EXCP_GONE);
+    default:
+      return "UNKNOWN";
+  }
+#undef CASE_TO_STR
+}
+
+std::string ExceptionToString(mx_excp_type_t type,
+                              const mx_exception_context_t& context) {
+  std::string result(ExceptionName(type));
+  // TODO(dje): Add more info to the string.
+  return result;
 }
 
 bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max) {
