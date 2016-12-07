@@ -13,6 +13,7 @@
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
+#include "apps/modular/services/device/user_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
@@ -103,12 +104,12 @@ class Settings {
   }
 };
 
-class DeviceRunnerApp : public DeviceRunner {
+class DeviceRunnerApp : public UserProvider {
  public:
   DeviceRunnerApp(const Settings& settings)
       : settings_(settings),
         app_context_(ApplicationContext::CreateFromStartupInfo()),
-        device_runner_binding_(this) {
+        binding_(this) {
     auto launch_info = ApplicationLaunchInfo::New();
     launch_info->url = settings_.device_shell;
     launch_info->arguments = to_array(settings_.device_shell_args);
@@ -121,20 +122,22 @@ class DeviceRunnerApp : public DeviceRunner {
     mozart::ViewProviderPtr view_provider;
     ConnectToService(services.get(), view_provider.NewRequest());
 
+    DeviceShellFactoryPtr device_shell_factory;
+    ConnectToService(services.get(), device_shell_factory.NewRequest());
+
     fidl::InterfaceHandle<mozart::ViewOwner> root_view;
     view_provider->CreateView(root_view.NewRequest(), nullptr);
     app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
-    ConnectToService(services.get(), device_shell_.NewRequest());
-
-    fidl::InterfaceHandle<DeviceRunner> device_runner_handle;
-    device_runner_binding_.Bind(device_runner_handle.NewRequest());
-    device_shell_->Initialize(std::move(device_runner_handle));
+    fidl::InterfaceHandle<UserProvider> user_provider_handle;
+    binding_.Bind(user_provider_handle.NewRequest());
+    device_shell_factory->Create(std::move(user_provider_handle),
+                                 device_shell_.NewRequest());
   }
 
  private:
-  // |DeviceRunner|
+  // |UserProvider|
   void Login(
       const fidl::String& username,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
@@ -171,7 +174,7 @@ class DeviceRunnerApp : public DeviceRunner {
   const Settings settings_;
 
   std::shared_ptr<ApplicationContext> app_context_;
-  fidl::Binding<DeviceRunner> device_runner_binding_;
+  fidl::Binding<UserProvider> binding_;
 
   ApplicationControllerPtr device_shell_controller_;
   DeviceShellPtr device_shell_;

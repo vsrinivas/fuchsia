@@ -4,11 +4,16 @@
 
 module modular;
 
-import "apps/modular/services/device/device_runner.fidl";
+import "apps/modular/services/device/user_provider.fidl";
 
 // This interface is meant to be implemented by a Device Shell so that
 // |DeviceRunner| could be passed to it on startup.
-[ServiceName="modular.DeviceShell"]
-interface DeviceShell {
-  Initialize(DeviceRunner service);
+[ServiceName="modular.DeviceShellFactory"]
+interface DeviceShellFactory {
+  Create(UserProvider user_provider, DeviceShell& device_shell);
 };
+
+// This interface is empty, but it still allows a DeviceShellFactory
+// client (i.e. the DeviceRunner) to monitor the life cycle of its
+// DeviceShell service instance.
+interface DeviceShell {};

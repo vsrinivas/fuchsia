@@ -6,11 +6,11 @@ import("//lib/fidl/fidl.gni")
 
 fidl("device") {
   sources = [
-    "device_runner.fidl",
     "device_shell.fidl",
+    "user_provider.fidl",
   ]
 
-  deps = [
+  public_deps = [
     "//apps/mozart/services/views"
   ]
 }

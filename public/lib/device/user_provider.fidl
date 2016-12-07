@@ -1,0 +1,22 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/mozart/services/views/view_token.fidl";
+
+// Given to the device shell UI so it can provide user information to
+// the device runner.
+//
+// The name is analog to StoryProvider, which is given to UserShell so
+// it can act on stories. Conceptually, it provides the device shell
+// with information about the users that can login here (even though
+// it doesn't do this right now) in the same way as StoryProvider
+// provides the user shell with stories to start here.
+interface UserProvider {
+  // Passes in the user authentication information from the lockscreen
+  // or shell. |view_owner| is the view given to the UserShell. To be
+  // refined once we get to it.
+  Login(string username, mozart.ViewOwner& view_owner);
+};
