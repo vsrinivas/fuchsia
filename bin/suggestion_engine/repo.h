@@ -54,17 +54,7 @@ class Repo {
     });
   }
 
-  std::unique_ptr<SuggestionPrototype> Extract(const std::string& id) {
-    auto it = suggestions_.find(id);
-    if (it == suggestions_.end()) {
-      return NULL;
-    } else {
-      std::unique_ptr<SuggestionPrototype> suggestion =
-          std::unique_ptr<SuggestionPrototype>(std::move(it->second));
-      suggestions_.erase(id);
-      return suggestion;
-    }
-  }
+  std::unique_ptr<SuggestionPrototype> Extract(const std::string& id);
 
   // Non-mutating indexer; returns NULL if no such suggestion exists.
   const SuggestionPrototype* operator[](

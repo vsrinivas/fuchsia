@@ -45,4 +45,14 @@ void Repo::InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,
   ask_channels_.emplace(std::move(ask));
 }
 
+std::unique_ptr<SuggestionPrototype> Repo::Extract(const std::string& id) {
+  auto it = suggestions_.find(id);
+  if (it == suggestions_.end()) {
+    return NULL;
+  } else {
+    const SuggestionPrototype* prototype = suggestions_[id];
+    return prototype->source->Extract(prototype->proposal->id);
+  }
+}
+
 }  // namespace maxwell

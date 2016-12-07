@@ -34,7 +34,7 @@ class ProposalPublisherImpl : public ProposalPublisher {
   void GetAll(const GetAllCallback& callback) override;
   void RegisterAskHandler(
       fidl::InterfaceHandle<AskHandler> ask_handler) override;
-  void Extract(std::string id);
+  std::unique_ptr<SuggestionPrototype> Extract(const std::string& id);
 
  private:
   class BindingSet : public maxwell::BindingSet<ProposalPublisher> {
@@ -59,7 +59,8 @@ class ProposalPublisherImpl : public ProposalPublisher {
   Repo* const repo_;
   const std::string component_url_;
   // indexed by proposal ID
-  std::unordered_map<std::string, SuggestionPrototype> proposals_;
+  std::unordered_map<std::string, std::unique_ptr<SuggestionPrototype>>
+      proposals_;
   BindingSet bindings_;
 };
 
