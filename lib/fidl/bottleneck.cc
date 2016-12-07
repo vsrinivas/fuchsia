@@ -6,9 +6,6 @@
 
 namespace modular {
 
-Bottleneck::Bottleneck(Kind kind, Operation operation)
-    : kind_(kind), operation_(operation) {}
-
 void Bottleneck::operator()(Result done) {
   results_.emplace_back(done);
   if (results_.size() == 1) {
@@ -18,7 +15,7 @@ void Bottleneck::operator()(Result done) {
 
 void Bottleneck::Call() {
   cover_ = results_.size();
-  operation_([this]() { Done(); });
+  operation_([this] { Done(); });
 }
 
 void Bottleneck::Done() {
