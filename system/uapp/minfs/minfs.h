@@ -14,7 +14,7 @@
 
 #define MINFS_MAGIC0         (0x002153466e694d21ULL)
 #define MINFS_MAGIC1         (0x385000d3d3d3d304ULL)
-#define MINFS_VERSION        0x00000001
+#define MINFS_VERSION        0x00000002
 
 #define MINFS_ROOT_INO       1
 #define MINFS_FLAG_CLEAN     1
@@ -25,6 +25,11 @@
 
 #define MINFS_DIRECT         16
 #define MINFS_INDIRECT       32
+
+// not possible to have a block at or past this one
+// due to the limitations of the inode and indirect blocks
+#define MINFS_MAX_FILE_BLOCK (MINFS_DIRECT + MINFS_INDIRECT * (MINFS_BLOCK_SIZE / sizeof(uint32_t)))
+#define MINFS_MAX_FILE_SIZE  MINFS_MAX_FILE_BLOCK * MINFS_BLOCK_SIZE
 
 #define MINFS_TYPE_FILE      8
 #define MINFS_TYPE_DIR       4
@@ -83,7 +88,8 @@ static_assert(sizeof(minfs_inode_t) == MINFS_INODE_SIZE,
 
 typedef struct {
     uint32_t ino;                   // inode number
-    uint16_t reclen;                // length of this record
+    uint16_t reclen;                // Low 15 bits: Length of record
+                                    // High 1 bits: Flags
     uint8_t namelen;                // length of the filename
     uint8_t type;                   // MINFS_TYPE_*
     char name[];                    // name does not have trailing \0
@@ -92,14 +98,23 @@ typedef struct {
 #define MINFS_DIRENT_SIZE sizeof(minfs_dirent_t)
 
 #define SIZEOF_MINFS_DIRENT(namelen) (MINFS_DIRENT_SIZE + ((namelen + 3) & (~3)))
+#define MINFS_MAX_NAME_SIZE       255
+#define MINFS_MAX_DIRENT_SIZE     SIZEOF_MINFS_DIRENT(MINFS_MAX_NAME_SIZE)
+#define MINFS_MAX_DIRECTORY_SIZE  (((1 << 20) - 1) & (~3))
+
+#define MINFS_RECLEN_MASK         0x7FFF
+#define MINFS_RECLEN_LAST         0x8000
+#define MINFS_RECLEN(de, off) ((de->reclen & MINFS_RECLEN_LAST) ? \
+                               (MINFS_MAX_DIRECTORY_SIZE - off) : \
+                               (de->reclen & MINFS_RECLEN_MASK))
 
 // Notes:
-// - directory files grow a block at a time
-//   and their size is always a multiple of
-//   of the fs block size
-// - dirents with ino of 0 are freespace, and
-//   skipped over on lookup
+// - dirents with ino of 0 are free, and skipped over on lookup
 // - reclen must be a multiple of 4
+// - the last record in a directory has the "MINFS_RECLEN_LAST" flag set. The
+//   actual size of this record can be computed from the offset at which this
+//   record starts. If the MAX_DIR_SIZE is increased, this 'last' record will
+//   also increase in size.
 
 
 // blocksize   8K    16K    32K

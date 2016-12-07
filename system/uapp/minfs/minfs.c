@@ -27,7 +27,8 @@ mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
         return ERR_INVALID_ARGS;
     }
     if (info->version != MINFS_VERSION) {
-        error("minfs: bad version %08x\n", info->version);
+        error("minfs: FS Version: %08x. Driver version: %08x\n", info->version,
+              MINFS_VERSION);
         return ERR_INVALID_ARGS;
     }
     if ((info->block_size != MINFS_BLOCK_SIZE) ||
@@ -228,7 +229,7 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
     // directory entry for parent
     de = (void*) bdata + DE0_SIZE;
     de->ino = ino_parent;
-    de->reclen = MINFS_BLOCK_SIZE - DE0_SIZE;
+    de->reclen = SIZEOF_MINFS_DIRENT(2) | MINFS_RECLEN_LAST;
     de->namelen = 2;
     de->type = MINFS_TYPE_DIR;
     de->name[0] = '.';

@@ -335,10 +335,15 @@ static inline void vn_put_block_dirty(vnode_t* vn, block_t* blk) {
     bcache_put(vn->fs->bc, blk, BLOCK_DIRTY);
 }
 
+// Immediately stop iterating over the directory.
 #define DIR_CB_DONE 0
+// Access the next direntry in the directory.
 #define DIR_CB_NEXT 1
-#define DIR_CB_SAVE 2
-#define DIR_CB_SAVE_SYNC 3
+// Identify that the direntry record was modified.
+#define DIR_CB_SAVE_SYNC 2
+
+static size_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off);
+static size_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t off);
 
 typedef struct dir_args {
     const char* name;
@@ -348,7 +353,8 @@ typedef struct dir_args {
     uint32_t reclen;
 } dir_args_t;
 
-static mx_status_t cb_dir_find(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
+static mx_status_t cb_dir_find(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args,
+                               size_t off) {
     if ((de->ino != 0) && (de->namelen == args->len) &&
         (!memcmp(de->name, args->name, args->len))) {
         args->ino = de->ino;
@@ -373,7 +379,8 @@ static mx_status_t can_unlink(vnode_t* vn) {
     return NO_ERROR;
 }
 
-static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de) {
+static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
+                             size_t off) {
     vn->inode.link_count--;
 
     //TODO: it would be safer to do this *after* we update the directory block
@@ -383,11 +390,14 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de) {
     de->ino = 0;
     vndir->inode.dirent_count--;
     minfs_sync_vnode(vndir, MX_FS_SYNC_MTIME);
+    _fs_write(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), off);
+    // TODO(smklein): Truncate directory size to reduce blocks allocated.
     return DIR_CB_SAVE_SYNC;
 }
 
 // caller is expected to prevent unlink of "." or ".."
-static mx_status_t cb_dir_unlink(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
+static mx_status_t cb_dir_unlink(vnode_t* vndir, minfs_dirent_t* de,
+                                 dir_args_t* args, size_t off) {
     if ((de->ino == 0) || (args->len != de->namelen) ||
         memcmp(args->name, de->name, args->len)) {
         return DIR_CB_NEXT;
@@ -403,11 +413,12 @@ static mx_status_t cb_dir_unlink(vnode_t* vndir, minfs_dirent_t* de, dir_args_t*
         vn_release(vn);
         return status;
     }
-    return do_unlink(vndir, vn, de);
+    return do_unlink(vndir, vn, de, off);
 }
 
 // same as unlink, but do not validate vnode
-static mx_status_t cb_dir_force_unlink(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
+static mx_status_t cb_dir_force_unlink(vnode_t* vndir, minfs_dirent_t* de,
+                                       dir_args_t* args, size_t off) {
     if ((de->ino == 0) || (args->len != de->namelen) ||
         memcmp(args->name, de->name, args->len)) {
         return DIR_CB_NEXT;
@@ -418,12 +429,13 @@ static mx_status_t cb_dir_force_unlink(vnode_t* vndir, minfs_dirent_t* de, dir_a
     if ((status = minfs_vnode_get(vndir->fs, &vn, de->ino)) < 0) {
         return status;
     }
-    return do_unlink(vndir, vn, de);
+    return do_unlink(vndir, vn, de, off);
 }
 
 // since these rename callbacks operates on a single name, they actually just do
 // some validation and change an inode, rather than altering any names
-static mx_status_t cb_dir_can_rename(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
+static mx_status_t cb_dir_can_rename(vnode_t* vndir, minfs_dirent_t* de,
+                                     dir_args_t* args, size_t off) {
     if ((de->ino == 0) || (args->len != de->namelen) ||
         memcmp(args->name, de->name, args->len)) {
         return DIR_CB_NEXT;
@@ -451,92 +463,118 @@ static mx_status_t cb_dir_can_rename(vnode_t* vndir, minfs_dirent_t* de, dir_arg
     return DIR_CB_DONE;
 }
 
-static mx_status_t cb_dir_update_inode(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
+static mx_status_t cb_dir_update_inode(vnode_t* vndir, minfs_dirent_t* de,
+                                       dir_args_t* args, size_t off) {
     if ((de->ino == 0) || (args->len != de->namelen) ||
         memcmp(args->name, de->name, args->len)) {
         return DIR_CB_NEXT;
     }
 
     de->ino = args->ino;
+    _fs_write(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), off);
     return DIR_CB_SAVE_SYNC;
 }
 
-static mx_status_t cb_dir_append(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* args) {
-    if (de->ino == 0) {
-        // empty entry, do we fit?
-        if (args->reclen > de->reclen) {
-            return DIR_CB_NEXT;
-        }
-    } else {
-        // filled entry, can we sub-divide?
-        uint32_t size = SIZEOF_MINFS_DIRENT(de->namelen);
-        if (size > de->reclen) {
-            error("bad reclen %u < %u\n", de->reclen, size);
-            return DIR_CB_DONE;
-        }
-        uint32_t extra = de->reclen - size;
-        if (extra < args->reclen) {
-            return DIR_CB_NEXT;
-        }
-        // shrink existing entry
-        de->reclen = size;
-        // create new entry in the remaining space
-        de = ((void*)de) + size;
-        de->reclen = extra;
-    }
+static mx_status_t fill_dirent(vnode_t* vndir, minfs_dirent_t* de,
+                               dir_args_t* args, size_t off) {
     de->ino = args->ino;
     de->type = args->type;
     de->namelen = args->len;
     memcpy(de->name, args->name, args->len);
     vndir->inode.dirent_count++;
+    _fs_write(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), off);
     return DIR_CB_SAVE_SYNC;
 }
 
+static mx_status_t cb_dir_append(vnode_t* vndir, minfs_dirent_t* de,
+                                 dir_args_t* args, size_t off) {
+    uint32_t reclen = MINFS_RECLEN(de, off);
+    if (de->ino == 0) {
+        // empty entry, do we fit?
+        if (args->reclen > reclen) {
+            return DIR_CB_NEXT;
+        }
+        return fill_dirent(vndir, de, args, off);
+    } else {
+        // filled entry, can we sub-divide?
+        uint32_t size = SIZEOF_MINFS_DIRENT(de->namelen);
+        if (size > reclen) {
+            error("bad reclen (smaller than dirent) %u < %u\n", reclen, size);
+            return ERR_IO;
+        }
+        uint32_t extra = reclen - size;
+        if (extra < args->reclen) {
+            return DIR_CB_NEXT;
+        }
+        // shrink existing entry
+        bool was_last_record = de->reclen & MINFS_RECLEN_LAST;
+        de->reclen = size;
+        _fs_write(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), off);
+        off += size;
+        // create new entry in the remaining space
+        de = ((void*)de) + size;
+        char data[MINFS_MAX_DIRENT_SIZE];
+        de = (minfs_dirent_t*) data;
+        de->reclen = extra | (was_last_record ? MINFS_RECLEN_LAST : 0);
+        return fill_dirent(vndir, de, args, off);
+    }
+}
+
+static mx_status_t validate_dirent(minfs_dirent_t* de, size_t bytes_read, size_t off) {
+    uint32_t reclen = MINFS_RECLEN(de, off);
+    if ((bytes_read < MINFS_DIRENT_SIZE) || (reclen < MINFS_DIRENT_SIZE)) {
+        error("vn_dir: Could not read dirent at offset: %lu\n", off);
+        return ERR_IO;
+    } else if ((off + reclen > MINFS_MAX_DIRECTORY_SIZE) || (reclen & 3)) {
+        error("vn_dir: bad reclen %u > %u\n", reclen, MINFS_MAX_DIRECTORY_SIZE);
+        return ERR_IO;
+    } else if (de->ino != 0) {
+        if ((de->namelen == 0) ||
+            (de->namelen > (reclen - MINFS_DIRENT_SIZE))) {
+            error("vn_dir: bad namelen %u / %u\n", de->namelen, reclen);
+            return ERR_IO;
+        }
+    }
+    return NO_ERROR;
+}
+
+// Calls a callback 'func' on all direntries in a directory 'vn' with the
+// provided arguments, reacting to the return code of the callback.
+//
+// When 'func' is called, it receives a few arguments:
+//  'vndir': The directory on which the callback is operating
+//  'de': A pointer the start of a single dirent.
+//        Only SIZEOF_MINFS_DIRENT(de->namelen) bytes are guaranteed to exist in
+//        memory from this starting pointer.
+//  'args': Additional arguments plubmed through vn_dir_for_each
+//  'off': Offset in the directory where this direntry is located.
 static mx_status_t vn_dir_for_each(vnode_t* vn, dir_args_t* args,
-                                   mx_status_t (*func)(vnode_t*, minfs_dirent_t*, dir_args_t*)) {
-    for (unsigned n = 0; n < vn->inode.block_count; n++) {
-        block_t* blk;
-        void* data;
-        if ((blk = vn_get_block(vn, n, &data, false)) == NULL) {
-            error("vn_dir: vn=%p missing block %u\n", vn, n);
-            return ERR_NOT_FOUND;
+                                   mx_status_t (*func)(vnode_t*, minfs_dirent_t*,
+                                                       dir_args_t*, size_t)) {
+    char data[MINFS_MAX_DIRENT_SIZE];
+    minfs_dirent_t* de = (minfs_dirent_t*) data;
+    size_t off = 0;
+    mx_status_t status;
+    while (off + MINFS_DIRENT_SIZE < MINFS_MAX_DIRECTORY_SIZE) {
+        trace(MINFS, "Reading dirent at offset %lu\n", off);
+        size_t r = _fs_read(vn, data, MINFS_MAX_DIRENT_SIZE, off);
+        if ((status = validate_dirent(de, r, off)) != NO_ERROR) {
+            return status;
         }
-        uint32_t size = MINFS_BLOCK_SIZE;
-        minfs_dirent_t* de = data;
-        while (size > MINFS_DIRENT_SIZE) {
-            //fprintf(stderr,"DE ino=%u rlen=%u nlen=%u\n", de->ino, de->reclen, de->namelen);
-            uint32_t rlen = de->reclen;
-            if ((rlen > size) || (rlen & 3)) {
-                error("vn_dir: vn=%p bad reclen %u > %u\n", vn, rlen, size);
-                break;
-            }
-            if (de->ino != 0) {
-                if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
-                    error("vn_dir: vn=%p bad namelen %u / %u\n", vn, de->namelen, rlen);
-                    break;
-                }
-            }
-            mx_status_t status;
-            switch ((status = func(vn, de, args))) {
-            case DIR_CB_NEXT:
-                break;
-            case DIR_CB_SAVE:
-                vn_put_block_dirty(vn, blk);
-                return NO_ERROR;
-            case DIR_CB_SAVE_SYNC:
-                vn->inode.seq_num++;
-                vn_put_block_dirty(vn, blk);
-                minfs_sync_vnode(vn, MX_FS_SYNC_MTIME);
-                return NO_ERROR;
-            case DIR_CB_DONE:
-            default:
-                vn_put_block(vn, blk);
-                return status;
-            }
-            de = ((void*) de) + rlen;
-            size -= rlen;
+
+        switch ((status = func(vn, de, args, off))) {
+        case DIR_CB_NEXT:
+            break;
+        case DIR_CB_SAVE_SYNC:
+            vn->inode.seq_num++;
+            minfs_sync_vnode(vn, MX_FS_SYNC_MTIME);
+            return NO_ERROR;
+        case DIR_CB_DONE:
+        default:
+            return status;
         }
-        vn_put_block(vn, blk);
+
+        off += MINFS_RECLEN(de, off);
     }
     return ERR_NOT_FOUND;
 }
@@ -564,16 +602,16 @@ static mx_status_t fs_close(vnode_t* vn) {
     return NO_ERROR;
 }
 
-// not possible to have a block at or past this one
-// due to the limitations of the inode and indirect blocks
-#define MAX_FILE_BLOCK (MINFS_DIRECT + MINFS_INDIRECT * (MINFS_BLOCK_SIZE / sizeof(uint32_t)))
-
 static ssize_t fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
     trace(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", vn, vn->ino, len, off);
     if (vn->inode.magic == MINFS_MAGIC_DIR) {
         return ERR_NOT_FILE;
     }
+    return _fs_read(vn, data, len, off);
+}
 
+// Internal read. Usable on directories.
+static size_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
     // clip to EOF
     if (off >= vn->inode.size) {
         return 0;
@@ -586,7 +624,7 @@ static ssize_t fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
     uint32_t n = off / MINFS_BLOCK_SIZE;
     size_t adjust = off % MINFS_BLOCK_SIZE;
 
-    while ((len > 0) && (n < MAX_FILE_BLOCK)) {
+    while ((len > 0) && (n < MINFS_MAX_FILE_BLOCK)) {
         size_t xfer;
         if (len > (MINFS_BLOCK_SIZE - adjust)) {
             xfer = MINFS_BLOCK_SIZE - adjust;
@@ -596,6 +634,7 @@ static ssize_t fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
 
         block_t* blk;
         void* bdata;
+        // TODO(smklein): Read should not allocate any blocks...
         if ((blk = vn_get_block(vn, n, &bdata, true)) == NULL) {
             break;
         }
@@ -615,6 +654,11 @@ static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     if (vn->inode.magic == MINFS_MAGIC_DIR) {
         return ERR_NOT_FILE;
     }
+    return _fs_write(vn, data, len, off);
+}
+
+// Internal write. Usable on directories.
+static size_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     if (len == 0) {
         return 0;
     }
@@ -623,7 +667,7 @@ static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     uint32_t n = off / MINFS_BLOCK_SIZE;
     size_t adjust = off % MINFS_BLOCK_SIZE;
 
-    while ((len > 0) && (n < MAX_FILE_BLOCK)) {
+    while ((len > 0) && (n < MINFS_MAX_FILE_BLOCK)) {
         size_t xfer;
         if (len > (MINFS_BLOCK_SIZE - adjust)) {
             xfer = MINFS_BLOCK_SIZE - adjust;
@@ -711,11 +755,12 @@ static mx_status_t fs_setattr(vnode_t* vn, vnattr_t* a) {
     return NO_ERROR;
 }
 
+#define DIRCOOKIE_FLAG_USED 1
+#define DIRCOOKIE_FLAG_ERROR 2
 
 typedef struct dircookie {
-    uint32_t used;   // not the first call
-    uint32_t index;  // block index
-    uint32_t size;   // size remaining
+    uint32_t flags;  // Identifies the state of the dircookie
+    size_t off;      // Offset into directory
     uint32_t seqno;  // inode seq no
 } dircookie_t;
 
@@ -728,72 +773,57 @@ static mx_status_t fs_readdir(vnode_t* vn, void* cookie, void* dirents, size_t l
         return ERR_NOT_SUPPORTED;
     }
 
-    uint32_t idx;
-    uint32_t sz;
-    if (dc->used) {
+    size_t off;
+    if (dc->flags & DIRCOOKIE_FLAG_ERROR) {
+        return ERR_IO;
+    } else if (dc->flags & DIRCOOKIE_FLAG_USED) {
         if (dc->seqno != vn->inode.seq_num) {
             // directory has been modified
             // stop returning entries
-            dc->index = -1;
-            return 0;
+            trace(MINFS, "minfs_readdir() Directory modified since readdir started\n");
+            goto fail;
         }
-        idx = dc->index;
-        sz = dc->size;
+        off = dc->off;
     } else {
-        idx = 0;
-        sz = MINFS_BLOCK_SIZE;
+        off = 0;
     }
 
-    for (;;) {
-        minfs_dirent_t* de;
-        block_t* blk;
-        if ((blk = vn_get_block(vn, idx, (void**) &de, false)) == NULL) {
-            goto done;
+    char data[MINFS_MAX_DIRENT_SIZE];
+    minfs_dirent_t* de = (minfs_dirent_t*) data;
+    size_t r;
+    while (off + MINFS_DIRENT_SIZE < MINFS_MAX_DIRECTORY_SIZE) {
+        r = _fs_read(vn, de, MINFS_MAX_DIRENT_SIZE, off);
+        if (validate_dirent(de, r, off) != NO_ERROR) {
+            goto fail;
         }
 
-        // advance to old position if continuing from before
-        de = ((void*)de) + (MINFS_BLOCK_SIZE - sz);
-
-        while (sz >= sizeof(minfs_dirent_t)) {
-            if ((de->reclen > sz) || (de->reclen & 3) || (de->reclen < MINFS_DIRENT_SIZE) ||
-                (de->namelen > (de->reclen - MINFS_DIRENT_SIZE))) {
-                // malformed entry
-                vn_put_block(vn, blk);
-                goto fail;
+        if (de->ino) {
+            mx_status_t status;
+            size_t len_remaining = len - (size_t)((void*)out - dirents);
+            if ((status = vfs_fill_dirent(out, len_remaining, de->name,
+                                          de->namelen, de->type)) < 0) {
+                // no more space
+                goto done;
             }
-            if (de->ino) {
-                mx_status_t status;
-                size_t len_remaining = len - (size_t)((void*)out - dirents);
-                if ((status = vfs_fill_dirent(out, len_remaining, de->name, de->namelen, de->type)) < 0) {
-                    // no more space
-                    vn_put_block(vn, blk);
-                    goto done;
-                }
-                out = ((void*) out) + status;
-            }
-            sz -= de->reclen;
-            de = ((void*) de) + de->reclen;
+            out = ((void*) out) + status;
         }
 
-        vn_put_block(vn, blk);
-        idx++;
-        sz = MINFS_BLOCK_SIZE;
+        off += MINFS_RECLEN(de, off);
     }
 
 done:
     // save our place in the dircookie
-    dc->used = 1;
-    dc->index = idx;
-    dc->size = sz;
+    dc->flags |= DIRCOOKIE_FLAG_USED;
+    dc->off = off;
     dc->seqno = vn->inode.seq_num;
-    size_t r = ((void*) out) - dirents;
+    r = ((void*) out) - dirents;
     assert(r <= len); // Otherwise, we're overflowing the input buffer.
     return r;
 
 fail:
-    // mark dircookie so further reads return 0
-    dc->index = -1;
-    dc->used = 1;
+    // mark dircookie so further reads also fail
+    dc->off = 0;
+    dc->flags |= DIRCOOKIE_FLAG_ERROR;
     return ERR_IO;
 }
 
@@ -803,7 +833,10 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
           vndir, vndir->ino, (int)len, name, mode);
     if (vndir->inode.magic != MINFS_MAGIC_DIR) {
         return ERR_NOT_SUPPORTED;
+    } else if (len > MINFS_MAX_NAME_SIZE) {
+        return ERR_NOT_SUPPORTED;
     }
+
     dir_args_t args = {
         .name = name,
         .len = len,
@@ -828,8 +861,6 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
     args.type = type;
     args.reclen = SIZEOF_MINFS_DIRENT(len);
     if ((status = vn_dir_for_each(vndir, &args, cb_dir_append)) < 0) {
-        //TODO: handle "block full" by creating a new directory block
-        error("minfs_create() dir append failed %d\n", status);
         return status;
     }
 
@@ -921,7 +952,7 @@ static mx_status_t fs_truncate(vnode_t* vn, size_t len) {
         minfs_sync_vnode(vn, MX_FS_SYNC_MTIME);
     } else if (len > vn->inode.size) {
         // Truncate should make the file longer, filled with zeroes.
-        if (MAX_FILE_BLOCK * MINFS_BLOCK_SIZE < len) {
+        if (MINFS_MAX_FILE_SIZE < len) {
             return ERR_INVALID_ARGS;
         }
         char zero = 0;
