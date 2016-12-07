@@ -104,6 +104,15 @@ class Binding {
   // implementation unbound.
   ~Binding() {}
 
+  // Completes a binding by creating a new pair of channels, binding one end to
+  // the previously specified implementation and returning the other end.
+  InterfaceHandle<Interface> NewBinding(
+      const FidlAsyncWaiter* waiter = GetDefaultAsyncWaiter()) {
+    InterfaceHandle<Interface> client;
+    Bind(client.NewRequest().PassChannel(), waiter);
+    return client;
+  }
+
   // Completes a binding that was constructed with only an interface
   // implementation. Takes ownership of |handle| and binds it to the previously
   // specified implementation. See class comment for definition of |waiter|.

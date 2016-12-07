@@ -1181,11 +1181,10 @@ class SmallCacheImpl : public SmallCache {
 TEST(UnionTest, InterfaceInUnion) {
   ClearAsyncWaiter();
   SmallCacheImpl impl;
-  SmallCachePtr ptr;
-  Binding<SmallCache> bindings(&impl, ptr.NewRequest());
+  Binding<SmallCache> bindings(&impl);
 
   HandleUnionPtr handle(HandleUnion::New());
-  handle->set_f_small_cache(std::move(ptr));
+  handle->set_f_small_cache(bindings.NewBinding());
 
   auto small_cache =
       SmallCachePtr::Create(std::move(handle->get_f_small_cache()));
@@ -1196,11 +1195,10 @@ TEST(UnionTest, InterfaceInUnion) {
 
 TEST(UnionTest, InterfaceInUnionSerialization) {
   SmallCacheImpl impl;
-  SmallCachePtr ptr;
-  Binding<SmallCache> bindings(&impl, ptr.NewRequest());
+  Binding<SmallCache> bindings(&impl);
 
   HandleUnionPtr handle(HandleUnion::New());
-  handle->set_f_small_cache(std::move(ptr));
+  handle->set_f_small_cache(bindings.NewBinding());
   size_t size = GetSerializedSize_(handle);
   EXPECT_EQ(16U, size);
 
