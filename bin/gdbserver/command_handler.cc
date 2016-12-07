@@ -458,13 +458,12 @@ bool CommandHandler::Handle_m(const ftl::StringView& packet,
   }
 
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[length]);
-  size_t bytes_read;
-  if (!current_process->ReadMemory(addr, length, buffer.get(), &bytes_read)) {
+  if (!current_process->ReadMemory(addr, buffer.get(), length)) {
     FTL_LOG(ERROR) << "m: Failed to read memory";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
-  std::string result = util::EncodeByteArrayString(buffer.get(), bytes_read);
+  std::string result = util::EncodeByteArrayString(buffer.get(), length);
   callback(result);
   return true;
 }

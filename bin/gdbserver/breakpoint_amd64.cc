@@ -32,13 +32,10 @@ bool SoftwareBreakpoint::Insert() {
   // Read the current contents at the address that we're about to overwrite, so
   // that it can be restored later.
   uint8_t orig;
-  size_t read_bytes;
-  if (!owner()->process()->ReadMemory(address(), 1, &orig, &read_bytes)) {
+  if (!owner()->process()->ReadMemory(address(), &orig, 1)) {
     FTL_LOG(ERROR) << "Failed to obtain current contents of memory";
     return false;
   }
-
-  FTL_DCHECK(read_bytes == 1);
 
   // Insert the Int3 instruction.
   if (!owner()->process()->WriteMemory(address(), &kInt3, 1)) {

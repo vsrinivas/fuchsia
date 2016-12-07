@@ -19,6 +19,7 @@
 
 #include "breakpoint.h"
 #include "exception_port.h"
+#include "memory-process.h"
 #include "thread.h"
 
 namespace debugserver {
@@ -122,10 +123,7 @@ class Process final {
   // Reads the block of memory of length |length| bytes starting at address
   // |address| into |out_buffer|. |out_buffer| must be at least as large as
   // |length|. Returns true on success or false on failure.
-  bool ReadMemory(uintptr_t address,
-                  size_t length,
-                  void* out_buffer,
-                  size_t* out_bytes_read);
+  bool ReadMemory(uintptr_t address, void* out_buffer, size_t length);
 
   // Writes the block of memory of length |length| bytes from |data| to the
   // memory address |address| of this process. Returns true on success or false
@@ -169,6 +167,9 @@ class Process final {
 
   // True, if the inferior has been run via a call to Start().
   bool started_;
+
+  // The API to access memory.
+  ProcessMemory memory_;
 
   // The collection of breakpoints that belong to this process.
   arch::BreakpointSet breakpoints_;

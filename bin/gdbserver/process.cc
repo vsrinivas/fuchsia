@@ -133,6 +133,7 @@ Process::Process(Server* server, Delegate* delegate, const vector<string>& argv)
       entry_address_(0),
       eport_key_(0),
       started_(false),
+      memory_(this),
       breakpoints_(this) {
   FTL_DCHECK(server_);
   FTL_DCHECK(delegate_);
@@ -363,55 +364,12 @@ void Process::ForEachThread(const ThreadCallback& callback) {
     callback(iter.second.get());
 }
 
-bool Process::ReadMemory(uintptr_t address,
-                         size_t length,
-                         void* out_buffer,
-                         size_t* out_bytes_read) {
-  FTL_DCHECK(out_buffer);
-  FTL_DCHECK(debug_handle_);
-  mx_status_t status = mx_process_read_memory(
-      debug_handle_.get(), address, out_buffer, length, out_bytes_read);
-  if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus(
-        ftl::StringPrintf("Failed to read memory at addr: %" PRIxPTR, address),
-        status);
-    return false;
-  }
-
-  FTL_VLOG(1) << "Bytes read: " << *out_bytes_read;
-
-  return true;
+bool Process::ReadMemory(uintptr_t address, void* out_buffer, size_t length) {
+  return memory_.Read(address, out_buffer, length);
 }
 
 bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
-  FTL_DCHECK(debug_handle_);
-
-  if (length == 0) {
-    FTL_VLOG(1) << "No data to write";
-    return false;
-  }
-
-  FTL_DCHECK(data);
-
-  size_t bytes_written;
-  mx_status_t status = mx_process_write_memory(debug_handle_.get(), address,
-                                               data, length, &bytes_written);
-  if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus(
-        ftl::StringPrintf("Failed to write memory at addr: %" PRIxPTR, address),
-        status);
-    return false;
-  }
-
-  if (bytes_written != length) {
-    FTL_LOG(WARNING) << "Failed to write requested number of bytes - length: "
-                     << length << ", written: " << bytes_written;
-    return false;
-  }
-
-  FTL_VLOG(1) << "Bytes written: " << bytes_written;
-
-  return true;
+  return memory_.Write(address, data, length);
 }
 
 void Process::OnException(const mx_excp_type_t type,
