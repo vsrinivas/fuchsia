@@ -160,6 +160,11 @@ class Payload {
     return *this;
   }
 
+  Payload& WriteUint64(uint64_t value) {
+    *reinterpret_cast<uint64_t*>(ptr_++) = value;
+    return *this;
+  }
+
   Payload& WriteDouble(double value) {
     *reinterpret_cast<double*>(ptr_++) = value;
     return *this;
@@ -353,6 +358,21 @@ class Int32Argument : public Argument {
   int32_t const value_;
 };
 
+class Uint32Argument : public Argument {
+ public:
+  explicit Uint32Argument(const StringRef& name_ref, uint32_t value)
+      : Argument(name_ref), value_(value) {}
+
+  void WriteTo(Payload& payload) const {
+    Argument::WriteTo(
+        payload, ArgumentType::kUint32, Size(),
+        ::tracing::internal::Uint32ArgumentFields::Value::Make(value_));
+  }
+
+ private:
+  uint32_t const value_;
+};
+
 class Int64Argument : public Argument {
  public:
   explicit Int64Argument(const StringRef& name_ref, int64_t value)
@@ -367,6 +387,22 @@ class Int64Argument : public Argument {
 
  private:
   int64_t const value_;
+};
+
+class Uint64Argument : public Argument {
+ public:
+  explicit Uint64Argument(const StringRef& name_ref, uint64_t value)
+      : Argument(name_ref), value_(value) {}
+
+  size_t Size() const { return Argument::Size() + sizeof(uint64_t); }
+
+  void WriteTo(Payload& payload) const {
+    Argument::WriteTo(payload, ArgumentType::kUint64, Size());
+    payload.WriteUint64(value_);
+  }
+
+ private:
+  uint64_t const value_;
 };
 
 class DoubleArgument : public Argument {
@@ -739,6 +775,7 @@ template <typename T>
 struct ArgumentMaker<
     T,
     typename std::enable_if<std::is_integral<T>::value &&
+                            !std::is_unsigned<T>::value &&
                             (sizeof(T) <= sizeof(int32_t))>::type> {
   using ResultType = Int32Argument;
   static ResultType Make(TraceWriter& writer,
@@ -752,6 +789,21 @@ template <typename T>
 struct ArgumentMaker<
     T,
     typename std::enable_if<std::is_integral<T>::value &&
+                            std::is_unsigned<T>::value &&
+                            (sizeof(T) <= sizeof(uint32_t))>::type> {
+  using ResultType = Uint32Argument;
+  static ResultType Make(TraceWriter& writer,
+                         const StringRef& name_ref,
+                         const T& value) {
+    return ResultType(name_ref, static_cast<uint32_t>(value));
+  }
+};
+
+template <typename T>
+struct ArgumentMaker<
+    T,
+    typename std::enable_if<std::is_integral<T>::value &&
+                            !std::is_unsigned<T>::value &&
                             (sizeof(T) > sizeof(int32_t)) &&
                             (sizeof(T) <= sizeof(int64_t))>::type> {
   using ResultType = Int64Argument;
@@ -759,6 +811,21 @@ struct ArgumentMaker<
                          const StringRef& name_ref,
                          const T& value) {
     return ResultType(name_ref, static_cast<int64_t>(value));
+  }
+};
+
+template <typename T>
+struct ArgumentMaker<
+    T,
+    typename std::enable_if<std::is_integral<T>::value &&
+                            std::is_unsigned<T>::value &&
+                            (sizeof(T) > sizeof(uint32_t)) &&
+                            (sizeof(T) <= sizeof(uint64_t))>::type> {
+  using ResultType = Uint64Argument;
+  static ResultType Make(TraceWriter& writer,
+                         const StringRef& name_ref,
+                         const T& value) {
+    return ResultType(name_ref, static_cast<uint64_t>(value));
   }
 };
 

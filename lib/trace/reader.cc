@@ -35,6 +35,14 @@ bool Chunk::ReadInt64(int64_t* out_value) {
   return false;
 }
 
+bool Chunk::ReadUint64(uint64_t* out_value) {
+  if (current_ < end_) {
+    *out_value = *reinterpret_cast<const uint64_t*>(current_++);
+    return true;
+  }
+  return false;
+}
+
 bool Chunk::ReadDouble(double* out_value) {
   if (current_ < end_) {
     *out_value = *reinterpret_cast<const double*>(current_++);
@@ -176,8 +184,14 @@ ArgumentValue& ArgumentValue::Copy(const ArgumentValue& other) {
     case ArgumentType::kInt32:
       int32_ = other.int32_;
       break;
+    case ArgumentType::kUint32:
+      int32_ = other.uint32_;
+      break;
     case ArgumentType::kInt64:
       int64_ = other.int64_;
+      break;
+    case ArgumentType::kUint64:
+      int64_ = other.uint64_;
       break;
     case ArgumentType::kDouble:
       double_ = other.double_;
@@ -647,6 +661,12 @@ bool TraceReader::ReadArguments(Chunk& record,
                                     ArgumentValue::MakeInt32(value));
         break;
       }
+      case ArgumentType::kUint32: {
+        auto value = Uint32ArgumentFields::Value::Get<uint32_t>(header);
+        out_arguments->emplace_back(std::move(name),
+                                    ArgumentValue::MakeUint32(value));
+        break;
+      }
       case ArgumentType::kInt64: {
         int64_t value;
         if (!arg.ReadInt64(&value)) {
@@ -655,6 +675,16 @@ bool TraceReader::ReadArguments(Chunk& record,
         }
         out_arguments->emplace_back(std::move(name),
                                     ArgumentValue::MakeInt64(value));
+        break;
+      }
+      case ArgumentType::kUint64: {
+        uint64_t value;
+        if (!arg.ReadUint64(&value)) {
+          context_.ReportError("Failed to read uint64 argument value");
+          return false;
+        }
+        out_arguments->emplace_back(std::move(name),
+                                    ArgumentValue::MakeUint64(value));
         break;
       }
       case ArgumentType::kDouble: {
