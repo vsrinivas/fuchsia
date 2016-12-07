@@ -171,23 +171,24 @@ bool mprotect_test() {
     uint32_t* addr = (uint32_t*)mmap(NULL, sizeof(uint32_t), PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
     ASSERT_NEQ(MAP_FAILED, addr, "mmap failed to map");
 
+    int page_size = getpagesize();
     // Should be able to write.
     *addr = 10;
     EXPECT_EQ(10u, *addr, "read after write failed");
 
-    int status = mprotect(addr, sizeof(uint32_t), PROT_READ);
+    int status = mprotect(addr, page_size, PROT_READ);
     EXPECT_EQ(0, status, "mprotect failed to downgrade to read-only");
 
     // TODO: catch page fault exceptions and confirm that the following line
     // fails
     //*addr = 12;
 
-    status = mprotect(addr, sizeof(uint32_t), PROT_WRITE);
+    status = mprotect(addr, page_size, PROT_WRITE);
     auto test_errno = errno;
     EXPECT_EQ(-1, status, "mprotect should fail for write-only");
     EXPECT_EQ(ENOTSUP, test_errno, "mprotect should return ENOTSUP for write-only");
 
-    status = mprotect(addr, sizeof(uint32_t), PROT_NONE);
+    status = mprotect(addr, page_size, PROT_NONE);
     test_errno = errno;
     EXPECT_EQ(-1, status, "mprotect should fail for PROT_NONE");
     EXPECT_EQ(ENOTSUP, test_errno, "mprotect should return ENOTSUP for PROT_NONE");
