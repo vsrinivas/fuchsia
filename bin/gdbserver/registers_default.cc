@@ -24,11 +24,6 @@ int GetSPRegisterNumber() {
   return -1;
 }
 
-int ComputeGdbSignal(const mx_exception_context_t& exception_context) {
-  FTL_NOTIMPLEMENTED();
-  return -1;
-}
-
 namespace {
 
 class RegistersDefault final : public Registers {

@@ -40,16 +40,19 @@ executable("gdbserver") {
 
   if (current_cpu == "x64") {
     sources += [
+      "arch-amd64.cc",
       "breakpoint_amd64.cc",
       "registers_amd64.cc",
     ]
   } else if (current_cpu == "arm64") {
     sources += [
+      "arch-arm64.cc",
       "breakpoint_arm64.cc",
       "registers_arm64.cc",
     ]
   } else {
     sources += [
+      "arch-default.cc",
       "breakpoint_default.cc",
       "registers_default.cc",
     ]
