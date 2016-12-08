@@ -10,17 +10,14 @@ namespace debugserver {
 namespace arch {
 
 int GetPCRegisterNumber() {
-  FTL_NOTIMPLEMENTED();
   return -1;
 }
 
 int GetFPRegisterNumber() {
-  FTL_NOTIMPLEMENTED();
   return -1;
 }
 
 int GetSPRegisterNumber() {
-  FTL_NOTIMPLEMENTED();
   return -1;
 }
 
@@ -34,32 +31,27 @@ class RegistersDefault final : public Registers {
 
   bool IsSupported() override { return false; }
 
-  bool RefreshGeneralRegisters() override {
-    FTL_NOTIMPLEMENTED();
+  bool RefreshRegset(int regset) override { return false; }
+
+  bool WriteRegset(int regset) override { return false; }
+
+  std::string GetRegsetAsString(int regset) override { return false; }
+
+  bool SetRegset(int regset, const ftl::StringView& value) override {
     return false;
   }
 
-  std::string GetGeneralRegisters() override {
-    FTL_NOTIMPLEMENTED();
-    return "";
-  }
+  std::string GetRegisterAsString(int regno) override { return ""; }
 
-  bool SetGeneralRegisters(const ftl::StringView& value) override {
-    FTL_NOTIMPLEMENTED();
+  bool GetRegister(int regno, void* buffer, size_t buf_size) override {
     return false;
   }
 
-  std::string GetRegisterValue(unsigned int register_number) override {
-    FTL_NOTIMPLEMENTED();
-    return "";
-  }
-
-  bool SetRegisterValue(int register_number,
-                        void* value,
-                        size_t value_size) override {
-    FTL_NOTIMPLEMENTED();
+  bool SetRegister(int regno, const void* value, size_t value_size) override {
     return false;
   }
+
+  bool SetSingleStep(bool enable) override { return false; }
 };
 
 }  // namespace
@@ -70,14 +62,12 @@ std::unique_ptr<Registers> Registers::Create(Thread* thread) {
 }
 
 // static
-std::string Registers::GetUninitializedGeneralRegisters() {
-  FTL_NOTIMPLEMENTED();
+std::string Registers::GetUninitializedGeneralRegistersAsString() {
   return "";
 }
 
 // static
 size_t Registers::GetRegisterSize() {
-  FTL_NOTIMPLEMENTED();
   return 0;
 }
 

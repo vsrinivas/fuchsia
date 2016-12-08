@@ -78,7 +78,6 @@ namespace {
 // Set the TF bit in the RFLAGS register of |thread|.
 
 bool SetRflagsTF(Thread* thread, bool enable) {
-#if 0  // needs corresponding reg changes
   arch::Registers* registers = thread->registers();
 
   if (!registers->RefreshGeneralRegisters()) {
@@ -95,9 +94,6 @@ bool SetRflagsTF(Thread* thread, bool enable) {
   }
 
   return true;
-#else
-  return false;
-#endif
 }
 
 }  // anonymous namespace

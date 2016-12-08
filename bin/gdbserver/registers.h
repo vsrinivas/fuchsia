@@ -20,6 +20,7 @@ class Thread;
 namespace arch {
 
 // The x86-64 general register names.
+// TODO(dje): Move to amd64-specific file.
 enum class Amd64Register {
   RAX = 0,
   RBX,
@@ -75,14 +76,19 @@ class Registers {
   // architecture is supported.
   virtual bool IsSupported() = 0;
 
-  // Loads and caches register values. This is useful in conjunction with
-  // GetRegisterValue to avoid unnecessary syscalls. Returns false if there is
-  // an error.
-  //
-  // TODO(armansito): This is not really needed if we can read specific
-  // registers using the mx_thread_read_state syscall with the correct hint.
-  // Remove this once that is fully supported.
-  virtual bool RefreshGeneralRegisters() = 0;
+  // Loads and caches register values for |regset|.
+  // Returns false if there is an error.
+  virtual bool RefreshRegset(int regset) = 0;
+
+  // Write the cached register set |regset| values back.
+  // Returns false if there is an error.
+  virtual bool WriteRegset(int regset) = 0;
+
+  // Wrappers for general regs (regset0).
+  bool RefreshGeneralRegisters();
+  bool WriteGeneralRegisters();
+  std::string GetGeneralRegistersAsString();
+  bool SetGeneralRegisters(const ftl::StringView& value);
 
   // TODO(armansito): GetGeneralRegisters() and SetGeneralRegisters() below both
   // work with strings that conform to the GDB remote serial protocol. We should
@@ -91,32 +97,47 @@ class Registers {
   // bits into a stand-alone library that we can use in gdb/lldb ports.
 
   // Returns a string containing sequentially encoded hexadecimal values of all
-  // general registers. For example, on an architecture with 4 registers of 4
-  // bytes each, this would return the following value:
+  // registers in |regset|. For example, on an architecture with 4 registers of
+  // 4 bytes each, this would return the following value:
   //
   //   WWWWWWWWXXXXXXXXYYYYYYYYZZZZZZZZ
   //
+  // RefreshRegset() must be called first.
   // Returns an empty string if there is an error while reading the registers.
-  virtual std::string GetGeneralRegisters() = 0;
+  virtual std::string GetRegsetAsString(int regset) = 0;
 
-  // Writes |value| to all general registers. |value| should be encoded the same
-  // way as the return value of GetGeneralRegisters(), as described above.
+  // Writes |value| to the cached value of |regset|.
+  // |value| should be encoded the same way as the return value of
+  // GetRegsetAsString(), as described above.
+  // WriteRegset() must be called afterwards.
   // Returns true on success.
-  virtual bool SetGeneralRegisters(const ftl::StringView& value) = 0;
+  virtual bool SetRegset(int regset, const ftl::StringView& value) = 0;
 
-  // Gets the value of the register numbered |register_number|. Returns an empty
-  // string in case of an error or if |register_number| is invalid. This avoids
+  // Gets the value of the register numbered |regno|. Returns an empty
+  // string in case of an error or if |regno| is invalid. This avoids
   // making a syscall to refresh all register values and uses the most recently
   // cached values instead. Call RefreshRegisterValues() first to get the most
   // up-to-date values.
-  virtual std::string GetRegisterValue(unsigned int register_number) = 0;
+  virtual std::string GetRegisterAsString(int regno) = 0;
 
-  // Sets the value of the register numbered |register_number| to |value| of
-  // size |value_size| bytes. Returns false if |register_number| and
+  // Get the value of register |regno| from the cached set
+  // and store in |buffer|.
+  // RefreshRegset() of the appropriate regset must be called first.
+  // Returns a boolean indicating success.
+  virtual bool GetRegister(int regno, void* buffer, size_t buf_size) = 0;
+
+  // Sets the value of the register numbered |regno| to |value| of
+  // size |value_size| bytes. Returns false if |regno| or
   // |value_size| are invalid on the current architecture.
-  virtual bool SetRegisterValue(int register_number,
-                                void* value,
-                                size_t value_size) = 0;
+  // WriteRegset() of the appropriate regset must be called afterwards.
+  virtual bool SetRegister(int regno, const void* value, size_t value_size) = 0;
+
+  // Get the value of the PC.
+  // RefreshGeneralRegisters() must be called first.
+  mx_vaddr_t GetPC();
+
+  // Set the h/w singlestepping register.
+  virtual bool SetSingleStep(bool enable) = 0;
 
   // Returns a string containing all 0s. This is used in our implementation to
   // return register values when there is a current inferior but no current
@@ -124,7 +145,7 @@ class Registers {
   // TODO(armansito): This is because we don't quite have a "stopped state" yet.
   // With the existing Magenta syscall surface, a process is either "started" or
   // "not started".
-  static std::string GetUninitializedGeneralRegisters();
+  static std::string GetUninitializedGeneralRegistersAsString();
 
   // Returns how many bytes each register value can hold. Returns 0 on
   // unsupported platforms.

@@ -168,9 +168,14 @@ bool CommandHandler::Handle_c(const ftl::StringView& packet,
       return ReplyWithError(util::ErrorCode::PERM, callback);
     }
 
-    if (!current_thread->registers()->SetRegisterValue(
-            arch::GetPCRegisterNumber(), &addr, sizeof(addr))) {
-      FTL_LOG(ERROR) << "c: Failed to set the PC register";
+    if (!current_thread->registers()->RefreshGeneralRegisters()) {
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+    }
+    if (!current_thread->registers()->SetRegister(arch::GetPCRegisterNumber(),
+                                                  &addr, sizeof(addr))) {
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+    }
+    if (!current_thread->registers()->WriteGeneralRegisters()) {
       return ReplyWithError(util::ErrorCode::PERM, callback);
     }
 
@@ -260,9 +265,14 @@ bool CommandHandler::Handle_C(const ftl::StringView& packet,
       return ReplyWithError(util::ErrorCode::INVAL, callback);
     }
 
-    if (!current_thread->registers()->SetRegisterValue(
-            arch::GetPCRegisterNumber(), &addr, sizeof(addr))) {
-      FTL_LOG(ERROR) << "C: Failed to set the PC register";
+    if (!current_thread->registers()->RefreshGeneralRegisters()) {
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+    }
+    if (!current_thread->registers()->SetRegister(arch::GetPCRegisterNumber(),
+                                                  &addr, sizeof(addr))) {
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+    }
+    if (!current_thread->registers()->WriteGeneralRegisters()) {
       return ReplyWithError(util::ErrorCode::PERM, callback);
     }
 
@@ -294,11 +304,11 @@ bool CommandHandler::Handle_g(const ResponseCallback& callback) {
   // registers.
   std::string result;
   if (!server_->current_thread()) {
-    result = arch::Registers::GetUninitializedGeneralRegisters();
+    result = arch::Registers::GetUninitializedGeneralRegistersAsString();
   } else {
     arch::Registers* regs = server_->current_thread()->registers();
     FTL_DCHECK(regs);
-    result = regs->GetGeneralRegisters();
+    result = regs->GetGeneralRegistersAsString();
   }
 
   if (result.empty()) {

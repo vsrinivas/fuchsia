@@ -365,7 +365,7 @@ void Server::OnArchitecturalException(Process* process,
 
     for (int regno : regnos) {
       FTL_DCHECK(regno < std::numeric_limits<uint8_t>::max() && regno >= 0);
-      std::string regval = thread->registers()->GetRegisterValue(regno);
+      std::string regval = thread->registers()->GetRegisterAsString(regno);
       stop_reply.AddRegisterValue(regno, regval);
     }
   } else {

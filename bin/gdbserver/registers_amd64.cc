@@ -13,6 +13,7 @@
 
 #include "thread.h"
 #include "util.h"
+#include "arch-x86.h"
 
 namespace debugserver {
 namespace arch {
@@ -31,43 +32,19 @@ int GetSPRegisterNumber() {
 
 namespace {
 
-bool GetGeneralRegistersHelper(const mx_handle_t thread_handle,
-                               mx_x86_64_general_regs_t* out_gregs,
-                               uint32_t* out_gregs_size) {
-  FTL_DCHECK(out_gregs);
-  FTL_DCHECK(out_gregs_size);
-
-  *out_gregs_size = sizeof(*out_gregs);
-  mx_status_t status = mx_thread_read_state(
-      thread_handle, MX_THREAD_STATE_REGSET0, out_gregs, sizeof(*out_gregs),
-      out_gregs_size);
-  if (status < 0) {
-    util::LogErrorWithMxStatus("Failed to read x86_64 registers", status);
-    return false;
-  }
-
-  FTL_DCHECK(*out_gregs_size == sizeof(*out_gregs));
-
-  return true;
-}
-
 // Includes all registers if |register_number| is -1.
-std::string GetRegisterValueAsString(const mx_x86_64_general_regs_t& gregs,
-                                     int register_number) {
-  FTL_DCHECK(register_number < static_cast<int>(Amd64Register::NUM_REGISTERS));
+// TODO: Here as elsewhere: more regsets.
+std::string GetRegisterAsStringHelper(const mx_x86_64_general_regs_t& gregs,
+                                      int regno) {
+  FTL_DCHECK(regno >= -1 &&
+             regno < static_cast<int>(Amd64Register::NUM_REGISTERS));
 
-  // Based on the value of |register_number|, we either need to fit in all
+  // Based on the value of |regno|, we either need to fit in all
   // registers or just a single one.
-  const size_t kDataSize =
-      register_number < 0 ? sizeof(gregs) : sizeof(uint64_t);
+  const size_t kDataSize = regno < 0 ? sizeof(gregs) : sizeof(uint64_t);
   const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(&gregs);
 
-  // TODO(armansito): Not all x86-64 registers store 64-bit values; the main
-  // ones all do but lower-bits of all the "r*" registers can be interpreted as
-  // 32-bit, 16-bit, or 8-bit registers (e.g. rax vs eax, ax, al, etc). So using
-  // |register_number| here to index into |gregs| isn't really a good idea. But
-  // we're doing it for now.
-  greg_bytes += register_number < 0 ? 0 : register_number * sizeof(uint64_t);
+  greg_bytes += regno < 0 ? 0 : regno * sizeof(uint64_t);
 
   return util::EncodeByteArrayString(greg_bytes, kDataSize);
 }
@@ -82,7 +59,9 @@ class RegistersAmd64 final : public Registers {
 
   bool IsSupported() override { return true; }
 
-  bool RefreshGeneralRegisters() override {
+  bool RefreshRegset(int regset) override {
+    FTL_DCHECK(regset == 0);
+
     // We report all zeros for the registers if the thread was just created.
     if (thread()->state() == Thread::State::kNew) {
       memset(&gregs_, 0, sizeof(gregs_));
@@ -90,79 +69,105 @@ class RegistersAmd64 final : public Registers {
     }
 
     uint32_t gregs_size;
-    return GetGeneralRegistersHelper(thread()->debug_handle(), &gregs_,
-                                     &gregs_size);
+    mx_status_t status = mx_thread_read_state(
+        thread()->debug_handle(), regset, &gregs_, sizeof(gregs_), &gregs_size);
+    if (status < 0) {
+      util::LogErrorWithMxStatus("Failed to read x86_64 registers", status);
+      return false;
+    }
+
+    FTL_DCHECK(gregs_size == sizeof(gregs_));
+
+    FTL_VLOG(1) << "Regset " << regset << " refreshed";
+    return true;
   }
 
-  std::string GetGeneralRegisters() override {
-    if (!RefreshGeneralRegisters())
-      return "";
+  bool WriteRegset(int regset) override {
+    FTL_DCHECK(regset == 0);
 
-    return GetRegisterValueAsString(gregs_, -1);
+    mx_status_t status = mx_thread_write_state(thread()->debug_handle(), regset,
+                                               &gregs_, sizeof(gregs_));
+    if (status < 0) {
+      util::LogErrorWithMxStatus("Failed to write x86_64 registers", status);
+      return false;
+    }
+
+    FTL_VLOG(1) << "Regset " << regset << " written";
+    return true;
   }
 
-  bool SetGeneralRegisters(const ftl::StringView& value) override {
+  std::string GetRegsetAsString(int regset) override {
+    FTL_DCHECK(regset == 0);
+    return GetRegisterAsStringHelper(gregs_, -1);
+  }
+
+  bool SetRegset(int regset, const ftl::StringView& value) override {
+    FTL_DCHECK(regset == 0);
+
     auto bytes = util::DecodeByteArrayString(value);
-    if (bytes.size() != sizeof(mx_x86_64_general_regs_t)) {
+    if (bytes.size() != sizeof(gregs_)) {
       FTL_LOG(ERROR) << "|value| doesn't match x86-64 general registers size: "
                      << value;
       return false;
     }
 
-    mx_x86_64_general_regs_t* gregs =
-        reinterpret_cast<mx_x86_64_general_regs_t*>(bytes.data());
-    mx_status_t status =
-        mx_thread_write_state(thread()->debug_handle(), MX_THREAD_STATE_REGSET0,
-                              gregs, sizeof(*gregs));
-    if (status < 0) {
-      util::LogErrorWithMxStatus("Failed to write x86_64 registers", status);
-      return false;
-    }
-
-    FTL_VLOG(1) << "General registers written: " << bytes.size() << " bytes";
-
+    memcpy(&gregs_, bytes.data(), sizeof(gregs_));
+    FTL_VLOG(1) << "Regset " << regset << " cache written";
     return true;
   }
 
-  std::string GetRegisterValue(unsigned int register_number) override {
-    if (register_number >=
-        static_cast<unsigned int>(Amd64Register::NUM_REGISTERS)) {
-      FTL_LOG(ERROR) << "Bad register_number: " << register_number;
+  std::string GetRegisterAsString(int regno) override {
+    if (regno < 0 || regno >= static_cast<int>(Amd64Register::NUM_REGISTERS)) {
+      FTL_LOG(ERROR) << "Bad register number: " << regno;
       return "";
     }
 
-    return GetRegisterValueAsString(gregs_, register_number);
+    return GetRegisterAsStringHelper(gregs_, regno);
   }
 
-  bool SetRegisterValue(int register_number,
-                        void* value,
-                        size_t value_size) override {
-    if (register_number >= static_cast<int>(Amd64Register::NUM_REGISTERS) ||
-        register_number < 0) {
-      FTL_LOG(ERROR) << "Invalid x86_64 register number: " << register_number;
+  bool GetRegister(int regno, void* buffer, size_t buf_size) override {
+    if (regno < 0 || regno >= static_cast<int>(Amd64Register::NUM_REGISTERS)) {
+      FTL_LOG(ERROR) << "Bad register_number: " << regno;
+      return false;
+    }
+    if (buf_size != sizeof(uint64_t)) {
+      FTL_LOG(ERROR) << "Bad buffer size: " << buf_size;
       return false;
     }
 
-    // On x86_64 all register values are 64-bit.
+    auto greg_bytes = reinterpret_cast<const uint8_t*>(&gregs_);
+    greg_bytes += regno * sizeof(uint64_t);
+    std::memcpy(buffer, greg_bytes, buf_size);
+    FTL_VLOG(1) << "Get register " << regno << " = "
+                << util::EncodeByteArrayString(greg_bytes, buf_size);
+    return true;
+  }
+
+  bool SetRegister(int regno, const void* value, size_t value_size) override {
+    if (regno < 0 || regno >= static_cast<int>(Amd64Register::NUM_REGISTERS)) {
+      FTL_LOG(ERROR) << "Invalid x86_64 register number: " << regno;
+      return false;
+    }
+    // On x86_64 all general register values are 64-bit.
     if (value_size != sizeof(uint64_t)) {
       FTL_LOG(ERROR) << "Invalid x86_64 register value size: " << value_size;
       return false;
     }
 
-    mx_x86_64_general_regs_t gregs;
-    uint32_t gregs_size;
-    if (!GetGeneralRegistersHelper(thread()->debug_handle(), &gregs,
-                                   &gregs_size))
-      return false;
+    auto greg_bytes = reinterpret_cast<uint8_t*>(&gregs_);
+    greg_bytes += regno * sizeof(uint64_t);
+    std::memcpy(greg_bytes, value, value_size);
+    FTL_VLOG(1) << "Set register " << regno << " = "
+                << util::EncodeByteArrayString(greg_bytes, value_size);
+    return true;
+  }
 
-    std::memcpy(&gregs + register_number * sizeof(uint64_t), value, value_size);
-    mx_status_t status = mx_thread_write_state(
-        thread()->debug_handle(), MX_THREAD_STATE_REGSET0, &gregs, gregs_size);
-    if (status < 0) {
-      util::LogErrorWithMxStatus("Failed to write x86_64 registers", status);
-      return false;
-    }
-
+  bool SetSingleStep(bool enable) override {
+    if (enable)
+      gregs_.rflags |= x86::EFLAGS_TF_MASK;
+    else
+      gregs_.rflags &= ~static_cast<uint64_t>(x86::EFLAGS_TF_MASK);
+    FTL_VLOG(2) << "rflags.TF set to " << enable;
     return true;
   }
 
@@ -178,7 +183,7 @@ std::unique_ptr<Registers> Registers::Create(Thread* thread) {
 }
 
 // static
-std::string Registers::GetUninitializedGeneralRegisters() {
+std::string Registers::GetUninitializedGeneralRegistersAsString() {
   return std::string(sizeof(mx_x86_64_general_regs_t) * 2, '0');
 }
 

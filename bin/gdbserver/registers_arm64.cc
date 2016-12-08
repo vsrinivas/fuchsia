@@ -36,38 +36,46 @@ class RegistersArm64 final : public Registers {
   ~RegistersArm64() = default;
 
   bool IsSupported() override {
-    // TODO(armansito): Implement.
     FTL_NOTIMPLEMENTED();
     return false;
   }
 
-  bool RefreshGeneralRegisters() override {
-    // TODO(armansito): Implement.
+  bool RefreshRegset(int regset) override {
     FTL_NOTIMPLEMENTED();
     return false;
   }
 
-  std::string GetGeneralRegisters() override {
-    // TODO(armansito): Implement.
+  bool WriteRegset(int regset) override {
+    FTL_NOTIMPLEMENTED();
+    return false;
+  }
+
+  std::string GetRegsetAsString(int regset) override {
+    FTL_NOTIMPLEMENTED();
+    return false;
+  }
+
+  bool SetRegset(int regset, const ftl::StringView& value) override {
+    FTL_NOTIMPLEMENTED();
+    return false;
+  }
+
+  std::string GetRegisterAsString(int regno) override {
     FTL_NOTIMPLEMENTED();
     return "";
   }
 
-  bool SetGeneralRegisters(const ftl::StringView& value) override {
-    // TODO(armansito): Implement.
+  bool GetRegister(int regno, void* buffer, size_t buf_size) override {
     FTL_NOTIMPLEMENTED();
     return false;
   }
 
-  std::string GetRegisterValue(unsigned int register_number) override {
+  bool SetRegister(int regno, const void* value, size_t value_size) override {
     FTL_NOTIMPLEMENTED();
-    return "";
+    return false;
   }
 
-  bool SetRegisterValue(int register_number,
-                        void* value,
-                        size_t value_size) override {
-    // TODO(armansito): Implement.
+  bool SetSingleStep(bool enable) override {
     FTL_NOTIMPLEMENTED();
     return false;
   }
@@ -81,7 +89,7 @@ std::unique_ptr<Registers> Registers::Create(Thread* thread) {
 }
 
 // static
-std::string Registers::GetUninitializedGeneralRegisters() {
+std::string Registers::GetUninitializedGeneralRegistersAsString() {
   // TODO(armansito): Implement.
   FTL_NOTIMPLEMENTED();
   return "";
