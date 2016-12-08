@@ -10,6 +10,8 @@ executable("gdbserver") {
     "breakpoint.h",
     "command_handler.cc",
     "command_handler.h",
+    "elf-util.cc",
+    "elf-util.h",
     "exception_port.cc",
     "exception_port.h",
     "registers.cc",
