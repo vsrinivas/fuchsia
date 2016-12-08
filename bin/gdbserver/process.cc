@@ -316,7 +316,7 @@ bool Process::RefreshAllThreads() {
 
   // First get the thread count so that we can allocate an appropriately sized
   // buffer.
-  mx_size_t num_threads;
+  size_t num_threads;
   mx_status_t status =
       mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
                          nullptr, 0, nullptr, &num_threads);
@@ -327,7 +327,7 @@ bool Process::RefreshAllThreads() {
 
   auto buffer_size = num_threads * sizeof(mx_koid_t);
   auto koids = std::make_unique<mx_koid_t[]>(num_threads);
-  mx_size_t records_read;
+  size_t records_read;
   status = mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
                               koids.get(), buffer_size, &records_read, nullptr);
   if (status != NO_ERROR) {
@@ -393,7 +393,7 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
 
   FTL_DCHECK(data);
 
-  mx_size_t bytes_written;
+  size_t bytes_written;
   mx_status_t status = mx_process_write_memory(debug_handle_.get(), address,
                                                data, length, &bytes_written);
   if (status != NO_ERROR) {
