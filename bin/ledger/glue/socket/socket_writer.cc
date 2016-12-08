@@ -30,7 +30,7 @@ void SocketWriter::Start(std::string data, mx::socket destination) {
 void SocketWriter::WriteData() {
   mx_status_t status = NO_ERROR;
   while (status == NO_ERROR && offset_ < data_.size()) {
-    mx_size_t written;
+    size_t written;
     status = destination_.write(0u, data_.data() + offset_,
                                 data_.size() - offset_, &written);
     if (status == NO_ERROR)
