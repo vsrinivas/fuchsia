@@ -196,7 +196,7 @@ bool Process::Initialize() {
   if (!LoadBinary(launchpad_, argv_[0]))
     goto fail;
 
-  FTL_LOG(INFO) << "Binary loaded";
+  FTL_VLOG(1) << "Binary loaded";
 
   // Initialize the PID.
   id_ = GetProcessId(launchpad_);
@@ -207,7 +207,7 @@ bool Process::Initialize() {
   if (!debug_handle_)
     goto fail;
 
-  FTL_LOG(INFO) << "mx_debug handle obtained for process";
+  FTL_VLOG(1) << "Debug handle " << debug_handle_ << " obtained for process";
 
   status = launchpad_get_base_address(launchpad_, &base_address_);
   if (status != NO_ERROR) {
@@ -281,7 +281,7 @@ bool Process::Start() {
   FTL_DCHECK(debug_handle_);
 
   if (started_) {
-    FTL_LOG(WARNING) << "Process already started";
+    FTL_LOG(ERROR) << "Process already started";
     return false;
   }
 
@@ -348,7 +348,7 @@ bool Process::IsAttached() const {
 Thread* Process::FindThreadById(mx_koid_t thread_id) {
   FTL_DCHECK(debug_handle_);
   if (thread_id == MX_HANDLE_INVALID) {
-    FTL_LOG(WARNING) << "Invalid thread ID given: " << thread_id;
+    FTL_LOG(ERROR) << "Invalid thread ID given: " << thread_id;
     return nullptr;
   }
 

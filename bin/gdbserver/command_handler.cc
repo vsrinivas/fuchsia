@@ -382,12 +382,12 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
 
       // Setting the current thread to "all threads" doesn't make much sense.
       if (tid < 0) {
-        FTL_LOG(WARNING) << "Cannot set the current thread to all threads";
+        FTL_LOG(ERROR) << "Cannot set the current thread to all threads";
         return ReplyWithError(util::ErrorCode::INVAL, callback);
       }
 
       if (!server_->current_process()) {
-        FTL_LOG(WARNING) << "No inferior exists";
+        FTL_LOG(ERROR) << "No inferior exists";
 
         // If we're given a positive thread ID but there is currently no
         // inferior,
@@ -903,7 +903,7 @@ bool CommandHandler::InsertSoftwareBreakpoint(
     size_t kind,
     const ftl::StringView& optional_params,
     const ResponseCallback& callback) {
-  FTL_LOG(INFO) << ftl::StringPrintf(
+  FTL_VLOG(1) << ftl::StringPrintf(
       "Insert software breakpoint at %" PRIxPTR ", kind: %lu", addr, kind);
 
   Process* current_process = server_->current_process();
@@ -926,8 +926,8 @@ bool CommandHandler::RemoveSoftwareBreakpoint(
     uintptr_t addr,
     size_t kind,
     const ResponseCallback& callback) {
-  FTL_LOG(INFO) << ftl::StringPrintf("Remove software breakpoint at %" PRIxPTR,
-                                     addr);
+  FTL_VLOG(1) << ftl::StringPrintf("Remove software breakpoint at %" PRIxPTR,
+                                   addr);
 
   Process* current_process = server_->current_process();
   if (!current_process) {

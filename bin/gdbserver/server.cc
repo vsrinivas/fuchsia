@@ -262,7 +262,7 @@ void Server::OnBytesRead(const ftl::StringView& bytes_read) {
   // response to a notification. The GDB Remote protocol defines only the
   // "Stop" notification, so we specially handle its acknowledgment here.
   if (packet_data == kStopAck && pending_notification_) {
-    FTL_LOG(INFO) << "Notification acknowledged";
+    FTL_VLOG(1) << "Notification acknowledged";
     pending_notification_.reset();
 
     // Try to post the next notification. If there are no queued events report,
@@ -325,7 +325,7 @@ void Server::OnProcessOrThreadExited(Process* process,
                                      const mx_excp_type_t type,
                                      const mx_exception_context_t& context) {
   // TODO(armansito): Implement
-  FTL_LOG(INFO) << (context.tid ? "Thread" : "Process") << " exited";
+  FTL_VLOG(1) << (context.tid ? "Thread" : "Process") << " exited";
 }
 
 void Server::OnArchitecturalException(Process* process,
@@ -334,7 +334,7 @@ void Server::OnArchitecturalException(Process* process,
                                       const mx_exception_context_t& context) {
   FTL_DCHECK(process);
   FTL_DCHECK(thread);
-  FTL_LOG(INFO) << "Architectural Exception";
+  FTL_VLOG(1) << "Architectural Exception";
 
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
   FTL_DCHECK(process == current_process());
