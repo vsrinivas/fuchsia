@@ -318,17 +318,17 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(
 
 template <typename T>
 mx_status_t URLLoaderImpl::HTTPClient<T>::SendBody() {
-  mx_size_t size = response_buf_.size();
+  size_t size = response_buf_.size();
 
   if (size > 0) {
     std::istream response_stream(&response_buf_);
-    mx_size_t done = 0;
+    size_t done = 0;
     do {
       char buffer[64 * 1024];
-      mx_size_t todo = std::min(sizeof(buffer), size - done);
+      size_t todo = std::min(sizeof(buffer), size - done);
       FTL_DCHECK(todo > 0);
       response_stream.read(buffer, todo);
-      mx_size_t written;
+      size_t written;
       mx_status_t result =
           response_body_stream_.write(0, buffer, todo, &written);
       if (result == ERR_SHOULD_WAIT) {

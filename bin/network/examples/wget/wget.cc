@@ -42,7 +42,7 @@ class ResponsePrinter {
 
     for (;;) {
       char buf[512];
-      mx_size_t num_bytes = sizeof(buf);
+      size_t num_bytes = sizeof(buf);
       mx_status_t result = body.read(0u, buf, num_bytes, &num_bytes);
 
       if (result == ERR_SHOULD_WAIT) {

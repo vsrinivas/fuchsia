@@ -20,7 +20,7 @@ mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
   mx_status_t result = NO_ERROR;
 
   while (true) {
-    mx_size_t num_bytes = buf_.size();
+    size_t num_bytes = buf_.size();
     result = socket_.read(0u, buf_.data(), num_bytes, &num_bytes);
     if (result == ERR_SHOULD_WAIT) {
       result = socket_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
@@ -62,7 +62,7 @@ mx_status_t VmoUploadElementReader::ReadAll(std::ostream* os) {
 
   uint64_t offset = 0;
   while (true) {
-    mx_size_t num_bytes = buf_.size();
+    size_t num_bytes = buf_.size();
     result = vmo_.read(buf_.data(), offset, num_bytes, &num_bytes);
     if (result != NO_ERROR) {
       if (result == ERR_OUT_OF_RANGE) {
