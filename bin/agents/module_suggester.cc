@@ -88,7 +88,7 @@ maxwell::ProposalPtr MkProposal(const std::string& label,
   d->color = content.color;
   d->icon_urls.push_back("");
   d->image_url = content.icon;
-  d->image_type = maxwell::SuggestionImageType::PERSON;
+  d->image_type = maxwell::SuggestionImageType::OTHER;
   p->display = std::move(d);
 
   return p;
