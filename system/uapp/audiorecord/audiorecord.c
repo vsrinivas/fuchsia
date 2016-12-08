@@ -66,11 +66,15 @@ next:
 }
 
 static void usage(char* me) {
-    fprintf(stderr, "usage: %s [-s <number of times to start/stop>] "
+    fprintf(stderr, "usage: %s [-f <file to write PCM data to>] "
+                    "[-s <number of times to start/stop>] "
                     "[-r <number of buffers to read per start/stop>]\n", me);
 }
 
 int main(int argc, char **argv) {
+    char* file_path = NULL;
+    int dest_fd = -1;
+
     // number of times to start & stop audio
     int start_stop_count = 1;
     // number of times to read per start/stop
@@ -78,7 +82,14 @@ int main(int argc, char **argv) {
 
     for (int i = 1; i < argc; i++) {
         char* arg = argv[i];
-        if (strcmp(arg, "-s") == 0) {
+        if (strcmp(arg, "-f") == 0) {
+            if (++i < argc) {
+                file_path = argv[i];
+                continue;
+            }
+            usage(argv[0]);
+            return -1;
+        } else if (strcmp(arg, "-s") == 0) {
             if (++i < argc) {
                 int count = atoi(argv[i]);
                 if (count > 0) {
@@ -104,10 +115,18 @@ int main(int argc, char **argv) {
         }
     }
 
+    if (file_path) {
+        dest_fd =  open(file_path, O_RDWR | O_CREAT | O_TRUNC);
+        if (dest_fd < 0) {
+            printf("couldn't open %s for writing\n", file_path);
+            return -1;
+        }
+    }
 
     int fd = open_source();
     if (fd < 0) {
         printf("couldn't find a usable audio source\n");
+        close(dest_fd);
         return -1;
     }
 
@@ -117,13 +136,18 @@ int main(int argc, char **argv) {
         for (int j = 0; j < read_count; j++) {
             uint16_t buffer[500];
             int length = read(fd, buffer, sizeof(buffer));
-            printf("read %d\n", length);
             if (length < 0) break;
+            if (dest_fd >= 0) {
+                write(dest_fd, buffer, length);
+            } else {
+                printf("read %d\n", length);
+            }
         }
 
         ioctl_audio_stop(fd);
     }
 
     close(fd);
+    close(dest_fd);
     return 0;
 }
