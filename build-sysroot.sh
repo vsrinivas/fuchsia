@@ -10,14 +10,10 @@ readonly HOST_ARCH=$(uname -m)
 readonly HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
-if [[ "x${HOST_OS}" == "xlinux" ]]; then
-  readonly JOBS=$(grep ^processor /proc/cpuinfo | wc -l)
-elif [[ "x${HOST_OS}" == "xdarwin" ]]; then
-  readonly JOBS=$(sysctl -n hw.ncpu)
-else
-  echo "Unsupported system: ${HOST_OS}" 1>&2
+JOBS=`getconf _NPROCESSORS_ONLN` || {
+  Cannot get number of processors
   exit 1
-fi
+}
 
 readonly CMAKE_HOST_TOOLS="\
   -DCMAKE_MAKE_PROGRAM=${ROOT_DIR}/buildtools/ninja \
