@@ -1,14 +1,14 @@
 {
     "labels": [
         "//dart/pkg/analyzer_cli(//build/toolchain:host_x64)",
-        "//dart/runtime/bin:dart_no_observatory",
-        "//dart/runtime/bin:dart_no_observatory(//build/toolchain:host_x64)",
+        "//dart/runtime/bin:dart",
+        "//dart/runtime/bin:dart(//build/toolchain:host_x64)",
         "//dart/runtime/bin:run_vm_tests",
         "//dart/runtime/bin:run_vm_tests_fuchsia"
     ],
     "binaries": [
         {
-            "binary": "dart_no_observatory",
+            "binary": "dart",
             "bootfs_path": "bin/dart"
         },
         {
