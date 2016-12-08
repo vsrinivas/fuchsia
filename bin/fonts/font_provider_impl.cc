@@ -78,7 +78,7 @@ bool FontProviderImpl::LoadFontsInternal() {
       return false;
     }
 
-    mx_size_t actual = 0;
+    size_t actual = 0;
     rv = vmo.write(data.data(), 0, data.size(), &actual);
     if (rv < 0) {
       FTL_LOG(ERROR) << "Failed to write data to VMO for " << family << ":"
