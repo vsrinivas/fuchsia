@@ -74,7 +74,7 @@ void FakeWavReader::ReadAt(uint64_t position, const ReadAtCallback& callback) {
 void FakeWavReader::WriteToSocket() {
   while (true) {
     uint8_t byte = GetByte(position_);
-    mx_size_t byte_count;
+    size_t byte_count;
 
     mx_status_t status = socket_.write(0u, &byte, 1u, &byte_count);
     if (status == NO_ERROR) {

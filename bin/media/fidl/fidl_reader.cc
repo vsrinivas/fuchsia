@@ -108,7 +108,7 @@ void FidlReader::ContinueReadAt() {
 void FidlReader::ReadFromSocket() {
   while (true) {
     FTL_DCHECK(read_at_bytes_remaining_ < std::numeric_limits<uint32_t>::max());
-    mx_size_t byte_count = 0;
+    size_t byte_count = 0;
     mx_status_t status = socket_.read(0u, read_at_buffer_,
                                       read_at_bytes_remaining_, &byte_count);
 

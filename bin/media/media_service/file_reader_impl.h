@@ -32,7 +32,7 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
   void ReadAt(uint64_t position, const ReadAtCallback& callback) override;
 
  private:
-  static constexpr mx_size_t kBufferSize = 8192;
+  static constexpr size_t kBufferSize = 8192;
 
   FileReaderImpl(const fidl::String& path,
                  fidl::InterfaceRequest<SeekingReader> request,
@@ -55,7 +55,7 @@ class FileReaderImpl : public MediaServiceImpl::Product<SeekingReader>,
   mx::socket socket_;
   FidlAsyncWaitID wait_id_ = 0;
   std::vector<char> buffer_;
-  mx_size_t remaining_buffer_bytes_count_ = 0;
+  size_t remaining_buffer_bytes_count_ = 0;
   char* remaining_buffer_bytes_;
   bool reached_end_;
 

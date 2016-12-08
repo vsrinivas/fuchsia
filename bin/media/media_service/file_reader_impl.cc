@@ -132,7 +132,7 @@ void FileReaderImpl::WriteToSocket() {
 
     FTL_DCHECK(remaining_buffer_bytes_ != nullptr);
 
-    mx_size_t byte_count;
+    size_t byte_count;
     mx_status_t status =
         socket_.write(0u, remaining_buffer_bytes_,
                       remaining_buffer_bytes_count_, &byte_count);

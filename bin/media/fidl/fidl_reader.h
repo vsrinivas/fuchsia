@@ -65,10 +65,10 @@ class FidlReader : public Reader,
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
 
   std::atomic_bool read_in_progress_;
-  mx_size_t read_at_position_;
+  size_t read_at_position_;
   uint8_t* read_at_buffer_;
-  mx_size_t read_at_bytes_to_read_;
-  mx_size_t read_at_bytes_remaining_;
+  size_t read_at_bytes_to_read_;
+  size_t read_at_bytes_remaining_;
   ReadAtCallback read_at_callback_;
   mx::socket socket_;
   size_t socket_position_ = kUnknownSize;
