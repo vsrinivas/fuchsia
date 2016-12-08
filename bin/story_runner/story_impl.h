@@ -102,11 +102,13 @@ class StoryImpl : public StoryRunner {
       const std::string& module_name,
       fidl::InterfaceRequest<ledger::Ledger> module_ledger,
       const std::function<void(ledger::Status)>& result);
-  void Dispose(ModuleControllerImpl* controller);
+  void DisposeModule(ModuleControllerImpl* controller);
 
  private:
   // Deletes itself on Stop().
   ~StoryImpl() override = default;
+
+  void DisposeLink(LinkImpl* link);
 
   // |StoryRunner|
   void GetStory(fidl::InterfaceRequest<Story> story_request) override;
@@ -130,8 +132,6 @@ class StoryImpl : public StoryRunner {
 
   ledger::LedgerRepositoryPtr user_ledger_repository_;
 
-  // TODO(mesch): Link instances are cleared only when the Story
-  // stops. They should already be cleared when they go out of scope.
   std::vector<std::unique_ptr<LinkImpl>> links_;
 
   // Callbacks for teardown requests in flight. This batches up

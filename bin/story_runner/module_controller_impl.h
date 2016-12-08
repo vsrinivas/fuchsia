@@ -42,7 +42,7 @@ class ModuleControllerImpl : public ModuleController {
   void Error();
 
   // Calls Stop() on the module, closes the module handle, notifies
-  // watchers, then Dispose()s the connection and finally calls
+  // watchers, then DisposeModule()s the connection and finally calls
   // done(). Thus, done must not reference anything in
   // ModuleController or the related StoryConnection.
   void TearDown(std::function<void()> done);

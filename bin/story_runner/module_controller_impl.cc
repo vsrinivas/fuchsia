@@ -71,7 +71,7 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
     // Value of teardown must survive deletion of this.
     auto teardown = teardown_;
 
-    story_impl_->Dispose(this);
+    story_impl_->DisposeModule(this);
 
     for (auto& done : teardown) {
       done();

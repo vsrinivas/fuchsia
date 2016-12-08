@@ -134,6 +134,10 @@ void LinkImpl::RemoveConnection(LinkConnection* const connection) {
                            });
   FTL_DCHECK(it != connections_.end());
   connections_.erase(it, connections_.end());
+
+  if (connections_.empty() && orphaned_handler_) {
+    orphaned_handler_();
+  }
 }
 
 LinkConnection::LinkConnection(LinkImpl* const impl,

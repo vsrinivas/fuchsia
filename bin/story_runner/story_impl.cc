@@ -85,7 +85,7 @@ StoryImpl::StoryImpl(
   binding_.Bind(std::move(story_runner_request));
 }
 
-void StoryImpl::Dispose(ModuleControllerImpl* const module_controller_impl) {
+void StoryImpl::DisposeModule(ModuleControllerImpl* const module_controller_impl) {
   auto f = std::find_if(connections_.begin(), connections_.end(),
                         [module_controller_impl](const Connection& c) {
                           return c.module_controller_impl.get() ==
@@ -99,8 +99,18 @@ void StoryImpl::CreateLink(const fidl::String& name,
                            fidl::InterfaceRequest<Link> link) {
   StoryStoragePtr story_storage_dup;
   story_storage_->Dup(story_storage_dup.NewRequest());
-  links_.emplace_back(
-      new LinkImpl(std::move(story_storage_dup), name, std::move(link)));
+  auto* link_impl = new LinkImpl(std::move(story_storage_dup), name, std::move(link));
+  links_.emplace_back(link_impl);
+  link_impl->set_orphaned_handler([this, link_impl]() { DisposeLink(link_impl); });
+}
+
+void StoryImpl::DisposeLink(LinkImpl* const link) {
+  auto f = std::find_if(links_.begin(), links_.end(),
+                        [link](const std::unique_ptr<LinkImpl>& l) {
+                          return l.get() == link;
+                        });
+  FTL_DCHECK(f != links_.end());
+  links_.erase(f);
 }
 
 void StoryImpl::StartModule(
@@ -190,8 +200,17 @@ void StoryImpl::Stop(const StopCallback& done) {
   }
 
   // TODO(mesch): While a teardown is in flight, new links and modules
-  // can still be created. Those will be missed here, and only caught
-  // by the destructor.
+  // can still be created. Those would be missed here. A newly created
+  // Module would actually block teardown, because no TearDown()
+  // request would be issued to it, and thus the connections_
+  // collection never becomes empty. A newly added Link would do no
+  // harm and just be removed again.
+
+  // At this point, we don't need notifications from disconnected
+  // Links anymore, as they will all be disposed soon anyway.
+  for (auto& link : links_) {
+    link->set_orphaned_handler(nullptr);
+  }
 
   StopModules();
 }
@@ -223,29 +242,19 @@ void StoryImpl::StopModules() {
 }
 
 void StoryImpl::StopLinks() {
-  auto count = std::make_shared<unsigned int>(0);
-  auto cont = [this, count]() {
-    if (++*count < links_.size()) {
-      return;
-    }
+  // Clear the remaining links. After they are destroyed, no
+  // DisposeLink() calls can arrive anymore. They don't need to be
+  // written, because they all were written when they were last
+  // changed.
+  links_.clear();
 
-    links_.clear();
-
-    for (auto done : teardown_) {
-      done();
-    }
-
-    // Also closes own connection.
-    delete this;
-  };
-
-  if (links_.empty()) {
-    cont();
-  } else {
-    for (auto& link : links_) {
-      link->WriteLinkData(cont);
-    }
+  for (auto done : teardown_) {
+    done();
   }
+
+  // Also closes own connection, but the done callback to the Stop()
+  // invocation is guaranteed to be sent.
+  delete this;
 }
 
 }  // namespace modular

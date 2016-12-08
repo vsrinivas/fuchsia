@@ -72,6 +72,11 @@ class LinkImpl : public StoryStorageLinkWatcher {
   void RemoveConnection(LinkConnection* connection);
   const FidlDocMap& docs() const { return docs_; }
 
+  // Used by StoryImpl.
+  void set_orphaned_handler(const std::function<void()>& fn) {
+    orphaned_handler_ = fn;
+  }
+
  private:
   void DatabaseChanged(LinkConnection* src);
   void NotifyWatchers(LinkConnection* src);
@@ -84,6 +89,7 @@ class LinkImpl : public StoryStorageLinkWatcher {
   std::vector<std::unique_ptr<LinkConnection>> connections_;
   const fidl::String name_;
   StoryStoragePtr story_storage_;
+  std::function<void()> orphaned_handler_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(LinkImpl);
 };
