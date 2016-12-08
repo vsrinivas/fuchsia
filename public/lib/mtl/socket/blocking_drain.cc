@@ -14,7 +14,7 @@ bool BlockingDrainFrom(
     const std::function<size_t(const void*, uint32_t)>& write_bytes) {
   for (;;) {
     char buffer[64 * 1024];
-    mx_size_t bytes_read;
+    size_t bytes_read;
     mx_status_t result = source.read(0, buffer, sizeof(buffer), &bytes_read);
     if (result == NO_ERROR) {
       size_t bytes_written = write_bytes(buffer, bytes_read);

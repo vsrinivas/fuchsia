@@ -73,7 +73,7 @@ void CopyToFileHandler::SendCallback(bool value) {
 void CopyToFileHandler::OnHandleReady(mx_status_t result) {
   if (result == NO_ERROR) {
     char buffer[64 * 1024];
-    mx_size_t size = 0;
+    size_t size = 0;
     result = source_.read(0u, buffer, sizeof(buffer), &size);
     if (result == NO_ERROR) {
       bool write_success = ftl::WriteFileDescriptor(
@@ -177,7 +177,7 @@ void CopyFromFileHandler::FillBuffer() {
 
 void CopyFromFileHandler::OnHandleReady(mx_status_t result) {
   if (result == NO_ERROR) {
-    mx_size_t bytes_written = 0;
+    size_t bytes_written = 0;
     result = destination_.write(0u, buffer_ + buffer_offset_,
                                 buffer_end_ - buffer_offset_, &bytes_written);
     if (result == NO_ERROR) {

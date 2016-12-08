@@ -26,7 +26,7 @@ bool BlockingCopyFromString(ftl::StringView source,
   const char* ptr = source.data();
   size_t to_write = source.size();
   for (;;) {
-    mx_size_t written;
+    size_t written;
     mx_status_t result = destination.write(0, ptr, to_write, &written);
     if (result == NO_ERROR) {
       if (written == to_write)

@@ -33,7 +33,7 @@ void SocketDrainer::Start(mx::socket source) {
 
 void SocketDrainer::ReadData() {
   char buffer[64 * 1024];
-  mx_size_t num_bytes = 0;
+  size_t num_bytes = 0;
   mx_status_t rv = source_.read(0, buffer, sizeof(buffer), &num_bytes);
   if (rv == NO_ERROR) {
     // Calling the user callback, and exiting early if this objects is

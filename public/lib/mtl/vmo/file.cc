@@ -41,9 +41,9 @@ bool VmoFromFd(ftl::UniqueFD fd, mx::vmo* handle_ptr) {
       return false;
     }
 
-    mx_size_t actual = 0;
+    size_t actual = 0;
     mx_status_t rv = handle_ptr->write(buffer, offset, bytes_read, &actual);
-    if (rv < 0 || actual != static_cast<mx_size_t>(bytes_read)) {
+    if (rv < 0 || actual != static_cast<size_t>(bytes_read)) {
       FTL_LOG(WARNING) << "mx::vmo::write wrote " << actual
                        << " bytes instead of " << bytes_read << " bytes.";
       return false;

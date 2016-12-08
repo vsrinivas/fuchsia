@@ -10,7 +10,6 @@
 
 namespace mtl {
 
-static_assert(sizeof(mx_size_t) == sizeof(uint64_t), "64-bit architecture");
 static_assert(sizeof(size_t) == sizeof(uint64_t), "64-bit architecture");
 
 SharedVmo::SharedVmo(mx::vmo vmo, uint32_t map_flags)

@@ -28,7 +28,7 @@ bool VmoFromContainer(const Container& container, mx::vmo* handle_ptr) {
     return true;
   }
 
-  mx_size_t actual;
+  size_t actual;
   status = handle_ptr->write(container.data(), 0, num_bytes, &actual);
   if (status < 0) {
     FTL_LOG(WARNING) << "mx::vmo::write failed: " << status;
@@ -60,7 +60,7 @@ bool ContainerFromVmo(const mx::vmo& buffer, Container* container_ptr) {
     return true;
   }
 
-  mx_size_t num_read;
+  size_t num_read;
   status = buffer.read(&(*container_ptr)[0], 0, num_bytes, &num_read);
   if (status < 0) {
     FTL_LOG(WARNING) << "mx::vmo::read failed: " << status;
