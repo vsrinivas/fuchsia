@@ -183,3 +183,8 @@ the loglistener tool will observe logs broadcast over the local link:
 ```
 $BUILDDIR/tools/loglistener
 ```
+
+## Debugging
+
+For random tips on debugging in the magenta environment see
+[debugging](debugging.md).
