@@ -28,3 +28,15 @@ MODULE := usb-ethernet-ax88179
 MODULE_SRCS := $(LOCAL_DIR)/asix-88179.c
 
 include make/module.mk
+
+MODULE_TYPE := driver
+
+MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
+
+MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+
+MODULE := usb-ethernet-lan9514
+
+MODULE_SRCS := $(LOCAL_DIR)/smsc-lan9514.c
+
+include make/module.mk
