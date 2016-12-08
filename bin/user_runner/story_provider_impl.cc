@@ -145,18 +145,32 @@ class WriteStoryDataCall : public Transaction {
     FTL_DCHECK(!story_data_.is_null());
 
     ledger_->GetRootPage(root_page_.NewRequest(), [this](ledger::Status status) {
+      const fidl::String& story_id = story_data_->story_info->id;
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "WriteStoryDataCall() " << story_id
+                       << " Ledger.GetRootPage() " << status;
+        result_();
+        Done();
+        return;
+      }
+
       const size_t size = story_data_->GetSerializedSize();
       fidl::Array<uint8_t> value = fidl::Array<uint8_t>::New(size);
       story_data_->Serialize(value.data(), size);
 
-      const fidl::String& story_id = story_data_->story_info->id;
-      root_page_->PutWithPriority(to_array(story_id), std::move(value),
-                                  ledger::Priority::EAGER,
-                                  [this](ledger::Status status) {
-                                    result_();
-                                    Done();
-                                  });
-    });
+      root_page_->PutWithPriority(
+          to_array(story_id), std::move(value), ledger::Priority::EAGER,
+          [this](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              const fidl::String& story_id = story_data_->story_info->id;
+              FTL_LOG(ERROR) << "WriteStoryDataCall() " << story_id
+                             << " Page.PutWithPriority() " << status;
+            }
+
+            result_();
+            Done();
+          });
+                                                  });
   }
 
  private:
@@ -191,6 +205,13 @@ class CreateStoryCall : public Transaction {
         root_docs_(std::move(root_docs)),
         ledger_repository_factory_(ledger_repository_factory) {
     ledger_->NewPage(story_page_.NewRequest(), [this](ledger::Status status) {
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "CreateStoryCall() " << story_id_
+                       << " Ledger.NewPage() " << status;
+        Done();
+        return;
+      }
+
       story_page_->GetId([this](fidl::Array<uint8_t> story_page_id) {
         story_data_ = StoryData::New();
         story_data_->story_page_id = std::move(story_page_id);
@@ -243,11 +264,24 @@ class DeleteStoryCall : public Transaction {
         story_id_(story_id),
         result_(result) {
     ledger_->GetRootPage(root_page_.NewRequest(), [this](ledger::Status status) {
-      root_page_->Delete(to_array(story_id_),
-                         [this](ledger::Status ledger_status) {
-                           result_();
-                           Done();
-                         });
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
+                       << " Ledger.GetRootPage() " << status;
+        result_();
+        Done();
+        return;
+      }
+
+      root_page_->Delete(to_array(story_id_), [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
+                         << " Page.Delete() " << status;
+        }
+
+
+        result_();
+        Done();
+      });
     });
   }
 
@@ -274,7 +308,8 @@ class ResumeStoryCall : public Transaction {
         story_id_(story_id),
         ledger_repository_factory_(ledger_repository_factory) {
     story_provider_impl_->GetStoryData(
-        story_id_, [this](StoryDataPtr story_data) {
+        story_id_,
+        [this](StoryDataPtr story_data) {
           if (story_data.is_null()) {
             // We cannot resume a deleted (or otherwise non-existing) story.
             story_provider_impl_->AddController(story_id_, nullptr);
@@ -285,6 +320,10 @@ class ResumeStoryCall : public Transaction {
           ledger_->GetPage(
               story_data_->story_page_id.Clone(), story_page_.NewRequest(),
               [this](ledger::Status status) {
+                if (status != ledger::Status::OK) {
+                  FTL_LOG(ERROR) << "CreateStoryCall() " << story_data_->story_info->id
+                                 << " Ledger.GetPage() " << status;
+                }
                 story_provider_impl_->AddController(story_id_, StoryControllerImpl::New(
                     std::move(story_data_), story_provider_impl_,
                     ledger_repository_factory_));
@@ -313,40 +352,68 @@ class PreviousStoriesCall : public Transaction {
                       ledger::Ledger* const ledger,
                       Result result)
       : Transaction(container), ledger_(ledger), result_(result) {
-    ledger_->GetRootPage(root_page_.NewRequest(), [this](ledger::Status status) {
-      root_page_->GetSnapshot(
-          root_snapshot_.NewRequest(), [this](ledger::Status status) {
-            root_snapshot_->GetEntries(
-                nullptr, nullptr, [this](ledger::Status status,
-                                         fidl::Array<ledger::EntryPtr> entries,
-                                         fidl::Array<uint8_t> next_token) {
-                  // TODO(mesch): Account for possibly
-                  // continuation here. That's not just a matter
-                  // of repeatedly calling, but it needs to be
-                  // wired up to the API, because a list that is
-                  // too large to return from Ledger is also too
-                  // large to return from StoryProvider.
-                  fidl::Array<fidl::String> story_ids;
-                  // This resize() has the side effect of marking the array as
-                  // non-null. Do not remove it because the fidl declaration
-                  // of this return value does not allow nulls.
-                  story_ids.resize(0);
-                  for (auto& entry : entries) {
-                    StoryDataPtr story_data = StoryData::New();
-                    story_data->Deserialize(entry->value.data(),
-                                            entry->value.size());
-                    story_ids.push_back(story_data->story_info->id);
-                  }
+    // This resize() has the side effect of marking the array as
+    // non-null. Do not remove it because the fidl declaration
+    // of this return value does not allow nulls.
+    story_ids_.resize(0);
 
-                  result_(std::move(story_ids));
+    ledger_->GetRootPage(
+        root_page_.NewRequest(),
+        [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR) << "PreviousStoryCall() "
+                           << " Ledger.GetRootPage() " << status;
+            result_(std::move(story_ids_));
+            Done();
+            return;
+          }
+          root_page_->GetSnapshot(
+              root_snapshot_.NewRequest(),
+              [this](ledger::Status status) {
+                if (status != ledger::Status::OK) {
+                  FTL_LOG(ERROR) << "PreviousStoryCall() "
+                                 << " Page.GetSnapshot() " << status;
+                  result_(std::move(story_ids_));
                   Done();
-                });
-          });
-    });
+                  return;
+                }
+                root_snapshot_->GetEntries(
+                    nullptr, nullptr,
+                    [this](ledger::Status status,
+                           fidl::Array<ledger::EntryPtr> entries,
+                           fidl::Array<uint8_t> next_token) {
+                      if (status != ledger::Status::OK) {
+                        FTL_LOG(ERROR) << "PreviousStoryCall() "
+                                       << " PageSnapshot.GetEntries() " << status;
+                        result_(std::move(story_ids_));
+                        Done();
+                        return;
+                      }
+
+                      // TODO(mesch): Account for possible
+                      // continuation here. That's not just a matter
+                      // of repeatedly calling, but it needs to be
+                      // wired up to the API, because a list that is
+                      // too large to return from Ledger is also too
+                      // large to return from StoryProvider.
+
+                      for (auto& entry : entries) {
+                        StoryDataPtr story_data = StoryData::New();
+                        story_data->Deserialize(entry->value.data(),
+                                                entry->value.size());
+                        story_ids_.push_back(story_data->story_info->id);
+                      }
+
+                      result_(std::move(story_ids_));
+                      Done();
+                    });
+              });
+        });
   }
 
  private:
   ledger::Ledger* const ledger_;  // not owned
+  fidl::Array<fidl::String> story_ids_;
   Result result_;
   ledger::PagePtr root_page_;
   ledger::PageSnapshotPtr root_snapshot_;
