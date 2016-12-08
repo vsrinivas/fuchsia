@@ -24,7 +24,7 @@ uintptr_t GetDataFromVMO(const mx::vmo& vmo, uint64_t* size_out) {
   if (!size_out)
     return 0u;
   mx_status_t status = vmo.get_size(size_out);
-  if (status != NO_ERROR || *size_out > std::numeric_limits<mx_size_t>::max())
+  if (status != NO_ERROR || *size_out > std::numeric_limits<size_t>::max())
     return 0u;
 
   uintptr_t data = 0u;
