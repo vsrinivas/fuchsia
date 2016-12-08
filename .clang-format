@@ -1,2 +1,3 @@
 BasedOnStyle: Chromium
 Standard: Cpp11
+AllowShortIfStatementsOnASingleLine: false
