@@ -34,6 +34,8 @@ typedef struct {
     mtx_t mutex;
     // completion signals free_write_reqs not empty
     completion_t free_write_completion;
+    // mutex used to synchronize ioctl_audio_start() and ioctl_audio_stop()
+    mtx_t start_stop_mutex;
 
     bool open;
     bool started;
@@ -124,16 +126,15 @@ static uint64_t get_usb_current_frame(usb_audio_sink_t* sink) {
 }
 
 static mx_status_t usb_audio_sink_start(usb_audio_sink_t* sink) {
-    if (sink->dead) {
-        return ERR_REMOTE_CLOSED;
-    }
+    mx_status_t status = NO_ERROR;
 
-    mtx_lock(&sink->mutex);
-    bool was_started = sink->started;
-    sink->started = true;
-    mtx_unlock(&sink->mutex);
-    if (was_started) {
-        return NO_ERROR;
+    mtx_lock(&sink->start_stop_mutex);
+    if (sink->dead) {
+        status = ERR_REMOTE_CLOSED;
+        goto out;
+    }
+    if (sink->started) {
+        goto out;
     }
 
     // switch to alternate interface if necessary
@@ -143,27 +144,31 @@ static mx_status_t usb_audio_sink_start(usb_audio_sink_t* sink) {
     sink->start_usb_frame = 0;
     sink->cur_txn = NULL;
 
-    return NO_ERROR;
+out:
+    mtx_unlock(&sink->start_stop_mutex);
+    return status;
 }
 
 static mx_status_t usb_audio_sink_stop(usb_audio_sink_t* sink) {
-    if (sink->dead) {
-        return ERR_REMOTE_CLOSED;
-    }
+    mx_status_t status = NO_ERROR;
 
-    mtx_lock(&sink->mutex);
-    bool was_started = sink->started;
-    sink->started = false;
-    mtx_unlock(&sink->mutex);
-    if (!was_started) {
-        return NO_ERROR;
+    mtx_lock(&sink->start_stop_mutex);
+    if (sink->dead) {
+        status = ERR_REMOTE_CLOSED;
+        goto out;
+    }
+    if (!sink->started) {
+        goto out;
     }
 
     // switch back to primary interface
     if (sink->alternate_setting != 0) {
         usb_set_interface(sink->usb_device, sink->interface_number, 0);
     }
-    return NO_ERROR;
+
+out:
+    mtx_unlock(&sink->start_stop_mutex);
+    return status;
 }
 
 static mx_status_t usb_audio_sink_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {

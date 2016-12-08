@@ -28,6 +28,8 @@ typedef struct {
     int completed_read_count;
     // mutex for synchronizing access to free_read_reqs, completed_reads, open and started
     mtx_t mutex;
+    // mutex used to synchronize ioctl_audio_start() and ioctl_audio_stop()
+    mtx_t start_stop_mutex;
 
     bool open;
     bool started;
@@ -110,15 +112,15 @@ static mx_status_t usb_audio_source_release(mx_device_t* device) {
 }
 
 static mx_status_t usb_audio_source_start(usb_audio_source_t* source) {
+    mx_status_t status = NO_ERROR;
+
+    mtx_lock(&source->start_stop_mutex);
     if (source->dead) {
-        return ERR_REMOTE_CLOSED;
+        status = ERR_REMOTE_CLOSED;
+        goto out;
     }
-    mtx_lock(&source->mutex);
-    bool was_started = source->started;
-    source->started = true;
-    mtx_unlock(&source->mutex);
-    if (was_started) {
-        return NO_ERROR;
+    if (source->started) {
+        goto out;
     }
 
     // switch to alternate interface if necessary
@@ -136,20 +138,21 @@ static mx_status_t usb_audio_source_start(usb_audio_source_t* source) {
         iotxn_queue(source->usb_device, txn);
     }
 
-    return NO_ERROR;
+out:
+    mtx_unlock(&source->start_stop_mutex);
+    return status;
 }
 
 static mx_status_t usb_audio_source_stop(usb_audio_source_t* source) {
-    if (source->dead) {
-        return ERR_REMOTE_CLOSED;
-    }
+    mx_status_t status = NO_ERROR;
 
-    mtx_lock(&source->mutex);
-    bool was_started = source->started;
-    source->started = false;
-    mtx_unlock(&source->mutex);
-    if (!was_started) {
-        return NO_ERROR;
+    mtx_lock(&source->start_stop_mutex);
+    if (source->dead) {
+        status = ERR_REMOTE_CLOSED;
+        goto out;
+    }
+    if (!source->started) {
+        goto out;
     }
 
     // switch back to primary interface
@@ -157,7 +160,9 @@ static mx_status_t usb_audio_source_stop(usb_audio_source_t* source) {
         usb_set_interface(source->usb_device, source->interface_number, 0);
     }
 
-    return NO_ERROR;
+out:
+    mtx_unlock(&source->start_stop_mutex);
+    return status;
 }
 
 static mx_status_t usb_audio_source_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t flags) {
