@@ -4,6 +4,7 @@
 
 #define _POSIX_C_SOURCE 200809L
 #define _GNU_SOURCE
+#define _DARWIN_C_SOURCE
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
