@@ -118,12 +118,14 @@ class DummyUserShellView : public mozart::BaseView {
 class DummyUserShellApp
     : public modular::StoryWatcher,
       public modular::StoryProviderWatcher,
+      public modular::LinkWatcher,
       public modular::SingleServiceViewApp<modular::UserShell> {
  public:
   explicit DummyUserShellApp(const Settings& settings)
       : settings_(settings),
         story_provider_watcher_binding_(this),
-        story_watcher_binding_(this) {}
+        story_watcher_binding_(this),
+        link_watcher_binding_(this) {}
   ~DummyUserShellApp() override = default;
 
  private:
@@ -145,9 +147,7 @@ class DummyUserShellApp
                       focus_controller_request) override {
     story_provider_.Bind(std::move(story_provider));
 
-    fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher;
-    story_provider_watcher_binding_.Bind(watcher.NewRequest());
-    story_provider_->Watch(std::move(watcher));
+    story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
 
     story_provider_->GetStoryInfo(
         "X", [](modular::StoryInfoPtr story_info) {
@@ -195,23 +195,11 @@ class DummyUserShellApp
   }
 
   // |StoryWatcher|
-  void OnStart() override {}
-
-  // |StoryWatcher|
-  void OnData() override {
-    if (++data_count_ % 5 == 0) {
-      StopExampleStory();
+  void OnStateChange(modular::StoryState state) override {
+    if (state != modular::StoryState::DONE) {
+      return;
     }
-  }
 
-  // |StoryWatcher|
-  void OnStop() override {}
-
-  // |StoryWatcher|
-  void OnError() override {}
-
-  // |StoryWatcher|
-  void OnDone() override {
     FTL_LOG(INFO) << "DummyUserShell DONE";
     story_controller_->Stop([this]() {
       TearDownStoryController();
@@ -221,6 +209,13 @@ class DummyUserShellApp
           [this]() { CreateStory(settings_.second_module, false); },
           ftl::TimeDelta::FromSeconds(20));
     });
+  }
+
+  // |LinkWatcher|
+  void Notify(modular::FidlDocMap docs) override {
+    if (++data_count_ % 5 == 0) {
+      StopExampleStory();
+    }
   }
 
   void CreateStory(const fidl::String& url, const bool keep) {
@@ -271,9 +266,13 @@ class DummyUserShellApp
         .Insert(&docs);
     root_->AddDocuments(std::move(docs));
 
-    fidl::InterfaceHandle<StoryWatcher> story_watcher;
-    story_watcher_binding_.Bind(story_watcher.NewRequest());
-    story_controller_->Watch(std::move(story_watcher));
+    // NOTE(mesch): Both watchers below fire right after they are
+    // registered. Make sure the link data watcher doesn't stop us
+    // right away.
+    data_count_ = 0;
+
+    story_controller_->Watch(story_watcher_binding_.NewBinding());
+    root_->Watch(link_watcher_binding_.NewBinding());
 
     fidl::InterfaceHandle<mozart::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -282,12 +281,6 @@ class DummyUserShellApp
     if (view_) {
       view_->ConnectView(std::move(story_view));
     }
-  }
-
-  void TearDownStoryController() {
-    story_watcher_binding_.Close();
-    story_controller_.reset();
-    root_.reset();
   }
 
   // Every five counter increments, we dehydrate and rehydrate the story.
@@ -317,9 +310,17 @@ class DummyUserShellApp
         });
   }
 
+  void TearDownStoryController() {
+    story_watcher_binding_.Close();
+    link_watcher_binding_.Close();
+    story_controller_.reset();
+    root_.reset();
+  }
+
   const Settings settings_;
   fidl::Binding<modular::StoryProviderWatcher> story_provider_watcher_binding_;
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
+  fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
   std::unique_ptr<DummyUserShellView> view_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;

@@ -22,17 +22,48 @@ interface ModuleController {
 // This interface is implemented by the client calling
 // ModuleController::Watch().
 interface ModuleWatcher {
-  // Called when the module instance calls Done() on its Story handle.
-  // The receiver is free to decide whether it's appropriate to Stop()
-  // the module. (It might be appropriate for the receiver to call
-  // Done() on its own instead.)
-  OnDone();
+  // Called with the current state right after registration, and
+  // subsequently when the state changes.
+  OnStateChange(ModuleState new_state);
+};
 
-  // Called after the module instance is stopped. See Module.Stop()
-  // for when this can happen, and what else happens then.
-  OnStop();
-
-  // Called when the connection to the module instance gets closed
-  // without Stop() request.
-  OnError();
+// State used to notify ModuleWatcher about state transitions of a
+// Module instance. This is very similar to the StoryState, however
+// it's not entirely the same and hence a separate type. The
+// ModuleState of the root module mostly drives the StoryState of the
+// whole story, but in the future we expect them to diverge more.
+// Right now, a module cannot have an INITIAL state, because it's
+// started as soon as it is created, and it gets deleted as soon as it
+// reaches the STOPPED state, whileas a story can be restarted.
+//
+// Currently possible state transitions are:
+//
+//   STARTING -> RUNNING
+//   STARTING -> DONE
+//   STARTING -> STOPPED
+//   STARTING -> ERROR
+//   RUNNING  -> DONE
+//   RUNNING  -> STOPPED
+//   RUNNING  -> ERROR
+//   DONE     -> STOPPED
+//
+enum ModuleState {
+  // Module instance was requested from the Story.
+  STARTING = 1,
+  // Module instance called Ready() on its Story handle.
+  RUNNING = 2,
+  // Module instance called Done() on its Story handle. The receiver
+  // is free to decide whether it's appropriate to Stop() the module.
+  // (It might be appropriate for the receiver to call Done() on its
+  // own instead.) The module, conversely, is free to continue
+  // running, but it should not close it's connection, as that would
+  // transition it to ERROR.
+  DONE = 3,
+  // Module instance is stopped after Module.Stop(). The module can
+  // now close its connection without transition to ERROR. No further
+  // transitions are to be expected.
+  STOPPED = 4,
+  // Connection to the Module instance was closed without Stop()
+  // request. No further transitions are to be expected.
+  ERROR = 5,
 };

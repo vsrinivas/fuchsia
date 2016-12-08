@@ -101,19 +101,11 @@ class DevUserShellApp
   }
 
   // |StoryWatcher|
-  void OnStart() override {}
+  void OnStateChange(modular::StoryState state) override {
+    if (state != modular::StoryState::DONE) {
+      return;
+    }
 
-  // |StoryWatcher|
-  void OnData() override {}
-
-  // |StoryWatcher|
-  void OnStop() override {}
-
-  // |StoryWatcher|
-  void OnError() override {}
-
-  // |StoryWatcher|
-  void OnDone() override {
     FTL_LOG(INFO) << "DevUserShell DONE";
     story_controller_->Stop([this]() {
       FTL_LOG(INFO) << "DevUserShell STOP";

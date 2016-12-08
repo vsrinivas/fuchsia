@@ -66,9 +66,15 @@ void StoryConnection::GetLedger(fidl::InterfaceRequest<ledger::Ledger> req,
   }
 }
 
+void StoryConnection::Ready() {
+  if (module_controller_impl_) {
+    module_controller_impl_->SetState(ModuleState::RUNNING);
+  }
+}
+
 void StoryConnection::Done() {
   if (module_controller_impl_) {
-    module_controller_impl_->Done();
+    module_controller_impl_->SetState(ModuleState::DONE);
   }
 }
 

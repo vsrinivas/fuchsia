@@ -104,13 +104,12 @@ class ModuleMonitor : public modular::ModuleWatcher {
     module_client->Watch(binding_.NewBinding());
   }
 
-  void OnDone() override {
-    FTL_LOG(INFO) << "RecipeImpl DONE";
-    story_->Done();
+  void OnStateChange(modular::ModuleState new_state) override {
+    if (new_state == modular::ModuleState::DONE) {
+      FTL_LOG(INFO) << "RecipeImpl DONE";
+      story_->Done();
+    }
   }
-
-  void OnStop() override {}
-  void OnError() override {}
 
  private:
   fidl::Binding<modular::ModuleWatcher> binding_;

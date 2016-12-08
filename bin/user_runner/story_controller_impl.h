@@ -29,8 +29,7 @@ class ApplicationContext;
 class StoryProviderImpl;
 
 class StoryControllerImpl : public StoryController,
-                            public ModuleWatcher,
-                            public LinkWatcher {
+                            public ModuleWatcher {
  public:
   static StoryControllerImpl* New(
       StoryDataPtr story_data,
@@ -68,15 +67,10 @@ class StoryControllerImpl : public StoryController,
   void Watch(fidl::InterfaceHandle<StoryWatcher> story_watcher) override;
 
   // |ModuleWatcher|
-  void OnDone() override;
-  void OnStop() override;
-  void OnError() override;
-
-  // |LinkWatcher|
-  void Notify(FidlDocMap docs) override;
+  void OnStateChange(ModuleState new_state) override;
 
   void WriteStoryData(std::function<void()> done);
-  void NotifyStoryWatchers(void (StoryWatcher::*method)());
+  void NotifyStateChange();
 
   // Starts the Story instance for the given story.
   void StartStory(fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
@@ -95,7 +89,6 @@ class StoryControllerImpl : public StoryController,
 
   fidl::BindingSet<StoryController> bindings_;
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
-  fidl::Binding<LinkWatcher> link_changed_binding_;
   fidl::InterfacePtrSet<StoryWatcher> story_watchers_;
   StoryRunnerPtr story_runner_;
   StoryPtr story_;

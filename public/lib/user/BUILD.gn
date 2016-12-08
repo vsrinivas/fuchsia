@@ -8,6 +8,7 @@ import("//lib/fidl/fidl.gni")
 fidl("user") {
   sources = [
     "focus.fidl",
+    "story_controller.fidl",
     "story_info.fidl",
     "story_provider.fidl",
     "user_shell.fidl",

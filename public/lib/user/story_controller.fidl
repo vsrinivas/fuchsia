@@ -1,0 +1,45 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/story/link.fidl";
+import "apps/modular/services/user/story_info.fidl";
+import "apps/mozart/services/views/view_token.fidl";
+
+// Used by the client of StoryProvider (UserShell) to interact with a
+// single story. Created by StoryProvider.
+interface StoryController {
+  // Gets information associated with the story.
+  GetInfo() => (StoryInfo info);
+
+  // Stores extra information associated with the story, like title,
+  // color, etc. Available in the |extra| field in the StoryInfo.
+  SetInfoExtra(string name, string value) => ();
+
+  // Runs the |Story| controlled by this |StoryController| instance if
+  // not yet running, else does nothing. |view_owner| is an interface
+  // request for the root view of this story.
+  Start(mozart.ViewOwner& view_owner);
+
+  // Gets a connection to the Link to the root module. Only available
+  // when the story is running. If requested earlier, gets queued
+  // until the story is started.
+  GetLink(Link& link);
+
+  // Stops this story if it is running, else does nothing. Returns
+  // when the story is stopped.
+  Stop() => ();
+
+  // Registers a listener for changes of the story state.
+  Watch(StoryWatcher watcher);
+};
+
+// This interface is implemented by the client calling
+// StoryController::Watch().
+interface StoryWatcher {
+  // Called with the current state right after registration, and
+  // subsequently when the state changes.
+  OnStateChange(StoryState new_state);
+};

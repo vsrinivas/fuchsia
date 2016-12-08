@@ -64,6 +64,7 @@ class StoryConnection : public Story {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   void GetLedger(fidl::InterfaceRequest<ledger::Ledger> module_ledger,
                  const GetLedgerCallback& result) override;
+  void Ready() override;
   void Done() override;
 
   // Not owned.

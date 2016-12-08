@@ -33,13 +33,9 @@ class ModuleControllerImpl : public ModuleController {
 
   ~ModuleControllerImpl() override = default;
 
-  // Notifies all watchers of Done.
-  void Done();
-
-  // Notifies all watchers of error, and also remembers the error
-  // state in the error_ flag. A newly added Watcher is notified of an
-  // existing error state.
-  void Error();
+  // Notifies all watchers of a state change of the module. Also
+  // remembers the state to initialize future added watchers.
+  void SetState(const ModuleState new_state);
 
   // Calls Stop() on the module, closes the module handle, notifies
   // watchers, then DisposeModule()s the connection and finally calls
@@ -57,7 +53,7 @@ class ModuleControllerImpl : public ModuleController {
   fidl::InterfacePtr<Module> module_;
   fidl::Binding<ModuleController> binding_;
   std::vector<fidl::InterfacePtr<ModuleWatcher>> watchers_;
-  bool error_{false};
+  ModuleState state_{ModuleState::STARTING};
 
   // Callbacks of TearDown() invocations. If there is one Stop()
   // request pending, a second one is only queued, no second call to

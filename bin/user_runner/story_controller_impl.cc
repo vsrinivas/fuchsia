@@ -18,7 +18,6 @@ StoryControllerImpl::StoryControllerImpl(
     : story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
       module_watcher_binding_(this),
-      link_changed_binding_(this),
       ledger_repository_factory_(ledger_repository_factory) {
   bindings_.set_on_empty_set_handler([this]() {
     story_provider_impl_->PurgeControllers();
@@ -78,7 +77,7 @@ void StoryControllerImpl::Start(
   }
 
   StartStory(std::move(view_owner_request));
-  NotifyStoryWatchers(&StoryWatcher::OnStart);
+  NotifyStateChange();
 }
 
 // |StoryController|
@@ -93,7 +92,7 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
     story_data_->story_info->state = StoryState::STOPPED;
     WriteStoryData([this, done]() {
       Reset();
-      NotifyStoryWatchers(&StoryWatcher::OnStop);
+      NotifyStateChange();
       done();
     });
   });
@@ -120,14 +119,13 @@ void StoryControllerImpl::StopForDelete(const StopCallback& done) {
     story_data_->story_info->is_running = false;
     story_data_->story_info->state = StoryState::STOPPED;
     Reset();
-    NotifyStoryWatchers(&StoryWatcher::OnStop);
+    NotifyStateChange();
     done();
   });
 }
 
 void StoryControllerImpl::Reset() {
   root_.reset();
-  link_changed_binding_.Close();
   module_.reset();
   story_.reset();
   story_runner_.reset();
@@ -142,32 +140,28 @@ void StoryControllerImpl::Watch(
 }
 
 // |ModuleWatcher|
-void StoryControllerImpl::OnStop() {
-  story_data_->story_info->state = StoryState::STOPPED;
-  WriteStoryData([this]() {
-    NotifyStoryWatchers(&StoryWatcher::OnStop);
-  });
-}
+void StoryControllerImpl::OnStateChange(const ModuleState state) {
+  switch (state) {
+    case ModuleState::STARTING:
+      story_data_->story_info->state = StoryState::STARTING;
+      break;
+    case ModuleState::RUNNING:
+      story_data_->story_info->state = StoryState::RUNNING;
+      break;
+    case ModuleState::STOPPED:
+      story_data_->story_info->state = StoryState::STOPPED;
+      break;
+    case ModuleState::DONE:
+      story_data_->story_info->state = StoryState::DONE;
+      break;
+    case ModuleState::ERROR:
+      story_data_->story_info->state = StoryState::ERROR;
+      break;
+  }
 
-// |ModuleWatcher|
-void StoryControllerImpl::OnDone() {
-  story_data_->story_info->state = StoryState::DONE;
   WriteStoryData([this]() {
-    NotifyStoryWatchers(&StoryWatcher::OnDone);
+    NotifyStateChange();
   });
-}
-
-// |ModuleWatcher|
-void StoryControllerImpl::OnError() {
-  story_data_->story_info->state = StoryState::ERROR;
-  WriteStoryData([this]() {
-    NotifyStoryWatchers(&StoryWatcher::OnError);
-  });
-}
-
-// |LinkWatcher|
-void StoryControllerImpl::Notify(FidlDocMap docs) {
-  NotifyStoryWatchers(&StoryWatcher::OnData);
 }
 
 void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
@@ -180,9 +174,10 @@ void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
   }
 }
 
-void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
-  story_watchers_.ForAllPtrs([method] (StoryWatcher* const watcher) {
-    (watcher->*method)();
+void StoryControllerImpl::NotifyStateChange() {
+  const StoryState state = story_data_->story_info->state;
+  story_watchers_.ForAllPtrs([state] (StoryWatcher* const watcher) {
+    watcher->OnStateChange(state);
   });
 }
 
@@ -225,16 +220,10 @@ void StoryControllerImpl::StartStory(
                       module_.NewRequest(), std::move(view_owner_request));
 
   story_data_->story_info->is_running = true;
-  story_data_->story_info->state = StoryState::RUNNING;
+  story_data_->story_info->state = StoryState::STARTING;
   WriteStoryData([](){});
 
-  fidl::InterfaceHandle<ModuleWatcher> module_watcher;
-  module_watcher_binding_.Bind(module_watcher.NewRequest());
-  module_->Watch(std::move(module_watcher));
-
-  fidl::InterfaceHandle<LinkWatcher> link_changed;
-  link_changed_binding_.Bind(link_changed.NewRequest());
-  root_->Watch(std::move(link_changed));
+  module_->Watch(module_watcher_binding_.NewBinding());
 }
 
 void StoryControllerImpl::GetLink(fidl::InterfaceRequest<Link> link_request) {

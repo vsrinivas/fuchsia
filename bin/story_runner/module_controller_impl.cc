@@ -28,21 +28,21 @@ ModuleControllerImpl::ModuleControllerImpl(
       binding_(this, std::move(module_controller)) {
   // If the Module instance closes its own connection, we signal this
   // as error to all current and future watchers.
-  module_.set_connection_error_handler([this]() { Error(); });
+  module_.set_connection_error_handler([this]() {
+    SetState(ModuleState::ERROR);
+  });
 }
 
-void ModuleControllerImpl::Done() {
-  for (auto& watcher : watchers_) {
-    watcher->OnDone();
+void ModuleControllerImpl::SetState(const ModuleState new_state) {
+  if (state_ == new_state) {
+    return;
   }
-};
 
-void ModuleControllerImpl::Error() {
-  error_ = true;
+  state_ = new_state;
   for (auto& watcher : watchers_) {
-    watcher->OnError();
+    watcher->OnStateChange(state_);
   }
-};
+}
 
 void ModuleControllerImpl::TearDown(std::function<void()> done) {
   teardown_.push_back(done);
@@ -64,9 +64,7 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
 
     module_.reset();
 
-    for (auto& watcher : watchers_) {
-      watcher->OnStop();
-    }
+    SetState(ModuleState::STOPPED);
 
     // Value of teardown must survive deletion of this.
     auto teardown = teardown_;
@@ -92,9 +90,7 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
 void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
   watchers_.push_back(
       fidl::InterfacePtr<ModuleWatcher>::Create(std::move(watcher)));
-  if (error_) {
-    watchers_.back()->OnError();
-  }
+  watchers_.back()->OnStateChange(state_);
 }
 
 void ModuleControllerImpl::Stop(const StopCallback& done) {

@@ -220,7 +220,7 @@ class CreateStoryCall : public Transaction {
         story_info->url = url_;
         story_info->id = story_id_;
         story_info->is_running = false;
-        story_info->state = StoryState::NEW;
+        story_info->state = StoryState::INITIAL;
         story_info->extra = std::move(extra_info_);
         story_info->extra.mark_non_null();
 

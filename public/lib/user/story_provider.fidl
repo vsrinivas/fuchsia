@@ -4,9 +4,8 @@
 
 module modular;
 
-import "apps/modular/services/story/link.fidl";
-import "apps/modular/services/user/story_info.fidl";
-import "apps/mozart/services/views/view_token.fidl";
+import "apps/modular/services/document_store/document.fidl";
+import "apps/modular/services/user/story_controller.fidl";
 
 // UserRunner implementation creates an instance of this service and
 // passes it to the UserShell service so it can operate on stories for
@@ -54,56 +53,6 @@ interface StoryProvider {
 
   // Registers a listener for changes in the story collection.
   Watch(StoryProviderWatcher watcher);
-};
-
-// Used by the client of StoryProvider (UserShell) to interact with a
-// single story. Created by StoryProvider.
-interface StoryController {
-  // Gets information associated with the story.
-  GetInfo() => (StoryInfo info);
-
-  // Stores extra information associated with the story, like title,
-  // color, etc. Available in the |extra| field in the StoryInfo.
-  SetInfoExtra(string name, string value) => ();
-
-  // Runs the |Story| controlled by this |StoryController| instance if
-  // not yet running, else does nothing. |view_owner| is an interface
-  // request for the root view of this story.
-  Start(mozart.ViewOwner& view_owner);
-
-  // Gets a connection to the Link to the root module. Only available
-  // when the story is running. If requested earlier, gets queued
-  // until the story is started.
-  GetLink(Link& link);
-
-  // Stops this story if it is running, else does nothing. Returns
-  // when the story is stopped.
-  Stop() => ();
-
-  // Registers a listener for changes of the story state.
-  Watch(StoryWatcher watcher);
-};
-
-// To be implemented by clients of StoryController to be notified of
-// changes of the Story. NOTE(mesch): TBD what we really want. It's just a
-// skeleton right now. Conceivably there could be just one method with
-// an updated StoryInfo value as its argument, or each method could
-// have such an argument.
-interface StoryWatcher {
-  // Story starts.
-  OnStart();
-
-  // Data is written to the root link.
-  OnData();
-
-  // Story stopped after Story.Stop() was called.
-  OnStop();
-
-  // Story done by its root module calling Done().
-  OnDone();
-
-  // The root module could not be started.
-  OnError();
 };
 
 // This interface is implemented by clients of StoryProvider.
