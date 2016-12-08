@@ -123,16 +123,27 @@ mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
 
 }  // namespace
 
+// static
+const char* Process::StateName(Process::State state) {
+#define CASE_TO_STR(x) \
+  case x:              \
+    return #x
+  switch (state) {
+    CASE_TO_STR(Process::State::kNew);
+    CASE_TO_STR(Process::State::kStarting);
+    CASE_TO_STR(Process::State::kRunning);
+    CASE_TO_STR(Process::State::kGone);
+    default:
+      break;
+  }
+#undef CASE_TO_STR
+  return "(unknown)";
+}
+
 Process::Process(Server* server, Delegate* delegate, const vector<string>& argv)
     : server_(server),
       delegate_(delegate),
       argv_(argv),
-      launchpad_(nullptr),
-      process_id_(MX_KOID_INVALID),
-      base_address_(0),
-      entry_address_(0),
-      eport_key_(0),
-      started_(false),
       memory_(this),
       breakpoints_(this) {
   FTL_DCHECK(server_);
@@ -147,8 +158,15 @@ Process::~Process() {
   if (launchpad_)
     launchpad_destroy(launchpad_);
 
+  if (debug_handle_ != MX_HANDLE_INVALID)
+    mx_handle_close(debug_handle_);
+
   // TODO(armanisto): Somehow kill the process here if it's running.
   // launchpad_destroy doesn't seem to do this.
+}
+
+std::string Process::GetName() const {
+  return ftl::StringPrintf("%" PRId64, id());
 }
 
 bool Process::Initialize() {
@@ -157,6 +175,18 @@ bool Process::Initialize() {
   FTL_DCHECK(!eport_key_);
 
   mx_status_t status;
+
+  // The Process object survives run-after-run. Switch Gone back to New.
+  switch (state_) {
+    case State::kNew:
+      break;
+    case State::kGone:
+      set_state(State::kNew);
+      break;
+    default:
+      // Shouldn't get here if process is currently live.
+      FTL_DCHECK(false);
+  }
 
   if (!SetupLaunchpad(&launchpad_, argv_))
     return false;
@@ -169,11 +199,11 @@ bool Process::Initialize() {
   FTL_LOG(INFO) << "Binary loaded";
 
   // Initialize the PID.
-  process_id_ = GetProcessId(launchpad_);
-  FTL_DCHECK(process_id_ != MX_KOID_INVALID);
+  id_ = GetProcessId(launchpad_);
+  FTL_DCHECK(id_ != MX_KOID_INVALID);
 
   // Now we need a debug-capable handle of the process.
-  debug_handle_.reset(GetProcessDebugHandle(process_id_));
+  debug_handle_ = GetProcessDebugHandle(id_);
   if (!debug_handle_)
     goto fail;
 
@@ -202,8 +232,10 @@ bool Process::Initialize() {
   return true;
 
 fail:
-  process_id_ = MX_KOID_INVALID;
-  debug_handle_.reset();
+  id_ = MX_KOID_INVALID;
+  if (debug_handle_ != MX_HANDLE_INVALID)
+    mx_handle_close(debug_handle_);
+  debug_handle_ = MX_HANDLE_INVALID;
   launchpad_destroy(launchpad_);
   launchpad_ = nullptr;
   return false;
@@ -230,21 +262,18 @@ bool Process::Attach() {
   return true;
 }
 
-bool Process::Detach() {
+void Process::Detach() {
+  // A copy of the handle is kept in ExceptionPort.BindData.
+  // We can't close the process handle until we unbind the exception port,
+  // so verify it's still open.
   FTL_DCHECK(debug_handle_);
-
-  if (!IsAttached()) {
-    FTL_LOG(ERROR) << "Cannot detach an already detached process";
-    return false;
-  }
+  FTL_DCHECK(IsAttached());
 
   FTL_DCHECK(eport_key_);
   if (!server_->exception_port()->Unbind(eport_key_))
     FTL_LOG(WARNING) << "Failed to unbind exception port; ignoring";
 
   eport_key_ = 0;
-
-  return true;
 }
 
 bool Process::Start() {
@@ -259,18 +288,57 @@ bool Process::Start() {
   // launchpad_start returns a dup of the process handle (owned by
   // |launchpad_|), where the original handle is given to the child. We have to
   // close the dup handle to avoid leaking it.
-  mx::process dup_handle(launchpad_start(launchpad_));
-  if (dup_handle.get() < 0) {
-    util::LogErrorWithMxStatus("Failed to start inferior process",
-                               dup_handle.get());
+  mx_handle_t dup_handle = launchpad_start(launchpad_);
+
+  // Launchpad is no longer needed after launchpad_start returns.
+  launchpad_destroy(launchpad_);
+  launchpad_ = nullptr;
+
+  if (dup_handle < 0) {
+    util::LogErrorWithMxStatus("Failed to start inferior process", dup_handle);
     return false;
   }
-
-  FTL_DCHECK(dup_handle);
+  mx_handle_close(dup_handle);
 
   started_ = true;
+  set_state(State::kStarting);
 
   return true;
+}
+
+void Process::set_state(State new_state) {
+  switch (new_state) {
+    case State::kNew:
+      FTL_DCHECK(state_ == State::kGone);
+      break;
+    case State::kStarting:
+      FTL_DCHECK(state_ == State::kNew);
+      break;
+    case State::kRunning:
+      FTL_DCHECK(state_ == State::kStarting);
+      break;
+    case State::kGone:
+      FTL_DCHECK(state_ == State::kStarting || state_ == State::kRunning);
+      break;
+    default:
+      FTL_DCHECK(false);
+  }
+  state_ = new_state;
+}
+
+void Process::FinishExit() {
+  Detach();
+  threads_.clear();
+
+  // We close the handle here so the o/s will release the process.
+  mx_handle_close(debug_handle_);
+  debug_handle_ = MX_HANDLE_INVALID;
+  id_ = MX_KOID_INVALID;
+  base_address_ = 0;
+  entry_address_ = 0;
+  started_ = false;
+
+  // Leave the state as kGone.
 }
 
 bool Process::IsAttached() const {
@@ -285,15 +353,21 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
   }
 
   const auto iter = threads_.find(thread_id);
-  if (iter != threads_.end())
-    return iter->second.get();
+  if (iter != threads_.end()) {
+    Thread* thread = iter->second.get();
+    if (thread->state() == Thread::State::kGone) {
+      FTL_VLOG(1) << "FindThreadById: Thread " << thread->GetDebugName()
+                  << " is gone";
+      return nullptr;
+    }
+    return thread;
+  }
 
   // Try to get a debug capable handle to the child of the current process with
   // a kernel object ID that matches |thread_id|.
   mx_handle_t thread_debug_handle;
-  mx_status_t status =
-      mx_object_get_child(debug_handle_.get(), thread_id, MX_RIGHT_SAME_RIGHTS,
-                          &thread_debug_handle);
+  mx_status_t status = mx_object_get_child(
+      debug_handle_, thread_id, MX_RIGHT_SAME_RIGHTS, &thread_debug_handle);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
                                status);
@@ -319,8 +393,8 @@ bool Process::RefreshAllThreads() {
   // buffer.
   size_t num_threads;
   mx_status_t status =
-      mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
-                         nullptr, 0, nullptr, &num_threads);
+      mx_object_get_info(debug_handle_, MX_INFO_PROCESS_THREADS, nullptr, 0,
+                         nullptr, &num_threads);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Failed to get process thread info", status);
     return false;
@@ -329,7 +403,7 @@ bool Process::RefreshAllThreads() {
   auto buffer_size = num_threads * sizeof(mx_koid_t);
   auto koids = std::make_unique<mx_koid_t[]>(num_threads);
   size_t records_read;
-  status = mx_object_get_info(debug_handle_.get(), MX_INFO_PROCESS_THREADS,
+  status = mx_object_get_info(debug_handle_, MX_INFO_PROCESS_THREADS,
                               koids.get(), buffer_size, &records_read, nullptr);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Failed to get process thread info", status);
@@ -342,8 +416,8 @@ bool Process::RefreshAllThreads() {
   for (size_t i = 0; i < num_threads; ++i) {
     mx_koid_t thread_id = koids[i];
     mx_handle_t thread_debug_handle = MX_HANDLE_INVALID;
-    status = mx_object_get_child(debug_handle_.get(), thread_id,
-                                 MX_RIGHT_SAME_RIGHTS, &thread_debug_handle);
+    status = mx_object_get_child(debug_handle_, thread_id, MX_RIGHT_SAME_RIGHTS,
+                                 &thread_debug_handle);
     if (status != NO_ERROR) {
       util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
                                  status);
@@ -364,6 +438,14 @@ void Process::ForEachThread(const ThreadCallback& callback) {
     callback(iter.second.get());
 }
 
+void Process::ForEachLiveThread(const ThreadCallback& callback) {
+  for (const auto& iter : threads_) {
+    Thread* thread = iter.second.get();
+    if (thread->state() != Thread::State::kGone)
+      callback(thread);
+  }
+}
+
 bool Process::ReadMemory(uintptr_t address, void* out_buffer, size_t length) {
   return memory_.Read(address, out_buffer, length);
 }
@@ -374,9 +456,9 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
 
 void Process::OnException(const mx_excp_type_t type,
                           const mx_exception_context_t& context) {
-  FTL_LOG(INFO) << "Process exception received";
-
-  Thread* thread = FindThreadById(context.tid);
+  Thread* thread = nullptr;
+  if (context.tid != MX_KOID_INVALID)
+    thread = FindThreadById(context.tid);
 
   // |type| could either map to an architectural exception or Magenta-defined
   // synthetic exceptions.
@@ -394,16 +476,40 @@ void Process::OnException(const mx_excp_type_t type,
       FTL_DCHECK(thread);
       FTL_DCHECK(thread->state() == Thread::State::kNew);
       delegate_->OnThreadStarted(this, thread, context);
-      return;
+      break;
     case MX_EXCP_GONE:
-      FTL_VLOG(1) << "Received MX_EXCP_GONE exception";
-      if (thread)
+      if (thread) {
+        FTL_VLOG(1) << "Received MX_EXCP_GONE exception for thread "
+                    << thread->GetName();
         thread->set_state(Thread::State::kGone);
-      delegate_->OnProcessOrThreadExited(this, type, context);
-      return;
+        // TODO: Split up OnProcessOrThreadExited into process/thread.
+        delegate_->OnProcessOrThreadExited(this, thread, type, context);
+        thread->FinishExit();
+      } else {
+        FTL_VLOG(1) << "Received MX_EXCP_GONE exception for process "
+                    << GetName();
+        set_state(Process::State::kGone);
+        delegate_->OnProcessOrThreadExited(this, thread, type, context);
+        FinishExit();
+      }
+      break;
     default:
       FTL_LOG(ERROR) << "Ignoring unrecognized synthetic exception: " << type;
       break;
+  }
+}
+
+int Process::ExitCode() {
+  FTL_DCHECK(state_ == State::kGone);
+  mx_info_process_t info;
+  auto status = mx_object_get_info(handle(), MX_INFO_PROCESS, &info,
+                                   sizeof(info), NULL, NULL);
+  if (status == NO_ERROR) {
+    FTL_LOG(INFO) << "Process exited with code " << info.return_code;
+    return info.return_code;
+  } else {
+    util::LogErrorWithMxStatus("Error getting process exit code", status);
+    return -1;
   }
 }
 

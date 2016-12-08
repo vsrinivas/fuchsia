@@ -686,8 +686,8 @@ bool CommandHandler::HandleQueryCurrentThreadId(
     }
   }
 
-  std::string thread_id = ftl::NumberToString<mx_koid_t>(
-      current_thread->thread_id(), ftl::Base::k16);
+  std::string thread_id =
+      ftl::NumberToString<mx_koid_t>(current_thread->id(), ftl::Base::k16);
 
   std::string reply = "QC" + thread_id;
   callback(reply);
@@ -772,9 +772,9 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
 
   std::deque<std::string> thread_ids;
   size_t buf_size = 0;
-  current_process->ForEachThread([&thread_ids, &buf_size](Thread* thread) {
+  current_process->ForEachLiveThread([&thread_ids, &buf_size](Thread* thread) {
     std::string thread_id =
-        ftl::NumberToString<mx_koid_t>(thread->thread_id(), ftl::Base::k16);
+        ftl::NumberToString<mx_koid_t>(thread->id(), ftl::Base::k16);
     buf_size += thread_id.length();
     thread_ids.push_back(thread_id);
   });

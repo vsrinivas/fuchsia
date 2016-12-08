@@ -26,14 +26,21 @@ class Thread final {
     kNew,
     kGone,
     kStopped,
-    kRunning
+    kRunning,
   };
 
-  Thread(Process* process, mx_handle_t debug_handle, mx_koid_t thread_id);
+  Thread(Process* process, mx_handle_t debug_handle, mx_koid_t id);
   ~Thread();
 
+  Process* process() const { return process_; }
   mx_handle_t debug_handle() const { return debug_handle_; }
-  mx_koid_t thread_id() const { return thread_id_; }
+  mx_koid_t id() const { return id_; }
+
+  std::string GetName() const;
+
+  // Same as GetName() except includes the ids in hex.
+  // This helps matching with thread names in packets.
+  std::string GetDebugName() const;
 
   // Returns a weak pointer to this Thread instance.
   ftl::WeakPtr<Thread> AsWeakPtr();
@@ -45,6 +52,8 @@ class Thread final {
 
   // Returns the current state of this thread.
   State state() const { return state_; }
+
+  static const char* StateName(Thread::State state);
 
   // Returns a GDB signal number based on the current exception context. If no
   // exception context was set on this Thread or if the exception data from the
@@ -63,7 +72,10 @@ class Thread final {
   friend class Process;
 
   // Called by Process to set the state of its threads.
-  void set_state(State state) { state_ = state; }
+  void set_state(State state);
+
+  // Called after all other processing of a thread exit has been done.
+  void FinishExit();
 
   // The owning process.
   Process* process_;  // weak
@@ -71,8 +83,8 @@ class Thread final {
   // The debug-capable handle that we use to invoke mx_debug_* syscalls.
   mx_handle_t debug_handle_;
 
-  // The thread ID (also the kernel object ID) associated with this thread.
-  mx_koid_t thread_id_;
+  // The thread ID (also the kernel object ID) of this thread.
+  mx_koid_t id_;
 
   // The arch::Registers object associated with this thread.
   std::unique_ptr<arch::Registers> registers_;

@@ -153,6 +153,7 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
                        Thread* thread,
                        const mx_exception_context_t& context) override;
   void OnProcessOrThreadExited(Process* process,
+                               Thread* thread,
                                const mx_excp_type_t type,
                                const mx_exception_context_t& context) override;
   void OnArchitecturalException(Process* process,

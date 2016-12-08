@@ -11,7 +11,6 @@
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
-#include <mx/process.h>
 
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -25,10 +24,14 @@
 namespace debugserver {
 
 class Server;
+class Thread;
 
 // Represents an inferior process that the stub is currently attached to.
 class Process final {
  public:
+ public:
+  enum class State { kNew, kStarting, kRunning, kGone };
+
   // Delegate interface for listening to Process life-time events.
   class Delegate {
    public:
@@ -44,6 +47,7 @@ class Process final {
     // with that specific thread ID is gone.
     virtual void OnProcessOrThreadExited(
         Process* process,
+        Thread* thread,
         const mx_excp_type_t type,
         const mx_exception_context_t& context) = 0;
 
@@ -62,8 +66,20 @@ class Process final {
                    const std::vector<std::string>& argv);
   ~Process();
 
+  std::string GetName() const;
+
+  // Returns the current state of this process.
+  State state() const { return state_; }
+
+  // Change the state to |new_state|.
+  void set_state(State new_state);
+
+  static const char* StateName(Process::State state);
+
   // Creates and initializes the inferior process but does not start it. Returns
   // false if there is an error.
+  // Do not call this if the process is currently live (state is kStarting or
+  // kRunning).
   bool Initialize();
 
   // Binds an exception port for receiving exceptions from the inferior process.
@@ -72,7 +88,7 @@ class Process final {
   bool Attach();
 
   // Detaches an attached process.
-  bool Detach();
+  void Detach();
 
   // Starts running the process. Returns false in case of an error. Initialize()
   // MUST be called successfully before calling Start().
@@ -86,10 +102,10 @@ class Process final {
 
   // Returns the process handle. This handle is owned and managed by this
   // Process instance, thus the caller should not close the handle.
-  mx_handle_t handle() const { return debug_handle_.get(); }
+  mx_handle_t handle() const { return debug_handle_; }
 
   // Returns the process ID.
-  mx_koid_t id() const { return process_id_; }
+  mx_koid_t id() const { return id_; }
 
   // Returns a mutable handle to the set of breakpoints managed by this process.
   arch::ProcessBreakpointSet* breakpoints() { return &breakpoints_; }
@@ -108,6 +124,7 @@ class Process final {
   // Returns an arbitrary thread that is owned by this process. This picks the
   // first thread that is returned from mx_object_get_info for the
   // MX_INFO_PROCESS_THREADS topic. This will refresh all threads.
+  // TODO(dje): ISTR GNU gdbserver being more random to avoid starving threads.
   Thread* PickOneThread();
 
   // Refreshes the complete Thread list for this process. Returns false if an
@@ -119,6 +136,8 @@ class Process final {
   // returns, so it is safe to bind local variables to |callback|.
   using ThreadCallback = std::function<void(Thread*)>;
   void ForEachThread(const ThreadCallback& callback);
+  // Same as ForEachThread except ignores State::Gone threads.
+  void ForEachLiveThread(const ThreadCallback& callback);
 
   // Reads the block of memory of length |length| bytes starting at address
   // |address| into |out_buffer|. |out_buffer| must be at least as large as
@@ -130,12 +149,18 @@ class Process final {
   // on failure.
   bool WriteMemory(uintptr_t address, const void* data, size_t length);
 
+  // Fetch the process's exit code.
+  int ExitCode();
+
  private:
   Process() = default;
 
   // The exception handler invoked by ExceptionPort.
   void OnException(const mx_excp_type_t type,
                    const mx_exception_context_t& context);
+
+  // Called after all other processing of a process exit has been done.
+  void FinishExit();
 
   // The server that owns us.
   Server* server_;  // weak
@@ -148,25 +173,28 @@ class Process final {
 
   // The launchpad_t instance used to bootstrap and run the process. The Process
   // owns this instance and holds on to it until it gets destroyed.
-  launchpad_t* launchpad_;
+  launchpad_t* launchpad_ = nullptr;
 
   // The debug-capable handle that we use to invoke mx_debug_* syscalls.
-  mx::process debug_handle_;
+  mx_handle_t debug_handle_ = MX_HANDLE_INVALID;
 
-  // The process ID.
-  mx_koid_t process_id_;
+  // The current state of this process.
+  State state_ = State::kNew;
+
+  // The process ID (also the kernel object ID).
+  mx_koid_t id_ = MX_KOID_INVALID;
 
   // The base load address of the dynamic linker.
-  mx_vaddr_t base_address_;
+  mx_vaddr_t base_address_ = 0;
 
   // The entry point of the dynamic linker.
-  mx_vaddr_t entry_address_;
+  mx_vaddr_t entry_address_ = 0;
 
   // The key we receive after binding an exception port.
-  ExceptionPort::Key eport_key_;
+  ExceptionPort::Key eport_key_ = 0;
 
   // True, if the inferior has been run via a call to Start().
-  bool started_;
+  bool started_ = false;
 
   // The API to access memory.
   ProcessMemory memory_;

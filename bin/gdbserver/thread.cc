@@ -4,19 +4,23 @@
 
 #include "thread.h"
 
+#include <cinttypes>
 #include <string>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/exception.h>
 
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_printf.h"
 
+#include "arch.h"
+#include "process.h"
 #include "util.h"
 
 namespace debugserver {
-namespace {
 
-std::string ThreadStateToString(Thread::State state) {
+// static
+const char* Thread::StateName(Thread::State state) {
 #define CASE_TO_STR(x) \
   case x:              \
     return #x
@@ -32,25 +36,47 @@ std::string ThreadStateToString(Thread::State state) {
   return "(unknown)";
 }
 
-}  // namespace
-
-Thread::Thread(Process* process, mx_handle_t debug_handle, mx_koid_t thread_id)
+Thread::Thread(Process* process, mx_handle_t debug_handle, mx_koid_t id)
     : process_(process),
       debug_handle_(debug_handle),
-      thread_id_(thread_id),
+      id_(id),
       state_(State::kNew),
       breakpoints_(this),
       weak_ptr_factory_(this) {
   FTL_DCHECK(process_);
   FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
-  FTL_DCHECK(thread_id_ != MX_KOID_INVALID);
+  FTL_DCHECK(id_ != MX_KOID_INVALID);
 
   registers_ = arch::Registers::Create(this);
   FTL_DCHECK(registers_.get());
 }
 
 Thread::~Thread() {
-  mx_handle_close(debug_handle_);
+  FTL_VLOG(2) << "Destructing thread " << GetDebugName();
+  // We don't use the mx classes so we must manually close this handle.
+  if (debug_handle_ != MX_HANDLE_INVALID)
+    mx_handle_close(debug_handle_);
+}
+
+std::string Thread::GetName() const {
+  return ftl::StringPrintf("%" PRId64 ".%" PRId64, process_->id(), id());
+}
+
+std::string Thread::GetDebugName() const {
+  return ftl::StringPrintf("%" PRId64 ".%" PRId64 "(%" PRIx64 ".%" PRIx64 ")",
+                           process_->id(), id(), process_->id(), id());
+}
+
+void Thread::set_state(State state) {
+  FTL_DCHECK(state != State::kNew);
+  state_ = state;
+}
+
+void Thread::FinishExit() {
+  // We close the handle here so the o/s will release the thread.
+  if (debug_handle_ != MX_HANDLE_INVALID)
+    mx_handle_close(debug_handle_);
+  debug_handle_ = MX_HANDLE_INVALID;
 }
 
 ftl::WeakPtr<Thread> Thread::AsWeakPtr() {
@@ -72,9 +98,14 @@ void Thread::SetExceptionContext(const mx_exception_context_t& context) {
 bool Thread::Resume() {
   if (state() != State::kStopped && state() != State::kNew) {
     FTL_LOG(ERROR) << "Cannot resume a thread while in state: "
-                   << ThreadStateToString(state());
+                   << StateName(state());
     return false;
   }
+
+  // This is printed here before resuming the task so that this is always
+  // printed before any subsequent exception report (which is read by another
+  // thread).
+  FTL_VLOG(2) << "Thread " << GetName() << " is now running";
 
   mx_status_t status = mx_task_resume(debug_handle_, MX_RESUME_EXCEPTION);
   if (status < 0) {
@@ -83,7 +114,7 @@ bool Thread::Resume() {
   }
 
   state_ = State::kRunning;
-  FTL_LOG(INFO) << "Thread (tid = " << thread_id_ << ") is running";
+  FTL_LOG(INFO) << "Thread (tid = " << id_ << ") is running";
 
   return true;
 }

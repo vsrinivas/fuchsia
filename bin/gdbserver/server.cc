@@ -321,6 +321,7 @@ void Server::OnThreadStarted(Process* process,
 }
 
 void Server::OnProcessOrThreadExited(Process* process,
+                                     Thread* thread,
                                      const mx_excp_type_t type,
                                      const mx_exception_context_t& context) {
   // TODO(armansito): Implement
