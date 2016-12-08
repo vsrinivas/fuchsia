@@ -17,7 +17,6 @@ type MojoWriteMessageFlags uint32
 type MojoReadMessageFlags uint32
 type MojoWriteDataFlags uint32
 type MojoReadDataFlags uint32
-type MojoCreateDataPipeOptionsFlags uint32
 type MojoCreateChannelOptionsFlags uint32
 type MojoCreateVmoOptionsFlags uint32
 type MojoDuplicateBufferHandleOptionsFlags uint32
@@ -65,10 +64,9 @@ const (
 	MOJO_WRITE_DATA_FLAG_NONE        MojoWriteDataFlags = 0
 	MOJO_WRITE_DATA_FLAG_ALL_OR_NONE MojoWriteDataFlags = 1 << 0
 
-	MOJO_CREATE_DATA_PIPE_OPTIONS_FLAG_NONE    MojoCreateDataPipeOptionsFlags    = 0
 	MOJO_CREATE_MESSAGE_PIPE_OPTIONS_FLAG_NONE MojoCreateChannelOptionsFlags = 0
 
-	MOJO_CREATE_SHARED_BUFFER_OPTIONS_FLAG_NONE    MojoCreateVmoOptionsFlags    = 0
+	MOJO_CREATE_SHARED_BUFFER_OPTIONS_FLAG_NONE    MojoCreateVmoOptionsFlags             = 0
 	MOJO_DUPLICATE_BUFFER_HANDLE_OPTIONS_FLAG_NONE MojoDuplicateBufferHandleOptionsFlags = 0
 	MOJO_MAP_BUFFER_FLAG_NONE                      MojoMapBufferFlags                    = 0
 	MOJO_BUFFER_INFORMATION_FLAG_NONE              MojoBufferInformationFlags            = 0
@@ -98,16 +96,6 @@ type MojoHandleSignalsState struct {
 	// was |MOJO_SYSTEM_RESULT_FAILED_PRECONDITION|, you can use this field to
 	// determine which, if any, of the signals can still be satisfied.
 	SatisfiableSignals MojoHandleSignals
-}
-
-// DataPipeOptions is used to specify creation parameters for a data pipe.
-type DataPipeOptions struct {
-	Flags MojoCreateDataPipeOptionsFlags
-	// The size of an element in bytes. All transactions and buffers will
-	// be an integral number of elements.
-	ElemSize uint32
-	// The capacity of the data pipe in bytes. Must be a multiple of elemSize.
-	Capacity uint32
 }
 
 // ChannelOptions is used to specify creation parameters for a message pipe.

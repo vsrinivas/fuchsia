@@ -100,7 +100,7 @@ import (
 // SIMPLE_TYPE          -> bool | FLOAT_TYPE | INTEGER_TYPE
 // FLOAT_TYPE           -> float | double
 // HANDLE_TYPE          -> handle langle [HANDLE_KIND] rangle [qstn]
-// HANDLE_KIND          -> channel | data_pipe_consumer | data_pipe_producer | vmo | process | thread | event | port
+// HANDLE_KIND          -> channel | vmo | process | thread | event | port
 // INTEGER_TYPE         -> int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64
 // STRING_TYPE          -> string [qstn]
 // ARRAY_TYPE           -> array langle TYPE [comma int_const_dec] rangle [qstn]
@@ -1297,7 +1297,7 @@ func (p *Parser) parseType() core.TypeRef {
 // SIMPLE_TYPE          -> bool | FLOAT_TYPE | INTEGER_TYPE
 // FLOAT_TYPE           -> float | double
 // HANDLE_TYPE          -> handle langle [HANDLE_KIND] rangle [qstn]
-// HANDLE_KIND          -> channel | data_pipe_consumer | data_pipe_producer | vmo | process | thread | event | port
+// HANDLE_KIND          -> channel | vmo | process | thread | event | port
 // INTEGER_TYPE         -> int8 | int16 | int32 | int64 | uint8 | uint16 | uint32 | uint64
 // STRING_TYPE          -> string [qstn]
 func (p *Parser) tryParseBuiltInType() core.TypeRef {

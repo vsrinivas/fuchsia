@@ -387,24 +387,6 @@ func (d *Decoder) ReadChannelHandle() (system.ChannelHandle, error) {
 	}
 }
 
-// ReadConsumerHandle reads a data pipe consumer handle.
-func (d *Decoder) ReadConsumerHandle() (system.ConsumerHandle, error) {
-	if handle, err := d.ReadUntypedHandle(); err != nil {
-		return nil, err
-	} else {
-		return handle.ToConsumerHandle(), nil
-	}
-}
-
-// ReadProducerHandle reads a data pipe producer handle.
-func (d *Decoder) ReadProducerHandle() (system.ProducerHandle, error) {
-	if handle, err := d.ReadUntypedHandle(); err != nil {
-		return nil, err
-	} else {
-		return handle.ToProducerHandle(), nil
-	}
-}
-
 // ReadVmoHandle reads a shared buffer handle.
 func (d *Decoder) ReadVmoHandle() (system.VmoHandle, error) {
 	if handle, err := d.ReadUntypedHandle(); err != nil {

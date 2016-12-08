@@ -521,14 +521,6 @@ def IsGenericHandleKind(kind):
   return kind.spec == HANDLE.spec or kind.spec == NULLABLE_HANDLE.spec
 
 
-def IsDataPipeConsumerKind(kind):
-  return kind.spec == DCPIPE.spec or kind.spec == NULLABLE_DCPIPE.spec
-
-
-def IsDataPipeProducerKind(kind):
-  return kind.spec == DPPIPE.spec or kind.spec == NULLABLE_DPPIPE.spec
-
-
 def IsChannelKind(kind):
   return kind.spec == CHANNEL.spec or kind.spec == NULLABLE_CHANNEL.spec
 
@@ -605,8 +597,6 @@ def IsPointerKind(kind):
 # aggregate type consisting of a handle and a version number.
 def IsAnyHandleKind(kind):
   return (IsGenericHandleKind(kind) or
-          IsDataPipeConsumerKind(kind) or
-          IsDataPipeProducerKind(kind) or
           IsChannelKind(kind) or
           IsVMOKind(kind) or
           IsProcessKind(kind) or

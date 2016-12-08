@@ -5,9 +5,6 @@
 #include <functional>
 #include <utility>
 
-#include <mx/datapipe.h>
-#include <magenta/syscalls/datapipe.h>
-
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/internal/bindings_internal.h"
@@ -98,23 +95,6 @@ class SampleFactoryImpl : public sample::Factory {
     if (request->obj)
       imported::ImportedInterfacePtr::Create(std::move(request->obj))
           ->DoSomething();
-  }
-
-  void DoStuff2(mx::datapipe_consumer pipe,
-                const DoStuff2Callback& callback) override {
-    // Read the data from the pipe, writing the response (as a string) to
-    // DidStuff2().
-    ASSERT_TRUE(pipe);
-    mx_size_t data_size = 0u;
-    ASSERT_EQ(NO_ERROR, pipe.read(MX_DATAPIPE_READ_FLAG_QUERY, nullptr, 0,
-              &data_size));
-    ASSERT_NE(0, static_cast<int>(data_size));
-    char data[64];
-    ASSERT_LT(static_cast<int>(data_size), 64);
-    ASSERT_EQ(NO_ERROR, pipe.read(MX_DATAPIPE_READ_FLAG_ALL_OR_NONE, data,
-              data_size, &data_size));
-
-    callback(data);
   }
 
   void CreateNamedObject(
@@ -226,50 +206,6 @@ TEST_F(HandlePassingTest, PassInvalid) {
   PumpMessages();
 
   EXPECT_TRUE(*cb.got_response);
-}
-
-struct DoStuff2Callback {
-  DoStuff2Callback(bool* got_response, std::string* got_text_reply)
-      : got_response(got_response), got_text_reply(got_text_reply) {}
-
-  void operator()(const String& text_reply) const {
-    *got_response = true;
-    *got_text_reply = text_reply;
-  }
-
-  bool* got_response;
-  std::string* got_text_reply;
-};
-
-// Verifies DataPipeConsumer can be passed and read from.
-TEST_F(HandlePassingTest, DataPipe) {
-  sample::FactoryPtr factory;
-  SampleFactoryImpl factory_impl(factory.NewRequest());
-
-  // Writes a string to a data pipe and passes the data pipe (consumer) to the
-  // factory.
-  mx::datapipe_producer producer_handle;
-  mx::datapipe_consumer consumer_handle;
-  ASSERT_EQ(NO_ERROR, mx::datapipe<void>::create(1, 1024, 0, &producer_handle,
-                                                 &consumer_handle));
-  std::string expected_text_reply = "got it";
-  // +1 for \0.
-  mx_size_t data_size = static_cast<mx_size_t>(expected_text_reply.size() + 1);
-  ASSERT_EQ(NO_ERROR,
-            producer_handle.write(MX_DATAPIPE_READ_FLAG_ALL_OR_NONE,
-                expected_text_reply.c_str(), data_size, &data_size));
-
-  bool got_response = false;
-  std::string got_text_reply;
-  DoStuff2Callback cb(&got_response, &got_text_reply);
-  factory->DoStuff2(std::move(consumer_handle), cb);
-
-  EXPECT_FALSE(*cb.got_response);
-
-  PumpMessages();
-
-  EXPECT_TRUE(*cb.got_response);
-  EXPECT_EQ(expected_text_reply, *cb.got_text_reply);
 }
 
 TEST_F(HandlePassingTest, PipesAreClosed) {

@@ -265,10 +265,6 @@ func fidlToRustType(t fidl_types.Type, context *Context) string {
 		switch handle_type.Kind {
 		case fidl_types.HandleType_Kind_Channel:
 			type_str = "::magenta::Channel"
-		case fidl_types.HandleType_Kind_DataPipeConsumer:
-			type_str = "::magenta::DataPipeConsumer"
-		case fidl_types.HandleType_Kind_DataPipeProducer:
-			type_str = "::magenta::DataPipeProducer"
 		case fidl_types.HandleType_Kind_Vmo:
 			type_str = "::magenta::Vmo"
 		case fidl_types.HandleType_Kind_Process:

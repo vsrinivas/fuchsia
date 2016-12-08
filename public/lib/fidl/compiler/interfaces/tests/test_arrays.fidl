@@ -23,20 +23,6 @@ struct StructWithInterfaceArray {
   array<StructWithInterface?>? nullable_structs_nullable_array;
 };
 
-struct StructWithDataPipeConsumers {
-  array<handle<data_pipe_consumer>> handles_array;
-  array<handle<data_pipe_consumer>>? handles_nullable_array;
-  array<handle<data_pipe_consumer>?> nullable_handles_array;
-  array<handle<data_pipe_consumer>?>? nullable_handles_nullable_array;
-};
-
-struct StructWithDataPipeProducers {
-  array<handle<data_pipe_producer>> handles_array;
-  array<handle<data_pipe_producer>>? handles_nullable_array;
-  array<handle<data_pipe_producer>?> nullable_handles_array;
-  array<handle<data_pipe_producer>?>? nullable_handles_nullable_array;
-};
-
 struct StructWithSharedBuffers {
   array<handle<vmo>> handles_array;
   array<handle<vmo>>? handles_nullable_array;

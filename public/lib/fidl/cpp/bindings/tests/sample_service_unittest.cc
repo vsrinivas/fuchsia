@@ -7,8 +7,6 @@
 #include <string>
 #include <utility>
 
-#include <mx/datapipe.h>
-
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/fidl/compiler/interfaces/tests/sample_service.fidl.h"
@@ -61,16 +59,6 @@ FooPtr MakeFoo() {
   for (size_t i = 0; i < data.size(); ++i)
     data[i] = static_cast<uint8_t>(data.size() - i);
 
-  auto input_streams = fidl::Array<mx::datapipe_consumer>::New(2);
-  auto output_streams = fidl::Array<mx::datapipe_producer>::New(2);
-  for (size_t i = 0; i < input_streams.size(); ++i) {
-    mx::datapipe_producer producer;
-    mx::datapipe_consumer consumer;
-    mx::datapipe<void>::create(1, 1024, 0, &producer, &consumer);
-    input_streams[i] = std::move(consumer);
-    output_streams[i] = std::move(producer);
-  }
-
   auto array_of_array_of_bools = fidl::Array<fidl::Array<bool>>::New(2);
   for (size_t i = 0; i < 2; ++i) {
     auto array_of_bools = fidl::Array<bool>::New(2);
@@ -92,8 +80,6 @@ FooPtr MakeFoo() {
   foo->extra_bars = std::move(extra_bars);
   foo->data = std::move(data);
   foo->source = std::move(handle1);
-  foo->input_streams = std::move(input_streams);
-  foo->output_streams = std::move(output_streams);
   foo->array_of_array_of_bools = std::move(array_of_array_of_bools);
 
   return foo;
@@ -136,12 +122,6 @@ void CheckFoo(const Foo& foo) {
   for (size_t i = 0; i < foo.data.size(); ++i) {
     EXPECT_EQ(static_cast<uint8_t>(foo.data.size() - i), foo.data[i]) << i;
   }
-
-  EXPECT_FALSE(foo.input_streams.is_null());
-  EXPECT_EQ(2u, foo.input_streams.size());
-
-  EXPECT_FALSE(foo.output_streams.is_null());
-  EXPECT_EQ(2u, foo.output_streams.size());
 
   EXPECT_EQ(2u, foo.array_of_array_of_bools.size());
   for (size_t i = 0; i < foo.array_of_array_of_bools.size(); ++i) {
@@ -228,8 +208,6 @@ void Print(int depth, const char* name, const FooPtr& foo) {
     Print(depth, "extra_bars", foo->extra_bars);
     Print(depth, "data", foo->data);
     Print(depth, "source", foo->source);
-    Print(depth, "input_streams", foo->input_streams);
-    Print(depth, "output_streams", foo->output_streams);
     Print(depth, "array_of_array_of_bools", foo->array_of_array_of_bools);
     --depth;
   }

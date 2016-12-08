@@ -36,14 +36,6 @@ func (h *InvalidHandle) Wait(signals system.MojoHandleSignals, deadline system.M
 	return system.MOJO_SYSTEM_RESULT_INVALID_ARGUMENT, system.MojoHandleSignalsState{}
 }
 
-func (h *InvalidHandle) ToConsumerHandle() system.ConsumerHandle {
-	return h
-}
-
-func (h *InvalidHandle) ToProducerHandle() system.ProducerHandle {
-	return h
-}
-
 func (h *InvalidHandle) ToChannelHandle() system.ChannelHandle {
 	return h
 }

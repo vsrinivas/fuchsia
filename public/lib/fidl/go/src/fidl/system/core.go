@@ -35,11 +35,6 @@ type Core interface {
 	//       happen with errors such as MOJO_SYSTEM_RESULT_INVALID_ARGUMENT.
 	WaitMany(handles []Handle, signals []MojoHandleSignals, deadline MojoDeadline) (result MojoResult, index int, states []MojoHandleSignalsState)
 
-	// CreateDataPipe creates a data pipe which is a unidirectional
-	// communication channel for unframed data. On success, returns a
-	// handle to the producer and consumer of the data pipe.
-	CreateDataPipe(opts *DataPipeOptions) (MojoResult, ProducerHandle, ConsumerHandle)
-
 	// CreateChannel creates a message pipe which is a bidirectional
 	// communication channel for framed data (i.e., messages). Messages
 	// can contain plain data and/or Mojo handles. On success, it returns
@@ -111,20 +106,6 @@ func (impl *coreImpl) WaitMany(handles []Handle, signals []MojoHandleSignals, de
 		signalsStates[i].SatisfiableSignals = MojoHandleSignals(rawSatisfiableSignals[i])
 	}
 	return MojoResult(r), index, signalsStates
-}
-
-func (impl *coreImpl) CreateDataPipe(opts *DataPipeOptions) (MojoResult, ProducerHandle, ConsumerHandle) {
-
-	var r uint32
-	var p, c uint32
-	impl.mu.Lock()
-	if opts == nil {
-		r, p, c = sysImpl.CreateDataPipeWithDefaultOptions()
-	} else {
-		r, p, c = sysImpl.CreateDataPipe(uint32(opts.Flags), uint32(opts.ElemSize), uint32(opts.Capacity))
-	}
-	impl.mu.Unlock()
-	return MojoResult(r), impl.AcquireNativeHandle(MojoHandle(p)).ToProducerHandle(), impl.AcquireNativeHandle(MojoHandle(c)).ToConsumerHandle()
 }
 
 func (impl *coreImpl) CreateChannel(opts *ChannelOptions) (MojoResult, ChannelHandle, ChannelHandle) {

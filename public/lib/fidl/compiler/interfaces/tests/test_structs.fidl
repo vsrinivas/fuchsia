@@ -66,11 +66,7 @@ struct NoDefaultFieldValues {
   string f11;
   string? f12;
   handle<channel> f13;
-  handle<data_pipe_consumer> f14;
-  handle<data_pipe_producer> f15;
   handle<channel>? f16;
-  handle<data_pipe_consumer>? f17;
-  handle<data_pipe_producer>? f18;
   handle f19;
   handle? f20;
   handle<vmo> f21;

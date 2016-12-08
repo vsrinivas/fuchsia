@@ -738,8 +738,6 @@ class FileTranslator(object):
     handle_mojom_types = {
         fidl_types_fidl.HandleType.Kind.UNSPECIFIED: module.HANDLE,
         fidl_types_fidl.HandleType.Kind.CHANNEL: module.CHANNEL,
-        fidl_types_fidl.HandleType.Kind.DATA_PIPE_CONSUMER: module.DCPIPE,
-        fidl_types_fidl.HandleType.Kind.DATA_PIPE_PRODUCER: module.DPPIPE,
         fidl_types_fidl.HandleType.Kind.VMO: module.VMO,
         fidl_types_fidl.HandleType.Kind.PROCESS: module.PROCESS,
         fidl_types_fidl.HandleType.Kind.THREAD: module.THREAD,
@@ -753,10 +751,6 @@ class FileTranslator(object):
     nullable_handle_mojom_types = {
         fidl_types_fidl.HandleType.Kind.UNSPECIFIED: module.NULLABLE_HANDLE,
         fidl_types_fidl.HandleType.Kind.CHANNEL: module.NULLABLE_CHANNEL,
-        fidl_types_fidl.HandleType.Kind.DATA_PIPE_CONSUMER:
-        module.NULLABLE_DCPIPE,
-        fidl_types_fidl.HandleType.Kind.DATA_PIPE_PRODUCER:
-        module.NULLABLE_DPPIPE,
         fidl_types_fidl.HandleType.Kind.VMO: module.NULLABLE_VMO,
         fidl_types_fidl.HandleType.Kind.PROCESS: module.NULLABLE_PROCESS,
         fidl_types_fidl.HandleType.Kind.THREAD: module.NULLABLE_THREAD,

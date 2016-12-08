@@ -6,11 +6,7 @@ module fidl.test;
 
 struct AllTheHandles {
   handle<channel> f1;
-  handle<data_pipe_consumer> f2;
-  handle<data_pipe_producer> f3;
   handle<channel>? f4;
-  handle<data_pipe_consumer>? f5;
-  handle<data_pipe_producer>? f6;
   handle f7;
   handle? f8;
   handle<vmo> f9;

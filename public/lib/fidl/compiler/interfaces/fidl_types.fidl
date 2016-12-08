@@ -84,8 +84,6 @@ struct HandleType {
   enum Kind {
     UNSPECIFIED,
     CHANNEL,
-    DATA_PIPE_CONSUMER,
-    DATA_PIPE_PRODUCER,
     VMO,
     PROCESS,
     THREAD,

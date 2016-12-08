@@ -20,11 +20,6 @@ struct StructD {
   array<handle<channel>> message_pipes;
 };
 
-struct StructE {
-  StructD struct_d;
-  handle<data_pipe_consumer> data_pipe_consumer;
-};
-
 struct StructF {
   array<uint8, 3> fixed_size_array;
 };
@@ -82,7 +77,6 @@ interface ConformanceTestInterface {
   Method2(StructB param0, StructA param1);
   Method3(array<bool> param0);
   Method4(StructC param0, array<uint8> param1);
-  Method5(StructE param0, handle<data_pipe_producer> param1);
   Method6(array<array<uint8>> param0);
   Method7(StructF param0, array<array<uint8, 3>?, 2> param1);
   Method8(array<array<string>?> param0);

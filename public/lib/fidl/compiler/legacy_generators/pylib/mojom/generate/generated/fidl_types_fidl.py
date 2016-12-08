@@ -47,8 +47,6 @@ class HandleType(object):
       'Kind': [
           ('UNSPECIFIED', 0),
           ('CHANNEL', 1),
-          ('DATA_PIPE_CONSUMER', 2),
-          ('DATA_PIPE_PRODUCER', 3),
           ('VMO', 4),
           ('PROCESS', 5),
           ('THREAD', 6),
@@ -351,4 +349,3 @@ class LiteralValue(object):
       _descriptor.SingleFieldGroup('uint64_value', _descriptor.TYPE_UINT64, 11, 0),
     ],
    }
-

@@ -505,10 +505,6 @@ func translateHandleType(handleType core.HandleTypeRef) *fidl_types.TypeHandleTy
 		kind = fidl_types.HandleType_Kind_Unspecified
 	case core.HandleKindChannel:
 		kind = fidl_types.HandleType_Kind_Channel
-	case core.HandleKindDataPipeConsumer:
-		kind = fidl_types.HandleType_Kind_DataPipeConsumer
-	case core.HandleKindDataPipeProducer:
-		kind = fidl_types.HandleType_Kind_DataPipeProducer
 	case core.HandleKindVmo:
 		kind = fidl_types.HandleType_Kind_Vmo
 	case core.HandleKindProcess:

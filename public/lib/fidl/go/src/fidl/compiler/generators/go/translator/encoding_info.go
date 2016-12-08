@@ -112,10 +112,6 @@ func (t *translator) handleTypeEncodingInfo(mojomType fidl_types.HandleType) (in
 		info.readFunction = "ReadHandle"
 	case fidl_types.HandleType_Kind_Channel:
 		info.readFunction = "ReadChannelHandle"
-	case fidl_types.HandleType_Kind_DataPipeConsumer:
-		info.readFunction = "ReadConsumerHandle"
-	case fidl_types.HandleType_Kind_DataPipeProducer:
-		info.readFunction = "ReadProducerHandle"
 	case fidl_types.HandleType_Kind_Vmo:
 		info.readFunction = "ReadVmoHandle"
 	}

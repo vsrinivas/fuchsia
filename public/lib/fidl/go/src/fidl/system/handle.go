@@ -44,14 +44,6 @@ type Handle interface {
 type UntypedHandle interface {
 	Handle
 
-	// ToConsumerHandle returns the underlying handle as a ConsumerHandle
-	// and invalidates this UntypedHandle representation.
-	ToConsumerHandle() ConsumerHandle
-
-	// ToProducerHandle returns the underlying handle as a ProducerHandle
-	// and invalidates this UntypedHandle representation.
-	ToProducerHandle() ProducerHandle
-
 	// ToChannelHandle returns the underlying handle as a ChannelHandle
 	// and invalidates this UntypedHandle representation.
 	ToChannelHandle() ChannelHandle
@@ -74,12 +66,11 @@ type UntypedHandle interface {
 //
 // Type structure of handles is the following: there is a struct baseHandle,
 // which serves as a "base class" for all the typed handles (i.e. sharedBuffer,
-// untypedHandleImpl, dataPipeProducer, dataPipeConsumer and messagePipe). We
-// express it by struct embedding. When we operate with handles, we create typed
-// handles and set finalizers on them, while to invalidate a handle and remove
-// finalizer we call methods on the embedded baseHandle struct. So in order for
-// finalizers to work correct we need to make sure that baseHandle is the first
-// component of typed handles.
+// untypedHandleImpl and messagePipe). We express it by struct embedding. When
+// we operate with handles, we create typed handles and set finalizers on them,
+// while to invalidate a handle and remove finalizer we call methods on the
+// embedded baseHandle struct. So in order for finalizers to work correct we
+// need to make sure that baseHandle is the first component of typed handles.
 func finalizeHandle(h Handle) {
 	log.Println("Handle was not closed.")
 	h.Close()
@@ -138,20 +129,6 @@ type untypedHandleImpl struct {
 	// baseHandle should always be the first component of this struct,
 	// see |finalizeHandle()| for more details.
 	baseHandle
-}
-
-func (h *untypedHandleImpl) ToConsumerHandle() ConsumerHandle {
-	handle := &dataPipeConsumer{h.baseHandle}
-	runtime.SetFinalizer(handle, finalizeHandle)
-	h.invalidate()
-	return handle
-}
-
-func (h *untypedHandleImpl) ToProducerHandle() ProducerHandle {
-	handle := &dataPipeProducer{h.baseHandle}
-	runtime.SetFinalizer(handle, finalizeHandle)
-	h.invalidate()
-	return handle
 }
 
 func (h *untypedHandleImpl) ToChannelHandle() ChannelHandle {

@@ -33,10 +33,6 @@ func TestTranslateType(t *testing.T) {
 			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: false}}},
 		{"system.ChannelHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Channel, Nullable: false}}},
-		{"system.ConsumerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
-			Kind: fidl_types.HandleType_Kind_DataPipeConsumer, Nullable: false}}},
-		{"system.ProducerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
-			Kind: fidl_types.HandleType_Kind_DataPipeProducer, Nullable: false}}},
 		{"system.VmoHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Vmo, Nullable: false}}},
 		{"system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{
@@ -57,10 +53,6 @@ func TestTranslateType(t *testing.T) {
 			Kind: fidl_types.HandleType_Kind_Unspecified, Nullable: true}}},
 		{"*system.ChannelHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Channel, Nullable: true}}},
-		{"*system.ConsumerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
-			Kind: fidl_types.HandleType_Kind_DataPipeConsumer, Nullable: true}}},
-		{"*system.ProducerHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
-			Kind: fidl_types.HandleType_Kind_DataPipeProducer, Nullable: true}}},
 		{"*system.VmoHandle", &fidl_types.TypeHandleType{fidl_types.HandleType{
 			Kind: fidl_types.HandleType_Kind_Vmo, Nullable: true}}},
 		{"*system.Handle", &fidl_types.TypeHandleType{fidl_types.HandleType{

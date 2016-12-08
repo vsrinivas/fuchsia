@@ -650,7 +650,7 @@ macro_rules! impl_codable_handle {
 impl_codable_handle!(Handle);
 impl_codable_handle!(::magenta::Channel);
 impl_codable_handle!(::magenta::Vmo);
-// TODO(raph): add other basic handle types here (data pipes, etc)
+// TODO(raph): add other basic handle types 
 
 pub trait CodableUnion : Encodable + Decodable {
     // Encode the object as a pointer reference. Primarily used for nested unions.

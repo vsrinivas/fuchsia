@@ -587,9 +587,7 @@ func TestStructsComputedData(t *testing.T) {
 		string?    f1;
 		handle?    f2;
 		MyStruct?  f3;
-		handle<data_pipe_consumer>?   f4;
 		array<int8>?  f5;
-		handle<data_pipe_producer>?   f6;
 		array<int8, 5>?  f7;
 		handle<channel>?   f8;
 		MyInterface? f9;

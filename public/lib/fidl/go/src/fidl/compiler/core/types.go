@@ -523,8 +523,6 @@ type HandleKind int
 const (
 	HandleKindUnspecified HandleKind = iota
 	HandleKindChannel
-	HandleKindDataPipeConsumer
-	HandleKindDataPipeProducer
 	HandleKindVmo
 	HandleKindProcess
 	HandleKindThread
@@ -538,8 +536,6 @@ const (
 var allHandleKinds = []HandleKind{
 	HandleKindUnspecified,
 	HandleKindChannel,
-	HandleKindDataPipeConsumer,
-	HandleKindDataPipeProducer,
 	HandleKindVmo,
 	HandleKindProcess,
 	HandleKindThread,
@@ -611,10 +607,6 @@ func (h HandleTypeRef) String() string {
 		break
 	case HandleKindChannel:
 		suffix = "<channel>"
-	case HandleKindDataPipeConsumer:
-		suffix = "<data_pipe_consumer>"
-	case HandleKindDataPipeProducer:
-		suffix = "<data_pipe_producer>"
 	case HandleKindVmo:
 		suffix = "<vmo>"
 	case HandleKindProcess:

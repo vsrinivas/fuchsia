@@ -68,8 +68,6 @@ union ObjectUnion {
 union HandleUnion {
   handle f_handle;
   handle<channel> f_message_pipe;
-  handle<data_pipe_consumer> f_data_pipe_consumer;
-  handle<data_pipe_producer> f_data_pipe_producer;
   handle<vmo> f_shared_buffer;
   SmallCache f_small_cache;
 };

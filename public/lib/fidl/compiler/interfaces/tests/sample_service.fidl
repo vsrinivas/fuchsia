@@ -34,11 +34,9 @@ struct Foo {
   array<Bar>? extra_bars@7;
   array<uint8>? data@6;
   handle<channel>? source@9;
-  array<handle<data_pipe_consumer>>? input_streams@10;
-  array<handle<data_pipe_producer>>? output_streams@11;
-  array<array<bool>>? array_of_array_of_bools@12;
-  array<array<array<string>>>? multi_array_of_strings@13;
-  array<bool>? array_of_bools@14;
+  array<array<bool>>? array_of_array_of_bools@10;
+  array<array<array<string>>>? multi_array_of_strings@11;
+  array<bool>? array_of_bools@12;
 };
 
 struct DefaultsTest {

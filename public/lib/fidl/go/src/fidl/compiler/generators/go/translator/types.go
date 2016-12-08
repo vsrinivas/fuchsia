@@ -74,10 +74,6 @@ func (t *translator) translateHandleType(mojomType fidl_types.HandleType) (goTyp
 		goType = "system.Handle"
 	case fidl_types.HandleType_Kind_Channel:
 		goType = "system.ChannelHandle"
-	case fidl_types.HandleType_Kind_DataPipeConsumer:
-		goType = "system.ConsumerHandle"
-	case fidl_types.HandleType_Kind_DataPipeProducer:
-		goType = "system.ProducerHandle"
 	case fidl_types.HandleType_Kind_Vmo:
 		goType = "system.VmoHandle"
 	// TODO(vardhan): Fix the following types to not use generic |system.Handle|.

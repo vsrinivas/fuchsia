@@ -136,10 +136,6 @@ def GetCppArrayArgWrapperType(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
     return "mx::handle<void>"
-  if mojom.IsDataPipeConsumerKind(kind):
-    return "mx::datapipe_consumer"
-  if mojom.IsDataPipeProducerKind(kind):
-    return "mx::datapipe_producer"
   if mojom.IsChannelKind(kind):
     return "mx::channel"
   if mojom.IsVMOKind(kind):
@@ -178,10 +174,6 @@ def GetCppResultWrapperType(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
     return "mx::handle<void>"
-  if mojom.IsDataPipeConsumerKind(kind):
-    return "mx::datapipe_consumer"
-  if mojom.IsDataPipeProducerKind(kind):
-    return "mx::datapipe_producer"
   if mojom.IsChannelKind(kind):
     return "mx::channel"
   if mojom.IsVMOKind(kind):
@@ -220,10 +212,6 @@ def GetCppWrapperType(kind):
     return "::fidl::String"
   if mojom.IsGenericHandleKind(kind):
     return "mx::handle<void>"
-  if mojom.IsDataPipeConsumerKind(kind):
-    return "mx::datapipe_consumer"
-  if mojom.IsDataPipeProducerKind(kind):
-    return "mx::datapipe_producer"
   if mojom.IsChannelKind(kind):
     return "mx::channel"
   if mojom.IsVMOKind(kind):
@@ -262,10 +250,6 @@ def GetCppConstWrapperType(kind):
     return "const ::fidl::String&"
   if mojom.IsGenericHandleKind(kind):
     return "mx::handle<void>"
-  if mojom.IsDataPipeConsumerKind(kind):
-    return "mx::datapipe_consumer"
-  if mojom.IsDataPipeProducerKind(kind):
-    return "mx::datapipe_producer"
   if mojom.IsChannelKind(kind):
     return "mx::channel"
   if mojom.IsVMOKind(kind):

@@ -32,7 +32,6 @@ interface NamedObject {
 interface Factory {
   DoStuff(Request request, handle<channel>? pipe)
       => (Response response, string text);
-  DoStuff2(handle<data_pipe_consumer> pipe) => (string text);
   CreateNamedObject(NamedObject& obj);
   RequestImportedInterface(imported.ImportedInterface& obj)
       => (imported.ImportedInterface& obj);
