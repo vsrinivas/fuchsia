@@ -28,6 +28,7 @@ help:
 	@echo "make list: List of buildable projects"
 	@echo "make clean: cleans build of current project"
 	@echo "make spotless: removes all build directories"
+	@echo "make gigaboot: build the bootloader"
 	@echo "make <project>: try to build project named <project>"
 	@echo ""
 	@echo "Examples:"
