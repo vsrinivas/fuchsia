@@ -1,30 +1,14 @@
 {
     "imports": [
-        "boringssl",
-        "netstack",
-        "vulkan_loader_and_layers"
+        "magma-common"
     ],
     "labels": [
-        "//magma:magma",
-        "//magma:magma_service_driver",
-        "//magma:magma_service_driver_test",
-        "//magma/tests",
-        "//magma/tests:autorun",
-        "//third_party/mesa:tests",
-        "//third_party/mesa:magma_vulkan"
+        "//magma/tests:autorun"
     ],
     "binaries": [
         {
             "binary": "libmsd-intel-gen-test.so",
-            "bootfs_path": "lib/driver/msd-intel-gen-test.so"
-        },
-        {
-            "binary": "libmagma.so",
-            "bootfs_path": "lib/libmagma.so"
-        },
-        {
-            "binary": "libvulkan_magma_intel.so",
-            "bootfs_path": "lib/libvulkan_magma_intel.so"
+            "bootfs_path": "lib/driver/libmsd-intel-gen-test.so"
         },
         {
             "binary": "magma_sys_unit_tests",
@@ -65,12 +49,6 @@
         {
             "binary": "autorun",
             "bootfs_path": "autorun"
-        }
-    ],
-    "resources": [
-        {
-            "bootfs_path": "lib/vulkan/icd.d/intel_magma_icd.json",
-            "file": "third_party/mesa/src/intel/vulkan/intel_magma_icd.json"
         }
     ]
 }

@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "magma-common"
+    ],
+    "binaries": [
+        {
+            "binary": "libmsd-intel-gen.so",
+            "bootfs_path": "lib/driver/libmsd-intel-gen.so"
+        }
+    ]
+}
