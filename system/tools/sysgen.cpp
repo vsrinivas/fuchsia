@@ -479,10 +479,10 @@ struct GenParams {
     GenFn genfn;
     const char* file_postfix;
     const char* entry_prefix;
-    const char* name_prefix;
     const char* empty_args;
-    uint32_t indent_spaces;
-    std::map<string, string> overrides;
+    const char* name_prefix;
+    const char* switch_var;
+    const char* switch_type;
     std::map<uint32_t, string> attributes;
 };
 
@@ -497,9 +497,16 @@ bool generate_file_header(std::ofstream& os) {
     return os.good();
 }
 
-const string override_type(const GenParams& gp, const string& type_name) {
-    auto ft = gp.overrides.find(type_name);
-    return (ft == gp.overrides.end()) ? type_name : ft->second;
+const std::map<string, string> c_overrides = {
+    {"", "void"},
+    {"any[]IN", "const void*"},
+    {"any[]OUT", "void*"},
+    {"any[]INOUT", "void*"}
+};
+
+const string override_type(const string& type_name) {
+    auto ft = c_overrides.find(type_name);
+    return (ft == c_overrides.end()) ? type_name : ft->second;
 }
 
 const string add_attribute(const GenParams& gp, uint32_t attribute) {
@@ -507,13 +514,15 @@ const string add_attribute(const GenParams& gp, uint32_t attribute) {
     return (ft == gp.attributes.end()) ? string() : ft->second;
 }
 
-bool generate_legacy_c(int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+bool generate_legacy_header(int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    constexpr uint32_t indent_spaces = 4u;
+
     if (gp.entry_prefix) {
         os << gp.entry_prefix << " ";
     }
 
     // writes "[return-type] prefix_[syscall-name]("
-    os << override_type(gp, (sc.ret_spec.empty() ? string() : sc.ret_spec[0].to_string()));
+    os << override_type(sc.ret_spec.empty() ? string() : sc.ret_spec[0].to_string());
     os << " " << gp.name_prefix << sc.name << "(";
 
     // Writes all arguments.
@@ -521,9 +530,9 @@ bool generate_legacy_c(int index, const GenParams& gp, std::ofstream& os, const 
         if (!os.good())
             return false;
         // writes each parameter in its own line.
-        os << "\n" << string(gp.indent_spaces, ' ');
+        os << "\n" << string(indent_spaces, ' ');
 
-        auto overrided = override_type(gp, arg.to_string());
+        auto overrided = override_type(arg.to_string());
 
         if (overrided != arg.to_string()) {
             os << overrided << " " << arg.name;
@@ -564,6 +573,15 @@ bool generate_legacy_c(int index, const GenParams& gp, std::ofstream& os, const 
     os.seekp(-1, std::ios_base::end);
 
     os << ";\n\n";
+    return os.good();
+}
+
+bool generate_legacy_code(int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
+        return true;
+    os << "    case " << index << ": " << gp.switch_var
+       << " = reinterpret_cast<" << gp.switch_type << ">(" << gp.name_prefix << sc.name <<");\n"
+       << "       break;\n";
     return os.good();
 }
 
@@ -615,13 +633,6 @@ bool generate_legacy_assembly_arm32(
     return os.good();
 }
 
-const std::map<string, string> c_overrides = {
-    {"", "void"},
-    {"any[]IN", "const void*"},
-    {"any[]OUT", "void*"},
-    {"any[]INOUT", "void*"}
-};
-
 const std::map<uint32_t, string> user_attrs = {
     {Syscall::NORETURN, "__attribute__((noreturn))"},
     {Syscall::VDSOPURE, "__attribute__((leaf, const))"}
@@ -630,6 +641,7 @@ const std::map<uint32_t, string> user_attrs = {
 enum GenType : uint32_t {
     UserHeaderC,
     KernelHeaderCPP,
+    KernelCodeCPP,
     KernelAsmIntel64,
     KernelAsmArm64,
     KernelAsmArm32,
@@ -639,54 +651,57 @@ enum GenType : uint32_t {
 const GenParams gen_params[] = {
     // The user header, pure C.  (UserHeaderC)
     {
-        generate_legacy_c,
+        generate_legacy_header,
         ".user.h",          // file postfix.
         "extern",           // function prefix.
+        "void",             // no-args special type.
         "mx_",              // function name prefix.
-        "void",             // no args special type.
-        4u,                 // argument indent.
-        c_overrides,
-        user_attrs,
+        nullptr,            // switch var (does not apply)
+        nullptr,            // switch type (does not apply)
+        user_attrs,         // attributes dictionary
     },
     // The kernel header, C++.  (KernelHeaderCPP)
     {
-        generate_legacy_c,
+        generate_legacy_header,
         ".kernel.h",        // file postix.
         nullptr,            // no function prefix
+        nullptr,            // no-args special type.
         "sys_",             // function name prefix.
-        nullptr,            // no args.
-        4u,                 // argument indent.
-        c_overrides
+    },
+    {
+        generate_legacy_code,
+        ".kernel.inc",      // file postix.
+        nullptr,            // no function prefix
+        nullptr,            // no-args (does not apply)
+        "sys_",             // function name prefix.
+        "sfunc",            // switch var name
+        "syscall_func"      // switch var type
     },
     //  The assembly file for x86-64 (KernelAsmIntel64).
     {
         generate_legacy_assembly_x64,
         ".x86-64.S",
         nullptr,
-        "m_syscall",
         nullptr,
-        0u
+        "m_syscall",
     },
     //  The assembly include file for ARM64 (KernelAsmArm64).
     {
         generate_legacy_assembly_arm64,
         ".arm64.S",
         nullptr,
-        "m_syscall",
         nullptr,
-        0u
+        "m_syscall",
     },
     //  The assembly include file for ARM32 (KernelAsmArm32).
     {
         generate_legacy_assembly_arm32,
         ".arm32.S",
         nullptr,
-        "m_syscall",
         nullptr,
-        0u,
+        "m_syscall",
     }
 };
-
 
 class SygenGenerator {
 public:
@@ -849,6 +864,8 @@ int main(int argc, char* argv[]) {
     if (!generator.Generate(GenType::UserHeaderC, output_prefix))
         return 1;
     if (!generator.Generate(GenType::KernelHeaderCPP, output_prefix))
+        return 1;
+    if (!generator.Generate(GenType::KernelCodeCPP, output_prefix))
         return 1;
     if (!generator.Generate(GenType::KernelAsmIntel64, output_prefix))
         return 1;
