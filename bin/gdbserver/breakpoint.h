@@ -13,15 +13,17 @@
 namespace debugserver {
 
 class Process;
+class Thread;
 
 namespace arch {
 
-class BreakpointSet;
+class ProcessBreakpointSet;
+class ThreadBreakpointSet;
 
 // Represents a breakpoint.
 class Breakpoint {
  public:
-  Breakpoint(uintptr_t address, size_t kind, BreakpointSet* owner);
+  Breakpoint(uintptr_t address, size_t kind);
   virtual ~Breakpoint() = default;
 
   // Inserts the breakpoint at the memory address it was initialized with.
@@ -35,25 +37,39 @@ class Breakpoint {
   // Returns true if Insert() has been called successfully on this breakpoint.
   virtual bool IsInserted() const = 0;
 
- protected:
   uintptr_t address() const { return address_; }
   size_t kind() const { return kind_; }
-  BreakpointSet* owner() const { return owner_; }
 
  private:
   Breakpoint() = default;
 
   uintptr_t address_;
   size_t kind_;
-  BreakpointSet* owner_;  // weak
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Breakpoint);
 };
 
+class ProcessBreakpoint : public Breakpoint {
+ protected:
+  ProcessBreakpoint(uintptr_t address,
+                    size_t kind,
+                    ProcessBreakpointSet* owner);
+  ProcessBreakpointSet* owner() const { return owner_; }
+
+ private:
+  ProcessBreakpoint() = default;
+
+  ProcessBreakpointSet* owner_;  // weak
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpoint);
+};
+
 // Represents a software breakpoint.
-class SoftwareBreakpoint final : public Breakpoint {
+class SoftwareBreakpoint final : public ProcessBreakpoint {
  public:
-  SoftwareBreakpoint(uintptr_t address, size_t kind, BreakpointSet* owner);
+  SoftwareBreakpoint(uintptr_t address,
+                     size_t kind,
+                     ProcessBreakpointSet* owner);
   ~SoftwareBreakpoint() override;
 
   // Breakpoint overrides
@@ -74,10 +90,10 @@ class SoftwareBreakpoint final : public Breakpoint {
 
 // Represents a collection of breakpoints managed by a process and defines
 // operations for adding and removing them.
-class BreakpointSet final {
+class ProcessBreakpointSet final {
  public:
-  explicit BreakpointSet(Process* process);
-  ~BreakpointSet() = default;
+  explicit ProcessBreakpointSet(Process* process);
+  ~ProcessBreakpointSet() = default;
 
   // Returns a pointer to the process that this object belongs to.
   Process* process() const { return process_; }
@@ -99,7 +115,75 @@ class BreakpointSet final {
   // All currently inserted breakpoints.
   std::unordered_map<uintptr_t, std::unique_ptr<Breakpoint>> breakpoints_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(BreakpointSet);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpointSet);
+};
+
+class ThreadBreakpoint : public Breakpoint {
+ protected:
+  ThreadBreakpoint(uintptr_t address, size_t kind, ThreadBreakpointSet* owner);
+  ThreadBreakpointSet* owner() const { return owner_; }
+
+ private:
+  ThreadBreakpoint() = default;
+
+  ThreadBreakpointSet* owner_;  // weak
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ThreadBreakpoint);
+};
+
+// Represents a single-step breakpoint.
+// This is for h/w based single-stepping only.
+class SingleStepBreakpoint final : public ThreadBreakpoint {
+ public:
+  SingleStepBreakpoint(uintptr_t address, ThreadBreakpointSet* owner);
+  ~SingleStepBreakpoint() override;
+
+  // Breakpoint overrides
+  bool Insert() override;
+  bool Remove() override;
+  bool IsInserted() const override;
+
+ private:
+  SingleStepBreakpoint() = default;
+
+  bool inserted_ = false;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(SingleStepBreakpoint);
+};
+
+// Represents a collection of breakpoints managed by a thread and defines
+// operations for adding and removing them.
+class ThreadBreakpointSet final {
+ public:
+  explicit ThreadBreakpointSet(Thread* thread);
+  ~ThreadBreakpointSet() = default;
+
+  // Returns a pointer to the thread that this object belongs to.
+  Thread* thread() const { return thread_; }
+
+  // Inserts a single-step breakpoint at the specified memory address with the
+  // given kind. |address| is recorded as the current pc value, at the moment
+  // for bookkeeping purposes.
+  // Returns true on success or false on failure.
+  bool InsertSingleStepBreakpoint(uintptr_t address);
+
+  // Removes the single-step breakpoint that was previously inserted.
+  // Returns true on success or false on failure.
+  bool RemoveSingleStepBreakpoint();
+
+  // Returns true if a single-step breakpoint is inserted.
+  bool SingleStepBreakpointInserted();
+
+ private:
+  Thread* thread_;  // weak
+
+  // All currently inserted breakpoints.
+  std::unordered_map<uintptr_t, std::unique_ptr<ThreadBreakpoint>> breakpoints_;
+
+  // There can be only one singlestep breakpoint.
+  std::unique_ptr<ThreadBreakpoint> single_step_breakpoint_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(ThreadBreakpointSet);
 };
 
 }  // namespace arch

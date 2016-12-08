@@ -7,6 +7,8 @@
 #include "lib/ftl/logging.h"
 
 #include "process.h"
+#include "registers.h"
+#include "thread.h"
 
 namespace debugserver {
 namespace arch {
@@ -18,6 +20,8 @@ const uint8_t kInt3 = 0xCC;
 }  // namespace
 
 bool SoftwareBreakpoint::Insert() {
+  // TODO: Handle breakpoints in unloaded solibs.
+
   if (IsInserted()) {
     FTL_LOG(WARNING) << "Breakpoint already inserted";
     return false;
@@ -67,6 +71,67 @@ bool SoftwareBreakpoint::Remove() {
 
 bool SoftwareBreakpoint::IsInserted() const {
   return !original_bytes_.empty();
+}
+
+namespace {
+
+// Set the TF bit in the RFLAGS register of |thread|.
+
+bool SetRflagsTF(Thread* thread, bool enable) {
+#if 0  // needs corresponding reg changes
+  arch::Registers* registers = thread->registers();
+
+  if (!registers->RefreshGeneralRegisters()) {
+    FTL_LOG(ERROR) << "Failed to refresh general regs";
+    return false;
+  }
+  if (!registers->SetSingleStep(enable)) {
+    FTL_LOG(ERROR) << "Failed to set rflags.TF";
+    return false;
+  }
+  if (!registers->WriteGeneralRegisters()) {
+    FTL_LOG(ERROR) << "Failed to write general regs";
+    return false;
+  }
+
+  return true;
+#else
+  return false;
+#endif
+}
+
+}  // anonymous namespace
+
+bool SingleStepBreakpoint::Insert() {
+  if (IsInserted()) {
+    FTL_LOG(WARNING) << "Breakpoint already inserted";
+    return false;
+  }
+
+  // TODO: Manage things like the user having already set TF.
+
+  if (!SetRflagsTF(owner()->thread(), true))
+    return false;
+
+  inserted_ = true;
+  return true;
+}
+
+bool SingleStepBreakpoint::Remove() {
+  if (!IsInserted()) {
+    FTL_LOG(WARNING) << "Breakpoint not inserted";
+    return false;
+  }
+
+  if (!SetRflagsTF(owner()->thread(), false))
+    return false;
+
+  inserted_ = false;
+  return true;
+}
+
+bool SingleStepBreakpoint::IsInserted() const {
+  return inserted_;
 }
 
 }  // namespace arch

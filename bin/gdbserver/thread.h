@@ -12,6 +12,7 @@
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
 
+#include "breakpoint.h"
 #include "registers.h"
 
 namespace debugserver {
@@ -78,6 +79,9 @@ class Thread final {
 
   // The current state of the this thread.
   State state_;
+
+  // The collection of breakpoints that belong to this thread.
+  arch::ThreadBreakpointSet breakpoints_;
 
   // Pointer to the most recent exception context that this Thread received via
   // an architectural exception. Contains nullptr if the thread never received

@@ -92,7 +92,7 @@ class Process final {
   mx_koid_t id() const { return process_id_; }
 
   // Returns a mutable handle to the set of breakpoints managed by this process.
-  arch::BreakpointSet* breakpoints() { return &breakpoints_; }
+  arch::ProcessBreakpointSet* breakpoints() { return &breakpoints_; }
 
   // Returns the base load address of the dynamic linker.
   mx_vaddr_t base_address() const { return base_address_; }
@@ -172,7 +172,7 @@ class Process final {
   ProcessMemory memory_;
 
   // The collection of breakpoints that belong to this process.
-  arch::BreakpointSet breakpoints_;
+  arch::ProcessBreakpointSet breakpoints_;
 
   // The threads owned by this process. This is map is populated lazily when
   // threads are requested through FindThreadById().

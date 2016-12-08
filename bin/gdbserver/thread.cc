@@ -39,6 +39,7 @@ Thread::Thread(Process* process, mx_handle_t debug_handle, mx_koid_t thread_id)
       debug_handle_(debug_handle),
       thread_id_(thread_id),
       state_(State::kNew),
+      breakpoints_(this),
       weak_ptr_factory_(this) {
   FTL_DCHECK(process_);
   FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);

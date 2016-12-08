@@ -24,5 +24,20 @@ bool SoftwareBreakpoint::IsInserted() const {
   return false;
 }
 
+bool SingleStepBreakpoint::Insert() {
+  FTL_NOTIMPLEMENTED();
+  return false;
+}
+
+bool SingleStepBreakpoint::Remove() {
+  FTL_NOTIMPLEMENTED();
+  return false;
+}
+
+bool SingleStepBreakpoint::IsInserted() const {
+  FTL_NOTIMPLEMENTED();
+  return false;
+}
+
 }  // namespace arch
 }  // namespace debugserver

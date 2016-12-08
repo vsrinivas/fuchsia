@@ -10,17 +10,26 @@ namespace debugserver {
 namespace arch {
 
 bool SoftwareBreakpoint::Insert() {
-  FTL_NOTIMPLEMENTED();
   return false;
 }
 
 bool SoftwareBreakpoint::Remove() {
-  FTL_NOTIMPLEMENTED();
   return false;
 }
 
 bool SoftwareBreakpoint::IsInserted() const {
-  FTL_NOTIMPLEMENTED();
+  return false;
+}
+
+bool SingleStepBreakpoint::Insert() {
+  return false;
+}
+
+bool SingleStepBreakpoint::Remove() {
+  return false;
+}
+
+bool SingleStepBreakpoint::IsInserted() const {
   return false;
 }
 
