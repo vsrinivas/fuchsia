@@ -17,10 +17,10 @@ namespace {
 Tracee::TransferStatus WriteBufferToSocket(const uint8_t* buffer,
                                            size_t len,
                                            const mx::socket& socket) {
-  mx_size_t offset = 0;
+  size_t offset = 0;
   while (offset < len) {
     mx_status_t status = NO_ERROR;
-    mx_size_t actual = 0;
+    size_t actual = 0;
     if ((status = socket.write(0u, buffer + offset, len - offset, &actual)) <
         0) {
       if (status == ERR_SHOULD_WAIT) {
@@ -178,7 +178,7 @@ Tracee::TransferStatus Tracee::TransferRecords(const mx::socket& socket) const {
 
   std::vector<uint8_t> buffer(buffer_vmo_size_);
 
-  mx_size_t actual = 0;
+  size_t actual = 0;
   if ((buffer_vmo_.read(buffer.data(), 0, buffer_vmo_size_, &actual) !=
        NO_ERROR) ||
       (actual != buffer_vmo_size_)) {

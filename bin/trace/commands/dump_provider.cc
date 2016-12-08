@@ -67,7 +67,7 @@ void DumpProvider::Run(const ftl::CommandLine& command_line) {
     if (!(pending & MX_SOCKET_READABLE))
       break;  // done reading
 
-    mx_size_t actual;
+    size_t actual;
     status = incoming.read(0u, buffer.data(), buffer.size(), &actual);
     FTL_CHECK(status == NO_ERROR);
 

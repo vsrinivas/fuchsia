@@ -80,7 +80,7 @@ void Tracer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 
 void Tracer::DrainSocket() {
   for (;;) {
-    mx_size_t actual;
+    size_t actual;
     mx_status_t status =
         socket_.read(0u, buffer_.data() + buffer_end_,
                      buffer_.capacity() - buffer_end_, &actual);

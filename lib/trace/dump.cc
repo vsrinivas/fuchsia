@@ -17,7 +17,7 @@ Dump::~Dump() {
   std::string content = out_.str();
   mx_status_t status = NO_ERROR;
   for (size_t offset = 0u; offset < content.size();) {
-    mx_size_t actual;
+    size_t actual;
     mx_status_t status = socket_.write(0u, content.data() + offset,
                                        content.size() - offset, &actual);
     if (status != NO_ERROR)
