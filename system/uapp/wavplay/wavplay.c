@@ -158,6 +158,8 @@ static int do_play(int src_fd, int dest_fd, uint32_t sample_rate)
 
         put_empty(index);
     }
+    ioctl_audio_stop(dest_fd);
+
     return ret;
 }
 
