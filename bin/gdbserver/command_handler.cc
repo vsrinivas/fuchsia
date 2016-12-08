@@ -23,7 +23,14 @@ namespace debugserver {
 namespace {
 
 const char kSupportedFeatures[] =
-    "QNonStop+;QThreadEvents+;swbreak+;qXfer:auxv:read+";
+    "QNonStop+;"
+#if 0  // TODO(dje)
+  "QThreadEvents+;"
+#endif
+#if 0  // TODO(dje)
+  "swbreak+;"
+#endif
+    "qXfer:auxv:read+";
 
 const char kAttached[] = "Attached";
 const char kCurrentThreadId[] = "C";
@@ -593,6 +600,9 @@ bool CommandHandler::Handle_v(const ftl::StringView& packet,
 bool CommandHandler::Handle_zZ(bool insert,
                                const ftl::StringView& packet,
                                const ResponseCallback& callback) {
+// Z0 needs more work. Disabled until ready.
+// One issue is we need to support the swbreak feature.
+#if 0
   // A Z packet contains the "type,addr,kind" parameters before all other
   // optional parameters, which follow an optional ';' character. Check to see
   // if there are any optional parameters:
@@ -642,7 +652,7 @@ bool CommandHandler::Handle_zZ(bool insert,
 
   FTL_LOG(WARNING) << "Breakpoints of type " << type
                    << " currently not supported";
-
+#endif
   return false;
 }
 
