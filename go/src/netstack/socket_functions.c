@@ -538,7 +538,7 @@ mx_status_t do_read(mxrio_msg_t* msg, iostate_t* ios, int events,
   }
 
   while (ios->roff < ios->rlen) {
-    mx_size_t nwritten;
+    size_t nwritten;
     mx_status_t r = mx_socket_write(ios->s, 0u, ios->rbuf->data + ios->roff,
                                     ios->rlen - ios->roff, &nwritten);
     debug_socket("mx_socket_write(%p, %d) => %lu\n",
@@ -573,7 +573,7 @@ mx_status_t do_write(mxrio_msg_t* msg, iostate_t* ios, int events,
       debug_alloc("do_write: get wbuf %p\n", ios->wbuf);
       assert(ios->wbuf);
     }
-    mx_size_t nread;
+    size_t nread;
     mx_status_t r = mx_socket_read(ios->s, 0u, ios->wbuf->data, RWBUF_SIZE,
                                    &nread);
     debug_socket("mx_socket_read => %d (%lu)\n", r, nread);
