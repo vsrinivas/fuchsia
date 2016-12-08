@@ -20,7 +20,7 @@ static bool socket_basic(void) {
     BEGIN_TEST;
 
     mx_status_t status;
-    mx_size_t count;
+    size_t count;
 
     mx_handle_t h[2];
     uint32_t read_data[] = { 0, 0 };
@@ -58,7 +58,7 @@ static bool socket_signals(void) {
     BEGIN_TEST;
 
     mx_status_t status;
-    mx_size_t count;
+    size_t count;
 
     mx_handle_t h0, h1;
     status = mx_socket_create(0, &h0, &h1);
@@ -70,7 +70,7 @@ static bool socket_signals(void) {
     ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE, "");
     ASSERT_EQ(signals1, MX_SIGNAL_WRITABLE, "");
 
-    const mx_size_t kAllSize = 128 * 1024;
+    const size_t kAllSize = 128 * 1024;
     char* big_buf =  (char*) malloc(kAllSize);
     ASSERT_NONNULL(big_buf, "");
 
@@ -123,7 +123,7 @@ static bool socket_half_close(void) {
     BEGIN_TEST;
 
     mx_status_t status;
-    mx_size_t count;
+    size_t count;
     mx_signals_t signals0, signals1;
 
     mx_handle_t h0, h1;
@@ -187,7 +187,7 @@ static bool socket_bytes_outstanding(void) {
     BEGIN_TEST;
 
     mx_status_t status;
-    mx_size_t count;
+    size_t count;
 
     mx_handle_t h[2];
     uint32_t read_data[] = { 0, 0 };
@@ -207,7 +207,7 @@ static bool socket_bytes_outstanding(void) {
     ASSERT_EQ(count, sizeof(write_data[1]), "");
 
     // Check the number of bytes outstanding.
-    mx_size_t outstanding = 0u;
+    size_t outstanding = 0u;
     status = mx_socket_read(h[1], 0u, NULL, 0, &outstanding);
     ASSERT_EQ(outstanding, sizeof(write_data), "");
 
@@ -232,7 +232,7 @@ static bool socket_bytes_outstanding_half_close(void) {
     BEGIN_TEST;
 
     mx_status_t status;
-    mx_size_t count;
+    size_t count;
     mx_signals_t signals0, signals1;
 
     mx_handle_t h0, h1;
@@ -309,7 +309,7 @@ static bool socket_short_write(void) {
     // TODO(qsr): Request socket buffer and use (socket_buffer + 1).
     const size_t buffer_size = 256 * 1024 + 1;
     char* buffer = malloc(buffer_size);
-    mx_size_t written = 0;
+    size_t written = 0;
     status = mx_socket_write(h0, 0u, buffer, buffer_size, &written);
     EXPECT_LT(written, buffer_size, "");
 

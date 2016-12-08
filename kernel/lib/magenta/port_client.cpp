@@ -47,7 +47,7 @@ bool PortClient::Signal(mx_signals_t signals, const Mutex* mutex) {
     return Signal(signals, 0u, mutex);
 }
 
-bool PortClient::Signal(mx_signals_t signal, mx_size_t count, const Mutex* mutex) {
+bool PortClient::Signal(mx_signals_t signal, size_t count, const Mutex* mutex) {
     DEBUG_ASSERT(signal);
     DEBUG_ASSERT(mutex->IsHeld());
     if ((signal & signals_) == 0)

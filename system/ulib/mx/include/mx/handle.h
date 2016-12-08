@@ -83,7 +83,7 @@ public:
     }
 
     mx_status_t get_info(uint32_t topic, uint16_t topic_size, void* buffer,
-                         mx_size_t buffer_size, mx_size_t* return_size) const {
+                         size_t buffer_size, size_t* return_size) const {
         return mx_object_get_info(get(), topic, topic_size, buffer, buffer_size, return_size);
     }
 
@@ -97,12 +97,12 @@ public:
     // TODO(abarth): mx_object_bind_exception_port
 
     mx_status_t get_property(uint32_t property, void* value,
-                             mx_size_t size) const {
+                             size_t size) const {
         return get_property(get(), property, value, size);
     }
 
     mx_status_t set_property(uint32_t property, const void* value,
-                             mx_size_t size) const {
+                             size_t size) const {
         return set_property(get(), property, value, size);
     }
 

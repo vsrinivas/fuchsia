@@ -34,13 +34,13 @@ public:
     status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
     // Socket methods.
-    mx_status_t Write(const void* src, mx_size_t len, bool from_user,
-                      mx_size_t* written);
+    mx_status_t Write(const void* src, size_t len, bool from_user,
+                      size_t* written);
 
     status_t HalfClose();
 
-    mx_status_t Read(void* dest, mx_size_t len, bool from_user,
-                     mx_size_t* nread);
+    mx_status_t Read(void* dest, size_t len, bool from_user,
+                     size_t* nread);
 
     void OnPeerZeroHandles();
 
@@ -49,15 +49,15 @@ private:
     public:
         ~CBuf();
         bool Init(uint32_t len);
-        mx_size_t Write(const void* src, mx_size_t len, bool from_user);
-        mx_size_t Read(void* dest, mx_size_t len, bool from_user);
-        mx_size_t CouldRead() const;
-        mx_size_t free() const;
+        size_t Write(const void* src, size_t len, bool from_user);
+        size_t Read(void* dest, size_t len, bool from_user);
+        size_t CouldRead() const;
+        size_t free() const;
         bool empty() const;
 
     private:
-        mx_size_t head_ = 0u;
-        mx_size_t tail_ = 0u;
+        size_t head_ = 0u;
+        size_t tail_ = 0u;
         uint32_t len_pow2_ = 0u;
         char* buf_ = nullptr;
         mxtl::RefPtr<VmObject> vmo_;
@@ -65,8 +65,8 @@ private:
 
     SocketDispatcher(uint32_t flags);
     mx_status_t Init(mxtl::RefPtr<SocketDispatcher> other);
-    mx_status_t WriteSelf(const void* src, mx_size_t len, bool from_user,
-                          mx_size_t* nwritten);
+    mx_status_t WriteSelf(const void* src, size_t len, bool from_user,
+                          size_t* nwritten);
     status_t  UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t HalfCloseOther();
 

@@ -39,7 +39,7 @@ bool vmo_read_write_test() {
     BEGIN_TEST;
 
     mx_status_t status;
-    mx_size_t size;
+    size_t size;
     mx_handle_t vmo;
 
     // allocate an object and read/write from it
@@ -183,7 +183,7 @@ bool vmo_read_only_map_test() {
     EXPECT_EQ(NO_ERROR, status, "vm_map");
     EXPECT_NEQ(0u, ptr, "vm_map");
 
-    mx_size_t sz;
+    size_t sz;
     auto sstatus = mx_cprng_draw((void*)ptr, 1, &sz);
     EXPECT_LT(sstatus, 0, "write");
 

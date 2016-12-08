@@ -11,7 +11,7 @@ vmo_op_range - perform an operation on a range of a VMO
 
 mx_status_t vmo_op_range(mx_handle_t handle, uint32_t op,
                          uint64_t offset, uint64_t size,
-                         void* buffer, mx_size_t buffer_size);
+                         void* buffer, size_t buffer_size);
 
 ```
 
@@ -40,4 +40,3 @@ TODO: fill in
 [vmo_get_size](vmo_get_size.md),
 [vmo_set_size](vmo_set_size.md),
 [vmo_op_range](vmo_op_range.md).
-

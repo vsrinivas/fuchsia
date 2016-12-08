@@ -124,7 +124,7 @@ mx_vaddr_t elf_load_bootfs(mx_handle_t log, mx_handle_t proc_self,
     if (interp_len > 0) {
         char interp[sizeof(INTERP_PREFIX) + interp_len];
         memcpy(interp, INTERP_PREFIX, sizeof(INTERP_PREFIX) - 1);
-        mx_size_t n;
+        size_t n;
         mx_status_t status = mx_vmo_read(
             vmo, &interp[sizeof(INTERP_PREFIX) - 1], interp_off, interp_len, &n);
         if (status < 0)

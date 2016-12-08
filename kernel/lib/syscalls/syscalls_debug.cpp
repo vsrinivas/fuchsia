@@ -37,8 +37,8 @@
 #define LOCAL_TRACE 0
 
 constexpr uint32_t kMaxDebugWriteSize = 256u;
-constexpr mx_size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
-constexpr mx_size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
+constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
+constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
 constexpr uint32_t kMaxThreadStateSize = MX_MAX_THREAD_STATE_SIZE;
 
@@ -136,7 +136,7 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
 
 mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
                                     user_ptr<void> buffer,
-                                    mx_size_t len, user_ptr<mx_size_t> actual) {
+                                    size_t len, user_ptr<size_t> actual) {
     if (!buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugReadBlock)
@@ -168,7 +168,7 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
     status_t st = vmo->ReadUser(buffer, offset, len, &read);
 
     if (st == NO_ERROR) {
-        if (actual.copy_to_user(static_cast<mx_size_t>(read)) != NO_ERROR)
+        if (actual.copy_to_user(static_cast<size_t>(read)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     return st;
@@ -176,7 +176,7 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
 
 mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
                                      user_ptr<const void> buffer,
-                                     mx_size_t len, user_ptr<mx_size_t> actual) {
+                                     size_t len, user_ptr<size_t> actual) {
     if (!buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugWriteBlock)
@@ -207,7 +207,7 @@ mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
     status_t st = vmo->WriteUser(buffer, offset, len, &written);
 
     if (st == NO_ERROR) {
-        if (actual.copy_to_user(static_cast<mx_size_t>(written)) != NO_ERROR)
+        if (actual.copy_to_user(static_cast<size_t>(written)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     return st;

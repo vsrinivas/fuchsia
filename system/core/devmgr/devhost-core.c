@@ -619,7 +619,7 @@ static int devhost_open_firmware(const char* fwpath) {
 }
 
 mx_status_t devhost_load_firmware(mx_driver_t* drv, const char* path, mx_handle_t* fw,
-                                  mx_size_t* size) {
+                                  size_t* size) {
     xprintf("devhost: drv=%p path=%s fw=%p\n", drv, path, fw);
 
     int fwfd = devhost_open_firmware(path);
@@ -670,9 +670,9 @@ mx_status_t devhost_load_firmware(mx_driver_t* drv, const char* path, mx_handle_
             return ERR_IO;
         }
         if (r == 0) break;
-        mx_size_t actual = 0;
-        status = mx_vmo_write(vmo, (const void*)buffer, off, (mx_size_t)r, &actual);
-        if (actual < (mx_size_t)r) {
+        size_t actual = 0;
+        status = mx_vmo_write(vmo, (const void*)buffer, off, (size_t)r, &actual);
+        if (actual < (size_t)r) {
             printf("devhost: BUG: wrote %zu < %zu firmware vmo bytes!\n", actual, r);
             close(fwfd);
             mx_handle_close(vmo);

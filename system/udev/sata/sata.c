@@ -44,7 +44,7 @@ typedef struct sata_device {
     int flags;
     int max_cmd; // inclusive
 
-    mx_size_t sector_sz;
+    size_t sector_sz;
     mx_off_t capacity; // bytes
 } sata_device_t;
 
@@ -143,7 +143,7 @@ static mx_status_t sata_device_identify(sata_device_t* dev, mx_device_t* control
             dev->capacity = sata_devinfo_u32(devinfo, SATA_DEVINFO_LBA_CAPACITY) * dev->sector_sz;
             xprintf("  LBA");
         }
-        xprintf(" %" PRIu64 " sectors, size=%" PRIuPTR "\n", dev->capacity, dev->sector_sz);
+        xprintf(" %" PRIu64 " sectors, size=%zu\n", dev->capacity, dev->sector_sz);
     } else {
         xprintf("  CHS unsupported!\n");
     }
@@ -161,7 +161,8 @@ static void sata_iotxn_queue(mx_device_t* dev, iotxn_t* txn) {
 
     // offset must be aligned to block size
     if (txn->offset % device->sector_sz) {
-        xprintf("%s: offset 0x%" PRIx64 " is not aligned to sector size %" PRIuPTR "!\n", dev->name, txn->offset, device->sector_sz);
+        xprintf("%s: offset 0x%" PRIx64 " is not aligned to sector size %zu!\n",
+                dev->name, txn->offset, device->sector_sz);
         txn->ops->complete(txn, ERR_INVALID_ARGS, 0);
         return;
     }

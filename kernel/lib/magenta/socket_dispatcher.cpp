@@ -28,7 +28,7 @@
 constexpr mx_rights_t kDefaultSocketRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-constexpr mx_size_t kDeFaultSocketBufferSize = 256 * 1024u;
+constexpr size_t kDeFaultSocketBufferSize = 256 * 1024u;
 
 constexpr mx_signals_t kValidSignalMask =
     MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED | MX_USER_SIGNAL_ALL;
@@ -65,7 +65,7 @@ bool SocketDispatcher::CBuf::Init(uint32_t len) {
     return true;
 }
 
-mx_size_t SocketDispatcher::CBuf::free() const {
+size_t SocketDispatcher::CBuf::free() const {
     uint consumed = modpow2((uint)(head_ - tail_), len_pow2_);
     return valpow2(len_pow2_) - consumed - 1;
 }
@@ -74,7 +74,7 @@ bool SocketDispatcher::CBuf::empty() const {
     return tail_ == head_;
 }
 
-mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool from_user) {
+size_t SocketDispatcher::CBuf::Write(const void* src, size_t len, bool from_user) {
 
     size_t write_len;
     size_t pos = 0;
@@ -116,7 +116,7 @@ mx_size_t SocketDispatcher::CBuf::Write(const void* src, mx_size_t len, bool fro
     return pos;
 }
 
-mx_size_t SocketDispatcher::CBuf::Read(void* dest, mx_size_t len, bool from_user) {
+size_t SocketDispatcher::CBuf::Read(void* dest, size_t len, bool from_user) {
     size_t ret = 0;
 
     if (tail_ != head_) {
@@ -151,7 +151,7 @@ mx_size_t SocketDispatcher::CBuf::Read(void* dest, mx_size_t len, bool from_user
     return ret;
 }
 
-mx_size_t SocketDispatcher::CBuf::CouldRead() const {
+size_t SocketDispatcher::CBuf::CouldRead() const {
     return modpow2((uint)(head_ - tail_), len_pow2_);
 }
 
@@ -291,8 +291,8 @@ status_t SocketDispatcher::HalfCloseOther() {
     return NO_ERROR;
 }
 
-mx_status_t SocketDispatcher::Write(const void* src, mx_size_t len,
-                                    bool from_user, mx_size_t* nwritten) {
+mx_status_t SocketDispatcher::Write(const void* src, size_t len,
+                                    bool from_user, size_t* nwritten) {
     mxtl::RefPtr<SocketDispatcher> other;
     {
         AutoLock lock(&lock_);
@@ -306,8 +306,8 @@ mx_status_t SocketDispatcher::Write(const void* src, mx_size_t len,
     return other->WriteSelf(src, len, from_user, nwritten);
 }
 
-mx_status_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len,
-                                        bool from_user, mx_size_t* written) {
+mx_status_t SocketDispatcher::WriteSelf(const void* src, size_t len,
+                                        bool from_user, size_t* written) {
     AutoLock lock(&lock_);
 
     if (!cbuf_.free())
@@ -331,8 +331,8 @@ mx_status_t SocketDispatcher::WriteSelf(const void* src, mx_size_t len,
     return NO_ERROR;
 }
 
-mx_status_t SocketDispatcher::Read(void* dest, mx_size_t len,
-                                   bool from_user, mx_size_t* nread) {
+mx_status_t SocketDispatcher::Read(void* dest, size_t len,
+                                   bool from_user, size_t* nread) {
     AutoLock lock(&lock_);
 
     // Just query for bytes outstanding.
@@ -357,6 +357,6 @@ mx_status_t SocketDispatcher::Read(void* dest, mx_size_t len,
     if (!closed && was_full && (st > 0))
         other_->state_tracker_.UpdateState(0u, MX_SOCKET_WRITABLE);
 
-    *nread = static_cast<mx_size_t>(st);
+    *nread = static_cast<size_t>(st);
     return NO_ERROR;
 }

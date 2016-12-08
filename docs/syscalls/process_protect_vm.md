@@ -10,7 +10,7 @@ process_protect_vm - set protection of a memory mapping
 #include <magenta/syscalls.h>
 
 mx_status_t mx_process_protect_vm(mx_handle_t proc_handle,
-                                  uintptr_t address, mx_size_t len,
+                                  uintptr_t address, size_t len,
                                   uint32_t prot);
 ```
 

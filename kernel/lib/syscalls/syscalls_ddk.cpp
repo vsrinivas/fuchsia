@@ -151,7 +151,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     return NO_ERROR;
 }
 
-mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, mx_size_t size,
+mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
                                       user_ptr<mx_handle_t> out) {
     LTRACEF("size 0x%zu\n", size);
 

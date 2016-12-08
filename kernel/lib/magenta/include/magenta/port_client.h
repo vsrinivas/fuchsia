@@ -22,7 +22,7 @@ public:
 
     mx_signals_t get_trigger_signals() const { return signals_; }
     bool Signal(mx_signals_t signals, const Mutex* mutex);
-    bool Signal(mx_signals_t signals, mx_size_t byte_count, const Mutex* mutex);
+    bool Signal(mx_signals_t signals, size_t byte_count, const Mutex* mutex);
 
 private:
     PortClient() = delete;

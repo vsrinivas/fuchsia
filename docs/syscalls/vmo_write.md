@@ -10,7 +10,7 @@ vmo_write - write bytes to the VMO
 #include <magenta/syscalls.h>
 
 mx_status_t mx_vmo_write(mx_handle_t handle, const void* data, uint64_t offset,
-                         mx_size_t len, mx_size_t* actual);
+                         size_t len, size_t* actual);
 
 ```
 

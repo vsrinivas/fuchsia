@@ -51,21 +51,21 @@ mx_status_t sys_object_get_property(
     mx_handle_t handle,
     uint32_t property,
     void* value,
-    mx_size_t size);
+    size_t size);
 
 mx_status_t sys_object_set_property(
     mx_handle_t handle,
     uint32_t property,
     const void* value,
-    mx_size_t size);
+    size_t size);
 
 mx_status_t sys_object_get_info(
     mx_handle_t handle,
     uint32_t topic,
     void* buffer,
-    mx_size_t buffer_size,
-    mx_size_t actual_count[1],
-    mx_size_t avail_count[1]);
+    size_t buffer_size,
+    size_t actual_count[1],
+    size_t avail_count[1]);
 
 mx_status_t sys_object_get_child(
     mx_handle_t handle,
@@ -111,15 +111,15 @@ mx_status_t sys_socket_write(
     mx_handle_t handle,
     uint32_t options,
     const void* buffer,
-    mx_size_t size,
-    mx_size_t actual[1]);
+    size_t size,
+    size_t actual[1]);
 
 mx_status_t sys_socket_read(
     mx_handle_t handle,
     uint32_t options,
     void* buffer,
-    mx_size_t size,
-    mx_size_t actual[1]);
+    size_t size,
+    size_t actual[1]);
 
 void sys_thread_exit();
 
@@ -172,34 +172,34 @@ mx_status_t sys_process_map_vm(
     mx_handle_t proc_handle,
     mx_handle_t vmo_handle,
     uint64_t offset,
-    mx_size_t len,
+    size_t len,
     uintptr_t ptr[1],
     uint32_t options);
 
 mx_status_t sys_process_unmap_vm(
     mx_handle_t proc_handle,
     uintptr_t address,
-    mx_size_t len);
+    size_t len);
 
 mx_status_t sys_process_protect_vm(
     mx_handle_t proc_handle,
     uintptr_t address,
-    mx_size_t len,
+    size_t len,
     uint32_t prot);
 
 mx_status_t sys_process_read_memory(
     mx_handle_t proc,
     uintptr_t vaddr,
     void* buffer,
-    mx_size_t len,
-    mx_size_t actual[1]);
+    size_t len,
+    size_t actual[1]);
 
 mx_status_t sys_process_write_memory(
     mx_handle_t proc,
     uintptr_t vaddr,
     const void* buffer,
-    mx_size_t len,
-    mx_size_t actual[1]);
+    size_t len,
+    size_t actual[1]);
 
 mx_status_t sys_job_create(
     mx_handle_t parent_job,
@@ -265,13 +265,13 @@ mx_status_t sys_port_create(
 mx_status_t sys_port_queue(
     mx_handle_t handle,
     const void* packet,
-    mx_size_t size);
+    size_t size);
 
 mx_status_t sys_port_wait(
     mx_handle_t handle,
     mx_time_t timeout,
     void* packet,
-    mx_size_t size);
+    size_t size);
 
 mx_status_t sys_port_bind(
     mx_handle_t handle,
@@ -288,15 +288,15 @@ mx_status_t sys_vmo_read(
     mx_handle_t handle,
     void* data,
     uint64_t offset,
-    mx_size_t len,
-    mx_size_t actual);
+    size_t len,
+    size_t actual);
 
 mx_status_t sys_vmo_write(
     mx_handle_t handle,
     const void* data,
     uint64_t offset,
-    mx_size_t len,
-    mx_size_t actual);
+    size_t len,
+    size_t actual);
 
 mx_status_t sys_vmo_get_size(
     mx_handle_t handle,
@@ -312,16 +312,16 @@ mx_status_t sys_vmo_op_range(
     uint64_t offset,
     uint64_t size,
     void* buffer,
-    mx_size_t buffer_size);
+    size_t buffer_size);
 
 mx_status_t sys_cprng_draw(
     void* buffer,
-    mx_size_t len,
-    mx_size_t actual[1]);
+    size_t len,
+    size_t actual[1]);
 
 mx_status_t sys_cprng_add_entropy(
     const void* buffer,
-    mx_size_t len);
+    size_t len);
 
 mx_handle_t sys_log_create(
     uint32_t options);
@@ -410,7 +410,7 @@ mx_status_t sys_io_mapping_get_info(
 
 mx_status_t sys_vmo_create_contiguous(
     mx_handle_t rsrc_handle,
-    mx_size_t size,
+    size_t size,
     mx_handle_t out[1]);
 
 mx_status_t sys_bootloader_fb_get_info(

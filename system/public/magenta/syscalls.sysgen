@@ -55,17 +55,17 @@ syscall object_signal_peer
     returns (mx_status_t);
 
 syscall object_get_property
-    (handle: mx_handle_t, property: uint32_t, value: any[size] OUT, size: mx_size_t)
+    (handle: mx_handle_t, property: uint32_t, value: any[size] OUT, size: size_t)
     returns (mx_status_t);
 
 syscall object_set_property
-    (handle: mx_handle_t, property: uint32_t, value: any[size] IN, size: mx_size_t)
+    (handle: mx_handle_t, property: uint32_t, value: any[size] IN, size: size_t)
     returns (mx_status_t);
 
 syscall object_get_info
     (handle: mx_handle_t, topic: uint32_t,
-        buffer: any[buffer_size] OUT, buffer_size: mx_size_t,
-        actual_count: mx_size_t[1] OUT, avail_count: mx_size_t[1] OUT)
+        buffer: any[buffer_size] OUT, buffer_size: size_t,
+        actual_count: size_t[1] OUT, avail_count: size_t[1] OUT)
     returns (mx_status_t);
 
 syscall object_get_child
@@ -104,12 +104,12 @@ syscall socket_create
 
 syscall socket_write
     (handle: mx_handle_t, options: uint32_t,
-        buffer: any[size] IN, size: mx_size_t, actual: mx_size_t[1] OUT)
+        buffer: any[size] IN, size: size_t, actual: size_t[1] OUT)
     returns (mx_status_t);
 
 syscall socket_read
     (handle: mx_handle_t, options: uint32_t,
-        buffer: any[size] OUT, size: mx_size_t, actual: mx_size_t[1] OUT)
+        buffer: any[size] OUT, size: size_t, actual: size_t[1] OUT)
     returns (mx_status_t);
 
 # Threads
@@ -152,26 +152,26 @@ syscall process_start
 
 syscall process_map_vm
     (proc_handle: mx_handle_t, vmo_handle: mx_handle_t,
-        offset: uint64_t, len: mx_size_t, ptr: uintptr_t[1] INOUT, options: uint32_t)
+        offset: uint64_t, len: size_t, ptr: uintptr_t[1] INOUT, options: uint32_t)
     returns (mx_status_t);
 
 syscall process_unmap_vm
-    (proc_handle: mx_handle_t, address: uintptr_t, len: mx_size_t)
+    (proc_handle: mx_handle_t, address: uintptr_t, len: size_t)
     returns (mx_status_t);
 
 syscall process_protect_vm
-    (proc_handle: mx_handle_t, address: uintptr_t, len: mx_size_t,
+    (proc_handle: mx_handle_t, address: uintptr_t, len: size_t,
         prot: uint32_t)
     returns (mx_status_t);
 
 syscall process_read_memory
     (proc: mx_handle_t, vaddr: uintptr_t,
-    buffer: any[len] OUT, len: mx_size_t, actual: mx_size_t[1] OUT)
+    buffer: any[len] OUT, len: size_t, actual: size_t[1] OUT)
     returns (mx_status_t);
 
 syscall process_write_memory
     (proc: mx_handle_t, vaddr: uintptr_t,
-    buffer: any[len] IN, len: mx_size_t, actual: mx_size_t[1] OUT)
+    buffer: any[len] IN, len: size_t, actual: size_t[1] OUT)
     returns (mx_status_t);
 
 # Jobs
@@ -239,11 +239,11 @@ syscall port_create
     returns (mx_status_t);
 
 syscall port_queue
-    (handle: mx_handle_t, packet: any[size] IN, size: mx_size_t)
+    (handle: mx_handle_t, packet: any[size] IN, size: size_t)
     returns (mx_status_t);
 
 syscall port_wait
-    (handle: mx_handle_t, timeout: mx_time_t, packet: any[size] OUT, size: mx_size_t)
+    (handle: mx_handle_t, timeout: mx_time_t, packet: any[size] OUT, size: size_t)
     returns (mx_status_t);
 
 syscall port_bind
@@ -257,11 +257,11 @@ syscall vmo_create
     returns (mx_status_t);
 
 syscall vmo_read
-    (handle: mx_handle_t, data: any[len] OUT, offset: uint64_t, len: mx_size_t, actual: mx_size_t)
+    (handle: mx_handle_t, data: any[len] OUT, offset: uint64_t, len: size_t, actual: size_t)
     returns (mx_status_t);
 
 syscall vmo_write
-    (handle: mx_handle_t, data: any[len] IN, offset: uint64_t, len: mx_size_t, actual: mx_size_t)
+    (handle: mx_handle_t, data: any[len] IN, offset: uint64_t, len: size_t, actual: size_t)
     returns (mx_status_t);
 
 syscall vmo_get_size
@@ -274,17 +274,17 @@ syscall vmo_set_size
 
 syscall vmo_op_range
     (handle: mx_handle_t, op: uint32_t, offset: uint64_t, size: uint64_t,
-        buffer: any[buffer_size] INOUT, buffer_size: mx_size_t)
+        buffer: any[buffer_size] INOUT, buffer_size: size_t)
     returns (mx_status_t);
 
 # Random Number generator
 
 syscall cprng_draw
-    (buffer: any[len] OUT, len: mx_size_t, actual: mx_size_t[1] OUT)
+    (buffer: any[len] OUT, len: size_t, actual: size_t[1] OUT)
     returns (mx_status_t);
 
 syscall cprng_add_entropy
-    (buffer: any[len] IN, len: mx_size_t)
+    (buffer: any[len] IN, len: size_t)
     returns (mx_status_t);
 
 # ---------------------------------------------------------------------------------------
@@ -377,7 +377,7 @@ syscall io_mapping_get_info
     returns (mx_status_t);
 
 syscall vmo_create_contiguous
-    (rsrc_handle: mx_handle_t, size: mx_size_t, out: mx_handle_t[1] OUT)
+    (rsrc_handle: mx_handle_t, size: size_t, out: mx_handle_t[1] OUT)
     returns (mx_status_t);
 
 # DDK Syscalls: Misc Info

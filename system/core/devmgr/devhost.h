@@ -56,7 +56,7 @@ bool devhost_is_bindable(magenta_driver_info_t* di, uint32_t protocol_id,
                          mx_device_prop_t* props, uint32_t prop_count);
 
 mx_status_t devhost_load_firmware(mx_driver_t* drv, const char* path,
-                                  mx_handle_t* fw, mx_size_t* size);
+                                  mx_handle_t* fw, size_t* size);
 
 // shared between devhost.c and rpc-device.c
 typedef struct devhost_iostate {

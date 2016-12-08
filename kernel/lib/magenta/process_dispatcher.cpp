@@ -534,7 +534,7 @@ const char* StateToString(ProcessDispatcher::State state) {
 
 mx_status_t ProcessDispatcher::Map(
     mxtl::RefPtr<VmObjectDispatcher> vmo, uint32_t vmo_rights,
-    uint64_t offset, mx_size_t len, uintptr_t* address, uint32_t flags) {
+    uint64_t offset, size_t len, uintptr_t* address, uint32_t flags) {
     mx_status_t status;
 
     status = vmo->Map(aspace(), vmo_rights, offset, len, address, flags);
@@ -542,7 +542,7 @@ mx_status_t ProcessDispatcher::Map(
     return status;
 }
 
-mx_status_t ProcessDispatcher::Unmap(uintptr_t address, mx_size_t len) {
+mx_status_t ProcessDispatcher::Unmap(uintptr_t address, size_t len) {
     mx_status_t status;
 
     // TODO: support range unmapping

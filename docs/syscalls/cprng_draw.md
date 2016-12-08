@@ -9,7 +9,7 @@ mx_cprng_draw - Draw from the kernel's CPRNG
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_cprng_draw(void* buffer, mx_size_t len, mx_size_t* actual);
+mx_status_t mx_cprng_draw(void* buffer, size_t len, size_t* actual);
 ```
 
 ## DESCRIPTION

@@ -11,8 +11,8 @@ object_get_info - query information about an object
 #include <magenta/syscalls/object.h>
 
 mx_status_t mx_object_get_info(mx_handle_t handle, uint32_t topic,
-                               void* buffer, mx_size_t buffer_size,
-                               mx_size_t* actual, mx_size_t* avail);
+                               void* buffer, size_t buffer_size,
+                               size_t* actual, size_t* avail);
 
 ```
 
@@ -92,7 +92,7 @@ mx_koid_t get_object_koid(mx_handle_t handle) {
 
 
 mx_koid_t threads[128];
-mx_size_t count, avail;
+size_t count, avail;
 
 if (mx_object_get_info(proc, MX_INFO_PROCESS_THREADS, threads,
                        sizeof(threads), &count, &avail) < 0) {

@@ -42,8 +42,8 @@
 
 #define LOCAL_TRACE 0
 
-constexpr mx_size_t kMaxCPRNGDraw = MX_CPRNG_DRAW_MAX_LEN;
-constexpr mx_size_t kMaxCPRNGSeed = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
+constexpr size_t kMaxCPRNGDraw = MX_CPRNG_DRAW_MAX_LEN;
+constexpr size_t kMaxCPRNGSeed = MX_CPRNG_ADD_ENTROPY_MAX_LEN;
 
 constexpr uint32_t kMaxWaitSetWaitResults = 1024u;
 
@@ -229,7 +229,7 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, user_ptr<void> ptr, uint3
     return log->ReadFromUser(ptr.get(), len, flags);
 }
 
-mx_status_t sys_cprng_draw(user_ptr<void> buffer, mx_size_t len, user_ptr<mx_size_t> actual) {
+mx_status_t sys_cprng_draw(user_ptr<void> buffer, size_t len, user_ptr<size_t> actual) {
     if (len > kMaxCPRNGDraw)
         return ERR_INVALID_ARGS;
 
@@ -249,7 +249,7 @@ mx_status_t sys_cprng_draw(user_ptr<void> buffer, mx_size_t len, user_ptr<mx_siz
     return NO_ERROR;
 }
 
-mx_status_t sys_cprng_add_entropy(user_ptr<const void> buffer, mx_size_t len) {
+mx_status_t sys_cprng_add_entropy(user_ptr<const void> buffer, size_t len) {
     if (len > kMaxCPRNGSeed)
         return ERR_INVALID_ARGS;
 
@@ -419,8 +419,8 @@ mx_status_t sys_socket_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_p
 }
 
 mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
-                             user_ptr<const void> _buffer, mx_size_t size,
-                             user_ptr<mx_size_t> actual) {
+                             user_ptr<const void> _buffer, size_t size,
+                             user_ptr<size_t> actual) {
     LTRACEF("handle %d\n", handle);
 
     if ((size > 0u) && !_buffer)
@@ -435,7 +435,7 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
 
     switch (flags) {
     case 0: {
-        mx_size_t nwritten;
+        size_t nwritten;
         status = socket->Write(_buffer.get(), size, true, &nwritten);
 
         if (status != NO_ERROR)
@@ -457,8 +457,8 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
 }
 
 mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
-                            user_ptr<void> _buffer, mx_size_t size,
-                            user_ptr<mx_size_t> actual) {
+                            user_ptr<void> _buffer, size_t size,
+                            user_ptr<size_t> actual) {
     LTRACEF("handle %d\n", handle);
 
     if (!actual || flags)
@@ -474,7 +474,7 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     if (status != NO_ERROR)
         return status;
 
-    mx_size_t nread;
+    size_t nread;
     status = socket->Read(_buffer.get(), size, true, &nread);
 
     if (status == NO_ERROR)

@@ -29,12 +29,11 @@
 // This allows for mx_object_get_info(handle, topic, &info, sizeof(info), NULL, NULL)
 
 mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
-                                user_ptr<void> _buffer, mx_size_t buffer_size,
-                                user_ptr<mx_size_t> _actual, user_ptr<mx_size_t> _avail) {
+                                user_ptr<void> _buffer, size_t buffer_size,
+                                user_ptr<size_t> _actual, user_ptr<size_t> _avail) {
     auto up = ProcessDispatcher::GetCurrent();
 
-    LTRACEF("handle %d topic %u buffer %p buffer_size %"
-            PRIuPTR "\n",
+    LTRACEF("handle %d topic %u buffer %p buffer_size %zu\n",
             handle, topic, _buffer.get(), buffer_size);
 
     switch (topic) {
@@ -48,8 +47,8 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             return NO_ERROR;
         }
         case MX_INFO_HANDLE_BASIC: {
-            mx_size_t actual = (buffer_size < sizeof(mx_info_handle_basic_t)) ? 0 : 1;
-            mx_size_t avail = 1;
+            size_t actual = (buffer_size < sizeof(mx_info_handle_basic_t)) ? 0 : 1;
+            size_t avail = 1;
 
             mxtl::RefPtr<Dispatcher> dispatcher;
             uint32_t rights;
@@ -80,8 +79,8 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             return NO_ERROR;
         }
         case MX_INFO_PROCESS: {
-            mx_size_t actual = (buffer_size < sizeof(mx_info_process_t)) ? 0 : 1;
-            mx_size_t avail = 1;
+            size_t actual = (buffer_size < sizeof(mx_info_process_t)) ? 0 : 1;
+            size_t avail = 1;
 
             // grab a reference to the dispatcher
             mxtl::RefPtr<ProcessDispatcher> process;
@@ -166,7 +165,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
 }
 
 mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
-                                    user_ptr<void> _value, mx_size_t size) {
+                                    user_ptr<void> _value, size_t size) {
     if (!_value)
         return ERR_INVALID_ARGS;
 
@@ -220,7 +219,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
 }
 
 mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
-                                    user_ptr<const void> _value, mx_size_t size) {
+                                    user_ptr<const void> _value, size_t size) {
     if (!_value)
         return ERR_INVALID_ARGS;
 

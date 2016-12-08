@@ -22,21 +22,21 @@
 struct IOP_Packet : public mxtl::DoublyLinkedListable<IOP_Packet*> {
     friend struct IOP_PacketListTraits;
 
-    static IOP_Packet* Alloc(mx_size_t size);
-    static IOP_Packet* Make(const void* data, mx_size_t size);
-    static IOP_Packet* MakeFromUser(const void* data, mx_size_t size);
+    static IOP_Packet* Alloc(size_t size);
+    static IOP_Packet* Make(const void* data, size_t size);
+    static IOP_Packet* MakeFromUser(const void* data, size_t size);
     static void Delete(IOP_Packet* packet);
 
-    IOP_Packet(mx_size_t data_size)
+    IOP_Packet(size_t data_size)
         : is_signal(false), data_size(data_size) {}
 
-    IOP_Packet(mx_size_t data_size, bool is_signal)
+    IOP_Packet(size_t data_size, bool is_signal)
         : is_signal(is_signal), data_size(data_size) {}
 
-    bool CopyToUser(void* data, mx_size_t* size);
+    bool CopyToUser(void* data, size_t* size);
 
     bool is_signal;
-    mx_size_t data_size;
+    size_t data_size;
 };
 
 struct IOP_Signal : public IOP_Packet {

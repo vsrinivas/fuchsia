@@ -22,7 +22,7 @@
 constexpr mx_rights_t kDefaultIOPortRights =
     MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
 
-IOP_Packet* IOP_Packet::Alloc(mx_size_t size) {
+IOP_Packet* IOP_Packet::Alloc(size_t size) {
     AllocChecker ac;
     auto mem = new (&ac) char [sizeof(IOP_Packet) + size];
     if (!ac.check())
@@ -30,7 +30,7 @@ IOP_Packet* IOP_Packet::Alloc(mx_size_t size) {
     return new (mem) IOP_Packet(size);
 }
 
-IOP_Packet* IOP_Packet::Make(const void* data, mx_size_t size) {
+IOP_Packet* IOP_Packet::Make(const void* data, size_t size) {
     auto pk = Alloc(size);
     if (!pk)
         return nullptr;
@@ -38,7 +38,7 @@ IOP_Packet* IOP_Packet::Make(const void* data, mx_size_t size) {
     return pk;
 }
 
-IOP_Packet* IOP_Packet::MakeFromUser(const void* data, mx_size_t size) {
+IOP_Packet* IOP_Packet::MakeFromUser(const void* data, size_t size) {
     auto pk = Alloc(size);
     if (!pk)
         return nullptr;
@@ -59,7 +59,7 @@ void IOP_Packet::Delete(IOP_Packet* packet) {
     delete [] reinterpret_cast<char*>(packet);
 }
 
-bool IOP_Packet::CopyToUser(void* data, mx_size_t* size) {
+bool IOP_Packet::CopyToUser(void* data, size_t* size) {
     if (*size < data_size)
         return ERR_BUFFER_TOO_SMALL;
     *size = data_size;

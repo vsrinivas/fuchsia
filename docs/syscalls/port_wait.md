@@ -10,7 +10,7 @@ port_wait - wait for a packet in an IO port
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/port.h>
 
-mx_status_t mx_port_wait(mx_handle_t handle, mx_time_t timeout, void* packet, mx_size_t size);
+mx_status_t mx_port_wait(mx_handle_t handle, mx_time_t timeout, void* packet, size_t size);
 ```
 
 ## DESCRIPTION
@@ -49,7 +49,7 @@ with *hdr.type* set to **MX_PORT_PKT_TYPE_IOSN**.
 typedef struct mx_io_packet {
     mx_packet_header_t hdr;
     mx_time_t timestamp;
-    mx_size_t bytes;
+    size_t bytes;
     mx_signals_t signals;
     uint32_t reserved;
 } mx_io_packet_t;

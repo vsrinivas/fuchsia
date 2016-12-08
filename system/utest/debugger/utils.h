@@ -56,9 +56,9 @@ extern uint64_t get_uint64_register(mx_handle_t thread, size_t offset);
 
 extern void set_uint64_register(mx_handle_t thread, size_t offset, uint64_t value);
 
-extern mx_size_t read_inferior_memory(mx_handle_t proc, uintptr_t vaddr, void* buf, mx_size_t len);
+extern size_t read_inferior_memory(mx_handle_t proc, uintptr_t vaddr, void* buf, size_t len);
 
-extern mx_size_t write_inferior_memory(mx_handle_t proc, uintptr_t vaddr, const void* buf, mx_size_t len);
+extern size_t write_inferior_memory(mx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len);
 
 extern mx_status_t create_inferior(const char* name,
                                    int argc, const char* const* argv,

@@ -9,7 +9,7 @@ mx_cprng_add_entropy - Add entropy to the kernel CPRNG
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_cprng_add_entropy(const void* buffer, mx_size_t len);
+mx_status_t mx_cprng_add_entropy(const void* buffer, size_t len);
 ```
 
 ## DESCRIPTION

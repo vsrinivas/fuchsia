@@ -14,7 +14,7 @@
 
 #define LOCAL_TRACE 0
 
-static IOP_Packet* MakePacket(uint64_t key, const mx_exception_report_t* report, mx_size_t size) {
+static IOP_Packet* MakePacket(uint64_t key, const mx_exception_report_t* report, size_t size) {
     auto pk = IOP_Packet::Alloc(size + sizeof(mx_packet_header_t));
     if (!pk)
         return nullptr;

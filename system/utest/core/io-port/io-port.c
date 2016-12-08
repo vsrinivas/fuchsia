@@ -330,7 +330,7 @@ static bool bind_sockets_test(void)
 {
     BEGIN_TEST;
     mx_status_t status;
-    mx_size_t sz;
+    size_t sz;
 
     mx_handle_t port;
     status = mx_port_create(0u, &port);

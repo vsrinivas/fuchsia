@@ -18,7 +18,7 @@ static void test_thread_fn(void* arg) {
 bool threads_test(void) {
     BEGIN_TEST;
 
-    const mx_size_t stack_size = 256u << 10;
+    const size_t stack_size = 256u << 10;
     mx_handle_t thread_stack_vmo;
     ASSERT_EQ(mx_vmo_create(stack_size, 0, &thread_stack_vmo), NO_ERROR, "");
     ASSERT_GT(thread_stack_vmo, 0, "");

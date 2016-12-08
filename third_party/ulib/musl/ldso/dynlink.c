@@ -537,7 +537,7 @@ static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
         _mx_handle_close(copy_vmo);
         return status;
     }
-    mx_size_t n;
+    size_t n;
     status = _mx_vmo_write(copy_vmo, (void*)window, 0, data_size, &n);
     _mx_process_unmap_vm(__magenta_process_self, window, 0);
     if (status < 0) {

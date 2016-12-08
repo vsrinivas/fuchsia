@@ -48,7 +48,7 @@ mx_status_t elf_load_get_interp(elf_load_info_t* info, mx_handle_t vmo,
         buffer = malloc(*interp_len + 1);
         if (buffer == NULL)
             return ERR_NO_MEMORY;
-        mx_size_t n;
+        size_t n;
         mx_status_t status = mx_vmo_read(vmo, buffer, offset, *interp_len, &n);
         if (status < 0) {
             free(buffer);

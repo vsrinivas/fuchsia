@@ -155,12 +155,6 @@ typedef uintptr_t mx_vaddr_t;
 // physical address
 typedef uintptr_t mx_paddr_t;
 
-// size
-typedef uintptr_t mx_size_t;
-typedef intptr_t mx_ssize_t;
-#define MX_SIZE_MAX UINTPTR_MAX
-#define MX_SSIZE_MAX INTPTR_MAX
-
 // offset
 typedef uint64_t mx_off_t;
 typedef int64_t mx_rel_off_t;

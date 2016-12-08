@@ -86,7 +86,7 @@ void driver_unbind(mx_driver_t* driver, mx_device_t* dev);
 mx_handle_t get_root_resource(void);
 
 mx_status_t load_firmware(mx_driver_t* driver, const char* path,
-                          mx_handle_t* fw, mx_size_t* size);
+                          mx_handle_t* fw, size_t* size);
 // Drivers may need to load firmware for a device, typically during the call to
 // bind the device. The devmgr will look for the firmware at the given path
 // relative to system-defined locations for device firmware. The file will be

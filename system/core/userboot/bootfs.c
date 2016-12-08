@@ -103,7 +103,7 @@ mx_handle_t bootfs_open(mx_handle_t log,
     mx_status_t status = mx_vmo_create(file.size, 0, &vmo);
     if (status < 0)
         fail(log, status, "mx_vmo_create failed\n");
-    mx_size_t n;
+    size_t n;
     status = mx_vmo_write(vmo, &fs->contents[file.offset], 0, file.size, &n);
     if (status < 0)
         fail(log, status, "mx_vmo_write failed\n");

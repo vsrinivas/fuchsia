@@ -27,7 +27,7 @@ typedef struct mx_packet_header {
 typedef struct mx_io_packet {
     mx_packet_header_t hdr;
     mx_time_t timestamp;
-    mx_size_t bytes;
+    size_t bytes;
     mx_signals_t signals;
     uint32_t reserved;
 } mx_io_packet_t;

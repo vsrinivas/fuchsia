@@ -13,7 +13,7 @@ weak_alias(dummy, __vm_wait);
 
 #define ROUND(addr) ((addr + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
 
-static mx_status_t vmo_remap(uintptr_t old_mapping, mx_size_t old_len, mx_size_t new_len, uint32_t flags, uintptr_t* new_mapping) {
+static mx_status_t vmo_remap(uintptr_t old_mapping, size_t old_len, size_t new_len, uint32_t flags, uintptr_t* new_mapping) {
     if (new_len < old_len) {
         // TODO(kulakowski)
         // For now we can't partially unmap.

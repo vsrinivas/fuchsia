@@ -163,7 +163,7 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
     }
 
     volatile uintptr_t entropy;
-    mx_size_t actual;
+    size_t actual;
     status = mx_cprng_draw(&entropy, sizeof(entropy), &actual);
     if (status != NO_ERROR || actual != sizeof(entropy)) {
         abort();

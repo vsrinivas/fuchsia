@@ -62,6 +62,6 @@ __EXPORT mx_handle_t get_root_resource(void) {
 }
 
 __EXPORT mx_status_t load_firmware(mx_driver_t* drv, const char* path,
-                                   mx_handle_t* fw, mx_size_t* size) {
+                                   mx_handle_t* fw, size_t* size) {
     return API->load_firmware(drv, path, fw, size);
 }

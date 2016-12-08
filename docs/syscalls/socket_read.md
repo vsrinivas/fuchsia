@@ -10,8 +10,8 @@ socket_read - read data from a socket
 #include <magenta/syscalls.h>
 
 mx_status_t mx_socket_read(mx_handle_t handle, uint32_t flags,
-                           void* buffer, mx_size_t size,
-                           mx_size_t* actual) {
+                           void* buffer, size_t size,
+                           size_t* actual) {
 ```
 
 ## DESCRIPTION

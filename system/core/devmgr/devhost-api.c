@@ -118,7 +118,7 @@ __EXPORT mx_handle_t _get_root_resource(void) {
 }
 
 static mx_status_t _load_firmware(mx_driver_t* drv, const char* path, mx_handle_t* fw,
-                                  mx_size_t* size) {
+                                  size_t* size) {
     mx_status_t r;
     DM_LOCK();
     r = devhost_load_firmware(drv, path, fw, size);

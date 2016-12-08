@@ -60,7 +60,7 @@ static void test_memory_ops(mx_handle_t inferior, mx_handle_t thread)
     test_data_addr = get_uint64_register(thread, offsetof(mx_aarch64_general_regs_t, r[9]));
 #endif
 
-    mx_size_t size = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
+    size_t size = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
     EXPECT_EQ(size, sizeof(test_data), "read_inferior_memory: short read");
 
     for (unsigned i = 0; i < sizeof(test_data); ++i) {
@@ -281,7 +281,7 @@ static bool debugger_thread_list_test(void)
     EXPECT_EQ(msg, MSG_EXTRA_THREADS_STARTED, "unexpected response when starting extra threads");
 
     uint32_t buf_size = 100 * sizeof(mx_koid_t);
-    mx_size_t num_threads;
+    size_t num_threads;
     mx_koid_t* threads = tu_malloc(buf_size);
     mx_status_t status = mx_object_get_info(inferior, MX_INFO_PROCESS_THREADS,
                                             threads, buf_size, &num_threads, NULL);

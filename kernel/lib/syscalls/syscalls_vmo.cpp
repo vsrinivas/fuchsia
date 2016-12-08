@@ -59,8 +59,8 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, user_ptr<mx_handle_t
 }
 
 mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> data,
-                         uint64_t offset, mx_size_t len, user_ptr<mx_size_t> actual) {
-    LTRACEF("handle %d, data %p, offset %#" PRIx64 ", len %#" PRIxPTR "\n",
+                         uint64_t offset, size_t len, user_ptr<size_t> actual) {
+    LTRACEF("handle %d, data %p, offset %#" PRIx64 ", len %#zx\n",
             handle, data.get(), offset, len);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -72,7 +72,7 @@ mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> data,
         return status;
 
     // do the read operation
-    mx_size_t nread;
+    size_t nread;
     status = vmo->Read(data, len, offset, &nread);
     if (status == NO_ERROR)
         status = actual.copy_to_user(nread);
@@ -81,8 +81,8 @@ mx_status_t sys_vmo_read(mx_handle_t handle, user_ptr<void> data,
 }
 
 mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> data,
-                          uint64_t offset, mx_size_t len, user_ptr<mx_size_t> actual) {
-    LTRACEF("handle %d, data %p, offset %#" PRIx64 ", len %#" PRIxPTR "\n",
+                          uint64_t offset, size_t len, user_ptr<size_t> actual) {
+    LTRACEF("handle %d, data %p, offset %#" PRIx64 ", len %#zx\n",
             handle, data.get(), offset, len);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -94,7 +94,7 @@ mx_status_t sys_vmo_write(mx_handle_t handle, user_ptr<const void> data,
         return status;
 
     // do the write operation
-    mx_size_t nwritten;
+    size_t nwritten;
     status = vmo->Write(data, len, offset, &nwritten);
     if (status == NO_ERROR)
         status = actual.copy_to_user(nwritten);
@@ -142,9 +142,9 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
 }
 
 mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, uint64_t size,
-                             user_ptr<void> buffer, mx_size_t buffer_size) {
+                             user_ptr<void> buffer, size_t buffer_size) {
     LTRACEF("handle %d op %u offset %#" PRIx64 " size %#" PRIx64
-            " buffer %p buffer_size %" PRIuPTR "\n",
+            " buffer %p buffer_size %zu\n",
             handle, op, offset, size, buffer.get(), buffer_size);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -160,11 +160,11 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
 }
 
 mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
-                               uint64_t offset, mx_size_t len, user_ptr<uintptr_t> user_ptr,
+                               uint64_t offset, size_t len, user_ptr<uintptr_t> user_ptr,
                                uint32_t flags) {
 
     LTRACEF("proc handle %d, vmo handle %d, offset %#" PRIx64
-            ", len %#" PRIxPTR ", user_ptr %p, flags %#x\n",
+            ", len %#zx, user_ptr %p, flags %#x\n",
             proc_handle, vmo_handle, offset, len, user_ptr.get(), flags);
 
     // current process
@@ -201,8 +201,8 @@ mx_status_t sys_process_map_vm(mx_handle_t proc_handle, mx_handle_t vmo_handle,
     return NO_ERROR;
 }
 
-mx_status_t sys_process_unmap_vm(mx_handle_t proc_handle, uintptr_t address, mx_size_t len) {
-    LTRACEF("proc handle %d, address %#" PRIxPTR ", len %#" PRIxPTR "\n",
+mx_status_t sys_process_unmap_vm(mx_handle_t proc_handle, uintptr_t address, size_t len) {
+    LTRACEF("proc handle %d, address %#" PRIxPTR ", len %#zx\n",
             proc_handle, address, len);
 
     // current process
@@ -216,10 +216,9 @@ mx_status_t sys_process_unmap_vm(mx_handle_t proc_handle, uintptr_t address, mx_
     return proc->Unmap(address, len);
 }
 
-mx_status_t sys_process_protect_vm(mx_handle_t proc_handle, uintptr_t address, mx_size_t len,
+mx_status_t sys_process_protect_vm(mx_handle_t proc_handle, uintptr_t address, size_t len,
                                    uint32_t prot) {
-    LTRACEF("proc handle %d, address %#" PRIxPTR ", len %#" PRIxPTR
-            ", prot %#x\n",
+    LTRACEF("proc handle %d, address %#" PRIxPTR ", len %#zx, prot %#x\n",
             proc_handle, address, len, prot);
 
     auto up = ProcessDispatcher::GetCurrent();

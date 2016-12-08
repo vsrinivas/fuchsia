@@ -242,7 +242,7 @@ void set_uint64_register(mx_handle_t thread, size_t offset, uint64_t value) {
     free(buf);
 }
 
-mx_size_t read_inferior_memory(mx_handle_t proc, uintptr_t vaddr, void* buf, mx_size_t len)
+size_t read_inferior_memory(mx_handle_t proc, uintptr_t vaddr, void* buf, size_t len)
 {
     mx_status_t status = mx_process_read_memory(proc, vaddr, buf, len, &len);
     if (status < 0)
@@ -250,7 +250,7 @@ mx_size_t read_inferior_memory(mx_handle_t proc, uintptr_t vaddr, void* buf, mx_
     return len;
 }
 
-mx_size_t write_inferior_memory(mx_handle_t proc, uintptr_t vaddr, const void* buf, mx_size_t len)
+size_t write_inferior_memory(mx_handle_t proc, uintptr_t vaddr, const void* buf, size_t len)
 {
     mx_status_t status = mx_process_write_memory(proc, vaddr, buf, len, &len);
     if (status < 0)

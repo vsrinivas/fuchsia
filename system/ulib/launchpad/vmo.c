@@ -16,7 +16,7 @@ mx_handle_t launchpad_vmo_from_mem(const void* data, size_t len) {
     mx_status_t status = mx_vmo_create(len, 0, &vmo);
     if (status < 0)
         return status;
-    mx_size_t n;
+    size_t n;
     status = mx_vmo_write(vmo, data, 0, len, &n);
     if (status < 0) {
         mx_handle_close(vmo);
@@ -69,7 +69,7 @@ mx_handle_t launchpad_vmo_from_fd(int fd) {
                 errno = ESPIPE;
                 return ERR_IO;
             }
-            mx_size_t n;
+            size_t n;
             status = mx_vmo_write(vmo, buffer, offset, nread, &n);
             if (status < 0) {
                 mx_handle_close(vmo);

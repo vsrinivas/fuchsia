@@ -49,7 +49,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> out) {
     return NO_ERROR;
 }
 
-mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, mx_size_t size) {
+mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (size > MX_PORT_MAX_PKT_SIZE)
@@ -75,7 +75,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, mx_s
 }
 
 mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
-                          user_ptr<void> packet, mx_size_t size) {
+                          user_ptr<void> packet, size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (!packet)

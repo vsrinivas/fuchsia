@@ -39,16 +39,16 @@ VmObjectDispatcher::VmObjectDispatcher(mxtl::RefPtr<VmObject> vmo)
 VmObjectDispatcher::~VmObjectDispatcher() {}
 
 mx_status_t VmObjectDispatcher::Read(user_ptr<void> user_data,
-                                     mx_size_t length,
+                                     size_t length,
                                      uint64_t offset,
-                                     mx_size_t* bytes_read) {
+                                     size_t* bytes_read) {
     return vmo_->ReadUser(user_data, offset, length, bytes_read);
 }
 
 mx_status_t VmObjectDispatcher::Write(user_ptr<const void> user_data,
-                                      mx_size_t length,
+                                      size_t length,
                                       uint64_t offset,
-                                      mx_size_t* bytes_written) {
+                                      size_t* bytes_written) {
 
     return vmo_->WriteUser(user_data, offset, length, bytes_written);
 }
@@ -103,7 +103,7 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
     }
 }
 
-mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_rights, uint64_t offset, mx_size_t len,
+mx_status_t VmObjectDispatcher::Map(mxtl::RefPtr<VmAspace> aspace, uint32_t vmo_rights, uint64_t offset, size_t len,
                                     uintptr_t* _ptr, uint32_t flags) {
     LTRACEF("vmo_rights 0x%x flags 0x%x\n", vmo_rights, flags);
 

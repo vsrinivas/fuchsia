@@ -19,7 +19,7 @@ means closing the VMO handle does not remove the mapping added by this function.
 
 A virtual memory object can be larger than the address space, which means you
 should check for overflow before converting the **uint64_t** size of the VMO to
-mx_process_map_vm's **mx_size_t** *len* parameter.
+mx_process_map_vm's **size_t** *len* parameter.
 
 ## SEE ALSO
 

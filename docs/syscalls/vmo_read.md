@@ -9,8 +9,8 @@ vmo_read - read bytes from the VMO
 ```
 #include <magenta/syscalls.h>
 
-mx_status_t mx_vmo_read(mx_handle_t handle, void* data, uint64_t offset, mx_size_t len,
-                        mx_size_t* actual);
+mx_status_t mx_vmo_read(mx_handle_t handle, void* data, uint64_t offset, size_t len,
+                        size_t* actual);
 
 ```
 

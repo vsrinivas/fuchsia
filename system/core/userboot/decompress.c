@@ -88,7 +88,7 @@ static mx_handle_t decompress_bootfs_vmo(mx_handle_t log, mx_handle_t proc_self,
     }
     data += sizeof(uint32_t);
 
-    mx_size_t newsize = hdr->outsize;
+    size_t newsize = hdr->outsize;
     check_lz4_frame(log, (const lz4_frame_desc*)data, newsize - sizeof(bootdata_t));
     data += sizeof(lz4_frame_desc);
 
@@ -108,7 +108,7 @@ static mx_handle_t decompress_bootfs_vmo(mx_handle_t log, mx_handle_t proc_self,
             MX_VM_FLAG_PERM_READ|MX_VM_FLAG_PERM_WRITE);
     check(log, status, "mx_process_map_vm failed on bootfs vmo during decompression\n");
 
-    mx_size_t remaining = newsize;
+    size_t remaining = newsize;
     uint8_t* dst = (uint8_t*)dst_addr;
 
     bootdata_t* boothdr = (bootdata_t*)dst;
@@ -174,12 +174,12 @@ mx_handle_t decompress_vmo(mx_handle_t log, mx_handle_t proc_self, mx_handle_t v
         // just return it.
         return vmo;
     }
-    if (size > MX_SIZE_MAX) {
+    if (size > SIZE_MAX) {
         fail(log, ERR_BUFFER_TOO_SMALL, "bootfs VMO too large to map\n");
     }
 
     uintptr_t addr = 0;
-    status = mx_process_map_vm(proc_self, vmo, 0, (mx_size_t)size, &addr, MX_VM_FLAG_PERM_READ);
+    status = mx_process_map_vm(proc_self, vmo, 0, (size_t)size, &addr, MX_VM_FLAG_PERM_READ);
     check(log, status, "mx_process_map_vm failed on bootfs vmo\n");
 
     const bootdata_t* hdr = (bootdata_t*)addr;

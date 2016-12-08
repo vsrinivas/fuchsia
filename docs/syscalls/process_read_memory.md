@@ -10,8 +10,8 @@ process_read_memory - Read from the provided process's address space.
 #include <magenta/syscalls.h>
 
 mx_status_t mx_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
-                                   void* buffer, mx_size_t len,
-                                   mx_size_t* actual);
+                                   void* buffer, size_t len,
+                                   size_t* actual);
 
 ```
 

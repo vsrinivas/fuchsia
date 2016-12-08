@@ -156,7 +156,7 @@ static void add_partition(const char* dev, uint64_t offset, uint64_t blocks, con
     uint8_t type[GPT_GUID_LEN];
     uint8_t guid[GPT_GUID_LEN];
     memset(type, 0xff, GPT_GUID_LEN);
-    mx_size_t sz;
+    size_t sz;
     mx_cprng_draw(guid, GPT_GUID_LEN, &sz);
     int rc = gpt_partition_add(gpt, name, type, guid, offset, blocks, 0);
     if (rc == 0) {

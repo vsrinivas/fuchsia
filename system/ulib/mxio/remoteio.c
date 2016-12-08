@@ -863,7 +863,7 @@ mx_status_t mxio_socket_posix_ioctl(mxio_t* io, int req, void* arg) {
     switch (req) {
     case FIONREAD: {
         mx_status_t r;
-        mx_size_t avail;
+        size_t avail;
         if ((r = mx_socket_read(rio->h2, 0, NULL, 0, &avail)) < 0) {
             return r;
         }

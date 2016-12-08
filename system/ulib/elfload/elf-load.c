@@ -36,7 +36,7 @@ mx_status_t elf_load_prepare(mx_handle_t vmo, elf_load_header_t* header,
                              uintptr_t* phoff) {
     // Read the file header and validate basic format sanity.
     elf_ehdr_t ehdr;
-    mx_size_t n;
+    size_t n;
     mx_status_t status = mx_vmo_read(vmo, &ehdr, 0, sizeof(ehdr), &n);
     if (status < 0)
         return status;
@@ -68,7 +68,7 @@ mx_status_t elf_load_prepare(mx_handle_t vmo, elf_load_header_t* header,
 mx_status_t elf_load_read_phdrs(mx_handle_t vmo, elf_phdr_t phdrs[],
                                 uintptr_t phoff, size_t phnum) {
     size_t phdrs_size = (size_t)phnum * sizeof(elf_phdr_t);
-    mx_size_t n;
+    size_t n;
     mx_status_t status = mx_vmo_read(vmo, phdrs, phoff, phdrs_size, &n);
     if (status < 0)
         return status;
@@ -162,7 +162,7 @@ static mx_handle_t get_writable_vmo(mx_handle_t proc_self,
         mx_handle_close(copy_vmo);
         return status;
     }
-    mx_size_t n;
+    size_t n;
     status = mx_vmo_write(copy_vmo, (void*)window, 0, data_size, &n);
     mx_process_unmap_vm(proc_self, window, 0);
     if (status < 0) {
@@ -215,7 +215,7 @@ static mx_status_t finish_load_segment(
     // to read that data out of the file and copy it into bss_vmo.
     if (partial_page > 0) {
         char buffer[PAGE_SIZE];
-        mx_size_t n;
+        size_t n;
         status = mx_vmo_read(vmo, buffer, file_end, partial_page, &n);
         if (status < 0) {
             mx_handle_close(bss_vmo);

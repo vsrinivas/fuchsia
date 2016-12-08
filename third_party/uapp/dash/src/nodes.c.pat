@@ -264,7 +264,7 @@ codec_encode(union node *node, mx_handle_t *vmo)
 	mx_status_t status = mx_vmo_create(size, 0, vmo);
 	if (status != NO_ERROR)
 		return status;
-	mx_size_t actual;
+	size_t actual;
 	return mx_vmo_write(*vmo, buffer, 0, size, &actual);
 }
 

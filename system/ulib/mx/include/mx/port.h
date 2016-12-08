@@ -25,11 +25,11 @@ public:
 
     static mx_status_t create(uint32_t options, port* result);
 
-    mx_status_t queue(const void* packet, mx_size_t size) const {
+    mx_status_t queue(const void* packet, size_t size) const {
         return mx_port_queue(get(), packet, size);
     }
 
-    mx_status_t wait(mx_time_t timeout, void* packet, mx_size_t size) const {
+    mx_status_t wait(mx_time_t timeout, void* packet, size_t size) const {
         return mx_port_wait(get(), timeout, packet, size);
     }
 

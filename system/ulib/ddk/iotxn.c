@@ -34,9 +34,9 @@ struct iotxn_priv {
     uint32_t flags;
 
     // payload size
-    mx_size_t data_size;
+    size_t data_size;
     // extra data, at the end of this ioxtn_t structure
-    mx_size_t extra_size;
+    size_t extra_size;
 
     iotxn_t txn; // must be at the end for extra data, only valid if not a clone
 };

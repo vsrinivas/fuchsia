@@ -205,7 +205,7 @@ evalifsubshell()
 
 	char buffer[size];
 
-	mx_size_t num_read;
+	size_t num_read;
 	status = mx_vmo_read(ast_vmo, buffer, 0, size, &num_read);
 	if (status < 0 || (size_t)num_read != size)
 		exit(status);

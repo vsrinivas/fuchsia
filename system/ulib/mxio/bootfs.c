@@ -38,12 +38,12 @@ struct bootfs_magic {
 void bootfs_parse(mx_handle_t vmo, size_t len,
                   void (*cb)(void*, const char* fn, size_t off, size_t len),
                   void* cb_arg) {
-    mx_size_t rlen;
+    size_t rlen;
     mx_off_t off = 0;
     struct bootfs_magic boot_data;
     mx_status_t r = mx_vmo_read(vmo, &boot_data, off, sizeof(boot_data), &rlen);
     if (r < 0 || rlen < sizeof(boot_data)) {
-        printf("bootfs_parse: couldn't read boot_data - %#" PRIxPTR "\n", rlen);
+        printf("bootfs_parse: couldn't read boot_data - %#zx\n", rlen);
         return;
     }
 

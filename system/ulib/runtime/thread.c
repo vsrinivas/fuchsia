@@ -47,7 +47,7 @@ static mx_status_t allocate_thread_page(mxr_thread_t** thread_out) {
     // somewhere once we have the ability to hint to the vm how and
     // where to allocate threads, stacks, heap etc.
 
-    const mx_size_t len = sizeof(mxr_thread_t);
+    const size_t len = sizeof(mxr_thread_t);
 
     mx_handle_t vmo;
     mx_status_t status = _mx_vmo_create(len, 0, &vmo);

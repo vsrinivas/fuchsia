@@ -25,13 +25,13 @@ public:
 
     static mx_status_t create(uint64_t size, uint32_t options, vmo* result);
 
-    mx_status_t read(void* data, uint64_t offset, mx_size_t len,
-                     mx_size_t* actual) const {
+    mx_status_t read(void* data, uint64_t offset, size_t len,
+                     size_t* actual) const {
         return mx_vmo_read(get(), data, offset, len, actual);
     }
 
-    mx_status_t write(const void* data, uint64_t offset, mx_size_t len,
-                      mx_size_t* actual) const {
+    mx_status_t write(const void* data, uint64_t offset, size_t len,
+                      size_t* actual) const {
         return mx_vmo_write(get(), data, offset, len, actual);
     }
 
@@ -44,7 +44,7 @@ public:
     }
 
     mx_status_t op_range(uint32_t op, uint64_t offset, uint64_t size,
-                         void* buffer, mx_size_t buffer_size) const {
+                         void* buffer, size_t buffer_size) const {
         return mx_vmo_op_range(get(), op, offset, size, buffer, buffer_size);
     }
 };
