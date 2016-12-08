@@ -15,6 +15,7 @@ executable("device_runner") {
   ]
 
   deps = [
+    "//apps/ledger/services",
     "//apps/modular/lib/app",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:scope",

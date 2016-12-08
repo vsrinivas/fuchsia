@@ -20,7 +20,6 @@
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/src/user_runner/story_provider_impl.h"
-#include "apps/modular/src/user_runner/user_ledger_repository_factory.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -35,7 +34,6 @@ namespace modular {
 namespace {
 
 const char kAppId[] = "modular_user_runner";
-const char kLedgerBaseDir[] = "/data/ledger/";
 // This is the prefix for the ApplicationEnvironment under which all
 // stories run for a user.
 const char kStoriesScopeLabelPrefix[] = "stories-";
@@ -69,20 +67,21 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 }  // namespace
 
+// UserRunner keeps a LedgerRepository around, and passes a duplicate to
+// StoryProvider. StoryProvider keeps one around and passes a duplicate to each
+// new StoryRunner.
 class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(
       std::shared_ptr<ApplicationContext> application_context,
-      fidl::Array<uint8_t> user_id,
-      const fidl::String& user_shell,
+      fidl::Array<uint8_t> user_id, const fidl::String& user_shell,
       fidl::Array<fidl::String> user_shell_args,
+      fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserRunner> user_runner_request)
       : application_context_(application_context),
         binding_(this, std::move(user_runner_request)) {
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
-
-    SetupLedgerRepository(user_id);
 
     ApplicationEnvironmentPtr parent_env;
     application_context_->environment()->Duplicate(parent_env.NewRequest());
@@ -91,25 +90,24 @@ class UserRunnerImpl : public UserRunner {
 
     RunUserShell(user_shell, user_shell_args, std::move(view_owner_request));
 
-    ledger::LedgerRepositoryPtr ledger_repository
-        = ledger_repository_factory_->Clone();
+    auto ledger_repository_ptr =
+        ledger::LedgerRepositoryPtr::Create(std::move(ledger_repository));
     ledger::LedgerPtr ledger;
-    ledger_repository->GetLedger(
+    ledger_repository_ptr->GetLedger(
         to_array(kAppId), ledger.NewRequest(), [](ledger::Status status) {
-      if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "UserRunnerImpl::Initialize: "
-                          " LedgerRepository.GetLedger() failed: "
-                       << LedgerStatusToString(status);
-      }
+      FTL_CHECK(status == ledger::Status::OK)
+            << "LedgerRepository.GetLedger() failed: "
+            << LedgerStatusToString(status);
     });
 
     ApplicationEnvironmentPtr env;
     stories_scope_->environment()->Duplicate(env.NewRequest());
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
-    auto story_provider_impl = new StoryProviderImpl(
-        std::move(env), std::move(ledger),
-        story_provider.NewRequest(), ledger_repository_factory_.get());
+    auto story_provider_impl =
+        new StoryProviderImpl(std::move(env), std::move(ledger),
+                              std::move(ledger_repository_ptr),
+                              story_provider.NewRequest());
 
     auto maxwell_services =
         GetServiceProvider("file:///system/apps/maxwell_launcher", nullptr);
@@ -136,16 +134,6 @@ class UserRunnerImpl : public UserRunner {
   ~UserRunnerImpl() override = default;
 
  private:
-  void SetupLedgerRepository(const fidl::Array<uint8_t>& user_id) {
-    auto app_services = GetServiceProvider("file:///system/apps/ledger", nullptr);
-
-    ledger::LedgerRepositoryFactoryPtr ledger_repository_factory;
-    ConnectToService(app_services.get(), ledger_repository_factory.NewRequest());
-    ledger_repository_factory_ = std::make_unique<UserLedgerRepositoryFactory>(
-        kLedgerBaseDir + to_hex_string(user_id),
-        std::move(ledger_repository_factory));
-  }
-
   ServiceProviderPtr GetServiceProvider(
       const fidl::String& url,
       const fidl::Array<fidl::String>* const args) {
@@ -185,7 +173,6 @@ class UserRunnerImpl : public UserRunner {
 
   std::shared_ptr<ApplicationContext> application_context_;
   StrongBinding<UserRunner> binding_;
-  std::unique_ptr<UserLedgerRepositoryFactory> ledger_repository_factory_;
   std::unique_ptr<Scope> stories_scope_;
   UserShellPtr user_shell_;
 
@@ -212,11 +199,14 @@ class UserRunnerApp : public UserRunnerFactory {
       fidl::Array<uint8_t> user_id,
       const fidl::String& user_shell,
       fidl::Array<fidl::String> user_shell_args,
+      fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserRunner> user_runner_request) override {
-    new UserRunnerImpl(application_context_,
-                       std::move(user_id), user_shell, std::move(user_shell_args),
-                       std::move(view_owner_request), std::move(user_runner_request));
+    new UserRunnerImpl(application_context_, std::move(user_id), user_shell,
+                       std::move(user_shell_args),
+                       std::move(ledger_repository),
+                       std::move(view_owner_request),
+                       std::move(user_runner_request));
   }
 
   std::shared_ptr<ApplicationContext> application_context_;

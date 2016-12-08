@@ -82,12 +82,12 @@ StoryImpl::StoryImpl(
     std::shared_ptr<ApplicationContext> application_context,
     fidl::InterfaceHandle<Resolver> resolver,
     fidl::InterfaceHandle<StoryStorage> story_storage,
-    fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repository,
+    fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
     fidl::InterfaceRequest<StoryRunner> story_runner_request)
       : binding_(this), application_context_(application_context) {
   resolver_.Bind(std::move(resolver));
   story_storage_.Bind(std::move(story_storage));
-  user_ledger_repository_.Bind(std::move(user_ledger_repository));
+  ledger_repository_.Bind(std::move(ledger_repository));
   binding_.Bind(std::move(story_runner_request));
 }
 
@@ -183,7 +183,7 @@ void StoryImpl::GetLedger(
     fidl::InterfaceRequest<ledger::Ledger> req,
     const std::function<void(ledger::Status)>& result) {
   FTL_DCHECK(!module_name.empty());
-  user_ledger_repository_->GetLedger(to_array(module_name), std::move(req), result);
+  ledger_repository_->GetLedger(to_array(module_name), std::move(req), result);
 }
 
 // |StoryRunner|

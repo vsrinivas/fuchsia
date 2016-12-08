@@ -17,7 +17,6 @@
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
-#include "apps/modular/src/user_runner/user_ledger_repository_factory.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -33,10 +32,8 @@ class StoryControllerImpl : public StoryController,
  public:
   static StoryControllerImpl* New(
       StoryDataPtr story_data,
-      StoryProviderImpl* story_provider_impl,
-      UserLedgerRepositoryFactory* const ledger_repository_factory) {
-    return new StoryControllerImpl(std::move(story_data), story_provider_impl,
-                                   ledger_repository_factory);
+      StoryProviderImpl* story_provider_impl) {
+    return new StoryControllerImpl(std::move(story_data), story_provider_impl);
   }
 
   ~StoryControllerImpl() override = default;
@@ -52,8 +49,7 @@ class StoryControllerImpl : public StoryController,
   // are created always with new.
   StoryControllerImpl(
       StoryDataPtr story_data,
-      StoryProviderImpl* story_provider_impl,
-      UserLedgerRepositoryFactory* ledger_repository_factory);
+      StoryProviderImpl* story_provider_impl);
 
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
@@ -100,8 +96,6 @@ class StoryControllerImpl : public StoryController,
   FidlDocMap root_docs_;
 
   ModuleControllerPtr module_;
-
-  UserLedgerRepositoryFactory* const ledger_repository_factory_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };

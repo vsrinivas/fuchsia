@@ -13,12 +13,10 @@ namespace modular {
 
 StoryControllerImpl::StoryControllerImpl(
     StoryDataPtr story_data,
-    StoryProviderImpl* const story_provider_impl,
-    UserLedgerRepositoryFactory* ledger_repository_factory)
+    StoryProviderImpl* const story_provider_impl)
     : story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
-      module_watcher_binding_(this),
-      ledger_repository_factory_(ledger_repository_factory) {
+      module_watcher_binding_(this) {
   bindings_.set_on_empty_set_handler([this]() {
     story_provider_impl_->PurgeControllers();
   });
@@ -204,7 +202,7 @@ void StoryControllerImpl::StartStory(
 
   story_runner_factory->Create(
       std::move(resolver), std::move(story_storage),
-      ledger_repository_factory_->Clone(),
+      story_provider_impl_->DuplicateLedgerRepository(),
       story_runner_.NewRequest());
 
   story_runner_->GetStory(story_.NewRequest());

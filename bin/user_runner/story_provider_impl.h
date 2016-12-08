@@ -15,9 +15,9 @@
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/story_data.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
+#include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "apps/modular/src/user_runner/transaction.h"
-#include "apps/modular/src/user_runner/user_ledger_repository_factory.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -34,8 +34,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   StoryProviderImpl(
       ApplicationEnvironmentPtr environment,
       fidl::InterfaceHandle<ledger::Ledger> ledger,
-      fidl::InterfaceRequest<StoryProvider> story_provider_request,
-      UserLedgerRepositoryFactory* ledger_repository_factory);
+      ledger::LedgerRepositoryPtr ledger_repository,
+      fidl::InterfaceRequest<StoryProvider> story_provider_request);
 
   ~StoryProviderImpl() override = default;
 
@@ -48,7 +48,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   // Used by Create and Resume implementations. Takes ownership of the
   // controller.
-  void AddController(const std::string& story_id, StoryControllerImpl* story_controller);
+  void AddController(const std::string& story_id,
+                     StoryControllerImpl* story_controller);
 
   // Removes story controller impls no longer needed. Also called by
   // the empty binding set handler of StoryControllerImpl.
@@ -61,11 +62,14 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // Used by CreateStory() to write story meta-data to the ledger.
   void WriteStoryData(StoryDataPtr story_data, std::function<void()> done);
 
+  fidl::InterfaceHandle<ledger::LedgerRepository> DuplicateLedgerRepository();
+
   // Used by StoryControllerImpl.
   using Storage = StoryStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
-  void ConnectToStoryRunnerFactory(fidl::InterfaceRequest<StoryRunnerFactory> request);
+  void ConnectToStoryRunnerFactory(
+      fidl::InterfaceRequest<StoryRunnerFactory> request);
   void ConnectToResolver(fidl::InterfaceRequest<Resolver> request);
 
   using FidlDocMap = fidl::Map<fidl::String, document_store::DocumentPtr>;
@@ -172,8 +176,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   std::unordered_map<std::string,
                      std::unique_ptr<StoryControllerEntry>> story_controllers_;
 
-  // Owned by UserRunner.
-  UserLedgerRepositoryFactory* const ledger_repository_factory_;
+  ledger::LedgerRepositoryPtr ledger_repository_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

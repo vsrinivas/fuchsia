@@ -88,7 +88,7 @@ class StoryImpl : public StoryRunner {
       std::shared_ptr<ApplicationContext> application_context,
       fidl::InterfaceHandle<Resolver> resolver,
       fidl::InterfaceHandle<StoryStorage> story_storage,
-      fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repository,
+      fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceRequest<StoryRunner> story_runner_request);
 
   // These methods are called by StoryConnection.
@@ -131,7 +131,7 @@ class StoryImpl : public StoryRunner {
   StoryStoragePtr story_storage_;
   std::vector<Connection> connections_;
 
-  ledger::LedgerRepositoryPtr user_ledger_repository_;
+  ledger::LedgerRepositoryPtr ledger_repository_;
 
   std::vector<std::unique_ptr<LinkImpl>> links_;
 

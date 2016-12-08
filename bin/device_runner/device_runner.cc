@@ -34,6 +34,8 @@ namespace {
 
 constexpr char kUserScopeLabelPrefix[] = "user-";
 constexpr char kUserRunnerUrl[] = "file:///system/apps/user_runner";
+constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
+constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
 
 class Settings {
  public:
@@ -110,12 +112,26 @@ class DeviceRunnerApp : public UserProvider {
       : settings_(settings),
         app_context_(ApplicationContext::CreateFromStartupInfo()),
         binding_(this) {
+    // 1. Start the ledger.
+    ServiceProviderPtr ledger_services;
+    auto ledger_launch_info = ApplicationLaunchInfo::New();
+    ledger_launch_info->url = kLedgerAppUrl;
+    ledger_launch_info->arguments = nullptr;
+    ledger_launch_info->services = ledger_services.NewRequest();
+
+    app_context_->launcher()->CreateApplication(
+        std::move(ledger_launch_info), ledger_controller_.NewRequest());
+
+    ConnectToService(ledger_services.get(),
+                     ledger_repository_factory_.NewRequest());
+
+    // 2. Start the device shell.
+    ServiceProviderPtr services;
     auto launch_info = ApplicationLaunchInfo::New();
     launch_info->url = settings_.device_shell;
     launch_info->arguments = to_array(settings_.device_shell_args);
-
-    ServiceProviderPtr services;
     launch_info->services = services.NewRequest();
+
     app_context_->launcher()->CreateApplication(
         std::move(launch_info), device_shell_controller_.NewRequest());
 
@@ -162,15 +178,27 @@ class DeviceRunnerApp : public UserProvider {
         std::move(launch_info),
         user_runner_controller_.NewRequest());
 
-    // 3. Initialize the UserRunner service.
+    // 3. Get the LedgerRepository for the user.
+    fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
+    ledger_repository_factory_->GetRepository(
+      kLedgerDataBaseDir + to_hex_string(user_id),
+      ledger_repository.NewRequest(),
+      [](ledger::Status status){
+        FTL_DCHECK(status == ledger::Status::OK)
+          << "GetRepository failed: " << status;
+      });
+
+    // 4. Initialize the UserRunner service.
     UserRunnerFactoryPtr user_runner_factory;
     ConnectToService(services.get(), user_runner_factory.NewRequest());
-    user_runner_factory->Create(std::move(user_id), settings_.user_shell,
-                                to_array(settings_.user_shell_args),
-                                std::move(view_owner_request),
-                                user_runner_.NewRequest());
+    user_runner_factory->Create(
+        std::move(user_id),
+        settings_.user_shell,
+        to_array(settings_.user_shell_args),
+        std::move(ledger_repository),
+        std::move(view_owner_request),
+        user_runner_.NewRequest());
   }
-
   const Settings settings_;
 
   std::shared_ptr<ApplicationContext> app_context_;
@@ -182,6 +210,9 @@ class DeviceRunnerApp : public UserProvider {
   std::unique_ptr<Scope> user_runner_scope_;
   ApplicationControllerPtr user_runner_controller_;
   UserRunnerPtr user_runner_;
+
+  ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
+  ApplicationControllerPtr ledger_controller_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
