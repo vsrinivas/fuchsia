@@ -19,7 +19,7 @@
 namespace {
 
 constexpr char kUsageString[] =
-    "Usage: debugserver [options] port program [args...]\n"
+    "Usage: debugserver [options] port [program [args...]]\n"
     "\n"
     "  port    - TCP port\n"
     "  program - the path to the executable to run\n"
@@ -28,8 +28,19 @@ constexpr char kUsageString[] =
     "\n"
     "Options:\n"
     "  --help             show this help message\n"
-    "  --verbose=[level]  set debug verbosity level\n"
-    "  --quiet=[level]    set quietness level (opposite of verbose)\n";
+    "  --verbose[=level]  set debug verbosity level\n"
+    "  --quiet[=level]    set quietness level (opposite of verbose)\n"
+    "\n"
+    "--verbose=<level> : sets |min_log_level| to -level\n"
+    "--quiet=<level>   : sets |min_log_level| to +level\n"
+    "Quiet supersedes verbose if both are specified.\n"
+    "Defined log levels:\n"
+    "-n - verbosity level n\n"
+    " 0 - INFO - this is the default level\n"
+    " 1 - WARNING\n"
+    " 2 - ERROR\n"
+    " 3 - FATAL\n"
+    "Note that negative log levels mean more verbosity.\n";
 
 void PrintUsageString() {
   std::cout << kUsageString << std::endl;
@@ -40,9 +51,13 @@ void PrintUsageString() {
 int main(int argc, char* argv[]) {
   ftl::CommandLine cl = ftl::CommandLineFromArgcArgv(argc, argv);
 
-  if (cl.HasOption("help", nullptr) || cl.positional_args().size() < 2) {
+  if (cl.HasOption("help", nullptr)) {
     PrintUsageString();
     return EXIT_SUCCESS;
+  }
+  if (cl.positional_args().size() < 1) {
+    PrintUsageString();
+    return EXIT_FAILURE;
   }
 
   if (!ftl::SetLogSettingsFromCommandLine(cl))
@@ -58,20 +73,15 @@ int main(int argc, char* argv[]) {
 
   debugserver::Server server(port);
 
-  // Create the process. Since we currently support running only one process
-  // during a single run of the stub, we initialize it here.
-  // TODO(armansito): Change this while adding support for creating and/or
-  // attaching to a process later.
   std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
                                          cl.positional_args().end());
-  auto inferior =
-      std::make_unique<debugserver::Process>(&server, &server, inferior_argv);
-  if (!inferior->Initialize()) {
-    FTL_LOG(ERROR) << "Failed to set up inferior";
-    return EXIT_FAILURE;
-  }
+  auto inferior = new debugserver::Process(&server, &server, inferior_argv);
 
-  server.set_current_process(inferior.release());
+  // It's simpler to set the current process here since we don't support
+  // multiple processes yet. The process is not live yet however, it does not
+  // exist to the kernel yet. Calling Process::Initialize() is left to the
+  // vRun command.
+  server.set_current_process(inferior);
 
   bool status = server.Run();
   if (!status) {

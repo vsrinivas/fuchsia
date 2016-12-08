@@ -67,6 +67,30 @@ bool StartsWith(const ftl::StringView& str, const ftl::StringView& prefix) {
   return str.substr(0, prefix.size()) == prefix;
 }
 
+std::vector<std::string> BuildArgvFor_vRun(const ftl::StringView& packet) {
+  std::vector<std::string> argv;
+  size_t len = packet.size();
+  size_t s = 0;
+
+  while (s < len) {
+    size_t semi = packet.find(';', s);
+    size_t n;
+    if (semi == ftl::StringView::npos)
+      n = len - s;
+    else
+      n = semi - s;
+    std::vector<uint8_t> arg = util::DecodeByteArrayString(packet.substr(s, n));
+    auto char_arg = reinterpret_cast<char*>(arg.data());
+    argv.push_back(std::string(char_arg, arg.size()));
+    if (semi == ftl::StringView::npos)
+      s = len;
+    else
+      s = semi + 1;
+  }
+
+  return argv;
+}
+
 }  // namespace
 
 CommandHandler::CommandHandler(Server* server)
@@ -870,20 +894,37 @@ bool CommandHandler::HandleQueryXfer(const ftl::StringView& params,
 
 bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
                                  const ResponseCallback& callback) {
-  // TODO(armansito): We're keeping it simple for now always only run the
-  // program that was passed to gdbserver in the command-line. Fix this later.
-  if (!packet.empty()) {
-    FTL_LOG(ERROR) << "vRun: Only running the default program is supported";
-    return ReplyWithError(util::ErrorCode::INVAL, callback);
-  }
+  FTL_VLOG(2) << "Handle_vRun: " << packet;
 
   Process* current_process = server_->current_process();
   if (!current_process) {
+    // This can't happen today, but it might eventually.
     FTL_LOG(ERROR) << "vRun: no current process to run!";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
-  if (!current_process->IsAttached() && !current_process->Attach()) {
+  if (!packet.empty()) {
+    std::vector<std::string> argv = BuildArgvFor_vRun(packet);
+    current_process->set_argv(argv);
+  }
+
+  switch (current_process->state()) {
+    case Process::State::kNew:
+    case Process::State::kGone:
+      break;
+    default:
+      FTL_LOG(ERROR)
+          << "vRun: need to kill the currently running process first";
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  if (!current_process->Initialize()) {
+    FTL_LOG(ERROR) << "Failed to set up inferior";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  FTL_DCHECK(!current_process->IsAttached());
+  if (!current_process->Attach()) {
     FTL_LOG(ERROR) << "vRun: Failed to attach process!";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }

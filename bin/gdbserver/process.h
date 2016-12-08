@@ -68,6 +68,8 @@ class Process final {
 
   std::string GetName() const;
 
+  void set_argv(const std::vector<std::string>& argv) { argv_ = argv; }
+
   // Returns the current state of this process.
   State state() const { return state_; }
 

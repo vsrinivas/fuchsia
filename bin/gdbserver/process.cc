@@ -148,7 +148,6 @@ Process::Process(Server* server, Delegate* delegate, const vector<string>& argv)
       breakpoints_(this) {
   FTL_DCHECK(server_);
   FTL_DCHECK(delegate_);
-  FTL_DCHECK(argv_.size() > 0);
 }
 
 Process::~Process() {
@@ -186,6 +185,13 @@ bool Process::Initialize() {
     default:
       // Shouldn't get here if process is currently live.
       FTL_DCHECK(false);
+  }
+
+  FTL_LOG(INFO) << "Initializing process";
+
+  if (argv_.size() == 0 || argv_[0].size() == 0) {
+    FTL_LOG(ERROR) << "No program specified";
+    return false;
   }
 
   if (!SetupLaunchpad(&launchpad_, argv_))
