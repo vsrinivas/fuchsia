@@ -81,7 +81,7 @@ bool Command::Start(modular::ApplicationLauncher* launcher,
 void Command::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   if (pending & MX_SOCKET_READABLE) {
     char buffer[2048];
-    mx_size_t len;
+    size_t len;
 
     if (handle == stdout_.get()) {
       if (stdout_.read(0, buffer, sizeof(buffer), &len) != NO_ERROR) {
@@ -99,7 +99,7 @@ void Command::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 }
 
 void Command::SendData(const void* bytes, size_t num_bytes) {
-  mx_size_t len;
+  size_t len;
   if (stdin_.write(0, bytes, num_bytes, &len) != NO_ERROR) {
     // TODO: Deal with the socket being full.
     FTL_LOG(ERROR) << "Failed to send";
