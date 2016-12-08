@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cinttypes>
+#include <elf.h>
 #include <string>
 
 #include "lib/ftl/logging.h"
@@ -16,6 +17,7 @@
 #include "registers.h"
 #include "server.h"
 #include "thread.h"
+#include "thread-action-list.h"
 #include "util.h"
 
 namespace debugserver {
@@ -33,6 +35,7 @@ const char kSupportedFeatures[] =
     "qXfer:auxv:read+";
 
 const char kAttached[] = "Attached";
+const char kCont[] = "Cont;";
 const char kCurrentThreadId[] = "C";
 const char kFirstThreadInfo[] = "fThreadInfo";
 const char kNonStop[] = "NonStop";
@@ -615,6 +618,8 @@ bool CommandHandler::Handle_Q(const ftl::StringView& prefix,
 
 bool CommandHandler::Handle_v(const ftl::StringView& packet,
                               const ResponseCallback& callback) {
+  if (StartsWith(packet, kCont))
+    return Handle_vCont(packet.substr(std::strlen(kCont)), callback);
   if (StartsWith(packet, kRun))
     return Handle_vRun(packet.substr(std::strlen(kRun)), callback);
 
@@ -863,17 +868,42 @@ bool CommandHandler::HandleQueryXfer(const ftl::StringView& params,
 
   // Build the auxiliary vector. This definition is provided by the Linux manual
   // page for the proc pseudo-filesystem (i.e. 'man proc'):
-  //
   // "This contains the contents of the ELF interpreter information passed to
   // the process at exec time. The format is one unsigned long ID plus one
   // unsigned long value for each entry. The last entry contains two zeros."
+  // On Fuchsia we borrow this concept to save inventing something new.
+  // We may have to eventually, but this works for now.
+  // There is an extra complication that all the needed values aren't available
+  // when the process starts: e.g., AT_ENTRY - the executable isn't loaded
+  // until sometime after the process starts.
+  constexpr size_t kMaxAuxvEntries = 10;
   struct {
     unsigned long key;
     unsigned long value;
-  } auxv[] = {
-    { 7, current_process->base_address() },  // AT_BASE
-    { }
-  };
+  } auxv[kMaxAuxvEntries];
+
+#define ADD_AUXV(_key, _value) \
+  do {                         \
+    auxv[n].key = (_key);      \
+    auxv[n].value = (_value);  \
+    ++n;                       \
+  } while (0)
+
+  size_t n = 0;
+  ADD_AUXV(AT_BASE, current_process->base_address());
+  if (current_process->DsosLoaded()) {
+    const elf::dsoinfo_t* exec = current_process->GetExecDso();
+    if (exec) {
+      ADD_AUXV(AT_ENTRY, exec->entry);
+      ADD_AUXV(AT_PHDR, exec->phdr);
+      ADD_AUXV(AT_PHENT, exec->phentsize);
+      ADD_AUXV(AT_PHNUM, exec->phnum);
+    }
+  }
+  ADD_AUXV(AT_NULL, 0);
+  FTL_DCHECK(n <= countof(auxv));
+
+#undef ADD_AUXV
 
   // We allow setting sizeof(auxv) as the offset, which would effectively result
   // in reading 0 bytes.
@@ -882,7 +912,8 @@ bool CommandHandler::HandleQueryXfer(const ftl::StringView& params,
     return ReplyWithError(util::ErrorCode::INVAL, callback);
   }
 
-  size_t rsp_len = std::min(sizeof(auxv) - offset, length);
+  size_t end = n * sizeof(auxv[0]);
+  size_t rsp_len = std::min(end - offset, length);
   char rsp[1 + rsp_len];
 
   rsp[0] = 'l';
@@ -890,6 +921,99 @@ bool CommandHandler::HandleQueryXfer(const ftl::StringView& params,
 
   callback(ftl::StringView(rsp, sizeof(rsp)));
   return true;
+}
+
+bool CommandHandler::Handle_vCont(const ftl::StringView& packet,
+                                  const ResponseCallback& callback) {
+  Process* current_process = server_->current_process();
+  if (!current_process) {
+    FTL_LOG(ERROR) << "vCont: no current process to run!";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  ThreadActionList actions(packet, current_process->id());
+  if (!actions.valid()) {
+    FTL_LOG(ERROR) << "vCont: \"" << packet << "\": error / not supported.";
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  FTL_DCHECK(current_process->IsAttached());
+  FTL_DCHECK(current_process->started());
+
+  // Before we start calling GetAction we need to resolve "pick one" thread
+  // values.
+  for (auto e : actions.actions()) {
+    if (e.tid() == 0) {
+      FTL_DCHECK(e.pid() > 0);
+      // TODO(dje): For now we assume there is only one process.
+      FTL_DCHECK(current_process->id() == e.pid() ||
+                 e.pid() == ThreadActionList::kAll);
+      Thread* t = current_process->PickOneThread();
+      if (t)
+        e.set_picked_tid(t->id());
+    }
+  }
+  actions.MarkPickOnesResolved();
+
+  // First pass over all actions: Find any errors that we can so that we
+  // don't cause any thread to run if there's an error.
+
+  bool action_list_ok = true;
+  current_process->ForEachLiveThread(
+      [&actions, ok_ptr = &action_list_ok](Thread * thread) {
+        mx_koid_t pid = thread->process()->id();
+        mx_koid_t tid = thread->id();
+        ThreadActionList::Action action = actions.GetAction(pid, tid);
+        switch (action) {
+          case ThreadActionList::Action::kStep:
+            switch (thread->state()) {
+              case Thread::State::kNew:
+                FTL_LOG(ERROR) << "vCont;s: can't step thread in kNew state";
+                *ok_ptr = false;
+                return;
+              default:
+                break;
+            }
+          default:
+            break;
+        }
+      });
+  if (!action_list_ok)
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+
+  current_process->ForEachLiveThread([&actions](Thread* thread) {
+    mx_koid_t pid = thread->process()->id();
+    mx_koid_t tid = thread->id();
+    ThreadActionList::Action action = actions.GetAction(pid, tid);
+    FTL_VLOG(1) << "vCont; Thread " << thread->GetDebugName()
+                << " state: " << thread->StateName(thread->state())
+                << " action: " << ThreadActionList::ActionToString(action);
+    switch (action) {
+      case ThreadActionList::Action::kContinue:
+        switch (thread->state()) {
+          case Thread::State::kNew:
+          case Thread::State::kStopped:
+            thread->Resume();
+            break;
+          default:
+            break;
+        }
+      case ThreadActionList::Action::kStep:
+        switch (thread->state()) {
+          case Thread::State::kStopped:
+            thread->Step();
+            break;
+          default:
+            break;
+        }
+      default:
+        break;
+    }
+  });
+
+  // We defer sending a stop-reply packet. Server will send it out when threads
+  // stop. At this point in time GDB is just expecting "OK".
+  return ReplyOK(callback);
 }
 
 bool CommandHandler::Handle_vRun(const ftl::StringView& packet,

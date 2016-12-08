@@ -84,6 +84,9 @@ class CommandHandler final {
                         const ResponseCallback& callback);
 
   // v packets:
+  // vCont
+  bool Handle_vCont(const ftl::StringView& packet,
+                    const ResponseCallback& callback);
   // vRun
   bool Handle_vRun(const ftl::StringView& packet,
                    const ResponseCallback& callback);

@@ -5,6 +5,7 @@
 #include "process.h"
 
 #include <cinttypes>
+#include <link.h>
 
 #include <launchpad/vmo.h>
 #include <magenta/syscalls.h>
@@ -18,6 +19,12 @@
 
 using std::string;
 using std::vector;
+
+// This is a global variable that exists in the dynamic linker, and thus in
+// every processes's address space (since Fuchsia is PIE-only). It contains
+// various information provided by the dynamic linker for use by debugging
+// tools.
+extern struct r_debug* _dl_debug_addr;
 
 namespace debugserver {
 namespace {
@@ -159,6 +166,8 @@ Process::~Process() {
 
   if (debug_handle_ != MX_HANDLE_INVALID)
     mx_handle_close(debug_handle_);
+
+  dso_free_list(dsos_);
 
   // TODO(armanisto): Somehow kill the process here if it's running.
   // launchpad_destroy doesn't seem to do this.
@@ -460,18 +469,72 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
   return memory_.Write(address, data, length);
 }
 
+void Process::TryBuildLoadedDsosList(Thread* thread) {
+  FTL_DCHECK(dsos_ == nullptr);
+
+  if (dsos_build_failed_)
+    return;
+
+  FTL_VLOG(2) << "Building dso list";
+
+  // TODO(dje): For now we make the simplifying assumption that the address of
+  // this variable in our address space is constant among all processes.
+  auto rdebug_vaddr = reinterpret_cast<mx_vaddr_t>(_dl_debug_addr);
+  struct r_debug debug;
+  if (!ReadMemory(rdebug_vaddr, &debug, sizeof(debug)))
+    return;
+
+  // Since we could, theoretically, stop in the dynamic linker before we get
+  // that far check to see if it has been filled in.
+  // TODO(dje): Document our test in dynlink.c.
+  if (debug.r_version == 0) {
+    FTL_VLOG(2) << "debug.r_version is 0";
+    return;
+  }
+
+  // Did we stop at the dynamic linker debug breakpoint?
+  bool success = thread->registers()->RefreshGeneralRegisters();
+  FTL_DCHECK(success);
+  mx_vaddr_t pc = thread->registers()->GetPC();
+  // TODO(dje): -1: adjust_pc_after_break
+  if (pc - 1 != debug.r_brk) {
+    FTL_VLOG(2) << "not stopped at dynlink debug bkpt";
+    return;
+  }
+
+  auto lmap_vaddr = reinterpret_cast<mx_vaddr_t>(debug.r_map);
+  dsos_ = elf::dso_fetch_list(memory_, lmap_vaddr, "app");
+  // We should have fetched at least one since this is not called until the
+  // dl_debug_state breakpoint is hit.
+  if (dsos_ == nullptr) {
+    // Don't keep trying.
+    FTL_VLOG(2) << "dso_fetch_list failed";
+    dsos_build_failed_ = true;
+  } else {
+    elf::dso_vlog_list(dsos_);
+  }
+}
+
 void Process::OnException(const mx_excp_type_t type,
                           const mx_exception_context_t& context) {
   Thread* thread = nullptr;
   if (context.tid != MX_KOID_INVALID)
     thread = FindThreadById(context.tid);
 
+  // Finding the load address of the main executable requires a few steps.
+  // It's not loaded until the first time we hit the _dl_debug_state
+  // breakpoint. For now gdb sets that breakpoint. What we do is watch for
+  // s/w breakpoint exceptions.
+  if (type == MX_EXCP_SW_BREAKPOINT) {
+    if (!DsosLoaded())
+      TryBuildLoadedDsosList(thread);
+  }
+
   // |type| could either map to an architectural exception or Magenta-defined
   // synthetic exceptions.
   if (MX_EXCP_IS_ARCH(type)) {
     FTL_DCHECK(thread);
-    thread->set_state(Thread::State::kStopped);
-    thread->SetExceptionContext(context);
+    thread->OnArchException(context);
     delegate_->OnArchitecturalException(this, thread, type, context);
     return;
   }
@@ -517,6 +580,10 @@ int Process::ExitCode() {
     util::LogErrorWithMxStatus("Error getting process exit code", status);
     return -1;
   }
+}
+
+const elf::dsoinfo_t* Process::GetExecDso() {
+  return dso_get_main_exec(dsos_);
 }
 
 }  // namespace debugserver

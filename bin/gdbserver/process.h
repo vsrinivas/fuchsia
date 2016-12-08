@@ -17,6 +17,7 @@
 #include "lib/mtl/tasks/message_loop_handler.h"
 
 #include "breakpoint.h"
+#include "dso-list.h"
 #include "exception_port.h"
 #include "memory-process.h"
 #include "thread.h"
@@ -154,6 +155,15 @@ class Process final {
   // Fetch the process's exit code.
   int ExitCode();
 
+  // Return true if dsos, including the main executable, have been loaded
+  // into the inferior.
+  bool DsosLoaded() { return dsos_ != nullptr; }
+
+  // Return the entry for the main executable from the dsos list.
+  // Returns nullptr if not present (could happen if inferior data structure
+  // has been clobbered).
+  const elf::dsoinfo_t* GetExecDso();
+
  private:
   Process() = default;
 
@@ -163,6 +173,13 @@ class Process final {
 
   // Called after all other processing of a process exit has been done.
   void FinishExit();
+
+  // Build list of loaded dsos.
+  // |thread| is the thread we stopped in.
+  // TODO(dje): This is normally only called once, after the main executable
+  // has been loaded. Therefore this list will not contain subsequently loaded
+  // dsos.
+  void TryBuildLoadedDsosList(Thread* thread);
 
   // The server that owns us.
   Server* server_;  // weak
@@ -208,6 +225,15 @@ class Process final {
   // threads are requested through FindThreadById().
   using ThreadMap = std::unordered_map<mx_koid_t, std::unique_ptr<Thread>>;
   ThreadMap threads_;
+
+  // List of dsos loaded.
+  // NULL if none have been loaded yet (including main executable).
+  // TODO(dje): Code taking from crashlogger, to be rewritten.
+  // TODO(dje): Doesn't include dsos loaded later.
+  elf::dsoinfo_t* dsos_ = nullptr;
+
+  // If true then building the dso list failed, don't try again.
+  bool dsos_build_failed_ = false;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Process);
 };

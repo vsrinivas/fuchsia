@@ -26,10 +26,10 @@ namespace debugserver {
 //
 // NOTE: This class is generally not thread safe. Care must be taken when
 // calling methods such as set_current_thread(), SetCurrentThread(), and
-// SendNotification() which modify the internal state of a Server instance.
+// QueueNotification() which modify the internal state of a Server instance.
 class Server final : public IOLoop::Delegate, public Process::Delegate {
  public:
-  // The default timeout interval used by SendNotification().
+  // The default timeout interval used when sending notifications.
   constexpr static int64_t kDefaultTimeoutSeconds = 30;
 
   explicit Server(uint16_t port);
@@ -70,21 +70,25 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
   // owned by this Server instance and should not be deleted.
   ExceptionPort* exception_port() { return &exception_port_; }
 
-  // Sends out a notification packet. The GDB Remote Protocol defines a specific
+  // Queue a notification packet and send it out if there are no currently
+  // queued notifications. The GDB Remote Protocol defines a specific
   // control-flow for notification packets, such that each notification packet
-  // will be pending until the remote end acknowledges it. There can be only one
-  // pending notification at a time.
+  // will be pending until the remote end acknowledges it. There can be only
+  // one pending notification at a time.
   //
   // A notification will time out if the remote end does not acknowledge it
-  // within |timeout|. If a notification times out, it will be sent again based
-  // on the value of |retry_count|. If |retry_count| is 0, then the next queued
-  // up notification will be sent.
-  void SendNotification(
+  // within |timeout|. If a notification times out, it will be sent again.
+  void QueueNotification(
       const ftl::StringView& name,
       const ftl::StringView& event,
       const ftl::TimeDelta& timeout =
-          ftl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds),
-      size_t retry_count = 0);
+          ftl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
+
+  // Wrapper of QueueNotification for "Stop" notifications.
+  void QueueStopNotification(
+      const ftl::StringView& event,
+      const ftl::TimeDelta& timeout =
+          ftl::TimeDelta::FromSeconds(kDefaultTimeoutSeconds));
 
   // Call this to schedule termination of gdbserver.
   // Any outstanding messages will be sent first.
@@ -98,13 +102,13 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
 
   // Represents a pending notification packet.
   struct PendingNotification {
-    PendingNotification(const std::string& bytes,
-                        const ftl::TimeDelta& timeout,
-                        size_t retries_left);
+    PendingNotification(const ftl::StringView& name,
+                        const ftl::StringView& event,
+                        const ftl::TimeDelta& timeout);
 
-    std::string bytes;
+    std::string name;
+    std::string event;
     ftl::TimeDelta timeout;
-    size_t retries_left;
   };
 
   Server() = default;
@@ -129,7 +133,7 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
 
   // Convenience helpers for PostWriteTask
   void PostPacketWriteTask(const ftl::StringView& data);
-  void PostNotificationWriteTask(const ftl::StringView& data);
+  void PostPendingNotificationWriteTask();
 
   // If |pending_notification_| is NULL, this pops the next lined-up
   // notification from |notify_queue_| and assigns it as the new pending
@@ -139,6 +143,9 @@ class Server final : public IOLoop::Delegate, public Process::Delegate {
   // next notification was not posted because either there is still a pending
   // unacknowledged notification or the notification queue is empty.
   bool TryPostNextNotification();
+
+  // Post a timeout handler for |pending_notification_|.
+  void PostNotificationTimeoutHandler();
 
   // Sets the run status and quits the main message loop.
   void QuitMessageLoop(bool status);

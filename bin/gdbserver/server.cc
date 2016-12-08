@@ -29,11 +29,12 @@ constexpr char kStopAck[] = "vStopped";
 
 }  // namespace
 
-Server::PendingNotification::PendingNotification(
-    const std::string& bytes,
-    const ftl::TimeDelta& timeout,
-    size_t retries_left)
-    : bytes(bytes), timeout(timeout), retries_left(retries_left) {}
+Server::PendingNotification::PendingNotification(const ftl::StringView& name,
+                                                 const ftl::StringView& event,
+                                                 const ftl::TimeDelta& timeout)
+    : name(name.data(), name.size()),
+      event(event.data(), event.size()),
+      timeout(timeout) {}
 
 Server::Server(uint16_t port)
     : port_(port),
@@ -87,20 +88,22 @@ void Server::SetCurrentThread(Thread* thread) {
     current_thread_ = thread->AsWeakPtr();
 }
 
-void Server::SendNotification(
-    const ftl::StringView& name,
-    const ftl::StringView& event,
-    const ftl::TimeDelta& timeout,
-    size_t retry_count) {
+void Server::QueueNotification(const ftl::StringView& name,
+                               const ftl::StringView& event,
+                               const ftl::TimeDelta& timeout) {
   // The GDB Remote protocol defines only the "Stop" notification
   FTL_DCHECK(name == kStopNotification);
-  std::string bytes = name.ToString() + ":" + event.ToString();
 
-  FTL_VLOG(1) << "Preparing notification: " << bytes;
+  FTL_VLOG(1) << "Preparing notification: " << name << ":" << event;
 
-  notify_queue_.push(std::make_unique<PendingNotification>(
-      bytes, timeout, retry_count));
+  notify_queue_.push(
+      std::make_unique<PendingNotification>(name, event, timeout));
   TryPostNextNotification();
+}
+
+void Server::QueueStopNotification(const ftl::StringView& event,
+                                   const ftl::TimeDelta& timeout) {
+  QueueNotification(kStopNotification, event, timeout);
 }
 
 bool Server::Listen() {
@@ -185,8 +188,11 @@ void Server::PostPacketWriteTask(const ftl::StringView& data) {
   PostWriteTask(false, data);
 }
 
-void Server::PostNotificationWriteTask(const ftl::StringView& data) {
-  PostWriteTask(true, data);
+void Server::PostPendingNotificationWriteTask() {
+  FTL_DCHECK(pending_notification_);
+  std::string bytes(pending_notification_->name + ":" +
+                    pending_notification_->event);
+  PostWriteTask(true, bytes);
 }
 
 bool Server::TryPostNextNotification() {
@@ -197,39 +203,29 @@ bool Server::TryPostNextNotification() {
   notify_queue_.pop();
   FTL_DCHECK(pending_notification_);
 
-  // Send the notification
-  PostNotificationWriteTask(pending_notification_->bytes);
+  // Send the notification.
+  PostPendingNotificationWriteTask();
+  PostNotificationTimeoutHandler();
+  return true;
+}
 
+void Server::PostNotificationTimeoutHandler() {
   // Set up a timeout handler.
-  // NOTE: There is a potential race in the logic below where the remote end
-  // COULD send an acknowledgment right after the timeout has expired and we
-  // have already sent the next queued up notification. In that case we could
-  // potentially interpret the acknowledgment packet for the previous
-  // notification as if it has been sent for the current one. The default time
-  // out interval is defined to be long enough that this is very unlikely.
+  // Continually resend the notification until the remote end acknowledges it,
+  // or until the notification is removed (say because the process exits).
   message_loop_.task_runner()->PostDelayedTask(
       [this, pending = pending_notification_.get()] {
         // If the notification that we set this timeout for has already been
         // acknowledged by the remote, then we have nothing to do.
+        // TODO(dje): sequence numbers?
         if (pending_notification_.get() != pending)
           return;
 
-        // If the notification has a positive retry count, then send it again.
-        if (pending_notification_->retries_left-- > 0) {
-          FTL_LOG(WARNING) << "Notification timed out; retrying";
-          PostNotificationWriteTask(pending_notification_->bytes);
-          return;
-        }
-
-        // The retry count has reached 0. Remove the pending notification and
-        // queue up the next one.
-        FTL_LOG(WARNING) << "Pending notifification timed out";
-        pending_notification_.reset();
-        TryPostNextNotification();
+        FTL_LOG(WARNING) << "Notification timed out; retrying";
+        PostPendingNotificationWriteTask();
+        PostNotificationTimeoutHandler();
       },
       pending_notification_->timeout);
-
-  return true;
 }
 
 void Server::QuitMessageLoop(bool status) {
@@ -261,15 +257,29 @@ void Server::OnBytesRead(const ftl::StringView& bytes_read) {
   // Before anything else, check to see if this is an acknowledgment in
   // response to a notification. The GDB Remote protocol defines only the
   // "Stop" notification, so we specially handle its acknowledgment here.
-  if (packet_data == kStopAck && pending_notification_) {
-    FTL_VLOG(1) << "Notification acknowledged";
-    pending_notification_.reset();
+  if (packet_data == kStopAck) {
+    if (pending_notification_) {
+      FTL_VLOG(2) << "Notification acknowledged";
 
-    // Try to post the next notification. If there are no queued events report,
-    // reply with OK.
-    if (!TryPostNextNotification()) {
-      FTL_DCHECK(notify_queue_.empty());
-      PostPacketWriteTask("OK");
+      // At this point we enter a loop of passing all queued notifications
+      // to GDB as normal (ack'd) messages, terminating with "OK". Nothing else
+      // is exchanged until this loop completes.
+      // https://sourceware.org/gdb/current/onlinedocs/gdb/Notification-Packets.html
+      // This is awkward to do given our message loop. What we do is keep
+      // the original notification around as a flag indicating this loop is
+      // active until the queue is empty.
+      // TODO(dje): Redo this.
+      if (!notify_queue_.empty()) {
+        std::unique_ptr<PendingNotification> notif =
+            std::move(notify_queue_.front());
+        notify_queue_.pop();
+        PostPacketWriteTask(notif->event);
+      } else {
+        pending_notification_.reset();
+        PostPacketWriteTask("OK");
+      }
+    } else {
+      FTL_VLOG(2) << "Notification acknowledged, but notification gone";
     }
     return;
   }
@@ -317,15 +327,42 @@ void Server::OnThreadStarted(Process* process,
   stop_reply.SetStopReason("create");
 
   auto packet = stop_reply.Build();
-  PostPacketWriteTask(ftl::StringView(packet.data(), packet.size()));
+
+  switch (process->state()) {
+    case Process::State::kStarting:
+      // vRun receives a synchronous response. After that it's all asynchronous.
+      PostPacketWriteTask(ftl::StringView(packet.data(), packet.size()));
+      process->set_state(Process::State::kRunning);
+      break;
+    case Process::State::kRunning:
+      QueueStopNotification(ftl::StringView(packet.data(), packet.size()));
+      break;
+    default:
+      FTL_DCHECK(false);
+  }
 }
 
 void Server::OnProcessOrThreadExited(Process* process,
                                      Thread* thread,
                                      const mx_excp_type_t type,
                                      const mx_exception_context_t& context) {
-  // TODO(armansito): Implement
-  FTL_VLOG(1) << (context.tid ? "Thread" : "Process") << " exited";
+  std::vector<char> packet;
+  if (thread) {
+    FTL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
+    int exit_code = 0;  // TODO(dje)
+    StopReplyPacket stop_reply(StopReplyPacket::Type::kThreadExited);
+    stop_reply.SetSignalNumber(exit_code);
+    stop_reply.SetThreadId(process->id(), thread->id());
+    packet = stop_reply.Build();
+  } else {
+    FTL_LOG(INFO) << "Process " << process->GetName() << " exited";
+    SetCurrentThread(nullptr);
+    int exit_code = process->ExitCode();
+    StopReplyPacket stop_reply(StopReplyPacket::Type::kProcessExited);
+    stop_reply.SetSignalNumber(exit_code);
+    packet = stop_reply.Build();
+  }
+  QueueStopNotification(ftl::StringView(packet.data(), packet.size()));
 }
 
 void Server::OnArchitecturalException(Process* process,
@@ -334,7 +371,8 @@ void Server::OnArchitecturalException(Process* process,
                                       const mx_exception_context_t& context) {
   FTL_DCHECK(process);
   FTL_DCHECK(thread);
-  FTL_VLOG(1) << "Architectural Exception";
+  FTL_VLOG(1) << "Architectural Exception: "
+              << util::ExceptionToString(type, context);
 
   // TODO(armansito): Fine-tune this check if we ever support multi-processing.
   FTL_DCHECK(process == current_process());
@@ -351,12 +389,6 @@ void Server::OnArchitecturalException(Process* process,
   StopReplyPacket stop_reply(StopReplyPacket::Type::kReceivedSignal);
   stop_reply.SetSignalNumber(sigval);
   stop_reply.SetThreadId(process->id(), context.tid);
-
-  // TODO(armansito): The kernel doesn't report MX_EXCP_*_BREAKPOINT currently,
-  // so we condition this on MX_EXCP_GENERAL. We always set "swbreak" for the
-  // stop reason since that's the only kind we currently support.
-  if (type == MX_EXCP_GENERAL)
-    stop_reply.SetStopReason("swbreak");
 
   // Registers.
   if (thread->registers()->RefreshGeneralRegisters()) {
@@ -375,7 +407,7 @@ void Server::OnArchitecturalException(Process* process,
   }
 
   auto packet = stop_reply.Build();
-  SendNotification("Stop", ftl::StringView(packet.data(), packet.size()));
+  QueueStopNotification(ftl::StringView(packet.data(), packet.size()));
 }
 
 }  // namespace debugserver

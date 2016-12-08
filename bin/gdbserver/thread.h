@@ -27,6 +27,7 @@ class Thread final {
     kGone,
     kStopped,
     kRunning,
+    kStepping,
   };
 
   Thread(Process* process, mx_handle_t debug_handle, mx_koid_t id);
@@ -61,12 +62,16 @@ class Thread final {
   // -1.
   int GetGdbSignal() const;
 
-  // Sets the current exception context for this thread.
-  void SetExceptionContext(const mx_exception_context_t& context);
+  // Called when the thread gets an architectural exception.
+  void OnArchException(const mx_exception_context_t& context);
 
   // Resumes the thread from a "stopped in exception" state. Returns true on
   // success, false on failure.
   bool Resume();
+
+  // Steps the thread from a "stopped in exception" state. Returns true on
+  // success, false on failure.
+  bool Step();
 
  private:
   friend class Process;

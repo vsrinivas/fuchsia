@@ -32,12 +32,11 @@ void InsertVector(std::vector<char>& collection,
 StopReplyPacket::StopReplyPacket(Type type) : type_(type), signo_(0) {}
 
 void StopReplyPacket::SetSignalNumber(uint8_t signal_number) {
-  FTL_DCHECK(type_ == Type::kReceivedSignal);
   signo_ = signal_number;
 }
 
 void StopReplyPacket::SetThreadId(mx_koid_t process_id, mx_koid_t thread_id) {
-  FTL_DCHECK(type_ == Type::kReceivedSignal);
+  FTL_DCHECK(type_ == Type::kReceivedSignal || type_ == Type::kThreadExited);
   tid_string_ = util::EncodeThreadId(process_id, thread_id);
 }
 
@@ -66,20 +65,33 @@ void StopReplyPacket::SetStopReason(const ftl::StringView& reason) {
 }
 
 std::vector<char> StopReplyPacket::Build() const {
-  // We only support kReceivedSignal for now.
-  FTL_DCHECK(type_ == Type::kReceivedSignal);
-  FTL_DCHECK(signo_) << "A signal number is required";
+  char type;
 
-  char type = HasParameters() ? 'T' : 'S';
+  switch (type_) {
+    case Type::kReceivedSignal:
+      FTL_DCHECK(signo_) << "A signal number is required";
+      type = HasParameters() ? 'T' : 'S';
+      break;
+    case Type::kProcessTerminatedWithSignal:
+      type = 'X';
+      break;
+    case Type::kProcessExited:
+      type = 'W';
+      break;
+    case Type::kThreadExited:
+      type = 'w';
+      break;
+    default:
+      FTL_DCHECK(false) << "Bad stop reply packet type";
+  }
 
-  // Calculate the final packet size.
   std::vector<char> packet;
 
   // Type
   packet.push_back(type);
 
   // Sigval
-  uint8_t signo = stop_reason_.empty() ? signo_ : 5;
+  uint8_t signo = stop_reason_.empty() ? signo_ : 5;  // TODO(dje): 5->?
   char signo_str[2];
   util::EncodeByteString(signo, signo_str);
   packet.insert(packet.end(), signo_str, signo_str + 2);
@@ -92,9 +104,19 @@ std::vector<char> StopReplyPacket::Build() const {
 
   // Thread ID.
   if (!tid_string_.empty()) {
-    InsertString(packet, kThreadIdPrefix);
-    InsertString(packet, tid_string_);
-    packet.push_back(';');
+    switch (type_) {
+      case Type::kThreadExited:
+        packet.push_back(';');
+        InsertString(packet, tid_string_);
+        break;
+      case Type::kReceivedSignal:
+        InsertString(packet, kThreadIdPrefix);
+        InsertString(packet, tid_string_);
+        packet.push_back(';');
+        break;
+      default:
+        FTL_DCHECK(false) << "bad stop reply type for thread";
+    }
   }
 
   // Stop reason

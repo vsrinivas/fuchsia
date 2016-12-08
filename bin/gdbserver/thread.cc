@@ -90,9 +90,25 @@ int Thread::GetGdbSignal() const {
   return arch::ComputeGdbSignal(*exception_context_);
 }
 
-void Thread::SetExceptionContext(const mx_exception_context_t& context) {
+void Thread::OnArchException(const mx_exception_context_t& context) {
+  // TODO(dje): While having a pointer allows for a simple "do we have a
+  // context" check, it might be simpler to just store the struct in the class.
   exception_context_.reset(new mx_exception_context_t);
   *exception_context_ = context;
+
+  State prev_state = state_;
+  set_state(State::kStopped);
+
+  // If we were singlestepping turn it off.
+  // If the user wants to try the singlestep again it must be re-requested.
+  if (prev_state == State::kStepping) {
+    FTL_DCHECK(breakpoints_.SingleStepBreakpointInserted());
+    if (!breakpoints_.RemoveSingleStepBreakpoint()) {
+      FTL_LOG(ERROR) << "Unable to clear single-step bkpt";
+    } else {
+      FTL_VLOG(2) << "Single-step bkpt cleared";
+    }
+  }
 }
 
 bool Thread::Resume() {
@@ -114,6 +130,38 @@ bool Thread::Resume() {
   }
 
   state_ = State::kRunning;
+  return true;
+}
+
+bool Thread::Step() {
+  if (state() != State::kStopped) {
+    FTL_LOG(ERROR) << "Cannot resume a thread while in state: "
+                   << StateName(state());
+    return false;
+  }
+
+  if (!registers_->RefreshGeneralRegisters()) {
+    FTL_LOG(ERROR) << "Failed refreshing gregs";
+    return false;
+  }
+  mx_vaddr_t pc = registers_->GetPC();
+
+  if (!breakpoints_.InsertSingleStepBreakpoint(pc))
+    return false;
+
+  // This is printed here before resuming the task so that this is always
+  // printed before any subsequent exception report (which is read by another
+  // thread).
+  FTL_LOG(INFO) << "Thread " << GetName() << " is now stepping";
+
+  mx_status_t status = mx_task_resume(debug_handle_, MX_RESUME_EXCEPTION);
+  if (status < 0) {
+    breakpoints_.RemoveSingleStepBreakpoint();
+    util::LogErrorWithMxStatus("Failed to resume thread", status);
+    return false;
+  }
+
+  state_ = State::kStepping;
   return true;
 }
 
