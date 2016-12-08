@@ -11,6 +11,7 @@
 #include <ctime>
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -335,6 +336,10 @@ struct Syscall {
             a.debug_dump();
         }
     }
+
+    bool is_vdso() const {
+        return std::find(attributes.begin(), attributes.end(), VDSOPURE) != attributes.end();
+    }
 };
 
 bool vet_identifier(const string& iden, const FileCtx& fc) {
@@ -466,13 +471,12 @@ bool parse_argpack(TokenStream& ts, std::vector<TypeSpec>* v) {
     return true;
 }
 
-enum GenType : uint32_t {
-    UserHeaderC,
-    KernelHeaderCPP,
-    Max
-};
+struct GenParams;
+
+using GenFn = bool (*) (int index, const GenParams& gp, std::ofstream& os, const Syscall& sc);
 
 struct GenParams {
+    GenFn genfn;
     const char* file_postfix;
     const char* entry_prefix;
     const char* name_prefix;
@@ -480,39 +484,6 @@ struct GenParams {
     uint32_t indent_spaces;
     std::map<string, string> overrides;
     std::map<uint32_t, string> attributes;
-};
-
-const std::map<string, string> c_overrides = {
-    {"", "void"},
-    {"any[]IN", "const void*"},
-    {"any[]OUT", "void*"},
-    {"any[]INOUT", "void*"}
-};
-
-const GenParams gen_params[] = {
-    // The user header, pure C.  (UserHeaderC)
-    {
-        ".user.h",          // file postfix.
-        "extern",           // function prefix.
-        "mx_",              // function name prefix.
-        "void",             // no args special type.
-        4u,                 // argument indent.
-        c_overrides,
-        {
-            {Syscall::NORETURN, "__attribute__((noreturn))"},
-            {Syscall::VDSOPURE, "__attribute__((leaf, const))"}
-        },
-    },
-    // The kernel header, C++.  (KernelHeaderCPP)
-    {
-        ".kernel.h",        // file postix.
-        nullptr,            // no function prefix
-        "sys_",             // function name prefix.
-        nullptr,            // no args.
-        4u,                 // argument indent.
-        c_overrides,
-        {},
-    }
 };
 
 bool generate_file_header(std::ofstream& os) {
@@ -536,7 +507,7 @@ const string add_attribute(const GenParams& gp, uint32_t attribute) {
     return (ft == gp.attributes.end()) ? string() : ft->second;
 }
 
-bool generate_legacy_c(const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+bool generate_legacy_c(int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
     if (gp.entry_prefix) {
         os << gp.entry_prefix << " ";
     }
@@ -596,6 +567,127 @@ bool generate_legacy_c(const GenParams& gp, std::ofstream& os, const Syscall& sc
     return os.good();
 }
 
+bool generate_legacy_assembly_x64(
+    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
+        return true;
+    // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs64, mx_##name, n
+    os << gp.name_prefix << " " << sc.arg_spec.size() << " " << sc.name << " " << index << "\n";
+    return os.good();
+}
+
+bool generate_legacy_assembly_arm64(
+    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
+        return true;
+    // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall mx_##name, n
+    os << gp.name_prefix << " " << sc.name << " " << index << "\n";
+    return os.good();
+}
+
+// TODO(cpu): Also consider moving this to the input file.
+const std::set<string> slots_64bit = {
+    "int64_t", "uint64_t", "mx_time_t"
+};
+
+bool generate_legacy_assembly_arm32(
+    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
+        return true;
+
+    // For 32bit, each function argument occupies one slot, unless it is a fixed 64bit size
+    // in which case it uses two. Additionally, for arm32, if the 64bit slot is now not in
+    // an even slot, a padding slot needs to be added. examples:
+    // uint32, uint32, uint64 == 4 slots
+    // uint32, uint64, uint32 == 5 slots
+
+    uint32_t count = 0;
+    for (const auto& arg : sc.arg_spec ) {
+        if (slots_64bit.find(arg.type) != slots_64bit.end()) {
+            count += (count % 2u) == 0 ? 2u : 3u;
+        } else {
+            count += 1;
+        }
+    }
+
+    // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs32, mx_##name, n
+    os << gp.name_prefix << " " << count << " " << sc.name << " " << index << "\n";
+    return os.good();
+}
+
+const std::map<string, string> c_overrides = {
+    {"", "void"},
+    {"any[]IN", "const void*"},
+    {"any[]OUT", "void*"},
+    {"any[]INOUT", "void*"}
+};
+
+const std::map<uint32_t, string> user_attrs = {
+    {Syscall::NORETURN, "__attribute__((noreturn))"},
+    {Syscall::VDSOPURE, "__attribute__((leaf, const))"}
+};
+
+enum GenType : uint32_t {
+    UserHeaderC,
+    KernelHeaderCPP,
+    KernelAsmIntel64,
+    KernelAsmArm64,
+    KernelAsmArm32,
+    Max
+};
+
+const GenParams gen_params[] = {
+    // The user header, pure C.  (UserHeaderC)
+    {
+        generate_legacy_c,
+        ".user.h",          // file postfix.
+        "extern",           // function prefix.
+        "mx_",              // function name prefix.
+        "void",             // no args special type.
+        4u,                 // argument indent.
+        c_overrides,
+        user_attrs,
+    },
+    // The kernel header, C++.  (KernelHeaderCPP)
+    {
+        generate_legacy_c,
+        ".kernel.h",        // file postix.
+        nullptr,            // no function prefix
+        "sys_",             // function name prefix.
+        nullptr,            // no args.
+        4u,                 // argument indent.
+        c_overrides
+    },
+    //  The assembly file for x86-64 (KernelAsmIntel64).
+    {
+        generate_legacy_assembly_x64,
+        ".x86-64.S",
+        nullptr,
+        "m_syscall",
+        nullptr,
+        0u
+    },
+    //  The assembly include file for ARM64 (KernelAsmArm64).
+    {
+        generate_legacy_assembly_arm64,
+        ".arm64.S",
+        nullptr,
+        "m_syscall",
+        nullptr,
+        0u
+    },
+    //  The assembly include file for ARM32 (KernelAsmArm32).
+    {
+        generate_legacy_assembly_arm32,
+        ".arm32.S",
+        nullptr,
+        "m_syscall",
+        nullptr,
+        0u,
+    }
+};
+
+
 class SygenGenerator {
 public:
     SygenGenerator(bool verbose) : verbose_(verbose) {}
@@ -625,13 +717,15 @@ public:
             return false;
         }
 
+        auto generator = gen_params[type].genfn;
+
+        int index = 0;
         for (const auto& sc : calls_) {
-            if (verbose_)
-                sc.debug_dump();
-            if (!generate_legacy_c(*gp, ofile, sc)) {
+            if (!generator(index, *gp, ofile, sc)) {
                 print_error("generation failed", output_file);
                 return false;
             }
+            ++index;
         }
 
         ofile << "\n";
@@ -646,6 +740,8 @@ private:
     std::list<Syscall> calls_;
     const bool verbose_;
 };
+
+
 
 bool process_comment(SygenGenerator* parser, TokenStream& ts) {
     return true;
@@ -753,6 +849,12 @@ int main(int argc, char* argv[]) {
     if (!generator.Generate(GenType::UserHeaderC, output_prefix))
         return 1;
     if (!generator.Generate(GenType::KernelHeaderCPP, output_prefix))
+        return 1;
+    if (!generator.Generate(GenType::KernelAsmIntel64, output_prefix))
+        return 1;
+    if (!generator.Generate(GenType::KernelAsmArm64, output_prefix))
+        return 1;
+    if (!generator.Generate(GenType::KernelAsmArm32, output_prefix))
         return 1;
 
     return 0;

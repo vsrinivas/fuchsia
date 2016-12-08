@@ -18,7 +18,7 @@ syscall num_cpus () vdsocall
     returns (uint32_t);
 
 syscall version_get
-    (version: char[version_len] OUT, version_len: uint32_t)
+    (version: char[version_len] OUT, version_len: uint32_t) vdsocall
     returns (mx_status_t);
 
 # Generic handle operations
