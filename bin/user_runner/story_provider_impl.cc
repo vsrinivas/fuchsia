@@ -548,10 +548,10 @@ void StoryProviderImpl::PurgeControllers() {
   // marked deleted that have no requests pending.
   std::vector<std::string> disconnected;
   for (auto& entry : story_controllers_) {
-    if ((entry.second->impl.get() != nullptr &&
-         entry.second->impl->bindings_size() == 0) ||
-        (entry.second->deleted && entry.second->requests.size() == 0 &&
-         entry.second->deleted_callbacks.size() == 0)) {
+    if (entry.second->impl.get() != nullptr &&
+        entry.second->impl->bindings_size() == 0) &&
+        entry.second->deleted && entry.second->requests.size() == 0 &&
+        entry.second->deleted_callbacks.size() == 0) {
       disconnected.push_back(entry.first);
     }
   }
@@ -670,6 +670,9 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
     new DeleteStoryCall(&transaction_container_, ledger_.get(), story_id,
                         [story_id]() {
                           FTL_LOG(INFO) << "Deleted story " << story_id;
+                          // This callback is for logging purposes. Flow of
+                          // control continues in the notification from the
+                          // Ledger.
                         });
   }
 }
