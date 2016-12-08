@@ -15,28 +15,38 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
+#include <lz4/lz4frame.h>
+#include <lz4/lz4.h>
 
 #define DEFAULT_BLOCKDEV "/dev/class/block/000"
 #define PATH_BLOCKDEVS "/dev/class/block"
-
+#define CHECK_BIT(var, pos) ((var) & (1 << (pos)))
 // 4GB
-#define MIN_SIZE_FUCHSIA_PART (((uint64_t)1024u) * 1024u * 1024u * 4u)
+#define MIN_SIZE_SYSTEM_PART (((uint64_t)1024u) * 1024u * 1024u * 4u)
 // 1GB
-#define MIN_SIZE_MAGENTA_PART (((uint64_t)1024u) * 1024u * 1024u)
+#define MIN_SIZE_EFI_PART (((uint64_t)1024u) * 1024u * 1024u)
 
 #define PATH_MAX 4096
 
 #define NUM_INSTALL_PARTS 2
 
+#define BLOCK_SIZE 65536
+
+// TODO(jmatt): it is gross that we're hard-coding this here, we should take
+// from the user or somehow set in the environment
+#define IMG_SYSTEM_PATH "/system/installer/user_fs.lz4"
+
 // use for the partition mask sent to parition_for_install
 typedef enum {
-    PART_MAGENTA = 1 << 0,
-    PART_FUCHSIA = 1 << 1
+    PART_EFI = 1 << 0,
+    PART_SYSTEM = 1 << 1
 } partition_flags;
 
-// GUID for a fuchsia partition
-static const uint8_t guid_fuchsia_part[16] = {
+// GUID for a system partition
+// as a string 606b000b-b7c7-4653-a7d5-b737332c899d
+static const uint8_t guid_system_part[16] = {
     0x0b, 0x00, 0x6b, 0x60,
     0xc7, 0xb7,
     0x53, 0x46,
@@ -196,7 +206,9 @@ static bool check_partition_size(const gpt_partition_t* partition,
  * part_out char* array. If the call reports NO_ERROR, path_out will contain
  * an array of character pointers to paths to the partitions, these paths will
  * be relative to the directory represented by search_dir. The path_out array
- * is ordered the same as the part_info array.
+ * is ordered the same as the part_info array. If some partitions are not found
+ * their entries will contain just a null terminator. An error will be returned
+ * if we encounter an error looking through the partition information.
  */
 static mx_status_t find_partition_path(gpt_partition_t* const* part_info,
                                        char** path_out, DIR* search_dir,
@@ -260,12 +272,14 @@ static mx_status_t find_partition_path(gpt_partition_t* const* part_info,
         close(file_fd);
     }
 
-    if (found_parts == num_parts) {
-        return NO_ERROR;
-    } else {
+
+    if (found_parts != num_parts) {
+        // this isn't an error per se, everything worked but we didn't find all
+        // the requested pieces.
         printf("Some partitions were not found.\n");
-        return ERR_NOT_FOUND;
     }
+
+    return NO_ERROR;
 }
 
 /*
@@ -309,7 +323,7 @@ static mx_status_t find_partition(gpt_device_t* gpt_data,
 
             break;
         default:
-            printf("Unrecognized error finding magenta parition: %d\n",
+            printf("Unrecognized error finding efi parition: %d\n",
                    rc);
     }
 
@@ -329,10 +343,10 @@ static mx_status_t find_partition(gpt_device_t* gpt_data,
  * should be the same length as the number of partitions as represented in
  * partition_flags. The order of the paths will be in ascending order of the
  * flag value used to request that partition, so if you're looking for the
- * fuchsia and magenta partitions, the magenta partition will be first and then
- * fuchsia.
+ * system and efi partitions, the efi partition will be first and then
+ * system.
  *
- * The magneta EFI partition is only considered valid if it is not the first
+ * The EFI partition is only considered valid if it is not the first
  * partition on the device since we assume the first partition of the device
  * contains the 'native' EFI partition for the device.
  */
@@ -352,16 +366,17 @@ static partition_flags partition_for_install(gpt_device_t* gpt_data,
     uint8_t parts_requested = 0;
 
     uint16_t part_id;
-    if (part_flags & PART_MAGENTA) {
+    if (part_flags & PART_EFI) {
         mx_status_t rc = find_partition(gpt_data, guid_efi_part,
-                                        MIN_SIZE_MAGENTA_PART, block_size,
-                                        "Magenta", &part_id, &part_info[parts_requested]);
+                                        MIN_SIZE_EFI_PART, block_size,
+                                        "EFI", &part_id,
+                                        &part_info[parts_requested]);
         if (rc == NO_ERROR) {
             if (part_id > 0) {
-                part_masks[parts_requested] = PART_MAGENTA;
+                part_masks[parts_requested] = PART_EFI;
                 parts_found++;
             } else {
-                printf("found a magenta partition, but it is the first; ");
+                printf("found an EFI partition, but it is the first; ");
                 printf("assume we want to keep this one intact.\n");
                 // reset part info
                 part_info[parts_requested] = NULL;
@@ -371,12 +386,13 @@ static partition_flags partition_for_install(gpt_device_t* gpt_data,
         parts_requested++;
     }
 
-    if (part_flags & PART_FUCHSIA) {
-        mx_status_t rc = find_partition(gpt_data, guid_fuchsia_part,
-                                        MIN_SIZE_FUCHSIA_PART, block_size,
-                                        "Fuchsia", &part_id, &part_info[parts_requested]);
+    if (part_flags & PART_SYSTEM) {
+        mx_status_t rc = find_partition(gpt_data, guid_system_part,
+                                        MIN_SIZE_SYSTEM_PART, block_size,
+                                        "System", &part_id,
+                                        &part_info[parts_requested]);
         if (rc == NO_ERROR) {
-            part_masks[parts_requested] = PART_FUCHSIA;
+            part_masks[parts_requested] = PART_SYSTEM;
             parts_found++;
         }
         parts_requested++;
@@ -422,6 +438,79 @@ static partition_flags partition_for_install(gpt_device_t* gpt_data,
     return part_flags;
 }
 
+static mx_status_t write_partition(int src, int dest, size_t* bytes_copied) {
+    uint8_t read_buffer[BLOCK_SIZE];
+    uint8_t decomp_buffer[BLOCK_SIZE];
+    *bytes_copied = 0;
+
+    LZ4F_decompressionContext_t dc_context;
+    LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&dc_context,
+                                                           LZ4F_VERSION);
+    if (LZ4F_isError(err)) {
+        printf("Error creating decompression context: %s\n",
+               LZ4F_getErrorName(err));
+        return ERR_INTERNAL;
+    }
+    // we set special initial read parameters so we can read just the header
+    // of the first frame to provide hints about how to proceed
+    size_t to_read = 4;
+    size_t to_expand = BLOCK_SIZE;
+    ssize_t to_consume;
+    size_t MB_10s = 0;
+    const uint32_t divisor = 1024 * 1024 * 10;
+
+    while ((to_consume = read(src, read_buffer, to_read)) > 0) {
+        ssize_t consumed_count = 0;
+        size_t chunk_size = 0;
+
+        if (*bytes_copied > 0) {
+            size_t new_val = *bytes_copied / divisor;
+            if (new_val != MB_10s) {
+                printf("   %zd0MB written.\r", new_val);
+                fflush(stdout);
+                MB_10s = new_val;
+            }
+        }
+
+        while (consumed_count < to_consume) {
+            to_expand = BLOCK_SIZE;
+            size_t req_size = to_consume - consumed_count;
+            chunk_size = LZ4F_decompress(dc_context, decomp_buffer, &to_expand,
+                                         read_buffer + consumed_count, &req_size,
+                                         NULL);
+            if (to_expand > 0) {
+                ssize_t written = write(dest, decomp_buffer, to_expand);
+                if (written != (ssize_t) to_expand) {
+                    printf("Error writing to partition, it may be corrupt. %s\n",
+                           strerror(errno));
+                    LZ4F_freeDecompressionContext(dc_context);
+                    return ERR_IO;
+                }
+                *bytes_copied += written;
+            }
+
+            consumed_count += req_size;
+        }
+
+
+        // set the next read request size
+        if (chunk_size > BLOCK_SIZE) {
+            to_read = BLOCK_SIZE;
+        } else {
+            to_read = chunk_size;
+        }
+    }
+    LZ4F_freeDecompressionContext(dc_context);
+
+    // go to the next line so we don't overwrite the last data size print out
+    printf("\n");
+    if (to_consume < 0) {
+        printf("Error decompressing file: %s.\n", strerror(errno));
+        return ERR_IO;
+    }
+    return NO_ERROR;
+}
+
 int main(int argc, char** argv) {
     DEBUG_ASSERT(NUM_INSTALL_PARTS == 2);
     // setup the base path in the path buffer
@@ -442,9 +531,21 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    // set up structures for hold source and destination paths for partition
+    // data
+    char system_path[PATH_MAX];
+    char efi_path[PATH_MAX];
+    char* part_paths[NUM_INSTALL_PARTS] = {efi_path, system_path};
+    char system_img_path[PATH_MAX] = IMG_SYSTEM_PATH;
+    char* disk_img_paths[NUM_INSTALL_PARTS] = {NULL, system_img_path};
+
     // device to install on
     gpt_device_t* install_dev = NULL;
     uint64_t block_size;
+    partition_flags ready_for_install = 0;
+    // TODO(jmatt): switch this to user-directed partition specification or
+    // add in the EFI partition when things are ready
+    partition_flags requested_parts = PART_SYSTEM;
     for (ssize_t rc = get_next_file_path(
              dir, buffer_remaining, &path_buffer[base_len]);
          rc >= 0;
@@ -463,14 +564,10 @@ int main(int argc, char** argv) {
         install_dev = read_gpt(fd, &block_size);
         close(fd);
 
-        char fuchsia_path[PATH_MAX];
-        char magenta_path[PATH_MAX];
-
-        char* part_paths[NUM_INSTALL_PARTS] = {fuchsia_path, magenta_path};
         // if we read a GPT, see if it has the entry we want
         if (install_dev != NULL && install_dev->valid) {
-            int ready_for_install = partition_for_install(
-                install_dev, block_size, PART_FUCHSIA | PART_MAGENTA,
+            ready_for_install = partition_for_install(
+                install_dev, block_size, requested_parts,
                 PATH_MAX, part_paths);
 
             // if ready_for_install == 0, then we'd do something!
@@ -488,7 +585,63 @@ int main(int argc, char** argv) {
 
     closedir(dir);
     if (install_dev != NULL && install_dev->valid) {
-        // do install
+
+        uint8_t part_idx = -1;
+        // scan through the requested partitions bitmask to see which
+        // partitions we want to write to and find the corresponding path for
+        // the disk image for that partition
+        for (int idx = 0; idx < 32; idx++) {
+            // see if this was a requested part, if so move the index we use to
+            // access the part_paths array because that array is ordered based
+            // on index of the order of bits in the bitmask sent to
+            // partition_for_install
+            if (CHECK_BIT(requested_parts, idx)) {
+                part_idx++;
+            }
+
+            // if either we weren't interested or we were, but we didn't find
+            // the partition, skip
+            if (!CHECK_BIT(requested_parts, idx) ||
+                (CHECK_BIT(requested_parts, idx) &&
+                 CHECK_BIT(ready_for_install, idx))) {
+                continue;
+            }
+
+            // do install
+            size_t bytes_written;
+            int fd_dst = open(part_paths[part_idx], O_RDWR);
+            if (fd_dst == -1) {
+                printf("Error opening output device, %s\n", strerror(errno));
+                gpt_device_release(install_dev);
+                return -1;
+            }
+
+            int fd_src = open(disk_img_paths[idx], O_RDONLY);
+            if (fd_src == -1) {
+                printf("Error opening disk image file, %s\n", strerror(errno));
+                close(fd_dst);
+                gpt_device_release(install_dev);
+                return -1;
+            }
+
+            time_t start;
+            time(&start);
+            mx_status_t rc = write_partition(fd_src, fd_dst, &bytes_written);
+            time_t end;
+            time(&end);
+
+            printf("%.f secs taken to write %zd bytes\n", difftime(end, start),
+                   bytes_written);
+            close(fd_dst);
+            close(fd_src);
+
+            if (rc != NO_ERROR) {
+                gpt_device_release(install_dev);
+                printf("Error %i writing partition\n", rc);
+                return -1;
+            }
+        }
+
         gpt_device_release(install_dev);
     } else {
         // no device looks configured the way we want for install, see if we can
