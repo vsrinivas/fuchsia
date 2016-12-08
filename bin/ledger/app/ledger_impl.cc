@@ -26,7 +26,7 @@ void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
                              const GetRootPageCallback& callback) {
   delegate_->GetPage(
       kRootPageId, Delegate::CreateIfNotFound::YES, std::move(page_request),
-      callback::TraceCallback(std::move(callback), "ledger", "get_root_page"));
+      TRACE_CALLBACK(std::move(callback), "ledger", "get_root_page"));
   ;
 }
 
@@ -36,9 +36,9 @@ void LedgerImpl::GetPage(fidl::Array<uint8_t> id,
                          const GetPageCallback& callback) {
   // TODO(etiennej): Switch back to Delegate::CreateIfNotFound::NO once LE-87 is
   // done.
-  delegate_->GetPage(
-      id, Delegate::CreateIfNotFound::YES, std::move(page_request),
-      callback::TraceCallback(std::move(callback), "ledger", "get_page"));
+  delegate_->GetPage(id, Delegate::CreateIfNotFound::YES,
+                     std::move(page_request),
+                     TRACE_CALLBACK(std::move(callback), "ledger", "get_page"));
 }
 
 // NewPage(Page& page) => (Status status);
@@ -46,7 +46,7 @@ void LedgerImpl::NewPage(fidl::InterfaceRequest<Page> page_request,
                          const NewPageCallback& callback) {
   delegate_->CreatePage(
       std::move(page_request),
-      callback::TraceCallback(std::move(callback), "ledger", "new_page"));
+      TRACE_CALLBACK(std::move(callback), "ledger", "new_page"));
 }
 
 // DeletePage(array<uint8> id) => (Status status);

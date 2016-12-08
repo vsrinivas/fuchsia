@@ -5,6 +5,7 @@
 #ifndef APPS_LEDGER_SRC_CALLBACK_TRACE_CALLBACK_H_
 #define APPS_LEDGER_SRC_CALLBACK_TRACE_CALLBACK_H_
 
+#include <functional>
 #include <utility>
 
 #include "apps/tracing/lib/trace/event.h"
@@ -111,12 +112,6 @@ class TracingLambda {
     TraceAsyncBegin(category_, name_, id_, std::forward<TraceArgType>(args)...);
   }
 
-  ~TracingLambda() {
-    if (!did_run_) {
-      TRACE_ASYNC_END1(category_, name_, id_, "NotRun", true);
-    }
-  }
-
   TracingLambda(TracingLambda&& other)
       : id_(other.id_),
         category_(other.category_),
@@ -124,6 +119,12 @@ class TracingLambda {
         callback_(std::move(other.callback_)),
         did_run_(other.did_run_) {
     other.did_run_ = true;
+  }
+
+  ~TracingLambda() {
+    if (!did_run_) {
+      TRACE_ASYNC_END1(category_, name_, id_, "NotRun", true);
+    }
   }
 
   template <typename... ArgType>
@@ -146,17 +147,41 @@ class TracingLambda {
   FTL_DISALLOW_COPY_AND_ASSIGN(TracingLambda);
 };
 
-}  // namespace internal
+template <typename F>
+struct ToStdFunction;
+
+template <typename Ret, typename Class, typename... Args>
+struct ToStdFunction<Ret (Class::*)(Args...) const> {
+  using type = std::function<Ret(Args...)>;
+};
 
 template <typename C, typename... ArgType>
 auto TraceCallback(C callback,
                    const char* category,
                    const char* name,
                    ArgType... args) {
-  return ftl::MakeCopyable(internal::TracingLambda<C, ArgType...>(
-      std::move(callback), category, name, std::forward<ArgType>(args)...));
+  // Ensures the returned type of TraceCallback is the same whether or not
+  // tracing is enabled.
+  return
+      typename ToStdFunction<decltype(&C::operator())>::type(ftl::MakeCopyable(
+          TracingLambda<C, ArgType...>(std::move(callback), category, name,
+                                       std::forward<ArgType>(args)...)));
 }
 
+template <typename C, typename... ArgType>
+auto TraceCallback(C callback) {
+  // Ensures the returned type of TraceCallback is the same whether or not
+  // tracing is enabled.
+  return typename ToStdFunction<decltype(&C::operator())>::type(
+      ftl::MakeCopyable(std::move(callback)));
+}
+
+}  // namespace internal
 }  // namespace callback
+
+#define TRACE_CALLBACK(cb, category, name, args...)                      \
+  (TRACE_ENABLED()                                                       \
+       ? ::callback::internal::TraceCallback(cb, category, name, ##args) \
+       : ::callback::internal::TraceCallback(cb))
 
 #endif  // APPS_LEDGER_SRC_CALLBACK_TRACE_CALLBACK_H_

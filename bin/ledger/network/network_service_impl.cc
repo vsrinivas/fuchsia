@@ -71,7 +71,7 @@ class NetworkServiceImpl::RunningRequest {
 
     const std::string& url = request->url.get();
     url_loader_->Start(std::move(request),
-                       callback::TraceCallback(
+                       TRACE_CALLBACK(
                            [this](network::URLResponsePtr response) {
                              url_loader_.reset();
 
@@ -163,7 +163,7 @@ ftl::RefPtr<callback::Cancellable> NetworkServiceImpl::Request(
       [this, &request]() { request.Cancel(); });
 
   request.set_callback(cancellable->WrapCallback(
-      callback::TraceCallback(std::move(callback), "network", "request")));
+      TRACE_CALLBACK(std::move(callback), "network", "request")));
   if (!in_backoff_) {
     request.SetNetworkService(GetNetworkService());
   }
