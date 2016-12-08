@@ -13,6 +13,10 @@ namespace files {
 // the file system.
 std::string SimplifyPath(std::string path);
 
+// Returns the absolute path of a possibly relative path.
+// It doesn't consult the filesystem or simplify the path.
+std::string AbsolutePath(const std::string& path);
+
 // Returns the directory name component of the given path.
 std::string GetDirectoryName(std::string path);
 

@@ -163,6 +163,19 @@ std::string SimplifyPath(std::string path) {
   return path;
 }
 
+std::string AbsolutePath(const std::string& path) {
+  if (path.size() > 0) {
+    if (path[0] == '/') {
+      // Path is already absolute.
+      return path;
+    }
+    return GetCurrentDirectory() + "/" + path;
+  } else {
+    // Path is empty.
+    return GetCurrentDirectory();
+  }
+}
+
 // Returns the directory name component of the given path.
 std::string GetDirectoryName(std::string path) {
   size_t separator = path.rfind('/');

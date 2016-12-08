@@ -119,6 +119,13 @@ TEST(Path, SimplifyPath) {
   EXPECT_EQ("../../def", SimplifyPath("abc/../../././../def"));
 }
 
+TEST(Path, AbsolutePath) {
+  EXPECT_EQ("/foo/bar", AbsolutePath("/foo/bar"));
+  EXPECT_EQ("/foo/bar/", AbsolutePath("/foo/bar/"));
+  EXPECT_EQ(GetCurrentDirectory(), AbsolutePath(""));
+  EXPECT_EQ(GetCurrentDirectory() + "/foo", AbsolutePath("foo"));
+}
+
 TEST(Path, GetDirectoryName) {
   EXPECT_EQ("foo", GetDirectoryName("foo/"));
   EXPECT_EQ("foo/bar", GetDirectoryName("foo/bar/"));
