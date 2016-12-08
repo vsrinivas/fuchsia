@@ -129,7 +129,7 @@ ifeq ($(MODULE_TYPE),userlib)
 
 ifneq ($(filter so,$(MODULE_EXPORT)),)
 ifneq ($(MODULE_SO_NAME),)
-$(info EXPORT $(MODULE) shared)
+#$(info EXPORT $(MODULE) shared)
 TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so.abi)
 SYSROOT_DEPS += $(TMP)
@@ -138,7 +138,7 @@ endif
 endif
 
 ifneq ($(filter a,$(MODULE_EXPORT)),)
-$(info EXPORT $(MODULE) static)
+#$(info EXPORT $(MODULE) static)
 TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_NAME).a
 $(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).a)
 SYSROOT_DEPS += $(TMP)
@@ -147,7 +147,7 @@ endif
 
 # only install headers for exported libraries
 ifneq ($(MODULE_EXPORT),)
-$(info EXPORT $(MODULE) include)
+#$(info EXPORT $(MODULE) include)
 # for now, unify all headers in one pile
 # TODO: ddk, etc should be packaged separately
 MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include
