@@ -18,6 +18,10 @@
 // two handles, optionally followed by plain data
 #define IOCTL_KIND_GET_TWO_HANDLES  0x2
 
+// SET_HANDLE ioctls accept a handle, and optionally
+// plain data afterwards.
+#define IOCTL_KIND_SET_HANDLE       0x3
+
 // core device/devmgr ioctl families
 #define IOCTL_FAMILY_RESERVED       0x00
 #define IOCTL_FAMILY_DEVICE         0x01

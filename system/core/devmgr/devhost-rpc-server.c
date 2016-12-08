@@ -218,8 +218,12 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
 
     *should_free_ios = false;
 
-    for (unsigned i = 0; i < msg->hcount; i++) {
-        mx_handle_close(msg->handle[i]);
+    // only IOCTL txns are prepared to deal with inbound handles
+    if (msg->hcount && (MXRIO_OP(msg->op) != MXRIO_IOCTL)) {
+        for (unsigned i = 0; i < msg->hcount; i++) {
+            mx_handle_close(msg->handle[i]);
+        }
+        msg->hcount = 0;
     }
 
     switch (MXRIO_OP(msg->op)) {
@@ -363,13 +367,37 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
     }
     case MXRIO_IOCTL: {
         if (len > MXIO_IOCTL_MAX_INPUT || arg > (ssize_t)sizeof(msg->data)) {
+            for (unsigned i = 0; i < msg->hcount; i++) {
+                mx_handle_close(msg->handle[i]);
+            }
             return ERR_INVALID_ARGS;
         }
+
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
+
+        uint32_t kind = IOCTL_KIND(msg->arg2.op);
+
+        if (kind == IOCTL_KIND_SET_HANDLE) {
+            if (len < sizeof(mx_handle_t)) {
+                len = sizeof(mx_handle_t);
+            }
+            // The sending side copied the handle into msg->handle[0]
+            // so that it would be sent via channel_write().  Here we
+            // copy the local version back into the space in the buffer
+            // that the original occupied.
+            memcpy(in_buf, msg->handle, sizeof(mx_handle_t));
+
+            // close any extraneous handles
+            for (unsigned i = 1; i < msg->hcount; i++) {
+                mx_handle_close(msg->handle[i]);
+            }
+            msg->hcount = 0;
+        }
+
         mx_status_t r = do_ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
         if (r >= 0) {
-            switch (IOCTL_KIND(msg->arg2.op)) {
+            switch (kind) {
                 case IOCTL_KIND_DEFAULT:
                     break;
                 case IOCTL_KIND_GET_HANDLE:
@@ -383,6 +411,8 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
             }
             msg->datalen = r;
             msg->arg2.off = ios->io_off;
+        } else if ((r == ERR_NOT_SUPPORTED) && (kind == IOCTL_KIND_SET_HANDLE)) {
+            mx_handle_close(msg->handle[0]);
         }
         return r;
     }

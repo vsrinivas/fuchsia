@@ -207,6 +207,7 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     for (unsigned i = 0; i < msg->hcount; i++) {
         mx_handle_close(msg->handle[i]);
     }
+    msg->hcount = 0;
 
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_OPEN: {
