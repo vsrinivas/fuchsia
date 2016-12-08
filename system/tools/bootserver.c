@@ -223,7 +223,7 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     char ackbuf[2048];
     char tmp[INET6_ADDRSTRLEN];
     struct timeval tv;
-    struct timeval begin, last, end;
+    struct timeval begin, end;
     nbmsg* msg = (void*)msgbuf;
     nbmsg* ack = (void*)ackbuf;
     int s, r;
@@ -263,7 +263,6 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
     }
     fprintf(stderr, "%s: sending '%s'...\n", appname, fn);
     gettimeofday(&begin, NULL);
-    last = begin;
     tv.tv_sec = 0;
     tv.tv_usec = 250 * 1000;
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -287,16 +286,13 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
 
     bool completed = false;
     do {
+        struct timeval packet_start_time;
+        gettimeofday(&packet_start_time, NULL);
+
         r = xread(&xd, msg->data, PAYLOAD_SIZE);
         if (r < 0) {
             fprintf(stderr, "\n%s: error: Reading '%s'\n", appname, fn);
             goto done;
-        }
-
-        gettimeofday(&end, NULL);
-        if (end.tv_usec < begin.tv_usec) {
-            end.tv_sec -= 1;
-            end.tv_usec += 1000000;
         }
 
         if (is_redirected) {
@@ -308,9 +304,14 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
             if (count++ > 1024 || r == 0) {
                 count = 0;
                 float bw = 0;
-                if (end.tv_sec > begin.tv_sec) {
-                    bw = (float)current_pos / (1024.0 * 1024.0 * (float)(end.tv_sec - begin.tv_sec));
+
+                struct timeval now;
+                gettimeofday(&now, NULL);
+                int64_t us_since_begin = ((int64_t)(now.tv_sec - begin.tv_sec) * 1000000 + ((int64_t)now.tv_usec - (int64_t)begin.tv_usec));
+                if (us_since_begin >= 1000000) {
+                    bw = (float)current_pos / (1024.0 * 1024.0 * (float)(us_since_begin / 1000000));
                 }
+
                 fprintf(stderr, "\33[2K\r");
                 if (sz > 0) {
                     fprintf(stderr, "%c %.01f%%", spinner[(spin++) % 4], 100.0 * (float)current_pos / (float)sz);
@@ -345,16 +346,15 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
             // At 1280 bytes per packet, we should at least have 10 microseconds
             // between packets, to be safe using 20 microseconds here.
             // 1280 bytes * (1,000,000/10) seconds = 128,000,000 bytes/seconds = 122MB/s = 976Mb/s
-            int64_t microseconds = (end.tv_sec - last.tv_sec) * 1000000 + ((int)end.tv_usec - (int)last.tv_usec);
-            uint64_t throttle = 20 - microseconds;
-            if (throttle > 0 && throttle < 1000) {
-                struct timespec reqtime;
-                reqtime.tv_sec = 0;
-                reqtime.tv_nsec = throttle * 1000;
-                nanosleep(&reqtime, NULL);
-            }
+            // We wait as a busy wait as the context switching a sleep can cause
+            // will often degrade performance significantly.
+            int64_t us_since_last_packet;
+            do {
+                struct timeval now;
+                gettimeofday(&now, NULL);
+                us_since_last_packet = (int64_t)(now.tv_sec - packet_start_time.tv_sec) * 1000000 + ((int64_t)now.tv_usec - (int64_t)packet_start_time.tv_usec);
+            } while (us_since_last_packet < 20);
         }
-        last = end;
 
         // ACKs really are NACKs
         if (ack->cookie > 0 && ack->cmd == NB_ACK && ack->arg != current_pos) {
