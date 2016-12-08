@@ -32,8 +32,6 @@ static mtx_t mutex = MTX_INIT;
 static cnd_t empty_cond = CND_INIT;
 static cnd_t full_cond = CND_INIT;
 
-static volatile bool done = false;
-
 static uint8_t buffers[BUFFER_SIZE * BUFFER_COUNT];
 static int buffer_states[BUFFER_COUNT];
 static int buffer_sizes[BUFFER_COUNT];
@@ -121,7 +119,7 @@ static void set_done(void) {
 static int file_read_thread(void* arg) {
     int fd = (int)(uintptr_t)arg;
 
-    while (!done) {
+    while (!file_done) {
         int index = get_empty();
         uint8_t* buffer = &buffers[index * BUFFER_SIZE];
         int count = read(fd, buffer, BUFFER_SIZE);
@@ -148,19 +146,19 @@ static int do_play(int src_fd, int dest_fd, uint32_t sample_rate)
     thrd_create_with_name(&thread, file_read_thread, (void *)(uintptr_t)src_fd, "file_read_thread");
     thrd_detach(thread);
 
-    while (!done) {
+    while (ret == 0) {
         int index = get_full();
         if (index < 0) break;
         uint8_t* buffer = &buffers[index * BUFFER_SIZE];
         int buffer_size = buffer_sizes[index];
 
         if (write(dest_fd, buffer, buffer_size) != buffer_size) {
-            done = true;
+            ret = -1;
         }
 
         put_empty(index);
     }
-    return 0;
+    return ret;
 }
 
 static int open_sink(void) {
@@ -203,7 +201,7 @@ next:
 
 }
 
-static void play_file(const char* path, int dest_fd) {
+static int play_file(const char* path, int dest_fd) {
     riff_wave_header riff_wave_header;
     chunk_header chunk_header;
     chunk_fmt chunk_fmt;
@@ -213,14 +211,14 @@ static void play_file(const char* path, int dest_fd) {
     int src_fd = open(path, O_RDONLY);
     if (src_fd < 0) {
         fprintf(stderr, "Unable to open file '%s'\n", path);
-        return;
+        return src_fd;
     }
 
     read(src_fd, &riff_wave_header, sizeof(riff_wave_header));
     if ((riff_wave_header.riff_id != ID_RIFF) ||
         (riff_wave_header.wave_id != ID_WAVE)) {
         fprintf(stderr, "Error: '%s' is not a riff/wave file\n", path);
-        return;
+        return -1;
     }
 
    for (int i = 0; i < BUFFER_COUNT; i++) {
@@ -251,16 +249,19 @@ static void play_file(const char* path, int dest_fd) {
 
     printf("playing %s\n", path);
 
-    do_play(src_fd, dest_fd, sample_rate);
+    int ret = do_play(src_fd, dest_fd, sample_rate);
     close(src_fd);
+    return ret;
 }
 
-static void play_files(const char* directory, int dest_fd) {
+static int play_files(const char* directory, int dest_fd) {
+    int ret = 0;
+
     struct dirent* de;
     DIR* dir = opendir(directory);
     if (!dir) {
         printf("Error opening %s\n", directory);
-        return;
+        return -1;
     }
 
     while ((de = readdir(dir)) != NULL) {
@@ -269,11 +270,13 @@ static void play_files(const char* directory, int dest_fd) {
         if (namelen < 5 || strcasecmp(de->d_name + namelen - 4, ".wav") != 0) continue;
 
         snprintf(path, sizeof(path), "%s/%s", directory, de->d_name);
-        play_file(path, dest_fd);
+        if ((ret = play_file(path, dest_fd)) < 0) {
+            break;
+        }
     }
 
     closedir(dir);
-
+    return ret;
 }
 
 int main(int argc, char **argv) {
@@ -283,15 +286,16 @@ int main(int argc, char **argv) {
         return -1;
     }
 
+    int ret = 0;
     if (argc == 1) {
-        play_files("/data", dest_fd);
+        ret = play_files("/data", dest_fd);
     } else {
-        for (int i = 1; i < argc && !done; i++) {
-            play_file(argv[i], dest_fd);
+        for (int i = 1; i < argc && ret == 0; i++) {
+            ret = play_file(argv[i], dest_fd);
         }
     }
 
     close(dest_fd);
 
-    return 0;
+    return ret;
 }
