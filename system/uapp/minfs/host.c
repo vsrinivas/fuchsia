@@ -4,10 +4,13 @@
 
 // for S_IF*
 #define _XOPEN_SOURCE
+#include "host.h"
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -15,6 +18,7 @@
 #include <fs/vfs.h>
 
 #include <mxio/vfs.h>
+#include "minfs.h"
 
 struct vnode {
     VNODE_BASE_FIELDS
@@ -28,6 +32,8 @@ static mx_status_t do_stat(vnode_t* vn, struct stat* s) {
         s->st_mode = a.mode;
         s->st_size = a.size;
         s->st_ino = a.inode;
+        s->st_ctime = a.create_time;
+        s->st_mtime = a.modify_time;
     }
     return status;
 }
@@ -45,7 +51,7 @@ static file_t fdtab[MAXFD];
 #define FD_MAGIC 0x45AB0000
 
 static file_t* file_get(int fd) {
-    if (((fd) & 0xFFFF0000) != FD_MAGIC) {
+    if (((fd)&0xFFFF0000) != FD_MAGIC) {
         return NULL;
     }
     fd &= 0x0000FFFF;
@@ -67,12 +73,19 @@ int status_to_errno(mx_status_t status) {
     }
 }
 
-#define FAIL(err) \
-    do { errno = (err); return errno ? -1 : 0; } while (0)
+#define FAIL(err)              \
+    do {                       \
+        errno = (err);         \
+        return errno ? -1 : 0; \
+    } while (0)
 #define STATUS(status) \
     FAIL(status_to_errno(status))
-#define FILE_GET(f, fd) \
-    do { if ((f = file_get(fd)) == NULL) FAIL(EBADF); } while (0)
+#define FILE_GET(f, fd)                   \
+    do {                                  \
+        if ((f = file_get(fd)) == NULL) { \
+            FAIL(EBADF);                  \
+        }                                 \
+    } while (0)
 #define FILE_WRAP(f, fd, name, args...) \
     do {                                \
         if ((f = file_get(fd)) == NULL) \
@@ -85,9 +98,6 @@ int status_to_errno(mx_status_t status) {
     } while (0)
 
 vnode_t* fake_root;
-
-#define PATH_PREFIX "::"
-#define PREFIX_SIZE 2
 
 static inline int check_path(const char* path) {
     if (strncmp(path, PATH_PREFIX, PREFIX_SIZE) || (fake_root == NULL)) {
@@ -164,19 +174,27 @@ off_t emu_lseek(int fd, off_t offset, int whence) {
 
     switch (whence) {
     case SEEK_SET:
-        if (offset < 0) FAIL(EINVAL);
+        if (offset < 0) {
+            FAIL(EINVAL);
+        }
         f->off = offset;
         break;
     case SEEK_END:
-        if (f->vn->ops->getattr(f->vn, &a)) FAIL(EINVAL);
+        if (f->vn->ops->getattr(f->vn, &a)) {
+            FAIL(EINVAL);
+        }
         old = a.size;
-        // fall through
+    // fall through
     case SEEK_CUR:
         n = old + offset;
         if (offset < 0) {
-            if (n >= old) FAIL(EINVAL);
+            if (n >= old) {
+                FAIL(EINVAL);
+            }
         } else {
-            if (n < old) FAIL(EINVAL);
+            if (n < old) {
+                FAIL(EINVAL);
+            }
         }
         f->off = n;
         break;
@@ -211,11 +229,104 @@ int emu_rename(const char* oldpath, const char* newpath) {
 
 int emu_stat(const char* fn, struct stat* s) {
     PATH_WRAP(fn, stat, fn, s);
-    vnode_t* vn;
-    mx_status_t status = vfs_walk(fake_root, &vn, fn + PREFIX_SIZE, &fn);
-    if (status == NO_ERROR) {
-        status = do_stat(vn, s);
+    vnode_t *vn, *cur = fake_root;
+    mx_status_t status;
+    const char* nextpath = NULL;
+    size_t len;
+
+    fn += PREFIX_SIZE;
+    do {
+        while (fn[0] == '/') {
+            fn++;
+        }
+        if (fn[0] == 0) {
+            fn = ".";
+        }
+        len = strlen(fn);
+        nextpath = strchr(fn, '/');
+        if (nextpath != NULL) {
+            len = nextpath - fn;
+            nextpath++;
+        }
+        status = cur->ops->lookup(cur, &vn, fn, len);
+        if (status != NO_ERROR) {
+            return -ENOENT;
+        }
+        if (cur != fake_root) {
+            vfs_close(cur);
+        }
+        cur = vn;
+        fn = nextpath;
+    } while (nextpath != NULL);
+
+    status = do_stat(vn, s);
+    if (vn != fake_root) {
         vfs_close(vn);
     }
     STATUS(status);
+}
+
+#define DIR_BUFSIZE 2048
+
+typedef struct MINDIR {
+    uint64_t magic;
+    vnode_t* vn;
+    vdircookie_t cookie;
+    uint8_t* ptr;
+    uint8_t data[DIR_BUFSIZE];
+    size_t size;
+    struct dirent de;
+} MINDIR;
+
+DIR* emu_opendir(const char* name) {
+    PATH_WRAP(name, opendir, name);
+    vnode_t* vn;
+    mx_status_t status = vfs_open(fake_root, &vn, name + PREFIX_SIZE, &name, O_RDONLY, 0);
+    if (status != NO_ERROR) {
+        return NULL;
+    }
+    MINDIR* dir = (MINDIR*)calloc(1, sizeof(MINDIR));
+    dir->magic = MINFS_MAGIC0;
+    dir->vn = vn;
+    return (void*)dir;
+}
+
+struct dirent* emu_readdir(DIR* dirp) {
+    if (((uint64_t*)dirp)[0] != MINFS_MAGIC0) {
+        return readdir(dirp);
+    }
+
+    MINDIR* dir = (MINDIR*)dirp;
+    for (;;) {
+        if (dir->size >= sizeof(vdirent_t)) {
+            vdirent_t* vde = (void*)dir->ptr;
+            if (dir->size >= vde->size) {
+                struct dirent* ent = &dir->de;
+                strcpy(ent->d_name, vde->name);
+                dir->ptr += vde->size;
+                dir->size -= vde->size;
+                return ent;
+            }
+            dir->size = 0;
+        }
+        mx_status_t status = dir->vn->ops->readdir(dir->vn, &dir->cookie, &dir->data, DIR_BUFSIZE);
+        if (status < 0) {
+            break;
+        }
+        dir->ptr = dir->data;
+        dir->size = status;
+    }
+    return NULL;
+}
+
+int emu_closedir(DIR* dirp) {
+    if (((uint64_t*)dirp)[0] != MINFS_MAGIC0) {
+        return closedir(dirp);
+    }
+
+    MINDIR* dir = (MINDIR*)dirp;
+    vfs_close(dir->vn);
+    free(dirp);
+
+    return 0;
 }

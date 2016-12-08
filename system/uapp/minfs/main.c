@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// for S_IF*
+#define _XOPEN_SOURCE
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -75,7 +78,7 @@ int do_cp(bcache_t* bc, int argc, char** argv) {
         return -1;
     }
 
-    char buffer[256*1024];
+    char buffer[256 * 1024];
     ssize_t r;
     for (;;) {
         if ((r = emu_read(fdi, buffer, sizeof(buffer))) < 0) {
@@ -101,6 +104,111 @@ done:
     return r;
 }
 
+int do_mkdir(bcache_t* bc, int argc, char** argv) {
+    if (argc != 1) {
+        fprintf(stderr, "mkdir requires one argument\n");
+        return -1;
+    }
+    if (io_setup(bc)) {
+        return -1;
+    }
+    // TODO(jpoichet) add support making parent directories when not present
+    const char* path = argv[0];
+    if (strncmp(path, PATH_PREFIX, PREFIX_SIZE)) {
+        fprintf(stderr, "error: mkdir can only operate minfs paths (must start with %s)\n", PATH_PREFIX);
+        return -1;
+    }
+    return emu_mkdir(path, 0);
+}
+
+int do_unlink(bcache_t* bc, int argc, char** argv) {
+    if (argc != 1) {
+        fprintf(stderr, "unlink requires one argument\n");
+        return -1;
+    }
+    if (io_setup(bc)) {
+        return -1;
+    }
+    const char* path = argv[0];
+    if (strncmp(path, PATH_PREFIX, PREFIX_SIZE)) {
+        fprintf(stderr, "error: unlink can only operate minfs paths (must start with %s)\n", PATH_PREFIX);
+        return -1;
+    }
+    return emu_unlink(path);
+}
+
+int do_rename(bcache_t* bc, int argc, char** argv) {
+    if (argc != 2) {
+        fprintf(stderr, "rename requires two arguments\n");
+        return -1;
+    }
+    if (io_setup(bc)) {
+        return -1;
+    }
+    const char* old_path = argv[0];
+    const char* new_path = argv[1];
+    if (strncmp(old_path, PATH_PREFIX, PREFIX_SIZE)) {
+        fprintf(stderr, "error: rename can only operate minfs paths (must start with %s)\n", PATH_PREFIX);
+        return -1;
+    }
+    if (strncmp(new_path, PATH_PREFIX, PREFIX_SIZE)) {
+        fprintf(stderr, "error: rename can only operate minfs paths (must start with %s)\n", PATH_PREFIX);
+        return -1;
+    }
+    return emu_rename(old_path, new_path);
+}
+
+static const char* modestr(uint32_t mode) {
+    switch (mode & S_IFMT) {
+    case S_IFREG:
+        return "-";
+    case S_IFCHR:
+        return "c";
+    case S_IFBLK:
+        return "b";
+    case S_IFDIR:
+        return "d";
+    default:
+        return "?";
+    }
+}
+
+int do_ls(bcache_t* bc, int argc, char** argv) {
+    if (argc != 1) {
+        fprintf(stderr, "ls requires one argument\n");
+        return -1;
+    }
+    if (io_setup(bc)) {
+        return -1;
+    }
+    const char* path = argv[0];
+    if (strncmp(path, PATH_PREFIX, PREFIX_SIZE)) {
+        fprintf(stderr, "error: ls can only operate minfs paths (must start with %s)\n", PATH_PREFIX);
+        return -1;
+    }
+
+    DIR* d = emu_opendir(path);
+    if (!d) {
+        return -1;
+    }
+
+    struct dirent* de;
+    char tmp[2048];
+    struct stat s;
+    while ((de = emu_readdir(d)) != NULL) {
+        if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..")) {
+            memset(&s, 0, sizeof(struct stat));
+            if ((strlen(de->d_name) + strlen(path) + 2) <= sizeof(tmp)) {
+                snprintf(tmp, sizeof(tmp), "%s/%s", path, de->d_name);
+                emu_stat(tmp, &s);
+            }
+            fprintf(stdout, "%s %8jd %s\n", modestr(s.st_mode), (intmax_t)s.st_size, de->d_name);
+        }
+    }
+    emu_closedir(d);
+    return 0;
+}
+
 #endif
 
 int do_minfs_mkfs(bcache_t* bc, int argc, char** argv) {
@@ -111,17 +219,23 @@ struct {
     const char* name;
     int (*func)(bcache_t* bc, int argc, char** argv);
     uint32_t flags;
-    const char *help;
+    const char* help;
 } CMDS[] = {
-    { "create", do_minfs_mkfs,  O_RDWR | O_CREAT, "initialize filesystem" },
-    { "mkfs",   do_minfs_mkfs,  O_RDWR | O_CREAT, "initialize filesystem" },
-    { "check",  do_minfs_check, O_RDONLY,         "check filesystem integrity"},
-    { "fsck",   do_minfs_check, O_RDONLY,         "check filesystem integrity"},
+    {"create", do_minfs_mkfs, O_RDWR | O_CREAT, "initialize filesystem"},
+    {"mkfs", do_minfs_mkfs, O_RDWR | O_CREAT, "initialize filesystem"},
+    {"check", do_minfs_check, O_RDONLY, "check filesystem integrity"},
+    {"fsck", do_minfs_check, O_RDONLY, "check filesystem integrity"},
 #ifdef __Fuchsia__
-    { "mount",  do_minfs_mount, O_RDWR,           "mount filesystem" },
+    {"mount", do_minfs_mount, O_RDWR, "mount filesystem"},
 #else
-    { "test",   do_minfs_test,  O_RDWR,           "run tests against filesystem" },
-    { "cp",     do_cp,          O_RDWR,           "copy to/from fs" },
+    {"test", do_minfs_test, O_RDWR, "run tests against filesystem"},
+    {"cp", do_cp, O_RDWR, "copy to/from fs"},
+    {"mkdir", do_mkdir, O_RDWR, "create directory"},
+    {"rm", do_unlink, O_RDWR, "delete file or directory"},
+    {"unlink", do_unlink, O_RDWR, "delete file or directory"},
+    {"mv", do_rename, O_RDWR, "rename file or directory"},
+    {"rename", do_rename, O_RDWR, "rename file or directory"},
+    {"ls", do_ls, O_RDWR, "list content of directory"},
 #endif
 };
 
@@ -146,9 +260,8 @@ off_t get_size(int fd) {
         fprintf(stderr, "error: could not find end of file/device\n");
         return 0;
     }
-    return s.st_size;;
+    return s.st_size;
 }
-
 
 int do_bitmap_test(void);
 
@@ -187,12 +300,12 @@ int main(int argc, char** argv) {
         switch (end[0]) {
         case 'M':
         case 'm':
-            size *= (1024*1024);
+            size *= (1024 * 1024);
             end++;
             break;
         case 'G':
         case 'g':
-            size *= (1024*1024*1024);
+            size *= (1024 * 1024 * 1024);
             end++;
             break;
         }
