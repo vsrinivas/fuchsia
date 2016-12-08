@@ -54,8 +54,6 @@ static int open_source(void) {
         }
         printf("%s sample rate %d\n", devname, sample_rate);
 
-        ioctl_audio_start(fd);
-
         closedir(dir);
         return fd;
 
@@ -67,18 +65,63 @@ next:
     return -1;
 }
 
+static void usage(char* me) {
+    fprintf(stderr, "usage: %s [-s <number of times to start/stop>] "
+                    "[-r <number of buffers to read per start/stop>]\n", me);
+}
+
 int main(int argc, char **argv) {
+    // number of times to start & stop audio
+    int start_stop_count = 1;
+    // number of times to read per start/stop
+    int read_count = INT_MAX;
+
+    for (int i = 1; i < argc; i++) {
+        char* arg = argv[i];
+        if (strcmp(arg, "-s") == 0) {
+            if (++i < argc) {
+                int count = atoi(argv[i]);
+                if (count > 0) {
+                    start_stop_count = count;
+                    continue;
+                }
+            }
+            usage(argv[0]);
+            return -1;
+        } else if (strcmp(arg, "-r") == 0) {
+            if (++i < argc) {
+                int count = atoi(argv[i]);
+                if (count > 0) {
+                    read_count = count;
+                    continue;
+                }
+            }
+            usage(argv[0]);
+            return -1;
+        } else {
+            usage(argv[0]);
+            return -1;
+        }
+    }
+
+
     int fd = open_source();
     if (fd < 0) {
         printf("couldn't find a usable audio source\n");
         return -1;
     }
 
-    while (1) {
-        uint16_t buffer[500];
-        int length = read(fd, buffer, sizeof(buffer));
-        printf("read %d\n", length);
-        if (length < 0) break;
+    for (int i = 0; i < start_stop_count; i++) {
+        ioctl_audio_start(fd);
+
+        for (int j = 0; j < read_count; j++) {
+            uint16_t buffer[500];
+            int length = read(fd, buffer, sizeof(buffer));
+            printf("read %d\n", length);
+            if (length < 0) break;
+        }
+
+        ioctl_audio_stop(fd);
     }
 
     close(fd);
