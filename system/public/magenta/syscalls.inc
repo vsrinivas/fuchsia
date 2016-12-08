@@ -190,21 +190,6 @@ MAGENTA_SYSCALL_DEF(3, 3, 110, mx_status_t, cprng_draw,
 MAGENTA_SYSCALL_DEF(2, 2, 111, mx_status_t, cprng_add_entropy,
                     USER_PTR(const void) buffer, mx_size_t len)
 
-// Data Pipes
-MAGENTA_SYSCALL_DEF(4, 4, 120, mx_handle_t, datapipe_create, uint32_t options, mx_size_t element_size,
-                    mx_size_t capacity, USER_PTR(mx_handle_t) consumer_handle)
-MAGENTA_SYSCALL_DEF(4, 4, 121, mx_ssize_t, datapipe_write, mx_handle_t handle, uint32_t options,
-                    mx_size_t requested, USER_PTR(const void) buffer)
-MAGENTA_SYSCALL_DEF(4, 4, 122, mx_ssize_t, datapipe_read, mx_handle_t handle, uint32_t options,
-                    mx_size_t requested, USER_PTR(void) buffer)
-MAGENTA_SYSCALL_DEF(3, 3, 123, mx_ssize_t, datapipe_begin_write, mx_handle_t handle, uint32_t options,
-                    USER_PTR(uintptr_t) buffer)
-MAGENTA_SYSCALL_DEF(2, 2, 124, mx_status_t, datapipe_end_write, mx_handle_t handle, mx_size_t written)
-MAGENTA_SYSCALL_DEF(3, 3, 125, mx_ssize_t, datapipe_begin_read, mx_handle_t handle, uint32_t options,
-                    USER_PTR(uintptr_t) buffer)
-MAGENTA_SYSCALL_DEF(2, 2, 126, mx_status_t, datapipe_end_read, mx_handle_t handle, mx_size_t read)
-
-
 
 // ----------------------------------------------------------------------------------------
 // Syscalls past this point are non-public

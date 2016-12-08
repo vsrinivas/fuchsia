@@ -287,38 +287,6 @@ syscall cprng_add_entropy
     (buffer: any[len] IN, len: mx_size_t)
     returns (mx_status_t);
 
-# Data Pipes
-
-syscall datapipe_create
-    (options: uint32_t, element_size: mx_size_t, capacity: mx_size_t,
-        consumer_handle: mx_handle_t[1] OUT)
-    returns (mx_handle_t);
-
-syscall datapipe_write
-    (handle: mx_handle_t, options: uint32_t, requested: mx_size_t, buffer: any[requested] IN)
-    returns (mx_ssize_t);
-
-syscall datapipe_read
-    (handle: mx_handle_t, options: uint32_t, requested: mx_size_t,
-        buffer: any[requested] OUT)
-    returns (mx_ssize_t);
-
-syscall datapipe_begin_write
-    (handle: mx_handle_t, options: uint32_t, buffer: uintptr_t[1] OUT)
-    returns (mx_ssize_t);
-
-syscall datapipe_end_write
-    (handle: mx_handle_t, written: mx_size_t)
-    returns (mx_status_t);
-
-syscall datapipe_begin_read
-    (handle: mx_handle_t, options: uint32_t, buffer: uintptr_t[1] OUT)
-    returns (mx_ssize_t);
-
-syscall datapipe_end_read
-    (handle: mx_handle_t, read: mx_size_t)
-    returns (mx_status_t);
-
 # ---------------------------------------------------------------------------------------
 # Syscalls past this point are non-public
 # Some currently do not require a handle to restrict access.

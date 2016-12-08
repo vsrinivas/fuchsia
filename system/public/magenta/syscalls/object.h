@@ -29,8 +29,6 @@ typedef enum {
     MX_OBJ_TYPE_CHANNEL             = 4,
     MX_OBJ_TYPE_EVENT               = 5,
     MX_OBJ_TYPE_IOPORT              = 6,
-    MX_OBJ_TYPE_DATA_PIPE_PRODUCER  = 7,
-    MX_OBJ_TYPE_DATA_PIPE_CONSUMER  = 8,
     MX_OBJ_TYPE_INTERRUPT           = 9,
     MX_OBJ_TYPE_IOMAP               = 10,
     MX_OBJ_TYPE_PCI_DEVICE          = 11,
@@ -66,12 +64,8 @@ typedef struct mx_info_process {
 #define MX_PROP_BAD_HANDLE_POLICY           1u
 // Argument is a uint32_t.
 #define MX_PROP_NUM_STATE_KINDS             2u
-// Argument is an mx_size_t.
-#define MX_PROP_DATAPIPE_READ_THRESHOLD     3u
-// Argument is an mx_size_t.
-#define MX_PROP_DATAPIPE_WRITE_THRESHOLD    4u
 // Argument is a char[MX_MAX_NAME_LEN]
-#define MX_PROP_NAME                        5u
+#define MX_PROP_NAME                        3u
 
 // Policies for MX_PROP_BAD_HANDLE_POLICY:
 #define MX_POLICY_BAD_HANDLE_IGNORE         0u

@@ -7,8 +7,6 @@
 namespace mx {
 
 class channel;
-class datapipe_consumer;
-class datapipe_producer;
 class eventpair;
 class log;
 class socket;
@@ -28,18 +26,6 @@ template <typename T> struct handle_traits {
 };
 
 template <> struct handle_traits<channel> {
-    static const bool supports_duplication = false;
-    static const bool supports_user_signal = true;
-    static const bool has_peer_handle = true;
-};
-
-template <> struct handle_traits<datapipe_consumer> {
-    static const bool supports_duplication = false;
-    static const bool supports_user_signal = true;
-    static const bool has_peer_handle = true;
-};
-
-template <> struct handle_traits<datapipe_producer> {
     static const bool supports_duplication = false;
     static const bool supports_user_signal = true;
     static const bool has_peer_handle = true;

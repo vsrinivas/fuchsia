@@ -104,42 +104,9 @@ static bool thread_name_test(void)
     END_TEST;
 }
 
-// This test is possible today because there exists an object that
-// has properties that can be get/set but not the name property.
-
-static bool unsupported_test(void)
-{
-    BEGIN_TEST;
-
-    mx_handle_t producer;
-    mx_handle_t consumer;
-    producer = mx_datapipe_create(0u, 1u, 16, &consumer);
-    ASSERT_GT(producer, 0, "could not create producer data pipe");
-    ASSERT_GT(consumer, 0, "could not create consumer data pipe");
-
-    char name[MX_MAX_NAME_LEN];
-    const char* test_name = "test_name";
-    EXPECT_EQ(mx_object_set_property(producer, MX_PROP_NAME,
-                                     test_name, strlen(test_name)),
-              ERR_NOT_SUPPORTED, "");
-
-    // All objects with readable properties return a name,
-    // thought it'll be an empty name if the object has no
-    // actual name storage.
-    EXPECT_EQ(mx_object_get_property(producer, MX_PROP_NAME,
-                                     name, sizeof(name)),
-              NO_ERROR, "");
-
-    tu_handle_close(producer);
-    tu_handle_close(consumer);
-
-    END_TEST;
-}
-
 BEGIN_TEST_CASE(property_tests)
 RUN_TEST(process_name_test);
 RUN_TEST(thread_name_test);
-RUN_TEST(unsupported_test);
 END_TEST_CASE(property_tests)
 
 int main(int argc, char **argv)

@@ -323,42 +323,6 @@ mx_status_t sys_cprng_add_entropy(
     const void* buffer,
     mx_size_t len);
 
-mx_handle_t sys_datapipe_create(
-    uint32_t options,
-    mx_size_t element_size,
-    mx_size_t capacity,
-    mx_handle_t consumer_handle[1]);
-
-mx_ssize_t sys_datapipe_write(
-    mx_handle_t handle,
-    uint32_t options,
-    mx_size_t requested,
-    const void* buffer);
-
-mx_ssize_t sys_datapipe_read(
-    mx_handle_t handle,
-    uint32_t options,
-    mx_size_t requested,
-    void* buffer);
-
-mx_ssize_t sys_datapipe_begin_write(
-    mx_handle_t handle,
-    uint32_t options,
-    uintptr_t buffer[1]);
-
-mx_status_t sys_datapipe_end_write(
-    mx_handle_t handle,
-    mx_size_t written);
-
-mx_ssize_t sys_datapipe_begin_read(
-    mx_handle_t handle,
-    uint32_t options,
-    uintptr_t buffer[1]);
-
-mx_status_t sys_datapipe_end_read(
-    mx_handle_t handle,
-    mx_size_t read);
-
 mx_handle_t sys_log_create(
     uint32_t options);
 

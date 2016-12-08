@@ -88,15 +88,6 @@
 + [nanosleep](syscalls/nanosleep.md) - sleep for some number of nanoseconds
 + [time_get](syscalls/time_get.md) - read a system clock
 
-## Data Pipes
-+ [datapipe_create](syscalls/datapipe_create.md)
-+ [datapipe_write](syscalls/datapipe_write.md)
-+ [datapipe_begin_write](syscalls/datapipe_begin_write.md)
-+ [datapipe_end_write](syscalls/datapipe_end_write.md)
-+ [datapipe_read](syscalls/datapipe_read.md)
-+ [datapipe_begin_read](syscalls/datapipe_begin_read.md)
-+ [datapipe_end_read](syscalls/datapipe_end_read.md)
-
 ## Logging
 + log_create - create a kernel managed log reader or writer
 + log_write - write log entry to log

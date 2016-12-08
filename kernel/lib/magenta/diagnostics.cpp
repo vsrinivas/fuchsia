@@ -28,7 +28,6 @@ static void DumpProcessListKeyMap() {
     printf("#ch : number of channel handles\n");
     printf("#ev : number of event and event pair handles\n");
     printf("#ip : number of io port handles\n");
-    printf("#dp : number of data pipe handles (both)\n");
 }
 
 static char StateChar(const ProcessDispatcher& pd) {
@@ -55,8 +54,6 @@ static const char* ObjectTypeToString(mx_obj_type_t type) {
         case MX_OBJ_TYPE_CHANNEL: return "channel";
         case MX_OBJ_TYPE_EVENT: return "event";
         case MX_OBJ_TYPE_IOPORT: return "io-port";
-        case MX_OBJ_TYPE_DATA_PIPE_PRODUCER: return "data-pipe-prod";
-        case MX_OBJ_TYPE_DATA_PIPE_CONSUMER: return "data-pipe-con";
         case MX_OBJ_TYPE_INTERRUPT: return "interrupt";
         case MX_OBJ_TYPE_IOMAP: return "io-map";
         case MX_OBJ_TYPE_PCI_DEVICE: return "pci-device";
@@ -99,7 +96,7 @@ static char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
-    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u %3u",
+    snprintf(buf, sizeof(buf), "%3u: %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
              types[MX_OBJ_TYPE_JOB],
              types[MX_OBJ_TYPE_PROCESS],
@@ -108,9 +105,7 @@ static char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
              types[MX_OBJ_TYPE_CHANNEL],
              // Events and event pairs:
              types[MX_OBJ_TYPE_EVENT] + types[MX_OBJ_TYPE_EVENT_PAIR],
-             types[MX_OBJ_TYPE_IOPORT],
-             // Both sides of data pipes:
-             types[MX_OBJ_TYPE_DATA_PIPE_PRODUCER] + types[MX_OBJ_TYPE_DATA_PIPE_CONSUMER]
+             types[MX_OBJ_TYPE_IOPORT]
              );
     return buf;
 }

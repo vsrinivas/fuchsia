@@ -13,7 +13,6 @@ static_library("mx") {
     "event.cc",
     "eventpair.cc",
     "include/mx/channel.h",
-    "include/mx/datapipe.h",
     "include/mx/event.h",
     "include/mx/eventpair.h",
     "include/mx/handle.h",

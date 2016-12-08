@@ -18,7 +18,6 @@ MODULE_DEPS := \
 MODULE_SRCS := \
     $(LOCAL_DIR)/syscalls.cpp \
     $(LOCAL_DIR)/syscalls_channel.cpp \
-    $(LOCAL_DIR)/syscalls_datapipe.cpp \
     $(LOCAL_DIR)/syscalls_debug.cpp \
     $(LOCAL_DIR)/syscalls_ddk.cpp \
     $(LOCAL_DIR)/syscalls_ddk_pci.cpp \

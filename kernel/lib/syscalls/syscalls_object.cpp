@@ -10,8 +10,6 @@
 
 #include <kernel/auto_lock.h>
 
-#include <magenta/data_pipe_consumer_dispatcher.h>
-#include <magenta/data_pipe_producer_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
@@ -205,28 +203,6 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
-        case MX_PROP_DATAPIPE_READ_THRESHOLD: {
-            auto consumer_dispatcher = dispatcher->get_specific<DataPipeConsumerDispatcher>();
-            if (!consumer_dispatcher)
-                return ERR_WRONG_TYPE;
-            if (size < sizeof(mx_size_t))
-                return ERR_BUFFER_TOO_SMALL;
-            mx_size_t threshold = consumer_dispatcher->GetReadThreshold();
-            if (_value.reinterpret<mx_size_t>().copy_to_user(threshold) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            return NO_ERROR;
-        }
-        case MX_PROP_DATAPIPE_WRITE_THRESHOLD: {
-            auto producer_dispatcher = dispatcher->get_specific<DataPipeProducerDispatcher>();
-            if (!producer_dispatcher)
-                return ERR_WRONG_TYPE;
-            if (size < sizeof(mx_size_t))
-                return ERR_BUFFER_TOO_SMALL;
-            mx_size_t threshold = producer_dispatcher->GetWriteThreshold();
-            if (_value.reinterpret<mx_size_t>().copy_to_user(threshold) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            return NO_ERROR;
-        }
         case MX_PROP_NAME: {
             if (size < MX_MAX_NAME_LEN)
                 return ERR_BUFFER_TOO_SMALL;
@@ -271,30 +247,6 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             if (_value.reinterpret<const uint32_t>().copy_from_user(&value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             status = process->set_bad_handle_policy(value);
-            break;
-        }
-        case MX_PROP_DATAPIPE_READ_THRESHOLD: {
-            if (size < sizeof(mx_size_t))
-                return ERR_BUFFER_TOO_SMALL;
-            auto consumer_dispatcher = dispatcher->get_specific<DataPipeConsumerDispatcher>();
-            if (!consumer_dispatcher)
-                return up->BadHandle(handle_value, ERR_WRONG_TYPE);
-            mx_size_t threshold = 0;
-            if (_value.reinterpret<const mx_size_t>().copy_from_user(&threshold) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            status = consumer_dispatcher->SetReadThreshold(threshold);
-            break;
-        }
-        case MX_PROP_DATAPIPE_WRITE_THRESHOLD: {
-            if (size < sizeof(mx_size_t))
-                return ERR_BUFFER_TOO_SMALL;
-            auto producer_dispatcher = dispatcher->get_specific<DataPipeProducerDispatcher>();
-            if (!producer_dispatcher)
-                return up->BadHandle(handle_value, ERR_WRONG_TYPE);
-            mx_size_t threshold = 0;
-            if (_value.reinterpret<const mx_size_t>().copy_from_user(&threshold) != NO_ERROR)
-                return ERR_INVALID_ARGS;
-            status = producer_dispatcher->SetWriteThreshold(threshold);
             break;
         }
         case MX_PROP_NAME: {
@@ -428,4 +380,3 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
 
     return ERR_WRONG_TYPE;
 }
-
