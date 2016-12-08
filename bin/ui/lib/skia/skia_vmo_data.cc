@@ -11,7 +11,7 @@
 #include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 
-static_assert(sizeof(mx_size_t) == sizeof(uint64_t),
+static_assert(sizeof(size_t) == sizeof(uint64_t),
               "Fuchsia should always be 64-bit");
 
 namespace mozart {
