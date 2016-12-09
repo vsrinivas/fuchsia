@@ -489,7 +489,7 @@ extern mx_status_t mx_pci_init(
     const mx_pci_init_arg_t init_buf[],
     uint32_t len);
 
-extern mx_status_t mx_mx_pci_add_subtract_io_range(
+extern mx_status_t mx_pci_add_subtract_io_range(
     mx_handle_t handle,
     bool mmio,
     uint64_t base,

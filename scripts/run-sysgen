@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# Copyright 2016 The Fuchsia Authors
+
+if [ ! -e build-magenta-pc-x86-64/tools/sysgen ]; then
+    echo "sysgen not found. did you build magenta?"
+    exit $?
+fi
+
+# remove any existing output.
+
+rm -f generated.arm32.S
+rm -f generated.arm64.S
+rm -f generated.kernel.h
+rm -f generated.kernel.inc
+rm -f generated.user.h
+rm -f generated.x86-64.S
+
+# generate again
+
+if ! ./build-magenta-pc-x86-64/tools/sysgen system/public/magenta/syscalls.sysgen; then
+    echo "sysgen failed"
+    exit $?
+fi
+
+# copy to destination if changed.
+
+rsync -c generated.user.h     system/public/magenta/gen-syscalls.h
+rsync -c generated.x86-64.S   system/ulib/magenta/gen-x86-64.S
+rsync -c generated.arm32.S    system/ulib/magenta/gen-arm32.S
+rsync -c generated.arm64.S    system/ulib/magenta/gen-arm64.S
+rsync -c generated.kernel.h   kernel/lib/magenta/gen-sysdefs.h
+rsync -c generated.kernel.inc kernel/lib/magenta/gen-switch.inc
+

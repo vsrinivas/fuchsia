@@ -479,8 +479,8 @@ struct GenParams {
     GenFn genfn;
     const char* file_postfix;
     const char* entry_prefix;
-    const char* empty_args;
     const char* name_prefix;
+    const char* empty_args;
     const char* switch_var;
     const char* switch_type;
     std::map<uint32_t, string> attributes;
@@ -590,7 +590,8 @@ bool generate_legacy_assembly_x64(
     if (sc.is_vdso())
         return true;
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs64, mx_##name, n
-    os << gp.name_prefix << " " << sc.arg_spec.size() << " " << sc.name << " " << index << "\n";
+    os << gp.entry_prefix << " " << sc.arg_spec.size() << " "
+       << gp.name_prefix << sc.name << " " << index << "\n";
     return os.good();
 }
 
@@ -599,7 +600,7 @@ bool generate_legacy_assembly_arm64(
     if (sc.is_vdso())
         return true;
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall mx_##name, n
-    os << gp.name_prefix << " " << sc.name << " " << index << "\n";
+    os << gp.entry_prefix << " " << gp.name_prefix << sc.name << " " << index << "\n";
     return os.good();
 }
 
@@ -629,7 +630,8 @@ bool generate_legacy_assembly_arm32(
     }
 
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs32, mx_##name, n
-    os << gp.name_prefix << " " << count << " " << sc.name << " " << index << "\n";
+    os << gp.entry_prefix << " " << count << " "
+       << gp.name_prefix << sc.name << " " << index << "\n";
     return os.good();
 }
 
@@ -654,8 +656,8 @@ const GenParams gen_params[] = {
         generate_legacy_header,
         ".user.h",          // file postfix.
         "extern",           // function prefix.
-        "void",             // no-args special type.
         "mx_",              // function name prefix.
+        "void",             // no-args special type
         nullptr,            // switch var (does not apply)
         nullptr,            // switch type (does not apply)
         user_attrs,         // attributes dictionary
@@ -664,42 +666,39 @@ const GenParams gen_params[] = {
     {
         generate_legacy_header,
         ".kernel.h",        // file postix.
-        nullptr,            // no function prefix
-        nullptr,            // no-args special type.
+        nullptr,            // no function prefix.
         "sys_",             // function name prefix.
     },
+    // The kernel C++ code. A switch statement set.
     {
         generate_legacy_code,
         ".kernel.inc",      // file postix.
-        nullptr,            // no function prefix
-        nullptr,            // no-args (does not apply)
+        nullptr,            // no function prefix.
         "sys_",             // function name prefix.
+        nullptr,            // no-args (does not apply)
         "sfunc",            // switch var name
         "syscall_func"      // switch var type
     },
     //  The assembly file for x86-64 (KernelAsmIntel64).
     {
         generate_legacy_assembly_x64,
-        ".x86-64.S",
-        nullptr,
-        nullptr,
-        "m_syscall",
+        ".x86-64.S",        // file postix.
+        "m_syscall",        // macro name prefix.
+        "mx_",              // function name prefix.
     },
     //  The assembly include file for ARM64 (KernelAsmArm64).
     {
         generate_legacy_assembly_arm64,
-        ".arm64.S",
-        nullptr,
-        nullptr,
-        "m_syscall",
+        ".arm64.S",         // file postix.
+        "m_syscall",        // macro name prefix.
+        "mx_",              // function name prefix.
     },
     //  The assembly include file for ARM32 (KernelAsmArm32).
     {
         generate_legacy_assembly_arm32,
-        ".arm32.S",
-        nullptr,
-        nullptr,
-        "m_syscall",
+        ".arm32.S",         // file postix.
+        "m_syscall",        // macro name prefix.
+        "mx_",              // function name prefix.
     }
 };
 

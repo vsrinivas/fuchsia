@@ -447,7 +447,7 @@ syscall pci_init
     (handle: mx_handle_t, init_buf: mx_pci_init_arg_t[len] IN, len: uint32_t)
     returns (mx_status_t);
 
-syscall mx_pci_add_subtract_io_range
+syscall pci_add_subtract_io_range
     (handle: mx_handle_t, mmio: bool, base: uint64_t, len: uint64_t, add: bool)
     returns (mx_status_t);
 

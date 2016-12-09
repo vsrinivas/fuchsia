@@ -181,7 +181,7 @@
        break;
     case 91: sfunc = reinterpret_cast<syscall_func>(sys_pci_init);
        break;
-    case 92: sfunc = reinterpret_cast<syscall_func>(sys_mx_pci_add_subtract_io_range);
+    case 92: sfunc = reinterpret_cast<syscall_func>(sys_pci_add_subtract_io_range);
        break;
     case 93: sfunc = reinterpret_cast<syscall_func>(sys_acpi_uefi_rsdp);
        break;
