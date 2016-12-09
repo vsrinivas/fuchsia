@@ -7,22 +7,17 @@
 
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/configuration/configuration_encoder.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace {
-constexpr ftl::StringView kHelpArg = "--help";
-constexpr ftl::StringView kHelpShortArg = "-h";
-constexpr ftl::StringView kConfigPathArg = "--config_path=";
-constexpr ftl::StringView kFirebaseIdArg = "--firebase_id=";
-constexpr ftl::StringView kFirebasePrefixArg = "--firebase_prefix=";
-
-bool IsArgument(const std::string& arg, ftl::StringView argument_name) {
-  return arg.size() >= argument_name.size() &&
-         arg.substr(0, argument_name.size()) == argument_name;
-}
+const char kHelpArg[] = "help";
+const char kConfigPathArg[] = "config_path";
+const char kFirebaseIdArg[] = "firebase_id";
+const char kFirebasePrefixArg[] = "firebase_prefix";
 
 void PrintHelp() {
   printf("Creates the configuration file used by the Ledger.\n");
@@ -38,32 +33,33 @@ void PrintHelp() {
 }
 
 int main(int argc, const char** argv) {
-  std::vector<std::string> args(argv, argv + argc);
+  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
 
   configuration::Configuration config;
-  ftl::StringView config_path = configuration::kDefaultConfigurationFile;
-  bool first_skipped = false;
-  for (const std::string& arg : args) {
-    if (!first_skipped) {
-      // Skip arg[0].
-      first_skipped = true;
-    } else if (IsArgument(arg, kHelpArg) || IsArgument(arg, kHelpShortArg)) {
-      PrintHelp();
-      return 0;
-    } else if (IsArgument(arg, kConfigPathArg)) {
-      config_path = ftl::StringView(arg).substr(kConfigPathArg.size());
-    } else if (IsArgument(arg, kFirebaseIdArg)) {
-      config.use_sync = true;
-      config.sync_params.firebase_id = arg.substr(kFirebaseIdArg.size());
-    } else if (IsArgument(arg, kFirebasePrefixArg)) {
-      config.use_sync = true;
-      config.sync_params.firebase_prefix =
-          arg.substr(kFirebasePrefixArg.size());
-    } else {
-      FTL_LOG(ERROR) << "Unrecognized argument " << arg;
-      PrintHelp();
-      return 1;
-    }
+  std::string config_path = configuration::kDefaultConfigurationFile.ToString();
+
+  if (command_line.HasOption(kHelpArg)) {
+    PrintHelp();
+    return 0;
+  }
+
+  if (command_line.HasOption(kConfigPathArg)) {
+    bool ret = command_line.GetOptionValue(kConfigPathArg, &config_path);
+    FTL_DCHECK(ret);
+  }
+
+  if (command_line.HasOption(kFirebaseIdArg)) {
+    config.use_sync = true;
+    bool ret = command_line.GetOptionValue(kFirebaseIdArg,
+                                           &config.sync_params.firebase_id);
+    FTL_DCHECK(ret);
+  }
+
+  if (command_line.HasOption(kFirebasePrefixArg)) {
+    config.use_sync = true;
+    bool ret = command_line.GetOptionValue(kFirebasePrefixArg,
+                                           &config.sync_params.firebase_prefix);
+    FTL_DCHECK(ret);
   }
 
   if (config.use_sync && (config.sync_params.firebase_id.empty() ||
@@ -77,11 +73,10 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  std::string config_path_string = config_path.ToString();
-  if (!files::CreateDirectory(files::GetDirectoryName(config_path_string))) {
+  if (!files::CreateDirectory(files::GetDirectoryName(config_path))) {
     FTL_LOG(ERROR) << "Unable to create directory for file " << config_path;
   }
-  if (!configuration::ConfigurationEncoder::Write(config_path_string, config)) {
+  if (!configuration::ConfigurationEncoder::Write(config_path, config)) {
     FTL_LOG(ERROR) << "Unable to write to file " << config_path;
     return 1;
   }
