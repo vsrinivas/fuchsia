@@ -17,6 +17,7 @@
 namespace configuration {
 namespace {
 const char kSynchronization[] = "synchronization";
+const char kUseSync[] = "use_sync";
 const char kFirebaseId[] = "firebase_id";
 const char kFirebasePrefix[] = "firebase_prefix";
 }
@@ -69,7 +70,6 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
   }
 
   auto sync_config = document[kSynchronization].GetObject();
-  new_configuration.use_sync = true;
   if (!sync_config.HasMember(kFirebaseId) ||
       !sync_config[kFirebaseId].IsString()) {
     FTL_LOG(ERROR) << "The " << kFirebaseId
@@ -77,8 +77,8 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
                    << ".";
     return false;
   }
-
-  new_configuration.sync_params.firebase_id = sync_config[kFirebaseId].GetString();
+  new_configuration.sync_params.firebase_id =
+      sync_config[kFirebaseId].GetString();
 
   if (!sync_config.HasMember(kFirebasePrefix) ||
       !sync_config[kFirebasePrefix].IsString()) {
@@ -90,10 +90,17 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
   new_configuration.sync_params.firebase_prefix =
       sync_config[kFirebasePrefix].GetString();
 
-  if (sync_config.MemberCount() != 2u) {
-    FTL_LOG(ERROR) << "Unknown parameters specified inside " << kSynchronization
-                   << ".";
-    return false;
+  // Set use_sync to true if kUseSync is true or missing. This is for
+  // backward-compatibility with config files written before serializing the
+  // |kUseSync| flag. TODO(ppi): remove the fallback in 2017.
+  new_configuration.use_sync = true;
+  if (sync_config.HasMember(kUseSync)) {
+    if (!sync_config[kUseSync].IsBool()) {
+      FTL_LOG(ERROR) << "The " << kUseSync << " parameter inside "
+                     << kSynchronization << " must be a boolean.";
+      return false;
+    }
+    new_configuration.use_sync = sync_config[kUseSync].GetBool();
   }
 
   *configuration = std::move(new_configuration);
@@ -107,22 +114,24 @@ std::string ConfigurationEncoder::EncodeToString(
 
   writer.StartObject();
   {
-    if (!configuration.use_sync) {
-      writer.EndObject();
-      return string_buffer.GetString();
-    }
     writer.Key(kSynchronization);
 
     writer.StartObject();
     {
-      writer.Key(kFirebaseId);
-      writer.String(configuration.sync_params.firebase_id.c_str(),
-                    configuration.sync_params.firebase_id.size());
-    }
-    {
-      writer.Key(kFirebasePrefix);
-      writer.String(configuration.sync_params.firebase_prefix.c_str(),
-                    configuration.sync_params.firebase_prefix.size());
+      {
+        writer.Key(kUseSync);
+        writer.Bool(configuration.use_sync);
+      }
+      {
+        writer.Key(kFirebaseId);
+        writer.String(configuration.sync_params.firebase_id.c_str(),
+                      configuration.sync_params.firebase_id.size());
+      }
+      {
+        writer.Key(kFirebasePrefix);
+        writer.String(configuration.sync_params.firebase_prefix.c_str(),
+                      configuration.sync_params.firebase_prefix.size());
+      }
     }
     writer.EndObject();
   }

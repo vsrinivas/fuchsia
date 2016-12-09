@@ -24,15 +24,17 @@ struct Configuration {
   Configuration& operator=(const Configuration&);
   Configuration& operator=(Configuration&&);
 
-  // Parameters used for cloud synchronization.
+  // Set to true to enable Cloud Sync. False by default.
+  bool use_sync;
+
+  // Cloud Sync parameters.
   struct SyncParams {
     // ID of the firebase instance.
     std::string firebase_id;
     // Prefix of firebase keys.
     std::string firebase_prefix;
   };
-  // Set to true to enable cloud synchronization. False by default.
-  bool use_sync;
+
   // sync_params holds the parameters used for cloud synchronization if
   // |use_sync| is true.
   SyncParams sync_params;

@@ -9,6 +9,7 @@
 #include "apps/ledger/src/configuration/configuration_encoder.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/files/directory.h"
+#include "lib/ftl/files/file.h"
 #include "lib/ftl/files/path.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_view.h"
@@ -18,34 +19,51 @@ const char kHelpArg[] = "help";
 const char kConfigPathArg[] = "config_path";
 const char kFirebaseIdArg[] = "firebase_id";
 const char kFirebasePrefixArg[] = "firebase_prefix";
+const char kSyncArg[] = "sync";
+const char kNoSyncArg[] = "nosync";
 
 void PrintHelp() {
-  printf("Creates the configuration file used by the Ledger.\n");
+  printf("Creates the configuration file used by Ledger.\n");
   printf("\n");
   printf("Optional, global arguments:\n");
   printf("  --config_path=/path/to/config/file: path to the configuration \n");
   printf("    file to write to (default: /data/ledger/config.json).\n");
   printf("  --help: prints this help.\n");
-  printf("Synchronization arguments (these enable cloud sync):\n");
+  printf("Cloud Sync configuration:\n");
+  printf("  (passing either implies --sync unless --nosync is passed)\n");
   printf("  --firebase_id=<NAME_OF_FIREBASE_INSTANCE>\n");
   printf("  --firebase_prefix=<USER_SPECIFIC_PREFIX>\n");
+  printf("Toggle Cloud Sync off and on:\n");
+  printf("  --sync\n");
+  printf("  --nosync\n");
 }
 }
 
 int main(int argc, const char** argv) {
   ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
 
-  configuration::Configuration config;
-  std::string config_path = configuration::kDefaultConfigurationFile.ToString();
-
   if (command_line.HasOption(kHelpArg)) {
     PrintHelp();
     return 0;
   }
 
+  std::string config_path = configuration::kDefaultConfigurationFile.ToString();
   if (command_line.HasOption(kConfigPathArg)) {
     bool ret = command_line.GetOptionValue(kConfigPathArg, &config_path);
     FTL_DCHECK(ret);
+  }
+  if (config_path.empty()) {
+    FTL_LOG(ERROR) << "Specify a non-empty " << kConfigPathArg;
+    return 1;
+  }
+
+  configuration::Configuration config;
+  if (files::IsFile(config_path) &&
+      !configuration::ConfigurationEncoder::Decode(config_path, &config)) {
+    FTL_LOG(WARNING) << "Found existing configuration file at: " << config_path
+                     << ", but failed to decode it. "
+                     << "Starting from the default configuration.";
+    config = configuration::Configuration();
   }
 
   if (command_line.HasOption(kFirebaseIdArg)) {
@@ -62,14 +80,24 @@ int main(int argc, const char** argv) {
     FTL_DCHECK(ret);
   }
 
-  if (config.use_sync && (config.sync_params.firebase_id.empty() ||
-                          config.sync_params.firebase_prefix.empty())) {
-    FTL_LOG(ERROR) << "Please specify both --firebase_id and --firebase_prefix";
+  if (command_line.HasOption(kSyncArg) && command_line.HasOption(kNoSyncArg)) {
+    FTL_LOG(ERROR)
+        << "Ledger isn't a Schroedinger notepad, it either syncs or not";
     return 1;
   }
 
-  if (config_path.empty()) {
-    FTL_LOG(ERROR) << "Please specify a non-empty directory path to write to.";
+  if (command_line.HasOption(kSyncArg)) {
+    config.use_sync = true;
+  }
+
+  if (command_line.HasOption(kNoSyncArg)) {
+    config.use_sync = false;
+  }
+
+  if (config.use_sync && (config.sync_params.firebase_id.empty() ||
+                          config.sync_params.firebase_prefix.empty())) {
+    FTL_LOG(ERROR) << "To enable Cloud Sync pass both --firebase_id "
+                   << "and --firebase_prefix";
     return 1;
   }
 

@@ -81,10 +81,19 @@ If something seems off with sync, run the following command:
 If the provided information is not enough to resolve the problem, please file a
 bug and attach the output.
 
-### Switching it Off
+### Toggling Cloud Sync off and on
 
-To disable sync, run the configuration script with no sync parameters:
+To disable sync:
 
 ```
-configure_ledger
+configure_ledger --nosync
 ```
+
+To enable it again:
+
+```
+configure_ledger --sync
+```
+
+The configuration tool remembers the Firebase settings even when the sync is
+off, so you don't need to pass them again.
