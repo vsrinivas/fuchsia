@@ -34,7 +34,8 @@ int socket(int domain, int type, int protocol) {
 
     char path[1024];
     int n = snprintf(path, sizeof(path), "%s/%s/%d/%d/%d", MXRIO_SOCKET_ROOT,
-                     MXRIO_SOCKET_DIR_SOCKET, domain, type, protocol);
+                     MXRIO_SOCKET_DIR_SOCKET, domain, type & ~SOCK_NONBLOCK,
+                     protocol);
     if (n < 0 || n >= (int)sizeof(path)) {
         return ERRNO(EINVAL);
     }
