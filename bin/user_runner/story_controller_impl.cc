@@ -32,6 +32,15 @@ void StoryControllerImpl::Connect(
 
 // |StoryController|
 void StoryControllerImpl::GetInfo(const GetInfoCallback& callback) {
+  // If a controller is deleted, we know there are no story data
+  // anymore, and all connections to the controller are closed soon.
+  // We just don't answer this request anymore and let its connection
+  // get closed.
+  if (deleted_) {
+    FTL_LOG(INFO) << "StoryControllerImpl::GetInfo() during delete: ignored.";
+    return;
+  }
+
   story_provider_impl_->GetStoryData(
       story_data_->story_info->id, [this, callback](StoryDataPtr story_data) {
         story_data_ = std::move(story_data);
@@ -50,6 +59,20 @@ void StoryControllerImpl::SetInfoExtra(const fidl::String& name,
 // |StoryController|
 void StoryControllerImpl::Start(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  // If a controller is stopped for delete, then it cannot be used
+  // further. However, as of now nothing prevents a client to call
+  // StartStory() on a story that is being deleted, so this condition
+  // arises legitimately. We just do nothing, and the connection to
+  // the client will be deleted shortly after. TODO(mesch): Change two
+  // things: (1) API such that it can be notified about such
+  // conditions, (2) implementation such that such conditons are
+  // checked more systematically, e.g. implement a formal state
+  // machine that checks how to handle each method in every state.
+  if (deleted_) {
+    FTL_LOG(INFO) << "StoryControllerImpl::StartStory() during delete: ignored.";
+    return;
+  }
+
   if (story_data_->story_info->is_running) {
     return;
   }
@@ -65,10 +88,50 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
     return;
   }
 
-  TearDownStory([this, done]() {
+  story_runner_->Stop([this, done]() {
+    story_data_->story_info->is_running = false;
+    story_data_->story_info->state = StoryState::STOPPED;
+    WriteStoryData([this, done]() {
+      Reset();
+      NotifyStoryWatchers(&StoryWatcher::OnStop);
+      done();
+    });
+  });
+}
+
+
+// A variant of Stop() that stops the controller because the story was
+// deleted. It also stops the story runner, but then does not write
+// the story data to the ledger, because that would undelete the story
+// again. It also suppresses writes of story data on status changes
+// from the root module.
+//
+// TODO(mesch): A cleaner way is probably to retain tombstones in the
+// ledger. We revisit that once we sort out cross device synchronization.
+void StoryControllerImpl::StopForDelete(const StopCallback& done) {
+  deleted_ = true;
+
+  if (!story_data_->story_info->is_running) {
+    done();
+    return;
+  }
+
+  story_runner_->Stop([this, done]() {
+    story_data_->story_info->is_running = false;
+    story_data_->story_info->state = StoryState::STOPPED;
+    Reset();
     NotifyStoryWatchers(&StoryWatcher::OnStop);
     done();
   });
+}
+
+void StoryControllerImpl::Reset() {
+  root_.reset();
+  link_changed_binding_.Close();
+  module_.reset();
+  story_.reset();
+  story_runner_.reset();
+  module_watcher_binding_.Close();
 }
 
 // |StoryController|
@@ -108,7 +171,13 @@ void StoryControllerImpl::Notify(FidlDocMap docs) {
 }
 
 void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
-  story_provider_impl_->WriteStoryData(story_data_->Clone(), done);
+  // If the story controller is deleted, we do not write story data
+  // anymore, because that would undelete it again.
+  if (!deleted_) {
+    story_provider_impl_->WriteStoryData(story_data_->Clone(), done);
+  } else {
+    done();
+  }
 }
 
 void StoryControllerImpl::NotifyStoryWatchers(void (StoryWatcher::*method)()) {
@@ -174,23 +243,6 @@ void StoryControllerImpl::GetLink(fidl::InterfaceRequest<Link> link_request) {
   } else {
     root_requests_.emplace_back(std::move(link_request));
   }
-}
-
-void StoryControllerImpl::TearDownStory(std::function<void()> done) {
-  story_runner_->Stop([this, done]() {
-    story_data_->story_info->is_running = false;
-    story_data_->story_info->state = StoryState::STOPPED;
-    WriteStoryData([this, done]() {
-        root_.reset();
-        link_changed_binding_.Close();
-        module_.reset();
-        story_.reset();
-        story_runner_.reset();
-        module_watcher_binding_.Close();
-
-        done();
-      });
-  });
 }
 
 }  // namespace modular

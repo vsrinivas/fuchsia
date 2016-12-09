@@ -100,8 +100,8 @@ class GetStoryDataCall : public Transaction {
                 to_array(story_id_),
                 [this](ledger::Status status, ledger::ValuePtr value) {
                   if (status != ledger::Status::OK) {
-                    FTL_LOG(INFO) << "GetStoryDataCall() " << story_id_
-                                  << " PageSnapshot.Get() " << status;
+                    FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
+                                   << " PageSnapshot.Get() " << status;
                     result_(std::move(story_data_));
                     Done();
                     return;
@@ -277,8 +277,6 @@ class DeleteStoryCall : public Transaction {
           FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
                          << " Page.Delete() " << status;
         }
-
-
         result_();
         Done();
       });
@@ -701,7 +699,7 @@ void StoryProviderImpl::DisposeController(
               };
 
   if (i->second->impl.get() != nullptr) {
-    i->second->impl->StopController(cont);
+    i->second->impl->StopForDelete(cont);
   } else {
     cont();
   }

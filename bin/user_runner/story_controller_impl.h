@@ -44,7 +44,7 @@ class StoryControllerImpl : public StoryController,
 
   // Used by StoryProviderImpl.
   void Connect(fidl::InterfaceRequest<StoryController> story_controller_request);
-  void StopController(const StopCallback& done) { Stop(done); }
+  void StopForDelete(const StopCallback& done);
   size_t bindings_size() const { return bindings_.size(); }
   void set_root_docs(FidlDocMap root_docs) { root_docs_ = std::move(root_docs); }
 
@@ -81,10 +81,14 @@ class StoryControllerImpl : public StoryController,
   // Starts the Story instance for the given story.
   void StartStory(fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
-  // Tears down the currently used StoryRunner instance, if any.
-  void TearDownStory(std::function<void()> done);
+  // Resets the state of the story controller such that Start() can be
+  // called again. This does not reset deleted_; once a
+  // StoryController instance received StopForDelete(), it cannot be
+  // reused anymore, and client connections will all be closed.
+  void Reset();
 
   StoryDataPtr story_data_;
+  bool deleted_{};
   StoryProviderImpl* const story_provider_impl_;
   std::shared_ptr<StoryStorageImpl::Storage> storage_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
