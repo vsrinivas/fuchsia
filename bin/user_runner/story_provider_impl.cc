@@ -544,14 +544,16 @@ void StoryProviderImpl::AddController(
 // user shell to maintain controllers for more stories than fit on the
 // screen, which is bounded).
 void StoryProviderImpl::PurgeControllers() {
-  // Scan entries for controllers without connections, or for those
-  // marked deleted that have no requests pending.
+  // Scan entries for controllers with no connections that have no
+  // delete operations pending, or for those with completed delete
+  // operations that have no connection requests pending.
   std::vector<std::string> disconnected;
   for (auto& entry : story_controllers_) {
-    if (entry.second->impl.get() != nullptr &&
-        entry.second->impl->bindings_size() == 0 &&
-        entry.second->deleted && entry.second->requests.size() == 0 &&
-        entry.second->deleted_callbacks.size() == 0) {
+    if ((entry.second->impl.get() != nullptr &&
+         entry.second->impl->bindings_size() == 0 &&
+         entry.second->deleted_callbacks.size() == 0) ||
+        (entry.second->deleted && entry.second->requests.size() == 0 &&
+         entry.second->deleted_callbacks.size() == 0)) {
       disconnected.push_back(entry.first);
     }
   }
