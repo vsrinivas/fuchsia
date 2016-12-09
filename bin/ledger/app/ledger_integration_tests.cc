@@ -212,6 +212,7 @@ class Watcher : public PageWatcher {
                 const OnChangeCallback& callback) override {
     changes_seen++;
     last_page_change_ = std::move(page_change);
+    last_snapshot_.reset();
     callback(last_snapshot_.NewRequest());
     change_callback_();
   }
