@@ -26,6 +26,7 @@ void Repo::AddSuggestion(SuggestionPrototype* prototype) {
     prototype->ranks_by_channel[ask_channel.get()] =
         ask_channel->OnAddSuggestion(prototype);
   }
+  suggestions_[prototype->suggestion_id] = prototype;
 }
 
 void Repo::InitiateAsk(fidl::InterfaceHandle<SuggestionListener> listener,

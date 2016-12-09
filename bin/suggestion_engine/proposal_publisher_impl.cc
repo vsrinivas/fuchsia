@@ -23,19 +23,7 @@ void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
 }
 
 void ProposalPublisherImpl::Remove(const fidl::String& proposal_id) {
-  const auto it = proposals_.find(proposal_id);
-
-  if (it != proposals_.end()) {
-    for (auto channel_rank : it->second->ranks_by_channel) {
-      channel_rank.first->OnRemoveSuggestion(channel_rank.second);
-    }
-
-    repo_->RemoveSuggestion(it->second->suggestion_id);
-    proposals_.erase(it);
-
-    if (ShouldEraseSelf())
-      EraseSelf();
-  }
+  Extract(proposal_id);
 }
 
 void ProposalPublisherImpl::GetAll(const GetAllCallback& callback) {
@@ -48,16 +36,22 @@ void ProposalPublisherImpl::RegisterAskHandler(
 }
 
 std::unique_ptr<SuggestionPrototype> ProposalPublisherImpl::Extract(
-    const std::string& id) {
-  const auto it = proposals_.find(id);
+    const std::string& proposal_id) {
+  const auto it = proposals_.find(proposal_id);
+
   if (it == proposals_.end()) {
     return NULL;
-  } else {
-    std::unique_ptr<SuggestionPrototype> prototype = std::move(it->second);
-    proposals_.erase(it);
-
-    return prototype;
+  for (auto channel_rank : it->second->ranks_by_channel) {
+    channel_rank.first->OnRemoveSuggestion(channel_rank.second);
   }
+  repo_->RemoveSuggestion(it->second->suggestion_id);
+  std::unique_ptr<SuggestionPrototype> extracted_proposal =
+      std::move(it->second);
+  proposals_.erase(it);
+
+  if (ShouldEraseSelf())
+    EraseSelf();
+  return extracted_proposal;
 }
 
 void ProposalPublisherImpl::BindingSet::OnConnectionError(
