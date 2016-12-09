@@ -69,7 +69,8 @@ void PageImpl::Watch(fidl::InterfaceHandle<PageWatcher> watcher,
   PageWatcherPtr watcher_ptr = PageWatcherPtr::Create(std::move(watcher));
   PageSnapshotPtr snapshot;
   GetSnapshot(snapshot.NewRequest(), std::move(timed_callback));
-  branch_tracker_->RegisterPageWatcher(std::move(watcher_ptr), std::move(snapshot));
+  branch_tracker_->RegisterPageWatcher(std::move(watcher_ptr),
+                                       std::move(snapshot));
 }
 
 void PageImpl::RunInTransaction(
@@ -216,26 +217,6 @@ void PageImpl::CreateReference(int64_t size,
         reference->opaque_id = convert::ToArray(object_id);
         callback(Status::OK, std::move(reference));
       });
-}
-
-// GetReference(Reference reference) => (Status status, Value? value);
-void PageImpl::GetReference(ReferencePtr reference,
-                            const GetReferenceCallback& callback) {
-  PageUtils::GetReferenceAsValuePtr(
-      storage_, reference->opaque_id,
-      TRACE_CALLBACK(std::move(callback), "page", "get_reference"));
-}
-
-// GetPartialReference(Reference reference, int64 offset, int64 max_size)
-//   => (Status status, handle<vmo>? buffer);
-void PageImpl::GetPartialReference(
-    ReferencePtr reference,
-    int64_t offset,
-    int64_t max_size,
-    const GetPartialReferenceCallback& callback) {
-  PageUtils::GetPartialReferenceAsBuffer(
-      storage_, reference->opaque_id, offset, max_size,
-      TRACE_CALLBACK(std::move(callback), "page", "get_partial_reference"));
 }
 
 // StartTransaction() => (Status status);

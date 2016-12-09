@@ -84,16 +84,19 @@ class BranchTracker::PageWatcherContainer {
 
           PageChangePtr page_change = PageChange::New();
           page_change->timestamp = new_commit->GetTimestamp();
+          page_change->changes = fidl::Array<EntryPtr>::New(0);
+          page_change->deleted_keys = fidl::Array<fidl::Array<uint8_t>>::New(0);
 
           for (; it->Valid(); it->Next()) {
-            EntryChangePtr change = EntryChange::New();
-            change->key = convert::ToArray((*it)->entry.key);
-
-            page_change->changes.push_back(std::move(change));
             if ((*it)->deleted) {
-              waiter->NewCallback()(storage::Status::OK, nullptr);
+              page_change->deleted_keys.push_back(
+                  convert::ToArray((*it)->entry.key));
               continue;
             }
+
+            EntryPtr entry = Entry::New();
+            entry->key = convert::ToArray((*it)->entry.key);
+            page_change->changes.push_back(std::move(entry));
 
             storage_->GetObject((*it)->entry.object_id, waiter->NewCallback());
           }
@@ -107,20 +110,14 @@ class BranchTracker::PageWatcherContainer {
               ](storage::Status status,
                 std::vector<std::unique_ptr<const storage::Object>>
                     results) mutable {
-
                 if (status != storage::Status::OK) {
                   FTL_LOG(ERROR)
                       << "Watcher: error while reading changed values.";
                   return;
                 }
-
+                FTL_DCHECK(results.size() == page_change->changes.size());
                 for (size_t i = 0; i < results.size(); i++) {
                   ftl::StringView object_contents;
-
-                  if (!results[i]) {
-                    // This object has been deleted, just skip it.
-                    continue;
-                  }
 
                   storage::Status read_status =
                       results[i]->GetData(&object_contents);
@@ -131,8 +128,9 @@ class BranchTracker::PageWatcherContainer {
                   }
 
                   // TODO(etiennej): LE-75 implement pagination on OnChange.
-                  page_change->changes[i]->new_value = BytesOrReference::New();
-                  page_change->changes[i]->new_value->set_bytes(
+                  // TODO(etiennej): LE-120 Use VMOs for big values.
+                  page_change->changes[i]->value = Value::New();
+                  page_change->changes[i]->value->set_bytes(
                       convert::ToArray(object_contents));
                 }
 

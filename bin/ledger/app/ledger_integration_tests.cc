@@ -196,10 +196,9 @@ class Watcher : public PageWatcher {
           ftl::Closure change_callback)
       : binding_(this, std::move(request)), change_callback_(change_callback) {}
 
-  PageChangePtr GetLastPageChange() { return last_page_change_.Clone(); }
-
   uint changes_seen = 0;
   PageSnapshotPtr last_snapshot_;
+  PageChangePtr last_page_change_;
 
  private:
   // PageWatcher:
@@ -210,6 +209,7 @@ class Watcher : public PageWatcher {
 
   void OnChange(PageChangePtr page_change,
                 const OnChangeCallback& callback) override {
+    FTL_DCHECK(page_change);
     changes_seen++;
     last_page_change_ = std::move(page_change);
     last_snapshot_.reset();
@@ -217,7 +217,6 @@ class Watcher : public PageWatcher {
     change_callback_();
   }
 
-  PageChangePtr last_page_change_;
   fidl::Binding<PageWatcher> binding_;
   ftl::Closure change_callback_;
 };
@@ -533,7 +532,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
   EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
-    EXPECT_TRUE(values[i].Equals(entries[i]->value));
+    EXPECT_TRUE(values[i].Equals(entries[i]->value->get_bytes()));
   }
 
   // Get entries matching the prefix "0".
@@ -542,7 +541,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
   EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
-    EXPECT_TRUE(values[i].Equals(entries[i]->value));
+    EXPECT_TRUE(values[i].Equals(entries[i]->value->get_bytes()));
   }
 
   // Get entries matching the prefix "00".
@@ -551,7 +550,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
   EXPECT_EQ(2u, entries.size());
   for (size_t i = 0; i < 2; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
-    EXPECT_TRUE(values[i].Equals(entries[i]->value));
+    EXPECT_TRUE(values[i].Equals(entries[i]->value->get_bytes()));
   }
 
   // Get keys matching the prefix "010".
@@ -559,7 +558,7 @@ TEST_F(LedgerApplicationTest, PageSnapshotGetEntries) {
       &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
   EXPECT_EQ(1u, entries.size());
   EXPECT_TRUE(keys[2].Equals(entries[0]->key));
-  EXPECT_TRUE(values[2].Equals(entries[0]->value));
+  EXPECT_TRUE(values[2].Equals(entries[0]->value->get_bytes()));
 
   // Get keys matching the prefix "5".
   snapshot->GetEntries(fidl::Array<uint8_t>::From(std::vector<uint8_t>{5}),
@@ -606,13 +605,13 @@ TEST_F(LedgerApplicationTest, PageSnapshotGettersReturnSortedEntries) {
   fidl::Array<EntryPtr> entries =
       SnapshotGetEntries(&snapshot, fidl::Array<uint8_t>());
   EXPECT_TRUE(keys[3].Equals(entries[0]->key));
-  EXPECT_TRUE(values[3].Equals(entries[0]->value));
+  EXPECT_TRUE(values[3].Equals(entries[0]->value->get_bytes()));
   EXPECT_TRUE(keys[0].Equals(entries[1]->key));
-  EXPECT_TRUE(values[0].Equals(entries[1]->value));
+  EXPECT_TRUE(values[0].Equals(entries[1]->value->get_bytes()));
   EXPECT_TRUE(keys[2].Equals(entries[2]->key));
-  EXPECT_TRUE(values[2].Equals(entries[2]->value));
+  EXPECT_TRUE(values[2].Equals(entries[2]->value->get_bytes()));
   EXPECT_TRUE(keys[1].Equals(entries[3]->key));
-  EXPECT_TRUE(values[1].Equals(entries[3]->value));
+  EXPECT_TRUE(values[1].Equals(entries[3]->value->get_bytes()));
 }
 
 TEST_F(LedgerApplicationTest, PageCreateReferenceNegativeSize) {
@@ -753,11 +752,10 @@ TEST_F(LedgerApplicationTest, PageWatcherSimple) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, watcher.changes_seen);
-  PageChangePtr change = watcher.GetLastPageChange();
+  PageChangePtr change = std::move(watcher.last_page_change_);
   EXPECT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 }
 
 TEST_F(LedgerApplicationTest, PageWatcherSnapshot) {
@@ -780,7 +778,7 @@ TEST_F(LedgerApplicationTest, PageWatcherSnapshot) {
       SnapshotGetEntries(&(watcher.last_snapshot_), convert::ToArray(""));
   EXPECT_EQ(1u, entries.size());
   EXPECT_EQ("name", convert::ToString(entries[0]->key));
-  EXPECT_EQ("Alice", convert::ToString(entries[0]->value));
+  EXPECT_EQ("Alice", convert::ToString(entries[0]->value->get_bytes()));
 }
 
 TEST_F(LedgerApplicationTest, PageWatcherTransaction) {
@@ -810,11 +808,10 @@ TEST_F(LedgerApplicationTest, PageWatcherTransaction) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, watcher.changes_seen);
-  PageChangePtr change = watcher.GetLastPageChange();
+  PageChangePtr change = std::move(watcher.last_page_change_);
   EXPECT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 }
 
 TEST_F(LedgerApplicationTest, PageWatcherParallel) {
@@ -858,22 +855,20 @@ TEST_F(LedgerApplicationTest, PageWatcherParallel) {
   EXPECT_TRUE(page1.WaitForIncomingResponse());
   mtl::MessageLoop::GetCurrent()->Run();
   EXPECT_EQ(1u, watcher1.changes_seen);
-  PageChangePtr change = watcher1.GetLastPageChange();
+  PageChangePtr change = std::move(watcher1.last_page_change_);
   EXPECT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 
   page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
   mtl::MessageLoop::GetCurrent()->Run();
 
   EXPECT_EQ(1u, watcher2.changes_seen);
-  change = watcher2.GetLastPageChange();
+  change = std::move(watcher2.last_page_change_);
   EXPECT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
       [] { mtl::MessageLoop::GetCurrent()->QuitNow(); },
@@ -883,11 +878,10 @@ TEST_F(LedgerApplicationTest, PageWatcherParallel) {
   EXPECT_EQ(2u, watcher1.changes_seen);
   EXPECT_EQ(1u, watcher2.changes_seen);
 
-  change = watcher1.GetLastPageChange();
+  change = std::move(watcher1.last_page_change_);
   EXPECT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
 }
 
 TEST_F(LedgerApplicationTest, PageWatcherEmptyTransaction) {
@@ -944,18 +938,16 @@ TEST_F(LedgerApplicationTest, PageWatcher1Change2Pages) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   ASSERT_EQ(1u, watcher1.changes_seen);
-  PageChangePtr change = watcher1.GetLastPageChange();
+  PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 
   ASSERT_EQ(1u, watcher2.changes_seen);
-  change = watcher2.GetLastPageChange();
+  change = std::move(watcher2.last_page_change_);
   ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Alice",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 }
 
 TEST_F(LedgerApplicationTest, Merging) {
@@ -1005,48 +997,43 @@ TEST_F(LedgerApplicationTest, Merging) {
   EXPECT_TRUE(page1.WaitForIncomingResponse());
   mtl::MessageLoop::GetCurrent()->Run();
   EXPECT_EQ(1u, watcher1.changes_seen);
-  PageChangePtr change = watcher1.GetLastPageChange();
+  PageChangePtr change = std::move(watcher1.last_page_change_);
   EXPECT_EQ(2u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
   EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
-  EXPECT_EQ("Alice",
-            convert::ToString(change->changes[1]->new_value->get_bytes()));
+  EXPECT_EQ("Alice", convert::ToString(change->changes[1]->value->get_bytes()));
 
   page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
   mtl::MessageLoop::GetCurrent()->Run();
 
   EXPECT_EQ(1u, watcher2.changes_seen);
-  change = watcher2.GetLastPageChange();
+  change = std::move(watcher2.last_page_change_);
   EXPECT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
   EXPECT_EQ("0123456789",
-            convert::ToString(change->changes[1]->new_value->get_bytes()));
+            convert::ToString(change->changes[1]->value->get_bytes()));
 
   mtl::MessageLoop::GetCurrent()->Run();
   mtl::MessageLoop::GetCurrent()->Run();
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
-  change = watcher1.GetLastPageChange();
+  change = std::move(watcher1.last_page_change_);
   EXPECT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Bob",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
   EXPECT_EQ("0123456789",
-            convert::ToString(change->changes[1]->new_value->get_bytes()));
+            convert::ToString(change->changes[1]->value->get_bytes()));
 
   EXPECT_EQ(2u, watcher2.changes_seen);
-  change = watcher2.GetLastPageChange();
+  change = std::move(watcher2.last_page_change_);
   EXPECT_EQ(1u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
-  EXPECT_EQ("Paris",
-            convert::ToString(change->changes[0]->new_value->get_bytes()));
+  EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
 }
 
 }  // namespace

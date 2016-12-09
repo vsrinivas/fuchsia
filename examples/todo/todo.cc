@@ -132,7 +132,7 @@ void TodoApp::List() {
 
         std::cout << "--- To Do ---" << std::endl;
         for (auto& entry : entries) {
-          std::cout << ToString(entry->value) << std::endl;
+          std::cout << ToString(entry->value->get_bytes()) << std::endl;
         }
         std::cout << "---" << std::endl;
       }));

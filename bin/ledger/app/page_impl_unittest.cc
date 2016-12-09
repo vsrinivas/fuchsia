@@ -351,83 +351,6 @@ TEST_F(PageImplTest, CreateReference) {
   ASSERT_EQ(value, it->second);
 }
 
-TEST_F(PageImplTest, GetReference) {
-  std::string value_string("a small value");
-  storage::ObjectId object_id = AddObjectToStorage(value_string);
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
-
-  ValuePtr value;
-  page_ptr_->GetReference(
-      std::move(reference),
-      [this, &value](Status status, ValuePtr received_value) {
-        EXPECT_EQ(Status::OK, status);
-        value = std::move(received_value);
-        message_loop_.PostQuitTask();
-      });
-  message_loop_.Run();
-  EXPECT_TRUE(value->is_bytes());
-  EXPECT_EQ(value_string, convert::ToString(value->get_bytes()));
-}
-
-TEST_F(PageImplTest, GetLargeReference) {
-  std::string value_string(kMaxInlineDataSize + 1, 'a');
-  storage::ObjectId object_id = AddObjectToStorage(value_string);
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
-
-  ValuePtr value;
-  page_ptr_->GetReference(
-      std::move(reference),
-      [this, &value](Status status, ValuePtr received_value) {
-        EXPECT_EQ(Status::OK, status);
-        value = std::move(received_value);
-        message_loop_.PostQuitTask();
-      });
-  message_loop_.Run();
-  EXPECT_TRUE(value->is_buffer());
-  std::string content;
-  EXPECT_TRUE(mtl::StringFromVmo(value->get_buffer(), &content));
-  EXPECT_EQ(value_string, content);
-}
-
-TEST_F(PageImplTest, GetPartialReference) {
-  std::string value_string("a small value");
-  storage::ObjectId object_id = AddObjectToStorage(value_string);
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
-
-  mx::vmo buffer;
-  page_ptr_->GetPartialReference(
-      std::move(reference), 2, 5,
-      [this, &buffer](Status status, mx::vmo received_buffer) {
-        EXPECT_EQ(Status::OK, status);
-        buffer = std::move(received_buffer);
-        message_loop_.PostQuitTask();
-      });
-  message_loop_.Run();
-  std::string content;
-  EXPECT_TRUE(mtl::StringFromVmo(buffer, &content));
-  EXPECT_EQ("small", content);
-}
-
-TEST_F(PageImplTest, GetUnknownReference) {
-  storage::ObjectId object_id("unknown reference");
-
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(object_id);
-
-  Status status;
-  page_ptr_->GetReference(
-      std::move(reference),
-      [this, &status](Status received_status, ValuePtr received_value) {
-        status = received_status;
-        message_loop_.PostQuitTask();
-      });
-  message_loop_.Run();
-  EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
-}
-
 TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   std::string key("some_key");
   std::string value("a small value");
@@ -461,7 +384,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
 
   EXPECT_EQ(1u, actual_entries.size());
   EXPECT_EQ(key, convert::ExtendedStringView(actual_entries[0]->key));
-  EXPECT_EQ(value, convert::ExtendedStringView(actual_entries[0]->value));
+  EXPECT_EQ(value,
+            convert::ExtendedStringView(actual_entries[0]->value->get_bytes()));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeys) {

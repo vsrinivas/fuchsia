@@ -66,15 +66,6 @@ struct Reference {
   array<uint8> opaque_id;
 };
 
-// A value that is either small enough to be directly embedded in |bytes| or
-// that is referenced in |reference|. The value of the reference can be
-// retrieved using |Page.GetReference()| or |Page.GetPartialReference()|.
-// References are immutable.
-union BytesOrReference {
-  array<uint8> bytes;
-  Reference reference;
-};
-
 // A page is the smallest unit of syncable data.
 interface Page {
   // Returns the identifier for the page.
@@ -119,15 +110,6 @@ interface Page {
   // |size| is negative, no validation is done.
   CreateReference(int64 size, handle<socket> data)
       => (Status status, Reference? reference);
-  // Returns the value of the given reference.
-  GetReference(Reference reference) => (Status status, Value? value);
-  // Returns a shared handle to a part of the value of a given reference,
-  // starting at the position that is specified by |offset|. If |offset| is less
-  // than 0, starts at |-offset| from the end of the value.
-  // Returns at most |max_size| bytes. If |max_size| is less than 0, returns
-  // everything.
-  GetPartialReference(Reference reference, int64 offset, int64 max_size)
-      => (Status status, handle<vmo>? buffer);
 
   // Transactions.
   //
@@ -167,11 +149,10 @@ enum Priority {
   LAZY
 };
 
-// A pair of key and value. The |value| will be NULL if it is too big and
-// should be retrieved through a direct call to |PageSnapshot.Get()|.
+// A pair of key and value.
 struct Entry {
   array<uint8> key;
-  array<uint8>? value;
+  Value value;
 };
 
 // The content of a page at a given time. Closing the connection to a |Page|
@@ -214,12 +195,6 @@ interface PageSnapshot {
       => (Status status, handle<vmo>? buffer);
 };
 
-// A change in the page. A NULL |new_value| represents a deletion.
-struct EntryChange {
-  array<uint8> key;
-  BytesOrReference? new_value;
-};
-
 struct PageChange {
   // The timestamp of this change. This represents the number of microseconds
   // since Unix epoch (i.e., since "1970-01-01 00:00 UTC", ignoring leap
@@ -227,8 +202,10 @@ struct PageChange {
   // not synchronized across devices. In particular, there is no guarantee that
   // the |timestamp| of a follow up change is greater than this one's.
   int64 timestamp;
-  // |changes| are sorted by |key|.
-  array<EntryChange> changes;
+  // List of new and modified entries. |changes| are sorted by |key|.
+  array<Entry> changes;
+  // List of deleted keys, in sorted order.
+  array<array<uint8>> deleted_keys;
 };
 
 // Interface to watch changes to a page. The initial state is sent immediately
@@ -275,6 +252,30 @@ enum MergePolicy {
   CUSTOM,
 };
 
+// A value that is either small enough to be directly embedded in |bytes| or
+// that is referenced by |reference|.
+union BytesOrReference {
+  array<uint8> bytes;
+  Reference reference;
+};
+
+// Source of the value used to resolve a conflict. The "left" source is used by
+// default in merging, so the value must be omitted entirely if chosen.
+// |DELETE| deletes the key. Used by |MergedValue|.
+enum ValueSource {
+  RIGHT = 0,
+  NEW,
+  DELETE
+};
+
+// A change in the page. If |source| is set to |NEW|, |new_value| must be set
+// to the new value. If |source| is not |NEW|, |new_value| is ignored.
+struct MergedValue {
+  array<uint8> key;
+  ValueSource source;
+  BytesOrReference? new_value;
+};
+
 // Custom conflict resolver. If a |ConflictResolverFactory| is registered, and
 // |ConflictResolverFactory.GetPolicy()| returns |AUTOMATIC_WITH_FALLBACK| or
 // |CUSTOM| when called for a given page, the |NewConflictResolver| method will
@@ -284,14 +285,16 @@ enum MergePolicy {
 // conflict by returning the final value for all conflicting keys as well as
 // values for any other key that the client wants to change.
 interface ConflictResolver {
-  // Method called when a conflict needs to be resolved. |change1| and
-  // |change2| contain the conflicting keys/values of the 2 branches to merge.
+  // Method called when a conflict needs to be resolved. |change_left| and
+  // |change_right| contain the keys/values of the 2 branches to merge.
   // If the |CUSTOM| policy was selected, all modified keys are present.
   // |common_version| is the snapshot of the first common ancestor of the 2
   // changes and will only be NULL if this version is no longer available.
-  // This method must return a set of changes that will be used to
-  // define the merged commit. For any key in |change1| or |change2|, the key
-  // must be present in |merge_changes|. Any other key can also be present.
-  Resolve(PageChange change1, PageChange change2, PageSnapshot? common_version)
-      => (array<EntryChange>? merge_changes);
+  // This method must return a set of changes, using the left branch as the
+  // base, that will be used to define the merged commit. Only key/value pairs
+  // different from the left version of the page should be sent. Clients can
+  // introduce new keys if needed.
+  // TODO(etiennej): handle pagination.
+  Resolve(PageChange change_left, PageChange change_right,
+          PageSnapshot? common_version) => (array<MergedValue>? merge_changes);
 };

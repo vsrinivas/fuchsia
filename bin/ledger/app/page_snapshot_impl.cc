@@ -52,7 +52,6 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
         callback, entry_list = std::move(entries)
       ](storage::Status status,
         std::vector<std::unique_ptr<const storage::Object>> results) mutable {
-
         if (status != storage::Status::OK) {
           FTL_LOG(ERROR) << "PageSnapshotImpl::GetEntries error while reading.";
           callback(Status::IO_ERROR, nullptr, nullptr);
@@ -68,7 +67,8 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
             return;
           }
 
-          entry_list[i]->value = convert::ToArray(object_contents);
+          entry_list[i]->value = Value::New();
+          entry_list[i]->value->set_bytes(convert::ToArray(object_contents));
         }
         callback(Status::OK, std::move(entry_list), nullptr);
       });
