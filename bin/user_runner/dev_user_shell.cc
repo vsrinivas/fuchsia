@@ -13,6 +13,7 @@
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
+#include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/user_runner/link_json.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
@@ -61,6 +62,7 @@ class DevUserShellApp
 
   // |UserShell|
   void Initialize(
+      fidl::InterfaceHandle<modular::UserContext> user_context,
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<maxwell::SuggestionProvider> suggestion_provider,
       fidl::InterfaceRequest<modular::FocusController> focus_controller_request)
@@ -68,6 +70,12 @@ class DevUserShellApp
     story_provider_.Bind(std::move(story_provider));
     Connect();
   }
+
+  // |UserShell|
+  void Terminate(const TerminateCallback& done) override {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    done();
+  };
 
   void Connect() {
     if (!view_owner_request_ || !story_provider_) {

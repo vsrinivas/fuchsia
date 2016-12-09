@@ -12,10 +12,13 @@ group("all") {
 executable("device_runner") {
   sources = [
     "device_runner.cc",
+    "user_controller_impl.cc",
+    "user_controller_impl.h",
   ]
 
   deps = [
     "//apps/ledger/services",
+    "//apps/ledger/services/internal",
     "//apps/modular/lib/app",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:scope",

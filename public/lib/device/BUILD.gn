@@ -11,6 +11,11 @@ fidl("device") {
   ]
 
   public_deps = [
+    ":device_context",
     "//apps/mozart/services/views"
   ]
+}
+
+fidl("device_context") {
+  sources = ["device_context.fidl"]
 }

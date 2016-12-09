@@ -14,6 +14,7 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
+#include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
@@ -143,14 +144,14 @@ class DummyUserShellApp
 
   // |UserShell|
   void Initialize(
+      fidl::InterfaceHandle<modular::UserContext> user_context,
       fidl::InterfaceHandle<modular::StoryProvider> story_provider,
       fidl::InterfaceHandle<maxwell::SuggestionProvider> suggestion_provider,
       fidl::InterfaceRequest<modular::FocusController> focus_controller_request)
       override {
+    user_context_.Bind(std::move(user_context));
     story_provider_.Bind(std::move(story_provider));
-
     story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
-
     story_provider_->GetStoryInfo("X", [](modular::StoryInfoPtr story_info) {
       FTL_LOG(INFO) << "StoryInfo for X is null: " << story_info.is_null();
     });
@@ -180,6 +181,12 @@ class DummyUserShellApp
         CreateStory(settings_.first_module, true);
       }
     });
+  }
+
+  // |UserShell|
+  void Terminate(const TerminateCallback& done) override {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    done();
   }
 
   // |StoryProviderWatcher|
@@ -245,8 +252,9 @@ class DummyUserShellApp
         mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
             [this] {
               FTL_LOG(INFO) << "DummyUserShell DELETE " << story_info_->id;
-              story_provider_->DeleteStory(story_info_->id, [this] {
-                FTL_LOG(INFO) << "DummyUserShell DELETE DONE";
+              story_provider_->DeleteStory(story_info_->id, [this]() {
+                FTL_LOG(INFO) << "DummyUserShell DELETE STORY DONE";
+                user_context_->Logout();
               });
             },
             ftl::TimeDelta::FromSeconds(20));
@@ -329,6 +337,7 @@ class DummyUserShellApp
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
   std::unique_ptr<DummyUserShellView> view_;
+  modular::UserContextPtr user_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   modular::LinkPtr root_;

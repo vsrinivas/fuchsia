@@ -12,6 +12,7 @@ fidl("user") {
     "story_info.fidl",
     "story_provider.fidl",
     "user_shell.fidl",
+    "user_context.fidl",
   ]
 
   public_deps = [

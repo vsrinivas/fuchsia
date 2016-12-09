@@ -14,7 +14,7 @@
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/scope.h"
-#include "apps/modular/lib/fidl/strong_binding.h"
+#include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/focus.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
@@ -23,14 +23,13 @@
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
-
 namespace {
 
 const char kAppId[] = "modular_user_runner";
@@ -67,9 +66,6 @@ std::string LedgerStatusToString(ledger::Status status) {
 
 }  // namespace
 
-// UserRunner keeps a LedgerRepository around, and passes a duplicate to
-// StoryProvider. StoryProvider keeps one around and passes a duplicate to each
-// new StoryRunner.
 class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(
@@ -78,12 +74,16 @@ class UserRunnerImpl : public UserRunner {
       const fidl::String& user_shell,
       fidl::Array<fidl::String> user_shell_args,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
+      fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<UserRunner> user_runner_request)
       : application_context_(application_context),
         binding_(this, std::move(user_runner_request)) {
-    const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
+    binding_.set_connection_error_handler([this]{
+      delete this;
+    });
 
+    const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
     ApplicationEnvironmentPtr parent_env;
     application_context_->environment()->Duplicate(parent_env.NewRequest());
     stories_scope_ = std::make_unique<Scope>(std::move(parent_env), label);
@@ -125,14 +125,23 @@ class UserRunnerImpl : public UserRunner {
     auto suggestion_provider =
         ConnectToService<maxwell::SuggestionProvider>(maxwell_services.get());
 
-    user_shell_->Initialize(std::move(story_provider),
+    user_shell_->Initialize(std::move(user_context),
+                            std::move(story_provider),
                             std::move(suggestion_provider),
                             std::move(focus_controller_request));
   }
 
-  ~UserRunnerImpl() override = default;
-
  private:
+  // |UserRunner|
+  void Terminate(const TerminateCallback& done) override {
+    FTL_DCHECK(user_shell_.is_bound());
+    FTL_LOG(INFO) << "UserRunner::Terminate: Terminating UserRunner.";
+    user_shell_->Terminate([done]{
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      done();
+    });
+  }
+
   ServiceProviderPtr GetServiceProvider(
       const fidl::String& url,
       const fidl::Array<fidl::String>* const args) {
@@ -171,7 +180,7 @@ class UserRunnerImpl : public UserRunner {
   }
 
   std::shared_ptr<ApplicationContext> application_context_;
-  StrongBinding<UserRunner> binding_;
+  fidl::Binding<UserRunner> binding_;
   std::unique_ptr<Scope> stories_scope_;
   UserShellPtr user_shell_;
 
@@ -198,10 +207,12 @@ class UserRunnerApp : public UserRunnerFactory {
               const fidl::String& user_shell,
               fidl::Array<fidl::String> user_shell_args,
               fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
+              fidl::InterfaceHandle<UserContext> user_context,
               fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
               fidl::InterfaceRequest<UserRunner> user_runner_request) override {
     new UserRunnerImpl(application_context_, std::move(user_id), user_shell,
                        std::move(user_shell_args), std::move(ledger_repository),
+                       std::move(user_context),
                        std::move(view_owner_request),
                        std::move(user_runner_request));
   }

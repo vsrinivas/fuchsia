@@ -15,8 +15,35 @@ import "apps/mozart/services/views/view_token.fidl";
 // it doesn't do this right now) in the same way as StoryProvider
 // provides the user shell with stories to start here.
 interface UserProvider {
-  // Passes in the user authentication information from the lockscreen
-  // or shell. |view_owner| is the view given to the UserShell. To be
-  // refined once we get to it.
-  Login(string username, mozart.ViewOwner& view_owner);
+  // Passes in the user authentication information from the lockscreen or shell.
+  // |view_owner| is the view given to the UserShell. To be refined once we get
+  // to it.
+  Login(string username, mozart.ViewOwner& view_owner,
+        UserController& user_controller);
+};
+
+// Provided by DeviceRunner, provided to DeviceShell. This interface provides
+// control to a logged-in user's life cycle, and the life of this interface is
+// bound to a user being logged in.
+// Similar to this interface is UserContext, which is provided to the UserShell
+// and also contains a mechanism to invoke a logout. (For now, this distinction
+// exists because we want a way for the UserShell to also logout, but not
+// provide the entire UserController).
+interface UserController {
+  // Logs out a user by triggering a tear-down. Returns once the UserRunner has
+  // torn down. This will trigger OnLogout for |UserWatcher|s.
+  Logout() => ();
+
+  // Registers a watcher for the user's life cycle events.
+  Watch(UserWatcher watcher);
+};
+
+// Implemented by whoever wants to watch the user's life-cycle (mostly just
+// DeviceShell). The DeviceRunner invokes |UserWatcher|s on events.
+interface UserWatcher {
+  // Called when a user has logged out. By the time this event is processed by
+  // a watcher, the UserRunner may already be torn down.
+  // TODO(vardhan): Make a guarantee that once OnLogout() is emitted, it is
+  // possible to UserProvider.Login() the same user.
+  OnLogout();
 };

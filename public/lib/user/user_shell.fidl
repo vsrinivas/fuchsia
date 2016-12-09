@@ -4,15 +4,22 @@
 
 module modular;
 
+import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
 import "apps/modular/services/user/focus.fidl";
 import "apps/modular/services/user/story_provider.fidl";
-import "apps/maxwell/services/suggestion/suggestion_provider.fidl";
+import "apps/modular/services/user/user_context.fidl";
 
 // This interface is meant to be implemented by a User Shell so that
 // dependencies can be passed to it on startup.
 [ServiceName="modular.UserShell"]  // Created by user shell applications.
 interface UserShell {
-  Initialize(StoryProvider story_provider,
+  Initialize(
+    UserContext user_context,
+    StoryProvider story_provider,
     maxwell.SuggestionProvider suggestion_provider,
     FocusController& focus_controller_request);
+
+  // This signals UserShell to teardown itself. Upon response, the caller may
+  // terminate the UserShell process if it hasn't done so already.
+  Terminate() => ();
 };

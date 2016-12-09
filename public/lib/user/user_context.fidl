@@ -1,0 +1,15 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// This is an interface to trigger changes to a logged in user, meant to be used
+// by the UserShell. There is some overlap with UserController, but this
+// interface denotes a separate privilege than UserController: a UserController
+// denotes ownership of a UserRunner, while a UserContext denotes a mechanism
+// to "ask" for life cycle changes.
+interface UserContext {
+  // Requests logging out the user. This will tear down UserRunner.
+  Logout();
+};

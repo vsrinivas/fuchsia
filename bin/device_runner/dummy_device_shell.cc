@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/services/device/device_context.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "lib/ftl/logging.h"
@@ -20,9 +21,11 @@ constexpr char kDummyUserName[] = "user1";
 
 class DummyDeviceShellApp
     : public modular::SingleServiceViewApp<modular::DeviceShellFactory>,
-      public modular::DeviceShell {
+      public modular::DeviceShell,
+      public modular::UserWatcher {
  public:
-  DummyDeviceShellApp() : binding_(this) {}
+  DummyDeviceShellApp() : device_shell_binding_(this),
+                          user_watcher_binding_(this) {}
   ~DummyDeviceShellApp() override = default;
 
  private:
@@ -35,25 +38,45 @@ class DummyDeviceShellApp
   }
 
   // |DeviceShellFactory|
-  void Create(fidl::InterfaceHandle<modular::UserProvider> user_provider,
+  void Create(fidl::InterfaceHandle<modular::DeviceContext> device_context,
+              fidl::InterfaceHandle<modular::UserProvider> user_provider,
               fidl::InterfaceRequest<modular::DeviceShell> device_shell_request)
       override {
     user_provider_.Bind(std::move(user_provider));
+    device_context_.Bind(std::move(device_context));
 
-    FTL_DCHECK(!binding_.is_bound());
-    binding_.Bind(std::move(device_shell_request));
+    FTL_DCHECK(!device_shell_binding_.is_bound());
+    device_shell_binding_.Bind(std::move(device_shell_request));
 
     Connect();
   }
 
+  // |DeviceShell|
+  void Terminate(const TerminateCallback& done) override {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    done();
+  }
+
+  // |UserWatcher|
+  void OnLogout() override {
+    FTL_LOG(INFO) << "User logged out. Starting shutdown.";
+    device_context_->Shutdown();
+  }
+
   void Connect() {
     if (user_provider_ && view_owner_request_) {
-      user_provider_->Login(kDummyUserName, std::move(view_owner_request_));
+      user_provider_->Login(kDummyUserName,
+                            std::move(view_owner_request_),
+                            user_controller_.NewRequest());
+      user_controller_->Watch(user_watcher_binding_.NewBinding());
     }
   }
 
-  fidl::Binding<DeviceShell> binding_;
+  fidl::Binding<modular::DeviceShell> device_shell_binding_;
+  fidl::Binding<modular::UserWatcher> user_watcher_binding_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  modular::DeviceContextPtr device_context_;
+  modular::UserControllerPtr user_controller_;
   modular::UserProviderPtr user_provider_;
   FTL_DISALLOW_COPY_AND_ASSIGN(DummyDeviceShellApp);
 };

@@ -13,14 +13,18 @@
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
+#include "apps/modular/services/device/device_context.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
+#include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
+#include "apps/modular/src/device_runner/user_controller_impl.h"
 #include "apps/mozart/services/presentation/presenter.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
@@ -32,8 +36,6 @@
 namespace modular {
 namespace {
 
-constexpr char kUserScopeLabelPrefix[] = "user-";
-constexpr char kUserRunnerUrl[] = "file:///system/apps/user_runner";
 constexpr char kLedgerAppUrl[] = "file:///system/apps/ledger";
 constexpr char kLedgerDataBaseDir[] = "/data/ledger/";
 
@@ -109,12 +111,16 @@ class Settings {
   }
 };
 
-class DeviceRunnerApp : public UserProvider {
+// TODO(vardhan): A running user's state is starting to grow, so break it
+// outside of DeviceRunnerApp.
+class DeviceRunnerApp : public UserProvider,
+                        public DeviceContext {
  public:
   DeviceRunnerApp(const Settings& settings)
       : settings_(settings),
         app_context_(ApplicationContext::CreateFromStartupInfo()),
-        binding_(this) {
+        device_context_binding_(this),
+        user_provider_binding_(this) {
     // 1. Start the ledger.
     ServiceProviderPtr ledger_services;
     auto ledger_launch_info = ApplicationLaunchInfo::New();
@@ -149,38 +155,36 @@ class DeviceRunnerApp : public UserProvider {
     app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
         std::move(root_view));
 
-    fidl::InterfaceHandle<UserProvider> user_provider_handle;
-    binding_.Bind(user_provider_handle.NewRequest());
-    device_shell_factory->Create(std::move(user_provider_handle),
+    device_shell_factory->Create(device_context_binding_.NewBinding(),
+                                 user_provider_binding_.NewBinding(),
                                  device_shell_.NewRequest());
   }
 
  private:
+  // |DeviceContext|
+  // TODO(vardhan): Signal the ledger application to tear down.
+  void Shutdown() override {
+    FTL_LOG(INFO) << "Shutting down DeviceRunner..";
+    auto cont = []{
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    };
+    if ((bool)user_controller_impl_) {
+      // This will tear down the user runner altogether, and call us back to
+      // delete |user_controller_impl_| when it is ready to be killed.
+      user_controller_impl_->Logout(cont);
+      // At this point, |user_controller_impl_| is destroyed.
+    } else {
+      cont();
+    }
+  }
+
   // |UserProvider|
   void Login(
       const fidl::String& username,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override {
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<UserController> user_controller) override {
+    // Get the LedgerRepository for the user.
     fidl::Array<uint8_t> user_id = to_array(username);
-    const std::string label = kUserScopeLabelPrefix + to_hex_string(user_id);
-
-    // 1. Create a child environment for the UserRunner.
-    ApplicationEnvironmentPtr env;
-    app_context_->environment()->Duplicate(env.NewRequest());
-    user_runner_scope_ = std::make_unique<Scope>(std::move(env), label);
-
-    ApplicationLauncherPtr launcher;
-    user_runner_scope_->environment()->GetApplicationLauncher(
-        launcher.NewRequest());
-
-    // 2. Launch UserRunner in the new environment.
-    auto launch_info = ApplicationLaunchInfo::New();
-    launch_info->url = kUserRunnerUrl;
-    ServiceProviderPtr services;
-    launch_info->services = services.NewRequest();
-    launcher->CreateApplication(std::move(launch_info),
-                                user_runner_controller_.NewRequest());
-
-    // 3. Get the LedgerRepository for the user.
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
     ledger_repository_factory_->GetRepository(
         kLedgerDataBaseDir + to_hex_string(user_id),
@@ -189,28 +193,30 @@ class DeviceRunnerApp : public UserProvider {
                                                    << status;
         });
 
-    // 4. Initialize the UserRunner service.
-    UserRunnerFactoryPtr user_runner_factory;
-    ConnectToService(services.get(), user_runner_factory.NewRequest());
-    user_runner_factory->Create(
-        std::move(user_id), settings_.user_shell,
-        to_array(settings_.user_shell_args), std::move(ledger_repository),
-        std::move(view_owner_request), user_runner_.NewRequest());
+    user_controller_impl_.reset(new UserControllerImpl(
+        app_context_,
+        settings_.user_shell,
+        settings_.user_shell_args,
+        std::move(user_id), std::move(ledger_repository),
+        std::move(view_owner_request), std::move(user_controller),
+        [this]() {
+          user_controller_impl_.reset();
+        }));
   }
+
   const Settings settings_;
 
   std::shared_ptr<ApplicationContext> app_context_;
-  fidl::Binding<UserProvider> binding_;
+  fidl::Binding<DeviceContext> device_context_binding_;
+  fidl::Binding<UserProvider> user_provider_binding_;
 
   ApplicationControllerPtr device_shell_controller_;
   DeviceShellPtr device_shell_;
 
-  std::unique_ptr<Scope> user_runner_scope_;
-  ApplicationControllerPtr user_runner_controller_;
-  UserRunnerPtr user_runner_;
-
   ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   ApplicationControllerPtr ledger_controller_;
+
+  std::unique_ptr<UserControllerImpl> user_controller_impl_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerApp);
 };
