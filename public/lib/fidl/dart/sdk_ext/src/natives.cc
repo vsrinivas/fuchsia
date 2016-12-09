@@ -48,6 +48,9 @@ struct HandlePeer {
   V(MxChannel_Write, 5)            \
   V(MxChannel_Read, 5)             \
   V(MxChannel_QueryAndRead, 3)     \
+  V(MxSocket_Create, 1)            \
+  V(MxSocket_Write, 5)             \
+  V(MxSocket_Read, 5)              \
   V(MxTime_Get, 1)                 \
   V(MxHandle_Close, 1)             \
   V(MxHandle_RegisterFinalizer, 2) \
@@ -461,6 +464,126 @@ void MxChannel_QueryAndRead(Dart_NativeArguments arguments) {
   Dart_ListSetAt(result, 2, dart_handles);
   Dart_ListSetAt(result, 3, Dart_NewInteger(blen));
   Dart_ListSetAt(result, 4, Dart_NewInteger(hlen));
+}
+
+void MxSocket_Create(Dart_NativeArguments arguments) {
+  int64_t options = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &options, Null);
+
+  mx_handle_t end1 = MX_HANDLE_INVALID;
+  mx_handle_t end2 = MX_HANDLE_INVALID;
+  mx_status_t rv = mx_socket_create(options, &end1, &end2);
+
+  Dart_Handle list = Dart_NewList(3);
+  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
+  Dart_ListSetAt(list, 1, Dart_NewInteger(end1));
+  Dart_ListSetAt(list, 2, Dart_NewInteger(end2));
+  Dart_SetReturnValue(arguments, list);
+}
+
+void MxSocket_Write(Dart_NativeArguments arguments) {
+  int64_t handle = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &handle, InvalidArgument);
+
+  Dart_Handle typed_data = Dart_GetNativeArgument(arguments, 1);
+  if (!Dart_IsTypedData(typed_data) && !Dart_IsNull(typed_data)) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  int64_t offset = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 2, &offset, InvalidArgument);
+  if (offset < 0) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  int64_t num_bytes = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 3, &num_bytes, InvalidArgument);
+  if ((Dart_IsNull(typed_data) && (num_bytes != 0)) ||
+      (!Dart_IsNull(typed_data) && (num_bytes <= 0))) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+  size_t blen = static_cast<size_t>(num_bytes);
+
+  int64_t options = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 4, &options, InvalidArgument);
+
+  // Grab the data if there is any.
+  Dart_TypedData_Type typ;
+  void* bytes = nullptr;
+  intptr_t bdlen = 0;
+  if (!Dart_IsNull(typed_data)) {
+    Dart_TypedDataAcquireData(typed_data, &typ, &bytes, &bdlen);
+  }
+  bytes = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(bytes) + offset);
+
+  mx_status_t rv = mx_socket_write(
+      static_cast<mx_handle_t>(handle), options, const_cast<const void*>(bytes),
+      blen, &blen);
+
+  // Release the data.
+  if (!Dart_IsNull(typed_data)) {
+    Dart_TypedDataReleaseData(typed_data);
+  }
+
+  Dart_Handle list = Dart_NewList(2);
+  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
+  Dart_ListSetAt(list, 1, Dart_NewInteger(blen));
+  Dart_SetReturnValue(arguments, list);
+}
+
+void MxSocket_Read(Dart_NativeArguments arguments) {
+  int64_t handle = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 0, &handle, InvalidArgument);
+
+  Dart_Handle typed_data = Dart_GetNativeArgument(arguments, 1);
+  if (!Dart_IsTypedData(typed_data) && !Dart_IsNull(typed_data)) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  int64_t offset = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 2, &offset, InvalidArgument);
+  if (offset < 0) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+
+  int64_t num_bytes = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 3, &num_bytes, InvalidArgument);
+  if ((Dart_IsNull(typed_data) && (num_bytes != 0)) ||
+      (!Dart_IsNull(typed_data) && (num_bytes <= 0))) {
+    SetInvalidArgumentReturn(arguments);
+    return;
+  }
+  size_t blen = static_cast<size_t>(num_bytes);
+
+  int64_t options = 0;
+  CHECK_INTEGER_ARGUMENT(arguments, 4, &options, InvalidArgument);
+
+  // Grab the data if there is any.
+  Dart_TypedData_Type typ;
+  void* bytes = nullptr;
+  intptr_t bdlen = 0;
+  if (!Dart_IsNull(typed_data)) {
+    Dart_TypedDataAcquireData(typed_data, &typ, &bytes, &bdlen);
+  }
+  bytes = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(bytes) + offset);
+
+  mx_status_t rv = mx_socket_read(
+      static_cast<mx_handle_t>(handle), options, bytes, blen, &blen);
+
+  // Release the data.
+  if (!Dart_IsNull(typed_data)) {
+    Dart_TypedDataReleaseData(typed_data);
+  }
+
+  Dart_Handle list = Dart_NewList(2);
+  Dart_ListSetAt(list, 0, Dart_NewInteger(rv));
+  Dart_ListSetAt(list, 1, Dart_NewInteger(blen));
+  Dart_SetReturnValue(arguments, list);
 }
 
 }  // namespace dart

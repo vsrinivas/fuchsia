@@ -4,43 +4,43 @@
 
 part of core;
 
-class ChannelReaderError {
+class SocketReaderError {
   final Object error;
   final StackTrace stacktrace;
 
-  ChannelReaderError(this.error, this.stacktrace);
+  SocketReaderError(this.error, this.stacktrace);
 
   @override
   String toString() => error.toString();
 }
 
-typedef void ChannelReaderErrorHandler(ChannelReaderError error);
+typedef void SocketReaderErrorHandler(SocketReaderError error);
 
-class ChannelReader {
-  Channel get channel => _channel;
-  Channel _channel;
+class SocketReader {
+  Socket get socket => _socket;
+  Socket _socket;
 
-  bool get isBound => _channel != null;
+  bool get isBound => _socket != null;
 
   HandleWaiter _waiter;
 
   VoidCallback onReadable;
-  ChannelReaderErrorHandler onError;
+  SocketReaderErrorHandler onError;
 
-  void bind(Channel channel) {
+  void bind(Socket socket) {
     if (isBound)
-      throw new FidlApiError('ChannelReader is already bound.');
-    _channel = channel;
+      throw new FidlApiError('SocketReader is already bound.');
+    _socket = socket;
     _waiter ??= new HandleWaiter();
     _asyncWait();
   }
 
-  Channel unbind() {
+  Socket unbind() {
     if (!isBound)
-      throw new FidlApiError("ChannelReader is not bound");
+      throw new FidlApiError("SocketReader is not bound");
     _waiter.cancelWait();
-    final Channel result = _channel;
-    _channel = null;
+    final Socket result = _socket;
+    _socket = null;
     return result;
   }
 
@@ -48,20 +48,20 @@ class ChannelReader {
     if (!isBound)
       return;
     _waiter.cancelWait();
-    _channel.close();
-    _channel = null;
+    _socket.close();
+    _socket = null;
   }
 
   void _asyncWait() {
     _waiter.asyncWait(
-      channel.handle,
-      MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+      socket.handle,
+      MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
       MX_TIME_INFINITE,
       _handleWaitComplete
     );
   }
 
-  void _errorSoon(ChannelReaderError error) {
+  void _errorSoon(SocketReaderError error) {
     if (onError == null)
       return;
     scheduleMicrotask(() {
@@ -73,13 +73,13 @@ class ChannelReader {
   }
 
   @override
-  String toString() => 'ChannelReader($_channel)';
+  String toString() => 'SocketReader($_socket)';
 
   void _handleWaitComplete(int status, int pending) {
     assert(isBound);
     if (status != NO_ERROR) {
       close();
-      _errorSoon(new ChannelReaderError(
+      _errorSoon(new SocketReaderError(
           'Wait completed with status ${getStringForStatus(status)} ($status)',
           null));
       return;
@@ -103,7 +103,7 @@ class ChannelReader {
       rethrow;
     } catch (e, s) {
       close();
-      _errorSoon(new ChannelReaderError(e, s));
+      _errorSoon(new SocketReaderError(e, s));
     }
   }
 }

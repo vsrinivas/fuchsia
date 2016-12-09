@@ -88,6 +88,16 @@ class MxChannel {
       native "MxChannel_QueryAndRead";
 }
 
+class MxSocket {
+  static List create(int flags) native "MxSocket_Create";
+
+  static List write(int handleToken, ByteData data, int offset,
+      int numBytes, int flags) native "MxSocket_Write";
+
+  static List read(int handleToken, ByteData data, int offset,
+      int numBytes, int flags) native "MxSocket_Read";
+}
+
 int _environment;
 int _outgoingServices;
 

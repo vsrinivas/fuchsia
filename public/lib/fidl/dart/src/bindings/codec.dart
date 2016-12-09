@@ -219,6 +219,9 @@ class Encoder {
     }
   }
 
+  void encodeSocket(core.Socket value, int offset, bool nullable) =>
+      encodeHandle(value != null ? value.handle : null, offset, nullable);
+
   void encodeNullPointer(int offset, bool nullable) {
     if (!nullable) {
       throw new FidlCodecError(
@@ -426,6 +429,16 @@ class Encoder {
           List<InterfaceHandle> value, int offset, int nullability, int expectedLength) =>
       _handleArrayEncodeHelper((e, v, o, n) => e.encodeInterfaceHandle(v, o, n),
           value, offset, kSerializedInterfaceSize, nullability, expectedLength);
+
+  void encodeSocketArray(List<core.Socket> value,
+          int offset, int nullability, int expectedLength) =>
+      _handleArrayEncodeHelper(
+          (e, v, o, n) => e.encodeSocket(v, o, n),
+          value,
+          offset,
+          kSerializedHandleSize,
+          nullability,
+          expectedLength);
 
   static const Utf8Encoder _utf8Encoder = const Utf8Encoder();
 
@@ -675,6 +688,9 @@ class Decoder {
       return null;
     return new InterfaceRequest(channel);
   }
+
+  core.Socket decodeSocket(int offset, bool nullable) =>
+      new core.Socket(decodeHandle(offset, nullable));
 
   Decoder decodePointer(int offset, bool nullable) {
     int basePosition = _base + offset;
@@ -1005,6 +1021,11 @@ class Decoder {
         nullability,
         expectedLength);
   }
+
+  List<core.Socket> decodeSocketArray(
+          int offset, int nullability, int expectedLength) =>
+      _handleArrayDecodeHelper((d, o, n) => d.decodeSocket(o, n),
+          offset, kSerializedHandleSize, nullability, expectedLength);
 
   static const _utf8Decoder = const Utf8Decoder();
 
