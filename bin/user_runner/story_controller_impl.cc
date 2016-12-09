@@ -185,6 +185,7 @@ void StoryControllerImpl::TearDownStory(std::function<void()> done) {
         link_changed_binding_.Close();
         module_.reset();
         story_.reset();
+        story_runner_.reset();
         module_watcher_binding_.Close();
 
         done();
