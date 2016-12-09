@@ -579,6 +579,7 @@ int mxio_status_to_errno(mx_status_t status) {
     case ERR_NO_RESOURCES: return ENOMEM;
     case ERR_BAD_HANDLE: return EBADF;
     case ERR_ACCESS_DENIED: return EACCES;
+    case ERR_SHOULD_WAIT: return EAGAIN;
 
     // No specific translation, so return a generic errno value.
     default: return EIO;
