@@ -1,0 +1,26 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module media;
+
+import "apps/media/services/media_transport.fidl";
+import "apps/media/services/media_types.fidl";
+
+// Models a service that captures content.
+interface MediaCapturer {
+  // Gets the list of supported media types.
+  GetSupportedMediaTypes() => (array<MediaTypeSet> supported_media_types);
+
+  // Sets the media type of the stream to be delivered.
+  SetMediaType(MediaType media_type);
+
+  // Gets the packet producer for the stream to be delivered.
+  GetPacketProducer(MediaPacketProducer& packet_producer);
+
+  // Starts capture.
+  Start();
+
+  // Stops capture.
+  Stop();
+};

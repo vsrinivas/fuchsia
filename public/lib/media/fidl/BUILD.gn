@@ -14,6 +14,7 @@ fidl("services") {
     "logs/media_packet_producer_channel.fidl",
     "logs/media_player_channel.fidl",
     "logs/media_sink_channel.fidl",
+    "media_capturer.fidl",
     "media_demux.fidl",
     "media_metadata.fidl",
     "media_player.fidl",

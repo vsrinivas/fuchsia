@@ -5,13 +5,14 @@
 module media;
 
 import "apps/media/services/audio_renderer.fidl";
-import "apps/media/services/media_types.fidl";
+import "apps/media/services/media_capturer.fidl";
+import "apps/media/services/media_demux.fidl";
 import "apps/media/services/media_player.fidl";
+import "apps/media/services/media_renderer.fidl";
 import "apps/media/services/media_sink.fidl";
 import "apps/media/services/media_source.fidl";
-import "apps/media/services/media_demux.fidl";
-import "apps/media/services/media_renderer.fidl";
 import "apps/media/services/media_type_converter.fidl";
+import "apps/media/services/media_types.fidl";
 import "apps/media/services/seeking_reader.fidl";
 import "apps/media/services/timeline_controller.fidl";
 import "apps/media/services/video_renderer.fidl";
@@ -59,6 +60,9 @@ interface MediaService {
   // Creates a video renderer.
   CreateVideoRenderer(VideoRenderer& video_renderer,
                       MediaRenderer& media_renderer);
+
+  // Creates an audio capturer.
+  CreateAudioCapturer(MediaCapturer& media_capturer);
 
   // Creates a timeline controller reader.
   CreateTimelineController(MediaTimelineController& timeline_controller);

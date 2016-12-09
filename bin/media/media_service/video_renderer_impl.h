@@ -18,7 +18,7 @@
 
 namespace media {
 
-// Mojo agent that renders video.
+// Fidl agent that renders video.
 class VideoRendererImpl : public MediaServiceImpl::Product<VideoRenderer>,
                           public VideoRenderer {
  public:

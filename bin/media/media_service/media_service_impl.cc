@@ -5,6 +5,7 @@
 #include "apps/media/src/media_service/media_service_impl.h"
 
 #include "apps/media/services/audio_server.fidl.h"
+#include "apps/media/src/media_service/audio_capturer_impl.h"
 #include "apps/media/src/media_service/file_reader_impl.h"
 #include "apps/media/src/media_service/media_decoder_impl.h"
 #include "apps/media/src/media_service/media_demux_impl.h"
@@ -94,6 +95,11 @@ void MediaServiceImpl::CreateVideoRenderer(
     fidl::InterfaceRequest<MediaRenderer> media_renderer) {
   AddProduct(VideoRendererImpl::Create(std::move(video_renderer),
                                        std::move(media_renderer), this));
+}
+
+void MediaServiceImpl::CreateAudioCapturer(
+    fidl::InterfaceRequest<MediaCapturer> media_capturer) {
+  AddProduct(AudioCapturerImpl::Create(std::move(media_capturer), this));
 }
 
 void MediaServiceImpl::CreateTimelineController(
