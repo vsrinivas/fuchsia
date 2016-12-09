@@ -37,6 +37,9 @@ class LinkWatcherImpl extends LinkWatcher {
   /// The returned handle should only be used once.
   InterfaceHandle<LinkWatcher> getHandle() => _binding.wrap(this);
 
+  /// Correctly close the Link Binding
+  void close() => _binding.close();
+
   /// A callback called whenever the associated [Link] has new changes.
   @override
   void notify(Map<String, Document> docs) {
@@ -50,9 +53,7 @@ class LinkWatcherImpl extends LinkWatcher {
       });
     });
 
-    _homeKey.currentState?.setState(() {
-      _homeKey.currentState._exampleDoc = docs[_kDocId];
-    });
+    _homeKey.currentState?.updateDoc(docs[_kDocId]);
   }
 }
 
@@ -146,6 +147,12 @@ class _HomeScreenState extends State<_HomeScreen> {
     }
 
     return _exampleDoc.properties[_kCounterValueKey].intValue;
+  }
+
+  void updateDoc(Document doc) {
+    if (doc != null) {
+      setState(() => _exampleDoc = doc);
+    }
   }
 
   @override

@@ -52,9 +52,7 @@ class LinkWatcherImpl extends LinkWatcher {
       });
     });
 
-    _homeKey.currentState?.setState(() {
-      _homeKey.currentState._exampleDoc = docs[_kDocId];
-    });
+    _homeKey.currentState?.updateDoc(docs[_kDocId]);
   }
 }
 
@@ -126,6 +124,12 @@ class _HomeScreenState extends State<_HomeScreen> {
     }
 
     return _exampleDoc.properties[_kCounterValueKey].intValue;
+  }
+
+  void updateDoc(Document doc) {
+    if (doc != null) {
+      setState(() => _exampleDoc = doc);
+    }
   }
 
   @override
