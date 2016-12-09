@@ -67,7 +67,7 @@ int32_t magma_system_map(magma_system_connection* connection, magma_buffer_t buf
     return 0;
 }
 
-int32_t magma_system_unmap(magma_system_connection* connection, magma_buffer_t buffer, void* addr)
+int32_t magma_system_unmap(magma_system_connection* connection, magma_buffer_t buffer)
 {
     if (!reinterpret_cast<magma::PlatformBuffer*>(buffer)->UnmapCpu())
         return -EINVAL;

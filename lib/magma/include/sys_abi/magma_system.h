@@ -49,8 +49,7 @@ void magma_system_set_tiling_mode(struct magma_system_connection* connection, ma
 
 int32_t magma_system_map(struct magma_system_connection* connection, magma_buffer_t buffer,
                          void** addr_out);
-int32_t magma_system_unmap(struct magma_system_connection* connection, magma_buffer_t buffer,
-                           void* addr);
+int32_t magma_system_unmap(struct magma_system_connection* connection, magma_buffer_t buffer);
 
 void magma_system_set_domain(struct magma_system_connection* connection, magma_buffer_t buffer,
                              uint32_t read_domains, uint32_t write_domain);
