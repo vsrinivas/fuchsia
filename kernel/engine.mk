@@ -345,7 +345,7 @@ SYSROOT_DEPS += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so
 GENERATED += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
 endif
 
-EXTRA_BUILDEPS += $(SYSROOT_DEPS)
+EXTRA_BUILDDEPS += $(SYSROOT_DEPS)
 
 # make the build depend on all of the user apps
 all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
