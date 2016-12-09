@@ -21,9 +21,6 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-// Maximum size of allocation gap that can be requested
-#define MAX_MIN_ALLOC_GAP (PAGE_SIZE * 1024)
-
 VmAddressRegion::VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags)
     : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags | VMAR_CAN_RWX_FLAGS,
                                &aspace, nullptr, "root") {
@@ -112,8 +109,9 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
         return ERR_INVALID_ARGS;
     }
 
-    vaddr_t new_base = base_ + offset;
+    vaddr_t new_base = -1;
     if (is_specific) {
+        new_base = base_ + offset;
         if (!IS_PAGE_ALIGNED(new_base)) {
             return ERR_INVALID_ARGS;
         }
@@ -130,7 +128,7 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
         }
     } else {
         // If we're not mapping to a specific place, search for an opening.
-        new_base = AllocSpotLocked(new_base, size, align_pow2, 0 /*alloc_gap*/, arch_mmu_flags);
+        new_base = AllocSpotLocked(size, align_pow2, arch_mmu_flags);
         if (new_base == static_cast<vaddr_t>(-1)) {
             return ERR_NO_MEMORY;
         }
@@ -467,39 +465,15 @@ not_found:
     return true; // not_found: stop search
 }
 
-vaddr_t VmAddressRegion::AllocSpotLocked(vaddr_t base, size_t size, uint8_t align_pow2,
-                                   size_t min_alloc_gap, uint arch_mmu_flags) {
+vaddr_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == kMagic);
     DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(min_alloc_gap));
-    DEBUG_ASSERT(min_alloc_gap <= MAX_MIN_ALLOC_GAP);
     DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
 
-    LTRACEF_LEVEL(2, "aspace %p base %#" PRIxPTR " size 0x%zx align %hhu\n", this, base, size,
+    LTRACEF_LEVEL(2, "aspace %p size 0x%zx align %hhu\n", this, size,
                   align_pow2);
 
-    if (align_pow2 < PAGE_SIZE_SHIFT)
-        align_pow2 = PAGE_SIZE_SHIFT;
-    vaddr_t align = 1UL << align_pow2;
-
-    vaddr_t spot;
-
-    // Find the first gap in the address space which can contain a region of the
-    // requested size.
-    auto before_iter = subregions_.end();
-    auto after_iter = subregions_.begin();
-
-    do {
-        if (CheckGapLocked(before_iter, after_iter, &spot, base, align, size, min_alloc_gap,
-                     arch_mmu_flags)) {
-            return spot;
-        }
-
-        before_iter = after_iter++;
-    } while (before_iter.IsValid());
-
-    // couldn't find anything
-    return -1;
+    return LinearRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
 }
 
 void VmAddressRegion::Dump(uint depth, bool verbose) const {
@@ -685,4 +659,32 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
     }
 
     return NO_ERROR;
+}
+
+vaddr_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                     uint arch_mmu_flags) {
+    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+
+    const vaddr_t base = 0;
+
+    if (align_pow2 < PAGE_SIZE_SHIFT)
+        align_pow2 = PAGE_SIZE_SHIFT;
+    const vaddr_t align = 1UL << align_pow2;
+
+    // Find the first gap in the address space which can contain a region of the
+    // requested size.
+    auto before_iter = subregions_.end();
+    auto after_iter = subregions_.begin();
+
+    do {
+        vaddr_t spot;
+        if (CheckGapLocked(before_iter, after_iter, &spot, base, align, size, 0, arch_mmu_flags)) {
+            return spot;
+        }
+
+        before_iter = after_iter++;
+    } while (before_iter.IsValid());
+
+    // couldn't find anything
+    return -1;
 }
