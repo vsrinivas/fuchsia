@@ -150,15 +150,28 @@ bool CommandBuffer::PatchRelocation(magma_system_relocation_entry* relocation,
     DASSERT(offset_in_page % sizeof(uint32_t) == 0); // just to be sure
 
     // actually patch the relocation
+    DASSERT(offset_in_page < PAGE_SIZE);
     static_cast<uint32_t*>(reloc_page_cpu_addr)[offset_in_page / sizeof(uint32_t)] =
         magma::lower_32_bits(address_to_patch);
 
     offset_in_page += sizeof(uint32_t);
 
+    if (offset_in_page >= PAGE_SIZE) {
+        if (!exec_resource->buffer->platform_buffer()->UnmapPageCpu(reloc_page_index))
+            return DRETF(false, "failed to unmap relocation page from CPU address space");
+
+        reloc_page_index++;
+        if (!exec_resource->buffer->platform_buffer()->MapPageCpu(reloc_page_index,
+                                                                  &reloc_page_cpu_addr))
+            return DRETF(false, "failed to map relocation page into CPU address space");
+
+        offset_in_page = 0;
+    }
+
+    DASSERT(offset_in_page < PAGE_SIZE);
     static_cast<uint32_t*>(reloc_page_cpu_addr)[offset_in_page / sizeof(uint32_t)] =
         magma::upper_32_bits(address_to_patch);
 
-    // unmap the mapped page
     if (!exec_resource->buffer->platform_buffer()->UnmapPageCpu(reloc_page_index))
         return DRETF(false, "failed to unmap relocation page from CPU address space");
 

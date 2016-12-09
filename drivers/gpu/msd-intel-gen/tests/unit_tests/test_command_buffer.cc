@@ -70,9 +70,9 @@ public:
             auto relocation = batch_buf_resource->relocation(i);
 
             uint32_t dword_offset = relocation->offset / sizeof(uint32_t);
-            batch_buf_data[dword_offset] = 0;
+            batch_buf_data[dword_offset] = 0xdeadbeef;
             dword_offset++;
-            batch_buf_data[dword_offset] = 0;
+            batch_buf_data[dword_offset] = 0xdeadbeef;
         }
 
         // do the relocation foo
