@@ -88,8 +88,8 @@ static_assert(sizeof(minfs_inode_t) == MINFS_INODE_SIZE,
 
 typedef struct {
     uint32_t ino;                   // inode number
-    uint16_t reclen;                // Low 15 bits: Length of record
-                                    // High 1 bits: Flags
+    uint32_t reclen;                // Low 28 bits: Length of record
+                                    // High 4 bits: Flags
     uint8_t namelen;                // length of the filename
     uint8_t type;                   // MINFS_TYPE_*
     char name[];                    // name does not have trailing \0
@@ -102,11 +102,14 @@ typedef struct {
 #define MINFS_MAX_DIRENT_SIZE     SIZEOF_MINFS_DIRENT(MINFS_MAX_NAME_SIZE)
 #define MINFS_MAX_DIRECTORY_SIZE  (((1 << 20) - 1) & (~3))
 
-#define MINFS_RECLEN_MASK         0x7FFF
-#define MINFS_RECLEN_LAST         0x8000
-#define MINFS_RECLEN(de, off) ((de->reclen & MINFS_RECLEN_LAST) ? \
+#define MINFS_RECLEN_MASK         0x0FFFFFFF
+#define MINFS_RECLEN_LAST         0x80000000
+#define MINFS_RECLEN(de, off) (((de)->reclen & MINFS_RECLEN_LAST) ? \
                                (MINFS_MAX_DIRECTORY_SIZE - off) : \
-                               (de->reclen & MINFS_RECLEN_MASK))
+                               ((de)->reclen & MINFS_RECLEN_MASK))
+
+// TODO(smklein): Compile-time assertion that "MINFS_MAX_DIRECTORY_SIZE" is less than
+// "MINFS_RECLEN_MASK".
 
 // Notes:
 // - dirents with ino of 0 are free, and skipped over on lookup
