@@ -4,7 +4,8 @@
 
 #include <string.h>
 
-#include "apps/ledger/services/ledger.fidl-sync.h"
+#include "apps/ledger/services/internal/internal.fidl-sync.h"
+#include "apps/ledger/services/public/ledger.fidl-sync.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/app/service_provider_impl.h"
@@ -43,7 +44,7 @@ class LedgerAppTest : public ::testing::Test {
     ::testing::Test::SetUp();
     modular::ServiceProviderPtr child_services;
     fidl::SynchronousInterfacePtr<ledger::LedgerRepositoryFactory>
-                ledger_repository_factory;
+        ledger_repository_factory;
 
     auto launch_info = modular::ApplicationLaunchInfo::New();
     launch_info->url = "file:///system/apps/ledger";
@@ -72,8 +73,7 @@ class LedgerAppTest : public ::testing::Test {
   modular::ApplicationControllerPtr ledger_repository_factory_controller_;
 
  protected:
-   fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
-
+  fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
 };
 
 TEST_F(LedgerAppTest, PutAndGet) {
@@ -81,7 +81,7 @@ TEST_F(LedgerAppTest, PutAndGet) {
   fidl::SynchronousInterfacePtr<ledger::Page> page;
   ledger_->GetRootPage(fidl::GetSynchronousProxy(&page), &status);
   ASSERT_EQ(Status::OK, status);
-  page->Put(TestArray(),TestArray(),&status);
+  page->Put(TestArray(), TestArray(), &status);
   EXPECT_EQ(Status::OK, status);
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   page->GetSnapshot(GetSynchronousProxy(&snapshot), &status);

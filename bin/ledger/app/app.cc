@@ -7,7 +7,7 @@
 
 #include <errno.h>
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
 #include "apps/ledger/src/configuration/configuration_encoder.h"
 #include "apps/ledger/src/environment/environment.h"

@@ -2,9 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("services") {
+import("//lib/fidl/fidl.gni")
+
+fidl("internal") {
+  sources = [
+    "internal.fidl",
+  ]
+
   deps = [
-    "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
   ]
 }

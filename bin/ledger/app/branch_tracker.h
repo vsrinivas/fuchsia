@@ -5,7 +5,7 @@
 #ifndef APPS_LEDGER_SRC_APP_BRANCH_TRACKER_H_
 #define APPS_LEDGER_SRC_APP_BRANCH_TRACKER_H_
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/fidl/bound_interface.h"
 #include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"

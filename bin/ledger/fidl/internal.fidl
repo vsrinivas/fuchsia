@@ -1,0 +1,24 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+[DartPackage="ledger"]
+module ledger;
+
+import "apps/ledger/services/public/ledger.fidl";
+
+// Base interface implemented by the Ledger application.
+// Will be called by the process setting up the user environment.
+[ServiceName="ledger::LedgerRepositoryFactory"]
+interface LedgerRepositoryFactory {
+  // Creates a new repository with the given |repository_name| if it doesn't
+  // already exist. All storage will be under |repository_path|.
+  GetRepository(string repository_path,
+                LedgerRepository& repository) => (Status status);
+};
+
+interface LedgerRepository {
+  // Creates a new Ledger for the given |ledger_name| if it doesn't already
+  // exist.
+   GetLedger(array<uint8> ledger_name, Ledger& ledger) => (Status status);
+};

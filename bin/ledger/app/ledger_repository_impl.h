@@ -5,7 +5,8 @@
 #ifndef APPS_LEDGER_SRC_APP_LEDGER_REPOSITORY_IMPL_H_
 #define APPS_LEDGER_SRC_APP_LEDGER_REPOSITORY_IMPL_H_
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/internal/internal.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/ledger_manager.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/convert/convert.h"

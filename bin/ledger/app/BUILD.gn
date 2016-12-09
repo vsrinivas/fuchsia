@@ -10,7 +10,7 @@ executable("app") {
 
   deps = [
     ":lib",
-    "//apps/ledger/services",
+    "//apps/ledger/services/internal",
     "//apps/ledger/src/configuration:lib",
     "//apps/ledger/src/environment",
     "//apps/ledger/src/network",
@@ -64,7 +64,8 @@ source_set("lib") {
   ]
 
   deps = [
-    "//apps/ledger/services",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/cloud_sync/impl",
     "//apps/ledger/src/configuration:lib",
@@ -129,7 +130,8 @@ executable("integration_tests") {
 
   deps = [
     ":lib",
-    "//apps/ledger/services",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
     "//apps/ledger/src/convert",
     "//apps/ledger/src/glue/socket",
     "//apps/ledger/src/storage/fake:lib",
@@ -152,8 +154,8 @@ executable("application_tests") {
   ]
 
   deps = [
-    "//apps/ledger/services",
-    "//apps/ledger/services:services_sync",
+    "//apps/ledger/services/internal:internal_sync",
+    "//apps/ledger/services/public:public_sync",
     "//apps/modular/lib/app",
     "//lib/fidl/cpp/bindings",
     "//lib/mtl",

@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/callback/trace_callback.h"

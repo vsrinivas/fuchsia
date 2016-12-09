@@ -4,7 +4,8 @@
 
 executable("todo") {
   deps = [
-    "//apps/ledger/services",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
     "//apps/modular/lib/app",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

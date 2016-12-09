@@ -6,7 +6,7 @@
 
 #include <algorithm>
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/branch_tracker.h"
 #include "lib/ftl/logging.h"
 

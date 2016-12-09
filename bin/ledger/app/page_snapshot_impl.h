@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/storage/public/commit_contents.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/tasks/task_runner.h"

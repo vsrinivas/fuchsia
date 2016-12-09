@@ -8,7 +8,7 @@
 #include <random>
 
 #include "apps/ledger/examples/todo/generator.h"
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/command_line.h"

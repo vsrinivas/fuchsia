@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/macros.h"

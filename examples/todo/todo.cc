@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/app/service_provider_impl.h"
 #include "lib/ftl/functional/make_copyable.h"

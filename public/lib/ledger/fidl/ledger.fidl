@@ -26,22 +26,6 @@ enum Status {
   UNKNOWN_ERROR = -1,
 };
 
-// Base interface implemented by the Ledger application.
-// Will be called by the process setting up the user environment.
-[ServiceName="ledger::LedgerRepositoryFactory"]
-interface LedgerRepositoryFactory {
-  // Creates a new repository with the given |repository_name| if it doesn't
-  // already exist. All storage will be under |repository_path|.
-  GetRepository(string repository_path,
-                LedgerRepository& repository) => (Status status);
-};
-
-interface LedgerRepository {
-  // Creates a new Ledger for the given |ledger_name| if it doesn't already
-  // exist.
-   GetLedger(array<uint8> ledger_name, Ledger& ledger) => (Status status);
-};
-
 [ServiceName="ledger::Ledger"]
 interface Ledger {
   // This is used to bootstrap a namespace. This page allows the client to keep

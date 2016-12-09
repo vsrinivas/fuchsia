@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/public/ledger_storage.h"
