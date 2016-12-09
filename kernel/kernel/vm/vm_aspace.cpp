@@ -10,12 +10,13 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/crypto/global_prng.h>
+#include <lib/crypto/prng.h>
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_address_region.h>
-#include <lk/init.h>
 #include <mxtl/auto_call.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/type_support.h>
@@ -113,7 +114,7 @@ static inline size_t trim_to_aspace(VmAspace& aspace, vaddr_t vaddr, size_t size
 }
 
 VmAspace::VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name)
-    : base_(base), size_(size), flags_(flags), root_vmar_(nullptr) {
+    : base_(base), size_(size), flags_(flags), root_vmar_(nullptr), aslr_prng_(nullptr, 0) {
 
     DEBUG_ASSERT(size != 0);
     DEBUG_ASSERT(base + size - 1 >= base);
@@ -135,6 +136,8 @@ status_t VmAspace::Init() {
     if (status != NO_ERROR) {
         return status;
     }
+
+    InitializeAslr();
 
     if (likely(!root_vmar_)) {
         return VmAddressRegion::CreateRoot(*this,
@@ -531,4 +534,14 @@ size_t VmAspace::AllocatedPages() const {
 
     AutoLock a(lock_);
     return root_vmar_->AllocatedPagesLocked();
+}
+
+void VmAspace::InitializeAslr() {
+    crypto::GlobalPRNG::GetInstance()->Draw(aslr_seed_, sizeof(aslr_seed_));
+    aslr_prng_.AddEntropy(aslr_seed_, sizeof(aslr_seed_));
+}
+
+void VmAspace::AslrDraw(uint8_t* buf, size_t len) {
+    ASSERT(len <= INT_MAX);
+    aslr_prng_.Draw(buf, static_cast<int>(len));
 }

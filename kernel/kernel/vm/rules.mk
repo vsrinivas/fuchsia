@@ -10,6 +10,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_DEPS += \
+    lib/cryptolib \
     lib/mxtl \
     lib/user_copy
 

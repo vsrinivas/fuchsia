@@ -8,6 +8,7 @@
 
 #include <arch/mmu.h>
 #include <assert.h>
+#include <lib/crypto/prng.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_address_region.h>
@@ -90,6 +91,8 @@ protected:
     friend class VmMapping;
     mutex_t& lock() { return lock_; }
 
+    void AslrDraw(uint8_t* buf, size_t len);
+
 private:
     // can only be constructed via factory
     VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name);
@@ -104,6 +107,8 @@ private:
     // internal page fault routine, friended to be only called by vmm_page_fault_handler
     status_t PageFault(vaddr_t va, uint flags);
     friend status_t vmm_page_fault_handler(vaddr_t va, uint flags);
+
+    void InitializeAslr();
 
     // magic
     static const uint32_t MAGIC = 0x564d4153; // VMAS
@@ -121,6 +126,11 @@ private:
     // root of virtual address space
     // Access to this reference is guarded by lock_.
     mxtl::RefPtr<VmAddressRegion> root_vmar_;
+
+    // PRNG used by VMARs for address choices.  We record the seed to enable
+    // reproducible debugging.
+    crypto::PRNG aslr_prng_;
+    uint8_t aslr_seed_[crypto::PRNG::kMinEntropy];
 
     // architecturally specific part of the aspace
     arch_aspace_t arch_aspace_ = {};
