@@ -11,47 +11,50 @@ namespace firebase {
 
 namespace {
 
-// Characters that are not allowed to appear in a Firebase key (but may appear
-// in a leaf value). See
-// https://firebase.google.com/docs/database/rest/structure-data.
-const char kIllegalKeyChars[] = ".$#[]/+";
-const size_t kIllegalKeyCharsCount = sizeof(kIllegalKeyChars) - 1;
-
-// Characters not allowed neither as keys nor values. Firebase documentation
-// doesn't imply that control characters 0-31 are not allowed in *values*, but
-// experimentation suggests so.
-const char kIllegalChars[] =
-    "\"\\"
-    "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A\x0B\x0C\x0D\x0E\x0F"
-    "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D\x1E\x1F"
-    "\x7F";
-const size_t kIllegalCharsCount = sizeof(kIllegalChars) - 1;
-
-bool IsValidValue(const std::string& s) {
-  if (!ftl::IsStringUTF8(s)) {
+// Returns true iff the given value can be put in Firebase without encoding.
+// Firebase requires the values to be valid UTF-8 JSON strings. JSON disallows
+// control characters in strings. We disallow backslash and double quote to
+// avoid reasoning about escaping. Note: this is a stop-gap solution, see
+// LE-118.
+bool CanValueBeVerbatim(const std::string& bytes) {
+  // Once encryption is in place this won't be useful. Until then, storing valid
+  // utf8 strings verbatim simplifies debugging.
+  if (!ftl::IsStringUTF8(bytes)) {
     return false;
   }
 
-  if (s.find_first_of(std::string(kIllegalChars, kIllegalCharsCount)) !=
-      std::string::npos) {
+  for (const char& byte : bytes) {
+    if ((0 <= byte && byte <= 31) || byte == 127 || byte == '\"' ||
+        byte == '\\') {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Characters that are not allowed to appear in a Firebase key (but may appear
+// in a value). See
+// https://firebase.google.com/docs/database/rest/structure-data.
+const char kIllegalKeyChars[] = ".$#[]/+";
+
+// Returns true if the given value can be used as a Firebase key without
+// encoding.
+bool CanKeyBeVerbatim(const std::string& bytes) {
+  if (!CanValueBeVerbatim(bytes)) {
+    return false;
+  }
+
+  if (bytes.find_first_of(std::string(kIllegalKeyChars)) != std::string::npos) {
     return false;
   }
 
   return true;
 }
 
-bool IsValidKey(const std::string& s) {
-  if (!IsValidValue(s)) {
-    return false;
-  }
-
-  // This can return false negatives when one of the forbidden bytes appears as
-  // part of a multibyte character. For our purposes this is acceptable, as we
-  // just fall back to base64.
-  return s.find_first_of(std::string(
-             kIllegalKeyChars, kIllegalKeyCharsCount)) == std::string::npos;
-}
-
+// Encodes the given bytes for storage in Firebase. We use the same encoding
+// function for both values and keys for simplicity, yielding values that can be
+// always safely used as either. Note: this is a stop-gap solution, see LE-118.
 std::string Encode(const std::string& s, bool verbatim) {
   if (verbatim) {
     return s + "V";
@@ -68,12 +71,12 @@ std::string Encode(const std::string& s, bool verbatim) {
 
 std::string EncodeKey(convert::ExtendedStringView bytes) {
   std::string s(bytes.data(), bytes.size());
-  return Encode(s, IsValidKey(s));
+  return Encode(s, CanKeyBeVerbatim(s));
 }
 
 std::string EncodeValue(convert::ExtendedStringView bytes) {
   std::string s(bytes.data(), bytes.size());
-  return Encode(s, IsValidValue(s));
+  return Encode(s, CanValueBeVerbatim(s));
 }
 
 bool Decode(const std::string& input, std::string* output) {

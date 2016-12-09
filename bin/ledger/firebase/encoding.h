@@ -13,7 +13,7 @@ namespace firebase {
 
 // Warning: this is a naive solution which needs multiple passes and copies of
 // the data each time. To be optimized if we are going to use this in the target
-// implementation.
+// implementation - see LE-118.
 
 // These methods encode the given bytes as a valid Firebase key / value.
 //
