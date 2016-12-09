@@ -499,30 +499,33 @@ Status PageStorageImpl::GetDeltaObjects(const CommitId& commit_id,
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageImpl::GetUnsyncedObjects(const CommitId& commit_id,
-                                           std::vector<ObjectId>* objects) {
-  std::vector<ObjectId> result;
+void PageStorageImpl::GetUnsyncedObjectIds(
+    const CommitId& commit_id,
+    std::function<void(Status, std::vector<ObjectId>)> callback) {
+  std::vector<ObjectId> object_ids;
   std::set<ObjectId> commit_objects;
   std::unique_ptr<const Commit> commit;
   Status s = GetCommit(commit_id, &commit);
   if (s != Status::OK) {
-    return s;
+    callback(s, std::move(object_ids));
+    return;
   }
   s = btree::GetObjects(commit->GetRootId(), this, &commit_objects);
   if (s != Status::OK) {
-    return s;
+    callback(s, std::move(object_ids));
+    return;
   }
   std::vector<ObjectId> unsynced_objects;
   s = db_.GetUnsyncedObjectIds(&unsynced_objects);
   if (s != Status::OK) {
-    return s;
+    callback(s, std::move(object_ids));
+    return;
   }
 
   std::set_intersection(commit_objects.begin(), commit_objects.end(),
                         unsynced_objects.begin(), unsynced_objects.end(),
-                        std::back_inserter(result));
-  objects->swap(result);
-  return Status::OK;
+                        std::back_inserter(object_ids));
+  callback(Status::OK, std::move(object_ids));
 }
 
 Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
@@ -534,21 +537,20 @@ void PageStorageImpl::AddObjectFromSync(
     mx::socket data,
     size_t size,
     const std::function<void(Status)>& callback) {
-  AddObject(std::move(data), size,
-            [ this, object_id = object_id.ToString(), callback ](
-                Status status, ObjectId found_id) {
-              if (status != Status::OK) {
-                callback(status);
-              } else if (found_id != object_id) {
-                FTL_LOG(ERROR)
-                    << "Object ID mismatch. Given ID: " << ToHex(object_id)
-                    << ". Found: " << ToHex(found_id);
-                files::DeletePath(GetFilePath(found_id), false);
-                callback(Status::OBJECT_ID_MISMATCH);
-              } else {
-                callback(Status::OK);
-              }
-            });
+  AddObject(std::move(data), size, [
+    this, object_id = object_id.ToString(), callback
+  ](Status status, ObjectId found_id) {
+    if (status != Status::OK) {
+      callback(status);
+    } else if (found_id != object_id) {
+      FTL_LOG(ERROR) << "Object ID mismatch. Given ID: " << ToHex(object_id)
+                     << ". Found: " << ToHex(found_id);
+      files::DeletePath(GetFilePath(found_id), false);
+      callback(Status::OBJECT_ID_MISMATCH);
+    } else {
+      callback(Status::OK);
+    }
+  });
 }
 
 void PageStorageImpl::AddObjectFromLocal(

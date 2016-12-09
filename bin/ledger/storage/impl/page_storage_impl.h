@@ -64,8 +64,9 @@ class PageStorageImpl : public PageStorage {
   Status MarkCommitSynced(const CommitId& commit_id) override;
   Status GetDeltaObjects(const CommitId& commit_id,
                          std::vector<ObjectId>* objects) override;
-  Status GetUnsyncedObjects(const CommitId& commit_id,
-                            std::vector<ObjectId>* objects) override;
+  void GetUnsyncedObjectIds(
+      const CommitId& commit_id,
+      std::function<void(Status, std::vector<ObjectId>)> callback) override;
   Status MarkObjectSynced(ObjectIdView object_id) override;
   void AddObjectFromSync(ObjectIdView object_id,
                          mx::socket data,

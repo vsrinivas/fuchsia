@@ -32,29 +32,30 @@ void CommitUpload::Start() {
   current_attempt_++;
   active_or_finished_ = true;
 
-  std::vector<storage::ObjectId> object_ids;
-  auto storage_status =
-      storage_->GetUnsyncedObjects(commit_->GetId(), &object_ids);
-  FTL_DCHECK(storage_status == storage::Status::OK);
+  storage_->GetUnsyncedObjectIds(
+      commit_->GetId(), [this](storage::Status status,
+                               std::vector<storage::ObjectId> object_ids) {
+        FTL_DCHECK(status == storage::Status::OK);
 
-  // If there are no unsynced objects referenced by the commit, upload the
-  // commit directly.
-  if (object_ids.empty()) {
-    UploadCommit();
-    return;
-  }
+        // If there are no unsynced objects referenced by the commit, upload the
+        // commit directly.
+        if (object_ids.empty()) {
+          UploadCommit();
+          return;
+        }
 
-  // Upload all unsynced objects referenced by the commit. The last upload that
-  // succeeds triggers uploading the commit.
-  objects_to_upload_ = object_ids.size();
-  for (const auto& id : object_ids) {
-    storage_->GetObject(id,
-                        [this](storage::Status storage_status,
-                               std::unique_ptr<const storage::Object> object) {
-                          FTL_DCHECK(storage_status == storage::Status::OK);
-                          UploadObject(std::move(object));
-                        });
-  }
+        // Upload all unsynced objects referenced by the commit. The last upload
+        // that succeeds triggers uploading the commit.
+        objects_to_upload_ = object_ids.size();
+        for (const auto& id : object_ids) {
+          storage_->GetObject(
+              id, [this](storage::Status storage_status,
+                         std::unique_ptr<const storage::Object> object) {
+                FTL_DCHECK(storage_status == storage::Status::OK);
+                UploadObject(std::move(object));
+              });
+        }
+      });
 }
 
 void CommitUpload::UploadObject(std::unique_ptr<const storage::Object> object) {

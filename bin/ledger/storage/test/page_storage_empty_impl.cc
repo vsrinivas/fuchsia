@@ -79,11 +79,11 @@ Status PageStorageEmptyImpl::GetDeltaObjects(const CommitId& commit_id,
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageStorageEmptyImpl::GetUnsyncedObjects(
+void PageStorageEmptyImpl::GetUnsyncedObjectIds(
     const CommitId& commit_id,
-    std::vector<ObjectId>* objects) {
+    std::function<void(Status, std::vector<ObjectId>)> callback) {
   FTL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
+  callback(Status::NOT_IMPLEMENTED, std::vector<ObjectId>());
 }
 
 Status PageStorageEmptyImpl::MarkObjectSynced(ObjectIdView object_id) {

@@ -720,8 +720,12 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
   // be the values added up to that point and also the root node of the given
   // commit.
   for (int i = 0; i < size; ++i) {
+    Status status;
     std::vector<ObjectId> objects;
-    EXPECT_EQ(Status::OK, storage_->GetUnsyncedObjects(commits[i], &objects));
+    storage_->GetUnsyncedObjectIds(
+        commits[i], ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                    &status, &objects));
+    EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(static_cast<unsigned>(i + 2), objects.size());
 
     std::unique_ptr<const Commit> commit;
@@ -737,8 +741,12 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
   // Mark the 2nd object as synced. We now expect to find the 2 unsynced values
   // and the (also unsynced) root node.
   EXPECT_EQ(Status::OK, storage_->MarkObjectSynced(data[1].object_id));
+  Status status;
   std::vector<ObjectId> objects;
-  EXPECT_EQ(Status::OK, storage_->GetUnsyncedObjects(commits[2], &objects));
+  storage_->GetUnsyncedObjectIds(
+      commits[2], ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                  &status, &objects));
+  EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(3u, objects.size());
   std::unique_ptr<const Commit> commit;
   EXPECT_EQ(Status::OK, storage_->GetCommit(commits[2], &commit));

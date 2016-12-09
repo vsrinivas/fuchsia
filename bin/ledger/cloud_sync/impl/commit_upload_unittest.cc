@@ -65,14 +65,15 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
   TestPageStorage() = default;
   ~TestPageStorage() override = default;
 
-  storage::Status GetUnsyncedObjects(
+  void GetUnsyncedObjectIds(
       const storage::CommitId& commit_id,
-      std::vector<storage::ObjectId>* object_ids) override {
-    object_ids->clear();
+      std::function<void(storage::Status, std::vector<storage::ObjectId>)>
+          callback) override {
+    std::vector<storage::ObjectId> object_ids;
     for (auto& id_object_pair : unsynced_objects_to_return) {
-      object_ids->push_back(id_object_pair.first);
+      object_ids.push_back(id_object_pair.first);
     }
-    return storage::Status::OK;
+    callback(storage::Status::OK, std::move(object_ids));
   }
 
   void GetObject(
