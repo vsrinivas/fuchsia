@@ -269,6 +269,10 @@ else
 NOECHO ?= @
 endif
 
+# used to force a rule to run every time
+.PHONY: FORCE
+FORCE:
+
 # try to include the project file
 -include project/$(PROJECT).mk
 ifndef TARGET
@@ -341,8 +345,7 @@ SYSROOT_DEPS += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so
 GENERATED += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
 endif
 
-# any extra top level build dependencies that someone declared
-all:: $(EXTRA_BUILDDEPS) $(SYSROOT_DEPS)
+EXTRA_BUILDEPS += $(SYSROOT_DEPS)
 
 # make the build depend on all of the user apps
 all:: $(foreach app,$(ALLUSER_APPS),$(app) $(app).strip)
@@ -491,10 +494,12 @@ $(GIT_VERSION_HEADER): scripts/git-version.sh FORCE
 	@echo generating $@
 	$(NOECHO)$< $@.new
 	$(NOECHO)if cmp -s $@.new $@; then rm $@.new; else mv -f $@.new $@; fi
-FORCE:;
 
 # make all object files depend on any targets in GLOBAL_SRCDEPS
 $(ALLOBJS): $(GLOBAL_SRCDEPS)
+
+# any extra top level build dependencies that someone may have declared
+all:: $(EXTRA_BUILDDEPS)
 
 clean: $(EXTRA_CLEANDEPS)
 	rm -f $(ALLOBJS)
@@ -507,21 +512,15 @@ install: all
 	scp $(OUTLKBIN) 192.168.0.4:/tftproot
 
 # generate a config-global.h file with all of the GLOBAL_DEFINES laid out in #define format
-globalconfigheader:
-
-$(GLOBAL_CONFIG_HEADER): globalconfigheader
+$(GLOBAL_CONFIG_HEADER): FORCE
 	@$(call MAKECONFIGHEADER,$@,GLOBAL_DEFINES,"")
 
 # generate a config-kernel.h file with all of the KERNEL_DEFINES laid out in #define format
-kernelconfigheader:
-
-$(KERNEL_CONFIG_HEADER): kernelconfigheader
+$(KERNEL_CONFIG_HEADER): FORCE
 	@$(call MAKECONFIGHEADER,$@,KERNEL_DEFINES,"")
 
 # generate a config-user.h file with all of the USER_DEFINES laid out in #define format
-userconfigheader:
-
-$(USER_CONFIG_HEADER): userconfigheader
+$(USER_CONFIG_HEADER): FORCE
 	@$(call MAKECONFIGHEADER,$@,USER_DEFINES,"#define __Fuchsia__ 1")
 
 GENERATED += $(GLOBAL_CONFIG_HEADER) $(KERNEL_CONFIG_HEADER) $(USER_CONFIG_HEADER)
@@ -534,7 +533,6 @@ ifeq ($(filter $(MAKECMDGOALS), clean), )
 -include $(DEPS)
 endif
 
-.PHONY: configheader
 endif
 
 endif # make spotless
