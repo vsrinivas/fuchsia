@@ -244,7 +244,8 @@ status_t VmAspace::Destroy() {
 //
 //  Arch can override this to impose it's own restrictions.
 
-__WEAK vaddr_t arch_mmu_pick_spot(arch_aspace_t* aspace, vaddr_t base, uint prev_region_arch_mmu_flags,
+__WEAK vaddr_t arch_mmu_pick_spot(const arch_aspace_t* aspace,
+                                  vaddr_t base, uint prev_region_arch_mmu_flags,
                                   vaddr_t end, uint next_region_arch_mmu_flags, vaddr_t align, size_t size,
                                   uint arch_mmu_flags) {
     // just align it by default

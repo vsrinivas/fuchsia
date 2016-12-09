@@ -549,7 +549,8 @@ static inline bool are_regions_compatible(uint new_region_flags,
 }
 
 
-vaddr_t arch_mmu_pick_spot(vaddr_t base, uint prev_region_flags,
+vaddr_t arch_mmu_pick_spot(const arch_aspace_t *aspace,
+                           vaddr_t base, uint prev_region_flags,
                            vaddr_t end,  uint next_region_flags,
                            vaddr_t align, size_t size, uint flags)
 {
