@@ -4,7 +4,7 @@
 
 module document_store;
 
-import "apps/ledger/services/ledger.fidl";
+import "apps/ledger/services/public/ledger.fidl";
 import "apps/modular/services/document_store/document.fidl";
 
 // Response codes for document store operations.

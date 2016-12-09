@@ -7,7 +7,7 @@ module modular;
 import "apps/modular/services/story/resolver.fidl";
 import "apps/modular/services/story/story.fidl";
 import "apps/modular/services/story/story_storage.fidl";
-import "apps/ledger/services/ledger.fidl";
+import "apps/ledger/services/internal/internal.fidl";
 
 // A service to create StoryRunner instances configured with services
 // they need. To the client of this service, the story is exposed

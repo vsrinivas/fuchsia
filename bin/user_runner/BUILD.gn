@@ -26,7 +26,8 @@ executable("user_runner") {
   ]
 
   deps = [
-    "//apps/ledger/services",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
     "//apps/maxwell/services/launcher",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/app",

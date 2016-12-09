@@ -11,6 +11,6 @@ fidl("document_store") {
   ]
 
   deps = [
-    "//apps/ledger/services",
+    "//apps/ledger/services/public",
   ]
 }

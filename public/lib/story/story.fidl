@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/ledger/services/ledger.fidl";
+import "apps/ledger/services/public/ledger.fidl";
 import "apps/modular/services/application/service_provider.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/story/module_controller.fidl";

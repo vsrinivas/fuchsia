@@ -63,7 +63,7 @@ executable("example_recipe") {
 
   deps = [
     ":calculator",
-    "//apps/ledger/services",
+    "//apps/ledger/services/public",
     "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:single_service_view_app",

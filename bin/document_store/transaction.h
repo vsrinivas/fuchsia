@@ -5,7 +5,7 @@
 
 #include <vector>
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/document_store/document_store.fidl.h"
 #include "apps/modular/src/document_store/documents.h"

@@ -6,7 +6,8 @@
 #include <string>
 #include <utility>
 
-#include "apps/ledger/services/ledger.fidl-sync.h"
+#include "apps/ledger/services/internal/internal.fidl-sync.h"
+#include "apps/ledger/services/public/ledger.fidl-sync.h"
 #include "apps/modular/services/document_store/document_store.fidl-sync.h"
 #include "apps/modular/src/document_store/documents.h"
 

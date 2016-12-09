@@ -10,7 +10,7 @@
 
 #include <string>
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/macros.h"
 

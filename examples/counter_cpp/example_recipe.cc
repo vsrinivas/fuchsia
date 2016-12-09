@@ -5,7 +5,7 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the story.
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/examples/counter_cpp/calculator.fidl.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/document_editor/document_editor.h"

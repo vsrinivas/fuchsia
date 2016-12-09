@@ -6,7 +6,8 @@
 
 #include <memory>
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/internal/internal.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/maxwell/services/launcher/launcher.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/app/application_context.h"

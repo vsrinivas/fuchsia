@@ -18,7 +18,8 @@ executable("story_runner") {
   ]
 
   deps = [
-    "//apps/ledger/services",
+    "//apps/ledger/services/internal",
+    "//apps/ledger/services/public",
     "//apps/modular/lib/app",
     "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:array_to_string",

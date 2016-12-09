@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #pragma once
 
-#include "apps/ledger/services/ledger.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/services/document_store/document_store.fidl.h"
 #include "lib/ftl/macros.h"
 
