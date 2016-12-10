@@ -1,0 +1,14 @@
+{
+    "imports": [
+        "magma"
+    ],
+    "labels": [
+        "//third_party/skia"
+    ],
+    "binaries": [
+        {
+            "binary": "dm",
+            "bootfs_path": "tests/dm"
+        }
+    ]
+}
