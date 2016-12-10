@@ -27,6 +27,7 @@
 
 #include <magenta/event_dispatcher.h>
 #include <magenta/event_pair_dispatcher.h>
+#include <magenta/fifo_dispatcher.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
@@ -479,6 +480,76 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
 
     if (status == NO_ERROR)
         status = actual.copy_to_user(nread);
+
+    return status;
+}
+
+mx_status_t sys_fifo_create(uint64_t count, user_ptr<mx_handle_t> out) {
+    // Must be a power of 2
+    if (!count || (count & (count - 1))) {
+        return ERR_INVALID_ARGS;
+    }
+
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    mx_rights_t rights;
+    mx_status_t result = FifoDispatcher::Create(count, &dispatcher, &rights);
+    if (result != NO_ERROR)
+        return result;
+
+    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    if (!handle)
+        return ERR_NO_MEMORY;
+
+    auto up = ProcessDispatcher::GetCurrent();
+    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+    up->AddHandle(mxtl::move(handle));
+
+    return NO_ERROR;
+}
+
+mx_status_t sys_fifo_op(mx_handle_t handle, uint32_t op, uint64_t val,
+                        user_ptr<mx_fifo_state_t> out) {
+    mx_rights_t rights = MX_RIGHT_READ;
+    switch (op) {
+    case MX_FIFO_READ_STATE:
+        if (!out) return ERR_INVALID_ARGS;
+        break;
+    case MX_FIFO_ADVANCE_HEAD:
+        rights |= MX_RIGHT_FIFO_PRODUCER;
+        break;
+    case MX_FIFO_ADVANCE_TAIL:
+        rights |= MX_RIGHT_FIFO_CONSUMER;
+        break;
+    default:
+        return ERR_INVALID_ARGS;
+    }
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<FifoDispatcher> fifo;
+    mx_status_t status = up->GetDispatcher(handle, &fifo, rights);
+    if (status != NO_ERROR)
+        return status;
+
+    mx_fifo_state_t state;
+    switch (op) {
+    case MX_FIFO_READ_STATE:
+        fifo->GetState(&state);
+        break;
+    case MX_FIFO_ADVANCE_HEAD:
+        status = fifo->AdvanceHead(val, &state);
+        break;
+    case MX_FIFO_ADVANCE_TAIL:
+        status = fifo->AdvanceTail(val, &state);
+        break;
+    }
+
+    if (out) {
+        if (out.copy_to_user(state) != NO_ERROR) {
+            status = ERR_INVALID_ARGS;
+        }
+    }
 
     return status;
 }

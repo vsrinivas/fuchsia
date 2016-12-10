@@ -190,6 +190,11 @@ MAGENTA_SYSCALL_DEF(3, 3, 110, mx_status_t, cprng_draw,
 MAGENTA_SYSCALL_DEF(2, 2, 111, mx_status_t, cprng_add_entropy,
                     USER_PTR(const void) buffer, size_t len)
 
+// Fifo
+MAGENTA_SYSCALL_DEF(2, 3, 115, mx_status_t, fifo_create, uint64_t count,
+                    USER_PTR(mx_handle_t) out)
+MAGENTA_SYSCALL_DEF(4, 5, 116, mx_status_t, fifo_op, mx_handle_t handle, uint32_t op,
+                    uint64_t val, USER_PTR(mx_fifo_state_t) out)
 
 // ----------------------------------------------------------------------------------------
 // Syscalls past this point are non-public

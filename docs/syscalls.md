@@ -67,6 +67,10 @@
 + [port_wait](syscalls/port_wait.md) - wait for packets to arrive on a port
 + [port_bind](syscalls/port_bind.md) - bind an object to a port
 
+## Fifos
++ [fifo_create](syscalls/fifo_create.md) - create a fifo
++ [fifo_op](syscalls/fifo_op.md) - perform an operation on a fifo
+
 ## Futexes
 + [futex_wait](syscalls/futex_wait.md)
 + [futex_wake](syscalls/futex_wake.md)

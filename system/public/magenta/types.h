@@ -110,6 +110,12 @@ typedef uint32_t mx_signals_t;
 #define MX_RESOURCE_WRITABLE        MX_OBJECT_SIGNAL_1
 #define MX_RESOURCE_CHILD_ADDED     MX_OBJECT_SIGNAL_2
 
+// Fifo
+#define MX_SIGNAL_FIFO_EMPTY        MX_OBJECT_SIGNAL_0
+#define MX_SIGNAL_FIFO_FULL         MX_OBJECT_SIGNAL_1
+#define MX_SIGNAL_FIFO_NOT_EMPTY    MX_OBJECT_SIGNAL_2
+#define MX_SIGNAL_FIFO_NOT_FULL     MX_OBJECT_SIGNAL_3
+
 // Legacy signal names, to be removed.
 #define MX_SIGNAL_READABLE          MX_OBJECT_SIGNAL_0
 #define MX_SIGNAL_WRITABLE          MX_OBJECT_SIGNAL_1
@@ -145,6 +151,8 @@ typedef uint32_t mx_rights_t;
 #define MX_RIGHT_GET_PROPERTY     ((mx_rights_t)1u << 6)
 #define MX_RIGHT_SET_PROPERTY     ((mx_rights_t)1u << 7)
 #define MX_RIGHT_ENUMERATE        ((mx_rights_t)1u << 8)
+#define MX_RIGHT_FIFO_PRODUCER    ((mx_rights_t)1u << 9)
+#define MX_RIGHT_FIFO_CONSUMER    ((mx_rights_t)1u << 10)
 #define MX_RIGHT_SAME_RIGHTS      ((mx_rights_t)1u << 31)
 
 // VM Object opcodes
@@ -201,6 +209,24 @@ typedef enum {
     MX_CACHE_POLICY_UNCACHED_DEVICE = 2,
     MX_CACHE_POLICY_WRITE_COMBINING = 3,
 } mx_cache_policy_t;
+
+// Fifo state
+typedef struct {
+    uint64_t head;
+    uint64_t tail;
+} mx_fifo_state_t;
+
+// Fifo ops
+typedef enum {
+    MX_FIFO_READ_STATE   = 0,
+    MX_FIFO_ADVANCE_HEAD = 1,
+    MX_FIFO_ADVANCE_TAIL = 2,
+} mx_fifo_op_t;
+
+#define MX_FIFO_PRODUCER_RIGHTS \
+    (MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_FIFO_PRODUCER)
+#define MX_FIFO_CONSUMER_RIGHTS \
+    (MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_FIFO_CONSUMER)
 
 #ifdef __cplusplus
 // We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by

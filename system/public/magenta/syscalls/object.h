@@ -39,6 +39,7 @@ typedef enum {
     MX_OBJ_TYPE_EVENT_PAIR          = 16,
     MX_OBJ_TYPE_JOB                 = 17,
     MX_OBJ_TYPE_VMAR                = 18,
+    MX_OBJ_TYPE_FIFO                = 19,
     MX_OBJ_TYPE_LAST
 } mx_obj_type_t;
 
