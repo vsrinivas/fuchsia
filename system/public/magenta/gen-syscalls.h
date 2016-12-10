@@ -289,14 +289,14 @@ extern mx_status_t mx_vmo_read(
     void* data,
     uint64_t offset,
     size_t len,
-    size_t actual);
+    size_t actual[1]);
 
 extern mx_status_t mx_vmo_write(
     mx_handle_t handle,
     const void* data,
     uint64_t offset,
     size_t len,
-    size_t actual);
+    size_t actual[1]);
 
 extern mx_status_t mx_vmo_get_size(
     mx_handle_t handle,
