@@ -54,7 +54,7 @@ Run:
 
 ```
 ./configure --enable-rustbuild --target=x86_64-unknown-fuchsia
-./x.py build --stage 1 --target=x86_64-unknown-fuchsia
+./x.py build --stage 1
 ```
 
 (If your cmake installation is too old (e.g., Ubuntu 14.04), you can use the
@@ -99,6 +99,11 @@ RUSTC=${RUST_ROOT}/build/x86_64-apple-darwin/stage1/bin/rustc cargo build --targ
 ```
 
 This will produce a binary as `target/x86_64-unknown-fuchsia/debug/examples/mx_toy`.
+A common error at this point is a link failure due to the linker not pointing to
+the clang wrapper (different failure mode depending on your default setup). A
+telltale sign is that the link command line begins with "cc" instead of
+"x86-unknown-fuchsia-cc". Make sure the cargo/.config is correct and in the right
+place (root directory of the crate to build).
 
 Running binaries on Fuchsia
 ---------------------------
