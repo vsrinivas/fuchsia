@@ -747,7 +747,7 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bazzle_dazzle";
   story_info->id = "";
-  story_info->state = modular::StoryState::NEW;
+  story_info->state = modular::StoryState::INITIAL;
   story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info));
 
@@ -774,7 +774,7 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bar";
   story_info->id = "";
-  story_info->state = modular::StoryState::NEW;
+  story_info->state = modular::StoryState::INITIAL;
   story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info));
 
@@ -798,7 +798,7 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
   auto story_info = modular::StoryInfo::New();
   story_info->url = "foo://bar";
   story_info->id = "";
-  story_info->state = modular::StoryState::NEW;
+  story_info->state = modular::StoryState::INITIAL;
   story_info->extra.mark_non_null();
   story_provider()->NotifyStoryChanged(std::move(story_info));
 
