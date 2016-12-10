@@ -39,7 +39,7 @@ std::unique_ptr<SuggestionPrototype> ProposalPublisherImpl::Extract(
     const std::string& proposal_id) {
   const auto it = proposals_.find(proposal_id);
 
-  if (it == proposals_.end()) {
+  if (it == proposals_.end())
     return NULL;
   for (auto channel_rank : it->second->ranks_by_channel) {
     channel_rank.first->OnRemoveSuggestion(channel_rank.second);
