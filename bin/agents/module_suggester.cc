@@ -72,10 +72,10 @@ maxwell::ProposalPtr MkProposal(const std::string& label,
     // TODO(afergan): Don't hardcode the doc id key or initial_data map key.
     // TODO(afergan, azani): Right now we pass the colors as Strings because
     // document_store::Value does not support hexadecimal.
-    doc->properties["Color"] = document_store::Value::New();
-    doc->properties["Color"]->set_string_value(data);
+    doc->properties["color"] = document_store::Value::New();
+    doc->properties["color"]->set_string_value(data);
     fidl::Map<fidl::String, document_store::DocumentPtr> map;
-    map[fidl::String("Color")] = std::move(doc);
+    map[fidl::String("color")] = std::move(doc);
     create_story->initial_data = std::move(map);
   }
   auto action = maxwell::Action::New();
