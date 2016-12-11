@@ -410,6 +410,10 @@ syscall pci_enable_bus_master
     (handle: mx_handle_t, enable: bool)
     returns (mx_status_t);
 
+syscall pci_enable_pio
+    (handle: mx_handle_t, enable: bool)
+    returns (mx_status_t);
+
 syscall pci_reset_device
     (handle: mx_handle_t)
     returns (mx_status_t);

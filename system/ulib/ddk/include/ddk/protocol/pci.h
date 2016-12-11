@@ -25,6 +25,7 @@ typedef struct pci_protocol {
                             void** vaddr,
                             uint64_t* size);
     mx_status_t (*enable_bus_master)(mx_device_t* dev, bool enable);
+    mx_status_t (*enable_pio)(mx_device_t* dev, bool enable);
     mx_status_t (*reset_device)(mx_device_t* dev);
     mx_handle_t (*map_interrupt)(mx_device_t* dev, int which_irq);
     mx_handle_t (*get_config)(mx_device_t* dev, const pci_config_t** config);

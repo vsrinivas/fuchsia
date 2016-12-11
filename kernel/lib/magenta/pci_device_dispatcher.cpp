@@ -95,6 +95,17 @@ status_t PciDeviceDispatcher::EnableBusMaster(bool enable) {
     return NO_ERROR;
 }
 
+status_t PciDeviceDispatcher::EnablePio(bool enable) {
+    AutoLock lock(&lock_);
+    DEBUG_ASSERT(device_ && device_->device());
+
+    if (!device_->claimed()) return ERR_BAD_STATE;  // Are we not claimed yet?
+
+    device_->device()->EnablePio(enable);
+
+    return NO_ERROR;
+}
+
 status_t PciDeviceDispatcher::ResetDevice() {
     AutoLock lock(&lock_);
     DEBUG_ASSERT(device_ && device_->device());

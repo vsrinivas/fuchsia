@@ -68,6 +68,7 @@ public:
 
     status_t ClaimDevice();
     status_t EnableBusMaster(bool enable);
+    status_t EnablePio(bool enable);
     status_t ResetDevice();
     status_t MapConfig(mxtl::RefPtr<Dispatcher>* out_mapping,
                        mx_rights_t* out_rights);

@@ -276,6 +276,7 @@ MAGENTA_SYSCALL_DEF(3, 3, 211, mx_status_t, pci_init, mx_handle_t handle,
                     USER_PTR(const mx_pci_init_arg_t) init_buf, uint32_t len)
 MAGENTA_SYSCALL_DEF(5, 7, 212, mx_status_t, pci_add_subtract_io_range, mx_handle_t handle,
                     bool mmio, uint64_t base, uint64_t len, bool add)
+MAGENTA_SYSCALL_DEF(2, 2, 213, mx_status_t, pci_enable_pio, mx_handle_t handle, bool enable)
 
 // DDK Syscalls: ACPI Glue
 MAGENTA_SYSCALL_DEF(1, 1, 220, uint32_t, acpi_uefi_rsdp, mx_handle_t handle)

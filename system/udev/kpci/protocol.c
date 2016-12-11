@@ -21,6 +21,12 @@ static mx_status_t pci_enable_bus_master(mx_device_t* dev, bool enable) {
     return mx_pci_enable_bus_master(device->handle, enable);
 }
 
+static mx_status_t pci_enable_pio(mx_device_t* dev, bool enable) {
+    kpci_device_t* device = get_kpci_device(dev);
+    assert(device->handle != MX_HANDLE_INVALID);
+    return mx_pci_enable_pio(device->handle, enable);
+}
+
 static mx_status_t pci_reset_device(mx_device_t* dev) {
     kpci_device_t* device = get_kpci_device(dev);
     assert(device->handle != MX_HANDLE_INVALID);
@@ -104,6 +110,7 @@ static mx_status_t pci_set_irq_mode(mx_device_t* dev,
 static pci_protocol_t _pci_protocol = {
     .claim_device = pci_claim_device,
     .enable_bus_master = pci_enable_bus_master,
+    .enable_pio = pci_enable_pio,
     .reset_device = pci_reset_device,
     .map_mmio = pci_map_mmio,
     .map_interrupt = pci_map_interrupt,

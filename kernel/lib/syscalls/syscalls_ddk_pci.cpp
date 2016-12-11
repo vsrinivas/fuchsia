@@ -299,6 +299,24 @@ mx_status_t sys_pci_enable_bus_master(mx_handle_t handle, bool enable) {
     return pci_device->EnableBusMaster(enable);
 }
 
+mx_status_t sys_pci_enable_pio(mx_handle_t handle, bool enable) {
+    /**
+     * Enables or disables PIO accesss for the PCI device associated with the handle.
+     * @param handle Handle associated with a PCI device
+     * @param enable true if PIO access should be enabled.
+     */
+    LTRACEF("handle %d\n", handle);
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<PciDeviceDispatcher> pci_device;
+    mx_status_t status = up->GetDispatcher(handle, &pci_device, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
+
+    return pci_device->EnablePio(enable);
+}
+
 mx_status_t sys_pci_reset_device(mx_handle_t handle) {
     /**
      * Resets the PCI device associated with the handle.
@@ -508,6 +526,10 @@ mx_status_t sys_pci_claim_device(mx_handle_t) {
 }
 
 mx_status_t sys_pci_enable_bus_master(mx_handle_t, bool) {
+    return ERR_NOT_SUPPORTED;
+}
+
+mx_status_t sys_pci_enable_pio(mx_handle_t, bool) {
     return ERR_NOT_SUPPORTED;
 }
 
