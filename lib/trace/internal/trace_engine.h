@@ -103,6 +103,10 @@ class TraceEngine final : private mtl::MessageLoopHandler {
                                 ThreadState outgoing_thread_state,
                                 const ThreadRef& outgoing_thread_ref,
                                 const ThreadRef& incoming_thread_ref);
+  void WriteLogRecord(Ticks event_time,
+                      const ThreadRef& thread_ref,
+                      const char* log_message,
+                      size_t log_message_length);
 
  private:
   explicit TraceEngine(ftl::RefPtr<mtl::SharedVmo> buffer,

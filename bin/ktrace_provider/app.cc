@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <magenta/syscalls/log.h>
+
 #include "apps/tracing/lib/trace/provider.h"
 #include "apps/tracing/src/ktrace_provider/importer.h"
 #include "lib/ftl/files/file.h"
@@ -70,13 +72,15 @@ void App::UpdateState(tracing::writer::TraceState state) {
 
 void App::RestartTracing() {
   SendDevMgrCommand(kKTraceOff);
-  trace_running_ = SendDevMgrCommand(kKTraceOn);
+  if ((trace_running_ = SendDevMgrCommand(kKTraceOn)))
+    log_importer_.Start();
 }
 
 void App::StopTracing() {
   if (trace_running_) {
     trace_running_ = false;
     SendDevMgrCommand(kKTraceOff);
+    log_importer_.Stop();
   }
 }
 
@@ -99,8 +103,10 @@ bool App::SendDevMgrCommand(std::string command) {
 
 void App::CollectTraces() {
   auto writer = tracing::writer::TraceWriter::Prepare();
-  if (!writer)
+  if (!writer) {
+    FTL_LOG(ERROR) << "Failed to prepare writer.";
     return;
+  }
 
   std::vector<uint8_t> buffer;
   if (!files::ReadFileToVector(kTraceDev, &buffer)) {

@@ -7,6 +7,7 @@
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/tracing/lib/trace/writer.h"
+#include "apps/tracing/src/ktrace_provider/log_importer.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -23,13 +24,13 @@ class App {
 
   void RestartTracing();
   void StopTracing();
-  bool SendDevMgrCommand(std::string command);
 
+  bool SendDevMgrCommand(std::string command);
   void CollectTraces();
 
   std::unique_ptr<modular::ApplicationContext> application_context_;
+  LogImporter log_importer_;
   tracing::writer::TraceHandlerKey trace_handler_key_;
-
   bool trace_running_ = false;
 
   ftl::WeakPtrFactory<App> weak_ptr_factory_;

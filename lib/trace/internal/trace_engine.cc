@@ -408,6 +408,30 @@ void TraceEngine::WriteContextSwitchRecord(
       .WriteValue(incoming_thread_ref);
 }
 
+void TraceEngine::WriteLogRecord(Ticks event_time,
+                                 const ThreadRef& thread_ref,
+                                 const char* log_message,
+                                 size_t log_message_length) {
+  if (!log_message)
+    return;
+
+  log_message_length =
+      std::min(log_message_length, size_t(LogRecordFields::kMaxMessageLength));
+  const size_t record_size = sizeof(RecordHeader) + thread_ref.Size() +
+                             WordsToBytes(1) + Pad(log_message_length);
+  Payload payload = AllocateRecord(record_size);
+  if (!payload)
+    return;
+
+  payload
+      .Write(MakeRecordHeader(RecordType::kLog, record_size) |
+             LogRecordFields::LogMessageLength::Make(log_message_length) |
+             LogRecordFields::ThreadRef::Make(thread_ref.encoded_value()))
+      .Write(event_time)
+      .WriteValue(thread_ref)
+      .WriteBytes(log_message, log_message_length);
+}
+
 TraceEngine::Payload TraceEngine::AllocateRecord(size_t num_bytes) {
   uintptr_t record_start =
       buffer_current_.fetch_add(num_bytes, std::memory_order_relaxed);

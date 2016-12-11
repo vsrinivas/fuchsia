@@ -146,6 +146,9 @@ void ChromiumExporter::ExportRecord(const reader::Record& record) {
     case RecordType::kKernelObject:
       ExportKernelObject(record.GetKernelObject());
       break;
+    case RecordType::kLog:
+      ExportLog(record.GetLog());
+      break;
     default:
       break;
   }
@@ -333,4 +336,25 @@ void ChromiumExporter::ExportKernelObject(
   }
 }
 
+void ChromiumExporter::ExportLog(const reader::Record::Log& log) {
+  writer_.StartObject();
+  writer_.Key("name");
+  writer_.String("log");
+  writer_.Key("ph");
+  writer_.String("i");
+  writer_.Key("ts");
+  writer_.Double(log.timestamp * tick_scale_);
+  writer_.Key("pid");
+  writer_.Uint64(log.process_thread.process_koid);
+  writer_.Key("tid");
+  writer_.Uint64(log.process_thread.thread_koid);
+  writer_.Key("s");
+  writer_.String("g");
+  writer_.Key("args");
+  writer_.StartObject();
+  writer_.Key("message");
+  writer_.String(log.message.c_str(), log.message.size());
+  writer_.EndObject();
+  writer_.EndObject();
+}
 }  // namespace tracing

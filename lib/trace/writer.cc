@@ -326,6 +326,15 @@ void TraceWriter::WriteContextSwitchRecord(
                                     incoming_thread_ref);
 }
 
+void TraceWriter::WriteLogRecord(Ticks event_time,
+                                 const ThreadRef& thread_ref,
+                                 const char* log_message,
+                                 size_t log_message_length) {
+  FTL_DCHECK(engine_);
+  engine_->WriteLogRecord(event_time, thread_ref, log_message,
+                          log_message_length);
+}
+
 Payload TraceWriter::WriteEventRecordBase(EventType event_type,
                                           Ticks event_time,
                                           const ThreadRef& thread_ref,

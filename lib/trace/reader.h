@@ -493,6 +493,13 @@ class Record {
     ProcessThread incoming_thread;
   };
 
+  // Log record data.
+  struct Log {
+    Ticks timestamp;
+    ProcessThread process_thread;
+    std::string message;
+  };
+
   explicit Record(const Metadata& record)
       : type_(RecordType::kMetadata), metadata_(record) {}
 
@@ -519,6 +526,10 @@ class Record {
   explicit Record(const ContextSwitch& record)
       : type_(RecordType::kContextSwitch) {
     new (&context_switch_) ContextSwitch(record);
+  }
+
+  explicit Record(const Log& record) : type_(RecordType::kLog) {
+    new (&log_) Log(record);
   }
 
   Record(const Record& other) { Copy(other); }
@@ -562,6 +573,11 @@ class Record {
     return context_switch_;
   }
 
+  const Log& GetLog() const {
+    FTL_DCHECK(type_ == RecordType::kLog);
+    return log_;
+  }
+
   RecordType type() const { return type_; }
 
  private:
@@ -577,6 +593,7 @@ class Record {
     Event event_;
     KernelObject kernel_object_;
     ContextSwitch context_switch_;
+    Log log_;
   };
 };
 
@@ -615,6 +632,7 @@ class TraceReader {
                               ::tracing::internal::RecordHeader header);
   bool ReadContextSwitchRecord(Chunk& record,
                                ::tracing::internal::RecordHeader header);
+  bool ReadLogRecord(Chunk& record, ::tracing::internal::RecordHeader header);
   bool ReadArguments(Chunk& record,
                      size_t count,
                      std::vector<Argument>* out_arguments);

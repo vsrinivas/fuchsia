@@ -8,6 +8,8 @@ executable("ktrace_provider") {
     "app.h",
     "importer.cc",
     "importer.h",
+    "log_importer.cc",
+    "log_importer.h",
     "main.cc",
     "tags.cc",
     "tags.h",

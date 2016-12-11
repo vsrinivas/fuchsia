@@ -35,6 +35,7 @@ TEST(WriterStubTest, AllFunctionsDoNothing) {
     writer.WriteContextSwitchRecord(0, 0, ThreadState::kDead,
                                     ThreadRef::MakeUnknown(),
                                     ThreadRef::MakeUnknown());
+    writer.WriteLogRecord(0, ThreadRef::MakeUnknown(), nullptr, 0);
     writer.WriteInstantEventRecord(0, ThreadRef::MakeUnknown(),
                                    StringRef::MakeEmpty(),
                                    StringRef::MakeEmpty(), EventScope::kThread);

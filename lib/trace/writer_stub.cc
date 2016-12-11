@@ -105,6 +105,13 @@ __WEAK void TraceWriter::WriteContextSwitchRecord(
   FTL_DCHECK(engine_);
 }
 
+__WEAK void TraceWriter::WriteLogRecord(Ticks event_time,
+                                        const ThreadRef& thread_ref,
+                                        const char* log_message,
+                                        size_t log_message_length) {
+  FTL_DCHECK(engine_);
+}
+
 __WEAK Payload TraceWriter::WriteEventRecordBase(EventType type,
                                                  Ticks event_time,
                                                  const ThreadRef& thread_ref,

@@ -26,6 +26,7 @@ enum class RecordType {
   kEvent = 4,
   kKernelObject = 7,
   kContextSwitch = 8,
+  kLog = 9,
 };
 
 // MetadataType enumerates all known trace metadata types.

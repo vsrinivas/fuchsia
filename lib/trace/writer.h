@@ -535,10 +535,20 @@ constexpr size_t SizeArguments(Head&& head, Tail&&... tail) {
 // Instances of this class are thread-safe.
 class TraceWriter final {
  public:
+  TraceWriter(TraceWriter&& other) : engine_(other.engine_) {
+    other.engine_ = nullptr;
+  }
+
   // Releases the trace writer.
   ~TraceWriter() {
     if (engine_)
       ::tracing::internal::ReleaseEngine();
+  }
+
+  TraceWriter& operator=(TraceWriter&& other) {
+    engine_ = other.engine_;
+    other.engine_ = nullptr;
+    return *this;
   }
 
   // Prepares to write trace records.
@@ -595,6 +605,14 @@ class TraceWriter final {
                                 ThreadState outgoing_thread_state,
                                 const ThreadRef& outgoing_thread_ref,
                                 const ThreadRef& incoming_thread_ref);
+
+  // Writes a log record into the trace buffer.
+  // Discards the record if it cannot be written or if
+  // log_message == nullptr.
+  void WriteLogRecord(Ticks event_time,
+                      const ThreadRef& thread_ref,
+                      const char* log_message,
+                      size_t log_message_length);
 
   // Writes an instant event record with arguments into the trace buffer.
   // Discards the record if it cannot be written.
@@ -770,7 +788,9 @@ class TraceWriter final {
                                size_t argument_count,
                                size_t payload_size);
 
-  ::tracing::internal::TraceEngine* const engine_;
+  ::tracing::internal::TraceEngine* engine_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(TraceWriter);
 };
 
 // Helps construct named arguments using SFINAE to coerce types.

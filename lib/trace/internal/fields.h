@@ -144,6 +144,12 @@ struct ContextSwitchRecordFields : RecordFields {
   using IncomingThreadRef = Field<36, 43>;
 };
 
+struct LogRecordFields : RecordFields {
+  static constexpr size_t kMaxMessageLength = 0x7fff;
+  using LogMessageLength = Field<16, 30>;
+  using ThreadRef = Field<32, 39>;
+};
+
 }  // namspace internal
 }  // namepsace tracing
 

@@ -18,14 +18,10 @@ namespace {
 
 auto NewArgumentList(TraceWriter& writer) {
   int i = 0;
-  return MakeArgumentList(writer,
-                          "int32", int32_t(42),
-                          "int64", int64_t(-42),
-                          "double", 42.42,
-                          "cstring", "constant",
-                          "dstring", std::string("dynamic"),
-                          "pointer", &i,
-                          "koid", Koid(1 << 10));
+  return MakeArgumentList(writer, "int32", int32_t(42), "int64", int64_t(-42),
+                          "double", 42.42, "cstring", "constant", "dstring",
+                          std::string("dynamic"), "pointer", &i, "koid",
+                          Koid(1 << 10));
 }
 
 struct WriterTest : public ::testing::Test {

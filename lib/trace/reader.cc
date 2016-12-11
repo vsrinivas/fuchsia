@@ -266,6 +266,9 @@ Record& Record::Destroy() {
     case RecordType::kContextSwitch:
       context_switch_.~ContextSwitch();
       break;
+    case RecordType::kLog:
+      log_.~Log();
+      break;
     default:
       break;
   }
@@ -296,6 +299,9 @@ Record& Record::Copy(const Record& other) {
       break;
     case RecordType::kContextSwitch:
       new (&context_switch_) ContextSwitch(other.context_switch_);
+      break;
+    case RecordType::kLog:
+      new (&log_) Log(other.log_);
       break;
     default:
       break;
@@ -366,6 +372,12 @@ bool TraceReader::ReadRecords(Chunk& chunk) {
       case RecordType::kContextSwitch: {
         if (!ReadContextSwitchRecord(record, pending_header_)) {
           context_.ReportError("Failed to read context switch record");
+        }
+        break;
+      }
+      case RecordType::kLog: {
+        if (!ReadLogRecord(record, pending_header_)) {
+          context_.ReportError("Failed to read log record");
         }
         break;
       }
@@ -622,6 +634,26 @@ bool TraceReader::ReadContextSwitchRecord(Chunk& record, RecordHeader header) {
 
   record_consumer_(Record(Record::ContextSwitch{
       cpu_number, outgoing_thread_state, outgoing_thread, incoming_thread}));
+  return true;
+}
+
+bool TraceReader::ReadLogRecord(Chunk& record, RecordHeader header) {
+  auto log_message_length =
+      LogRecordFields::LogMessageLength::Get<uint16_t>(header);
+
+  if (log_message_length > LogRecordFields::kMaxMessageLength)
+    return false;
+
+  auto thread_ref = LogRecordFields::ThreadRef::Get<EncodedThreadRef>(header);
+  Ticks timestamp;
+  ProcessThread process_thread;
+  ftl::StringView log_message;
+  if (!record.Read(&timestamp) ||
+      !context_.DecodeThreadRef(record, thread_ref, &process_thread) ||
+      !record.ReadString(log_message_length, &log_message))
+    return false;
+  record_consumer_(
+      Record(Record::Log{timestamp, process_thread, log_message.ToString()}));
   return true;
 }
 
