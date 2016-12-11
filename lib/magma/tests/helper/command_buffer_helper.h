@@ -50,7 +50,7 @@ public:
     }
 
     static constexpr uint32_t kNumResources = 3;
-    static constexpr uint32_t kBufferSize = 4096;
+    static constexpr uint32_t kBufferSize = PAGE_SIZE * 2;
 
     std::vector<MagmaSystemBuffer*>& resources() { return resources_; }
     std::vector<msd_buffer*>& msd_resources() { return msd_resources_; }
@@ -126,8 +126,15 @@ private:
             batch_buf->num_relocations = kNumResources - 1;
             for (uint32_t i = 0; i < batch_buf->num_relocations; i++) {
                 auto relocation = &abi_relocations()[i];
-                relocation->offset =
-                    kBufferSize - ((i + 1) * 2 * sizeof(uint32_t)); // every other dword
+                switch (i) {
+                case 0:
+                    // test page boundary
+                    relocation->offset = kBufferSize / 2 - sizeof(uint32_t);
+                    break;
+                default:
+                    relocation->offset =
+                        kBufferSize - ((i + 1) * 2 * sizeof(uint32_t)); // every other dword
+                }
                 relocation->target_resource_index = i;
                 relocation->target_offset = kBufferSize / 2; // just relocate right to the middle
                 relocation->read_domains_bitfield = MAGMA_DOMAIN_CPU;
