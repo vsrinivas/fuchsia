@@ -8,8 +8,8 @@ create a media player.
 The media player currently uses a file reader only, so you'll need to have an
 accessible file. Here's an example command line:
 
-  @ bootstrap -
-  @boot launch media_player --path=/data/vid.ogv
+    @ bootstrap -
+    @boot launch media_player --path=/data/vid.ogv
 
 In the future, we'll support a network reader as well.
 

@@ -8,7 +8,6 @@
 #include <queue>
 
 #include "apps/media/examples/media_player/media_player_params.h"
-#include "apps/media/lib/mapped_shared_buffer.h"
 #include "apps/media/lib/timeline_function.h"
 #include "apps/media/services/media_player.fidl.h"
 #include "apps/media/services/video_renderer.fidl.h"

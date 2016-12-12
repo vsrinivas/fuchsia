@@ -1,0 +1,24 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("vu_meter") {
+  sources = [
+    "main.cc",
+    "vu_meter_params.cc",
+    "vu_meter_params.h",
+    "vu_meter_view.cc",
+    "vu_meter_view.h",
+  ]
+
+  deps = [
+    "//apps/media/lib",
+    "//apps/media/services",
+    "//apps/mozart/lib/skia:vmo",
+    "//apps/mozart/lib/view_framework:view_provider",
+    "//apps/mozart/services/buffers/cpp",
+    "//apps/mozart/services/geometry/cpp",
+    "//lib/mtl",
+    "//third_party/skia",
+  ]
+}

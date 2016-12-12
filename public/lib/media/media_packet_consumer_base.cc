@@ -65,6 +65,15 @@ void MediaPacketConsumerBase::Bind(
   binding_.set_connection_error_handler([this]() { Reset(); });
 }
 
+void MediaPacketConsumerBase::Bind(
+    fidl::InterfaceHandle<MediaPacketConsumer>* handle) {
+#ifndef NDEBUG
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
+  binding_.Bind(handle);
+  binding_.set_connection_error_handler([this]() { Reset(); });
+}
+
 bool MediaPacketConsumerBase::is_bound() {
 #ifndef NDEBUG
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());

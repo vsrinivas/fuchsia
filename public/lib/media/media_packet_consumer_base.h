@@ -60,6 +60,9 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // Binds to this MediaPacketConsumer.
   void Bind(fidl::InterfaceRequest<MediaPacketConsumer> request);
 
+  // Binds to this MediaPacketConsumer.
+  void Bind(fidl::InterfaceHandle<MediaPacketConsumer>* handle);
+
   // Determines if the consumer is bound to a message pipe.
   bool is_bound();
 
