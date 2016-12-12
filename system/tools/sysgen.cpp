@@ -514,65 +514,79 @@ const string add_attribute(const GenParams& gp, uint32_t attribute) {
     return (ft == gp.attributes.end()) ? string() : ft->second;
 }
 
-bool generate_legacy_header(int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+bool generate_legacy_header(
+    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
     constexpr uint32_t indent_spaces = 4u;
 
-    if (gp.entry_prefix) {
-        os << gp.entry_prefix << " ";
-    }
+    auto syscall_name = gp.name_prefix + sc.name;
 
-    // writes "[return-type] prefix_[syscall-name]("
-    os << override_type(sc.ret_spec.empty() ? string() : sc.ret_spec[0].to_string());
-    os << " " << gp.name_prefix << sc.name << "(";
+    // We write each entry one or two times. The second time the syscall name
+    // is prefixed with an underscore.
+    for (int times = 0; times != 2; ++times) {
 
-    // Writes all arguments.
-    for (const auto& arg : sc.arg_spec) {
-        if (!os.good())
-            return false;
-        // writes each parameter in its own line.
-        os << "\n" << string(indent_spaces, ' ');
-
-        auto overrided = override_type(arg.to_string());
-
-        if (overrided != arg.to_string()) {
-            os << overrided << " " << arg.name;
-        } else if (!arg.arr_spec) {
-            os << arg.type << " " << arg.name;
-        } else {
-            if (arg.arr_spec->kind == ArraySpec::IN)
-                os << "const ";
-
-            os << arg.type << " " << arg.name;
-            os << "[";
-            if (arg.arr_spec->count)
-                os << arg.arr_spec->count;
-            os << "]";
+        if (gp.entry_prefix) {
+            os << gp.entry_prefix << " ";
+        } else if (times) {
+            break;
         }
 
-        os << ",";
-    }
+        // writes "[return-type] prefix_[syscall-name]("
+        os << override_type(sc.ret_spec.empty() ? string() : sc.ret_spec[0].to_string());
 
-    if (!sc.arg_spec.empty()) {
-        // remove the comma.
+        os << " " << syscall_name << "(";
+
+        // Writes all arguments.
+        for (const auto& arg : sc.arg_spec) {
+            if (!os.good())
+                return false;
+            // writes each parameter in its own line.
+            os << "\n" << string(indent_spaces, ' ');
+
+            auto overrided = override_type(arg.to_string());
+
+            if (overrided != arg.to_string()) {
+                os << overrided << " " << arg.name;
+            } else if (!arg.arr_spec) {
+                os << arg.type << " " << arg.name;
+            } else {
+                if (arg.arr_spec->kind == ArraySpec::IN)
+                    os << "const ";
+
+                os << arg.type << " " << arg.name;
+                os << "[";
+                if (arg.arr_spec->count)
+                    os << arg.arr_spec->count;
+                os << "]";
+            }
+
+            os << ",";
+        }
+
+        if (!sc.arg_spec.empty()) {
+            // remove the comma.
+            os.seekp(-1, std::ios_base::end);
+        } else {
+            // empty args might have a special type.
+            if (gp.empty_args)
+                os << gp.empty_args;
+        }
+
+        os << ") ";
+
+        // Writes attributes after arguments.
+        for (const auto& attr : sc.attributes) {
+            auto a = add_attribute(gp, attr);
+            if (!a.empty())
+                os << a << " ";
+        }
+
         os.seekp(-1, std::ios_base::end);
-    } else {
-        // empty args might have a special type.
-        if (gp.empty_args)
-            os << gp.empty_args;
+
+        os << ";\n\n";
+
+        syscall_name = "_" + syscall_name;
     }
 
-    os << ") ";
-
-    // Writes attributes after arguments.
-    for (const auto& attr : sc.attributes) {
-        auto a = add_attribute(gp, attr);
-        if (!a.empty())
-            os << a << " ";
-    }
-
-    os.seekp(-1, std::ios_base::end);
-
-    os << ";\n\n";
     return os.good();
 }
 
@@ -632,6 +646,18 @@ bool generate_legacy_assembly_arm32(
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs32, mx_##name, n
     os << gp.entry_prefix << " " << count << " "
        << gp.name_prefix << sc.name << " " << index << "\n";
+
+    return os.good();
+}
+
+bool generate_trace_info(
+    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    if (sc.is_vdso())
+        return true;
+    // Can be injected as an array of structs or into a tuple-like C++ container.
+    os << "{" << index << ", " << sc.arg_spec.size() << ", "
+       << '"' << sc.name << "\"},\n";
+
     return os.good();
 }
 
@@ -647,6 +673,7 @@ enum GenType : uint32_t {
     KernelAsmIntel64,
     KernelAsmArm64,
     KernelAsmArm32,
+    TraceInfo,
     Max
 };
 
@@ -699,6 +726,12 @@ const GenParams gen_params[] = {
         ".arm32.S",         // file postix.
         "m_syscall",        // macro name prefix.
         "mx_",              // function name prefix.
+    },
+    // The trace subsystem data, to be interpreted as an
+    // array of structs.
+    {
+        generate_trace_info,
+        ".trace.inc",
     }
 };
 
@@ -871,6 +904,8 @@ int main(int argc, char* argv[]) {
     if (!generator.Generate(GenType::KernelAsmArm64, output_prefix))
         return 1;
     if (!generator.Generate(GenType::KernelAsmArm32, output_prefix))
+        return 1;
+    if (!generator.Generate(GenType::TraceInfo, output_prefix))
         return 1;
 
     return 0;
