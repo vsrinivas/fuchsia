@@ -5,6 +5,7 @@
 #include "apps/ledger/src/network/fake_network_service.h"
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/mtl/socket/strings.h"
 
 namespace ledger {
 
@@ -12,6 +13,28 @@ FakeNetworkService::FakeNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner)
     : task_runner_(task_runner) {}
 
 FakeNetworkService::~FakeNetworkService() {}
+
+network::URLRequest* FakeNetworkService::GetRequest() {
+  return request_received_.get();
+}
+
+void FakeNetworkService::SetResponse(network::URLResponsePtr response) {
+  response_to_return_ = std::move(response);
+}
+
+void FakeNetworkService::SetSocketResponse(mx::socket body,
+                                           uint32_t status_code) {
+  network::URLResponsePtr server_response = network::URLResponse::New();
+  server_response->body = network::URLBody::New();
+  server_response->body->set_stream(std::move(body));
+  server_response->status_code = status_code;
+  SetResponse(std::move(server_response));
+}
+
+void FakeNetworkService::SetStringResponse(const std::string& body,
+                                           uint32_t status_code) {
+  SetSocketResponse(mtl::WriteStringToSocket(body), status_code);
+}
 
 ftl::RefPtr<callback::Cancellable> FakeNetworkService::Request(
     std::function<network::URLRequestPtr()> request_factory,

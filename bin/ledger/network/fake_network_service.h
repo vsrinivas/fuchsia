@@ -17,10 +17,13 @@ class FakeNetworkService : public NetworkService {
   FakeNetworkService(ftl::RefPtr<ftl::TaskRunner> task_runner);
   ~FakeNetworkService() override;
 
-  network::URLRequest* GetRequest() { return request_received_.get(); }
-  void SetResponse(network::URLResponsePtr response) {
-    response_to_return_ = std::move(response);
-  }
+  network::URLRequest* GetRequest();
+
+  void SetResponse(network::URLResponsePtr response);
+
+  void SetSocketResponse(mx::socket body, uint32_t status_code);
+
+  void SetStringResponse(const std::string& body, uint32_t status_code);
 
  private:
   // NetworkService

@@ -28,6 +28,11 @@ source_set("fake") {
 
   public_deps = [
     ":network",
+    "//lib/ftl",
+  ]
+
+  deps = [
+    "//lib/mtl",
   ]
 }
 
