@@ -115,7 +115,7 @@ static char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
 
 void DumpProcessList() {
     AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
-    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vo #vm #ch #ev #ip #dp [  job:name]\n", "id");
+    printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vo #vm #ch #ev #ip [  job:name]\n", "id");
 
     for (const auto& process : ProcessDispatcher::global_process_list_) {
         char pname[MX_MAX_NAME_LEN];
