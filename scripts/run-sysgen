@@ -23,12 +23,11 @@ if ! ./build-magenta-pc-x86-64/tools/sysgen system/public/magenta/syscalls.sysge
     exit $?
 fi
 
-# copy to destination if changed.
+# copy to destination if changed (via rysnc checksum option).
 
 rsync -c generated.user.h     system/public/magenta/gen-syscalls.h
 rsync -c generated.x86-64.S   system/ulib/magenta/gen-x86-64.S
 rsync -c generated.arm32.S    system/ulib/magenta/gen-arm32.S
 rsync -c generated.arm64.S    system/ulib/magenta/gen-arm64.S
-rsync -c generated.kernel.h   kernel/lib/magenta/gen-sysdefs.h
-rsync -c generated.kernel.inc kernel/lib/magenta/gen-switch.inc
-
+rsync -c generated.kernel.h   kernel/lib/magenta/include/magenta/gen-sysdefs.h
+rsync -c generated.kernel.inc kernel/lib/magenta/include/magenta/gen-switch.inc
