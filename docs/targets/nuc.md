@@ -21,8 +21,9 @@ These instructions configure the machine to boot from a USB flash drive.
 
 ## GigaBoot20x6 Setup
 1. Format the first partition on a USB flash drive as FAT.
-2. Build the bootloader: `(cd $MAGENTA_ROOT/bootloader; make)`
-3. Copy `$MAGENTA_ROOT/bootloader/out/osboot.efi` to `/EFI/BOOT/BOOTX64.EFI` on the USB flash drive.
+2. Build Magenta for x86-64
+3. The bootloader is here: build-magenta-pc-x86-64/bootloader/bootx64.efi
+4. Copy `bootx64.elf` to `/EFI/BOOT/BOOTX64.EFI` on the USB flash drive.
 4. Use this flash drive to network boot.
 5. If you copy `magenta.bin` to `/magenta.bin` on the flash drive it will boot from the flash drive instead of the network.
 
