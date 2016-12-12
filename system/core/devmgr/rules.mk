@@ -36,7 +36,8 @@ MODULE_STATIC_LIBS := \
     ulib/launchpad \
     ulib/elfload \
     ulib/mxio \
-    ulib/fs
+    ulib/fs \
+    ulib/fs-management
 
 MODULE_LIBS := ulib/magenta ulib/musl
 

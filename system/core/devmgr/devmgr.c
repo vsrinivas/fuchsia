@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <ddk/protocol/device.h>
+#include <fs-management/mount.h>
 #include <gpt/gpt.h>
 #include <magenta/device/block.h>
 #include <magenta/device/console.h>
@@ -47,16 +48,6 @@ mx_handle_t get_sysinfo_job_root(void) {
 
 #define VC_DEVICE "/dev/class/console/vc"
 
-static const uint8_t minfs_magic[16] = {
-    0x21, 0x4d, 0x69, 0x6e, 0x46, 0x53, 0x21, 0x00,
-    0x04, 0xd3, 0xd3, 0xd3, 0xd3, 0x00, 0x50, 0x38,
-};
-
-static const uint8_t gpt_magic[16] = {
-    0x45, 0x46, 0x49, 0x20, 0x50, 0x41, 0x52, 0x54,
-    0x00, 0x00, 0x01, 0x00, 0x5c, 0x00, 0x00, 0x00,
-};
-
 static bool switch_to_first_vc(void) {
     char* v = getenv("startup.keep-log-visible");
     if (!v) return true;
@@ -65,123 +56,79 @@ static bool switch_to_first_vc(void) {
     return !strcmp(v, "0") || !strcmp(v, "false") || !strcmp(v, "off");
 }
 
-// Mount a handle to a remote filesystem on a directory.
-// Any future requests made through the path at "where" will be transmitted to
-// the handle returned from this function.
-static mx_status_t mount_remote_handle(const char* where, mx_handle_t* h) {
-    int fd;
-    if ((fd = open(where, O_DIRECTORY | O_RDWR)) < 0) {
-        return ERR_BAD_STATE;
-    } else if (ioctl_devmgr_mount_fs(fd, h) != sizeof(mx_handle_t)) {
-        close(fd);
-        return ERR_BAD_STATE;
-    }
-    close(fd);
+static mx_status_t launch_minfs(int argc, const char** argv, mx_handle_t h) {
+    devmgr_launch(svcs_job_handle, "minfs:/data", argc, argv, -1, h,
+                  MX_HND_TYPE_USER0);
     return NO_ERROR;
 }
 
-static void launch_minfs(const char* device_name) {
-    mx_handle_t h;
-    mx_status_t status = mount_remote_handle("/data", &h);
-    if (status != NO_ERROR) {
-        printf("devmgr: Failed to mount remote handle handle at '/data'\n");
-        return;
-    }
-    char device_path[MXIO_MAX_FILENAME + 64];
-    snprintf(device_path, sizeof(device_path), "/dev/class/block/%s", device_name);
-    const char* argv[] = { "/boot/bin/minfs", device_path, "mount", "/data" };
-    printf("devmgr: /dev/class/block/%s: minfs?\n", device_name);
-    devmgr_launch(svcs_job_handle, "minfs:/data", sizeof(argv)/sizeof(argv[0]),
-                  argv, -1, h, MX_HND_TYPE_USER0);
-}
-
-static void launch_fat(const char* device_name) {
-    char device_path_arg[MXIO_MAX_FILENAME + 64];
-    snprintf(device_path_arg, sizeof(device_path_arg),
-             "/dev/class/block/%s", device_name);
-    int fd = open(device_path_arg, O_RDWR);
-    if (fd < 0) {
-        printf("Could not open block device: %s\n", device_path_arg);
-        return;
-    }
-    // Use the GUID to avoid auto-mounting the EFI partition as writable
-    uint8_t guid[GPT_GUID_LEN];
-    ssize_t r = ioctl_block_get_type_guid(fd, guid, sizeof(guid));
-    bool efi = false;
-    static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
-    if (r == GPT_GUID_LEN && !memcmp(guid, guid_efi_part, GPT_GUID_LEN)) {
-        efi = true;
-    }
-    close(fd);
-    char readonly_arg[64];
-    snprintf(readonly_arg, sizeof(readonly_arg), "-readonly=%s", efi ? "true" : "false");
-
-    snprintf(device_path_arg, sizeof(device_path_arg),
-             "-devicepath=/dev/class/block/%s", device_name);
-
-    static int fat_counter = 0;
-    static int efi_counter = 0;
-    char mount_path[MXIO_MAX_FILENAME + 64];
-    if (efi) {
-        snprintf(mount_path, sizeof(mount_path), "/volume/efi-%d", efi_counter++);
-    } else {
-        snprintf(mount_path, sizeof(mount_path), "/volume/fat-%d", fat_counter++);
-    }
-    mkdir(mount_path, 0755);
-    mx_handle_t h;
-    mx_status_t status = mount_remote_handle(mount_path, &h);
-    if (status != NO_ERROR) {
-        printf("devmgr: Failed to mount remote handle handle at '%s'\n", mount_path);
-        return;
-    }
-
-    const char* argv[] = {
-        "/system/bin/thinfs",
-        device_path_arg,
-        readonly_arg,
-        "mount",
-    };
-    printf("devmgr: /dev/class/block/%s: fatfs?\n", device_name);
-    devmgr_launch(svcs_job_handle, "fatfs:/volume",
-                  sizeof(argv)/sizeof(argv[0]), argv, -1, h, MX_HND_TYPE_USER0);
+static mx_status_t launch_fat(int argc, const char** argv, mx_handle_t h) {
+    devmgr_launch(svcs_job_handle, "fatfs:/volume", argc, argv, -1, h,
+                  MX_HND_TYPE_USER0);
+    return NO_ERROR;
 }
 
 static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
-    uint8_t data[4096];
     printf("devmgr: new block device: /dev/class/block/%s\n", name);
     int fd;
     if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
         return NO_ERROR;
     }
 
-    if (read(fd, data, sizeof(data)) != sizeof(data)) {
-        close(fd);
-        printf("devmgr: cannot read: /dev/class/block/%s\n", name);
-        return NO_ERROR;
-    }
+    disk_format_t df = detect_disk_format(fd);
 
     // TODO(smklein): Pass block devices by handle, not pathname, since
     // accessing devices by pathnames is inherently racy.
-    if (!memcmp(data + 0x200, gpt_magic, sizeof(gpt_magic))) {
+    switch (df) {
+    case DISK_FORMAT_GPT: {
         printf("devmgr: /dev/class/block/%s: GPT?\n", name);
         // probe for partition table
         ioctl_device_bind(fd, "gpt", 4);
         close(fd);
-    } else if(!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
-        close(fd);
-        launch_minfs(name);
-    } else if ((data[510] == 0x55 && data[511] == 0xAA) && (data[38] == 0x29 ||
-                                                            data[66] == 0x29)) {
-        // 0x55AA are always placed at offset 510 and 511 for FAT filesystems.
-        // 0x29 is the Boot Signature, but it is placed at either offset 38 or
-        // 66 (depending on FAT type).
-        close(fd);
-        launch_fat(name);
-    } else {
-        close(fd);
+        return NO_ERROR;
     }
-
-    return NO_ERROR;
+    case DISK_FORMAT_MINFS: {
+        close(fd);
+        char devicepath[MXIO_MAX_FILENAME + 64];
+        snprintf(devicepath, sizeof(devicepath), "/dev/class/block/%s", name);
+        mount_options_t options;
+        memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+        printf("devmgr: %s: minfs?\n", devicepath);
+        mount(devicepath, "/data", df, &options, launch_minfs);
+        return NO_ERROR;
+    }
+    case DISK_FORMAT_FAT: {
+        // Use the GUID to avoid auto-mounting the EFI partition as writable
+        uint8_t guid[GPT_GUID_LEN];
+        ssize_t r = ioctl_block_get_type_guid(fd, guid, sizeof(guid));
+        close(fd);
+        bool efi = false;
+        static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
+        if (r == GPT_GUID_LEN && !memcmp(guid, guid_efi_part, GPT_GUID_LEN)) {
+            efi = true;
+        }
+        mount_options_t options;
+        memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+        options.readonly = efi;
+        char devicepath[MXIO_MAX_FILENAME + 64];
+        snprintf(devicepath, sizeof(devicepath), "/dev/class/block/%s", name);
+        static int fat_counter = 0;
+        static int efi_counter = 0;
+        char mountpath[MXIO_MAX_FILENAME + 64];
+        if (efi) {
+            snprintf(mountpath, sizeof(mountpath), "/volume/efi-%d", efi_counter++);
+        } else {
+            snprintf(mountpath, sizeof(mountpath), "/volume/fat-%d", fat_counter++);
+        }
+        mkdir(mountpath, 0755);
+        printf("devmgr: %s: fatfs?\n", devicepath);
+        mount(devicepath, mountpath, df, &options, launch_fat);
+        return NO_ERROR;
+    }
+    default:
+        close(fd);
+        return NO_ERROR;
+    }
 }
 
 static const char* argv_netsvc[] = { "/boot/bin/netsvc" };
