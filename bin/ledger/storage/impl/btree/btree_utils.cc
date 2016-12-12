@@ -10,47 +10,6 @@
 namespace storage {
 namespace btree {
 namespace {
-
-Status GetObjectsFromChild(const TreeNode& node,
-                           int child_index,
-                           std::set<ObjectId>* objects);
-
-// Retrieves all objects in the subtree having |node| as root and adds them in
-// |objects| set.
-Status GetObjects(std::unique_ptr<const TreeNode> node,
-                  std::set<ObjectId>* objects) {
-  objects->insert(node->GetId());
-  for (int i = 0; i < node->GetKeyCount(); ++i) {
-    Status s = GetObjectsFromChild(*node, i, objects);
-    if (s != Status::OK) {
-      return s;
-    }
-    Entry e;
-    s = node->GetEntry(i, &e);
-    if (s != Status::OK) {
-      return s;
-    }
-    objects->insert(e.object_id);
-  }
-  return GetObjectsFromChild(*node, node->GetKeyCount(), objects);
-}
-
-// Checks if the child is present in the given index and adds the objects in
-// its subtree in the given set.
-Status GetObjectsFromChild(const TreeNode& node,
-                           int child_index,
-                           std::set<ObjectId>* objects) {
-  std::unique_ptr<const TreeNode> child;
-  Status s = node.GetChild(child_index, &child);
-  if (s == Status::NO_SUCH_CHILD) {
-    return Status::OK;
-  }
-  if (s != Status::OK) {
-    return s;
-  }
-  return GetObjects(std::move(child), objects);
-}
-
 // Iterates through the nodes of the subtree with |node| as root and calls
 // |on_next| on each entry found with a key equal to or greater than |min_key|.
 void ForEachEntryIn(PageStorage* page_storage,
@@ -318,23 +277,30 @@ void ApplyChanges(
   callback(status, new_id, std::move(new_nodes));
 }
 
-Status GetObjects(ObjectIdView root_id,
-                  PageStorage* page_storage,
-                  std::set<ObjectId>* objects) {
+void GetObjectIds(PageStorage* page_storage,
+                  ObjectIdView root_id,
+                  std::function<void(Status, std::set<ObjectId>)> callback) {
   FTL_DCHECK(!root_id.empty());
+  auto object_ids = std::make_unique<std::set<ObjectId>>();
+  object_ids->insert(root_id.ToString());
 
-  std::set<ObjectId> result;
-  std::unique_ptr<const TreeNode> root;
-  Status s = TreeNode::FromId(page_storage, root_id, &root);
-  if (s != Status::OK) {
-    return s;
-  }
-  s = GetObjects(std::move(root), &result);
-  if (s != Status::OK) {
-    return s;
-  }
-  objects->swap(result);
-  return Status::OK;
+  auto on_next =
+      [ page_storage, object_ids = object_ids.get() ](EntryAndNodeId e) {
+    object_ids->insert(e.entry.object_id);
+    object_ids->insert(e.node_id);
+    return true;
+  };
+  auto on_done = ftl::MakeCopyable([
+    object_ids = std::move(object_ids), callback = std::move(callback)
+  ](Status status) {
+    if (status != Status::OK) {
+      callback(status, std::set<ObjectId>());
+      return;
+    }
+    callback(status, std::move(*object_ids));
+  });
+  ForEachEntry(page_storage, root_id, "", std::move(on_next),
+               std::move(on_done));
 }
 
 void GetObjectsFromSync(ObjectIdView root_id,
@@ -342,8 +308,7 @@ void GetObjectsFromSync(ObjectIdView root_id,
                         std::function<void(Status)> callback) {
   ftl::RefPtr<callback::Waiter<Status, const Object>> waiter_ =
       callback::Waiter<Status, const Object>::Create(Status::OK);
-
-  auto on_next = [page_storage, waiter_](const EntryAndNodeId& e) {
+  auto on_next = [page_storage, waiter_](EntryAndNodeId e) {
     if (e.entry.priority == KeyPriority::EAGER) {
       page_storage->GetObject(e.entry.object_id, waiter_->NewCallback());
     }

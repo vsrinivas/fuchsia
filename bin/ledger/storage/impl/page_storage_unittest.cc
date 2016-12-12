@@ -725,6 +725,7 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     storage_->GetUnsyncedObjectIds(
         commits[i], ::test::Capture([this] { message_loop_.PostQuitTask(); },
                                     &status, &objects));
+    EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(static_cast<unsigned>(i + 2), objects.size());
 
@@ -746,6 +747,7 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
   storage_->GetUnsyncedObjectIds(
       commits[2], ::test::Capture([this] { message_loop_.PostQuitTask(); },
                                   &status, &objects));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(3u, objects.size());
   std::unique_ptr<const Commit> commit;

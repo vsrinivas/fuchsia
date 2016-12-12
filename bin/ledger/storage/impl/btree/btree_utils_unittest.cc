@@ -11,6 +11,7 @@
 #include "apps/ledger/src/storage/impl/btree/entry_change_iterator.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/types.h"
+#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/logging.h"
@@ -253,22 +254,32 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
 
 TEST_F(BTreeUtilsTest, GetObjectFromEmpty) {
   ObjectId root_id = CreateEmptyContents();
-  std::set<ObjectId> objects;
-  ASSERT_EQ(Status::OK, btree::GetObjects(root_id, &fake_storage_, &objects));
-  EXPECT_EQ(1u, objects.size());
-  EXPECT_TRUE(objects.find(root_id) != objects.end());
+  Status status;
+  std::set<ObjectId> object_ids;
+  btree::GetObjectIds(&fake_storage_, root_id,
+                      ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &object_ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, object_ids.size());
+  EXPECT_TRUE(object_ids.find(root_id) != object_ids.end());
 }
 
 TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   std::vector<EntryChange> entries = CreateEntryChanges(kTestNodeSize);
   ObjectId root_id = CreateTree(entries);
 
-  std::set<ObjectId> objects;
-  ASSERT_EQ(Status::OK, btree::GetObjects(root_id, &fake_storage_, &objects));
-  EXPECT_EQ(5u, objects.size());
-  EXPECT_TRUE(objects.find(root_id) != objects.end());
+  Status status;
+  std::set<ObjectId> object_ids;
+  btree::GetObjectIds(&fake_storage_, root_id,
+                      ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &object_ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(5u, object_ids.size());
+  EXPECT_TRUE(object_ids.find(root_id) != object_ids.end());
   for (EntryChange& e : entries) {
-    EXPECT_TRUE(objects.find(e.entry.object_id) != objects.end());
+    EXPECT_TRUE(object_ids.find(e.entry.object_id) != object_ids.end());
   }
 }
 
@@ -276,12 +287,17 @@ TEST_F(BTreeUtilsTest, GetObjectBigTree) {
   std::vector<EntryChange> entries = CreateEntryChanges(99);
   ObjectId root_id = CreateTree(entries);
 
-  std::set<ObjectId> objects;
-  ASSERT_EQ(Status::OK, btree::GetObjects(root_id, &fake_storage_, &objects));
-  EXPECT_EQ(99u + 25u, objects.size());
-  EXPECT_TRUE(objects.find(root_id) != objects.end());
+  Status status;
+  std::set<ObjectId> object_ids;
+  btree::GetObjectIds(&fake_storage_, root_id,
+                      ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &object_ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(99u + 25u, object_ids.size());
+  EXPECT_TRUE(object_ids.find(root_id) != object_ids.end());
   for (EntryChange& e : entries) {
-    EXPECT_TRUE(objects.find(e.entry.object_id) != objects.end());
+    EXPECT_TRUE(object_ids.find(e.entry.object_id) != object_ids.end());
   }
 }
 
@@ -309,13 +325,18 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   // lazy object, all others should have been requested.
   EXPECT_EQ(3 + 4u, object_requests.size());
 
-  std::set<ObjectId> objects;
-  ASSERT_EQ(Status::OK, btree::GetObjects(root_id, &fake_storage_, &objects));
-  ASSERT_EQ(3 + 5u, objects.size());
+  Status status;
+  std::set<ObjectId> object_ids;
+  btree::GetObjectIds(&fake_storage_, root_id,
+                      ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &object_ids));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(3 + 5u, object_ids.size());
   for (ObjectId& id : object_requests) {
     // entries[3] contains the lazy value.
     if (id != entries[3].entry.object_id) {
-      EXPECT_TRUE(objects.find(id) != objects.end());
+      EXPECT_TRUE(object_ids.find(id) != object_ids.end());
     }
   }
 }

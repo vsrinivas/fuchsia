@@ -502,30 +502,32 @@ Status PageStorageImpl::GetDeltaObjects(const CommitId& commit_id,
 void PageStorageImpl::GetUnsyncedObjectIds(
     const CommitId& commit_id,
     std::function<void(Status, std::vector<ObjectId>)> callback) {
-  std::vector<ObjectId> object_ids;
-  std::set<ObjectId> commit_objects;
   std::unique_ptr<const Commit> commit;
   Status s = GetCommit(commit_id, &commit);
   if (s != Status::OK) {
-    callback(s, std::move(object_ids));
+    callback(s, std::vector<ObjectId>());
     return;
   }
-  s = btree::GetObjects(commit->GetRootId(), this, &commit_objects);
-  if (s != Status::OK) {
-    callback(s, std::move(object_ids));
-    return;
-  }
-  std::vector<ObjectId> unsynced_objects;
-  s = db_.GetUnsyncedObjectIds(&unsynced_objects);
-  if (s != Status::OK) {
-    callback(s, std::move(object_ids));
-    return;
-  }
+  btree::GetObjectIds(this, commit->GetRootId(), [
+    this, callback = std::move(callback)
+  ](Status s, std::set<ObjectId> commit_objects) {
+    std::vector<ObjectId> object_ids;
+    if (s != Status::OK) {
+      callback(s, std::move(object_ids));
+      return;
+    }
+    std::vector<ObjectId> unsynced_objects;
+    s = db_.GetUnsyncedObjectIds(&unsynced_objects);
+    if (s != Status::OK) {
+      callback(s, std::move(object_ids));
+      return;
+    }
 
-  std::set_intersection(commit_objects.begin(), commit_objects.end(),
-                        unsynced_objects.begin(), unsynced_objects.end(),
-                        std::back_inserter(object_ids));
-  callback(Status::OK, std::move(object_ids));
+    std::set_intersection(commit_objects.begin(), commit_objects.end(),
+                          unsynced_objects.begin(), unsynced_objects.end(),
+                          std::back_inserter(object_ids));
+    callback(Status::OK, std::move(object_ids));
+  });
 }
 
 Status PageStorageImpl::MarkObjectSynced(ObjectIdView object_id) {
