@@ -1,5 +1,8 @@
 {
-    "labels": [ "//third_party/speccpu2000" ],
+    "labels": [
+        "//third_party/speccpu2000",
+        "//third_party/speccpu2000(//build/toolchain:host_x64)"
+    ],
     "binaries": [
         {
             "binary": "164.gzip",
@@ -108,7 +111,7 @@
           "bootfs_path": "benchmarks/data/176.gcc/scilab.i"
         },
         {
-          "file": "third_party/speccpu2000/177.mesa/data/ref/input/mesa.in",
+          "file": "third_party/speccpu2000/177.mesa/data/ref/input/mesa.mesh",
           "bootfs_path": "benchmarks/data/177.mesa/mesa.mesh"
         },
         {
