@@ -16,6 +16,15 @@
 
 #include "../bcm-common/bcm28xx.h"
 
+
+
+#define BCM_PROPERTY_TAG_GET_MACADDR        (0x00010003)
+
+#define BCM_MAILBOX_REQUEST                 (0x00000000)
+
+
+
+
 // Preserve columns
 // clang-format off
 enum mailbox_channel {
@@ -37,6 +46,26 @@ enum bcm_device {
     bcm_dev_uart1 = 2,
     bcm_dev_usb   = 3,
 };
+
+typedef struct {
+    uint32_t buff_size;
+    uint32_t code;
+} property_tag_header_t;
+
+
+typedef struct {
+    uint32_t tag;
+    uint32_t size;
+    uint32_t req;
+    uint8_t  macid[8];  //note: this is a 6 byte request, but value buffers need to be 32-bit aligned
+} property_tag_get_macid_t;
+#define BCM_MAILBOX_TAG_GET_MACID   {0x00010003,8,6,{0,0,0,0,0,0,0,0}}
+
+
+typedef struct {
+    uint32_t    tag;
+} property_tag_endtag_t;
+#define BCM_MAILBOX_TAG_ENDTAG              {0x00000000}
 
 // Must mmap memory on 4k page boundaries. The device doesn't exactly fall on
 // a page boundary, so we align it to one.
@@ -201,10 +230,54 @@ static mx_status_t bcm_vc_poweron(enum bcm_device dev) {
     return NO_ERROR;
 }
 
+static mx_status_t bcm_get_macid(uint8_t* mac) {
+    mx_status_t ret = NO_ERROR;
+    iotxn_t* txn;
+
+    property_tag_header_t header;
+    property_tag_get_macid_t tag = BCM_MAILBOX_TAG_GET_MACID;
+    property_tag_endtag_t endtag = BCM_MAILBOX_TAG_ENDTAG;
+
+    header.buff_size =  sizeof(property_tag_header_t) +
+                        sizeof(property_tag_get_macid_t) +
+                        sizeof(property_tag_endtag_t);
+    header.code = BCM_MAILBOX_REQUEST;
+
+    ret = iotxn_alloc(&txn, 0, header.buff_size, 0);
+    if (ret < 0)
+        return ret;
+
+    mx_paddr_t pa;
+
+    txn->ops->physmap(txn, &pa);
+
+    uint32_t offset = 0;
+
+    txn->ops->copyto(txn, &header, sizeof(header), offset);
+    offset += sizeof(header);
+    txn->ops->copyto(txn, &tag, sizeof(tag), offset);
+    offset += sizeof(tag);
+    txn->ops->copyto(txn, &endtag, sizeof(endtag), offset);
+
+    ret = mailbox_write(ch_propertytags_tovc, (pa + BCM_SDRAM_BUS_ADDR_BASE));
+    if (ret != NO_ERROR)
+        return ret;
+
+    uint32_t ack = 0x0;
+    ret = mailbox_read(ch_propertytags_tovc, &ack);
+    if (ret != NO_ERROR)
+        return ret;
+
+    txn->ops->copyfrom(txn,mac,6,sizeof(header)+offsetof(property_tag_get_macid_t,macid));
+
+    return ret;
+}
+
 static ssize_t mailbox_device_ioctl(mx_device_t* dev, uint32_t op,
                                     const void* in_buf, size_t in_len,
                                     void* out_buf, size_t out_len) {
     bcm_fb_desc_t fbdesc;
+    uint8_t macid[6];
 
     switch (op) {
     case IOCTL_BCM_POWER_ON_USB:
@@ -214,6 +287,12 @@ static ssize_t mailbox_device_ioctl(mx_device_t* dev, uint32_t op,
         memcpy(&fbdesc, in_buf, in_len);
         bcm_vc_get_framebuffer(&fbdesc);
         memcpy(out_buf, &fbdesc, out_len);
+        return out_len;
+
+    case IOCTL_BCM_GET_MACID:
+
+        bcm_get_macid(macid);
+        memcpy(out_buf, macid, out_len);
         return out_len;
     }
     return ERR_NOT_SUPPORTED;

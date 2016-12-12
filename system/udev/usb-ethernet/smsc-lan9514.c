@@ -8,9 +8,11 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
+#include <ddk/protocol/bcm.h>
 #include <magenta/listnode.h>
 
 #include <inttypes.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -558,7 +560,6 @@ static mx_status_t lan9514_reset(lan9514_t* eth) {
         if (lan9514_read_register(eth, LAN9514_HW_CFG_REG, &retval) < 0)
             goto fail;
     } while (retval & LAN9514_HW_CFG_LRST);
-    printf("LAN9514 Lite HW reset complete...\n");
 
     status = lan9514_write_register(eth, LAN9514_PM_CTRL_REG, LAN9514_PM_CTRL_PHY_RST);
     if (status < 0)
@@ -567,63 +568,53 @@ static mx_status_t lan9514_reset(lan9514_t* eth) {
         if (lan9514_read_register(eth, LAN9514_PM_CTRL_REG, &retval) < 0)
             goto fail;
     } while (retval & LAN9514_PM_CTRL_PHY_RST);
-    printf("LAN9514 PHY reset complete...\n");
+
+    //if we are on rpi, then we can use this fd to retrieve mac id
+    uint8_t temp_mac[6];
+    int fd = open("/dev/soc/bcm-vc-rpc", O_RDWR);
+    if (fd) {
+        if (ioctl_bcm_get_macid(fd,temp_mac,sizeof(temp_mac))) {
+            uint32_t macword = (temp_mac[5] << 8) + temp_mac[4];
+            if (lan9514_write_register(eth, LAN9514_ADDR_HI_REG, macword) < 0)
+                goto fail;
+            macword =   (temp_mac[3] << 24) +
+                        (temp_mac[2] << 16) +
+                        (temp_mac[1] << 8 ) +
+                         temp_mac[0];
+            if (lan9514_write_register(eth, LAN9514_ADDR_LO_REG, macword) < 0)
+                goto fail;
+        }
+        close(fd);
+    }
 
     if (lan9514_read_mac_address(eth) < 0)
         goto fail;
-    printf("Current MAC Address %02x:%02x:%02x:%02x:%02x:%02x\n", eth->mac_addr[5], eth->mac_addr[4],
-           eth->mac_addr[3], eth->mac_addr[2],
-           eth->mac_addr[1], eth->mac_addr[0]);
-
-    if (lan9514_write_register(eth, LAN9514_ADDR_HI_REG, 0x00004a1c) < 0)
-        goto fail;
-    if (lan9514_write_register(eth, LAN9514_ADDR_LO_REG, 0x17b65000) < 0)
-        goto fail;
-
-    if (lan9514_read_mac_address(eth) < 0)
-        goto fail;
-    printf("Updated MAC Address %02x:%02x:%02x:%02x:%02x:%02x\n", eth->mac_addr[5], eth->mac_addr[4],
-           eth->mac_addr[3], eth->mac_addr[2],
-           eth->mac_addr[1], eth->mac_addr[0]);
+    printf("LAN9514 MAC Address %02x:%02x:%02x:%02x:%02x:%02x\n", eth->mac_addr[0], eth->mac_addr[1],
+           eth->mac_addr[2], eth->mac_addr[3],
+           eth->mac_addr[4], eth->mac_addr[5]);
 
     // Set Bulk IN empty response to 1=NAK   (0=ZLP)
     if (lan9514_read_register(eth, LAN9514_HW_CFG_REG, &retval) < 0)
         goto fail;
-    printf("LAN9514 HW_CFG register = 0x%08x\n", retval);
     retval |= LAN9514_HW_CFG_BIR;
     if (lan9514_write_register(eth, LAN9514_HW_CFG_REG, retval) < 0)
         goto fail;
-    if (lan9514_read_register(eth, LAN9514_HW_CFG_REG, &retval) < 0)
-        goto fail;
-    printf("updated LAN9514 HW_CFG register = 0x%08x\n", retval);
 
     if (lan9514_write_register(eth, LAN9514_BULK_IN_DLY_REG, LAN9514_BULK_IN_DLY_DEFAULT) < 0)
         goto fail;
-    if (lan9514_read_register(eth, LAN9514_BULK_IN_DLY_REG, &retval) < 0)
-        goto fail;
-    printf("LAN9514 Bulk In Delay set to %d\n", retval);
 
     if (lan9514_read_register(eth, LAN9514_HW_CFG_REG, &retval) < 0)
         goto fail;
     retval &= ~LAN9514_HW_CFG_RXDOFF;
     if (lan9514_write_register(eth, LAN9514_HW_CFG_REG, retval) < 0)
         goto fail;
-    if (lan9514_read_register(eth, LAN9514_HW_CFG_REG, &retval) < 0)
-        goto fail;
-    printf("updated LAN9514 HW_CFG register = 0x%08x\n", retval);
 
     if (lan9514_write_register(eth, LAN9514_INT_STS_REG, LAN9514_INT_STS_REG_CLEAR_ALL) < 0)
         goto fail;
-    printf("LAN9514 Cleared all pending interrupts\n");
-
-    if (lan9514_read_register(eth, LAN9514_ID_REV_REG, &retval) < 0)
-        goto fail;
-    printf("LAN9514 id/revision register: 0x%08x\n", retval);
 
     retval = LAN9514_LED_GPIO_CFG_SPD_LED | LAN9514_LED_GPIO_CFG_LNK_LED | LAN9514_LED_GPIO_CFG_FDX_LED;
     if (lan9514_write_register(eth, LAN9514_LED_GPIO_CFG_REG, retval) < 0)
         goto fail;
-    printf("LAN9514 LED Configuration = 0x%08x\n", retval);
 
     if (lan9514_write_register(eth, LAN9514_AFC_CFG_REG, LAN9514_AFC_CFG_DEFAULT) < 0)
         goto fail;
@@ -752,23 +743,6 @@ static mx_status_t lan9514_bind(mx_driver_t* driver, mx_device_t* device) {
     if (result < 0)
         return result;
 
-    usb_descriptor_header_t* header = usb_desc_iter_next(&iter);
-    int index = 0;
-    while (header) {
-        printf("%d: %x\n", index++, header->bDescriptorType);
-        header = usb_desc_iter_next(&iter);
-    }
-
-    usb_desc_iter_reset(&iter);
-
-    char* outstr;
-
-    for (index = 0; index < 6; index++) {
-        usb_get_string_descriptor(device, index, &outstr);
-        printf("%d : %s\n", index, outstr);
-    }
-    usb_desc_iter_reset(&iter);
-
     usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
     printf("lan9514 returned %d endpoints\n", intf->bNumEndpoints);
     if (!intf || intf->bNumEndpoints != 3) {
@@ -785,15 +759,15 @@ static mx_status_t lan9514_bind(mx_driver_t* driver, mx_device_t* device) {
         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
             if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                 bulk_out_addr = endp->bEndpointAddress;
-                printf("lan9514 bulk out endpoint:%x\n", bulk_out_addr);
+                //printf("lan9514 bulk out endpoint:%x\n", bulk_out_addr);
             }
         } else {
             if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                 bulk_in_addr = endp->bEndpointAddress;
-                printf("lan9514 bulk in endpoint:%x\n", bulk_in_addr);
+                //printf("lan9514 bulk in endpoint:%x\n", bulk_in_addr);
             } else if (usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
                 intr_addr = endp->bEndpointAddress;
-                printf("lan9514 interrupt endpoint:%x\n", intr_addr);
+                //printf("lan9514 interrupt endpoint:%x\n", intr_addr);
             }
         }
         endp = usb_desc_iter_next_endpoint(&iter);

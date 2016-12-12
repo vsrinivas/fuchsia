@@ -33,7 +33,7 @@ MODULE_TYPE := driver
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/hexdump
 
-MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
+MODULE_LIBS := ulib/driver ulib/magenta ulib/musl ulib/mxio
 
 MODULE := usb-ethernet-lan9514
 
