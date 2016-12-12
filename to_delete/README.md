@@ -1,5 +1,6 @@
-Fuchsia Open Source Template Repository
+NetConnector
 =======================================
 
-This repository is a template that we will use when creating new open source
-repositories for Fuchsia.
+NetConnector provides high-level connectivity services for Fuchsia-to-Fuchsia
+communication. In its current manifestation, it serves to unblock developers
+who want to implement distributed scenarios.
