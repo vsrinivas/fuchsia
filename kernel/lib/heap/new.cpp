@@ -50,12 +50,18 @@ bool AllocChecker::check() {
 }
 
 void *operator new(size_t s, AllocChecker* ac) noexcept {
+    if (unlikely(s == 0))
+        s = 1;
+
     auto mem = malloc(s);
     ac->arm(s, mem != nullptr);
     return mem;
 }
 
 void *operator new[](size_t s, AllocChecker* ac) noexcept {
+    if (unlikely(s == 0))
+        s = 1;
+
     auto mem = malloc(s);
     ac->arm(s, mem != nullptr);
     return mem;
