@@ -274,7 +274,8 @@ mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_
     }
     dnode_t* dn;
     mx_status_t r = dn_lookup(parent->dnode, &dn, name, len);
-    if (r >= 0) {
+    assert(r <= 0);
+    if (r == 0) {
         vn_acquire(dn->vnode);
         *out = dn->vnode;
     }

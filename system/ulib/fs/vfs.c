@@ -64,11 +64,12 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             nextpath++;
             trace(WALK, "vfs_walk: vn=%p name='%.*s' nextpath='%s'\n", vn, (int)len, path, nextpath);
             r = vn->ops->lookup(vn, &vn, path, len);
+            assert(r <= 0);
             if (oldvn) {
                 // release the old vnode, even if there was an error
                 vn_release(oldvn);
             }
-            if (r) {
+            if (r < 0) {
                 return r;
             }
             oldvn = vn;
