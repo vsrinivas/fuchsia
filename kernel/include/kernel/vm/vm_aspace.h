@@ -45,6 +45,7 @@ public:
     size_t size() const { return size_; }
     arch_aspace_t& arch_aspace() { return arch_aspace_; }
     bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
+    bool is_aslr_enabled() const { return aslr_enabled_; }
 
     // Get the root VMAR (briefly acquires the aspace lock)
     mxtl::RefPtr<VmAddressRegion> RootVmar();
@@ -120,6 +121,7 @@ private:
     uint32_t flags_;
     char name_[32];
     bool aspace_destroyed_ = false;
+    bool aslr_enabled_ = false;
 
     mutable mutex_t lock_ = MUTEX_INITIAL_VALUE(lock_);
 

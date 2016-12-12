@@ -13,6 +13,7 @@
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
 #include <kernel/auto_lock.h>
+#include <kernel/cmdline.h>
 #include <kernel/thread.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_object.h>
@@ -537,11 +538,15 @@ size_t VmAspace::AllocatedPages() const {
 }
 
 void VmAspace::InitializeAslr() {
+    aslr_enabled_ = is_user() && !cmdline_get_bool("aslr.disable", false);
+
     crypto::GlobalPRNG::GetInstance()->Draw(aslr_seed_, sizeof(aslr_seed_));
     aslr_prng_.AddEntropy(aslr_seed_, sizeof(aslr_seed_));
 }
 
 void VmAspace::AslrDraw(uint8_t* buf, size_t len) {
+    DEBUG_ASSERT(aslr_enabled_);
+
     ASSERT(len <= INT_MAX);
     aslr_prng_.Draw(buf, static_cast<int>(len));
 }
