@@ -22,8 +22,10 @@ class ApplicationLoader {
   ~ApplicationLoader();
 
   // Opens the specified URL.
-  // Returns a file descriptor and the corresponding path in the filesystem.
-  std::tuple<ftl::UniqueFD, std::string> Open(const std::string& url);
+  // Callback receives a file descriptor and the corresponding path in the
+  // filesystem.
+  void Open(const std::string& url,
+            const std::function<void(ftl::UniqueFD, std::string)>& callback);
 
  private:
   std::vector<std::string> path_;

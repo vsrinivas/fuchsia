@@ -17,6 +17,7 @@
 
 #include "apps/modular/src/application_manager/url_resolver.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/ftl/functional/make_copyable.h"
 
 namespace modular {
 namespace {
@@ -228,46 +229,47 @@ void ApplicationEnvironmentImpl::CreateApplication(
     return;
   }
 
-  ftl::UniqueFD fd;
-  std::string path;
-  std::tie(fd, path) = loader_->Open(launch_info->url);
+  loader_->Open(launch_info->url, ftl::MakeCopyable([
+    this, launch_info = std::move(launch_info),
+    controller = std::move(controller)
+  ](ftl::UniqueFD fd, std::string path) mutable {
+    std::string runner;
+    if (HasShebang(fd, &runner)) {
+      // We create the entry in |runners_| before calling ourselves recursively
+      // to detect cycles.
+      auto it = runners_.emplace(runner, nullptr);
+      if (it.second) {
+        ServiceProviderPtr runner_services;
+        ApplicationControllerPtr runner_controller;
+        auto runner_launch_info = ApplicationLaunchInfo::New();
+        runner_launch_info->url = runner;
+        runner_launch_info->services = runner_services.NewRequest();
+        CreateApplication(std::move(runner_launch_info),
+                          runner_controller.NewRequest());
 
-  std::string runner;
-  if (HasShebang(fd, &runner)) {
-    // We create the entry in |runners_| before calling ourselves recursively
-    // to detect cycles.
-    auto it = runners_.emplace(runner, nullptr);
-    if (it.second) {
-      ServiceProviderPtr runner_services;
-      ApplicationControllerPtr runner_controller;
-      auto runner_launch_info = ApplicationLaunchInfo::New();
-      runner_launch_info->url = runner;
-      runner_launch_info->services = runner_services.NewRequest();
-      CreateApplication(std::move(runner_launch_info),
-                        runner_controller.NewRequest());
+        runner_controller.set_connection_error_handler(
+            [this, runner]() { runners_.erase(runner); });
 
-      runner_controller.set_connection_error_handler(
-          [this, runner]() { runners_.erase(runner); });
+        it.first->second = std::make_unique<ApplicationRunnerHolder>(
+            std::move(runner_services), std::move(runner_controller));
+      } else if (!it.first->second) {
+        // There was a cycle in the runner graph.
+        FTL_LOG(ERROR) << "Cannot run " << launch_info->url << " with "
+                       << runner << " because of a cycle in the runner graph.";
+        return;
+      }
 
-      it.first->second = std::make_unique<ApplicationRunnerHolder>(
-          std::move(runner_services), std::move(runner_controller));
-    } else if (!it.first->second) {
-      // There was a cycle in the runner graph.
-      FTL_LOG(ERROR) << "Cannot run " << launch_info->url << " with " << runner
-                     << " because of a cycle in the runner graph.";
+      ApplicationStartupInfoPtr startup_info = ApplicationStartupInfo::New();
+      startup_info->environment = environment_bindings_.AddBinding(this);
+      startup_info->launch_info = std::move(launch_info);
+      it.first->second->StartApplication(std::move(fd), std::move(startup_info),
+                                         std::move(controller));
       return;
     }
 
-    ApplicationStartupInfoPtr startup_info = ApplicationStartupInfo::New();
-    startup_info->environment = environment_bindings_.AddBinding(this);
-    startup_info->launch_info = std::move(launch_info);
-    it.first->second->StartApplication(std::move(fd), std::move(startup_info),
-                                       std::move(controller));
-    return;
-  }
-
-  CreateApplicationWithProcess(path, environment_bindings_.AddBinding(this),
-                               std::move(launch_info), std::move(controller));
+    CreateApplicationWithProcess(path, environment_bindings_.AddBinding(this),
+                                 std::move(launch_info), std::move(controller));
+  }));
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(

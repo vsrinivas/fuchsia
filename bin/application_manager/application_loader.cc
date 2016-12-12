@@ -17,8 +17,9 @@ ApplicationLoader::ApplicationLoader(std::vector<std::string> path)
 
 ApplicationLoader::~ApplicationLoader() {}
 
-std::tuple<ftl::UniqueFD, std::string> ApplicationLoader::Open(
-    const std::string& url) {
+void ApplicationLoader::Open(
+    const std::string& url,
+    const std::function<void(ftl::UniqueFD, std::string)>& callback) {
   std::string path = GetPathFromURL(url);
   if (path.empty()) {
     // TODO(abarth): Support URL schemes other than file:// by querying the host
@@ -38,13 +39,14 @@ std::tuple<ftl::UniqueFD, std::string> ApplicationLoader::Open(
       }
     }
     if (fd.is_valid()) {
-      return std::make_tuple(std::move(fd), std::move(path));
+      callback(std::move(fd), std::move(path));
+      return;
     } else {
       FTL_LOG(ERROR) << "Could not load url: " << url;
     }
   }
 
-  return std::make_tuple(ftl::UniqueFD(), std::string());
+  callback(ftl::UniqueFD(), std::string());
 }
 
 }  // namespace modular
