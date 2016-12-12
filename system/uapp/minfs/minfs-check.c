@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "minfs.h"
 #include "minfs-private.h"
 
 #define VERBOSE 1
@@ -69,78 +70,116 @@ static mx_status_t get_inode_nth_bno(minfs_t* fs, minfs_inode_t* inode, uint32_t
     return NO_ERROR;
 }
 
+// Convert 'single-block-reads' to generic reads, which may cross block
+// boundaries. This function works on directories too.
+static mx_status_t file_read(minfs_t* fs, minfs_inode_t* inode, void* data,
+                              size_t len, size_t off) {
+    if (off >= inode->size) {
+        return 0;
+    }
+    if (len > (inode->size - off)) {
+        len = inode->size - off;
+    }
+
+    void* start = data;
+    uint32_t n = off / MINFS_BLOCK_SIZE;
+    size_t adjust = off % MINFS_BLOCK_SIZE;
+
+    while ((len > 0) && (n < MINFS_MAX_FILE_BLOCK)) {
+        size_t xfer;
+        if (len > (MINFS_BLOCK_SIZE - adjust)) {
+            xfer = MINFS_BLOCK_SIZE - adjust;
+        } else {
+            xfer = len;
+        }
+
+        uint32_t bno;
+        mx_status_t status;
+        if ((status = get_inode_nth_bno(fs, inode, n, &bno)) != NO_ERROR) {
+            return status;
+        }
+
+        if ((status = bcache_read(fs->bc, bno, data, adjust, xfer)) != NO_ERROR) {
+            return status;
+        }
+
+        adjust = 0;
+        len -= xfer;
+        data += xfer;
+        n++;
+    }
+
+    return data - start;
+}
+
 static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* inode,
                                    uint32_t ino, uint32_t parent, uint32_t flags) {
     unsigned eno = 0;
     bool dot = false;
     bool dotdot = false;
     uint32_t dirent_count = 0;
-    for (unsigned n = 0; n < inode->block_count; n++) {
-        uint32_t bno;
-        mx_status_t status;
-        if ((status = get_inode_nth_bno(fs, inode, n, &bno)) < 0) {
-            error("check: ino#%u: directory block %u invalid\n", ino, n);
-            return status;
+
+    size_t off = 0;
+    while (true) {
+        uint32_t data[MINFS_DIRENT_SIZE];
+        mx_status_t status = file_read(fs, inode, data, MINFS_DIRENT_SIZE, off);
+        if (status != MINFS_DIRENT_SIZE) {
+            error("check: ino#%u: Could not read direnty at %zd\n", ino, off);
+            return status < 0 ? status : ERR_IO;
         }
-        uint32_t data[MINFS_BLOCK_SIZE];
-        if ((status = bcache_read(fs->bc, bno, data, 0, MINFS_BLOCK_SIZE)) < 0) {
-            error("check: ino#%u: failed to read block %u (bno=%u)\n", ino, n, bno);
-            return status;
-        }
-        uint32_t size = MINFS_BLOCK_SIZE;
         minfs_dirent_t* de = (void*) data;
-        while (size > MINFS_DIRENT_SIZE) {
-            uint32_t rlen = de->reclen;
-            if ((rlen > size) || (rlen & 3)) {
-                error("check: ino#%u: de[%u]: bad dirent reclen\n", ino, eno);
+        uint32_t rlen = MINFS_RECLEN(de, off);
+        bool is_last = de->reclen & MINFS_RECLEN_LAST;
+        if (!is_last && ((rlen < MINFS_DIRENT_SIZE) ||
+                         (rlen > MINFS_MAX_DIRENT_SIZE) || (rlen & 3))) {
+            error("check: ino#%u: de[%u]: bad dirent reclen (%u)\n", ino, eno, rlen);
+            return ERR_IO_DATA_INTEGRITY;
+        }
+        if (de->ino == 0) {
+            if (flags & CD_DUMP) {
+                info("ino#%u: de[%u]: <empty> reclen=%u\n", ino, eno, rlen);
+            }
+        } else {
+            if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
+                error("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
                 return ERR_IO_DATA_INTEGRITY;
             }
-            if (de->ino == 0) {
-                if (flags & CD_DUMP) {
-                    info("ino#%u: de[%u]: <empty> reclen=%u\n", ino, eno, rlen);
+            if ((de->namelen == 1) && (de->name[0] == '.')) {
+                if (dot) {
+                    error("check: ino#%u: multiple '.' entries\n", ino);
                 }
-            } else {
-                if ((de->namelen == 0) || (de->namelen > (rlen - MINFS_DIRENT_SIZE))) {
-                    error("check: ino#%u: de[%u]: invalid namelen %u\n", ino, eno, de->namelen);
-                    return ERR_IO_DATA_INTEGRITY;
+                dot = true;
+                if (de->ino != ino) {
+                    error("check: ino#%u: de[%u]: '.' ino=%u (not self!)\n", ino, eno, de->ino);
                 }
-                if ((de->namelen == 1) && (de->name[0] == '.')) {
-                    if (dot) {
-                        error("check: ino#%u: multiple '.' entries\n", ino);
-                    }
-                    dot = true;
-                    if (de->ino != ino) {
-                        error("check: ino#%u: de[%u]: '.' ino=%u (not self!)\n", ino, eno, de->ino);
-                    }
-                }
-                if ((de->namelen == 2) && (de->name[0] == '.') && (de->name[1] == '.')) {
-                    if (dotdot) {
-                        error("check: ino#%u: multiple '..' entries\n", ino);
-                    }
-                    dotdot = true;
-                    if (de->ino != parent) {
-                        error("check: ino#%u: de[%u]: '..' ino=%u (not parent!)\n", ino, eno, de->ino);
-                    }
-                }
-                //TODO: check for cycles (non-dot/dotdot dir ref already in checked bitmap)
-                if (flags & CD_DUMP) {
-                    info("ino#%u: de[%u]: ino=%u type=%u '%.*s'\n",
-                         ino, eno, de->ino, de->type, de->namelen, de->name);
-                }
-                if (flags & CD_RECURSE) {
-                    if ((status = check_inode(chk, fs, de->ino, ino)) < 0) {
-                        return status;
-                    }
-                }
-                dirent_count++;
             }
-            eno++;
-            de = ((void*) de) + rlen;
-            size -= rlen;
+            if ((de->namelen == 2) && (de->name[0] == '.') && (de->name[1] == '.')) {
+                if (dotdot) {
+                    error("check: ino#%u: multiple '..' entries\n", ino);
+                }
+                dotdot = true;
+                if (de->ino != parent) {
+                    error("check: ino#%u: de[%u]: '..' ino=%u (not parent!)\n", ino, eno, de->ino);
+                }
+            }
+            //TODO: check for cycles (non-dot/dotdot dir ref already in checked bitmap)
+            if (flags & CD_DUMP) {
+                info("ino#%u: de[%u]: ino=%u type=%u '%.*s'\n",
+                     ino, eno, de->ino, de->type, de->namelen, de->name);
+            }
+            if (flags & CD_RECURSE) {
+                if ((status = check_inode(chk, fs, de->ino, ino)) < 0) {
+                    return status;
+                }
+            }
+            dirent_count++;
         }
-        if (size > 0) {
-            error("check: ino#%u: blk=%u bno=%u dir block not full\n", ino, n, bno);
+        if (is_last) {
+            break;
+        } else {
+            off += rlen;
         }
+        eno++;
     }
     if (dirent_count != inode->dirent_count) {
         error("check: ino#%u: dirent_count of %u != %u (actual)\n",
