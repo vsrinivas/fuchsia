@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 group("configuration") {
-
   deps = [
     ":configuration_writer",
     ":lib",
@@ -16,6 +15,8 @@ source_set("lib") {
     "configuration.h",
     "configuration_encoder.cc",
     "configuration_encoder.h",
+    "load_configuration.cc",
+    "load_configuration.h",
   ]
 
   deps = [

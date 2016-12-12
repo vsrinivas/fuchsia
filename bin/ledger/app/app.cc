@@ -9,61 +9,58 @@
 
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/src/app/ledger_repository_factory_impl.h"
-#include "apps/ledger/src/configuration/configuration_encoder.h"
+#include "apps/ledger/src/configuration/configuration.h"
+#include "apps/ledger/src/configuration/load_configuration.h"
 #include "apps/ledger/src/environment/environment.h"
 #include "apps/ledger/src/network/network_service_impl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "apps/tracing/lib/trace/provider.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/ftl/files/directory.h"
-#include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace ledger {
 
-// App is the main entry point of the Ledger Mojo application.
+// App is the main entry point of the Ledger application.
 //
 // It is responsible for setting up the LedgerRepositoryFactory, which connects
-// clients to
-// individual ledger instances. It should not however hold long-lived objects
-// shared between ledger instances, as we need to be able to put them in
+// clients to individual Ledger instances. It should not however hold long-lived
+// objects shared between Ledger instances, as we need to be able to put them in
 // separate processes when the app becomes multi-instance.
 class App {
  public:
-  App(ftl::RefPtr<ftl::TaskRunner> main_runner)
+  App()
       : application_context_(
             modular::ApplicationContext::CreateFromStartupInfo()) {
     FTL_DCHECK(application_context_);
-
     tracing::InitializeTracer(application_context_.get(), {"ledger"});
+  }
+  ~App() {}
 
-    std::string configuration_file =
-        configuration::kDefaultConfigurationFile.ToString();
-    configuration::Configuration configuration;
-    if (files::IsFile(configuration_file)) {
-      if (configuration::ConfigurationEncoder::Decode(configuration_file,
-                                                      &configuration)) {
-        FTL_LOG(INFO) << "Read the configuration file at "
-                      << configuration::kDefaultConfigurationFile;
-      }
-    } else {
-      FTL_LOG(WARNING)
-          << "No configuration file for Ledger. Using default configuration";
+  bool Start(ftl::RefPtr<ftl::TaskRunner> main_runner) {
+    configuration::Configuration config;
+    if (!LoadConfiguration(&config)) {
+      FTL_LOG(ERROR) << "Ledger is misconfigured, quitting.";
+      return false;
     }
 
-    if (configuration.use_sync) {
+    if (!SaveAsLastConfiguration(config)) {
+      FTL_LOG(ERROR) << "Failed to save the current configuration for "
+                     << "compatibility check, quitting.";
+      return false;
+    }
+
+    if (config.use_sync) {
       network_service_ =
           std::make_unique<ledger::NetworkServiceImpl>(main_runner, [this] {
             return application_context_
                 ->ConnectToEnvironmentService<network::NetworkService>();
           });
     }
-    environment_ = std::make_unique<Environment>(std::move(configuration),
-                                                 std::move(main_runner),
-                                                 network_service_.get());
+    environment_ = std::make_unique<Environment>(
+        std::move(config), std::move(main_runner), network_service_.get());
 
     factory_impl_ =
         std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());
@@ -73,8 +70,8 @@ class App {
             fidl::InterfaceRequest<LedgerRepositoryFactory> request) {
           factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
         });
+    return true;
   }
-  ~App() {}
 
  private:
   std::unique_ptr<modular::ApplicationContext> application_context_;
@@ -91,7 +88,10 @@ class App {
 int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
 
-  ledger::App app(loop.task_runner());
+  ledger::App app;
+  if (!app.Start(loop.task_runner())) {
+    return 1;
+  }
 
   loop.Run();
   return 0;

@@ -22,10 +22,19 @@ bool operator==(const Configuration& lhs, const Configuration& rhs) {
   return lhs.use_sync == rhs.use_sync && lhs.sync_params == rhs.sync_params;
 }
 
+bool operator!=(const Configuration& lhs, const Configuration& rhs) {
+  return !(lhs == rhs);
+}
+
 bool operator==(const Configuration::SyncParams& lhs,
                 const Configuration::SyncParams& rhs) {
   return lhs.firebase_id == rhs.firebase_id &&
          lhs.firebase_prefix == rhs.firebase_prefix;
+}
+
+bool operator!=(const Configuration::SyncParams& lhs,
+                const Configuration::SyncParams& rhs) {
+  return !(lhs == rhs);
 }
 
 }  // namespace configuration

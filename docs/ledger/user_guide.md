@@ -6,10 +6,18 @@ Ledger writes all data under `/data/ledger`. In order for data to be persisted,
 ensure that a persistent partition is mounted under /data. See [minfs
 setup](https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md).
 
-## Sync
+## Cloud Sync
 
 By default Ledger runs without sync. To enable sync, follow the instructions
 below.
+
+When enabled, Cloud Sync synchronizes the content of all pages using the
+selected cloud provider (see below for configuration.
+
+**Note**: Ledger does not support **migrations** between cloud providers. Once
+Cloud Sync is set up, you won't be able to switch to a different cloud provider
+(e.g. to a different Firebase instance) without flushing the locally persisted
+data.
 
 ### Prerequisities
 

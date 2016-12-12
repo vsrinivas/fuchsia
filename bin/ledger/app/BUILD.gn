@@ -86,8 +86,8 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":integration_tests",
     ":application_tests",
+    ":integration_tests",
   ]
 }
 

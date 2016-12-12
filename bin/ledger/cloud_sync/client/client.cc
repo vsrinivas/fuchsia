@@ -12,6 +12,7 @@
 #include "apps/ledger/src/cloud_sync/impl/firebase_paths.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/configuration/configuration_encoder.h"
+#include "apps/ledger/src/configuration/load_configuration.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
@@ -66,13 +67,12 @@ bool ClientApp::Initialize() {
     return false;
   }
 
-  if (!configuration::ConfigurationEncoder::Decode(
-          configuration::kDefaultConfigurationFile.ToString(),
-          &configuration_)) {
-    std::cout << "Error: unable to read Ledger configuration at: "
-              << configuration::kDefaultConfigurationFile << std::endl;
-    std::cout << "Hint: run `configure_ledger --help` to learn about "
-              << "configuration options." << std::endl;
+  if (!configuration::LoadConfiguration(&configuration_)) {
+    std::cout << "Error: Ledger is misconfigured." << std::endl;
+    std::cout
+        << "Hint: refer to the User Guide at "
+        << "https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md"
+        << std::endl;
     return false;
   }
 

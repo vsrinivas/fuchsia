@@ -14,6 +14,9 @@ namespace configuration {
 constexpr ftl::StringView kDefaultConfigurationFile =
     "/data/ledger/config.json";
 
+constexpr ftl::StringView kLastConfigurationFile =
+    "/data/ledger/last_config.json";
+
 // The configuration for the Ledger.
 struct Configuration {
   // Creates a default, empty configuration.
@@ -41,7 +44,10 @@ struct Configuration {
 };
 
 bool operator==(const Configuration& lhs, const Configuration& rhs);
+bool operator!=(const Configuration& lhs, const Configuration& rhs);
 bool operator==(const Configuration::SyncParams& lhs,
+                const Configuration::SyncParams& rhs);
+bool operator!=(const Configuration::SyncParams& lhs,
                 const Configuration::SyncParams& rhs);
 }  // namespace configuration
 
