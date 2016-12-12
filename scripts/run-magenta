@@ -13,6 +13,7 @@ function HELP {
     echo "-c                  : add item to kernel commandline"
     echo "-d                  : run with emulated disk"
     echo "-g                  : use graphical console"
+    echo "-I <interface name> : network interface name, default is qemu."
     echo "-k                  : use KVM"
     echo "-m <memory in MB>   : default 512MB"
     echo "-n                  : run with emulated nic"
@@ -44,7 +45,13 @@ SMP=4
 INITRD=
 CMDLINE=""
 
-while getopts a:Abc:dgkm:nNo:rs:vx:h FLAG; do
+if [ $(uname -s) == "Darwin" ]; then
+  IFNAME="tap0"
+else
+  IFNAME="qemu"
+fi
+
+while getopts a:Abc:dgI:km:nNo:rs:vx:h FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         A) AUDIO=1;;
@@ -52,6 +59,7 @@ while getopts a:Abc:dgkm:nNo:rs:vx:h FLAG; do
         c) CMDLINE+="$OPTARG ";;
         d) DISK=1;;
         g) GRAPHICS=1;;
+        I) IFNAME=$OPTARG;;
         k) DO_KVM=1;;
         m) MEMSIZE=$OPTARG;;
         n) NET=1;;
@@ -130,17 +138,17 @@ fi
 if [ "$NET" -eq 1 ]; then
     # virtio based network interface
     if [ "$ARCH" == "x86-64" ]; then
-        ARGS+=" -netdev type=user,hostname=qemu,id=net0 -device virtio-net-pci,netdev=net0"
+        ARGS+=" -netdev type=user,hostname=$IFNAME,id=net0 -device virtio-net-pci,netdev=net0"
     else
-        ARGS+=" -netdev user,id=vmnic,hostname=qemu -device virtio-net-device,netdev=vmnic"
+        ARGS+=" -netdev user,id=vmnic,hostname=$IFNAME -device virtio-net-device,netdev=vmnic"
     fi
 fi
 
 if [ "$NET" -eq 2 ]; then
     if [ $(uname -s) == "Darwin" ]; then
-        ARGS+=" -netdev type=tap,ifname=tap0,script=no,id=net0"
+        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=no,id=net0"
     else
-        ARGS+=" -netdev type=tap,ifname=qemu,script=no,id=net0"
+        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=no,id=net0"
     fi
     if [ "$ARCH" == "x86-64" ]; then
         ARGS+=" -device e1000,netdev=net0"
