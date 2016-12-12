@@ -41,9 +41,8 @@ void ApplicationLoader::Open(
     if (fd.is_valid()) {
       callback(std::move(fd), std::move(path));
       return;
-    } else {
-      FTL_LOG(ERROR) << "Could not load url: " << url;
     }
+    FTL_LOG(ERROR) << "Could not load url: " << url;
   }
 
   callback(ftl::UniqueFD(), std::string());
