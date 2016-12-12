@@ -78,3 +78,11 @@ bool VmAddressRegionOrMapping::is_valid_mapping_flags(uint arch_mmu_flags) {
     }
     return true;
 }
+
+size_t VmAddressRegionOrMapping::AllocatedPages() const {
+    AutoLock guard(aspace_->lock());
+    if (state_ != LifeCycleState::ALIVE) {
+        return 0;
+    }
+    return AllocatedPagesLocked();
+}

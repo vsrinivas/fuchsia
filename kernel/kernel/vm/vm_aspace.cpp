@@ -510,5 +510,5 @@ size_t VmAspace::AllocatedPages() const {
     DEBUG_ASSERT(magic_ == MAGIC);
 
     AutoLock a(lock_);
-    return root_vmar_->AllocatedPages();
+    return root_vmar_->AllocatedPagesLocked();
 }

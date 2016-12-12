@@ -34,12 +34,12 @@ VmMapping::~VmMapping() {
     DEBUG_ASSERT(magic_ == kMagic);
 }
 
-size_t VmMapping::AllocatedPages() const {
+size_t VmMapping::AllocatedPagesLocked() const {
     DEBUG_ASSERT(magic_ == kMagic);
+    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
 
-    AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
-        return ERR_BAD_STATE;
+        return 0;
     }
     return object_->AllocatedPages();
 }

@@ -83,7 +83,7 @@ public:
     uint32_t flags() const { return flags_; }
 
     // Recursively compute the number of allocated pages within this region
-    virtual size_t AllocatedPages() const = 0;
+    virtual size_t AllocatedPages() const;
 
     // Subtype information and safe down-casting
     virtual bool is_mapping() const = 0;
@@ -127,6 +127,9 @@ protected:
 
     // Version of Destroy() that does not acquire the aspace lock
     virtual status_t DestroyLocked() = 0;
+
+    // Version of AllocatedPages() that does not acquire the aspace lock
+    virtual size_t AllocatedPagesLocked() const = 0;
 
     // Transition from NOT_READY to READY, and add references to self to related
     // structures.
@@ -188,7 +191,6 @@ public:
 
     bool is_mapping() const override { return false; }
 
-    size_t AllocatedPages() const override;
     void Dump(uint depth) const override;
     status_t PageFault(vaddr_t va, uint pf_flags) override;
 
@@ -198,6 +200,8 @@ protected:
     friend class VmAspace;
     // constructor for use in creating the kernel aspace singleton
     explicit VmAddressRegion(VmAspace& kernel_aspace);
+    // Count the allocated pages, caller must be holding the aspace lock
+    size_t AllocatedPagesLocked() const override;
 
     friend class VmMapping;
     // Remove *region* from the subregion list
@@ -276,7 +280,6 @@ public:
 
     bool is_mapping() const override { return true; }
 
-    size_t AllocatedPages() const override;
     void Dump(uint depth) const override;
     status_t PageFault(vaddr_t va, uint pf_flags) override;
 
@@ -309,6 +312,9 @@ private:
 
     // Version of Unmap() that does not acquire the aspace lock
     status_t UnmapLocked();
+
+    // Version of AllocatedPages() that does not acquire the aspace lock
+    size_t AllocatedPagesLocked() const override;
 
     void Activate() override;
 

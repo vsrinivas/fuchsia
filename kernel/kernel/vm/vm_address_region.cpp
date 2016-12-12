@@ -277,12 +277,17 @@ mxtl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t
     return mxtl::RefPtr<VmAddressRegionOrMapping>(&*itr);
 }
 
-size_t VmAddressRegion::AllocatedPages() const {
+size_t VmAddressRegion::AllocatedPagesLocked() const {
     DEBUG_ASSERT(magic_ == kMagic);
+    DEBUG_ASSERT(is_mutex_held(&aspace_->lock()));
+
+    if (state_ != LifeCycleState::ALIVE) {
+        return 0;
+    }
 
     size_t sum = 0;
     for (const auto& child : subregions_) {
-        sum += child.AllocatedPages();
+        sum += child.AllocatedPagesLocked();
     }
     return sum;
 }
