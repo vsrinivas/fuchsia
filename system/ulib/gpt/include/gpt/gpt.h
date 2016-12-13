@@ -21,6 +21,24 @@ typedef struct gpt_device gpt_device_t;
     0xba, 0x4b, 0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b \
 };
 
+// GUID for a system partition
+// as a string 606b000b-b7c7-4653-a7d5-b737332c899d
+#define GUID_SYSTEM_VALUE {                        \
+    0x0b, 0x00, 0x6b, 0x60,                        \
+    0xc7, 0xb7,                                    \
+    0x53, 0x46,                                    \
+    0xa7, 0xd5, 0xb7, 0x37, 0x33, 0x2c, 0x89, 0x9d \
+};
+
+// GUID for a data partition
+// as a string 08185f0c-892d-428a-a789-dbeec8f55e6a
+#define GUID_DATA_VALUE {                          \
+    0x0c, 0x5f, 0x18, 0x08,                        \
+    0x2d, 0x89,                                    \
+    0x8a, 0x42,                                    \
+    0xa7, 0x89, 0xdb, 0xee, 0xc8, 0xf5, 0x5e, 0x6a \
+};
+
 typedef struct gpt_partition {
     uint8_t type[GPT_GUID_LEN];
     uint8_t guid[GPT_GUID_LEN];
