@@ -39,7 +39,7 @@ void InputInterpreter::OnReport(const InputDevice* device,
     return;
   }
 
-  TRACE_DURATION1("input", "OnReport", "type", type);
+  TRACE_DURATION("input", "OnReport", "type", type);
   DeviceState* state = it->second.get();
 
   switch (type) {

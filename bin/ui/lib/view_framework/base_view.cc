@@ -77,7 +77,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
                               const OnInvalidationCallback& callback) {
   FTL_DCHECK(invalidation);
   FTL_DCHECK(invalidation->frame_info);
-  TRACE_DURATION0("view", "OnInvalidation");
+  TRACE_DURATION("view", "OnInvalidation");
 
   invalidated_ = false;
   frame_tracker_.Update(*invalidation->frame_info, ftl::TimePoint::Now());
@@ -87,7 +87,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
     FTL_DCHECK(invalidation->properties->display_metrics);
     FTL_DCHECK(invalidation->properties->view_layout);
     FTL_DCHECK(invalidation->properties->view_layout->size);
-    TRACE_DURATION0("view", "OnPropertiesChanged");
+    TRACE_DURATION("view", "OnPropertiesChanged");
 
     ViewPropertiesPtr old_properties = std::move(properties_);
     properties_ = std::move(invalidation->properties);
@@ -98,7 +98,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
     return;
 
   {
-    TRACE_DURATION0("view", "OnLayout");
+    TRACE_DURATION("view", "OnLayout");
     OnLayout();
   }
 
@@ -108,7 +108,7 @@ void BaseView::OnInvalidation(ViewInvalidationPtr invalidation,
   }
 
   {
-    TRACE_DURATION0("view", "OnDraw");
+    TRACE_DURATION("view", "OnDraw");
     OnDraw();
   }
 
@@ -120,14 +120,14 @@ void BaseView::OnChildAttached(uint32_t child_key,
                                const OnChildUnavailableCallback& callback) {
   FTL_DCHECK(child_view_info);
 
-  TRACE_DURATION1("view", "OnChildAttached", "child_key", child_key);
+  TRACE_DURATION("view", "OnChildAttached", "child_key", child_key);
   OnChildAttached(child_key, std::move(child_view_info));
   callback();
 }
 
 void BaseView::OnChildUnavailable(uint32_t child_key,
                                   const OnChildUnavailableCallback& callback) {
-  TRACE_DURATION1("view", "OnChildUnavailable", "child_key", child_key);
+  TRACE_DURATION("view", "OnChildUnavailable", "child_key", child_key);
   OnChildUnavailable(child_key);
   callback();
 }

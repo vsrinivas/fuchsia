@@ -19,7 +19,7 @@ std::atomic<int32_t> g_count;
 
 void TraceCount(int32_t delta) {
   int32_t count = g_count.fetch_add(delta, std::memory_order_relaxed) + delta;
-  TRACE_COUNTER1("gfx", "SkImageVmo", 0u, "count", count);
+  TRACE_COUNTER("gfx", "SkImageVmo", 0u, "count", count);
 }
 
 void ReleaseBuffer(const void* pixels, void* context) {

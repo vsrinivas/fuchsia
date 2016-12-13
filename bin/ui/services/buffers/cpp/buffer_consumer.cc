@@ -23,8 +23,8 @@ void TraceConsumedBufferTally(int32_t count_delta, int64_t total_bytes_delta) {
   int64_t total_bytes = g_consumed_buffer_total_bytes.fetch_add(
                             total_bytes_delta, std::memory_order_relaxed) +
                         total_bytes_delta;
-  TRACE_COUNTER1("gfx", "BufferConsumer/alloc", 0u, "consumed_buffers", count);
-  TRACE_COUNTER1("gfx", "BufferConsumer/size", 0u, "total_bytes", total_bytes);
+  TRACE_COUNTER("gfx", "BufferConsumer/alloc", 0u, "consumed_buffers", count);
+  TRACE_COUNTER("gfx", "BufferConsumer/size", 0u, "total_bytes", total_bytes);
 }
 
 class ConsumedVmo : public mtl::SharedVmo {
@@ -147,7 +147,7 @@ void BufferConsumer::OnHandleError(mx_handle_t handle, mx_status_t error) {
 }
 
 void BufferConsumer::TracePooledBufferCount() const {
-  TRACE_COUNTER1("gfx", "BufferConsumer/pool",
+  TRACE_COUNTER("gfx", "BufferConsumer/pool",
                  reinterpret_cast<uintptr_t>(this), "retained_buffers",
                  retained_buffers_.size());
 }

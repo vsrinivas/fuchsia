@@ -32,7 +32,7 @@ RenderFrame::~RenderFrame() {}
 
 void RenderFrame::Draw(SkCanvas* canvas) const {
   FTL_DCHECK(canvas);
-  TRACE_DURATION0("gfx", "RenderFrame::Draw");
+  TRACE_DURATION("gfx", "RenderFrame::Draw");
 
   // TODO: Consider using GrDrawContext instead of SkCanvas.
   canvas->clear(SK_ColorBLACK);

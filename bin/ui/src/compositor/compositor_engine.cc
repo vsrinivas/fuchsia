@@ -417,7 +417,7 @@ void CompositorEngine::ComposeRenderer(RendererState* renderer_state,
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_VLOG(2) << "ComposeRenderer: renderer_state=" << renderer_state;
 
-  TRACE_DURATION1("gfx", "CompositorEngine::ComposeRenderer", "renderer",
+  TRACE_DURATION("gfx", "CompositorEngine::ComposeRenderer", "renderer",
                   renderer_state->FormattedLabel());
 
   ftl::TimePoint composition_time = ftl::TimePoint();
@@ -431,7 +431,7 @@ void CompositorEngine::PresentRenderer(RendererState* renderer_state,
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_VLOG(2) << "PresentRenderer: renderer_state=" << renderer_state;
 
-  TRACE_DURATION1("gfx", "CompositorEngine::PresentRenderer", "renderer",
+  TRACE_DURATION("gfx", "CompositorEngine::PresentRenderer", "renderer",
                   renderer_state->FormattedLabel());
 
   // TODO(jeffbrown): Be more selective and do this work only for scenes
@@ -452,7 +452,7 @@ void CompositorEngine::SnapshotRenderer(RendererState* renderer_state) {
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_VLOG(2) << "SnapshotRenderer: renderer_state=" << renderer_state;
 
-  TRACE_DURATION1("gfx", "CompositorEngine::SnapshotRenderer", "renderer",
+  TRACE_DURATION("gfx", "CompositorEngine::SnapshotRenderer", "renderer",
                   renderer_state->FormattedLabel());
 
   if (FTL_VLOG_IS_ON(2)) {
@@ -493,7 +493,7 @@ void CompositorEngine::PaintRenderer(RendererState* renderer_state,
   FTL_DCHECK(IsRendererStateRegisteredDebug(renderer_state));
   FTL_VLOG(2) << "PaintRenderer: renderer_state=" << renderer_state;
 
-  TRACE_DURATION1("gfx", "CompositorEngine::PaintRenderer", "renderer",
+  TRACE_DURATION("gfx", "CompositorEngine::PaintRenderer", "renderer",
                   renderer_state->FormattedLabel());
 
   RenderFrame::Metadata frame_metadata(frame_info, composition_time);

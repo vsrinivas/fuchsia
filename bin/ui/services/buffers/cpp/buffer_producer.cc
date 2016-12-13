@@ -24,8 +24,8 @@ void TraceProducedBufferTally(int32_t count_delta, int64_t total_bytes_delta) {
   int64_t total_bytes = g_produced_buffer_total_bytes.fetch_add(
                             total_bytes_delta, std::memory_order_relaxed) +
                         total_bytes_delta;
-  TRACE_COUNTER1("gfx", "BufferProducer/alloc", 0u, "produced_buffers", count);
-  TRACE_COUNTER1("gfx", "BufferProducer/size", 0u, "total_bytes", total_bytes);
+  TRACE_COUNTER("gfx", "BufferProducer/alloc", 0u, "produced_buffers", count);
+  TRACE_COUNTER("gfx", "BufferProducer/size", 0u, "total_bytes", total_bytes);
 }
 
 // Establishes a constraint on whether a VMO should be reused for an
@@ -182,7 +182,7 @@ void BufferProducer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
 }
 
 void BufferProducer::TracePooledBufferCount() const {
-  TRACE_COUNTER2("gfx", "BufferProducer/pool",
+  TRACE_COUNTER("gfx", "BufferProducer/pool",
                  reinterpret_cast<uintptr_t>(this), "pending_buffers",
                  pending_buffers_.size(), "available_buffers",
                  available_buffers_.size());
