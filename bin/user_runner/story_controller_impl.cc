@@ -87,6 +87,12 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
     return;
   }
 
+  // Stop watching the root module to avoid any race conditions for state
+  // updates.
+  // TODO(vardhan): Revisit this solution to the race condition (and also for
+  // StopForDelete).
+  module_watcher_binding_.Close();
+
   story_runner_->Stop([this, done]() {
     story_data_->story_info->is_running = false;
     story_data_->story_info->state = StoryState::STOPPED;
@@ -115,6 +121,8 @@ void StoryControllerImpl::StopForDelete(const StopCallback& done) {
     return;
   }
 
+  module_watcher_binding_.Close();
+
   story_runner_->Stop([this, done]() {
     story_data_->story_info->is_running = false;
     story_data_->story_info->state = StoryState::STOPPED;
@@ -129,7 +137,8 @@ void StoryControllerImpl::Reset() {
   module_.reset();
   story_.reset();
   story_runner_.reset();
-  module_watcher_binding_.Close();
+  if (module_watcher_binding_.is_bound())
+    module_watcher_binding_.Close();
 }
 
 // |StoryController|
