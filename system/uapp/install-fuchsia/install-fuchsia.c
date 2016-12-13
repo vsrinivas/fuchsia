@@ -37,6 +37,7 @@
 // TODO(jmatt): it is gross that we're hard-coding this here, we should take
 // from the user or somehow set in the environment
 #define IMG_SYSTEM_PATH "/system/installer/user_fs.lz4"
+#define IMG_EFI_PATH "/system/installer/efi_fs.lz4"
 
 // use for the partition mask sent to parition_for_install
 typedef enum {
@@ -44,16 +45,7 @@ typedef enum {
     PART_SYSTEM = 1 << 1
 } partition_flags;
 
-// GUID for a system partition
-// as a string 606b000b-b7c7-4653-a7d5-b737332c899d
-static const uint8_t guid_system_part[16] = {
-    0x0b, 0x00, 0x6b, 0x60,
-    0xc7, 0xb7,
-    0x53, 0x46,
-    0xa7, 0xd5,
-    0xb7, 0x37, 0x33, 0x2c, 0x89, 0x9d
-};
-
+static const uint8_t guid_system_part[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
 static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
 
 /*
@@ -142,8 +134,9 @@ static gpt_device_t* read_gpt(int fd, uint64_t* blocksize_out) {
 }
 
 /*
- * Given a pointer to GPT information, look for a partition with the matching
- * type GUID.
+ * Given a pointer to an array of gpt_partition_t structs, look for a partition
+ * with the matching type GUID. The table_size argument tells this function how
+ * many entries there are in the array.
  * Returns
  *   * ERR_INVALID_ARGS if any pointers are null
  *   * ERR_BAD_STATE if the GPT data reports itself as invalid
@@ -151,21 +144,16 @@ static gpt_device_t* read_gpt(int fd, uint64_t* blocksize_out) {
  *   * NO_ERROR if the partition is found, in which case the index is assigned
  *     to part_id_out
  */
-static mx_status_t find_partition_entries(gpt_device_t* gpt_data, const uint8_t* guid,
+static mx_status_t find_partition_entries(gpt_partition_t** gpt_table,
+                                          const uint8_t* guid,
+                                          uint16_t table_size,
                                           uint16_t* part_id_out) {
-    DEBUG_ASSERT(gpt_data != NULL);
+    DEBUG_ASSERT(gpt_table != NULL);
     DEBUG_ASSERT(guid != NULL);
     DEBUG_ASSERT(part_id_out != NULL);
 
-    if (!gpt_data->valid) {
-        return ERR_BAD_STATE;
-    }
-
-    for (uint16_t idx = 0;
-         idx < countof(gpt_data->partitions) && gpt_data->partitions[idx] != NULL;
-         idx++) {
-
-        uint8_t* type_ptr = gpt_data->partitions[idx]->type;
+    for (uint16_t idx = 0; idx < table_size && gpt_table[idx] != NULL; idx++) {
+        uint8_t* type_ptr = gpt_table[idx]->type;
         if (!memcmp(type_ptr, guid, 16)) {
             *part_id_out = idx;
             return NO_ERROR;
@@ -186,8 +174,11 @@ static bool check_partition_size(const gpt_partition_t* partition,
     DEBUG_ASSERT(partition->last >= partition->first);
     DEBUG_ASSERT(partition->name != NULL);
 
+    uint64_t block_count = partition->last - partition->first + 1;
     uint64_t partition_size =
         block_size * (partition->last - partition->first + 1);
+    printf("%s has %" PRIu64 " blocks and block size of %" PRIu64 "\n",
+           partition_name, block_count, block_size);
 
     if (partition_size < min_size) {
         printf("%s partition too small, found %" PRIu64 ", but require \
@@ -283,48 +274,68 @@ static mx_status_t find_partition_path(gpt_partition_t* const* part_info,
 }
 
 /*
- * Given a GPT in gpt_data and a partition guid in part_guid, validate that the
- * partition is in the GPT. Further, validate that the GPT reports that the
- * number of blocks in the partition multiplied by the provided block_size meets
- * the min_size.
+ * Given an array of GPT partition entries in gpt_table and a partition guid in
+ * part_guid, validate that the partition is in the array. Further, validate
+ * that the entry reports that the number of blocks in the partition multiplied
+ * by the provided block_size meets the min_size. If more than one partition in
+ * the array passes this test, the first match will be provided. The length of
+ * the partition information array should be passed in table_size.
+ *
  * If NO_ERROR is returned, part_index_out will contain the index in the GPT for
  * the requested partition. Additionally, the pointer at *part_info_out will
  * point at the gpt_partition_t with information for the requested partition.
  */
-static mx_status_t find_partition(gpt_device_t* gpt_data,
+static mx_status_t find_partition(gpt_partition_t** gpt_table,
                                   const uint8_t* part_guid, uint64_t min_size,
                                   uint64_t block_size, const char* part_name,
-                                  uint16_t* part_index_out,
+                                  uint16_t table_size, uint16_t* part_index_out,
                                   gpt_partition_t** part_info_out) {
-    mx_status_t rc = find_partition_entries(gpt_data, part_guid,
-                                            part_index_out);
+    // if we find a partition, but it is the wrong size, we want to keep
+    // looking down the table for something that might match, this offset
+    // tracks our overall progress in the table
+    uint16_t part_offset = 0;
 
-    gpt_partition_t* partition;
-    switch (rc) {
-        case ERR_NOT_FOUND:
-            printf("No %s partition found.\n", part_name);
-            break;
-        case ERR_INVALID_ARGS:
-            printf("Arguments are invalid for %s partition.\n", part_name);
-            break;
-        case ERR_BAD_STATE:
-            printf("GPT descriptor is invalid.\n");
-            break;
-        case NO_ERROR:
-            partition = gpt_data->partitions[*part_index_out];
-            DEBUG_ASSERT(partition->last >= partition->first);
+    mx_status_t rc = NO_ERROR;
+    while (rc == NO_ERROR) {
+        // reduce table_size by the number of entries we've examined
+        rc = find_partition_entries(gpt_table, part_guid,
+                                    table_size - part_offset, part_index_out);
 
-            bool size_ok = check_partition_size(partition, min_size,
-                                                block_size, part_name);
-            if (size_ok) {
-                *part_info_out = partition;
-                return NO_ERROR;
-            }
+        gpt_partition_t* partition;
+        switch (rc) {
+            case ERR_NOT_FOUND:
+                printf("No %s partition found.\n", part_name);
+                break;
+            case ERR_INVALID_ARGS:
+                printf("Arguments are invalid for %s partition.\n", part_name);
+                break;
+            case ERR_BAD_STATE:
+                printf("GPT descriptor is invalid.\n");
+                break;
+            case NO_ERROR:
+                partition = gpt_table[*part_index_out];
+                DEBUG_ASSERT(partition->last >= partition->first);
 
-            break;
-        default:
-            printf("Unrecognized error finding efi parition: %d\n",
-                   rc);
+                if (check_partition_size(partition, min_size, block_size,
+                                         part_name)) {
+                    *part_info_out = partition;
+                    // adjust the output index by part_offset
+                    *part_index_out = part_offset + *part_index_out;
+                    return NO_ERROR;
+                } else {
+                    // if the size doesn't check out, keep looking for
+                    // partitions later in the table
+                    uint16_t jump_size = *part_index_out + 1;
+
+                    // advance the pointer
+                    gpt_table += jump_size;
+                    part_offset += jump_size;
+                }
+                break;
+            default:
+                printf("Unrecognized error finding efi parition: %d\n", rc);
+                break;
+        }
     }
 
     // we didn't find a suitable partition
@@ -359,27 +370,39 @@ static partition_flags partition_for_install(gpt_device_t* gpt_data,
     DEBUG_ASSERT(gpt_data->valid);
     DEBUG_ASSERT(NUM_INSTALL_PARTS == 2);
 
+    if (!gpt_data->valid) {
+        return part_flags;
+    }
+
     DIR* block_dir = NULL;
     gpt_partition_t* part_info[NUM_INSTALL_PARTS] = {NULL, NULL};
     uint8_t parts_found = 0;
     int part_masks[NUM_INSTALL_PARTS] = {0, 0};
     uint8_t parts_requested = 0;
 
-    uint16_t part_id;
+    uint16_t part_id = 0;
     if (part_flags & PART_EFI) {
-        mx_status_t rc = find_partition(gpt_data, guid_efi_part,
-                                        MIN_SIZE_EFI_PART, block_size,
-                                        "EFI", &part_id,
-                                        &part_info[parts_requested]);
-        if (rc == NO_ERROR) {
-            if (part_id > 0) {
-                part_masks[parts_requested] = PART_EFI;
-                parts_found++;
-            } else {
-                printf("found an EFI partition, but it is the first; ");
-                printf("assume we want to keep this one intact.\n");
-                // reset part info
-                part_info[parts_requested] = NULL;
+
+        // look for a match until we exhaust partitions
+        mx_status_t rc = NO_ERROR;
+        while (part_info[parts_requested] == NULL && rc == NO_ERROR) {
+            uint16_t part_limit = countof(gpt_data->partitions) - part_id;
+            rc = find_partition((gpt_partition_t**) &gpt_data->partitions[part_id],
+                                guid_efi_part, MIN_SIZE_EFI_PART, block_size,
+                                "EFI", part_limit, &part_id,
+                                &part_info[parts_requested]);
+
+            if (rc == NO_ERROR) {
+                if (part_id > 0) {
+                    part_masks[parts_requested] = PART_EFI;
+                    parts_found++;
+                } else {
+                    printf("found an EFI partition, but it is the first; ");
+                    printf("assume we want to keep this one intact.\n");
+                    // reset part info
+                    part_info[parts_requested] = NULL;
+                    part_id++;
+                }
             }
         }
 
@@ -387,9 +410,10 @@ static partition_flags partition_for_install(gpt_device_t* gpt_data,
     }
 
     if (part_flags & PART_SYSTEM) {
-        mx_status_t rc = find_partition(gpt_data, guid_system_part,
-                                        MIN_SIZE_SYSTEM_PART, block_size,
-                                        "System", &part_id,
+        mx_status_t rc = find_partition((gpt_partition_t**) &gpt_data->partitions,
+                                        guid_system_part, MIN_SIZE_SYSTEM_PART,
+                                        block_size, "System",
+                                        countof(gpt_data->partitions), &part_id,
                                         &part_info[parts_requested]);
         if (rc == NO_ERROR) {
             part_masks[parts_requested] = PART_SYSTEM;
@@ -537,7 +561,8 @@ int main(int argc, char** argv) {
     char efi_path[PATH_MAX];
     char* part_paths[NUM_INSTALL_PARTS] = {efi_path, system_path};
     char system_img_path[PATH_MAX] = IMG_SYSTEM_PATH;
-    char* disk_img_paths[NUM_INSTALL_PARTS] = {NULL, system_img_path};
+    char efi_img_path[PATH_MAX] = IMG_EFI_PATH;
+    char* disk_img_paths[NUM_INSTALL_PARTS] = {efi_img_path, system_img_path};
 
     // device to install on
     gpt_device_t* install_dev = NULL;
@@ -545,7 +570,7 @@ int main(int argc, char** argv) {
     partition_flags ready_for_install = 0;
     // TODO(jmatt): switch this to user-directed partition specification or
     // add in the EFI partition when things are ready
-    partition_flags requested_parts = PART_SYSTEM;
+    partition_flags requested_parts = PART_EFI | PART_SYSTEM;
     for (ssize_t rc = get_next_file_path(
              dir, buffer_remaining, &path_buffer[base_len]);
          rc >= 0;
@@ -643,8 +668,10 @@ int main(int argc, char** argv) {
         }
 
         gpt_device_release(install_dev);
+        return 0;
     } else {
         // no device looks configured the way we want for install, see if we can
         // partition a device and make it suitable
+        return -1;
     }
 }
