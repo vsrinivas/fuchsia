@@ -72,7 +72,6 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
         for (auto& action : suggestion_prototype->proposal->on_selected) {
           switch (action->which()) {
             case Action::Tag::CREATE_STORY: {
-              modular::StoryControllerPtr story_controller;
               const auto& create_story = action->get_create_story();
 
               if (story_provider_) {
@@ -84,20 +83,26 @@ class SuggestionEngineApp : public SuggestionEngine, public SuggestionProvider {
                         suggestion_prototype->proposal->display->color);
                 extra_info["color"] = hex_color;
                 auto& initial_data = create_story->initial_data;
+                auto& module_id = create_story->module_id;
                 story_provider_->CreateStoryWithInfo(
                     create_story->module_id, std::move(extra_info),
-                    std::move(initial_data), story_controller.NewRequest());
-                FTL_LOG(INFO) << "Creating story with module "
-                              << create_story->module_id;
+                    std::move(initial_data),
+                    [this, module_id](const fidl::String& story_id) {
+                      modular::StoryControllerPtr story_controller;
+                      story_provider_->GetController(
+                          story_id, story_controller.NewRequest());
+                      FTL_LOG(INFO) << "Creating story with module "
+                                    << module_id;
 
-                story_controller->GetInfo(ftl::MakeCopyable(
-                    // TODO(thatguy): We should not be std::move()ing
-                    // story_controller *while we're calling it*.
-                    [ this, controller = std::move(story_controller) ](
-                        modular::StoryInfoPtr story_info) {
-                      FTL_LOG(INFO) << "Focusing!";
-                      focus_controller_ptr_->FocusStory(story_info->id);
-                    }));
+                      story_controller->GetInfo(ftl::MakeCopyable(
+                          // TODO(thatguy): We should not be std::move()ing
+                          // story_controller *while we're calling it*.
+                          [ this, controller = std::move(story_controller) ](
+                              modular::StoryInfoPtr story_info) {
+                            FTL_LOG(INFO) << "Focusing!";
+                            focus_controller_ptr_->FocusStory(story_info->id);
+                          }));
+                    });
               } else {
                 FTL_LOG(WARNING) << "Unable to add module; no story provider";
               }
