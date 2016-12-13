@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/syscalls/types.h>
+#include <magenta/types.h>
 
 __BEGIN_CDECLS
 

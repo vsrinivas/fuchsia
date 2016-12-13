@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <magenta/syscalls/types.h>
+#include <magenta/types.h>
 
 // ask clang format not to mess up the indentation:
 // clang-format off

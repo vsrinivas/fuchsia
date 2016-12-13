@@ -6,6 +6,8 @@
 
 #include <magenta/compiler.h>
 #include <magenta/errors.h>
+#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #ifndef __cplusplus
 #ifndef _KERNEL
@@ -114,11 +116,23 @@ typedef uint32_t mx_signals_t;
 #define MX_SIGNAL_PEER_CLOSED       MX_OBJECT_SIGNAL_2
 #define MX_SIGNAL_SIGNALED          MX_OBJECT_SIGNAL_3
 
+// global kernel object id.
+typedef uint64_t mx_koid_t;
+#define MX_KOID_INVALID ((uint64_t) 0)
+
+// Structure for mx_handle_wait_many():
 typedef struct {
     mx_handle_t handle;
     mx_signals_t waitfor;
     mx_signals_t pending;
 } mx_wait_item_t;
+
+// Structure for mx_waitset_*():
+typedef struct mx_waitset_result {
+    uint64_t cookie;
+    mx_status_t status;
+    mx_signals_t observed;
+} mx_waitset_result_t;
 
 typedef uint32_t mx_rights_t;
 #define MX_RIGHT_NONE             ((mx_rights_t)0u)
@@ -132,6 +146,14 @@ typedef uint32_t mx_rights_t;
 #define MX_RIGHT_SET_PROPERTY     ((mx_rights_t)1u << 7)
 #define MX_RIGHT_ENUMERATE        ((mx_rights_t)1u << 8)
 #define MX_RIGHT_SAME_RIGHTS      ((mx_rights_t)1u << 31)
+
+// VM Object opcodes
+#define MX_VMO_OP_COMMIT                1u
+#define MX_VMO_OP_DECOMMIT              2u
+#define MX_VMO_OP_LOCK                  3u
+#define MX_VMO_OP_UNLOCK                4u
+#define MX_VMO_OP_LOOKUP                5u
+#define MX_VMO_OP_CACHE_SYNC            6u
 
 // flags to vm map routines
 #define MX_VM_FLAG_FIXED          (1u << 0)
@@ -162,8 +184,15 @@ typedef int64_t mx_rel_off_t;
 // Maximum string length for kernel names (process name, thread name, etc)
 #define MX_MAX_NAME_LEN           (32)
 
+// Buffer size limits on the cprng syscalls
+#define MX_CPRNG_DRAW_MAX_LEN        256
+#define MX_CPRNG_ADD_ENTROPY_MAX_LEN 256
+
 // interrupt flags
 #define MX_FLAG_REMAP_IRQ  0x1
+
+// Socket flags and limits.
+#define MX_SOCKET_HALF_CLOSE                1u
 
 // Flags which can be used to to control cache policy for APIs which map memory.
 typedef enum {
