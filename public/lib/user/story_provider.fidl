@@ -44,10 +44,10 @@ interface StoryProvider {
   // Obtains a controller for a previously run story identified by its
   // story ID. Obtaining the controller doesn't run it yet. If the
   // story doesn't exist, the interface request is closed.
-  ResumeStory(string story_id, StoryController& story);
+  GetController(string story_id, StoryController& story);
 
   // Returns IDs of known stories. More information about the stories
-  // can be retrieved using GetStoryInfo(), or by ResumeStory(), then
+  // can be retrieved using GetStoryInfo(), or by GetController(), then
   // StoryController.GetInfo().
   PreviousStories() => (array<string> story_ids);
 

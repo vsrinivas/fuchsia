@@ -46,7 +46,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
     aux_bindings_.AddBinding(this, std::move(request));
   }
 
-  // Used by Create and Resume implementations. Takes ownership of the
+  // Used by Create and GetController implementations. Takes ownership of the
   // controller.
   void AddController(const std::string& story_id,
                      StoryControllerImpl* story_controller);
@@ -97,9 +97,9 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
                    const DeleteStoryCallback& callback) override;
 
   // |StoryProvider|
-  void ResumeStory(const fidl::String& story_id,
-                   fidl::InterfaceRequest<StoryController>
-                       story_controller_request) override;
+  void GetController(const fidl::String& story_id,
+                     fidl::InterfaceRequest<StoryController>
+                     story_controller_request) override;
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override;
@@ -115,7 +115,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& cb) override;
 
-  // Used by CreateStory() and ResumeStory(). Followed eventually by
+  // Used by CreateStory() and GetController(). Followed eventually by
   // AddController(). See impl for details.
   void PendControllerAdd(
       const std::string& story_id,

@@ -247,9 +247,9 @@ class DummyUserShellApp
     });
   }
 
-  void ResumeStory() {
+  void GetController() {
     FTL_LOG(INFO) << "DummyUserShell RESUME";
-    story_provider_->ResumeStory(story_info_->id,
+    story_provider_->GetController(story_info_->id,
                                  story_controller_.NewRequest());
     InitStory();
   }
@@ -302,7 +302,7 @@ class DummyUserShellApp
                       [this](modular::StoryInfoPtr story_info) {
                         FTL_DCHECK(!story_info.is_null());
                         FTL_DCHECK(story_info->is_running == false);
-                        ResumeStory();
+                        GetController();
                       });
                 },
                 ftl::TimeDelta::FromSeconds(10));

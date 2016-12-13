@@ -288,9 +288,9 @@ class DeleteStoryCall : public Transaction {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
 };
 
-class ResumeStoryCall : public Transaction {
+class GetControllerCall : public Transaction {
  public:
-  ResumeStoryCall(
+  GetControllerCall(
       TransactionContainer* const container,
       ledger::Ledger* const ledger,
       StoryProviderImpl* const story_provider_impl,
@@ -332,7 +332,7 @@ class ResumeStoryCall : public Transaction {
   StoryDataPtr story_data_;
   ledger::PagePtr story_page_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResumeStoryCall);
+  FTL_DISALLOW_COPY_AND_ASSIGN(GetControllerCall);
 };
 
 class PreviousStoriesCall : public Transaction {
@@ -707,7 +707,7 @@ void StoryProviderImpl::DisposeController(
 }
 
 // |StoryProvider|
-void StoryProviderImpl::ResumeStory(
+void StoryProviderImpl::GetController(
     const fidl::String& story_id,
     fidl::InterfaceRequest<StoryController> story_controller_request) {
   // If no story controller known, reserve an entry for it, and
@@ -715,7 +715,7 @@ void StoryProviderImpl::ResumeStory(
   auto i = story_controllers_.find(story_id);
   if (i == story_controllers_.end()) {
     PendControllerAdd(story_id, std::move(story_controller_request));
-    new ResumeStoryCall(
+    new GetControllerCall(
         &transaction_container_, ledger_.get(), this,
         story_id);
 

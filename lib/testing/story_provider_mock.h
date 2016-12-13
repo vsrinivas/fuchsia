@@ -57,7 +57,7 @@ class StoryProviderMock : public StoryProvider {
                     const GetStoryInfoCallback& callback) override {}
 
   // |StoryProvider|
-  void ResumeStory(
+  void GetController(
       const fidl::String& story_id,
       fidl::InterfaceRequest<modular::StoryController> story) override {}
 
