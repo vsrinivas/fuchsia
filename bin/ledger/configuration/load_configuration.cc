@@ -7,6 +7,7 @@
 #include "apps/ledger/src/configuration/configuration_encoder.h"
 #include "lib/ftl/files/directory.h"
 #include "lib/ftl/files/file.h"
+#include "lib/ftl/files/path.h"
 
 namespace configuration {
 
@@ -70,7 +71,12 @@ bool LoadConfiguration(Configuration* result) {
 }
 
 bool SaveAsLastConfiguration(const Configuration& config) {
-  return ConfigurationEncoder::Write(kLastConfigurationFile.ToString(), config);
+  std::string config_path = kLastConfigurationFile.ToString();
+  if (!files::CreateDirectory(files::GetDirectoryName(config_path))) {
+    FTL_LOG(ERROR) << "Unable to create directory for file " << config_path;
+    return false;
+  }
+  return ConfigurationEncoder::Write(config_path, config);
 }
 
 }  // namespace configuration

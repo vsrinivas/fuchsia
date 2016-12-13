@@ -46,7 +46,7 @@ class App {
       return false;
     }
 
-    if (!SaveAsLastConfiguration(config)) {
+    if (!configuration::SaveAsLastConfiguration(config)) {
       FTL_LOG(ERROR) << "Failed to save the current configuration for "
                      << "compatibility check, quitting.";
       return false;
