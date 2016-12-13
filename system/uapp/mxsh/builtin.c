@@ -23,8 +23,9 @@
 #include <magenta/listnode.h>
 
 static int mxc_motd(int argc, char** argv) {
-    char kernel_rev[64] = {'?'};
-    mx_version_get(kernel_rev, sizeof(kernel_rev));
+    char kernel_rev[64] = {0};
+    if (mx_version_get(kernel_rev, sizeof(kernel_rev)) < 0)
+        kernel_rev[0] = '?';
 
     printf("---------------------------------------------------------------------------\n"
            "Welcome to fuchsia.\n"

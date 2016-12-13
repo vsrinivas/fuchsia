@@ -35,8 +35,8 @@ constexpr uint32_t kMaxMessageHandles = 1024u;
 constexpr size_t kChannelReadHandlesChunkCount = 16u;
 constexpr size_t kChannelWriteHandlesInlineCount = 8u;
 
-mx_status_t sys_channel_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_ptr<mx_handle_t> out1) {
-    LTRACEF("entry out_handles %p,%p\n", out0.get(), out1.get());
+mx_status_t sys_channel_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* _out1) {
+    LTRACEF("out_handles %p,%p\n", _out0, _out1);
 
     if ((flags != 0u) && (flags != MX_FLAG_REPLY_CHANNEL))
         return ERR_INVALID_ARGS;
@@ -59,9 +59,9 @@ mx_status_t sys_channel_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (out0.copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
+    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
-    if (out1.copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
+    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -72,12 +72,12 @@ mx_status_t sys_channel_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_
 }
 
 mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
-                             user_ptr<void> _bytes,
-                             uint32_t num_bytes, user_ptr<uint32_t> _num_bytes,
-                             user_ptr<mx_handle_t> _handles,
-                             uint32_t num_handles, user_ptr<uint32_t> _num_handles) {
+                             void* _bytes,
+                             uint32_t num_bytes, uint32_t* _num_bytes,
+                             mx_handle_t* _handles,
+                             uint32_t num_handles, uint32_t* _num_handles) {
     LTRACEF("handle %d bytes %p num_bytes %p handles %p num_handles %p",
-            handle_value, _bytes.get(), _num_bytes.get(), _handles.get(), _num_handles.get());
+            handle_value, _bytes, _num_bytes, _handles, _num_handles);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -98,18 +98,18 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
     // On ERR_BUFFER_TOO_SMALL, Read() gives us the size of the next message (which remains
     // unconsumed, unless |flags| has MX_CHANNEL_READ_MAY_DISCARD set).
     if (_num_bytes) {
-        if (_num_bytes.copy_to_user(num_bytes) != NO_ERROR)
+        if (make_user_ptr(_num_bytes).copy_to_user(num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     if (_num_handles) {
-        if (_num_handles.copy_to_user(num_handles) != NO_ERROR)
+        if (make_user_ptr(_num_handles).copy_to_user(num_handles) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     if (result == ERR_BUFFER_TOO_SMALL)
         return result;
 
     if (num_bytes > 0u) {
-        if (_bytes.copy_array_to_user(msg->data(), num_bytes) != NO_ERROR)
+        if (make_user_ptr(_bytes).copy_array_to_user(msg->data(), num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -120,12 +120,14 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
         // Copy the handle values out in chunks.
         mx_handle_t hvs[kChannelReadHandlesChunkCount];
         size_t num_copied = 0;
+        user_ptr<mx_handle_t> handles(_handles);
+
         do {
             size_t this_chunk_size = mxtl::min(num_handles - num_copied,
                                                kChannelReadHandlesChunkCount);
             for (size_t i = 0; i < this_chunk_size; i++)
                 hvs[i] = up->MapHandleToValue(handle_list[num_copied + i]);
-            _handles.element_offset(num_copied).copy_array_to_user(hvs, this_chunk_size);
+            handles.element_offset(num_copied).copy_array_to_user(hvs, this_chunk_size);
             num_copied += this_chunk_size;
         } while (num_copied < num_handles);
 
@@ -142,10 +144,10 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
 }
 
 mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
-                              user_ptr<const void> _bytes, uint32_t num_bytes,
-                              user_ptr<const mx_handle_t> _handles, uint32_t num_handles) {
+                              const void* _bytes, uint32_t num_bytes,
+                              const mx_handle_t* _handles, uint32_t num_handles) {
     LTRACEF("handle %d bytes %p num_bytes %u handles %p num_handles %u flags 0x%x\n",
-            handle_value, _bytes.get(), num_bytes, _handles.get(), num_handles, flags);
+            handle_value, _bytes, num_bytes, _handles, num_handles, flags);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -172,7 +174,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
         return result;
 
     if (num_bytes > 0u) {
-        if (_bytes.copy_array_from_user(msg->mutable_data(), num_bytes) != NO_ERROR)
+        if (make_user_ptr(_bytes).copy_array_from_user(msg->mutable_data(), num_bytes) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
@@ -181,7 +183,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
     if (!ac.check())
         return ERR_NO_MEMORY;
     if (num_handles > 0u) {
-        if (_handles.copy_array_from_user(handles.get(), num_handles) != NO_ERROR)
+        if (make_user_ptr(_handles).copy_array_from_user(handles.get(), num_handles) != NO_ERROR)
             return ERR_INVALID_ARGS;
 
         {

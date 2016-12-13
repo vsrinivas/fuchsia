@@ -43,14 +43,14 @@ uint64_t get_tsc_ticks_per_ms(void);
 };
 
 mx_status_t sys_thread_create(mx_handle_t process_handle,
-                              user_ptr<const char> name, uint32_t name_len,
-                              uint32_t flags, user_ptr<mx_handle_t> out) {
+                              const char* _name, uint32_t name_len,
+                              uint32_t flags, mx_handle_t* _out) {
     LTRACEF("process handle %d, flags %#x\n", process_handle, flags);
 
     // copy the name to a local buffer
     char buf[MX_MAX_NAME_LEN];
     mxtl::StringPiece sp;
-    status_t result = magenta_copy_user_string(name.get(), name_len, buf, sizeof(buf), &sp);
+    status_t result = magenta_copy_user_string(_name, name_len, buf, sizeof(buf), &sp);
     if (result != NO_ERROR)
         return result;
 
@@ -88,7 +88,7 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     if (!handle)
         return ERR_NO_MEMORY;
 
-    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
@@ -119,12 +119,13 @@ void sys_thread_exit() {
 }
 
 mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
-                                  user_ptr<uintptr_t> value_ptr) {
-    LTRACEF("handle %d operation %u value_ptr %p", handle_value, op, value_ptr.get());
+                                  uintptr_t* _value_ptr) {
+    LTRACEF("handle %d operation %u value_ptr %p", handle_value, op, _value_ptr);
 
     // TODO(cpu) what to do with |handle_value|?
 
     uintptr_t value;
+    user_ptr<uintptr_t> value_ptr(_value_ptr);
 
     switch (op) {
 #ifdef ARCH_X86_64
@@ -179,10 +180,10 @@ mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
 }
 
 mx_status_t sys_process_create(mx_handle_t job_handle,
-                               user_ptr<const char> name, uint32_t name_len,
-                               uint32_t flags, user_ptr<mx_handle_t> proc_handle,
-                               user_ptr<mx_handle_t> vmar_handle) {
-    LTRACEF("name %p, flags 0x%x\n", name.get(), flags);
+                               const char* _name, uint32_t name_len,
+                               uint32_t flags, mx_handle_t* _proc_handle,
+                               mx_handle_t* _vmar_handle) {
+    LTRACEF("name %p, flags 0x%x\n", _name, flags);
 
     // currently, the only valid flag value is 0
     if (flags != 0)
@@ -194,7 +195,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     // Silently truncate the given name.
     if (name_len > sizeof(buf))
         name_len = sizeof(buf);
-    status_t result = magenta_copy_user_string(name.get(), name_len, buf, sizeof(buf), &sp);
+    status_t result = magenta_copy_user_string(_name, name_len, buf, sizeof(buf), &sp);
     if (result != NO_ERROR)
         return result;
     LTRACEF("name %s\n", buf);
@@ -234,10 +235,10 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     if (!vmar_h)
         return ERR_NO_MEMORY;
 
-    if (proc_handle.copy_to_user(up->MapHandleToValue(proc_h.get())) != NO_ERROR)
+    if (make_user_ptr(_proc_handle).copy_to_user(up->MapHandleToValue(proc_h.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (vmar_handle.copy_to_user(up->MapHandleToValue(vmar_h.get())) != NO_ERROR)
+    if (make_user_ptr(_vmar_handle).copy_to_user(up->MapHandleToValue(vmar_h.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(vmar_h));
@@ -340,7 +341,7 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
     }
 }
 
-mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t flags, user_ptr<mx_handle_t> out) {
+mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t flags, mx_handle_t* _out) {
     LTRACEF("parent: %d\n", parent_job);
 
     if (flags != 0u)
@@ -360,7 +361,7 @@ mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t flags, user_ptr<mx_h
         return status;
 
     HandleUniquePtr job_handle(MakeHandle(mxtl::move(job), rights));
-    if (out.copy_to_user(up->MapHandleToValue(job_handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(job_handle.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(job_handle));

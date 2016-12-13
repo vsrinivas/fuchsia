@@ -114,7 +114,7 @@ mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_
     }
 }
 
-mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> init_buf, uint32_t len) {
+mx_status_t sys_pci_init(mx_handle_t handle, const mx_pci_init_arg_t* _init_buf, uint32_t len) {
     // TODO: finer grained validation
     // TODO(security): Add additional access checks
     mx_status_t status;
@@ -138,7 +138,8 @@ mx_status_t sys_pci_init(mx_handle_t handle, user_ptr<const mx_pci_init_arg_t> i
         return ERR_NO_MEMORY;
     }
     {
-        mx_status_t status = init_buf.reinterpret<const void>().copy_array_from_user(arg.get(), len);
+        status = make_user_ptr(_init_buf).reinterpret<const void>().copy_array_from_user(
+            arg.get(), len);
         if (status != NO_ERROR) {
             return status;
         }
@@ -544,7 +545,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
     return pci_device->SetIrqMode((mx_pci_irq_mode_t)mode, requested_irq_count);
 }
 #else  // WITH_DEV_PCIE
-mx_status_t sys_pci_init(mx_handle_t, user_ptr<const mx_pci_init_arg_t>, uint32_t) {
+mx_status_t sys_pci_init(mx_handle_t, const mx_pci_init_arg_t*, uint32_t) {
     shutdown_early_init_console();
     return ERR_NOT_SUPPORTED;
 }

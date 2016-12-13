@@ -68,7 +68,7 @@ extern "C" void arm_syscall_handler(struct arm_fault_frame* frame) {
     case n:                                                                                        \
         sfunc = reinterpret_cast<syscall_func>(sys_##name);                                        \
         break;
-#include <magenta/syscalls.inc>
+#include <magenta/gen-switch.inc>
         default:
             sfunc = reinterpret_cast<syscall_func>(sys_invalid_syscall);
     }
@@ -124,7 +124,7 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
     case n:                                                                                        \
         sfunc = reinterpret_cast<syscall_func>(sys_##name);                                        \
         break;
-#include <magenta/syscalls.inc>
+#include <magenta/gen-switch.inc>
         default:
             sfunc = reinterpret_cast<syscall_func>(sys_invalid_syscall);
     }
@@ -186,7 +186,7 @@ uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t ar
     case n:                                                                                        \
         sfunc = reinterpret_cast<syscall_func>(sys_##name);                                        \
         break;
-#include <magenta/syscalls.inc>
+#include <magenta/gen-switch.inc>
         default:
             sfunc = reinterpret_cast<syscall_func>(sys_invalid_syscall);
     }

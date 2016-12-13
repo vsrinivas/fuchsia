@@ -22,7 +22,7 @@
 
 #define LOCAL_TRACE 0
 
-mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> out) {
+mx_status_t sys_port_create(uint32_t options, mx_handle_t* _out) {
     LTRACEF("options %u\n", options);
 
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -41,7 +41,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> out) {
 
     mx_handle_t hv = up->MapHandleToValue(handle.get());
 
-    if (out.copy_to_user(hv) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(hv) != NO_ERROR)
         return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
@@ -49,7 +49,7 @@ mx_status_t sys_port_create(uint32_t options, user_ptr<mx_handle_t> out) {
     return NO_ERROR;
 }
 
-mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, size_t size) {
+mx_status_t sys_port_queue(mx_handle_t handle, const void* _packet, size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (size > MX_PORT_MAX_PKT_SIZE)
@@ -65,7 +65,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, size
     if (status != NO_ERROR)
         return status;
 
-    auto iopk = IOP_Packet::MakeFromUser(packet.get(), size);
+    auto iopk = IOP_Packet::MakeFromUser(_packet, size);
     if (!iopk)
         return ERR_NO_MEMORY;
 
@@ -75,10 +75,10 @@ mx_status_t sys_port_queue(mx_handle_t handle, user_ptr<const void> packet, size
 }
 
 mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
-                          user_ptr<void> packet, size_t size) {
+                          void* _packet, size_t size) {
     LTRACEF("handle %d\n", handle);
 
-    if (!packet)
+    if (!_packet)
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -97,7 +97,7 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
     if (status < 0)
         return status;
 
-    if (!iopk->CopyToUser(packet.get(), &size))
+    if (!iopk->CopyToUser(_packet, &size))
         return ERR_INVALID_ARGS;
 
     IOP_Packet::Delete(iopk);

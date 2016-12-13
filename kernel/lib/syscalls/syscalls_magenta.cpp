@@ -93,7 +93,7 @@ mx_status_t sys_clock_adjust(mx_handle_t hrsrc, uint32_t clock_id, int64_t offse
 }
 
 
-mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> out) {
+mx_status_t sys_event_create(uint32_t options, mx_handle_t* _out) {
     LTRACEF("options 0x%x\n", options);
 
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -109,7 +109,7 @@ mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> out) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
@@ -117,8 +117,8 @@ mx_status_t sys_event_create(uint32_t options, user_ptr<mx_handle_t> out) {
 }
 
 mx_status_t sys_eventpair_create(uint32_t flags,
-                                 user_ptr<mx_handle_t> out0, user_ptr<mx_handle_t> out1) {
-    LTRACEF("entry out_handles %p,%p\n", out0.get(), out1.get());
+                                 mx_handle_t* _out0, mx_handle_t* _out1) {
+    LTRACEF("entry out_handles %p,%p\n", _out0, _out1);
 
     if (flags != 0u)  // No flags defined/supported yet.
         return ERR_NOT_SUPPORTED;
@@ -138,10 +138,10 @@ mx_status_t sys_eventpair_create(uint32_t flags,
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (out0.copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
+    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (out1.copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
+    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -150,22 +150,24 @@ mx_status_t sys_eventpair_create(uint32_t flags,
     return NO_ERROR;
 }
 
-mx_status_t sys_futex_wait(user_ptr<mx_futex_t> value_ptr, int current_value, mx_time_t timeout) {
+mx_status_t sys_futex_wait(mx_futex_t* _value_ptr, int current_value, mx_time_t timeout) {
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexWait(
-        value_ptr, current_value, timeout);
+        make_user_ptr(_value_ptr), current_value, timeout);
 }
 
-mx_status_t sys_futex_wake(user_ptr<mx_futex_t> value_ptr, uint32_t count) {
-    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(value_ptr, count);
+mx_status_t sys_futex_wake(mx_futex_t* _value_ptr, uint32_t count) {
+    return ProcessDispatcher::GetCurrent()->futex_context()->FutexWake(
+        make_user_ptr(_value_ptr), count);
 }
 
-mx_status_t sys_futex_requeue(user_ptr<mx_futex_t> wake_ptr, uint32_t wake_count, int current_value,
-                              user_ptr<mx_futex_t> requeue_ptr, uint32_t requeue_count) {
+mx_status_t sys_futex_requeue(mx_futex_t* _wake_ptr, uint32_t wake_count, int current_value,
+                              mx_futex_t* _requeue_ptr, uint32_t requeue_count) {
     return ProcessDispatcher::GetCurrent()->futex_context()->FutexRequeue(
-        wake_ptr, wake_count, current_value, requeue_ptr, requeue_count);
+        make_user_ptr(_wake_ptr), wake_count, current_value,
+        make_user_ptr(_requeue_ptr), requeue_count);
 }
 
-int sys_log_create(uint32_t flags) {
+mx_handle_t sys_log_create(uint32_t flags) {
     LTRACEF("flags 0x%x\n", flags);
 
     // kernel flag is forbidden to userspace
@@ -197,8 +199,8 @@ int sys_log_create(uint32_t flags) {
     return hv;
 }
 
-int sys_log_write(mx_handle_t log_handle, uint32_t len, user_ptr<const void> ptr, uint32_t flags) {
-    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr.get());
+mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, const void* _ptr, uint32_t flags) {
+    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr);
 
     if (len > DLOG_MAX_ENTRY)
         return ERR_OUT_OF_RANGE;
@@ -211,14 +213,14 @@ int sys_log_write(mx_handle_t log_handle, uint32_t len, user_ptr<const void> ptr
         return status;
 
     char buf[DLOG_MAX_ENTRY];
-    if (magenta_copy_from_user(ptr.get(), buf, len) != NO_ERROR)
+    if (magenta_copy_from_user(_ptr, buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return log->Write(buf, len, flags);
 }
 
-int sys_log_read(mx_handle_t log_handle, uint32_t len, user_ptr<void> ptr, uint32_t flags) {
-    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, ptr.get());
+mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, void* _ptr, uint32_t flags) {
+    LTRACEF("log handle %d, len 0x%x, ptr 0x%p\n", log_handle, len, _ptr);
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -227,10 +229,10 @@ int sys_log_read(mx_handle_t log_handle, uint32_t len, user_ptr<void> ptr, uint3
     if (status != NO_ERROR)
         return status;
 
-    return log->ReadFromUser(ptr.get(), len, flags);
+    return log->ReadFromUser(_ptr, len, flags);
 }
 
-mx_status_t sys_cprng_draw(user_ptr<void> buffer, size_t len, user_ptr<size_t> actual) {
+mx_status_t sys_cprng_draw(void* _buffer, size_t len, size_t* _actual) {
     if (len > kMaxCPRNGDraw)
         return ERR_INVALID_ARGS;
 
@@ -239,9 +241,9 @@ mx_status_t sys_cprng_draw(user_ptr<void> buffer, size_t len, user_ptr<size_t> a
     auto prng = crypto::GlobalPRNG::GetInstance();
     prng->Draw(kernel_buf, static_cast<int>(len));
 
-    if (buffer.copy_array_to_user(kernel_buf, len) != NO_ERROR)
+    if (make_user_ptr(_buffer).copy_array_to_user(kernel_buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
-    if (actual.copy_to_user(len) != NO_ERROR)
+    if (make_user_ptr(_actual).copy_to_user(len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     // Get rid of the stack copy of the random data
@@ -250,12 +252,12 @@ mx_status_t sys_cprng_draw(user_ptr<void> buffer, size_t len, user_ptr<size_t> a
     return NO_ERROR;
 }
 
-mx_status_t sys_cprng_add_entropy(user_ptr<const void> buffer, size_t len) {
+mx_status_t sys_cprng_add_entropy(const void* _buffer, size_t len) {
     if (len > kMaxCPRNGSeed)
         return ERR_INVALID_ARGS;
 
     uint8_t kernel_buf[kMaxCPRNGSeed];
-    if (buffer.copy_array_from_user(kernel_buf, len) != NO_ERROR)
+    if (make_user_ptr(_buffer).copy_array_from_user(kernel_buf, len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     auto prng = crypto::GlobalPRNG::GetInstance();
@@ -267,7 +269,7 @@ mx_status_t sys_cprng_add_entropy(user_ptr<const void> buffer, size_t len) {
     return NO_ERROR;
 }
 
-mx_status_t sys_waitset_create(uint32_t options, user_ptr<mx_handle_t> out) {
+mx_status_t sys_waitset_create(uint32_t options, mx_handle_t* _out) {
     if (options != 0)
         return ERR_INVALID_ARGS;
 
@@ -282,7 +284,7 @@ mx_status_t sys_waitset_create(uint32_t options, user_ptr<mx_handle_t> out) {
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
@@ -341,12 +343,12 @@ mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
 
 mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
                              mx_time_t timeout,
-                             user_ptr<mx_waitset_result_t> _results,
-                             user_ptr<uint32_t> _count) {
+                             mx_waitset_result_t* _results,
+                             uint32_t* _count) {
     LTRACEF("wait set handle %d\n", ws_handle);
 
     uint32_t count;
-    if (_count.copy_from_user(&count) != NO_ERROR)
+    if (make_user_ptr(_count).copy_from_user(&count) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     //TODO: use inline array here
@@ -374,10 +376,10 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
     uint32_t max_results = 0u;
     mx_status_t result = ws_dispatcher->Wait(timeout, &count, results.get(), &max_results);
     if (result == NO_ERROR) {
-        if (_count.copy_to_user(count) != NO_ERROR)
+        if (make_user_ptr(_count).copy_to_user(count) != NO_ERROR)
             return ERR_INVALID_ARGS;
         if (count > 0u) {
-            if (_results.copy_array_to_user(results.get(), count) != NO_ERROR)
+            if (make_user_ptr(_results).copy_array_to_user(results.get(), count) != NO_ERROR)
                 return ERR_INVALID_ARGS;
         }
     }
@@ -385,8 +387,8 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
     return result;
 }
 
-mx_status_t sys_socket_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_ptr<mx_handle_t> out1) {
-    LTRACEF("entry out_handles %p, %p\n", out0.get(), out1.get());
+mx_status_t sys_socket_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* _out1) {
+    LTRACEF("entry out_handles %p, %p\n", _out0, _out1);
 
     if (flags != 0u)
         return ERR_INVALID_ARGS;
@@ -407,10 +409,10 @@ mx_status_t sys_socket_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_p
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (out0.copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
+    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (out1.copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
+    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -420,8 +422,8 @@ mx_status_t sys_socket_create(uint32_t flags, user_ptr<mx_handle_t> out0, user_p
 }
 
 mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
-                             user_ptr<const void> _buffer, size_t size,
-                             user_ptr<size_t> actual) {
+                             const void* _buffer, size_t size,
+                             size_t* _actual) {
     LTRACEF("handle %d\n", handle);
 
     if ((size > 0u) && !_buffer)
@@ -437,14 +439,14 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
     switch (flags) {
     case 0: {
         size_t nwritten;
-        status = socket->Write(_buffer.get(), size, true, &nwritten);
+        status = socket->Write(_buffer, size, true, &nwritten);
 
         if (status != NO_ERROR)
             return status;
 
         // Caller may ignore results if desired.
-        if (actual)
-            status = actual.copy_to_user(nwritten);
+        if (_actual)
+            status = make_user_ptr(_actual).copy_to_user(nwritten);
 
         return status;
     }
@@ -458,11 +460,11 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
 }
 
 mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
-                            user_ptr<void> _buffer, size_t size,
-                            user_ptr<size_t> actual) {
+                            void* _buffer, size_t size,
+                            size_t* _actual) {
     LTRACEF("handle %d\n", handle);
 
-    if (!actual || flags)
+    if (!_actual || flags)
         return ERR_INVALID_ARGS;
 
     if (!_buffer && size > 0)
@@ -476,15 +478,15 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
         return status;
 
     size_t nread;
-    status = socket->Read(_buffer.get(), size, true, &nread);
+    status = socket->Read(_buffer, size, true, &nread);
 
     if (status == NO_ERROR)
-        status = actual.copy_to_user(nread);
+        status = make_user_ptr(_actual).copy_to_user(nread);
 
     return status;
 }
 
-mx_status_t sys_fifo_create(uint64_t count, user_ptr<mx_handle_t> out) {
+mx_status_t sys_fifo_create(uint64_t count, mx_handle_t* _out) {
     // Must be a power of 2
     if (!count || (count & (count - 1))) {
         return ERR_INVALID_ARGS;
@@ -501,19 +503,18 @@ mx_status_t sys_fifo_create(uint64_t count, user_ptr<mx_handle_t> out) {
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
     return NO_ERROR;
 }
 
-mx_status_t sys_fifo_op(mx_handle_t handle, uint32_t op, uint64_t val,
-                        user_ptr<mx_fifo_state_t> out) {
+mx_status_t sys_fifo_op(mx_handle_t handle, uint32_t op, uint64_t val, mx_fifo_state_t* _out) {
     mx_rights_t rights = MX_RIGHT_READ;
     switch (op) {
     case MX_FIFO_OP_READ_STATE:
-        if (!out) return ERR_INVALID_ARGS;
+        if (!_out) return ERR_INVALID_ARGS;
         break;
     case MX_FIFO_OP_ADVANCE_HEAD:
     case MX_FIFO_OP_PRODUCER_EXCEPTION:
@@ -553,8 +554,8 @@ mx_status_t sys_fifo_op(mx_handle_t handle, uint32_t op, uint64_t val,
         break;
     }
 
-    if (out) {
-        if (out.copy_to_user(state) != NO_ERROR) {
+    if (_out) {
+        if (make_user_ptr(_out).copy_to_user(state) != NO_ERROR) {
             status = ERR_INVALID_ARGS;
         }
     }

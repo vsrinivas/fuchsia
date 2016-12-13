@@ -28,12 +28,22 @@ extern "C" uint64_t get_tsc_ticks_per_ms(void);
 
 static void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
 
-#define MAGENTA_SYSCALL_DEF(s64,s32,num,ret,name,attr,args...) \
-    ktrace_name_etc(TAG_SYSCALL_NAME, num, 0, #name, true);
-#define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
+// Generated struct that has the syscall index and name.
+static struct ktrace_syscall_info {
+    uint32_t id;
+    uint32_t nargs;
+    const char* name;
+} kt_syscall_info [] = {
+    #include <magenta/gen-trace.inc>
+    {0, 0, nullptr}
+};
 
-void ktrace_report_syscalls(void) {
-#include <magenta/syscalls.inc>
+void ktrace_report_syscalls(ktrace_syscall_info* call) {
+    size_t ix = 0;
+    while (call[ix].name) {
+        ktrace_name_etc(TAG_SYSCALL_NAME, call[ix].id, 0, call[ix].name, true);
+        ++ix;
+    }
 }
 
 static uint32_t probe_number = 1;
@@ -149,7 +159,7 @@ status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     case KTRACE_ACTION_REWIND:
         // roll back to just after the metadata
         atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
-        ktrace_report_syscalls();
+        ktrace_report_syscalls(kt_syscall_info);
         ktrace_report_probes();
         break;
     case KTRACE_ACTION_NEW_PROBE: {
@@ -224,7 +234,7 @@ void ktrace_init(unsigned level) {
 
     // enable tracing
     atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
-    ktrace_report_syscalls();
+    ktrace_report_syscalls(kt_syscall_info);
     ktrace_report_probes();
     atomic_store(&ks->grpmask, KTRACE_GRP_TO_MASK(grpmask));
 

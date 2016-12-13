@@ -23,8 +23,8 @@
 // via new_channel_handle and ipc connections may be accepted via this pipe.
 // parent_handle must have RIGHT_WRITE
 mx_status_t sys_resource_create(mx_handle_t handle,
-                                user_ptr<const mx_rrec_t> records, uint32_t count,
-                                user_ptr<mx_handle_t> rsrc_out) {
+                                const mx_rrec_t* _records, uint32_t count,
+                                mx_handle_t* _rsrc_out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // Obtain the parent Resource
@@ -37,6 +37,8 @@ mx_status_t sys_resource_create(mx_handle_t handle,
     // Disallow no records (self is required) or excessive number
     if ((count < 1) || (count > ResourceDispatcher::kMaxRecords))
         return ERR_OUT_OF_RANGE;
+
+    user_ptr<const mx_rrec_t> records(_records);
 
     mx_rrec_t rec;
     if (records.copy_array_from_user(&rec, 1, 0) != NO_ERROR)
@@ -71,7 +73,7 @@ mx_status_t sys_resource_create(mx_handle_t handle,
     if (!child_h)
         return ERR_NO_MEMORY;
 
-    if (rsrc_out.copy_to_user(up->MapHandleToValue(child_h.get())) != NO_ERROR)
+    if (make_user_ptr(_rsrc_out).copy_to_user(up->MapHandleToValue(child_h.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(child_h));
@@ -83,7 +85,7 @@ mx_status_t sys_resource_create(mx_handle_t handle,
 // Return a handle appropriate to that index (eg VMO for RSRC_INFO_MMIO, etc)
 // resource handle must have RIGHT_READ
 mx_status_t sys_resource_get_handle(mx_handle_t handle, uint32_t index,
-                                    uint32_t options, user_ptr<mx_handle_t> out) {
+                                    uint32_t options, mx_handle_t* _out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     // Obtain the parent Resource
@@ -103,7 +105,7 @@ mx_status_t sys_resource_get_handle(mx_handle_t handle, uint32_t index,
     if (!out_h)
         return ERR_NO_MEMORY;
 
-    if (out.copy_to_user(up->MapHandleToValue(out_h.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(out_h.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(out_h));
@@ -163,7 +165,7 @@ mx_status_t sys_resource_connect(mx_handle_t handle, mx_handle_t channel_hv) {
 
 // Given a resource handle, attempt to accept an inbound connection
 // resource handle must have RIGHT_WRITE
-mx_status_t sys_resource_accept(mx_handle_t handle, user_ptr<mx_handle_t> out) {
+mx_status_t sys_resource_accept(mx_handle_t handle, mx_handle_t* _out) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mx_status_t result;
@@ -177,7 +179,7 @@ mx_status_t sys_resource_accept(mx_handle_t handle, user_ptr<mx_handle_t> out) {
     if (result)
         return result;
 
-    if (out.copy_to_user(up->MapHandleToValue(channel.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(channel.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(channel));

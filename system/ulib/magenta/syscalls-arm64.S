@@ -24,7 +24,4 @@ _\name:
 .size \name, . - _\name
 .endm
 
-#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall mx_##name, n
-#define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
-
-#include <magenta/syscalls.inc>
+#include "gen-arm64.S"

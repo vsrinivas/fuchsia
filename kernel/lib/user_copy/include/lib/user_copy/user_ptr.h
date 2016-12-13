@@ -91,3 +91,6 @@ private:
     // the kernel and user space.
     T* const ptr_;
 };
+
+template <typename T>
+user_ptr<T> make_user_ptr(T* p) { return user_ptr<T>(p); }

@@ -88,10 +88,9 @@ mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
     return interrupt->WaitForInterrupt();
 }
 
-
 mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t len,
                                    mx_cache_policy_t cache_policy,
-                                   user_ptr<uintptr_t> out_vaddr) {
+                                   uintptr_t* _out_vaddr) {
 
     LTRACEF("addr %#" PRIxPTR " len %#x\n", paddr, len);
 
@@ -101,7 +100,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
         return status;
     }
 
-    if (!out_vaddr)
+    if (!_out_vaddr)
         return ERR_INVALID_ARGS;
 
     uint arch_mmu_flags =
@@ -148,7 +147,8 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
         return status;
     }
 
-    if (out_vaddr.copy_to_user(reinterpret_cast<uintptr_t>(mapping->base())) != NO_ERROR) {
+    if (make_user_ptr(_out_vaddr).copy_to_user(
+        reinterpret_cast<uintptr_t>(mapping->base())) != NO_ERROR) {
         mapping->Unmap();
         return ERR_INVALID_ARGS;
     }
@@ -157,7 +157,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
 }
 
 mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
-                                      user_ptr<mx_handle_t> out) {
+                                      mx_handle_t* _out) {
     LTRACEF("size 0x%zu\n", size);
 
     if (size == 0) return ERR_INVALID_ARGS;
@@ -197,7 +197,7 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (out.copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
@@ -256,11 +256,11 @@ mx_status_t sys_set_framebuffer(mx_handle_t hrsrc, void* vaddr, uint32_t len, ui
  * @param out_len Mapped size of the I/O range.
  */
 mx_status_t sys_io_mapping_get_info(mx_handle_t handle,
-                                    user_ptr<uintptr_t> out_vaddr,
-                                    user_ptr<uint64_t> out_size) {
+                                    uintptr_t* _out_vaddr,
+                                    uint64_t* _out_size) {
     LTRACEF("handle %d\n", handle);
 
-    if (!out_vaddr || !out_size)
+    if (!_out_vaddr || !_out_size)
         return ERR_INVALID_ARGS;
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -279,11 +279,11 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle,
     uintptr_t vaddr = reinterpret_cast<uintptr_t>(io_mapping->vaddr());
     uint64_t  size  = io_mapping->size();
 
-    status = out_vaddr.copy_to_user(vaddr);
+    status = make_user_ptr(_out_vaddr).copy_to_user(vaddr);
     if (status != NO_ERROR)
         return status;
 
-    return out_size.copy_to_user(size);
+    return make_user_ptr(_out_size).copy_to_user(size);
 }
 
 #if ARCH_X86

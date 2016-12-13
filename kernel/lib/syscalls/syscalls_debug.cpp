@@ -135,9 +135,9 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
 }
 
 mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
-                                    user_ptr<void> buffer,
-                                    size_t len, user_ptr<size_t> actual) {
-    if (!buffer)
+                                    void* _buffer,
+                                    size_t len, size_t* _actual) {
+    if (!_buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugReadBlock)
         return ERR_INVALID_ARGS;
@@ -169,19 +169,19 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
     uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
     size_t read = 0;
 
-    status_t st = vmo->ReadUser(buffer, offset, len, &read);
+    status_t st = vmo->ReadUser(make_user_ptr(_buffer), offset, len, &read);
 
     if (st == NO_ERROR) {
-        if (actual.copy_to_user(static_cast<size_t>(read)) != NO_ERROR)
+        if (make_user_ptr(_actual).copy_to_user(static_cast<size_t>(read)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     return st;
 }
 
 mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
-                                     user_ptr<const void> buffer,
-                                     size_t len, user_ptr<size_t> actual) {
-    if (!buffer)
+                                     const void* _buffer,
+                                     size_t len, size_t* _actual) {
+    if (!_buffer)
         return ERR_INVALID_ARGS;
     if (len == 0 || len > kMaxDebugWriteBlock)
         return ERR_INVALID_ARGS;
@@ -212,32 +212,32 @@ mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
     uint64_t offset = vaddr - vm_mapping->base() + vm_mapping->object_offset();
     size_t written = 0;
 
-    status_t st = vmo->WriteUser(buffer, offset, len, &written);
+    status_t st = vmo->WriteUser(make_user_ptr(_buffer), offset, len, &written);
 
     if (st == NO_ERROR) {
-        if (actual.copy_to_user(static_cast<size_t>(written)) != NO_ERROR)
+        if (make_user_ptr(_actual).copy_to_user(static_cast<size_t>(written)) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
     return st;
 }
 
-mx_status_t sys_ktrace_read(mx_handle_t handle, user_ptr<void> data,
+mx_status_t sys_ktrace_read(mx_handle_t handle, void* _data,
                             uint32_t offset, uint32_t len,
-                            user_ptr<uint32_t> actual) {
+                            uint32_t* _actual) {
     // TODO: finer grained validation
     mx_status_t status;
     if ((status = validate_resource_handle(handle)) < 0) {
         return status;
     }
 
-    int result = ktrace_read_user(data.get(), offset, len);
+    int result = ktrace_read_user(_data, offset, len);
     if (result < 0)
         return result;
 
-    return actual.copy_to_user(static_cast<uint32_t>(result));
+    return make_user_ptr(_actual).copy_to_user(static_cast<uint32_t>(result));
 }
 
-mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t options, user_ptr<void> ptr) {
+mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t options, void* _ptr) {
     // TODO: finer grained validation
     mx_status_t status;
     if ((status = validate_resource_handle(handle)) < 0) {
@@ -247,7 +247,7 @@ mx_status_t sys_ktrace_control(mx_handle_t handle, uint32_t action, uint32_t opt
     switch (action) {
     case KTRACE_ACTION_NEW_PROBE: {
         char name[MX_MAX_NAME_LEN];
-        if (ptr.copy_array_from_user(name, sizeof(name) - 1) != NO_ERROR)
+        if (make_user_ptr(_ptr).copy_array_from_user(name, sizeof(name) - 1) != NO_ERROR)
             return ERR_INVALID_ARGS;
         name[sizeof(name) - 1] = 0;
         return ktrace_control(action, options, name);
@@ -280,8 +280,8 @@ mx_status_t sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg
 }
 
 mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
-                                  user_ptr<void> _buffer_ptr,
-                                  uint32_t buffer_len, user_ptr<uint32_t> actual) {
+                                  void* _buffer,
+                                  uint32_t buffer_len, uint32_t* _actual) {
     LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -307,22 +307,21 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
     // Always set the actual size so the caller can provide larger buffers.
     // The value is only usable if the status is NO_ERROR or ERR_BUFFER_TOO_SMALL.
     if (status == NO_ERROR || status == ERR_BUFFER_TOO_SMALL) {
-        if (actual.copy_to_user(buffer_len) != NO_ERROR)
+        if (make_user_ptr(_actual).copy_to_user(buffer_len) != NO_ERROR)
             return ERR_INVALID_ARGS;
     }
 
     if (status != NO_ERROR)
         return status;
 
-    if (_buffer_ptr.copy_array_to_user(bytes.get(), buffer_len) != NO_ERROR)
+    if (make_user_ptr(_buffer).copy_array_to_user(bytes.get(), buffer_len) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     return NO_ERROR;
 }
 
 mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
-                                   user_ptr<const void> _buffer_ptr, uint32_t buffer_len)
-{
+                                   const void* _buffer, uint32_t buffer_len) {
     LTRACEF("handle %d, state_kind %u\n", handle, state_kind);
 
     auto up = ProcessDispatcher::GetCurrent();
@@ -343,7 +342,7 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
         return ERR_NO_MEMORY;
     mxtl::Array<uint8_t> bytes(tmp_buf, buffer_len);
 
-    status = _buffer_ptr.copy_array_from_user(bytes.get(), buffer_len);
+    status = make_user_ptr(_buffer).copy_array_from_user(bytes.get(), buffer_len);
     if (status != NO_ERROR)
         return ERR_INVALID_ARGS;
 

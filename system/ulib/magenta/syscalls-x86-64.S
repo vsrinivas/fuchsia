@@ -77,7 +77,4 @@ _\name:
 .size \name, . - _\name
 .endm
 
-#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs64, mx_##name, n
-#define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
-
-#include <magenta/syscalls.inc>
+#include "gen-x86-64.S"
