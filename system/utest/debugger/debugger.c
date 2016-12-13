@@ -40,6 +40,8 @@ static const char test_inferior_child_name[] = "inferior";
 // The segfault child is not used by the test.
 // It exists for debugging purposes.
 static const char test_segfault_child_name[] = "segfault";
+// Used for testing the s/w breakpoint insn.
+static const char test_swbreak_child_name[] = "swbreak";
 
 static bool done_tests = false;
 
@@ -496,6 +498,22 @@ static int __NO_INLINE test_segfault(void)
     return test_segfault_doit1(&i);
 }
 
+// Invoke the s/w breakpoint insn.
+
+static int __NO_INLINE test_swbreak(void)
+{
+    unittest_printf("Invoking s/w breakpoint instruction\n");
+#ifdef __x86_64__
+    __asm__ volatile ("int3");
+#endif
+#ifdef __aarch64__
+    // This is what gdb uses.
+    __asm__ volatile ("brk 0");
+#endif
+    unittest_printf("Resumed after s/w breakpoint instruction\n");
+    return 0;
+}
+
 BEGIN_TEST_CASE(debugger_tests)
 RUN_TEST(debugger_test);
 RUN_TEST(debugger_thread_list_test);
@@ -524,6 +542,10 @@ int main(int argc, char **argv)
     if (argc >= 2 && strcmp(argv[1], test_segfault_child_name) == 0) {
         check_verbosity(argc, argv);
         return test_segfault();
+    }
+    if (argc >= 2 && strcmp(argv[1], test_swbreak_child_name) == 0) {
+        check_verbosity(argc, argv);
+        return test_swbreak();
     }
 
     thrd_t watchdog_thread;
