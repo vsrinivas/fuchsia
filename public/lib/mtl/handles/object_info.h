@@ -5,7 +5,7 @@
 #ifndef LIB_MTL_OBJECT_INFO_H_
 #define LIB_MTL_OBJECT_INFO_H_
 
-#include <magenta/syscalls/types.h>
+#include <magenta/types.h>
 
 #include <string>
 
