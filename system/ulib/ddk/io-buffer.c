@@ -84,6 +84,18 @@ mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle, mx_o
     return io_buffer_init_common(buffer, vmo_handle, size, offset, flags);
 }
 
+// copies an io_buffer. clone gets duplicate of the source's vmo_handle
+mx_status_t io_buffer_clone(io_buffer_t* src, io_buffer_t* dest) {
+    mx_status_t status = mx_handle_duplicate(src->vmo_handle, MX_RIGHT_SAME_RIGHTS,
+                                             &dest->vmo_handle);
+    if (status < 0) return status;
+    dest->size = src->size;
+    dest->offset = src->offset;
+    dest->virt = src->virt;
+    dest->phys = src->phys;
+    return NO_ERROR;
+}
+
 void io_buffer_release(io_buffer_t* buffer) {
     if (buffer->vmo_handle) {
         mx_handle_close(buffer->vmo_handle);

@@ -78,10 +78,10 @@ static void iotxn_mmap(iotxn_t* txn, void** data) {
     *data = io_buffer_virt(&priv->buffer);
 }
 
-static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
-    iotxn_priv_t* priv = get_priv(txn);
-    iotxn_t* clone = NULL;
+static iotxn_priv_t* iotxn_get_clone(size_t extra_size) {
     iotxn_priv_t* cpriv = NULL;
+    iotxn_t* clone = NULL;
+
     // look in clone list first for something that fits
     bool found = false;
 
@@ -107,19 +107,12 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     cpriv = calloc(1, sizeof(iotxn_priv_t) + extra_size);
     if (!cpriv) {
         xprintf("iotxn: out of memory\n");
-        return ERR_NO_MEMORY;
+        return NULL;
     }
-    memset(cpriv, 0, sizeof(iotxn_priv_t));
 
 out:
     cpriv->flags |= IOTXN_FLAG_CLONE;
-    // copy data payload metadata to the clone so the api can just work
-    memcpy(&cpriv->buffer, &priv->buffer, sizeof(priv->buffer));
-    cpriv->data_size = priv->data_size;
-    memcpy(&cpriv->txn, txn, sizeof(iotxn_t));
-    cpriv->txn.complete_cb = NULL; // clear the complete cb
-    *out = &cpriv->txn;
-    return NO_ERROR;
+    return cpriv;
 }
 
 static void iotxn_release(iotxn_t* txn) {
@@ -131,6 +124,9 @@ static void iotxn_release(iotxn_t* txn) {
     }
 
     if (priv->flags & IOTXN_FLAG_CLONE) {
+        // close our io-buffer's copy of the VMO handle
+        io_buffer_release(&priv->buffer);
+
         mtx_lock(&clone_list_mutex);
         list_add_tail(&clone_list, &txn->node);
         priv->flags |= IOTXN_FLAG_FREE;
@@ -141,6 +137,24 @@ static void iotxn_release(iotxn_t* txn) {
         priv->flags |= IOTXN_FLAG_FREE;
         mtx_unlock(&free_list_mutex);
     }
+}
+
+static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
+    iotxn_priv_t* priv = get_priv(txn);
+    iotxn_priv_t* cpriv = iotxn_get_clone(extra_size);
+    if (!cpriv) return ERR_NO_MEMORY;
+
+    // copy data payload metadata to the clone so the api can just work
+    mx_status_t status = io_buffer_clone(&priv->buffer, &cpriv->buffer);
+    if (status < 0) {
+        iotxn_release(&cpriv->txn);
+        return status;
+    }
+    cpriv->data_size = priv->data_size;
+    memcpy(&cpriv->txn, txn, sizeof(iotxn_t));
+    cpriv->txn.complete_cb = NULL; // clear the complete cb
+    *out = &cpriv->txn;
+    return NO_ERROR;
 }
 
 static iotxn_ops_t ops = {
@@ -197,6 +211,18 @@ out:
     priv->txn.ops = &ops;
     *out = &priv->txn;
     xprintf("iotxn_alloc: found=%d txn=%p buffer_size=0x%zx\n", found, &priv->txn, priv->buffer.size);
+    return NO_ERROR;
+}
+
+mx_status_t iotxn_alloc_vmo(iotxn_t** out, mx_handle_t vmo_handle, size_t data_size,
+                            mx_off_t data_offset, size_t extra_size) {
+    iotxn_priv_t* priv = iotxn_get_clone(extra_size);
+    if (!priv) return ERR_NO_MEMORY;
+
+    io_buffer_init_vmo(&priv->buffer, vmo_handle, data_offset, IO_BUFFER_RW);
+    priv->data_size = data_size;
+
+    *out = &priv->txn;
     return NO_ERROR;
 }
 

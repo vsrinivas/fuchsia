@@ -33,6 +33,9 @@ mx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags);
 mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle, mx_off_t offset,
                                uint32_t flags);
 
+// copies an io_buffer. clone gets duplicate of the source's vmo_handle
+mx_status_t io_buffer_clone(io_buffer_t* src, io_buffer_t* dest);
+
 // Releases an io_buffer
 void io_buffer_release(io_buffer_t* buffer);
 

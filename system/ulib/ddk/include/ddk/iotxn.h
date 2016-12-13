@@ -99,6 +99,11 @@ struct iotxn {
 // and extra storage space of extra_size
 mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t extra_size);
 
+// creates a new iotxn based on a provided VMO buffer, offset and size
+// this duplicates the provided vmo_handle
+mx_status_t iotxn_alloc_vmo(iotxn_t** out, mx_handle_t vmo_handle, size_t data_size,
+                            mx_off_t data_offset, size_t extra_size);
+
 // queue an iotxn against a device
 void iotxn_queue(mx_device_t* dev, iotxn_t* txn);
 
