@@ -274,6 +274,23 @@ void LedgerApplicationTest::DeletePage(const fidl::Array<uint8_t>& page_id,
   EXPECT_EQ(expected_status, status);
 }
 
+TEST_F(LedgerApplicationTest, LedgerRepositoryDuplicate) {
+  files::ScopedTempDir tmp_dir;
+  Status status;
+  LedgerRepositoryPtr repository;
+  ledger_repository_factory_->GetRepository(
+      tmp_dir.path(), repository.NewRequest(),
+      [&status](Status s) { status = s; });
+  EXPECT_TRUE(ledger_repository_factory_.WaitForIncomingResponse());
+  EXPECT_EQ(Status::OK, status);
+
+  LedgerRepositoryPtr duplicated_repository;
+  repository->Duplicate(duplicated_repository.NewRequest(),
+                        [&status](Status s) { status = s; });
+  EXPECT_TRUE(repository.WaitForIncomingResponse());
+  EXPECT_EQ(Status::OK, status);
+}
+
 TEST_F(LedgerApplicationTest, GetLedger) {
   EXPECT_NE(nullptr, ledger_.get());
 }

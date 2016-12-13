@@ -20,5 +20,8 @@ interface LedgerRepositoryFactory {
 interface LedgerRepository {
   // Creates a new Ledger for the given |ledger_name| if it doesn't already
   // exist.
-   GetLedger(array<uint8> ledger_name, Ledger& ledger) => (Status status);
+  GetLedger(array<uint8> ledger_name, Ledger& ledger) => (Status status);
+
+  // Binds a new LedgerRepository handle to this repository.
+  Duplicate(LedgerRepository& request) => (Status status);
 };

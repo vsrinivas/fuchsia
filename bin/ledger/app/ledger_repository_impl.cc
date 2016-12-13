@@ -62,6 +62,13 @@ void LedgerRepositoryImpl::GetLedger(
   callback(Status::OK);
 }
 
+void LedgerRepositoryImpl::Duplicate(
+    fidl::InterfaceRequest<LedgerRepository> request,
+    const DuplicateCallback& callback) {
+  BindRepository(std::move(request));
+  callback(Status::OK);
+}
+
 void LedgerRepositoryImpl::CheckEmpty() {
   if (!on_empty_callback_)
     return;

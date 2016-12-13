@@ -34,6 +34,8 @@ class LedgerRepositoryImpl : public LedgerRepository {
   void GetLedger(fidl::Array<uint8_t> ledger_name,
                  fidl::InterfaceRequest<Ledger> ledger_request,
                  const GetLedgerCallback& callback) override;
+  void Duplicate(fidl::InterfaceRequest<LedgerRepository> request,
+                 const DuplicateCallback& callback) override;
 
   void CheckEmpty();
 
