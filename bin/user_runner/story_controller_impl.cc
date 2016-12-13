@@ -137,8 +137,6 @@ void StoryControllerImpl::Reset() {
   module_.reset();
   story_.reset();
   story_runner_.reset();
-  if (module_watcher_binding_.is_bound())
-    module_watcher_binding_.Close();
 }
 
 // |StoryController|
