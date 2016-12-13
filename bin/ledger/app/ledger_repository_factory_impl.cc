@@ -19,7 +19,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     const fidl::String& repository_path,
     fidl::InterfaceRequest<LedgerRepository> repository_request,
     const GetRepositoryCallback& callback) {
-  TRACE_DURATION0("repository_factory", "get_repository");
+  TRACE_DURATION("repository_factory", "get_repository");
   std::string sanitized_path =
       files::SimplifyPath(std::move(repository_path.get()));
   auto it = repositories_.find(sanitized_path);

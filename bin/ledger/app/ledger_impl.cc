@@ -52,7 +52,7 @@ void LedgerImpl::NewPage(fidl::InterfaceRequest<Page> page_request,
 // DeletePage(array<uint8> id) => (Status status);
 void LedgerImpl::DeletePage(fidl::Array<uint8_t> id,
                             const DeletePageCallback& callback) {
-  TRACE_DURATION0("ledger", "delete_page");
+  TRACE_DURATION("ledger", "delete_page");
 
   callback(delegate_->DeletePage(id));
 }
@@ -62,7 +62,7 @@ void LedgerImpl::DeletePage(fidl::Array<uint8_t> id,
 void LedgerImpl::SetConflictResolverFactory(
     fidl::InterfaceHandle<ConflictResolverFactory> factory,
     const SetConflictResolverFactoryCallback& callback) {
-  TRACE_DURATION0("ledger", "set_conflict_resolver_factory");
+  TRACE_DURATION("ledger", "set_conflict_resolver_factory");
 
   FTL_NOTIMPLEMENTED();
   callback(Status::UNKNOWN_ERROR);

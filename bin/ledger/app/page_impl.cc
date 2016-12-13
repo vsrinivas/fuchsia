@@ -31,7 +31,7 @@ PageImpl::~PageImpl() {}
 
 // GetId() => (array<uint8> id);
 void PageImpl::GetId(const GetIdCallback& callback) {
-  TRACE_DURATION0("page", "get_id");
+  TRACE_DURATION("page", "get_id");
 
   callback(convert::ToArray(storage_->GetId()));
 }
@@ -49,7 +49,7 @@ const storage::CommitId& PageImpl::GetCurrentCommitId() {
 void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     const GetSnapshotCallback& callback) {
-  TRACE_DURATION0("page", "get_snapshot");
+  TRACE_DURATION("page", "get_snapshot");
 
   std::unique_ptr<const storage::Commit> commit;
   storage::Status status = storage_->GetCommit(GetCurrentCommitId(), &commit);
@@ -240,7 +240,7 @@ void PageImpl::GetPartialReference(
 
 // StartTransaction() => (Status status);
 void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
-  TRACE_DURATION0("page", "start_transaction");
+  TRACE_DURATION("page", "start_transaction");
 
   if (journal_) {
     callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
@@ -270,7 +270,7 @@ void PageImpl::Commit(const CommitCallback& callback) {
 
 // Rollback() => (Status status);
 void PageImpl::Rollback(const RollbackCallback& callback) {
-  TRACE_DURATION0("page", "rollback");
+  TRACE_DURATION("page", "rollback");
 
   if (!journal_) {
     callback(Status::NO_TRANSACTION_IN_PROGRESS);
