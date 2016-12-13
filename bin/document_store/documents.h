@@ -133,7 +133,7 @@ bool PropertyValueFromEntry(const ledger::EntryPtr& entry,
   if (!PropertyFromLedgerKey(entry->key, docid, property)) {
     return false;
   }
-  if (!DeserializeValue(entry->value, value)) {
+  if (!DeserializeValue(entry->value->get_bytes(), value)) {
     return false;
   }
   return true;

@@ -388,8 +388,9 @@ class PreviousStoriesCall : public Transaction {
 
                   for (auto& entry : entries) {
                     StoryDataPtr story_data = StoryData::New();
-                    story_data->Deserialize(entry->value.data(),
-                                            entry->value.size());
+                    story_data->Deserialize(
+                      entry->value->get_bytes().data(),
+                      entry->value->get_bytes().size());
                     story_ids_.push_back(story_data->story_info->id);
                   }
 
@@ -754,42 +755,39 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
   FTL_DCHECK(!page->changes.is_null());
 
   for (auto& entry : page->changes) {
-    if (entry->new_value.is_null()) {
-      const fidl::String story_id = to_string(entry->key);
-      watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
-        watcher->OnDelete(story_id);
-      });
+    auto story_data = StoryData::New();
+    auto& bytes = entry->value->get_bytes();
+    story_data->Deserialize(bytes.data(), bytes.size());
 
-      // If there is a story controller entry for this ID, mark it
-      // deleted and dispose. We can only purge it when there are no
-      // pending requests for it, otherwise we have to wait for the
-      // requests to come back. If there already is a controller, we
-      // first have to stop it.
-      auto i = story_controllers_.find(story_id);
-      if (i != story_controllers_.end()) {
-        // If already marked deleted, this is from a local
-        // DeleteStory() request. If not yet marked deleted, this is
-        // from sync, so we mark it accordingly.
-        if (!i->second->deleted) {
-          PendControllerDelete(story_id, []{});
-        }
-        DisposeController(story_id);
+    // If this is a new story, guard against double using its key.
+    story_ids_.insert(story_data->story_info->id.get());
+
+    watchers_.ForAllPtrs([&story_data](StoryProviderWatcher* const watcher) {
+      watcher->OnChange(story_data->story_info.Clone());
+    });
+  }
+  for (auto& key : page->deleted_keys) {
+    const fidl::String story_id = to_string(key);
+    watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
+      watcher->OnDelete(story_id);
+    });
+
+    // If there is a story controller entry for this ID, mark it
+    // deleted and dispose. We can only purge it when there are no
+    // pending requests for it, otherwise we have to wait for the
+    // requests to come back. If there already is a controller, we
+    // first have to stop it.
+    auto i = story_controllers_.find(story_id);
+    if (i != story_controllers_.end()) {
+      // If already marked deleted, this is from a local
+      // DeleteStory() request. If not yet marked deleted, this is
+      // from sync, so we mark it accordingly.
+      if (!i->second->deleted) {
+        PendControllerDelete(story_id, []{});
       }
-
-    } else {
-      auto story_data = StoryData::New();
-      auto& bytes = entry->new_value->get_bytes();
-      story_data->Deserialize(bytes.data(), bytes.size());
-
-      // If this is a new story, guard against double using its key.
-      story_ids_.insert(story_data->story_info->id.get());
-
-      watchers_.ForAllPtrs([&story_data](StoryProviderWatcher* const watcher) {
-        watcher->OnChange(story_data->story_info.Clone());
-      });
+      DisposeController(story_id);
     }
   }
-
   cb(nullptr);
 }
 

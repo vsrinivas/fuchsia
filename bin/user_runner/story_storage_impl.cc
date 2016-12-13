@@ -169,8 +169,8 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
       for (auto& watcher_entry : watchers_) {
         if (link_id == watcher_entry.first) {
           auto data = LinkData::New();
-          data->Deserialize(entry->new_value->get_bytes().data(),
-                            entry->new_value->get_bytes().size());
+          data->Deserialize(entry->value->get_bytes().data(),
+                            entry->value->get_bytes().size());
           watcher_entry.second->OnChange(std::move(data));
         }
       }
