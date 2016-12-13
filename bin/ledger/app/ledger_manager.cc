@@ -191,15 +191,15 @@ LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(
 
 std::unique_ptr<PageManager> LedgerManager::NewPageManager(
     std::unique_ptr<storage::PageStorage> page_storage) {
-  std::unique_ptr<cloud_sync::PageSyncContext> page_sync;
+  std::unique_ptr<cloud_sync::PageSyncContext> page_sync_context;
   if (sync_) {
-    page_sync = sync_->CreatePageContext(page_storage.get(), [] {
+    page_sync_context = sync_->CreatePageContext(page_storage.get(), [] {
       // TODO(ppi): reinitialize the sync?
       FTL_LOG(ERROR) << "Page Sync stopped due to unrecoverable error.";
     });
   }
   return std::make_unique<PageManager>(
-      std::move(page_storage), std::move(page_sync),
+      std::move(page_storage), std::move(page_sync_context),
       merge_manager_.GetMergeResolver(page_storage.get()));
 }
 
