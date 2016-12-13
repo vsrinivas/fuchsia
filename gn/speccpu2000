@@ -84,6 +84,26 @@
           "bootfs_path": "benchmarks/data/175.vpr/arch.in"
         },
         {
+          "file": "third_party/speccpu2000/176.gcc/data/ref/input/166.i",
+          "bootfs_path": "benchmarks/data/176.gcc/166.i"
+        },
+        {
+          "file": "third_party/speccpu2000/176.gcc/data/ref/input/200.i",
+          "bootfs_path": "benchmarks/data/176.gcc/200.i"
+        },
+        {
+          "file": "third_party/speccpu2000/176.gcc/data/ref/input/expr.i",
+          "bootfs_path": "benchmarks/data/176.gcc/expr.i"
+        },
+        {
+          "file": "third_party/speccpu2000/176.gcc/data/ref/input/integrate.i",
+          "bootfs_path": "benchmarks/data/176.gcc/integrate.i"
+        },
+        {
+          "file": "third_party/speccpu2000/176.gcc/data/ref/input/scilab.i",
+          "bootfs_path": "benchmarks/data/176.gcc/scilab.i"
+        },
+        {
           "file": "third_party/speccpu2000/177.mesa/data/ref/input/mesa.in",
           "bootfs_path": "benchmarks/data/177.mesa/mesa.mesh"
         },
