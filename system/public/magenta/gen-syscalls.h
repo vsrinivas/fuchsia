@@ -889,6 +889,14 @@ extern mx_status_t _mx_pci_enable_bus_master(
     mx_handle_t handle,
     bool enable);
 
+extern mx_status_t mx_pci_enable_pio(
+    mx_handle_t handle,
+    bool enable);
+
+extern mx_status_t _mx_pci_enable_pio(
+    mx_handle_t handle,
+    bool enable);
+
 extern mx_status_t mx_pci_reset_device(
     mx_handle_t handle);
 

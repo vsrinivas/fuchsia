@@ -445,6 +445,10 @@ mx_status_t sys_pci_enable_bus_master(
     mx_handle_t handle,
     bool enable);
 
+mx_status_t sys_pci_enable_pio(
+    mx_handle_t handle,
+    bool enable);
+
 mx_status_t sys_pci_reset_device(
     mx_handle_t handle);
 
