@@ -41,8 +41,9 @@ class StoryControllerImpl : public StoryController,
   // Used by StoryProviderImpl.
   void Connect(fidl::InterfaceRequest<StoryController> story_controller_request);
   void StopForDelete(const StopCallback& done);
+  void AddLinkData(FidlDocMap data);
+  bool IsActive();  // Has story or pending stop or start requests?
   size_t bindings_size() const { return bindings_.size(); }
-  void set_root_docs(FidlDocMap root_docs) { root_docs_ = std::move(root_docs); }
 
  private:
   // Constructor is private to ensure (by way of New()) that instances
@@ -68,6 +69,9 @@ class StoryControllerImpl : public StoryController,
   void WriteStoryData(std::function<void()> done);
   void NotifyStateChange();
 
+  // Starts the StoryRunner instance to run the story in.
+  void StartStoryRunner();
+
   // Starts the Story instance for the given story.
   void StartStory(fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
 
@@ -89,13 +93,10 @@ class StoryControllerImpl : public StoryController,
   StoryRunnerPtr story_runner_;
   StoryPtr story_;
   LinkPtr root_;
-  // If requests for root_ arrive before we have it, we store these
-  // requests here.
-  std::vector<fidl::InterfaceRequest<Link>> root_requests_;
-  // These docs are added to the root link before any requests are connected.
-  FidlDocMap root_docs_;
-
   ModuleControllerPtr module_;
+
+  std::vector<std::function<void()>> stop_requests_;
+  fidl::InterfaceRequest<mozart::ViewOwner> start_request_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };

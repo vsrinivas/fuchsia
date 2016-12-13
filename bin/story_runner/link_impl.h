@@ -119,7 +119,9 @@ class LinkConnection : public Link {
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void Dup(fidl::InterfaceRequest<Link> dup) override;
+  void Sync(const SyncCallback& callback) override;
 
+  // Used by Watch() and WatchAll().
   void AddWatcher(fidl::InterfaceHandle<LinkWatcher> watcher,
                   const bool self_notify);
 

@@ -33,6 +33,7 @@ executable("user_runner") {
     "//apps/modular/lib/fidl:scope",
     "//apps/modular/lib/fidl:strong_binding",
     "//apps/modular/services/document_store",
+    "//apps/modular/lib/document_editor",
     "//apps/modular/services/story:private",
     "//apps/modular/services/user:private",
     "//apps/mozart/services/views",

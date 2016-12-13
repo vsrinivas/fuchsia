@@ -18,6 +18,8 @@ StoryControllerImpl::StoryControllerImpl(
       story_provider_impl_(story_provider_impl),
       module_watcher_binding_(this) {
   bindings_.set_on_empty_set_handler([this]() {
+    // This does not purge a controller with an open story runner as
+    // indicated by IsActive().
     story_provider_impl_->PurgeControllers();
   });
 }
@@ -25,6 +27,22 @@ StoryControllerImpl::StoryControllerImpl(
 void StoryControllerImpl::Connect(
     fidl::InterfaceRequest<StoryController> story_controller_request) {
   bindings_.AddBinding(this, std::move(story_controller_request));
+}
+
+void StoryControllerImpl::AddLinkData(FidlDocMap data) {
+  if (data.is_null()) {
+    return;
+  }
+
+  if (!story_.is_bound()) {
+    StartStoryRunner();
+  }
+
+  root_->AddDocuments(std::move(data));
+}
+
+bool StoryControllerImpl::IsActive() {
+  return story_.is_bound() || stop_requests_.size() > 0 || start_request_;
 }
 
 // |StoryController|
@@ -58,7 +76,7 @@ void StoryControllerImpl::Start(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   // If a controller is stopped for delete, then it cannot be used
   // further. However, as of now nothing prevents a client to call
-  // StartStory() on a story that is being deleted, so this condition
+  // Start() on a story that is being deleted, so this condition
   // arises legitimately. We just do nothing, and the connection to
   // the client will be deleted shortly after. TODO(mesch): Change two
   // things: (1) API such that it can be notified about such
@@ -66,68 +84,107 @@ void StoryControllerImpl::Start(
   // checked more systematically, e.g. implement a formal state
   // machine that checks how to handle each method in every state.
   if (deleted_) {
-    FTL_LOG(INFO) << "StoryControllerImpl::StartStory() during delete: ignored.";
+    FTL_LOG(INFO) << "StoryControllerImpl::Start() during delete: ignored.";
     return;
   }
 
-  if (story_data_->story_info->is_running) {
+  // If the story is running, we do nothing and close the view owner
+  // request. Also, if another view owner request is pending, we close
+  // this one. First start request wins.
+  if (story_data_->story_info->is_running || start_request_) {
     return;
   }
 
-  StartStory(std::move(view_owner_request));
-  NotifyStateChange();
+  // We store the view owner request until we actually handle it. If
+  // another start request arrives in the meantime, it is preempted by
+  // this one.
+  start_request_ = std::move(view_owner_request);
+
+  auto cont = [this]() {
+                if (!story_.is_bound()) {
+                  StartStoryRunner();
+                }
+
+                if (start_request_ && !deleted_) {
+                  StartStory(std::move(start_request_));
+                  NotifyStateChange();
+                }
+
+                // In case we didn't use the start request, we close it here,
+                start_request_ = nullptr;
+
+                if (deleted_) {
+                  FTL_LOG(INFO) << "StoryControllerImpl::Start()"
+                      " callback during delete: ignored.";
+                }
+              };
+
+  // If a stop request is in flight, we wait for it to finish before
+  // we start.
+  if (stop_requests_.size() > 0) {
+    Stop(cont);
+  } else {
+    cont();
+  }
 }
 
 // |StoryController|
 void StoryControllerImpl::Stop(const StopCallback& done) {
-  if (!story_data_->story_info->is_running) {
-    done();
+  stop_requests_.emplace_back(done);
+
+  if (stop_requests_.size() != 1) {
     return;
   }
 
-  // Stop watching the root module to avoid any race conditions for state
-  // updates.
-  // TODO(vardhan): Revisit this solution to the race condition (and also for
-  // StopForDelete).
-  module_watcher_binding_.Close();
-
-  story_runner_->Stop([this, done]() {
-    story_data_->story_info->is_running = false;
-    story_data_->story_info->state = StoryState::STOPPED;
-    WriteStoryData([this, done]() {
-      Reset();
-      NotifyStateChange();
+  if (!story_.is_bound()) {
+    std::vector<std::function<void()>> stop_requests = std::move(stop_requests_);
+    for (auto& done : stop_requests) {
       done();
+    }
+    return;
+  }
+
+  // At this point, we don't need to monitor the root module for state
+  // changes anymore, because the next state change of the story is
+  // triggered by the Stop() call below.
+  if (module_watcher_binding_.is_bound()) {
+    module_watcher_binding_.Close();
+  }
+
+  // Ensure the Stop() call is sent only after the root link was
+  // written. Since the AddDocuments() and the Stop() requests are
+  // sent over different channels, there is no ordering guarantee
+  // between them. If the Stop() request happens to be executed before
+  // the AddDocuments() request, the link is never written to the
+  // ledger.
+  root_->Sync([this]() {
+    story_runner_->Stop([this]() {
+      story_data_->story_info->is_running = false;
+      story_data_->story_info->state = StoryState::STOPPED;
+      WriteStoryData([this]() {
+        Reset();
+        NotifyStateChange();
+
+        std::vector<std::function<void()>> stop_requests = std::move(stop_requests_);
+        for (auto& done : stop_requests) {
+          done();
+        }
+      });
     });
   });
 }
 
 
 // A variant of Stop() that stops the controller because the story was
-// deleted. It also stops the story runner, but then does not write
-// the story data to the ledger, because that would undelete the story
-// again. It also suppresses writes of story data on status changes
-// from the root module.
+// deleted. It suppresses any writes of story data, so that the story
+// is not resurrected in the ledger.
 //
 // TODO(mesch): A cleaner way is probably to retain tombstones in the
-// ledger. We revisit that once we sort out cross device synchronization.
+// ledger. We revisit that once we sort out cross device
+// synchronization.
 void StoryControllerImpl::StopForDelete(const StopCallback& done) {
   deleted_ = true;
-
-  if (!story_data_->story_info->is_running) {
-    done();
-    return;
-  }
-
-  module_watcher_binding_.Close();
-
-  story_runner_->Stop([this, done]() {
-    story_data_->story_info->is_running = false;
-    story_data_->story_info->state = StoryState::STOPPED;
-    Reset();
-    NotifyStateChange();
-    done();
-  });
+  Stop(done);
 }
 
 void StoryControllerImpl::Reset() {
@@ -164,6 +221,8 @@ void StoryControllerImpl::OnStateChange(const ModuleState state) {
       break;
   }
 
+  // TODO(mesch): Notify() doesn't need to wait for the data to be
+  // written, same as in StartStory().
   WriteStoryData([this]() {
     NotifyStateChange();
   });
@@ -186,8 +245,7 @@ void StoryControllerImpl::NotifyStateChange() {
   });
 }
 
-void StoryControllerImpl::StartStory(
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+void StoryControllerImpl::StartStoryRunner() {
   StoryRunnerFactoryPtr story_runner_factory;
   story_provider_impl_->ConnectToStoryRunnerFactory(story_runner_factory.NewRequest());
 
@@ -207,18 +265,10 @@ void StoryControllerImpl::StartStory(
 
   story_runner_->GetStory(story_.NewRequest());
   story_->CreateLink("root", root_.NewRequest());
+}
 
-  if (!root_docs_.is_null()) {
-    root_->AddDocuments(std::move(root_docs_));
-  }
-
-  // Connect pending requests to the new root_, so that it can be
-  // configured before the new module uses it.
-  for (auto& root_request : root_requests_) {
-    root_->Dup(std::move(root_request));
-  }
-  root_requests_.clear();
-
+void StoryControllerImpl::StartStory(
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   fidl::InterfaceHandle<Link> link;
   root_->Dup(link.NewRequest());
   story_->StartModule(story_data_->story_info->url, std::move(link), nullptr, nullptr,
@@ -232,11 +282,11 @@ void StoryControllerImpl::StartStory(
 }
 
 void StoryControllerImpl::GetLink(fidl::InterfaceRequest<Link> link_request) {
-  if (root_.is_bound()) {
-    root_->Dup(std::move(link_request));
-  } else {
-    root_requests_.emplace_back(std::move(link_request));
+  if (!story_.is_bound()) {
+    StartStoryRunner();
   }
+
+  root_->Dup(std::move(link_request));
 }
 
 }  // namespace modular

@@ -79,6 +79,13 @@ interface Link {
   // keep a reference to a Link instance and pass it as an argument to
   // another service.
   Dup(Link& dup);
+
+  // Allows to await completion of previously pipelined requests, to
+  // create sequentiality across service instances without giving
+  // every operation an empty return value. Useed to gate an operation
+  // on another service (like StoryRunner.Stop()) that would actually
+  // tear down this service on state being persistent.
+  Sync() => ();
 };
 
 // This interface is meant to be implemented by a client of Link.

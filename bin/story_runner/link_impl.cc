@@ -190,6 +190,10 @@ void LinkConnection::Dup(fidl::InterfaceRequest<Link> dup) {
   LinkConnection::New(impl_, std::move(dup));
 }
 
+void LinkConnection::Sync(const SyncCallback& callback) {
+  callback();
+}
+
 void LinkConnection::AddDocuments(FidlDocMap docs) {
   impl_->AddDocuments(std::move(docs), this);
 }

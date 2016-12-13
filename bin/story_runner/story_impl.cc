@@ -145,6 +145,8 @@ void StoryImpl::StartModule(
         launch_info->services = app_services.NewRequest();
         launch_info->url = module_url;
 
+        FTL_LOG(INFO) << "StoryImpl::StartModule() " << module_url;
+
         ApplicationControllerPtr application_controller;
         application_context_->launcher()->CreateApplication(
             std::move(launch_info), application_controller.NewRequest());

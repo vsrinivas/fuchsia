@@ -225,7 +225,7 @@ class CreateStoryCall : public Transaction {
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
           auto* const story_controller = StoryControllerImpl::New(
               std::move(story_data_), story_provider_impl_);
-          story_controller->set_root_docs(std::move(root_docs_));
+          story_controller->AddLinkData(std::move(root_docs_));
           story_provider_impl_->AddController(story_id_, story_controller);
           Done();
         });
@@ -541,14 +541,16 @@ void StoryProviderImpl::PurgeControllers() {
   for (auto& entry : story_controllers_) {
     if ((entry.second->impl.get() != nullptr &&
          entry.second->impl->bindings_size() == 0 &&
+         !entry.second->impl->IsActive() &&
          entry.second->deleted_callbacks.size() == 0) ||
-        (entry.second->deleted && entry.second->requests.size() == 0 &&
+        (entry.second->deleted &&
+         entry.second->requests.size() == 0 &&
+         (entry.second->impl.get() == nullptr || !entry.second->impl->IsActive()) &&
          entry.second->deleted_callbacks.size() == 0)) {
       disconnected.push_back(entry.first);
     }
   }
   for (auto& story_id : disconnected) {
-    FTL_LOG(INFO) << "StoryProviderImpl purge StoryController " << story_id;
     story_controllers_.erase(story_id);
   }
 }
@@ -651,6 +653,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
     fidl::InterfaceRequest<StoryController> story_controller_request) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   PendControllerAdd(story_id, std::move(story_controller_request));
+  FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_docs;
   new CreateStoryCall(
       &transaction_container_, ledger_.get(), this, url,
       story_id, std::move(extra_info), std::move(root_docs));

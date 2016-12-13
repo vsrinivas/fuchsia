@@ -15,17 +15,17 @@ interface StoryController {
   GetInfo() => (StoryInfo info);
 
   // Stores extra information associated with the story, like title,
-  // color, etc. Available in the |extra| field in the StoryInfo.
+  // color, etc. Available in the |extra| field in StoryInfo.
   SetInfoExtra(string name, string value) => ();
 
   // Runs the |Story| controlled by this |StoryController| instance if
-  // not yet running, else does nothing. |view_owner| is an interface
-  // request for the root view of this story.
+  // not yet running or requested to start, else does nothing.
+  // |view_owner| is an interface request for the root view of this
+  // story. If Stop() requests are pending when this request is
+  // issued, the request is queued until the Stop() request completes.
   Start(mozart.ViewOwner& view_owner);
 
-  // Gets a connection to the Link to the root module. Only available
-  // when the story is running. If requested earlier, gets queued
-  // until the story is started.
+  // Gets a connection to the Link to the root module.
   GetLink(Link& link);
 
   // Stops this story if it is running, else does nothing. Returns
