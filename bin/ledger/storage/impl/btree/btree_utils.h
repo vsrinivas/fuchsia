@@ -5,6 +5,7 @@
 #ifndef APPS_LEDGER_SRC_STORAGE_IMPL_BTREE_BTREE_UTILS_H_
 #define APPS_LEDGER_SRC_STORAGE_IMPL_BTREE_BTREE_UTILS_H_
 
+#include <memory>
 #include <unordered_set>
 
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"

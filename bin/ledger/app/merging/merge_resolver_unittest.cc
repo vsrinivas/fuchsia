@@ -208,6 +208,7 @@ TEST_F(MergeResolverTest, LastOneWins) {
   std::vector<storage::Entry> content_vector =
       GetCommitContents(commit->GetContents());
   // Entries are ordered by keys
+  ASSERT_EQ(2u, content_vector.size());
   EXPECT_EQ("key2", content_vector[0].key);
   EXPECT_EQ("val2.1", content_vector[0].object_id);
   EXPECT_EQ("key3", content_vector[1].key);

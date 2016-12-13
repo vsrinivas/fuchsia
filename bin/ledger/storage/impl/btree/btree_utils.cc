@@ -5,11 +5,15 @@
 #include "apps/ledger/src/storage/impl/btree/btree_utils.h"
 
 #include "apps/ledger/src/callback/waiter.h"
+#include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
 
 namespace storage {
 namespace btree {
 namespace {
+
+// Helper functions for btree::ForEach.
+
 // Iterates through the nodes of the subtree with |node| as root and calls
 // |on_next| on each entry found with a key equal to or greater than |min_key|.
 void ForEachEntryIn(PageStorage* page_storage,
@@ -89,153 +93,268 @@ void ForEachEntryIn(PageStorage* page_storage,
   }));
 }
 
+void RemoveNodeId(const ObjectId& id, std::unordered_set<ObjectId>* nodes) {
+  auto it = nodes->find(id);
+  if (it != nodes->end()) {
+    nodes->erase(it);
+  }
+}
+
+// Helper functions for btree::ApplyChanges.
+
+void ApplyChangesIn(
+    PageStorage* page_storage,
+    Iterator<const EntryChange>* changes,
+    std::unique_ptr<const TreeNode> node,
+    bool is_root,
+    const std::string& max_key,
+    size_t node_size,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::function<void(Status,
+                       ObjectId,
+                       std::unique_ptr<TreeNode::Mutation::Updater>)> on_done);
+
 // Recursively merge |left| and |right| nodes. |new_id| will contain the ID of
 // the new, merged node. Returns OK on success or the error code otherwise.
-Status Merge(PageStorage* page_storage,
-             std::unique_ptr<const TreeNode> left,
-             std::unique_ptr<const TreeNode> right,
-             std::unordered_set<ObjectId>* new_nodes,
-             ObjectId* new_id) {
+void Merge(PageStorage* page_storage,
+           std::unique_ptr<const TreeNode> left,
+           std::unique_ptr<const TreeNode> right,
+           std::unordered_set<ObjectId>* new_nodes,
+           std::function<void(Status, ObjectId)> on_done) {
   if (left == nullptr) {
-    *new_id = right == nullptr ? "" : right->GetId();
-    return Status::OK;
+    if (right == nullptr) {
+      on_done(Status::OK, "");
+      return;
+    }
+    on_done(Status::OK, right->GetId());
+    return;
   }
   if (right == nullptr) {
-    *new_id = left->GetId();
-    return Status::OK;
+    on_done(Status::OK, left->GetId());
+    return;
   }
 
   // Merge the children before merging left and right.
-  ObjectId child_id;
   std::unique_ptr<const TreeNode> left_rightmost_child;
   std::unique_ptr<const TreeNode> right_leftmost_child;
-  Status left_status =
-      left->GetChild(left->GetKeyCount(), &left_rightmost_child);
-  Status right_status = right->GetChild(0, &left_rightmost_child);
-  if (left_status != Status::OK && left_status != Status::NO_SUCH_CHILD) {
-    return left_status;
+  Status s = left->GetChild(left->GetKeyCount(), &left_rightmost_child);
+  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
+    on_done(s, "");
+    return;
   }
-  if (right_status != Status::OK && right_status != Status::NO_SUCH_CHILD) {
-    return right_status;
+  s = right->GetChild(0, &left_rightmost_child);
+  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
+    on_done(s, "");
+    return;
   }
-  Status child_result =
-      Merge(page_storage, std::move(left_rightmost_child),
-            std::move(right_leftmost_child), new_nodes, &child_id);
-  if (child_result != Status::OK) {
-    return child_result;
-  }
+  Merge(page_storage, std::move(left_rightmost_child),
+        std::move(right_leftmost_child), new_nodes, ftl::MakeCopyable([
+          page_storage, left = std::move(left), right = std::move(right),
+          new_nodes, on_done = std::move(on_done)
+        ](Status s, ObjectId child_id) mutable {
+          if (s != Status::OK) {
+            on_done(s, "");
+            return;
+          }
+          RemoveNodeId(left->GetId(), new_nodes);
+          RemoveNodeId(right->GetId(), new_nodes);
 
-  auto it = new_nodes->find(left->GetId());
-  if (it != new_nodes->end()) {
-    new_nodes->erase(it);
-  }
-  it = new_nodes->find(right->GetId());
-  if (it != new_nodes->end()) {
-    new_nodes->erase(it);
-  }
-
-  Status s = TreeNode::Merge(page_storage, std::move(left), std::move(right),
-                             child_id, new_id);
-  if (s != Status::OK) {
-    return s;
-  }
-  new_nodes->insert(*new_id);
-  return Status::OK;
+          ObjectId new_id;
+          s = TreeNode::Merge(page_storage, std::move(left), std::move(right),
+                              child_id, &new_id);
+          if (s != Status::OK) {
+            on_done(s, "");
+            return;
+          }
+          new_nodes->insert(new_id);
+          on_done(Status::OK, new_id);
+        }));
 }
 
-// Recursively applies the changes starting from the given |node|.
-Status ApplyChanges(PageStorage* page_storage,
-                    std::unique_ptr<const TreeNode> node,
-                    size_t node_size,
-                    const std::string& max_key,
-                    std::unordered_set<ObjectId>* new_nodes,
-                    Iterator<const EntryChange>* changes,
-                    TreeNode::Mutation* parent_mutation,
-                    ObjectId* new_id) {
-  TreeNode::Mutation mutation = node->StartMutation();
-  std::string key;
-
-  while (changes->Valid() &&
-         ((key = (*changes)->entry.key) < max_key || max_key.empty())) {
-    int index;
-    Status s = node->FindKeyOrChild(key, &index);
-    if (s == Status::OK) {
-      // The key was found in this node.
-      if ((*changes)->deleted) {
-        // Remove the entry after merging the children.
-        ObjectId child_id;
-        std::unique_ptr<const TreeNode> left;
-        std::unique_ptr<const TreeNode> right;
-        Status left_status = node->GetChild(index, &left);
-        Status right_status = node->GetChild(index + 1, &right);
-        if (left_status != Status::OK && left_status != Status::NO_SUCH_CHILD) {
-          return left_status;
-        }
-        if (right_status != Status::OK &&
-            right_status != Status::NO_SUCH_CHILD) {
-          return right_status;
-        }
-        Status merge_status = Merge(page_storage, std::move(left),
-                                    std::move(right), new_nodes, &child_id);
-        if (merge_status != Status::OK) {
-          return merge_status;
-        }
-        mutation.RemoveEntry(key, child_id);
-      } else {
-        // Update the entry's value.
-        mutation.UpdateEntry((*changes)->entry);
-      }
-    } else if (s == Status::NOT_FOUND) {
-      // The key was not found in this node.
-      std::unique_ptr<const TreeNode> child;
-      Status child_status = node->GetChild(index, &child);
-      if (child_status == Status::OK) {
-        // Recursively search for the key in the child and then update the child
-        // id in this node in the corresponding index.
-        std::string next_key;
-        if (index == node->GetKeyCount()) {
-          next_key = "";
-        } else {
-          Entry entry;
-          node->GetEntry(index, &entry);
-          next_key = entry.key;
-        }
-        ObjectId new_child_id;
-        Status status =
-            ApplyChanges(page_storage, std::move(child), node_size, next_key,
-                         new_nodes, changes, &mutation, &new_child_id);
-        if (status != Status::OK) {
-          return status;
-        }
-        // The change iterator already advanced inside the nested ApplyChanges,
-        // so we skip advancing it here.
-        continue;
-      } else if (child_status == Status::NO_SUCH_CHILD) {
-        if ((*changes)->deleted) {
-          // We try to remove an entry that is not in the tree. This is
-          // expected, as journals collate all operations on a key in a single
-          // change: if one does a put then a delete on a key, then we will only
-          // see here the delete operation.
-          FTL_VLOG(1) << "Failed to delete key " << key << ": No such entry.";
-        } else {
-          // Add the entry here. Since there is no child, both the new left and
-          // right children are empty.
-          mutation.AddEntry((*changes)->entry, "", "");
-        }
-      } else {
-        // GetChild returned an error.
-        return child_status;
-      }
-    } else {
-      // FindKeyOrChild returned an error.
-      return s;
-    }
-    changes->Next();
+// Applies the change to the given node. If the change is a deletion, it also
+// triggers the merging of the corresponding children. |new_nodes| will be
+// updated by adding all newly created nodes and removing the previous ones. The
+// pointed object of |new_nodes| should outlive the call to the |on_done|
+// callback.
+void ApplyChangeOnNode(
+    PageStorage* page_storage,
+    const EntryChange* change,
+    const TreeNode* node,
+    int change_index,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::function<void(Status, std::unique_ptr<TreeNode::Mutation::Updater>)>
+        on_done) {
+  if (!change->deleted) {
+    // Update the entry's value.
+    on_done(
+        Status::OK,
+        std::make_unique<TreeNode::Mutation::Updater>([entry = change->entry](
+            TreeNode::Mutation * mutation) { mutation->UpdateEntry(entry); }));
+    return;
   }
-  FTL_DCHECK(parent_mutation || !changes->Valid());
+  // Remove the entry after merging the children.
+  ObjectId child_id;
+  std::unique_ptr<const TreeNode> left;
+  std::unique_ptr<const TreeNode> right;
+  Status s = node->GetChild(change_index, &left);
+  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
+    on_done(s, nullptr);
+    return;
+  }
+  s = node->GetChild(change_index + 1, &right);
+  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
+    on_done(s, nullptr);
+    return;
+  }
 
-  return mutation.Finish(node_size, parent_mutation, max_key, new_nodes,
-                         new_id);
+  Merge(page_storage, std::move(left), std::move(right), new_nodes, [
+    key = change->entry.key, on_done = std::move(on_done)
+  ](Status s, ObjectId child_id) {
+    if (s != Status::OK) {
+      on_done(s, nullptr);
+      return;
+    }
+    on_done(Status::OK, std::make_unique<TreeNode::Mutation::Updater>(
+                            [key, child_id](TreeNode::Mutation* mutation) {
+                              mutation->RemoveEntry(key, child_id);
+                            }));
+  });
+}
+
+// Retrieves the child node in the given |child_index| and, if present,
+// recursively calls ApplyChangesIn to apply all necessary changes to the
+// subtree with that child as root. When |on_done| is called, the |changes|
+// iterator will already be advanced to the first change that has not been
+// applied, or to the end of the iterator if there is no such element.
+void ApplyChangeOnKeyNotFound(
+    PageStorage* page_storage,
+    Iterator<const EntryChange>* changes,
+    const TreeNode* node,
+    int child_index,
+    int node_size,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::function<void(Status, std::unique_ptr<TreeNode::Mutation::Updater>)>
+        on_done) {
+  std::unique_ptr<const TreeNode> child;
+  Status s = node->GetChild(child_index, &child);
+  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
+    changes->Next();
+    on_done(s, nullptr);
+    return;
+  }
+  if (s == Status::NO_SUCH_CHILD) {
+    if ((*changes)->deleted) {
+      // We try to remove an entry that is not in the tree. This is
+      // expected, as journals collate all operations on a key in a single
+      // change: if one does a put then a delete on a key, then we will only
+      // see here the delete operation.
+      FTL_VLOG(1) << "Failed to delete key " << (*changes)->entry.key
+                  << ": No such entry.";
+      changes->Next();
+      on_done(Status::OK, nullptr);
+      return;
+    }
+    // Add the entry here. Since there is no child, both the new left and
+    // right children are empty.
+    Entry entry = std::move((*changes)->entry);
+    changes->Next();
+    on_done(Status::OK,
+            std::make_unique<TreeNode::Mutation::Updater>([entry = std::move(
+                                                               entry)](
+                TreeNode::Mutation * mutation) {
+              mutation->AddEntry(entry, "", "");
+            }));
+    return;
+  }
+  // Recursively search for the key in the child and then update the child
+  // id in this node in the corresponding index.
+  std::string next_key;
+  if (child_index == node->GetKeyCount()) {
+    next_key = "";
+  } else {
+    Entry entry;
+    node->GetEntry(child_index, &entry);
+    next_key = entry.key;
+  }
+  ApplyChangesIn(
+      page_storage, changes, std::move(child), false, std::move(next_key),
+      node_size, new_nodes,
+      [on_done = std::move(on_done)](
+          Status s, ObjectId new_child_id,
+          std::unique_ptr<TreeNode::Mutation::Updater> parent_updater) {
+        // No need to call Next on the iterator here, it has already
+        // advanced in the ApplyChangesIn loop.
+        on_done(s, std::move(parent_updater));
+      });
+}
+
+// Applies all given changes in the subtree having |node| as a root.
+// |changes| should be sorted by the changes' entry key.
+// |max_key| is the maximal value (exclusive) this code could have as a key.
+// E.g. a child node placed between keys "A" and "B", has "B" as it's |max_key|.
+// It should be an empty string for the root node.
+// |node_size| is the maximal size of a tree node as defined in this B-Tree.
+// |new_nodes| is the set of all nodes added during the recursion.
+// |on_done| is called once, with the returned status and, when successfull, the
+// id of the new root and the TreeNode::Mutation::Updater for the parent node's
+// mutation.
+void ApplyChangesIn(
+    PageStorage* page_storage,
+    Iterator<const EntryChange>* changes,
+    std::unique_ptr<const TreeNode> node,
+    bool is_root,
+    const std::string& max_key,
+    size_t node_size,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::function<void(Status,
+                       ObjectId,
+                       std::unique_ptr<TreeNode::Mutation::Updater>)> on_done) {
+  auto waiter =
+      callback::Waiter<Status, TreeNode::Mutation::Updater>::Create(Status::OK);
+  // Apply all changes in the correct range: until the max_key. Wait for all
+  // changes to be detected for this node before applying them in this node's
+  // mutation, so as to guarantee they are applied in the right order.
+  while (changes->Valid() &&
+         (max_key.empty() || (*changes)->entry.key < max_key)) {
+    int index;
+    Status s = node->FindKeyOrChild((*changes)->entry.key, &index);
+    const EntryChange& change = **changes;
+    if (s == Status::OK) {
+      // The key was found. Apply the change to this node.
+      ApplyChangeOnNode(page_storage, &change, node.get(), index, new_nodes,
+                        waiter->NewCallback());
+      changes->Next();
+    } else if (s == Status::NOT_FOUND) {
+      // The key was not found here. Search in the corresponding child.
+      ApplyChangeOnKeyNotFound(page_storage, changes, node.get(), index,
+                               node_size, new_nodes, waiter->NewCallback());
+    } else {
+      // Error in FindKeyOrChild.
+      on_done(s, "", nullptr);
+      return;
+    }
+  }
+  waiter->Finalize(ftl::MakeCopyable([
+    node = std::move(node), is_root, max_key, node_size, new_nodes,
+    on_done = std::move(on_done)
+  ](Status s, std::vector<std::unique_ptr<TreeNode::Mutation::Updater>>
+                  apply_updates) mutable {
+    if (s != Status::OK) {
+      on_done(s, "", nullptr);
+      return;
+    }
+    TreeNode::Mutation mutation = node->StartMutation();
+    for (const auto& apply_update : apply_updates) {
+      if (apply_update) {
+        (*apply_update)(&mutation);
+      }
+    }
+    ObjectId new_id;
+    std::unique_ptr<TreeNode::Mutation::Updater> parent_updater;
+    mutation.Finish(node_size, is_root, max_key, &parent_updater, new_nodes,
+                    &new_id);
+    on_done(s, new_id, std::move(parent_updater));
+  }));
 }
 
 }  // namespace
@@ -247,34 +366,44 @@ void ApplyChanges(
     std::unique_ptr<Iterator<const EntryChange>> changes,
     std::function<void(Status, ObjectId, std::unordered_set<ObjectId>)>
         callback) {
-  std::unordered_set<ObjectId> new_nodes;
+  // Get or create the root.
   std::unique_ptr<const TreeNode> root;
+  ObjectId tmp_node_id;
   if (root_id.empty()) {
-    ObjectId tmp_root_id;
     Status status =
         TreeNode::FromEntries(page_storage, std::vector<Entry>(),
-                              std::vector<ObjectId>{ObjectId()}, &tmp_root_id);
+                              std::vector<ObjectId>{ObjectId()}, &tmp_node_id);
     if (status != Status::OK) {
-      callback(status, ObjectId(), std::move(new_nodes));
+      callback(status, ObjectId(), std::unordered_set<ObjectId>());
       return;
     }
-    status = TreeNode::FromId(page_storage, tmp_root_id, &root);
-    if (status != Status::OK) {
-      callback(status, ObjectId(), std::move(new_nodes));
-      return;
-    }
-  } else {
-    Status status = TreeNode::FromId(page_storage, root_id, &root);
-    if (status != Status::OK) {
-      callback(status, ObjectId(), std::move(new_nodes));
-      return;
-    }
+    root_id = tmp_node_id;
+  }
+  Status status = TreeNode::FromId(page_storage, root_id, &root);
+  if (status != Status::OK) {
+    callback(status, ObjectId(), std::unordered_set<ObjectId>());
+    return;
   }
 
-  ObjectId new_id;
-  Status status = ApplyChanges(page_storage, std::move(root), node_size, "",
-                               &new_nodes, changes.get(), nullptr, &new_id);
-  callback(status, new_id, std::move(new_nodes));
+  // |new_nodes| will be populated with all nodes created after this set of
+  // changes.
+  std::unique_ptr<std::unordered_set<ObjectId>> new_nodes =
+      std::make_unique<std::unordered_set<ObjectId>>();
+  std::unordered_set<ObjectId>* new_nodes_ptr = new_nodes.get();
+  ApplyChangesIn(
+      page_storage, changes.get(), std::move(root), true, "", node_size,
+      new_nodes_ptr,
+      ftl::MakeCopyable([
+        new_nodes = std::move(new_nodes), callback = std::move(callback)
+      ](Status s, ObjectId new_id,
+        std::unique_ptr<TreeNode::Mutation::Updater> parent_updater) mutable {
+        FTL_DCHECK(parent_updater == nullptr);
+        if (s != Status::OK) {
+          callback(s, "", std::unordered_set<ObjectId>());
+          return;
+        }
+        callback(Status::OK, std::move(new_id), *new_nodes);
+      }));
 }
 
 void GetObjectIds(PageStorage* page_storage,

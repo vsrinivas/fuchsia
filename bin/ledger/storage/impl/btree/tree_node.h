@@ -35,6 +35,8 @@ class TreeNode {
   //     .Finish();
   class Mutation {
    public:
+    using Updater = std::function<void(Mutation*)>;
+
     explicit Mutation(const TreeNode& node);
     Mutation(Mutation&&);
     ~Mutation();
@@ -65,17 +67,16 @@ class TreeNode {
 
     // Creates as many tree nodes as necessary given the |max_size| of entries a
     // node can have. If this mutation is not on the root node the
-    // |parent_mutation| argument should be provided and is updated as
-    // necessary.
-    // If this mutation is on the root node, |parent_mutation| should be NULL
-    // and in that case, |new_root_id| is updated to hold the new root's id.
-    // After calling this method, this Mutation object is no longer valid and
-    // calling any methods on it will fail.
+    // |parent_updater| argument should be provided and is updated as necessary.
+    // If this mutation is on the root node, |new_root_id| is updated to hold
+    // the new root's id.  After calling this method, this Mutation object is no
+    // longer valid and calling any methods on it will fail.
     // TODO(nellyv): This method should not be necessary after updating the
     // B-Tree node implementation.
     Status Finish(size_t max_size,
-                  Mutation* parent_mutation,
+                  bool is_root,
                   const std::string& max_key,
+                  std::unique_ptr<Updater>* parent_updater,
                   std::unordered_set<ObjectId>* new_nodes,
                   ObjectId* new_root_id);
 

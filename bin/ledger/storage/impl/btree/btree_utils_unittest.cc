@@ -80,11 +80,13 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
     btree::ApplyChanges(
         &fake_storage_, root_id, kTestNodeSize,
         std::make_unique<EntryChangeIterator>(entries.begin(), entries.end()),
-        [&new_root_id](Status status, ObjectId obj_id,
-                       std::unordered_set<ObjectId> new_nodes) {
+        [this, &new_root_id](Status status, ObjectId obj_id,
+                             std::unordered_set<ObjectId> new_nodes) {
           EXPECT_EQ(Status::OK, status);
           new_root_id = obj_id;
+          message_loop_.PostQuitTask();
         });
+    EXPECT_FALSE(RunLoopWithTimeout());
     return new_root_id;
   }
 
@@ -105,18 +107,20 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   btree::ApplyChanges(
       &fake_storage_, root_id, 4,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      [&new_root_id](Status status, ObjectId obj_id,
-                     std::unordered_set<ObjectId> new_nodes) {
+      [this, &new_root_id](Status status, ObjectId obj_id,
+                           std::unordered_set<ObjectId> new_nodes) {
         EXPECT_EQ(Status::OK, status);
         EXPECT_EQ(1u, new_nodes.size());
         EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
         new_root_id = obj_id;
+        message_loop_.PostQuitTask();
       });
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   CommitContentsImpl reader(new_root_id, &fake_storage_);
   std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
   for (int i = 0; i < 4; ++i) {
-    EXPECT_TRUE(entries->Valid());
+    ASSERT_TRUE(entries->Valid());
     EXPECT_EQ(changes[i].entry, **entries);
     entries->Next();
   }
@@ -132,16 +136,19 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10]
-  btree::ApplyChanges(&fake_storage_, root_id, 4,
-                      std::make_unique<EntryChangeIterator>(
-                          golden_entries.begin(), golden_entries.end()),
-                      [&new_root_id](Status status, ObjectId obj_id,
-                                     std::unordered_set<ObjectId> new_nodes) {
-                        EXPECT_EQ(Status::OK, status);
-                        EXPECT_EQ(4u, new_nodes.size());
-                        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
-                        new_root_id = obj_id;
-                      });
+  btree::ApplyChanges(
+      &fake_storage_, root_id, 4,
+      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
+                                            golden_entries.end()),
+      [this, &new_root_id](Status status, ObjectId obj_id,
+                           std::unordered_set<ObjectId> new_nodes) {
+        EXPECT_EQ(Status::OK, status);
+        EXPECT_EQ(4u, new_nodes.size());
+        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
+        new_root_id = obj_id;
+        message_loop_.PostQuitTask();
+      });
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   CommitContentsImpl reader(new_root_id, &fake_storage_);
   std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
@@ -164,17 +171,19 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
   ObjectId new_root_id2;
-  btree::ApplyChanges(&fake_storage_, new_root_id, 4,
-                      std::make_unique<EntryChangeIterator>(new_change.begin(),
-                                                            new_change.end()),
-                      [&new_root_id2](Status status, ObjectId obj_id,
-                                      std::unordered_set<ObjectId> new_nodes) {
-                        EXPECT_EQ(Status::OK, status);
-                        // The root and the 3rd child have changed.
-                        EXPECT_EQ(2u, new_nodes.size());
-                        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
-                        new_root_id2 = obj_id;
-                      });
+  btree::ApplyChanges(
+      &fake_storage_, new_root_id, 4, std::make_unique<EntryChangeIterator>(
+                                          new_change.begin(), new_change.end()),
+      [this, &new_root_id2](Status status, ObjectId obj_id,
+                            std::unordered_set<ObjectId> new_nodes) {
+        EXPECT_EQ(Status::OK, status);
+        // The root and the 3rd child have changed.
+        EXPECT_EQ(2u, new_nodes.size());
+        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
+        new_root_id2 = obj_id;
+        message_loop_.PostQuitTask();
+      });
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   CommitContentsImpl reader2(new_root_id2, &fake_storage_);
   entries = reader2.begin();
@@ -200,16 +209,19 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
   ObjectId tmp_root_id;
-  btree::ApplyChanges(&fake_storage_, root_id, 4,
-                      std::make_unique<EntryChangeIterator>(
-                          golden_entries.begin(), golden_entries.end()),
-                      [&tmp_root_id](Status status, ObjectId obj_id,
-                                     std::unordered_set<ObjectId> new_nodes) {
-                        EXPECT_EQ(Status::OK, status);
-                        EXPECT_EQ(4u, new_nodes.size());
-                        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
-                        tmp_root_id = obj_id;
-                      });
+  btree::ApplyChanges(
+      &fake_storage_, root_id, 4,
+      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
+                                            golden_entries.end()),
+      [this, &tmp_root_id](Status status, ObjectId obj_id,
+                           std::unordered_set<ObjectId> new_nodes) {
+        EXPECT_EQ(Status::OK, status);
+        EXPECT_EQ(4u, new_nodes.size());
+        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
+        tmp_root_id = obj_id;
+        message_loop_.PostQuitTask();
+      });
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   // Delete entries.
   std::vector<EntryChange> delete_changes;
@@ -222,17 +234,20 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   //         /     |        \
   // [00, 01]  [05, 06]    [071, 08, 09, 10]
   ObjectId new_root_id;
-  btree::ApplyChanges(&fake_storage_, tmp_root_id, 4,
-                      std::make_unique<EntryChangeIterator>(
-                          delete_changes.begin(), delete_changes.end()),
-                      [&new_root_id](Status status, ObjectId obj_id,
-                                     std::unordered_set<ObjectId> new_nodes) {
-                        EXPECT_EQ(Status::OK, status);
-                        // The root and the first 2 children have changed.
-                        EXPECT_EQ(3u, new_nodes.size());
-                        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
-                        new_root_id = obj_id;
-                      });
+  btree::ApplyChanges(
+      &fake_storage_, tmp_root_id, 4,
+      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
+                                            delete_changes.end()),
+      [this, &new_root_id](Status status, ObjectId obj_id,
+                           std::unordered_set<ObjectId> new_nodes) {
+        EXPECT_EQ(Status::OK, status);
+        // The root and the first 2 children have changed.
+        EXPECT_EQ(3u, new_nodes.size());
+        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
+        new_root_id = obj_id;
+        message_loop_.PostQuitTask();
+      });
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   CommitContentsImpl reader(new_root_id, &fake_storage_);
   std::unique_ptr<Iterator<const Entry>> entries = reader.begin();

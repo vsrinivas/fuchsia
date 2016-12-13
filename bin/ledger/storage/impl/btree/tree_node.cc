@@ -275,8 +275,9 @@ Status TreeNode::Mutation::Finish(ObjectId* new_id) {
 }
 
 Status TreeNode::Mutation::Finish(size_t max_size,
-                                  Mutation* parent_mutation,
+                                  bool is_root,
                                   const std::string& max_key,
+                                  std::unique_ptr<Updater>* parent_updater,
                                   std::unordered_set<ObjectId>* new_nodes,
                                   ObjectId* new_root_id) {
   FinalizeEntriesChildren();
@@ -293,10 +294,12 @@ Status TreeNode::Mutation::Finish(size_t max_size,
       return s;
     }
     new_nodes->insert(new_id);
-    if (parent_mutation) {
-      parent_mutation->UpdateChildId(max_key, new_id);
-    } else {
+    if (is_root) {
       new_root_id->swap(new_id);
+    } else {
+      *parent_updater =
+          std::make_unique<Updater>([ max_key, new_id = std::move(new_id) ](
+              Mutation * m) { m->UpdateChildId(max_key, new_id); });
     }
     return Status::OK;
   }
@@ -337,12 +340,16 @@ Status TreeNode::Mutation::Finish(size_t max_size,
   FTL_DCHECK(entries_.size() == 0) << "Entries left: " << entries_.size();
   FTL_DCHECK(children_.size() == 0) << "Children left: " << children_.size();
 
-  if (parent_mutation) {
+  if (!is_root) {
     // Move the pivots to the parent node.
-    for (size_t i = 0; i < new_entries.size(); ++i) {
-      parent_mutation->AddEntry(new_entries[i], new_children[i],
-                                new_children[i + 1]);
-    }
+    *parent_updater = std::make_unique<Updater>([
+      new_entries = std::move(new_entries),
+      new_children = std::move(new_children)
+    ](Mutation * m) {
+      for (size_t i = 0; i < new_entries.size(); ++i) {
+        m->AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
+      }
+    });
     return Status::OK;
   }
 
@@ -362,7 +369,8 @@ Status TreeNode::Mutation::Finish(size_t max_size,
   for (size_t i = 0; i < new_entries.size(); ++i) {
     mutation.AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
   }
-  return mutation.Finish(max_size, nullptr, max_key, new_nodes, new_root_id);
+  return mutation.Finish(max_size, true, max_key, nullptr, new_nodes,
+                         new_root_id);
 }
 
 void TreeNode::Mutation::CopyUntil(std::string key) {
