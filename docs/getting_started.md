@@ -115,8 +115,10 @@ for building Magenta for the ARM64 and x86-64 architectures:
 ```
 cd $SRC
 git clone https://fuchsia.googlesource.com/third_party/gcc_none_toolchains toolchains
-cd toolchains
-./doit -a 'arm aarch64 x86_64' -f -j32
+cd toolchains.
+./do-build --target arm-none
+./do-build --target aarch64-none
+./do-build --target x86_64-none
 ```
 
 ### Configure PATH for toolchains
