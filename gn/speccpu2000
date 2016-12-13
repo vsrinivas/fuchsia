@@ -179,6 +179,38 @@
           "bootfs_path": "benchmarks/data/255.vortex/lendian3.raw"
         },
         {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/lendian.wnv",
+          "bootfs_path": "benchmarks/data/255.vortex/lendian.wnv"
+        },
+        {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/lendian.rnv",
+          "bootfs_path": "benchmarks/data/255.vortex/lendian.rnv"
+        },
+        {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/bendian1.raw",
+          "bootfs_path": "benchmarks/data/255.vortex/bendian1.raw"
+        },
+        {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/bendian2.raw",
+          "bootfs_path": "benchmarks/data/255.vortex/bendian2.raw"
+        },
+        {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/bendian3.raw",
+          "bootfs_path": "benchmarks/data/255.vortex/bendian3.raw"
+        },
+        {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/bendian.wnv",
+          "bootfs_path": "benchmarks/data/255.vortex/bendian.wnv"
+        },
+        {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/bendian.rnv",
+          "bootfs_path": "benchmarks/data/255.vortex/bendian.rnv"
+        },
+        {
+          "file": "third_party/speccpu2000/255.vortex/data/ref/input/persons.1k",
+          "bootfs_path": "benchmarks/data/255.vortex/persons.1k"
+        },
+        {
           "file": "third_party/speccpu2000/256.bzip2/data/ref/input/input.source",
           "bootfs_path": "benchmarks/data/256.bzip2/inpout.source"
         },
