@@ -131,6 +131,10 @@
           "bootfs_path": "benchmarks/data/181.mcf/inp.in"
         },
         {
+          "file": "third_party/speccpu2000/181.mcf/data/ref/input/mcf.out",
+          "bootfs_path": "benchmarks/data/181.mcf/mcf.out"
+        },
+        {
           "file": "third_party/speccpu2000/183.equake/data/ref/input/inp.in",
           "bootfs_path": "benchmarks/data/183.equake/inp.in"
         },
