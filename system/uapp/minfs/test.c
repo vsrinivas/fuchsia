@@ -10,9 +10,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
+#include "host.h"
 #include "misc.h"
 
 void drop_cache(void);
@@ -99,8 +100,8 @@ int worker_rw(worker_t* w, bool do_read) {
     int r;
     if (do_read) {
         uint8_t buffer[FBUFSIZE];
-        if ((r = read(w->fd, buffer, xfer)) < 0) {
-            fprintf(stderr, "worker('%s') read failed @%u: %s\n",
+        if ((r = emu_read(w->fd, buffer, xfer)) < 0) {
+            fprintf(stderr, "worker('%s') emu_read failed @%u: %s\n",
                     w->name, w->pos, strerror(errno));
             return FAIL;
         }
@@ -110,7 +111,7 @@ int worker_rw(worker_t* w, bool do_read) {
             return FAIL;
         }
     } else {
-        if ((r = write(w->fd, w->u8 + off, xfer)) < 0) {
+        if ((r = emu_write(w->fd, w->u8 + off, xfer)) < 0) {
             fprintf(stderr, "worker('%s') write failed @%u: %s\n",
                     w->name, w->pos, strerror(errno));
             return FAIL;
@@ -126,7 +127,7 @@ int worker_rw(worker_t* w, bool do_read) {
 int worker_verify(worker_t* w) {
     int r = worker_rw(w, true);
     if (r == DONE) {
-        close(w->fd);
+        emu_close(w->fd);
     }
     return r;
 }
@@ -134,7 +135,7 @@ int worker_verify(worker_t* w) {
 int worker_writer(worker_t* w) {
     int r = worker_rw(w, false);
     if (r == DONE) {
-        if (lseek(w->fd, 0, SEEK_SET) != 0) {
+        if (emu_lseek(w->fd, 0, SEEK_SET) != 0) {
             fprintf(stderr, "worker('%s') seek failed: %s\n",
                     w->name, strerror(errno));
             return FAIL;
@@ -164,7 +165,7 @@ int worker_new(const char* where, const char* fn,
     w->work = work;
     w->flags = flags;
 
-    if ((w->fd = open(w->name, O_RDWR | O_CREAT | O_EXCL, 0644)) < 0) {
+    if ((w->fd = emu_open(w->name, O_RDWR | O_CREAT | O_EXCL, 0644)) < 0) {
         fprintf(stderr, "worker('%s') cannot create file\n", w->name);
         free(w);
         return -1;
@@ -232,12 +233,12 @@ int test_rw1(void) {
             return -1;
         }
     }
-    unlink("::file0007");
+    emu_unlink("::file0007");
     return do_all_work();
 }
 
 int test_maxfile(void) {
-    int fd = TRY(open("::bigfile", O_CREAT|O_WRONLY, 0644));
+    int fd = TRY(emu_open("::bigfile", O_CREAT | O_WRONLY, 0644));
     if (fd < 0) {
         return -1;
     }
@@ -246,7 +247,7 @@ int test_maxfile(void) {
     ssize_t sz = 0;
     ssize_t r;
     for (;;) {
-        if ((r = TRY(write(fd, data, sizeof(data)))) < 0) {
+        if ((r = TRY(emu_write(fd, data, sizeof(data)))) < 0) {
             return -1;
         }
         sz += r;
@@ -254,54 +255,54 @@ int test_maxfile(void) {
             break;
         }
     }
-    close(fd);
-    unlink("::bigfile");
+    emu_close(fd);
+    emu_unlink("::bigfile");
     fprintf(stderr, "wrote %d bytes\n", (int) sz);
     return (r < 0) ? -1 : 0;
 }
 
 int test_basic(void) {
-    TRY(mkdir("::alpha", 0755));
-    TRY(mkdir("::alpha/bravo", 0755));
-    TRY(mkdir("::alpha/bravo/charlie", 0755));
-    TRY(mkdir("::alpha/bravo/charlie/delta", 0755));
-    TRY(mkdir("::alpha/bravo/charlie/delta/echo", 0755));
-    int fd1 = TRY(open("::alpha/bravo/charlie/delta/echo/foxtrot", O_RDWR|O_CREAT, 0644));
-    int fd2 = TRY(open("::alpha/bravo/charlie/delta/echo/foxtrot", O_RDWR, 0644));
-    TRY(write(fd1, "Hello, World!\n", 14));
-    close(fd1);
-    close(fd2);
-    fd1 = TRY(open("::file.txt", O_CREAT|O_RDWR, 0644));
-    close(fd1);
-    TRY(unlink("::file.txt"));
-    TRY(mkdir("::emptydir", 0755));
-    fd1 = TRY(open("::emptydir", O_RDWR, 0644));
-    EXPECT_FAIL(unlink("::emptydir"));
-    close(fd1);
-    TRY(unlink("::emptydir"));
+    TRY(emu_mkdir("::alpha", 0755));
+    TRY(emu_mkdir("::alpha/bravo", 0755));
+    TRY(emu_mkdir("::alpha/bravo/charlie", 0755));
+    TRY(emu_mkdir("::alpha/bravo/charlie/delta", 0755));
+    TRY(emu_mkdir("::alpha/bravo/charlie/delta/echo", 0755));
+    int fd1 = TRY(emu_open("::alpha/bravo/charlie/delta/echo/foxtrot", O_RDWR | O_CREAT, 0644));
+    int fd2 = TRY(emu_open("::alpha/bravo/charlie/delta/echo/foxtrot", O_RDWR, 0644));
+    TRY(emu_write(fd1, "Hello, World!\n", 14));
+    emu_close(fd1);
+    emu_close(fd2);
+    fd1 = TRY(emu_open("::file.txt", O_CREAT | O_RDWR, 0644));
+    emu_close(fd1);
+    TRY(emu_unlink("::file.txt"));
+    TRY(emu_mkdir("::emptydir", 0755));
+    fd1 = TRY(emu_open("::emptydir", O_RDWR, 0644));
+    EXPECT_FAIL(emu_unlink("::emptydir"));
+    emu_close(fd1);
+    TRY(emu_unlink("::emptydir"));
     return 0;
 }
 
 int test_rename(void) {
-    EXPECT_FAIL(rename("::alpha", "::bravo")); // Cannot rename when src does not exist
-    TRY(mkdir("::alpha", 0755));
-    EXPECT_FAIL(rename("::alpha", "::alpha")); // Cannot rename to self
-    int fd = TRY(open("::bravo", O_RDWR|O_CREAT|O_EXCL, 0644));
-    close(fd);
-    EXPECT_FAIL(rename("::alpha", "::bravo")); // Cannot rename dir to file
-    TRY(unlink("::bravo"));
-    TRY(rename("::alpha", "::bravo")); // Rename dir (dst does not exist)
-    TRY(mkdir("::alpha", 0755));
-    TRY(rename("::bravo", "::alpha")); // Rename dir (dst does exist)
-    fd = TRY(open("::alpha/charlie", O_RDWR|O_CREAT|O_EXCL, 0644));
-    TRY(rename("::alpha/charlie", "::alpha/delta")); // Rename file (dst does not exist)
-    close(fd);
-    fd = TRY(open("::alpha/charlie", O_RDWR|O_CREAT|O_EXCL, 0644));
-    TRY(rename("::alpha/delta", "::alpha/charlie")); // Rename file (dst does not exist)
-    EXPECT_FAIL(rename("::alpha/charlie", "::charlie")); // Cannot rename outside current directory
-    close(fd);
-    TRY(unlink("::alpha/charlie"));
-    TRY(unlink("::alpha"));
+    EXPECT_FAIL(emu_rename("::alpha", "::bravo")); // Cannot rename when src does not exist
+    TRY(emu_mkdir("::alpha", 0755));
+    EXPECT_FAIL(emu_rename("::alpha", "::alpha")); // Cannot rename to self
+    int fd = TRY(emu_open("::bravo", O_RDWR | O_CREAT | O_EXCL, 0644));
+    emu_close(fd);
+    EXPECT_FAIL(emu_rename("::alpha", "::bravo")); // Cannot rename dir to file
+    TRY(emu_unlink("::bravo"));
+    TRY(emu_rename("::alpha", "::bravo")); // Rename dir (dst does not exist)
+    TRY(emu_mkdir("::alpha", 0755));
+    TRY(emu_rename("::bravo", "::alpha")); // Rename dir (dst does exist)
+    fd = TRY(emu_open("::alpha/charlie", O_RDWR | O_CREAT | O_EXCL, 0644));
+    TRY(emu_rename("::alpha/charlie", "::alpha/delta")); // Rename file (dst does not exist)
+    emu_close(fd);
+    fd = TRY(emu_open("::alpha/charlie", O_RDWR | O_CREAT | O_EXCL, 0644));
+    TRY(emu_rename("::alpha/delta", "::alpha/charlie"));     // Rename file (dst does not exist)
+    EXPECT_FAIL(emu_rename("::alpha/charlie", "::charlie")); // Cannot rename outside current directory
+    emu_close(fd);
+    TRY(emu_unlink("::alpha/charlie"));
+    TRY(emu_unlink("::alpha"));
     return 0;
 }
 

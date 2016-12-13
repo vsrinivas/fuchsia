@@ -3,6 +3,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fs/trace.h>
 #include <fuse/fuse.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -11,7 +12,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <fs/trace.h>
 
 #include "minfs-private.h"
 
@@ -100,7 +100,6 @@ static int getattr_callback(const char* path, struct stat* stbuf) {
 static int readdir_callback(const char* path, void* buf, fuse_fill_dir_t filler,
                             off_t offset, struct fuse_file_info* fi) {
     debug("fuse-minfs: [readdir] '%s'\n", path);
-
     const char* pathout;
     vnode_t* vn;
     LOCK();

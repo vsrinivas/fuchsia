@@ -11,6 +11,9 @@
 #include <unistd.h>
 
 #include "minfs-private.h"
+#ifndef __Fuchsia__
+#include "host.h"
+#endif
 
 int do_minfs_check(bcache_t* bc, int argc, char** argv) {
     return minfs_check(bc);
@@ -63,11 +66,11 @@ int do_cp(bcache_t* bc, int argc, char** argv) {
     }
 
     int fdi, fdo;
-    if ((fdi = open(argv[0], O_RDONLY)) < 0) {
+    if ((fdi = emu_open(argv[0], O_RDONLY, 0)) < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", argv[0]);
         return -1;
     }
-    if ((fdo = open(argv[1], O_WRONLY | O_CREAT | O_EXCL, 0644)) < 0) {
+    if ((fdo = emu_open(argv[1], O_WRONLY | O_CREAT | O_EXCL, 0644)) < 0) {
         fprintf(stderr, "error: cannot open '%s'\n", argv[1]);
         return -1;
     }
@@ -75,7 +78,7 @@ int do_cp(bcache_t* bc, int argc, char** argv) {
     char buffer[256*1024];
     ssize_t r;
     for (;;) {
-        if ((r = read(fdi, buffer, sizeof(buffer))) < 0) {
+        if ((r = emu_read(fdi, buffer, sizeof(buffer))) < 0) {
             fprintf(stderr, "error: reading from '%s'\n", argv[0]);
             break;
         } else if (r == 0) {
@@ -84,7 +87,7 @@ int do_cp(bcache_t* bc, int argc, char** argv) {
         void* ptr = buffer;
         ssize_t len = r;
         while (len > 0) {
-            if ((r = write(fdo, ptr, len)) < 0) {
+            if ((r = emu_write(fdo, ptr, len)) < 0) {
                 fprintf(stderr, "error: writing to '%s'\n", argv[1]);
                 goto done;
             }
@@ -93,8 +96,8 @@ int do_cp(bcache_t* bc, int argc, char** argv) {
         }
     }
 done:
-    close(fdi);
-    close(fdo);
+    emu_close(fdi);
+    emu_close(fdo);
     return r;
 }
 

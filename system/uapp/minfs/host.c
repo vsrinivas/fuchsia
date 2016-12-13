@@ -7,10 +7,10 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <string.h>
-#include <unistd.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <fs/vfs.h>
 
@@ -31,9 +31,6 @@ static mx_status_t do_stat(vnode_t* vn, struct stat* s) {
     }
     return status;
 }
-
-#define FN(n) __wrap_##n
-#define FL(n) __real_##n
 
 typedef struct {
     vnode_t* vn;
@@ -77,9 +74,15 @@ int status_to_errno(mx_status_t status) {
 #define FILE_GET(f, fd) \
     do { if ((f = file_get(fd)) == NULL) FAIL(EBADF); } while (0)
 #define FILE_WRAP(f, fd, name, args...) \
-    do { if ((f = file_get(fd)) == NULL) return __real_##name(args); } while (0)
+    do {                                \
+        if ((f = file_get(fd)) == NULL) \
+            return name(args);          \
+    } while (0)
 #define PATH_WRAP(path, name, args...) \
-    do { if (check_path(path)) return __real_##name(args); } while (0)
+    do {                               \
+        if (check_path(path))          \
+            return name(args);         \
+    } while (0)
 
 vnode_t* fake_root;
 
@@ -93,8 +96,7 @@ static inline int check_path(const char* path) {
     return 0;
 }
 
-int FL(open)(const char* path, int flags, mode_t mode);
-int FN(open)(const char* path, int flags, mode_t mode) {
+int emu_open(const char* path, int flags, mode_t mode) {
     //TODO: fdtab lock
     PATH_WRAP(path, open, path, flags, mode);
     int fd;
@@ -111,8 +113,7 @@ int FN(open)(const char* path, int flags, mode_t mode) {
     FAIL(EMFILE);
 }
 
-int FL(close)(int fd);
-int FN(close)(int fd) {
+int emu_close(int fd) {
     //TODO: fdtab lock
     file_t* f;
     FILE_WRAP(f, fd, close, fd);
@@ -121,21 +122,19 @@ int FN(close)(int fd) {
     return 0;
 }
 
-int FL(mkdir)(const char* path, mode_t mode);
-int FN(mkdir)(const char* path, mode_t mode) {
+int emu_mkdir(const char* path, mode_t mode) {
     PATH_WRAP(path, mkdir, path, mode);
     mode = S_IFDIR;
-    int fd = FN(open)(path, O_CREAT | O_EXCL, S_IFDIR | (mode & 0777));
+    int fd = emu_open(path, O_CREAT | O_EXCL, S_IFDIR | (mode & 0777));
     if (fd >= 0) {
-        FN(close)(fd);
+        emu_close(fd);
         return 0;
     } else {
         return fd;
     }
 }
 
-ssize_t FL(read)(int fd, void* buf, size_t count);
-ssize_t FN(read)(int fd, void* buf, size_t count) {
+ssize_t emu_read(int fd, void* buf, size_t count) {
     file_t* f;
     FILE_WRAP(f, fd, read, fd, buf, count);
     ssize_t r = f->vn->ops->read(f->vn, buf, count, f->off);
@@ -145,8 +144,7 @@ ssize_t FN(read)(int fd, void* buf, size_t count) {
     return r;
 }
 
-ssize_t FL(write)(int fd, const void* buf, size_t count);
-ssize_t FN(write)(int fd, const void* buf, size_t count) {
+ssize_t emu_write(int fd, const void* buf, size_t count) {
     file_t* f;
     FILE_WRAP(f, fd, write, fd, buf, count);
     ssize_t r = f->vn->ops->write(f->vn, buf, count, f->off);
@@ -156,8 +154,7 @@ ssize_t FN(write)(int fd, const void* buf, size_t count) {
     return r;
 }
 
-off_t FL(lseek)(int fd, off_t offset, int whence);
-off_t FN(lseek)(int fd, off_t offset, int whence) {
+off_t emu_lseek(int fd, off_t offset, int whence) {
     file_t* f;
     FILE_WRAP(f, fd, lseek, fd, offset, whence);
 
@@ -189,15 +186,13 @@ off_t FN(lseek)(int fd, off_t offset, int whence) {
     return f->off;
 }
 
-int FL(fstat)(int fd, struct stat* s);
-int FN(fstat)(int fd, struct stat* s) {
+int emu_fstat(int fd, struct stat* s) {
     file_t* f;
     FILE_WRAP(f, fd, fstat, fd, s);
     STATUS(do_stat(f->vn, s));
 }
 
-int FL(unlink)(const char* path);
-int FN(unlink)(const char* path) {
+int emu_unlink(const char* path) {
     PATH_WRAP(path, unlink, path);
     vnode_t* vn;
     mx_status_t status = vfs_walk(fake_root, &vn, path + PREFIX_SIZE, &path);
@@ -208,15 +203,13 @@ int FN(unlink)(const char* path) {
     STATUS(status);
 }
 
-int FL(rename)(const char* oldpath, const char* newpath);
-int FN(rename)(const char* oldpath, const char* newpath) {
+int emu_rename(const char* oldpath, const char* newpath) {
     PATH_WRAP(oldpath, rename, oldpath, newpath);
     mx_status_t status = vfs_rename(fake_root, oldpath + PREFIX_SIZE, newpath + PREFIX_SIZE, 0);
     STATUS(status);
 }
 
-int FL(stat)(const char* fn, struct stat* s);
-int FN(stat)(const char* fn, struct stat* s) {
+int emu_stat(const char* fn, struct stat* s) {
     PATH_WRAP(fn, stat, fn, s);
     vnode_t* vn;
     mx_status_t status = vfs_walk(fake_root, &vn, fn + PREFIX_SIZE, &fn);
@@ -226,4 +219,3 @@ int FN(stat)(const char* fn, struct stat* s) {
     }
     STATUS(status);
 }
-

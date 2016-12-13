@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-ifneq ($(HOST_PLATFORM),darwin)
 CFLAGS := -Wall -std=c11 -g -O0
 CFLAGS += -Werror-implicit-function-declaration
 CFLAGS += -Wstrict-prototypes -Wwrite-strings
@@ -17,14 +16,17 @@ ifeq ($(call TOBOOL,$(ENABLE_MINFS_FUSE_DEBUG)),true)
 FUSE_CFLAGS += -DDEBUG
 endif
 
-LFLAGS := -Wl,-wrap,open -Wl,-wrap,unlink -Wl,-wrap,stat -Wl,-wrap,mkdir
-LFLAGS += -Wl,-wrap,close -Wl,-wrap,read -Wl,-wrap,write -Wl,-wrap,fstat
-LFLAGS += -Wl,-wrap,lseek -Wl,-wrap,rename
+FUSE_LFLAGS := $(LFLAGS)
 
-FUSE_LFLAGS := $(LFLAGS) -lfuse
+ifeq ($(HOST_PLATFORM),darwin)
+FUSE_CFLAGS += -D_DARWIN_USE_64_BIT_INODE -I/usr/local/include/osxfuse
+FUSE_LFLAGS += -L/usr/local/lib -losxfuse
+else
+FUSE_LFLAGS += -lfuse
+endif
 
 SRCS += main.c test.c
-LIBMINFS_SRCS += wrap.c bitmap.c bcache.c
+LIBMINFS_SRCS += host.c bitmap.c bcache.c
 LIBMINFS_SRCS += minfs.c minfs-ops.c minfs-check.c
 LIBFS_SRCS += vfs.c
 
@@ -67,5 +69,3 @@ $(BUILDDIR)/tools/fuse-minfs: system/uapp/minfs/fuse.c $(LIBMINFS_OBJS) $(LIBFS_
 
 GENERATED += $(MINFS_TOOLS)
 EXTRA_BUILDDEPS += $(MINFS_TOOLS)
-endif
-
