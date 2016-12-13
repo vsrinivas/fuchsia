@@ -18,9 +18,8 @@
 
 // Creation flags for VmAddressRegion and VmMappings
 
-// When randomly allocating subregions, reduce sprawl (hint).
-// Currently ignored, since randomization is not yet implemented.
-// TODO(teisenbe): Remove this comment when randomization is implemented.
+// When randomly allocating subregions, reduce sprawl by placing allocations
+// near each other.
 #define VMAR_FLAG_COMPACT (1 << 0)
 // Request that the new region be at the specified offset in its parent region.
 #define VMAR_FLAG_SPECIFIC (1 << 1)
@@ -317,6 +316,8 @@ private:
     vaddr_t LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags);
     vaddr_t NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
                                                       uint arch_mmu_flags);
+    vaddr_t CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                   uint arch_mmu_flags);
 
     // Utility for allocators for iterating over gaps between allocations
     // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).

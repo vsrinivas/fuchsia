@@ -202,6 +202,48 @@ bool basic_allocate_test() {
     END_TEST;
 }
 
+bool map_in_compact_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t vmo;
+    mx_handle_t region;
+    uintptr_t region_addr, map_addr;
+
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), NO_ERROR, "");
+
+    const size_t region_size = PAGE_SIZE * 10;
+    const size_t map_size = PAGE_SIZE;
+
+    ASSERT_EQ(mx_vmo_create(map_size, 0, &vmo), NO_ERROR, "");
+
+    ASSERT_EQ(mx_vmar_allocate(vmar, 0, region_size,
+                               MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE | MX_VM_FLAG_COMPACT,
+                               &region, &region_addr),
+              NO_ERROR, "");
+
+    ASSERT_EQ(mx_vmar_map(region, 0, vmo, 0, map_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &map_addr),
+              NO_ERROR, "");
+    EXPECT_GE(map_addr, region_addr, "");
+    EXPECT_LE(map_addr + map_size, region_addr + region_size, "");
+
+    // Make a second allocation
+    ASSERT_EQ(mx_vmar_map(region, 0, vmo, 0, map_size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &map_addr),
+              NO_ERROR, "");
+    EXPECT_GE(map_addr, region_addr, "");
+    EXPECT_LE(map_addr + map_size, region_addr + region_size, "");
+
+    EXPECT_EQ(mx_handle_close(region), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
 // Attempt to allocate out of the region bounds
 bool allocate_oob_test() {
     BEGIN_TEST;
@@ -1560,6 +1602,7 @@ RUN_TEST(allocate_oob_test);
 RUN_TEST(allocate_unsatisfiable_test);
 RUN_TEST(destroyed_vmar_test);
 RUN_TEST(map_over_destroyed_test);
+RUN_TEST(map_in_compact_test);
 RUN_TEST(overmapping_test);
 RUN_TEST(invalid_args_test);
 RUN_TEST(unaligned_len_test);

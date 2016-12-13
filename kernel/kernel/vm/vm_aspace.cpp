@@ -143,9 +143,7 @@ status_t VmAspace::Init() {
     InitializeAslr();
 
     if (likely(!root_vmar_)) {
-        return VmAddressRegion::CreateRoot(*this,
-                                           VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_COMPACT,
-                                           &root_vmar_);
+        return VmAddressRegion::CreateRoot(*this, VMAR_FLAG_CAN_MAP_SPECIFIC, &root_vmar_);
     }
     return NO_ERROR;
 }

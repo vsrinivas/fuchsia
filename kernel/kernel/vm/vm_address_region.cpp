@@ -41,7 +41,7 @@ VmAddressRegion::VmAddressRegion(VmAddressRegion& parent, vaddr_t base, size_t s
 
 VmAddressRegion::VmAddressRegion(VmAspace& kernel_aspace)
     : VmAddressRegion(kernel_aspace, kernel_aspace.base(), kernel_aspace.size(),
-                      VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_COMPACT) {
+                      VMAR_FLAG_CAN_MAP_SPECIFIC) {
 
     // Activate the kernel root aspace immediately
     state_ = LifeCycleState::ALIVE;
@@ -472,7 +472,11 @@ vaddr_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint a
                   align_pow2);
 
     if (aspace_->is_aslr_enabled()) {
-        return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
+        if (flags_ & VMAR_FLAG_COMPACT) {
+            return CompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
+        } else {
+            return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
+        }
     }
     return LinearRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
 }
@@ -821,4 +825,74 @@ vaddr_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, 
         return spot;
     }
     panic("Unexpected allocation failure\n");
+}
+
+// The COMPACT allocator begins by picking a random offset in the region to
+// start allocations at, and then places new allocations to the left and right
+// of the original region with small random-length gaps between.
+vaddr_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                                uint arch_mmu_flags) {
+    DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+
+    align_pow2 = mxtl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
+    const vaddr_t align = 1UL << align_pow2;
+
+    if (unlikely(subregions_.size() == 0)) {
+        return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
+    }
+
+    // Decide if we're allocating before or after the existing allocations, and
+    // how many gap pages to use.
+    bool alloc_before;
+    size_t num_gap_pages;
+    {
+        uint8_t entropy;
+        aspace_->AslrPrng().Draw(&entropy, sizeof(entropy));
+        alloc_before = entropy & 1;
+        num_gap_pages = (entropy >> 1) + 1;
+    }
+
+    // Try our first choice for *num_gap_pages*, but if that fails, try fewer
+    for (size_t gap_pages = num_gap_pages; gap_pages > 0; gap_pages >>= 1) {
+        // Try our first choice for *alloc_before*, but if that fails, try the other
+        for (size_t i = 0; i < 2; ++i, alloc_before = !alloc_before) {
+            ChildList::iterator before_iter;
+            ChildList::iterator after_iter;
+            vaddr_t chosen_base;
+            if (alloc_before) {
+                before_iter = subregions_.end();
+                after_iter = subregions_.begin();
+
+                safeint::CheckedNumeric<vaddr_t> base = after_iter->base();
+                base -= size;
+                base -= PAGE_SIZE * gap_pages;
+                if (!base.IsValid()) {
+                    continue;
+                }
+
+                chosen_base = base.ValueOrDie();
+            } else {
+                before_iter = --subregions_.end();
+                after_iter = subregions_.end();
+                DEBUG_ASSERT(before_iter.IsValid());
+
+                safeint::CheckedNumeric<vaddr_t> base = before_iter->base();
+                base += before_iter->size();
+                base += PAGE_SIZE * gap_pages;
+                if (!base.IsValid()) {
+                    continue;
+                }
+
+                chosen_base = base.ValueOrDie();
+            }
+
+            vaddr_t spot;
+            if (CheckGapLocked(before_iter, after_iter, &spot, chosen_base, align, size, 0,
+                               arch_mmu_flags) && spot != static_cast<vaddr_t>(-1)) {
+                return spot;
+            }
+        }
+    }
+
+    return -1;
 }
