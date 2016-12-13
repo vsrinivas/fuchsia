@@ -264,7 +264,7 @@ struct TypeSpec {
 };
 
 struct Syscall {
-    enum Atrributes : uint32_t {
+    enum Attributes : uint32_t {
         NORETURN,           // user mode: syscall does not return.
         VDSOPURE,           // user mode: syscall is handled by the vdso.
     };
@@ -273,7 +273,7 @@ struct Syscall {
     string name;
     std::vector<TypeSpec> ret_spec;
     std::vector<TypeSpec> arg_spec;
-    std::vector<Atrributes> attributes;
+    std::vector<Attributes> attributes;
 
     bool validate() const {
         if (ret_spec.size() > kMaxReturnArgs) {
@@ -811,13 +811,13 @@ bool process_syscall(SygenGenerator* parser, TokenStream& ts) {
     auto return_spec = attrib;
 
     if (attrib == "vdsocall") {
-        syscall.attributes.push_back(Syscall::Atrributes::VDSOPURE);
+        syscall.attributes.push_back(Syscall::Attributes::VDSOPURE);
         return_spec = ts.next();
     }
 
     if (return_spec == "noreturn") {
         // nothing else follows "noreturn" except terminator.
-        syscall.attributes.push_back(Syscall::Atrributes::NORETURN);
+        syscall.attributes.push_back(Syscall::Attributes::NORETURN);
     } else if (return_spec == "returns") {
         ts.next();
 
