@@ -25,31 +25,41 @@ if [ $(dirname "$(dirname "$script_dir")")/"$expected_path" != "$script_dir" ]; 
 fi
 
 DEFAULT_SIZE_SYSTEM=4
+DEFAULT_SIZE_EFI=1
 BLOCK_SIZE=1024
 STAGING_DIR="${script_dir}/build-installer"
 # TODO take a size for the magenta partition as well
-blocks=0
+blocks_sys=0
+blocks_efi=0
 release=0
 debug=0
 platform=""
-build_dir=""
+build_dir_fuchsia=""
 minfs_path=""
+build_dir_magenta=""
+device_type="pc"
 
-while getopts ":u:hrdp:b:m:" opt; do
+
+while getopts ":u:hrdp:b:m:e:a:t:" opt; do
   case $opt in
     u)
-      blocks=$(($OPTARG * 1024 * 1024))
+      blocks_sys=$(($OPTARG * 1024 * 1024))
       ;;
     h)
       echo "build-installable-usersfs.sh -u <SIZE> [-r|-d] [-p] [-b <BUILD DIR>]"
       echo "-u: size of system partition in GB"
+      echo "-e: size of the EFI partition in GB"
       echo "-r: use the release build directory, should not be used with -d"
       echo "-d: use the debug build directory, should not be used with -r"
-      echo "-p: platform architecture, eg. x86-64, arm-32, etc"
-      echo "-b: specify the build directory manually, this will cause -r, -d," \
-        "and -p arguments to be ignored"
+      echo "-p: platform architecture, eg. x86-64, arm, or arm-64"
+      echo "-b: specify the build directory manually, this will cause -r and" \
+        "-d arguments to be ignored"
       echo "-m: path to the host architecture minfs binary, perhaps you need" \
         "to run 'make' in magenta/system/uapp/minfs"
+      echo "-a: artifacts directory for magenta, will be used to find files" \
+        "to place on the EFI partition. If not supplied, this will be assumed" \
+        "relative to fuchsia build directory."
+      echo "-t: the device type, for example 'qemu', 'rpi', 'pc', etc"
       exit 0
       ;;
     r)
@@ -62,28 +72,34 @@ while getopts ":u:hrdp:b:m:" opt; do
       platform=$OPTARG
       ;;
     b)
-      build_dir=$OPTARG
+      build_dir_fuchsia=$OPTARG
       ;;
     m)
       minfs_path=$OPTARG
+      ;;
+    e)
+      blocks_efi=$(($OPTARG * 1024 * 1024))
+      ;;
+    a)
+      build_dir_magenta=$OPTARG
+      ;;
+    t)
+      device_type=$OPTARG
       ;;
     \?)
       echo "Unknown option -$OPTARG"
   esac
 done
 
-if [ "$blocks" -eq 0 ]; then
-  blocks=$(($DEFAULT_SIZE_SYSTEM * 1024 * 1024))
+if [ "$blocks_sys" -eq 0 ]; then
+  blocks_sys=$(($DEFAULT_SIZE_SYSTEM * 1024 * 1024))
 fi
 
-if [ ! -f "$minfs_path" ]; then
-  echo "minfs path not found, please build minfs for your host and supply the" \
-    "path"
-  exit -1
+if [ "$blocks_efi" -eq 0 ]; then
+  blocks_efi=$(($DEFAULT_SIZE_EFI * 1024 * 1024))
 fi
 
-# if the build directory is not specified, infer it from other parameters
-if [ "$build_dir" = "" ]; then
+if [ "$build_dir_fuchsia" = "" ] || [ "$build_dir_magenta" = ""]; then
   if [ "$release" -eq "$debug" ]; then
     if [ "$debug" -eq 0 ]; then
       debug=1
@@ -97,24 +113,60 @@ if [ "$build_dir" = "" ]; then
     platform=x86-64
   fi
 
-  build_dir=""
   if [ "$release" -eq 1 ]; then
-    build_dir="release"
+    build_variant="release"
   else
-    build_dir="debug"
-  fi
-
-  build_dir=$script_dir/../../out/$build_dir-$platform
-else
-  if [ "$release" -ne 0 ] || [ "$debug" -ne 0 ] || [ "$platform" -ne "" ]; then
-    echo "build directory is specified, platform and release args ignored"
+    build_variant="debug"
   fi
 fi
 
-disk_path="${STAGING_DIR}/user_fs"
+arch=""
+case $platform in
+  x86-64)
+    arch="X64"
+    ;;
+  arm)
+    arch="ARM"
+    ;;
+  arm-64)
+    arch="AA64"
+    ;;
+  \?)
+    echo "Platform is not valid, should be x86-64, arm, or arm-64!"
+esac
 
-if [ ! -d "$build_dir" ]; then
-  echo "Output directory '$build_dir' not found, please make sure you've"\
+# if the build directory is not specified, infer it from other parameters
+if [ "$build_dir_fuchsia" = "" ]; then
+  build_dir_fuchsia=$script_dir/../../out/$build_variant-$platform
+else
+  if [ "$release" -ne 0 ] || [ "$debug" -ne 0 ]; then
+    echo "build directory is specified release arg ignored"
+  fi
+fi
+
+if [ "$build_dir_magenta" = "" ]; then
+  build_dir_magenta=$build_dir_fuchsia/../build-magenta/build-magenta-$device_type-$platform
+else
+  if [ "$device_type" -ne "" ]; then
+    echo "build directory is specified, type arg ignored"
+  fi
+fi
+
+if [ "$minfs_path" = "" ]; then
+  minfs_path=$build_dir_magenta/tools/minfs
+fi
+
+if [ ! -f "$minfs_path" ]; then
+  echo "minfs path not found, please build minfs for your host and supply the" \
+    "path"
+  exit -1
+fi
+
+disk_path="${STAGING_DIR}/user_fs"
+disk_path_efi="${STAGING_DIR}/efi_fs"
+
+if [ ! -d "$build_dir_fuchsia" ]; then
+  echo "Output directory '$build_dir_fuchsia' not found, please make sure you've"\
     "supplied the right build type and architecture OR correct path."
   exit -1
 fi
@@ -126,13 +178,19 @@ else
 fi
 
 # create a suitably large file
-echo "Creating disk image, this may take some time ${script_name} ..."
-dd if=/dev/zero of="$disk_path" bs="$BLOCK_SIZE" count="$blocks"
+echo "Creating system disk image, this may take some time..."
+dd if=/dev/zero of="$disk_path" bs="$BLOCK_SIZE" count="$blocks_sys"
 "$minfs_path" "$disk_path" mkfs
 
+echo "Creating EFI disk image, this may take some time..."
+dd if=/dev/zero of="$disk_path_efi" bs="$BLOCK_SIZE" count="$blocks_efi"
+mkfs.vfat -F 32 "$disk_path_efi"
+
 mcpy_loc=$(which mcopy)
+mmd_loc=$(which mmd)
 lz4_path=$(which lz4)
 
 "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc" \
-  --lz4_path="$lz4_path" --build_dir="$build_dir" --temp_dir="$STAGING_DIR" \
-  --minfs_path="$minfs_path"
+  --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia" \
+  --temp_dir="$STAGING_DIR" --minfs_path="$minfs_path" --arch="$arch" \
+  --efi_disk="$disk_path_efi" --build_dir_magenta="$build_dir_magenta"
