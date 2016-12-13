@@ -5,7 +5,7 @@
 #ifndef APPS_MOZART_SERVICES_BUFFERS_CPP_BUFFER_CONSUMER_H_
 #define APPS_MOZART_SERVICES_BUFFERS_CPP_BUFFER_CONSUMER_H_
 
-#include <magenta/syscalls/types.h>
+#include <magenta/types.h>
 #include <mx/eventpair.h>
 
 #include <memory>
