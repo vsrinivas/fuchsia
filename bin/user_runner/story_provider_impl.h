@@ -24,6 +24,7 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/time/time_point.h"
 
 namespace modular {
 class ApplicationContext;
@@ -82,15 +83,13 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   // |StoryProvider|
   void CreateStory(const fidl::String& url,
-                   fidl::InterfaceRequest<StoryController>
-                       story_controller_request) override;
+                   const CreateStoryCallback& callback) override;
 
   // |StoryProvider|
   void CreateStoryWithInfo(const fidl::String& url,
                            FidlStringMap extra_info,
                            FidlDocMap root_docs,
-                           fidl::InterfaceRequest<StoryController>
-                               story_controller_request) override;
+                           const CreateStoryWithInfoCallback& callback) override;
 
   // |StoryProvider|
   void DeleteStory(const fidl::String& story_id,
@@ -115,8 +114,12 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& cb) override;
 
-  // Used by CreateStory() and GetController(). Followed eventually by
-  // AddController(). See impl for details.
+  // Used by CreateStory(). Followed eventually by AddController(). See impl
+  // for details.
+  void PendControllerAdd(const std::string& story_id);
+
+  // Used by GetController(). Followed eventually by AddController(). See impl
+  // for details.
   void PendControllerAdd(
       const std::string& story_id,
       fidl::InterfaceRequest<StoryController> story_controller_request);
@@ -171,6 +174,10 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
     std::unique_ptr<StoryControllerImpl> impl;
     bool deleted{};
     std::vector<DeleteStoryCallback> deleted_callbacks;
+
+    // Time beyond which the implementation is free to purge this controller.
+    // It is set to 0 if there outstanding connections to the controller.
+    ftl::TimePoint purge_time;
   };
   std::unordered_map<std::string, std::unique_ptr<StoryControllerEntry>>
       story_controllers_;

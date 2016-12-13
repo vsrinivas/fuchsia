@@ -228,7 +228,13 @@ class DummyUserShellApp
 
     using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
     story_provider_->CreateStoryWithInfo(url, FidlStringMap(), std::move(docs),
-                                         story_controller_.NewRequest());
+                                         [this, keep](const fidl::String& story_id) {
+                                           GetStoryInfo(story_id, keep);
+                                         });
+  }
+
+  void GetStoryInfo(const fidl::String& story_id, const bool keep) {
+    story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_->GetInfo([this, keep](modular::StoryInfoPtr story_info) {
       story_info_ = std::move(story_info);
       FTL_LOG(INFO) << "DummyUserShell START " << story_info_->id << " "

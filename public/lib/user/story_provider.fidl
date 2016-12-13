@@ -16,19 +16,18 @@ import "apps/modular/services/user/story_controller.fidl";
 // stopped, so it's a bad idea to close the story provider connection
 // while a story is still running.
 interface StoryProvider {
-  // Creates a new story running the module at |url|. Gives control
-  // over the newly created story through a StoryController. The
-  // module won't actually be run until Start() is invoked on the
-  // story controller.
-  CreateStory(string url, StoryController& story);
+  // Creates a new story running the module at |url|. The returned |story_id|
+  // can then be used to get a StoryController to perform actions on the newly
+  // created story.
+  CreateStory(string url) => (string story_id);
 
   // Like CreateStory, but with extra info and with values for the
   // root link atomically set. Otherwise, if SetInfoExtra() is called
   // separately on story controller, separate notifications are
   // generated, which is inconvenient.
   CreateStoryWithInfo(string url, map<string, string>? extra_info,
-                      map<string, document_store.Document>? root_docs,
-                      StoryController& story);
+                      map<string, document_store.Document>? root_docs)
+      => (string story_id);
 
   // Deletes an existing story from the list of known stories. Returns
   // when the delete notification is received from the Ledger. If the

@@ -79,23 +79,25 @@ class DevUserShellApp
     FTL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
-    story_provider_->CreateStory(settings_.root_module,
-                                 story_controller_.NewRequest());
+    story_provider_->CreateStory(
+        settings_.root_module, [this](const fidl::String& story_id) {
+          story_provider_->GetController(story_id,
+                                         story_controller_.NewRequest());
+          fidl::InterfaceHandle<StoryWatcher> story_watcher;
+          story_watcher_binding_.Bind(story_watcher.NewRequest());
+          story_controller_->Watch(std::move(story_watcher));
 
-    fidl::InterfaceHandle<StoryWatcher> story_watcher;
-    story_watcher_binding_.Bind(story_watcher.NewRequest());
-    story_controller_->Watch(std::move(story_watcher));
+          story_controller_->Start(std::move(view_owner_request_));
 
-    story_controller_->Start(std::move(view_owner_request_));
+          if (!settings_.root_link.empty()) {
+            modular::LinkPtr root;
+            story_controller_->GetLink(root.NewRequest());
 
-    if (!settings_.root_link.empty()) {
-      modular::LinkPtr root;
-      story_controller_->GetLink(root.NewRequest());
-
-      rapidjson::Document document;
-      document.Parse(settings_.root_link.c_str());
-      root->SetAllDocuments(modular::ConvertToLink(document));
-    }
+            rapidjson::Document document;
+            document.Parse(settings_.root_link.c_str());
+            root->SetAllDocuments(modular::ConvertToLink(document));
+          }
+        });
   }
 
   // |StoryWatcher|

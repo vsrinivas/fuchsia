@@ -28,7 +28,7 @@ class StoryProviderMock : public StoryProvider {
   // |StoryProvider|
   void CreateStory(
       const fidl::String& url,
-      fidl::InterfaceRequest<modular::StoryController> story) override {
+      const CreateStoryCallback& callback) override {
     last_created_story_ = url;
   }
 
@@ -37,7 +37,7 @@ class StoryProviderMock : public StoryProvider {
       const fidl::String& url,
       fidl::Map<fidl::String, fidl::String> extra_info,
       fidl::Map<fidl::String, document_store::DocumentPtr> root_docs,
-      fidl::InterfaceRequest<modular::StoryController> story) override {
+      const CreateStoryWithInfoCallback& callback) override {
     last_created_story_ = url;
   }
 
