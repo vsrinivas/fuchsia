@@ -289,10 +289,10 @@ void backtrace(mx_handle_t process, mx_handle_t thread,
     // Set up libunwind if requested.
 
     bool libunwind_ok = use_libunwind;
-    if (debug_level > 0) {
+    if (verbosity_level > 0) {
         // Don't turn on libunwind debugging for -d1.
         // Note: max libunwind debugging level is 16
-        unw_set_debug_level(debug_level - 1);
+        unw_set_debug_level(verbosity_level - 1);
     }
 
     unw_fuchsia_info_t* fuchsia = nullptr;

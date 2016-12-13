@@ -31,7 +31,7 @@ const char* cl_basename(const char* s) {
     return s + i;
 }
 
-int debug_level = 0;
+int verbosity_level = 0;
 
 void do_print_debug(const char* file, int line, const char* func, const char* fmt, ...) {
     fflush(stdout);

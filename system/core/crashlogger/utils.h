@@ -11,13 +11,13 @@
 
 extern const char* cl_basename(const char* file);
 
-extern int debug_level;
+extern int verbosity_level;
 
 extern void do_print_debug(const char* file, int line, const char* func, const char* fmt, ...);
 
 #define debugf(level, fmt...) \
   do { \
-    if (debug_level >= (level)) { \
+    if (verbosity_level >= (level)) { \
       do_print_debug (__FILE__, __LINE__, __func__, fmt); \
     } \
   } while (0)

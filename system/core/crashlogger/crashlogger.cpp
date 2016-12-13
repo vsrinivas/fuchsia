@@ -98,6 +98,22 @@ void output_frame_arm64(const arm64_exc_data_t& exc_data,
            regs.pc, regs.cpsr);
 };
 
+bool read_general_regs(mx_handle_t thread, void* buf, size_t buf_size) {
+    // The syscall takes a uint32_t.
+    auto to_xfer = static_cast<uint32_t>(buf_size);
+    uint32_t bytes_read;
+    auto status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, buf, to_xfer, &bytes_read);
+    if (status < 0) {
+        print_mx_error("unable to access general regs", status);
+        return false;
+    }
+    if (bytes_read != buf_size) {
+        print_error("general regs size mismatch: %u != %zu\n", bytes_read, buf_size);
+        return false;
+    }
+    return true;
+}
+
 void dump_memory(mx_handle_t proc, uintptr_t start, size_t len) {
     // Make sure we're not allocating an excessive amount of stack.
     DEBUG_ASSERT(len <= kMemoryDumpSize);
@@ -126,7 +142,7 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
 
     auto context = report->context;
     printf("<== fatal exception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", context.pid, context.tid);
-    printf("<== %s , PC at 0x%" PRIxPTR "\n", excp_type_to_str(report->header.type), context.arch.pc);
+    printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report->header.type), context.arch.pc);
 
     mx_handle_t process;
     mx_status_t status = mx_object_get_child(0, context.pid, MX_RIGHT_SAME_RIGHTS, &process);
@@ -157,16 +173,8 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
     mx_vaddr_t pc = 0, sp = 0, fp = 0;
     const char* arch = "unknown";
 
-    uint32_t regs_size = sizeof(regs);
-    status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0, &regs, regs_size, &regs_size);
-    if (status < 0) {
-        printf("unable to read general regs for [%" PRIu64 ".%" PRIu64 "] : error %d\n", context.pid, context.tid, status);
+    if (!read_general_regs(thread, &regs, sizeof(regs)))
         goto Fail;
-    }
-    if (regs_size != sizeof(regs)) {
-        printf("general regs size mismatch for [%" PRIu64 ".%" PRIu64 "] : %u != %zu\n", context.pid, context.tid, regs_size, sizeof(regs));
-        goto Fail;
-    }
 
     if (context.arch_id == ARCH_ID_X86_64) {
 #if defined(__x86_64__)
@@ -280,7 +288,7 @@ int self_dump_func(void* arg) {
 void usage() {
     fprintf(stderr, "Usage: crashlogger [options]\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -d[n] = set debug level to N\n");
+    fprintf(stderr, "  -v[n] = set verbosity level to N\n");
     fprintf(stderr, "  -f = force replacement of existing crashlogger\n");
     fprintf(stderr, "  -n = do not use libunwind\n");
 }
@@ -295,11 +303,11 @@ int main(int argc, char** argv) {
 
     for (int i = 1; i < argc; ++i) {
         const char* arg = argv[i];
-        if (strncmp(arg, "-d", 2) == 0) {
+        if (strncmp(arg, "-v", 2) == 0) {
             if (arg[2] != '\0') {
-                debug_level = atoi(arg + 2);
+                verbosity_level = atoi(arg + 2);
             } else {
-                debug_level = 1;
+                verbosity_level = 1;
             }
         } else if (strcmp(arg, "-f") == 0) {
             force = true;
@@ -313,7 +321,7 @@ int main(int argc, char** argv) {
 
     // At debugging level 1 print our dso list (in case we crash in a way
     // that prevents printing it later).
-    if (debug_level >= 1) {
+    if (verbosity_level >= 1) {
         mx_handle_t self = mx_process_self();
         dsoinfo_t* dso_list = dso_fetch_list(self, "crashlogger");
         printf("Crashlogger dso list:\n");
