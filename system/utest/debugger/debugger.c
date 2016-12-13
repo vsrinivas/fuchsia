@@ -9,6 +9,7 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <magenta/crashlogger.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/debug.h>
@@ -498,18 +499,13 @@ static int __NO_INLINE test_segfault(void)
     return test_segfault_doit1(&i);
 }
 
-// Invoke the s/w breakpoint insn.
+// Invoke the s/w breakpoint insn using the crashlogger mechanism
+// to request a backtrace but not terminate the process.
 
 static int __NO_INLINE test_swbreak(void)
 {
     unittest_printf("Invoking s/w breakpoint instruction\n");
-#ifdef __x86_64__
-    __asm__ volatile ("int3");
-#endif
-#ifdef __aarch64__
-    // This is what gdb uses.
-    __asm__ volatile ("brk 0");
-#endif
+    crashlogger_request_backtrace();
     unittest_printf("Resumed after s/w breakpoint instruction\n");
     return 0;
 }

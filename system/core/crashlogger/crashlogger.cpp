@@ -12,6 +12,7 @@
 #include <hexdump/hexdump.h>
 
 #include <magenta/assert.h>
+#include <magenta/crashlogger.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/debug.h>
@@ -23,6 +24,49 @@
 #include "backtrace.h"
 #include "dso-list.h"
 #include "utils.h"
+
+#if defined(__x86_64__)
+using gregs_type = mx_x86_64_general_regs_t;
+#elif defined(__aarch64__)
+using gregs_type = mx_aarch64_general_regs_t;
+#else
+using gregs_type = int; // unsupported arch
+#endif
+
+// If true then s/w breakpoint instructions do not kill the process.
+// After the backtrace is printed the thread quietly resumes.
+// TODO: The default is on for now for development purposes.
+// Ultimately will want to switch this to off.
+static bool swbreak_backtrace_enabled = true;
+
+// Return true if the thread is to be resumed "successfully" (meaning the o/s
+// won't kill it, and thus the kill process).
+
+static bool is_resumable_swbreak(const mx_exception_report_t* report) {
+    if (report->header.type == MX_EXCP_SW_BREAKPOINT && swbreak_backtrace_enabled)
+        return true;
+    return false;
+}
+
+#if defined(__x86_64__)
+
+int have_swbreak_magic(const gregs_type* regs) {
+    return regs->rax == CRASHLOGGER_RESUME_MAGIC;
+}
+
+#elif defined(__aarch64__)
+
+int have_swbreak_magic(const gregs_type* regs) {
+    return regs->r[0] == CRASHLOGGER_RESUME_MAGIC;
+}
+
+#else
+
+int have_swbreak_magic(const gregs_type* regs) {
+    return 0;
+}
+
+#endif
 
 const char* excp_type_to_str(uint32_t type) {
     DEBUG_ASSERT(MX_EXCP_IS_ARCH(type));
@@ -59,6 +103,9 @@ constexpr size_t kMemoryDumpSize = 256;
 // However there is no need to lock it as the self-dumper thread only runs
 // when the main thread has crashed.
 mx_handle_t crashed_thread = MX_HANDLE_INVALID;
+
+// The exception that |crashed_thread| got.
+mx_exception_report_t crashed_thread_report;
 
 void output_frame_x86_64(const x86_64_exc_data_t& exc_data,
                          const mx_x86_64_general_regs_t& regs) {
@@ -114,6 +161,17 @@ bool read_general_regs(mx_handle_t thread, void* buf, size_t buf_size) {
     return true;
 }
 
+bool write_general_regs(mx_handle_t thread, void* buf, size_t buf_size) {
+    // The syscall takes a uint32_t.
+    auto to_xfer = static_cast<uint32_t> (buf_size);
+    auto status = mx_thread_write_state(thread, MX_THREAD_STATE_REGSET0, buf, to_xfer);
+    if (status < 0) {
+        print_mx_error("unable to access general regs", status);
+        return false;
+    }
+    return true;
+}
+
 void dump_memory(mx_handle_t proc, uintptr_t start, size_t len) {
     // Make sure we're not allocating an excessive amount of stack.
     DEBUG_ASSERT(len <= kMemoryDumpSize);
@@ -127,13 +185,43 @@ void dump_memory(mx_handle_t proc, uintptr_t start, size_t len) {
     }
 }
 
-void resume_crashed_thread(mx_handle_t thread) {
-    auto status = mx_task_resume(thread, MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED);
+void resume_thread(mx_handle_t thread, bool handled) {
+    uint32_t options = MX_RESUME_EXCEPTION;
+    if (!handled)
+        options |= MX_RESUME_NOT_HANDLED;
+    auto status = mx_task_resume(thread, options);
     if (status != NO_ERROR) {
-        print_mx_error("unable to \"resume\" crashed thread", status);
+        print_mx_error("unable to \"resume\" thread", status);
         // This shouldn't ever happen. The task is now effectively hung.
         // TODO: Try to forcefully kill it?
     }
+}
+
+void resume_thread_from_exception(mx_handle_t thread,
+                                  const mx_exception_report_t* report,
+                                  const gregs_type* gregs) {
+    if (is_resumable_swbreak(report) &&
+        gregs != nullptr && have_swbreak_magic(gregs)) {
+#if defined(__x86_64__)
+        // On x86, the pc is left at one past the s/w break insn,
+        // so there's nothing more we need to do.
+#elif defined(__aarch64__)
+        gregs_type regs = *gregs;
+        // Skip past the brk instruction.
+        regs.pc += 4;
+        if (!write_general_regs(thread, &regs, sizeof(regs)))
+            goto Fail;
+#else
+        goto Fail;
+#endif
+        resume_thread(thread, true);
+        return;
+    }
+
+  Fail:
+    // Tell the o/s to "resume" the thread by killing the process, the
+    // exception has not been handled.
+    resume_thread(thread, false);
 }
 
 void process_report(const mx_exception_report_t* report, bool use_libunwind) {
@@ -141,7 +229,12 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
         return;
 
     auto context = report->context;
-    printf("<== fatal exception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", context.pid, context.tid);
+    const char* fatal = "fatal ";
+    // This won't print "fatal" in the case where this is a s/w bkpt but
+    // CRASHLOGGER_RESUME_MAGIC isn't set. Big deal.
+    if (is_resumable_swbreak(report))
+        fatal = "";
+    printf("<== %sexception: process [%" PRIu64 "] thread [%" PRIu64 "]\n", fatal, context.pid, context.tid);
     printf("<== %s, PC at 0x%" PRIxPTR "\n", excp_type_to_str(report->header.type), context.arch.pc);
 
     mx_handle_t process;
@@ -161,41 +254,38 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
     // Record the crashed thread so that if we crash then self_dump_func
     // can (try to) "resume" the thread so that it's not left hanging.
     crashed_thread = thread;
+    crashed_thread_report = *report;
 
-#if defined(__x86_64__)
-    mx_x86_64_general_regs_t regs;
-#elif defined(__aarch64__)
-    mx_aarch64_general_regs_t regs;
-#else // unsupported arch
-    int regs;
-#endif
-
+    gregs_type reg_buf;
+    gregs_type *regs = nullptr;
     mx_vaddr_t pc = 0, sp = 0, fp = 0;
     const char* arch = "unknown";
 
-    if (!read_general_regs(thread, &regs, sizeof(regs)))
+    if (!read_general_regs(thread, &reg_buf, sizeof(reg_buf)))
         goto Fail;
+    // Delay setting this until here so Fail will know we now have the regs.
+    regs = &reg_buf;
 
     if (context.arch_id == ARCH_ID_X86_64) {
 #if defined(__x86_64__)
         arch = "x86_64";
-        output_frame_x86_64(context.arch.u.x86_64, regs);
-        pc = regs.rip;
-        sp = regs.rsp;
-        fp = regs.rbp;
+        output_frame_x86_64(context.arch.u.x86_64, *regs);
+        pc = regs->rip;
+        sp = regs->rsp;
+        fp = regs->rbp;
 #endif
     } else if (context.arch_id == ARCH_ID_ARM_64) {
 #if defined(__aarch64__)
         arch = "aarch64";
-        output_frame_arm64(context.arch.u.arm_64, regs);
+        output_frame_arm64(context.arch.u.arm_64, *regs);
 
         // Only output the Fault address register if there's a data fault.
         if (MX_EXCP_FATAL_PAGE_FAULT == report->header.type)
             printf(" far %#18" PRIx64 "\n", context.arch.u.arm_64.far);
 
-        pc = regs.pc;
-        sp = regs.sp;
-        fp = regs.r[29];
+        pc = regs->pc;
+        sp = regs->sp;
+        fp = regs->r[29];
 #endif
     } else {
         // TODO: support other architectures. It's unlikely we'll get here as
@@ -212,9 +302,11 @@ void process_report(const mx_exception_report_t* report, bool use_libunwind) {
 Fail:
     debugf(1, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
 
-    // allow the thread (and then process) to die:
-    resume_crashed_thread(thread);
+    // allow the thread (and then process) to die, unless the exception is
+    // to just trigger a backtrace (if enabled)
+    resume_thread_from_exception(thread, report, regs);
     crashed_thread = MX_HANDLE_INVALID;
+    crashed_thread_report = { };
 
     mx_handle_close(thread);
     mx_handle_close(process);
@@ -260,8 +352,10 @@ int self_dump_func(void* arg) {
     // Also, before we do anything else, "resume" the original crashing thread.
     // Otherwise whomever is waiting on its process to terminate will hang.
     // And best do this ASAP in case we ourselves crash.
+    // If this was a resumable exception we'll instead kill the process,
+    // but we only get here if crashlogger itself crashed.
     if (crashed_thread != MX_HANDLE_INVALID) {
-        resume_crashed_thread(crashed_thread);
+        resume_thread_from_exception(crashed_thread, &crashed_thread_report, nullptr);
     }
 
     // Now we can check the return code of the unbinding. We don't want to
@@ -291,6 +385,8 @@ void usage() {
     fprintf(stderr, "  -v[n] = set verbosity level to N\n");
     fprintf(stderr, "  -f = force replacement of existing crashlogger\n");
     fprintf(stderr, "  -n = do not use libunwind\n");
+    fprintf(stderr, "  -s[on|off] = enable s/w breakpoints to trigger\n");
+    fprintf(stderr, "      a backtrace without terminating the process\n");
 }
 
 int main(int argc, char** argv) {
@@ -313,6 +409,17 @@ int main(int argc, char** argv) {
             force = true;
         } else if (strcmp(arg, "-n") == 0) {
             use_libunwind = false;
+        } else if (strncmp(arg, "-s", 2) == 0) {
+            if (arg[2] == '\0') {
+                swbreak_backtrace_enabled = true;
+            } else if (strcmp(arg, "-son") == 0) {
+                swbreak_backtrace_enabled = true;
+            } else if (strcmp(arg, "-soff") == 0) {
+                swbreak_backtrace_enabled = false;
+            } else {
+                usage();
+                return 1;
+            }
         } else {
             usage();
             return 1;
