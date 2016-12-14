@@ -24,6 +24,7 @@
         "moterm",
         "mozart",
         "mtl",
+        "netconnector",
         "netstack",
         "network",
         "re2",
