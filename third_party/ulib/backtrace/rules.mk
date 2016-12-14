@@ -4,6 +4,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_EXPORT := so
+
 MODULE_CFLAGS += -I$(LOCAL_DIR)/include/backtrace
 
 MODULE_SRCS := \

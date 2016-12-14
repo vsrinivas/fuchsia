@@ -4,6 +4,8 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_EXPORT := so
+
 MODULE_COMPILEFLAGS := \
     -DDEBUG \
     -I$(LOCAL_DIR)/include/ngunwind \
