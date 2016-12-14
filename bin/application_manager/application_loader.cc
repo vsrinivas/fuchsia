@@ -9,6 +9,9 @@
 #include <utility>
 
 #include "apps/modular/src/application_manager/url_resolver.h"
+#include "lib/ftl/files/unique_fd.h"
+#include "lib/ftl/logging.h"
+#include "lib/mtl/vmo/file.h"
 
 namespace modular {
 
@@ -19,7 +22,7 @@ ApplicationLoader::~ApplicationLoader() {}
 
 void ApplicationLoader::Open(
     const std::string& url,
-    const std::function<void(ftl::UniqueFD, std::string)>& callback) {
+    const std::function<void(mx::vmo, std::string)>& callback) {
   std::string path = GetPathFromURL(url);
   if (path.empty()) {
     // TODO(abarth): Support URL schemes other than file:// by querying the host
@@ -38,14 +41,15 @@ void ApplicationLoader::Open(
         }
       }
     }
-    if (fd.is_valid()) {
-      callback(std::move(fd), std::move(path));
+    mx::vmo data;
+    if (fd.is_valid() && mtl::VmoFromFd(std::move(fd), &data)) {
+      callback(std::move(data), std::move(path));
       return;
     }
     FTL_LOG(ERROR) << "Could not load url: " << url;
   }
 
-  callback(ftl::UniqueFD(), std::string());
+  callback(mx::vmo(), std::string());
 }
 
 }  // namespace modular

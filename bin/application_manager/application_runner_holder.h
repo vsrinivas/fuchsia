@@ -5,6 +5,8 @@
 #ifndef APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_RUNNER_HOLDER_H_
 #define APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_RUNNER_HOLDER_H_
 
+#include <mx/vmo.h>
+
 #include "apps/modular/services/application/application_controller.fidl.h"
 #include "apps/modular/services/application/application_runner.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
@@ -19,7 +21,7 @@ class ApplicationRunnerHolder {
   ~ApplicationRunnerHolder();
 
   void StartApplication(
-      ftl::UniqueFD fd,
+      mx::vmo data,
       ApplicationStartupInfoPtr startup_info,
       fidl::InterfaceRequest<ApplicationController> controller);
 

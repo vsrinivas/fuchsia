@@ -5,11 +5,13 @@
 #ifndef APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_LOADER_H_
 #define APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_LOADER_H_
 
+#include <functional>
 #include <string>
 #include <tuple>
 #include <vector>
 
-#include "lib/ftl/files/unique_fd.h"
+#include <mx/vmo.h>
+
 #include "lib/ftl/macros.h"
 
 namespace modular {
@@ -22,10 +24,9 @@ class ApplicationLoader {
   ~ApplicationLoader();
 
   // Opens the specified URL.
-  // Callback receives a file descriptor and the corresponding path in the
-  // filesystem.
+  // Callback receives a VMO and the URL.
   void Open(const std::string& url,
-            const std::function<void(ftl::UniqueFD, std::string)>& callback);
+            const std::function<void(mx::vmo, std::string)>& callback);
 
  private:
   std::vector<std::string> path_;

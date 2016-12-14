@@ -4,7 +4,6 @@
 
 #include "apps/modular/src/application_manager/application_runner_holder.h"
 
-#include <mx/vmo.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -26,17 +25,9 @@ ApplicationRunnerHolder::ApplicationRunnerHolder(
 ApplicationRunnerHolder::~ApplicationRunnerHolder() = default;
 
 void ApplicationRunnerHolder::StartApplication(
-    ftl::UniqueFD fd,
+    mx::vmo data,
     ApplicationStartupInfoPtr startup_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  mx::vmo data;
-  // TODO(abarth): This copy should be asynchronous.
-  if (!mtl::VmoFromFd(std::move(fd), &data)) {
-    FTL_LOG(ERROR) << "Cannot run " << startup_info->launch_info->url
-                   << " because URL is unreadable.";
-    return;
-  }
-
   ApplicationPackagePtr package = ApplicationPackage::New();
   package->data = std::move(data);
   runner_->StartApplication(std::move(package), std::move(startup_info),

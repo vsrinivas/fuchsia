@@ -82,19 +82,18 @@ mx::process CreateProcess(
   return mx::process(result);
 }
 
-bool HasShebang(const ftl::UniqueFD& fd, std::string* runner) {
-  if (!fd.is_valid())
+bool HasShebang(const mx::vmo& data, std::string* runner) {
+  if (!data)
     return false;
   std::string shebang(kMaxShebangLength, '\0');
-  ssize_t count = read(fd.get(), &shebang[0], shebang.length());
-  if (count == -1)
+  size_t count;
+  mx_status_t status = data.read(&shebang[0], 0, shebang.length(), &count);
+  if (status != NO_ERROR)
     return false;
   if (shebang.find(kFuchsiaMagic) != 0)
     return false;
   size_t newline = shebang.find('\n', kFuchsiaMagicLength);
   if (newline == std::string::npos)
-    return false;
-  if (lseek(fd.get(), 0, SEEK_SET) == -1)
     return false;
   *runner = shebang.substr(kFuchsiaMagicLength, newline - kFuchsiaMagicLength);
   return true;
@@ -233,11 +232,11 @@ void ApplicationEnvironmentImpl::CreateApplication(
       launch_info->url, ftl::MakeCopyable([
         this, launch_info = std::move(launch_info),
         controller = std::move(controller)
-      ](ftl::UniqueFD fd, std::string path) mutable {
+      ](mx::vmo data, std::string url) mutable {
         std::string runner;
-        if (!HasShebang(fd, &runner)) {
+        if (!HasShebang(data, &runner)) {
           CreateApplicationWithProcess(
-              path, environment_bindings_.AddBinding(this),
+              url, environment_bindings_.AddBinding(this),
               std::move(launch_info), std::move(controller));
           return;
         }
@@ -263,7 +262,7 @@ void ApplicationEnvironmentImpl::CreateApplication(
           startup_info->environment = environment_bindings_.AddBinding(this);
           startup_info->launch_info = std::move(launch_info);
           result.first->second->StartApplication(
-              std::move(fd), std::move(startup_info), std::move(controller));
+              std::move(data), std::move(startup_info), std::move(controller));
         } else if (!result.first->second) {
           // There was a cycle in the runner graph.
           FTL_LOG(ERROR) << "Cannot run " << launch_info->url << " with "
@@ -275,15 +274,15 @@ void ApplicationEnvironmentImpl::CreateApplication(
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
-    const std::string& path,
+    const std::string& url,
     fidl::InterfaceHandle<ApplicationEnvironment> environment,
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
   mx::process process =
-      CreateProcess(path, std::move(environment), std::move(launch_info));
+      CreateProcess(url, std::move(environment), std::move(launch_info));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
-        std::move(controller), this, std::move(process), path);
+        std::move(controller), this, std::move(process), url);
     ApplicationControllerImpl* key = application.get();
     applications_.emplace(key, std::move(application));
   }
