@@ -20,12 +20,8 @@ def main():
                       required=True)
   parser.add_argument('--root-build-dir',
                       help='Path to root of the build directory', required=True)
-  parser.add_argument('--analyzer-packages',
-                      help='Path to .packages file for the analyzer_cli package',
-                      required=True)
-  parser.add_argument('--analyzer-main', help='Path to the analyzer executable',
-                      required=True)
-  parser.add_argument('--dart', help='Path to the Dart executable',
+  parser.add_argument('--dartanalyzer',
+                      help='Path to the Dart analyzer executable',
                       required=True)
   parser.add_argument('--dart-sdk', help='Path to the Dart SDK',
                       required=True)
@@ -42,9 +38,7 @@ def main():
   script_template = string.Template('''#!/bin/sh
 
 echo "Package : $package_name"
-$dart \\
-  --packages=$analyzer_packages \\
-  $analyzer_main \\
+$dartanalyzer \\
   --packages=$dot_packages \\
   --dart-sdk=$dart_sdk \\
   $options_argument \\

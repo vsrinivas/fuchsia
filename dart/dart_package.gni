@@ -104,20 +104,13 @@ template("dart_package") {
 
       invocation_file = "$target_gen_dir/$invocation_file_name"
 
-      dart_binary_label = "//dart/runtime/bin:dart_no_observatory($host_toolchain)"
-      dart_binary_dir = get_label_info(dart_binary_label, "root_out_dir")
-      dart_binary = "$dart_binary_dir/dart_no_observatory"
-
-      analyzer_base_label = "//dart/pkg/analyzer_cli"
-      analyzer_label = "$analyzer_base_label($host_toolchain)"
-      analyzer_gen_dir = get_label_info(analyzer_label, "target_gen_dir")
-      analyzer_name = get_label_info(analyzer_label, "name")
-      analyzer_packages = "$analyzer_gen_dir/$analyzer_name.packages"
-      analyzer_main = "$analyzer_base_label/bin/analyzer.dart"
+      dart_sdk_label = "//dart:create_sdk($host_toolchain)"
+      dart_sdk_out_dir = get_label_info(dart_sdk_label, "root_out_dir")
+      dart_sdk_dir = "$dart_sdk_out_dir/dart-sdk"
+      dart_analyzer_binary = "$dart_sdk_dir/bin/dartanalyzer"
 
       deps = dart_deps + [
-        analyzer_label,
-        dart_binary_label,
+        dart_sdk_label,
       ]
 
       outputs = [
@@ -133,16 +126,12 @@ template("dart_package") {
                rebase_path(dot_packages_file),
                "--root-build-dir",
                rebase_path(root_build_dir),
-               "--analyzer-packages",
-               rebase_path(analyzer_packages),
-               "--analyzer-main",
-               rebase_path(analyzer_main),
-               "--dart",
-               rebase_path(dart_binary),
+               "--dartanalyzer",
+               rebase_path(dart_analyzer_binary),
                "--package-name",
                package_name,
                "--dart-sdk",
-               rebase_path("//dart/sdk")
+               rebase_path(dart_sdk_dir)
       ]
 
       if (defined(invoker.analysis_options)) {
