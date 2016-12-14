@@ -100,7 +100,6 @@ static int getattr_callback(const char* path, struct stat* stbuf) {
 static int readdir_callback(const char* path, void* buf, fuse_fill_dir_t filler,
                             off_t offset, struct fuse_file_info* fi) {
     debug("fuse-minfs: [readdir] '%s'\n", path);
-    vdircookie_t dircookie;
 
     const char* pathout;
     vnode_t* vn;
@@ -112,38 +111,47 @@ static int readdir_callback(const char* path, void* buf, fuse_fill_dir_t filler,
         return -EIO;
     }
 
+    int ret = 0;
     uint8_t dirents[2048];
     size_t len = sizeof(dirents);
-    status = vn->ops->readdir(vn, &dircookie, &dirents, len);
+    vdircookie_t dircookie;
+    memset(&dircookie, 0, sizeof(vdircookie_t));
+
+    do {
+      status = vn->ops->readdir(vn, &dircookie, &dirents, len);
+      if (status < 0) {
+          debug("fuse-minfs: failed to readdir %s: %d\n", path, status);
+          ret = -EIO;
+          goto done;
+      }
+
+      debug("fuse-minfs: readdir %s: %d\n", path, status);
+
+      size_t size = status;
+      uint8_t* ptr = &dirents[0];
+      while (size >= sizeof(vdirent_t)) {
+          vdirent_t* vde = (void*)ptr;
+          if (vde->size == 0)
+              break;
+          if (size < vde->size)
+              break;
+
+          debug("fuse-minfs: size %u/%zu type %u name %s\n", vde->size, size, vde->type, vde->name);
+          if (filler(buf, vde->name, NULL, 0) != 0) {
+              ret = -ENOMEM;
+              goto done;
+          }
+          ptr += vde->size;
+          size -= vde->size;
+      }
+    } while(status > 0);
+
+done:
     if (vn != fake_root) {
-        vfs_close(vn);
-    }
-    if (status < 0) {
-        debug("fuse-minfs: failed to readdir %s: %d\n", path, status);
-        UNLOCK();
-        return -EIO;
-    }
-
-    debug("fuse-minfs: readdir %s: %d\n", path, status);
-    size_t size = status;
-    uint8_t* ptr = &dirents[0];
-    while (size >= sizeof(vdirent_t)) {
-        vdirent_t* vde = (void*)ptr;
-        if (vde->size == 0)
-            break;
-        if (size < vde->size)
-            break;
-
-        debug("fuse-minfs: size %u/%zu type %u name %s\n", vde->size, size, vde->type, vde->name);
-        if (filler(buf, vde->name, NULL, 0) != 0) {
-            UNLOCK();
-            return -ENOMEM;
-        }
-        ptr += vde->size;
-        size -= vde->size;
+      vfs_close(vn);
     }
     UNLOCK();
-    return 0;
+    return ret;
 }
 
 static int open_callback(const char* path, struct fuse_file_info* fi) {
