@@ -25,6 +25,7 @@ function HELP {
     echo "-s <number of cpus> : number of cpus, 1 for uniprocessor, default is 4"
     echo "-u <path>           : execute qemu startUp script, default is no script"
     echo "-v                  : use vnc based display"
+    echo "-V                  : try to use virtio devices"
     echo "-x <bootfs>         : add eXtra bootfs"
     echo "-h for help"
     echo "all arguments after -- are passed to qemu directly"
@@ -47,6 +48,7 @@ QEMUDIR=
 RELEASE=0
 UPSCRIPT=no
 VNC=0
+VIRTIO=0
 SMP=4
 INITRD=
 CMDLINE=""
@@ -57,7 +59,7 @@ else
   IFNAME="qemu"
 fi
 
-while getopts a:Abc:dgI:km:nNo:q:rs:u:vx:h FLAG; do
+while getopts a:Abc:dgI:km:nNo:q:rs:u:vVx:h FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         A) AUDIO=1;;
@@ -76,6 +78,7 @@ while getopts a:Abc:dgI:km:nNo:q:rs:u:vx:h FLAG; do
         s) SMP=$OPTARG;;
         u) UPSCRIPT=$OPTARG;;
         v) VNC=1;;
+        V) VIRTIO=1;;
         x) INITRD=$OPTARG;;
         h) HELP;;
         \?)
@@ -125,21 +128,24 @@ if [ "$GRAPHICS" -eq 0 ]; then
     ARGS+=" -nographic"
 else
     ARGS+=" -serial stdio"
-    if [ "$ARCH" = "x86-64" ]; then
+    if [ "$ARCH" = "x86-64" ] && [ "$VIRTIO" -eq 0 ]; then
         # Enable Bochs VBE device, which Magenta has a device for
         ARGS+=" -vga std"
     else
-        ARGS+=" -device virtio-gpu-device"
+        # use the virtio gpu for display
+        ARGS+=" -vga none"
+        ARGS+=" -device virtio-gpu-pci"
     fi
 fi
 
 if [ "$DISK" -eq 1 ]; then
-    if [ "$ARCH" == "x86-64" ]; then
+    ARGS+=" -drive file=blk.bin,format=raw,if=none,id=mydisk"
+    if [ "$ARCH" == "x86-64" ] && [ "$VIRTIO" -eq 0 ]; then
         # ahci
-        ARGS+=" -drive file=blk.bin,if=none,id=mydisk -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
+        ARGS+=" -device ich9-ahci,id=ahci -device ide-drive,drive=mydisk,bus=ahci.0"
     else
-        # virtio based block device
-        ARGS+=" -drive if=none,file=blk.bin,id=blk,format=raw -device virtio-blk-device,drive=blk"
+        # virtio based block device, pci, transitional
+        ARGS+=" -device virtio-blk-pci,disable-modern=true,drive=mydisk"
     fi
 fi
 
@@ -148,12 +154,7 @@ if [ "$NET" -eq 0 ]; then
 fi
 
 if [ "$NET" -eq 1 ]; then
-    # virtio based network interface
-    if [ "$ARCH" == "x86-64" ]; then
-        ARGS+=" -netdev type=user,hostname=$IFNAME,id=net0 -device virtio-net-pci,netdev=net0"
-    else
-        ARGS+=" -netdev user,id=vmnic,hostname=$IFNAME -device virtio-net-device,netdev=vmnic"
-    fi
+    ARGS+=" -netdev type=user,hostname=$IFNAME,id=net0"
 fi
 
 if [ "$NET" -eq 2 ]; then
@@ -180,13 +181,15 @@ if [ "$NET" -eq 2 ]; then
         fi
         ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
     fi
-    if [ "$ARCH" == "x86-64" ]; then
-        ARGS+=" -device e1000,netdev=net0"
-    else
-        ARGS+=" -device virtio-net-device,netdev=net0"
-    fi
 fi
 
+if [ "$NET" -ne 0 ]; then
+    if [ "$ARCH" == "x86-64" ] && [ "$VIRTIO" -eq 0 ]; then
+        ARGS+=" -device e1000,netdev=net0"
+    else
+        ARGS+=" -device virtio-net-pci,netdev=net0"
+    fi
+fi
 
 if [ "$AUDIO" -ne 0 ]; then
     ARGS+=" -soundhw hda"
@@ -195,6 +198,14 @@ fi
 
 if [ "$SMP" -ne 1 ]; then
     ARGS+=" -smp $SMP"
+fi
+
+# start a few extra harmless virtio devices that can be ignored
+if [ "$VIRTIO" -ne 0 ]; then
+    ARGS+=" -device virtio-serial-pci"
+    ARGS+=" -device virtio-rng-pci"
+    ARGS+=" -device virtio-mouse-pci"
+    ARGS+=" -device virtio-keyboard-pci"
 fi
 
 case $ARCH in
