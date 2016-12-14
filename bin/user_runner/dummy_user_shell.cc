@@ -202,12 +202,12 @@ class DummyUserShellApp
     }
 
     FTL_LOG(INFO) << "DummyUserShell DONE";
-    story_controller_->Stop([this]() {
+    story_controller_->Stop([this] {
       TearDownStoryController();
 
       // When the story is done, we start the next one.
       mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this]() { CreateStory(settings_.second_module, false); },
+          [this] { CreateStory(settings_.second_module, false); },
           ftl::TimeDelta::FromSeconds(20));
     });
   }
@@ -237,9 +237,9 @@ class DummyUserShellApp
 
       if (!keep) {
         mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-            [this]() {
+            [this] {
               FTL_LOG(INFO) << "DummyUserShell DELETE " << story_info_->id;
-              story_provider_->DeleteStory(story_info_->id, [this]() {
+              story_provider_->DeleteStory(story_info_->id, [this] {
                 FTL_LOG(INFO) << "DummyUserShell DELETE DONE";
               });
             },
@@ -292,12 +292,12 @@ class DummyUserShellApp
         story_info_->id, [this](modular::StoryInfoPtr story_info) {
           FTL_DCHECK(!story_info.is_null());
           FTL_DCHECK(story_info->is_running == true);
-          story_controller_->Stop([this]() {
+          story_controller_->Stop([this] {
             TearDownStoryController();
 
             // When the story stops, we start it again.
             mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-                [this]() {
+                [this] {
                   story_provider_->GetStoryInfo(
                       story_info_->id,
                       [this](modular::StoryInfoPtr story_info) {

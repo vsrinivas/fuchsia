@@ -105,7 +105,7 @@ class DevUserShellApp
     }
 
     FTL_LOG(INFO) << "DevUserShell DONE";
-    story_controller_->Stop([this]() {
+    story_controller_->Stop([this] {
       FTL_LOG(INFO) << "DevUserShell STOP";
       story_watcher_binding_.Close();
       story_controller_.reset();

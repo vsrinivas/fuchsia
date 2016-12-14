@@ -105,10 +105,10 @@ class TransactionImpl : public Transaction {
     FTL_LOG(WARNING) << "Add is deprecated. Please use Put.";
     internal::VoidCallbackTracker* callback_tracker =
         new internal::VoidCallbackTracker(docs.size(),
-                                          [callback]() { callback(); });
+                                          [callback] { callback(); });
     for (size_t i = 0; i < docs.size(); ++i) {
       AddOne(std::move(docs.at(i)),
-             [callback_tracker]() { callback_tracker->Run(); });
+             [callback_tracker] { callback_tracker->Run(); });
     }
   };
 
@@ -122,10 +122,10 @@ class TransactionImpl : public Transaction {
            const PutCallback& callback) override {
     internal::VoidCallbackTracker* callback_tracker =
         new internal::VoidCallbackTracker(documents.size(),
-                                          [callback]() { callback(); });
+                                          [callback] { callback(); });
     for (size_t i = 0; i < documents.size(); ++i) {
       PutOne(std::move(documents.at(i)),
-             [callback_tracker]() { callback_tracker->Run(); });
+             [callback_tracker] { callback_tracker->Run(); });
     }
   };
 
@@ -145,10 +145,10 @@ class TransactionImpl : public Transaction {
               const DeleteCallback& callback) override {
     internal::VoidCallbackTracker* callback_tracker =
         new internal::VoidCallbackTracker(docids.size(),
-                                          [callback]() { callback(); });
+                                          [callback] { callback(); });
     for (size_t i = 0; i < docids.size(); ++i) {
       DeleteOne(std::move(docids.at(i)),
-                [callback_tracker]() { callback_tracker->Run(); });
+                [callback_tracker] { callback_tracker->Run(); });
     }
   };
 
@@ -170,7 +170,7 @@ class TransactionImpl : public Transaction {
           }
           internal::VoidCallbackTracker* callback_tracker =
               new internal::VoidCallbackTracker(keys.size() + 1,
-                                                [callback]() { callback(); });
+                                                [callback] { callback(); });
 
           fidl::String docid;
           internal::DocidFromLedgerKey(keys[0], &docid);
@@ -270,7 +270,7 @@ class TransactionImpl : public Transaction {
                    std::function<void()> callback) {
     internal::VoidCallbackTracker* callback_tracker =
         new internal::VoidCallbackTracker(document->properties.size() + 1,
-                                          [callback]() { callback(); });
+                                          [callback] { callback(); });
     fidl::Array<uint8_t> key;
     fidl::Array<uint8_t> value;
 

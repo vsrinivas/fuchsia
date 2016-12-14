@@ -254,7 +254,7 @@ void ApplicationEnvironmentImpl::CreateApplication(
                             runner_controller.NewRequest());
 
           runner_controller.set_connection_error_handler(
-              [this, runner]() { runners_.erase(runner); });
+              [this, runner] { runners_.erase(runner); });
 
           result.first->second = std::make_unique<ApplicationRunnerHolder>(
               std::move(runner_services), std::move(runner_controller));

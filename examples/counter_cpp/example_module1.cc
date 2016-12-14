@@ -174,7 +174,7 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
 
     auto adder_service = modular::ConnectToService<modular::examples::Adder>(
         recipe_services.get());
-    adder_service.set_connection_error_handler([]() {
+    adder_service.set_connection_error_handler([] {
       FTL_CHECK(false) << "Uh oh, Connection to Adder closed by the recipe.";
     });
     adder_service->Add(
@@ -210,7 +210,7 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
     }
     ftl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this, module_ptr]() {
+        [this, module_ptr] {
           if (!module_ptr.get()) {
             return;
           }

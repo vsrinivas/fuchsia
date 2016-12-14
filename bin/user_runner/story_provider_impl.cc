@@ -28,7 +28,7 @@ void InitStoryId() {
 // used as a story id.
 std::string MakeStoryId(std::unordered_set<std::string>* story_ids,
                         const size_t length) {
-  std::function<char()> randchar = []() -> char {
+  std::function<char()> randchar = [] {
     const char charset[] =
         "0123456789"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -223,7 +223,7 @@ class CreateStoryCall : public Transaction {
         story_info->extra = std::move(extra_info_);
         story_info->extra.mark_non_null();
 
-        story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
+        story_provider_impl_->WriteStoryData(story_data_->Clone(), [this] {
           auto* const story_controller = StoryControllerImpl::New(
               std::move(story_data_), story_provider_impl_);
           story_controller->AddLinkData(std::move(root_docs_));
@@ -670,7 +670,7 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
     // Delete the record. The story will be stopped in the PageWatcher
     // callback.
     new DeleteStoryCall(&transaction_container_, ledger_.get(), story_id,
-                        [story_id]() {
+                        [story_id] {
                           FTL_LOG(INFO) << "Deleted story " << story_id;
                           // This callback is for logging purposes. Flow of
                           // control continues in the notification from the
@@ -687,7 +687,7 @@ void StoryProviderImpl::DisposeController(const fidl::String& story_id) {
   auto i = story_controllers_.find(story_id);
   FTL_DCHECK(i != story_controllers_.end());
 
-  auto cont = [this, story_id]() {
+  auto cont = [this, story_id] {
     auto i = story_controllers_.find(story_id);
     FTL_DCHECK(i != story_controllers_.end());
 
@@ -771,7 +771,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
         // DeleteStory() request. If not yet marked deleted, this is
         // from sync, so we mark it accordingly.
         if (!i->second->deleted) {
-          PendControllerDelete(story_id, []() {});
+          PendControllerDelete(story_id, []{});
         }
         DisposeController(story_id);
       }

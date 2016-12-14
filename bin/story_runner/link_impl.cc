@@ -104,7 +104,7 @@ void LinkImpl::DatabaseChanged(LinkConnection* const src) {
   // src is only used to compare its value. If the connection was
   // deleted before the callback is invoked, it will also be removed
   // from connections_.
-  WriteLinkData([this, src]() { NotifyWatchers(src); });
+  WriteLinkData([this, src] { NotifyWatchers(src); });
 }
 
 void LinkImpl::OnChange(LinkDataPtr link_data) {
@@ -145,7 +145,7 @@ LinkConnection::LinkConnection(LinkImpl* const impl,
     : impl_(impl), binding_(this, std::move(link_request)) {
   impl_->AddConnection(this);
   binding_.set_connection_error_handler(
-      [this]() { impl_->RemoveConnection(this); });
+      [this] { impl_->RemoveConnection(this); });
 }
 
 void LinkConnection::Query(const LinkConnection::QueryCallback& callback) {

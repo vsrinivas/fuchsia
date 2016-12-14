@@ -109,7 +109,7 @@ void StoryImpl::CreateLink(const fidl::String& name,
       new LinkImpl(std::move(story_storage_dup), name, std::move(link));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
-      [this, link_impl]() { DisposeLink(link_impl); });
+      [this, link_impl] { DisposeLink(link_impl); });
 }
 
 void StoryImpl::DisposeLink(LinkImpl* const link) {
@@ -225,7 +225,7 @@ void StoryImpl::Stop(const StopCallback& done) {
 }
 
 void StoryImpl::StopModules() {
-  auto cont = [this]() {
+  auto cont = [this] {
     if (!connections_.empty()) {
       // Not the last call.
       return;

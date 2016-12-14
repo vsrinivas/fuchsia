@@ -29,7 +29,7 @@ ModuleControllerImpl::ModuleControllerImpl(
   // If the Module instance closes its own connection, we signal this
   // as error to all current and future watchers.
   module_.set_connection_error_handler(
-      [this]() { SetState(ModuleState::ERROR); });
+      [this] { SetState(ModuleState::ERROR); });
 }
 
 void ModuleControllerImpl::SetState(const ModuleState new_state) {
@@ -55,7 +55,7 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
   // be called twice, so the second call must be protected from fully
   // executing.
   auto called = std::make_shared<bool>(false);
-  auto cont = [this, called]() {
+  auto cont = [this, called] {
     if (*called) {
       return;
     }

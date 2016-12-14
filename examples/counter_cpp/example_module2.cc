@@ -158,7 +158,7 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
     }
     ftl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this, module_ptr]() {
+        [this, module_ptr] {
           if (!module_ptr.get()) {
             return;
           }

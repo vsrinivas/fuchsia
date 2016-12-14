@@ -17,7 +17,7 @@ StoryControllerImpl::StoryControllerImpl(
     : story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
       module_watcher_binding_(this) {
-  bindings_.set_on_empty_set_handler([this]() {
+  bindings_.set_on_empty_set_handler([this] {
     // This does not purge a controller with an open story runner as
     // indicated by IsActive().
     story_provider_impl_->PurgeControllers();
@@ -100,7 +100,7 @@ void StoryControllerImpl::Start(
   // this one.
   start_request_ = std::move(view_owner_request);
 
-  auto cont = [this]() {
+  auto cont = [this] {
     if (!story_.is_bound()) {
       StartStoryRunner();
     }
@@ -158,11 +158,11 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
   // between them. If the Stop() request happens to be executed before
   // the AddDocuments() request, the link is never written to the
   // ledger.
-  root_->Sync([this]() {
-    story_runner_->Stop([this]() {
+  root_->Sync([this] {
+    story_runner_->Stop([this] {
       story_data_->story_info->is_running = false;
       story_data_->story_info->state = StoryState::STOPPED;
-      WriteStoryData([this]() {
+      WriteStoryData([this] {
         Reset();
         NotifyStateChange();
 
@@ -224,7 +224,7 @@ void StoryControllerImpl::OnStateChange(const ModuleState state) {
 
   // TODO(mesch): Notify() doesn't need to wait for the data to be
   // written, same as in StartStory().
-  WriteStoryData([this]() { NotifyStateChange(); });
+  WriteStoryData([this] { NotifyStateChange(); });
 }
 
 void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
@@ -276,7 +276,7 @@ void StoryControllerImpl::StartStory(
 
   story_data_->story_info->is_running = true;
   story_data_->story_info->state = StoryState::STARTING;
-  WriteStoryData([]() {});
+  WriteStoryData([]{});
 
   module_->Watch(module_watcher_binding_.NewBinding());
 }

@@ -49,7 +49,7 @@ class StrongBinding {
   // The binding may be completed with a subsequent call to the |Bind| method.
   // Does not take ownership of |impl|, which must outlive the binding.
   explicit StrongBinding(ImplPtr impl) : binding_(impl) {
-    binding_.set_connection_error_handler([this]() { OnConnectionError(); });
+    binding_.set_connection_error_handler([this] { OnConnectionError(); });
   }
 
   // Constructs a completed binding of message pipe |handle| to implementation
