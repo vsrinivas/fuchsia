@@ -68,6 +68,11 @@ void StoryControllerImpl::SetInfoExtra(const fidl::String& name,
                                        const fidl::String& value,
                                        const SetInfoExtraCallback& callback) {
   story_data_->story_info->extra[name] = value;
+
+  // Callback is serialized after WriteStoryData. This means that
+  // after the callback returns, story info can be read from the
+  // ledger and will have it. TODO(mesch): Not sure if that's needed.
+  // Perhaps we can work this into a generalized Sync() operation?
   WriteStoryData(callback);
 }
 
@@ -162,16 +167,15 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
     story_runner_->Stop([this] {
       story_data_->story_info->is_running = false;
       story_data_->story_info->state = StoryState::STOPPED;
-      WriteStoryData([this] {
-        Reset();
-        NotifyStateChange();
+      WriteStoryData([]{});
+      Reset();
+      NotifyStateChange();
 
-        std::vector<std::function<void()>> stop_requests =
-            std::move(stop_requests_);
-        for (auto& done : stop_requests) {
-          done();
-        }
-      });
+      std::vector<std::function<void()>> stop_requests =
+          std::move(stop_requests_);
+      for (auto& done : stop_requests) {
+        done();
+      }
     });
   });
 }
@@ -222,9 +226,8 @@ void StoryControllerImpl::OnStateChange(const ModuleState state) {
       break;
   }
 
-  // TODO(mesch): Notify() doesn't need to wait for the data to be
-  // written, same as in StartStory().
-  WriteStoryData([this] { NotifyStateChange(); });
+  WriteStoryData([]{});
+  NotifyStateChange();
 }
 
 void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
