@@ -62,7 +62,7 @@ InterfaceHandle connectToServiceByName(ServiceProvider serviceProvider, String s
   return new InterfaceHandle(pair.channel1, 0);
 }
 
-typedef void ServiceConnector(InterfaceRequest request);
+typedef void ServiceConnector<T>(InterfaceRequest<T> request);
 typedef void DefaultServiceConnector(String serviceName,
                                      InterfaceRequest request);
 
@@ -81,7 +81,7 @@ class ServiceProviderImpl extends ServiceProvider {
 
   final Map<String, ServiceConnector> _connectors = new Map<String, ServiceConnector>();
 
-  void addServiceForName(ServiceConnector connector, String serviceName) {
+  void addServiceForName<T>(ServiceConnector<T> connector, String serviceName) {
     _connectors[serviceName] = connector;
   }
 
