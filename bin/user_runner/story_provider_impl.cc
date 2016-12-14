@@ -224,7 +224,7 @@ class CreateStoryCall : public Transaction {
         story_info->extra.mark_non_null();
 
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this] {
-          auto* const story_controller = StoryControllerImpl::New(
+          auto* const story_controller = new StoryControllerImpl(
               std::move(story_data_), story_provider_impl_);
           story_controller->AddLinkData(std::move(root_docs_));
           story_provider_impl_->AddController(story_id_, story_controller);
@@ -318,8 +318,8 @@ class GetControllerCall : public Transaction {
                                  << " Ledger.GetPage() " << status;
                 }
                 story_provider_impl_->AddController(
-                    story_id_, StoryControllerImpl::New(std::move(story_data_),
-                                                        story_provider_impl_));
+                    story_id_, new StoryControllerImpl(std::move(story_data_),
+                                                       story_provider_impl_));
                 Done();
               });
         });

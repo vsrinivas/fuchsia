@@ -29,11 +29,8 @@ class StoryProviderImpl;
 
 class StoryControllerImpl : public StoryController, public ModuleWatcher {
  public:
-  static StoryControllerImpl* New(StoryDataPtr story_data,
-                                  StoryProviderImpl* story_provider_impl) {
-    return new StoryControllerImpl(std::move(story_data), story_provider_impl);
-  }
-
+  StoryControllerImpl(StoryDataPtr story_data,
+                      StoryProviderImpl* story_provider_impl);
   ~StoryControllerImpl() override = default;
 
   // Used by StoryProviderImpl.
@@ -45,11 +42,6 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   size_t bindings_size() const { return bindings_.size(); }
 
  private:
-  // Constructor is private to ensure (by way of New()) that instances
-  // are created always with new.
-  StoryControllerImpl(StoryDataPtr story_data,
-                      StoryProviderImpl* story_provider_impl);
-
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;
   void SetInfoExtra(const fidl::String& name,
