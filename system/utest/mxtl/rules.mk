@@ -24,6 +24,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
     $(LOCAL_DIR)/ref_ptr_tests.cpp \
+    $(LOCAL_DIR)/slab_allocator_tests.cpp \
     $(LOCAL_DIR)/type_support_tests.cpp \
     $(LOCAL_DIR)/unique_free_ptr_tests.cpp \
     $(LOCAL_DIR)/unique_ptr_tests.cpp \
