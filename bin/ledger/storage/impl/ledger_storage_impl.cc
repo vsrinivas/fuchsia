@@ -50,7 +50,7 @@ LedgerStorageImpl::LedgerStorageImpl(ftl::RefPtr<ftl::TaskRunner> main_runner,
 LedgerStorageImpl::~LedgerStorageImpl() {}
 
 Status LedgerStorageImpl::CreatePageStorage(
-    PageIdView page_id,
+    PageId page_id,
     std::unique_ptr<PageStorage>* page_storage) {
   std::string path = GetPathFor(page_id);
   if (!files::CreateDirectory(path)) {
@@ -58,7 +58,7 @@ Status LedgerStorageImpl::CreatePageStorage(
     return Status::INTERNAL_IO_ERROR;
   }
   auto result = std::make_unique<PageStorageImpl>(main_runner_, io_runner_,
-                                                  GetPathFor(page_id), page_id);
+                                                  path, std::move(page_id));
   Status s = result->Init();
   if (s != Status::OK) {
     FTL_LOG(ERROR) << "Failed to initialize PageStorage. Status: " << s;
@@ -69,12 +69,12 @@ Status LedgerStorageImpl::CreatePageStorage(
 }
 
 void LedgerStorageImpl::GetPageStorage(
-    PageIdView page_id,
+    PageId page_id,
     const std::function<void(Status, std::unique_ptr<PageStorage>)>& callback) {
   std::string path = GetPathFor(page_id);
   if (files::IsDirectory(path)) {
-    auto result = std::make_unique<PageStorageImpl>(
-        main_runner_, io_runner_, GetPathFor(page_id), page_id);
+    auto result = std::make_unique<PageStorageImpl>(main_runner_, io_runner_,
+                                                    path, std::move(page_id));
     Status status = result->Init();
     if (status != Status::OK) {
       callback(status, nullptr);

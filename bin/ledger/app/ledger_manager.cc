@@ -141,7 +141,7 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
   container->BindPage(std::move(page_request), std::move(callback));
 
   storage_->GetPageStorage(
-      page_id,
+      page_id.ToString(),
       [ this, create_if_not_found, page_id = page_id.ToString(), container ](
           storage::Status storage_status,
           std::unique_ptr<storage::PageStorage> page_storage) mutable {
@@ -156,7 +156,7 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
             return;
           }
           storage::Status status =
-              storage_->CreatePageStorage(page_id, &page_storage);
+              storage_->CreatePageStorage(std::move(page_id), &page_storage);
           if (status != storage::Status::OK) {
             container->SetPageManager(Status::INTERNAL_ERROR, nullptr);
             return;

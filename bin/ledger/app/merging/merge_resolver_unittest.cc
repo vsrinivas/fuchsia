@@ -57,7 +57,7 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     ::testing::Test::SetUp();
     page_storage_.reset(new storage::PageStorageImpl(
         message_loop_.task_runner(), message_loop_.task_runner(),
-        tmp_dir_.path(), kRootPageId));
+        tmp_dir_.path(), kRootPageId.ToString()));
     EXPECT_EQ(storage::Status::OK, page_storage_->Init());
   }
 

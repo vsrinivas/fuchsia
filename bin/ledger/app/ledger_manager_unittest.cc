@@ -33,25 +33,26 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   ~FakeLedgerStorage() {}
 
   storage::Status CreatePageStorage(
-      storage::PageIdView page_id,
+      storage::PageId page_id,
       std::unique_ptr<storage::PageStorage>* page_storage) override {
-    create_page_calls.push_back(page_id.ToString());
+    create_page_calls.push_back(std::move(page_id));
     page_storage->reset();
     return storage::Status::IO_ERROR;
   }
 
   void GetPageStorage(
-      storage::PageIdView page_id,
+      storage::PageId page_id,
       const std::function<void(storage::Status,
                                std::unique_ptr<storage::PageStorage>)>&
           callback) override {
-    get_page_calls.push_back(page_id.ToString());
-    task_runner_->PostTask([ this, callback, page_id = page_id.ToString() ]() {
+    get_page_calls.push_back(page_id);
+    task_runner_->PostTask([ this, callback, page_id = std::move(page_id) ]() {
       if (get_page_fails) {
         callback(storage::Status::NOT_FOUND, nullptr);
       } else {
         callback(storage::Status::OK,
-                 std::make_unique<storage::fake::FakePageStorage>(page_id));
+                 std::make_unique<storage::fake::FakePageStorage>(
+                     std::move(page_id)));
       }
     });
   }

@@ -23,7 +23,7 @@ class PageStorageImpl : public PageStorage {
   PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> main_runner,
                   ftl::RefPtr<ftl::TaskRunner> io_runner,
                   std::string page_dir,
-                  PageIdView page_id);
+                  PageId page_id);
   ~PageStorageImpl() override;
 
   // Initializes this PageStorageImpl. This includes initializing the underlying

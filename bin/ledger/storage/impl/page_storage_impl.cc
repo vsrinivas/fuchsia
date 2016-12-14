@@ -275,11 +275,11 @@ class PageStorageImpl::FileWriter {
 PageStorageImpl::PageStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                  ftl::RefPtr<ftl::TaskRunner> io_runner,
                                  std::string page_dir,
-                                 PageIdView page_id)
+                                 PageId page_id)
     : main_runner_(task_runner),
       io_runner_(io_runner),
       page_dir_(page_dir),
-      page_id_(page_id.ToString()),
+      page_id_(std::move(page_id)),
       db_(this, page_dir_ + kLevelDbDir),
       objects_dir_(page_dir_ + kObjectDir),
       staging_dir_(page_dir_ + kStagingDir),

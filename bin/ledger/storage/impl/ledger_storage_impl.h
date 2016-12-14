@@ -21,11 +21,11 @@ class LedgerStorageImpl : public LedgerStorage {
                     const std::string& ledger_name);
   ~LedgerStorageImpl() override;
 
-  Status CreatePageStorage(PageIdView page_id,
+  Status CreatePageStorage(PageId page_id,
                            std::unique_ptr<PageStorage>* page_storage) override;
 
   void GetPageStorage(
-      PageIdView page_id,
+      PageId page_id,
       const std::function<void(Status, std::unique_ptr<PageStorage>)>& callback)
       override;
 
