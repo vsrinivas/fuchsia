@@ -8,8 +8,8 @@
 #include <mx/channel.h>
 
 #include <functional>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 #include <utility>
 
 #include "apps/modular/services/application/service_provider.fidl.h"

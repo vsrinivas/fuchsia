@@ -101,23 +101,23 @@ void StoryControllerImpl::Start(
   start_request_ = std::move(view_owner_request);
 
   auto cont = [this]() {
-                if (!story_.is_bound()) {
-                  StartStoryRunner();
-                }
+    if (!story_.is_bound()) {
+      StartStoryRunner();
+    }
 
-                if (start_request_ && !deleted_) {
-                  StartStory(std::move(start_request_));
-                  NotifyStateChange();
-                }
+    if (start_request_ && !deleted_) {
+      StartStory(std::move(start_request_));
+      NotifyStateChange();
+    }
 
-                // In case we didn't use the start request, we close it here,
-                start_request_ = nullptr;
+    // In case we didn't use the start request, we close it here,
+    start_request_ = nullptr;
 
-                if (deleted_) {
-                  FTL_LOG(INFO) << "StoryControllerImpl::Start()"
-                      " callback during delete: ignored.";
-                }
-              };
+    if (deleted_) {
+      FTL_LOG(INFO) << "StoryControllerImpl::Start()"
+                       " callback during delete: ignored.";
+    }
+  };
 
   // If a stop request is in flight, we wait for it to finish before
   // we start.
@@ -137,7 +137,8 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
   }
 
   if (!story_.is_bound()) {
-    std::vector<std::function<void()>> stop_requests = std::move(stop_requests_);
+    std::vector<std::function<void()>> stop_requests =
+        std::move(stop_requests_);
     for (auto& done : stop_requests) {
       done();
     }
@@ -165,7 +166,8 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
         Reset();
         NotifyStateChange();
 
-        std::vector<std::function<void()>> stop_requests = std::move(stop_requests_);
+        std::vector<std::function<void()>> stop_requests =
+            std::move(stop_requests_);
         for (auto& done : stop_requests) {
           done();
         }
@@ -173,7 +175,6 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
     });
   });
 }
-
 
 // A variant of Stop() that stops the controller because the story was
 // deleted. It suppresses any writes of story data, so that the story
@@ -223,9 +224,7 @@ void StoryControllerImpl::OnStateChange(const ModuleState state) {
 
   // TODO(mesch): Notify() doesn't need to wait for the data to be
   // written, same as in StartStory().
-  WriteStoryData([this]() {
-    NotifyStateChange();
-  });
+  WriteStoryData([this]() { NotifyStateChange(); });
 }
 
 void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
@@ -240,14 +239,14 @@ void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
 
 void StoryControllerImpl::NotifyStateChange() {
   const StoryState state = story_data_->story_info->state;
-  story_watchers_.ForAllPtrs([state] (StoryWatcher* const watcher) {
-    watcher->OnStateChange(state);
-  });
+  story_watchers_.ForAllPtrs(
+      [state](StoryWatcher* const watcher) { watcher->OnStateChange(state); });
 }
 
 void StoryControllerImpl::StartStoryRunner() {
   StoryRunnerFactoryPtr story_runner_factory;
-  story_provider_impl_->ConnectToStoryRunnerFactory(story_runner_factory.NewRequest());
+  story_provider_impl_->ConnectToStoryRunnerFactory(
+      story_runner_factory.NewRequest());
 
   ResolverPtr resolver;
   story_provider_impl_->ConnectToResolver(resolver.NewRequest());
@@ -271,12 +270,13 @@ void StoryControllerImpl::StartStory(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   fidl::InterfaceHandle<Link> link;
   root_->Dup(link.NewRequest());
-  story_->StartModule(story_data_->story_info->url, std::move(link), nullptr, nullptr,
-                      module_.NewRequest(), std::move(view_owner_request));
+  story_->StartModule(story_data_->story_info->url, std::move(link), nullptr,
+                      nullptr, module_.NewRequest(),
+                      std::move(view_owner_request));
 
   story_data_->story_info->is_running = true;
   story_data_->story_info->state = StoryState::STARTING;
-  WriteStoryData([](){});
+  WriteStoryData([]() {});
 
   module_->Watch(module_watcher_binding_.NewBinding());
 }

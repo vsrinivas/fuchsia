@@ -27,19 +27,18 @@ namespace modular {
 class ApplicationContext;
 class StoryProviderImpl;
 
-class StoryControllerImpl : public StoryController,
-                            public ModuleWatcher {
+class StoryControllerImpl : public StoryController, public ModuleWatcher {
  public:
-  static StoryControllerImpl* New(
-      StoryDataPtr story_data,
-      StoryProviderImpl* story_provider_impl) {
+  static StoryControllerImpl* New(StoryDataPtr story_data,
+                                  StoryProviderImpl* story_provider_impl) {
     return new StoryControllerImpl(std::move(story_data), story_provider_impl);
   }
 
   ~StoryControllerImpl() override = default;
 
   // Used by StoryProviderImpl.
-  void Connect(fidl::InterfaceRequest<StoryController> story_controller_request);
+  void Connect(
+      fidl::InterfaceRequest<StoryController> story_controller_request);
   void StopForDelete(const StopCallback& done);
   void AddLinkData(FidlDocMap data);
   bool IsActive();  // Has story or pending stop or start requests?
@@ -48,9 +47,8 @@ class StoryControllerImpl : public StoryController,
  private:
   // Constructor is private to ensure (by way of New()) that instances
   // are created always with new.
-  StoryControllerImpl(
-      StoryDataPtr story_data,
-      StoryProviderImpl* story_provider_impl);
+  StoryControllerImpl(StoryDataPtr story_data,
+                      StoryProviderImpl* story_provider_impl);
 
   // |StoryController|
   void GetInfo(const GetInfoCallback& callback) override;

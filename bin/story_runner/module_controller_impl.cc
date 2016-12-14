@@ -28,9 +28,8 @@ ModuleControllerImpl::ModuleControllerImpl(
       binding_(this, std::move(module_controller)) {
   // If the Module instance closes its own connection, we signal this
   // as error to all current and future watchers.
-  module_.set_connection_error_handler([this]() {
-    SetState(ModuleState::ERROR);
-  });
+  module_.set_connection_error_handler(
+      [this]() { SetState(ModuleState::ERROR); });
 }
 
 void ModuleControllerImpl::SetState(const ModuleState new_state) {

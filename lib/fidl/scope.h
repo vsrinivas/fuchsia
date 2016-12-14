@@ -11,8 +11,8 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/services/application/application_environment_host.fidl.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 
 namespace modular {
 
@@ -22,10 +22,8 @@ namespace modular {
 // environment.
 class Scope : public ApplicationEnvironmentHost {
  public:
-  Scope(ApplicationEnvironmentPtr parent_env,
-        const std::string& label)
-      : binding_(this),
-        parent_env_(std::move(parent_env)) {
+  Scope(ApplicationEnvironmentPtr parent_env, const std::string& label)
+      : binding_(this), parent_env_(std::move(parent_env)) {
     parent_env_->CreateNestedEnvironment(binding_.NewBinding(),
                                          env_.NewRequest(),
                                          env_controller_.NewRequest(), label);

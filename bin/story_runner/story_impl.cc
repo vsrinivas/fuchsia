@@ -34,7 +34,8 @@ StoryConnection::StoryConnection(
     const std::string& module_url,
     ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<Story> story)
-    : story_impl_(story_impl), module_url_(module_url),
+    : story_impl_(story_impl),
+      module_url_(module_url),
       module_controller_impl_(module_controller_impl),
       binding_(this, std::move(story)) {}
 
@@ -50,11 +51,9 @@ void StoryConnection::StartModule(
     fidl::InterfaceRequest<ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_impl_->StartModule(query, std::move(link),
-                           std::move(outgoing_services),
+  story_impl_->StartModule(query, std::move(link), std::move(outgoing_services),
                            std::move(incoming_services),
-                           std::move(module_controller),
-                           std::move(view_owner));
+                           std::move(module_controller), std::move(view_owner));
 }
 
 void StoryConnection::GetLedger(fidl::InterfaceRequest<ledger::Ledger> req,
@@ -84,14 +83,15 @@ StoryImpl::StoryImpl(
     fidl::InterfaceHandle<StoryStorage> story_storage,
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
     fidl::InterfaceRequest<StoryRunner> story_runner_request)
-      : binding_(this), application_context_(application_context) {
+    : binding_(this), application_context_(application_context) {
   resolver_.Bind(std::move(resolver));
   story_storage_.Bind(std::move(story_storage));
   ledger_repository_.Bind(std::move(ledger_repository));
   binding_.Bind(std::move(story_runner_request));
 }
 
-void StoryImpl::DisposeModule(ModuleControllerImpl* const module_controller_impl) {
+void StoryImpl::DisposeModule(
+    ModuleControllerImpl* const module_controller_impl) {
   auto f = std::find_if(connections_.begin(), connections_.end(),
                         [module_controller_impl](const Connection& c) {
                           return c.module_controller_impl.get() ==
@@ -105,16 +105,17 @@ void StoryImpl::CreateLink(const fidl::String& name,
                            fidl::InterfaceRequest<Link> link) {
   StoryStoragePtr story_storage_dup;
   story_storage_->Dup(story_storage_dup.NewRequest());
-  auto* link_impl = new LinkImpl(std::move(story_storage_dup), name, std::move(link));
+  auto* link_impl =
+      new LinkImpl(std::move(story_storage_dup), name, std::move(link));
   links_.emplace_back(link_impl);
-  link_impl->set_orphaned_handler([this, link_impl]() { DisposeLink(link_impl); });
+  link_impl->set_orphaned_handler(
+      [this, link_impl]() { DisposeLink(link_impl); });
 }
 
 void StoryImpl::DisposeLink(LinkImpl* const link) {
-  auto f = std::find_if(links_.begin(), links_.end(),
-                        [link](const std::unique_ptr<LinkImpl>& l) {
-                          return l.get() == link;
-                        });
+  auto f = std::find_if(
+      links_.begin(), links_.end(),
+      [link](const std::unique_ptr<LinkImpl>& l) { return l.get() == link; });
   FTL_DCHECK(f != links_.end());
   links_.erase(f);
 }
@@ -162,7 +163,8 @@ void StoryImpl::StartModule(
         fidl::InterfaceRequest<Story> self_request = self.NewRequest();
 
         module->Initialize(std::move(self), std::move(link),
-            std::move(outgoing_services), std::move(incoming_services));
+                           std::move(outgoing_services),
+                           std::move(incoming_services));
 
         Connection connection;
 
@@ -172,18 +174,17 @@ void StoryImpl::StartModule(
             new ModuleControllerImpl(this, module_url, std::move(module),
                                      std::move(module_controller_request)));
 
-        connection.story_connection.reset(
-            new StoryConnection(this, module_url, connection.module_controller_impl.get(),
-                                std::move(self_request)));
+        connection.story_connection.reset(new StoryConnection(
+            this, module_url, connection.module_controller_impl.get(),
+            std::move(self_request)));
 
         connections_.emplace_back(std::move(connection));
       }));
 }
 
-void StoryImpl::GetLedger(
-    const std::string& module_name,
-    fidl::InterfaceRequest<ledger::Ledger> req,
-    const std::function<void(ledger::Status)>& result) {
+void StoryImpl::GetLedger(const std::string& module_name,
+                          fidl::InterfaceRequest<ledger::Ledger> req,
+                          const std::function<void(ledger::Status)>& result) {
   FTL_DCHECK(!module_name.empty());
   ledger_repository_->GetLedger(to_array(module_name), std::move(req), result);
 }

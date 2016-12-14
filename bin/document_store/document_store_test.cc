@@ -91,8 +91,8 @@ class DocumentStoreTest {
 
     ledger::LedgerPtr ledger;
 
-    FTL_CHECK(ledger_repository->GetLedger(std::move(ledger_name),
-                                           ledger.NewRequest(), &ledger_status));
+    FTL_CHECK(ledger_repository->GetLedger(
+        std::move(ledger_name), ledger.NewRequest(), &ledger_status));
     FTL_LOG(INFO) << "Got a ledger with status: " << ledger_status;
     FTL_CHECK(!ledger.encountered_error());
     FTL_CHECK(ledger_status == ledger::Status::OK);

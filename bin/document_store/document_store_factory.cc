@@ -25,9 +25,10 @@ namespace document_store {
 
 // Implementation of the DocumentStore interface.
 class DocumentStoreImpl : public DocumentStore {
-  using PageGetter = std::function<void(
-      fidl::Array<uint8_t> page_id, fidl::InterfaceRequest<ledger::Page>,
-      const ledger::Ledger::GetPageCallback&)>;
+  using PageGetter =
+      std::function<void(fidl::Array<uint8_t> page_id,
+                         fidl::InterfaceRequest<ledger::Page>,
+                         const ledger::Ledger::GetPageCallback&)>;
 
  public:
   // DocumentStoreImpl does not take ownership of ledger.

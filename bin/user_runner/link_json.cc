@@ -13,7 +13,8 @@ namespace {
 int next_id{};
 
 // Returns ID of the document created for the object.
-fidl::String ConvertObject(LinkData* const ret, const rapidjson::Value::ConstObject& src) {
+fidl::String ConvertObject(LinkData* const ret,
+                           const rapidjson::Value::ConstObject& src) {
   constexpr char id[] = "@id";
 
   // If a JSON object defines the @id property, then it's the @id of

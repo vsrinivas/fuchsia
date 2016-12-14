@@ -6,9 +6,9 @@
 #define APPS_MODULAR_SRC_USER_RUNNER_LINK_JSON_H_
 
 #include "apps/modular/services/document_store/document.fidl.h"
-#include "third_party/rapidjson/rapidjson/document.h"
-#include "lib/fidl/cpp/bindings/string.h"
 #include "lib/fidl/cpp/bindings/map.h"
+#include "lib/fidl/cpp/bindings/string.h"
+#include "third_party/rapidjson/rapidjson/document.h"
 
 namespace modular {
 

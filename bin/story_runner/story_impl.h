@@ -84,12 +84,11 @@ class StoryConnection : public Story {
 // StoryConnection above. Also implements StoryRunner.
 class StoryImpl : public StoryRunner {
  public:
-  StoryImpl(
-      std::shared_ptr<ApplicationContext> application_context,
-      fidl::InterfaceHandle<Resolver> resolver,
-      fidl::InterfaceHandle<StoryStorage> story_storage,
-      fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
-      fidl::InterfaceRequest<StoryRunner> story_runner_request);
+  StoryImpl(std::shared_ptr<ApplicationContext> application_context,
+            fidl::InterfaceHandle<Resolver> resolver,
+            fidl::InterfaceHandle<StoryStorage> story_storage,
+            fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
+            fidl::InterfaceRequest<StoryRunner> story_runner_request);
 
   // These methods are called by StoryConnection.
   void CreateLink(const fidl::String& name, fidl::InterfaceRequest<Link> link);
@@ -99,10 +98,9 @@ class StoryImpl : public StoryRunner {
                    fidl::InterfaceRequest<ServiceProvider> incoming_services,
                    fidl::InterfaceRequest<ModuleController> module_controller,
                    fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
-  void GetLedger(
-      const std::string& module_name,
-      fidl::InterfaceRequest<ledger::Ledger> module_ledger,
-      const std::function<void(ledger::Status)>& result);
+  void GetLedger(const std::string& module_name,
+                 fidl::InterfaceRequest<ledger::Ledger> module_ledger,
+                 const std::function<void(ledger::Status)>& result);
   void DisposeModule(ModuleControllerImpl* controller);
 
  private:

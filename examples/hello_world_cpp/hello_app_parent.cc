@@ -8,8 +8,8 @@
 #include <string>
 
 #include "apps/modular/examples/hello_world_cpp/hello.fidl.h"
-#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/lib/app/connect.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"

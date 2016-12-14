@@ -122,8 +122,9 @@ class Module2App : public modular::SingleServiceViewApp<modular::Module> {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<modular::ServiceProvider> services) override {
     view_.reset(new Module2View(
-        &store_, application_context()
-                     ->ConnectToEnvironmentService<mozart::ViewManager>(),
+        &store_,
+        application_context()
+            ->ConnectToEnvironmentService<mozart::ViewManager>(),
         std::move(view_owner_request)));
   }
 

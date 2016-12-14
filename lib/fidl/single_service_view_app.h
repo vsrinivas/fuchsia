@@ -20,7 +20,7 @@ namespace modular {
 
 // Base class for an application which provides a single instance of a
 // single service, which also provides a view.
-template<class Service>
+template <class Service>
 class SingleServiceViewApp : public Service, public mozart::ViewProvider {
  public:
   SingleServiceViewApp()

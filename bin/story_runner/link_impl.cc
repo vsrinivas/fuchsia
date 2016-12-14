@@ -28,9 +28,8 @@ LinkImpl::LinkImpl(StoryStoragePtr story_storage,
                    fidl::InterfaceRequest<Link> link_request)
     : name_(name), story_storage_(std::move(story_storage)) {
   ReadLinkData(ftl::MakeCopyable([
-    this, link_request = std::move(link_request)]() mutable {
-    LinkConnection::New(this, std::move(link_request));
-  }));
+    this, link_request = std::move(link_request)
+  ]() mutable { LinkConnection::New(this, std::move(link_request)); }));
 }
 
 // The |LinkConnection| object knows which client made the call to
@@ -128,10 +127,11 @@ void LinkImpl::AddConnection(LinkConnection* const connection) {
 }
 
 void LinkImpl::RemoveConnection(LinkConnection* const connection) {
-  auto it = std::remove_if(connections_.begin(), connections_.end(),
-                           [connection](const std::unique_ptr<LinkConnection>& p) {
-                             return p.get() == connection;
-                           });
+  auto it =
+      std::remove_if(connections_.begin(), connections_.end(),
+                     [connection](const std::unique_ptr<LinkConnection>& p) {
+                       return p.get() == connection;
+                     });
   FTL_DCHECK(it != connections_.end());
   connections_.erase(it, connections_.end());
 
@@ -144,9 +144,8 @@ LinkConnection::LinkConnection(LinkImpl* const impl,
                                fidl::InterfaceRequest<Link> link_request)
     : impl_(impl), binding_(this, std::move(link_request)) {
   impl_->AddConnection(this);
-  binding_.set_connection_error_handler([this]() {
-    impl_->RemoveConnection(this);
-  });
+  binding_.set_connection_error_handler(
+      [this]() { impl_->RemoveConnection(this); });
 }
 
 void LinkConnection::Query(const LinkConnection::QueryCallback& callback) {

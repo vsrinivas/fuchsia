@@ -16,9 +16,9 @@
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/user/focus.fidl.h"
+#include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
-#include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
@@ -74,7 +74,8 @@ class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(
       std::shared_ptr<ApplicationContext> application_context,
-      fidl::Array<uint8_t> user_id, const fidl::String& user_shell,
+      fidl::Array<uint8_t> user_id,
+      const fidl::String& user_shell,
       fidl::Array<fidl::String> user_shell_args,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
@@ -85,8 +86,7 @@ class UserRunnerImpl : public UserRunner {
 
     ApplicationEnvironmentPtr parent_env;
     application_context_->environment()->Duplicate(parent_env.NewRequest());
-    stories_scope_ = std::make_unique<Scope>(
-        std::move(parent_env), label);
+    stories_scope_ = std::make_unique<Scope>(std::move(parent_env), label);
 
     RunUserShell(user_shell, user_shell_args, std::move(view_owner_request));
 
@@ -95,19 +95,18 @@ class UserRunnerImpl : public UserRunner {
     ledger::LedgerPtr ledger;
     ledger_repository_ptr->GetLedger(
         to_array(kAppId), ledger.NewRequest(), [](ledger::Status status) {
-      FTL_CHECK(status == ledger::Status::OK)
-            << "LedgerRepository.GetLedger() failed: "
-            << LedgerStatusToString(status);
-    });
+          FTL_CHECK(status == ledger::Status::OK)
+              << "LedgerRepository.GetLedger() failed: "
+              << LedgerStatusToString(status);
+        });
 
     ApplicationEnvironmentPtr env;
     stories_scope_->environment()->Duplicate(env.NewRequest());
 
     fidl::InterfaceHandle<StoryProvider> story_provider;
-    auto story_provider_impl =
-        new StoryProviderImpl(std::move(env), std::move(ledger),
-                              std::move(ledger_repository_ptr),
-                              story_provider.NewRequest());
+    auto story_provider_impl = new StoryProviderImpl(
+        std::move(env), std::move(ledger), std::move(ledger_repository_ptr),
+        story_provider.NewRequest());
 
     auto maxwell_services =
         GetServiceProvider("file:///system/apps/maxwell_launcher", nullptr);
@@ -147,8 +146,8 @@ class UserRunnerImpl : public UserRunner {
     }
 
     ApplicationControllerPtr ctrl;
-    application_context_->launcher()->CreateApplication(
-        std::move(launch_info), ctrl.NewRequest());
+    application_context_->launcher()->CreateApplication(std::move(launch_info),
+                                                        ctrl.NewRequest());
     application_controllers_.emplace_back(std::move(ctrl));
 
     return services;
@@ -195,16 +194,14 @@ class UserRunnerApp : public UserRunnerFactory {
 
  private:
   // |UserRunnerFactory|
-  void Create(
-      fidl::Array<uint8_t> user_id,
-      const fidl::String& user_shell,
-      fidl::Array<fidl::String> user_shell_args,
-      fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<UserRunner> user_runner_request) override {
+  void Create(fidl::Array<uint8_t> user_id,
+              const fidl::String& user_shell,
+              fidl::Array<fidl::String> user_shell_args,
+              fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
+              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+              fidl::InterfaceRequest<UserRunner> user_runner_request) override {
     new UserRunnerImpl(application_context_, std::move(user_id), user_shell,
-                       std::move(user_shell_args),
-                       std::move(ledger_repository),
+                       std::move(user_shell_args), std::move(ledger_repository),
                        std::move(view_owner_request),
                        std::move(user_runner_request));
   }

@@ -168,11 +168,13 @@ std::ostream& operator<<(std::ostream& os, const FidlDocMap& docs) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const document_store::Document& doc) {
+std::ostream& operator<<(std::ostream& os,
+                         const document_store::Document& doc) {
   return os << doc.properties;
 }
 
-std::ostream& operator<<(std::ostream& os, const document_store::Document* const doc) {
+std::ostream& operator<<(std::ostream& os,
+                         const document_store::Document* const doc) {
   return os << doc->properties;
 }
 

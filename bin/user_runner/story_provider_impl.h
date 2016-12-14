@@ -90,7 +90,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
                            FidlStringMap extra_info,
                            FidlDocMap root_docs,
                            fidl::InterfaceRequest<StoryController>
-                           story_controller_request) override;
+                               story_controller_request) override;
 
   // |StoryProvider|
   void DeleteStory(const fidl::String& story_id,
@@ -99,7 +99,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // |StoryProvider|
   void GetController(const fidl::String& story_id,
                      fidl::InterfaceRequest<StoryController>
-                     story_controller_request) override;
+                         story_controller_request) override;
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override;
@@ -123,9 +123,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   // Used by DeleteStory(). Followed eventually by
   // DisposeController(). See impl for details.
-  void PendControllerDelete(
-      const std::string& story_id,
-      const std::function<void()>& delete_callback);
+  void PendControllerDelete(const std::string& story_id,
+                            const std::function<void()>& delete_callback);
 
   // Properly disposes the story controller for the given story by
   // first stopping its story if its running. See impl for details.
@@ -173,8 +172,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
     bool deleted{};
     std::vector<DeleteStoryCallback> deleted_callbacks;
   };
-  std::unordered_map<std::string,
-                     std::unique_ptr<StoryControllerEntry>> story_controllers_;
+  std::unordered_map<std::string, std::unique_ptr<StoryControllerEntry>>
+      story_controllers_;
 
   ledger::LedgerRepositoryPtr ledger_repository_;
 

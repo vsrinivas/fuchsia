@@ -7,10 +7,10 @@
 
 #include <memory>
 
-#include "apps/modular/src/application_manager/application_environment_impl.h"
-#include "apps/modular/src/application_manager/application_loader.h"
 #include "apps/modular/services/application/application_environment_host.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
+#include "apps/modular/src/application_manager/application_environment_impl.h"
+#include "apps/modular/src/application_manager/application_loader.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"

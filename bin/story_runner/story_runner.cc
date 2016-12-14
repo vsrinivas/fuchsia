@@ -5,12 +5,12 @@
 // Implementation of the story runner application and of all services
 // that it provides directly or transitively through other services.
 
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/src/story_runner/story_impl.h"
-#include "apps/ledger/services/internal/internal.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -40,10 +40,8 @@ class StoryRunnerApp : public StoryRunnerFactory {
       fidl::InterfaceHandle<StoryStorage> story_storage,
       fidl::InterfaceHandle<ledger::LedgerRepository> user_ledger_repo,
       fidl::InterfaceRequest<StoryRunner> story_runner_request) override {
-    new StoryImpl(application_context_,
-                  std::move(resolver),
-                  std::move(story_storage),
-                  std::move(user_ledger_repo),
+    new StoryImpl(application_context_, std::move(resolver),
+                  std::move(story_storage), std::move(user_ledger_repo),
                   std::move(story_runner_request));
   }
 

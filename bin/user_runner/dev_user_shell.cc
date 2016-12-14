@@ -35,8 +35,7 @@ class Settings {
   explicit Settings(const ftl::CommandLine& command_line) {
     root_module = command_line.GetOptionValueWithDefault(
         "root-module", "file:///system/apps/example_recipe");
-    root_link = command_line.GetOptionValueWithDefault(
-        "root-link", "");
+    root_link = command_line.GetOptionValueWithDefault("root-link", "");
   }
 
   std::string root_module;
@@ -48,8 +47,7 @@ class DevUserShellApp
       public modular::SingleServiceViewApp<modular::UserShell> {
  public:
   explicit DevUserShellApp(const Settings& settings)
-      : settings_(settings),
-        story_watcher_binding_(this) {}
+      : settings_(settings), story_watcher_binding_(this) {}
   ~DevUserShellApp() override = default;
 
  private:
@@ -62,11 +60,11 @@ class DevUserShellApp
   }
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-                  fidl::InterfaceHandle<maxwell::SuggestionProvider>
-                      suggestion_provider,
-                  fidl::InterfaceRequest<modular::FocusController>
-                  focus_controller_request) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+      fidl::InterfaceHandle<maxwell::SuggestionProvider> suggestion_provider,
+      fidl::InterfaceRequest<modular::FocusController> focus_controller_request)
+      override {
     story_provider_.Bind(std::move(story_provider));
     Connect();
   }
@@ -78,8 +76,8 @@ class DevUserShellApp
       return;
     }
 
-    FTL_LOG(INFO) << "DevUserShell START " << settings_.root_module
-                  << " " << settings_.root_link;
+    FTL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
+                  << settings_.root_link;
 
     story_provider_->CreateStory(settings_.root_module,
                                  story_controller_.NewRequest());

@@ -19,8 +19,8 @@
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -345,10 +345,10 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
     // Read initial Link data. We expect the shell to tell us what it
     // is.
-    link_->Query([this](
-        fidl::Map<fidl::String, document_store::DocumentPtr> value) {
-      FTL_LOG(INFO) << "example_recipe link: " << value;
-    });
+    link_->Query(
+        [this](fidl::Map<fidl::String, document_store::DocumentPtr> value) {
+          FTL_LOG(INFO) << "example_recipe link: " << value;
+        });
 
     story_->CreateLink("module1", module1_link_.NewRequest());
     story_->CreateLink("module2", module2_link_.NewRequest());
@@ -364,16 +364,15 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     outgoing_services_.AddBinding(services_for_module1.NewRequest());
     outgoing_services_.AddService<modular::examples::Adder>(
         [this](fidl::InterfaceRequest<modular::examples::Adder> req) {
-      adder_clients_.AddBinding(&adder_service_, std::move(req));
-    });
+          adder_clients_.AddBinding(&adder_service_, std::move(req));
+        });
 
     modular::ServiceProviderPtr services_from_module1;
     fidl::InterfaceHandle<mozart::ViewOwner> module1_view;
-    story_->StartModule("file:///system/apps/example_module1",
-                        std::move(module1_link_handle),
-                        std::move(services_for_module1),
-                        services_from_module1.NewRequest(),
-                        module1_.NewRequest(), module1_view.NewRequest());
+    story_->StartModule(
+        "file:///system/apps/example_module1", std::move(module1_link_handle),
+        std::move(services_for_module1), services_from_module1.NewRequest(),
+        module1_.NewRequest(), module1_view.NewRequest());
     ConnectView(std::move(module1_view));
 
     // Consume services from Module 1.
@@ -440,52 +439,54 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     // This snippet of code demonstrates using the module's Ledger. Each time
     // this module is initialized, it updates a counter in the root page.
     // 1. Get the module's ledger.
-    story_->GetLedger(module_ledger_.NewRequest(),
-        [this](ledger::Status status) {
+    story_->GetLedger(module_ledger_.NewRequest(), [this](
+                                                       ledger::Status status) {
       FTL_CHECK(status == ledger::Status::OK);
       // 2. Get the root page of the ledger.
       module_ledger_->GetRootPage(
-          module_root_page_.NewRequest(),
-          [this](ledger::Status status) {
-        FTL_CHECK(status == ledger::Status::OK);
-        // 3. Get a snapshot of the root page.
-        module_root_page_->GetSnapshot(page_snapshot_.NewRequest(),
-            [this](ledger::Status status) mutable {
-          FTL_CHECK(status == ledger::Status::OK);
-          // 4. Read the counter from the root page.
-          page_snapshot_->Get(to_array(kLedgerCounterKey),
-              [this](ledger::Status status, ledger::ValuePtr value) {
-            // 5. If counter doesn't exist, initialize. Otherwise, increment.
-            if (status == ledger::Status::KEY_NOT_FOUND) {
-              FTL_LOG(INFO) << "No counter in root page. Initializing to 1.";
-              fidl::Array<uint8_t> data;
-              data.push_back(1);
-              module_root_page_->Put(
-                to_array(kLedgerCounterKey),
-                std::move(data),
-                [](ledger::Status status) {
+          module_root_page_.NewRequest(), [this](ledger::Status status) {
+            FTL_CHECK(status == ledger::Status::OK);
+            // 3. Get a snapshot of the root page.
+            module_root_page_->GetSnapshot(
+                page_snapshot_.NewRequest(),
+                [this](ledger::Status status) mutable {
                   FTL_CHECK(status == ledger::Status::OK);
+                  // 4. Read the counter from the root page.
+                  page_snapshot_->Get(
+                      to_array(kLedgerCounterKey),
+                      [this](ledger::Status status, ledger::ValuePtr value) {
+                        // 5. If counter doesn't exist, initialize. Otherwise,
+                        // increment.
+                        if (status == ledger::Status::KEY_NOT_FOUND) {
+                          FTL_LOG(INFO)
+                              << "No counter in root page. Initializing to 1.";
+                          fidl::Array<uint8_t> data;
+                          data.push_back(1);
+                          module_root_page_->Put(
+                              to_array(kLedgerCounterKey), std::move(data),
+                              [](ledger::Status status) {
+                                FTL_CHECK(status == ledger::Status::OK);
+                              });
+                        } else {
+                          FTL_CHECK(status == ledger::Status::OK);
+                          FTL_CHECK(value->is_bytes());
+                          fidl::Array<uint8_t> counter_data =
+                              value->get_bytes().Clone();
+                          FTL_LOG(INFO)
+                              << "Retrieved counter from root page: "
+                              << static_cast<uint32_t>(counter_data[0])
+                              << ". Incrementing.";
+                          counter_data[0]++;
+                          module_root_page_->Put(
+                              to_array(kLedgerCounterKey),
+                              std::move(counter_data),
+                              [](ledger::Status status) {
+                                FTL_CHECK(status == ledger::Status::OK);
+                              });
+                        }
+                      });
                 });
-            } else {
-              FTL_CHECK(status == ledger::Status::OK);
-              FTL_CHECK(value->is_bytes());
-              fidl::Array<uint8_t> counter_data
-                  = value->get_bytes().Clone();
-              FTL_LOG(INFO)
-                  << "Retrieved counter from root page: "
-                  << static_cast<uint32_t>(counter_data[0])
-                  << ". Incrementing.";
-              counter_data[0]++;
-              module_root_page_->Put(
-                to_array(kLedgerCounterKey),
-                std::move(counter_data),
-                [](ledger::Status status) {
-                  FTL_CHECK(status == ledger::Status::OK);
-                });
-            }
           });
-        });
-      });
     });
   }
 

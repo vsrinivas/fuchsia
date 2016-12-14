@@ -10,11 +10,11 @@
 #include <string>
 #include <unordered_map>
 
+#include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/src/application_manager/application_controller_impl.h"
 #include "apps/modular/src/application_manager/application_environment_controller_impl.h"
 #include "apps/modular/src/application_manager/application_loader.h"
 #include "apps/modular/src/application_manager/application_runner_holder.h"
-#include "apps/modular/services/application/application_environment.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
 #include "lib/ftl/strings/string_view.h"

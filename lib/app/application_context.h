@@ -74,8 +74,8 @@ class ApplicationContext {
   void ConnectToEnvironmentService(
       fidl::InterfaceRequest<Interface> interface_request,
       const std::string& interface_name = Interface::Name_) {
-    environment_services_->ConnectToService(
-        interface_name, interface_request.PassChannel());
+    environment_services_->ConnectToService(interface_name,
+                                            interface_request.PassChannel());
   }
 
  private:

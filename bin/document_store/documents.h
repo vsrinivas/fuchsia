@@ -72,7 +72,8 @@ void DocumentLedgerKeyPrefix(const fidl::String& docid,
 // document-property pair.
 // This function decodes the document id and property name from a particular
 // ledger key.
-bool PropertyFromLedgerKey(const fidl::Array<uint8_t>& key, fidl::String* docid,
+bool PropertyFromLedgerKey(const fidl::Array<uint8_t>& key,
+                           fidl::String* docid,
                            fidl::String* property) {
   const uint8_t* key_raw = key.data();
   // Since the first byte is a prefix, it cannot be null.
@@ -125,8 +126,10 @@ bool DocidFromLedgerKey(const fidl::Array<uint8_t>& key, fidl::String* docid) {
 }
 
 // Decodes a property from a ledger entry.
-bool PropertyValueFromEntry(const ledger::EntryPtr& entry, fidl::String* docid,
-                            fidl::String* property, ValuePtr* value) {
+bool PropertyValueFromEntry(const ledger::EntryPtr& entry,
+                            fidl::String* docid,
+                            fidl::String* property,
+                            ValuePtr* value) {
   if (!PropertyFromLedgerKey(entry->key, docid, property)) {
     return false;
   }
@@ -171,7 +174,8 @@ bool NextDocumentFromEntries(fidl::Array<ledger::EntryPtr>::Iterator* it,
 
 // Computes the difference between the |original| and the |recent| document.
 // Null values indicate that the value is to be deleted.
-void DocumentDiff(const DocumentPtr& original, const DocumentPtr& recent,
+void DocumentDiff(const DocumentPtr& original,
+                  const DocumentPtr& recent,
                   DocumentPtr* diff) {
   if (original.is_null()) {
     *diff = recent.Clone();

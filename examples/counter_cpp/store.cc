@@ -49,7 +49,8 @@ Counter::Counter(DocumentEditor* editor) {
   FTL_DCHECK(is_valid());
 }
 
-std::unique_ptr<DocumentEditor> Counter::ToDocument(const std::string& module_name) {
+std::unique_ptr<DocumentEditor> Counter::ToDocument(
+    const std::string& module_name) {
   auto editor = std::make_unique<DocumentEditor>(kDocId);
   editor->SetProperty(kCounterLabel, DocumentEditor::NewIntValue(counter))
       .SetProperty(kSenderLabel, DocumentEditor::NewStringValue(module_name));

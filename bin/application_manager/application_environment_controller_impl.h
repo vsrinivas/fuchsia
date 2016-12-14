@@ -7,9 +7,9 @@
 
 #include <memory>
 
-#include "lib/ftl/macros.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 #include "apps/modular/services/application/application_environment_controller.fidl.h"
+#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/ftl/macros.h"
 
 namespace modular {
 class ApplicationEnvironmentImpl;

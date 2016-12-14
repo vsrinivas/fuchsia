@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
 #include <iostream>
+#include <memory>
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
@@ -45,11 +45,13 @@ class Settings {
     user_shell = command_line.GetOptionValueWithDefault(
         "user-shell", "file:///system/apps/armadillo_user_shell");
 
-    ParseShellArgs(command_line.GetOptionValueWithDefault(
-        "device-shell-args", ""), &device_shell_args);
+    ParseShellArgs(
+        command_line.GetOptionValueWithDefault("device-shell-args", ""),
+        &device_shell_args);
 
-    ParseShellArgs(command_line.GetOptionValueWithDefault(
-        "user-shell-args", ""), &user_shell_args);
+    ParseShellArgs(
+        command_line.GetOptionValueWithDefault("user-shell-args", ""),
+        &user_shell_args);
   }
 
   static std::string GetUsage() {
@@ -72,7 +74,8 @@ class Settings {
   std::vector<std::string> user_shell_args;
 
  private:
-  void ParseShellArgs(const std::string& value, std::vector<std::string>* args) {
+  void ParseShellArgs(const std::string& value,
+                      std::vector<std::string>* args) {
     bool escape = false;
     std::string arg;
     for (std::string::const_iterator i = value.begin(); i != value.end(); ++i) {
@@ -174,30 +177,25 @@ class DeviceRunnerApp : public UserProvider {
     launch_info->url = kUserRunnerUrl;
     ServiceProviderPtr services;
     launch_info->services = services.NewRequest();
-    launcher->CreateApplication(
-        std::move(launch_info),
-        user_runner_controller_.NewRequest());
+    launcher->CreateApplication(std::move(launch_info),
+                                user_runner_controller_.NewRequest());
 
     // 3. Get the LedgerRepository for the user.
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
     ledger_repository_factory_->GetRepository(
-      kLedgerDataBaseDir + to_hex_string(user_id),
-      ledger_repository.NewRequest(),
-      [](ledger::Status status){
-        FTL_DCHECK(status == ledger::Status::OK)
-          << "GetRepository failed: " << status;
-      });
+        kLedgerDataBaseDir + to_hex_string(user_id),
+        ledger_repository.NewRequest(), [](ledger::Status status) {
+          FTL_DCHECK(status == ledger::Status::OK) << "GetRepository failed: "
+                                                   << status;
+        });
 
     // 4. Initialize the UserRunner service.
     UserRunnerFactoryPtr user_runner_factory;
     ConnectToService(services.get(), user_runner_factory.NewRequest());
     user_runner_factory->Create(
-        std::move(user_id),
-        settings_.user_shell,
-        to_array(settings_.user_shell_args),
-        std::move(ledger_repository),
-        std::move(view_owner_request),
-        user_runner_.NewRequest());
+        std::move(user_id), settings_.user_shell,
+        to_array(settings_.user_shell_args), std::move(ledger_repository),
+        std::move(view_owner_request), user_runner_.NewRequest());
   }
   const Settings settings_;
 

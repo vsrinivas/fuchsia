@@ -7,8 +7,8 @@
 #ifndef APPS_MODULAR_LIB_APP_CONNECT_H_
 #define APPS_MODULAR_LIB_APP_CONNECT_H_
 
-#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 
 namespace modular {
 
@@ -20,8 +20,8 @@ inline fidl::InterfacePtr<Interface> ConnectToService(
     ServiceProvider* service_provider,
     const std::string& interface_name = Interface::Name_) {
   fidl::InterfacePtr<Interface> interface_ptr;
-  service_provider->ConnectToService(
-      interface_name, interface_ptr.NewRequest().PassChannel());
+  service_provider->ConnectToService(interface_name,
+                                     interface_ptr.NewRequest().PassChannel());
   return interface_ptr;
 }
 

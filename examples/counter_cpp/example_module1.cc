@@ -141,8 +141,9 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
       fidl::InterfaceRequest<modular::ServiceProvider> services) override {
     view_.reset(new Module1View(
-        &store_, application_context()
-                     ->ConnectToEnvironmentService<mozart::ViewManager>(),
+        &store_,
+        application_context()
+            ->ConnectToEnvironmentService<mozart::ViewManager>(),
         std::move(view_owner_request)));
   }
 
@@ -163,8 +164,8 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
     outgoing_services_.AddBinding(std::move(outgoing_services));
     outgoing_services_.AddService<modular::examples::Multiplier>(
         [this](fidl::InterfaceRequest<modular::examples::Multiplier> req) {
-      multiplier_clients_.AddBinding(&multiplier_service_, std::move(req));
-    });
+          multiplier_clients_.AddBinding(&multiplier_service_, std::move(req));
+        });
 
     // This exercises the incoming services we get from the recipe.
     FTL_CHECK(incoming_services.is_valid());

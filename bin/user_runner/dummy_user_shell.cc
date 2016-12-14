@@ -32,9 +32,11 @@ namespace {
 constexpr uint32_t kRootNodeId = mozart::kSceneRootNodeId;
 constexpr uint32_t kViewResourceIdBase = 100;
 
-constexpr char kUserShell[] = "https://fuchsia.googlesource.com/modular/"
+constexpr char kUserShell[] =
+    "https://fuchsia.googlesource.com/modular/"
     "services/user/user_shell.fidl#modular.UserShell";
-constexpr char kDummyUserShell[] = "https://fuchsia.googlesource.com/modular/"
+constexpr char kDummyUserShell[] =
+    "https://fuchsia.googlesource.com/modular/"
     "src/user_runner/dummy_user_shell.cc";
 
 class Settings {
@@ -140,19 +142,18 @@ class DummyUserShellApp
   }
 
   // |UserShell|
-  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
-                  fidl::InterfaceHandle<maxwell::SuggestionProvider>
-                      suggestion_provider,
-                  fidl::InterfaceRequest<modular::FocusController>
-                      focus_controller_request) override {
+  void Initialize(
+      fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+      fidl::InterfaceHandle<maxwell::SuggestionProvider> suggestion_provider,
+      fidl::InterfaceRequest<modular::FocusController> focus_controller_request)
+      override {
     story_provider_.Bind(std::move(story_provider));
 
     story_provider_->Watch(story_provider_watcher_binding_.NewBinding());
 
-    story_provider_->GetStoryInfo(
-        "X", [](modular::StoryInfoPtr story_info) {
-               FTL_LOG(INFO) << "StoryInfo for X is null: " << story_info.is_null();
-             });
+    story_provider_->GetStoryInfo("X", [](modular::StoryInfoPtr story_info) {
+      FTL_LOG(INFO) << "StoryInfo for X is null: " << story_info.is_null();
+    });
 
     story_provider_->PreviousStories([this](fidl::Array<fidl::String> stories) {
       if (stories.size() > 0) {
@@ -163,11 +164,11 @@ class DummyUserShellApp
           ](modular::StoryInfoPtr story_info) {
             ++*count;
             if (!story_info.is_null()) {
-              FTL_LOG(INFO) << "Previous story " << *count << " of " << max << " "
-                            << story_id << " " << story_info->url;
+              FTL_LOG(INFO) << "Previous story " << *count << " of " << max
+                            << " " << story_id << " " << story_info->url;
             } else {
-              FTL_LOG(INFO) << "Previous story " << *count << " of " << max << " "
-                            << story_id << " was deleted";
+              FTL_LOG(INFO) << "Previous story " << *count << " of " << max
+                            << " " << story_id << " was deleted";
             }
 
             if (*count == max) {
@@ -239,8 +240,8 @@ class DummyUserShellApp
             [this]() {
               FTL_LOG(INFO) << "DummyUserShell DELETE " << story_info_->id;
               story_provider_->DeleteStory(story_info_->id, [this]() {
-                  FTL_LOG(INFO) << "DummyUserShell DELETE DONE";
-                });
+                FTL_LOG(INFO) << "DummyUserShell DELETE DONE";
+              });
             },
             ftl::TimeDelta::FromSeconds(20));
       }
@@ -250,7 +251,7 @@ class DummyUserShellApp
   void GetController() {
     FTL_LOG(INFO) << "DummyUserShell RESUME";
     story_provider_->GetController(story_info_->id,
-                                 story_controller_.NewRequest());
+                                   story_controller_.NewRequest());
     InitStory();
   }
 
@@ -261,8 +262,8 @@ class DummyUserShellApp
     // user shell it's running.
     modular::FidlDocMap docs;
     modular::DocumentEditor(story_info_->url)
-        .SetProperty(
-            kUserShell, modular::DocumentEditor::NewStringValue(kDummyUserShell))
+        .SetProperty(kUserShell,
+                     modular::DocumentEditor::NewStringValue(kDummyUserShell))
         .Insert(&docs);
     root_->AddDocuments(std::move(docs));
 

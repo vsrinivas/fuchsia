@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/services/story/resolver.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/services/story/resolver.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -17,8 +17,8 @@ namespace modular {
 // It only ever returns bindings to its sole instance.
 class ResolverApp : public Resolver {
  public:
-  ResolverApp() :
-      application_context_(ApplicationContext::CreateFromStartupInfo()) {
+  ResolverApp()
+      : application_context_(ApplicationContext::CreateFromStartupInfo()) {
     application_context_->outgoing_services()->AddService<Resolver>(
         [this](fidl::InterfaceRequest<Resolver> request) {
           bindings_.AddBinding(this, std::move(request));

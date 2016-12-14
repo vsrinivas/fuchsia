@@ -6,8 +6,8 @@
 #define APPS_MODULAR_SRC_BOOTSTRAP_APP_H_
 
 #include <memory>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/service_provider_impl.h"

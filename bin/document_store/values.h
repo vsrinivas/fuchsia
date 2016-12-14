@@ -43,7 +43,8 @@ void SerializeFloat(const double value, fidl::Array<uint8_t>* serialized) {
 }
 
 // Serialize a string value for storage on the ledger.
-void SerializeStringOrIri(const fidl::String& value, const ValuePrefix prefix,
+void SerializeStringOrIri(const fidl::String& value,
+                          const ValuePrefix prefix,
                           fidl::Array<uint8_t>* serialized) {
   *serialized = fidl::Array<uint8_t>::New(1 + value.size());
 
