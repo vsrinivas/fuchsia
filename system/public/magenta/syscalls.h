@@ -33,6 +33,11 @@ static inline mx_handle_t _mx_process_self(void) {
   return __magenta_process_self;
 }
 
+#define mx_vmar_root_self _mx_vmar_root_self
+static inline mx_handle_t _mx_vmar_root_self(void) {
+  return __magenta_vmar_root_self;
+}
+
 #ifndef WITHOUT_COMPAT_SYSCALLS
 
 #define mx_process_map_vm _mx_process_map_vm
