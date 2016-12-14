@@ -385,6 +385,7 @@ template("fidl") {
   dart_package("${target_name}_dart") {
     package_name = dart_package_name
     source_dir = target_gen_dir
+    analysis_options = "//lib/fidl/dart/analysis_options_fidl"
 
     deps = [ "//lib/fidl/dart" ]
     fidl_deps = []
