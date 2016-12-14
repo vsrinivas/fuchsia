@@ -45,8 +45,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 #include <unistd.h>
 #include <sys/mman.h>
 
-#include <libunwind/libunwind.h>
-#include <libunwind/dwarf.h>
+#include <ngunwind/libunwind.h>
+#include <ngunwind/dwarf.h>
 
 #include "compiler.h"
 

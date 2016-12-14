@@ -28,7 +28,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 #include <magenta/types.h>
 
-#include <libunwind/fuchsia.h>
+#include <ngunwind/fuchsia.h>
 
 #include "libunwind_i.h"
 

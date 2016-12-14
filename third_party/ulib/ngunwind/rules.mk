@@ -6,8 +6,8 @@ MODULE_TYPE := userlib
 
 MODULE_COMPILEFLAGS := \
     -DDEBUG \
-    -I$(LOCAL_DIR)/include/libunwind \
-    -I$(LOCAL_DIR)/include/libunwind/private \
+    -I$(LOCAL_DIR)/include/ngunwind \
+    -I$(LOCAL_DIR)/include/ngunwind/private \
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/src/dwarf/Gexpr.c \

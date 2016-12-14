@@ -13,8 +13,8 @@
 
 #include <backtrace/backtrace.h>
 
-#include <libunwind/libunwind.h>
-#include <libunwind/fuchsia.h>
+#include <ngunwind/libunwind.h>
+#include <ngunwind/fuchsia.h>
 
 #include <magenta/cpp.h>
 #include <magenta/types.h>
