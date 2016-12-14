@@ -2,6 +2,32 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+#
+# The syntax of each line is
+#     syscall <name> [attributes] ([args]) [returns (<type>)];
+#
+# with '[]' being optional and '<>' being required input.
+#
+# <name> is the syscall function name. It must be a valid C identifier.
+#
+# [attributes] can be empty or is a space separated list of words with
+# meaning for a particular generator.
+#
+# [args] can be empty or is a comma separated list of '<aname>: <type> [ctr]'
+#
+# <aname> is the argument name. It must be a valid C indentifier.
+#
+# <type> is the argument type. It must be a valid C indentifer with an optional
+# array-spec which when present it must be "[number]" or "[aname]", with the
+# number being an integer and aname the name of the argument that controls the
+# array size.
+#
+# [ctr] can be empty or is an all-caps word to specify a argument constraint
+# with valid values being one of: 'IN', 'OUT', 'INOUT'
+#
+# The 'returns (<type>)' is expected unless one of the attributes is 'noreturn'.
+#
+
 # Time
 
 syscall time_get
@@ -14,11 +40,11 @@ syscall nanosleep
 
 # Global system information
 
-syscall num_cpus () vdsocall
+syscall num_cpus vdsocall leafc ()
     returns (uint32_t);
 
-syscall version_get
-    (version: char[version_len] OUT, version_len: uint32_t) vdsocall
+syscall version_get vdsocall
+    (version: char[version_len] OUT, version_len: uint32_t)
     returns (mx_status_t);
 
 # Generic handle operations
@@ -114,7 +140,7 @@ syscall socket_read
 
 # Threads
 
-syscall thread_exit () noreturn;
+syscall thread_exit noreturn ();
 
 syscall thread_create
     (process: mx_handle_t, name: char[name_len] IN, name_len: uint32_t,
@@ -137,8 +163,8 @@ syscall thread_write_state
 
 # Processes
 
-syscall process_exit
-    (retcode: int) noreturn;
+syscall process_exit noreturn
+    (retcode: int);
 
 syscall process_create
     (job: mx_handle_t, name: char[name_len] IN, name_len: uint32_t, options: uint32_t,

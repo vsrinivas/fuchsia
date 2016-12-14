@@ -19,11 +19,11 @@ extern uint32_t _mx_num_cpus(void) __attribute__((leaf, const));
 
 extern mx_status_t mx_version_get(
     char version[],
-    uint32_t version_len) __attribute__((leaf, const));
+    uint32_t version_len);
 
 extern mx_status_t _mx_version_get(
     char version[],
-    uint32_t version_len) __attribute__((leaf, const));
+    uint32_t version_len);
 
 extern mx_status_t mx_handle_close(
     mx_handle_t handle);

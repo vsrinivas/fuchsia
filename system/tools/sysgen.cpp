@@ -264,16 +264,11 @@ struct TypeSpec {
 };
 
 struct Syscall {
-    enum Attributes : uint32_t {
-        NORETURN,           // user mode: syscall does not return.
-        VDSOPURE,           // user mode: syscall is handled by the vdso.
-    };
-
     FileCtx fc;
     string name;
     std::vector<TypeSpec> ret_spec;
     std::vector<TypeSpec> arg_spec;
-    std::vector<Attributes> attributes;
+    std::vector<string> attributes;
 
     bool validate() const {
         if (ret_spec.size() > kMaxReturnArgs) {
@@ -336,10 +331,6 @@ struct Syscall {
             a.debug_dump();
         }
     }
-
-    bool is_vdso() const {
-        return std::find(attributes.begin(), attributes.end(), VDSOPURE) != attributes.end();
-    }
 };
 
 bool vet_identifier(const string& iden, const FileCtx& fc) {
@@ -350,8 +341,6 @@ bool vet_identifier(const string& iden, const FileCtx& fc) {
 
     if (iden == "syscall" ||
         iden == "returns" ||
-        iden == "noreturn" ||
-        iden == "vdsocall" ||
         iden == "IN" || iden == "OUT" || iden == "INOUT") {
         fc.print_error("identifier cannot be keyword or attribute", iden);
         return false;
@@ -483,7 +472,7 @@ struct GenParams {
     const char* empty_args;
     const char* switch_var;
     const char* switch_type;
-    std::map<uint32_t, string> attributes;
+    std::map<string, string> attributes;
 };
 
 bool generate_file_header(std::ofstream& os) {
@@ -509,9 +498,19 @@ const string override_type(const string& type_name) {
     return (ft == c_overrides.end()) ? type_name : ft->second;
 }
 
-const string add_attribute(const GenParams& gp, uint32_t attribute) {
+const string add_attribute(const GenParams& gp, const string& attribute) {
     auto ft = gp.attributes.find(attribute);
     return (ft == gp.attributes.end()) ? string() : ft->second;
+}
+
+bool is_vdso(const Syscall& sc) {
+    return std::find(
+        sc.attributes.begin(), sc.attributes.end(), "vdsocall") != sc.attributes.end();
+}
+
+bool is_noreturn(const Syscall& sc) {
+    return std::find(
+        sc.attributes.begin(), sc.attributes.end(), "noreturn") != sc.attributes.end();
 }
 
 bool generate_legacy_header(
@@ -531,7 +530,16 @@ bool generate_legacy_header(
         }
 
         // writes "[return-type] prefix_[syscall-name]("
-        os << override_type(sc.ret_spec.empty() ? string() : sc.ret_spec[0].to_string());
+
+        if (sc.ret_spec.empty()) {
+            os << override_type(string());
+        } else {
+            if (is_noreturn(sc)) {
+                fprintf(stderr, "error: unexpected return spec for %s\n", sc.name.c_str());
+                return false;
+            }
+            os << override_type(sc.ret_spec[0].to_string());
+        }
 
         os << " " << syscall_name << "(";
 
@@ -591,7 +599,7 @@ bool generate_legacy_header(
 }
 
 bool generate_legacy_code(int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (sc.is_vdso())
+    if (is_vdso(sc))
         return true;
     os << "    case " << index << ": " << gp.switch_var
        << " = reinterpret_cast<" << gp.switch_type << ">(" << gp.name_prefix << sc.name <<");\n"
@@ -601,7 +609,7 @@ bool generate_legacy_code(int index, const GenParams& gp, std::ofstream& os, con
 
 bool generate_legacy_assembly_x64(
     int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (sc.is_vdso())
+    if (is_vdso(sc))
         return true;
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs64, mx_##name, n
     os << gp.entry_prefix << " " << sc.arg_spec.size() << " "
@@ -611,7 +619,7 @@ bool generate_legacy_assembly_x64(
 
 bool generate_legacy_assembly_arm64(
     int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (sc.is_vdso())
+    if (is_vdso(sc))
         return true;
     // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall mx_##name, n
     os << gp.entry_prefix << " " << gp.name_prefix << sc.name << " " << index << "\n";
@@ -625,7 +633,7 @@ const std::set<string> slots_64bit = {
 
 bool generate_legacy_assembly_arm32(
     int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (sc.is_vdso())
+    if (is_vdso(sc))
         return true;
 
     // For 32bit, each function argument occupies one slot, unless it is a fixed 64bit size
@@ -652,7 +660,7 @@ bool generate_legacy_assembly_arm32(
 
 bool generate_trace_info(
     int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (sc.is_vdso())
+    if (is_vdso(sc))
         return true;
     // Can be injected as an array of structs or into a tuple-like C++ container.
     os << "{" << index << ", " << sc.arg_spec.size() << ", "
@@ -661,9 +669,9 @@ bool generate_trace_info(
     return os.good();
 }
 
-const std::map<uint32_t, string> user_attrs = {
-    {Syscall::NORETURN, "__attribute__((noreturn))"},
-    {Syscall::VDSOPURE, "__attribute__((leaf, const))"}
+const std::map<string, string> user_attrs = {
+    {"noreturn", "__attribute__((noreturn))"},
+    {"leafc", "__attribute__((leaf, const))"}
 };
 
 enum GenType : uint32_t {
@@ -802,37 +810,26 @@ bool process_syscall(SygenGenerator* parser, TokenStream& ts) {
 
     Syscall syscall { ts.filectx(), name };
 
-    ts.next();
+    while (true) {
+        auto maybe_attr = ts.next();
+        if (maybe_attr[0] != '(') {
+            syscall.attributes.push_back(maybe_attr);
+        } else {
+            break;
+        }
+    }
 
     if (!parse_argpack(ts, &syscall.arg_spec))
         return false;
 
-    auto attrib = ts.next();
-    auto return_spec = attrib;
+    auto return_spec = ts.next();
 
-    if (attrib == "vdsocall") {
-        syscall.attributes.push_back(Syscall::Attributes::VDSOPURE);
-        return_spec = ts.next();
-    }
-
-    if (return_spec == "noreturn") {
-        // nothing else follows "noreturn" except terminator.
-        syscall.attributes.push_back(Syscall::Attributes::NORETURN);
-    } else if (return_spec == "returns") {
+    if (return_spec == "returns") {
         ts.next();
 
         if (!parse_argpack(ts, &syscall.ret_spec))
             return false;
-        if (syscall.ret_spec.empty()) {
-            ts.filectx().print_error("empty return, expected", "noreturn");
-            return false;
-        }
-    } else {
-        ts.filectx().print_error("expected", "returns");
-        return false;
-    }
-
-    if (ts.next() != ";") {
+    } else if (return_spec != ";") {
         ts.filectx().print_error("expected", ";");
         return false;
     }
