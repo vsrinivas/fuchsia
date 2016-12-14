@@ -62,7 +62,7 @@ bool ProcessMemory::Write(uintptr_t address,
     return true;
   }
 
-  mx_size_t bytes_written;
+  size_t bytes_written;
   mx_status_t status =
       mx_process_write_memory(handle, address, data, length, &bytes_written);
   if (status != NO_ERROR) {
