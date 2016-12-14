@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 group("ledger") {
-
   deps = [
     "//apps/ledger/examples",
     "//apps/ledger/services",
