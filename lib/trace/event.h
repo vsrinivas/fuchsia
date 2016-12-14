@@ -31,12 +31,6 @@
 // Use |TRACE_SCOPE_*| constants to specify the scope of the event.
 #define TRACE_INSTANT(category, name, scope, args...) \
   TRACE_INTERNAL_INSTANT(category, name, scope, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_INSTANT0 TRACE_INSTANT
-#define TRACE_INSTANT1 TRACE_INSTANT
-#define TRACE_INSTANT2 TRACE_INSTANT
-#define TRACE_INSTANT3 TRACE_INSTANT
-#define TRACE_INSTANT4 TRACE_INSTANT
 
 // Writes a counter event with the specified id.  The arguments to this
 // event are numeric samples which may be presented by the visualizer as a
@@ -44,112 +38,47 @@
 #define TRACE_COUNTER(category, name, id, k1, v1, args...) \
   TRACE_INTERNAL_COUNTER(category, name, id,               \
                          TRACE_INTERNAL_MAKE_ARGS(k1, v1, ##args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_COUNTER1 TRACE_COUNTER
-#define TRACE_COUNTER2 TRACE_COUNTER
-#define TRACE_COUNTER3 TRACE_COUNTER
-#define TRACE_COUNTER4 TRACE_COUNTER
 
 // Writes a duration event which ends when the current scope exits.
 #define TRACE_DURATION(category, name, args...) \
   TRACE_INTERNAL_DURATION(category, name, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_DURATION0 TRACE_DURATION
-#define TRACE_DURATION1 TRACE_DURATION
-#define TRACE_DURATION2 TRACE_DURATION
-#define TRACE_DURATION3 TRACE_DURATION
-#define TRACE_DURATION4 TRACE_DURATION
 
 // Writes a duration begin event only.
 #define TRACE_DURATION_BEGIN(category, name, args...) \
   TRACE_INTERNAL_DURATION_BEGIN(category, name, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_DURATION_BEGIN0 TRACE_DURATION_BEGIN
-#define TRACE_DURATION_BEGIN1 TRACE_DURATION_BEGIN
-#define TRACE_DURATION_BEGIN2 TRACE_DURATION_BEGIN
-#define TRACE_DURATION_BEGIN3 TRACE_DURATION_BEGIN
-#define TRACE_DURATION_BEGIN4 TRACE_DURATION_BEGIN
 
 // Writes a duration end event only.
 #define TRACE_DURATION_END(category, name, args...) \
   TRACE_INTERNAL_DURATION_END(category, name, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_DURATION_END0 TRACE_DURATION_END
-#define TRACE_DURATION_END1 TRACE_DURATION_END
-#define TRACE_DURATION_END2 TRACE_DURATION_END
-#define TRACE_DURATION_END3 TRACE_DURATION_END
-#define TRACE_DURATION_END4 TRACE_DURATION_END
 
 // Writes an asynchronous begin event with the specified id.
 #define TRACE_ASYNC_BEGIN(category, name, id, args...) \
   TRACE_INTERNAL_ASYNC_BEGIN(category, name, id, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_ASYNC_BEGIN0 TRACE_ASYNC_BEGIN
-#define TRACE_ASYNC_BEGIN1 TRACE_ASYNC_BEGIN
-#define TRACE_ASYNC_BEGIN2 TRACE_ASYNC_BEGIN
-#define TRACE_ASYNC_BEGIN3 TRACE_ASYNC_BEGIN
-#define TRACE_ASYNC_BEGIN4 TRACE_ASYNC_BEGIN
 
 // Writes an asynchronous instant event with the specified id.
 #define TRACE_ASYNC_INSTANT(category, name, id, args...) \
   TRACE_INTERNAL_ASYNC_INSTANT(category, name, id,       \
                                TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_ASYNC_INSTANT0 TRACE_ASYNC_INSTANT
-#define TRACE_ASYNC_INSTANT1 TRACE_ASYNC_INSTANT
-#define TRACE_ASYNC_INSTANT2 TRACE_ASYNC_INSTANT
-#define TRACE_ASYNC_INSTANT3 TRACE_ASYNC_INSTANT
-#define TRACE_ASYNC_INSTANT4 TRACE_ASYNC_INSTANT
 
 // Writes an asynchronous end event with the specified id.
 #define TRACE_ASYNC_END(category, name, id, args...) \
   TRACE_INTERNAL_ASYNC_END(category, name, id, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_ASYNC_END0 TRACE_ASYNC_END
-#define TRACE_ASYNC_END1 TRACE_ASYNC_END
-#define TRACE_ASYNC_END2 TRACE_ASYNC_END
-#define TRACE_ASYNC_END3 TRACE_ASYNC_END
-#define TRACE_ASYNC_END4 TRACE_ASYNC_END
 
 // Writes a flow begin event with the specified id.
 #define TRACE_FLOW_BEGIN(category, name, id, args...) \
   TRACE_INTERNAL_FLOW_BEGIN(category, name, id, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_FLOW_BEGIN0 TRACE_FLOW_BEGIN
-#define TRACE_FLOW_BEGIN1 TRACE_FLOW_BEGIN
-#define TRACE_FLOW_BEGIN2 TRACE_FLOW_BEGIN
-#define TRACE_FLOW_BEGIN3 TRACE_FLOW_BEGIN
-#define TRACE_FLOW_BEGIN4 TRACE_FLOW_BEGIN
 
 // Writes a flow step event with the specified id.
 #define TRACE_FLOW_STEP(category, name, id, args...) \
   TRACE_INTERNAL_FLOW_STEP(category, name, id, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_FLOW_STEP0 TRACE_FLOW_STEP
-#define TRACE_FLOW_STEP1 TRACE_FLOW_STEP
-#define TRACE_FLOW_STEP2 TRACE_FLOW_STEP
-#define TRACE_FLOW_STEP3 TRACE_FLOW_STEP
-#define TRACE_FLOW_STEP4 TRACE_FLOW_STEP
 
 // Writes a flow end event with the specified id.
 #define TRACE_FLOW_END(category, name, id, args...) \
   TRACE_INTERNAL_FLOW_END(category, name, id, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_FLOW_END0 TRACE_FLOW_END
-#define TRACE_FLOW_END1 TRACE_FLOW_END
-#define TRACE_FLOW_END2 TRACE_FLOW_END
-#define TRACE_FLOW_END3 TRACE_FLOW_END
-#define TRACE_FLOW_END4 TRACE_FLOW_END
 
 // Writes a description of a kernel object indicated by |handle|,
 // including its koid, name, and the supplied arguments.
 #define TRACE_HANDLE(handle, args...) \
   TRACE_INTERNAL_HANDLE(handle, TRACE_INTERNAL_MAKE_ARGS(args))
-// TODO(qsr): Obsolete macros. Remove when usage has been removed.
-#define TRACE_HANDLE0 TRACE_HANDLE
-#define TRACE_HANDLE1 TRACE_HANDLE
-#define TRACE_HANDLE2 TRACE_HANDLE
-#define TRACE_HANDLE3 TRACE_HANDLE
-#define TRACE_HANDLE4 TRACE_HANDLE
 
 #endif  // APPS_TRACING_LIB_TRACE_H_
