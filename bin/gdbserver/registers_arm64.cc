@@ -52,7 +52,7 @@ class RegistersArm64 final : public Registers {
 
   std::string GetRegsetAsString(int regset) override {
     FTL_NOTIMPLEMENTED();
-    return false;
+    return "";
   }
 
   bool SetRegset(int regset, const ftl::StringView& value) override {
