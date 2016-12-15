@@ -21,7 +21,7 @@ class ApplicationRunnerHolder {
   ~ApplicationRunnerHolder();
 
   void StartApplication(
-      mx::vmo data,
+      ApplicationPackagePtr package,
       ApplicationStartupInfoPtr startup_info,
       fidl::InterfaceRequest<ApplicationController> controller);
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/application_manager/application_loader.h"
+#include "apps/modular/src/application_manager/root_application_loader.h"
 
 #include <fcntl.h>
 
@@ -15,14 +15,14 @@
 
 namespace modular {
 
-ApplicationLoader::ApplicationLoader(std::vector<std::string> path)
+RootApplicationLoader::RootApplicationLoader(std::vector<std::string> path)
     : path_(std::move(path)) {}
 
-ApplicationLoader::~ApplicationLoader() {}
+RootApplicationLoader::~RootApplicationLoader() {}
 
-void ApplicationLoader::Open(
-    const std::string& url,
-    const std::function<void(mx::vmo, std::string)>& callback) {
+void RootApplicationLoader::LoadApplication(
+    const fidl::String& url,
+    const ApplicationLoader::LoadApplicationCallback& callback) {
   std::string path = GetPathFromURL(url);
   if (path.empty()) {
     // TODO(abarth): Support URL schemes other than file:// by querying the host
@@ -43,13 +43,15 @@ void ApplicationLoader::Open(
     }
     mx::vmo data;
     if (fd.is_valid() && mtl::VmoFromFd(std::move(fd), &data)) {
-      callback(std::move(data), std::move(path));
+      ApplicationPackagePtr package = ApplicationPackage::New();
+      package->data = std::move(data);
+      callback(std::move(package));
       return;
     }
     FTL_LOG(ERROR) << "Could not load url: " << url;
   }
 
-  callback(mx::vmo(), std::string());
+  callback(ApplicationPackage::New());
 }
 
 }  // namespace modular

@@ -11,9 +11,9 @@
 #include <unordered_map>
 
 #include "apps/modular/services/application/application_environment.fidl.h"
+#include "apps/modular/services/application/application_loader.fidl.h"
 #include "apps/modular/src/application_manager/application_controller_impl.h"
 #include "apps/modular/src/application_manager/application_environment_controller_impl.h"
-#include "apps/modular/src/application_manager/application_loader.h"
 #include "apps/modular/src/application_manager/application_runner_holder.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -26,7 +26,6 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
  public:
   ApplicationEnvironmentImpl(
       ApplicationEnvironmentImpl* parent,
-      ApplicationLoader* loader,
       fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
       const fidl::String& label);
   ~ApplicationEnvironmentImpl() override;
@@ -81,8 +80,12 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
  private:
   static uint32_t next_numbered_label_;
 
+  void CreateApplicationWithRunner(
+      ApplicationPackagePtr package, ApplicationLaunchInfoPtr launch_info,
+      fidl::InterfaceRequest<ApplicationController> controller,
+      std::string runner);
   void CreateApplicationWithProcess(
-      const std::string& path,
+      const std::string& path, ApplicationPackagePtr package,
       fidl::InterfaceHandle<ApplicationEnvironment> environment,
       ApplicationLaunchInfoPtr launch_info,
       fidl::InterfaceRequest<ApplicationController> controller);
@@ -91,8 +94,8 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   fidl::BindingSet<ApplicationLauncher> launcher_bindings_;
 
   ApplicationEnvironmentImpl* parent_;
-  ApplicationLoader* loader_;
   ApplicationEnvironmentHostPtr host_;
+  ApplicationLoaderPtr loader_;
   std::string label_;
 
   std::unordered_map<ApplicationEnvironmentImpl*,

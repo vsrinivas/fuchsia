@@ -34,6 +34,10 @@ interface ApplicationEnvironment {
   // the environment services, giving child applications to launch other
   // applications in the environment and to create nested environments.
   //
+  // The |host| must provide an |ApplicationLoader| service (or inherit one from
+  // its parent) if it wishes to allow new applications to be loaded in the
+  // nested environment.
+  //
   // The |controller| can be used to control the lifecycle of the created
   // environment. If an |ApplicationEnvironmentController|'s interface is
   // request, the environment will be killed when the interface is closed.

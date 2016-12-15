@@ -25,11 +25,9 @@ ApplicationRunnerHolder::ApplicationRunnerHolder(
 ApplicationRunnerHolder::~ApplicationRunnerHolder() = default;
 
 void ApplicationRunnerHolder::StartApplication(
-    mx::vmo data,
+    ApplicationPackagePtr package,
     ApplicationStartupInfoPtr startup_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  ApplicationPackagePtr package = ApplicationPackage::New();
-  package->data = std::move(data);
   runner_->StartApplication(std::move(package), std::move(startup_info),
                             std::move(controller));
 }

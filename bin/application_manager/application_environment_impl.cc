@@ -15,6 +15,7 @@
 
 #include <utility>
 
+#include "apps/modular/lib/app/connect.h"
 #include "apps/modular/src/application_manager/url_resolver.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/strings/string_printf.h"
@@ -39,7 +40,7 @@ bool HasReservedHandles(
 }
 
 mx::process CreateProcess(
-    const std::string& path,
+    const std::string& path, ApplicationPackagePtr package,
     fidl::InterfaceHandle<ApplicationEnvironment> environment,
     ApplicationLaunchInfoPtr launch_info) {
   fidl::Map<uint32_t, mx::handle<void>> startup_handles =
@@ -67,12 +68,14 @@ mx::process CreateProcess(
   for (const auto& argument : launch_info->arguments)
     argv.push_back(argument.get().c_str());
 
+  mx::vmo data = std::move(package->data);
+
   // TODO(abarth): We probably shouldn't pass environ, but currently this
   // is very useful as a way to tell the loader in the child process to
   // print out load addresses so we can understand crashes.
-  mx_handle_t result =
-      launchpad_launch_mxio_etc(path_arg, argv.size(), argv.data(), environ,
-                                handles.size(), handles.data(), ids.data());
+  mx_handle_t result = launchpad_launch_mxio_vmo_etc(
+      path_arg, data.release(), argv.size(), argv.data(), environ,
+      handles.size(), handles.data(), ids.data());
   if (result < 0) {
     auto status = static_cast<mx_status_t>(result);
     FTL_LOG(ERROR) << "Cannot run executable " << path << " due to error "
@@ -105,11 +108,15 @@ uint32_t ApplicationEnvironmentImpl::next_numbered_label_ = 1u;
 
 ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
     ApplicationEnvironmentImpl* parent,
-    ApplicationLoader* loader,
     fidl::InterfaceHandle<ApplicationEnvironmentHost> host,
     const fidl::String& label)
-    : parent_(parent), loader_(loader) {
+    : parent_(parent) {
   host_.Bind(std::move(host));
+
+  // Get the ApplicationLoader service up front.
+  ServiceProviderPtr service_provider;
+  GetServices(service_provider.NewRequest());
+  loader_ = ConnectToService<ApplicationLoader>(service_provider.get());
 
   if (label.size() == 0)
     label_ = ftl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
@@ -188,8 +195,8 @@ void ApplicationEnvironmentImpl::CreateNestedEnvironment(
     const fidl::String& label) {
   auto controller = std::make_unique<ApplicationEnvironmentControllerImpl>(
       std::move(controller_request),
-      std::make_unique<ApplicationEnvironmentImpl>(this, loader_,
-                                                   std::move(host), label));
+      std::make_unique<ApplicationEnvironmentImpl>(this, std::move(host),
+                                                   label));
   ApplicationEnvironmentImpl* child = controller->environment();
   child->Duplicate(std::move(environment));
   children_.emplace(child, std::move(controller));
@@ -228,60 +235,68 @@ void ApplicationEnvironmentImpl::CreateApplication(
     return;
   }
 
-  loader_->Open(
+  loader_->LoadApplication(
       launch_info->url, ftl::MakeCopyable([
         this, launch_info = std::move(launch_info),
         controller = std::move(controller)
-      ](mx::vmo data, std::string url) mutable {
+      ](ApplicationPackagePtr package) mutable {
         std::string runner;
-        if (!HasShebang(data, &runner)) {
-          CreateApplicationWithProcess(
-              url, environment_bindings_.AddBinding(this),
-              std::move(launch_info), std::move(controller));
-          return;
+        if (HasShebang(package->data, &runner)) {
+          CreateApplicationWithRunner(std::move(package), std::move(launch_info),
+                                      std::move(controller), runner);
+        } else {
+          CreateApplicationWithProcess(launch_info->url, std::move(package),
+                                       environment_bindings_.AddBinding(this),
+                                       std::move(launch_info),
+                                       std::move(controller));
         }
 
-        // We create the entry in |runners_| before calling ourselves
-        // recursively to detect cycles.
-        auto result = runners_.emplace(runner, nullptr);
-        if (result.second) {
-          ServiceProviderPtr runner_services;
-          ApplicationControllerPtr runner_controller;
-          auto runner_launch_info = ApplicationLaunchInfo::New();
-          runner_launch_info->url = runner;
-          runner_launch_info->services = runner_services.NewRequest();
-          CreateApplication(std::move(runner_launch_info),
-                            runner_controller.NewRequest());
-
-          runner_controller.set_connection_error_handler(
-              [this, runner] { runners_.erase(runner); });
-
-          result.first->second = std::make_unique<ApplicationRunnerHolder>(
-              std::move(runner_services), std::move(runner_controller));
-
-        } else if (!result.first->second) {
-          // There was a cycle in the runner graph.
-          FTL_LOG(ERROR) << "Cannot run " << launch_info->url << " with "
-                         << runner
-                         << " because of a cycle in the runner graph.";
-          return;
-        }
-
-        auto startup_info = ApplicationStartupInfo::New();
-        startup_info->environment = environment_bindings_.AddBinding(this);
-        startup_info->launch_info = std::move(launch_info);
-        result.first->second->StartApplication(
-            std::move(data), std::move(startup_info), std::move(controller));
       }));
 }
 
+void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
+    ApplicationPackagePtr package, ApplicationLaunchInfoPtr launch_info,
+    fidl::InterfaceRequest<ApplicationController> controller,
+    std::string runner) {
+  // We create the entry in |runners_| before calling ourselves
+  // recursively to detect cycles.
+  auto result = runners_.emplace(runner, nullptr);
+  if (result.second) {
+    ServiceProviderPtr runner_services;
+    ApplicationControllerPtr runner_controller;
+    auto runner_launch_info = ApplicationLaunchInfo::New();
+    runner_launch_info->url = runner;
+    runner_launch_info->services = runner_services.NewRequest();
+    CreateApplication(std::move(runner_launch_info),
+                      runner_controller.NewRequest());
+
+    runner_controller.set_connection_error_handler(
+        [this, runner] { runners_.erase(runner); });
+
+    result.first->second = std::make_unique<ApplicationRunnerHolder>(
+        std::move(runner_services), std::move(runner_controller));
+
+  } else if (!result.first->second) {
+    // There was a cycle in the runner graph.
+    FTL_LOG(ERROR) << "Cannot run " << launch_info->url << " with " << runner
+                   << " because of a cycle in the runner graph.";
+    return;
+  }
+
+  auto startup_info = ApplicationStartupInfo::New();
+  startup_info->environment = environment_bindings_.AddBinding(this);
+  startup_info->launch_info = std::move(launch_info);
+  result.first->second->StartApplication(
+      std::move(package), std::move(startup_info), std::move(controller));
+}
+
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
-    const std::string& url,
+    const std::string& url, ApplicationPackagePtr package,
     fidl::InterfaceHandle<ApplicationEnvironment> environment,
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
-  mx::process process =
-      CreateProcess(url, std::move(environment), std::move(launch_info));
+  mx::process process = CreateProcess(
+      url, std::move(package), std::move(environment), std::move(launch_info));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, std::move(process), url);

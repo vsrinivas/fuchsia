@@ -15,12 +15,13 @@ constexpr char kRootLabel[] = "root";
 
 }  // namespace
 
-RootEnvironmentHost::RootEnvironmentHost(ApplicationLoader* loader)
-    : loader_(loader), host_binding_(this) {
+RootEnvironmentHost::RootEnvironmentHost(
+    std::vector<std::string> application_path)
+    : loader_(application_path), host_binding_(this) {
   fidl::InterfaceHandle<ApplicationEnvironmentHost> host;
   host_binding_.Bind(&host);
   environment_ = std::make_unique<ApplicationEnvironmentImpl>(
-      nullptr, loader_, std::move(host), kRootLabel);
+      nullptr, std::move(host), kRootLabel);
 }
 
 RootEnvironmentHost::~RootEnvironmentHost() = default;
@@ -31,6 +32,11 @@ void RootEnvironmentHost::GetApplicationEnvironmentServices(
 }
 
 void RootEnvironmentHost::ConnectToService(const fidl::String& interface_name,
-                                           mx::channel channel) {}
+                                           mx::channel channel) {
+  if (interface_name == ApplicationLoader::Name_) {
+    loader_bindings_.AddBinding(
+        &loader_, fidl::InterfaceRequest<ApplicationLoader>(std::move(channel)));
+  }
+}
 
 }  // namespace modular

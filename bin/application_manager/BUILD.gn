@@ -10,15 +10,15 @@ executable("application_manager") {
     "application_environment_controller_impl.h",
     "application_environment_impl.cc",
     "application_environment_impl.h",
-    "application_loader.cc",
-    "application_loader.h",
     "application_runner_holder.cc",
     "application_runner_holder.h",
     "command_listener.cc",
     "command_listener.h",
-    "main.cc",
     "config.cc",
     "config.h",
+    "main.cc",
+    "root_application_loader.cc",
+    "root_application_loader.h",
     "root_environment_host.cc",
     "root_environment_host.h",
     "url_resolver.cc",
@@ -26,6 +26,7 @@ executable("application_manager") {
   ]
 
   deps = [
+    "//apps/modular/lib/app",
     "//apps/modular/services/application",
     "//lib/ftl",
     "//lib/mtl",

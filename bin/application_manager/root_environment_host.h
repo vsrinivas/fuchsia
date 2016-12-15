@@ -10,7 +10,7 @@
 #include "apps/modular/services/application/application_environment_host.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/src/application_manager/application_environment_impl.h"
-#include "apps/modular/src/application_manager/application_loader.h"
+#include "apps/modular/src/application_manager/root_application_loader.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -20,7 +20,7 @@ namespace modular {
 class RootEnvironmentHost : public ApplicationEnvironmentHost,
                             public ServiceProvider {
  public:
-  explicit RootEnvironmentHost(ApplicationLoader* loader);
+  explicit RootEnvironmentHost(std::vector<std::string> application_path);
   ~RootEnvironmentHost() override;
 
   ApplicationEnvironmentImpl* environment() const { return environment_.get(); }
@@ -36,8 +36,9 @@ class RootEnvironmentHost : public ApplicationEnvironmentHost,
                         mx::channel channel) override;
 
  private:
-  ApplicationLoader* loader_;
+  RootApplicationLoader loader_;
   fidl::Binding<ApplicationEnvironmentHost> host_binding_;
+  fidl::BindingSet<ApplicationLoader> loader_bindings_;
   fidl::BindingSet<ServiceProvider> service_provider_bindings_;
 
   std::vector<std::string> path_;

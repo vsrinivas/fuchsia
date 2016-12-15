@@ -10,7 +10,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "apps/modular/src/application_manager/application_loader.h"
 #include "apps/modular/src/application_manager/command_listener.h"
 #include "apps/modular/src/application_manager/config.h"
 #include "apps/modular/src/application_manager/root_environment_host.h"
@@ -58,8 +57,7 @@ int main(int argc, char** argv) {
 
   mtl::MessageLoop message_loop;
 
-  ApplicationLoader loader(config.TakePath());
-  RootEnvironmentHost root(&loader);
+  RootEnvironmentHost root(config.TakePath());
 
   if (!initial_apps.empty()) {
     message_loop.task_runner()->PostTask([&root, &initial_apps] {
