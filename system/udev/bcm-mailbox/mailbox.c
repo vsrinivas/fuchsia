@@ -152,14 +152,14 @@ static mx_status_t mailbox_read(enum mailbox_channel ch, uint32_t* result) {
 }
 
 static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
-
     mx_status_t ret = NO_ERROR;
     iotxn_t* txn;
 
     if (!vc_framebuffer) {
 
         // buffer needs to be aligned on 16 byte boundary, pad the alloc to make sure we have room to adjust
-        ret = iotxn_alloc(&txn, 0, sizeof(bcm_fb_desc_t) + 16, 0);
+        const size_t txnsize = sizeof(bcm_fb_desc_t) + 16;
+        ret = iotxn_alloc(&txn, 0, txnsize, 0);
         if (ret < 0)
             return ret;
 
@@ -171,6 +171,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
         uint32_t offset = (16 - (pa % 16)) % 16;
 
         txn->ops->copyto(txn, fb_desc, sizeof(bcm_fb_desc_t), offset);
+        txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, 0, txnsize);
 
         ret = mailbox_write(ch_framebuffer, (pa + offset + BCM_SDRAM_BUS_ADDR_BASE));
         if (ret != NO_ERROR)
@@ -181,6 +182,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
         if (ret != NO_ERROR)
             return ret;
 
+        txn->ops->cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, txnsize);
         txn->ops->copyfrom(txn, &bcm_vc_framebuffer, sizeof(bcm_fb_desc_t), offset);
 
         uintptr_t page_base;
@@ -258,6 +260,7 @@ static mx_status_t bcm_get_macid(uint8_t* mac) {
     txn->ops->copyto(txn, &tag, sizeof(tag), offset);
     offset += sizeof(tag);
     txn->ops->copyto(txn, &endtag, sizeof(endtag), offset);
+    txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, 0, header.buff_size);
 
     ret = mailbox_write(ch_propertytags_tovc, (pa + BCM_SDRAM_BUS_ADDR_BASE));
     if (ret != NO_ERROR)
@@ -268,6 +271,7 @@ static mx_status_t bcm_get_macid(uint8_t* mac) {
     if (ret != NO_ERROR)
         return ret;
 
+    txn->ops->cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, header.buff_size);
     txn->ops->copyfrom(txn,mac,6,sizeof(header)+offsetof(property_tag_get_macid_t,macid));
 
     return ret;

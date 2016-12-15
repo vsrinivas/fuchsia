@@ -286,6 +286,13 @@ static void complete_request(
             req->request_id, status, length);
 
     iotxn_t* txn = req->txn;
+
+    // Invalidate caches over this region since the DMA engine may have moved
+    // data below us.
+    if (status == NO_ERROR) {
+        txn->ops->cacheop(txn, IOTXN_CACHE_INVALIDATE, txn->offset, length);
+    }
+
     txn->ops->complete(txn, status, length);
 
     // Put this back on the free list of requests, but make sure the free list
@@ -433,6 +440,10 @@ static void dwc_iotxn_queue_hw(dwc_usb_t* dwc,
     if (ep_address == 0) {
         req->ctrl_phase = CTRL_PHASE_SETUP;
     }
+
+    // Writeback any items pending on the cache. We don't want these to be
+    // flushed during a DMA op.
+    txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, txn->offset, txn->length);
 
     // Append this transaction to the end of the Device/Endpoint's pending
     // transaction queue.
@@ -1571,6 +1582,7 @@ static int endpoint_request_scheduler_thread(void* arg) {
                 iotxn_t* txn = req->setuptxn;
                 // Copy the setup data into the setup iotxn.
                 txn->ops->copyto(txn, &pdata->setup, sizeof(usb_setup_t), 0);
+                txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, 0, sizeof(usb_setup_t));
                 txn->length = sizeof(usb_setup_t);
 
                 // Perform the SETUP phase of the control transfer.
