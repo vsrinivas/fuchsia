@@ -10,25 +10,52 @@
 #include <sys/stat.h>
 
 #include <magenta/device/devmgr.h>
+#include <magenta/syscalls.h>
 #include <mxio/vfs.h>
 
 #include "minfs-private.h"
+#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
+
+#ifdef __Fuchsia__
+static mx_status_t vmo_read_exact(mx_handle_t h, void* data, uint64_t offset, size_t len) {
+    size_t actual;
+    mx_status_t status = mx_vmo_read(h, data, offset, len, &actual);
+    if (status != NO_ERROR) {
+        return status;
+    } else if (actual != len) {
+        return ERR_IO;
+    }
+    return NO_ERROR;
+}
+
+static mx_status_t vmo_write_exact(mx_handle_t h, const void* data, uint64_t offset, size_t len) {
+    size_t actual;
+    mx_status_t status = mx_vmo_write(h, data, offset, len, &actual);
+    if (status != NO_ERROR) {
+        return status;
+    } else if (actual != len) {
+        return ERR_IO;
+    }
+    return NO_ERROR;
+}
+#endif
 
 #define VNODE_IS_DIR(vn) (vn->inode.magic == MINFS_MAGIC_DIR)
 
 //TODO: better bitmap block read/write functions
 
 // Allocate a new data block from the block bitmap.
-// Return the underlying block (obtained via bcache_get()).
-// If hint is nonzero it indicates which block number
-// to start the search for free blocks from.
-block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** bdata) {
+// Return the underlying block (obtained via bcache_get()), if 'out_block' is not NULL.
+//
+// If hint is nonzero it indicates which block number to start the search for
+// free blocks from.
+mx_status_t minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, block_t** out_block) {
     uint32_t bno = bitmap_alloc(&fs->block_map, hint);
     if ((bno == BITMAP_FAIL) && (hint != 0)) {
         bno = bitmap_alloc(&fs->block_map, 0);
     }
     if (bno == BITMAP_FAIL) {
-        return NULL;
+        return ERR_NO_RESOURCES;
     }
 
     // obtain the in-memory bitmap block
@@ -40,22 +67,24 @@ block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** b
     void* bdata_abm;
     if ((block_abm = bcache_get(fs->bc, fs->info.abm_block + bmbno, &bdata_abm)) == NULL) {
         bitmap_clr(&fs->block_map, bno);
-        return NULL;
+        return ERR_IO;
     }
 
-    // obtain the block we're allocating
-    block_t* block;
-    if ((block = bcache_get_zero(fs->bc, bno, bdata)) == NULL) {
-        bitmap_clr(&fs->block_map, bno);
-        bcache_put(fs->bc, block_abm, 0);
-        return NULL;
+    // obtain the block we're allocating, if requested.
+    if (out_block != NULL) {
+        void* bdata;
+        if ((*out_block = bcache_get_zero(fs->bc, bno, &bdata)) == NULL) {
+            bitmap_clr(&fs->block_map, bno);
+            bcache_put(fs->bc, block_abm, 0);
+            return ERR_IO;
+        }
     }
 
     // commit the bitmap
     memcpy(bdata_abm, bmdata, MINFS_BLOCK_SIZE);
     bcache_put(fs->bc, block_abm, BLOCK_DIRTY);
     *out_bno = bno;
-    return block;
+    return NO_ERROR;
 }
 
 typedef struct {
@@ -239,31 +268,95 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
     return NO_ERROR;
 }
 
-// Obtain the nth block of a vnode.
-// If alloc is true, allocate that block if it doesn't already exist.
-static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) {
-#if 0
-    uint32_t hint = ((vn->fs->info.block_count - vn->fs->info.dat_block) / 256) * (vn->ino % 256);
-#else
-    uint32_t hint = 0;
-#endif
-    // direct blocks are simple... is there an entry in dnum[]?
-    if (n < MINFS_DIRECT) {
-        uint32_t bno;
-        if ((bno = vn->inode.dnum[n]) == 0) {
-            if (alloc) {
-                block_t* blk = minfs_new_block(vn->fs, hint, &bno, bdata);
-                if (blk != NULL) {
-                    vn->inode.dnum[n] = bno;
-                    vn->inode.block_count++;
-                    minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
-                }
-                return blk;
-            } else {
-                return NULL;
+#ifdef __Fuchsia__
+// Read data from disk at block 'bno', into the 'nth' logical block of the file.
+static mx_status_t vn_fill_block(vnode_t* vn, uint32_t n, uint32_t bno) {
+    // TODO(smklein): read directly from block device into vmo; no need to copy
+    // into an intermediate buffer.
+    char bdata[MINFS_BLOCK_SIZE];
+    if (readblk(vn->fs->bc, bno, bdata)) {
+        return ERR_IO;
+    }
+    mx_status_t status = vmo_write_exact(vn->vmo, bdata, n * MINFS_BLOCK_SIZE, MINFS_BLOCK_SIZE);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    return NO_ERROR;
+}
+
+// Since we cannot yet register the filesystem as a paging service (and cleanly
+// fault on pages when they are actually needed), we currently read an entire
+// file to a VMO when a file's data block are accessed.
+//
+// TODO(smklein): Even this hack can be optimized; a bitmap could be used to
+// track all 'empty/read/dirty' blocks for each vnode, rather than reading
+// the entire file.
+static mx_status_t vn_init_vmo(vnode_t* vn) {
+    if (vn->vmo != MX_HANDLE_INVALID) {
+        return NO_ERROR;
+    }
+
+    mx_status_t status;
+    if ((status = mx_vmo_create(ROUNDUP(vn->inode.size, MINFS_BLOCK_SIZE), 0, &vn->vmo)) != NO_ERROR) {
+        error("Failed to initialize vmo; error: %d\n", status);
+        return status;
+    }
+
+    // Initialize all direct blocks
+    uint32_t bno;
+    for (uint32_t d = 0; d < MINFS_DIRECT; d++) {
+        if ((bno = vn->inode.dnum[d]) != 0) {
+            if ((status = vn_fill_block(vn, d, bno)) != NO_ERROR) {
+                error("Failed to fill bno %u; error: %d\n", bno, status);
+                return status;
             }
         }
-        return bcache_get(vn->fs->bc, bno, bdata);
+    }
+
+    // Initialize all indirect blocks
+    for (uint32_t i = 0; i < MINFS_INDIRECT; i++) {
+        uint32_t ibno;
+        block_t* iblk;
+        uint32_t* ientry;
+        if ((ibno = vn->inode.inum[i]) != 0) {
+            // TODO(smklein): Should there be a separate vmo for indirect blocks?
+            if ((iblk = bcache_get(vn->fs->bc, ibno, (void**) &ientry)) == NULL) {
+                return ERR_IO;
+            }
+
+            const uint32_t direct_per_indirect = MINFS_BLOCK_SIZE / sizeof(uint32_t);
+            for (uint32_t j = 0; j < direct_per_indirect; j++) {
+                if ((bno = ientry[j]) != 0) {
+                    uint32_t n = MINFS_DIRECT + i * direct_per_indirect + j;
+                    if ((status = vn_fill_block(vn, n, bno)) != NO_ERROR) {
+                        bcache_put(vn->fs->bc, iblk, 0);
+                        return status;
+                    }
+                }
+            }
+            bcache_put(vn->fs->bc, iblk, 0);
+        }
+    }
+
+    return NO_ERROR;
+}
+#endif
+
+// Get the bno corresponding to the nth logical block within the file.
+static mx_status_t vn_get_bno(vnode_t* vn, uint32_t n, uint32_t* bno, bool alloc) {
+    uint32_t hint = 0;
+    // direct blocks are simple... is there an entry in dnum[]?
+    if (n < MINFS_DIRECT) {
+        if (((*bno = vn->inode.dnum[n]) == 0) && alloc) {
+            mx_status_t status = minfs_new_block(vn->fs, hint, bno, NULL);
+            if (status != NO_ERROR) {
+                return status;
+            }
+            vn->inode.dnum[n] = *bno;
+            vn->inode.block_count++;
+            minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
+        }
+        return NO_ERROR;
     }
 
     // for indirect blocks, adjust past the direct blocks
@@ -275,7 +368,7 @@ static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) 
     uint32_t j = n % (MINFS_BLOCK_SIZE / sizeof(uint32_t));
 
     if (i >= MINFS_INDIRECT) {
-        return NULL;
+        return ERR_OUT_OF_RANGE;
     }
 
     uint32_t ibno;
@@ -286,37 +379,34 @@ static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) 
     // look up the indirect bno
     if ((ibno = vn->inode.inum[i]) == 0) {
         if (!alloc) {
-            return NULL;
+            *bno = 0;
+            return NO_ERROR;
         }
         // allocate a new indirect block
-        if ((iblk = minfs_new_block(vn->fs, 0, &ibno, (void**) &ientry)) == NULL) {
-            return NULL;
+        mx_status_t status = minfs_new_block(vn->fs, 0, &ibno, &iblk);
+        if (status != NO_ERROR) {
+            return ERR_NO_RESOURCES;
         }
+        ientry = block_data(iblk);
         // record new indirect block in inode, note that we need to update
         vn->inode.block_count++;
         vn->inode.inum[i] = ibno;
         iflags = BLOCK_DIRTY;
     } else {
         if ((iblk = bcache_get(vn->fs->bc, ibno, (void**) &ientry)) == NULL) {
-            error("minfs: cannot read indirect block @%u\n", ibno);
-            return NULL;
+            return ERR_IO;
         }
     }
 
-    uint32_t bno;
-    block_t* blk = NULL;
-    if ((bno = ientry[j]) == 0) {
-        if (alloc) {
-            // allocate a new block
-            blk = minfs_new_block(vn->fs, hint, &bno, bdata);
-            if (blk != NULL) {
-                vn->inode.block_count++;
-                ientry[j] = bno;
-                iflags = BLOCK_DIRTY;
-            }
+    if (((*bno = ientry[j]) == 0) && alloc) {
+        // allocate a new block
+        if (minfs_new_block(vn->fs, hint, bno, NULL) != NO_ERROR) {
+            bcache_put(vn->fs->bc, iblk, iflags);
+            return ERR_NO_RESOURCES;
         }
-    } else {
-        blk = bcache_get(vn->fs->bc, bno, bdata);
+        vn->inode.block_count++;
+        ientry[j] = *bno;
+        iflags = BLOCK_DIRTY;
     }
 
     // release indirect block, updating if necessary
@@ -326,7 +416,7 @@ static block_t* vn_get_block(vnode_t* vn, uint32_t n, void** bdata, bool alloc) 
         minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
     }
 
-    return blk;
+    return NO_ERROR;
 }
 
 static inline void vn_put_block(vnode_t* vn, block_t* blk) {
@@ -700,6 +790,9 @@ static void fs_release(vnode_t* vn) {
     }
     list_delete(&vn->hashnode);
     free(vn);
+#ifdef __Fuchsia__
+    mx_handle_close(vn->vmo);
+#endif
 }
 
 static mx_status_t fs_open(vnode_t** _vn, uint32_t flags) {
@@ -742,6 +835,14 @@ static mx_status_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off, siz
         len = vn->inode.size - off;
     }
 
+    mx_status_t status;
+#ifdef __Fuchsia__
+    if ((status = vn_init_vmo(vn)) != NO_ERROR) {
+        return status;
+    } else if ((status = mx_vmo_read(vn->vmo, data, off, len, actual)) != NO_ERROR) {
+        return status;
+    }
+#else
     void* start = data;
     uint32_t n = off / MINFS_BLOCK_SIZE;
     size_t adjust = off % MINFS_BLOCK_SIZE;
@@ -754,11 +855,16 @@ static mx_status_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off, siz
             xfer = len;
         }
 
-        block_t* blk;
-        void* bdata;
-        if ((blk = vn_get_block(vn, n, &bdata, false)) != NULL) {
+        uint32_t bno;
+        if ((status = vn_get_bno(vn, n, &bno, false)) != NO_ERROR) {
+            return status;
+        }
+        if (bno != 0) {
+            char bdata[MINFS_BLOCK_SIZE];
+            if (readblk(vn->fs->bc, bno, bdata)) {
+                return ERR_IO;
+            }
             memcpy(data, bdata + adjust, xfer);
-            vn_put_block(vn, blk);
         } else {
             // If the block is not allocated, just read zeros
             memset(data, 0, xfer);
@@ -770,6 +876,7 @@ static mx_status_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off, siz
         n++;
     }
     *actual = data - start;
+#endif
     return NO_ERROR;
 }
 
@@ -793,7 +900,13 @@ static mx_status_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t o
         return NO_ERROR;
     }
 
-    const void* start = data;
+#ifdef __Fuchsia__
+    mx_status_t status;
+    if ((status = vn_init_vmo(vn)) != NO_ERROR) {
+        return status;
+    }
+#endif
+    const void* const start = data;
     uint32_t n = off / MINFS_BLOCK_SIZE;
     size_t adjust = off % MINFS_BLOCK_SIZE;
 
@@ -805,13 +918,60 @@ static mx_status_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t o
             xfer = len;
         }
 
-        block_t* blk;
-        void* bdata;
-        if ((blk = vn_get_block(vn, n, &bdata, true)) == NULL) {
-            break;
+#ifdef __Fuchsia__
+        size_t xfer_off = n * MINFS_BLOCK_SIZE + adjust;
+        if ((xfer_off + xfer) > vn->inode.size) {
+            size_t new_size = xfer_off + xfer;
+            if ((status = mx_vmo_set_size(vn->vmo, ROUNDUP(new_size, MINFS_BLOCK_SIZE))) != NO_ERROR) {
+                goto done;
+            }
+            vn->inode.size = new_size;
         }
-        memcpy(bdata + adjust, data, xfer);
-        vn_put_block_dirty(vn, blk);
+
+        // TODO(smklein): If a failure occurs after writing to the VMO, but
+        // before updating the data to disk, then our in-memory representation
+        // of the file may not be consistent with the on-disk representation of
+        // the file. As a consequence, an error is returned (ERR_IO) rather than
+        // doing a partial read.
+
+        // Update this block of the in-memory VMO
+        if ((status = vmo_write_exact(vn->vmo, data, xfer_off, xfer)) != NO_ERROR) {
+            return ERR_IO;
+        }
+
+        // Update this block on-disk
+        char bdata[MINFS_BLOCK_SIZE];
+        // TODO(smklein): Can we write directly from the VMO to the block device,
+        // preventing the need for a 'bdata' variable?
+        if (xfer != MINFS_BLOCK_SIZE) {
+            if (vmo_read_exact(vn->vmo, bdata, n * MINFS_BLOCK_SIZE, MINFS_BLOCK_SIZE) != NO_ERROR) {
+                return ERR_IO;
+            }
+        }
+        const void* wdata = (xfer != MINFS_BLOCK_SIZE) ? bdata : data;
+        uint32_t bno;
+        if (vn_get_bno(vn, n, &bno, true) != NO_ERROR) {
+            return ERR_IO;
+        }
+        assert(bno != 0);
+        if (writeblk(vn->fs->bc, bno, wdata)) {
+            return ERR_IO;
+        }
+#else
+        uint32_t bno;
+        if (vn_get_bno(vn, n, &bno, true) != NO_ERROR) {
+            return ERR_IO;
+        }
+        assert(bno != 0);
+        char wdata[MINFS_BLOCK_SIZE];
+        if (readblk(vn->fs->bc, bno, wdata)) {
+            return ERR_IO;
+        }
+        memcpy(wdata + adjust, data, xfer);
+        if (writeblk(vn->fs->bc, bno, wdata)) {
+            return ERR_IO;
+        }
+#endif
 
         adjust = 0;
         len -= xfer;
@@ -819,6 +979,7 @@ static mx_status_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t o
         n++;
     }
 
+done:
     len = data - start;
     if (len == 0) {
         // If more than zero bytes were requested, but zero bytes were written,
@@ -994,20 +1155,19 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
     args.type = type;
     args.reclen = SIZEOF_MINFS_DIRENT(len);
     if ((status = vn_dir_for_each(vndir, &args, cb_dir_append)) < 0) {
+        fs_release(vndir);
         return status;
     }
 
     if (type == MINFS_TYPE_DIR) {
-        void* bdata;
-        block_t* blk;
-        if ((blk = minfs_new_block(vndir->fs, 0, vn->inode.dnum + 0, &bdata)) == NULL) {
-            panic("failed to create directory");
-        }
+        char bdata[SIZEOF_MINFS_DIRENT(1) + SIZEOF_MINFS_DIRENT(2)];
         minfs_dir_init(bdata, vn->ino, vndir->ino);
-        bcache_put(vndir->fs->bc, blk, BLOCK_DIRTY);
-        vn->inode.block_count = 1;
+        size_t expected = SIZEOF_MINFS_DIRENT(1) + SIZEOF_MINFS_DIRENT(2);
+        if (_fs_write_exact(vn, bdata, expected, 0) != NO_ERROR) {
+            fs_release(vndir);
+            return ERR_IO;
+        }
         vn->inode.dirent_count = 2;
-        vn->inode.size = MINFS_BLOCK_SIZE;
         minfs_sync_vnode(vn, MX_FS_SYNC_DEFAULT);
     }
     *out = vn;
@@ -1059,6 +1219,12 @@ static mx_status_t fs_truncate(vnode_t* vn, size_t len) {
 
 static mx_status_t _fs_truncate(vnode_t* vn, size_t len) {
     mx_status_t r = 0;
+#ifdef __Fuchsia__
+    if (vn_init_vmo(vn) != NO_ERROR) {
+        return ERR_IO;
+    }
+#endif
+
     if (len < vn->inode.size) {
         // Truncate should make the file shorter
         size_t bno = vn->inode.size / MINFS_BLOCK_SIZE;
@@ -1078,12 +1244,34 @@ static mx_status_t _fs_truncate(vnode_t* vn, size_t len) {
 
         // Write zeroes to the rest of the remaining block, if it exists
         if (len < vn->inode.size) {
-            void* bdata;
-            block_t* blk;
-            size_t adjust = len % MINFS_BLOCK_SIZE;
-            if ((blk = vn_get_block(vn, len / MINFS_BLOCK_SIZE, &bdata, false)) != NULL) {
+            char bdata[MINFS_BLOCK_SIZE];
+            uint32_t bno;
+            if (vn_get_bno(vn, len / MINFS_BLOCK_SIZE, &bno, false) != NO_ERROR) {
+                return ERR_IO;
+            }
+            if (bno != 0) {
+                size_t adjust = len % MINFS_BLOCK_SIZE;
+#ifdef __Fuchsia__
+                if ((r = vmo_read_exact(vn->vmo, bdata, len - adjust, adjust)) != NO_ERROR) {
+                    return ERR_IO;
+                }
                 memset(bdata + adjust, 0, MINFS_BLOCK_SIZE - adjust);
-                vn_put_block_dirty(vn, blk);
+
+                // TODO(smklein): Remove this write when shrinking VMO size
+                // automatically sets partial pages to zero.
+                if ((r = vmo_write_exact(vn->vmo, bdata, len - adjust, MINFS_BLOCK_SIZE)) != NO_ERROR) {
+                    return ERR_IO;
+                }
+#else
+                if (readblk(vn->fs->bc, bno, bdata)) {
+                    return ERR_IO;
+                }
+                memset(bdata + adjust, 0, MINFS_BLOCK_SIZE - adjust);
+#endif
+
+                if (writeblk(vn->fs->bc, bno, bdata)) {
+                    return ERR_IO;
+                }
             }
         }
         vn->inode.size = len;
@@ -1094,10 +1282,17 @@ static mx_status_t _fs_truncate(vnode_t* vn, size_t len) {
             return ERR_INVALID_ARGS;
         }
         char zero = 0;
-        if ((r = fs_write(vn, &zero, 1, len - 1)) < 0) {
+        if ((r = _fs_write_exact(vn, &zero, 1, len - 1)) != NO_ERROR) {
             return r;
         }
     }
+
+#ifdef __Fuchsia__
+    if ((r = mx_vmo_set_size(vn->vmo, ROUNDUP(len, MINFS_BLOCK_SIZE))) != NO_ERROR) {
+        return r;
+    }
+#endif
+
     return NO_ERROR;
 }
 

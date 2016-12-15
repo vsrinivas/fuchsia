@@ -42,6 +42,14 @@ struct vnode {
 
     list_node_t hashnode;
 
+#ifdef __Fuchsia__
+    // TODO(smklein): When we have can register MinFS as a pager service, and
+    // it can properly handle pages faults on a vnode's contents, then we can
+    // avoid reading the entire file up-front. Until then, read the contents of
+    // a VMO into memory when it is read/written.
+    mx_handle_t vmo;
+#endif
+
     minfs_inode_t inode;
 };
 
@@ -57,7 +65,7 @@ mx_status_t minfs_vnode_get(minfs_t* fs, vnode_t** out, uint32_t ino);
 mx_status_t minfs_vnode_new(minfs_t* fs, vnode_t** out, uint32_t type);
 
 // allocate a new data block and bcache_get_zero() it
-block_t* minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, void** bdata);
+mx_status_t minfs_new_block(minfs_t* fs, uint32_t hint, uint32_t* out_bno, block_t** out_block);
 
 // free ino in inode bitmap
 mx_status_t minfs_ino_free(minfs_t* fs, uint32_t ino);

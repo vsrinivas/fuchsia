@@ -17,34 +17,6 @@
 
 #define BLOCK_FLAGS 0xF
 
-static int readblk(int fd, uint32_t bno, void* data) {
-    off_t off = bno * MINFS_BLOCK_SIZE;
-    trace(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
-    if (lseek(fd, off, SEEK_SET) < 0) {
-        error("minfs: cannot seek to block %u\n", bno);
-        return -1;
-    }
-    if (read(fd, data, MINFS_BLOCK_SIZE) != MINFS_BLOCK_SIZE) {
-        error("minfs: cannot read block %u\n", bno);
-        return -1;
-    }
-    return 0;
-}
-
-static int writeblk(int fd, uint32_t bno, void* data) {
-    off_t off = bno * MINFS_BLOCK_SIZE;
-    trace(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
-    if (lseek(fd, off, SEEK_SET) < 0) {
-        error("minfs: cannot seek to block %u\n", bno);
-        return -1;
-    }
-    if (write(fd, data, MINFS_BLOCK_SIZE) != MINFS_BLOCK_SIZE) {
-        error("minfs: cannot write block %u\n", bno);
-        return -1;
-    }
-    return 0;
-}
-
 struct block {
     list_node_t hashnode;
     list_node_t listnode;
@@ -52,6 +24,10 @@ struct block {
     uint32_t bno;
     void* data;
 };
+
+void* block_data(block_t* blk) {
+    return blk->data;
+}
 
 struct bcache {
     list_node_t list_busy;  // between bcache_get() and bcache_put()
@@ -68,6 +44,36 @@ struct bcache {
 
 static_assert((1<<MINFS_HASH_BITS) == MINFS_BUCKETS,
               "minfs constants disagree");
+
+mx_status_t readblk(bcache_t* bc, uint32_t bno, void* data) {
+    int fd = bc->fd;
+    off_t off = bno * MINFS_BLOCK_SIZE;
+    trace(IO, "readblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
+    if (lseek(fd, off, SEEK_SET) < 0) {
+        error("minfs: cannot seek to block %u\n", bno);
+        return ERR_IO;
+    }
+    if (read(fd, data, MINFS_BLOCK_SIZE) != MINFS_BLOCK_SIZE) {
+        error("minfs: cannot read block %u\n", bno);
+        return ERR_IO;
+    }
+    return NO_ERROR;
+}
+
+mx_status_t writeblk(bcache_t* bc, uint32_t bno, const void* data) {
+    int fd = bc->fd;
+    off_t off = bno * MINFS_BLOCK_SIZE;
+    trace(IO, "writeblk() bno=%u off=%#llx\n", bno, (unsigned long long)off);
+    if (lseek(fd, off, SEEK_SET) < 0) {
+        error("minfs: cannot seek to block %u\n", bno);
+        return ERR_IO;
+    }
+    if (write(fd, data, MINFS_BLOCK_SIZE) != MINFS_BLOCK_SIZE) {
+        error("minfs: cannot write block %u\n", bno);
+        return ERR_IO;
+    }
+    return NO_ERROR;
+}
 
 uint32_t bcache_max_block(bcache_t* bc) {
     return bc->blockmax;
@@ -145,7 +151,7 @@ static block_t* _bcache_get(bcache_t* bc, uint32_t bno, void** data, uint32_t mo
             blk->flags |= BLOCK_DIRTY;
             memset(blk->data, 0, bc->blocksize);
         } else {
-            if (readblk(bc->fd, bno, blk->data) < 0) {
+            if (readblk(bc, bno, blk->data) < 0) {
                 panic("bcache: bno %u read error!\n", bno);
             }
         }
@@ -176,7 +182,7 @@ void bcache_put(bcache_t* bc, block_t* blk, uint32_t flags) {
     // remove from busy list
     list_delete(&blk->listnode);
     if ((flags | blk->flags) & BLOCK_DIRTY) {
-        if (writeblk(bc->fd, blk->bno, blk->data) < 0) {
+        if (writeblk(bc, blk->bno, blk->data) < 0) {
             error("block write error!\n");
         }
         blk->flags &= (~(BLOCK_DIRTY|BLOCK_BUSY));

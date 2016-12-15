@@ -200,10 +200,16 @@ uint32_t bitmap_alloc(bitmap_t* bm, uint32_t minbit);
 typedef struct bcache bcache_t;
 typedef struct block block_t;
 
+void* block_data(block_t* blk);
 int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize, uint32_t num);
 int bcache_close(bcache_t* bc);
 
 #define BLOCK_DIRTY 1
+
+// Raw block read functions. These do not track blocks (or attempt to access
+// the block cache)
+mx_status_t readblk(bcache_t* bc, uint32_t bno, void* data);
+mx_status_t writeblk(bcache_t* bc, uint32_t bno, const void* data);
 
 // acquire a block, reading from disk if necessary,
 // returning a handle and a pointer to the data

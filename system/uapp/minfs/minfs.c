@@ -165,9 +165,10 @@ mx_status_t minfs_vnode_new(minfs_t* fs, vnode_t** out, uint32_t type) {
     vn->inode.link_count = 1;
     vn->refcount = 1;
     vn->ops = &minfs_ops;
-    if (minfs_ino_alloc(fs, &vn->inode, &vn->ino) < 0) {
+    mx_status_t status;
+    if ((status = minfs_ino_alloc(fs, &vn->inode, &vn->ino)) != NO_ERROR) {
         free(vn);
-        return ERR_NO_RESOURCES;
+        return status;
     }
     vn->fs = fs;
     list_add_tail(fs->vnode_hash + INO_HASH(vn->ino), &vn->hashnode);
