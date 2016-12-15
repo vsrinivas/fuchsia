@@ -408,6 +408,10 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
                     msg->hcount = 2;
                     memcpy(msg->handle, msg->data, 2 * sizeof(mx_handle_t));
                     break;
+                case IOCTL_KIND_GET_THREE_HANDLES:
+                    msg->hcount = 3;
+                    memcpy(msg->handle, msg->data, 3 * sizeof(mx_handle_t));
+                    break;
             }
             msg->datalen = r;
             msg->arg2.off = ios->io_off;

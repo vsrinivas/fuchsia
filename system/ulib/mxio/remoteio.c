@@ -287,6 +287,11 @@ static ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
             return ERR_INVALID_ARGS;
         }
         break;
+    case IOCTL_KIND_GET_THREE_HANDLES:
+        if (out_len < 3 * sizeof(mx_handle_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        break;
     case IOCTL_KIND_SET_HANDLE:
         if (in_len < sizeof(mx_handle_t)) {
             return ERR_INVALID_ARGS;
@@ -326,6 +331,15 @@ static ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
             }
             if (handles < 2) {
                 memset(out_buf, 0, (2 - handles) * sizeof(mx_handle_t));
+            }
+            break;
+        case IOCTL_KIND_GET_THREE_HANDLES:
+            handles = (msg.hcount > 3 ? 3 : msg.hcount);
+            if (handles) {
+                memcpy(out_buf, msg.handle, handles * sizeof(mx_handle_t));
+            }
+            if (handles < 3) {
+                memset(out_buf, 0, (3 - handles) * sizeof(mx_handle_t));
             }
             break;
     }

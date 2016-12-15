@@ -18,6 +18,10 @@
 // two handles, optionally followed by plain data
 #define IOCTL_KIND_GET_TWO_HANDLES  0x2
 
+// GET_THREE_HANDLES ioctls accept plain data and return
+// three handles, optionally followed by plain data
+#define IOCTL_KIND_GET_THREE_HANDLES 0x4
+
 // SET_HANDLE ioctls accept a handle, and optionally
 // plain data afterwards.
 #define IOCTL_KIND_SET_HANDLE       0x3
