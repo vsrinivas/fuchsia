@@ -275,4 +275,15 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
                                       size_t hnds_count, mx_handle_t* handles,
                                       uint32_t* ids);
 
+// Same as launchpad_launch_mxio_etc, but loads the program from a vmo not the
+// filesystem.
+// In all cases, the vmo and the handles are consumed.
+mx_handle_t launchpad_launch_mxio_vmo_etc(const char* name, mx_handle_t vmo,
+                                          int argc, const char* const* argv,
+                                          const char* const* envp,
+                                          size_t hnds_count, mx_handle_t* handles,
+                                          uint32_t* ids);
+
+
+
 __END_CDECLS

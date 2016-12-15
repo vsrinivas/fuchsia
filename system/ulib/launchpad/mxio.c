@@ -69,16 +69,15 @@ mx_status_t launchpad_add_all_mxio(launchpad_t* lp) {
     return status;
 }
 
-mx_handle_t launchpad_launch_mxio_etc(const char* name,
-                                      int argc, const char* const* argv,
-                                      const char* const* envp,
-                                      size_t hnds_count, mx_handle_t* handles,
-                                      uint32_t* ids) {
+mx_handle_t launchpad_launch_mxio_vmo_etc(const char* name, mx_handle_t vmo,
+                                          int argc, const char* const* argv,
+                                          const char* const* envp,
+                                          size_t hnds_count,
+                                          mx_handle_t* handles, uint32_t* ids) {
     launchpad_t* lp;
 
-    const char* filename = argv[0];
     if (name == NULL)
-        name = filename;
+        name = argv[0];
 
     mx_handle_t job_to_child = MX_HANDLE_INVALID;
     mx_handle_t job = get_mxio_job();
@@ -87,7 +86,7 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
 
     mx_status_t status = launchpad_create(job_to_child, name, &lp);
     if (status == NO_ERROR) {
-        status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
+        status = launchpad_elf_load(lp, vmo);
         if (status == NO_ERROR)
             status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
         if (status == NO_ERROR)
@@ -100,9 +99,20 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
             status = launchpad_add_all_mxio(lp);
         if (status == NO_ERROR)
             status = launchpad_add_handles(lp, hnds_count, handles, ids);
+    } else {
+      mx_handle_close(vmo);
     }
 
     return finish_launch(lp, status, handles, hnds_count);
+}
+
+mx_handle_t launchpad_launch_mxio_etc(const char* name,
+                                      int argc, const char* const* argv,
+                                      const char* const* envp,
+                                      size_t hnds_count, mx_handle_t* handles,
+                                      uint32_t* ids) {
+  return launchpad_launch_mxio_vmo_etc(name, launchpad_vmo_from_file(argv[0]),
+      argc, argv, envp, hnds_count, handles, ids);
 }
 
 mx_handle_t launchpad_launch_mxio(const char* name,
