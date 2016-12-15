@@ -49,6 +49,10 @@ static volatile struct dwc_regs* regs;
 #define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
 #define IS_WORD_ALIGNED(ptr) ((ulong)(ptr) % sizeof(ulong) == 0)
 
+// Log every 512th frame Overrun.
+#define FRAME_OVERRUN_THRESHOLD 512
+static uint32_t debug_frame_overrun_counter = 0;
+
 typedef struct dwc_usb_device dwc_usb_device_t;
 
 typedef enum dwc_endpoint_direction {
@@ -1435,8 +1439,13 @@ static bool handle_channel_halted_interrupt(uint channel,
 
         return true;
     } else if (interrupts.frame_overrun) {
-        printf("Requeue Frame Overrun on ep = %u, devid = %u\n",
-               ep->ep_address, ep->parent->device_id);
+        if (++debug_frame_overrun_counter == FRAME_OVERRUN_THRESHOLD) {
+            debug_frame_overrun_counter = 0;
+
+            // A little coarse since we only log every nth frame overrun.
+            printf("Requeued %d Frame Overruns. Last one on ep = %u, devid = %u\n",
+                   FRAME_OVERRUN_THRESHOLD, ep->ep_address, ep->parent->device_id);
+        }
         release_channel(channel, dwc);
         mtx_lock(&ep->pending_request_mtx);
         list_add_head(&ep->pending_requests, &req->node);
