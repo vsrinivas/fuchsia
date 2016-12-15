@@ -140,8 +140,10 @@ static void complete_at_dir(DIR* dir, completion_state_t* state,
         char completion[LINE_MAX];
         strncpy(completion, state->line_prefix, sizeof(completion));
         completion[sizeof(completion) - 1] = '\0';
-        strncat(completion, state->line_separator, sizeof(completion));
-        strncat(completion, de->d_name, sizeof(completion));
+        size_t remaining = sizeof(completion) - strlen(completion) - 1;
+        strncat(completion, state->line_separator, remaining);
+        remaining = sizeof(completion) - strlen(completion) - 1;
+        strncat(completion, de->d_name, remaining);
 
         linenoiseAddCompletion(completions, completion);
     }
