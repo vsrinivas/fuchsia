@@ -240,6 +240,7 @@ void ApplicationEnvironmentImpl::CreateApplication(
               std::move(launch_info), std::move(controller));
           return;
         }
+
         // We create the entry in |runners_| before calling ourselves
         // recursively to detect cycles.
         auto result = runners_.emplace(runner, nullptr);
@@ -257,19 +258,20 @@ void ApplicationEnvironmentImpl::CreateApplication(
 
           result.first->second = std::make_unique<ApplicationRunnerHolder>(
               std::move(runner_services), std::move(runner_controller));
-          ApplicationStartupInfoPtr startup_info =
-              ApplicationStartupInfo::New();
-          startup_info->environment = environment_bindings_.AddBinding(this);
-          startup_info->launch_info = std::move(launch_info);
-          result.first->second->StartApplication(
-              std::move(data), std::move(startup_info), std::move(controller));
+
         } else if (!result.first->second) {
           // There was a cycle in the runner graph.
           FTL_LOG(ERROR) << "Cannot run " << launch_info->url << " with "
                          << runner
                          << " because of a cycle in the runner graph.";
+          return;
         }
 
+        auto startup_info = ApplicationStartupInfo::New();
+        startup_info->environment = environment_bindings_.AddBinding(this);
+        startup_info->launch_info = std::move(launch_info);
+        result.first->second->StartApplication(
+            std::move(data), std::move(startup_info), std::move(controller));
       }));
 }
 
