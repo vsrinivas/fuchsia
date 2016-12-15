@@ -1,5 +1,16 @@
 # QEMU
 
+## Install Prerequisites
+
+Building QEMU on macOS requires a few packages. As of macOS 10.12.1:
+
+```
+# Using http://brew.sh
+brew install pkg-config glib automake libtool
+
+# Or use http://macports.org ("port install ...") or build manually
+```
+
 ## Build QEMU
 
 If you don't want to install in /usr/local (the default), which will require you
