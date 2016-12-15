@@ -112,7 +112,8 @@ MODULE_SO_INSTALL_NAME := lib/lib$(MODULE_SO_NAME).so
 endif
 ifneq ($(MODULE_SO_INSTALL_NAME),-)
 USER_MANIFEST_LINES += $(MODULE_SO_INSTALL_NAME)=$(MODULE_LIBNAME).so.strip
-ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(USER_DEBUG_MODULES)),$(MODULE_SHORTNAME)),yes),yes)
+# These debug info files go in the bootfs image.
+ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(BOOTFS_DEBUG_MODULES)),$(MODULE_SHORTNAME)),yes),yes)
 USER_MANIFEST_DEBUG_INPUTS += $(MODULE_LIBNAME).so.debug
 endif
 endif
@@ -132,6 +133,14 @@ ifneq ($(MODULE_SO_NAME),)
 #$(info EXPORT $(MODULE) shared)
 TMP := $(BUILDDIR)/sysroot/lib/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so.abi)
+SYSROOT_DEPS += $(TMP)
+GENERATED += $(TMP)
+# Install debug info for exported libraries for debuggers to find.
+# These files live on the development host, not the target.
+# There's no point in saving separate debug info here (at least not yet),
+# we just make a copy of the unstripped file.
+TMP := $(BUILDDIR)/sysroot/debug-info/lib$(MODULE_SO_NAME).so
+$(call copy-dst-src,$(TMP),$(MODULE_LIBNAME).so)
 SYSROOT_DEPS += $(TMP)
 GENERATED += $(TMP)
 endif

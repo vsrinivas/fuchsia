@@ -23,7 +23,9 @@ ALLUSER_APPS += $(MODULE_USERAPP_OBJECT)
 ALLUSER_MODULES += $(MODULE)
 
 USER_MANIFEST_LINES += $(MODULE_INSTALL_PATH)/$(MODULE_NAME)=$(addsuffix .strip,$(MODULE_USERAPP_OBJECT))
-ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(USER_DEBUG_MODULES)),$(MODULE_SHORTNAME)),yes),yes)
+
+# These debug info files go in the bootfs image.
+ifeq ($(and $(filter $(subst $(COMMA),$(SPACE),$(BOOTFS_DEBUG_MODULES)),$(MODULE_SHORTNAME)),yes),yes)
 USER_MANIFEST_DEBUG_INPUTS += $(addsuffix .debug,$(MODULE_USERAPP_OBJECT))
 endif
 

@@ -252,6 +252,7 @@ USER_FS := $(BUILDDIR)/user.fs
 # manifest of files to include in the user bootfs
 USER_MANIFEST := $(BUILDDIR)/bootfs.manifest
 USER_MANIFEST_LINES :=
+# The contents of this are derived from BOOTFS_DEBUG_MODULES.
 USER_MANIFEST_DEBUG_INPUTS :=
 
 # construct a slightly prettier version of LKINC with . removed and trailing / added
@@ -343,6 +344,13 @@ $(BUILDDIR)/sysroot/lib/libpthread.so: third_party/ulib/musl/lib.ld
 
 SYSROOT_DEPS += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
 GENERATED += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(BUILDDIR)/sysroot/lib/libpthread.so
+
+# GDB specifically looks for ld.so.1, so we create that as a symlink.
+$(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP): FORCE
+	@$(MKDIR)
+	rm -f $@
+	ln -s libc.so $@
+SYSROOT_DEPS += $(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP)
 endif
 
 EXTRA_BUILDDEPS += $(SYSROOT_DEPS)
