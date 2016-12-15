@@ -36,6 +36,12 @@ typedef struct iotxn_ops iotxn_ops_t;
 #define IOTXN_OP_READ      1
 #define IOTXN_OP_WRITE     2
 
+// cache maintenance ops
+#define IOTXN_CACHE_INVALIDATE        MX_VMO_OP_CACHE_INVALIDATE
+#define IOTXN_CACHE_CLEAN             MX_VMO_OP_CACHE_CLEAN
+#define IOTXN_CACHE_CLEAN_INVALIDATE  MX_VMO_OP_CACHE_CLEAN_INVALIDATE
+#define IOTXN_CACHE_SYNC              MX_VMO_OP_CACHE_SYNC
+
 // flags
 //
 // This iotxn should not begin before any iotxns queued ahead
@@ -142,6 +148,9 @@ struct iotxn_ops {
     // always a better option.
     void (*mmap)(iotxn_t* txn, void** data);
 
+    // cacheop() performs a cache maintenance op against the iotxn's internal
+    // buffer.
+    void (*cacheop)(iotxn_t* txn, uint32_t op, size_t offset, size_t length);
 
     // clone() creates a new iotxn which shares the underlying data
     // storage with this one, suitable for a driver to use to make a

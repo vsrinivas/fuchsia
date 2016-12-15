@@ -92,3 +92,8 @@ void io_buffer_release(io_buffer_t* buffer) {
         buffer->vmo_handle = MX_HANDLE_INVALID;
     }
 }
+
+mx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
+                               const mx_off_t offset, const size_t size) {
+    return mx_vmo_op_range(buffer->vmo_handle, op, offset, size, NULL, 0);
+}

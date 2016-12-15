@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <ddk/io-buffer.h>
 #include <ddk/iotxn.h>
 #include <ddk/device.h>
@@ -157,6 +158,11 @@ static mx_status_t iotxn_clone(iotxn_t* txn, iotxn_t** out, size_t extra_size) {
     return NO_ERROR;
 }
 
+static void iotxn_cacheop(iotxn_t* txn, uint32_t op, size_t offset, size_t length) {
+    iotxn_priv_t* priv = get_priv(txn);
+    io_buffer_cache_op(&priv->buffer, op, offset, length);
+}
+
 static iotxn_ops_t ops = {
     .complete = iotxn_complete,
     .copyfrom = iotxn_copyfrom,
@@ -165,6 +171,7 @@ static iotxn_ops_t ops = {
     .mmap = iotxn_mmap,
     .clone = iotxn_clone,
     .release = iotxn_release,
+    .cacheop = iotxn_cacheop,
 };
 
 mx_status_t iotxn_alloc(iotxn_t** out, uint32_t flags, size_t data_size, size_t extra_size) {

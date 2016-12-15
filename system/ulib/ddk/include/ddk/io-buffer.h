@@ -30,12 +30,14 @@ mx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags);
 
 // Initializes an io_buffer base on an existing VMO.
 // duplicates the provided vmo_handle - does not take ownership
-mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle, mx_off_t offset,
-                               uint32_t flags);
+mx_status_t io_buffer_init_vmo(io_buffer_t* buffer, mx_handle_t vmo_handle,
+                               mx_off_t offset, uint32_t flags);
 
 // copies an io_buffer. clone gets duplicate of the source's vmo_handle
 mx_status_t io_buffer_clone(io_buffer_t* src, io_buffer_t* dest);
 
+mx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
+                               const mx_off_t offset, const size_t size);
 // Releases an io_buffer
 void io_buffer_release(io_buffer_t* buffer);
 
