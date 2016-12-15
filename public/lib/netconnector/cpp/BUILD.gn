@@ -1,0 +1,19 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("lib") {
+  sources = [
+    "async_wait.cc",
+    "async_wait.h",
+    "message_relay.cc",
+    "message_relay.h",
+  ]
+
+  deps = [
+    "//lib/fidl/cpp/waiter",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//magenta/system/ulib/mx",
+  ]
+}
