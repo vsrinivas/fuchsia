@@ -16,6 +16,7 @@ fidl("user") {
 
   public_deps = [
     "//apps/modular/services/story",
+    "//apps/modular/services/document_store",
   ]
 
   deps = [
@@ -37,6 +38,7 @@ fidl("private") {
 
   deps = [
     "//apps/mozart/services/views",
+    "//apps/ledger/services/internal",
   ]
 
   visibility = [

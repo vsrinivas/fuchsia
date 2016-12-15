@@ -37,6 +37,7 @@ fidl("private") {
     "//apps/modular/services/document_store",
     "//apps/mozart/services/views",
     "//apps/ledger/services/public",
+    "//apps/ledger/services/internal",
   ]
 
   visibility = [
