@@ -41,3 +41,6 @@ static const mount_options_t default_mount_options = {
 mx_status_t mount(const char* devicepath, const char* mountpath, disk_format_t df,
                   const mount_options_t* options,
                   mx_status_t (*cb)(int argc, const char** argv, mx_handle_t h));
+
+// Umount the filesystem process.
+mx_status_t umount(const char* mountpath);

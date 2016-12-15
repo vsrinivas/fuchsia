@@ -4,6 +4,7 @@
 
 #include <fs-management/mount.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
@@ -119,4 +120,19 @@ mx_status_t mount(const char* devicepath, const char* mountpath,
     default:
         return ERR_NOT_SUPPORTED;
     }
+}
+
+mx_status_t umount(const char* mountpath) {
+    int fd = open(mountpath, O_DIRECTORY | O_NOREMOTE);
+    if (fd < 0) {
+        fprintf(stderr, "Could not open directory: %s\n", strerror(errno));
+        return -1;
+    }
+
+    mx_status_t status = ioctl_devmgr_unmount_node(fd);
+    if (status < 0) {
+        fprintf(stderr, "Could not unmount filesystem: %d\n", status);
+    }
+    close(fd);
+    return status;
 }
