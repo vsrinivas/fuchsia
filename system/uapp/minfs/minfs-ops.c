@@ -700,12 +700,13 @@ static size_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
 
         block_t* blk;
         void* bdata;
-        // TODO(smklein): Read should not allocate any blocks...
-        if ((blk = vn_get_block(vn, n, &bdata, true)) == NULL) {
-            break;
+        if ((blk = vn_get_block(vn, n, &bdata, false)) != NULL) {
+            memcpy(data, bdata + adjust, xfer);
+            vn_put_block(vn, blk);
+        } else {
+            // If the block is not allocated, just read zeros
+            memset(data, 0, xfer);
         }
-        memcpy(data, bdata + adjust, xfer);
-        vn_put_block(vn, blk);
 
         adjust = 0;
         len -= xfer;
