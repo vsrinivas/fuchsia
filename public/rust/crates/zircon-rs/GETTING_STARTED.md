@@ -10,7 +10,8 @@ Building the compiler
 First, build the [clang wrapper](tools/). It helps if you check out this repo
 under your fuchsia root, but it's not necessary. We'll call the directory
 where you created the symlinks `${RUST_TOOLS}`. In any case, the created
-symlinks do need to be under your Fuchsia root.
+symlinks do need to be under your Fuchsia root, which we will refer to as
+`${FUCHSIA_ROOT}`.
 
 You can sanity-check the clang wrapper:
 
@@ -53,6 +54,9 @@ cc = "${RUST_TOOLS}/aarch64-unknown-fuchsia-cc"
 Run:
 
 ```
+cd ${FUCHSIA_ROOT}
+./scripts/build-sysroot.sh
+cd ${RUST_ROOT}
 ./configure --enable-rustbuild --target=x86_64-unknown-fuchsia
 ./x.py build --stage 1
 ```
@@ -60,9 +64,8 @@ Run:
 (If your cmake installation is too old (e.g., Ubuntu 14.04), you can use the
 prebuilt in Fuchsia:
 ```
-PATH=${FUCHSIA_ROOT}/buildtools/cmake/bin:$PATH ./x.py build --stage 1 --target=x86_64-unknown-fuchsia
+PATH=${FUCHSIA_ROOT}/buildtools/cmake/bin:$PATH ./x.py build --stage 1
 ```
-where ${FUCHSIA_ROOT} is the base of your Fuchsia checkout.)
 
 You should now have a working Rust compiler under `build/x86_64-apple-darwin/stage1/bin/rustc`
 (adjust your host triple as necessary).
@@ -82,7 +85,8 @@ To build a single binary, run:
   -Clinker=${RUST_TOOLS}/x86-64-unknown-fuchsia-cc
 ```
 
-To build with cargo, create a .cargo/config. As above, expand the absolute path.
+To build with cargo, create a config file in ${RUST_ROOT}/.cargo/config.
+As above, expand the absolute path.
 
 ```
 [target.x86_64-unknown-fuchsia]
