@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fs-management/mount.h>
 #include <magenta/device/devmgr.h>
 
 bool verbose = false;
@@ -41,18 +42,5 @@ int main(int argc, char** argv) {
     char* path = argv[1];
 
     xprintf("Unmount path: %s\n", path);
-    int fd = open(path, O_DIRECTORY | O_NOREMOTE);
-    if (fd < 0) {
-        fprintf(stderr, "Could not open directory: %s\n", strerror(errno));
-        return -1;
-    }
-
-    mx_status_t status = ioctl_devmgr_unmount_node(fd);
-    if (status < 0) {
-        fprintf(stderr, "Could not unmount filesystem: %d\n", status);
-    } else {
-        xprintf("Unmounted successfully\n");
-    }
-    close(fd);
-    return status;
+    return umount(path);
 }
