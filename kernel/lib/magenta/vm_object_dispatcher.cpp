@@ -107,3 +107,4 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
             return ERR_INVALID_ARGS;
     }
 }
+
