@@ -14,6 +14,8 @@
 #define TRACE_INTERNAL_CATEGORY_ENABLED(category) \
   ::tracing::writer::IsTracingEnabledForCategory(category)
 
+#define TRACE_INTERNAL_NONCE() ::tracing::internal::TraceNonce()
+
 #define TRACE_INTERNAL_SCOPE_LABEL__(token) __trace_scope_##token
 #define TRACE_INTERNAL_SCOPE_LABEL_(token) TRACE_INTERNAL_SCOPE_LABEL__(token)
 #define TRACE_INTERNAL_SCOPE_LABEL() TRACE_INTERNAL_SCOPE_LABEL_(__COUNTER__)
@@ -124,6 +126,8 @@
 
 namespace tracing {
 namespace internal {
+
+uint64_t TraceNonce();
 
 template <typename... Args>
 void WriteInstantEventRecord(::tracing::writer::TraceWriter& writer,

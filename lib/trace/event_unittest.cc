@@ -54,6 +54,16 @@ TEST_F(EventTest, CategoryEnabled) {
   EXPECT_EQ(false, TRACE_CATEGORY_ENABLED("disabled"));
 }
 
+TEST_F(EventTest, TraceNounce) {
+  const size_t nonces_count = 100;
+  std::set<uint64_t> nonces;
+  for (size_t i = 0; i < nonces_count; ++i) {
+    nonces.insert(TRACE_NONCE());
+  }
+  EXPECT_EQ(nonces_count, nonces.size());
+  EXPECT_EQ(nonces.end(), nonces.find(0u));
+}
+
 TEST_F(EventTest, Instant) {
   TRACE_INSTANT("cat", "name", TRACE_SCOPE_GLOBAL);
   TRACE_INSTANT("cat", "name", TRACE_SCOPE_PROCESS);

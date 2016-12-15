@@ -27,6 +27,10 @@
 // Specifies that an event is globally relevant.
 #define TRACE_SCOPE_GLOBAL (::tracing::EventScope::kGlobal)
 
+// Returns an uint64 that can be used as identifier for TRACE_ASYNC_* and
+// TRACE_FLOW_*.
+#define TRACE_NONCE() TRACE_INTERNAL_NONCE()
+
 // Writes an instant event representing a single moment in time (a probe).
 // Use |TRACE_SCOPE_*| constants to specify the scope of the event.
 #define TRACE_INSTANT(category, name, scope, args...) \
