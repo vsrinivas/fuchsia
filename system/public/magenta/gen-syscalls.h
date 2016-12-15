@@ -645,6 +645,26 @@ extern mx_status_t _mx_cprng_add_entropy(
     const void* buffer,
     size_t len);
 
+extern mx_status_t mx_fifo_create(
+    uint64_t count,
+    mx_handle_t out[1]);
+
+extern mx_status_t _mx_fifo_create(
+    uint64_t count,
+    mx_handle_t out[1]);
+
+extern mx_status_t mx_fifo_op(
+    mx_handle_t handle,
+    uint32_t op,
+    uint64_t val,
+    mx_fifo_state_t out[1]);
+
+extern mx_status_t _mx_fifo_op(
+    mx_handle_t handle,
+    uint32_t op,
+    uint64_t val,
+    mx_fifo_state_t out[1]);
+
 extern mx_handle_t mx_log_create(
     uint32_t options);
 
