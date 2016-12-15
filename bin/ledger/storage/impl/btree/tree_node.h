@@ -60,25 +60,27 @@ class TreeNode {
     Mutation& UpdateChildId(const std::string& key_after,
                             ObjectIdView child_id);
 
-    // Creates the new TreeNode as a result of the given updates. After calling
-    // this method, this Mutation object is no longer valid and calling any
-    // methods on it will fail.
-    Status Finish(ObjectId* new_id);
+    // Creates the new TreeNode as a result of the given updates. |on_done| will
+    // be called with the status and, if successfull, the new node's id. After
+    // calling this method, this Mutation object is no longer valid and calling
+    // any methods on it will fail.
+    void Finish(std::function<void(Status, ObjectId)> on_done);
 
     // Creates as many tree nodes as necessary given the |max_size| of entries a
-    // node can have. If this mutation is not on the root node the
-    // |parent_updater| argument should be provided and is updated as necessary.
-    // If this mutation is on the root node, |new_root_id| is updated to hold
-    // the new root's id.  After calling this method, this Mutation object is no
-    // longer valid and calling any methods on it will fail.
+    // node can have. If this mutation corresponds to a root node, |on_done|
+    // will be called with the new root id and a null Updater. Otherwise,
+    // |on_done| will be called with an empty object id and if there some
+    // changes to be done on the parent node, the Updater will have a non-null
+    // value. After calling this method, this Mutation object is no longer valid
+    // and calling any methods on it will fail.
     // TODO(nellyv): This method should not be necessary after updating the
     // B-Tree node implementation.
-    Status Finish(size_t max_size,
-                  bool is_root,
-                  const std::string& max_key,
-                  std::unique_ptr<Updater>* parent_updater,
-                  std::unordered_set<ObjectId>* new_nodes,
-                  ObjectId* new_root_id);
+    void Finish(size_t max_size,
+                bool is_root,
+                const std::string& max_key,
+                std::unordered_set<ObjectId>* new_nodes,
+                std::function<void(Status, ObjectId, std::unique_ptr<Updater>)>
+                    on_done);
 
    private:
     // Copies the entries from the |node_| starting at |node_index_| and until

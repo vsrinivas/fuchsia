@@ -268,18 +268,28 @@ void TreeNode::Mutation::FinalizeEntriesChildren() {
   finished = true;
 }
 
-Status TreeNode::Mutation::Finish(ObjectId* new_id) {
+void TreeNode::Mutation::Finish(
+    std::function<void(Status, ObjectId /* new_id */)> on_done) {
   FTL_DCHECK(!finished);
   FinalizeEntriesChildren();
-  return FromEntries(node_.page_storage_, entries_, children_, new_id);
+  ObjectId new_id;
+  Status s = FromEntries(node_.page_storage_, entries_, children_, &new_id);
+  if (s != Status::OK) {
+    on_done(s, "");
+    return;
+  }
+  on_done(Status::OK, std::move(new_id));
 }
 
-Status TreeNode::Mutation::Finish(size_t max_size,
-                                  bool is_root,
-                                  const std::string& max_key,
-                                  std::unique_ptr<Updater>* parent_updater,
-                                  std::unordered_set<ObjectId>* new_nodes,
-                                  ObjectId* new_root_id) {
+void TreeNode::Mutation::Finish(
+    size_t max_size,
+    bool is_root,
+    const std::string& max_key,
+    std::unordered_set<ObjectId>* new_nodes,
+    std::function<void(Status,
+                       ObjectId /* new_root_id */,
+                       std::unique_ptr<Updater> /* parent_updater */)>
+        on_done) {
   FinalizeEntriesChildren();
   // If we want N nodes, each with S entries, separated by 1 entry, then the
   // total number of entries E is E = N*S+(N-1), leading to N=(E+1)/(S+1). As
@@ -291,17 +301,18 @@ Status TreeNode::Mutation::Finish(size_t max_size,
     ObjectId new_id;
     Status s = FromEntries(node_.page_storage_, entries_, children_, &new_id);
     if (s != Status::OK) {
-      return s;
+      on_done(s, "", nullptr);
+      return;
     }
     new_nodes->insert(new_id);
     if (is_root) {
-      new_root_id->swap(new_id);
-    } else {
-      *parent_updater =
-          std::make_unique<Updater>([ max_key, new_id = std::move(new_id) ](
-              Mutation * m) { m->UpdateChildId(max_key, new_id); });
+      on_done(Status::OK, new_id, nullptr);
+      return;
     }
-    return Status::OK;
+    on_done(Status::OK, "",
+            std::make_unique<Updater>([ max_key, new_id = std::move(new_id) ](
+                Mutation * m) { m->UpdateChildId(max_key, new_id); }));
+    return;
   }
 
   std::vector<Entry> new_entries;
@@ -342,15 +353,16 @@ Status TreeNode::Mutation::Finish(size_t max_size,
 
   if (!is_root) {
     // Move the pivots to the parent node.
-    *parent_updater = std::make_unique<Updater>([
-      new_entries = std::move(new_entries),
-      new_children = std::move(new_children)
-    ](Mutation * m) {
-      for (size_t i = 0; i < new_entries.size(); ++i) {
-        m->AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
-      }
-    });
-    return Status::OK;
+    on_done(Status::OK, "", std::make_unique<Updater>([
+              new_entries = std::move(new_entries),
+              new_children = std::move(new_children)
+            ](Mutation * m) {
+              for (size_t i = 0; i < new_entries.size(); ++i) {
+                m->AddEntry(new_entries[i], new_children[i],
+                            new_children[i + 1]);
+              }
+            }));
+    return;
   }
 
   // No parent node, create a new one.
@@ -369,8 +381,7 @@ Status TreeNode::Mutation::Finish(size_t max_size,
   for (size_t i = 0; i < new_entries.size(); ++i) {
     mutation.AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
   }
-  return mutation.Finish(max_size, true, max_key, nullptr, new_nodes,
-                         new_root_id);
+  mutation.Finish(max_size, true, max_key, new_nodes, std::move(on_done));
 }
 
 void TreeNode::Mutation::CopyUntil(std::string key) {

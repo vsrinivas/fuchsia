@@ -349,11 +349,7 @@ void ApplyChangesIn(
         (*apply_update)(&mutation);
       }
     }
-    ObjectId new_id;
-    std::unique_ptr<TreeNode::Mutation::Updater> parent_updater;
-    mutation.Finish(node_size, is_root, max_key, &parent_updater, new_nodes,
-                    &new_id);
-    on_done(s, new_id, std::move(parent_updater));
+    mutation.Finish(node_size, is_root, max_key, new_nodes, std::move(on_done));
   }));
 }
 

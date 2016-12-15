@@ -9,6 +9,8 @@
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 #include "apps/ledger/src/storage/public/commit_contents.h"
 #include "apps/ledger/src/storage/public/constants.h"
+#include "apps/ledger/src/test/capture.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/logging.h"
 
@@ -33,7 +35,7 @@ std::vector<Entry> GetEntries(int size) {
   return entries;
 }
 
-class TreeNodeTest : public ::testing::Test {
+class TreeNodeTest : public ::test::TestWithMessageLoop {
  public:
   TreeNodeTest() : fake_storage_("page_id") {}
 
@@ -191,10 +193,14 @@ TEST_F(TreeNodeTest, MutationAddEntry) {
   ObjectId left = CreateEmptyNode()->GetId();
   ObjectId right = CreateEmptyNode()->GetId();
 
+  Status status;
   ObjectId new_node_id;
-  EXPECT_EQ(
-      Status::OK,
-      node->StartMutation().AddEntry(entry, left, right).Finish(&new_node_id));
+  node->StartMutation()
+      .AddEntry(entry, left, right)
+      .Finish(::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                              &new_node_id));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
 
   // Initial node:
@@ -222,11 +228,14 @@ TEST_F(TreeNodeTest, MutationUpdateEntry) {
   int size = 3;
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
-  ObjectId new_node_id;
 
   Entry entry{"b", RandomId(), KeyPriority::EAGER};
-  EXPECT_EQ(Status::OK,
-            node->StartMutation().UpdateEntry(entry).Finish(&new_node_id));
+  Status status;
+  ObjectId new_node_id;
+  node->StartMutation().UpdateEntry(entry).Finish(::test::Capture(
+      [this] { message_loop_.PostQuitTask(); }, &status, &new_node_id));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
 
   // Initial node:
@@ -252,10 +261,15 @@ TEST_F(TreeNodeTest, MutationRemoveEntry) {
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
 
-  ObjectId new_node_id;
   ObjectId child = CreateEmptyNode()->GetId();
-  EXPECT_EQ(Status::OK,
-            node->StartMutation().RemoveEntry("b", child).Finish(&new_node_id));
+  Status status;
+  ObjectId new_node_id;
+  node->StartMutation()
+      .RemoveEntry("b", child)
+      .Finish(::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                              &new_node_id));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
 
   // Initial node:
@@ -282,11 +296,15 @@ TEST_F(TreeNodeTest, MutationUpdateChildId) {
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
 
-  ObjectId new_node_id;
   ObjectId child = CreateEmptyNode()->GetId();
-  EXPECT_EQ(
-      Status::OK,
-      node->StartMutation().UpdateChildId("b", child).Finish(&new_node_id));
+  Status status;
+  ObjectId new_node_id;
+  node->StartMutation()
+      .UpdateChildId("b", child)
+      .Finish(::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                              &new_node_id));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
 
   // Initial node:
@@ -313,10 +331,14 @@ TEST_F(TreeNodeTest, EmptyMutation) {
   std::unique_ptr<const TreeNode> node =
       FromEntries(GetEntries(size), CreateChildren(size + 1));
 
-  ObjectId new_node_id;
   // Note that creating an empty mutation is inefficient and should be avoided
   // when possible.
-  EXPECT_EQ(Status::OK, node->StartMutation().Finish(&new_node_id));
+  Status status;
+  ObjectId new_node_id;
+  node->StartMutation().Finish(::test::Capture(
+      [this] { message_loop_.PostQuitTask(); }, &status, &new_node_id));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
   // TOOD(nellyv): check that the new id is equal to the original one when ids
   // are not randomly assigned.
