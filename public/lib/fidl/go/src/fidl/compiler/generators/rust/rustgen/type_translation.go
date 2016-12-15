@@ -6,9 +6,9 @@ package rustgen
 
 import (
 	"log"
+	"path/filepath"
 	"strconv"
 	"strings"
-	"path/filepath"
 
 	"fidl/compiler/generated/fidl_files"
 	"fidl/compiler/generated/fidl_types"
@@ -96,11 +96,6 @@ func assertNotReservedKeyword(keyword string) string {
 		log.Fatalf("Generated name `%s` is a reserved Rust keyword.", keyword)
 	}
 	return keyword
-}
-
-// Mangles a name.
-func mangleName(name string) string {
-	return name + "_"
 }
 
 // A map where keys are fidl names and values are Rust-mangled names.
@@ -193,11 +188,11 @@ func fidlToRustName(decl *fidl_types.DeclarationData, context *Context, fmt func
 	}
 	src_file := context.FileGraph.Files[src_file_name]
 	name := removeNamespaceFromIdentifier(context, &src_file, *decl.FullIdentifier)
-	crates, present := (*context.Map)["//" + relpath]
+	crates, present := (*context.Map)["//"+relpath]
 	if !present {
-		// TODO: probably want to fatal error in this case
-		//logBrokenDep(relpath, context.File.FileName)
-		return "::UNKNOWN_CRATE::" + mangleReservedKeyword(fmt(name))
+		relThisPath, _ := filepath.Rel(context.SrcRootPath, context.File.FileName)
+		log.Fatal("Unresolved dependency: ", relThisPath, " depends on ", relpath,
+			" but not in dependency map.")
 	}
 	if len(crates) == 0 {
 		return "::" + mangleReservedKeyword(fmt(name))
@@ -541,4 +536,3 @@ func fidlUserTypeNeedsBoxing(typ fidl_types.UserDefinedType) bool {
 	}
 	return false
 }
-
