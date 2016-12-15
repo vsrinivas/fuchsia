@@ -172,7 +172,7 @@ KERNEL_DEFINES += \
     KERNEL_LOAD_OFFSET=$(KERNEL_LOAD_OFFSET)
 
 # if its requested we build with SMP, arm generically supports 4 cpus
-ifeq ($(WITH_SMP),1)
+ifeq ($(call TOBOOL,$(WITH_SMP)),true)
 SMP_MAX_CPUS ?= 4
 SMP_CPU_CLUSTER_SHIFT ?= 8
 SMP_CPU_ID_BITS ?= 24

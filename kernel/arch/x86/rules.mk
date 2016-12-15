@@ -89,28 +89,35 @@ MODULE_SRCS += \
 ifeq ($(SUBARCH),x86-64)
 MODULE_SRCS += \
 	$(SUBARCH_DIR)/syscall.S \
-	$(SUBARCH_DIR)/user_copy.S
+	$(SUBARCH_DIR)/user_copy.S \
+	$(SUBARCH_DIR)/uspace_entry.S
 endif
 
 MODULE_DEPS += lib/bitmap
 
 include $(LOCAL_DIR)/toolchain.mk
 
-# Enable SMP for x86-64
+# enable more if smp is requested
+ifeq ($(call TOBOOL,$(WITH_SMP)),true)
+
+# only 64bit supports smp
 ifeq ($(SUBARCH),x86-64)
+SMP_MAX_CPUS ?= 16
 KERNEL_DEFINES += \
-	WITH_SMP=1 \
-	SMP_MAX_CPUS=16
+	WITH_SMP=1
 MODULE_SRCS += \
 	$(SUBARCH_DIR)/bootstrap16.c \
 	$(SUBARCH_DIR)/smp.c \
-	$(SUBARCH_DIR)/start16.S \
-	$(SUBARCH_DIR)/uspace_entry.S
-endif # SUBARCH x86-64
-ifeq ($(SUBARCH),x86-32)
+	$(SUBARCH_DIR)/start16.S
+else
+# non 64bit does not support SMP
+SMP_MAX_CPUS := 1
+endif
+endif
+
+# always set this to something
 KERNEL_DEFINES += \
-	SMP_MAX_CPUS=1
-endif # SUBARCH x86-32
+	SMP_MAX_CPUS=$(SMP_MAX_CPUS)
 
 # set the default toolchain to x86 elf and set a #define
 ifeq ($(SUBARCH),x86-32)

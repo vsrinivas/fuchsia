@@ -39,7 +39,7 @@ KERNEL_DEFINES += \
 	ARCH_DEFAULT_STACK_SIZE=4096
 
 # if its requested we build with SMP, arm generically supports 4 cpus
-ifeq ($(WITH_SMP),1)
+ifeq ($(call TOBOOL,$(WITH_SMP)),true)
 SMP_MAX_CPUS ?= 4
 SMP_CPU_CLUSTER_SHIFT ?= 8
 SMP_CPU_ID_BITS ?= 24 # Ignore aff3 bits for now since they are not next to aff2

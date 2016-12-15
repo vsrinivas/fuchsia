@@ -385,7 +385,6 @@ FUNCTION(arm_secondary_setup)
 
     /* set up the mmu on this cpu and switch to virtual memory */
     bl      .Lmmu_setup
-#endif
 
     /* stay in supervisor and call into arm arch code to continue setup */
     mov     r0, r5
@@ -395,6 +394,7 @@ FUNCTION(arm_secondary_setup)
 unsupported_cpu_trap:
     wfe
     b       unsupported_cpu_trap
+#endif // WITH_SMP
 
 .ltorg
 
