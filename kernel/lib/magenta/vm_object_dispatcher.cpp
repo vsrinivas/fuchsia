@@ -96,8 +96,13 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
 
             return vmo_->Lookup(offset, size, buffer.reinterpret<paddr_t>(), buffer_size);
         case MX_VMO_OP_CACHE_SYNC:
-            // TODO: handle
-            return ERR_NOT_SUPPORTED;
+            return vmo_->SyncCache(offset, size);
+        case MX_VMO_OP_CACHE_INVALIDATE:
+            return vmo_->InvalidateCache(offset, size);
+        case MX_VMO_OP_CACHE_CLEAN:
+            return vmo_->CleanCache(offset, size);
+        case MX_VMO_OP_CACHE_CLEAN_INVALIDATE:
+            return vmo_->CleanInvalidateCache(offset, size);
         default:
             return ERR_INVALID_ARGS;
     }

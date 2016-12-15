@@ -179,12 +179,15 @@ typedef uint32_t mx_rights_t;
 #define MX_RIGHT_SAME_RIGHTS      ((mx_rights_t)1u << 31)
 
 // VM Object opcodes
-#define MX_VMO_OP_COMMIT                1u
-#define MX_VMO_OP_DECOMMIT              2u
-#define MX_VMO_OP_LOCK                  3u
-#define MX_VMO_OP_UNLOCK                4u
-#define MX_VMO_OP_LOOKUP                5u
-#define MX_VMO_OP_CACHE_SYNC            6u
+#define MX_VMO_OP_COMMIT                 1u
+#define MX_VMO_OP_DECOMMIT               2u
+#define MX_VMO_OP_LOCK                   3u
+#define MX_VMO_OP_UNLOCK                 4u
+#define MX_VMO_OP_LOOKUP                 5u
+#define MX_VMO_OP_CACHE_SYNC             6u
+#define MX_VMO_OP_CACHE_INVALIDATE       7u
+#define MX_VMO_OP_CACHE_CLEAN            8u
+#define MX_VMO_OP_CACHE_CLEAN_INVALIDATE 9u
 
 // flags to vmar routines
 #define MX_VM_FLAG_PERM_READ        (1u << 0)

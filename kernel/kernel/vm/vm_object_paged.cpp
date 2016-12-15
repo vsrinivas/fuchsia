@@ -8,6 +8,7 @@
 
 #include "vm_priv.h"
 
+#include <arch/ops.h>
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
@@ -587,6 +588,80 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> 
         auto status = buffer.element_offset(index).copy_to_user(pa);
         if (unlikely(status < 0))
             return status;
+    }
+
+    return NO_ERROR;
+}
+
+status_t VmObjectPaged::InvalidateCache(const uint64_t offset, const uint64_t len) {
+    return CacheOp(offset, len, CacheOpType::Invalidate);
+}
+
+status_t VmObjectPaged::CleanCache(const uint64_t offset, const uint64_t len) {
+    return CacheOp(offset, len, CacheOpType::Clean);
+}
+
+status_t VmObjectPaged::CleanInvalidateCache(const uint64_t offset, const uint64_t len) {
+    return CacheOp(offset, len, CacheOpType::CleanInvalidate);
+}
+
+status_t VmObjectPaged::SyncCache(const uint64_t offset, const uint64_t len) {
+    return CacheOp(offset, len, CacheOpType::Sync);
+}
+
+status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t len,
+                                const CacheOpType type) {
+    DEBUG_ASSERT(magic_ == MAGIC);
+
+    if (unlikely(len == 0))
+        return ERR_INVALID_ARGS;
+
+    AutoLock a(lock_);
+
+    if (unlikely(!InRange(start_offset, len, size_)))
+        return ERR_OUT_OF_RANGE;
+
+    const size_t end_offset = static_cast<size_t>(start_offset + len);
+    size_t op_start_offset = static_cast<size_t>(start_offset);
+
+    while (op_start_offset != end_offset) {
+        // Offset at the end of the current page.
+        const size_t page_end_offset = ROUNDUP(op_start_offset + 1, PAGE_SIZE);
+
+        // This cache op will either terminate at the end of the current page or
+        // at the end of the whole op range -- whichever comes first.
+        const size_t op_end_offset = MIN(page_end_offset, end_offset);
+
+        const size_t cache_op_len = op_end_offset - op_start_offset;
+
+        const size_t page_offset = op_start_offset % PAGE_SIZE;
+
+        vm_page_t* p = GetPageLocked(op_start_offset);
+
+        if (likely(p)) {
+            // Convert the page address to a Kernel virtual address.
+            const paddr_t pa = vm_page_to_paddr(p);
+            const void* ptr = paddr_to_kvaddr(pa);
+            const addr_t cache_op_addr = reinterpret_cast<addr_t>(ptr) + page_offset;
+
+            // Perform the necessary cache op against this page.
+            switch(type) {
+            case CacheOpType::Invalidate:
+                arch_invalidate_cache_range(cache_op_addr, cache_op_len);
+                break;
+            case CacheOpType::Clean:
+                arch_clean_cache_range(cache_op_addr, cache_op_len);
+                break;
+            case CacheOpType::CleanInvalidate:
+                arch_clean_invalidate_cache_range(cache_op_addr, cache_op_len);
+                break;
+            case CacheOpType::Sync:
+                arch_sync_cache_range(cache_op_addr, cache_op_len);
+                break;
+            }
+        }
+
+        op_start_offset += cache_op_len;
     }
 
     return NO_ERROR;
