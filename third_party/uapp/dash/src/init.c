@@ -15,6 +15,8 @@
 #include "trap.h"
 #include "output.h"
 #include "memalloc.h"
+#include "tab.h"
+#include <linenoise/linenoise.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -166,6 +168,11 @@ init() {
 #ifdef USE_GLIBC_STDIO
 	      initstreams();
 #endif
+      }
+
+      /* from tab.c: */
+      {
+	  linenoiseSetCompletionCallback(tab_complete);
       }
 
       /* from var.c: */

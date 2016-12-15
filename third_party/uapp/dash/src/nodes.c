@@ -638,3 +638,4 @@ union node *codec_decode(char *buffer, size_t length)
 	decodenode(&node);
 	return node;
 }
+

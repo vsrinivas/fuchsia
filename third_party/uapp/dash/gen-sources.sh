@@ -33,7 +33,7 @@ gcc mksyntax.c -o mksyntax
 DASH_CFILES="alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
   input.c jobs.c main.c memalloc.c miscbltin.c \
   mystring.c options.c parser.c redir.c show.c trap.c output.c \
-  bltin/printf.c system.c bltin/test.c bltin/times.c var.c"
+  bltin/printf.c system.c tab.c bltin/test.c bltin/times.c var.c"
 
 ./mkinit $DASH_CFILES
 ./mknodes nodetypes nodes.c.pat

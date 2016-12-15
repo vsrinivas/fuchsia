@@ -40,6 +40,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/signames.c \
     $(LOCAL_DIR)/src/syntax.c \
     $(LOCAL_DIR)/src/system.c \
+    $(LOCAL_DIR)/src/tab.c \
     $(LOCAL_DIR)/src/trap.c \
     $(LOCAL_DIR)/src/var.c \
 
