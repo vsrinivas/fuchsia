@@ -18,6 +18,7 @@ fidl("suggestion") {
 
   deps = [
     "//apps/modular/services/user",
+    "//apps/modular/services/document_store",
   ]
 }
 
