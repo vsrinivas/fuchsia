@@ -11,6 +11,7 @@
 #include <magenta/errors.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
+#include <dev/pcie_ref_counted.h>
 #include <dev/pcie_upstream_node.h>
 
 #include <region-alloc/region-alloc.h>
@@ -29,6 +30,9 @@ public:
     // Disallow copying, assigning and moving.
     DISALLOW_COPY_ASSIGN_AND_MOVE(PcieBridge);
 
+    // Implement ref counting, do not let derived classes override.
+    PCIE_IMPLEMENT_REFCOUNTED;
+
     // Device overrides
     void Unplug() override;
 
@@ -39,10 +43,6 @@ public:
 
     // Properties
     PcieBusDriver& driver() { return PcieDevice::driver(); }
-
-    // RefCounting dismbiguation... see comment in PcieUpstreamNode
-    void AddRef() { PcieDevice::AddRef(); }
-    bool Release() __WARN_UNUSED_RESULT { return PcieDevice::Release(); }
 
     uint64_t pf_mem_base()        const { return pf_mem_base_; }
     uint64_t pf_mem_limit()       const { return pf_mem_limit_; }

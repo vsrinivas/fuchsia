@@ -36,24 +36,6 @@ PcieUpstreamNode::~PcieUpstreamNode() {
 #endif
 }
 
-void PcieUpstreamNode::AddRef() {
-    DEBUG_ASSERT((type_ == PcieUpstreamNode::Type::BRIDGE) ||
-                 (type_ == PcieUpstreamNode::Type::ROOT));
-
-    if (type_ == PcieUpstreamNode::Type::BRIDGE)
-        static_cast<PcieBridge*>(this)->AddRef();
-    else
-        static_cast<PcieRoot*>(this)->AddRef();
-}
-
-bool PcieUpstreamNode::Release() {
-    DEBUG_ASSERT((type_ == PcieUpstreamNode::Type::BRIDGE) ||
-                 (type_ == PcieUpstreamNode::Type::ROOT));
-    return (type_ == PcieUpstreamNode::Type::BRIDGE)
-        ? static_cast<PcieBridge*>(this)->Release()
-        : static_cast<PcieRoot*>(this)->Release();
-}
-
 void PcieUpstreamNode::AllocateDownstreamBars() {
     /* Finally, allocate all of the BARs for our downstream devices.  Make sure
      * to not access our downstream devices directly.  Instead, hold references

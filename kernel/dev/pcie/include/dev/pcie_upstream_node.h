@@ -9,6 +9,7 @@
 
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
+#include <dev/pcie_ref_counted.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
@@ -30,6 +31,9 @@ public:
     // Disallow copying, assigning and moving.
     DISALLOW_COPY_ASSIGN_AND_MOVE(PcieUpstreamNode);
 
+    // Require that derived classes implement ref counting.
+    PCIE_REQUIRE_REFCOUNTED;
+
     mxtl::RefPtr<PcieDevice> GetDownstream(uint ndx) { return bus_drv_.GetDownstream(*this, ndx); }
     PcieBusDriver& driver() { return bus_drv_; }
 
@@ -39,26 +43,6 @@ public:
     virtual RegionAllocator& mmio_lo_regions() = 0;
     virtual RegionAllocator& mmio_hi_regions() = 0;
     virtual RegionAllocator& pio_regions() = 0;
-
-    // Explicit implementation of AddRef and Release.
-    //
-    // We want to be able to hold RefPtrs to PcieUpstreamNodes, so normally we
-    // would just derive from mxtl::RefCounted<>.  Unfortunately, PcieBridges
-    // are both PcieUpstreamNodes as well as PcieDevices, and PcieDevices are
-    // already RefCounted.  One could solve this problem with virtual
-    // inheritance, but one runs the risk of being murdered by one's colleagues
-    // if one were to try such a thing.
-    //
-    // Instead of getting murdered, we ensure that all of the derived classes of
-    // UpstreamNode (Bridge/Device and Root) inherit from RefCounted, and then
-    // have explicit implementations of AddRef/Release which use type to perform
-    // a safe downcast to our derived class and then call their AddRef/Release
-    // implementation.  There is a minor performance penalty for this, but since
-    // external users deal almost exclusively with PcieDevices and nothing else,
-    // it is not really on the critical path.  Plus, it is much better than
-    // getting murdered.
-    void AddRef();
-    bool Release() __WARN_UNUSED_RESULT;
 
 protected:
     friend class PcieBusDriver;

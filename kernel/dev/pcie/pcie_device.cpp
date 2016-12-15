@@ -27,6 +27,47 @@
 
 #define LOCAL_TRACE 0
 
+namespace {  // anon namespace.  Externals do not need to know about PcieDeviceImpl
+class PcieDeviceImpl : public PcieDevice {
+public:
+    static mxtl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);
+
+    // Disallow copying, assigning and moving.
+    DISALLOW_COPY_ASSIGN_AND_MOVE(PcieDeviceImpl);
+
+    // Implement ref counting, do not let derived classes override.
+    PCIE_IMPLEMENT_REFCOUNTED;
+
+protected:
+    PcieDeviceImpl(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint func_id)
+        : PcieDevice(bus_drv, bus_id, dev_id, func_id, false) { }
+};
+
+mxtl::RefPtr<PcieDevice> PcieDeviceImpl::Create(PcieUpstreamNode& upstream,
+                                                uint dev_id, uint func_id) {
+    AllocChecker ac;
+    auto raw_dev = new (&ac) PcieDeviceImpl(upstream.driver(),
+                                            upstream.managed_bus_id(),
+                                            dev_id,
+                                            func_id);
+    if (!ac.check()) {
+        TRACEF("Out of memory attemping to create PCIe device %02x:%02x.%01x.\n",
+                upstream.managed_bus_id(), dev_id, func_id);
+        return nullptr;
+    }
+
+    auto dev = mxtl::AdoptRef(static_cast<PcieDevice*>(raw_dev));
+    status_t res = raw_dev->Init(upstream);
+    if (res != NO_ERROR) {
+        TRACEF("Failed to initialize PCIe device %02x:%02x.%01x. (res %d)\n",
+                upstream.managed_bus_id(), dev_id, func_id, res);
+        return nullptr;
+    }
+
+    return dev;
+}
+}  // namespace
+
 PcieDevice::PcieDevice(PcieBusDriver& bus_drv,
                        uint bus_id, uint dev_id, uint func_id, bool is_bridge)
     : bus_drv_(bus_drv),
@@ -57,25 +98,7 @@ PcieDevice::~PcieDevice() {
 }
 
 mxtl::RefPtr<PcieDevice> PcieDevice::Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id) {
-    AllocChecker ac;
-    auto raw_dev = new (&ac) PcieDevice(upstream.driver(),
-                                        upstream.managed_bus_id(), dev_id, func_id);
-    if (!ac.check()) {
-        DEBUG_ASSERT(raw_dev == nullptr);
-        TRACEF("Out of memory attemping to create PCIe device %02x:%02x.%01x.\n",
-                upstream.managed_bus_id(), dev_id, func_id);
-        return nullptr;
-    }
-
-    auto dev = mxtl::AdoptRef(raw_dev);
-    status_t res = dev->Init(upstream);
-    if (res != NO_ERROR) {
-        TRACEF("Failed to initialize PCIe device %02x:%02x.%01x. (res %d)\n",
-                upstream.managed_bus_id(), dev_id, func_id, res);
-        return nullptr;
-    }
-
-    return dev;
+    return PcieDeviceImpl::Create(upstream, dev_id, func_id);
 }
 
 status_t PcieDevice::Init(PcieUpstreamNode& upstream) {

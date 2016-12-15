@@ -15,11 +15,11 @@
 #include <dev/pcie_caps.h>
 #include <dev/pcie_constants.h>
 #include <dev/pcie_irqs.h>
+#include <dev/pcie_ref_counted.h>
 #include <dev/pcie_regs.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <mxtl/macros.h>
-#include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
 
@@ -42,19 +42,23 @@ struct pcie_bar_info_t {
 };
 
 /*
- * Struct used to manage the relationship between a PCIe device/function and its
+ * Base used to manage the relationship between a PCIe device/function and its
  * associated driver.  During a bus scan/probe operation, all drivers will have
  * their registered probe methods called until a driver claims a device.  A
  * driver may claim a device by returning a pointer to a driver-managed
  * pcie_device_state struct, with the driver owned fields filled out.
  */
-class PcieDevice : public mxtl::RefCounted<PcieDevice> {
+class PcieDevice {
 public:
     static mxtl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);
+
     virtual ~PcieDevice();
 
     // Disallow copying, assigning and moving.
     DISALLOW_COPY_ASSIGN_AND_MOVE(PcieDevice);
+
+    // Require that derived classes implement ref counting.
+    PCIE_REQUIRE_REFCOUNTED;
 
     mxtl::RefPtr<PcieUpstreamNode> GetUpstream();
 
@@ -312,8 +316,7 @@ public:
 protected:
     friend class PcieUpstreamNode;
     friend class PcieBusDriver;  // TODO(johngro): remove this.  Currently used for IRQ swizzle.
-    PcieDevice(PcieBusDriver& bus_drv,
-               uint bus_id, uint dev_id, uint func_id, bool is_bridge = false);
+    PcieDevice(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint func_id, bool is_bridge);
 
     void ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits);
     void AssignCmdLocked(uint16_t value) { ModifyCmdLocked(0xFFFF, value); }
