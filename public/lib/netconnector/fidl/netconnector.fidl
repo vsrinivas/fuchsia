@@ -1,0 +1,39 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module netconnector;
+
+// Primary netconnector service definition.
+[ServiceName="netconnector::NetConnector"]
+interface NetConnector {
+  // Sets the name for the local device. This method is typically only called
+  // by the |netconnector| app when it's used as a utility.
+  SetHostName(string host_name);
+
+  // Registers a responder. |responder_name| identifies the responder and is
+  // the same name used in |RequestConnection|. |service_name| is the name
+  // that will be passed to |ConnectToEnvironmentService| to connect to the
+  // responder. This method is typically only called by the |netconnector| app
+  // when it's used as a utility. In most cases, responders will be registered
+  // using |netconnector|'s config file.
+  RegisterResponder(string responder_name, string service_name);
+
+  // Registers a device. |device_name| identifies the device and is the same
+  // name used in |RequestConnection|. |address| is the IP address of the
+  // device. This method is typically only called by the |netconnector| app
+  // when it's used as a utility. In most cases, devices will be discovered
+  // using mDNS or will be registered using |netconnector|'s config file.
+  RegisterDevice(string device_name, string address);
+
+  // Requests the specified responder on the specified device.
+  RequestConnection(string device_name,
+                    string responder_name,
+                    handle<channel> channel);
+};
+
+// Callback interface exposed by responders
+interface Responder {
+  // Notifies the responder that a connection is requested.
+  ConnectionRequested(string responder_name, handle<channel> channel);
+};
