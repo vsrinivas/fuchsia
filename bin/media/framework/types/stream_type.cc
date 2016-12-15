@@ -95,7 +95,7 @@ std::unique_ptr<StreamTypeSet> StreamTypeSet::Clone() const {
   return Create(medium(), encodings());
 }
 
-bool StreamTypeSet::IncludesEncoding(const std::string encoding) {
+bool StreamTypeSet::IncludesEncoding(const std::string& encoding) const {
   for (const std::string set_encoding : encodings_) {
     if (set_encoding == encoding) {
       return true;
@@ -103,6 +103,10 @@ bool StreamTypeSet::IncludesEncoding(const std::string encoding) {
   }
 
   return false;
+}
+
+bool StreamTypeSet::Includes(const StreamType& type) const {
+  return medium_ == type.medium() && IncludesEncoding(type.encoding());
 }
 
 }  // namespace media

@@ -105,9 +105,9 @@ class AudioStreamTypeSet : public StreamTypeSet {
 
   Range<uint32_t> frames_per_second() const { return frames_per_second_; }
 
-  bool contains(const AudioStreamType& type) const;
-
   std::unique_ptr<StreamTypeSet> Clone() const override;
+
+  bool Includes(const StreamType& type) const override;
 
  private:
   AudioStreamType::SampleFormat sample_format_;

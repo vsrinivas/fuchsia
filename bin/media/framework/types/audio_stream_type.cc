@@ -75,15 +75,21 @@ const AudioStreamTypeSet* AudioStreamTypeSet::audio() const {
   return this;
 }
 
-bool AudioStreamTypeSet::contains(const AudioStreamType& type) const {
-  return (sample_format() == type.sample_format() ||
-          sample_format() == AudioStreamType::SampleFormat::kAny) &&
-         channels().contains(type.frames_per_second()) &&
-         frames_per_second().contains(type.frames_per_second());
-}
-
 std::unique_ptr<StreamTypeSet> AudioStreamTypeSet::Clone() const {
   return Create(encodings(), sample_format(), channels(), frames_per_second());
+}
+
+bool AudioStreamTypeSet::Includes(const StreamType& type) const {
+  if (!StreamTypeSet::Includes(type)) {
+    return false;
+  }
+
+  FTL_DCHECK(type.audio() != nullptr);
+
+  return (sample_format() == type.audio()->sample_format() ||
+          sample_format() == AudioStreamType::SampleFormat::kAny) &&
+         channels().contains(type.audio()->frames_per_second()) &&
+         frames_per_second().contains(type.audio()->frames_per_second());
 }
 
 }  // namespace media

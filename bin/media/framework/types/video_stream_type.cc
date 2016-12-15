@@ -190,4 +190,15 @@ std::unique_ptr<StreamTypeSet> VideoStreamTypeSet::Clone() const {
   return Create(encodings(), width(), height());
 }
 
+bool VideoStreamTypeSet::Includes(const StreamType& type) const {
+  if (!StreamTypeSet::Includes(type)) {
+    return false;
+  }
+
+  FTL_DCHECK(type.video() != nullptr);
+
+  return width().contains(type.video()->width()) &&
+         height().contains(type.video()->height());
+}
+
 }  // namespace media

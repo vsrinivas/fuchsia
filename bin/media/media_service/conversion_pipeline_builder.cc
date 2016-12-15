@@ -107,7 +107,7 @@ AddResult AddTransformsForCompressedAudio(
   // See if we have a matching audio type.
   for (const std::unique_ptr<StreamTypeSet>& out_type_set : out_type_sets) {
     if (out_type_set->medium() == StreamType::Medium::kAudio) {
-      if (out_type_set->audio()->contains(in_type)) {
+      if (out_type_set->audio()->Includes(in_type)) {
         // No transform needed.
         *out_type = in_type.Clone();
         return AddResult::kFinished;

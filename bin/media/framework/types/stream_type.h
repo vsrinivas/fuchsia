@@ -122,7 +122,9 @@ class StreamTypeSet {
 
   virtual std::unique_ptr<StreamTypeSet> Clone() const;
 
-  bool IncludesEncoding(const std::string encoding);
+  bool IncludesEncoding(const std::string& encoding) const;
+
+  virtual bool Includes(const StreamType& type) const;
 
  private:
   StreamType::Medium medium_;

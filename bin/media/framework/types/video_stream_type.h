@@ -308,6 +308,8 @@ class VideoStreamTypeSet : public StreamTypeSet {
 
   std::unique_ptr<StreamTypeSet> Clone() const override;
 
+  bool Includes(const StreamType& type) const override;
+
  private:
   Range<uint32_t> width_;
   Range<uint32_t> height_;
