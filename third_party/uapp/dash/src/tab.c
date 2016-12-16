@@ -182,6 +182,13 @@ void tab_complete(const char* line, linenoiseCompletions* completions) {
         completion_state.line_separator = "/";
         completion_state.file_prefix = file_prefix + 1;
         paths = partial_paths;
+
+        // If the partial path is empty, it means we were given
+        // something like "/foo". We should therefore set the path to
+        // search to "/".
+        if (strlen(paths[0]) == 0) {
+            paths[0] = "/";
+        }
     }
 
     for (; *paths != NULL; paths++) {
