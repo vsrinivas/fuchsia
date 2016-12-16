@@ -310,14 +310,16 @@ extern mx_status_t mx_process_create(
     const char name[],
     uint32_t name_len,
     uint32_t options,
-    mx_handle_t out[1]);
+    mx_handle_t proc_handle[1],
+    mx_handle_t vmar_handle[1]);
 
 extern mx_status_t _mx_process_create(
     mx_handle_t job,
     const char name[],
     uint32_t name_len,
     uint32_t options,
-    mx_handle_t out[1]);
+    mx_handle_t proc_handle[1],
+    mx_handle_t vmar_handle[1]);
 
 extern mx_status_t mx_process_start(
     mx_handle_t process_handle,
@@ -334,44 +336,6 @@ extern mx_status_t _mx_process_start(
     uintptr_t stack,
     mx_handle_t arg_handle,
     uintptr_t arg2);
-
-extern mx_status_t mx_process_map_vm(
-    mx_handle_t proc_handle,
-    mx_handle_t vmo_handle,
-    uint64_t offset,
-    size_t len,
-    uintptr_t ptr[1],
-    uint32_t options);
-
-extern mx_status_t _mx_process_map_vm(
-    mx_handle_t proc_handle,
-    mx_handle_t vmo_handle,
-    uint64_t offset,
-    size_t len,
-    uintptr_t ptr[1],
-    uint32_t options);
-
-extern mx_status_t mx_process_unmap_vm(
-    mx_handle_t proc_handle,
-    uintptr_t address,
-    size_t len);
-
-extern mx_status_t _mx_process_unmap_vm(
-    mx_handle_t proc_handle,
-    uintptr_t address,
-    size_t len);
-
-extern mx_status_t mx_process_protect_vm(
-    mx_handle_t proc_handle,
-    uintptr_t address,
-    size_t len,
-    uint32_t prot);
-
-extern mx_status_t _mx_process_protect_vm(
-    mx_handle_t proc_handle,
-    uintptr_t address,
-    size_t len,
-    uint32_t prot);
 
 extern mx_status_t mx_process_read_memory(
     mx_handle_t proc,
@@ -816,14 +780,14 @@ extern mx_status_t mx_mmap_device_memory(
     mx_paddr_t paddr,
     uint32_t len,
     mx_cache_policy_t cache_policy,
-    void* out_vaddr);
+    uintptr_t out_vaddr[1]);
 
 extern mx_status_t _mx_mmap_device_memory(
     mx_handle_t handle,
     mx_paddr_t paddr,
     uint32_t len,
     mx_cache_policy_t cache_policy,
-    void* out_vaddr);
+    uintptr_t out_vaddr[1]);
 
 extern mx_status_t mx_io_mapping_get_info(
     mx_handle_t handle,
@@ -844,6 +808,68 @@ extern mx_status_t _mx_vmo_create_contiguous(
     mx_handle_t rsrc_handle,
     size_t size,
     mx_handle_t out[1]);
+
+extern mx_status_t mx_vmar_allocate(
+    mx_handle_t parent_vmar_handle,
+    size_t offset,
+    size_t size,
+    uint32_t flags,
+    mx_handle_t child_vmar[1],
+    uintptr_t child_addr[1]);
+
+extern mx_status_t _mx_vmar_allocate(
+    mx_handle_t parent_vmar_handle,
+    size_t offset,
+    size_t size,
+    uint32_t flags,
+    mx_handle_t child_vmar[1],
+    uintptr_t child_addr[1]);
+
+extern mx_status_t mx_vmar_destroy(
+    mx_handle_t vmar_handle);
+
+extern mx_status_t _mx_vmar_destroy(
+    mx_handle_t vmar_handle);
+
+extern mx_status_t mx_vmar_map(
+    mx_handle_t vmar_handle,
+    size_t vmar_offset,
+    mx_handle_t vmo_handle,
+    uint64_t vmo_offset,
+    size_t len,
+    uint32_t flags,
+    uintptr_t mapped_addr[1]);
+
+extern mx_status_t _mx_vmar_map(
+    mx_handle_t vmar_handle,
+    size_t vmar_offset,
+    mx_handle_t vmo_handle,
+    uint64_t vmo_offset,
+    size_t len,
+    uint32_t flags,
+    uintptr_t mapped_addr[1]);
+
+extern mx_status_t mx_vmar_unmap(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len);
+
+extern mx_status_t _mx_vmar_unmap(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len);
+
+extern mx_status_t mx_vmar_protect(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len,
+    uint32_t prot);
+
+extern mx_status_t _mx_vmar_protect(
+    mx_handle_t vmar_handle,
+    uintptr_t addr,
+    size_t len,
+    uint32_t prot);
 
 extern mx_status_t mx_bootloader_fb_get_info(
     uint32_t format[1],

@@ -1691,7 +1691,7 @@ static mx_status_t usb_dwc_bind(mx_driver_t* drv, mx_device_t* dev) {
     // Carve out some address space for this device.
     st = mx_mmap_device_memory(
         get_root_resource(), USB_PAGE_START, (uint32_t)USB_PAGE_SIZE,
-        MX_CACHE_POLICY_UNCACHED_DEVICE, (void*)(&regs));
+        MX_CACHE_POLICY_UNCACHED_DEVICE, (uintptr_t*)(&regs));
     if (st != NO_ERROR) {
         xprintf("usb_dwc_bind failed to mx_mmap_device_memory.\n");
         goto error_return;

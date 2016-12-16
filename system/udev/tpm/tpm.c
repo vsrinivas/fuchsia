@@ -138,13 +138,15 @@ static mx_protocol_device_t tpm_device_proto __UNUSED = {
 
 mx_status_t tpm_init(mx_driver_t* driver) {
 #if defined(__x86_64__) || defined(__i386__)
+    uintptr_t tmp;
     mx_status_t status = mx_mmap_device_memory(
             get_root_resource(),
             TPM_PHYS_ADDRESS, TPM_PHYS_LENGTH,
-            MX_CACHE_POLICY_UNCACHED, &tpm_base);
+            MX_CACHE_POLICY_UNCACHED, &tmp);
     if (status != NO_ERROR) {
         return status;
     }
+    tpm_base = (void*)(tmp);
 
     mx_device_t* dev;
     status = device_create(&dev, driver, "tpm", &tpm_device_proto);

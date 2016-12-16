@@ -91,7 +91,7 @@ mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
 
 mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t len,
                                    mx_cache_policy_t cache_policy,
-                                   user_ptr<void*> out_vaddr) {
+                                   user_ptr<uintptr_t> out_vaddr) {
 
     LTRACEF("addr %#" PRIxPTR " len %#x\n", paddr, len);
 
@@ -148,7 +148,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
         return status;
     }
 
-    if (out_vaddr.copy_to_user(reinterpret_cast<void*>(mapping->base())) != NO_ERROR) {
+    if (out_vaddr.copy_to_user(reinterpret_cast<uintptr_t>(mapping->base())) != NO_ERROR) {
         mapping->Unmap();
         return ERR_INVALID_ARGS;
     }

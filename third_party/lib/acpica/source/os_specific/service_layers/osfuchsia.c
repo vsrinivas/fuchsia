@@ -245,7 +245,7 @@ void *AcpiOsMapMemory(
     ACPI_PHYSICAL_ADDRESS aligned_address = PhysicalAddress & ~(PAGE_SIZE - 1);
     ACPI_PHYSICAL_ADDRESS end = (PhysicalAddress + Length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
-    void* vaddr = NULL;
+    uintptr_t vaddr;
     // TODO(teisenbe): Replace this with a VMO-based system
     mx_status_t status = mx_mmap_device_memory(root_resource_handle,
                                                aligned_address, end - aligned_address,
@@ -253,7 +253,8 @@ void *AcpiOsMapMemory(
     if (status != NO_ERROR) {
         return NULL;
     }
-    return vaddr + (PhysicalAddress - aligned_address);
+
+    return (void*)(vaddr + (PhysicalAddress - aligned_address));
 }
 
 /**

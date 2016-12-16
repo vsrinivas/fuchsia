@@ -183,15 +183,15 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
 
         txn->ops->copyfrom(txn, &bcm_vc_framebuffer, sizeof(bcm_fb_desc_t), offset);
 
-        void* page_base;
+        uintptr_t page_base;
 
         // map framebuffer into userspace
         mx_mmap_device_memory(
             get_root_resource(),
             bcm_vc_framebuffer.fb_p & 0x3fffffff, bcm_vc_framebuffer.fb_size,
             MX_CACHE_POLICY_UNCACHED_DEVICE, &page_base);
-        memset(page_base, 0x00, bcm_vc_framebuffer.fb_size);
         vc_framebuffer = (uint8_t*)page_base;
+        memset(vc_framebuffer, 0x00, bcm_vc_framebuffer.fb_size);
 
         txn->ops->release(txn);
     }
@@ -328,7 +328,7 @@ static mx_protocol_device_t mailbox_device_proto = {
 static mx_protocol_device_t vc_device_proto = {};
 
 mx_status_t mailbox_bind(mx_driver_t* driver, mx_device_t* parent) {
-    void* page_base;
+    uintptr_t page_base;
 
     // Carve out some address space for the device -- it's memory mapped.
     mx_status_t status = mx_mmap_device_memory(
