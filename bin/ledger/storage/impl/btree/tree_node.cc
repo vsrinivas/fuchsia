@@ -101,11 +101,11 @@ TreeNode::Mutation TreeNode::StartMutation() const {
   return TreeNode::Mutation(*this);
 }
 
-Status TreeNode::Split(int index,
-                       ObjectIdView left_rightmost_child,
-                       ObjectIdView right_leftmost_child,
-                       ObjectId* left,
-                       ObjectId* right) const {
+void TreeNode::Split(
+    int index,
+    ObjectIdView left_rightmost_child,
+    ObjectIdView right_leftmost_child,
+    std::function<void(Status, ObjectId, ObjectId)> on_done) const {
   FTL_DCHECK(index >= 0 && index < GetKeyCount());
   // Left node
   std::vector<Entry> entries;
@@ -118,7 +118,8 @@ Status TreeNode::Split(int index,
   ObjectId left_id;
   Status s = FromEntries(page_storage_, entries, children, &left_id);
   if (s != Status::OK) {
-    return s;
+    on_done(s, "", "");
+    return;
   }
 
   entries.clear();
@@ -134,12 +135,11 @@ Status TreeNode::Split(int index,
   if (s != Status::OK) {
     // TODO(nellyv): If this fails, remove the left  object from the object
     // page_storage.
-    return s;
+    on_done(s, "", "");
+    return;
   }
 
-  left->swap(left_id);
-  right->swap(right_id);
-  return Status::OK;
+  on_done(Status::OK, left_id, right_id);
 }
 
 int TreeNode::GetKeyCount() const {

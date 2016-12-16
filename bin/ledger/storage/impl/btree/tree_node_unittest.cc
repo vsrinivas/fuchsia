@@ -131,7 +131,11 @@ TEST_F(TreeNodeTest, SplitMerge) {
   Status status;
   ObjectId left_id;
   ObjectId right_id;
-  EXPECT_EQ(Status::OK, node->Split(split_index, "", "", &left_id, &right_id));
+  node->Split(split_index, "", "",
+              ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                              &left_id, &right_id));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
 
   std::unique_ptr<const TreeNode> left_node = FromId(left_id);
   EXPECT_EQ(split_index, left_node->GetKeyCount());

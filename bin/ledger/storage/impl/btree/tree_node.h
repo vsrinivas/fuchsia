@@ -139,17 +139,17 @@ class TreeNode {
   // Starts a new mutation based on this node. See also |TreeNode::Mutation|.
   Mutation StartMutation() const;
 
-  // Creates two new tree nodes by splitting this one. The |left| one will store
-  // entries in [0, index) and the |right| one those in [index, GetKeyCount()).
+  // Creates two new tree nodes by splitting this one. The left one will store
+  // entries in [0, index) and the right one those in [index, GetKeyCount()).
   // The rightmost child of |left| will be set to |left_rightmost_child| and the
   // leftmost child of |right| will be set to |right_leftmost_child|. Both
   // |left_rightmost_child| and |right_leftmost_child| can be empty, if there is
-  // no child in the given position.
-  Status Split(int index,
-               ObjectIdView left_rightmost_child,
-               ObjectIdView right_leftmost_child,
-               ObjectId* left,
-               ObjectId* right) const;
+  // no child in the given position. |on_done| will be called with the status
+  // and if successfull with the ids of new left and right nodes.
+  void Split(int index,
+             ObjectIdView left_rightmost_child,
+             ObjectIdView right_leftmost_child,
+             std::function<void(Status, ObjectId, ObjectId)> on_done) const;
 
   // Returns the number of entries stored in this tree node.
   int GetKeyCount() const;
