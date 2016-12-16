@@ -171,8 +171,9 @@ class Process final {
   void OnException(const mx_excp_type_t type,
                    const mx_exception_context_t& context);
 
+  // Release all resources held by the process.
   // Called after all other processing of a process exit has been done.
-  void FinishExit();
+  void Clear();
 
   // Build list of loaded dsos.
   // |thread| is the thread we stopped in.

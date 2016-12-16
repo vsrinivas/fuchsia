@@ -158,19 +158,9 @@ Process::Process(Server* server, Delegate* delegate, const vector<string>& argv)
 }
 
 Process::~Process() {
-  if (IsAttached())
-    Detach();
-
-  if (launchpad_)
-    launchpad_destroy(launchpad_);
-
-  if (debug_handle_ != MX_HANDLE_INVALID)
-    mx_handle_close(debug_handle_);
-
-  dso_free_list(dsos_);
+  Clear();
 
   // TODO(armanisto): Somehow kill the process here if it's running.
-  // launchpad_destroy doesn't seem to do this.
 }
 
 std::string Process::GetName() const {
@@ -341,19 +331,30 @@ void Process::set_state(State new_state) {
   state_ = new_state;
 }
 
-void Process::FinishExit() {
-  Detach();
+void Process::Clear() {
+  if (IsAttached())
+    Detach();
+
   threads_.clear();
 
   // We close the handle here so the o/s will release the process.
-  mx_handle_close(debug_handle_);
+  if (debug_handle_ != MX_HANDLE_INVALID)
+    mx_handle_close(debug_handle_);
   debug_handle_ = MX_HANDLE_INVALID;
+
   id_ = MX_KOID_INVALID;
   base_address_ = 0;
   entry_address_ = 0;
   started_ = false;
 
-  // Leave the state as kGone.
+  dso_free_list(dsos_);
+  dsos_ = nullptr;
+
+  if (launchpad_)
+    launchpad_destroy(launchpad_);
+  launchpad_ = nullptr;
+
+  // If the process just exited, leave the state as kGone.
 }
 
 bool Process::IsAttached() const {
@@ -553,13 +554,13 @@ void Process::OnException(const mx_excp_type_t type,
         thread->set_state(Thread::State::kGone);
         // TODO: Split up OnProcessOrThreadExited into process/thread.
         delegate_->OnProcessOrThreadExited(this, thread, type, context);
-        thread->FinishExit();
+        thread->Clear();
       } else {
         FTL_VLOG(1) << "Received MX_EXCP_GONE exception for process "
                     << GetName();
         set_state(Process::State::kGone);
         delegate_->OnProcessOrThreadExited(this, thread, type, context);
-        FinishExit();
+        Clear();
       }
       break;
     default:

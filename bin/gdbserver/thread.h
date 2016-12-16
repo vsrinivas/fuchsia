@@ -79,8 +79,9 @@ class Thread final {
   // Called by Process to set the state of its threads.
   void set_state(State state);
 
+  // Release all resources held by the thread.
   // Called after all other processing of a thread exit has been done.
-  void FinishExit();
+  void Clear();
 
   // The owning process.
   Process* process_;  // weak

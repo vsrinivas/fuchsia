@@ -53,9 +53,8 @@ Thread::Thread(Process* process, mx_handle_t debug_handle, mx_koid_t id)
 
 Thread::~Thread() {
   FTL_VLOG(2) << "Destructing thread " << GetDebugName();
-  // We don't use the mx classes so we must manually close this handle.
-  if (debug_handle_ != MX_HANDLE_INVALID)
-    mx_handle_close(debug_handle_);
+
+  Clear();
 }
 
 std::string Thread::GetName() const {
@@ -72,7 +71,7 @@ void Thread::set_state(State state) {
   state_ = state;
 }
 
-void Thread::FinishExit() {
+void Thread::Clear() {
   // We close the handle here so the o/s will release the thread.
   if (debug_handle_ != MX_HANDLE_INVALID)
     mx_handle_close(debug_handle_);
