@@ -19,6 +19,17 @@ source_set("bottleneck") {
   ]
 }
 
+source_set("operation") {
+  sources = [
+    "operation.h",
+    "operation.cc",
+  ]
+
+  deps = [
+    "//lib/ftl",
+  ]
+}
+
 source_set("scope") {
   sources = [
     "scope.h",

@@ -10,8 +10,8 @@
 #include <unordered_map>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/services/story/story_storage.fidl.h"
-#include "apps/modular/src/user_runner/transaction.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"
@@ -60,7 +60,7 @@ class StoryStorageImpl : public StoryStorage, public ledger::PageWatcher {
   const std::string key_;
   std::shared_ptr<Storage> storage_;
   ledger::PagePtr story_page_;
-  TransactionContainer transaction_container_;
+  OperationContainer operation_container_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };

@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
@@ -17,7 +18,6 @@
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
-#include "apps/modular/src/user_runner/transaction.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -149,7 +149,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   ServiceProviderPtr resolver_services_;
 
   std::unordered_set<std::string> story_ids_;
-  TransactionContainer transaction_container_;
+  OperationContainer operation_container_;
   std::shared_ptr<Storage> storage_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 

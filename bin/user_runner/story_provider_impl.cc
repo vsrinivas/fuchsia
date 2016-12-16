@@ -65,15 +65,15 @@ std::string MakeStoryId(std::unordered_set<std::string>* story_ids,
 // checking was useful in debugging ledger, so I let the nesting in
 // place for now.
 
-class GetStoryDataCall : public Transaction {
+class GetStoryDataCall : public Operation {
  public:
   using Result = std::function<void(StoryDataPtr)>;
 
-  GetStoryDataCall(TransactionContainer* const container,
+  GetStoryDataCall(OperationContainer* const container,
                    ledger::Ledger* const ledger,
                    const fidl::String& story_id,
                    Result result)
-      : Transaction(container),
+      : Operation(container),
         ledger_(ledger),
         story_id_(story_id),
         result_(result) {
@@ -131,15 +131,15 @@ class GetStoryDataCall : public Transaction {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetStoryDataCall);
 };
 
-class WriteStoryDataCall : public Transaction {
+class WriteStoryDataCall : public Operation {
  public:
   using Result = std::function<void()>;
 
-  WriteStoryDataCall(TransactionContainer* const container,
+  WriteStoryDataCall(OperationContainer* const container,
                      ledger::Ledger* const ledger,
                      StoryDataPtr story_data,
                      Result result)
-      : Transaction(container),
+      : Operation(container),
         ledger_(ledger),
         story_data_(std::move(story_data)),
         result_(result) {
@@ -184,13 +184,13 @@ class WriteStoryDataCall : public Transaction {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteStoryDataCall);
 };
 
-class CreateStoryCall : public Transaction {
+class CreateStoryCall : public Operation {
  public:
   using FidlStringMap = StoryProviderImpl::FidlStringMap;
   using FidlDocMap = StoryProviderImpl::FidlDocMap;
   using Result = std::function<void(fidl::String)>;
 
-  CreateStoryCall(TransactionContainer* const container,
+  CreateStoryCall(OperationContainer* const container,
                   ledger::Ledger* const ledger,
                   StoryProviderImpl* const story_provider_impl,
                   const fidl::String& url,
@@ -198,7 +198,7 @@ class CreateStoryCall : public Transaction {
                   FidlStringMap extra_info,
                   FidlDocMap root_docs,
                   Result result)
-      : Transaction(container),
+      : Operation(container),
         ledger_(ledger),
         story_provider_impl_(story_provider_impl),
         url_(url),
@@ -256,15 +256,15 @@ class CreateStoryCall : public Transaction {
   FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
 
-class DeleteStoryCall : public Transaction {
+class DeleteStoryCall : public Operation {
  public:
   using Result = StoryProviderImpl::DeleteStoryCallback;
 
-  DeleteStoryCall(TransactionContainer* const container,
+  DeleteStoryCall(OperationContainer* const container,
                   ledger::Ledger* const ledger,
                   const fidl::String& story_id,
                   Result result)
-      : Transaction(container),
+      : Operation(container),
         ledger_(ledger),
         story_id_(story_id),
         result_(result) {
@@ -298,13 +298,13 @@ class DeleteStoryCall : public Transaction {
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
 };
 
-class GetControllerCall : public Transaction {
+class GetControllerCall : public Operation {
  public:
-  GetControllerCall(TransactionContainer* const container,
+  GetControllerCall(OperationContainer* const container,
                     ledger::Ledger* const ledger,
                     StoryProviderImpl* const story_provider_impl,
                     const fidl::String& story_id)
-      : Transaction(container),
+      : Operation(container),
         ledger_(ledger),
         story_provider_impl_(story_provider_impl),
         story_id_(story_id) {
@@ -344,14 +344,14 @@ class GetControllerCall : public Transaction {
   FTL_DISALLOW_COPY_AND_ASSIGN(GetControllerCall);
 };
 
-class PreviousStoriesCall : public Transaction {
+class PreviousStoriesCall : public Operation {
  public:
   using Result = StoryProviderImpl::PreviousStoriesCallback;
 
-  PreviousStoriesCall(TransactionContainer* const container,
+  PreviousStoriesCall(OperationContainer* const container,
                       ledger::Ledger* const ledger,
                       Result result)
-      : Transaction(container), ledger_(ledger), result_(result) {
+      : Operation(container), ledger_(ledger), result_(result) {
     // This resize() has the side effect of marking the array as
     // non-null. Do not remove it because the fidl declaration
     // of this return value does not allow nulls.
@@ -458,7 +458,7 @@ StoryProviderImpl::StoryProviderImpl(
   // story. Hence we bind the interface request only after this call
   // completes.
   new PreviousStoriesCall(
-      &transaction_container_, ledger_.get(), ftl::MakeCopyable([
+      &operation_container_, ledger_.get(), ftl::MakeCopyable([
         this, story_provider_request = std::move(story_provider_request)
       ](fidl::Array<fidl::String> stories) mutable {
         for (auto& story_id : stories) {
@@ -591,7 +591,7 @@ void StoryProviderImpl::GetStoryInfo(
     const fidl::String& story_id,
     const GetStoryInfoCallback& story_data_callback) {
   new GetStoryDataCall(
-      &transaction_container_, ledger_.get(), story_id,
+      &operation_container_, ledger_.get(), story_id,
       [this, story_data_callback](StoryDataPtr story_data) {
         story_data_callback(
             story_data.is_null() ? nullptr : std::move(story_data->story_info));
@@ -601,7 +601,7 @@ void StoryProviderImpl::GetStoryInfo(
 void StoryProviderImpl::GetStoryData(
     const fidl::String& story_id,
     const std::function<void(StoryDataPtr)>& result) {
-  new GetStoryDataCall(&transaction_container_, ledger_.get(), story_id,
+  new GetStoryDataCall(&operation_container_, ledger_.get(), story_id,
                        result);
 }
 
@@ -648,7 +648,7 @@ void StoryProviderImpl::ConnectToResolver(
 
 void StoryProviderImpl::WriteStoryData(StoryDataPtr story_data,
                                        std::function<void()> done) {
-  new WriteStoryDataCall(&transaction_container_, ledger_.get(),
+  new WriteStoryDataCall(&operation_container_, ledger_.get(),
                          std::move(story_data), done);
 }
 
@@ -670,7 +670,7 @@ void StoryProviderImpl::CreateStory(
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   PendControllerAdd(story_id);
   new CreateStoryCall(
-      &transaction_container_, ledger_.get(), this, url,
+      &operation_container_, ledger_.get(), this, url,
       story_id, FidlStringMap(), FidlDocMap(), callback);
 }
 
@@ -684,7 +684,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
   PendControllerAdd(story_id);
   FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_docs;
   new CreateStoryCall(
-      &transaction_container_, ledger_.get(), this, url,
+      &operation_container_, ledger_.get(), this, url,
       story_id, std::move(extra_info), std::move(root_docs), callback);
 }
 
@@ -698,7 +698,7 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
   if (i->second->deleted_callbacks.size() == 1) {
     // Delete the record. The story will be stopped in the PageWatcher
     // callback.
-    new DeleteStoryCall(&transaction_container_, ledger_.get(), story_id,
+    new DeleteStoryCall(&operation_container_, ledger_.get(), story_id,
                         [story_id] {
                           FTL_LOG(INFO) << "Deleted story " << story_id;
                           // This callback is for logging purposes. Flow of
@@ -744,7 +744,7 @@ void StoryProviderImpl::GetController(
   auto i = story_controllers_.find(story_id);
   if (i == story_controllers_.end()) {
     PendControllerAdd(story_id, std::move(story_controller_request));
-    new GetControllerCall(&transaction_container_, ledger_.get(), this,
+    new GetControllerCall(&operation_container_, ledger_.get(), this,
                           story_id);
 
   } else if (i->second->impl.get() != nullptr && !i->second->deleted) {
@@ -764,7 +764,7 @@ void StoryProviderImpl::GetController(
 // |StoryProvider|
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
-  new PreviousStoriesCall(&transaction_container_, ledger_.get(), callback);
+  new PreviousStoriesCall(&operation_container_, ledger_.get(), callback);
 }
 
 // |PageWatcher|

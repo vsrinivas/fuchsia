@@ -6,21 +6,21 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/src/user_runner/transaction.h"
+#include "apps/modular/lib/fidl/operation.h"
 
 namespace modular {
 
 namespace {
 
-class ReadLinkDataCall : public Transaction {
+class ReadLinkDataCall : public Operation {
  public:
   using Result = StoryStorageImpl::ReadLinkDataCallback;
 
-  ReadLinkDataCall(TransactionContainer* const container,
+  ReadLinkDataCall(OperationContainer* const container,
                    ledger::Page* const page,
                    const fidl::String& link_id,
                    Result result)
-      : Transaction(container),
+      : Operation(container),
         page_(page),
         link_id_(link_id),
         result_(result) {
@@ -50,16 +50,16 @@ class ReadLinkDataCall : public Transaction {
   FTL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
 
-class WriteLinkDataCall : public Transaction {
+class WriteLinkDataCall : public Operation {
  public:
   using Result = StoryStorageImpl::WriteLinkDataCallback;
 
-  WriteLinkDataCall(TransactionContainer* const container,
+  WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
                     const fidl::String& link_id,
                     LinkDataPtr data,
                     Result result)
-      : Transaction(container),
+      : Operation(container),
         page_(page),
         link_id_(link_id),
         data_(std::move(data)),
@@ -109,7 +109,7 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
                                     const ReadLinkDataCallback& cb) {
   if (story_page_.is_bound()) {
-    new ReadLinkDataCall(&transaction_container_, story_page_.get(), link_id,
+    new ReadLinkDataCall(&operation_container_, story_page_.get(), link_id,
                          cb);
 
   } else {
@@ -128,7 +128,7 @@ void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
                                      LinkDataPtr data,
                                      const WriteLinkDataCallback& cb) {
   if (story_page_.is_bound()) {
-    new WriteLinkDataCall(&transaction_container_, story_page_.get(), link_id,
+    new WriteLinkDataCall(&operation_container_, story_page_.get(), link_id,
                           std::move(data), cb);
 
   } else {
