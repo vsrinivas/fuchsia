@@ -46,6 +46,8 @@ mx_status_t MappedSharedBuffer::InitFromVmo(mx::vmo vmo, uint32_t map_flags) {
 }
 
 mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo, uint32_t map_flags) {
+  Reset();
+
   uint64_t size;
   mx_status_t status = vmo.get_size(&size);
   if (status != NO_ERROR) {
@@ -59,17 +61,17 @@ mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo, uint32_t map_flags) {
   }
 
   size_ = size;
-  buffer_ptr_.reset();
 
   // TODO(dalesat): Map only for required operations (read or write).
   uintptr_t mapped_buffer = 0u;
-  status = mx::vmar::root_self().map(0, vmo, 0u, size, map_flags, &mapped_buffer);
+  status =
+      mx::vmar::root_self().map(0, vmo, 0u, size, map_flags, &mapped_buffer);
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "mx::vmar::map failed, status " << status;
     return status;
   }
 
-  buffer_ptr_.reset(reinterpret_cast<uint8_t*>(mapped_buffer));
+  buffer_ptr_ = reinterpret_cast<uint8_t*>(mapped_buffer);
 
   vmo_ = std::move(vmo);
 
@@ -83,9 +85,16 @@ bool MappedSharedBuffer::initialized() const {
 }
 
 void MappedSharedBuffer::Reset() {
+  if (buffer_ptr_ != nullptr) {
+    FTL_DCHECK(size_ != 0);
+    mx_status_t status = mx::vmar::root_self().unmap(
+        reinterpret_cast<uintptr_t>(buffer_ptr_), size_);
+    FTL_CHECK(status == NO_ERROR);
+    buffer_ptr_ = nullptr;
+  }
+
   size_ = 0;
   vmo_.reset();
-  buffer_ptr_.reset();
 }
 
 uint64_t MappedSharedBuffer::size() const {
@@ -104,27 +113,27 @@ mx::vmo MappedSharedBuffer::GetDuplicateVmo(mx_rights_t rights) const {
 }
 
 bool MappedSharedBuffer::Validate(uint64_t offset, uint64_t size) {
-  FTL_DCHECK(buffer_ptr_);
+  FTL_DCHECK(buffer_ptr_ != nullptr);
   return offset < size_ && size <= size_ - offset;
 }
 
 void* MappedSharedBuffer::PtrFromOffset(uint64_t offset) const {
-  FTL_DCHECK(buffer_ptr_);
+  FTL_DCHECK(buffer_ptr_ != nullptr);
 
   if (offset == FifoAllocator::kNullOffset) {
     return nullptr;
   }
 
   FTL_DCHECK(offset < size_);
-  return buffer_ptr_.get() + offset;
+  return buffer_ptr_ + offset;
 }
 
 uint64_t MappedSharedBuffer::OffsetFromPtr(void* ptr) const {
-  FTL_DCHECK(buffer_ptr_);
+  FTL_DCHECK(buffer_ptr_ != nullptr);
   if (ptr == nullptr) {
     return FifoAllocator::kNullOffset;
   }
-  uint64_t offset = reinterpret_cast<uint8_t*>(ptr) - buffer_ptr_.get();
+  uint64_t offset = reinterpret_cast<uint8_t*>(ptr) - buffer_ptr_;
   FTL_DCHECK(offset < size_);
   return offset;
 }

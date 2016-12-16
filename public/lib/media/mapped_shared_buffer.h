@@ -63,22 +63,14 @@ class MappedSharedBuffer {
   virtual void OnInit();
 
  private:
-  struct MappedBufferDeleter {
-    inline void operator()(uint8_t* ptr) const {
-      mx_status_t status =
-          mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ptr), 0);
-      FTL_CHECK(status == NO_ERROR);
-    }
-  };
+  // Pointer to the mapped buffer.
+  uint8_t* buffer_ptr_;
 
   // Size of the shared buffer.
   uint64_t size_;
 
   // VMO to shared buffer when initialized with InitFromVmo.
   mx::vmo vmo_;
-
-  // Pointer to the mapped buffer.
-  std::unique_ptr<uint8_t, MappedBufferDeleter> buffer_ptr_;
 };
 
 }  // namespace media
