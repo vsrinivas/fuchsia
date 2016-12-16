@@ -5,7 +5,7 @@
 #include "apps/media/lib/mapped_shared_buffer.h"
 
 #include <magenta/types.h>
-#include <mx/process.h>
+#include <mx/vmar.h>
 #include <mx/vmo.h>
 
 #include "apps/media/lib/fifo_allocator.h"
@@ -63,9 +63,9 @@ mx_status_t MappedSharedBuffer::InitInternal(mx::vmo vmo, uint32_t map_flags) {
 
   // TODO(dalesat): Map only for required operations (read or write).
   uintptr_t mapped_buffer = 0u;
-  status = mx::process::self().map_vm(vmo, 0u, size, &mapped_buffer, map_flags);
+  status = mx::vmar::root_self().map(0, vmo, 0u, size, map_flags, &mapped_buffer);
   if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "mx::process::map_vm failed, status " << status;
+    FTL_LOG(ERROR) << "mx::vmar::map failed, status " << status;
     return status;
   }
 

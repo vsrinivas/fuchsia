@@ -7,7 +7,7 @@
 #include <memory>
 
 #include <magenta/types.h>
-#include <mx/process.h>
+#include <mx/vmar.h>
 #include <mx/vmo.h>
 
 #include "lib/ftl/logging.h"
@@ -66,7 +66,7 @@ class MappedSharedBuffer {
   struct MappedBufferDeleter {
     inline void operator()(uint8_t* ptr) const {
       mx_status_t status =
-          mx::process::self().unmap_vm(reinterpret_cast<uintptr_t>(ptr), 0u);
+          mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(ptr), 0);
       FTL_CHECK(status == NO_ERROR);
     }
   };
