@@ -10,7 +10,7 @@
 #include <limits.h>  // PAGE_SIZE
 #include <magenta/syscalls/object.h>
 #include <map>
-#include <mx/process.h>
+#include <mx/vmar.h>
 #include <mx/vmo.h>
 #include <vector>
 
@@ -190,8 +190,8 @@ bool MagentaPlatformBuffer::MapCpu(void** addr_out)
     if (map_count_ == 0) {
         DASSERT(!virt_addr_);
         uintptr_t ptr;
-        mx_status_t status = mx::process::self().map_vm(
-            vmo_, 0, size(), &ptr, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+        mx_status_t status = mx::vmar::root_self().map(
+            0, vmo_, 0, size(), MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &ptr);
         if (status != NO_ERROR)
             return DRETF(false, "failed to map vmo");
 
@@ -213,8 +213,8 @@ bool MagentaPlatformBuffer::UnmapCpu()
         map_count_--;
         if (map_count_ == 0) {
             DLOG("map_count 0 unmapping vmo %p", this);
-            mx_status_t status =
-                mx_process_unmap_vm(mx_process_self(), reinterpret_cast<uintptr_t>(virt_addr_), 0);
+            mx_status_t status = mx::vmar::root_self().unmap(
+                    reinterpret_cast<uintptr_t>(virt_addr_), size());
             virt_addr_ = nullptr;
             if (status != NO_ERROR)
                 DRETF(false, "failed to unmap vmo: %d", status);
@@ -323,8 +323,9 @@ bool MagentaPlatformBuffer::MapPageCpu(uint32_t page_index, void** addr_out)
     }
 
     uintptr_t ptr;
-    mx_status_t status = mx::process::self().map_vm(vmo_, page_index * PAGE_SIZE, PAGE_SIZE, &ptr,
-                                                    MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+    mx_status_t status = mx::vmar::root_self().map(0, vmo_, page_index * PAGE_SIZE, PAGE_SIZE,
+                                                   MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                                                   &ptr);
     if (status != NO_ERROR)
         return DRETF(false, "page map failed");
 
@@ -343,7 +344,7 @@ bool MagentaPlatformBuffer::UnmapPageCpu(uint32_t page_index)
     uintptr_t addr = reinterpret_cast<uintptr_t>(iter->second);
     mapped_pages_.erase(iter);
 
-    mx_status_t status = mx_process_unmap_vm(mx_process_self(), addr, 0);
+    mx_status_t status = mx::vmar::root_self().unmap(addr, PAGE_SIZE);
     if (status != NO_ERROR)
         return DRETF(false, "failed to unmap vmo page %d", page_index);
 
