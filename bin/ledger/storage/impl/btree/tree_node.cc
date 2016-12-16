@@ -70,11 +70,11 @@ Status TreeNode::FromEntries(PageStorage* page_storage,
   return Status::OK;
 }
 
-Status TreeNode::Merge(PageStorage* page_storage,
-                       std::unique_ptr<const TreeNode> left,
-                       std::unique_ptr<const TreeNode> right,
-                       ObjectIdView merged_child_id,
-                       ObjectId* merged_id) {
+void TreeNode::Merge(PageStorage* page_storage,
+                     std::unique_ptr<const TreeNode> left,
+                     std::unique_ptr<const TreeNode> right,
+                     ObjectIdView merged_child_id,
+                     std::function<void(Status, ObjectId)> on_done) {
   std::vector<Entry> entries;
   entries.insert(entries.end(), left->entries_.begin(), left->entries_.end());
   entries.insert(entries.end(), right->entries_.begin(), right->entries_.end());
@@ -88,7 +88,13 @@ Status TreeNode::Merge(PageStorage* page_storage,
   children.insert(children.end(), right->children_.begin() + 1,
                   right->children_.end());
 
-  return FromEntries(page_storage, entries, children, merged_id);
+  ObjectId merged_id;
+  Status s = FromEntries(page_storage, entries, children, &merged_id);
+  if (s != Status::OK) {
+    on_done(s, "");
+    return;
+  }
+  on_done(Status::OK, merged_id);
 }
 
 TreeNode::Mutation TreeNode::StartMutation() const {

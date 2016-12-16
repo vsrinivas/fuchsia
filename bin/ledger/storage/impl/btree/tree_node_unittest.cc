@@ -128,6 +128,7 @@ TEST_F(TreeNodeTest, SplitMerge) {
       FromEntries(entries, std::vector<ObjectId>(size + 1));
 
   int split_index = 3;
+  Status status;
   ObjectId left_id;
   ObjectId right_id;
   EXPECT_EQ(Status::OK, node->Split(split_index, "", "", &left_id, &right_id));
@@ -146,8 +147,12 @@ TEST_F(TreeNodeTest, SplitMerge) {
 
   // Merge
   ObjectId merged_id;
-  EXPECT_EQ(Status::OK, TreeNode::Merge(&fake_storage_, std::move(left_node),
-                                        std::move(right_node), "", &merged_id));
+  TreeNode::Merge(&fake_storage_, std::move(left_node), std::move(right_node),
+                  "", ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &merged_id));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+
   std::unique_ptr<const TreeNode> merged_node = FromId(merged_id);
   EXPECT_EQ(size, merged_node->GetKeyCount());
   for (int i = 0; i < size; ++i) {

@@ -123,18 +123,18 @@ class TreeNode {
                             const std::vector<ObjectId>& children,
                             ObjectId* node_id);
 
-  // Creates a new tree node by merging |left| and |right|. The id of the new
-  // node is stored in |merged_id|. |merged_child_id| should contain the id of
-  // the new child node stored between the last entry of |left| and the first
-  // entry of |right| in the merged node.
+  // Creates a new tree node by merging |left| and |right|. |merged_child_id|
+  // should contain the id of the new child node stored between the last entry
+  // of |left| and the first entry of |right| in the merged node. |on_done| will
+  // be called with the status and the new merged node's id.
   // Typical usage of this method would be to merge nodes bottom-up, each time
   // using the id of the newly merged node as the |merged_child_id| of the next
   // merge call.
-  static Status Merge(PageStorage* page_storage,
-                      std::unique_ptr<const TreeNode> left,
-                      std::unique_ptr<const TreeNode> right,
-                      ObjectIdView merged_child_id,
-                      ObjectId* merged_id);
+  static void Merge(PageStorage* page_storage,
+                    std::unique_ptr<const TreeNode> left,
+                    std::unique_ptr<const TreeNode> right,
+                    ObjectIdView merged_child_id,
+                    std::function<void(Status, ObjectId)> on_done);
 
   // Starts a new mutation based on this node. See also |TreeNode::Mutation|.
   Mutation StartMutation() const;

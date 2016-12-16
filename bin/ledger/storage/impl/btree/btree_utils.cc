@@ -159,15 +159,14 @@ void Merge(PageStorage* page_storage,
           RemoveNodeId(left->GetId(), new_nodes);
           RemoveNodeId(right->GetId(), new_nodes);
 
-          ObjectId new_id;
-          s = TreeNode::Merge(page_storage, std::move(left), std::move(right),
-                              child_id, &new_id);
-          if (s != Status::OK) {
-            on_done(s, "");
-            return;
-          }
-          new_nodes->insert(new_id);
-          on_done(Status::OK, new_id);
+          TreeNode::Merge(page_storage, std::move(left), std::move(right),
+                          child_id, [ new_nodes, on_done = std::move(on_done) ](
+                                        Status s, ObjectId merged_id) {
+                            if (s == Status::OK) {
+                              new_nodes->insert(merged_id);
+                            }
+                            on_done(s, merged_id);
+                          });
         }));
 }
 
