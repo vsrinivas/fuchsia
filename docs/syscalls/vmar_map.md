@@ -10,7 +10,7 @@ vmar_map - add a memory mapping
 #include <magenta/syscalls.h>
 
 mx_status_t mx_vmar_map(mx_handle_t vmar, size_t vmar_offset,
-                        mx_handle_t vmo, size_t vmo_offset, size_t len,
+                        mx_handle_t vmo, uint64_t vmo_offset, size_t len,
                         uint32_t map_flags, uintptr_t* mapped_addr)
 ```
 
