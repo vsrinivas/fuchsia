@@ -12,6 +12,6 @@ MODULE_SRCS += $(LOCAL_DIR)/install-fuchsia.c
 
 MODULE_STATIC_LIBS := ulib/gpt ulib/cksum ulib/lz4
 
-MODULE_LIBS := ulib/magenta ulib/musl ulib/mxio
+MODULE_LIBS := ulib/magenta ulib/musl ulib/mxio ulib/fs-management
 
 include make/module.mk

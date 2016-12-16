@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fs-management/mount.h>
 #include <gpt/gpt.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -22,7 +23,11 @@
 
 #define DEFAULT_BLOCKDEV "/dev/class/block/000"
 #define PATH_BLOCKDEVS "/dev/class/block"
+
 #define CHECK_BIT(var, pos) ((var) & (1 << (pos)))
+
+#define PATH_VOLUMES "/volume"
+
 // 4GB
 #define MIN_SIZE_SYSTEM_PART (((uint64_t)1024u) * 1024u * 1024u * 4u)
 // 1GB
@@ -86,7 +91,7 @@ static ssize_t get_next_file_path(
 static int open_device_ro(const char* dev_path) {
     int fd = open(dev_path, O_RDONLY);
     if (fd < 0) {
-        printf("Could not read device at %s, open reported error:%s\n",
+        fprintf(stderr, "Could not read device at %s, open reported error:%s\n",
                dev_path, strerror(errno));
     }
 
@@ -102,12 +107,13 @@ static gpt_device_t* read_gpt(int fd, uint64_t* blocksize_out) {
     DEBUG_ASSERT(blocksize_out != NULL);
     ssize_t rc = ioctl_block_get_blocksize(fd, blocksize_out);
     if (rc < 0) {
-        printf("error getting block size, ioctl result code: %zd\n", rc);
+        fprintf(stderr, "error getting block size, ioctl result code: %zd\n",
+                rc);
         return NULL;
     }
 
     if (*blocksize_out < 1) {
-        printf("Device reports block size of %" PRIu64 ", abort!\n",
+        fprintf(stderr, "Device reports block size of %" PRIu64 ", abort!\n",
                *blocksize_out);
         return NULL;
     }
@@ -115,7 +121,8 @@ static gpt_device_t* read_gpt(int fd, uint64_t* blocksize_out) {
     uint64_t blocks;
     rc = ioctl_block_get_size(fd, &blocks);
     if (rc < 0) {
-        printf("error getting device size, ioctl result code: %zd\n", rc);
+        fprintf(stderr, "error getting device size, ioctl result code: %zd\n",
+                rc);
         return NULL;
     }
 
@@ -123,10 +130,10 @@ static gpt_device_t* read_gpt(int fd, uint64_t* blocksize_out) {
     gpt_device_t* gpt;
     rc = gpt_device_init(fd, *blocksize_out, blocks, &gpt);
     if (rc < 0) {
-        printf("error reading GPT, result code: %zd \n", rc);
+        fprintf(stderr, "error reading GPT, result code: %zd \n", rc);
         return NULL;
     } else if (!gpt->valid) {
-        printf("error reading GPT, libgpt reports data is invalid\n");
+        fprintf(stderr, "error reading GPT, libgpt reports data is invalid\n");
         return NULL;
     }
 
@@ -181,7 +188,7 @@ static bool check_partition_size(const gpt_partition_t* partition,
            partition_name, block_count, block_size);
 
     if (partition_size < min_size) {
-        printf("%s partition too small, found %" PRIu64 ", but require \
+        fprintf(stderr, "%s partition too small, found %" PRIu64 ", but require \
                 %" PRIu64  "\n",
                partition_name, partition_size, min_size);
         return false;
@@ -211,7 +218,7 @@ static mx_status_t find_partition_path(gpt_partition_t* const* part_info,
     int found_parts = 0;
     int dir_fd = dirfd(search_dir);
     if (dir_fd < 0) {
-        printf("Could not get descriptor for directory, '%s'.\n",
+        fprintf(stderr, "Could not get descriptor for directory, '%s'.\n",
                strerror(errno));
         return ERR_IO;
     }
@@ -229,7 +236,7 @@ static mx_status_t find_partition_path(gpt_partition_t* const* part_info,
         // get a file descriptor for the entry
         int file_fd = openat(dir_fd, entry->d_name, O_RDONLY);
         if (file_fd < 0) {
-            printf("Error opening descriptor for %s, error:'%s'\n",
+            fprintf(stderr, "Error opening descriptor for %s, error:'%s'\n",
                    entry->d_name, strerror(errno));
             continue;
         }
@@ -249,20 +256,19 @@ static mx_status_t find_partition_path(gpt_partition_t* const* part_info,
                         strcpy(path_targ, entry->d_name);
                         found_parts++;
                     } else {
-                        printf("Error, non-unique partition GUIDs!!\n");
+                        fprintf(stderr, "Error, non-unique partition GUIDs!!\n");
                         close(file_fd);
                         return ERR_NOT_FOUND;
                     }
                 }
             }
         } else {
-            printf("ioctl failed getting GUID for %s, error:(%zi) '%s'\n",
-                   entry->d_name, rc, strerror(errno));
+            fprintf(stderr, "ioctl failed getting GUID for %s, error:(%zi) \
+                    '%s'\n", entry->d_name, rc, strerror(errno));
         }
 
         close(file_fd);
     }
-
 
     if (found_parts != num_parts) {
         // this isn't an error per se, everything worked but we didn't find all
@@ -304,10 +310,11 @@ static mx_status_t find_partition(gpt_partition_t** gpt_table,
         gpt_partition_t* partition;
         switch (rc) {
             case ERR_NOT_FOUND:
-                printf("No %s partition found.\n", part_name);
+                fprintf(stderr, "No %s partition found.\n", part_name);
                 break;
             case ERR_INVALID_ARGS:
-                printf("Arguments are invalid for %s partition.\n", part_name);
+                fprintf(stderr, "Arguments are invalid for %s partition.\n",
+                        part_name);
                 break;
             case ERR_BAD_STATE:
                 printf("GPT descriptor is invalid.\n");
@@ -333,7 +340,8 @@ static mx_status_t find_partition(gpt_partition_t** gpt_table,
                 }
                 break;
             default:
-                printf("Unrecognized error finding efi parition: %d\n", rc);
+                fprintf(stderr, "Unrecognized error finding efi parition: %d\n",
+                        rc);
                 break;
         }
     }
@@ -455,11 +463,54 @@ static partition_flags partition_for_install(gpt_device_t* gpt_data,
         }
         closedir(block_dir);
     } else {
-        printf("Failure reading directory %s, error: %s\n",
+        fprintf(stderr, "Failure reading directory %s, error: %s\n",
                PATH_BLOCKDEVS, strerror(errno));
     }
 
     return part_flags;
+}
+
+/*
+ * Attempt to unmount all known mount paths.
+ */
+static mx_status_t unmount_all(void) {
+    const char* static_paths[2] = {"/data", "/system"};
+    for (uint16_t idx = 0; idx < countof(static_paths); idx++) {
+        printf("Unmounting filesystem at %s...", static_paths[idx]);
+        mx_status_t rc = umount(static_paths[idx]);
+        if (rc != NO_ERROR && rc != ERR_NOT_FOUND) {
+            printf("FAILURE\n");
+            return ERR_BAD_STATE;
+        }
+        printf("SUCCESS\n");
+    }
+
+    char path[PATH_MAX];
+    DIR* vols = opendir(PATH_VOLUMES);
+    if (vols == NULL) {
+        fprintf(stderr, "Couldn't open volumes directory for reading!\n");
+        return ERR_IO;
+    }
+
+    mx_status_t result = NO_ERROR;
+    struct dirent* entry = NULL;
+    strcpy(path, PATH_VOLUMES);
+    while ((entry = readdir(vols)) != NULL) {
+        strcat(path, "/");
+        int path_len = strlen(path);
+
+        strncpy(path + path_len, entry->d_name, PATH_MAX - path_len);
+        printf("Unmounting filesystem at %s...", path);
+        result = umount(path);
+        if (result != NO_ERROR) {
+            printf("FAILURE\n");
+            break;
+        }
+        printf("SUCCESS\n");
+    }
+
+    closedir(vols);
+    return result;
 }
 
 static mx_status_t write_partition(int src, int dest, size_t* bytes_copied) {
@@ -610,6 +661,10 @@ int main(int argc, char** argv) {
 
     closedir(dir);
     if (install_dev != NULL && install_dev->valid) {
+        if (unmount_all() != NO_ERROR) {
+            gpt_device_release(install_dev);
+            return -1;
+        }
 
         uint8_t part_idx = -1;
         // scan through the requested partitions bitmask to see which
@@ -667,6 +722,7 @@ int main(int argc, char** argv) {
             }
         }
 
+        // do install
         gpt_device_release(install_dev);
         return 0;
     } else {
