@@ -533,10 +533,7 @@ bool invalid_args_test() {
                           &map_addr),
               NO_ERROR, "");
     EXPECT_EQ(mx_vmar_unmap(vmar, map_addr + 1, PAGE_SIZE), ERR_INVALID_ARGS, "");
-    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, PAGE_SIZE - 1), ERR_INVALID_ARGS, "");
     EXPECT_EQ(mx_vmar_protect(vmar, map_addr + 1, PAGE_SIZE, MX_VM_FLAG_PERM_READ),
-              ERR_INVALID_ARGS, "");
-    EXPECT_EQ(mx_vmar_protect(vmar, map_addr, PAGE_SIZE - 1, MX_VM_FLAG_PERM_READ),
               ERR_INVALID_ARGS, "");
     EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), NO_ERROR, "");
 
@@ -587,6 +584,41 @@ bool invalid_args_test() {
                               MX_VM_FLAG_PERM_READ | (1<<31)),
               ERR_INVALID_ARGS, "");
     EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), NO_ERROR, "");
+
+    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(process), NO_ERROR, "");
+
+    END_TEST;
+}
+
+// Test passing in unaligned lens to unmap/protect
+bool unaligned_len_test() {
+    BEGIN_TEST;
+
+    mx_handle_t process;
+    mx_handle_t vmar;
+    mx_handle_t vmo;
+    uintptr_t map_addr;
+
+    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+                                0, &process, &vmar), NO_ERROR, "");
+    ASSERT_EQ(mx_vmo_create(4 * PAGE_SIZE, 0, &vmo), NO_ERROR, "");
+
+    ASSERT_EQ(mx_vmar_map(vmar, 0, vmo, 0, 4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ, &map_addr),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_protect(vmar, map_addr, 4 * PAGE_SIZE - 1,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE - 1), NO_ERROR, "");
+
+    // Make sure we can't access the last page of the memory mappings anymore
+    {
+        uint8_t buf;
+        size_t read;
+        EXPECT_EQ(mx_process_read_memory(process, map_addr + 3 * PAGE_SIZE, &buf, 1, &read),
+                  ERR_NO_MEMORY, "");
+    }
 
     EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
     EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
@@ -828,6 +860,7 @@ RUN_TEST(destroyed_vmar_test);
 RUN_TEST(map_over_destroyed_test);
 RUN_TEST(overmapping_test);
 RUN_TEST(invalid_args_test);
+RUN_TEST(unaligned_len_test);
 RUN_TEST(rights_drop_test);
 RUN_TEST(protect_test);
 RUN_TEST(nested_region_perms_test);

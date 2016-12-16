@@ -213,7 +213,7 @@ mx_status_t VmAddressRegionDispatcher::Protect(size_t offset, size_t len, uint32
     DEBUG_ASSERT(mapping->base() >= vmar_->base());
     size_t mapping_offset = mapping->base() - vmar_->base();
     if (len != 0) {
-        if (mapping_offset != offset || mapping->size() != len) {
+        if (mapping_offset != offset || mapping->size() != ROUNDUP(len, PAGE_SIZE)) {
             return ERR_INVALID_ARGS;
         }
     }
@@ -243,7 +243,7 @@ mx_status_t VmAddressRegionDispatcher::Unmap(size_t offset, size_t len) {
     DEBUG_ASSERT(mapping->base() >= vmar_->base());
     size_t mapping_offset = mapping->base() - vmar_->base();
     if (len != 0) {
-        if (mapping_offset != offset || mapping->size() != len) {
+        if (mapping_offset != offset || mapping->size() != ROUNDUP(len, PAGE_SIZE)) {
             return ERR_INVALID_ARGS;
         }
     }

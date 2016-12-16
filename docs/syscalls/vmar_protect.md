@@ -32,6 +32,8 @@ a bitwise-or of one or more of the following:
   not have the *MX_RIGHT_EXECUTE* right.  It is also an error if the VMO handle
   used to create the mapping did not have the *MX_RIGHT_EXECUTE* right.
 
+If *len* is not page-aligned, it will be rounded up the next page boundary.
+
 ## RETURN VALUE
 
 **vmar_protect**() returns **NO_ERROR** on success.
@@ -39,7 +41,7 @@ a bitwise-or of one or more of the following:
 ## ERRORS
 
 **ERR_INVALID_ARGS**  *prot* is an unsupported combination of flags
-(e.g., PROT_WRITE but not PROT_READ), *addr* or *len* are not page-aligned,
+(e.g., PROT_WRITE but not PROT_READ), *addr* is not page-aligned,
 *len* is 0, or some subrange of the requested range is occupied by a subregion.
 
 **ERR_NOT_FOUND**  Some subrange of the requested range is not mapped.
