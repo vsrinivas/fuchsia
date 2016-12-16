@@ -76,17 +76,17 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
 
   ObjectId CreateTree(std::vector<EntryChange>& entries) {
     ObjectId root_id = CreateEmptyContents();
+
+    Status status;
     ObjectId new_root_id;
+    std::unordered_set<ObjectId> new_nodes;
     btree::ApplyChanges(
         &fake_storage_, root_id, kTestNodeSize,
         std::make_unique<EntryChangeIterator>(entries.begin(), entries.end()),
-        [this, &new_root_id](Status status, ObjectId obj_id,
-                             std::unordered_set<ObjectId> new_nodes) {
-          EXPECT_EQ(Status::OK, status);
-          new_root_id = obj_id;
-          message_loop_.PostQuitTask();
-        });
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &new_root_id, &new_nodes));
     EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
     return new_root_id;
   }
 
@@ -101,21 +101,20 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   ObjectId root_id = CreateEmptyContents();
   std::vector<EntryChange> changes = CreateEntryChanges(4);
 
+  Status status;
+  ObjectId new_root_id;
+  std::unordered_set<ObjectId> new_nodes;
   // Expected layout (X is key "keyX"):
   // [1, 2, 3, 4]
-  ObjectId new_root_id;
   btree::ApplyChanges(
       &fake_storage_, root_id, 4,
       std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      [this, &new_root_id](Status status, ObjectId obj_id,
-                           std::unordered_set<ObjectId> new_nodes) {
-        EXPECT_EQ(Status::OK, status);
-        EXPECT_EQ(1u, new_nodes.size());
-        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
-        new_root_id = obj_id;
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                      &new_root_id, &new_nodes));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(1u, new_nodes.size());
+  EXPECT_TRUE(new_nodes.find(new_root_id) != new_nodes.end());
 
   CommitContentsImpl reader(new_root_id, &fake_storage_);
   std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
@@ -131,24 +130,22 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   ObjectId root_id = CreateEmptyContents();
   std::vector<EntryChange> golden_entries = CreateEntryChanges(11);
 
+  Status status;
   ObjectId new_root_id;
+  std::unordered_set<ObjectId> new_nodes;
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10]
-  btree::ApplyChanges(
-      &fake_storage_, root_id, 4,
-      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                            golden_entries.end()),
-      [this, &new_root_id](Status status, ObjectId obj_id,
-                           std::unordered_set<ObjectId> new_nodes) {
-        EXPECT_EQ(Status::OK, status);
-        EXPECT_EQ(4u, new_nodes.size());
-        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
-        new_root_id = obj_id;
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  btree::ApplyChanges(&fake_storage_, root_id, 4,
+                      std::make_unique<EntryChangeIterator>(
+                          golden_entries.begin(), golden_entries.end()),
+                      ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &new_root_id, &new_nodes));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(4u, new_nodes.size());
+  EXPECT_TRUE(new_nodes.find(new_root_id) != new_nodes.end());
 
   CommitContentsImpl reader(new_root_id, &fake_storage_);
   std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
@@ -166,24 +163,23 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   // Insert key "071" between keys "07" and "08".
   golden_entries.insert(golden_entries.begin() + 8, new_change[0]);
 
+  new_nodes.clear();
+  ObjectId new_root_id2;
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
-  ObjectId new_root_id2;
-  btree::ApplyChanges(
-      &fake_storage_, new_root_id, 4, std::make_unique<EntryChangeIterator>(
-                                          new_change.begin(), new_change.end()),
-      [this, &new_root_id2](Status status, ObjectId obj_id,
-                            std::unordered_set<ObjectId> new_nodes) {
-        EXPECT_EQ(Status::OK, status);
-        // The root and the 3rd child have changed.
-        EXPECT_EQ(2u, new_nodes.size());
-        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
-        new_root_id2 = obj_id;
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  btree::ApplyChanges(&fake_storage_, new_root_id, 4,
+                      std::make_unique<EntryChangeIterator>(new_change.begin(),
+                                                            new_change.end()),
+                      ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &new_root_id2, &new_nodes));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_NE(new_root_id, new_root_id2);
+  // The root and the 3rd child have changed.
+  EXPECT_EQ(2u, new_nodes.size());
+  EXPECT_TRUE(new_nodes.find(new_root_id2) != new_nodes.end());
 
   CommitContentsImpl reader2(new_root_id2, &fake_storage_);
   entries = reader2.begin();
@@ -198,32 +194,16 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
 }
 
 TEST_F(BTreeUtilsTest, DeleteChanges) {
-  ObjectId root_id = CreateEmptyContents();
-  std::vector<EntryChange> golden_entries = CreateEntryChanges(11);
-
-  std::vector<Entry> entries_to_delete{golden_entries[2].entry,
-                                       golden_entries[4].entry};
-
   // Expected layout (XX is key "keyXX"):
   //                 [03, 07]
   //            /       |            \
-  // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
-  ObjectId tmp_root_id;
-  btree::ApplyChanges(
-      &fake_storage_, root_id, 4,
-      std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                            golden_entries.end()),
-      [this, &tmp_root_id](Status status, ObjectId obj_id,
-                           std::unordered_set<ObjectId> new_nodes) {
-        EXPECT_EQ(Status::OK, status);
-        EXPECT_EQ(4u, new_nodes.size());
-        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
-        tmp_root_id = obj_id;
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
+  std::vector<EntryChange> golden_entries = CreateEntryChanges(11);
+  ObjectId root_id = CreateTree(golden_entries);
 
   // Delete entries.
+  std::vector<Entry> entries_to_delete{golden_entries[2].entry,
+                                       golden_entries[4].entry};
   std::vector<EntryChange> delete_changes;
   for (size_t i = 0; i < entries_to_delete.size(); ++i) {
     delete_changes.push_back(EntryChange{entries_to_delete[i], true});
@@ -232,22 +212,21 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   // Expected layout (XX is key "keyXX"):
   //            [03, 07]
   //         /     |        \
-  // [00, 01]  [05, 06]    [071, 08, 09, 10]
+  // [00, 01]  [05, 06]    [08, 09, 10, 11]
+  Status status;
   ObjectId new_root_id;
-  btree::ApplyChanges(
-      &fake_storage_, tmp_root_id, 4,
-      std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                            delete_changes.end()),
-      [this, &new_root_id](Status status, ObjectId obj_id,
-                           std::unordered_set<ObjectId> new_nodes) {
-        EXPECT_EQ(Status::OK, status);
-        // The root and the first 2 children have changed.
-        EXPECT_EQ(3u, new_nodes.size());
-        EXPECT_TRUE(new_nodes.find(obj_id) != new_nodes.end());
-        new_root_id = obj_id;
-        message_loop_.PostQuitTask();
-      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  std::unordered_set<ObjectId> new_nodes;
+  btree::ApplyChanges(&fake_storage_, root_id, 4,
+                      std::make_unique<EntryChangeIterator>(
+                          delete_changes.begin(), delete_changes.end()),
+                      ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &new_root_id, &new_nodes));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_NE(root_id, new_root_id);
+  // The root and the first 2 children have changed.
+  EXPECT_EQ(3u, new_nodes.size());
+  EXPECT_TRUE(new_nodes.find(new_root_id) != new_nodes.end());
 
   CommitContentsImpl reader(new_root_id, &fake_storage_);
   std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
@@ -267,14 +246,14 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   EXPECT_FALSE(entries->Valid());
 }
 
-TEST_F(BTreeUtilsTest, GetObjectFromEmpty) {
+TEST_F(BTreeUtilsTest, GetObjectIdsFromEmpty) {
   ObjectId root_id = CreateEmptyContents();
   Status status;
   std::set<ObjectId> object_ids;
   btree::GetObjectIds(&fake_storage_, root_id,
                       ::test::Capture([this] { message_loop_.PostQuitTask(); },
                                       &status, &object_ids));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, object_ids.size());
   EXPECT_TRUE(object_ids.find(root_id) != object_ids.end());
@@ -289,7 +268,7 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   btree::GetObjectIds(&fake_storage_, root_id,
                       ::test::Capture([this] { message_loop_.PostQuitTask(); },
                                       &status, &object_ids));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(5u, object_ids.size());
   EXPECT_TRUE(object_ids.find(root_id) != object_ids.end());
@@ -298,7 +277,7 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   }
 }
 
-TEST_F(BTreeUtilsTest, GetObjectBigTree) {
+TEST_F(BTreeUtilsTest, GetObjectIdsBigTree) {
   std::vector<EntryChange> entries = CreateEntryChanges(99);
   ObjectId root_id = CreateTree(entries);
 
@@ -307,7 +286,7 @@ TEST_F(BTreeUtilsTest, GetObjectBigTree) {
   btree::GetObjectIds(&fake_storage_, root_id,
                       ::test::Capture([this] { message_loop_.PostQuitTask(); },
                                       &status, &object_ids));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(99u + 25u, object_ids.size());
   EXPECT_TRUE(object_ids.find(root_id) != object_ids.end());
@@ -321,16 +300,17 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   entries[3].entry.priority = KeyPriority::LAZY;
   ObjectId root_id = CreateTree(entries);
 
+  fake_storage_.object_requests.clear();
+  Status status;
   // Expected layout (XX is key "keyXX"):
   //        [02]
   //      /      \
   // [00, 01]  [03, 04]
-  fake_storage_.object_requests.clear();
-  btree::GetObjectsFromSync(root_id, &fake_storage_, [this](Status s) {
-    EXPECT_EQ(Status::OK, s);
-    message_loop_.PostQuitTask();
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  btree::GetObjectsFromSync(
+      root_id, &fake_storage_,
+      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
 
   std::vector<ObjectId> object_requests;
   std::copy(fake_storage_.object_requests.begin(),
@@ -340,12 +320,11 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   // lazy object, all others should have been requested.
   EXPECT_EQ(3 + 4u, object_requests.size());
 
-  Status status;
   std::set<ObjectId> object_ids;
   btree::GetObjectIds(&fake_storage_, root_id,
                       ::test::Capture([this] { message_loop_.PostQuitTask(); },
                                       &status, &object_ids));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  ASSERT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(3 + 5u, object_ids.size());
   for (ObjectId& id : object_requests) {
@@ -362,7 +341,7 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
   ObjectId root_id = CreateTree(entries);
 
   int current_key = 0;
-  auto on_next = [&current_key](const btree::EntryAndNodeId& e) {
+  auto on_next = [&current_key](btree::EntryAndNodeId e) {
     EXPECT_EQ(ftl::StringPrintf("key%02d", current_key), e.entry.key);
     current_key++;
     return true;
@@ -379,7 +358,7 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
   // Find all entries with "key3" prefix in the key.
   std::string prefix = "key3";
   int current_key = 30;
-  auto on_next = [&current_key, &prefix](const btree::EntryAndNodeId& e) {
+  auto on_next = [&current_key, &prefix](btree::EntryAndNodeId e) {
     if (e.entry.key.substr(0, prefix.length()) != prefix) {
       return false;
     }
