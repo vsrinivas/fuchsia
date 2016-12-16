@@ -16,6 +16,7 @@
 #include "exec.h"
 #include "process.h"
 #include "options.h"
+#include "var.h"
 
 static mx_handle_t get_mxio_job(void) {
     static mx_handle_t job;
@@ -94,7 +95,7 @@ static mx_status_t prepare_launch(launchpad_t* lp, const char* filename, int arg
     if (status != NO_ERROR)
         return status;
 
-    status = launchpad_environ(lp, (const char* const*)environ);
+    status = launchpad_environ(lp, (const char* const*)environment());
     if (status != NO_ERROR)
         return status;
 
