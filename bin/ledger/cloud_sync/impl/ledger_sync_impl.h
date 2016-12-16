@@ -8,6 +8,7 @@
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/environment/environment.h"
+#include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/network/network_service.h"
 
 namespace cloud_sync {
@@ -17,13 +18,19 @@ class LedgerSyncImpl : public LedgerSync {
   LedgerSyncImpl(ledger::Environment* environment, ftl::StringView app_id);
   ~LedgerSyncImpl();
 
+  void RemoteContains(ftl::StringView page_id,
+                      std::function<void(RemoteResponse)> callback) override;
+
   std::unique_ptr<PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,
       ftl::Closure error_callback) override;
 
  private:
   ledger::Environment* environment_;
-  const std::string app_id_;
+  // Firebase path under which the data of this Ledger instance is stored.
+  const std::string app_path_;
+  // Firebase instance scoped to |app_path_|.
+  std::unique_ptr<firebase::Firebase> app_firebase_;
 };
 
 }  // namespace cloud_sync

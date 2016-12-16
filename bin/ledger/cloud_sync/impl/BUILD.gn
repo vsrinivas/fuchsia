@@ -37,12 +37,14 @@ source_set("unittests") {
   sources = [
     "batch_download_unittest.cc",
     "commit_upload_unittest.cc",
+    "ledger_sync_impl_unittest.cc",
     "page_sync_impl_unittest.cc",
   ]
 
   deps = [
     ":impl",
     "//apps/ledger/src/cloud_provider/test",
+    "//apps/ledger/src/network:fake",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
     "//lib/ftl",

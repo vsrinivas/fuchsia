@@ -96,10 +96,11 @@ bool ClientApp::Initialize() {
         return context_->ConnectToEnvironmentService<network::NetworkService>();
       });
 
+  std::string app_path = GetFirebasePathForApp(
+      configuration_.sync_params.firebase_prefix, "cloud_sync_client");
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_.get(), configuration_.sync_params.firebase_id,
-      GetFirebasePathForPage(configuration_.sync_params.firebase_prefix,
-                             "cloud_sync_client", RandomString()));
+      GetFirebasePathForPage(app_path, RandomString()));
   cloud_provider_ =
       std::make_unique<cloud_provider::CloudProviderImpl>(firebase_.get());
 

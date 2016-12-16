@@ -51,6 +51,15 @@ class LedgerManager : public LedgerImpl::Delegate {
 
  private:
   class PageManagerContainer;
+
+  // Handles a request to retrieve a page, making a decision about whether the
+  // page should be created locally based on the response from a query to the
+  // cloud.
+  void HandleGetPage(storage::PageId page_id,
+                     cloud_sync::RemoteResponse remote_response,
+                     CreateIfNotFound create_if_not_found,
+                     PageManagerContainer* container);
+
   // Adds a new PageManagerContainer for |page_id| and configures its so that we
   // delete it from |page_managers_| automatically when the last local client
   // disconnects from the page. Returns the container.

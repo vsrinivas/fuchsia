@@ -10,12 +10,16 @@
 
 namespace cloud_sync {
 
-std::string GetFirebasePathForPage(ftl::StringView user_prefix,
-                                   ftl::StringView app_id,
+std::string GetFirebasePathForApp(ftl::StringView user_prefix,
+                                  ftl::StringView app_id) {
+  return ftl::Concatenate({firebase::EncodeKey(user_prefix), "/",
+                           storage::kSerializationVersion, "/",
+                           firebase::EncodeKey(app_id)});
+}
+
+std::string GetFirebasePathForPage(ftl::StringView app_path,
                                    ftl::StringView page_id) {
-  return ftl::Concatenate(
-      {firebase::EncodeKey(user_prefix), "/", storage::kSerializationVersion,
-       "/", firebase::EncodeKey(app_id), "/", firebase::EncodeKey(page_id)});
+  return ftl::Concatenate({app_path, "/", firebase::EncodeKey(page_id)});
 }
 
 }  // namespace cloud_sync

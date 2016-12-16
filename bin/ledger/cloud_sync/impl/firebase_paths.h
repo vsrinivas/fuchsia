@@ -6,8 +6,13 @@
 
 namespace cloud_sync {
 
-std::string GetFirebasePathForPage(ftl::StringView user_prefix,
-                                   ftl::StringView app_id,
+// Returns the Firebase path under which the data for the given app is stored.
+std::string GetFirebasePathForApp(ftl::StringView user_prefix,
+                                  ftl::StringView app_id);
+
+// Returns the Firebase path under which the data for the given page is stored,
+// given the path for the app.
+std::string GetFirebasePathForPage(ftl::StringView app_path,
                                    ftl::StringView page_id);
 
 }  // namespace cloud_sync

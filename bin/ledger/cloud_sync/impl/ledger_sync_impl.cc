@@ -15,9 +15,47 @@ namespace cloud_sync {
 
 LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
                                ftl::StringView app_id)
-    : environment_(environment), app_id_(app_id.ToString()) {}
+    : environment_(environment),
+      app_path_(GetFirebasePathForApp(
+          environment_->configuration().sync_params.firebase_prefix,
+          app_id)),
+      app_firebase_(std::make_unique<firebase::FirebaseImpl>(
+          environment_->network_service(),
+          environment_->configuration().sync_params.firebase_id,
+          app_path_)) {}
 
 LedgerSyncImpl::~LedgerSyncImpl() {}
+
+void LedgerSyncImpl::RemoteContains(
+    ftl::StringView page_id,
+    std::function<void(RemoteResponse)> callback) {
+  app_firebase_->Get(
+      firebase::EncodeKey(page_id), "shallow=true",
+      [callback = std::move(callback)](firebase::Status status,
+                                       const rapidjson::Value& value) {
+        if (status != firebase::Status::OK) {
+          FTL_LOG(WARNING) << "Failed to look up the page in Firebase, error: "
+                           << status;
+          switch (status) {
+            case firebase::Status::NETWORK_ERROR:
+              callback(RemoteResponse::NETWORK_ERROR);
+              return;
+            case firebase::Status::PARSE_ERROR:
+              callback(RemoteResponse::PARSE_ERROR);
+              return;
+            case firebase::Status::SERVER_ERROR:
+              callback(RemoteResponse::SERVER_ERROR);
+              return;
+            default:
+              FTL_NOTREACHED();
+          }
+          return;
+        }
+
+        callback(value.IsNull() ? RemoteResponse::NOT_FOUND
+                                : RemoteResponse::FOUND);
+      });
+}
 
 std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
     storage::PageStorage* page_storage,
@@ -30,9 +68,7 @@ std::unique_ptr<PageSyncContext> LedgerSyncImpl::CreatePageContext(
   result->firebase = std::make_unique<firebase::FirebaseImpl>(
       environment_->network_service(),
       environment_->configuration().sync_params.firebase_id,
-      GetFirebasePathForPage(
-          environment_->configuration().sync_params.firebase_prefix, app_id_,
-          page_storage->GetId()));
+      GetFirebasePathForPage(app_path_, page_storage->GetId()));
   result->cloud_provider = std::make_unique<cloud_provider::CloudProviderImpl>(
       result->firebase.get());
   result->page_sync = std::make_unique<PageSyncImpl>(

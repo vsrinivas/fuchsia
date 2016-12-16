@@ -33,8 +33,15 @@ interface Ledger {
   // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   GetRootPage(Page& page_request) => (Status status);
 
-  // Retrieves the page with the given identifier.  It is allowed to connect to
-  // the same page multiple times.
+  // Retrieves the page with the given identifier. It is allowed to connect to
+  // the same page multiple times. Returns OK and binds |page_request| to the
+  // page on success.
+  //
+  // On error returns one of:
+  //  - PAGE_NOT_REACHABLE if the requested page is not present locally, and
+  //    lookup of the page in the cloud failed due to a connection or server error
+  //  - PAGE_NOT_FOUND if the requested page is not present neither
+  //    locally nor remotely in the cloud
   GetPage(array<uint8, 16> id, Page& page_request) => (Status status);
 
   // Creates a new page.

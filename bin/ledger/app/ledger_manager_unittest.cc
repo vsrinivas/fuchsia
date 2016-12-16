@@ -12,6 +12,8 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/ledger_storage.h"
+#include "apps/ledger/src/test/capture.h"
+#include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
@@ -29,7 +31,7 @@ storage::PageId RandomId() {
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
   FakeLedgerStorage(ftl::RefPtr<ftl::TaskRunner> task_runner)
-      : get_page_fails(false), task_runner_(task_runner) {}
+      : task_runner_(task_runner) {}
   ~FakeLedgerStorage() {}
 
   storage::Status CreatePageStorage(
@@ -46,8 +48,8 @@ class FakeLedgerStorage : public storage::LedgerStorage {
                                std::unique_ptr<storage::PageStorage>)>&
           callback) override {
     get_page_calls.push_back(page_id);
-    task_runner_->PostTask([ this, callback, page_id = std::move(page_id) ]() {
-      if (get_page_fails) {
+    task_runner_->PostTask([this, callback, page_id]() {
+      if (should_get_page_fail) {
         callback(storage::Status::NOT_FOUND, nullptr);
       } else {
         callback(storage::Status::OK,
@@ -68,7 +70,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
     delete_page_calls.clear();
   }
 
-  bool get_page_fails;
+  bool should_get_page_fail = false;
   std::vector<storage::PageId> create_page_calls;
   std::vector<storage::PageId> get_page_calls;
   std::vector<storage::PageId> delete_page_calls;
@@ -79,28 +81,66 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
 };
 
-class LedgerManagerTest : public ::testing::Test {
+class FakeLedgerSync : public cloud_sync::LedgerSync {
  public:
-  LedgerManagerTest() {}
-  ~LedgerManagerTest() override {}
+  FakeLedgerSync(ftl::RefPtr<ftl::TaskRunner> task_runner)
+      : task_runner_(task_runner) {}
+  ~FakeLedgerSync() {}
 
- protected:
-  mtl::MessageLoop message_loop_;
+  void RemoteContains(
+      ftl::StringView page_id,
+      std::function<void(cloud_sync::RemoteResponse)> callback) override {
+    remote_contains_calls++;
+    task_runner_->PostTask([ this, callback = std::move(callback) ] {
+      callback(response_to_return);
+    });
+  }
+
+  std::unique_ptr<cloud_sync::PageSyncContext> CreatePageContext(
+      storage::PageStorage* page_storage,
+      ftl::Closure error_callback) override {
+    return nullptr;
+  }
+
+  cloud_sync::RemoteResponse response_to_return =
+      cloud_sync::RemoteResponse::NOT_FOUND;
+
+  int remote_contains_calls = 0;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(LedgerManagerTest);
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
+};
+
+class LedgerManagerTest : public test::TestWithMessageLoop {
+ public:
+  LedgerManagerTest() {}
+
+  // test::TestWithMessageLoop:
+  void SetUp() override {
+    test::TestWithMessageLoop::SetUp();
+    std::unique_ptr<FakeLedgerStorage> storage =
+        std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
+    storage_ptr = storage.get();
+    std::unique_ptr<FakeLedgerSync> sync =
+        std::make_unique<FakeLedgerSync>(message_loop_.task_runner());
+    sync_ptr = sync.get();
+    ledger_manager_ =
+        std::make_unique<LedgerManager>(std::move(storage), std::move(sync));
+    ledger_manager_->BindLedger(ledger.NewRequest());
+  }
+
+ protected:
+  FakeLedgerStorage* storage_ptr;
+  FakeLedgerSync* sync_ptr;
+  std::unique_ptr<LedgerManager> ledger_manager_;
+  LedgerPtr ledger;
 };
 
 // Verifies that LedgerImpl proxies vended by LedgerManager work correctly,
 // that is, make correct calls to ledger storage.
 TEST_F(LedgerManagerTest, LedgerImpl) {
-  std::unique_ptr<FakeLedgerStorage> storage =
-      std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
-  FakeLedgerStorage* storage_ptr = storage.get();
-  LedgerManager ledger_manager(std::move(storage), nullptr);
-
-  LedgerPtr ledger;
-  ledger_manager.BindLedger(ledger.NewRequest());
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
@@ -115,7 +155,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   page.reset();
   storage_ptr->ClearCalls();
 
-  storage_ptr->get_page_fails = true;
+  storage_ptr->should_get_page_fail = true;
   ledger->GetRootPage(page.NewRequest(),
                       [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
@@ -129,9 +169,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   ledger->GetPage(convert::ToArray(id), page.NewRequest(),
                   [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
-  // TODO(etiennej): Once LE-87 is fixed, the number of create page calls
-  // should be 0.
-  EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
+  EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(id, storage_ptr->get_page_calls[0]);
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
@@ -151,32 +189,19 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 // Verifies that deleting the LedgerManager closes the channels connected to
 // LedgerImpl.
 TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
-  std::unique_ptr<LedgerManager> ledger_manager =
-      std::make_unique<LedgerManager>(
-          std::make_unique<FakeLedgerStorage>(message_loop_.task_runner()),
-          nullptr);
-
-  LedgerPtr ledger;
-  ledger_manager->BindLedger(ledger.NewRequest());
   bool ledger_closed = false;
   ledger.set_connection_error_handler([this, &ledger_closed] {
     ledger_closed = true;
     message_loop_.PostQuitTask();
   });
 
-  ledger_manager.reset();
+  ledger_manager_.reset();
   message_loop_.Run();
   EXPECT_TRUE(ledger_closed);
 }
 
 // Verifies that two successive calls to GetPage do not create 2 storages.
 TEST_F(LedgerManagerTest, CallGetPageTwice) {
-  std::unique_ptr<FakeLedgerStorage> storage =
-      std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
-  FakeLedgerStorage* storage_ptr = storage.get();
-  LedgerManager ledger_manager(std::move(storage), nullptr);
-  LedgerPtr ledger;
-  ledger_manager.BindLedger(ledger.NewRequest());
   PagePtr page;
   storage::PageId id = RandomId();
 
@@ -193,13 +218,82 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
                     message_loop_.PostQuitTask();
                   });
   page.reset();
-  message_loop_.Run();
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(2u, calls);
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(id, storage_ptr->get_page_calls[0]);
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
+}
+
+// Cloud shouldn't be queried if the page is present locally.
+TEST_F(LedgerManagerTest, GetPageFromStorageDontAskTheCloud) {
+  storage_ptr->should_get_page_fail = false;
+  Status status;
+
+  // Get the page when present in storage but not in the cloud.
+  sync_ptr->response_to_return = cloud_sync::RemoteResponse::NOT_FOUND;
+  PagePtr page1;
+  ledger->GetPage(
+      convert::ToArray(RandomId()), page1.NewRequest(),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(0, sync_ptr->remote_contains_calls);
+
+  // Get the page when present in storage and in the cloud.
+  sync_ptr->response_to_return = cloud_sync::RemoteResponse::FOUND;
+  PagePtr page2;
+  ledger->GetPage(
+      convert::ToArray(RandomId()), page2.NewRequest(),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(0, sync_ptr->remote_contains_calls);
+}
+
+TEST_F(LedgerManagerTest, GetPageFromTheCloud) {
+  storage_ptr->should_get_page_fail = true;
+  Status status;
+
+  // Get the page when not present in the cloud.
+  sync_ptr->response_to_return = cloud_sync::RemoteResponse::NOT_FOUND;
+  PagePtr page1;
+  ledger->GetPage(
+      convert::ToArray(RandomId()), page1.NewRequest(),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
+  EXPECT_EQ(1, sync_ptr->remote_contains_calls);
+
+  // Get the page when we can't reach the cloud.
+  sync_ptr->response_to_return = cloud_sync::RemoteResponse::NETWORK_ERROR;
+  PagePtr page2;
+  ledger->GetPage(
+      convert::ToArray(RandomId()), page2.NewRequest(),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  // Gotcha: this returns INTERNAL_ERROR here, because we end up trying to
+  // create the local page storage, and FakeLedgerStorage above can't do that
+  // and returns IO_ERROR.
+  // TODO(ppi): make FakeLedgerStorage more capable and expect OK below.
+  EXPECT_EQ(Status::INTERNAL_ERROR, status);
+  EXPECT_EQ(2, sync_ptr->remote_contains_calls);
+
+  // Get the page when present in the cloud.
+  sync_ptr->response_to_return = cloud_sync::RemoteResponse::FOUND;
+  PagePtr page3;
+  ledger->GetPage(
+      convert::ToArray(RandomId()), page3.NewRequest(),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  // Gotcha: this returns INTERNAL_ERROR here, because we end up trying to
+  // create the local page storage, and FakeLedgerStorage above can't do that
+  // and returns IO_ERROR.
+  // TODO(ppi): make FakeLedgerStorage more capable and expect OK below.
+  EXPECT_EQ(Status::INTERNAL_ERROR, status);
+  EXPECT_EQ(3, sync_ptr->remote_contains_calls);
 }
 
 }  // namespace

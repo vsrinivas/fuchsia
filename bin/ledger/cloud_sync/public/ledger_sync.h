@@ -5,6 +5,7 @@
 #ifndef APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_LEDGER_SYNC_H_
 #define APPS_LEDGER_SRC_CLOUD_SYNC_PUBLIC_LEDGER_SYNC_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -24,15 +25,29 @@ struct PageSyncContext {
   std::unique_ptr<PageSync> page_sync;
 };
 
-// Manages cloud sync for a particular ledger.
+enum class RemoteResponse {
+  FOUND,
+  NOT_FOUND,
+  NETWORK_ERROR,
+  SERVER_ERROR,
+  PARSE_ERROR
+};
+
+// Manages Cloud Sync for a particular ledger.
 class LedgerSync {
  public:
   LedgerSync() {}
   virtual ~LedgerSync() {}
 
-  // Creates a new page sync along with its context. The provided
-  // |error_callback| is called when sync is stopped due to an unrecoverable
-  // error.
+  // Returns true iff the page of the given id is present in the cloud.
+  virtual void RemoteContains(ftl::StringView page_id,
+                              std::function<void(RemoteResponse)> callback) = 0;
+
+  // Creates a new page sync along with its context for the given page. The page
+  // could already have data synced to the cloud or not.
+  //
+  // The provided |error_callback| is called when sync is stopped due to an
+  // unrecoverable error.
   virtual std::unique_ptr<PageSyncContext> CreatePageContext(
       storage::PageStorage* page_storage,
       ftl::Closure error_callback) = 0;
