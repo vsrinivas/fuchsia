@@ -4,7 +4,7 @@
 
 #include "apps/icu_data/lib/icu_data.h"
 
-#include <magenta/syscalls.h>
+#include <mx/vmar.h>
 
 #include "apps/icu_data/lib/constants.h"
 #include "apps/icu_data/services/icu_data.fidl.h"
@@ -15,6 +15,7 @@ namespace icu_data {
 namespace {
 
 static uintptr_t g_icu_data_ptr = 0u;
+static size_t g_icu_data_size = 0u;
 
 // Helper function. Given a VMO handle, map the memory into the process and
 // return a pointer to the memory.
@@ -23,15 +24,17 @@ static uintptr_t g_icu_data_ptr = 0u;
 uintptr_t GetDataFromVMO(const mx::vmo& vmo, uint64_t* size_out) {
   if (!size_out)
     return 0u;
-  mx_status_t status = vmo.get_size(size_out);
+  mx_status_t status = vmo.get_size(&g_icu_data_size);
   if (status != NO_ERROR || *size_out > std::numeric_limits<size_t>::max())
     return 0u;
 
   uintptr_t data = 0u;
-  status = mx_process_map_vm(mx_process_self(), vmo.get(), 0, *size_out, &data,
-                             MX_VM_FLAG_PERM_READ);
-  if (status == NO_ERROR)
+  status = mx::vmar::root_self().map(0, vmo, 0, g_icu_data_size,
+                                     MX_VM_FLAG_PERM_READ, &data);
+  if (status == NO_ERROR) {
+    *size_out = g_icu_data_size;
     return data;
+  }
 
   return 0u;
 }
@@ -92,7 +95,7 @@ bool Release() {
   if (g_icu_data_ptr) {
     // Unmap the ICU data.
     mx_status_t status =
-        mx_process_unmap_vm(mx_process_self(), g_icu_data_ptr, 0);
+        mx::vmar::root_self().unmap(g_icu_data_ptr, g_icu_data_size);
     g_icu_data_ptr = 0u;
     return status == NO_ERROR;
   } else {
