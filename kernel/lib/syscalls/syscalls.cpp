@@ -35,8 +35,9 @@ int sys_invalid_syscall(void) {
 
 #if ARCH_ARM
 
+/* ARM32 supports up to 9 arguments */
 using syscall_func = int64_t (*)(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e,
-                                 uint32_t f, uint32_t g, uint32_t h);
+                                 uint32_t f, uint32_t g, uint32_t h, uint32_t i);
 
 extern "C" void arm_syscall_handler(struct arm_fault_frame* frame) {
     uint64_t ret = 0;
@@ -74,7 +75,7 @@ extern "C" void arm_syscall_handler(struct arm_fault_frame* frame) {
 
     /* call the routine */
     ret = sfunc(frame->r[0], frame->r[1], frame->r[2], frame->r[3], frame->r[4],
-                         frame->r[5], frame->r[6], frame->r[7]);
+                         frame->r[5], frame->r[6], frame->r[7], frame->r[8]);
 
     LTRACEF_LEVEL(2, "ret 0x%llx\n", ret);
 

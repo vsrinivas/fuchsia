@@ -98,14 +98,28 @@ _\name:
 .endif
 .if \nargs == 8
     push_regs r4, r5, r6, r7
-    ldrd   r4, r5, [sp, #16]
-    ldrd   r6, r7, [sp, #24]
+    add    r12, sp, #16
+    ldmia  r12, {r4-r7}
     movw   r12, #\n
     movt   r12, #MAGENTA_SYSCALL_MAGIC
     svc    #0xff00ff
     mov    r12, #0
     pop_regs r4, r5, r6, r7
     bx     lr
+.endif
+.if \nargs == 9
+    push_regs r4, r5, r6, r7, r8
+    add    r12, sp, #20
+    ldmia  r12, {r4-r8}
+    movw   r12, #\n
+    movt   r12, #MAGENTA_SYSCALL_MAGIC
+    svc    #0xff00ff
+    mov    r12, #0
+    pop_regs r4, r5, r6, r7, r8
+    bx     lr
+.endif
+.if \nargs > 9
+.error "syscall asking for an unsupported number of args"
 .endif
     .cfi_endproc
     .fnend
