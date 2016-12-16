@@ -107,8 +107,8 @@
 //
 // void Test() {
 //     using DefaultList = mxtl::SinglyLinkedList<mxtl::RefPtr<Foo>>;
-//     using TypeAList   = mxtl::SinglyLinkedList<mxtl::RefPtr<Foo>, Foo:TypeATraits>;
-//     using TypeBList   = mxtl::SinglyLinkedList<mxtl::RefPtr<Foo>, Foo:TypeBTraits>;
+//     using TypeAList   = mxtl::SinglyLinkedList<mxtl::RefPtr<Foo>, Foo::TypeATraits>;
+//     using TypeBList   = mxtl::SinglyLinkedList<mxtl::RefPtr<Foo>, Foo::TypeBTraits>;
 //
 //     DefaultList default_list;
 //     TypeAList a_list;
