@@ -70,6 +70,10 @@ class IOLoop final {
 
   IOLoop() = default;
 
+  // Helper method for StartReadTask, only called from the read thread.
+  // Process one read request.
+  void OnReadTask();
+
   // Posts an asynchronous task on to listen for an incoming packet. This
   // initiates a loop that always reads for incoming packets. Called from Run().
   void StartReadLoop();

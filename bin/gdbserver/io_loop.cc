@@ -61,44 +61,47 @@ void IOLoop::Quit() {
   FTL_LOG(INFO) << "Socket I/O loop exited";
 }
 
+void IOLoop::OnReadTask() {
+  FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() ==
+             read_task_runner_.get());
+
+  ssize_t read_size = read(fd_, in_buffer_.data(), kMaxBufferSize);
+
+  // 0 bytes means that the remote end closed the TCP connection.
+  if (read_size == 0) {
+    FTL_VLOG(1) << "Client closed connection";
+    ReportDisconnected();
+    return;
+  }
+
+  // There was an error
+  if (read_size < 0) {
+    util::LogErrorWithErrno("Error occurred while waiting for a packet");
+    ReportError();
+    return;
+  }
+
+  ftl::StringView bytes_read(in_buffer_.data(), read_size);
+  FTL_VLOG(2) << "-> " << util::EscapeNonPrintableString(bytes_read);
+
+  // Notify the delegate that we read some bytes. We copy the buffer data
+  // into the closure as |in_buffer_| can get modified before the closure
+  // runs.
+  // TODO(armansito): Pass a weakptr to |delegate_|?
+  origin_task_runner_->PostTask([ bytes_read = bytes_read.ToString(), this ] {
+    delegate_->OnBytesRead(bytes_read);
+  });
+
+  if (!quit_called_)
+    read_task_runner_->PostTask(std::bind(&IOLoop::OnReadTask, this));
+}
+
 void IOLoop::StartReadLoop() {
   // Make sure the call is coming from the origin thread.
   FTL_DCHECK(mtl::MessageLoop::GetCurrent()->task_runner().get() ==
              origin_task_runner_.get());
-  // TODO(armansito): Pass a refptr/weakptr to |this|?
-  ftl::Closure read_task = [this, &read_task] {
-    ssize_t read_size = read(fd_, in_buffer_.data(), kMaxBufferSize);
 
-    // 0 bytes means that the remote end closed the TCP connection.
-    if (read_size == 0) {
-      FTL_VLOG(1) << "Client closed connection";
-      ReportDisconnected();
-      return;
-    }
-
-    // There was an error
-    if (read_size < 0) {
-      util::LogErrorWithErrno("Error occurred while waiting for a packet");
-      ReportError();
-      return;
-    }
-
-    ftl::StringView bytes_read(in_buffer_.data(), read_size);
-    FTL_VLOG(2) << "-> " << util::EscapeNonPrintableString(bytes_read);
-
-    // Notify the delegate that we read some bytes. We copy the buffer data
-    // into the closure as |in_buffer_| can get modified before the closure
-    // runs.
-    // TODO(armansito): Pass a weakptr to |delegate_|?
-    origin_task_runner_->PostTask([ bytes_read = bytes_read.ToString(), this ] {
-      delegate_->OnBytesRead(bytes_read);
-    });
-
-    if (!quit_called_)
-      read_task_runner_->PostTask(read_task);
-  };
-
-  read_task_runner_->PostTask(read_task);
+  read_task_runner_->PostTask(std::bind(&IOLoop::OnReadTask, this));
 }
 
 void IOLoop::PostWriteTask(const ftl::StringView& bytes) {
