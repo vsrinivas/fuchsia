@@ -190,11 +190,11 @@ AddResult AddTransformsForLpcm(const AudioStreamType& in_type,
   // transforms that handle more than one conversion.
   if (in_type.sample_format() != out_type_set.sample_format() &&
       out_type_set.sample_format() != AudioStreamType::SampleFormat::kAny) {
-    *output =
-        graph
-            ->ConnectOutputToPart(*output, graph->Add(LpcmReformatter::Create(
-                                               in_type, out_type_set)))
-            .output();
+    *output = graph
+                  ->ConnectOutputToPart(
+                      *output, graph->Add(LpcmReformatter::Create(
+                                   in_type, out_type_set.sample_format())))
+                  .output();
   }
 
   if (!out_type_set.channels().contains(in_type.channels())) {

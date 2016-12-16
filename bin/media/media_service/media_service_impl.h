@@ -60,6 +60,11 @@ class MediaServiceImpl : public FactoryServiceBase, public MediaService {
   void CreateTimelineController(fidl::InterfaceRequest<MediaTimelineController>
                                     timeline_controller) override;
 
+  void CreateLpcmReformatter(
+      MediaTypePtr input_media_type,
+      AudioSampleFormat output_sample_format,
+      fidl::InterfaceRequest<MediaTypeConverter> lpcm_reformatter) override;
+
  private:
   fidl::BindingSet<MediaService> bindings_;
 

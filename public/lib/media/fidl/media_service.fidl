@@ -66,4 +66,9 @@ interface MediaService {
 
   // Creates a timeline controller reader.
   CreateTimelineController(MediaTimelineController& timeline_controller);
+
+  // Creates a reformatter for LPCM audio.
+  CreateLpcmReformatter(MediaType input_media_type,
+                        AudioSampleFormat output_sample_format,
+                        MediaTypeConverter& lpcm_reformatter);
 };

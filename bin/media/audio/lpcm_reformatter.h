@@ -15,7 +15,10 @@ class LpcmReformatter : public Transform {
  public:
   static std::shared_ptr<LpcmReformatter> Create(
       const AudioStreamType& in_type,
-      const AudioStreamTypeSet& out_type);
+      AudioStreamType::SampleFormat out_sample_format);
+
+  // Returns the type of the stream the reformatter will produce.
+  virtual std::unique_ptr<StreamType> output_stream_type() = 0;
 };
 
 }  // namespace media

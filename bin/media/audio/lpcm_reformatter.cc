@@ -14,9 +14,12 @@ template <typename TIn, typename TOut>
 class LpcmReformatterImpl : public LpcmReformatter {
  public:
   LpcmReformatterImpl(const AudioStreamType& in_type,
-                      const AudioStreamTypeSet& out_type);
+                      AudioStreamType::SampleFormat out_sample_format);
 
   ~LpcmReformatterImpl() override;
+
+  // LpcmReformatter override.
+  std::unique_ptr<StreamType> output_stream_type() override;
 
   // Transform implementation.
   bool TransformPacket(const PacketPtr& input,
@@ -31,24 +34,28 @@ class LpcmReformatterImpl : public LpcmReformatter {
 
 std::shared_ptr<LpcmReformatter> LpcmReformatter::Create(
     const AudioStreamType& in_type,
-    const AudioStreamTypeSet& out_type) {
+    const AudioStreamType::SampleFormat out_sample_format) {
   LpcmReformatter* result = nullptr;
 
   switch (in_type.sample_format()) {
     case AudioStreamType::SampleFormat::kUnsigned8:
-      switch (out_type.sample_format()) {
+      switch (out_sample_format) {
         case AudioStreamType::SampleFormat::kUnsigned8:
         case AudioStreamType::SampleFormat::kAny:
-          result = new LpcmReformatterImpl<uint8_t, uint8_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<uint8_t, uint8_t>(in_type,
+                                                             out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kSigned16:
-          result = new LpcmReformatterImpl<uint8_t, int16_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<uint8_t, int16_t>(in_type,
+                                                             out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kSigned24In32:
-          result = new LpcmReformatterImpl<uint8_t, int32_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<uint8_t, int32_t>(in_type,
+                                                             out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kFloat:
-          result = new LpcmReformatterImpl<uint8_t, float>(in_type, out_type);
+          result = new LpcmReformatterImpl<uint8_t, float>(in_type,
+                                                           out_sample_format);
           break;
         default:
           FTL_DCHECK(false) << "unsupported sample format";
@@ -57,19 +64,23 @@ std::shared_ptr<LpcmReformatter> LpcmReformatter::Create(
       }
       break;
     case AudioStreamType::SampleFormat::kSigned16:
-      switch (out_type.sample_format()) {
+      switch (out_sample_format) {
         case AudioStreamType::SampleFormat::kUnsigned8:
-          result = new LpcmReformatterImpl<int16_t, uint8_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<int16_t, uint8_t>(in_type,
+                                                             out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kSigned16:
         case AudioStreamType::SampleFormat::kAny:
-          result = new LpcmReformatterImpl<int16_t, int16_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<int16_t, int16_t>(in_type,
+                                                             out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kSigned24In32:
-          result = new LpcmReformatterImpl<int16_t, int32_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<int16_t, int32_t>(in_type,
+                                                             out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kFloat:
-          result = new LpcmReformatterImpl<int16_t, float>(in_type, out_type);
+          result = new LpcmReformatterImpl<int16_t, float>(in_type,
+                                                           out_sample_format);
           break;
         default:
           FTL_DCHECK(false) << "unsupported sample format";
@@ -78,19 +89,23 @@ std::shared_ptr<LpcmReformatter> LpcmReformatter::Create(
       }
       break;
     case AudioStreamType::SampleFormat::kSigned24In32:
-      switch (out_type.sample_format()) {
+      switch (out_sample_format) {
         case AudioStreamType::SampleFormat::kUnsigned8:
-          result = new LpcmReformatterImpl<int32_t, uint8_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<int32_t, uint8_t>(in_type,
+                                                             out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kSigned16:
-          result = new LpcmReformatterImpl<int32_t, int16_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<int32_t, int16_t>(in_type,
+                                                             out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kSigned24In32:
         case AudioStreamType::SampleFormat::kAny:
-          result = new LpcmReformatterImpl<int32_t, int32_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<int32_t, int32_t>(in_type,
+                                                             out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kFloat:
-          result = new LpcmReformatterImpl<int32_t, float>(in_type, out_type);
+          result = new LpcmReformatterImpl<int32_t, float>(in_type,
+                                                           out_sample_format);
           break;
         default:
           FTL_DCHECK(false) << "unsupported sample format";
@@ -99,19 +114,23 @@ std::shared_ptr<LpcmReformatter> LpcmReformatter::Create(
       }
       break;
     case AudioStreamType::SampleFormat::kFloat:
-      switch (out_type.sample_format()) {
+      switch (out_sample_format) {
         case AudioStreamType::SampleFormat::kUnsigned8:
-          result = new LpcmReformatterImpl<float, uint8_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<float, uint8_t>(in_type,
+                                                           out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kSigned16:
-          result = new LpcmReformatterImpl<float, int16_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<float, int16_t>(in_type,
+                                                           out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kSigned24In32:
-          result = new LpcmReformatterImpl<float, int32_t>(in_type, out_type);
+          result = new LpcmReformatterImpl<float, int32_t>(in_type,
+                                                           out_sample_format);
           break;
         case AudioStreamType::SampleFormat::kFloat:
         case AudioStreamType::SampleFormat::kAny:
-          result = new LpcmReformatterImpl<float, float>(in_type, out_type);
+          result =
+              new LpcmReformatterImpl<float, float>(in_type, out_sample_format);
           break;
         default:
           FTL_DCHECK(false) << "unsupported sample format";
@@ -131,13 +150,11 @@ std::shared_ptr<LpcmReformatter> LpcmReformatter::Create(
 template <typename TIn, typename TOut>
 LpcmReformatterImpl<TIn, TOut>::LpcmReformatterImpl(
     const AudioStreamType& in_type,
-    const AudioStreamTypeSet& out_type)
+    AudioStreamType::SampleFormat out_sample_format)
     : in_type_(in_type),
       out_type_(in_type.encoding(),
                 nullptr,
-                out_type.sample_format() == AudioStreamType::SampleFormat::kAny
-                    ? in_type.sample_format()
-                    : out_type.sample_format(),
+                out_sample_format,
                 in_type.channels(),
                 in_type.frames_per_second()) {
   FTL_DCHECK(in_type.encoding() == StreamType::kAudioEncodingLpcm);
@@ -146,6 +163,12 @@ LpcmReformatterImpl<TIn, TOut>::LpcmReformatterImpl(
 
 template <typename TIn, typename TOut>
 LpcmReformatterImpl<TIn, TOut>::~LpcmReformatterImpl() {}
+
+template <typename TIn, typename TOut>
+std::unique_ptr<StreamType>
+LpcmReformatterImpl<TIn, TOut>::output_stream_type() {
+  return in_type_.Clone();
+}
 
 namespace {
 
@@ -253,14 +276,15 @@ bool LpcmReformatterImpl<TIn, TOut>::TransformPacket(
 
   const TIn* in_channel = static_cast<const TIn*>(input->payload());
   TOut* out_channel = static_cast<TOut*>(buffer);
+  uint32_t channels = in_type_.channels();
 
   for (uint32_t channel = 0; channel < in_type_.channels(); channel++) {
     const TIn* in_sample = in_channel;
     TOut* out_sample = out_channel;
     for (size_t sample = 0; sample < frame_count; sample++) {
       CopySample(out_sample, in_sample);
-      in_sample += in_type_.channels();
-      out_sample += out_type_.channels();
+      in_sample += channels;
+      out_sample += channels;
     }
     ++in_channel;
     ++out_channel;

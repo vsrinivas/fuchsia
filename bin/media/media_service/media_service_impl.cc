@@ -7,6 +7,7 @@
 #include "apps/media/services/audio_server.fidl.h"
 #include "apps/media/src/media_service/audio_capturer_impl.h"
 #include "apps/media/src/media_service/file_reader_impl.h"
+#include "apps/media/src/media_service/lpcm_reformatter_impl.h"
 #include "apps/media/src/media_service/media_decoder_impl.h"
 #include "apps/media/src/media_service/media_demux_impl.h"
 #include "apps/media/src/media_service/media_player_impl.h"
@@ -106,6 +107,15 @@ void MediaServiceImpl::CreateTimelineController(
     fidl::InterfaceRequest<MediaTimelineController> timeline_controller) {
   AddProduct(MediaTimelineControllerImpl::Create(std::move(timeline_controller),
                                                  this));
+}
+
+void MediaServiceImpl::CreateLpcmReformatter(
+    MediaTypePtr input_media_type,
+    AudioSampleFormat output_sample_format,
+    fidl::InterfaceRequest<MediaTypeConverter> lpcm_reformatter) {
+  AddProduct(LpcmReformatterImpl::Create(std::move(input_media_type),
+                                         output_sample_format,
+                                         std::move(lpcm_reformatter), this));
 }
 
 }  // namespace media
