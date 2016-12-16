@@ -5,17 +5,21 @@
 import("//magma/gnbuild/magma.gni")
 
 group("magma_service_driver") {
-  deps = [
-    "$msd_intel_gen_build_root",
-  ]
+  if (target_cpu == "x64") {
+    deps = [
+      "$msd_intel_gen_build_root",
+    ]
+  }
 }
 
 group("magma_service_driver_test") {
   testonly = true
 
-  deps = [
-    "$msd_intel_gen_build_root:test",
-  ]
+  if (target_cpu == "x64") {
+    deps = [
+      "$msd_intel_gen_build_root:test",
+    ]
+  }
 }
 
 # This config allows inclusion of headers via relative paths from src
@@ -35,22 +39,6 @@ source_set("libmsd") {
   ]
   public_deps = [
     "include:msd_abi",
-  ]
-}
-
-group("magma_tests") {
-  testonly = true
-
-  deps = [
-    "tests",
-  ]
-}
-
-group("mesa_tests") {
-  testonly = true
-
-  deps = [
-    "$mesa_build_root:tests",
   ]
 }
 
