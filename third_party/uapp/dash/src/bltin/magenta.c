@@ -237,27 +237,35 @@ static int mxc_rm_recursive(int atfd, char* path) {
 }
 
 int mxc_rm(int argc, char** argv) {
+    // skip "rm"
+    argc--;
+    argv++;
     bool recursive = false;
     if (argc > 1) {
-        if (!strcmp(argv[1], "-r")) {
+        if (!strcmp(argv[0], "-r")) {
             recursive = true;
             argc--;
             argv++;
         }
     }
-    if (argc < 2) {
-        fprintf(stderr, "usage: rm [-r] <filename>\n");
+    if (argc < 1) {
+        fprintf(stderr, "usage: rm [-r] <filename>...\n");
         return -1;
     }
-    if (recursive) {
-        if (mxc_rm_recursive(AT_FDCWD, argv[0])) {
-            goto err;
+
+    while (argc-- > 0) {
+        if (recursive) {
+            if (mxc_rm_recursive(AT_FDCWD, argv[0])) {
+                goto err;
+            }
+        } else {
+            if (unlink(argv[0])) {
+                goto err;
+            }
         }
-    } else {
-        if (unlink(argv[0])) {
-            goto err;
-        }
+        argv++;
     }
+
     return 0;
 err:
     fprintf(stderr, "error: failed to delete '%s'\n", argv[0]);
