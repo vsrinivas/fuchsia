@@ -4,7 +4,7 @@
 
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 
-#include <mx/process.h>
+#include <mx/vmar.h>
 
 #include <atomic>
 
@@ -30,8 +30,9 @@ void ReleaseBuffer(void* pixels, void* context) {
 }
 
 void UnmapMemory(void* pixels, void* context) {
+  const size_t size = reinterpret_cast<size_t>(context);
   mx_status_t status =
-      mx::process::self().unmap_vm(reinterpret_cast<uintptr_t>(pixels), 0u);
+      mx::vmar::root_self().unmap(reinterpret_cast<uintptr_t>(pixels), size);
   FTL_CHECK(status == NO_ERROR);
   TraceCount(-1);
 }
@@ -172,18 +173,20 @@ sk_sp<SkSurface> MakeSkSurfaceFromVMO(const SkImageInfo& info,
 
   uintptr_t buffer = 0u;
   status =
-      mx::process::self().map_vm(vmo, 0u, needed_bytes, &buffer,
-                                 MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE);
+      mx::vmar::root_self().map(0, vmo, 0u, needed_bytes,
+                                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                                &buffer);
   if (status != NO_ERROR) {
     FTL_LOG(ERROR) << "Could not map surface: status=" << status;
     return nullptr;
   }
 
   sk_sp<SkSurface> surface = SkSurface::MakeRasterDirectReleaseProc(
-      info, reinterpret_cast<void*>(buffer), row_bytes, &UnmapMemory, nullptr);
+      info, reinterpret_cast<void*>(buffer), row_bytes, &UnmapMemory,
+      reinterpret_cast<void*>(needed_bytes));
   if (!surface) {
     FTL_LOG(ERROR) << "Could not create SkSurface";
-    status = mx::process::self().unmap_vm(buffer, 0u);
+    status = mx::vmar::root_self().unmap(buffer, needed_bytes);
     FTL_CHECK(status == NO_ERROR);
     return nullptr;
   }
