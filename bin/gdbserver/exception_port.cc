@@ -10,6 +10,7 @@
 #include <magenta/syscalls/port.h>
 
 #include "lib/ftl/logging.h"
+#include "lib/mtl/handles/object_info.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 #include "process.h"
@@ -176,6 +177,10 @@ bool ExceptionPort::Unbind(const Key key) {
 
 void ExceptionPort::Worker() {
   FTL_DCHECK(eport_handle_);
+
+  // Give this thread an identifiable name for debugging purposes.
+  mtl::SetCurrentThreadName("exception port reader");
+
   FTL_VLOG(1) << "ExceptionPort I/O thread started";
 
   mx_handle_t eport;

@@ -12,6 +12,7 @@
 #include "lib/ftl/log_settings.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/mtl/handles/object_info.h"
 
 #include "process.h"
 #include "server.h"
@@ -70,6 +71,9 @@ int main(int argc, char* argv[]) {
   }
 
   FTL_LOG(INFO) << "Starting server.";
+
+  // Give this thread an identifiable name for debugging purposes.
+  mtl::SetCurrentThreadName("server (main)");
 
   debugserver::Server server(port);
 

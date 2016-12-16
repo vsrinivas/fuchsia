@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "lib/ftl/logging.h"
+#include "lib/mtl/handles/object_info.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
 
@@ -31,8 +32,8 @@ void IOLoop::Run() {
   FTL_DCHECK(!is_running_);
 
   is_running_ = true;
-  read_thread_ = mtl::CreateThread(&read_task_runner_);
-  write_thread_ = mtl::CreateThread(&write_task_runner_);
+  read_thread_ = mtl::CreateThread(&read_task_runner_, "i/o loop read task");
+  write_thread_ = mtl::CreateThread(&write_task_runner_, "i/o loop write task");
 
   StartReadLoop();
 }
