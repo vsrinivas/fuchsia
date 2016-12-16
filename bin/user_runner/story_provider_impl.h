@@ -175,8 +175,10 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
     bool deleted{};
     std::vector<DeleteStoryCallback> deleted_callbacks;
 
-    // Time beyond which the implementation is free to purge this controller.
-    // It is set to 0 if there outstanding connections to the controller.
+    // Time beyond which the implementation is free to purge this
+    // controller. It is set to 0 if there are outstanding connections
+    // to the controller (in which situation the controller must not
+    // be purged anyway).
     ftl::TimePoint purge_time;
   };
   std::unordered_map<std::string, std::unique_ptr<StoryControllerEntry>>
