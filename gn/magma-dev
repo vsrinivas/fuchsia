@@ -22,8 +22,8 @@
             "bootfs_path": "lib/libmagma.so"
         },
         {
-            "binary": "libvulkan.so",
-            "bootfs_path": "lib/libvulkan.so"
+            "binary": "libvulkan_magma_intel.so",
+            "bootfs_path": "lib/libvulkan_magma_intel.so"
         },
         {
             "binary": "magma_sys_unit_tests",
@@ -56,6 +56,12 @@
         {
             "binary": "autorun",
             "bootfs_path": "autorun"
+        }
+    ],
+    "resources": [
+        {
+            "bootfs_path": "lib/vulkan/icd.d/intel_magma_icd.json",
+            "file": "third_party/mesa/src/intel/vulkan/intel_magma_icd.json"
         }
     ]
 }
