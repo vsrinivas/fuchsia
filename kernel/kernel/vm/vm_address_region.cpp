@@ -194,6 +194,10 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
         return ERR_ACCESS_DENIED;
     }
 
+    if (!IS_PAGE_ALIGNED(vmo_offset)) {
+        return ERR_INVALID_ARGS;
+    }
+
     // If we're mapping it with a specific permission, we should allow
     // future Protect() calls on the mapping to keep that permission.
     if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ) {

@@ -528,6 +528,11 @@ bool invalid_args_test() {
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
                           &map_addr),
               ERR_INVALID_ARGS, "");
+    EXPECT_EQ(mx_vmar_map(vmar, PAGE_SIZE, vmo, PAGE_SIZE - 1,
+                          3 * PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_SPECIFIC,
+                          &map_addr),
+              ERR_INVALID_ARGS, "");
     EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, 0,
                           4 * PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
                           &map_addr),
