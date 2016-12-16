@@ -32,7 +32,7 @@ bool ProcessMemory::Read(uintptr_t address,
     util::LogErrorWithMxStatus(
         ftl::StringPrintf("Failed to read memory at addr: %" PRIxPTR, address),
         status);
-    return status;
+    return false;
   }
 
   // TODO(dje): The kernel currently doesn't support short reads,
