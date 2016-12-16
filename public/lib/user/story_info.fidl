@@ -56,6 +56,6 @@ enum StoryState {
   DONE = 3,
   // Story stopped after Story.Stop() was called.
   STOPPED = 4,
-  // The root module could not be started.
+  // The application of the root module could not be started.
   ERROR = 5,
 };

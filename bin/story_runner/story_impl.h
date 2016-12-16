@@ -120,7 +120,6 @@ class StoryImpl : public StoryRunner {
   struct Connection {
     std::shared_ptr<StoryConnection> story_connection;
     std::shared_ptr<ModuleControllerImpl> module_controller_impl;
-    ApplicationControllerPtr application_controller;
   };
 
   fidl::Binding<StoryRunner> binding_;

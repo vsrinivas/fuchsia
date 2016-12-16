@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/module_controller.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -29,7 +30,8 @@ class ModuleControllerImpl : public ModuleController {
   ModuleControllerImpl(
       StoryImpl* const story_impl,
       const fidl::String& url,
-      fidl::InterfacePtr<Module> module,
+      ApplicationControllerPtr module_application,
+      ModulePtr module,
       fidl::InterfaceRequest<ModuleController> module_controller);
 
   ~ModuleControllerImpl() override = default;
@@ -49,9 +51,12 @@ class ModuleControllerImpl : public ModuleController {
   void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
   void Stop(const StopCallback& done) override;
 
+  void OnConnectionError();
+
   StoryImpl* const story_impl_;
   const fidl::String url_;
-  fidl::InterfacePtr<Module> module_;
+  ApplicationControllerPtr module_application_;
+  ModulePtr module_;
   fidl::Binding<ModuleController> binding_;
   fidl::InterfacePtrSet<ModuleWatcher> watchers_;
   ModuleState state_{ModuleState::STARTING};

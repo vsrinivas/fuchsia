@@ -214,6 +214,7 @@ void StoryControllerImpl::OnStateChange(const ModuleState state) {
       story_data_->story_info->state = StoryState::STARTING;
       break;
     case ModuleState::RUNNING:
+    case ModuleState::UNLINKED:
       story_data_->story_info->state = StoryState::RUNNING;
       break;
     case ModuleState::STOPPED:

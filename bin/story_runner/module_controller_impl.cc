@@ -20,16 +20,28 @@ constexpr ftl::TimeDelta kStoryTearDownTimeout = ftl::TimeDelta::FromSeconds(1);
 ModuleControllerImpl::ModuleControllerImpl(
     StoryImpl* const story_impl,
     const fidl::String& url,
-    fidl::InterfacePtr<Module> module,
+    ApplicationControllerPtr module_application,
+    ModulePtr module,
     fidl::InterfaceRequest<ModuleController> module_controller)
     : story_impl_(story_impl),
       url_(url),
+      module_application_(std::move(module_application)),
       module_(std::move(module)),
       binding_(this, std::move(module_controller)) {
-  // If the Module instance closes its own connection, we signal this
-  // as error to all current and future watchers.
-  module_.set_connection_error_handler(
+  module_application_.set_connection_error_handler(
       [this] { SetState(ModuleState::ERROR); });
+  module_.set_connection_error_handler(
+      [this] { OnConnectionError(); });
+}
+
+// If the Module instance closes its own connection, we signal this to
+// all current and future watchers by an appropriate state transition.
+void ModuleControllerImpl::OnConnectionError() {
+  if (state_ == ModuleState::STARTING) {
+    SetState(ModuleState::UNLINKED);
+  } else {
+    SetState(ModuleState::ERROR);
+  }
 }
 
 void ModuleControllerImpl::SetState(const ModuleState new_state) {
@@ -77,14 +89,21 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
   };
 
   // At this point, it's no longer an error if the module closes its
-  // connection.
+  // connection, or the application exits.
+  module_application_.set_connection_error_handler(nullptr);
   module_.set_connection_error_handler(nullptr);
 
-  // Call Module.Stop(), but also schedule a timeout.
-  module_->Stop(cont);
+  // If the module was UNLINKED, stop it directly. Otherwise call
+  // Module.Stop(), but also schedule a timeout in case it doesn't
+  // return from Stop().
+  if (state_ == ModuleState::UNLINKED) {
+    cont();
 
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      cont, kStoryTearDownTimeout);
+  } else {
+    module_->Stop(cont);
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+        cont, kStoryTearDownTimeout);
+  }
 }
 
 void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {

@@ -168,10 +168,10 @@ void StoryImpl::StartModule(
 
         Connection connection;
 
-        connection.application_controller = std::move(application_controller);
-
         connection.module_controller_impl.reset(
-            new ModuleControllerImpl(this, module_url, std::move(module),
+            new ModuleControllerImpl(this, module_url,
+                                     std::move(application_controller),
+                                     std::move(module),
                                      std::move(module_controller_request)));
 
         connection.story_connection.reset(new StoryConnection(
