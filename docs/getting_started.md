@@ -19,24 +19,34 @@ try -j16 or -j8.
 
 ## Preparing the build environment
 
+### Ubuntu
+
 On Ubuntu this should obtain the necessary pre-reqs:
 ```
 sudo apt-get install texinfo libglib2.0-dev autoconf libtool libsdl-dev build-essential
 ```
 
-On Mac with homebrew:
+### macOS
+Install the Xcode Command Line Tools:
+```
+xcode-select --install
+```
+
+Install the other pre-reqs:
+
+* Using Homebrew:
 ```
 brew install wget pkg-config glib autoconf automake libtool
 ```
 
-On Mac with MacPorts:
+* Using MacPorts:
 ```
 port install autoconf automake libtool libpixman pkgconfig glib2
 ```
 
 ## Install Toolchains
 
-If you're developing on Linux or OSX, there are prebuilt toolchain binaries avaiable.
+If you're developing on Linux or macOS, there are prebuilt toolchain binaries avaiable.
 Just run this script from your Magenta working directory:
 
 ```
