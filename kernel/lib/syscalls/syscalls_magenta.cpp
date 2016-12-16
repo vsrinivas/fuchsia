@@ -512,13 +512,15 @@ mx_status_t sys_fifo_op(mx_handle_t handle, uint32_t op, uint64_t val,
                         user_ptr<mx_fifo_state_t> out) {
     mx_rights_t rights = MX_RIGHT_READ;
     switch (op) {
-    case MX_FIFO_READ_STATE:
+    case MX_FIFO_OP_READ_STATE:
         if (!out) return ERR_INVALID_ARGS;
         break;
-    case MX_FIFO_ADVANCE_HEAD:
+    case MX_FIFO_OP_ADVANCE_HEAD:
+    case MX_FIFO_OP_PRODUCER_EXCEPTION:
         rights |= MX_RIGHT_FIFO_PRODUCER;
         break;
-    case MX_FIFO_ADVANCE_TAIL:
+    case MX_FIFO_OP_ADVANCE_TAIL:
+    case MX_FIFO_OP_CONSUMER_EXCEPTION:
         rights |= MX_RIGHT_FIFO_CONSUMER;
         break;
     default:
@@ -534,14 +536,20 @@ mx_status_t sys_fifo_op(mx_handle_t handle, uint32_t op, uint64_t val,
 
     mx_fifo_state_t state;
     switch (op) {
-    case MX_FIFO_READ_STATE:
+    case MX_FIFO_OP_READ_STATE:
         fifo->GetState(&state);
         break;
-    case MX_FIFO_ADVANCE_HEAD:
+    case MX_FIFO_OP_ADVANCE_HEAD:
         status = fifo->AdvanceHead(val, &state);
         break;
-    case MX_FIFO_ADVANCE_TAIL:
+    case MX_FIFO_OP_ADVANCE_TAIL:
         status = fifo->AdvanceTail(val, &state);
+        break;
+    case MX_FIFO_OP_PRODUCER_EXCEPTION:
+        status = fifo->SetException(MX_FIFO_PRODUCER_EXCEPTION, val > 0, &state);
+        break;
+    case MX_FIFO_OP_CONSUMER_EXCEPTION:
+        status = fifo->SetException(MX_FIFO_CONSUMER_EXCEPTION, val > 0, &state);
         break;
     }
 

@@ -34,22 +34,22 @@ static bool basic_test(void) {
 
     mx_fifo_state_t state;
     reset_state(&state);
-    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_READ_STATE, 0, &state), 0, "Error getting fifo state");
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_READ_STATE, 0, &state), 0, "Error getting fifo state");
     ASSERT_EQ(state.head, 0u, "Bad fifo state");
     ASSERT_EQ(state.tail, 0u, "Bad fifo state");
-    check_signals(fifo, MX_SIGNAL_FIFO_EMPTY | MX_SIGNAL_FIFO_NOT_FULL);
+    check_signals(fifo, MX_FIFO_EMPTY | MX_FIFO_NOT_FULL);
 
     reset_state(&state);
-    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_ADVANCE_HEAD, 1, &state), 0, "Error advancing head");
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_ADVANCE_HEAD, 1, &state), 0, "Error advancing head");
     ASSERT_EQ(state.head, 1u, "Error advancing head");
     ASSERT_EQ(state.tail, 0u, "Error advancing tail");
-    check_signals(fifo, MX_SIGNAL_FIFO_NOT_EMPTY | MX_SIGNAL_FIFO_NOT_FULL);
+    check_signals(fifo, MX_FIFO_NOT_EMPTY | MX_FIFO_NOT_FULL);
 
     reset_state(&state);
-    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_ADVANCE_HEAD, 3, &state), 0, "Error advancing head");
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_ADVANCE_HEAD, 3, &state), 0, "Error advancing head");
     ASSERT_EQ(state.head, 4u, "Error advancing head");
     ASSERT_EQ(state.tail, 0u, "Error advancing head");
-    check_signals(fifo, MX_SIGNAL_FIFO_NOT_EMPTY | MX_SIGNAL_FIFO_FULL);
+    check_signals(fifo, MX_FIFO_NOT_EMPTY | MX_FIFO_FULL);
 
     ASSERT_GE(mx_handle_close(fifo), 0, "Error closing fifo");
     END_TEST;
@@ -64,25 +64,25 @@ static bool advance_too_many_test(void) {
     reset_state(&state);
 
     // Can't advance head beyond end, or tail past head.
-    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_ADVANCE_HEAD, 5, &state), ERR_OUT_OF_RANGE,
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_ADVANCE_HEAD, 5, &state), ERR_OUT_OF_RANGE,
             "Error advancing head");
     ASSERT_EQ(state.head, 0u, "Error advancing head");
     ASSERT_EQ(state.tail, 0u, "Error advancing head");
 
     reset_state(&state);
-    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_ADVANCE_TAIL, 1, &state), ERR_OUT_OF_RANGE,
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_ADVANCE_TAIL, 1, &state), ERR_OUT_OF_RANGE,
             "Error advancing tail");
     ASSERT_EQ(state.head, 0u, "Error advancing tail");
     ASSERT_EQ(state.tail, 0u, "Error advancing tail");
 
     // Check advancing tail after head != tail
     reset_state(&state);
-    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_ADVANCE_HEAD, 2, &state), 0, "Error advancing head");
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_ADVANCE_HEAD, 2, &state), 0, "Error advancing head");
     ASSERT_EQ(state.head, 2u, "Error advancing head");
     ASSERT_EQ(state.tail, 0u, "Error advancing head");
 
     reset_state(&state);
-    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_ADVANCE_TAIL, 3, &state), ERR_OUT_OF_RANGE,
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_ADVANCE_TAIL, 3, &state), ERR_OUT_OF_RANGE,
             "Error advancing tail");
     ASSERT_EQ(state.head, 2u, "Error advancing tail");
     ASSERT_EQ(state.tail, 0u, "Error advancing tail");
@@ -108,14 +108,14 @@ static bool restrict_rights_test(void) {
     }
 
     // consumer can't move head
-    ASSERT_EQ(mx_fifo_op(consumer, MX_FIFO_ADVANCE_HEAD, 1u, NULL), ERR_ACCESS_DENIED,
+    ASSERT_EQ(mx_fifo_op(consumer, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL), ERR_ACCESS_DENIED,
             "Error advancing head (should have been denied)");
 
     // move head so fifo is not empty
-    ASSERT_EQ(mx_fifo_op(producer, MX_FIFO_ADVANCE_HEAD, 1u, NULL), 0, "Error advancing head");
+    ASSERT_EQ(mx_fifo_op(producer, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL), 0, "Error advancing head");
 
     // producer can't move tail
-    ASSERT_EQ(mx_fifo_op(producer, MX_FIFO_ADVANCE_TAIL, 1u, NULL), ERR_ACCESS_DENIED,
+    ASSERT_EQ(mx_fifo_op(producer, MX_FIFO_OP_ADVANCE_TAIL, 1u, NULL), ERR_ACCESS_DENIED,
             "Error advancing tail (should have been denied)");
 
     ASSERT_GE(mx_handle_close(producer), 0, "Error closing fifo");
@@ -130,15 +130,15 @@ static int thread_consumer(void* arg) {
     reset_state(&state);
 
     // ensure we can read the fifo state
-    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_READ_STATE, 0, &state), 0, "Error getting fifo state");
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_READ_STATE, 0, &state), 0, "Error getting fifo state");
 
     mx_signals_t pending;
-    ASSERT_EQ(mx_handle_wait_one(fifo, MX_SIGNAL_FIFO_NOT_EMPTY, 1000 * 1000 * 1000, &pending),
+    ASSERT_EQ(mx_handle_wait_one(fifo, MX_FIFO_NOT_EMPTY, 1000 * 1000 * 1000, &pending),
             0, "Error waiting on the fifo");
-    ASSERT_EQ(pending & MX_SIGNAL_FIFO_NOT_EMPTY, MX_SIGNAL_FIFO_NOT_EMPTY,
+    ASSERT_EQ(pending & MX_FIFO_NOT_EMPTY, MX_FIFO_NOT_EMPTY,
             "Error with pending signals");
 
-    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_ADVANCE_TAIL, 1u, NULL), 0, "Error advancing tail");
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, NULL), 0, "Error advancing tail");
 
     return 0;
 }
@@ -164,12 +164,12 @@ static bool multithreaded_test(void) {
     ASSERT_EQ(ret, thrd_success, "Error during thread creation");
 
     mx_nanosleep(1000);
-    ASSERT_EQ(mx_fifo_op(producer, MX_FIFO_ADVANCE_HEAD, 1u, NULL), 0, "Error advancing head");
+    ASSERT_EQ(mx_fifo_op(producer, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL), 0, "Error advancing head");
 
     mx_signals_t pending;
-    ASSERT_EQ(mx_handle_wait_one(producer, MX_SIGNAL_FIFO_EMPTY, 1000 * 1000 * 1000, &pending),
+    ASSERT_EQ(mx_handle_wait_one(producer, MX_FIFO_EMPTY, 1000 * 1000 * 1000, &pending),
             0, "Error waiting on the fifo");
-    ASSERT_EQ(pending & MX_SIGNAL_FIFO_EMPTY, MX_SIGNAL_FIFO_EMPTY,
+    ASSERT_EQ(pending & MX_FIFO_EMPTY, MX_FIFO_EMPTY,
             "Error with pending signals");
 
     ASSERT_EQ(thrd_join(consume_thr, NULL), thrd_success, "Error during join");
@@ -179,11 +179,56 @@ static bool multithreaded_test(void) {
     END_TEST;
 }
 
+static bool exception_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t fifo;
+    ASSERT_EQ(mx_fifo_create(4, &fifo), 0, "Error during fifo create");
+
+    mx_signals_t pending;
+    mx_signals_t exceptions = MX_FIFO_PRODUCER_EXCEPTION | MX_FIFO_CONSUMER_EXCEPTION;
+    ASSERT_EQ(mx_handle_wait_one(fifo, exceptions, 0u,
+                &pending), ERR_TIMED_OUT, "Error getting fifo signals");
+    ASSERT_EQ(0u, (pending & exceptions), "Fifo should not have exception bits set");
+
+    mx_fifo_state_t state;
+    mx_signals_t empty_exc = MX_FIFO_EMPTY | MX_FIFO_NOT_FULL;
+    reset_state(&state);
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_PRODUCER_EXCEPTION, 1u, &state), 0,
+            "Error setting producer exception");
+    ASSERT_EQ(state.head, 0u, "Error setting producer exception");
+    ASSERT_EQ(state.tail, 0u, "Error setting producer exception");
+    check_signals(fifo, empty_exc | MX_FIFO_PRODUCER_EXCEPTION);
+
+    reset_state(&state);
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_PRODUCER_EXCEPTION, 0u, &state), 0,
+            "Error clearing producer exception");
+    ASSERT_EQ(state.head, 0u, "Error clearing producer exception");
+    ASSERT_EQ(state.tail, 0u, "Error clearing producer exception");
+    check_signals(fifo, empty_exc);
+
+    reset_state(&state);
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 1u, &state), 0,
+            "Error setting consumer exception");
+    ASSERT_EQ(state.head, 0u, "Error setting consumer exception");
+    ASSERT_EQ(state.tail, 0u, "Error setting consumer exception");
+    check_signals(fifo, empty_exc | MX_FIFO_CONSUMER_EXCEPTION);
+
+    reset_state(&state);
+    ASSERT_EQ(mx_fifo_op(fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 0u, &state), 0,
+            "Error clearing consumer exception");
+    ASSERT_EQ(state.head, 0u, "Error clearing consumer exception");
+    ASSERT_EQ(state.tail, 0u, "Error clearing consumer exception");
+    check_signals(fifo, empty_exc);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fifo_tests)
 RUN_TEST(basic_test)
 RUN_TEST(advance_too_many_test)
 RUN_TEST(restrict_rights_test)
 RUN_TEST(multithreaded_test)
+RUN_TEST(exception_test)
 END_TEST_CASE(fifo_tests)
 
 #ifndef BUILD_COMBINED_TESTS

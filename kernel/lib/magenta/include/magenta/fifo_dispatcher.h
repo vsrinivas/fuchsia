@@ -28,6 +28,7 @@ public:
 
     status_t AdvanceHead(uint64_t count, mx_fifo_state_t* out);
     status_t AdvanceTail(uint64_t count, mx_fifo_state_t* out);
+    status_t SetException(mx_signals_t signal, bool set, mx_fifo_state_t* out);
 
 private:
     explicit FifoDispatcher(uint64_t count);

@@ -41,7 +41,7 @@ status_t FifoDispatcher::Create(uint64_t count, mxtl::RefPtr<Dispatcher>* dispat
 FifoDispatcher::FifoDispatcher(uint64_t count)
     : count_(count) {
     state_.head = state_.tail = 0;
-    state_tracker_.set_initial_signals_state(MX_SIGNAL_FIFO_EMPTY|MX_SIGNAL_FIFO_NOT_FULL);
+    state_tracker_.set_initial_signals_state(MX_FIFO_EMPTY|MX_FIFO_NOT_FULL);
 }
 
 FifoDispatcher::~FifoDispatcher() {}
@@ -63,10 +63,10 @@ status_t FifoDispatcher::AdvanceHead(uint64_t count, mx_fifo_state_t* out) {
     state_.head += count;
 
     if (prev_head == state_.tail) {
-        state_tracker_.UpdateState(MX_SIGNAL_FIFO_EMPTY, MX_SIGNAL_FIFO_NOT_EMPTY);
+        state_tracker_.UpdateState(MX_FIFO_EMPTY, MX_FIFO_NOT_EMPTY);
     }
     if (state_.head - state_.tail == count_) {
-        state_tracker_.UpdateState(MX_SIGNAL_FIFO_NOT_FULL, MX_SIGNAL_FIFO_FULL);
+        state_tracker_.UpdateState(MX_FIFO_NOT_FULL, MX_FIFO_FULL);
     }
 
     return NO_ERROR;
@@ -83,11 +83,28 @@ status_t FifoDispatcher::AdvanceTail(uint64_t count, mx_fifo_state_t* out) {
     state_.tail += count;
 
     if (state_.head - prev_tail == count_) {
-        state_tracker_.UpdateState(MX_SIGNAL_FIFO_FULL, MX_SIGNAL_FIFO_NOT_FULL);
+        state_tracker_.UpdateState(MX_FIFO_FULL, MX_FIFO_NOT_FULL);
     }
     if (state_.head == state_.tail) {
-        state_tracker_.UpdateState(MX_SIGNAL_FIFO_NOT_EMPTY, MX_SIGNAL_FIFO_EMPTY);
+        state_tracker_.UpdateState(MX_FIFO_NOT_EMPTY, MX_FIFO_EMPTY);
     }
 
+    return NO_ERROR;
+}
+
+status_t FifoDispatcher::SetException(mx_signals_t signal, bool set, mx_fifo_state_t* out) {
+    AutoLock lock(&lock_);
+    StateUpdater updater(this, out);
+
+    if (signal != MX_FIFO_PRODUCER_EXCEPTION &&
+        signal != MX_FIFO_CONSUMER_EXCEPTION) {
+        return ERR_INVALID_ARGS;
+    }
+
+    if (set) {
+        state_tracker_.UpdateState(0u, signal);
+    } else {
+        state_tracker_.UpdateState(signal, 0u);
+    }
     return NO_ERROR;
 }

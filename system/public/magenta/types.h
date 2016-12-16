@@ -111,10 +111,14 @@ typedef uint32_t mx_signals_t;
 #define MX_RESOURCE_CHILD_ADDED     MX_OBJECT_SIGNAL_2
 
 // Fifo
-#define MX_SIGNAL_FIFO_EMPTY        MX_OBJECT_SIGNAL_0
-#define MX_SIGNAL_FIFO_FULL         MX_OBJECT_SIGNAL_1
-#define MX_SIGNAL_FIFO_NOT_EMPTY    MX_OBJECT_SIGNAL_2
-#define MX_SIGNAL_FIFO_NOT_FULL     MX_OBJECT_SIGNAL_3
+#define MX_FIFO_EMPTY               MX_OBJECT_SIGNAL_0
+#define MX_FIFO_FULL                MX_OBJECT_SIGNAL_1
+#define MX_FIFO_NOT_EMPTY           MX_OBJECT_SIGNAL_2
+#define MX_FIFO_NOT_FULL            MX_OBJECT_SIGNAL_3
+#define MX_FIFO_PRODUCER_EXCEPTION  MX_OBJECT_SIGNAL_4
+#define MX_FIFO_CONSUMER_EXCEPTION  MX_OBJECT_SIGNAL_5
+#define MX_FIFO_SIGNAL_MASK         (MX_FIFO_EMPTY | MX_FIFO_FULL | MX_FIFO_NOT_EMPTY | MX_FIFO_NOT_FULL \
+                                     MX_FIFO_PRODUCER_EXCEPTION | MX_FIFO_CONSUMER_EXCEPTION)
 
 // Legacy signal names, to be removed.
 #define MX_SIGNAL_READABLE          MX_OBJECT_SIGNAL_0
@@ -229,9 +233,11 @@ typedef struct {
 
 // Fifo ops
 typedef enum {
-    MX_FIFO_READ_STATE   = 0,
-    MX_FIFO_ADVANCE_HEAD = 1,
-    MX_FIFO_ADVANCE_TAIL = 2,
+    MX_FIFO_OP_READ_STATE         = 0,
+    MX_FIFO_OP_ADVANCE_HEAD       = 1,
+    MX_FIFO_OP_ADVANCE_TAIL       = 2,
+    MX_FIFO_OP_PRODUCER_EXCEPTION = 3,
+    MX_FIFO_OP_CONSUMER_EXCEPTION = 4,
 } mx_fifo_op_t;
 
 #define MX_FIFO_PRODUCER_RIGHTS \
