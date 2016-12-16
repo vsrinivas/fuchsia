@@ -25,7 +25,7 @@ class SharedVmo : public ftl::RefCountedThreadSafe<SharedVmo> {
   //
   // |vmo| must be a valid VMO handle.
   // If not zero, |map_flags| specifies the flags which should be passed to
-  // |mx::process::map_vm| when the VMO is mapped.
+  // |mx::vmar::map| when the VMO is mapped.
   explicit SharedVmo(mx::vmo vmo, uint32_t map_flags = 0u);
 
   virtual ~SharedVmo();
