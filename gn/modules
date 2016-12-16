@@ -79,5 +79,8 @@
             "binary": "youtube_video.flx",
             "bootfs_path": "apps/youtube_video"
         }
+  ],
+  "components": [
+      "apps/modules/email/map/map_component.json"
   ]
 }
