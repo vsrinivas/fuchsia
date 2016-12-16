@@ -59,7 +59,8 @@ error value is returned.
 non-zero when neither **MX_VM_FLAG_SPECIFIC** nor
 **MX_VM_FLAG_SPECIFIC_OVERWRITE** are given, *vmar_offset* and *len*
 describe an unsatisfiable allocation due to exceeding the region bounds,
-*vmar_offset* or *vmo_offset* are not page-aligned, or *len* is 0.
+*vmar_offset* or *vmo_offset* are not page-aligned,
+*vmo_offset* + ROUNDUP(*len*, PAGE_SIZE) overflows, or *len* is 0.
 
 **ERR_ACCESS_DENIED**  insufficient privileges to make the requested mapping
 

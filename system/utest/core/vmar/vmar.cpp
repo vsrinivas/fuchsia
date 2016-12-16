@@ -561,6 +561,19 @@ bool invalid_args_test() {
               ERR_INVALID_ARGS, "");
     EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, 4 * PAGE_SIZE), NO_ERROR, "");
 
+    // Overflowing vmo_offset
+    EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, UINT64_MAX + 1 - PAGE_SIZE,
+                          PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                          &map_addr),
+              ERR_INVALID_ARGS, "");
+    EXPECT_EQ(mx_vmar_map(vmar, 0, vmo, UINT64_MAX + 1 - 2 * PAGE_SIZE,
+                          PAGE_SIZE,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                          &map_addr),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_vmar_unmap(vmar, map_addr, PAGE_SIZE), NO_ERROR, "");
+
     // size=0
     EXPECT_EQ(mx_vmar_allocate(vmar, 0, 0,
                                MX_VM_FLAG_CAN_MAP_READ | MX_VM_FLAG_CAN_MAP_WRITE,

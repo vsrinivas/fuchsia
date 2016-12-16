@@ -194,7 +194,11 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
         return ERR_ACCESS_DENIED;
     }
 
-    if (!IS_PAGE_ALIGNED(vmo_offset)) {
+    size = ROUNDUP(size, PAGE_SIZE);
+
+    // Make sure that vmo_offset is aligned and that a mapping of this size
+    // wouldn't overflow the vmo offset.
+    if (!IS_PAGE_ALIGNED(vmo_offset) || vmo_offset + size < vmo_offset) {
         return ERR_INVALID_ARGS;
     }
 
@@ -209,8 +213,6 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
     if (arch_mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
         vmar_flags |= VMAR_FLAG_CAN_MAP_EXECUTE;
     }
-
-    size = ROUNDUP(size, PAGE_SIZE);
 
     mxtl::RefPtr<VmAddressRegionOrMapping> res;
     status_t status =
