@@ -349,13 +349,10 @@ TEST_F(TreeNodeTest, EmptyMutation) {
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
-  // TOOD(nellyv): check that the new id is equal to the original one when ids
-  // are not randomly assigned.
-
+  ASSERT_EQ(size, new_node->GetKeyCount());
   for (int i = 0; i < size; ++i) {
     EXPECT_EQ(GetEntry(node.get(), i), GetEntry(new_node.get(), i));
   }
-
   for (int i = 0; i <= size; ++i) {
     EXPECT_EQ(GetChildId(node.get(), i), GetChildId(new_node.get(), i));
   }
