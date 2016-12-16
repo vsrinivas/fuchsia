@@ -88,10 +88,10 @@ static void run_program(const char *progname, int argc, const char** argv, mx_ha
 
 static void run_command(const char* cmd) {
     const char* args[] = {
-        "/boot/bin/mxsh", "-c", cmd
+        "/boot/bin/sh", "-c", cmd
     };
     printf("net cmd: %s\n", cmd);
-    run_program("net:mxsh", 3, args, 0);
+    run_program("net:sh", 3, args, 0);
 }
 
 static void run_server(const char* progname, const char* bin, mx_handle_t h) {

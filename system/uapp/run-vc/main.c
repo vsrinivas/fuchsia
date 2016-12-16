@@ -22,13 +22,13 @@ int main(int argc, const char* const* argv, const char* const* envp) {
         return fd;
     }
 
-    // start mxsh if no arguments
+    // start shell if no arguments
     char pname[128];
     int pargc;
-    bool mxsh;
-    const char* pargv[1] = { "/boot/bin/mxsh" };
-    if ((mxsh = argc == 1)) {
-        strcpy(pname, "mxsh:vc");
+    bool shell;
+    const char* pargv[1] = { "/boot/bin/sh" };
+    if ((shell = argc == 1)) {
+        strcpy(pname, "sh:vc");
         pargc = 1;
     } else {
         char* bname = strrchr(argv[1], '/');
@@ -70,7 +70,7 @@ int main(int argc, const char* const* argv, const char* const* envp) {
 
     printf("starting process %s\n", pargv[0]);
 
-    status = launchpad_arguments(lp, pargc, mxsh ? pargv : &argv[1]);
+    status = launchpad_arguments(lp, pargc, shell ? pargv : &argv[1]);
     if (status != NO_ERROR) {
         printf("Error %d in launchpad_arguments\n", status);
         return status;
@@ -83,7 +83,7 @@ int main(int argc, const char* const* argv, const char* const* envp) {
     }
 
     status = launchpad_elf_load(
-        lp, launchpad_vmo_from_file(mxsh ? pargv[0] : argv[1]));
+        lp, launchpad_vmo_from_file(shell ? pargv[0] : argv[1]));
     if (status != NO_ERROR) {
         printf("Error %d in launchpad_elf_load\n", status);
         return status;
