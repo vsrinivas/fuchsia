@@ -6,9 +6,9 @@
         "//magma:magma",
         "//magma:magma_service_driver",
         "//magma:magma_service_driver_test",
-        "//magma:magma_tests",
-        "//magma:mesa_tests",
+        "//magma/tests",
         "//magma/tests:autorun",
+        "//third_party/mesa:tests",
         "//third_party/mesa:magma_vulkan"
     ],
     "binaries": [
