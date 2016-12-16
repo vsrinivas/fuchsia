@@ -346,7 +346,7 @@ bool Importer::HandlePageFault(Ticks event_time,
         event_time, thread_ref, irq_category_ref_, page_fault_name_ref_,
         EventScope::kThread,
         ToArgumentList(PointerArgument(vaddr_name_ref_, virtual_address),
-                       Int32Argument(flags_name_ref_, flags)));
+                       Uint32Argument(flags_name_ref_, flags)));
   }
   return true;
 }
@@ -449,10 +449,8 @@ bool Importer::HandleChannelWrite(Ticks event_time,
   writer_.WriteFlowBeginEventRecord(
       event_time, GetThreadRef(thread), channel_category_ref_,
       channel_write_name_ref_, counter,
-      ToArgumentList(
-          Int32Argument(num_bytes_name_ref_, static_cast<int32_t>(num_bytes)),
-          Int32Argument(num_handles_name_ref_,
-                        static_cast<int32_t>(num_handles))));
+      ToArgumentList(Uint32Argument(num_bytes_name_ref_, num_bytes),
+                     Uint32Argument(num_handles_name_ref_, num_handles)));
 
   return true;
 }
@@ -536,8 +534,8 @@ bool Importer::HandleProbe(Ticks event_time,
   writer_.WriteInstantEventRecord(
       event_time, GetThreadRef(thread), probe_category_ref_,
       GetNameRef(probe_names_, "probe", probe), EventScope::kThread,
-      ToArgumentList(Int32Argument(arg0_name_ref_, arg0),
-                     Int32Argument(arg1_name_ref_, arg1)));
+      ToArgumentList(Uint32Argument(arg0_name_ref_, arg0),
+                     Uint32Argument(arg1_name_ref_, arg1)));
   return true;
 }
 
