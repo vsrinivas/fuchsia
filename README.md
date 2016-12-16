@@ -6,8 +6,13 @@ Modular is the application platform of Fuchsia.
 It provides a post-API programming model that allows applications to cooperate
 in a shared context without the need to call each other's APIs directly.
 
-First,
-[setup, build, and run](https://fuchsia.googlesource.com/manifest/+/master/README.md) Fuchsia.
+## Prerequisities
+
+1. Follow instructions in [fuchsia](https://fuchsia.googlesource.com/fuchsia/+/HEAD/README.md) for getting the source, setup, build and running Fuchsia.
+1. Follow instructions in [ledger](https://fuchsia.googlesource.com/ledger/+/HEAD/docs/user_guide.md) to setup the Ledger and all its dependencies including netstack and minfs.
+
+## Running
+
 On the Fuchsia command line you can start an example application flow thus:
 
 ```sh
@@ -27,3 +32,9 @@ shell application. In this example, these arguments are in turn more flags.
 Commas inside the value of such arguments are escaped by backslashes. The value
 of `--root-module` selects the module to run. The value of `--root-link` is a
 JSON representation of the initial data the module is started with.
+
+## Contents
+
+ - [docs](docs) - documentation
+ - [service](service) - fidl API
+ - [src](src) - implementation
