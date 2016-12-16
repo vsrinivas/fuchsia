@@ -5,10 +5,10 @@
 extern crate magenta_sys;
 
 pub fn main() {
-    let time = unsafe { magenta_sys::mx_current_time() };
+    let time = unsafe { magenta_sys::mx_time_get(magenta_sys::MX_CLOCK_MONOTONIC) };
     println!("before sleep, time = {}", time);
-    unsafe { magenta_sys::mx_nanosleep(1000_000_000); } 
-    let time = unsafe { magenta_sys::mx_current_time() };
+    unsafe { magenta_sys::mx_nanosleep(1000_000_000); }
+    let time = unsafe { magenta_sys::mx_time_get(magenta_sys::MX_CLOCK_MONOTONIC) };
     println!("after sleep, time = {}", time);
 }
 
