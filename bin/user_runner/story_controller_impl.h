@@ -79,7 +79,7 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
 
   fidl::BindingSet<StoryController> bindings_;
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
-  fidl::InterfacePtrSet<StoryWatcher> story_watchers_;
+  fidl::InterfacePtrSet<StoryWatcher> watchers_;
   StoryRunnerPtr story_runner_;
   StoryPtr story_;
   LinkPtr root_;

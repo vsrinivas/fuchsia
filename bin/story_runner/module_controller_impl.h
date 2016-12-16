@@ -12,6 +12,7 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
 
@@ -52,7 +53,7 @@ class ModuleControllerImpl : public ModuleController {
   const fidl::String url_;
   fidl::InterfacePtr<Module> module_;
   fidl::Binding<ModuleController> binding_;
-  std::vector<fidl::InterfacePtr<ModuleWatcher>> watchers_;
+  fidl::InterfacePtrSet<ModuleWatcher> watchers_;
   ModuleState state_{ModuleState::STARTING};
 
   // Callbacks of TearDown() invocations. If there is one Stop()

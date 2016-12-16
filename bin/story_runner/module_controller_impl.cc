@@ -38,9 +38,10 @@ void ModuleControllerImpl::SetState(const ModuleState new_state) {
   }
 
   state_ = new_state;
-  for (auto& watcher : watchers_) {
-    watcher->OnStateChange(state_);
-  }
+  watchers_.ForAllPtrs(
+      [this](ModuleWatcher* const watcher) {
+        watcher->OnStateChange(state_);
+      });
 }
 
 void ModuleControllerImpl::TearDown(std::function<void()> done) {
@@ -87,9 +88,9 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
 }
 
 void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
-  watchers_.push_back(
-      fidl::InterfacePtr<ModuleWatcher>::Create(std::move(watcher)));
-  watchers_.back()->OnStateChange(state_);
+  auto ptr = fidl::InterfacePtr<ModuleWatcher>::Create(std::move(watcher));
+  ptr->OnStateChange(state_);
+  watchers_.AddInterfacePtr(std::move(ptr));
 }
 
 void ModuleControllerImpl::Stop(const StopCallback& done) {

@@ -200,10 +200,11 @@ void StoryControllerImpl::Reset() {
 }
 
 // |StoryController|
-void StoryControllerImpl::Watch(
-    fidl::InterfaceHandle<StoryWatcher> story_watcher) {
-  story_watchers_.AddInterfacePtr(
-      StoryWatcherPtr::Create(std::move(story_watcher)));
+void StoryControllerImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
+  auto ptr = StoryWatcherPtr::Create(std::move(watcher));
+  const StoryState state = story_data_->story_info->state;
+  ptr->OnStateChange(state);
+  watchers_.AddInterfacePtr(std::move(ptr));
 }
 
 // |ModuleWatcher|
@@ -242,7 +243,7 @@ void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
 
 void StoryControllerImpl::NotifyStateChange() {
   const StoryState state = story_data_->story_info->state;
-  story_watchers_.ForAllPtrs(
+  watchers_.ForAllPtrs(
       [state](StoryWatcher* const watcher) { watcher->OnStateChange(state); });
 }
 
