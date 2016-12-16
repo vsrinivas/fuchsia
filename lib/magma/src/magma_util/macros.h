@@ -132,18 +132,6 @@ template <class T> static inline T round_up(T val, uint32_t alignment)
     return ((val - 1) | (alignment - 1)) + 1;
 }
 
-static inline uint8_t inb(uint16_t _port)
-{
-    uint8_t rv;
-    __asm__ __volatile__("inb %1, %0" : "=a"(rv) : "d"(_port));
-    return (rv);
-}
-
-static inline void outb(uint8_t _data, uint16_t _port)
-{
-    __asm__ __volatile__("outb %1, %0" : : "d"(_port), "a"(_data));
-}
-
 } // namespace magma
 
 #endif // MACROS_H_
