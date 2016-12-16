@@ -9,7 +9,7 @@
 namespace moterm {
 namespace {
 
-constexpr char kDefaultShell[] = "file:///boot/bin/mxsh";
+constexpr char kDefaultShell[] = "file:///boot/bin/sh";
 
 }  // namespace
 
