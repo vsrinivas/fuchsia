@@ -27,6 +27,7 @@
 #include <magenta/magenta.h>
 #include <magenta/thread_dispatcher.h>
 #include <magenta/user_copy.h>
+#include <magenta/vm_address_region_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
 #define LOCAL_TRACE 0
@@ -59,10 +60,11 @@ Handle* map_value_to_handle(mx_handle_t value, mx_handle_t mixer) {
     return MapU32ToHandle(handle_id);
 }
 
-mx_status_t ProcessDispatcher::Create(mxtl::RefPtr<JobDispatcher> job,
-                                      mxtl::StringPiece name,
-                                      mxtl::RefPtr<Dispatcher>* dispatcher,
-                                      mx_rights_t* rights, uint32_t flags) {
+mx_status_t ProcessDispatcher::Create(
+    mxtl::RefPtr<JobDispatcher> job, mxtl::StringPiece name, uint32_t flags,
+    mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights,
+    mxtl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
+    mx_rights_t* root_vmar_rights) {
     AllocChecker ac;
     auto process = new (&ac) ProcessDispatcher(mxtl::move(job), name, flags);
     if (!ac.check())
@@ -74,7 +76,19 @@ mx_status_t ProcessDispatcher::Create(mxtl::RefPtr<JobDispatcher> job,
 
     *rights = kDefaultProcessRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(process);
-    return NO_ERROR;
+
+    // Create a dispatcher for the root VMAR.
+    mxtl::RefPtr<Dispatcher> new_vmar_dispatcher;
+    result = VmAddressRegionDispatcher::Create(
+        process->aspace()->root_vmar(), &new_vmar_dispatcher, root_vmar_rights);
+    if (result == NO_ERROR) {
+        *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
+            mxtl::move(new_vmar_dispatcher));
+    } else {
+        dispatcher->reset();
+    }
+
+    return result;
 }
 
 ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,

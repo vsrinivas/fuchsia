@@ -212,25 +212,13 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
 
     // create a new process dispatcher
     mxtl::RefPtr<Dispatcher> proc_dispatcher;
-    mx_rights_t proc_rights;
-    status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, &proc_dispatcher, &proc_rights, flags);
+    mxtl::RefPtr<VmAddressRegionDispatcher> vmar_dispatcher;
+    mx_rights_t proc_rights, vmar_rights;
+    status_t res = ProcessDispatcher::Create(mxtl::move(job), sp, flags,
+                                             &proc_dispatcher, &proc_rights,
+                                             &vmar_dispatcher, &vmar_rights);
     if (res != NO_ERROR)
         return res;
-
-    mxtl::RefPtr<Dispatcher> vmar_dispatcher;
-    mx_rights_t vmar_rights;
-    {
-        mxtl::RefPtr<ProcessDispatcher> process_dispatcher(
-                proc_dispatcher->get_specific<ProcessDispatcher>());
-        ASSERT(process_dispatcher);
-
-        // Create a dispatcher for the root VMAR
-        mxtl::RefPtr<VmAddressRegion> root_vmar(process_dispatcher->aspace()->root_vmar());
-        status_t status = VmAddressRegionDispatcher::Create(mxtl::move(root_vmar),
-                                                            &vmar_dispatcher, &vmar_rights);
-        if (status != NO_ERROR)
-            return status;
-    }
 
     uint32_t koid = (uint32_t)proc_dispatcher->get_koid();
     ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);

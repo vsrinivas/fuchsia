@@ -274,10 +274,12 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     if (status != NO_ERROR)
         return status;
 
-    mx_rights_t rights;
     mxtl::RefPtr<Dispatcher> proc_disp;
-    status = ProcessDispatcher::Create(GetRootJobDispatcher(), "userboot",
-                                       &proc_disp, &rights, 0);
+    mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+    mx_rights_t rights, vmar_rights;
+    status = ProcessDispatcher::Create(GetRootJobDispatcher(), "userboot", 0,
+                                       &proc_disp, &rights,
+                                       &vmar, &vmar_rights);
     if (status < 0)
         return status;
 
@@ -286,19 +288,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     auto proc = DownCastDispatcher<ProcessDispatcher>(mxtl::move(proc_disp));
     ASSERT(proc);
 
-    // Create a dispatcher for the root VMAR
-    mxtl::RefPtr<Dispatcher> vmar_disp;
-    mx_rights_t vmar_rights;
-    mxtl::RefPtr<VmAddressRegion> root_vmar(proc->aspace()->root_vmar());
-    status = VmAddressRegionDispatcher::Create(mxtl::move(root_vmar),
-                                               &vmar_disp, &vmar_rights);
-    if (status != NO_ERROR)
-        return status;
-
-    handles[BOOTSTRAP_VMAR_ROOT] = MakeHandle(vmar_disp, vmar_rights);
-
-    auto vmar = DownCastDispatcher<VmAddressRegionDispatcher>(mxtl::move(vmar_disp));
-
+    handles[BOOTSTRAP_VMAR_ROOT] = MakeHandle(vmar, vmar_rights);
 
     VDso vdso;
     handles[BOOTSTRAP_VDSO] = vdso.vmo_handle().release();

@@ -29,10 +29,11 @@ class JobDispatcher;
 
 class ProcessDispatcher : public Dispatcher {
 public:
-    static mx_status_t Create(mxtl::RefPtr<JobDispatcher> job,
-                              mxtl::StringPiece name,
-                              mxtl::RefPtr<Dispatcher>* dispatcher,
-                              mx_rights_t* rights, uint32_t flags);
+    static mx_status_t Create(
+        mxtl::RefPtr<JobDispatcher> job, mxtl::StringPiece name, uint32_t flags,
+        mxtl::RefPtr<Dispatcher>* dispatcher, mx_rights_t* rights,
+        mxtl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
+        mx_rights_t* root_vmar_rights);
 
     // Traits to belong in the global list of processes.
     struct ProcessListTraits {
