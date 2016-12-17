@@ -54,6 +54,8 @@ build() {
     "*") echo "unknown target '${target}'" 1>&2 && exit 1;;
   esac
 
+  local magenta_sysroot="${magenta_buildroot}/build-${magenta_target}/sysroot"
+
   if [[ "${release}" = "true" ]]; then
     local cmake_build_type_flags="${CMAKE_SHARED_FLAGS:-} -DCMAKE_BUILD_TYPE=Release"
     local magenta_build_type_flags="DEBUG=0"
@@ -65,7 +67,7 @@ build() {
   rm -rf -- "${sysroot}" && mkdir -p -- "${sysroot}"
 
   pushd "${ROOT_DIR}/magenta"
-  rm -rf -- "${magenta_buildroot}/build-${magenta_target}/sysroot"
+  rm -rf -- "${magenta_sysroot}"
   # build the sysroot for the target architecture
   make -j ${JOBS} ${magenta_build_type_flags:-} BUILDROOT=${magenta_buildroot} ${magenta_target}
   # build host tools
@@ -73,9 +75,15 @@ build() {
   popd
 
   cp -r -- \
-    "${magenta_buildroot}/build-${magenta_target}/sysroot/include" \
-    "${magenta_buildroot}/build-${magenta_target}/sysroot/lib" \
+    "${magenta_sysroot}/include" \
+    "${magenta_sysroot}/lib" \
     "${sysroot}"
+
+  if [[ -d "${magenta_sysroot}/debug-info" ]]; then
+    cp -r -- \
+      "${magenta_sysroot}/debug-info" \
+      "${sysroot}"
+  fi
 
   mkdir -p -- "${outdir}/build-libunwind-${target}"
   pushd "${outdir}/build-libunwind-${target}"
