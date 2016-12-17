@@ -310,7 +310,7 @@ static char* join(char* buffer, size_t buffer_length, int argc, char** argv) {
         size_t arg_length = strlen(arg);
         if (total_length + arg_length + 1 > buffer_length)
             return NULL;
-        strncat(buffer + total_length, arg, buffer_length - total_length - 1);
+        strncpy(buffer + total_length, arg, buffer_length - total_length - 1);
         total_length += arg_length;
     }
     return buffer + total_length;
