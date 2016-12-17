@@ -81,6 +81,21 @@
         }
   ],
   "components": [
-      "apps/modules/email/map/map_component.json"
+      "apps/modules/email/email_list/email_list_component.json",
+      "apps/modules/email/email_list_grid/email_list_grid_component.json",
+      "apps/modules/email/email_nav/email_nav_component.json",
+      "apps/modules/email/email_service/email_service_component.json",
+      "apps/modules/email/email_session/email_session_component.json",
+      "apps/modules/email/email_story/email_story_component.json",
+      "apps/modules/email/email_thread/email_thread_component.json",
+      "apps/modules/email/interactive_receipt/interactive_receipt_component.json",
+      "apps/modules/email/interactive_receipt_http/interactive_receipt_http_component.json",
+      "apps/modules/email/map/map_component.json",
+      "apps/modules/email/music_story/music_story_component.json",
+      "apps/modules/email/usps/usps_component.json",
+      "apps/modules/email/youtube_related_videos/youtube_related_videos_component.json",
+      "apps/modules/email/youtube_story/youtube_story_component.json",
+      "apps/modules/email/youtube_thumbnail/youtube_thumbnail_component.json",
+      "apps/modules/email/youtube_video/youtube_video_component.json"
   ]
 }
