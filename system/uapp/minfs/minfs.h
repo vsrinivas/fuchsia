@@ -108,8 +108,8 @@ typedef struct {
                                (MINFS_MAX_DIRECTORY_SIZE - off) : \
                                ((de)->reclen & MINFS_RECLEN_MASK))
 
-// TODO(smklein): Compile-time assertion that "MINFS_MAX_DIRECTORY_SIZE" is less than
-// "MINFS_RECLEN_MASK".
+static_assert(MINFS_MAX_DIRECTORY_SIZE <= MINFS_RECLEN_MASK,
+              "MinFS directory size must be smaller than reclen mask");
 
 // Notes:
 // - dirents with ino of 0 are free, and skipped over on lookup
