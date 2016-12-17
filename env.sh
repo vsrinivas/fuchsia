@@ -293,7 +293,8 @@ fi
 function fset-usage() {
   cat >&2 <<END
 Usage: fset x86-64|arm64 [--release] [--modules m1,m2...]
-                         [--goma|--no-goma] [--ccache|--no-ccache]
+                         [--goma|--no-goma] [--no-ensure-goma]
+                         [--ccache|--no-ccache]
 Sets fuchsia build options.
 END
 }
@@ -337,6 +338,7 @@ function fset() {
   shift
 
   local goma
+  local ensure_goma=1
   local ccache
   while [[ $# -ne 0 ]]; do
     case $1 in
@@ -358,6 +360,9 @@ function fset() {
       --no-goma)
         goma=0
         ;;
+      --no-ensure-goma)
+        ensure_goma=0
+        ;;
       --ccache)
         ccache=1
         ;;
@@ -377,6 +382,7 @@ function fset() {
   export FUCHSIA_SYSROOT_DIR="${FUCHSIA_OUT_DIR}/sysroot/${FUCHSIA_SYSROOT_TARGET}-fuchsia"
   export FUCHSIA_SYSROOT_REV_CACHE="${FUCHSIA_SYSROOT_DIR}/build.rev"
   export FUCHSIA_SETTINGS="${settings}"
+  export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
 
   fset-add-ninja-arg -C "${FUCHSIA_BUILD_DIR}"
 
@@ -528,7 +534,8 @@ END
 }
 
 function fbuild-goma-ensure-start() {
-  if [[ "${FUCHSIA_GEN_ARGS}" == *--goma* ]]; then
+  if ([[ "${FUCHSIA_GEN_ARGS}" == *--goma* ]] \
+      && [[ "${FUCHSIA_ENSURE_GOMA}" -eq 1 ]]); then
     ~/goma/goma_ctl.py ensure_start
   fi
 }
