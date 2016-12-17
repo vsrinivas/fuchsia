@@ -71,20 +71,27 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   // reused anymore, and client connections will all be closed.
   void Reset();
 
+  // The state of a Story and the context to obtain it from and
+  // persist it to.
   StoryDataPtr story_data_;
-  bool deleted_{};
   StoryProviderImpl* const story_provider_impl_;
   std::shared_ptr<StoryStorageImpl::Storage> storage_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
 
+  // Implement the primary service provided here: StoryController.
   fidl::BindingSet<StoryController> bindings_;
-  fidl::Binding<ModuleWatcher> module_watcher_binding_;
   fidl::InterfacePtrSet<StoryWatcher> watchers_;
+
+  // These 5 things are needed to hold on to a running story. They are
+  // the ones that get reset on Stop()/Reset().
   StoryRunnerPtr story_runner_;
   StoryPtr story_;
   LinkPtr root_;
   ModuleControllerPtr module_;
+  fidl::Binding<ModuleWatcher> module_watcher_binding_;
 
+  // These fields hold state related to asynchronously completing operations.
+  bool deleted_{};
   std::vector<std::function<void()>> stop_requests_;
   fidl::InterfaceRequest<mozart::ViewOwner> start_request_;
 
