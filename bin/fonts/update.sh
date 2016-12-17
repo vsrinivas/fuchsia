@@ -49,7 +49,7 @@ function download_tarball() {
   esac
   if [[ -f "${tar_path}" ]]; then
     mkdir -p -- "${untar_dir}"
-    (cd -- "${untar_dir}" "${tar_path}" && ${extract_cmd} "${tar_path}")
+    (cd -- "${untar_dir}" && ${extract_cmd} "${tar_path}")
     rm -f -- "${tar_path}"
   fi
 }
