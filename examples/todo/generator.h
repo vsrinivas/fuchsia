@@ -15,8 +15,7 @@ namespace todo {
 
 class Generator {
  public:
-  Generator(std::default_random_engine* rng,
-            const std::vector<std::string>& positional_args);
+  Generator(std::default_random_engine* rng);
   ~Generator();
 
   std::string Generate();

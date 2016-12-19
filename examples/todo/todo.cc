@@ -62,7 +62,7 @@ TodoApp::TodoApp(ftl::CommandLine command_line)
       size_distribution_(kMeanListSize, kListSizeStdDev),
       delay_distribution_(kMinDelaySeconds, kMaxDelaySeconds),
       command_line_(std::move(command_line)),
-      generator_(&rng_, command_line_.positional_args()),
+      generator_(&rng_),
       context_(modular::ApplicationContext::CreateFromStartupInfo()),
       page_watcher_binding_(this) {
   ledger::LedgerPtr ledger = GetLedger();
