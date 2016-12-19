@@ -5,11 +5,18 @@
 group("netconnector") {
   deps = [
     ":examples",
+    ":services",
   ]
 }
 
 group("examples") {
   deps = [
     "//apps/netconnector/examples/netconnector_example",
+  ]
+}
+
+group("services") {
+  deps = [
+    "//apps/netconnector/src",
   ]
 }

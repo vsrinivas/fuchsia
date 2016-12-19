@@ -1,0 +1,36 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("src") {
+  deps = [
+    ":netconnector",
+  ]
+}
+
+executable("netconnector") {
+  sources = [
+    "listener.cc",
+    "listener.h",
+    "main.cc",
+    "message_transceiver.cc",
+    "message_transceiver.h",
+    "netconnector_params.cc",
+    "netconnector_params.h",
+    "netconnector_impl.cc",
+    "netconnector_impl.h",
+    "requestor_agent.cc",
+    "requestor_agent.h",
+    "responder_agent.cc",
+    "responder_agent.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/app",
+    "//apps/netconnector/lib",
+    "//apps/netconnector/services",
+    "//lib/ftl",
+    "//lib/mtl",
+    "//third_party/rapidjson",
+  ]
+}
