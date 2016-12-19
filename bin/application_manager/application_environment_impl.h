@@ -85,7 +85,7 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
       fidl::InterfaceRequest<ApplicationController> controller,
       std::string runner);
   void CreateApplicationWithProcess(
-      const std::string& path, ApplicationPackagePtr package,
+      std::string url, ApplicationPackagePtr package,
       fidl::InterfaceHandle<ApplicationEnvironment> environment,
       ApplicationLaunchInfoPtr launch_info,
       fidl::InterfaceRequest<ApplicationController> controller);

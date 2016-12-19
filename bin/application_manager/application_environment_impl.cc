@@ -291,12 +291,12 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
-    const std::string& url, ApplicationPackagePtr package,
+    std::string url, ApplicationPackagePtr package,
     fidl::InterfaceHandle<ApplicationEnvironment> environment,
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
   mx::process process = CreateProcess(
-      url, std::move(package), std::move(environment), std::move(launch_info));
+      std::move(url), std::move(package), std::move(environment), std::move(launch_info));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, std::move(process), url);
