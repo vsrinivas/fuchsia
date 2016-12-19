@@ -1,0 +1,21 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("netconnector_example") {
+  sources = [
+    "main.cc",
+    "netconnector_example_params.cc",
+    "netconnector_example_params.h",
+    "netconnector_example_impl.cc",
+    "netconnector_example_impl.h",
+  ]
+
+  deps = [
+    "//apps/modular/lib/app",
+    "//apps/netconnector/lib",
+    "//apps/netconnector/services",
+    "//lib/ftl",
+    "//lib/mtl",
+  ]
+}
