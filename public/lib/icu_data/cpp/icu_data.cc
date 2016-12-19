@@ -15,24 +15,25 @@ namespace icu_data {
 namespace {
 
 static uintptr_t g_icu_data_ptr = 0u;
-static size_t g_icu_data_size = 0u;
+static size_t g_icu_data_size = 0;
 
 // Helper function. Given a VMO handle, map the memory into the process and
 // return a pointer to the memory.
 // |size_out| is required and is set with the size of the mapped memory
 // region.
-uintptr_t GetDataFromVMO(const mx::vmo& vmo, uint64_t* size_out) {
+uintptr_t GetDataFromVMO(const mx::vmo& vmo, size_t* size_out) {
   if (!size_out)
     return 0u;
-  mx_status_t status = vmo.get_size(&g_icu_data_size);
-  if (status != NO_ERROR || *size_out > std::numeric_limits<size_t>::max())
+  uint64_t data_size = 0u;
+  mx_status_t status = vmo.get_size(&data_size);
+  if (status != NO_ERROR || data_size > std::numeric_limits<size_t>::max())
     return 0u;
 
   uintptr_t data = 0u;
-  status = mx::vmar::root_self().map(0, vmo, 0, g_icu_data_size,
+  status = mx::vmar::root_self().map(0, vmo, 0, static_cast<size_t>(data_size),
                                      MX_VM_FLAG_PERM_READ, &data);
   if (status == NO_ERROR) {
-    *size_out = g_icu_data_size;
+    *size_out = static_cast<size_t>(data_size);
     return data;
   }
 
@@ -69,7 +70,7 @@ bool Initialize(modular::ServiceProvider* services) {
     return false;
   }
 
-  uint64_t data_size = 0;
+  size_t data_size = 0;
   uintptr_t data = GetDataFromVMO(response->vmo, &data_size);
 
   // Pass the data to ICU.
@@ -77,6 +78,7 @@ bool Initialize(modular::ServiceProvider* services) {
     UErrorCode err = U_ZERO_ERROR;
     udata_setCommonData(reinterpret_cast<const char*>(data), &err);
     g_icu_data_ptr = data;
+    g_icu_data_size = data_size;
     return err == U_ZERO_ERROR;
   } else {
     Release();
@@ -97,6 +99,7 @@ bool Release() {
     mx_status_t status =
         mx::vmar::root_self().unmap(g_icu_data_ptr, g_icu_data_size);
     g_icu_data_ptr = 0u;
+    g_icu_data_size = 0;
     return status == NO_ERROR;
   } else {
     return false;
