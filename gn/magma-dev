@@ -1,6 +1,7 @@
 {
     "imports": [
-        "boringssl"
+        "boringssl",
+        "netstack"
     ],
     "labels": [
         "//magma:magma",
