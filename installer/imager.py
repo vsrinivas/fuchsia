@@ -113,7 +113,7 @@ with open(primary_manifest, "r") as manifest_file:
         mkdir_cmd = [minfs_bin, disk_path, "mkdir", "::%s" % dir_path]
         try:
           subprocess.check_call(mkdir_cmd)
-        except (subprocess. CalledProcessError):
+        except (subprocess.CalledProcessError):
           print "Error creating directory '%s'" % dir_path
           sys.exit(-1)
         except (OSError):
@@ -129,7 +129,7 @@ with open(primary_manifest, "r") as manifest_file:
 
       try:
         subprocess.check_call(minfs_cmd)
-      except (subprocess. CalledProcessError):
+      except (subprocess.CalledProcessError):
         print "Error copying file %s" % parts[1]
         sys.exit(-1)
       except (OSError):
@@ -169,7 +169,7 @@ mkfs_cmd = [mkbootfs_path, "-c", "-o", out_file, aux_manifest, primary_manifest]
 print "Creating installer bootfs"
 try:
   subprocess.check_call(mkfs_cmd, cwd=working_dir)
-except (subprocess. CalledProcessError):
+except (subprocess.CalledProcessError):
   print "Error creating bootfs"
   sys.exit(-1)
 except (OSError):
