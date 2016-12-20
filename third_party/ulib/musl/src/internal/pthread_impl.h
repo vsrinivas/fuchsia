@@ -67,7 +67,6 @@ struct __timer {
 
 #define SIGTIMER 32
 #define SIGCANCEL 33
-#define SIGSYNCCALL 34
 
 #define SIGALL_SET ((sigset_t*)(const unsigned long long[2]){-1, -1})
 #define SIGPT_SET                                                                     \
