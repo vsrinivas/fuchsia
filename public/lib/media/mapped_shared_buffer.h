@@ -64,7 +64,7 @@ class MappedSharedBuffer {
 
  private:
   // Pointer to the mapped buffer.
-  uint8_t* buffer_ptr_;
+  uint8_t* buffer_ptr_ = nullptr;
 
   // Size of the shared buffer.
   uint64_t size_;
