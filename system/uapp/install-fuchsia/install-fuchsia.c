@@ -44,11 +44,23 @@
 #define IMG_SYSTEM_PATH "/system/installer/user_fs.lz4"
 #define IMG_EFI_PATH "/system/installer/efi_fs.lz4"
 
+// the first and last 17K of the disk using GPT is reserved for
+// 512B for the MBR, 512B the GPT header, and 16K for for 128, 128B
+// partition entries. Technically the reserved space is two blocks
+// plus 16KB, so we're making an assumption here that block sizes are
+// 512B.
+#define SIZE_RESERVED (((uint32_t) 17) * 1024)
+
 // use for the partition mask sent to parition_for_install
 typedef enum {
     PART_EFI = 1 << 0,
     PART_SYSTEM = 1 << 1
 } partition_flags;
+
+typedef struct part_tuple {
+    int index;
+    size_t first;
+} part_tuple_t;
 
 static const uint8_t guid_system_part[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
 static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
@@ -350,6 +362,133 @@ static mx_status_t find_partition(gpt_partition_t** gpt_table,
     return ERR_NOT_FOUND;
 }
 
+static int compare(const void* ls, const void* rs) {
+    return (int) (((part_tuple_t*) ls)->first - ((part_tuple_t*) rs)->first);
+}
+
+/*
+ * Sort an array of gpt_partition_t pointers based on the values of
+ * gpt_partition_t->first. The returned value will contain an array of pointers
+ * to partitions in sorted order. This array was allocated on the heap and
+ * should be freed at some point.
+ */
+static gpt_partition_t** sort_partitions(gpt_partition_t** parts,
+                                         uint16_t count) {
+    gpt_partition_t** sorted_parts = malloc(count * sizeof(gpt_partition_t*));
+    if (sorted_parts == NULL) {
+        fprintf(stderr, "Unable to sort partitions, out of memory.\n");
+        return NULL;
+    }
+
+    part_tuple_t* sort_tuples = malloc(count * sizeof(part_tuple_t));
+    if (sort_tuples == NULL) {
+        fprintf(stderr, "Unable to sort partitions, out of memory.\n");
+        free(sorted_parts);
+        return NULL;
+    }
+
+    for (uint16_t idx = 0; idx < count; idx++, sort_tuples++) {
+        sort_tuples->index = idx;
+        sort_tuples->first = parts[idx]->first;
+    }
+
+    sort_tuples -= count;
+    qsort(sort_tuples, count, sizeof(part_tuple_t), compare);
+
+    // create a sorted array of pointers
+    for (uint16_t idx = 0; idx < count; idx++, sort_tuples++) {
+        sorted_parts[idx] = parts[sort_tuples->index];
+    }
+
+    sort_tuples -= count;
+    free(sort_tuples);
+    return sorted_parts;
+}
+
+/*
+ * Attempt to find an unallocated portion of the specified device that is at
+ * least blocks_req in size. block_count should contain the total number of
+ * blocks on the disk. The offset in blocks of the allocation hole will be
+ * returned or 0 if no suitable space is located. 0 is used as a sentinel here
+ * because space would never be available at block 0 because the first blocks
+ * of the disk are used for the GPT and/or MBR.
+ */
+static size_t find_available_space(gpt_device_t* device, size_t blocks_req,
+                                   size_t block_count, size_t block_size) {
+    gpt_partition_t** sorted_parts;
+    // 17K is reserved at the front and back of the disk for the protected MBR
+    // and the GPT. The front is the primary of these and the back is the backup
+    const uint32_t blocks_resrvd = SIZE_RESERVED / block_size;
+
+    // if the device has no partitions, we can add one after the reserved
+    // section at the front
+    if (device->partitions[0] == NULL) {
+        if (block_count - blocks_resrvd * 2 >= blocks_req) {
+            // TODO link to GPT constant
+            return blocks_resrvd;
+        } else {
+            return 0;
+        }
+    }
+
+    // check if the GPT is sorted by partition position
+    bool sorted = true;
+    size_t count = 0;
+    for (count = 1; count < PARTITIONS_COUNT &&
+             device->partitions[count] != NULL && sorted; count++) {
+        sorted = device->partitions[count - 1]->first <
+            device->partitions[count]->first;
+    }
+
+    if (!sorted) {
+        // count the number of valid partitions because in this case we would
+        // have bailed out of counting early
+        for (count = 0; device->partitions[count] != NULL; count++);
+        sorted_parts = sort_partitions(device->partitions, count);
+        if (sorted_parts == NULL) {
+            return 0;
+        }
+    } else {
+        sorted_parts = device->partitions;
+    }
+
+    // check to see if we have space at the beginning of the disk
+    if (sorted_parts[0]->first - blocks_resrvd >= blocks_req) {
+        if (!sorted) {
+            free(sorted_parts);
+        }
+        return blocks_resrvd;
+    }
+
+    // check if there is space between partitions
+    for (size_t idx = 1; idx < count; idx++) {
+        if (sorted_parts[idx]->first - sorted_parts[idx - 1]->last - 1 >=
+            blocks_req) {
+            size_t offset = sorted_parts[idx - 1]->last + 1;
+            if (!sorted) {
+                free(sorted_parts);
+            }
+            return offset;
+        }
+    }
+
+    // check to see if there is space at the end of the disk
+    if (block_count - sorted_parts[count - 1]->last - 1 - blocks_resrvd >=
+        blocks_req) {
+        size_t offset = sorted_parts[count - 1]->last + 1;
+        if (!sorted) {
+            free(sorted_parts);
+        }
+        return offset;
+    }
+
+    if (!sorted) {
+        free(sorted_parts);
+    }
+
+    return 0;
+}
+
 /*
  * Give GPT information, check if the table contains entries for the partitions
  * represented by part_mask. For constructing the part_mask, see the PART_*
@@ -592,6 +731,77 @@ static mx_status_t write_partition(int src, int dest, size_t* bytes_copied) {
     return NO_ERROR;
 }
 
+static bool do_sort_test(int test_size, uint64_t val_max) {
+    gpt_partition_t* values = malloc(test_size * sizeof(gpt_partition_t));
+    gpt_partition_t** value_ptrs = malloc(test_size * sizeof(gpt_partition_t*));
+    if (values == NULL) {
+        printf("Unable to allocate memory for test\n");
+        return false;
+    }
+
+    for (int idx = 0; idx < test_size; idx++) {
+        bool unique = false;
+        while (!unique) {
+            double rando = ((double) rand()) / RAND_MAX;
+            uint64_t val = rando * val_max;
+
+            (values + idx)->first = val;
+
+            // check the uniqueness of the value since our sort doesn't handle
+            // duplicate values
+            unique = true;
+            for (int idx2 = 0; idx2 < idx; idx2++) {
+                if ((values + idx2)->first == val) {
+                    unique = false;
+                    break;
+                }
+            }
+
+            value_ptrs[idx] = values + idx;
+        }
+    }
+
+    gpt_partition_t** sorted_values = sort_partitions(value_ptrs, test_size);
+
+    // check that we're strictly in ascending order
+    bool ordered = true;
+    for (int idx = 1; idx < test_size; idx++) {
+        if (sorted_values[idx - 1]->first > sorted_values[idx]->first) {
+            ordered = false;
+            printf("Values are not ordered, index: %i--%lu!\n", idx,
+                   sorted_values[idx]->first);
+        }
+    }
+
+    if (!ordered) {
+        for (int idx = 0; idx < test_size; idx++) {
+            printf(" -- %lu", sorted_values[idx]->first);
+        }
+        printf("\n");
+    }
+
+
+    free(values);
+    free(sorted_values);
+    free(value_ptrs);
+    return ordered;
+}
+
+static bool test_sort(void) {
+    // run 20 iterations with 20K elements as a stress test. We also think
+    // this should hit all possible code paths
+    for (int count = 0; count < 20; count++) {
+        if (!do_sort_test(20000, 10000000)) {
+            return false;
+        }
+        printf(".");
+        fflush(stdout);
+    }
+
+    printf("\nAll tests succeeded\n");
+    return true;
+}
+
 int main(int argc, char** argv) {
     DEBUG_ASSERT(NUM_INSTALL_PARTS == 2);
     // setup the base path in the path buffer
@@ -735,8 +945,72 @@ int main(int argc, char** argv) {
         gpt_device_release(install_dev);
         return 0;
     } else {
+        printf("Starting the search for free space\n");
+        dir = opendir(PATH_BLOCKDEVS);
+        if (dir == NULL) {
+            printf("Open failed for directory: '%s' with error %s\n",
+                   PATH_BLOCKDEVS, strerror(errno));
+            return -1;
+        }
+
+        size_t space_offset = 0;
+
         // no device looks configured the way we want for install, see if we can
         // partition a device and make it suitable
+        for (ssize_t rc = get_next_file_path(
+                 dir, buffer_remaining, &path_buffer[base_len]);
+             rc >= 0;
+             rc = get_next_file_path(
+                 dir, buffer_remaining, &path_buffer[base_len])) {
+            if (rc > 0) {
+                printf("Device path length overrun by %zd characters\n", rc);
+                continue;
+            }
+
+            printf("Examining path %s\n", path_buffer);
+            // open device read-only
+            int fd = open_device_ro(&path_buffer[0]);
+            if (fd < 0) {
+                printf("Error reading directory");
+                continue;
+            }
+
+            uint64_t disk_size;
+            uint64_t block_size;
+            ssize_t rc2 = ioctl_block_get_size(fd, &disk_size);
+            ssize_t rc3 = ioctl_block_get_blocksize(fd, &block_size);
+            if (rc2 < 0 || rc3 < 0) {
+                fprintf(stderr, "Unable to read disk or block size.\n");
+                return -1;
+            }
+
+            install_dev = read_gpt(fd, &block_size);
+            close(fd);
+
+            if (install_dev == NULL) {
+                continue;
+            } else if (!install_dev->valid) {
+                fprintf(stderr, "Read GPT for %s, but it is invalid\n",
+                        path_buffer);
+                gpt_device_release(install_dev);
+                continue;
+            }
+
+            size_t space_offset = find_available_space(
+                install_dev,
+                (MIN_SIZE_SYSTEM_PART + MIN_SIZE_EFI_PART) / block_size,
+                disk_size / block_size, block_size);
+            if (space_offset > 0) {
+                break;
+            }
+        }
+
+        if (space_offset > 0) {
+            // TODO(jmatt): create partitions of appropriate size
+        } else {
+            // TODO(jmatt): look for partition(s) we could remove and use their
+            // space
+        }
         return -1;
     }
 }
