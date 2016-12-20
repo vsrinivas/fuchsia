@@ -89,7 +89,7 @@ status_t VmMapping::Protect(uint arch_mmu_flags) {
 }
 
 status_t VmMapping::Unmap(vaddr_t base, size_t size) {
-    LTRACEF("%p %s %#" PRIxPTR " %#" PRIxPTR "\n", this, name_, base, size);
+    LTRACEF("%p %s %#" PRIxPTR " %zu\n", this, name_, base, size);
 
     if (!IS_PAGE_ALIGNED(base)) {
         return ERR_INVALID_ARGS;
