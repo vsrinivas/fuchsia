@@ -40,9 +40,9 @@ bool HasReservedHandles(
 }
 
 mx::process CreateProcess(
-    const std::string& path, ApplicationPackagePtr package,
-    fidl::InterfaceHandle<ApplicationEnvironment> environment,
-    ApplicationLaunchInfoPtr launch_info) {
+    ApplicationPackagePtr package,
+    ApplicationLaunchInfoPtr launch_info,
+    fidl::InterfaceHandle<ApplicationEnvironment> environment) {
   fidl::Map<uint32_t, mx::handle<void>> startup_handles =
       std::move(launch_info->startup_handles);
   startup_handles.insert(MX_HND_TYPE_APPLICATION_ENVIRONMENT,
@@ -61,7 +61,7 @@ mx::process CreateProcess(
     handles.push_back(it.GetValue().release());
   }
 
-  const char* path_arg = path.c_str();
+  const char* path_arg = launch_info->url.get().c_str();
   std::vector<const char*> argv;
   argv.reserve(launch_info->arguments.size() + 1);
   argv.push_back(path_arg);
@@ -78,7 +78,7 @@ mx::process CreateProcess(
       handles.size(), handles.data(), ids.data());
   if (result < 0) {
     auto status = static_cast<mx_status_t>(result);
-    FTL_LOG(ERROR) << "Cannot run executable " << path << " due to error "
+    FTL_LOG(ERROR) << "Cannot run executable " << launch_info->url << " due to error "
                    << status << " (" << mx_status_get_string(status) << ")";
     return mx::process();
   }
@@ -235,19 +235,23 @@ void ApplicationEnvironmentImpl::CreateApplication(
     return;
   }
 
+  // launch_info is moved before LoadApplication() gets at its first argument.
+  fidl::String url = launch_info->url;
   loader_->LoadApplication(
-      launch_info->url, ftl::MakeCopyable([
+        url, ftl::MakeCopyable([
         this, launch_info = std::move(launch_info),
         controller = std::move(controller)
       ](ApplicationPackagePtr package) mutable {
         std::string runner;
         if (HasShebang(package->data, &runner)) {
-          CreateApplicationWithRunner(std::move(package), std::move(launch_info),
-                                      std::move(controller), runner);
+          CreateApplicationWithRunner(std::move(package),
+                                      std::move(launch_info),
+                                      runner,
+                                      std::move(controller));
         } else {
-          CreateApplicationWithProcess(launch_info->url, std::move(package),
-                                       environment_bindings_.AddBinding(this),
+          CreateApplicationWithProcess(std::move(package),
                                        std::move(launch_info),
+                                       environment_bindings_.AddBinding(this),
                                        std::move(controller));
         }
 
@@ -255,9 +259,10 @@ void ApplicationEnvironmentImpl::CreateApplication(
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
-    ApplicationPackagePtr package, ApplicationLaunchInfoPtr launch_info,
-    fidl::InterfaceRequest<ApplicationController> controller,
-    std::string runner) {
+    ApplicationPackagePtr package,
+    ApplicationLaunchInfoPtr launch_info,
+    std::string runner,
+    fidl::InterfaceRequest<ApplicationController> controller) {
   // We create the entry in |runners_| before calling ourselves
   // recursively to detect cycles.
   auto result = runners_.emplace(runner, nullptr);
@@ -291,12 +296,13 @@ void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
-    std::string url, ApplicationPackagePtr package,
-    fidl::InterfaceHandle<ApplicationEnvironment> environment,
+    ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
+    fidl::InterfaceHandle<ApplicationEnvironment> environment,
     fidl::InterfaceRequest<ApplicationController> controller) {
+  const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateProcess(
-      std::move(url), std::move(package), std::move(environment), std::move(launch_info));
+      std::move(package), std::move(launch_info), std::move(environment));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, std::move(process), url);

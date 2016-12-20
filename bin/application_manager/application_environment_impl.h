@@ -81,13 +81,14 @@ class ApplicationEnvironmentImpl : public ApplicationEnvironment,
   static uint32_t next_numbered_label_;
 
   void CreateApplicationWithRunner(
-      ApplicationPackagePtr package, ApplicationLaunchInfoPtr launch_info,
-      fidl::InterfaceRequest<ApplicationController> controller,
-      std::string runner);
-  void CreateApplicationWithProcess(
-      std::string url, ApplicationPackagePtr package,
-      fidl::InterfaceHandle<ApplicationEnvironment> environment,
+      ApplicationPackagePtr package,
       ApplicationLaunchInfoPtr launch_info,
+      std::string runner,
+      fidl::InterfaceRequest<ApplicationController> controller);
+  void CreateApplicationWithProcess(
+      ApplicationPackagePtr package,
+      ApplicationLaunchInfoPtr launch_info,
+      fidl::InterfaceHandle<ApplicationEnvironment> environment,
       fidl::InterfaceRequest<ApplicationController> controller);
 
   fidl::BindingSet<ApplicationEnvironment> environment_bindings_;
