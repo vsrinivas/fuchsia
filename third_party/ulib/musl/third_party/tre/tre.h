@@ -42,8 +42,8 @@ typedef int reg_errcode_t;
 
 typedef wchar_t tre_char_t;
 
-#define DPRINT(msg)                                                                                \
-    do {                                                                                           \
+#define DPRINT(msg) \
+    do {            \
     } while (0)
 
 #define elementsof(x) (sizeof(x) / sizeof(x[0]))
@@ -78,7 +78,7 @@ typedef wctype_t tre_ctype_t;
 
 /* Returns number of bytes to add to (char *)ptr to make it
    properly aligned for the type. */
-#define ALIGN(ptr, type)                                                                           \
+#define ALIGN(ptr, type) \
     ((((long)ptr) % sizeof(type)) ? (sizeof(type) - (((long)ptr) % sizeof(type))) : 0)
 
 #undef MAX
@@ -126,7 +126,8 @@ struct tnfa_transition {
 #define ASSERT_LAST 256
 
 /* Tag directions. */
-typedef enum { TRE_TAG_MINIMIZE = 0, TRE_TAG_MAXIMIZE = 1 } tre_tag_direction_t;
+typedef enum { TRE_TAG_MINIMIZE = 0,
+               TRE_TAG_MAXIMIZE = 1 } tre_tag_direction_t;
 
 /* Instructions to compute submatch register values from tag values
    after a successful match.  */
@@ -207,8 +208,8 @@ void* tre_mem_alloc_impl(tre_mem_t mem, int provided, void* provided_block, int 
 
 #define tre_mem_newa() tre_mem_new_impl(1, alloca(sizeof(struct tre_mem_struct)))
 
-#define tre_mem_alloca(mem, size)                                                                  \
-    ((mem)->n >= (size) ? tre_mem_alloc_impl((mem), 1, NULL, 0, (size))                            \
+#define tre_mem_alloca(mem, size)                                       \
+    ((mem)->n >= (size) ? tre_mem_alloc_impl((mem), 1, NULL, 0, (size)) \
                         : tre_mem_alloc_impl((mem), 1, alloca(TRE_MEM_BLOCK_SIZE), 0, (size)))
 #endif /* TRE_USE_ALLOCA */
 

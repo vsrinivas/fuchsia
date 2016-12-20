@@ -16,8 +16,8 @@
 #include <magenta/internal.h>
 // TODO(teisenbe): Remove this include once code below no longer uses it (e.g.
 // after we switch to using sub-VMARs).
-#include <magenta/syscalls/object.h>
 #include <magenta/status.h>
+#include <magenta/syscalls/object.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <stdarg.h>
