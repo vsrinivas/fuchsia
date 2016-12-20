@@ -13,9 +13,9 @@
 #include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "command_handler.h"
-#include "exception_port.h"
-#include "io_loop.h"
+#include "command-handler.h"
+#include "exception-port.h"
+#include "io-loop.h"
 #include "process.h"
 #include "thread.h"
 

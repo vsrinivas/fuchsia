@@ -18,7 +18,7 @@
 
 #include "breakpoint.h"
 #include "dso-list.h"
-#include "exception_port.h"
+#include "exception-port.h"
 #include "memory-process.h"
 #include "thread.h"
 

@@ -2,36 +2,36 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("test_apps") {
+group("test-apps") {
   testonly = true
 
   deps = [
-    ":crash_test",
-    ":exit_test",
-    ":loop_test",
+    ":crash-test",
+    ":exit-test",
+    ":loop-test",
   ]
 }
 
-executable("exit_test") {
+executable("exit-test") {
   testonly = true
 
   sources = [
-    "exit_test.c",
+    "exit-test.c",
   ]
 }
 
-executable("crash_test") {
+executable("crash-test") {
   testonly = true
 
   sources = [
-    "crash_test.c",
+    "crash-test.c",
   ]
 }
 
-executable("loop_test") {
+executable("loop-test") {
   testonly = true
 
   sources = [
-    "loop_test.c",
+    "loop-test.c",
   ]
 }

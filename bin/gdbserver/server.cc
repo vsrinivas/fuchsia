@@ -17,7 +17,7 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "stop_reply_packet.h"
+#include "stop-reply-packet.h"
 #include "util.h"
 
 namespace debugserver {
