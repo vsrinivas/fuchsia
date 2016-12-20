@@ -64,10 +64,6 @@
             "bootfs_path": "apps/hello_app_parent"
         },
         {
-            "binary": "resolver",
-            "bootfs_path": "apps/resolver"
-        },
-        {
             "binary": "story_runner",
             "bootfs_path": "apps/story_runner"
         },

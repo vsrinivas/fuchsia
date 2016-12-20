@@ -47,6 +47,14 @@
             "bootfs_path": "apps/maxwell_test"
         },
         {
+            "binary": "resolver_main",
+            "bootfs_path": "apps/resolver"
+        },
+        {
+            "binary": "resolver_test",
+            "bootfs_path": "apps/resolver_test"
+        },
+        {
             "binary": "suggestion_engine",
             "bootfs_path": "apps/suggestion_engine"
         }
