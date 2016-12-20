@@ -77,6 +77,10 @@ class GetStoryDataCall : public Operation {
         ledger_(ledger),
         story_id_(story_id),
         result_(result) {
+    Ready();
+  }
+
+  void Run() override {
     ledger_->GetRootPage(
         root_page_.NewRequest(), [this](ledger::Status status) {
           if (status != ledger::Status::OK) {
@@ -143,6 +147,10 @@ class WriteStoryDataCall : public Operation {
         ledger_(ledger),
         story_data_(std::move(story_data)),
         result_(result) {
+    Ready();
+  }
+
+  void Run() override {
     FTL_DCHECK(!story_data_.is_null());
 
     ledger_->GetRootPage(
@@ -206,6 +214,10 @@ class CreateStoryCall : public Operation {
         extra_info_(std::move(extra_info)),
         root_docs_(std::move(root_docs)),
         result_(result) {
+    Ready();
+  }
+
+  void Run() override {
     ledger_->NewPage(story_page_.NewRequest(), [this](ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "CreateStoryCall() " << story_id_
@@ -214,30 +226,26 @@ class CreateStoryCall : public Operation {
         return;
       }
 
-      story_page_->GetId(
-          [this](fidl::Array<uint8_t> story_page_id) {
-            story_data_ = StoryData::New();
-            story_data_->story_page_id = std::move(story_page_id);
-            story_data_->story_info = StoryInfo::New();
-            auto* const story_info = story_data_->story_info.get();
-            story_info->url = url_;
-            story_info->id = story_id_;
-            story_info->is_running = false;
-            story_info->state = StoryState::INITIAL;
-            story_info->extra = std::move(extra_info_);
-            story_info->extra.mark_non_null();
+      story_page_->GetId([this](fidl::Array<uint8_t> story_page_id) {
+        story_data_ = StoryData::New();
+        story_data_->story_page_id = std::move(story_page_id);
+        story_data_->story_info = StoryInfo::New();
+        auto* const story_info = story_data_->story_info.get();
+        story_info->url = url_;
+        story_info->id = story_id_;
+        story_info->is_running = false;
+        story_info->state = StoryState::INITIAL;
+        story_info->extra = std::move(extra_info_);
+        story_info->extra.mark_non_null();
 
-            story_provider_impl_->WriteStoryData(
-                story_data_->Clone(), [this]() {
-                  auto* const story_controller = new StoryControllerImpl(
-                      std::move(story_data_), story_provider_impl_);
-                  story_controller->AddLinkData(std::move(root_docs_));
-                  story_provider_impl_->AddController(story_id_,
-                                                      story_controller);
-                  result_(story_id_);
-                  Done();
-                });
-          });
+        story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
+          StoryControllerImpl controller(std::move(story_data_),
+                                         story_provider_impl_);
+          controller.AddLinkData(std::move(root_docs_));
+          result_(story_id_);
+          Done();
+        });
+      });
     });
   }
 
@@ -259,20 +267,47 @@ class CreateStoryCall : public Operation {
 class DeleteStoryCall : public Operation {
  public:
   using Result = StoryProviderImpl::DeleteStoryCallback;
+  using StoryIds = std::unordered_set<std::string>*;
+  using ControllerMap =
+      std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>*;
+  using PendingDeletion = std::pair<std::string, DeleteStoryCall*>*;
 
   DeleteStoryCall(OperationContainer* const container,
                   ledger::Ledger* const ledger,
+                  bool is_locally_triggered,
                   const fidl::String& story_id,
+                  StoryIds story_ids,
+                  ControllerMap story_controllers,
+                  PendingDeletion pending_deletion,
                   Result result)
       : Operation(container),
         ledger_(ledger),
+        is_locally_triggered_(is_locally_triggered),
         story_id_(story_id),
+        story_ids_(story_ids),
+        story_controllers_(story_controllers),
+        pending_deletion_(pending_deletion),
         result_(result) {
+    Ready();
+  }
+
+  void Run() override {
+    if (!is_locally_triggered_) {
+      Complete();
+      return;
+    }
+
+    // There should not be an existing pending_deletion_.
+    FTL_DCHECK(pending_deletion_->first.empty());
+    FTL_DCHECK(pending_deletion_->second == nullptr);
+    *pending_deletion_ = std::make_pair(story_id_, this);
+
     ledger_->GetRootPage(root_page_.NewRequest(), [this](
                                                       ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
                        << " Ledger.GetRootPage() " << status;
+        *pending_deletion_ = std::pair<std::string, DeleteStoryCall*>();
         result_();
         Done();
         return;
@@ -283,16 +318,36 @@ class DeleteStoryCall : public Operation {
           FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
                          << " Page.Delete() " << status;
         }
-        result_();
-        Done();
       });
+    });
+  }
+
+  void Complete() {
+    story_ids_->erase(story_id_);
+    *pending_deletion_ = std::pair<std::string, DeleteStoryCall*>();
+    auto i = story_controllers_->find(story_id_);
+    if (i == story_controllers_->end()) {
+      result_();
+      Done();
+      return;
+    }
+
+    FTL_DCHECK(i->second.get() != nullptr);
+    i->second->StopForDelete([this] {
+      story_controllers_->erase(story_id_);
+      result_();
+      Done();
     });
   }
 
  private:
   ledger::Ledger* const ledger_;  // not owned
   ledger::PagePtr root_page_;
+  bool is_locally_triggered_;
   const fidl::String story_id_;
+  StoryIds story_ids_;
+  ControllerMap story_controllers_;
+  PendingDeletion pending_deletion_;
   Result result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
@@ -300,19 +355,37 @@ class DeleteStoryCall : public Operation {
 
 class GetControllerCall : public Operation {
  public:
+  using ControllerMap =
+      std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>*;
+
   GetControllerCall(OperationContainer* const container,
                     ledger::Ledger* const ledger,
                     StoryProviderImpl* const story_provider_impl,
-                    const fidl::String& story_id)
+                    ControllerMap story_controllers,
+                    const fidl::String& story_id,
+                    fidl::InterfaceRequest<StoryController> request)
       : Operation(container),
         ledger_(ledger),
         story_provider_impl_(story_provider_impl),
-        story_id_(story_id) {
+        story_controllers_(story_controllers),
+        story_id_(story_id),
+        request_(std::move(request)) {
+    Ready();
+  }
+
+  void Run() override {
+    // If possible, try connecting to an existing controller.
+    auto i = story_controllers_->find(story_id_);
+    if (i != story_controllers_->end()) {
+      i->second->Connect(std::move(request_));
+      Done();
+      return;
+    }
+
     story_provider_impl_->GetStoryData(
         story_id_, [this](StoryDataPtr story_data) {
           if (story_data.is_null()) {
             // We cannot resume a deleted (or otherwise non-existing) story.
-            story_provider_impl_->AddController(story_id_, nullptr);
             Done();
             return;
           }
@@ -325,9 +398,10 @@ class GetControllerCall : public Operation {
                                  << story_data_->story_info->id
                                  << " Ledger.GetPage() " << status;
                 }
-                story_provider_impl_->AddController(
-                    story_id_, new StoryControllerImpl(std::move(story_data_),
-                                                       story_provider_impl_));
+                auto controller = new StoryControllerImpl(
+                    std::move(story_data_), story_provider_impl_);
+                controller->Connect(std::move(request_));
+                story_controllers_->emplace(story_id_, controller);
                 Done();
               });
         });
@@ -336,7 +410,9 @@ class GetControllerCall : public Operation {
  private:
   ledger::Ledger* const ledger_;                  // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
+  ControllerMap story_controllers_;
   const fidl::String story_id_;
+  fidl::InterfaceRequest<StoryController> request_;
 
   StoryDataPtr story_data_;
   ledger::PagePtr story_page_;
@@ -352,6 +428,10 @@ class PreviousStoriesCall : public Operation {
                       ledger::Ledger* const ledger,
                       Result result)
       : Operation(container), ledger_(ledger), result_(result) {
+    Ready();
+  }
+
+  void Run() override {
     // This resize() has the side effect of marking the array as
     // non-null. Do not remove it because the fidl declaration
     // of this return value does not allow nulls.
@@ -396,9 +476,8 @@ class PreviousStoriesCall : public Operation {
 
                   for (auto& entry : entries) {
                     StoryDataPtr story_data = StoryData::New();
-                    story_data->Deserialize(
-                      entry->value->get_bytes().data(),
-                      entry->value->get_bytes().size());
+                    story_data->Deserialize(entry->value->get_bytes().data(),
+                                            entry->value->get_bytes().size());
                     story_ids_.push_back(story_data->story_info->id);
                   }
 
@@ -457,127 +536,21 @@ StoryProviderImpl::StoryProviderImpl(
   // stories *before* we can process any calls that might create a new
   // story. Hence we bind the interface request only after this call
   // completes.
-  new PreviousStoriesCall(
-      &operation_container_, ledger_.get(), ftl::MakeCopyable([
-        this, story_provider_request = std::move(story_provider_request)
-      ](fidl::Array<fidl::String> stories) mutable {
-        for (auto& story_id : stories) {
-          story_ids_.insert(story_id.get());
-        }
-
-        InitStoryId();  // So MakeStoryId() returns something more random.
-
-        binding_.Bind(std::move(story_provider_request));
-      }));
-}
-
-// Announces the eventual arrival of a controller instance but without a
-// connection request to it at the moment.
-void StoryProviderImpl::PendControllerAdd(
-    const std::string& story_id) {
-  if (story_controllers_.find(story_id) == story_controllers_.end()) {
-    story_controllers_[story_id].reset(new StoryControllerEntry);
-  }
-}
-
-// Announces the eventual arrival of a controller instance. If another
-// request arrives for it meanwhile, it is stored in the entry here
-// until the first request finishes. All requests received by then are
-// then connected to the controller instance in AddController() below.
-void StoryProviderImpl::PendControllerAdd(
-    const std::string& story_id,
-    fidl::InterfaceRequest<StoryController> story_controller_request) {
-  PendControllerAdd(story_id);
-  story_controllers_[story_id]->requests.emplace_back(
-      std::move(story_controller_request));
-  story_controllers_[story_id]->purge_time = ftl::TimePoint();
-}
-
-
-// Announces the eventual deletion of a controller instance. If
-// another delete request arrives for it meanwhile, it is stored in
-// the entry here. Connection requests that arrive for it are
-// declined.
-void StoryProviderImpl::PendControllerDelete(const std::string& story_id,
-                                             const DeleteStoryCallback& done) {
-  if (story_controllers_.find(story_id) == story_controllers_.end()) {
-    story_controllers_[story_id].reset(new StoryControllerEntry);
-  }
-  story_controllers_[story_id]->deleted = true;
-  story_controllers_[story_id]->deleted_callbacks.push_back(done);
-}
-
-// Completes the asynchronous creation of a controller instance
-// started by PendControllerAdd() above. If the creation of the
-// controller failed (for example, because its story ID doesn't
-// exist), this method is called with a nullptr argument.
-void StoryProviderImpl::AddController(
-    const std::string& story_id,
-    StoryControllerImpl* const story_controller) {
-  FTL_DCHECK(story_controllers_.find(story_id) != story_controllers_.end());
-  FTL_DCHECK(story_controllers_[story_id].get() != nullptr);
-  FTL_DCHECK(story_controllers_[story_id]->impl.get() == nullptr);
-
-  StoryControllerEntry* const entry = story_controllers_[story_id].get();
-
-  if (story_controller == nullptr) {
-    entry->deleted = true;
-  } else {
-    entry->impl.reset(story_controller);
-  }
-
-  if (!entry->deleted && story_controller != nullptr) {
-    for (auto& request : entry->requests) {
-      story_controller->Connect(std::move(request));
+  new PreviousStoriesCall(&operation_queue_, ledger_.get(), ftl::MakeCopyable([
+    this, story_provider_request = std::move(story_provider_request)
+  ](fidl::Array<fidl::String> stories) mutable {
+    for (auto& story_id : stories) {
+      story_ids_.insert(story_id.get());
     }
-  }
-  entry->requests.clear();
 
-  PurgeControllers();
+    InitStoryId();  // So MakeStoryId() returns something more random.
+
+    binding_.Bind(std::move(story_provider_request));
+  }));
 }
 
-// Called every time something changes about the conditions of
-// controllers that may (but doesn't necessarily does) affect the set
-// of controller instances. This is because existence of controllers
-// is affected by confluence of concurrently completing operations or
-// arising conditions, for example the completion of the asynchronous
-// lookup of the story data from the ledger another request to connect
-// to the story controller, the disconnect of such a request, and the
-// request to delete the story.
-//
-// We do this by scanning the set of controllers because it's
-// relatively small (the heuristics is that there is no need for the
-// user shell to maintain controllers for more stories than fit on the
-// screen, which is bounded).
-void StoryProviderImpl::PurgeControllers() {
-  // Scan entries for controllers with no connections that have no
-  // delete operations pending for a time bounded duration, or for those with
-  // completed delete operations that have no connection requests pending.
-  std::vector<std::string> disconnected;
-  for (auto& entry : story_controllers_) {
-    if (entry.second->deleted && entry.second->requests.size() == 0 &&
-         (entry.second->impl.get() == nullptr ||
-          !entry.second->impl->IsActive()) &&
-         entry.second->deleted_callbacks.size() == 0) {
-      disconnected.push_back(entry.first);
-    }
-    if (entry.second->impl.get() != nullptr &&
-        entry.second->impl->bindings_size() == 0 &&
-        !entry.second->impl->IsActive() &&
-        entry.second->deleted_callbacks.size() == 0) {
-      if (entry.second->purge_time == ftl::TimePoint()) {
-        // This is the first time that we saw that the controller has no active
-        // connections. Give it some time before purging it.
-        entry.second->purge_time =
-            ftl::TimePoint::Now() + ftl::TimeDelta::FromSeconds(10);
-      } else if (entry.second->purge_time <= ftl::TimePoint::Now()) {
-        disconnected.push_back(entry.first);
-      }
-    }
-  }
-  for (auto& story_id : disconnected) {
-    story_controllers_.erase(story_id);
-  }
+void StoryProviderImpl::PurgeController(const std::string& story_id) {
+  story_controllers_.erase(story_id);
 }
 
 // |StoryProvider|
@@ -587,22 +560,10 @@ void StoryProviderImpl::Watch(
       StoryProviderWatcherPtr::Create(std::move(watcher)));
 }
 
-void StoryProviderImpl::GetStoryInfo(
-    const fidl::String& story_id,
-    const GetStoryInfoCallback& story_data_callback) {
-  new GetStoryDataCall(
-      &operation_container_, ledger_.get(), story_id,
-      [this, story_data_callback](StoryDataPtr story_data) {
-        story_data_callback(
-            story_data.is_null() ? nullptr : std::move(story_data->story_info));
-      });
-}
-
 void StoryProviderImpl::GetStoryData(
     const fidl::String& story_id,
     const std::function<void(StoryDataPtr)>& result) {
-  new GetStoryDataCall(&operation_container_, ledger_.get(), story_id,
-                       result);
+  new GetStoryDataCall(&operation_collection_, ledger_.get(), story_id, result);
 }
 
 ledger::PagePtr StoryProviderImpl::GetStoryPage(
@@ -648,7 +609,7 @@ void StoryProviderImpl::ConnectToResolver(
 
 void StoryProviderImpl::WriteStoryData(StoryDataPtr story_data,
                                        std::function<void()> done) {
-  new WriteStoryDataCall(&operation_container_, ledger_.get(),
+  new WriteStoryDataCall(&operation_collection_, ledger_.get(),
                          std::move(story_data), done);
 }
 
@@ -664,14 +625,12 @@ StoryProviderImpl::DuplicateLedgerRepository() {
 }
 
 // |StoryProvider|
-void StoryProviderImpl::CreateStory(
-    const fidl::String& url,
-    const CreateStoryCallback& callback) {
+void StoryProviderImpl::CreateStory(const fidl::String& url,
+                                    const CreateStoryCallback& callback) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
-  PendControllerAdd(story_id);
-  new CreateStoryCall(
-      &operation_container_, ledger_.get(), this, url,
-      story_id, FidlStringMap(), FidlDocMap(), callback);
+  FTL_LOG(INFO) << "CreateStory() " << url;
+  new CreateStoryCall(&operation_queue_, ledger_.get(), this, url, story_id,
+                      FidlStringMap(), FidlDocMap(), callback);
 }
 
 // |StoryProvider|
@@ -681,90 +640,43 @@ void StoryProviderImpl::CreateStoryWithInfo(
     FidlDocMap root_docs,
     const CreateStoryWithInfoCallback& callback) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
-  PendControllerAdd(story_id);
   FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_docs;
-  new CreateStoryCall(
-      &operation_container_, ledger_.get(), this, url,
-      story_id, std::move(extra_info), std::move(root_docs), callback);
+  new CreateStoryCall(&operation_queue_, ledger_.get(), this, url, story_id,
+                      std::move(extra_info), std::move(root_docs), callback);
 }
 
 // |StoryProvider|
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
                                     const DeleteStoryCallback& callback) {
-  // We store the callback in the story controller entry, and
-  // eventually call it from there.
-  PendControllerDelete(story_id, callback);
-  auto i = story_controllers_.find(story_id);
-  if (i->second->deleted_callbacks.size() == 1) {
-    // Delete the record. The story will be stopped in the PageWatcher
-    // callback.
-    new DeleteStoryCall(&operation_container_, ledger_.get(), story_id,
-                        [story_id] {
-                          FTL_LOG(INFO) << "Deleted story " << story_id;
-                          // This callback is for logging purposes. Flow of
-                          // control continues in the notification from the
-                          // Ledger.
-                        });
-  }
+  new DeleteStoryCall(&operation_queue_, ledger_.get(), true, story_id,
+                      &story_ids_, &story_controllers_, &pending_deletion_,
+                      callback);
 }
 
-// When a story should be deleted, the story controller should be
-// deleted, but only after its story was stopped. Once this is
-// completed, delete callbacks can be invoked and the story really be
-// purged.
-void StoryProviderImpl::DisposeController(const fidl::String& story_id) {
-  auto i = story_controllers_.find(story_id);
-  FTL_DCHECK(i != story_controllers_.end());
-
-  auto cont = [this, story_id] {
-    auto i = story_controllers_.find(story_id);
-    FTL_DCHECK(i != story_controllers_.end());
-
-    for (auto& done : i->second->deleted_callbacks) {
-      done();
-    }
-    i->second->deleted_callbacks.clear();
-
-    PurgeControllers();
-  };
-
-  if (i->second->impl.get() != nullptr) {
-    i->second->impl->StopForDelete(cont);
-  } else {
-    cont();
-  }
+// |StoryProvider|
+void StoryProviderImpl::GetStoryInfo(
+    const fidl::String& story_id,
+    const GetStoryInfoCallback& story_data_callback) {
+  new GetStoryDataCall(
+      &operation_collection_, ledger_.get(), story_id,
+      [this, story_data_callback](StoryDataPtr story_data) {
+        story_data_callback(
+            story_data.is_null() ? nullptr : std::move(story_data->story_info));
+      });
 }
 
 // |StoryProvider|
 void StoryProviderImpl::GetController(
     const fidl::String& story_id,
-    fidl::InterfaceRequest<StoryController> story_controller_request) {
-  // If no story controller known, reserve an entry for it, and
-  // request one.
-  auto i = story_controllers_.find(story_id);
-  if (i == story_controllers_.end()) {
-    PendControllerAdd(story_id, std::move(story_controller_request));
-    new GetControllerCall(&operation_container_, ledger_.get(), this,
-                          story_id);
-
-  } else if (i->second->impl.get() != nullptr && !i->second->deleted) {
-    // A story controller exists, and no deletion is requested.
-    // Connect to it.
-    i->second->impl->Connect(std::move(story_controller_request));
-
-  } else {
-    // A story controller entry exists, and a request is in flight,
-    // either for creation or deletion. Piggyback onto it. The current
-    // request gets either dropped or connected when the pending
-    // request completes.
-    PendControllerAdd(story_id, std::move(story_controller_request));
-  }
+    fidl::InterfaceRequest<StoryController> request) {
+  new GetControllerCall(&operation_queue_, ledger_.get(), this,
+                        &story_controllers_, story_id, std::move(request));
 }
 
 // |StoryProvider|
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
-  new PreviousStoriesCall(&operation_container_, ledger_.get(), callback);
+  new PreviousStoriesCall(&operation_queue_, ledger_.get(), callback);
 }
 
 // |PageWatcher|
@@ -800,20 +712,14 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
       watcher->OnDelete(story_id);
     });
 
-    // If there is a story controller entry for this ID, mark it
-    // deleted and dispose. We can only purge it when there are no
-    // pending requests for it, otherwise we have to wait for the
-    // requests to come back. If there already is a controller, we
-    // first have to stop it.
-    auto i = story_controllers_.find(story_id);
-    if (i != story_controllers_.end()) {
-      // If already marked deleted, this is from a local
-      // DeleteStory() request. If not yet marked deleted, this is
-      // from sync, so we mark it accordingly.
-      if (!i->second->deleted) {
-        PendControllerDelete(story_id, []{});
-      }
-      DisposeController(story_id);
+    if (pending_deletion_.first == story_id) {
+      // It is okay to do a static_cast here because we know at compile time
+      // that this has to be a DeleteStoryCall*.
+      static_cast<DeleteStoryCall*>(pending_deletion_.second)->Complete();
+    } else {
+      new DeleteStoryCall(&operation_queue_, ledger_.get(), false, story_id,
+                          &story_ids_, &story_controllers_, &pending_deletion_,
+                          [] {});
     }
   }
   cb(nullptr);

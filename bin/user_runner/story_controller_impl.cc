@@ -20,7 +20,7 @@ StoryControllerImpl::StoryControllerImpl(
   bindings_.set_on_empty_set_handler([this] {
     // This does not purge a controller with an open story runner as
     // indicated by IsActive().
-    story_provider_impl_->PurgeControllers();
+    story_provider_impl_->PurgeController(story_data_->story_info->id);
   });
 }
 

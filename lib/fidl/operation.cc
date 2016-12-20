@@ -8,11 +8,12 @@
 
 namespace modular {
 
-void OperationContainer::Hold(Operation* const o) {
+void OperationCollection::Hold(Operation* const o) {
   operations_.emplace_back(o);
+  o->Run();
 }
 
-void OperationContainer::Drop(Operation* const o) {
+void OperationCollection::Drop(Operation* const o) {
   auto it = std::remove_if(
       operations_.begin(), operations_.end(),
       [o](const std::unique_ptr<Operation>& p) { return p.get() == o; });
@@ -20,8 +21,26 @@ void OperationContainer::Drop(Operation* const o) {
   operations_.erase(it, operations_.end());
 }
 
+void OperationQueue::Hold(Operation* const o) {
+  operations_.emplace(o);
+  // Run this operation if it is the only operation in the queue.
+  if (operations_.size() == 1) {
+    o->Run();
+  }
+}
+
+void OperationQueue::Drop(Operation* const o) {
+  FTL_DCHECK(operations_.front().get() == o);
+  operations_.pop();
+  if (!operations_.empty()) {
+    operations_.front()->Run();
+  }
+}
+
 Operation::Operation(OperationContainer* const c)
-    : container_(c) {
+    : container_(c) {}
+
+void Operation::Ready() {
   container_->Hold(this);
 }
 

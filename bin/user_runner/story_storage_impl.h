@@ -60,7 +60,7 @@ class StoryStorageImpl : public StoryStorage, public ledger::PageWatcher {
   const std::string key_;
   std::shared_ptr<Storage> storage_;
   ledger::PagePtr story_page_;
-  OperationContainer operation_container_;
+  OperationCollection operation_collection_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };

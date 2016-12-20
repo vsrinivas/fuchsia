@@ -30,6 +30,10 @@ namespace modular {
 class ApplicationContext;
 class StoryControllerImpl;
 
+namespace {
+class DeleteStoryCall;
+}  // namespace
+
 class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
  public:
   StoryProviderImpl(
@@ -47,14 +51,9 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
     aux_bindings_.AddBinding(this, std::move(request));
   }
 
-  // Used by Create and GetController implementations. Takes ownership of the
-  // controller.
-  void AddController(const std::string& story_id,
-                     StoryControllerImpl* story_controller);
-
-  // Removes story controller impls no longer needed. Also called by
-  // the empty binding set handler of StoryControllerImpl.
-  void PurgeControllers();
+  // Called by empty binding set handler of StoryControllerImpl to remove
+  // the corresponding entry.
+  void PurgeController(const std::string& story_id);
 
   // Obtains the StoryData for an existing story from the ledger.
   void GetStoryData(const fidl::String& story_id,
@@ -78,27 +77,27 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
  private:
   // |StoryProvider|
-  void GetStoryInfo(const fidl::String& story_id,
-                    const GetStoryInfoCallback& story_info_callback) override;
-
-  // |StoryProvider|
   void CreateStory(const fidl::String& url,
                    const CreateStoryCallback& callback) override;
 
   // |StoryProvider|
-  void CreateStoryWithInfo(const fidl::String& url,
-                           FidlStringMap extra_info,
-                           FidlDocMap root_docs,
-                           const CreateStoryWithInfoCallback& callback) override;
+  void CreateStoryWithInfo(
+      const fidl::String& url,
+      FidlStringMap extra_info,
+      FidlDocMap root_docs,
+      const CreateStoryWithInfoCallback& callback) override;
 
   // |StoryProvider|
   void DeleteStory(const fidl::String& story_id,
                    const DeleteStoryCallback& callback) override;
 
   // |StoryProvider|
+  void GetStoryInfo(const fidl::String& story_id,
+                    const GetStoryInfoCallback& story_info_callback) override;
+
+  // |StoryProvider|
   void GetController(const fidl::String& story_id,
-                     fidl::InterfaceRequest<StoryController>
-                         story_controller_request) override;
+                     fidl::InterfaceRequest<StoryController> request) override;
 
   // |StoryProvider|
   void PreviousStories(const PreviousStoriesCallback& callback) override;
@@ -113,25 +112,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // |PageWatcher|
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& cb) override;
-
-  // Used by CreateStory(). Followed eventually by AddController(). See impl
-  // for details.
-  void PendControllerAdd(const std::string& story_id);
-
-  // Used by GetController(). Followed eventually by AddController(). See impl
-  // for details.
-  void PendControllerAdd(
-      const std::string& story_id,
-      fidl::InterfaceRequest<StoryController> story_controller_request);
-
-  // Used by DeleteStory(). Followed eventually by
-  // DisposeController(). See impl for details.
-  void PendControllerDelete(const std::string& story_id,
-                            const std::function<void()>& delete_callback);
-
-  // Properly disposes the story controller for the given story by
-  // first stopping its story if its running. See impl for details.
-  void DisposeController(const fidl::String& story_id);
 
   ApplicationEnvironmentPtr environment_;
   StrongBinding<StoryProvider> binding_;
@@ -148,41 +128,36 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   ServiceProviderPtr story_runner_services_;
   ServiceProviderPtr resolver_services_;
 
+  // A list of IDs of *all* stories available on a user's ledger.
   std::unordered_set<std::string> story_ids_;
-  OperationContainer operation_container_;
+
+  // This is a container of all operations that are currently enqueued to run in
+  // a FIFO manner. All operations exposed via |StoryProvider| interface is
+  // queued here.
+  //
+  // The advantage of doing this is that if an operations consists of multiple
+  // asynchronous calls then no state needs to be maintained for incomplete /
+  // pending operations.
+  OperationQueue operation_queue_;
+
+  // This is a container of all Operations that can be run concurrently.
+  OperationCollection operation_collection_;
+
   std::shared_ptr<Storage> storage_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
-  // Between a request coming in for a controller and the controller
-  // being created, more requests may come in. To handle this
-  // condition correctly, a request issued for a controller is marked
-  // by an instance of this struct, and its completion is marked by
-  // setting the controller.
-  //
-  // Likewise, between a request to delete a controller and it being
-  // stopped and ready to delete, more requests can come in, which are
-  // queued up in the same way. Requests to delete trump requests to
-  // connect, so if a connect request is received while a delete is
-  // pending, it won't get connected.
-  //
-  // Instances of this struct are held in a unique_ptr<> to be sure
-  // that we never need to move them.
-  struct StoryControllerEntry {
-    std::vector<fidl::InterfaceRequest<StoryController>> requests;
-    std::unique_ptr<StoryControllerImpl> impl;
-    bool deleted{};
-    std::vector<DeleteStoryCallback> deleted_callbacks;
-
-    // Time beyond which the implementation is free to purge this
-    // controller. It is set to 0 if there are outstanding connections
-    // to the controller (in which situation the controller must not
-    // be purged anyway).
-    ftl::TimePoint purge_time;
-  };
-  std::unordered_map<std::string, std::unique_ptr<StoryControllerEntry>>
+  std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>
       story_controllers_;
+
+  // This represents a delete operation that was created via |DeleteStory()|
+  // but is awaiting the corresponding |PageWatcher::OnChange()| before the
+  // operation can be marked as done.
+  //
+  // Note that delete operations taking place on remote devices can still
+  // trigger a new delete operations.
+  std::pair<std::string, DeleteStoryCall*> pending_deletion_;
 
   ledger::LedgerRepositoryPtr ledger_repository_;
 

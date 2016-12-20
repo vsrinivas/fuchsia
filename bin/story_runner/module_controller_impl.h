@@ -29,7 +29,7 @@ class ModuleControllerImpl : public ModuleController {
  public:
   ModuleControllerImpl(
       StoryImpl* const story_impl,
-      const fidl::String& url,
+      const std::string& url,
       ApplicationControllerPtr module_application,
       ModulePtr module,
       fidl::InterfaceRequest<ModuleController> module_controller);
@@ -54,7 +54,7 @@ class ModuleControllerImpl : public ModuleController {
   void OnConnectionError();
 
   StoryImpl* const story_impl_;
-  const fidl::String url_;
+  const std::string url_;
   ApplicationControllerPtr module_application_;
   ModulePtr module_;
   fidl::Binding<ModuleController> binding_;

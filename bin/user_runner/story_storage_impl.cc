@@ -24,6 +24,10 @@ class ReadLinkDataCall : public Operation {
         page_(page),
         link_id_(link_id),
         result_(result) {
+    Ready();
+  }
+
+  void Run() override {
     page_->GetSnapshot(
         page_snapshot_.NewRequest(), [this](ledger::Status status) {
           page_snapshot_->Get(
@@ -64,6 +68,10 @@ class WriteLinkDataCall : public Operation {
         link_id_(link_id),
         data_(std::move(data)),
         result_(result) {
+    Ready();
+  }
+
+  void Run() override {
     fidl::Array<uint8_t> bytes;
     bytes.resize(data_->GetSerializedSize());
     data_->Serialize(bytes.data(), bytes.size());
@@ -109,7 +117,7 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
                                     const ReadLinkDataCallback& cb) {
   if (story_page_.is_bound()) {
-    new ReadLinkDataCall(&operation_container_, story_page_.get(), link_id,
+    new ReadLinkDataCall(&operation_collection_, story_page_.get(), link_id,
                          cb);
 
   } else {
@@ -128,7 +136,7 @@ void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
                                      LinkDataPtr data,
                                      const WriteLinkDataCallback& cb) {
   if (story_page_.is_bound()) {
-    new WriteLinkDataCall(&operation_container_, story_page_.get(), link_id,
+    new WriteLinkDataCall(&operation_collection_, story_page_.get(), link_id,
                           std::move(data), cb);
 
   } else {

@@ -19,7 +19,7 @@ constexpr ftl::TimeDelta kStoryTearDownTimeout = ftl::TimeDelta::FromSeconds(1);
 
 ModuleControllerImpl::ModuleControllerImpl(
     StoryImpl* const story_impl,
-    const fidl::String& url,
+    const std::string& url,
     ApplicationControllerPtr module_application,
     ModulePtr module,
     fidl::InterfaceRequest<ModuleController> module_controller)

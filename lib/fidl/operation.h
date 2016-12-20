@@ -6,6 +6,7 @@
 #define APPS_MODULAR_LIB_FIDL_OPERATION_H_
 
 #include <memory>
+#include <queue>
 #include <vector>
 
 #include "lib/ftl/macros.h"
@@ -13,21 +14,52 @@
 namespace modular {
 class Operation;
 
-// Holds on to Operation instances until they declare themselves to
-// be Done().
+// An abstract base class which provides methods to hold on to Operation
+// instances until they declare themselves to be Done().
 class OperationContainer {
  public:
   OperationContainer() = default;
+  virtual ~OperationContainer() = default;
 
- private:
+ protected:
   friend class Operation;
-  void Hold(Operation* o);
-  void Drop(Operation* o);
+  virtual void Hold(Operation* o) = 0;
+  virtual void Drop(Operation* o) = 0;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(OperationContainer);
+};
+
+// A specialized |OoperationContainer| which runs every instance of Operation as
+// soon as it arrives.
+class OperationCollection : public OperationContainer {
+ public:
+  OperationCollection() = default;
+
+ protected:
+  void Hold(Operation* o) override;
+  void Drop(Operation* o) override;
 
  private:
   std::vector<std::unique_ptr<Operation>> operations_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(OperationContainer);
+  FTL_DISALLOW_COPY_AND_ASSIGN(OperationCollection);
+};
+
+// A specialized |OperationContainer| which runs incoming Operations in a
+// first-in-first-out order. All operations would be run sequentially, which
+// would ensure that there are no partially complete operations when a new
+// operation starts.
+class OperationQueue : public OperationContainer {
+ public:
+  OperationQueue() = default;
+
+ private:
+  void Hold(Operation* o) override;
+  void Drop(Operation* o) override;
+
+  std::queue<std::unique_ptr<Operation>> operations_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(OperationQueue);
 };
 
 // Something that can be put in an OperationContainer until it calls
@@ -60,10 +92,18 @@ class Operation {
  public:
   virtual ~Operation() = default;
 
+  // Derived classes need to implement this method which will get called when
+  // this Operation gets scheduled. |Done()| must be called after |Run()|
+  // completes.
+  virtual void Run() = 0;
+
  protected:
   // Derived classes need to pass the OperationContainer here. The
   // constructor adds the instance to the container.
   Operation(OperationContainer* const container);
+
+  // Derived classes call this when they are ready for |Run()| to be called.
+  void Ready();
 
   // Derived classes call this when they are prepared to be removed
   // from the container. Must be the last the instance does, as it
