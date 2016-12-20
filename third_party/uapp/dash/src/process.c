@@ -18,13 +18,6 @@
 #include "options.h"
 #include "var.h"
 
-static mx_handle_t get_mxio_job(void) {
-    static mx_handle_t job;
-    if (!job)
-        job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
-    return job;
-}
-
 static mx_handle_t get_application_environment(void) {
     static mx_handle_t application_environment;
     if (!application_environment) {
@@ -128,7 +121,7 @@ static mx_status_t launch(const char* filename, int argc, const char* const* arg
     launchpad_t* lp = NULL;
 
     mx_handle_t job_to_child = MX_HANDLE_INVALID;
-    mx_handle_t job = get_mxio_job();
+    mx_handle_t job = launchpad_get_mxio_job();
     if (job != MX_HANDLE_INVALID)
         mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
 

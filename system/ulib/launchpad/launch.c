@@ -50,6 +50,10 @@ mx_handle_t get_mxio_job(void) {
     return mxio_job;
 }
 
+mx_handle_t launchpad_get_mxio_job(void) {
+  return get_mxio_job();
+}
+
 mx_handle_t launchpad_launch(const char* name,
                              int argc, const char* const* argv,
                              const char* const* envp,
