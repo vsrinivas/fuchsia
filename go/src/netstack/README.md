@@ -57,12 +57,18 @@ $ brew install dnsmasq
 You need these 2 lines in your dnsmasq.conf. You can delete everything else.
 
 On Ubuntu, edit /etc/dnsmasq.conf.
-On Mac, edit /usr/local/etc/dnsmasq.conf
-(or $HOMEBREW_PREFIX/etc/dnsmasq.conf if you changed the installation dir).
 
 ```
 interface=qemu
 dhcp-range=qemu,192.168.3.50,192.168.3.150,24h
+```
+
+On Mac, edit /usr/local/etc/dnsmasq.conf
+(or $HOMEBREW_PREFIX/etc/dnsmasq.conf if you changed the installation dir).
+
+```
+interface=tap0
+dhcp-range=tap0,192.168.3.50,192.168.3.150,24h
 ```
 
 Restart dnsmasq.
@@ -79,12 +85,18 @@ On Mac (if you used homebrew),
 $ sudo brew services restart dnsmasq
 ```
 
-### Setting up NAT (on Linux)
+The dnsmasq service silently fails to start if the directory `/var/log/misc`
+does not exist. Just create it to fix.
+
+### Setting up NAT
 
 Optionally you can set up NAT to route the traffic to an external
-network interface. These instructions use *eth0* as the name of that
-interface, but it may vary (to eth1, or something more exoctic) on
-your particular machine.
+network interface.
+
+On Linux:
+
+These instructions use *eth0* as the name of that interface, but it may vary (to
+eth1, or something more exotic) on your particular machine.
 
 Execute the following commands as root (you need this every time you
 reboot the machine).
@@ -94,6 +106,32 @@ echo 1 > /proc/sys/net/ipv4/ip_forward
 iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 iptables -A FORWARD -i eth0 -o qemu -m state --state RELATED,ESTABLISHED -j ACCEPT
 iptables -A FORWARD -i qemu -o eth0 -j ACCEPT
+```
+
+On Mac:
+
+To set up NAT, run these commands every time qemu is started (because only then
+the tap0 interface is created):
+
+```
+sudo ifconfig tap0 192.168.3.1 up
+sudo sysctl net.inet.ip.forwarding=1
+echo "
+nat on en0 from tap0:network to any -> (en0)
+pass out on en0 inet from tap0:network to any
+" | sudo pfctl -ef -
+```
+
+To confirm the NAT setup:
+
+```
+sudo pfctl -s nat
+```
+
+To clear the NAT and revert to the original `pf.conf`:
+
+```
+sudo pfctl -F all -f /etc/pf.conf
 ```
 
 ### Running the qemu startup script with -N option
