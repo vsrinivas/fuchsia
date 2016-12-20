@@ -167,7 +167,7 @@ LpcmReformatterImpl<TIn, TOut>::~LpcmReformatterImpl() {}
 template <typename TIn, typename TOut>
 std::unique_ptr<StreamType>
 LpcmReformatterImpl<TIn, TOut>::output_stream_type() {
-  return in_type_.Clone();
+  return out_type_.Clone();
 }
 
 namespace {
