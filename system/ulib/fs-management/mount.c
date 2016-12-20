@@ -126,7 +126,7 @@ mx_status_t umount(const char* mountpath) {
     int fd = open(mountpath, O_DIRECTORY | O_NOREMOTE);
     if (fd < 0) {
         fprintf(stderr, "Could not open directory: %s\n", strerror(errno));
-        return -1;
+        return ERR_BAD_STATE;
     }
 
     mx_status_t status = ioctl_devmgr_unmount_node(fd);

@@ -43,4 +43,8 @@ mx_status_t mount(const char* devicepath, const char* mountpath, disk_format_t d
                   mx_status_t (*cb)(int argc, const char** argv, mx_handle_t h));
 
 // Umount the filesystem process.
+//
+// Returns ERR_BAD_STATE if mountpath could not be opened.
+// Returns ERR_NOT_FOUND if there is no mounted filesystem on mountpath.
+// Other errors may also be returned if problems occur while unmounting.
 mx_status_t umount(const char* mountpath);
