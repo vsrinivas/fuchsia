@@ -73,6 +73,21 @@ make -j32 magenta-qemu-arm64
 make -j32 magenta-pc-x86-64
 ```
 
+### Using Clang
+
+To build Magenta using Clang as the target toolchain, set the
+`USE_CLANG=true` variable when invoking Make.
+
+```
+cd $SRC/magenta
+
+# for aarch64
+make -j32 USE_CLANG=true magenta-qemu-arm64
+
+# for x86-64
+make -j32 USE_CLANG=true magenta-pc-x86-64
+```
+
 ## Building Magenta for all targets
 
 ```
