@@ -47,6 +47,7 @@ const char kXfer[] = "Xfer";
 
 // qRcmd commands
 const char kExit[] = "exit";
+const char kHelp[] = "help";
 const char kQuit[] = "quit";
 
 // This always returns true so that command handlers can simple call "return
@@ -741,6 +742,14 @@ bool CommandHandler::HandleQueryRcmd(const ftl::StringView& command,
   if (cmd == kQuit || cmd == kExit) {
     ReplyOK(callback);
     server_->PostQuitMessageLoop(true);
+  } else if (cmd == kHelp) {
+    std::string text;
+    text += "help - print this help text\n";
+    text += "exit - quit debugserver\n";
+    text += "quit - quit debugserver\n";
+    callback(util::EncodeString(text));
+  } else {
+    callback(util::EncodeString("Invalid monitor command\n"));
   }
 
   return true;

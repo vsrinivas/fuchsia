@@ -34,6 +34,10 @@ void EncodeByteString(const uint8_t byte, char out_hex[2]);
 // result in a string.
 std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes);
 
+// Encodes the string into hexadecimal ASCII digits and returns the
+// result in a string.
+std::string EncodeString(const ftl::StringView& string);
+
 // Escapes binary non-printable (based on the current locale) characters in a
 // printable format to enable pretty-printing of binary data. For example, '0'
 // becomes "\x00".

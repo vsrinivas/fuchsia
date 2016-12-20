@@ -81,6 +81,11 @@ std::string EncodeByteArrayString(const uint8_t* bytes, size_t num_bytes) {
   return result;
 }
 
+std::string EncodeString(const ftl::StringView& string) {
+  auto bytes = reinterpret_cast<const uint8_t*>(string.data());
+  return EncodeByteArrayString(bytes, string.size());
+}
+
 std::vector<uint8_t> DecodeByteArrayString(const ftl::StringView& string) {
   std::vector<uint8_t> result;
   if (string.size() % 2) {
