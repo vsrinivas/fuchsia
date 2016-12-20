@@ -372,5 +372,53 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
   btree::ForEachEntry(&fake_storage_, root_id, prefix, on_next, on_done);
 }
 
+TEST_F(BTreeUtilsTest, ForEachDiff) {
+  std::unique_ptr<const Object> object;
+  ASSERT_EQ(Status::OK, fake_storage_.AddObjectSynchronous("change1", &object));
+  ObjectId object_id = object->GetId();
+
+  std::vector<EntryChange> changes = CreateEntryChanges(50);
+  ObjectId base_root_id = CreateTree(changes);
+  changes.clear();
+  // Update value for key10.
+  changes.push_back(
+      EntryChange{Entry{"key1", object_id, KeyPriority::LAZY}, false});
+  // Add entry key255.
+  changes.push_back(
+      EntryChange{Entry{"key255", object_id, KeyPriority::LAZY}, false});
+  // Remove entry key40.
+  changes.push_back(EntryChange{Entry{"key40", "", KeyPriority::LAZY}, true});
+
+  Status status;
+  ObjectId other_root_id;
+  std::unordered_set<ObjectId> new_nodes;
+  btree::ApplyChanges(
+      &fake_storage_, base_root_id, kTestNodeSize,
+      std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
+      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                      &other_root_id, &new_nodes));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+
+  // ForEachDiff should return all changes just applied.
+  size_t current_change = 0;
+  btree::ForEachDiff(
+      &fake_storage_, base_root_id, other_root_id,
+      [this, &changes, &current_change](EntryChange e) {
+        EXPECT_EQ(changes[current_change].deleted, e.deleted);
+        if (e.deleted) {
+          EXPECT_EQ(changes[current_change].entry.key, e.entry.key);
+        } else {
+          EXPECT_EQ(changes[current_change].entry, e.entry);
+        }
+        ++current_change;
+        return true;
+      },
+      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::OK, status);
+  EXPECT_EQ(changes.size(), current_change);
+}
+
 }  // namespace
 }  // namespace storage

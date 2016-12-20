@@ -254,7 +254,8 @@ TreeNode::Mutation& TreeNode::Mutation::UpdateChildId(
     const std::string& key_after,
     ObjectIdView child_id) {
   FTL_DCHECK(!finished);
-  FTL_DCHECK(entries_.empty() || entries_.back().key < key_after);
+  FTL_DCHECK(entries_.empty() || key_after.empty() ||
+             entries_.back().key < key_after);
   CopyUntil(key_after);
 
   children_.push_back(child_id.ToString());

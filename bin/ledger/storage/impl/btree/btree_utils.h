@@ -59,6 +59,17 @@ void ForEachEntry(PageStorage* page_storage,
                   std::function<bool(EntryAndNodeId)> on_next,
                   std::function<void(Status)> on_done);
 
+// Iterates through the differences between two trees given their root ids
+// |base_root_id| and |other_root_id| and calls |on_next| on found differences.
+// Returning false from |on_next| will immediately stop the iteration. |on_done|
+// is called once, upon successfull completion, i.e. when there are no more
+// differences or iteration was interrupted, or if an error occurs.
+void ForEachDiff(PageStorage* page_storage,
+                 ObjectIdView base_root_id,
+                 ObjectIdView other_root_id,
+                 std::function<bool(EntryChange)> on_next,
+                 std::function<void(Status)> on_done);
+
 }  // namespace btree
 }  // namespace storage
 

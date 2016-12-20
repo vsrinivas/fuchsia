@@ -352,6 +352,28 @@ void ApplyChangesIn(
   }));
 }
 
+// Returns a vector with all the tree's entries, sorted by key.
+void GetEntriesVector(
+    PageStorage* page_storage,
+    ObjectIdView root_id,
+    std::function<void(Status, std::unique_ptr<std::vector<Entry>>)> on_done) {
+  auto entries = std::make_unique<std::vector<Entry>>();
+  auto on_next = [entries = entries.get()](EntryAndNodeId e) {
+    entries->push_back(e.entry);
+    return true;
+  };
+  btree::ForEachEntry(
+      page_storage, root_id, "", on_next, ftl::MakeCopyable([
+        entries = std::move(entries), on_done = std::move(on_done)
+      ](Status s) mutable {
+        if (s != Status::OK) {
+          on_done(s, nullptr);
+          return;
+        }
+        on_done(Status::OK, std::move(entries));
+      }));
+}
+
 }  // namespace
 
 void ApplyChanges(
@@ -478,6 +500,82 @@ void ForEachEntry(PageStorage* page_storage,
                        ftl::MakeCopyable([on_done = std::move(on_done)](
                            Status s) { on_done(s); }));
       }));
+}
+
+void ForEachDiff(PageStorage* page_storage,
+                 ObjectIdView base_root_id,
+                 ObjectIdView other_root_id,
+                 std::function<bool(EntryChange)> on_next,
+                 std::function<void(Status)> on_done) {
+  // TODO(nellyv): This is a naive calculation of the the diff, loading all
+  // entries from both versions in memory and then computing the diff. This
+  // should be updated with the new version of the BTree.
+  auto waiter =
+      callback::Waiter<Status, std::vector<Entry>>::Create(Status::OK);
+  GetEntriesVector(page_storage, base_root_id, waiter->NewCallback());
+  GetEntriesVector(page_storage, other_root_id, waiter->NewCallback());
+  waiter->Finalize([
+    on_next = std::move(on_next), on_done = std::move(on_done)
+  ](Status s, std::vector<std::unique_ptr<std::vector<Entry>>> entries) {
+    if (s != Status::OK) {
+      on_done(s);
+      return;
+    }
+    FTL_DCHECK(entries.size() == 2u);
+    auto base_it = entries[0].get()->begin();
+    auto base_it_end = entries[0].get()->end();
+    auto other_it = entries[1].get()->begin();
+    auto other_it_end = entries[1].get()->end();
+
+    while (base_it != base_it_end && other_it != other_it_end) {
+      if (*base_it == *other_it) {
+        // Entries are equal.
+        ++base_it;
+        ++other_it;
+        continue;
+      }
+      EntryChange change;
+      // strcmp will not work if keys contain '\0' characters.
+      int cmp = ftl::StringView(base_it->key).compare(other_it->key);
+      if (cmp >= 0) {
+        // The entry was added or updated.
+        change = {*other_it, false};
+      } else {
+        // The entry was deleted.
+        change = {*base_it, true};
+      }
+      if (!on_next(std::move(change))) {
+        on_done(Status::OK);
+        return;
+      }
+      // Advance the iterators.
+      if (cmp >= 0) {
+        ++other_it;
+      }
+      if (cmp <= 0) {
+        ++base_it;
+      }
+    }
+    while (base_it != base_it_end) {
+      // The entry was deleted.
+      EntryChange change{*base_it, true};
+      if (!on_next(std::move(change))) {
+        on_done(Status::OK);
+        return;
+      }
+      base_it++;
+    }
+    while (other_it != other_it_end) {
+      // The entry was added.
+      EntryChange change{*other_it, false};
+      if (!on_next(std::move(change))) {
+        on_done(Status::OK);
+        return;
+      }
+      other_it++;
+    }
+    on_done(Status::OK);
+  });
 }
 
 }  // namespace btree
