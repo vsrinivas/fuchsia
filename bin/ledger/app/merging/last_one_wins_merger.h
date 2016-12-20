@@ -18,10 +18,11 @@ namespace ledger {
 // the value from the most recent commit is used.
 class LastOneWinsMerger : public MergeStrategy {
  public:
-  LastOneWinsMerger(storage::PageStorage* storage);
+  LastOneWinsMerger();
   ~LastOneWinsMerger() override;
 
   ftl::RefPtr<callback::Cancellable> Merge(
+      storage::PageStorage* storage,
       std::unique_ptr<const storage::Commit> head_1,
       std::unique_ptr<const storage::Commit> head_2,
       std::unique_ptr<const storage::Commit> ancestor) override;

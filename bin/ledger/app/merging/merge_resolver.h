@@ -5,6 +5,8 @@
 #ifndef APPS_LEDGER_SRC_APP_MERGING_CONFLICT_RESOLVER_H_
 #define APPS_LEDGER_SRC_APP_MERGING_CONFLICT_RESOLVER_H_
 
+#include <vector>
+
 #include "apps/ledger/src/app/merging/merge_strategy.h"
 #include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -17,14 +19,16 @@ namespace ledger {
 // provided merge strategy.
 class MergeResolver : public storage::CommitWatcher {
  public:
-  MergeResolver(storage::PageStorage* storage,
-                std::unique_ptr<MergeStrategy> strategy);
+  MergeResolver(ftl::Closure on_destroyed, storage::PageStorage* storage);
   ~MergeResolver();
 
   void set_on_empty(ftl::Closure on_empty_callback);
 
   // Returns true if no merge is currently in progress.
   bool IsEmpty();
+
+  // Changes the current merge strategy. Any pending merge will be cancelled.
+  void SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy);
 
  private:
   // storage::CommitWatcher:
@@ -40,8 +44,9 @@ class MergeResolver : public storage::CommitWatcher {
       const std::unique_ptr<const storage::Commit>& head2);
 
   storage::PageStorage* const storage_;
-  std::unique_ptr<MergeStrategy> const strategy_;
+  std::unique_ptr<MergeStrategy> strategy_;
   callback::CancellableContainer merges_;
+  ftl::Closure on_destroyed_;
 
   // WeakPtrFactory must be the last field of the class.
   ftl::WeakPtrFactory<MergeResolver> weak_ptr_factory_;

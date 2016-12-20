@@ -6,6 +6,8 @@
 #define APPS_LEDGER_SRC_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 
 #include <memory>
+#include <unordered_map>
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/storage/public/commit.h"
@@ -13,16 +15,30 @@
 #include "lib/ftl/macros.h"
 
 namespace ledger {
+// Manages the strategies for handling merges and conflicts for a whole ledger.
+// Holds a ConflictResolverFactory if the client provides one.
+// |LedgerMergeManager| must outlive all MergeResolver it provides.
 class LedgerMergeManager {
  public:
   LedgerMergeManager() {}
   ~LedgerMergeManager() {}
 
+  void SetFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory);
+
   std::unique_ptr<MergeResolver> GetMergeResolver(
       storage::PageStorage* storage);
 
  private:
+  void RemoveResolver(const storage::PageId& page_id);
+  void GetResolverStrategyForPage(
+      const storage::PageId& page_id,
+      std::function<void(std::unique_ptr<MergeStrategy>)> strategy);
+
+  ConflictResolverFactoryPtr conflict_resolver_factory_;
+
+  std::unordered_map<storage::PageId, MergeResolver*> resolvers_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(LedgerMergeManager);
 };
-}
+}  // namespace ledger
 #endif  // APPS_LEDGER_SRC_APP_MERGING_LEDGER_MERGE_MANAGER_H_

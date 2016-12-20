@@ -35,6 +35,9 @@ class LedgerImpl : public Ledger {
 
     virtual Status DeletePage(convert::ExtendedStringView page_id) = 0;
 
+    virtual void SetConflictResolverFactory(
+        fidl::InterfaceHandle<ConflictResolverFactory> factory) = 0;
+
    private:
     FTL_DISALLOW_COPY_AND_ASSIGN(Delegate);
   };

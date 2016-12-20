@@ -62,8 +62,8 @@ void LedgerImpl::SetConflictResolverFactory(
     const SetConflictResolverFactoryCallback& callback) {
   TRACE_DURATION("ledger", "set_conflict_resolver_factory");
 
-  FTL_NOTIMPLEMENTED();
-  callback(Status::UNKNOWN_ERROR);
+  delegate_->SetConflictResolverFactory(std::move(factory));
+  callback(Status::OK);
 }
 
 }  // namespace ledger

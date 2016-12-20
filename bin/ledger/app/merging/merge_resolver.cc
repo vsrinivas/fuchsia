@@ -4,9 +4,12 @@
 
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 
+#include <algorithm>
 #include <memory>
 #include <queue>
+#include <set>
 
+#include "apps/ledger/src/app/merging/ledger_merge_manager.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -26,17 +29,16 @@ struct GenerationComparator {
 
 }  // namespace
 
-MergeResolver::MergeResolver(storage::PageStorage* storage,
-                             std::unique_ptr<MergeStrategy> strategy)
-    : storage_(storage),
-      strategy_(std::move(strategy)),
-      weak_ptr_factory_(this) {
+MergeResolver::MergeResolver(ftl::Closure on_destroyed,
+                             storage::PageStorage* storage)
+    : storage_(storage), on_destroyed_(on_destroyed), weak_ptr_factory_(this) {
   storage_->AddCommitWatcher(this);
   PostCheckConflicts();
 }
 
 MergeResolver::~MergeResolver() {
   storage_->RemoveCommitWatcher(this);
+  on_destroyed_();
 }
 
 void MergeResolver::set_on_empty(ftl::Closure on_empty_callback) {
@@ -45,6 +47,14 @@ void MergeResolver::set_on_empty(ftl::Closure on_empty_callback) {
 
 bool MergeResolver::IsEmpty() {
   return merges_.empty();
+}
+
+void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
+  merges_.clear();
+  strategy_.swap(strategy);
+  if (strategy_) {
+    PostCheckConflicts();
+  }
 }
 
 void MergeResolver::OnNewCommits(
@@ -63,6 +73,11 @@ void MergeResolver::PostCheckConflicts() {
       });
 }
 void MergeResolver::CheckConflicts() {
+  if (!strategy_) {
+    // No strategy, let's bail out early.
+    return;
+  }
+
   std::vector<storage::CommitId> heads;
   storage::Status s = storage_->GetHeadCommitIds(&heads);
   FTL_DCHECK(s == storage::Status::OK);
@@ -90,7 +105,8 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
 
   std::unique_ptr<const storage::Commit> common_ancestor(
       FindCommonAncestor(commits[0], commits[1]));
-  merges_.emplace(strategy_->Merge(std::move(commits[0]), std::move(commits[1]),
+  merges_.emplace(strategy_->Merge(storage_, std::move(commits[0]),
+                                   std::move(commits[1]),
                                    std::move(common_ancestor)));
 }
 

@@ -44,6 +44,8 @@ class LedgerManager : public LedgerImpl::Delegate {
                fidl::InterfaceRequest<Page> page_request,
                std::function<void(Status)> callback) override;
   Status DeletePage(convert::ExtendedStringView page_id) override;
+  void SetConflictResolverFactory(
+      fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
 
   void set_on_empty(const ftl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
@@ -73,6 +75,8 @@ class LedgerManager : public LedgerImpl::Delegate {
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<cloud_sync::LedgerSync> sync_;
   LedgerImpl ledger_impl_;
+  // merge_manager_ must be destructed after page_managers_ to ensure it
+  // outlives any page-specific merge resolver.
   LedgerMergeManager merge_manager_;
   fidl::BindingSet<Ledger> bindings_;
 

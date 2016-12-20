@@ -4,6 +4,8 @@
 
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 
+#include <string>
+
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/merging/last_one_wins_merger.h"
 #include "apps/ledger/src/callback/cancellable_helper.h"
@@ -94,8 +96,9 @@ TEST_F(MergeResolverTest, Empty) {
   storage::CommitId commit_2 = CreateCommit(storage::kFirstPageCommitId,
                                             AddKeyValueToJournal("foo", "baz"));
   std::unique_ptr<LastOneWinsMerger> strategy =
-      std::make_unique<LastOneWinsMerger>(page_storage_.get());
-  MergeResolver resolver(page_storage_.get(), std::move(strategy));
+      std::make_unique<LastOneWinsMerger>();
+  MergeResolver resolver([] {}, page_storage_.get());
+  resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
   std::vector<storage::CommitId> ids;
   EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
@@ -115,6 +118,7 @@ class VerifyingMerger : public MergeStrategy {
   ~VerifyingMerger() override {}
 
   ftl::RefPtr<callback::Cancellable> Merge(
+      storage::PageStorage* storage,
       std::unique_ptr<const storage::Commit> head_1,
       std::unique_ptr<const storage::Commit> head_2,
       std::unique_ptr<const storage::Commit> ancestor) override {
@@ -163,7 +167,8 @@ TEST_F(MergeResolverTest, CommonAncestor) {
 
   std::unique_ptr<VerifyingMerger> strategy =
       std::make_unique<VerifyingMerger>(commit_5, commit_3, commit_2);
-  MergeResolver resolver(page_storage_.get(), std::move(strategy));
+  MergeResolver resolver([] {}, page_storage_.get());
+  resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
   EXPECT_FALSE(RunLoopWithTimeout());
 
@@ -194,8 +199,9 @@ TEST_F(MergeResolverTest, LastOneWins) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
   std::unique_ptr<LastOneWinsMerger> strategy =
-      std::make_unique<LastOneWinsMerger>(page_storage_.get());
-  MergeResolver resolver(page_storage_.get(), std::move(strategy));
+      std::make_unique<LastOneWinsMerger>();
+  MergeResolver resolver([] {}, page_storage_.get());
+  resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
 
   EXPECT_FALSE(RunLoopWithTimeout());

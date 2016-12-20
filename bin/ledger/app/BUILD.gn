@@ -40,8 +40,6 @@ source_set("lib") {
     "ledger_repository_factory_impl.h",
     "ledger_repository_impl.cc",
     "ledger_repository_impl.h",
-    "merging/dummy_merger.cc",
-    "merging/dummy_merger.h",
     "merging/last_one_wins_merger.cc",
     "merging/last_one_wins_merger.h",
     "merging/ledger_merge_manager.cc",

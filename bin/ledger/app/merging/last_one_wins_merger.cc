@@ -5,6 +5,7 @@
 #include "apps/ledger/src/app/merging/last_one_wins_merger.h"
 
 #include <memory>
+#include <string>
 
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "lib/ftl/functional/closure.h"
@@ -147,22 +148,23 @@ void Merger::Done() {
 
 }  // namespace
 
-LastOneWinsMerger::LastOneWinsMerger(storage::PageStorage* storage)
-    : storage_(storage) {}
+LastOneWinsMerger::LastOneWinsMerger() {}
 
 LastOneWinsMerger::~LastOneWinsMerger() {}
 
 ftl::RefPtr<callback::Cancellable> LastOneWinsMerger::Merge(
+    storage::PageStorage* storage,
     std::unique_ptr<const storage::Commit> head_1,
     std::unique_ptr<const storage::Commit> head_2,
     std::unique_ptr<const storage::Commit> ancestor) {
+  FTL_DCHECK(storage_ != nullptr);
   if (head_1->GetTimestamp() > head_2->GetTimestamp()) {
     // Order commits by their timestamps. Then we know that head_2 overwrites
     // head_1 under this merging strategy.
     head_1.swap(head_2);
   }
   ftl::RefPtr<Merger> merger = Merger::Create(
-      storage_, std::move(head_1), std::move(head_2), std::move(ancestor));
+      storage, std::move(head_1), std::move(head_2), std::move(ancestor));
 
   merger->Start();
   return merger;

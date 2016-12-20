@@ -66,6 +66,8 @@ class AutoCleanableSet {
 
   bool empty() { return set_.empty(); }
 
+  void clear() { set_.clear(); }
+
   template <class... Args>
   V& emplace(Args&&... args) {
     auto pair = set_.emplace(std::forward<Args>(args)...);

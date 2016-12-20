@@ -221,6 +221,36 @@ class Watcher : public PageWatcher {
   ftl::Closure change_callback_;
 };
 
+class TestConflictResolverFactory : public ConflictResolverFactory {
+ public:
+  TestConflictResolverFactory(
+      MergePolicy policy,
+      fidl::InterfaceRequest<ConflictResolverFactory> request,
+      ftl::Closure on_method_called_callback)
+      : policy_(policy),
+        binding_(this, std::move(request)),
+        callback_(on_method_called_callback) {}
+
+  uint get_policy_calls = 0;
+
+ private:
+  // ConflictResolverFactory:
+  void GetPolicy(fidl::Array<uint8_t> page_id,
+                 const GetPolicyCallback& callback) override {
+    get_policy_calls++;
+    callback(policy_);
+    callback_();
+  }
+
+  void NewConflictResolver(
+      fidl::Array<uint8_t> page_id,
+      fidl::InterfaceRequest<ConflictResolver> resolver) override {}
+
+  MergePolicy policy_;
+  fidl::Binding<ConflictResolverFactory> binding_;
+  ftl::Closure callback_;
+};
+
 LedgerPtr LedgerApplicationTest::GetTestLedger() {
   Status status;
   LedgerRepositoryPtr repository;
@@ -1034,6 +1064,122 @@ TEST_F(LedgerApplicationTest, Merging) {
   EXPECT_EQ(1u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
+}
+
+TEST_F(LedgerApplicationTest, MergingWithConflictResolutionFactory) {
+  PagePtr page1 = GetTestPage();
+  fidl::Array<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
+    test_page_id = std::move(page_id);
+  });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  // Set up a resolver
+  ConflictResolverFactoryPtr resolver_factory_ptr;
+  std::unique_ptr<TestConflictResolverFactory> resolver_factory =
+      std::make_unique<TestConflictResolverFactory>(
+          MergePolicy::NONE, GetProxy(&resolver_factory_ptr),
+          [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  LedgerPtr ledger_ptr = GetTestLedger();
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  PagePtr page2 = GetPage(test_page_id, Status::OK);
+
+  PageWatcherPtr watcher1_ptr;
+  Watcher watcher1(GetProxy(&watcher1_ptr),
+                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  page1->Watch(std::move(watcher1_ptr),
+               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  PageWatcherPtr watcher2_ptr;
+  Watcher watcher2(GetProxy(&watcher2_ptr),
+                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  page2->Watch(std::move(watcher2_ptr),
+               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+
+  page2->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
+             [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+
+  // Verify that each change is seen by the right watcher.
+  page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page1.WaitForIncomingResponse());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(1u, watcher1.changes_seen);
+  PageChangePtr change = std::move(watcher1.last_page_change_);
+  EXPECT_EQ(2u, change->changes.size());
+  EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
+  EXPECT_EQ("Alice", convert::ToString(change->changes[1]->value->get_bytes()));
+
+  page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page2.WaitForIncomingResponse());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(1u, watcher2.changes_seen);
+  change = std::move(watcher2.last_page_change_);
+  EXPECT_EQ(2u, change->changes.size());
+  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
+  EXPECT_EQ("0123456789",
+            convert::ToString(change->changes[1]->value->get_bytes()));
+  EXPECT_TRUE(RunLoopWithTimeout());
+  EXPECT_EQ(1u, resolver_factory->get_policy_calls);
+
+  // Change the merge strategy.
+  resolver_factory_ptr.reset();
+  resolver_factory = std::make_unique<TestConflictResolverFactory>(
+      MergePolicy::LAST_ONE_WINS, GetProxy(&resolver_factory_ptr),
+      [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+  ledger_ptr->SetConflictResolverFactory(
+      std::move(resolver_factory_ptr),
+      [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(ledger_ptr.WaitForIncomingResponse());
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Each change is seen once, and by the correct watcher only.
+  EXPECT_EQ(2u, watcher1.changes_seen);
+  change = std::move(watcher1.last_page_change_);
+  EXPECT_EQ(2u, change->changes.size());
+  EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
+  EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
+  EXPECT_EQ("0123456789",
+            convert::ToString(change->changes[1]->value->get_bytes()));
+
+  EXPECT_EQ(2u, watcher2.changes_seen);
+  change = std::move(watcher2.last_page_change_);
+  EXPECT_EQ(1u, change->changes.size());
+  EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
+  EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
+
+  EXPECT_EQ(1u, resolver_factory->get_policy_calls);
 }
 
 }  // namespace

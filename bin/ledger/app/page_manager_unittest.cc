@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/app/merging/dummy_merger.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
 #include "apps/ledger/src/cloud_sync/test/page_sync_empty_impl.h"
@@ -24,8 +23,7 @@ namespace ledger {
 namespace {
 
 std::unique_ptr<MergeResolver> GetDummyResolver(storage::PageStorage* storage) {
-  std::unique_ptr<DummyMerger> merger = std::make_unique<DummyMerger>();
-  return std::make_unique<MergeResolver>(storage, std::move(merger));
+  return std::make_unique<MergeResolver>([] {}, storage);
 }
 
 class FakePageSync : public cloud_sync::test::PageSyncEmptyImpl {
