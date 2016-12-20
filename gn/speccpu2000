@@ -212,15 +212,15 @@
         },
         {
           "file": "third_party/speccpu2000/256.bzip2/data/ref/input/input.source",
-          "bootfs_path": "benchmarks/data/256.bzip2/inpout.source"
+          "bootfs_path": "benchmarks/data/256.bzip2/input.source"
         },
         {
           "file": "third_party/speccpu2000/256.bzip2/data/ref/input/input.graphic",
-          "bootfs_path": "benchmarks/data/256.bzip2/inpout.graphic"
+          "bootfs_path": "benchmarks/data/256.bzip2/input.graphic"
         },
         {
           "file": "third_party/speccpu2000/256.bzip2/data/ref/input/input.program",
-          "bootfs_path": "benchmarks/data/256.bzip2/inpout.program"
+          "bootfs_path": "benchmarks/data/256.bzip2/input.program"
         },
         {
           "file": "third_party/speccpu2000/300.twolf/data/ref/input/ref.blk",
