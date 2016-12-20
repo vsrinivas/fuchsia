@@ -77,9 +77,7 @@ function download_ninja() {
 }
 
 function download_gn() {
-  # TODO(abarth): gn doesn't follow the normal pattern because we download our
-  # copy from Chromium's Google Storage bucket.
-  download_tool gn "https://storage.googleapis.com/chromium-gn"
+  download_tool gn "${FUCHSIA_URL_BASE}/gn/${HOST_PLATFORM}"
 }
 
 function download_cmake() {
