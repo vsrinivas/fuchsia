@@ -13,14 +13,11 @@ executable("carmen_sandiego") {
     "carmen_sandiego.cc",
   ]
 
-  public_deps = [
-    "//third_party/rapidjson",
-  ]
-
   deps = [
     "//apps/maxwell/services/context",
     "//apps/maxwell/src/acquirers:gps",
     "//apps/modular/lib/app",
+    "//apps/modular/lib/rapidjson",
     "//lib/mtl",
   ]
 }
@@ -34,14 +31,11 @@ executable("ideas") {
     "ideas.h",
   ]
 
-  public_deps = [
-    "//third_party/rapidjson",
-  ]
-
   deps = [
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/app",
+    "//apps/modular/lib/rapidjson",
     "//lib/mtl",
   ]
 }
@@ -57,6 +51,7 @@ executable("module_suggester") {
     "//apps/maxwell/services/context",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/app",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/document_store",
     "//lib/mtl",
   ]

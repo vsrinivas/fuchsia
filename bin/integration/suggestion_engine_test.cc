@@ -2,18 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unordered_map>
-
 #include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_engine.fidl.h"
 #include "apps/maxwell/src/acquirers/mock/mock_gps.h"
 #include "apps/maxwell/src/agents/ideas.h"
 #include "apps/maxwell/src/integration/context_engine_test_base.h"
 #include "apps/maxwell/src/integration/test_suggestion_listener.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/story_provider_mock.h"
-#include "apps/modular/src/document_store/documents.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
@@ -420,13 +417,11 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   create_story->module_id = "foo://bar";
   auto action = maxwell::Action::New();
 
-  document_store::DocumentPtr doc(document_store::Document::New());
-  doc->docid = "foo";
-  doc->properties["bar"] = document_store::Value::New();
-  doc->properties["bar"]->set_string_value("some data");
-  auto initial_data = fidl::Map<fidl::String, document_store::DocumentPtr>();
-  initial_data[fidl::String("bazzle")] = std::move(doc);
-  create_story->initial_data = std::move(initial_data);
+  modular::JsonDoc doc;
+  std::vector<std::string> segments{"foo", "bar"};
+  modular::JsonPointer(modular::EscapeJsonPath(segments.begin(), segments.end()))
+      .Set(doc, "some_data");
+  create_story->initial_data = modular::JsonValueToString(doc);
 
   action->set_create_story(std::move(create_story));
   fidl::Array<maxwell::ActionPtr> actions;

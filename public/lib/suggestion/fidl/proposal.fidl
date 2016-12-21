@@ -53,5 +53,5 @@ struct CreateStory {
 
   // If set, calls Link.AddDocuments() on the new Story's Link immediately after
   // the Story creation.
-  map<string, document_store.Document>? initial_data;
+  string? initial_data;
 };

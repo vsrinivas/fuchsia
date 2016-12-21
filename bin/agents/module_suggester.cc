@@ -7,6 +7,7 @@
 #include "apps/maxwell/services/context/client.fidl.h"
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/document_store/documents.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -67,16 +68,14 @@ maxwell::ProposalPtr MkProposal(const std::string& label,
   create_story->module_id = content.url;
   const auto& data = content.module_data;
   if (data.size() > 0) {
-    auto doc = document_store::Document::New();
-    doc->docid = label;
     // TODO(afergan): Don't hardcode the doc id key or initial_data map key.
     // TODO(afergan, azani): Right now we pass the colors as Strings because
     // document_store::Value does not support hexadecimal.
-    doc->properties["color"] = document_store::Value::New();
-    doc->properties["color"]->set_string_value(data);
-    fidl::Map<fidl::String, document_store::DocumentPtr> map;
-    map[fidl::String("color")] = std::move(doc);
-    create_story->initial_data = std::move(map);
+    modular::JsonDoc doc;
+    std::vector<std::string> segments{"init", label, "color"};
+    modular::JsonPointer(modular::EscapeJsonPath(segments.begin(), segments.end()))
+        .Set(doc, data);
+    create_story->initial_data = modular::JsonValueToString(doc);
   }
   auto action = maxwell::Action::New();
   action->set_create_story(std::move(create_story));
