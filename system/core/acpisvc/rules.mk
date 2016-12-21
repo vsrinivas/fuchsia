@@ -21,6 +21,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/power.c \
     $(LOCAL_DIR)/powerbtn.c \
     $(LOCAL_DIR)/processor.c \
+    $(LOCAL_DIR)/resource_tree.c \
     $(LOCAL_DIR)/resources.c \
 
 else
