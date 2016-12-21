@@ -121,8 +121,11 @@ class VerifyingMerger : public MergeStrategy {
       : head1_(head1), head2_(head2), ancestor_(ancestor) {}
   ~VerifyingMerger() override {}
 
+  void SetOnError(std::function<void()> on_error) override {}
+
   ftl::RefPtr<callback::Cancellable> Merge(
       storage::PageStorage* storage,
+      PageManager* page_manager,
       std::unique_ptr<const storage::Commit> head_1,
       std::unique_ptr<const storage::Commit> head_2,
       std::unique_ptr<const storage::Commit> ancestor) override {

@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "apps/ledger/src/app/diff_utils.h"
 #include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -49,113 +50,42 @@ class BranchTracker::PageWatcherContainer {
       return;
     }
     change_in_flight_ = true;
+
     // TODO(etiennej): See LE-74: clean object ownership
-    std::unique_ptr<storage::CommitContents> last_contents =
-        last_commit_->GetContents();
-    std::unique_ptr<storage::CommitContents> current_contents =
-        current_commit_->GetContents();
-    std::function<void(
-        storage::Status,
-        std::unique_ptr<storage::Iterator<const storage::EntryChange>>)>
-        diff_callback = ftl::MakeCopyable([
-          this, new_commit = std::move(current_commit_)
-        ](storage::Status status,
-          std::unique_ptr<storage::Iterator<const storage::EntryChange>>
-              it) mutable {
+    diff_utils::ComputePageChange(
+        storage_, current_commit_->GetTimestamp(), last_commit_->GetContents(),
+        current_commit_->GetContents(),
+        ftl::MakeCopyable([ this, new_commit = std::move(current_commit_) ](
+            storage::Status status, PageChangePtr page_change_ptr) mutable {
           if (status != storage::Status::OK) {
-            // This change notification is abandonned. At the next commit, we
-            // will try again (but not before). The next notification will cover
-            // both this change and the next.
-            FTL_LOG(ERROR) << "Unable to compute diff.";
+            // This change notification is abandonned. At the next commit,
+            // we will try again (but not before). The next notification
+            // will cover both this change and the next.
+            FTL_LOG(ERROR) << "Unable to compute PageChange for Watch update.";
             change_in_flight_ = false;
             return;
           }
 
-          if (!it->Valid()) {
+          if (!page_change_ptr) {
             change_in_flight_ = false;
             last_commit_.swap(new_commit);
             SendCommit();
             return;
           }
 
-          auto waiter =
-              callback::Waiter<storage::Status,
-                               std::unique_ptr<const storage::Object>>::
-                  Create(storage::Status::OK);
-
-          PageChangePtr page_change = PageChange::New();
-          page_change->timestamp = new_commit->GetTimestamp();
-          page_change->changes = fidl::Array<EntryPtr>::New(0);
-          page_change->deleted_keys = fidl::Array<fidl::Array<uint8_t>>::New(0);
-
-          for (; it->Valid(); it->Next()) {
-            if ((*it)->deleted) {
-              page_change->deleted_keys.push_back(
-                  convert::ToArray((*it)->entry.key));
-              continue;
-            }
-
-            EntryPtr entry = Entry::New();
-            entry->key = convert::ToArray((*it)->entry.key);
-            entry->priority =
-                (*it)->entry.priority == storage::KeyPriority::EAGER
-                    ? Priority::EAGER
-                    : Priority::LAZY;
-            page_change->changes.push_back(std::move(entry));
-
-            storage_->GetObject((*it)->entry.object_id, waiter->NewCallback());
-          }
-
-          std::function<void(
-              storage::Status,
-              std::vector<std::unique_ptr<const storage::Object>>)>
-              result_callback = ftl::MakeCopyable([
-                this, new_commit = std::move(new_commit),
-                page_change = std::move(page_change)
-              ](storage::Status status,
-                std::vector<std::unique_ptr<const storage::Object>>
-                    results) mutable {
-                if (status != storage::Status::OK) {
-                  FTL_LOG(ERROR)
-                      << "Watcher: error while reading changed values.";
-                  return;
+          interface_->OnChange(
+              std::move(page_change_ptr), ftl::MakeCopyable([
+                this, new_commit = std::move(new_commit)
+              ](fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
+                if (snapshot_request) {
+                  manager_->BindPageSnapshot(new_commit->Clone(),
+                                             std::move(snapshot_request));
                 }
-                FTL_DCHECK(results.size() == page_change->changes.size());
-                for (size_t i = 0; i < results.size(); i++) {
-                  ftl::StringView object_contents;
-
-                  storage::Status read_status =
-                      results[i]->GetData(&object_contents);
-                  if (read_status != storage::Status::OK) {
-                    FTL_LOG(ERROR)
-                        << "Watcher: error while reading changed value.";
-                    return;
-                  }
-
-                  // TODO(etiennej): LE-75 implement pagination on OnChange.
-                  // TODO(etiennej): LE-120 Use VMOs for big values.
-                  page_change->changes[i]->value = Value::New();
-                  page_change->changes[i]->value->set_bytes(
-                      convert::ToArray(object_contents));
-                }
-
-                interface_->OnChange(
-                    std::move(page_change), ftl::MakeCopyable([
-                      this, new_commit = std::move(new_commit)
-                    ](fidl::InterfaceRequest<PageSnapshot>
-                                                snapshot_request) mutable {
-                      if (snapshot_request) {
-                        manager_->BindPageSnapshot(new_commit->Clone(),
-                                                   std::move(snapshot_request));
-                      }
-                      change_in_flight_ = false;
-                      last_commit_.swap(new_commit);
-                      SendCommit();
-                    }));
-              });
-          waiter->Finalize(result_callback);
-        });
-    last_contents->diff(std::move(current_contents), diff_callback);
+                change_in_flight_ = false;
+                last_commit_.swap(new_commit);
+                SendCommit();
+              }));
+        }));
   }
 
   bool change_in_flight_;

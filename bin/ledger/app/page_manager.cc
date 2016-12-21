@@ -34,6 +34,7 @@ PageManager::PageManager(
     sync_backlog_downloaded_ = true;
   }
   merge_resolver_->set_on_empty([this] { CheckEmpty(); });
+  merge_resolver_->SetPageManager(this);
 }
 
 PageManager::~PageManager() {}

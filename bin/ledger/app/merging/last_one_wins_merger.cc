@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/src/app/page_manager.h"
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "lib/ftl/functional/closure.h"
 
@@ -76,16 +77,18 @@ void Merger::Start() {
       storage_->StartMergeCommit(left_->GetId(), right_->GetId(), &journal_);
   FTL_DCHECK(s == storage::Status::OK);
 
-  auto on_next = [this](storage::EntryChange change) {
-    if (cancelled_) {
+  auto on_next = [self =
+                      ftl::RefPtr<Merger>(this)](storage::EntryChange change) {
+    if (self->cancelled_) {
       return false;
     }
     const std::string& key = change.entry.key;
     storage::Status s;
     if (change.deleted) {
-      s = journal_->Delete(key);
+      s = self->journal_->Delete(key);
     } else {
-      s = journal_->Put(key, change.entry.object_id, change.entry.priority);
+      s = self->journal_->Put(key, change.entry.object_id,
+                              change.entry.priority);
     }
     if (s != storage::Status::OK) {
       FTL_LOG(ERROR) << "Error while merging commits: " << s;
@@ -93,25 +96,25 @@ void Merger::Start() {
     return true;
   };
 
-  auto on_done = [this](storage::Status s) {
-    if (cancelled_) {
+  auto on_done = [self = ftl::RefPtr<Merger>(this)](storage::Status s) {
+    if (self->cancelled_) {
       return;
     }
     if (s != storage::Status::OK) {
       FTL_LOG(ERROR) << "Unable to create diff for merging: " << s;
-      Done();
+      self->Done();
       return;
     }
-    journal_->Commit(
-        [this](storage::Status s, const storage::CommitId& commit_id) {
+    self->journal_->Commit(
+        [self](storage::Status s, const storage::CommitId& commit_id) {
           if (s != storage::Status::OK) {
             FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
           }
-          Done();
+          self->Done();
         });
   };
   storage_->GetCommitContentsDiff(*ancestor_, *right_, std::move(on_next),
-                               std::move(on_done));
+                                  std::move(on_done));
 }
 
 void Merger::Cancel() {
@@ -142,8 +145,11 @@ LastOneWinsMerger::LastOneWinsMerger() {}
 
 LastOneWinsMerger::~LastOneWinsMerger() {}
 
+void LastOneWinsMerger::SetOnError(std::function<void()> on_error) {}
+
 ftl::RefPtr<callback::Cancellable> LastOneWinsMerger::Merge(
     storage::PageStorage* storage,
+    PageManager* page_manager,
     std::unique_ptr<const storage::Commit> head_1,
     std::unique_ptr<const storage::Commit> head_2,
     std::unique_ptr<const storage::Commit> ancestor) {

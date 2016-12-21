@@ -64,9 +64,7 @@ class Waiter : public ftl::RefCountedThreadSafe<Waiter<S, T>> {
       ExecuteCallbackIfFinished();
       return;
     }
-    if (result) {
-      results_[index] = std::move(result);
-    }
+    results_[index] = std::move(result);
     returned_results_++;
     ExecuteCallbackIfFinished();
   }

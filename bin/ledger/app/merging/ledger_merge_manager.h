@@ -33,6 +33,7 @@ class LedgerMergeManager {
   void GetResolverStrategyForPage(
       const storage::PageId& page_id,
       std::function<void(std::unique_ptr<MergeStrategy>)> strategy);
+  void ResetStrategyForPage(storage::PageId page_id);
 
   ConflictResolverFactoryPtr conflict_resolver_factory_;
 

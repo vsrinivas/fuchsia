@@ -15,6 +15,8 @@
 #include "lib/ftl/memory/weak_ptr.h"
 
 namespace ledger {
+class PageManager;
+
 // MergeResolver watches a page and resolves conflicts as they appear using the
 // provided merge strategy.
 class MergeResolver : public storage::CommitWatcher {
@@ -30,6 +32,8 @@ class MergeResolver : public storage::CommitWatcher {
   // Changes the current merge strategy. Any pending merge will be cancelled.
   void SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy);
 
+  void SetPageManager(PageManager* page_manager);
+
  private:
   // storage::CommitWatcher:
   void OnNewCommits(
@@ -44,6 +48,7 @@ class MergeResolver : public storage::CommitWatcher {
       const std::unique_ptr<const storage::Commit>& head2);
 
   storage::PageStorage* const storage_;
+  PageManager* page_manager_ = nullptr;
   std::unique_ptr<MergeStrategy> strategy_;
   callback::CancellableContainer merges_;
   ftl::Closure on_destroyed_;

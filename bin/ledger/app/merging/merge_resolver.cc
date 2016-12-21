@@ -10,6 +10,7 @@
 #include <set>
 
 #include "apps/ledger/src/app/merging/ledger_merge_manager.h"
+#include "apps/ledger/src/app/page_manager.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -55,6 +56,11 @@ void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
   if (strategy_) {
     PostCheckConflicts();
   }
+}
+
+void MergeResolver::SetPageManager(PageManager* page_manager) {
+  FTL_DCHECK(page_manager_ == nullptr);
+  page_manager_ = page_manager;
 }
 
 void MergeResolver::OnNewCommits(
@@ -105,8 +111,8 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
 
   std::unique_ptr<const storage::Commit> common_ancestor(
       FindCommonAncestor(commits[0], commits[1]));
-  merges_.emplace(strategy_->Merge(storage_, std::move(commits[0]),
-                                   std::move(commits[1]),
+  merges_.emplace(strategy_->Merge(storage_, page_manager_,
+                                   std::move(commits[0]), std::move(commits[1]),
                                    std::move(common_ancestor)));
 }
 
