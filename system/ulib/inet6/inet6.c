@@ -323,8 +323,6 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
         icmp6_send(_data, len, (void*)&ip->src);
         return;
     }
-
-    BAD("ICMP6 Unhandled");
 }
 
 void eth_recv(void* _data, size_t len) {
