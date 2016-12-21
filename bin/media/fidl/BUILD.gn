@@ -4,6 +4,8 @@
 
 source_set("fidl") {
   sources = [
+    "fidl_conversion_pipeline_builder.cc",
+    "fidl_conversion_pipeline_builder.h",
     "fidl_formatting.cc",
     "fidl_formatting.h",
     "fidl_packet_consumer.cc",
