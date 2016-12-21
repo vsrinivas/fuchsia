@@ -68,13 +68,14 @@ void MediaDecoderImpl::GetOutputType(const GetOutputTypeCallback& callback) {
 }
 
 void MediaDecoderImpl::GetPacketConsumer(
-    fidl::InterfaceRequest<MediaPacketConsumer> consumer) {
-  consumer_->Bind(std::move(consumer));
+    fidl::InterfaceRequest<MediaPacketConsumer> request) {
+  Retain();
+  consumer_->Bind(std::move(request), [this]() { Release(); });
 }
 
 void MediaDecoderImpl::GetPacketProducer(
-    fidl::InterfaceRequest<MediaPacketProducer> producer) {
-  producer_->Bind(std::move(producer));
+    fidl::InterfaceRequest<MediaPacketProducer> request) {
+  producer_->Bind(std::move(request));
 }
 
 }  // namespace media

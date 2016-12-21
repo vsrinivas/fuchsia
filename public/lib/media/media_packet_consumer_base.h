@@ -99,6 +99,10 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
   // just runs the callback.
   virtual void OnFlushRequested(const FlushCallback& callback);
 
+  // Called when the binding is unbound. The default implementation does
+  // nothing. Subclasses may delete themselves in overrides of |OnUnbind|.
+  virtual void OnUnbind();
+
   // Called when a fatal error occurs. The default implementation does nothing.
   virtual void OnFailure();
 

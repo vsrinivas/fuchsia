@@ -11,7 +11,9 @@ FidlPacketConsumer::FidlPacketConsumer() {}
 FidlPacketConsumer::~FidlPacketConsumer() {}
 
 void FidlPacketConsumer::Bind(
-    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request) {
+    fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
+    const std::function<void()>& unbind_handler) {
+  unbind_handler_ = unbind_handler;
   MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 
@@ -41,6 +43,13 @@ void FidlPacketConsumer::OnFlushRequested(const FlushCallback& callback) {
   } else {
     FTL_DLOG(WARNING) << "flush requested but no callback registered";
     callback();
+  }
+}
+
+void FidlPacketConsumer::OnUnbind() {
+  if (unbind_handler_) {
+    std::function<void()> unbind_handler(std::move(unbind_handler_));
+    unbind_handler();
   }
 }
 

@@ -106,7 +106,10 @@ void MediaPacketConsumerBase::Reset() {
   FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 #endif
   FLOG(log_channel_, Reset());
-  if (binding_.is_bound()) {
+
+  bool unbind = binding_.is_bound();
+
+  if (unbind) {
     binding_.Close();
   }
 
@@ -118,7 +121,13 @@ void MediaPacketConsumerBase::Reset() {
   if (counter_) {
     counter_->Detach();
   }
+
   counter_ = std::make_shared<SuppliedPacketCounter>(this);
+
+  // Do this at the end of the function in case OnUnbind deletes this.
+  if (unbind) {
+    OnUnbind();
+  }
 }
 
 void MediaPacketConsumerBase::Fail() {
@@ -134,6 +143,12 @@ void MediaPacketConsumerBase::OnPacketReturning() {}
 
 void MediaPacketConsumerBase::OnFlushRequested(const FlushCallback& callback) {
   callback();
+}
+
+void MediaPacketConsumerBase::OnUnbind() {
+#ifndef NDEBUG
+  FTL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+#endif
 }
 
 void MediaPacketConsumerBase::OnFailure() {

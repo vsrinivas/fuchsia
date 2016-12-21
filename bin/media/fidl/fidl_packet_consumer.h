@@ -22,8 +22,8 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   ~FidlPacketConsumer() override;
 
   // Binds.
-  void Bind(
-      fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request);
+  void Bind(fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
+            const std::function<void()>& connection_error_handler);
 
   // Sets a callback signalling that a flush has been requested from the
   // MediaPacketConsumer client.
@@ -39,6 +39,8 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   void OnPacketReturning() override;
 
   void OnFlushRequested(const FlushCallback& callback) override;
+
+  void OnUnbind() override;
 
   // ActiveSource implementation.
   bool can_accept_allocator() const override;
@@ -67,6 +69,7 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
     std::unique_ptr<SuppliedPacket> supplied_packet_;
   };
 
+  std::function<void()> unbind_handler_;
   Demand downstream_demand_ = Demand::kNegative;
   FlushRequestedCallback flush_requested_callback_;
   SupplyCallback supply_callback_;

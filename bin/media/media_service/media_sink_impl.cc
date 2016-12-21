@@ -86,14 +86,15 @@ MediaSinkImpl::MediaSinkImpl(fidl::InterfaceHandle<MediaRenderer> renderer,
 MediaSinkImpl::~MediaSinkImpl() {}
 
 void MediaSinkImpl::GetPacketConsumer(
-    fidl::InterfaceRequest<MediaPacketConsumer> consumer) {
-  consumer_->Bind(std::move(consumer));
+    fidl::InterfaceRequest<MediaPacketConsumer> request) {
+  Retain();
+  consumer_->Bind(std::move(request), [this]() { Release(); });
 }
 
 void MediaSinkImpl::GetTimelineControlPoint(
-    fidl::InterfaceRequest<MediaTimelineControlPoint> req) {
+    fidl::InterfaceRequest<MediaTimelineControlPoint> request) {
   FTL_DCHECK(renderer_);
-  renderer_->GetTimelineControlPoint(std::move(req));
+  renderer_->GetTimelineControlPoint(std::move(request));
 }
 
 }  // namespace media

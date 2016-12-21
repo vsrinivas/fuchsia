@@ -45,7 +45,19 @@ class FactoryServiceBase {
             FactoryServiceBase* owner)
         : ProductBase(owner), binding_(impl, std::move(request)) {
       FTL_DCHECK(impl);
-      binding_.set_connection_error_handler([this]() { ReleaseFromOwner(); });
+      Retain();
+      binding_.set_connection_error_handler([this]() { Release(); });
+    }
+
+    // Increments the retention count.
+    void Retain() { ++retention_count_; }
+
+    // Decrements the retention count and calls UnbindAndReleaseFromOwner if
+    // the count has reached zero.
+    void Release() {
+      if (--retention_count_ == 0) {
+        UnbindAndReleaseFromOwner();
+      }
     }
 
     // Closes the binding and calls ReleaseFromOwner.
@@ -58,6 +70,7 @@ class FactoryServiceBase {
     }
 
    private:
+    size_t retention_count_ = 0;
     fidl::Binding<Interface> binding_;
   };
 

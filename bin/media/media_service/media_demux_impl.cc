@@ -111,8 +111,6 @@ void MediaDemuxImpl::Describe(const DescribeCallback& callback) {
     fidl::Array<MediaTypePtr> result =
         fidl::Array<MediaTypePtr>::New(streams_.size());
     for (size_t i = 0; i < streams_.size(); i++) {
-      MediaSourceStreamDescriptorPtr descriptor =
-          MediaSourceStreamDescriptor::New();
       result[i] = streams_[i]->media_type();
     }
 

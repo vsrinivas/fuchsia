@@ -68,7 +68,7 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
   off_t seek_result = lseek(fd_.get(), position, SEEK_SET);
   if (seek_result < 0) {
     // TODO(dalesat): More specific error code.
-    FTL_LOG(INFO) << "seek failed, result " << seek_result;
+    FTL_LOG(ERROR) << "seek failed, result " << seek_result;
     result_ = MediaResult::UNKNOWN_ERROR;
     callback(result_, mx::socket());
     return;
@@ -91,7 +91,8 @@ void FileReaderImpl::ReadAt(uint64_t position, const ReadAtCallback& callback) {
 
   if (result_ != MediaResult::OK) {
     // Error occurred during WriteToSocket.
-    FTL_LOG(INFO) << "error occurred during WriteToSocket, result_ " << result_;
+    FTL_LOG(ERROR) << "error occurred during WriteToSocket, result_ "
+                   << result_;
     callback(result_, mx::socket());
     return;
   }
