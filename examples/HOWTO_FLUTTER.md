@@ -1,12 +1,12 @@
 # Flutter Module Development
 
-This directory demonstrates how you modules with Dart and Flutter. At the moment
-this document assumes that every module gets built as part of the core fuchsia
-build and included in the bootfs.
+This directory demonstrates how you create modules with Dart and Flutter. At the
+moment this document assumes that every module gets built as part of the core
+fuchsia build and included in the bootfs.
 
-# Examples Modules
+# Example Modules
 
-## Hello World Example
+## Hello World
 
 (located in `hello_world_flutter/`)
 
@@ -14,18 +14,19 @@ This example demonstrates how to create a minimal flutter module and implement
 the `Module` interface. It shows a simple flutter text widget displaying
 "Hello, world!" on the screen.
 
-## Counter Example
+## Counter
 
 (located in `counter_flutter/`)
 
 This example consists of two modules: parent and child. The parent module runs
 as the top-level module and spawns a child module. Each module displays the
 shared counter value, and the value can be increased or decreased from both
-modules. The main purpose of this example is to demonstrate the followings:
+modules. The main purpose of this example is to demonstrate the following
+aspects:
 
-* Starting a new module as a child, using the Story service.
+* Starting a new module as a child, using the `Story` service.
 * Composing the child's UI into the parent's widget tree using `ChildView`.
-* Exchanging data between modules using a shared Link service.
+* Exchanging data between modules using a shared `Link` service.
 
 ## Running the Examples on Fuchsia
 
@@ -86,7 +87,7 @@ void main() {
 
 When the `Module` implementation wants to update some values in `State` of a
 `StatefulWidget`, it can obtain the `State` object via `GlobalKey`s or other
-means. (See the "counter" example code)
+means. (See the "counter" example code.)
 
 # Importing Packages
 
@@ -127,7 +128,7 @@ To use any FIDL generated dart bindings, you need to first look at the
 For example, let's say we want to import and use the `module.fidl` file (located
 in `<fuchsia_root>/apps/modular/services/story`) in our dart code. We should
 first look at the `BUILD.gn` file in the same directory. In this file we can see
-that the `module.fidl` file is included in the `fidl('story')` target.
+that the `module.fidl` file is included in the `fidl("story")` target.
 
 ```
 # For consumption outside modular.
@@ -177,7 +178,7 @@ import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/widgets.dart';
 ```
 
-To import things in the fuchsia tree, we use dots(`.`) instead of slashes(`/`)
+To import things in the fuchsia tree, we use dots (`.`) instead of slashes (`/`)
 as path delimiter. For FIDL-generated dart files, we add `.dart` at the end of
 the corresponding fidl file path. (e.g. `module.fidl.dart`)
 
@@ -193,7 +194,7 @@ Also, refer to the example flutter module code to see how the
 
 ## Things to Watch Out For
 
-### Handles can only be used once
+### Handles Can Only Be Used Once
 
 Once an `InterfaceHandle<Foo>` is bound to a proxy, the handle cannot be used in
 other places. Often, in case you have to share the same service with multiple
@@ -203,7 +204,7 @@ service will provide a way to obtain a duplicate handle (e.g. `Link::Dup()`).
 You can also call `unbind()` method on `ProxyController` to get the usable
 `InterfaceHandle<Foo>` back, which then can be used by someone else.
 
-### Proxies and Bindings should be Closed Properly
+### Proxies and Bindings Should Be Closed Properly
 
 You need to explicitly close `FooProxy` and `FooBinding` objects that are bound
 to channels, when they are no longer in use. You do not need to explicitly close
