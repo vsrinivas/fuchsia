@@ -7,6 +7,7 @@
 
 #include "helper/platform_device_helper.h"
 #include "sys_driver/magma_driver.h"
+#include "sys_driver/magma_system_connection.h"
 #include "sys_driver/magma_system_context.h"
 #include "sys_driver/magma_system_device.h"
 #include "gtest/gtest.h"
@@ -27,12 +28,13 @@ public:
         if (!device)
             return DRETP(nullptr, "no device");
 
-        return std::make_unique<TestMultithread>(wait, std::unique_ptr<MagmaDriver>(driver),
-                                                 std::unique_ptr<MagmaSystemDevice>(device));
+        return std::make_unique<TestMultithread>(
+            wait, std::unique_ptr<MagmaDriver>(driver),
+            std::shared_ptr<MagmaSystemDevice>(std::move(device)));
     }
 
     TestMultithread(bool wait, std::unique_ptr<MagmaDriver> driver,
-                    std::unique_ptr<MagmaSystemDevice> device)
+                    std::shared_ptr<MagmaSystemDevice> device)
         : wait_(wait), driver_(std::move(driver)), device_(std::move(device))
     {
     }
@@ -60,7 +62,7 @@ public:
     void ConnectionThreadLoop(uint32_t num_iterations)
     {
         auto connection = std::make_unique<MagmaSystemConnection>(
-            device_.get(), MsdConnectionUniquePtr(msd_device_open(device_->msd_dev(), 0)),
+            device_, MsdConnectionUniquePtr(msd_device_open(device_->msd_dev(), 0)),
             MAGMA_SYSTEM_CAPABILITY_RENDERING);
         ASSERT_NE(connection, nullptr);
 
@@ -137,7 +139,7 @@ public:
 private:
     const bool wait_;
     std::unique_ptr<MagmaDriver> driver_;
-    std::unique_ptr<MagmaSystemDevice> device_;
+    std::shared_ptr<MagmaSystemDevice> device_;
     uint32_t context_id_ = 0;
 };
 

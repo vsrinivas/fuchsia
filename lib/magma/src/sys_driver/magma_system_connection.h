@@ -22,22 +22,15 @@ static inline msd_connection_unique_ptr_t MsdConnectionUniquePtr(msd_connection*
     return msd_connection_unique_ptr_t(conn, &msd_connection_close);
 }
 
+class MagmaSystemDevice;
+
 class MagmaSystemConnection : private MagmaSystemContext::Owner,
                               public magma::PlatformConnection::Delegate {
 public:
-    class Owner {
-    public:
-        virtual uint32_t GetDeviceId() = 0;
-        virtual void PageFlip(std::shared_ptr<MagmaSystemBuffer> buf,
-                              magma_system_pageflip_callback_t callback, void* data) = 0;
-        // Create a buffer for |handle| or, if one already exists, give me that
-        virtual std::shared_ptr<MagmaSystemBuffer> GetBufferForHandle(uint32_t handle) = 0;
-        // Notifies the owner that this BufferManager no longer cares about the buffer with |id|
-        virtual void ReleaseBuffer(uint64_t id) = 0;
-    };
+    MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> device,
+                          msd_connection_unique_ptr_t msd_connection, uint32_t capabilities);
 
-    MagmaSystemConnection(Owner* owner, msd_connection_unique_ptr_t msd_connection,
-                          uint32_t capabilities);
+    ~MagmaSystemConnection();
 
     // Create a buffer from the handle and add it to the map,
     // on success |id_out| contains the id to be used to query the map
@@ -58,19 +51,24 @@ public:
 
     bool WaitRendering(uint64_t buffer_id) override;
 
-    uint32_t GetDeviceId() { return owner_->GetDeviceId(); }
+    uint32_t GetDeviceId();
 
     msd_connection* msd_connection() { return msd_connection_.get(); }
 
     void PageFlip(uint64_t id, magma_system_pageflip_callback_t callback, void* data) override;
 
+    std::shared_ptr<magma::PlatformEvent> ShutdownEvent() override { return shutdown_event_; }
+
+    void SignalShutdown() { shutdown_event_->Signal(); }
+
 private:
-    Owner* owner_;
+    std::weak_ptr<MagmaSystemDevice> device_;
     msd_connection_unique_ptr_t msd_connection_;
     std::unordered_map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
     std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
     bool has_display_capability_;
     bool has_render_capability_;
+    std::shared_ptr<magma::PlatformEvent> shutdown_event_;
 
     // MagmaSystemContext::Owner
     std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) override

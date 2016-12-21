@@ -8,6 +8,7 @@
 #include "magma_system.h"
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
+#include "platform_event.h"
 
 #include <memory>
 
@@ -72,6 +73,8 @@ public:
 
         virtual void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
                               void* data) = 0;
+
+        virtual std::shared_ptr<magma::PlatformEvent> ShutdownEvent() = 0;
     };
 
     virtual ~PlatformConnection() {}

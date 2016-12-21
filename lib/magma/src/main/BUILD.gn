@@ -4,10 +4,6 @@
 
 import("//magma/gnbuild/magma.gni")
 
-declare_args() {
-  magma_indriver_test = ""
-}
-
 source_set("main") {
   sources = [
     "driver_main.cpp",

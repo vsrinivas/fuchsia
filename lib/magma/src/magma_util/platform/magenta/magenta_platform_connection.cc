@@ -2,12 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "magenta_platform_event.h"
 #include "platform_connection.h"
 
 #include "mx/channel.h"
+#include "mx/waitset.h"
 #include <errno.h>
 #include <magenta/types.h>
 #include <map>
+
+constexpr uint32_t kCookieChannel = 1;
+constexpr uint32_t kCookieShutdown = 2;
 
 namespace magma {
 
@@ -88,9 +93,9 @@ struct PageFlipReply {
 class MagentaPlatformConnection : public PlatformConnection {
 public:
     MagentaPlatformConnection(std::unique_ptr<Delegate> delegate, mx::channel local_endpoint,
-                              mx::channel remote_endpoint)
+                              mx::channel remote_endpoint, mx::waitset waitset)
         : delegate_(std::move(delegate)), local_endpoint_(std::move(local_endpoint)),
-          remote_endpoint_(std::move(remote_endpoint))
+          remote_endpoint_(std::move(remote_endpoint)), waitset_(std::move(waitset))
     {
     }
 
@@ -105,13 +110,30 @@ public:
         uint8_t bytes[num_bytes];
         mx_handle_t handles[kNumHandles];
 
-        mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
-        mx_signals_t pending;
+        mx_signals_t pending = 0;
 
-        if (local_endpoint_.wait_one(signals, MX_TIME_INFINITE, &pending) != NO_ERROR)
-            return DRETF(false, "failed to wait on channel");
+        uint32_t num_results = 2;
+        mx_waitset_result_t results[num_results];
 
-        if (pending & MX_SIGNAL_READABLE) {
+        if (waitset_.wait(MX_TIME_INFINITE, results, &num_results) != NO_ERROR)
+            return DRETF(false, "waitset::wait failed");
+
+        for (uint32_t i = 0; i < num_results; i++) {
+            switch (results[i].cookie) {
+            case kCookieChannel:
+                if (results[i].status != NO_ERROR)
+                    return DRETF(false, "error in waitset result: %d", results[i].status);
+                pending = results[i].observed;
+                break;
+
+            case kCookieShutdown:
+                DASSERT(results[i].status == NO_ERROR);
+                DASSERT(results[i].observed);
+                return false;
+            }
+        }
+
+        if (pending & MX_CHANNEL_READABLE) {
             auto status = local_endpoint_.read(0, bytes, num_bytes, &actual_bytes, handles,
                                                kNumHandles, &actual_handles);
             if (status != NO_ERROR)
@@ -161,7 +183,7 @@ public:
 
             if (!success)
                 return DRETF(false, "failed to interperet message");
-        } else if (pending & MX_SIGNAL_PEER_CLOSED) {
+        } else if (pending & MX_CHANNEL_PEER_CLOSED) {
             DLOG("remote endpoint closed");
             return false;
         }
@@ -182,7 +204,7 @@ private:
 
     bool ImportBuffer(ImportBufferOp* op, mx_handle_t* handle)
     {
-        DLOG("Operation: ImportBuffer\n");
+        DLOG("Operation: ImportBuffer");
         if (!op)
             return DRETF(false, "malformed message");
         uint64_t buffer_id;
@@ -193,7 +215,7 @@ private:
 
     bool ReleaseBuffer(ReleaseBufferOp* op)
     {
-        DLOG("Operation: ReleaseBuffer\n");
+        DLOG("Operation: ReleaseBuffer");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->ReleaseBuffer(op->buffer_id))
@@ -203,7 +225,7 @@ private:
 
     bool CreateContext(CreateContextOp* op)
     {
-        DLOG("Operation: CreateContext\n");
+        DLOG("Operation: CreateContext");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->CreateContext(op->context_id))
@@ -213,7 +235,7 @@ private:
 
     bool DestroyContext(DestroyContextOp* op)
     {
-        DLOG("Operation: DestroyContext\n");
+        DLOG("Operation: DestroyContext");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->DestroyContext(op->context_id))
@@ -223,7 +245,7 @@ private:
 
     bool ExecuteCommandBuffer(ExecuteCommandBufferOp* op)
     {
-        DLOG("Operation: ExecuteCommandBuffer\n");
+        DLOG("Operation: ExecuteCommandBuffer");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->ExecuteCommandBuffer(op->command_buffer_id, op->context_id))
@@ -233,7 +255,7 @@ private:
 
     bool WaitRendering(WaitRenderingOp* op)
     {
-        DLOG("Operation: WaitRendering\n");
+        DLOG("Operation: WaitRendering");
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->WaitRendering(op->buffer_id))
@@ -245,7 +267,7 @@ private:
 
     bool PageFlip(PageFlipOp* op)
     {
-        DLOG("Operation: PageFlip\n");
+        DLOG("Operation: PageFlip");
         if (!op)
             return DRETF(false, "malformed message");
 
@@ -259,7 +281,7 @@ private:
 
     bool GetError(GetErrorOp* op)
     {
-        DLOG("Operation: GetError\n");
+        DLOG("Operation: GetError");
         if (!op)
             return DRETF(false, "malformed message");
         int32_t result = error_;
@@ -300,6 +322,7 @@ private:
     std::unique_ptr<Delegate> delegate_;
     mx::channel local_endpoint_;
     mx::channel remote_endpoint_;
+    mx::waitset waitset_;
     int32_t error_{};
 };
 
@@ -472,7 +495,7 @@ public:
 
     bool WaitMessage(uint8_t* msg_out, uint32_t msg_size, bool blocking)
     {
-        mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+        mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
         mx_signals_t pending = 0;
 
         auto status = channel_.wait_one(signals, blocking ? MX_TIME_INFINITE : 0, &pending);
@@ -481,9 +504,9 @@ public:
             return true;
         } else if (status == NO_ERROR) {
             DLOG("got NO_ERROR, blocking: %s, readable: %s, closed %s", blocking ? "true" : "false",
-                 pending & MX_SIGNAL_READABLE ? "true" : "false",
-                 pending & MX_SIGNAL_PEER_CLOSED ? "true" : "false");
-            if (pending & MX_SIGNAL_READABLE) {
+                 pending & MX_CHANNEL_READABLE ? "true" : "false",
+                 pending & MX_CHANNEL_PEER_CLOSED ? "true" : "false");
+            if (pending & MX_CHANNEL_READABLE) {
                 uint32_t actual_bytes;
                 mx_status_t status =
                     channel_.read(0, msg_out, msg_size, &actual_bytes, nullptr, 0, nullptr);
@@ -491,7 +514,7 @@ public:
                     return DRETF(false, "failed to read from channel");
                 if (actual_bytes != msg_size)
                     return DRETF(false, "read wrong number of bytes from channel");
-            } else if (pending & MX_SIGNAL_PEER_CLOSED) {
+            } else if (pending & MX_CHANNEL_PEER_CLOSED) {
                 return DRETF(false, "channel, closed");
             }
             return true;
@@ -532,8 +555,26 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
     if (status != NO_ERROR)
         return DRETP(nullptr, "mx::channel::create failed");
 
-    return std::unique_ptr<MagentaPlatformConnection>(new MagentaPlatformConnection(
-        std::move(delegate), std::move(local_endpoint), std::move(remote_endpoint)));
+    mx::waitset waitset;
+    status = mx::waitset::create(0, &waitset);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "mx::waitset::create failed");
+
+    status = waitset.add(kCookieChannel, local_endpoint.get(),
+                         MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "mx::waitset::add failed");
+
+    auto event = static_cast<MagentaPlatformEvent*>(delegate->ShutdownEvent().get());
+    DASSERT(event);
+
+    status = waitset.add(kCookieShutdown, event->mx_handle(), event->mx_signal());
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "mx::waitset::add failed");
+
+    return std::unique_ptr<MagentaPlatformConnection>(
+        new MagentaPlatformConnection(std::move(delegate), std::move(local_endpoint),
+                                      std::move(remote_endpoint), std::move(waitset)));
 }
 
 } // namespace magma

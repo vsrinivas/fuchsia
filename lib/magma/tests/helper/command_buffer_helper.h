@@ -30,14 +30,14 @@ public:
             msd_drv.get(), platform_device ? platform_device->GetDeviceHandle() : nullptr);
         if (!msd_dev)
             return DRETP(nullptr, "failed to create msd device");
-        auto dev = std::unique_ptr<MagmaSystemDevice>(
-            new MagmaSystemDevice(msd_device_unique_ptr_t(msd_dev, &msd_device_destroy)));
+        auto dev = std::make_shared<MagmaSystemDevice>(
+            msd_device_unique_ptr_t(msd_dev, &msd_device_destroy));
         uint32_t ctx_id = 0;
         auto msd_connection = msd_device_open(msd_dev, 0);
         if (!msd_connection)
             return DRETP(nullptr, "msd_device_open failed");
         auto connection = std::unique_ptr<MagmaSystemConnection>(new MagmaSystemConnection(
-            dev.get(), MsdConnectionUniquePtr(msd_connection), MAGMA_SYSTEM_CAPABILITY_RENDERING));
+            dev, MsdConnectionUniquePtr(msd_connection), MAGMA_SYSTEM_CAPABILITY_RENDERING));
         if (!connection)
             return DRETP(nullptr, "failed to connect to msd device");
         connection->CreateContext(ctx_id);
@@ -85,7 +85,7 @@ public:
     }
 
 private:
-    CommandBufferHelper(msd_driver_unique_ptr_t msd_drv, std::unique_ptr<MagmaSystemDevice> dev,
+    CommandBufferHelper(msd_driver_unique_ptr_t msd_drv, std::shared_ptr<MagmaSystemDevice> dev,
                         std::unique_ptr<MagmaSystemConnection> connection, MagmaSystemContext* ctx)
         : msd_drv_(std::move(msd_drv)), dev_(std::move(dev)), connection_(std::move(connection)),
           ctx_(ctx)
@@ -167,7 +167,7 @@ private:
     }
 
     msd_driver_unique_ptr_t msd_drv_;
-    std::unique_ptr<MagmaSystemDevice> dev_;
+    std::shared_ptr<MagmaSystemDevice> dev_;
     std::unique_ptr<MagmaSystemConnection> connection_;
     MagmaSystemContext* ctx_; // owned by the connection
 

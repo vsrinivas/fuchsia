@@ -23,15 +23,12 @@ int devhost_start(void);
 #include <magenta/types.h>
 #include <thread>
 
+#include "magma_util/dlog.h"
 #include "magma_util/platform/magenta/magenta_platform_ioctl.h"
 #include "magma_util/sleep.h"
 #include "sys_driver/magma_driver.h"
 
 #define MAGMA_START 1
-
-#ifndef MAGMA_CREATE_DEVICE
-#define MAGMA_CREATE_DEVICE 1
-#endif
 
 #if MAGMA_INDRIVER_TEST
 void magma_indriver_test(mx_device_t* device);
@@ -44,19 +41,7 @@ void magma_indriver_test(mx_device_t* device);
 #define INTEL_I915_REG_WINDOW_SIZE (0x1000000u)
 #define INTEL_I915_FB_WINDOW_SIZE (0x10000000u)
 
-#define TRACE 1
-
-#if TRACE
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...)                                                                            \
-    do {                                                                                           \
-    } while (0)
-#endif
-
-static int magma_hook(void* dev);
-
-typedef struct intel_i915_device {
+struct intel_i915_device_t {
     mx_device_t device;
     mx_device_t* parent_device;
 
@@ -67,10 +52,12 @@ typedef struct intel_i915_device {
     mx_display_info_t info;
     uint32_t flags;
 
-    MagmaDriver* magma_driver;
-    MagmaSystemDevice* magma_system_device;
+    std::unique_ptr<MagmaDriver> magma_driver;
+    std::shared_ptr<MagmaSystemDevice> magma_system_device;
+};
 
-} intel_i915_device_t;
+static int magma_start(intel_i915_device_t* dev);
+static int magma_stop(intel_i915_device_t* dev);
 
 #define get_i915_device(dev) containerof(dev, intel_i915_device_t, device)
 
@@ -117,6 +104,8 @@ static mx_status_t intel_i915_open(mx_device_t* dev, mx_device_t** out, uint32_t
     return NO_ERROR;
 }
 
+static mx_status_t intel_i915_close(mx_device_t* mx_device, uint32_t flags) { return NO_ERROR; }
+
 static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void* in_buf,
                                 size_t in_len, void* out_buf, size_t out_len)
 {
@@ -143,8 +132,8 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
         if (!out_buf || out_len < sizeof(*device_handle_out))
             return DRET(ERR_INVALID_ARGS);
 
-        auto connection =
-            device->magma_system_device->Open(request->client_id, request->capabilities);
+        auto connection = MagmaSystemDevice::Open(device->magma_system_device, request->client_id,
+                                                  request->capabilities);
         if (!connection)
             return DRET(ERR_INVALID_ARGS);
 
@@ -156,18 +145,29 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
 
         break;
     }
+#if MAGMA_INDRIVER_TEST
+    case IOCTL_MAGMA_TEST_RESTART:
+        result = magma_stop(device);
+        if (result != NO_ERROR)
+            return DRET_MSG(result, "magma_stop failed");
+        result = magma_start(device);
+        break;
+#endif
     }
     DLOG("intel_i915_ioctl op 0x%x returning %zd\n", op, result);
 
     return result;
 }
 
-static mx_status_t intel_i915_close(mx_device_t* dev, uint32_t flags) { return NO_ERROR; }
-
 static mx_status_t intel_i915_release(mx_device_t* dev)
 {
+    DLOG("intel_i915_release");
+
     intel_i915_device_t* device = get_i915_device(dev);
     intel_i915_enable_backlight(device, false);
+
+    if (MAGMA_START)
+        magma_stop(device);
 
     if (device->framebuffer) {
         mx_handle_close(device->framebuffer_handle);
@@ -188,7 +188,7 @@ static mx_protocol_device_t intel_i915_device_proto = {
 
 static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
 {
-    xprintf("intel_i915_bind start mx_device %p\n", dev);
+    DLOG("intel_i915_bind start mx_device %p", dev);
 
     pci_protocol_t* pci;
     if (device_get_protocol(dev, MX_PROTOCOL_PCI, (void**)&pci))
@@ -199,7 +199,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
         return status;
 
     // map resources and initialize the device
-    auto device = reinterpret_cast<intel_i915_device_t*>(calloc(1, sizeof(intel_i915_device_t)));
+    auto device = new intel_i915_device_t();
     if (!device)
         return ERR_NO_MEMORY;
 
@@ -218,7 +218,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
         device->framebuffer_handle = pci->map_mmio(dev, 2, MX_CACHE_POLICY_WRITE_COMBINING,
                                                    &device->framebuffer, &device->framebuffer_size);
         if (device->framebuffer_handle < 0) {
-            free(device);
+            delete device;
             return status;
         }
     }
@@ -247,7 +247,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
             device->framebuffer_size = di->stride * di->height * sizeof(uint16_t);
             break;
         default:
-            xprintf("unrecognized format 0x%x, defaulting to 32bpp", di->format);
+            DLOG("unrecognized format 0x%x, defaulting to 32bpp", di->format);
         case MX_PIXEL_FORMAT_ARGB_8888:
         case MX_PIXEL_FORMAT_RGB_x888:
             device->framebuffer_size = di->stride * di->height * sizeof(uint32_t);
@@ -270,8 +270,16 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev)
          device->framebuffer_size);
 
     if (MAGMA_START) {
-        std::thread magma_thread(magma_hook, device);
-        magma_thread.detach();
+        device->magma_driver = std::unique_ptr<MagmaDriver>(MagmaDriver::Create());
+        if (!device->magma_driver)
+            return ERR_INTERNAL;
+
+#if MAGMA_INDRIVER_TEST
+        DLOG("running magma indriver test");
+        magma_indriver_test(device->parent_device);
+#endif
+
+        magma_start(device);
     }
 
     return NO_ERROR;
@@ -294,33 +302,30 @@ MAGENTA_DRIVER_BEGIN(_driver_intel_gen_gpu, "intel-gen-gpu", "magenta", "!0.1", 
 MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
     // clang-format on
 
-    static int magma_hook(void* param)
+    static int magma_start(intel_i915_device_t* device)
 {
-    xprintf("magma_hook start\n");
+    DLOG("magma_start");
 
-    auto dev = reinterpret_cast<intel_i915_device_t*>(param);
-
-#if MAGMA_INDRIVER_TEST
-    xprintf("running magma indriver test\n");
-    magma_indriver_test(dev->parent_device);
-#endif
-
-    // create and add the gpu device
-    dev->magma_driver = MagmaDriver::Create();
-    if (!dev->magma_driver)
-        return ERR_INTERNAL;
-
-    xprintf("Created driver %p\n", dev->magma_driver);
-
-    dev->magma_system_device = dev->magma_driver->CreateDevice(dev->parent_device);
-    if (!dev->magma_system_device) {
-        xprintf("Failed to create device");
+    device->magma_system_device = device->magma_driver->CreateDevice(device->parent_device);
+    if (!device->magma_system_device) {
+        DLOG("Failed to create device");
         return ERR_INTERNAL;
     }
 
-    xprintf("Created device %p\n", dev->magma_system_device);
+    DLOG("Created device %p", device->magma_system_device.get());
 
-    xprintf("magma_hook finish\n");
+    return NO_ERROR;
+}
 
+static int magma_stop(intel_i915_device_t* device)
+{
+    DLOG("magma_stop");
+
+    if (!device->magma_system_device->Shutdown(5000)) {
+        DLOG("magma device shutdown failed");
+        return ERR_INTERNAL;
+    }
+
+    device->magma_system_device.reset();
     return NO_ERROR;
 }

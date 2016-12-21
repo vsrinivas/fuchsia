@@ -7,12 +7,11 @@
 #include "magma_util/macros.h"
 #include <errno.h>
 
-MagmaSystemConnection::MagmaSystemConnection(Owner* owner,
+MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> weak_device,
                                              msd_connection_unique_ptr_t msd_connection,
                                              uint32_t capabilities)
-    : owner_(owner), msd_connection_(std::move(msd_connection))
+    : device_(weak_device), msd_connection_(std::move(msd_connection))
 {
-    DASSERT(owner_);
     DASSERT(msd_connection_);
 
     has_display_capability_ = capabilities & MAGMA_SYSTEM_CAPABILITY_DISPLAY;
@@ -22,6 +21,26 @@ MagmaSystemConnection::MagmaSystemConnection(Owner* owner,
     DASSERT(has_render_capability_ || has_display_capability_);
     DASSERT((capabilities &
              ~(MAGMA_SYSTEM_CAPABILITY_DISPLAY | MAGMA_SYSTEM_CAPABILITY_RENDERING)) == 0);
+
+    shutdown_event_ = magma::PlatformEvent::Create();
+    DASSERT(shutdown_event_);
+
+    auto device = weak_device.lock();
+    if (device)
+        device->ConnectionOpened(shutdown_event_);
+}
+
+MagmaSystemConnection::~MagmaSystemConnection()
+{
+    auto device = device_.lock();
+    if (device)
+        device->ConnectionClosed(shutdown_event_);
+}
+
+uint32_t MagmaSystemConnection::GetDeviceId()
+{
+    auto device = device_.lock();
+    return device ? device->GetDeviceId() : 0;
 }
 
 bool MagmaSystemConnection::CreateContext(uint32_t context_id)
@@ -105,7 +124,11 @@ bool MagmaSystemConnection::WaitRendering(uint64_t buffer_id)
 
 bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out)
 {
-    auto buf = owner_->GetBufferForHandle(handle);
+    auto device = device_.lock();
+    if (!device)
+        return DRETF(false, "failed to lock device");
+
+    auto buf = device->GetBufferForHandle(handle);
     if (!buf)
         return DRETF(false, "failed to get buffer for handle");
 
@@ -121,14 +144,18 @@ bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out)
 
 bool MagmaSystemConnection::ReleaseBuffer(uint64_t id)
 {
+    auto device = device_.lock();
+    if (!device)
+        return DRETF(false, "failed to lock device");
+
     auto iter = buffer_map_.find(id);
     if (iter == buffer_map_.end())
         return DRETF(false, "Attempting to free invalid buffer id");
 
     buffer_map_.erase(iter);
     // Now that our shared reference has been dropped we tell our
-    // owner that were done with the buffer
-    owner_->ReleaseBuffer(id);
+    // device that we're done with the buffer
+    device->ReleaseBuffer(id);
 
     return true;
 }
@@ -156,5 +183,11 @@ void MagmaSystemConnection::PageFlip(uint64_t id, magma_system_pageflip_callback
         return;
     }
 
-    owner_->PageFlip(buf, callback, data);
+    auto device = device_.lock();
+    if (!device) {
+        callback(DRET_MSG(-EINVAL, "Attempting to page flip, failed to lock device"), data);
+        return;
+    }
+
+    device->PageFlip(buf, callback, data);
 }

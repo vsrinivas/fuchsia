@@ -58,8 +58,8 @@ TEST(MagmaSystemConnection, ContextManagement)
     auto msd_connection = new MsdMockConnection_ContextManagement();
 
     auto msd_dev = new MsdMockDevice();
-    MagmaSystemDevice dev(MsdDeviceUniquePtr(msd_dev));
-    MagmaSystemConnection connection(&dev, MsdConnectionUniquePtr(msd_connection),
+    auto dev = std::make_shared<MagmaSystemDevice>(MsdDeviceUniquePtr(msd_dev));
+    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
                                      MAGMA_SYSTEM_CAPABILITY_RENDERING);
 
     EXPECT_EQ(msd_connection->NumActiveContexts(), 0u);
@@ -88,10 +88,10 @@ TEST(MagmaSystemConnection, BufferManagement)
     ASSERT_NE(msd_drv, nullptr);
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
     ASSERT_NE(msd_dev, nullptr);
-    MagmaSystemDevice dev(MsdDeviceUniquePtr(msd_dev));
+    auto dev = std::make_shared<MagmaSystemDevice>(MsdDeviceUniquePtr(msd_dev));
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection connection(&dev, MsdConnectionUniquePtr(msd_connection),
+    MagmaSystemConnection connection(dev, MsdConnectionUniquePtr(msd_connection),
                                      MAGMA_SYSTEM_CAPABILITY_RENDERING);
 
     uint64_t test_size = 4096;
@@ -129,16 +129,16 @@ TEST(MagmaSystemConnection, BufferSharing)
     ASSERT_NE(msd_drv, nullptr);
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
     ASSERT_NE(msd_dev, nullptr);
-    MagmaSystemDevice dev(MsdDeviceUniquePtr(msd_dev));
+    auto dev = std::make_shared<MagmaSystemDevice>(MsdDeviceUniquePtr(msd_dev));
 
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection connection_0(&dev, MsdConnectionUniquePtr(msd_connection),
+    MagmaSystemConnection connection_0(dev, MsdConnectionUniquePtr(msd_connection),
                                        MAGMA_SYSTEM_CAPABILITY_RENDERING);
 
     msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection connection_1(&dev, MsdConnectionUniquePtr(msd_connection),
+    MagmaSystemConnection connection_1(dev, MsdConnectionUniquePtr(msd_connection),
                                        MAGMA_SYSTEM_CAPABILITY_RENDERING);
 
     auto platform_buf = magma::PlatformBuffer::Create(4096);
@@ -181,11 +181,11 @@ TEST(MagmaSystemConnection, PageFlip)
 {
     auto msd_drv = msd_driver_create();
     auto msd_dev = msd_driver_create_device(msd_drv, nullptr);
-    MagmaSystemDevice dev(MsdDeviceUniquePtr(msd_dev));
+    auto dev = std::make_shared<MagmaSystemDevice>(MsdDeviceUniquePtr(msd_dev));
 
     auto msd_connection = msd_device_open(msd_dev, 0);
     ASSERT_NE(msd_connection, nullptr);
-    MagmaSystemConnection display(&dev, MsdConnectionUniquePtr(msd_connection),
+    MagmaSystemConnection display(dev, MsdConnectionUniquePtr(msd_connection),
                                   MAGMA_SYSTEM_CAPABILITY_DISPLAY);
 
     // should be unable to pageflip totally bogus handle

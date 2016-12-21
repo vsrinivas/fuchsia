@@ -5,10 +5,11 @@
 #ifndef _MAGMA_SYSTEM_DEVICE_H_
 #define _MAGMA_SYSTEM_DEVICE_H_
 
-#include "magma_system_connection.h"
 #include "msd.h"
 #include "platform_connection.h"
+#include "platform_event.h"
 #include <functional>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -20,32 +21,49 @@ static inline msd_device_unique_ptr_t MsdDeviceUniquePtr(msd_device* msd_dev)
     return msd_device_unique_ptr_t(msd_dev, &msd_device_destroy);
 }
 
-class MagmaSystemDevice : public MagmaSystemConnection::Owner {
+class MagmaSystemBuffer;
+
+class MagmaSystemDevice {
 public:
     MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev)) {}
 
     // Opens a connection to the device. On success |connection_handle_out| will contain the
     // connection handle to be passed to the client
-    std::unique_ptr<magma::PlatformConnection> Open(msd_client_id client_id, uint32_t capabilities);
+    static std::unique_ptr<magma::PlatformConnection>
+    Open(std::shared_ptr<MagmaSystemDevice>, msd_client_id client_id, uint32_t capabilities);
 
     msd_device* msd_dev() { return msd_dev_.get(); }
 
-    // MagmaSystemConnection::Owner
     // Returns the device id. 0 is invalid.
-    uint32_t GetDeviceId() override;
+    uint32_t GetDeviceId();
 
-    // MagmaSystemDisplay::Owner
     void PageFlip(std::shared_ptr<MagmaSystemBuffer> buf, magma_system_pageflip_callback_t callback,
-                  void* data) override;
+                  void* data);
 
-    // MagmaSystemBufferManager::Owner
-    std::shared_ptr<MagmaSystemBuffer> GetBufferForHandle(uint32_t handle) override;
-    void ReleaseBuffer(uint64_t id) override;
+    std::shared_ptr<MagmaSystemBuffer> GetBufferForHandle(uint32_t handle);
+    void ReleaseBuffer(uint64_t id);
+
+    bool Shutdown(uint32_t timeout_ms);
+
+    void ConnectionOpened(std::shared_ptr<magma::PlatformEvent> shutdown_event)
+    {
+        std::unique_lock<std::mutex> lock(connection_list_mutex_);
+        connection_list_.push_back(shutdown_event);
+    }
+
+    void ConnectionClosed(std::shared_ptr<magma::PlatformEvent> shutdown_event)
+    {
+        std::unique_lock<std::mutex> lock(connection_list_mutex_);
+        connection_list_.remove(shutdown_event);
+    }
 
 private:
     msd_device_unique_ptr_t msd_dev_;
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
     std::mutex buffer_map_mutex_;
+
+    std::list<std::shared_ptr<magma::PlatformEvent>> connection_list_;
+    std::mutex connection_list_mutex_;
 };
 
 #endif //_MAGMA_SYSTEM_DEVICE_H_

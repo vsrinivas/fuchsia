@@ -18,7 +18,11 @@ public:
     virtual ~PlatformEvent() {}
 
     virtual void Signal() = 0;
-    virtual void Wait() = 0;
+
+    // Returns true if the event is signaled before the timeout expires.
+    virtual bool Wait(uint64_t timeout_ms) = 0;
+
+    bool Wait() { return Wait(UINT64_MAX); }
 };
 
 } // namespace magma

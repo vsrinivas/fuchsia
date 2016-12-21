@@ -22,14 +22,13 @@ class MagmaDriver {
 public:
     MagmaDriver(msd_driver_unique_ptr_t msd_drv) : msd_drv_(std::move(msd_drv)) {}
 
-    MagmaSystemDevice* CreateDevice(void* device)
+    std::unique_ptr<MagmaSystemDevice> CreateDevice(void* device)
     {
         msd_device* msd_dev = msd_driver_create_device(msd_drv_.get(), device);
-        if (!msd_dev) {
+        if (!msd_dev)
             return DRETP(nullptr, "msd_create_device failed");;
-        }
 
-        return new MagmaSystemDevice(MsdDeviceUniquePtr(msd_dev));
+        return std::make_unique<MagmaSystemDevice>(MsdDeviceUniquePtr(msd_dev));
     }
 
     static MagmaDriver* Create()
