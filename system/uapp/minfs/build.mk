@@ -11,6 +11,12 @@ CFLAGS += -Isystem/ulib/mxio/include
 CFLAGS += -Isystem/ulib/fs/include
 CFLAGS += -Isystem/public
 
+ifeq ($(HOST_PLATFORM),darwin)
+CFLAGS += -DO_DIRECTORY=0200000
+else
+CFLAGS += -D_POSIX_C_SOURCE=200809L
+endif
+
 FUSE_CFLAGS := $(CFLAGS) -D_FILE_OFFSET_BITS=64
 ifeq ($(call TOBOOL,$(ENABLE_MINFS_FUSE_DEBUG)),true)
 FUSE_CFLAGS += -DDEBUG

@@ -7,6 +7,7 @@
 
 #include <fcntl.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <mxio/dispatcher.h>
@@ -156,13 +157,15 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
     size_t len = strlen(path);
     vnode_t* vn;
 
-    // TODO(smklein): Enforce 'must_be_dir'
     bool must_be_dir = false;
     if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != NO_ERROR) {
         return r;
     }
 
     if (flags & O_CREAT) {
+        if (must_be_dir && !S_ISDIR(mode)) {
+            return ERR_INVALID_ARGS;
+        }
         if ((r = vndir->ops->create(vndir, &vn, path, len, mode)) < 0) {
             if ((r == ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
                 goto try_open;
@@ -194,6 +197,10 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
             vn_release(vn);
             return r;
         }
+
+#ifdef __Fuchsia__
+        flags |= (must_be_dir ? O_DIRECTORY : 0);
+#endif
         r = vn->ops->open(&vn, flags);
         // Open and lookup both incremented the refcount. Release it once for
         // opening a vnode.
@@ -233,12 +240,11 @@ static mx_status_t txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
 
 mx_status_t vfs_unlink(vnode_t* vndir, const char* path, size_t len) {
     bool must_be_dir;
-    // TODO(smklein): Use 'must_be_dir*' in the fs-specific unlink.
     mx_status_t r;
     if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != NO_ERROR) {
         return r;
     }
-    return vndir->ops->unlink(vndir, path, len);
+    return vndir->ops->unlink(vndir, path, len, must_be_dir);
 }
 
 mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
@@ -261,16 +267,16 @@ mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
         // Local filesystem
         size_t oldlen = strlen(oldpath);
         size_t newlen = strlen(newpath);
-        // TODO(smklein): Use 'must_be_dir*' in the fs-specific rename.
-        bool must_be_dir_old;
-        bool must_be_dir_new;
-        if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &must_be_dir_old)) != NO_ERROR) {
+        bool old_must_be_dir;
+        bool new_must_be_dir;
+        if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
             goto done;
         }
-        if ((r = vfs_name_trim(newpath, newlen, &newlen, &must_be_dir_new)) != NO_ERROR) {
+        if ((r = vfs_name_trim(newpath, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
             goto done;
         }
-        r = vndir->ops->rename(oldparent, newparent, oldpath, oldlen, newpath, newlen);
+        r = vndir->ops->rename(oldparent, newparent, oldpath, oldlen, newpath, newlen,
+                               old_must_be_dir, new_must_be_dir);
     } else {
 #ifdef __Fuchsia__
         // Remote filesystem.

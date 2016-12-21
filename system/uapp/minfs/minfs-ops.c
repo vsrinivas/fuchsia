@@ -14,6 +14,8 @@
 
 #include "minfs-private.h"
 
+#define VNODE_IS_DIR(vn) (vn->inode.magic == MINFS_MAGIC_DIR)
+
 //TODO: better bitmap block read/write functions
 
 // Allocate a new data block from the block bitmap.
@@ -398,7 +400,7 @@ static mx_status_t cb_dir_find(vnode_t* vndir, minfs_dirent_t* de, dir_args_t* a
 
 static mx_status_t can_unlink(vnode_t* vn) {
     // directories must be empty (dirent_count == 2)
-    if (vn->inode.magic == MINFS_MAGIC_DIR) {
+    if (VNODE_IS_DIR(vn)) {
         if (vn->inode.dirent_count != 2) {
             // if we have more than "." and "..", not empty, cannot unlink
             return ERR_BAD_STATE;
@@ -490,6 +492,11 @@ static mx_status_t cb_dir_unlink(vnode_t* vndir, minfs_dirent_t* de,
         return status;
     }
 
+    // If a directory was requested, then only try unlinking a directory
+    if ((args->type == MINFS_TYPE_DIR) && !VNODE_IS_DIR(vn)) {
+        vn_release(vn);
+        return ERR_NOT_DIR;
+    }
     if ((status = can_unlink(vn)) < 0) {
         vn_release(vn);
         return status;
@@ -658,6 +665,9 @@ static void fs_release(vnode_t* vn) {
 static mx_status_t fs_open(vnode_t** _vn, uint32_t flags) {
     vnode_t* vn = *_vn;
     trace(MINFS, "minfs_open() vn=%p(#%u)\n", vn, vn->ino);
+    if ((flags & O_DIRECTORY) && !VNODE_IS_DIR(vn)) {
+        return ERR_NOT_DIR;
+    }
     vn_acquire(vn);
     return NO_ERROR;
 }
@@ -670,7 +680,7 @@ static mx_status_t fs_close(vnode_t* vn) {
 
 static ssize_t fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
     trace(MINFS, "minfs_read() vn=%p(#%u) len=%zd off=%zd\n", vn, vn->ino, len, off);
-    if (vn->inode.magic == MINFS_MAGIC_DIR) {
+    if (VNODE_IS_DIR(vn)) {
         return ERR_NOT_FILE;
     }
     return _fs_read(vn, data, len, off);
@@ -718,7 +728,7 @@ static size_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
 
 static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     trace(MINFS, "minfs_write() vn=%p(#%u) len=%zd off=%zd\n", vn, vn->ino, len, off);
-    if (vn->inode.magic == MINFS_MAGIC_DIR) {
+    if (VNODE_IS_DIR(vn)) {
         return ERR_NOT_FILE;
     }
     return _fs_write(vn, data, len, off);
@@ -772,7 +782,7 @@ static size_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
 
 static mx_status_t fs_lookup(vnode_t* vn, vnode_t** out, const char* name, size_t len) {
     trace(MINFS, "minfs_lookup() vn=%p(#%u) name='%.*s'\n", vn, vn->ino, (int)len, name);
-    if (vn->inode.magic != MINFS_MAGIC_DIR) {
+    if (!VNODE_IS_DIR(vn)) {
         error("not directory\n");
         return ERR_NOT_SUPPORTED;
     }
@@ -836,7 +846,7 @@ static mx_status_t fs_readdir(vnode_t* vn, void* cookie, void* dirents, size_t l
     dircookie_t* dc = cookie;
     vdirent_t* out = dirents;
 
-    if (vn->inode.magic != MINFS_MAGIC_DIR) {
+    if (!VNODE_IS_DIR(vn)) {
         return ERR_NOT_SUPPORTED;
     }
 
@@ -898,7 +908,7 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
                              const char* name, size_t len, uint32_t mode) {
     trace(MINFS, "minfs_create() vn=%p(#%u) name='%.*s' mode=%#x\n",
           vndir, vndir->ino, (int)len, name, mode);
-    if (vndir->inode.magic != MINFS_MAGIC_DIR) {
+    if (!VNODE_IS_DIR(vndir)) {
         return ERR_NOT_SUPPORTED;
     } else if (len > MINFS_MAX_NAME_SIZE) {
         return ERR_NOT_SUPPORTED;
@@ -964,9 +974,9 @@ static ssize_t fs_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
     }
 }
 
-static mx_status_t fs_unlink(vnode_t* vn, const char* name, size_t len) {
+static mx_status_t fs_unlink(vnode_t* vn, const char* name, size_t len, bool must_be_dir) {
     trace(MINFS, "minfs_unlink() vn=%p(#%u) name='%.*s'\n", vn, vn->ino, (int)len, name);
-    if (vn->inode.magic != MINFS_MAGIC_DIR) {
+    if (!VNODE_IS_DIR(vn)) {
         return ERR_NOT_SUPPORTED;
     }
     if ((len == 1) && (name[0] == '.')) {
@@ -978,12 +988,13 @@ static mx_status_t fs_unlink(vnode_t* vn, const char* name, size_t len) {
     dir_args_t args = {
         .name = name,
         .len = len,
+        .type = must_be_dir ? MINFS_TYPE_DIR : 0,
     };
     return vn_dir_for_each(vn, &args, cb_dir_unlink);
 }
 
 static mx_status_t fs_truncate(vnode_t* vn, size_t len) {
-    if (vn->inode.magic == MINFS_MAGIC_DIR) {
+    if (VNODE_IS_DIR(vn)) {
         return ERR_NOT_FILE;
     }
 
@@ -1061,12 +1072,13 @@ static mx_status_t check_not_subdirectory(vnode_t* src, vnode_t* newdir) {
 
 static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
                              const char* oldname, size_t oldlen,
-                             const char* newname, size_t newlen) {
+                             const char* newname, size_t newlen,
+                             bool src_must_be_dir, bool dst_must_be_dir) {
     trace(MINFS, "minfs_rename() olddir=%p(#%u) newdir=%p(#%u) oldname='%.*s' newname='%.*s'\n",
           olddir, olddir->ino, newdir, newdir->ino, (int)oldlen, oldname, (int)newlen, newname);
 
     // ensure that the vnodes containin oldname and newname are directories
-    if (olddir->inode.magic != MINFS_MAGIC_DIR || newdir->inode.magic != MINFS_MAGIC_DIR)
+    if (!(VNODE_IS_DIR(olddir) && VNODE_IS_DIR(newdir)))
         return ERR_NOT_SUPPORTED;
 
     // rule out any invalid new/old names
@@ -1094,12 +1106,18 @@ static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
         goto done;
     }
 
+    // If either the 'src' or 'dst' must be directories, BOTH of them must be directories.
+    if (!VNODE_IS_DIR(oldvn) && (src_must_be_dir || dst_must_be_dir)) {
+        status = ERR_NOT_DIR;
+        goto done;
+    }
+
     // if the entry for 'newname' exists, make sure it can be replaced by
     // the vnode behind 'oldname'.
     args.name = newname;
     args.len = newlen;
     args.ino = oldvn->ino;
-    args.type = (oldvn->inode.magic == MINFS_MAGIC_DIR) ? MINFS_TYPE_DIR : MINFS_TYPE_FILE;
+    args.type = VNODE_IS_DIR(oldvn) ? MINFS_TYPE_DIR : MINFS_TYPE_FILE;
     status = vn_dir_for_each(newdir, &args, cb_dir_can_rename);
     if (status == ERR_NOT_FOUND) {
         // if 'newname' does not exist, create it

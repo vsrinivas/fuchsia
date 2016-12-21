@@ -155,9 +155,30 @@ void test_directory_trailing_slash(void) {
     TRY(unlink("::a///"));
     TRY(unlink("::b//"));
     TRY(unlink("::c/"));
+
+    // Before we unlink 'd', try renaming it using some trailing '/' characters.
+    TRY(rename("::d", "::e"));
+    TRY(rename("::e", "::d/"));
+    TRY(rename("::d/", "::e"));
+    TRY(rename("::e/", "::d/"));
     TRY(unlink("::d"));
 
-    // TODO(smklein): Demonstrate this behavior does *not* apply to files.
+    // We can make / unlink a file...
+    TRY(close(TRY(open("::a", O_RDWR | O_CREAT | O_EXCL, 0644))));
+    TRY(unlink("::a"));
+
+    // ... But we cannot refer to that file using a trailing '/'.
+    TRY(close(TRY(open("::a", O_RDWR | O_CREAT | O_EXCL, 0644))));
+    EXPECT_FAIL(open("::a/", O_RDWR, 0644));
+
+    // We can rename the file...
+    TRY(rename("::a", "::b"));
+    // ... But neither the source (nor the destination) can have trailing slashes.
+    EXPECT_FAIL(rename("::b", "::a/"));
+    EXPECT_FAIL(rename("::b/", "::a"));
+    EXPECT_FAIL(rename("::b/", "::a/"));
+    EXPECT_FAIL(unlink("::b/"));
+    TRY(unlink("::b"));
 }
 
 int test_directory(void) {

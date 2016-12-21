@@ -215,7 +215,7 @@ int emu_unlink(const char* path) {
     vnode_t* vn;
     mx_status_t status = vfs_walk(fake_root, &vn, path + PREFIX_SIZE, &path);
     if (status == NO_ERROR) {
-        status = vn->ops->unlink(vn, path, strlen(path));
+        status = vn->ops->unlink(vn, path, strlen(path), false);
         vfs_close(vn);
     }
     STATUS(status);

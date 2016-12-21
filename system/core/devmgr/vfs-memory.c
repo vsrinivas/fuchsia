@@ -25,6 +25,9 @@
 #define MAXBLOCKS 8192
 #define BLOCKSIZE 8192
 
+// 'true' if directory, 'false' if file
+#define DNODE_IS_DIR(dn) (dn->vnode->dnode != NULL)
+
 mx_status_t mem_get_node(vnode_t** out, mx_device_t* dev);
 mx_status_t mem_can_unlink(dnode_t* dn);
 
@@ -158,9 +161,9 @@ mx_status_t memfs_truncate(vnode_t* vn, size_t len) {
     return r;
 }
 
-mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
-                         const char* oldname, size_t oldlen,
-                         const char* newname, size_t newlen) {
+mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
+                         const char* newname, size_t newlen, bool src_must_be_dir,
+                         bool dst_must_be_dir) {
     if ((olddir->dnode == NULL) || (newdir->dnode == NULL))
         return ERR_BAD_STATE;
     if ((oldlen == 1) && (oldname[0] == '.'))
@@ -178,10 +181,13 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
     if ((r = dn_lookup(olddir->dnode, &olddn, oldname, oldlen)) < 0) {
         return r;
     }
-    bool srcIsFile = (olddn->vnode->dnode == NULL);
+    if (!DNODE_IS_DIR(olddn) && (src_must_be_dir || dst_must_be_dir)) {
+        return ERR_NOT_DIR;
+    }
+
     // Verify that the destination is not a subdirectory of the source (if
     // both are directories).
-    if (!srcIsFile) {
+    if (DNODE_IS_DIR(olddn)) {
         dnode_t* observeddn = newdir->dnode;
         // Iterate all the way up to root
         while (observeddn->parent != observeddn) {
@@ -201,8 +207,7 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
             // Cannot rename node to itself
             return ERR_INVALID_ARGS;
         }
-        bool dstIsFile = (targetdn->vnode->dnode == NULL);
-        if (srcIsFile != dstIsFile) {
+        if (DNODE_IS_DIR(olddn) != DNODE_IS_DIR(targetdn)) {
             // Cannot rename files to directories (and vice versa)
             return ERR_INVALID_ARGS;
         } else if ((r = mem_can_unlink(targetdn)) < 0) {
@@ -244,9 +249,9 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir,
     return NO_ERROR;
 }
 
-mx_status_t mem_rename_none(vnode_t* olddir, vnode_t* newdir,
-                              const char* oldname, size_t oldlen,
-                              const char* newname, size_t newlen) {
+mx_status_t mem_rename_none(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
+                            const char* newname, size_t newlen, bool src_must_be_dir,
+                            bool dst_must_be_dir) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -338,8 +343,8 @@ ssize_t memfs_ioctl(vnode_t* vn, uint32_t op,
 }
 
 mx_status_t mem_can_unlink(dnode_t* dn) {
-    bool isDirectory = (dn->vnode->dnode != NULL);
-    if (isDirectory && (dn->vnode->refcount > 1)) {
+    bool is_directory = (dn->vnode->dnode != NULL);
+    if (is_directory && (dn->vnode->refcount > 1)) {
         // Cannot unlink an open directory
         return ERR_BAD_STATE;
     } else if (!list_is_empty(&dn->children)) {
@@ -352,7 +357,7 @@ mx_status_t mem_can_unlink(dnode_t* dn) {
     return NO_ERROR;
 }
 
-mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len) {
+mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len, bool must_be_dir) {
     xprintf("memfs_unlink(%p,'%.*s')\n", vn, (int)len, name);
     if (vn->dnode == NULL) {
         return ERR_NOT_DIR;
@@ -362,6 +367,10 @@ mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len) {
     if ((r = dn_lookup(vn->dnode, &dn, name, len)) < 0) {
         return r;
     }
+    bool is_directory = (dn->vnode->dnode != NULL);
+    if (!is_directory && must_be_dir) {
+        return ERR_NOT_DIR;
+    }
     if ((r = mem_can_unlink(dn)) < 0) {
         return r;
     }
@@ -369,7 +378,7 @@ mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len) {
     return NO_ERROR;
 }
 
-mx_status_t mem_unlink_none(vnode_t* vn, const char* name, size_t len) {
+mx_status_t mem_unlink_none(vnode_t* vn, const char* name, size_t len, bool must_be_dir) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -862,11 +871,12 @@ mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,
     }
 
     mx_status_t unlink_r;
+    bool must_be_dir = false;
     if (flags == MEMFS_TYPE_VMO) {
         // add a backing file
         mx_handle_t vmo;
         if ((r = mx_vmo_create(len, 0, &vmo)) < 0) {
-            if ((unlink_r = parent->ops->unlink(parent, pathout, strlen(pathout))) != NO_ERROR) {
+            if ((unlink_r = parent->ops->unlink(parent, pathout, strlen(pathout), must_be_dir)) != NO_ERROR) {
                 printf("memfs: unexpected unlink failure: %s %d\n", pathout, unlink_r);
             }
             vn_release(parent);
@@ -879,7 +889,7 @@ mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,
 
     r = vn->ops->write(vn, ptr, len, 0);
     if (r != (int)len) {
-        if ((unlink_r = parent->ops->unlink(parent, pathout, strlen(pathout))) != NO_ERROR) {
+        if ((unlink_r = parent->ops->unlink(parent, pathout, strlen(pathout), must_be_dir)) != NO_ERROR) {
             printf("memfs: unexpected unlink failure: %s %d\n", pathout, unlink_r);
         }
         vn_release(parent);

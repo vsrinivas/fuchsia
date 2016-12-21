@@ -95,13 +95,14 @@ struct vnode_ops {
     // Performs the given ioctl op on vn.
     // On success, returns the number of bytes received.
 
-    mx_status_t (*unlink)(vnode_t* vn, const char* name, size_t len);
+    mx_status_t (*unlink)(vnode_t* vn, const char* name, size_t len, bool must_be_dir);
     // Removes name from directory vn
 
     mx_status_t (*truncate)(vnode_t* vn, size_t len);
     // Change the size of vn
 
-    mx_status_t (*rename)(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen, const char* newname, size_t newlen);
+    mx_status_t (*rename)(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
+                          const char* newname, size_t newlen, bool src_must_be_dir, bool dst_must_be_dir);
     // Renames the path at oldname in olddir to the path at newname in newdir.
     // Unlinks any prior newname if it already exists.
 
