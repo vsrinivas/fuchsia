@@ -1,7 +1,5 @@
 #define SYS_close 3
 #define SYS_ioctl 16
-#define SYS_pread64 17
-#define SYS_pwrite64 18
 #define SYS_msync 26
 #define SYS_mincore 27
 #define SYS_madvise 28
@@ -87,7 +85,5 @@
 #define SYS_ppoll 271
 #define SYS_utimensat 280
 #define SYS_fallocate 285
-#define SYS_preadv 295
-#define SYS_pwritev 296
 #define SYS_prlimit64 302
 #define SYS_getcpu 309

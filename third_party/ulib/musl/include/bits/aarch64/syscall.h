@@ -17,10 +17,6 @@
 #define SYS_openat 56
 #define SYS_close 57
 #define SYS_quotactl 60
-#define SYS_pread64 67
-#define SYS_pwrite64 68
-#define SYS_preadv 69
-#define SYS_pwritev 70
 #define SYS_pselect6 72
 #define SYS_ppoll 73
 #define SYS_readlinkat 78

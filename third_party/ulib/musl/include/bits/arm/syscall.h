@@ -36,8 +36,6 @@
 #define SYS_sched_get_priority_max 159
 #define SYS_sched_get_priority_min 160
 #define SYS_sched_rr_get_interval 161
-#define SYS_pread64 180
-#define SYS_pwrite64 181
 #define SYS_ugetrlimit 191
 #define SYS_mincore 219
 #define SYS_madvise 220
@@ -104,8 +102,6 @@
 #define SYS_getcpu 345
 #define SYS_utimensat 348
 #define SYS_fallocate 352
-#define SYS_preadv 361
-#define SYS_pwritev 362
 #define SYS_recvmmsg 365
 #define SYS_accept4 366
 #define SYS_prlimit64 369

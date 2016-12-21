@@ -39,13 +39,6 @@ long __syscall_ret(unsigned long r);
 #define SYS_getrlimit SYS_ugetrlimit
 #endif
 
-#ifdef SYS_pread64
-#undef SYS_pread
-#undef SYS_pwrite
-#define SYS_pread SYS_pread64
-#define SYS_pwrite SYS_pwrite64
-#endif
-
 #ifdef SYS_fadvise64_64
 #undef SYS_fadvise
 #define SYS_fadvise SYS_fadvise64_64

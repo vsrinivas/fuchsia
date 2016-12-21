@@ -963,10 +963,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/unistd/nice.c \
     $(LOCAL_DIR)/src/unistd/pause.c \
     $(LOCAL_DIR)/src/unistd/posix_close.c \
-    $(LOCAL_DIR)/src/unistd/pread.c \
-    $(LOCAL_DIR)/src/unistd/preadv.c \
-    $(LOCAL_DIR)/src/unistd/pwrite.c \
-    $(LOCAL_DIR)/src/unistd/pwritev.c \
     $(LOCAL_DIR)/src/unistd/readlinkat.c \
     $(LOCAL_DIR)/src/unistd/renameat.c \
     $(LOCAL_DIR)/src/unistd/setpgrp.c \

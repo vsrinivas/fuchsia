@@ -64,6 +64,30 @@ static ssize_t stub_writev(int fd, const struct iovec* iov, int num) {
 }
 weak_alias(stub_writev, writev);
 
+static ssize_t stub_preadv(int fd, const struct iovec* iov, int count, off_t ofs) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_preadv, preadv);
+
+static ssize_t stub_pread(int fd, void* buf, size_t size, off_t ofs) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_pread, pread);
+
+static ssize_t stub_pwritev(int fd, const struct iovec* iov, int count, off_t ofs) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_pwritev, pwritev);
+
+static ssize_t stub_pwrite(int fd, const void* buf, size_t size, off_t ofs) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_pwrite, pwrite);
+
 static int stub_link(const char* oldpath, const char* newpath) {
     errno = ENOSYS;
     return -1;
