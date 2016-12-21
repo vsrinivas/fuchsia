@@ -57,9 +57,6 @@ void* __libc_intercept_arg(void*) __attribute__((weak));
 
 _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
                                  void* stack_end, void* arg) {
-    if (&__libc_intercept_arg != NULL)
-        arg = __libc_intercept_arg(arg);
-
     // extract process startup information from message pipe in arg
     mx_handle_t bootstrap = (uintptr_t)arg;
 
