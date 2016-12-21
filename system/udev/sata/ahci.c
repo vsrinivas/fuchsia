@@ -24,11 +24,12 @@
 #include "ahci.h"
 #include "sata.h"
 
-#define INTEL_AHCI_VID      (0x8086)
+#define INTEL_VID           (0x8086)
 #define LYNX_POINT_AHCI_DID (0x8c02)
 #define WILDCAT_AHCI_DID    (0x9c83)
 #define SUNRISE_AHCI_DID    (0x9d03)
 #define ICH9_AHCI_DID       (0x2922)
+#define SERIES_6_AHCI_DID   (0x1c02)
 
 #define AMD_AHCI_VID        (0x1022)
 #define AMD_FCH_AHCI_DID    (0x7801)
@@ -794,15 +795,16 @@ mx_driver_t _driver_ahci = {
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_ahci, "ahci", "magenta", "0.1", 11)
+MAGENTA_DRIVER_BEGIN(_driver_ahci, "ahci", "magenta", "0.1", 12)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_GOTO_IF(EQ, BIND_PCI_VID, AMD_AHCI_VID, 1),
     // intel devices
-    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_AHCI_VID),
+    BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, LYNX_POINT_AHCI_DID), // Simics
     BI_MATCH_IF(EQ, BIND_PCI_DID, WILDCAT_AHCI_DID),    // Pixel2
     BI_MATCH_IF(EQ, BIND_PCI_DID, SUNRISE_AHCI_DID),    // NUC
     BI_MATCH_IF(EQ, BIND_PCI_DID, ICH9_AHCI_DID),       // QEMU
+    BI_MATCH_IF(EQ, BIND_PCI_DID, SERIES_6_AHCI_DID),   // 6x era chipset (Sandy/Ivy Bridge)
     BI_ABORT(),
     // AMD devices
     BI_LABEL(1),
