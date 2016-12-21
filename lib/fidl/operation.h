@@ -21,31 +21,28 @@ class OperationContainer {
   OperationContainer() = default;
   virtual ~OperationContainer() = default;
 
- protected:
+ private:
   friend class Operation;
   virtual void Hold(Operation* o) = 0;
   virtual void Drop(Operation* o) = 0;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(OperationContainer);
 };
 
-// A specialized |OoperationContainer| which runs every instance of Operation as
-// soon as it arrives.
+// An implementation of |OperationContainer| which runs every instance of
+// Operation as soon as it arrives.
 class OperationCollection : public OperationContainer {
  public:
   OperationCollection() = default;
 
- protected:
+ private:
   void Hold(Operation* o) override;
   void Drop(Operation* o) override;
 
- private:
   std::vector<std::unique_ptr<Operation>> operations_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(OperationCollection);
 };
 
-// A specialized |OperationContainer| which runs incoming Operations in a
+// An implementation of |OperationContainer| which runs incoming Operations in a
 // first-in-first-out order. All operations would be run sequentially, which
 // would ensure that there are no partially complete operations when a new
 // operation starts.
