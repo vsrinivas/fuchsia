@@ -48,7 +48,7 @@
         },
         {
             "binary": "resolver_main",
-            "bootfs_path": "apps/resolver"
+            "bootfs_path": "apps/resolver_main"
         },
         {
             "binary": "resolver_test",
