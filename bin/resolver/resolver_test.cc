@@ -25,7 +25,7 @@ class ResolverTest {
     modular::ServiceProviderPtr child_services;
 
     auto launch_info = modular::ApplicationLaunchInfo::New();
-    launch_info->url = "file:///system/apps/resolver";
+    launch_info->url = "file:///system/apps/resolver_main";
     launch_info->services = child_services.NewRequest();
 
     context_->launcher()->CreateApplication(std::move(launch_info),
