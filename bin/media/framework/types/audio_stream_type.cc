@@ -88,7 +88,7 @@ bool AudioStreamTypeSet::Includes(const StreamType& type) const {
 
   return (sample_format() == type.audio()->sample_format() ||
           sample_format() == AudioStreamType::SampleFormat::kAny) &&
-         channels().contains(type.audio()->frames_per_second()) &&
+         channels().contains(type.audio()->channels()) &&
          frames_per_second().contains(type.audio()->frames_per_second());
 }
 
