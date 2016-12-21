@@ -261,7 +261,6 @@ int main(int argc, char** argv) {
                     }
                 }
                 if (len) {
-                    len += 8;
                     pending = 1;
                     goto transmit;
                 }
