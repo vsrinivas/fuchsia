@@ -8,11 +8,9 @@
 
 #include "apps/media/services/media_source.fidl.h"
 #include "apps/media/services/seeking_reader.fidl.h"
-#include "apps/media/src/decode/decoder.h"
-#include "apps/media/src/demux/demux.h"
-#include "apps/media/src/demux/reader.h"
+#include "apps/media/src/fidl/fidl_conversion_pipeline_builder.h"
 #include "apps/media/src/fidl/fidl_packet_producer.h"
-#include "apps/media/src/framework/graph.h"
+#include "apps/media/src/framework/types/stream_type.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/util/fidl_publisher.h"
 #include "apps/media/src/util/incident.h"
@@ -34,16 +32,14 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
   ~MediaSourceImpl() override;
 
   // MediaSource implementation.
-  void GetStreams(const GetStreamsCallback& callback) override;
+  void Describe(const DescribeCallback& callback) override;
 
   void GetPacketProducer(
       uint32_t stream_index,
-      fidl::InterfaceRequest<MediaPacketProducer> producer) override;
+      fidl::InterfaceRequest<MediaPacketProducer> request) override;
 
   void GetStatus(uint64_t version_last_seen,
                  const GetStatusCallback& callback) override;
-
-  void Prepare(const PrepareCallback& callback) override;
 
   void Flush(const FlushCallback& callback) override;
 
@@ -57,52 +53,46 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
 
   class Stream {
    public:
-    Stream(OutputRef output,
+    Stream(const MediaServicePtr& media_service,
+           const ProducerGetter& producer_getter,
            std::unique_ptr<StreamType> stream_type,
            const std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>&
                allowed_stream_types,
-           Graph* graph);
+           const std::function<void()>& callback);
 
     ~Stream();
 
     // Gets the media type of the stream.
     MediaTypePtr media_type() const;
 
-    // Gets the original stream type of the stream.
-    MediaTypePtr original_media_type() const;
-
     // Gets the producer.
-    void GetPacketProducer(
-        fidl::InterfaceRequest<MediaPacketProducer> producer);
+    void GetPacketProducer(fidl::InterfaceRequest<MediaPacketProducer> request);
 
-    // Tells the producer to flush its connection.
-    void FlushConnection(
-        const FidlPacketProducer::FlushConnectionCallback callback);
+    bool valid() { return !!producer_getter_; }
 
-   private:
+    ProducerGetter producer_getter_;
     std::unique_ptr<StreamType> stream_type_;
-    std::unique_ptr<StreamType> original_stream_type_;
-    Graph* graph_;
-    OutputRef output_;
-    std::shared_ptr<FidlPacketProducer> producer_;
   };
-
-  // Handles the completion of demux initialization.
-  void OnDemuxInitialized(Result result);
 
   // Reports a problem via status.
   void ReportProblem(const std::string& type, const std::string& details);
 
-  ftl::RefPtr<ftl::TaskRunner> task_runner_;
-  fidl::Array<MediaTypeSetPtr> allowed_media_types_;
-  Graph graph_;
-  PartRef demux_part_;
-  std::shared_ptr<Demux> demux_;
+  // Handles a status update from the demux. When called with the default
+  // argument values, initiates demux status updates.
+  void HandleDemuxStatusUpdates(uint64_t version = MediaDemux::kInitialMetadata,
+                                MediaDemuxStatusPtr status = nullptr);
+
+  std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>
+      allowed_stream_types_;
+  MediaServicePtr media_service_;
+  MediaDemuxPtr demux_;
   Incident init_complete_;
   std::vector<std::unique_ptr<Stream>> streams_;
-  FidlPublisher<GetStatusCallback> status_publisher_;
   MediaMetadataPtr metadata_;
   ProblemPtr problem_;
+  FidlPublisher<GetStatusCallback> status_publisher_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(MediaSourceImpl);
 };
 
 }  // namespace media

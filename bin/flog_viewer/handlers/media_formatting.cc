@@ -18,21 +18,6 @@ std::ostream& operator<<(std::ostream& os, const fidl::InterfacePtr<T>& value) {
   }
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const media::MediaSourceStreamDescriptorPtr& value) {
-  if (!value) {
-    return os << "<nullptr>" << std::endl;
-  } else {
-    os << std::endl;
-  }
-
-  os << indent;
-  os << begl << "index: " << int(value->index) << std::endl;
-  os << begl << "media_type: " << value->media_type;
-  os << begl << "original_media_type: " << value->original_media_type;
-  return os << outdent;
-}
-
 std::ostream& operator<<(std::ostream& os, const media::MediaTypePtr& value) {
   if (!value) {
     return os << "<nullptr>" << std::endl;

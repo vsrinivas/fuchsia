@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <functional>
+#include <memory>
+#include <vector>
+
 #include "apps/media/services/media_service.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/src/framework/types/stream_type.h"

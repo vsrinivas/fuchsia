@@ -15,8 +15,8 @@ interface MediaSource {
   // status immediately.
   const uint64 kInitialStatus = 0;
 
-  // Gets the streams produced by this source.
-  GetStreams() => (array<MediaSourceStreamDescriptor> streams);
+  // Describes the source.
+  Describe() => (array<MediaType> stream_types);
 
   // Gets the packet producer for the specified stream.
   GetPacketProducer(uint32 stream_index, MediaPacketProducer& packet_producer);
@@ -27,26 +27,11 @@ interface MediaSource {
   GetStatus(uint64 version_last_seen)
       => (uint64 version, MediaSourceStatus status);
 
-  // Prepares the source.
-  Prepare() => ();
-
   // Flushes the source and downstream components.
   Flush() => ();
 
   // Seeks to the specified position, specified in nanoseconds.
   Seek(int64 position) => ();
-};
-
-// Describes a media stream produced by a source.
-struct MediaSourceStreamDescriptor {
-  // Zero-based index.
-  uint32 index;
-
-  // Media type of the stream after conversion.
-  MediaType media_type;
-
-  // Media type of the stream before conversion (as produced by the demux).
-  MediaType original_media_type;
 };
 
 // Describes the status of the media source.

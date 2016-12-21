@@ -51,8 +51,6 @@ std::ostream& operator<<(std::ostream& os,
                          const SubpictureMediaTypeDetailsPtr& value);
 std::ostream& operator<<(std::ostream& os,
                          const SubpictureMediaTypeSetDetailsPtr& value);
-std::ostream& operator<<(std::ostream& os,
-                         const MediaSourceStreamDescriptorPtr& value);
 std::ostream& operator<<(std::ostream& os, const TimelineTransformPtr& value);
 
 std::ostream& operator<<(std::ostream& os, const network::HttpHeaderPtr& value);
