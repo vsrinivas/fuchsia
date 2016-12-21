@@ -69,8 +69,10 @@ std::ostream& operator<<(std::ostream& os, Range<bool> value);
 
 std::ostream& operator<<(std::ostream& os,
                          const std::unique_ptr<StreamType>& value);
+std::ostream& operator<<(std::ostream& os, const StreamType& value);
 std::ostream& operator<<(std::ostream& os,
                          const std::unique_ptr<StreamTypeSet>& value);
+std::ostream& operator<<(std::ostream& os, const StreamTypeSet& value);
 std::ostream& operator<<(
     std::ostream& os,
     const std::unique_ptr<std::vector<std::unique_ptr<StreamType>>>& value);
