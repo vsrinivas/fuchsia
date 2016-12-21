@@ -5,6 +5,7 @@
 #pragma once
 
 #include <magenta/types.h>
+#include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -39,7 +40,7 @@ typedef struct mxio_ops {
     void (*wait_begin)(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* signals);
     void (*wait_end)(mxio_t* io, mx_signals_t signals, uint32_t* events);
     ssize_t (*ioctl)(mxio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf, size_t out_len);
-    ssize_t (*posix_ioctl)(mxio_t* io, int req, void* arg);
+    ssize_t (*posix_ioctl)(mxio_t* io, int req, va_list va);
 } mxio_ops_t;
 
 // mxio_t flags
@@ -115,7 +116,7 @@ mx_status_t mxio_close(mxio_t* io);
 // wraps a socket with an mxio_t using simple io
 mxio_t* mxio_pipe_create(mx_handle_t h);
 
-mx_status_t mxio_pipe_posix_ioctl(mxio_t* io, int req, void* arg);
+mx_status_t mxio_pipe_posix_ioctl(mxio_t* io, int req, va_list va);
 
 // wraps a vmo, offset, length with an mxio_t providing a readonly file
 mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len);
@@ -148,7 +149,7 @@ mxio_t* mxio_waitable_create(mx_handle_t h, mx_signals_t signals_in, mx_signals_
 void mxio_socket_set_stream_ops(mxio_t* io);
 void mxio_socket_set_dgram_ops(mxio_t* io);
 
-mx_status_t mxio_socket_posix_ioctl(mxio_t* io, int req, void* arg);
+mx_status_t mxio_socket_posix_ioctl(mxio_t* io, int req, va_list va);
 mx_status_t mxio_socket_shutdown(mxio_t* io, int how);
 
 // unsupported / do-nothing hooks shared by implementations
@@ -167,7 +168,7 @@ ssize_t mxio_default_ioctl(mxio_t* io, uint32_t op, const void* in_buf, size_t i
 void mxio_default_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals);
 void mxio_default_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events);
 mx_status_t mxio_default_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* types);
-ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, void* arg);
+ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, va_list va);
 
 void __mxio_startup_handles_init(uint32_t num, mx_handle_t handles[],
                                  uint32_t handle_info[])

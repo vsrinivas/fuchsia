@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdarg.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -71,7 +72,7 @@ void mxio_default_wait_begin(mxio_t* io, uint32_t events,
 void mxio_default_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
 }
 
-ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, void* arg) {
+ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, va_list va) {
     return ERR_NOT_SUPPORTED;
 }
 

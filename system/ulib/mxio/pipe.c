@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits.h>
+#include <stdarg.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -148,7 +150,7 @@ static mx_status_t mx_pipe_unwrap(mxio_t* io, mx_handle_t* handles, uint32_t* ty
     return 1;
 }
 
-static ssize_t mx_pipe_posix_ioctl(mxio_t* io, int req, void* arg) {
+static ssize_t mx_pipe_posix_ioctl(mxio_t* io, int req, va_list va) {
     mx_pipe_t* p = (void*)io;
     switch (req) {
     case FIONREAD: {
@@ -157,7 +159,11 @@ static ssize_t mx_pipe_posix_ioctl(mxio_t* io, int req, void* arg) {
         if ((r = mx_socket_read(p->h, 0, NULL, 0, &avail)) < 0) {
             return r;
         }
-        *(int*)arg = avail;
+        if (avail > INT_MAX) {
+            avail = INT_MAX;
+        }
+        int* actual = va_arg(va, int*);
+        *actual = avail;
         return NO_ERROR;
     }
     default:

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <limits.h>
 #include <stdatomic.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -1090,7 +1091,7 @@ static void mxsio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) 
     *_events = events;
 }
 
-static ssize_t mxsio_posix_ioctl_stream(mxio_t* io, int req, void* arg) {
+static ssize_t mxsio_posix_ioctl_stream(mxio_t* io, int req, va_list va) {
     mxrio_t* rio = (mxrio_t*)io;
     switch (req) {
     case FIONREAD: {
@@ -1099,7 +1100,11 @@ static ssize_t mxsio_posix_ioctl_stream(mxio_t* io, int req, void* arg) {
         if ((r = mx_socket_read(rio->h2, 0, NULL, 0, &avail)) < 0) {
             return r;
         }
-        *(int*)arg = avail;
+        if (avail > INT_MAX) {
+            avail = INT_MAX;
+        }
+        int* actual = va_arg(va, int*);
+        *actual = avail;
         return NO_ERROR;
     }
     default:

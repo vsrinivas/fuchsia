@@ -139,4 +139,3 @@ mxio_t* mxio_vmofile_create(mx_handle_t h, mx_off_t off, mx_off_t len) {
     mtx_init(&vf->lock, mtx_plain);
     return &vf->io;
 }
-

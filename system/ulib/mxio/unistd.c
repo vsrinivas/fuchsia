@@ -1494,9 +1494,8 @@ int ioctl(int fd, int req, ...) {
     }
     va_list ap;
     va_start(ap, req);
-    void* arg = va_arg(ap, void*);
+    ssize_t r = io->ops->posix_ioctl(io, req, ap);
     va_end(ap);
-    ssize_t r = io->ops->posix_ioctl(io, req, arg);
     mxio_release(io);
     return STATUS(r);
 }
