@@ -165,7 +165,7 @@ void AudioRendererImpl::GetSupportedMediaTypes(
 
 void AudioRendererImpl::SetMediaType(MediaTypePtr media_type) {
   // Are we already configured?
-  if (pipe_.is_bound()) {
+  if (format_) {
     FTL_LOG(ERROR) << "Attempting to reconfigure a configured audio renderer.";
     Shutdown();
     return;
