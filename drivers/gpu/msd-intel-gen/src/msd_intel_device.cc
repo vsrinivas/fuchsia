@@ -370,6 +370,8 @@ int MsdIntelDevice::DeviceThreadLoop()
 
     lock.Release();
 
+    render_engine_cs_->Reset();
+
     DLOG("DeviceThreadLoop exit");
     return 0;
 }

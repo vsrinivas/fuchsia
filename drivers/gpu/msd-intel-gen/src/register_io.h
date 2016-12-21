@@ -8,57 +8,55 @@
 #include "magma_util/dlog.h"
 #include "platform_mmio.h"
 #include <memory>
-#include <vector>
 
-// RegisterIo wraps mmio access and adds forcewake logic.
+// RegisterIo wraps mmio access.
 class RegisterIo {
 public:
     RegisterIo(std::unique_ptr<magma::PlatformMmio> mmio);
 
     void Write32(uint32_t offset, uint32_t val)
     {
-        if (trace_enable_)
-            trace_.emplace_back(Operation{Operation::WRITE32, offset, val});
         mmio_->Write32(val, offset);
+        if (hook_)
+            hook_->Write32(offset, val);
     }
 
     uint32_t Read32(uint32_t offset)
     {
         uint32_t val = mmio_->Read32(offset);
-        if (trace_enable_)
-            trace_.emplace_back(Operation{Operation::READ32, offset, val});
+        if (hook_)
+            hook_->Read32(offset, val);
         return val;
     }
 
     uint64_t Read64(uint32_t offset)
     {
         uint64_t val = mmio_->Read64(offset);
-        if (trace_enable_)
-            trace_.emplace_back(Operation{Operation::READ64, offset, val});
+        if (hook_)
+            hook_->Read64(offset, val);
         return val;
     }
 
     magma::PlatformMmio* mmio() { return mmio_.get(); }
 
-    struct Operation {
-        enum Type { WRITE32, READ32, READ64 };
-        Type type;
-        uint32_t offset;
-        uint64_t val;
+    class Hook {
+    public:
+        virtual void Write32(uint32_t offset, uint32_t val) = 0;
+        virtual void Read32(uint32_t offset, uint32_t val) = 0;
+        virtual void Read64(uint32_t offset, uint64_t val) = 0;
     };
 
-    std::vector<Operation>& trace() { return trace_; }
-
-    void enable_trace(bool enable)
+    void InstallHook(std::unique_ptr<Hook> hook)
     {
-        DLOG("enable_trace: %d", enable);
-        trace_enable_ = enable;
+        DASSERT(!hook_);
+        hook_ = std::move(hook);
     }
+
+    Hook* hook() { return hook_.get(); }
 
 private:
     std::unique_ptr<magma::PlatformMmio> mmio_;
-    std::vector<Operation> trace_;
-    bool trace_enable_ = false;
+    std::unique_ptr<Hook> hook_;
 };
 
 #endif // REGISTER_IO_H

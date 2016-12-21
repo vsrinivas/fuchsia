@@ -7,6 +7,7 @@
 #include "instructions.h"
 #include "mock/mock_address_space.h"
 #include "mock/mock_mmio.h"
+#include "register_tracer.h"
 #include "registers.h"
 #include "render_init_batch.h"
 #include "sequencer.h"
@@ -181,7 +182,7 @@ public:
 
         uint32_t tail_start = ringbuffer->tail();
 
-        register_io_->enable_trace(true);
+        register_io_->InstallHook(std::make_unique<RegisterTracer>());
 
         EXPECT_TRUE(render_cs->RenderInit(context_, std::move(init_batch), address_space_));
 
@@ -235,11 +236,11 @@ public:
         std::vector<uint32_t> submitport_writes{0, 0, upper_32_bits, lower_32_bits};
         uint32_t write = 0;
 
-        for (auto operation : register_io_->trace()) {
+        for (auto operation : static_cast<RegisterTracer*>(register_io_->hook())->trace()) {
             if (operation.offset ==
                 EngineCommandStreamer::kRenderEngineMmioBase +
                     registers::ExeclistSubmitPort::kSubmitOffset) {
-                EXPECT_EQ(operation.type, RegisterIo::Operation::WRITE32);
+                EXPECT_EQ(operation.type, RegisterTracer::Operation::WRITE32);
                 ASSERT_LT(write, submitport_writes.size());
                 EXPECT_EQ(operation.val, submitport_writes[write++]);
             }
@@ -247,6 +248,45 @@ public:
         EXPECT_EQ(write, submitport_writes.size());
 
         EXPECT_TRUE(context_->Unmap(address_space_->id(), engine_cs_->id()));
+    }
+
+    void Reset()
+    {
+        class Hook : public RegisterIo::Hook {
+        public:
+            Hook(RegisterIo* register_io) : register_io_(register_io) {}
+
+            void Write32(uint32_t offset, uint32_t val) override
+            {
+                switch (offset) {
+                case EngineCommandStreamer::kRenderEngineMmioBase +
+                    registers::ResetControl::kOffset:
+                    // set ready for reset bit
+                    if (val & 0x00010001) {
+                        val = register_io_->mmio()->Read32(offset) | 0x2;
+                        register_io_->mmio()->Write32(val, offset);
+                    }
+                    break;
+                case registers::GraphicsDeviceResetControl::kOffset:
+                    // clear the render reset bit
+                    if (val & 0x2) {
+                        val = register_io_->mmio()->Read32(offset) & ~0x2;
+                        register_io_->mmio()->Write32(val, offset);
+                    }
+                    break;
+                }
+            }
+
+            void Read32(uint32_t offset, uint32_t val) override {}
+            void Read64(uint32_t offset, uint64_t val) override {}
+
+        private:
+            RegisterIo* register_io_;
+        };
+
+        register_io_->InstallHook(std::make_unique<Hook>(register_io_.get()));
+
+        EXPECT_TRUE(engine_cs_->Reset());
     }
 
 private:
@@ -306,4 +346,10 @@ TEST(RenderEngineCommandStreamer, RenderInitGen9)
 {
     TestEngineCommandStreamer test;
     test.RenderInit();
+}
+
+TEST(RenderEngineCommandStreamer, Reset)
+{
+    TestEngineCommandStreamer test;
+    test.Reset();
 }

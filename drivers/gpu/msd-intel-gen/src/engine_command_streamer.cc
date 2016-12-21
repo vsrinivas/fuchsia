@@ -361,6 +361,49 @@ uint64_t EngineCommandStreamer::GetActiveHeadPointer()
     return registers::ActiveHeadPointer::read(register_io(), mmio_base_);
 }
 
+bool EngineCommandStreamer::Reset()
+{
+    registers::GraphicsDeviceResetControl::Engine engine;
+
+    switch (id()) {
+    case RENDER_COMMAND_STREAMER:
+        engine = registers::GraphicsDeviceResetControl::RENDER_ENGINE;
+        break;
+    default:
+        return DRETF(false, "Reset for engine id %d not implemented\n", id());
+    }
+
+    registers::ResetControl::request(register_io(), mmio_base());
+
+    constexpr uint32_t kRetryMs = 10;
+    constexpr uint32_t kRetryTimeoutMs = 100;
+
+    auto start = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed;
+
+    do {
+        if (registers::ResetControl::ready_for_reset(register_io(), mmio_base())) {
+            registers::GraphicsDeviceResetControl::initiate_reset(register_io(), engine);
+
+            start = std::chrono::high_resolution_clock::now();
+            do {
+                if (registers::GraphicsDeviceResetControl::is_reset_complete(register_io(), engine))
+                    return true;
+                magma::msleep(kRetryMs);
+                elapsed = std::chrono::high_resolution_clock::now() - start;
+
+            } while (elapsed.count() < kRetryTimeoutMs);
+
+            return DRETF(false, "reset failed to complete");
+        }
+        magma::msleep(kRetryMs);
+        elapsed = std::chrono::high_resolution_clock::now() - start;
+
+    } while (elapsed.count() < kRetryTimeoutMs);
+
+    return DRETF(false, "Ready for reset failed");
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<RenderInitBatch>

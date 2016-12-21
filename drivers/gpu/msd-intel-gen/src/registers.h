@@ -383,6 +383,51 @@ public:
     }
 };
 
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.741
+class ResetControl {
+public:
+    static constexpr uint32_t kOffset = 0xd0;
+    static constexpr uint32_t kRequestResetBit = 0;
+    static constexpr uint32_t kReadyForResetBit = 1;
+
+    static void request(RegisterIo* register_io, uint64_t mmio_base)
+    {
+        register_io->Write32(mmio_base + kOffset,
+                             ((1 << kRequestResetBit) << 16) | (1 << kRequestResetBit));
+    }
+
+    static bool ready_for_reset(RegisterIo* register_io, uint64_t mmio_base)
+    {
+        return register_io->Read32(mmio_base + kOffset) & (1 << kReadyForResetBit);
+    }
+};
+
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.755
+class GraphicsDeviceResetControl {
+public:
+    enum Engine { RENDER_ENGINE };
+
+    static constexpr uint32_t kOffset = 0x941C;
+    static constexpr uint32_t kRenderResetBit = 1;
+
+    static void initiate_reset(RegisterIo* register_io, Engine engine)
+    {
+        switch (engine) {
+        case RENDER_ENGINE:
+            register_io->Write32(kOffset, (1 << kRenderResetBit));
+            break;
+        }
+    }
+
+    static bool is_reset_complete(RegisterIo* register_io, Engine engine)
+    {
+        switch (engine) {
+        case RENDER_ENGINE:
+            return (register_io->Read32(kOffset) & (1 << kRenderResetBit)) == 0;
+        }
+    }
+};
+
 } // namespace
 
 #endif // REGISTERS_H

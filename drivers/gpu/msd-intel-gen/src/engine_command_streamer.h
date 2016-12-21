@@ -45,6 +45,8 @@ public:
 
     virtual bool WaitIdle() = 0;
 
+    virtual bool Reset();
+
 protected:
     bool SubmitContext(MsdIntelContext* context, uint32_t tail);
     bool UpdateContext(MsdIntelContext* context, uint32_t tail);
