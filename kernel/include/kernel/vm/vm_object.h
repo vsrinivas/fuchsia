@@ -72,7 +72,7 @@ public:
         return ERR_NOT_SUPPORTED;
     }
 
-    virtual void Dump(uint depth = 0, bool page_dump = false) {}
+    virtual void Dump(uint depth, bool verbose) = 0;
 
 protected:
     // private constructor (use Create())
@@ -153,7 +153,7 @@ public:
 
     status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
 
-    void Dump(uint depth = 0, bool page_dump = false) override;
+    void Dump(uint depth, bool verbose) override;
 
     vm_page_t* GetPageLocked(uint64_t offset) override;
     vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) override;
@@ -200,7 +200,7 @@ public:
 
     status_t Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t>, size_t) override;
 
-    void Dump(uint depth = 0, bool page_dump = false) override;
+    void Dump(uint depth, bool verbose) override;
 
     status_t GetPageLocked(uint64_t offset, paddr_t* pa) override;
     status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) override;

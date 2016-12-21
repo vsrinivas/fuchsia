@@ -468,15 +468,15 @@ vaddr_t VmAddressRegion::AllocSpotLocked(vaddr_t base, size_t size, uint8_t alig
     return -1;
 }
 
-void VmAddressRegion::Dump(uint depth) const {
+void VmAddressRegion::Dump(uint depth, bool verbose) const {
     DEBUG_ASSERT(magic_ == kMagic);
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
-    printf("region %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR " size %#zx\n", this,
-           ref_count_debug(), name_, base_, base_ + size_ - 1, size_);
+    printf("vmar %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx ref %d '%s'\n", this,
+           base_, base_ + size_ - 1, size_, ref_count_debug(), name_);
     for (const auto& child : subregions_) {
-        child.Dump(depth + 1);
+        child.Dump(depth + 1, verbose);
     }
 }
 

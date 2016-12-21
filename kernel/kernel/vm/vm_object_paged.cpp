@@ -73,7 +73,7 @@ mxtl::RefPtr<VmObject> VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t 
     return vmo;
 }
 
-void VmObjectPaged::Dump(uint depth, bool page_dump) {
+void VmObjectPaged::Dump(uint depth, bool verbose) {
     if (magic_ != MAGIC) {
         printf("VmObjectPaged at %p has bad magic\n", this);
         return;
@@ -87,15 +87,14 @@ void VmObjectPaged::Dump(uint depth, bool page_dump) {
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
-    printf("object %p: ref %d size %#" PRIx64 ", %zu allocated pages\n", this, ref_count_debug(), size_,
-           count);
+    printf("object %p size %#" PRIx64 " pages %zu ref %d\n", this, size_, count, ref_count_debug());
 
-    if (page_dump) {
+    if (verbose) {
         auto f = [depth](const auto p, uint64_t offset) {
-            for (uint i = 0; i < depth; ++i) {
+            for (uint i = 0; i < depth + 1; ++i) {
                 printf("  ");
             }
-            printf("  offset %#" PRIx64 " page %p paddr %#" PRIxPTR "\n", offset, p, vm_page_to_paddr(p));
+            printf("offset %#" PRIx64 " page %p paddr %#" PRIxPTR "\n", offset, p, vm_page_to_paddr(p));
         };
         page_list_.ForEveryPage(f);
     }

@@ -98,7 +98,7 @@ public:
     vaddr_t GetKey() const { return base(); }
 
     // Dump debug info
-    virtual void Dump(uint depth = 0) const = 0;
+    virtual void Dump(uint depth, bool verbose) const = 0;
 
 protected:
     // friend VmAddressRegion so it can access DestroyLocked
@@ -202,7 +202,7 @@ public:
 
     bool is_mapping() const override { return false; }
 
-    void Dump(uint depth) const override;
+    void Dump(uint depth, bool verbose) const override;
     status_t PageFault(vaddr_t va, uint pf_flags) override;
 
 protected:
@@ -294,7 +294,7 @@ public:
 
     bool is_mapping() const override { return true; }
 
-    void Dump(uint depth) const override;
+    void Dump(uint depth, bool verbose) const override;
     status_t PageFault(vaddr_t va, uint pf_flags) override;
 
 protected:

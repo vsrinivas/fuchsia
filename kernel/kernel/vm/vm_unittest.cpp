@@ -326,7 +326,7 @@ static bool vmm_tests(void* context) {
     }
 
     unittest_printf("verify there are no test aspaces left around\n");
-    DumpAllAspaces();
+    DumpAllAspaces(true);
 
     unittest_printf("done with vmm tests\n");
     END_TEST;

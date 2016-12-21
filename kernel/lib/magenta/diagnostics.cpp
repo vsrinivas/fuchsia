@@ -241,7 +241,7 @@ void DumpProcessAddressSpace(mx_koid_t id) {
         return;
     }
 
-    pd->aspace()->Dump();
+    pd->aspace()->Dump(true);
 }
 
 static size_t mwd_limit = 32 * 256;

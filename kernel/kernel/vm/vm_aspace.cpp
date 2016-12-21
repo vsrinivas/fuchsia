@@ -492,22 +492,22 @@ status_t VmAspace::PageFault(vaddr_t va, uint flags) {
     return root_vmar_->PageFault(va, flags);
 }
 
-void VmAspace::Dump() const {
+void VmAspace::Dump(bool verbose) const {
     DEBUG_ASSERT(magic_ == MAGIC);
-    printf("aspace %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR " size %#zx flags %#x\n", this,
-           ref_count_debug(), name_, base_, base_ + size_ - 1, size_, flags_);
+    printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx fl %#x ref %d '%s'\n", this,
+           base_, base_ + size_ - 1, size_, flags_, ref_count_debug(), name_);
 
-    printf("regions:\n");
     AutoLock a(lock_);
 
-    root_vmar_->Dump(1);
+    if (verbose)
+        root_vmar_->Dump(1, verbose);
 }
 
-void DumpAllAspaces() {
+void DumpAllAspaces(bool verbose) {
     AutoLock a(aspace_list_lock);
 
     for (const auto& a : aspaces)
-        a.Dump();
+        a.Dump(verbose);
 }
 
 size_t VmAspace::AllocatedPages() const {

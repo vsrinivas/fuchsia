@@ -44,23 +44,24 @@ size_t VmMapping::AllocatedPagesLocked() const {
     return object_->AllocatedPages();
 }
 
-void VmMapping::Dump(uint depth) const {
+void VmMapping::Dump(uint depth, bool verbose) const {
     DEBUG_ASSERT(magic_ == kMagic);
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
-    printf("mapping %p: ref %d name '%s' range %#" PRIxPTR " - %#" PRIxPTR
-           " size %#zx mmu_flags %#x vmo %p offset %#" PRIx64 "\n",
-           this, ref_count_debug(), name_, base_, base_ + size_ - 1, size_, arch_mmu_flags_,
-           object_.get(), object_offset_);
-    object_->Dump(depth + 1);
+    printf("map %p [%#" PRIxPTR " %#" PRIxPTR
+           "] sz %#zx mmufl %#x vmo %p off %#" PRIx64 " ref %d '%s'\n",
+           this, base_, base_ + size_ - 1, size_, arch_mmu_flags_,
+           object_.get(), object_offset_, ref_count_debug(), name_);
+    if (verbose)
+        object_->Dump(depth + 1, false);
 }
 
 status_t VmMapping::Protect(uint arch_mmu_flags) {
     DEBUG_ASSERT(magic_ == kMagic);
-    LTRACEF("%p %s %#" PRIxPTR " %#x %#x\n", this, name_, base_, flags_, arch_mmu_flags);
+LTRACEF("%p %s %#" PRIxPTR " %#x %#x\n", this, name_, base_, flags_, arch_mmu_flags);
 
-    AutoLock guard(aspace_->lock());
+AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
         return ERR_BAD_STATE;
     }

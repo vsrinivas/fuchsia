@@ -220,7 +220,7 @@ static int cmd_vmm(int argc, const cmd_args* argv) {
         test_aspace = vmm_get_kernel_aspace();
 
     if (!strcmp(argv[1].str, "aspaces")) {
-        DumpAllAspaces();
+        DumpAllAspaces(true);
     } else if (!strcmp(argv[1].str, "alloc")) {
         if (argc < 3)
             goto notenoughargs;

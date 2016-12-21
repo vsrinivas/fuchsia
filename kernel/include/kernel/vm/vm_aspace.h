@@ -56,7 +56,7 @@ public:
     // set the per thread aspace pointer to this
     void AttachToThread(thread_t* t);
 
-    void Dump() const;
+    void Dump(bool verbose) const;
 
     size_t AllocatedPages() const;
 
@@ -131,7 +131,7 @@ private:
     friend void vm_init_preheap(uint level);
 };
 
-void DumpAllAspaces();
+void DumpAllAspaces(bool verbose);
 
 // hack to convert from vmm_aspace_t to VmAspace
 static VmAspace* vmm_aspace_to_obj(vmm_aspace_t* aspace) {
