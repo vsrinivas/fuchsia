@@ -239,13 +239,15 @@ class CreateStoryCall : public Operation {
         story_info->extra.mark_non_null();
 
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
-          StoryControllerImpl controller(std::move(story_data_),
-                                         story_provider_impl_);
-          // TODO(alhaad): The newly created story might miss its root link
-          // data. We should wait here for Sync().
-          controller.AddLinkData(std::move(root_docs_));
-          result_(story_id_);
-          Done();
+          controller_ = std::make_unique<StoryControllerImpl>(
+              std::move(story_data_), story_provider_impl_);
+
+          // We call stop on the controller to ensure that root data has been
+          // written before this operations is done.
+          controller_->AddLinkDataAndStop(std::move(root_docs_), [this] {
+            result_(story_id_);
+            Done();
+          });
         });
       });
     });
@@ -262,6 +264,7 @@ class CreateStoryCall : public Operation {
 
   ledger::PagePtr story_page_;
   StoryDataPtr story_data_;
+  std::unique_ptr<StoryControllerImpl> controller_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };

@@ -141,7 +141,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   OperationQueue operation_queue_;
 
   // This is a container of all Operations that can be run concurrently.
-  // TODO(alhaad): Instead of separating OperstionQueue and OperationCollection
+  // TODO(alhaad): Instead of separating OperationQueue and OperationCollection
   // it would be better for understanding and performance to simply have a
   // OperationQueue per story_id.
   OperationCollection operation_collection_;
