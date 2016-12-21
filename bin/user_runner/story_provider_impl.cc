@@ -241,6 +241,8 @@ class CreateStoryCall : public Operation {
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
           StoryControllerImpl controller(std::move(story_data_),
                                          story_provider_impl_);
+          // TODO(alhaad): The newly created story might miss its root link
+          // data. We should wait here for Sync().
           controller.AddLinkData(std::move(root_docs_));
           result_(story_id_);
           Done();
@@ -267,22 +269,20 @@ class CreateStoryCall : public Operation {
 class DeleteStoryCall : public Operation {
  public:
   using Result = StoryProviderImpl::DeleteStoryCallback;
-  using StoryIds = std::unordered_set<std::string>*;
+  using StoryIdSet = std::unordered_set<std::string>;
   using ControllerMap =
-      std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>*;
-  using PendingDeletion = std::pair<std::string, DeleteStoryCall*>*;
+      std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>;
+  using PendingDeletion = std::pair<std::string, DeleteStoryCall*>;
 
   DeleteStoryCall(OperationContainer* const container,
                   ledger::Ledger* const ledger,
-                  bool is_locally_triggered,
                   const fidl::String& story_id,
-                  StoryIds story_ids,
-                  ControllerMap story_controllers,
-                  PendingDeletion pending_deletion,
+                  StoryIdSet* const story_ids,
+                  ControllerMap* const story_controllers,
+                  PendingDeletion* const pending_deletion,
                   Result result)
       : Operation(container),
         ledger_(ledger),
-        is_locally_triggered_(is_locally_triggered),
         story_id_(story_id),
         story_ids_(story_ids),
         story_controllers_(story_controllers),
@@ -292,7 +292,7 @@ class DeleteStoryCall : public Operation {
   }
 
   void Run() override {
-    if (!is_locally_triggered_) {
+    if (pending_deletion_ == nullptr) {
       Complete();
       return;
     }
@@ -320,6 +320,8 @@ class DeleteStoryCall : public Operation {
         }
       });
     });
+
+    // Complete() would be trigerred by PageWatcher::OnChange().
   }
 
   void Complete() {
@@ -343,11 +345,10 @@ class DeleteStoryCall : public Operation {
  private:
   ledger::Ledger* const ledger_;  // not owned
   ledger::PagePtr root_page_;
-  bool is_locally_triggered_;
   const fidl::String story_id_;
-  StoryIds story_ids_;
-  ControllerMap story_controllers_;
-  PendingDeletion pending_deletion_;
+  StoryIdSet* const story_ids_;
+  ControllerMap* const  story_controllers_;
+  PendingDeletion* const pending_deletion_;
   Result result_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DeleteStoryCall);
@@ -356,12 +357,12 @@ class DeleteStoryCall : public Operation {
 class GetControllerCall : public Operation {
  public:
   using ControllerMap =
-      std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>*;
+      std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>;
 
   GetControllerCall(OperationContainer* const container,
                     ledger::Ledger* const ledger,
                     StoryProviderImpl* const story_provider_impl,
-                    ControllerMap story_controllers,
+                    ControllerMap* const story_controllers,
                     const fidl::String& story_id,
                     fidl::InterfaceRequest<StoryController> request)
       : Operation(container),
@@ -410,7 +411,7 @@ class GetControllerCall : public Operation {
  private:
   ledger::Ledger* const ledger_;                  // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
-  ControllerMap story_controllers_;
+  ControllerMap* const story_controllers_;
   const fidl::String story_id_;
   fidl::InterfaceRequest<StoryController> request_;
 
@@ -648,9 +649,8 @@ void StoryProviderImpl::CreateStoryWithInfo(
 // |StoryProvider|
 void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
                                     const DeleteStoryCallback& callback) {
-  new DeleteStoryCall(&operation_queue_, ledger_.get(), true, story_id,
-                      &story_ids_, &story_controllers_, &pending_deletion_,
-                      callback);
+  new DeleteStoryCall(&operation_queue_, ledger_.get(), story_id, &story_ids_,
+                      &story_controllers_, &pending_deletion_, callback);
 }
 
 // |StoryProvider|
@@ -713,13 +713,11 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
     });
 
     if (pending_deletion_.first == story_id) {
-      // It is okay to do a static_cast here because we know at compile time
-      // that this has to be a DeleteStoryCall*.
-      static_cast<DeleteStoryCall*>(pending_deletion_.second)->Complete();
+      pending_deletion_.second->Complete();
     } else {
-      new DeleteStoryCall(&operation_queue_, ledger_.get(), false, story_id,
-                          &story_ids_, &story_controllers_, &pending_deletion_,
-                          [] {});
+      new DeleteStoryCall(&operation_queue_, ledger_.get(), story_id,
+                          &story_ids_, &story_controllers_,
+                          nullptr  /* pending_deletion */, [] {});
     }
   }
   cb(nullptr);

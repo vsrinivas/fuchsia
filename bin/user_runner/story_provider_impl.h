@@ -132,15 +132,18 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   std::unordered_set<std::string> story_ids_;
 
   // This is a container of all operations that are currently enqueued to run in
-  // a FIFO manner. All operations exposed via |StoryProvider| interface is
+  // a FIFO manner. All operations exposed via |StoryProvider| interface are
   // queued here.
   //
-  // The advantage of doing this is that if an operations consists of multiple
+  // The advantage of doing this is that if an operation consists of multiple
   // asynchronous calls then no state needs to be maintained for incomplete /
   // pending operations.
   OperationQueue operation_queue_;
 
   // This is a container of all Operations that can be run concurrently.
+  // TODO(alhaad): Instead of separating OperstionQueue and OperationCollection
+  // it would be better for understanding and performance to simply have a
+  // OperationQueue per story_id.
   OperationCollection operation_collection_;
 
   std::shared_ptr<Storage> storage_;
@@ -156,7 +159,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // operation can be marked as done.
   //
   // Note that delete operations taking place on remote devices can still
-  // trigger a new delete operations.
+  // trigger a new delete operation.
   std::pair<std::string, DeleteStoryCall*> pending_deletion_;
 
   ledger::LedgerRepositoryPtr ledger_repository_;
