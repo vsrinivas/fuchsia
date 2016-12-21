@@ -2364,6 +2364,14 @@ static void demo_init_vk(struct demo *demo) {
                     VK_KHR_XCB_SURFACE_EXTENSION_NAME;
             }
 #endif
+#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+            if (!strcmp(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
+                        instance_extensions[i].extensionName)) {
+                platformSurfaceExtFound = 1;
+                demo->extension_names[demo->enabled_extension_count++] =
+                    VK_KHR_MAGMA_SURFACE_EXTENSION_NAME;
+            }
+#endif
             if (!strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
                         instance_extensions[i].extensionName)) {
                 if (demo->validate) {
@@ -2390,6 +2398,15 @@ static void demo_init_vk(struct demo *demo) {
 #if defined(VK_USE_PLATFORM_XCB_KHR)
         ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
                  "the " VK_KHR_XCB_SURFACE_EXTENSION_NAME
+                 " extension.\n\nDo you have a compatible "
+                 "Vulkan installable client driver (ICD) installed?\nPlease "
+                 "look at the Getting Started guide for additional "
+                 "information.\n",
+                 "vkCreateInstance Failure");
+#endif
+#if defined(VK_USE_PLATFORM_MAGMA_KHR)
+        ERR_EXIT("vkEnumerateInstanceExtensionProperties failed to find "
+                 "the " VK_KHR_MAGMA_SURFACE_EXTENSION_NAME
                  " extension.\n\nDo you have a compatible "
                  "Vulkan installable client driver (ICD) installed?\nPlease "
                  "look at the Getting Started guide for additional "
