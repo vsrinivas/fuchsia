@@ -43,7 +43,7 @@ class ResolverTest {
         &modules));
     FTL_CHECK(1 == modules.size());
     FTL_CHECK("https://www.example.com/hello" == modules[0]->component_id);
-    FTL_LOG("Test passed.");
+    FTL_LOG(INFO) << "Test passed.";
   }
 
  private:
