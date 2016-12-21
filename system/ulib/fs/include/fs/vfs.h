@@ -23,6 +23,8 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
 mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
                      const char* path, const char** pathout);
 
+mx_status_t vfs_unlink(vnode_t* vn, const char* path, size_t len);
+
 mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath,
                        mx_handle_t rh);
 

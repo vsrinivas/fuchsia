@@ -294,12 +294,25 @@ static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const ch
 
     char dirpath[1024];
 
-    const char* name = strrchr(path, '/');
-    if (name == NULL) {
+    // Make 'path_end' the final index of the string without trailing '/' characters.
+    size_t path_end = strnlen(path, PATH_MAX - 1) - 1;
+    while ((path_end > 0) && (path[path_end] == '/')) {
+        path_end--;
+    }
+
+    // Find the last non-trailing '/'
+    const char* name = path + path_end;
+    while ((name > path) && (*name != '/')) {
+        name--;
+    }
+
+    if ((name == path) && (*name != '/')) {
+        // No '/' characters found
         name = path;
         dirpath[0] = '.';
         dirpath[1] = 0;
     } else {
+        // At least one '/' found
         if ((name - path) > (ptrdiff_t)(sizeof(dirpath) - 1)) {
             mxio_release(iodir);
             return ERR_INVALID_ARGS;

@@ -404,7 +404,7 @@ static mx_status_t _vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         return vn->ops->sync(vn);
     }
     case MXRIO_UNLINK:
-        return vn->ops->unlink(vn, (const char*)msg->data, len);
+        return vfs_unlink(vn, (const char*)msg->data, len);
     default:
         return ERR_NOT_SUPPORTED;
     }

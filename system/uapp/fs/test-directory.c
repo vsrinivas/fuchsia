@@ -142,10 +142,29 @@ void test_directory_coalesce(void) {
     test_directory_coalesce_helper(merge_with_both);
 }
 
+void test_directory_trailing_slash(void) {
+    printf("Test Directory Trailing Slash\n");
+
+    // We should be able to refer to directories with any number of trailing
+    // slashes, and still refer to the same entity.
+    TRY(mkdir("::a", 0755));
+    TRY(mkdir("::b/", 0755));
+    TRY(mkdir("::c//", 0755));
+    TRY(mkdir("::d///", 0755));
+
+    TRY(unlink("::a///"));
+    TRY(unlink("::b//"));
+    TRY(unlink("::c/"));
+    TRY(unlink("::d"));
+
+    // TODO(smklein): Demonstrate this behavior does *not* apply to files.
+}
+
 int test_directory(void) {
     test_directory_coalesce();
     test_directory_filename_max();
     test_directory_large();
+    test_directory_trailing_slash();
     // TODO(smklein): Run this when MemFS can execute it without causing an OOM
 #if 0
     test_directory_max();

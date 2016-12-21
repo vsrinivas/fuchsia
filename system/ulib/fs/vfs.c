@@ -22,6 +22,70 @@ struct vnode {
 
 uint32_t __trace_bits;
 
+// Trim a name before sending it to internal filesystem functions.
+// Trailing '/' characters imply that the name must refer to a directory.
+static mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, bool* dir_out) {
+    bool is_dir = false;
+    while ((len > 0) && name[len - 1] == '/') {
+        len--;
+        is_dir = true;
+    }
+
+    // 'name' should not contain paths consisting of exclusively '/' characters.
+    if (len == 0) {
+        return ERR_INVALID_ARGS;
+    }
+
+    *len_out = len;
+    *dir_out = is_dir;
+    return NO_ERROR;
+}
+
+static mx_status_t vfs_walk_remote(vnode_t* vn, vnode_t** out, const char* path,
+                                   const char** pathout, vnode_t* oldvn) {
+    trace(WALK, "vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
+    *out = vn;
+    *pathout = path;
+    if (oldvn == NULL) {
+        // returning our original vnode, need to upref it
+        vn_acquire(vn);
+    }
+    return vn->remote;
+}
+
+static mx_status_t vfs_walk_next(vnode_t* vn, vnode_t** out, const char* path,
+                                 const char* nextpath, const char** pathout, vnode_t** oldvn) {
+    // path has at least one additional segment
+    // traverse to the next segment
+    size_t len = nextpath - path;
+    nextpath++;
+    trace(WALK, "vfs_walk: vn=%p name='%.*s' nextpath='%s'\n", vn, (int)len, path, nextpath);
+    mx_status_t r = vn->ops->lookup(vn, out, path, len);
+    assert(r <= 0);
+    if (*oldvn) {
+        // release the old vnode, even if there was an error
+        vn_release(*oldvn);
+    }
+    if (r < 0) {
+        return r;
+    }
+    *oldvn = *out;
+    *pathout = nextpath;
+    return NO_ERROR;
+}
+
+static void vfs_walk_final(vnode_t* vn, vnode_t** out, const char* path, const char** pathout,
+                           vnode_t* oldvn) {
+    // final path segment, we're done here
+    trace(WALK, "vfs_walk: vn=%p name='%s' (local)\n", vn, path);
+    if (oldvn == NULL) {
+        // returning our original vnode, need to upref it
+        vn_acquire(vn);
+    }
+    *out = vn;
+    *pathout = path;
+}
+
 // Starting at vnode vn, walk the tree described by the path string,
 // until either there is only one path segment remaining in the string
 // or we encounter a vnode that represents a remote filesystem
@@ -31,9 +95,7 @@ uint32_t __trace_bits;
 mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
                      const char* path, const char** pathout) {
     vnode_t* oldvn = NULL;
-    const char* nextpath;
     mx_status_t r;
-    size_t len;
 
     for (;;) {
         while (path[0] == '/') {
@@ -47,40 +109,27 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
         if ((vn->remote > 0) && (!(vn->flags & V_FLAG_DEVICE))) {
             // remote filesystem mount, caller must resolve
             // devices are different, so ignore them even though they can have vn->remote
-            trace(WALK, "vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
-            *out = vn;
-            *pathout = path;
-            if (oldvn == NULL) {
-                // returning our original vnode, need to upref it
-                vn_acquire(vn);
+            return vfs_walk_remote(vn, out, path, pathout, oldvn);
+        }
+
+        char* nextpath = strchr(path, '/');
+        bool additional_segment = false;
+        if (nextpath != NULL) {
+            char* end = nextpath;
+            while (*end != '\0') {
+                if (*end != '/') {
+                    additional_segment = true;
+                    break;
+                }
+                end++;
             }
-            return vn->remote;
-        } else if ((nextpath = strchr(path, '/')) != NULL) {
-            // path has at least one additional segment
-            // traverse to the next segment
-            len = nextpath - path;
-            nextpath++;
-            trace(WALK, "vfs_walk: vn=%p name='%.*s' nextpath='%s'\n", vn, (int)len, path, nextpath);
-            r = vn->ops->lookup(vn, &vn, path, len);
-            assert(r <= 0);
-            if (oldvn) {
-                // release the old vnode, even if there was an error
-                vn_release(oldvn);
-            }
-            if (r < 0) {
+        }
+        if (additional_segment) {
+            if ((r = vfs_walk_next(vn, &vn, path, nextpath, &path, &oldvn)) != NO_ERROR) {
                 return r;
             }
-            oldvn = vn;
-            path = nextpath;
         } else {
-            // final path segment, we're done here
-            trace(WALK, "vfs_walk: vn=%p name='%s' (local)\n", vn, path);
-            if (oldvn == NULL) {
-                // returning our original vnode, need to upref it
-                vn_acquire(vn);
-            }
-            *out = vn;
-            *pathout = path;
+            vfs_walk_final(vn, out, path, pathout, oldvn);
             return NO_ERROR;
         }
     }
@@ -106,6 +155,13 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
 
     size_t len = strlen(path);
     vnode_t* vn;
+
+    // TODO(smklein): Enforce 'must_be_dir'
+    bool must_be_dir = false;
+    if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != NO_ERROR) {
+        return r;
+    }
+
     if (flags & O_CREAT) {
         if ((r = vndir->ops->create(vndir, &vn, path, len, mode)) < 0) {
             if ((r == ERR_ALREADY_EXISTS) && (!(flags & O_EXCL))) {
@@ -175,6 +231,16 @@ static mx_status_t txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
 }
 #endif
 
+mx_status_t vfs_unlink(vnode_t* vndir, const char* path, size_t len) {
+    bool must_be_dir;
+    // TODO(smklein): Use 'must_be_dir*' in the fs-specific unlink.
+    mx_status_t r;
+    if ((r = vfs_name_trim(path, len, &len, &must_be_dir)) != NO_ERROR) {
+        return r;
+    }
+    return vndir->ops->unlink(vndir, path, len);
+}
+
 mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
                        mx_handle_t rh) {
     vnode_t* oldparent, *newparent;
@@ -193,8 +259,18 @@ mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
 
     if (r_old == 0) {
         // Local filesystem
-        r = vndir->ops->rename(oldparent, newparent, oldpath, strlen(oldpath),
-                            newpath, strlen(newpath));
+        size_t oldlen = strlen(oldpath);
+        size_t newlen = strlen(newpath);
+        // TODO(smklein): Use 'must_be_dir*' in the fs-specific rename.
+        bool must_be_dir_old;
+        bool must_be_dir_new;
+        if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &must_be_dir_old)) != NO_ERROR) {
+            goto done;
+        }
+        if ((r = vfs_name_trim(newpath, newlen, &newlen, &must_be_dir_new)) != NO_ERROR) {
+            goto done;
+        }
+        r = vndir->ops->rename(oldparent, newparent, oldpath, oldlen, newpath, newlen);
     } else {
 #ifdef __Fuchsia__
         // Remote filesystem.
@@ -205,6 +281,7 @@ mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
 #endif
     }
 
+done:
     vn_release(oldparent);
     vn_release(newparent);
     return r;
