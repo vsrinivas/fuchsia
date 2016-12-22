@@ -1,7 +1,8 @@
 {
     "imports": [
         "boringssl",
-        "netstack"
+        "netstack",
+        "vulkan_loader_and_layers"
     ],
     "labels": [
         "//magma:magma",
