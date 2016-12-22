@@ -41,12 +41,6 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     // could miss wakeups.
     lock_.Acquire();
 
-    UserThread* t = UserThread::GetCurrent();
-    if (t->state() == UserThread::State::DYING || t->state() == UserThread::State::DEAD) {
-        lock_.Release();
-        return ERR_BAD_STATE;
-    }
-
     int value;
     status_t result = value_ptr.copy_from_user(&value);
     if (result != NO_ERROR) {
@@ -58,7 +52,8 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
         return ERR_BAD_STATE;
     }
 
-    node = t->futex_node();
+    UserThread* thread = UserThread::GetCurrent();
+    node = thread->futex_node();
     node->set_hash_key(futex_key);
     node->SetAsSingletonList();
 

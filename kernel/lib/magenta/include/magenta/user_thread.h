@@ -68,8 +68,6 @@ public:
     void get_name(char out_name[MX_MAX_NAME_LEN]);
     uint64_t runtime_ns() const { return thread_runtime(&thread_); }
 
-    State state() const { return state_; }
-
     status_t SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<ExceptionPort> eport);
     void ResetExceptionPort();
     mxtl::RefPtr<ExceptionPort> exception_port();
