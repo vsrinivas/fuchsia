@@ -191,6 +191,10 @@
           "bootfs_path": "benchmarks/data/252.eon/spectra.dat"
         },
         {
+          "file": "third_party/speccpu2000/252.eon/data/ref/input/materials",
+          "bootfs_path": "benchmarks/data/252.eon/materials"
+        },
+        {
           "file": "third_party/speccpu2000/255.vortex/data/ref/input/lendian1.raw",
           "bootfs_path": "benchmarks/data/255.vortex/lendian1.raw"
         },
