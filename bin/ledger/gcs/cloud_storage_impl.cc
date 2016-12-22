@@ -9,6 +9,7 @@
 #include <string>
 
 #include "apps/ledger/src/glue/socket/socket_pair.h"
+#include "apps/ledger/src/glue/socket/socket_writer.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/files/eintr_wrapper.h"
 #include "lib/ftl/files/file.h"
@@ -23,6 +24,7 @@
 #include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/socket/files.h"
 #include "lib/mtl/vmo/file.h"
+#include "lib/mtl/vmo/strings.h"
 
 namespace gcs {
 
@@ -77,17 +79,17 @@ void CloudStorageImpl::UploadFile(const std::string& key,
                                   const std::function<void(Status)>& callback) {
   std::string url = GetUploadUrl(key);
 
-  uint64_t data_size;
-  mx_status_t status = data.get_size(&data_size);
-  if (status != NO_ERROR) {
-    FTL_LOG(ERROR) << "Failed to retrieve the size of the vmo.";
+  // To workaround US-123, we need to stream the vmo to a socket.
+  // TODO(ppi): drop this once we can send vmo as the request body.
+  std::string data_str;
+  if (!mtl::StringFromVmo(std::move(data), &data_str)) {
+    FTL_LOG(ERROR) << "Failed read the vmo.";
     callback(Status::INTERNAL_ERROR);
     return;
   }
 
   auto request_factory = ftl::MakeCopyable([
-    url = std::move(url), task_runner = task_runner_, data = std::move(data),
-    data_size
+    url = std::move(url), task_runner = task_runner_, data = std::move(data_str)
   ] {
     network::URLRequestPtr request(network::URLRequest::New());
     request->url = url;
@@ -98,7 +100,7 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
     content_length_header->name = kContentLengthHeader;
 
-    content_length_header->value = ftl::NumberToString(data_size);
+    content_length_header->value = ftl::NumberToString(data.size());
     request->headers.push_back(std::move(content_length_header));
 
     // x-goog-if-generation-match header. This ensures that files are never
@@ -108,10 +110,14 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     generation_match_header->value = "0";
     request->headers.push_back(std::move(generation_match_header));
 
-    mx::vmo duplicated_data;
-    data.duplicate(MX_RIGHT_READ, &duplicated_data);
+    // To workaround US-123, we need to stream the vmo to a socket.
+    // TODO(ppi): drop this once we can send vmo as the request body.
     request->body = network::URLBody::New();
-    request->body->set_buffer(std::move(duplicated_data));
+    glue::SocketPair socket;
+    glue::SocketWriter* writer = new glue::SocketWriter();  // Self-owned.
+    writer->Start(data, std::move(socket.socket1));
+    request->body = network::URLBody::New();
+    request->body->set_stream(std::move(socket.socket2));
     return request;
   });
 

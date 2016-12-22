@@ -95,10 +95,10 @@ TEST_F(CloudStorageImplTest, TestUpload) {
       "/v0/b/bucket/o/prefixhello-world",
       fake_network_service_.GetRequest()->url);
   EXPECT_EQ("POST", fake_network_service_.GetRequest()->method);
-  EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_buffer());
+  EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_stream());
   std::string sent_content;
-  EXPECT_TRUE(mtl::StringFromVmo(
-      std::move(fake_network_service_.GetRequest()->body->get_buffer()),
+  EXPECT_TRUE(mtl::BlockingCopyToString(
+      std::move(fake_network_service_.GetRequest()->body->get_stream()),
       &sent_content));
   EXPECT_EQ(content, sent_content);
 
