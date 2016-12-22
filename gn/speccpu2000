@@ -147,6 +147,22 @@
           "bootfs_path": "benchmarks/data/188.ammp/ammp.in"
         },
         {
+          "file": "third_party/speccpu2000/188.ammp/data/ref/input/all.init.ammp",
+          "bootfs_path": "benchmarks/data/188.ammp/all.init.ammp"
+        },
+        {
+          "file": "third_party/speccpu2000/188.ammp/data/ref/input/init_cond.run.1",
+          "bootfs_path": "benchmarks/data/188.ammp/init_cond.run.1"
+        },
+        {
+          "file": "third_party/speccpu2000/188.ammp/data/ref/input/init_cond.run.2",
+          "bootfs_path": "benchmarks/data/188.ammp/init_cond.run.2"
+        },
+        {
+          "file": "third_party/speccpu2000/188.ammp/data/ref/input/init_cond.run.3",
+          "bootfs_path": "benchmarks/data/188.ammp/init_cond.run.3"
+        },
+        {
           "file": "third_party/speccpu2000/252.eon/data/ref/input/chair.camera",
           "bootfs_path": "benchmarks/data/252.eon/chair.camera"
         },
