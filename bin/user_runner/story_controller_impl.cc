@@ -32,6 +32,7 @@ void StoryControllerImpl::Connect(
 void StoryControllerImpl::AddLinkDataAndStop(FidlDocMap data,
                                              const StopCallback& done) {
   if (data.is_null()) {
+    done();
     return;
   }
 
