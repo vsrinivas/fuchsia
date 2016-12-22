@@ -26,9 +26,27 @@ TreeNode::TreeNode(PageStorage* page_storage,
 
 TreeNode::~TreeNode() {}
 
-Status TreeNode::FromId(PageStorage* page_storage,
-                        ObjectIdView id,
-                        std::unique_ptr<const TreeNode>* node) {
+void TreeNode::FromId(
+    PageStorage* page_storage,
+    ObjectIdView id,
+    std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
+  std::unique_ptr<const Object> object;
+  page_storage->GetObject(
+      id, [ page_storage, callback = std::move(callback) ](
+              Status status, std::unique_ptr<const Object> object) {
+        if (status != Status::OK) {
+          callback(status, nullptr);
+          return;
+        }
+        std::unique_ptr<const TreeNode> node;
+        status = FromObject(page_storage, std::move(object), &node);
+        callback(status, std::move(node));
+      });
+}
+
+Status TreeNode::FromIdSynchronous(PageStorage* page_storage,
+                                   ObjectIdView id,
+                                   std::unique_ptr<const TreeNode>* node) {
   std::unique_ptr<const Object> object;
   Status status = page_storage->GetObjectSynchronous(id, &object);
   if (status != Status::OK) {
@@ -158,7 +176,7 @@ Status TreeNode::GetChild(int index,
   if (children_[index].empty()) {
     return Status::NO_SUCH_CHILD;
   }
-  return FromId(page_storage_, children_[index], child);
+  return FromIdSynchronous(page_storage_, children_[index], child);
 }
 
 ObjectId TreeNode::GetChildId(int index) const {
@@ -379,7 +397,7 @@ void TreeNode::Mutation::Finish(
       TreeNode::FromEntries(node_.page_storage_, std::vector<Entry>(),
                             std::vector<ObjectId>{ObjectId()}, &tmp_node_id);
   FTL_DCHECK(s == Status::OK);
-  s = TreeNode::FromId(node_.page_storage_, tmp_node_id, &new_node);
+  s = TreeNode::FromIdSynchronous(node_.page_storage_, tmp_node_id, &new_node);
   FTL_DCHECK(s == Status::OK);
 
   // new_entries could contain more than max_size elements, so we can't directly

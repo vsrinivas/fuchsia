@@ -55,9 +55,9 @@ TEST_F(DiffIteratorTest, IterateEmptyDiff) {
                             std::vector<ObjectId>(5), &node_id1));
 
   std::unique_ptr<const TreeNode> left;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, node_id1, &left));
+  EXPECT_EQ(Status::OK, TreeNode::FromIdSynchronous(&fake_storage_, node_id1, &left));
   std::unique_ptr<const TreeNode> right;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, node_id1, &right));
+  EXPECT_EQ(Status::OK, TreeNode::FromIdSynchronous(&fake_storage_, node_id1, &right));
 
   DiffIterator it(std::move(left), std::move(right));
   EXPECT_FALSE(it.Valid());
@@ -91,9 +91,9 @@ TEST_F(DiffIteratorTest, IterateOneNode) {
                             std::vector<ObjectId>(7), &node_id2));
 
   std::unique_ptr<const TreeNode> left;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, node_id1, &left));
+  EXPECT_EQ(Status::OK, TreeNode::FromIdSynchronous(&fake_storage_, node_id1, &left));
   std::unique_ptr<const TreeNode> right;
-  EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, node_id2, &right));
+  EXPECT_EQ(Status::OK, TreeNode::FromIdSynchronous(&fake_storage_, node_id2, &right));
 
   DiffIterator it(std::move(left), std::move(right));
 

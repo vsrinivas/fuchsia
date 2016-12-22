@@ -49,8 +49,13 @@ class TreeNodeTest : public ::test::TestWithMessageLoop {
 
  protected:
   std::unique_ptr<const TreeNode> FromId(ObjectIdView id) {
+    Status status;
     std::unique_ptr<const TreeNode> node;
-    EXPECT_EQ(Status::OK, TreeNode::FromId(&fake_storage_, id, &node));
+    TreeNode::FromId(&fake_storage_, id,
+                     ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                     &status, &node));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
     return node;
   }
 
@@ -96,12 +101,31 @@ class TreeNodeTest : public ::test::TestWithMessageLoop {
 TEST_F(TreeNodeTest, CreateGetTreeNode) {
   std::unique_ptr<const TreeNode> node = CreateEmptyNode();
 
+  Status status;
   std::unique_ptr<const TreeNode> found_node;
-  EXPECT_EQ(Status::OK,
-            TreeNode::FromId(&fake_storage_, node->GetId(), &found_node));
+  TreeNode::FromId(&fake_storage_, node->GetId(),
+                   ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                   &status, &found_node));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_NE(nullptr, found_node);
 
-  EXPECT_EQ(Status::NOT_FOUND,
-            TreeNode::FromId(&fake_storage_, RandomId(), &found_node));
+  TreeNode::FromId(&fake_storage_, RandomId(),
+                   ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                   &status, &found_node));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::NOT_FOUND, status);
+}
+
+TEST_F(TreeNodeTest, CreateGetTreeNodeSynchronous) {
+  std::unique_ptr<const TreeNode> node = CreateEmptyNode();
+
+  std::unique_ptr<const TreeNode> found_node;
+  EXPECT_EQ(Status::OK, TreeNode::FromIdSynchronous(
+                            &fake_storage_, node->GetId(), &found_node));
+
+  EXPECT_EQ(Status::NOT_FOUND, TreeNode::FromIdSynchronous(
+                                   &fake_storage_, RandomId(), &found_node));
 }
 
 TEST_F(TreeNodeTest, GetEntryChild) {
@@ -376,8 +400,8 @@ TEST_F(TreeNodeTest, Serialization) {
       });
   EXPECT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> retrieved_node;
-  EXPECT_EQ(Status::OK,
-            TreeNode::FromId(&fake_storage_, object->GetId(), &node));
+  EXPECT_EQ(Status::OK, TreeNode::FromIdSynchronous(&fake_storage_,
+                                                    object->GetId(), &node));
 
   ftl::StringView data;
   EXPECT_EQ(Status::OK, object->GetData(&data));

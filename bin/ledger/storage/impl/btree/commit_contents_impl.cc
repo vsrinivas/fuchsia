@@ -37,14 +37,14 @@ void CommitContentsImpl::diff(
     std::function<void(Status, std::unique_ptr<Iterator<const EntryChange>>)>
         callback) const {
   std::unique_ptr<const TreeNode> root;
-  Status status = TreeNode::FromId(page_storage_, root_id_, &root);
+  Status status = TreeNode::FromIdSynchronous(page_storage_, root_id_, &root);
   if (status != Status::OK) {
     callback(status, nullptr);
     return;
   }
 
   std::unique_ptr<const TreeNode> right;
-  status = TreeNode::FromId(page_storage_, other->GetBaseObjectId(), &right);
+  status = TreeNode::FromIdSynchronous(page_storage_, other->GetBaseObjectId(), &right);
   if (status != Status::OK) {
     callback(status, nullptr);
     return;
@@ -61,7 +61,7 @@ ObjectId CommitContentsImpl::GetBaseObjectId() const {
 std::unique_ptr<BTreeIterator> CommitContentsImpl::NewIterator() const {
   std::unique_ptr<const TreeNode> root;
   // TODO(nellyv): Update API to return error Status. LE-39
-  FTL_CHECK(TreeNode::FromId(page_storage_, root_id_, &root) == Status::OK);
+  FTL_CHECK(TreeNode::FromIdSynchronous(page_storage_, root_id_, &root) == Status::OK);
   return std::make_unique<BTreeIterator>(std::move(root));
 }
 

@@ -396,7 +396,7 @@ void ApplyChanges(
     }
     root_id = tmp_node_id;
   }
-  Status status = TreeNode::FromId(page_storage, root_id, &root);
+  Status status = TreeNode::FromIdSynchronous(page_storage, root_id, &root);
   if (status != Status::OK) {
     callback(status, ObjectId(), std::unordered_set<ObjectId>());
     return;
