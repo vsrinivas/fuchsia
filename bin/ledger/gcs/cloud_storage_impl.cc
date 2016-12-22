@@ -18,7 +18,9 @@
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/ascii.h"
+#include "lib/ftl/strings/concatenate.h"
 #include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/socket/files.h"
 #include "lib/mtl/vmo/file.h"
 
@@ -50,22 +52,38 @@ void RunUploadFileCallback(const std::function<void(Status)>& callback,
   callback(status);
 }
 
+constexpr ftl::StringView kDownloadEndpoint =
+    "https://storage-download.googleapis.com/";
+constexpr ftl::StringView kUploadEndpoint =
+    "https://storage-upload.googleapis.com/";
+
+std::string GetDownloadUrlPrefix(const std::string& bucket_name,
+                                 const std::string& prefix) {
+  return ftl::Concatenate({kDownloadEndpoint, bucket_name, "/", prefix});
+}
+
+std::string GetUploadUrlPrefix(const std::string& bucket_name,
+                               const std::string& prefix) {
+  return ftl::Concatenate({kUploadEndpoint, bucket_name, "/", prefix});
+}
+
 }  // namespace
 
 CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                    ledger::NetworkService* network_service,
-                                   const std::string& bucket_name)
+                                   const std::string& bucket_name,
+                                   const std::string& prefix)
     : task_runner_(std::move(task_runner)),
       network_service_(std::move(network_service)),
-      bucket_name_(bucket_name) {}
+      download_url_prefix_(GetDownloadUrlPrefix(bucket_name, prefix)),
+      upload_url_prefix_(GetUploadUrlPrefix(bucket_name, prefix)) {}
 
 CloudStorageImpl::~CloudStorageImpl() {}
 
 void CloudStorageImpl::UploadFile(const std::string& key,
                                   mx::vmo data,
                                   const std::function<void(Status)>& callback) {
-  std::string url =
-      "https://storage-upload.googleapis.com/" + bucket_name_ + "/" + key;
+  std::string url = GetUploadUrl(key);
 
   uint64_t data_size;
   mx_status_t status = data.get_size(&data_size);
@@ -76,7 +94,8 @@ void CloudStorageImpl::UploadFile(const std::string& key,
   }
 
   auto request_factory = ftl::MakeCopyable([
-    url, task_runner = task_runner_, data = std::move(data), data_size
+    url = std::move(url), task_runner = task_runner_, data = std::move(data),
+    data_size
   ] {
     network::URLRequestPtr request(network::URLRequest::New());
     request->url = url;
@@ -115,11 +134,10 @@ void CloudStorageImpl::DownloadFile(
     const std::string& key,
     const std::function<void(Status status, uint64_t size, mx::socket data)>&
         callback) {
-  std::string url =
-      "https://storage-download.googleapis.com/" + bucket_name_ + "/" + key;
+  std::string url = GetDownloadUrl(key);
 
   Request(
-      [url] {
+      [url = std::move(url)] {
         network::URLRequestPtr request(network::URLRequest::New());
         request->url = url;
         request->method = "GET";
@@ -131,6 +149,14 @@ void CloudStorageImpl::DownloadFile(
         OnDownloadResponseReceived(std::move(callback), status,
                                    std::move(response));
       });
+}
+
+std::string CloudStorageImpl::GetDownloadUrl(ftl::StringView key) {
+  return ftl::Concatenate({download_url_prefix_, key});
+}
+
+std::string CloudStorageImpl::GetUploadUrl(ftl::StringView key) {
+  return ftl::Concatenate({upload_url_prefix_, key});
 }
 
 void CloudStorageImpl::Request(

@@ -39,7 +39,10 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
  public:
   CloudStorageImplTest()
       : fake_network_service_(message_loop_.task_runner()),
-        gcs_(message_loop_.task_runner(), &fake_network_service_, "bucket") {}
+        gcs_(message_loop_.task_runner(),
+             &fake_network_service_,
+             "bucket",
+             "prefix") {}
   ~CloudStorageImplTest() override {}
 
  protected:
@@ -82,12 +85,12 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   SetResponse("", 0, 200);
   Status status;
   gcs_.UploadFile(
-      "hello/world/baz/quz", std::move(data),
+      "hello/world", std::move(data),
       test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ("https://storage-upload.googleapis.com/bucket/hello/world/baz/quz",
+  EXPECT_EQ("https://storage-upload.googleapis.com/bucket/prefixhello/world",
             fake_network_service_.GetRequest()->url);
   EXPECT_EQ("PUT", fake_network_service_.GetRequest()->method);
   EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_buffer());
@@ -120,7 +123,7 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
 
   Status status;
   gcs_.UploadFile(
-      "hello/world/baz/quz", std::move(data),
+      "hello/world", std::move(data),
       test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
@@ -134,15 +137,14 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   Status status;
   uint64_t size;
   mx::socket data;
-  gcs_.DownloadFile("hello/world/baz/quz",
+  gcs_.DownloadFile("hello/world",
                     test::Capture([this] { message_loop_.PostQuitTask(); },
                                   &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(
-      "https://storage-download.googleapis.com/bucket/hello/world/baz/quz",
-      fake_network_service_.GetRequest()->url);
+  EXPECT_EQ("https://storage-download.googleapis.com/bucket/prefixhello/world",
+            fake_network_service_.GetRequest()->url);
   EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
 
   std::string downloaded_content;

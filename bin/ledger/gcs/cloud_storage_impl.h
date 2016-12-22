@@ -21,7 +21,8 @@ class CloudStorageImpl : public CloudStorage {
  public:
   CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                    ledger::NetworkService* network_service,
-                   const std::string& bucket_name);
+                   const std::string& bucket_name,
+                   const std::string& prefix);
   ~CloudStorageImpl() override;
 
   // CloudStorage implementation.
@@ -35,6 +36,10 @@ class CloudStorageImpl : public CloudStorage {
           callback) override;
 
  private:
+  std::string GetDownloadUrl(ftl::StringView key);
+
+  std::string GetUploadUrl(ftl::StringView key);
+
   void Request(
       std::function<network::URLRequestPtr()> request_factory,
       const std::function<void(Status status,
@@ -52,7 +57,8 @@ class CloudStorageImpl : public CloudStorage {
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ledger::NetworkService* const network_service_;
-  std::string bucket_name_;
+  const std::string download_url_prefix_;
+  const std::string upload_url_prefix_;
   callback::CancellableContainer requests_;
 };
 
