@@ -85,14 +85,16 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   SetResponse("", 0, 200);
   Status status;
   gcs_.UploadFile(
-      "hello/world", std::move(data),
+      "hello-world", std::move(data),
       test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ("https://storage-upload.googleapis.com/bucket/prefixhello/world",
-            fake_network_service_.GetRequest()->url);
-  EXPECT_EQ("PUT", fake_network_service_.GetRequest()->method);
+  EXPECT_EQ(
+      "https://firebasestorage.googleapis.com"
+      "/v0/b/bucket/o/prefixhello-world",
+      fake_network_service_.GetRequest()->url);
+  EXPECT_EQ("POST", fake_network_service_.GetRequest()->method);
   EXPECT_TRUE(fake_network_service_.GetRequest()->body->is_buffer());
   std::string sent_content;
   EXPECT_TRUE(mtl::StringFromVmo(
@@ -123,7 +125,7 @@ TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
 
   Status status;
   gcs_.UploadFile(
-      "hello/world", std::move(data),
+      "hello-world", std::move(data),
       test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
   ASSERT_FALSE(RunLoopWithTimeout());
 
@@ -137,14 +139,16 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   Status status;
   uint64_t size;
   mx::socket data;
-  gcs_.DownloadFile("hello/world",
+  gcs_.DownloadFile("hello-world",
                     test::Capture([this] { message_loop_.PostQuitTask(); },
                                   &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ("https://storage-download.googleapis.com/bucket/prefixhello/world",
-            fake_network_service_.GetRequest()->url);
+  EXPECT_EQ(
+      "https://firebasestorage.googleapis.com"
+      "/v0/b/bucket/o/prefixhello-world?alt=media",
+      fake_network_service_.GetRequest()->url);
   EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
 
   std::string downloaded_content;
@@ -160,7 +164,7 @@ TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   Status status;
   uint64_t size;
   mx::socket data;
-  gcs_.DownloadFile("hello/world/baz/quz",
+  gcs_.DownloadFile("hello-world",
                     test::Capture([this] { message_loop_.PostQuitTask(); },
                                   &status, &size, &data));
   ASSERT_FALSE(RunLoopWithTimeout());

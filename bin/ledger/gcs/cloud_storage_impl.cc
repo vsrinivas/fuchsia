@@ -52,19 +52,12 @@ void RunUploadFileCallback(const std::function<void(Status)>& callback,
   callback(status);
 }
 
-constexpr ftl::StringView kDownloadEndpoint =
-    "https://storage-download.googleapis.com/";
-constexpr ftl::StringView kUploadEndpoint =
-    "https://storage-upload.googleapis.com/";
+constexpr ftl::StringView kApiEndpoint =
+    "https://firebasestorage.googleapis.com/v0/b/";
 
-std::string GetDownloadUrlPrefix(const std::string& bucket_name,
-                                 const std::string& prefix) {
-  return ftl::Concatenate({kDownloadEndpoint, bucket_name, "/", prefix});
-}
-
-std::string GetUploadUrlPrefix(const std::string& bucket_name,
-                               const std::string& prefix) {
-  return ftl::Concatenate({kUploadEndpoint, bucket_name, "/", prefix});
+std::string GetUrlPrefix(const std::string& bucket_name,
+                         const std::string& user_prefix) {
+  return ftl::Concatenate({kApiEndpoint, bucket_name, "/o/", user_prefix});
 }
 
 }  // namespace
@@ -72,11 +65,10 @@ std::string GetUploadUrlPrefix(const std::string& bucket_name,
 CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
                                    ledger::NetworkService* network_service,
                                    const std::string& bucket_name,
-                                   const std::string& prefix)
+                                   const std::string& user_prefix)
     : task_runner_(std::move(task_runner)),
       network_service_(std::move(network_service)),
-      download_url_prefix_(GetDownloadUrlPrefix(bucket_name, prefix)),
-      upload_url_prefix_(GetUploadUrlPrefix(bucket_name, prefix)) {}
+      url_prefix_(GetUrlPrefix(bucket_name, user_prefix)) {}
 
 CloudStorageImpl::~CloudStorageImpl() {}
 
@@ -99,7 +91,7 @@ void CloudStorageImpl::UploadFile(const std::string& key,
   ] {
     network::URLRequestPtr request(network::URLRequest::New());
     request->url = url;
-    request->method = "PUT";
+    request->method = "POST";
     request->auto_follow_redirects = true;
 
     // Content-Length header.
@@ -152,11 +144,13 @@ void CloudStorageImpl::DownloadFile(
 }
 
 std::string CloudStorageImpl::GetDownloadUrl(ftl::StringView key) {
-  return ftl::Concatenate({download_url_prefix_, key});
+  FTL_DCHECK(key.find('/') == std::string::npos);
+  return ftl::Concatenate({url_prefix_, key, "?alt=media"});
 }
 
 std::string CloudStorageImpl::GetUploadUrl(ftl::StringView key) {
-  return ftl::Concatenate({upload_url_prefix_, key});
+  FTL_DCHECK(key.find('/') == std::string::npos);
+  return ftl::Concatenate({url_prefix_, key});
 }
 
 void CloudStorageImpl::Request(

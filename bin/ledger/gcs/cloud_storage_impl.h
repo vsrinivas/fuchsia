@@ -57,8 +57,7 @@ class CloudStorageImpl : public CloudStorage {
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ledger::NetworkService* const network_service_;
-  const std::string download_url_prefix_;
-  const std::string upload_url_prefix_;
+  const std::string url_prefix_;
   callback::CancellableContainer requests_;
 };
 
