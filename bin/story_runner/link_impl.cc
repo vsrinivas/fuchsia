@@ -4,79 +4,98 @@
 
 #include "apps/modular/src/story_runner/link_impl.h"
 
-#include "apps/modular/lib/document_editor/document_editor.h"
-#include "apps/modular/services/document_store/document.fidl.h"
+#include <functional>
+
 #include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/services/story/module.fidl.h"
-#include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
-#include "lib/ftl/macros.h"
 
 namespace modular {
-
-using document_store::Document;
-using document_store::DocumentPtr;
-using document_store::Value;
-using document_store::ValuePtr;
 
 LinkImpl::LinkImpl(StoryStoragePtr story_storage,
                    const fidl::String& name,
                    fidl::InterfaceRequest<Link> link_request)
-    : name_(name), story_storage_(std::move(story_storage)),
+    : name_(name),
+      story_storage_(std::move(story_storage)),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
   ReadLinkData(ftl::MakeCopyable([
     this, link_request = std::move(link_request)
   ]() mutable { LinkConnection::New(this, std::move(link_request)); }));
 }
 
-// The |LinkConnection| object knows which client made the call to
-// AddDocument() or SetAllDocument(), so it notifies either all
-// clients or all other clients, depending on whether WatchAll() or
-// Watch() was called, respectively.
+// The |LinkConnection| object knows which client made the call to Set() or
+// Update(), so it notifies either all clients or all other clients, depending
+// on whether WatchAll() or Watch() was called, respectively.
 //
 // TODO(jimbe) This mechanism breaks if the call to Watch() is made
 // *after* the call to SetAllDocument(). Need to find a way to improve
 // this.
-void LinkImpl::AddDocuments(FidlDocMap docs, LinkConnection* const src) {
-  DocMap add_docs;
-  docs.Swap(&add_docs);
 
-  bool dirty = false;
-  for (auto& add_doc : add_docs) {
-    DocumentEditor editor;
-    if (!editor.Edit(add_doc.first, &docs_)) {
-      // Docid does not currently exist. Add the entire Document.
-      docs_[add_doc.first] = std::move(add_doc.second);
-      dirty = true;
-    } else {
-      // Docid does exist. Add or update the individual properties.
-      auto& new_props = add_doc.second->properties;
-      for (auto it = new_props.begin(); it != new_props.end(); ++it) {
-        const std::string& new_key = it.GetKey();
-        ValuePtr& new_value = it.GetValue();
-
-        Value* const old_value = editor.GetValue(new_key);
-        if (!old_value || !new_value->Equals(*old_value)) {
-          dirty = true;
-          editor.SetProperty(new_key, std::move(new_value));
-        }
-      }
-    }
+void LinkImpl::Set(const fidl::String& path,
+                   const fidl::String& json,
+                   LinkConnection* const src) {
+  //  FTL_LOG(INFO) << "**** Set()" << std::endl
+  //                << "PATH " << path << std::endl
+  //                << "JSON " << json;
+  CrtJsonDoc new_value;
+  new_value.Parse(json);
+  if (new_value.HasParseError()) {
+    // TODO(jimbe) Handle errors better
+    FTL_CHECK(!new_value.HasParseError())
+        << "PARSE ERROR in Update()" << new_value.GetParseError();
+    return;
   }
 
+  bool dirty = true;
+  bool alreadyExist = false;
+
+  // A single slash creates an unwanted node at the root.
+  CrtJsonPointer ptr(path == "/" ? "" : path);
+  CrtJsonValue& current_value =
+      ptr.Create(doc_, doc_.GetAllocator(), &alreadyExist);
+  if (alreadyExist) {
+    dirty = new_value != current_value;
+  }
+
+  if (dirty) {
+    ptr.Set(doc_, new_value);
+    DatabaseChanged(src);
+  }
+  FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToString(doc_);
+}
+
+void LinkImpl::UpdateObject(const fidl::String& path,
+                            const fidl::String& json,
+                            LinkConnection* const src) {
+  //  FTL_LOG(INFO) << "**** Update()" << std::endl
+  //                << "PATH " << path << std::endl
+  //                << "JSON " << json;
+  CrtJsonDoc new_value;
+  new_value.Parse(json);
+  if (new_value.HasParseError()) {
+    // TODO(jimbe) Handle errors better
+    FTL_CHECK(!new_value.HasParseError())
+        << "PARSE ERROR in Update()" << new_value.GetParseError();
+    return;
+  }
+
+  CrtJsonPointer ptr(path);
+  CrtJsonValue& current_value = ptr.Create(doc_);
+
+  bool dirty =
+      MergeObject(current_value, std::move(new_value), doc_.GetAllocator());
   if (dirty) {
     DatabaseChanged(src);
   }
+  FTL_LOG(INFO) << "LinkImpl::Update() " << JsonValueToString(doc_);
 }
 
-void LinkImpl::SetAllDocuments(FidlDocMap new_docs, LinkConnection* const src) {
-  bool dirty = !new_docs.Equals(docs_);
-  if (dirty) {
-    docs_.Swap(&new_docs);
+void LinkImpl::Erase(const fidl::String& path, LinkConnection* const src) {
+  CrtJsonPointer ptr(path);
+  auto p = ptr.Get(doc_);
+  if (p != nullptr && ptr.Erase(doc_)) {
     DatabaseChanged(src);
   }
 }
@@ -85,14 +104,43 @@ void LinkImpl::Sync(const std::function<void()>& callback) {
   story_storage_->Sync(callback);
 }
 
+// Merge source into target. The values will be move()'d.
+// Returns true if the merge operation caused any changes.
+bool LinkImpl::MergeObject(CrtJsonValue& target,
+                           CrtJsonValue&& source,
+                           CrtJsonValue::AllocatorType& allocator) {
+  FTL_CHECK(source.IsObject());
+
+  if (!target.IsObject()) {
+    target = std::move(source);
+    return true;
+  }
+
+  bool diff = false;
+  for (auto& source_itr : source.GetObject()) {
+    auto target_itr = target.FindMember(source_itr.name);
+    // If the value already exists and not identical, set it.
+    if (target_itr == target.MemberEnd()) {
+      target.AddMember(std::move(source_itr.name), std::move(source_itr.value),
+                       allocator);
+      diff = true;
+    } else if (source_itr.value != target_itr->value) {
+      // TODO(jimbe) The above comparison is O(n^2). Need to revisit the
+      // detection logic.
+      target_itr->value = std::move(source_itr.value);
+      diff = true;
+    }
+  }
+  return diff;
+}
+
 void LinkImpl::ReadLinkData(const std::function<void()>& done) {
   story_storage_->ReadLinkData(name_, [this, done](LinkDataPtr data) {
     if (!data.is_null()) {
-      FTL_DCHECK(!data->docs.is_null());
-      docs_ = std::move(data->docs);
-    } else {
-      // The document map is always valid, even when empty.
-      docs_.mark_non_null();
+      FTL_LOG(INFO) << "LinkImpl::ReadLinkData: " << data->json;
+      std::string json;
+      data->json.Swap(&json);
+      doc_.Parse(std::move(json));
     }
 
     done();
@@ -105,7 +153,7 @@ void LinkImpl::WriteLinkData(const std::function<void()>& done) {
 
 void LinkImpl::WriteLinkDataImpl(const std::function<void()>& done) {
   auto link_data = LinkData::New();
-  link_data->docs = docs_.Clone();
+  link_data->json = JsonValueToString(doc_);
   story_storage_->WriteLinkData(name_, std::move(link_data), done);
 }
 
@@ -117,17 +165,23 @@ void LinkImpl::DatabaseChanged(LinkConnection* const src) {
 }
 
 void LinkImpl::OnChange(LinkDataPtr link_data) {
-  if (docs_.Equals(link_data->docs)) {
-    return;
-  }
-  docs_ = std::move(link_data->docs);
+  // TODO(jimbe) With rapidjson, this check is expensive, O(n^2), so we won't
+  // do it for now. See case kObjectType in operator==() in
+  // include/rapidjson/document.h.
+  //  if (doc_.Equals(link_data->json)) {
+  //    return;
+  //  }
+
+  // TODO(jimbe) Decide how these changes should be merged into the current
+  // CrtJsonDoc. In this first iteration, we'll do a wholesale replace.
+  doc_.Parse(link_data->json);
   NotifyWatchers(nullptr);
 }
 
 void LinkImpl::NotifyWatchers(LinkConnection* const src) {
   for (auto& dst : connections_) {
     const bool self_notify = (dst.get() != src);
-    dst->NotifyWatchers(docs_, self_notify);
+    dst->NotifyWatchers(doc_, self_notify);
   }
 }
 
@@ -157,10 +211,6 @@ LinkConnection::LinkConnection(LinkImpl* const impl,
       [this] { impl_->RemoveConnection(this); });
 }
 
-void LinkConnection::Query(const LinkConnection::QueryCallback& callback) {
-  callback(impl_->docs().Clone());
-}
-
 void LinkConnection::Watch(fidl::InterfaceHandle<LinkWatcher> watcher) {
   AddWatcher(std::move(watcher), false);
 }
@@ -178,20 +228,23 @@ void LinkConnection::AddWatcher(fidl::InterfaceHandle<LinkWatcher> watcher,
   // there is snapshot information that can be used by clients to query the
   // state at this instant. Otherwise there is no sequence information about
   // total state versus incremental changes.
-  watcher_ptr->Notify(impl_->docs().Clone());
+  auto& doc = impl_->doc();
+  watcher_ptr->Notify(JsonValueToString(doc));
 
   auto& watcher_set = self_notify ? all_watchers_ : watchers_;
   watcher_set.AddInterfacePtr(std::move(watcher_ptr));
 }
 
-void LinkConnection::NotifyWatchers(const FidlDocMap& docs,
+void LinkConnection::NotifyWatchers(const CrtJsonDoc& doc,
                                     const bool self_notify) {
+  fidl::String json(JsonValueToString(impl_->doc()));
+
   if (self_notify) {
     watchers_.ForAllPtrs(
-        [&docs](LinkWatcher* const watcher) { watcher->Notify(docs.Clone()); });
+        [&json](LinkWatcher* const watcher) { watcher->Notify(json); });
   }
   all_watchers_.ForAllPtrs(
-      [&docs](LinkWatcher* const watcher) { watcher->Notify(docs.Clone()); });
+      [&json](LinkWatcher* const watcher) { watcher->Notify(json); });
 }
 
 void LinkConnection::Dup(fidl::InterfaceRequest<Link> dup) {
@@ -202,12 +255,28 @@ void LinkConnection::Sync(const SyncCallback& callback) {
   impl_->Sync(callback);
 }
 
-void LinkConnection::AddDocuments(FidlDocMap docs) {
-  impl_->AddDocuments(std::move(docs), this);
+void LinkConnection::UpdateObject(const fidl::String& path,
+                                  const fidl::String& json) {
+  impl_->UpdateObject(path, json, this);
 }
 
-void LinkConnection::SetAllDocuments(FidlDocMap new_docs) {
-  impl_->SetAllDocuments(std::move(new_docs), this);
+void LinkConnection::Set(const fidl::String& path, const fidl::String& json) {
+  impl_->Set(path, json, this);
+}
+
+void LinkConnection::Erase(const fidl::String& path) {
+  impl_->Erase(path, this);
+}
+
+void LinkConnection::Get(const fidl::String& path,
+                         const GetCallback& callback) {
+  CrtJsonPointer ptr(path);
+  auto p = ptr.Get(impl_->doc());
+  if (p == nullptr) {
+    callback(fidl::String());
+  } else {
+    callback(fidl::String(JsonValueToString(*p)));
+  }
 }
 
 }  // namespace modular

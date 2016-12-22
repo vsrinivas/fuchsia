@@ -139,10 +139,6 @@ fidl("story") {
     "module_controller.fidl",
     "story.fidl",
   ]
-
-  deps = [
-    "//apps/modular/services/document_store",
-  ]
 }
 ```
 

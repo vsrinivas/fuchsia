@@ -4,7 +4,6 @@
 
 module modular;
 
-import "apps/modular/services/document_store/document.fidl";
 import "apps/modular/services/user/story_controller.fidl";
 
 // UserRunner implementation creates an instance of this service and
@@ -26,8 +25,7 @@ interface StoryProvider {
   // separately on story controller, separate notifications are
   // generated, which is inconvenient.
   CreateStoryWithInfo(string url, map<string, string>? extra_info,
-                      map<string, document_store.Document>? root_docs)
-      => (string story_id);
+      string? root_json) => (string story_id);
 
   // Deletes an existing story from the list of known stories. Returns
   // when the delete notification is received from the Ledger. If the

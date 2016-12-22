@@ -7,7 +7,7 @@
 
 #include <iterator>
 
-#include "apps/modular/lib/document_editor/document_editor.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -23,19 +23,20 @@ constexpr char kDocId[] =
     "http://google.com/id/dc7cade7-7be0-4e23-924d-df67e15adae5";
 
 // Property labels
-constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
-constexpr char kSenderLabel[] = "http://schema.org/sender";
+constexpr char kCounterKey[] = "http://schema.domokit.org/counter";
+constexpr char kSenderKey[] = "http://schema.org/sender";
+constexpr char kJsonSegment[] = "counters";
+constexpr char kJsonPath[] = "/counters";
 
 class Counter {
  public:
   Counter() = default;
 
-  Counter(modular::DocumentEditor* editor);
+  Counter(const rapidjson::Value& name, const rapidjson::Value& value);
 
-  std::unique_ptr<modular::DocumentEditor> ToDocument(
-      const std::string& module_name);
+  rapidjson::Document ToDocument(const std::string& module_name);
 
-  bool is_valid() { return counter > 0; }
+  bool is_valid() { return counter >= 0; }
 
   // Remember where this data came from. This is particularly useful when
   // a story is rehydrated to ensure that everything restarts properly.
@@ -43,33 +44,29 @@ class Counter {
 
   // This is the module's "data". The value is incremented and sent back to the
   // Link whenever a message is received with a higher value.
-  int counter = 0;
+  int counter = -1;
 };
 
-}  // namespace example
-
-namespace modular {
-
-class Store : public LinkWatcher {
+class Store : public modular::LinkWatcher {
  public:
   using Callback = std::function<void()>;
 
   Store(const std::string& module_name);
 
-  void Initialize(fidl::InterfaceHandle<Link> link);
+  void Initialize(fidl::InterfaceHandle<modular::Link> link);
 
   void AddCallback(Callback c);
 
   void Stop();
 
-  // See comments on Module2Impl in example-module2.cc.
-  void Notify(FidlDocMap docs) override;
+  // |LinkWatcher|
+  void Notify(const fidl::String& json) override;
 
   // Process an update from the Link and write it to our local copy.
   // The update is ignored if:
   //   - it's missing the desired document.
   //   - the data in the update is stale (can happen on rehydrate).
-  void ApplyLinkData(FidlDocMap docs);
+  void ApplyLinkData(const std::string& json);
 
   void ModelChanged();
 
@@ -86,7 +83,7 @@ class Store : public LinkWatcher {
 
   fidl::Binding<LinkWatcher> watcher_binding_;
 
-  fidl::InterfacePtr<Link> link_;
+  fidl::InterfacePtr<modular::Link> link_;
 
   // True if there is data pending to send to the link, otherwise false.
   bool dirty_ = false;

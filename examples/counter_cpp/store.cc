@@ -2,70 +2,67 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iterator>
-
 #include "apps/modular/examples/counter_cpp/store.h"
 
-#include "apps/modular/lib/document_editor/document_editor.h"
+#include <iterator>
+
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "lib/fidl/cpp/bindings/map.h"
 
-using document_store::Document;
-using document_store::Value;
-
-using fidl::Array;
-using fidl::Binding;
 using fidl::InterfaceHandle;
-using fidl::InterfacePtr;
-using fidl::InterfaceRequest;
-using fidl::Map;
 using fidl::String;
 
-using modular::DocumentEditor;
-using modular::FidlDocMap;
 using modular::Link;
 using modular::LinkWatcher;
-using modular::operator<<;
 
 namespace modular_example {
 
-Counter::Counter(DocumentEditor* editor) {
-  Value* sender_value = editor->GetValue(kSenderLabel);
-  Value* counter_value = editor->GetValue(kCounterLabel);
-
+Counter::Counter(const rapidjson::Value& name, const rapidjson::Value& value) {
   // Updates may be incremental, so don't assume that all fields are present.
-  if (sender_value)
-    sender = std::move(sender_value->get_string_value());
-  if (counter_value) {
-    counter = counter_value->get_int_value();
+  auto itr = value.FindMember(kSenderKey);
+  if (itr != value.MemberEnd()) {
+    FTL_CHECK(itr->value.IsString());
+    sender = itr->value.GetString();
+  }
+
+  itr = value.FindMember(kCounterKey);
+  if (itr != value.MemberEnd()) {
+    FTL_CHECK(itr->value.IsInt());
+    counter = itr->value.GetInt();
   }
 
   // For the last iteration, test that Module2 removes the sender.
   if (counter <= 10)
-    FTL_DCHECK(!sender.empty());
+    FTL_CHECK(!sender.empty());
   else
-    FTL_DCHECK(sender.empty());
+    FTL_CHECK(sender.empty());
 
-  FTL_DCHECK(is_valid());
+  FTL_CHECK(is_valid());
 }
 
-std::unique_ptr<DocumentEditor> Counter::ToDocument(
-    const std::string& module_name) {
-  auto editor = std::make_unique<DocumentEditor>(kDocId);
-  editor->SetProperty(kCounterLabel, DocumentEditor::NewIntValue(counter))
-      .SetProperty(kSenderLabel, DocumentEditor::NewStringValue(module_name));
-
-  // For the last value, remove the sender property to prove that property
-  // removal works.
+rapidjson::Document Counter::ToDocument(const std::string& module_name) {
+  rapidjson::Document counter_doc;
+  auto& allocator1 = counter_doc.GetAllocator();
+  counter_doc.SetObject();
+  counter_doc.AddMember(kCounterKey, rapidjson::Value().SetInt(counter),
+                        allocator1);
   if (counter == 11) {
-    editor->RemoveProperty(kSenderLabel);
+    // TODO(jimbe) remove the sender property to prove that property removal
+    // works. This requires calling Erase(), but this code isn't structured
+    // to work that way right now because it just returns a json string.
+    // A related open question is how we should implement deletion based on
+    // the JSON string we return. One proposal is for UpdateObject() to also
+    // take a list of keys to delete.
+    counter_doc.AddMember(kSenderKey, rapidjson::Value("", allocator1),
+                          allocator1);
+  } else {
+    counter_doc.AddMember(kSenderKey, rapidjson::Value(module_name, allocator1),
+                          allocator1);
   }
 
-  return editor;
+  return counter_doc;
 }
-}  // namespace modular_example
-
-namespace modular {
 
 Store::Store(const std::string& module_name)
     : module_name_(module_name), watcher_binding_(this) {}
@@ -87,26 +84,35 @@ void Store::Stop() {
   link_.reset();
 }
 
-// See comments on Module2Impl in example-module2.cc.
-void Store::Notify(FidlDocMap docs) {
-  ApplyLinkData(std::move(docs));
+void Store::Notify(const fidl::String& json) {
+  FTL_LOG(INFO) << "**** Store::Notify() " << module_name_;
+  ApplyLinkData(json.get());
 }
 
 // Process an update from the Link and write it to our local copy.
 // The update is ignored if:
 //   - it's missing the desired document.
 //   - the data in the update is stale (can happen on rehydrate).
-void Store::ApplyLinkData(FidlDocMap docs) {
-  // There's only supposed to be one document.
-  FTL_DCHECK(docs.size() <= 1);
-  if (docs.size() == 0) {
+void Store::ApplyLinkData(const std::string& json) {
+  FTL_LOG(INFO) << "**** Store::ApplyLinkData() " << module_name_ << std::endl
+                << "JSON " << json;
+  rapidjson::Document doc;
+  doc.Parse(json);
+  FTL_CHECK(!doc.HasParseError());
+  if (doc.IsNull()) {
     // Received an empty update, which means we are starting a new story.
     // Don't do anything now, the recipe will gives us the initial data.
     return;
   }
 
-  DocumentEditor editor(docs.begin().GetValue().get());
-  modular_example::Counter new_counter(&editor);
+  rapidjson::Pointer ptr(modular_example::kJsonPath);
+  rapidjson::Value* value = ptr.Get(doc);
+  FTL_CHECK(value != nullptr);
+
+  auto itr = value->GetObject().MemberBegin();
+  FTL_CHECK(itr != value->GetObject().MemberEnd());
+
+  modular_example::Counter new_counter(itr->name, itr->value);
 
   // Redundant update, ignore it.
   if (new_counter.counter <= counter.counter) {
@@ -130,15 +136,19 @@ void Store::ModelChanged() {
 }
 
 void Store::SendIfDirty() {
+  FTL_LOG(INFO) << "**** Store::SendIfDirty()" << this->module_name_;
   if (link_ && dirty_) {
-    FidlDocMap docs;
-    auto editor = counter.ToDocument(module_name_);
-    editor->Insert(&docs);
+    rapidjson::Document doc = counter.ToDocument(module_name_);
 
-    FTL_DCHECK(link_.get() != nullptr);
-    FTL_DCHECK(docs.size() > 0);
+    FTL_CHECK(link_.get() != nullptr);
+    FTL_CHECK(doc.IsObject());
 
-    link_->SetAllDocuments(std::move(docs));
+    std::vector<std::string> segments{modular_example::kJsonSegment,
+                                      modular_example::kDocId};
+
+    link_->UpdateObject(
+        modular::EscapeJsonPath(segments.begin(), segments.end()),
+        modular::JsonValueToString(doc));
     dirty_ = false;
   }
 }

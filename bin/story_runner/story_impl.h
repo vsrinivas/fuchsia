@@ -13,9 +13,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
-#include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"

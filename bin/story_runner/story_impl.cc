@@ -10,7 +10,6 @@
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
-#include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/resolver.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
@@ -18,14 +17,10 @@
 #include "apps/modular/src/story_runner/module_controller_impl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
-#include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
 

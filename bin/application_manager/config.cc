@@ -5,11 +5,9 @@
 #include "apps/modular/src/application_manager/config.h"
 
 #include <stdio.h>
-
 #include <utility>
 
-#include <rapidjson/document.h>
-
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/ftl/files/file.h"
 
 namespace modular {
@@ -20,10 +18,6 @@ constexpr char kPath[] = "path";
 constexpr char kInclude[] = "include";
 
 }  // namespace
-
-Config::Config() = default;
-
-Config::~Config() = default;
 
 bool Config::ReadIfExistsFrom(const std::string& config_file) {
   std::string data;
@@ -43,8 +37,8 @@ bool Config::ReadIfExistsFrom(const std::string& config_file) {
 bool Config::Parse(const std::string& string) {
   initial_apps_.clear();
 
-  rapidjson::Document document;
-  document.Parse(string.data(), string.size());
+  JsonDoc document;
+  document.Parse(string);
   if (!document.IsObject())
     return false;
 

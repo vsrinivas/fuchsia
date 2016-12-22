@@ -10,9 +10,9 @@
 
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/app/connect.h"
-#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
@@ -220,24 +220,25 @@ class DummyUserShellApp
   }
 
   // |LinkWatcher|
-  void Notify(modular::FidlDocMap docs) override {
+  void Notify(const fidl::String& json) override {
     if (++data_count_ % 5 == 0) {
       StopExampleStory();
     }
   }
 
   void CreateStory(const fidl::String& url, const bool keep) {
-    modular::FidlDocMap docs;
-    modular::DocumentEditor(url)
-        .SetProperty("created-with-info",
-                     modular::DocumentEditor::NewStringValue("yes"))
-        .Insert(&docs);
+    modular::JsonDoc doc;
+    std::vector<std::string> segments{"example", url, "created-with-info"};
+    modular::JsonPointer(
+        modular::EscapeJsonPath(segments.begin(), segments.end()))
+        .Set(doc, true);
 
     using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
-    story_provider_->CreateStoryWithInfo(url, FidlStringMap(), std::move(docs),
-                                         [this, keep](const fidl::String& story_id) {
-                                           GetStoryInfo(story_id, keep);
-                                         });
+    story_provider_->CreateStoryWithInfo(
+        url, FidlStringMap(), modular::JsonValueToString(doc),
+        [this, keep](const fidl::String& story_id) {
+          GetStoryInfo(story_id, keep);
+        });
   }
 
   void GetStoryInfo(const fidl::String& story_id, const bool keep) {
@@ -274,12 +275,10 @@ class DummyUserShellApp
 
     // NOTE(mesch): Totally tentative. Tell the root module under what
     // user shell it's running.
-    modular::FidlDocMap docs;
-    modular::DocumentEditor(story_info_->url)
-        .SetProperty(kUserShell,
-                     modular::DocumentEditor::NewStringValue(kDummyUserShell))
-        .Insert(&docs);
-    root_->AddDocuments(std::move(docs));
+    std::vector<std::string> segments{"startup", "stories",
+                                      story_info_->url.get(), kUserShell};
+    root_->Set(modular::EscapeJsonPath(segments.begin(), segments.end()),
+               modular::JsonValueToString(modular::JsonValue(kDummyUserShell)));
 
     // NOTE(mesch): Both watchers below fire right after they are
     // registered. Make sure the link data watcher doesn't stop us

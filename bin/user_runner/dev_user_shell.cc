@@ -8,27 +8,20 @@
 
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
 #include "apps/modular/lib/app/connect.h"
-#include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
-#include "apps/modular/services/document_store/document.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
-#include "apps/modular/src/user_runner/link_json.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/command_line.h"
-#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/tasks/task_runner.h"
-#include "lib/ftl/time/time_delta.h"
 #include "lib/mtl/tasks/message_loop.h"
-#include "third_party/rapidjson/rapidjson/document.h"
 
 namespace {
 
@@ -236,10 +229,7 @@ class DevUserShellApp
           if (!settings_.root_link.empty()) {
             modular::LinkPtr root;
             story_controller_->GetLink(root.NewRequest());
-
-            rapidjson::Document document;
-            document.Parse(settings_.root_link.c_str());
-            root->SetAllDocuments(modular::ConvertToLink(document));
+            root->UpdateObject("", settings_.root_link);
           }
         });
   }

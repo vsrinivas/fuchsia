@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/modular/lib/document_editor/document_editor.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/module_controller.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
@@ -37,7 +37,7 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   void Connect(
       fidl::InterfaceRequest<StoryController> story_controller_request);
   void StopForDelete(const StopCallback& done);
-  void AddLinkDataAndSync(FidlDocMap data, const StopCallback& done);
+  void AddLinkDataAndSync(const fidl::String& json, const StopCallback& done);
   bool IsActive();  // Has story or pending stop or start requests?
   size_t bindings_size() const { return bindings_.size(); }
 

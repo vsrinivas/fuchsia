@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
+
 import 'package:apps.modular.lib.app.dart/app.dart';
 import 'package:apps.modular.services.application/service_provider.fidl.dart';
-import 'package:apps.modular.services.document_store/document.fidl.dart';
 import 'package:apps.modular.services.story/link.fidl.dart';
 import 'package:apps.modular.services.story/module.fidl.dart';
 import 'package:apps.modular.services.story/story.fidl.dart';
@@ -15,8 +16,11 @@ final ApplicationContext _context = new ApplicationContext.fromStartupInfo();
 
 final GlobalKey<_HomeScreenState> _homeKey = new GlobalKey<_HomeScreenState>();
 
+final String _kDocRoot = 'counters';
 final String _kDocId = 'counter-doc-id';
-final String _kCounterValueKey = 'counter-key';
+final String _kCounterValueKey = "http://schema.domokit.org/counter";
+final String _kPingPongPacketType = 'http://schema.domokit.org/PingPongPacket';
+final String _kAtTypeKey = '@type';
 
 ModuleImpl _module;
 
@@ -41,18 +45,17 @@ class LinkWatcherImpl extends LinkWatcher {
 
   /// A callback called whenever the associated [Link] has new changes.
   @override
-  void notify(Map<String, Document> docs) {
-    _log('Notify call!');
-    docs.keys.forEach((String id) {
-      Document doc = docs[id];
-      _log('Printing document with id: ${doc.docid}');
-
-      doc.properties.keys.forEach((String key) {
-        _log('$key: ${doc.properties[key]}');
-      });
-    });
-
-    _homeKey.currentState?.updateDoc(docs[_kDocId]);
+  void notify(String json) {
+    _log('Child LinkWatcherImpl.notify call');
+    _log('Child JSON: ${json}');
+    dynamic doc = JSON.decode(json);
+    if (doc is Map &&
+        doc[_kDocRoot] is Map &&
+        doc[_kDocRoot][_kDocId] is Map &&
+        doc[_kDocRoot][_kDocId][_kCounterValueKey] is int) {
+      _homeKey.currentState
+          ?.updateValue(doc[_kDocRoot][_kDocId][_kCounterValueKey]);
+    }
   }
 }
 
@@ -61,6 +64,8 @@ class ModuleImpl extends Module {
 
   final LinkProxy _link = new LinkProxy();
   final LinkWatcherImpl _linkWatcher = new LinkWatcherImpl();
+
+  final String _jsonPath = "/" + _kDocRoot + "/" + _kDocId;
 
   void bind(InterfaceRequest<Module> request) {
     _binding.bind(this, request);
@@ -81,7 +86,7 @@ class ModuleImpl extends Module {
     // Register the link watcher.
     _link.watchAll(_linkWatcher.getHandle());
 
-    _setValue(42);
+    _initValue(42);
   }
 
   @override
@@ -96,12 +101,19 @@ class ModuleImpl extends Module {
     callback();
   }
 
+  void _initValue(int newValue) {
+    _link.set(
+        _jsonPath,
+        JSON.encode(<String, dynamic>{
+          _kAtTypeKey: _kPingPongPacketType,
+          _kCounterValueKey: newValue,
+        }));
+  }
+
   void _setValue(int newValue) {
-    _link.addDocuments(<String, Document>{
-      _kDocId: new Document.init(_kDocId, <String, Value>{
-        _kCounterValueKey: new Value()..intValue = newValue,
-      }),
-    });
+    // Update just the value of interest. Don't overwrite other members.
+    _link.updateObject(
+        _jsonPath, JSON.encode(<String, dynamic>{_kCounterValueKey: newValue}));
   }
 }
 
@@ -113,23 +125,14 @@ class _HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<_HomeScreen> {
-  Document _exampleDoc;
+  int _linkValue = 0;
 
   int get _currentValue {
-    if (_exampleDoc == null ||
-        _exampleDoc.properties == null ||
-        !_exampleDoc.properties.containsKey(_kCounterValueKey) ||
-        _exampleDoc.properties[_kCounterValueKey].tag != ValueTag.intValue) {
-      return -1;
-    }
-
-    return _exampleDoc.properties[_kCounterValueKey].intValue;
+    return _linkValue;
   }
 
-  void updateDoc(Document doc) {
-    if (doc != null) {
-      setState(() => _exampleDoc = doc);
-    }
+  void updateValue(int value) {
+    setState(() => _linkValue = value);
   }
 
   @override

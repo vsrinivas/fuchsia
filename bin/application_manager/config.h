@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_APPLICATION_MANAGER_CONFIG_H_
-#define MOJO_APPLICATION_MANAGER_CONFIG_H_
+#ifndef APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_CONFIG_H_
+#define APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_CONFIG_H_
 
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "apps/modular/services/application/application_launcher.fidl.h"
@@ -30,8 +29,8 @@ namespace modular {
 
 class Config {
  public:
-  Config();
-  ~Config();
+  Config() = default;
+  ~Config() = default;
 
   bool ReadIfExistsFrom(const std::string& config_file);
 
@@ -53,4 +52,4 @@ class Config {
 
 }  // namespace modular
 
-#endif  // MOJO_APPLICATION_MANAGER_CONFIG_H_
+#endif  // APPS_MODULAR_SRC_APPLICATION_MANAGER_APPLICATION_CONFIG_H_

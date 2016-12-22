@@ -6,6 +6,7 @@
 
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "lib/ftl/logging.h"
 
@@ -29,9 +30,9 @@ void StoryControllerImpl::Connect(
   bindings_.AddBinding(this, std::move(story_controller_request));
 }
 
-void StoryControllerImpl::AddLinkDataAndSync(FidlDocMap data,
+void StoryControllerImpl::AddLinkDataAndSync(const fidl::String& json,
                                              const StopCallback& done) {
-  if (data.is_null()) {
+  if (json.is_null()) {
     done();
     return;
   }
@@ -40,7 +41,7 @@ void StoryControllerImpl::AddLinkDataAndSync(FidlDocMap data,
     StartStoryRunner();
   }
 
-  root_->AddDocuments(std::move(data));
+  root_->UpdateObject("", json);
   root_->Sync(done);
 }
 

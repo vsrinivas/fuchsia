@@ -5,12 +5,8 @@
 #ifndef MOJO_APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 #define MOJO_APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 
-#include <memory>
-#include <unordered_map>
-
-#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/bottleneck.h"
-#include "apps/modular/services/document_store/document.fidl.h"
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/story_storage.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -18,10 +14,16 @@
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/ftl/macros.h"
 
 namespace modular {
+
+// Use the CrtAllocator and not the pool allocator so that merging doesn't
+// require deep copying.
+using CrtJsonDoc =
+    rapidjson::GenericDocument<rapidjson::UTF8<>, rapidjson::CrtAllocator>;
+using CrtJsonValue = CrtJsonDoc::ValueType;
+using CrtJsonPointer = rapidjson::GenericPointer<CrtJsonValue>;
 
 class LinkConnection;
 
@@ -63,11 +65,16 @@ class LinkImpl : public StoryStorageLinkWatcher {
   ~LinkImpl() override = default;
 
   // Used by LinkConnection.
-  void AddDocuments(FidlDocMap docs, LinkConnection* src);
-  void SetAllDocuments(FidlDocMap docs, LinkConnection* src);
+  void UpdateObject(const fidl::String& path,
+                    const fidl::String& json,
+                    LinkConnection* src);
+  void Set(const fidl::String& path,
+           const fidl::String& json,
+           LinkConnection* src);
+  void Erase(const fidl::String& path, LinkConnection* src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
-  const FidlDocMap& docs() const { return docs_; }
+  const CrtJsonDoc& doc() const { return doc_; }
   void Sync(const std::function<void()>& callback);
 
   // Used by StoryImpl.
@@ -76,6 +83,10 @@ class LinkImpl : public StoryStorageLinkWatcher {
   }
 
  private:
+  bool MergeObject(CrtJsonValue& target,
+                   CrtJsonValue&& source,
+                   CrtJsonValue::AllocatorType& allocator);
+
   void DatabaseChanged(LinkConnection* src);
   void NotifyWatchers(LinkConnection* src);
   void ReadLinkData(const std::function<void()>& done);
@@ -85,7 +96,7 @@ class LinkImpl : public StoryStorageLinkWatcher {
   // |StoryStorageLinkWatcher|
   void OnChange(LinkDataPtr link_data) override;
 
-  FidlDocMap docs_;
+  CrtJsonDoc doc_;
   std::vector<std::unique_ptr<LinkConnection>> connections_;
   const fidl::String name_;
   StoryStoragePtr story_storage_;
@@ -108,16 +119,18 @@ class LinkConnection : public Link {
     new LinkConnection(impl, std::move(link_request));
   }
 
-  void NotifyWatchers(const FidlDocMap& docs, const bool self_notify);
+  void NotifyWatchers(const CrtJsonDoc& doc, const bool self_notify);
 
  private:
   // Private so it cannot be created on the stack.
   LinkConnection(LinkImpl* impl, fidl::InterfaceRequest<Link> link_request);
 
   // |Link|
-  void AddDocuments(FidlDocMap docs) override;
-  void SetAllDocuments(FidlDocMap docs) override;
-  void Query(const QueryCallback& callback) override;
+  void UpdateObject(const fidl::String& path,
+                    const fidl::String& json) override;
+  void Set(const fidl::String& path, const fidl::String& json) override;
+  void Get(const fidl::String& path, const GetCallback& callback) override;
+  void Erase(const fidl::String& path) override;
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void Dup(fidl::InterfaceRequest<Link> dup) override;

@@ -72,7 +72,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
       fidl::InterfaceRequest<StoryRunnerFactory> request);
   void ConnectToResolver(fidl::InterfaceRequest<Resolver> request);
 
-  using FidlDocMap = fidl::Map<fidl::String, document_store::DocumentPtr>;
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
 
  private:
@@ -84,7 +83,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   void CreateStoryWithInfo(
       const fidl::String& url,
       FidlStringMap extra_info,
-      FidlDocMap root_docs,
+      const fidl::String& root_json,
       const CreateStoryWithInfoCallback& callback) override;
 
   // |StoryProvider|

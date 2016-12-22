@@ -6,8 +6,7 @@
 
 #include <utility>
 
-#include <rapidjson/document.h>
-
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/ftl/files/file.h"
 
 namespace bootstrap {
@@ -27,8 +26,8 @@ bool Config::ReadFrom(const std::string& config_file) {
 }
 
 bool Config::Parse(const std::string& string) {
-  rapidjson::Document document;
-  document.Parse(string.data(), string.size());
+  modular::JsonDoc document;
+  document.Parse(string);
   if (!document.IsObject())
     return false;
 

@@ -195,7 +195,6 @@ class WriteStoryDataCall : public Operation {
 class CreateStoryCall : public Operation {
  public:
   using FidlStringMap = StoryProviderImpl::FidlStringMap;
-  using FidlDocMap = StoryProviderImpl::FidlDocMap;
   using Result = std::function<void(fidl::String)>;
 
   CreateStoryCall(OperationContainer* const container,
@@ -204,7 +203,7 @@ class CreateStoryCall : public Operation {
                   const fidl::String& url,
                   const std::string& story_id,
                   FidlStringMap extra_info,
-                  FidlDocMap root_docs,
+                  fidl::String root_json,
                   Result result)
       : Operation(container),
         ledger_(ledger),
@@ -212,7 +211,7 @@ class CreateStoryCall : public Operation {
         url_(url),
         story_id_(story_id),
         extra_info_(std::move(extra_info)),
-        root_docs_(std::move(root_docs)),
+        root_json_(std::move(root_json)),
         result_(result) {
     Ready();
   }
@@ -244,7 +243,7 @@ class CreateStoryCall : public Operation {
 
           // We call stop on the controller to ensure that root data has been
           // written before this operations is done.
-          controller_->AddLinkDataAndSync(std::move(root_docs_), [this] {
+          controller_->AddLinkDataAndSync(std::move(root_json_), [this] {
             result_(story_id_);
             Done();
           });
@@ -259,7 +258,7 @@ class CreateStoryCall : public Operation {
   const fidl::String url_;
   const std::string story_id_;
   FidlStringMap extra_info_;
-  FidlDocMap root_docs_;
+  fidl::String root_json_;
   Result result_;
 
   ledger::PagePtr story_page_;
@@ -352,7 +351,7 @@ class DeleteStoryCall : public Operation {
   ledger::PagePtr root_page_;
   const fidl::String story_id_;
   StoryIdSet* const story_ids_;
-  ControllerMap* const  story_controllers_;
+  ControllerMap* const story_controllers_;
   PendingDeletion* const pending_deletion_;
   Result result_;
 
@@ -388,29 +387,28 @@ class GetControllerCall : public Operation {
       return;
     }
 
-    story_provider_impl_->GetStoryData(
-        story_id_, [this](StoryDataPtr story_data) {
-          if (story_data.is_null()) {
-            // We cannot resume a deleted (or otherwise non-existing) story.
-            Done();
-            return;
-          }
-          story_data_ = std::move(story_data);
-          ledger_->GetPage(
-              story_data_->story_page_id.Clone(), story_page_.NewRequest(),
-              [this](ledger::Status status) {
-                if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR) << "CreateStoryCall() "
-                                 << story_data_->story_info->id
-                                 << " Ledger.GetPage() " << status;
-                }
-                auto controller = new StoryControllerImpl(
-                    std::move(story_data_), story_provider_impl_);
-                controller->Connect(std::move(request_));
-                story_controllers_->emplace(story_id_, controller);
-                Done();
-              });
-        });
+    story_provider_impl_->GetStoryData(story_id_, [this](
+                                                      StoryDataPtr story_data) {
+      if (story_data.is_null()) {
+        // We cannot resume a deleted (or otherwise non-existing) story.
+        Done();
+        return;
+      }
+      story_data_ = std::move(story_data);
+      ledger_->GetPage(story_data_->story_page_id.Clone(),
+                       story_page_.NewRequest(), [this](ledger::Status status) {
+                         if (status != ledger::Status::OK) {
+                           FTL_LOG(ERROR) << "GetControllerCall() "
+                                          << story_data_->story_info->id
+                                          << " Ledger.GetPage() " << status;
+                         }
+                         auto controller = new StoryControllerImpl(
+                             std::move(story_data_), story_provider_impl_);
+                         controller->Connect(std::move(request_));
+                         story_controllers_->emplace(story_id_, controller);
+                         Done();
+                       });
+    });
   }
 
  private:
@@ -636,19 +634,19 @@ void StoryProviderImpl::CreateStory(const fidl::String& url,
   const std::string story_id = MakeStoryId(&story_ids_, 10);
   FTL_LOG(INFO) << "CreateStory() " << url;
   new CreateStoryCall(&operation_queue_, ledger_.get(), this, url, story_id,
-                      FidlStringMap(), FidlDocMap(), callback);
+                      FidlStringMap(), fidl::String(), callback);
 }
 
 // |StoryProvider|
 void StoryProviderImpl::CreateStoryWithInfo(
     const fidl::String& url,
     FidlStringMap extra_info,
-    FidlDocMap root_docs,
+    const fidl::String& root_json,
     const CreateStoryWithInfoCallback& callback) {
   const std::string story_id = MakeStoryId(&story_ids_, 10);
-  FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_docs;
+  FTL_LOG(INFO) << "CreateStoryWithInfo() " << root_json;
   new CreateStoryCall(&operation_queue_, ledger_.get(), this, url, story_id,
-                      std::move(extra_info), std::move(root_docs), callback);
+                      std::move(extra_info), std::move(root_json), callback);
 }
 
 // |StoryProvider|
@@ -722,7 +720,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
     } else {
       new DeleteStoryCall(&operation_queue_, ledger_.get(), story_id,
                           &story_ids_, &story_controllers_,
-                          nullptr  /* pending_deletion */, [] {});
+                          nullptr /* pending_deletion */, [] {});
     }
   }
   cb(nullptr);

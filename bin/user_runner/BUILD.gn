@@ -31,8 +31,7 @@ executable("user_runner") {
     "//apps/modular/lib/fidl:operation",
     "//apps/modular/lib/fidl:scope",
     "//apps/modular/lib/fidl:strong_binding",
-    "//apps/modular/services/document_store",
-    "//apps/modular/lib/document_editor",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/story:private",
     "//apps/modular/services/user:private",
     "//apps/modular/services/device:device_context",
@@ -47,7 +46,6 @@ executable("user_runner") {
 executable("dev_user_shell") {
   sources = [
     "dev_user_shell.cc",
-    "link_json.cc",
   ]
 
   deps = [
@@ -55,7 +53,7 @@ executable("dev_user_shell") {
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/services/device:device_context",
-    "//apps/modular/services/document_store",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/user",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",
@@ -63,7 +61,6 @@ executable("dev_user_shell") {
     "//lib/ftl",
     "//lib/mtl",
     "//lib/mtl/tasks",
-    "//third_party/rapidjson",
   ]
 }
 
@@ -74,9 +71,9 @@ executable("dummy_user_shell") {
 
   deps = [
     "//apps/maxwell/services/suggestion",
-    "//apps/modular/lib/document_editor",
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:single_service_view_app",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/device:device_context",
     "//apps/modular/services/user",
     "//apps/mozart/lib/view_framework",

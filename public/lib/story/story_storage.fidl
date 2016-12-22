@@ -4,8 +4,6 @@
 
 module modular;
 
-import "apps/modular/services/document_store/document.fidl";
-
 // The abstraction provided internally by UserRunner to StoryRunner
 // for state persistence.
 interface StoryStorage {
@@ -25,7 +23,6 @@ interface StoryStorageLinkWatcher {
 };
 
 struct LinkData {
-  // The data stored in one Link instance. The key is the docid of the
-  // Document.
-  map<string, document_store.Document> docs;
+  // The data stored in one Link instance.
+  string json;
 };

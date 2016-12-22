@@ -7,28 +7,23 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/examples/counter_cpp/calculator.fidl.h"
+#include "apps/modular/examples/counter_cpp/store.h"
 #include "apps/modular/lib/app/connect.h"
-#include "apps/modular/lib/document_editor/document_editor.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/services/document_store/document.fidl.h"
-#include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fidl/cpp/bindings/map.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
+
 #include "third_party/skia/include/core/SkCanvas.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "third_party/skia/include/core/SkRect.h"
@@ -47,23 +42,15 @@ constexpr uint32_t kViewNodeIdBase = 100;
 constexpr uint32_t kViewNodeIdSpacing = 100;
 constexpr uint32_t kViewSceneNodeIdOffset = 1;
 
-// Link data subjects
-constexpr char kDocId[] =
-    "http://google.com/id/dc7cade7-7be0-4e23-924d-df67e15adae5";
-
-// Link data property labels
-constexpr char kCounterLabel[] = "http://schema.domokit.org/counter";
-constexpr char kSenderLabel[] = "http://schema.org/sender";
-constexpr char kIsALabel[] = "isA";
-
-// Link data property values
-constexpr char kIsAValue[] = "http://schema.domokit.org/PingPongPacket";
+// JSON data
+constexpr char kInitialJson[] =
+    "{     \"@type\" : \"http://schema.domokit.org/PingPongPacket\","
+    "      \"http://schema.domokit.org/counter\" : 0,"
+    "      \"http://schema.org/sender\" : \"RecipeImpl\""
+    "}";
 
 // Ledger keys
 constexpr char kLedgerCounterKey[] = "counter_key";
-
-using document_store::Document;
-using document_store::DocumentPtr;
 
 using modular::operator<<;
 
@@ -76,13 +63,13 @@ class LinkConnection : public modular::LinkWatcher {
     src_->Watch(src_binding_.NewBinding());
   }
 
-  void Notify(modular::FidlDocMap docs) override {
+  void Notify(const fidl::String& json) override {
     // We receive an initial update when the Link initializes. It's empty
     // if this is a new session, or it has documents if it's a restored session.
     // In either case, it should be ignored, otherwise we can get multiple
     // messages traveling at the same time.
-    if (!initial_update_ && docs.size() > 0) {
-      dst_->SetAllDocuments(std::move(docs));
+    if (!initial_update_ && json.size() > 0) {
+      dst_->Set("", json);
     }
     initial_update_ = false;
   }
@@ -345,10 +332,9 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
     // Read initial Link data. We expect the shell to tell us what it
     // is.
-    link_->Query(
-        [this](fidl::Map<fidl::String, document_store::DocumentPtr> value) {
-          FTL_LOG(INFO) << "example_recipe link: " << value;
-        });
+    link_->Get("", [this](const fidl::String& json) {
+      FTL_LOG(INFO) << "example_recipe link: " << json;
+    });
 
     story_->CreateLink("module1", module1_link_.NewRequest());
     story_->CreateLink("module2", module2_link_.NewRequest());
@@ -418,21 +404,16 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     // the Story is not new, but already contains existing Modules
     // and Links from the previous execution that is continued here.
     // Is that really enough?
-    module1_link_->Query([this](
-        fidl::Map<fidl::String, document_store::DocumentPtr> value) {
-      if (value.size() == 0) {
+    module1_link_->Get("", [this](const fidl::String& json) {
+      if (json == "null") {
         // This must come last, otherwise LinkConnection gets a
         // notification of our own write because of the "send
         // initial values" code.
-        modular::FidlDocMap docs;
-        modular::DocumentEditor(kDocId)
-            .SetProperty(kIsALabel,
-                         modular::DocumentEditor::NewIriValue(kIsAValue))
-            .SetProperty(kCounterLabel, modular::DocumentEditor::NewIntValue(1))
-            .SetProperty(kSenderLabel,
-                         modular::DocumentEditor::NewStringValue("RecipeImpl"))
-            .Insert(&docs);
-        module1_link_->SetAllDocuments(std::move(docs));
+        std::vector<std::string> segments{modular_example::kJsonSegment,
+                                          modular_example::kDocId};
+        module1_link_->Set(
+            modular::EscapeJsonPath(segments.begin(), segments.end()),
+            kInitialJson);
       }
     });
 

@@ -6,19 +6,13 @@
 #include "apps/modular/examples/counter_cpp/store.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/single_service_view_app.h"
-#include "apps/modular/services/document_store/document.fidl.h"
-#include "apps/modular/services/story/link.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
 #include "apps/mozart/lib/skia/skia_vmo_surface.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/services/buffers/cpp/buffer_producer.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fidl/cpp/bindings/map.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/weak_ptr.h"
@@ -40,7 +34,7 @@ constexpr char kModuleName[] = "Module1Impl";
 class Module1View : public mozart::BaseView {
  public:
   explicit Module1View(
-      modular::Store* const store,
+      modular_example::Store* const store,
       mozart::ViewManagerPtr view_manager,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
@@ -105,7 +99,7 @@ class Module1View : public mozart::BaseView {
     canvas->flush();
   }
 
-  modular::Store* const store_;
+  modular_example::Store* const store_;
   mozart::BufferProducer buffer_producer_;
   bool enable_animation_ = false;
 
@@ -114,7 +108,7 @@ class Module1View : public mozart::BaseView {
 
 class MultiplierImpl : public modular::examples::Multiplier {
  public:
-  MultiplierImpl() {}
+  MultiplierImpl() = default;
 
  private:
   // |Multiplier| impl:
@@ -238,7 +232,7 @@ class Module1App : public modular::SingleServiceViewApp<modular::Module> {
 
   std::unique_ptr<Module1View> view_;
   modular::StoryPtr story_;
-  modular::Store store_;
+  modular_example::Store store_;
 
   // Note: This should remain the last member so it'll be destroyed and
   // invalidate its weak pointers before any other members are destroyed.

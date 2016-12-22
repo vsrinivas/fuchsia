@@ -27,11 +27,11 @@ executable("application_manager") {
 
   deps = [
     "//apps/modular/lib/app",
+    "//apps/modular/lib/rapidjson",
     "//apps/modular/services/application",
     "//lib/ftl",
     "//lib/mtl",
     "//magenta/system/ulib/mx",
-    "//third_party/rapidjson",
   ]
 
   libs = [
