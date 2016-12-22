@@ -65,8 +65,10 @@ int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, u
     if (!platform_buffer)
         return DRET(-ENOMEM);
 
-    if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get()))
-        return DRET(-EINVAL);
+    int32_t result =
+        magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get());
+    if (result != 0)
+        return DRET(result);
 
     *size_out = platform_buffer->size();
     *buffer_out =
@@ -95,8 +97,10 @@ int32_t magma_system_import(magma_system_connection* connection, uint32_t buffer
     if (!platform_buffer)
         return DRET_MSG(-EINVAL, "PlatformBuffer::Import failed");
 
-    if (!magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get()))
-        return DRET_MSG(-EINVAL, "ImportBuffer failed");
+    int32_t result =
+        magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get());
+    if (result != 0)
+        return DRET_MSG(result, "ImportBuffer failed");
 
     *buffer_out = reinterpret_cast<magma_buffer_t>(platform_buffer.release());
 

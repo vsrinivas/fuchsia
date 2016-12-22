@@ -333,38 +333,38 @@ public:
     MagentaPlatformIpcConnection(mx::channel channel) : channel_(std::move(channel)) {}
 
     // Imports a buffer for use in the system driver
-    bool ImportBuffer(PlatformBuffer* buffer) override
+    int32_t ImportBuffer(PlatformBuffer* buffer) override
     {
         if (!buffer)
-            return DRETF(false, "attempting to import null buffer");
+            return DRET_MSG(-EINVAL, "attempting to import null buffer");
 
         uint32_t duplicate_handle;
         if (!buffer->duplicate_handle(&duplicate_handle))
-            return DRETF(false, "failed to get duplicate_handle");
+            return DRET_MSG(-EINVAL, "failed to get duplicate_handle");
 
         mx_handle_t duplicate_handle_mx = duplicate_handle;
 
         ImportBufferOp op;
-        mx_status_t status = channel_.write(0, &op, sizeof(op), &duplicate_handle_mx, 1);
-        if (status != NO_ERROR) {
+        int32_t result = channel_write(&op, sizeof(op), &duplicate_handle_mx, 1);
+        if (result != 0) {
             mx_handle_close(duplicate_handle);
-            return DRETF(false, "failed to write to channel");
+            return DRET_MSG(result, "failed to write to channel");
         }
 
-        return true;
+        return 0;
     }
 
     // Destroys the buffer with |buffer_id| within this connection
     // returns false if the buffer with |buffer_id| has not been imported
-    bool ReleaseBuffer(uint64_t buffer_id) override
+    int32_t ReleaseBuffer(uint64_t buffer_id) override
     {
         ReleaseBufferOp op;
         op.buffer_id = buffer_id;
-        mx_status_t status = channel_.write(0, &op, sizeof(op), nullptr, 0);
-        if (status != NO_ERROR)
-            return DRETF(false, "failed to write to channel");
+        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != 0)
+            return DRET_MSG(result, "failed to write to channel");
 
-        return true;
+        return 0;
     }
 
     // Creates a context and returns the context id
@@ -375,9 +375,9 @@ public:
 
         CreateContextOp op;
         op.context_id = context_id;
-        mx_status_t status = channel_.write(0, &op, sizeof(op), nullptr, 0);
-        if (status != NO_ERROR)
-            SetError(-EINVAL);
+        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != 0)
+            SetError(result);
     }
 
     // Destroys a context for the given id
@@ -385,9 +385,9 @@ public:
     {
         DestroyContextOp op;
         op.context_id = context_id;
-        mx_status_t status = channel_.write(0, &op, sizeof(op), nullptr, 0);
-        if (status != NO_ERROR)
-            SetError(-EINVAL);
+        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != 0)
+            SetError(result);
     }
 
     void ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override
@@ -395,23 +395,24 @@ public:
         ExecuteCommandBufferOp op;
         op.command_buffer_id = command_buffer_id;
         op.context_id = context_id;
-        mx_status_t status = channel_.write(0, &op, sizeof(op), nullptr, 0);
-        if (status != NO_ERROR)
-            SetError(-EINVAL);
+        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != 0)
+            SetError(result);
     }
 
     void WaitRendering(uint64_t buffer_id) override
     {
         WaitRenderingOp op;
         op.buffer_id = buffer_id;
-        mx_status_t status = channel_.write(0, &op, sizeof(op), nullptr, 0);
-        if (status != NO_ERROR) {
-            SetError(-EINVAL);
+        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != 0) {
+            SetError(result);
             return;
         }
         int32_t error;
-        if (!WaitError(&error)) {
-            SetError(-EINVAL);
+        result = WaitError(&error);
+        if (result != 0) {
+            SetError(result);
             return;
         }
 
@@ -433,10 +434,10 @@ public:
 
         PageFlipOp op;
         op.buffer_id = buffer_id;
-        mx_status_t status = channel_.write(0, &op, sizeof(op), nullptr, 0);
-        if (status != NO_ERROR) {
+        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != 0) {
             if (callback)
-                callback(DRET_MSG(-EINVAL, "could not write to channel"), data);
+                callback(DRET_MSG(result, "could not write to channel"), data);
             return;
         }
 
@@ -444,9 +445,11 @@ public:
         DLOG("waiting on reply");
         PageFlipReply reply;
         reply.buffer_id = 0;
-        if (!WaitMessage(reinterpret_cast<uint8_t*>(&reply), sizeof(reply), !first_frame)) {
+
+        result = WaitMessage(reinterpret_cast<uint8_t*>(&reply), sizeof(reply), !first_frame);
+        if (result != 0) {
             if (callback)
-                callback(DRET_MSG(-EINVAL, "failed to wait for pageflip response"), data);
+                callback(DRET_MSG(result, "failed to wait for pageflip response"), data);
             return;
         }
 
@@ -473,13 +476,14 @@ public:
             return result;
 
         GetErrorOp op;
-        mx_status_t status = channel_.write(0, &op, sizeof(op), nullptr, 0);
-        if (status != NO_ERROR)
-            return -EINVAL;
+        result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != 0)
+            return DRET_MSG(result, "failed to write to channel");
 
         int32_t error;
-        if (!WaitError(&error))
-            return -EINVAL;
+        result = WaitError(&error);
+        if (result != 0)
+            return result;
 
         return error;
     }
@@ -490,12 +494,12 @@ public:
             error_ = DRET_MSG(error, "MagentaPlatformIpcConnection encountered async error");
     }
 
-    bool WaitError(int32_t* error_out)
+    int32_t WaitError(int32_t* error_out)
     {
         return WaitMessage(reinterpret_cast<uint8_t*>(error_out), sizeof(*error_out), true);
     }
 
-    bool WaitMessage(uint8_t* msg_out, uint32_t msg_size, bool blocking)
+    int32_t WaitMessage(uint8_t* msg_out, uint32_t msg_size, bool blocking)
     {
         mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
         mx_signals_t pending = 0;
@@ -503,7 +507,7 @@ public:
         auto status = channel_.wait_one(signals, blocking ? MX_TIME_INFINITE : 0, &pending);
         if (status == ERR_TIMED_OUT) {
             DLOG("got ERR_TIMED_OUT, returning true");
-            return true;
+            return 0;
         } else if (status == NO_ERROR) {
             DLOG("got NO_ERROR, blocking: %s, readable: %s, closed %s", blocking ? "true" : "false",
                  pending & MX_CHANNEL_READABLE ? "true" : "false",
@@ -513,19 +517,33 @@ public:
                 mx_status_t status =
                     channel_.read(0, msg_out, msg_size, &actual_bytes, nullptr, 0, nullptr);
                 if (status != NO_ERROR)
-                    return DRETF(false, "failed to read from channel");
+                    return DRET_MSG(-EINVAL, "failed to read from channel");
                 if (actual_bytes != msg_size)
                     return DRETF(false, "read wrong number of bytes from channel");
             } else if (pending & MX_CHANNEL_PEER_CLOSED) {
-                return DRETF(false, "channel, closed");
+                return DRET_MSG(-ENODEV, "channel, closed");
             }
-            return true;
+            return 0;
         } else {
-            return DRETF(false, "failed to wait on channel");
+            return DRET_MSG(-EINVAL, "failed to wait on channel");
         }
     }
 
 private:
+    int32_t channel_write(const void* bytes, uint32_t num_bytes, const mx_handle_t* handles,
+                          uint32_t num_handles)
+    {
+        mx_status_t status = channel_.write(0, bytes, num_bytes, handles, num_handles);
+        switch (status) {
+        case NO_ERROR:
+            return 0;
+        case ERR_BAD_STATE:
+            return -ENODEV;
+        default:
+            return -EINVAL;
+        }
+    }
+
     struct pageflip_closure {
         magma_system_pageflip_callback_t callback;
         void* data;

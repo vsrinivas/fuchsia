@@ -60,24 +60,11 @@ public:
         EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size));
 
         magma_system_submit_command_buffer(connection_, command_buffer, context_id);
-
-        result = magma_system_get_error(connection_);
-        if (result != 0)
-            return DRET(result);
-
         magma_system_wait_rendering(connection_, batch_buffer);
-
-        result = magma_system_get_error(connection_);
-        if (result != 0)
-            return DRET(result);
-
         magma_system_destroy_context(connection_, context_id);
 
         result = magma_system_get_error(connection_);
-        if (result != 0)
-            return DRET(result);
-
-        return 0;
+        return DRET(result);
     }
 
     bool InitBatchBuffer(magma_buffer_t buffer, uint64_t size)
