@@ -44,6 +44,6 @@ source_set("libmsd") {
 
 shared_library("magma") {
   deps = [
-    "src/sys_driver:sys_abi_impl($magma_shared_toolchain)",
+    "src/libmagma($magma_shared_toolchain)",
   ]
 }

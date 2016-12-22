@@ -4,28 +4,20 @@
 
 import("//magma/gnbuild/magma.gni")
 
-source_set("sys_driver") {
+source_set("libmagma") {
   public_deps = [
-    "$magma_build_root/include:msd_abi",
     "$magma_build_root/include:sys_abi",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:buffer",
   ]
 
   sources = [
-    "magma_driver.h",
-    "magma_system_buffer.cc",
-    "magma_system_buffer.h",
-    "magma_system_connection.cc",
-    "magma_system_connection.h",
-    "magma_system_context.cc",
-    "magma_system_context.h",
-    "magma_system_device.cc",
-    "magma_system_device.h",
+    "magma_system.cc",
   ]
 
   deps = [
     "$magma_build_root/src/magma_util/platform:connection",
-    "$magma_build_root/src/magma_util/platform:device",
   ]
+
+  libs = [ "mxio" ]
 }
