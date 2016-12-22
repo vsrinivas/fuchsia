@@ -19,7 +19,7 @@ need to add /path/to/install/bin to your PATH.
 
 ```
 cd $SRC
-git clone https://fuchsia.googlesource.com/third_party/qemu
+git clone --recursive https://fuchsia.googlesource.com/third_party/qemu
 cd qemu
 ./configure --target-list=arm-softmmu,aarch64-softmmu,x86_64-softmmu
 make -j32
