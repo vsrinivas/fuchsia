@@ -66,7 +66,7 @@ static void arm64_cpu_early_init(void)
     arch_enable_fiqs();
 
     /* enable cycle counter */
-    ARM64_WRITE_SYSREG(pmcr_el0, PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT);
+    ARM64_WRITE_SYSREG(pmcr_el0, (uint64_t)(PMCR_EL0_ENABLE_BIT | PMCR_EL0_LONG_COUNTER_BIT));
     ARM64_WRITE_SYSREG(pmcntenset_el0, (1UL << 31));
 
     /* enable user space access to cycle counter */
