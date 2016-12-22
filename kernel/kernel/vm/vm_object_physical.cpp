@@ -60,7 +60,7 @@ void VmObjectPhysical::Dump(uint depth, bool verbose) {
     for (uint i = 0; i < depth; ++i) {
         printf("  ");
     }
-    printf("object %p base %#" PRIxPTR " size %#" PRIx64 "\n ref %d", this, base_, size_, ref_count_debug());
+    printf("object %p base %#" PRIxPTR " size %#" PRIx64 " ref %d\n", this, base_, size_, ref_count_debug());
 }
 
 // get the physical address of a page at offset
