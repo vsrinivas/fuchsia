@@ -87,6 +87,10 @@
           "bootfs_path": "benchmarks/data/175.vpr/net.in"
         },
         {
+          "file": "third_party/speccpu2000/175.vpr/data/ref/input/place.in",
+          "bootfs_path": "benchmarks/data/175.vpr/place.in"
+        },
+        {
           "file": "third_party/speccpu2000/175.vpr/data/ref/input/arch.in",
           "bootfs_path": "benchmarks/data/175.vpr/arch.in"
         },
