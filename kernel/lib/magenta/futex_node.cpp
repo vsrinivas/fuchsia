@@ -112,17 +112,22 @@ status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t timeout) {
     // would not be atomic, which would mean that we could miss wakeups.
     mutex_release_internal(mutex->GetInternal(), /* reschedule= */ false);
 
-    status_t result = wait_queue_block(&wait_queue_, t);
+    // Check whether a kill has been initiated, and block if not.  This
+    // check+wait must be done atomically (with respect to THREAD_LOCK),
+    // otherwise we could miss a thread termination.
+    thread_t* current_thread = get_current_thread();
+    status_t result;
+    if (current_thread->signals & THREAD_SIGNAL_KILL) {
+        result = ERR_INTERRUPTED;
+    } else {
+        current_thread->interruptable = true;
+        result = wait_queue_block(&wait_queue_, t);
+        current_thread->interruptable = false;
+    }
 
     THREAD_UNLOCK(state);
 
     return result;
-}
-
-void FutexNode::WakeKilledThread() {
-    THREAD_LOCK(state);
-    wait_queue_wake_one(&wait_queue_, true, NO_ERROR);
-    THREAD_UNLOCK(state);
 }
 
 void FutexNode::WakeThreads(FutexNode* head) {

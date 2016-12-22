@@ -21,6 +21,10 @@ FutexContext::FutexContext() {
 
 FutexContext::~FutexContext() {
     LTRACE_ENTRY;
+
+    // All of the threads should have removed themselves from wait queues
+    // by the time the process has exited.
+    DEBUG_ASSERT(futex_table_.is_empty());
 }
 
 status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_time_t timeout) {
@@ -93,24 +97,6 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     // another thread is waiting on the mutex, then that thread won't get
     // woken -- the wakeup from the FutexWake() call would have got lost.
     return NO_ERROR;
-}
-
-void FutexContext::WakeAll() {
-    LTRACE_ENTRY;
-
-    AutoLock lock(lock_);
-    for(auto &entry : futex_table_) {
-        FutexNode::WakeThreads(&entry);
-    }
-    futex_table_.clear();
-}
-
-void FutexContext::WakeKilledThread(FutexNode* node) {
-    LTRACE_ENTRY;
-
-    AutoLock lock(lock_);
-    if (UnqueueNodeLocked(node))
-        node->WakeKilledThread();
 }
 
 status_t FutexContext::FutexWake(user_ptr<int> value_ptr, uint32_t count) {
