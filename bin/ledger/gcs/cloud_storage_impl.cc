@@ -181,6 +181,11 @@ void CloudStorageImpl::OnResponse(
     return;
   }
 
+  if (response->status_code == 404) {
+    callback(Status::NOT_FOUND, std::move(response));
+    return;
+  }
+
   if (response->status_code != 200 && response->status_code != 204) {
     FTL_LOG(ERROR) << response->url << " error " << response->status_line;
     callback(Status::SERVER_ERROR, std::move(response));

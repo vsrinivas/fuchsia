@@ -14,6 +14,8 @@ ftl::StringView StatusToString(Status status) {
       return "INTERNAL_ERROR";
     case Status::NETWORK_ERROR:
       return "NETWORK_ERROR";
+    case Status::NOT_FOUND:
+      return "NOT_FOUND";
     case Status::OBJECT_ALREADY_EXISTS:
       return "OBJECT_ALREADY_EXISTS";
     case Status::PARSE_ERROR:

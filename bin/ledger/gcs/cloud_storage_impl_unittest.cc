@@ -157,6 +157,25 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   EXPECT_EQ(size, content.size());
 }
 
+TEST_F(CloudStorageImplTest, TestDownloadNotFound) {
+  SetResponse("", 0, 404);
+
+  Status status;
+  uint64_t size;
+  mx::socket data;
+  gcs_.DownloadFile(
+      "whoa", test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                            &size, &data));
+  ASSERT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(
+      "https://firebasestorage.googleapis.com"
+      "/v0/b/bucket/o/prefixwhoa?alt=media",
+      fake_network_service_.GetRequest()->url);
+  EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
+}
+
 TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
   const std::string content = "abc";
   SetResponse(content, content.size() + 1, 200);
