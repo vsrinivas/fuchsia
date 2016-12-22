@@ -12,9 +12,7 @@
 
 namespace examples {
 namespace {
-static constexpr char kResponderName[] = "example";
-static constexpr char kResponderServiceName[] =
-    "netconnector::ExampleResponder";
+static constexpr char kRespondingServiceName[] = "netconnector::Example";
 
 static const std::vector<std::string> kConversation = {
     "Hello!",    "Hello!",   "Do you like my hat?",
@@ -44,13 +42,12 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
   conversation_iter_ = kConversation.begin();
 
   if (params->request_device_name().empty()) {
-    // Params say we should be a responder. Register ourselves as such.
-    application_context_->outgoing_services()
-        ->AddService<netconnector::Responder>(
-            [this](fidl::InterfaceRequest<netconnector::Responder> request) {
-              bindings_.AddBinding(this, std::move(request));
-            },
-            kResponderServiceName);
+    // Params say we should be responding. Register the responding service.
+    application_context_->outgoing_services()->AddServiceForName(
+        [this](mx::channel channel) {
+          message_relay_.SetChannel(std::move(channel));
+        },
+        kRespondingServiceName);
   } else {
     // Params say we should be a requestor.
     netconnector::NetConnectorPtr connector =
@@ -69,8 +66,12 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
     message_relay_.SetChannel(std::move(local));
 
     // Pass the remote end to NetConnector.
-    connector->RequestConnection(params->request_device_name(), kResponderName,
-                                 std::move(remote));
+    modular::ServiceProviderPtr device_service_provider;
+    connector->GetDeviceServiceProvider(params->request_device_name(),
+                                        device_service_provider.NewRequest());
+
+    device_service_provider->ConnectToService(kRespondingServiceName,
+                                              std::move(remote));
 
     // Start the conversation.
     SendMessage(*conversation_iter_);
@@ -80,16 +81,6 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
 }
 
 NetConnectorExampleImpl::~NetConnectorExampleImpl() {}
-
-void NetConnectorExampleImpl::ConnectionRequested(
-    const fidl::String& responder_name,
-    mx::channel channel) {
-  // We only get here if we're the responder.
-  FTL_LOG(INFO) << "Connection requested, responder name " << responder_name;
-  FTL_DCHECK(responder_name == kResponderName);
-
-  message_relay_.SetChannel(std::move(channel));
-}
 
 void NetConnectorExampleImpl::SendMessage(const std::string& message_string) {
   FTL_LOG(INFO) << "Sending message: '" << message_string << "'";

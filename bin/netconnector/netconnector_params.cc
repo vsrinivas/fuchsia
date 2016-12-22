@@ -6,6 +6,7 @@
 
 #include <rapidjson/document.h>
 
+#include "apps/modular/services/application/application_launcher.fidl.h"
 #include "lib/ftl/files/file.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
@@ -13,10 +14,10 @@
 namespace netconnector {
 namespace {
 
-constexpr const char kConfigHost[] = "host";
-constexpr const char kConfigResponders[] = "responders";
-constexpr const char kConfigDevices[] = "devices";
-constexpr const char kDefaultConfigFileName[] =
+constexpr char kConfigHost[] = "host";
+constexpr char kConfigServices[] = "services";
+constexpr char kConfigDevices[] = "devices";
+constexpr char kDefaultConfigFileName[] =
     "/system/data/netconnector/netconnector.config";
 }  // namespace
 
@@ -25,7 +26,7 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
 
   listen_ = command_line.HasOption("listen");
 
-  if (!command_line.GetOptionValue("name", &host_name_)) {
+  if (!command_line.GetOptionValue("host", &host_name_)) {
     host_name_ = std::string();
   }
 
@@ -47,15 +48,23 @@ NetConnectorParams::NetConnectorParams(const ftl::CommandLine& command_line) {
   }
 
   for (auto option : command_line.options()) {
-    if (option.name == "responder") {
-      auto split = ftl::SplitString(option.value, "@", ftl::kTrimWhitespace,
-                                    ftl::kSplitWantNonEmpty);
-      if (split.size() != 2) {
-        Usage();
-        return;
-      }
+    if (option.name == "service") {
+      for (auto service :
+           ftl::SplitString(option.value, ",", ftl::kTrimWhitespace,
+                            ftl::kSplitWantNonEmpty)) {
+        auto split = ftl::SplitString(service, "@", ftl::kTrimWhitespace,
+                                      ftl::kSplitWantNonEmpty);
 
-      RegisterResponder(split[0].ToString(), split[1].ToString());
+        if (split.size() != 2) {
+          Usage();
+          FTL_LOG(ERROR) << "Invalid --service value";
+          return;
+        }
+
+        auto launch_info = modular::ApplicationLaunchInfo::New();
+        launch_info->url = split[1].ToString();
+        RegisterService(split[0].ToString(), std::move(launch_info));
+      }
     }
 
     if (option.name == "device") {
@@ -78,29 +87,32 @@ void NetConnectorParams::Usage() {
   FTL_LOG(INFO) << "    @boot netconnector [ options ]";
   FTL_LOG(INFO) << "options:";
   FTL_LOG(INFO)
-      << "    --no-config                        don't read a config file";
+      << "    --no-config                      don't read a config file";
   FTL_LOG(INFO)
-      << "    --config=<file>                    read config file (default "
+      << "    --config=<file>                  read config file (default "
       << kDefaultConfigFileName << ")";
-  FTL_LOG(INFO) << "    --host=<name>                      set the host name";
-  FTL_LOG(INFO) << "    --responder=<name>@<servcie_name>  register responder";
-  FTL_LOG(INFO) << "    --device=<name>@<ip>               register device";
-  FTL_LOG(INFO) << "    --listen                           run as listener";
-  FTL_LOG(INFO) << "Multiple responders and devices can be registered.";
+  FTL_LOG(INFO) << "    --host=<name>                    set the host name";
+  FTL_LOG(INFO) << "    --service=<name>@<app url>[,...] register service";
+  FTL_LOG(INFO) << "    --device=<name>@<ip address>     register device";
+  FTL_LOG(INFO) << "    --listen                         run as listener";
 }
 
-void NetConnectorParams::RegisterResponder(const std::string& name,
-                                           const std::string& service_name) {
-  auto result = service_names_by_responder_name_.emplace(name, service_name);
+void NetConnectorParams::RegisterService(
+    const std::string& name,
+    modular::ApplicationLaunchInfoPtr launch_info) {
+  auto result =
+      launch_infos_by_service_name_.emplace(name, std::move(launch_info));
+
   if (!result.second) {
-    FTL_DCHECK(result.first != service_names_by_responder_name_.end());
-    result.first->second = service_name;
+    FTL_DCHECK(result.first != launch_infos_by_service_name_.end());
+    result.first->second = std::move(launch_info);
   }
 }
 
 void NetConnectorParams::RegisterDevice(const std::string& name,
                                         const std::string& address) {
   auto result = device_addresses_by_name_.emplace(name, address);
+
   if (!result.second) {
     FTL_DCHECK(result.first != device_addresses_by_name_.end());
     result.first->second = address;
@@ -129,7 +141,7 @@ bool NetConnectorParams::ParseConfig(const std::string& string) {
     host_name_ = value.GetString();
   }
 
-  iter = document.FindMember(kConfigResponders);
+  iter = document.FindMember(kConfigServices);
   if (iter != document.MemberEnd()) {
     const auto& value = iter->value;
     if (!value.IsObject()) {
@@ -137,11 +149,33 @@ bool NetConnectorParams::ParseConfig(const std::string& string) {
     }
 
     for (const auto& pair : value.GetObject()) {
-      if (!pair.name.IsString() || !pair.value.IsString()) {
+      if (!pair.name.IsString()) {
         return false;
       }
 
-      RegisterResponder(pair.name.GetString(), pair.value.GetString());
+      auto launch_info = modular::ApplicationLaunchInfo::New();
+      if (pair.value.IsString()) {
+        launch_info->url = pair.value.GetString();
+      } else if (pair.value.IsArray()) {
+        const auto& array = pair.value.GetArray();
+
+        if (array.Empty() || !array[0].IsString()) {
+          return false;
+        }
+
+        launch_info->url = array[0].GetString();
+        for (size_t i = 1; i < array.Size(); ++i) {
+          if (!array[i].IsString()) {
+            return false;
+          }
+
+          launch_info->arguments.push_back(array[i].GetString());
+        }
+      } else {
+        return false;
+      }
+
+      RegisterService(pair.name.GetString(), std::move(launch_info));
     }
   }
 

@@ -14,28 +14,27 @@ namespace netconnector {
 
 class NetConnectorImpl;
 
-class ResponderAgent : public MessageTransciever {
+class ServiceAgent : public MessageTransciever {
  public:
-  static std::unique_ptr<ResponderAgent> Create(ftl::UniqueFD socket_fd,
-                                                NetConnectorImpl* owner);
+  static std::unique_ptr<ServiceAgent> Create(ftl::UniqueFD socket_fd,
+                                              NetConnectorImpl* owner);
 
-  ~ResponderAgent();
+  ~ServiceAgent();
 
  protected:
   // MessageTransciever overrides.
   void OnVersionReceived(uint32_t version) override;
 
-  void OnResponderNameReceived(std::string responder_name) override;
+  void OnServiceNameReceived(const std::string& service_name) override;
 
   void OnConnectionClosed() override;
 
  private:
-  ResponderAgent(ftl::UniqueFD socket_fd, NetConnectorImpl* owner);
+  ServiceAgent(ftl::UniqueFD socket_fd, NetConnectorImpl* owner);
 
   NetConnectorImpl* owner_;
-  ResponderPtr responder_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(ResponderAgent);
+  FTL_DISALLOW_COPY_AND_ASSIGN(ServiceAgent);
 };
 
 }  // namespace netconnector

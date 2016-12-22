@@ -13,4 +13,4 @@ details.
 ## Application netconnector_example
 
 The application `netconnector_example` runs either as an example requestor or
-as an example responder. See [the README file](https://fuchsia.googlesource.com/netconnector/+/master/examples/netconnector_example/README.md) for details.
+as an example responding service. See [the README file](https://fuchsia.googlesource.com/netconnector/+/master/examples/netconnector_example/README.md) for details.

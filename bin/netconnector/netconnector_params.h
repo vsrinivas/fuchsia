@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "apps/modular/services/application/application_launcher.fidl.h"
 #include "lib/ftl/command_line.h"
 #include "lib/ftl/macros.h"
 
@@ -22,16 +23,14 @@ class NetConnectorParams {
 
   const std::string& host_name() const { return host_name_; }
 
-  const std::unordered_map<std::string, std::string>& responders() {
-    return service_names_by_responder_name_;
+  std::unordered_map<std::string, modular::ApplicationLaunchInfoPtr>
+  MoveServices() {
+    return std::move(launch_infos_by_service_name_);
   }
 
   const std::unordered_map<std::string, std::string>& devices() {
     return device_addresses_by_name_;
   }
-
-  void RegisterResponder(const std::string& selector,
-                         const std::string& service_name);
 
   void RegisterDevice(const std::string& name, const std::string& address);
 
@@ -42,10 +41,14 @@ class NetConnectorParams {
 
   bool ParseConfig(const std::string& string);
 
+  void RegisterService(const std::string& selector,
+                       modular::ApplicationLaunchInfoPtr launch_info);
+
   bool is_valid_;
   bool listen_ = false;
   std::string host_name_;
-  std::unordered_map<std::string, std::string> service_names_by_responder_name_;
+  std::unordered_map<std::string, modular::ApplicationLaunchInfoPtr>
+      launch_infos_by_service_name_;
   std::unordered_map<std::string, std::string> device_addresses_by_name_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorParams);

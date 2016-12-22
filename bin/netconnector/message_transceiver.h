@@ -33,9 +33,9 @@ All integers are in big-endian order.
 
 Here are the types:
 
-    version          (0x00) indicates the version of the sender
-    responder name   (0x01) indicates the name of the desired responder
-    message          (0x02) contains a message
+    version        (0x00) indicates the version of the sender
+    service name   (0x01) indicates the name of the desired service
+    message        (0x02) contains a message
 
 A version packet has a 4-byte payload specifying the version of the sender.
 Version packets are sent by both sides upon connection establishment. The format
@@ -43,12 +43,12 @@ of subsequent traffic on the connection must conform to the minimum of the two
 version numbers. If either party isn't backward-compatible to that version, it
 must close the connection.
 
-A responder name packet's payload consists of a string identifying the
-desired responder. The requestor sends a selector packet after the version
-packets are exchanged. If the remote party doesn't recognize the responder name,
+A service name packet's payload consists of a string identifying the desired
+service. The requestor sends a service name packet after the version packets
+are exchanged. If the remote party doesn't recognize the service name,
 it must close the connection.
 
-A message packet contains a message intended for the requestor/responder.
+A message packet contains a message intended for the requestor/service.
 
 If either party receives a malformed packet, it must close the connection.
 
@@ -70,8 +70,8 @@ class MessageTransciever {
   // Sets the channel that the transceiver should use to forward messages.
   void SetChannel(mx::channel channel);
 
-  // Sends a responder name.
-  void SendResponderName(const std::string& responder_name);
+  // Sends a service name.
+  void SendServiceName(const std::string& service_name);
 
   // Sends a message.
   void SendMessage(std::vector<uint8_t> message);
@@ -82,8 +82,8 @@ class MessageTransciever {
   // Called when a version is received.
   virtual void OnVersionReceived(uint32_t version) = 0;
 
-  // Called when a responder name is received.
-  virtual void OnResponderNameReceived(std::string responder_name) = 0;
+  // Called when a service name is received.
+  virtual void OnServiceNameReceived(const std::string& service_name) = 0;
 
   // Called when a message is received. The default implementation puts the
   // message on the channel supplied by SetChannel.
@@ -95,7 +95,7 @@ class MessageTransciever {
  private:
   enum class PacketType : uint8_t {
     kVersion = 0,
-    kResponderName = 1,
+    kServiceName = 1,
     kMessage = 2,
     kMax = 2
   };
@@ -114,7 +114,7 @@ class MessageTransciever {
   static const uint32_t kVersion = 1;
   static const uint32_t kNullVersion = 0;
   static const uint32_t kMinSupportedVersion = 1;
-  static const size_t kMaxResponderNameLength = 1024;
+  static const size_t kMaxServiceNameLength = 1024;
 
   // Sends a version packet.
   void SendVersionPacket();

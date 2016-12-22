@@ -17,12 +17,11 @@ class NetConnectorImpl;
 
 class RequestorAgent : public MessageTransciever {
  public:
-  static std::unique_ptr<RequestorAgent> Create(
-      const std::string& address,
-      uint16_t port,
-      const std::string& responder_name,
-      mx::channel local_channel,
-      NetConnectorImpl* owner);
+  static std::unique_ptr<RequestorAgent> Create(const std::string& address,
+                                                uint16_t port,
+                                                const std::string& service_name,
+                                                mx::channel local_channel,
+                                                NetConnectorImpl* owner);
 
   ~RequestorAgent() override;
 
@@ -30,7 +29,7 @@ class RequestorAgent : public MessageTransciever {
   // MessageTransciever overrides.
   void OnVersionReceived(uint32_t version) override;
 
-  void OnResponderNameReceived(std::string responder_name) override;
+  void OnServiceNameReceived(const std::string& service_name) override;
 
   void OnConnectionClosed() override;
 
@@ -38,11 +37,11 @@ class RequestorAgent : public MessageTransciever {
   static void SetPort(struct sockaddr* addr, uint16_t port);
 
   RequestorAgent(ftl::UniqueFD socket_fd,
-                 const std::string& responder_name,
+                 const std::string& service_name,
                  mx::channel local_channel,
                  NetConnectorImpl* owner);
 
-  std::string responder_name_;
+  std::string service_name_;
   mx::channel local_channel_;
   NetConnectorImpl* owner_;
 

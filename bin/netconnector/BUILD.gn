@@ -10,6 +10,8 @@ group("src") {
 
 executable("netconnector") {
   sources = [
+    "device_service_provider.cc",
+    "device_service_provider.h",
     "listener.cc",
     "listener.h",
     "main.cc",
@@ -21,12 +23,15 @@ executable("netconnector") {
     "netconnector_impl.h",
     "requestor_agent.cc",
     "requestor_agent.h",
-    "responder_agent.cc",
-    "responder_agent.h",
+    "responding_service_host.cc",
+    "responding_service_host.h",
+    "service_agent.cc",
+    "service_agent.h",
   ]
 
   deps = [
     "//apps/modular/lib/app",
+    "//apps/modular/services/application",
     "//apps/netconnector/lib",
     "//apps/netconnector/services",
     "//lib/ftl",

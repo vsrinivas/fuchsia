@@ -8,4 +8,8 @@ fidl("services") {
   sources = [
     "netconnector.fidl",
   ]
+
+  public_deps = [
+    "//apps/modular/services/application",
+  ]
 }

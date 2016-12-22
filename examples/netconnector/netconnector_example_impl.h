@@ -15,15 +15,11 @@
 
 namespace examples {
 
-class NetConnectorExampleImpl : public netconnector::Responder {
+class NetConnectorExampleImpl {
  public:
   NetConnectorExampleImpl(NetConnectorExampleParams* params);
 
   ~NetConnectorExampleImpl();
-
-  // netconnector::Responder implementation.
-  void ConnectionRequested(const fidl::String& responder_name,
-                           mx::channel channel) override;
 
  private:
   void SendMessage(const std::string& message_string);
@@ -31,7 +27,6 @@ class NetConnectorExampleImpl : public netconnector::Responder {
   void HandleReceivedMessage(std::vector<uint8_t> message);
 
   std::unique_ptr<modular::ApplicationContext> application_context_;
-  fidl::BindingSet<netconnector::Responder> bindings_;
   netconnector::MessageRelay message_relay_;
   std::vector<std::string>::const_iterator conversation_iter_;
 

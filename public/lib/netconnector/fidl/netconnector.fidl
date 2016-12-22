@@ -4,6 +4,9 @@
 
 module netconnector;
 
+import "apps/modular/services/application/application_launcher.fidl";
+import "apps/modular/services/application/service_provider.fidl";
+
 // Primary netconnector service definition.
 [ServiceName="netconnector::NetConnector"]
 interface NetConnector {
@@ -11,13 +14,14 @@ interface NetConnector {
   // by the |netconnector| app when it's used as a utility.
   SetHostName(string host_name);
 
-  // Registers a responder. |responder_name| identifies the responder and is
-  // the same name used in |RequestConnection|. |service_name| is the name
-  // that will be passed to |ConnectToEnvironmentService| to connect to the
-  // responder. This method is typically only called by the |netconnector| app
-  // when it's used as a utility. In most cases, responders will be registered
-  // using |netconnector|'s config file.
-  RegisterResponder(string responder_name, string service_name);
+  // Registers a responding service. |service_name| identifies the service and
+  // is the same name used in |RequestConnection|. |launch_info| provides the
+  // information required to launch the service. This method is typically only
+  // called by the |netconnector| app when it's used as a utility. In most
+  // cases, responding service will be registered using |netconnector|'s config
+  //  file.
+  RegisterService(string service_name,
+                  modular.ApplicationLaunchInfo launch_info);
 
   // Registers a device. |device_name| identifies the device and is the same
   // name used in |RequestConnection|. |address| is the IP address of the
@@ -26,14 +30,7 @@ interface NetConnector {
   // using mDNS or will be registered using |netconnector|'s config file.
   RegisterDevice(string device_name, string address);
 
-  // Requests the specified responder on the specified device.
-  RequestConnection(string device_name,
-                    string responder_name,
-                    handle<channel> channel);
-};
-
-// Callback interface exposed by responders
-interface Responder {
-  // Notifies the responder that a connection is requested.
-  ConnectionRequested(string responder_name, handle<channel> channel);
+  // Gets a provider for services on the specified device.
+  GetDeviceServiceProvider(string device_name,
+                           modular.ServiceProvider& service_provider);
 };

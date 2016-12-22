@@ -9,11 +9,15 @@
 #include <unordered_map>
 #include <vector>
 
+#include "apps/modular/services/application/application_launcher.fidl.h"
+#include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
+#include "apps/netconnector/src/device_service_provider.h"
 #include "apps/netconnector/src/listener.h"
 #include "apps/netconnector/src/requestor_agent.h"
-#include "apps/netconnector/src/responder_agent.h"
 #include "apps/netconnector/src/netconnector_params.h"
+#include "apps/netconnector/src/responding_service_host.h"
+#include "apps/netconnector/src/service_agent.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/ftl/macros.h"
@@ -26,40 +30,52 @@ class NetConnectorImpl : public NetConnector {
 
   ~NetConnectorImpl();
 
-  ResponderPtr GetResponder(const std::string responder_name);
+  modular::ServiceProvider* responding_services() {
+    return responding_service_host_.services();
+  }
+
+  void ReleaseDeviceServiceProvider(
+      DeviceServiceProvider* device_service_provider);
+
+  void AddRequestorAgent(std::unique_ptr<RequestorAgent> requestor_agent);
 
   void ReleaseRequestorAgent(RequestorAgent* requestor_agent);
 
-  void ReleaseResponderAgent(ResponderAgent* responder_agent);
+  void ReleaseServiceAgent(ServiceAgent* service_agent);
 
   // NetConnector implementation.
   void SetHostName(const fidl::String& host_name) override;
 
-  void RegisterResponder(const fidl::String& name,
-                         const fidl::String& url) override;
+  void RegisterService(const fidl::String& name,
+                       modular::ApplicationLaunchInfoPtr launch_info) override;
 
   void RegisterDevice(const fidl::String& name,
                       const fidl::String& address) override;
 
-  void RequestConnection(const fidl::String& device_name,
-                         const fidl::String& responder_name,
-                         mx::channel channel) override;
+  void GetDeviceServiceProvider(const fidl::String& device_name,
+                                fidl::InterfaceRequest<modular::ServiceProvider>
+                                    service_provider) override;
 
  private:
   static constexpr uint16_t kPort = 7777;
 
-  void AddRequestorAgent(std::unique_ptr<RequestorAgent> requestor_agent);
+  void AddDeviceServiceProvider(
+      std::unique_ptr<DeviceServiceProvider> device_service_provider);
 
-  void AddResponderAgent(std::unique_ptr<ResponderAgent> responder_agent);
+  void AddServiceAgent(std::unique_ptr<ServiceAgent> service_agent);
 
   NetConnectorParams* params_;
   std::unique_ptr<modular::ApplicationContext> application_context_;
   fidl::BindingSet<NetConnector> bindings_;
   Listener listener_;
+  RespondingServiceHost responding_service_host_;
+  std::unordered_map<DeviceServiceProvider*,
+                     std::unique_ptr<DeviceServiceProvider>>
+      device_service_providers_;
   std::unordered_map<RequestorAgent*, std::unique_ptr<RequestorAgent>>
       requestor_agents_;
-  std::unordered_map<ResponderAgent*, std::unique_ptr<ResponderAgent>>
-      responder_agents_;
+  std::unordered_map<ServiceAgent*, std::unique_ptr<ServiceAgent>>
+      service_agents_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorImpl);
 };

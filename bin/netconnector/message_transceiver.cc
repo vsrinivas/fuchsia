@@ -63,14 +63,15 @@ void MessageTransciever::SetChannel(mx::channel channel) {
   }
 }
 
-void MessageTransciever::SendResponderName(const std::string& responder_name) {
+void MessageTransciever::SendServiceName(const std::string& service_name) {
   if (!socket_fd_.is_valid()) {
-    FTL_LOG(WARNING) << "SendResponderName called with closed connection";
+    FTL_LOG(WARNING) << "SendServiceName called with closed connection";
     return;
   }
 
-  send_task_runner_->PostTask([ this, selector = responder_name ]() {
-    SendPacket(PacketType::kResponderName, selector.data(), selector.size());
+  send_task_runner_->PostTask([ this, service_name = service_name ]() {
+    SendPacket(PacketType::kServiceName, service_name.data(),
+               service_name.size());
   });
 }
 
@@ -304,24 +305,24 @@ void MessageTransciever::OnReceivedPacketComplete() {
       }
       break;
 
-    case PacketType::kResponderName:
+    case PacketType::kServiceName:
       if (version_ == kNullVersion) {
-        FTL_LOG(ERROR) << "Responder name packet received when version "
+        FTL_LOG(ERROR) << "Service name packet received when version "
                           "packet was expected";
         CloseConnection();
         return;
       }
 
       if (receive_packet_header_.payload_size_ == 0 ||
-          receive_packet_header_.payload_size_ > kMaxResponderNameLength) {
-        FTL_LOG(ERROR) << "Responder name packet has bad payload size "
+          receive_packet_header_.payload_size_ > kMaxServiceNameLength) {
+        FTL_LOG(ERROR) << "Service name packet has bad payload size "
                        << receive_packet_header_.payload_size_;
         CloseConnection();
         return;
       }
 
-      task_runner_->PostTask([ this, selector = ParsePayloadString() ]() {
-        OnResponderNameReceived(selector);
+      task_runner_->PostTask([ this, service_name = ParsePayloadString() ]() {
+        OnServiceNameReceived(service_name);
       });
       break;
 

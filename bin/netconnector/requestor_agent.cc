@@ -18,11 +18,11 @@ namespace netconnector {
 std::unique_ptr<RequestorAgent> RequestorAgent::Create(
     const std::string& address,
     uint16_t port,
-    const std::string& responder_name,
+    const std::string& service_name,
     mx::channel local_channel,
     NetConnectorImpl* owner) {
   FTL_DCHECK(!address.empty());
-  FTL_DCHECK(!responder_name.empty());
+  FTL_DCHECK(!service_name.empty());
   FTL_DCHECK(local_channel);
   FTL_DCHECK(owner != nullptr);
 
@@ -60,7 +60,7 @@ std::unique_ptr<RequestorAgent> RequestorAgent::Create(
       }
 
       return std::unique_ptr<RequestorAgent>(new RequestorAgent(
-          std::move(fd), responder_name, std::move(local_channel), owner));
+          std::move(fd), service_name, std::move(local_channel), owner));
     } else {
       FTL_LOG(WARNING) << "Unrecognized address family " << addrinfo->ai_family;
       continue;
@@ -91,14 +91,14 @@ void RequestorAgent::SetPort(struct sockaddr* addr, uint16_t port) {
 }
 
 RequestorAgent::RequestorAgent(ftl::UniqueFD socket_fd,
-                               const std::string& responder_name,
+                               const std::string& service_name,
                                mx::channel local_channel,
                                NetConnectorImpl* owner)
     : MessageTransciever(std::move(socket_fd)),
-      responder_name_(responder_name),
+      service_name_(service_name),
       local_channel_(std::move(local_channel)),
       owner_(owner) {
-  FTL_DCHECK(!responder_name_.empty());
+  FTL_DCHECK(!service_name_.empty());
   FTL_DCHECK(local_channel_);
   FTL_DCHECK(owner_ != nullptr);
 }
@@ -106,12 +106,12 @@ RequestorAgent::RequestorAgent(ftl::UniqueFD socket_fd,
 RequestorAgent::~RequestorAgent() {}
 
 void RequestorAgent::OnVersionReceived(uint32_t version) {
-  SendResponderName(responder_name_);
+  SendServiceName(service_name_);
   SetChannel(std::move(local_channel_));
 }
 
-void RequestorAgent::OnResponderNameReceived(std::string responder_name) {
-  FTL_LOG(ERROR) << "RequestorAgent received responder name";
+void RequestorAgent::OnServiceNameReceived(const std::string& service_name) {
+  FTL_LOG(ERROR) << "RequestorAgent received service name";
   CloseConnection();
 }
 
