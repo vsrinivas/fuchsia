@@ -384,42 +384,44 @@ void ApplyChanges(
     std::function<void(Status, ObjectId, std::unordered_set<ObjectId>)>
         callback) {
   // Get or create the root.
-  std::unique_ptr<const TreeNode> root;
   ObjectId tmp_node_id;
   if (root_id.empty()) {
     Status status =
         TreeNode::FromEntries(page_storage, std::vector<Entry>(),
                               std::vector<ObjectId>{ObjectId()}, &tmp_node_id);
     if (status != Status::OK) {
-      callback(status, ObjectId(), std::unordered_set<ObjectId>());
+      callback(status, ObjectId(), {});
       return;
     }
     root_id = tmp_node_id;
   }
-  Status status = TreeNode::FromIdSynchronous(page_storage, root_id, &root);
-  if (status != Status::OK) {
-    callback(status, ObjectId(), std::unordered_set<ObjectId>());
-    return;
-  }
-
-  // |new_nodes| will be populated with all nodes created after this set of
-  // changes.
-  std::unique_ptr<std::unordered_set<ObjectId>> new_nodes =
-      std::make_unique<std::unordered_set<ObjectId>>();
-  std::unordered_set<ObjectId>* new_nodes_ptr = new_nodes.get();
-  ApplyChangesIn(
-      page_storage, changes.get(), std::move(root), true, "", node_size,
-      new_nodes_ptr,
-      ftl::MakeCopyable([
-        new_nodes = std::move(new_nodes), callback = std::move(callback)
-      ](Status s, ObjectId new_id,
-        std::unique_ptr<TreeNode::Mutation::Updater> parent_updater) mutable {
-        FTL_DCHECK(parent_updater == nullptr);
+  TreeNode::FromId(
+      page_storage, root_id, ftl::MakeCopyable([
+        page_storage, node_size, changes = std::move(changes),
+        callback = std::move(callback)
+      ](Status s, std::unique_ptr<const TreeNode> root) mutable {
         if (s != Status::OK) {
-          callback(s, "", std::unordered_set<ObjectId>());
+          callback(s, "", {});
           return;
         }
-        callback(Status::OK, std::move(new_id), *new_nodes);
+        // |new_nodes| will be populated with all nodes created after this set
+        // of changes.
+        auto new_nodes = std::make_unique<std::unordered_set<ObjectId>>();
+        std::unordered_set<ObjectId>* new_nodes_ptr = new_nodes.get();
+        ApplyChangesIn(
+            page_storage, changes.get(), std::move(root), true, "", node_size,
+            new_nodes_ptr, ftl::MakeCopyable([
+              new_nodes = std::move(new_nodes), callback = std::move(callback)
+            ](Status s, ObjectId new_id,
+                           std::unique_ptr<TreeNode::Mutation::Updater>
+                               parent_updater) mutable {
+              FTL_DCHECK(parent_updater == nullptr);
+              if (s != Status::OK) {
+                callback(s, "", {});
+                return;
+              }
+              callback(Status::OK, std::move(new_id), std::move(*new_nodes));
+            }));
       }));
 }
 

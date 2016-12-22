@@ -575,14 +575,8 @@ void PageStorageImpl::GetObject(
     GetObjectFromSync(object_id, callback);
     return;
   }
-
-  main_runner_->PostTask([
-    callback, object_id = convert::ToString(object_id),
-    file_path = std::move(file_path)
-  ]() mutable {
-    callback(Status::OK, std::make_unique<ObjectImpl>(std::move(object_id),
-                                                      std::move(file_path)));
-  });
+  callback(Status::OK, std::make_unique<ObjectImpl>(object_id.ToString(),
+                                                    std::move(file_path)));
 }
 
 Status PageStorageImpl::GetObjectSynchronous(

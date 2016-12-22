@@ -246,12 +246,16 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     journal->Commit([this, &commit_id](Status status, const CommitId& id) {
       EXPECT_EQ(Status::OK, status);
       commit_id = id;
+      message_loop_.PostQuitTask();
     });
+    EXPECT_FALSE(RunLoopWithTimeout());
 
     // Commit and Rollback should fail after a successfull commit.
     journal->Commit([this](Status status, const CommitId&) {
       EXPECT_EQ(Status::ILLEGAL_STATE, status);
+      message_loop_.PostQuitTask();
     });
+    EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::ILLEGAL_STATE, journal->Rollback());
 
     // Check the contents.
@@ -467,9 +471,11 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   EXPECT_EQ(Status::ILLEGAL_STATE,
             journal->Put("key", "value", KeyPriority::EAGER));
   EXPECT_EQ(Status::ILLEGAL_STATE, journal->Delete("key"));
-  journal->Commit([](Status s, const CommitId& id) {
+  journal->Commit([this](Status s, const CommitId& id) {
     EXPECT_EQ(Status::ILLEGAL_STATE, s);
+    message_loop_.PostQuitTask();
   });
+  ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_NE(Status::ILLEGAL_STATE, journal->Rollback());
 
   // Implicit journals.
@@ -480,9 +486,11 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   Status put_status = journal->Put("key", "value", KeyPriority::EAGER);
   EXPECT_NE(Status::ILLEGAL_STATE, put_status);
   EXPECT_NE(Status::ILLEGAL_STATE, journal->Delete("key"));
-  journal->Commit([](Status s, const CommitId& id) {
+  journal->Commit([this](Status s, const CommitId& id) {
     EXPECT_NE(Status::ILLEGAL_STATE, s);
+    message_loop_.PostQuitTask();
   });
+  ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_NE(Status::ILLEGAL_STATE, journal->Rollback());
 }
 
@@ -710,9 +718,11 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
                                     JournalType::IMPLICIT, &journal));
     EXPECT_EQ(Status::OK, journal->Put("key" + ftl::NumberToString(i),
                                        data[i].object_id, KeyPriority::LAZY));
-    journal->Commit([](Status status, const CommitId& id) {
+    journal->Commit([this](Status status, const CommitId& id) {
       EXPECT_EQ(Status::OK, status);
+      message_loop_.PostQuitTask();
     });
+    ASSERT_FALSE(RunLoopWithTimeout());
     commits.push_back(GetFirstHead()->GetId());
   }
 
@@ -777,8 +787,11 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
   EXPECT_EQ(Status::OK,
             journal->Put("key", data.object_id, KeyPriority::EAGER));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
-  journal->Commit(
-      [](Status status, const CommitId& id) { EXPECT_EQ(Status::OK, status); });
+  journal->Commit([this](Status status, const CommitId& id) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  });
+  ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
 }
 
@@ -799,8 +812,11 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   EXPECT_EQ(Status::OK,
             journal->Put("key0", data[0].object_id, KeyPriority::LAZY));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[0].object_id));
-  journal->Commit(
-      [](Status status, const CommitId& id) { EXPECT_EQ(Status::OK, status); });
+  journal->Commit([this](Status status, const CommitId& id) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  });
+  ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(storage_->ObjectIsUntracked(data[0].object_id));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[1].object_id));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[2].object_id));
@@ -819,8 +835,11 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
             journal->Put("key1", data[2].object_id, KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
             journal->Put("key3", data[0].object_id, KeyPriority::LAZY));
-  journal->Commit(
-      [](Status status, const CommitId& id) { EXPECT_EQ(Status::OK, status); });
+  journal->Commit([this](Status status, const CommitId& id) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  });
+  ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_FALSE(storage_->ObjectIsUntracked(data[0].object_id));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[1].object_id));
@@ -874,7 +893,9 @@ TEST_F(PageStorageTest, OrderOfCommitWatch) {
         commit_id = id;
         // We should get the callback before the watchers.
         EXPECT_EQ(0, watcher.commit_count);
+        message_loop_.PostQuitTask();
       });
+  ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1, watcher.commit_count);
   EXPECT_EQ(commit_id, watcher.last_commit_id);
@@ -972,7 +993,9 @@ TEST_F(PageStorageTest, Generation) {
     std::unique_ptr<const Commit> commit3;
     storage_->GetCommit(commit_id3, &commit3);
     EXPECT_EQ(3u, commit3->GetGeneration());
+    message_loop_.PostQuitTask();
   });
+  ASSERT_FALSE(RunLoopWithTimeout());
 }
 
 TEST_F(PageStorageTest, DeletionOnIOThread) {
