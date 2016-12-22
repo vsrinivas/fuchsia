@@ -44,36 +44,10 @@ void RunUploadFileCallback(const std::function<void(Status)>& callback,
                            network::URLResponsePtr response) {
   // A precondition failure means the object already exist.
   if (response->status_code == 412) {
-    callback(Status::OBJECT_ALREADY_EXIST);
+    callback(Status::OBJECT_ALREADY_EXISTS);
     return;
   }
   callback(status);
-}
-
-void OnFileWritten(const std::string& destination,
-                   const std::function<void(Status)>& callback,
-                   uint64_t expected_file_size,
-                   bool success) {
-  if (!success) {
-    files::DeletePath(destination, false);
-    callback(Status::UNKNOWN_ERROR);
-    return;
-  }
-
-  uint64_t file_size;
-  if (!files::GetFileSize(destination, &file_size)) {
-    files::DeletePath(destination, false);
-    callback(Status::UNKNOWN_ERROR);
-    return;
-  }
-
-  if (file_size != expected_file_size) {
-    files::DeletePath(destination, false);
-    callback(Status::UNKNOWN_ERROR);
-    return;
-  }
-
-  callback(Status::OK);
 }
 
 }  // namespace
@@ -88,31 +62,22 @@ CloudStorageImpl::CloudStorageImpl(ftl::RefPtr<ftl::TaskRunner> task_runner,
 CloudStorageImpl::~CloudStorageImpl() {}
 
 void CloudStorageImpl::UploadFile(const std::string& key,
-                                  const std::string& source,
+                                  mx::vmo data,
                                   const std::function<void(Status)>& callback) {
-  uint64_t file_size;
-  if (!files::GetFileSize(source, &file_size)) {
-    callback(Status::UNKNOWN_ERROR);
-    return;
-  }
-
-  ftl::UniqueFD fd(open(source.c_str(), O_RDONLY));
-  if (!fd.is_valid()) {
-    callback(Status::UNKNOWN_ERROR);
-    return;
-  }
-  mx::vmo vmo;
-  if (!mtl::VmoFromFd(std::move(fd), &vmo)) {
-    callback(Status::UNKNOWN_ERROR);
-    return;
-  }
-
   std::string url =
       "https://storage-upload.googleapis.com/" + bucket_name_ + "/" + key;
 
+  uint64_t data_size;
+  mx_status_t status = data.get_size(&data_size);
+  if (status != NO_ERROR) {
+    FTL_LOG(ERROR) << "Failed to retrieve the size of the vmo.";
+    callback(Status::INTERNAL_ERROR);
+    return;
+  }
+
   auto request_factory = ftl::MakeCopyable([
-    url, source, file_size, task_runner = task_runner_, vmo = std::move(vmo)
-  ]() {
+    url, task_runner = task_runner_, data = std::move(data), data_size
+  ] {
     network::URLRequestPtr request(network::URLRequest::New());
     request->url = url;
     request->method = "PUT";
@@ -121,7 +86,8 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     // Content-Length header.
     network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
     content_length_header->name = kContentLengthHeader;
-    content_length_header->value = ftl::NumberToString(file_size);
+
+    content_length_header->value = ftl::NumberToString(data_size);
     request->headers.push_back(std::move(content_length_header));
 
     // x-goog-if-generation-match header. This ensures that files are never
@@ -131,11 +97,10 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     generation_match_header->value = "0";
     request->headers.push_back(std::move(generation_match_header));
 
-
-    mx::vmo duplicated_vmo;
-    vmo.duplicate(MX_RIGHT_READ, &duplicated_vmo);
+    mx::vmo duplicated_data;
+    data.duplicate(MX_RIGHT_READ, &duplicated_data);
     request->body = network::URLBody::New();
-    request->body->set_buffer(std::move(duplicated_vmo));
+    request->body->set_buffer(std::move(duplicated_data));
     return request;
   });
 
@@ -148,23 +113,23 @@ void CloudStorageImpl::UploadFile(const std::string& key,
 
 void CloudStorageImpl::DownloadFile(
     const std::string& key,
-    const std::string& destination,
-    const std::function<void(Status)>& callback) {
+    const std::function<void(Status status, uint64_t size, mx::socket data)>&
+        callback) {
   std::string url =
       "https://storage-download.googleapis.com/" + bucket_name_ + "/" + key;
 
   Request(
-      [url]() {
+      [url] {
         network::URLRequestPtr request(network::URLRequest::New());
         request->url = url;
         request->method = "GET";
         request->auto_follow_redirects = true;
         return request;
       },
-      [this, destination, callback](Status status,
-                                    network::URLResponsePtr response) {
-        OnDownloadResponseReceived(std::move(destination), std::move(callback),
-                                   status, std::move(response));
+      [ this, callback = std::move(callback) ](
+          Status status, network::URLResponsePtr response) {
+        OnDownloadResponseReceived(std::move(callback), status,
+                                   std::move(response));
       });
 }
 
@@ -186,13 +151,13 @@ void CloudStorageImpl::OnResponse(
   if (response->error) {
     FTL_LOG(ERROR) << response->url << " error "
                    << response->error->description;
-    callback(Status::UNKNOWN_ERROR, std::move(response));
+    callback(Status::NETWORK_ERROR, std::move(response));
     return;
   }
 
   if (response->status_code != 200 && response->status_code != 204) {
     FTL_LOG(ERROR) << response->url << " error " << response->status_line;
-    callback(Status::UNKNOWN_ERROR, std::move(response));
+    callback(Status::SERVER_ERROR, std::move(response));
     return;
   }
 
@@ -200,45 +165,32 @@ void CloudStorageImpl::OnResponse(
 }
 
 void CloudStorageImpl::OnDownloadResponseReceived(
-    const std::string& destination,
-    const std::function<void(Status)>& callback,
+    const std::function<void(Status status, uint64_t size, mx::socket data)>
+        callback,
     Status status,
     network::URLResponsePtr response) {
   if (status != Status::OK) {
-    callback(status);
+    callback(status, 0u, mx::socket());
     return;
   }
 
   network::HttpHeaderPtr size_header =
       GetHeader(response->headers, kContentLengthHeader);
   if (!size_header) {
-    callback(Status::UNKNOWN_ERROR);
+    callback(Status::PARSE_ERROR, 0u, mx::socket());
     return;
   }
 
   uint64_t expected_file_size;
   if (!ftl::StringToNumberWithError(size_header->value.get(),
                                     &expected_file_size)) {
-    callback(Status::UNKNOWN_ERROR);
+    callback(Status::PARSE_ERROR, 0u, mx::socket());
     return;
   }
 
   network::URLBodyPtr body = std::move(response->body);
   FTL_DCHECK(body->is_stream());
-
-  ftl::UniqueFD fd(HANDLE_EINTR(creat(destination.c_str(), 0666)));
-  if (!fd.is_valid()) {
-    callback(Status::UNKNOWN_ERROR);
-    return;
-  }
-
-  mtl::CopyToFileDescriptor(
-      std::move(body->get_stream()), std::move(fd), task_runner_,
-      [destination, callback, expected_file_size](bool success,
-                                                  ftl::UniqueFD fd) {
-        OnFileWritten(std::move(destination), std::move(callback),
-                      expected_file_size, success);
-      });
+  callback(Status::OK, expected_file_size, std::move(body->get_stream()));
 }
 
 }  // namespace gcs

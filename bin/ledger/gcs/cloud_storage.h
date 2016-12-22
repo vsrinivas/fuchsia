@@ -8,15 +8,12 @@
 #include <functional>
 #include <string>
 
+#include "apps/ledger/src/gcs/status.h"
 #include "lib/ftl/macros.h"
+#include "mx/socket.h"
+#include "mx/vmo.h"
 
 namespace gcs {
-
-enum class Status {
-  OK,
-  OBJECT_ALREADY_EXIST,
-  UNKNOWN_ERROR,
-};
 
 class CloudStorage {
  public:
@@ -24,12 +21,13 @@ class CloudStorage {
   virtual ~CloudStorage(){};
 
   virtual void UploadFile(const std::string& key,
-                          const std::string& source,
+                          mx::vmo data,
                           const std::function<void(Status)>& callback) = 0;
 
-  virtual void DownloadFile(const std::string& key,
-                            const std::string& destination,
-                            const std::function<void(Status)>& callback) = 0;
+  virtual void DownloadFile(
+      const std::string& key,
+      const std::function<void(Status status, uint64_t size, mx::socket data)>&
+          callback) = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(CloudStorage);

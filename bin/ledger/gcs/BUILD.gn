@@ -7,6 +7,8 @@ source_set("gcs") {
     "cloud_storage.h",
     "cloud_storage_impl.cc",
     "cloud_storage_impl.h",
+    "status.cc",
+    "status.h",
   ]
 
   deps = [
@@ -18,6 +20,7 @@ source_set("gcs") {
     "//apps/ledger/src/glue/socket",
     "//apps/ledger/src/network",
     "//lib/ftl",
+    "//magenta/system/ulib/mx",
   ]
 }
 

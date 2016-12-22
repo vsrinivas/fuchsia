@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "apps/ledger/src/network/fake_network_service.h"
+#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "apps/network/services/network_service.fidl.h"
 #include "gtest/gtest.h"
@@ -74,17 +75,16 @@ class CloudStorageImplTest : public test::TestWithMessageLoop {
 };
 
 TEST_F(CloudStorageImplTest, TestUpload) {
-  const std::string content = "Hello World\n";
-  std::string file;
-  Status status;
-  ASSERT_TRUE(CreateFile(content, &file));
+  std::string content = "Hello World\n";
+  mx::vmo data;
+  ASSERT_TRUE(mtl::VmoFromString(content, &data));
 
   SetResponse("", 0, 200);
-  gcs_.UploadFile("hello/world/baz/quz", file, [this, &status](Status s) {
-    status = s;
-    message_loop_.PostQuitTask();
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  Status status;
+  gcs_.UploadFile(
+      "hello/world/baz/quz", std::move(data),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ("https://storage-upload.googleapis.com/bucket/hello/world/baz/quz",
@@ -113,32 +113,31 @@ TEST_F(CloudStorageImplTest, TestUpload) {
 }
 
 TEST_F(CloudStorageImplTest, TestUploadWhenObjectAlreadyExists) {
-  std::string file;
-  Status status;
-  ASSERT_TRUE(CreateFile("", &file));
-
+  std::string content = "";
+  mx::vmo data;
+  ASSERT_TRUE(mtl::VmoFromString(content, &data));
   SetResponse("", 0, 412);
-  gcs_.UploadFile("hello/world/baz/quz", file, [this, &status](Status s) {
-    status = s;
-    message_loop_.PostQuitTask();
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(Status::OBJECT_ALREADY_EXIST, status);
+  Status status;
+  gcs_.UploadFile(
+      "hello/world/baz/quz", std::move(data),
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+  ASSERT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(Status::OBJECT_ALREADY_EXISTS, status);
 }
 
 TEST_F(CloudStorageImplTest, TestDownload) {
   const std::string content = "Hello World\n";
-  std::string file;
-  Status status;
-  ASSERT_TRUE(CreateFile("", &file));
-
   SetResponse(content, content.size(), 200);
-  gcs_.DownloadFile("hello/world/baz/quz", file, [this, &status](Status s) {
-    status = s;
-    message_loop_.PostQuitTask();
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
+
+  Status status;
+  uint64_t size;
+  mx::socket data;
+  gcs_.DownloadFile("hello/world/baz/quz",
+                    test::Capture([this] { message_loop_.PostQuitTask(); },
+                                  &status, &size, &data));
+  ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(
@@ -147,24 +146,31 @@ TEST_F(CloudStorageImplTest, TestDownload) {
   EXPECT_EQ("GET", fake_network_service_.GetRequest()->method);
 
   std::string downloaded_content;
-  EXPECT_TRUE(files::ReadFileToString(file, &downloaded_content));
-  EXPECT_EQ(content, downloaded_content);
+  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &downloaded_content));
+  EXPECT_EQ(downloaded_content, content);
+  EXPECT_EQ(size, content.size());
 }
 
 TEST_F(CloudStorageImplTest, TestDownloadWithResponseBodyTooShort) {
-  const std::string content = "Hello World\n";
-  std::string file;
+  const std::string content = "abc";
+  SetResponse(content, content.size() + 1, 200);
+
   Status status;
-  ASSERT_TRUE(CreateFile(content, &file));
+  uint64_t size;
+  mx::socket data;
+  gcs_.DownloadFile("hello/world/baz/quz",
+                    test::Capture([this] { message_loop_.PostQuitTask(); },
+                                  &status, &size, &data));
+  ASSERT_FALSE(RunLoopWithTimeout());
 
-  SetResponse(content, content.size() - 1, 200);
-  gcs_.DownloadFile("hello/world/baz/quz", file, [this, &status](Status s) {
-    status = s;
-    message_loop_.PostQuitTask();
-  });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  std::string downloaded_content;
+  EXPECT_TRUE(mtl::BlockingCopyToString(std::move(data), &downloaded_content));
 
-  EXPECT_EQ(Status::UNKNOWN_ERROR, status);
+  // As the result is returned in a socket, we pass the expected size to the
+  // client so that they can verify if the response is complete.
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(4u, size);
+  EXPECT_EQ(3u, downloaded_content.size());
 }
 
 }  // namespace

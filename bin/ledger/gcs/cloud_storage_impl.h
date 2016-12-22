@@ -12,6 +12,8 @@
 #include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/network/network_service.h"
 #include "lib/ftl/tasks/task_runner.h"
+#include "mx/socket.h"
+#include "mx/vmo.h"
 
 namespace gcs {
 
@@ -24,11 +26,13 @@ class CloudStorageImpl : public CloudStorage {
 
   // CloudStorage implementation.
   void UploadFile(const std::string& key,
-                  const std::string& source,
+                  mx::vmo data,
                   const std::function<void(Status)>& callback) override;
-  void DownloadFile(const std::string& key,
-                    const std::string& destination,
-                    const std::function<void(Status)>& callback) override;
+
+  void DownloadFile(
+      const std::string& key,
+      const std::function<void(Status status, uint64_t size, mx::socket data)>&
+          callback) override;
 
  private:
   void Request(
@@ -40,10 +44,11 @@ class CloudStorageImpl : public CloudStorage {
                                network::URLResponsePtr response)>& callback,
       network::URLResponsePtr response);
 
-  void OnDownloadResponseReceived(const std::string& destination,
-                                  const std::function<void(Status)>& callback,
-                                  Status status,
-                                  network::URLResponsePtr response);
+  void OnDownloadResponseReceived(
+      std::function<void(Status status, uint64_t size, mx::socket data)>
+          callback,
+      Status status,
+      network::URLResponsePtr response);
 
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ledger::NetworkService* const network_service_;
