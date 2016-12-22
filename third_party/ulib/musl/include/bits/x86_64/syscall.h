@@ -10,8 +10,6 @@
 #define SYS_setitimer 38
 #define SYS_execve 59
 #define SYS_wait4 61
-#define SYS_kill 62
-#define SYS_uname 63
 #define SYS_semget 64
 #define SYS_semop 65
 #define SYS_semctl 66
@@ -53,7 +51,6 @@
 #define SYS_tkill 200
 #define SYS_sched_setaffinity 203
 #define SYS_sched_getaffinity 204
-#define SYS_set_tid_address 218
 #define SYS_semtimedop 220
 #define SYS_fadvise64 221
 #define SYS_timer_create 222
@@ -72,7 +69,6 @@
 #define SYS_mq_getsetattr 245
 #define SYS_waitid 247
 #define SYS_openat 257
-#define SYS_mkdirat 258
 #define SYS_mknodat 259
 #define SYS_fchownat 260
 #define SYS_renameat 264
@@ -80,8 +76,6 @@
 #define SYS_symlinkat 266
 #define SYS_readlinkat 267
 #define SYS_fchmodat 268
-#define SYS_faccessat 269
-#define SYS_pselect6 270
 #define SYS_ppoll 271
 #define SYS_utimensat 280
 #define SYS_fallocate 285
