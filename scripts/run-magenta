@@ -146,9 +146,9 @@ fi
 
 if [ "$NET" -eq 2 ]; then
     if [ $(uname -s) == "Darwin" ]; then
-        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=no,id=net0"
+        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=no,downscript=no,id=net0"
     else
-        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=no,id=net0"
+        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=no,downscript=no,id=net0"
     fi
     if [ "$ARCH" == "x86-64" ]; then
         ARGS+=" -device e1000,netdev=net0"
