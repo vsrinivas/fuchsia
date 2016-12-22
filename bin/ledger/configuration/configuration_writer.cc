@@ -17,8 +17,9 @@
 namespace {
 const char kHelpArg[] = "help";
 const char kConfigPathArg[] = "config_path";
+const char kGcsBucketArg[] = "gcs_bucket";
 const char kFirebaseIdArg[] = "firebase_id";
-const char kFirebasePrefixArg[] = "firebase_prefix";
+const char kUserPrefixArg[] = "user_prefix";
 const char kSyncArg[] = "sync";
 const char kNoSyncArg[] = "nosync";
 
@@ -30,9 +31,10 @@ void PrintHelp() {
   printf("    file to write to (default: /data/ledger/config.json).\n");
   printf("  --help: prints this help.\n");
   printf("Cloud Sync configuration:\n");
-  printf("  (passing either implies --sync unless --nosync is passed)\n");
+  printf("  (passing any implies --sync unless --nosync is passed)\n");
+  printf("  --gcs_bucket=<NAME_OF_GCS_BUCKET>\n");
   printf("  --firebase_id=<NAME_OF_FIREBASE_INSTANCE>\n");
-  printf("  --firebase_prefix=<USER_SPECIFIC_PREFIX>\n");
+  printf("  --user_prefix=<USER_SPECIFIC_PREFIX>\n");
   printf("Toggle Cloud Sync off and on:\n");
   printf("  --sync\n");
   printf("  --nosync\n");
@@ -66,6 +68,13 @@ int main(int argc, const char** argv) {
     config = configuration::Configuration();
   }
 
+  if (command_line.HasOption(kGcsBucketArg)) {
+    config.use_sync = true;
+    bool ret = command_line.GetOptionValue(kGcsBucketArg,
+                                           &config.sync_params.gcs_bucket);
+    FTL_DCHECK(ret);
+  }
+
   if (command_line.HasOption(kFirebaseIdArg)) {
     config.use_sync = true;
     bool ret = command_line.GetOptionValue(kFirebaseIdArg,
@@ -73,10 +82,10 @@ int main(int argc, const char** argv) {
     FTL_DCHECK(ret);
   }
 
-  if (command_line.HasOption(kFirebasePrefixArg)) {
+  if (command_line.HasOption(kUserPrefixArg)) {
     config.use_sync = true;
-    bool ret = command_line.GetOptionValue(kFirebasePrefixArg,
-                                           &config.sync_params.firebase_prefix);
+    bool ret = command_line.GetOptionValue(kUserPrefixArg,
+                                           &config.sync_params.user_prefix);
     FTL_DCHECK(ret);
   }
 
@@ -95,9 +104,9 @@ int main(int argc, const char** argv) {
   }
 
   if (config.use_sync && (config.sync_params.firebase_id.empty() ||
-                          config.sync_params.firebase_prefix.empty())) {
-    FTL_LOG(ERROR) << "To enable Cloud Sync pass both --firebase_id "
-                   << "and --firebase_prefix";
+                          config.sync_params.user_prefix.empty())) {
+    FTL_LOG(ERROR) << "To enable Cloud Sync pass both "
+                   << "--firebase_id and --user_prefix";
     return 1;
   }
 

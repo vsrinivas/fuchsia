@@ -18,8 +18,10 @@ namespace configuration {
 namespace {
 const char kSynchronization[] = "synchronization";
 const char kUseSync[] = "use_sync";
+const char kGcsBucket[] = "gcs_bucked";
 const char kFirebaseId[] = "firebase_id";
-const char kFirebasePrefix[] = "firebase_prefix";
+const char kUserPrefix[] = "user_prefix";
+const char kDeprecatedFirebasePrefix[] = "firebase_prefix";
 }
 
 bool ConfigurationEncoder::Decode(const std::string& configuration_path,
@@ -70,6 +72,17 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
   }
 
   auto sync_config = document[kSynchronization].GetObject();
+
+  if (sync_config.HasMember(kGcsBucket)) {
+    if (!sync_config[kGcsBucket].IsString()) {
+      FTL_LOG(ERROR) << "The " << kGcsBucket << " parameter inside "
+                     << kSynchronization << " must be a string.";
+      return false;
+    }
+    new_configuration.sync_params.gcs_bucket =
+        sync_config[kGcsBucket].GetString();
+  }
+
   if (!sync_config.HasMember(kFirebaseId) ||
       !sync_config[kFirebaseId].IsString()) {
     FTL_LOG(ERROR) << "The " << kFirebaseId
@@ -80,15 +93,32 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
   new_configuration.sync_params.firebase_id =
       sync_config[kFirebaseId].GetString();
 
-  if (!sync_config.HasMember(kFirebasePrefix) ||
-      !sync_config[kFirebasePrefix].IsString()) {
-    FTL_LOG(ERROR) << "The " << kFirebasePrefix
-                   << " parameter must be specified inside " << kSynchronization
-                   << ".";
-    return false;
+  // Read the user prefix from --firebase_prefix for backward-compatibility.
+  // TODO(ppi): remove the fallback in 2017.
+  if (sync_config.HasMember(kDeprecatedFirebasePrefix)) {
+    if (!sync_config[kDeprecatedFirebasePrefix].IsString()) {
+      FTL_LOG(ERROR) << "The " << kDeprecatedFirebasePrefix
+                     << " parameter inside " << kSynchronization
+                     << " must be a string.";
+      return false;
+    }
+
+    FTL_LOG(WARNING) << "The " << kDeprecatedFirebasePrefix << " parameter is "
+                     << "deprecated.";
+    new_configuration.sync_params.user_prefix =
+        sync_config[kDeprecatedFirebasePrefix].GetString();
+  } else {
+    if (!sync_config.HasMember(kUserPrefix) ||
+        !sync_config[kUserPrefix].IsString()) {
+      FTL_LOG(ERROR) << "The " << kUserPrefix
+                     << " parameter must be specified inside "
+                     << kSynchronization << ".";
+      return false;
+    }
+
+    new_configuration.sync_params.user_prefix =
+        sync_config[kUserPrefix].GetString();
   }
-  new_configuration.sync_params.firebase_prefix =
-      sync_config[kFirebasePrefix].GetString();
 
   // Set use_sync to true if kUseSync is true or missing. This is for
   // backward-compatibility with config files written before serializing the
@@ -123,14 +153,19 @@ std::string ConfigurationEncoder::EncodeToString(
         writer.Bool(configuration.use_sync);
       }
       {
+        writer.Key(kGcsBucket);
+        writer.String(configuration.sync_params.gcs_bucket.c_str(),
+                      configuration.sync_params.gcs_bucket.size());
+      }
+      {
         writer.Key(kFirebaseId);
         writer.String(configuration.sync_params.firebase_id.c_str(),
                       configuration.sync_params.firebase_id.size());
       }
       {
-        writer.Key(kFirebasePrefix);
-        writer.String(configuration.sync_params.firebase_prefix.c_str(),
-                      configuration.sync_params.firebase_prefix.size());
+        writer.Key(kUserPrefix);
+        writer.String(configuration.sync_params.user_prefix.c_str(),
+                      configuration.sync_params.user_prefix.size());
       }
     }
     writer.EndObject();

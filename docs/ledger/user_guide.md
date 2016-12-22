@@ -68,7 +68,7 @@ Console](https://console.firebase.google.com/) and set the following in
 In order to point Ledger to your database, run the configuration script:
 
 ```
-configure_ledger --firebase_id=<DATABASE_ID> --firebase_prefix=<USER_IDENTITY>
+configure_ledger --firebase_id=<DATABASE_ID> --user_prefix=<USER_IDENTITY>
 ```
 
 `DATABASE_ID` is the identifier of your Firebase project. (it's "ABC" for a

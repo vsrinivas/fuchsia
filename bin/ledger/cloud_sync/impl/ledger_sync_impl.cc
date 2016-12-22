@@ -17,7 +17,7 @@ LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
                                ftl::StringView app_id)
     : environment_(environment),
       app_path_(GetFirebasePathForApp(
-          environment_->configuration().sync_params.firebase_prefix,
+          environment_->configuration().sync_params.user_prefix,
           app_id)),
       app_firebase_(std::make_unique<firebase::FirebaseImpl>(
           environment_->network_service(),

@@ -79,7 +79,7 @@ bool ClientApp::Initialize() {
   if (!configuration_.use_sync) {
     std::cout << "Error: Cloud sync is disabled in the Ledger configuration."
               << std::endl;
-    std::cout << "Hint: pass --firebase_id and --firebase_prefix to "
+    std::cout << "Hint: pass --firebase_id and --user_prefix to "
               << "`configure_ledger`" << std::endl;
     return false;
   }
@@ -87,8 +87,8 @@ bool ClientApp::Initialize() {
   std::cout << "Cloud Sync Settings:" << std::endl;
   std::cout << " - firebase id: " << configuration_.sync_params.firebase_id
             << std::endl;
-  std::cout << " - firebase prefix: "
-            << configuration_.sync_params.firebase_prefix << std::endl;
+  std::cout << " - firebase prefix: " << configuration_.sync_params.user_prefix
+            << std::endl;
   std::cout << std::endl;
 
   network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
@@ -97,7 +97,7 @@ bool ClientApp::Initialize() {
       });
 
   std::string app_path = GetFirebasePathForApp(
-      configuration_.sync_params.firebase_prefix, "cloud_sync_client");
+      configuration_.sync_params.user_prefix, "cloud_sync_client");
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_.get(), configuration_.sync_params.firebase_id,
       GetFirebasePathForPage(app_path, RandomString()));

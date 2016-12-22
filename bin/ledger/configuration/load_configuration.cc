@@ -15,8 +15,9 @@ namespace {
 
 bool CheckIfCompatible(const Configuration& last_config,
                        const Configuration& next_config) {
-  if (!last_config.sync_params.firebase_id.empty() ||
-      !last_config.sync_params.firebase_prefix.empty()) {
+  if (!last_config.sync_params.gcs_bucket.empty() ||
+      !last_config.sync_params.firebase_id.empty() ||
+      !last_config.sync_params.user_prefix.empty()) {
     if (last_config.sync_params != next_config.sync_params) {
       FTL_LOG(ERROR) << "A previous run of Ledger used a different Cloud Sync "
                      << "destination.";
