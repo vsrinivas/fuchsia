@@ -157,7 +157,6 @@ ftl::RefPtr<callback::Cancellable> LastOneWinsMerger::Merge(
     std::unique_ptr<const storage::Commit> head_1,
     std::unique_ptr<const storage::Commit> head_2,
     std::unique_ptr<const storage::Commit> ancestor) {
-  FTL_DCHECK(storage_ != nullptr);
   if (head_1->GetTimestamp() > head_2->GetTimestamp()) {
     // Order commits by their timestamps. Then we know that head_2 overwrites
     // head_1 under this merging strategy.

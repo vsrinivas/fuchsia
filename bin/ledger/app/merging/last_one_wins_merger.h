@@ -28,8 +28,6 @@ class LastOneWinsMerger : public MergeStrategy {
       std::unique_ptr<const storage::Commit> ancestor) override;
 
  private:
-  storage::PageStorage* storage_;
-
   FTL_DISALLOW_COPY_AND_ASSIGN(LastOneWinsMerger);
 };
 
