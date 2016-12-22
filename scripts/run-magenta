@@ -15,7 +15,7 @@ function HELP {
     echo "-g                  : use graphical console"
     echo "-I <interface name> : network interface name, default is qemu."
     echo "-k                  : use KVM"
-    echo "-m <memory in MB>   : default 512MB"
+    echo "-m <memory in MB>   : memory size, default is ${MEMSIZE_DEFAULT}MB"
     echo "-n                  : run with emulated nic"
     echo "-N                  : run with emulated nic via tun/tap"
     echo "-o <dir>            : build directory"
@@ -37,7 +37,8 @@ DISK=0
 BUILDDIR=
 GRAPHICS=0
 DO_KVM=0
-MEMSIZE=2048
+MEMSIZE_DEFAULT=2048
+MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
 RELEASE=0
 VNC=0
