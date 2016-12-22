@@ -11,7 +11,7 @@ uint64_t _mx_ticks_get() {
     return ticks;
 #elif __arm__
     uint32_t ticks;
-    __asm__ volatile("mrc p15, 0, %0, c9, c13, 0" : "=r" (count));
+    __asm__ volatile("mrc p15, 0, %0, c9, c13, 0" : "=r" (ticks));
     return ticks;
 #elif __x86_64__
     uint32_t ticks_low;
