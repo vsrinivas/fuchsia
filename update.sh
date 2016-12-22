@@ -99,6 +99,10 @@ function download_godepfile() {
   download_tool godepfile "${FUCHSIA_URL_BASE}/godepfile/${HOST_PLATFORM}"
 }
 
+function download_qemu() {
+  download_tarball qemu "qemu/${HOST_PLATFORM}" "${SCRIPT_ROOT}"
+}
+
 function download_all() {
   download_ninja
   download_gn
@@ -106,6 +110,7 @@ function download_all() {
   download_toolchain
   download_go
   download_godepfile
+  download_qemu
 }
 
 function echo_error() {
@@ -143,6 +148,11 @@ case ${i} in
     ;;
   --godepfile)
     download_godepfile
+    has_arguments="true"
+    shift
+    ;;
+  --qemu)
+    download_qemu
     has_arguments="true"
     shift
     ;;
