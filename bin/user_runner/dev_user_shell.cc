@@ -17,6 +17,7 @@
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/modular/src/user_runner/link_json.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
+#include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -31,6 +32,10 @@
 
 namespace {
 
+constexpr uint32_t kRootModuleKey = 1;
+constexpr uint32_t kRootViewSceneResourceId = 1;
+constexpr uint32_t kRootViewSceneNodeId = 1;
+
 class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
@@ -41,6 +46,124 @@ class Settings {
 
   std::string root_module;
   std::string root_link;
+};
+
+struct ViewData {
+  mozart::ViewInfoPtr view_info;
+  mozart::ViewPropertiesPtr view_properties;
+  mozart::RectF layout_bounds;
+  uint32_t scene_version = 1u;
+};
+
+class DevUserShellView : public mozart::BaseView {
+ public:
+  explicit DevUserShellView(
+      mozart::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      : BaseView(std::move(view_manager),
+                 std::move(view_owner_request),
+                 "DevUserShellView") {}
+
+  ~DevUserShellView() override = default;
+
+  void SetRootModuleView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
+    GetViewContainer()->AddChild(kRootModuleKey, std::move(view_owner));
+    root_view_data_ = std::unique_ptr<ViewData>(new ViewData());
+  }
+
+ private:
+  // |BaseView|:
+  void OnChildAttached(uint32_t child_key,
+                       mozart::ViewInfoPtr child_view_info) override {
+    root_view_data_->view_info = std::move(child_view_info);
+    Invalidate();
+  }
+
+  // |BaseView|:
+  void OnChildUnavailable(uint32_t child_key) override {
+    root_view_data_.reset();
+    GetViewContainer()->RemoveChild(child_key, nullptr);
+    Invalidate();
+  }
+
+  // |BaseView|:
+  void OnLayout() override {
+    FTL_DCHECK(properties());
+    // Layout root view
+    if (root_view_data_) {
+      const mozart::Size& size = *properties()->view_layout->size;
+
+      root_view_data_->layout_bounds.x = 0;
+      root_view_data_->layout_bounds.y = 0;
+      root_view_data_->layout_bounds.width = size.width;
+      root_view_data_->layout_bounds.height = size.height;
+
+      auto view_properties = mozart::ViewProperties::New();
+      view_properties->view_layout = mozart::ViewLayout::New();
+      view_properties->view_layout->size = mozart::Size::New();
+      view_properties->view_layout->size->width =
+          root_view_data_->layout_bounds.width;
+      view_properties->view_layout->size->height =
+          root_view_data_->layout_bounds.height;
+
+      if (!root_view_data_->view_properties.Equals(view_properties)) {
+        root_view_data_->view_properties = view_properties.Clone();
+        root_view_data_->scene_version++;
+        GetViewContainer()->SetChildProperties(
+            kRootModuleKey, root_view_data_->scene_version, std::move(view_properties));
+      }
+    }
+  }
+
+  // |BaseView|:
+  void OnDraw() override {
+    FTL_DCHECK(properties());
+
+    // Update the scene.
+    // TODO: only send the resources once, be more incremental
+    auto update = mozart::SceneUpdate::New();
+    update->clear_resources = true;
+    update->clear_nodes = true;
+
+    // Create the root node
+    auto root_node = mozart::Node::New();
+
+    // If we have the view, add it to the scene.
+    if (root_view_data_ && root_view_data_->view_info) {
+      mozart::RectF extent;
+      extent.width = root_view_data_->layout_bounds.width;
+      extent.height = root_view_data_->layout_bounds.height;
+      root_node->content_transform = mozart::Transform::New();
+      root_node->content_clip = extent.Clone();
+      mozart::SetTranslationTransform(root_node->content_transform.get(),
+                                      root_view_data_->layout_bounds.x,
+                                      root_view_data_->layout_bounds.y, 0.f);
+
+      auto scene_resource = mozart::Resource::New();
+      scene_resource->set_scene(mozart::SceneResource::New());
+      scene_resource->get_scene()->scene_token =
+          root_view_data_->view_info->scene_token.Clone();
+      update->resources.insert(kRootViewSceneResourceId, std::move(scene_resource));
+
+      auto scene_node = mozart::Node::New();
+      scene_node->op = mozart::NodeOp::New();
+      scene_node->op->set_scene(mozart::SceneNodeOp::New());
+      scene_node->op->get_scene()->scene_resource_id = kRootViewSceneResourceId;
+      update->nodes.insert(kRootViewSceneNodeId, std::move(scene_node));
+      root_node->child_node_ids.push_back(kRootViewSceneNodeId);
+    }
+
+    // Add the root node.
+    update->nodes.insert(mozart::kSceneRootNodeId, std::move(root_node));
+    scene()->Update(std::move(update));
+
+    // Publish the scene.
+    scene()->Publish(CreateSceneMetadata());
+  }
+
+  std::unique_ptr<ViewData> root_view_data_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(DevUserShellView);
 };
 
 class DevUserShellApp
@@ -87,6 +210,11 @@ class DevUserShellApp
     FTL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
+    view_.reset(
+        new DevUserShellView(application_context()
+                           ->ConnectToEnvironmentService<mozart::ViewManager>(),
+                       std::move(view_owner_request_)));
+
     story_provider_->CreateStory(
         settings_.root_module, [this](const fidl::String& story_id) {
           story_provider_->GetController(story_id,
@@ -95,7 +223,9 @@ class DevUserShellApp
           story_watcher_binding_.Bind(story_watcher.NewRequest());
           story_controller_->Watch(std::move(story_watcher));
 
-          story_controller_->Start(std::move(view_owner_request_));
+          fidl::InterfaceHandle<mozart::ViewOwner> root_module_view;
+          story_controller_->Start(root_module_view.NewRequest());
+          view_->SetRootModuleView(std::move(root_module_view));
 
           if (!settings_.root_link.empty()) {
             modular::LinkPtr root;
@@ -123,6 +253,7 @@ class DevUserShellApp
   }
 
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  std::unique_ptr<DevUserShellView> view_;
   const Settings settings_;
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
   modular::StoryProviderPtr story_provider_;
