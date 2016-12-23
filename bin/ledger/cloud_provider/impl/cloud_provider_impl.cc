@@ -20,23 +20,15 @@ namespace {
 // The root path under which all commits are stored.
 constexpr ftl::StringView kCommitRoot = "commits";
 
-// The root path under which all objects are stored.
-constexpr ftl::StringView kObjectRoot = "objects";
-
 // Returns the path under which the given commit is stored.
 std::string GetCommitPath(const Commit& commit) {
   return ftl::Concatenate({kCommitRoot, "/", firebase::EncodeKey(commit.id)});
 }
-
-// Returns the path under which the given object is stored.
-std::string GetObjectPath(ObjectIdView object_id) {
-  return ftl::Concatenate(
-      {kObjectRoot, "/", firebase::EncodeKey(object_id.ToString())});
-}
 }  // namespace
 
-CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase)
-    : firebase_(firebase) {}
+CloudProviderImpl::CloudProviderImpl(firebase::Firebase* firebase,
+                                     gcs::CloudStorage* cloud_storage)
+    : firebase_(firebase), cloud_storage_(cloud_storage) {}
 
 CloudProviderImpl::~CloudProviderImpl() {}
 
@@ -94,52 +86,25 @@ void CloudProviderImpl::GetCommits(
 void CloudProviderImpl::AddObject(ObjectIdView object_id,
                                   mx::vmo data,
                                   std::function<void(Status)> callback) {
-  std::string data_str;
-  auto result = mtl::StringFromVmo(data, &data_str);
-  if (!result) {
-    callback(Status::INTERNAL_ERROR);
-    return;
-  }
-
-  std::string encoded =
-      ftl::Concatenate({"\"", firebase::EncodeValue(data_str), "\""});
-  // Maximum size of a value stored in Firebase is 10MB.
-  // TODO(ppi): switch to GCS for the object API.
-  if (encoded.size() > 10'000'000) {
-    FTL_LOG(ERROR) << "Failed to upload object to Firebase - object too big.";
-    callback(Status::ARGUMENT_ERROR);
-    return;
-  }
-
-  firebase_->Put(GetObjectPath(object_id), encoded,
-                 [callback](firebase::Status status) {
-                   callback(ConvertFirebaseStatus(status));
-                 });
+  // Even though this yields path to be used in GCS, we use Firebase key
+  // encoding, as it happens to produce valid GCS object names. To be revisited
+  // when we redo the encoding in LE-118.
+  cloud_storage_->UploadFile(
+      firebase::EncodeKey(object_id), std::move(data),
+      [callback = std::move(callback)](gcs::Status status) {
+        callback(ConvertGcsStatus(status));
+      });
 }
 
 void CloudProviderImpl::GetObject(
     ObjectIdView object_id,
     std::function<void(Status status, uint64_t size, mx::socket data)>
         callback) {
-  firebase_->Get(
-      GetObjectPath(object_id), "",
-      [callback](firebase::Status status, const rapidjson::Value& value) {
-        if (status != firebase::Status::OK) {
-          callback(ConvertFirebaseStatus(status), 0u, mx::socket());
-          return;
-        }
-
-        if (value.IsNull()) {
-          callback(Status::NOT_FOUND, 0u, mx::socket());
-          return;
-        }
-
-        std::string data;
-        if (!value.IsString() || !firebase::Decode(value.GetString(), &data)) {
-          callback(Status::PARSE_ERROR, 0u, mx::socket());
-          return;
-        }
-        callback(Status::OK, data.size(), mtl::WriteStringToSocket(data));
+  cloud_storage_->DownloadFile(
+      firebase::EncodeKey(object_id),
+      [callback = std::move(callback)](gcs::Status status, uint64_t size,
+                                       mx::socket data) {
+        callback(ConvertGcsStatus(status), size, std::move(data));
       });
 }
 

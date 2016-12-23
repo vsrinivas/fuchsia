@@ -14,6 +14,7 @@
 #include "apps/ledger/src/cloud_provider/public/types.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/watch_client.h"
+#include "apps/ledger/src/gcs/cloud_storage.h"
 #include "mx/socket.h"
 #include "mx/vmo.h"
 
@@ -21,7 +22,8 @@ namespace cloud_provider {
 
 class CloudProviderImpl : public CloudProvider {
  public:
-  CloudProviderImpl(firebase::Firebase* firebase);
+  CloudProviderImpl(firebase::Firebase* firebase,
+                    gcs::CloudStorage* cloud_storage);
   ~CloudProviderImpl() override;
 
   // CloudProvider:
@@ -53,6 +55,7 @@ class CloudProviderImpl : public CloudProvider {
   std::string GetTimestampQuery(const std::string& min_timestamp);
 
   firebase::Firebase* const firebase_;
+  gcs::CloudStorage* const cloud_storage_;
   std::map<CommitWatcher*, std::unique_ptr<WatchClientImpl>> watchers_;
 };
 

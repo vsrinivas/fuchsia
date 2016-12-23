@@ -166,7 +166,7 @@ void DoctorCommand::CheckHttpsConnectivity() {
 }
 
 void DoctorCommand::CheckObjects() {
-  what("Firebase - upload test object");
+  what("GCS - upload test object");
   std::string id = RandomString();
   std::string content = RandomString();
   mx::vmo data;
@@ -197,7 +197,7 @@ void DoctorCommand::CheckObjects() {
 
 void DoctorCommand::CheckGetObject(std::string id,
                                    std::string expected_content) {
-  what("Firebase - retrieve test object");
+  what("GCS - retrieve test object");
   cloud_provider_->GetObject(id, [
     this, expected_content = std::move(expected_content),
     request_start = ftl::TimePoint::Now()

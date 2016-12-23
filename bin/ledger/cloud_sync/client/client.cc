@@ -9,12 +9,13 @@
 
 #include "apps/ledger/src/cloud_provider/impl/cloud_provider_impl.h"
 #include "apps/ledger/src/cloud_provider/public/types.h"
-#include "apps/ledger/src/cloud_sync/impl/firebase_paths.h"
+#include "apps/ledger/src/cloud_sync/impl/paths.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/configuration/configuration_encoder.h"
 #include "apps/ledger/src/configuration/load_configuration.h"
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/firebase_impl.h"
+#include "apps/ledger/src/gcs/cloud_storage_impl.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/network/services/network_service.fidl.h"
@@ -87,7 +88,7 @@ bool ClientApp::Initialize() {
   std::cout << "Cloud Sync Settings:" << std::endl;
   std::cout << " - firebase id: " << configuration_.sync_params.firebase_id
             << std::endl;
-  std::cout << " - firebase prefix: " << configuration_.sync_params.user_prefix
+  std::cout << " - user prefix: " << configuration_.sync_params.user_prefix
             << std::endl;
   std::cout << std::endl;
 
@@ -96,13 +97,19 @@ bool ClientApp::Initialize() {
         return context_->ConnectToEnvironmentService<network::NetworkService>();
       });
 
-  std::string app_path = GetFirebasePathForApp(
+  std::string app_firebase_path = GetFirebasePathForApp(
       configuration_.sync_params.user_prefix, "cloud_sync_client");
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_.get(), configuration_.sync_params.firebase_id,
-      GetFirebasePathForPage(app_path, RandomString()));
-  cloud_provider_ =
-      std::make_unique<cloud_provider::CloudProviderImpl>(firebase_.get());
+      GetFirebasePathForPage(app_firebase_path, RandomString()));
+  std::string app_gcs_prefix = GetGcsPrefixForApp(
+      configuration_.sync_params.user_prefix, "cloud_sync_client");
+  cloud_storage_ = std::make_unique<gcs::CloudStorageImpl>(
+      mtl::MessageLoop::GetCurrent()->task_runner(), network_service_.get(),
+      configuration_.sync_params.gcs_bucket,
+      GetGcsPrefixForPage(app_gcs_prefix, RandomString()));
+  cloud_provider_ = std::make_unique<cloud_provider::CloudProviderImpl>(
+      firebase_.get(), cloud_storage_.get());
 
   command_ = CommandFromArgs(args);
   if (command_ == nullptr) {

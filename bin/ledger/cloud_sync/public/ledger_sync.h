@@ -13,6 +13,7 @@
 #include "apps/ledger/src/cloud_sync/public/page_sync.h"
 #include "apps/ledger/src/configuration/configuration.h"
 #include "apps/ledger/src/firebase/firebase.h"
+#include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/macros.h"
 
@@ -21,6 +22,7 @@ namespace cloud_sync {
 // Page sync along with associated objects that it uses.
 struct PageSyncContext {
   std::unique_ptr<firebase::Firebase> firebase;
+  std::unique_ptr<gcs::CloudStorage> cloud_storage;
   std::unique_ptr<cloud_provider::CloudProvider> cloud_provider;
   std::unique_ptr<PageSync> page_sync;
 };

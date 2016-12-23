@@ -8,6 +8,7 @@
 #include <string>
 
 #include "apps/ledger/src/firebase/status.h"
+#include "apps/ledger/src/gcs/status.h"
 #include "lib/ftl/strings/string_view.h"
 
 namespace cloud_provider {
@@ -31,6 +32,8 @@ enum class Status {
 
 ftl::StringView StatusToString(Status status);
 std::ostream& operator<<(std::ostream& os, Status status);
+
+Status ConvertGcsStatus(gcs::Status gcs_status);
 
 Status ConvertFirebaseStatus(firebase::Status firebase_status);
 

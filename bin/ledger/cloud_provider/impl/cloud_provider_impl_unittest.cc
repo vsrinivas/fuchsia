@@ -13,6 +13,7 @@
 #include "apps/ledger/src/firebase/encoding.h"
 #include "apps/ledger/src/firebase/firebase.h"
 #include "apps/ledger/src/firebase/status.h"
+#include "apps/ledger/src/gcs/cloud_storage.h"
 #include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -30,12 +31,35 @@ namespace cloud_provider {
 namespace {
 
 class CloudProviderImplTest : public test::TestWithMessageLoop,
+                              public gcs::CloudStorage,
                               public firebase::Firebase,
                               public CommitWatcher {
  public:
   CloudProviderImplTest()
-      : cloud_provider_(std::make_unique<CloudProviderImpl>(this)) {}
+      : cloud_provider_(std::make_unique<CloudProviderImpl>(this, this)) {}
   ~CloudProviderImplTest() override {}
+
+  // gcs::CloudStorage:
+  void UploadFile(const std::string& key,
+                  mx::vmo data,
+                  const std::function<void(gcs::Status)>& callback) override {
+    upload_keys_.push_back(key);
+    upload_data_.push_back(std::move(data));
+    message_loop_.task_runner()->PostTask(
+        [this, callback] { callback(gcs::Status::OK); });
+  }
+
+  void DownloadFile(
+      const std::string& key,
+      const std::function<
+          void(gcs::Status status, uint64_t size, mx::socket data)>& callback)
+      override {
+    download_keys_.push_back(key);
+    message_loop_.task_runner()->PostTask([this, callback] {
+      callback(download_status_, download_response_size_,
+               std::move(download_response_));
+    });
+  }
 
   // firebase::Firebase:
   void Get(const std::string& key,
@@ -95,6 +119,17 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
 
  protected:
   const std::unique_ptr<CloudProviderImpl> cloud_provider_;
+
+  // These members keep track of calls made on the GCS client.
+  std::vector<std::string> download_keys_;
+  std::vector<std::string> upload_keys_;
+  std::vector<mx::vmo> upload_data_;
+
+  // These members hold response data that GCS client is to return when called
+  // by CloudProviderImpl.
+  uint64_t download_response_size_ = 0;
+  mx::socket download_response_;
+  gcs::Status download_status_ = gcs::Status::OK;
 
   // These members track calls made by CloudProviderImpl to Firebase client.
   std::vector<std::string> get_keys_;
@@ -366,17 +401,20 @@ TEST_F(CloudProviderImplTest, AddObject) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(1u, put_keys_.size());
-  EXPECT_EQ(put_keys_.size(), put_data_.size());
-  EXPECT_EQ("objects/object_idV", put_keys_[0]);
-  EXPECT_EQ("\"bazingaV\"", put_data_[0]);
+  EXPECT_EQ(1u, upload_keys_.size());
+  EXPECT_EQ(upload_keys_.size(), upload_data_.size());
+  EXPECT_EQ("object_idV", upload_keys_[0]);
+
+  std::string uploaded_content;
+  ASSERT_TRUE(
+      mtl::StringFromVmo(std::move(upload_data_[0]), &uploaded_content));
+  EXPECT_EQ("bazinga", uploaded_content);
 }
 
 TEST_F(CloudProviderImplTest, GetObject) {
-  std::string get_response_content = "\"bazingaV\"";
-  get_response_.reset(new rapidjson::Document());
-  get_response_->Parse(get_response_content.c_str(),
-                       get_response_content.size());
+  std::string content = "bazinga";
+  download_response_ = mtl::WriteStringToSocket(content);
+  download_response_size_ = content.size();
 
   Status status;
   uint64_t size;
@@ -393,15 +431,13 @@ TEST_F(CloudProviderImplTest, GetObject) {
   EXPECT_EQ(7u, data_str.size());
   EXPECT_EQ(7u, size);
 
-  EXPECT_EQ(1u, get_keys_.size());
-  EXPECT_EQ("objects/object_idV", get_keys_[0]);
+  EXPECT_EQ(1u, download_keys_.size());
+  EXPECT_EQ("object_idV", download_keys_[0]);
 }
 
 TEST_F(CloudProviderImplTest, GetObjectNotFound) {
-  std::string get_response_content = "null";
-  get_response_.reset(new rapidjson::Document());
-  get_response_->Parse(get_response_content.c_str(),
-                       get_response_content.size());
+  download_response_ = mtl::WriteStringToSocket("");
+  download_status_ = gcs::Status::NOT_FOUND;
 
   Status status;
   uint64_t size;

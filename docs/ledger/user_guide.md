@@ -12,12 +12,16 @@ By default Ledger runs without sync. To enable sync, follow the instructions
 below.
 
 When enabled, Cloud Sync synchronizes the content of all pages using the
-selected cloud provider (see below for configuration.
+selected cloud provider (see below for configuration).
 
 **Note**: Ledger does not support **migrations** between cloud providers. Once
 Cloud Sync is set up, you won't be able to switch to a different cloud provider
 (e.g. to a different Firebase instance) without flushing the locally persisted
-data.
+data. (see Reset Everything below)
+
+**Warning**: Ledger does not (currently) support authorization. Data stored in
+the cloud is world-readable and world-writable. Please don't store anything
+private, sensitive or real in Ledger yet.
 
 ### Prerequisities
 
@@ -35,15 +39,14 @@ You should see the HTML content of the `example.com` placeholder page.
 
 ### Setup
 
-To use sync, you will need an instance of the Firebase Real-Time Database. You
-can get one at https://firebase.google.com/.
+To use sync, you will need an instance of the Firebase Real-Time Database along
+with Firebase Storage. You can create a new Firebase project at
+https://firebase.google.com/. Then, visit the [Firebase
+Console](https://console.firebase.google.com/) and follow the instructions
+below.
 
-Ledger does not currently support authorization, so the database needs to be
-public-readable and public-writable (better not to store anything private
-there). You also need to **set up indexes** that allow Ledger to perform queries
-on synced metadata. Go to the [Firebase
-Console](https://console.firebase.google.com/) and set the following in
-`Database / Rules`:
+In `Database / Rules`, paste the rules below and click "Publish". (note that
+this makes the database data world-readable and world-writeable)
 
 ```
 {
@@ -65,11 +68,31 @@ Console](https://console.firebase.google.com/) and set the following in
 }
 ```
 
+In `Storage / Rules`, change the line starting with "allow" to match the example
+below and click "Publish". (note that this makes the database data
+world-readable and world-writeable) Also take note of "YOUR_BUCKET_NAME" in the
+rules - you will need that in a second.
+
+```
+service firebase.storage {
+  match /b/<BUCKET NAME>/o {
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
 In order to point Ledger to your database, run the configuration script:
 
 ```
-configure_ledger --firebase_id=<DATABASE_ID> --user_prefix=<USER_IDENTITY>
+configure_ledger --gcs_bucket=<BUCKET NAME> --firebase_id=<DATABASE_ID> --user_prefix=<USER_IDENTITY>
 ```
+
+`BUCKET_NAME` is the name of the storage bucket referenced above. Firebase
+Storage is backed by GCS, so this is actually a name of a Google Cloud Storage
+bucket. It however has to be the bucket of the Firebase Storage instance
+configured as described above, and not any general GCS bucket.
 
 `DATABASE_ID` is the identifier of your Firebase project. (it's "ABC" for a
 firebase database "ABC.firebaseio.com")
@@ -105,3 +128,16 @@ configure_ledger --sync
 
 The configuration tool remembers the Firebase settings even when the sync is
 off, so you don't need to pass them again.
+
+## Reset Everything
+
+To remove all locally persisted Ledger data, you can run:
+
+```
+$ rm -r /data/ledger
+```
+
+To remove the data synced to the cloud, visit `Database / Data` in the [Firebase
+Console](https://console.firebase.google.com/) and click on the red cross that
+appears when you hover over the root of your database. Then, visit `Storage /
+Files` and delete all objects.

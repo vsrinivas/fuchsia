@@ -27,8 +27,9 @@ class LedgerSyncImpl : public LedgerSync {
 
  private:
   ledger::Environment* environment_;
+  const std::string app_gcs_prefix_;
   // Firebase path under which the data of this Ledger instance is stored.
-  const std::string app_path_;
+  const std::string app_firebase_path_;
   // Firebase instance scoped to |app_path_|.
   std::unique_ptr<firebase::Firebase> app_firebase_;
 };

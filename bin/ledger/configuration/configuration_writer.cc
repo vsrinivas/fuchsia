@@ -103,9 +103,10 @@ int main(int argc, const char** argv) {
     config.use_sync = false;
   }
 
-  if (config.use_sync && (config.sync_params.firebase_id.empty() ||
+  if (config.use_sync && (config.sync_params.gcs_bucket.empty() ||
+                          config.sync_params.firebase_id.empty() ||
                           config.sync_params.user_prefix.empty())) {
-    FTL_LOG(ERROR) << "To enable Cloud Sync pass both "
+    FTL_LOG(ERROR) << "To enable Cloud Sync pass all of --gcs_bucket, "
                    << "--firebase_id and --user_prefix";
     return 1;
   }

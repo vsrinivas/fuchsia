@@ -21,6 +21,7 @@ source_set("impl") {
 
   deps = [
     "//apps/ledger/src/firebase",
+    "//apps/ledger/src/gcs",
     "//apps/ledger/src/glue/crypto",
     "//lib/ftl",
     "//lib/mtl",
@@ -40,6 +41,7 @@ source_set("unittests") {
   deps = [
     ":impl",
     "//apps/ledger/src/firebase",
+    "//apps/ledger/src/gcs",
     "//apps/ledger/src/test:lib",
     "//lib/ftl",
     "//lib/mtl",
