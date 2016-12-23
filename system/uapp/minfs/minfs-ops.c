@@ -657,9 +657,9 @@ static void fs_release(vnode_t* vn) {
           vn->inode.link_count ? "" : " link-count is zero");
     if (vn->inode.link_count == 0) {
         minfs_inode_destroy(vn);
-        list_delete(&vn->hashnode);
-        free(vn);
     }
+    list_delete(&vn->hashnode);
+    free(vn);
 }
 
 static mx_status_t fs_open(vnode_t** _vn, uint32_t flags) {
