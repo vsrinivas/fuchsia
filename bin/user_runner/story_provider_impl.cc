@@ -329,7 +329,9 @@ class DeleteStoryCall : public Operation {
 
   void Complete() {
     story_ids_->erase(story_id_);
-    *pending_deletion_ = std::pair<std::string, DeleteStoryCall*>();
+    if (pending_deletion_) {
+      *pending_deletion_ = std::pair<std::string, DeleteStoryCall*>();
+    }
     auto i = story_controllers_->find(story_id_);
     if (i == story_controllers_->end()) {
       result_();
