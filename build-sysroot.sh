@@ -10,6 +10,8 @@ readonly HOST_ARCH=$(uname -m)
 readonly HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
 readonly HOST_TRIPLE="${HOST_ARCH}-${HOST_OS}"
 
+readonly CMAKE_PROGRAM=${CMAKE_PROGRAM:-${ROOT_DIR}/buildtools/cmake/bin/cmake}
+
 JOBS=`getconf _NPROCESSORS_ONLN` || {
   Cannot get number of processors
   exit 1
@@ -87,7 +89,7 @@ build() {
 
   mkdir -p -- "${outdir}/build-libunwind-${target}"
   pushd "${outdir}/build-libunwind-${target}"
-  [[ -f "${outdir}/build-libunwind-${target}/build.ninja" ]] || CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/runtimes/libcxx/include" ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+  [[ -f "${outdir}/build-libunwind-${target}/build.ninja" ]] || CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/runtimes/libcxx/include" ${CMAKE_PROGRAM} -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     ${cmake_build_type_flags:-} \
@@ -103,7 +105,7 @@ build() {
 
   mkdir -p -- "${outdir}/build-libcxxabi-${target}"
   pushd "${outdir}/build-libcxxabi-${target}"
-  [[ -f "${outdir}/build-libcxxabi-${target}/build.ninja" ]] || ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+  [[ -f "${outdir}/build-libcxxabi-${target}/build.ninja" ]] || ${CMAKE_PROGRAM} -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     ${cmake_build_type_flags:-} \
@@ -121,7 +123,7 @@ build() {
 
   mkdir -p -- "${outdir}/build-libcxx-${target}"
   pushd "${outdir}/build-libcxx-${target}"
-  [[ -f "${outdir}/build-libcxx-${target}/build.ninja" ]] || ${ROOT_DIR}/buildtools/cmake/bin/cmake -GNinja \
+  [[ -f "${outdir}/build-libcxx-${target}/build.ninja" ]] || ${CMAKE_PROGRAM} -GNinja \
     ${CMAKE_HOST_TOOLS:-} \
     ${CMAKE_SHARED_FLAGS:-} \
     ${cmake_build_type_flags:-} \
