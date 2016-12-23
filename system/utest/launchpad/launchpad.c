@@ -13,6 +13,7 @@
 
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 
 #include <mxio/util.h>
 
@@ -34,7 +35,11 @@ static bool launchpad_test(void)
     mx_handle_t mxio_job = mx_job_default();
     ASSERT_GT(mxio_job, 0, "no mxio job object");
 
-    mx_status_t status = launchpad_create(mxio_job, test_inferior_child_name, &lp);
+    mx_handle_t job_copy = MX_HANDLE_INVALID;
+    ASSERT_EQ(mx_handle_duplicate(mxio_job, MX_RIGHT_SAME_RIGHTS, &job_copy),
+              NO_ERROR, "mx_handle_duplicate failed");
+
+    mx_status_t status = launchpad_create(job_copy, test_inferior_child_name, &lp);
     ASSERT_EQ(status, NO_ERROR, "launchpad_create");
 
     status = launchpad_elf_load(lp, launchpad_vmo_from_file(program_path));
