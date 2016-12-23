@@ -296,6 +296,7 @@ function fset-usage() {
   cat >&2 <<END
 Usage: fset x86-64|arm64 [--release] [--modules m1,m2...]
                          [--goma|--no-goma] [--no-ensure-goma]
+                         [--goma-dir path]
                          [--ccache|--no-ccache]
 Sets fuchsia build options.
 END
@@ -340,6 +341,7 @@ function fset() {
   shift
 
   local goma
+  local goma_dir
   local ensure_goma=1
   local ccache
   while [[ $# -ne 0 ]]; do
@@ -365,6 +367,18 @@ function fset() {
       --no-ensure-goma)
         ensure_goma=0
         ;;
+      --goma-dir)
+        if [[ $# -lt 2 ]]; then
+          fset-usage
+          return 1
+        fi
+        goma_dir=$2
+        if [[ ! -d "${goma_dir}" ]]; then
+          echo -e "GOMA directory does not exist: "${goma_dir}""
+          return 1
+        fi
+        shift
+        ;;
       --ccache)
         ccache=1
         ;;
@@ -386,11 +400,18 @@ function fset() {
   export FUCHSIA_SETTINGS="${settings}"
   export FUCHSIA_ENSURE_GOMA="${ensure_goma}"
 
+  # If a goma directory wasn't specified explicitly then default to "~/goma".
+  if [[ -n "${goma_dir}" ]]; then
+    export FUCHSIA_GOMA_DIR="${goma_dir}"
+  else
+    export FUCHSIA_GOMA_DIR=~/goma
+  fi
+
   fset-add-ninja-arg -C "${FUCHSIA_BUILD_DIR}"
 
   # Automatically detect goma and ccache if not specified explicitly.
   if [[ -z "${goma}" ]] && [[ -z "${ccache}" ]]; then
-    if [[ -d ~/goma ]]; then
+    if [[ -d "${FUCHSIA_GOMA_DIR}" ]]; then
       goma=1
     elif [[ -n "${CCACHE_DIR}" ]] && [[ -d "${CCACHE_DIR}" ]]; then
       ccache=1
@@ -400,7 +421,7 @@ function fset() {
   # Add --goma or --ccache as appropriate.
   local builder=
   if [[ "${goma}" -eq 1 ]]; then
-    fset-add-gen-arg --goma
+    fset-add-gen-arg --goma "${FUCHSIA_GOMA_DIR}"
     # macOS needs a lower value of -j parameter, because it has a limit on the
     # number of open file descriptors. Use 15 * cpu_count, which works well in
     # practice.
@@ -538,7 +559,7 @@ END
 function fbuild-goma-ensure-start() {
   if ([[ "${FUCHSIA_GEN_ARGS}" == *--goma* ]] \
       && [[ "${FUCHSIA_ENSURE_GOMA}" -eq 1 ]]); then
-    ~/goma/goma_ctl.py ensure_start
+    "${FUCHSIA_GOMA_DIR}"/goma_ctl.py ensure_start
   fi
 }
 
