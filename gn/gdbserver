@@ -9,20 +9,20 @@
             "bootfs_path": "bin/debugserver"
         },
         {
-            "binary": "gdbserver_unittests",
-            "bootfs_path": "test/gdbserver_unittests"
+            "binary": "gdbserver-unittests",
+            "bootfs_path": "test/gdbserver-unittests"
         },
         {
-            "binary": "exit_test",
-            "bootfs_path": "test/gdbserver/exit_test"
+            "binary": "exit-test",
+            "bootfs_path": "test/gdbserver/exit-test"
         },
         {
-            "binary": "crash_test",
-            "bootfs_path": "test/gdbserver/crash_test"
+            "binary": "crash-test",
+            "bootfs_path": "test/gdbserver/crash-test"
         },
         {
-            "binary": "loop_test",
-            "bootfs_path": "test/gdbserver/loop_test"
+            "binary": "loop-test",
+            "bootfs_path": "test/gdbserver/loop-test"
         }
     ]
 }
