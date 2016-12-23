@@ -57,22 +57,37 @@ std::function<void(ledger::Status)> HandleResponse(std::string description) {
 
 }  // namespace
 
-TodoApp::TodoApp(ftl::CommandLine command_line)
+TodoApp::TodoApp()
     : rng_(time(0)),
       size_distribution_(kMeanListSize, kListSizeStdDev),
       delay_distribution_(kMinDelaySeconds, kMaxDelaySeconds),
-      command_line_(std::move(command_line)),
       generator_(&rng_),
       context_(modular::ApplicationContext::CreateFromStartupInfo()),
+      module_binding_(this),
       page_watcher_binding_(this) {
-  ledger::LedgerPtr ledger = GetLedger();
-  ledger->GetRootPage(page_.NewRequest(), HandleResponse("GetRootPage"));
+  context_->outgoing_services()->AddService<modular::Module>(
+      [this](fidl::InterfaceRequest<modular::Module> request) {
+        FTL_DCHECK(!module_binding_.is_bound());
+        module_binding_.Bind(std::move(request));
+      });
+}
 
-  ledger::PageWatcherPtr page_watcher;
-  page_watcher_binding_.Bind(page_watcher.NewRequest());
-  page_->Watch(std::move(page_watcher), HandleResponse("Watch"));
+void TodoApp::Initialize(
+    fidl::InterfaceHandle<modular::Story> story,
+    fidl::InterfaceHandle<modular::Link> link,
+    fidl::InterfaceHandle<modular::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<modular::ServiceProvider> outgoing_services) {
+  story_.Bind(std::move(story));
+  story_->GetLedger(ledger_.NewRequest(), HandleResponse("GetLedger"));
+  ledger_->GetRootPage(page_.NewRequest(), HandleResponse("GetRootPage"));
+
+  page_->Watch(page_watcher_binding_.NewBinding(), HandleResponse("Watch"));
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { Act(); });
+}
+
+void TodoApp::Stop(const StopCallback& done) {
+  done();
 }
 
 void TodoApp::OnInitialState(
@@ -86,32 +101,6 @@ void TodoApp::OnChange(ledger::PageChangePtr page_change,
                        const OnChangeCallback& callback) {
   List();
   callback(nullptr);
-}
-
-ledger::LedgerPtr TodoApp::GetLedger() {
-  // TODO(ppi): this whole function should be just
-  // a call to context_->ConnectToEnvironmentService<ledger::Ledger>();
-  // once we can run the todo app in modular.
-
-  ledger::LedgerRepositoryFactoryPtr repository_factory;
-  modular::ServiceProviderPtr child_services;
-  auto launch_info = modular::ApplicationLaunchInfo::New();
-  launch_info->url = "file:///system/apps/ledger";
-  launch_info->services = child_services.NewRequest();
-  context_->launcher()->CreateApplication(std::move(launch_info),
-                                          ledger_controller_.NewRequest());
-  modular::ConnectToService(child_services.get(),
-                            repository_factory.NewRequest());
-
-  ledger::LedgerRepositoryPtr repository;
-  repository_factory->GetRepository("/data/ledger/todo_user",
-                                    repository.NewRequest(),
-                                    HandleResponse("GetRepository"));
-
-  ledger::LedgerPtr ledger;
-  repository->GetLedger(ToArray("todo"), ledger.NewRequest(),
-                        HandleResponse("GetLedger"));
-  return ledger;
 }
 
 void TodoApp::List() {
@@ -177,9 +166,8 @@ void TodoApp::Act() {
 }  // namespace todo
 
 int main(int argc, const char** argv) {
-  ftl::CommandLine command_line = ftl::CommandLineFromArgcArgv(argc, argv);
   mtl::MessageLoop loop;
-  todo::TodoApp app(std::move(command_line));
+  todo::TodoApp app;
   loop.Run();
   return 0;
 }

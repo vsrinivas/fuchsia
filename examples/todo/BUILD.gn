@@ -7,6 +7,7 @@ executable("todo") {
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/modular/lib/app",
+    "//apps/modular/services/story",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
     "//lib/mtl",
