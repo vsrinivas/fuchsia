@@ -12,6 +12,7 @@
 #include "lib/ftl/strings/string_view.h"
 #include "lib/ftl/time/time_delta.h"
 #include "lib/ftl/time/time_point.h"
+#include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
 
@@ -194,22 +195,43 @@ void DoctorCommand::CheckObjects() {
       });
 }
 
-void DoctorCommand::CheckGetObject(std::string id, std::string content) {
+void DoctorCommand::CheckGetObject(std::string id,
+                                   std::string expected_content) {
   what("Firebase - retrieve test object");
-  ftl::TimePoint request_start = ftl::TimePoint::Now();
-  cloud_provider_->GetObject(
-      id, [this, request_start](cloud_provider::Status status, uint64_t size,
-                                mx::socket data) {
-        if (status != cloud_provider::Status::OK) {
-          error(status);
-          on_done_();
-          return;
-        }
+  cloud_provider_->GetObject(id, [
+    this, expected_content = std::move(expected_content),
+    request_start = ftl::TimePoint::Now()
+  ](cloud_provider::Status status, uint64_t size, mx::socket data) {
+    if (status != cloud_provider::Status::OK) {
+      error(status);
+      on_done_();
+      return;
+    }
 
-        ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
-        ok(delta);
-        CheckCommits();
-      });
+    if (size != expected_content.size()) {
+      error("Wrong size of the retrieved object: " + std::to_string(size) +
+            " instead of " + std::to_string(expected_content.size()));
+      on_done_();
+      return;
+    }
+
+    std::string retrieved_content;
+    if (!mtl::BlockingCopyToString(std::move(data), &retrieved_content)) {
+      error("Failed to read the object content.");
+      on_done_();
+      return;
+    }
+
+    if (retrieved_content != expected_content) {
+      error("Wrong content of the retrieved object.");
+      on_done_();
+      return;
+    }
+
+    ftl::TimeDelta delta = ftl::TimePoint::Now() - request_start;
+    ok(delta);
+    CheckCommits();
+  });
 }
 
 void DoctorCommand::CheckCommits() {
