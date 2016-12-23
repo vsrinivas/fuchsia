@@ -26,9 +26,12 @@ typedef struct mx_pipe {
 static ssize_t _read(mx_handle_t h, void* data, size_t len, int nonblock) {
     // TODO: let the generic read() to do this loop
     for (;;) {
-        ssize_t r;
-        if ((r = mx_socket_read(h, 0, data, len, &len)) == NO_ERROR) {
+        ssize_t r = mx_socket_read(h, 0, data, len, &len);
+        if (r == NO_ERROR) {
             return (ssize_t) len;
+        }
+        if (r == ERR_REMOTE_CLOSED && !nonblock) {
+            return 0;
         }
         if (r == ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
@@ -41,7 +44,7 @@ static ssize_t _read(mx_handle_t h, void* data, size_t len, int nonblock) {
                 continue;
             }
             if (pending & MX_SOCKET_PEER_CLOSED) {
-                return ERR_REMOTE_CLOSED;
+                return 0;
             }
             // impossible
             return ERR_INTERNAL;
