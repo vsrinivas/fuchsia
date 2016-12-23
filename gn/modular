@@ -56,6 +56,10 @@
             "bootfs_path": "apps/example_recipe"
         },
         {
+            "binary": "example_todo_headless",
+            "bootfs_path": "apps/example_todo_headless"
+        },
+        {
             "binary": "hello_app_child",
             "bootfs_path": "apps/hello_app_child"
         },

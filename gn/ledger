@@ -17,10 +17,6 @@
             "bootfs_path": "apps/ledger_apptests"
         },
         {
-            "binary": "todo",
-            "bootfs_path": "apps/todo"
-        },
-        {
             "binary": "configure_ledger",
             "bootfs_path": "bin/configure_ledger"
         },
