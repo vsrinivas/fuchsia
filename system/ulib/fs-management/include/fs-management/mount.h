@@ -42,6 +42,10 @@ mx_status_t mount(const char* devicepath, const char* mountpath, disk_format_t d
                   const mount_options_t* options,
                   mx_status_t (*cb)(int argc, const char** argv, mx_handle_t h));
 
+// Format the provided device with a requested disk format.
+mx_status_t mkfs(const char* devicepath, disk_format_t df,
+                 mx_status_t (*cb)(int argc, const char** argv));
+
 // Umount the filesystem process.
 //
 // Returns ERR_BAD_STATE if mountpath could not be opened.

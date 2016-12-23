@@ -9,12 +9,13 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/mkfs.c \
     $(LOCAL_DIR)/mount.c \
 
 MODULE_LIBS := \
     ulib/mxio \
     ulib/magenta \
-    ulib/musl
+    ulib/musl \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := fs-management
