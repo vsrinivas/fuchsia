@@ -4,7 +4,6 @@
 
 #include "msd_intel_connection.h"
 #include "magma_util/dlog.h"
-#include <errno.h>
 
 void msd_connection_close(msd_connection* connection)
 {
@@ -22,5 +21,5 @@ msd_context* msd_connection_create_context(msd_connection* connection)
 int32_t msd_connection_wait_rendering(msd_connection* connection, msd_buffer* buffer)
 {
     MsdIntelAbiBuffer::cast(buffer)->ptr()->WaitRendering();
-    return 0;
+    return MAGMA_STATUS_OK;
 }

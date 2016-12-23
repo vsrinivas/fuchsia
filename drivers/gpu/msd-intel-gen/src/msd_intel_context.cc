@@ -6,7 +6,6 @@
 #include "address_space.h"
 #include "command_buffer.h"
 #include "msd_intel_connection.h"
-#include <errno.h>
 
 void MsdIntelContext::SetEngineState(EngineCommandStreamerId id,
                                      std::unique_ptr<MsdIntelBuffer> context_buffer,
@@ -114,11 +113,11 @@ bool ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
 
 void msd_context_destroy(msd_context* ctx) { delete MsdIntelAbiContext::cast(ctx); }
 
-int32_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
-                                           msd_buffer** exec_resources)
+magma_status_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
+                                                  msd_buffer** exec_resources)
 {
     if (!MsdIntelAbiContext::cast(ctx)->ptr()->SubmitCommandBuffer(
             CommandBuffer::Create(cmd_buf, exec_resources, MsdIntelAbiContext::cast(ctx)->ptr())))
-        return DRET(-EINVAL);
-    return 0;
+        return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+    return MAGMA_STATUS_OK;
 }

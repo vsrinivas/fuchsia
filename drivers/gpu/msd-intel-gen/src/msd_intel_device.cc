@@ -431,7 +431,7 @@ void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
         mapping = AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
         if (!mapping) {
             if (callback)
-                (*callback)(DRET_MSG(-ENOMEM, "Couldn't map buffer to gtt"), data);
+                (*callback)(DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't map buffer to gtt"), data);
             return;
         }
         display_mappings_.push_front(mapping);
@@ -475,7 +475,7 @@ void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
             if (elapsed.count() > kRetryMsMax) {
                 DLOG("Timeout waiting for page flip event");
                 if (callback)
-                    (*callback)(-ETIMEDOUT, data);
+                    (*callback)(MAGMA_STATUS_INTERNAL_ERROR, data);
                 return;
             }
             std::this_thread::yield();
