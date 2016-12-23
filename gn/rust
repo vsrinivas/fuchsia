@@ -1,0 +1,20 @@
+{
+    "labels": [
+        "//rust/magenta-rs",
+        "//apps/xi"
+    ],
+    "binaries": [
+        {
+            "binary": "example_mx_toy",
+            "bootfs_path": "bin/example_mx_toy"
+        },
+        {
+            "binary": "xi-core",
+            "bootfs_path": "apps/xi-core"
+        },
+        {
+            "binary": "xi_app.flx",
+            "bootfs_path": "apps/xi_app"
+        }
+    ]
+}
