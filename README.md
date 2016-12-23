@@ -13,7 +13,7 @@ in a shared context without the need to call each other's APIs directly.
 
 ## Running
 
-On the Fuchsia command line you can start an example application flow thus:
+On the Fuchsia command line you can start an example application flow like this:
 
 ```sh
 @ bootstrap device_runner --user-shell=dummy_user_shell
