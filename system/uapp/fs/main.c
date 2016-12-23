@@ -106,6 +106,7 @@ int test_rw_workers(void);
 int test_rename(void);
 int test_sync(void);
 int test_truncate(void);
+int test_unlink(void);
 
 struct {
     const char* name;
@@ -119,6 +120,7 @@ struct {
     {"rename", test_rename},
     {"sync", test_sync},
     {"truncate", test_truncate},
+    {"unlink", test_unlink},
 };
 
 int run_fs_tests(int (*mount)(void), int (*unmount)(void), int argc, char** argv) {

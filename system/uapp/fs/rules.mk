@@ -21,6 +21,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-rename.c \
     $(LOCAL_DIR)/test-sync.c \
     $(LOCAL_DIR)/test-truncate.c \
+    $(LOCAL_DIR)/test-unlink.c \
 
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
 MODULE_LDFLAGS += --wrap rename --wrap truncate
