@@ -798,8 +798,36 @@ static bool test_sort(void) {
         fflush(stdout);
     }
 
-    printf("\nAll tests succeeded\n");
+    printf("\nAll tests completed.\n");
     return true;
+}
+
+mx_status_t add_partition(gpt_device_t* device, uint64_t offset_blocks,
+                          uint64_t size_blocks, uint8_t* guid_type,
+                          const char* name) {
+    uint8_t guid_id[GPT_GUID_LEN];
+    size_t rand_size = 0;
+    mx_status_t rc = mx_cprng_draw(guid_id, GPT_GUID_LEN, &rand_size);
+    if (rc != NO_ERROR || rand_size != GPT_GUID_LEN) {
+        fprintf(stderr, "Sys call failed to set all random bytes, err: %s\n",
+                strerror(errno));
+        return rc;
+    }
+
+    int gpt_result = gpt_partition_add(device, name, guid_type, guid_id,
+                                       offset_blocks, size_blocks, 0);
+    if (gpt_result < 0) {
+        fprintf(stderr, "Error adding partition code: %i\n", gpt_result);
+        return ERR_INTERNAL;
+    }
+
+    gpt_result = gpt_device_sync(device);
+    if (gpt_result < 0) {
+        fprintf(stderr, "Error writing partition table, code: %i\n", gpt_result);
+        return ERR_IO;
+    }
+
+    return NO_ERROR;
 }
 
 int main(int argc, char** argv) {
@@ -835,8 +863,6 @@ int main(int argc, char** argv) {
     gpt_device_t* install_dev = NULL;
     uint64_t block_size;
     partition_flags ready_for_install = 0;
-    // TODO(jmatt): switch this to user-directed partition specification or
-    // add in the EFI partition when things are ready
     partition_flags requested_parts = PART_EFI | PART_SYSTEM;
     for (ssize_t rc = get_next_file_path(
              dir, buffer_remaining, &path_buffer[base_len]);
@@ -861,8 +887,6 @@ int main(int argc, char** argv) {
             ready_for_install = partition_for_install(
                 install_dev, block_size, requested_parts,
                 PATH_MAX, part_paths);
-
-            // if ready_for_install == 0, then we'd do something!
 
             printf("Ready for install on %s? 0x%x\n", path_buffer,
                    ready_for_install);
@@ -945,7 +969,6 @@ int main(int argc, char** argv) {
         gpt_device_release(install_dev);
         return 0;
     } else {
-        printf("Starting the search for free space\n");
         dir = opendir(PATH_BLOCKDEVS);
         if (dir == NULL) {
             printf("Open failed for directory: '%s' with error %s\n",
@@ -954,6 +977,8 @@ int main(int argc, char** argv) {
         }
 
         size_t space_offset = 0;
+        int device_fd;
+        uint64_t block_size;
 
         // no device looks configured the way we want for install, see if we can
         // partition a device and make it suitable
@@ -967,25 +992,23 @@ int main(int argc, char** argv) {
                 continue;
             }
 
-            printf("Examining path %s\n", path_buffer);
             // open device read-only
-            int fd = open_device_ro(&path_buffer[0]);
-            if (fd < 0) {
+            device_fd = open_device_ro(&path_buffer[0]);
+            if (device_fd < 0) {
                 printf("Error reading directory");
                 continue;
             }
 
             uint64_t disk_size;
-            uint64_t block_size;
-            ssize_t rc2 = ioctl_block_get_size(fd, &disk_size);
-            ssize_t rc3 = ioctl_block_get_blocksize(fd, &block_size);
+            ssize_t rc2 = ioctl_block_get_size(device_fd, &disk_size);
+            ssize_t rc3 = ioctl_block_get_blocksize(device_fd, &block_size);
             if (rc2 < 0 || rc3 < 0) {
                 fprintf(stderr, "Unable to read disk or block size.\n");
                 return -1;
             }
 
-            install_dev = read_gpt(fd, &block_size);
-            close(fd);
+            install_dev = read_gpt(device_fd, &block_size);
+            close(device_fd);
 
             if (install_dev == NULL) {
                 continue;
@@ -996,17 +1019,55 @@ int main(int argc, char** argv) {
                 continue;
             }
 
-            size_t space_offset = find_available_space(
+            space_offset = find_available_space(
                 install_dev,
                 (MIN_SIZE_SYSTEM_PART + MIN_SIZE_EFI_PART) / block_size,
                 disk_size / block_size, block_size);
             if (space_offset > 0) {
                 break;
             }
+            gpt_device_release(install_dev);
         }
 
         if (space_offset > 0) {
-            // TODO(jmatt): create partitions of appropriate size
+            printf("Adding partitions...\n");
+            // open a read/write fd for the block device
+            int rw_dev = open(path_buffer, O_RDWR);
+            if (rw_dev < 0) {
+                printf("couldn't open device read/write\n");
+                return -1;
+            }
+
+            gpt_device_t* gpt_edit = read_gpt(rw_dev, &block_size);
+            if (gpt_edit == NULL || !gpt_edit->valid) {
+                return -1;
+            }
+            // TODO(jmatt): consider asking the user what device to partition
+            // install_dev should point to the device we want to modify
+            uint64_t size_blocks = MIN_SIZE_SYSTEM_PART / block_size;
+            uint8_t type_system[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
+            mx_status_t rc = add_partition(gpt_edit, space_offset, size_blocks,
+                                           type_system, "system");
+            if (rc != NO_ERROR) {
+                return -1;
+            }
+
+            uint64_t size_blocks_efi = MIN_SIZE_EFI_PART / block_size;
+            uint8_t type_efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
+            rc = add_partition(gpt_edit, space_offset + size_blocks,
+                               size_blocks_efi, type_efi, "EFI");
+            if (rc != NO_ERROR) {
+                return -1;
+            }
+
+            gpt_device_release(install_dev);
+            gpt_device_release(gpt_edit);
+
+            // force a re-read of the block device so the new partitions are
+            // properly picked up
+            ioctl_block_rr_part(rw_dev);
+            close(rw_dev);
+            printf("Partitions added, please run installer again.\n");
         } else {
             // TODO(jmatt): look for partition(s) we could remove and use their
             // space
