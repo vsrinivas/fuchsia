@@ -7,6 +7,7 @@
 
 #include "gpu_mapping.h"
 #include "msd_intel_buffer.h"
+#include "sequencer.h"
 
 class MsdIntelContext;
 
@@ -24,12 +25,12 @@ public:
                       std::unique_ptr<GpuMapping> batch_buffer_mapping)
         : context_(context), batch_buffer_mapping_(std::move(batch_buffer_mapping))
     {
+        batch_buffer_mapping_->buffer()->IncrementInflightCounter();
     }
 
     ~SimpleMappedBatch()
     {
-        if (batch_buffer_mapping_->buffer()->sequence_number() == sequence_number_)
-            batch_buffer_mapping_->buffer()->SetSequenceNumber(Sequencer::kInvalidSequenceNumber);
+        batch_buffer_mapping_->buffer()->DecrementInflightCounter();
     }
 
     MsdIntelContext* GetContext() override { return context_.get(); }
@@ -45,7 +46,6 @@ public:
     void SetSequenceNumber(uint32_t sequence_number) override
     {
         sequence_number_ = sequence_number;
-        batch_buffer_mapping_->buffer()->SetSequenceNumber(sequence_number);
     }
 
 private:

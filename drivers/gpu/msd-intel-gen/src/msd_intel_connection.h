@@ -16,17 +16,11 @@ public:
     class Owner {
     public:
         virtual bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
-        virtual bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) = 0;
     };
 
     MsdIntelConnection(Owner* owner) : owner_(owner) {}
 
     virtual ~MsdIntelConnection() {}
-
-    bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf)
-    {
-        return owner_->WaitRendering(std::move(buf));
-    }
 
     bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {

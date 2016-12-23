@@ -219,41 +219,6 @@ public:
         EXPECT_TRUE(processing_complete);
     }
 
-    void WaitRenderingRequest()
-    {
-        magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-        ASSERT_NE(platform_device, nullptr);
-
-        std::unique_ptr<MsdIntelDevice> device =
-            MsdIntelDevice::Create(platform_device->GetDeviceHandle(), false);
-        ASSERT_NE(device, nullptr);
-
-        // Pick a sequence number that's already completed.
-        EXPECT_TRUE(device->WaitIdle());
-
-        uint32_t sequence_number = device->global_context()
-                                       ->hardware_status_page(RENDER_COMMAND_STREAMER)
-                                       ->read_sequence_number();
-
-        std::thread wait_thread(
-            [](MsdIntelDevice* device, uint32_t sequence_number) {
-                auto buffer = MsdIntelBuffer::Create(PAGE_SIZE);
-                buffer->SetSequenceNumber(sequence_number);
-                EXPECT_TRUE(device->WaitRendering(std::move(buffer)));
-            },
-            device.get(), sequence_number);
-
-        while (device->wait_rendering_request_count() == 0) {
-            std::this_thread::yield();
-        }
-
-        device->ProcessCompletedCommandBuffers(nullptr);
-
-        EXPECT_EQ(device->wait_rendering_request_count(), 0u);
-
-        wait_thread.join();
-    }
-
     void MaxFreq()
     {
         magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
@@ -309,12 +274,6 @@ TEST(MsdIntelDevice, DeviceRequest)
 {
     TestMsdIntelDevice test;
     test.DeviceRequest();
-}
-
-TEST(MsdIntelDevice, WaitRenderingRequest)
-{
-    TestMsdIntelDevice test;
-    test.WaitRenderingRequest();
 }
 
 TEST(MsdIntelDevice, MaxFreq)

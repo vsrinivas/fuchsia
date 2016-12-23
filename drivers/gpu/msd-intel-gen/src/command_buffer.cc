@@ -8,28 +8,19 @@
 
 CommandBuffer::~CommandBuffer()
 {
+    for (auto res : exec_resources_) {
+        res.buffer->DecrementInflightCounter();
+    }
+
     if (!prepared_to_execute_)
         return;
 
     UnmapResourcesGpu();
-
-    if (sequence_number_ != Sequencer::kInvalidSequenceNumber) {
-        for (auto res : exec_resources_) {
-            // only want to reset seq num on buffers that arent referenced
-            // from another more recent command buffer
-            if (res.buffer->sequence_number() == sequence_number_) {
-                res.buffer->SetSequenceNumber(Sequencer::kInvalidSequenceNumber);
-            }
-        }
-    }
 }
 
 void CommandBuffer::SetSequenceNumber(uint32_t sequence_number)
 {
     sequence_number_ = sequence_number;
-    for (auto res : exec_resources_) {
-        res.buffer->SetSequenceNumber(sequence_number);
-    }
 }
 
 CommandBuffer::CommandBuffer(msd_buffer* abi_cmd_buf, std::weak_ptr<ClientContext> context)
@@ -40,7 +31,6 @@ CommandBuffer::CommandBuffer(msd_buffer* abi_cmd_buf, std::weak_ptr<ClientContex
 
 bool CommandBuffer::Initialize(msd_buffer** exec_buffers)
 {
-
     if (!magma::CommandBuffer::Initialize())
         return DRETF(false, "Failed to intialize command buffer base class");
 
@@ -49,6 +39,10 @@ bool CommandBuffer::Initialize(msd_buffer** exec_buffers)
         auto buffer = MsdIntelAbiBuffer::cast(exec_buffers[i])->ptr();
         exec_resources_.emplace_back(
             ExecResource{buffer, resource(i).offset(), resource(i).length()});
+    }
+
+    for (auto res : exec_resources_) {
+        res.buffer->IncrementInflightCounter();
     }
 
     return true;

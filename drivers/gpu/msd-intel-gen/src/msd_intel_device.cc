@@ -29,16 +29,6 @@ private:
     std::unique_ptr<CommandBuffer> command_buffer_;
 };
 
-class MsdIntelDevice::WaitRenderingRequest : public DeviceRequest {
-public:
-    WaitRenderingRequest(uint32_t sequence_number) : sequence_number_(sequence_number) {}
-
-    uint32_t sequence_number() { return sequence_number_; }
-
-private:
-    uint32_t sequence_number_;
-};
-
 class MsdIntelDevice::FlipRequest : public DeviceRequest {
 public:
     FlipRequest(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_pageflip_callback_t callback,
@@ -273,35 +263,6 @@ bool MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_
     return true;
 }
 
-bool MsdIntelDevice::WaitRendering(std::shared_ptr<MsdIntelBuffer> buffer)
-{
-    DASSERT(buffer);
-    DLOG("WaitRendering buffer with sequence_number 0x%x", buffer->sequence_number());
-    CHECK_THREAD_NOT_CURRENT(device_thread_id_);
-
-    uint32_t sequence_number = buffer->sequence_number();
-    // early out if we never rendered to this buffer or rendering has already completed
-    if (sequence_number == Sequencer::kInvalidSequenceNumber)
-        return true;
-
-    auto request = std::make_unique<WaitRenderingRequest>(sequence_number);
-    auto reply = request->GetReply();
-
-    DASSERT(monitor_);
-    magma::Monitor::Lock lock(monitor_);
-    lock.Acquire();
-    wait_rendering_request_list_.emplace_back(std::move(request));
-    lock.Release();
-
-    // If the sequence number was completed before we inserted ourselves into the list,
-    // we could wait forever; so Signal the device thread to ensure our request is seen.
-    monitor_->Signal();
-
-    reply->Wait();
-
-    return true;
-}
-
 void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
                           magma_system_pageflip_callback_t callback, void* data)
 {
@@ -309,11 +270,7 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
     DASSERT(buffer);
 
-    if (!WaitRendering(buffer)) {
-        if (callback)
-            (*callback)(DRET_MSG(-ETIMEDOUT, "WaitRendering failed"), data);
-        return;
-    }
+    buffer->WaitRendering();
 
     auto request = std::make_unique<FlipRequest>(buffer, callback, data);
     auto reply = request->GetReply();
@@ -370,6 +327,7 @@ int MsdIntelDevice::DeviceThreadLoop()
 
     lock.Release();
 
+    // Ensure gpu is idle
     render_engine_cs_->Reset();
 
     DLOG("DeviceThreadLoop exit");
@@ -396,20 +354,6 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers(magma::Monitor::Lock* lock)
     render_engine_cs_->ProcessCompletedCommandBuffers(&last_completed_sequence_number);
 
     progress_.Completed(last_completed_sequence_number);
-
-    for (auto iter = wait_rendering_request_list_.begin();
-         iter != wait_rendering_request_list_.end();) {
-        WaitRenderingRequest* request = (*iter).get();
-        DASSERT(request->sequence_number() != Sequencer::kInvalidSequenceNumber);
-
-        if (request->sequence_number() <= last_completed_sequence_number) {
-            DLOG("acknowledging wait rendering request");
-            request->ProcessAndReply(this);
-            iter = wait_rendering_request_list_.erase(iter);
-        } else {
-            iter++;
-        }
-    }
 }
 
 void MsdIntelDevice::ProcessDeviceRequests(magma::Monitor::Lock* lock)

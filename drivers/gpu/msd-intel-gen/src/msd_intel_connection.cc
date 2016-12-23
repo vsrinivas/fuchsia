@@ -19,11 +19,8 @@ msd_context* msd_connection_create_context(msd_connection* connection)
         std::make_unique<ClientContext>(MsdIntelAbiConnection::cast(connection)->ptr(), nullptr));
 }
 
-int32_t msd_connection_wait_rendering(struct msd_connection* connection, struct msd_buffer* buf)
+int32_t msd_connection_wait_rendering(msd_connection* connection, msd_buffer* buffer)
 {
-    if (!MsdIntelAbiConnection::cast(connection)
-             ->ptr()
-             ->WaitRendering((MsdIntelAbiBuffer::cast(buf)->ptr())))
-        return DRET(-ETIMEDOUT);
+    MsdIntelAbiBuffer::cast(buffer)->ptr()->WaitRendering();
     return 0;
 }

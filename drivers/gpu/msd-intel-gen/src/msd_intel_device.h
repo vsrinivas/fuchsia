@@ -100,9 +100,6 @@ private:
     // MsdIntelConnection::Owner
     bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
 
-    // MsdIntelConnection::Owner
-    bool WaitRendering(std::shared_ptr<MsdIntelBuffer> buf) override;
-
 private:
     MsdIntelDevice();
     void Destroy();
@@ -135,8 +132,6 @@ private:
 
     std::shared_ptr<AddressSpace> gtt() { return gtt_; }
 
-    uint32_t wait_rendering_request_count() { return wait_rendering_request_list_.size(); }
-
     static const uint32_t kMagic = 0x64657669; //"devi"
 
     uint32_t device_id_{};
@@ -165,7 +160,6 @@ private:
     // Thread-shared data members
     std::shared_ptr<magma::Monitor> monitor_;
     std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
-    std::list<std::unique_ptr<WaitRenderingRequest>> wait_rendering_request_list_;
 
     friend class TestMsdIntelDevice;
     friend class TestCommandBuffer;

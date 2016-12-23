@@ -8,10 +8,12 @@
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "platform_buffer.h"
-#include "sequencer.h"
+#include "platform_event.h"
 #include "types.h"
+#include <atomic>
 #include <list>
 #include <memory>
+#include <mutex>
 
 class GpuMapping;
 
@@ -30,9 +32,16 @@ public:
 
     uint32_t write_domain() { return write_domain_bitfield_; }
 
-    void SetSequenceNumber(uint32_t sequence_number) { sequence_number_ = sequence_number; }
+    // connection thread
+    void IncrementInflightCounter() { ++inflight_counter_; }
 
-    uint32_t sequence_number() { return sequence_number_; }
+    // device thread
+    void DecrementInflightCounter();
+
+    // connection thread
+    void WaitRendering();
+
+    uint32_t inflight_counter() { return inflight_counter_ & 0xFFFFFFFF; }
 
     CachingType caching_type() { return caching_type_; }
 
@@ -56,7 +65,9 @@ private:
     uint32_t read_domains_bitfield_ = MEMORY_DOMAIN_CPU;
     uint32_t write_domain_bitfield_ = MEMORY_DOMAIN_CPU;
 
-    uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
+    std::atomic_uint64_t inflight_counter_{};
+    std::unique_ptr<magma::PlatformEvent> wait_rendering_event_;
+    std::mutex wait_rendering_mutex_;
 
     std::list<std::weak_ptr<GpuMapping>> mapping_list_;
 };

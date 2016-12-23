@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "magma_util/sleep.h"
 #include "mock/mock_address_space.h"
 #include "msd_intel_buffer.h"
 #include "gtest/gtest.h"
@@ -177,6 +178,34 @@ public:
 
         EXPECT_EQ(buffer->shared_mapping_count(), 3u);
     }
+
+    static void WaitRendering()
+    {
+        auto buffer = MsdIntelBuffer::Create(PAGE_SIZE);
+        uint32_t val = 0;
+
+        buffer->IncrementInflightCounter();
+        buffer->IncrementInflightCounter();
+
+        std::thread wait_thread(
+            [](MsdIntelBuffer* buffer, uint32_t* val) {
+                buffer->WaitRendering();
+                EXPECT_EQ(2u, *val);
+            },
+            buffer.get(), &val);
+
+        magma::msleep(1000);
+        ++val;
+        buffer->DecrementInflightCounter();
+
+        magma::msleep(1000);
+        ++val;
+        buffer->DecrementInflightCounter();
+
+        EXPECT_EQ(0u, buffer->inflight_counter());
+
+        wait_thread.join();
+    }
 };
 
 TEST(MsdIntelBuffer, CreateAndDestroy)
@@ -213,3 +242,5 @@ TEST(MsdIntelBuffer, OverlappedMapping)
     TestMsdIntelBuffer::OverlappedMapping(4096);
     TestMsdIntelBuffer::OverlappedMapping(8192);
 }
+
+TEST(MsdIntelBuffer, WaitRendering) { TestMsdIntelBuffer::WaitRendering(); }
