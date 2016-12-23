@@ -51,7 +51,8 @@ struct msd_context* msd_connection_create_context(struct msd_connection* connect
 // Blocks until all currently outstanding work on the given buffer completes.
 // If more work that references this buffer is queued while waiting, this may return before that
 // work is completed.
-int32_t msd_connection_wait_rendering(struct msd_connection* connection, struct msd_buffer* buf);
+magma_status_t msd_connection_wait_rendering(struct msd_connection* connection,
+                                             struct msd_buffer* buf);
 
 // Destroys the given context.
 void msd_context_destroy(struct msd_context* ctx);
@@ -61,8 +62,9 @@ void msd_context_destroy(struct msd_context* ctx);
 // |cmd_buf| is the command buffer to be executed
 // |exec_resources| is all of the buffers referenced by the handles in command_buf->exec_resources
 // in the same order
-int32_t msd_context_execute_command_buffer(struct msd_context* ctx, struct msd_buffer* cmd_buf,
-                                           struct msd_buffer** exec_resources);
+magma_status_t msd_context_execute_command_buffer(struct msd_context* ctx,
+                                                  struct msd_buffer* cmd_buf,
+                                                  struct msd_buffer** exec_resources);
 
 // Creates a buffer that owns the provided handle
 // The resulting msd_buffer is owned by the caller and must be destroyed

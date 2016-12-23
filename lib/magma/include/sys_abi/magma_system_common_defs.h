@@ -17,6 +17,24 @@ extern "C" {
 #define MAGMA_DOMAIN_CPU 0x00000001
 #define MAGMA_DOMAIN_GTT 0x00000040
 
+// possible values for magma_status_t
+#define MAGMA_STATUS_OK (0)
+#define MAGMA_STATUS_INTERNAL_ERROR (-1)
+#define MAGMA_STATUS_INVALID_ARGS (-2)
+#define MAGMA_STATUS_ACCESS_DENIED (-3)
+#define MAGMA_STATUS_MEMORY_ERROR (-4)
+#define MAGMA_STATUS_CONNECTION_LOST (-5)
+
+typedef int32_t magma_status_t;
+
+#define MAGMA_STATUS_TO_BOOL(status) ((status) == MAGMA_STATUS_OK)
+
+typedef uintptr_t magma_buffer_t;
+
+struct magma_system_connection {
+    uint32_t magic_;
+};
+
 // a relocation entry that informs the system driver how to patch GPU virtual addresses
 // in an exec resource. The 32 bit word at offset in the buffer will be overwritten with
 // the GPU virtual address of the 32 bit word at target_offset in target_buffer.
@@ -44,10 +62,9 @@ struct magma_system_command_buffer {
 };
 
 // callback type for magma_system_pageflip and msd_device_pageflip
-// |error| is a value from errno.h indicating the result of the attempted pageflip,
-// where 0 indicates success
+// |status| indicates whether an error occurred
 // |data| is a user defined parameter which is passed into the page flip function
-typedef void (*magma_system_pageflip_callback_t)(int32_t error, void* data);
+typedef void (*magma_system_pageflip_callback_t)(magma_status_t status, void* data);
 
 struct magma_system_connection_request {
     uint32_t client_id;

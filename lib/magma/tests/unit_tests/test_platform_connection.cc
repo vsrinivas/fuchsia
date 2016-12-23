@@ -72,7 +72,7 @@ public:
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    static void PageFlipCallback(int32_t error, void* data)
+    static void PageFlipCallback(magma_status_t error, void* data)
     {
         EXPECT_EQ(error, test_error);
         EXPECT_EQ(*reinterpret_cast<uint64_t*>(data), test_buffer_id);
@@ -86,7 +86,7 @@ public:
 
     static uint64_t test_buffer_id;
     static uint32_t test_context_id;
-    static int32_t test_error;
+    static magma_status_t test_error;
     static bool test_complete;
 
 private:
@@ -102,7 +102,7 @@ private:
 
 uint64_t TestPlatformConnection::test_buffer_id;
 uint32_t TestPlatformConnection::test_context_id;
-int32_t TestPlatformConnection::test_error;
+magma_status_t TestPlatformConnection::test_error;
 bool TestPlatformConnection::test_complete;
 
 class TestDelegate : public magma::PlatformConnection::Delegate {

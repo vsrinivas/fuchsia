@@ -6,7 +6,6 @@
 #include "magenta/magenta_platform_ioctl.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
-#include <errno.h>
 
 magma_system_connection* magma_system_open(int fd, uint32_t capabilities)
 {
@@ -30,7 +29,7 @@ void magma_system_close(magma_system_connection* connection)
     delete magma::PlatformIpcConnection::cast(connection);
 }
 
-int32_t magma_system_get_error(magma_system_connection* connection)
+magma_status_t magma_system_get_error(magma_system_connection* connection)
 {
     return magma::PlatformIpcConnection::cast(connection)->GetError();
 }
@@ -58,23 +57,23 @@ void magma_system_destroy_context(magma_system_connection* connection, uint32_t 
     magma::PlatformIpcConnection::cast(connection)->DestroyContext(context_id);
 }
 
-int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, uint64_t* size_out,
-                           magma_buffer_t* buffer_out)
+magma_status_t magma_system_alloc(magma_system_connection* connection, uint64_t size,
+                                  uint64_t* size_out, magma_buffer_t* buffer_out)
 {
     auto platform_buffer = magma::PlatformBuffer::Create(size);
     if (!platform_buffer)
-        return DRET(-ENOMEM);
+        return DRET(MAGMA_STATUS_MEMORY_ERROR);
 
-    int32_t result =
+    magma_status_t result =
         magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get());
-    if (result != 0)
+    if (result != MAGMA_STATUS_OK)
         return DRET(result);
 
     *size_out = platform_buffer->size();
     *buffer_out =
         reinterpret_cast<magma_buffer_t>(platform_buffer.release()); // Ownership passed across abi
 
-    return 0;
+    return MAGMA_STATUS_OK;
 }
 
 void magma_system_free(magma_system_connection* connection, magma_buffer_t buffer)
@@ -89,33 +88,32 @@ uint64_t magma_system_get_buffer_id(magma_buffer_t buffer)
     return reinterpret_cast<magma::PlatformBuffer*>(buffer)->id();
 }
 
-int32_t magma_system_import(magma_system_connection* connection, uint32_t buffer_handle,
-                            magma_buffer_t* buffer_out)
+magma_status_t magma_system_import(magma_system_connection* connection, uint32_t buffer_handle,
+                                   magma_buffer_t* buffer_out)
 {
     auto platform_buffer = magma::PlatformBuffer::Import(buffer_handle);
-
     if (!platform_buffer)
-        return DRET_MSG(-EINVAL, "PlatformBuffer::Import failed");
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "PlatformBuffer::Import failed");
 
-    int32_t result =
+    magma_status_t result =
         magma::PlatformIpcConnection::cast(connection)->ImportBuffer(platform_buffer.get());
-    if (result != 0)
+    if (result != MAGMA_STATUS_OK)
         return DRET_MSG(result, "ImportBuffer failed");
 
     *buffer_out = reinterpret_cast<magma_buffer_t>(platform_buffer.release());
 
-    return 0;
+    return MAGMA_STATUS_OK;
 }
 
-int32_t magma_system_export(magma_system_connection* connection, magma_buffer_t buffer,
-                            uint32_t* buffer_handle_out)
+magma_status_t magma_system_export(magma_system_connection* connection, magma_buffer_t buffer,
+                                   uint32_t* buffer_handle_out)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
     if (!platform_buffer->duplicate_handle(buffer_handle_out))
-        return DRET(-EINVAL);
+        return DRET(MAGMA_STATUS_INVALID_ARGS);
 
-    return 0;
+    return MAGMA_STATUS_OK;
 }
 
 void magma_system_set_tiling_mode(magma_system_connection* connection, magma_buffer_t buffer,
@@ -124,25 +122,25 @@ void magma_system_set_tiling_mode(magma_system_connection* connection, magma_buf
     DLOG("magma_system_set_tiling_mode unimplemented");
 }
 
-int32_t magma_system_map(magma_system_connection* connection, magma_buffer_t buffer,
-                         void** addr_out)
+magma_status_t magma_system_map(magma_system_connection* connection, magma_buffer_t buffer,
+                                void** addr_out)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
     if (!platform_buffer->MapCpu(addr_out))
-        return DRET(-EINVAL);
+        return DRET(MAGMA_STATUS_MEMORY_ERROR);
 
-    return 0;
+    return MAGMA_STATUS_OK;
 }
 
-int32_t magma_system_unmap(magma_system_connection* connection, magma_buffer_t buffer)
+magma_status_t magma_system_unmap(magma_system_connection* connection, magma_buffer_t buffer)
 {
     auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
 
     if (!platform_buffer->UnmapCpu())
-        return DRET(-EINVAL);
+        return DRET(MAGMA_STATUS_MEMORY_ERROR);
 
-    return 0;
+    return MAGMA_STATUS_OK;
 }
 
 void magma_system_set_domain(magma_system_connection* connection, magma_buffer_t buffer,

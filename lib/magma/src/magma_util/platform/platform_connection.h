@@ -22,17 +22,17 @@ public:
     static std::unique_ptr<PlatformIpcConnection> Create(uint32_t device_handle);
 
     // Imports a buffer for use in the system driver
-    virtual int32_t ImportBuffer(PlatformBuffer* buffer) = 0;
+    virtual magma_status_t ImportBuffer(PlatformBuffer* buffer) = 0;
     // Destroys the buffer with |buffer_id| within this connection
     // returns false if |buffer_id| has not been imported
-    virtual int32_t ReleaseBuffer(uint64_t buffer_id) = 0;
+    virtual magma_status_t ReleaseBuffer(uint64_t buffer_id) = 0;
 
     // Creates a context and returns the context id
     virtual void CreateContext(uint32_t* context_id_out) = 0;
     // Destroys a context for the given id
     virtual void DestroyContext(uint32_t context_id) = 0;
 
-    virtual int32_t GetError() = 0;
+    virtual magma_status_t GetError() = 0;
 
     virtual void ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) = 0;
 

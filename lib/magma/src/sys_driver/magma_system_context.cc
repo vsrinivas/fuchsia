@@ -123,8 +123,10 @@ bool MagmaSystemContext::ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer>
     }
 
     // submit command buffer to driver
-    int32_t ret = msd_context_execute_command_buffer(msd_ctx(), cmd_buf->system_buffer()->msd_buf(),
-                                                     msd_resources.data());
+    magma_status_t result = msd_context_execute_command_buffer(
+        msd_ctx(), cmd_buf->system_buffer()->msd_buf(), msd_resources.data());
+    if (result != MAGMA_STATUS_OK)
+        return DRETF(false, "ExecuteCommandBuffer: msd_context_execute_command_buffer failed");
 
-    return DRETF(ret == 0, "ExecuteCommandBuffer: msd_context_execute_command_buffer failed");
+    return true;
 }

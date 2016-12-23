@@ -126,7 +126,7 @@ static void looper_thread_entry()
         if (result == 0) {
             complete_count++;
         } else {
-            EXPECT_EQ(-EINVAL, result);
+            EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, result);
             test.reset(new TestConnection());
         }
     }

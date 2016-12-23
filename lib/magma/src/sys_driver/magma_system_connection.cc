@@ -5,7 +5,6 @@
 #include "magma_system_connection.h"
 #include "magma_system_device.h"
 #include "magma_util/macros.h"
-#include <errno.h>
 
 MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> weak_device,
                                              msd_connection_unique_ptr_t msd_connection,
@@ -115,8 +114,9 @@ bool MagmaSystemConnection::WaitRendering(uint64_t buffer_id)
     if (!system_buffer)
         return DRETF(false, "Couldn't find system buffer for id 0x%lx", buffer_id);
 
-    int32_t result = msd_connection_wait_rendering(msd_connection(), system_buffer->msd_buf());
-    if (result != 0)
+    magma_status_t result =
+        msd_connection_wait_rendering(msd_connection(), system_buffer->msd_buf());
+    if (result != MAGMA_STATUS_OK)
         return DRETF(false, "msd_connection_wait_rendering failed: %d", result);
 
     return true;
@@ -173,13 +173,16 @@ void MagmaSystemConnection::PageFlip(uint64_t id, magma_system_pageflip_callback
                                      void* data)
 {
     if (!has_display_capability_) {
-        callback(DRET_MSG(-EINVAL, "Attempting to pageflip without display capability"), data);
+        callback(DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
+                          "Attempting to pageflip without display capability"),
+                 data);
         return;
     }
 
     auto buf = LookupBuffer(id);
     if (!buf) {
-        callback(DRET_MSG(-EINVAL, "Attempting to page flip with invalid buffer"), data);
+        callback(DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Attempting to page flip with invalid buffer"),
+                 data);
         return;
     }
 

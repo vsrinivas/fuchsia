@@ -6,7 +6,6 @@
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 #include <ddk/driver.h>
-#include <errno.h>
 #include <limits.h>  // PAGE_SIZE
 #include <magenta/syscalls/object.h>
 #include <map>

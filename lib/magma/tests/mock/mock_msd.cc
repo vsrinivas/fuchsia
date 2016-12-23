@@ -51,9 +51,10 @@ msd_context* msd_connection_create_context(msd_connection* dev)
     return MsdMockConnection::cast(dev)->CreateContext();
 }
 
-int32_t msd_connection_wait_rendering(struct msd_connection* connection, struct msd_buffer* buf)
+magma_status_t msd_connection_wait_rendering(struct msd_connection* connection,
+                                             struct msd_buffer* buf)
 {
-    return 0;
+    return MAGMA_STATUS_OK;
 }
 
 void msd_context_destroy(msd_context* ctx) { delete MsdMockContext::cast(ctx); }
@@ -74,8 +75,8 @@ void msd_buffer_destroy(msd_buffer* buf)
         return g_bufmgr->DestroyBuffer(MsdMockBuffer::cast(buf));
 }
 
-int32_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
-                                           msd_buffer** exec_resources)
+magma_status_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
+                                                  msd_buffer** exec_resources)
 {
     return MsdMockContext::cast(ctx)->ExecuteCommandBuffer(cmd_buf, exec_resources);
 }

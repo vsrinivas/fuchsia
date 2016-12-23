@@ -9,7 +9,6 @@
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "platform_buffer.h"
-#include <errno.h>
 #include <memory>
 #include <vector>
 
@@ -56,16 +55,16 @@ public:
     MsdMockContext(MsdMockConnection* connection) : connection_(connection) { magic_ = kMagic; }
     virtual ~MsdMockContext();
 
-    int32_t ExecuteCommandBuffer(msd_buffer* cmd_buf_in, msd_buffer** exec_resources)
+    magma_status_t ExecuteCommandBuffer(msd_buffer* cmd_buf_in, msd_buffer** exec_resources)
     {
         auto cmd_buf = MsdMockCommandBuffer(MsdMockBuffer::cast(cmd_buf_in));
         if (!cmd_buf.Initialize())
-            return DRET_MSG(-EINVAL, "failed to Initialize command buffer");
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to Initialize command buffer");
         last_submitted_exec_resources_.clear();
         for (uint32_t i = 0; i < cmd_buf.num_resources(); i++) {
             last_submitted_exec_resources_.push_back(MsdMockBuffer::cast(exec_resources[i]));
         }
-        return 0;
+        return MAGMA_STATUS_OK;
     }
 
     static MsdMockContext* cast(msd_context* ctx)

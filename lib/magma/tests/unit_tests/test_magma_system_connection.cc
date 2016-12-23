@@ -164,14 +164,14 @@ TEST(MagmaSystemConnection, BufferSharing)
 
 class TestPageFlip {
 public:
-    TestPageFlip(int32_t expected_error) : expected_error_(expected_error) {}
+    TestPageFlip(magma_status_t expected_error) : expected_error_(expected_error) {}
 
-    void Test(int32_t error) { EXPECT_EQ(error, expected_error_); }
+    void Test(magma_status_t error) { EXPECT_EQ(error, expected_error_); }
 private:
-    int32_t expected_error_;
+    magma_status_t expected_error_;
 };
 
-void callback(int32_t error, void* data)
+void callback(magma_status_t error, void* data)
 {
     EXPECT_NE(data, nullptr);
     reinterpret_cast<TestPageFlip*>(data)->Test(error);
@@ -189,7 +189,7 @@ TEST(MagmaSystemConnection, PageFlip)
                                   MAGMA_SYSTEM_CAPABILITY_DISPLAY);
 
     // should be unable to pageflip totally bogus handle
-    auto test_invalid = std::unique_ptr<TestPageFlip>(new TestPageFlip(-EINVAL));
+    auto test_invalid = std::unique_ptr<TestPageFlip>(new TestPageFlip(MAGMA_STATUS_INVALID_ARGS));
     display.PageFlip(0, &callback, test_invalid.get());
 
     auto buf = magma::PlatformBuffer::Create(PAGE_SIZE);

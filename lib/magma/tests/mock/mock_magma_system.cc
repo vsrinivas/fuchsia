@@ -7,7 +7,6 @@
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
 
-#include <errno.h>
 #include <unordered_map>
 
 class MockConnection : public magma_system_connection {
@@ -28,7 +27,7 @@ void magma_system_close(magma_system_connection* connection)
     delete static_cast<MockConnection*>(connection);
 }
 
-int32_t magma_system_get_error(magma_system_connection* connection) { return 0; }
+magma_status_t magma_system_get_error(magma_system_connection* connection) { return 0; }
 
 // Returns the device id.  0 is an invalid device id.
 uint32_t magma_system_get_device_id(int32_t fd) { return 0x1916; }
@@ -40,13 +39,13 @@ void magma_system_create_context(magma_system_connection* connection, uint32_t* 
 
 void magma_system_destroy_context(magma_system_connection* connection, uint32_t context_id) {}
 
-int32_t magma_system_alloc(magma_system_connection* connection, uint64_t size, uint64_t* size_out,
-                           magma_buffer_t* buffer_out)
+magma_status_t magma_system_alloc(magma_system_connection* connection, uint64_t size,
+                                  uint64_t* size_out, magma_buffer_t* buffer_out)
 {
     auto buffer = magma::PlatformBuffer::Create(size);
     *buffer_out = reinterpret_cast<magma_buffer_t>(buffer.release());
     *size_out = size;
-    return 0;
+    return MAGMA_STATUS_OK;
 }
 
 void magma_system_free(magma_system_connection* connection, magma_buffer_t buffer)
@@ -59,19 +58,19 @@ uint64_t magma_system_get_buffer_id(magma_buffer_t buffer)
     return reinterpret_cast<magma::PlatformBuffer*>(buffer)->id();
 }
 
-int32_t magma_system_map(magma_system_connection* connection, magma_buffer_t buffer,
-                         void** addr_out)
+magma_status_t magma_system_map(magma_system_connection* connection, magma_buffer_t buffer,
+                                void** addr_out)
 {
     if (!reinterpret_cast<magma::PlatformBuffer*>(buffer)->MapCpu(addr_out))
-        return -EINVAL;
-    return 0;
+        return MAGMA_STATUS_MEMORY_ERROR;
+    return MAGMA_STATUS_OK;
 }
 
-int32_t magma_system_unmap(magma_system_connection* connection, magma_buffer_t buffer)
+magma_status_t magma_system_unmap(magma_system_connection* connection, magma_buffer_t buffer)
 {
     if (!reinterpret_cast<magma::PlatformBuffer*>(buffer)->UnmapCpu())
-        return -EINVAL;
-    return 0;
+        return MAGMA_STATUS_MEMORY_ERROR;
+    return MAGMA_STATUS_OK;
 }
 
 void magma_system_set_tiling_mode(magma_system_connection* connection, uint64_t buffer_id,
@@ -92,14 +91,14 @@ void magma_system_submit_command_buffer(struct magma_system_connection* connecti
 
 void magma_system_wait_rendering(magma_system_connection* connection, uintptr_t buffer) {}
 
-int32_t magma_system_export(magma_system_connection* connection, magma_buffer_t buffer,
-                            uint32_t* buffer_handle_out)
+magma_status_t magma_system_export(magma_system_connection* connection, magma_buffer_t buffer,
+                                   uint32_t* buffer_handle_out)
 {
-    return 0;
+    return MAGMA_STATUS_OK;
 }
 
 void magma_system_display_page_flip(magma_system_connection* connection, uint64_t buffer_id,
                                     magma_system_pageflip_callback_t callback, void* data)
 {
-  callback(0, data);
+    callback(MAGMA_STATUS_OK, data);
 }

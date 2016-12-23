@@ -7,7 +7,6 @@
 
 #include "mx/channel.h"
 #include "mx/waitset.h"
-#include <errno.h>
 #include <magenta/types.h>
 #include <map>
 
@@ -87,7 +86,7 @@ T* OpCast(uint8_t* bytes, uint32_t num_bytes, mx_handle_t* handles, uint32_t kNu
 
 struct PageFlipReply {
     uint64_t buffer_id;
-    int32_t error;
+    magma_status_t error;
 } __attribute__((packed));
 
 class MagentaPlatformConnection : public PlatformConnection {
@@ -209,7 +208,7 @@ private:
             return DRETF(false, "malformed message");
         uint64_t buffer_id;
         if (!delegate_->ImportBuffer(*handle, &buffer_id))
-            SetError(-EINVAL);
+            SetError(MAGMA_STATUS_INVALID_ARGS);
         return true;
     }
 
@@ -219,7 +218,7 @@ private:
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->ReleaseBuffer(op->buffer_id))
-            SetError(-EINVAL);
+            SetError(MAGMA_STATUS_INVALID_ARGS);
         return true;
     }
 
@@ -229,7 +228,7 @@ private:
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->CreateContext(op->context_id))
-            SetError(-EINVAL);
+            SetError(MAGMA_STATUS_INTERNAL_ERROR);
         return true;
     }
 
@@ -239,7 +238,7 @@ private:
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->DestroyContext(op->context_id))
-            SetError(-EINVAL);
+            SetError(MAGMA_STATUS_INTERNAL_ERROR);
         return true;
     }
 
@@ -249,7 +248,7 @@ private:
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->ExecuteCommandBuffer(op->command_buffer_id, op->context_id))
-            SetError(-EINVAL);
+            SetError(MAGMA_STATUS_INTERNAL_ERROR);
         return true;
     }
 
@@ -259,7 +258,7 @@ private:
         if (!op)
             return DRETF(false, "malformed message");
         if (!delegate_->WaitRendering(op->buffer_id))
-            SetError(-EINVAL);
+            SetError(MAGMA_STATUS_INTERNAL_ERROR);
         if (!WriteError(0))
             return false;
         return true;
@@ -284,27 +283,27 @@ private:
         DLOG("Operation: GetError");
         if (!op)
             return DRETF(false, "malformed message");
-        int32_t result = error_;
+        magma_status_t result = error_;
         error_ = 0;
         if (!WriteError(result))
             return false;
         return true;
     }
 
-    void SetError(int32_t error)
+    void SetError(magma_status_t error)
     {
         if (!error_)
             error_ = DRET_MSG(error, "MagentaPlatformConnection encountered async error");
     }
 
-    bool WriteError(int32_t error)
+    bool WriteError(magma_status_t error)
     {
         DLOG("Writing error %d to channel", error);
         auto status = local_endpoint_.write(0, &error, sizeof(error), nullptr, 0);
         return DRETF(status == NO_ERROR, "failed to write to channel");
     }
 
-    static void PageFlipCallback(int32_t error, void* data)
+    static void PageFlipCallback(magma_status_t error, void* data)
     {
         DLOG("MagentaPlatformConnection::PageFlipCallback");
         auto pageflip_data = reinterpret_cast<PageFlipData*>(data);
@@ -325,7 +324,7 @@ private:
     mx::channel local_endpoint_;
     mx::channel remote_endpoint_;
     mx::waitset waitset_;
-    int32_t error_{};
+    magma_status_t error_{};
 };
 
 class MagentaPlatformIpcConnection : public PlatformIpcConnection {
@@ -333,38 +332,38 @@ public:
     MagentaPlatformIpcConnection(mx::channel channel) : channel_(std::move(channel)) {}
 
     // Imports a buffer for use in the system driver
-    int32_t ImportBuffer(PlatformBuffer* buffer) override
+    magma_status_t ImportBuffer(PlatformBuffer* buffer) override
     {
         if (!buffer)
-            return DRET_MSG(-EINVAL, "attempting to import null buffer");
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "attempting to import null buffer");
 
         uint32_t duplicate_handle;
         if (!buffer->duplicate_handle(&duplicate_handle))
-            return DRET_MSG(-EINVAL, "failed to get duplicate_handle");
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to get duplicate_handle");
 
         mx_handle_t duplicate_handle_mx = duplicate_handle;
 
         ImportBufferOp op;
-        int32_t result = channel_write(&op, sizeof(op), &duplicate_handle_mx, 1);
-        if (result != 0) {
+        magma_status_t result = channel_write(&op, sizeof(op), &duplicate_handle_mx, 1);
+        if (result != MAGMA_STATUS_OK) {
             mx_handle_close(duplicate_handle);
             return DRET_MSG(result, "failed to write to channel");
         }
 
-        return 0;
+        return MAGMA_STATUS_OK;
     }
 
     // Destroys the buffer with |buffer_id| within this connection
     // returns false if the buffer with |buffer_id| has not been imported
-    int32_t ReleaseBuffer(uint64_t buffer_id) override
+    magma_status_t ReleaseBuffer(uint64_t buffer_id) override
     {
         ReleaseBufferOp op;
         op.buffer_id = buffer_id;
-        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
-        if (result != 0)
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != MAGMA_STATUS_OK)
             return DRET_MSG(result, "failed to write to channel");
 
-        return 0;
+        return MAGMA_STATUS_OK;
     }
 
     // Creates a context and returns the context id
@@ -375,8 +374,8 @@ public:
 
         CreateContextOp op;
         op.context_id = context_id;
-        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
-        if (result != 0)
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != MAGMA_STATUS_OK)
             SetError(result);
     }
 
@@ -385,8 +384,8 @@ public:
     {
         DestroyContextOp op;
         op.context_id = context_id;
-        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
-        if (result != 0)
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != MAGMA_STATUS_OK)
             SetError(result);
     }
 
@@ -395,8 +394,8 @@ public:
         ExecuteCommandBufferOp op;
         op.command_buffer_id = command_buffer_id;
         op.context_id = context_id;
-        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
-        if (result != 0)
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != MAGMA_STATUS_OK)
             SetError(result);
     }
 
@@ -404,12 +403,12 @@ public:
     {
         WaitRenderingOp op;
         op.buffer_id = buffer_id;
-        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
-        if (result != 0) {
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        if (result != MAGMA_STATUS_OK) {
             SetError(result);
             return;
         }
-        int32_t error;
+        magma_status_t error;
         result = WaitError(&error);
         if (result != 0) {
             SetError(result);
@@ -426,7 +425,9 @@ public:
         auto iter = pageflip_closure_map_.find(buffer_id);
         if (iter != pageflip_closure_map_.end()) {
             if (callback)
-                callback(DRET_MSG(-EINVAL, "attempting to pageflip unavailable buffer"), data);
+                callback(DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                                  "attempting to pageflip unavailable buffer"),
+                         data);
             return;
         }
 
@@ -434,7 +435,7 @@ public:
 
         PageFlipOp op;
         op.buffer_id = buffer_id;
-        int32_t result = channel_write(&op, sizeof(op), nullptr, 0);
+        magma_status_t result = channel_write(&op, sizeof(op), nullptr, 0);
         if (result != 0) {
             if (callback)
                 callback(DRET_MSG(result, "could not write to channel"), data);
@@ -457,7 +458,9 @@ public:
             auto iter = pageflip_closure_map_.find(reply.buffer_id);
             if (iter == pageflip_closure_map_.end()) {
                 if (callback)
-                    callback(DRET_MSG(-EINVAL, "no closure for buffer id in reply"), data);
+                    callback(
+                        DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "no closure for buffer id in reply"),
+                        data);
                 return;
             }
             auto closure = iter->second;
@@ -468,43 +471,43 @@ public:
         first_frame = false;
     }
 
-    int32_t GetError() override
+    magma_status_t GetError() override
     {
-        int32_t result = error_;
+        magma_status_t result = error_;
         error_ = 0;
-        if (result != 0)
+        if (result != MAGMA_STATUS_OK)
             return result;
 
         GetErrorOp op;
         result = channel_write(&op, sizeof(op), nullptr, 0);
-        if (result != 0)
+        if (result != MAGMA_STATUS_OK)
             return DRET_MSG(result, "failed to write to channel");
 
-        int32_t error;
+        magma_status_t error;
         result = WaitError(&error);
-        if (result != 0)
+        if (result != MAGMA_STATUS_OK)
             return result;
 
         return error;
     }
 
-    void SetError(int32_t error)
+    void SetError(magma_status_t error)
     {
         if (!error_)
             error_ = DRET_MSG(error, "MagentaPlatformIpcConnection encountered async error");
     }
 
-    int32_t WaitError(int32_t* error_out)
+    magma_status_t WaitError(magma_status_t* error_out)
     {
         return WaitMessage(reinterpret_cast<uint8_t*>(error_out), sizeof(*error_out), true);
     }
 
-    int32_t WaitMessage(uint8_t* msg_out, uint32_t msg_size, bool blocking)
+    magma_status_t WaitMessage(uint8_t* msg_out, uint32_t msg_size, bool blocking)
     {
         mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
         mx_signals_t pending = 0;
 
-        auto status = channel_.wait_one(signals, blocking ? MX_TIME_INFINITE : 0, &pending);
+        mx_status_t status = channel_.wait_one(signals, blocking ? MX_TIME_INFINITE : 0, &pending);
         if (status == ERR_TIMED_OUT) {
             DLOG("got ERR_TIMED_OUT, returning true");
             return 0;
@@ -517,30 +520,31 @@ public:
                 mx_status_t status =
                     channel_.read(0, msg_out, msg_size, &actual_bytes, nullptr, 0, nullptr);
                 if (status != NO_ERROR)
-                    return DRET_MSG(-EINVAL, "failed to read from channel");
+                    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to read from channel");
                 if (actual_bytes != msg_size)
-                    return DRETF(false, "read wrong number of bytes from channel");
+                    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
+                                    "read wrong number of bytes from channel");
             } else if (pending & MX_CHANNEL_PEER_CLOSED) {
-                return DRET_MSG(-ENODEV, "channel, closed");
+                return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "channel, closed");
             }
             return 0;
         } else {
-            return DRET_MSG(-EINVAL, "failed to wait on channel");
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to wait on channel");
         }
     }
 
 private:
-    int32_t channel_write(const void* bytes, uint32_t num_bytes, const mx_handle_t* handles,
-                          uint32_t num_handles)
+    magma_status_t channel_write(const void* bytes, uint32_t num_bytes, const mx_handle_t* handles,
+                                 uint32_t num_handles)
     {
         mx_status_t status = channel_.write(0, bytes, num_bytes, handles, num_handles);
         switch (status) {
         case NO_ERROR:
-            return 0;
-        case ERR_BAD_STATE:
-            return -ENODEV;
+            return MAGMA_STATUS_OK;
+        case ERR_REMOTE_CLOSED:
+            return MAGMA_STATUS_CONNECTION_LOST;
         default:
-            return -EINVAL;
+            return MAGMA_STATUS_INTERNAL_ERROR;
         }
     }
 
@@ -552,7 +556,7 @@ private:
     mx::channel channel_;
     std::map<uint64_t, pageflip_closure> pageflip_closure_map_;
     uint32_t next_context_id_{};
-    int32_t error_{};
+    magma_status_t error_{};
     bool first_frame = true;
 };
 
