@@ -3,10 +3,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+set -eo pipefail
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 
 # N.B. This must be an absolute path.
-readonly ROOT_DIR="$(dirname $(dirname "${SCRIPT_DIR}"))"
+readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
 
 readonly HOST_ARCH=$(uname -m)
 readonly HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
@@ -21,7 +23,7 @@ else
   exit 1
 fi
 
-set -eo pipefail; [[ "${TRACE}" ]] && set -x
+[[ "${TRACE}" ]] && set -x
 
 usage() {
   printf >&2 '%s: [-c] [-o outdir] [-d destdir] [-j jobs]\n' "$0"
