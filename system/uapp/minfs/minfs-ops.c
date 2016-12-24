@@ -344,9 +344,31 @@ static inline void vn_put_block_dirty(vnode_t* vn, block_t* blk) {
 // Identify that the direntry record was modified. Stop iterating.
 #define DIR_CB_SAVE_SYNC 2
 
-static size_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off);
-static size_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t off);
+static mx_status_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off, size_t* actual);
+static mx_status_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t off, size_t* actual);
 static mx_status_t _fs_truncate(vnode_t* vn, size_t len);
+
+static mx_status_t _fs_read_exact(vnode_t* vn, void* data, size_t len, size_t off) {
+    size_t actual;
+    mx_status_t status = _fs_read(vn, data, len, off, &actual);
+    if (status != NO_ERROR) {
+        return status;
+    } else if (actual != len) {
+        return ERR_IO;
+    }
+    return NO_ERROR;
+}
+
+static mx_status_t _fs_write_exact(vnode_t* vn, const void* data, size_t len, size_t off) {
+    size_t actual;
+    mx_status_t status = _fs_write(vn, data, len, off, &actual);
+    if (status != NO_ERROR) {
+        return status;
+    } else if (actual != len) {
+        return ERR_IO;
+    }
+    return NO_ERROR;
+}
 
 typedef struct dir_args {
     const char* name;
@@ -428,9 +450,13 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
     // Coalesce with "next" first, so the MINFS_RECLEN_LAST bit can easily flow
     // back to "de" and "de_prev".
     if (!(de->reclen & MINFS_RECLEN_LAST)) {
-        size_t r = _fs_read(vndir, &de_next, MINFS_DIRENT_SIZE, off_next);
-        if (validate_dirent(&de_next, r, off_next) != NO_ERROR) {
+        size_t len = MINFS_DIRENT_SIZE;
+        mx_status_t status = _fs_read_exact(vndir, &de_next, len, off_next);
+        if (status != NO_ERROR) {
             error("unlink: Failed to read next dirent\n");
+            return status;
+        } else if (validate_dirent(&de_next, len, off_next) != NO_ERROR) {
+            error("unlink: Read invalid dirent\n");
             return ERR_IO;
         }
         if (de_next.ino == 0) {
@@ -440,9 +466,13 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
         }
     }
     if (off_prev != off) {
-        size_t r = _fs_read(vndir, &de_prev, MINFS_DIRENT_SIZE, off_prev);
-        if (validate_dirent(&de_prev, r, off_prev) != NO_ERROR) {
+        size_t len = MINFS_DIRENT_SIZE;
+        mx_status_t status = _fs_read_exact(vndir, &de_prev, len, off_prev);
+        if (status != NO_ERROR) {
             error("unlink: Failed to read previous dirent\n");
+            return status;
+        } else if (validate_dirent(&de_prev, len, off_prev) != NO_ERROR) {
+            error("unlink: Read invalid dirent\n");
             return ERR_IO;
         }
         if (de_prev.ino == 0) {
@@ -457,10 +487,9 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
     }
     de->ino = 0;
     de->reclen = (coalesced_size & MINFS_RECLEN_MASK) | (de->reclen & MINFS_RECLEN_LAST);
-    size_t r = _fs_write(vndir, de, MINFS_DIRENT_SIZE, off);
-    if (r != MINFS_DIRENT_SIZE) {
-        error("unlink: Failed to updated directory\n");
-        return ERR_IO;
+    mx_status_t status = _fs_write_exact(vndir, de, MINFS_DIRENT_SIZE, off);
+    if (status != NO_ERROR) {
+        return status;
     }
 
     if (de->reclen & MINFS_RECLEN_LAST) {
@@ -559,7 +588,10 @@ static mx_status_t cb_dir_update_inode(vnode_t* vndir, minfs_dirent_t* de,
     }
 
     de->ino = args->ino;
-    _fs_write(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), offs->off);
+    mx_status_t status = _fs_write_exact(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), offs->off);
+    if (status != NO_ERROR) {
+        return status;
+    }
     return DIR_CB_SAVE_SYNC;
 }
 
@@ -570,7 +602,10 @@ static mx_status_t fill_dirent(vnode_t* vndir, minfs_dirent_t* de,
     de->namelen = args->len;
     memcpy(de->name, args->name, args->len);
     vndir->inode.dirent_count++;
-    _fs_write(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), off);
+    mx_status_t status = _fs_write_exact(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), off);
+    if (status != NO_ERROR) {
+        return status;
+    }
     return DIR_CB_SAVE_SYNC;
 }
 
@@ -597,7 +632,10 @@ static mx_status_t cb_dir_append(vnode_t* vndir, minfs_dirent_t* de,
         // shrink existing entry
         bool was_last_record = de->reclen & MINFS_RECLEN_LAST;
         de->reclen = size;
-        _fs_write(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), offs->off);
+        mx_status_t status = _fs_write_exact(vndir, de, SIZEOF_MINFS_DIRENT(de->namelen), offs->off);
+        if (status != NO_ERROR) {
+            return status;
+        }
         offs->off += size;
         // create new entry in the remaining space
         de = ((void*)de) + size;
@@ -629,11 +667,13 @@ static mx_status_t vn_dir_for_each(vnode_t* vn, dir_args_t* args,
         .off = 0,
         .off_prev = 0,
     };
-    mx_status_t status;
     while (offs.off + MINFS_DIRENT_SIZE < MINFS_MAX_DIRECTORY_SIZE) {
         trace(MINFS, "Reading dirent at offset %zd\n", offs.off);
-        size_t r = _fs_read(vn, data, MINFS_MAX_DIRENT_SIZE, offs.off);
-        if ((status = validate_dirent(de, r, offs.off)) != NO_ERROR) {
+        size_t r;
+        mx_status_t status = _fs_read(vn, data, MINFS_MAX_DIRENT_SIZE, offs.off, &r);
+        if (status != NO_ERROR) {
+            return status;
+        } else if ((status = validate_dirent(de, r, offs.off)) != NO_ERROR) {
             return status;
         }
 
@@ -683,14 +723,20 @@ static ssize_t fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
     if (VNODE_IS_DIR(vn)) {
         return ERR_NOT_FILE;
     }
-    return _fs_read(vn, data, len, off);
+    size_t r;
+    mx_status_t status = _fs_read(vn, data, len, off, &r);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    return r;
 }
 
 // Internal read. Usable on directories.
-static size_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
+static mx_status_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off, size_t* actual) {
     // clip to EOF
     if (off >= vn->inode.size) {
-        return 0;
+        *actual = 0;
+        return NO_ERROR;
     }
     if (len > (vn->inode.size - off)) {
         len = vn->inode.size - off;
@@ -723,7 +769,8 @@ static size_t _fs_read(vnode_t* vn, void* data, size_t len, size_t off) {
         data += xfer;
         n++;
     }
-    return data - start;
+    *actual = data - start;
+    return NO_ERROR;
 }
 
 static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
@@ -731,13 +778,19 @@ static ssize_t fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     if (VNODE_IS_DIR(vn)) {
         return ERR_NOT_FILE;
     }
-    return _fs_write(vn, data, len, off);
+    size_t actual;
+    mx_status_t status = _fs_write(vn, data, len, off, &actual);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    return actual;
 }
 
 // Internal write. Usable on directories.
-static size_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
+static mx_status_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t off, size_t* actual) {
     if (len == 0) {
-        return 0;
+        *actual = 0;
+        return NO_ERROR;
     }
 
     const void* start = data;
@@ -777,7 +830,8 @@ static size_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     }
 
     minfs_sync_vnode(vn, MX_FS_SYNC_MTIME);  // writes always update mtime
-    return len;
+    *actual = len;
+    return NO_ERROR;
 }
 
 static mx_status_t fs_lookup(vnode_t* vn, vnode_t** out, const char* name, size_t len) {
@@ -869,8 +923,10 @@ static mx_status_t fs_readdir(vnode_t* vn, void* cookie, void* dirents, size_t l
     minfs_dirent_t* de = (minfs_dirent_t*) data;
     size_t r;
     while (off + MINFS_DIRENT_SIZE < MINFS_MAX_DIRECTORY_SIZE) {
-        r = _fs_read(vn, de, MINFS_MAX_DIRENT_SIZE, off);
-        if (validate_dirent(de, r, off) != NO_ERROR) {
+        mx_status_t status = _fs_read(vn, de, MINFS_MAX_DIRENT_SIZE, off, &r);
+        if (status != NO_ERROR) {
+            goto fail;
+        } else if (validate_dirent(de, r, off) != NO_ERROR) {
             goto fail;
         }
 
