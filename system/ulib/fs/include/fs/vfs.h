@@ -6,16 +6,57 @@
 
 #include "trace.h"
 
+#include <mxio/debug.h>
+#include <mxio/remoteio.h>
+
+#include <stdlib.h>
 #include <stdint.h>
+#ifdef __Fuchsia__
+#include <threads.h>
+#endif
 #include <sys/types.h>
 
 #include <magenta/types.h>
 
 #include <mxio/vfs.h>
+#include <mxio/dispatcher.h>
+
+#define MXDEBUG 0
 
 // VFS Helpers (vfs.c)
 #define V_FLAG_DEVICE 1
 #define V_FLAG_VMOFILE 2
+
+// A lock which should be used to protect lookup and walk operations
+#ifdef __Fuchsia__
+extern mtx_t vfs_lock;
+#endif
+extern mxio_dispatcher_t* vfs_dispatcher;
+
+// The following functions must be defined by the filesystem linking
+// with this VFS layer.
+
+// Extract handle(s), type, and extra info from a vnode.
+//  - type == '0' means the vn represents a non-local device.
+//  - If the vnode can be acquired, it is acquired by this function.
+//  - Returns the number of handles acquired.
+mx_status_t vfs_get_handles(vnode_t* vn, uint32_t flags, mx_handle_t* hnds,
+                            uint32_t* type, void* extra, uint32_t* esize);
+// Handle incoming mxrio messages.
+mx_status_t vfs_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
+// Called when a request is made to watch a directory.
+ssize_t vfs_do_ioctl_watch_dir(vnode_t* vn,
+                               const void* in_buf, size_t in_len,
+                               void* out_buf, size_t out_len);
+// Called when something is added to a watched directory.
+void vfs_notify_add(vnode_t* vn, const char* name, size_t len);
+
+typedef struct vfs_iostate {
+    vnode_t* vn;
+    vdircookie_t dircookie;
+    size_t io_off;
+    uint32_t io_flags;
+} vfs_iostate_t;
 
 mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
                      const char** pathout, uint32_t flags, uint32_t mode);
@@ -30,5 +71,18 @@ mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath,
 
 mx_status_t vfs_close(vnode_t* vn);
 
+ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_len,
+                     void* out_buf, size_t out_len);
+
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type);
+
+mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h);
+mx_status_t vfs_uninstall_remote(vnode_t* vn);
+mx_status_t vfs_uninstall_all(void);
+
+// Acquire a handle to the vnode. vn_acquires vn if successful.
+mx_handle_t vfs_create_handle(vnode_t* vn, uint32_t flags);
+// Generic implementation of vfs_handler, which dispatches messages to fs operations.
+mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
+

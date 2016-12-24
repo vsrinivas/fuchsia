@@ -2,24 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/trace.h>
-#include <fs/vfs.h>
+#include <mxio/dispatcher.h>
+#include <mxio/remoteio.h>
 
 #include <fcntl.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <mxio/dispatcher.h>
-#include <mxio/remoteio.h>
-
-#ifndef __Fuchsia__
-#define O_NOREMOTE 0100000000
-#endif
-
-struct vnode {
-    VNODE_BASE_FIELDS
-};
+#include "vfs-internal.h"
 
 uint32_t __trace_bits;
 
@@ -309,6 +301,44 @@ mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
     return sz;
 }
 
+ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
+                     size_t in_len, void* out_buf, size_t out_len) {
+    switch (op) {
+#ifdef __Fuchsia__
+    case IOCTL_DEVICE_WATCH_DIR: {
+        return vfs_do_ioctl_watch_dir(vn, in_buf, in_len, out_buf, out_len);
+    }
+    case IOCTL_DEVMGR_MOUNT_FS: {
+        if ((in_len != 0) || (out_len != sizeof(mx_handle_t))) {
+            return ERR_INVALID_ARGS;
+        }
+        mx_handle_t h0, h1;
+        mx_status_t status;
+        if ((status = mx_channel_create(0, &h0, &h1)) < 0) {
+            return status;
+        }
+        if ((status = vfs_install_remote(vn, h1)) < 0) {
+            mx_handle_close(h0);
+            mx_handle_close(h1);
+            return status;
+        }
+        memcpy(out_buf, &h0, sizeof(mx_handle_t));
+        return sizeof(mx_handle_t);
+    }
+    case IOCTL_DEVMGR_UNMOUNT_NODE: {
+        return vfs_uninstall_remote(vn);
+    }
+    case IOCTL_DEVMGR_UNMOUNT_FS: {
+        vfs_uninstall_all();
+        vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
+        exit(0);
+    }
+#endif
+    default:
+        return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
+    }
+}
+
 void vn_acquire(vnode_t* vn) {
     trace(REFS, "acquire vn=%p ref=%u\n", vn, vn->refcount);
     vn->refcount++;
@@ -324,6 +354,7 @@ void vn_release(vnode_t* vn) {
     }
     vn->refcount--;
     if (vn->refcount == 0) {
+        assert(!(vn->remote > 0));
         trace(VFS, "vfs_release: vn=%p\n", vn);
         vn->ops->release(vn);
     }

@@ -2,15 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dnode.h"
-#include "memfs-private.h"
-
-#include <fs/vfs.h>
-
-#include <magenta/device/devmgr.h>
 #include <magenta/listnode.h>
-
-#include <ddk/device.h>
 
 #include <mxio/debug.h>
 #include <mxio/remoteio.h>
@@ -19,7 +11,10 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 #include <sys/stat.h>
+
+#include "vfs-internal.h"
 
 // Non-intrusive node in linked list of vnodes acting as mount points
 typedef struct mount_node {
@@ -51,6 +46,7 @@ mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
     mount_point->vn = vn;
     list_add_tail(&remote_list, &mount_point->node);
     vn->remote = h;
+    vn_acquire(vn); // Acquire the vn to make sure it isn't released from memory.
     mtx_unlock(&vfs_lock);
 
     return NO_ERROR;
@@ -88,8 +84,10 @@ static mx_status_t do_unmount(mount_node_t* mount_point) {
         printf("Unexpected error unmounting filesystem: %d\n", status);
     }
     mx_handle_close(mount_point->vn->remote);
-    mount_point->vn->remote = 0;
+    vnode_t* vn = mount_point->vn;
     free(mount_point);
+    vn->remote = 0;
+    vn_release(vn);
     return status;
 }
 

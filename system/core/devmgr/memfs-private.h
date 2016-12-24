@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <fs/vfs.h>
 #include <magenta/types.h>
 #include <mxio/remoteio.h>
 #include <mxio/vfs.h>
@@ -52,13 +53,8 @@ typedef struct vnode_watcher {
     mx_handle_t h;
 } vnode_watcher_t;
 
-ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
-                     size_t in_len, void* out_buf, size_t out_len);
-
 mx_handle_t vfs_get_vmofile(vnode_t* vn, mx_off_t* off, mx_off_t* len);
 
-
-void vfs_notify_add(vnode_t* vndir, const char* name, size_t namelen);
 void vfs_global_init(vnode_t* root);
 
 // generate mxremoteio handles
@@ -127,29 +123,9 @@ mx_status_t memfs_create_directory(const char* path, uint32_t flags);
 mx_status_t memfs_create_from_vmo(const char* path, uint32_t flags,
                                   mx_handle_t vmo, mx_off_t off, mx_off_t len);
 
-mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h);
-mx_status_t vfs_uninstall_remote(vnode_t* vn);
-mx_status_t vfs_uninstall_all(void);
-
 // big vfs lock protects lookup and walk operations
 //TODO: finer grained locking
 extern mtx_t vfs_lock;
-
-typedef struct vfs_iostate {
-    union {
-        mx_device_t* dev;
-        vnode_t* vn;
-    };
-    vdircookie_t dircookie;
-    size_t io_off;
-    uint32_t io_flags;
-
-    list_node_t node;
-    const char* fn;
-} vfs_iostate_t;
-
-void track_vfs_iostate(vfs_iostate_t* ios, const char* fn);
-void untrack_vfs_iostate(vfs_iostate_t* ios);
 
 vfs_iostate_t* create_vfs_iostate(mx_device_t* dev);
 

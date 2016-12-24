@@ -1,0 +1,34 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+// TODO(smklein): Move thse ioctls to public/magenta/fs/vfs.h
+#include <magenta/device/device.h>
+#include <magenta/device/devmgr.h>
+#include <magenta/processargs.h>
+#include <magenta/syscalls.h>
+#include <magenta/types.h>
+
+#include <fs/trace.h>
+#include <fs/vfs.h>
+
+#include <fcntl.h>
+#include <string.h>
+#ifdef __Fuchsia__
+#include <threads.h>
+#endif
+#include <unistd.h>
+
+#include <mxio/dispatcher.h>
+#include <mxio/remoteio.h>
+
+#ifndef __Fuchsia__
+#define O_NOREMOTE 0100000000
+#endif
+
+typedef struct vnode {
+    VNODE_BASE_FIELDS;
+} vnode_t;
+
