@@ -54,7 +54,7 @@ mx_handle_t vfs_rpc_server(vnode_t* vn) {
     vfs_iostate_t* ios;
     mx_status_t r;
 
-    if ((ios = calloc(1, sizeof(vfs_iostate_t))) == NULL)
+    if ((ios = (vfs_iostate_t*)calloc(1, sizeof(vfs_iostate_t))) == NULL)
         return ERR_NO_MEMORY;
     ios->vn = vn;
 
@@ -71,7 +71,7 @@ mx_handle_t vfs_rpc_server(vnode_t* vn) {
         return h;
     }
 
-    if ((r = mxio_dispatcher_add(vfs_dispatcher, h, vfs_handler, ios)) < 0) {
+    if ((r = mxio_dispatcher_add(vfs_dispatcher, h, (void*) vfs_handler, ios)) < 0) {
         free(ios);
         return r;
     }

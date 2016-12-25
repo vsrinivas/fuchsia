@@ -77,7 +77,7 @@ void minfs_sync_vnode(vnode_t* vn, uint32_t flags) {
         panic("failed sync vnode %p(#%u)", vn, vn->ino);
     }
 
-    memcpy(bdata + off_of_ino, &vn->inode, MINFS_INODE_SIZE);
+    memcpy((void*)((uintptr_t)bdata + off_of_ino), &vn->inode, MINFS_INODE_SIZE);
     bcache_put(vn->fs->bc, blk, BLOCK_DIRTY);
 }
 
@@ -141,7 +141,7 @@ mx_status_t minfs_ino_alloc(minfs_t* fs, minfs_inode_t* inode, uint32_t* ino_out
 
     // write data to blocks in memory
     memcpy(bdata_ibm, bmdata, MINFS_BLOCK_SIZE);
-    memcpy(bdata_ino + off_of_ino, inode, MINFS_INODE_SIZE);
+    memcpy((void*)((uintptr_t)bdata_ino + off_of_ino), inode, MINFS_INODE_SIZE);
 
     // commit blocks to disk
     bcache_put(fs->bc, block_ibm, BLOCK_DIRTY);
@@ -156,7 +156,7 @@ mx_status_t minfs_vnode_new(minfs_t* fs, vnode_t** out, uint32_t type) {
     if ((type != MINFS_TYPE_FILE) && (type != MINFS_TYPE_DIR)) {
         return ERR_INVALID_ARGS;
     }
-    if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
+    if ((vn = (vnode_t*)calloc(1, sizeof(vnode_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
     vn->inode.magic = MINFS_MAGIC(type);
@@ -193,7 +193,7 @@ mx_status_t minfs_vnode_get(minfs_t* fs, vnode_t** out, uint32_t ino) {
             return NO_ERROR;
         }
     }
-    if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
+    if ((vn = (vnode_t*)calloc(1, sizeof(vnode_t))) == NULL) {
         return ERR_NO_MEMORY;
     }
     mx_status_t status;
@@ -220,7 +220,7 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
 #define DE0_SIZE SIZEOF_MINFS_DIRENT(1)
 
     // directory entry for self
-    minfs_dirent_t* de = (void*) bdata;
+    minfs_dirent_t* de = (minfs_dirent_t*) bdata;
     de->ino = ino_self;
     de->reclen = DE0_SIZE;
     de->namelen = 1;
@@ -228,7 +228,7 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
     de->name[0] = '.';
 
     // directory entry for parent
-    de = (void*) bdata + DE0_SIZE;
+    de = (minfs_dirent_t*)((uintptr_t)bdata + DE0_SIZE);
     de->ino = ino_parent;
     de->reclen = SIZEOF_MINFS_DIRENT(2) | MINFS_RECLEN_LAST;
     de->namelen = 2;
@@ -246,7 +246,7 @@ mx_status_t minfs_create(minfs_t** out, bcache_t* bc, minfs_info_t* info) {
         return status;
     }
 
-    minfs_t* fs = calloc(1, sizeof(minfs_t));
+    minfs_t* fs = (minfs_t*)calloc(1, sizeof(minfs_t));
     if (fs == NULL) {
         return ERR_NO_MEMORY;
     }
@@ -413,7 +413,7 @@ int minfs_mkfs(bcache_t* bc) {
 
     // setup root inode
     blk = bcache_get(bc, info.ino_block, &bdata);
-    minfs_inode_t* ino = (void*) bdata;
+    minfs_inode_t* ino = (minfs_inode_t*) bdata;
     ino[MINFS_ROOT_INO].magic = MINFS_MAGIC_DIR;
     ino[MINFS_ROOT_INO].size = MINFS_BLOCK_SIZE;
     ino[MINFS_ROOT_INO].block_count = 1;

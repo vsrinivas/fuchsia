@@ -8,6 +8,7 @@ MINFS_CFLAGS += -Isystem/ulib/system/include
 MINFS_CFLAGS += -Isystem/ulib/magenta/include
 MINFS_CFLAGS += -Isystem/ulib/mxio/include
 MINFS_CFLAGS += -Isystem/ulib/fs/include
+MINFS_CFLAGS += -Isystem/public
 
 ifeq ($(HOST_PLATFORM),darwin)
 MINFS_CFLAGS += -DO_DIRECTORY=0200000
@@ -31,15 +32,15 @@ else
 FUSE_LDFLAGS += -lfuse
 endif
 
-SRCS += main.c test.c
-LIBMINFS_SRCS += host.c bitmap.c bcache.c
-LIBMINFS_SRCS += minfs.c minfs-ops.c minfs-check.c
+SRCS += main.cpp test.cpp
+LIBMINFS_SRCS += host.cpp bitmap.cpp bcache.cpp
+LIBMINFS_SRCS += minfs.cpp minfs-ops.cpp minfs-check.cpp
 LIBFS_SRCS += vfs.c
 
-OBJS := $(patsubst %.c,$(BUILDDIR)/host/system/uapp/minfs/%.o,$(SRCS))
-DEPS := $(patsubst %.c,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(SRCS))
-LIBMINFS_OBJS := $(patsubst %.c,$(BUILDDIR)/host/system/uapp/minfs/%.o,$(LIBMINFS_SRCS))
-LIBMINFS_DEPS := $(patsubst %.c,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(LIBMINFS_SRCS))
+OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.o,$(SRCS))
+DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(SRCS))
+LIBMINFS_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.o,$(LIBMINFS_SRCS))
+LIBMINFS_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(LIBMINFS_SRCS))
 LIBFS_OBJS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.o,$(LIBFS_SRCS))
 LIBFS_DEPS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.d,$(LIBFS_SRCS))
 MINFS_TOOLS := $(BUILDDIR)/tools/minfs
@@ -55,10 +56,10 @@ minfs:: $(MINFS_TOOLS)
 -include $(LIBMINFS_DEPS)
 -include $(LIBFS_DEPS)
 
-$(BUILDDIR)/host/system/uapp/minfs/%.o: system/uapp/minfs/%.c
+$(BUILDDIR)/host/system/uapp/minfs/%.o: system/uapp/minfs/%.cpp
 	@echo compiling $@
 	@mkdir -p $(dir $@)
-	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
+	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/host/system/ulib/fs/%.o: system/ulib/fs/%.c
 	@echo compiling $@
@@ -69,10 +70,10 @@ $(BUILDDIR)/tools/minfs: $(OBJS) $(LIBMINFS_OBJS) $(LIBFS_OBJS)
 	@echo linking $@
 	@$(HOST_CC) $(MINFS_LDFLAGS) -o $@ $^
 
-$(BUILDDIR)/host/system/uapp/minfs/fuse.o: system/uapp/minfs/fuse.c
+$(BUILDDIR)/host/system/uapp/minfs/fuse.o: system/uapp/minfs/fuse.cpp
 	@echo compiling $@
 	@mkdir -p $(dir $@)
-	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MINFS_CFLAGS) $(FUSE_CFLAGS) -c -o $@ $<
+	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) $(FUSE_CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/tools/fuse-minfs: $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(BUILDDIR)/host/system/uapp/minfs/fuse.o
 	@echo linking $@

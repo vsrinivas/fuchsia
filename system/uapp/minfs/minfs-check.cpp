@@ -47,7 +47,7 @@ static mx_status_t get_inode_nth_bno(minfs_t* fs, minfs_inode_t* inode, uint32_t
         return NO_ERROR;
     }
     n -= MINFS_DIRECT;
-    uint32_t i = n / (MINFS_BLOCK_SIZE / sizeof(uint32_t));
+    uint32_t i = static_cast<uint32_t>(n / (MINFS_BLOCK_SIZE / sizeof(uint32_t)));
     uint32_t j = n % (MINFS_BLOCK_SIZE / sizeof(uint32_t));
 
     if (i >= MINFS_INDIRECT) {
@@ -82,15 +82,15 @@ static mx_status_t file_read(minfs_t* fs, minfs_inode_t* inode, void* data,
     }
 
     void* start = data;
-    uint32_t n = off / MINFS_BLOCK_SIZE;
-    size_t adjust = off % MINFS_BLOCK_SIZE;
+    uint32_t n = static_cast<uint32_t>(off / MINFS_BLOCK_SIZE);
+    uint32_t adjust = off % MINFS_BLOCK_SIZE;
 
     while ((len > 0) && (n < MINFS_MAX_FILE_BLOCK)) {
-        size_t xfer;
+        uint32_t xfer;
         if (len > (MINFS_BLOCK_SIZE - adjust)) {
             xfer = MINFS_BLOCK_SIZE - adjust;
         } else {
-            xfer = len;
+            xfer = static_cast<uint32_t>(len);
         }
 
         uint32_t bno;
@@ -105,11 +105,11 @@ static mx_status_t file_read(minfs_t* fs, minfs_inode_t* inode, void* data,
 
         adjust = 0;
         len -= xfer;
-        data += xfer;
+        data = (void*)((uintptr_t)data + xfer);
         n++;
     }
 
-    return data - start;
+    return static_cast<mx_status_t>((uintptr_t) data - (uintptr_t) start);
 }
 
 static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* inode,
@@ -127,8 +127,8 @@ static mx_status_t check_directory(check_t* chk, minfs_t* fs, minfs_inode_t* ino
             error("check: ino#%u: Could not read direnty at %zd\n", ino, off);
             return status < 0 ? status : ERR_IO;
         }
-        minfs_dirent_t* de = (void*) data;
-        uint32_t rlen = MINFS_RECLEN(de, off);
+        minfs_dirent_t* de = reinterpret_cast<minfs_dirent_t*>(data);
+        uint32_t rlen = static_cast<uint32_t>(MINFS_RECLEN(de, off));
         bool is_last = de->reclen & MINFS_RECLEN_LAST;
         if (!is_last && ((rlen < MINFS_DIRENT_SIZE) ||
                          (rlen > MINFS_MAX_DIRENT_SIZE) || (rlen & 3))) {

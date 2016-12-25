@@ -25,7 +25,7 @@ mx_status_t bitmap_init(bitmap_t* bm, uint32_t max) {
     size_t size = 64 * bm->mapcount;
     size = ((size + MINFS_BLOCK_SIZE - 1) / MINFS_BLOCK_SIZE) * MINFS_BLOCK_SIZE;
 
-    if ((bm->map = calloc(1, size)) == NULL) {
+    if ((bm->map = (uint64_t*)calloc(1, size)) == NULL) {
         return ERR_NO_MEMORY;
     }
     bm->end = bm->map + bm->mapcount;
@@ -59,7 +59,7 @@ uint32_t bitmap_alloc(bitmap_t* bm, uint32_t minbit) {
         uint32_t n;
         if ((n = __builtin_ffsll(~v)) != 0) {
             n--;
-            uint32_t ret = ((bits - bm->map) << 6) + n;
+            uint32_t ret = (uint32_t) (((bits - bm->map) << 6) + n);
             // If this is end-1, and the map is full
             // we might attempt to use a bit past the
             // end.  Ensure that we do not.

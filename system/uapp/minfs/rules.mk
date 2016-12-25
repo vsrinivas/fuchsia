@@ -10,22 +10,29 @@ MODULE_TYPE := userapp
 
 # app main
 MODULE_SRCS := \
-    $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/main.cpp \
 
 # "libfs"
 MODULE_SRCS += \
-    $(LOCAL_DIR)/bitmap.c \
-    $(LOCAL_DIR)/bcache.c \
-    $(LOCAL_DIR)/rpc.c \
+    $(LOCAL_DIR)/bitmap.cpp \
+    $(LOCAL_DIR)/bcache.cpp \
+    $(LOCAL_DIR)/rpc.cpp \
 
 # minfs implementation
 MODULE_SRCS += \
-    $(LOCAL_DIR)/minfs.c \
-    $(LOCAL_DIR)/minfs-ops.c \
-    $(LOCAL_DIR)/minfs-check.c \
+    $(LOCAL_DIR)/minfs.cpp \
+    $(LOCAL_DIR)/minfs-ops.cpp \
+    $(LOCAL_DIR)/minfs-check.cpp \
 
-MODULE_STATIC_LIBS := ulib/fs
+MODULE_STATIC_LIBS := \
+    ulib/fs \
 
-MODULE_LIBS := ulib/magenta ulib/mxio ulib/musl
+MODULE_LIBS := \
+    ulib/magenta \
+    ulib/mxio \
+    ulib/musl \
+    ulib/mxcpp \
+    ulib/mxio \
+    ulib/mxtl \
 
 include make/module.mk

@@ -140,20 +140,6 @@ struct bitmap {
     uint64_t *end;
 };
 
-
-/* orr
-static inline void* bitmap_data(bitmap_t* bm) {
-    return bm->map;
-}
-
-#define BITMAP_FAIL (0xFFFFFFFF)
-
-// find an available bit, set it, return that bitnumber
-// returns BITMAP_FAIL if no bit is found
-uint32_t bitmap_alloc(bitmap_t* bm, uint32_t minbit);
-*/
-
-
 mx_status_t bitmap_init(bitmap_t* bm, uint32_t maxbits);
 void bitmap_destroy(bitmap_t* bm);
 

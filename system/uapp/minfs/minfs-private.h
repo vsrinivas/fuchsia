@@ -94,7 +94,7 @@ void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent);
 
 // get pointer to nth block worth of data in a bitmap
 static inline void* minfs_bitmap_nth_block(bitmap_t* bm, uint32_t n) {
-    return bitmap_data(bm) + (MINFS_BLOCK_SIZE * n);
+    return (void*)((uintptr_t)bitmap_data(bm) + (uintptr_t)(MINFS_BLOCK_SIZE * n));
 }
 
 // get pointer to block of data containing bitno
@@ -105,7 +105,7 @@ static inline void* minfs_bitmap_block(bitmap_t* bm, uint32_t* blkno, uint32_t b
     } else {
         uint32_t n = (bitno / MINFS_BLOCK_BITS);
         *blkno = n;
-        return bitmap_data(bm) + (MINFS_BLOCK_SIZE * n);
+        return minfs_bitmap_nth_block(bm, n);
     }
 }
 

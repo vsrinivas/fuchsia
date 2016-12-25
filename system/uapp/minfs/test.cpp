@@ -154,7 +154,7 @@ int worker_writer(worker_t* w) {
 int worker_new(const char* where, const char* fn,
                int (*work)(worker_t* w), uint32_t size, uint32_t flags) {
     worker_t* w;
-    if ((w = calloc(1, sizeof(worker_t))) == NULL) {
+    if ((w = (worker_t*)calloc(1, sizeof(worker_t))) == NULL) {
         return -1;
     }
 

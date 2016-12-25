@@ -16,6 +16,7 @@
 #endif
 #include <sys/types.h>
 
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 
 #include <mxio/vfs.h>
@@ -26,6 +27,8 @@
 // VFS Helpers (vfs.c)
 #define V_FLAG_DEVICE 1
 #define V_FLAG_VMOFILE 2
+
+__BEGIN_CDECLS
 
 // A lock which should be used to protect lookup and walk operations
 #ifdef __Fuchsia__
@@ -86,3 +89,4 @@ mx_handle_t vfs_create_handle(vnode_t* vn, uint32_t flags);
 // Generic implementation of vfs_handler, which dispatches messages to fs operations.
 mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 
+__END_CDECLS

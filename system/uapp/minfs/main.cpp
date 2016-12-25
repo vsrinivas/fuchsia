@@ -94,7 +94,7 @@ int do_cp(bcache_t* bc, int argc, char** argv) {
                 fprintf(stderr, "error: writing to '%s'\n", argv[1]);
                 goto done;
             }
-            ptr += r;
+            ptr = (void*)((uintptr_t)ptr + r);
             len -= r;
         }
     }
@@ -342,7 +342,7 @@ found:
     size /= MINFS_BLOCK_SIZE;
 
     bcache_t* bc;
-    if (bcache_create(&bc, fd, size, MINFS_BLOCK_SIZE, 64) < 0) {
+    if (bcache_create(&bc, fd, (uint32_t) size, MINFS_BLOCK_SIZE, 64) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }

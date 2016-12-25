@@ -200,7 +200,8 @@ mx_status_t bcache_read(bcache_t* bc, uint32_t bno, void* data, uint32_t off, ui
     void* bdata;
     block_t* blk = bcache_get(bc, bno, &bdata);
     if (blk != NULL) {
-        memcpy(data, bdata + off, len);
+        void* bdata_src = (void*)((uintptr_t)bdata + off);
+        memcpy(data, bdata_src, len);
         bcache_put(bc, blk, 0);
         return 0;
     } else {
@@ -214,7 +215,7 @@ mx_status_t bcache_sync(bcache_t* bc) {
 
 int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize, uint32_t num) {
     bcache_t* bc;
-    if ((bc = calloc(1, sizeof(bcache_t))) == NULL) {
+    if ((bc = (bcache_t*)calloc(1, sizeof(bcache_t))) == NULL) {
         return -1;
     }
     bc->fd = fd;
@@ -229,7 +230,7 @@ int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize,
     }
     while (num > 0) {
         block_t* blk;
-        if ((blk = calloc(1, sizeof(block_t))) == NULL) {
+        if ((blk = (block_t*)calloc(1, sizeof(block_t))) == NULL) {
             break;
         }
         if ((blk->data = malloc(bc->blocksize)) == NULL) {

@@ -16,7 +16,7 @@
 
 static inline uint32_t fnv1a32(const void* ptr, size_t len) {
     uint32_t n = FNV32_OFFSET_BASIS;
-    const uint8_t* data = ptr;
+    const uint8_t* data = (const uint8_t*) ptr;
     while (len-- > 0) {
         n = (n ^ (*data++)) * FNV32_PRIME;
     }
@@ -28,7 +28,7 @@ static inline uint32_t fnv1a32(const void* ptr, size_t len) {
 
 static inline uint64_t fnv1a64(const void* ptr, size_t len) {
     uint64_t n = FNV64_OFFSET_BASIS;
-    const uint8_t* data = ptr;
+    const uint8_t* data = (const uint8_t*) ptr;
     while (len-- > 0) {
         n = (n ^ (*data++)) * FNV64_PRIME;
     }

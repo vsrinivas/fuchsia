@@ -288,7 +288,7 @@ DIR* emu_opendir(const char* name) {
     MINDIR* dir = (MINDIR*)calloc(1, sizeof(MINDIR));
     dir->magic = MINFS_MAGIC0;
     dir->vn = vn;
-    return (void*)dir;
+    return (DIR*) dir;
 }
 
 struct dirent* emu_readdir(DIR* dirp) {
@@ -299,7 +299,7 @@ struct dirent* emu_readdir(DIR* dirp) {
     MINDIR* dir = (MINDIR*)dirp;
     for (;;) {
         if (dir->size >= sizeof(vdirent_t)) {
-            vdirent_t* vde = (void*)dir->ptr;
+            vdirent_t* vde = (vdirent_t*)dir->ptr;
             if (dir->size >= vde->size) {
                 struct dirent* ent = &dir->de;
                 strcpy(ent->d_name, vde->name);

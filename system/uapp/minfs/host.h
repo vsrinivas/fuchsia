@@ -4,8 +4,6 @@
 
 #pragma once
 
-// for S_IF*
-#define _XOPEN_SOURCE
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
