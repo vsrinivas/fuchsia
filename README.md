@@ -36,5 +36,5 @@ JSON representation of the initial data the module is started with.
 ## Contents
 
  - [docs](docs) - documentation
- - [service](service) - fidl API
+ - [services](services) - fidl API
  - [src](src) - implementation
