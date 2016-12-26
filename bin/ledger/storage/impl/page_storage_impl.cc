@@ -619,6 +619,27 @@ Status PageStorageImpl::GetSyncMetadata(std::string* sync_state) {
   return db_.GetSyncMetadata(sync_state);
 }
 
+void PageStorageImpl::GetCommitContents(const Commit& commit,
+                                        std::string min_key,
+                                        std::function<bool(Entry)> on_next,
+                                        std::function<void(Status)> on_done) {
+  btree::ForEachEntry(
+      this, commit.GetRootId(), min_key,
+      [on_next = std::move(on_next)](btree::EntryAndNodeId next) {
+        return on_next(next.entry);
+      },
+      std::move(on_done));
+}
+
+void PageStorageImpl::GetCommitContentsDiff(
+    const Commit& base_commit,
+    const Commit& other_commit,
+    std::function<bool(EntryChange)> on_next_diff,
+    std::function<void(Status)> on_done) {
+  btree::ForEachDiff(this, base_commit.GetRootId(), other_commit.GetRootId(),
+                     std::move(on_next_diff), std::move(on_done));
+}
+
 void PageStorageImpl::NotifyWatchers(
     const std::vector<std::unique_ptr<const Commit>>& commits,
     ChangeSource source) {

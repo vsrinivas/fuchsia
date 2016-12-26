@@ -140,5 +140,23 @@ Status PageStorageEmptyImpl::GetSyncMetadata(std::string* sync_state) {
   return Status::NOT_IMPLEMENTED;
 }
 
+void PageStorageEmptyImpl::GetCommitContents(
+    const Commit& commit,
+    std::string min_key,
+    std::function<bool(Entry)> on_next,
+    std::function<void(Status)> on_done) {
+  FTL_NOTIMPLEMENTED();
+  on_done(Status::NOT_IMPLEMENTED);
+}
+
+void PageStorageEmptyImpl::GetCommitContentsDiff(
+    const Commit& base_commit,
+    const Commit& other_commit,
+    std::function<bool(EntryChange)> on_next_diff,
+    std::function<void(Status)> on_done) {
+  FTL_NOTIMPLEMENTED();
+  on_done(Status::NOT_IMPLEMENTED);
+}
+
 }  // namespace test
 }  // namespace storage

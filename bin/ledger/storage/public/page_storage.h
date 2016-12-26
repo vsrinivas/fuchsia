@@ -143,6 +143,29 @@ class PageStorage {
   // Retrieves the opaque sync metadata associated with this page.
   virtual Status GetSyncMetadata(std::string* sync_state) = 0;
 
+  // Commit contents.
+
+  // Iterates over the entries of the given |commit| and calls |on_next| on
+  // found entries with a key equal to or greater than |min_key|. Returning
+  // false from |on_next| will immediately stop the iteration. |on_done| is
+  // called once, upon successfull completion, i.e. when there are no more
+  // elements or iteration was interrupted, or if an error occurs.
+  virtual void GetCommitContents(const Commit& commit,
+                                 std::string min_key,
+                                 std::function<bool(Entry)> on_next,
+                                 std::function<void(Status)> on_done) = 0;
+
+  // Iterates over the difference between the contents of two commits and calls
+  // |on_next_diff| on found changed entries. Returning false from
+  // |on_next_diff| will immediately stop the iteration. |on_done| is called
+  // once, upon successfull completion, i.e. when there are no more differences
+  // or iteration was interrupted, or if an error occurs.
+  virtual void GetCommitContentsDiff(
+      const Commit& base_commit,
+      const Commit& other_commit,
+      std::function<bool(EntryChange)> on_next_diff,
+      std::function<void(Status)> on_done) = 0;
+
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageStorage);
 };
