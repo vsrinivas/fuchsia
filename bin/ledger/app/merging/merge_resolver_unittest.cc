@@ -37,18 +37,6 @@ std::function<void(storage::Journal*)> DeleteKeyFromJournal(
   };
 }
 
-std::vector<storage::Entry> GetCommitContents(
-    std::unique_ptr<storage::CommitContents> contents) {
-  std::vector<storage::Entry> result;
-  std::unique_ptr<storage::Iterator<const storage::Entry>> it =
-      contents->begin();
-  while (it->Valid()) {
-    result.push_back(**it);
-    it->Next();
-  }
-  return result;
-}
-
 class MergeResolverTest : public test::TestWithMessageLoop {
  public:
   MergeResolverTest() {}
@@ -79,6 +67,22 @@ class MergeResolverTest : public test::TestWithMessageLoop {
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, actual_status);
     return actual_commit_id;
+  }
+
+  std::vector<storage::Entry> GetCommitContents(const storage::Commit& commit) {
+    storage::Status status;
+    std::vector<storage::Entry> result;
+    auto on_next = [&result](storage::Entry e) {
+      result.push_back(e);
+      return true;
+    };
+    page_storage_->GetCommitContents(
+        commit, "", std::move(on_next),
+        test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+    EXPECT_FALSE(RunLoopWithTimeout());
+
+    EXPECT_EQ(storage::Status::OK, status);
+    return result;
   }
 
   std::unique_ptr<storage::PageStorageImpl> page_storage_;
@@ -211,8 +215,7 @@ TEST_F(MergeResolverTest, LastOneWins) {
   EXPECT_EQ(1u, ids.size());
   std::unique_ptr<const storage::Commit> commit;
   EXPECT_EQ(storage::Status::OK, page_storage_->GetCommit(ids[0], &commit));
-  std::vector<storage::Entry> content_vector =
-      GetCommitContents(commit->GetContents());
+  std::vector<storage::Entry> content_vector = GetCommitContents(*commit);
   // Entries are ordered by keys
   ASSERT_EQ(2u, content_vector.size());
   EXPECT_EQ("key2", content_vector[0].key);

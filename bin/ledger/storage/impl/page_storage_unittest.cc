@@ -261,14 +261,11 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     // Check the contents.
     std::unique_ptr<const Commit> commit;
     EXPECT_EQ(Status::OK, storage_->GetCommit(commit_id, &commit));
-    std::unique_ptr<Iterator<const Entry>> contents =
-        commit->GetContents()->begin();
+    std::vector<Entry> entries = GetCommitContents(*commit);
+    EXPECT_EQ(static_cast<size_t>(keys), entries.size());
     for (int i = 0; i < keys; ++i) {
-      EXPECT_TRUE(contents->Valid());
-      EXPECT_EQ("key" + std::to_string(i), (*contents)->key);
-      contents->Next();
+      EXPECT_EQ("key" + std::to_string(i), entries[i].key);
     }
-    EXPECT_FALSE(contents->Valid());
 
     return commit_id;
   }
@@ -283,6 +280,22 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
           message_loop_.PostQuitTask();
         });
     message_loop_.Run();
+  }
+
+  std::vector<Entry> GetCommitContents(const Commit& commit) {
+    Status status;
+    std::vector<Entry> result;
+    auto on_next = [&result](Entry e) {
+      result.push_back(e);
+      return true;
+    };
+    storage_->GetCommitContents(
+        commit, "", std::move(on_next),
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status));
+    EXPECT_FALSE(RunLoopWithTimeout());
+
+    EXPECT_EQ(Status::OK, status);
+    return result;
   }
 
   std::thread io_thread_;
