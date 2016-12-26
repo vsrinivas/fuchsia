@@ -34,7 +34,6 @@ class Merger : public callback::Cancellable {
   void SetOnDone(ftl::Closure callback) override;
 
  private:
-  void OnDiffReady();
   void Done();
 
   ftl::Closure on_done_;
@@ -73,55 +72,46 @@ ftl::RefPtr<Merger> Merger::Create(
 }
 
 void Merger::Start() {
-  std::unique_ptr<storage::CommitContents> right_contents =
-      right_->GetContents();
-  ancestor_contents_ = ancestor_->GetContents();
-  ancestor_contents_->diff(
-      std::move(right_contents),
-      [this](storage::Status status,
-             std::unique_ptr<storage::Iterator<const storage::EntryChange>>
-                 right_changes) mutable {
-        if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Unable to create diff for merging: " << status;
-          Done();
-          return;
-        }
-        right_changes_ = std::move(right_changes);
-        OnDiffReady();
-      });
-}
-
-void Merger::OnDiffReady() {
-  if (cancelled_) {
-    return;
-  }
   storage::Status s =
       storage_->StartMergeCommit(left_->GetId(), right_->GetId(), &journal_);
   FTL_DCHECK(s == storage::Status::OK);
 
-  while (right_changes_->Valid()) {
-    const std::string& key = (*right_changes_)->entry.key;
-    if ((*right_changes_)->deleted) {
-      storage::Status s = journal_->Delete(key);
-      if (s != storage::Status::OK) {
-        FTL_LOG(ERROR) << "Error while merging commits: " << s;
-      }
-    } else {
-      storage::Status s = journal_->Put(key, (*right_changes_)->entry.object_id,
-                                        (*right_changes_)->entry.priority);
-      if (s != storage::Status::OK) {
-        FTL_LOG(ERROR) << "Error while merging commits: " << s;
-      }
+  auto on_next = [this](storage::EntryChange change) {
+    if (cancelled_) {
+      return false;
     }
-    right_changes_->Next();
-  }
-  journal_->Commit(
-      [this](storage::Status status, const storage::CommitId& commit_id) {
-        if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
-        }
-        Done();
-      });
+    const std::string& key = change.entry.key;
+    storage::Status s;
+    if (change.deleted) {
+      s = journal_->Delete(key);
+    } else {
+      s = journal_->Put(key, change.entry.object_id, change.entry.priority);
+    }
+    if (s != storage::Status::OK) {
+      FTL_LOG(ERROR) << "Error while merging commits: " << s;
+    }
+    return true;
+  };
+
+  auto on_done = [this](storage::Status s) {
+    if (cancelled_) {
+      return;
+    }
+    if (s != storage::Status::OK) {
+      FTL_LOG(ERROR) << "Unable to create diff for merging: " << s;
+      Done();
+      return;
+    }
+    journal_->Commit(
+        [this](storage::Status s, const storage::CommitId& commit_id) {
+          if (s != storage::Status::OK) {
+            FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+          }
+          Done();
+        });
+  };
+  storage_->GetCommitContentsDiff(*ancestor_, *right_, std::move(on_next),
+                               std::move(on_done));
 }
 
 void Merger::Cancel() {
