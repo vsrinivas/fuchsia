@@ -391,22 +391,29 @@ void TreeNode::Mutation::Finish(
   }
 
   // No parent node, create a new one.
-  std::unique_ptr<const TreeNode> new_node;
-  ObjectId tmp_node_id;
+  ObjectId empty_node_id;
   Status s =
       TreeNode::FromEntries(node_.page_storage_, std::vector<Entry>(),
-                            std::vector<ObjectId>{ObjectId()}, &tmp_node_id);
+                            std::vector<ObjectId>{ObjectId()}, &empty_node_id);
   FTL_DCHECK(s == Status::OK);
-  s = TreeNode::FromIdSynchronous(node_.page_storage_, tmp_node_id, &new_node);
-  FTL_DCHECK(s == Status::OK);
-
-  // new_entries could contain more than max_size elements, so we can't directly
-  // create the root using FromEntries. We use a mutation instead.
-  TreeNode::Mutation mutation = new_node->StartMutation();
-  for (size_t i = 0; i < new_entries.size(); ++i) {
-    mutation.AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
-  }
-  mutation.Finish(max_size, true, max_key, new_nodes, std::move(on_done));
+  TreeNode::FromId(node_.page_storage_, empty_node_id, [
+    max_size, max_key, new_entries = std::move(new_entries),
+    new_children = std::move(new_children), new_nodes,
+    on_done = std::move(on_done)
+  ](Status s, std::unique_ptr<const TreeNode> new_node) {
+    if (s != Status::OK) {
+      on_done(s, "", nullptr);
+      return;
+    }
+    // new_entries could contain more than max_size elements,
+    // so we can't directly create the root using FromEntries.
+    // We use a mutation instead.
+    TreeNode::Mutation mutation = new_node->StartMutation();
+    for (size_t i = 0; i < new_entries.size(); ++i) {
+      mutation.AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
+    }
+    mutation.Finish(max_size, true, max_key, new_nodes, std::move(on_done));
+  });
 }
 
 void TreeNode::Mutation::CopyUntil(std::string key) {
