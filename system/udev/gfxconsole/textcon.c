@@ -19,7 +19,8 @@ static inline void movecursor(textcon_t* tc, int x, int y) {
 static inline void pushline(textcon_t* tc, int y) {
     tc->pushline(tc->cookie, y);
 }
-static inline void setparam(textcon_t* tc, int param, void* arg, size_t arglen) {
+static inline void setparam(textcon_t* tc, int param, uint8_t* arg,
+                            size_t arglen) {
     tc->setparam(tc->cookie, param, arg, arglen);
 }
 
@@ -544,7 +545,8 @@ static void putc_plain(textcon_t* tc, uint8_t c) {
     movecursor(tc, tc->x, tc->y);
 }
 
-void tc_init(textcon_t* tc, int w, int h, void* data, uint8_t fg, uint8_t bg) {
+void tc_init(textcon_t* tc, int w, int h, vc_char_t* data,
+             uint8_t fg, uint8_t bg) {
     tc->w = w;
     tc->h = h;
     tc->x = 0;

@@ -60,7 +60,8 @@ struct textcon {
     uint8_t args[TC_MAX_ARG_LENGTH + 1];
 };
 
-void tc_init(textcon_t* tc, int w, int h, void* data, uint8_t fg, uint8_t bg);
+void tc_init(textcon_t* tc, int w, int h, vc_char_t* data,
+             uint8_t fg, uint8_t bg);
 
 static inline void tc_putc(textcon_t* tc, uint8_t c) {
     tc->putc(tc, c);
