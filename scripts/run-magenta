@@ -19,8 +19,10 @@ function HELP {
     echo "-n                  : run with emulated nic"
     echo "-N                  : run with emulated nic via tun/tap"
     echo "-o <dir>            : build directory"
+    echo "-q <directory>      : location of qemu, defaults to looking on \$PATH"
     echo "-r                  : run release build"
     echo "-s <number of cpus> : number of cpus, 1 for uniprocessor, default is 4"
+    echo "-u <path>           : execute qemu startUp script, default is no script"
     echo "-v                  : use vnc based display"
     echo "-x <bootfs>         : add eXtra bootfs"
     echo "-h for help"
@@ -40,7 +42,9 @@ DO_KVM=0
 MEMSIZE_DEFAULT=2048
 MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
+QEMUDIR=
 RELEASE=0
+UPSCRIPT=no
 VNC=0
 SMP=4
 INITRD=
@@ -52,7 +56,7 @@ else
   IFNAME="qemu"
 fi
 
-while getopts a:Abc:dgI:km:nNo:rs:vx:h FLAG; do
+while getopts a:Abc:dgI:km:nNo:q:rs:u:vx:h FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         A) AUDIO=1;;
@@ -66,8 +70,10 @@ while getopts a:Abc:dgI:km:nNo:rs:vx:h FLAG; do
         n) NET=1;;
         N) NET=2;;
         o) BUILDDIR=$OPTARG;;
+        q) QEMUDIR=${OPTARG}/;;
         r) RELEASE=1;;
         s) SMP=$OPTARG;;
+        u) UPSCRIPT=$OPTARG;;
         v) VNC=1;;
         x) INITRD=$OPTARG;;
         h) HELP;;
@@ -147,9 +153,9 @@ fi
 
 if [ "$NET" -eq 2 ]; then
     if [ $(uname -s) == "Darwin" ]; then
-        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=no,downscript=no,id=net0"
+        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
     else
-        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=no,downscript=no,id=net0"
+        ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
     fi
     if [ "$ARCH" == "x86-64" ]; then
         ARGS+=" -device e1000,netdev=net0"
@@ -170,15 +176,15 @@ fi
 
 case $ARCH in
     arm32)
-        QEMU=qemu-system-arm
+        QEMU=${QEMUDIR}qemu-system-arm
         ARGS+=" -machine virt -cpu cortex-a15 -kernel $BUILDDIR/magenta.elf"
         ;;
     arm64)
-        QEMU=qemu-system-aarch64
+        QEMU=${QEMUDIR}qemu-system-aarch64
         ARGS+=" -machine virt -cpu cortex-a53 -kernel $BUILDDIR/magenta.elf"
         ;;
     x86-64)
-        QEMU=qemu-system-x86_64
+        QEMU=${QEMUDIR}qemu-system-x86_64
         ARGS+=" -machine q35 -kernel $BUILDDIR/magenta.bin"
         if [ $DO_KVM -ne 0 ]; then
           ARGS+=" -enable-kvm -cpu host"
