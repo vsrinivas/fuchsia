@@ -24,6 +24,7 @@ fi
 export FUCHSIA_DIR="$(dirname "${FUCHSIA_SCRIPTS_DIR}")"
 export FUCHSIA_OUT_DIR="${FUCHSIA_DIR}/out"
 export MAGENTA_DIR="${FUCHSIA_DIR}/magenta"
+export QEMU_DIR="${FUCHSIA_DIR}/buildtools/qemu/bin"
 
 ### envhelp: print usage for command or list of commands
 
@@ -222,7 +223,8 @@ END
 function mrun() {
   mcheck || return 1
 
-  "${MAGENTA_DIR}/scripts/run-magenta" -o "${MAGENTA_BUILD_DIR}" -a "${MAGENTA_ARCH}" "$@"
+  "${MAGENTA_DIR}/scripts/run-magenta" -o "${MAGENTA_BUILD_DIR}" -a "${MAGENTA_ARCH}" \
+    -q "${QEMU_DIR}" $@
 }
 
 ### msymbolize: symbolizes stack traces
