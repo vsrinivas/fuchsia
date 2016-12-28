@@ -1,6 +1,24 @@
 # QEMU
 
-## Install Prerequisites
+Magenta can run under emulation using QEMU. QEMU can either be installed via
+prebuilt binaries, or built locally. (Note that a full Fuchsia checkout already
+includes prebuilts.)
+
+## Install Prebuilt QEMU
+
+```
+git clone https://fuchsia.googlesource.com/buildtools
+cd buildtools
+./update.sh
+```
+
+This will download QEMU to the buildtools/qemu directory. You can either add
+buildtools/qemu/bin to your PATH, or specify buildtools/qemu/bin using the
+-q flag to the run-magenta scripts (see below).
+
+## Build QEMU
+
+### Install Prerequisites
 
 Building QEMU on macOS requires a few packages. As of macOS 10.12.1:
 
@@ -11,11 +29,7 @@ brew install pkg-config glib automake libtool
 # Or use http://macports.org ("port install ...") or build manually
 ```
 
-## Build QEMU
-
-If you don't want to install in /usr/local (the default), which will require you
-to be root, add --prefix=/path/to/install  (perhaps $HOME/qemu) and then you'll
-need to add /path/to/install/bin to your PATH.
+### Build
 
 ```
 cd $SRC
@@ -25,6 +39,11 @@ cd qemu
 make -j32
 sudo make install
 ```
+
+If you don't want to install in /usr/local (the default), which will require you
+to be root, add --prefix=/path/to/install (perhaps $HOME/qemu). Then you'll
+either need to add /path/to/install/bin to your PATH or use -q /path/to/install
+when invoking run-magenta-{arch}.
 
 ## Run Magenta under QEMU
 
@@ -36,8 +55,10 @@ sudo make install
 ./scripts/run-magenta-x86-64
 ```
 
-The -h flag will list a number of options, including things like -b to rebuild first
-if necessary and -g to run with a graphical framebuffer.
+If QEMU is not on your path, use -q <directory> to specify its location.
+
+The -h flag will list a number of options, including things like -b to rebuild
+first if necessary and -g to run with a graphical framebuffer.
 
 To exit qemu, enter Ctrl-a x. Use Ctrl-a h to see other commands.
 
