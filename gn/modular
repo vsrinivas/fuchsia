@@ -88,6 +88,10 @@
             "bootfs_path": "apps/swap_recipe"
         },
         {
+            "binary": "test_runner",
+            "bootfs_path": "apps/test_runner"
+        },
+        {
             "binary": "user_runner",
             "bootfs_path": "apps/user_runner"
         }
