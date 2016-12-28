@@ -268,8 +268,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/exit/exit.c \
     $(LOCAL_DIR)/src/exit/quick_exit.c \
     $(LOCAL_DIR)/src/fcntl/creat.c \
-    $(LOCAL_DIR)/src/fcntl/posix_fadvise.c \
-    $(LOCAL_DIR)/src/fcntl/posix_fallocate.c \
     $(LOCAL_DIR)/src/fenv/__flt_rounds.c \
     $(LOCAL_DIR)/src/fenv/fegetexceptflag.c \
     $(LOCAL_DIR)/src/fenv/feholdexcept.c \
@@ -315,7 +313,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/legacy/valloc.c \
     $(LOCAL_DIR)/src/linux/adjtime.c \
     $(LOCAL_DIR)/src/linux/cache.c \
-    $(LOCAL_DIR)/src/linux/chroot.c \
     $(LOCAL_DIR)/src/linux/flock.c \
     $(LOCAL_DIR)/src/linux/ptrace.c \
     $(LOCAL_DIR)/src/linux/quotactl.c \
@@ -323,8 +320,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/linux/settimeofday.c \
     $(LOCAL_DIR)/src/linux/stime.c \
     $(LOCAL_DIR)/src/linux/utimes.c \
-    $(LOCAL_DIR)/src/linux/wait3.c \
-    $(LOCAL_DIR)/src/linux/wait4.c \
     $(LOCAL_DIR)/src/locale/__lctrans.c \
     $(LOCAL_DIR)/src/locale/__mo_lookup.c \
     $(LOCAL_DIR)/src/locale/bind_textdomain_codeset.c \
@@ -517,16 +512,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/mman/munmap.c \
     $(LOCAL_DIR)/src/mman/posix_madvise.c \
     $(LOCAL_DIR)/src/mman/shm_open.c \
-    $(LOCAL_DIR)/src/mq/mq_close.c \
-    $(LOCAL_DIR)/src/mq/mq_getattr.c \
-    $(LOCAL_DIR)/src/mq/mq_notify.c \
-    $(LOCAL_DIR)/src/mq/mq_open.c \
-    $(LOCAL_DIR)/src/mq/mq_receive.c \
-    $(LOCAL_DIR)/src/mq/mq_send.c \
-    $(LOCAL_DIR)/src/mq/mq_setattr.c \
-    $(LOCAL_DIR)/src/mq/mq_timedreceive.c \
-    $(LOCAL_DIR)/src/mq/mq_timedsend.c \
-    $(LOCAL_DIR)/src/mq/mq_unlink.c \
     $(LOCAL_DIR)/src/multibyte/btowc.c \
     $(LOCAL_DIR)/src/multibyte/c16rtomb.c \
     $(LOCAL_DIR)/src/multibyte/c32rtomb.c \
@@ -954,19 +939,14 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/unistd/ctermid.c \
     $(LOCAL_DIR)/src/unistd/dup3.c \
     $(LOCAL_DIR)/src/unistd/fchdir.c \
-    $(LOCAL_DIR)/src/unistd/fchownat.c \
     $(LOCAL_DIR)/src/unistd/gethostname.c \
     $(LOCAL_DIR)/src/unistd/getlogin.c \
     $(LOCAL_DIR)/src/unistd/getlogin_r.c \
-    $(LOCAL_DIR)/src/unistd/linkat.c \
     $(LOCAL_DIR)/src/unistd/nice.c \
     $(LOCAL_DIR)/src/unistd/pause.c \
     $(LOCAL_DIR)/src/unistd/posix_close.c \
-    $(LOCAL_DIR)/src/unistd/readlinkat.c \
-    $(LOCAL_DIR)/src/unistd/renameat.c \
     $(LOCAL_DIR)/src/unistd/setpgrp.c \
     $(LOCAL_DIR)/src/unistd/sleep.c \
-    $(LOCAL_DIR)/src/unistd/symlinkat.c \
     $(LOCAL_DIR)/src/unistd/tcgetpgrp.c \
     $(LOCAL_DIR)/src/unistd/tcsetpgrp.c \
     $(LOCAL_DIR)/src/unistd/ttyname.c \

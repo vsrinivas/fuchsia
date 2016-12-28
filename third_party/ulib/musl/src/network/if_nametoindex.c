@@ -13,6 +13,6 @@ unsigned if_nametoindex(const char* name) {
         return 0;
     strncpy(ifr.ifr_name, name, sizeof ifr.ifr_name);
     r = ioctl(fd, SIOCGIFINDEX, &ifr);
-    __syscall(SYS_close, fd);
+    close(fd);
     return r < 0 ? 0 : ifr.ifr_ifindex;
 }

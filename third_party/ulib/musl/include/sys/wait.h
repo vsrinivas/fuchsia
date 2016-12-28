@@ -23,12 +23,6 @@ pid_t waitpid(pid_t, int*, int);
 int waitid(idtype_t, id_t, siginfo_t*, int);
 #endif
 
-#if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
-#include <sys/resource.h>
-pid_t wait3(int*, int, struct rusage*);
-pid_t wait4(pid_t, int*, int, struct rusage*);
-#endif
-
 #define WNOHANG 1
 #define WUNTRACED 2
 

@@ -94,6 +94,12 @@ static int stub_link(const char* oldpath, const char* newpath) {
 }
 weak_alias(stub_link, link);
 
+static int stub_linkat(int fd1, const char* existing, int fd2, const char* new, int flag) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_linkat, linkat);
+
 static int stub_unlinkat(int fd, const char* path, int flag) {
     errno = ENOSYS;
     return -1;
@@ -111,6 +117,12 @@ static ssize_t stub_readlink(const char* path, char* buf, size_t bufsiz) {
     return -1;
 }
 weak_alias(stub_readlink, readlink);
+
+static ssize_t stub_readlinkat(int fd, const char* restrict path, char* restrict buf, size_t bufsize) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_readlinkat, readlinkat);
 
 static int stub_mkdir(const char* path, mode_t mode) {
     errno = ENOSYS;
@@ -270,6 +282,12 @@ static int stub_fchown(int fd, uid_t owner, gid_t group) {
 }
 weak_alias(stub_fchown, fchown);
 
+static int stub_fchownat(int fd, const char* path, uid_t uid, gid_t gid, int flag) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_fchownat, fchownat);
+
 static int stub_lchown(const char* path, uid_t owner, gid_t group) {
     errno = ENOSYS;
     return -1;
@@ -336,11 +354,23 @@ static int stub_rename(const char* oldpath, const char* newpath) {
 }
 weak_alias(stub_rename, rename);
 
+static int stub_renameat(int oldfd, const char* old, int newfd, const char* new) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_renameat, renameat);
+
 static int stub_symlink(const char* oldpath, const char* newpath) {
     errno = ENOSYS;
     return -1;
 }
 weak_alias(stub_symlink, symlink);
+
+static int stub_symlinkat(const char* existing, int fd, const char* new) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_symlinkat, symlinkat);
 
 static void stub_sync(void) {
     errno = ENOSYS;
@@ -385,3 +415,15 @@ static int stub_ioctl(int fd, int req, ...) {
     return -1;
 }
 weak_alias(stub_ioctl, ioctl);
+
+static int stub_posix_fadvise(int fd, off_t base, off_t len, int advice) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_posix_fadvise, posix_fadvise);
+
+static int stub_posix_fallocate(int fd, off_t base, off_t len) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_posix_fallocate, posix_fallocate);

@@ -26,14 +26,10 @@ void __init_security(void) {
     if (aux[AT_UID] == aux[AT_EUID] && aux[AT_GID] == aux[AT_EGID] && !aux[AT_SECURE]) return;
 
     struct pollfd pfd[3] = {{.fd = 0}, {.fd = 1}, {.fd = 2}};
-#ifdef SYS_poll
-    __syscall(SYS_poll, pfd, 3, 0);
-#else
-    __syscall(SYS_ppoll, pfd, 3, &(struct timespec){0}, 0, _NSIG / 8);
-#endif
+    poll(pfd, 3, 0);
     for (i = 0; i < 3; i++)
         if (pfd[i].revents & POLLNVAL)
-            if (__sys_open("/dev/null", O_RDWR) < 0) a_crash();
+            if (open("/dev/null", O_RDWR) < 0) a_crash();
     libc.secure = 1;
 #endif
 }

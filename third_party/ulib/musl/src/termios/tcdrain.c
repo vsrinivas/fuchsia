@@ -1,8 +1,9 @@
-#include "libc.h"
-#include "syscall.h"
-#include <sys/ioctl.h>
 #include <termios.h>
 
+#include <errno.h>
+
 int tcdrain(int fd) {
-    return syscall(SYS_ioctl, fd, TCSBRK, 1);
+    // TODO(kulakowski) terminal handling.
+    errno = ENOSYS;
+    return -1;
 }

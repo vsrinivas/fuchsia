@@ -16,12 +16,12 @@ FILE* tmpfile(void) {
         ;
     for (try = 0; try < MAXTRIES; try ++) {
         __randname(s + 13);
-        fd = sys_open(s, O_RDWR | O_CREAT | O_EXCL, 0600);
+        fd = open(s, O_RDWR | O_CREAT | O_EXCL, 0600);
         if (fd >= 0) {
             unlink(s);
             f = __fdopen(fd, "w+");
             if (!f)
-                __syscall(SYS_close, fd);
+                close(fd);
             return f;
         }
     }

@@ -8,7 +8,7 @@ void* __mmap(void*, size_t, int, int, int, off_t);
 const char unsigned* __map_file(const char* pathname, size_t* size) {
     struct stat st;
     const unsigned char* map = MAP_FAILED;
-    int fd = __sys_open(pathname, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
+    int fd = open(pathname, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
     if (fd < 0)
         return 0;
     if (!fstat(fd, &st)) {

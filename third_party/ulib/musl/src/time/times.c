@@ -1,6 +1,8 @@
-#include "syscall.h"
 #include <sys/times.h>
 
+#include <errno.h>
+
 clock_t times(struct tms* tms) {
-    return __syscall(SYS_times, tms);
+    errno = ENOSYS;
+    return -1;
 }

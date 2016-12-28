@@ -1,12 +1,9 @@
-#include "libc.h"
-#include "syscall.h"
 #include <signal.h>
-#include <unistd.h>
+
+#include <poll.h>
+#include <stddef.h>
 
 int pause(void) {
-#ifdef SYS_pause
-    return syscall(SYS_pause);
-#else
-    return syscall(SYS_ppoll, 0, 0, 0, 0);
-#endif
+    // TODO(kulakowski) Signal handling.
+    return poll(NULL, 0, 0);
 }

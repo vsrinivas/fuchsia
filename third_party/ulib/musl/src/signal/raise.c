@@ -1,14 +1,14 @@
 #include "pthread_impl.h"
-#include "syscall.h"
+#include <errno.h>
 #include <signal.h>
 #include <stdint.h>
 
 int raise(int sig) {
-    int tid, ret;
+    int ret;
     sigset_t set;
     __block_app_sigs(&set);
-    tid = __syscall(SYS_gettid);
-    ret = syscall(SYS_tkill, tid, sig);
+    // TODO(kulakowski) Signals.
+    ret = ENOSYS;
     __restore_sigs(&set);
     return ret;
 }

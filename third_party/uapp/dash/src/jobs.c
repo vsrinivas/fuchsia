@@ -1138,7 +1138,10 @@ waitproc(int block, int *status)
 
 	do {
 		gotsigchld = 0;
-		err = wait3(status, flags, NULL);
+		// TODO(kulakowski) Actually wait on children.
+		// err = wait3(status, flags, NULL);
+		(void)flags;
+		err = -1;
 		if (err || !block)
 			break;
 

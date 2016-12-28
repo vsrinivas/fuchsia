@@ -21,11 +21,11 @@ int fchmodat(int fd, const char* path, mode_t mode, int flag) {
     if (S_ISLNK(st.st_mode))
         return __syscall_ret(-EOPNOTSUPP);
 
-    if ((fd2 = __syscall(SYS_openat, fd, path,
-                         O_RDONLY | O_PATH | O_NOFOLLOW | O_NOCTTY | O_CLOEXEC)) < 0) {
-        if (fd2 == -ELOOP)
-            return __syscall_ret(-EOPNOTSUPP);
-        return __syscall_ret(fd2);
+    if ((fd2 = openat(fd, path,
+                      O_RDONLY | O_PATH | O_NOFOLLOW | O_NOCTTY | O_CLOEXEC)) < 0) {
+        if (errno == ELOOP)
+            errno = EOPNOTSUPP;
+        return -1;
     }
 
     __procfdname(proc, fd2);
@@ -37,6 +37,6 @@ int fchmodat(int fd, const char* path, mode_t mode, int flag) {
             ret = __syscall(SYS_fchmodat, AT_FDCWD, proc, mode);
     }
 
-    __syscall(SYS_close, fd2);
+    close(fd2);
     return __syscall_ret(ret);
 }

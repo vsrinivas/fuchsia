@@ -157,7 +157,6 @@ unsigned ualarm(unsigned, unsigned);
 #define L_XTND 2
 pid_t vfork(void);
 int vhangup(void);
-int chroot(const char*);
 int getpagesize(void);
 int getdtablesize(void);
 int sethostname(const char*, size_t);

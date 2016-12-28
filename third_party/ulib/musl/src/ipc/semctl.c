@@ -1,7 +1,7 @@
-#include "ipc.h"
-#include "syscall.h"
-#include <stdarg.h>
 #include <sys/sem.h>
+
+#include <errno.h>
+#include <stdarg.h>
 
 union semun {
     int val;
@@ -25,5 +25,7 @@ int semctl(int id, int num, int cmd, ...) {
         arg = va_arg(ap, union semun);
         va_end(ap);
     }
-    return syscall(SYS_semctl, id, num, cmd | IPC_64, arg.buf);
+
+    errno = ENOSYS;
+    return -1;
 }

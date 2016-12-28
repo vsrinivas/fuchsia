@@ -1,7 +1,9 @@
-#include "libc.h"
-#include "syscall.h"
 #include <sys/wait.h>
 
+#include <errno.h>
+
 pid_t waitpid(pid_t pid, int* status, int options) {
-    return syscall(SYS_wait4, pid, status, options, 0);
+    // TODO(kulakowski) Actually wait on |pid|.
+    errno = ENOSYS;
+    return -1;
 }

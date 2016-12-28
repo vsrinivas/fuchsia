@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 static void cleanup(void* p) {
-    __syscall(SYS_close, (intptr_t)p);
+    close((int)(intptr_t)p);
 }
 
 static unsigned long mtime(void) {

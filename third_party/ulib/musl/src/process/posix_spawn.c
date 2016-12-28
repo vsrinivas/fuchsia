@@ -22,10 +22,6 @@ struct args {
 
 void __get_handler_set(sigset_t*);
 
-static int __sys_dup2(int old, int new) {
-    return dup2(old, new);
-}
-
 static int child(void* args_vp) {
     int i, ret;
     struct sigaction sa = {0};
@@ -85,25 +81,27 @@ static int child(void* args_vp) {
                 ret = dup(p);
                 if (ret < 0)
                     goto fail;
-                __syscall(SYS_close, p);
+                close(p);
                 p = ret;
             }
             switch (op->cmd) {
             case FDOP_CLOSE:
-                __syscall(SYS_close, op->fd);
+                close(op->fd);
                 break;
             case FDOP_DUP2:
-                if ((ret = __sys_dup2(op->srcfd, op->fd)) < 0)
+                if ((ret = dup2(op->srcfd, op->fd)) < 0)
                     goto fail;
                 break;
             case FDOP_OPEN:
-                fd = __sys_open(op->path, op->oflag, op->mode);
-                if ((ret = fd) < 0)
+                fd = open(op->path, op->oflag, op->mode);
+                if (fd < 0) {
+                    ret = errno;
                     goto fail;
+                }
                 if (fd != op->fd) {
-                    if ((ret = __sys_dup2(fd, op->fd)) < 0)
+                    if ((ret = dup2(fd, op->fd)) < 0)
                         goto fail;
-                    __syscall(SYS_close, fd);
+                    close(fd);
                 }
                 break;
             }

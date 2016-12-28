@@ -38,17 +38,3 @@ long __syscall_ret(unsigned long r);
 #undef SYS_getrlimit
 #define SYS_getrlimit SYS_ugetrlimit
 #endif
-
-#ifdef SYS_fadvise64_64
-#undef SYS_fadvise
-#define SYS_fadvise SYS_fadvise64_64
-#elif defined(SYS_fadvise64)
-#undef SYS_fadvise
-#define SYS_fadvise SYS_fadvise64
-#endif
-
-#define __sys_open2(x, pn, fl) __syscall(SYS_openat, AT_FDCWD, pn, (fl) | O_LARGEFILE)
-#define __sys_open3(x, pn, fl, mo) __syscall(SYS_openat, AT_FDCWD, pn, (fl) | O_LARGEFILE, mo)
-
-#define __sys_open(...) __SYSCALL_DISP(__sys_open, , __VA_ARGS__)
-#define sys_open(...) __syscall_ret(__sys_open(__VA_ARGS__))

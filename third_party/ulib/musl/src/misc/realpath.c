@@ -21,7 +21,7 @@ char* realpath(const char* restrict filename, char* restrict resolved) {
         return 0;
     }
 
-    fd = sys_open(filename, O_PATH | O_NONBLOCK | O_CLOEXEC);
+    fd = open(filename, O_PATH | O_NONBLOCK | O_CLOEXEC);
     if (fd < 0)
         return 0;
     __procfdname(buf, fd);
@@ -39,9 +39,9 @@ char* realpath(const char* restrict filename, char* restrict resolved) {
         goto err;
     }
 
-    __syscall(SYS_close, fd);
+    close(fd);
     return resolved ? strcpy(resolved, tmp) : strdup(tmp);
-err:
-    __syscall(SYS_close, fd);
+ err:
+    close(fd);
     return 0;
 }
