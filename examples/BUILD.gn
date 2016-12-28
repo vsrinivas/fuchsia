@@ -9,6 +9,7 @@ group("examples") {
     "hello_world_cpp",
     "hello_world_flutter",
     "https_flutter",
+    "swap_cpp",
     "todo_cpp",
   ]
 }
