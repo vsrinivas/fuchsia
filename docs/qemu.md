@@ -81,7 +81,7 @@ This is sufficient to enable link local IPv6 (as the loglistener tool uses).
 
 On macOS:
 
-macOS does not support tun/tap devices out of the box, however there is a widely
+macOS does not support tun/tap devices out of the box; however, there is a widely
 used set of kernel extensions called tuntaposx which can be downloaded
 [here](http://tuntaposx.sourceforge.net/download.xhtml). Once the installer
 completes, the extensions will create up to 16 tun/tap devices. The
