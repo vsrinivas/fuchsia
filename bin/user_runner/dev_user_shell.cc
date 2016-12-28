@@ -67,8 +67,14 @@ class DevUserShellView : public mozart::BaseView {
   ~DevUserShellView() override = default;
 
   void SetRootModuleView(fidl::InterfaceHandle<mozart::ViewOwner> view_owner) {
-    GetViewContainer()->AddChild(kRootModuleKey, std::move(view_owner));
-    root_view_data_ = std::unique_ptr<ViewData>(new ViewData());
+    if (view_owner) {
+      GetViewContainer()->AddChild(kRootModuleKey, std::move(view_owner));
+      root_view_data_.reset(new ViewData());
+    } else {
+      GetViewContainer()->RemoveChild(kRootModuleKey, nullptr);
+      root_view_data_.reset(nullptr);
+      Invalidate();
+    }
   }
 
  private:
@@ -249,6 +255,7 @@ class DevUserShellApp
       FTL_LOG(INFO) << "DevUserShell STOP";
       story_watcher_binding_.Close();
       story_controller_.reset();
+      view_->SetRootModuleView(nullptr);
     });
   }
 
