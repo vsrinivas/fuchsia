@@ -13,5 +13,6 @@ group("modular") {
     "src/document_store",
     "src/story_runner:all",
     "src/user_runner:all",
+    "test_runner",
   ]
 }
