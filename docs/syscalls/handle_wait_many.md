@@ -30,7 +30,7 @@ containing the handle and signals bitmask to wait for for each item.
 The *timeout* parameter is relative time (from now) in nanoseconds which
 takes two special values: **0** and **MX_TIME_INFINITE**. The former causes
 the wait to complete immediately and the latter signals that wait will
-never times out.
+never time out.
 
 Upon return, the *pending* field of *items* is filled with bitmaps indicating
 which signals are pending for each item.
