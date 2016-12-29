@@ -84,6 +84,20 @@ static inline void dret_null(const char* file, int line, const char* msg, ...)
          ? (ret != nullptr ? ret : (magma::dret_null(__FILE__, __LINE__, __VA_ARGS__), nullptr))   \
          : ret)
 
+enum LogLevel { LOG_WARNING };
+
+static inline void log(LogLevel level, const char* msg, ...)
+{
+    switch (level) {
+    case LOG_WARNING: printf("[WARNING] "); break;
+    }
+    va_list args;
+    va_start(args, msg);
+    vprintf(msg, args);
+    va_end(args);
+    printf("\n");
+}
+
 #define UNIMPLEMENTED(...)                                                                         \
     do {                                                                                           \
         DLOG("UNIMPLEMENTED: " #__VA_ARGS__);                                                      \
