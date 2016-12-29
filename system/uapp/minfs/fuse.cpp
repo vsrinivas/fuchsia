@@ -35,7 +35,7 @@ static pthread_mutex_t bc_lock;
 static int vnode_for_path(const char* path, vnode_t** out) {
     vnode_t *vn, *cur = fake_root;
     mx_status_t status;
-    const char* nextpath = NULL;
+    const char* nextpath = nullptr;
     size_t len;
 
     do {
@@ -47,7 +47,7 @@ static int vnode_for_path(const char* path, vnode_t** out) {
         }
         len = strlen(path);
         nextpath = strchr(path, '/');
-        if (nextpath != NULL) {
+        if (nextpath != nullptr) {
             len = nextpath - path;
             nextpath++;
             debug("fuse-minfs: nextpath = %s\n", nextpath);
@@ -62,7 +62,7 @@ static int vnode_for_path(const char* path, vnode_t** out) {
         }
         cur = vn;
         path = nextpath;
-    } while (nextpath != NULL);
+    } while (nextpath != nullptr);
 
     *out = vn;
     return 0;
@@ -136,7 +136,7 @@ static int readdir_callback(const char* path, void* buf, fuse_fill_dir_t filler,
               break;
 
           debug("fuse-minfs: size %u/%zu type %u name %s\n", vde->size, size, vde->type, vde->name);
-          if (filler(buf, vde->name, NULL, 0) != 0) {
+          if (filler(buf, vde->name, nullptr, 0) != 0) {
               ret = -ENOMEM;
               goto done;
           }
@@ -414,7 +414,7 @@ off_t get_size(int fd, off_t* out) {
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        return fuse_main(argc, argv, &fuse_minfs_operations, NULL);
+        return fuse_main(argc, argv, &fuse_minfs_operations, nullptr);
     } else {
 #ifdef DEBUG
         trace_on(TRACE_MINFS | TRACE_VFS | TRACE_WALK);
@@ -435,9 +435,9 @@ int main(int argc, char* argv[]) {
           error("fuse-minfs: could not determine size of %s\n", block);
           return -1;
         }
-        size /= MINFS_BLOCK_SIZE;
+        size /= kMinfsBlockSize;
 
-        if (bcache_create(&bc, fd, size, MINFS_BLOCK_SIZE, 64) < 0) {
+        if (bcache_create(&bc, fd, size, kMinfsBlockSize, 64) < 0) {
             error("fuse-minfs: cannot create block cache\n");
             return -1;
         }
@@ -449,6 +449,6 @@ int main(int argc, char* argv[]) {
         fake_root = vn;
         the_block_cache = bc;
 
-        return fuse_main(argc - 1, argv + 1, &fuse_minfs_operations, NULL);
+        return fuse_main(argc - 1, argv + 1, &fuse_minfs_operations, nullptr);
     }
 }

@@ -4,40 +4,49 @@
 
 #pragma once
 
+#include <mxtl/intrusive_double_list.h>
+#include <mxtl/intrusive_hash_table.h>
+#include <mxtl/macros.h>
+#include <mxtl/ref_counted.h>
+#include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
+
 #include <magenta/types.h>
 
 #include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "misc.h"
+
 // clang-format off
 
-#define MINFS_MAGIC0         (0x002153466e694d21ULL)
-#define MINFS_MAGIC1         (0x385000d3d3d3d304ULL)
-#define MINFS_VERSION        0x00000002
+constexpr uint64_t kMinfsMagic0 = (0x002153466e694d21ULL);
+constexpr uint64_t kMinfsMagic1 = (0x385000d3d3d3d304ULL);
+constexpr uint32_t kMinfsVersion = 0x00000002;
 
-#define MINFS_ROOT_INO       1
-#define MINFS_FLAG_CLEAN     1
-#define MINFS_BLOCK_SIZE     8192
-#define MINFS_BLOCK_BITS     (MINFS_BLOCK_SIZE * 8)
-#define MINFS_INODE_SIZE     256
-#define MINFS_INODES_PER_BLOCK (MINFS_BLOCK_SIZE / MINFS_INODE_SIZE)
+constexpr uint32_t kMinfsRootIno        = 1;
+constexpr uint32_t kMinfsFlagClean      = 1;
+constexpr uint32_t kMinfsBlockSize      = 8192;
+constexpr uint32_t kMinfsBlockBits      = (kMinfsBlockSize * 8);
+constexpr uint32_t kMinfsInodeSize      = 256;
+constexpr uint32_t kMinfsInodesPerBlock = (kMinfsBlockSize / kMinfsInodeSize);
 
-#define MINFS_DIRECT         16
-#define MINFS_INDIRECT       32
+constexpr uint32_t kMinfsDirect   = 16;
+constexpr uint32_t kMinfsIndirect = 32;
 
 // not possible to have a block at or past this one
 // due to the limitations of the inode and indirect blocks
-#define MINFS_MAX_FILE_BLOCK (MINFS_DIRECT + MINFS_INDIRECT * (MINFS_BLOCK_SIZE / sizeof(uint32_t)))
-#define MINFS_MAX_FILE_SIZE  MINFS_MAX_FILE_BLOCK * MINFS_BLOCK_SIZE
+constexpr uint64_t kMinfsMaxFileBlock = (kMinfsDirect + kMinfsIndirect * (kMinfsBlockSize / sizeof(uint32_t)));
+constexpr uint64_t kMinfsMaxFileSize  = kMinfsMaxFileBlock * kMinfsBlockSize;
 
-#define MINFS_TYPE_FILE      8
-#define MINFS_TYPE_DIR       4
+constexpr uint32_t kMinfsTypeFile = 8;
+constexpr uint32_t kMinfsTypeDir  = 4;
 
-#define MINFS_MAGIC(T)       (0xAA6f6e00 | (T))
-#define MINFS_MAGIC_DIR      MINFS_MAGIC(MINFS_TYPE_DIR)
-#define MINFS_MAGIC_FILE     MINFS_MAGIC(MINFS_TYPE_FILE)
-#define MINFS_MAGIC_TYPE(n)  ((n) & 0xFF)
+constexpr uint32_t MinfsMagic(uint32_t T) { return 0xAA6f6e00 | T; }
+constexpr uint32_t kMinfsMagicDir  = MinfsMagic(kMinfsTypeDir);
+constexpr uint32_t kMinfsMagicFile = MinfsMagic(kMinfsTypeFile);
+constexpr uint32_t MinfsMagicType(uint32_t n) { return n & 0xFF; }
 
 typedef struct {
     uint64_t magic0;
@@ -64,8 +73,8 @@ typedef struct {
 //   a block number of less than dat_block (start of data blocks)
 //   to be used
 // - inode numbers refer to the inode in block:
-//     ino_block + ino / MINFS_INODES_PER_BLOCK
-//   at offset: ino % MINFS_INODES_PER_BLOCK
+//     ino_block + ino / kMinfsInodesPerBlock
+//   at offset: ino % kMinfsInodesPerBlock
 // - inode 0 is never used, should be marked allocated but ignored
 
 typedef struct {
@@ -77,13 +86,13 @@ typedef struct {
     uint64_t modify_time;
     uint32_t seq_num;               // bumped when modified
     uint32_t gen_num;               // bumped when deleted
-    uint32_t dirent_count;           // for directories
+    uint32_t dirent_count;          // for directories
     uint32_t rsvd[5];
-    uint32_t dnum[MINFS_DIRECT];    // direct blocks
-    uint32_t inum[MINFS_INDIRECT];  // indirect blocks
+    uint32_t dnum[kMinfsDirect];    // direct blocks
+    uint32_t inum[kMinfsIndirect];  // indirect blocks
 } minfs_inode_t;
 
-static_assert(sizeof(minfs_inode_t) == MINFS_INODE_SIZE,
+static_assert(sizeof(minfs_inode_t) == kMinfsInodeSize,
               "minfs inode size is wrong");
 
 typedef struct {
@@ -91,30 +100,36 @@ typedef struct {
     uint32_t reclen;                // Low 28 bits: Length of record
                                     // High 4 bits: Flags
     uint8_t namelen;                // length of the filename
-    uint8_t type;                   // MINFS_TYPE_*
+    uint8_t type;                   // kMinfsType*
     char name[];                    // name does not have trailing \0
 } minfs_dirent_t;
 
-#define MINFS_DIRENT_SIZE sizeof(minfs_dirent_t)
+constexpr uint32_t MINFS_DIRENT_SIZE = sizeof(minfs_dirent_t);
 
-#define SIZEOF_MINFS_DIRENT(namelen) (MINFS_DIRENT_SIZE + ((namelen + 3) & (~3)))
-#define MINFS_MAX_NAME_SIZE       255
-#define MINFS_MAX_DIRENT_SIZE     SIZEOF_MINFS_DIRENT(MINFS_MAX_NAME_SIZE)
-#define MINFS_MAX_DIRECTORY_SIZE  (((1 << 20) - 1) & (~3))
+constexpr uint32_t DirentSize(uint8_t namelen) {
+    return MINFS_DIRENT_SIZE + ((namelen + 3) & (~3));
+}
 
-#define MINFS_RECLEN_MASK         0x0FFFFFFF
-#define MINFS_RECLEN_LAST         0x80000000
-#define MINFS_RECLEN(de, off) (((de)->reclen & MINFS_RECLEN_LAST) ? \
-                               (MINFS_MAX_DIRECTORY_SIZE - off) : \
-                               ((de)->reclen & MINFS_RECLEN_MASK))
+constexpr uint8_t kMinfsMaxNameSize       = 255;
+constexpr uint32_t kMinfsMaxDirentSize    = DirentSize(kMinfsMaxNameSize);
+constexpr uint32_t kMinfsMaxDirectorySize = (((1 << 20) - 1) & (~3));
 
-static_assert(MINFS_MAX_DIRECTORY_SIZE <= MINFS_RECLEN_MASK,
+constexpr uint32_t kMinfsReclenMask = 0x0FFFFFFF;
+constexpr uint32_t kMinfsReclenLast = 0x80000000;
+
+constexpr uint32_t MinfsReclen(minfs_dirent_t* de, size_t off) {
+    return (de->reclen & kMinfsReclenLast) ?
+           kMinfsMaxDirectorySize - static_cast<uint32_t>(off) :
+           de->reclen & kMinfsReclenMask;
+}
+
+static_assert(kMinfsMaxDirectorySize <= kMinfsReclenMask,
               "MinFS directory size must be smaller than reclen mask");
 
 // Notes:
 // - dirents with ino of 0 are free, and skipped over on lookup
 // - reclen must be a multiple of 4
-// - the last record in a directory has the "MINFS_RECLEN_LAST" flag set. The
+// - the last record in a directory has the "kMinfsReclenLast" flag set. The
 //   actual size of this record can be computed from the offset at which this
 //   record starts. If the MAX_DIR_SIZE is increased, this 'last' record will
 //   also increase in size.
@@ -130,90 +145,176 @@ static_assert(MINFS_MAX_DIRECTORY_SIZE <= MINFS_RECLEN_MASK,
 
 
 
-// Allocation Bitmap (bitmap.c)
+// Block Cache (bcache.c)
+class Bcache;
 
-typedef struct bitmap bitmap_t;
-struct bitmap {
-    uint32_t bitcount;
-    uint32_t mapcount;
-    uint64_t *map;
-    uint64_t *end;
+// Flag denoting if a block is dirty or not
+constexpr uint32_t kBlockDirty = 0x01;
+// Flag identifying block list on which a block exists.
+constexpr uint32_t kBlockBusy  = 0x02;
+constexpr uint32_t kBlockLRU   = 0x04;
+constexpr uint32_t kBlockFree  = 0x08;
+
+constexpr uint32_t kBlockLLFlags = (kBlockBusy | kBlockLRU | kBlockFree);
+
+constexpr uint32_t kMinfsHashBits = (8);
+constexpr uint32_t kMinfsBuckets = (1 << kMinfsHashBits);
+
+class BlockNode : public mxtl::DoublyLinkedListable<mxtl::RefPtr<BlockNode>>,
+                  public mxtl::RefCounted<BlockNode> {
+public:
+    using NodeState = mxtl::DoublyLinkedListNodeState<mxtl::RefPtr<BlockNode>>;
+    struct TypeListTraits {
+        static NodeState& node_state(BlockNode& bn) { return bn.type_list_state_; }
+    };
+    struct TypeHashTraits {
+        static NodeState& node_state(BlockNode& bn) { return bn.type_hash_state_; }
+    };
+
+    // Create a single Block within a Block Cache
+    static mx_status_t Create(Bcache* bc);
+
+    void* data() const { return data_.get(); }
+
+    // Allow BlockNode to be placed in an mxtl::HashTable
+    uint32_t GetKey() const { return bno_; }
+    static size_t GetHash(uint32_t key) { return fnv1a32(&key, sizeof(key)); }
+
+    ~BlockNode();
+private:
+    friend class Bcache;
+    friend class BcacheLists;
+    friend struct TypeListTraits;
+    friend struct TypeHashTraits;
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(BlockNode);
+    BlockNode();
+
+    NodeState type_list_state_;
+    NodeState type_hash_state_;
+    uint32_t flags_;
+    uint32_t bno_;
+    mxtl::unique_ptr<char, mxtl::free_delete> data_;
 };
 
-mx_status_t bitmap_init(bitmap_t* bm, uint32_t maxbits);
-void bitmap_destroy(bitmap_t* bm);
+// Contains operations that act on Bcache's linked lists, updating their flags as they move from
+// one list to another.
+class BcacheLists {
+public:
+    void PushBack(mxtl::RefPtr<BlockNode> blk, uint32_t block_type);
+    mxtl::RefPtr<BlockNode> PopFront(uint32_t block_type);
+    mxtl::RefPtr<BlockNode> Erase(mxtl::RefPtr<BlockNode> blk, uint32_t block_type);
 
-// This will never fail if the new maxbits is no larger
-// that the original maxbits.  The underlying storage will
-// not be reduced (so this is useful for creating a bitmap
-// to match a particular storage size and then adjust it
-// to a maximum allowed bit smaller than the storage)
-mx_status_t bitmap_resize(bitmap_t* bm, uint32_t maxbits);
+private:
+    using LinkedList = mxtl::DoublyLinkedList<mxtl::RefPtr<BlockNode>, BlockNode::TypeListTraits>;
+    LinkedList* GetList(uint32_t block_type);
 
-static inline void bitmap_set(bitmap_t* bm, uint32_t n) {
-    if (n < bm->bitcount) {
-        bm->map[n >> 6] |= (1ULL << (n & 63));
+    LinkedList list_busy_;  // Between Get() and Put(). In hash.
+    LinkedList list_lru_;   // Available for re-use. In hash.
+    LinkedList list_free_;  // Never been used. Not in hash.
+};
+
+class Bcache {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
+    friend class BlockNode;
+
+    static mx_status_t Create(Bcache** out, int fd, uint32_t blockmax, uint32_t blocksize,
+                              uint32_t num);
+
+    // Raw block read functions.
+    // These do not track blocks (or attempt to access the block cache)
+    mx_status_t Readblk(uint32_t bno, void* data);
+    mx_status_t Writeblk(uint32_t bno, const void* data);
+
+    uint32_t Maxblk() const { return blockmax_; };
+
+    // acquire a block, reading from disk if necessary,
+    // returning a handle and a pointer to the data
+    mxtl::RefPtr<BlockNode> Get(uint32_t bno);
+    // acquire a block, not reading from disk, marking dirty,
+    // and clearing to all 0s
+    mxtl::RefPtr<BlockNode> GetZero(uint32_t bno);
+
+    // release a block back to the cache
+    // flags *must* contain kBlockDirty if it was modified
+    void Put(mxtl::RefPtr<BlockNode> blk, uint32_t flags);
+
+    // Helper function which combines 'Get' and 'Put'.
+    mx_status_t Read(uint32_t bno, void* data, uint32_t off, uint32_t len);
+
+    // drop all non-busy, non-dirty blocks
+    void Invalidate();
+
+    int Sync();
+    int Close();
+
+    ~Bcache();
+
+private:
+    Bcache(int fd, uint32_t blockmax, uint32_t blocksize);
+
+    mxtl::RefPtr<BlockNode> Get(uint32_t bno, uint32_t mode);
+
+    using HashTableBucket = mxtl::DoublyLinkedList<mxtl::RefPtr<BlockNode>, BlockNode::TypeHashTraits>;
+    using HashTable = mxtl::HashTable<uint32_t, mxtl::RefPtr<BlockNode>, HashTableBucket>;
+    HashTable hash_; // Map of all 'in use' blocks, accessible by bno
+    BcacheLists lists_;
+    int fd_;
+    uint32_t blockmax_;
+    uint32_t blocksize_;
+};
+
+// Allocation Bitmap (bitmap.c)
+constexpr uint32_t BITMAP_FAIL = (0xFFFFFFFF);
+
+class Bitmap {
+public:
+    Bitmap();
+    ~Bitmap();
+
+    mx_status_t Init(uint32_t maxbits);
+    void Reset();
+
+    // find an available bit, set it, return that bitnumber
+    // returns BITMAP_FAIL if no bit is found
+    uint32_t Alloc(uint32_t minbit);
+
+    // This will never fail if the new maxbits is no larger
+    // that the original maxbits.  The underlying storage will
+    // not be reduced (so this is useful for creating a bitmap
+    // to match a particular storage size and then adjust it
+    // to a maximum allowed bit smaller than the storage)
+    mx_status_t Resize(uint32_t maxbits);
+
+    void Set(uint32_t n);
+    void Clr(uint32_t n);
+    bool Get(uint32_t n) const;
+
+    // Get a pointer to block 'blkno' in bitmap.
+    void* GetBlock(uint32_t blkno) const {
+        assert(blkno * kMinfsBlockSize <= bitcount_);
+        return (void*)((uintptr_t)(map_.get()) + (uintptr_t)(kMinfsBlockSize * blkno));
     }
-}
 
-static inline void bitmap_clr(bitmap_t* bm, uint32_t n) {
-    if (n < bm->bitcount) {
-        bm->map[n >> 6] &= ~((1ULL << (n & 63)));
+    // Get a pointer to block 'blkno_out' in bitmap, which contains bit 'bitno'.
+    void* GetBitBlock(uint32_t* blkno_out, uint32_t bitno) const {
+        assert(bitno <= bitcount_);
+        *blkno_out = (bitno / kMinfsBlockSize);
+        return GetBlock(*blkno_out);
     }
-}
 
-static inline bool bitmap_get(bitmap_t* bm, uint32_t n) {
-    if (n < bm->bitcount) {
-        return (bm->map[n >> 6] & (1ULL << (n & 63))) != 0;
-    } else {
-        return 0;
+    void* data() const { return map_.get(); }
+
+    uint32_t Capacity() const {
+        return bitcount_;
     }
-}
 
-static inline void* bitmap_data(bitmap_t* bm) {
-    return bm->map;
-}
+private:
+    uint32_t Mapcount() const;
+    uint64_t* End() const;
+    size_t BytesRequired() const;
 
-#define BITMAP_FAIL (0xFFFFFFFF)
-
-// find an available bit, set it, return that bitnumber
-// returns BITMAP_FAIL if no bit is found
-uint32_t bitmap_alloc(bitmap_t* bm, uint32_t minbit);
-
-
-// Block Cache (bcache.c)
-
-typedef struct bcache bcache_t;
-typedef struct block block_t;
-
-void* block_data(block_t* blk);
-int bcache_create(bcache_t** out, int fd, uint32_t blockmax, uint32_t blocksize, uint32_t num);
-int bcache_close(bcache_t* bc);
-
-#define BLOCK_DIRTY 1
-
-// Raw block read functions. These do not track blocks (or attempt to access
-// the block cache)
-mx_status_t readblk(bcache_t* bc, uint32_t bno, void* data);
-mx_status_t writeblk(bcache_t* bc, uint32_t bno, const void* data);
-
-// acquire a block, reading from disk if necessary,
-// returning a handle and a pointer to the data
-block_t* bcache_get(bcache_t* bc, uint32_t bno, void** bdata);
-
-// acquire a block, not reading from disk, marking dirty,
-// and clearing to all 0s
-block_t* bcache_get_zero(bcache_t* bc, uint32_t bno, void** block);
-
-// release a block back to the cache
-// flags *must* contain BLOCK_DIRTY if it was modified
-void bcache_put(bcache_t* bc, block_t* blk, uint32_t flags);
-
-mx_status_t bcache_read(bcache_t* bc, uint32_t bno, void* data, uint32_t off, uint32_t len);
-
-mx_status_t bcache_sync(bcache_t* bc);
-
-uint32_t bcache_max_block(bcache_t* bc);
-
-// drop all non-busy, non-dirty blocks
-void bcache_invalidate(bcache_t* bc);
+    uint32_t bitcount_; // Number of addressable bits
+    mxtl::unique_ptr<uint64_t, mxtl::free_delete> map_; // Underlying map of bits
+};

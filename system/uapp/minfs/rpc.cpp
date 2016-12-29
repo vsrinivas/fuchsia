@@ -54,7 +54,7 @@ mx_handle_t vfs_rpc_server(vnode_t* vn) {
     vfs_iostate_t* ios;
     mx_status_t r;
 
-    if ((ios = (vfs_iostate_t*)calloc(1, sizeof(vfs_iostate_t))) == NULL)
+    if ((ios = (vfs_iostate_t*)calloc(1, sizeof(vfs_iostate_t))) == nullptr)
         return ERR_NO_MEMORY;
     ios->vn = vn;
 

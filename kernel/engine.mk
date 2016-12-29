@@ -171,7 +171,7 @@ ARCH_ASMFLAGS :=
 # Host compile flags
 HOST_COMPILEFLAGS := -Wall -g
 HOST_CFLAGS := -std=c11 -Isystem/public -Isystem/private
-HOST_CPPFLAGS := -std=c++11
+HOST_CPPFLAGS := -std=c++11 -fno-exceptions -fno-rtti
 HOST_ASMFLAGS :=
 
 # top level rule

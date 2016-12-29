@@ -52,14 +52,14 @@ static file_t fdtab[MAXFD];
 
 static file_t* file_get(int fd) {
     if (((fd)&0xFFFF0000) != FD_MAGIC) {
-        return NULL;
+        return nullptr;
     }
     fd &= 0x0000FFFF;
     if ((fd < 0) || (fd >= MAXFD)) {
-        return NULL;
+        return nullptr;
     }
-    if (fdtab[fd].vn == NULL) {
-        return NULL;
+    if (fdtab[fd].vn == nullptr) {
+        return nullptr;
     }
     return fdtab + fd;
 }
@@ -82,13 +82,13 @@ int status_to_errno(mx_status_t status) {
     FAIL(status_to_errno(status))
 #define FILE_GET(f, fd)                   \
     do {                                  \
-        if ((f = file_get(fd)) == NULL) { \
+        if ((f = file_get(fd)) == nullptr) { \
             FAIL(EBADF);                  \
         }                                 \
     } while (0)
 #define FILE_WRAP(f, fd, name, args...) \
     do {                                \
-        if ((f = file_get(fd)) == NULL) \
+        if ((f = file_get(fd)) == nullptr) \
             return name(args);          \
     } while (0)
 #define PATH_WRAP(path, name, args...) \
@@ -100,7 +100,7 @@ int status_to_errno(mx_status_t status) {
 vnode_t* fake_root;
 
 static inline int check_path(const char* path) {
-    if (strncmp(path, PATH_PREFIX, PREFIX_SIZE) || (fake_root == NULL)) {
+    if (strncmp(path, PATH_PREFIX, PREFIX_SIZE) || (fake_root == nullptr)) {
         return -1;
     }
     return 0;
@@ -111,8 +111,8 @@ int emu_open(const char* path, int flags, mode_t mode) {
     PATH_WRAP(path, open, path, flags, mode);
     int fd;
     for (fd = 0; fd < MAXFD; fd++) {
-        if (fdtab[fd].vn == NULL) {
-            const char* pathout = NULL;
+        if (fdtab[fd].vn == nullptr) {
+            const char* pathout = nullptr;
             mx_status_t status = vfs_open(fake_root, &fdtab[fd].vn, path + PREFIX_SIZE, &pathout, flags, mode);
             if (status < 0) {
                 STATUS(status);
@@ -231,7 +231,7 @@ int emu_stat(const char* fn, struct stat* s) {
     PATH_WRAP(fn, stat, fn, s);
     vnode_t *vn, *cur = fake_root;
     mx_status_t status;
-    const char* nextpath = NULL;
+    const char* nextpath = nullptr;
     size_t len;
 
     fn += PREFIX_SIZE;
@@ -244,7 +244,7 @@ int emu_stat(const char* fn, struct stat* s) {
         }
         len = strlen(fn);
         nextpath = strchr(fn, '/');
-        if (nextpath != NULL) {
+        if (nextpath != nullptr) {
             len = nextpath - fn;
             nextpath++;
         }
@@ -257,7 +257,7 @@ int emu_stat(const char* fn, struct stat* s) {
         }
         cur = vn;
         fn = nextpath;
-    } while (nextpath != NULL);
+    } while (nextpath != nullptr);
 
     status = do_stat(vn, s);
     if (vn != fake_root) {
@@ -283,16 +283,16 @@ DIR* emu_opendir(const char* name) {
     vnode_t* vn;
     mx_status_t status = vfs_open(fake_root, &vn, name + PREFIX_SIZE, &name, O_RDONLY, 0);
     if (status != NO_ERROR) {
-        return NULL;
+        return nullptr;
     }
     MINDIR* dir = (MINDIR*)calloc(1, sizeof(MINDIR));
-    dir->magic = MINFS_MAGIC0;
+    dir->magic = kMinfsMagic0;
     dir->vn = vn;
     return (DIR*) dir;
 }
 
 struct dirent* emu_readdir(DIR* dirp) {
-    if (((uint64_t*)dirp)[0] != MINFS_MAGIC0) {
+    if (((uint64_t*)dirp)[0] != kMinfsMagic0) {
         return readdir(dirp);
     }
 
@@ -316,11 +316,11 @@ struct dirent* emu_readdir(DIR* dirp) {
         dir->ptr = dir->data;
         dir->size = status;
     }
-    return NULL;
+    return nullptr;
 }
 
 int emu_closedir(DIR* dirp) {
-    if (((uint64_t*)dirp)[0] != MINFS_MAGIC0) {
+    if (((uint64_t*)dirp)[0] != kMinfsMagic0) {
         return closedir(dirp);
     }
 

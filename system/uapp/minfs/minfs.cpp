@@ -9,6 +9,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <magenta/new.h>
+#include <magenta/syscalls.h>
+
+#include <mxtl/unique_ptr.h>
+
 #include "minfs-private.h"
 
 void minfs_dump_info(minfs_info_t* info) {
@@ -21,18 +26,18 @@ void minfs_dump_info(minfs_info_t* info) {
 }
 
 mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
-    if ((info->magic0 != MINFS_MAGIC0) ||
-        (info->magic1 != MINFS_MAGIC1)) {
+    if ((info->magic0 != kMinfsMagic0) ||
+        (info->magic1 != kMinfsMagic1)) {
         error("minfs: bad magic\n");
         return ERR_INVALID_ARGS;
     }
-    if (info->version != MINFS_VERSION) {
+    if (info->version != kMinfsVersion) {
         error("minfs: FS Version: %08x. Driver version: %08x\n", info->version,
-              MINFS_VERSION);
+              kMinfsVersion);
         return ERR_INVALID_ARGS;
     }
-    if ((info->block_size != MINFS_BLOCK_SIZE) ||
-        (info->inode_size != MINFS_INODE_SIZE)) {
+    if ((info->block_size != kMinfsBlockSize) ||
+        (info->inode_size != kMinfsInodeSize)) {
         error("minfs: bsz/isz %u/%u unsupported\n", info->block_size, info->inode_size);
         return ERR_INVALID_ARGS;
     }
@@ -52,60 +57,109 @@ static uint64_t minfs_current_utc_time(void) {
     return timestamp++;
 }
 
+// sync the data portion of the current vnode
 void minfs_sync_vnode(vnode_t* vn, uint32_t flags) {
-    // sync the data portion of the current vnode
-    block_t* blk;
-    void* bdata;
 
     // by default, c/mtimes are not updated to current time
-    if (flags != MX_FS_SYNC_DEFAULT) {
+    if (flags != kMxFsSyncDefault) {
         mx_time_t cur_time = minfs_current_utc_time();
         // update times before syncing
-        if ((flags & MX_FS_SYNC_MTIME) != 0) {
+        if ((flags & kMxFsSyncMtime) != 0) {
             vn->inode.modify_time = cur_time;
         }
-        if ((flags & MX_FS_SYNC_CTIME) != 0) {
+        if ((flags & kMxFsSyncCtime) != 0) {
             vn->inode.create_time = cur_time;
         }
         // TODO(orr): no current support for atime
     }
 
-    uint32_t bno_of_ino = vn->fs->info.ino_block + (vn->ino / MINFS_INODES_PER_BLOCK);
-    uint32_t off_of_ino = (vn->ino % MINFS_INODES_PER_BLOCK) * MINFS_INODE_SIZE;
+    uint32_t bno_of_ino = vn->fs->info.ino_block + (vn->ino / kMinfsInodesPerBlock);
+    uint32_t off_of_ino = (vn->ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
 
-    if ((blk = bcache_get(vn->fs->bc, bno_of_ino, &bdata)) == NULL) {
+    mxtl::RefPtr<BlockNode> blk;
+    if ((blk = vn->fs->bc->Get(bno_of_ino)) == nullptr) {
         panic("failed sync vnode %p(#%u)", vn, vn->ino);
     }
 
-    memcpy((void*)((uintptr_t)bdata + off_of_ino), &vn->inode, MINFS_INODE_SIZE);
-    bcache_put(vn->fs->bc, blk, BLOCK_DIRTY);
+    memcpy((void*)((uintptr_t)blk->data() + off_of_ino), &vn->inode, kMinfsInodeSize);
+    vn->fs->bc->Put(blk, kBlockDirty);
 }
 
-mx_status_t minfs_ino_free(minfs_t* fs, uint32_t ino) {
+Minfs::Minfs(Bcache* bc_, minfs_info_t* info_) : bc(bc_) {
+    memcpy(&info, info_, sizeof(minfs_info_t));
+    for (size_t n = 0; n < kMinfsBuckets; n++) {
+        list_initialize(vnode_hash_ + n);
+    }
+}
+
+mx_status_t Minfs::InoFree(const minfs_inode_t& inode, uint32_t ino) {
     // locate data and block offset of bitmap
     void *bmdata;
     uint32_t bmbno;
-    if ((bmdata = minfs_bitmap_block(&fs->inode_map, &bmbno, ino)) == NULL) {
+    if ((bmdata = inode_map_.GetBitBlock(&bmbno, ino)) == nullptr) {
         panic("inode not in bitmap");
     }
 
     // obtain the block of the inode bitmap we need
-    block_t* block_ibm;
-    void* bdata_ibm;
-    if ((block_ibm = bcache_get(fs->bc, fs->info.ibm_block + bmbno, &bdata_ibm)) == NULL) {
+    mxtl::RefPtr<BlockNode> block_ibm;
+    if ((block_ibm = bc->Get(info.ibm_block + bmbno)) == nullptr) {
         return ERR_IO;
     }
 
     // update and commit block to disk
-    bitmap_clr(&fs->inode_map, ino);
-    memcpy(bdata_ibm, bmdata, MINFS_BLOCK_SIZE);
-    bcache_put(fs->bc, block_ibm, BLOCK_DIRTY);
+    inode_map_.Clr(ino);
+    memcpy(block_ibm->data(), bmdata, kMinfsBlockSize);
+    bc->Put(block_ibm, kBlockDirty);
+
+    mxtl::RefPtr<BlockNode> bitmap_blk;
+
+    // release all direct blocks
+    for (unsigned n = 0; n < kMinfsDirect; n++) {
+        if (inode.dnum[n] == 0) {
+            continue;
+        }
+        if ((bitmap_blk = BitmapBlockGet(bitmap_blk, inode.dnum[n])) == nullptr) {
+            return ERR_IO;
+        }
+        block_map.Clr(inode.dnum[n]);
+    }
+
+    // release all indirect blocks
+    for (unsigned n = 0; n < kMinfsIndirect; n++) {
+        if (inode.inum[n] == 0) {
+            continue;
+        }
+        mxtl::RefPtr<BlockNode> blk;
+        if ((blk = bc->Get(inode.inum[n])) == nullptr) {
+            BitmapBlockPut(bitmap_blk);
+            return ERR_IO;
+        }
+        uint32_t* entry = static_cast<uint32_t*>(blk->data());
+        // release the blocks pointed at by the entries in the indirect block
+        for (unsigned m = 0; m < (kMinfsBlockSize / sizeof(uint32_t)); m++) {
+            if (entry[m] == 0) {
+                continue;
+            }
+            if ((bitmap_blk = BitmapBlockGet(bitmap_blk, entry[m])) == nullptr) {
+                bc->Put(blk, 0);
+                return ERR_IO;
+            }
+            block_map.Clr(entry[m]);
+        }
+        bc->Put(blk, 0);
+        // release the direct block itself
+        if ((bitmap_blk = BitmapBlockGet(bitmap_blk, inode.inum[n])) == nullptr) {
+            return ERR_IO;
+        }
+        block_map.Clr(inode.inum[n]);
+    }
+    BitmapBlockPut(bitmap_blk);
 
     return NO_ERROR;
 }
 
-mx_status_t minfs_ino_alloc(minfs_t* fs, minfs_inode_t* inode, uint32_t* ino_out) {
-    uint32_t ino = bitmap_alloc(&fs->inode_map, 0);
+mx_status_t Minfs::InoNew(minfs_inode_t* inode, uint32_t* ino_out) {
+    uint32_t ino = inode_map_.Alloc(0);
     if (ino == BITMAP_FAIL) {
         return ERR_NO_RESOURCES;
     }
@@ -113,65 +167,63 @@ mx_status_t minfs_ino_alloc(minfs_t* fs, minfs_inode_t* inode, uint32_t* ino_out
     // locate data and block offset of bitmap
     void *bmdata;
     uint32_t bmbno;
-    if ((bmdata = minfs_bitmap_block(&fs->inode_map, &bmbno, ino)) == NULL) {
+    if ((bmdata = inode_map_.GetBitBlock(&bmbno, ino)) == nullptr) {
         panic("inode not in bitmap");
     }
 
     // obtain the block of the inode bitmap we need
-    block_t* block_ibm;
-    void* bdata_ibm;
-    if ((block_ibm = bcache_get(fs->bc, fs->info.ibm_block + bmbno, &bdata_ibm)) == NULL) {
-        bitmap_clr(&fs->inode_map, ino);
+    mxtl::RefPtr<BlockNode> block_ibm;
+    if ((block_ibm = bc->Get(info.ibm_block + bmbno)) == nullptr) {
+        inode_map_.Clr(ino);
         return ERR_IO;
     }
 
-    uint32_t bno_of_ino = fs->info.ino_block + (ino / MINFS_INODES_PER_BLOCK);
-    uint32_t off_of_ino = (ino % MINFS_INODES_PER_BLOCK) * MINFS_INODE_SIZE;
+    uint32_t bno_of_ino = info.ino_block + (ino / kMinfsInodesPerBlock);
+    uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
 
     // obtain the block of the inode table we need
-    block_t* block_ino;
-    void* bdata_ino;
-    if ((block_ino = bcache_get(fs->bc, bno_of_ino, &bdata_ino)) == NULL) {
-        bitmap_clr(&fs->inode_map, ino);
-        bcache_put(fs->bc, block_ibm, 0);
+    mxtl::RefPtr<BlockNode> block_ino;
+    if ((block_ino = bc->Get(bno_of_ino)) == nullptr) {
+        inode_map_.Clr(ino);
+        bc->Put(block_ibm, 0);
         return ERR_IO;
     }
 
     //TODO: optional sanity check of both blocks
 
     // write data to blocks in memory
-    memcpy(bdata_ibm, bmdata, MINFS_BLOCK_SIZE);
-    memcpy((void*)((uintptr_t)bdata_ino + off_of_ino), inode, MINFS_INODE_SIZE);
+    memcpy(block_ibm->data(), bmdata, kMinfsBlockSize);
+    memcpy((void*)((uintptr_t)block_ino->data() + off_of_ino), inode, kMinfsInodeSize);
 
     // commit blocks to disk
-    bcache_put(fs->bc, block_ibm, BLOCK_DIRTY);
-    bcache_put(fs->bc, block_ino, BLOCK_DIRTY);
+    bc->Put(block_ibm, kBlockDirty);
+    bc->Put(block_ino, kBlockDirty);
 
     *ino_out = ino;
     return NO_ERROR;
 }
 
-mx_status_t minfs_vnode_new(minfs_t* fs, vnode_t** out, uint32_t type) {
+mx_status_t Minfs::VnodeNew(vnode_t** out, uint32_t type) {
     vnode_t* vn;
-    if ((type != MINFS_TYPE_FILE) && (type != MINFS_TYPE_DIR)) {
+    if ((type != kMinfsTypeFile) && (type != kMinfsTypeDir)) {
         return ERR_INVALID_ARGS;
     }
-    if ((vn = (vnode_t*)calloc(1, sizeof(vnode_t))) == NULL) {
+    if ((vn = (vnode_t*)calloc(1, sizeof(vnode_t))) == nullptr) {
         return ERR_NO_MEMORY;
     }
-    vn->inode.magic = MINFS_MAGIC(type);
+    vn->inode.magic = MinfsMagic(type);
     // TODO(orr) update when mx_time_get() works with unix epoch time
     vn->inode.create_time = vn->inode.modify_time = minfs_current_utc_time();
     vn->inode.link_count = 1;
     vn->refcount = 1;
     vn->ops = &minfs_ops;
     mx_status_t status;
-    if ((status = minfs_ino_alloc(fs, &vn->inode, &vn->ino)) != NO_ERROR) {
+    if ((status = InoNew(&vn->inode, &vn->ino)) != NO_ERROR) {
         free(vn);
         return status;
     }
-    vn->fs = fs;
-    list_add_tail(fs->vnode_hash + INO_HASH(vn->ino), &vn->hashnode);
+    vn->fs = this;
+    list_add_tail(vnode_hash_ + INO_HASH(vn->ino), &vn->hashnode);
 
     trace(MINFS, "new_vnode() %p(#%u) { magic=%#08x }\n",
           vn, vn->ino, vn->inode.magic);
@@ -180,65 +232,108 @@ mx_status_t minfs_vnode_new(minfs_t* fs, vnode_t** out, uint32_t type) {
     return 0;
 }
 
-mx_status_t minfs_vnode_get(minfs_t* fs, vnode_t** out, uint32_t ino) {
-    if ((ino < 1) || (ino >= fs->info.inode_count)) {
+mx_status_t Minfs::VnodeGet(vnode_t** out, uint32_t ino) {
+    if ((ino < 1) || (ino >= info.inode_count)) {
         return ERR_OUT_OF_RANGE;
     }
     vnode_t* vn;
     uint32_t bucket = INO_HASH(ino);
-    list_for_every_entry(fs->vnode_hash + bucket, vn, vnode_t, hashnode) {
+    list_for_every_entry(vnode_hash_ + bucket, vn, vnode_t, hashnode) {
         if (vn->ino == ino) {
             vn_acquire(vn);
             *out = vn;
             return NO_ERROR;
         }
     }
-    if ((vn = (vnode_t*)calloc(1, sizeof(vnode_t))) == NULL) {
+    if ((vn = (vnode_t*)calloc(1, sizeof(vnode_t))) == nullptr) {
         return ERR_NO_MEMORY;
     }
     mx_status_t status;
-    uint32_t ino_per_blk = fs->info.block_size / MINFS_INODE_SIZE;
-    if ((status = bcache_read(fs->bc, fs->info.ino_block + ino / ino_per_blk, &vn->inode,
-                              MINFS_INODE_SIZE * (ino % ino_per_blk), MINFS_INODE_SIZE)) < 0) {
+    uint32_t ino_per_blk = info.block_size / kMinfsInodeSize;
+    if ((status = bc->Read(info.ino_block + ino / ino_per_blk, &vn->inode,
+                           kMinfsInodeSize * (ino % ino_per_blk), kMinfsInodeSize)) < 0) {
         return status;
     }
     trace(MINFS, "get_vnode() %p(#%u) { magic=%#08x size=%u blks=%u dn=%u,%u,%u,%u... }\n",
           vn, ino, vn->inode.magic, vn->inode.size, vn->inode.block_count,
           vn->inode.dnum[0], vn->inode.dnum[1], vn->inode.dnum[2],
           vn->inode.dnum[3]);
-    vn->fs = fs;
+    vn->fs = this;
     vn->ino = ino;
     vn->refcount = 1;
     vn->ops = &minfs_ops;
-    list_add_tail(fs->vnode_hash + bucket, &vn->hashnode);
+    list_add_tail(vnode_hash_ + bucket, &vn->hashnode);
 
     *out = vn;
     return NO_ERROR;
 }
 
+// Allocate a new data block from the block bitmap.
+// Return the underlying block (obtained via Bcache::Get()), if 'out_block' is not nullptr.
+//
+// If hint is nonzero it indicates which block number to start the search for
+// free blocks from.
+mx_status_t Minfs::BlockNew(uint32_t hint, uint32_t* out_bno, mxtl::RefPtr<BlockNode> *out_block) {
+    uint32_t bno = block_map.Alloc(hint);
+    if ((bno == BITMAP_FAIL) && (hint != 0)) {
+        bno = block_map.Alloc(0);
+    }
+    if (bno == BITMAP_FAIL) {
+        return ERR_NO_RESOURCES;
+    }
+    assert(bno != 0); // Cannot allocate root block
+
+    // obtain the in-memory bitmap block
+    uint32_t bmbno;
+    void *bmdata = block_map.GetBitBlock(&bmbno, bno); // bmbno relative to bitmap
+    bmbno += info.abm_block;                          // bmbno relative to block device
+
+    // obtain the block of the alloc bitmap we need
+    mxtl::RefPtr<BlockNode> block_abm;
+    if ((block_abm = bc->Get(bmbno)) == nullptr) {
+        block_map.Clr(bno);
+        return ERR_IO;
+    }
+
+    // obtain the block we're allocating, if requested.
+    if (out_block != nullptr) {
+        if ((*out_block = bc->GetZero(bno)) == nullptr) {
+            block_map.Clr(bno);
+            bc->Put(block_abm, 0);
+            return ERR_IO;
+        }
+    }
+
+    // commit the bitmap
+    memcpy(block_abm->data(), bmdata, kMinfsBlockSize);
+    bc->Put(block_abm, kBlockDirty);
+    *out_bno = bno;
+    return NO_ERROR;
+}
+
 void minfs_dir_init(void* bdata, uint32_t ino_self, uint32_t ino_parent) {
-#define DE0_SIZE SIZEOF_MINFS_DIRENT(1)
+#define DE0_SIZE DirentSize(1)
 
     // directory entry for self
     minfs_dirent_t* de = (minfs_dirent_t*) bdata;
     de->ino = ino_self;
     de->reclen = DE0_SIZE;
     de->namelen = 1;
-    de->type = MINFS_TYPE_DIR;
+    de->type = kMinfsTypeDir;
     de->name[0] = '.';
 
     // directory entry for parent
     de = (minfs_dirent_t*)((uintptr_t)bdata + DE0_SIZE);
     de->ino = ino_parent;
-    de->reclen = SIZEOF_MINFS_DIRENT(2) | MINFS_RECLEN_LAST;
+    de->reclen = DirentSize(2) | kMinfsReclenLast;
     de->namelen = 2;
-    de->type = MINFS_TYPE_DIR;
+    de->type = kMinfsTypeDir;
     de->name[0] = '.';
     de->name[1] = '.';
 }
 
-mx_status_t minfs_create(minfs_t** out, bcache_t* bc, minfs_info_t* info) {
-    uint32_t blocks = bcache_max_block(bc);
+mx_status_t Minfs::Create(Minfs** out, Bcache* bc, minfs_info_t* info) {
+    uint32_t blocks = bc->Maxblk();
     uint32_t inodes = info->inode_count;
 
     mx_status_t status = minfs_check_info(info, blocks);
@@ -246,82 +341,72 @@ mx_status_t minfs_create(minfs_t** out, bcache_t* bc, minfs_info_t* info) {
         return status;
     }
 
-    minfs_t* fs = (minfs_t*)calloc(1, sizeof(minfs_t));
-    if (fs == NULL) {
+    mxtl::unique_ptr<Minfs> fs(new Minfs(bc, info));
+    if (fs == nullptr) {
         return ERR_NO_MEMORY;
     }
-    for (int n = 0; n < MINFS_BUCKETS; n++) {
-        list_initialize(fs->vnode_hash + n);
-    }
-    memcpy(&fs->info, info, sizeof(minfs_info_t));
-    fs->bc = bc;
 
     // determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
-    //uint32_t inoblks = (inodes + MINFS_INODES_PER_BLOCK - 1) / MINFS_INODES_PER_BLOCK;
-    fs->abmblks = (blocks + MINFS_BLOCK_BITS - 1) / MINFS_BLOCK_BITS;
-    fs->ibmblks = (inodes + MINFS_BLOCK_BITS - 1) / MINFS_BLOCK_BITS;
+    //uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+    fs->abmblks_ = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    fs->ibmblks_ = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
 
-    if ((status = bitmap_init(&fs->block_map, fs->abmblks * MINFS_BLOCK_BITS)) < 0) {
-        free(fs);
+    if ((status = fs->block_map.Init(fs->abmblks_ * kMinfsBlockBits)) < 0) {
         return status;
     }
-    if ((status = bitmap_init(&fs->inode_map, fs->ibmblks * MINFS_BLOCK_BITS)) < 0) {
-        bitmap_destroy(&fs->block_map);
-        free(fs);
+    if ((status = fs->inode_map_.Init(fs->ibmblks_ * kMinfsBlockBits)) < 0) {
         return status;
     }
     // this keeps the underlying storage a block multiple but ensures we
     // can't allocate beyond the last real block or inode
-    bitmap_resize(&fs->block_map, fs->info.block_count);
-    bitmap_resize(&fs->inode_map, fs->info.inode_count);
+    fs->block_map.Resize(fs->info.block_count);
+    fs->inode_map_.Resize(fs->info.inode_count);
 
-    *out = fs;
+    if ((status = fs->LoadBitmaps()) < 0) {
+        return status;
+    }
+    *out = fs.release();
     return NO_ERROR;
 }
 
-void minfs_destroy(minfs_t* fs) {
-}
-
-mx_status_t minfs_load_bitmaps(minfs_t* fs) {
-    for (uint32_t n = 0; n < fs->abmblks; n++) {
-        void* bmdata = minfs_bitmap_nth_block(&fs->block_map, n);
-        if (bcache_read(fs->bc, fs->info.abm_block + n, bmdata, 0, MINFS_BLOCK_SIZE)) {
+mx_status_t Minfs::LoadBitmaps() {
+    for (uint32_t n = 0; n < abmblks_; n++) {
+        void* bmdata = block_map.GetBlock(n);
+        if (bc->Read(info.abm_block + n, bmdata, 0, kMinfsBlockSize)) {
             error("minfs: failed reading alloc bitmap\n");
         }
     }
-    for (uint32_t n = 0; n < fs->ibmblks; n++) {
-        void* bmdata = minfs_bitmap_nth_block(&fs->inode_map, n);
-        if (bcache_read(fs->bc, fs->info.ibm_block + n, bmdata, 0, MINFS_BLOCK_SIZE)) {
+    for (uint32_t n = 0; n < ibmblks_; n++) {
+        void* bmdata = inode_map_.GetBlock(n);
+        if (bc->Read(info.ibm_block + n, bmdata, 0, kMinfsBlockSize)) {
             error("minfs: failed reading inode bitmap\n");
         }
     }
     return NO_ERROR;
 }
 
-mx_status_t minfs_mount(vnode_t** out, bcache_t* bc) {
+mx_status_t minfs_mount(vnode_t** out, Bcache* bc) {
     minfs_info_t info;
 
-    if (bcache_read(bc, 0, &info, 0, sizeof(info)) < 0) {
+    if (bc->Read(0, &info, 0, sizeof(info)) < 0) {
         error("minfs: could not read info block\n");
         return -1;
     }
-    if (minfs_check_info(&info, bcache_max_block(bc))) {
+    if (minfs_check_info(&info, bc->Maxblk())) {
         return -1;
     }
 
-    minfs_t* fs;
-    if (minfs_create(&fs, bc, &info)) {
+    Minfs* fs;
+    if (Minfs::Create(&fs, bc, &info)) {
         error("minfs: mount failed\n");
-        return -1;
-    }
-    if (minfs_load_bitmaps(fs)) {
         return -1;
     }
 
     vnode_t* vn;
-    if (minfs_vnode_get(fs, &vn, MINFS_ROOT_INO)) {
+    if (fs->VnodeGet(&vn, kMinfsRootIno)) {
         error("minfs: cannot find root inode\n");
+        delete fs;
         return -1;
     }
 
@@ -329,28 +414,28 @@ mx_status_t minfs_mount(vnode_t** out, bcache_t* bc) {
     return NO_ERROR;
 }
 
-mx_status_t minfs_unmount(minfs_t* fs) {
-    return bcache_close(fs->bc);
+mx_status_t Minfs::Unmount() {
+    return bc->Close();
 }
 
-int minfs_mkfs(bcache_t* bc) {
-    uint32_t blocks = bcache_max_block(bc);
+int minfs_mkfs(Bcache* bc) {
+    uint32_t blocks = bc->Maxblk();
     uint32_t inodes = 32768;
 
     // determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
-    uint32_t inoblks = (inodes + MINFS_INODES_PER_BLOCK - 1) / MINFS_INODES_PER_BLOCK;
-    uint32_t abmblks = (blocks + MINFS_BLOCK_BITS - 1) / MINFS_BLOCK_BITS;
-    uint32_t ibmblks = (inodes + MINFS_BLOCK_BITS - 1) / MINFS_BLOCK_BITS;
+    uint32_t inoblks = (inodes + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
+    uint32_t abmblks = (blocks + kMinfsBlockBits - 1) / kMinfsBlockBits;
+    uint32_t ibmblks = (inodes + kMinfsBlockBits - 1) / kMinfsBlockBits;
 
     minfs_info_t info;
     memset(&info, 0x00, sizeof(info));
-    info.magic0 = MINFS_MAGIC0;
-    info.magic1 = MINFS_MAGIC1;
-    info.version = MINFS_VERSION;
-    info.flags = MINFS_FLAG_CLEAN;
-    info.block_size = MINFS_BLOCK_SIZE;
-    info.inode_size = MINFS_INODE_SIZE;
+    info.magic0 = kMinfsMagic0;
+    info.magic1 = kMinfsMagic1;
+    info.version = kMinfsVersion;
+    info.flags = kMinfsFlagClean;
+    info.block_size = kMinfsBlockSize;
+    info.inode_size = kMinfsInodeSize;
     info.block_count = blocks;
     info.inode_count = inodes;
     info.ibm_block = 8;
@@ -359,71 +444,67 @@ int minfs_mkfs(bcache_t* bc) {
     info.dat_block = info.ino_block + inoblks;
     minfs_dump_info(&info);
 
-    bitmap_t abm;
-    bitmap_t ibm;
-    if (bitmap_init(&abm, info.block_count)) {
+    Bitmap abm;
+    Bitmap ibm;
+    if (abm.Init(info.block_count)) {
         return -1;
     }
-    if (bitmap_init(&ibm, info.inode_count)) {
-        bitmap_destroy(&abm);
+    if (ibm.Init(info.inode_count)) {
         return -1;
     }
-
-    void* bdata;
-    block_t* blk;
 
     // write rootdir
-    blk = bcache_get_zero(bc, info.dat_block, &bdata);
-    minfs_dir_init(bdata, MINFS_ROOT_INO, MINFS_ROOT_INO);
-    bcache_put(bc, blk, BLOCK_DIRTY);
+    mxtl::RefPtr<BlockNode> blk = bc->GetZero(info.dat_block);
+    minfs_dir_init(blk->data(), kMinfsRootIno, kMinfsRootIno);
+    bc->Put(blk, kBlockDirty);
 
     // update inode bitmap
-    bitmap_set(&ibm, 0);
-    bitmap_set(&ibm, MINFS_ROOT_INO);
+    ibm.Set(0);
+    ibm.Set(kMinfsRootIno);
 
     // update block bitmap:
     // reserve all blocks before the data storage area
     // reserve the first data block (for root directory)
     for (uint32_t n = 0; n <= info.dat_block; n++) {
-        bitmap_set(&abm, n);
+        abm.Set(n);
     }
 
     // write allocation bitmap
     for (uint32_t n = 0; n < abmblks; n++) {
-        void* bmdata = minfs_bitmap_nth_block(&abm, n);
-        blk = bcache_get_zero(bc, info.abm_block + n, &bdata);
-        memcpy(bdata, bmdata, MINFS_BLOCK_SIZE);
-        bcache_put(bc, blk, BLOCK_DIRTY);
+        void* bmdata = abm.GetBlock(n);
+        blk = bc->GetZero(info.abm_block + n);
+        memcpy(blk->data(), bmdata, kMinfsBlockSize);
+        bc->Put(blk, kBlockDirty);
     }
 
     // write inode bitmap
     for (uint32_t n = 0; n < ibmblks; n++) {
-        void* bmdata = minfs_bitmap_nth_block(&ibm, n);
-        blk = bcache_get_zero(bc, info.ibm_block + n, &bdata);
-        memcpy(bdata, bmdata, MINFS_BLOCK_SIZE);
-        bcache_put(bc, blk, BLOCK_DIRTY);
+        void* bmdata = ibm.GetBlock(n);
+        blk = bc->GetZero(info.ibm_block + n);
+        memcpy(blk->data(), bmdata, kMinfsBlockSize);
+        bc->Put(blk, kBlockDirty);
     }
 
     // write inodes
     for (uint32_t n = 0; n < inoblks; n++) {
-        blk = bcache_get_zero(bc, info.ino_block + n, &bdata);
-        bcache_put(bc, blk, BLOCK_DIRTY);
+        blk = bc->GetZero(info.ino_block + n);
+        bc->Put(blk, kBlockDirty);
     }
 
 
     // setup root inode
-    blk = bcache_get(bc, info.ino_block, &bdata);
-    minfs_inode_t* ino = (minfs_inode_t*) bdata;
-    ino[MINFS_ROOT_INO].magic = MINFS_MAGIC_DIR;
-    ino[MINFS_ROOT_INO].size = MINFS_BLOCK_SIZE;
-    ino[MINFS_ROOT_INO].block_count = 1;
-    ino[MINFS_ROOT_INO].link_count = 1;
-    ino[MINFS_ROOT_INO].dirent_count = 2;
-    ino[MINFS_ROOT_INO].dnum[0] = info.dat_block;
-    bcache_put(bc, blk, BLOCK_DIRTY);
+    blk = bc->Get(info.ino_block);
+    minfs_inode_t* ino = (minfs_inode_t*) blk->data();
+    ino[kMinfsRootIno].magic = kMinfsMagicDir;
+    ino[kMinfsRootIno].size = kMinfsBlockSize;
+    ino[kMinfsRootIno].block_count = 1;
+    ino[kMinfsRootIno].link_count = 1;
+    ino[kMinfsRootIno].dirent_count = 2;
+    ino[kMinfsRootIno].dnum[0] = info.dat_block;
+    bc->Put(blk, kBlockDirty);
 
-    blk = bcache_get_zero(bc, 0, &bdata);
-    memcpy(bdata, &info, sizeof(info));
-    bcache_put(bc, blk, BLOCK_DIRTY);
+    blk = bc->GetZero(0);
+    memcpy(blk->data(), &info, sizeof(info));
+    bc->Put(blk, kBlockDirty);
     return 0;
 }

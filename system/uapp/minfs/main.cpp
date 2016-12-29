@@ -18,12 +18,12 @@
 #include "host.h"
 #endif
 
-int do_minfs_check(bcache_t* bc, int argc, char** argv) {
+int do_minfs_check(Bcache* bc, int argc, char** argv) {
     return minfs_check(bc);
 }
 
 #ifdef __Fuchsia__
-int do_minfs_mount(bcache_t* bc, int argc, char** argv) {
+int do_minfs_mount(Bcache* bc, int argc, char** argv) {
     vnode_t* vn = 0;
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
@@ -34,14 +34,14 @@ int do_minfs_mount(bcache_t* bc, int argc, char** argv) {
 #else
 int run_fs_tests(int argc, char** argv);
 
-static bcache_t* the_block_cache;
+static Bcache* the_block_cache;
 void drop_cache(void) {
-    bcache_invalidate(the_block_cache);
+    the_block_cache->Invalidate();
 }
 
 extern vnode_t* fake_root;
 
-int io_setup(bcache_t* bc) {
+int io_setup(Bcache* bc) {
     vnode_t* vn = 0;
     if (minfs_mount(&vn, bc) < 0) {
         return -1;
@@ -51,14 +51,14 @@ int io_setup(bcache_t* bc) {
     return 0;
 }
 
-int do_minfs_test(bcache_t* bc, int argc, char** argv) {
+int do_minfs_test(Bcache* bc, int argc, char** argv) {
     if (io_setup(bc)) {
         return -1;
     }
     return run_fs_tests(argc, argv);
 }
 
-int do_cp(bcache_t* bc, int argc, char** argv) {
+int do_cp(Bcache* bc, int argc, char** argv) {
     if (argc != 2) {
         fprintf(stderr, "cp requires two arguments\n");
         return -1;
@@ -104,7 +104,7 @@ done:
     return r;
 }
 
-int do_mkdir(bcache_t* bc, int argc, char** argv) {
+int do_mkdir(Bcache* bc, int argc, char** argv) {
     if (argc != 1) {
         fprintf(stderr, "mkdir requires one argument\n");
         return -1;
@@ -121,7 +121,7 @@ int do_mkdir(bcache_t* bc, int argc, char** argv) {
     return emu_mkdir(path, 0);
 }
 
-int do_unlink(bcache_t* bc, int argc, char** argv) {
+int do_unlink(Bcache* bc, int argc, char** argv) {
     if (argc != 1) {
         fprintf(stderr, "unlink requires one argument\n");
         return -1;
@@ -137,7 +137,7 @@ int do_unlink(bcache_t* bc, int argc, char** argv) {
     return emu_unlink(path);
 }
 
-int do_rename(bcache_t* bc, int argc, char** argv) {
+int do_rename(Bcache* bc, int argc, char** argv) {
     if (argc != 2) {
         fprintf(stderr, "rename requires two arguments\n");
         return -1;
@@ -173,7 +173,7 @@ static const char* modestr(uint32_t mode) {
     }
 }
 
-int do_ls(bcache_t* bc, int argc, char** argv) {
+int do_ls(Bcache* bc, int argc, char** argv) {
     if (argc != 1) {
         fprintf(stderr, "ls requires one argument\n");
         return -1;
@@ -195,7 +195,7 @@ int do_ls(bcache_t* bc, int argc, char** argv) {
     struct dirent* de;
     char tmp[2048];
     struct stat s;
-    while ((de = emu_readdir(d)) != NULL) {
+    while ((de = emu_readdir(d)) != nullptr) {
         if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..")) {
             memset(&s, 0, sizeof(struct stat));
             if ((strlen(de->d_name) + strlen(path) + 2) <= sizeof(tmp)) {
@@ -211,13 +211,13 @@ int do_ls(bcache_t* bc, int argc, char** argv) {
 
 #endif
 
-int do_minfs_mkfs(bcache_t* bc, int argc, char** argv) {
+int do_minfs_mkfs(Bcache* bc, int argc, char** argv) {
     return minfs_mkfs(bc);
 }
 
 struct {
     const char* name;
-    int (*func)(bcache_t* bc, int argc, char** argv);
+    int (*func)(Bcache* bc, int argc, char** argv);
     uint32_t flags;
     const char* help;
 } CMDS[] = {
@@ -289,7 +289,7 @@ int main(int argc, char** argv) {
     char* cmd = argv[2];
 
     char* sizestr;
-    if ((sizestr = strchr(fn, '@')) != NULL) {
+    if ((sizestr = strchr(fn, '@')) != nullptr) {
         *sizestr++ = 0;
         char* end;
         size = strtoull(sizestr, &end, 10);
@@ -339,10 +339,10 @@ found:
     if (size == 0) {
         size = get_size(fd);
     }
-    size /= MINFS_BLOCK_SIZE;
+    size /= kMinfsBlockSize;
 
-    bcache_t* bc;
-    if (bcache_create(&bc, fd, (uint32_t) size, MINFS_BLOCK_SIZE, 64) < 0) {
+    Bcache* bc;
+    if (Bcache::Create(&bc, fd, (uint32_t) size, kMinfsBlockSize, 64) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }

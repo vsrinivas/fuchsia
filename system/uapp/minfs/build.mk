@@ -6,9 +6,12 @@ MINFS_CFLAGS += -Werror-implicit-function-declaration
 MINFS_CFLAGS += -Wstrict-prototypes -Wwrite-strings
 MINFS_CFLAGS += -Isystem/ulib/system/include
 MINFS_CFLAGS += -Isystem/ulib/magenta/include
+MINFS_CFLAGS += -Isystem/ulib/mxcpp/include
 MINFS_CFLAGS += -Isystem/ulib/mxio/include
+MINFS_CFLAGS += -Isystem/ulib/mxtl/include
 MINFS_CFLAGS += -Isystem/ulib/fs/include
 MINFS_CFLAGS += -Isystem/public
+MINFS_CFLAGS += -Isystem/private
 
 ifeq ($(HOST_PLATFORM),darwin)
 MINFS_CFLAGS += -DO_DIRECTORY=0200000
@@ -36,6 +39,7 @@ SRCS += main.cpp test.cpp
 LIBMINFS_SRCS += host.cpp bitmap.cpp bcache.cpp
 LIBMINFS_SRCS += minfs.cpp minfs-ops.cpp minfs-check.cpp
 LIBFS_SRCS += vfs.c
+LIBMXCPP_SRCS := new.cpp pure_virtual.cpp
 
 OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.o,$(SRCS))
 DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(SRCS))
@@ -43,6 +47,8 @@ LIBMINFS_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.o,$(LIBMI
 LIBMINFS_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(LIBMINFS_SRCS))
 LIBFS_OBJS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.o,$(LIBFS_SRCS))
 LIBFS_DEPS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.d,$(LIBFS_SRCS))
+LIBMXCPP_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/mxcpp/%.o,$(LIBMXCPP_SRCS))
+LIBMXCPP_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/mxcpp/%.d,$(LIBMXCPP_SRCS))
 MINFS_TOOLS := $(BUILDDIR)/tools/minfs
 
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_MINFS_FUSE)),true)
@@ -55,6 +61,7 @@ minfs:: $(MINFS_TOOLS)
 -include $(DEPS)
 -include $(LIBMINFS_DEPS)
 -include $(LIBFS_DEPS)
+-include $(LIBMXCPP_DEPS)
 
 $(BUILDDIR)/host/system/uapp/minfs/%.o: system/uapp/minfs/%.cpp
 	@echo compiling $@
@@ -66,7 +73,12 @@ $(BUILDDIR)/host/system/ulib/fs/%.o: system/ulib/fs/%.c
 	@mkdir -p $(dir $@)
 	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
 
-$(BUILDDIR)/tools/minfs: $(OBJS) $(LIBMINFS_OBJS) $(LIBFS_OBJS)
+$(BUILDDIR)/host/system/ulib/mxcpp/%.o: system/ulib/mxcpp/%.cpp
+	@echo compiling $@
+	@mkdir -p $(dir $@)
+	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/tools/minfs: $(OBJS) $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(LIBMXCPP_OBJS)
 	@echo linking $@
 	@$(HOST_CC) $(MINFS_LDFLAGS) -o $@ $^
 

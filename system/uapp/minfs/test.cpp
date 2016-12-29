@@ -154,7 +154,7 @@ int worker_writer(worker_t* w) {
 int worker_new(const char* where, const char* fn,
                int (*work)(worker_t* w), uint32_t size, uint32_t flags) {
     worker_t* w;
-    if ((w = (worker_t*)calloc(1, sizeof(worker_t))) == NULL) {
+    if ((w = (worker_t*)calloc(1, sizeof(worker_t))) == nullptr) {
         return -1;
     }
 
@@ -181,7 +181,7 @@ int worker_new(const char* where, const char* fn,
 
 int do_work(void) {
     uint32_t busy_count = 0;
-    for (worker_t* w = all_workers; w != NULL; w = w->next) {
+    for (worker_t* w = all_workers; w != nullptr; w = w->next) {
         if (w->status == BUSY) {
             busy_count++;
             if ((w->status = w->work(w)) == FAIL) {
