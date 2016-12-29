@@ -7,7 +7,6 @@
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 
 #include "apps/component_manager/services/component.fidl.h"
-#include "apps/modular/services/document_store/document.fidl.h"
 
 #include "lib/fidl/cpp/bindings/binding.h"
 
@@ -19,7 +18,7 @@ class ResolverImpl : public Resolver {
       : component_index_(std::move(component_index)) {}
 
   void ResolveModules(const fidl::String& contract,
-                      document_store::DocumentPtr data,
+                      const fidl::String& json_data,
                       const ResolveModulesCallback& callback) override;
 
  private:

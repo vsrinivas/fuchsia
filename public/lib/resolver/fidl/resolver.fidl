@@ -4,14 +4,12 @@
 
 module resolver;
 
-import "apps/modular/services/document_store/document.fidl";
-
 [ServiceName="resolver"]
 interface Resolver {
   // Find components whose module facets match the specified |contract| and can
   // accept the optionally-specified |data|. The |results| are ordered from
   // most relevant to least relevant.
-  ResolveModules(string contract, document_store.Document? data) => (array<ModuleInfo> modules);
+  ResolveModules(string contract, string? json_data) => (array<ModuleInfo> modules);
 };
 
 struct ModuleInfo {

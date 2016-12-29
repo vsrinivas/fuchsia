@@ -18,42 +18,18 @@ namespace internal {
 
 constexpr char kModuleFacetName[] = "fuchsia:module";
 
-bool EqualJsonDocstore(const rapidjson::Value& json,
-                       const document_store::ValuePtr& docstore) {
-  switch (docstore->which()) {
-    case document_store::Value::Tag::IRI:
-      return (json.IsString() && docstore->get_iri() == json.GetString());
-    case document_store::Value::Tag::STRING_VALUE:
-      return (json.IsString() &&
-              docstore->get_string_value() == json.GetString());
-    case document_store::Value::Tag::INT_VALUE:
-      return (json.IsInt() && docstore->get_int_value() == json.GetInt());
-    case document_store::Value::Tag::FLOAT_VALUE:
-      return (json.IsDouble() &&
-              docstore->get_float_value() == json.GetDouble());
-    case document_store::Value::Tag::BINARY:
-    case document_store::Value::Tag::EMPTY:
-      return false;
-    default:
-      FTL_LOG(FATAL) << "Unsupported data type.";
-  }
-  FTL_LOG(FATAL) << "This should never happen.";
-  return false;
-}
-
 // Accepts the data_preconditions object of a module facet and a document
 // and returns whether or not the document matches the stated preconditions.
 // Precodnitions map property names to property values in the document.
 bool MatchDataPreconditions(const rapidjson::Value& preconditions,
-                            const document_store::DocumentPtr& data) {
+                            const rapidjson::Value& data) {
   FTL_CHECK(preconditions.IsObject());
+  FTL_CHECK(data.IsObject());
 
   for (auto it = preconditions.MemberBegin(); preconditions.MemberEnd() != it;
        ++it) {
-    auto data_it = data->properties.find(it->name.GetString());
-
-    if (data_it == data->properties.end() ||
-        !EqualJsonDocstore(it->value, data_it.GetValue())) {
+    if (!data.HasMember(it->name.GetString()) ||
+        it->value != data[it->name.GetString()]) {
       return false;
     }
   }
@@ -63,7 +39,7 @@ bool MatchDataPreconditions(const rapidjson::Value& preconditions,
 }  // namespace internal
 
 void ResolverImpl::ResolveModules(const fidl::String& contract,
-                                  document_store::DocumentPtr data,
+                                  const fidl::String& json_data,
                                   const ResolveModulesCallback& callback) {
   FTL_CHECK(!!component_index_);
 
@@ -83,19 +59,28 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
 
   component_index_->FindComponentManifests(
       std::move(filter),
-      ftl::MakeCopyable([ callback, data = std::move(data) ](
-          fidl::Array<component::ComponentManifestPtr> components) {
+      [callback, json_data](
+        fidl::Array<component::ComponentManifestPtr> components) {
+        rapidjson::Document data;
+        if (!!json_data) {
+          if (data.Parse(json_data.get().c_str()).HasParseError()) {
+            FTL_LOG(WARNING) << "Parse error.";
+            callback(nullptr);
+            return;
+          }
+        }
+
         fidl::Array<ModuleInfoPtr> results(fidl::Array<ModuleInfoPtr>::New(0));
 
         for (auto it = components.begin(); components.end() != it; ++it) {
           rapidjson::Document manifest;
           if (manifest.Parse((*it)->raw.get().c_str()).HasParseError()) {
-            FTL_LOG(WARNING) << "Parse error for manifest of "
-                             << (*it)->component->url;
+            FTL_LOG(WARNING)
+                << "Parse error for manifest of " << (*it)->component->url;
             continue;
           }
 
-          if (!manifest[internal::kModuleFacetName].HasMember(
+          if (!!json_data || !manifest[internal::kModuleFacetName].HasMember(
                   "data_preconditions") ||
               internal::MatchDataPreconditions(
                   manifest[internal::kModuleFacetName]["data_preconditions"],
@@ -107,7 +92,7 @@ void ResolverImpl::ResolveModules(const fidl::String& contract,
         }
 
         callback(std::move(results));
-      }));
+      });
 }
 
 }  // namespace resolver

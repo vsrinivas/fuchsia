@@ -8,9 +8,5 @@ fidl("resolver") {
   sources = [
     "resolver.fidl",
   ]
-
-  deps = [
-    "//apps/modular/services/document_store",
-  ]
 }
 
