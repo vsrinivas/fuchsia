@@ -6,6 +6,7 @@
 #define MSD_INTEL_CONTEXT_H
 
 #include "command_buffer.h"
+#include "magma_util/status.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
 #include "ringbuffer.h"
@@ -26,6 +27,11 @@ public:
 
     virtual bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id);
     virtual bool Unmap(AddressSpaceId address_space_id, EngineCommandStreamerId id);
+
+    virtual std::weak_ptr<MsdIntelConnection> connection()
+    {
+        return std::weak_ptr<MsdIntelConnection>();
+    }
 
     // Gets the gpu address of the context buffer if mapped.
     bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);
@@ -71,11 +77,11 @@ public:
     {
     }
 
-    bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
+    magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf);
 
     std::shared_ptr<AddressSpace> exec_address_space() { return exec_address_space_; }
 
-    std::weak_ptr<MsdIntelConnection> connection() { return connection_; }
+    std::weak_ptr<MsdIntelConnection> connection() override { return connection_; }
 
 private:
     std::weak_ptr<MsdIntelConnection> connection_;

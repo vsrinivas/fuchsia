@@ -17,7 +17,7 @@ class MsdIntelConnection {
 public:
     class Owner {
     public:
-        virtual bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
+        virtual magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
     };
 
@@ -25,7 +25,7 @@ public:
 
     virtual ~MsdIntelConnection() {}
 
-    bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+    magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {
         return owner_->SubmitCommandBuffer(std::move(cmd_buf));
     }
@@ -34,9 +34,14 @@ public:
         return owner_->DestroyContext(std::move(client_context));
     }
 
+    bool context_killed() { return context_killed_; }
+
+    void set_context_killed() { context_killed_ = true; }
+
 private:
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
+    bool context_killed_ = false;
     Owner* owner_;
 };
 

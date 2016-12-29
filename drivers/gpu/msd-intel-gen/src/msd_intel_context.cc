@@ -100,11 +100,11 @@ bool MsdIntelContext::GetRingbufferGpuAddress(EngineCommandStreamerId id, gpu_ad
     return true;
 }
 
-bool ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
 {
     auto connection = connection_.lock();
     if (!connection)
-        return DRETF(false, "couldn't lock reference to connection");
+        return DRET_MSG(MAGMA_STATUS_CONNECTION_LOST, "couldn't lock reference to connection");
 
     return connection->SubmitCommandBuffer(std::move(cmd_buf));
 }
@@ -127,8 +127,9 @@ void msd_context_destroy(msd_context* ctx)
 magma_status_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
                                                   msd_buffer** exec_resources)
 {
-    if (!MsdIntelAbiContext::cast(ctx)->ptr()->SubmitCommandBuffer(
-            CommandBuffer::Create(cmd_buf, exec_resources, MsdIntelAbiContext::cast(ctx)->ptr())))
-        return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-    return MAGMA_STATUS_OK;
+    auto context = MsdIntelAbiContext::cast(ctx)->ptr();
+
+    magma::Status status =
+        context->SubmitCommandBuffer(CommandBuffer::Create(cmd_buf, exec_resources, context));
+    return status.get();
 }

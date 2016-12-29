@@ -103,16 +103,17 @@ private:
     }
 
     // MsdIntelConnection::Owner
-    bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
+    magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
     void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
 
 private:
     MsdIntelDevice();
     void Destroy();
+    bool RenderEngineInit();
+    bool RenderEngineReset();
 
-    void ProcessAllRequests(magma::Monitor::Lock* lock);
     void ProcessDeviceRequests(magma::Monitor::Lock* lock);
-    void ProcessCompletedCommandBuffers(magma::Monitor::Lock* lock);
+    void ProcessCompletedCommandBuffers(magma::Monitor::Lock* lock, uint32_t sequence_number);
     void HangCheck();
 
     magma::Status ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);

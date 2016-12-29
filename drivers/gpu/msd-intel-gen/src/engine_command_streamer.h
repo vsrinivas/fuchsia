@@ -7,6 +7,7 @@
 
 #include "address_space.h"
 #include "hardware_status_page.h"
+#include "magma_util/status.h"
 #include "mapped_batch.h"
 #include "msd_intel_context.h"
 #include "pagetable.h"
@@ -95,7 +96,8 @@ public:
 
     void SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
 
-    void ProcessCompletedCommandBuffers(uint32_t* last_completed_sequence_number_out);
+    void ProcessCompletedCommandBuffers(uint32_t last_completed_sequence);
+    void ResetCurrentContext();
 
     bool WaitIdle() override;
 

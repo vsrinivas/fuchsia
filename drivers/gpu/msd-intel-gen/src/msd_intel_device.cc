@@ -173,6 +173,18 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!global_context_->Map(gtt_, render_engine_cs_->id()))
         return DRETF(false, "global context init failed");
 
+    if (!RenderEngineInit())
+        return DRETF(false, "failed to init render engine");
+
+    monitor_ = magma::Monitor::CreateShared();
+
+    return true;
+}
+
+bool MsdIntelDevice::RenderEngineInit()
+{
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+
     render_engine_cs_->InitHardware();
 
     auto init_batch = render_engine_cs_->CreateRenderInitBatch(device_id_);
@@ -182,9 +194,18 @@ bool MsdIntelDevice::Init(void* device_handle)
     if (!render_engine_cs_->RenderInit(global_context_, std::move(init_batch), gtt_))
         return DRETF(false, "render_engine_cs failed RenderInit");
 
-    monitor_ = magma::Monitor::CreateShared();
-
     return true;
+}
+
+bool MsdIntelDevice::RenderEngineReset()
+{
+    magma::log(magma::LOG_WARNING, "resetting render engine");
+
+    render_engine_cs_->ResetCurrentContext();
+
+    registers::AllEngineFault::clear(register_io_.get());
+
+    return RenderEngineInit();
 }
 
 void MsdIntelDevice::StartDeviceThread()
@@ -238,7 +259,8 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
     DumpState dump_state;
     Dump(&dump_state);
 
-    const char* fmt = "Device id: 0x%x\n"
+    const char* fmt = "---- device dump begin ----\n"
+                      "Device id: 0x%x\n"
                       "RENDER_COMMAND_STREAMER\n"
                       "sequence_number 0x%x\n"
                       "active head pointer: 0x%llx\n";
@@ -259,11 +281,12 @@ void MsdIntelDevice::DumpToString(std::string& dump_out)
                       dump_state.fault_type);
         dump_out.append(&buf[0]);
     } else {
-        dump_out.append("No engine faults detected.");
+        dump_out.append("No engine faults detected.\n");
     }
+    dump_out.append("---- device dump end ----");
 }
 
-bool MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
+magma::Status MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
 {
     DLOG("SubmitCommandBuffer");
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
@@ -274,8 +297,7 @@ bool MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_
     EnqueueDeviceRequest(std::move(request));
 
     magma::Status status = reply->Wait();
-
-    return DRETF(status.ok(), "command buffer submissions failed, status %d", status.get());
+    return status;
 }
 
 void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_context)
@@ -339,9 +361,28 @@ int MsdIntelDevice::DeviceThreadLoop()
         if (device_thread_quit_flag_)
             break;
 
-        ProcessAllRequests(&lock);
+        uint32_t sequence_number =
+            hardware_status_page(RENDER_COMMAND_STREAMER)->read_sequence_number();
 
-        HangCheck();
+        // TODO(MA-126): check for fault only when an interrupt tells us a command buffer has
+        // completed.
+        bool fault =
+            registers::AllEngineFault::read(register_io_.get()) & registers::AllEngineFault::kValid;
+        if (fault) {
+            std::string s;
+            DumpToString(s);
+            magma::log(magma::LOG_WARNING, "GPU fault detected\n%s", s.c_str());
+            RenderEngineReset();
+            DLOG("returned from RenderEngineReset\n");
+        } else {
+            ProcessCompletedCommandBuffers(&lock, sequence_number);
+        }
+
+        ProcessDeviceRequests(&lock);
+
+        // TODO(US-126): check for hang only when we have a true watchdog timeout
+        if (!fault)
+            HangCheck();
 
         // TODO(US-86): only reset the time_point when timed_out (currently unreliable).
         time_point =
@@ -358,25 +399,17 @@ int MsdIntelDevice::DeviceThreadLoop()
 }
 
 // If |lock| is non null then it should be in acquired state.
-// The lock will be released and reacquired while processing device requests.
-void MsdIntelDevice::ProcessAllRequests(magma::Monitor::Lock* lock)
-{
-    ProcessCompletedCommandBuffers(lock);
-    ProcessDeviceRequests(lock);
-}
-
-// If |lock| is non null then it should be in acquired state.
-void MsdIntelDevice::ProcessCompletedCommandBuffers(magma::Monitor::Lock* lock)
+void MsdIntelDevice::ProcessCompletedCommandBuffers(magma::Monitor::Lock* lock,
+                                                    uint32_t sequence_number)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
     if (lock)
         DASSERT(lock->acquired(monitor_.get()));
 
-    uint32_t last_completed_sequence_number;
-    render_engine_cs_->ProcessCompletedCommandBuffers(&last_completed_sequence_number);
+    render_engine_cs_->ProcessCompletedCommandBuffers(sequence_number);
 
-    progress_.Completed(last_completed_sequence_number);
+    progress_.Completed(sequence_number);
 }
 
 void MsdIntelDevice::ProcessDeviceRequests(magma::Monitor::Lock* lock)
@@ -412,9 +445,10 @@ void MsdIntelDevice::HangCheck()
         if (elapsed.count() > kHangCheckTimeoutMs) {
             std::string s;
             DumpToString(s);
-            printf("Suspected GPU hang: last submitted sequence number 0x%x\n\n%s\n",
-                   progress_.last_submitted_sequence_number(), s.c_str());
-            DASSERT(false);
+            magma::log(magma::LOG_WARNING, "Suspected GPU hang: last submitted sequence number "
+                                           "0x%x\n%s",
+                       progress_.last_submitted_sequence_number(), s.c_str());
+            RenderEngineReset();
         }
     }
 }
@@ -424,6 +458,13 @@ magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
     DLOG("preparing command buffer for execution");
+
+    auto context = command_buffer->GetContext().lock();
+    DASSERT(context);
+
+    auto connection = context->connection().lock();
+    if (connection && connection->context_killed())
+        return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Connection context killed");
 
     if (!command_buffer->PrepareForExecution(render_engine_cs_.get(), gtt()))
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to prepare command buffer for execution");

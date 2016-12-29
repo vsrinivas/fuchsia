@@ -8,6 +8,7 @@
 #include "magma_util/macros.h"
 #include "magma_util/sleep.h"
 #include "msd_intel_buffer.h"
+#include "msd_intel_connection.h"
 #include "registers.h"
 #include "render_init_batch.h"
 #include "ringbuffer.h"
@@ -538,8 +539,9 @@ bool RenderEngineCommandStreamer::WaitIdle()
     auto start = std::chrono::high_resolution_clock::now();
 
     while (!inflight_command_sequences_.empty()) {
-        uint32_t last_completed_sequence_number;
-        ProcessCompletedCommandBuffers(&last_completed_sequence_number);
+        uint32_t last_completed_sequence_number =
+            hardware_status_page(RENDER_COMMAND_STREAMER)->read_sequence_number();
+        ProcessCompletedCommandBuffers(last_completed_sequence_number);
 
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double, std::milli> elapsed = end - start;
@@ -556,14 +558,8 @@ bool RenderEngineCommandStreamer::WaitIdle()
     return true;
 }
 
-void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(
-    uint32_t* last_completed_sequence_number_out)
+void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(uint32_t last_completed_sequence)
 {
-    HardwareStatusPage* status_page = hardware_status_page(id());
-
-    uint32_t last_completed_sequence = status_page->read_sequence_number();
-    DLOG("last_completed_sequence 0x%x", last_completed_sequence);
-
     bool progress = false;
 
     // pop all completed command buffers
@@ -587,8 +583,6 @@ void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(
         inflight_command_sequences_.pop();
         progress = true;
     }
-
-    *last_completed_sequence_number_out = last_completed_sequence;
 
     if (progress)
         ScheduleContext();
@@ -647,4 +641,30 @@ bool RenderEngineCommandStreamer::WriteSequenceNumber(MsdIntelContext* context,
     *sequence_number_out = sequence_number;
 
     return true;
+}
+
+void RenderEngineCommandStreamer::ResetCurrentContext()
+{
+    DLOG("ResetCurrentContext");
+
+    DASSERT(!inflight_command_sequences_.empty());
+
+    auto context = inflight_command_sequences_.front().GetContext().lock();
+
+    // Do this before releasing any connection threads block in wait rendering
+    auto connection = context->connection().lock();
+    DASSERT(connection);
+    connection->set_context_killed();
+
+    // Cleanup resources for any inflight command sequences on this context
+    while (!inflight_command_sequences_.empty()) {
+        auto& sequence = inflight_command_sequences_.front();
+        if (sequence.mapped_batch()->was_scheduled())
+            scheduler_->CommandBufferCompleted(
+                inflight_command_sequences_.front().GetContext().lock());
+        inflight_command_sequences_.pop();
+    }
+
+    // Reset the engine hardware
+    EngineCommandStreamer::Reset();
 }

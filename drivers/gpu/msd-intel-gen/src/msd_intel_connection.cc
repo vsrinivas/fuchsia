@@ -18,8 +18,17 @@ msd_context* msd_connection_create_context(msd_connection* connection)
         std::make_unique<ClientContext>(MsdIntelAbiConnection::cast(connection)->ptr(), nullptr));
 }
 
-int32_t msd_connection_wait_rendering(msd_connection* connection, msd_buffer* buffer)
+magma_status_t msd_connection_wait_rendering(msd_connection* abi_connection, msd_buffer* buffer)
 {
+    auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
+
+    if (connection->context_killed())
+        return DRET(MAGMA_STATUS_CONTEXT_KILLED);
+
     MsdIntelAbiBuffer::cast(buffer)->ptr()->WaitRendering();
+
+    if (connection->context_killed())
+        return DRET(MAGMA_STATUS_CONTEXT_KILLED);
+
     return MAGMA_STATUS_OK;
 }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "scheduler.h"
+#include "msd_intel_connection.h"
 #include "msd_intel_context.h"
 
 class FifoScheduler : public Scheduler {
@@ -34,6 +35,12 @@ std::shared_ptr<MsdIntelContext> FifoScheduler::ScheduleContext()
         context = fifo_.front().lock();
         if (!context)
             fifo_.pop();
+
+        auto connection = context->connection().lock();
+        if (connection && connection->context_killed()) {
+            DLOG("connection context killed");
+            fifo_.pop();
+        }
     }
 
     if (current_context_ == nullptr || current_context_ == context) {
