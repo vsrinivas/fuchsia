@@ -14,9 +14,17 @@ class MsdIntelContext;
 class MappedBatch {
 public:
     virtual ~MappedBatch() {}
-    virtual MsdIntelContext* GetContext() = 0;
+
+    virtual std::weak_ptr<MsdIntelContext> GetContext() = 0;
     virtual bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) = 0;
     virtual void SetSequenceNumber(uint32_t sequence_number) = 0;
+    virtual uint32_t GetPipeControlFlags() { return 0; }
+
+    void scheduled() { scheduled_ = true; }
+    bool was_scheduled() { return scheduled_; }
+
+private:
+    bool scheduled_ = false;
 };
 
 class SimpleMappedBatch : public MappedBatch {
@@ -33,7 +41,7 @@ public:
         batch_buffer_mapping_->buffer()->DecrementInflightCounter();
     }
 
-    MsdIntelContext* GetContext() override { return context_.get(); }
+    std::weak_ptr<MsdIntelContext> GetContext() override { return context_; }
 
     bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) override
     {

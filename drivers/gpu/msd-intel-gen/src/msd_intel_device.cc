@@ -425,16 +425,14 @@ void MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
+    DLOG("preparing command buffer for execution");
+
+    if (!command_buffer->PrepareForExecution(render_engine_cs_.get(), gtt()))
+        DLOG("Failed to prepare command buffer for execution");
+
+    render_engine_cs_->SubmitCommandBuffer(std::move(command_buffer));
+
     RequestMaxFreq();
-
-    uint32_t sequence_number;
-    if (!render_engine_cs_->ExecuteCommandBuffer(std::move(command_buffer), gtt(),
-                                                 &sequence_number)) {
-        DLOG("[WARNING] Failed to execute command buffer");
-        return;
-    }
-
-    progress_.Submitted(sequence_number);
 }
 
 void MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContext> client_context)

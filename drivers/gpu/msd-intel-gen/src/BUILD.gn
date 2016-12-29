@@ -40,6 +40,8 @@ source_set("src") {
     "render_init_batch_gen9.cc",
     "ringbuffer.cc",
     "ringbuffer.h",
+    "scheduler.cc",
+    "scheduler.h",
     "types.h",
   ]
 

@@ -12,6 +12,7 @@
 #include "pagetable.h"
 #include "register_io.h"
 #include "render_init_batch.h"
+#include "scheduler.h"
 #include "sequencer.h"
 #include <memory>
 #include <queue>
@@ -23,6 +24,8 @@ public:
         virtual RegisterIo* register_io() = 0;
         virtual Sequencer* sequencer() = 0;
         virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
+        // Keep the device informed when we have scheduled command sequences
+        virtual void batch_submitted(uint32_t sequence_number) = 0;
     };
 
     EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id, uint32_t mmio_base);
@@ -39,9 +42,7 @@ public:
 
     uint64_t GetActiveHeadPointer();
 
-    virtual bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
-                                      std::shared_ptr<AddressSpace> ggtt,
-                                      uint32_t* sequence_number_out) = 0;
+    virtual void SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
 
     virtual bool WaitIdle() = 0;
 
@@ -67,6 +68,8 @@ protected:
         return owner_->hardware_status_page(id);
     }
 
+    void batch_submitted(uint32_t sequence_number) { owner_->batch_submitted(sequence_number); }
+
 private:
     virtual uint32_t GetContextSize() const { return PAGE_SIZE * 2; }
 
@@ -90,9 +93,7 @@ public:
                     std::unique_ptr<RenderInitBatch> init_batch,
                     std::shared_ptr<AddressSpace> address_space);
 
-    bool ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
-                              std::shared_ptr<AddressSpace> ggtt,
-                              uint32_t* sequence_number_out) override;
+    void SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
 
     void ProcessCompletedCommandBuffers(uint32_t* last_completed_sequence_number_out);
 
@@ -103,12 +104,11 @@ private:
 
     uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 
-    bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch, uint32_t pipe_control_flags,
-                   uint32_t* sequence_number_out);
+    bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch);
 
     bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
                           AddressSpaceId address_space_id);
-    bool WriteSequenceNumber(MsdIntelContext* context, uint32_t sequence_number);
+    bool WriteSequenceNumber(MsdIntelContext* context, uint32_t* sequence_number_out);
     void ScheduleContext();
 
     class InflightCommandSequence {
@@ -124,7 +124,7 @@ private:
 
         uint32_t ringbuffer_offset() { return ringbuffer_offset_; }
 
-        MsdIntelContext* GetContext() { return mapped_batch_->GetContext(); }
+        std::weak_ptr<MsdIntelContext> GetContext() { return mapped_batch_->GetContext(); }
 
         MappedBatch* mapped_batch() { return mapped_batch_.get(); }
 
@@ -141,7 +141,7 @@ private:
         std::unique_ptr<MappedBatch> mapped_batch_;
     };
 
-    std::queue<InflightCommandSequence> pending_command_sequences_;
+    std::unique_ptr<Scheduler> scheduler_;
     std::queue<InflightCommandSequence> inflight_command_sequences_;
 
     friend class TestEngineCommandStreamer;

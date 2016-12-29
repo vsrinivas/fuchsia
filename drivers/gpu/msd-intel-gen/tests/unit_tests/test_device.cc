@@ -10,10 +10,10 @@
 
 class TestEngineCommandStreamer {
 public:
-    static void ExecBatch(RenderEngineCommandStreamer* engine,
-                          std::unique_ptr<MappedBatch> mapped_batch, uint32_t* sequence_number_out)
+    static bool ExecBatch(RenderEngineCommandStreamer* engine,
+                          std::unique_ptr<MappedBatch> mapped_batch)
     {
-        EXPECT_TRUE(engine->ExecBatch(std::move(mapped_batch), 0, sequence_number_out));
+        return engine->ExecBatch(std::move(mapped_batch));
     }
 };
 
@@ -155,14 +155,11 @@ public:
 
             uint32_t tail_start = ringbuffer->tail();
 
-            uint32_t sequence_number = 0;
-            TestEngineCommandStreamer::ExecBatch(
+            EXPECT_TRUE(TestEngineCommandStreamer::ExecBatch(
                 device->render_engine_cs(),
                 std::unique_ptr<SimpleMappedBatch>(
-                    new SimpleMappedBatch(device->global_context(), std::move(batch_mapping))),
-                &sequence_number);
+                    new SimpleMappedBatch(device->global_context(), std::move(batch_mapping)))));
 
-            EXPECT_NE(sequence_number, 0u);
             EXPECT_TRUE(device->WaitIdle());
 
             EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());

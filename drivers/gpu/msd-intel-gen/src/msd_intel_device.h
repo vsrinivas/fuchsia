@@ -97,6 +97,11 @@ private:
     // EngineCommandStreamer::Owner
     HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override;
 
+    void batch_submitted(uint32_t sequence_number) override
+    {
+        progress_.Submitted(sequence_number);
+    }
+
     // MsdIntelConnection::Owner
     bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
     void DestroyContext(std::shared_ptr<ClientContext> client_context) override;

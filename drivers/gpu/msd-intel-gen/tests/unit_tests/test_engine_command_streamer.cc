@@ -6,6 +6,7 @@
 #include "engine_command_streamer.h"
 #include "instructions.h"
 #include "mock/mock_address_space.h"
+#include "mock/mock_mapped_batch.h"
 #include "mock/mock_mmio.h"
 #include "register_tracer.h"
 #include "registers.h"
@@ -301,6 +302,8 @@ private:
     {
         return hw_status_page_.get();
     }
+
+    void batch_submitted(uint32_t sequence_number) override {}
 
     void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override
     {

@@ -102,7 +102,9 @@ public:
 
         ASSERT_TRUE(cmd_buf_->PrepareForExecution(engine, address_space));
 
-        ClientContext* ctx = static_cast<ClientContext*>(cmd_buf_->GetContext());
+        auto context = cmd_buf_->GetContext().lock();
+        ASSERT_NE(context, nullptr);
+        ClientContext* ctx = static_cast<ClientContext*>(context.get());
         ASSERT_NE(ctx, nullptr);
 
         gpu_addr_t gpu_addr;

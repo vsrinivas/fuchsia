@@ -4,6 +4,7 @@
 
 #include "command_buffer.h"
 #include "engine_command_streamer.h"
+#include "instructions.h"
 #include "msd_intel_context.h"
 
 CommandBuffer::~CommandBuffer()
@@ -48,10 +49,12 @@ bool CommandBuffer::Initialize(msd_buffer** exec_buffers)
     return true;
 }
 
-MsdIntelContext* CommandBuffer::GetContext()
+std::weak_ptr<MsdIntelContext> CommandBuffer::GetContext() { return context_; }
+
+uint32_t CommandBuffer::GetPipeControlFlags()
 {
-    DASSERT(prepared_to_execute_);
-    return locked_context_.get();
+    return MiPipeControl::kIndirectStatePointersDisable |
+           MiPipeControl::kCommandStreamerStallEnableBit;
 }
 
 bool CommandBuffer::GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out)

@@ -427,6 +427,7 @@ RenderEngineCommandStreamer::Create(EngineCommandStreamer::Owner* owner)
 RenderEngineCommandStreamer::RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner)
     : EngineCommandStreamer(owner, RENDER_COMMAND_STREAMER, kRenderEngineMmioBase)
 {
+    scheduler_ = Scheduler::CreateFifoScheduler();
 }
 
 bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> context,
@@ -445,54 +446,49 @@ bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> co
     if (!mapping)
         return DRETF(false, "batch init failed");
 
-    uint32_t sequence_number;
     std::unique_ptr<SimpleMappedBatch> mapped_batch(
         new SimpleMappedBatch(context, std::move(mapping)));
 
-    return ExecBatch(std::move(mapped_batch), 0, &sequence_number);
+    return ExecBatch(std::move(mapped_batch));
 }
 
-bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_batch,
-                                            uint32_t pipe_control_flags,
-                                            uint32_t* sequence_number_out)
+bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_batch)
 {
-    MsdIntelContext* context = mapped_batch->GetContext();
-
-    uint32_t sequence_number = sequencer()->next_sequence_number();
-
-    DLOG("ExecBatch sequence number 0x%x", sequence_number);
+    auto context = mapped_batch->GetContext().lock();
+    DASSERT(context);
 
     gpu_addr_t gpu_addr;
     if (!mapped_batch->GetGpuAddress(ADDRESS_SPACE_GTT, &gpu_addr))
         return DRETF(false, "coudln't get batch gpu address");
 
-    if (!StartBatchBuffer(context, gpu_addr, ADDRESS_SPACE_GTT))
+    if (!StartBatchBuffer(context.get(), gpu_addr, ADDRESS_SPACE_GTT))
         return DRETF(false, "failed to emit batch");
 
-    if (!PipeControl(context, pipe_control_flags))
+    if (!PipeControl(context.get(), mapped_batch->GetPipeControlFlags()))
         return DRETF(false, "FlushInvalidate failed");
 
-    if (!WriteSequenceNumber(context, sequence_number))
+    uint32_t sequence_number;
+    if (!WriteSequenceNumber(context.get(), &sequence_number))
         return DRETF(false, "failed to finish batch buffer");
-
-    uint32_t ringbuffer_offset = context->get_ringbuffer(id())->tail();
 
     mapped_batch->SetSequenceNumber(sequence_number);
 
-    pending_command_sequences_.emplace(sequence_number, ringbuffer_offset, std::move(mapped_batch));
+    uint32_t ringbuffer_offset = context->get_ringbuffer(id())->tail();
+    inflight_command_sequences_.emplace(sequence_number, ringbuffer_offset,
+                                        std::move(mapped_batch));
 
-    *sequence_number_out = sequence_number;
+    uint32_t tail = inflight_command_sequences_.back().ringbuffer_offset();
+    DLOG("Submitting context for sequence_number 0x%x", sequence_number);
 
-    ScheduleContext();
+    SubmitContext(context.get(), tail);
+
+    batch_submitted(sequence_number);
 
     return true;
 }
 
 void RenderEngineCommandStreamer::ScheduleContext()
 {
-    if (pending_command_sequences_.empty())
-        return;
-
     uint64_t status = registers::ExeclistStatus::read(register_io(), mmio_base());
 
     if (registers::ExeclistStatus::execlist_write_pointer(status) ==
@@ -502,38 +498,36 @@ void RenderEngineCommandStreamer::ScheduleContext()
         return;
     }
 
-    auto context = pending_command_sequences_.front().GetContext();
+    while (true) {
+        auto context = scheduler_->ScheduleContext();
+        if (!context)
+            break;
 
-    auto current_context = inflight_command_sequences_.empty()
-                               ? nullptr
-                               : inflight_command_sequences_.front().GetContext();
+        auto mapped_batch = std::move(context->pending_batch_queue().front());
+        mapped_batch->scheduled();
+        context->pending_batch_queue().pop();
 
-    if (!current_context || current_context == context) {
-        uint32_t tail = pending_command_sequences_.front().ringbuffer_offset();
-        DLOG("Submitting context for sequence_number 0x%x",
-             pending_command_sequences_.front().sequence_number());
-        inflight_command_sequences_.emplace(std::move(pending_command_sequences_.front()));
-        pending_command_sequences_.pop();
-        SubmitContext(context, tail);
+        // TODO(MA-142) - ExecBatch should not fail.  Scheduler should verify there is
+        // sufficient room in the ringbuffer before selecting a context.
+        // For now, drop the command buffer and try another context.
+        if (ExecBatch(std::move(mapped_batch)))
+            break;
+
+        magma::log(magma::LOG_WARNING, "ExecBatch failed");
     }
 }
 
-bool RenderEngineCommandStreamer::ExecuteCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf,
-                                                       std::shared_ptr<AddressSpace> ggtt,
-                                                       uint32_t* sequence_number_out)
+void RenderEngineCommandStreamer::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
 {
-    DLOG("preparing command buffer for execution");
+    auto context = command_buffer->GetContext().lock();
+    if (!context)
+        return;
 
-    if (!cmd_buf->PrepareForExecution(this, ggtt))
-        return DRETF(false, "Failed to prepare command buffer for execution");
+    context->pending_batch_queue().emplace(std::move(command_buffer));
 
-    uint32_t pipe_control_flags = MiPipeControl::kIndirectStatePointersDisable |
-                                  MiPipeControl::kCommandStreamerStallEnableBit;
+    scheduler_->CommandBufferQueued(context);
 
-    if (!ExecBatch(std::move(cmd_buf), pipe_control_flags, sequence_number_out))
-        return DRETF(false, "ExecBatch failed");
-
-    return true;
+    ScheduleContext();
 }
 
 bool RenderEngineCommandStreamer::WaitIdle()
@@ -583,7 +577,12 @@ void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(
              "ringbuffer_start_offset 0x%x",
              sequence.sequence_number(), sequence.ringbuffer_offset());
 
-        sequence.GetContext()->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
+        auto context = sequence.GetContext().lock();
+        DASSERT(context);
+        context->get_ringbuffer(id())->update_head(sequence.ringbuffer_offset());
+
+        if (sequence.mapped_batch()->was_scheduled())
+            scheduler_->CommandBufferCompleted(context);
 
         inflight_command_sequences_.pop();
         progress = true;
@@ -626,7 +625,7 @@ bool RenderEngineCommandStreamer::StartBatchBuffer(MsdIntelContext* context, gpu
 }
 
 bool RenderEngineCommandStreamer::WriteSequenceNumber(MsdIntelContext* context,
-                                                      uint32_t sequence_number)
+                                                      uint32_t* sequence_number_out)
 {
     auto ringbuffer = context->get_ringbuffer(id());
 
@@ -638,11 +637,14 @@ bool RenderEngineCommandStreamer::WriteSequenceNumber(MsdIntelContext* context,
     gpu_addr_t gpu_addr =
         hardware_status_page(id())->gpu_addr() + HardwareStatusPage::kSequenceNumberOffset;
 
+    uint32_t sequence_number = sequencer()->next_sequence_number();
     DLOG("writing sequence number update to 0x%x", sequence_number);
 
     MiStoreDataImmediate::write_ringbuffer(ringbuffer, sequence_number, gpu_addr,
                                            ADDRESS_SPACE_GTT);
     MiNoop::write_ringbuffer(ringbuffer);
+
+    *sequence_number_out = sequence_number;
 
     return true;
 }

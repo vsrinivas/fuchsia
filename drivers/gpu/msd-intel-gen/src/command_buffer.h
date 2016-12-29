@@ -42,12 +42,13 @@ public:
     // This should be called only when we are ready to submit the CommandBuffer for execution.
     bool PrepareForExecution(EngineCommandStreamer* engine, std::shared_ptr<AddressSpace> ggtt);
 
-    // only valid after PrepareForExecution succeeds
-    MsdIntelContext* GetContext() override;
+    std::weak_ptr<MsdIntelContext> GetContext() override;
 
     void SetSequenceNumber(uint32_t sequence_number) override;
 
     bool GetGpuAddress(AddressSpaceId address_space_id, gpu_addr_t* gpu_addr_out) override;
+
+    uint32_t GetPipeControlFlags() override;
 
 private:
     CommandBuffer(msd_buffer* abi_cmd_buf, std::weak_ptr<ClientContext> context);

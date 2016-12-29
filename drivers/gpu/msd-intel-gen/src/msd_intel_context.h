@@ -12,6 +12,7 @@
 #include "types.h"
 #include <map>
 #include <memory>
+#include <queue>
 
 class MsdIntelConnection;
 
@@ -47,6 +48,8 @@ public:
         return state_map_.find(id) != state_map_.end();
     }
 
+    std::queue<std::unique_ptr<MappedBatch>>& pending_batch_queue() { return pending_batch_queue_; }
+
 private:
     struct PerEngineState {
         std::shared_ptr<MsdIntelBuffer> context_buffer;
@@ -55,6 +58,7 @@ private:
     };
 
     std::map<EngineCommandStreamerId, PerEngineState> state_map_;
+    std::queue<std::unique_ptr<MappedBatch>> pending_batch_queue_;
 
     friend class TestContext;
 };
