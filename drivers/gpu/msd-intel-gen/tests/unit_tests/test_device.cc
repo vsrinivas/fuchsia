@@ -202,7 +202,11 @@ public:
             }
 
         protected:
-            void Process(MsdIntelDevice* device) override { *processing_complete_ = true; }
+            magma::Status Process(MsdIntelDevice* device) override
+            {
+                *processing_complete_ = true;
+                return MAGMA_STATUS_OK;
+            }
 
         private:
             std::shared_ptr<bool> processing_complete_;

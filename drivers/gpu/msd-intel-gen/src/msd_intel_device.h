@@ -115,10 +115,10 @@ private:
     void ProcessCompletedCommandBuffers(magma::Monitor::Lock* lock);
     void HangCheck();
 
-    void ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
-    void ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
-    void ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
-                     magma_system_pageflip_callback_t callback, void* data);
+    magma::Status ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
+    magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
+    magma::Status ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
+                              magma_system_pageflip_callback_t callback, void* data);
 
     bool WaitIdle();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request);

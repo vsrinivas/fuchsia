@@ -20,9 +20,9 @@ public:
     }
 
 protected:
-    void Process(MsdIntelDevice* device) override
+    magma::Status Process(MsdIntelDevice* device) override
     {
-        device->ProcessCommandBuffer(std::move(command_buffer_));
+        return device->ProcessCommandBuffer(std::move(command_buffer_));
     }
 
 private:
@@ -37,9 +37,9 @@ public:
     }
 
 protected:
-    void Process(MsdIntelDevice* device) override
+    magma::Status Process(MsdIntelDevice* device) override
     {
-        device->ProcessDestroyContext(std::move(client_context_));
+        return device->ProcessDestroyContext(std::move(client_context_));
     }
 
 private:
@@ -55,9 +55,9 @@ public:
     }
 
 protected:
-    void Process(MsdIntelDevice* device) override
+    magma::Status Process(MsdIntelDevice* device) override
     {
-        device->ProcessFlip(buffer_, callback_, data_);
+        return device->ProcessFlip(buffer_, callback_, data_);
     }
 
 private:
@@ -273,11 +273,9 @@ bool MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_
 
     EnqueueDeviceRequest(std::move(request));
 
-    reply->Wait();
+    magma::Status status = reply->Wait();
 
-    DLOG("SubmitCommandBuffer returning");
-
-    return true;
+    return DRETF(status.ok(), "command buffer submissions failed, status %d", status.get());
 }
 
 void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_context)
@@ -421,32 +419,37 @@ void MsdIntelDevice::HangCheck()
     }
 }
 
-void MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
+magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
     DLOG("preparing command buffer for execution");
 
     if (!command_buffer->PrepareForExecution(render_engine_cs_.get(), gtt()))
-        DLOG("Failed to prepare command buffer for execution");
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to prepare command buffer for execution");
 
     render_engine_cs_->SubmitCommandBuffer(std::move(command_buffer));
 
     RequestMaxFreq();
+    return MAGMA_STATUS_OK;
 }
 
-void MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContext> client_context)
+magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContext> client_context)
 {
     DLOG("ProcessDestroyContext");
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     // Just let it go out of scope
+    return MAGMA_STATUS_OK;
 }
 
-void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
-                                 magma_system_pageflip_callback_t callback, void* data)
+magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
+                                          magma_system_pageflip_callback_t callback, void* data)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     DASSERT(buffer);
+
+    // Error indicators are passed to the callback
+    magma::Status status(MAGMA_STATUS_OK);
 
     std::shared_ptr<GpuMapping> mapping;
 
@@ -460,9 +463,10 @@ void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
     if (!mapping) {
         mapping = AddressSpace::GetSharedGpuMapping(gtt_, buffer, PAGE_SIZE);
         if (!mapping) {
+            DLOG("Couldn't map buffer to gtt");
             if (callback)
-                (*callback)(DRET_MSG(MAGMA_STATUS_MEMORY_ERROR, "Couldn't map buffer to gtt"), data);
-            return;
+                (*callback)(MAGMA_STATUS_MEMORY_ERROR, data);
+            return status;
         }
         display_mappings_.push_front(mapping);
     }
@@ -507,7 +511,7 @@ void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
                 DLOG("Timeout waiting for page flip event");
                 if (callback)
                     (*callback)(MAGMA_STATUS_INTERNAL_ERROR, data);
-                return;
+                return status;
             }
             std::this_thread::yield();
         }
@@ -524,6 +528,8 @@ void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
 
     flip_callback_ = callback;
     flip_data_ = data;
+
+    return status;
 }
 
 bool MsdIntelDevice::WaitIdle()
