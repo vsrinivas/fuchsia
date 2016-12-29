@@ -16,6 +16,9 @@ int __clock_gettime(clockid_t clk, struct timespec* ts) {
     case CLOCK_REALTIME:
         mx_clock = MX_CLOCK_UTC;
         break;
+    case CLOCK_THREAD_CPUTIME_ID:
+        mx_clock = MX_CLOCK_THREAD;
+        break;
     default:
         errno = EINVAL;
         return -1;

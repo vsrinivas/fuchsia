@@ -35,6 +35,7 @@
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/log.h>
 #include <magenta/user_copy.h>
+#include <magenta/user_thread.h>
 #include <magenta/wait_set_dispatcher.h>
 
 #include <mxtl/ref_ptr.h>
@@ -67,6 +68,8 @@ uint64_t sys_time_get(uint32_t clock_id) {
         return current_time_hires();
     case MX_CLOCK_UTC:
         return current_time_hires() + utc_offset;
+    case MX_CLOCK_THREAD:
+        return UserThread::GetCurrent()->runtime_ns();
     default:
         //TODO: figure out the best option here
         return 0u;

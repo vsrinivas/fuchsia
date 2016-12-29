@@ -966,6 +966,26 @@ out:
 }
 
 /**
+ * @brief Return the number of nanoseconds a thread has been running for.
+ *
+ * This takes the thread_lock to ensure there are no races while calculating the
+ * runtime of the thread.
+ */
+lk_bigtime_t thread_runtime(const thread_t *t)
+{
+    THREAD_LOCK(state);
+
+    lk_bigtime_t runtime = t->runtime_ns;
+    if (t->state == THREAD_RUNNING) {
+        runtime += current_time_hires() - t->last_started_running_ns;
+    }
+
+    THREAD_UNLOCK(state);
+
+    return runtime;
+}
+
+/**
  * @brief Construct a thread t around the current running state
  *
  * This should be called once per CPU initialization.  It will create

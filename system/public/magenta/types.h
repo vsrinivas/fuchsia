@@ -190,6 +190,7 @@ typedef uint32_t mx_rights_t;
 // clock ids
 #define MX_CLOCK_MONOTONIC        (0u)
 #define MX_CLOCK_UTC              (1u)
+#define MX_CLOCK_THREAD           (2u)
 
 // virtual address
 typedef uintptr_t mx_vaddr_t;

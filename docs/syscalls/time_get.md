@@ -23,6 +23,8 @@ invalid.
 
 *MX_CLOCK_UTC* number of wall clock nanoseconds since the Unix epoch (midnight on January 1 1970) in UTC
 
+*MX_CLOCK_THREAD* number of nanoseconds the current thread has been running for.
+
 ## RETURN VALUE
 
 **mx_time_get**() returns zero on error.

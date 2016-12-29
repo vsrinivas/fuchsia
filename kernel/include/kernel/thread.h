@@ -106,7 +106,7 @@ typedef struct thread {
     /* if blocked, a pointer to the wait queue */
     struct wait_queue *blocking_wait_queue;
 
-    /* return code if woken up abnornmally from suspend, sleep, or block */
+    /* return code if woken up abnormally from suspend, sleep, or block */
     status_t blocked_status;
 
     /* are we allowed to be interrupted on the current thing we're blocked/sleeping on */
@@ -204,6 +204,9 @@ status_t thread_sleep_etc(lk_time_t delay, bool interruptable);
 
 /* non interruptable version of thread_sleep_etc */
 static inline status_t thread_sleep(lk_time_t delay) { return thread_sleep_etc(delay, false); }
+
+/* return the number of nanoseconds a thread has been running for */
+lk_bigtime_t thread_runtime(const thread_t *t);
 
 /* deliver a kill signal to a thread */
 void thread_kill(thread_t *t, bool block);
