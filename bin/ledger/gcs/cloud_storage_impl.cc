@@ -88,6 +88,12 @@ void CloudStorageImpl::UploadFile(const std::string& key,
     return;
   }
 
+  if (data_str.size() > 10'000) {
+    FTL_LOG(ERROR) << "Uploading objects bigger than 10 kB is broken, "
+                   << "see US-123 and US-125.";
+    callback(Status::INTERNAL_ERROR);
+  }
+
   auto request_factory = ftl::MakeCopyable([
     url = std::move(url), task_runner = task_runner_, data = std::move(data_str)
   ] {
