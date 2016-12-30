@@ -160,26 +160,18 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
     module_watcher_binding_.Close();
   }
 
-  // Ensure the Stop() call is sent only after the root link was
-  // written. Since the AddDocuments() and the Stop() requests are
-  // sent over different channels, there is no ordering guarantee
-  // between them. If the Stop() request happens to be executed before
-  // the AddDocuments() request, the link is never written to the
-  // ledger.
-  root_->Sync([this] {
-    story_runner_->Stop([this] {
-      story_data_->story_info->is_running = false;
-      story_data_->story_info->state = StoryState::STOPPED;
-      WriteStoryData([]{});
-      Reset();
-      NotifyStateChange();
+  story_runner_->Stop([this] {
+    story_data_->story_info->is_running = false;
+    story_data_->story_info->state = StoryState::STOPPED;
+    WriteStoryData([]{});
+    Reset();
+    NotifyStateChange();
 
-      std::vector<std::function<void()>> stop_requests =
-          std::move(stop_requests_);
-      for (auto& done : stop_requests) {
-        done();
-      }
-    });
+    std::vector<std::function<void()>> stop_requests =
+        std::move(stop_requests_);
+    for (auto& done : stop_requests) {
+      done();
+    }
   });
 }
 

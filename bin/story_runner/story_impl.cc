@@ -29,6 +29,45 @@
 
 namespace modular {
 
+namespace {
+
+// Used to asynchronously  wait on links to sync. Calls |done| when all links
+// have synced.
+class LinkAsyncAwaiter {
+ public:
+  static void New(const std::vector<std::unique_ptr<LinkImpl>>& v,
+                  std::function<void()> done) {
+    new LinkAsyncAwaiter(v, std::move(done));
+  }
+
+ private:
+  // Private so it cannot be created on the stack.
+  LinkAsyncAwaiter(const std::vector<std::unique_ptr<LinkImpl>>& v,
+                   std::function<void()> done) {
+    counter_ = v.size();
+    if (counter_ == 0) {
+      done();
+      delete this;
+      return;
+    }
+
+    for (auto& e : v) {
+      e->Sync([this, done] {
+        counter_--;
+        FTL_DCHECK(counter_ >= 0);
+        if (counter_ == 0) {
+          done();
+          delete this;
+        }
+      });
+    }
+  }
+
+  int counter_;
+};
+
+}  // namespace
+
 StoryConnection::StoryConnection(
     StoryImpl* const story_impl,
     const std::string& module_url,
@@ -231,7 +270,8 @@ void StoryImpl::StopModules() {
       return;
     }
 
-    StopLinks();
+    // Make sure that all the links are synced before stopping.
+    LinkAsyncAwaiter::New(links_, [this] { StopLinks(); });
   };
 
   // First, get rid of all connections without a ModuleController.
