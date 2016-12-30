@@ -75,17 +75,13 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
     *called = true;
 
     module_.reset();
-
     SetState(ModuleState::STOPPED);
-
-    // Value of teardown must survive deletion of this.
-    auto teardown = teardown_;
-
-    story_impl_->DisposeModule(this);
-
-    for (auto& done : teardown) {
+    for (auto& done : teardown_) {
       done();
     }
+
+    // When this method returns, this is deleted and must not be accessed.
+    story_impl_->DisposeModule(this);
   };
 
   // At this point, it's no longer an error if the module closes its

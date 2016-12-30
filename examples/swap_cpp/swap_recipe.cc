@@ -143,10 +143,12 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
   void StartModule(const std::string& module_query) {
     if (module_) {
-      // TODO(abdulla): Figure out why the StopCalback is not invoked.
-      module_->Stop([] {});
-      module_.reset();
-      module_view_.reset();
+      module_->Stop([this, module_query] {
+        module_.reset();
+        module_view_.reset();
+        StartModule(module_query);
+      });
+      return;
     }
     fidl::InterfaceHandle<modular::Link> module_link_handle;
     module_link_->Dup(module_link_handle.NewRequest());
