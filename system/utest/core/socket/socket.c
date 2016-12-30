@@ -45,6 +45,14 @@ static bool socket_basic(void) {
     ASSERT_EQ(read_data[0], write_data[0], "");
     ASSERT_EQ(read_data[1], write_data[1], "");
 
+    status = mx_socket_write(h[0], 0u, write_data, sizeof(write_data), NULL);
+    ASSERT_EQ(status, NO_ERROR, "");
+    memset(read_data, 0, sizeof(read_data));
+    status = mx_socket_read(h[1], 0u, read_data, sizeof(read_data), NULL);
+    ASSERT_EQ(status, NO_ERROR, "");
+    ASSERT_EQ(read_data[0], write_data[0], "");
+    ASSERT_EQ(read_data[1], write_data[1], "");
+
     mx_handle_close(h[1]);
 
     status = mx_socket_write(h[0], 0u, &write_data[1], sizeof(write_data[1]), &count);

@@ -25,6 +25,8 @@ There is one value (besides 0) that may be passed to *flags*. If
 socket endpoint at *handle* is closed. Further writes to the other
 endpoint of the socket will fail with **ERR_BAD_STATE**.
 
+If a NULL *actual* is passed in, it will be ignored.
+
 ## RETURN VALUE
 
 **socket_write**() returns **NO_ERROR** on success.

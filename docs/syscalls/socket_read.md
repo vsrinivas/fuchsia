@@ -24,6 +24,8 @@ If a NULL *buffer* and 0 *size* are passed in, then this syscall
 instead requests that the number of outstanding bytes to be returned
 via *actual*.
 
+If a NULL *actual* is passed in, it will be ignored.
+
 ## RETURN VALUE
 
 **socket_read**() returns **NO_ERROR** on success, and writes into

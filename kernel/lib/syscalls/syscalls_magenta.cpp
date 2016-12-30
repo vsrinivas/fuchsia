@@ -444,11 +444,8 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
         size_t nwritten;
         status = socket->Write(_buffer, size, true, &nwritten);
 
-        if (status != NO_ERROR)
-            return status;
-
         // Caller may ignore results if desired.
-        if (_actual)
+        if (status == NO_ERROR && _actual)
             status = make_user_ptr(_actual).copy_to_user(nwritten);
 
         return status;
@@ -467,7 +464,7 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
                             size_t* _actual) {
     LTRACEF("handle %d\n", handle);
 
-    if (!_actual || flags)
+    if (flags)
         return ERR_INVALID_ARGS;
 
     if (!_buffer && size > 0)
@@ -483,7 +480,8 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     size_t nread;
     status = socket->Read(_buffer, size, true, &nread);
 
-    if (status == NO_ERROR)
+    // Caller may ignore results if desired.
+    if (status == NO_ERROR && _actual)
         status = make_user_ptr(_actual).copy_to_user(nread);
 
     return status;
