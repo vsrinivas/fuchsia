@@ -4,8 +4,8 @@
     ],
     "binaries": [
         {
-            "binary": "benchmark_channels",
-            "bootfs_path": "test/benchmark_channels"
+            "binary": "benchmarks",
+            "bootfs_path": "test/benchmarks"
         }
     ]
 }
