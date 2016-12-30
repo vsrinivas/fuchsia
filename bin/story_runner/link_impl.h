@@ -62,16 +62,13 @@ class LinkImpl : public StoryStorageLinkWatcher {
            fidl::InterfaceRequest<Link> link_request);
   ~LinkImpl() override = default;
 
-  // Used internally but unlike ReadLinkData() also by StoryImpl in
-  // teardown.
-  void WriteLinkData(const std::function<void()>& done);
-
   // Used by LinkConnection.
   void AddDocuments(FidlDocMap docs, LinkConnection* src);
   void SetAllDocuments(FidlDocMap docs, LinkConnection* src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
   const FidlDocMap& docs() const { return docs_; }
+  void Sync(const std::function<void()>& callback);
 
   // Used by StoryImpl.
   void set_orphaned_handler(const std::function<void()>& fn) {
@@ -82,6 +79,7 @@ class LinkImpl : public StoryStorageLinkWatcher {
   void DatabaseChanged(LinkConnection* src);
   void NotifyWatchers(LinkConnection* src);
   void ReadLinkData(const std::function<void()>& done);
+  void WriteLinkData(const std::function<void()>& done);
   void WriteLinkDataImpl(const std::function<void()>& done);
 
   // |StoryStorageLinkWatcher|

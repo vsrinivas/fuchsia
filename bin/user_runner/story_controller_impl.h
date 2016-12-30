@@ -37,7 +37,7 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   void Connect(
       fidl::InterfaceRequest<StoryController> story_controller_request);
   void StopForDelete(const StopCallback& done);
-  void AddLinkDataAndStop(FidlDocMap data, const StopCallback& done);
+  void AddLinkDataAndSync(FidlDocMap data, const StopCallback& done);
   bool IsActive();  // Has story or pending stop or start requests?
   size_t bindings_size() const { return bindings_.size(); }
 

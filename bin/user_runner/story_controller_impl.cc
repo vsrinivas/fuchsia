@@ -29,7 +29,7 @@ void StoryControllerImpl::Connect(
   bindings_.AddBinding(this, std::move(story_controller_request));
 }
 
-void StoryControllerImpl::AddLinkDataAndStop(FidlDocMap data,
+void StoryControllerImpl::AddLinkDataAndSync(FidlDocMap data,
                                              const StopCallback& done) {
   if (data.is_null()) {
     done();
@@ -41,7 +41,7 @@ void StoryControllerImpl::AddLinkDataAndStop(FidlDocMap data,
   }
 
   root_->AddDocuments(std::move(data));
-  Stop(done);
+  root_->Sync(done);
 }
 
 bool StoryControllerImpl::IsActive() {

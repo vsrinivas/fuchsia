@@ -244,7 +244,7 @@ class CreateStoryCall : public Operation {
 
           // We call stop on the controller to ensure that root data has been
           // written before this operations is done.
-          controller_->AddLinkDataAndStop(std::move(root_docs_), [this] {
+          controller_->AddLinkDataAndSync(std::move(root_docs_), [this] {
             result_(story_id_);
             Done();
           });

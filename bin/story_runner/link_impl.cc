@@ -81,6 +81,10 @@ void LinkImpl::SetAllDocuments(FidlDocMap new_docs, LinkConnection* const src) {
   }
 }
 
+void LinkImpl::Sync(const std::function<void()>& callback) {
+  story_storage_->Sync(callback);
+}
+
 void LinkImpl::ReadLinkData(const std::function<void()>& done) {
   story_storage_->ReadLinkData(name_, [this, done](LinkDataPtr data) {
     if (!data.is_null()) {
@@ -195,7 +199,7 @@ void LinkConnection::Dup(fidl::InterfaceRequest<Link> dup) {
 }
 
 void LinkConnection::Sync(const SyncCallback& callback) {
-  callback();
+  impl_->Sync(callback);
 }
 
 void LinkConnection::AddDocuments(FidlDocMap docs) {

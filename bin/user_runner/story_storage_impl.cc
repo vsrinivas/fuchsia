@@ -93,6 +93,27 @@ class WriteLinkDataCall : public Operation {
   FTL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
 
+class SyncCall : public Operation {
+ public:
+  using Result = StoryStorageImpl::SyncCallback;
+
+  SyncCall(OperationContainer* const container, Result result)
+      : Operation(container),
+        result_(result) {
+    Ready();
+  }
+
+  void Run() override {
+    result_();
+    Done();
+  }
+
+ private:
+  Result result_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(SyncCall);
+};
+
 }  // namespace
 
 StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
@@ -117,7 +138,7 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
                                     const ReadLinkDataCallback& cb) {
   if (story_page_.is_bound()) {
-    new ReadLinkDataCall(&operation_collection_, story_page_.get(), link_id,
+    new ReadLinkDataCall(&operation_queue_, story_page_.get(), link_id,
                          cb);
 
   } else {
@@ -136,7 +157,7 @@ void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
                                      LinkDataPtr data,
                                      const WriteLinkDataCallback& cb) {
   if (story_page_.is_bound()) {
-    new WriteLinkDataCall(&operation_collection_, story_page_.get(), link_id,
+    new WriteLinkDataCall(&operation_queue_, story_page_.get(), link_id,
                           std::move(data), cb);
 
   } else {
@@ -185,6 +206,11 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
     }
   }
   cb(nullptr);
+}
+
+// |StoryStorage|
+void StoryStorageImpl::Sync(const SyncCallback& cb) {
+  new SyncCall(&operation_queue_, cb);
 }
 
 }  // namespace modular

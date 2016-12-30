@@ -13,6 +13,7 @@ interface StoryStorage {
   WriteLinkData(string link_id, LinkData data) => ();
   WatchLink(string link_id, StoryStorageLinkWatcher watcher);
   Dup(StoryStorage& dup);  // gives a connection to every Link
+  Sync() => ();  // Waits for all previously queued operations to complete
 };
 
 interface StoryStorageLinkWatcher {

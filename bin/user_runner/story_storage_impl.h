@@ -47,6 +47,7 @@ class StoryStorageImpl : public StoryStorage, public ledger::PageWatcher {
       const fidl::String& link_id,
       fidl::InterfaceHandle<StoryStorageLinkWatcher> watcher) override;
   void Dup(fidl::InterfaceRequest<StoryStorage> dup) override;
+  void Sync(const SyncCallback& cb) override;
 
   // |PageWatcher|
   void OnInitialState(fidl::InterfaceHandle<ledger::PageSnapshot> page,
@@ -60,7 +61,7 @@ class StoryStorageImpl : public StoryStorage, public ledger::PageWatcher {
   const std::string key_;
   std::shared_ptr<Storage> storage_;
   ledger::PagePtr story_page_;
-  OperationCollection operation_collection_;
+  OperationQueue operation_queue_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryStorageImpl);
 };
