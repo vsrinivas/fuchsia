@@ -93,6 +93,9 @@ private:
 };
 
 mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_t base, uint64_t len, bool add) {
+
+    LTRACEF("handle %d mmio %d base %#" PRIx64 " len %#" PRIx64 " add %d\n", handle, mmio, base, len, add);
+
     // TODO: finer grained validation
     // TODO(security): Add additional access checks
     mx_status_t status;
@@ -267,7 +270,7 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, mx_pcie_ge
      * @param index Device index
      * @param out_info Device info (BDF address, vendor id, etc...)
      */
-    LTRACE_ENTRY;
+    LTRACEF("handle %d index %u\n", hrsrc, index);
 
     // TODO: finer grained validation
     mx_status_t status;
