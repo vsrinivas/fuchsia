@@ -18,6 +18,7 @@
         "leveldb",
         "libc-tests",
         "lua",
+        "magenta_benchmarks",
         "media",
         "modular",
         "modules",

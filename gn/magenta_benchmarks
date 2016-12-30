@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//magenta/benchmarks"
+    ],
+    "binaries": [
+        {
+            "binary": "benchmark_channels",
+            "bootfs_path": "test/benchmark_channels"
+        }
+    ]
+}
