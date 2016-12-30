@@ -30,6 +30,7 @@
 #define SUNRISE_AHCI_DID    (0x9d03)
 #define ICH9_AHCI_DID       (0x2922)
 #define SERIES_6_AHCI_DID   (0x1c02)
+#define SUNRISE_POINT_H_AHCI_DID (0xa102)
 
 #define AMD_AHCI_VID        (0x1022)
 #define AMD_FCH_AHCI_DID    (0x7801)
@@ -795,7 +796,7 @@ mx_driver_t _driver_ahci = {
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_ahci, "ahci", "magenta", "0.1", 12)
+MAGENTA_DRIVER_BEGIN(_driver_ahci, "ahci", "magenta", "0.1", 13)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_GOTO_IF(EQ, BIND_PCI_VID, AMD_AHCI_VID, 1),
     // intel devices
@@ -805,6 +806,7 @@ MAGENTA_DRIVER_BEGIN(_driver_ahci, "ahci", "magenta", "0.1", 12)
     BI_MATCH_IF(EQ, BIND_PCI_DID, SUNRISE_AHCI_DID),    // NUC
     BI_MATCH_IF(EQ, BIND_PCI_DID, ICH9_AHCI_DID),       // QEMU
     BI_MATCH_IF(EQ, BIND_PCI_DID, SERIES_6_AHCI_DID),   // 6x era chipset (Sandy/Ivy Bridge)
+    BI_MATCH_IF(EQ, BIND_PCI_DID, SUNRISE_POINT_H_AHCI_DID), // H110 chipset
     BI_ABORT(),
     // AMD devices
     BI_LABEL(1),
