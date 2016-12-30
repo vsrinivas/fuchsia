@@ -348,9 +348,10 @@ GENERATED += $(BUILDDIR)/sysroot/lib/libm.so $(BUILDDIR)/sysroot/lib/libdl.so $(
 # GDB specifically looks for ld.so.1, so we create that as a symlink.
 $(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP): FORCE
 	@$(MKDIR)
-	rm -f $@
-	ln -s libc.so $@
+	$(NOECHO)rm -f $@
+	$(NOECHO)ln -s libc.so $@
 SYSROOT_DEPS += $(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP)
+GENERATED += $(BUILDDIR)/sysroot/debug-info/$(USER_SHARED_INTERP)
 endif
 
 EXTRA_BUILDDEPS += $(SYSROOT_DEPS)
