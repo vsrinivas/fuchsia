@@ -241,11 +241,12 @@ mx_driver_t _driver_intel_ethernet = {
     },
 };
 
-MAGENTA_DRIVER_BEGIN(_driver_intel_ethernet, "intel-ethernet", "magenta", "0.1", 6)
+MAGENTA_DRIVER_BEGIN(_driver_intel_ethernet, "intel-ethernet", "magenta", "0.1", 7)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x100E), // Qemu
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15A3), // Broadwell
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1570), // Skylake
     BI_MATCH_IF(EQ, BIND_PCI_DID, 0x1533), // I210 standalone
+    BI_MATCH_IF(EQ, BIND_PCI_DID, 0x15b8), // I219
 MAGENTA_DRIVER_END(_driver_intel_ethernet)
