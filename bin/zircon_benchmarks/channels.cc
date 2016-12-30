@@ -79,5 +79,3 @@ BENCHMARK_REGISTER_F(Channel, Read)
     ->Arg(1 * 1024)
     ->Arg(32 * 1024)
     ->Arg(64 * 1024);
-
-BENCHMARK_MAIN();

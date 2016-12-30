@@ -2,17 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("benchmarks") {
-  testonly = true
-  deps = [
-    ":benchmark_channels",
-  ]
-}
-
-executable("benchmark_channels") {
+executable("benchmarks") {
   testonly = true
   sources = [
     "channels.cc",
+    "main.cc",
+    "sockets.cc",
   ]
   deps = [
     "//third_party/benchmark",
