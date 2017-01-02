@@ -2,7 +2,7 @@
 
 ## NAME
 
-tick_get - Read the number of high-precision timer ticks since boot.
+ticks_get - Read the number of high-precision timer ticks since boot.
 
 ## SYNOPSIS
 
@@ -34,3 +34,7 @@ The returned value may be highly variable. Factors that can affect it include:
 ## BUGS
 
 Only a 32-bit range is supported on ARMv6 and ARMv7.
+
+## SEE ALSO
+
+[ticks_per_second](ticks_per_second.md)

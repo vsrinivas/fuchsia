@@ -17,6 +17,10 @@ extern uint64_t mx_ticks_get(void);
 
 extern uint64_t _mx_ticks_get(void);
 
+extern uint64_t mx_ticks_per_second(void);
+
+extern uint64_t _mx_ticks_per_second(void);
+
 extern uint32_t mx_num_cpus(void) __attribute__((leaf, const));
 
 extern uint32_t _mx_num_cpus(void) __attribute__((leaf, const));

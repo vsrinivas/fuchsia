@@ -39,6 +39,9 @@ lk_time_t current_time(void);
 /* current time in nanoseconds */
 lk_bigtime_t current_time_hires(void);
 
+/* high-precision timer ticks per second */
+uint64_t ticks_per_second(void);
+
 /* super early platform initialization, before almost everything */
 void platform_early_init(void);
 

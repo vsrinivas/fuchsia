@@ -220,6 +220,11 @@ lk_time_t current_time(void)
     return cntpct_to_lk_time(read_cntpct());
 }
 
+uint64_t ticks_per_second(void)
+{
+    return u64_mul_u32_fp32_64(1000, cntpct_per_ms);
+}
+
 static uint32_t abs_int32(int32_t a)
 {
     return (a > 0) ? a : -a;

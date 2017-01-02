@@ -167,6 +167,11 @@ lk_bigtime_t current_time_hires(void)
     return time;
 }
 
+uint64_t ticks_per_second(void)
+{
+    return tsc_ticks_per_ms * 1000;
+}
+
 // The PIT timer will keep track of wall time if we aren't using the TSC
 static enum handler_return pit_timer_tick(void *arg)
 {

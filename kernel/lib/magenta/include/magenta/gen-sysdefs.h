@@ -9,6 +9,8 @@ mx_status_t sys_nanosleep(
 
 uint64_t sys_ticks_get();
 
+uint64_t sys_ticks_per_second();
+
 uint32_t sys_num_cpus();
 
 mx_status_t sys_version_get(

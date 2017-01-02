@@ -42,6 +42,10 @@ syscall ticks_get vdsocall
     ()
     returns (uint64_t);
 
+syscall ticks_per_second
+    ()
+    returns (uint64_t);
+
 # Global system information
 
 syscall num_cpus vdsocall leafc ()

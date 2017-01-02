@@ -6,22 +6,25 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
-// mx_get_ticks() should return ticks which monotonically increase.
-static bool ticks_increase_monotonically(void) {
+// Calculation of elapsed time using ticks.
+static bool elapsed_time_using_ticks(void) {
     BEGIN_TEST;
 
-    uint64_t prev = 0;
-    for (int i = 0; i < 100; i++) {
-        uint64_t ticks = mx_ticks_get();
-        ASSERT_LE(prev, ticks, "");
-        prev = ticks;
-    }
+    uint64_t per_second = mx_ticks_per_second();
+    ASSERT_GE(per_second, 0u, "Invalid ticks per second");
+
+    uint64_t x = mx_ticks_get();
+    uint64_t y = mx_ticks_get();
+    ASSERT_GE(y, x, "Ticks went backwards");
+
+    double seconds = (y - x) / (double)per_second;
+    ASSERT_GE(seconds, 0u, "Time went backwards");
 
     END_TEST;
 }
 
 BEGIN_TEST_CASE(ticks_tests)
-RUN_TEST(ticks_increase_monotonically)
+RUN_TEST(elapsed_time_using_ticks)
 END_TEST_CASE(ticks_tests)
 
 #ifndef BUILD_COMBINED_TESTS
