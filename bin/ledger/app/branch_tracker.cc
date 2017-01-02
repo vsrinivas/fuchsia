@@ -96,6 +96,10 @@ class BranchTracker::PageWatcherContainer {
 
             EntryPtr entry = Entry::New();
             entry->key = convert::ToArray((*it)->entry.key);
+            entry->priority =
+                (*it)->entry.priority == storage::KeyPriority::EAGER
+                    ? Priority::EAGER
+                    : Priority::LAZY;
             page_change->changes.push_back(std::move(entry));
 
             storage_->GetObject((*it)->entry.object_id, waiter->NewCallback());

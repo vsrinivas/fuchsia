@@ -160,6 +160,7 @@ enum Priority {
 struct Entry {
   array<uint8> key;
   Value value;
+  Priority priority;
 };
 
 // The content of a page at a given time. Closing the connection to a |Page|
@@ -281,6 +282,7 @@ struct MergedValue {
   array<uint8> key;
   ValueSource source;
   BytesOrReference? new_value;
+  Priority priority;
 };
 
 // Custom conflict resolver. If a |ConflictResolverFactory| is registered, and

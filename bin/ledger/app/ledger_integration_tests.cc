@@ -809,6 +809,7 @@ TEST_F(LedgerApplicationTest, PageWatcherSnapshot) {
   EXPECT_EQ(1u, entries.size());
   EXPECT_EQ("name", convert::ToString(entries[0]->key));
   EXPECT_EQ("Alice", convert::ToString(entries[0]->value->get_bytes()));
+  EXPECT_EQ(Priority::EAGER, entries[0]->priority);
 }
 
 TEST_F(LedgerApplicationTest, PageWatcherTransaction) {

@@ -383,6 +383,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   EXPECT_EQ(key, convert::ExtendedStringView(actual_entries[0]->key));
   EXPECT_EQ(value,
             convert::ExtendedStringView(actual_entries[0]->value->get_bytes()));
+  EXPECT_EQ(Priority::EAGER, actual_entries[0]->priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
