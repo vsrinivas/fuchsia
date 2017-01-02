@@ -52,7 +52,7 @@ int main(int argc, const char** argv) {
   std::string config_path = configuration::kDefaultConfigurationFile.ToString();
   if (command_line.HasOption(kConfigPathArg)) {
     bool ret = command_line.GetOptionValue(kConfigPathArg, &config_path);
-    FTL_DCHECK(ret);
+    FTL_CHECK(ret);
   }
   if (config_path.empty()) {
     FTL_LOG(ERROR) << "Specify a non-empty " << kConfigPathArg;
@@ -68,25 +68,27 @@ int main(int argc, const char** argv) {
     config = configuration::Configuration();
   }
 
-  if (command_line.HasOption(kGcsBucketArg)) {
-    config.use_sync = true;
-    bool ret = command_line.GetOptionValue(kGcsBucketArg,
-                                           &config.sync_params.gcs_bucket);
-    FTL_DCHECK(ret);
-  }
-
   if (command_line.HasOption(kFirebaseIdArg)) {
     config.use_sync = true;
     bool ret = command_line.GetOptionValue(kFirebaseIdArg,
                                            &config.sync_params.firebase_id);
-    FTL_DCHECK(ret);
+    FTL_CHECK(ret);
+    config.sync_params.gcs_bucket =
+        config.sync_params.firebase_id + ".appspot.com";
+  }
+
+  if (command_line.HasOption(kGcsBucketArg)) {
+    config.use_sync = true;
+    bool ret = command_line.GetOptionValue(kGcsBucketArg,
+                                           &config.sync_params.gcs_bucket);
+    FTL_CHECK(ret);
   }
 
   if (command_line.HasOption(kUserPrefixArg)) {
     config.use_sync = true;
     bool ret = command_line.GetOptionValue(kUserPrefixArg,
                                            &config.sync_params.user_prefix);
-    FTL_DCHECK(ret);
+    FTL_CHECK(ret);
   }
 
   if (command_line.HasOption(kSyncArg) && command_line.HasOption(kNoSyncArg)) {
@@ -103,10 +105,9 @@ int main(int argc, const char** argv) {
     config.use_sync = false;
   }
 
-  if (config.use_sync && (config.sync_params.gcs_bucket.empty() ||
-                          config.sync_params.firebase_id.empty() ||
+  if (config.use_sync && (config.sync_params.firebase_id.empty() ||
                           config.sync_params.user_prefix.empty())) {
-    FTL_LOG(ERROR) << "To enable Cloud Sync pass all of --gcs_bucket, "
+    FTL_LOG(ERROR) << "To enable Cloud Sync pass "
                    << "--firebase_id and --user_prefix";
     return 1;
   }
