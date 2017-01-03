@@ -57,6 +57,24 @@ static unsigned active_vc_index;
 static vc_battery_info_t battery_info;
 static mtx_t vc_lock = MTX_INIT;
 
+static int modifiers_from_keycode(uint8_t keycode) {
+    switch (keycode) {
+    case HID_USAGE_KEY_LEFT_SHIFT:
+        return MOD_LSHIFT;
+    case HID_USAGE_KEY_RIGHT_SHIFT:
+        return MOD_RSHIFT;
+    case HID_USAGE_KEY_LEFT_ALT:
+        return MOD_LALT;
+    case HID_USAGE_KEY_RIGHT_ALT:
+        return MOD_RALT;
+    case HID_USAGE_KEY_LEFT_CTRL:
+        return MOD_LCTRL;
+    case HID_USAGE_KEY_RIGHT_CTRL:
+        return MOD_RCTRL;
+    }
+    return 0;
+}
+
 static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
                                  int* cur_idx, int* prev_idx,
                                  hid_keys_t* key_pressed,
@@ -72,27 +90,9 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
         memcpy(key_pressed, &key_delta, sizeof(key_delta));
     }
     hid_for_every_key(&key_delta, keycode) {
-        switch (keycode) {
-        // modifier keys are special
-        case HID_USAGE_KEY_LEFT_SHIFT:
-            *modifiers |= MOD_LSHIFT;
-            break;
-        case HID_USAGE_KEY_RIGHT_SHIFT:
-            *modifiers |= MOD_RSHIFT;
-            break;
-        case HID_USAGE_KEY_LEFT_ALT:
-            *modifiers |= MOD_LALT;
-            break;
-        case HID_USAGE_KEY_RIGHT_ALT:
-            *modifiers |= MOD_RALT;
-            break;
-        case HID_USAGE_KEY_LEFT_CTRL:
-            *modifiers |= MOD_LCTRL;
-            break;
-        case HID_USAGE_KEY_RIGHT_CTRL:
-            *modifiers |= MOD_RCTRL;
-            break;
+        *modifiers |= modifiers_from_keycode(keycode);
 
+        switch (keycode) {
         case HID_USAGE_KEY_F1 ... HID_USAGE_KEY_F10:
             if (*modifiers & MOD_ALT) {
                 vc_set_active_console(keycode - HID_USAGE_KEY_F1);
@@ -167,29 +167,7 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
         memcpy(key_released, &key_delta, sizeof(key_delta));
     }
     hid_for_every_key(&key_delta, keycode) {
-        switch (keycode) {
-        // modifier keys are special
-        case HID_USAGE_KEY_LEFT_SHIFT:
-            *modifiers &= ~MOD_LSHIFT;
-            break;
-        case HID_USAGE_KEY_RIGHT_SHIFT:
-            *modifiers &= ~MOD_RSHIFT;
-            break;
-        case HID_USAGE_KEY_LEFT_ALT:
-            *modifiers &= ~MOD_LALT;
-            break;
-        case HID_USAGE_KEY_RIGHT_ALT:
-            *modifiers &= ~MOD_RALT;
-            break;
-        case HID_USAGE_KEY_LEFT_CTRL:
-            *modifiers &= ~MOD_LCTRL;
-            break;
-        case HID_USAGE_KEY_RIGHT_CTRL:
-            *modifiers &= ~MOD_RCTRL;
-            break;
-
-        default:; // nothing
-        }
+        *modifiers &= ~modifiers_from_keycode(keycode);
     }
 
     if (!consumed) {
@@ -507,26 +485,9 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
                 continue;
             }
 
-            switch (keycode) {
-            case HID_USAGE_KEY_LEFT_SHIFT:
-                vc->modifiers |= MOD_LSHIFT;
-                break;
-            case HID_USAGE_KEY_RIGHT_SHIFT:
-                vc->modifiers |= MOD_RSHIFT;
-                break;
-            case HID_USAGE_KEY_LEFT_CTRL:
-                vc->modifiers |= MOD_LCTRL;
-                break;
-            case HID_USAGE_KEY_RIGHT_CTRL:
-                vc->modifiers |= MOD_RCTRL;
-                break;
-            case HID_USAGE_KEY_LEFT_ALT:
-                vc->modifiers |= MOD_LALT;
-                break;
-            case HID_USAGE_KEY_RIGHT_ALT:
-                vc->modifiers |= MOD_RALT;
-                break;
+            vc->modifiers |= modifiers_from_keycode(keycode);
 
+            switch (keycode) {
             // generate special stuff for a few different keys
             case HID_USAGE_KEY_ENTER:
             case HID_USAGE_KEY_KP_ENTER:
@@ -613,26 +574,7 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
 
         hid_kbd_released_keys(&vc->key_states[prev_idx], &vc->key_states[cur_idx], &key_delta);
         hid_for_every_key(&key_delta, keycode) {
-            switch (keycode) {
-            case HID_USAGE_KEY_LEFT_SHIFT:
-                vc->modifiers &= (~MOD_LSHIFT);
-                break;
-            case HID_USAGE_KEY_RIGHT_SHIFT:
-                vc->modifiers &= (~MOD_RSHIFT);
-                break;
-            case HID_USAGE_KEY_LEFT_CTRL:
-                vc->modifiers &= (~MOD_LCTRL);
-                break;
-            case HID_USAGE_KEY_RIGHT_CTRL:
-                vc->modifiers &= (~MOD_RCTRL);
-                break;
-            case HID_USAGE_KEY_LEFT_ALT:
-                vc->modifiers &= (~MOD_LALT);
-                break;
-            case HID_USAGE_KEY_RIGHT_ALT:
-                vc->modifiers &= (~MOD_RALT);
-                break;
-            }
+            vc->modifiers &= ~modifiers_from_keycode(keycode);
         }
 
         // swap key states
