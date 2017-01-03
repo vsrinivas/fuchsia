@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -177,16 +178,38 @@ done:
 }
 
 int mxc_mkdir(int argc, char** argv) {
-    if (argc < 2) {
+    // skip "mkdir"
+    argc--;
+    argv++;
+    bool parents = false;
+    if (argc < 1) {
         fprintf(stderr, "usage: mkdir <path>\n");
         return -1;
     }
-    while (argc > 1) {
+    if (!strcmp(argv[0], "-p")) {
+        parents = true;
         argc--;
         argv++;
-        if (mkdir(argv[0], 0755)) {
-            fprintf(stderr, "error: failed to make directory '%s'\n", argv[0]);
+    }
+    while (argc > 0) {
+        char* dir = argv[0];
+        if (parents) {
+            for (size_t slash = 0u; dir[slash]; slash++) {
+                if (slash != 0u && dir[slash] == '/') {
+                    dir[slash] = '\0';
+                    if (mkdir(dir, 0755) && errno != EEXIST) {
+                        fprintf(stderr, "error: failed to make directory '%s'\n", dir);
+                        return 0;
+                    }
+                    dir[slash] = '/';
+                }
+            }
         }
+        if (mkdir(dir, 0755) && !(parents && errno == EEXIST)) {
+            fprintf(stderr, "error: failed to make directory '%s'\n", dir);
+        }
+        argc--;
+        argv++;
     }
     return 0;
 }
