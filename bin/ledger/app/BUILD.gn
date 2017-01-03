@@ -85,7 +85,7 @@ group("tests") {
 
   deps = [
     ":application_tests",
-    ":integration_tests",
+    "//apps/ledger/src/app/integration_tests",
   ]
 }
 
@@ -112,31 +112,6 @@ source_set("unittests") {
     "//apps/ledger/src/test:lib",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",
-    "//lib/mtl",
-    "//third_party/gtest",
-  ]
-}
-
-executable("integration_tests") {
-  output_name = "ledger_integration_tests"
-
-  testonly = true
-
-  sources = [
-    "ledger_integration_tests.cc",
-  ]
-
-  deps = [
-    ":lib",
-    "//apps/ledger/services/internal",
-    "//apps/ledger/services/public",
-    "//apps/ledger/src/convert",
-    "//apps/ledger/src/glue/socket",
-    "//apps/ledger/src/storage/fake:lib",
-    "//apps/ledger/src/storage/public",
-    "//apps/ledger/src/test:lib",
-    "//apps/ledger/src/test:main",
-    "//lib/fidl/cpp/bindings",
     "//lib/mtl",
     "//third_party/gtest",
   ]
