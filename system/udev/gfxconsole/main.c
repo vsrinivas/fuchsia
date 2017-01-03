@@ -583,6 +583,13 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
                 str[2] = 'F';
                 vc->charcount = 3;
                 break;
+            case HID_USAGE_KEY_DELETE:
+                str[0] = 0x1b;
+                str[1] = '[';
+                str[2] = '3';
+                str[3] = '~';
+                vc->charcount = 4;
+                break;
             case HID_USAGE_KEY_PAGEUP:
                 str[0] = 0x1b;
                 str[1] = '[';
