@@ -4,6 +4,9 @@
 #include "malloc_impl.h"
 #include <errno.h>
 #include <limits.h>
+#include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +19,6 @@
 
 void* __mmap(void*, size_t, int, int, int, off_t);
 int __munmap(void*, size_t);
-void* __fake_mremap(void*, size_t, size_t, int, ...);
 int __madvise(void*, size_t, int);
 
 struct bin {
@@ -40,6 +42,8 @@ static struct {
 #define FREE_FILL 0x79
 
 #define BIN_TO_CHUNK(i) (MEM_TO_CHUNK(&mal.bins[i].head))
+
+#define ROUND(addr) ((addr + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
 
 /* Synchronization tools */
 
@@ -118,6 +122,61 @@ void __dump_heap(int x)
 	}
 }
 #endif
+
+static mx_status_t vmo_remap(uintptr_t old_mapping, size_t old_len, size_t new_len, uintptr_t* new_mapping) {
+    if (new_len < old_len) {
+        // TODO(kulakowski) Partially unmap.
+        *new_mapping = old_mapping;
+        return NO_ERROR;
+    }
+
+    mx_handle_t vmo;
+    mx_status_t status = _mx_vmo_create(new_len, 0, &vmo);
+    if (status != 0) {
+        return status;
+    }
+
+    size_t offset = 0;
+    uint32_t flags = MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE;
+    status = _mx_vmar_map(_mx_vmar_root_self(), offset, vmo, 0u, new_len,
+                          flags, new_mapping);
+    _mx_handle_close(vmo);
+    if (status != NO_ERROR) {
+        return status;
+    }
+
+    memcpy((void*)*new_mapping, (void*)old_mapping, old_len);
+
+    status = _mx_vmar_unmap(_mx_vmar_root_self(), old_mapping, old_len);
+    if (status != NO_ERROR) {
+        _mx_vmar_unmap(_mx_vmar_root_self(), *new_mapping, new_len);
+        return status;
+    }
+
+    return NO_ERROR;
+}
+
+static void* remap_pages(void* old_addr, size_t old_len, size_t new_len) {
+    uintptr_t mapping = (uintptr_t)old_addr;
+    if (ROUND(mapping) != mapping) {
+        errno = EINVAL;
+        return MAP_FAILED;
+    }
+
+    if (new_len >= PTRDIFF_MAX) {
+        errno = ENOMEM;
+        return MAP_FAILED;
+    }
+
+    uintptr_t new_mapping = 0u;
+    mx_status_t status = vmo_remap(mapping, old_len, new_len, &new_mapping);
+    if (status != NO_ERROR) {
+        errno = ENOMEM;
+        return MAP_FAILED;
+    }
+
+    return (void*)new_mapping;
+}
 
 void* __expand_heap(size_t*);
 
@@ -370,8 +429,8 @@ void* realloc(void* p, size_t n) {
         newlen = (newlen + PAGE_SIZE - 1) & -PAGE_SIZE;
         if (oldlen == newlen)
             return p;
-        base = __fake_mremap(base, oldlen, newlen, MREMAP_MAYMOVE);
-        if (base == (void*)-1)
+        base = remap_pages(base, oldlen, newlen);
+        if (base == MAP_FAILED)
             return newlen < oldlen ? p : 0;
         self = (void*)(base + extra);
         self->csize = newlen - extra;

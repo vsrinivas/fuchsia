@@ -511,7 +511,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/mman/mlockall.c \
     $(LOCAL_DIR)/src/mman/mmap.c \
     $(LOCAL_DIR)/src/mman/mprotect.c \
-    $(LOCAL_DIR)/src/mman/mremap.c \
     $(LOCAL_DIR)/src/mman/msync.c \
     $(LOCAL_DIR)/src/mman/munlock.c \
     $(LOCAL_DIR)/src/mman/munlockall.c \
