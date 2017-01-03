@@ -30,6 +30,7 @@ This page is a non-comprehensive index of the magenta documentation.
 
 + [Getting Started](docs/getting_started.md)
 + [Contributing Patches](docs/contributing.md)
++ [Hacking notes](docs/hacking.md)
 + [Relationship with LK](docs/mg_and_lk.md)
 + [Kernel Objects](docs/kernel_objects.md)
 + [Process Objects](docs/objects/process.md)
