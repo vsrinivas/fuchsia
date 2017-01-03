@@ -20,7 +20,7 @@
  */
 static uint32_t power_button_object_handler(void* ctx) {
     mx_handle_t event = (mx_handle_t)(uintptr_t)ctx;
-    mx_object_signal(event, 0, MX_SIGNAL_SIGNALED);
+    mx_object_signal(event, 0, MX_EVENT_SIGNALED);
     // Note that the spec indicates to return 0. The code in the
     // Intel implementation (AcpiEvFixedEventDetect) reads differently.
     return ACPI_INTERRUPT_HANDLED;
@@ -53,7 +53,7 @@ static void notify_object_handler(ACPI_HANDLE Device, UINT32 Value, void* Contex
     }
 
     if (power_btn) {
-        mx_object_signal(event, 0, MX_SIGNAL_SIGNALED);
+        mx_object_signal(event, 0, MX_EVENT_SIGNALED);
     }
 
     ACPI_FREE(info);
@@ -64,7 +64,7 @@ static int power_button_thread(void* arg) {
 
     for (;;) {
         mx_status_t status = mx_handle_wait_one(event,
-                                                MX_SIGNAL_SIGNALED,
+                                                MX_EVENT_SIGNALED,
                                                 MX_TIME_INFINITE,
                                                 NULL);
         if (status != NO_ERROR) {

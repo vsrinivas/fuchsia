@@ -75,8 +75,8 @@ static bool socket_signals(void) {
     mx_signals_t signals0 = get_satisfied_signals(h0);
     mx_signals_t signals1 = get_satisfied_signals(h1);
 
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(signals1, MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE, "");
+    ASSERT_EQ(signals1, MX_SOCKET_WRITABLE, "");
 
     const size_t kAllSize = 128 * 1024;
     char* big_buf =  (char*) malloc(kAllSize);
@@ -91,8 +91,8 @@ static bool socket_signals(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(signals1, MX_SIGNAL_READABLE | MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE, "");
+    ASSERT_EQ(signals1, MX_SOCKET_READABLE | MX_SOCKET_WRITABLE, "");
 
     status = mx_socket_read(h1, 0u, big_buf, kAllSize, &count);
     ASSERT_EQ(status, NO_ERROR, "");
@@ -101,10 +101,10 @@ static bool socket_signals(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(signals1, MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE, "");
+    ASSERT_EQ(signals1, MX_SOCKET_WRITABLE, "");
 
-    status = mx_object_signal_peer(h0, MX_SIGNAL_WRITABLE, 0u);
+    status = mx_object_signal_peer(h0, MX_SOCKET_WRITABLE, 0u);
     ASSERT_EQ(status, ERR_INVALID_ARGS, "");
 
     status = mx_object_signal_peer(h0, 0u, MX_USER_SIGNAL_1);
@@ -113,13 +113,13 @@ static bool socket_signals(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(signals1, MX_SIGNAL_WRITABLE | MX_USER_SIGNAL_1, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE, "");
+    ASSERT_EQ(signals1, MX_SOCKET_WRITABLE | MX_USER_SIGNAL_1, "");
 
     mx_handle_close(h1);
 
     signals0 = get_satisfied_signals(h0);
-    ASSERT_EQ(signals0, MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(signals0, MX_SOCKET_PEER_CLOSED, "");
 
     mx_handle_close(h0);
 
@@ -141,8 +141,8 @@ static bool socket_half_close(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(signals1, MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE, "");
+    ASSERT_EQ(signals1, MX_SOCKET_WRITABLE, "");
 
     status = mx_socket_write(h1, 0u, "12345", 5u, &count);
     ASSERT_EQ(status, NO_ERROR, "");
@@ -154,7 +154,7 @@ static bool socket_half_close(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE | MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED, "");
     ASSERT_EQ(signals1, 0u, "");
 
     status = mx_socket_write(h0, 0u, "abcde", 5u, &count);
@@ -162,7 +162,7 @@ static bool socket_half_close(void) {
     ASSERT_EQ(count, 5u, "");
 
     signals1 = get_satisfied_signals(h1);
-    ASSERT_EQ(signals1, MX_SIGNAL_READABLE, "");
+    ASSERT_EQ(signals1, MX_SOCKET_READABLE, "");
 
     status = mx_socket_write(h1, 0u, "fghij", 5u, &count);
     ASSERT_EQ(status, ERR_BAD_STATE, "");
@@ -178,7 +178,7 @@ static bool socket_half_close(void) {
     ASSERT_EQ(status, ERR_REMOTE_CLOSED, "");
 
     signals0 = get_satisfied_signals(h0);
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED, "");
 
     status = mx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);
     ASSERT_EQ(status, NO_ERROR, "");
@@ -250,8 +250,8 @@ static bool socket_bytes_outstanding_half_close(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE, "");
-    ASSERT_EQ(signals1, MX_SIGNAL_WRITABLE, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE, "");
+    ASSERT_EQ(signals1, MX_SOCKET_WRITABLE, "");
 
     status = mx_socket_write(h1, 0u, "12345", 5u, &count);
     ASSERT_EQ(status, NO_ERROR, "");
@@ -263,7 +263,7 @@ static bool socket_bytes_outstanding_half_close(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE | MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED, "");
     ASSERT_EQ(signals1, 0u, "");
 
     status = mx_socket_write(h0, 0u, "abcde", 5u, &count);
@@ -271,7 +271,7 @@ static bool socket_bytes_outstanding_half_close(void) {
     ASSERT_EQ(count, 5u, "");
 
     signals1 = get_satisfied_signals(h1);
-    ASSERT_EQ(signals1, MX_SIGNAL_READABLE, "");
+    ASSERT_EQ(signals1, MX_SOCKET_READABLE, "");
 
     status = mx_socket_write(h1, 0u, "fghij", 5u, &count);
     ASSERT_EQ(status, ERR_BAD_STATE, "");
@@ -292,7 +292,7 @@ static bool socket_bytes_outstanding_half_close(void) {
     ASSERT_EQ(status, ERR_REMOTE_CLOSED, "");
 
     signals0 = get_satisfied_signals(h0);
-    ASSERT_EQ(signals0, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, "");
+    ASSERT_EQ(signals0, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED, "");
 
     status = mx_socket_read(h1, 0u, rbuf, sizeof(rbuf), &count);
     ASSERT_EQ(status, NO_ERROR, "");

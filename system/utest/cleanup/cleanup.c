@@ -38,11 +38,11 @@ bool cleanup_test(void) {
 
     mx_handle_close(p1[1]);
     unittest_printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
-    r = mx_handle_wait_one(p1[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    r = mx_handle_wait_one(p1[0], MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending);
     ASSERT_EQ(r, 0, "cleanup-test: FAILED");
 
-    ASSERT_EQ(pending, MX_SIGNAL_PEER_CLOSED, "cleanup-test: FAILED");
+    ASSERT_EQ(pending, MX_CHANNEL_PEER_CLOSED, "cleanup-test: FAILED");
     unittest_printf("cleanup-test: SUCCESS, observed PEER_CLOSED signal\n\n");
     mx_handle_close(p1[0]);
     mx_handle_close(p1[1]);
@@ -65,7 +65,7 @@ bool cleanup_test(void) {
     r = mx_channel_write(p1[0], 0, &msg, sizeof(msg), &event, 1);
     ASSERT_EQ(r, ERR_BAD_STATE, "cleanup-test: unexpected message_write return code");
 
-    r = mx_object_signal(event, 0u, MX_SIGNAL_SIGNALED);
+    r = mx_object_signal(event, 0u, MX_EVENT_SIGNALED);
     ASSERT_GE(r, 0, "cleanup-test: unable to signal event!");
     unittest_printf("cleanup-test: SUCCESS, event is alive\n\n");
 
@@ -95,11 +95,11 @@ bool cleanup_test(void) {
     mx_handle_close(p0[1]);
 
     unittest_printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
-    r = mx_handle_wait_one(p1[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    r = mx_handle_wait_one(p1[0], MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending);
     ASSERT_EQ(r, 0, "cleanup-test: FAILED");
 
-    ASSERT_EQ(pending, MX_SIGNAL_PEER_CLOSED, "cleanup-test: FAILED");
+    ASSERT_EQ(pending, MX_CHANNEL_PEER_CLOSED, "cleanup-test: FAILED");
 
     test_state = 100;
     unittest_printf("cleanup-test: PASSED\n");

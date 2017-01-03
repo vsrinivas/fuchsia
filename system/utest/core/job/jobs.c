@@ -81,7 +81,7 @@ static bool kill_test(void) {
     ASSERT_EQ(mx_task_kill(job_child), NO_ERROR, "");
 
     mx_signals_t signals;
-    mx_handle_wait_one(process, MX_SIGNAL_SIGNALED, 0u, &signals);
+    mx_handle_wait_one(process, MX_PROCESS_SIGNALED, 0u, &signals);
 
     END_TEST;
 }

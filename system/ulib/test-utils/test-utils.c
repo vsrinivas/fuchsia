@@ -124,36 +124,22 @@ void tu_channel_read(mx_handle_t handle, uint32_t flags, void* bytes, uint32_t* 
         tu_fatal(__func__, status);
 }
 
-// Wait until |handle| is readable or peer is closed.
+// Wait until |channel| is readable or peer is closed.
 // Result is true if readable, otherwise false.
 
-bool tu_wait_readable(mx_handle_t handle)
+bool tu_channel_wait_readable(mx_handle_t channel)
 {
-    mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+    mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     mx_signals_t pending;
     int64_t timeout = TU_WATCHDOG_DURATION_NANOSECONDS;
-    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout, &pending);
+    mx_status_t result = tu_wait(&channel, &signals, 1, NULL, timeout, &pending);
     if (result != NO_ERROR)
         tu_fatal(__func__, result);
-    if ((pending & MX_SIGNAL_READABLE) == 0) {
+    if ((pending & MX_CHANNEL_READABLE) == 0) {
         unittest_printf("%s: peer closed\n", __func__);
         return false;
     }
     return true;
-}
-
-void tu_wait_signaled(mx_handle_t handle)
-{
-    mx_signals_t signals = MX_SIGNAL_SIGNALED;
-    mx_signals_t pending;
-    int64_t timeout = TU_WATCHDOG_DURATION_NANOSECONDS;
-    mx_status_t result = tu_wait(&handle, &signals, 1, NULL, timeout, &pending);
-    if (result != NO_ERROR)
-        tu_fatal(__func__, result);
-    if ((pending & MX_SIGNAL_SIGNALED) == 0) {
-        unittest_printf_critical("%s: unexpected return from tu_wait\n", __func__);
-        exit(TU_FAIL_ERRCODE);
-    }
 }
 
 mx_handle_t tu_launch(const char* name,
@@ -216,6 +202,20 @@ mx_handle_t tu_launch_mxio_fini(launchpad_t* lp)
     return proc;
 }
 
+void tu_process_wait_signaled(mx_handle_t process)
+{
+    mx_signals_t signals = MX_PROCESS_SIGNALED;
+    mx_signals_t pending;
+    int64_t timeout = TU_WATCHDOG_DURATION_NANOSECONDS;
+    mx_status_t result = tu_wait(&process, &signals, 1, NULL, timeout, &pending);
+    if (result != NO_ERROR)
+        tu_fatal(__func__, result);
+    if ((pending & MX_PROCESS_SIGNALED) == 0) {
+        unittest_printf_critical("%s: unexpected return from tu_wait\n", __func__);
+        exit(TU_FAIL_ERRCODE);
+    }
+}
+
 int tu_process_get_return_code(mx_handle_t process)
 {
     mx_info_process_t info;
@@ -228,7 +228,7 @@ int tu_process_get_return_code(mx_handle_t process)
 
 int tu_process_wait_exit(mx_handle_t process)
 {
-    tu_wait_signaled(process);
+    tu_process_wait_signaled(process);
     return tu_process_get_return_code(process);
 }
 

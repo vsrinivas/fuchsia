@@ -53,7 +53,7 @@ static mx_handle_t event_handle;
 
 static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t pending;
-    mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+    mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     int64_t timeout = MX_TIME_INFINITE;
     mx_status_t status = mx_handle_wait_one(handle, signals, timeout, &pending);
     if (status == ERR_HANDLE_CLOSED) {
@@ -61,7 +61,7 @@ static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
         return true;
     }
     ASSERT_GE(status, 0, "handle wait one failed");
-    if ((pending & MX_SIGNAL_READABLE) != 0) {
+    if ((pending & MX_CHANNEL_READABLE) != 0) {
         *result = WAIT_READABLE;
         return true;
     }
@@ -72,7 +72,7 @@ static bool wait_readable(mx_handle_t handle, enum wait_result* result) {
 
 static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
     mx_signals_t pending;
-    mx_signals_t signals = MX_SIGNAL_SIGNALED;
+    mx_signals_t signals = MX_EVENT_SIGNALED;
     int64_t timeout = MX_TIME_INFINITE;
     mx_status_t status = mx_handle_wait_one(handle, signals, timeout, &pending);
     if (status == ERR_HANDLE_CLOSED) {
@@ -80,7 +80,7 @@ static bool wait_signaled(mx_handle_t handle, enum wait_result* result) {
         return true;
     }
     ASSERT_GE(status, 0, "handle wait one failed");
-    ASSERT_NEQ(pending & MX_SIGNAL_SIGNALED, 0u,
+    ASSERT_NEQ(pending & MX_EVENT_SIGNALED, 0u,
                "unexpected return in wait_signaled");
     *result = WAIT_SIGNALED;
     return true;

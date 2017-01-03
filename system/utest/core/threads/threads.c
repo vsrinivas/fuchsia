@@ -63,7 +63,7 @@ static bool threads_test(void) {
     mxr_thread_t* thread = NULL;
     ASSERT_TRUE(start_thread(test_thread_fn, NULL, &thread), "");
 
-    ASSERT_EQ(mx_handle_wait_one(mxr_thread_get_handle(thread), MX_SIGNAL_SIGNALED,
+    ASSERT_EQ(mx_handle_wait_one(mxr_thread_get_handle(thread), MX_THREAD_SIGNALED,
                                  MX_TIME_INFINITE, NULL), NO_ERROR, "");
 
     mxr_thread_destroy(thread);

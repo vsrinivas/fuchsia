@@ -78,7 +78,7 @@ static bool recv_msg(mx_handle_t handle, enum message* msg)
 
     unittest_printf("waiting for message on handle %u\n", handle);
 
-    if (!tu_wait_readable(handle)) {
+    if (!tu_channel_wait_readable(handle)) {
         unittest_printf("peer closed while trying to read message\n");
         return false;
     }
@@ -104,7 +104,7 @@ static bool recv_msg_new_thread_handle(mx_handle_t handle, mx_handle_t* thread)
 
     unittest_printf("waiting for message on handle %u\n", handle);
 
-    ASSERT_TRUE(tu_wait_readable(handle), "peer closed while trying to read message");
+    ASSERT_TRUE(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
     uint32_t num_handles = 1;
     tu_channel_read(handle, 0, &data, &num_bytes, thread, &num_handles);
@@ -402,7 +402,7 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
     mx_koid_t tid;
     read_and_verify_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, false, &tid);
     resume_thread_from_exception(child, tid, MX_RESUME_NOT_HANDLED);
-    tu_wait_signaled(child);
+    tu_process_wait_signaled(child);
 
     tu_handle_close(child);
     tu_handle_close(eport);
@@ -474,7 +474,7 @@ static bool process_start_test(void)
     read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
     send_msg(our_channel, MSG_DONE);
     resume_thread_from_exception(child, tid, 0);
-    tu_wait_signaled(child);
+    tu_process_wait_signaled(child);
 
     tu_handle_close(child);
     tu_handle_close(eport);
@@ -500,7 +500,7 @@ static bool process_gone_notification_test(void)
     ASSERT_EQ(tid, 0u, "tid not zero");
     // there's no reply to a "gone" notification
 
-    tu_wait_signaled(child);
+    tu_process_wait_signaled(child);
     tu_handle_close(child);
 
     tu_handle_close(eport);
@@ -655,7 +655,7 @@ static bool trigger_test(void)
                 resume_thread_from_exception(child, tid, MX_RESUME_NOT_HANDLED);
             }
         }
-        tu_wait_signaled(child);
+        tu_process_wait_signaled(child);
         tu_handle_close(child);
         tu_handle_close(eport);
         tu_handle_close(our_channel);

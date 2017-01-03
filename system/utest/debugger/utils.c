@@ -65,7 +65,7 @@ bool recv_msg(mx_handle_t handle, enum message* msg)
 
     unittest_printf("waiting for message on handle %u\n", handle);
 
-    ASSERT_TRUE(tu_wait_readable(handle), "peer closed while trying to read message");
+    ASSERT_TRUE(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
     tu_channel_read(handle, 0, &data, &num_bytes, NULL, 0);
     ASSERT_EQ(num_bytes, sizeof(data), "unexpected message size");
@@ -389,7 +389,7 @@ bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior)
 
     send_msg(channel, MSG_DONE);
 
-    tu_wait_signaled(inferior);
+    tu_process_wait_signaled(inferior);
     EXPECT_EQ(tu_process_get_return_code(inferior), 1234,
               "unexpected inferior return code");
 

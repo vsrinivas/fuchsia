@@ -26,13 +26,13 @@ static mx_status_t wait_for_message(
 
     mx_signals_t pending;
     mx_status_t status = mx_handle_wait_one(h,
-                                            MX_SIGNAL_READABLE|MX_SIGNAL_PEER_CLOSED,
+                                            MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                             MX_TIME_INFINITE,
                                             &pending);
     if (status != NO_ERROR) {
         return status;
     }
-    if (pending & MX_SIGNAL_READABLE) {
+    if (pending & MX_CHANNEL_READABLE) {
         uint32_t rsp_len = 0;
         uint32_t num_handles_returned = 0;
         status = mx_channel_read(h, 0, NULL, rsp_len, &rsp_len,
@@ -78,7 +78,7 @@ static mx_status_t wait_for_message(
                 sizeof(mx_handle_t) * num_handles_returned);
 
         return NO_ERROR;
-    } else if (pending & MX_SIGNAL_PEER_CLOSED) {
+    } else if (pending & MX_CHANNEL_PEER_CLOSED) {
         return ERR_REMOTE_CLOSED;
     } else {
         // Shouldn't happen; if status == NO_ERROR, then one of the signals

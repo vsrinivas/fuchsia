@@ -92,7 +92,7 @@ static mx_status_t launch(int argc, const char** argv, mx_handle_t h) {
     // and delegate the responsibilities of the loader service elsewhere, it can
     // terminate without waiting for the child filesystem to terminate as well.
 
-    status = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE,
+    status = mx_handle_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE,
                                 NULL);
     if (status != NO_ERROR) {
         fprintf(stderr, "fs_mount: Error waiting for filesystem to terminate\n");

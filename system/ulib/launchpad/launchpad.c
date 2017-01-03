@@ -341,7 +341,7 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
     if (status != NO_ERROR)
         return status;
 
-    status = mx_handle_wait_one(loader_svc, MX_SIGNAL_READABLE,
+    status = mx_handle_wait_one(loader_svc, MX_CHANNEL_READABLE,
                                 MX_TIME_INFINITE, NULL);
     if (status != NO_ERROR)
         return status;

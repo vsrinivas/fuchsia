@@ -15,16 +15,16 @@
 static bool wait(mx_handle_t event, mx_handle_t quit_event) {
     mx_status_t ms;
     mx_wait_item_t items[2];
-    items[0].waitfor = MX_SIGNAL_SIGNALED;
+    items[0].waitfor = MX_EVENT_SIGNALED;
     items[0].handle = event;
-    items[1].waitfor = MX_SIGNAL_SIGNALED;
+    items[1].waitfor = MX_EVENT_SIGNALED;
     items[1].handle = quit_event;
 
     ms = mx_handle_wait_many(items, 2, MX_TIME_INFINITE);
     if (ms < 0)
         return false;
 
-    return (items[1].pending == MX_SIGNAL_SIGNALED);
+    return (items[1].pending == MX_EVENT_SIGNALED);
 }
 
 static bool wait_user(mx_handle_t event, mx_handle_t quit_event, mx_signals_t user_signal) {
@@ -33,14 +33,14 @@ static bool wait_user(mx_handle_t event, mx_handle_t quit_event, mx_signals_t us
     mx_wait_item_t items[2];
     items[0].waitfor = user_signal;
     items[0].handle = event;
-    items[1].waitfor = MX_SIGNAL_SIGNALED;
+    items[1].waitfor = MX_EVENT_SIGNALED;
     items[1].handle = quit_event;
 
     ms = mx_handle_wait_many(items, 2, MX_TIME_INFINITE);
     if (ms < 0)
         return false;
 
-    return (items[1].pending == MX_SIGNAL_SIGNALED);
+    return (items[1].pending == MX_EVENT_SIGNALED);
 }
 
 static int thread_fn_1(void* arg) {
@@ -48,7 +48,7 @@ static int thread_fn_1(void* arg) {
 
     do {
         mx_nanosleep(MX_MSEC(200));
-        mx_status_t status = mx_object_signal(events[1], 0u, MX_SIGNAL_SIGNALED);
+        mx_status_t status = mx_object_signal(events[1], 0u, MX_EVENT_SIGNALED);
         assert(status == NO_ERROR);
     } while (!wait(events[2], events[0]));
 
@@ -60,7 +60,7 @@ static int thread_fn_2(void* arg) {
 
     while (!wait(events[1], events[0])) {
         mx_nanosleep(MX_MSEC(100));
-        mx_status_t status = mx_object_signal(events[2], 0u, MX_SIGNAL_SIGNALED);
+        mx_status_t status = mx_object_signal(events[2], 0u, MX_EVENT_SIGNALED);
         assert(status == NO_ERROR);
     }
 
@@ -85,7 +85,7 @@ static bool basic_test(void) {
     }
 
     mx_nanosleep(MX_MSEC(400));
-    mx_object_signal(events[0], 0u, MX_SIGNAL_SIGNALED);
+    mx_object_signal(events[0], 0u, MX_EVENT_SIGNALED);
 
     for (int ix = 0; ix != 4; ++ix) {
         ASSERT_EQ(thrd_join(threads[ix], NULL), thrd_success, "Error during wait");
@@ -137,7 +137,7 @@ static bool user_signals_test(void) {
     }
 
     mx_nanosleep(MX_MSEC(400));
-    mx_object_signal(events[0], 0u, MX_SIGNAL_SIGNALED);
+    mx_object_signal(events[0], 0u, MX_EVENT_SIGNALED);
 
     for (int ix = 0; ix != 4; ++ix) {
         ASSERT_EQ(thrd_join(threads[ix], NULL), thrd_success, "Error during wait");
@@ -170,14 +170,14 @@ static bool wait_signals_test(void) {
     mx_signals_t pending;
 
     mx_wait_item_t items[3];
-    items[0].waitfor = MX_SIGNAL_SIGNALED;
+    items[0].waitfor = MX_EVENT_SIGNALED;
     items[0].handle = events[0];
-    items[1].waitfor = MX_SIGNAL_SIGNALED;
+    items[1].waitfor = MX_EVENT_SIGNALED;
     items[1].handle = events[1];
-    items[2].waitfor = MX_SIGNAL_SIGNALED;
+    items[2].waitfor = MX_EVENT_SIGNALED;
     items[2].handle = events[2];
 
-    status = mx_handle_wait_one(events[0], MX_SIGNAL_SIGNALED, 1u, &pending);
+    status = mx_handle_wait_one(events[0], MX_EVENT_SIGNALED, 1u, &pending);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
     ASSERT_EQ(pending, 0u, "");
 
@@ -185,7 +185,7 @@ static bool wait_signals_test(void) {
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
     ASSERT_FALSE(items[0].pending || items[1].pending || items[2].pending, "")
 
-    status = mx_handle_wait_one(events[0], MX_SIGNAL_SIGNALED, 0u, &pending);
+    status = mx_handle_wait_one(events[0], MX_EVENT_SIGNALED, 0u, &pending);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
     ASSERT_EQ(pending, 0u, "");
 
@@ -193,31 +193,31 @@ static bool wait_signals_test(void) {
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
     ASSERT_FALSE(items[0].pending || items[1].pending || items[2].pending, "")
 
-    ASSERT_GE(mx_object_signal(events[0], 0u, MX_SIGNAL_SIGNALED), 0, "Error during event signal");
+    ASSERT_GE(mx_object_signal(events[0], 0u, MX_EVENT_SIGNALED), 0, "Error during event signal");
 
-    status = mx_handle_wait_one(events[0], MX_SIGNAL_SIGNALED, 1u, &pending);
+    status = mx_handle_wait_one(events[0], MX_EVENT_SIGNALED, 1u, &pending);
     ASSERT_EQ(status, 0, "wait failed");
-    ASSERT_EQ(pending, MX_SIGNAL_SIGNALED, "Error during wait call");
+    ASSERT_EQ(pending, MX_EVENT_SIGNALED, "Error during wait call");
 
     status = mx_handle_wait_many(items, 3, 1);
     ASSERT_EQ(status, 0, "wait failed");
-    ASSERT_EQ(items[0].pending, MX_SIGNAL_SIGNALED, "Error during wait call");
+    ASSERT_EQ(items[0].pending, MX_EVENT_SIGNALED, "Error during wait call");
 
-    status = mx_handle_wait_one(events[0], MX_SIGNAL_SIGNALED, 0u, &pending);
+    status = mx_handle_wait_one(events[0], MX_EVENT_SIGNALED, 0u, &pending);
     ASSERT_EQ(status, NO_ERROR, "wait failed");
-    ASSERT_EQ(pending, MX_SIGNAL_SIGNALED, "Error during wait call");
+    ASSERT_EQ(pending, MX_EVENT_SIGNALED, "Error during wait call");
 
-    ASSERT_GE(mx_object_signal(events[0], MX_SIGNAL_SIGNALED, 0u), 0, "Error during event reset");
-    ASSERT_GE(mx_object_signal(events[2], 0u, MX_SIGNAL_SIGNALED), 0, "Error during event signal");
+    ASSERT_GE(mx_object_signal(events[0], MX_EVENT_SIGNALED, 0u), 0, "Error during event reset");
+    ASSERT_GE(mx_object_signal(events[2], 0u, MX_EVENT_SIGNALED), 0, "Error during event signal");
     status = mx_handle_wait_many(items, 3, 1);
     ASSERT_EQ(status, 0, "wait failed");
-    ASSERT_EQ(items[2].pending, MX_SIGNAL_SIGNALED, "Error during wait call");
+    ASSERT_EQ(items[2].pending, MX_EVENT_SIGNALED, "Error during wait call");
 
     thrd_t thread;
     int ret = thrd_create_with_name(&thread, thread_fn_closer, &events[1], "closer");
     ASSERT_EQ(ret, thrd_success, "Error during thread creation");
 
-    status = mx_handle_wait_one(events[1], MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+    status = mx_handle_wait_one(events[1], MX_EVENT_SIGNALED, MX_TIME_INFINITE, NULL);
     ASSERT_EQ(status, ERR_HANDLE_CLOSED, "Error during wait");
 
     ASSERT_EQ(thrd_join(thread, NULL), thrd_success, "Error during thread close");
@@ -232,11 +232,11 @@ static bool reset_test(void) {
     BEGIN_TEST;
     mx_handle_t event;
     ASSERT_EQ(mx_event_create(0U, &event), 0, "Error during event creation");
-    ASSERT_GE(mx_object_signal(event, 0u, MX_SIGNAL_SIGNALED), 0, "Error during event signal");
-    ASSERT_GE(mx_object_signal(event, MX_SIGNAL_SIGNALED, 0u), 0, "Error during event reset");
+    ASSERT_GE(mx_object_signal(event, 0u, MX_EVENT_SIGNALED), 0, "Error during event signal");
+    ASSERT_GE(mx_object_signal(event, MX_EVENT_SIGNALED, 0u), 0, "Error during event reset");
 
     mx_status_t status;
-    status = mx_handle_wait_one(event, MX_SIGNAL_SIGNALED, 1u, NULL);
+    status = mx_handle_wait_one(event, MX_EVENT_SIGNALED, 1u, NULL);
     ASSERT_EQ(status, ERR_TIMED_OUT, "wait should have timeout");
 
     ASSERT_EQ(mx_handle_close(event), NO_ERROR, "error during handle close");
@@ -255,14 +255,14 @@ static bool wait_many_failures_test(void) {
 
     mx_wait_item_t items[2];
     items[0].handle = handles[0];
-    items[0].waitfor = MX_SIGNAL_SIGNALED;
+    items[0].waitfor = MX_EVENT_SIGNALED;
     items[1].handle = handles[1];
-    items[1].waitfor = MX_SIGNAL_SIGNALED;
+    items[1].waitfor = MX_EVENT_SIGNALED;
     ASSERT_EQ(mx_handle_wait_many(items, 2, MX_TIME_INFINITE),
               ERR_BAD_HANDLE, "Wait-many should have failed with ERR_BAD_HANDLE");
 
     // Signal the event, to check that wait-many cleaned up correctly.
-    ASSERT_EQ(mx_object_signal(handles[0], 0u, MX_SIGNAL_SIGNALED), NO_ERROR,
+    ASSERT_EQ(mx_object_signal(handles[0], 0u, MX_EVENT_SIGNALED), NO_ERROR,
               "Error during event signal");
 
     // TODO(vtl): Also test other failure code paths: 1. a handle not supporting waiting (i.e., not

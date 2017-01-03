@@ -1879,7 +1879,7 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
         goto out;
     }
 
-    status = _mx_handle_wait_one(loader_svc, MX_SIGNAL_READABLE,
+    status = _mx_handle_wait_one(loader_svc, MX_CHANNEL_READABLE,
                                  MX_TIME_INFINITE, NULL);
     if (status != NO_ERROR) {
         error("mx_handle_wait_one for loader service reply: %d (%s)",

@@ -182,7 +182,7 @@ static int ipc_thread(void* arg) {
         uint32_t n = sizeof(data);
         if ((status = mx_channel_read(ipc_handle, 0, data, n, &n, NULL, 0, NULL)) < 0) {
             if (status == ERR_SHOULD_WAIT) {
-                mx_handle_wait_one(ipc_handle, MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL);
+                mx_handle_wait_one(ipc_handle, MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL);
                 continue;
             }
             printf("netsvc: ipc read failed: %d\n", status);

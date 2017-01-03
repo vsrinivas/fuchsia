@@ -55,7 +55,7 @@ static void disconnect_handler(mxio_dispatcher_t* md, handler_t* handler, bool n
     // send a synthetic message so we know when it's safe to destroy
     mx_io_packet_t packet;
     packet.hdr.key = (uint64_t)(uintptr_t)handler;
-    packet.signals = need_close_cb ? MX_SIGNAL_SIGNALED : 0;
+    packet.signals = need_close_cb ? MX_PORT_SIGNALED : 0;
     mx_port_queue(md->ioport, &packet, sizeof(packet));
 
     // flag so we know to ignore further events
@@ -78,11 +78,11 @@ again:
             // handler is awaiting gc
             // ignore events for it until we get the synthetic "destroy" event
             if (packet.hdr.type == MX_PORT_PKT_TYPE_USER) {
-                destroy_handler(md, handler, packet.signals & MX_SIGNAL_SIGNALED);
+                destroy_handler(md, handler, packet.signals & MX_PORT_SIGNALED);
             }
             continue;
         }
-        if (packet.signals & MX_SIGNAL_READABLE) {
+        if (packet.signals & MX_CHANNEL_READABLE) {
             if ((r = md->cb(handler->h, handler->cb, handler->cookie)) != 0) {
                 if (r == ERR_DISPATCHER_NO_WORK) {
                     printf("mxio: dispatcher found no work to do!\n");
@@ -92,7 +92,7 @@ again:
                 }
             }
         }
-        if (packet.signals & MX_SIGNAL_PEER_CLOSED) {
+        if (packet.signals & MX_CHANNEL_PEER_CLOSED) {
             // synthesize a close
             disconnect_handler(md, handler, true);
         }
@@ -158,7 +158,7 @@ mx_status_t mxio_dispatcher_add(mxio_dispatcher_t* md, mx_handle_t h, void* cb, 
     mtx_lock(&md->lock);
     list_add_tail(&md->list, &handler->node);
     if ((r = mx_port_bind(md->ioport, (uint64_t)(uintptr_t)handler, h,
-                             MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) < 0) {
+                             MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) < 0) {
         list_delete(&handler->node);
     }
     mtx_unlock(&md->lock);

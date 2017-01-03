@@ -85,15 +85,15 @@ void tu_channel_write(mx_handle_t handle, uint32_t flags, const void* bytes, uin
 void tu_channel_read(mx_handle_t handle, uint32_t flags, void* bytes, uint32_t* num_bytes,
                      mx_handle_t* handles, uint32_t* num_handles);
 
-// Wait for |handle| to be readable.
-// Returns true if the handle is readable, and false if the peer has closed its end.
+// Wait for |channel| to be readable.
+// Returns true if the channel is readable, and false if the peer has closed its end.
 // The call fails and the process terminates if the call times out within TU_WATCHDOG_DURATION_NANOSECONDS.
-bool tu_wait_readable(mx_handle_t handle);
+bool tu_channel_wait_readable(mx_handle_t channel);
 
-// Wait for |handle| to be signaled (MX_SIGNAL_SIGNALED).
-// The call fails and the process terminates if the call times out within TU_WATCHDOG_DURATION_NANOSECONDS.
+// Wait for |process| to be signaled (MX_PROCESS_SIGNALED).
+// The call fails and the calling process terminates if the call times out within TU_WATCHDOG_DURATION_NANOSECONDS.
 
-void tu_wait_signaled(mx_handle_t handle);
+void tu_process_wait_signaled(mx_handle_t process);
 
 // Fetch the return code of |process|.
 

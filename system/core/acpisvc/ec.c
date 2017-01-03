@@ -33,13 +33,13 @@ static struct {
 static int acpi_ec_thread(void* arg) {
     while (1) {
         mx_status_t mx_status = mx_handle_wait_one(pending_sci_evt,
-                                                   MX_SIGNAL_SIGNALED,
+                                                   MX_EVENT_SIGNALED,
                                                    MX_TIME_INFINITE,
                                                    NULL);
         if (mx_status != NO_ERROR) {
             break;
         }
-        mx_object_signal(pending_sci_evt, MX_SIGNAL_SIGNALED, 0);
+        mx_object_signal(pending_sci_evt, MX_EVENT_SIGNALED, 0);
 
         UINT32 global_lock;
         while (AcpiAcquireGlobalLock(0xFFFF, &global_lock) != AE_OK)
@@ -83,7 +83,7 @@ static int acpi_ec_thread(void* arg) {
 }
 
 static uint32_t raw_ec_event_gpe_handler(ACPI_HANDLE gpe_dev, uint32_t gpe_num, void* ctx) {
-    mx_object_signal(pending_sci_evt, 0, MX_SIGNAL_SIGNALED);
+    mx_object_signal(pending_sci_evt, 0, MX_EVENT_SIGNALED);
     return ACPI_REENABLE_GPE;
 }
 

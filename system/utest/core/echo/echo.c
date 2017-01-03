@@ -17,14 +17,14 @@
 bool wait_for_readable(mx_handle_t handle) {
     unittest_printf("waiting for handle %u to be readable (or closed)\n", handle);
     // Wait for |handle| to become readable or closed.
-    mx_signals_t signals = MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+    mx_signals_t signals = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
     mx_signals_t pending;
     mx_status_t wait_status = mx_handle_wait_one(handle, signals, MX_TIME_INFINITE,
                                                        &pending);
     if (wait_status != NO_ERROR) {
         return false;
     }
-    if (!(pending & MX_SIGNAL_READABLE)) {
+    if (!(pending & MX_CHANNEL_READABLE)) {
         return false;
     }
     return true;

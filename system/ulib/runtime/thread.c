@@ -184,7 +184,7 @@ mx_status_t mxr_thread_join(mxr_thread_t* thread) {
         thread->state = JOINED;
         mxr_mutex_unlock(&thread->state_lock);
         mx_status_t status = _mx_handle_wait_one(
-            thread->handle, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+            thread->handle, MX_THREAD_SIGNALED, MX_TIME_INFINITE, NULL);
         if (status != NO_ERROR)
             return status;
         break;

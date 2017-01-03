@@ -176,10 +176,10 @@ static int test_timeout_helper(void* ctx) {
     timeout_args* args = ctx;
     ASSERT_EQ(mtx_lock(&args->mutex), thrd_success, "f to lock");
     // Inform the main thread that we have acquired the lock.
-    ASSERT_EQ(mx_object_signal(args->start_event, 0, MX_SIGNAL_SIGNALED), NO_ERROR,
+    ASSERT_EQ(mx_object_signal(args->start_event, 0, MX_EVENT_SIGNALED), NO_ERROR,
               "failed to signal");
     // Wait until the main thread has completed its test.
-    ASSERT_EQ(mx_handle_wait_one(args->done_event, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL),
+    ASSERT_EQ(mx_handle_wait_one(args->done_event, MX_EVENT_SIGNALED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "failed to wait");
     ASSERT_EQ(mtx_unlock(&args->mutex), thrd_success, "failed to unlock");
     return 0;
@@ -202,7 +202,7 @@ static bool test_timeout_elapsed(void) {
     thrd_t helper;
     ASSERT_EQ(thrd_create(&helper, test_timeout_helper, &args), thrd_success, "");
     // Wait for the helper thread to acquire the lock.
-    ASSERT_EQ(mx_handle_wait_one(args.start_event, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL),
+    ASSERT_EQ(mx_handle_wait_one(args.start_event, MX_EVENT_SIGNALED, MX_TIME_INFINITE, NULL),
               NO_ERROR, "failed to wait");
 
     for (int i = 0; i < 5; ++i) {
@@ -228,7 +228,7 @@ static bool test_timeout_elapsed(void) {
     }
 
     // Inform the helper thread that we are done.
-    ASSERT_EQ(mx_object_signal(args.done_event, 0, MX_SIGNAL_SIGNALED),
+    ASSERT_EQ(mx_object_signal(args.done_event, 0, MX_EVENT_SIGNALED),
               NO_ERROR, "failed to signal");
     ASSERT_EQ(thrd_join(helper, NULL), thrd_success, "failed to join");
 

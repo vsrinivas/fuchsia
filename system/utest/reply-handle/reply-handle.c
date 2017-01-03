@@ -76,12 +76,12 @@ int reply_handle_rw(void) {
     ASSERT_GT(p, 0, msg);
 
     mx_signals_t pending;
-    r = mx_handle_wait_one(p2[0], MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+    r = mx_handle_wait_one(p2[0], MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending);
     snprintf(msg, sizeof(msg), "error waiting on p2[0] %d\n", r);
     ASSERT_GE(r, 0, msg);
 
-    ASSERT_TRUE(pending & MX_SIGNAL_READABLE, "channel 2a not readable");
+    ASSERT_TRUE(pending & MX_CHANNEL_READABLE, "channel 2a not readable");
 
     unittest_printf("write handle %x to helper...\n", p2[1]);
     char data[128];

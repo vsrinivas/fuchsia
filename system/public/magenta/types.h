@@ -88,7 +88,6 @@ typedef uint32_t mx_signals_t;
 
 // EventPair
 #define MX_EPAIR_SIGNALED           MX_OBJECT_SIGNAL_3
-#define MX_EPAIR_CLOSED             MX_OBJECT_SIGNAL_2
 #define MX_EPAIR_PEER_CLOSED        MX_OBJECT_SIGNAL_2
 #define MX_EPAIR_SIGNAL_MASK        (MX_USER_SIGNAL_ALL | MX_OBJECT_SIGNAL_2 | MX_OBJECT_SIGNAL_3)
 
@@ -138,12 +137,6 @@ typedef uint32_t mx_signals_t;
 
 // Thread
 #define MX_THREAD_SIGNALED          MX_OBJECT_SIGNAL_3
-
-// Legacy signal names, to be removed.
-#define MX_SIGNAL_READABLE          MX_OBJECT_SIGNAL_0
-#define MX_SIGNAL_WRITABLE          MX_OBJECT_SIGNAL_1
-#define MX_SIGNAL_PEER_CLOSED       MX_OBJECT_SIGNAL_2
-#define MX_SIGNAL_SIGNALED          MX_OBJECT_SIGNAL_3
 
 // global kernel object id.
 typedef uint64_t mx_koid_t;

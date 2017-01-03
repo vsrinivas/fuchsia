@@ -99,7 +99,7 @@ static mx_status_t launch(int argc, const char** argv) {
         return proc;
     }
 
-    status = mx_handle_wait_one(proc, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+    status = mx_handle_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
     if (status != NO_ERROR) {
         fprintf(stderr, "fs_mkfs: Error waiting for mkfs to terminate\n");
     }

@@ -256,9 +256,9 @@ bool wait_set_wait_single_thread_2_test(void) {
     ASSERT_GT(ws, 0, "mx_waitset_create() failed");
 
     const uint64_t cookie1 = 987654321098765ull;
-    EXPECT_EQ(mx_waitset_add(ws, cookie1, mp[0], MX_SIGNAL_READABLE), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, cookie1, mp[0], MX_WAITSET_READABLE), NO_ERROR, "");
     const uint64_t cookie2 = 789023457890412ull;
-    EXPECT_EQ(mx_waitset_add(ws, cookie2, mp[0], MX_SIGNAL_PEER_CLOSED), NO_ERROR, "");
+    EXPECT_EQ(mx_waitset_add(ws, cookie2, mp[0], MX_WAITSET_PEER_CLOSED), NO_ERROR, "");
 
     mx_waitset_result_t results[5] = {};
     uint32_t num_results = 5u;
@@ -269,7 +269,7 @@ bool wait_set_wait_single_thread_2_test(void) {
     num_results = 5u;
     EXPECT_EQ(mx_waitset_wait(ws, 0u, results, &num_results), NO_ERROR, "");
     ASSERT_EQ(num_results, 1u, "wrong num_results from mx_waitset_wait()");
-    EXPECT_TRUE(check_results(num_results, results, cookie2, NO_ERROR, MX_SIGNAL_PEER_CLOSED), "");
+    EXPECT_TRUE(check_results(num_results, results, cookie2, NO_ERROR, MX_WAITSET_PEER_CLOSED), "");
 
     EXPECT_EQ(mx_handle_close(mp[0]), NO_ERROR, "");
     num_results = 5u;

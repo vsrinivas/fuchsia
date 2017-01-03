@@ -270,7 +270,7 @@ static int split(char* line, char* argv[], int max) {
 static void joinproc(mx_handle_t p) {
     mx_status_t r;
 
-    r = mx_handle_wait_one(p, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+    r = mx_handle_wait_one(p, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
     if (r != NO_ERROR) {
         fprintf(stderr, "[process(%x): wait failed? %d]\n", p, r);
         return;

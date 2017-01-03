@@ -32,15 +32,15 @@ static ssize_t _read(mx_handle_t h, void* data, size_t len, int nonblock) {
         }
         if (r == ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
-            r = mx_handle_wait_one(h, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+            r = mx_handle_wait_one(h, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;
             }
-            if (pending & MX_SIGNAL_READABLE) {
+            if (pending & MX_SOCKET_READABLE) {
                 continue;
             }
-            if (pending & MX_SIGNAL_PEER_CLOSED) {
+            if (pending & MX_SOCKET_PEER_CLOSED) {
                 return ERR_REMOTE_CLOSED;
             }
             // impossible
@@ -59,15 +59,15 @@ static ssize_t _write(mx_handle_t h, const void* data, size_t len, int nonblock)
         }
         if (r == ERR_SHOULD_WAIT && !nonblock) {
             mx_signals_t pending;
-            r = mx_handle_wait_one(h, MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+            r = mx_handle_wait_one(h, MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                    MX_TIME_INFINITE, &pending);
             if (r < 0) {
                 return r;
             }
-            if (pending & MX_SIGNAL_WRITABLE) {
+            if (pending & MX_SOCKET_WRITABLE) {
                 continue;
             }
-            if (pending & MX_SIGNAL_PEER_CLOSED) {
+            if (pending & MX_SOCKET_PEER_CLOSED) {
                 return ERR_REMOTE_CLOSED;
             }
             // impossible
@@ -107,26 +107,26 @@ static void mx_pipe_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle,
     *handle = p->h;
     mx_signals_t signals = 0;
     if (events & EPOLLIN) {
-        signals |= MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED;
+        signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
     }
     if (events & EPOLLOUT) {
-        signals |= MX_SIGNAL_WRITABLE;
+        signals |= MX_SOCKET_WRITABLE;
     }
     if (events & EPOLLRDHUP) {
-        signals |= MX_SIGNAL_PEER_CLOSED;
+        signals |= MX_SOCKET_PEER_CLOSED;
     }
     *_signals = signals;
 }
 
 static void mx_pipe_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (signals & (MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED)) {
+    if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
         events |= EPOLLIN;
     }
-    if (signals & MX_SIGNAL_WRITABLE) {
+    if (signals & MX_SOCKET_WRITABLE) {
         events |= EPOLLOUT;
     }
-    if (signals & MX_SIGNAL_PEER_CLOSED) {
+    if (signals & MX_SOCKET_PEER_CLOSED) {
         events |= EPOLLRDHUP;
     }
     *_events = events;

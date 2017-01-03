@@ -168,7 +168,7 @@ static int loader_service_thread(void* arg) {
     mx_status_t r;
 
     for (;;) {
-        if ((r = mx_handle_wait_one(h, MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL)) < 0) {
+        if ((r = mx_handle_wait_one(h, MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL)) < 0) {
             // This is the normal error for the other end going away,
             // which happens when the process dies.
             if (r != ERR_BAD_STATE)

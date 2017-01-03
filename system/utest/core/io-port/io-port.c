@@ -175,13 +175,13 @@ static bool bind_basic_test(void)
     status = mx_port_create(0u, &event);
     EXPECT_EQ(status, 0, "could not create io port");
 
-    status = mx_port_bind(ioport, -1, event, MX_SIGNAL_SIGNALED);
+    status = mx_port_bind(ioport, -1, event, MX_EVENT_SIGNALED);
     EXPECT_EQ(status, ERR_NOT_SUPPORTED, "non waitable objects not allowed");
 
-    status = mx_port_bind(ioport, -1, channel[0], MX_SIGNAL_READABLE);
+    status = mx_port_bind(ioport, -1, channel[0], MX_CHANNEL_READABLE);
     EXPECT_EQ(status, NO_ERROR, "failed to bind channel");
 
-    status = mx_port_bind(ioport, -2, channel[1], MX_SIGNAL_READABLE);
+    status = mx_port_bind(ioport, -2, channel[1], MX_CHANNEL_READABLE);
     EXPECT_EQ(status, NO_ERROR, "failed to bind channel");
 
     status = mx_handle_close(ioport);
@@ -267,7 +267,7 @@ static bool bind_channels_test(void)
     for (int ix = 0; ix != countof(channels) / 2; ++ix) {
         status = mx_channel_create(0u, &channels[ix * 2], &channels[ix * 2 + 1]);
         EXPECT_EQ(status, NO_ERROR, "failed to create channel");
-        status = mx_port_bind(info.port, (ix * 2) + 1, channels[ix * 2], MX_SIGNAL_READABLE);
+        status = mx_port_bind(info.port, (ix * 2) + 1, channels[ix * 2], MX_CHANNEL_READABLE);
         EXPECT_EQ(status, NO_ERROR, "failed to bind event to ioport");
     }
 
@@ -292,11 +292,11 @@ static bool bind_channels_test(void)
 
     // Check the received packets are reasonable.
     for (int ix = 0; ix != countof(order); ++ix) {
-        status = mx_handle_wait_one(recv_channel, MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL);
+        status = mx_handle_wait_one(recv_channel, MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL);
         EXPECT_EQ(status, NO_ERROR, "failed to wait for channel");
         status = mx_channel_read(recv_channel, 0u, &report, bytes, &bytes, NULL, 0, NULL);
         EXPECT_EQ(status, NO_ERROR, "expected valid message");
-        EXPECT_EQ(report.signals, MX_SIGNAL_READABLE, "invalid signal");
+        EXPECT_EQ(report.signals, MX_CHANNEL_READABLE, "invalid signal");
         EXPECT_EQ(report.type, MX_PORT_PKT_TYPE_IOSN, "invalid type");
         ++arrivals[(int)report.key].actual;
     }
@@ -340,7 +340,7 @@ static bool bind_sockets_test(void)
     status = mx_socket_create(0u, &socket0, &socket1);
     EXPECT_EQ(status, NO_ERROR, "");
 
-    status = mx_port_bind(port, 1ull, socket1, MX_SIGNAL_READABLE | MX_USER_SIGNAL_3);
+    status = mx_port_bind(port, 1ull, socket1, MX_SOCKET_READABLE | MX_USER_SIGNAL_3);
     EXPECT_EQ(status, NO_ERROR, "");
 
     status = mx_socket_write(socket0, 0u, "ab", 2, &sz);
@@ -364,11 +364,11 @@ static bool bind_sockets_test(void)
     uint32_t bytes = sizeof(report);
 
     for (int ix = 0; ix != 2; ++ix) {
-        status = mx_handle_wait_one(channel[0], MX_SIGNAL_READABLE, MX_TIME_INFINITE, NULL);
+        status = mx_handle_wait_one(channel[0], MX_CHANNEL_READABLE, MX_TIME_INFINITE, NULL);
         EXPECT_EQ(status, NO_ERROR, "");
         status = mx_channel_read(channel[0], 0u, &report, bytes, &bytes, NULL, 0, NULL);
         EXPECT_EQ(status, NO_ERROR, "");
-        EXPECT_EQ(report.signals, MX_SIGNAL_READABLE, "");
+        EXPECT_EQ(report.signals, MX_CHANNEL_READABLE, "");
         EXPECT_EQ(report.type, MX_PORT_PKT_TYPE_IOSN, "");
         // TODO(cpu): No longer we return the size. It seems we can get this back.
         EXPECT_EQ(report.size, 0u, "");
@@ -414,14 +414,14 @@ static bool bind_channels_playback(void)
     status = mx_channel_write(h[0], 0u, "def", 3, NULL, 0);
     EXPECT_EQ(status, NO_ERROR, "");
 
-    status = mx_port_bind(port, 3ull, h[1], MX_SIGNAL_READABLE);
+    status = mx_port_bind(port, 3ull, h[1], MX_CHANNEL_READABLE);
     EXPECT_EQ(status, NO_ERROR, "");
 
     mx_io_packet_t io_pkt;
     for (int ix = 0; ix != 2; ++ix) {
         status = mx_port_wait(port, MX_TIME_INFINITE, &io_pkt, sizeof(io_pkt));
         EXPECT_EQ(status, NO_ERROR, "");
-        EXPECT_EQ(io_pkt.signals, MX_SIGNAL_READABLE, "");
+        EXPECT_EQ(io_pkt.signals, MX_CHANNEL_READABLE, "");
     }
 
     status = mx_handle_close(port);

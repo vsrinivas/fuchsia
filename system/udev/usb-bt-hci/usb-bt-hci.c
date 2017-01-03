@@ -154,8 +154,8 @@ static int hci_read_thread(void* arg) {
     mx_wait_item_t items[2];
     items[0].handle = hci->control_pipe[0];
     items[1].handle = hci->acl_pipe[0];
-    items[0].waitfor = MX_SIGNAL_READABLE;
-    items[1].waitfor = MX_SIGNAL_READABLE;
+    items[0].waitfor = MX_CHANNEL_READABLE;
+    items[1].waitfor = MX_CHANNEL_READABLE;
 
     while (1) {
         mx_status_t status = mx_handle_wait_many(items, countof(items), MX_TIME_INFINITE);
@@ -163,7 +163,7 @@ static int hci_read_thread(void* arg) {
             printf("mx_handle_wait_many fail\n");
             break;
         }
-        if (items[0].pending & MX_SIGNAL_READABLE) {
+        if (items[0].pending & MX_CHANNEL_READABLE) {
             uint8_t buf[256];
             uint32_t length = sizeof(buf);
             status = mx_channel_read(items[0].handle, 0, buf, length, &length, NULL, 0, NULL);
@@ -179,7 +179,7 @@ static int hci_read_thread(void* arg) {
                 break;
             }
         }
-        if (items[1].pending & MX_SIGNAL_READABLE) {
+        if (items[1].pending & MX_CHANNEL_READABLE) {
             uint8_t buf[ACL_BUF_SIZE];
             uint32_t length = sizeof(buf);
             status = mx_channel_read(items[1].handle, 0, buf, length, &length, NULL, 0, NULL);
