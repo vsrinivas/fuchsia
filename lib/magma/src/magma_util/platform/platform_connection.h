@@ -7,6 +7,7 @@
 
 #include "magma_system.h"
 #include "magma_util/macros.h"
+#include "magma_util/status.h"
 #include "platform_buffer.h"
 #include "platform_event.h"
 
@@ -68,8 +69,9 @@ public:
         virtual bool CreateContext(uint32_t context_id) = 0;
         virtual bool DestroyContext(uint32_t context_id) = 0;
 
-        virtual bool ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) = 0;
-        virtual bool WaitRendering(uint64_t buffer_id) = 0;
+        virtual magma::Status ExecuteCommandBuffer(uint64_t command_buffer_id,
+                                                   uint32_t context_id) = 0;
+        virtual magma::Status WaitRendering(uint64_t buffer_id) = 0;
 
         virtual void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
                               void* data) = 0;

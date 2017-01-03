@@ -43,13 +43,13 @@ public:
     // Returns nullptr if the buffer is not found
     std::shared_ptr<MagmaSystemBuffer> LookupBuffer(uint64_t id);
 
-    bool ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override;
+    magma::Status ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override;
 
     bool CreateContext(uint32_t context_id) override;
     bool DestroyContext(uint32_t context_id) override;
     MagmaSystemContext* LookupContext(uint32_t context_id);
 
-    bool WaitRendering(uint64_t buffer_id) override;
+    magma::Status WaitRendering(uint64_t buffer_id) override;
 
     uint32_t GetDeviceId();
 
@@ -58,18 +58,18 @@ public:
     void PageFlip(uint64_t id, magma_system_pageflip_callback_t callback, void* data) override;
 
 private:
+    // MagmaSystemContext::Owner
+    std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) override
+    {
+        return LookupBuffer(id);
+    }
+
     std::weak_ptr<MagmaSystemDevice> device_;
     msd_connection_unique_ptr_t msd_connection_;
     std::unordered_map<uint32_t, std::unique_ptr<MagmaSystemContext>> context_map_;
     std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
     bool has_display_capability_;
     bool has_render_capability_;
-
-    // MagmaSystemContext::Owner
-    std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) override
-    {
-        return LookupBuffer(id);
-    }
 };
 
 #endif //_MAGMA_SYSTEM_CONNECTION_H_

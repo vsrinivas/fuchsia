@@ -9,6 +9,7 @@
 #include <memory>
 
 #include "magma_system_buffer.h"
+#include "magma_util/status.h"
 #include "msd.h"
 
 using msd_context_unique_ptr_t = std::unique_ptr<msd_context, decltype(&msd_context_destroy)>;
@@ -30,7 +31,7 @@ public:
     {
     }
 
-    bool ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> command_buffer);
+    magma::Status ExecuteCommandBuffer(std::shared_ptr<MagmaSystemBuffer> command_buffer);
 
 private:
     msd_context* msd_ctx() { return msd_ctx_.get(); }

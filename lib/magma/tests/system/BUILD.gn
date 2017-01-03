@@ -15,6 +15,7 @@ executable("magma_system_tests") {
 
   sources = [
     "main.cc",
+    "test_hang_recovery.cc",
     "test_shutdown.cc",
   ]
 

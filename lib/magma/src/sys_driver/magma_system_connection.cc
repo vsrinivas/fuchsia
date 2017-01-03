@@ -79,40 +79,41 @@ MagmaSystemContext* MagmaSystemConnection::LookupContext(uint32_t context_id)
     return iter->second.get();
 }
 
-bool MagmaSystemConnection::ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id)
+magma::Status MagmaSystemConnection::ExecuteCommandBuffer(uint64_t command_buffer_id,
+                                                          uint32_t context_id)
 {
     if (!has_render_capability_)
-        return DRETF(false, "Attempting to execute a command buffer without render capability");
+        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
+                        "Attempting to execute a command buffer without render capability");
 
     auto command_buffer = LookupBuffer(command_buffer_id);
     if (!command_buffer)
-        return DRETF(false, "Attempting to execute invalid command buffer id");
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                        "Attempting to execute invalid command buffer id");
 
     auto context = LookupContext(context_id);
     if (!context)
-        return DRETF(false, "Attempting to execute command buffer on invalid context");
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                        "Attempting to execute command buffer on invalid context");
 
-    if (!context->ExecuteCommandBuffer(command_buffer))
-        return DRETF(false, "Context failed to execute command buffer");
-
-    return true;
+    return context->ExecuteCommandBuffer(command_buffer);
 }
 
-bool MagmaSystemConnection::WaitRendering(uint64_t buffer_id)
+magma::Status MagmaSystemConnection::WaitRendering(uint64_t buffer_id)
 {
     if (!has_render_capability_)
-        return DRETF(false, "Attempting to wait rendering without render capability");
+        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
+                        "Attempting to wait rendering without render capability");
 
     std::shared_ptr<MagmaSystemBuffer> system_buffer = LookupBuffer(buffer_id);
     if (!system_buffer)
-        return DRETF(false, "Couldn't find system buffer for id 0x%lx", buffer_id);
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Couldn't find system buffer for id 0x%lx",
+                        buffer_id);
 
     magma_status_t result =
         msd_connection_wait_rendering(msd_connection(), system_buffer->msd_buf());
-    if (result != MAGMA_STATUS_OK)
-        return DRETF(false, "msd_connection_wait_rendering failed: %d", result);
 
-    return true;
+    return DRET_MSG(result, "msd_connection_wait_rendering failed: %d", result);
 }
 
 bool MagmaSystemConnection::ImportBuffer(uint32_t handle, uint64_t* id_out)

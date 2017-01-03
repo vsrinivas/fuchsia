@@ -134,18 +134,18 @@ public:
         return true;
     }
 
-    bool ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override
+    magma::Status ExecuteCommandBuffer(uint64_t command_buffer_id, uint32_t context_id) override
     {
         EXPECT_EQ(command_buffer_id, TestPlatformConnection::test_buffer_id);
         EXPECT_EQ(context_id, TestPlatformConnection::test_context_id);
         TestPlatformConnection::test_complete = true;
-        return true;
+        return MAGMA_STATUS_OK;
     }
-    bool WaitRendering(uint64_t buffer_id) override
+    magma::Status WaitRendering(uint64_t buffer_id) override
     {
         EXPECT_EQ(buffer_id, TestPlatformConnection::test_buffer_id);
         TestPlatformConnection::test_complete = true;
-        return true;
+        return MAGMA_STATUS_OK;
     }
 
     void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,

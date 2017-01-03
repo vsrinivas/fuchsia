@@ -249,7 +249,11 @@ private:
         DLOG("Operation: ExecuteCommandBuffer");
         if (!op)
             return DRETF(false, "malformed message");
-        if (!delegate_->ExecuteCommandBuffer(op->command_buffer_id, op->context_id))
+        magma::Status status =
+            delegate_->ExecuteCommandBuffer(op->command_buffer_id, op->context_id);
+        if (status.get() == MAGMA_STATUS_CONTEXT_KILLED)
+            ShutdownEvent()->Signal();
+        if (!status)
             SetError(MAGMA_STATUS_INTERNAL_ERROR);
         return true;
     }
@@ -259,7 +263,10 @@ private:
         DLOG("Operation: WaitRendering");
         if (!op)
             return DRETF(false, "malformed message");
-        if (!delegate_->WaitRendering(op->buffer_id))
+        magma::Status status = delegate_->WaitRendering(op->buffer_id);
+        if (status.get() == MAGMA_STATUS_CONTEXT_KILLED)
+            ShutdownEvent()->Signal();
+        if (!status)
             SetError(MAGMA_STATUS_INTERNAL_ERROR);
         if (!WriteError(0))
             return false;

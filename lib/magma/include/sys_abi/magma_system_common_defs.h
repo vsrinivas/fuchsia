@@ -23,7 +23,8 @@ extern "C" {
 #define MAGMA_STATUS_INVALID_ARGS (-2)
 #define MAGMA_STATUS_ACCESS_DENIED (-3)
 #define MAGMA_STATUS_MEMORY_ERROR (-4)
-#define MAGMA_STATUS_CONNECTION_LOST (-5)
+#define MAGMA_STATUS_CONTEXT_KILLED (-5)
+#define MAGMA_STATUS_CONNECTION_LOST (-6)
 
 typedef int32_t magma_status_t;
 
