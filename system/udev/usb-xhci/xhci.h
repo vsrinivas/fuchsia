@@ -83,6 +83,9 @@ struct xhci {
     // Maps root hub port index to index relative to their virtual root hub
     uint8_t* rh_port_map;
 
+    // Pointer to the USB Legacy Support Capability, if present.
+    xhci_usb_legacy_support_cap_t* usb_legacy_support_cap;
+
     // device thread stuff
     thrd_t device_thread;
     xhci_slot_t* slots;

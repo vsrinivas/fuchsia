@@ -134,6 +134,14 @@ typedef volatile struct {
     uint32_t reserved;
 } __PACKED erst_entry_t;
 
+// XHCI USB Legacy Support Extended Cap
+typedef volatile struct {
+    uint8_t cap_id;
+    uint8_t next_cap_ptr;
+    uint8_t bios_owned_sem;
+    uint8_t os_owned_sem;
+} __PACKED xhci_usb_legacy_support_cap_t;
+
 // Command register bits
 #define USBCMD_RS       (1 << 0)
 #define USBCMD_HCRST    (1 << 1)

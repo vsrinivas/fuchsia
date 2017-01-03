@@ -97,12 +97,42 @@ static void xhci_read_extended_caps(xhci_t* xhci, void* mmio, volatile uint32_t*
                 printf("PSI[%d] psiv: %d psie: %d plt: %d psim: %d\n", i, psiv, psie, plt, psim);
             }
 #endif
+        } else if (cap_id == EXT_CAP_USB_LEGACY_SUPPORT) {
+            xhci->usb_legacy_support_cap = (xhci_usb_legacy_support_cap_t*)cap_ptr;
         }
 
         // offset is 32-bit words from cap_ptr
         offset = XHCI_GET_BITS32(cap_ptr, EXT_CAP_NEXT_PTR_START, EXT_CAP_NEXT_PTR_BITS);
         cap_ptr = (offset ? cap_ptr + offset : NULL);
     }
+}
+
+static mx_status_t xhci_claim_ownership(xhci_t* xhci) {
+    xhci_usb_legacy_support_cap_t* cap = xhci->usb_legacy_support_cap;
+    if (cap == NULL) {
+        return NO_ERROR;
+    }
+
+    // The XHCI spec defines this handoff protocol.  We need to wait at most one
+    // second for the BIOS to respond.
+    //
+    // Note that bios_owned_sem and os_owned_sem are adjacent 1-byte fields, so
+    // must be written to as single bytes to prevent the OS from modifying the
+    // BIOS semaphore.  Additionally, all bits besides bit 0 in the OS semaphore
+    // are RsvdP, so we need to preserve them on modification.
+    cap->os_owned_sem |= 1;
+    mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
+    mx_time_t deadline = now + MX_SEC(1);
+    while ((cap->bios_owned_sem & 1) && now < deadline) {
+        mx_nanosleep(MX_MSEC(10));
+        now = mx_time_get(MX_CLOCK_MONOTONIC);
+    }
+
+    if (cap->bios_owned_sem & 1) {
+        cap->os_owned_sem &= ~1;
+        return ERR_TIMED_OUT;
+    }
+    return NO_ERROR;
 }
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
@@ -136,6 +166,26 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
     xhci->slots = (xhci_slot_t*)calloc(xhci->max_slots + 1, sizeof(xhci_slot_t));
     if (!xhci->slots) {
         result = ERR_NO_MEMORY;
+        goto fail;
+    }
+
+    xhci->rh_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
+    if (!xhci->rh_map) {
+        result = ERR_NO_MEMORY;
+        goto fail;
+    }
+    xhci->rh_port_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
+    if (!xhci->rh_port_map) {
+        result = ERR_NO_MEMORY;
+        goto fail;
+    }
+    xhci_read_extended_caps(xhci, mmio, hccparams1);
+
+    // We need to claim before we write to any other registers on the
+    // controller, but after we've read the extended capabilities.
+    result = xhci_claim_ownership(xhci);
+    if (result != NO_ERROR) {
+        printf("xhci_claim_ownership failed\n");
         goto fail;
     }
 
@@ -180,18 +230,6 @@ mx_status_t xhci_init(xhci_t* xhci, void* mmio) {
         printf("xhci_event_ring_init failed\n");
         goto fail;
     }
-
-    xhci->rh_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
-    if (!xhci->rh_map) {
-        result = ERR_NO_MEMORY;
-        goto fail;
-    }
-    xhci->rh_port_map = (uint8_t *)calloc(xhci->rh_num_ports, sizeof(uint8_t));
-    if (!xhci->rh_port_map) {
-        result = ERR_NO_MEMORY;
-        goto fail;
-    }
-    xhci_read_extended_caps(xhci, mmio, hccparams1);
 
     // initialize virtual root hub devices
     for (int i = 0; i < XHCI_RH_COUNT; i++) {
