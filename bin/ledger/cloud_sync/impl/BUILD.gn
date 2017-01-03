@@ -45,6 +45,7 @@ source_set("unittests") {
     ":impl",
     "//apps/ledger/src/cloud_provider/test",
     "//apps/ledger/src/network:fake",
+    "//apps/ledger/src/storage/public",
     "//apps/ledger/src/storage/test",
     "//apps/ledger/src/test:lib",
     "//lib/ftl",

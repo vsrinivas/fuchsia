@@ -10,30 +10,38 @@
 
 namespace cloud_sync {
 
-// Even though this yields path to be used in GCS, we use Firebase key encoding,
-// as it happens to produce valid GCS object names. To be revisited when we redo
-// the encoding in LE-118.
+namespace {
+constexpr char kGcsSeparator[] = "%2F";
+constexpr char kFirebaseSeparator[] = "/";
+}  // namespace
+
+// Even though this yields a path to be used in GCS, we use Firebase key
+// encoding, as it happens to produce valid GCS object names. To be revisited
+// when we redo the encoding in LE-118.
 std::string GetGcsPrefixForApp(ftl::StringView user_prefix,
                                ftl::StringView app_id) {
-  return ftl::Concatenate(
-      {firebase::EncodeKey(user_prefix), "_", firebase::EncodeKey(app_id)});
+  return ftl::Concatenate({firebase::EncodeKey(user_prefix), kGcsSeparator,
+                           storage::kSerializationVersion, kGcsSeparator,
+                           firebase::EncodeKey(app_id)});
 }
 
 std::string GetGcsPrefixForPage(ftl::StringView app_path,
                                 ftl::StringView page_id) {
-  return ftl::Concatenate({app_path, "_", firebase::EncodeKey(page_id)});
+  return ftl::Concatenate(
+      {app_path, kGcsSeparator, firebase::EncodeKey(page_id), kGcsSeparator});
 }
 
 std::string GetFirebasePathForApp(ftl::StringView user_prefix,
                                   ftl::StringView app_id) {
-  return ftl::Concatenate({firebase::EncodeKey(user_prefix), "/",
-                           storage::kSerializationVersion, "/",
+  return ftl::Concatenate({firebase::EncodeKey(user_prefix), kFirebaseSeparator,
+                           storage::kSerializationVersion, kFirebaseSeparator,
                            firebase::EncodeKey(app_id)});
 }
 
 std::string GetFirebasePathForPage(ftl::StringView app_path,
                                    ftl::StringView page_id) {
-  return ftl::Concatenate({app_path, "/", firebase::EncodeKey(page_id)});
+  return ftl::Concatenate(
+      {app_path, kFirebaseSeparator, firebase::EncodeKey(page_id)});
 }
 
 }  // namespace cloud_sync

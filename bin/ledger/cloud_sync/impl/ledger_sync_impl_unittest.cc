@@ -5,10 +5,12 @@
 #include "apps/ledger/src/cloud_sync/impl/ledger_sync_impl.h"
 
 #include "apps/ledger/src/network/fake_network_service.h"
+#include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/concatenate.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace cloud_sync {
@@ -43,8 +45,10 @@ TEST_F(LedgerSyncImplTest, RemoteContainsRequestUrl) {
       "page_id",
       test::Capture([this] { message_loop_.PostQuitTask(); }, &response));
   RunLoopWithTimeout();
-  EXPECT_EQ("https://.firebaseio.com/V/1/test_idV/page_idV.json?shallow=true",
-            network_service_.GetRequest()->url);
+  const std::string expected_url = ftl::Concatenate(
+      {"https://.firebaseio.com/V/", storage::kSerializationVersion,
+       "/test_idV/page_idV.json?shallow=true"});
+  EXPECT_EQ(expected_url, network_service_.GetRequest()->url);
 }
 
 TEST_F(LedgerSyncImplTest, RemoteContainsWhenAnswerIsYes) {
