@@ -451,15 +451,16 @@ static void platform_init_timer(uint level)
         calibration_clock = CLOCK_PIT;
     }
 
-    use_tsc_deadline = invariant_tsc &&
+    const char *force_wallclock = cmdline_get("timer.wallclock");
+    bool use_invariant_tsc = invariant_tsc && (!force_wallclock || !strcmp(force_wallclock, "tsc"));
+
+    use_tsc_deadline = use_invariant_tsc &&
             x86_feature_test(X86_FEATURE_TSC_DEADLINE);
     if (!use_tsc_deadline) {
         calibrate_apic_timer();
     }
 
-    const char *force_wallclock = cmdline_get("timer.wallclock");
-
-    if (invariant_tsc && (!force_wallclock || !strcmp(force_wallclock, "tsc"))) {
+    if (use_invariant_tsc) {
         calibrate_tsc();
 
         // Program PIT in the software strobe configuration, but do not load
