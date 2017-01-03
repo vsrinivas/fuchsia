@@ -249,6 +249,15 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
     __UNREACHABLE;
 }
 
+static mx_status_t is_current_thread(mxtl::RefPtr<Dispatcher>* dispatcher) {
+    auto thread_dispatcher = DownCastDispatcher<ThreadDispatcher>(dispatcher);
+    if (!thread_dispatcher)
+        return ERR_WRONG_TYPE;
+    if (thread_dispatcher->thread() != UserThread::GetCurrent())
+        return ERR_ACCESS_DENIED;
+    return NO_ERROR;
+}
+
 mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
                                     const void* _value, size_t size) {
     if (!_value)
@@ -264,8 +273,6 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
     if (!magenta_rights_check(rights, MX_RIGHT_SET_PROPERTY))
         return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
-    mx_status_t status = ERR_INVALID_ARGS;
-
     switch (property) {
         case MX_PROP_BAD_HANDLE_POLICY: {
             if (size < sizeof(uint32_t))
@@ -276,21 +283,49 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             uint32_t value = 0;
             if (make_user_ptr(_value).reinterpret<const uint32_t>().copy_from_user(&value) != NO_ERROR)
                 return ERR_INVALID_ARGS;
-            status = process->set_bad_handle_policy(value);
-            break;
+            return process->set_bad_handle_policy(value);
         }
         case MX_PROP_NAME: {
             if (size >= MX_MAX_NAME_LEN)
                 size = MX_MAX_NAME_LEN - 1;
-
             char name[MX_MAX_NAME_LEN - 1];
             if (make_user_ptr(_value).copy_array_from_user(name, size) != NO_ERROR)
                 return ERR_INVALID_ARGS;
             return dispatcher->set_name(name, size);
         }
+#if ARCH_ARM
+        case MX_PROP_REGISTER_CP15: {
+            if (size < sizeof(uintptr_t))
+                return ERR_BUFFER_TOO_SMALL;
+            mx_status_t status = is_current_thread(&dispatcher);
+            if (status != NO_ERROR)
+                return status;
+            uintptr_t addr;
+            if (make_user_ptr(_value).reinterpret<const uintptr_t>().copy_from_user(&addr) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            __asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r" (addr));
+            ISB;
+            return NO_ERROR;
+        }
+#elif ARCH_X86_64
+        case MX_PROP_REGISTER_FS: {
+            if (size < sizeof(uintptr_t))
+                return ERR_BUFFER_TOO_SMALL;
+            mx_status_t status = is_current_thread(&dispatcher);
+            if (status != NO_ERROR)
+                return status;
+            uintptr_t addr;
+            if (make_user_ptr(_value).reinterpret<const uintptr_t>().copy_from_user(&addr) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            if (!x86_is_vaddr_canonical(addr))
+                return ERR_INVALID_ARGS;
+            write_msr(X86_MSR_IA32_FS_BASE, addr);
+            return NO_ERROR;
+        }
+#endif
     }
 
-    return status;
+    return ERR_INVALID_ARGS;
 }
 
 mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uint32_t set_mask) {

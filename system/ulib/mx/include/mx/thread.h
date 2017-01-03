@@ -37,10 +37,6 @@ public:
         return mx_thread_start(get(), thread_entry, stack, arg1, arg2);
     }
 
-    mx_status_t arch_prctl(uint32_t op, uintptr_t* value_ptr) const {
-        return mx_thread_arch_prctl(get(), op, value_ptr);
-    }
-
     // TODO(abarth): mx_thread_read_state
     // TODO(abarth): mx_thread_write_state
 };

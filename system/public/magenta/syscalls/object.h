@@ -72,8 +72,16 @@ typedef struct mx_info_vmar {
 #define MX_PROP_BAD_HANDLE_POLICY           1u
 // Argument is a uint32_t.
 #define MX_PROP_NUM_STATE_KINDS             2u
-// Argument is a char[MX_MAX_NAME_LEN]
+// Argument is a char[MX_MAX_NAME_LEN].
 #define MX_PROP_NAME                        3u
+
+#if __arm__
+// Argument is a uintptr_t.
+#define MX_PROP_REGISTER_CP15           4u
+#elif __x86_64__
+// Argument is a uintptr_t.
+#define MX_PROP_REGISTER_FS             4u
+#endif
 
 // Policies for MX_PROP_BAD_HANDLE_POLICY:
 #define MX_POLICY_BAD_HANDLE_IGNORE         0u

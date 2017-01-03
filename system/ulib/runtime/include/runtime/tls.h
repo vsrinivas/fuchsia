@@ -5,8 +5,8 @@
 #pragma once
 
 #include <magenta/compiler.h>
-#include <magenta/prctl.h>
 #include <magenta/syscalls.h>
+#include <magenta/syscalls/object.h>
 
 __BEGIN_CDECLS
 
@@ -37,8 +37,8 @@ static inline void* mxr_tp_get(void) {
     return tp;
 }
 static inline void mxr_tp_set(mx_handle_t self, void* tp) {
-    mx_status_t status = _mx_thread_arch_prctl(
-        self, ARCH_SET_CP15_READONLY, (uintptr_t*)&tp);
+    mx_status_t status = _mx_object_set_property(
+        self, MX_PROP_REGISTER_CP15, (uintptr_t*)&tp, sizeof(uintptr_t));
     if (status != NO_ERROR)
         __builtin_trap();
 }
@@ -51,8 +51,8 @@ static inline void* mxr_tp_get(void) {
     return tp;
 }
 static inline void mxr_tp_set(mx_handle_t self, void* tp) {
-    mx_status_t status = _mx_thread_arch_prctl(
-        self, ARCH_SET_FS, (uintptr_t*)&tp);
+    mx_status_t status = _mx_object_set_property(
+        self, MX_PROP_REGISTER_FS, (uintptr_t*)&tp, sizeof(uintptr_t));
     if (status != NO_ERROR)
         __builtin_trap();
 }
