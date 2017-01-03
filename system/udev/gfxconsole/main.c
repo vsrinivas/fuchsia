@@ -94,22 +94,22 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
             break;
 
         case HID_USAGE_KEY_F1 ... HID_USAGE_KEY_F10:
-            if (*modifiers & MOD_LALT || *modifiers & MOD_RALT) {
+            if (*modifiers & MOD_ALT) {
                 vc_set_active_console(keycode - HID_USAGE_KEY_F1);
                 consumed = 1;
             }
             break;
 
         case HID_USAGE_KEY_F11:
-            if (active_vc && (*modifiers & MOD_LALT || *modifiers & MOD_RALT)) {
+            if (active_vc && (*modifiers & MOD_ALT)) {
                 vc_device_set_fullscreen(active_vc, !(active_vc->flags & VC_FLAG_FULLSCREEN));
                 consumed = 1;
             }
             break;
 
         case HID_USAGE_KEY_TAB:
-            if (*modifiers & MOD_LALT || *modifiers & MOD_RALT) {
-                if (*modifiers & MOD_LSHIFT || *modifiers & MOD_RSHIFT) {
+            if (*modifiers & MOD_ALT) {
+                if (*modifiers & MOD_SHIFT) {
                     vc_set_active_console(active_vc_index == 0 ? vc_count - 1 : active_vc_index - 1);
                 } else {
                     vc_set_active_console(active_vc_index == vc_count - 1 ? 0 : active_vc_index + 1);
@@ -119,25 +119,25 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
             break;
 
         case HID_USAGE_KEY_UP:
-            if (*modifiers & MOD_LALT || *modifiers & MOD_RALT) {
+            if (*modifiers & MOD_ALT) {
                 vc_device_scroll_viewport(active_vc, -1);
                 consumed = 1;
             }
             break;
         case HID_USAGE_KEY_DOWN:
-            if (*modifiers & MOD_LALT || *modifiers & MOD_RALT) {
+            if (*modifiers & MOD_ALT) {
                 vc_device_scroll_viewport(active_vc, 1);
                 consumed = 1;
             }
             break;
         case HID_USAGE_KEY_PAGEUP:
-            if (*modifiers & MOD_LSHIFT || *modifiers & MOD_RSHIFT) {
+            if (*modifiers & MOD_SHIFT) {
                 vc_device_scroll_viewport(active_vc, -(vc_device_rows(active_vc) / 2));
                 consumed = 1;
             }
             break;
         case HID_USAGE_KEY_PAGEDOWN:
-            if (*modifiers & MOD_LSHIFT || *modifiers & MOD_RSHIFT) {
+            if (*modifiers & MOD_SHIFT) {
                 vc_device_scroll_viewport(active_vc, vc_device_rows(active_vc) / 2);
                 consumed = 1;
             }
@@ -145,8 +145,7 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
 
         case HID_USAGE_KEY_DELETE:
             // Provide a CTRL-ALT-DEL reboot sequence
-            if ((*modifiers & (MOD_LCTRL | MOD_RCTRL)) &&
-                (*modifiers & (MOD_LALT | MOD_RALT))) {
+            if ((*modifiers & MOD_CTRL) && (*modifiers & MOD_ALT)) {
 
                 int fd;
                 // Send the reboot command to devmgr
