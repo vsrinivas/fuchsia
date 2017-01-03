@@ -46,6 +46,7 @@ BENCHMARK_DEFINE_F(Channel, Write)(benchmark::State& state) {
   state.SetBytesProcessed(state.iterations() * state.range(0));
 }
 BENCHMARK_REGISTER_F(Channel, Write)
+    ->Arg(64)
     ->Arg(1 * 1024)
     ->Arg(32 * 1024)
     ->Arg(64 * 1024);
@@ -76,6 +77,7 @@ BENCHMARK_DEFINE_F(Channel, Read)(benchmark::State& state) {
   state.SetBytesProcessed(bytes_processed);
 }
 BENCHMARK_REGISTER_F(Channel, Read)
+    ->Arg(64)
     ->Arg(1 * 1024)
     ->Arg(32 * 1024)
     ->Arg(64 * 1024);

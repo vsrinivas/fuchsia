@@ -54,6 +54,7 @@ BENCHMARK_DEFINE_F(Socket, Write)(benchmark::State& state) {
   state.SetBytesProcessed(bytes_processed);
 }
 BENCHMARK_REGISTER_F(Socket, Write)
+    ->Arg(64)
     ->Arg(1 * 1024)
     ->Arg(32 * 1024)
     ->Arg(64 * 1024);
@@ -89,6 +90,7 @@ BENCHMARK_DEFINE_F(Socket, Read)(benchmark::State& state) {
   state.SetBytesProcessed(bytes_processed);
 }
 BENCHMARK_REGISTER_F(Socket, Read)
+    ->Arg(64)
     ->Arg(1 * 1024)
     ->Arg(32 * 1024)
     ->Arg(64 * 1024);
