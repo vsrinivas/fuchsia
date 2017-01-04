@@ -1,7 +1,8 @@
 {
     "labels": [
         "//apps/component_manager",
-        "//apps/component_manager/examples"
+        "//apps/component_manager/examples",
+        "//apps/component_manager/src"
     ],
     "binaries": [
         {
@@ -15,6 +16,10 @@
         {
             "binary": "gen/component_index.json",
             "bootfs_path": "components/index.json"
+        },
+        {
+            "binary": "run_component",
+            "bootfs_path": "apps/run_component"
         }
     ],
     "components": [
