@@ -5,6 +5,7 @@
 #ifndef LIB_MTL_OBJECT_INFO_H_
 #define LIB_MTL_OBJECT_INFO_H_
 
+#include <magenta/syscalls/object.h>
 #include <magenta/types.h>
 
 #include <string>
@@ -14,6 +15,9 @@ namespace mtl {
 // Gets the kernel object id (koid) of the object associated with the handle.
 // Returns |MX_KOID_INVALID| if the handle is invalid.
 mx_koid_t GetKoid(mx_handle_t handle);
+
+// Gets the type of a kernel object.
+mx_obj_type_t GetObjectType(mx_handle_t handle);
 
 // Gets the name of a kernel object.
 std::string GetObjectName(mx_handle_t handle);
