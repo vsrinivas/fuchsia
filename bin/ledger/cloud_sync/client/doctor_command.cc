@@ -166,9 +166,12 @@ void DoctorCommand::CheckHttpsConnectivity() {
 }
 
 void DoctorCommand::CheckObjects() {
-  what("GCS - upload test object");
+  what("GCS - upload test object (1 MB)");
   std::string id = RandomString();
-  std::string content = RandomString();
+  std::string content = std::string(1'000'000, 'a');
+  content[42] = 'b';
+  content[content.size() - 42] = 'c';
+
   mx::vmo data;
   auto result = mtl::VmoFromString(content, &data);
   FTL_DCHECK(result);
