@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <limits>
 #include <vector>
 
 #include "apps/media/lib/flog.h"
@@ -12,6 +11,7 @@
 #include "apps/media/lib/timeline_function.h"
 #include "apps/media/services/logs/media_player_channel.fidl.h"
 #include "apps/media/services/media_service.fidl.h"
+#include "apps/media/services/media_source.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
 #include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/services/timeline_controller.fidl.h"
@@ -28,8 +28,8 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
  public:
   static std::shared_ptr<MediaPlayerImpl> Create(
       fidl::InterfaceHandle<SeekingReader> reader,
-      fidl::InterfaceHandle<MediaRenderer> audio_renderer,
-      fidl::InterfaceHandle<MediaRenderer> video_renderer,
+      fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+      fidl::InterfaceHandle<MediaRenderer> video_renderer_handle,
       fidl::InterfaceRequest<MediaPlayer> request,
       MediaServiceImpl* owner);
 
@@ -56,24 +56,22 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
     kPlaying,  // Time is progressing.
   };
 
-  struct Stream {
-    Stream();
-    ~Stream();
-    // TODO(dalesat): Have the sink enlist the decoder.
-    MediaTypeConverterPtr decoder_;
-    MediaSinkPtr sink_;
-    // The following fields are just temporaries used to solve lambda capture
-    // problems.
-    MediaPacketProducerPtr encoded_producer_;
-    MediaPacketProducerPtr decoded_producer_;
-    fidl::InterfaceHandle<MediaRenderer> renderer_;
-  };
-
-  MediaPlayerImpl(fidl::InterfaceHandle<SeekingReader> reader,
-                  fidl::InterfaceHandle<MediaRenderer> audio_renderer,
-                  fidl::InterfaceHandle<MediaRenderer> video_renderer,
+  MediaPlayerImpl(fidl::InterfaceHandle<SeekingReader> reader_handle,
+                  fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+                  fidl::InterfaceHandle<MediaRenderer> video_renderer_handle,
                   fidl::InterfaceRequest<MediaPlayer> request,
                   MediaServiceImpl* owner);
+
+  // Creates sinks for enabled streams.
+  void CreateSinks(fidl::Array<MediaTypePtr> stream_types,
+                   fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+                   fidl::InterfaceHandle<MediaRenderer> video_renderer_handle);
+
+  // Prepares a stream.
+  void PrepareStream(fidl::InterfaceHandle<MediaRenderer> renderer_handle,
+                     size_t index,
+                     const MediaTypePtr& input_media_type,
+                     const std::function<void()>& callback);
 
   // Takes action based on current state.
   void Update();
@@ -81,21 +79,10 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   // Creates a TimelineTransform for the specified rate.
   TimelineTransformPtr CreateTimelineTransform(float rate);
 
-  // Prepares a stream.
-  void PrepareStream(Stream* stream,
-                     size_t index,
-                     const MediaTypePtr& input_media_type,
-                     const std::function<void()>& callback);
-
-  // Creates a sink for a stream.
-  void CreateSink(Stream* stream,
-                  const MediaTypePtr& input_media_type,
-                  const std::function<void()>& callback);
-
-  // Handles a status update from the demux. When called with the default
-  // argument values, initiates demux status updates.
-  void HandleDemuxStatusUpdates(uint64_t version = MediaDemux::kInitialMetadata,
-                                MediaDemuxStatusPtr status = nullptr);
+  // Handles a status update from the source. When called with the default
+  // argument values, initiates source status updates.
+  void HandleSourceStatusUpdates(uint64_t version = MediaSource::kInitialStatus,
+                                 MediaSourceStatusPtr status = nullptr);
 
   // Handles a status update from the control point. When called with the
   // default argument values, initiates control point. status updates.
@@ -104,17 +91,17 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
       MediaTimelineControlPointStatusPtr status = nullptr);
 
   MediaServicePtr media_service_;
-  MediaDemuxPtr demux_;
+  MediaSourcePtr source_;
   MediaTimelineControllerPtr timeline_controller_;
   MediaTimelineControlPointPtr timeline_control_point_;
   TimelineConsumerPtr timeline_consumer_;
-  std::vector<std::unique_ptr<Stream>> streams_;
+  std::vector<MediaSinkPtr> sinks_;
 
   // The state we're currently in.
   State state_ = State::kWaiting;
 
-  // The state we trying to transition to, either because the client has called
-  // |Play| or |Pause| or because we've hit end-of-stream.
+  // The state we're trying to transition to, either because the client has
+  // called |Play| or |Pause| or because we've hit end-of-stream.
   State target_state_ = State::kFlushed;
 
   // Whether we're currently at end-of-stream.
@@ -132,15 +119,9 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   // A function that translates local time into presentation time in ns.
   TimelineFunction timeline_function_;
 
-  CallbackJoiner set_transform_joiner_;
   MediaMetadataPtr metadata_;
-  ProblemPtr demux_problem_;
+  ProblemPtr problem_;
   FidlPublisher<GetStatusCallback> status_publisher_;
-
-  // The following fields are just temporaries used to solve lambda capture
-  // problems.
-  fidl::InterfaceHandle<MediaRenderer> audio_renderer_;
-  fidl::InterfaceHandle<MediaRenderer> video_renderer_;
 
   FLOG_INSTANCE_CHANNEL(logs::MediaPlayerChannel, log_channel_);
 };

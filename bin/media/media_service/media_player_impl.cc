@@ -5,33 +5,36 @@
 #include "apps/media/src/media_service/media_player_impl.h"
 
 #include "apps/media/lib/timeline.h"
-#include "apps/media/src/demux/reader.h"
+#include "apps/media/src/fidl/fidl_formatting.h"
 #include "apps/media/src/util/callback_joiner.h"
 #include "apps/modular/lib/app/connect.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
 
 namespace media {
 
 // static
 std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
-    fidl::InterfaceHandle<SeekingReader> reader,
-    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
-    fidl::InterfaceHandle<MediaRenderer> video_renderer,
+    fidl::InterfaceHandle<SeekingReader> reader_handle,
+    fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+    fidl::InterfaceHandle<MediaRenderer> video_renderer_handle,
     fidl::InterfaceRequest<MediaPlayer> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaPlayerImpl>(new MediaPlayerImpl(
-      std::move(reader), std::move(audio_renderer), std::move(video_renderer),
-      std::move(request), owner));
+      std::move(reader_handle), std::move(audio_renderer_handle),
+      std::move(video_renderer_handle), std::move(request), owner));
 }
 
 MediaPlayerImpl::MediaPlayerImpl(
-    fidl::InterfaceHandle<SeekingReader> reader,
-    fidl::InterfaceHandle<MediaRenderer> audio_renderer,
-    fidl::InterfaceHandle<MediaRenderer> video_renderer,
+    fidl::InterfaceHandle<SeekingReader> reader_handle,
+    fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+    fidl::InterfaceHandle<MediaRenderer> video_renderer_handle,
     fidl::InterfaceRequest<MediaPlayer> request,
     MediaServiceImpl* owner)
     : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner) {
-  FTL_DCHECK(reader);
+  FTL_DCHECK(reader_handle);
+  RCHECK(audio_renderer_handle || video_renderer_handle);
+  FTL_DCHECK(owner);
 
   status_publisher_.SetCallbackRunner([this](const GetStatusCallback& callback,
                                              uint64_t version) {
@@ -39,7 +42,7 @@ MediaPlayerImpl::MediaPlayerImpl(
     status->timeline_transform = TimelineTransform::From(timeline_function_);
     status->end_of_stream = end_of_stream_;
     status->metadata = metadata_.Clone();
-    status->problem = demux_problem_.Clone();
+    status->problem = problem_.Clone();
     callback(version, std::move(status));
   });
 
@@ -47,58 +50,99 @@ MediaPlayerImpl::MediaPlayerImpl(
 
   media_service_ = owner->ConnectToEnvironmentService<MediaService>();
 
-  media_service_->CreateDemux(std::move(reader), demux_.NewRequest());
-  HandleDemuxStatusUpdates();
+  // Create a source with no type conversions.
+  media_service_->CreateSource(std::move(reader_handle), nullptr,
+                               source_.NewRequest());
+  HandleSourceStatusUpdates();
 
+  // Create a timeline controller.
   media_service_->CreateTimelineController(timeline_controller_.NewRequest());
   timeline_controller_->GetControlPoint(timeline_control_point_.NewRequest());
   timeline_control_point_->GetTimelineConsumer(timeline_consumer_.NewRequest());
   HandleTimelineControlPointStatusUpdates();
 
-  audio_renderer_ = std::move(audio_renderer);
-  video_renderer_ = std::move(video_renderer);
-
-  demux_->Describe([this](fidl::Array<MediaTypePtr> stream_types) {
+  source_->Describe(ftl::MakeCopyable([
+    this, audio_renderer_handle = std::move(audio_renderer_handle),
+    video_renderer_handle = std::move(video_renderer_handle)
+  ](fidl::Array<MediaTypePtr> stream_types) mutable {
+    // TODO(dalesat): Update channel definition (s/Demux/Source).
     FLOG(log_channel_, ReceivedDemuxDescription(stream_types.Clone()));
-    // Populate streams_ and enable the streams we want.
-    std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
-
-    for (MediaTypePtr& stream_type : stream_types) {
-      streams_.push_back(std::unique_ptr<Stream>(new Stream()));
-      Stream& stream = *streams_.back();
-      switch (stream_type->medium) {
-        case MediaTypeMedium::AUDIO:
-          if (audio_renderer_) {
-            stream.renderer_ = std::move(audio_renderer_);
-            PrepareStream(&stream, streams_.size() - 1, stream_type,
-                          callback_joiner->NewCallback());
-          }
-          break;
-        case MediaTypeMedium::VIDEO:
-          if (video_renderer_) {
-            stream.renderer_ = std::move(video_renderer_);
-            PrepareStream(&stream, streams_.size() - 1, stream_type,
-                          callback_joiner->NewCallback());
-          }
-          break;
-        // TODO(dalesat): Enable other stream types.
-        default:
-          break;
-      }
-    }
-
-    callback_joiner->WhenJoined([this]() {
-      FLOG(log_channel_, StreamsPrepared());
-      // The enabled streams are prepared.
-      media_service_.reset();
-      state_ = State::kFlushed;
-      FLOG(log_channel_, Flushed());
-      Update();
-    });
-  });
+    CreateSinks(std::move(stream_types), std::move(audio_renderer_handle),
+                std::move(video_renderer_handle));
+  }));
 }
 
 MediaPlayerImpl::~MediaPlayerImpl() {}
+
+void MediaPlayerImpl::CreateSinks(
+    fidl::Array<MediaTypePtr> stream_types,
+    fidl::InterfaceHandle<MediaRenderer> audio_renderer_handle,
+    fidl::InterfaceHandle<MediaRenderer> video_renderer_handle) {
+  std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
+
+  size_t stream_index = 0;
+
+  for (MediaTypePtr& stream_type : stream_types) {
+    switch (stream_type->medium) {
+      case MediaTypeMedium::AUDIO:
+        if (audio_renderer_handle) {
+          PrepareStream(std::move(audio_renderer_handle), stream_index,
+                        stream_type, callback_joiner->NewCallback());
+        }
+        break;
+
+      case MediaTypeMedium::VIDEO:
+        if (video_renderer_handle) {
+          PrepareStream(std::move(video_renderer_handle), stream_index,
+                        stream_type, callback_joiner->NewCallback());
+        }
+        break;
+
+      // TODO(dalesat): Enable other stream types.
+
+      default:
+        break;
+    }
+
+    ++stream_index;
+  }
+
+  callback_joiner->WhenJoined([this]() {
+    FLOG(log_channel_, StreamsPrepared());
+    state_ = State::kFlushed;
+    FLOG(log_channel_, Flushed());
+    Update();
+  });
+}
+
+void MediaPlayerImpl::PrepareStream(
+    fidl::InterfaceHandle<MediaRenderer> renderer_handle,
+    size_t index,
+    const MediaTypePtr& input_media_type,
+    const std::function<void()>& callback) {
+  FTL_DCHECK(media_service_);
+
+  MediaPacketProducerPtr producer;
+  source_->GetPacketProducer(index, producer.NewRequest());
+
+  MediaSinkPtr sink;
+  media_service_->CreateSink(std::move(renderer_handle),
+                             input_media_type.Clone(), sink.NewRequest());
+
+  MediaTimelineControlPointPtr timeline_control_point;
+  sink->GetTimelineControlPoint(timeline_control_point.NewRequest());
+
+  timeline_controller_->AddControlPoint(std::move(timeline_control_point));
+
+  MediaPacketConsumerPtr consumer;
+  sink->GetPacketConsumer(consumer.NewRequest());
+  sinks_.push_back(std::move(sink));
+
+  // Capture sink so it survives through the callback.
+  producer->Connect(std::move(consumer), ftl::MakeCopyable([
+                      this, callback, producer = std::move(producer)
+                    ]() { callback(); }));
+}
 
 void MediaPlayerImpl::Update() {
   // This method is called whenever we might want to take action based on the
@@ -142,7 +186,7 @@ void MediaPlayerImpl::Update() {
           // complete.
           state_ = State::kWaiting;
           FLOG(log_channel_, Seeking(target_position_));
-          demux_->Seek(target_position_, [this]() {
+          source_->Seek(target_position_, [this]() {
             transform_subject_time_ = target_position_;
             target_position_ = kUnspecifiedTime;
             state_ = State::kFlushed;
@@ -191,7 +235,7 @@ void MediaPlayerImpl::Update() {
           // transition to |kFlushed| when the operation is complete.
           state_ = State::kWaiting;
           FLOG(log_channel_, Flushing());
-          demux_->Flush([this]() {
+          source_->Flush([this]() {
             state_ = State::kFlushed;
             FLOG(log_channel_, Flushed());
             // Now we're in |kFlushed|. Call |Update| to see if there's further
@@ -315,89 +359,18 @@ void MediaPlayerImpl::Seek(int64_t position) {
   Update();
 }
 
-void MediaPlayerImpl::PrepareStream(Stream* stream,
-                                    size_t index,
-                                    const MediaTypePtr& input_media_type,
-                                    const std::function<void()>& callback) {
-  FTL_DCHECK(media_service_);
-
-  demux_->GetPacketProducer(index, stream->encoded_producer_.NewRequest());
-
-  if (input_media_type->encoding != MediaType::kAudioEncodingLpcm &&
-      input_media_type->encoding != MediaType::kVideoEncodingUncompressed) {
-    std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
-
-    // Compressed media. Insert a decoder in front of the sink. The sink would
-    // add its own internal decoder, but we want to test the decoder.
-    media_service_->CreateDecoder(input_media_type.Clone(),
-                                  stream->decoder_.NewRequest());
-
-    MediaPacketConsumerPtr decoder_consumer;
-    stream->decoder_->GetPacketConsumer(decoder_consumer.NewRequest());
-
-    callback_joiner->Spawn();
-    stream->encoded_producer_->Connect(std::move(decoder_consumer),
-                                       [stream, callback_joiner]() {
-                                         stream->encoded_producer_.reset();
-                                         callback_joiner->Complete();
-                                       });
-
-    callback_joiner->Spawn();
-    stream->decoder_->GetOutputType([this, stream, callback_joiner](
-        MediaTypePtr output_type) {
-      stream->decoder_->GetPacketProducer(stream->decoded_producer_.NewRequest());
-      CreateSink(stream, output_type, callback_joiner->NewCallback());
-      callback_joiner->Complete();
-    });
-
-    callback_joiner->WhenJoined(callback);
-  } else {
-    // Uncompressed media. Connect the demux stream directly to the sink. This
-    // would work for compressed media as well (the sink would decode), but we
-    // want to test the decoder.
-    stream->decoded_producer_ = std::move(stream->encoded_producer_);
-    CreateSink(stream, input_media_type, callback);
-  }
-}
-
-void MediaPlayerImpl::CreateSink(Stream* stream,
-                                 const MediaTypePtr& input_media_type,
-                                 const std::function<void()>& callback) {
-  FTL_DCHECK(input_media_type);
-  FTL_DCHECK(stream->decoded_producer_);
-  FTL_DCHECK(media_service_);
-
-  media_service_->CreateSink(std::move(stream->renderer_),
-                             input_media_type.Clone(),
-                             stream->sink_.NewRequest());
-
-  MediaTimelineControlPointPtr timeline_control_point;
-  stream->sink_->GetTimelineControlPoint(timeline_control_point.NewRequest());
-
-  timeline_controller_->AddControlPoint(std::move(timeline_control_point));
-
-  MediaPacketConsumerPtr consumer;
-  stream->sink_->GetPacketConsumer(consumer.NewRequest());
-
-  stream->decoded_producer_->Connect(std::move(consumer),
-                                     [this, callback, stream]() {
-                                       stream->decoded_producer_.reset();
-                                       callback();
-                                     });
-}
-
-void MediaPlayerImpl::HandleDemuxStatusUpdates(uint64_t version,
-                                               MediaDemuxStatusPtr status) {
+void MediaPlayerImpl::HandleSourceStatusUpdates(uint64_t version,
+                                                MediaSourceStatusPtr status) {
   if (status) {
     metadata_ = std::move(status->metadata);
-    demux_problem_ = std::move(status->problem);
+    problem_ = std::move(status->problem);
     status_publisher_.SendUpdates();
   }
 
-  demux_->GetStatus(version,
-                    [this](uint64_t version, MediaDemuxStatusPtr status) {
-                      HandleDemuxStatusUpdates(version, std::move(status));
-                    });
+  source_->GetStatus(version,
+                     [this](uint64_t version, MediaSourceStatusPtr status) {
+                       HandleSourceStatusUpdates(version, std::move(status));
+                     });
 }
 
 void MediaPlayerImpl::HandleTimelineControlPointStatusUpdates(
@@ -416,9 +389,5 @@ void MediaPlayerImpl::HandleTimelineControlPointStatusUpdates(
         HandleTimelineControlPointStatusUpdates(version, std::move(status));
       });
 }
-
-MediaPlayerImpl::Stream::Stream() {}
-
-MediaPlayerImpl::Stream::~Stream() {}
 
 }  // namespace media
