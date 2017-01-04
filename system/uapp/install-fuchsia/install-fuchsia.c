@@ -508,14 +508,15 @@ static size_t find_available_space(gpt_device_t* device, size_t blocks_req,
  * partition on the device since we assume the first partition of the device
  * contains the 'native' EFI partition for the device.
  */
-static partition_flags partition_for_install(gpt_device_t* gpt_data,
-                                             const uint64_t block_size,
-                                             partition_flags part_flags,
-                                             size_t max_path_len,
-                                             char* part_paths_out[]) {
+static partition_flags find_install_partitions(gpt_device_t* gpt_data,
+                                               const uint64_t block_size,
+                                               partition_flags part_flags,
+                                               size_t max_path_len,
+                                               char* part_paths_out[]) {
     DEBUG_ASSERT(gpt_data != NULL);
     DEBUG_ASSERT(gpt_data->valid);
-    DEBUG_ASSERT(NUM_INSTALL_PARTS == 2);
+    static_assert(NUM_INSTALL_PARTS == 2,
+                  "Install partition count is unexpected, expected 2.");
 
     if (!gpt_data->valid) {
         return part_flags;
@@ -589,8 +590,9 @@ static partition_flags partition_for_install(gpt_device_t* gpt_data,
 
                 // construct paths for partitions
                 if (strlen(str_targ) + base_len + 2 > max_path_len) {
-                    printf("Path %s/%s does not fit in provided buffer.\n",
-                           PATH_BLOCKDEVS, str_targ);
+                    fprintf(stderr,
+                            "Path %s/%s does not fit in provided buffer.\n",
+                            PATH_BLOCKDEVS, str_targ);
                     continue;
                 }
                 memmove(&str_targ[base_len + 1], str_targ,
@@ -701,8 +703,9 @@ static mx_status_t write_partition(int src, int dest, size_t* bytes_copied) {
             if (to_expand > 0) {
                 ssize_t written = write(dest, decomp_buffer, to_expand);
                 if (written != (ssize_t) to_expand) {
-                    printf("Error writing to partition, it may be corrupt. %s\n",
-                           strerror(errno));
+                    fprintf(stderr,
+                            "Error writing to partition, it may be corrupt. %s\n",
+                            strerror(errno));
                     LZ4F_freeDecompressionContext(dc_context);
                     return ERR_IO;
                 }
@@ -725,7 +728,7 @@ static mx_status_t write_partition(int src, int dest, size_t* bytes_copied) {
     // go to the next line so we don't overwrite the last data size print out
     printf("\n");
     if (to_consume < 0) {
-        printf("Error decompressing file: %s.\n", strerror(errno));
+        fprintf(stderr, "Error decompressing file: %s.\n", strerror(errno));
         return ERR_IO;
     }
     return NO_ERROR;
@@ -735,7 +738,7 @@ static bool do_sort_test(int test_size, uint64_t val_max) {
     gpt_partition_t* values = malloc(test_size * sizeof(gpt_partition_t));
     gpt_partition_t** value_ptrs = malloc(test_size * sizeof(gpt_partition_t*));
     if (values == NULL) {
-        printf("Unable to allocate memory for test\n");
+        fprintf(stderr, "Unable to allocate memory for test\n");
         return false;
     }
 
@@ -830,47 +833,39 @@ mx_status_t add_partition(gpt_device_t* device, uint64_t offset_blocks,
     return NO_ERROR;
 }
 
-int main(int argc, char** argv) {
-    DEBUG_ASSERT(NUM_INSTALL_PARTS == 2);
-    // setup the base path in the path buffer
-    static char path_buffer[PATH_MAX];
-    strcpy(path_buffer, PATH_BLOCKDEVS);
-    strcat(path_buffer, "/");
-
+/*
+ * Take a directory stream of devices, the path to that directory, and a bit
+ * mask describing which partitions are being looked for and determines which
+ * partitions are available, what their device path is, and loads the
+ * gpt_device_t struct for the device containing the partition(s). The
+ * unfound_parts_out bit mask has bits set for any partitions not found. The
+ * part_paths_out array is indexed by the position of the corresponding bit
+ * in the requested_parts bit mask and size of the array passed in should
+ * match the number of partitions requested. If the requested_parts bit mask
+ * is 0b1011 the array should be length three. If the unfound_parts_out mask
+ * were set to 0b0010 then the path array would be null at index 1 while index
+ * 0 and 2 would point to a string.
+ */
+mx_status_t find_install_device(DIR* dir, const char* dir_path,
+                                partition_flags requested_parts,
+                                partition_flags* unfound_parts_out,
+                                char* part_paths_out[],
+                                gpt_device_t** device_out) {
+    char path_buffer[PATH_MAX];
+    strcpy(path_buffer, dir_path);
     const size_t base_len = strlen(path_buffer);
-    DEBUG_ASSERT(base_len < PATH_MAX);
     const size_t buffer_remaining = PATH_MAX - base_len - 1;
-
-    // first read the directory of block devices
-    DIR* dir;
-    dir = opendir(PATH_BLOCKDEVS);
-    if (dir == NULL) {
-        printf("Open failed for directory: '%s' with error %s\n",
-               PATH_BLOCKDEVS, strerror(errno));
-        return -1;
-    }
-
-    // set up structures for hold source and destination paths for partition
-    // data
-    char system_path[PATH_MAX];
-    char efi_path[PATH_MAX];
-    char* part_paths[NUM_INSTALL_PARTS] = {efi_path, system_path};
-    char system_img_path[PATH_MAX] = IMG_SYSTEM_PATH;
-    char efi_img_path[PATH_MAX] = IMG_EFI_PATH;
-    char* disk_img_paths[NUM_INSTALL_PARTS] = {efi_img_path, system_img_path};
-
-    // device to install on
-    gpt_device_t* install_dev = NULL;
     uint64_t block_size;
-    partition_flags ready_for_install = 0;
-    partition_flags requested_parts = PART_EFI | PART_SYSTEM;
+    gpt_device_t* install_dev = NULL;
+
     for (ssize_t rc = get_next_file_path(
              dir, buffer_remaining, &path_buffer[base_len]);
          rc >= 0;
          rc = get_next_file_path(
              dir, buffer_remaining, &path_buffer[base_len])) {
         if (rc > 0) {
-            printf("Device path length overrun by %zd characters\n", rc);
+            fprintf(stderr,
+                    "Device path length overrun by %zd characters\n", rc);
             continue;
         }
         // open device read-only
@@ -884,194 +879,296 @@ int main(int argc, char** argv) {
 
         // if we read a GPT, see if it has the entry we want
         if (install_dev != NULL && install_dev->valid) {
-            ready_for_install = partition_for_install(
+            *unfound_parts_out = find_install_partitions(
                 install_dev, block_size, requested_parts,
-                PATH_MAX, part_paths);
+                PATH_MAX, part_paths_out);
 
             printf("Ready for install on %s? 0x%x\n", path_buffer,
-                   ready_for_install);
-            if (ready_for_install != 0) {
+                   *unfound_parts_out);
+            if (*unfound_parts_out != 0) {
                 gpt_device_release(install_dev);
                 install_dev = NULL;
             } else {
+                *device_out = install_dev;
                 break;
             }
         }
     }
 
-    closedir(dir);
-    if (install_dev != NULL && install_dev->valid) {
-        if (unmount_all() != NO_ERROR) {
-            // this isn't necessarily a failure, some of the paths that we tried
-            // to unmount not exist or might not actually correspond to devices
-            // we want to write to. We'll try to open the devices we want to
-            // write to and see what happens
-            printf("Warning, devices might not be unmounted.\n");
+    if (install_dev != NULL) {
+        return NO_ERROR;
+    } else {
+        return ERR_NOT_FOUND;
+    }
+}
+
+/*
+ * Write out the install data from the source paths into the destination
+ * paths. A partition is only written if its bit is set in both parts_requested
+ * and parts_available masks. The paths_src array should be indexed based the
+ * position of the bit in the masks while the paths_dest array should be
+ * indexed based on how many requested partitions there are.
+ */
+mx_status_t write_install_data(partition_flags parts_requested,
+                               partition_flags parts_available,
+                               char* paths_src[],
+                               char* paths_dest[]) {
+    if (unmount_all() != NO_ERROR) {
+        // this isn't necessarily a failure, some of the paths that we tried
+        // to unmount not exist or might not actually correspond to devices
+        // we want to write to. We'll try to open the devices we want to
+        // write to and see what happens
+        printf("Warning, devices might not be unmounted.\n");
+    }
+
+    uint8_t part_idx = -1;
+    // scan through the requested partitions bitmask to see which
+    // partitions we want to write to and find the corresponding path for
+    // the disk image for that partition
+    for (int idx = 0; idx < 32; idx++) {
+        // see if this was a requested part, if so move the index we use to
+        // access the part_paths array because that array is ordered based
+        // on index of the order of bits in the bitmask sent to
+        // partition_for_install
+        if (CHECK_BIT(parts_requested, idx)) {
+            part_idx++;
         }
 
-        uint8_t part_idx = -1;
-        // scan through the requested partitions bitmask to see which
-        // partitions we want to write to and find the corresponding path for
-        // the disk image for that partition
-        for (int idx = 0; idx < 32; idx++) {
-            // see if this was a requested part, if so move the index we use to
-            // access the part_paths array because that array is ordered based
-            // on index of the order of bits in the bitmask sent to
-            // partition_for_install
-            if (CHECK_BIT(requested_parts, idx)) {
-                part_idx++;
-            }
-
-            // if either we weren't interested or we were, but we didn't find
-            // the partition, skip
-            if (!CHECK_BIT(requested_parts, idx) ||
-                (CHECK_BIT(requested_parts, idx) &&
-                 CHECK_BIT(ready_for_install, idx))) {
-                continue;
-            }
-
-            // do install
-            size_t bytes_written;
-            int fd_dst = open(part_paths[part_idx], O_RDWR);
-            if (fd_dst == -1) {
-                printf("Error opening output device, %s\n", strerror(errno));
-                gpt_device_release(install_dev);
-                return -1;
-            }
-
-            int fd_src = open(disk_img_paths[idx], O_RDONLY);
-            if (fd_src == -1) {
-                printf("Error opening disk image file, %s\n", strerror(errno));
-                close(fd_dst);
-                gpt_device_release(install_dev);
-                return -1;
-            }
-
-            time_t start;
-            time(&start);
-            mx_status_t rc = write_partition(fd_src, fd_dst, &bytes_written);
-            time_t end;
-            time(&end);
-
-            printf("%.f secs taken to write %zd bytes\n", difftime(end, start),
-                   bytes_written);
-            close(fd_dst);
-            close(fd_src);
-
-            if (rc != NO_ERROR) {
-                gpt_device_release(install_dev);
-                printf("Error %i writing partition\n", rc);
-                return -1;
-            }
+        // if either we weren't interested or we were, but we didn't find
+        // the partition, skip
+        if (!CHECK_BIT(parts_requested, idx) ||
+            (CHECK_BIT(parts_requested, idx) &&
+             CHECK_BIT(parts_available, idx))) {
+            continue;
         }
 
         // do install
+        size_t bytes_written;
+        int fd_dst = open(paths_dest[part_idx], O_RDWR);
+        if (fd_dst == -1) {
+            fprintf(stderr, "Error opening output device, %s\n",
+                    strerror(errno));
+            return ERR_IO;
+        }
+
+        int fd_src = open(paths_src[idx], O_RDONLY);
+        if (fd_src == -1) {
+            fprintf(stderr, "Error opening disk image file, %s\n",
+                    strerror(errno));
+            close(fd_dst);
+            return ERR_IO;
+        }
+
+        time_t start;
+        time(&start);
+        mx_status_t rc = write_partition(fd_src, fd_dst, &bytes_written);
+        time_t end;
+        time(&end);
+
+        printf("%.f secs taken to write %zd bytes\n", difftime(end, start),
+               bytes_written);
+        close(fd_dst);
+        close(fd_src);
+
+        if (rc != NO_ERROR) {
+            fprintf(stderr, "Error %i writing partition\n", rc);
+            return rc;
+        }
+    }
+
+    return NO_ERROR;
+}
+
+/*
+ * Given a directory, assume its contents represent block devices. Look at
+ * each entry to see if it contains a GPT and if it does, see if the GPT
+ * reports that space_required contiguous bytes are available. If a suitable
+ * place is found device_path_out and offset_out will be set to valid values,
+ * otherwise they will be left unchanged.
+ */
+void find_device_with_space(DIR* dir, char* dir_path, size_t space_required,
+                            char* device_path_out, size_t* offset_out) {
+    char path_buffer[PATH_MAX];
+    strcpy(path_buffer, dir_path);
+    size_t base_len = strlen(path_buffer);
+    size_t buffer_remaining = PATH_MAX - base_len - 1;
+    uint64_t block_size;
+
+    // no device looks configured the way we want for install, see if we can
+    // partition a device and make it suitable
+    for (ssize_t rc = get_next_file_path(
+             dir, buffer_remaining, &path_buffer[base_len]);
+         rc >= 0;
+         rc = get_next_file_path(
+             dir, buffer_remaining, &path_buffer[base_len])) {
+        if (rc > 0) {
+            fprintf(stderr, "Device path length overrun by %zd characters\n",
+                    rc);
+            continue;
+        }
+
+        // open device read-only
+        int device_fd = open_device_ro(&path_buffer[0]);
+        if (device_fd < 0) {
+            fprintf(stderr, "Error reading directory");
+            continue;
+        }
+
+        uint64_t disk_size;
+        ssize_t rc2 = ioctl_block_get_size(device_fd, &disk_size);
+        ssize_t rc3 = ioctl_block_get_blocksize(device_fd, &block_size);
+        if (rc2 < 0 || rc3 < 0) {
+            fprintf(stderr, "Unable to read disk or block size.\n");
+            close(device_fd);
+            return;
+        }
+
+        gpt_device_t* install_dev = read_gpt(device_fd, &block_size);
+
+        if (install_dev == NULL) {
+            close(device_fd);
+            continue;
+        } else if (!install_dev->valid) {
+            fprintf(stderr, "Read GPT for %s, but it is invalid\n",
+                    path_buffer);
+            gpt_device_release(install_dev);
+            close(device_fd);
+            continue;
+        }
+
+        size_t space_offset = find_available_space(
+            install_dev, space_required / block_size, disk_size / block_size,
+            block_size);
         gpt_device_release(install_dev);
-        return 0;
+        close(device_fd);
+        if (space_offset > 0) {
+            strcpy(device_path_out, path_buffer);
+            *offset_out = space_offset;
+            return;
+        }
+    }
+}
+
+
+/*
+ * Create the system partition and ESP on the specified device, starting at the
+ * specified block offset.
+ */
+mx_status_t create_partitions(char* dev_path, uint64_t block_offset) {
+    printf("Adding partitions...\n");
+    // open a read/write fd for the block device
+    int rw_dev = open(dev_path, O_RDWR);
+    if (rw_dev < 0) {
+        fprintf(stderr, "couldn't open device read/write\n");
+        return ERR_IO;
+    }
+    uint64_t block_size;
+    gpt_device_t* gpt_edit = read_gpt(rw_dev, &block_size);
+
+    // TODO(jmatt): consider asking the user what device to partition
+    // install_dev should point to the device we want to modify
+    uint64_t size_blocks = MIN_SIZE_SYSTEM_PART / block_size;
+    uint8_t type_system[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
+    mx_status_t rc = add_partition(gpt_edit, block_offset, size_blocks,
+                                       type_system, "system");
+    if (rc != NO_ERROR) {
+        gpt_device_release(gpt_edit);
+        close(rw_dev);
+        return rc;
+    }
+
+    uint64_t size_blocks_efi = MIN_SIZE_EFI_PART / block_size;
+    uint8_t type_efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
+    rc = add_partition(gpt_edit, block_offset + size_blocks,
+                       size_blocks_efi, type_efi, "EFI");
+    if (rc != NO_ERROR) {
+        gpt_device_release(gpt_edit);
+        close(rw_dev);
+        return rc;
+    }
+
+    gpt_device_release(gpt_edit);
+
+    // force a re-read of the block device so the new partitions are
+    // properly picked up
+    ioctl_block_rr_part(rw_dev);
+    close(rw_dev);
+    printf("Partitions added, please run installer again.\n");
+    return NO_ERROR;
+}
+
+int main(int argc, char** argv) {
+    static_assert(NUM_INSTALL_PARTS == 2,
+                  "Install partition count is unexpected, expected 2.");
+    static_assert(PATH_MAX >= sizeof(PATH_BLOCKDEVS),
+                  "File path max length is too short for path to block devices.");
+    // setup the base path in the path buffer
+    static char path_buffer[sizeof(PATH_BLOCKDEVS) + 2];
+    strcpy(path_buffer, PATH_BLOCKDEVS);
+    strcat(path_buffer, "/");
+
+    // set up structures for hold source and destination paths for partition
+    // data
+    char system_path[PATH_MAX];
+    char efi_path[PATH_MAX];
+    char* part_paths[NUM_INSTALL_PARTS] = {efi_path, system_path};
+    char system_img_path[PATH_MAX] = IMG_SYSTEM_PATH;
+    char efi_img_path[PATH_MAX] = IMG_EFI_PATH;
+    char* disk_img_paths[NUM_INSTALL_PARTS] = {efi_img_path, system_img_path};
+
+    // device to install on
+    gpt_device_t* install_dev = NULL;
+    //uint64_t block_size;
+    partition_flags ready_for_install = 0;
+    partition_flags requested_parts = PART_EFI | PART_SYSTEM;
+
+    // first read the directory of block devices
+    DIR* dir;
+    dir = opendir(PATH_BLOCKDEVS);
+    if (dir == NULL) {
+        fprintf(stderr, "Open failed for directory: '%s' with error %s\n",
+                PATH_BLOCKDEVS, strerror(errno));
+        return -1;
+    }
+
+    mx_status_t rc = find_install_device(dir, path_buffer, requested_parts,
+                                         &ready_for_install, part_paths,
+                                         &install_dev);
+    closedir(dir);
+
+    if (rc == NO_ERROR && install_dev->valid) {
+        rc = write_install_data(requested_parts, ready_for_install,
+                                disk_img_paths, part_paths);
+        gpt_device_release(install_dev);
+        if (rc == NO_ERROR) {
+            return 0;
+        } else {
+            return -1;
+        }
     } else {
         dir = opendir(PATH_BLOCKDEVS);
         if (dir == NULL) {
-            printf("Open failed for directory: '%s' with error %s\n",
-                   PATH_BLOCKDEVS, strerror(errno));
+            fprintf(stderr, "Open failed for directory: '%s' with error %s\n",
+                    PATH_BLOCKDEVS, strerror(errno));
             return -1;
         }
 
+        strcpy(path_buffer, PATH_BLOCKDEVS);
+        strcat(path_buffer, "/");
+
+        char device_path[PATH_MAX];
         size_t space_offset = 0;
-        int device_fd;
-        uint64_t block_size;
-
-        // no device looks configured the way we want for install, see if we can
-        // partition a device and make it suitable
-        for (ssize_t rc = get_next_file_path(
-                 dir, buffer_remaining, &path_buffer[base_len]);
-             rc >= 0;
-             rc = get_next_file_path(
-                 dir, buffer_remaining, &path_buffer[base_len])) {
-            if (rc > 0) {
-                printf("Device path length overrun by %zd characters\n", rc);
-                continue;
-            }
-
-            // open device read-only
-            device_fd = open_device_ro(&path_buffer[0]);
-            if (device_fd < 0) {
-                printf("Error reading directory");
-                continue;
-            }
-
-            uint64_t disk_size;
-            ssize_t rc2 = ioctl_block_get_size(device_fd, &disk_size);
-            ssize_t rc3 = ioctl_block_get_blocksize(device_fd, &block_size);
-            if (rc2 < 0 || rc3 < 0) {
-                fprintf(stderr, "Unable to read disk or block size.\n");
-                return -1;
-            }
-
-            install_dev = read_gpt(device_fd, &block_size);
-            close(device_fd);
-
-            if (install_dev == NULL) {
-                continue;
-            } else if (!install_dev->valid) {
-                fprintf(stderr, "Read GPT for %s, but it is invalid\n",
-                        path_buffer);
-                gpt_device_release(install_dev);
-                continue;
-            }
-
-            space_offset = find_available_space(
-                install_dev,
-                (MIN_SIZE_SYSTEM_PART + MIN_SIZE_EFI_PART) / block_size,
-                disk_size / block_size, block_size);
-            if (space_offset > 0) {
-                break;
-            }
-            gpt_device_release(install_dev);
+        find_device_with_space(dir, path_buffer,
+                               MIN_SIZE_SYSTEM_PART + MIN_SIZE_EFI_PART,
+                               device_path, &space_offset);
+        closedir(dir);
+        if (space_offset == 0) {
+            // TODO don't give up, try removing one or more partitions
+            return -1;
         }
 
-        if (space_offset > 0) {
-            printf("Adding partitions...\n");
-            // open a read/write fd for the block device
-            int rw_dev = open(path_buffer, O_RDWR);
-            if (rw_dev < 0) {
-                printf("couldn't open device read/write\n");
-                return -1;
-            }
-
-            gpt_device_t* gpt_edit = read_gpt(rw_dev, &block_size);
-            if (gpt_edit == NULL || !gpt_edit->valid) {
-                return -1;
-            }
-            // TODO(jmatt): consider asking the user what device to partition
-            // install_dev should point to the device we want to modify
-            uint64_t size_blocks = MIN_SIZE_SYSTEM_PART / block_size;
-            uint8_t type_system[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
-            mx_status_t rc = add_partition(gpt_edit, space_offset, size_blocks,
-                                           type_system, "system");
-            if (rc != NO_ERROR) {
-                return -1;
-            }
-
-            uint64_t size_blocks_efi = MIN_SIZE_EFI_PART / block_size;
-            uint8_t type_efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
-            rc = add_partition(gpt_edit, space_offset + size_blocks,
-                               size_blocks_efi, type_efi, "EFI");
-            if (rc != NO_ERROR) {
-                return -1;
-            }
-
-            gpt_device_release(install_dev);
-            gpt_device_release(gpt_edit);
-
-            // force a re-read of the block device so the new partitions are
-            // properly picked up
-            ioctl_block_rr_part(rw_dev);
-            close(rw_dev);
-            printf("Partitions added, please run installer again.\n");
-        } else {
-            // TODO(jmatt): look for partition(s) we could remove and use their
-            // space
-        }
+        create_partitions(device_path, space_offset);
+        // TODO(jmatt) if result is NO_ERROR, try again
         return -1;
     }
 }
