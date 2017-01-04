@@ -17,6 +17,8 @@ class NetConnectorExampleParams {
 
   bool is_valid() const { return is_valid_; }
 
+  bool register_provider() const { return register_provider_; }
+
   const std::string& request_device_name() const {
     return request_device_name_;
   }
@@ -25,6 +27,7 @@ class NetConnectorExampleParams {
   void Usage();
 
   bool is_valid_;
+  bool register_provider_;
   std::string request_device_name_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(NetConnectorExampleParams);

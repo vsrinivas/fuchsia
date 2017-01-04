@@ -65,4 +65,28 @@ void RespondingServiceHost::RegisterSingleton(
       service_name);
 }
 
+void RespondingServiceHost::RegisterProvider(
+    const std::string& service_name,
+    fidl::InterfaceHandle<modular::ServiceProvider> handle) {
+  modular::ServiceProviderPtr service_provider =
+      modular::ServiceProviderPtr::Create(std::move(handle));
+
+  service_provider.set_connection_error_handler([this, service_name] {
+    FTL_LOG(ERROR) << "Singleton " << service_name << " provider died";
+    service_providers_by_name_.erase(service_name);
+  });
+
+  service_providers_by_name_.emplace(service_name, std::move(service_provider));
+
+  service_provider_.AddServiceForName(
+      [this, service_name](mx::channel client_handle) {
+        FTL_VLOG(2) << "Servicing provided service request for "
+                    << service_name;
+        auto iter = service_providers_by_name_.find(service_name);
+        FTL_DCHECK(iter != service_providers_by_name_.end());
+        iter->second->ConnectToService(service_name, std::move(client_handle));
+      },
+      service_name);
+}
+
 }  // namespace netconnector

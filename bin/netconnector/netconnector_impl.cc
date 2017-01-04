@@ -25,20 +25,20 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
     // Start the listener.
     FTL_DCHECK(!params->listen());
 
-    netconnector::NetConnectorPtr net_connector =
+    netconnector::NetConnectorAdminPtr net_connector_admin =
         application_context_
-            ->ConnectToEnvironmentService<netconnector::NetConnector>();
+            ->ConnectToEnvironmentService<netconnector::NetConnectorAdmin>();
 
     if (!params->host_name().empty()) {
-      net_connector->SetHostName(params->host_name());
+      net_connector_admin->SetHostName(params->host_name());
     }
 
     for (auto& pair : params_->MoveServices()) {
-      net_connector->RegisterService(pair.first, std::move(pair.second));
+      net_connector_admin->RegisterService(pair.first, std::move(pair.second));
     }
 
     for (auto& pair : params_->devices()) {
-      net_connector->RegisterDevice(pair.first, pair.second);
+      net_connector_admin->RegisterDevice(pair.first, pair.second);
     }
 
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
@@ -65,6 +65,10 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
       [this](fidl::InterfaceRequest<NetConnector> request) {
         bindings_.AddBinding(this, std::move(request));
       });
+  application_context_->outgoing_services()->AddService<NetConnectorAdmin>(
+      [this](fidl::InterfaceRequest<NetConnectorAdmin> request) {
+        admin_bindings_.AddBinding(this, std::move(request));
+      });
 }
 
 NetConnectorImpl::~NetConnectorImpl() {}
@@ -83,6 +87,19 @@ void NetConnectorImpl::ReleaseRequestorAgent(RequestorAgent* requestor_agent) {
 void NetConnectorImpl::ReleaseServiceAgent(ServiceAgent* service_agent) {
   size_t removed = service_agents_.erase(service_agent);
   FTL_DCHECK(removed == 1);
+}
+
+void NetConnectorImpl::GetDeviceServiceProvider(
+    const fidl::String& device_name,
+    fidl::InterfaceRequest<modular::ServiceProvider> request) {
+  auto iter = params_->devices().find(device_name);
+  if (iter == params_->devices().end()) {
+    FTL_LOG(ERROR) << "Unrecognized device name " << device_name;
+    return;
+  }
+
+  AddDeviceServiceProvider(DeviceServiceProvider::Create(
+      device_name, iter->second, kPort, std::move(request), this));
 }
 
 void NetConnectorImpl::SetHostName(const fidl::String& host_name) {
@@ -104,17 +121,11 @@ void NetConnectorImpl::RegisterDevice(const fidl::String& name,
   params_->RegisterDevice(name, address);
 }
 
-void NetConnectorImpl::GetDeviceServiceProvider(
-    const fidl::String& device_name,
-    fidl::InterfaceRequest<modular::ServiceProvider> request) {
-  auto iter = params_->devices().find(device_name);
-  if (iter == params_->devices().end()) {
-    FTL_LOG(ERROR) << "Unrecognized device name " << device_name;
-    return;
-  }
-
-  AddDeviceServiceProvider(DeviceServiceProvider::Create(
-      device_name, iter->second, kPort, std::move(request), this));
+void NetConnectorImpl::RegisterServiceProvider(
+    const fidl::String& name,
+    fidl::InterfaceHandle<modular::ServiceProvider> handle) {
+  FTL_LOG(INFO) << "Service '" << name << "' provider registered.";
+  responding_service_host_.RegisterProvider(name, std::move(handle));
 }
 
 void NetConnectorImpl::AddDeviceServiceProvider(
