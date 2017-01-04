@@ -79,8 +79,9 @@ class BranchTracker::PageWatcherContainer {
           }
 
           auto waiter =
-              callback::Waiter<storage::Status, const storage::Object>::Create(
-                  storage::Status::OK);
+              callback::Waiter<storage::Status,
+                               std::unique_ptr<const storage::Object>>::
+                  Create(storage::Status::OK);
 
           PageChangePtr page_change = PageChange::New();
           page_change->timestamp = new_commit->GetTimestamp();

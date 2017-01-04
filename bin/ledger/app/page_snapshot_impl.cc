@@ -30,8 +30,8 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
                                   const GetEntriesCallback& callback) {
   std::unique_ptr<storage::Iterator<const storage::Entry>> it =
       contents_->find(key_prefix);
-  auto waiter =
-      callback::Waiter<storage::Status, const storage::Object>::Create(
+  auto waiter = callback::
+      Waiter<storage::Status, std::unique_ptr<const storage::Object>>::Create(
           storage::Status::OK);
   fidl::Array<EntryPtr> entries = fidl::Array<EntryPtr>::New(0);
 

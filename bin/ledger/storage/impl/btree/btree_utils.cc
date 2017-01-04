@@ -21,7 +21,8 @@ void ForEachEntryIn(PageStorage* page_storage,
                     std::string min_key,
                     std::function<bool(EntryAndNodeId)> on_next,
                     std::function<void(Status)> on_done) {
-  auto waiter = callback::Waiter<Status, const Object>::Create(Status::OK);
+  auto waiter = callback::Waiter<Status, std::unique_ptr<const Object>>::Create(
+      Status::OK);
 
   int start_index;
   Status key_found = node->FindKeyOrChild(min_key, &start_index);
@@ -308,8 +309,8 @@ void ApplyChangesIn(
     std::function<void(Status,
                        ObjectId,
                        std::unique_ptr<TreeNode::Mutation::Updater>)> on_done) {
-  auto waiter =
-      callback::Waiter<Status, TreeNode::Mutation::Updater>::Create(Status::OK);
+  auto waiter = callback::Waiter<
+      Status, std::unique_ptr<TreeNode::Mutation::Updater>>::Create(Status::OK);
   // Apply all changes in the correct range: until the max_key. Wait for all
   // changes to be detected for this node before applying them in this node's
   // mutation, so as to guarantee they are applied in the right order.
@@ -454,8 +455,9 @@ void GetObjectIds(PageStorage* page_storage,
 void GetObjectsFromSync(ObjectIdView root_id,
                         PageStorage* page_storage,
                         std::function<void(Status)> callback) {
-  ftl::RefPtr<callback::Waiter<Status, const Object>> waiter_ =
-      callback::Waiter<Status, const Object>::Create(Status::OK);
+  ftl::RefPtr<callback::Waiter<Status, std::unique_ptr<const Object>>> waiter_ =
+      callback::Waiter<Status, std::unique_ptr<const Object>>::Create(
+          Status::OK);
   auto on_next = [page_storage, waiter_](EntryAndNodeId e) {
     if (e.entry.priority == KeyPriority::EAGER) {
       page_storage->GetObject(e.entry.object_id, waiter_->NewCallback());
@@ -513,7 +515,8 @@ void ForEachDiff(PageStorage* page_storage,
   // entries from both versions in memory and then computing the diff. This
   // should be updated with the new version of the BTree.
   auto waiter =
-      callback::Waiter<Status, std::vector<Entry>>::Create(Status::OK);
+      callback::Waiter<Status, std::unique_ptr<std::vector<Entry>>>::Create(
+          Status::OK);
   GetEntriesVector(page_storage, base_root_id, waiter->NewCallback());
   GetEntriesVector(page_storage, other_root_id, waiter->NewCallback());
   waiter->Finalize([

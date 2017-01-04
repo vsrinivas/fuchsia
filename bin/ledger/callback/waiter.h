@@ -14,7 +14,7 @@
 namespace callback {
 // Waiter can be used to collate the results of many asynchronous calls into one
 // callback. A typical usage example would be:
-// Waiter<Status, Object> waiter(Status::OK);
+// Waiter<Status, std::unique_ptr<Object>> waiter(Status::OK);
 // storage->GetObject(object_id1, waiter.NewCallback());
 // storage->GetObject(object_id2, waiter.NewCallback());
 // storage->GetObject(object_id3, waiter.NewCallback());
@@ -29,22 +29,21 @@ class Waiter : public ftl::RefCountedThreadSafe<Waiter<S, T>> {
     return ftl::AdoptRef(new Waiter<S, T>(default_status));
   }
 
-  std::function<void(S, std::unique_ptr<T>)> NewCallback() {
+  std::function<void(S, T)> NewCallback() {
     FTL_DCHECK(!finalized_);
     if (result_status_ != default_status_) {
-      return [](S status, std::unique_ptr<T> result) {};
+      return [](S status, T result) {};
     }
-    results_.push_back(std::unique_ptr<T>());
-    std::function<void(S, std::unique_ptr<T>)> callback = [
+    results_.emplace_back();
+    std::function<void(S, T)> callback = [
       waiter_ref = ftl::RefPtr<Waiter<S, T>>(this), index = results_.size() - 1
-    ](S status, std::unique_ptr<T> result) {
+    ](S status, T result) {
       waiter_ref->ReturnResult(index, status, std::move(result));
     };
     return callback;
   }
 
-  void Finalize(
-      std::function<void(S, std::vector<std::unique_ptr<T>>)> callback) {
+  void Finalize(std::function<void(S, std::vector<T>)> callback) {
     FTL_DCHECK(!finalized_) << "Waiter already finalized, can't finalize more!";
     result_callback_ = callback;
     finalized_ = true;
@@ -55,7 +54,7 @@ class Waiter : public ftl::RefCountedThreadSafe<Waiter<S, T>> {
   Waiter(S default_status)
       : default_status_(default_status), result_status_(default_status_) {}
 
-  void ReturnResult(int index, S status, std::unique_ptr<T> result) {
+  void ReturnResult(int index, S status, T result) {
     if (result_status_ != default_status_)
       return;
     if (status != default_status_) {
@@ -66,7 +65,7 @@ class Waiter : public ftl::RefCountedThreadSafe<Waiter<S, T>> {
       return;
     }
     if (result) {
-      results_[index].swap(result);
+      results_[index] = std::move(result);
     }
     returned_results_++;
     ExecuteCallbackIfFinished();
@@ -85,11 +84,11 @@ class Waiter : public ftl::RefCountedThreadSafe<Waiter<S, T>> {
   size_t current_index_ = 0;
 
   size_t returned_results_ = 0;
-  std::vector<std::unique_ptr<T>> results_;
+  std::vector<T> results_;
   S default_status_;
   S result_status_;
 
-  std::function<void(S, std::vector<std::unique_ptr<T>>)> result_callback_;
+  std::function<void(S, std::vector<T>)> result_callback_;
 };
 
 // StatusWaiter can be used to collate the results of many asynchronous calls
@@ -102,14 +101,12 @@ class StatusWaiter {
       : waiter_(Waiter<S, bool>::Create(default_status)) {}
 
   std::function<void(S)> NewCallback() {
-    return [callback = waiter_->NewCallback()](S s) {
-      callback(s, std::make_unique<bool>(true));
-    };
+    return [callback = waiter_->NewCallback()](S s) { callback(s, true); };
   }
 
   void Finalize(std::function<void(S)> callback) {
-    waiter_->Finalize([callback](
-        S s, std::vector<std::unique_ptr<bool>> values) { callback(s); });
+    waiter_->Finalize(
+        [callback](S s, std::vector<bool> values) { callback(s); });
   }
 
  private:
