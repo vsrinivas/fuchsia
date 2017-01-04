@@ -6,7 +6,7 @@
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # N.B. This must be an absolute path.
-readonly ROOT_DIR="$(dirname "${SCRIPT_DIR}")"
+readonly ROOT_DIR="$(dirname $(dirname "${SCRIPT_DIR}"))"
 
 readonly HOST_ARCH=$(uname -m)
 readonly HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
@@ -62,7 +62,7 @@ build() {
   config_datadir="//share/gdb"
   [[ -f "${builddir}/Makefile" ]] || ${ROOT_DIR}/third_party/gdb/configure \
     --prefix="$config_prefix" \
-    --enable-targets=arm-elf,aarch64-elf,x86_64-elf,x86_64-fuchsia \
+    --enable-targets=arm-elf,aarch64-elf,aarch64-fuchsia,x86_64-elf,x86_64-fuchsia \
     --disable-werror \
     --disable-nls \
     --with-gdb-datadir="$config_datadir" \
