@@ -6,6 +6,7 @@ executable("benchmarks") {
   testonly = true
   sources = [
     "channels.cc",
+    "events.cc",
     "main.cc",
     "sockets.cc",
     "syscalls.cc",
