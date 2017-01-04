@@ -110,7 +110,13 @@ TEST_F(PageImplTest, PutNoTransaction) {
 
 TEST_F(PageImplTest, PutReferenceNoTransaction) {
   std::string key("some_key");
-  storage::ObjectId object_id("some_id");
+  std::string object_data("some_data");
+  std::unique_ptr<const storage::Object> object;
+  storage::Status status =
+      fake_storage_->AddObjectSynchronous(object_data, &object);
+  EXPECT_EQ(storage::Status::OK, status);
+
+  storage::ObjectId object_id = object->GetId();
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_id);
 
@@ -118,7 +124,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
     EXPECT_EQ(Status::OK, status);
     auto objects = fake_storage_->GetObjects();
     // No object should have been added.
-    EXPECT_EQ(0u, objects.size());
+    EXPECT_EQ(1u, objects.size());
 
     const std::map<std::string,
                    std::unique_ptr<storage::fake::FakeJournalDelegate>>&
@@ -132,6 +138,29 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
     EXPECT_EQ(object_id, entry.value);
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
+    message_loop_.PostQuitTask();
+  };
+  page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
+                          Priority::LAZY, callback);
+  message_loop_.Run();
+}
+
+TEST_F(PageImplTest, PutUnknownReference) {
+  std::string key("some_key");
+  storage::ObjectId object_id("unknown_id");
+  ReferencePtr reference = Reference::New();
+  reference->opaque_id = convert::ToArray(object_id);
+
+  auto callback = [this, &key, &object_id](Status status) {
+    EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
+    auto objects = fake_storage_->GetObjects();
+    // No object should have been added.
+    EXPECT_EQ(0u, objects.size());
+
+    const std::map<std::string,
+                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
+        journals = fake_storage_->GetJournals();
+    EXPECT_EQ(0u, journals.size());
     message_loop_.PostQuitTask();
   };
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
@@ -167,8 +196,15 @@ TEST_F(PageImplTest, TransactionCommit) {
   std::string key1("some_key1");
   storage::ObjectId object_id1;
   std::string value("a small value");
+
   std::string key2("some_key2");
-  storage::ObjectId object_id2("some_id2");
+  std::string value2("another value");
+  std::unique_ptr<const storage::Object> object2;
+  storage::Status status =
+      fake_storage_->AddObjectSynchronous(value2, &object2);
+  EXPECT_EQ(storage::Status::OK, status);
+  storage::ObjectId object_id2 = object2->GetId();
+
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_id2);
 
@@ -187,7 +223,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   auto put_callback = [this, &key1, &value, &object_id1](Status status) {
     EXPECT_EQ(Status::OK, status);
     auto objects = fake_storage_->GetObjects();
-    EXPECT_EQ(1u, objects.size());
+    EXPECT_EQ(2u, objects.size());
     object_id1 = objects.begin()->first;
     std::string actual_value = objects.begin()->second;
     EXPECT_EQ(value, actual_value);
@@ -206,14 +242,14 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
     message_loop_.PostQuitTask();
-
   };
+
   page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value), put_callback);
   message_loop_.Run();
 
   auto put_reference_callback = [this, &key2, &object_id2](Status status) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(1u, fake_storage_->GetObjects().size());
+    EXPECT_EQ(2u, fake_storage_->GetObjects().size());
 
     // No finished commit yet, with now two entries.
     const std::map<std::string,
@@ -237,7 +273,7 @@ TEST_F(PageImplTest, TransactionCommit) {
 
   auto delete_callback = [this, &key2](Status status) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(1u, fake_storage_->GetObjects().size());
+    EXPECT_EQ(2u, fake_storage_->GetObjects().size());
 
     // No finished commit yet, with the second entry deleted.
     const std::map<std::string,
@@ -258,7 +294,7 @@ TEST_F(PageImplTest, TransactionCommit) {
 
   page_ptr_->Commit([this](Status status) {
     EXPECT_EQ(Status::OK, status);
-    EXPECT_EQ(1u, fake_storage_->GetObjects().size());
+    EXPECT_EQ(2u, fake_storage_->GetObjects().size());
 
     const std::map<std::string,
                    std::unique_ptr<storage::fake::FakeJournalDelegate>>&

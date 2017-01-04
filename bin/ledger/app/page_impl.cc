@@ -170,10 +170,21 @@ void PageImpl::PutReference(fidl::Array<uint8_t> key,
       TRACE_CALLBACK(std::move(callback), "page", "put_reference");
 
   storage::ObjectIdView object_id(reference->opaque_id);
-  PutInCommit(key, object_id,
-              priority == Priority::EAGER ? storage::KeyPriority::EAGER
-                                          : storage::KeyPriority::LAZY,
-              std::move(timed_callback));
+  storage_->GetObject(
+      object_id, ftl::MakeCopyable([
+        this, key = std::move(key), object_id = object_id.ToString(), priority,
+        timed_callback
+      ](storage::Status status, std::unique_ptr<const storage::Object> object) {
+        if (status != storage::Status::OK) {
+          timed_callback(
+              PageUtils::ConvertStatus(status, Status::REFERENCE_NOT_FOUND));
+          return;
+        }
+        PutInCommit(key, object_id,
+                    priority == Priority::EAGER ? storage::KeyPriority::EAGER
+                                                : storage::KeyPriority::LAZY,
+                    std::move(timed_callback));
+      }));
 }
 
 void PageImpl::PutInCommit(convert::ExtendedStringView key,
