@@ -53,7 +53,7 @@ class URLLoaderImpl::HTTPClient {
   bool OnVerifyCertificate(bool preverified, asio::ssl::verify_context& ctx);
   void OnConnect(const asio::error_code& err);
   void OnHandShake(const asio::error_code& err);
-  void OnWriteRequest(const asio::error_code& err);
+  void OnWriteRequest(const asio::error_code& err, std::size_t transferred);
   void OnReadStatusLine(const asio::error_code& err);
   mx_status_t SendBody();
   void ParseHeaderField(const std::string& header,
@@ -159,6 +159,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::CreateRequest(
   }
 
   uint64_t content_length = request_body_buf_.size();
+
   if (content_length > 0)
     request_header_stream << "Content-Length: " << content_length << "\r\n";
 
@@ -249,9 +250,10 @@ template <>
 void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(
     const asio::error_code& err) {
   if (!err) {
-    asio::async_write(socket_, request_bufs_,
-                      std::bind(&HTTPClient<nonssl_socket_t>::OnWriteRequest,
-                                this, std::placeholders::_1));
+    asio::async_write(
+        socket_, request_bufs_,
+        std::bind(&HTTPClient<nonssl_socket_t>::OnWriteRequest, this,
+                  std::placeholders::_1, std::placeholders::_2));
   } else {
     FTL_LOG(ERROR) << "Connect(NonSSL): " << err.message();
     SendError(network::NETWORK_ERR_CONNECTION_FAILED);
@@ -261,9 +263,9 @@ void URLLoaderImpl::HTTPClient<nonssl_socket_t>::OnConnect(
 template <typename T>
 void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err) {
   if (!err) {
-    asio::async_write(
-        socket_, request_bufs_,
-        std::bind(&HTTPClient<T>::OnWriteRequest, this, std::placeholders::_1));
+    asio::async_write(socket_, request_bufs_,
+                      std::bind(&HTTPClient<T>::OnWriteRequest, this,
+                                std::placeholders::_1, std::placeholders::_2));
   } else {
     FTL_LOG(ERROR) << "HandShake: " << err.message();
     SendError(network::NETWORK_ERR_SSL_HANDSHAKE_NOT_COMPLETED);
@@ -271,14 +273,34 @@ void URLLoaderImpl::HTTPClient<T>::OnHandShake(const asio::error_code& err) {
 }
 
 template <typename T>
-void URLLoaderImpl::HTTPClient<T>::OnWriteRequest(const asio::error_code& err) {
+void URLLoaderImpl::HTTPClient<T>::OnWriteRequest(const asio::error_code& err,
+                                                  std::size_t transferred) {
   if (!err) {
-    // TODO(toshik): The response_ streambuf will automatically grow
-    // The growth may be limited by passing a maximum size to the
-    // streambuf constructor.
-    asio::async_read_until(socket_, response_buf_, "\r\n",
-                           std::bind(&HTTPClient<T>::OnReadStatusLine, this,
-                                     std::placeholders::_1));
+    std::size_t transferred_from_header =
+        std::min(request_header_buf_.size(), transferred);
+    request_header_buf_.consume(transferred_from_header);
+    if (transferred > transferred_from_header)
+      request_body_buf_.consume(transferred - transferred_from_header);
+
+    request_bufs_.clear();
+    if (request_header_buf_.size() > 0)
+      request_bufs_.push_back(request_header_buf_.data());
+    if (request_body_buf_.size() > 0)
+      request_bufs_.push_back(request_body_buf_.data());
+
+    if (!request_bufs_.empty()) {
+      asio::async_write(
+          socket_, request_bufs_,
+          std::bind(&HTTPClient<T>::OnWriteRequest, this, std::placeholders::_1,
+                    std::placeholders::_2));
+    } else {
+      // TODO(toshik): The response_ streambuf will automatically grow
+      // The growth may be limited by passing a maximum size to the
+      // streambuf constructor.
+      asio::async_read_until(socket_, response_buf_, "\r\n",
+                             std::bind(&HTTPClient<T>::OnReadStatusLine, this,
+                                       std::placeholders::_1));
+    }
   } else {
     FTL_LOG(ERROR) << "WriteRequest: " << err.message();
     // TODO(toshik): better error code?
