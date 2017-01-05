@@ -50,7 +50,7 @@ void MessageRelayBase::ReadChannelMessages() {
     if (status == ERR_SHOULD_WAIT) {
       // Nothing to read. Wait until there is.
       read_async_wait_.Start(
-          channel_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+          channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
           MX_TIME_INFINITE, [this]() { ReadChannelMessages(); });
       return;
     }
@@ -105,7 +105,7 @@ void MessageRelayBase::WriteChannelMessages() {
     if (status == ERR_SHOULD_WAIT) {
       // No room for the write. Wait until there is.
       write_async_wait_.Start(
-          channel_.get(), MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+          channel_.get(), MX_CHANNEL_WRITABLE | MX_CHANNEL_PEER_CLOSED,
           MX_TIME_INFINITE, [this]() { WriteChannelMessages(); });
       return;
     }
