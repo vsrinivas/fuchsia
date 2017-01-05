@@ -4,7 +4,7 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR)
+MODULE := cat
 
 MODULE_TYPE := userapp
 
@@ -13,5 +13,29 @@ MODULE_SRCS += $(LOCAL_DIR)/cat.c
 MODULE_NAME := cat
 
 MODULE_LIBS := ulib/mxio ulib/magenta ulib/musl
+
+include make/module.mk
+
+MODULE := true
+
+MODULE_TYPE := userapp
+
+MODULE_SRCS += $(LOCAL_DIR)/true.c
+
+MODULE_NAME := true
+
+MODULE_LIBS := ulib/magenta ulib/musl
+
+include make/module.mk
+
+MODULE := false
+
+MODULE_TYPE := userapp
+
+MODULE_SRCS += $(LOCAL_DIR)/false.c
+
+MODULE_NAME := false
+
+MODULE_LIBS := ulib/magenta ulib/musl
 
 include make/module.mk
