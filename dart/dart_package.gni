@@ -96,6 +96,7 @@ template("dart_package") {
   }
 
   if (!defined(invoker.disable_analysis) || !invoker.disable_analysis) {
+    dot_packages_target_name = target_name
     analyzer_name = "${target_name}_analyzer_sh"
     invocation_file_name = "$target_name.analyzer.sh"
 
@@ -111,10 +112,11 @@ template("dart_package") {
 
       deps = dart_deps + [
         dart_sdk_label,
+        ":$dot_packages_target_name",
       ]
 
       outputs = [
-        invocation_file
+        invocation_file,
       ]
 
       args = [
