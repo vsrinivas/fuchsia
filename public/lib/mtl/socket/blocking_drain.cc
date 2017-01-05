@@ -26,7 +26,7 @@ bool BlockingDrainFrom(
         return false;
       }
     } else if (result == ERR_SHOULD_WAIT) {
-      result = source.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+      result = source.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                MX_TIME_INFINITE, nullptr);
       if (result != NO_ERROR) {
         // If the socket was closed, then treat as EOF.

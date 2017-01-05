@@ -89,7 +89,7 @@ void DeviceWatcher::ListDevices(ftl::WeakPtr<DeviceWatcher> weak, int dir_fd) {
 }
 
 void DeviceWatcher::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  if (pending & MX_SIGNAL_READABLE) {
+  if (pending & MX_CHANNEL_READABLE) {
     uint32_t size;
     char name[MXIO_MAX_FILENAME + 1];
     mx_status_t status =
@@ -102,7 +102,7 @@ void DeviceWatcher::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
     return;
   }
 
-  if (pending & MX_SIGNAL_PEER_CLOSED) {
+  if (pending & MX_CHANNEL_PEER_CLOSED) {
     // TODO(jeffbrown): Should we tell someone about this?
     dir_watch_.reset();
     return;

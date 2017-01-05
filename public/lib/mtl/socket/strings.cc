@@ -34,7 +34,7 @@ bool BlockingCopyFromString(ftl::StringView source,
       to_write -= written;
       ptr += written;
     } else if (result == ERR_SHOULD_WAIT) {
-      result = destination.wait_one(MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+      result = destination.wait_one(MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                     MX_TIME_INFINITE, nullptr);
       if (result != NO_ERROR) {
         // If the socket was closed, then treat as EOF.

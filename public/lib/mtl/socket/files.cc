@@ -92,7 +92,7 @@ void CopyToFileHandler::OnHandleReady(mx_status_t result) {
   }
   if (result == ERR_SHOULD_WAIT) {
     wait_id_ = waiter_->AsyncWait(source_.get(),
-                                  MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                                  MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                   MX_TIME_INFINITE, &WaitComplete, this);
     return;
   }
@@ -192,7 +192,7 @@ void CopyFromFileHandler::OnHandleReady(mx_status_t result) {
   }
   if (result == ERR_SHOULD_WAIT) {
     wait_id_ = waiter_->AsyncWait(destination_.get(),
-                                  MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+                                  MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                   MX_TIME_INFINITE, &WaitComplete, this);
     return;
   }

@@ -155,7 +155,7 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   }
 
   wait_state_.Resize(handler_data_.size() + 1);
-  wait_state_.Set(0, kIgnoredKey, event_.get(), MX_SIGNAL_SIGNALED);
+  wait_state_.Set(0, kIgnoredKey, event_.get(), MX_EVENT_SIGNALED);
   size_t count = 1;
   for (auto it = handler_data_.begin(); it != handler_data_.end();
        ++it, ++count) {
@@ -181,8 +181,8 @@ ftl::TimePoint MessageLoop::Wait(ftl::TimePoint now,
   }
 
   // Reset signals on control channel.
-  if (wait_state_.items[0].pending & MX_SIGNAL_SIGNALED) {
-    mx_status_t rv = event_.signal(MX_SIGNAL_SIGNALED, 0u);
+  if (wait_state_.items[0].pending & MX_EVENT_SIGNALED) {
+    mx_status_t rv = event_.signal(MX_EVENT_SIGNALED, 0u);
     FTL_DCHECK(rv == NO_ERROR);
   }
 
@@ -226,7 +226,7 @@ void MessageLoop::PostQuitTask() {
 }
 
 void MessageLoop::ScheduleDrainIncomingTasks() {
-  mx_status_t status = event_.signal(0u, MX_SIGNAL_SIGNALED);
+  mx_status_t status = event_.signal(0u, MX_EVENT_SIGNALED);
   FTL_DCHECK(status == NO_ERROR);
 }
 

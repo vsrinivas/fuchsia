@@ -58,7 +58,7 @@ void SocketDrainer::ReadData() {
 void SocketDrainer::WaitForData() {
   FTL_DCHECK(!wait_id_);
   wait_id_ = waiter_->AsyncWait(source_.get(),
-                                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                                MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                                 MX_TIME_INFINITE, &WaitComplete, this);
 }
 

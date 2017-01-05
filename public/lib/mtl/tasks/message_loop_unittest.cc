@@ -262,7 +262,7 @@ TEST(MessageLoop, QuitFromReady) {
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_CHANNEL_READABLE, ftl::TimeDelta::Max());
   message_loop.Run();
   EXPECT_EQ(1, handler.ready_count());
   EXPECT_EQ(0, handler.error_count());
@@ -305,7 +305,7 @@ TEST(MessageLoop, HandleReady) {
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_CHANNEL_READABLE, ftl::TimeDelta::Max());
   handler.set_handler_key(key);
   message_loop.Run();
   EXPECT_EQ(1, handler.ready_count());
@@ -324,7 +324,7 @@ TEST(MessageLoop, AfterHandleReadyCallback) {
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key = message_loop.AddHandler(
-      &handler, endpoint0.get(), MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
+      &handler, endpoint0.get(), MX_CHANNEL_READABLE, ftl::TimeDelta::Max());
   handler.set_handler_key(key);
   int after_task_callback_count = 0;
   message_loop.SetAfterTaskCallback(
@@ -343,7 +343,7 @@ TEST(MessageLoop, AfterDeadlineExpiredCallback) {
   mx::channel::create(0, &endpoint0, &endpoint1);
 
   MessageLoop message_loop;
-  message_loop.AddHandler(&handler, endpoint0.get(), MX_SIGNAL_READABLE,
+  message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
                           ftl::TimeDelta::FromMicroseconds(10000));
   message_loop.task_runner()->PostDelayedTask(
       [&message_loop] { message_loop.QuitNow(); },
@@ -386,7 +386,7 @@ TEST(MessageLoop, QuitWhenDeadlineExpired) {
   MessageLoop message_loop;
   handler.set_message_loop(&message_loop);
   MessageLoop::HandlerKey key =
-      message_loop.AddHandler(&handler, endpoint0.get(), MX_SIGNAL_READABLE,
+      message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
                               ftl::TimeDelta::FromMicroseconds(10000));
   message_loop.Run();
   EXPECT_EQ(0, handler.ready_count());
@@ -403,7 +403,7 @@ TEST(MessageLoop, Destruction) {
   mx::channel::create(0, &endpoint0, &endpoint1);
   {
     MessageLoop message_loop;
-    message_loop.AddHandler(&handler, endpoint0.get(), MX_SIGNAL_READABLE,
+    message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
                             ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
@@ -454,12 +454,12 @@ TEST(MessageLoop, MultipleHandleDestruction) {
     odd_handler.set_message_loop(&message_loop);
     odd_handler.add_handler_key(
         message_loop.AddHandler(&odd_handler, pipe1.endpoint0.get(),
-                                MX_SIGNAL_READABLE, ftl::TimeDelta::Max()));
+                                MX_CHANNEL_READABLE, ftl::TimeDelta::Max()));
     message_loop.AddHandler(&even_handler, pipe2.endpoint0.get(),
-                            MX_SIGNAL_READABLE, ftl::TimeDelta::Max());
+                            MX_CHANNEL_READABLE, ftl::TimeDelta::Max());
     odd_handler.add_handler_key(
         message_loop.AddHandler(&odd_handler, pipe3.endpoint0.get(),
-                                MX_SIGNAL_READABLE, ftl::TimeDelta::Max()));
+                                MX_CHANNEL_READABLE, ftl::TimeDelta::Max()));
   }
   EXPECT_EQ(1, odd_handler.error_count());
   EXPECT_EQ(1, even_handler.error_count());
@@ -477,7 +477,7 @@ class AddHandlerOnErrorHandler : public TestMessageLoopHandler {
   }
 
   void OnHandleError(mx_handle_t handle, mx_status_t status) override {
-    message_loop_->AddHandler(this, handle, MX_SIGNAL_READABLE,
+    message_loop_->AddHandler(this, handle, MX_CHANNEL_READABLE,
                               ftl::TimeDelta::Max());
     TestMessageLoopHandler::OnHandleError(handle, status);
   }
@@ -499,7 +499,7 @@ TEST(MessageLoop, AddHandlerOnError) {
   {
     MessageLoop message_loop;
     handler.set_message_loop(&message_loop);
-    message_loop.AddHandler(&handler, endpoint0.get(), MX_SIGNAL_READABLE,
+    message_loop.AddHandler(&handler, endpoint0.get(), MX_CHANNEL_READABLE,
                             ftl::TimeDelta::Max());
   }
   EXPECT_EQ(1, handler.error_count());
