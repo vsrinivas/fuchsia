@@ -76,12 +76,19 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
 
     module_.reset();
     SetState(ModuleState::STOPPED);
+
+    // ReleaseModule() must be called before the callbacks, because
+    // StoryImpl::Stop() relies on being called back *after* the module
+    // controller was disposed.
+    story_impl_->ReleaseModule(this);
+
     for (auto& done : teardown_) {
       done();
     }
 
-    // When this method returns, this is deleted and must not be accessed.
-    story_impl_->DisposeModule(this);
+    // |this| must be deleted after the callbacks, because otherwise the
+    // callback for ModuleController::Stop() cannot be sent anymore.
+    delete this;
   };
 
   // At this point, it's no longer an error if the module closes its

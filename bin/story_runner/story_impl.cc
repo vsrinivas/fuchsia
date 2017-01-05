@@ -129,7 +129,7 @@ StoryImpl::StoryImpl(
   binding_.Bind(std::move(story_runner_request));
 }
 
-void StoryImpl::DisposeModule(
+void StoryImpl::ReleaseModule(
     ModuleControllerImpl* const module_controller_impl) {
   auto f = std::find_if(connections_.begin(), connections_.end(),
                         [module_controller_impl](const Connection& c) {
@@ -137,6 +137,7 @@ void StoryImpl::DisposeModule(
                                  module_controller_impl;
                         });
   FTL_DCHECK(f != connections_.end());
+  f->module_controller_impl.release();
   connections_.erase(f);
 }
 

@@ -101,7 +101,8 @@ class StoryImpl : public StoryRunner {
   void GetLedger(const std::string& module_name,
                  fidl::InterfaceRequest<ledger::Ledger> module_ledger,
                  const std::function<void(ledger::Status)>& result);
-  void DisposeModule(ModuleControllerImpl* controller);
+  // Releases ownership of |controller|.
+  void ReleaseModule(ModuleControllerImpl* controller);
 
  private:
   // Deletes itself on Stop().
@@ -118,8 +119,8 @@ class StoryImpl : public StoryRunner {
   void StopLinks();
 
   struct Connection {
-    std::shared_ptr<StoryConnection> story_connection;
-    std::shared_ptr<ModuleControllerImpl> module_controller_impl;
+    std::unique_ptr<StoryConnection> story_connection;
+    std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };
 
   fidl::Binding<StoryRunner> binding_;
