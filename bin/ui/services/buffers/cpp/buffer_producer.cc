@@ -96,7 +96,7 @@ std::unique_ptr<ProducedBufferHolder> BufferProducer::ProduceBuffer(
 
   mtl::MessageLoop::HandlerKey handler_key =
       mtl::MessageLoop::GetCurrent()->AddHandler(this, production_fence->get(),
-                                                 MX_SIGNAL_PEER_CLOSED);
+                                                 MX_EPAIR_PEER_CLOSED);
 
   pending_buffers_.emplace(
       production_fence->get(),
@@ -167,7 +167,7 @@ ftl::RefPtr<mtl::SharedVmo> BufferProducer::CreateSharedVmo(size_t size) {
 }
 
 void BufferProducer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  FTL_DCHECK(pending & MX_SIGNAL_PEER_CLOSED);
+  FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
 
   auto it = pending_buffers_.find(handle);
   FTL_DCHECK(it != pending_buffers_.end());

@@ -109,7 +109,7 @@ std::unique_ptr<ConsumedBufferHolder> BufferConsumer::ConsumeBuffer(
     if (consumed_vmo->AddRetention(retention_koid, std::move(retention))) {
       mtl::MessageLoop::HandlerKey handler_key =
           mtl::MessageLoop::GetCurrent()->AddHandler(this, retention_handle,
-                                                     MX_SIGNAL_PEER_CLOSED);
+                                                     MX_EPAIR_PEER_CLOSED);
       retained_buffers_.emplace(
           retention_handle,
           RetentionInfo{handler_key, shared_vmo, retention_koid});
@@ -126,7 +126,7 @@ std::unique_ptr<ConsumedBufferHolder> BufferConsumer::ConsumeBuffer(
 }
 
 void BufferConsumer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  FTL_DCHECK(pending & MX_SIGNAL_PEER_CLOSED);
+  FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
 
   auto it = retained_buffers_.find(handle);
   FTL_DCHECK(it != retained_buffers_.end());
