@@ -6,7 +6,6 @@
 #define APPS_MODULAR_LIB_FIDL_SINGLE_SERVICE_VIEW_APP_H_
 
 #include <memory>
-#include <vector>
 
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
