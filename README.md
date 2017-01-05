@@ -33,6 +33,21 @@ Commas inside the value of such arguments are escaped by backslashes. The value
 of `--root-module` selects the module to run. The value of `--root-link` is a
 JSON representation of the initial data the module is started with.
 
+## Testing
+
+Testing support is currently under development.
+Please use our example as an integration test and wait for it to complete.
+
+```sh
+$ @ bootstrap device_runner --user-shell=dummy_user_shell
+...
+...
+[00091.616] 03539.03566> [INFO:../../apps/modular/src/user_runner/dummy_user_shell.cc(256)] DummyUserShell DELETE STORY DONE
+[00091.616] 03071.03110> [INFO:../../apps/modular/src/user_runner/user_runner.cc(138)] UserRunner::Terminate: Terminating UserRunner.
+[00091.621] 02886.02905> [INFO:../../apps/modular/src/device_runner/dummy_device_shell.cc(62)] User logged out. Starting shutdown.
+[00091.622] 02794.02810> [INFO:../../apps/modular/src/device_runner/device_runner.cc(167)] Shutting down DeviceRunner..
+```
+
 ## Contents
 
  - [docs](docs) - documentation
