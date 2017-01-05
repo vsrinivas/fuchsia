@@ -15,8 +15,7 @@
 
 // VFS Helpers (vfs.c)
 #define V_FLAG_DEVICE 1
-#define V_FLAG_REMOTE 2
-#define V_FLAG_VMOFILE 4
+#define V_FLAG_VMOFILE 2
 
 mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
                      const char** pathout, uint32_t flags, uint32_t mode);

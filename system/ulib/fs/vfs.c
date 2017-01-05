@@ -44,7 +44,7 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             // convert empty initial path of final path segment to "."
             path = ".";
         }
-        if (vn->flags & V_FLAG_REMOTE) {
+        if (vn->remote > 0) {
             // remote filesystem mount, caller must resolve
             trace(WALK, "vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
             *out = vn;
@@ -53,10 +53,7 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
                 // returning our original vnode, need to upref it
                 vn_acquire(vn);
             }
-            if (vn->remote > 0) {
-                return vn->remote;
-            }
-            return ERR_NOT_FOUND;
+            return vn->remote;
         } else if ((nextpath = strchr(path, '/')) != NULL) {
             // path has at least one additional segment
             // traverse to the next segment
@@ -127,12 +124,12 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
         }
         if (flags & O_NOREMOTE) {
             // Opening a mount point: Do NOT traverse across remote.
-            if (!(vn->flags & V_FLAG_REMOTE)) {
+            if (!(vn->remote > 0)) {
                 // There must be a remote handle mounted on this vnode.
                 vn_release(vn);
                 return ERR_BAD_STATE;
             }
-        } else if ((vn->flags & V_FLAG_REMOTE) && (vn->remote > 0)) {
+        } else if (vn->remote > 0) {
             // Opening a mount point: Traverse across remote.
             *pathout = ".";
             r = vn->remote;

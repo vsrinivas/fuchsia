@@ -51,7 +51,6 @@ mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
     mount_point->vn = vn;
     list_add_tail(&remote_list, &mount_point->node);
     vn->remote = h;
-    vn->flags |= V_FLAG_REMOTE;
     mtx_unlock(&vfs_lock);
 
     return NO_ERROR;
