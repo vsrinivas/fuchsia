@@ -220,6 +220,22 @@ void dump_all_threads(bool full);
 /* scheduler routines */
 void thread_yield(void);             /* give up the cpu and time slice voluntarily */
 void thread_preempt(bool interrupt); /* get preempted (return to head of queue and reschedule) */
+void thread_resched(void);
+
+static inline bool thread_is_realtime(thread_t *t)
+{
+    return (t->flags & THREAD_FLAG_REAL_TIME) && t->priority > DEFAULT_PRIORITY;
+}
+
+static inline bool thread_is_idle(thread_t *t)
+{
+    return !!(t->flags & THREAD_FLAG_IDLE);
+}
+
+static inline bool thread_is_real_time_or_idle(thread_t *t)
+{
+    return !!(t->flags & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE));
+}
 
 #ifdef WITH_LIB_UTHREAD
 void uthread_context_switch(thread_t *oldthread, thread_t *newthread);
@@ -231,6 +247,9 @@ enum handler_return thread_timer_tick(void);
 /* the current thread */
 thread_t *get_current_thread(void);
 void set_current_thread(thread_t *);
+
+/* the idle thread(s) (statically allocated) */
+extern thread_t idle_threads[SMP_MAX_CPUS];
 
 /* scheduler lock */
 extern spin_lock_t thread_lock;

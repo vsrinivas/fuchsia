@@ -23,6 +23,7 @@
 #include <string.h>
 #include <printf.h>
 #include <err.h>
+#include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <kernel/mp.h>
@@ -50,63 +51,25 @@ struct thread_stats thread_stats[SMP_MAX_CPUS];
 #define THREAD_TICK_RATE_MS (THREAD_TICK_RATE / 1000000u) // 10ms
 
 /* global thread list */
-static struct list_node thread_list;
+static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
 
 /* master thread spinlock */
 spin_lock_t thread_lock = SPIN_LOCK_INITIAL_VALUE;
 
-/* the run queue */
-static struct list_node run_queue[NUM_PRIORITIES];
-static uint32_t run_queue_bitmap;
-
-/* make sure the bitmap is large enough to cover our number of priorities */
-static_assert(NUM_PRIORITIES <= sizeof(run_queue_bitmap) * 8, "");
-
 /* the idle thread(s) (statically allocated) */
-#if WITH_SMP
-static thread_t _idle_threads[SMP_MAX_CPUS];
-#define idle_thread(cpu) (&_idle_threads[cpu])
-#else
-static thread_t _idle_thread;
-#define idle_thread(cpu) (&_idle_thread)
-#endif
+thread_t idle_threads[SMP_MAX_CPUS];
 
 /* local routines */
-static void thread_resched(void);
+void thread_resched(void);
 static int idle_thread_routine(void *) __NO_RETURN;
 static void thread_exit_locked(thread_t *current_thread, int retcode) __NO_RETURN;
-static void thread_block(void);
-static void thread_unblock(thread_t *t, bool resched);
+
+/* scheduler */
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
 /* preemption timer */
 static timer_t preempt_timer[SMP_MAX_CPUS];
 #endif
-
-/* run queue manipulation */
-static void insert_in_run_queue_head(thread_t *t)
-{
-    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(t->state == THREAD_READY);
-    DEBUG_ASSERT(!list_in_list(&t->queue_node));
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-
-    list_add_head(&run_queue[t->priority], &t->queue_node);
-    run_queue_bitmap |= (1<<t->priority);
-}
-
-static void insert_in_run_queue_tail(thread_t *t)
-{
-    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(t->state == THREAD_READY);
-    DEBUG_ASSERT(!list_in_list(&t->queue_node));
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-
-    list_add_tail(&run_queue[t->priority], &t->queue_node);
-    run_queue_bitmap |= (1<<t->priority);
-}
 
 static void init_thread_struct(thread_t *t, const char *name)
 {
@@ -265,21 +228,6 @@ status_t thread_set_real_time(thread_t *t)
     return NO_ERROR;
 }
 
-static bool thread_is_realtime(thread_t *t)
-{
-    return (t->flags & THREAD_FLAG_REAL_TIME) && t->priority > DEFAULT_PRIORITY;
-}
-
-static bool thread_is_idle(thread_t *t)
-{
-    return !!(t->flags & THREAD_FLAG_IDLE);
-}
-
-static bool thread_is_real_time_or_idle(thread_t *t)
-{
-    return !!(t->flags & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE));
-}
-
 /**
  * @brief  Make a suspended thread executable.
  *
@@ -295,22 +243,17 @@ status_t thread_resume(thread_t *t)
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(t->state != THREAD_DEATH);
 
-    bool resched = false;
     bool ints_disabled = arch_ints_disabled();
+    bool resched = false;
+    if (!ints_disabled) /* HACK, don't resced into bootstrap thread before idle thread is set up */
+        resched = true;
+
     THREAD_LOCK(state);
     if (t->state == THREAD_SUSPENDED) {
-        t->state = THREAD_READY;
-        insert_in_run_queue_head(t);
-        if (!ints_disabled) /* HACK, don't resced into bootstrap thread before idle thread is set up */
-            resched = true;
+        sched_unblock(t, resched);
     }
 
-    mp_reschedule(MP_CPU_ALL_BUT_LOCAL, 0);
-
     THREAD_UNLOCK(state);
-
-    if (resched)
-        thread_yield();
 
     return NO_ERROR;
 }
@@ -530,9 +473,9 @@ void thread_kill(thread_t *t, bool block)
         case THREAD_SLEEPING:
             /* thread is sleeping */
             if (t->interruptable) {
-                t->state = THREAD_READY;
                 t->blocked_status = ERR_INTERRUPTED;
-                insert_in_run_queue_head(t);
+
+                sched_unblock(t, false);
             }
             break;
         case THREAD_DEATH:
@@ -576,36 +519,6 @@ __NO_RETURN static int idle_thread_routine(void *arg)
         arch_idle();
 }
 
-static thread_t *get_top_thread(int cpu)
-{
-    thread_t *newthread;
-    uint32_t local_run_queue_bitmap = run_queue_bitmap;
-
-    while (local_run_queue_bitmap) {
-        /* find the first (remaining) queue with a thread in it */
-        uint next_queue = HIGHEST_PRIORITY - __builtin_clz(local_run_queue_bitmap)
-                          - (sizeof(run_queue_bitmap) * 8 - NUM_PRIORITIES);
-
-        list_for_every_entry(&run_queue[next_queue], newthread, thread_t, queue_node) {
-#if WITH_SMP
-            if (newthread->pinned_cpu < 0 || newthread->pinned_cpu == cpu)
-#endif
-            {
-                list_delete(&newthread->queue_node);
-
-                if (list_is_empty(&run_queue[next_queue]))
-                    run_queue_bitmap &= ~(1<<next_queue);
-
-                return newthread;
-            }
-        }
-
-        local_run_queue_bitmap &= ~(1<<next_queue);
-    }
-    /* no threads to run, select the idle thread for this cpu */
-    return idle_thread(cpu);
-}
-
 /**
  * @brief  Cause another thread to be executed.
  *
@@ -616,7 +529,7 @@ static thread_t *get_top_thread(int cpu)
  * This is probably not the function you're looking for. See
  * thread_yield() instead.
  */
-static void thread_resched(void)
+void thread_resched(void)
 {
     thread_t *oldthread;
     thread_t *newthread;
@@ -630,7 +543,7 @@ static void thread_resched(void)
 
     THREAD_STATS_INC(reschedules);
 
-    newthread = get_top_thread(cpu);
+    newthread = sched_get_top_thread(cpu);
 
     DEBUG_ASSERT(newthread);
 
@@ -675,7 +588,7 @@ static void thread_resched(void)
         thread_stats[cpu].idle_time += now - thread_stats[cpu].last_idle_timestamp;
     }
     if (thread_is_idle(newthread)) {
-        thread_stats[cpu].last_idle_timestamp = current_time_hires();
+        thread_stats[cpu].last_idle_timestamp = now;
     }
 #endif
 
@@ -760,7 +673,7 @@ static void thread_resched(void)
  */
 void thread_yield(void)
 {
-    thread_t *current_thread = get_current_thread();
+    __UNUSED thread_t *current_thread = get_current_thread();
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
@@ -770,13 +683,7 @@ void thread_yield(void)
 
     THREAD_STATS_INC(yields);
 
-    /* we are yielding the cpu, so stick ourselves into the tail of the run queue and reschedule */
-    current_thread->state = THREAD_READY;
-    current_thread->remaining_time_slice = 0;
-    if (likely(!thread_is_idle(current_thread))) { /* idle thread doesn't go in the run queue */
-        insert_in_run_queue_tail(current_thread);
-    }
-    thread_resched();
+    sched_yield();
 
     THREAD_UNLOCK(state);
 }
@@ -799,7 +706,7 @@ void thread_yield(void)
  */
 void thread_preempt(bool interrupt)
 {
-    thread_t *current_thread = get_current_thread();
+    __UNUSED thread_t *current_thread = get_current_thread();
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
@@ -818,54 +725,9 @@ void thread_preempt(bool interrupt)
 
     THREAD_LOCK(state);
 
-    /* we are being preempted, so we get to go back into the front of the run queue if we have quantum left */
-    current_thread->state = THREAD_READY;
-    if (likely(!thread_is_idle(current_thread))) { /* idle thread doesn't go in the run queue */
-        if (current_thread->remaining_time_slice > 0)
-            insert_in_run_queue_head(current_thread);
-        else
-            insert_in_run_queue_tail(current_thread); /* if we're out of quantum, go to the tail of the queue */
-    }
-    thread_resched();
+    sched_preempt();
 
     THREAD_UNLOCK(state);
-}
-
-/**
- * @brief  Suspend thread until woken.
- *
- * This function schedules another thread to execute.  This function does not
- * return until the thread is made runable again by some other module.
- *
- * You probably don't want to call this function directly; it's meant to be called
- * from other modules, such as mutex, which will presumably set the thread's
- * state to blocked and add it to some queue or another.
- */
-static void thread_block(void)
-{
-    __UNUSED thread_t *current_thread = get_current_thread();
-
-    DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(current_thread->state == THREAD_BLOCKED);
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    DEBUG_ASSERT(!thread_is_idle(current_thread));
-
-    /* we are blocking on something. the blocking code should have already stuck us on a queue */
-    thread_resched();
-}
-
-static void thread_unblock(thread_t *t, bool resched)
-{
-    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(t->state == THREAD_BLOCKED);
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    DEBUG_ASSERT(!thread_is_idle(t));
-
-    t->state = THREAD_READY;
-    insert_in_run_queue_head(t);
-    mp_reschedule(MP_CPU_ALL_BUT_LOCAL, 0);
-    if (resched)
-        thread_resched();
 }
 
 enum handler_return thread_timer_tick(void)
@@ -905,9 +767,9 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, v
         return INT_NO_RESCHEDULE;
     }
 
-    t->state = THREAD_READY;
     t->blocked_status = NO_ERROR;
-    insert_in_run_queue_head(t);
+
+    sched_unblock(t, false);
 
     spin_unlock(&thread_lock);
 
@@ -954,7 +816,7 @@ status_t thread_sleep_etc(lk_time_t delay, bool interruptable)
     current_thread->blocked_status = NO_ERROR;
 
     current_thread->interruptable = interruptable;
-    thread_resched();
+    sched_block();
     current_thread->interruptable = false;
 
     blocked_status = current_thread->blocked_status;
@@ -1023,20 +885,13 @@ void thread_construct_first(thread_t *t, const char *name)
  */
 void thread_init_early(void)
 {
-    int i;
-
     DEBUG_ASSERT(arch_curr_cpu_num() == 0);
 
-    /* initialize the run queues */
-    for (i=0; i < NUM_PRIORITIES; i++)
-        list_initialize(&run_queue[i]);
-
-    /* initialize the thread list */
-    list_initialize(&thread_list);
-
     /* create a thread to cover the current running state */
-    thread_t *t = idle_thread(0);
+    thread_t *t = &idle_threads[0];
     thread_construct_first(t, "bootstrap");
+
+    sched_init_early();
 }
 
 /**
@@ -1088,9 +943,7 @@ void thread_set_priority(int priority)
         priority = HIGHEST_PRIORITY;
     current_thread->priority = priority;
 
-    current_thread->state = THREAD_READY;
-    insert_in_run_queue_head(current_thread);
-    thread_resched();
+    sched_preempt();
 
     THREAD_UNLOCK(state);
 }
@@ -1161,13 +1014,13 @@ thread_t *thread_create_idle_thread(uint cpu_num)
     DEBUG_ASSERT(cpu_num != 0 && cpu_num < SMP_MAX_CPUS);
 
     /* Shouldn't be initialized yet */
-    DEBUG_ASSERT(idle_thread(cpu_num)->magic != THREAD_MAGIC);
+    DEBUG_ASSERT(idle_threads[cpu_num].magic != THREAD_MAGIC);
 
     char name[16];
     snprintf(name, sizeof(name), "idle %u", cpu_num);
 
     thread_t *t = thread_create_etc(
-            idle_thread(cpu_num), name,
+            &idle_threads[cpu_num], name,
             idle_thread_routine, NULL,
             IDLE_PRIORITY,
             NULL, DEFAULT_STACK_SIZE,
@@ -1240,7 +1093,7 @@ void dump_thread(thread_t *t, bool full_dump)
         dprintf(INFO, "\tstate %s, curr_cpu %d, pinned_cpu %d, priority %d, remaining time slice %" PRIu64 "\n",
                 thread_state_to_str(t->state), t->curr_cpu, t->pinned_cpu, t->priority, t->remaining_time_slice);
 #else
-        dprintf(INFO, "\tstate %s, priority %d, remaining quantum %" PRIu64 "\n",
+        dprintf(INFO, "\tstate %s, priority %d, remaining time slice %" PRIu64 "\n",
                 thread_state_to_str(t->state), t->priority, t->remaining_time_slice);
 #endif
         dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
@@ -1380,7 +1233,7 @@ status_t wait_queue_block(wait_queue_t *wait, lk_time_t timeout)
         timer_set_oneshot(&timer, timeout, wait_queue_timeout_handler, (void *)current_thread);
     }
 
-    thread_resched();
+    sched_block();
 
     /* we don't really know if the timer fired or not, so it's better safe to try to cancel it */
     if (timeout != INFINITE_TIME) {
@@ -1409,8 +1262,6 @@ int wait_queue_wake_one(wait_queue_t *wait, bool reschedule, status_t wait_queue
     thread_t *t;
     int ret = 0;
 
-    thread_t *current_thread = get_current_thread();
-
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
@@ -1419,25 +1270,12 @@ int wait_queue_wake_one(wait_queue_t *wait, bool reschedule, status_t wait_queue
     if (t) {
         wait->count--;
         DEBUG_ASSERT(t->state == THREAD_BLOCKED);
-        t->state = THREAD_READY;
         t->blocked_status = wait_queue_error;
         t->blocking_wait_queue = NULL;
 
-        /* if we're instructed to reschedule, stick the current thread on the head
-         * of the run queue first, so that the newly awakened thread gets a chance to run
-         * before the current one, but the current one doesn't get unnecessarilly punished.
-         */
-        if (reschedule) {
-            current_thread->state = THREAD_READY;
-            insert_in_run_queue_head(current_thread);
-        }
-        insert_in_run_queue_head(t);
-        mp_reschedule(MP_CPU_ALL_BUT_LOCAL, 0);
-        if (reschedule) {
-            thread_resched();
-        }
-        ret = 1;
+        sched_unblock(t, reschedule);
 
+        ret = 1;
     }
 
     return ret;
@@ -1463,41 +1301,32 @@ int wait_queue_wake_all(wait_queue_t *wait, bool reschedule, status_t wait_queue
     thread_t *t;
     int ret = 0;
 
-    thread_t *current_thread = get_current_thread();
-
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    if (reschedule && wait->count > 0) {
-        /* if we're instructed to reschedule, stick the current thread on the head
-         * of the run queue first, so that the newly awakened threads get a chance to run
-         * before the current one, but the current one doesn't get unnecessarilly punished.
-         */
-        current_thread->state = THREAD_READY;
-        insert_in_run_queue_head(current_thread);
-    }
+    if (wait->count == 0)
+        return 0;
+
+    struct list_node list = LIST_INITIAL_VALUE(list);
 
     /* pop all the threads off the wait queue into the run queue */
     while ((t = list_remove_head_type(&wait->list, thread_t, queue_node))) {
         wait->count--;
+
         DEBUG_ASSERT(t->state == THREAD_BLOCKED);
-        t->state = THREAD_READY;
         t->blocked_status = wait_queue_error;
         t->blocking_wait_queue = NULL;
 
-        insert_in_run_queue_head(t);
+        list_add_tail(&list, &t->queue_node);
+
         ret++;
     }
 
+    DEBUG_ASSERT(ret > 0);
     DEBUG_ASSERT(wait->count == 0);
 
-    if (ret > 0) {
-        mp_reschedule(MP_CPU_ALL_BUT_LOCAL, 0);
-        if (reschedule) {
-            thread_resched();
-        }
-    }
+    sched_unblock_list(&list, reschedule);
 
     return ret;
 }
@@ -1552,10 +1381,9 @@ status_t thread_unblock_from_wait_queue(thread_t *t, status_t wait_queue_error)
     list_delete(&t->queue_node);
     t->blocking_wait_queue->count--;
     t->blocking_wait_queue = NULL;
-    t->state = THREAD_READY;
     t->blocked_status = wait_queue_error;
-    insert_in_run_queue_head(t);
-    mp_reschedule(MP_CPU_ALL_BUT_LOCAL, 0);
+
+    sched_unblock(t, false);
 
     return NO_ERROR;
 }
