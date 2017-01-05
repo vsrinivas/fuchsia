@@ -85,7 +85,7 @@ void FakeWavReader::WriteToSocket() {
 
     if (status == ERR_SHOULD_WAIT) {
       wait_id_ = fidl::GetDefaultAsyncWaiter()->AsyncWait(
-          socket_.get(), MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+          socket_.get(), MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
           MX_TIME_INFINITE, FakeWavReader::WriteToSocketStatic, this);
       return;
     }

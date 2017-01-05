@@ -114,7 +114,7 @@ void FidlReader::ReadFromSocket() {
 
     if (status == ERR_SHOULD_WAIT) {
       fidl::GetDefaultAsyncWaiter()->AsyncWait(
-          socket_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+          socket_.get(), MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
           MX_TIME_INFINITE, FidlReader::ReadFromSocketStatic, this);
       break;
     }
