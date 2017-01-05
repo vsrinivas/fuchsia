@@ -55,7 +55,7 @@ void Tracer::Start(TraceOptionsPtr options,
   reader_.reset(new reader::TraceReader(record_consumer, error_handler));
 
   handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-      this, socket_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
+      this, socket_.get(), MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED);
 }
 
 void Tracer::Stop() {
@@ -69,9 +69,9 @@ void Tracer::Stop() {
 void Tracer::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   FTL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
-  if (pending & MX_SIGNAL_READABLE) {
+  if (pending & MX_SOCKET_READABLE) {
     DrainSocket();
-  } else if (pending & MX_SIGNAL_PEER_CLOSED) {
+  } else if (pending & MX_SOCKET_PEER_CLOSED) {
     Done();
   } else {
     FTL_CHECK(false);

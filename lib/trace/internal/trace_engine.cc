@@ -106,7 +106,7 @@ void TraceEngine::StartTracing(TraceFinishedCallback finished_callback) {
   WriteProcessDescription(g_process_koid, mtl::GetCurrentProcessName());
 
   fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-      this, fence_.get(), MX_EPAIR_CLOSED);
+      this, fence_.get(), MX_EPAIR_PEER_CLOSED);
 }
 
 void TraceEngine::StopTracing() {
@@ -443,7 +443,7 @@ TraceEngine::Payload TraceEngine::AllocateRecord(size_t num_bytes) {
 }
 
 void TraceEngine::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  FTL_DCHECK(pending & MX_EPAIR_CLOSED);
+  FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
 
   StopTracing(TraceDisposition::kConnectionLost, true);
 }

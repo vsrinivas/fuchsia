@@ -25,17 +25,17 @@ Tracee::TransferStatus WriteBufferToSocket(const uint8_t* buffer,
         0) {
       if (status == ERR_SHOULD_WAIT) {
         mx_signals_t pending = 0;
-        status = socket.wait_one(MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+        status = socket.wait_one(MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                  MX_TIME_INFINITE, &pending);
         if (status < 0) {
           FTL_LOG(ERROR) << "Wait on socket failed: " << status;
           return Tracee::TransferStatus::kCorrupted;
         }
 
-        if (pending & MX_SIGNAL_WRITABLE)
+        if (pending & MX_SOCKET_WRITABLE)
           continue;
 
-        if (pending & MX_SIGNAL_PEER_CLOSED) {
+        if (pending & MX_SOCKET_PEER_CLOSED) {
           FTL_LOG(ERROR) << "Peer closed while writing to socket";
           return Tracee::TransferStatus::kReceiverDead;
         }
@@ -112,7 +112,7 @@ bool Tracee::Start(size_t buffer_size,
   start_callback_ = std::move(start_callback);
   stop_callback_ = std::move(stop_callback);
   fence_handler_key_ = mtl::MessageLoop::GetCurrent()->AddHandler(
-      this, fence_.get(), MX_EPAIR_CLOSED);
+      this, fence_.get(), MX_EPAIR_PEER_CLOSED);
   return true;
 }
 
@@ -144,7 +144,7 @@ void Tracee::OnProviderStarted(bool success) {
 }
 
 void Tracee::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  FTL_DCHECK(pending & MX_EPAIR_CLOSED);
+  FTL_DCHECK(pending & MX_EPAIR_PEER_CLOSED);
   FTL_DCHECK(state_ == State::kStarted || state_ == State::kStartAcknowledged ||
              state_ == State::kStopping);
   FTL_DCHECK(stop_callback_);
