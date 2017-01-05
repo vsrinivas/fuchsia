@@ -103,12 +103,11 @@ mx_status_t handle_watcher_schedule_request(void) {
     }
     iostate_t* ios = (iostate_t*)results[i].cookie;
     mx_signals_t satisfied = results[i].observed;
-    debug_socket("watcher: [%d] sockfd=%d, satisfied=0x%x (%s%s%s%s%s)\n", i,
+    debug_socket("watcher: [%d] sockfd=%d, satisfied=0x%x (%s%s%s%s)\n", i,
                  ios->sockfd, satisfied,
                  (satisfied & MX_SIGNAL_READABLE) ? "R" : "",
                  (satisfied & MX_SIGNAL_WRITABLE) ? "W" : "",
                  (satisfied & MX_SIGNAL_PEER_CLOSED) ? "C" : "",
-                 (satisfied & MX_SIGNAL_SIGNALED) ? "S" : "",
                  (satisfied & MXSIO_SIGNAL_HALFCLOSED) ? "H" : "");
 
     mx_signals_t watching_signals = ios->watching_signals;

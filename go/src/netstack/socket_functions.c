@@ -334,8 +334,7 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
   msg->datalen = 0;
 
   fd_event_set(ios->sockfd, EVENT_EXCEPT);
-  socket_signals_set(ios, MX_SIGNAL_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED |
-                     MX_SIGNAL_SIGNALED);
+  socket_signals_set(ios, MX_SIGNAL_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED);
 
   if (ios->handle_type == HANDLE_TYPE_DGRAM) {
     schedule_w(ios);
@@ -510,8 +509,7 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
   msg->datalen = 0;
 
   fd_event_set(ios_new->sockfd, EVENT_EXCEPT);
-  socket_signals_set(ios_new, MX_SIGNAL_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED |
-                     MX_SIGNAL_SIGNALED);
+  socket_signals_set(ios_new, MX_SIGNAL_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED);
 
   schedule_rw(ios_new);
   return NO_ERROR;
