@@ -322,13 +322,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(
       SendError(network::NETWORK_ERR_INVALID_RESPONSE);
       return;
     }
-    if (!(status_code_ >= 200 && status_code_ <= 299) && status_code_ != 301 &&
-        status_code_ != 302 && status_code_ != 307 && status_code_ != 308) {
-      // TODO(toshik): handle more status codes
-      FTL_LOG(ERROR) << "ReadStatusLine: Status code " << status_code_;
-      SendError(network::NETWORK_ERR_NOT_IMPLEMENTED);
-      return;
-    }
+    // TODO(toshik): we don't treat any status code as an NETWORK_ERR for now
 
     asio::async_read_until(
         socket_, response_buf_, "\r\n\r\n",
