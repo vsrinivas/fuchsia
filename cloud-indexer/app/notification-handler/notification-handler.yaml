@@ -1,9 +1,0 @@
-service: notification-handler
-runtime: custom
-vm: true
-api_version: 1
-
-# Multiple instances are not supported because Pub/Sub will broadcast the same
-# messages to every instance.
-manual_scaling:
-  instances: 1

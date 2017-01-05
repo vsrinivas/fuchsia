@@ -1,9 +1,0 @@
-name: parser
-dependencies:
-  collection: any
-  modular:
-    path: ../dart-packages/modular
-  yaml: any
-  path: any
-dev_dependencies:
-  test: ^0.12.11

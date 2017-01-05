@@ -1,6 +1,0 @@
-dispatch:
-- url: "*/notification_handler/*"
-  module: notification-handler
-
-- url: "*/*"
-  module: default
