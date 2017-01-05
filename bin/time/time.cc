@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   mx_status_t status =
-      mx_handle_wait_one(handle, MX_SIGNAL_SIGNALED, MX_TIME_INFINITE, NULL);
+      mx_handle_wait_one(handle, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
 
   gettimeofday(&endtimeval, NULL);
 
