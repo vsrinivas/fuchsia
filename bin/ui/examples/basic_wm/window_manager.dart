@@ -33,7 +33,7 @@ class WindowTitleBar extends StatelessWidget {
       child: new Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          new Flexible(
+          new Expanded(
             child: new GestureDetector(
               onTap: onActivate,
               onPanStart: (DragStartDetails details) {
@@ -170,7 +170,7 @@ class _WindowFrameState extends State<WindowFrame> {
                   onClosed: _handleClose,
                   onMoved: _handleMove,
                 ),
-                new Flexible(child: config.child),
+                new Expanded(child: config.child),
               ],
             ),
           ),
