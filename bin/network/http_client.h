@@ -334,7 +334,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadStatusLine(
         socket_, response_buf_, "\r\n\r\n",
         std::bind(&HTTPClient<T>::OnReadHeaders, this, std::placeholders::_1));
   } else {
-    FTL_LOG(ERROR) << "ReadStatusLine: " << err;
+    FTL_LOG(ERROR) << "ReadStatusLine: " << err.message();
   }
 }
 
@@ -447,7 +447,7 @@ void URLLoaderImpl::HTTPClient<T>::OnReadHeaders(const asio::error_code& err) {
           std::bind(&HTTPClient<T>::OnReadBody, this, std::placeholders::_1));
     }
   } else {
-    FTL_LOG(ERROR) << "ReadHeaders: " << err;
+    FTL_LOG(ERROR) << "ReadHeaders: " << err.message();
   }
 }
 
