@@ -293,6 +293,7 @@ fi
 ### fset: set fuchsia build properties
 
 function fset-usage() {
+  # Note: if updating the syntax here please update zsh-completion/_fset to match
   cat >&2 <<END
 Usage: fset x86-64|arm64 [--release] [--modules m1,m2...]
                          [--goma|--no-goma] [--no-ensure-goma]
@@ -694,3 +695,32 @@ function fmkbootloader() {
   ) && \
     echo "Bootloader loaded to $1"
 }
+
+
+if [[ -n "${ZSH_VERSION}" ]]; then
+  ### Zsh Completion
+  fpath+=${FUCHSIA_SCRIPTS_DIR}/zsh-completion
+  autoload -U compinit
+  compinit
+
+  ### Directory shortcuts for Jiri projects
+  # a mapping of jiri project names to paths will be in the associative array fuchsia_projects
+  # a directory shortcut ~f-projectname will be present for each project with / replaced by -
+  function regenerate_fuchsia_projects() {
+    local _update_file=${FUCHSIA_DIR}/.jiri_root/update_history/latest
+    local _projects_file=${FUCHSIA_DIR}/.jiri_root/projects.zsh
+    if [[ -e $_update_file ]]; then
+      if [ $_update_file -nt $_projects_file -o ! -e $_projects_file ]; then
+        grep '<project name=' $_update_file | \
+          sed -e 's, *<project name="\([^"]*\)" path="\([^"]*\)".*,fuchsia_projects+=(\1 \2),' > \
+          $_projects_file
+      fi
+      . $_projects_file
+    fi
+  }
+  typeset -A fuchsia_projects
+  regenerate_fuchsia_projects
+  for _p in "${(@k)fuchsia_projects}"; do
+    hash -d f-${_p//\//-}=$FUCHSIA_DIR/$fuchsia_projects[$_p]
+  done
+fi

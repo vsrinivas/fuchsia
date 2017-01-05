@@ -1,0 +1,8 @@
+#compdef fbuild-sysroot fbuild-sysroot-if-changed
+
+# complete fbuild-sysroot arguments
+_arguments '-c[clean]' '-r[release]' \
+  '-d[destination dir]:directory:_files -/' \
+  '-o[out dir]:directory:_files -/' \
+  '-t[target arch]:arch:(x86-64 aarch64)'
+

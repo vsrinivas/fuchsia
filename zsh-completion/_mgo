@@ -1,0 +1,4 @@
+#compdef mgo
+
+# complete mgo with directories under ${MAGENTA_DIR}
+_files -/ -W ${MAGENTA_DIR} mgo
