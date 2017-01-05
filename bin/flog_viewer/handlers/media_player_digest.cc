@@ -55,16 +55,16 @@ std::shared_ptr<Accumulator> MediaPlayerDigest::GetAccumulator() {
   return accumulator_;
 }
 
-void MediaPlayerDigest::ReceivedDemuxDescription(
+void MediaPlayerDigest::ReceivedSourceDescription(
     fidl::Array<media::MediaTypePtr> stream_types) {
   if (accumulator_->state_ != MediaPlayerAccumulator::State::kInitial) {
-    ReportProblem() << "ReceivedDemuxDescription out of sequence";
+    ReportProblem() << "ReceivedSourceDescription out of sequence";
   } else {
     accumulator_->state_ = MediaPlayerAccumulator::State::kDescriptionReceived;
   }
 
   if (accumulator_->stream_types_) {
-    ReportProblem() << "Duplicate ReceivedDemuxDescription";
+    ReportProblem() << "Duplicate ReceivedSourceDescription";
   }
 
   accumulator_->stream_types_ = std::move(stream_types);

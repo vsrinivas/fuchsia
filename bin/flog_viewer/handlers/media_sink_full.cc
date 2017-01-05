@@ -25,17 +25,11 @@ void MediaSinkFull::HandleMessage(fidl::Message* message) {
 }
 
 void MediaSinkFull::Config(media::MediaTypePtr input_type,
-                           media::MediaTypePtr output_type,
-                           uint64_t consumer_address,
-                           uint64_t producer_address) {
+                           media::MediaTypePtr output_type) {
   std::cout << entry() << "MediaSink.Config" << std::endl;
   std::cout << indent;
   std::cout << begl << "input_type: " << input_type;
   std::cout << begl << "output_type: " << output_type;
-  std::cout << begl << "consumer_address: " << *AsChannel(consumer_address)
-            << std::endl;
-  std::cout << begl << "producer_address: " << *AsChannel(producer_address)
-            << std::endl;
   std::cout << outdent;
 }
 

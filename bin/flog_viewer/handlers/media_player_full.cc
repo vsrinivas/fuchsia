@@ -24,9 +24,9 @@ void MediaPlayerFull::HandleMessage(fidl::Message* message) {
   stub_.Accept(message);
 }
 
-void MediaPlayerFull::ReceivedDemuxDescription(
+void MediaPlayerFull::ReceivedSourceDescription(
     fidl::Array<media::MediaTypePtr> stream_types) {
-  std::cout << entry() << "MediaPlayer.ReceivedDemuxDescription" << std::endl;
+  std::cout << entry() << "MediaPlayer.ReceivedSourceDescription" << std::endl;
   std::cout << indent;
   std::cout << begl << "stream_types: " << stream_types;
   std::cout << outdent;

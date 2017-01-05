@@ -32,9 +32,7 @@ class MediaSinkDigest : public ChannelHandler,
  private:
   // MediaSinkChannel implementation.
   void Config(media::MediaTypePtr input_type,
-              media::MediaTypePtr output_type,
-              uint64_t consumer_address,
-              uint64_t producer_address) override;
+              media::MediaTypePtr output_type) override;
 
  private:
   media::logs::MediaSinkChannelStub stub_;
@@ -53,8 +51,6 @@ class MediaSinkAccumulator : public Accumulator {
  private:
   media::MediaTypePtr input_type_;
   media::MediaTypePtr output_type_;
-  std::shared_ptr<Channel> consumer_channel_;
-  std::shared_ptr<Channel> producer_channel_;
 
   friend class MediaSinkDigest;
 };

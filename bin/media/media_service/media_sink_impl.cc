@@ -61,11 +61,8 @@ MediaSinkImpl::MediaSinkImpl(
 
           renderer_->SetMediaType(MediaType::From(stream_type_));
 
-          // TODO(dalesat): Update channel definition.
-          FLOG(log_channel_,
-               Config(std::move(original_media_type_),
-                      MediaType::From(stream_type_), FLOG_ADDRESS(nullptr),
-                      FLOG_ADDRESS(nullptr)));
+          FLOG(log_channel_, Config(std::move(original_media_type_),
+                                    MediaType::From(stream_type_)));
 
           // Not needed anymore.
           original_media_type_.reset();

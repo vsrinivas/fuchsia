@@ -65,8 +65,7 @@ MediaPlayerImpl::MediaPlayerImpl(
     this, audio_renderer_handle = std::move(audio_renderer_handle),
     video_renderer_handle = std::move(video_renderer_handle)
   ](fidl::Array<MediaTypePtr> stream_types) mutable {
-    // TODO(dalesat): Update channel definition (s/Demux/Source).
-    FLOG(log_channel_, ReceivedDemuxDescription(stream_types.Clone()));
+    FLOG(log_channel_, ReceivedSourceDescription(stream_types.Clone()));
     CreateSinks(std::move(stream_types), std::move(audio_renderer_handle),
                 std::move(video_renderer_handle));
   }));

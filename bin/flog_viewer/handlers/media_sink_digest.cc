@@ -30,18 +30,12 @@ std::shared_ptr<Accumulator> MediaSinkDigest::GetAccumulator() {
 }
 
 void MediaSinkDigest::Config(media::MediaTypePtr input_type,
-                             media::MediaTypePtr output_type,
-                             uint64_t consumer_address,
-                             uint64_t producer_address) {
+                             media::MediaTypePtr output_type) {
   FTL_DCHECK(input_type);
   FTL_DCHECK(output_type);
 
   accumulator_->input_type_ = std::move(input_type);
   accumulator_->output_type_ = std::move(output_type);
-  accumulator_->consumer_channel_ = AsChannel(consumer_address);
-  accumulator_->consumer_channel_->SetHasParent();
-  accumulator_->producer_channel_ = AsChannel(producer_address);
-  accumulator_->producer_channel_->SetHasParent();
 }
 
 MediaSinkAccumulator::MediaSinkAccumulator() {}
@@ -53,22 +47,6 @@ void MediaSinkAccumulator::Print(std::ostream& os) {
   os << indent;
   os << begl << "input_type: " << input_type_;
   os << begl << "output_type: " << output_type_;
-
-  if (consumer_channel_) {
-    os << begl << "consumer: " << *consumer_channel_ << " ";
-    FTL_DCHECK(consumer_channel_->resolved());
-    consumer_channel_->PrintAccumulator(os);
-  } else {
-    os << begl << "consumer: <none>" << std::endl;
-  }
-
-  if (producer_channel_) {
-    os << begl << "producer: " << *producer_channel_ << " ";
-    FTL_DCHECK(producer_channel_->resolved());
-    producer_channel_->PrintAccumulator(os);
-  } else {
-    os << begl << "producer: <none>" << std::endl;
-  }
 
   Accumulator::Print(os);
   os << outdent;

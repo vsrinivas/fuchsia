@@ -23,9 +23,7 @@ class MediaSinkFull : public ChannelHandler,
 
   // MediaSinkChannel implementation.
   void Config(media::MediaTypePtr input_type,
-              media::MediaTypePtr output_type,
-              uint64_t consumer_address,
-              uint64_t producer_address) override;
+              media::MediaTypePtr output_type) override;
 
  private:
   media::logs::MediaSinkChannelStub stub_;

@@ -9,7 +9,7 @@ import "apps/media/services/timelines.fidl";
 
 [ServiceName="media::logs::MediaPlayerChannel"]
 interface MediaPlayerChannel {
-  ReceivedDemuxDescription(array<MediaType> stream_types);
+  ReceivedSourceDescription(array<MediaType> stream_types);
   StreamsPrepared();
   Flushed();
   Primed();

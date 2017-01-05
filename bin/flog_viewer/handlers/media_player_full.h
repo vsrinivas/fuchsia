@@ -24,7 +24,7 @@ class MediaPlayerFull : public ChannelHandler,
 
  private:
   // MediaPlayerChannel implementation.
-  void ReceivedDemuxDescription(
+  void ReceivedSourceDescription(
       fidl::Array<media::MediaTypePtr> stream_types) override;
 
   void StreamsPrepared() override;

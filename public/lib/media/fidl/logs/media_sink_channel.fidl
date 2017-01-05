@@ -8,8 +8,5 @@ import "apps/media/services/media_types.fidl";
 
 [ServiceName="media::logs::MediaSinkChannel"]
 interface MediaSinkChannel {
-  Config(MediaType input_type,
-      MediaType output_type,
-      uint64 consumer_address,
-      uint64 producer_address);
+  Config(MediaType input_type, MediaType output_type);
 };
