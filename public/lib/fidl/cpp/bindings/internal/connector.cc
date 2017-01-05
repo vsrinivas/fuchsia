@@ -49,7 +49,7 @@ bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
     return false;
 
   mx_signals_t pending = MX_SIGNAL_NONE;
-  mx_status_t rv = channel_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+  mx_status_t rv = channel_.wait_one(MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                      timeout == ftl::TimeDelta::Max()
                                          ? MX_TIME_INFINITE
                                          : timeout.ToNanoseconds(),
@@ -60,13 +60,13 @@ bool Connector::WaitForIncomingMessage(ftl::TimeDelta timeout) {
     NotifyError();
     return false;
   }
-  if (pending & MX_SIGNAL_READABLE) {
+  if (pending & MX_CHANNEL_READABLE) {
     bool ok = ReadSingleMessage(&rv);
     FTL_ALLOW_UNUSED_LOCAL(ok);
     return (rv == NO_ERROR);
   }
 
-  FTL_DCHECK(pending & MX_SIGNAL_PEER_CLOSED);
+  FTL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
   NotifyError();
   return false;
 }
@@ -125,7 +125,7 @@ void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
   }
   FTL_DCHECK(!error_);
 
-  if (pending & MX_SIGNAL_READABLE) {
+  if (pending & MX_CHANNEL_READABLE) {
     // If the channel is readable, we drain one message out of the channel and
     // then return to the event loop to avoid starvation.
 
@@ -139,7 +139,7 @@ void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
     FTL_DCHECK(rv == NO_ERROR || rv == ERR_SHOULD_WAIT);
     WaitToReadMore();
 
-  } else if (pending & MX_SIGNAL_PEER_CLOSED) {
+  } else if (pending & MX_CHANNEL_PEER_CLOSED) {
     // Notice that we don't notify an error until we've drained all the messages
     // out of the channel.
     NotifyError();
@@ -150,7 +150,7 @@ void Connector::OnHandleReady(mx_status_t result, mx_signals_t pending) {
 void Connector::WaitToReadMore() {
   FTL_CHECK(!async_wait_id_);
   async_wait_id_ = waiter_->AsyncWait(
-      channel_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+      channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
       MX_TIME_INFINITE, &Connector::CallOnHandleReady, this);
 }
 

@@ -35,7 +35,7 @@ bool ReadTextMessage(const mx::channel& handle, std::string* text) {
         return false;
       }
       rv = mx_handle_wait_one(handle.get(),
-                              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                              MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                               MX_TIME_INFINITE, nullptr);
       if (rv != NO_ERROR)
         return false;
