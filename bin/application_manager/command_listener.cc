@@ -22,7 +22,7 @@ CommandListener::CommandListener(ApplicationEnvironmentImpl* root_environment,
   FTL_DCHECK(command_channel_);
 
   handler_key_ = message_loop_->AddHandler(
-      this, command_channel_.get(), MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+      this, command_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
       ftl::TimeDelta::Max());
 }
 
@@ -31,7 +31,7 @@ CommandListener::~CommandListener() {
 };
 
 void CommandListener::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
-  if (pending & MX_SIGNAL_READABLE) {
+  if (pending & MX_CHANNEL_READABLE) {
     uint32_t num_bytes = 0;
     uint32_t num_handles = 0;
     mx_status_t status = command_channel_.read(0, nullptr, 0, &num_bytes,
@@ -46,7 +46,7 @@ void CommandListener::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
     }
     FTL_LOG(ERROR) << "Closing command channel due to read error.";
   } else {
-    FTL_DCHECK(pending & MX_SIGNAL_PEER_CLOSED);
+    FTL_DCHECK(pending & MX_CHANNEL_PEER_CLOSED);
   }
   Close();
 }
