@@ -74,9 +74,13 @@ void PcieUpstreamNode::ScanDownstream() {
         for (uint func_id = 0; func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE; ++func_id) {
             /* If we can find the config, and it has a valid vendor ID, go ahead
              * and scan it looking for a valid function. */
-            pcie_config_t* cfg = driver().GetConfig(managed_bus_id_, dev_id, func_id);
-            bool good_device = cfg && (pcie_read16(&cfg->base.vendor_id) != PCIE_INVALID_VENDOR_ID);
+            auto cfg = driver().GetConfig(managed_bus_id_, dev_id, func_id);
+            uint16_t vendor_id = cfg->Read(PciConfig::kVendorId);
+            bool good_device = cfg && (vendor_id != PCIE_INVALID_VENDOR_ID);
             if (good_device) {
+                uint16_t device_id = cfg->Read(PciConfig::kDeviceId);
+                LTRACEF("found valid device %04x:%04x at %02x:%02x.%01x\n",
+                        vendor_id, device_id, managed_bus_id_, dev_id, func_id);
                 /* Don't scan the function again if we have already discovered
                  * it.  If this function happens to be a bridge, go ahead and
                  * look under it for new devices. */
@@ -87,7 +91,7 @@ void PcieUpstreamNode::ScanDownstream() {
                 if (!downstream_device) {
                     auto new_dev = ScanDevice(cfg, dev_id, func_id);
                     if (new_dev == nullptr) {
-                        TRACEF("Failed to initialize device %02x:%02x:%01x; This is Very Bad.  "
+                        TRACEF("Failed to initialize device %02x:%02x.%01x; This is Very Bad.  "
                                "Device (and any of its children) will be inaccessible!\n",
                                managed_bus_id_, dev_id, func_id);
                         good_device = false;
@@ -104,13 +108,13 @@ void PcieUpstreamNode::ScanDownstream() {
              * config's header type indicates that this is not a multi-function
              * device, then just move on to the next device. */
             if (!func_id &&
-               (!good_device || !(pcie_read8(&cfg->base.header_type) & PCI_HEADER_TYPE_MULTI_FN)))
+               (!good_device || !(cfg->Read(PciConfig::kHeaderType) & PCI_HEADER_TYPE_MULTI_FN)))
                 break;
         }
     }
 }
 
-mxtl::RefPtr<PcieDevice> PcieUpstreamNode::ScanDevice(pcie_config_t* cfg,
+mxtl::RefPtr<PcieDevice> PcieUpstreamNode::ScanDevice(const PciConfig* cfg,
                                                       uint dev_id,
                                                       uint func_id) {
     DEBUG_ASSERT(cfg);
@@ -125,7 +129,7 @@ mxtl::RefPtr<PcieDevice> PcieUpstreamNode::ScanDevice(pcie_config_t* cfg,
     LTRACEF("Scanning new function at %02x:%02x.%01x\n", managed_bus_id_, dev_id, func_id);
 
     /* Is there an actual device here? */
-    uint16_t vendor_id = pcie_read16(&cfg->base.vendor_id);
+    uint16_t vendor_id = cfg->Read(PciConfig::kVendorId);
     if (vendor_id == PCIE_INVALID_VENDOR_ID) {
         LTRACEF("Bad vendor ID (0x%04hx) when looking for PCIe device at %02x:%02x.%01x\n",
                 vendor_id, managed_bus_id_, dev_id, func_id);
@@ -134,10 +138,9 @@ mxtl::RefPtr<PcieDevice> PcieUpstreamNode::ScanDevice(pcie_config_t* cfg,
 
     // Create the either a PcieBridge or a PcieDevice based on the configuration
     // header type.
-    uint8_t header_type = pcie_read8(&cfg->base.header_type) & PCI_HEADER_TYPE_MASK;
+    uint8_t header_type = cfg->Read(PciConfig::kHeaderType) & PCI_HEADER_TYPE_MASK;
     if (header_type == PCI_HEADER_TYPE_PCI_BRIDGE) {
-        auto bridge_cfg = reinterpret_cast<pci_to_pci_bridge_config_t*>(&cfg->base);
-        uint secondary_id = pcie_read8(&bridge_cfg->secondary_bus_id);
+        uint secondary_id = cfg->Read(PciConfig::kSecondaryBusId);
         return PcieBridge::Create(*this, dev_id, func_id, secondary_id);
     }
 

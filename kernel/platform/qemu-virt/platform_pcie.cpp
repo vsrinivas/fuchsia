@@ -113,7 +113,7 @@ static void arm_qemu_pcie_init_hook(uint level) {
 
         constexpr uint64_t MMIO_BASE = PCIE_MMIO_BASE_PHYS;
         constexpr uint64_t MMIO_SIZE = PCIE_MMIO_SIZE;
-        res = pcie->AddBusRegion(MMIO_BASE, MMIO_SIZE, PcieAddrSpace::MMIO);
+        res = pcie->AddBusRegion(MMIO_BASE, MMIO_SIZE, PciAddrSpace::MMIO);
         if (res != NO_ERROR) {
             TRACEF("WARNING - Failed to add initial PCIe MMIO region "
                    "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",
@@ -123,7 +123,7 @@ static void arm_qemu_pcie_init_hook(uint level) {
 
         constexpr uint64_t PIO_BASE = PCIE_PIO_BASE_PHYS;
         constexpr uint64_t PIO_SIZE = PCIE_PIO_SIZE;
-        res = pcie->AddBusRegion(PIO_BASE, PIO_SIZE, PcieAddrSpace::PIO);
+        res = pcie->AddBusRegion(PIO_BASE, PIO_SIZE, PciAddrSpace::PIO);
         if (res != NO_ERROR) {
             TRACEF("WARNING - Failed to add initial PCIe PIO region "
                    "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",

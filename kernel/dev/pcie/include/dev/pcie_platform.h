@@ -9,7 +9,7 @@
 #pragma once
 
 #include <dev/interrupt.h>
-#include <dev/pcie_constants.h>
+#include <dev/pci_common.h>
 #include <magenta/compiler.h>
 #include <magenta/errors.h>
 #include <sys/types.h>

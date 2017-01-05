@@ -19,6 +19,7 @@
 #include <mxtl/ref_ptr.h>
 #include <sys/types.h>
 
+class PciConfig;
 class PcieBridge : public PcieDevice,
                    public PcieUpstreamNode {
 public:
@@ -79,4 +80,5 @@ private:
     uint32_t io_base_;
     uint32_t io_limit_;
     bool     supports_32bit_pio_;
+    mxtl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
 };

@@ -13,21 +13,21 @@
 #include <magenta/errors.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_caps.h>
-#include <dev/pcie_constants.h>
+#include <dev/pci_common.h>
 #include <dev/pcie_irqs.h>
 #include <dev/pcie_ref_counted.h>
-#include <dev/pcie_regs.h>
+#include <dev/pci_config.h>
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/unique_ptr.h>
 #include <new.h>
 #include <sys/types.h>
 
 /* Fwd decls */
 class  PcieBusDriver;
 class  PcieUpstreamNode;
-struct pcie_config_t;
 
 /*
  * struct used to fetch information about a configured base address register
@@ -51,8 +51,8 @@ struct pcie_bar_info_t {
  */
 class PcieDevice {
 public:
+    using CapabilityList = mxtl::SinglyLinkedList<mxtl::unique_ptr<PciStdCapability>>;
     static mxtl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);
-
     virtual ~PcieDevice();
 
     // Disallow copying, assigning and moving.
@@ -271,14 +271,6 @@ public:
      */
     status_t MaskUnmaskIrq(uint irq_id, bool mask);
 
-    // Capability parsing
-    //
-    // TODO(johngro): these need to be refactored to use non-static methods,
-    // and to be private.
-    static status_t ParseMsiCaps(PcieDevice* dev, void* hdr, uint version, uint space_left);
-    static status_t ParsePciExpressCaps(PcieDevice* dev, void* hdr, uint version, uint space_left);
-    static status_t ParsePciAdvFeatures(PcieDevice* dev, void* hdr, uint version, uint space_left);
-
     void SetQuirksDone() { quirks_done_ = true; }
 
     /**
@@ -287,7 +279,7 @@ public:
     status_t MaskIrq(uint irq_id)   { return MaskUnmaskIrq(irq_id, true); }
     status_t UnmaskIrq(uint irq_id) { return MaskUnmaskIrq(irq_id, false); }
 
-    const pcie_config_t* config()      const { return cfg_; }
+    const PciConfig*     config()      const { return cfg_; }
     paddr_t              config_phys() const { return cfg_phys_; }
     PcieBusDriver&       driver()            { return bus_drv_; }
 
@@ -308,7 +300,16 @@ public:
     uint     func_id()        const { return func_id_; }
     uint     bar_count()      const { return bar_count_; }
     uint8_t  legacy_irq_pin() const { return irq_.legacy.pin; }
-    pcie_device_type_t pcie_device_type() const { return pcie_caps_.devtype; }
+    const    CapabilityList& capabilities() const { return caps_.detected; }
+    // TODO(cja): This doesn't really make sense in a pcie capability optional world.
+    // It is only used by bridge and debug code, so it might make sense to just have those check if
+    // the device is pcie first, then use dev->pcie()->devtype().
+    pcie_device_type_t pcie_device_type() const {
+        if (pcie_)
+            return pcie_->devtype();
+        else
+            return PCIE_DEVTYPE_UNKNOWN;
+    }
 
     // TODO(johngro) : make these protected.  They are currently only visibile
     // because of debug code.
@@ -327,7 +328,9 @@ protected:
     status_t InitLocked(PcieUpstreamNode& upstream);
     status_t ProbeBarsLocked();
     status_t ProbeBarLocked(uint bar_id);
-    status_t ParseCapabilitiesLocked();
+    status_t ProbeCapabilitiesLocked();
+    status_t ParseStdCapabilitiesLocked();
+    status_t ParseExtCapabilitiesLocked();
     status_t MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>&& upstream);
     status_t InitLegacyIrqStateLocked(PcieUpstreamNode& upstream);
 
@@ -344,7 +347,7 @@ protected:
     void         DisableLocked();
 
     PcieBusDriver& bus_drv_;        // Reference to our bus driver state.
-    pcie_config_t* cfg_ = nullptr;  // Pointer to the memory mapped ECAM (kernel vaddr)
+    const PciConfig*         cfg_ = nullptr;  // Pointer to the memory mapped ECAM (kernel vaddr)
     paddr_t        cfg_phys_ = 0;   // The physical address of the device's ECAM
     SpinLock       cmd_reg_lock_;   // Protection for access to the command register.
     const bool     is_bridge_;      // True if this device is also a bridge
@@ -390,9 +393,10 @@ private:
 
     // Internal MSI IRQ support.
     void SetMsiEnb(bool enb) {
-        DEBUG_ASSERT(irq_.msi.cfg);
-        volatile uint16_t* ctrl_reg = &irq_.msi.cfg->ctrl;
-        pcie_write16(ctrl_reg, PCIE_CAP_MSI_CTRL_SET_ENB(enb, pcie_read16(ctrl_reg)));
+        DEBUG_ASSERT(irq_.msi);
+        DEBUG_ASSERT(irq_.msi->is_valid());
+        cfg_->Write(irq_.msi->ctrl_reg(),
+                PCIE_CAP_MSI_CTRL_SET_ENB(enb, cfg_->Read(irq_.msi->ctrl_reg())));
     }
 
     bool     MaskUnmaskMsiIrqLocked(uint irq_id, bool mask);
@@ -411,26 +415,15 @@ private:
     void     ResetCommonIrqBookkeeping();
     status_t AllocIrqHandlers(uint requested_irqs, bool is_masked);
 
+    /* Capabilities */
+    // TODO(cja): organize capabilities into their own structure
+    struct Capabilities {
+        CapabilityList detected;
+    } caps_;
     /* PCI Express Capabilities (Standard Capability 0x10) if present */
-    struct {
-        uint               version;  // version of the caps structure.
-        pcie_device_type_t devtype = PCIE_DEVTYPE_UNKNOWN;
-        bool               has_flr;  // true if device supports function level reset
-        pcie_caps_hdr_t*   ecam;     // pointer to the caps structure header in ECAM
-
-        /* Pointers to various chunk structures which may or may not be present
-         * in the caps structure.  All of these chunks will be present in a v2
-         * structure, but only some of the chunks may be present (depending on
-         * device type) in a v1 structure. */
-        pcie_caps_chunk_t*      chunks[PCS_CAPS_CHUNK_COUNT];
-        pcie_caps_root_chunk_t* root;
-    } pcie_caps_;
-
+    PciCapPcie* pcie_ = nullptr;
     /* PCI Advanced Capabilities (Standard Capability 0x13) if present */
-    struct {
-        pcie_cap_adv_caps_t* ecam;     // pointer to the adv caps structure in ECAM
-        bool                 has_flr;  // true if device supports function level reset
-    } pcie_adv_caps_;
+    PciCapAdvFeatures* pci_af_ = nullptr;
 
     // IRQ configuration and handling state
     struct {
@@ -451,15 +444,7 @@ private:
             mxtl::RefPtr<SharedLegacyIrqHandler> shared_handler;
         } legacy;
 
-        /* MSI state */
-        struct {
-            pcie_cap_msi_t*    cfg = nullptr;
-            uint               max_irqs = 0;
-            bool               is64bit;
-            volatile uint32_t* pvm_mask_reg = nullptr;
-            pcie_msi_block_t   irq_block;
-        } msi;
-
+        PciCapMsi* msi = nullptr;
         /* TODO(johngro) : Add MSI-X state */
         struct { } msi_x;
     } irq_;

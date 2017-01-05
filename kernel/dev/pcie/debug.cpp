@@ -7,6 +7,7 @@
 
 #ifdef WITH_LIB_CONSOLE
 
+#include <ctype.h>
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
@@ -16,6 +17,8 @@
 #include <dev/pcie_bridge.h>
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
+
+static constexpr unsigned int kPciDumpRowLen = 0x10u;
 
 class PcieDebugConsole {
 public:
@@ -275,6 +278,46 @@ static void do_lspci_indent(uint level) {
         printf(_fmt, ##__VA_ARGS__);           \
     } while (0)
 
+/*
+ * PCI address spaces are not necessarily mapped in a manner such that
+ * the address hexdump8 uses is useful, so implement one that supports
+ * PIO and MMIO.
+ */
+static void pci_cfg_hexdump8(const PciConfig* cfg, uint16_t off, uint amt)
+{
+    uint8_t buf[kPciDumpRowLen];
+    for (uint buf_off = off; buf_off < amt; buf_off += kPciDumpRowLen) {
+        uint len = MIN(amt - buf_off, kPciDumpRowLen);
+
+        printf("%#" PRIxPTR ": ", cfg->base() + buf_off);
+        for (uint i = 0; i < len; i++)
+            buf[i] = cfg->Read(PciReg8(static_cast<uint16_t>(buf_off + i)));
+
+        for (uint i = 0; i < kPciDumpRowLen; i++ ) {
+            if (i < len) {
+                printf("%02x ", buf[i]);
+            } else {
+                printf("   ");
+            }
+        }
+
+        printf("|");
+
+        for (uint i = 0; i < len; i++) {
+            if (i < len) {
+                if (isgraph(buf[i]))
+                    printf("%c", buf[i]);
+                else
+                    printf(".");
+            } else {
+                printf(" ");
+            }
+        }
+
+        printf("\n");
+    }
+}
+
 static void dump_pcie_hdr(const PcieDevice& dev, lspci_params_t* params)
 {
     DEBUG_ASSERT(params);
@@ -295,11 +338,11 @@ static void dump_pcie_hdr(const PcieDevice& dev, lspci_params_t* params)
 static void dump_pcie_bars(const PcieDevice& dev,
                            lspci_params_t* params)
 {
-    auto cfg = &dev.config()->base;
+    auto cfg = dev.config();
 
-    DEBUG_ASSERT(dev.bar_count() <= countof(cfg->base_addresses));
+    DEBUG_ASSERT(dev.bar_count() <= PCIE_MAX_BAR_REGS);
     for (uint i = 0; i < dev.bar_count(); ++i) {
-        LSPCI_PRINTF("Base Addr[%u]      : 0x%08x", i, pcie_read32(&cfg->base_addresses[i]));
+        LSPCI_PRINTF("Base Addr[%u]      : 0x%08x", i, cfg->Read(PciConfig::kBAR(i)));
 
         const pcie_bar_info_t* info = dev.GetBarInfo(i);
         if (info == nullptr) {
@@ -319,66 +362,66 @@ static void dump_pcie_bars(const PcieDevice& dev,
 
 static void dump_pcie_common(const PcieDevice& dev, lspci_params_t* params)
 {
-    auto cfg = &dev.config()->base;
-    uint8_t base_class = pcie_read8(&cfg->base_class);
+    auto cfg = dev.config();
+    uint8_t base_class = cfg->Read(PciConfig::kBaseClass);
 
-    LSPCI_PRINTF("Command           : 0x%04x\n",    pcie_read16(&cfg->command));
-    LSPCI_PRINTF("Status            : 0x%04x\n",    pcie_read16(&cfg->status));
-    LSPCI_PRINTF("Rev ID            : 0x%02x\n",    pcie_read8(&cfg->revision_id_0));
-    LSPCI_PRINTF("Prog Iface        : 0x%02x\n",    pcie_read8(&cfg->program_interface));
-    LSPCI_PRINTF("Sub Class         : 0x%02x\n",    pcie_read8(&cfg->sub_class));
+    LSPCI_PRINTF("Command           : 0x%04x\n",    cfg->Read(PciConfig::kCommand));
+    LSPCI_PRINTF("Status            : 0x%04x\n",    cfg->Read(PciConfig::kStatus));
+    LSPCI_PRINTF("Rev ID            : 0x%02x\n",    cfg->Read(PciConfig::kRevisionId));
+    LSPCI_PRINTF("Prog Iface        : 0x%02x\n",    cfg->Read(PciConfig::kProgramInterface));
+    LSPCI_PRINTF("Sub Class         : 0x%02x\n",    cfg->Read(PciConfig::kSubClass));
     LSPCI_PRINTF("Base Class        : 0x%02x %s\n", base_class,
                                                     pci_class_code_to_string(base_class));
-    LSPCI_PRINTF("Cache Line Sz     : 0x%02x\n",    pcie_read8(&cfg->cache_line_size));
-    LSPCI_PRINTF("Latency Timer     : 0x%02x\n",    pcie_read8(&cfg->latency_timer));
-    LSPCI_PRINTF("Header Type       : 0x%02x\n",    pcie_read8(&cfg->header_type));
-    LSPCI_PRINTF("BIST              : 0x%02x\n",    pcie_read8(&cfg->bist));
+    LSPCI_PRINTF("Cache Line Sz     : 0x%02x\n",    cfg->Read(PciConfig::kCacheLineSize));
+    LSPCI_PRINTF("Latency Timer     : 0x%02x\n",    cfg->Read(PciConfig::kLatencyTimer));
+    LSPCI_PRINTF("Header Type       : 0x%02x\n",    cfg->Read(PciConfig::kHeaderType));
+    LSPCI_PRINTF("BIST              : 0x%02x\n",    cfg->Read(PciConfig::kBist));
 }
 
 static void dump_pcie_standard(const PcieDevice& dev, lspci_params_t* params)
 {
-    auto cfg = &dev.config()->base;
-    LSPCI_PRINTF("Cardbus CIS       : 0x%08x\n", pcie_read32(&cfg->cardbus_cis_ptr));
-    LSPCI_PRINTF("Subsystem VID     : 0x%04x\n", pcie_read16(&cfg->subsystem_vendor_id));
-    LSPCI_PRINTF("Subsystem ID      : 0x%04x\n", pcie_read16(&cfg->subsystem_id));
-    LSPCI_PRINTF("Exp ROM addr      : 0x%08x\n", pcie_read32(&cfg->expansion_rom_address));
-    LSPCI_PRINTF("Cap Ptr           : 0x%02x\n", pcie_read8(&cfg->capabilities_ptr));
-    LSPCI_PRINTF("IRQ line          : 0x%02x\n", pcie_read8(&cfg->interrupt_line));
-    LSPCI_PRINTF("IRQ pin           : 0x%02x\n", pcie_read8(&cfg->interrupt_pin));
-    LSPCI_PRINTF("Min Grant         : 0x%02x\n", pcie_read8(&cfg->min_grant));
-    LSPCI_PRINTF("Max Latency       : 0x%02x\n", pcie_read8(&cfg->max_latency));
+    auto cfg = dev.config();
+    LSPCI_PRINTF("Cardbus CIS       : 0x%08x\n", cfg->Read(PciConfig::kCardbusCisPtr));
+    LSPCI_PRINTF("Subsystem VID     : 0x%04x\n", cfg->Read(PciConfig::kSubsystemVendorId));
+    LSPCI_PRINTF("Subsystem ID      : 0x%04x\n", cfg->Read(PciConfig::kSubsystemId));
+    LSPCI_PRINTF("Exp ROM addr      : 0x%08x\n", cfg->Read(PciConfig::kExpansionRomAddress));
+    LSPCI_PRINTF("Cap Ptr           : 0x%02x\n", cfg->Read(PciConfig::kCapabilitiesPtr));
+    LSPCI_PRINTF("IRQ line          : 0x%02x\n", cfg->Read(PciConfig::kInterruptLine));
+    LSPCI_PRINTF("IRQ pin           : 0x%02x\n", cfg->Read(PciConfig::kInterruptPin));
+    LSPCI_PRINTF("Min Grant         : 0x%02x\n", cfg->Read(PciConfig::kMinGrant));
+    LSPCI_PRINTF("Max Latency       : 0x%02x\n", cfg->Read(PciConfig::kMaxLatency));
 }
 
 static void dump_pcie_bridge(const PcieBridge& bridge, lspci_params_t* params)
 {
-    pci_to_pci_bridge_config_t* bcfg = (pci_to_pci_bridge_config_t*)(&bridge.config()->base);
+    auto cfg = bridge.config();
 
-    LSPCI_PRINTF("P. Bus ID         : 0x%02x\n", pcie_read8(&bcfg->primary_bus_id));
+    LSPCI_PRINTF("P. Bus ID         : 0x%02x\n", cfg->Read(PciConfig::kPrimaryBusId));
     LSPCI_PRINTF("S. Bus Range      : [0x%02x, 0x%02x]\n",
-                                                 pcie_read8(&bcfg->secondary_bus_id),
-                                                 pcie_read8(&bcfg->subordinate_bus_id));
-    LSPCI_PRINTF("S. Latency Timer  : 0x%02x\n", pcie_read8(&bcfg->secondary_latency_timer));
-    LSPCI_PRINTF("IO Base           : 0x%02x\n", pcie_read8(&bcfg->io_base));
-    LSPCI_PRINTF("IO Base Upper     : 0x%04x\n", pcie_read16(&bcfg->io_base_upper));
-    LSPCI_PRINTF("IO Limit          : 0x%02x\n", pcie_read8(&bcfg->io_limit));
-    LSPCI_PRINTF("IO Limit Upper    : 0x%04x",   pcie_read16(&bcfg->io_limit_upper));
+                                                 cfg->Read(PciConfig::kSecondaryBusId),
+                                                 cfg->Read(PciConfig::kSubordinateBusId));
+    LSPCI_PRINTF("S. Latency Timer  : 0x%02x\n", cfg->Read(PciConfig::kSecondaryLatencyTimer));
+    LSPCI_PRINTF("IO Base           : 0x%02x\n", cfg->Read(PciConfig::kIoBase));
+    LSPCI_PRINTF("IO Base Upper     : 0x%04x\n", cfg->Read(PciConfig::kIoBaseUpper));
+    LSPCI_PRINTF("IO Limit          : 0x%02x\n", cfg->Read(PciConfig::kIoLimit));
+    LSPCI_PRINTF("IO Limit Upper    : 0x%04x",   cfg->Read(PciConfig::kIoLimitUpper));
     if (bridge.io_base() < bridge.io_limit()) {
         printf(" :: [0x%08x, 0x%08x]\n", bridge.io_base(), bridge.io_limit());
     } else {
         printf("\n");
     }
-    LSPCI_PRINTF("Secondary Status  : 0x%04x\n", pcie_read16(&bcfg->secondary_status));
-    LSPCI_PRINTF("Memory Limit      : 0x%04x\n", pcie_read16(&bcfg->memory_limit));
-    LSPCI_PRINTF("Memory Base       : 0x%04x", pcie_read16(&bcfg->memory_base));
+    LSPCI_PRINTF("Secondary Status  : 0x%04x\n", cfg->Read(PciConfig::kSecondaryStatus));
+    LSPCI_PRINTF("Memory Limit      : 0x%04x\n", cfg->Read(PciConfig::kMemoryLimit));
+    LSPCI_PRINTF("Memory Base       : 0x%04x", cfg->Read(PciConfig::kMemoryBase));
     if (bridge.mem_base() < bridge.mem_limit()) {
         printf(" :: [0x%08x, 0x%08x]\n", bridge.mem_base(), bridge.mem_limit());
     } else {
         printf("\n");
     }
-    LSPCI_PRINTF("PFMem Base        : 0x%04x\n", pcie_read16(&bcfg->prefetchable_memory_base));
-    LSPCI_PRINTF("PFMem Base Upper  : 0x%08x\n", pcie_read32(&bcfg->prefetchable_memory_base_upper));
-    LSPCI_PRINTF("PFMem Limit       : 0x%04x\n", pcie_read16(&bcfg->prefetchable_memory_limit));
-    LSPCI_PRINTF("PFMem Limit Upper : 0x%08x", pcie_read32(&bcfg->prefetchable_memory_limit_upper));
+    LSPCI_PRINTF("PFMem Base        : 0x%04x\n", cfg->Read(PciConfig::kPrefetchableMemoryBase));
+    LSPCI_PRINTF("PFMem Base Upper  : 0x%08x\n", cfg->Read(PciConfig::kPrefetchableMemoryBaseUpper));
+    LSPCI_PRINTF("PFMem Limit       : 0x%04x\n", cfg->Read(PciConfig::kPrefetchableMemoryLimit));
+    LSPCI_PRINTF("PFMem Limit Upper : 0x%08x", cfg->Read(PciConfig::kPrefetchableMemoryLimitUpper));
     if (bridge.pf_mem_base() < bridge.pf_mem_limit()) {
         printf(" :: [0x%016" PRIx64 ", 0x%016" PRIx64"]\n",
                 bridge.pf_mem_base(), bridge.pf_mem_limit());
@@ -386,18 +429,79 @@ static void dump_pcie_bridge(const PcieBridge& bridge, lspci_params_t* params)
         printf("\n");
     }
 
-    LSPCI_PRINTF("Capabilities Ptr  : 0x%02x\n", pcie_read8(&bcfg->capabilities_ptr));
-    LSPCI_PRINTF("Exp ROM Address   : 0x%08x\n", pcie_read32(&bcfg->expansion_rom_address));
-    LSPCI_PRINTF("Interrupt Line    : 0x%02x\n", pcie_read8(&bcfg->interrupt_line));
-    LSPCI_PRINTF("Interrupt Pin     : 0x%02x\n", pcie_read8(&bcfg->interrupt_pin));
-    LSPCI_PRINTF("Bridge Control    : 0x%04x\n", pcie_read16(&bcfg->bridge_control));
+    LSPCI_PRINTF("Capabilities Ptr  : 0x%02x\n", cfg->Read(PciConfig::kCapabilitiesPtr));
+    LSPCI_PRINTF("Exp ROM Address   : 0x%08x\n", cfg->Read(PciConfig::kExpansionRomAddress));
+    LSPCI_PRINTF("Interrupt Line    : 0x%02x\n", cfg->Read(PciConfig::kInterruptLine));
+    LSPCI_PRINTF("Interrupt Pin     : 0x%02x\n", cfg->Read(PciConfig::kInterruptPin));
+    LSPCI_PRINTF("Bridge Control    : 0x%04x\n", cfg->Read(PciConfig::kBridgeControl));
 }
 
-static void dump_pcie_raw_config(uint amt, const void* kvaddr, paddr_t phys)
+static void dump_pcie_raw_config(uint amt, const PciConfig* cfg)
 {
-    printf("%u bytes of raw config (kvaddr %p; phys %#" PRIx64 ")\n",
-           amt, kvaddr, static_cast<uint64_t>(phys));
-    hexdump8(kvaddr, amt);
+    DEBUG_ASSERT(amt == PCIE_BASE_CONFIG_SIZE || amt == PCIE_EXTENDED_CONFIG_SIZE);
+    printf("%u bytes of raw config (base %s:%#" PRIxPTR ")\n",
+           amt, (cfg->addr_space() == PciAddrSpace::MMIO) ? "MMIO" : "PIO", cfg->base());
+
+    pci_cfg_hexdump8(cfg, 0, amt);
+}
+
+#define CAP_TBL_ENTRY(s) (s, #s)
+static struct _cap_tbl {
+    uint8_t id;
+    const char *label;
+} cap_tbl[] = {
+    { PCIE_CAP_ID_PCI_PWR_MGMT, "PCI_PWR_MGMT" },
+    { PCIE_CAP_ID_AGP, "AGP" },
+    { PCIE_CAP_ID_VPD, "VPD" },
+    { PCIE_CAP_ID_MSI, "MSI" },
+    { PCIE_CAP_ID_PCIX, "PCIX" },
+    { PCIE_CAP_ID_HYPERTRANSPORT, "HYPERTRANSPORT" },
+    { PCIE_CAP_ID_VENDOR, "VENDOR" },
+    { PCIE_CAP_ID_DEBUG_PORT, "DEBUG_PORT" },
+    { PCIE_CAP_ID_COMPACTPCI_CRC, "COMPACTPCI_CRC" },
+    { PCIE_CAP_ID_PCI_HOTPLUG, "PCI_HOTPLUG" },
+    { PCIE_CAP_ID_PCI_BRIDGE_SUBSYSTEM_VID, "PCI_BRIDGE_SUBSYSTEM_VID" },
+    { PCIE_CAP_ID_AGP_8X, "AGP_8X" },
+    { PCIE_CAP_ID_SECURE_DEVICE, "SECURE_DEVICE" },
+    { PCIE_CAP_ID_PCI_EXPRESS, "PCI_EXPRESS" },
+    { PCIE_CAP_ID_MSIX, "MSIX" },
+    { PCIE_CAP_ID_SATA_DATA_NDX_CFG, "SATA_DATA_NDX_CFG" },
+    { PCIE_CAP_ID_ADVANCED_FEATURES, "ADVANCED_FEATURES" },
+    { PCIE_CAP_ID_ENHANCED_ALLOCATION, "ENHANCED_ALLOCATION" },
+};
+#undef CAP_TABLE_ENTRY
+
+static inline const char* get_cap_str(uint8_t id) {
+    for (const auto& cur : cap_tbl) {
+        if (cur.id == id) {
+            return cur.label;
+        }
+    }
+
+    return "<Unknown>";
+}
+
+static void dump_pcie_capabilities(mxtl::RefPtr<PcieDevice> dev, void *ctx)
+{
+    bool is_first = true;
+    lspci_params_t* params = static_cast<lspci_params_t*>(ctx);
+    auto initial_indent = params->indent_level;
+    params->indent_level += 2;
+
+    if (!dev->capabilities().is_empty()) {
+        LSPCI_PRINTF("Std Capabilities  :");
+        for (const auto& cap : dev->capabilities()) {
+            if (is_first) {
+                printf(" %s (%#02x)\n ", get_cap_str(cap.id()), cap.id());
+                is_first = false;
+                params->indent_level += 9;
+            } else {
+                LSPCI_PRINTF(" %s (%#02x)\n ", get_cap_str(cap.id()), cap.id());
+            }
+        }
+    }
+
+    params->indent_level = initial_indent;
 }
 
 static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uint level)
@@ -405,6 +509,7 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
     DEBUG_ASSERT(dev && ctx);
     lspci_params_t* params = (lspci_params_t*)ctx;
     bool match;
+    auto cfg = dev->config();
 
     /* Grab the device's lock so it cannot be unplugged out from under us while
      * we print details. */
@@ -442,7 +547,7 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
         dump_pcie_common(*dev, params);
         dump_pcie_bars(*dev, params);
 
-        uint8_t header_type = pcie_read8(&dev->config()->base.header_type) & PCI_HEADER_TYPE_MASK;
+        uint8_t header_type = cfg->Read(PciConfig::kHeaderType) & PCI_HEADER_TYPE_MASK;
         switch (header_type) {
         case PCI_HEADER_TYPE_STANDARD:
             dump_pcie_standard(*dev, params);
@@ -466,11 +571,11 @@ static bool dump_pcie_device(const mxtl::RefPtr<PcieDevice>& dev, void* ctx, uin
         }
 
         params->indent_level -= 2;
+        dump_pcie_capabilities(dev, params);
     }
 
     if (params->cfg_dump_amt)
-        dump_pcie_raw_config(params->cfg_dump_amt,
-                             dev->config(), dev->config_phys());
+        dump_pcie_raw_config(params->cfg_dump_amt, dev->config());
 
     return true;
 }
@@ -570,15 +675,14 @@ int PcieDebugConsole::CmdLsPci(int argc, const cmd_args *argv) {
         (params.bus_id  != WILDCARD_ID) &&
         (params.dev_id  != WILDCARD_ID) &&
         (params.func_id != WILDCARD_ID)) {
-        pcie_config_t* cfg;
-        paddr_t cfg_phys;
+        const PciConfig* cfg;
 
-        cfg = bus_drv->GetConfig(params.bus_id, params.dev_id, params.func_id, &cfg_phys);
+        cfg = bus_drv->GetConfig(params.bus_id, params.dev_id, params.func_id);
         if (!cfg) {
             printf("Config space for %02x:%02x.%01x not mapped by bus driver!\n",
                    params.bus_id, params.dev_id, params.func_id);
         } else {
-            dump_pcie_raw_config(params.cfg_dump_amt, cfg, cfg_phys);
+            dump_pcie_raw_config(params.cfg_dump_amt, cfg);
         }
     } else {
         printf("PCIe scan discovered %u device%s\n", params.found, (params.found == 1) ? "" : "s");

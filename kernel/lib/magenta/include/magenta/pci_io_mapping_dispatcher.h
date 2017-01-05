@@ -7,7 +7,7 @@
 #pragma once
 #if WITH_DEV_PCIE
 
-#include <dev/pcie_constants.h>
+#include <dev/pci_common.h>
 #include <magenta/io_mapping_dispatcher.h>
 #include <sys/types.h>
 

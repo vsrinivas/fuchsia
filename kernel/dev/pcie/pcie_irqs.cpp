@@ -21,6 +21,7 @@
 #include <string.h>
 #include <trace.h>
 
+#include <dev/pci_config.h>
 #include <dev/pcie_device.h>
 
 #define LOCAL_TRACE 0
@@ -130,12 +131,12 @@ enum handler_return SharedLegacyIrqHandler::Handler() {
                          PcieDevice,
                          irq_.legacy.shared_handler_node) {
         uint16_t command, status;
-        pcie_config_t* cfg = dev->cfg_;
+        auto cfg = dev->config();
 
         {
             AutoSpinLock cmd_reg_lock(dev->cmd_reg_lock_);
-            command = pcie_read16(&cfg->base.command);
-            status  = pcie_read16(&cfg->base.status);
+            command = cfg->Read(PciConfig::kCommand);
+            status  = cfg->Read(PciConfig::kStatus);
         }
 
         if ((status & PCIE_CFG_STATUS_INT_STS) && !(command & PCIE_CFG_COMMAND_INT_DISABLE)) {
@@ -163,8 +164,8 @@ enum handler_return SharedLegacyIrqHandler::Handler() {
                     hstate->masked = true;
                     {
                         AutoSpinLock cmd_reg_lock(dev->cmd_reg_lock_);
-                        command = pcie_read16(&cfg->base.command);
-                        pcie_write16(&cfg->base.command, command | PCIE_CFG_COMMAND_INT_DISABLE);
+                        command = cfg->Read(PciConfig::kCommand);
+                        cfg->Write(PciConfig::kCommand, command | PCIE_CFG_COMMAND_INT_DISABLE);
                     }
                 }
             } else {
@@ -174,8 +175,8 @@ enum handler_return SharedLegacyIrqHandler::Handler() {
 
                 {
                     AutoSpinLock cmd_reg_lock(dev->cmd_reg_lock_);
-                    command = pcie_read16(&cfg->base.command);
-                    pcie_write16(&cfg->base.command, command | PCIE_CFG_COMMAND_INT_DISABLE);
+                    command = cfg->Read(PciConfig::kCommand);
+                    cfg->Write(PciConfig::kCommand, command | PCIE_CFG_COMMAND_INT_DISABLE);
                 }
             }
         }
@@ -194,7 +195,7 @@ void SharedLegacyIrqHandler::AddDevice(PcieDevice& dev) {
      * level. */
     AutoSpinLockIrqSave lock(device_handler_list_lock_);
 
-    pcie_write16(&dev.cfg_->base.command, pcie_read16(&dev.cfg_->base.command) |
+    dev.cfg_->Write(PciConfig::kCommand, dev.cfg_->Read(PciConfig::kCommand) |
                                           PCIE_CFG_COMMAND_INT_DISABLE);
 
     bool first_device = list_is_empty(&device_handler_list_);
@@ -213,7 +214,7 @@ void SharedLegacyIrqHandler::RemoveDevice(PcieDevice& dev) {
      * device on the list, mask the top level IRQ */
     AutoSpinLockIrqSave lock(device_handler_list_lock_);
 
-    pcie_write16(&dev.cfg_->base.command, pcie_read16(&dev.cfg_->base.command) |
+    dev.cfg_->Write(PciConfig::kCommand, dev.cfg_->Read(PciConfig::kCommand) |
                                           PCIE_CFG_COMMAND_INT_DISABLE);
     list_delete(&dev.irq_.legacy.shared_handler_node);
 
@@ -285,22 +286,22 @@ bool PcieDevice::MaskUnmaskMsiIrqLocked(uint irq_id, bool mask) {
      * the interrupt, but it is not possible to do so. */
     DEBUG_ASSERT(!mask ||
                  bus_drv_.platform().supports_msi_masking() ||
-                 irq_.msi.pvm_mask_reg);
+                 irq_.msi->has_pvm());
 
     /* If we can mask at the PCI device level, do so. */
-    if (irq_.msi.pvm_mask_reg) {
+    if (irq_.msi->has_pvm()) {
         DEBUG_ASSERT(irq_id < PCIE_MAX_MSI_IRQS);
-        uint32_t  val  = pcie_read32(irq_.msi.pvm_mask_reg);
+        uint32_t  val  = cfg_->Read(irq_.msi->mask_bits_reg());
         if (mask) val |=  (static_cast<uint32_t>(1u) << irq_id);
         else      val &= ~(static_cast<uint32_t>(1u) << irq_id);
-        pcie_write32(irq_.msi.pvm_mask_reg, val);
+        cfg_->Write(irq_.msi->mask_bits_reg(), val);
     }
 
     /* If we can mask at the platform interrupt controller level, do so. */
-    DEBUG_ASSERT(irq_.msi.irq_block.allocated);
-    DEBUG_ASSERT(irq_id < irq_.msi.irq_block.num_irq);
+    DEBUG_ASSERT(irq_.msi->irq_block_.allocated);
+    DEBUG_ASSERT(irq_id < irq_.msi->irq_block_.num_irq);
     if (bus_drv_.platform().supports_msi_masking())
-        bus_drv_.platform().MaskUnmaskMsi(&irq_.msi.irq_block, irq_id, mask);
+        bus_drv_.platform().MaskUnmaskMsi(&irq_.msi->irq_block_, irq_id, mask);
 
     bool ret = hstate.masked;
     hstate.masked = mask;
@@ -314,7 +315,7 @@ status_t PcieDevice::MaskUnmaskMsiIrq(uint irq_id, bool mask) {
     /* If a mask is being requested, and we cannot mask at either the platform
      * interrupt controller or the PCI device level, tell the caller that the
      * operation is unsupported. */
-    if (mask && !bus_drv_.platform().supports_msi_masking() && !irq_.msi.pvm_mask_reg)
+    if (mask && !bus_drv_.platform().supports_msi_masking() && !irq_.msi->has_pvm())
         return ERR_NOT_SUPPORTED;
 
     DEBUG_ASSERT(irq_.handlers);
@@ -328,7 +329,8 @@ status_t PcieDevice::MaskUnmaskMsiIrq(uint irq_id, bool mask) {
 }
 
 void PcieDevice::MaskAllMsiVectors() {
-    DEBUG_ASSERT(irq_.msi.cfg);
+    DEBUG_ASSERT(irq_.msi);
+    DEBUG_ASSERT(irq_.msi->is_valid());
 
     for (uint i = 0; i < irq_.handler_count; i++)
         MaskUnmaskMsiIrq(i, true);
@@ -336,13 +338,14 @@ void PcieDevice::MaskAllMsiVectors() {
     /* In theory, this should not be needed as all of the relevant bits should
      * have already been masked during the calls to MaskUnmaskMsiIrq.  Just to
      * be careful, however, we explicitly mask all of the upper bits as well. */
-    if (irq_.msi.pvm_mask_reg)
-        pcie_write32(irq_.msi.pvm_mask_reg, 0xFFFFFFFF);
+    if (irq_.msi->has_pvm())
+        cfg_->Write(irq_.msi->mask_bits_reg(), 0xFFFFFFFF);
 }
 
 void PcieDevice::SetMsiTarget(uint64_t tgt_addr, uint32_t tgt_data) {
-    DEBUG_ASSERT(irq_.msi.cfg);
-    DEBUG_ASSERT(irq_.msi.is64bit || !(tgt_addr >> 32));
+    DEBUG_ASSERT(irq_.msi);
+    DEBUG_ASSERT(irq_.msi->is_valid());
+    DEBUG_ASSERT(irq_.msi->is64Bit() || !(tgt_addr >> 32));
     DEBUG_ASSERT(!(tgt_data >> 16));
 
     /* Make sure MSI is disabled_ and all vectors masked (if possible) before
@@ -353,25 +356,23 @@ void PcieDevice::SetMsiTarget(uint64_t tgt_addr, uint32_t tgt_data) {
     /* lower bits of the address register are common to all forms of the MSI
      * capability structure.  Upper address bits and data position depend on
      * whether this is a 64 bit or 32 bit version */
-    pcie_write32(&irq_.msi.cfg->addr, static_cast<uint32_t>(tgt_addr & 0xFFFFFFFF));
-    if (irq_.msi.is64bit) {
-        pcie_write32(&irq_.msi.cfg->nopvm_64bit.addr_upper, static_cast<uint32_t>(tgt_addr >> 32));
-        pcie_write16(&irq_.msi.cfg->nopvm_64bit.data, static_cast<uint16_t>(tgt_data & 0xFFFF));
-    } else {
-        pcie_write16(&irq_.msi.cfg->nopvm_32bit.data, static_cast<uint16_t>(tgt_data & 0xFFFF));
+    cfg_->Write(irq_.msi->addr_reg(), static_cast<uint32_t>(tgt_addr & 0xFFFFFFFF));
+    if (irq_.msi->is64Bit()) {
+        cfg_->Write(irq_.msi->addr_upper_reg(), static_cast<uint32_t>(tgt_addr >> 32));
     }
+    cfg_->Write(irq_.msi->data_reg(), static_cast<uint16_t>(tgt_data & 0xFFFF));
 }
 
 void PcieDevice::FreeMsiBlock() {
     /* If no block has been allocated, there is nothing to do */
-    if (!irq_.msi.irq_block.allocated)
+    if (!irq_.msi->irq_block_.allocated)
         return;
 
     DEBUG_ASSERT(bus_drv_.platform().supports_msi());
 
     /* Mask the IRQ at the platform interrupt controller level if we can, and
      * unregister any registered handler. */
-    const pcie_msi_block_t* b = &irq_.msi.irq_block;
+    const pcie_msi_block_t* b = &irq_.msi->irq_block_;
     for (uint i = 0; i < b->num_irq; i++) {
         if (bus_drv_.platform().supports_msi_masking()) {
             bus_drv_.platform().MaskUnmaskMsi(b, i, true);
@@ -380,12 +381,13 @@ void PcieDevice::FreeMsiBlock() {
     }
 
     /* Give the block of IRQs back to the plaform */
-    bus_drv_.platform().FreeMsiBlock(&irq_.msi.irq_block);
-    DEBUG_ASSERT(!irq_.msi.irq_block.allocated);
+    bus_drv_.platform().FreeMsiBlock(&irq_.msi->irq_block_);
+    DEBUG_ASSERT(!irq_.msi->irq_block_.allocated);
 }
 
 void PcieDevice::SetMsiMultiMessageEnb(uint requested_irqs) {
-    DEBUG_ASSERT(irq_.msi.cfg);
+    DEBUG_ASSERT(irq_.msi);
+    DEBUG_ASSERT(irq_.msi->is_valid());
     DEBUG_ASSERT((requested_irqs >= 1) && (requested_irqs <= PCIE_MAX_MSI_IRQS));
 
     uint log2 = log2_uint_ceil(requested_irqs);
@@ -394,8 +396,8 @@ void PcieDevice::SetMsiMultiMessageEnb(uint requested_irqs) {
     DEBUG_ASSERT(!log2 || ((0x1u << (log2 - 1)) < requested_irqs));
     DEBUG_ASSERT((0x1u << log2) >= requested_irqs);
 
-    volatile uint16_t* ctrl_reg = &irq_.msi.cfg->ctrl;
-    pcie_write16(ctrl_reg, PCIE_CAP_MSI_CTRL_SET_MME(log2, pcie_read16(ctrl_reg)));
+    cfg_->Write(irq_.msi->ctrl_reg(),
+            PCIE_CAP_MSI_CTRL_SET_MME(log2, cfg_->Read(irq_.msi->ctrl_reg())));
 }
 
 void PcieDevice::LeaveMsiIrqMode() {
@@ -413,21 +415,22 @@ void PcieDevice::LeaveMsiIrqMode() {
 
 status_t PcieDevice::EnterMsiIrqMode(uint requested_irqs) {
     DEBUG_ASSERT(requested_irqs);
+    DEBUG_ASSERT(irq_.msi);
 
     status_t res = NO_ERROR;
 
     // We cannot go into MSI mode if we don't support MSI at all, or we don't
     // support the number of IRQs requested
-    if (!irq_.msi.cfg                         ||
+    if (!irq_.msi->is_valid()                  ||
         !bus_drv_.platform().supports_msi()   ||
-        (requested_irqs > irq_.msi.max_irqs))
+        (requested_irqs > irq_.msi->max_irqs()))
         return ERR_NOT_SUPPORTED;
 
     // If we support PVM, make sure that we are completely masked before
     // attempting to allocte the block of IRQs.
     bool initially_masked;
-    if (irq_.msi.pvm_mask_reg) {
-        pcie_write32(irq_.msi.pvm_mask_reg, 0xFFFFFFFF);
+    if (irq_.msi->has_pvm()) {
+        cfg_->Write(irq_.msi->mask_bits_reg(), 0xFFFFFFFF);
         initially_masked = true;
     } else {
         // If we cannot mask at the PCI level, then our IRQs will be initially
@@ -437,11 +440,11 @@ status_t PcieDevice::EnterMsiIrqMode(uint requested_irqs) {
     }
 
     /* Ask the platform for a chunk of MSI compatible IRQs */
-    DEBUG_ASSERT(!irq_.msi.irq_block.allocated);
+    DEBUG_ASSERT(!irq_.msi->irq_block_.allocated);
     res = bus_drv_.platform().AllocMsiBlock(requested_irqs,
-                                            irq_.msi.is64bit,
+                                            irq_.msi->is64Bit(),
                                             false,  /* is_msix == false */
-                                            &irq_.msi.irq_block);
+                                            &irq_.msi->irq_block_);
     if (res != NO_ERROR) {
         LTRACEF("Failed to allocate a block of %u MSI IRQs for device "
                 "%02x:%02x.%01x (res %d)\n",
@@ -464,16 +467,16 @@ status_t PcieDevice::EnterMsiIrqMode(uint requested_irqs) {
      * 2) Each IRQ has been masked at system level (if supported)
      * 3) Each IRQ has been masked at the PCI PVM level (if supported)
      */
-    DEBUG_ASSERT(irq_.msi.irq_block.allocated);
-    SetMsiTarget(irq_.msi.irq_block.tgt_addr, irq_.msi.irq_block.tgt_data);
+    DEBUG_ASSERT(irq_.msi->irq_block_.allocated);
+    SetMsiTarget(irq_.msi->irq_block_.tgt_addr, irq_.msi->irq_block_.tgt_data);
 
     /* Properly program the multi-message enable field in the control register */
     SetMsiMultiMessageEnb(requested_irqs);
 
     /* Register each IRQ with the dispatcher */
-    DEBUG_ASSERT(irq_.handler_count <= irq_.msi.irq_block.num_irq);
+    DEBUG_ASSERT(irq_.handler_count <= irq_.msi->irq_block_.num_irq);
     for (uint i = 0; i < irq_.handler_count; ++i) {
-        bus_drv_.platform().RegisterMsiHandler(&irq_.msi.irq_block,
+        bus_drv_.platform().RegisterMsiHandler(&irq_.msi->irq_block_,
                                                i,
                                                PcieDevice::MsiIrqHandlerThunk,
                                                irq_.handlers + i);
@@ -490,12 +493,13 @@ bailout:
 }
 
 enum handler_return PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) {
+    DEBUG_ASSERT(irq_.msi);
     /* No need to save IRQ state; we are in an IRQ handler at the moment. */
     AutoSpinLock handler_lock(hstate.lock);
 
     /* Mask our IRQ if we can. */
     bool was_masked;
-    if (bus_drv_.platform().supports_msi_masking() || irq_.msi.pvm_mask_reg) {
+    if (bus_drv_.platform().supports_msi_masking() || irq_.msi->has_pvm()) {
         was_masked = MaskUnmaskMsiIrqLocked(hstate.pci_irq_id, true);
     } else {
         DEBUG_ASSERT(!hstate.masked);
@@ -532,6 +536,7 @@ enum handler_return PcieDevice::MsiIrqHandlerThunk(void *arg) {
  ******************************************************************************/
 status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
                                                     pcie_irq_mode_caps_t* out_caps) const {
+    DEBUG_ASSERT(irq_.msi);
     DEBUG_ASSERT(plugged_in_);
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(out_caps);
@@ -561,14 +566,14 @@ status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
 
         /* If the device supports MSI, it will have a pointer to the control
          * structure in config. */
-        if (!irq_.msi.cfg)
+        if (!irq_.msi->is_valid())
             return ERR_NOT_SUPPORTED;
 
         /* We support PVM if either the device does, or if the platform is
          * capable of masking and unmasking individual IRQs from an MSI block
          * allocation. */
-        out_caps->max_irqs = irq_.msi.max_irqs;
-        out_caps->per_vector_masking_supported = (irq_.msi.pvm_mask_reg != NULL)
+        out_caps->max_irqs = irq_.msi->max_irqs();
+        out_caps->per_vector_masking_supported = irq_.msi->has_pvm()
                                               || (bus_drv_.platform().supports_msi_masking());
         break;
 
@@ -626,8 +631,9 @@ status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs)
             return NO_ERROR;
 
         case PCIE_IRQ_MODE_MSI:
-            DEBUG_ASSERT(irq_.msi.cfg);
-            DEBUG_ASSERT(irq_.msi.irq_block.allocated);
+            DEBUG_ASSERT(irq_.msi);
+            DEBUG_ASSERT(irq_.msi->is_valid());
+            DEBUG_ASSERT(irq_.msi->irq_block_.allocated);
 
             LeaveMsiIrqMode();
 
@@ -905,7 +911,7 @@ status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
     // Does config say that we have a legacy IRQ pin?  If so use the bus driver
     // to map it to the system IRQ ID, then grab a hold of the shared legacy IRQ
     // handler.
-    irq_.legacy.pin = pcie_read8(&cfg_->base.interrupt_pin);
+    irq_.legacy.pin = cfg_->Read(PciConfig::kInterruptPin);
     if (irq_.legacy.pin) {
         status_t res = MapPinToIrqLocked(mxtl::RefPtr<PcieUpstreamNode>(&upstream));
         if (res != NO_ERROR) {

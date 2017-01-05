@@ -76,8 +76,6 @@ PcieDevice::PcieDevice(PcieBusDriver& bus_drv,
       dev_id_(dev_id),
       func_id_(func_id),
       bar_count_(is_bridge ? PCIE_BAR_REGS_PER_BRIDGE : PCIE_BAR_REGS_PER_DEVICE) {
-    memset(&pcie_caps_, 0, sizeof(pcie_caps_));
-    memset(&pcie_adv_caps_, 0, sizeof(pcie_adv_caps_));
 }
 
 PcieDevice::~PcieDevice() {
@@ -94,7 +92,7 @@ PcieDevice::~PcieDevice() {
     /* Make certain that all bus access (MMIO, PIO, Bus mastering) has been
      * disabled.  Also, explicitly disable legacy IRQs */
     if (cfg_)
-        pcie_write16(&cfg_->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+        cfg_->Write(PciConfig::kCommand, PCIE_CFG_COMMAND_INT_DISABLE);
 }
 
 mxtl::RefPtr<PcieDevice> PcieDevice::Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id) {
@@ -127,12 +125,12 @@ status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
     }
 
     // Cache basic device info
-    vendor_id_ = pcie_read16(&cfg_->base.vendor_id);
-    device_id_ = pcie_read16(&cfg_->base.device_id);
-    class_id_  = pcie_read8(&cfg_->base.base_class);
-    subclass_  = pcie_read8(&cfg_->base.sub_class);
-    prog_if_   = pcie_read8(&cfg_->base.program_interface);
-    rev_id_    = pcie_read8(&cfg_->base.revision_id_0);
+    vendor_id_ = cfg_->Read(PciConfig::kVendorId);
+    device_id_ = cfg_->Read(PciConfig::kDeviceId);
+    class_id_  = cfg_->Read(PciConfig::kBaseClass);
+    subclass_  = cfg_->Read(PciConfig::kSubClass);
+    prog_if_   = cfg_->Read(PciConfig::kProgramInterface);
+    rev_id_    = cfg_->Read(PciConfig::kRevisionId);
 
     // Determine the details of each of the BARs, but do not actually allocate
     // space on the bus for them yet.
@@ -142,7 +140,7 @@ status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
 
     // Parse and sanity check the capabilities and extended capabilities lists
     // if they exist
-    res = ParseCapabilitiesLocked();
+    res = ProbeCapabilitiesLocked();
     if (res != NO_ERROR)
         return res;
 
@@ -192,7 +190,7 @@ void PcieDevice::Unclaim() {
      * memory.  If it is a bridge, leave this stuff turned on so that downstream devices can
      * continue to function. */
     if (!is_bridge_)
-        pcie_write16(&cfg_->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+        cfg_->Write(PciConfig::kCommand, PCIE_CFG_COMMAND_INT_DISABLE);
 
     /* Device is now unclaimed */
     claimed_ = false;
@@ -212,7 +210,7 @@ void PcieDevice::Unplug() {
 
     if (plugged_in_) {
         /* Remove all access this device has to the PCI bus */
-        pcie_write16(&cfg_->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+        cfg_->Write(PciConfig::kCommand, PCIE_CFG_COMMAND_INT_DISABLE);
 
         /* TODO(johngro) : Make sure that our interrupt mode has been set to
          * completely disabled.  Do not return allocated BARs to the central
@@ -265,16 +263,16 @@ status_t PcieDevice::DoFunctionLevelReset() {
 
     // If cannot reset via the PCIe capability, or the PCI advanced capability,
     // then this device simply does not support function level reset.
-    if (!pcie_caps_.has_flr && !pcie_adv_caps_.has_flr)
+    if (!(pcie_ && pcie_->has_flr()) && !(pci_af_ && pci_af_->has_flr()))
         return ERR_NOT_SUPPORTED;
 
-    if (pcie_caps_.has_flr) {
+    if (pcie_ && pcie_->has_flr()) {
         // TODO: perform function level reset using PCIe Capability Structure.
         TRACEF("TODO(johngro): Implement PCIe Capability FLR\n");
         return ERR_NOT_SUPPORTED;
     }
 
-    if (pcie_adv_caps_.has_flr) {
+    if (pci_af_ && pci_af_->has_flr()) {
         // Following the procedure outlined in the Implementation notes
         uint32_t bar_backup[PCIE_MAX_BAR_REGS];
         uint16_t cmd_backup;
@@ -287,10 +285,10 @@ status_t PcieDevice::DoFunctionLevelReset() {
             DEBUG_ASSERT(irq_.legacy.shared_handler != nullptr);
             AutoSpinLockIrqSave cmd_reg_lock(cmd_reg_lock_);
 
-            cmd_backup = pcie_read16(&cfg_->base.command);
-            pcie_write16(&cfg_->base.command, PCIE_CFG_COMMAND_INT_DISABLE);
+            cmd_backup = cfg_->Read(PciConfig::kCommand);
+            cfg_->Write(PciConfig::kCommand, PCIE_CFG_COMMAND_INT_DISABLE);
             for (uint i = 0; i < bar_count_; ++i)
-                bar_backup[i] = pcie_read32(&cfg_->base.base_addresses[i]);
+                bar_backup[i] = cfg_->Read(PciConfig::kBAR(i));
         }
 
         // 3) Poll the transaction pending bit until it clears.  This may take
@@ -298,7 +296,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
         lk_time_t start = current_time();
         ret = ERR_TIMED_OUT;
         do {
-            if (!(pcie_read8(&pcie_adv_caps_.ecam->af_status) &
+            if (!(cfg_->Read(pci_af_->af_status()) &
                   PCS_ADVCAPS_STATUS_TRANS_PENDING)) {
                 ret = NO_ERROR;
                 break;
@@ -313,12 +311,12 @@ status_t PcieDevice::DoFunctionLevelReset() {
 
             // Restore the command register
             AutoSpinLockIrqSave cmd_reg_lock(cmd_reg_lock_);
-            pcie_write16(&cfg_->base.command, cmd_backup);
+            cfg_->Write(PciConfig::kCommand, cmd_backup);
 
             return ret;
         } else {
             // 4) Software initiates the FLR
-            pcie_write8(&pcie_adv_caps_.ecam->af_ctrl, PCS_ADVCAPS_CTRL_INITIATE_FLR);
+            cfg_->Write(pci_af_->af_ctrl(), PCS_ADVCAPS_CTRL_INITIATE_FLR);
 
             // 5) Software waits 100mSec
             thread_sleep(100);
@@ -333,7 +331,7 @@ status_t PcieDevice::DoFunctionLevelReset() {
         start = current_time();
         ret   = ERR_TIMED_OUT;
         do {
-            if (pcie_read16(&cfg_->base.vendor_id) != PCIE_INVALID_VENDOR_ID) {
+            if (cfg_->Read(PciConfig::kVendorId) != PCIE_INVALID_VENDOR_ID) {
                 ret = NO_ERROR;
                 break;
             }
@@ -345,8 +343,8 @@ status_t PcieDevice::DoFunctionLevelReset() {
             AutoSpinLockIrqSave cmd_reg_lock(cmd_reg_lock_);
 
             for (uint i = 0; i < bar_count_; ++i)
-                pcie_write32(&cfg_->base.base_addresses[i], bar_backup[i]);
-            pcie_write16(&cfg_->base.command, cmd_backup);
+                cfg_->Write(PciConfig::kBAR(i), bar_backup[i]);
+            cfg_->Write(PciConfig::kCommand, cmd_backup);
         } else {
             // TODO(johngro) : What do we do if this fails?  If we trigger a
             // device reset, and the device fails to re-appear after 5 seconds,
@@ -384,8 +382,8 @@ void PcieDevice::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
 
     {
         AutoSpinLockIrqSave cmd_reg_lock(cmd_reg_lock_);
-        pcie_write16(&cfg_->base.command,
-                     static_cast<uint16_t>((pcie_read16(&cfg_->base.command) & ~clr_bits)
+        cfg_->Write(PciConfig::kCommand,
+                     static_cast<uint16_t>((cfg_->Read(PciConfig::kCommand) & ~clr_bits)
                                                                              |  set_bits));
     }
 }
@@ -397,7 +395,7 @@ status_t PcieDevice::ProbeBarsLocked() {
     static_assert(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_DEVICE, "");
     static_assert(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_BRIDGE, "");
 
-    __UNUSED uint8_t header_type = pcie_read8(&cfg_->base.header_type) & PCI_HEADER_TYPE_MASK;
+    __UNUSED uint8_t header_type = cfg_->Read(PciConfig::kHeaderType) & PCI_HEADER_TYPE_MASK;
 
     DEBUG_ASSERT((header_type == PCI_HEADER_TYPE_STANDARD) ||
                  (header_type == PCI_HEADER_TYPE_PCI_BRIDGE));
@@ -437,8 +435,7 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
 
     /* Determine the type of BAR this is.  Make sure that it is one of the types we understand */
     pcie_bar_info_t& bar_info  = bars_[bar_id];
-    volatile uint32_t* bar_reg = &cfg_->base.base_addresses[bar_id];
-    uint32_t bar_val           = pcie_read32(bar_reg);
+    uint32_t bar_val           = cfg_->Read(PciConfig::kBAR(bar_id));
     bar_info.is_mmio           = (bar_val & PCI_BAR_IO_TYPE_MASK) == PCI_BAR_IO_TYPE_MMIO;
     bar_info.is_64bit          = bar_info.is_mmio &&
                                  ((bar_val & PCI_BAR_MMIO_TYPE_MASK) == PCI_BAR_MMIO_TYPE_64BIT);
@@ -473,11 +470,11 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
      * in time, otherwise they might see some minor glitching while access is
      * disabled.
      */
-    uint16_t backup = pcie_read16(&cfg_->base.command);
+    uint16_t backup = cfg_->Read(PciConfig::kCommand);;
     if (bar_info.is_mmio)
-        pcie_write16(&cfg_->base.command, static_cast<uint16_t>(backup & ~PCI_COMMAND_MEM_EN));
+        cfg_->Write(PciConfig::kCommand, static_cast<uint16_t>(backup & ~PCI_COMMAND_MEM_EN));
     else
-        pcie_write16(&cfg_->base.command, static_cast<uint16_t>(backup & ~PCI_COMMAND_IO_EN));
+        cfg_->Write(PciConfig::kCommand, static_cast<uint16_t>(backup & ~PCI_COMMAND_IO_EN));
 
     /* Figure out the size of this BAR region by writing 1's to the
      * address bits, then reading back to see which bits the device
@@ -486,18 +483,19 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
     uint32_t addr_lo   = bar_val & addr_mask;
     uint64_t size_mask;
 
-    pcie_write32(bar_reg, bar_val | addr_mask);
-    size_mask = ~(pcie_read32(bar_reg) & addr_mask);
-    pcie_write32(bar_reg, bar_val);
+    cfg_->Write(PciConfig::kBAR(bar_id), bar_val | addr_mask);
+    size_mask = ~(cfg_->Read(PciConfig::kBAR(bar_id)) & addr_mask);
+    cfg_->Write(PciConfig::kBAR(bar_id), bar_val);
 
     if (bar_info.is_mmio) {
         if (bar_info.is_64bit) {
+
             /* 64bit MMIO? Probe the upper bits as well */
-            bar_reg++;
-            bar_val = pcie_read32(bar_reg);
-            pcie_write32(bar_reg, 0xFFFFFFFF);
-            size_mask |= ((uint64_t)~pcie_read32(bar_reg)) << 32;
-            pcie_write32(bar_reg, bar_val);
+            bar_id++;
+            bar_val = cfg_->Read(PciConfig::kBAR(bar_id));
+            cfg_->Write(PciConfig::kBAR(bar_id), 0xFFFFFFFF);
+            size_mask |= ((uint64_t)~cfg_->Read(PciConfig::kBAR(bar_id))) << 32;
+            cfg_->Write(PciConfig::kBAR(bar_id), bar_val);
             bar_info.size = size_mask + 1;
             bar_info.bus_addr = (static_cast<uint64_t>(bar_val) << 32) | addr_lo;
         } else {
@@ -511,7 +509,7 @@ status_t PcieDevice::ProbeBarLocked(uint bar_id) {
     }
 
     /* Restore the command register to its previous value */
-    pcie_write16(&cfg_->base.command, backup);
+    cfg_->Write(PciConfig::kCommand, backup);
 
     /* Success */
     return NO_ERROR;
@@ -659,14 +657,13 @@ status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
     /* Allocation succeeded.  Record our allocated and aligned physical address
      * in our BAR(s) */
     DEBUG_ASSERT(info.allocation != nullptr);
-    volatile uint32_t* bar_reg = &cfg_->base.base_addresses[info.first_bar_reg];
-
+    uint bar_reg = info.first_bar_reg;
     info.bus_addr = info.allocation->base;
 
-    pcie_write32(bar_reg, static_cast<uint32_t>((info.bus_addr & 0xFFFFFFFF) |
-                                                (pcie_read32(bar_reg) & ~addr_mask)));
+    cfg_->Write(PciConfig::kBAR(bar_reg), static_cast<uint32_t>((info.bus_addr & 0xFFFFFFFF) |
+                                                (cfg_->Read(PciConfig::kBAR(bar_reg)) & ~addr_mask)));
     if (info.is_64bit)
-        pcie_write32(bar_reg + 1, static_cast<uint32_t>(info.bus_addr >> 32));
+        cfg_->Write(PciConfig::kBAR(bar_reg + 1), static_cast<uint32_t>(info.bus_addr >> 32));
 
     return NO_ERROR;
 }

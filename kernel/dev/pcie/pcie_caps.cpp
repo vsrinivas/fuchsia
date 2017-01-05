@@ -10,35 +10,16 @@
 #include <err.h>
 #include <string.h>
 #include <trace.h>
-
+#include <dev/pci_config.h>
 #include <dev/pcie_device.h>
 
 #define LOCAL_TRACE 0
 
-struct pcie_caps_parse_table_entry_t {
-    using ParseFn = status_t (*)(PcieDevice* dev, void* hdr,
-                                 uint version, uint space_left);
-
-    constexpr pcie_caps_parse_table_entry_t(ParseFn pfn, uint cid) : parse(pfn), cap_id(cid) { }
-    ParseFn  parse;
-    uint     cap_id;
-};
-
-typedef struct pcie_caps_fetch_hdr_params {
-    void* hdr;
-    uint  cap_id;
-    uint  cap_version;
-    uint  space_left;
-} pcie_caps_fetch_hdr_params_t;
-
-typedef struct pcie_do_parse_caps_params {
-    status_t (*fetch_hdr)(PcieDevice*                   dev,
-                          void*                         prev_hdr,
-                          pcie_caps_fetch_hdr_params_t* out_params);
-    const pcie_caps_parse_table_entry_t* parse_table;
-    const size_t                         parse_table_size;
-    const uint                           max_possible_caps;
-} pcie_do_parse_caps_params_t;
+/*
+ * TODO(cja) Re-add the paranoid sanity checks on capability placement
+ * and size that was in the old code. Doing this sanely likely involves keeping
+ * the various C style structures for the capabilities in pcie_caps.h originally
+*/
 
 static bool quirk_should_force_pcie(const PcieDevice& dev) {
     static const struct {
@@ -57,69 +38,104 @@ static bool quirk_should_force_pcie(const PcieDevice& dev) {
     return false;
 }
 
+
+/*
+ * Advanced Capabilities for Conventional PCI ECN
+ */
+PciCapAdvFeatures::PciCapAdvFeatures(const PcieDevice& dev, uint16_t base, uint8_t id)
+    : PciStdCapability(dev, base, id) {
+    DEBUG_ASSERT(id == PCIE_CAP_ID_ADVANCED_FEATURES);
+    auto cfg = dev.config();
+
+    length_    = PciReg8(static_cast<uint16_t>(base_ + kLengthOffset));
+    af_caps_   = PciReg8(static_cast<uint16_t>(base_ + kAFCapsOffset));
+    af_ctrl_   = PciReg8(static_cast<uint16_t>(base_ + kAFControlOffset));
+    af_status_ = PciReg8(static_cast<uint16_t>(base_ + kAFStatusOffset));
+
+    uint8_t caps = cfg->Read(af_caps_);
+    has_flr_ = PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(caps);
+    has_tp_  = PCS_ADVCAPS_CAP_HAS_TRANS_PENDING(caps);
+
+    uint8_t length = cfg->Read(length_);
+    if (length != PCS_ADVCAPS_LENGTH) {
+        TRACEF("Length of %u does not match the spec length of %u!\n", length, PCS_ADVCAPS_LENGTH);
+        return;
+    }
+
+    is_valid_ = true;
+}
+
 /*
  * PCI Express Base Specification 1.1  Section 7.8 (version 1)
  * PCI Express Base Specification 3.1a Section 7.8 (version 2)
  */
-status_t PcieDevice::ParsePciExpressCaps(PcieDevice* dev,
-                                         void*       hdr,
-                                         uint        capability_version,
-                                         uint        space_left) {
-    pcie_capabilities_t* ecam;
-    uint16_t             caps;
-    uint                 version;
-    pcie_device_type_t   devtype;
-    uint                 min_size;
+PciCapPcie::PciCapPcie(const PcieDevice& dev, uint16_t base, uint8_t id)
+    : PciStdCapability(dev, base, id) {
+    DEBUG_ASSERT(id == PCIE_CAP_ID_PCI_EXPRESS);
+    auto cfg = dev.config();
 
-    static_assert(countof(dev->pcie_caps_.chunks) == PCS_CAPS_CHUNK_COUNT, "");
-    DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(hdr);
-    DEBUG_ASSERT(!capability_version);  // Standard caps do not have version encoded in the std hdr
-
-    /* Duplicate check */
-    if (dev->pcie_caps_.ecam) {
+    /* Have we already initialized PCIE? */
+    if (is_valid_) {
         TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has more than one PCI "
                 "Express capability structure!\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id());
-        goto fail;
+               dev.bus_id(), dev.dev_id(), dev.func_id(),
+               dev.vendor_id(), dev.device_id());
+        return;
     }
 
-    /* Min size sanity check */
-    min_size = PCS_CAPS_MIN_SIZE;
-    if (min_size > space_left) {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned PCI "
-               "Express capability structure.  Structure must be at least %u "
-               "bytes long, but only %u bytes remain in ECAM standard config.\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               min_size, space_left);
-        goto fail;
-    }
+    caps_ = PciReg16(static_cast<uint16_t>(base_ + kPcieCapsOffset));
+    auto cap_val = cfg->Read(caps_);
+    version_ = PCS_CAPS_VERSION(cap_val);
+    devtype_ = PCS_CAPS_DEVTYPE(cap_val);
 
-    /* Extract the the version and device type and use it to determine the real
-     * minimum size of the structure.  Sanity check the device/port type in the
-     * process */
-    ecam    = (pcie_capabilities_t*)hdr;
-    caps    = pcie_read16(&ecam->hdr.caps);
-    version = PCS_CAPS_VERSION(caps);
-    devtype = PCS_CAPS_DEVTYPE(caps);
+    /*
+     * Set up all the offsets for the various chunks in the device. Some may
+     * not be supported, but regardless of whether they are there the final
+     * structure will be the same.
+     */
+    device.caps_    = PciReg32(static_cast<uint16_t>(base_ + kCapsOffset(kDeviceOffset)));
+    device.ctrl_    = PciReg16(static_cast<uint16_t>(base_ + kControlOffset(kDeviceOffset)));
+    device.status_  = PciReg16(static_cast<uint16_t>(base_ + kStatusOffset(kDeviceOffset)));
+
+    link.caps_      = PciReg32(static_cast<uint16_t>(base_ + kCapsOffset(kLinkOffset)));
+    link.ctrl_      = PciReg16(static_cast<uint16_t>(base_ + kControlOffset(kLinkOffset)));
+    link.status_    = PciReg16(static_cast<uint16_t>(base_ + kStatusOffset(kLinkOffset)));
+
+    slot.caps_      = PciReg32(static_cast<uint16_t>(base_ + kCapsOffset(kSlotOffset)));
+    slot.ctrl_      = PciReg16(static_cast<uint16_t>(base_ + kControlOffset(kSlotOffset)));
+    slot.status_    = PciReg16(static_cast<uint16_t>(base_ + kStatusOffset(kSlotOffset)));
+
+    root.caps_      = PciReg16(static_cast<uint16_t>(base_ + kRootCapsOffset));
+    root.ctrl_      = PciReg16(static_cast<uint16_t>(base_ + kRootControlOffset));
+    root.status_    = PciReg32(static_cast<uint16_t>(base_ + kRootStatusOffset));
+
+    device2.caps_   = PciReg32(static_cast<uint16_t>(base_ + kCapsOffset(kDevice2Offset)));
+    device2.ctrl_   = PciReg16(static_cast<uint16_t>(base_ + kControlOffset(kDevice2Offset)));
+    device2.status_ = PciReg16(static_cast<uint16_t>(base_ + kStatusOffset(kDevice2Offset)));
+
+    link2.caps_     = PciReg32(static_cast<uint16_t>(base_ + kCapsOffset(kLinkOffset)));
+    link2.ctrl_     = PciReg16(static_cast<uint16_t>(base_ + kControlOffset(kLinkOffset)));
+    link2.status_   = PciReg16(static_cast<uint16_t>(base_ + kStatusOffset(kLinkOffset)));
+
+    slot2.caps_     = PciReg32(static_cast<uint16_t>(base_ + kCapsOffset(kSlotOffset)));
+    slot2.ctrl_     = PciReg16(static_cast<uint16_t>(base_ + kControlOffset(kSlotOffset)));
+    slot2.status_   = PciReg16(static_cast<uint16_t>(base_ + kStatusOffset(kSlotOffset)));
 
     /* Sanity check the device/port type */
-    switch (devtype) {
+    switch (devtype_) {
         // Type 0 config header types
         case PCIE_DEVTYPE_PCIE_ENDPOINT:
         case PCIE_DEVTYPE_LEGACY_PCIE_ENDPOINT:
         case PCIE_DEVTYPE_RC_INTEGRATED_ENDPOINT:
         case PCIE_DEVTYPE_RC_EVENT_COLLECTOR:
-            if (dev->is_bridge_) {
+            if (dev.is_bridge()) {
                 TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has a Type 0 PCIe "
                        "device type (0x%x) in PCIe capabilties structure, but "
                        "does not have a Type 0 config header.\n",
-                       dev->bus_id(), dev->dev_id(), dev->func_id(),
-                       dev->vendor_id(), dev->device_id(),
-                       devtype);
-                return ERR_INTERNAL;
+                       dev.bus_id(), dev.dev_id(), dev.func_id(),
+                       dev.vendor_id(), dev.device_id(),
+                       devtype_);
+                return;
             }
             break;
 
@@ -129,101 +145,25 @@ status_t PcieDevice::ParsePciExpressCaps(PcieDevice* dev,
         case PCIE_DEVTYPE_SWITCH_DOWNSTREAM_PORT:
         case PCIE_DEVTYPE_PCIE_TO_PCI_BRIDGE:
         case PCIE_DEVTYPE_PCI_TO_PCIE_BRIDGE:
-            if (!dev->is_bridge_) {
+            if (!dev.is_bridge()) {
                 TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has a Type 1 PCIe "
                        "device type (0x%x) in PCIe capabilties structure, but "
                        "does not have a Type 1 config header.\n",
-                       dev->bus_id(), dev->dev_id(), dev->func_id(),
-                       dev->vendor_id(), dev->device_id(),
-                       devtype);
-                return ERR_INTERNAL;
+                       dev.bus_id(), dev.dev_id(), dev.func_id(),
+                       dev.vendor_id(), dev.device_id(),
+                       devtype_);
+                return;
             }
             break;
 
         default:
             TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has an illegal PCIe "
                    "device type (0x%x) in PCIe capabilties structure.\n",
-                   dev->bus_id(), dev->dev_id(), dev->func_id(),
-                   dev->vendor_id(), dev->device_id(),
-                   devtype);
-            return ERR_INTERNAL;
+                   dev.bus_id(), dev.dev_id(), dev.func_id(),
+                   dev.vendor_id(), dev.device_id(),
+                   devtype_);
+            return;
     }
-
-    /* Version sanity check and size extraction */
-    if (version == 2) {
-        /* V2 structure always have the full structure */
-        min_size = PCS_CAPS_V2_SIZE;
-    } else if (version == 1) {
-        /* Presence or absence of fields in V1 registers depend on the device
-         * type.  See PCI Express Base Specification 1.1  Section 7.8 */
-        switch (devtype) {
-            case PCIE_DEVTYPE_RC_ROOT_PORT:
-            case PCIE_DEVTYPE_RC_EVENT_COLLECTOR:
-                min_size = PCS_CAPS_V1_ROOT_PORT_SIZE;
-                break;
-
-            case PCIE_DEVTYPE_SWITCH_DOWNSTREAM_PORT:
-                min_size = PCS_CAPS_V1_DOWNSTREAM_PORT_SIZE;
-                break;
-
-            case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:
-                min_size = PCS_CAPS_V1_UPSTREAM_PORT_SIZE;
-                break;
-
-            default:
-                min_size = PCS_CAPS_V1_ENDPOINT_SIZE;
-                break;
-        }
-    } else {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegal PCI Express "
-               "capability structure version (%u).\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               version);
-        goto fail;
-    }
-
-    /* Finish the size sanity check */
-    if (min_size > space_left) {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned PCI "
-               "Express capability structure (ver %u, devtype %u).  Structure "
-               "must be at least %u bytes long, but only %u bytes remain in ECAM "
-               "standard config.\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               version, devtype, min_size, space_left);
-        goto fail;
-    }
-
-    /* Based on the device type and version, extract the various chunk pointers */
-    switch (devtype) {
-        case PCIE_DEVTYPE_RC_ROOT_PORT:
-            dev->pcie_caps_.root = &ecam->root;
-            // Deliberate fall-thru
-
-        case PCIE_DEVTYPE_SWITCH_DOWNSTREAM_PORT:
-            dev->pcie_caps_.chunks[PCS_CAPS_SLOT_CHUNK_NDX] = &ecam->slot;
-            if (version > 1)
-                dev->pcie_caps_.chunks[PCS_CAPS_SLOT2_CHUNK_NDX] = &ecam->slot2;
-            // Deliberate fall-thru
-
-        case PCIE_DEVTYPE_SWITCH_UPSTREAM_PORT:
-            dev->pcie_caps_.chunks[PCS_CAPS_LINK_CHUNK_NDX] = &ecam->link;
-            if (version > 1)
-                dev->pcie_caps_.chunks[PCS_CAPS_LINK2_CHUNK_NDX] = &ecam->link2;
-            // Deliberate fall-thru
-
-        default:
-            dev->pcie_caps_.chunks[PCS_CAPS_DEV_CHUNK_NDX] = &ecam->device;
-            if (version > 1)
-                dev->pcie_caps_.chunks[PCS_CAPS_DEV2_CHUNK_NDX] = &ecam->device2;
-            break;
-    }
-
-    /* Root event collectors do not have slot or link chunks, but they do have
-     * device chunks as well as the root chunk.  */
-    if (devtype == PCIE_DEVTYPE_RC_EVENT_COLLECTOR)
-        dev->pcie_caps_.root = &ecam->root;
 
     /* TODO(johngro): remember to read the MSI/MSI-X interrupt message number
      * field when setting up for MSI/MSI-X.  We almost certainly need to hook
@@ -234,80 +174,69 @@ status_t PcieDevice::ParsePciExpressCaps(PcieDevice* dev,
 
     /* Check device capabilities to see if we support function level reset or
      * not */
-    uint32_t devcaps;
-    bool has_flr;
-    devcaps = pcie_read32(&dev->pcie_caps_.chunks[PCS_CAPS_DEV_CHUNK_NDX]->caps);
-    has_flr = PCS_DEV_CAPS_FUNC_LEVEL_RESET(devcaps) != 0;
+    uint32_t devcaps = cfg->Read(device.caps());
+    has_flr_ = (PCS_DEV_CAPS_FUNC_LEVEL_RESET(devcaps) != 0);
 
-    /* Success, stash the rest of our results and we are done */
-    dev->pcie_caps_.ecam    = &ecam->hdr;
-    dev->pcie_caps_.version = version;
-    dev->pcie_caps_.devtype = devtype;
-    dev->pcie_caps_.has_flr = has_flr;
-    return NO_ERROR;
-
-fail:
-    memset(&dev->pcie_caps_, 0, sizeof(dev->pcie_caps_));
-    return ERR_INTERNAL;
+    is_valid_ = true;
 }
 
 /*
- * PCI Local Bus Specification 3.0 Section 6.8.1
+ * @see PCI Local Bus Specification 3.0 Section 6.8.1
  */
-status_t PcieDevice::ParseMsiCaps(PcieDevice* dev,
-                                  void*       hdr,
-                                  uint        version,
-                                  uint        space_left) {
-    DEBUG_ASSERT(dev);
+PciCapMsi::PciCapMsi(const PcieDevice& dev, uint16_t base, uint8_t id)
+    : PciStdCapability(dev, base, id) {
+    DEBUG_ASSERT(id == PCIE_CAP_ID_MSI);
+    auto cfg = dev.config();
 
-    /* Zero out the devices MSI IRQ state */
-    memset(&dev->irq_.msi, 0, sizeof(dev->irq_.msi));
+    // Set up the rest of the registers based on whether we're 64 bit or not.
+    ctrl_     = PciReg16(static_cast<uint16_t>(base_ + kControlOffset));
+    addr_     = PciReg32(static_cast<uint16_t>(base_ + kAddrOffset));
 
-    /* Make sure we have at least enough space to hold the common header. */
-    size_t min_size = PCIE_CAP_MSI_CAP_HDR_SIZE;
-    if (space_left < min_size) {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned MSI "
-               "capability structure.  Structure header is at least %zu bytes "
-               "long, but only %u bytes remain in ECAM standard config.\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               min_size, space_left);
-        return ERR_INVALID_ARGS;
+    uint16_t ctrl = cfg->Read(ctrl_reg());
+    has_pvm_      = PCIE_CAP_MSI_CTRL_PVM_SUPPORTED(ctrl);
+    is_64_bit_    = PCIE_CAP_MSI_CTRL_64BIT_SUPPORTED(ctrl);
+    msi_size_     = (has_pvm_ ? (is_64_bit_ ? k64BitPvmSize : k32BitPvmSize)
+                              : (is_64_bit_ ? k64BitNoPvmSize : k32BitNoPvmSize));
+
+    if (is_64_bit_) {
+        addr_upper_   = PciReg32(static_cast<uint16_t>(base_ + kAddrUpperOffset));
+        data_         = PciReg16(static_cast<uint16_t>(base_ + kData64Offset));
+        mask_bits_    = PciReg32(static_cast<uint16_t>(base_ + kMaskBits64Offset));
+        pending_bits_ = PciReg32(static_cast<uint16_t>(base_ + kPendingBits64Offset));
+    } else {
+        data_         = PciReg16(static_cast<uint16_t>(base_ + kData32Offset));
+        mask_bits_    = PciReg32(static_cast<uint16_t>(base_ + kMaskBits32Offset));
+        pending_bits_ = PciReg32(static_cast<uint16_t>(base_ + kPendingBits32Offset));
     }
 
-    /* Extract the control field and figure out what sub-type of MSI capability
-     * struture we are dealing with. */
-    pcie_cap_msi_t* msi_cap = (pcie_cap_msi_t*)hdr;
-    uint16_t        ctrl    = pcie_read16(&msi_cap->ctrl);
-    bool            pvm     = PCIE_CAP_MSI_CTRL_PVM_SUPPORTED(ctrl);
-    bool            is64bit = PCIE_CAP_MSI_CTRL_64BIT_SUPPORTED(ctrl);
+    memset(&irq_block_, 0, sizeof(irq_block_));
+    uint16_t msi_end = static_cast<uint16_t>(base_ + msi_size_);
+    uint16_t cfgend = PCIE_BASE_CONFIG_SIZE;
 
-    if (pvm) min_size += is64bit ? sizeof(msi_cap->pvm_64bit)   : sizeof(msi_cap->pvm_32bit);
-    else     min_size += is64bit ? sizeof(msi_cap->nopvm_64bit) : sizeof(msi_cap->nopvm_32bit);
-
-    if (space_left < min_size) {
+    if (msi_end >= cfgend) {
         TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned MSI "
                "capability structure.  Structure %s 64-bit addressing and %s "
-               "per-vector masking and should be %zu bytes long, but only %u "
-               "bytes remain in ECAM standard config.\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               is64bit ? "supports" : "does not support",
-               pvm     ? "supports" : "does not support",
-               min_size, space_left);
-        return ERR_INVALID_ARGS;
+               "per-vector masking and should be %u bytes long, but the "
+               "structure ends at %u, %u bytes past the end of config "
+               "space\n",
+               dev.bus_id(), dev.dev_id(), dev.func_id(),
+               dev.vendor_id(), dev.device_id(),
+               is_64_bit_ ? "supports" : "does not support",
+               has_pvm_ ? "supports" : "does not support",
+               msi_size_, msi_end, static_cast<unsigned int>(cfgend - msi_end));
+        return;
     }
 
     /* Sanity check the Multi-Message Capable field */
-    uint max_irqs = 0x1u << PCIE_CAP_MSI_CTRL_GET_MMC(ctrl);
-    if (max_irqs > PCIE_MAX_MSI_IRQS) {
+    max_irqs_ = 0x1u << PCIE_CAP_MSI_CTRL_GET_MMC(ctrl);
+    if (max_irqs_ > PCIE_MAX_MSI_IRQS) {
         TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has invalid Multi-Message "
                "Capable value in MSI capability structure (%d).  Structure "
                "claims to support %u vectors, but %u is the maximum allowed.\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               PCIE_CAP_MSI_CTRL_GET_MMC(ctrl), max_irqs, PCIE_MAX_MSI_IRQS);
-        return ERR_INTERNAL;
+               dev.bus_id(), dev.dev_id(), dev.func_id(),
+               dev.vendor_id(), dev.device_id(),
+               PCIE_CAP_MSI_CTRL_GET_MMC(ctrl), max_irqs_, PCIE_MAX_MSI_IRQS);
+        return;
     }
 
     /* Success!
@@ -316,352 +245,109 @@ status_t PcieDevice::ParseMsiCaps(PcieDevice* dev,
      * set to 1-vector (multi-message disabled).  Then record our capabilities
      * in the device's bookkeeping and we are done.
      */
-    pcie_write16(&msi_cap->ctrl, PCIE_CAP_MSI_CTRL_SET_MME(0,
-                                 PCIE_CAP_MSI_CTRL_SET_ENB(0, ctrl)));
+    cfg->Write(ctrl_reg(), PCIE_CAP_MSI_CTRL_SET_MME(0,
+                           PCIE_CAP_MSI_CTRL_SET_ENB(0, ctrl)));
+    if (has_pvm_)
+        cfg->Write(mask_bits_reg(), 0xFFFFFFFF);
 
-    dev->irq_.msi.cfg      = msi_cap;
-    dev->irq_.msi.max_irqs = max_irqs;
-    dev->irq_.msi.is64bit  = is64bit;
-    if (pvm) {
-        /*
-         * If we support PVM, cache a pointer to the mask register (so we don't
-         * have to keep constantly checking if we are 64 bit or 32 bit MSI to
-         * figure out where our register is).  Also, mask sure that all vectors
-         * are currently masked.
-         */
-        dev->irq_.msi.pvm_mask_reg = is64bit
-                                   ? &msi_cap->pvm_64bit.mask_bits
-                                   : &msi_cap->pvm_32bit.mask_bits;
-        pcie_write32(dev->irq_.msi.pvm_mask_reg, 0xFFFFFFFF);
+    is_valid_ = true;
+}
+
+/* Catch quirks and invalid capability offsets we may see */
+inline status_t validate_capability_offset(uint8_t offset) {
+    if (offset == 0xFF
+        || offset < PCIE_CAP_PTR_MIN_VALID
+        || offset > PCIE_CAP_PTR_MAX_VALID) {
+        return ERR_INVALID_ARGS;
     }
 
     return NO_ERROR;
 }
 
 /*
- * Advanced Capabilities for Conventional PCI ECN
+ * TODO(cja): It may be worth moving to table based solution like we had before
+ * where we have a single parse function and a function table for it to use,
+ * but it involves a bit more worrying about ownership of capabilities and
+ * std / ext attributes.
  */
-status_t PcieDevice::ParsePciAdvFeatures(PcieDevice* dev,
-                                         void*       hdr,
-                                         uint        version,
-                                         uint        space_left) {
-    DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(hdr);
-    DEBUG_ASSERT(!version);  // Standard capabilities do not have versions
 
-    /* Size sanity check */
-    pcie_cap_adv_caps_t* ecam = (pcie_cap_adv_caps_t*)hdr;
-    if (sizeof(*ecam) > space_left) {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegally positioned PCI "
-                "Advanced capability structure.  Structure is %zu bytes long, but "
-                "only %u bytes remain in ECAM standard config.\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               sizeof(*ecam), space_left);
-        return ERR_INVALID_ARGS;
-    }
+status_t PcieDevice::ParseStdCapabilitiesLocked() {
+    status_t res = NO_ERROR;
+    uint8_t cap_offset = cfg_->Read(PciConfig::kCapabilitiesPtr);
+    uint8_t caps_found = 0;
+    AllocChecker ac;
 
-    uint8_t length = pcie_read8(&ecam->length);
-    if (sizeof(*ecam) > length) {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has an invalid PCI Advanced "
-               "capability structure length.  Expected %zu, Actual %u\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               sizeof(*ecam), length);
-        return ERR_INVALID_ARGS;
-    }
-
-    /* Read the caps field and sanity check it */
-    uint8_t caps = pcie_read8(&ecam->af_caps);
-    if (PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(caps) !=
-        PCS_ADVCAPS_CAP_HAS_TRANS_PENDING(caps)) {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegal PCI Advanced "
-               "capability structure.  Structure %s a Function Level Reset bit, "
-               "but %s a Transaction Pending Bit (caps = 0x%02x)\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(caps) ? "has" : "does not have",
-               PCS_ADVCAPS_CAP_HAS_TRANS_PENDING(caps)    ? "has" : "does not have",
-               caps);
-        return ERR_INTERNAL;
-    }
-
-    /* Success, stash our results and we are done */
-    dev->pcie_adv_caps_.ecam    = ecam;
-    dev->pcie_adv_caps_.has_flr = PCS_ADVCAPS_CAP_HAS_FUNC_LEVEL_RESET(caps);
-
-    return NO_ERROR;
-}
-
-static status_t pcie_fetch_standard_cap_hdr(PcieDevice*                   dev,
-                                            void*                         prev_hdr,
-                                            pcie_caps_fetch_hdr_params_t *out_params) {
-    DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(dev->config());
-    DEBUG_ASSERT(out_params);
-
-    /* By default, return a NULL next header and stop searching */
-    memset(out_params, 0, sizeof(*out_params));
-
-    /* Determine the position of the next header based on the previous header. */
-    uint8_t cptr;
-    if (!prev_hdr) {
-        /* If there was no previous header at all, check to see if this device
-         * even has a standard capability list */
-        uint16_t status = pcie_read16(&dev->config()->base.status);
-        if (!(status & PCI_STATUS_NEW_CAPS))
-            return NO_ERROR;
-
-        /* Start of the standard config list comes from the capabilities ptr
-         * member of the config header */
-        cptr = static_cast<uint8_t>(pcie_read8(&dev->config()->base.capabilities_ptr)
-                                    & ~(PCIE_CAPABILITY_ALIGNMENT - 1));
-    } else {
-        /* Extract the next header pointer from the previous header */
-        cptr = pcie_cap_hdr_get_next_ptr(pcie_read16((pcie_cap_hdr_t*)prev_hdr));
-    }
-
-    /* NULL next pointer means that we are done */
-    if (cptr == PCIE_CAP_PTR_NULL)
-        return NO_ERROR;
-
-    /* Sanity check the capability pointer. */
-    if (!((cptr >= PCIE_CAP_PTR_MIN_VALID) && (cptr <= PCIE_CAP_PTR_MAX_VALID)) ||
-        !IS_ALIGNED(cptr, PCIE_CAP_PTR_ALIGNMENT)) {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegal capability "
-               "pointer (0x%02x) in standard capability list.\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               cptr);
-        return ERR_INTERNAL;
-    }
-
-    /* Read the next header */
-    static_assert(PCIE_CAP_PTR_MAX_VALID <= PCIE_BASE_CONFIG_SIZE, "");
-    uint space = PCIE_BASE_CONFIG_SIZE - cptr;
-    DEBUG_ASSERT(space >= sizeof(pcie_cap_hdr_t));
-
-    pcie_cap_hdr_t* hdr_ptr = (pcie_cap_hdr_t*)((uintptr_t)(dev->config()) + cptr);
-    pcie_cap_hdr_t  hdr_val = pcie_read16(hdr_ptr);
-
-    /* Things look good.  Fill out our output params and we are done */
-    out_params->hdr         = hdr_ptr;
-    out_params->cap_id      = pcie_cap_hdr_get_type(hdr_val);
-    out_params->cap_version = 0x0;
-    out_params->space_left  = space;
-    return NO_ERROR;
-}
-
-static status_t pcie_fetch_extended_cap_hdr(PcieDevice*                   dev,
-                                            void*                         prev_hdr,
-                                            pcie_caps_fetch_hdr_params_t* out_params) {
-    DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(dev->config());
-    DEBUG_ASSERT(out_params);
-
-    /* By default, return a NULL next header and stop searching */
-    memset(out_params, 0, sizeof(*out_params));
-
-    /* Determine the position of the next header based on the previous header. */
-    uint16_t cptr = prev_hdr
-                  ? pcie_ext_cap_hdr_get_next_ptr(pcie_read32((pcie_ext_cap_hdr_t*)prev_hdr))
-                  : PCIE_BASE_CONFIG_SIZE;
-
-    /* NULL next pointer means that we are done */
-    if (cptr == PCIE_EXT_CAP_PTR_NULL)
-        return NO_ERROR;
-
-    /* Sanity check the capability pointer. */
-    if (!((cptr >= PCIE_EXT_CAP_PTR_MIN_VALID) && (cptr <= PCIE_EXT_CAP_PTR_MAX_VALID)) ||
-        !IS_ALIGNED(cptr, PCIE_EXT_CAP_PTR_ALIGNMENT)) {
-        TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has illegal capability "
-               "pointer (0x%02x) in extended capability list.\n",
-               dev->bus_id(), dev->dev_id(), dev->func_id(),
-               dev->vendor_id(), dev->device_id(),
-               cptr);
-        return ERR_INTERNAL;
-    }
-
-    /* Read the next header */
-    static_assert(PCIE_EXT_CAP_PTR_MAX_VALID <= PCIE_EXTENDED_CONFIG_SIZE, "");
-    uint space = PCIE_EXTENDED_CONFIG_SIZE - cptr;
-    DEBUG_ASSERT(space >= sizeof(pcie_ext_cap_hdr_t));
-
-    pcie_ext_cap_hdr_t* hdr_ptr = (pcie_ext_cap_hdr_t*)((uintptr_t)(dev->config()) + cptr);
-    pcie_ext_cap_hdr_t  hdr_val = pcie_read32(hdr_ptr);
-
-    /* A raw extended header value of 0 indicates the end of the list */
-    if (!hdr_val)
-        return NO_ERROR;
-
-    /* Things look good.  Fill out our output params and we are done */
-    out_params->hdr         = hdr_ptr;
-    out_params->cap_id      = pcie_ext_cap_hdr_get_type(hdr_val);
-    out_params->cap_version = pcie_ext_cap_hdr_get_cap_version(hdr_val);
-    out_params->space_left  = space;
-
-    return NO_ERROR;
-}
-
-static status_t pcie_do_parse_caps(PcieDevice* dev,
-                                   const pcie_do_parse_caps_params_t* params) {
-    DEBUG_ASSERT(dev);
-    DEBUG_ASSERT(params);
-    DEBUG_ASSERT((params->fetch_hdr == pcie_fetch_standard_cap_hdr) ||
-                 (params->fetch_hdr == pcie_fetch_extended_cap_hdr));
-    DEBUG_ASSERT(params->parse_table);
-
-    __UNUSED const char* dbg_tag = (params->fetch_hdr == pcie_fetch_standard_cap_hdr)
-                                 ? "standard"
-                                 : "extended";
-
-    status_t res;
-    pcie_caps_fetch_hdr_params_t fp;
-    uint caps_found = 0;
-
-    /* Fetch headers using the proper fetch function until we encounter a fatal
-     * error, or we run out of capabilities to parse. */
-    for (res = params->fetch_hdr(dev, NULL, &fp);
-         fp.hdr && (res == NO_ERROR);
-         res = params->fetch_hdr(dev, fp.hdr, &fp)) {
-        /* Sanity check to make sure we're not looping excessively because of
-         * something like a cycle in our list.  Note: this check does not ensure
-         * that none of the capability structures are overlapping (which might
-         * be a good thing to check as well), it just makes sure that we have
-         * not processed more capability headers than it is possible to fit
-         * inside of a standard or extended configuration block. */
-        caps_found += 1;
-        if (caps_found > params->max_possible_caps) {
-            TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has too many %s "
-                   "capabilities!  %u capability headers have been found so "
-                   "far!\n",
-                   dev->bus_id(), dev->dev_id(), dev->func_id(),
-                   dev->vendor_id(), dev->device_id(),
-                   dbg_tag, caps_found);
-            return ERR_INTERNAL;
+    /*
+     * Walk the pointer list for the standard capabilities table. As a safety,
+     * keep track of how many capabilities we've looked at to prevent potential
+     * cycles from walking forever. Any supported capability will be parsed
+     * by their object in the PcieDevice, and are additionally stored in a list
+     * for reference later.
+     */
+    while (cap_offset != PCIE_CAP_PTR_NULL && caps_found < PCIE_MAX_CAPABILITIES) {
+        if ((res = validate_capability_offset(cap_offset)) != NO_ERROR) {
+            TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has invalid cptr (%#02x)\n",
+                    bus_id(), dev_id(), func_id(),
+                    vendor_id(), device_id(), cap_offset);
+            break;
         }
 
-        /* Look through our parse table to find a parse hook */
-        const pcie_caps_parse_table_entry_t* entry = NULL;
-        for (size_t i = 0; (i < params->parse_table_size) && !entry; ++i) {
-            if (params->parse_table[i].cap_id == fp.cap_id) {
-                entry = &params->parse_table[i];
-                break;
-            }
+        uint8_t id = cfg_->Read(PciReg8(cap_offset));
+
+        LTRACEF("Found capability (#%u, id = 0x%02x) for device %02x:%02x.%01x (%04hx:%04hx)\n",
+                caps_found, id,
+                bus_id(), dev_id(), func_id(),
+                vendor_id(), device_id());
+        /*
+         * Depending on the capability found we allocate a structure of the appropriate type
+         * and add it to the bookkeeping tree. For important things like MSI/PCIE we cache a raw
+         * pointer to it for fast access, but otherwise everything is found via the capability list.
+         *
+         * TODO(cja): if we make this a two stage allocation/initialization in the future we can do
+         * away with is_valid() style checks that are done in additional checking if pcie_/msi_ are
+         * valid pointers.
+         */
+        PciStdCapability* cap;
+        switch(id) {
+            case PCIE_CAP_ID_MSI:
+                cap = irq_.msi = new (&ac) PciCapMsi(*this, cap_offset, id); break;
+            case PCIE_CAP_ID_PCI_EXPRESS:
+                cap = pcie_ = new (&ac) PciCapPcie(*this, cap_offset, id); break;
+            case PCIE_CAP_ID_ADVANCED_FEATURES:
+                cap = pci_af_ = new (&ac) PciCapAdvFeatures(*this, cap_offset, id); break;
+
+            default:
+                cap = new (&ac) PciStdCapability(*this, cap_offset, id); break;
         }
 
-        /* If we failed to find a hook, log a warning and keep going.  A new
-         * capability ID may have been added to the standard since this code was
-         * written */
-        if (!entry) {
-            TRACEF("Skipping unnknown %s capability (#%u, id = 0x%02x) for device "
-                   "%02x:%02x.%01x (%04hx:%04hx)\n",
-                   dbg_tag, caps_found, fp.cap_id,
-                   dev->bus_id(), dev->dev_id(), dev->func_id(),
-                   dev->vendor_id(), dev->device_id());
-            continue;
+        if (!ac.check()) {
+            TRACEF("Could not allocate memory fori capability 0x%02x\n", id);
+            return ERR_NO_MEMORY;
         }
 
-        LTRACEF("Found %s capability (#%u, id = 0x%02x) for device %02x:%02x.%01x (%04hx:%04hx)\n",
-                dbg_tag, caps_found, fp.cap_id,
-                dev->bus_id(), dev->dev_id(), dev->func_id(),
-                dev->vendor_id(), dev->device_id());
-
-        /* Process the capability if we have a parse hook.  Stop processing if
-         * something goes fatally wrong */
-        if (entry->parse) {
-            res = entry->parse(dev, fp.hdr, fp.cap_version, fp.space_left);
-            if (res != NO_ERROR)
-                break;
-        }
+        caps_.detected.push_front(mxtl::unique_ptr<PciStdCapability>(cap));
+        cap_offset  = cfg_->Read(PciReg8(static_cast<uint16_t>(cap_offset + 0x1))) & 0xFC;
+        caps_found++;
     }
 
     return res;
 }
 
-#define PTE(_cap_id, _parse_fn) pcie_caps_parse_table_entry_t(_parse_fn, _cap_id)
-static const pcie_caps_parse_table_entry_t PCIE_STANDARD_CAPS_PARSE_TABLE[] = {
-    PTE(PCIE_CAP_ID_NULL,                     NULL),
-    PTE(PCIE_CAP_ID_PCI_PWR_MGMT,             NULL),
-    PTE(PCIE_CAP_ID_AGP,                      NULL),
-    PTE(PCIE_CAP_ID_VPD,                      NULL),
-    PTE(PCIE_CAP_ID_MSI,                      PcieDevice::ParseMsiCaps),
-    PTE(PCIE_CAP_ID_PCIX,                     NULL),
-    PTE(PCIE_CAP_ID_HYPERTRANSPORT,           NULL),
-    PTE(PCIE_CAP_ID_VENDOR,                   NULL),
-    PTE(PCIE_CAP_ID_DEBUG_PORT,               NULL),
-    PTE(PCIE_CAP_ID_COMPACTPCI_CRC,           NULL),
-    PTE(PCIE_CAP_ID_PCI_HOTPLUG,              NULL),
-    PTE(PCIE_CAP_ID_PCI_BRIDGE_SUBSYSTEM_VID, NULL),
-    PTE(PCIE_CAP_ID_AGP_8X,                   NULL),
-    PTE(PCIE_CAP_ID_SECURE_DEVICE,            NULL),
-    PTE(PCIE_CAP_ID_PCI_EXPRESS,              PcieDevice::ParsePciExpressCaps),
-    PTE(PCIE_CAP_ID_MSIX,                     NULL),
-    PTE(PCIE_CAP_ID_SATA_DATA_NDX_CFG,        NULL),
-    PTE(PCIE_CAP_ID_ADVANCED_FEATURES,        PcieDevice::ParsePciAdvFeatures),
-    PTE(PCIE_CAP_ID_ENHANCED_ALLOCATION,      NULL),
-};
+status_t PcieDevice::ParseExtCapabilitiesLocked() {
+    /*
+     * TODO(cja): Since ExtCaps are a no-op right now (we had nothing in the table for
+     * supported extended capabilities) this is a stub for now.
+     */
+    return NO_ERROR;
+}
 
-static const pcie_caps_parse_table_entry_t PCIE_EXTENDED_CAPS_PARSE_TABLE[] = {
-    PTE(PCIE_EXT_CAP_ID_NULL,                                  NULL),
-    PTE(PCIE_EXT_CAP_ID_ADVANCED_ERROR_REPORTING,              NULL),
-    PTE(PCIE_EXT_CAP_ID_VIRTUAL_CHANNEL_NO_MFVC,               NULL),
-    PTE(PCIE_EXT_CAP_ID_DEVICE_SERIAL_NUMBER,                  NULL),
-    PTE(PCIE_EXT_CAP_ID_POWER_BUDGETING,                       NULL),
-    PTE(PCIE_EXT_CAP_ID_ROOT_COMPLEX_LINK_DECLARATION,         NULL),
-    PTE(PCIE_EXT_CAP_ID_ROOT_COMPLEX_INTERNAL_LINK_CONTROL,    NULL),
-    PTE(PCIE_EXT_CAP_ID_ROOT_COMPLEX_EVENT_COLLECTOR_EP_ASSOC, NULL),
-    PTE(PCIE_EXT_CAP_ID_MULTI_FUNCTION_VIRTUAL_CHANNEL,        NULL),
-    PTE(PCIE_EXT_CAP_ID_VIRTUAL_CHANNEL_MFVC,                  NULL),
-    PTE(PCIE_EXT_CAP_ID_ROOT_COMPLEX_REGISTER_BLOCK,           NULL),
-    PTE(PCIE_EXT_CAP_ID_VENDOR_SPECIFIC,                       NULL),
-    PTE(PCIE_EXT_CAP_ID_CONFIGURATION_ACCESS_CORRELATION,      NULL),
-    PTE(PCIE_EXT_CAP_ID_ACCESS_CONTROL_SERVICES,               NULL),
-    PTE(PCIE_EXT_CAP_ID_ALTERNATIVE_ROUTING_ID_INTERPRETATION, NULL),
-    PTE(PCIE_EXT_CAP_ID_ADDRESS_TRANSLATION_SERVICES,          NULL),
-    PTE(PCIE_EXT_CAP_ID_SINGLE_ROOT_IO_VIRTUALIZATION,         NULL),
-    PTE(PCIE_EXT_CAP_ID_MULTI_ROOT_IO_VIRTUALIZATION,          NULL),
-    PTE(PCIE_EXT_CAP_ID_MULTICAST,                             NULL),
-    PTE(PCIE_EXT_CAP_ID_PAGE_REQUEST,                          NULL),
-    PTE(PCIE_EXT_CAP_ID_RESERVED_FOR_AMD,                      NULL),
-    PTE(PCIE_EXT_CAP_ID_RESIZABLE_BAR,                         NULL),
-    PTE(PCIE_EXT_CAP_ID_DYNAMIC_POWER_ALLOCATION,              NULL),
-    PTE(PCIE_EXT_CAP_ID_TLP_PROCESSING_HINTS,                  NULL),
-    PTE(PCIE_EXT_CAP_ID_LATENCY_TOLERANCE_REPORTING,           NULL),
-    PTE(PCIE_EXT_CAP_ID_SECONDARY_PCI_EXPRESS,                 NULL),
-    PTE(PCIE_EXT_CAP_ID_PROTOCOL_MULTIPLEXING,                 NULL),
-    PTE(PCIE_EXT_CAP_ID_PROCESS_ADDRESS_SPACE_ID,              NULL),
-    PTE(PCIE_EXT_CAP_ID_LN_REQUESTER,                          NULL),
-    PTE(PCIE_EXT_CAP_ID_DOWNSTREAM_PORT_CONTAINMENT,           NULL),
-    PTE(PCIE_EXT_CAP_ID_L1_PM_SUBSTATES,                       NULL),
-    PTE(PCIE_EXT_CAP_ID_PRECISION_TIME_MEASUREMENT,            NULL),
-    PTE(PCIE_EXT_CAP_ID_PCI_EXPRESS_OVER_MPHY,                 NULL),
-    PTE(PCIE_EXT_CAP_ID_FRS_QUEUEING,                          NULL),
-    PTE(PCIE_EXT_CAP_ID_READINESS_TIME_REPORTING,              NULL),
-    PTE(PCIE_EXT_CAP_ID_DESIGNATED_VENDOR_SPECIFIC,            NULL),
-};
-#undef PTE
-
-static const pcie_do_parse_caps_params_t PCIE_STANDARD_PARSE_CAPS_PARAMS = {
-    .fetch_hdr         = pcie_fetch_standard_cap_hdr,
-    .parse_table       = PCIE_STANDARD_CAPS_PARSE_TABLE,
-    .parse_table_size  = countof(PCIE_STANDARD_CAPS_PARSE_TABLE),
-    .max_possible_caps = PCIE_MAX_CAPABILITIES,
-};
-
-static const pcie_do_parse_caps_params_t PCIE_EXTENDED_PARSE_CAPS_PARAMS = {
-    .fetch_hdr         = pcie_fetch_extended_cap_hdr,
-    .parse_table       = PCIE_EXTENDED_CAPS_PARSE_TABLE,
-    .parse_table_size  = countof(PCIE_EXTENDED_CAPS_PARSE_TABLE),
-    .max_possible_caps = PCIE_MAX_EXT_CAPABILITIES,
-};
-
-status_t PcieDevice::ParseCapabilitiesLocked() {
-    DEBUG_ASSERT(dev_lock_.IsHeld());
-
-    status_t ret = pcie_do_parse_caps(this, &PCIE_STANDARD_PARSE_CAPS_PARAMS);
-    if (NO_ERROR != ret)
+// Parse PCI Standard Capabilities starting with the pointer in the PCI
+// config structure.
+status_t PcieDevice::ProbeCapabilitiesLocked() {
+    status_t ret = ParseStdCapabilitiesLocked();
+    if (ret != NO_ERROR) {
         return ret;
+    }
 
     /* If this device is PCIe device, the parse the extended configuration
      * section of the PCI config looking for extended capabilities.  Based on
@@ -675,8 +361,9 @@ status_t PcieDevice::ParseCapabilitiesLocked() {
      * contain a proper PCI Express Capability Structure.  Because of this, we
      * maintain a quirks list of non compliant devices which are actually PCIe,
      * but do not appear to be so at first glance. */
-    if (pcie_caps_.ecam || quirk_should_force_pcie(*this))
-        ret = pcie_do_parse_caps(this, &PCIE_EXTENDED_PARSE_CAPS_PARAMS);
+    if (pcie_->is_valid() || quirk_should_force_pcie(*this)) {
+        ret = ParseExtCapabilitiesLocked();
+    }
 
     return ret;
-};
+}

@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <dev/pci_config.h>
 #include <dev/pcie_platform.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
@@ -19,14 +20,13 @@
 
 class SharedLegacyIrqHandler;
 
-class  PcieBridge;
-class  PcieDebugConsole;
-class  PcieDevice;
-class  PcieRoot;
-class  PcieUpstreamNode;
-struct pcie_config_t;
+class PcieBridge;
+class PcieDebugConsole;
+class PcieDevice;
+class PcieRoot;
+class PcieUpstreamNode;
+class PciConfig;
 
-enum class PcieAddrSpace { MMIO, PIO };
 
 class PcieBusDriver : public mxtl::RefCounted<PcieBusDriver> {
 public:
@@ -67,10 +67,10 @@ public:
     // Add a section of memory mapped PCI config space to the bus driver,
     // provided that it does not overlap with any existing ecam regions.
     status_t AddEcamRegion(const EcamRegion& ecam);
-    pcie_config_t* GetConfig(uint bus_id,
-                             uint dev_id,
-                             uint func_id,
-                             paddr_t* out_cfg_phys = nullptr) const;
+    const PciConfig* GetConfig(uint bus_id,
+                                uint dev_id,
+                                uint func_id,
+                                paddr_t* out_cfg_phys = nullptr);
 
     // Address space (PIO and MMIO) allocation management
     //
@@ -88,11 +88,11 @@ public:
     // back.  If this behavior is unacceptable, users should be sure to submit
     // only MMIO address space operations which target regions either entirely
     // above or entirely below the 4GB mark.
-    status_t AddBusRegion(uint64_t base, uint64_t size, PcieAddrSpace aspace) {
+    status_t AddBusRegion(uint64_t base, uint64_t size, PciAddrSpace aspace) {
         return AddSubtractBusRegion(base, size, aspace, true);
     }
 
-    status_t SubtractBusRegion(uint64_t base, uint64_t size, PcieAddrSpace aspace) {
+    status_t SubtractBusRegion(uint64_t base, uint64_t size, PciAddrSpace aspace) {
         return AddSubtractBusRegion(base, size, aspace, false);
     }
 
@@ -210,7 +210,7 @@ private:
                                      ForeachDeviceCallback                 cbk,
                                      void*                                 ctx);
     status_t AddSubtractBusRegion(uint64_t base, uint64_t size,
-                                  PcieAddrSpace aspace, bool add_op);
+                                  PciAddrSpace aspace, bool add_op);
 
     // IRQ support.  Implementation in pcie_irqs.cpp
     void ShutdownIrqs();
@@ -222,6 +222,7 @@ private:
     Mutex                               bus_rescan_lock_;
     mutable Mutex                       start_lock_;
     RootCollection                      roots_;
+    mxtl::SinglyLinkedList<mxtl::RefPtr<PciConfig>> configs_;
 
     RegionAllocator::RegionPool::RefPtr region_bookkeeping_;
     RegionAllocator                     mmio_lo_regions_;

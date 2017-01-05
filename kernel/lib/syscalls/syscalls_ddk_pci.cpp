@@ -110,7 +110,7 @@ mx_status_t sys_pci_add_subtract_io_range(mx_handle_t handle, bool mmio, uint64_
         return ERR_BAD_STATE;
     }
 
-    PcieAddrSpace addr_space = mmio ? PcieAddrSpace::MMIO : PcieAddrSpace::PIO;
+    PciAddrSpace addr_space = mmio ? PciAddrSpace::MMIO : PciAddrSpace::PIO;
 
     if (add) {
         return pcie->AddBusRegion(base, len, addr_space);
@@ -176,7 +176,6 @@ mx_status_t sys_pci_init(mx_handle_t handle, const mx_pci_init_arg_t* _init_buf,
             return status;
         }
     }
-
     // TODO(teisenbe): For now assume there is only one ECAM
     if (win_count != 1) {
         return ERR_INVALID_ARGS;

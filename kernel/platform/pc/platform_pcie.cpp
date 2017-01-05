@@ -14,6 +14,7 @@
 #include <kernel/mutex.h>
 #include <lk/init.h>
 #include <magenta/syscalls/pci.h>
+#include <mxtl/limits.h>
 #include <string.h>
 #include <trace.h>
 
@@ -22,7 +23,6 @@
 class X86PciePlatformSupport : public PciePlatformInterface {
 public:
     X86PciePlatformSupport() : PciePlatformInterface(MsiSupportLevel::MSI) { }
-
     status_t AllocMsiBlock(uint requested_irqs,
                            bool can_target_64bit,
                            bool is_msix,
@@ -50,10 +50,10 @@ static void lockdown_pcie_bus_regions(PcieBusDriver& pcie) {
     // This should *never* fail.  If it does, halt and catch fire, even in a
     // release build.
     status_t res;
-    res = pcie.SubtractBusRegion(0x0, 0x10000, PcieAddrSpace::PIO);
+    res = pcie.SubtractBusRegion(0x0, 0x10000, PciAddrSpace::PIO);
     ASSERT(res == NO_ERROR);
 
-    res = pcie.SubtractBusRegion(0x0, 0xFFFFFFFFFFFFFFFF, PcieAddrSpace::MMIO);
+    res = pcie.SubtractBusRegion(0x0, mxtl::numeric_limits<uint64_t>::max(), PciAddrSpace::MMIO);
     ASSERT(res == NO_ERROR);
 }
 
@@ -77,7 +77,7 @@ static void x86_pcie_init_hook(uint level) {
     constexpr uint64_t pcie_pio_base = 0x8000;
     constexpr uint64_t pcie_pio_size = 0x10000 - pcie_pio_base;
 
-    res = pcie->AddBusRegion(pcie_pio_base, pcie_pio_size, PcieAddrSpace::PIO);
+    res = pcie->AddBusRegion(pcie_pio_base, pcie_pio_size, PciAddrSpace::PIO);
     if (res != NO_ERROR) {
         TRACEF("WARNING - Failed to add initial PCIe PIO region "
                "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",
@@ -96,7 +96,7 @@ static void x86_pcie_init_hook(uint level) {
     // make mistakes in the past.
     constexpr uint64_t pcie_mmio_base = 0x0;
     constexpr uint64_t pcie_mmio_size = 0x100000000;
-    res = pcie->AddBusRegion(pcie_mmio_base, pcie_mmio_size, PcieAddrSpace::MMIO);
+    res = pcie->AddBusRegion(pcie_mmio_base, pcie_mmio_size, PciAddrSpace::MMIO);
     if (res != NO_ERROR) {
         TRACEF("WARNING - Failed to add initial PCIe MMIO region "
                "[%" PRIx64 ", %" PRIx64") to bus driver! (res %d)\n",
@@ -110,7 +110,7 @@ static void x86_pcie_init_hook(uint level) {
         auto pcie = reinterpret_cast<PcieBusDriver*>(ctx);
         status_t res;
 
-        res = pcie->SubtractBusRegion(base, size, PcieAddrSpace::MMIO);
+        res = pcie->SubtractBusRegion(base, size, PciAddrSpace::MMIO);
         if (res != NO_ERROR) {
             // Woah, this is Very Bad!  If we failed to prohibit the PCIe bus
             // driver from using a region of the MMIO bus we are in a pretty

@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <magenta/compiler.h>
 #include <platform.h>
-#include <dev/pci.h>
 
 #if defined(WITH_LIB_CONSOLE)
 #include <lib/console.h>

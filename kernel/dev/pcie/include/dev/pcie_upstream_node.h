@@ -16,6 +16,7 @@
 
 struct pcie_config_t;
 class  RegionAllocator;
+class  PciConfig;
 
 // PcieUpstreamNode
 //
@@ -56,7 +57,7 @@ protected:
     void ScanDownstream();
     void UnplugDownstream();
 
-    mxtl::RefPtr<PcieDevice> ScanDevice(pcie_config_t* cfg, uint dev_id, uint func_id);
+    mxtl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
 
 private:
 

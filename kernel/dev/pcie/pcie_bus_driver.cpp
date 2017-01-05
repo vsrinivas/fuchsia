@@ -394,7 +394,7 @@ bool PcieBusDriver::ForeachDownstreamDevice(const mxtl::RefPtr<PcieUpstreamNode>
 
 status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
                                              uint64_t size,
-                                             PcieAddrSpace aspace,
+                                             PciAddrSpace aspace,
                                              bool add_op) {
     if (!IsNotStarted(true)) {
         TRACEF("Cannot add/subtract bus regions once the bus driver has been started!\n");
@@ -407,7 +407,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
     uint64_t end = base + size - 1;
     auto OpPtr = add_op ? &RegionAllocator::AddRegion : &RegionAllocator::SubtractRegion;
 
-    if (aspace == PcieAddrSpace::MMIO) {
+    if (aspace == PciAddrSpace::MMIO) {
         // Figure out if this goes in the low region, the high region, or needs
         // to be split into two regions.
         constexpr uint64_t U32_MAX = mxtl::numeric_limits<uint32_t>::max();
@@ -433,7 +433,7 @@ status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base,
             return (mmio_hi.*OpPtr)({ .base = hi_base, .size = hi_size }, true);
         }
     } else {
-        DEBUG_ASSERT(aspace == PcieAddrSpace::PIO);
+        DEBUG_ASSERT(aspace == PciAddrSpace::PIO);
 
         if ((base | end) & ~PCIE_PIO_ADDR_SPACE_MASK)
             return ERR_INVALID_ARGS;
@@ -480,22 +480,25 @@ void PcieBusDriver::ShutdownDriver() {
  *  ECAM support
  *
  ******************************************************************************/
-pcie_config_t* PcieBusDriver::GetConfig(uint bus_id,
+/* TODO(cja): The bus driver owns all configs as well as devices so the
+ * lifecycle of both are already dependent. Should this still return a refptr?
+ */
+const PciConfig* PcieBusDriver::GetConfig(uint bus_id,
                                         uint dev_id,
                                         uint func_id,
-                                        paddr_t* out_cfg_phys) const {
+                                        paddr_t* out_cfg_phys) {
     DEBUG_ASSERT(bus_id  < PCIE_MAX_BUSSES);
     DEBUG_ASSERT(dev_id  < PCIE_MAX_DEVICES_PER_BUS);
     DEBUG_ASSERT(func_id < PCIE_MAX_FUNCTIONS_PER_DEVICE);
-
-    if (out_cfg_phys)
-        *out_cfg_phys = 0;
 
     // Find the region which would contain this bus_id, if any.
     // add does not overlap with any already defined regions.
     AutoLock ecam_region_lock(ecam_region_lock_);
     auto iter = ecam_regions_.upper_bound(static_cast<uint8_t>(bus_id));
     --iter;
+
+    if (out_cfg_phys)
+        *out_cfg_phys = 0;
 
     if (!iter.IsValid())
         return nullptr;
@@ -512,7 +515,22 @@ pcie_config_t* PcieBusDriver::GetConfig(uint bus_id,
     if (out_cfg_phys)
         *out_cfg_phys = iter->ecam().phys_base + offset;
 
-    return reinterpret_cast<pcie_config_t*>(static_cast<uint8_t*>(iter->vaddr()) + offset);
+    // TODO(cja): Move to a BDF based associative container for better lookup time
+    // and insert or find behavior.
+    uintptr_t addr = reinterpret_cast<uintptr_t>(static_cast<uint8_t*>(iter->vaddr()) + offset);
+    auto cfg_iter = configs_.find_if([addr](const PciConfig& cfg) {
+                                        return (cfg.base() == addr);
+                                        });
+    /* An entry for this bdf config has been found in cache, return it */
+    if (cfg_iter.IsValid()) {
+        return &(*cfg_iter);
+    }
+
+    // TODO(cja): PIO support here
+    // Nothing found, create a new PciConfig for this address
+    auto cfg = PciConfig::Create(addr, PciAddrSpace::MMIO);
+    configs_.push_front(cfg);
+    return cfg.get();
 }
 
 status_t PcieBusDriver::AddEcamRegion(const EcamRegion& ecam) {

@@ -7,7 +7,7 @@
 #pragma once
 #if WITH_DEV_PCIE
 
-#include <dev/pcie_constants.h>
+#include <dev/pci_common.h>
 #include <dev/pcie_device.h>
 #include <kernel/spinlock.h>
 #include <kernel/vm/vm_aspace.h>

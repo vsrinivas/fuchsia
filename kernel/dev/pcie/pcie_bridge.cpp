@@ -22,6 +22,7 @@
 #include <trace.h>
 #include <platform.h>
 
+#include <dev/pci_config.h>
 #include <dev/pcie_bridge.h>
 
 #define LOCAL_TRACE 0
@@ -78,9 +79,8 @@ status_t PcieBridge::Init(PcieUpstreamNode& upstream) {
     // taken care of bridge configuration.  In the short term, it would be good
     // to add some protection against cycles in the bridge configuration which
     // could lead to infinite recursion.
-    auto bridge_cfg   = reinterpret_cast<pci_to_pci_bridge_config_t*>(&cfg_->base);
-    uint primary_id   = pcie_read8(&bridge_cfg->primary_bus_id);
-    uint secondary_id = pcie_read8(&bridge_cfg->secondary_bus_id);
+    uint primary_id = cfg_->Read(PciConfig::kPrimaryBusId);
+    uint secondary_id = cfg_->Read(PciConfig::kSecondaryBusId);
 
     if (primary_id == secondary_id) {
         TRACEF("PCI-to-PCI bridge detected at %02x:%02x.%01x claims to be bridged to itsef "
@@ -127,42 +127,41 @@ status_t PcieBridge::ParseBusWindowsLocked() {
     //
     // See The PCI-to-PCI Bridge Architecture Specification Revision 1.2,
     // section 3.2.5 and chapter 4 for detail.
-    auto& bcfg = *(reinterpret_cast<pci_to_pci_bridge_config_t*>(&cfg_->base));
     uint32_t base, limit;
 
     // I/O window
-    base  = pcie_read8(&bcfg.io_base);
-    limit = pcie_read8(&bcfg.io_limit);
+    base  = cfg_->Read(PciConfig::kIoBase);
+    limit = cfg_->Read(PciConfig::kIoLimit);
 
     supports_32bit_pio_ = ((base & 0xF) == 0x1) && ((base & 0xF) == (limit& 0xF));
     io_base_  = (base & ~0xF) << 8;
     io_limit_ = (limit << 8) | 0xFFF;
     if (supports_32bit_pio_) {
-        io_base_  |= static_cast<uint32_t>(pcie_read16(&bcfg.io_base_upper)) << 16;
-        io_limit_ |= static_cast<uint32_t>(pcie_read16(&bcfg.io_limit_upper)) << 16;
+        io_base_  |= static_cast<uint32_t>(cfg_->Read(PciConfig::kIoBaseUpper)) << 16;
+        io_limit_ |= static_cast<uint32_t>(cfg_->Read(PciConfig::kIoLimitUpper)) << 16;
     }
 
     io_base_  = base;
     io_limit_ = limit;
 
     // Non-prefetchable memory window
-    mem_base_  = (static_cast<uint32_t>(pcie_read16(&bcfg.memory_base)) << 16)
+    mem_base_  = (static_cast<uint32_t>(cfg_->Read(PciConfig::kMemoryBase)) << 16)
                        & ~0xFFFFF;
-    mem_limit_ = (static_cast<uint32_t>(pcie_read16(&bcfg.memory_limit)) << 16)
+    mem_limit_ = (static_cast<uint32_t>(cfg_->Read(PciConfig::kMemoryLimit)) << 16)
                        | 0xFFFFF;
 
     // Prefetchable memory window
-    base  = pcie_read16(&bcfg.prefetchable_memory_base);
-    limit = pcie_read16(&bcfg.prefetchable_memory_limit);
+    base  = cfg_->Read(PciConfig::kPrefetchableMemoryBase);
+    limit = cfg_->Read(PciConfig::kPrefetchableMemoryLimit);
 
     bool supports_64bit_pf_mem = ((base & 0xF) == 0x1) && ((base & 0xF) == (limit& 0xF));
     pf_mem_base_  = (base & ~0xF) << 16;;
     pf_mem_limit_ = (limit << 16) | 0xFFFFF;
     if (supports_64bit_pf_mem) {
         pf_mem_base_  |=
-            static_cast<uint64_t>(pcie_read32(&bcfg.prefetchable_memory_base_upper)) << 32;
+            static_cast<uint64_t>(cfg_->Read(PciConfig::kPrefetchableMemoryBaseUpper)) << 32;
         pf_mem_limit_ |=
-            static_cast<uint64_t>(pcie_read32(&bcfg.prefetchable_memory_limit_upper)) << 32;
+            static_cast<uint64_t>(cfg_->Read(PciConfig::kPrefetchableMemoryLimitUpper)) << 32;
     }
 
     return NO_ERROR;
@@ -271,19 +270,18 @@ void PcieBridge::Disable() {
 
         // Close all of our IO windows at the HW level and update the internal
         // bookkeeping to indicate that they are closed.
-        auto& bcfg = *(reinterpret_cast<pci_to_pci_bridge_config_t*>(&cfg_->base));
-        pcie_write8(&bcfg.io_base, 0xF0);
-        pcie_write8(&bcfg.io_limit, 0);
-        pcie_write16(&bcfg.io_base_upper, 0);
-        pcie_write16(&bcfg.io_limit_upper, 0);
+        cfg_->Write(PciConfig::kIoBase, 0xF0);
+        cfg_->Write(PciConfig::kIoLimit, 0);
+        cfg_->Write(PciConfig::kIoBaseUpper, 0);
+        cfg_->Write(PciConfig::kIoLimitUpper, 0);
 
-        pcie_write16(&bcfg.memory_base, 0xFFF0);
-        pcie_write16(&bcfg.memory_limit, 0);
+        cfg_->Write(PciConfig::kMemoryBase, 0xFFF0);
+        cfg_->Write(PciConfig::kMemoryLimit, 0);
 
-        pcie_write16(&bcfg.prefetchable_memory_base, 0xFFF0);
-        pcie_write16(&bcfg.prefetchable_memory_limit, 0);
-        pcie_write32(&bcfg.prefetchable_memory_base_upper, 0);
-        pcie_write32(&bcfg.prefetchable_memory_limit_upper, 0);
+        cfg_->Write(PciConfig::kPrefetchableMemoryBase, 0xFFF0);
+        cfg_->Write(PciConfig::kPrefetchableMemoryLimit, 0);
+        cfg_->Write(PciConfig::kPrefetchableMemoryBaseUpper, 0);
+        cfg_->Write(PciConfig::kPrefetchableMemoryLimitUpper, 0);
 
         pf_mem_limit_ = mem_limit_ = io_limit_ = 0u;
         pf_mem_base_  = mem_base_  = io_base_  = 1u;

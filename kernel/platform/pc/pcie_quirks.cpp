@@ -11,7 +11,6 @@
 
 #include <dev/pcie_bus_driver.h>
 #include <dev/pcie_device.h>
-#include <dev/pcie_regs.h>
 #include <mxtl/ref_ptr.h>
 #include <trace.h>
 
@@ -40,7 +39,7 @@ static void pcie_tolud_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
     static const struct {
         uint32_t match;
         uint32_t mask;
-        uint32_t offset;
+        uint16_t offset;
     } TOLUD_CHIPSET_LUT[] = {
         // QEMU's emulation of Intel Q35.   No TOLUD register that I know of.
         { .match = 0x808629c0, .mask = 0xFFFFFFFF, .offset = 0x0 },
@@ -93,17 +92,16 @@ static void pcie_tolud_quirk(const mxtl::RefPtr<PcieDevice>& dev) {
 
     // Looks like we recognize this chip.  Check our table to see if there is a
     // TOLUD register we should read.
-    uint32_t offset = TOLUD_CHIPSET_LUT[i].offset;
+    uint16_t offset = TOLUD_CHIPSET_LUT[i].offset;
     if (offset) {
         static constexpr uint32_t TOLUD_MASK = 0xFFF00000;
-        auto tolud_reg = reinterpret_cast<volatile uint32_t*>(
-                         reinterpret_cast<intptr_t>(&dev->config()->base) + offset);
-        uint32_t tolud_val = pcie_read32(tolud_reg) & TOLUD_MASK;
+        auto tolud_reg = PciReg32(offset);
+        uint32_t tolud_val = dev->config()->Read(tolud_reg) & TOLUD_MASK;
 
         // Subtract out the TOLUD region from the PCI driver's allocatable MMIO region.
         if (tolud_val) {
             LTRACEF("TOLUD Quirk subtracting region [0x%08x, 0x%08x)\n", 0u, tolud_val);
-            status_t res = dev->driver().SubtractBusRegion(0u, tolud_val, PcieAddrSpace::MMIO);
+            status_t res = dev->driver().SubtractBusRegion(0u, tolud_val, PciAddrSpace::MMIO);
             if (res != NO_ERROR)
                 TRACEF("WARNING : PCIe TOLUD Quirk failed to subtract region "
                        "[0x%08x, 0x%08x) (res %d)!\n", 0u, tolud_val, res);

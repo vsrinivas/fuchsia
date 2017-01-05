@@ -10,10 +10,11 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/debug.cpp \
+	$(LOCAL_DIR)/pci_config.cpp \
 	$(LOCAL_DIR)/pcie_bridge.cpp \
 	$(LOCAL_DIR)/pcie_bus_driver.cpp \
-	$(LOCAL_DIR)/pcie_device.cpp \
 	$(LOCAL_DIR)/pcie_caps.cpp \
+	$(LOCAL_DIR)/pcie_device.cpp \
 	$(LOCAL_DIR)/pcie_irqs.cpp \
 	$(LOCAL_DIR)/pcie_root.cpp \
 	$(LOCAL_DIR)/pcie_upstream_node.cpp
@@ -22,11 +23,6 @@ MODULE_DEPS += \
     lib/mxtl \
     lib/region-alloc
 
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-# TODO(mcgrathr,johngro): This is only needed because of the unclean
-# use of list_node in PcieDevice.irq_.legacy; when that is cleaned up
-# then this should be removed.
-MODULE_COMPILEFLAGS += -Wno-invalid-offsetof
-endif
+MODULE_CPPFLAGS += -Wno-invalid-offsetof
 
 include make/module.mk
