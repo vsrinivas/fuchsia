@@ -45,12 +45,12 @@ mx_status_t handle_watcher_stop(void) {
   uint8_t c;
   mx_signals_t observed;
   if ((r = mx_handle_wait_one(s_ctrl[1],
-                              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED, 0u,
+                              MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, 0u,
                               &observed)) < 0 && r != ERR_TIMED_OUT) {
     error("handle_watcher_stop: mx_handle_wait_one failed (r=%d)\n", r);
     return r;
   }
-  if (r == ERR_TIMED_OUT || !(observed & MX_SIGNAL_READABLE)) {
+  if (r == ERR_TIMED_OUT || !(observed & MX_CHANNEL_READABLE)) {
     vdebug("watch_stop: send ABORT\n");
     c = ABORT;
     if ((r = mx_channel_write(s_ctrl[1], 0u, &c, 1u, NULL, 0u)) < 0) {
@@ -60,12 +60,12 @@ mx_status_t handle_watcher_stop(void) {
   }
 
   if ((r = mx_handle_wait_one(s_ctrl[1],
-                              MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                              MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                               MX_TIME_INFINITE, &observed)) < 0) {
     error("handle_watcher_stop: mx_handle_wait_one failed (r=%d)\n", r);
     return r;
   }
-  if (!(observed & MX_SIGNAL_READABLE)) {
+  if (!(observed & MX_CHANNEL_READABLE)) {
     error("handle_watcher_stop: mx_handle_wait_one not readable (r=%d)\n", r);
     return ERR_BAD_STATE;
   }
@@ -89,11 +89,6 @@ mx_status_t handle_watcher_schedule_request(void) {
   }
   debug_socket("watcher: num_results=%d max_results=%d\n", NSOCKETS,
                num_results);
-  if (num_results > NSOCKETS) {
-    // TODO
-    error("not enough buffer to get all handles with signals (%d/%d)\n",
-          num_results, NSOCKETS);
-  }
 
   for (int i = 0; i < (int)num_results; i++) {
     if (results[i].cookie == CTRL_COOKIE) {
@@ -105,21 +100,21 @@ mx_status_t handle_watcher_schedule_request(void) {
     mx_signals_t satisfied = results[i].observed;
     debug_socket("watcher: [%d] sockfd=%d, satisfied=0x%x (%s%s%s%s)\n", i,
                  ios->sockfd, satisfied,
-                 (satisfied & MX_SIGNAL_READABLE) ? "R" : "",
-                 (satisfied & MX_SIGNAL_WRITABLE) ? "W" : "",
-                 (satisfied & MX_SIGNAL_PEER_CLOSED) ? "C" : "",
+                 (satisfied & MX_SOCKET_READABLE) ? "R" : "",
+                 (satisfied & MX_SOCKET_WRITABLE) ? "W" : "",
+                 (satisfied & MX_SOCKET_PEER_CLOSED) ? "C" : "",
                  (satisfied & MXSIO_SIGNAL_HALFCLOSED) ? "H" : "");
 
     mx_signals_t watching_signals = ios->watching_signals;
     // socket_signals_clear will change ios->watching_signals
     socket_signals_clear(ios, satisfied);
 
-    if ((satisfied & MX_SIGNAL_PEER_CLOSED) &&
-        !(satisfied & MX_SIGNAL_READABLE)) {
+    if ((satisfied & MX_SOCKET_PEER_CLOSED) &&
+        !(satisfied & MX_SOCKET_READABLE)) {
       // peer closed and no outstanding data to read
       handle_request_close(ios, satisfied);
     } else if ((satisfied & MXSIO_SIGNAL_HALFCLOSED) &&
-               !(satisfied & MX_SIGNAL_READABLE)) {
+               !(satisfied & MX_SOCKET_READABLE)) {
       // peer half closed and no outstanding data to read
       handle_request_halfclose(ios, satisfied);
     } else if (satisfied & watching_signals) {
@@ -189,12 +184,12 @@ static int handle_watcher_loop(void* arg) {
     // wait for START command (ignore ABORT received in the last round)
     mx_signals_t observed;
     if ((r = mx_handle_wait_one(s_ctrl[0],
-                                MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+                                MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
                                 MX_TIME_INFINITE, &observed)) < 0) {
       error("handle_watcher_loop: mx_handle_wait_one failed (r=%d)\n", r);
       return r;
     }
-    if (!(observed & MX_SIGNAL_READABLE)) {
+    if (!(observed & MX_CHANNEL_READABLE)) {
       error("handle_watcher_loop: mx_handle_wait_one not readable (r=%d)\n", r);
       return ERR_BAD_STATE;
     }
@@ -262,7 +257,7 @@ mx_status_t handle_watcher_init(int* readfd_) {
   }
 
   if ((r = mx_waitset_add(s_waitset, CTRL_COOKIE, s_ctrl[0],
-                          MX_SIGNAL_READABLE)) < 0) {
+                          MX_CHANNEL_READABLE)) < 0) {
     error("mx_waitset_add failed (%d)\n", r);
     goto fail_waitset_add;
   }

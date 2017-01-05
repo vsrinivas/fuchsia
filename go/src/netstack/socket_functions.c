@@ -36,6 +36,14 @@ enum {
   HANDLE_TYPE_DGRAM,
 };
 
+// TODO(kulakowski) This code relies on channels and sockets sharing
+// the same values for the readable, writable, and peer closed
+// signals. Eventually this will be simplified when we get a datagram
+// mode for sockets.
+static_assert(MX_SOCKET_READABLE == MX_CHANNEL_READABLE, "");
+static_assert(MX_SOCKET_WRITABLE == MX_CHANNEL_WRITABLE, "");
+static_assert(MX_SOCKET_PEER_CLOSED == MX_CHANNEL_PEER_CLOSED, "");
+
 void handle_request_close(iostate_t* ios, mx_signals_t signals) {
   debug("handle_request_close\n");
   handle_request(request_pack(MXRIO_CLOSE, 0, NULL, ios), EVENT_NONE, signals);
@@ -68,7 +76,7 @@ static void schedule_r(iostate_t* ios) {
 
 static void schedule_w(iostate_t* ios) {
   debug("schedule_w\n");
-  socket_signals_set(ios, MX_SIGNAL_READABLE);
+  socket_signals_set(ios, MX_SOCKET_READABLE);
   wait_queue_put(WAIT_SOCKET, ios->sockfd,
                  request_pack(MXRIO_WRITE, 0, NULL, ios));
 }
@@ -334,7 +342,7 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
   msg->datalen = 0;
 
   fd_event_set(ios->sockfd, EVENT_EXCEPT);
-  socket_signals_set(ios, MX_SIGNAL_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED);
+  socket_signals_set(ios, MX_SOCKET_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED);
 
   if (ios->handle_type == HANDLE_TYPE_DGRAM) {
     schedule_w(ios);
@@ -365,7 +373,7 @@ mx_status_t do_halfclose(mxrio_msg_t* msg, iostate_t* ios, int events,
   debug("do_halfclose\n");
   int r = net_shutdown(ios->sockfd, SHUT_WR);
   debug_net("net_shutdown => %d (errno=%d)\n", r, errno);
-  socket_signals_set(ios, MX_SIGNAL_PEER_CLOSED);
+  socket_signals_set(ios, MX_SOCKET_PEER_CLOSED);
   return NO_ERROR;
 }
 
@@ -509,7 +517,7 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
   msg->datalen = 0;
 
   fd_event_set(ios_new->sockfd, EVENT_EXCEPT);
-  socket_signals_set(ios_new, MX_SIGNAL_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED);
+  socket_signals_set(ios_new, MX_SOCKET_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED);
 
   schedule_rw(ios_new);
   return NO_ERROR;
@@ -586,7 +594,7 @@ mx_status_t do_read_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
                  ios->rbuf->data + ios->roff, ios->rlen - ios->roff, nwritten);
     if (r < 0) {
       if (r == ERR_SHOULD_WAIT) {
-        socket_signals_set(ios, MX_SIGNAL_WRITABLE);
+        socket_signals_set(ios, MX_SOCKET_WRITABLE);
         return PENDING_SOCKET;
       }
       error("do_read_stream: mx_socket_write failed (%d)\n", r);
@@ -678,12 +686,12 @@ mx_status_t do_write_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
         mx_socket_read(ios->data_h, 0u, ios->wbuf->data, RWBUF_SIZE, &nread);
     debug_socket("mx_socket_read => %d (%lu)\n", r, nread);
     if (r == ERR_SHOULD_WAIT) {
-      if (signals & MX_SIGNAL_PEER_CLOSED) {
+      if (signals & MX_SOCKET_PEER_CLOSED) {
         debug_socket("do_write: handle_close (socket is closed)\n");
         handle_request_close(ios, signals);
         return NO_ERROR;
       }
-      socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED |
+      socket_signals_set(ios, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED |
                          MXSIO_SIGNAL_HALFCLOSED);
       return PENDING_SOCKET;
     } else if (r == ERR_REMOTE_CLOSED) {
@@ -723,7 +731,7 @@ mx_status_t do_write_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
   ios->wlen = 0;
   ios->woff = 0;
 
-  socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED |
+  socket_signals_set(ios, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED |
                      MXSIO_SIGNAL_HALFCLOSED);
   return PENDING_SOCKET;
 }
@@ -741,12 +749,12 @@ mx_status_t do_write_dgram(mxrio_msg_t* msg, iostate_t* ios, int events,
                                   (uint32_t*)&nread, NULL, 0, NULL);
   debug_socket("mx_channel_read => %d (%lu)\n", r, nread);
   if (r == ERR_SHOULD_WAIT) {
-    if (signals & MX_SIGNAL_PEER_CLOSED) {
+    if (signals & MX_SOCKET_PEER_CLOSED) {
       debug_socket("do_write_dgram: handle_close (channel is closed)\n");
       handle_request_close(ios, signals);
       return NO_ERROR;
     }
-    socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
+    socket_signals_set(ios, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED);
     return PENDING_SOCKET;
   } else if (r == ERR_REMOTE_CLOSED) {
     handle_request_close(ios, signals);
@@ -773,7 +781,7 @@ mx_status_t do_write_dgram(mxrio_msg_t* msg, iostate_t* ios, int events,
     error("bad socket message\n");
   }
 
-  socket_signals_set(ios, MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED);
+  socket_signals_set(ios, MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED);
   return PENDING_SOCKET;
 }
 
