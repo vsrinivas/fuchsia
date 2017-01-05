@@ -220,6 +220,11 @@ void ApplicationEnvironmentImpl::Duplicate(
 void ApplicationEnvironmentImpl::CreateApplication(
     modular::ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceRequest<ApplicationController> controller) {
+  if (launch_info->url.get().empty()) {
+    FTL_LOG(ERROR) << "Cannot create application because launch_info contains"
+        " an empty url";
+    return;
+  }
   std::string canon_url = CanonicalizeURL(launch_info->url);
   if (canon_url.empty()) {
     FTL_LOG(ERROR) << "Cannot run " << launch_info->url
