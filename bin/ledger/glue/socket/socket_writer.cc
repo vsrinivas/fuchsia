@@ -50,7 +50,7 @@ void SocketWriter::WriteData() {
 
 void SocketWriter::WaitForSocket() {
   wait_id_ = waiter_->AsyncWait(destination_.get(),
-                                MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED,
+                                MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED,
                                 MX_TIME_INFINITE, &WaitComplete, this);
 }
 
