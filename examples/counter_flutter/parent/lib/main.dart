@@ -176,7 +176,7 @@ class _HomeScreenState extends State<_HomeScreen> {
     ];
 
     if (_conn != null) {
-      children.add(new Flexible(
+      children.add(new Expanded(
         flex: 1,
         child: new ChildView(connection: _conn),
       ));
