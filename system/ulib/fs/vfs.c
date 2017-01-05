@@ -44,8 +44,9 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
             // convert empty initial path of final path segment to "."
             path = ".";
         }
-        if (vn->remote > 0) {
+        if ((vn->remote > 0) && (!(vn->flags & V_FLAG_DEVICE))) {
             // remote filesystem mount, caller must resolve
+            // devices are different, so ignore them even though they can have vn->remote
             trace(WALK, "vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
             *out = vn;
             *pathout = path;
@@ -129,8 +130,9 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
                 vn_release(vn);
                 return ERR_BAD_STATE;
             }
-        } else if (vn->remote > 0) {
+        } else if ((vn->remote > 0) && (!(vn->flags & V_FLAG_DEVICE))) {
             // Opening a mount point: Traverse across remote.
+            // Devices are different, even though they also have remotes.  Ignore them.
             *pathout = ".";
             r = vn->remote;
             vn_release(vn);
