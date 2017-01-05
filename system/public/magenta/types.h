@@ -89,11 +89,8 @@ typedef uint32_t mx_signals_t;
 // EventPair
 #define MX_EPAIR_SIGNALED           MX_OBJECT_SIGNAL_3
 #define MX_EPAIR_CLOSED             MX_OBJECT_SIGNAL_2
+#define MX_EPAIR_PEER_CLOSED        MX_OBJECT_SIGNAL_2
 #define MX_EPAIR_SIGNAL_MASK        (MX_USER_SIGNAL_ALL | MX_OBJECT_SIGNAL_2 | MX_OBJECT_SIGNAL_3)
-
-// Task signals (process, thread, job)
-#define MX_TASK_TERMINATED          MX_OBJECT_SIGNAL_3
-#define MX_TASK_SIGNAL_MASK         MX_OBJECT_SIGNAL_3
 
 // Channel
 #define MX_CHANNEL_READABLE         MX_OBJECT_SIGNAL_0
@@ -104,6 +101,11 @@ typedef uint32_t mx_signals_t;
 #define MX_SOCKET_READABLE          MX_OBJECT_SIGNAL_0
 #define MX_SOCKET_WRITABLE          MX_OBJECT_SIGNAL_1
 #define MX_SOCKET_PEER_CLOSED       MX_OBJECT_SIGNAL_2
+
+// Port
+#define MX_PORT_READABLE            MX_OBJECT_SIGNAL_0
+#define MX_PORT_PEER_CLOSED         MX_OBJECT_SIGNAL_2
+#define MX_PORT_SIGNALED            MX_OBJECT_SIGNAL_3
 
 // Resource
 #define MX_RESOURCE_READABLE        MX_OBJECT_SIGNAL_0
@@ -119,6 +121,23 @@ typedef uint32_t mx_signals_t;
 #define MX_FIFO_CONSUMER_EXCEPTION  MX_OBJECT_SIGNAL_5
 #define MX_FIFO_SIGNAL_MASK         (MX_FIFO_EMPTY | MX_FIFO_FULL | MX_FIFO_NOT_EMPTY | MX_FIFO_NOT_FULL \
                                      MX_FIFO_PRODUCER_EXCEPTION | MX_FIFO_CONSUMER_EXCEPTION)
+
+// Waitset
+#define MX_WAITSET_READABLE         MX_OBJECT_SIGNAL_0
+#define MX_WAITSET_PEER_CLOSED      MX_OBJECT_SIGNAL_2
+
+// Task signals (process, thread, job)
+#define MX_TASK_TERMINATED          MX_OBJECT_SIGNAL_3
+#define MX_TASK_SIGNAL_MASK         MX_OBJECT_SIGNAL_3
+
+// Job
+#define MX_JOB_SIGNALED             MX_OBJECT_SIGNAL_3
+
+// Process
+#define MX_PROCESS_SIGNALED         MX_OBJECT_SIGNAL_3
+
+// Thread
+#define MX_THREAD_SIGNALED          MX_OBJECT_SIGNAL_3
 
 // Legacy signal names, to be removed.
 #define MX_SIGNAL_READABLE          MX_OBJECT_SIGNAL_0
