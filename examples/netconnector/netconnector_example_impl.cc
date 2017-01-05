@@ -7,6 +7,8 @@
 #include <mx/channel.h>
 
 #include "apps/netconnector/examples/netconnector_example/netconnector_example_params.h"
+#include "apps/netconnector/services/netconnector.fidl.h"
+#include "apps/netconnector/services/netconnector_admin.fidl.h"
 #include "lib/ftl/logging.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -27,15 +29,19 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) { HandleReceivedMessage(message); });
 
-  message_relay_.SetChannelClosedCallback([this]() {
-    if (conversation_iter_ == kConversation.end()) {
-      FTL_LOG(INFO) << "Channel closed, quitting";
-    } else {
-      FTL_LOG(ERROR) << "Channel closed unexpectedly, quitting";
-    }
+  // Quit when the local channel closes, unless we're registering our provider.
+  // In that case, we need to stay around to respond to future requests.
+  if (params->register_provider()) {
+    message_relay_.SetChannelClosedCallback([this]() {
+      if (conversation_iter_ == kConversation.end()) {
+        FTL_LOG(INFO) << "Channel closed, quitting";
+      } else {
+        FTL_LOG(ERROR) << "Channel closed unexpectedly, quitting";
+      }
 
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-  });
+      mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    });
+  }
 
   // Start at the beginning of the conversation. The party that receives the
   // last message in the conversation closes the channel.
@@ -43,13 +49,31 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
 
   if (params->request_device_name().empty()) {
     // Params say we should be responding. Register the responding service.
+    FTL_LOG(INFO) << "Running as responder";
     application_context_->outgoing_services()->AddServiceForName(
         [this](mx::channel channel) {
           message_relay_.SetChannel(std::move(channel));
         },
         kRespondingServiceName);
+
+    if (params->register_provider()) {
+      // Register our provider with netconnector.
+      FTL_LOG(INFO) << "Registering provider";
+      netconnector::NetConnectorAdminPtr admin =
+          application_context_
+              ->ConnectToEnvironmentService<netconnector::NetConnectorAdmin>();
+
+      fidl::InterfaceHandle<modular::ServiceProvider> handle;
+      application_context_->outgoing_services()->AddBinding(
+          handle.NewRequest());
+
+      FTL_DCHECK(handle);
+
+      admin->RegisterServiceProvider(kRespondingServiceName, std::move(handle));
+    }
   } else {
     // Params say we should be a requestor.
+    FTL_LOG(INFO) << "Running as requestor";
     netconnector::NetConnectorPtr connector =
         application_context_
             ->ConnectToEnvironmentService<netconnector::NetConnector>();

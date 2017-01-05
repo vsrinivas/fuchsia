@@ -7,6 +7,7 @@ import("//lib/fidl/fidl.gni")
 fidl("services") {
   sources = [
     "netconnector.fidl",
+    "netconnector_admin.fidl",
   ]
 
   public_deps = [

@@ -156,6 +156,7 @@ void MessageTransciever::ReceiveWorker() {
       if (errno != EIO || socket_fd_.is_valid()) {
         FTL_LOG(ERROR) << "Failed to receive, errno " << errno;
       }
+
       CloseConnection();
       break;
     }

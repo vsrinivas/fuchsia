@@ -12,6 +12,7 @@
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
+#include "apps/netconnector/services/netconnector_admin.fidl.h"
 #include "apps/netconnector/src/device_service_provider.h"
 #include "apps/netconnector/src/listener.h"
 #include "apps/netconnector/src/requestor_agent.h"
@@ -24,7 +25,7 @@
 
 namespace netconnector {
 
-class NetConnectorImpl : public NetConnector {
+class NetConnectorImpl : public NetConnector, public NetConnectorAdmin {
  public:
   NetConnectorImpl(NetConnectorParams* params);
 
@@ -44,6 +45,11 @@ class NetConnectorImpl : public NetConnector {
   void ReleaseServiceAgent(ServiceAgent* service_agent);
 
   // NetConnector implementation.
+  void GetDeviceServiceProvider(const fidl::String& device_name,
+                                fidl::InterfaceRequest<modular::ServiceProvider>
+                                    service_provider) override;
+
+  // NetConnectorAdmin implementation.
   void SetHostName(const fidl::String& host_name) override;
 
   void RegisterService(const fidl::String& name,
@@ -52,9 +58,9 @@ class NetConnectorImpl : public NetConnector {
   void RegisterDevice(const fidl::String& name,
                       const fidl::String& address) override;
 
-  void GetDeviceServiceProvider(const fidl::String& device_name,
-                                fidl::InterfaceRequest<modular::ServiceProvider>
-                                    service_provider) override;
+  void RegisterServiceProvider(const fidl::String& name,
+                               fidl::InterfaceHandle<modular::ServiceProvider>
+                                   service_provider) override;
 
  private:
   static constexpr uint16_t kPort = 7777;
@@ -67,6 +73,7 @@ class NetConnectorImpl : public NetConnector {
   NetConnectorParams* params_;
   std::unique_ptr<modular::ApplicationContext> application_context_;
   fidl::BindingSet<NetConnector> bindings_;
+  fidl::BindingSet<NetConnectorAdmin> admin_bindings_;
   Listener listener_;
   RespondingServiceHost responding_service_host_;
   std::unordered_map<DeviceServiceProvider*,

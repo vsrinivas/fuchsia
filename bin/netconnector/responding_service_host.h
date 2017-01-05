@@ -24,6 +24,10 @@ class RespondingServiceHost {
   void RegisterSingleton(const std::string& service_name,
                          modular::ApplicationLaunchInfoPtr launch_info);
 
+  // Registers a provider for a singleton service.
+  void RegisterProvider(const std::string& service_name,
+                        fidl::InterfaceHandle<modular::ServiceProvider> handle);
+
   modular::ServiceProvider* services() {
     return static_cast<modular::ServiceProvider*>(&service_provider_);
   }
