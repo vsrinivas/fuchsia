@@ -6,7 +6,6 @@ module media;
 
 import "apps/media/services/audio_renderer.fidl";
 import "apps/media/services/media_capturer.fidl";
-import "apps/media/services/media_demux.fidl";
 import "apps/media/services/media_player.fidl";
 import "apps/media/services/media_renderer.fidl";
 import "apps/media/services/media_sink.fidl";
@@ -42,7 +41,7 @@ interface MediaService {
              MediaSink& sink);
 
   // Creates a demux.
-  CreateDemux(SeekingReader reader, MediaDemux& demux);
+  CreateDemux(SeekingReader reader, MediaSource& demux);
 
   // Creates a decoder.
   CreateDecoder(MediaType input_media_type, MediaTypeConverter& decoder);

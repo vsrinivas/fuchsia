@@ -33,7 +33,7 @@ class MediaServiceImpl : public FactoryServiceBase, public MediaService {
                   fidl::InterfaceRequest<MediaSink> sink) override;
 
   void CreateDemux(fidl::InterfaceHandle<SeekingReader> reader,
-                   fidl::InterfaceRequest<MediaDemux> demux) override;
+                   fidl::InterfaceRequest<MediaSource> demux) override;
 
   void CreateDecoder(
       MediaTypePtr input_media_type,

@@ -79,13 +79,13 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
 
   // Handles a status update from the demux. When called with the default
   // argument values, initiates demux status updates.
-  void HandleDemuxStatusUpdates(uint64_t version = MediaDemux::kInitialMetadata,
-                                MediaDemuxStatusPtr status = nullptr);
+  void HandleDemuxStatusUpdates(uint64_t version = MediaSource::kInitialStatus,
+                                MediaSourceStatusPtr status = nullptr);
 
   std::unique_ptr<std::vector<std::unique_ptr<StreamTypeSet>>>
       allowed_stream_types_;
   MediaServicePtr media_service_;
-  MediaDemuxPtr demux_;
+  MediaSourcePtr demux_;
   Incident init_complete_;
   std::vector<std::unique_ptr<Stream>> streams_;
   MediaMetadataPtr metadata_;

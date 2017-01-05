@@ -16,16 +16,16 @@ namespace media {
 // static
 std::shared_ptr<MediaDemuxImpl> MediaDemuxImpl::Create(
     fidl::InterfaceHandle<SeekingReader> reader,
-    fidl::InterfaceRequest<MediaDemux> request,
+    fidl::InterfaceRequest<MediaSource> request,
     MediaServiceImpl* owner) {
   return std::shared_ptr<MediaDemuxImpl>(
       new MediaDemuxImpl(std::move(reader), std::move(request), owner));
 }
 
 MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
-                               fidl::InterfaceRequest<MediaDemux> request,
+                               fidl::InterfaceRequest<MediaSource> request,
                                MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaDemux>(this, std::move(request), owner) {
+    : MediaServiceImpl::Product<MediaSource>(this, std::move(request), owner) {
   FTL_DCHECK(reader);
 
   task_runner_ = mtl::MessageLoop::GetCurrent()->task_runner();
@@ -33,7 +33,7 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
 
   status_publisher_.SetCallbackRunner(
       [this](const GetStatusCallback& callback, uint64_t version) {
-        MediaDemuxStatusPtr status = MediaDemuxStatus::New();
+        MediaSourceStatusPtr status = MediaSourceStatus::New();
         status->metadata = metadata_.Clone();
         status->problem = problem_.Clone();
         callback(version, std::move(status));

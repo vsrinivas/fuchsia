@@ -10,7 +10,7 @@
 
 #include "apps/media/lib/flog.h"
 #include "apps/media/services/logs/media_demux_channel.fidl.h"
-#include "apps/media/services/media_demux.fidl.h"
+#include "apps/media/services/media_source.fidl.h"
 #include "apps/media/services/seeking_reader.fidl.h"
 #include "apps/media/src/demux/demux.h"
 #include "apps/media/src/fidl/fidl_packet_producer.h"
@@ -24,17 +24,17 @@
 namespace media {
 
 // Fidl agent that decodes a stream.
-class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
-                       public MediaDemux {
+class MediaDemuxImpl : public MediaServiceImpl::Product<MediaSource>,
+                       public MediaSource {
  public:
   static std::shared_ptr<MediaDemuxImpl> Create(
       fidl::InterfaceHandle<SeekingReader> reader,
-      fidl::InterfaceRequest<MediaDemux> request,
+      fidl::InterfaceRequest<MediaSource> request,
       MediaServiceImpl* owner);
 
   ~MediaDemuxImpl() override;
 
-  // MediaDemux implementation.
+  // MediaSource implementation.
   void Describe(const DescribeCallback& callback) override;
 
   void GetPacketProducer(
@@ -50,7 +50,7 @@ class MediaDemuxImpl : public MediaServiceImpl::Product<MediaDemux>,
 
  private:
   MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
-                 fidl::InterfaceRequest<MediaDemux> request,
+                 fidl::InterfaceRequest<MediaSource> request,
                  MediaServiceImpl* owner);
 
   class Stream {

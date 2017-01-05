@@ -133,7 +133,7 @@ void MediaSourceImpl::Seek(int64_t position, const SeekCallback& callback) {
 }
 
 void MediaSourceImpl::HandleDemuxStatusUpdates(uint64_t version,
-                                               MediaDemuxStatusPtr status) {
+                                               MediaSourceStatusPtr status) {
   if (status) {
     metadata_ = std::move(status->metadata);
     problem_ = std::move(status->problem);
@@ -141,7 +141,7 @@ void MediaSourceImpl::HandleDemuxStatusUpdates(uint64_t version,
   }
 
   demux_->GetStatus(version,
-                    [this](uint64_t version, MediaDemuxStatusPtr status) {
+                    [this](uint64_t version, MediaSourceStatusPtr status) {
                       HandleDemuxStatusUpdates(version, std::move(status));
                     });
 }

@@ -58,7 +58,7 @@ void MediaServiceImpl::CreateSink(fidl::InterfaceHandle<MediaRenderer> renderer,
 }
 
 void MediaServiceImpl::CreateDemux(fidl::InterfaceHandle<SeekingReader> reader,
-                                   fidl::InterfaceRequest<MediaDemux> demux) {
+                                   fidl::InterfaceRequest<MediaSource> demux) {
   AddProduct(MediaDemuxImpl::Create(std::move(reader), std::move(demux), this));
 }
 
