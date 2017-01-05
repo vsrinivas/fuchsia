@@ -229,6 +229,11 @@ public:
         return internal_erase(PtrTraits::GetRaw(ns.next_));
     }
 
+    // clear
+    //
+    // Clear out the list, unlinking all of the elements in the process.  For
+    // managed pointer types, this will release all references held by the list
+    // to the objects which were in it.
     void clear() {
         while (!is_empty()) {
             auto& head_ns = NodeTraits::node_state(*head_);
@@ -237,6 +242,16 @@ public:
             head_ns.prev_ = nullptr;
             PtrTraits::Take(head_ns.next_);
         }
+    }
+
+    // clear_unsafe
+    //
+    // See comments in mxtl/intrusive_single_list.h
+    // Think carefully before calling this!
+    void clear_unsafe() {
+        static_assert(PtrTraits::IsManaged == false,
+                     "clear_unsafe is not allowed for containers of managed pointers");
+        head_ = PtrTraits::MakeSentinel(sentinel());
     }
 
     // swap : swaps the contest of two lists.

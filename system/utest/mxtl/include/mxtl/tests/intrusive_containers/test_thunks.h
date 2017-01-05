@@ -23,6 +23,7 @@ template <typename TestEnvironmentClass>
 struct TestThunks {
     // Generic tests
     MAKE_TEST_THUNK(Clear);
+    MAKE_TEST_THUNK(ClearUnsafe);
     MAKE_TEST_THUNK(IsEmpty);
     MAKE_TEST_THUNK(Iterate);
     MAKE_TEST_THUNK(IterErase);

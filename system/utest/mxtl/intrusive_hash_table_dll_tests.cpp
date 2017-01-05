@@ -100,6 +100,12 @@ RUN_NAMED_TEST("Clear (unmanaged)",            UMTE::ClearTest)
 RUN_NAMED_TEST("Clear (unique)",               UPTE::ClearTest)
 RUN_NAMED_TEST("Clear (RefPtr)",               RPTE::ClearTest)
 
+RUN_NAMED_TEST("ClearUnsafe (unmanaged)",      UMTE::ClearUnsafeTest)
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_NAMED_TEST("ClearUnsafe (unique)",         UPTE::ClearUnsafeTest)
+RUN_NAMED_TEST("ClearUnsafe (RefPtr)",         RPTE::ClearUnsafeTest)
+#endif
+
 RUN_NAMED_TEST("IsEmpty (unmanaged)",          UMTE::IsEmptyTest)
 RUN_NAMED_TEST("IsEmpty (unique)",             UPTE::IsEmptyTest)
 RUN_NAMED_TEST("IsEmpty (RefPtr)",             RPTE::IsEmptyTest)

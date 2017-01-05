@@ -332,6 +332,11 @@ public:
         return internal_erase(&obj);
     }
 
+    // clear
+    //
+    // Clear out the tree, unlinking all of the elements in the process.  For
+    // managed pointer types, this will release all references held by the tree
+    // to the objects which were in it.
     void clear() {
         if (is_empty())
             return;
@@ -380,6 +385,20 @@ public:
         left_most_  = sentinel();
         right_most_ = sentinel();
         count_ = 0;
+    }
+
+    // clear_unsafe
+    //
+    // See comments in mxtl/intrusive_single_list.h
+    // Think carefully before calling this!
+    void clear_unsafe() {
+        static_assert(PtrTraits::IsManaged == false,
+                     "clear_unsafe is not allowed for containers of managed pointers");
+
+        root_       = nullptr;
+        left_most_  = sentinel();
+        right_most_ = sentinel();
+        count_      = 0;
     }
 
     // swap : swaps the contents of two trees.

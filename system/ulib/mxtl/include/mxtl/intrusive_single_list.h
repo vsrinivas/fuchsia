@@ -335,14 +335,32 @@ public:
 
     // clear
     //
-    // Clear out the list, unlinking all of the elements in the
-    // process.  For managed pointer types, this will release all
-    // references held by the list to the objects which were in it.
+    // Clear out the list, unlinking all of the elements in the process.  For
+    // managed pointer types, this will release all references held by the list
+    // to the objects which were in it.
     void clear() {
         while (!is_empty()) {
             auto& head_ns = NodeTraits::node_state(*head_);
             head_ = PtrTraits::Take(head_ns.next_);
         }
+    }
+
+    // clear_unsafe
+    //
+    // A special clear operation which just resets the internal container
+    // structure, but leaves all of the node-state(s) of the current element(s)
+    // alone.
+    //
+    // Only usable with containers of unmanaged pointers (Very Bad things can happen
+    // if you try this with containers of managed pointers).
+    //
+    // Note: While this can be useful in special cases (such as resetting a free
+    // list for a pool/slab allocator during destruction), you normally do not
+    // want this behavior.  Think carefully before calling this!
+    void clear_unsafe() {
+        static_assert(PtrTraits::IsManaged == false,
+                     "clear_unsafe is not allowed for containers of managed pointers");
+        head_ = PtrTraits::MakeSentinel(sentinel());
     }
 
     // erase_next

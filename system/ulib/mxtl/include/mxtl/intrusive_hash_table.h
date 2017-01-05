@@ -219,9 +219,29 @@ public:
         return direct_erase(GetBucket(obj), obj);
     }
 
+    // clear
+    //
+    // Clear out the all of the hashtable buckets.  For managed pointer types,
+    // this will release all references held by the hashtable to the objects
+    // which were in it.
     void clear() {
         for (auto& e : buckets_)
             e.clear();
+        count_ = 0;
+    }
+
+    // clear_unsafe
+    //
+    // Perform a clear_unsafe on all buckets and reset the internal count to
+    // zero.  See comments in mxtl/intrusive_single_list.h
+    // Think carefully before calling this!
+    void clear_unsafe() {
+        static_assert(PtrTraits::IsManaged == false,
+                     "clear_unsafe is not allowed for containers of managed pointers");
+
+        for (auto& e : buckets_)
+            e.clear_unsafe();
+
         count_ = 0;
     }
 

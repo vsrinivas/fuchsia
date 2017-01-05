@@ -237,6 +237,40 @@ public:
         END_TEST;
     }
 
+    bool ClearUnsafe() {
+        BEGIN_TEST;
+
+        // Start by making some objects.
+        ASSERT_TRUE(Populate(container()), "");
+
+        // Perform an unsafe clear of the container.  Afterwards, the number of
+        // live objects we have should be equal to the number of elements
+        // initially added to the container, since the unsafe operation should
+        // not have released any references to any objects during the unsafe
+        // clear operation.
+        //
+        // Note: This is currently a moot point.  clear_unsafe() operations are
+        // only currently allowed on unmanaged pointers, and the test framework
+        // (by necessity) always hold references to all internally allocated
+        // unmanaged objects.
+        container().clear_unsafe();
+        EXPECT_EQ(0u, Size(container()), "");
+        EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");
+
+        for (size_t i = 0; i < OBJ_COUNT; ++i) {
+            EXPECT_NONNULL(objects()[i], "");
+
+            // Make sure that the internal pointer states of all of our objects
+            // do not know yet that they have been removed from the container.
+            // The clear_unsafe operation should not have updated any of the
+            // internal object states.
+            auto& ns = ContainerType::NodeTraits::node_state(*objects()[i]);
+            EXPECT_TRUE(ns.InContainer(), "");
+        }
+
+        END_TEST;
+    }
+
     bool IsEmpty() {
         BEGIN_TEST;
 
