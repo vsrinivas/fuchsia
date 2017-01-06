@@ -168,7 +168,7 @@ int unittest_set_verbosity_level(int new_level);
 #define END_HELPER return current_test_info->all_ok
 
 #ifdef __cplusplus
-#define AUTO_TYPE_VAR(type) auto&
+#define AUTO_TYPE_VAR(type) auto
 #else
 #define AUTO_TYPE_VAR(type) __typeof__(type)
 #endif
@@ -292,8 +292,8 @@ int unittest_set_verbosity_level(int new_level);
 
 #define ASSERT_TRUE(actual, msg) UT_TRUE(actual, msg, RET_FALSE)
 #define ASSERT_FALSE(actual, msg) UT_FALSE(actual, msg, RET_FALSE)
-#define ASSERT_NULL(actual, msg) UT_NULL(actual, msg, DONOT_RET)
-#define ASSERT_NONNULL(actual, msg) UT_NONNULL(actual, msg, DONOT_RET)
+#define ASSERT_NULL(actual, msg) UT_NULL(actual, msg, RET_FALSE)
+#define ASSERT_NONNULL(actual, msg) UT_NONNULL(actual, msg, RET_FALSE)
 #define ASSERT_BYTES_EQ(expected, actual, length, msg) UT_BYTES_EQ(expected, actual, length, msg, RET_FALSE)
 #define ASSERT_BYTES_NE(bytes1, bytes2, length, msg) UT_BYTES_NE(bytes1, bytes2, length, msg, RET_FALSE)
 

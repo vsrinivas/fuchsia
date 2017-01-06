@@ -56,7 +56,7 @@ static bool uptr_test_move() {
         EXPECT_TRUE(ac.check(), "");
 
         CountingPtr ptr2 = mxtl::move(ptr);
-        EXPECT_EQ(ptr.get(), nullptr, "expected ptr to be null");
+        EXPECT_NULL(ptr, "expected ptr to be null");
     }
 
     EXPECT_EQ(1, destroy_count, "");
@@ -208,7 +208,7 @@ static bool uptr_test_array_move() {
         EXPECT_TRUE(ac.check(), "");
 
         CountingArrPtr ptr2 = mxtl::move(ptr);
-        EXPECT_EQ(ptr.get(), nullptr, "expected ptr to be null");
+        EXPECT_NULL(ptr, "expected ptr to be null");
     }
     EXPECT_EQ(1, destroy_count, "");
 
