@@ -29,6 +29,7 @@ source_set("device") {
   sources = [
     "magenta_platform_device.cc",
     "magenta_platform_device.h",
+    "magenta_platform_interrupt.h",
   ]
 
   deps = [

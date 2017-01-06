@@ -6,6 +6,7 @@
 #define PLATFORM_DEVICE_H
 
 #include "magma_util/dlog.h"
+#include "platform_interrupt.h"
 #include "platform_mmio.h"
 #include <memory>
 
@@ -27,6 +28,12 @@ public:
                                                         PlatformMmio::CachePolicy cache_policy)
     {
         DLOG("CpuMapPciMmio unimplemented");
+        return nullptr;
+    }
+
+    virtual std::unique_ptr<PlatformInterrupt> RegisterInterrupt()
+    {
+        DLOG("RegisterInterrupt unimplemented");
         return nullptr;
     }
 

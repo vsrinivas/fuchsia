@@ -22,6 +22,8 @@ public:
     std::unique_ptr<PlatformMmio> CpuMapPciMmio(unsigned int pci_bar,
                                                 PlatformMmio::CachePolicy cache_policy) override;
 
+    std::unique_ptr<PlatformInterrupt> RegisterInterrupt() override;
+
 private:
     mx_device_t* mx_device() { return mx_device_; }
 

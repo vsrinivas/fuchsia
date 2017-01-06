@@ -57,6 +57,7 @@ source_set("magma_platform_tests") {
   testonly = true
 
   sources = [
+    "test_platform_interrupt.cc",
     "test_mmio.cc",
     "test_platform_buffer.cc",
     "test_platform_connection.cc",

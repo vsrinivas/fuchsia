@@ -6,6 +6,7 @@
 #include <ddk/protocol/pci.h>
 
 #include "magenta_platform_device.h"
+#include "magenta_platform_interrupt.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_mmio.h"
@@ -88,6 +89,40 @@ bool MagentaPlatformDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
 
     mx_handle_close(cfg_handle);
     return true;
+}
+
+std::unique_ptr<PlatformInterrupt> MagentaPlatformDevice::RegisterInterrupt()
+{
+    void* protocol;
+    mx_status_t status = device_get_protocol(mx_device(), MX_PROTOCOL_PCI, &protocol);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "device_get_protocol failed (%d)", status);
+
+    auto pci = reinterpret_cast<pci_protocol_t*>(protocol);
+
+    uint32_t max_irqs;
+    status = pci->query_irq_mode_caps(mx_device(), MX_PCIE_IRQ_MODE_LEGACY, &max_irqs);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "query_irq_mode_caps failed (%d)", status);
+
+    if (max_irqs == 0)
+        return DRETP(nullptr, "max_irqs is zero");
+
+    // Mode must be Disabled before we can request Legacy
+    status = pci->set_irq_mode(mx_device(), MX_PCIE_IRQ_MODE_DISABLED, 0);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "set_irq_mode(DISABLED) failed (%d)", status);
+
+    status = pci->set_irq_mode(mx_device(), MX_PCIE_IRQ_MODE_LEGACY, 1);
+    if (status != NO_ERROR)
+        return DRETP(nullptr, "set_irq_mode(LEGACY) failed (%d)", status);
+
+    mx_handle_t interrupt_handle;
+    status = pci->map_interrupt(mx_device(), 0, &interrupt_handle);
+    if (status < 0)
+        return DRETP(nullptr, "map_interrupt failed (%d)", status);
+
+    return std::make_unique<MagentaPlatformInterrupt>(interrupt_handle);
 }
 
 std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)
