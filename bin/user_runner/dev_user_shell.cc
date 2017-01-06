@@ -70,9 +70,9 @@ class DevUserShellView : public mozart::BaseView {
     if (view_owner) {
       GetViewContainer()->AddChild(kRootModuleKey, std::move(view_owner));
       root_view_data_.reset(new ViewData());
-    } else {
+    } else if (root_view_data_) {
       GetViewContainer()->RemoveChild(kRootModuleKey, nullptr);
-      root_view_data_.reset(nullptr);
+      root_view_data_.reset();
       Invalidate();
     }
   }
