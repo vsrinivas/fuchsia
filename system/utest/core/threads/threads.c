@@ -16,9 +16,23 @@ static void test_thread_fn(void* arg) {
     mx_thread_exit();
 }
 
-bool threads_test(void) {
-    BEGIN_TEST;
+static void busy_thread_fn(void* arg) {
+    volatile uint64_t i = 0;
+    while (true) {
+        ++i;
+    }
+}
 
+static void sleep_thread_fn(void* arg) {
+    mx_nanosleep(MX_TIME_INFINITE);
+}
+
+static void wait_thread_fn(void* arg) {
+    mx_handle_t event = *(mx_handle_t*)arg;
+    mx_handle_wait_one(event, MX_USER_SIGNAL_0, MX_TIME_INFINITE, NULL);
+}
+
+static bool start_thread(mxr_thread_entry_t entry, void* arg, mxr_thread_t** thread_out) {
     const size_t stack_size = 256u << 10;
     mx_handle_t thread_stack_vmo;
     ASSERT_EQ(mx_vmo_create(stack_size, 0, &thread_stack_vmo), NO_ERROR, "");
@@ -29,9 +43,25 @@ bool threads_test(void) {
                           MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &stack), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(thread_stack_vmo), NO_ERROR, "");
 
+    ASSERT_EQ(mxr_thread_create("test_thread", thread_out), NO_ERROR, "");
+    ASSERT_EQ(mxr_thread_start(*thread_out, stack, stack_size, entry, arg), NO_ERROR, "");
+    return true;
+}
+
+static bool start_and_kill_thread(mxr_thread_entry_t entry, void* arg) {
     mxr_thread_t* thread = NULL;
-    ASSERT_EQ(mxr_thread_create("test_thread", &thread), NO_ERROR, "");
-    ASSERT_EQ(mxr_thread_start(thread, stack, stack_size, test_thread_fn, NULL), NO_ERROR, "");
+    ASSERT_TRUE(start_thread(entry, arg, &thread), "");
+    mx_nanosleep(MX_MSEC(100));
+    ASSERT_EQ(mx_task_kill(mxr_thread_get_handle(thread)), NO_ERROR, "");
+    ASSERT_EQ(mxr_thread_join(thread), NO_ERROR, "");
+    return true;
+}
+
+static bool threads_test(void) {
+    BEGIN_TEST;
+
+    mxr_thread_t* thread = NULL;
+    ASSERT_TRUE(start_thread(test_thread_fn, NULL, &thread), "");
 
     ASSERT_EQ(mx_handle_wait_one(mxr_thread_get_handle(thread), MX_SIGNAL_SIGNALED,
                                  MX_TIME_INFINITE, NULL), NO_ERROR, "");
@@ -99,10 +129,40 @@ static bool test_thread_start_with_zero_instruction_pointer(void) {
     END_TEST;
 }
 
+static bool test_kill_busy_thread(void) {
+    BEGIN_TEST;
+
+    ASSERT_TRUE(start_and_kill_thread(busy_thread_fn, NULL), "");
+
+    END_TEST;
+}
+
+static bool test_kill_sleep_thread(void) {
+    BEGIN_TEST;
+
+    ASSERT_TRUE(start_and_kill_thread(sleep_thread_fn, NULL), "");
+
+    END_TEST;
+}
+
+static bool test_kill_wait_thread(void) {
+    BEGIN_TEST;
+
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0, &event), NO_ERROR, "");
+    ASSERT_TRUE(start_and_kill_thread(wait_thread_fn, &event), "");
+    ASSERT_EQ(mx_handle_close(event), NO_ERROR, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(threads_tests)
 RUN_TEST(threads_test)
 RUN_TEST(test_thread_start_on_initial_thread)
 RUN_TEST(test_thread_start_with_zero_instruction_pointer)
+RUN_TEST(test_kill_busy_thread)
+RUN_TEST(test_kill_sleep_thread)
+RUN_TEST(test_kill_wait_thread)
 END_TEST_CASE(threads_tests)
 
 #ifndef BUILD_COMBINED_TESTS
