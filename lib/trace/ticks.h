@@ -6,6 +6,7 @@
 #define APPS_TRACING_LIB_TRACE_TICKS_H_
 
 #include <stdint.h>
+#include <magenta/syscalls.h>
 
 namespace tracing {
 
@@ -13,10 +14,14 @@ namespace tracing {
 using Ticks = uint64_t;
 
 // Gets the current timestamp in ticks elapsed since some arbitrary epoch.
-Ticks GetTicksNow();
+inline Ticks GetTicksNow() {
+  return mx_ticks_get();
+}
 
 // Gets the tick resolution in ticks per second.
-Ticks GetTicksPerSecond();
+inline Ticks GetTicksPerSecond() {
+  return mx_ticks_per_second();
+}
 
 }  // namepsace tracing
 
