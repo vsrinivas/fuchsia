@@ -175,27 +175,29 @@ const struct __attribute__((packed)) {\
     magenta_note_driver_t driver;\
     mx_bind_inst_t binding[BindCount];\
 } MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver) = {\
-    .note = {\
-        .namesz = 7,\
-        .descsz = sizeof(magenta_note_driver_t) + sizeof(mx_bind_inst_t) * (BindCount),\
-        .type = MAGENTA_NOTE_DRIVER,\
-        .name = "Magenta",\
+    /* .note = */ {\
+        /* .namesz = */ 7,\
+        /* .descsz = */ sizeof(magenta_note_driver_t) + sizeof(mx_bind_inst_t) * (BindCount),\
+        /* .type = */ MAGENTA_NOTE_DRIVER,\
+        /* .name = */ "Magenta",\
     },\
-    .driver = {\
-        .bindcount = (BindCount),\
-        .name = DriverName,\
-        .vendor = VendorName,\
-        .version = Version,\
+    /* .driver = */ {\
+        /* .bindcount = */ (BindCount),\
+        /* .reserved = */ 0,\
+        /* .name = */ DriverName,\
+        /* .vendor = */ VendorName,\
+        /* .version = */ Version,\
     },\
-    .binding = {
+    /* .binding = */ {
 
 #define MAGENTA_DRIVER_END(Driver) }};\
 extern const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver); \
 const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR = {\
-    .note = &MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).driver,\
-    .driver = &Driver,\
-    .binding = MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).binding,\
-    .binding_size = sizeof(MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver)).binding,\
+    /* .node = */ {},\
+    /* .driver = */ &Driver,\
+    /* .note = */ &MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).driver,\
+    /* .binding = */ MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).binding,\
+    /* .binding_size = */ sizeof(MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver)).binding,\
 };
 
 __END_CDECLS;
