@@ -24,8 +24,8 @@ will not start executing until *thread_start()* is called.
 When the last handle to a thread is closed, the thread is destroyed.
 
 Thread handles may be waited on and will assert the signal
-*MX_SIGNAL_SIGNALED* when the thread stops executing (due to
-*thread_exit**() being called.
+*MX_THREAD_SIGNALED* when the thread stops executing (due to
+*thread_exit**() being called).
 
 ## RETURN VALUE
 

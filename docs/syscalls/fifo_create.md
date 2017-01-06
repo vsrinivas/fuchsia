@@ -31,9 +31,9 @@ The newly-created handle will have the *MX_RIGHT_TRANSFER*,
 or *MX_FIFO_CONSUMER_RIGHTS* to pass default producer/consumer rights to
 **handle_duplicate**() or **handle_replace**().
 
-The *MX_SIGNAL_FIFO_EMPTY*, *MX_SIGNAL_FIFO_NOT_EMPTY*, *MX_SIGNAL_FIFO_FULL*,
-and *MX_SIGNAL_FIFO_NOT_FULL* signals are set by the fifo as appropriate when
-the head and tail are advanced.
+The *MX_FIFO_EMPTY*, *MX_FIFO_NOT_EMPTY*, *MX_FIFO_FULL*, and
+*MX_FIFO_NOT_FULL* signals are set by the fifo as appropriate when the
+head and tail are advanced.
 
 The size of the fifo must be a positive power of 2.
 

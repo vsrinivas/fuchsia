@@ -18,7 +18,7 @@ mx_status_t mx_eventpair_create(uint32_t flags, mx_handle_t* out0, mx_handle_t* 
 are mutually signalable. That is, calling **object_signal**() on one object
 (handle) actually sets the signals on the other object, and vice versa.
 Destroying one object (by closing all the handles to it) sets the
-*MX_SIGNAL_PEER_CLOSED* signal on the other object (if it is still alive); any
+*MX_EPAIR_PEER_CLOSED* signal on the other object (if it is still alive); any
 signals that were set remain set, while those that were not become
 unsatisfiable.
 
