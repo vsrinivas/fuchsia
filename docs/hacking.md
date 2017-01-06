@@ -51,3 +51,22 @@ EXTERNAL_KERNEL_DEFINES := ENABLE_KERNEL_LL_DEBUG=1
 ```
 
 More information on ``local.mk`` can be found via ``make help``
+
+## Requesting a backtrace from within a program
+
+For debugging purposes, the system crashlogger can print backtraces by
+request. It requires modifying your source, but in the absence of a
+debugger, or as a general builtin debug mechanism, this can be useful.
+
+```
+#include <magenta/crashlogger.h>
+
+void my_function() {
+  crashlogger_request_backtrace();
+}
+```
+
+When crashlogger\_request\_backtrace is called, it causes an
+exception used by debuggers for breakpoint handling.
+If a debugger is not attached, the system crashlogger will
+process the exception, print a backtrace, and then resume the thread.
