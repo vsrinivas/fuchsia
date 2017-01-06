@@ -16,3 +16,11 @@ Regenerating the files is easy enough:
 ```
 $ scripts/run-sysgen.sh
 ```
+
+## Terminal navigation and keyboard shortcuts
+
+Alt+Tab switches between VTs
+Alt+F{1,2,...} switches directly to a VT
+Alt+Up/Down scrolls up and down by lines
+Shift+PgUp/PgDown scrolls up and down by half page
+Ctrl+Alt+Delete reboots
