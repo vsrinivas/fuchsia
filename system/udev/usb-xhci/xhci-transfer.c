@@ -17,7 +17,7 @@
 static void print_trb(xhci_t* xhci, xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
     int index = trb - ring->start;
     uint32_t* ptr = (uint32_t *)trb;
-    uint64_t paddr = xhci_virt_to_phys(xhci, (mx_vaddr_t)trb);
+    uint64_t paddr = io_buffer_phys(&ring->buffer, index * sizeof(xhci_trb_t));
 
     printf("trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
 }
@@ -51,7 +51,7 @@ mx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint32_t endpoin
 
     // then move transfer ring's dequeue pointer passed the failed transaction
     xhci_sync_command_init(&command);
-    uint64_t ptr = xhci_virt_to_phys(xhci, (mx_vaddr_t)transfer_ring->current);
+    uint64_t ptr = xhci_transfer_ring_current_phys(transfer_ring);
     ptr |= transfer_ring->pcs;
     // command expects device context index, so increment endpoint by 1
     control = (slot_id << TRB_SLOT_ID_START) | ((endpoint + 1) << TRB_ENDPOINT_ID_START);
@@ -162,7 +162,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
         control_bits |= XFER_TRB_IDT; // immediate data flag
         trb_set_control(trb, TRB_TRANSFER_SETUP, control_bits);
         print_trb(xhci, ring, trb);
-        xhci_increment_ring(xhci, ring);
+        xhci_increment_ring(ring);
     }
 
     // Data Stage
@@ -203,7 +203,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
                 trb_set_control(trb, TRB_TRANSFER_NORMAL, control_bits);
             }
             print_trb(xhci, ring, trb);
-            xhci_increment_ring(xhci, ring);
+            xhci_increment_ring(ring);
         }
 
         // Follow up with event data TRB
@@ -213,7 +213,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
         trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
         print_trb(xhci, ring, trb);
-        xhci_increment_ring(xhci, ring);
+        xhci_increment_ring(ring);
     }
 
     if (setup) {
@@ -227,7 +227,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
         }
         trb_set_control(trb, TRB_TRANSFER_STATUS, control_bits);
         print_trb(xhci, ring, trb);
-        xhci_increment_ring(xhci, ring);
+        xhci_increment_ring(ring);
 
         if (length == 0) {
             // Follow up with event data TRB
@@ -237,7 +237,7 @@ mx_status_t xhci_queue_transfer(xhci_t* xhci, uint32_t slot_id, usb_setup_t* set
             XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS, interruptor_target);
             trb_set_control(trb, TRB_TRANSFER_EVENT_DATA, XFER_TRB_IOC);
             print_trb(xhci, ring, trb);
-            xhci_increment_ring(xhci, ring);
+            xhci_increment_ring(ring);
         }
     }
     // update dequeue_ptr to TRB following this transaction
@@ -276,8 +276,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
 }
 
 mx_status_t xhci_get_descriptor(xhci_t* xhci, uint32_t slot_id, uint8_t type, uint16_t value,
-                                uint16_t index, void* data, uint16_t length) {
-    mx_paddr_t phys_addr = xhci_virt_to_phys(xhci, (mx_vaddr_t)data);
+                                uint16_t index, mx_paddr_t phys_addr, uint16_t length) {
     return xhci_control_request(xhci, slot_id, USB_DIR_IN | type | USB_RECIP_DEVICE,
                                 USB_REQ_GET_DESCRIPTOR, value, index, phys_addr, length);
 }
@@ -308,13 +307,13 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
         if (control & EVT_TRB_ED) {
             context = (xhci_transfer_context_t*)trb_get_ptr(trb);
         } else {
-            trb = xhci_read_trb_ptr(xhci, trb);
+            trb = xhci_read_trb_ptr(ring, trb);
             for (int i = 0; i < 5 && trb; i++) {
                 if (trb_get_type(trb) == TRB_TRANSFER_EVENT_DATA) {
                     context = (xhci_transfer_context_t*)trb_get_ptr(trb);
                     break;
                 }
-                trb = xhci_get_next_trb(xhci, trb);
+                trb = xhci_get_next_trb(ring, trb);
             }
         }
     }

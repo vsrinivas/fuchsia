@@ -5,7 +5,6 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/io-alloc.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/usb-bus.h>
 #include <ddk/protocol/usb-hci.h>
@@ -37,7 +36,6 @@ typedef struct usb_xhci {
     mx_device_t* bus_device;
     usb_bus_protocol_t* bus_protocol;
 
-    io_alloc_t* io_alloc;
     pci_protocol_t* pci_proto;
     bool legacy_irq_mode;
     mx_handle_t irq_handle;
@@ -73,40 +71,6 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
     }
 
     uxhci->bus_protocol->remove_device(uxhci->bus_device, slot_id);
-}
-
-void* xhci_malloc(xhci_t* xhci, size_t size) {
-    usb_xhci_t* uxhci = xhci_to_usb_xhci(xhci);
-    return io_malloc(uxhci->io_alloc, size);
-}
-
-void* xhci_memalign(xhci_t* xhci, size_t alignment, size_t size) {
-    usb_xhci_t* uxhci = xhci_to_usb_xhci(xhci);
-    void* result = io_memalign(uxhci->io_alloc, alignment, size);
-    if (result) {
-        memset(result, 0, size);
-    }
-    return result;
-}
-
-void xhci_free(xhci_t* xhci, void* addr) {
-    usb_xhci_t* uxhci = xhci_to_usb_xhci(xhci);
-    io_free(uxhci->io_alloc, addr);
-}
-
-void xhci_free_phys(xhci_t* xhci, mx_paddr_t addr) {
-    usb_xhci_t* uxhci = xhci_to_usb_xhci(xhci);
-    io_free(uxhci->io_alloc, (void*)io_phys_to_virt(uxhci->io_alloc, addr));
-}
-
-mx_paddr_t xhci_virt_to_phys(xhci_t* xhci, mx_vaddr_t addr) {
-    usb_xhci_t* uxhci = xhci_to_usb_xhci(xhci);
-    return io_virt_to_phys(uxhci->io_alloc, addr);
-}
-
-mx_vaddr_t xhci_phys_to_virt(xhci_t* xhci, mx_paddr_t addr) {
-    usb_xhci_t* uxhci = xhci_to_usb_xhci(xhci);
-    return io_phys_to_virt(uxhci->io_alloc, addr);
 }
 
 static int xhci_irq_thread(void* arg) {
@@ -338,7 +302,6 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev, void** cook
     mx_handle_t irq_handle = MX_HANDLE_INVALID;
     mx_handle_t mmio_handle = MX_HANDLE_INVALID;
     mx_handle_t cfg_handle = MX_HANDLE_INVALID;
-    io_alloc_t* io_alloc = NULL;
     usb_xhci_t* uxhci = NULL;
     mx_status_t status;
 
@@ -360,12 +323,6 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev, void** cook
         goto error_return;
     }
 
-    // create an IO memory allocator
-    io_alloc = io_alloc_init(10 * 1024 * 1024);
-
-    //printf("VID %04X %04X\n", pci_config->vendor_id, pci_config->device_id);
-
-    // map our MMIO
     int bar = -1;
     void* mmio;
     uint64_t mmio_len;
@@ -415,7 +372,6 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev, void** cook
         goto error_return;
     }
 
-    uxhci->io_alloc = io_alloc;
     uxhci->irq_handle = irq_handle;
     uxhci->mmio_handle = mmio_handle;
     uxhci->cfg_handle = cfg_handle;
@@ -442,8 +398,6 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev, void** cook
 error_return:
     if (uxhci)
         free(uxhci);
-    if (io_alloc)
-        io_alloc_free(io_alloc);
     if (irq_handle != MX_HANDLE_INVALID)
         mx_handle_close(irq_handle);
     if (mmio_handle != MX_HANDLE_INVALID)

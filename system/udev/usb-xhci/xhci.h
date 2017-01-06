@@ -9,6 +9,7 @@
 #include <magenta/types.h>
 #include <magenta/listnode.h>
 #include <sync/completion.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <threads.h>
 
@@ -16,9 +17,10 @@
 #include "xhci-root-hub.h"
 #include "xhci-trb.h"
 
-#define COMMAND_RING_SIZE 8
-#define EVENT_RING_SIZE 64
-#define TRANSFER_RING_SIZE 64
+// choose ring sizes to allow each ring to fit in a single page
+#define COMMAND_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
+#define TRANSFER_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
+#define EVENT_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
 #define ERST_ARRAY_SIZE 1
 
 #define XHCI_RH_USB_2 0 // index of USB 2.0 virtual root hub device
@@ -26,6 +28,8 @@
 #define XHCI_RH_COUNT 2 // number of virtual root hub devices
 
 typedef struct xhci_slot {
+    // buffer for our device context
+    io_buffer_t buffer;
     xhci_slot_context_t* sc;
     // epcs point into DMA memory past sc
     xhci_endpoint_context_t* epcs[XHCI_NUM_EPS];
@@ -55,13 +59,16 @@ struct xhci {
 
     // DMA data structures
     uint64_t* dcbaa;
-    uint64_t* scratch_pad;
+    mx_paddr_t dcbaa_phys;
 
     xhci_transfer_ring_t command_ring;
     xhci_command_context_t* command_contexts[COMMAND_RING_SIZE];
 
     // One event ring for now, but we will have multiple if we use multiple interruptors
-    xhci_event_ring_t event_rings[1];
+#define INTERRUPTOR_COUNT 1
+    xhci_event_ring_t event_rings[INTERRUPTOR_COUNT];
+    erst_entry_t* erst_arrays[INTERRUPTOR_COUNT];
+    mx_paddr_t erst_arrays_phys[INTERRUPTOR_COUNT];
 
     size_t page_size;
     size_t max_slots;
@@ -97,7 +104,9 @@ struct xhci {
 
     // DMA buffers used by xhci_device_thread in xhci-device-manager.c
     uint8_t* input_context;
+    mx_paddr_t input_context_phys;
     usb_device_descriptor_t* device_descriptor;
+    mx_paddr_t device_descriptor_phys;
 
     // for xhci_get_current_frame()
     mtx_t mfindex_mutex;
@@ -105,6 +114,19 @@ struct xhci {
     uint64_t mfindex_wrap_count;
    // time of last mfindex wrap
     mx_time_t last_mfindex_wrap;
+
+    // VMO buffer for DCBAA and ERST array
+    mx_handle_t dcbaa_erst_handle;
+    mx_vaddr_t dcbaa_erst_virt;
+    // VMO buffer for input context
+    mx_handle_t input_context_handle;
+    mx_vaddr_t input_context_virt;
+    // VMO buffer for scratch pad pages
+    mx_handle_t scratch_pad_pages_handle;
+    mx_vaddr_t scratch_pad_pages_virt;
+    // VMO buffer for scratch pad index
+    mx_handle_t scratch_pad_index_handle;
+    mx_vaddr_t scratch_pad_index_virt;
 };
 
 mx_status_t xhci_init(xhci_t* xhci, void* mmio);
@@ -127,13 +149,6 @@ inline bool xhci_is_root_hub(xhci_t* xhci, uint32_t device_id) {
 }
 
 // upper layer routines in usb-xhci.c
-void* xhci_malloc(xhci_t* xhci, size_t size);
-void* xhci_memalign(xhci_t* xhci, size_t alignment, size_t size);
-void xhci_free(xhci_t* xhci, void* addr);
-void xhci_free_phys(xhci_t* xhci, mx_paddr_t addr);
-mx_paddr_t xhci_virt_to_phys(xhci_t* xhci, mx_vaddr_t addr);
-mx_vaddr_t xhci_phys_to_virt(xhci_t* xhci, mx_paddr_t addr);
-
 mx_status_t xhci_add_device(xhci_t* xhci, int slot_id, int hub_address, int speed);
 void xhci_remove_device(xhci_t* xhci, int slot_id);
 void xhci_process_deferred_txns(xhci_t* xhci, xhci_transfer_ring_t* ring, bool closed);

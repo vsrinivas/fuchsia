@@ -72,18 +72,19 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     slot->speed = speed;
 
     // allocate DMA memory for device context
-    uint8_t* device_context = (uint8_t*)xhci_memalign(xhci, 64, xhci->context_size * XHCI_NUM_EPS);
-    if (!device_context) {
-        printf("out of DMA memory!\n");
-        return ERR_NO_MEMORY;
+    mx_status_t status = io_buffer_init(&slot->buffer, xhci->context_size * XHCI_NUM_EPS, IO_BUFFER_RW);
+    if (status != NO_ERROR) {
+        printf("failed to allocate io_buffer for slot\n");
+        return status;
     }
+    uint8_t* device_context = (uint8_t *)io_buffer_virt(&slot->buffer);
 
     xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[0];
-    mx_status_t status = xhci_transfer_ring_init(xhci, transfer_ring, TRANSFER_RING_SIZE);
-    if (status < 0)
-        return status;
+    status = xhci_transfer_ring_init(transfer_ring, TRANSFER_RING_SIZE);
+    if (status < 0) return status;
 
-    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)&xhci->input_context[0 * xhci->context_size];
+    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
+    mx_paddr_t icc_phys = xhci->input_context_phys;
     xhci_slot_context_t* sc = (xhci_slot_context_t*)&xhci->input_context[1 * xhci->context_size];
     xhci_endpoint_context_t* ep0c = (xhci_endpoint_context_t*)&xhci->input_context[2 * xhci->context_size];
     memset((void*)icc, 0, xhci->context_size);
@@ -123,8 +124,7 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     XHCI_SET_BITS32(&sc->sc2, SLOT_CTX_TT_PORT_NUM_START, SLOT_CTX_TT_PORT_NUM_BITS, tt_port_number);
 
     // Setup endpoint context for ep0
-    void* tr = (void*)transfer_ring->start;
-    uint64_t tr_dequeue = xhci_virt_to_phys(xhci, (mx_vaddr_t)tr);
+    mx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(transfer_ring);
 
     XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_CERR_START, EP_CTX_CERR_BITS, 3); // ???
     XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_EP_TYPE_START, EP_CTX_EP_TYPE_BITS, EP_CTX_EP_TYPE_CONTROL);
@@ -134,12 +134,12 @@ static mx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     XHCI_SET_BITS32(&ep0c->epc4, EP_CTX_AVG_TRB_LENGTH_START, EP_CTX_AVG_TRB_LENGTH_BITS, 8); // ???
 
     // install our device context for the slot
-    XHCI_WRITE64(&xhci->dcbaa[slot_id], xhci_virt_to_phys(xhci, (mx_vaddr_t)slot->sc));
+    XHCI_WRITE64(&xhci->dcbaa[slot_id], io_buffer_phys(&slot->buffer));
     // then send the address device command
 
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_ADDRESS_DEVICE, xhci_virt_to_phys(xhci, (mx_vaddr_t)icc),
+    xhci_post_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys,
                       (slot_id << TRB_SLOT_ID_START), &command.context);
     int cc = xhci_sync_command_wait(&command);
     if (cc == TRB_CC_SUCCESS) {
@@ -199,7 +199,7 @@ static void xhci_disable_slot(xhci_t* xhci, uint32_t slot_id) {
 
     xprintf("cleaning up slot %d\n", slot_id);
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    xhci_free(xhci, (void*)slot->sc);
+    io_buffer_release(&slot->buffer);
     memset(slot, 0, sizeof(*slot));
 }
 
@@ -229,7 +229,7 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
 
     // read first 8 bytes of device descriptor to fetch ep0 max packet size
     result = xhci_get_descriptor(xhci, slot_id, USB_TYPE_STANDARD, USB_DT_DEVICE << 8, 0,
-                                 xhci->device_descriptor, 8);
+                                 xhci->device_descriptor_phys, 8);
     if (result != 8) {
         printf("xhci_get_descriptor failed\n");
         goto disable_slot_exit;
@@ -258,7 +258,8 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     }
 
     // update the max packet size in our device context
-    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)&xhci->input_context[0 * xhci->context_size];
+    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
+    mx_paddr_t icc_phys = xhci->input_context_phys;
     xhci_endpoint_context_t* ep0c = (xhci_endpoint_context_t*)&xhci->input_context[2 * xhci->context_size];
     memset((void*)icc, 0, xhci->context_size);
     memset((void*)ep0c, 0, xhci->context_size);
@@ -267,7 +268,7 @@ static mx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS, mps);
 
     xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_EVAL_CONTEXT, xhci_virt_to_phys(xhci, (mx_vaddr_t)icc),
+    xhci_post_command(xhci, TRB_CMD_EVAL_CONTEXT, icc_phys,
                       (slot_id << TRB_SLOT_ID_START), &command.context);
     cc = xhci_sync_command_wait(&command);
     if (cc != TRB_CC_SUCCESS) {
@@ -327,7 +328,7 @@ static bool xhci_stop_endpoint(xhci_t* xhci, uint32_t slot_id, int ep_index) {
     }
     // and any deferred requests
     xhci_process_deferred_txns(xhci, transfer_ring, true);
-    xhci_transfer_ring_free(xhci, transfer_ring);
+    xhci_transfer_ring_free(transfer_ring);
 
     return true;
 }
@@ -366,13 +367,14 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
 
     xhci_remove_device(xhci, slot_id);
 
-    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)&xhci->input_context[0 * xhci->context_size];
+    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
+    mx_paddr_t icc_phys = xhci->input_context_phys;
     memset((void*)icc, 0, xhci->context_size);
     XHCI_WRITE32(&icc->drop_context_flags, drop_flags);
 
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_CONFIGURE_EP, xhci_virt_to_phys(xhci, (mx_vaddr_t)icc),
+    xhci_post_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
                       (slot_id << TRB_SLOT_ID_START), &command.context);
     int cc = xhci_sync_command_wait(&command);
     if (cc != TRB_CC_SUCCESS) {
@@ -386,18 +388,6 @@ static mx_status_t xhci_handle_disconnect_device(xhci_t* xhci, uint32_t hub_addr
 
 static int xhci_device_thread(void* arg) {
     xhci_t* xhci = (xhci_t*)arg;
-
-    xhci->input_context = (uint8_t*)xhci_memalign(xhci, 64, xhci->context_size * (XHCI_NUM_EPS + 2));
-    if (!xhci->input_context) {
-        printf("out of DMA memory!\n");
-        return ERR_NO_MEMORY;
-    }
-    xhci->device_descriptor = (usb_device_descriptor_t*)xhci_malloc(xhci, sizeof(usb_device_descriptor_t));
-    if (!xhci->device_descriptor) {
-        printf("out of DMA memory!\n");
-        xhci_free(xhci, xhci->input_context);
-        return ERR_NO_MEMORY;
-    }
 
     while (1) {
         xprintf("xhci_device_thread top of loop\n");
@@ -428,12 +418,6 @@ static int xhci_device_thread(void* arg) {
             xhci_start_root_hubs(xhci);
         }
     }
-
-    // free our DMA buffers
-    xhci_free(xhci, xhci->input_context);
-    xhci_free(xhci, xhci->device_descriptor);
-    xhci->input_context = NULL;
-    xhci->device_descriptor = NULL;
 
     return 0;
 }
@@ -501,7 +485,8 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
     uint32_t index = xhci_endpoint_index(ep->bEndpointAddress);
     xhci_transfer_ring_t* transfer_ring = &slot->transfer_rings[index];
 
-    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)&xhci->input_context[0 * xhci->context_size];
+    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;
+    mx_paddr_t icc_phys = xhci->input_context_phys;
     xhci_slot_context_t* sc = (xhci_slot_context_t*)&xhci->input_context[1 * xhci->context_size];
     memset((void*)icc, 0, xhci->context_size);
 
@@ -528,12 +513,11 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
         xhci_endpoint_context_t* epc = (xhci_endpoint_context_t*)&xhci->input_context[(index + 2) * xhci->context_size];
         memset((void*)epc, 0, xhci->context_size);
         // allocate a transfer ring for the endpoint
-        mx_status_t status = xhci_transfer_ring_init(xhci, transfer_ring, TRANSFER_RING_SIZE);
+        mx_status_t status = xhci_transfer_ring_init(transfer_ring, TRANSFER_RING_SIZE);
         if (status < 0)
             return status;
 
-        void* tr = (void*)slot->transfer_rings[index].start;
-        uint64_t tr_dequeue = xhci_virt_to_phys(xhci, (mx_vaddr_t)tr);
+        mx_paddr_t tr_dequeue = xhci_transfer_ring_start_phys(&slot->transfer_rings[index]);
 
         XHCI_SET_BITS32(&epc->epc0, EP_CTX_INTERVAL_START, EP_CTX_INTERVAL_BITS, compute_interval(ep, speed));
         XHCI_SET_BITS32(&epc->epc0, EP_CTX_MAX_ESIT_PAYLOAD_HI_START, EP_CTX_MAX_ESIT_PAYLOAD_HI_BITS,
@@ -559,7 +543,7 @@ mx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
 
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_CONFIGURE_EP, xhci_virt_to_phys(xhci, (mx_vaddr_t)icc),
+    xhci_post_command(xhci, TRB_CMD_CONFIGURE_EP, icc_phys,
                       (slot_id << TRB_SLOT_ID_START), &command.context);
 
     xhci_sync_command_wait(&command);
@@ -582,11 +566,14 @@ mx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
     if (slot_id > xhci->max_slots) return ERR_INVALID_ARGS;
 
     xhci_slot_t* slot = &xhci->slots[slot_id];
-    uint8_t* input_context = (uint8_t*)xhci_memalign(xhci, 64, xhci->context_size * 2);
-    if (!input_context) {
-        printf("out of DMA memory!\n");
-        return ERR_NO_MEMORY;
+
+    io_buffer_t buffer;
+    mx_status_t status = io_buffer_init(&buffer, xhci->context_size * 2, IO_BUFFER_RW);
+    if (status != NO_ERROR) {
+        printf("io_buffer_init failed in xhci_configure_hub\n");
+        return status;
     }
+    uint8_t* input_context = (uint8_t*)io_buffer_virt(&buffer);
 
     uint32_t num_ports = descriptor->bNbrPorts;
     uint32_t ttt = 0;
@@ -594,7 +581,7 @@ mx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
         ttt = (descriptor->wHubCharacteristics >> 5) & 3;
     }
 
-    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)&input_context[0 * xhci->context_size];
+    xhci_input_control_context_t* icc = (xhci_input_control_context_t*)input_context;
     xhci_slot_context_t* sc = (xhci_slot_context_t*)&input_context[1 * xhci->context_size];
     memset((void*)icc, 0, xhci->context_size);
     memset((void*)sc, 0, xhci->context_size);
@@ -609,11 +596,11 @@ mx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
 
     xhci_sync_command_t command;
     xhci_sync_command_init(&command);
-    xhci_post_command(xhci, TRB_CMD_EVAL_CONTEXT, xhci_virt_to_phys(xhci, (mx_vaddr_t)icc),
+    xhci_post_command(xhci, TRB_CMD_EVAL_CONTEXT, io_buffer_phys(&buffer),
                       (slot_id << TRB_SLOT_ID_START), &command.context);
     int cc = xhci_sync_command_wait(&command);
 
-    xhci_free(xhci, input_context);
+    io_buffer_release(&buffer);
 
     if (cc != TRB_CC_SUCCESS) {
         printf("TRB_CMD_EVAL_CONTEXT failed\n");
