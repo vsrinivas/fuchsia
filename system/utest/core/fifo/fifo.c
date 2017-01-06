@@ -20,7 +20,7 @@ static void reset_state(mx_fifo_state_t* state) {
 static bool check_signals(mx_handle_t fifo, mx_signals_t expected) {
     mx_signals_t pending;
     mx_status_t status = mx_handle_wait_one(fifo, expected, 0u, &pending);
-    ASSERT_EQ(status, ERR_TIMED_OUT, "wait failed");
+    ASSERT_EQ(status, NO_ERROR, "wait failed");
     ASSERT_EQ(pending, expected, "Error with fifo signals");
     return true;
 }

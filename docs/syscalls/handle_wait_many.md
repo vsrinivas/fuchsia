@@ -27,24 +27,26 @@ the specified *items* or *timeout* elapses.
 The caller must provide *count* mx_wait_item_ts in the *items* array,
 containing the handle and signals bitmask to wait for for each item.
 
-The *timeout* parameter is relative time (from now) in nanoseconds which
-takes two special values: **0** and **MX_TIME_INFINITE**. The former causes
-the wait to complete immediately and the latter signals that wait will
-never time out.
+The *timeout* parameter specifies a relative timeout (from now) in nanoseconds,
+ranging from **0** (do not wait at all) to **MX_TIME_INFINITE** (wait forever).
 
 Upon return, the *pending* field of *items* is filled with bitmaps indicating
 which signals are pending for each item.
 
-It is possible to have the call return with a *items* array with values
-different than the values that caused the wait to complete if other threads are
-further modifing the objects behind the *handles*.
+The *pending* signals in *items* may not reflect the actual state of the object's
+signals if the state of the object was modified by another thread or
+process.  (For example, a Channel ceases asserting **MX_CHANNEL_READABLE**
+once the last message in its queue is read).
 
 ## RETURN VALUE
 
-**handle_wait_many**() returns **NO_ERROR** on success.
+**handle_wait_many**() returns **NO_ERROR** if any of *waitfor* signals were
+observed on their respective object before *timeout* expires.
 
 In the event of **ERR_TIMED_OUT**, *items* may reflect state changes
-that occurred after the timeout but before the syscall returned.
+that occurred after the timeout expired, but before the syscall returned.
+
+For any other return value, the *pending* fields of *items* are undefined.
 
 ## ERRORS
 
@@ -60,7 +62,7 @@ have **MX_RIGHT_READ** and may not be waited upon.
 
 **ERR_TIMED_OUT**  The specified timeout elapsed (or was 0 to begin
 with) before any of the specified signals are observed on any of the
-specified handles. There may still be pending signals.
+specified handles.
 
 **ERR_NOT_SUPPORTED**  One of the *items* contains a handle that cannot
 be waited one (for example, a Port handle).
@@ -69,5 +71,6 @@ be waited one (for example, a Port handle).
 
 ## BUGS
 
-Currently the smallest *timeout* is 1 millisecond. Intervals smaller
-than that are equivalent to 1ms.
+Currently *timeout* is rounded down to the nearest millisecond interval.
+
+*pending* more properly should be called *observed*.

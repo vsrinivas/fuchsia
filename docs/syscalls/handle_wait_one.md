@@ -12,30 +12,35 @@ handle_wait_one - wait for signals on a handle
 mx_status_t mx_handle_wait_one(mx_handle_t handle,
                                mx_signals_t signals,
                                mx_time timeout,
-                               mx_signals_t* pending);
+                               mx_signals_t* observed);
 ```
 
 ## DESCRIPTION
 
 **handle_wait_one**() is a blocking syscall which causes the caller to
-wait until at least one of the specified *signals* is pending on *handle*
-or *timeout* elapses.
+wait until at least one of the specified *signals* has been observed on
+the object *handle* refers to or *timeout* elapses.
 
-Upon return, if non-NULL, *pending* is a bitmap of all of the
-signals which are pending on *handle*.
+Upon return, if non-NULL, *observed* is a bitmap of *all* of the
+signals which were observed asserted on that object while waiting.
 
-It is possible to have the call return with *pending* different than the
-state that caused the wait to complete if another thread is further modifying
-the object behind *handle*.
+The *observed* signals may not reflect the actual state of the object's
+signals if the state of the object was modified by another thread or
+process.  (For example, a Channel ceases asserting **MX_CHANNEL_READABLE**
+once the last message in its queue is read).
 
-The *timeout* parameter is relative time (from now) in nanoseconds which
-takes two special values: **0** and **MX_TIME_INFINITE**. The former causes
-the wait to complete immediately and the latter signals that wait will
-never time out.
+The *timeout* parameter specifies a relative timeout (from now) in nanoseconds,
+ranging from **0** (do not wait at all) to **MX_TIME_INFINITE** (wait forever).
 
 ## RETURN VALUE
 
-**handle_wait_one**() returns **NO_ERROR** on success.
+**handle_wait_one**() returns **NO_ERROR** if any of *signals* were observed
+on the object before *timeout* expires.
+
+In the event of **ERR_TIMED_OUT**, *observed* may reflect state changes
+that occurred after the timeout expired, but before the syscall returned.
+
+For any other return value, *observed* is undefined.
 
 ## ERRORS
 
@@ -50,12 +55,11 @@ not be waited upon.
 
 **ERR_TIMED_OUT**  The specified timeout elapsed (or was 0 to begin
 with) before any of the specified *signals* are observed on
-*handle*. There may still be pending signals.
+*handle*.
 
 **ERR_NOT_SUPPORTED**  *handle* is a handle that cannot be waited on
 (for example, a Port handle).
 
 ## BUGS
 
-Currently the smallest *timeout* is 1 millisecond. Intervals smaller
-than that are equivalent to 1ms.
+Currently *timeout* is rounded down to the nearest millisecond interval.

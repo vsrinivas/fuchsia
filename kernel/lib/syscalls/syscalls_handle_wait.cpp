@@ -68,15 +68,11 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)timeout, (uint32_t)(timeout >> 32));
 #endif
 
-    if (timeout > 0ull) {
-        lk_time_t t = mx_time_to_lk(timeout);
-        if (t == 0)
-            t = 1u;
-
-        result = event.Wait(t);
-    } else {
-        result = ERR_TIMED_OUT;
-    }
+    // event_wait() will return NO_ERROR if already signaled,
+    // even if timeout is 0.  It will return ERR_TIMED_OUT
+    // after the timeout expires if the event has not been
+    // signaled.
+    result = event.Wait(mx_time_to_lk(timeout));
 
     // Regardless of wait outcome, we must call End().
     auto signals_state = wait_state_observer.End();
@@ -153,15 +149,11 @@ mx_status_t sys_handle_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time
         return result;
     }
 
-    if (timeout > 0ull) {
-        lk_time_t t = mx_time_to_lk(timeout);
-        if (t == 0u)
-            t = 1u;
-
-        result = event.Wait(t);
-    } else {
-        result = ERR_TIMED_OUT;
-    }
+    // event_wait() will return NO_ERROR if already signaled,
+    // even if timeout is 0.  It will return ERR_TIMED_OUT
+    // after the timeout expires if the event has not been
+    // signaled.
+    result = event.Wait(mx_time_to_lk(timeout));
 
     // Regardless of wait outcome, we must call End().
     mx_signals_t combined = 0;
