@@ -1122,53 +1122,56 @@ int main(int argc, char** argv) {
     partition_flags ready_for_install = 0;
     partition_flags requested_parts = PART_EFI | PART_SYSTEM;
 
-    // first read the directory of block devices
-    DIR* dir;
-    dir = opendir(PATH_BLOCKDEVS);
-    if (dir == NULL) {
-        fprintf(stderr, "Open failed for directory: '%s' with error %s\n",
-                PATH_BLOCKDEVS, strerror(errno));
-        return -1;
-    }
-
-    mx_status_t rc = find_install_device(dir, path_buffer, requested_parts,
-                                         &ready_for_install, part_paths,
-                                         &install_dev);
-    closedir(dir);
-
-    if (rc == NO_ERROR && install_dev->valid) {
-        rc = write_install_data(requested_parts, ready_for_install,
-                                disk_img_paths, part_paths);
-        gpt_device_release(install_dev);
-        if (rc == NO_ERROR) {
-            return 0;
-        } else {
-            return -1;
-        }
-    } else {
-        dir = opendir(PATH_BLOCKDEVS);
+    // the dirty bit is set to true whenever the devices directory is in a
+    // state where it it unknown if installation can proceed
+    bool retry = false;
+    do {
+        // first read the directory of block devices
+        DIR* dir = opendir(PATH_BLOCKDEVS);
         if (dir == NULL) {
             fprintf(stderr, "Open failed for directory: '%s' with error %s\n",
                     PATH_BLOCKDEVS, strerror(errno));
             return -1;
         }
 
-        strcpy(path_buffer, PATH_BLOCKDEVS);
-        strcat(path_buffer, "/");
-
-        char device_path[PATH_MAX];
-        size_t space_offset = 0;
-        find_device_with_space(dir, path_buffer,
-                               MIN_SIZE_SYSTEM_PART + MIN_SIZE_EFI_PART,
-                               device_path, &space_offset);
+        mx_status_t rc = find_install_device(dir, path_buffer, requested_parts,
+                                             &ready_for_install, part_paths,
+                                             &install_dev);
         closedir(dir);
-        if (space_offset == 0) {
-            // TODO don't give up, try removing one or more partitions
-            return -1;
-        }
 
-        create_partitions(device_path, space_offset);
-        // TODO(jmatt) if result is NO_ERROR, try again
-        return -1;
-    }
+        if (rc == NO_ERROR && install_dev->valid) {
+            rc = write_install_data(requested_parts, ready_for_install,
+                                    disk_img_paths, part_paths);
+            gpt_device_release(install_dev);
+            if (rc == NO_ERROR) {
+                return 0;
+            } else {
+                return -1;
+            }
+        } else {
+            dir = opendir(PATH_BLOCKDEVS);
+            if (dir == NULL) {
+                fprintf(stderr, "Open failed for directory: '%s' with error %s\n",
+                        PATH_BLOCKDEVS, strerror(errno));
+                return -1;
+            }
+
+            strcpy(path_buffer, PATH_BLOCKDEVS);
+            strcat(path_buffer, "/");
+
+            char device_path[PATH_MAX];
+            size_t space_offset = 0;
+            find_device_with_space(dir, path_buffer,
+                                   MIN_SIZE_SYSTEM_PART + MIN_SIZE_EFI_PART,
+                                   device_path, &space_offset);
+            closedir(dir);
+            if (space_offset == 0) {
+                // TODO don't give up, try removing one or more partitions
+                continue;
+            }
+
+            // if partition creation succeeds, set the dirty bit
+            retry = create_partitions(device_path, space_offset) == NO_ERROR;
+        }
+    } while (retry);
 }
