@@ -33,23 +33,36 @@ static void set_utc_offset(rtc_t* rtc) {
     // Leading 0 allows using the 1-indexed month values from rtc.
     static uint64_t days_in_month[] = {
         0,
-        31, // January
-        29, // February
-        31, // March
-        30, // April
-        31, // May
-        30, // June
-        31, // July
-        31, // August
-        30, // September
-        31, // October
-        30, // November
-        31, // December
+        31, // 2016 January
+        29, // 2016 February
+        31, // 2016 March
+        30, // 2016 April
+        31, // 2016 May
+        30, // 2016 June
+        31, // 2016 July
+        31, // 2016 August
+        30, // 2016 September
+        31, // 2016 October
+        30, // 2016 November
+        31, // 2016 December
+        31, // 2017 January
+        28, // 2017 February
+        31, // 2017 March
+        30, // 2017 April
+        31, // 2017 May
+        30, // 2017 June
+        31, // 2017 July
+        31, // 2017 August
+        30, // 2017 September
+        31, // 2017 October
+        30, // 2017 November
+        31, // 2017 December
     };
 
     // First add all the prior complete months.
+    size_t current_month = rtc->month + 12 * (rtc->year - 2016);
     uint64_t days_this_year = 0;
-    for (size_t month = 1; month < rtc->month; month++) {
+    for (size_t month = 1; month < current_month; month++) {
         days_this_year += days_in_month[month];
     }
 
