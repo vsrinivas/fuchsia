@@ -475,14 +475,18 @@ static partition_flags partition_for_install(gpt_device_t* gpt_data,
  */
 static mx_status_t unmount_all(void) {
     const char* static_paths[2] = {"/data", "/system"};
+    mx_status_t result = NO_ERROR;
     for (uint16_t idx = 0; idx < countof(static_paths); idx++) {
         printf("Unmounting filesystem at %s...", static_paths[idx]);
         mx_status_t rc = umount(static_paths[idx]);
         if (rc != NO_ERROR && rc != ERR_NOT_FOUND) {
+            // why not return failure? we're just making a best effort attempt,
+            // the system can return an error from this unmount call
             printf("FAILURE\n");
-            return ERR_BAD_STATE;
+            result = rc;
+        } else {
+            printf("SUCCESS\n");
         }
-        printf("SUCCESS\n");
     }
 
     char path[PATH_MAX];
@@ -492,7 +496,6 @@ static mx_status_t unmount_all(void) {
         return ERR_IO;
     }
 
-    mx_status_t result = NO_ERROR;
     struct dirent* entry = NULL;
     strcpy(path, PATH_VOLUMES);
     while ((entry = readdir(vols)) != NULL) {
@@ -504,12 +507,15 @@ static mx_status_t unmount_all(void) {
         result = umount(path);
         if (result != NO_ERROR) {
             printf("FAILURE\n");
-            break;
+        } else {
+            printf("SUCCESS\n");
         }
-        printf("SUCCESS\n");
     }
 
     closedir(vols);
+    // take a power nap, the system may take a moment to free resources after
+    // unmounting
+    sleep(1);
     return result;
 }
 
@@ -662,8 +668,11 @@ int main(int argc, char** argv) {
     closedir(dir);
     if (install_dev != NULL && install_dev->valid) {
         if (unmount_all() != NO_ERROR) {
-            gpt_device_release(install_dev);
-            return -1;
+            // this isn't necessarily a failure, some of the paths that we tried
+            // to unmount not exist or might not actually correspond to devices
+            // we want to write to. We'll try to open the devices we want to
+            // write to and see what happens
+            printf("Warning, devices might not be unmounted.\n");
         }
 
         uint8_t part_idx = -1;
