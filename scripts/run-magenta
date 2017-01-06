@@ -142,6 +142,10 @@ if [ "$DISK" -eq 1 ]; then
     fi
 fi
 
+if [ "$NET" -eq 0 ]; then
+  ARGS+=" -net none"
+fi
+
 if [ "$NET" -eq 1 ]; then
     # virtio based network interface
     if [ "$ARCH" == "x86-64" ]; then
