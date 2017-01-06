@@ -23,7 +23,7 @@ mx_status_t SocketUploadElementReader::ReadAll(std::ostream* os) {
     size_t num_bytes = buf_.size();
     result = socket_.read(0u, buf_.data(), num_bytes, &num_bytes);
     if (result == ERR_SHOULD_WAIT) {
-      result = socket_.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+      result = socket_.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                               MX_TIME_INFINITE, nullptr);
       if (result == NO_ERROR)
         continue;  // retry now that the socket is ready

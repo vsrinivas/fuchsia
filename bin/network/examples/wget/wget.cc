@@ -46,7 +46,7 @@ class ResponsePrinter {
       mx_status_t result = body.read(0u, buf, num_bytes, &num_bytes);
 
       if (result == ERR_SHOULD_WAIT) {
-        body.wait_one(MX_SIGNAL_READABLE | MX_SIGNAL_PEER_CLOSED,
+        body.wait_one(MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED,
                       MX_TIME_INFINITE, nullptr);
       } else if (result == NO_ERROR) {
         if (fwrite(buf, num_bytes, 1, stdout) != 1) {

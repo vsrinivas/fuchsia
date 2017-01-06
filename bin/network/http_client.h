@@ -349,7 +349,7 @@ mx_status_t URLLoaderImpl::HTTPClient<T>::SendBody() {
           response_body_stream_.write(0, buffer, todo, &written);
       if (result == ERR_SHOULD_WAIT) {
         result = response_body_stream_.wait_one(
-            MX_SIGNAL_WRITABLE | MX_SIGNAL_PEER_CLOSED, MX_TIME_INFINITE,
+            MX_SOCKET_WRITABLE | MX_SOCKET_PEER_CLOSED, MX_TIME_INFINITE,
             nullptr);
         if (result == NO_ERROR)
           continue;  // retry now that the socket is ready
