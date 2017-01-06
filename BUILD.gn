@@ -14,5 +14,6 @@ group("modular") {
     "src/story_runner:all",
     "src/user_runner:all",
     "test_runner",
+    "tests",
   ]
 }

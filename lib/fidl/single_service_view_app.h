@@ -5,10 +5,7 @@
 #ifndef APPS_MODULAR_LIB_FIDL_SINGLE_SERVICE_VIEW_APP_H_
 #define APPS_MODULAR_LIB_FIDL_SINGLE_SERVICE_VIEW_APP_H_
 
-#include <memory>
-
-#include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/services/application/service_provider.fidl.h"
+#include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/mozart/services/views/view_manager.fidl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
@@ -20,18 +17,22 @@ namespace modular {
 // Base class for an application which provides a single instance of a
 // single service, which also provides a view.
 template <class Service>
-class SingleServiceViewApp : public Service, public mozart::ViewProvider {
+class SingleServiceViewApp : public SingleServiceApp<Service>,
+  public mozart::ViewProvider {
  public:
   SingleServiceViewApp()
-      : application_context_(ApplicationContext::CreateFromStartupInfo()),
-        service_binding_(this),
-        view_provider_binding_(this) {
-    application_context_->outgoing_services()->AddService<Service>(
-        [this](fidl::InterfaceRequest<Service> request) {
-          FTL_DCHECK(!service_binding_.is_bound());
-          service_binding_.Bind(std::move(request));
-        });
-    application_context_->outgoing_services()->AddService<mozart::ViewProvider>(
+      : view_provider_binding_(this) {
+    // TODO: The following line needs to be broken out for reasons not
+    // completely clear. Using the more obvious
+    //   application_context()->outgoing_services()...
+    // results in the error:
+    //   use of undeclared identifier 'application_context'
+    // Adding the this-> prefix to the same line, or scoping the call with
+    // SingleServiceApp<Service>::, results in the error:
+    //   use 'template' keyword to treat 'AddService' as a dependent template
+    //   name
+    ApplicationContext* application_context = this->application_context();
+    application_context->outgoing_services()->AddService<mozart::ViewProvider>(
         [this](fidl::InterfaceRequest<mozart::ViewProvider> request) {
           FTL_DCHECK(!view_provider_binding_.is_bound());
           view_provider_binding_.Bind(std::move(request));
@@ -40,14 +41,7 @@ class SingleServiceViewApp : public Service, public mozart::ViewProvider {
 
   ~SingleServiceViewApp() override = default;
 
- protected:
-  ApplicationContext* application_context() {
-    return application_context_.get();
-  }
-
  private:
-  std::unique_ptr<ApplicationContext> application_context_;
-  fidl::Binding<Service> service_binding_;
   fidl::Binding<mozart::ViewProvider> view_provider_binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(SingleServiceViewApp);

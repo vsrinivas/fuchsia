@@ -1,0 +1,36 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("parent_child") {
+  deps = [
+    ":child_module",
+    ":parent_module",
+  ]
+}
+
+executable("child_module") {
+  sources = [
+    "child_module.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/testing:reporting",
+    "//apps/modular/services/story",
+    "//apps/mozart/services/views",
+    "//lib/mtl",
+  ]
+}
+
+executable("parent_module") {
+  sources = [
+    "parent_module.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/testing:reporting",
+    "//apps/modular/services/story",
+    "//apps/mozart/services/views",
+    "//lib/mtl",
+  ]
+}

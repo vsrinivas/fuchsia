@@ -18,3 +18,9 @@ source_set("story_provider_mock") {
   ]     
 }
 
+source_set("reporting") {
+  sources = [
+    "reporting.h",
+    "reporting.cc",
+  ]
+}
