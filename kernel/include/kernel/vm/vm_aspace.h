@@ -45,7 +45,9 @@ public:
     size_t size() const { return size_; }
     arch_aspace_t& arch_aspace() { return arch_aspace_; }
     bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
-    mxtl::RefPtr<VmAddressRegion> root_vmar() { return root_vmar_; }
+
+    // Get the root VMAR (briefly acquires the aspace lock)
+    mxtl::RefPtr<VmAddressRegion> RootVmar();
 
     // destroy but not free the address space
     status_t Destroy();
@@ -118,7 +120,7 @@ private:
     mutable mutex_t lock_ = MUTEX_INITIAL_VALUE(lock_);
 
     // root of virtual address space
-    // TODO(teisenbe): maybe embed this
+    // Access to this reference is guarded by lock_.
     mxtl::RefPtr<VmAddressRegion> root_vmar_;
 
     // architecturally specific part of the aspace

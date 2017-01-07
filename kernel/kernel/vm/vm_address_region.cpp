@@ -26,7 +26,7 @@
 
 VmAddressRegion::VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags)
     : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags | VMAR_CAN_RWX_FLAGS,
-                               aspace, nullptr, "root") {
+                               &aspace, nullptr, "root") {
 
     // We add in CAN_RWX_FLAGS above, since an address space can't usefully
     // contain a process without all of these.
@@ -36,7 +36,8 @@ VmAddressRegion::VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, ui
 
 VmAddressRegion::VmAddressRegion(VmAddressRegion& parent, vaddr_t base, size_t size,
                                  uint32_t vmar_flags, const char* name)
-    : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags, *parent.aspace_, &parent, name) {
+    : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags, parent.aspace_.get(), &parent,
+                               name) {
 
     LTRACEF("%p '%s'\n", this, name_);
 }
@@ -47,6 +48,12 @@ VmAddressRegion::VmAddressRegion(VmAspace& kernel_aspace)
 
     // Activate the kernel root aspace immediately
     state_ = LifeCycleState::ALIVE;
+}
+
+VmAddressRegion::VmAddressRegion()
+    : VmAddressRegionOrMapping(kMagic, 0, 0, 0, nullptr, nullptr, "dummy") {
+
+    LTRACEF("%p '%s'\n", this, name_);
 }
 
 VmAddressRegion::~VmAddressRegion() {

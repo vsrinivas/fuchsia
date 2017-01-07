@@ -129,7 +129,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     }
 
     auto aspace = ProcessDispatcher::GetCurrent()->aspace();
-    auto vmar = aspace->root_vmar();
+    auto vmar = aspace->RootVmar();
 
     mxtl::RefPtr<VmMapping> mapping;
     status_t res = vmar->CreateVmMapping(0, len, PAGE_SIZE_SHIFT, VMAR_FLAG_MAP_HIGH,

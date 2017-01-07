@@ -21,10 +21,10 @@
 
 VmAddressRegionOrMapping::VmAddressRegionOrMapping(uint32_t magic,
                                                    vaddr_t base, size_t size, uint32_t flags,
-                                                   VmAspace& aspace, VmAddressRegion* parent,
+                                                   VmAspace* aspace, VmAddressRegion* parent,
                                                    const char* name)
     : magic_(magic), state_(LifeCycleState::NOT_READY), base_(base), size_(size), flags_(flags),
-      aspace_(&aspace), parent_(parent) {
+      aspace_(aspace), parent_(parent) {
 
     strlcpy(name_, name, sizeof(name_));
     LTRACEF("%p '%s'\n", this, name_);

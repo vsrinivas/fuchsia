@@ -30,6 +30,9 @@
 // pointer to a singleton kernel address space
 VmAspace* VmAspace::kernel_aspace_ = nullptr;
 
+// pointer to the dummy root VMAR singleton
+static VmAddressRegion* dummy_root_vmar = nullptr;
+
 // list of all address spaces
 static mutex_t aspace_list_lock = MUTEX_INITIAL_VALUE(aspace_list_lock);
 static mxtl::DoublyLinkedList<VmAspace*> aspaces;
@@ -38,9 +41,16 @@ static mxtl::DoublyLinkedList<VmAspace*> aspaces;
 void VmAspace::KernelAspaceInitPreHeap() {
     // the singleton kernel address space
     static VmAspace _kernel_aspace(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL, "kernel");
+
+    // the singleton dummy root vmar (used to break a reference cycle in
+    // Destroy())
+    static VmAddressRegionDummy dummy_vmar;
 #if LK_DEBUGLEVEL > 1
     _kernel_aspace.Adopt();
+    dummy_vmar.Adopt();
 #endif
+
+    dummy_root_vmar = &dummy_vmar;
 
     static VmAddressRegion _kernel_root_vmar(_kernel_aspace);
 
@@ -205,16 +215,26 @@ VmAspace::~VmAspace() {
     magic_ = 0;
 }
 
+mxtl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
+    AutoLock guard(lock_);
+    mxtl::RefPtr<VmAddressRegion> ref(root_vmar_);
+    return mxtl::move(ref);
+}
+
 status_t VmAspace::Destroy() {
     DEBUG_ASSERT(magic_ == MAGIC);
     LTRACEF("%p '%s'\n", this, name_);
 
+    AutoLock guard(lock_);
     // tear down and free all of the regions in our address space
-    status_t status = root_vmar_->Destroy();
+    status_t status = root_vmar_->DestroyLocked();
     if (status != NO_ERROR && status != ERR_BAD_STATE) {
         return status;
     }
     aspace_destroyed_ = true;
+
+    // Break the reference cycle between this aspace and the root VMAR
+    root_vmar_.reset(dummy_root_vmar);
 
     return NO_ERROR;
 }
@@ -283,7 +303,7 @@ status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint6
 
     // allocate a region and put it in the aspace list
     mxtl::RefPtr<VmMapping> r(nullptr);
-    status_t status = root_vmar_->CreateVmMapping(vmar_offset, size, align_pow2,
+    status_t status = RootVmar()->CreateVmMapping(vmar_offset, size, align_pow2,
                                                   vmar_flags,
                                                   vmo, offset, arch_mmu_flags, name, &r);
     if (status != NO_ERROR) {
@@ -440,7 +460,7 @@ status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t alig
 status_t VmAspace::FreeRegion(vaddr_t va) {
     DEBUG_ASSERT(!is_user());
 
-    mxtl::RefPtr<VmAddressRegionOrMapping> r = root_vmar_->FindRegion(va);
+    mxtl::RefPtr<VmAddressRegionOrMapping> r = RootVmar()->FindRegion(va);
     if (!r) {
         return ERR_NOT_FOUND;
     }
@@ -449,7 +469,7 @@ status_t VmAspace::FreeRegion(vaddr_t va) {
 }
 
 mxtl::RefPtr<VmAddressRegionOrMapping> VmAspace::FindRegion(vaddr_t va) {
-    mxtl::RefPtr<VmAddressRegion> vmar(root_vmar_);
+    mxtl::RefPtr<VmAddressRegion> vmar(RootVmar());
     while (1) {
         mxtl::RefPtr<VmAddressRegionOrMapping> next(vmar->FindRegion(va));
         if (!next) {
@@ -481,7 +501,7 @@ void VmAspace::AttachToThread(thread_t* t) {
 
 status_t VmAspace::PageFault(vaddr_t va, uint flags) {
     DEBUG_ASSERT(magic_ == MAGIC);
-    DEBUG_ASSERT(root_vmar_);
+    DEBUG_ASSERT(!aspace_destroyed_);
     LTRACEF("va %#" PRIxPTR ", flags %#x\n", va, flags);
 
     // for now, hold the aspace lock across the page fault operation,

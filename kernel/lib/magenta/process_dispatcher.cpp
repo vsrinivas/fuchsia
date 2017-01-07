@@ -80,7 +80,7 @@ mx_status_t ProcessDispatcher::Create(
     // Create a dispatcher for the root VMAR.
     mxtl::RefPtr<Dispatcher> new_vmar_dispatcher;
     result = VmAddressRegionDispatcher::Create(
-        process->aspace()->root_vmar(), &new_vmar_dispatcher, root_vmar_rights);
+        process->aspace()->RootVmar(), &new_vmar_dispatcher, root_vmar_rights);
     if (result == NO_ERROR) {
         *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
             mxtl::move(new_vmar_dispatcher));

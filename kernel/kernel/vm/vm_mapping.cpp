@@ -24,7 +24,7 @@
 VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
                      mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags,
                      const char* name)
-    : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags, *parent.aspace_, &parent, name),
+    : VmAddressRegionOrMapping(kMagic, base, size, vmar_flags, parent.aspace_.get(), &parent, name),
       object_(mxtl::move(vmo)), object_offset_(vmo_offset), arch_mmu_flags_(arch_mmu_flags) {
 
     LTRACEF("%p '%s'\n", this, name_);

@@ -83,7 +83,7 @@ status_t IoMappingDispatcher::Init(const char* dbg_name,
     paddr_ = paddr;
     size_  = size;
 
-    auto root_vmar = aspace_->root_vmar();
+    auto root_vmar = aspace_->RootVmar();
     status_t res = root_vmar->CreateVmMapping(0, size, PAGE_SIZE_SHIFT, 0,
                                               mxtl::move(vmo), 0, arch_mmu_flags,
                                               dbg_name, &mapping_);

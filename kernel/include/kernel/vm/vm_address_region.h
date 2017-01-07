@@ -75,7 +75,7 @@ public:
     //
     // Returns NO_ERROR on success, ERR_BAD_STATE if already dead, and other
     // values on error (typically unmap failure).
-    status_t Destroy();
+    virtual status_t Destroy();
 
     // accessors
     vaddr_t base() const { return base_; }
@@ -119,7 +119,7 @@ protected:
     };
 
     VmAddressRegionOrMapping(uint32_t magic, vaddr_t base, size_t size, uint32_t flags,
-                             VmAspace& aspace, VmAddressRegion* parent, const char* name);
+                             VmAspace* aspace, VmAddressRegion* parent, const char* name);
 
     // Check if the given *arch_mmu_flags* are allowed under this
     // regions *flags_*
@@ -174,31 +174,31 @@ protected:
 };
 
 // A representation of a contiguous range of virtual address space
-class VmAddressRegion final : public VmAddressRegionOrMapping {
+class VmAddressRegion : public VmAddressRegionOrMapping {
 public:
     // Create a root region.  This will span the entire aspace
     static status_t CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
                                mxtl::RefPtr<VmAddressRegion>* out);
     // Create a subregion of this region
-    status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
-                           uint32_t vmar_flags, const char* name,
-                           mxtl::RefPtr<VmAddressRegion>* out);
+    virtual status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
+                                   uint32_t vmar_flags, const char* name,
+                                   mxtl::RefPtr<VmAddressRegion>* out);
     // Create a VmMapping within this region
-    status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
-                             uint32_t vmar_flags,
-                             mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-                             uint arch_mmu_flags, const char* name,
-                             mxtl::RefPtr<VmMapping>* out);
+    virtual status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
+                                     uint32_t vmar_flags,
+                                     mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                                     uint arch_mmu_flags, const char* name,
+                                     mxtl::RefPtr<VmMapping>* out);
 
     // Find the child region that contains the given addr.  If addr is in a gap,
     // returns nullptr.  This is a non-recursive search.
-    mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
+    virtual mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
 
     // Unmap a subset of the region of memory in the containing address space,
     // returning it to this region to allocate.  If a subregion is entirely in
     // the range, that subregion is destroyed.  If a subregion is partially in
     // the range, Unmap() will fail.
-    status_t Unmap(vaddr_t base, size_t size);
+    virtual status_t Unmap(vaddr_t base, size_t size);
 
     bool is_mapping() const override { return false; }
 
@@ -207,6 +207,9 @@ public:
 
 protected:
     static const uint32_t kMagic = 0x564d4152; // VMAR
+
+    // constructor for use in creating a VmAddressRegionDummy
+    explicit VmAddressRegion();
 
     friend class VmAspace;
     // constructor for use in creating the kernel aspace singleton
@@ -267,6 +270,66 @@ private:
 
     // list of subregions, indexed by base address
     ChildList subregions_;
+};
+
+// A VmAddressRegion that always returns errors.  This is used to break a
+// reference cycle between root VMARs and VmAspaces.
+class VmAddressRegionDummy final : public VmAddressRegion {
+public:
+    VmAddressRegionDummy() : VmAddressRegion() { }
+
+    status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
+                           uint32_t vmar_flags, const char* name,
+                           mxtl::RefPtr<VmAddressRegion>* out) override {
+        return ERR_BAD_STATE;
+    }
+    status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
+                             uint32_t vmar_flags,
+                             mxtl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                             uint arch_mmu_flags, const char* name,
+                             mxtl::RefPtr<VmMapping>* out) override {
+        return ERR_BAD_STATE;
+    }
+
+    mxtl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr) override {
+        return nullptr;
+    }
+
+    status_t Unmap(vaddr_t base, size_t size) override {
+        return ERR_BAD_STATE;
+    }
+
+    void Dump(uint depth, bool verbose) const override {
+        return;
+    }
+
+    status_t PageFault(vaddr_t va, uint pf_flags) override {
+        // We should never be trying to page fault on this...
+        ASSERT(false);
+        return ERR_BAD_STATE;
+    }
+
+    size_t AllocatedPages() const override {
+        return 0;
+    }
+
+    status_t Destroy() override {
+        return ERR_BAD_STATE;
+    }
+
+    ~VmAddressRegionDummy() override { }
+
+    size_t AllocatedPagesLocked() const override {
+        return 0;
+    }
+
+    status_t DestroyLocked() override {
+        return ERR_BAD_STATE;
+    }
+
+    void Activate() override {
+        return;
+    }
 };
 
 // A representation of the mapping of a VMO into the address space
