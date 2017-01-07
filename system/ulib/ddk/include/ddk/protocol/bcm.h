@@ -46,6 +46,9 @@ typedef struct {
 #define IOCTL_BCM_GET_MACID \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BCM, 3)
 
+#define IOCTL_BCM_GET_CLOCKRATE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BCM, 4)
+
 // ssize_t ioctl_bcm_power_on_usb(int fd);
 IOCTL_WRAPPER(ioctl_bcm_power_on_usb, IOCTL_BCM_POWER_ON_USB);
 
@@ -55,5 +58,7 @@ IOCTL_WRAPPER_INOUT(ioctl_bcm_get_framebuffer, IOCTL_BCM_GET_FRAMEBUFFER, bcm_fb
 IOCTL_WRAPPER_IN(ioctl_bcm_fill_framebuffer, IOCTL_BCM_FILL_FRAMEBUFFER, uint8_t);
 
 IOCTL_WRAPPER_VAROUT(ioctl_bcm_get_macid, IOCTL_BCM_GET_MACID, uint8_t);
+
+IOCTL_WRAPPER_INOUT(ioctl_bcm_get_clock_rate, IOCTL_BCM_GET_CLOCKRATE, uint32_t, uint32_t);
 
 __END_CDECLS

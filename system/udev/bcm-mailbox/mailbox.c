@@ -16,14 +16,9 @@
 
 #include "../bcm-common/bcm28xx.h"
 
-
-
 #define BCM_PROPERTY_TAG_GET_MACADDR        (0x00010003)
 
 #define BCM_MAILBOX_REQUEST                 (0x00000000)
-
-
-
 
 // Preserve columns
 // clang-format off
@@ -60,6 +55,15 @@ typedef struct {
     uint8_t  macid[8];  //note: this is a 6 byte request, but value buffers need to be 32-bit aligned
 } property_tag_get_macid_t;
 #define BCM_MAILBOX_TAG_GET_MACID   {0x00010003,8,6,{0,0,0,0,0,0,0,0}}
+
+typedef struct {
+    uint32_t tag;
+    uint32_t size;
+    uint32_t valsize;
+    uint32_t clockid;
+    uint32_t resp;
+} property_tag_get_clock_rate_t;
+#define BCM_MAILBOX_TAG_GET_CLOCKRATE   {0x00030002,8,4,0,0}
 
 
 typedef struct {
@@ -108,9 +112,6 @@ static mx_device_t disp_device;
 static mx_display_info_t disp_info;
 
 static mx_status_t mailbox_write(const enum mailbox_channel ch, uint32_t value) {
-    //assert((value & 0xF0000000) == 0);
-
-    //value = value << 4;
     value = value | ch;
 
     // Wait for there to be space in the FIFO.
@@ -232,21 +233,18 @@ static mx_status_t bcm_vc_poweron(enum bcm_device dev) {
     return NO_ERROR;
 }
 
-static mx_status_t bcm_get_macid(uint8_t* mac) {
+static mx_status_t bcm_get_property_tag(uint8_t* buf, const size_t len) {
     mx_status_t ret = NO_ERROR;
     iotxn_t* txn;
 
     property_tag_header_t header;
-    property_tag_get_macid_t tag = BCM_MAILBOX_TAG_GET_MACID;
     property_tag_endtag_t endtag = BCM_MAILBOX_TAG_ENDTAG;
 
-    header.buff_size =  sizeof(property_tag_header_t) +
-                        sizeof(property_tag_get_macid_t) +
-                        sizeof(property_tag_endtag_t);
+    header.buff_size = sizeof(header) + len + sizeof(endtag);
     header.code = BCM_MAILBOX_REQUEST;
 
     ret = iotxn_alloc(&txn, 0, header.buff_size, 0);
-    if (ret < 0)
+    if (ret != 0)
         return ret;
 
     mx_paddr_t pa;
@@ -257,22 +255,58 @@ static mx_status_t bcm_get_macid(uint8_t* mac) {
 
     txn->ops->copyto(txn, &header, sizeof(header), offset);
     offset += sizeof(header);
-    txn->ops->copyto(txn, &tag, sizeof(tag), offset);
-    offset += sizeof(tag);
+
+    txn->ops->copyto(txn, buf, len, offset);
+    offset += len;
+
     txn->ops->copyto(txn, &endtag, sizeof(endtag), offset);
     txn->ops->cacheop(txn, IOTXN_CACHE_CLEAN, 0, header.buff_size);
 
     ret = mailbox_write(ch_propertytags_tovc, (pa + BCM_SDRAM_BUS_ADDR_BASE));
-    if (ret != NO_ERROR)
-        return ret;
+    if (ret != NO_ERROR) {
+        goto cleanup_and_exit;
+    }
 
     uint32_t ack = 0x0;
     ret = mailbox_read(ch_propertytags_tovc, &ack);
-    if (ret != NO_ERROR)
-        return ret;
+    if (ret != NO_ERROR) {
+        goto cleanup_and_exit;
+    }
 
     txn->ops->cacheop(txn, IOTXN_CACHE_INVALIDATE, 0, header.buff_size);
-    txn->ops->copyfrom(txn,mac,6,sizeof(header)+offsetof(property_tag_get_macid_t,macid));
+    txn->ops->copyfrom(txn, buf, len, sizeof(header));
+
+cleanup_and_exit:
+    txn->ops->release(txn);
+    return ret;
+}
+
+static mx_status_t bcm_get_macid(uint8_t* mac) {
+    mx_status_t ret = NO_ERROR;
+    property_tag_get_macid_t tag = BCM_MAILBOX_TAG_GET_MACID;
+
+    ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
+
+    memcpy(mac, tag.macid, 6);
+
+    return ret;
+}
+
+static mx_status_t bcm_get_clock_rate(const uint32_t clockid, uint32_t* res) {
+    mx_status_t ret = NO_ERROR;
+    property_tag_get_clock_rate_t tag = BCM_MAILBOX_TAG_GET_CLOCKRATE;
+
+    tag.clockid = clockid;
+
+    ret = bcm_get_property_tag((uint8_t*)&tag, sizeof(tag));
+
+    // Make sure that we're getting data back for the clock that we requested.
+    if (tag.clockid != clockid) {
+        return ERR_IO;
+    }
+
+    // Fill in the return parameter;
+    *res = tag.resp;
 
     return ret;
 }
@@ -297,6 +331,20 @@ static ssize_t mailbox_device_ioctl(mx_device_t* dev, uint32_t op,
 
         bcm_get_macid(macid);
         memcpy(out_buf, macid, out_len);
+        return out_len;
+    case IOCTL_BCM_GET_CLOCKRATE:
+        // Input buffer should be exactly 4 bytes long and should contain the
+        // ID of the target clock. Output buffer should also be exactly 4 bytes
+        // and will contain the clock rate of the target clock.
+        if (in_len != 4 || out_len != 4)
+            return ERR_INVALID_ARGS;
+
+        const uint32_t clockid = *((uint32_t*)(in_buf));
+
+        mx_status_t rc = bcm_get_clock_rate(clockid, (uint32_t*)out_buf);
+        if (rc != NO_ERROR)
+            return rc;
+
         return out_len;
     }
     return ERR_NOT_SUPPORTED;
