@@ -9,9 +9,12 @@
 #include <gpt/gpt.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <lz4/lz4frame.h>
+#include <lz4/lz4.h>
 #include <magenta/assert.h>
-#include <magenta/syscalls.h>
 #include <magenta/device/block.h>
+#include <magenta/listnode.h>
+#include <magenta/syscalls.h>
 #include <mxio/io.h>
 #include <mxio/util.h>
 #include <stdio.h>
@@ -19,8 +22,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <lz4/lz4frame.h>
-#include <lz4/lz4.h>
 
 #include <installer/lib-installer.h>
 
@@ -59,6 +60,13 @@ typedef enum {
     PART_SYSTEM = 1 << 1
 } partition_flags;
 
+typedef struct disk_rec {
+    list_node_t disk_node;
+    gpt_device_t* device;
+    char* path;
+    uint16_t part_count;
+} disk_rec_t;
+
 static const uint8_t guid_system_part[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
 static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
 
@@ -78,10 +86,10 @@ static ssize_t get_next_file_path(
     DEBUG_ASSERT(name_out != NULL);
     struct dirent* entry;
 
-    do {
-        entry = readdir(dfd);
-    } while(entry != NULL &&
-            (!strcmp(".", entry->d_name) || !strcmp("..", entry->d_name)));
+    // skip and '.' or '..' entries
+    while ((entry = readdir(dfd)) != NULL &&
+           (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")));
+
     if (entry == NULL) {
         return -1;
     } else {
@@ -96,6 +104,18 @@ static ssize_t get_next_file_path(
             return 0;
         }
     }
+}
+
+static uint16_t count_partitions(gpt_device_t* device) {
+    DEBUG_ASSERT(device != NULL);
+
+    if (device == NULL) {
+        return 0;
+    }
+
+    uint16_t counter;
+    for (counter = 0; device->partitions[counter] != NULL; counter++);
+    return counter;
 }
 
 /*
@@ -147,7 +167,6 @@ static gpt_device_t* read_gpt(int fd, uint64_t* blocksize_out) {
         fprintf(stderr, "error reading GPT, result code: %zd \n", rc);
         return NULL;
     } else if (!gpt->valid) {
-        fprintf(stderr, "error reading GPT, libgpt reports data is invalid\n");
         return NULL;
     }
 
@@ -409,12 +428,16 @@ static mx_status_t unmount_all(void) {
             continue;
         }
         strncpy(path + path_len, entry->d_name, PATH_MAX - path_len);
-        printf("Unmounting filesystem at '%s'...", path);
-        result = umount(path);
-        if (result != NO_ERROR) {
+
+        printf("Unmounting filesystem at %s...", path);
+        mx_status_t rc = umount(path);
+        if (rc != NO_ERROR) {
             printf("FAILURE\n");
         } else {
             printf("SUCCESS\n");
+        }
+        if (result == NO_ERROR && rc != NO_ERROR) {
+            result = rc;
         }
     }
 
@@ -465,6 +488,12 @@ static mx_status_t write_partition(int src, int dest, size_t* bytes_copied) {
             chunk_size = LZ4F_decompress(dc_context, decomp_buffer, &to_expand,
                                          read_buffer + consumed_count, &req_size,
                                          NULL);
+
+            if (LZ4F_isError(chunk_size)) {
+                fprintf(stderr, "Error decompressing volume file.\n");
+                return ERR_INTERNAL;
+            }
+
             if (to_expand > 0) {
                 ssize_t written = write(dest, decomp_buffer, to_expand);
                 if (written != (ssize_t) to_expand) {
@@ -984,6 +1013,358 @@ static mx_status_t do_data_partition(gpt_device_t* install_dev,
     return NO_ERROR;
 }
 
+static char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len) {
+    size_t i = 0;
+    char* ptr = dst;
+    while (i < len) {
+        char c = src[i++] & 0x7f;
+        *ptr++ = c;
+        if (!c) break;
+    }
+    return dst;
+}
+
+static void get_input(char* buf, size_t max_input) {
+    // converted to signed since idx could possible be negative
+    ssize_t max_input_s = max_input;
+    for (ssize_t idx = 0; idx < max_input_s; idx++) {
+        int c = getc(stdin);
+
+        // if the user hit backspace, erase the previous char and position the
+        // index before the erased char so the next loop will fill in that space
+        if (c == 8) {
+            if (idx > 0) {
+                printf("%c", c);
+                fflush(stdout);
+                idx--;
+                buf[idx] = ' ';
+            }
+            idx--;
+            continue;
+        }
+
+        sprintf(buf + idx, "%c", c);
+        printf("%c", c);
+        fflush(stdout);
+        if (buf[idx] == '\n') {
+            buf[idx] = '\0';
+            return;
+        }
+    }
+
+    buf[max_input - 1] = '\0';
+}
+
+/*
+ * Checks that the given string converts to a number and that the number
+ * converted back to a string matches the original input string.
+ */
+static bool check_input(char* input, int* out_value) {
+    char* parsed = NULL;
+    // according to strtol() docs, set errno before calling
+    errno = 0;
+    long int tmp = strtol(input, &parsed, 10);
+
+    // check that there was no parse error, that the value is within the integer
+    // range, and that all of the input was consumed in parsing
+    if (!errno && tmp <= INT_MAX && parsed == input + strlen(input)) {
+        *out_value = (int) tmp;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static void release_disk_list(list_node_t* list) {
+    disk_rec_t* rec;
+    while ((rec = list_remove_head_type(list, disk_rec_t, disk_node)) != NULL) {
+        if (rec->path != NULL) {
+            free(rec->path);
+        }
+
+        if (rec->device != NULL) {
+            gpt_device_release(rec->device);
+        }
+
+        free(rec);
+    }
+}
+
+/*
+ * Given a size in bytes, compute how many gibibytes (2^30) and tenths of a
+ * gibibyte this represents. Note that the tenths are computed by TRUNCATING
+ * rather than rounding, so what would accurately be 2.46GiB will be returned
+ * as 2.4GiB.
+ */
+static void get_gib_and_tenths(uint64_t size, uint64_t* gb_out,
+                               uint64_t* tenths_out) {
+    *gb_out = size >> 30;
+    *tenths_out = ((size - (*gb_out << 30)) * 10) >> 30;
+}
+
+static void print_gpt(gpt_device_t* device, uint64_t block_size,
+                      uint16_t part_count) {
+    for (int part_idx = 0; part_idx < part_count; part_idx++) {
+        gpt_partition_t* part_targ = device->partitions[part_idx];
+        uint64_t size_bytes = block_size *
+            (part_targ->last - part_targ->first + 1);
+        uint64_t size_gib;
+        uint64_t remainder;
+        get_gib_and_tenths(size_bytes, &size_gib, &remainder);
+
+        char name[GPT_GUID_STRLEN];
+        memset(name, 0, GPT_GUID_STRLEN);
+
+        utf16_to_cstring(name, (const uint16_t *) part_targ->name,
+                         GPT_GUID_STRLEN - 1);
+        name[GPT_GUID_STRLEN - 1] = '\0';
+
+        printf("       Partition %d %16s %" PRIu64 ".%" PRIu64  \
+               "GB at block %" PRIu64 "\n",
+               part_idx, name, size_gib, remainder, part_targ->first);
+    }
+}
+
+/*
+ * Takes a file descriptor pointing to a disk, attempting to read a GPT from the
+ * disk and construct a disk_rec_t, a pointer to which will be returned through
+ * rec_out.
+ * Returns
+ *  ERR_NO_MEMORY if memory can't be allocated for the record data
+ *  ERR_IO if the device does not contain a GPT or otherwise can not be read
+ *  NO_ERROR if all goes well
+ */
+static mx_status_t build_disk_record(int device_fd, char* path,
+                                     uint64_t* block_size_out,
+                                     disk_rec_t** rec_out) {
+    disk_rec_t* disk_rec = malloc(sizeof(disk_rec_t));
+    if (disk_rec == NULL) {
+        fprintf(stderr, "No memory available to add disk entry.\n");
+        return ERR_NO_MEMORY;
+    }
+
+    // see if this block device has a GPT we can read and get disk
+    // size
+    gpt_device_t* target_dev = read_gpt(device_fd, block_size_out);
+    if (target_dev == NULL || !target_dev->valid) {
+        if (target_dev != NULL) {
+            gpt_device_release(target_dev);
+        }
+        free(disk_rec);
+        return ERR_IO;
+    }
+    disk_rec->device = target_dev;
+
+    // record path to the device
+    disk_rec->path = malloc((strlen(path) + 1) * sizeof(char));
+    if (disk_rec->path == NULL) {
+        fprintf(stderr, "Out of memory when writing disk path.\n");
+        free(disk_rec);
+        gpt_device_release(target_dev);
+        return ERR_NO_MEMORY;
+    } else {
+        strcpy(disk_rec->path, path);
+    }
+
+    disk_rec->part_count = count_partitions(target_dev);
+
+    *rec_out = disk_rec;
+    return NO_ERROR;
+}
+
+void print_disk_info(int disk_fd, uint16_t disk_num, char* dev_path) {
+    uint64_t disk_size;
+    ssize_t rc = ioctl_block_get_size(disk_fd, &disk_size);
+    if (rc < 0) {
+        printf("WARNING: Unable to read disk size, reporting zero.\n");
+        disk_size = 0;
+    }
+
+    uint64_t disk_size_gib;
+    uint64_t tenths_of_gib;
+    get_gib_and_tenths(disk_size, &disk_size_gib, &tenths_of_gib);
+    printf("Disk %d (%s) %" PRIu64 ".%" PRIu64 "GB\n", disk_num, dev_path,
+           disk_size_gib, tenths_of_gib);
+}
+
+static bool build_disk_list(DIR* dev_dir, char* dev_path, size_t path_buf_sz,
+                            list_node_t* disk_list, uint16_t* disk_num,
+                            bool print) {
+    size_t base_len = strlen(dev_path);
+    size_t buffer_remaining = path_buf_sz - base_len - 1;
+    uint64_t block_size;
+    for (ssize_t rc = get_next_file_path(
+             dev_dir, buffer_remaining, &dev_path[base_len]);
+         rc >= 0;
+         rc = get_next_file_path(
+             dev_dir, buffer_remaining, &dev_path[base_len])) {
+        // confirm path to device is not too long
+        if (rc > 0) {
+            fprintf(stderr, "Device path length overrun by %zd characters\n",
+                    rc);
+            continue;
+        }
+
+        int device_fd = open_device_ro(dev_path);
+        if (device_fd < 0) {
+            fprintf(stderr, "Could not read device entry.\n");
+            continue;
+        }
+
+        disk_rec_t* disk_rec;
+        rc = build_disk_record(device_fd, dev_path, &block_size, &disk_rec);
+
+        if (rc == NO_ERROR) {
+            list_add_tail(disk_list, &disk_rec->disk_node);
+        } else if (rc == ERR_IO) {
+            // this just wasn't a GPT device or device couldn't be read,
+            // continue on to other possible devices
+            close(device_fd);
+            continue;
+        } else {
+            close(device_fd);
+            fprintf(stderr,
+                    "Out of memory or other unexpected error, aborting.\n");
+            return false;
+        }
+
+        // TODO (jmatt) make print a callback
+        if (print) {
+            print_disk_info(device_fd, *disk_num, dev_path);
+            print_gpt(disk_rec->device, block_size, disk_rec->part_count);
+        }
+
+        close(device_fd);
+        (*disk_num)++;
+    }
+
+    return true;
+}
+
+static bool ask_for_disk_part(list_node_t* list, int num_disks,
+                              disk_rec_t** disk_out, int* part_idx_out) {
+    printf("Delete a partition on which disk (0-%i blank to cancel)?\n",
+           (num_disks - 1));
+    char buffer[512];
+    get_input(buffer, sizeof(buffer));
+    int req_disk;
+
+    if (!check_input(buffer, &req_disk)) {
+        printf("Disk selection is not understood.\n");
+        return false;
+    }
+
+    // check that specified disk number is in range
+    if (req_disk < 0 || req_disk >= num_disks) {
+        printf("Specified disk is invalid, please choose 0-%i\n", num_disks - 1);
+        return false;
+    }
+
+    disk_rec_t* selected_disk = list_peek_head_type(list, disk_rec_t, disk_node);
+    for (int idx = 0; idx < req_disk; idx++) {
+        selected_disk = list_next_type(list, &selected_disk->disk_node,
+                                       disk_rec_t, disk_node);
+    }
+
+    printf("Which partition would you like to remove? (0-%i)\n",
+           selected_disk->part_count - 1);
+
+    get_input(buffer, sizeof(buffer));
+    if (!check_input(buffer, &req_disk)) {
+        printf("Invalid input\n");
+        return false;
+    }
+
+    if (req_disk < 0 || req_disk >= selected_disk->part_count) {
+        printf("Partition index is out of range, please choose 0-%i\n",
+               selected_disk->part_count - 1);
+        return false;
+    }
+    *disk_out = selected_disk;
+    *part_idx_out = req_disk;
+    return true;
+}
+
+static bool remove_partition(int device_fd, int part_idx) {
+    uint64_t block_size;
+    gpt_device_t* dev = read_gpt(device_fd, &block_size);
+    if (dev == NULL) {
+        printf("Unable to remove partition, couldn't read GPT.\n");
+        return false;
+    }
+
+    if (!dev->valid) {
+        printf("Unable to remove partition, GPT is invalid\n");
+        gpt_device_release(dev);
+        return false;
+    }
+
+    if (dev->partitions[part_idx] == NULL ||
+        gpt_partition_remove(dev, dev->partitions[part_idx]->guid)) {
+        gpt_device_release(dev);
+        printf("Unable to remove partition, partition not found!\n");
+        return false;
+    }
+
+    if (gpt_device_sync(dev)) {
+        printf("Unable to remove partition, GPT could not be written.\n");
+        gpt_device_release(dev);
+        return false;
+    }
+
+    gpt_device_release(dev);
+    return true;
+}
+
+static bool ask_for_space(void) {
+    DIR* dev_dir;
+    char dev_path[PATH_MAX] = PATH_BLOCKDEVS;
+    size_t base_len = strlen(dev_path);
+    DEBUG_ASSERT(base_len > 0);
+    dev_path[base_len] = '/';
+    dev_path[++base_len] = '\0';
+
+    dev_dir = opendir(PATH_BLOCKDEVS);
+    if (dev_dir == NULL) {
+        fprintf(stderr, "Could not open device directory.\n");
+        return false;
+    }
+    list_node_t disk_list;
+    list_initialize(&disk_list);
+    uint16_t disk_num = 0;
+    if (!build_disk_list(dev_dir, dev_path, PATH_MAX, &disk_list, &disk_num,
+                         true)) {
+        release_disk_list(&disk_list);
+        closedir(dev_dir);
+        return false;
+    }
+    closedir(dev_dir);
+
+    // no disks, nothing to do
+    if (disk_num < 1) {
+        return false;
+    }
+
+    disk_rec_t* selected_disk;
+    int req_part;
+    if (!ask_for_disk_part(&disk_list, disk_num, &selected_disk, &req_part)) {
+        release_disk_list(&disk_list);
+        return false;
+    }
+
+    int device_fd = open(selected_disk->path, O_RDWR);
+    if (device_fd < 0) {
+        printf("Unable to remove partition, could not open GPT for writing.\n");
+        release_disk_list(&disk_list);
+        return false;
+    }
+    bool result = remove_partition(device_fd, req_part);
+
+    close(device_fd);
+    release_disk_list(&disk_list);
+    return result;
+}
+
 int main(int argc, char** argv) {
     static_assert(NUM_INSTALL_PARTS == 2,
                   "Install partition count is unexpected, expected 2.");
@@ -1014,6 +1395,7 @@ int main(int argc, char** argv) {
     bool retry;
     do {
         retry = false;
+
         // first read the directory of block devices
         DIR* dir = opendir(PATH_BLOCKDEVS);
         if (dir == NULL) {
@@ -1069,6 +1451,7 @@ int main(int argc, char** argv) {
             closedir(dir);
             if (space_offset == 0) {
                 // TODO don't give up, try removing one or more partitions
+                retry = ask_for_space();
                 continue;
             }
 
