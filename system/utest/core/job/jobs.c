@@ -8,9 +8,10 @@
 #include <stdlib.h>
 
 #include <magenta/syscalls.h>
+#include <mini-process/mini-process.h>
 #include <unittest/unittest.h>
 
-static const char process_name[] = "job-test";
+static const char process_name[] = "job-test-p";
 
 extern mx_handle_t root_job;
 
@@ -37,7 +38,7 @@ static bool basic_test(void) {
     END_TEST;
 }
 
-static bool process_test(void) {
+static bool create_test(void) {
     BEGIN_TEST;
 
     mx_handle_t job_parent = root_job;
@@ -64,7 +65,29 @@ static bool process_test(void) {
     END_TEST;
 }
 
+static bool kill_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t job_parent = root_job;
+    ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
+
+    mx_handle_t job_child;
+    ASSERT_EQ(mx_job_create(job_parent, 0u, &job_child), NO_ERROR, "");
+
+    mx_handle_t process, thread;
+    ASSERT_EQ(start_mini_process(job_child, &process, &thread), NO_ERROR, "");
+
+    mx_nanosleep(5000000);
+    ASSERT_EQ(mx_task_kill(job_child), NO_ERROR, "");
+
+    mx_signals_t signals;
+    mx_handle_wait_one(process, MX_SIGNAL_SIGNALED, 0u, &signals);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(job_tests)
 RUN_TEST(basic_test)
-RUN_TEST(process_test)
+RUN_TEST(create_test)
+RUN_TEST(kill_test)
 END_TEST_CASE(job_tests)

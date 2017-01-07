@@ -336,6 +336,8 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
             return kill_task<ProcessDispatcher>(mxtl::move(dispatcher), rights);
         case MX_OBJ_TYPE_THREAD:
             return kill_task<ThreadDispatcher>(mxtl::move(dispatcher), rights);
+        case MX_OBJ_TYPE_JOB:
+            return kill_task<JobDispatcher>(mxtl::move(dispatcher), rights);
         default:
             return ERR_WRONG_TYPE;
     }

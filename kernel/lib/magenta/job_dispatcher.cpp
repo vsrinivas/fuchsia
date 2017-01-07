@@ -66,7 +66,7 @@ void JobDispatcher::AddChildProcess(ProcessDispatcher* process) {
 
 void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
     AutoLock lock(&lock_);
-    if (!ProcessDispatcher::ProcessListTraits::node_state(*process).InContainer())
+    if (!ProcessDispatcher::JobListTraits::node_state(*process).InContainer())
         return;
     procs_.erase(*process);
     --process_count_;
