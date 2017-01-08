@@ -24,7 +24,12 @@ static inline void setparam(textcon_t* tc, int param, uint8_t* arg,
     tc->setparam(tc->cookie, param, arg, arglen);
 }
 
-#define ATTR(tc) ((((tc)->fg & 15) << 8) | (((tc)->bg & 15) << 12))
+// Construct a vc_char_t from the given character using the current colors.
+static inline vc_char_t make_vc_char(textcon_t* tc, uint8_t ch) {
+    return (vc_char_t)(ch |
+                       (((vc_char_t)tc->fg & 15) << 8) |
+                       (((vc_char_t)tc->bg & 15) << 12));
+}
 
 static vc_char_t* dataxy(textcon_t* tc, int x, int y) {
     assert(x >= 0);
@@ -68,7 +73,7 @@ static void erase_region(textcon_t* tc, int x0, int y0, int x1, int y1) {
     x1 = clampx(tc, x1);
     vc_char_t* ptr = dataxy(tc, x0, y0);
     vc_char_t* end = dataxy(tc, x1, y1) + 1;
-    fill(ptr, ' ' | ATTR(tc), end - ptr);
+    fill(ptr, make_vc_char(tc, ' '), end - ptr);
     invalidate(tc, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
 }
 
@@ -119,7 +124,7 @@ static void erase_chars(textcon_t* tc, int arg) {
         *dst++ = *src++;
     }
     while (dst < end) {
-        *dst++ = ' ' | ATTR(tc);
+        *dst++ = make_vc_char(tc, ' ');
     }
 
     invalidate(tc, tc->x, tc->y, tc->w - tc->x, 1);
@@ -133,7 +138,7 @@ static void _scroll_up(textcon_t* tc, int y0, int y1) {
     if (src < end) {
         pushline(tc, y0);
         memmove(dst, src, (end - src) * sizeof(vc_char_t));
-        fill(end - tc->w, ' ' | ATTR(tc), tc->w);
+        fill(end - tc->w, make_vc_char(tc, ' '), tc->w);
     }
 }
 
@@ -145,7 +150,7 @@ static void _scroll_down(textcon_t* tc, int y0, int y1) {
     if (src < end) {
         // todo: push topline
         memmove(dst, src, (end - dst) * sizeof(vc_char_t));
-        fill(src, ' ' | ATTR(tc), tc->w);
+        fill(src, make_vc_char(tc, ' '), tc->w);
     }
 }
 
@@ -509,7 +514,7 @@ static void putc_plain(textcon_t* tc, uint8_t c) {
             tc->y = clampy(tc, tc->y - 1);
         }
         tc->x--;
-        dataxy(tc, tc->x, tc->y)[0] = ' ' | ATTR(tc);
+        dataxy(tc, tc->x, tc->y)[0] = make_vc_char(tc, ' ');
         break;
     case 9: // tab / ^I
         moveto(tc, (tc->x + 7) & (~7), tc->y);
@@ -537,7 +542,7 @@ static void putc_plain(textcon_t* tc, uint8_t c) {
             putc_cr(tc);
             putc_lf(tc);
         }
-        dataxy(tc, tc->x, tc->y)[0] = c | ATTR(tc);
+        dataxy(tc, tc->x, tc->y)[0] = make_vc_char(tc, c);
         invalidate(tc, tc->x, tc->y, 1, 1);
         tc->x++;
         break;
@@ -579,7 +584,7 @@ void tc_seth(textcon_t* tc, int h) {
         tc->y -= old_h - h;
     } else if (old_h < h) {
         do {
-            fill(dataxy(tc, 0, tc->scroll_y1 + y), ' ' | ATTR(tc), tc->w);
+            fill(dataxy(tc, 0, tc->scroll_y1 + y), make_vc_char(tc, ' '), tc->w);
         } while (++y < h - old_h);
     }
     tc->y = clampy(tc, tc->y);
