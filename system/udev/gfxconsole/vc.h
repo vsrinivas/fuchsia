@@ -15,7 +15,8 @@
 #include "textcon.h"
 
 typedef uint16_t vc_char_t;
-#define CHARVAL(ch, fg, bg) (((ch)&0xff) | (((fg)&0xf) << 8) | (((bg)&0xf) << 12))
+#define CHARVAL(ch, fg, bg) \
+    ((vc_char_t)(((ch)&0xff) | (((fg)&0xf) << 8) | (((bg)&0xf) << 12)))
 #define TOCHAR(ch) ((ch)&0xff)
 #define TOFG(ch) (((ch) >> 8) & 0xf)
 #define TOBG(ch) (((ch) >> 12) & 0xf)
@@ -70,8 +71,8 @@ typedef struct vc_device {
     // offsets into the scrollback buffer in rows
 
     uint32_t palette[16];
-    unsigned front_color;
-    unsigned back_color;
+    uint8_t front_color;
+    uint8_t back_color;
     // color
 
     textcon_t textcon;

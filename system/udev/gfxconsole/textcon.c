@@ -398,18 +398,18 @@ static void putc_escape2(textcon_t* tc, uint8_t c) {
         for (int i = 0; i < tc->argc; i++) {
             int n = tc->argn[i];
             if ((n >= 30) && (n <= 37)) { // set fg
-                tc->fg = n - 30;
+                tc->fg = (uint8_t)(n - 30);
             } else if ((n >= 40) && (n <= 47)) { // set bg
-                tc->bg = n - 40;
+                tc->bg = (uint8_t)(n - 40);
             } else if ((n == 1) && (tc->fg <= 7)) { // bold
-                tc->fg += 8;
+                tc->fg = (uint8_t)(tc->fg + 8);
             } else if (n == 0) { // reset
                 tc->fg = 0;
                 tc->bg = 15;
             } else if (n == 7) { // reverse
-                n = tc->fg;
+                uint8_t temp = tc->fg;
                 tc->fg = tc->bg;
-                tc->bg = n;
+                tc->bg = temp;
             } else if (n == 39) { // default fg
                 tc->fg = 0;
             } else if (n == 49) { // default bg

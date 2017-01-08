@@ -188,7 +188,7 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
 }
 
 static int vc_input_thread(void* arg) {
-    int fd = (uintptr_t)arg;
+    int fd = (int)(uintptr_t)arg;
 
     uint8_t previous_report_buf[8];
     uint8_t report_buf[8];
@@ -214,13 +214,13 @@ static int vc_input_thread(void* arg) {
             vc_process_kb_report(previous_report_buf, key_state, &cur_idx, &prev_idx, NULL, NULL, &modifiers);
             vc_process_kb_report(report_buf, key_state, &cur_idx, &prev_idx, NULL, NULL, &modifiers);
             // Accelerate key repeat until reaching the high frequency
-            repeat_interval = repeat_interval * .75;
+            repeat_interval = repeat_interval * 3 / 4;
             repeat_interval = repeat_interval < HIGH_REPEAT_KEY_FREQUENCY_MICRO ? HIGH_REPEAT_KEY_FREQUENCY_MICRO : repeat_interval;
             continue;
         }
 
         memcpy(previous_report_buf, report_buf, sizeof(report_buf));
-        int r = read(fd, report_buf, sizeof(report_buf));
+        ssize_t r = read(fd, report_buf, sizeof(report_buf));
         if (r < 0) {
             break; // will be restarted by poll thread if needed
         }
@@ -454,7 +454,7 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
                 count = vc->charcount;
             }
             memcpy(buf, vc->chardata, count);
-            vc->charcount -= count;
+            vc->charcount -= (uint32_t)count;
             if (vc->charcount > 0) {
                 memmove(vc->chardata, vc->chardata + count, vc->charcount);
             }
@@ -477,7 +477,7 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
             if (ch) {
                 if (vc->modifiers & MOD_CTRL) {
                     uint8_t sub = vc->modifiers & MOD_SHIFT ? 'A' : 'a';
-                    str[0] = ch - sub + 1;
+                    str[0] = (char)(ch - sub + 1);
                 } else {
                     str[0] = ch;
                 }

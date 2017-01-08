@@ -227,8 +227,8 @@ static void vc_device_reset(vc_device_t* dev) {
 static void write_status_at(vc_device_t* dev, const char* str, unsigned offset) {
     static enum { NORMAL,
                   ESCAPE } state = NORMAL;
-    int fg = STATUS_FG;
-    int bg = STATUS_BG;
+    uint8_t fg = STATUS_FG;
+    uint8_t bg = STATUS_BG;
     char c;
     int idx = offset;
     int p_num = 0;
@@ -247,11 +247,11 @@ static void write_status_at(vc_device_t* dev, const char* str, unsigned offset) 
                 p_num = (p_num * 10) + (c - '0');
             } else if (c == 'm') {
                 if (p_num >= 30 && p_num <= 37) {
-                    fg = p_num - 30;
+                    fg = (uint8_t)(p_num - 30);
                 } else if (p_num >= 40 && p_num <= 47) {
-                    bg = p_num - 40;
+                    bg = (uint8_t)(p_num - 40);
                 } else if (p_num == 1 && fg <= 0x7) {
-                    fg += 8;
+                    fg = (uint8_t)(fg + 8);
                 } else if (p_num == 0) {
                     fg = STATUS_FG;
                     bg = STATUS_BG;
