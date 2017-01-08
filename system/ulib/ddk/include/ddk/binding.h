@@ -159,11 +159,18 @@ typedef struct magenta_driver_info {
 #define MAGENTA_DRIVER_PASTE(a,b) a##b
 
 #if MAGENTA_BUILTIN_DRIVERS
-#define MAGENTA_DRIVER_ATTR __ALIGNED(sizeof(void*)) __SECTION("magenta_drivers")
+#define MAGENTA_DRIVER_ATTR_DECL
+#define MAGENTA_DRIVER_ATTR_DEF __ALIGNED(sizeof(void*)) __SECTION("magenta_drivers")
 #define MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_PASTE(__magenta_driver_info__,Driver)
 #define MAGENTA_DRIVER_NOTE(Driver)
 #else
-#define MAGENTA_DRIVER_ATTR __EXPORT
+// GCC has a quirk about how '__attribute__((visibility("default")))'
+// (__EXPORT here) works for const variables in C++.  The attribute has no
+// effect when used on the definition of a const variable, and GCC gives a
+// warning/error about that.  The attribute must appear on the "extern"
+// declaration of the variable instead.
+#define MAGENTA_DRIVER_ATTR_DECL __EXPORT
+#define MAGENTA_DRIVER_ATTR_DEF
 #define MAGENTA_DRIVER_NOTE(Driver) __attribute__((section(".note.magenta.driver." #Driver)))
 #define MAGENTA_DRIVER_SYMBOL(Driver) __magenta_driver__
 #endif
@@ -191,8 +198,8 @@ const struct __attribute__((packed)) {\
     /* .binding = */ {
 
 #define MAGENTA_DRIVER_END(Driver) }};\
-extern const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver); \
-const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR = {\
+extern const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DECL; \
+const magenta_driver_info_t MAGENTA_DRIVER_SYMBOL(Driver) MAGENTA_DRIVER_ATTR_DEF = {\
     /* .node = */ {},\
     /* .driver = */ &Driver,\
     /* .note = */ &MAGENTA_DRIVER_PASTE(__magenta_driver_note__,Driver).driver,\
