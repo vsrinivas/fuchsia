@@ -97,6 +97,7 @@ static int acpi_battery_poll_thread(void* arg) {
         dev->capacity_design = bif->capacity_design;
         mtx_unlock(&dev->lock);
         free(bif);
+        free(bst);
 
         mx_nanosleep(MX_MSEC(1000));
     }
