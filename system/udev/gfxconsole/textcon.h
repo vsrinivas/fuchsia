@@ -52,12 +52,14 @@ struct textcon {
     uint8_t fg;
     uint8_t bg;
 
-    // escape sequence parameter parsing
-    int num;
-    int argc;
+    // Escape sequence parameter parsing
+    // Numeric arguments
+    int num;  // Argument currently being read
+    int argn_count;  // Number of arguments read into argn[]
     int argn[TC_MAX_ARG];
-    int argsn;
-    uint8_t args[TC_MAX_ARG_LENGTH + 1];
+    // String argument (e.g. for console title)
+    int argstr_size;  // Number of characters read into argstr[]
+    uint8_t argstr[TC_MAX_ARG_LENGTH + 1];
 };
 
 void tc_init(textcon_t* tc, int w, int h, vc_char_t* data,

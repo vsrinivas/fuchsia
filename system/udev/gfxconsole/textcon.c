@@ -219,14 +219,14 @@ static void putc_param(textcon_t* tc, uint8_t c) {
         tc->num = tc->num * 10 + (c - '0');
         return;
     case ';':
-        if (tc->argc < TC_MAX_ARG) {
-            tc->argn[tc->argc++] = tc->num;
+        if (tc->argn_count < TC_MAX_ARG) {
+            tc->argn[tc->argn_count++] = tc->num;
         }
         tc->putc = putc_escape2;
         break;
     default:
-        if (tc->argc < TC_MAX_ARG) {
-            tc->argn[tc->argc++] = tc->num;
+        if (tc->argn_count < TC_MAX_ARG) {
+            tc->argn[tc->argn_count++] = tc->num;
         }
         tc->putc = putc_escape2;
         putc_escape2(tc, c);
@@ -234,8 +234,8 @@ static void putc_param(textcon_t* tc, uint8_t c) {
     }
 }
 
-#define ARG0(def) ((tc->argc > 0) ? tc->argn[0] : (def))
-#define ARG1(def) ((tc->argc > 1) ? tc->argn[1] : (def))
+#define ARG0(def) ((tc->argn_count > 0) ? tc->argn[0] : (def))
+#define ARG1(def) ((tc->argn_count > 1) ? tc->argn[1] : (def))
 
 static void putc_dec(textcon_t* tc, uint8_t c) {
     switch (c) {
@@ -278,13 +278,13 @@ static textcon_param_t osc_to_param(int osc) {
 static void putc_osc2(textcon_t* tc, uint8_t c) {
     switch (c) {
     case 7: // end command
-        if (tc->argsn)
-            setparam(tc, osc_to_param(ARG0(-1)), tc->args, tc->argsn);
+        if (tc->argstr_size)
+            setparam(tc, osc_to_param(ARG0(-1)), tc->argstr, tc->argstr_size);
         tc->putc = putc_plain;
         break;
     default:
-        if (tc->argsn < TC_MAX_ARG_LENGTH)
-            tc->args[tc->argsn++] = c;
+        if (tc->argstr_size < TC_MAX_ARG_LENGTH)
+            tc->argstr[tc->argstr_size++] = c;
         break;
     }
 }
@@ -304,16 +304,16 @@ static void putc_osc(textcon_t* tc, uint8_t c) {
         tc->num = tc->num * 10 + (c - '0');
         return;
     case ';':
-        if (tc->argc < TC_MAX_ARG) {
-            tc->argn[tc->argc++] = tc->num;
+        if (tc->argn_count < TC_MAX_ARG) {
+            tc->argn[tc->argn_count++] = tc->num;
         }
-        memset(tc->args, 0, TC_MAX_ARG_LENGTH);
-        tc->argsn = 0;
+        memset(tc->argstr, 0, TC_MAX_ARG_LENGTH);
+        tc->argstr_size = 0;
         tc->putc = putc_osc2;
         break;
     default:
-        if (tc->argc < TC_MAX_ARG) {
-            tc->argn[tc->argc++] = tc->num;
+        if (tc->argn_count < TC_MAX_ARG) {
+            tc->argn[tc->argn_count++] = tc->num;
         }
         tc->putc = putc_osc2;
         putc_osc2(tc, c);
@@ -338,13 +338,13 @@ static void putc_escape2(textcon_t* tc, uint8_t c) {
         tc->putc = putc_param;
         return;
     case ';': // end parameter
-        if (tc->argc < TC_MAX_ARG) {
-            tc->argn[tc->argc++] = 0;
+        if (tc->argn_count < TC_MAX_ARG) {
+            tc->argn[tc->argn_count++] = 0;
         }
         return;
     case '?':
         tc->num = 0;
-        tc->argc = 0;
+        tc->argn_count = 0;
         tc->putc = putc_dec;
         return;
     case 'A': // (CUU) Cursor Up
@@ -395,7 +395,7 @@ static void putc_escape2(textcon_t* tc, uint8_t c) {
         moveto(tc, tc->x, y ? (y - 1) : 0);
         break;
     case 'm': // (SGR) Character Attributes
-        for (int i = 0; i < tc->argc; i++) {
+        for (int i = 0; i < tc->argn_count; i++) {
             int n = tc->argn[i];
             if ((n >= 30) && (n <= 37)) { // set fg
                 tc->fg = (uint8_t)(n - 30);
@@ -454,12 +454,12 @@ static void putc_escape(textcon_t* tc, uint8_t c) {
         return;
     case '[':
         tc->num = 0;
-        tc->argc = 0;
+        tc->argn_count = 0;
         tc->putc = putc_escape2;
         return;
     case ']':
         tc->num = 0;
-        tc->argc = 0;
+        tc->argn_count = 0;
         tc->putc = putc_osc;
         return;
     case '7': // (DECSC) Save Cursor
