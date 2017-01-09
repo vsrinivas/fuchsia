@@ -304,7 +304,7 @@ static void sanitize_rtc(rtc_t* rtc) {
     };
 
     intel_rtc_get(rtc, sizeof(*rtc));
-    if (rtc_is_invalid(rtc) || rtc->year < 2010 || rtc->year > 2020) {
+    if (rtc_is_invalid(rtc) || rtc->year < 2016 || rtc->year > 2017) {
         intel_rtc_set(&default_rtc, sizeof(&default_rtc));
         *rtc = default_rtc;
     }
