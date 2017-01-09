@@ -8,12 +8,13 @@
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
+#include "escher/renderer/image_owner.h"
 #include "escher/vk/vulkan_context.h"
 #include "escher/vk/vulkan_swapchain.h"
 
 #include "vulkan_proc_addrs.h"
 
-class Demo {
+class Demo : public escher::ImageOwner {
  public:
   struct WindowParams {
     int width = 1024;
@@ -55,6 +56,11 @@ class Demo {
   escher::VulkanSwapchain GetVulkanSwapchain() { return swapchain_; }
 
  private:
+  // Implement ImageOwner::RecycleImage().
+  void RecycleImage(const escher::ImageInfo& info,
+                    vk::Image image,
+                    escher::impl::GpuMemPtr mem) override;
+
   vk::Instance instance_;
   GLFWwindow* window_;
   vk::SurfaceKHR surface_;

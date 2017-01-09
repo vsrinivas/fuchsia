@@ -9,6 +9,7 @@
 #include "escher/forward_declarations.h"
 #include "escher/impl/gpu_mem.h"
 #include "escher/renderer/image.h"
+#include "escher/renderer/image_owner.h"
 #include "ftl/macros.h"
 #include "ftl/memory/ref_counted.h"
 
@@ -21,7 +22,7 @@ class GpuUploader;
 // Allow client to obtain new or recycled Images.  All Images obtained from an
 // ImageCache must be destroyed before the ImageCache is destroyed.
 // TODO: cache returned images so that we don't need to reallocate new ones.
-class ImageCache {
+class ImageCache : public ImageOwner {
  public:
   // The allocator is used to allocate memory for newly-created images.  The
   // queue and CommandBufferPool are used to schedule image layout transitions.
@@ -60,31 +61,10 @@ class ImageCache {
   ImagePtr NewNoiseImage(uint32_t width, uint32_t height);
 
  private:
-  // TODO: merge this with base Image class.  I now think that the correct
-  // approach is not to reuse "high-level" objects such as images and buffers,
-  // but instead to intelligently manage the underlying memory.
-  class Image : public escher::Image {
-   public:
-    Image(vk::Image image,
-          vk::Format format,
-          uint32_t width,
-          uint32_t height,
-          GpuMemPtr memory,
-          ImageCache* cache);
-    ~Image();
-
-    uint8_t* Map() override;
-    void Unmap() override;
-
-   private:
-    ImageCache* cache_;
-    GpuMemPtr mem_;
-    void* mapped_ = nullptr;
-
-    FTL_DISALLOW_COPY_AND_ASSIGN(Image);
-  };
-
-  void DestroyImage(vk::Image image, vk::Format format);
+  // Implement ImageOwner::RecycleImage().
+  void RecycleImage(const ImageInfo& info,
+                    vk::Image image,
+                    impl::GpuMemPtr mem) override;
 
   vk::Device device_;
   vk::PhysicalDevice physical_device_;

@@ -4,6 +4,7 @@
 
 #include "demo.h"
 
+#include "escher/impl/gpu_mem.h"
 #include "escher/renderer/image.h"
 #include "ftl/logging.h"
 #include "ftl/memory/ref_ptr.h"
@@ -388,8 +389,10 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
     image_views.reserve(images.size());
     escher_images.reserve(images.size());
     for (auto& im : images) {
-      escher_images.push_back(ftl::MakeRefCounted<escher::Image>(
-          im, format, swapchain_extent.width, swapchain_extent.height));
+      escher_images.push_back(
+          CreateImage(escher::ImageInfo{format, swapchain_extent.width,
+                                        swapchain_extent.height},
+                      im, nullptr));
 
       vk::ImageSubresourceRange range;
       range.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -423,6 +426,15 @@ void Demo::DestroySwapchain() {
   FTL_CHECK(swapchain_.swapchain);
   device_.destroySwapchainKHR(swapchain_.swapchain);
   swapchain_.swapchain = nullptr;
+}
+
+void Demo::RecycleImage(const escher::ImageInfo& info,
+                        vk::Image image,
+                        escher::impl::GpuMemPtr mem) {
+  // There is nothing to do here.  These images belong to the swapchain, and
+  // will be destroyed at the same time as the swapchain.  Similarly, there is
+  // no memory bound to the images that we are responsible for releasing.
+  FTL_DCHECK(!mem);
 }
 
 void Demo::DestroyDevice() {

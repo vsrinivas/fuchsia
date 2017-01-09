@@ -29,9 +29,9 @@ ImageCache::~ImageCache() {
   FTL_CHECK(image_count_ == 0);
 }
 
-ImagePtr ImageCache::NewImage(const vk::ImageCreateInfo& info,
+ImagePtr ImageCache::NewImage(const vk::ImageCreateInfo& create_info,
                               vk::MemoryPropertyFlags memory_flags) {
-  vk::Image image = ESCHER_CHECKED_VK_RESULT(device_.createImage(info));
+  vk::Image image = ESCHER_CHECKED_VK_RESULT(device_.createImage(create_info));
 
   vk::MemoryRequirements reqs = device_.getImageMemoryRequirements(image);
   GpuMemPtr memory = allocator_->Allocate(reqs, memory_flags);
@@ -41,8 +41,8 @@ ImagePtr ImageCache::NewImage(const vk::ImageCreateInfo& info,
   FTL_CHECK(result == vk::Result::eSuccess);
 
   image_count_++;
-  return AdoptRef(new Image(image, info.format, info.extent.width,
-                            info.extent.height, std::move(memory), this));
+
+  return CreateImage(ImageInfo(create_info), image, std::move(memory));
 }
 
 ImagePtr ImageCache::GetDepthImage(vk::Format format,
@@ -91,6 +91,8 @@ ImagePtr ImageCache::NewColorAttachmentImage(
 
   auto image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
 
+  // TODO: this transition is not necessary if the render-pass uses eUndefined
+  // as the layout.
   auto command_buffer = command_buffer_pool_->GetCommandBuffer();
   command_buffer->TransitionImageLayout(
       image, vk::ImageLayout::eUndefined,
@@ -167,49 +169,11 @@ ImagePtr ImageCache::NewNoiseImage(uint32_t width, uint32_t height) {
   return NewImageFromPixels(vk::Format::eR8Unorm, width, height, pixels.get());
 }
 
-void ImageCache::DestroyImage(vk::Image image, vk::Format format) {
+void ImageCache::RecycleImage(const ImageInfo& info,
+                              vk::Image image,
+                              impl::GpuMemPtr mem) {
   device_.destroyImage(image);
   image_count_--;
-}
-
-ImageCache::Image::Image(vk::Image image,
-                         vk::Format format,
-                         uint32_t width,
-                         uint32_t height,
-                         GpuMemPtr memory,
-                         ImageCache* cache)
-    : escher::Image(image, format, width, height),
-      cache_(cache),
-      mem_(std::move(memory)) {}
-
-ImageCache::Image::~Image() {
-  FTL_DCHECK(!mapped_);
-  cache_->DestroyImage(get(), format());
-}
-
-uint8_t* ImageCache::Image::Map() {
-  if (!mapped_) {
-    mapped_ = ESCHER_CHECKED_VK_RESULT(
-        cache_->device_.mapMemory(mem_->base(), mem_->offset(), mem_->size()));
-  }
-  return reinterpret_cast<uint8_t*>(mapped_);
-}
-
-void ImageCache::Image::Unmap() {
-  if (mapped_) {
-    vk::Device device = cache_->device_;
-
-    // TODO: only flush if the coherent bit isn't set; also see
-    // Buffer::Unmap().
-    vk::MappedMemoryRange range;
-    range.memory = mem_->base();
-    range.offset = mem_->offset();
-    range.size = mem_->size();
-    device.flushMappedMemoryRanges(1, &range);
-
-    device.unmapMemory(mem_->base());
-    mapped_ = nullptr;
-  }
 }
 
 }  // namespace impl

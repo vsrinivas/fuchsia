@@ -4,21 +4,35 @@
 
 #include "escher/renderer/image.h"
 
+#include "escher/impl/gpu_mem.h"
+#include "escher/renderer/image_owner.h"
+
 namespace escher {
 
-Image::Image(vk::Image image,
-             vk::Format format,
-             uint32_t width,
-             uint32_t height)
+ImageInfo::ImageInfo(const vk::ImageCreateInfo& create_info)
+    : format(create_info.format),
+      width(create_info.extent.width),
+      height(create_info.extent.height) {}
+
+ImageInfo::ImageInfo(vk::Format f, uint32_t w, uint32_t h)
+    : format(f), width(w), height(h) {}
+
+Image::Image(ImageInfo info,
+             vk::Image image,
+             impl::GpuMemPtr mem,
+             ImageOwner* owner)
     : impl::Resource(nullptr),
+      info_(info),
       image_(image),
-      format_(format),
-      width_(width),
-      height_(height),
+      mem_(std::move(mem)),
+      owner_(owner),
       has_depth_(false),
       has_stencil_(false) {
+  FTL_CHECK(image);
+  FTL_CHECK(owner);
+
   // TODO: How do we future-proof this in case more formats are added?
-  switch (format) {
+  switch (info_.format) {
     case vk::Format::eD16Unorm:
     case vk::Format::eX8D24UnormPack32:
     case vk::Format::eD32Sfloat:
@@ -36,6 +50,9 @@ Image::Image(vk::Image image,
   }
 }
 
-Image::~Image() {}
+Image::~Image() {
+  // Return underlying resources to the manager.
+  owner_->RecycleImage(info_, image_, std::move(mem_));
+}
 
 }  // namespace escher
