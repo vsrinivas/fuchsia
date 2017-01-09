@@ -20,11 +20,15 @@ void MessageRelayBase::SetChannel(mx::channel channel) {
 
   channel_.swap(channel);
 
-  ReadChannelMessages();
+  // We defer handling channel messages so that the caller doesn't get callbacks
+  // during SetChannel.
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this]() {
+    ReadChannelMessages();
 
-  if (!messages_to_write_.empty()) {
-    WriteChannelMessages();
-  }
+    if (!messages_to_write_.empty()) {
+      WriteChannelMessages();
+    }
+  });
 }
 
 void MessageRelayBase::SendMessage(std::vector<uint8_t> message) {

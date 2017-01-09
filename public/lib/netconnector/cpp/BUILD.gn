@@ -8,6 +8,7 @@ source_set("lib") {
     "async_wait.h",
     "message_relay.cc",
     "message_relay.h",
+    "net_stub_responder.h",
   ]
 
   deps = [
