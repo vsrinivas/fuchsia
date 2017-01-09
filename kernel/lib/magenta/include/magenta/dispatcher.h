@@ -97,6 +97,7 @@ private:
 
 template <typename T>
 mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<Dispatcher>&& disp) {
-    auto ptr = disp.leak_ref()->get_specific<T>();
-    return mxtl::internal::MakeRefPtrNoAdopt(ptr);
+    return (likely(DispatchTag<T>::ID == disp->get_type())) ?
+            mxtl::RefPtr<T>::Downcast(mxtl::move(disp)) :
+            nullptr;
 }
