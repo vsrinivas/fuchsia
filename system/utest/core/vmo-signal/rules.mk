@@ -14,6 +14,6 @@ MODULE_SRCS += \
 MODULE_NAME := vmo-signal-test
 
 MODULE_LIBS := \
-    ulib/unittest ulib/mxio ulib/magenta ulib/musl ulib/test-utils
+    ulib/unittest ulib/mxio ulib/magenta ulib/musl
 
 include make/module.mk
