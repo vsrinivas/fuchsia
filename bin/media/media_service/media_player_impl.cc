@@ -31,7 +31,9 @@ MediaPlayerImpl::MediaPlayerImpl(
     fidl::InterfaceHandle<MediaRenderer> video_renderer_handle,
     fidl::InterfaceRequest<MediaPlayer> request,
     MediaServiceImpl* owner)
-    : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner) {
+    : MediaServiceImpl::Product<MediaPlayer>(this, std::move(request), owner),
+      // TODO(dalesat): Generate names for these.
+      responder_(this, "only_media_player", owner->application_context()) {
   FTL_DCHECK(reader_handle);
   RCHECK(audio_renderer_handle || video_renderer_handle);
   FTL_DCHECK(owner);
