@@ -19,22 +19,24 @@ namespace crypto {
 
 namespace GlobalPRNG {
 
+static PRNG* kGlobalPrng = nullptr;
+
 PRNG* GetInstance() {
-    static PRNG* global_prng = nullptr;
-    static mutex_t lock = MUTEX_INITIAL_VALUE(lock);
-
-    AllocChecker ac;
-
-    AutoLock guard(lock);
-    if (unlikely(!global_prng)) {
-        global_prng = new (&ac) PRNG(nullptr, 0);
-        ASSERT(ac.check());
-    }
-    return global_prng;
+    ASSERT(kGlobalPrng);
+    return kGlobalPrng;
 }
 
+// Instantiates the global PRNG (in non-thread-safe mode) and seeds it.
 static void EarlyBootSeed(uint level) {
-    PRNG* prng = GetInstance();
+    ASSERT(kGlobalPrng == nullptr);
+
+    // Statically allocate an array of bytes to put the PRNG into.  We do this
+    // to control when the PRNG constructor is called.
+    // TODO(security): This causes the PRNG state to be in a fairly predictable
+    // place.  Some aspects of KASLR will help with this, but we may
+    // additionally want to remap where this is later.
+    alignas(alignof(PRNG))static uint8_t prng_space[sizeof(PRNG)];
+    kGlobalPrng = new (&prng_space) PRNG(NULL, 0, PRNG::NonThreadSafeTag());
 
     uint8_t buf[32] = {0};
     // TODO(security): Have the PRNG reseed based on usage
@@ -53,16 +55,24 @@ static void EarlyBootSeed(uint level) {
         // hardware that we should remove and attempt to do better.  If this
         // fallback is used, it breaks all cryptography used on the system.
         // *CRITICAL*
-        prng->AddEntropy(buf, sizeof(buf));
+        kGlobalPrng->AddEntropy(buf, sizeof(buf));
         return;
     }
     DEBUG_ASSERT(fetched == sizeof(buf));
-    prng->AddEntropy(buf, static_cast<int>(fetched));
+    kGlobalPrng->AddEntropy(buf, static_cast<int>(fetched));
+}
+
+// Migrate the global PRNG to enter thread-safe mode.
+static void BecomeThreadSafe(uint level) {
+    GetInstance()->BecomeThreadSafe();
 }
 
 } //namespace GlobalPRNG
 
 } // namespace crypto
 
-LK_INIT_HOOK(global_prng, crypto::GlobalPRNG::EarlyBootSeed,
-             LK_INIT_LEVEL_THREADING);
+LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed,
+             LK_INIT_LEVEL_TARGET_EARLY);
+
+LK_INIT_HOOK(global_prng_thread_safe, crypto::GlobalPRNG::BecomeThreadSafe,
+             LK_INIT_LEVEL_THREADING - 1)

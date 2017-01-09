@@ -20,6 +20,47 @@ bool instantiate(void*) {
     END_TEST;
 }
 
+bool non_thread_safe_prng_same_behavior(void*) {
+    BEGIN_TEST;
+
+    static const char kSeed1[32] = {'1', '2', '3'};
+    static const int kSeed1Size = sizeof(kSeed1);
+    static const char kSeed2[32] = {'a', 'b', 'c'};
+    static const int kSeed2Size = sizeof(kSeed2);
+    static const int kDrawSize = 13;
+
+    PRNG prng1(kSeed1, kSeed1Size, PRNG::NonThreadSafeTag());
+    PRNG prng2(kSeed1, kSeed1Size);
+
+    EXPECT_FALSE(prng1.is_thread_safe(), "unexpected PRNG state");
+    EXPECT_TRUE(prng2.is_thread_safe(), "unexpected PRNG state");
+
+    uint8_t out1[kDrawSize];
+    uint8_t out2[kDrawSize];
+    prng1.Draw(out1, sizeof(out1));
+    prng2.Draw(out2, sizeof(out2));
+    EXPECT_EQ(0, memcmp(out1, out2, sizeof(out1)), "inconsistent prng");
+
+    // Verify they stay in sync after adding entropy
+    prng1.AddEntropy(kSeed2, kSeed2Size);
+    prng2.AddEntropy(kSeed2, kSeed2Size);
+
+    prng1.Draw(out1, sizeof(out1));
+    prng2.Draw(out2, sizeof(out2));
+    EXPECT_EQ(0, memcmp(out1, out2, sizeof(out1)), "inconsistent prng");
+
+    // Verify they stay in sync after the non-thread-safe one transitions
+    // to being thread-safe.
+    prng1.BecomeThreadSafe();
+    EXPECT_TRUE(prng1.is_thread_safe(), "unexpected PRNG state");
+
+    prng1.Draw(out1, sizeof(out1));
+    prng2.Draw(out2, sizeof(out2));
+    EXPECT_EQ(0, memcmp(out1, out2, sizeof(out1)), "inconsistent prng");
+
+    END_TEST;
+}
+
 bool prng_output(void*) {
     BEGIN_TEST;
 
@@ -71,6 +112,7 @@ bool prng_output(void*) {
 
 UNITTEST_START_TESTCASE(prng_tests)
 UNITTEST("Instantiate", instantiate)
+UNITTEST("NonThreadSafeMode", non_thread_safe_prng_same_behavior)
 UNITTEST("Test Output", prng_output)
 UNITTEST_END_TESTCASE(prng_tests, "prng",
                       "Test pseudo-random number generator implementation.",
