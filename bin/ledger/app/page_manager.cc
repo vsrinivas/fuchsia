@@ -47,10 +47,10 @@ void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request) {
 }
 
 void PageManager::BindPageSnapshot(
-    std::unique_ptr<storage::CommitContents> contents,
+    std::unique_ptr<const storage::Commit> commit,
     fidl::InterfaceRequest<PageSnapshot> snapshot_request) {
   snapshots_.emplace(std::move(snapshot_request), page_storage_.get(),
-                     std::move(contents));
+                     std::move(commit));
 }
 
 void PageManager::CheckEmpty() {

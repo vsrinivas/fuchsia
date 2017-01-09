@@ -45,6 +45,13 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
                               std::unique_ptr<const Object>* object) override;
   Status AddObjectSynchronous(convert::ExtendedStringView data,
                               std::unique_ptr<const Object>* object) override;
+  void GetCommitContents(const Commit& commit,
+                         std::string min_key,
+                         std::function<bool(Entry)> on_next,
+                         std::function<void(Status)> on_done) override;
+  void GetEntryFromCommit(const Commit& commit,
+                          std::string key,
+                          std::function<void(Status, Entry)> callback) override;
 
   // For testing:
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&

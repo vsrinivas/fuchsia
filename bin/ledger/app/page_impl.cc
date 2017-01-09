@@ -57,8 +57,7 @@ void PageImpl::GetSnapshot(
     callback(PageUtils::ConvertStatus(status));
     return;
   }
-  manager_->BindPageSnapshot(commit->GetContents(),
-                             std::move(snapshot_request));
+  manager_->BindPageSnapshot(std::move(commit), std::move(snapshot_request));
   callback(Status::OK);
 }
 

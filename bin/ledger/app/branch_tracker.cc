@@ -145,7 +145,7 @@ class BranchTracker::PageWatcherContainer {
                     ](fidl::InterfaceRequest<PageSnapshot>
                                                 snapshot_request) mutable {
                       if (snapshot_request) {
-                        manager_->BindPageSnapshot(new_commit->GetContents(),
+                        manager_->BindPageSnapshot(new_commit->Clone(),
                                                    std::move(snapshot_request));
                       }
                       change_in_flight_ = false;

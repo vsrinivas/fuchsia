@@ -631,6 +631,36 @@ void PageStorageImpl::GetCommitContents(const Commit& commit,
       std::move(on_done));
 }
 
+void PageStorageImpl::GetEntryFromCommit(
+    const Commit& commit,
+    std::string key,
+    std::function<void(Status, Entry)> callback) {
+  std::unique_ptr<bool> key_found = std::make_unique<bool>(false);
+  auto on_next = [ key, key_found = key_found.get(),
+                   callback ](btree::EntryAndNodeId next) {
+    if (next.entry.key == key) {
+      *key_found = true;
+      callback(Status::OK, next.entry);
+    }
+    return false;
+  };
+
+  auto on_done = ftl::MakeCopyable([
+    key_found = std::move(key_found), callback = std::move(callback)
+  ](Status s) mutable {
+    if (*key_found) {
+      return;
+    }
+    if (s == Status::OK) {
+      callback(Status::NOT_FOUND, Entry());
+      return;
+    }
+    callback(s, Entry());
+  });
+  btree::ForEachEntry(this, commit.GetRootId(), std::move(key),
+                      std::move(on_next), std::move(on_done));
+}
+
 void PageStorageImpl::GetCommitContentsDiff(
     const Commit& base_commit,
     const Commit& other_commit,

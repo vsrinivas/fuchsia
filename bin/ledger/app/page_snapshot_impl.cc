@@ -20,108 +20,128 @@
 namespace ledger {
 PageSnapshotImpl::PageSnapshotImpl(
     storage::PageStorage* page_storage,
-    std::unique_ptr<storage::CommitContents> contents)
-    : page_storage_(page_storage), contents_(std::move(contents)) {}
+    std::unique_ptr<const storage::Commit> commit)
+    : page_storage_(page_storage), commit_(std::move(commit)) {}
 
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
 void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
                                   fidl::Array<uint8_t> token,
                                   const GetEntriesCallback& callback) {
-  std::unique_ptr<storage::Iterator<const storage::Entry>> it =
-      contents_->find(key_prefix);
   auto waiter = callback::
       Waiter<storage::Status, std::unique_ptr<const storage::Object>>::Create(
           storage::Status::OK);
-  fidl::Array<EntryPtr> entries = fidl::Array<EntryPtr>::New(0);
-
-  while (it->Valid() &&
-         convert::ExtendedStringView((*it)->key).substr(0, key_prefix.size()) ==
-             convert::ExtendedStringView(key_prefix)) {
-    EntryPtr entry = Entry::New();
-    entry->key = convert::ToArray((*it)->key);
-    entry->priority = (*it)->priority == storage::KeyPriority::EAGER
-                          ? Priority::EAGER
-                          : Priority::LAZY;
-    entries.push_back(std::move(entry));
-
-    page_storage_->GetObject((*it)->object_id, waiter->NewCallback());
-    it->Next();
-  }
-
-  std::function<void(storage::Status,
-                     std::vector<std::unique_ptr<const storage::Object>>)>
-      result_callback = ftl::MakeCopyable([
-        callback, entry_list = std::move(entries)
-      ](storage::Status status,
-        std::vector<std::unique_ptr<const storage::Object>> results) mutable {
-        if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "PageSnapshotImpl::GetEntries error while reading.";
-          callback(Status::IO_ERROR, nullptr, nullptr);
-          return;
+  auto entries = std::make_unique<fidl::Array<EntryPtr>>();
+  std::string prefix =
+      key_prefix.is_null() ? "" : convert::ToString(key_prefix);
+  auto on_next = ftl::MakeCopyable(
+      [ this, prefix, entries = entries.get(), waiter ](storage::Entry entry) {
+        if (convert::ExtendedStringView(entry.key).substr(0, prefix.size()) !=
+            convert::ExtendedStringView(prefix)) {
+          return false;
         }
+        EntryPtr entry_ptr = Entry::New();
+        entry_ptr->key = convert::ToArray(entry.key);
+        entries->push_back(std::move(entry_ptr));
 
-        for (size_t i = 0; i < results.size(); i++) {
-          ftl::StringView object_contents;
+        page_storage_->GetObject(entry.object_id, waiter->NewCallback());
+        return true;
+      });
 
-          storage::Status read_status = results[i]->GetData(&object_contents);
-          if (read_status != storage::Status::OK) {
+  auto on_done = ftl::MakeCopyable([
+    this, waiter, entries = std::move(entries), callback = std::move(callback)
+  ](storage::Status status) mutable {
+    if (status != storage::Status::OK) {
+      FTL_LOG(ERROR) << "PageSnapshotImpl::GetEntries error while reading.";
+      callback(Status::IO_ERROR, nullptr, nullptr);
+      return;
+    }
+    std::function<void(storage::Status,
+                       std::vector<std::unique_ptr<const storage::Object>>)>
+        result_callback = ftl::MakeCopyable([
+          callback = std::move(callback), entries = std::move(entries)
+        ](storage::Status status,
+          std::vector<std::unique_ptr<const storage::Object>> results) mutable {
+          if (status != storage::Status::OK) {
+            FTL_LOG(ERROR)
+                << "PageSnapshotImpl::GetEntries error while reading.";
             callback(Status::IO_ERROR, nullptr, nullptr);
             return;
           }
 
-          entry_list[i]->value = Value::New();
-          entry_list[i]->value->set_bytes(convert::ToArray(object_contents));
-        }
-        callback(Status::OK, std::move(entry_list), nullptr);
-      });
-  waiter->Finalize(result_callback);
+          for (size_t i = 0; i < results.size(); i++) {
+            ftl::StringView object_contents;
+
+            storage::Status read_status = results[i]->GetData(&object_contents);
+            if (read_status != storage::Status::OK) {
+              callback(Status::IO_ERROR, nullptr, nullptr);
+              return;
+            }
+
+            (*entries)[i]->value = Value::New();
+            (*entries)[i]->value->set_bytes(convert::ToArray(object_contents));
+          }
+          callback(Status::OK, std::move(*entries), nullptr);
+        });
+    waiter->Finalize(result_callback);
+  });
+
+  page_storage_->GetCommitContents(*commit_, prefix, std::move(on_next),
+                                   std::move(on_done));
 }
 
 void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
                                fidl::Array<uint8_t> token,
                                const GetKeysCallback& callback) {
-  std::unique_ptr<storage::Iterator<const storage::Entry>> it =
-      contents_->find(key_prefix);
-  fidl::Array<fidl::Array<uint8_t>> keys =
-      fidl::Array<fidl::Array<uint8_t>>::New(0);
-
-  while (it->Valid() &&
-         convert::ExtendedStringView((*it)->key).substr(0, key_prefix.size()) ==
-             convert::ExtendedStringView(key_prefix)) {
-    keys.push_back(convert::ToArray((*it)->key));
-    it->Next();
-  }
-  callback(Status::OK, std::move(keys), nullptr);
+  auto keys = std::make_unique<fidl::Array<fidl::Array<uint8_t>>>();
+  auto on_next = ftl::MakeCopyable([
+    key_prefix = convert::ToString(key_prefix), keys = keys.get()
+  ](storage::Entry entry) {
+    if (convert::ExtendedStringView(entry.key).substr(0, key_prefix.size()) !=
+        convert::ExtendedStringView(key_prefix)) {
+      return false;
+    }
+    keys->push_back(convert::ToArray(entry.key));
+    return true;
+  });
+  auto on_done = ftl::MakeCopyable([
+    keys = std::move(keys), callback = std::move(callback)
+  ](storage::Status s) { callback(Status::OK, std::move(*keys), nullptr); });
+  page_storage_->GetCommitContents(*commit_, convert::ToString(key_prefix),
+                                   std::move(on_next), std::move(on_done));
 }
 
 void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
                            const GetCallback& callback) {
-  std::unique_ptr<storage::Iterator<const storage::Entry>> it =
-      contents_->find(key);
-  if (!it->Valid() ||
-      convert::ExtendedStringView((*it)->key) !=
-          convert::ExtendedStringView(key)) {
-    callback(Status::KEY_NOT_FOUND, nullptr);
-    return;
-  }
-  PageUtils::GetReferenceAsValuePtr(page_storage_, (*it)->object_id, callback);
+  page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
+    this, callback = std::move(callback)
+  ](storage::Status status, storage::Entry entry) {
+    if (status != storage::Status::OK) {
+      callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
+               nullptr);
+      return;
+    }
+    PageUtils::GetReferenceAsValuePtr(page_storage_, entry.object_id,
+                                      std::move(callback));
+  });
 }
 
 void PageSnapshotImpl::GetPartial(fidl::Array<uint8_t> key,
                                   int64_t offset,
                                   int64_t max_size,
                                   const GetPartialCallback& callback) {
-  std::unique_ptr<storage::Iterator<const storage::Entry>> it =
-      contents_->find(key);
-  if (!it->Valid() ||
-      convert::ExtendedStringView((*it)->key) !=
-          convert::ExtendedStringView(key)) {
-    callback(Status::KEY_NOT_FOUND, mx::vmo());
-    return;
-  }
-  PageUtils::GetPartialReferenceAsBuffer(page_storage_, (*it)->object_id,
-                                         offset, max_size, callback);
+  page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
+    this, offset, max_size, callback = std::move(callback)
+  ](storage::Status status, storage::Entry entry) {
+    if (status != storage::Status::OK) {
+      callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
+               mx::vmo());
+      return;
+    }
+
+    PageUtils::GetPartialReferenceAsBuffer(page_storage_, entry.object_id,
+                                           offset, max_size, callback);
+  });
 }
 
 }  // namespace ledger

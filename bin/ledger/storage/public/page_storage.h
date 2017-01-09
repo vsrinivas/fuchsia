@@ -155,6 +155,14 @@ class PageStorage {
                                  std::function<bool(Entry)> on_next,
                                  std::function<void(Status)> on_done) = 0;
 
+  // Retrieves the entry with the given |key| and calls |on_done| with the
+  // result. The status of |on_done| will be |OK| on success, |NOT_FOUND| if
+  // there is no such key in the given commit or an error status on failure.
+  virtual void GetEntryFromCommit(
+      const Commit& commit,
+      std::string key,
+      std::function<void(Status, Entry)> on_done) = 0;
+
   // Iterates over the difference between the contents of two commits and calls
   // |on_next_diff| on found changed entries. Returning false from
   // |on_next_diff| will immediately stop the iteration. |on_done| is called

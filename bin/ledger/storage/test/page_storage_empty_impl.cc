@@ -149,6 +149,14 @@ void PageStorageEmptyImpl::GetCommitContents(
   on_done(Status::NOT_IMPLEMENTED);
 }
 
+void PageStorageEmptyImpl::GetEntryFromCommit(
+    const Commit& commit,
+    std::string key,
+    std::function<void(Status, Entry)> callback) {
+  FTL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, Entry());
+}
+
 void PageStorageEmptyImpl::GetCommitContentsDiff(
     const Commit& base_commit,
     const Commit& other_commit,

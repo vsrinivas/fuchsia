@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/storage/public/commit_contents.h"
+#include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/tasks/task_runner.h"
 
@@ -17,7 +17,7 @@ namespace ledger {
 class PageSnapshotImpl : public PageSnapshot {
  public:
   PageSnapshotImpl(storage::PageStorage* page_storage,
-                   std::unique_ptr<storage::CommitContents> contents);
+                   std::unique_ptr<const storage::Commit> commit);
   ~PageSnapshotImpl();
 
  private:
@@ -35,7 +35,7 @@ class PageSnapshotImpl : public PageSnapshot {
                   const GetPartialCallback& callback) override;
 
   storage::PageStorage* page_storage_;
-  std::unique_ptr<storage::CommitContents> contents_;
+  std::unique_ptr<const storage::Commit> commit_;
 };
 
 }  // namespace ledger

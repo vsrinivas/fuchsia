@@ -140,6 +140,47 @@ Status FakePageStorage::AddObjectSynchronous(
   return GetObjectSynchronous(object_id, object);
 }
 
+void FakePageStorage::GetCommitContents(const Commit& commit,
+                                        std::string min_key,
+                                        std::function<bool(Entry)> on_next,
+                                        std::function<void(Status)> on_done) {
+  FakeJournalDelegate* journal = journals_[commit.GetId()].get();
+  if (!journal) {
+    on_done(Status::NOT_FOUND);
+    return;
+  }
+  const std::map<std::string, fake::FakeJournalDelegate::Entry,
+                 convert::StringViewComparator>& data = journal->GetData();
+  for (const auto entry : data) {
+    if (min_key.empty() || min_key <= entry.first) {
+      if (!on_next(
+              Entry{entry.first, entry.second.value, entry.second.priority})) {
+        break;
+      }
+    }
+  }
+  on_done(Status::OK);
+}
+
+void FakePageStorage::GetEntryFromCommit(
+    const Commit& commit,
+    std::string key,
+    std::function<void(Status, Entry)> callback) {
+  FakeJournalDelegate* journal = journals_[commit.GetId()].get();
+  if (!journal) {
+    callback(Status::NOT_FOUND, Entry());
+    return;
+  }
+  const std::map<std::string, fake::FakeJournalDelegate::Entry,
+                 convert::StringViewComparator>& data = journal->GetData();
+  if (data.find(key) == data.end()) {
+    callback(Status::NOT_FOUND, Entry());
+    return;
+  }
+  const fake::FakeJournalDelegate::Entry& entry = data.at(key);
+  callback(Status::OK, Entry{key, entry.value, entry.priority});
+}
+
 const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
 FakePageStorage::GetJournals() const {
   return journals_;

@@ -13,7 +13,7 @@
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "apps/ledger/src/storage/test/commit_contents_empty_impl.h"
+#include "apps/ledger/src/storage/test/commit_empty_impl.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
@@ -87,8 +87,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   on_empty_called = false;
   PageSnapshotPtr snapshot;
   page_manager.BindPageSnapshot(
-      std::unique_ptr<storage::CommitContents>(
-          new storage::test::CommitContentsEmptyImpl()),
+      std::make_unique<const storage::test::CommitEmptyImpl>(),
       snapshot.NewRequest());
   snapshot.reset();
   EXPECT_FALSE(RunLoopWithTimeout());

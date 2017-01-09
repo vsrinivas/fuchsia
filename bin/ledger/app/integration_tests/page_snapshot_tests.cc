@@ -81,7 +81,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetPartial) {
   snapshot->GetPartial(convert::ToArray("favorite book"), 0, -1,
                        [](Status status, mx::vmo received_buffer) {
                          // People don't read much these days.
-                         EXPECT_EQ(status, Status::KEY_NOT_FOUND);
+                         EXPECT_EQ(Status::KEY_NOT_FOUND, status);
                        });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
 }

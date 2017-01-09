@@ -224,9 +224,17 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(Status::OK, status);
     auto objects = fake_storage_->GetObjects();
     EXPECT_EQ(2u, objects.size());
-    object_id1 = objects.begin()->first;
-    std::string actual_value = objects.begin()->second;
-    EXPECT_EQ(value, actual_value);
+    // Objects are ordered by a randomly assigned object id, so we can't know
+    // the correct possition of the value in the map.
+    bool object_found = false;
+    for (auto object : objects) {
+      if (object.second == value) {
+        object_found = true;
+        object_id1 = object.first;
+        break;
+      }
+    }
+    EXPECT_TRUE(object_found);
 
     // No finished commit yet.
     const std::map<std::string,
