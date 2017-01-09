@@ -189,7 +189,7 @@ public:
 
         EXPECT_TRUE(render_cs->RenderInit(context_, std::move(init_batch), address_space_));
 
-        EXPECT_EQ(ringbuffer->tail() - tail_start, 9u * 4);
+        EXPECT_EQ(ringbuffer->tail() - tail_start, 10u * 4);
 
         auto ringbuffer_content = TestRingbuffer::vaddr(ringbuffer);
 

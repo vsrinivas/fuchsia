@@ -57,6 +57,16 @@ void EngineCommandStreamer::InitHardware()
     registers::GraphicsMode::write(register_io(), mmio_base_,
                                    registers::GraphicsMode::kExeclistEnable,
                                    registers::GraphicsMode::kExeclistEnable);
+
+    registers::HardwareStatusMask::write(
+        register_io(), mmio_base_, registers::InterruptRegisterBase::RENDER_ENGINE,
+        registers::InterruptRegisterBase::USER, registers::InterruptRegisterBase::UNMASK);
+    registers::GtInterruptMask0::write(
+        register_io(), registers::InterruptRegisterBase::RENDER_ENGINE,
+        registers::InterruptRegisterBase::USER, registers::InterruptRegisterBase::UNMASK);
+    registers::GtInterruptEnable0::write(register_io(),
+                                         registers::InterruptRegisterBase::RENDER_ENGINE,
+                                         registers::InterruptRegisterBase::USER, true);
 }
 
 // Register definitions from BSpec BXML Reference.
@@ -485,6 +495,14 @@ bool RenderEngineCommandStreamer::ExecBatch(std::unique_ptr<MappedBatch> mapped_
     if (!WriteSequenceNumber(context.get(), &sequence_number))
         return DRETF(false, "failed to finish batch buffer");
 
+    auto ringbuffer = context->get_ringbuffer(id());
+
+    // TODO: don't allocate a sequence number if we don't have space for the user interrupt
+    if (!ringbuffer->HasSpace(MiUserInterrupt::kDwordCount * sizeof(uint32_t)))
+        return DRETF(false, "ringbuffer has insufficient space");
+
+    MiUserInterrupt::write(ringbuffer);
+
     mapped_batch->SetSequenceNumber(sequence_number);
 
     uint32_t ringbuffer_offset = context->get_ringbuffer(id())->tail();
@@ -509,6 +527,7 @@ void RenderEngineCommandStreamer::ScheduleContext()
             registers::ExeclistStatus::execlist_current_pointer(status) &&
         registers::ExeclistStatus::execlist_queue_full(status)) {
         DLOG("execlist queue full: status 0x%lx", status);
+        DASSERT(false);
         return;
     }
 

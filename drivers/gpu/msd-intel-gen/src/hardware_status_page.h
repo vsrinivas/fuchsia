@@ -33,6 +33,12 @@ public:
 
     uint32_t read_sequence_number() { return read_general_purpose_offset(kSequenceNumberOffset); }
 
+    uint32_t read_interrupt_status()
+    {
+        return reinterpret_cast<uint32_t*>(
+            owner_->hardware_status_page_cpu_addr(engine_command_streamer_id_))[0];
+    }
+
     // from Intel-GFX-BSpec-SuperNDA-BDW-20140919-b70387-r74244-Web
     // Render Logical Context Data - The Per-Process Hardware Status Page
     static constexpr uint32_t kSequenceNumberOffset = 0x20;

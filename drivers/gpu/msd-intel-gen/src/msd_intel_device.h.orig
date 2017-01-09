@@ -163,8 +163,11 @@ private:
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
     std::shared_ptr<GlobalContext> global_context_;
     std::unique_ptr<Sequencer> sequencer_;
-	std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
+<<<<<<< HEAD
+    std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
+=======
     std::unique_ptr<magma::PlatformInterrupt> interrupt_;
+>>>>>>> 699faae... Introduce interrupt based device thread.
 
     // page flipping
     std::deque<std::shared_ptr<GpuMapping>> display_mappings_;

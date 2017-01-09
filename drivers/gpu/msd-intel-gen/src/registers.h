@@ -490,6 +490,118 @@ public:
     }
 };
 
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.10
+class MasterInterruptControl {
+public:
+    static constexpr uint32_t kOffset = 0x44200;
+    static constexpr uint32_t kRenderInterruptsPendingBitMask = 1 << 0;
+    static constexpr uint32_t kEnableBitMask = 1 << 31;
+
+    static void write(RegisterIo* register_io, bool enable)
+    {
+        register_io->Write32(kOffset, enable ? kEnableBitMask : 0);
+    }
+    static uint32_t read(RegisterIo* register_io) { return register_io->Read32(kOffset); }
+};
+
+class InterruptRegisterBase {
+public:
+    enum Engine { RENDER_ENGINE };
+    enum Source { PAGE_FAULT, CONTEXT_SWITCH, USER };
+    enum MaskOp { MASK, UNMASK };
+
+    static constexpr uint32_t kUserInterruptBit = 1 << 0;
+    static constexpr uint32_t kPageFaultBit = 1 << 7;
+    static constexpr uint32_t kContextSwitchBit = 1 << 8;
+
+    static void write(RegisterIo* register_io, uint64_t offset, Source source, bool set)
+    {
+        uint32_t bit;
+        switch (source) {
+        case USER:
+            bit = kUserInterruptBit;
+            break;
+        case PAGE_FAULT:
+            bit = kPageFaultBit;
+            break;
+        case CONTEXT_SWITCH:
+            bit = kContextSwitchBit;
+            break;
+        }
+
+        uint32_t val = register_io->Read32(offset);
+        val = set ? (val | bit) : (val & ~bit);
+        register_io->Write32(offset, val);
+        register_io->mmio()->PostingRead32(offset);
+        val = register_io->Read32(offset);
+    }
+};
+
+class HardwareStatusMask : public InterruptRegisterBase {
+public:
+    static constexpr uint32_t kRenderOffset = 0x98;
+
+    static void write(RegisterIo* register_io, uint64_t mmio_base, Engine engine, Source source,
+                      MaskOp op)
+    {
+        switch (engine) {
+        case RENDER_ENGINE:
+            InterruptRegisterBase::write(register_io, mmio_base + kRenderOffset, source,
+                                         op == MASK);
+            break;
+        }
+    }
+};
+
+class GtInterruptMask0 : public InterruptRegisterBase {
+public:
+    static constexpr uint32_t kOffset = 0x44304;
+
+    static void write(RegisterIo* register_io, Engine engine, Source source, MaskOp op)
+    {
+        switch (engine) {
+        case RENDER_ENGINE:
+            InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
+            break;
+        }
+    }
+};
+
+class GtInterruptIdentity0 : public InterruptRegisterBase {
+public:
+    static constexpr uint32_t kOffset = 0x44308;
+
+    static uint32_t read(RegisterIo* register_io, Engine engine)
+    {
+        switch (engine) {
+        case RENDER_ENGINE:
+            return register_io->Read32(kOffset);
+        }
+    }
+    static void write(RegisterIo* register_io, Engine engine, Source source, MaskOp op)
+    {
+        switch (engine) {
+        case RENDER_ENGINE:
+            InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
+            break;
+        }
+    }
+};
+
+class GtInterruptEnable0 : public InterruptRegisterBase {
+public:
+    static constexpr uint32_t kOffset = 0x4430C;
+
+    static void write(RegisterIo* register_io, Engine engine, Source source, bool enable)
+    {
+        switch (engine) {
+        case RENDER_ENGINE:
+            InterruptRegisterBase::write(register_io, kOffset, source, enable);
+            break;
+        }
+    }
+};
+
 } // namespace
 
 #endif // REGISTERS_H

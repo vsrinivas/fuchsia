@@ -103,9 +103,6 @@ void MsdIntelDevice::Destroy()
     DLOG("Destroy");
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
-    if (register_io_)
-        registers::MasterInterruptControl::write(register_io_.get(), false);
-
     interrupt_thread_quit_flag_ = true;
 
     if (interrupt_)
@@ -180,13 +177,17 @@ bool MsdIntelDevice::Init(void* device_handle)
     // Clear faults
     registers::AllEngineFault::clear(register_io_.get());
 
+<<<<<<< HEAD
+    PerProcessGtt::InitPrivatePat(register_io_.get());
+
+    gtt_ = std::unique_ptr<Gtt>(new Gtt());
+=======
     interrupt_ = platform_device_->RegisterInterrupt();
     if (!interrupt_)
         return DRETF(false, "failed to register interrupt");
 
-    PerProcessGtt::InitPrivatePat(register_io_.get());
-
-    gtt_ = std::make_shared<Gtt>();
+    gtt_ = std::unique_ptr<Gtt>(new Gtt(this));
+>>>>>>> 699faae... Introduce interrupt based device thread.
 
     if (!gtt_->Init(gtt_size, platform_device_.get()))
         return DRETF(false, "failed to Init gtt");
@@ -197,10 +198,10 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     render_engine_cs_ = RenderEngineCommandStreamer::Create(this);
 
-    global_context_ = std::shared_ptr<GlobalContext>(new GlobalContext(gtt_));
+    global_context_ = std::shared_ptr<GlobalContext>(new GlobalContext());
 
     // Creates the context backing store.
-    if (!render_engine_cs_->InitContext(global_context_.get()))
+    if (!render_engine_cs_->InitContext(global_context_.get(), nullptr))
         return DRETF(false, "render_engine_cs failed to init global context");
 
     if (!global_context_->Map(gtt_, render_engine_cs_->id()))
@@ -211,13 +212,15 @@ bool MsdIntelDevice::Init(void* device_handle)
 
     monitor_ = magma::Monitor::CreateShared();
 
-	scratch_buffer_ =
+<<<<<<< HEAD
+    scratch_buffer_ =
         std::shared_ptr<magma::PlatformBuffer>(magma::PlatformBuffer::Create(PAGE_SIZE));
 
     if (!scratch_buffer_->PinPages(0, 1))
         return DRETF(false, "failed to pin pages scratch buffer");
-
+=======
     registers::MasterInterruptControl::write(register_io_.get(), true);
+>>>>>>> 699faae... Introduce interrupt based device thread.
 
     return true;
 }

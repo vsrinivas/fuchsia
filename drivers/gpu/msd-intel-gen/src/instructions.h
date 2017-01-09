@@ -76,4 +76,13 @@ public:
     }
 };
 
+// intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf pp.1010
+class MiUserInterrupt {
+public:
+    static constexpr uint32_t kDwordCount = 1;
+    static constexpr uint32_t kCommandType = 0x2 << 23;
+
+    static void write(Ringbuffer* ringbuffer) { ringbuffer->write_tail(kCommandType); }
+};
+
 #endif // INSTRUCTIONS_H
