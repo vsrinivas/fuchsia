@@ -21,14 +21,14 @@ constexpr mx_rights_t kDefaultThreadRights =
 status_t ThreadDispatcher::Create(mxtl::RefPtr<UserThread> thread, mxtl::RefPtr<Dispatcher>* dispatcher,
                                   mx_rights_t* rights) {
     AllocChecker ac;
-    Dispatcher* disp = new (&ac) ThreadDispatcher(thread);
+    auto disp = mxtl::AdoptRef(new (&ac) ThreadDispatcher(thread));
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    thread->set_dispatcher(disp->get_specific<ThreadDispatcher>());
+    thread->set_dispatcher(disp.get());
 
     *rights = kDefaultThreadRights;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(disp);
+    *dispatcher = mxtl::move(disp);
     return NO_ERROR;
 }
 

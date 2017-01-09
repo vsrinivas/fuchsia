@@ -109,7 +109,7 @@ public:
         mxtl::RefPtr<Dispatcher> generic_dispatcher;
         if (!GetDispatcher(handle_value, &generic_dispatcher, out_rights))
             return BadHandle(handle_value, ERR_BAD_HANDLE);
-        *dispatcher = DownCastDispatcher<T>(mxtl::move(generic_dispatcher));
+        *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
             return BadHandle(handle_value, ERR_WRONG_TYPE);
         return NO_ERROR;

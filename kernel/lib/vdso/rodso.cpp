@@ -24,7 +24,7 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
         VmObjectPaged::CreateFromROData(image, size),
         &dispatcher, &vmo_rights_);
     ASSERT(status == NO_ERROR);
-    vmo_ = DownCastDispatcher<VmObjectDispatcher>(mxtl::move(dispatcher));
+    vmo_ = DownCastDispatcher<VmObjectDispatcher>(&dispatcher);
     vmo_rights_ &= ~MX_RIGHT_WRITE;
 }
 

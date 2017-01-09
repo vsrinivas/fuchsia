@@ -87,7 +87,7 @@ void DeleteHandle(Handle* handle) {
         // this time.
         switch (disp->get_type()) {
             case MX_OBJ_TYPE_IOMAP: {
-                auto iodisp = disp->get_specific<IoMappingDispatcher>();
+                auto iodisp = DownCastDispatcher<IoMappingDispatcher>(&disp);
                 if (iodisp)
                     iodisp->Close();
                 break;

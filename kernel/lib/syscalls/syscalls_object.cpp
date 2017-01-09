@@ -214,7 +214,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
         case MX_PROP_BAD_HANDLE_POLICY: {
             if (size < sizeof(uint32_t))
                 return ERR_BUFFER_TOO_SMALL;
-            auto process = dispatcher->get_specific<ProcessDispatcher>();
+            auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
             if (!process)
                 return ERR_WRONG_TYPE;
             uint32_t value = process->get_bad_handle_policy();
@@ -225,7 +225,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
         case MX_PROP_NUM_STATE_KINDS: {
             if (size != sizeof(uint32_t))
                 return ERR_BUFFER_TOO_SMALL;
-            auto thread = dispatcher->get_specific<ThreadDispatcher>();
+            auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
             if (!thread)
                 return ERR_WRONG_TYPE;
             uint32_t value = thread->thread()->get_num_state_kinds();
@@ -270,7 +270,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
         case MX_PROP_BAD_HANDLE_POLICY: {
             if (size < sizeof(uint32_t))
                 return ERR_BUFFER_TOO_SMALL;
-            auto process = dispatcher->get_specific<ProcessDispatcher>();
+            auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
             if (!process)
                 return up->BadHandle(handle_value, ERR_WRONG_TYPE);
             uint32_t value = 0;
@@ -373,7 +373,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         return ERR_ACCESS_DENIED;
     }
 
-    auto process = dispatcher->get_specific<ProcessDispatcher>();
+    auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
         auto thread = process->LookupThreadById(koid);
         if (!thread)
@@ -391,7 +391,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         return NO_ERROR;
     }
 
-    auto resource = dispatcher->get_specific<ResourceDispatcher>();
+    auto resource = DownCastDispatcher<ResourceDispatcher>(&dispatcher);
     if (resource) {
         auto child = resource->LookupChildById(koid);
         if (!child)

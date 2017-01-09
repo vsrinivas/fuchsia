@@ -83,7 +83,7 @@ mx_status_t ProcessDispatcher::Create(
         process->aspace()->RootVmar(), &new_vmar_dispatcher, root_vmar_rights);
     if (result == NO_ERROR) {
         *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
-            mxtl::move(new_vmar_dispatcher));
+                &new_vmar_dispatcher);
     } else {
         dispatcher->reset();
     }

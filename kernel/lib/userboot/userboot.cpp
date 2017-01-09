@@ -101,7 +101,7 @@ static mx_status_t get_vmo_handle(mxtl::RefPtr<VmObject> vmo, bool readonly,
         mxtl::move(vmo), &dispatcher, &rights);
     if (result == NO_ERROR) {
         if (disp_ptr)
-            disp_ptr->reset(dispatcher->get_specific<VmObjectDispatcher>());
+            *disp_ptr = mxtl::RefPtr<VmObjectDispatcher>::Downcast(dispatcher);
         if (readonly)
             rights &= ~MX_RIGHT_WRITE;
         if (ptr)
@@ -144,7 +144,7 @@ static mx_handle_t make_bootstrap_channel(
         if (status != NO_ERROR)
             return status;
         user_channel_handle.reset(MakeHandle(mxtl::move(mpd0), rights));
-        kernel_channel.reset(mpd1->get_specific<ChannelDispatcher>());
+        kernel_channel = DownCastDispatcher<ChannelDispatcher>(&mpd1);
     }
 
     // Here it goes!
@@ -285,7 +285,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
 
     handles[BOOTSTRAP_PROC] = MakeHandle(proc_disp, rights);
 
-    auto proc = DownCastDispatcher<ProcessDispatcher>(mxtl::move(proc_disp));
+    auto proc = DownCastDispatcher<ProcessDispatcher>(&proc_disp);
     ASSERT(proc);
 
     handles[BOOTSTRAP_VMAR_ROOT] = MakeHandle(vmar, vmar_rights);
@@ -323,7 +323,7 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
         if (status < 0)
             return status;
         handles[BOOTSTRAP_THREAD] = MakeHandle(ut_disp, rights);
-        thread = DownCastDispatcher<ThreadDispatcher>(mxtl::move(ut_disp));
+        thread = DownCastDispatcher<ThreadDispatcher>(&ut_disp);
     }
     DEBUG_ASSERT(thread);
 

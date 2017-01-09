@@ -60,11 +60,6 @@ public:
 
     void remove_handle();
 
-    template <typename T>
-    T* get_specific() {
-        return (DispatchTag<T>::ID == get_type())? static_cast<T*>(this) : nullptr;
-    }
-
     // Interface for derived classes.
 
     virtual mx_obj_type_t get_type() const = 0;
@@ -95,9 +90,12 @@ private:
     int handle_count_;
 };
 
+// Checks if a RefPtr<Dispatcher> points to a dispatcher of a given dispatcher subclass T and, if
+// so, moves the reference to a RefPtr<T>, otherwise it leaves the RefPtr<Dispatcher> alone.
+// Must be called with a pointer to a valid (non-null) dispatcher.
 template <typename T>
-mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<Dispatcher>&& disp) {
-    return (likely(DispatchTag<T>::ID == disp->get_type())) ?
-            mxtl::RefPtr<T>::Downcast(mxtl::move(disp)) :
+mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<Dispatcher>* disp) {
+    return (likely(DispatchTag<T>::ID == (*disp)->get_type())) ?
+            mxtl::RefPtr<T>::Downcast(mxtl::move(*disp)) :
             nullptr;
 }

@@ -307,7 +307,7 @@ void sys_process_exit(int retcode) {
 // helper routine for sys_task_kill
 template <typename T>
 static mx_status_t kill_task(mxtl::RefPtr<Dispatcher> dispatcher, uint32_t rights) {
-    auto task = dispatcher->get_specific<T>();
+    auto task = DownCastDispatcher<T>(&dispatcher);
     if (!task)
         return ERR_WRONG_TYPE;
 

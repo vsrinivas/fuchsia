@@ -48,13 +48,13 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
     if (!up->GetDispatcher(obj_handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
 
-    auto process = dispatcher->get_specific<ProcessDispatcher>();
+    auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
         process->ResetExceptionPort(debugger);
         return NO_ERROR;
     }
 
-    auto thread = dispatcher->get_specific<ThreadDispatcher>();
+    auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (thread) {
         if (debugger)
             return ERR_INVALID_ARGS;
@@ -91,12 +91,12 @@ static mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_
     if (!up->GetDispatcher(obj_handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
 
-    auto process = dispatcher->get_specific<ProcessDispatcher>();
+    auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
         return process->SetExceptionPort(mxtl::move(eport), debugger);
     }
 
-    auto thread = dispatcher->get_specific<ThreadDispatcher>();
+    auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (thread) {
         if (debugger)
             return ERR_INVALID_ARGS;
@@ -134,7 +134,7 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
     if (!up->GetDispatcher(handle, &dispatcher, &rights))
         return ERR_BAD_HANDLE;
 
-    auto thread = dispatcher->get_specific<ThreadDispatcher>();
+    auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (!thread)
         return ERR_WRONG_TYPE;
 
