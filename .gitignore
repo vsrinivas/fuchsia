@@ -36,4 +36,5 @@
 /mac/qemu
 /mac/qemu.stamp
 /mac/toolchain.stamp
+/qemu
 /toolchain
