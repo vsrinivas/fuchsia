@@ -771,14 +771,14 @@ static bool do_sort_test(int test_size, uint64_t val_max) {
     for (int idx = 1; idx < test_size; idx++) {
         if (sorted_values[idx - 1]->first > sorted_values[idx]->first) {
             ordered = false;
-            printf("Values are not ordered, index: %i--%lu!\n", idx,
+            printf("Values are not ordered, index: %i--%" PRIu64 "!\n", idx,
                    sorted_values[idx]->first);
         }
     }
 
     if (!ordered) {
         for (int idx = 0; idx < test_size; idx++) {
-            printf(" -- %lu", sorted_values[idx]->first);
+            printf(" -- %" PRIu64 "", sorted_values[idx]->first);
         }
         printf("\n");
     }
@@ -986,7 +986,7 @@ mx_status_t write_install_data(partition_flags parts_requested,
  * place is found device_path_out and offset_out will be set to valid values,
  * otherwise they will be left unchanged.
  */
-void find_device_with_space(DIR* dir, char* dir_path, size_t space_required,
+void find_device_with_space(DIR* dir, char* dir_path, uint64_t space_required,
                             char* device_path_out, size_t* offset_out) {
     char path_buffer[PATH_MAX];
     strcpy(path_buffer, dir_path);
