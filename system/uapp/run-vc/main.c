@@ -7,6 +7,7 @@
 #include <launchpad/vmo.h>
 #include <limits.h>
 #include <magenta/processargs.h>
+#include <magenta/syscalls.h>
 #include <magenta/types.h>
 #include <mxio/util.h>
 #include <stdbool.h>
@@ -36,8 +37,20 @@ int main(int argc, const char* const* argv, const char* const* envp) {
         pargc = argc - 1;
     }
 
+    mx_handle_t job = mx_job_default();
+    if (job == MX_HANDLE_INVALID) {
+        printf("Error getting default job\n");
+        return -1;
+    }
+
+    mx_status_t status = mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job);
+    if (status != NO_ERROR) {
+        printf("Error %d duplicating job handle\n", status);
+        return status;
+    }
+
     launchpad_t* lp;
-    mx_status_t status = launchpad_create(0u, pname, &lp);
+    status = launchpad_create(job, pname, &lp);
     if (status != NO_ERROR) {
         printf("Error %d in launchpad_create\n", status);
         return status;
