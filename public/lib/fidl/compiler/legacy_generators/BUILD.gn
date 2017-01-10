@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 # TODO(vardhan): This should be split up to be per-language.
-group("legacy_generators") {
-  generator_sources = [
+copy("legacy_generators") {
+  sources = [
       "generators/cpp_templates/enum_macros.tmpl",
       "generators/cpp_templates/interface_declaration.tmpl",
       "generators/cpp_templates/interface_definition.tmpl",
@@ -71,15 +71,5 @@ group("legacy_generators") {
       "pylib/mojom/parse/parser_runner.py",
       "run_code_generators.py",
   ]
-  deps = []
-  i = 1
-  foreach(source, generator_sources) {
-    target_name = "legacy_generators_copy_$i"
-    copy(target_name) {
-      sources = [ source ]
-      outputs = [ "$root_out_dir/legacy_generators/$source" ]
-    }
-    deps += [ ":$target_name" ]
-    i = i + 1
-  }
+  outputs = [ "$root_out_dir/legacy_generators/{{source_target_relative}}" ]
 }
