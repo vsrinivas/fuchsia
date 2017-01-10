@@ -26,43 +26,77 @@ ImageCache::ImageCache(vk::Device device,
       uploader_(uploader) {}
 
 ImageCache::~ImageCache() {
-  FTL_CHECK(image_count_ == 0);
+  FTL_CHECK(outstanding_image_count_ == 0);
+
+  // Destroy all of the unused images.
+  for (auto& pair : unused_images_) {
+    auto& queue = pair.second;
+    while (!queue.empty()) {
+      device_.destroyImage(queue.front().image);
+      queue.pop();
+    }
+  }
 }
 
-ImagePtr ImageCache::NewImage(const vk::ImageCreateInfo& create_info,
-                              vk::MemoryPropertyFlags memory_flags) {
+ImagePtr ImageCache::NewImage(const ImageInfo& info) {
+  if (ImagePtr result = FindImage(info)) {
+    outstanding_image_count_++;
+    return result;
+  }
+
+  // Create a new vk::Image, since we couldn't find a suitable one.
+  vk::ImageCreateInfo create_info;
+  create_info.imageType = vk::ImageType::e2D;
+  create_info.format = info.format;
+  create_info.extent = vk::Extent3D{info.width, info.height, 1};
+  create_info.mipLevels = 1;
+  create_info.arrayLayers = 1;
+  switch (info.sample_count) {
+    case 1:
+      create_info.samples = vk::SampleCountFlagBits::e1;
+      break;
+    case 2:
+      create_info.samples = vk::SampleCountFlagBits::e2;
+      break;
+    case 4:
+      create_info.samples = vk::SampleCountFlagBits::e4;
+      break;
+    case 8:
+      create_info.samples = vk::SampleCountFlagBits::e8;
+      break;
+    default:
+      FTL_DCHECK(false);
+  }
+  create_info.tiling = vk::ImageTiling::eOptimal;
+  create_info.usage = info.usage;
+  create_info.sharingMode = vk::SharingMode::eExclusive;
+  create_info.initialLayout = vk::ImageLayout::eUndefined;
   vk::Image image = ESCHER_CHECKED_VK_RESULT(device_.createImage(create_info));
 
+  // Allocate memory and bind it to the image.
   vk::MemoryRequirements reqs = device_.getImageMemoryRequirements(image);
-  GpuMemPtr memory = allocator_->Allocate(reqs, memory_flags);
-
+  GpuMemPtr memory = allocator_->Allocate(reqs, info.memory_flags);
   vk::Result result =
       device_.bindImageMemory(image, memory->base(), memory->offset());
   FTL_CHECK(result == vk::Result::eSuccess);
 
-  image_count_++;
-
-  return CreateImage(ImageInfo(create_info), image, std::move(memory));
+  outstanding_image_count_++;
+  return CreateImage(info, image, std::move(memory));
 }
 
-ImagePtr ImageCache::GetDepthImage(vk::Format format,
+ImagePtr ImageCache::NewDepthImage(vk::Format format,
                                    uint32_t width,
                                    uint32_t height,
                                    vk::ImageUsageFlags additional_flags) {
-  vk::ImageCreateInfo info;
-  info.imageType = vk::ImageType::e2D;
+  ImageInfo info;
   info.format = format;
-  info.extent = vk::Extent3D{width, height, 1};
-  info.mipLevels = 1;
-  info.arrayLayers = 1;
-  info.samples = vk::SampleCountFlagBits::e1;
-  info.tiling = vk::ImageTiling::eOptimal;
+  info.width = width;
+  info.height = height;
+  info.sample_count = 1;
   info.usage =
       additional_flags | vk::ImageUsageFlagBits::eDepthStencilAttachment;
-  info.initialLayout = vk::ImageLayout::eUndefined;
-  info.sharingMode = vk::SharingMode::eExclusive;
 
-  auto image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto image = NewImage(info);
 
   auto command_buffer = command_buffer_pool_->GetCommandBuffer();
   command_buffer->TransitionImageLayout(
@@ -77,19 +111,14 @@ ImagePtr ImageCache::NewColorAttachmentImage(
     uint32_t width,
     uint32_t height,
     vk::ImageUsageFlags additional_flags) {
-  vk::ImageCreateInfo info;
-  info.imageType = vk::ImageType::e2D;
+  ImageInfo info;
   info.format = vk::Format::eB8G8R8A8Srgb;
-  info.extent = vk::Extent3D{width, height, 1};
-  info.mipLevels = 1;
-  info.arrayLayers = 1;
-  info.samples = vk::SampleCountFlagBits::e1;
-  info.tiling = vk::ImageTiling::eOptimal;
+  info.width = width;
+  info.height = height;
+  info.sample_count = 1;
   info.usage = additional_flags | vk::ImageUsageFlagBits::eColorAttachment;
-  info.initialLayout = vk::ImageLayout::eUndefined;
-  info.sharingMode = vk::SharingMode::eExclusive;
 
-  auto image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto image = NewImage(info);
 
   // TODO: this transition is not necessary if the render-pass uses eUndefined
   // as the layout.
@@ -121,20 +150,16 @@ ImagePtr ImageCache::NewImageFromPixels(vk::Format format,
   auto writer = uploader_->GetWriter(width * height * bytes_per_pixel);
   memcpy(writer.ptr(), pixels, width * height * bytes_per_pixel);
 
-  // Create the new image.
-  vk::ImageCreateInfo info;
-  info.imageType = vk::ImageType::e2D;
+  ImageInfo info;
   info.format = format;
-  info.extent = vk::Extent3D{width, height, 1};
-  info.mipLevels = 1;
-  info.arrayLayers = 1;
-  info.samples = vk::SampleCountFlagBits::e1;
-  info.tiling = vk::ImageTiling::eOptimal;
+  info.width = width;
+  info.height = height;
+  info.sample_count = 1;
   info.usage =
       vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
-  info.initialLayout = vk::ImageLayout::eUndefined;
-  info.sharingMode = vk::SharingMode::eExclusive;
-  auto image = NewImage(info, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+  // Create the new image.
+  auto image = NewImage(info);
 
   vk::BufferImageCopy region;
   region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -169,11 +194,24 @@ ImagePtr ImageCache::NewNoiseImage(uint32_t width, uint32_t height) {
   return NewImageFromPixels(vk::Format::eR8Unorm, width, height, pixels.get());
 }
 
+ImagePtr ImageCache::FindImage(const ImageInfo& info) {
+  auto& queue = unused_images_[info];
+  if (queue.empty()) {
+    return ImagePtr();
+  } else {
+    ImagePtr result =
+        CreateImage(info, queue.front().image, std::move(queue.front().mem));
+    queue.pop();
+    return result;
+  }
+}
+
 void ImageCache::RecycleImage(const ImageInfo& info,
                               vk::Image image,
                               impl::GpuMemPtr mem) {
-  device_.destroyImage(image);
-  image_count_--;
+  auto& queue = unused_images_[info];
+  queue.push(UnusedImage{image, std::move(mem)});
+  outstanding_image_count_--;
 }
 
 }  // namespace impl

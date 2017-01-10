@@ -111,7 +111,7 @@ FramebufferPtr PaperRenderer::NewFramebuffer(const ImagePtr& main_color_image) {
   uint32_t width = main_color_image->width();
   uint32_t height = main_color_image->height();
 
-  ImagePtr depth_image = image_cache_->GetDepthImage(
+  ImagePtr depth_image = image_cache_->NewDepthImage(
       depth_format_, width, height,
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
 

@@ -389,10 +389,12 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
     image_views.reserve(images.size());
     escher_images.reserve(images.size());
     for (auto& im : images) {
-      escher_images.push_back(
-          CreateImage(escher::ImageInfo{format, swapchain_extent.width,
-                                        swapchain_extent.height},
-                      im, nullptr));
+      escher::ImageInfo image_info;
+      image_info.format = format;
+      image_info.width = swapchain_extent.width;
+      image_info.height = swapchain_extent.height;
+      image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
+      escher_images.push_back(CreateImage(image_info, im, nullptr));
 
       vk::ImageSubresourceRange range;
       range.aspectMask = vk::ImageAspectFlagBits::eColor;

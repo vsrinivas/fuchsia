@@ -9,14 +9,6 @@
 
 namespace escher {
 
-ImageInfo::ImageInfo(const vk::ImageCreateInfo& create_info)
-    : format(create_info.format),
-      width(create_info.extent.width),
-      height(create_info.extent.height) {}
-
-ImageInfo::ImageInfo(vk::Format f, uint32_t w, uint32_t h)
-    : format(f), width(w), height(h) {}
-
 Image::Image(ImageInfo info,
              vk::Image image,
              impl::GpuMemPtr mem,

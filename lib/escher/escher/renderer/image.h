@@ -11,14 +11,19 @@ namespace escher {
 
 // Full description of the size and layout of an Image.
 struct ImageInfo {
-  vk::Format format;
-  uint32_t width;
-  uint32_t height;
-  // TODO: add more fields, like number of mip-levels.
+  vk::Format format = vk::Format::eUndefined;
+  uint32_t width = 0;
+  uint32_t height = 0;
+  uint32_t sample_count = 1;
+  vk::ImageUsageFlags usage;
+  vk::MemoryPropertyFlags memory_flags =
+      vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-  // Convenient way to populate an ImageInfo.
-  ImageInfo(const vk::ImageCreateInfo& create_info);
-  ImageInfo(vk::Format format, uint32_t width, uint32_t height);
+  bool operator==(const ImageInfo& other) const {
+    return format == other.format && width == other.width &&
+           height == other.height && sample_count == other.sample_count &&
+           usage == other.usage && memory_flags == other.memory_flags;
+  }
 };
 
 // Every Image has an owner, who is responsible for cleaning up the Image's
