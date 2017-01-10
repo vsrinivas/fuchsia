@@ -639,10 +639,10 @@ static mx_status_t unmount_all(void) {
 
     struct dirent* entry = NULL;
     strcpy(path, PATH_VOLUMES);
-    while ((entry = readdir(vols)) != NULL) {
-        strcat(path, "/");
-        int path_len = strlen(path);
+    strcat(path, "/");
+    int path_len = strlen(path);
 
+    while ((entry = readdir(vols)) != NULL) {
         strncpy(path + path_len, entry->d_name, PATH_MAX - path_len);
         printf("Unmounting filesystem at %s...", path);
         result = umount(path);
