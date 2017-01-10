@@ -4,16 +4,14 @@
 
 #include "apps/modular/lib/testing/reporting.h"
 
-TestPoint::TestPoint(std::string label)
-: label_(std::move(label)) {}
+TestPoint::TestPoint(std::string label) : label_(std::move(label)) {}
 
 TestPoint::~TestPoint() {
   if (!value_)
     TEST_FAIL(label_);
 }
 
-void
-TestPoint::Pass() {
+void TestPoint::Pass() {
   value_ = true;
   TEST_PASS(label_);
 }
