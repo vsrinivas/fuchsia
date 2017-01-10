@@ -485,6 +485,7 @@ static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
         _fs_truncate(vndir, off + MINFS_DIRENT_SIZE);
     }
 
+    // This effectively 'unlinks' the target node without deleting the direntry
     vn->inode.link_count--;
     vn_release(vn);
 
@@ -536,10 +537,17 @@ static mx_status_t cb_dir_force_unlink(vnode_t* vndir, minfs_dirent_t* de,
     return do_unlink(vndir, vn, de, offs);
 }
 
-// since these rename callbacks operates on a single name, they actually just do
-// some validation and change an inode, rather than altering any names
-static mx_status_t cb_dir_can_rename(vnode_t* vndir, minfs_dirent_t* de,
-                                     dir_args_t* args, de_off_t* offs) {
+// Given a (name, inode, type) combination:
+//   - If no corresponding 'name' is found, ERR_NOT_FOUND is returned
+//   - If the 'name' corresponds to a vnode, check that the target vnode:
+//      - Does not have the same inode as the argument inode
+//      - Is the same type as the argument 'type'
+//      - Is unlinkable
+//   - If the previous checks pass, then:
+//      - Remove the old vnode (decrement link count by one)
+//      - Replace the old vnode's position in the directory with the new inode
+static mx_status_t cb_dir_attempt_rename(vnode_t* vndir, minfs_dirent_t* de,
+                                         dir_args_t* args, de_off_t* offs) {
     if ((de->ino == 0) || (args->len != de->namelen) ||
         memcmp(args->name, de->name, args->len)) {
         return do_next_dirent(de, offs);
@@ -563,8 +571,15 @@ static mx_status_t cb_dir_can_rename(vnode_t* vndir, minfs_dirent_t* de,
         return status;
     }
 
+    vn->inode.link_count--;
     vn_release(vn);
-    return DIR_CB_DONE;
+
+    de->ino = args->ino;
+    status = _fs_write_exact(vndir, de, DirentSize(de->namelen), offs->off);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    return DIR_CB_SAVE_SYNC;
 }
 
 static mx_status_t cb_dir_update_inode(vnode_t* vndir, minfs_dirent_t* de,
@@ -1264,20 +1279,15 @@ static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
     args.len = newlen;
     args.ino = oldvn->ino;
     args.type = VNODE_IS_DIR(oldvn) ? kMinfsTypeDir : kMinfsTypeFile;
-    status = vn_dir_for_each(newdir, &args, cb_dir_can_rename);
+    status = vn_dir_for_each(newdir, &args, cb_dir_attempt_rename);
     if (status == ERR_NOT_FOUND) {
         // if 'newname' does not exist, create it
         args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(newlen)));
         if ((status = vn_dir_for_each(newdir, &args, cb_dir_append)) < 0) {
             goto done;
         }
-        status = 0;
-    } else if (status == 0) {
-        // if 'newname' does exist, replace its inode.
-        status = vn_dir_for_each(newdir, &args, cb_dir_update_inode);
-    }
-
-    if (status != 0) {
+        status = NO_ERROR;
+    } else if (status != NO_ERROR) {
         goto done;
     }
 
