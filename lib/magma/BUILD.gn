@@ -47,3 +47,9 @@ shared_library("magma") {
     "src/libmagma($magma_shared_toolchain)",
   ]
 }
+
+group("vulkan") {
+  public_deps = [
+    "//third_party/vulkan_loader_and_validation_layers:vulkan",
+  ]
+}
