@@ -12,6 +12,8 @@ source_set("lib") {
   ]
 
   deps = [
+    "//apps/modular/lib/app",
+    "//apps/netconnector/services",
     "//lib/fidl/cpp/waiter",
     "//lib/ftl",
     "//lib/mtl",
