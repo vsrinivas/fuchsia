@@ -182,12 +182,10 @@ static status_t arm_shared_page_fault_handler(struct arm_fault_frame *frame, uin
     // decode the fault status (from table B3-23) and see if we need to call into the VMM for a page fault
     uint32_t fault_status = (BIT(fsr, 10) ? (1<<4) : 0) |  BITS(fsr, 3, 0);
     switch (fault_status) {
-        case 0b01101:
-        case 0b01111: // permission fault
-            // XXX add flag for permission
-            PANIC_UNIMPLEMENTED;
-        case 0b00101:
-        case 0b00111: { // translation fault
+        case 0b01101: // permission fault first level
+        case 0b01111: // permission fault second level
+        case 0b00101: // translation fault first level
+        case 0b00111: { // translation fault second level
             bool write = !!BIT(fsr, 11);
             bool user = (frame->spsr & CPSR_MODE_MASK) == CPSR_MODE_USR;
 
@@ -195,7 +193,10 @@ static status_t arm_shared_page_fault_handler(struct arm_fault_frame *frame, uin
             pf_flags |= write ? VMM_PF_FLAG_WRITE : 0;
             pf_flags |= user ? VMM_PF_FLAG_USER : 0;
             pf_flags |= instruction_fault ? VMM_PF_FLAG_INSTRUCTION : 0;
-            pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
+            // translation faults get turned into NOT_PRESENT
+            if (fault_status == 0b00101 || fault_status == 0b00111) {
+                pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
+            }
 
             arch_enable_ints();
             status_t err = vmm_page_fault_handler(far, pf_flags);
