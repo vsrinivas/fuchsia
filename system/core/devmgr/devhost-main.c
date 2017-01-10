@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
     if ((argc > 1) && (!strcmp(argv[1], "root"))) {
         as_root = true;
 
-        mx_status_t status = devmgr_launch_acpisvc();
+        mx_status_t status = devmgr_launch_acpisvc(job_handle);
         if (status != NO_ERROR) {
             return 1;
         }

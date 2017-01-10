@@ -6,7 +6,7 @@
 
 #include <magenta/types.h>
 
-mx_status_t devmgr_launch_acpisvc(void);
+mx_status_t devmgr_launch_acpisvc(mx_handle_t job_handle);
 mx_status_t devmgr_init_pcie(void);
 
 void devmgr_reboot(void);
