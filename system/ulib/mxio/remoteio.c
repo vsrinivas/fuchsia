@@ -206,7 +206,7 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
 
     mx_status_t r;
 
-    mx_handle_t* rchannel = pthread_getspecific(rchannel_key);
+    static thread_local mx_handle_t* rchannel;
     if (rchannel == NULL) {
         if ((rchannel = malloc(sizeof(mx_handle_t) * 2)) == NULL) {
             return ERR_NO_MEMORY;
@@ -215,8 +215,9 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
             free(rchannel);
             return r;
         }
+        // This is set just to run the associated destructor.
+        pthread_setspecific(rchannel_key, rchannel);
     }
-    pthread_setspecific(rchannel_key, rchannel);
 
     msg->op |= MXRIO_REPLY_CHANNEL;
     msg->handle[msg->hcount++] = rchannel[1];
@@ -277,6 +278,7 @@ fail_close_reply_channel:
     if (mx_channel_create(MX_FLAG_REPLY_CHANNEL, &rchannel[0], &rchannel[1]) < 0) {
         free(rchannel);
         rchannel = NULL;
+        pthread_setspecific(rchannel_key, NULL);
     }
     return r;
 }
