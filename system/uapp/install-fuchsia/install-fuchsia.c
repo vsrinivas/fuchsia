@@ -541,7 +541,21 @@ static partition_flags find_install_partitions(gpt_device_t* gpt_data,
                                 &part_info[parts_requested]);
 
             if (rc == NO_ERROR) {
-                if (part_id > 0) {
+                // check if this is the first partition on disk, we could sort
+                // but that seems overly involved for our simple requirements
+                // for this use case
+                bool first = true;
+                for (int idx = 0;
+                     idx < PARTITIONS_COUNT && gpt_data->partitions[idx] != NULL;
+                     idx++) {
+                    if (gpt_data->partitions[part_id]->first >
+                        gpt_data->partitions[idx]->first) {
+                        first = false;
+                        break;
+                    }
+                }
+
+                if (!first) {
                     part_masks[parts_requested] = PART_EFI;
                     parts_found++;
                 } else {
