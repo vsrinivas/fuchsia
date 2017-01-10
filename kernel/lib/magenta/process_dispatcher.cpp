@@ -275,7 +275,7 @@ void ProcessDispatcher::RemoveThread(UserThread* t) {
 }
 
 
-void ProcessDispatcher::AllHandlesClosed() {
+void ProcessDispatcher::on_zero_handles() {
     LTRACE_ENTRY_OBJ;
 
     // check that we're not already entering a dead state
