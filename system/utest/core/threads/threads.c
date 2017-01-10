@@ -10,6 +10,16 @@
 #include <unittest/unittest.h>
 #include <runtime/thread.h>
 
+static mx_handle_t get_root_job(void) {
+#ifdef BUILD_COMBINED_TESTS
+    extern mx_handle_t root_job;
+    return root_job;
+#else
+    // TODO(kulakowski) Get this from somewhere.
+    return MX_HANDLE_INVALID;
+#endif
+}
+
 static void test_thread_fn(void* arg) {
     // Note: You shouldn't use C standard library functions from this thread.
     mx_nanosleep(MX_MSEC(100));
@@ -88,7 +98,7 @@ static bool test_thread_start_on_initial_thread(void) {
     mx_handle_t process;
     mx_handle_t vmar;
     mx_handle_t thread;
-    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
     ASSERT_EQ(mx_thread_create(process, kThreadName, sizeof(kThreadName) - 1,
                                0, &thread), NO_ERROR, "");
@@ -112,7 +122,7 @@ static bool test_thread_start_with_zero_instruction_pointer(void) {
     mx_handle_t process;
     mx_handle_t vmar;
     mx_handle_t thread;
-    ASSERT_EQ(mx_process_create(0, kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
     ASSERT_EQ(mx_thread_create(process, kThreadName, sizeof(kThreadName) - 1,
                                0, &thread), NO_ERROR, "");
