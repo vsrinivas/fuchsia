@@ -44,6 +44,8 @@ class Settings {
   explicit Settings(const ftl::CommandLine& command_line) {
     device_shell = command_line.GetOptionValueWithDefault(
         "device-shell", "file:///system/apps/dummy_device_shell");
+    user_runner = command_line.GetOptionValueWithDefault("user-runner",
+        "file:///system/apps/user_runner");
     user_shell = command_line.GetOptionValueWithDefault(
         "user-shell", "file:///system/apps/armadillo_user_shell");
 
@@ -60,10 +62,13 @@ class Settings {
     return R"USAGE(device_runner
       --device-shell=DEVICE_SHELL
       --device-shell-args=SHELL_ARGS
+      --user-runner=USER_RUNNER
       --user-shell=USER_SHELL
       --user-shell-args=SHELL_ARGS
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to "file:///system/apps/dummy_device_shell".
+    USER_RUNNER: URL of the user runner implementation to run.
+                Defaults to "file:///system/apps/user_runner"
     USER_SHELL: URL of the user shell to run.
                 Defaults to "file:///system/apps/armadillo_user_shell".
                 For integration testing use "dummy_user_shell".
@@ -72,6 +77,7 @@ class Settings {
 
   std::string device_shell;
   std::vector<std::string> device_shell_args;
+  std::string user_runner;
   std::string user_shell;
   std::vector<std::string> user_shell_args;
 
@@ -195,6 +201,7 @@ class DeviceRunnerApp : public UserProvider,
 
     user_controller_impl_.reset(new UserControllerImpl(
         app_context_,
+        settings_.user_runner,
         settings_.user_shell,
         settings_.user_shell_args,
         std::move(user_id), std::move(ledger_repository),

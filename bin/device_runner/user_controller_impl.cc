@@ -14,12 +14,12 @@ namespace modular {
 namespace {
 
 constexpr char kUserScopeLabelPrefix[] = "user-";
-constexpr char kUserRunnerUrl[] = "file:///system/apps/user_runner";
 
 }  // namespace
 
 UserControllerImpl::UserControllerImpl(
     std::shared_ptr<ApplicationContext> app_context,
+    const std::string& user_runner,
     const std::string& user_shell,
     const std::vector<std::string>& user_shell_args,
     fidl::Array<uint8_t> user_id,
@@ -45,7 +45,7 @@ UserControllerImpl::UserControllerImpl(
 
   // 2. Launch UserRunner in the new environment.
   auto launch_info = ApplicationLaunchInfo::New();
-  launch_info->url = kUserRunnerUrl;
+  launch_info->url = user_runner;
   ServiceProviderPtr services;
   launch_info->services = services.NewRequest();
   launcher->CreateApplication(std::move(launch_info),

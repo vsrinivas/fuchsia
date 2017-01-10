@@ -54,6 +54,7 @@ class UserControllerImpl : public UserController {
 
   UserControllerImpl(
       std::shared_ptr<ApplicationContext> app_context,
+      const std::string& user_runner,
       const std::string& user_shell,
       const std::vector<std::string>& user_shell_args,
       fidl::Array<uint8_t> user_id,

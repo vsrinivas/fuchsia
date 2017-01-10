@@ -39,5 +39,7 @@ fidl("private") {
 
   visibility = [
     "//apps/modular/*",
+    # Exposed for experimental user_runner implementation.
+    "//apps/modules/exp/*",
   ]
 }
