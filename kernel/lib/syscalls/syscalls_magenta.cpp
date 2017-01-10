@@ -242,6 +242,7 @@ mx_status_t sys_cprng_draw(void* _buffer, size_t len, size_t* _actual) {
     uint8_t kernel_buf[kMaxCPRNGDraw];
 
     auto prng = crypto::GlobalPRNG::GetInstance();
+    ASSERT(prng->is_thread_safe());
     prng->Draw(kernel_buf, static_cast<int>(len));
 
     if (make_user_ptr(_buffer).copy_array_to_user(kernel_buf, len) != NO_ERROR)
@@ -264,6 +265,7 @@ mx_status_t sys_cprng_add_entropy(const void* _buffer, size_t len) {
         return ERR_INVALID_ARGS;
 
     auto prng = crypto::GlobalPRNG::GetInstance();
+    ASSERT(prng->is_thread_safe());
     prng->AddEntropy(kernel_buf, static_cast<int>(len));
 
     // Get rid of the stack copy of the random data
