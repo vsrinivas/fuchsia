@@ -382,6 +382,16 @@ GLOBAL_DEFINES += $(EXTERNAL_DEFINES)
 $(info EXTERNAL_DEFINES = $(EXTERNAL_DEFINES))
 endif
 
+# Modules are added earlier before the recurse stage, so just print the info here
+ifneq ($(EXTERNAL_MODULES),)
+$(info EXTERNAL_MODULES = $(EXTERNAL_MODULES))
+endif
+
+ifneq ($(EXTERNAL_KERNEL_DEFINES),)
+KERNEL_DEFINES += $(EXTERNAL_KERNEL_DEFINES)
+$(info EXTERNAL_KERNEL_DEFINES = $(EXTERNAL_KERNEL_DEFINES))
+endif
+
 # prefix all of the paths in GLOBAL_INCLUDES and KERNEL_INCLUDES with -I
 GLOBAL_INCLUDES := $(addprefix -I,$(GLOBAL_INCLUDES))
 KERNEL_INCLUDES := $(addprefix -I,$(KERNEL_INCLUDES))
