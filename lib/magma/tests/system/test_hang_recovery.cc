@@ -45,7 +45,9 @@ public:
             magma_system_close(connection_);
     }
 
-    void SubmitCommandBuffer(bool bogus)
+    enum How { NORMAL, FAULT, HANG };
+
+    void SubmitCommandBuffer(How how)
     {
         ASSERT_NE(connection_, nullptr);
 
@@ -58,23 +60,27 @@ public:
         void* vaddr;
         ASSERT_EQ(0, magma_system_map(connection_, batch_buffer, &vaddr));
 
-        EXPECT_TRUE(InitBatchBuffer(vaddr, size));
-        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, bogus));
+        EXPECT_TRUE(InitBatchBuffer(vaddr, size, how == HANG));
+        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, how == FAULT));
 
         magma_system_submit_command_buffer(connection_, command_buffer, context_id_);
 
         // TODO(MA-129) - wait_rendering should return an error
         magma_system_wait_rendering(connection_, batch_buffer);
 
-        if (bogus) {
-            magma_status_t status = magma_system_get_error(connection_);
-            // Wait rendering can't pass back a proper error yet
-            EXPECT_TRUE(status == MAGMA_STATUS_CONNECTION_LOST ||
-                        status == MAGMA_STATUS_INTERNAL_ERROR);
-            EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
-        } else {
+        switch (how) {
+        case NORMAL:
             EXPECT_EQ(MAGMA_STATUS_OK, magma_system_get_error(connection_));
             EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
+            break;
+        case FAULT:
+            EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_system_get_error(connection_));
+            EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
+            break;
+        case HANG:
+            EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_system_get_error(connection_));
+            EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
+            break;
         }
 
         EXPECT_EQ(magma_system_unmap(connection_, batch_buffer), 0);
@@ -83,26 +89,35 @@ public:
         magma_system_free(connection_, command_buffer);
     }
 
-    bool InitBatchBuffer(void* vaddr, uint64_t size)
+    bool InitBatchBuffer(void* vaddr, uint64_t size, bool hang)
     {
         if ((magma_system_get_device_id(fd()) >> 8) != 0x19)
             return DRETF(false, "not an intel gen9 device");
 
         memset(vaddr, 0, size);
 
+        // store dword
         reinterpret_cast<uint32_t*>(vaddr)[0] = (0x20 << 23) | (4 - 2) | (1 << 22); // gtt
         reinterpret_cast<uint32_t*>(vaddr)[1] =
             0x1000000; // gpu address - overwritten by relocation (or not)
         reinterpret_cast<uint32_t*>(vaddr)[2] = 0;
         reinterpret_cast<uint32_t*>(vaddr)[3] = kValue;
-        reinterpret_cast<uint32_t*>(vaddr)[4] = 0xA << 23;
+
+        // wait for semaphore - proceed if dword at given address > dword given
+        reinterpret_cast<uint32_t*>(vaddr)[4] = (0x1C << 23) | (4 - 2) | (1 << 22); // gtt
+        reinterpret_cast<uint32_t*>(vaddr)[5] = hang ? ~0 : 0;
+        reinterpret_cast<uint32_t*>(vaddr)[6] =
+            0x1000000; // gpu address - overwritten by relocation (or not)
+        reinterpret_cast<uint32_t*>(vaddr)[7] = 0;
+
+        reinterpret_cast<uint32_t*>(vaddr)[8] = 0xA << 23;
         reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1] = 0xdeadbeef;
 
         return true;
     }
 
     bool InitCommandBuffer(magma_buffer_t buffer, magma_buffer_t batch_buffer,
-                           uint64_t batch_buffer_length, bool bogus)
+                           uint64_t batch_buffer_length, bool fault)
     {
         void* vaddr;
         if (magma_system_map(connection_, buffer, &vaddr) != 0)
@@ -116,12 +131,19 @@ public:
         auto exec_resource =
             reinterpret_cast<struct magma_system_exec_resource*>(command_buffer + 1);
         exec_resource->buffer_id = magma_system_get_buffer_id(batch_buffer);
-        exec_resource->num_relocations = bogus ? 0 : 1;
+        exec_resource->num_relocations = fault ? 0 : 2;
         exec_resource->offset = 0;
         exec_resource->length = batch_buffer_length;
 
         auto reloc = reinterpret_cast<struct magma_system_relocation_entry*>(exec_resource + 1);
-        reloc->offset = 0x4;
+        reloc->offset = 1 * 4;
+        reloc->target_resource_index = 0;
+        reloc->target_offset = batch_buffer_length - 4;
+        reloc->read_domains_bitfield = 0;
+        reloc->write_domains_bitfield = 0;
+
+        reloc++;
+        reloc->offset = 6 * 4;
         reloc->target_resource_index = 0;
         reloc->target_offset = batch_buffer_length - 4;
         reloc->read_domains_bitfield = 0;
@@ -143,11 +165,15 @@ TEST(HangRecovery, One)
 {
     std::unique_ptr<TestConnection> test;
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(false);
+    test->SubmitCommandBuffer(TestConnection::NORMAL);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(true);
+    test->SubmitCommandBuffer(TestConnection::FAULT);
     test.reset(new TestConnection());
-    test->SubmitCommandBuffer(false);
+    test->SubmitCommandBuffer(TestConnection::NORMAL);
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::HANG);
+    test.reset(new TestConnection());
+    test->SubmitCommandBuffer(TestConnection::NORMAL);
 }
 
 TEST(HangRecovery, Two)
@@ -155,7 +181,7 @@ TEST(HangRecovery, Two)
     std::thread happy([] {
         std::unique_ptr<TestConnection> test(new TestConnection());
         for (uint32_t count = 0; count < 100; count++) {
-            test->SubmitCommandBuffer(false);
+            test->SubmitCommandBuffer(TestConnection::NORMAL);
         }
     });
 
@@ -163,9 +189,12 @@ TEST(HangRecovery, Two)
         std::unique_ptr<TestConnection> test(new TestConnection());
         for (uint32_t count = 0; count < 100; count++) {
             if (count % 2 == 0) {
-                test->SubmitCommandBuffer(false);
+                test->SubmitCommandBuffer(TestConnection::NORMAL);
+            } else if (count % 3 == 0) {
+                test->SubmitCommandBuffer(TestConnection::FAULT);
+                test.reset(new TestConnection());
             } else {
-                test->SubmitCommandBuffer(true);
+                test->SubmitCommandBuffer(TestConnection::HANG);
                 test.reset(new TestConnection());
             }
         }
