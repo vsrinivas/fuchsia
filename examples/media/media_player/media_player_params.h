@@ -21,10 +21,19 @@ class MediaPlayerParams {
 
   const std::string& url() const { return url_; }
 
+  const std::string& device_name() const { return device_name_; }
+
+  const std::string& service_name() const { return service_name_; }
+
  private:
+  void Usage();
+
   bool is_valid_;
+
   std::string path_;
   std::string url_;
+  std::string device_name_;
+  std::string service_name_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerParams);
 };

@@ -65,45 +65,56 @@ MediaPlayerView::MediaPlayerView(
   media::MediaServicePtr media_service =
       application_context->ConnectToEnvironmentService<media::MediaService>();
 
-  // Get an audio renderer.
-  media::AudioRendererPtr audio_renderer;
-  media::MediaRendererPtr audio_media_renderer;
-  media_service->CreateAudioRenderer(audio_renderer.NewRequest(),
-                                     audio_media_renderer.NewRequest());
+  if (params.device_name().empty()) {
+    // Get an audio renderer.
+    media::AudioRendererPtr audio_renderer;
+    media::MediaRendererPtr audio_media_renderer;
+    media_service->CreateAudioRenderer(audio_renderer.NewRequest(),
+                                       audio_media_renderer.NewRequest());
 
-  // Get a video renderer.
-  media::MediaRendererPtr video_media_renderer;
-  media_service->CreateVideoRenderer(video_renderer_.NewRequest(),
-                                     video_media_renderer.NewRequest());
+    // Get a video renderer.
+    media::MediaRendererPtr video_media_renderer;
+    media_service->CreateVideoRenderer(video_renderer_.NewRequest(),
+                                       video_media_renderer.NewRequest());
 
-  mozart::ViewOwnerPtr video_view_owner;
-  video_renderer_->CreateView(video_view_owner.NewRequest());
-  GetViewContainer()->AddChild(kVideoChildKey, std::move(video_view_owner));
+    mozart::ViewOwnerPtr video_view_owner;
+    video_renderer_->CreateView(video_view_owner.NewRequest());
+    GetViewContainer()->AddChild(kVideoChildKey, std::move(video_view_owner));
 
-  // We start with a non-zero size so we get a progress bar regardless of
-  // whether we get video.
-  video_size_.width = 640u;
-  video_size_.height = 100u;
-  video_renderer_->GetVideoSize([this](mozart::SizePtr video_size) {
-    FTL_LOG(INFO) << "video_size " << video_size->width << "x"
-                  << video_size->height;
-    video_size_ = *video_size;
-    Invalidate();
-  });
+    // We start with a non-zero size so we get a progress bar regardless of
+    // whether we get video.
+    video_size_.width = 640u;
+    video_size_.height = 100u;
+    video_renderer_->GetVideoSize([this](mozart::SizePtr video_size) {
+      FTL_LOG(INFO) << "video_size " << video_size->width << "x"
+                    << video_size->height;
+      video_size_ = *video_size;
+      Invalidate();
+    });
 
-  // Get a reader.
-  media::SeekingReaderPtr reader;
-  if (!params.url().empty()) {
-    media_service->CreateNetworkReader(params.url(), reader.NewRequest());
+    // Get a reader.
+    media::SeekingReaderPtr reader;
+    if (!params.url().empty()) {
+      media_service->CreateNetworkReader(params.url(), reader.NewRequest());
+    } else {
+      FTL_DCHECK(!params.path().empty());
+      media_service->CreateFileReader(params.path(), reader.NewRequest());
+    }
+
+    // Create a player from all that stuff.
+    media_service->CreatePlayer(
+        std::move(reader), std::move(audio_media_renderer),
+        std::move(video_media_renderer), media_player_.NewRequest());
   } else {
-    FTL_DCHECK(!params.path().empty());
-    media_service->CreateFileReader(params.path(), reader.NewRequest());
-  }
+    // Create a player proxy.
+    media_service->CreatePlayerProxy(params.device_name(),
+                                     params.service_name(),
+                                     media_player_.NewRequest());
 
-  // Create a player from all that stuff.
-  media_service->CreatePlayer(
-      std::move(reader), std::move(audio_media_renderer),
-      std::move(video_media_renderer), media_player_.NewRequest());
+    // Use a non-zero size so we get a progress bar.
+    video_size_.width = 640u;
+    video_size_.height = 100u;
+  }
 
   // Get the first frames queued up so we can show something.
   media_player_->Pause();
@@ -124,8 +135,8 @@ void MediaPlayerView::OnEvent(mozart::EventPtr event,
   switch (event->action) {
     case mozart::EventType::POINTER_DOWN:
       FTL_DCHECK(event->pointer_data);
-      if (Contains(progress_bar_rect_, event->pointer_data->x,
-                   event->pointer_data->y)) {
+      if (metadata_ && Contains(progress_bar_rect_, event->pointer_data->x,
+                                event->pointer_data->y)) {
         // User poked the progress bar...seek.
         media_player_->Seek((event->pointer_data->x - progress_bar_rect_.x) *
                             metadata_->duration / progress_bar_rect_.width);
@@ -166,6 +177,10 @@ void MediaPlayerView::OnEvent(mozart::EventPtr event,
 
 void MediaPlayerView::OnLayout() {
   FTL_DCHECK(properties());
+
+  if (!video_renderer_) {
+    return;
+  }
 
   auto view_properties = mozart::ViewProperties::New();
   view_properties->view_layout = mozart::ViewLayout::New();
