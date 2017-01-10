@@ -9,6 +9,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/bcm.h>
+#include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
 
 #include <inttypes.h>
@@ -516,6 +517,25 @@ static void lan9514_free(lan9514_t* eth) {
     free(eth);
 }
 
+static ssize_t lan9514_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
+    switch (op) {
+    case IOCTL_ETHERNET_GET_MAC_ADDR: {
+        uint8_t* mac = reply;
+        if (max < ETH_MAC_SIZE) return ERR_BUFFER_TOO_SMALL;
+        lan9514_get_mac_addr(dev, mac);
+        return ETH_MAC_SIZE;
+    }
+    case IOCTL_ETHERNET_GET_MTU: {
+        size_t* mtu = reply;
+        if (max < sizeof(*mtu)) return ERR_BUFFER_TOO_SMALL;
+        *mtu = lan9514_get_mtu(dev);
+        return sizeof(*mtu);
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
 static mx_status_t lan9514_release(mx_device_t* device) {
     lan9514_t* eth = get_lan9514(device);
     lan9514_free(eth);
@@ -543,6 +563,7 @@ static ethernet_protocol_t lan9514_proto = {
 };
 
 static mx_protocol_device_t lan9514_device_proto = {
+    .ioctl = lan9514_ioctl,
     .unbind = lan9514_unbind,
     .release = lan9514_release,
     .read = lan9514_read,

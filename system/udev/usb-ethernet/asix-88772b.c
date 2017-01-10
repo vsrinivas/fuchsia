@@ -7,6 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
+#include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
 
 #include <inttypes.h>
@@ -389,6 +390,25 @@ static mx_status_t ax88772b_release(mx_device_t* device) {
     return NO_ERROR;
 }
 
+static ssize_t ax88772b_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
+    switch (op) {
+    case IOCTL_ETHERNET_GET_MAC_ADDR: {
+        uint8_t* mac = reply;
+        if (max < ETH_MAC_SIZE) return ERR_BUFFER_TOO_SMALL;
+        ax88772b_get_mac_addr(dev, mac);
+        return ETH_MAC_SIZE;
+    }
+    case IOCTL_ETHERNET_GET_MTU: {
+        size_t* mtu = reply;
+        if (max < sizeof(*mtu)) return ERR_BUFFER_TOO_SMALL;
+        *mtu = ax88772b_get_mtu(dev);
+        return sizeof(*mtu);
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
 // simplified read/write interface
 
 static ssize_t ax88772b_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
@@ -408,6 +428,7 @@ static ssize_t ax88772b_write(mx_device_t* dev, const void* data, size_t len, mx
 }
 
 static mx_protocol_device_t ax88772b_device_proto = {
+    .ioctl = ax88772b_ioctl,
     .unbind = ax88772b_unbind,
     .release = ax88772b_release,
     .read = ax88772b_read,
