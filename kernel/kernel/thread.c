@@ -45,6 +45,10 @@ struct thread_stats thread_stats[SMP_MAX_CPUS];
 
 #define DEBUG_THREAD_CONTEXT_SWITCH 0
 
+#define THREAD_INITIAL_TIME_SLICE ((lk_bigtime_t)50000000u) // 50ms
+#define THREAD_TICK_RATE ((lk_bigtime_t)10000000u) // 10ms
+#define THREAD_TICK_RATE_MS (THREAD_TICK_RATE / 1000000u) // 10ms
+
 /* global thread list */
 static struct list_node thread_list;
 
@@ -638,12 +642,12 @@ static void thread_resched(void)
         return;
 
     lk_bigtime_t now = current_time_hires();
-    oldthread->runtime_ns += now - oldthread->last_started_running_ns;
-    newthread->last_started_running_ns = now;
+    oldthread->runtime_ns += now - oldthread->last_started_running;
+    newthread->last_started_running = now;
 
     /* set up quantum for the new thread if it was consumed */
-    if (newthread->remaining_quantum <= 0) {
-        newthread->remaining_quantum = 5; // XXX make this smarter
+    if (newthread->remaining_time_slice == 0) {
+        newthread->remaining_time_slice = THREAD_INITIAL_TIME_SLICE;
     }
 
     /* mark the cpu ownership of the threads */
@@ -698,7 +702,7 @@ static void thread_resched(void)
         dprintf(ALWAYS, "arch_context_switch: start preempt, cpu %u, old %p (%s), new %p (%s)\n",
                 cpu, oldthread, oldthread->name, newthread, newthread->name);
 #endif
-        timer_set_periodic(&preempt_timer[cpu], 10, (timer_callback)thread_timer_tick, NULL);
+        timer_set_periodic(&preempt_timer[cpu], THREAD_TICK_RATE_MS, (timer_callback)thread_timer_tick, NULL);
     }
 #endif
 
@@ -768,7 +772,7 @@ void thread_yield(void)
 
     /* we are yielding the cpu, so stick ourselves into the tail of the run queue and reschedule */
     current_thread->state = THREAD_READY;
-    current_thread->remaining_quantum = 0;
+    current_thread->remaining_time_slice = 0;
     if (likely(!thread_is_idle(current_thread))) { /* idle thread doesn't go in the run queue */
         insert_in_run_queue_tail(current_thread);
     }
@@ -817,7 +821,7 @@ void thread_preempt(bool interrupt)
     /* we are being preempted, so we get to go back into the front of the run queue if we have quantum left */
     current_thread->state = THREAD_READY;
     if (likely(!thread_is_idle(current_thread))) { /* idle thread doesn't go in the run queue */
-        if (current_thread->remaining_quantum > 0)
+        if (current_thread->remaining_time_slice > 0)
             insert_in_run_queue_head(current_thread);
         else
             insert_in_run_queue_tail(current_thread); /* if we're out of quantum, go to the tail of the queue */
@@ -871,8 +875,11 @@ enum handler_return thread_timer_tick(void)
     if (thread_is_real_time_or_idle(current_thread))
         return INT_NO_RESCHEDULE;
 
-    current_thread->remaining_quantum--;
-    if (current_thread->remaining_quantum <= 0) {
+    current_thread->remaining_time_slice -= MIN(THREAD_TICK_RATE, current_thread->remaining_time_slice);
+
+    ktrace_probe2("timer_tick", (uint32_t)current_thread->user_tid, current_thread->remaining_time_slice);
+
+    if (current_thread->remaining_time_slice == 0) {
         return INT_RESCHEDULE;
     } else {
         return INT_NO_RESCHEDULE;
@@ -973,7 +980,7 @@ lk_bigtime_t thread_runtime(const thread_t *t)
 
     lk_bigtime_t runtime = t->runtime_ns;
     if (t->state == THREAD_RUNNING) {
-        runtime += current_time_hires() - t->last_started_running_ns;
+        runtime += current_time_hires() - t->last_started_running;
     }
 
     THREAD_UNLOCK(state);
@@ -1221,7 +1228,7 @@ void dump_thread(thread_t *t, bool full_dump)
 
     lk_bigtime_t runtime = t->runtime_ns;
     if (t->state == THREAD_RUNNING) {
-        runtime += current_time_hires() - t->last_started_running_ns;
+        runtime += current_time_hires() - t->last_started_running;
     }
 
     char oname[THREAD_NAME_LENGTH];
@@ -1230,11 +1237,11 @@ void dump_thread(thread_t *t, bool full_dump)
     if (full_dump) {
         dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name);
 #if WITH_SMP
-        dprintf(INFO, "\tstate %s, curr_cpu %d, pinned_cpu %d, priority %d, remaining quantum %d\n",
-                thread_state_to_str(t->state), t->curr_cpu, t->pinned_cpu, t->priority, t->remaining_quantum);
+        dprintf(INFO, "\tstate %s, curr_cpu %d, pinned_cpu %d, priority %d, remaining time slice %" PRIu64 "\n",
+                thread_state_to_str(t->state), t->curr_cpu, t->pinned_cpu, t->priority, t->remaining_time_slice);
 #else
-        dprintf(INFO, "\tstate %s, priority %d, remaining quantum %d\n",
-                thread_state_to_str(t->state), t->priority, t->remaining_quantum);
+        dprintf(INFO, "\tstate %s, priority %d, remaining quantum %" PRIu64 "\n",
+                thread_state_to_str(t->state), t->priority, t->remaining_time_slice);
 #endif
         dprintf(INFO, "\truntime_ns %" PRIu64 ", runtime_s %" PRIu64 "\n",
                 runtime, runtime / 1000000000);

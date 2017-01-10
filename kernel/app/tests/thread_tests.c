@@ -183,7 +183,7 @@ static void event_test(void)
 static int quantum_tester(void *arg)
 {
     for (;;) {
-        printf("%p: in this thread. rq %d\n", get_current_thread(), get_current_thread()->remaining_quantum);
+        printf("%p: in this thread. rq %" PRIu64 "\n", get_current_thread(), get_current_thread()->remaining_time_slice);
     }
     return 0;
 }

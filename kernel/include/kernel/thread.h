@@ -80,7 +80,8 @@ typedef struct thread {
     struct list_node queue_node;
     int priority;
     enum thread_state state;
-    int remaining_quantum;
+    lk_bigtime_t last_started_running;
+    lk_bigtime_t remaining_time_slice;
     unsigned int flags;
     unsigned int signals;
 #if WITH_SMP
@@ -96,8 +97,6 @@ typedef struct thread {
     uint64_t user_tid;
     uint64_t user_pid;
 
-    /* accounting information */
-    lk_bigtime_t last_started_running_ns;
     /* Total time in THREAD_RUNNING state.  If the thread is currently in
      * THREAD_RUNNING state, this excludes the time it has accrued since it
      * left the scheduler. */
