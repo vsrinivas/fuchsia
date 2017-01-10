@@ -7,6 +7,7 @@
 
 #include <mxtl/macros.h>
 #include <mxtl/mutex.h>
+#include <mxtl/null_lock.h>
 
 // Introduce preprocessor definitions for the underlying mutex data type and the
 // lock/unlock operations based on whether this code is being used in the kernel
@@ -39,6 +40,9 @@ public:
 
     explicit AutoLock(Mutex* mutex)
         :   AutoLock(mutex->GetInternal()) {}
+
+    explicit AutoLock(mxtl::NullLock*) : mutex_(nullptr) { }
+    explicit AutoLock(mxtl::NullLock&) : mutex_(nullptr) { }
 
     ~AutoLock() {
         release();
