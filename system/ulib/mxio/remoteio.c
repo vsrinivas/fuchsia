@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -39,6 +40,25 @@ struct mxrio {
 
     uint32_t flags;
 };
+
+static pthread_key_t rchannel_key;
+
+static void rchannel_cleanup(void* data) {
+    if (data == NULL) {
+        return;
+    }
+    mx_handle_t* handles = (mx_handle_t*)data;
+    if (handles[0] != MX_HANDLE_INVALID)
+        mx_handle_close(handles[0]);
+    if (handles[1] != MX_HANDLE_INVALID)
+        mx_handle_close(handles[1]);
+    free(handles);
+}
+
+void __mxio_rchannel_init(void) {
+    if (pthread_key_create(&rchannel_key, &rchannel_cleanup) != 0)
+        abort();
+}
 
 static const char* _opnames[] = MXRIO_OPNAMES;
 const char* mxio_opname(uint32_t op) {
@@ -186,17 +206,18 @@ static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
 
     mx_status_t r;
 
-    static thread_local mx_handle_t *rchannel = NULL;
+    mx_handle_t* rchannel = pthread_getspecific(rchannel_key);
     if (rchannel == NULL) {
         if ((rchannel = malloc(sizeof(mx_handle_t) * 2)) == NULL) {
             return ERR_NO_MEMORY;
         }
         if ((r = mx_channel_create(MX_FLAG_REPLY_CHANNEL, &rchannel[0], &rchannel[1])) < 0) {
             free(rchannel);
-            rchannel = NULL;
             return r;
         }
     }
+    pthread_setspecific(rchannel_key, rchannel);
+
     msg->op |= MXRIO_REPLY_CHANNEL;
     msg->handle[msg->hcount++] = rchannel[1];
 

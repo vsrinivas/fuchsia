@@ -173,3 +173,5 @@ ssize_t mxio_default_posix_ioctl(mxio_t* io, int req, va_list va);
 void __mxio_startup_handles_init(uint32_t num, mx_handle_t handles[],
                                  uint32_t handle_info[])
     __attribute__((visibility("hidden")));
+
+void __mxio_rchannel_init(void) __attribute__((visibility("hidden")));

@@ -398,6 +398,9 @@ void __libc_extensions_init(uint32_t handle_count,
     // Stash the rest for mxio_get_startup_handle callers to see.
     __mxio_startup_handles_init(handle_count, handle, handle_info);
 
+    // Set up thread local storage for rchannels.
+    __mxio_rchannel_init();
+
     // TODO(abarth): The cwd path string should be more tightly coupled with
     // the cwd handle.
     const char* cwd = getenv("PWD");
