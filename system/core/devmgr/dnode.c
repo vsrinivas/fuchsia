@@ -147,13 +147,34 @@ mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len) {
     mx_status_t r;
     dnode_t* dn;
 
+    // Use 'c->p' to point to the last seen vnode.
+    // Use 'c->n' to count the number of entries we've already returned.
+    if (c->n == 0) {
+        r = vfs_fill_dirent((void*)(ptr + pos), len - pos, ".", 1,
+                            VTYPE_TO_DTYPE(V_TYPE_DIR));
+        if (r < 0) {
+            return pos;
+        }
+        pos += r;
+        c->n++;
+    }
+    if (c->n == 1) {
+        r = vfs_fill_dirent((void*)(ptr + pos), len - pos, "..", 2,
+                            VTYPE_TO_DTYPE(V_TYPE_DIR));
+        if (r < 0) {
+            return pos;
+        }
+        pos += r;
+        c->n++;
+    }
+
     list_for_every_entry(&parent->children, dn, dnode_t, dn_entry) {
         if (search) {
             if (dn == last) {
                 search = false;
             }
         } else {
-            uint32_t vtype = (DN_TYPE(dn->flags) == DN_TYPE_DIR) ? V_TYPE_DIR : V_TYPE_FILE;
+            uint32_t vtype = DNODE_IS_DIR(dn) ? V_TYPE_DIR : V_TYPE_FILE;
             r = vfs_fill_dirent((void*)(ptr + pos), len - pos,
                                 dn->name, DN_NAME_LEN(dn->flags),
                                 VTYPE_TO_DTYPE(vtype));
@@ -162,8 +183,10 @@ mx_status_t dn_readdir(dnode_t* parent, void* cookie, void* data, size_t len) {
             }
             last = dn;
             pos += r;
+            c->n++;
         }
     }
+
     c->p = last;
     return pos;
 }

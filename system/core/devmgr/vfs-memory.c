@@ -25,9 +25,6 @@
 #define MAXBLOCKS 8192
 #define BLOCKSIZE 8192
 
-// 'true' if directory, 'false' if file
-#define DNODE_IS_DIR(dn) (dn->vnode->dnode != NULL)
-
 mx_status_t mem_get_node(vnode_t** out, mx_device_t* dev);
 mx_status_t mem_can_unlink(dnode_t* dn);
 
@@ -304,8 +301,7 @@ static mx_status_t mem_getattr(vnode_t* vn, vnattr_t* attr) {
 
 mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len) {
     if (parent->dnode == NULL) {
-        // TODO: not directory error?
-        return ERR_NOT_FOUND;
+        return ERR_NOT_DIR;
     }
     return dn_readdir(parent->dnode, cookie, data, len);
 }

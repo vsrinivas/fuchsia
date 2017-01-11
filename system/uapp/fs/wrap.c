@@ -75,6 +75,13 @@ int FN(open)(const char* path, int flags, mode_t mode) {
     DO_REAL(open, real_path, flags, mode);
 }
 
+int FL(opendir)(const char* path);
+int FN(opendir)(const char* path) {
+    char real_path[PATH_MAX];
+    PATH_WRAP(path, real_path);
+    DO_REAL(opendir, real_path);
+}
+
 int FL(mkdir)(const char* path, mode_t mode);
 int FN(mkdir)(const char* path, mode_t mode) {
     char real_path[PATH_MAX];

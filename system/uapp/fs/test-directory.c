@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -181,11 +183,92 @@ void test_directory_trailing_slash(void) {
     TRY(unlink("::b"));
 }
 
+typedef struct expected_dirent {
+    bool          seen; // Flip to true once it has been seen
+    const char*   d_name;
+    unsigned char d_type;
+} expected_dirent_t;
+
+void check_contains_all(const char* dirname, expected_dirent_t* edirents, size_t len) {
+    DIR* dir = opendir(dirname);
+    assert(dir != NULL);
+    size_t seen = 0;
+
+    while (seen != len) {
+        struct dirent *de = readdir(dir);
+        assert(de != NULL); // Terminated before seeing all the direntries we expected to see
+        bool found = false;
+        for (size_t i = 0; i < len; i++) {
+            if (strcmp(edirents[i].d_name, de->d_name) == 0) {
+                assert(edirents[i].d_type == de->d_type);
+                assert(!edirents[i].seen);
+                edirents[i].seen = true;
+                seen++;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            printf("Saw an unexpected dirent: %s\n", de->d_name);
+            assert(false);
+        }
+    }
+
+    assert(readdir(dir) == NULL); // There exists an entry we didn't expect to see
+    closedir(dir);
+
+    // Flip 'seen' back to false so the array of expected dirents can be reused
+    for (size_t i = 0; i < len; i++) {
+        edirents[i].seen = false;
+    }
+}
+
+void test_directory_readdir(void) {
+    printf("Test Directory Readdir\n");
+    TRY(mkdir("::a", 0755));
+    EXPECT_FAIL(mkdir("::a", 0755));
+
+    expected_dirent_t empty_dir[] = {
+        { false, ".", DT_DIR },
+        { false, "..", DT_DIR },
+    };
+    check_contains_all("::a", empty_dir, sizeof(empty_dir) / sizeof(empty_dir[0]));
+
+    TRY(mkdir("::a/dir1", 0755));
+    TRY(close(TRY(open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644))));
+    TRY(close(TRY(open("::a/file2", O_RDWR | O_CREAT | O_EXCL, 0644))));
+    TRY(mkdir("::a/dir2", 0755));
+    expected_dirent_t filled_dir[] = {
+        { false, ".", DT_DIR },
+        { false, "..", DT_DIR },
+        { false, "dir1", DT_DIR },
+        { false, "dir2", DT_DIR },
+        { false, "file1", DT_REG },
+        { false, "file2", DT_REG },
+    };
+    check_contains_all("::a", filled_dir, sizeof(filled_dir) / sizeof(filled_dir[0]));
+
+    TRY(unlink("::a/dir2"));
+    TRY(unlink("::a/file2"));
+    expected_dirent_t partial_dir[] = {
+        { false, ".", DT_DIR },
+        { false, "..", DT_DIR },
+        { false, "dir1", DT_DIR },
+        { false, "file1", DT_REG },
+    };
+    check_contains_all("::a", partial_dir, sizeof(partial_dir) / sizeof(partial_dir[0]));
+
+    TRY(unlink("::a/dir1"));
+    TRY(unlink("::a/file1"));
+    check_contains_all("::a", empty_dir, sizeof(empty_dir) / sizeof(empty_dir[0]));
+}
+
 int test_directory(void) {
     test_directory_coalesce();
     test_directory_filename_max();
     test_directory_large();
     test_directory_trailing_slash();
+    test_directory_readdir();
     // TODO(smklein): Run this when MemFS can execute it without causing an OOM
 #if 0
     test_directory_max();

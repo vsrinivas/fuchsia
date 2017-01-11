@@ -24,7 +24,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-unlink.c \
 
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
-MODULE_LDFLAGS += --wrap rename --wrap truncate
+MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir
 
 MODULE_LIBS := \
     ulib/mxio ulib/launchpad ulib/magenta ulib/musl

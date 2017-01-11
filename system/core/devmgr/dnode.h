@@ -12,12 +12,16 @@ typedef struct dnode dnode_t;
 #define DN_NAME_MAX 255
 #define DN_NAME_LEN(flags) ((flags) & 0xFF)
 
+// Warning: These flags are currently unused
 #define DN_TYPE_MASK    0xF00
 #define DN_TYPE_DIR     0x100
 #define DN_TYPE_FILE    0x200
 #define DN_TYPE_DEVICE  0x300
 #define DN_TYPE_SYMLINK 0x400
 #define DN_TYPE(flags) ((flags) & DN_TYPE_MASK)
+
+// 'true' if directory, 'false' if file
+#define DNODE_IS_DIR(dn) (dn->vnode->dnode != NULL)
 
 struct dnode {
     dnode_t* parent;
