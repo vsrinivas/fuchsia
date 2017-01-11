@@ -8,7 +8,6 @@
 #include "apps/maxwell/services/suggestion/proposal_publisher.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
-#include "apps/modular/src/document_store/documents.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
@@ -69,8 +68,6 @@ maxwell::ProposalPtr MkProposal(const std::string& label,
   const auto& data = content.module_data;
   if (data.size() > 0) {
     // TODO(afergan): Don't hardcode the doc id key or initial_data map key.
-    // TODO(afergan, azani): Right now we pass the colors as Strings because
-    // document_store::Value does not support hexadecimal.
     modular::JsonDoc doc;
     std::vector<std::string> segments{"init", label, "color"};
     modular::JsonPointer(modular::EscapeJsonPath(segments.begin(), segments.end()))

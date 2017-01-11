@@ -52,7 +52,6 @@ executable("module_suggester") {
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/app",
     "//apps/modular/lib/rapidjson",
-    "//apps/modular/services/document_store",
     "//lib/mtl",
   ]
 }
