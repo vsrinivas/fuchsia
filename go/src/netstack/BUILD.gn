@@ -52,3 +52,29 @@ executable("app") {
     "//third_party/lwip",
   ]
 }
+
+action("netstack2") {
+  out_path = "$root_out_dir/netstack2"
+
+  outputs = [ out_path ]
+
+  script = rebase_path("//.") + "/build/gobuild.py"
+  depfile_path = "${out_path}.d"
+  depfile = depfile_path
+
+  args = [
+    "--fuchsia-root",
+    rebase_path("//."),
+    "--root-out-dir",
+    rebase_path("$root_out_dir"),
+    "--depfile",
+    rebase_path(depfile_path),
+    "--current-cpu",
+    current_cpu,
+    "apps/netstack/netstack2",
+  ]
+
+  deps = [
+    "//third_party/go:go_runtime",
+  ]
+}
