@@ -6,12 +6,12 @@
 
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
-#include <GLFW/glfw3.h>
 
 #include "escher/renderer/image_owner.h"
 #include "escher/vk/vulkan_context.h"
 #include "escher/vk/vulkan_swapchain.h"
 
+#include "keyboard_handler.h"
 #include "vulkan_proc_addrs.h"
 
 class Demo : public escher::ImageOwner {
@@ -30,7 +30,7 @@ class Demo : public escher::ImageOwner {
   };
 
   Demo(InstanceParams instance_params, WindowParams window_params) {
-    InitGlfw();
+    InitWindowSystem();
     CreateInstance(instance_params);
     CreateWindowAndSurface(window_params);
     CreateDeviceAndQueue();
@@ -41,7 +41,7 @@ class Demo : public escher::ImageOwner {
     DestroySwapchain();
     DestroyDevice();
     DestroyInstance();
-    ShutdownGlfw();
+    ShutdownWindowSystem();
   }
 
   const std::vector<vk::LayerProperties>& GetInstanceLayers() const {
@@ -50,10 +50,21 @@ class Demo : public escher::ImageOwner {
   const std::vector<vk::ExtensionProperties>& GetInstanceExtensions() const {
     return instance_extensions_;
   }
-  GLFWwindow* GetWindow() const { return window_; }
 
   escher::VulkanContext GetVulkanContext();
   escher::VulkanSwapchain GetVulkanSwapchain() { return swapchain_; }
+
+  // Register a callback to fire when |key| is pressed.  Key must contain either
+  // a single alpha-numeric character (uppercase only), or one of the special
+  // values "ESCAPE", "SPACE", and "RETURN".
+  void SetKeyCallback(std::string key, std::function<void()> func);
+
+  // Notify the demo that it should stop looping and quit.
+  void SetShouldQuit();
+  bool ShouldQuit() { return should_quit_; }
+
+  // Poll for platform-specific events.
+  void PollEvents();
 
  private:
   // Implement ImageOwner::RecycleImage().
@@ -62,7 +73,6 @@ class Demo : public escher::ImageOwner {
                     escher::impl::GpuMemPtr mem) override;
 
   vk::Instance instance_;
-  GLFWwindow* window_;
   vk::SurfaceKHR surface_;
   // TODO: may not need to retain physical_device_
   vk::PhysicalDevice physical_device_;
@@ -80,7 +90,7 @@ class Demo : public escher::ImageOwner {
 
   uint32_t swapchain_image_count_ = 0;
 
-  void InitGlfw();
+  void InitWindowSystem();
   void CreateInstance(InstanceParams params);
   void CreateWindowAndSurface(const WindowParams& window_params);
   void CreateDeviceAndQueue();
@@ -89,7 +99,9 @@ class Demo : public escher::ImageOwner {
   void DestroySwapchain();
   void DestroyDevice();
   void DestroyInstance();
-  void ShutdownGlfw();
+  void ShutdownWindowSystem();
+
+  void AppendPlatformSpecificInstanceExtensionNames(InstanceParams* params);
 
   // Redirect to instance method.
   static VkBool32 RedirectDebugReport(VkDebugReportFlagsEXT flags,
@@ -117,4 +129,7 @@ class Demo : public escher::ImageOwner {
   std::vector<vk::ExtensionProperties> instance_extensions_;
 
   vk::InstanceCreateInfo instance_create_info;
+
+  KeyboardHandler keyboard_handler_;
+  bool should_quit_ = false;
 };

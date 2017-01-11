@@ -40,7 +40,7 @@ void RingTricks1::Init(escher::Stage* stage) {
                 MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
 
   ring_mesh1_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 300.f,
-                                   250.f, 18.f, -15.f);
+                                    250.f, 18.f, -15.f);
 }
 
 RingTricks1::~RingTricks1() {}
@@ -50,8 +50,8 @@ escher::Model* RingTricks1::Update(const escher::Stopwatch& stopwatch,
                                    escher::Stage* stage) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
-  float screen_width = 1600.f;
-  float screen_height = 1024.f;
+  float screen_width = stage->viewing_volume().width();
+  float screen_height = stage->viewing_volume().height();
   float min_height = 5.f;
   float max_height = 80.f;
   float elevation_range = max_height - min_height;

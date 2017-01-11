@@ -56,8 +56,7 @@ std::unique_ptr<MeshManager> NewMeshManager(CommandBufferPool* main_pool,
 
 }  // namespace
 
-EscherImpl::EscherImpl(const VulkanContext& context,
-                       const VulkanSwapchain& swapchain)
+EscherImpl::EscherImpl(const VulkanContext& context)
     : vulkan_context_(context),
       command_buffer_pool_(NewCommandBufferPool(context)),
       transfer_command_buffer_pool_(NewTransferCommandBufferPool(context)),

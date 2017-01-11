@@ -26,8 +26,8 @@
 #include "escher/vk/vulkan_swapchain_helper.h"
 #include "ftl/logging.h"
 
-static constexpr int kDemoWidth = 1600;
-static constexpr int kDemoHeight = 1024;
+static constexpr int kDemoWidth = 2160;
+static constexpr int kDemoHeight = 1440;
 
 // Material design places objects from 0.0f to 24.0f.
 static constexpr float kNear = 100.f;
@@ -37,43 +37,7 @@ bool g_show_debug_info = false;
 bool g_enable_lighting = true;
 int g_current_scene = 0;
 
-static void key_callback(GLFWwindow* window,
-                         int key,
-                         int scancode,
-                         int action,
-                         int mods) {
-  // We only care about presses, not releases.
-  if (action == GLFW_PRESS) {
-    switch (key) {
-      case GLFW_KEY_ESCAPE:
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-        break;
-      case GLFW_KEY_D:
-        g_show_debug_info = !g_show_debug_info;
-        break;
-      case GLFW_KEY_SPACE:
-        g_enable_lighting = !g_enable_lighting;
-        break;
-      case GLFW_KEY_0:
-        g_current_scene = 10;
-        break;
-      case GLFW_KEY_1:
-      case GLFW_KEY_2:
-      case GLFW_KEY_3:
-      case GLFW_KEY_4:
-      case GLFW_KEY_5:
-      case GLFW_KEY_6:
-      case GLFW_KEY_7:
-      case GLFW_KEY_8:
-      case GLFW_KEY_9:
-        g_current_scene = key - GLFW_KEY_0 - 1;
-      default:
-        break;
-    }
-  }
-}
-
-std::unique_ptr<Demo> create_demo(bool use_fullscreen) {
+std::unique_ptr<Demo> CreateDemo(bool use_fullscreen) {
   Demo::WindowParams window_params;
   window_params.window_name = "Escher Waterfall Demo (Vulkan)";
   window_params.width = kDemoWidth;
@@ -102,14 +66,28 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto demo = create_demo(use_fullscreen);
-  glfwSetKeyCallback(demo->GetWindow(), key_callback);
+  auto demo = CreateDemo(use_fullscreen);
+
+  demo->SetKeyCallback("ESCAPE", [&]() { demo->SetShouldQuit(); });
+  demo->SetKeyCallback("SPACE",
+                       [&]() { g_enable_lighting = !g_enable_lighting; });
+  demo->SetKeyCallback("D", [&]() { g_show_debug_info = !g_show_debug_info; });
+  demo->SetKeyCallback("1", [&]() { g_current_scene = 1; });
+  demo->SetKeyCallback("2", [&]() { g_current_scene = 2; });
+  demo->SetKeyCallback("3", [&]() { g_current_scene = 3; });
+  demo->SetKeyCallback("4", [&]() { g_current_scene = 4; });
+  demo->SetKeyCallback("5", [&]() { g_current_scene = 5; });
+  demo->SetKeyCallback("6", [&]() { g_current_scene = 6; });
+  demo->SetKeyCallback("7", [&]() { g_current_scene = 7; });
+  demo->SetKeyCallback("8", [&]() { g_current_scene = 8; });
+  demo->SetKeyCallback("9", [&]() { g_current_scene = 9; });
+  demo->SetKeyCallback("0", [&]() { g_current_scene = 10; });
 
   escher::GlslangInitializeProcess();
   {
     escher::VulkanContext vulkan_context = demo->GetVulkanContext();
 
-    escher::Escher escher(vulkan_context, demo->GetVulkanSwapchain());
+    escher::Escher escher(vulkan_context);
     auto renderer = escher.NewPaperRenderer();
     escher::VulkanSwapchainHelper swapchain_helper(demo->GetVulkanSwapchain(),
                                                    renderer);
@@ -170,7 +148,7 @@ int main(int argc, char** argv) {
       scene->Init(&stage);
     }
 
-    while (!glfwWindowShouldClose(demo->GetWindow())) {
+    while (!demo->ShouldQuit()) {
       g_current_scene = g_current_scene % scenes.size();
       auto& scene = scenes.at(g_current_scene);
       escher::Model* model = scene->Update(stopwatch, frame_count, &stage);
@@ -185,7 +163,7 @@ int main(int argc, char** argv) {
         stopwatch.Reset();
       }
 
-      glfwPollEvents();
+      demo->PollEvents();
     }
 
     vulkan_context.device.waitIdle();

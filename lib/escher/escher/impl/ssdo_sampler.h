@@ -23,7 +23,10 @@ class SsdoSampler {
   // Must match the fragment shader in ssdo_sampler.cc
   const static uint32_t kNoiseSize = 5;
 
-  const static vk::Format kColorFormat = vk::Format::eB8G8R8A8Srgb;
+  // TODO: change to eB8G8R8A8Srgb when Magma has a swapchain that supports it.
+  // Actually, this shouldn't be coupled with the format of the swapchain
+  // framebuffer, but some refactoring will be required to decouple it.
+  const static vk::Format kColorFormat = vk::Format::eB8G8R8A8Unorm;
 
   struct SamplerConfig {
     vec4 key_light;
@@ -50,14 +53,12 @@ class SsdoSampler {
   void Sample(CommandBuffer* command_buffer,
               const FramebufferPtr& framebuffer,
               const TexturePtr& depth_texture,
-              const SamplerConfig* push_constants,
-              const std::vector<vk::ClearValue>& clear_values);
+              const SamplerConfig* push_constants);
 
   void Filter(CommandBuffer* command_buffer,
               const FramebufferPtr& framebuffer,
               const TexturePtr& unfiltered_illumination,
-              const FilterConfig* push_constants,
-              const std::vector<vk::ClearValue>& clear_values);
+              const FilterConfig* push_constants);
 
   // TODO: This is exposed so that PaperRenderer can use it to create
   // Framebuffers, but it would be nice to find a way to remove this.

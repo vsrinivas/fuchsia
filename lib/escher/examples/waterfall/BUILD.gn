@@ -2,58 +2,57 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//lib/escher/vulkan.gni")
+executable("waterfall") {
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+  sources = [
+    "demo.cc",
+    "scenes/demo_scene.cc",
+    "scenes/ring_tricks1.cc",
+    "scenes/ring_tricks2.cc",
+    "scenes/ring_tricks3.cc",
+    "scenes/scene.cc",
+    "scenes/uber_scene.cc",
+    "scenes/uber_scene2.cc",
+    "scenes/uber_scene3.cc",
+    "scenes/wobbly_ocean_scene.cc",
+    "scenes/wobbly_rings_scene.cc",
+    "vulkan_proc_addrs.cc",
+    "waterfall_main.cc",
+  ]
+  deps = [
+    "//lib/escher/escher",
+    "//lib/ftl",
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/glslang:SPIRV",
+    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+  ]
+  libs = [
+    "dl",
+    "pthread",
+  ]
 
-if (is_linux) {
-  executable("waterfall") {
-    defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
-    sources = [
-      "demo.cc",
-      #"scenes/app_test_scene.cc",
-      #"scenes/shadow_test_scene.cc",
-      "scenes/wobbly_ocean_scene.cc",
-      "scenes/ring_tricks3.cc",
-      "scenes/ring_tricks2.cc",
-      "scenes/ring_tricks1.cc",
-      "scenes/uber_scene3.cc",
-      "scenes/uber_scene2.cc",
-      "scenes/uber_scene.cc",
-      "scenes/demo_scene.cc",
-      "scenes/scene.cc",
-      "scenes/wobbly_rings_scene.cc",
-      "vulkan_proc_addrs.cc",
-      "waterfall_main.cc",
-    ]
-    deps = [
-      "//lib/escher/escher",
-      "//lib/ftl",
-      "third_party:glfw",
-    ]
-    libs = [
-      "dl",
-      "glslang",
-      "glslang-default-resource-limits",
-      "HLSL",
-      "OGLCompiler",
-      "OSDependent",
-      "pthread",
-      "SPIRV",
+  include_dirs = [
+    "//lib",
+    "//lib/escher",
+    "//third_party/glm",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//magma:vulkan" ]
+    sources += [ "demo_fuchsia.cc" ]
+  }
+
+  if (is_linux) {
+    configs += [ "//lib/escher:vulkan_linux" ]
+    deps += [ "third_party:glfw" ]
+    sources += [ "demo_linux.cc" ]
+    libs += [
       "X11",
       "Xinerama",
       "Xcursor",
       "Xrandr",
-      "vulkan",
     ]
-    lib_dirs = [
-      "$vulkan_sdk/lib",
-      "$vulkan_sdk/lib/glslang",
-    ]
-    include_dirs = [
-      "//lib",
-      "//lib/escher",
-      "//third_party/glm",
-      "$vulkan_sdk/include",
-      "third_party/glfw/include",
-    ]
+
+    include_dirs += [ "third_party/glfw/include" ]
   }
 }

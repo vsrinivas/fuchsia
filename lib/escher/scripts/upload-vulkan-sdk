@@ -6,7 +6,7 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-# This script uploads the Vulkan SDK to Google Storage.  Then, it
+# This script uploads the Vulkan SDK to Google Storage.
 
 readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 

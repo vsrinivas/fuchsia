@@ -74,6 +74,10 @@ class CommandBuffer {
   void BeginRenderPass(vk::RenderPass,
                        const FramebufferPtr& framebuffer,
                        const std::vector<vk::ClearValue>& clear_values);
+  void BeginRenderPass(vk::RenderPass,
+                       const FramebufferPtr& framebuffer,
+                       const vk::ClearValue* clear_values,
+                       size_t clear_value_count);
 
   // Simple wrapper around endRenderPass().
   void EndRenderPass() { command_buffer_.endRenderPass(); }

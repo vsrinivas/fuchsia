@@ -87,7 +87,8 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
       model_renderer_(std::make_unique<impl::ModelRenderer>(
           escher,
           model_data_.get(),
-          vk::Format::eB8G8R8A8Srgb,
+          // TODO: use a SRGB format.
+          vk::Format::eB8G8R8A8Unorm,
           ESCHER_CHECKED_VK_RESULT(
               impl::GetSupportedDepthFormat(context_.physical_device)))),
       ssdo_(std::make_unique<impl::SsdoSampler>(
@@ -170,7 +171,7 @@ void PaperRenderer::DrawSsdoPasses(const FramebufferPtr& framebuffer_in,
 
   impl::SsdoSampler::SamplerConfig sampler_config(stage);
   ssdo_->Sample(command_buffer, framebuffer->aux_color_fb(), depth_texture,
-                &sampler_config, clear_values_);
+                &sampler_config);
 
   // Now that we have finished sampling the depth buffer, transition it for
   // reuse as a depth buffer in the lighting pass.
@@ -189,7 +190,7 @@ void PaperRenderer::DrawSsdoPasses(const FramebufferPtr& framebuffer_in,
       filter_config.stride = vec2(1.f / stage.viewing_volume().width(), 0.f);
       filter_config.scene_depth = stage.viewing_volume().depth_range();
       ssdo_->Filter(command_buffer, framebuffer->main_color_fb(),
-                    aux_color_texture, &filter_config, clear_values_);
+                    aux_color_texture, &filter_config);
 
       command_buffer->TransitionImageLayout(
           aux_color_texture->image(), vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -203,7 +204,7 @@ void PaperRenderer::DrawSsdoPasses(const FramebufferPtr& framebuffer_in,
       filter_config.stride = vec2(0.f, 1.f / stage.viewing_volume().height());
       filter_config.scene_depth = stage.viewing_volume().depth_range();
       ssdo_->Filter(command_buffer, framebuffer->aux_color_fb(),
-                    main_color_texture, &filter_config, clear_values_);
+                    main_color_texture, &filter_config);
 
       command_buffer->TransitionImageLayout(
           main_color_texture->image(), vk::ImageLayout::eShaderReadOnlyOptimal,
@@ -235,9 +236,8 @@ void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer_in,
   clear_values_[0] = vk::ClearColorValue(
       std::array<float, 4>{{clear_color.x, clear_color.y, clear_color.z, 1.f}});
 
-  // Render
   command_buffer->BeginRenderPass(model_renderer_->lighting_pass(),
-                                  framebuffer_in, clear_values_);
+                                  framebuffer_in, clear_values_.data(), 1);
   model_renderer_->Draw(stage, model, command_buffer, illumination_texture);
   command_buffer->EndRenderPass();
 

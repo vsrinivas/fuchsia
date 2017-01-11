@@ -14,16 +14,6 @@
 
 #define VK_CHECK_RESULT(XXX) FTL_CHECK(XXX.result == vk::Result::eSuccess)
 
-// Helper for Demo::InitGlfw().
-static void DemoGlfwErrorCallback(int err_code, const char* err_desc) {
-  std::cerr << "GLFW ERROR: " << err_code << " " << err_desc << std::endl;
-}
-
-void Demo::InitGlfw() {
-  FTL_CHECK(glfwInit());
-  glfwSetErrorCallback(DemoGlfwErrorCallback);
-}
-
 // Helper for Demo::CreateInstance().
 static std::vector<vk::LayerProperties> GetRequiredInstanceLayers(
     std::set<std::string> required_layer_names) {
@@ -79,13 +69,7 @@ void Demo::CreateInstance(InstanceParams params) {
         std::set<std::string>(params.layer_names.begin(),
                               params.layer_names.end()));
 
-    // Get names of extensions required by GLFW.
-    uint32_t extensions_count;
-    const char** extensions =
-        glfwGetRequiredInstanceExtensions(&extensions_count);
-    for (uint32_t i = 0; i < extensions_count; ++i) {
-      params.extension_names.emplace_back(std::string(extensions[i]));
-    }
+    AppendPlatformSpecificInstanceExtensionNames(&params);
 
     // We need this extension for getting debug callbacks.
     params.extension_names.emplace_back("VK_EXT_debug_report");
@@ -138,21 +122,6 @@ void Demo::CreateInstance(InstanceParams params) {
         instance_, &dbgCreateInfo, nullptr, &debug_report_callback_);
     FTL_CHECK(result == VK_SUCCESS);
   }
-}
-
-void Demo::CreateWindowAndSurface(const WindowParams& params) {
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-  GLFWmonitor* monitor =
-      params.use_fullscreen ? glfwGetPrimaryMonitor() : nullptr;
-  window_ = glfwCreateWindow(params.width, params.height,
-                             params.window_name.c_str(), monitor, NULL);
-  FTL_CHECK(window_);
-
-  VkSurfaceKHR surface;
-  VkResult err = glfwCreateWindowSurface(instance_, window_, NULL, &surface);
-  FTL_CHECK(!err);
-  surface_ = surface;
 }
 
 void Demo::CreateDeviceAndQueue() {
@@ -328,9 +297,17 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
     for (auto& sf : result.value) {
       if (sf.colorSpace != color_space)
         continue;
+
+      // TODO: remove this once Magma supports SRGB swapchains.
+      if (sf.format == vk::Format::eB8G8R8A8Unorm) {
+        format = sf.format;
+        break;
+      }
+
       if (sf.format == vk::Format::eB8G8R8A8Srgb) {
         // eB8G8R8A8Srgb is our favorite!
         format = sf.format;
+        break;
       } else if (format == vk::Format::eUndefined) {
         // Anything is better than eUndefined.
         format = sf.format;
@@ -453,12 +430,6 @@ void Demo::DestroyInstance() {
   instance_.destroy();
 }
 
-void Demo::ShutdownGlfw() {
-  // TODO: close window, and... ?
-
-  glfwTerminate();
-}
-
 VkBool32 Demo::HandleDebugReport(VkDebugReportFlagsEXT flags,
                                  VkDebugReportObjectTypeEXT objectType,
                                  uint64_t object,
@@ -475,4 +446,8 @@ escher::VulkanContext Demo::GetVulkanContext() {
   return escher::VulkanContext(instance_, physical_device_, device_, queue_,
                                queue_family_index_, transfer_queue_,
                                transfer_queue_family_index_);
+}
+
+void Demo::SetKeyCallback(std::string key, std::function<void()> func) {
+  keyboard_handler_.SetCallback(std::move(key), std::move(func));
 }

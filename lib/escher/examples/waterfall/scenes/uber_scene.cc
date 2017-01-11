@@ -55,8 +55,8 @@ escher::Model* UberScene::Update(const escher::Stopwatch& stopwatch,
                                  escher::Stage* stage) {
   float current_time_sec = stopwatch.GetElapsedSeconds();
 
-  float screen_width = 2160.f;
-  float screen_height = 1440.f;
+  float screen_width = stage->viewing_volume().width();
+  float screen_height = stage->viewing_volume().height();
   float min_height = 2.f;
   float max_height = 20.f;
 

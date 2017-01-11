@@ -47,7 +47,7 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
 
  private:
   impl::CommandBufferPool* pool_;
-  impl::CommandBuffer* current_frame_;
+  impl::CommandBuffer* current_frame_ = nullptr;
 
   uint64_t frame_number_ = 0;
 

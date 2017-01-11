@@ -86,6 +86,14 @@ void UniformBufferPool::InternalAllocate() {
   FTL_CHECK(buffer_size_ == reqs.size);
   FTL_CHECK(buffer_size_ % reqs.alignment == 0);
 
+  // Validation layer complains if we bind a buffer to memory without first
+  // querying it's memory requirements.  This shouldn't be necessary, since
+  // all buffers are identically-configured.
+  // TODO: disable this in release mode.
+  for (uint32_t i = 1; i < kBufferBatchSize; ++i) {
+    device_.getBufferMemoryRequirements(new_buffers[i]);
+  }
+
   // Allocate enough memory for all of the buffers.
   reqs.size *= kBufferBatchSize;
   auto mem = allocator_->Allocate(reqs, flags_);

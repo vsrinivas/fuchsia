@@ -12,8 +12,8 @@
 
 namespace escher {
 
-Escher::Escher(const VulkanContext& context, const VulkanSwapchain& swapchain)
-    : impl_(make_unique<impl::EscherImpl>(context, swapchain)) {}
+Escher::Escher(const VulkanContext& context)
+    : impl_(make_unique<impl::EscherImpl>(context)) {}
 
 Escher::~Escher() {}
 

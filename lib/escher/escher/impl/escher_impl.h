@@ -23,7 +23,7 @@ class SsdoSampler;
 // Implements the public Escher API.
 class EscherImpl {
  public:
-  EscherImpl(const VulkanContext& context, const VulkanSwapchain& swapchain);
+  EscherImpl(const VulkanContext& context);
   ~EscherImpl();
 
   const VulkanContext& vulkan_context();

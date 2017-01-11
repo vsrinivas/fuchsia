@@ -42,8 +42,13 @@ std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height) {
   auto ptr = std::make_unique<uint8_t[]>(width * height);
   auto pixels = ptr.get();
 
+// TODO: when we have a random source, use it.
+#if defined(__Fuchsia__)
+  std::default_random_engine prng(12345);
+#else
   std::random_device seed;
   std::default_random_engine prng(seed());
+#endif
   std::uniform_int_distribution<uint8_t> random;
 
   for (uint32_t j = 0; j < height; ++j) {

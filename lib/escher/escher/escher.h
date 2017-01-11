@@ -23,7 +23,7 @@ class Escher : public MeshBuilderFactory {
   // Escher does not take ownership of the objects in the Vulkan context.  It is
   // up to the application to eventually destroy them, and also to ensure that
   // they outlive the Escher instance.
-  Escher(const VulkanContext& context, const VulkanSwapchain& swapchain);
+  Escher(const VulkanContext& context);
   ~Escher();
 
   // Implement MeshBuilderFactory interface.

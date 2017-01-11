@@ -522,8 +522,7 @@ SsdoSampler::GetDescriptorSetLayoutCreateInfo() {
 void SsdoSampler::Sample(CommandBuffer* command_buffer,
                          const FramebufferPtr& framebuffer,
                          const TexturePtr& depth_texture,
-                         const SamplerConfig* push_constants,
-                         const std::vector<vk::ClearValue>& clear_values) {
+                         const SamplerConfig* push_constants) {
   auto vk_command_buffer = command_buffer->get();
   auto descriptor_set = pool_.Allocate(1, command_buffer)->get(0);
 
@@ -559,7 +558,9 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
 
   device_.updateDescriptorSets(kUpdatedDescriptorCount, writes, 0, nullptr);
 
-  command_buffer->BeginRenderPass(render_pass_, framebuffer, clear_values);
+  vk::ClearValue clear_value(
+      vk::ClearColorValue(std::array<uint32_t, 4>{{0, 0, 0, 0}}));
+  command_buffer->BeginRenderPass(render_pass_, framebuffer, &clear_value, 1);
   {
     auto vk_pipeline_layout = sampler_pipeline_->layout();
 
@@ -582,8 +583,7 @@ void SsdoSampler::Sample(CommandBuffer* command_buffer,
 void SsdoSampler::Filter(CommandBuffer* command_buffer,
                          const FramebufferPtr& framebuffer,
                          const TexturePtr& unfiltered_illumination,
-                         const FilterConfig* push_constants,
-                         const std::vector<vk::ClearValue>& clear_values) {
+                         const FilterConfig* push_constants) {
   auto vk_command_buffer = command_buffer->get();
   auto descriptor_set = pool_.Allocate(1, command_buffer)->get(0);
 
@@ -623,7 +623,9 @@ void SsdoSampler::Filter(CommandBuffer* command_buffer,
 
   device_.updateDescriptorSets(kUpdatedDescriptorCount, writes, 0, nullptr);
 
-  command_buffer->BeginRenderPass(render_pass_, framebuffer, clear_values);
+  vk::ClearValue clear_value(
+      vk::ClearColorValue(std::array<uint32_t, 4>{{0, 0, 0, 0}}));
+  command_buffer->BeginRenderPass(render_pass_, framebuffer, &clear_value, 1);
   {
     auto vk_pipeline_layout = sampler_pipeline_->layout();
 

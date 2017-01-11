@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//lib/escher/vulkan.gni")
-
 config("thread_safety_warning") {
   cflags = [
     "-Wthread-safety",
@@ -12,9 +10,20 @@ config("thread_safety_warning") {
 }
 
 static_library("escher") {
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+  defines = [
+    "VULKAN_HPP_NO_EXCEPTIONS",
+    "GLM_ENABLE_EXPERIMENTAL",
 
-  deps = [ "//lib/ftl" ]
+    # Currently necessary on Fuchsia, but not Linux.
+    "ESCHER_DISABLE_BACKGROUND_COMPILATION",
+  ]
+
+  deps = [
+    "//lib/ftl",
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/glslang:SPIRV",
+    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+  ]
 
   sources = [
     "escher.cc",
@@ -22,7 +31,6 @@ static_library("escher") {
     "escher_process_init.cc",
     "escher_process_init.h",
     "forward_declarations.h",
-    "status.h",
     "geometry/quad.cc",
     "geometry/quad.h",
     "geometry/size_i.cc",
@@ -84,10 +92,10 @@ static_library("escher") {
     "impl/vk/pipeline_spec.h",
     "impl/vulkan_utils.cc",
     "impl/vulkan_utils.h",
-    "material/color_utils.h",
     "material/color_utils.cc",
-    "material/material.h",
+    "material/color_utils.h",
     "material/material.cc",
+    "material/material.h",
     "renderer/framebuffer.cc",
     "renderer/framebuffer.h",
     "renderer/image.cc",
@@ -126,12 +134,13 @@ static_library("escher") {
     "shape/mesh_builder_factory.h",
     "shape/modifier_wobble.cc",
     "shape/modifier_wobble.h",
+    "status.h",
     "util/image_loader.cc",
     "util/image_loader.h",
     "util/need.h",
     "util/stopwatch.h",
-    "vk/buffer.h",
     "vk/buffer.cc",
+    "vk/buffer.h",
     "vk/vulkan_context.h",
     "vk/vulkan_swapchain.h",
     "vk/vulkan_swapchain_helper.cc",
@@ -140,16 +149,25 @@ static_library("escher") {
 
   include_dirs = [
     "//lib",  # for ftl/
-    "//lib/escher", # TODO: make //lib/escher/src|include directories.
+    "//lib/escher",  # TODO: make //lib/escher/src|include directories.
     "//third_party/glm",
-    "$glslang_compiler_src",
-    "$vulkan_sdk/include",
+    "//third_party/shaderc/third_party/glslang",
   ]
 
   public_configs = [ ":thread_safety_warning" ]
+
+  if (is_fuchsia) {
+    deps += [ "//magma:vulkan" ]
+  }
+
+  if (is_linux) {
+    configs += [ "//lib/escher:vulkan_linux" ]
+  }
 }
 
 group("unittests") {
+  testonly = true
   deps = [
-    "//lib/escher/test:test($host_toolchain)",  ]
+    "//lib/escher/test:escher_unittests",
+  ]
 }

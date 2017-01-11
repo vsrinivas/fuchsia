@@ -2,46 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//lib/escher/vulkan.gni")
+executable("escher_unittests") {
+  testonly = true
 
-if (is_linux) {
-  executable("escher_unittests") {
-    testonly = true
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
-    defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+  sources = [
+    "impl/glsl_compiler_unittest.cc",
+    "impl/pipeline_cache_unittest.cc",
+    "run_all_unittests.cc",
+  ]
 
-    sources = [
-      "run_all_unittests.cc",
-      "impl/glsl_compiler_unittest.cc",
-      "impl/pipeline_cache_unittest.cc"
-    ]
+  deps = [
+    "//lib/escher/escher",
+    "//third_party/gtest",
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/glslang:SPIRV",
+    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+  ]
 
-    deps = [
-      "//lib/escher/escher",
-      "//third_party/gtest"
-    ]
+  libs = [ "pthread" ]
 
-    libs = [
-      "glslang",
-      "glslang-default-resource-limits",
-      "HLSL",
-      "OGLCompiler",
-      "OSDependent",
-      "pthread",
-      "SPIRV",
-      "vulkan",
-    ]
+  include_dirs = [
+    "//lib",
+    "//lib/escher",
+  ]
 
-    lib_dirs = [
-      "$vulkan_sdk/lib",
-      "$vulkan_sdk/lib/glslang",
-    ]
+  if (is_fuchsia) {
+    deps += [ "//magma:vulkan" ]
+  }
 
-    include_dirs = [
-      "//lib",
-      "//lib/escher",
-      "$glslang_compiler_src",
-      "$vulkan_sdk/include",
-    ]
+  if (is_linux) {
+    configs += [ "//lib/escher:vulkan_linux" ]
   }
 }

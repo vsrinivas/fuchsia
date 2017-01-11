@@ -215,6 +215,14 @@ void CommandBuffer::BeginRenderPass(
     vk::RenderPass render_pass,
     const FramebufferPtr& framebuffer,
     const std::vector<vk::ClearValue>& clear_values) {
+  BeginRenderPass(render_pass, framebuffer, clear_values.data(),
+                  clear_values.size());
+}
+
+void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
+                                    const FramebufferPtr& framebuffer,
+                                    const vk::ClearValue* clear_values,
+                                    size_t clear_value_count) {
   uint32_t width = framebuffer->width();
   uint32_t height = framebuffer->height();
 
@@ -224,8 +232,8 @@ void CommandBuffer::BeginRenderPass(
   info.renderArea.offset.y = 0;
   info.renderArea.extent.width = width;
   info.renderArea.extent.height = height;
-  info.clearValueCount = static_cast<uint32_t>(clear_values.size());
-  info.pClearValues = clear_values.data();
+  info.clearValueCount = static_cast<uint32_t>(clear_value_count);
+  info.pClearValues = clear_values;
   info.framebuffer = framebuffer->get();
 
   command_buffer_.beginRenderPass(&info, vk::SubpassContents::eInline);

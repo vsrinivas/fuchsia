@@ -112,7 +112,7 @@ ImagePtr ImageCache::NewColorAttachmentImage(
     uint32_t height,
     vk::ImageUsageFlags additional_flags) {
   ImageInfo info;
-  info.format = vk::Format::eB8G8R8A8Srgb;
+  info.format = vk::Format::eB8G8R8A8Unorm;
   info.width = width;
   info.height = height;
   info.sample_count = 1;
