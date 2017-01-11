@@ -25,7 +25,8 @@ public:
 
     // TODO(teisenbe): Make this the planned batch interface
     mx_status_t Allocate(size_t offset, size_t size, uint32_t flags,
-                         mxtl::RefPtr<VmAddressRegion>* out);
+                         mxtl::RefPtr<VmAddressRegionDispatcher>* dispatcher,
+                         mx_rights_t* rights);
 
     mx_status_t Destroy();
 

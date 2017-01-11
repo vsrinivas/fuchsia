@@ -49,8 +49,9 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
         return ERR_ACCESS_DENIED;
 
     // Create the new VMAR
-    mxtl::RefPtr<VmAddressRegion> new_vmar;
-    status = vmar->Allocate(offset, size, flags, &new_vmar);
+    mxtl::RefPtr<VmAddressRegionDispatcher> new_vmar;
+    mx_rights_t new_rights;
+    status = vmar->Allocate(offset, size, flags, &new_vmar, &new_rights);
     if (status != NO_ERROR)
         return status;
 
@@ -61,18 +62,11 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
         new_vmar->Destroy();
     });
 
-    if (make_user_ptr(_child_addr).copy_to_user(new_vmar->base()) != NO_ERROR)
+    if (make_user_ptr(_child_addr).copy_to_user(new_vmar->vmar()->base()) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    // Create a dispatcher
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t new_rights;
-    status = VmAddressRegionDispatcher::Create(mxtl::move(new_vmar), &dispatcher, &new_rights);
-    if (status != NO_ERROR)
-        return status;
-
     // Create a handle and attach the dispatcher to it
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), new_rights));
+    HandleUniquePtr handle(MakeHandle(mxtl::move(new_vmar), new_rights));
     if (!handle)
         return ERR_NO_MEMORY;
 

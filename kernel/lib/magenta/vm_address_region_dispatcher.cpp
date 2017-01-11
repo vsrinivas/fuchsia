@@ -129,7 +129,9 @@ VmAddressRegionDispatcher::VmAddressRegionDispatcher(mxtl::RefPtr<VmAddressRegio
 VmAddressRegionDispatcher::~VmAddressRegionDispatcher() {}
 
 mx_status_t VmAddressRegionDispatcher::Allocate(
-        size_t offset, size_t size, uint32_t flags, mxtl::RefPtr<VmAddressRegion>* out) {
+    size_t offset, size_t size, uint32_t flags,
+    mxtl::RefPtr<VmAddressRegionDispatcher>* new_dispatcher,
+    mx_rights_t* new_rights) {
 
     uint32_t vmar_flags;
     uint arch_mmu_flags;
@@ -142,7 +144,22 @@ mx_status_t VmAddressRegionDispatcher::Allocate(
         return ERR_INVALID_ARGS;
     }
 
-    return vmar_->CreateSubVmar(offset, size, /* align_pow2 */ 0 , vmar_flags, "useralloc", out);
+    mxtl::RefPtr<VmAddressRegion> new_vmar;
+    status = vmar_->CreateSubVmar(offset, size, /* align_pow2 */ 0 , vmar_flags,
+                                  "useralloc", &new_vmar);
+    if (status != NO_ERROR)
+        return status;
+
+    // Create the dispatcher.
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    status = VmAddressRegionDispatcher::Create(mxtl::move(new_vmar),
+                                               &dispatcher, new_rights);
+    if (status != NO_ERROR)
+        return status;
+
+    *new_dispatcher =
+        DownCastDispatcher<VmAddressRegionDispatcher>(&dispatcher);
+    return NO_ERROR;
 }
 
 mx_status_t VmAddressRegionDispatcher::Destroy() {
