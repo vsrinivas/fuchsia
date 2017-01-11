@@ -7,10 +7,6 @@
 #include <asm.h>
 #include <err.h>
 
-// We do not need to check whether the addresses are in the
-// kernel or virtual address spaces, since we only access them
-// using user privileges.
-
 .syntax unified
 .arm
 
