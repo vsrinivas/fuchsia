@@ -188,7 +188,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     if (status != NO_ERROR) {
         atomic_fetch_sub(&libc.thread_count, 1);
         if (map)
-            _mx_vmar_unmap(_mx_vmar_root_self(), map, size);
+            _mx_vmar_unmap(_mx_vmar_root_self(), (uintptr_t)map, size);
         mxr_thread_destroy(mxr_thread);
         return status == ERR_ACCESS_DENIED ? EPERM : EAGAIN;
     }
