@@ -2,33 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-CFLAGS := $(HOST_CFLAGS) -Wall -std=c11 -g -O0
-CFLAGS += -Werror-implicit-function-declaration
-CFLAGS += -Wstrict-prototypes -Wwrite-strings
-CFLAGS += -Isystem/ulib/system/include
-CFLAGS += -Isystem/ulib/magenta/include
-CFLAGS += -Isystem/ulib/mxio/include
-CFLAGS += -Isystem/ulib/fs/include
-CFLAGS += -Isystem/public
+MINFS_CFLAGS += -Werror-implicit-function-declaration
+MINFS_CFLAGS += -Wstrict-prototypes -Wwrite-strings
+MINFS_CFLAGS += -Isystem/ulib/system/include
+MINFS_CFLAGS += -Isystem/ulib/magenta/include
+MINFS_CFLAGS += -Isystem/ulib/mxio/include
+MINFS_CFLAGS += -Isystem/ulib/fs/include
 
 ifeq ($(HOST_PLATFORM),darwin)
-CFLAGS += -DO_DIRECTORY=0200000
+MINFS_CFLAGS += -DO_DIRECTORY=0200000
 else
-CFLAGS += -D_POSIX_C_SOURCE=200809L
+MINFS_CFLAGS += -D_POSIX_C_SOURCE=200809L
 endif
 
-FUSE_CFLAGS := $(CFLAGS) -D_FILE_OFFSET_BITS=64
+MINFS_LDFLAGS :=
+
+FUSE_CFLAGS := -D_FILE_OFFSET_BITS=64
 ifeq ($(call TOBOOL,$(ENABLE_MINFS_FUSE_DEBUG)),true)
 FUSE_CFLAGS += -DDEBUG
 endif
 
-FUSE_LFLAGS := $(LFLAGS)
+FUSE_LDFLAGS :=
 
 ifeq ($(HOST_PLATFORM),darwin)
 FUSE_CFLAGS += -D_DARWIN_USE_64_BIT_INODE -I/usr/local/include/osxfuse
-FUSE_LFLAGS += -L/usr/local/lib -losxfuse
+FUSE_LDFLAGS += -L/usr/local/lib -losxfuse
 else
-FUSE_LFLAGS += -lfuse
+FUSE_LDFLAGS += -lfuse
 endif
 
 SRCS += main.c test.c
@@ -58,20 +58,25 @@ minfs:: $(MINFS_TOOLS)
 $(BUILDDIR)/host/system/uapp/minfs/%.o: system/uapp/minfs/%.c
 	@echo compiling $@
 	@mkdir -p $(dir $@)
-	@$(HOST_CC) -MMD -MP -c -o $@ $(CFLAGS) $<
+	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/host/system/ulib/fs/%.o: system/ulib/fs/%.c
 	@echo compiling $@
 	@mkdir -p $(dir $@)
-	@$(HOST_CC) -MMD -MP -c -o $@ $(CFLAGS) $<
+	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/tools/minfs: $(OBJS) $(LIBMINFS_OBJS) $(LIBFS_OBJS)
 	@echo linking $@
-	@$(HOST_CC) -o $@ $(LFLAGS) $(CFLAGS) $(OBJS) $(LIBMINFS_OBJS) $(LIBFS_OBJS)
+	@$(HOST_CC) $(MINFS_LDFLAGS) -o $@ $^
 
-$(BUILDDIR)/tools/fuse-minfs: system/uapp/minfs/fuse.c $(LIBMINFS_OBJS) $(LIBFS_OBJS)
+$(BUILDDIR)/host/system/uapp/minfs/fuse.o: system/uapp/minfs/fuse.c
+	@echo compiling $@
+	@mkdir -p $(dir $@)
+	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MINFS_CFLAGS) $(FUSE_CFLAGS) -c -o $@ $<
+
+$(BUILDDIR)/tools/fuse-minfs: $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(BUILDDIR)/host/system/uapp/minfs/fuse.o
 	@echo linking $@
-	@$(HOST_CC) -o $@ system/uapp/minfs/fuse.c $(FUSE_LFLAGS) $(FUSE_CFLAGS) $(LIBMINFS_OBJS) $(LIBFS_OBJS)
+	@$(HOST_CC) $(MINFS_LDFLAGS) $(FUSE_LDFLAGS) -o $@ $^
 
 GENERATED += $(MINFS_TOOLS)
 EXTRA_BUILDDEPS += $(MINFS_TOOLS)

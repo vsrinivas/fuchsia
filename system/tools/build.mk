@@ -10,9 +10,6 @@ NETRUNCMD := $(BUILDDIR)/tools/netruncmd
 NETCP := $(BUILDDIR)/tools/netcp
 SYSGEN := $(BUILDDIR)/tools/sysgen
 
-TOOLS_CFLAGS := $(HOST_CFLAGS) -g -std=c11 -Wall -Isystem/public -Isystem/private
-TOOLS_CXXFLAGS := $(HOST_CPPFLAGS) -std=c++11 -Wall
-
 ALL_TOOLS := $(BOOTSERVER) $(LOGLISTENER) $(NETRUNCMD) $(NETCP) $(SYSGEN)
 
 # LZ4 host lib
@@ -27,7 +24,7 @@ LZ4_LIB := $(BUILDDIR)/tools/lz4/liblz4.a
 $(BUILDDIR)/tools/lz4/%.o: $(LZ4_ROOT)/%.c
 	@echo compiling $@
 	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(TOOLS_CFLAGS) $(LZ4_CFLAGS) -o $@ -c $<
+	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(LZ4_CFLAGS) -o $@ -c $<
 
 $(LZ4_LIB): $(LZ4_OBJS)
 	@echo archiving $@
@@ -36,13 +33,13 @@ $(LZ4_LIB): $(LZ4_OBJS)
 
 # mkbootfs
 MKBOOTFS := $(BUILDDIR)/tools/mkbootfs
-MKBOOTFS_CFLAGS := $(TOOLS_CFLAGS) -I$(LZ4_ROOT)/include/lz4
+MKBOOTFS_CFLAGS := -I$(LZ4_ROOT)/include/lz4
 MKBOOTFS_LDFLAGS := -L$(BUILDDIR)/tools/lz4 -Bstatic -llz4 -Bdynamic
 
 $(BUILDDIR)/tools/mkbootfs: system/tools/mkbootfs.c $(LZ4_LIB)
 	@echo compiling $@
 	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(MKBOOTFS_CFLAGS) -o $@ $< $(MKBOOTFS_LDFLAGS)
+	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MKBOOTFS_CFLAGS) -o $@ $< $(MKBOOTFS_LDFLAGS)
 
 ALL_TOOLS += $(MKBOOTFS)
 
@@ -50,22 +47,22 @@ ALL_TOOLS += $(MKBOOTFS)
 $(BUILDDIR)/tools/%: system/tools/%.c
 	@echo compiling $@
 	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(TOOLS_CFLAGS) -o $@ $<
+	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) -o $@ $<
 
 $(BUILDDIR)/tools/%: system/tools/%.cpp
 	@echo compiling $@
 	@$(MKDIR)
-	$(NOECHO)$(HOST_CXX) $(TOOLS_CXXFLAGS) -o $@ $<
+	$(NOECHO)$(HOST_CXX) $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) -o $@ $<
 
 $(BUILDDIR)/tools/netruncmd: system/tools/netruncmd.c system/tools/netprotocol.c
 	@echo compiling $@
 	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(TOOLS_CFLAGS) -o $@ $^
+	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) -o $@ $^
 
 $(BUILDDIR)/tools/netcp: system/tools/netcp.c system/tools/netprotocol.c
 	@echo compiling $@
 	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) $(TOOLS_CFLAGS) -o $@ $^
+	$(NOECHO)$(HOST_CC) $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) -o $@ $^
 
 GENERATED += $(ALL_TOOLS)
 EXTRA_BUILDDEPS += $(ALL_TOOLS)

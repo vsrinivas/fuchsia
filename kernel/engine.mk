@@ -168,9 +168,9 @@ ARCH_CPPFLAGS :=
 ARCH_ASMFLAGS :=
 
 # Host compile flags
-HOST_COMPILEFLAGS :=
-HOST_CFLAGS :=
-HOST_CPPFLAGS :=
+HOST_COMPILEFLAGS := -Wall -g
+HOST_CFLAGS := -std=c11 -Isystem/public -Isystem/private
+HOST_CPPFLAGS := -std=c++11
 HOST_ASMFLAGS :=
 
 # top level rule
