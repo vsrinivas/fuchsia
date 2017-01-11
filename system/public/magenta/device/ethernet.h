@@ -21,8 +21,8 @@
 #define IOCTL_ETHERNET_GET_MTU \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 1)
 
-// ssize_t ioctl_ethernet_get_mac_addr(int fd, uint8_t* out);
-IOCTL_WRAPPER_OUT(ioctl_ethernet_get_mac_addr, IOCTL_ETHERNET_GET_MAC_ADDR, uint8_t);
+// ssize_t ioctl_ethernet_get_mac_addr(int fd, uint8_t* out, size_t out_len);
+IOCTL_WRAPPER_VAROUT(ioctl_ethernet_get_mac_addr, IOCTL_ETHERNET_GET_MAC_ADDR, uint8_t);
 
 // ssize_t ioctl_ethernet_get_mtu(int fd, size_t* out);
 IOCTL_WRAPPER_OUT(ioctl_ethernet_get_mtu, IOCTL_ETHERNET_GET_MTU, size_t);
