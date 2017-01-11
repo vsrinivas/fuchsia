@@ -21,6 +21,7 @@
 
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
+#include "third_party/rapidjson/rapidjson/prettywriter.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
@@ -36,6 +37,15 @@ template <typename T>
 inline std::string JsonValueToString(const T& v) {
   rapidjson::StringBuffer buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+  v.Accept(writer);
+  return buffer.GetString();
+}
+
+// Like above, but pretty prints the string.
+template <typename T>
+inline std::string JsonValueToPrettyString(const T& v) {
+  rapidjson::StringBuffer buffer;
+  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
   v.Accept(writer);
   return buffer.GetString();
 }

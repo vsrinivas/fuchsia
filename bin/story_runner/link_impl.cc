@@ -63,7 +63,7 @@ void LinkImpl::Set(const fidl::String& path,
     ptr.Set(doc_, new_value);
     DatabaseChanged(src);
   }
-  FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToString(doc_);
+  FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToPrettyString(doc_);
 }
 
 void LinkImpl::UpdateObject(const fidl::String& path,
@@ -89,7 +89,7 @@ void LinkImpl::UpdateObject(const fidl::String& path,
   if (dirty) {
     DatabaseChanged(src);
   }
-  FTL_LOG(INFO) << "LinkImpl::Update() " << JsonValueToString(doc_);
+  FTL_LOG(INFO) << "LinkImpl::Update() " << JsonValueToPrettyString(doc_);
 }
 
 void LinkImpl::Erase(const fidl::String& path, LinkConnection* const src) {
@@ -137,10 +137,10 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
 void LinkImpl::ReadLinkData(const std::function<void()>& done) {
   story_storage_->ReadLinkData(name_, [this, done](LinkDataPtr data) {
     if (!data.is_null()) {
-      FTL_LOG(INFO) << "LinkImpl::ReadLinkData: " << data->json;
       std::string json;
       data->json.Swap(&json);
       doc_.Parse(std::move(json));
+      FTL_LOG(INFO) << "LinkImpl::ReadLinkData() " << JsonValueToPrettyString(doc_);
     }
 
     done();

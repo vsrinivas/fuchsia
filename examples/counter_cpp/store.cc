@@ -85,7 +85,7 @@ void Store::Stop() {
 }
 
 void Store::Notify(const fidl::String& json) {
-  FTL_LOG(INFO) << "**** Store::Notify() " << module_name_;
+  FTL_LOG(INFO) << "Store::Notify() " << module_name_;
   ApplyLinkData(json.get());
 }
 
@@ -94,11 +94,11 @@ void Store::Notify(const fidl::String& json) {
 //   - it's missing the desired document.
 //   - the data in the update is stale (can happen on rehydrate).
 void Store::ApplyLinkData(const std::string& json) {
-  FTL_LOG(INFO) << "**** Store::ApplyLinkData() " << module_name_ << std::endl
-                << "JSON " << json;
   rapidjson::Document doc;
   doc.Parse(json);
   FTL_CHECK(!doc.HasParseError());
+  FTL_LOG(INFO) << "Store::ApplyLinkData() " << module_name_ << " "
+                << modular::JsonValueToPrettyString(doc);
   if (doc.IsNull()) {
     // Received an empty update, which means we are starting a new story.
     // Don't do anything now, the recipe will gives us the initial data.
@@ -106,7 +106,7 @@ void Store::ApplyLinkData(const std::string& json) {
   }
 
   rapidjson::Pointer ptr(modular_example::kJsonPath);
-  rapidjson::Value* value = ptr.Get(doc);
+  rapidjson::Value* const value = ptr.Get(doc);
   FTL_CHECK(value != nullptr);
 
   auto itr = value->GetObject().MemberBegin();
@@ -136,7 +136,7 @@ void Store::ModelChanged() {
 }
 
 void Store::SendIfDirty() {
-  FTL_LOG(INFO) << "**** Store::SendIfDirty()" << this->module_name_;
+  FTL_LOG(INFO) << "Store::SendIfDirty() " << this->module_name_;
   if (link_ && dirty_) {
     rapidjson::Document doc = counter.ToDocument(module_name_);
 
