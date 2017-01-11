@@ -1565,7 +1565,9 @@ status_t thread_unblock_from_wait_queue(thread_t *t, status_t wait_queue_error)
 #if WITH_PANIC_BACKTRACE
 static status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t sz)
 {
-    if ((ptr < t->stack) || (ptr > (t->stack + t->stack_size - sizeof(void*)))) {
+    if (!is_kernel_address((uintptr_t)ptr) ||
+        (ptr < t->stack) ||
+        (ptr > (t->stack + t->stack_size - sizeof(void*)))) {
         return ERR_NOT_FOUND;
     }
     memcpy(out, ptr, sz);
