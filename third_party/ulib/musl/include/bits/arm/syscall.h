@@ -29,7 +29,6 @@
 #define SYS_sched_get_priority_min 160
 #define SYS_sched_rr_get_interval 161
 #define SYS_ugetrlimit 191
-#define SYS_mincore 219
 #define SYS_madvise 220
 #define SYS_sched_setaffinity 241
 #define SYS_sched_getaffinity 242

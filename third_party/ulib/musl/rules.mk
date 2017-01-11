@@ -501,7 +501,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/misc/uname.c \
     $(LOCAL_DIR)/src/misc/wordexp.c \
     $(LOCAL_DIR)/src/mman/madvise.c \
-    $(LOCAL_DIR)/src/mman/mincore.c \
     $(LOCAL_DIR)/src/mman/mlock.c \
     $(LOCAL_DIR)/src/mman/mlockall.c \
     $(LOCAL_DIR)/src/mman/mmap.c \

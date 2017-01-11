@@ -52,6 +52,5 @@
 #define SYS_munlock 229
 #define SYS_mlockall 230
 #define SYS_munlockall 231
-#define SYS_mincore 232
 #define SYS_madvise 233
 #define SYS_prlimit64 261

@@ -1,5 +1,4 @@
 #define SYS_msync 26
-#define SYS_mincore 27
 #define SYS_madvise 28
 #define SYS_shmget 29
 #define SYS_shmat 30
