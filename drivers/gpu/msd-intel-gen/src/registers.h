@@ -87,14 +87,12 @@ public:
     {
         constexpr uint32_t kValid = 1;
         constexpr uint32_t kLegacyMode32bitPpgtt = 1 << 3;
-        constexpr uint32_t kL3llcCoherent = 1 << 5;
         constexpr uint32_t kLegacyModePpgttEnable = 1 << 8;
         constexpr uint32_t kContextIdShift = 32;
 
         uint64_t desc = gpu_addr;
         desc |= kValid;
         desc |= kLegacyMode32bitPpgtt;
-        desc |= kL3llcCoherent;
         if (ppgtt_enable)
             desc |= kLegacyModePpgttEnable;
         desc |= static_cast<uint64_t>(context_id) << kContextIdShift;
