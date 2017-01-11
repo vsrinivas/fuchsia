@@ -787,6 +787,8 @@ public:
         return true;
     }
 
+    bool verbose() const { return verbose_; }
+
 private:
     void print_error(const char* what, const string& file) {
         fprintf(stderr, "error: %s for %s\n", what, file.c_str());
