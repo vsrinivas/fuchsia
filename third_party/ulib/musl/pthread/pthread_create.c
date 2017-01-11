@@ -27,10 +27,6 @@ weak_alias(dummy_0, __release_ptc);
 
 #define ROUND(x) (((x) + PAGE_SIZE - 1) & -PAGE_SIZE)
 
-void* __mmap(void*, size_t, int, int, int, off_t);
-int __munmap(void*, size_t);
-int __mprotect(void*, size_t, int);
-
 void* __copy_tls(unsigned char*);
 
 static void start_pthread(void* arg) {
@@ -192,7 +188,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     if (status != NO_ERROR) {
         atomic_fetch_sub(&libc.thread_count, 1);
         if (map)
-            __munmap(map, size);
+            _mx_vmar_unmap(_mx_vmar_root_self(), map, size);
         mxr_thread_destroy(mxr_thread);
         return status == ERR_ACCESS_DENIED ? EPERM : EAGAIN;
     }
