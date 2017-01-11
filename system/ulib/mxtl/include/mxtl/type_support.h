@@ -184,4 +184,12 @@ struct match_cv<const volatile SrcType, DestType> {
   using type = typename remove_cv<DestType>::type const volatile;
 };
 
+// is_class builtin
+template <typename T>
+struct is_class : public integral_constant<bool, __is_class(T)> { };
+
+// is_base_of builtin
+template <typename Base, typename Derived>
+struct is_base_of : public integral_constant<bool, __is_base_of(Base, Derived)> { };
+
 }  // namespace mxtl
