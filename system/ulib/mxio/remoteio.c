@@ -977,7 +977,9 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
         return ERR_INTERNAL;
     }
     n -= MXIO_SOCKET_MSG_HEADER_SIZE;
-    memcpy(msg->msg_name, &m->addr, m->addrlen);
+    if (msg->msg_name != NULL) {
+        memcpy(msg->msg_name, &m->addr, m->addrlen);
+    }
     msg->msg_namelen = m->addrlen;
     msg->msg_flags = m->flags;
     char* data = m->data;
@@ -1018,7 +1020,9 @@ static ssize_t mxsio_sendmsg_dgram(mxio_t* io, const struct msghdr* msg, int fla
 
     // TODO: avoid malloc m
     mxio_socket_msg_t* m = malloc(mlen);
-    memcpy(&m->addr, msg->msg_name, msg->msg_namelen);
+    if (msg->msg_name != NULL) {
+        memcpy(&m->addr, msg->msg_name, msg->msg_namelen);
+    }
     m->addrlen = msg->msg_namelen;
     m->flags = flags;
     char* data = m->data;
