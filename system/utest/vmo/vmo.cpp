@@ -49,10 +49,20 @@ bool vmo_read_write_test() {
     status = mx_vmo_create(len, 0, &vmo);
     EXPECT_EQ(status, NO_ERROR, "vm_object_create");
 
-    char buf[PAGE_SIZE];
+    char buf[len];
     status = mx_vmo_read(vmo, buf, 0, sizeof(buf), &size);
     EXPECT_EQ(status, NO_ERROR, "vm_object_read");
     EXPECT_EQ(sizeof(buf), size, "vm_object_read");
+
+    // make sure it's full of zeros
+    size_t count = 0;
+    for (auto c: buf) {
+        EXPECT_EQ(c, 0, "zero test");
+        if (c != 0) {
+            printf("char at offset %#zx is bad\n", count);
+        }
+        count++;
+    }
 
     memset(buf, 0x99, sizeof(buf));
     status = mx_vmo_write(vmo, buf, 0, sizeof(buf), &size);

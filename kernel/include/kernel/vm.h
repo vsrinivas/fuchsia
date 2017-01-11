@@ -245,12 +245,42 @@ void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace);
    NULL is a valid argument, which unmaps the current user address space */
 void vmm_set_active_aspace(vmm_aspace_t* aspace);
 
-/* page fault handler, called during page fault context, with interrupts enabled */
+/* page fault flags */
 #define VMM_PF_FLAG_WRITE (1u << 0)
 #define VMM_PF_FLAG_USER (1u << 1)
 #define VMM_PF_FLAG_INSTRUCTION (1u << 2)
 #define VMM_PF_FLAG_NOT_PRESENT (1u << 3)
-status_t vmm_page_fault_handler(vaddr_t addr, uint flags);
+
+#define VMM_PF_FLAG_HW_FAULT (1u << 4) /* hardware is requesting a fault */
+#define VMM_PF_FLAG_SW_FAULT (1u << 5) /* software fault */
+#define VMM_PF_FLAG_FAULT_MASK (VMM_PF_FLAG_HW_FAULT | VMM_PF_FLAG_SW_FAULT)
+
+/* convenience routine for convering page fault flags to a string */
+static const char *vmm_pf_flags_to_string(uint pf_flags, char str[5]) {
+    str[0] = (pf_flags & VMM_PF_FLAG_WRITE) ? 'w' : 'r';
+    str[1] = (pf_flags & VMM_PF_FLAG_USER) ? 'u' : 's';
+    str[2] = (pf_flags & VMM_PF_FLAG_INSTRUCTION) ? 'i' : 'd';
+    str[3] = (pf_flags & VMM_PF_FLAG_NOT_PRESENT) ? 'n' : 'p';
+    str[4] = '\0';
+
+    return str;
+}
+
+/* page fault handler, called during page fault context, with interrupts enabled */
+status_t vmm_page_fault_handler(vaddr_t addr, uint pf_flags);
+
+/* return a pointer to the zero page */
+static inline vm_page_t *vm_get_zero_page(void) {
+    extern vm_page_t *zero_page;
+    return zero_page;
+}
+
+/* return the physical address of the zero page */
+static inline paddr_t vm_get_zero_page_paddr(void) {
+    extern paddr_t zero_page_paddr;
+
+    return zero_page_paddr;
+}
 
 __END_CDECLS
 

@@ -101,29 +101,9 @@ protected:
     // get a pointer to a page at a given offset
     friend class VmMapping;
 
-    virtual vm_page_t* GetPageLocked(uint64_t offset) TA_REQ(lock_) { return nullptr; }
-
     // get the physical address of a page at offset
-    virtual status_t GetPageLocked(uint64_t offset, paddr_t* pa) TA_REQ(lock_) {
-        auto page = GetPageLocked(offset);
-        if (!page)
-            return ERR_NOT_FOUND;
-        *pa = vm_page_to_paddr(page);
-        return NO_ERROR;
-    }
-
-    // fault in a page at a given offset with PF_FLAGS
-    virtual vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) TA_REQ(lock_) {
-        return nullptr;
-    }
-
-    // fault in a page at a given offset with PF_FLAGS returning the physical address
-    virtual status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) TA_REQ(lock_) {
-        auto page = FaultPageLocked(offset, pf_flags);
-        if (!page)
-            return ERR_NOT_FOUND;
-        *pa = vm_page_to_paddr(page);
-        return NO_ERROR;
+    virtual status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t** page, paddr_t* pa) TA_REQ(lock_) {
+        return ERR_NOT_SUPPORTED;
     }
 
     Mutex* lock() TA_RET_CAP(lock_) { return &lock_; }
@@ -174,8 +154,7 @@ public:
     status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) override;
     status_t SyncCache(const uint64_t offset, const uint64_t len) override;
 
-    vm_page_t* GetPageLocked(uint64_t offset) override TA_REQ(lock_);
-    vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) override TA_REQ(lock_);
+    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t **, paddr_t *) override TA_REQ(lock_);
 
 private:
     // private constructor (use Create())
@@ -225,8 +204,7 @@ public:
 
     void Dump(uint depth, bool verbose) override;
 
-    status_t GetPageLocked(uint64_t offset, paddr_t* pa) override TA_REQ(lock_);
-    status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) override TA_REQ(lock_);
+    status_t GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t **, paddr_t* pa) override TA_REQ(lock_);
 
 private:
     // private constructor (use Create())

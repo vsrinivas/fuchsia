@@ -33,6 +33,10 @@ extern int __data_end;
 extern int __bss_start;
 extern int __bss_end;
 
+// boot time allocated page full of zeros
+vm_page_t *zero_page;
+paddr_t zero_page_paddr;
+
 // mark the physical pages backing a range of virtual as in use.
 // allocate the physical pages and throw them away
 static void mark_pages_in_use(vaddr_t va, size_t len) {
@@ -102,6 +106,15 @@ void vm_init_preheap(uint level) {
 
         mark_pages_in_use(boot_alloc_start, boot_alloc_end - boot_alloc_start);
     }
+
+    // grab a page and mark it as the zero page
+    zero_page = pmm_alloc_page(0, &zero_page_paddr);
+    DEBUG_ASSERT(zero_page);
+
+    void* ptr = paddr_to_kvaddr(zero_page_paddr);
+    DEBUG_ASSERT(ptr);
+
+    arch_zero_page(ptr);
 }
 
 void vm_init_postheap(uint level) {

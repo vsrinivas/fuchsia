@@ -141,6 +141,10 @@ void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace) {
 void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 
 status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
+
+    // hardware fault, mark it as such
+    flags |= VMM_PF_FLAG_HW_FAULT;
+
 #if TRACE_PAGE_FAULT || LOCAL_TRACE
     thread_t* current_thread = get_current_thread();
     TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x\n", current_thread->name, addr, flags);

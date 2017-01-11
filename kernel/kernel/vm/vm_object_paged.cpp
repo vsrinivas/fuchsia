@@ -172,32 +172,45 @@ mxtl::RefPtr<VmObject> VmObjectPaged::CreateFromROData(const void* data, size_t 
     return vmo;
 }
 
-vm_page_t* VmObjectPaged::GetPageLocked(uint64_t offset) TA_REQ(lock_) {
+status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, vm_page_t** const page_out, paddr_t* const pa_out) TA_REQ(lock_) {
     DEBUG_ASSERT(magic_ == MAGIC);
 
     if (offset >= size_)
-        return nullptr;
+        return ERR_OUT_OF_RANGE;
 
-    return page_list_.GetPage(offset);
-}
-
-vm_page_t* VmObjectPaged::FaultPageLocked(uint64_t offset, uint pf_flags) TA_REQ(lock_) {
-    DEBUG_ASSERT(magic_ == MAGIC);
-
-    LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x\n", this, offset, pf_flags);
-
-    if (offset >= size_)
-        return nullptr;
-
+    // see if we already have a page at that offset
     vm_page_t* p = page_list_.GetPage(offset);
-    if (p)
-        return p;
+    if (p) {
+        if (page_out)
+            *page_out = p;
+        if (pa_out)
+            *pa_out = vm_page_to_paddr(p);
+        return NO_ERROR;
+    }
+
+    // if we're not being asked to sw or hw fault in the page, return not found
+    if ((pf_flags & VMM_PF_FLAG_FAULT_MASK) == 0)
+        return ERR_NOT_FOUND;
+
+    __UNUSED char pf_string[5];
+    LTRACEF("vmo %p, offset %#" PRIx64 ", pf_flags %#x (%s)\n", this, offset, pf_flags,
+           vmm_pf_flags_to_string(pf_flags, pf_string));
+
+    // based on the type of fault, return either a new page or the zero page
+    if ((pf_flags & VMM_PF_FLAG_WRITE) == 0) {
+        LTRACEF("returning the zero page\n");
+        if (page_out)
+            *page_out = vm_get_zero_page();
+        if (pa_out)
+            *pa_out = vm_get_zero_page_paddr();
+        return NO_ERROR;
+    }
 
     // allocate a page
     paddr_t pa;
     p = pmm_alloc_page(pmm_alloc_flags_, &pa);
     if (!p)
-        return nullptr;
+        return ERR_NO_MEMORY;
 
     p->state = VM_PAGE_STATE_OBJECT;
 
@@ -209,7 +222,12 @@ vm_page_t* VmObjectPaged::FaultPageLocked(uint64_t offset, uint pf_flags) TA_REQ
 
     LTRACEF("faulted in page %p, pa %#" PRIxPTR "\n", p, pa);
 
-    return p;
+    if (page_out)
+        *page_out = p;
+    if (pa_out)
+        *pa_out = pa;
+
+    return NO_ERROR;
 }
 
 status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* committed) {
@@ -464,12 +482,12 @@ status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* b
         size_t tocopy = MIN(PAGE_SIZE - page_offset, new_len);
 
         // fault in the page
-        vm_page_t* p = FaultPageLocked(src_offset, write ? VMM_PF_FLAG_WRITE : 0);
-        if (!p)
-            return ERR_NO_MEMORY;
+        paddr_t pa;
+        auto status = GetPageLocked(src_offset, VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0), nullptr, &pa);
+        if (status < 0)
+            return status;
 
         // compute the kernel mapping of this page
-        paddr_t pa = vm_page_to_paddr(p);
         uint8_t* page_ptr = reinterpret_cast<uint8_t*>(paddr_to_kvaddr(pa));
 
         // call the copy routine
@@ -580,15 +598,13 @@ status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, user_ptr<paddr_t> 
     size_t index = 0;
     for (uint64_t off = start_page_offset; off != end_page_offset; off += PAGE_SIZE, index++) {
         // grab a pointer to the page only if it's already present
-        vm_page_t* p = GetPageLocked(off);
-        if (unlikely(!p))
+        paddr_t pa;
+        auto status = GetPageLocked(off, 0, nullptr, &pa);
+        if (status < 0)
             return ERR_NO_MEMORY;
 
-        // find the physical address
-        paddr_t pa = vm_page_to_paddr(p);
-
         // copy it out into user space
-        auto status = buffer.element_offset(index).copy_to_user(pa);
+        status = buffer.element_offset(index).copy_to_user(pa);
         if (unlikely(status < 0))
             return status;
     }
@@ -639,11 +655,12 @@ status_t VmObjectPaged::CacheOp(const uint64_t start_offset, const uint64_t len,
 
         const size_t page_offset = op_start_offset % PAGE_SIZE;
 
-        vm_page_t* p = GetPageLocked(op_start_offset);
+        // lookup the physical address of the page, careful not to fault in a new one
+        paddr_t pa;
+        auto status = GetPageLocked(op_start_offset, 0, nullptr, &pa);
 
-        if (likely(p)) {
+        if (likely(status == NO_ERROR)) {
             // Convert the page address to a Kernel virtual address.
-            const paddr_t pa = vm_page_to_paddr(p);
             const void* ptr = paddr_to_kvaddr(pa);
             const addr_t cache_op_addr = reinterpret_cast<addr_t>(ptr) + page_offset;
 
