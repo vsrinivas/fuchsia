@@ -184,7 +184,7 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 		if err != nil {
 			return mx.ErrInternal
 		}
-		msg.SetProtocol(uint32(mxio.ProtocolRemote))
+		msg.SetProtocol(mxio.ProtocolRemote)
 		msg.Handle[0] = h
 		msg.Hcount = 1
 		return mx.ErrOk
@@ -305,7 +305,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 			vfs.freeCookie(cookie)
 			return mx.ErrInternal
 		}
-		msg.SetProtocol(uint32(mxio.ProtocolRemote))
+		msg.SetProtocol(mxio.ProtocolRemote)
 		msg.Hcount = 1
 		msg.Handle[0] = h
 		return mx.ErrOk
@@ -319,7 +319,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 			println("dir clone createhandle err: ", err.Error())
 			return mx.ErrInternal
 		}
-		msg.SetProtocol(uint32(mxio.ProtocolRemote))
+		msg.SetProtocol(mxio.ProtocolRemote)
 		msg.Handle[0] = h
 		msg.Hcount = 1
 		return mx.ErrOk
