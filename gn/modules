@@ -36,10 +36,6 @@
             "bootfs_path": "apps/email_thread"
         },
         {
-            "binary": "email_user_shell",
-            "bootfs_path": "apps/email_user_shell"
-        },
-        {
             "binary": "interactive_receipt.flx",
             "bootfs_path": "apps/interactive_receipt"
         },
