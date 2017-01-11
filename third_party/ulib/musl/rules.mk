@@ -31,7 +31,6 @@ LOCAL_CFLAGS := \
     -U_ALL_SOURCE \
     -Wno-sign-compare \
     -Wno-parentheses \
-    -Wno-error \
     -Wno-missing-braces \
     -Wno-type-limits \
     -Werror=strict-prototypes \
