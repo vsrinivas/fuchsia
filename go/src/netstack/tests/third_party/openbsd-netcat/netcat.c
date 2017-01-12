@@ -374,11 +374,19 @@ main(int argc, char *argv[])
                                 int rv, plen;
                                 char buf[16384];
                                 struct sockaddr_storage z;
+#if defined(NO_MSG_PEEK)
+                                int n;
+#endif
 
                                 len = sizeof(z);
                                 plen = 2048;
+#if defined(NO_MSG_PEEK)
+                                rv = n = recvfrom(s, buf, plen, 0,
+                                    (struct sockaddr *)&z, &len);
+#else
                                 rv = recvfrom(s, buf, plen, MSG_PEEK,
                                     (struct sockaddr *)&z, &len);
+#endif
                                 if (rv < 0)
                                         err(1, "recvfrom");
 
@@ -388,8 +396,24 @@ main(int argc, char *argv[])
 
                                 if (vflag)
                                         report_connect((struct sockaddr *)&z, len);
-
+#if defined(NO_MSG_PEEK)
+                                /*
+                                 * We need to process the data in buf here
+                                 * otherwise it would be lost.
+                                 * Simulate what readwrite() would do with it.
+                                 */
+                                if (n == 0) {
+                                        shutdown(s, SHUT_RD);
+                                } else {
+                                        int lfd = fileno(stdout);
+                                        if (tflag)
+                                                atelnet(s, (unsigned char*)buf, n);
+                                        if ((int)atomicio(vwrite, lfd, buf, n) == n)
+                                                readwrite(s);
+                                }
+#else
                                 readwrite(s);
+#endif
                         } else {
                                 len = sizeof(cliaddr);
                                 connfd = accept(s, (struct sockaddr *)&cliaddr,

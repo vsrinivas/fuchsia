@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 executable("nc") {
+  defines = [ "NO_MSG_PEEK" ]
+
   sources = [
     "atomicio.c",
     "atomicio.h",
