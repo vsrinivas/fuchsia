@@ -7,9 +7,6 @@
 #include <endian.h>
 #include <limits.h>
 #include <magenta/syscalls.h>
-// TODO(teisenbe): This should go away when we clean up the VMAR
-// stuff below to not need to call mx_object_get_info.
-#include <magenta/syscalls/object.h>
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 # define MY_ELFDATA ELFDATA2LSB
@@ -80,15 +77,19 @@ mx_status_t elf_load_read_phdrs(mx_handle_t vmo, elf_phdr_t phdrs[],
     return NO_ERROR;
 }
 
-// An ET_DYN file can be loaded anywhere, so choose where.  This computes
-// handle->load_bias, which is the difference between p_vaddr values in
-// this file and actual runtime addresses.  (Usually the lowest p_vaddr in
-// an ET_DYN file will be 0 and so the load bias is also the load base
-// address, but ELF does not require that the lowest p_vaddr be 0.)
-static mx_status_t choose_load_bias(mx_handle_t vmar,
+// An ET_DYN file can be loaded anywhere, so choose where.  This
+// allocates a VMAR to hold the image, and returns its handle and
+// absolute address.  This also computes the "load bias", which is the
+// difference between p_vaddr values in this file and actual runtime
+// addresses.  (Usually the lowest p_vaddr in an ET_DYN file will be 0
+// and so the load bias is also the load base address, but ELF does
+// not require that the lowest p_vaddr be 0.)
+static mx_status_t choose_load_bias(mx_handle_t root_vmar,
                                     const elf_load_header_t* header,
                                     const elf_phdr_t phdrs[],
-                                    uintptr_t *bias) {
+                                    mx_handle_t* vmar,
+                                    uintptr_t* vmar_base,
+                                    uintptr_t* bias) {
     // This file can be loaded anywhere, so the first thing is to
     // figure out the total span it will need and reserve a span
     // of address space that big.  The kernel decides where to put it.
@@ -115,36 +116,16 @@ static mx_status_t choose_load_bias(mx_handle_t vmar,
     if (span == 0)
         return NO_ERROR;
 
-    // vm_map requires some vm_object handle, so create a dummy one.
-    mx_handle_t vmo;
-    if (mx_vmo_create(0, 0, &vmo) < 0)
-        return ERR_NO_MEMORY;
-
-    // Do a mapping to let the kernel choose an address range.
-    // TODO(MG-161): This really ought to be a no-access mapping (PROT_NONE
-    // in POSIX terms).  But the kernel currently doesn't allow that, so do
-    // a read-only mapping.
-    uintptr_t base = 0;
-    mx_status_t status = mx_vmar_map(vmar, 0, vmo, 0,
-                                     span, MX_VM_FLAG_PERM_READ,
-                                     &base);
-    mx_handle_close(vmo);
-    if (status < 0)
-        return ERR_NO_MEMORY;
-
-    // TODO(MG-133): Really we should just leave the no-access mapping in
-    // place and let each PT_LOAD mapping overwrite it.  But the kernel
-    // currently doesn't allow splitting an existing mapping to overwrite
-    // part of it.  So we remove the address-reserving mapping before
-    // starting on the actual PT_LOAD mappings.  Since there is no chance
-    // of racing with another thread doing mappings in this process,
-    // there's no danger of "losing the reservation".
-    status = mx_vmar_unmap(vmar, base, span);
-    if (status < 0)
-        return ERR_NO_MEMORY;
-
-    *bias = base - low;
-    return NO_ERROR;
+    // Allocate a VMAR to reserve the whole address range.
+    mx_status_t status = mx_vmar_allocate(root_vmar, 0, span,
+                                          MX_VM_FLAG_CAN_MAP_READ |
+                                          MX_VM_FLAG_CAN_MAP_WRITE |
+                                          MX_VM_FLAG_CAN_MAP_EXECUTE |
+                                          MX_VM_FLAG_CAN_MAP_SPECIFIC,
+                                          vmar, vmar_base);
+    if (status == NO_ERROR)
+        *bias = *vmar_base - low;
+    return status;
 }
 
 // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
@@ -183,28 +164,14 @@ static mx_handle_t get_writable_vmo(mx_handle_t vmar_self,
 
 static mx_status_t finish_load_segment(
     mx_handle_t vmar, mx_handle_t vmo, const elf_phdr_t* ph,
-    uintptr_t start, size_t size,
+    size_t start_offset, size_t size,
     uintptr_t file_start, uintptr_t file_end, size_t partial_page) {
     const uint32_t flags = MX_VM_FLAG_SPECIFIC |
         ((ph->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0) |
         ((ph->p_flags & PF_W) ? MX_VM_FLAG_PERM_WRITE : 0) |
         ((ph->p_flags & PF_X) ? MX_VM_FLAG_PERM_EXECUTE : 0);
 
-    // Compute the VMAR base so we can calculate offsets to give to map.
-    // TODO(teisenbe): This will become unnecessary once this code switches
-    // to using sub-regions.
-    mx_info_vmar_t vmar_info;
-    mx_status_t status = mx_object_get_info(vmar, MX_INFO_VMAR,
-                                            &vmar_info, sizeof(vmar_info),
-                                            NULL, NULL);
-    if (status != NO_ERROR)
-        return status;
-
-    if (start < vmar_info.base)
-        return ERR_ELF_BAD_FORMAT;
-
-    size_t start_offset = start - vmar_info.base;
-
+    uintptr_t start;
     if (ph->p_filesz == ph->p_memsz)
         // Straightforward segment, map all the whole pages from the file.
         return mx_vmar_map(vmar, start_offset, vmo, file_start, size, flags,
@@ -220,14 +187,13 @@ static mx_status_t finish_load_segment(
         if (status != NO_ERROR)
             return status;
 
-        start_offset = start - vmar_info.base;
         start_offset += file_size;
         size -= file_size;
     }
 
     // The rest of the segment will be backed by anonymous memory.
     mx_handle_t bss_vmo;
-    status = mx_vmo_create(size, 0, &bss_vmo);
+    mx_status_t status = mx_vmo_create(size, 0, &bss_vmo);
     if (status < 0)
         return status;
 
@@ -264,13 +230,13 @@ static mx_status_t finish_load_segment(
 }
 
 static mx_status_t load_segment(mx_handle_t vmar_self,
-                                mx_handle_t vmar, mx_handle_t vmo,
-                                uintptr_t bias, const elf_phdr_t* ph) {
+                                mx_handle_t vmar, size_t vmar_offset,
+                                mx_handle_t vmo, const elf_phdr_t* ph) {
     // The p_vaddr can start in the middle of a page, but the
     // semantics are that all the whole pages containing the
     // p_vaddr+p_filesz range are mapped in.
-    uintptr_t start = (uintptr_t)ph->p_vaddr + bias;
-    uintptr_t end = start + ph->p_memsz;
+    size_t start = (size_t)ph->p_vaddr + vmar_offset;
+    size_t end = start + ph->p_memsz;
     start &= -PAGE_SIZE;
     end = (end + PAGE_SIZE - 1) & -PAGE_SIZE;
     size_t size = end - start;
@@ -306,22 +272,28 @@ static mx_status_t load_segment(mx_handle_t vmar_self,
     return status;
 }
 
-mx_status_t elf_load_map_segments(mx_handle_t vmar_self, mx_handle_t vmar,
+mx_status_t elf_load_map_segments(mx_handle_t vmar_self, mx_handle_t root_vmar,
                                   const elf_load_header_t* header,
                                   const elf_phdr_t phdrs[],
                                   mx_handle_t vmo,
                                   mx_vaddr_t* base, mx_vaddr_t* entry) {
+    uintptr_t vmar_base = 0;
     uintptr_t bias = 0;
-    mx_status_t status = choose_load_bias(vmar, header, phdrs, &bias);
+    mx_handle_t vmar = MX_HANDLE_INVALID;
+    mx_status_t status = choose_load_bias(root_vmar, header, phdrs,
+                                          &vmar, &vmar_base, &bias);
 
+    size_t vmar_offset = bias - vmar_base;
     for (uint_fast16_t i = 0; status == NO_ERROR && i < header->e_phnum; ++i) {
         if (phdrs[i].p_type == PT_LOAD)
-            status = load_segment(vmar_self, vmar, vmo, bias, &phdrs[i]);
+            status = load_segment(vmar_self, vmar, vmar_offset, vmo, &phdrs[i]);
     }
+
+    mx_handle_close(vmar);
 
     if (status == NO_ERROR) {
         if (base != NULL)
-            *base = bias;
+            *base = vmar_base;
         if (entry != NULL)
             *entry = header->e_entry != 0 ? header->e_entry + bias : 0;
     }
