@@ -17,16 +17,6 @@
 
 namespace {
 
-extern "C" mx_handle_t get_root_job() {
-#ifdef BUILD_COMBINED_TESTS
-    extern mx_handle_t root_job;
-    return root_job;
-#else
-    // TODO(kulakowski) Get this from somewhere.
-    return MX_HANDLE_INVALID;
-#endif
-}
-
 const char kProcessName[] = "Test process";
 
 const uint32_t kRwxMapPerm =
@@ -58,7 +48,7 @@ bool destroy_root_test() {
 
     mx_handle_t process;
     mx_handle_t vmar;
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     EXPECT_EQ(mx_vmar_destroy(vmar), NO_ERROR, "");
@@ -84,7 +74,7 @@ bool basic_allocate_test() {
     mx_handle_t region1, region2;
     uintptr_t region1_addr, region2_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     const size_t region1_size = PAGE_SIZE * 10;
@@ -119,7 +109,7 @@ bool allocate_oob_test() {
     mx_handle_t region1, region2;
     uintptr_t region1_addr, region2_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     const size_t region1_size = PAGE_SIZE * 10;
@@ -157,7 +147,7 @@ bool allocate_unsatisfiable_test() {
     mx_handle_t region1, region2, region3;
     uintptr_t region1_addr, region2_addr, region3_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     const size_t region1_size = PAGE_SIZE * 10;
@@ -207,7 +197,7 @@ bool destroyed_vmar_test() {
     uintptr_t region_addr[3];
     uintptr_t map_addr[2];
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), NO_ERROR, "");
@@ -310,7 +300,7 @@ bool map_over_destroyed_test() {
     uintptr_t region_addr[2];
     uintptr_t map_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), NO_ERROR, "");
@@ -399,7 +389,7 @@ bool overmapping_test() {
     uintptr_t region_addr[3];
     uintptr_t map_addr[2];
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), NO_ERROR, "");
@@ -496,7 +486,7 @@ bool invalid_args_test() {
     mx_handle_t region;
     uintptr_t region_addr, map_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
     ASSERT_EQ(mx_vmo_create(4 * PAGE_SIZE, 0, &vmo), NO_ERROR, "");
 
@@ -648,7 +638,7 @@ bool unaligned_len_test() {
     mx_handle_t vmo;
     uintptr_t map_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
     ASSERT_EQ(mx_vmo_create(4 * PAGE_SIZE, 0, &vmo), NO_ERROR, "");
 
@@ -685,7 +675,7 @@ bool rights_drop_test() {
     uintptr_t map_addr;
     uintptr_t region_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), NO_ERROR, "");
 
@@ -740,7 +730,7 @@ bool protect_test() {
     mx_handle_t vmo;
     uintptr_t map_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), NO_ERROR, "");
 
@@ -797,7 +787,7 @@ bool nested_region_perms_test() {
     uintptr_t region_addr[2];
     uintptr_t map_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     ASSERT_EQ(mx_vmo_create(PAGE_SIZE, 0, &vmo), NO_ERROR, "");
@@ -905,7 +895,7 @@ bool unmap_split_test() {
     mx_handle_t vmo;
     uintptr_t mapping_addr[3];
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     ASSERT_EQ(mx_vmo_create(4 * PAGE_SIZE, 0, &vmo), NO_ERROR, "");
@@ -973,7 +963,7 @@ bool unmap_multiple_test() {
     uintptr_t mapping_addr[3];
     uintptr_t subregion_addr;
 
-    ASSERT_EQ(mx_process_create(get_root_job(), kProcessName, sizeof(kProcessName) - 1,
+    ASSERT_EQ(mx_process_create(mx_job_default(), kProcessName, sizeof(kProcessName) - 1,
                                 0, &process, &vmar), NO_ERROR, "");
 
     const size_t mapping_size = 4 * PAGE_SIZE;

@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
         return r;
     }
 
-    job_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    job_handle = mx_job_default();
     sysinfo_job_root = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HJOBROOT));
     app_launcher = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_USER0, ID_HLAUNCHER));
 

@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
     devmgr_io_init();
 
     root_resource_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0));
-    root_job_handle = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    root_job_handle = mx_job_default();
 
     printf("devmgr: main()\n");
 

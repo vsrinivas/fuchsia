@@ -19,12 +19,17 @@ __BEGIN_CDECLS
 
 #define mx_process_self _mx_process_self
 static inline mx_handle_t _mx_process_self(void) {
-  return __magenta_process_self;
+    return __magenta_process_self;
 }
 
 #define mx_vmar_root_self _mx_vmar_root_self
 static inline mx_handle_t _mx_vmar_root_self(void) {
-  return __magenta_vmar_root_self;
+    return __magenta_vmar_root_self;
+}
+
+#define mx_job_default _mx_job_default
+static inline mx_handle_t _mx_job_default(void) {
+    return __magenta_job_default;
 }
 
 __END_CDECLS

@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
         check("launchpad_vmo_from_file", vmo);
     }
 
-    mx_handle_t job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    mx_handle_t job = mx_job_default();
     if (new_job) {
         if (job == MX_HANDLE_INVALID) {
             fprintf(stderr, "no mxio job handle found\n");

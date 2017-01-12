@@ -80,7 +80,7 @@ mx_handle_t launchpad_launch_mxio_vmo_etc(const char* name, mx_handle_t vmo,
         name = argv[0];
 
     mx_handle_t job_to_child = MX_HANDLE_INVALID;
-    mx_handle_t job = get_mxio_job();
+    mx_handle_t job = mx_job_default();
     if (job > 0)
         mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
 

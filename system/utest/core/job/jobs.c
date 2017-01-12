@@ -19,7 +19,7 @@ static bool basic_test(void) {
     BEGIN_TEST;
 
     // Never close the launchpad job.
-    mx_handle_t job_parent = root_job;
+    mx_handle_t job_parent = mx_job_default();
     ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
 
     // If the parent job is valid, one should be able to create a child job
@@ -41,7 +41,7 @@ static bool basic_test(void) {
 static bool create_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t job_parent = root_job;
+    mx_handle_t job_parent = mx_job_default();
     ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
 
     mx_handle_t job_child;
@@ -68,7 +68,7 @@ static bool create_test(void) {
 static bool kill_test(void) {
     BEGIN_TEST;
 
-    mx_handle_t job_parent = root_job;
+    mx_handle_t job_parent = mx_job_default();
     ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
 
     mx_handle_t job_child;

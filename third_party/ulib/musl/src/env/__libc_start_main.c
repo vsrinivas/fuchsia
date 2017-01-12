@@ -115,6 +115,18 @@ _Noreturn void __libc_start_main(int (*main)(int, char**, char**),
             handle_info[i] = 0;
             break;
 
+        case MX_HND_TYPE_JOB:
+            // The default job provided to the process to use for
+            // creation of additional processes.  It may or may not
+            // be the job this process is a child of.  It may not
+            // be provided at all.
+            if (__magenta_job_default != MX_HANDLE_INVALID)
+                _mx_handle_close(__magenta_job_default);
+            __magenta_job_default = handles[i];
+            handles[i] = MX_HANDLE_INVALID;
+            handle_info[i] = 0;
+            break;
+
         case MX_HND_TYPE_VMAR_ROOT:
             // As above for PROC_SELF
             if (__magenta_vmar_root_self != MX_HANDLE_INVALID)

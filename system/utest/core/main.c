@@ -34,16 +34,11 @@ static void log_write(const void* data, size_t len) {
 // use mxio. See ./README.md.
 
 mx_handle_t root_resource;
-mx_handle_t root_job;
 
 void __libc_extensions_init(uint32_t count, mx_handle_t handle[], uint32_t info[]) {
     for (unsigned n = 0; n < count; n++) {
         if (info[n] == MX_HND_INFO(MX_HND_TYPE_RESOURCE, 0)) {
             root_resource = handle[n];
-            break;
-        }
-        if (info[n] == MX_HND_INFO(MX_HND_TYPE_JOB, 0)) {
-            root_job = handle[n];
             break;
         }
     }

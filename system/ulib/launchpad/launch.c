@@ -39,19 +39,8 @@ mx_handle_t launchpad_launch_with_job(mx_handle_t job,
     return finish_launch(lp, status, handles, hnds_count);
 }
 
-static mx_handle_t mxio_job = MX_HANDLE_INVALID;
-static mtx_t mxio_job_mutex = MTX_INIT;
-
-mx_handle_t get_mxio_job(void) {
-    mtx_lock(&mxio_job_mutex);
-    if (mxio_job == MX_HANDLE_INVALID)
-        mxio_job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
-    mtx_unlock(&mxio_job_mutex);
-    return mxio_job;
-}
-
 mx_handle_t launchpad_get_mxio_job(void) {
-  return get_mxio_job();
+    return mx_job_default();
 }
 
 mx_handle_t launchpad_launch(const char* name,
@@ -60,7 +49,7 @@ mx_handle_t launchpad_launch(const char* name,
                              size_t hnds_count, mx_handle_t* handles,
                              uint32_t* ids) {
     mx_handle_t job_to_child = MX_HANDLE_INVALID;
-    mx_handle_t job = get_mxio_job();
+    mx_handle_t job = mx_job_default();
     if (job > 0)
         mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
 

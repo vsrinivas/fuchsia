@@ -31,7 +31,7 @@ static bool launchpad_test(void)
 
     launchpad_t* lp = NULL;
 
-    mx_handle_t mxio_job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+    mx_handle_t mxio_job = mx_job_default();
     ASSERT_GT(mxio_job, 0, "no mxio job object");
 
     mx_status_t status = launchpad_create(mxio_job, test_inferior_child_name, &lp);
