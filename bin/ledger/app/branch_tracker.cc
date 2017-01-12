@@ -53,8 +53,7 @@ class BranchTracker::PageWatcherContainer {
 
     // TODO(etiennej): See LE-74: clean object ownership
     diff_utils::ComputePageChange(
-        storage_, current_commit_->GetTimestamp(), last_commit_->GetContents(),
-        current_commit_->GetContents(),
+        storage_, *last_commit_, *current_commit_,
         ftl::MakeCopyable([ this, new_commit = std::move(current_commit_) ](
             storage::Status status, PageChangePtr page_change_ptr) mutable {
           if (status != storage::Status::OK) {

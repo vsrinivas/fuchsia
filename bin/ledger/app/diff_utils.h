@@ -8,18 +8,16 @@
 #include <functional>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/storage/public/commit_contents.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/macros.h"
 
 namespace ledger {
 namespace diff_utils {
-// Asynchronously creates a PageChange from the diff of two CommitContents.
+// Asynchronously creates a PageChange from the diff of two Commits.
 void ComputePageChange(
     storage::PageStorage* storage,
-    int64_t change_timestamp,
-    std::unique_ptr<storage::CommitContents> base,
-    std::unique_ptr<storage::CommitContents> other,
+    const storage::Commit& base,
+    const storage::Commit& other,
     std::function<void(storage::Status, PageChangePtr)> callback);
 
 }  // namespace diff_utils

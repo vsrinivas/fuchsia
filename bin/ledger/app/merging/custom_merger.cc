@@ -95,11 +95,9 @@ void Merger::Start() {
       callback::Waiter<storage::Status, PageChangePtr>::Create(
           storage::Status::OK);
 
-  diff_utils::ComputePageChange(storage_, left_->GetTimestamp(),
-                                ancestor_->GetContents(), left_->GetContents(),
+  diff_utils::ComputePageChange(storage_, *ancestor_, *left_,
                                 waiter->NewCallback());
-  diff_utils::ComputePageChange(storage_, left_->GetTimestamp(),
-                                ancestor_->GetContents(), right_->GetContents(),
+  diff_utils::ComputePageChange(storage_, *ancestor_, *right_,
                                 waiter->NewCallback());
 
   waiter->Finalize([self = ftl::RefPtr<Merger>(this)](

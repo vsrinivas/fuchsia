@@ -16,89 +16,83 @@ namespace diff_utils {
 
 void ComputePageChange(
     storage::PageStorage* storage,
-    int64_t change_timestamp,
-    std::unique_ptr<storage::CommitContents> base,
-    std::unique_ptr<storage::CommitContents> other,
+    const storage::Commit& base,
+    const storage::Commit& other,
     std::function<void(storage::Status, PageChangePtr)> callback) {
-  base->diff(
-      std::move(other),
-      [ change_timestamp, storage, callback = std::move(callback) ](
-          storage::Status status,
-          std::unique_ptr<storage::Iterator<const storage::EntryChange>>
-              it) mutable {
-        if (status != storage::Status::OK) {
-          FTL_LOG(ERROR) << "Unable to compute diff.";
-          callback(status, nullptr);
-          return;
-        }
+  auto waiter = callback::
+      Waiter<storage::Status, std::unique_ptr<const storage::Object>>::Create(
+          storage::Status::OK);
 
-        if (!it->Valid()) {
-          callback(storage::Status::OK, nullptr);
-          return;
-        }
+  PageChangePtr page_change = PageChange::New();
+  page_change->timestamp = other.GetTimestamp();
+  page_change->changes = fidl::Array<EntryPtr>::New(0);
+  page_change->deleted_keys = fidl::Array<fidl::Array<uint8_t>>::New(0);
 
-        auto waiter = callback::Waiter<storage::Status,
-                                       std::unique_ptr<const storage::Object>>::
-            Create(storage::Status::OK);
+  auto on_next = [ storage, waiter, page_change = page_change.get() ](
+      storage::EntryChange change) {
+    if (change.deleted) {
+      page_change->deleted_keys.push_back(convert::ToArray(change.entry.key));
+      return true;
+    }
 
-        PageChangePtr page_change = PageChange::New();
-        page_change->timestamp = change_timestamp;
-        page_change->changes = fidl::Array<EntryPtr>::New(0);
-        page_change->deleted_keys = fidl::Array<fidl::Array<uint8_t>>::New(0);
+    EntryPtr entry = Entry::New();
+    entry->key = convert::ToArray(change.entry.key);
+    entry->priority = change.entry.priority == storage::KeyPriority::EAGER
+                          ? Priority::EAGER
+                          : Priority::LAZY;
+    page_change->changes.push_back(std::move(entry));
+    storage->GetObject(change.entry.object_id, waiter->NewCallback());
 
-        for (; it->Valid(); it->Next()) {
-          if ((*it)->deleted) {
-            page_change->deleted_keys.push_back(
-                convert::ToArray((*it)->entry.key));
-            continue;
+    return true;
+  };
+
+  auto on_done = ftl::MakeCopyable([
+    waiter = std::move(waiter), page_change = std::move(page_change),
+    callback = std::move(callback)
+  ](storage::Status status) mutable {
+    if (status != storage::Status::OK) {
+      FTL_LOG(ERROR) << "Unable to compute diff.";
+      callback(status, nullptr);
+      return;
+    }
+    if (page_change->changes.size() == 0) {
+      callback(status, nullptr);
+      return;
+    }
+    std::function<void(storage::Status,
+                       std::vector<std::unique_ptr<const storage::Object>>)>
+        result_callback = ftl::MakeCopyable([
+          page_change = std::move(page_change), callback = std::move(callback)
+        ](storage::Status status,
+          std::vector<std::unique_ptr<const storage::Object>> results) mutable {
+          if (status != storage::Status::OK) {
+            FTL_LOG(ERROR) << "Watcher: error while reading changed values.";
+            callback(status, nullptr);
+            return;
           }
+          FTL_DCHECK(results.size() == page_change->changes.size());
+          for (size_t i = 0; i < results.size(); i++) {
+            ftl::StringView object_contents;
 
-          EntryPtr entry = Entry::New();
-          entry->key = convert::ToArray((*it)->entry.key);
-          entry->priority = (*it)->entry.priority == storage::KeyPriority::EAGER
-                                ? Priority::EAGER
-                                : Priority::LAZY;
-          page_change->changes.push_back(std::move(entry));
-          storage->GetObject((*it)->entry.object_id, waiter->NewCallback());
-        }
+            storage::Status read_status = results[i]->GetData(&object_contents);
+            if (read_status != storage::Status::OK) {
+              FTL_LOG(ERROR) << "Watcher: error while reading changed value.";
+              callback(read_status, nullptr);
+              return;
+            }
 
-        std::function<void(storage::Status,
-                           std::vector<std::unique_ptr<const storage::Object>>)>
-            result_callback = ftl::MakeCopyable([
-              page_change = std::move(page_change),
-              callback = std::move(callback)
-            ](storage::Status status,
-              std::vector<std::unique_ptr<const storage::Object>>
-                  results) mutable {
-              if (status != storage::Status::OK) {
-                FTL_LOG(ERROR)
-                    << "Watcher: error while reading changed values.";
-                callback(status, nullptr);
-                return;
-              }
-              FTL_DCHECK(results.size() == page_change->changes.size());
-              for (size_t i = 0; i < results.size(); i++) {
-                ftl::StringView object_contents;
-
-                storage::Status read_status =
-                    results[i]->GetData(&object_contents);
-                if (read_status != storage::Status::OK) {
-                  FTL_LOG(ERROR)
-                      << "Watcher: error while reading changed value.";
-                  callback(read_status, nullptr);
-                  return;
-                }
-
-                // TODO(etiennej): LE-75 implement pagination on OnChange.
-                // TODO(etiennej): LE-120 Use VMOs for big values.
-                page_change->changes[i]->value = Value::New();
-                page_change->changes[i]->value->set_bytes(
-                    convert::ToArray(object_contents));
-              }
-              callback(storage::Status::OK, std::move(page_change));
-            });
-        waiter->Finalize(result_callback);
-      });
+            // TODO(etiennej): LE-75 implement pagination on OnChange.
+            // TODO(etiennej): LE-120 Use VMOs for big values.
+            page_change->changes[i]->value = Value::New();
+            page_change->changes[i]->value->set_bytes(
+                convert::ToArray(object_contents));
+          }
+          callback(storage::Status::OK, std::move(page_change));
+        });
+    waiter->Finalize(result_callback);
+  });
+  storage->GetCommitContentsDiff(base, other, std::move(on_next),
+                                 std::move(on_done));
 }
 
 }  // namespace diff_utils
