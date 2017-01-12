@@ -1,0 +1,6 @@
+{
+    "labels": [
+        "//lib/escher:examples_linux",
+        "//lib/escher:tests_linux"
+    ]
+}

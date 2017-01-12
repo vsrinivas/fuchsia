@@ -2,5 +2,15 @@
     "labels": [
         "//lib/escher:examples",
         "//lib/escher:tests"
+    ],
+    "binaries": [
+        {
+            "binary": "waterfall",
+            "bootfs_path": "apps/waterfall"
+        },
+        {
+            "binary": "escher_unittests",
+            "bootfs_path": "test/escher_unittests"
+        }
     ]
 }
