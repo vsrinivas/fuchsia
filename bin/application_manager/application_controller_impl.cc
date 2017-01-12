@@ -35,16 +35,16 @@ ApplicationControllerImpl::ApplicationControllerImpl(
 
 ApplicationControllerImpl::~ApplicationControllerImpl() {
   RemoveTerminationHandlerIfNeeded();
-  // NOTE(abdulla): This is a short-term fix until we better understand process,
-  // module, and application life-cycles.
-  process_.kill();
 }
 
 void ApplicationControllerImpl::Kill(const KillCallback& callback) {
-  environment_->ExtractApplication(this);
-  // The destructor of the temporary returned by ExtractApplication destroys
-  // |this| at the end of the previous statement.
+  std::unique_ptr<ApplicationControllerImpl> self =
+      environment_->ExtractApplication(this);
+  RemoveTerminationHandlerIfNeeded();
+  process_.kill();
+  process_.reset();
   callback();
+  // The |self| destructor destroys |this| when we unwind this stack frame.
 }
 
 void ApplicationControllerImpl::Detach() {
@@ -56,7 +56,7 @@ void ApplicationControllerImpl::OnHandleReady(mx_handle_t handle,
   FTL_DCHECK(handle == process_.get());
   FTL_DCHECK(pending & MX_TASK_TERMINATED);
   environment_->ExtractApplication(this);
-  // The destructor of the temporary returned by ExtractApplication destroys
+  // The temporary object returnd by ExtractApplication destructor destroys
   // |this| at the end of the previous statement.
 }
 

@@ -160,9 +160,10 @@ void App::ResetViewManager() {
 void App::LaunchApplication(modular::ApplicationLaunchInfoPtr launch_info) {
   FTL_LOG(INFO) << "Bootstrapping application " << launch_info->url;
 
+  modular::ApplicationControllerPtr controller;
   env_launcher_->CreateApplication(std::move(launch_info),
-                                   app_controller_.NewRequest());
-  app_controller_.set_connection_error_handler([] {
+                                   controller.NewRequest());
+  controller.set_connection_error_handler([] {
     FTL_LOG(INFO) << "Bootstrapped application terminated.";
     exit(0);
   });
