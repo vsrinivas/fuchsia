@@ -144,31 +144,27 @@ void Merger::OnMergeDone(fidl::Array<MergedValuePtr> merged_values) {
     return;
   }
 
-  std::unique_ptr<storage::CommitContents> right_contents =
-      right_->GetContents();
   ftl::RefPtr<callback::Waiter<storage::Status, storage::ObjectId>> waiter =
       callback::Waiter<storage::Status, storage::ObjectId>::Create(
           storage::Status::OK);
-  bool has_error = false;
   for (const MergedValuePtr& merged_value : merged_values) {
-    if (has_error) {
-      break;
-    }
     switch (merged_value->source) {
       case ValueSource::RIGHT: {
-        std::unique_ptr<storage::Iterator<const storage::Entry>> entries =
-            right_contents->find(merged_value->key);
-        if (!entries || !entries->Valid() ||
-            (*entries)->key != convert::ExtendedStringView(merged_value->key)) {
-          FTL_LOG(ERROR)
-              << "Key " << convert::ExtendedStringView(merged_value->key)
-              << " is not present in the right change. Unable to proceed";
-          waiter->NewCallback()(storage::Status::NOT_FOUND,
-                                storage::ObjectId());
-          has_error = true;
-        } else {
-          waiter->NewCallback()(storage::Status::OK, (*entries)->object_id);
-        }
+        std::string key = convert::ToString(merged_value->key);
+        storage_->GetEntryFromCommit(*right_, key, [
+          key, callback = waiter->NewCallback()
+        ](storage::Status status, storage::Entry entry) {
+          if (status != storage::Status::OK) {
+            if (status == storage::Status::NOT_FOUND) {
+              FTL_LOG(ERROR)
+                  << "Key " << key
+                  << " is not present in the right change. Unable to proceed";
+            }
+            callback(status, storage::ObjectId());
+            return;
+          }
+          callback(storage::Status::OK, entry.object_id);
+        });
         break;
       }
       case ValueSource::NEW: {
