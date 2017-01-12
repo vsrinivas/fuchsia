@@ -34,8 +34,13 @@ int main(int argc, const char** argv) {
   for (size_t i = 1; i < positional_args.size(); ++i)
     launch_info->arguments.push_back(positional_args[i]);
   launch_info->services = services.NewRequest();
+  modular::ApplicationControllerPtr controller;
   application_context_->launcher()->CreateApplication(std::move(launch_info),
-                                                      nullptr);
+                                                      controller.NewRequest());
+  controller.set_connection_error_handler([&loop] {
+    FTL_LOG(INFO) << "Launched application terminated.";
+    loop.PostQuitTask();
+  });
 
   // Create the view.
   fidl::InterfacePtr<mozart::ViewProvider> view_provider;
@@ -49,7 +54,6 @@ int main(int argc, const char** argv) {
   presenter->Present(std::move(view_owner));
 
   // Done!
-  loop.PostQuitTask();
   loop.Run();
   return 0;
 }
