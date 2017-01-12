@@ -7,7 +7,16 @@ import("//build/config/sysroot.gni")
 assert(current_os == "fuchsia")
 
 config("werror") {
-  cflags = [ "-Werror" ]
+  cflags = [
+    "-Werror",
+
+    # Declarations marked as deprecated should cause build failures, rather
+    # they should emit warnings to notify developers about the use of
+    # deprecated interfaces.
+    "-Wno-error=deprecated-declarations",
+
+    # Do not add additional -Wno-error to this config.
+  ]
 }
 
 config("icf") {
