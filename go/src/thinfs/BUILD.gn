@@ -3,35 +3,27 @@
 # found in the LICENSE file.
 
 action("thinfs") {
-  thinfs_path = "$root_out_dir/thinfs"
+  out_path = "$root_out_dir/thinfs"
 
-  outputs = [ thinfs_path ]
+  outputs = [ out_path ]
 
-  if (target_cpu == "x64") {
-    # TODO(smklein): Delete this conditional (obliterating the 'else' case)
-    # once the ARM64 build is fixed.
-    script = "scripts/build_fuchsia.py"
-    depfile_path = "${thinfs_path}.d"
-    depfile = depfile_path
+  script = rebase_path("//.") + "/build/gobuild.py"
+  depfile_path = "${out_path}.d"
+  depfile = depfile_path
 
-    args = [
-      "--fuchsia-root",
-      rebase_path("//."),
-      "--go-binary",
-      rebase_path(get_label_info("//third_party/go:go_runtime", "target_gen_dir") + "/bin/go"),
-      "--go-bin-directory",
-      rebase_path("$root_out_dir"),
-      "--output",
-      rebase_path(thinfs_path, root_build_dir),
-      "--depfile",
-      rebase_path(depfile_path),
-      "fuchsia.googlesource.com/thinfs/magenta",
-    ]
+  args = [
+    "--fuchsia-root",
+    rebase_path("//."),
+    "--root-out-dir",
+    rebase_path("$root_out_dir"),
+    "--depfile",
+    rebase_path(depfile_path),
+    "--current-cpu",
+    current_cpu,
+    "fuchsia.googlesource.com/thinfs",
+  ]
 
-    deps = [
-      "//third_party/go:go_runtime",
-    ]
-  } else {
-    script = "scripts/lie_for_arm64_build.py"
-  }
+  deps = [
+    "//third_party/go:go_runtime",
+  ]
 }
