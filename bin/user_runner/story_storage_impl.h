@@ -11,7 +11,6 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/services/story/story_storage.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"
@@ -23,39 +22,38 @@ namespace modular {
 // If |story_page| is not bound, story data are just kept in memory.
 // This is useful when ledger is broken. TODO(mesch): Eventually
 // in-memory storage can be removed from here.
-class StoryStorageImpl : public StoryStorage, public ledger::PageWatcher {
+class StoryStorageImpl : public ledger::PageWatcher {
  public:
   using Storage =
       std::unordered_map<std::string,
-                         std::unordered_map<std::string, LinkDataPtr>>;
+                         std::unordered_map<std::string, std::string>>;
+
+  using DataCallback = std::function<void(const fidl::String&)>;
+
+  using SyncCallback = std::function<void()>;
 
   StoryStorageImpl(std::shared_ptr<Storage> storage,
                    ledger::PagePtr story_page,
-                   const fidl::String& key,
-                   fidl::InterfaceRequest<StoryStorage> request);
+                   const fidl::String& key);
 
   ~StoryStorageImpl() override;
 
- private:
-  // |StoryStorage|
   void ReadLinkData(const fidl::String& link_id,
-                    const ReadLinkDataCallback& callback) override;
+                    const DataCallback& callback);
   void WriteLinkData(const fidl::String& link_id,
-                     LinkDataPtr data,
-                     const WriteLinkDataCallback& callback) override;
-  void WatchLink(
-      const fidl::String& link_id,
-      fidl::InterfaceHandle<StoryStorageLinkWatcher> watcher) override;
-  void Dup(fidl::InterfaceRequest<StoryStorage> request) override;
-  void Sync(const SyncCallback& callback) override;
+                     const fidl::String& data,
+                     const SyncCallback& callback);
+  void WatchLink(const fidl::String& link_id,
+                 const DataCallback& watcher);
+  void Sync(const SyncCallback& callback);
 
+ private:
   // |PageWatcher|
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& callback) override;
 
-  fidl::BindingSet<StoryStorage> bindings_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
-  std::vector<std::pair<fidl::String, StoryStorageLinkWatcherPtr>> watchers_;
+  std::vector<std::pair<fidl::String, DataCallback>> watchers_;
   const std::string key_;
   std::shared_ptr<Storage> storage_;
   ledger::PagePtr story_page_;

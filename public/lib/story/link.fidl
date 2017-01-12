@@ -101,8 +101,8 @@ interface Link {
   // Allows to await completion of previously pipelined requests, to
   // create sequentiality across service instances without giving
   // every operation an empty return value. Used to gate an operation
-  // on another service (like StoryRunner.Stop()) that would actually
-  // tear down this service on state being persistent.
+  // on another service that would actually tear down this service on
+  // state being persistent.
   Sync() => ();
 };
 

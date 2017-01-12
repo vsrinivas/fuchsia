@@ -12,10 +12,8 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
-#include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/story_data.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
-#include "apps/modular/services/user/user_runner.fidl.h"
 #include "apps/modular/src/user_runner/story_controller_impl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -24,10 +22,10 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/time/time_point.h"
 
 namespace modular {
 class ApplicationContext;
+class Resolver;
 
 namespace {
 class DeleteStoryCall;
@@ -55,14 +53,18 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   // Used by CreateStory() to write story meta-data to the ledger.
   void WriteStoryData(StoryDataPtr story_data, std::function<void()> done);
 
-  fidl::InterfaceHandle<ledger::LedgerRepository> DuplicateLedgerRepository();
+  ledger::LedgerRepository* ledger_repository() {
+    return ledger_repository_.get();
+  }
+
+  ApplicationLauncher* launcher() {
+    return launcher_.get();
+  }
 
   // Used by StoryControllerImpl.
   using Storage = StoryStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
-  void ConnectToStoryRunnerFactory(
-      fidl::InterfaceRequest<StoryRunnerFactory> request);
   void ConnectToResolver(fidl::InterfaceRequest<Resolver> request);
 
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;

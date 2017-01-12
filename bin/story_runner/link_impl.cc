@@ -14,16 +14,20 @@
 
 namespace modular {
 
-LinkImpl::LinkImpl(StoryStoragePtr story_storage,
+LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
                    const fidl::String& name,
                    fidl::InterfaceRequest<Link> request)
     : name_(name),
-      story_storage_(std::move(story_storage)),
+      story_storage_(story_storage),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
   ReadLinkData(
       ftl::MakeCopyable([ this, request = std::move(request) ]() mutable {
         LinkConnection::New(this, std::move(request));
       }));
+
+  story_storage_->WatchLink(name, [this](const fidl::String& json) {
+    OnChange(json);
+  });
 }
 
 LinkImpl::~LinkImpl() {}
@@ -143,13 +147,10 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
 }
 
 void LinkImpl::ReadLinkData(const std::function<void()>& done) {
-  story_storage_->ReadLinkData(name_, [this, done](LinkDataPtr data) {
-    if (!data.is_null()) {
-      std::string json;
-      data->json.Swap(&json);
-      doc_.Parse(std::move(json));
-      FTL_LOG(INFO) << "LinkImpl::ReadLinkData() "
-                    << JsonValueToPrettyString(doc_);
+  story_storage_->ReadLinkData(name_, [this, done](const fidl::String& json) {
+    if (!json.is_null()) {
+      doc_.Parse(json.get());
+      FTL_LOG(INFO) << "LinkImpl::ReadLinkData() " << JsonValueToPrettyString(doc_);
     }
 
     done();
@@ -161,9 +162,7 @@ void LinkImpl::WriteLinkData(const std::function<void()>& done) {
 }
 
 void LinkImpl::WriteLinkDataImpl(const std::function<void()>& done) {
-  auto link_data = LinkData::New();
-  link_data->json = JsonValueToString(doc_);
-  story_storage_->WriteLinkData(name_, std::move(link_data), done);
+  story_storage_->WriteLinkData(name_, JsonValueToString(doc_), done);
 }
 
 void LinkImpl::DatabaseChanged(LinkConnection* const src) {
@@ -173,17 +172,24 @@ void LinkImpl::DatabaseChanged(LinkConnection* const src) {
   WriteLinkData([this, src] { NotifyWatchers(src); });
 }
 
-void LinkImpl::OnChange(LinkDataPtr link_data) {
-  // TODO(jimbe) With rapidjson, this check is expensive, O(n^2), so we won't
-  // do it for now. See case kObjectType in operator==() in
-  // include/rapidjson/document.h.
-  //  if (doc_.Equals(link_data->json)) {
+void LinkImpl::OnChange(const fidl::String& json) {
+  // NOTE(jimbe) With rapidjson, the opposite check is more expensive,
+  // O(n^2), so we won't do it for now. See case kObjectType in
+  // operator==() in include/rapidjson/document.h.
+  //  if (doc_.Equals(json)) {
   //    return;
   //  }
+  //
+  // Since all json in a link was written by the same serializer, this
+  // check is mostly accurate. This test has false negatives when only
+  // order differs.
+  if (json == JsonValueToString(doc_)) {
+    return;
+  }
 
   // TODO(jimbe) Decide how these changes should be merged into the current
   // CrtJsonDoc. In this first iteration, we'll do a wholesale replace.
-  doc_.Parse(link_data->json);
+  doc_.Parse(json);
   NotifyWatchers(nullptr);
 }
 

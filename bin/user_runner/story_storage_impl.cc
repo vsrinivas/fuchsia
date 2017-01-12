@@ -5,6 +5,7 @@
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/services/story/story_storage.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/operation.h"
 
@@ -14,7 +15,7 @@ namespace {
 
 class ReadLinkDataCall : public Operation {
  public:
-  using Result = StoryStorageImpl::ReadLinkDataCallback;
+  using Result = StoryStorageImpl::DataCallback;
 
   ReadLinkDataCall(OperationContainer* const container,
                    ledger::Page* const page,
@@ -33,12 +34,12 @@ class ReadLinkDataCall : public Operation {
           page_snapshot_->Get(
               to_array(link_id_),
               [this](ledger::Status status, ledger::ValuePtr value) {
+                data_ = LinkData::New();
                 if (value) {
-                  data_ = LinkData::New();
                   data_->Deserialize(value->get_bytes().data(),
                                      value->get_bytes().size());
                 }
-                result_(std::move(data_));
+                result_(data_->json);
                 Done();
               });
         });
@@ -56,18 +57,19 @@ class ReadLinkDataCall : public Operation {
 
 class WriteLinkDataCall : public Operation {
  public:
-  using Result = StoryStorageImpl::WriteLinkDataCallback;
+  using Result = StoryStorageImpl::SyncCallback;
 
   WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
                     const fidl::String& link_id,
-                    LinkDataPtr data,
+                    const fidl::String& data,
                     Result result)
       : Operation(container),
         page_(page),
         link_id_(link_id),
-        data_(std::move(data)),
         result_(result) {
+    data_ = LinkData::New();
+    data_->json = data;
     Ready();
   }
 
@@ -118,15 +120,12 @@ class SyncCall : public Operation {
 
 StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
                                    ledger::PagePtr story_page,
-                                   const fidl::String& key,
-                                   fidl::InterfaceRequest<StoryStorage> request)
+                                   const fidl::String& key)
     : page_watcher_binding_(this),
       key_(key),
       storage_(storage),
       // Comment out this initializer in order to switch to in-memory storage.
       story_page_(std::move(story_page)) {
-  bindings_.AddBinding(this, std::move(request));
-
   if (story_page_.is_bound()) {
     // TODO(mesch): We get the initial state from a different query. This
     // leaves the possibility that the next OnChange is against a
@@ -141,9 +140,8 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
 
 StoryStorageImpl::~StoryStorageImpl() {}
 
-// |StoryStorage|
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
-                                    const ReadLinkDataCallback& callback) {
+                                    const DataCallback& callback) {
   if (story_page_.is_bound()) {
     new ReadLinkDataCall(&operation_queue_, story_page_.get(), link_id,
                          callback);
@@ -152,38 +150,34 @@ void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
     auto& story_data = (*storage_)[key_];
     auto i = story_data.find(link_id);
     if (i != story_data.end()) {
-      callback(i->second->Clone());
+      callback(i->second);
     } else {
       callback(nullptr);
     }
   }
 }
 
-// |StoryStorage|
 void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
-                                     LinkDataPtr data,
-                                     const WriteLinkDataCallback& callback) {
+                                     const fidl::String& data,
+                                     const SyncCallback& callback) {
   if (story_page_.is_bound()) {
     new WriteLinkDataCall(&operation_queue_, story_page_.get(), link_id,
-                          std::move(data), callback);
+                          data, callback);
 
   } else {
-    (*storage_)[key_][link_id] = std::move(data);
+    (*storage_)[key_][link_id] = data;
     callback();
   }
 }
 
-// |StoryStorage|
 void StoryStorageImpl::WatchLink(
     const fidl::String& link_id,
-    fidl::InterfaceHandle<StoryStorageLinkWatcher> watcher) {
-  watchers_.emplace_back(std::make_pair(
-      link_id, StoryStorageLinkWatcherPtr::Create(std::move(watcher))));
+    const DataCallback& watcher) {
+  watchers_.emplace_back(std::make_pair(link_id, watcher));
 }
 
-// |StoryStorage|
-void StoryStorageImpl::Dup(fidl::InterfaceRequest<StoryStorage> request) {
-  bindings_.AddBinding(this, std::move(request));
+void StoryStorageImpl::Sync(const SyncCallback& callback) {
+  new SyncCall(&operation_queue_, callback);
 }
 
 // |PageWatcher|
@@ -197,17 +191,12 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
           auto data = LinkData::New();
           data->Deserialize(entry->value->get_bytes().data(),
                             entry->value->get_bytes().size());
-          watcher_entry.second->OnChange(std::move(data));
+          watcher_entry.second(data->json);
         }
       }
     }
   }
   callback(nullptr);
-}
-
-// |StoryStorage|
-void StoryStorageImpl::Sync(const SyncCallback& callback) {
-  new SyncCall(&operation_queue_, callback);
 }
 
 }  // namespace modular

@@ -8,7 +8,7 @@
 #include "apps/modular/lib/fidl/bottleneck.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/services/story/story_storage.fidl.h"
+#include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -51,7 +51,7 @@ class LinkConnection;
 // closed. This is done by the StoryImpl that created it. TODO(mesch):
 // Link instances should already be deleted earlier, when they lose
 // all their references.
-class LinkImpl : public StoryStorageLinkWatcher {
+class LinkImpl {
  public:
   // Connects a new LinkConnection object on the heap for the given
   // Link interface request. LinkImpl owns the LinkConnection created
@@ -59,10 +59,11 @@ class LinkImpl : public StoryStorageLinkWatcher {
   // instances are deleted when their connections close, and they are
   // all deleted (and close their connections) when LinkImpl is
   // destroyed.
-  LinkImpl(StoryStoragePtr story_storage,
+  LinkImpl(StoryStorageImpl* story_storage,
            const fidl::String& name,
            fidl::InterfaceRequest<Link> request);
-  ~LinkImpl() override;
+
+  ~LinkImpl();
 
   // Used by LinkConnection.
   void UpdateObject(const fidl::String& path,
@@ -92,14 +93,12 @@ class LinkImpl : public StoryStorageLinkWatcher {
   void ReadLinkData(const std::function<void()>& callback);
   void WriteLinkData(const std::function<void()>& callback);
   void WriteLinkDataImpl(const std::function<void()>& callback);
-
-  // |StoryStorageLinkWatcher|
-  void OnChange(LinkDataPtr link_data) override;
+  void OnChange(const fidl::String& json);
 
   CrtJsonDoc doc_;
   std::vector<std::unique_ptr<LinkConnection>> connections_;
   const fidl::String name_;
-  StoryStoragePtr story_storage_;
+  StoryStorageImpl* const story_storage_;
   std::function<void()> orphaned_handler_;
 
   Bottleneck write_link_data_;
@@ -123,7 +122,7 @@ class LinkConnection : public Link {
 
  private:
   // Private so it cannot be created on the stack.
-  LinkConnection(LinkImpl* impl, fidl::InterfaceRequest<Link> link_request);
+  LinkConnection(LinkImpl* impl, fidl::InterfaceRequest<Link> request);
 
   // |Link|
   void UpdateObject(const fidl::String& path,

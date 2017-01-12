@@ -7,6 +7,7 @@
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
+#include "apps/modular/src/story_runner/story_impl.h"
 #include "apps/modular/src/user_runner/story_provider_impl.h"
 #include "lib/ftl/logging.h"
 
@@ -37,8 +38,8 @@ void StoryControllerImpl::AddLinkDataAndSync(
     return;
   }
 
-  if (!story_.is_bound()) {
-    StartStoryRunner();
+  if (!story_impl_) {
+    StartStoryImpl();
   }
 
   root_->UpdateObject("", json);
@@ -106,8 +107,8 @@ void StoryControllerImpl::Start(
   start_request_ = std::move(request);
 
   auto cont = [this] {
-    if (!story_.is_bound()) {
-      StartStoryRunner();
+    if (!story_impl_) {
+      StartStoryImpl();
     }
 
     if (start_request_ && !deleted_) {
@@ -141,7 +142,8 @@ void StoryControllerImpl::Stop(const StopCallback& callback) {
     return;
   }
 
-  if (!story_.is_bound()) {
+  if (!story_impl_) {
+    // Callbacks might delete this.
     std::vector<std::function<void()>> stop_requests =
         std::move(stop_requests_);
     for (auto& done : stop_requests) {
@@ -157,18 +159,21 @@ void StoryControllerImpl::Stop(const StopCallback& callback) {
     module_watcher_binding_.Close();
   }
 
-  story_runner_->Stop([this] {
+  story_impl_->Stop([this] {
     story_data_->story_info->is_running = false;
     story_data_->story_info->state = StoryState::STOPPED;
-    WriteStoryData([]{});
-    Reset();
-    NotifyStateChange();
 
-    std::vector<std::function<void()>> stop_requests =
-        std::move(stop_requests_);
-    for (auto& done : stop_requests) {
-      done();
-    }
+    WriteStoryData([this] {
+      Reset();
+      NotifyStateChange();
+
+      // Callbacks might delete this.
+      std::vector<std::function<void()>> stop_requests =
+          std::move(stop_requests_);
+      for (auto& done : stop_requests) {
+        done();
+      }
+    });
   });
 }
 
@@ -187,8 +192,7 @@ void StoryControllerImpl::StopForDelete(const StopCallback& callback) {
 void StoryControllerImpl::Reset() {
   root_.reset();
   module_.reset();
-  story_.reset();
-  story_runner_.reset();
+  story_impl_.reset();
 }
 
 // |StoryController|
@@ -240,36 +244,30 @@ void StoryControllerImpl::NotifyStateChange() {
       [state](StoryWatcher* const watcher) { watcher->OnStateChange(state); });
 }
 
-void StoryControllerImpl::StartStoryRunner() {
-  StoryRunnerFactoryPtr story_runner_factory;
-  story_provider_impl_->ConnectToStoryRunnerFactory(
-      story_runner_factory.NewRequest());
-
+void StoryControllerImpl::StartStoryImpl() {
   ResolverPtr resolver;
   story_provider_impl_->ConnectToResolver(resolver.NewRequest());
 
-  StoryStoragePtr story_storage;
   story_storage_impl_.reset(new StoryStorageImpl(
       story_provider_impl_->storage(),
       story_provider_impl_->GetStoryPage(story_data_->story_page_id),
-      story_data_->story_info->id, story_storage.NewRequest()));
+      story_data_->story_info->id));
 
-  story_runner_factory->Create(
-      std::move(resolver), std::move(story_storage),
-      story_provider_impl_->DuplicateLedgerRepository(),
-      story_runner_.NewRequest());
+  story_impl_.reset(new StoryImpl(
+      story_provider_impl_->launcher(),
+      std::move(resolver), story_storage_impl_.get(),
+      story_provider_impl_->ledger_repository()));
 
-  story_runner_->GetStory(story_.NewRequest());
-  story_->CreateLink("root", root_.NewRequest());
+  story_impl_->CreateLink("root", root_.NewRequest());
 }
 
 void StoryControllerImpl::StartStory(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
   fidl::InterfaceHandle<Link> link;
   root_->Dup(link.NewRequest());
-  story_->StartModule(story_data_->story_info->url, std::move(link), nullptr,
-                      nullptr, module_.NewRequest(),
-                      std::move(view_owner_request));
+  story_impl_->StartModule(story_data_->story_info->url, std::move(link), nullptr,
+                           nullptr, module_.NewRequest(),
+                           std::move(view_owner_request));
 
   story_data_->story_info->is_running = true;
   story_data_->story_info->state = StoryState::STARTING;
@@ -279,8 +277,8 @@ void StoryControllerImpl::StartStory(
 }
 
 void StoryControllerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
-  if (!story_.is_bound()) {
-    StartStoryRunner();
+  if (!story_impl_) {
+    StartStoryImpl();
   }
 
   root_->Dup(std::move(request));

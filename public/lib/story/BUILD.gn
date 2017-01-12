@@ -24,7 +24,6 @@ fidl("story") {
 fidl("private") {
   sources = [
     "resolver.fidl",
-    "story_runner.fidl",
     "story_storage.fidl",
   ]
 

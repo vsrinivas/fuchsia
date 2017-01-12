@@ -46,10 +46,9 @@ interface Story {
               ModuleController& module_controller,
               mozart.ViewOwner& view_owner);
 
-  // Gets the Ledger associated with this module. This ledger instance is unique
-  // to this module under this user, regardless of which story is run. If
-  // GetLedger() is called by a non-module (i.e., via StoryRunner.GetStory()),
-  // the request is closed and a ledger.UNKNOWN_ERROR status is returned.
+  // Gets the Ledger associated with this module. This ledger instance
+  // is unique to this module under this user, regardless of which
+  // story is run.
   GetLedger(ledger.Ledger& module_ledger) => (ledger.Status status);
 
   // The module holding this handle to the Story declares it's ready

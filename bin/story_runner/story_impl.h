@@ -15,14 +15,19 @@
 
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
-#include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
+#include "apps/modular/services/story/resolver.fidl.h"
+#include "apps/modular/services/story/story.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/ftl/macros.h"
+
+namespace ledger {
+class LedgerRepository;
+}
 
 namespace modular {
 
@@ -32,6 +37,7 @@ class ModuleControllerImpl;
 class StoryConnection;
 class StoryImpl;
 class StoryPage;
+class StoryStorageImpl;
 
 // StoryConnection keeps a single connection from a module instance in the
 // story to a StoryImpl. This way, requests that the module makes on
@@ -79,14 +85,15 @@ class StoryConnection : public Story {
 };
 
 // The actual implementation of the Story service. Called from
-// StoryConnection above. Also implements StoryRunner.
-class StoryImpl : public StoryRunner {
+// StoryConnection above.
+class StoryImpl {
  public:
-  StoryImpl(std::shared_ptr<ApplicationContext> application_context,
+  StoryImpl(ApplicationLauncher* launcher,
             fidl::InterfaceHandle<Resolver> resolver,
-            fidl::InterfaceHandle<StoryStorage> story_storage,
-            fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
-            fidl::InterfaceRequest<StoryRunner> story_runner_request);
+            StoryStorageImpl* story_storage,
+            ledger::LedgerRepository* ledger_repository);
+
+  ~StoryImpl();
 
   // These methods are called by StoryConnection.
   void CreateLink(const fidl::String& name, fidl::InterfaceRequest<Link> request);
@@ -102,15 +109,11 @@ class StoryImpl : public StoryRunner {
   // Releases ownership of |controller|.
   void ReleaseModule(ModuleControllerImpl* controller);
 
+  // Used by StoryController.
+  void Stop(const std::function<void()>& done);
+
  private:
-  // Deletes itself on Stop().
-  ~StoryImpl() override;
-
   void DisposeLink(LinkImpl* link);
-
-  // |StoryRunner|
-  void GetStory(fidl::InterfaceRequest<Story> request) override;
-  void Stop(const StopCallback& callback) override;
 
   // Phases of Stop(), broken out into separate methods.
   void StopModules();
@@ -121,13 +124,11 @@ class StoryImpl : public StoryRunner {
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };
 
-  fidl::Binding<StoryRunner> binding_;
-  std::shared_ptr<ApplicationContext> application_context_;
+  ApplicationLauncher* const launcher_;
   fidl::InterfacePtr<Resolver> resolver_;
-  StoryStoragePtr story_storage_;
+  StoryStorageImpl* const story_storage_;
+  ledger::LedgerRepository* const ledger_repository_;
   std::vector<Connection> connections_;
-
-  ledger::LedgerRepositoryPtr ledger_repository_;
 
   std::vector<std::unique_ptr<LinkImpl>> links_;
 

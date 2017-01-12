@@ -35,6 +35,7 @@ executable("user_runner") {
     "//apps/modular/services/story:private",
     "//apps/modular/services/user:private",
     "//apps/modular/services/device:device_context",
+    "//apps/modular/src/story_runner",
     "//apps/mozart/services/views",
     "//lib/fidl/cpp/bindings",
     "//lib/ftl",

@@ -4,6 +4,7 @@
 
 #include "apps/modular/src/story_runner/story_impl.h"
 
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
@@ -21,6 +22,7 @@
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace modular {
 
@@ -73,16 +75,14 @@ void StoryConnection::Done() {
 }
 
 StoryImpl::StoryImpl(
-    std::shared_ptr<ApplicationContext> application_context,
+    ApplicationLauncher* const launcher,
     fidl::InterfaceHandle<Resolver> resolver,
-    fidl::InterfaceHandle<StoryStorage> story_storage,
-    fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
-    fidl::InterfaceRequest<StoryRunner> story_runner_request)
-    : binding_(this), application_context_(application_context) {
+    StoryStorageImpl* const story_storage,
+    ledger::LedgerRepository* const ledger_repository)
+    : launcher_(launcher),
+      story_storage_(story_storage),
+      ledger_repository_(ledger_repository) {
   resolver_.Bind(std::move(resolver));
-  story_storage_.Bind(std::move(story_storage));
-  ledger_repository_.Bind(std::move(ledger_repository));
-  binding_.Bind(std::move(story_runner_request));
 }
 
 StoryImpl::~StoryImpl() {}
@@ -101,10 +101,8 @@ void StoryImpl::ReleaseModule(
 
 void StoryImpl::CreateLink(const fidl::String& name,
                            fidl::InterfaceRequest<Link> request) {
-  StoryStoragePtr story_storage_dup;
-  story_storage_->Dup(story_storage_dup.NewRequest());
   auto* const link_impl =
-      new LinkImpl(std::move(story_storage_dup), name, std::move(request));
+      new LinkImpl(story_storage_, name, std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
       [this, link_impl] { DisposeLink(link_impl); });
@@ -147,7 +145,7 @@ void StoryImpl::StartModule(
         FTL_LOG(INFO) << "StoryImpl::StartModule() " << module_url;
 
         ApplicationControllerPtr application_controller;
-        application_context_->launcher()->CreateApplication(
+        launcher_->CreateApplication(
             std::move(launch_info), application_controller.NewRequest());
 
         mozart::ViewProviderPtr view_provider;
@@ -187,19 +185,14 @@ void StoryImpl::GetLedger(const std::string& module_name,
   ledger_repository_->GetLedger(to_array(module_name), std::move(request), result);
 }
 
-// |StoryRunner|
-void StoryImpl::GetStory(fidl::InterfaceRequest<Story> request) {
-  Connection connection;
-
-  connection.story_connection.reset(
-      new StoryConnection(this, "", nullptr, std::move(request)));
-
-  connections_.emplace_back(std::move(connection));
-}
-
-// |StoryRunner|
-void StoryImpl::Stop(const StopCallback& callback) {
-  teardown_.push_back(callback);
+void StoryImpl::Stop(const std::function<void()>& done) {
+  // TODO(mesch): Stop() is only ever called from StoryControllerImpl
+  // anymore, and in a way that ensures only one Stop() invocation is
+  // pending at a time. So this mechanism here is subsumed by the
+  // pending queue in StoryControllerImpl and will be removed here
+  // (actually the plan is to merge StoryImpl and
+  // StoryControllerImpl).
+  teardown_.push_back(done);
 
   if (teardown_.size() != 1) {
     // A teardown is in flight, just piggyback on it.
@@ -219,13 +212,8 @@ void StoryImpl::Stop(const StopCallback& callback) {
 }
 
 void StoryImpl::StopModules() {
-  // First, get rid of all connections without a ModuleController.
-  auto n = std::remove_if(
-      connections_.begin(), connections_.end(),
-      [](Connection& c) { return c.module_controller_impl.get() == nullptr; });
-  connections_.erase(n, connections_.end());
-
-  // Second, tear down all connections with a ModuleController.
+  // Tear down all connections with a ModuleController first, then the
+  // links between them.
   auto connections_count = std::make_shared<int>(connections_.size());
   auto cont = [this, connections_count] {
     --*connections_count;
@@ -237,6 +225,8 @@ void StoryImpl::StopModules() {
     StopLinks();
   };
 
+  // Invocation or pass of cont must be last, as cont might delete
+  // this via done callbacks.
   if (connections_.empty()) {
     cont();
   } else {
@@ -261,15 +251,32 @@ void StoryImpl::StopLinks() {
     // changed.
     links_.clear();
 
-    for (auto done : teardown_) {
-      done();
+    // Done callbacks might delete |this| as well as objects provided
+    // exclusively to |this| without ownership, and they are not
+    // necessarily run through the runloop because they come in
+    // through a non-fidl method. If the callbacks would be invoked
+    // directly, |this| could be deleted not just for the remainder of
+    // this function here, but also for the remainder of all functions
+    // above us in the callstack, including functions that run as
+    // methods of other objects owned by |this| or provided to |this|.
+    //
+    // (Specifically, this function is invoked as result callback from
+    // SyncCall, which is an Operation instance in the OperationQueue
+    // of StoryStorageImpl, which gets deleted together with StoryImpl
+    // by StoryControllerImpl. SyncCall then goes on to call Done() to
+    // remove itself from the OperationQueue, but at that time the
+    // OperationQueue and all pending Operation instances in it would
+    // already be deleted.)
+    //
+    // Therefore, to avoid such problems, all done callbacks are
+    // invoked through the run loop.
+    for (auto& done : teardown_) {
+      mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(done);
     }
-
-    // Also closes own connection, but the done callback to the Stop()
-    // invocation is guaranteed to be sent.
-    delete this;
   };
 
+  // Invocation or pass of cont must be last, as cont might delete
+  // this via done callbacks.
   if (links_.empty()) {
     cont();
   } else {

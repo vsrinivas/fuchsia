@@ -96,11 +96,11 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
   module_application_.set_connection_error_handler(nullptr);
   module_.set_connection_error_handler(nullptr);
 
-  // If the module was UNLINKED, stop it directly. Otherwise call
-  // Module.Stop(), but also schedule a timeout in case it doesn't
-  // return from Stop().
+  //If the module was UNLINKED, stop it without a delay. Otherwise
+  // call Module.Stop(), but also schedule a timeout in case it
+  // doesn't return from Stop().
   if (state_ == ModuleState::UNLINKED) {
-    cont();
+    mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
 
   } else {
     module_->Stop(cont);

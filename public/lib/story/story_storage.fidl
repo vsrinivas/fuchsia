@@ -4,25 +4,8 @@
 
 module modular;
 
-// The abstraction provided internally by UserRunner to StoryRunner
-// for state persistence.
-interface StoryStorage {
-  ReadLinkData(string link_id) => (LinkData? data);
-  WriteLinkData(string link_id, LinkData data) => ();
-  WatchLink(string link_id, StoryStorageLinkWatcher watcher);
-  Dup(StoryStorage& dup);  // gives a connection to every Link
-  Sync() => ();  // Waits for all previously queued operations to complete
-};
-
-interface StoryStorageLinkWatcher {
-  // Called when the link data has changed in the underlying ledger
-  // page. For now, Link data are never deleted from a story, they
-  // just stop changing when they are no longer accessed by any Link
-  // instance.
-  OnChange(LinkData changed);
-};
-
+// What is stored in the story page of the user runner ledger for a
+// single link.
 struct LinkData {
-  // The data stored in one Link instance.
   string json;
 };

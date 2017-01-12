@@ -10,6 +10,7 @@
 
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
+#include "apps/modular/services/story/resolver.fidl.h"
 #include "apps/modular/src/user_runner/story_controller_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -331,6 +332,7 @@ class DeleteStoryCall : public Operation {
     if (pending_deletion_) {
       *pending_deletion_ = std::pair<std::string, DeleteStoryCall*>();
     }
+
     auto i = story_controllers_->find(story_id_);
     if (i == story_controllers_->end()) {
       result_();
@@ -599,20 +601,6 @@ ledger::PagePtr StoryProviderImpl::GetStoryPage(
   return ret;
 }
 
-void StoryProviderImpl::ConnectToStoryRunnerFactory(
-    fidl::InterfaceRequest<StoryRunnerFactory> request) {
-  if (!story_runner_services_.is_bound()) {
-    auto story_runner_launch_info = ApplicationLaunchInfo::New();
-    story_runner_launch_info->services = story_runner_services_.NewRequest();
-    story_runner_launch_info->url = "file:///system/apps/story_runner";
-    ApplicationControllerPtr app;
-    launcher_->CreateApplication(std::move(story_runner_launch_info),
-                                 app.NewRequest());
-    apps_.AddInterfacePtr(std::move(app));
-  }
-  ConnectToService(story_runner_services_.get(), std::move(request));
-}
-
 void StoryProviderImpl::ConnectToResolver(
     fidl::InterfaceRequest<Resolver> request) {
   if (!resolver_services_.is_bound()) {
@@ -631,17 +619,6 @@ void StoryProviderImpl::WriteStoryData(StoryDataPtr story_data,
                                        std::function<void()> done) {
   new WriteStoryDataCall(&operation_collection_, ledger_.get(),
                          std::move(story_data), done);
-}
-
-fidl::InterfaceHandle<ledger::LedgerRepository>
-StoryProviderImpl::DuplicateLedgerRepository() {
-  fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repo;
-  ledger_repository_->Duplicate(
-      ledger_repo.NewRequest(), [](ledger::Status status) {
-        FTL_CHECK(status == ledger::Status::OK)
-            << "LedgerRepository.Duplicate() failed: " << status;
-      });
-  return ledger_repo;
 }
 
 // |StoryProvider|

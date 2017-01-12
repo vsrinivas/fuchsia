@@ -12,7 +12,6 @@
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/story/module_controller.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
-#include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/story_data.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
@@ -26,6 +25,7 @@
 namespace modular {
 class ApplicationContext;
 class StoryProviderImpl;
+class StoryImpl;
 
 class StoryControllerImpl : public StoryController, public ModuleWatcher {
  public:
@@ -38,7 +38,6 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   void StopForDelete(const StopCallback& callback);
   void AddLinkDataAndSync(
       const fidl::String& json, const std::function<void()>& callback);
-  size_t bindings_size() const { return bindings_.size(); }
 
  private:
   // |StoryController|
@@ -57,14 +56,14 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   void WriteStoryData(std::function<void()> callback);
   void NotifyStateChange();
 
-  // Starts the StoryRunner instance to run the story in.
-  void StartStoryRunner();
+  // Starts the StoryImpl instance to run the story in.
+  void StartStoryImpl();
 
   // Starts the Story instance for the given story.
   void StartStory(fidl::InterfaceRequest<mozart::ViewOwner> request);
 
-  // Resets the state of the story controller such that Start() can be
-  // called again. This does not reset deleted_; once a
+  // Resets the state of the story controller such that Start()
+  // can be called again. This does not reset deleted_; once a
   // StoryController instance received StopForDelete(), it cannot be
   // reused anymore, and client connections will all be closed.
   void Reset();
@@ -73,17 +72,16 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   // persist it to.
   StoryDataPtr story_data_;
   StoryProviderImpl* const story_provider_impl_;
-  std::shared_ptr<StoryStorageImpl::Storage> storage_;
+  std::unique_ptr<StoryStorageImpl::Storage> storage_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
 
   // Implement the primary service provided here: StoryController.
   fidl::BindingSet<StoryController> bindings_;
   fidl::InterfacePtrSet<StoryWatcher> watchers_;
 
-  // These 5 things are needed to hold on to a running story. They are
+  // These things are needed to hold on to a running story. They are
   // the ones that get reset on Stop()/Reset().
-  StoryRunnerPtr story_runner_;
-  StoryPtr story_;
+  std::unique_ptr<StoryImpl> story_impl_;
   LinkPtr root_;
   ModuleControllerPtr module_;
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
