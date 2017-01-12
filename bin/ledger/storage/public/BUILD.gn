@@ -5,7 +5,6 @@
 source_set("public") {
   sources = [
     "commit.h",
-    "commit_contents.h",
     "commit_watcher.h",
     "constants.h",
     "iterator.h",

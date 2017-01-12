@@ -35,11 +35,6 @@ uint64_t CommitEmptyImpl::GetGeneration() const {
   return 0;
 }
 
-std::unique_ptr<CommitContents> CommitEmptyImpl::GetContents() const {
-  FTL_NOTIMPLEMENTED();
-  return nullptr;
-}
-
 ObjectId CommitEmptyImpl::CommitEmptyImpl::GetRootId() const {
   FTL_NOTIMPLEMENTED();
   return "NOT_IMPLEMENTED";

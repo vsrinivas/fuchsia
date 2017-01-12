@@ -32,8 +32,6 @@ class FakeCommit : public Commit {
 
   uint64_t GetGeneration() const override;
 
-  std::unique_ptr<CommitContents> GetContents() const override;
-
   ObjectId GetRootId() const override;
 
   std::string GetStorageBytes() const override;

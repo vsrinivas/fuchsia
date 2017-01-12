@@ -9,6 +9,7 @@
 #include <unordered_set>
 
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
+#include "apps/ledger/src/storage/public/iterator.h"
 #include "apps/ledger/src/storage/public/types.h"
 
 namespace storage {

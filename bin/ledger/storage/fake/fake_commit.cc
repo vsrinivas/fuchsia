@@ -7,9 +7,9 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/storage/test/commit_contents_empty_impl.h"
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/public/commit.h"
+#include "apps/ledger/src/storage/public/iterator.h"
 
 namespace storage {
 namespace fake {
@@ -57,31 +57,6 @@ class EntryMapIterator : public Iterator<const storage::Entry> {
   std::map<std::string, fake::FakeJournalDelegate::Entry>::const_iterator it_;
   std::map<std::string, fake::FakeJournalDelegate::Entry>::const_iterator end_;
 };
-
-class FakeCommitContents : public test::CommitContentsEmptyImpl {
- public:
-  FakeCommitContents(FakeJournalDelegate* journal) : journal_(journal) {}
-  ~FakeCommitContents() {}
-
-  // CommitContents:
-  std::unique_ptr<Iterator<const Entry>> begin() const override {
-    const std::map<std::string, fake::FakeJournalDelegate::Entry,
-                   convert::StringViewComparator>& data = journal_->GetData();
-    return std::make_unique<EntryMapIterator>(data.begin(), data.end());
-  }
-
-  std::unique_ptr<Iterator<const Entry>> find(
-      convert::ExtendedStringView key) const override {
-    std::unique_ptr<Iterator<const Entry>> it = begin();
-    while (it->Valid() && (*it)->key < key) {
-      it->Next();
-    }
-    return it;
-  }
-
- private:
-  FakeJournalDelegate* journal_;
-};
 }
 
 FakeCommit::FakeCommit(FakeJournalDelegate* journal) : journal_(journal) {}
@@ -105,10 +80,6 @@ int64_t FakeCommit::GetTimestamp() const {
 
 uint64_t FakeCommit::GetGeneration() const {
   return 0;
-}
-
-std::unique_ptr<CommitContents> FakeCommit::GetContents() const {
-  return std::make_unique<FakeCommitContents>(journal_);
 }
 
 ObjectId FakeCommit::FakeCommit::GetRootId() const {

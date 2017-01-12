@@ -29,7 +29,7 @@
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
-#include "lib/ftl/strings/string_number_conversions.h"
+#include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/threading/create_thread.h"
@@ -237,8 +237,8 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
 
     for (int i = 0; i < keys; ++i) {
       EXPECT_EQ(Status::OK,
-                journal->Put("key" + std::to_string(i), RandomId(kObjectIdSize),
-                             KeyPriority::EAGER));
+                journal->Put(ftl::StringPrintf("key%d", i),
+                             RandomId(kObjectIdSize), KeyPriority::EAGER));
     }
     EXPECT_EQ(Status::OK, journal->Delete("key_does_not_exist"));
 
@@ -729,7 +729,7 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     EXPECT_EQ(Status::OK,
               storage_->StartCommit(GetFirstHead()->GetId(),
                                     JournalType::IMPLICIT, &journal));
-    EXPECT_EQ(Status::OK, journal->Put("key" + ftl::NumberToString(i),
+    EXPECT_EQ(Status::OK, journal->Put(ftl::StringPrintf("key%d", i),
                                        data[i].object_id, KeyPriority::LAZY));
     journal->Commit([this](Status status, const CommitId& id) {
       EXPECT_EQ(Status::OK, status);
@@ -1030,6 +1030,33 @@ TEST_F(PageStorageTest, DeletionOnIOThread) {
   }
   EXPECT_FALSE(called);
   io_thread.join();
+}
+
+TEST_F(PageStorageTest, GetEntryFromCommit) {
+  int size = 10;
+  CommitId commit_id = TryCommitFromLocal(JournalType::EXPLICIT, size);
+  std::unique_ptr<const Commit> commit;
+  EXPECT_EQ(Status::OK, storage_->GetCommit(commit_id, &commit));
+
+  Status status;
+  Entry entry;
+  storage_->GetEntryFromCommit(
+      *commit, "key not found",
+      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                      &entry));
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_EQ(Status::NOT_FOUND, status);
+
+  for (int i = 0; i < size; ++i) {
+    std::string expected_key = ftl::StringPrintf("key%d", i);
+    storage_->GetEntryFromCommit(
+        *commit, expected_key,
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &entry));
+    ASSERT_FALSE(RunLoopWithTimeout());
+    ASSERT_EQ(Status::OK, status);
+    EXPECT_EQ(expected_key, entry.key);
+  }
 }
 
 }  // namespace

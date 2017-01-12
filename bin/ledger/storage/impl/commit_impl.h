@@ -36,7 +36,6 @@ class CommitImpl : public Commit {
   std::vector<CommitId> GetParentIds() const override;
   int64_t GetTimestamp() const override;
   uint64_t GetGeneration() const override;
-  std::unique_ptr<CommitContents> GetContents() const override;
   ObjectId GetRootId() const override;
   std::string GetStorageBytes() const override;
 

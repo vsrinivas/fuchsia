@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "apps/ledger/src/storage/public/commit.h"
-#include "apps/ledger/src/storage/public/commit_contents.h"
 
 namespace storage {
 namespace test {
@@ -32,8 +31,6 @@ class CommitEmptyImpl : public Commit {
   int64_t GetTimestamp() const override;
 
   uint64_t GetGeneration() const override;
-
-  std::unique_ptr<CommitContents> GetContents() const override;
 
   ObjectId GetRootId() const override;
 

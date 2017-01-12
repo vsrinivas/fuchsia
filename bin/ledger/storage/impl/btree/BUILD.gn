@@ -11,14 +11,8 @@ group("btree") {
 
 source_set("lib") {
   sources = [
-    "btree_iterator.cc",
-    "btree_iterator.h",
     "btree_utils.cc",
     "btree_utils.h",
-    "commit_contents_impl.cc",
-    "commit_contents_impl.h",
-    "diff_iterator.cc",
-    "diff_iterator.h",
     "encoding.cc",
     "encoding.h",
     "position.cc",
@@ -40,9 +34,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "btree_iterator_unittest.cc",
     "btree_utils_unittest.cc",
-    "diff_iterator_unittest.cc",
     "encoding_unittest.cc",
     "entry_change_iterator.h",
     "tree_node_unittest.cc",

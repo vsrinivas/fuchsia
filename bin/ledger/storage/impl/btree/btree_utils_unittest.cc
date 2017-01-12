@@ -7,7 +7,6 @@
 #include <stdio.h>
 
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
-#include "apps/ledger/src/storage/impl/btree/commit_contents_impl.h"
 #include "apps/ledger/src/storage/impl/btree/entry_change_iterator.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/types.h"
@@ -90,6 +89,22 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
     return new_root_id;
   }
 
+  std::vector<Entry> GetEntriesList(ObjectId root_id) {
+    std::vector<Entry> entries;
+    auto on_next = [&entries](btree::EntryAndNodeId entry) {
+      entries.push_back(entry.entry);
+      return true;
+    };
+    auto on_done = [this](Status status) {
+      EXPECT_EQ(Status::OK, status);
+      message_loop_.PostQuitTask();
+    };
+    btree::ForEachEntry(&fake_storage_, root_id, "", std::move(on_next),
+                        std::move(on_done));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    return entries;
+  }
+
  protected:
   TrackGetObjectFakePageStorage fake_storage_;
 
@@ -116,14 +131,11 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   EXPECT_EQ(1u, new_nodes.size());
   EXPECT_TRUE(new_nodes.find(new_root_id) != new_nodes.end());
 
-  CommitContentsImpl reader(new_root_id, &fake_storage_);
-  std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
-  for (int i = 0; i < 4; ++i) {
-    ASSERT_TRUE(entries->Valid());
-    EXPECT_EQ(changes[i].entry, **entries);
-    entries->Next();
+  std::vector<Entry> entries = GetEntriesList(new_root_id);
+  ASSERT_EQ(changes.size(), entries.size());
+  for (size_t i = 0; i < entries.size(); ++i) {
+    EXPECT_EQ(changes[i].entry, entries[i]);
   }
-  EXPECT_FALSE(entries->Valid());
 }
 
 TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
@@ -147,16 +159,11 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   EXPECT_EQ(4u, new_nodes.size());
   EXPECT_TRUE(new_nodes.find(new_root_id) != new_nodes.end());
 
-  CommitContentsImpl reader(new_root_id, &fake_storage_);
-  std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
+  std::vector<Entry> entries = GetEntriesList(new_root_id);
+  ASSERT_EQ(golden_entries.size(), entries.size());
   for (size_t i = 0; i < golden_entries.size(); ++i) {
-    EXPECT_TRUE(entries->Valid());
-    EXPECT_EQ(golden_entries[i].entry, **entries)
-        << "Expected " << golden_entries[i].entry.key << " but found "
-        << (*entries)->key;
-    entries->Next();
+    EXPECT_EQ(golden_entries[i].entry, entries[i]);
   }
-  EXPECT_FALSE(entries->Valid());
 
   Entry new_entry = {"key071", "objectid071", KeyPriority::EAGER};
   std::vector<EntryChange> new_change{EntryChange{new_entry, false}};
@@ -181,16 +188,11 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   EXPECT_EQ(2u, new_nodes.size());
   EXPECT_TRUE(new_nodes.find(new_root_id2) != new_nodes.end());
 
-  CommitContentsImpl reader2(new_root_id2, &fake_storage_);
-  entries = reader2.begin();
+  entries = GetEntriesList(new_root_id2);
+  ASSERT_EQ(golden_entries.size(), entries.size());
   for (size_t i = 0; i < golden_entries.size(); ++i) {
-    EXPECT_TRUE(entries->Valid());
-    EXPECT_EQ(golden_entries[i].entry, **entries)
-        << "Expected " << golden_entries[i].entry.key << " but found "
-        << (*entries)->key;
-    entries->Next();
+    EXPECT_EQ(golden_entries[i].entry, entries[i]);
   }
-  EXPECT_FALSE(entries->Valid());
 }
 
 TEST_F(BTreeUtilsTest, DeleteChanges) {
@@ -228,22 +230,17 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   EXPECT_EQ(3u, new_nodes.size());
   EXPECT_TRUE(new_nodes.find(new_root_id) != new_nodes.end());
 
-  CommitContentsImpl reader(new_root_id, &fake_storage_);
-  std::unique_ptr<Iterator<const Entry>> entries = reader.begin();
+  std::vector<Entry> entries = GetEntriesList(new_root_id);
+  ASSERT_EQ(golden_entries.size() - entries_to_delete.size(), entries.size());
   size_t deleted_index = 0;
   for (size_t i = 0; i < golden_entries.size(); ++i) {
     if (golden_entries[i].entry == entries_to_delete[deleted_index]) {
-      // Skip deleted entries
+      // Skip the deleted entries.
       deleted_index++;
       continue;
     }
-    EXPECT_TRUE(entries->Valid());
-    EXPECT_EQ(golden_entries[i].entry, **entries)
-        << "Expected " << golden_entries[i].entry.key << " but found "
-        << (*entries)->key;
-    entries->Next();
+    EXPECT_EQ(golden_entries[i].entry, entries[i - deleted_index]);
   }
-  EXPECT_FALSE(entries->Valid());
 }
 
 TEST_F(BTreeUtilsTest, GetObjectIdsFromEmpty) {
@@ -335,6 +332,23 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   }
 }
 
+TEST_F(BTreeUtilsTest, ForEachEmptyTree) {
+  std::vector<EntryChange> entries = {};
+  ObjectId root_id = CreateTree(entries);
+  auto on_next = [](btree::EntryAndNodeId e) {
+    // Fail: There are no elements in the tree.
+    EXPECT_TRUE(false);
+    return false;
+  };
+  auto on_done = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  };
+  btree::ForEachEntry(&fake_storage_, root_id, "", std::move(on_next),
+                      std::move(on_done));
+  ASSERT_FALSE(RunLoopWithTimeout());
+}
+
 TEST_F(BTreeUtilsTest, ForEachAllEntries) {
   // Create a tree from entries with keys from 00-99.
   std::vector<EntryChange> entries = CreateEntryChanges(100);
@@ -346,8 +360,12 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
     current_key++;
     return true;
   };
-  auto on_done = [](Status status) { EXPECT_EQ(Status::OK, status); };
+  auto on_done = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  };
   btree::ForEachEntry(&fake_storage_, root_id, "", on_next, on_done);
+  ASSERT_FALSE(RunLoopWithTimeout());
 }
 
 TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
@@ -365,11 +383,13 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
     EXPECT_EQ(ftl::StringPrintf("key%02d", current_key++), e.entry.key);
     return true;
   };
-  auto on_done = [&current_key](Status status) {
+  auto on_done = [this, &current_key](Status status) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(40, current_key);
+    message_loop_.PostQuitTask();
   };
   btree::ForEachEntry(&fake_storage_, root_id, prefix, on_next, on_done);
+  ASSERT_FALSE(RunLoopWithTimeout());
 }
 
 TEST_F(BTreeUtilsTest, ForEachDiff) {

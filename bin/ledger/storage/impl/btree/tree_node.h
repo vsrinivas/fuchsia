@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/public/commit_contents.h"
 #include "apps/ledger/src/storage/public/object.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"

@@ -7,7 +7,6 @@
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
-#include "apps/ledger/src/storage/public/commit_contents.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"

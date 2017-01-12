@@ -56,11 +56,6 @@ uint64_t CommitRandomImpl::GetGeneration() const {
   return generation_;
 }
 
-std::unique_ptr<CommitContents> CommitRandomImpl::GetContents() const {
-  FTL_NOTIMPLEMENTED();
-  return nullptr;
-}
-
 ObjectId CommitRandomImpl::CommitRandomImpl::GetRootId() const {
   return root_node_id_;
 }

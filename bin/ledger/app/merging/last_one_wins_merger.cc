@@ -42,10 +42,8 @@ class Merger : public callback::Cancellable {
 
   std::unique_ptr<const storage::Commit> const left_;
   std::unique_ptr<const storage::Commit> const right_;
-  std::unique_ptr<storage::Iterator<const storage::EntryChange>> right_changes_;
 
   std::unique_ptr<const storage::Commit> const ancestor_;
-  std::unique_ptr<storage::CommitContents> ancestor_contents_;
 
   std::unique_ptr<storage::Journal> journal_;
   bool is_done_ = false;

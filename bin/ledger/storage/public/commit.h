@@ -9,7 +9,6 @@
 #include <string>
 #include <vector>
 
-#include "apps/ledger/src/storage/public/commit_contents.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/macros.h"
 
@@ -36,9 +35,6 @@ class Commit {
   // Returns the generation of this commit (ie. the number of commits to the
   // root).
   virtual uint64_t GetGeneration() const = 0;
-
-  // Returns the contents of this commit.
-  virtual std::unique_ptr<CommitContents> GetContents() const = 0;
 
   // Returns the id of the root node of this commit.
   virtual ObjectId GetRootId() const = 0;

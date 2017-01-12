@@ -9,7 +9,7 @@
 #include <sys/time.h>
 
 #include "apps/ledger/src/glue/crypto/hash.h"
-#include "apps/ledger/src/storage/impl/btree/commit_contents_impl.h"
+#include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/build_config.h"
 #include "lib/ftl/logging.h"
@@ -169,10 +169,6 @@ int64_t CommitImpl::GetTimestamp() const {
 
 uint64_t CommitImpl::GetGeneration() const {
   return generation_;
-}
-
-std::unique_ptr<CommitContents> CommitImpl::GetContents() const {
-  return std::make_unique<CommitContentsImpl>(root_node_id_, page_storage_);
 }
 
 ObjectId CommitImpl::CommitImpl::GetRootId() const {
