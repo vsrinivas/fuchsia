@@ -166,10 +166,13 @@ class TreeNode {
   // to be in [0, GetKeyCount() - 1].
   Status GetEntry(int index, Entry* entry) const;
 
-  // Finds the child node at position |index| and stores it in |child|. |index|
-  // has to be in [0, GetKeyCount()]. If the child at the given index is empty
-  // |NO_SUCH_CHILD| is returned and the value of |child| is not updated.
-  Status GetChild(int index, std::unique_ptr<const TreeNode>* child) const;
+  // Finds the child node at position |index| and calls the |callback| with the
+  // result. |index| has to be in [0, GetKeyCount()]. If the child at the given
+  // index is empty |NO_SUCH_CHILD| is returned and the value of |child| is not
+  // updated.
+  void GetChild(int index,
+                std::function<void(Status, std::unique_ptr<const TreeNode>)>
+                    callback) const;
 
   // Returns the id of the child node at position |index|. If the child at the
   // given index is empty, an empty string is returned. |index| has to be in [0,

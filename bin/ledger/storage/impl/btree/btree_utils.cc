@@ -115,6 +115,20 @@ void ApplyChangesIn(
                        ObjectId,
                        std::unique_ptr<TreeNode::Mutation::Updater>)> on_done);
 
+// Returns the child node at the given index or nullptr if the child is empty.
+// |callback| will be called with an |OK| status on success, including the case
+// of an empty child, or the error status on failure.
+void GetChild(
+    const TreeNode& node,
+    int index,
+    std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
+  if (node.GetChildId(index).empty()) {
+    callback(Status::OK, nullptr);
+  } else {
+    node.GetChild(index, std::move(callback));
+  }
+}
+
 // Recursively merge |left| and |right| nodes. |new_id| will contain the ID of
 // the new, merged node. Returns OK on success or the error code otherwise.
 void Merge(PageStorage* page_storage,
@@ -135,40 +149,42 @@ void Merge(PageStorage* page_storage,
     return;
   }
 
-  // Merge the children before merging left and right.
-  std::unique_ptr<const TreeNode> left_rightmost_child;
-  std::unique_ptr<const TreeNode> right_leftmost_child;
-  Status s = left->GetChild(left->GetKeyCount(), &left_rightmost_child);
-  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
-    on_done(s, "");
-    return;
-  }
-  s = right->GetChild(0, &left_rightmost_child);
-  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
-    on_done(s, "");
-    return;
-  }
-  Merge(page_storage, std::move(left_rightmost_child),
-        std::move(right_leftmost_child), new_nodes, ftl::MakeCopyable([
-          page_storage, left = std::move(left), right = std::move(right),
-          new_nodes, on_done = std::move(on_done)
-        ](Status s, ObjectId child_id) mutable {
-          if (s != Status::OK) {
-            on_done(s, "");
-            return;
-          }
-          RemoveNodeId(left->GetId(), new_nodes);
-          RemoveNodeId(right->GetId(), new_nodes);
+  auto waiter =
+      callback::Waiter<Status, std::unique_ptr<const TreeNode>>::Create(
+          Status::OK);
+  // The rightmost child of left.
+  GetChild(*left, left->GetKeyCount(), waiter->NewCallback());
+  // The leftmost child of right.
+  GetChild(*right, 0, waiter->NewCallback());
 
-          TreeNode::Merge(page_storage, std::move(left), std::move(right),
-                          child_id, [ new_nodes, on_done = std::move(on_done) ](
-                                        Status s, ObjectId merged_id) {
-                            if (s == Status::OK) {
-                              new_nodes->insert(merged_id);
-                            }
-                            on_done(s, merged_id);
-                          });
-        }));
+  waiter->Finalize(ftl::MakeCopyable([
+    page_storage, new_nodes, left = std::move(left), right = std::move(right),
+    on_done = std::move(on_done)
+  ](Status s, std::vector<std::unique_ptr<const TreeNode>> children) mutable {
+    // Merge the children before merging left and right.
+    Merge(page_storage, std::move(children[0]), std::move(children[1]),
+          new_nodes, ftl::MakeCopyable([
+            page_storage, left = std::move(left), right = std::move(right),
+            new_nodes, on_done = std::move(on_done)
+          ](Status s, ObjectId child_id) mutable {
+            if (s != Status::OK) {
+              on_done(s, "");
+              return;
+            }
+            RemoveNodeId(left->GetId(), new_nodes);
+            RemoveNodeId(right->GetId(), new_nodes);
+
+            TreeNode::Merge(page_storage, std::move(left), std::move(right),
+                            child_id,
+                            [ new_nodes, on_done = std::move(on_done) ](
+                                Status s, ObjectId merged_id) {
+                              if (s == Status::OK) {
+                                new_nodes->insert(merged_id);
+                              }
+                              on_done(s, merged_id);
+                            });
+          }));
+  }));
 }
 
 // Applies the change to the given node. If the change is a deletion, it also
@@ -192,33 +208,37 @@ void ApplyChangeOnNode(
             TreeNode::Mutation * mutation) { mutation->UpdateEntry(entry); }));
     return;
   }
-  // Remove the entry after merging the children.
-  ObjectId child_id;
-  std::unique_ptr<const TreeNode> left;
-  std::unique_ptr<const TreeNode> right;
-  Status s = node->GetChild(change_index, &left);
-  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
-    on_done(s, nullptr);
-    return;
-  }
-  s = node->GetChild(change_index + 1, &right);
-  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
-    on_done(s, nullptr);
-    return;
-  }
 
-  Merge(page_storage, std::move(left), std::move(right), new_nodes, [
-    key = change->entry.key, on_done = std::move(on_done)
-  ](Status s, ObjectId child_id) {
+  auto waiter =
+      callback::Waiter<Status, std::unique_ptr<const TreeNode>>::Create(
+          Status::OK);
+  // Get the left and right children.
+  GetChild(*node, change_index, waiter->NewCallback());
+  GetChild(*node, change_index + 1, waiter->NewCallback());
+
+  waiter->Finalize(ftl::MakeCopyable([
+    page_storage, new_nodes, key = change->entry.key,
+    on_done = std::move(on_done)
+  ](Status s, std::vector<std::unique_ptr<const TreeNode>> children) mutable {
     if (s != Status::OK) {
       on_done(s, nullptr);
       return;
     }
-    on_done(Status::OK, std::make_unique<TreeNode::Mutation::Updater>(
-                            [key, child_id](TreeNode::Mutation* mutation) {
-                              mutation->RemoveEntry(key, child_id);
-                            }));
-  });
+    // Remove the entry after merging the children.
+    Merge(page_storage, std::move(children[0]), std::move(children[1]),
+          new_nodes, [ key = std::move(key), on_done = std::move(on_done) ](
+                         Status s, ObjectId child_id) {
+            if (s != Status::OK) {
+              on_done(s, nullptr);
+              return;
+            }
+            on_done(Status::OK,
+                    std::make_unique<TreeNode::Mutation::Updater>(
+                        [key, child_id](TreeNode::Mutation* mutation) {
+                          mutation->RemoveEntry(key, child_id);
+                        }));
+          });
+  }));
 }
 
 // Retrieves the child node in the given |child_index| and, if present,
@@ -235,39 +255,6 @@ void ApplyChangeOnKeyNotFound(
     std::unordered_set<ObjectId>* new_nodes,
     std::function<void(Status, std::unique_ptr<TreeNode::Mutation::Updater>)>
         on_done) {
-  std::unique_ptr<const TreeNode> child;
-  Status s = node->GetChild(child_index, &child);
-  if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
-    changes->Next();
-    on_done(s, nullptr);
-    return;
-  }
-  if (s == Status::NO_SUCH_CHILD) {
-    if ((*changes)->deleted) {
-      // We try to remove an entry that is not in the tree. This is
-      // expected, as journals collate all operations on a key in a single
-      // change: if one does a put then a delete on a key, then we will only
-      // see here the delete operation.
-      FTL_VLOG(1) << "Failed to delete key " << (*changes)->entry.key
-                  << ": No such entry.";
-      changes->Next();
-      on_done(Status::OK, nullptr);
-      return;
-    }
-    // Add the entry here. Since there is no child, both the new left and
-    // right children are empty.
-    Entry entry = std::move((*changes)->entry);
-    changes->Next();
-    on_done(Status::OK,
-            std::make_unique<TreeNode::Mutation::Updater>([entry = std::move(
-                                                               entry)](
-                TreeNode::Mutation * mutation) {
-              mutation->AddEntry(entry, "", "");
-            }));
-    return;
-  }
-  // Recursively search for the key in the child and then update the child
-  // id in this node in the corresponding index.
   std::string next_key;
   if (child_index == node->GetKeyCount()) {
     next_key = "";
@@ -276,16 +263,53 @@ void ApplyChangeOnKeyNotFound(
     node->GetEntry(child_index, &entry);
     next_key = entry.key;
   }
-  ApplyChangesIn(
-      page_storage, changes, std::move(child), false, std::move(next_key),
-      node_size, new_nodes,
-      [on_done = std::move(on_done)](
-          Status s, ObjectId new_child_id,
-          std::unique_ptr<TreeNode::Mutation::Updater> parent_updater) {
-        // No need to call Next on the iterator here, it has already
-        // advanced in the ApplyChangesIn loop.
-        on_done(s, std::move(parent_updater));
-      });
+
+  node->GetChild(child_index, [
+    next_key = std::move(next_key), page_storage, changes, node_size, new_nodes,
+    on_done = std::move(on_done)
+  ](Status s, std::unique_ptr<const TreeNode> child) mutable {
+    if (s != Status::OK && s != Status::NO_SUCH_CHILD) {
+      changes->Next();
+      on_done(s, nullptr);
+      return;
+    }
+    if (s == Status::NO_SUCH_CHILD) {
+      if ((*changes)->deleted) {
+        // We try to remove an entry that is not in the tree. This is
+        // expected, as journals collate all operations on a key in a single
+        // change: if one does a put then a delete on a key, then we will only
+        // see here the delete operation.
+        FTL_VLOG(1) << "Failed to delete key " << (*changes)->entry.key
+                    << ": No such entry.";
+        changes->Next();
+        on_done(Status::OK, nullptr);
+        return;
+      }
+      // Add the entry here. Since there is no child, both the new left and
+      // right children are empty.
+      Entry entry = std::move((*changes)->entry);
+      changes->Next();
+      on_done(Status::OK,
+              std::make_unique<TreeNode::Mutation::Updater>([entry = std::move(
+                                                                 entry)](
+                  TreeNode::Mutation * mutation) {
+                mutation->AddEntry(entry, "", "");
+              }));
+      return;
+    }
+    // Recursively search for the key in the child and then update the child
+    // id in this node in the corresponding index.
+    ApplyChangesIn(
+        page_storage, changes, std::move(child), false, std::move(next_key),
+        node_size, new_nodes,
+        [on_done = std::move(on_done)](
+            Status s, ObjectId new_child_id,
+            std::unique_ptr<TreeNode::Mutation::Updater> parent_updater) {
+          // No need to call Next on the iterator here, it has already
+          // advanced in the ApplyChangesIn loop.
+          on_done(s, std::move(parent_updater));
+        });
+  });
 }
 
 // Applies all given changes in the subtree having |node| as a root.

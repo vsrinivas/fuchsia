@@ -85,12 +85,6 @@ class TreeNodeTest : public ::test::TestWithMessageLoop {
     return children;
   }
 
-  ObjectId GetChildId(const TreeNode* node, int index) {
-    std::unique_ptr<const TreeNode> found_child;
-    EXPECT_EQ(Status::OK, node->GetChild(index, &found_child));
-    return found_child->GetId();
-  }
-
   fake::FakePageStorage fake_storage_;
 
  private:
@@ -138,8 +132,12 @@ TEST_F(TreeNodeTest, GetEntryChild) {
   }
 
   for (int i = 0; i <= size; ++i) {
+    Status status;
     std::unique_ptr<const TreeNode> child;
-    EXPECT_EQ(Status::NO_SUCH_CHILD, node->GetChild(i, &child));
+    node->GetChild(i, ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &child));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    ASSERT_EQ(Status::NO_SUCH_CHILD, status);
     EXPECT_TRUE(node->GetChildId(i).empty());
   }
 }
@@ -250,10 +248,10 @@ TEST_F(TreeNodeTest, MutationAddEntry) {
   EXPECT_EQ(entry, GetEntry(new_node.get(), 1));
   EXPECT_EQ(GetEntry(node.get(), 1), GetEntry(new_node.get(), 2));
 
-  EXPECT_EQ(GetChildId(node.get(), 0), GetChildId(new_node.get(), 0));
-  EXPECT_EQ(left, GetChildId(new_node.get(), 1));
-  EXPECT_EQ(right, GetChildId(new_node.get(), 2));
-  EXPECT_EQ(GetChildId(node.get(), 2), GetChildId(new_node.get(), 3));
+  EXPECT_EQ(node->GetChildId(0), new_node->GetChildId(0));
+  EXPECT_EQ(left, new_node->GetChildId(1));
+  EXPECT_EQ(right, new_node->GetChildId(2));
+  EXPECT_EQ(node->GetChildId(2), new_node->GetChildId(3));
 }
 
 TEST_F(TreeNodeTest, MutationUpdateEntry) {
@@ -284,7 +282,7 @@ TEST_F(TreeNodeTest, MutationUpdateEntry) {
   EXPECT_EQ(GetEntry(node.get(), 2), GetEntry(new_node.get(), 2));
 
   for (int i = 0; i <= size; ++i) {
-    EXPECT_EQ(GetChildId(node.get(), i), GetChildId(new_node.get(), i));
+    EXPECT_EQ(node->GetChildId(i), new_node->GetChildId(i));
   }
 }
 
@@ -318,9 +316,9 @@ TEST_F(TreeNodeTest, MutationRemoveEntry) {
   EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(new_node.get(), 0));
   EXPECT_EQ(GetEntry(node.get(), 2), GetEntry(new_node.get(), 1));
 
-  EXPECT_EQ(GetChildId(node.get(), 0), GetChildId(new_node.get(), 0));
-  EXPECT_EQ(child, GetChildId(new_node.get(), 1));
-  EXPECT_EQ(GetChildId(node.get(), 3), GetChildId(new_node.get(), 2));
+  EXPECT_EQ(node->GetChildId(0), new_node->GetChildId(0));
+  EXPECT_EQ(child, new_node->GetChildId(1));
+  EXPECT_EQ(node->GetChildId(3), new_node->GetChildId(2));
 }
 
 TEST_F(TreeNodeTest, MutationUpdateChildId) {
@@ -353,9 +351,9 @@ TEST_F(TreeNodeTest, MutationUpdateChildId) {
   EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(new_node.get(), 0));
   EXPECT_EQ(GetEntry(node.get(), 1), GetEntry(new_node.get(), 1));
 
-  EXPECT_EQ(GetChildId(node.get(), 0), GetChildId(new_node.get(), 0));
-  EXPECT_EQ(child, GetChildId(new_node.get(), 1));
-  EXPECT_EQ(GetChildId(node.get(), 2), GetChildId(new_node.get(), 2));
+  EXPECT_EQ(node->GetChildId(0), new_node->GetChildId(0));
+  EXPECT_EQ(child, new_node->GetChildId(1));
+  EXPECT_EQ(node->GetChildId(2), new_node->GetChildId(2));
 }
 
 TEST_F(TreeNodeTest, EmptyMutation) {
@@ -377,7 +375,7 @@ TEST_F(TreeNodeTest, EmptyMutation) {
     EXPECT_EQ(GetEntry(node.get(), i), GetEntry(new_node.get(), i));
   }
   for (int i = 0; i <= size; ++i) {
-    EXPECT_EQ(GetChildId(node.get(), i), GetChildId(new_node.get(), i));
+    EXPECT_EQ(node->GetChildId(i), new_node->GetChildId(i));
   }
 }
 

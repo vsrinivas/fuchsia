@@ -170,13 +170,16 @@ Status TreeNode::GetEntry(int index, Entry* entry) const {
   return Status::OK;
 }
 
-Status TreeNode::GetChild(int index,
-                          std::unique_ptr<const TreeNode>* child) const {
+void TreeNode::GetChild(
+    int index,
+    std::function<void(Status, std::unique_ptr<const TreeNode>)> callback)
+    const {
   FTL_DCHECK(index >= 0 && index <= GetKeyCount());
   if (children_[index].empty()) {
-    return Status::NO_SUCH_CHILD;
+    callback(Status::NO_SUCH_CHILD, nullptr);
+    return;
   }
-  return FromIdSynchronous(page_storage_, children_[index], child);
+  return FromId(page_storage_, children_[index], std::move(callback));
 }
 
 ObjectId TreeNode::GetChildId(int index) const {
