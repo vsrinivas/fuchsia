@@ -10,7 +10,6 @@ group("modular") {
     "src/application_manager",
     "src/bootstrap",
     "src/device_runner:all",
-    "src/document_store",
     "src/story_runner:all",
     "src/user_runner:all",
     "test_runner",

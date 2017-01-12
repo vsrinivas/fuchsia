@@ -6,7 +6,6 @@ group("services") {
   deps = [
     "application",
     "device",
-    "document_store",
     "story",
     "user",
   ]
