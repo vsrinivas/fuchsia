@@ -1,0 +1,31 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("common") {
+  sources = [
+    "byte_buffer.cc",
+    "byte_buffer.h",
+    "test_helpers.h",
+  ]
+
+  deps = [
+    "//lib/ftl",
+  ]
+}
+
+executable("tests") {
+  testonly = true
+  output_name = "common_unittests"
+
+  sources = [
+    "byte_buffer_unittest.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//apps/bluetooth/test:test_main",
+    "//lib/ftl",
+    "//third_party/gtest",
+  ]
+}
