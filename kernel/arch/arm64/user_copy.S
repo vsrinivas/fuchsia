@@ -7,6 +7,10 @@
 #include <asm.h>
 #include <err.h>
 
+# We do not need to check whether the addresses are in the
+# kernel or virtual address spaces, sine we only access them
+# using EL0 privileges.
+
 # status_t _arm64_copy_from_user(void *dst, const void *src, size_t len, void **fault_return)
 FUNCTION(_arm64_copy_from_user)
     # Setup data fault return
