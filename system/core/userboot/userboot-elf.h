@@ -25,7 +25,8 @@ mx_vaddr_t elf_load_vmo(mx_handle_t log, mx_handle_t vmar_self,
 // main executable.
 mx_vaddr_t elf_load_bootfs(mx_handle_t log, mx_handle_t vmar_self,
                            struct bootfs *fs, mx_handle_t proc,
-                           mx_handle_t vmar, const char* filename,
-                           mx_handle_t to_child, size_t* stack_size);
+                           mx_handle_t vmar, mx_handle_t thread,
+                           const char* filename, mx_handle_t to_child,
+                           size_t* stack_size);
 
 #pragma GCC visibility pop

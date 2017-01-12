@@ -34,9 +34,9 @@ static noreturn void do_shutdown(mx_handle_t log, mx_handle_t rroot) {
 }
 
 static void load_child_process(mx_handle_t log, mx_handle_t vmar_self,
-                               const struct options* o,
-                               mx_handle_t bootfs_vmo, mx_handle_t vdso_vmo,
-                               mx_handle_t proc, mx_handle_t vmar,
+                               const struct options* o, mx_handle_t bootfs_vmo,
+                               mx_handle_t vdso_vmo, mx_handle_t proc,
+                               mx_handle_t vmar, mx_handle_t thread,
                                mx_handle_t to_child, mx_vaddr_t* entry,
                                mx_vaddr_t* vdso_base, size_t* stack_size) {
 
@@ -45,7 +45,7 @@ static void load_child_process(mx_handle_t log, mx_handle_t vmar_self,
     bootfs_mount(vmar_self, log, bootfs_vmo, &bootfs);
 
     // This will handle a PT_INTERP by doing a second lookup in bootfs.
-    *entry = elf_load_bootfs(log, vmar_self, &bootfs, proc, vmar,
+    *entry = elf_load_bootfs(log, vmar_self, &bootfs, proc, vmar, thread,
                              o->value[OPTION_FILENAME], to_child, stack_size);
 
     // All done with bootfs!
@@ -177,10 +177,16 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (status < 0)
         fail(log, status, "mx_process_create failed\n");
 
+    // Create the initial thread in the new process
+    mx_handle_t thread;
+    status = mx_thread_create(proc, filename, strlen(filename), 0, &thread);
+    if (status < 0)
+        fail(log, status, "mx_thread_create failed\n");
+
     mx_vaddr_t entry, vdso_base;
     size_t stack_size = MAGENTA_DEFAULT_STACK_SIZE;
     load_child_process(log, vmar_self, &o, bootfs_vmo, vdso_vmo, proc, vmar,
-                       to_child, &entry, &vdso_base, &stack_size);
+                       thread, to_child, &entry, &vdso_base, &stack_size);
 
     // Allocate the stack for the child.
     stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
@@ -207,12 +213,6 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (status < 0)
         fail(log, status,
              "mx_handle_duplicate failed on child process handle\n");
-
-    // Create the initial thread in the new process
-    mx_handle_t thread;
-    status = mx_thread_create(proc, filename, strlen(filename), 0, &thread);
-    if (status < 0)
-        fail(log, status, "mx_thread_create failed\n");
 
     if (thread_handle_loc != NULL) {
         // Reuse the slot for the child's handle.

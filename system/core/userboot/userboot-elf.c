@@ -67,6 +67,7 @@ enum loader_bootstrap_handle_index {
     BOOTSTRAP_LOGGER,
     BOOTSTRAP_PROC,
     BOOTSTRAP_ROOT_VMAR,
+    BOOTSTRAP_THREAD,
     BOOTSTRAP_HANDLES
 };
 
@@ -80,8 +81,8 @@ struct loader_bootstrap_message {
 };
 
 static void stuff_loader_bootstrap(mx_handle_t log, mx_handle_t proc,
-                                   mx_handle_t vmar, mx_handle_t to_child,
-                                   mx_handle_t vmo) {
+                                   mx_handle_t vmar, mx_handle_t thread,
+                                   mx_handle_t to_child, mx_handle_t vmo) {
     struct loader_bootstrap_message msg = {
         .header = {
             .protocol = MX_PROCARGS_PROTOCOL,
@@ -96,6 +97,7 @@ static void stuff_loader_bootstrap(mx_handle_t log, mx_handle_t proc,
             [BOOTSTRAP_LOGGER] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 0),
             [BOOTSTRAP_PROC] = MX_HND_INFO(MX_HND_TYPE_PROC_SELF, 0),
             [BOOTSTRAP_ROOT_VMAR] = MX_HND_INFO(MX_HND_TYPE_VMAR_ROOT, 0),
+            [BOOTSTRAP_THREAD] = MX_HND_INFO(MX_HND_TYPE_THREAD_SELF, 0),
         },
         .env = LOADER_BOOTSTRAP_ENVIRON,
     };
@@ -104,10 +106,12 @@ static void stuff_loader_bootstrap(mx_handle_t log, mx_handle_t proc,
         [BOOTSTRAP_LOGGER] = MX_HANDLE_INVALID,
         [BOOTSTRAP_PROC] = MX_HANDLE_INVALID,
         [BOOTSTRAP_ROOT_VMAR] = MX_HANDLE_INVALID,
+        [BOOTSTRAP_THREAD] = MX_HANDLE_INVALID,
     };
     mx_handle_duplicate(log, MX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_LOGGER]);
     mx_handle_duplicate(proc, MX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_PROC]);
     mx_handle_duplicate(vmar, MX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_ROOT_VMAR]);
+    mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_THREAD]);
 
     mx_status_t status = mx_channel_write(
         to_child, 0, &msg, sizeof(msg),
@@ -118,8 +122,9 @@ static void stuff_loader_bootstrap(mx_handle_t log, mx_handle_t proc,
 
 mx_vaddr_t elf_load_bootfs(mx_handle_t log, mx_handle_t vmar_self,
                            struct bootfs *fs, mx_handle_t proc,
-                           mx_handle_t vmar, const char* filename,
-                           mx_handle_t to_child, size_t* stack_size) {
+                           mx_handle_t vmar, mx_handle_t thread,
+                           const char* filename, mx_handle_t to_child,
+                           size_t* stack_size) {
     mx_handle_t vmo = bootfs_open(log, fs, filename);
 
     uintptr_t interp_off = 0;
@@ -140,7 +145,7 @@ mx_vaddr_t elf_load_bootfs(mx_handle_t log, mx_handle_t vmar_self,
 
         print(log, filename, " has PT_INTERP \"", interp, "\"\n", NULL);
 
-        stuff_loader_bootstrap(log, proc, vmar, to_child, vmo);
+        stuff_loader_bootstrap(log, proc, vmar, thread, to_child, vmo);
 
         mx_handle_t interp_vmo = bootfs_open(log, fs, interp);
         entry = load(log, vmar_self, vmar,
