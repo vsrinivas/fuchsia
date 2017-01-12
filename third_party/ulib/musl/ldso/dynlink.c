@@ -14,10 +14,7 @@
 #include <link.h>
 #include <magenta/dlfcn.h>
 #include <magenta/internal.h>
-// TODO(teisenbe): Remove this include once code below no longer uses it (e.g.
-// after we switch to using sub-VMARs).
 #include <magenta/status.h>
-#include <magenta/syscalls/object.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <stdarg.h>
@@ -484,50 +481,10 @@ static void unmap_library(struct dso* dso) {
     }
 }
 
-static void* choose_load_address(size_t span) {
-    // vm_map requires some vm_object handle, so create a dummy one.
-    mx_handle_t vmo;
-    if (_mx_vmo_create(0, 0, &vmo) < 0)
-        return MAP_FAILED;
-
-    // Do a mapping to let the kernel choose an address range.
-    // TODO(MG-161): This really ought to be a no-access mapping (PROT_NONE
-    // in POSIX terms).  But the kernel currently doesn't allow that, so do
-    // a read-only mapping.
-    uintptr_t base;
-    mx_status_t status = _mx_vmar_map(__magenta_vmar_root_self, 0, vmo, 0, span,
-                                      MX_VM_FLAG_PERM_READ, &base);
-    _mx_handle_close(vmo);
-    if (status < 0) {
-        error("failed to reserve %zu bytes of address space: %d\n",
-              span, status);
-        errno = ENOMEM;
-        return MAP_FAILED;
-    }
-
-    // TODO(MG-133): Really we should just leave the no-access mapping in
-    // place and let each PT_LOAD mapping overwrite it.  But the kernel
-    // currently doesn't allow splitting an existing mapping to overwrite
-    // part of it.  So we remove the address-reserving mapping before
-    // starting on the actual PT_LOAD mappings.  NOTE! THIS IS RACY!
-    // That is, in the general case of dlopen when there are multiple
-    // threads, it's racy.  For the startup case (or any time when there
-    // is only one thread), it's fine.
-    status = _mx_vmar_unmap(__magenta_vmar_root_self, base, span);
-    if (status < 0) {
-        error("vm_unmap failed on reservation %#" PRIxPTR "+%zu: %d\n",
-              base, span, status);
-        errno = ENOMEM;
-        return MAP_FAILED;
-    }
-
-    return (void*)base;
-}
-
 // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
 // This will go away when we have copy-on-write.
 static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
-                                    off_t* off_start, size_t* map_size) {
+                                    size_t* off_start, size_t* map_size) {
     mx_handle_t copy_vmo;
     mx_status_t status = _mx_vmo_create(data_size, 0, &copy_vmo);
     if (status < 0)
@@ -562,26 +519,16 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     size_t addr_min = SIZE_MAX, addr_max = 0, map_len;
     size_t this_min, this_max;
     size_t nsegs = 0;
-    off_t off_start = 0;
     Ehdr* eh;
     Phdr *ph, *ph0;
     unsigned char *map = MAP_FAILED, *base;
+    mx_handle_t vmar = MX_HANDLE_INVALID;
     size_t dyn = 0;
     size_t tls_image = 0;
     size_t i;
 
-    // Get the VMAR's base so we can perform SPECIFIC mappings below.
-    // TODO(teisenbe): This should be unnecessary once this code is
-    // switched to using subregions.
-    mx_info_vmar_t vmar_info;
-    mx_status_t status = _mx_object_get_info(__magenta_vmar_root_self,
-                                             MX_INFO_VMAR, &vmar_info,
-                                             sizeof(vmar_info), NULL, NULL);
-    if (status < 0)
-        return 0;
-
     size_t l;
-    status = _mx_vmo_read(vmo, buf, 0, sizeof buf, &l);
+    mx_status_t status = _mx_vmo_read(vmo, buf, 0, sizeof buf, &l);
     eh = buf;
     if (status < 0)
         return 0;
@@ -630,7 +577,6 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         nsegs++;
         if (ph->p_vaddr < addr_min) {
             addr_min = ph->p_vaddr;
-            off_start = ph->p_offset;
         }
         if (ph->p_vaddr + ph->p_memsz > addr_max) {
             addr_max = ph->p_vaddr + ph->p_memsz;
@@ -641,12 +587,23 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     addr_max += PAGE_SIZE - 1;
     addr_max &= -PAGE_SIZE;
     addr_min &= -PAGE_SIZE;
-    off_start &= -PAGE_SIZE;
-    map_len = addr_max - addr_min + off_start;
-    map = choose_load_address(map_len);
-    if (map == MAP_FAILED)
-        goto error;
-    dso->map = map;
+    map_len = addr_max - addr_min;
+
+    // Allocate a VMAR to reserve the whole address range.
+    uintptr_t vmar_base;
+    status = _mx_vmar_allocate(__magenta_vmar_root_self, 0, map_len,
+                               MX_VM_FLAG_CAN_MAP_READ |
+                               MX_VM_FLAG_CAN_MAP_WRITE |
+                               MX_VM_FLAG_CAN_MAP_EXECUTE |
+                               MX_VM_FLAG_CAN_MAP_SPECIFIC,
+                               &vmar, &vmar_base);
+    if (status != NO_ERROR) {
+        error("failed to reserve %zu bytes of address space: %d\n",
+              map_len, status);
+        goto mx_error;
+    }
+
+    dso->map = map = (void*)vmar_base;
     dso->map_len = map_len;
     base = map - addr_min;
     dso->phdr = 0;
@@ -664,7 +621,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         }
         this_min = ph->p_vaddr & -PAGE_SIZE;
         this_max = ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1 & -PAGE_SIZE;
-        off_start = ph->p_offset & -PAGE_SIZE;
+        size_t off_start = ph->p_offset & -PAGE_SIZE;
         uint32_t mx_flags = MX_VM_FLAG_SPECIFIC;
         mx_flags |= (ph->p_flags & PF_R) ? MX_VM_FLAG_PERM_READ : 0;
         mx_flags |= (ph->p_flags & PF_W) ? MX_VM_FLAG_PERM_WRITE : 0;
@@ -698,8 +655,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             }
         }
 
-        size_t mapoff = mapaddr - vmar_info.base;
-        status = _mx_vmar_map(__magenta_vmar_root_self, mapoff, map_vmo,
+        status = _mx_vmar_map(vmar, mapaddr - vmar_base, map_vmo,
                               off_start, map_size, mx_flags, &mapaddr);
         if (map_vmo != vmo)
             _mx_handle_close(map_vmo);
@@ -718,8 +674,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
                     goto mx_error;
                 }
                 uintptr_t bss_mapaddr = 0;
-                size_t bss_mapoff = pgbrk - vmar_info.base;
-                status = _mx_vmar_map(__magenta_vmar_root_self, bss_mapoff,
+                status = _mx_vmar_map(vmar, pgbrk - vmar_base,
                                       bss_vmo, 0, bss_len, mx_flags,
                                       &bss_mapaddr);
                 _mx_handle_close(bss_vmo);
@@ -728,6 +683,8 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
             }
         }
     }
+
+    _mx_handle_close(vmar);
 
     dso->base = base;
     dso->dynv = laddr(dso, dyn);
@@ -740,6 +697,8 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
 noexec:
     errno = ENOEXEC;
 error:
+    if (vmar != MX_HANDLE_INVALID)
+        _mx_handle_close(vmar);
     if (map != MAP_FAILED)
         unmap_library(dso);
     free(allocated_buf);
