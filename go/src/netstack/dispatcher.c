@@ -50,7 +50,7 @@ mx_status_t rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     mx_handle_close(msg->handle[i]);
   }
 
-  debug("rio_handler: op=%s, sockfd=%d, len=%u, arg=%d\n",
+  vdebug("rio_handler: op=%s, sockfd=%d, len=%u, arg=%d\n",
         getopname(MXRIO_OP(msg->op)), ios ? ios->sockfd : -999, msg->datalen,
         msg->arg);
 

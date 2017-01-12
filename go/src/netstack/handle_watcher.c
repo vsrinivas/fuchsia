@@ -205,27 +205,27 @@ static int handle_watcher_loop(void* arg) {
     }
 
     // wait at most two handles
-    debug("handle_watcher_loop: waiting\n");
+    vdebug("handle_watcher_loop: waiting\n");
     uint32_t num_results = NSOCKETS;
     mx_waitset_result_t results[NSOCKETS];
     if ((r = mx_waitset_wait(s_waitset, MX_TIME_INFINITE, results, &num_results)) < 0) {
       return r;
     }
-    debug("handle_watcher_loop: wait_done (num=%d)\n", num_results);
+    vdebug("handle_watcher_loop: wait_done (num=%d)\n", num_results);
 
     c = 0;
     for (int i = 0; i < (int)num_results; i++) {
       if (results[i].cookie != CTRL_COOKIE) {
         if (results[i].observed == 0) { // should not happen
-          debug("handle_watcher_loop: no observed signals. skip\n");
+          vdebug("handle_watcher_loop: no observed signals. skip\n");
           continue;
         }
         c = 1;
         break;
       }
     }
-    debug_socket("handle_watcher_loop: send %d (%s)\n", c,
-                 (c > 0) ? "FOUND" : "NOT FOUND");
+    vdebug("handle_watcher_loop: send %d (%s)\n", c,
+           (c > 0) ? "FOUND" : "NOT FOUND");
     // if any handle except the control handle has a signal, interrupt
     // the select
     if (c > 0) {

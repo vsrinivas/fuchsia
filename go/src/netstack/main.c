@@ -14,8 +14,8 @@
 #include "apps/netstack/trace.h"
 
 int main(int argc, char** argv) {
-  int trace_facil = TRACE_FACIL_ALL;
-  int trace_level = TRACE_LEVEL_ERROR;
+  int trace_facil = TRACE_FACIL_NET | TRACE_FACIL_SOCKET | TRACE_FACIL_OTHERS;
+  int trace_level = TRACE_LEVEL_ERROR;  // TRACE_LEVEL_DEBUG
 
   int opt;
   while ((opt = getopt(argc, argv, "f:l:")) != -1) {

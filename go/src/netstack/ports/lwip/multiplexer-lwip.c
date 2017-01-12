@@ -67,24 +67,24 @@ int multiplexer(void *arg) {
     fd_set write_set = s_active_write_set;
     fd_set except_set = s_active_except_set;
 
-    debug("watching 0 to %d...\n", s_nwatch - 1);
+    vdebug("watching 0 to %d...\n", s_nwatch - 1);
     int nfd = lwip_select(s_nwatch, &read_set, &write_set, &except_set, NULL);
     // TODO: if nfd < 0?
-    debug_always("nfd=%d\n", nfd);
+    vdebug("nfd=%d\n", nfd);
 
     if (handle_watcher_stop() > 0) {
       handle_watcher_schedule_request();
     }
 
     if (FD_ISSET(handle_watcher_fd, &read_set)) {
-      debug_always("handle_watcher_fd is set\n");
+      vdebug("handle_watcher_fd is set\n");
       --nfd;
       vdebug("multiplexer: clear interrupt\n");
       clear_interrupt(handle_watcher_fd);
     }
 
     if (FD_ISSET(request_fd, &read_set)) {
-      debug_always("request_fd is set\n");
+      vdebug("request_fd is set\n");
       --nfd;
       request_t *rq;
       rq = shared_queue_get();
