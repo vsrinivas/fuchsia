@@ -507,10 +507,8 @@ class PreviousStoriesCall : public Operation {
 StoryProviderImpl::StoryProviderImpl(
     ApplicationEnvironmentPtr environment,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
-    ledger::LedgerRepositoryPtr ledger_repository,
-    fidl::InterfaceRequest<StoryProvider> story_provider_request)
+    ledger::LedgerRepositoryPtr ledger_repository)
     : environment_(std::move(environment)),
-      binding_(this),
       storage_(new Storage),
       page_watcher_binding_(this),
       ledger_repository_(std::move(ledger_repository)) {
@@ -540,17 +538,28 @@ StoryProviderImpl::StoryProviderImpl(
   // stories *before* we can process any calls that might create a new
   // story. Hence we bind the interface request only after this call
   // completes.
-  new PreviousStoriesCall(&operation_queue_, ledger_.get(), ftl::MakeCopyable([
-    this, story_provider_request = std::move(story_provider_request)
-  ](fidl::Array<fidl::String> stories) mutable {
+  new PreviousStoriesCall(&operation_queue_, ledger_.get(), ftl::MakeCopyable(
+      [this](fidl::Array<fidl::String> stories) mutable {
     for (auto& story_id : stories) {
       story_ids_.insert(story_id.get());
     }
 
     InitStoryId();  // So MakeStoryId() returns something more random.
 
-    binding_.Bind(std::move(story_provider_request));
+    for (auto& request : requests_) {
+      bindings_.AddBinding(this, std::move(request));
+    }
+    requests_.clear();
+    ready_ = true;
   }));
+}
+
+void StoryProviderImpl::AddBinding(fidl::InterfaceRequest<StoryProvider> request) {
+  if (ready_) {
+    bindings_.AddBinding(this, std::move(request));
+  } else {
+    requests_.emplace_back(std::move(request));
+  }
 }
 
 void StoryProviderImpl::PurgeController(const std::string& story_id) {

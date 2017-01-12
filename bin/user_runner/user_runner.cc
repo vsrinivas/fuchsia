@@ -103,10 +103,11 @@ class UserRunnerImpl : public UserRunner {
     ApplicationEnvironmentPtr env;
     stories_scope_->environment()->Duplicate(env.NewRequest());
 
+    story_provider_impl_.reset(new StoryProviderImpl(
+        std::move(env), std::move(ledger), std::move(ledger_repository_ptr)));
+
     fidl::InterfaceHandle<StoryProvider> story_provider;
-    auto story_provider_impl = new StoryProviderImpl(
-        std::move(env), std::move(ledger), std::move(ledger_repository_ptr),
-        story_provider.NewRequest());
+    story_provider_impl_->AddBinding(story_provider.NewRequest());
 
     auto maxwell_services =
         GetServiceProvider("file:///system/apps/maxwell_launcher", nullptr);
@@ -114,7 +115,7 @@ class UserRunnerImpl : public UserRunner {
     auto maxwell_launcher =
         ConnectToService<maxwell::Launcher>(maxwell_services.get());
     fidl::InterfaceHandle<StoryProvider> story_provider_aux;
-    story_provider_impl->AddAuxiliaryBinding(story_provider_aux.NewRequest());
+    story_provider_impl_->AddBinding(story_provider_aux.NewRequest());
 
     // The FocusController is implemented by the UserShell.
     fidl::InterfaceHandle<FocusController> focus_controller;
@@ -183,6 +184,7 @@ class UserRunnerImpl : public UserRunner {
   fidl::Binding<UserRunner> binding_;
   std::unique_ptr<Scope> stories_scope_;
   UserShellPtr user_shell_;
+  std::unique_ptr<StoryProviderImpl> story_provider_impl_;
 
   // Keep connections to applications started here around so they are
   // killed when this instance is deleted.

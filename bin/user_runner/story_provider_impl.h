@@ -11,12 +11,12 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
-#include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/services/story/story_runner.fidl.h"
 #include "apps/modular/services/user/story_data.fidl.h"
 #include "apps/modular/services/user/story_provider.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
+#include "apps/modular/src/user_runner/story_controller_impl.h"
 #include "apps/modular/src/user_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
@@ -28,7 +28,6 @@
 
 namespace modular {
 class ApplicationContext;
-class StoryControllerImpl;
 
 namespace {
 class DeleteStoryCall;
@@ -39,17 +38,11 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   StoryProviderImpl(
       ApplicationEnvironmentPtr environment,
       fidl::InterfaceHandle<ledger::Ledger> ledger,
-      ledger::LedgerRepositoryPtr ledger_repository,
-      fidl::InterfaceRequest<StoryProvider> story_provider_request);
+      ledger::LedgerRepositoryPtr ledger_repository);
 
   ~StoryProviderImpl() override = default;
 
-  // Adds a non-lifecycle-governing binding to this |StoryProvider|.
-  // The principal binding established in the constructor governs the
-  // lifespan of this instance.
-  void AddAuxiliaryBinding(fidl::InterfaceRequest<StoryProvider> request) {
-    aux_bindings_.AddBinding(this, std::move(request));
-  }
+  void AddBinding(fidl::InterfaceRequest<StoryProvider> request);
 
   // Called by empty binding set handler of StoryControllerImpl to remove
   // the corresponding entry.
@@ -113,14 +106,19 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
                 const OnChangeCallback& callback) override;
 
   ApplicationEnvironmentPtr environment_;
-  StrongBinding<StoryProvider> binding_;
-  fidl::BindingSet<StoryProvider> aux_bindings_;
   ledger::LedgerPtr ledger_;
+
+  fidl::BindingSet<StoryProvider> bindings_;
+
+  // We can only accept binding requests once the instance is fully
+  // initalized. So we queue them up initially.
+  bool ready_{};
+  std::vector<fidl::InterfaceRequest<StoryProvider>> requests_;
 
   // The apps that provide the services below which were started by
   // this service instance through launcher_. We retain their
-  // controllers, such that when this service terminates (though it
-  // current doesn't) it terminates those apps as well.
+  // controllers, such that when this service terminates it terminates
+  // those apps as well.
   fidl::InterfacePtrSet<ApplicationController> apps_;
 
   ApplicationLauncherPtr launcher_;
