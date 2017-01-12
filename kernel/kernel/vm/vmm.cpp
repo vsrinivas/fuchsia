@@ -8,6 +8,7 @@
 #include "vm_priv.h"
 #include <assert.h>
 #include <err.h>
+#include <inttypes.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
@@ -142,7 +143,7 @@ void DumpProcessMemoryUsage(const char* prefix, size_t min_pages);
 status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
 #if TRACE_PAGE_FAULT || LOCAL_TRACE
     thread_t* current_thread = get_current_thread();
-    TRACEF("thread %s va 0x%lx, flags 0x%x\n", current_thread->name, addr, flags);
+    TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x\n", current_thread->name, addr, flags);
 #endif
 
 #if _LP64
