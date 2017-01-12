@@ -5,6 +5,11 @@
 #include <gpt/gpt.h>
 #include <magenta/syscalls.h>
 
+typedef struct part_tuple {
+    int index;
+    size_t first;
+} part_tuple_t;
+
 mx_status_t find_partition_entries(gpt_partition_t** gpt_table,
                                    const uint8_t* guid,
                                    uint16_t table_size,
@@ -20,3 +25,6 @@ bool check_partition_size(const gpt_partition_t* partition,
                           const uint64_t min_size,
                           const uint64_t block_size,
                           const char* partition_name);
+
+gpt_partition_t** sort_partitions(gpt_partition_t** parts,
+                                  uint16_t count);

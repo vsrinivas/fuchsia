@@ -2,6 +2,7 @@
 // User of this source code is governed by a BSD-style license that be be found
 // in the LICENSE file.
 #include <gpt/gpt.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <magenta/assert.h>
 #include <magenta/syscalls.h>
@@ -123,9 +124,77 @@ bool test_find_partition(void) {
     END_TEST;
 }
 
+bool verify_sort(gpt_partition_t** partitions, int count) {
+    bool ordered = true;
+    for (int idx = 1; idx < count; idx++) {
+        if (partitions[idx - 1]->first > partitions[idx]->first) {
+            ordered = false;
+            printf("Values are not ordered, index: %i--%" PRIu64 "!\n", idx,
+                   partitions[idx]->first);
+        }
+    }
+    return ordered;
+}
+
+bool do_sort_test(int test_size, uint64_t val_max) {
+    gpt_partition_t* values = malloc(test_size * sizeof(gpt_partition_t));
+    gpt_partition_t** value_ptrs = malloc(test_size * sizeof(gpt_partition_t*));
+    if (values == NULL) {
+        fprintf(stderr, "Unable to allocate memory for test\n");
+        return false;
+    }
+
+    for (int idx = 0; idx < test_size; idx++) {
+        bool unique = false;
+        while (!unique) {
+            double rando = ((double) rand()) / RAND_MAX;
+            uint64_t val = rando * val_max;
+
+            (values + idx)->first = val;
+
+            // check the uniqueness of the value since our sort doesn't handle
+            // duplicate values
+            unique = true;
+            for (int idx2 = 0; idx2 < idx; idx2++) {
+                if ((values + idx2)->first == val) {
+                    unique = false;
+                    break;
+                }
+            }
+
+            value_ptrs[idx] = values + idx;
+        }
+    }
+
+    gpt_partition_t** sorted_values = sort_partitions(value_ptrs, test_size);
+    ASSERT_EQ(verify_sort(sorted_values, test_size), true, "");
+
+    // sort again to test ordered data is handled properly
+    sorted_values = sort_partitions(sorted_values, test_size);
+    ASSERT_EQ(verify_sort(sorted_values, test_size), true, "");
+
+    free(values);
+    free(sorted_values);
+    free(value_ptrs);
+
+    return true;
+}
+
+bool test_sort(void) {
+    BEGIN_TEST;
+    // run 20 iterations with 20K elements as a stress test. We also think
+    // this should hit all possible code paths
+    for (int count = 0; count < 20; count++) {
+        do_sort_test(256, 10000000);
+        fflush(stdout);
+    }
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(installer_tests)
 RUN_TEST(test_find_partition_entries)
 RUN_TEST(test_find_partition)
+RUN_TEST(test_sort);
 END_TEST_CASE(installer_tests)
 
 int main(int argc, char** argv) {

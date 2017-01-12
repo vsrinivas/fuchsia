@@ -6,6 +6,7 @@
 #include <magenta/assert.h>
 #include <magenta/syscalls.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <installer/lib-installer.h>
@@ -136,4 +137,46 @@ mx_status_t find_partition(gpt_partition_t** gpt_table,
 
     // we didn't find a suitable partition
     return ERR_NOT_FOUND;
+}
+
+static int compare(const void* ls, const void* rs) {
+    return (int) (((part_tuple_t*) ls)->first - ((part_tuple_t*) rs)->first);
+}
+
+/*
+ * Sort an array of gpt_partition_t pointers based on the values of
+ * gpt_partition_t->first. The returned value will contain an array of pointers
+ * to partitions in sorted order. This array was allocated on the heap and
+ * should be freed at some point.
+ */
+gpt_partition_t** sort_partitions(gpt_partition_t** parts, uint16_t count) {
+    gpt_partition_t** sorted_parts = malloc(count * sizeof(gpt_partition_t*));
+    if (sorted_parts == NULL) {
+        fprintf(stderr, "Unable to sort partitions, out of memory.\n");
+        return NULL;
+    }
+
+    part_tuple_t* sort_tuples = malloc(count * sizeof(part_tuple_t));
+    if (sort_tuples == NULL) {
+        fprintf(stderr, "Unable to sort partitions, out of memory.\n");
+        free(sorted_parts);
+        return NULL;
+    }
+
+    for (uint16_t idx = 0; idx < count; idx++, sort_tuples++) {
+        sort_tuples->index = idx;
+        sort_tuples->first = parts[idx]->first;
+    }
+
+    sort_tuples -= count;
+    qsort(sort_tuples, count, sizeof(part_tuple_t), compare);
+
+    // create a sorted array of pointers
+    for (uint16_t idx = 0; idx < count; idx++, sort_tuples++) {
+        sorted_parts[idx] = parts[sort_tuples->index];
+    }
+
+    sort_tuples -= count;
+    free(sort_tuples);
+    return sorted_parts;
 }

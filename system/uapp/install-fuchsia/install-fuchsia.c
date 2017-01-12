@@ -59,11 +59,6 @@ typedef enum {
     PART_SYSTEM = 1 << 1
 } partition_flags;
 
-typedef struct part_tuple {
-    int index;
-    size_t first;
-} part_tuple_t;
-
 static const uint8_t guid_system_part[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
 static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
 
@@ -234,49 +229,6 @@ static mx_status_t find_partition_path(gpt_partition_t* const* part_info,
     }
 
     return NO_ERROR;
-}
-
-static int compare(const void* ls, const void* rs) {
-    return (int) (((part_tuple_t*) ls)->first - ((part_tuple_t*) rs)->first);
-}
-
-/*
- * Sort an array of gpt_partition_t pointers based on the values of
- * gpt_partition_t->first. The returned value will contain an array of pointers
- * to partitions in sorted order. This array was allocated on the heap and
- * should be freed at some point.
- */
-static gpt_partition_t** sort_partitions(gpt_partition_t** parts,
-                                         uint16_t count) {
-    gpt_partition_t** sorted_parts = malloc(count * sizeof(gpt_partition_t*));
-    if (sorted_parts == NULL) {
-        fprintf(stderr, "Unable to sort partitions, out of memory.\n");
-        return NULL;
-    }
-
-    part_tuple_t* sort_tuples = malloc(count * sizeof(part_tuple_t));
-    if (sort_tuples == NULL) {
-        fprintf(stderr, "Unable to sort partitions, out of memory.\n");
-        free(sorted_parts);
-        return NULL;
-    }
-
-    for (uint16_t idx = 0; idx < count; idx++, sort_tuples++) {
-        sort_tuples->index = idx;
-        sort_tuples->first = parts[idx]->first;
-    }
-
-    sort_tuples -= count;
-    qsort(sort_tuples, count, sizeof(part_tuple_t), compare);
-
-    // create a sorted array of pointers
-    for (uint16_t idx = 0; idx < count; idx++, sort_tuples++) {
-        sorted_parts[idx] = parts[sort_tuples->index];
-    }
-
-    sort_tuples -= count;
-    free(sort_tuples);
-    return sorted_parts;
 }
 
 /*
@@ -620,77 +572,6 @@ static mx_status_t write_partition(int src, int dest, size_t* bytes_copied) {
         return ERR_IO;
     }
     return NO_ERROR;
-}
-
-static bool do_sort_test(int test_size, uint64_t val_max) {
-    gpt_partition_t* values = malloc(test_size * sizeof(gpt_partition_t));
-    gpt_partition_t** value_ptrs = malloc(test_size * sizeof(gpt_partition_t*));
-    if (values == NULL) {
-        fprintf(stderr, "Unable to allocate memory for test\n");
-        return false;
-    }
-
-    for (int idx = 0; idx < test_size; idx++) {
-        bool unique = false;
-        while (!unique) {
-            double rando = ((double) rand()) / RAND_MAX;
-            uint64_t val = rando * val_max;
-
-            (values + idx)->first = val;
-
-            // check the uniqueness of the value since our sort doesn't handle
-            // duplicate values
-            unique = true;
-            for (int idx2 = 0; idx2 < idx; idx2++) {
-                if ((values + idx2)->first == val) {
-                    unique = false;
-                    break;
-                }
-            }
-
-            value_ptrs[idx] = values + idx;
-        }
-    }
-
-    gpt_partition_t** sorted_values = sort_partitions(value_ptrs, test_size);
-
-    // check that we're strictly in ascending order
-    bool ordered = true;
-    for (int idx = 1; idx < test_size; idx++) {
-        if (sorted_values[idx - 1]->first > sorted_values[idx]->first) {
-            ordered = false;
-            printf("Values are not ordered, index: %i--%" PRIu64 "!\n", idx,
-                   sorted_values[idx]->first);
-        }
-    }
-
-    if (!ordered) {
-        for (int idx = 0; idx < test_size; idx++) {
-            printf(" -- %" PRIu64 "", sorted_values[idx]->first);
-        }
-        printf("\n");
-    }
-
-
-    free(values);
-    free(sorted_values);
-    free(value_ptrs);
-    return ordered;
-}
-
-static bool test_sort(void) {
-    // run 20 iterations with 20K elements as a stress test. We also think
-    // this should hit all possible code paths
-    for (int count = 0; count < 20; count++) {
-        if (!do_sort_test(20000, 10000000)) {
-            return false;
-        }
-        printf(".");
-        fflush(stdout);
-    }
-
-    printf("\nAll tests completed.\n");
-    return true;
 }
 
 mx_status_t add_partition(gpt_device_t* device, uint64_t offset_blocks,
