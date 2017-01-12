@@ -80,6 +80,7 @@ void ModuleApp::Initialize(
 
 void ModuleApp::Stop(const StopCallback& done) {
   done();
+  mtl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 }  // namespace modula_example
