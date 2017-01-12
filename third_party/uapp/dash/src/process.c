@@ -121,7 +121,7 @@ static mx_status_t launch(const char* filename, int argc, const char* const* arg
     launchpad_t* lp = NULL;
 
     mx_handle_t job_to_child = MX_HANDLE_INVALID;
-    mx_handle_t job = launchpad_get_mxio_job();
+    mx_handle_t job = mx_job_default();
     if (job != MX_HANDLE_INVALID)
         mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
 

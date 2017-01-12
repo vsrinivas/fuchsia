@@ -30,11 +30,6 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job,
                                        const char* name,
                                        launchpad_t** result);
 
-// Retrieve the cached job handle if one was transfered via mxio from
-// the parent process. This handle is owned by launchpad and callers
-// must not close or transfer it away.
-mx_handle_t launchpad_get_mxio_job(void) __attribute((deprecated));
-
 // Create a new launchpad for a given existing process handle and a
 // its root VMAR handle.  On success, the launchpad takes ownership
 // of both handles.
@@ -241,8 +236,8 @@ mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
 // launchpad_arguments, launchpad_environ, launchpad_add_handles,
 // launchpad_start, launchpad_destroy.
 //
-// The job used for these calls is fetched from the startup handles
-// via mxio_get_startup_handle() with MX_HND_TYPE_JOB and duplicated.
+// The job used for these calls is the "default job" for the process
+// obtained via mx_handle_default()
 //
 // Returns the process handle on success, giving ownership to the caller;
 // or an error code on failure.  In all cases, the handles are consumed.
@@ -269,8 +264,8 @@ mx_handle_t launchpad_launch_with_job(mx_status_t job,
 // launchpad_environ, launchpad_clone_mxio_root, launchpad_clone_fd,
 // launchpad_start, launchpad_destroy.
 //
-// The job used for these calls is fetched from the startup handles
-// via mxio_get_startup_handle() with MX_HND_TYPE_JOB and duplicated.
+// The job used for these calls is the "default job" for the process
+// obtained via mx_handle_default()
 //
 // Returns the process handle on success, giving ownership to the caller;
 // or an error code on failure.

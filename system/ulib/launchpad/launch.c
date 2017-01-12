@@ -39,10 +39,6 @@ mx_handle_t launchpad_launch_with_job(mx_handle_t job,
     return finish_launch(lp, status, handles, hnds_count);
 }
 
-mx_handle_t launchpad_get_mxio_job(void) {
-    return mx_job_default();
-}
-
 mx_handle_t launchpad_launch(const char* name,
                              int argc, const char* const* argv,
                              const char* const* envp,
