@@ -69,6 +69,14 @@ normal userspace startup process (launching the device manager, etc).
 It is useful for alternate boot modes (like a factory test or system
 unit tests).
 
+The pathname used here is relative to `/boot`, so it should not start with
+a `/` prefix.
+
+Note that this option does not work for executables that are linked with
+libraries other than libc and the dynamic linker.
+
+Example: `userboot=bin/core-tests`
+
 ## userboot.shutdown
 
 If this option is set, userboot will attempt to power off the machine
