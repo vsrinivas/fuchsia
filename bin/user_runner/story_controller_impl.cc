@@ -26,14 +26,14 @@ StoryControllerImpl::StoryControllerImpl(
 }
 
 void StoryControllerImpl::Connect(
-    fidl::InterfaceRequest<StoryController> story_controller_request) {
-  bindings_.AddBinding(this, std::move(story_controller_request));
+    fidl::InterfaceRequest<StoryController> request) {
+  bindings_.AddBinding(this, std::move(request));
 }
 
-void StoryControllerImpl::AddLinkDataAndSync(const fidl::String& json,
-                                             const StopCallback& done) {
+void StoryControllerImpl::AddLinkDataAndSync(
+    const fidl::String& json, const std::function<void()>& callback) {
   if (json.is_null()) {
-    done();
+    callback();
     return;
   }
 
@@ -42,7 +42,7 @@ void StoryControllerImpl::AddLinkDataAndSync(const fidl::String& json,
   }
 
   root_->UpdateObject("", json);
-  root_->Sync(done);
+  root_->Sync(callback);
 }
 
 bool StoryControllerImpl::IsActive() {
@@ -82,7 +82,7 @@ void StoryControllerImpl::SetInfoExtra(const fidl::String& name,
 
 // |StoryController|
 void StoryControllerImpl::Start(
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<mozart::ViewOwner> request) {
   // If a controller is stopped for delete, then it cannot be used
   // further. However, as of now nothing prevents a client to call
   // Start() on a story that is being deleted, so this condition
@@ -107,7 +107,7 @@ void StoryControllerImpl::Start(
   // We store the view owner request until we actually handle it. If
   // another start request arrives in the meantime, it is preempted by
   // this one.
-  start_request_ = std::move(view_owner_request);
+  start_request_ = std::move(request);
 
   auto cont = [this] {
     if (!story_.is_bound()) {
@@ -138,8 +138,8 @@ void StoryControllerImpl::Start(
 }
 
 // |StoryController|
-void StoryControllerImpl::Stop(const StopCallback& done) {
-  stop_requests_.emplace_back(done);
+void StoryControllerImpl::Stop(const StopCallback& callback) {
+  stop_requests_.emplace_back(callback);
 
   if (stop_requests_.size() != 1) {
     return;
@@ -183,9 +183,9 @@ void StoryControllerImpl::Stop(const StopCallback& done) {
 // TODO(mesch): A cleaner way is probably to retain tombstones in the
 // ledger. We revisit that once we sort out cross device
 // synchronization.
-void StoryControllerImpl::StopForDelete(const StopCallback& done) {
+void StoryControllerImpl::StopForDelete(const StopCallback& callback) {
   deleted_ = true;
-  Stop(done);
+  Stop(callback);
 }
 
 void StoryControllerImpl::Reset() {
@@ -228,13 +228,13 @@ void StoryControllerImpl::OnStateChange(const ModuleState state) {
   NotifyStateChange();
 }
 
-void StoryControllerImpl::WriteStoryData(std::function<void()> done) {
+void StoryControllerImpl::WriteStoryData(std::function<void()> callback) {
   // If the story controller is deleted, we do not write story data
   // anymore, because that would undelete it again.
   if (!deleted_) {
-    story_provider_impl_->WriteStoryData(story_data_->Clone(), done);
+    story_provider_impl_->WriteStoryData(story_data_->Clone(), callback);
   } else {
-    done();
+    callback();
   }
 }
 
@@ -282,12 +282,12 @@ void StoryControllerImpl::StartStory(
   module_->Watch(module_watcher_binding_.NewBinding());
 }
 
-void StoryControllerImpl::GetLink(fidl::InterfaceRequest<Link> link_request) {
+void StoryControllerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   if (!story_.is_bound()) {
     StartStoryRunner();
   }
 
-  root_->Dup(std::move(link_request));
+  root_->Dup(std::move(request));
 }
 
 }  // namespace modular

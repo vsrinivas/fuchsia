@@ -92,7 +92,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   // |StoryProvider|
   void GetStoryInfo(const fidl::String& story_id,
-                    const GetStoryInfoCallback& story_info_callback) override;
+                    const GetStoryInfoCallback& callback) override;
 
   // |StoryProvider|
   void GetController(const fidl::String& story_id,
@@ -106,11 +106,11 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   // |PageWatcher|
   void OnInitialState(fidl::InterfaceHandle<ledger::PageSnapshot> page,
-                      const OnInitialStateCallback& cb) override;
+                      const OnInitialStateCallback& callback) override;
 
   // |PageWatcher|
   void OnChange(ledger::PageChangePtr page,
-                const OnChangeCallback& cb) override;
+                const OnChangeCallback& callback) override;
 
   ApplicationEnvironmentPtr environment_;
   StrongBinding<StoryProvider> binding_;

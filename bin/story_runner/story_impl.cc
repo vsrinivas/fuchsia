@@ -173,7 +173,7 @@ void StoryImpl::StartModule(
         // We currently require a 1:1 relationship between module
         // application instances and Module service instances, because
         // flutter only allows one ViewOwner per flutter application,
-        // and we need one ViewOnwer instance per Module instance.
+        // and we need one ViewOwner instance per Module instance.
 
         auto launch_info = ApplicationLaunchInfo::New();
 

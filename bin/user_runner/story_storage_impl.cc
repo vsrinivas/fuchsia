@@ -136,18 +136,18 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
 
 // |StoryStorage|
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
-                                    const ReadLinkDataCallback& cb) {
+                                    const ReadLinkDataCallback& callback) {
   if (story_page_.is_bound()) {
     new ReadLinkDataCall(&operation_queue_, story_page_.get(), link_id,
-                         cb);
+                         callback);
 
   } else {
     auto& story_data = (*storage_)[key_];
     auto i = story_data.find(link_id);
     if (i != story_data.end()) {
-      cb(i->second->Clone());
+      callback(i->second->Clone());
     } else {
-      cb(nullptr);
+      callback(nullptr);
     }
   }
 }
@@ -155,14 +155,14 @@ void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,
 // |StoryStorage|
 void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
                                      LinkDataPtr data,
-                                     const WriteLinkDataCallback& cb) {
+                                     const WriteLinkDataCallback& callback) {
   if (story_page_.is_bound()) {
     new WriteLinkDataCall(&operation_queue_, story_page_.get(), link_id,
-                          std::move(data), cb);
+                          std::move(data), callback);
 
   } else {
     (*storage_)[key_][link_id] = std::move(data);
-    cb();
+    callback();
   }
 }
 
@@ -175,23 +175,23 @@ void StoryStorageImpl::WatchLink(
 }
 
 // |StoryStorage|
-void StoryStorageImpl::Dup(fidl::InterfaceRequest<StoryStorage> dup) {
-  bindings_.AddBinding(this, std::move(dup));
+void StoryStorageImpl::Dup(fidl::InterfaceRequest<StoryStorage> request) {
+  bindings_.AddBinding(this, std::move(request));
 }
 
 // |PageWatcher|
 void StoryStorageImpl::OnInitialState(
     fidl::InterfaceHandle<ledger::PageSnapshot> page,
-    const OnInitialStateCallback& cb) {
+    const OnInitialStateCallback& callback) {
   // TODO(mesch): We get the initial state from a direct query. This
   // leaves the possibility that the next OnChange is against a
   // different base state.
-  cb();
+  callback();
 }
 
 // |PageWatcher|
 void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
-                                const OnChangeCallback& cb) {
+                                const OnChangeCallback& callback) {
   if (!page.is_null() && !page->changes.is_null()) {
     for (auto& entry : page->changes) {
       const fidl::String link_id = to_string(entry->key);
@@ -205,12 +205,12 @@ void StoryStorageImpl::OnChange(ledger::PageChangePtr page,
       }
     }
   }
-  cb(nullptr);
+  callback(nullptr);
 }
 
 // |StoryStorage|
-void StoryStorageImpl::Sync(const SyncCallback& cb) {
-  new SyncCall(&operation_queue_, cb);
+void StoryStorageImpl::Sync(const SyncCallback& callback) {
+  new SyncCall(&operation_queue_, callback);
 }
 
 }  // namespace modular

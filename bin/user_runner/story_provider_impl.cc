@@ -305,7 +305,7 @@ class DeleteStoryCall : public Operation {
     *pending_deletion_ = std::make_pair(story_id_, this);
 
     ledger_->GetRootPage(root_page_.NewRequest(), [this](
-                                                      ledger::Status status) {
+        ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
                        << " Ledger.GetRootPage() " << status;
@@ -442,7 +442,7 @@ class PreviousStoriesCall : public Operation {
     story_ids_.resize(0);
 
     ledger_->GetRootPage(root_page_.NewRequest(), [this](
-                                                      ledger::Status status) {
+        ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "PreviousStoryCall() "
                        << " Ledger.GetRootPage() " << status;
@@ -659,11 +659,11 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 // |StoryProvider|
 void StoryProviderImpl::GetStoryInfo(
     const fidl::String& story_id,
-    const GetStoryInfoCallback& story_data_callback) {
+    const GetStoryInfoCallback& callback) {
   new GetStoryDataCall(
       &operation_collection_, ledger_.get(), story_id,
-      [this, story_data_callback](StoryDataPtr story_data) {
-        story_data_callback(
+      [this, callback](StoryDataPtr story_data) {
+        callback(
             story_data.is_null() ? nullptr : std::move(story_data->story_info));
       });
 }
@@ -685,15 +685,15 @@ void StoryProviderImpl::PreviousStories(
 // |PageWatcher|
 void StoryProviderImpl::OnInitialState(
     fidl::InterfaceHandle<ledger::PageSnapshot> page,
-    const OnInitialStateCallback& cb) {
+    const OnInitialStateCallback& callback) {
   // TODO(mesch): Consider to initialize story_ids_ here, but the
   // current place may be better anyway.
-  cb();
+  callback();
 }
 
 // |PageWatcher|
 void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
-                                 const OnChangeCallback& cb) {
+                                 const OnChangeCallback& callback) {
   FTL_DCHECK(!page.is_null());
   FTL_DCHECK(!page->changes.is_null());
 
@@ -709,6 +709,7 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
       watcher->OnChange(story_data->story_info.Clone());
     });
   }
+
   for (auto& key : page->deleted_keys) {
     const fidl::String story_id = to_string(key);
     watchers_.ForAllPtrs([&story_id](StoryProviderWatcher* const watcher) {
@@ -723,7 +724,8 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
                           nullptr /* pending_deletion */, [] {});
     }
   }
-  cb(nullptr);
+
+  callback(nullptr);
 }
 
 }  // namespace modular

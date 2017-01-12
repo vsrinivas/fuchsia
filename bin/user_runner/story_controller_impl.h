@@ -34,10 +34,10 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   ~StoryControllerImpl() override = default;
 
   // Used by StoryProviderImpl.
-  void Connect(
-      fidl::InterfaceRequest<StoryController> story_controller_request);
-  void StopForDelete(const StopCallback& done);
-  void AddLinkDataAndSync(const fidl::String& json, const StopCallback& done);
+  void Connect(fidl::InterfaceRequest<StoryController> request);
+  void StopForDelete(const StopCallback& callback);
+  void AddLinkDataAndSync(
+      const fidl::String& json, const std::function<void()>& callback);
   bool IsActive();  // Has story or pending stop or start requests?
   size_t bindings_size() const { return bindings_.size(); }
 
@@ -47,23 +47,22 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   void SetInfoExtra(const fidl::String& name,
                     const fidl::String& value,
                     const SetInfoExtraCallback& callback) override;
-  void Start(
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
-  void GetLink(fidl::InterfaceRequest<Link> link_request) override;
-  void Stop(const StopCallback& done) override;
-  void Watch(fidl::InterfaceHandle<StoryWatcher> story_watcher) override;
+  void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override;
+  void GetLink(fidl::InterfaceRequest<Link> request) override;
+  void Stop(const StopCallback& callback) override;
+  void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
 
   // |ModuleWatcher|
   void OnStateChange(ModuleState new_state) override;
 
-  void WriteStoryData(std::function<void()> done);
+  void WriteStoryData(std::function<void()> callback);
   void NotifyStateChange();
 
   // Starts the StoryRunner instance to run the story in.
   void StartStoryRunner();
 
   // Starts the Story instance for the given story.
-  void StartStory(fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+  void StartStory(fidl::InterfaceRequest<mozart::ViewOwner> request);
 
   // Resets the state of the story controller such that Start() can be
   // called again. This does not reset deleted_; once a

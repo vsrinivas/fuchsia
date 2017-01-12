@@ -39,21 +39,21 @@ class StoryStorageImpl : public StoryStorage, public ledger::PageWatcher {
  private:
   // |StoryStorage|
   void ReadLinkData(const fidl::String& link_id,
-                    const ReadLinkDataCallback& cb) override;
+                    const ReadLinkDataCallback& callback) override;
   void WriteLinkData(const fidl::String& link_id,
                      LinkDataPtr data,
-                     const WriteLinkDataCallback& cb) override;
+                     const WriteLinkDataCallback& callback) override;
   void WatchLink(
       const fidl::String& link_id,
       fidl::InterfaceHandle<StoryStorageLinkWatcher> watcher) override;
-  void Dup(fidl::InterfaceRequest<StoryStorage> dup) override;
-  void Sync(const SyncCallback& cb) override;
+  void Dup(fidl::InterfaceRequest<StoryStorage> request) override;
+  void Sync(const SyncCallback& callback) override;
 
   // |PageWatcher|
   void OnInitialState(fidl::InterfaceHandle<ledger::PageSnapshot> page,
-                      const OnInitialStateCallback& cb) override;
+                      const OnInitialStateCallback& callback) override;
   void OnChange(ledger::PageChangePtr page,
-                const OnChangeCallback& cb) override;
+                const OnChangeCallback& callback) override;
 
   fidl::BindingSet<StoryStorage> bindings_;
   fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
