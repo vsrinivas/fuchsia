@@ -161,8 +161,7 @@ def main():
     time.sleep(random.uniform(2,5))
     ensure_engine()
 
-  args = ['--package', recipes_cfg_path,
-          '--bootstrap-script', __file__] + sys.argv[1:]
+  args = ['--package', recipes_cfg_path] + sys.argv[1:]
   return _subprocess_call([
       sys.executable, '-u',
       os.path.join(engine_path, engine_subpath, 'recipes.py')] + args)
