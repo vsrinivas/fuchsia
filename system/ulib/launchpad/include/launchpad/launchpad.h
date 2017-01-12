@@ -33,7 +33,7 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job,
 // Retrieve the cached job handle if one was transfered via mxio from
 // the parent process. This handle is owned by launchpad and callers
 // must not close or transfer it away.
-mx_handle_t launchpad_get_mxio_job(void);
+mx_handle_t launchpad_get_mxio_job(void) __attribute((deprecated));
 
 // Create a new launchpad for a given existing process handle and a
 // its root VMAR handle.  On success, the launchpad takes ownership
