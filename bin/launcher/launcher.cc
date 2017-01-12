@@ -70,8 +70,8 @@ class LauncherApp : public maxwell::Launcher {
   }
 
   void StartAgent(const std::string& url) {
-    auto agent_host =
-        std::make_unique<maxwell::ApplicationEnvironmentHostImpl>();
+    auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
+        app_context_->environment().get());
 
     agent_host->AddService<maxwell::ContextPublisher>(
         [this, url](fidl::InterfaceRequest<maxwell::ContextPublisher> request) {

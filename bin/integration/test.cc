@@ -64,7 +64,8 @@ void Sleep() {
 }
 
 MaxwellTestBase::MaxwellTestBase()
-    : test_environment_host_binding_(&test_environment_host_) {
+    : test_environment_host_(root_environment),
+      test_environment_host_binding_(&test_environment_host_) {
   fidl::InterfaceHandle<modular::ApplicationEnvironmentHost>
       test_environment_host_handle;
   test_environment_host_binding_.Bind(&test_environment_host_handle);

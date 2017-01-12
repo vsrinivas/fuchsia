@@ -143,8 +143,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   StoryProviderMock* story_provider() { return &story_provider_; }
 
   void StartSuggestionAgent(const std::string& url) {
-    auto agent_host =
-        std::make_unique<maxwell::ApplicationEnvironmentHostImpl>();
+    auto agent_host = std::make_unique<maxwell::ApplicationEnvironmentHostImpl>(
+        root_environment);
     agent_host->AddService<maxwell::ContextSubscriber>([this, url](
         fidl::InterfaceRequest<maxwell::ContextSubscriber> request) {
       context_engine()->RegisterSubscriber(url, std::move(request));
@@ -419,7 +419,8 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
 
   modular::JsonDoc doc;
   std::vector<std::string> segments{"foo", "bar"};
-  modular::JsonPointer(modular::EscapeJsonPath(segments.begin(), segments.end()))
+  modular::JsonPointer(
+      modular::EscapeJsonPath(segments.begin(), segments.end()))
       .Set(doc, "some_data");
   create_story->initial_data = modular::JsonValueToString(doc);
 

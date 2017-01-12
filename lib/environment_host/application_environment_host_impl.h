@@ -5,6 +5,7 @@
 #pragma once
 
 #include "apps/modular/lib/app/service_provider_impl.h"
+#include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/services/application/application_environment_host.fidl.h"
 
 namespace maxwell {
@@ -14,6 +15,7 @@ class ApplicationEnvironmentHostImpl
     : public modular::ApplicationEnvironmentHost,
       public modular::ServiceProviderImpl {
  public:
+  ApplicationEnvironmentHostImpl(modular::ApplicationEnvironment* parent_env);
   void GetApplicationEnvironmentServices(
       fidl::InterfaceRequest<modular::ServiceProvider> environment_services)
       override;

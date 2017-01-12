@@ -4,7 +4,20 @@
 
 #include "apps/maxwell/src/application_environment_host_impl.h"
 
+#include "apps/modular/lib/app/connect.h"
+#include "apps/modular/services/application/application_loader.fidl.h"
+
 namespace maxwell {
+
+ApplicationEnvironmentHostImpl::ApplicationEnvironmentHostImpl(
+    modular::ApplicationEnvironment* parent_env) {
+  AddService<modular::ApplicationLoader>(
+      [parent_env](fidl::InterfaceRequest<modular::ApplicationLoader> request) {
+        modular::ServiceProviderPtr root_services;
+        parent_env->GetServices(root_services.NewRequest());
+        modular::ConnectToService(root_services.get(), std::move(request));
+      });
+}
 
 void ApplicationEnvironmentHostImpl::GetApplicationEnvironmentServices(
     fidl::InterfaceRequest<modular::ServiceProvider> environment_services) {
