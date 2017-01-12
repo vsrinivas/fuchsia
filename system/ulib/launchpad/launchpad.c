@@ -47,6 +47,7 @@ struct launchpad {
     bool loader_message;
 };
 
+#define HND_LOADER_COUNT 3
 // We always install the process handle as the first in the message.
 #define lp_proc(lp) ((lp)->handles[0])
 // We always install the vmar handle as the second in the message.
@@ -537,10 +538,12 @@ mx_handle_t launchpad_use_loader_service(launchpad_t* lp, mx_handle_t svc) {
     return result;
 }
 
-static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t tochannel) {
+static mx_status_t send_loader_message(launchpad_t* lp,
+                                       mx_handle_t first_thread,
+                                       mx_handle_t tochannel) {
     struct loader_msg {
         mx_proc_args_t header;
-        uint32_t handle_info[HND_SPECIAL_COUNT + 1];
+        uint32_t handle_info[HND_SPECIAL_COUNT + HND_LOADER_COUNT];
         char args_and_env[];
     };
 
@@ -575,26 +578,32 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t tochannel) {
     // This loop should be completely unrolled.  But using a switch here
     // gives us compiler warnings if we forget to handle any of the special
     // types listed in the enum.
-    mx_handle_t handles[HND_SPECIAL_COUNT + 2];
+    mx_handle_t handles[HND_SPECIAL_COUNT + HND_LOADER_COUNT];
     size_t nhandles = 0;
     for (enum special_handles i = 0; i <= HND_SPECIAL_COUNT; ++i) {
         uint32_t id = 0; // -Wall
         switch (i) {
         case HND_SPECIAL_COUNT:;
-            // Duplicate the process and root vmar handle so we can send it in
-            // the loader message and still have them later.
+            // Duplicate the handles for the loader so we can send them in the
+            // loader message and still have them later.
             mx_handle_t proc;
-            mx_handle_t vmar;
-            mx_status_t status = mx_handle_duplicate(lp_proc(lp),
-                                                     MX_RIGHT_SAME_RIGHTS, &proc);
-            if (status < 0) {
+            mx_status_t status = mx_handle_duplicate(lp_proc(lp), MX_RIGHT_SAME_RIGHTS, &proc);
+            if (status != NO_ERROR) {
                 free(msg);
                 return status;
             }
-
+            mx_handle_t vmar;
             status = mx_handle_duplicate(lp_vmar(lp), MX_RIGHT_SAME_RIGHTS, &vmar);
-            if (status < 0) {
+            if (status != NO_ERROR) {
                 mx_handle_close(proc);
+                free(msg);
+                return status;
+            }
+            mx_handle_t thread;
+            status = mx_handle_duplicate(first_thread, MX_RIGHT_SAME_RIGHTS, &thread);
+            if (status != NO_ERROR) {
+                mx_handle_close(proc);
+                mx_handle_close(vmar);
                 free(msg);
                 return status;
             }
@@ -602,7 +611,9 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t tochannel) {
             msg->handle_info[nhandles] = MX_HND_TYPE_PROC_SELF;
             handles[nhandles + 1] = vmar;
             msg->handle_info[nhandles + 1] = MX_HND_TYPE_VMAR_ROOT;
-            nhandles += 2;
+            handles[nhandles + 2] = thread;
+            msg->handle_info[nhandles + 2] = MX_HND_TYPE_THREAD_SELF;
+            nhandles += HND_LOADER_COUNT;
             continue;
 
         case HND_LOADER_SVC:
@@ -628,10 +639,11 @@ static mx_status_t send_loader_message(launchpad_t* lp, mx_handle_t tochannel) {
             lp->special_handles[i] = MX_HANDLE_INVALID;
         lp->loader_message = false;
     } else {
-        // Close the process and vmar handles we duplicated.
+        // Close the handles we duplicated for the loader.
         // The others remain live in the launchpad.
-        mx_handle_close(handles[nhandles - 1]);
-        mx_handle_close(handles[nhandles - 2]);
+        for (int i = 1; i <= HND_LOADER_COUNT; i++) {
+          mx_handle_close(handles[nhandles - i]);
+        }
     }
 
     free(msg);
@@ -751,7 +763,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     }
 
     if (lp->loader_message) {
-        status = send_loader_message(lp, to_child);
+        status = send_loader_message(lp, *thread, to_child);
         if (status != NO_ERROR) {
             mx_handle_close(*thread);
             return status;
