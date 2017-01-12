@@ -87,16 +87,24 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
     switch (ec) {
         case 0b000000: /* unknown reason */
             /* this is for a lot of reasons, but most of them are undefined instructions */
+            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+                /* trapped inside the kernel, this is bad */
+                printf("unknown exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+                break;
+            }
 #if WITH_LIB_MAGENTA
-            if (try_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr) == NO_ERROR)
-                return;
+            try_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
 #endif
             return;
         case 0b111000: /* BRK from arm32 */
         case 0b111100: { /* BRK from arm64 */
+            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+                /* trapped inside the kernel, this is bad */
+                printf("BRK in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+                break;
+            }
 #if WITH_LIB_MAGENTA
-            if (try_magenta_exception_handler (MX_EXCP_SW_BREAKPOINT, iframe, esr) == NO_ERROR)
-                return;
+            try_magenta_exception_handler (MX_EXCP_SW_BREAKPOINT, iframe, esr);
 #endif
             return;
         }
@@ -111,16 +119,13 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             return;
         case 0b010001: /* syscall from arm32 */
         case 0b010101: /* syscall from arm64 */
-#ifdef WITH_LIB_SYSCALL
-            void arm64_syscall(struct arm64_iframe_long *iframe);
-            arch_enable_fiqs();
-            arm64_syscall(iframe);
-            arch_disable_fiqs();
-            return;
-#else
+            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+                /* trapped inside the kernel, this is bad */
+                printf("syscall from in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+                break;
+            }
             arm64_syscall(iframe, (ec == 0x15) ? true : false, iss & 0xffff, iframe->elr);
             return;
-#endif
         case 0b100000: /* instruction abort from lower level */
         case 0b100001: { /* instruction abort from same level */
             /* read the FAR register */
@@ -226,8 +231,13 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             break;
         }
         default: {
+            /* TODO: properly decode more of these */
+            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+                /* trapped inside the kernel, this is bad */
+                printf("unhandled exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+                break;
+            }
 #if WITH_LIB_MAGENTA
-            /* TODO: properly decode more of these, since they may be originating in kernel space */
             /* let magenta get a shot at it */
             if (try_magenta_exception_handler (MX_EXCP_GENERAL, iframe, esr) == NO_ERROR)
                 return;
