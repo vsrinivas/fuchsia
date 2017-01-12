@@ -971,7 +971,11 @@ static ssize_t mxsio_recvmsg_dgram(mxio_t* io, struct msghdr* msg, int flags) {
 
     // TODO: avoid malloc
     mxio_socket_msg_t* m = malloc(mlen);
-    size_t n = mxsio_rx_dgram(io, m, mlen);
+    ssize_t n = mxsio_rx_dgram(io, m, mlen);
+    if (n < 0) {
+        free(m);
+        return n;
+    }
     if ((size_t)n < MXIO_SOCKET_MSG_HEADER_SIZE) {
         free(m);
         return ERR_INTERNAL;
