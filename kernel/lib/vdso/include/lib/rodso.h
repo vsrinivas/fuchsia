@@ -16,27 +16,23 @@ public:
     }
     HandleUniquePtr vmo_handle();
 
+    size_t size() const { return size_; }
+
+    mx_status_t Map(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
+                    size_t offset);
+
 protected:
 
     RoDso(const char* name, const void* image, size_t size,
           uintptr_t code_start);
 
-    mx_status_t MapAnywhere(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
-                            uintptr_t* start_addr);
-    mx_status_t MapFixed(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
-                         uintptr_t start_addr);
-
 private:
-
-    mx_status_t Map(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
-                    uintptr_t* start_addr);
 
     mx_status_t MapSegment(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
                            bool code,
-                           uintptr_t start_offset,
-                           uintptr_t end_offset,
-                           uintptr_t* mapped_addr);
-
+                           size_t vmar_offset,
+                           size_t start_offset,
+                           size_t end_offset);
     const char* name_;
     mxtl::RefPtr<VmObjectDispatcher> vmo_;
     mx_rights_t vmo_rights_;

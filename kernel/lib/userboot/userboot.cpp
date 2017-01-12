@@ -55,13 +55,31 @@ public:
                 USERBOOT_CODE_END, USERBOOT_CODE_START),
           vdso_(vdso) {}
 
-    mx_status_t Map(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
+    // The whole userboot image consists of the userboot rodso image
+    // immediately followed by the vDSO image.  This returns the size
+    // of that combined image.
+    size_t size() const {
+        return RoDso::size() + vdso_->size();
+    }
+
+    mx_status_t Map(mxtl::RefPtr<VmAddressRegionDispatcher> root_vmar,
                     uintptr_t* vdso_base, uintptr_t* entry) {
-        // Map userboot anywhere.
-        uintptr_t start;
-        mx_status_t status = MapAnywhere(vmar, &start);
+        // Create a VMAR (placed anywhere) to hold the combined image.
+        mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
+        mx_rights_t vmar_rights;
+        mx_status_t status = root_vmar->Allocate(0, size(),
+                                                 MX_VM_FLAG_CAN_MAP_READ |
+                                                 MX_VM_FLAG_CAN_MAP_WRITE |
+                                                 MX_VM_FLAG_CAN_MAP_EXECUTE |
+                                                 MX_VM_FLAG_CAN_MAP_SPECIFIC,
+                                                 &vmar, &vmar_rights);
+        if (status != NO_ERROR)
+            return status;
+
+        // Map userboot proper.
+        status = RoDso::Map(vmar, 0);
         if (status == NO_ERROR) {
-            *entry = start + USERBOOT_ENTRY;
+            *entry = vmar->vmar()->base() + USERBOOT_ENTRY;
             // TODO(mcgrathr): The rodso-code.sh script uses nm, which lies
             // about the actual ELF symbol values when they are Thumb function
             // symbols with the low bit set (it clears the low bit in what it
@@ -71,13 +89,9 @@ public:
             *entry |= 1;
 #endif
 
-            // Map the vDSO image immediately after the userboot image,
-            // where the userboot code expects to find it.  We assume that
-            // ASLR won't have placed the userboot image so close to the
-            // top of the address space that there isn't any room left for
-            // the vDSO.
-            *vdso_base = start + USERBOOT_CODE_END;
-            status = vdso_->Map(mxtl::move(vmar), *vdso_base);
+            // Map the vDSO right after it.
+            *vdso_base = vmar->vmar()->base() + RoDso::size();
+            status = vdso_->Map(mxtl::move(vmar), RoDso::size());
         }
         return status;
     }
@@ -294,7 +308,8 @@ static int attempt_userboot(const void* bootfs, size_t bfslen) {
     handles[BOOTSTRAP_VDSO] = vdso.vmo_handle().release();
 
     UserbootImage userboot(&vdso);
-    uintptr_t vdso_base, entry;
+    uintptr_t vdso_base = 0;
+    uintptr_t entry = 0;
     status = userboot.Map(vmar, &vdso_base, &entry);
     if (status != NO_ERROR)
         return status;

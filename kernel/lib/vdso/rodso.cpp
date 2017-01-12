@@ -33,70 +33,44 @@ HandleUniquePtr RoDso::vmo_handle() {
 }
 
 // Map one segment from our VM object.
-// If *mapped_addr is zero to begin with, it can go anywhere.
 mx_status_t RoDso::MapSegment(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
                               bool code,
-                              uintptr_t start_offset,
-                              uintptr_t end_offset,
-                              uintptr_t* mapped_addr) {
+                              size_t vmar_offset,
+                              size_t start_offset,
+                              size_t end_offset) {
 
-    uint32_t flags = MX_VM_FLAG_PERM_READ;
-    size_t target_offset = 0;
+    uint32_t flags = MX_VM_FLAG_SPECIFIC | MX_VM_FLAG_PERM_READ;
     if (code)
         flags |= MX_VM_FLAG_PERM_EXECUTE;
-    if (*mapped_addr != 0) {
-        flags |= MX_VM_FLAG_SPECIFIC;
-        if (*mapped_addr < vmar->vmar()->base()) {
-            return ERR_INVALID_ARGS;
-        }
-        target_offset = *mapped_addr - vmar->vmar()->base();
-    }
 
     size_t len = end_offset - start_offset;
 
     mxtl::RefPtr<VmMapping> mapping;
-    mx_status_t status = vmar->Map(target_offset,
-        vmo_->vmo(), start_offset, len, flags, &mapping);
+    mx_status_t status = vmar->Map(vmar_offset, vmo_->vmo(),
+                                   start_offset, len, flags, &mapping);
 
     const char* segment_name = code ? "code" : "rodata";
     if (status != NO_ERROR) {
         dprintf(CRITICAL,
-                "userboot: %s %s mapping %#" PRIxPTR " @ %#" PRIxPTR
+                "userboot: %s %s mapping %#zx @ %#" PRIxPTR
                 " size %#zx failed %d\n",
-                name_, segment_name,
-                start_offset, *mapped_addr, len, status);
+                name_, segment_name, start_offset,
+                vmar->vmar()->base() + vmar_offset, len, status);
     } else {
-        *mapped_addr = mapping->base();
-        dprintf(SPEW, "userboot: %-8s %-6s %#7" PRIxPTR " @ [%#" PRIxPTR
+        DEBUG_ASSERT(mapping->base() == vmar->vmar()->base() + vmar_offset);
+        dprintf(SPEW, "userboot: %-8s %-6s %#7zx @ [%#" PRIxPTR
                 ",%#" PRIxPTR ")\n", name_, segment_name, start_offset,
-                *mapped_addr, *mapped_addr + len);
+                mapping->base(), mapping->base() + len);
     }
 
     return status;
 }
 
 mx_status_t RoDso::Map(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
-                       uintptr_t *start_addr) {
-    // TODO(teisenbe): Change this to create a sub-VMAR with two child mappings
-    // instead.
-    mx_status_t status = MapSegment(vmar, false, 0, code_start_,
-                                    start_addr);
-    if (status == NO_ERROR) {
-        uintptr_t code_address = *start_addr + code_start_;
-        status = MapSegment(mxtl::move(vmar), true, code_start_, size_,
-                            &code_address);
-    }
+                       size_t offset) {
+    mx_status_t status = MapSegment(vmar, false, offset, 0, code_start_);
+    if (status == NO_ERROR)
+        status = MapSegment(mxtl::move(vmar), true,
+                            offset + code_start_, code_start_, size_);
     return status;
-}
-
-mx_status_t RoDso::MapAnywhere(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
-                               uintptr_t *start_addr) {
-    *start_addr = 0;
-    return Map(mxtl::move(vmar), start_addr);
-}
-
-mx_status_t RoDso::MapFixed(mxtl::RefPtr<VmAddressRegionDispatcher> vmar,
-                            uintptr_t start_addr) {
-    ASSERT(start_addr != 0);
-    return Map(mxtl::move(vmar), &start_addr);
 }
