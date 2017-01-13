@@ -5,6 +5,7 @@
 group("services") {
   deps = [
     "application",
+    "component",
     "device",
     "story",
     "user",

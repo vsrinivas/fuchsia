@@ -11,5 +11,8 @@ group("examples") {
     "https_flutter",
     "swap_cpp",
     "todo_cpp",
+    "hello_component",
+    "request_components",
+    "components_query",
   ]
 }
