@@ -20,9 +20,10 @@ LinkImpl::LinkImpl(StoryStoragePtr story_storage,
     : name_(name),
       story_storage_(std::move(story_storage)),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
-  ReadLinkData(ftl::MakeCopyable([
-    this, request = std::move(request)
-  ]() mutable { LinkConnection::New(this, std::move(request)); }));
+  ReadLinkData(
+      ftl::MakeCopyable([ this, request = std::move(request) ]() mutable {
+        LinkConnection::New(this, std::move(request));
+      }));
 }
 
 LinkImpl::~LinkImpl() {}
@@ -71,7 +72,7 @@ void LinkImpl::Set(const fidl::String& path,
 void LinkImpl::UpdateObject(const fidl::String& path,
                             const fidl::String& json,
                             LinkConnection* const src) {
-  //  FTL_LOG(INFO) << "**** Update()" << std::endl
+  //  FTL_LOG(INFO) << "**** Update() starting" << std::endl
   //                << "PATH " << path << std::endl
   //                << "JSON " << json;
   CrtJsonDoc new_value;
@@ -91,7 +92,8 @@ void LinkImpl::UpdateObject(const fidl::String& path,
   if (dirty) {
     DatabaseChanged(src);
   }
-  FTL_LOG(INFO) << "LinkImpl::Update() " << JsonValueToPrettyString(doc_);
+  FTL_LOG(INFO) << "LinkImpl::Update() result "
+                << JsonValueToPrettyString(doc_);
 }
 
 void LinkImpl::Erase(const fidl::String& path, LinkConnection* const src) {
@@ -111,7 +113,11 @@ void LinkImpl::Sync(const std::function<void()>& callback) {
 bool LinkImpl::MergeObject(CrtJsonValue& target,
                            CrtJsonValue&& source,
                            CrtJsonValue::AllocatorType& allocator) {
-  FTL_CHECK(source.IsObject());
+  if (!source.IsObject()) {
+    FTL_LOG(INFO) << "LinkImpl::MergeObject() - source is not an object "
+                  << JsonValueToPrettyString(doc_);
+    return false;
+  }
 
   if (!target.IsObject()) {
     target = std::move(source);
@@ -142,7 +148,8 @@ void LinkImpl::ReadLinkData(const std::function<void()>& done) {
       std::string json;
       data->json.Swap(&json);
       doc_.Parse(std::move(json));
-      FTL_LOG(INFO) << "LinkImpl::ReadLinkData() " << JsonValueToPrettyString(doc_);
+      FTL_LOG(INFO) << "LinkImpl::ReadLinkData() "
+                    << JsonValueToPrettyString(doc_);
     }
 
     done();
