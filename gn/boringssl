@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "netstack"
+    ],
     "labels": [
         "//third_party/boringssl:bssl",
         "//third_party/boringssl:boringssl_tests"
