@@ -38,7 +38,7 @@ mx_status_t elf_load_prepare(mx_handle_t vmo, elf_load_header_t* header,
     elf_ehdr_t ehdr;
     size_t n;
     mx_status_t status = mx_vmo_read(vmo, &ehdr, 0, sizeof(ehdr), &n);
-    if (status < 0)
+    if (status != NO_ERROR)
         return status;
     if (n != sizeof(ehdr) ||
         ehdr.e_ident[EI_MAG0] != ELFMAG0 ||
@@ -70,7 +70,7 @@ mx_status_t elf_load_read_phdrs(mx_handle_t vmo, elf_phdr_t phdrs[],
     size_t phdrs_size = (size_t)phnum * sizeof(elf_phdr_t);
     size_t n;
     mx_status_t status = mx_vmo_read(vmo, phdrs, phoff, phdrs_size, &n);
-    if (status < 0)
+    if (status != NO_ERROR)
         return status;
     if (n != phdrs_size)
         return ERR_ELF_BAD_FORMAT;
@@ -130,36 +130,37 @@ static mx_status_t choose_load_bias(mx_handle_t root_vmar,
 
 // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
 // This will go away when we have copy-on-write.
-static mx_handle_t get_writable_vmo(mx_handle_t vmar_self,
+static mx_status_t get_writable_vmo(mx_handle_t vmar_self,
                                     mx_handle_t vmo, size_t data_size,
                                     uintptr_t* file_start,
-                                    uintptr_t* file_end) {
+                                    uintptr_t* file_end,
+                                    mx_handle_t* copy_vmo) {
     mx_handle_t copy_vmo;
-    mx_status_t status = mx_vmo_create(data_size, 0, &copy_vmo);
-    if (status < 0)
+    mx_status_t status = mx_vmo_create(data_size, 0, copy_vmo);
+    if (status != NO_ERROR)
         return status;
     uintptr_t window = 0;
     status = mx_vmar_map(vmar_self, 0, vmo,
                          *file_start, data_size, MX_VM_FLAG_PERM_READ,
                          &window);
-    if (status < 0) {
-        mx_handle_close(copy_vmo);
+    if (status != NO_ERROR) {
+        mx_handle_close(*copy_vmo);
         return status;
     }
     size_t n;
-    status = mx_vmo_write(copy_vmo, (void*)window, 0, data_size, &n);
+    status = mx_vmo_write(*copy_vmo, (void*)window, 0, data_size, &n);
     mx_vmar_unmap(vmar_self, window, data_size);
-    if (status < 0) {
-        mx_handle_close(copy_vmo);
+    if (status != NO_ERROR) {
+        mx_handle_close(*copy_vmo);
         return status;
     }
     if (n != data_size) {
-        mx_handle_close(copy_vmo);
+        mx_handle_close(*copy_vmo);
         return ERR_IO;
     }
     *file_end -= *file_start;
     *file_start = 0;
-    return copy_vmo;
+    return NO_ERROR;
 }
 
 static mx_status_t finish_load_segment(
@@ -194,7 +195,7 @@ static mx_status_t finish_load_segment(
     // The rest of the segment will be backed by anonymous memory.
     mx_handle_t bss_vmo;
     mx_status_t status = mx_vmo_create(size, 0, &bss_vmo);
-    if (status < 0)
+    if (status != NO_ERROR)
         return status;
 
     // The final partial page of initialized data falls into the
@@ -204,7 +205,7 @@ static mx_status_t finish_load_segment(
         char buffer[PAGE_SIZE];
         size_t n;
         status = mx_vmo_read(vmo, buffer, file_end, partial_page, &n);
-        if (status < 0) {
+        if (status != NO_ERROR) {
             mx_handle_close(bss_vmo);
             return status;
         }
@@ -213,7 +214,7 @@ static mx_status_t finish_load_segment(
             return ERR_ELF_BAD_FORMAT;
         }
         status = mx_vmo_write(bss_vmo, buffer, 0, n, &n);
-        if (status < 0) {
+        if (status != NO_ERROR) {
             mx_handle_close(bss_vmo);
             return status;
         }
@@ -261,14 +262,16 @@ static mx_status_t load_segment(mx_handle_t vmar_self,
                                    file_start, file_end, partial_page);
 
     // For a writable segment, we need a writable VMO.
-    mx_handle_t writable_vmo = get_writable_vmo(vmar_self, vmo, data_size,
-                                                &file_start, &file_end);
-    if (writable_vmo < 0)
-        return writable_vmo;
-    mx_status_t status = finish_load_segment(vmar, writable_vmo, ph,
-                                             start, size, file_start,
-                                             file_end, partial_page);
-    mx_handle_close(writable_vmo);
+    mx_handle_t writable_vmo;
+    mx_status_t status = get_writable_vmo(vmar_self, vmo, data_size,
+                                          &file_start, &file_end,
+                                          &writable_vmo);
+    if (status == NO_ERROR) {
+        status = finish_load_segment(vmar, writable_vmo, ph,
+                                     start, size, file_start,
+                                     file_end, partial_page);
+        mx_handle_close(writable_vmo);
+    }
     return status;
 }
 
