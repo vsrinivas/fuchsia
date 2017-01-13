@@ -15,7 +15,8 @@
 #include "lib/ftl/macros.h"
 
 namespace ledger {
-// Manages the strategies for handling merges and conflicts for a whole ledger.
+// Manages the strategies for handling merges and conflicts for a ledger as
+// managed by |LedgerManager|.
 // Holds a ConflictResolverFactory if the client provides one.
 // |LedgerMergeManager| must outlive all MergeResolver it provides.
 class LedgerMergeManager {

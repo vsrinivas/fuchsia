@@ -13,7 +13,8 @@
 
 namespace ledger {
 namespace diff_utils {
-// Asynchronously creates a PageChange from the diff of two Commits.
+// Asynchronously creates a PageChange representing the diff of the two provided
+// commits. The result, or an error, will be provided in |callback|.
 void ComputePageChange(
     storage::PageStorage* storage,
     const storage::Commit& base,
