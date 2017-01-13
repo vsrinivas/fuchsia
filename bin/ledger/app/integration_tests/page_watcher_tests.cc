@@ -80,6 +80,32 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
   EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 }
 
+TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
+  PagePtr page = GetTestPage();
+  page->Put(convert::ToArray("foo"), convert::ToArray("bar"),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  PageWatcherPtr watcher_ptr;
+  Watcher watcher(watcher_ptr.NewRequest(),
+                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+
+  page->Watch(std::move(watcher_ptr),
+              [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->Delete(convert::ToArray("foo"),
+               [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(1u, watcher.changes_seen);
+  PageChangePtr change = std::move(watcher.last_page_change_);
+  EXPECT_EQ(0u, change->changes.size());
+  EXPECT_EQ(1u, change->deleted_keys.size());
+  EXPECT_EQ("foo", convert::ToString(change->deleted_keys[0]));
+}
+
 TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;

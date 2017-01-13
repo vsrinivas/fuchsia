@@ -55,7 +55,8 @@ void ComputePageChange(
       callback(status, nullptr);
       return;
     }
-    if (page_change->changes.size() == 0) {
+    if (page_change->changes.size() == 0 &&
+        page_change->deleted_keys.size() == 0) {
       callback(status, nullptr);
       return;
     }
