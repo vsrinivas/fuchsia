@@ -19,8 +19,6 @@ StoryControllerImpl::StoryControllerImpl(
       story_provider_impl_(story_provider_impl),
       module_watcher_binding_(this) {
   bindings_.set_on_empty_set_handler([this] {
-    // This does not purge a controller with an open story runner as
-    // indicated by IsActive().
     story_provider_impl_->PurgeController(story_data_->story_info->id);
   });
 }
@@ -43,10 +41,6 @@ void StoryControllerImpl::AddLinkDataAndSync(
 
   root_->UpdateObject("", json);
   root_->Sync(callback);
-}
-
-bool StoryControllerImpl::IsActive() {
-  return story_.is_bound() || stop_requests_.size() > 0 || start_request_;
 }
 
 // |StoryController|

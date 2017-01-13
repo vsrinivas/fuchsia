@@ -38,7 +38,6 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
   void StopForDelete(const StopCallback& callback);
   void AddLinkDataAndSync(
       const fidl::String& json, const std::function<void()>& callback);
-  bool IsActive();  // Has story or pending stop or start requests?
   size_t bindings_size() const { return bindings_.size(); }
 
  private:
