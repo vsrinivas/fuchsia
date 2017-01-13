@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/lib/timeline_rate.h"
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/src/ffmpeg/ffmpeg_decoder_base.h"
 
 namespace media {

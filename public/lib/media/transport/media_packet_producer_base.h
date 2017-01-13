@@ -6,9 +6,9 @@
 
 #include <limits>
 
-#include "apps/media/lib/flog.h"
-#include "apps/media/lib/shared_buffer_set_allocator.h"
-#include "apps/media/lib/timeline_rate.h"
+#include "apps/media/lib/flog/flog.h"
+#include "apps/media/lib/timeline/timeline_rate.h"
+#include "apps/media/lib/transport/shared_buffer_set_allocator.h"
 #include "apps/media/services/logs/media_packet_producer_channel.fidl.h"
 #include "apps/media/services/media_transport.fidl.h"
 #include "lib/ftl/synchronization/mutex.h"

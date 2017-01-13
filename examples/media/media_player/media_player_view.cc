@@ -9,7 +9,7 @@
 #include <iomanip>
 
 #include "apps/media/examples/media_player/media_player_params.h"
-#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/services/audio_renderer.fidl.h"
 #include "apps/media/services/media_service.fidl.h"
 #include "apps/modular/lib/app/connect.h"

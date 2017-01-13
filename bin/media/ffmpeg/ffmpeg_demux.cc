@@ -6,7 +6,7 @@
 #include <map>
 #include <thread>
 
-#include "apps/media/lib/timeline_rate.h"
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/src/ffmpeg/av_codec_context.h"
 #include "apps/media/src/ffmpeg/av_format_context.h"
 #include "apps/media/src/ffmpeg/av_io_context.h"

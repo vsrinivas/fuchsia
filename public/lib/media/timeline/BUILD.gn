@@ -1,0 +1,36 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("timeline") {
+  sources = [
+    "timeline.h",
+    "timeline_function.cc",
+    "timeline_function.h",
+    "timeline_rate.cc",
+    "timeline_rate.h",
+  ]
+
+  deps = [
+    "//apps/media/services",
+    "//lib/ftl",
+  ]
+}
+
+executable("tests") {
+  output_name = "media_lib_timeline_tests"
+
+  testonly = true
+
+  sources = [
+    "test/run_all_tests.cc",
+    "test/timeline_function_test.cc",
+    "test/timeline_rate_test.cc",
+  ]
+
+  deps = [
+    ":timeline",
+    "//lib/mtl",
+    "//third_party/gtest",
+  ]
+}

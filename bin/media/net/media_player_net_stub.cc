@@ -8,7 +8,7 @@
 
 #include <mx/channel.h>
 
-#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline/timeline.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "lib/ftl/logging.h"
 

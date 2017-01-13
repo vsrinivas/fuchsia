@@ -6,7 +6,7 @@
 
 #include <cmath>
 
-#include "apps/media/lib/timeline_rate.h"
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/src/audio/mixer_input_impl.h"
 #include "gtest/gtest.h"
 

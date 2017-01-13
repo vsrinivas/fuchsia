@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "apps/media/lib/flog.h"
+#include "apps/media/lib/flog/flog.h"
 #include "apps/media/services/logs/media_demux_channel.fidl.h"
 #include "apps/media/services/media_source.fidl.h"
 #include "apps/media/services/seeking_reader.fidl.h"

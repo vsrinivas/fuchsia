@@ -4,7 +4,7 @@
 
 #include "apps/media/src/media_service/video_renderer_impl.h"
 
-#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline/timeline.h"
 #include "apps/mozart/services/geometry/cpp/geometry_util.h"
 #include "lib/ftl/logging.h"
 

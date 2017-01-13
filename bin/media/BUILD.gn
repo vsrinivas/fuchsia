@@ -29,7 +29,8 @@ group("apptests") {
   testonly = true
 
   deps = [
-    "//apps/media/lib:apptests",
+    "//apps/media/lib/timeline:tests",
+    "//apps/media/lib/transport:tests",
     "//apps/media/src/audio:apptests",
     "//apps/media/src/demux:apptests",
     "//apps/media/src/media_service:apptests",

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/media/lib/timeline_rate.h"
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/services/media_service.fidl.h"
 #include "apps/media/src/fidl/fidl_formatting.h"
 #include "apps/media/src/media_service/test/fake_renderer.h"

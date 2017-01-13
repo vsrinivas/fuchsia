@@ -7,8 +7,8 @@
 #include <deque>
 #include <set>
 
-#include "apps/media/lib/timeline_function.h"
-#include "apps/media/lib/timeline_rate.h"
+#include "apps/media/lib/timeline/timeline_function.h"
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/services/audio_renderer.fidl.h"
 #include "apps/media/services/media_renderer.fidl.h"
 #include "apps/media/src/audio_server/audio_pipe.h"

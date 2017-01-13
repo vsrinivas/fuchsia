@@ -6,9 +6,9 @@
 
 #include <vector>
 
-#include "apps/media/lib/flog.h"
-#include "apps/media/lib/timeline.h"
-#include "apps/media/lib/timeline_function.h"
+#include "apps/media/lib/flog/flog.h"
+#include "apps/media/lib/timeline/timeline.h"
+#include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/src/net/media_player_net_stub.h"
 #include "apps/media/services/logs/media_player_channel.fidl.h"
 #include "apps/media/services/media_service.fidl.h"

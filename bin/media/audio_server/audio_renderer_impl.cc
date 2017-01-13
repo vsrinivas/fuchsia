@@ -7,9 +7,9 @@
 #include <algorithm>
 #include <limits>
 
-#include "apps/media/lib/timeline.h"
-#include "apps/media/lib/timeline_function.h"
-#include "apps/media/lib/timeline_rate.h"
+#include "apps/media/lib/timeline/timeline.h"
+#include "apps/media/lib/timeline/timeline_function.h"
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/src/audio_server/audio_output_manager.h"
 #include "apps/media/src/audio_server/audio_renderer_to_output_link.h"
 #include "apps/media/src/audio_server/audio_server_impl.h"

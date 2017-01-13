@@ -28,7 +28,7 @@ source_set("ffmpeg") {
   ]
 
   deps = [
-    "//apps/media/lib",
+    "//apps/media/lib/timeline",
     "//apps/media/src/audio",
     "//apps/media/src/decode",
     "//apps/media/src/demux",

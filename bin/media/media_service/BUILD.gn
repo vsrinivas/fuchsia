@@ -36,7 +36,8 @@ executable("media_service") {
   ]
 
   deps = [
-    "//apps/media/lib",
+    "//apps/media/lib/flog",
+    "//apps/media/lib/timeline",
     "//apps/media/services",
     "//apps/media/src/audio",
     "//apps/media/src/decode",
@@ -74,7 +75,8 @@ executable("apptests") {
 
   deps = [
     ":media_service",
-    "//apps/media/lib",
+    "//apps/media/lib/timeline",
+    "//apps/media/lib/transport",
     "//apps/media/services",
     "//apps/media/src/fidl",
     "//apps/media/src/framework_create",

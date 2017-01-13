@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "apps/media/lib/timeline_function.h"
+#include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/services/timeline_controller.fidl.h"
 #include "apps/media/src/util/fidl_publisher.h"
 #include "lib/fidl/cpp/bindings/binding.h"

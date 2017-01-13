@@ -6,8 +6,8 @@
 
 #include <limits>
 
-#include "apps/media/lib/timeline.h"
-#include "apps/media/lib/timeline_function.h"
+#include "apps/media/lib/timeline/timeline.h"
+#include "apps/media/lib/timeline/timeline_function.h"
 
 namespace media {
 

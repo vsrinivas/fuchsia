@@ -8,7 +8,7 @@
 #include <iostream>
 #include <limits>
 
-#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline/timeline.h"
 
 namespace media {
 

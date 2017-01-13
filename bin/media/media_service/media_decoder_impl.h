@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "apps/media/lib/flog.h"
+#include "apps/media/lib/flog/flog.h"
 #include "apps/media/services/logs/media_decoder_channel.fidl.h"
 #include "apps/media/services/media_type_converter.fidl.h"
 #include "apps/media/src/decode/decoder.h"

@@ -1,13 +1,11 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("lib") {
+source_set("transport") {
   sources = [
     "fifo_allocator.cc",
     "fifo_allocator.h",
-    "flog.cc",
-    "flog.h",
     "mapped_shared_buffer.cc",
     "mapped_shared_buffer.h",
     "media_packet_consumer_base.cc",
@@ -18,14 +16,11 @@ source_set("lib") {
     "shared_buffer_set.h",
     "shared_buffer_set_allocator.cc",
     "shared_buffer_set_allocator.h",
-    "timeline.h",
-    "timeline_function.cc",
-    "timeline_function.h",
-    "timeline_rate.cc",
-    "timeline_rate.h",
   ]
 
   deps = [
+    "//apps/media/lib/flog",
+    "//apps/media/lib/timeline",
     "//apps/media/services",
     "//apps/media/services/flog",
     "//apps/modular/lib/app",
@@ -34,8 +29,8 @@ source_set("lib") {
   ]
 }
 
-executable("apptests") {
-  output_name = "media_cpp_apptests"
+executable("tests") {
+  output_name = "media_lib_transport_tests"
 
   testonly = true
 
@@ -43,12 +38,10 @@ executable("apptests") {
     "test/run_all_tests.cc",
     "test/shared_buffer_set_allocator_test.cc",
     "test/shared_buffer_set_test.cc",
-    "test/timeline_function_test.cc",
-    "test/timeline_rate_test.cc",
   ]
 
   deps = [
-    ":lib",
+    ":transport",
     "//lib/mtl",
     "//third_party/gtest",
   ]

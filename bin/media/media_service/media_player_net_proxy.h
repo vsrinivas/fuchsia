@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include "apps/media/lib/timeline_function.h"
+#include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/src/net/media_player_net.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/util/fidl_publisher.h"

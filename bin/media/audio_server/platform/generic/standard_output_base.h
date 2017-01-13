@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "apps/media/lib/timeline.h"
-#include "apps/media/lib/timeline_function.h"
+#include "apps/media/lib/timeline/timeline.h"
+#include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/services/media_result.fidl.h"
 #include "apps/media/services/media_types.fidl.h"
 #include "apps/media/src/audio_server/audio_output.h"

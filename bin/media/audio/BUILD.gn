@@ -24,6 +24,7 @@ source_set("audio") {
   ]
 
   deps = [
+    "//apps/media/lib/timeline",
     "//apps/media/src/framework",
     "//apps/media/src/util",
     "//lib/ftl",
@@ -44,7 +45,7 @@ executable("apptests") {
 
   deps = [
     ":audio",
-    "//apps/media/lib",
+    "//apps/media/lib/timeline",
     "//apps/media/src/framework_create",
     "//third_party/gtest",
   ]

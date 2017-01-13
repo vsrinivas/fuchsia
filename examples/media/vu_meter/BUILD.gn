@@ -12,7 +12,7 @@ executable("vu_meter") {
   ]
 
   deps = [
-    "//apps/media/lib",
+    "//apps/media/lib/transport",
     "//apps/media/services",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework:view_provider",

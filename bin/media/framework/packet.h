@@ -7,7 +7,7 @@
 #include <limits>
 #include <memory>
 
-#include "apps/media/lib/timeline_rate.h"
+#include "apps/media/lib/timeline/timeline_rate.h"
 #include "apps/media/src/framework/payload_allocator.h"
 #include "lib/ftl/logging.h"
 

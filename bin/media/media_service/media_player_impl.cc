@@ -4,7 +4,7 @@
 
 #include "apps/media/src/media_service/media_player_impl.h"
 
-#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline/timeline.h"
 #include "apps/media/src/fidl/fidl_formatting.h"
 #include "apps/media/src/util/callback_joiner.h"
 #include "apps/modular/lib/app/connect.h"

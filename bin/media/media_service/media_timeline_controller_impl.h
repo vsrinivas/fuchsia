@@ -7,8 +7,8 @@
 #include <memory>
 #include <vector>
 
-#include "apps/media/lib/timeline.h"
-#include "apps/media/lib/timeline_function.h"
+#include "apps/media/lib/timeline/timeline.h"
+#include "apps/media/lib/timeline/timeline_function.h"
 #include "apps/media/services/timeline_controller.fidl.h"
 #include "apps/media/src/media_service/media_service_impl.h"
 #include "apps/media/src/util/callback_joiner.h"

@@ -8,7 +8,7 @@
 
 #include <mx/channel.h>
 
-#include "apps/media/lib/timeline.h"
+#include "apps/media/lib/timeline/timeline.h"
 #include "apps/netconnector/services/netconnector.fidl.h"
 #include "lib/ftl/logging.h"
 
