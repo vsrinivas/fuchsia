@@ -946,6 +946,7 @@ status_t thread_sleep_etc(lk_time_t delay, bool interruptable)
         goto out;
     }
 
+    /* set a one shot timer to wake us up and reschedule */
     timer_set_oneshot(&timer, delay, thread_sleep_handler, (void *)current_thread);
     current_thread->state = THREAD_SLEEPING;
     current_thread->blocked_status = NO_ERROR;
@@ -955,9 +956,9 @@ status_t thread_sleep_etc(lk_time_t delay, bool interruptable)
     current_thread->interruptable = false;
 
     blocked_status = current_thread->blocked_status;
-    if (blocked_status == ERR_INTERRUPTED) {
-        timer_cancel(&timer);
-    }
+
+    /* always cancel the timer, since we may be racing with the timer tick on other cpus */
+    timer_cancel(&timer);
 
 out:
     THREAD_UNLOCK(state);
