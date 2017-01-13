@@ -12,14 +12,6 @@
             "bootfs_path": "apps/device_runner"
         },
         {
-            "binary": "document_store_factory",
-            "bootfs_path": "apps/document_store"
-        },
-        {
-            "binary": "document_store_test",
-            "bootfs_path": "apps/document_store_test"
-        },
-        {
             "binary": "dummy_device_shell",
             "bootfs_path": "apps/dummy_device_shell"
         },
