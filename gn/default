@@ -4,7 +4,6 @@
         "asio",
         "boringssl",
         "cmdutils",
-        "component_manager",
         "dart",
         "dropbear",
         "fidl",

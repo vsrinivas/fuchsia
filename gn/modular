@@ -4,6 +4,14 @@
     ],
     "binaries": [
         {
+            "binary": "component_manager_main",
+            "bootfs_path": "apps/component_manager"
+        },
+        {
+            "binary": "components_query",
+            "bootfs_path": "bin/components"
+        },
+        {
             "binary": "dev_user_shell",
             "bootfs_path": "apps/dev_user_shell"
         },
@@ -52,6 +60,10 @@
             "bootfs_path": "apps/example_todo_headless"
         },
         {
+            "binary": "gen/component_index.json",
+            "bootfs_path": "components/index.json"
+        },
+        {
             "binary": "hello_app_child",
             "bootfs_path": "apps/hello_app_child"
         },
@@ -62,6 +74,10 @@
         {
             "binary": "resolver",
             "bootfs_path": "apps/resolver"
+        },
+        {
+            "binary": "run_component",
+            "bootfs_path": "apps/run_component"
         },
         {
             "binary": "story_runner",
@@ -87,6 +103,9 @@
             "binary": "user_runner",
             "bootfs_path": "apps/user_runner"
         }
-
+    ],
+    "components": [
+        "apps/modular/src/component_manager/component_manager.json",
+        "apps/modular/examples/hello_component/hello_component.json"
     ]
 }

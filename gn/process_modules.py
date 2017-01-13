@@ -41,7 +41,7 @@ class Amalgamation:
             file["bootfs_path"] = r["bootfs_path"]
             self.files.append(file)
         for c in config.get("components", []):
-            # See https://fuchsia.googlesource.com/component_manager/ for what a component is.
+            # See https://fuchsia.googlesource.com/modular/src/component_manager/ for what a component is.
             manifest = component_manifest.ComponentManifest(os.path.join(paths.FUCHSIA_ROOT, c))
             self.component_urls.append(manifest.url)
             for component_file in manifest.files().values():
