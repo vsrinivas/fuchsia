@@ -263,7 +263,9 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
 
         /* process it */
         LTRACEF("timer %p\n", timer);
-        DEBUG_ASSERT(timer && timer->magic == TIMER_MAGIC);
+        DEBUG_ASSERT_MSG(timer && timer->magic == TIMER_MAGIC,
+                "ASSERT: timer failed magic check: timer %p, magic 0x%x\n",
+                timer, (uint)timer->magic);
         list_delete(&timer->node);
 
         /* mark the timer busy */
