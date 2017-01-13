@@ -35,17 +35,9 @@ struct vnode {
     // all directory watchers
     list_node_t watch_list;
 
-    union {
-        struct {
-            mx_handle_t h;
-            mx_off_t offset; // offset into object
-            mx_off_t length; // extent of data
-        } vmo;
-        struct {
-            mx_off_t length;
-            uint8_t* block[];
-        } data;
-    };
+    mx_handle_t vmo;
+    mx_off_t length; // TYPE_VMO: Size of data within vmo. TYPE_DATA: Size of vmo
+    mx_off_t offset; // TYPE_VMO: Offset into vmo which contains data.
 };
 
 typedef struct vnode_watcher {

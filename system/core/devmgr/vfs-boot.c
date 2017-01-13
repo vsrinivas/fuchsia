@@ -23,13 +23,13 @@
 
 mx_handle_t vfs_get_vmofile(vnode_t* vn, mx_off_t* off, mx_off_t* len) {
     mx_handle_t vmo;
-    mx_status_t status = mx_handle_duplicate(vn->vmo.h, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER, &vmo);
+    mx_status_t status = mx_handle_duplicate(vn->vmo, MX_RIGHT_READ | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER, &vmo);
     if (status < 0)
         return status;
-    xprintf("vmofile: %x (%x) off=%" PRIu64 " len=%" PRIu64 "\n", vmo, vn->vmo.h, vn->vmo.offset, vn->vmo.length);
+    xprintf("vmofile: %x (%x) off=%" PRIu64 " len=%" PRIu64 "\n", vmo, vn->vmo, vn->offset, vn->length);
 
-    *off = vn->vmo.offset;
-    *len = vn->vmo.length;
+    *off = vn->offset;
+    *len = vn->length;
     return vmo;
 }
 
@@ -51,9 +51,9 @@ static mx_status_t _vnb_create(vnode_t* parent, vnode_t** out,
     xprintf("vnb_create: vn=%p, parent=%p name='%.*s' datalen=%zd\n",
             vnb, parent, (int)namelen, name, datalen);
 
-    vnb->vmo.length = datalen;
-    vnb->vmo.h = h;
-    vnb->vmo.offset = off;
+    vnb->length = datalen;
+    vnb->vmo = h;
+    vnb->offset = off;
 
     if (h) {
         vnb->flags |= V_FLAG_VMOFILE;

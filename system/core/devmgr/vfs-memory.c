@@ -16,14 +16,14 @@
 #include <mxio/vfs.h>
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
 #define MXDEBUG 0
 
-#define MAXBLOCKS 8192
-#define BLOCKSIZE 8192
+#define MINFS_MAX_FILE_SIZE (8192 * 8192)
 
 mx_status_t mem_get_node(vnode_t** out, mx_device_t* dev);
 mx_status_t mem_can_unlink(dnode_t* dn);
@@ -31,12 +31,9 @@ mx_status_t mem_can_unlink(dnode_t* dn);
 static void mem_release(vnode_t* vn) {
     xprintf("memfs: vn %p destroyed\n", vn);
 
-    for (int i = 0; i < MAXBLOCKS; i++) {
-        if (vn->data.block[i]) {
-            free(vn->data.block[i]);
-        }
+    if (vn->vmo != MX_HANDLE_INVALID) {
+        mx_handle_close(vn->vmo);
     }
-    free(vn);
 }
 
 mx_status_t memfs_open(vnode_t** _vn, uint32_t flags) {
@@ -53,109 +50,83 @@ mx_status_t memfs_close(vnode_t* vn) {
     return NO_ERROR;
 }
 
-static ssize_t mem_read(vnode_t* vn, void* _data, size_t len, size_t off) {
-    uint8_t* data = _data;
-    ssize_t count = 0;
-    if (off >= vn->data.length)
+static ssize_t mem_read(vnode_t* vn, void* data, size_t len, size_t off) {
+    if ((off >= vn->length) || (vn->vmo == MX_HANDLE_INVALID)) {
         return 0;
-    if (len > (vn->data.length - off))
-        len = vn->data.length - off;
-
-    size_t bno = off / BLOCKSIZE;
-    off = off % BLOCKSIZE;
-    while (len > 0) {
-        size_t xfer = (BLOCKSIZE - off);
-        if (len < xfer)
-            xfer = len;
-        if (vn->data.block[bno] == NULL) {
-            xprintf("mem_read: hole at %zu\n", bno);
-            memset(data, 0, xfer);
-        } else {
-            memcpy(data, vn->data.block[bno] + off, xfer);
-        }
-        data += xfer;
-        len -= xfer;
-        count += xfer;
-        bno++;
-        off = 0;
     }
-    return count;
+
+    size_t actual;
+    mx_status_t status;
+    if ((status = mx_vmo_read(vn->vmo, data, off, len, &actual)) != NO_ERROR) {
+        return status;
+    }
+    return actual;
 }
 
-static ssize_t mem_write(vnode_t* vn, const void* _data, size_t len, size_t off) {
-    const uint8_t* data = _data;
-    ssize_t count = 0;
-    size_t bno = off / BLOCKSIZE;
-    off = off % BLOCKSIZE;
-    while (len > 0) {
-        size_t xfer = (BLOCKSIZE - off);
-        if (len < xfer)
-            xfer = len;
-        if (bno >= MAXBLOCKS) {
-            return count ? count : ERR_NO_MEMORY;
-        }
-        if (vn->data.block[bno] == NULL) {
-            xprintf("mem_write: alloc at %zu\n", bno);
-            if ((vn->data.block[bno] = calloc(1, BLOCKSIZE)) == NULL) {
-                return count ? count : ERR_NO_MEMORY;
-            }
-        }
-        memcpy(vn->data.block[bno] + off, data, xfer);
+static ssize_t mem_write(vnode_t* vn, const void* data, size_t len, size_t off) {
+    mx_status_t status;
+    size_t newlen = off + len;
+    newlen = newlen > MINFS_MAX_FILE_SIZE ? MINFS_MAX_FILE_SIZE : newlen;
 
-        size_t pos = bno * BLOCKSIZE + off + xfer;
-        if (pos > vn->data.length)
-            vn->data.length = pos;
-
-        data += xfer;
-        len -= xfer;
-        count += xfer;
-        bno++;
-        off = 0;
+    // TODO(smklein): Round up to PAGE_SIZE increments to reduce overhead on a series of small
+    // writes.
+    if (vn->vmo == MX_HANDLE_INVALID) {
+        // First access to the file? Allocate it.
+        if ((status = mx_vmo_create(newlen, 0, &vn->vmo)) != NO_ERROR) {
+            return status;
+        }
+    } else if (newlen > vn->length) {
+        // Accessing beyond the end of the file? Extend it.
+        if ((status = mx_vmo_set_size(vn->vmo, newlen)) != NO_ERROR) {
+            return status;
+        }
     }
-    return count;
+
+    size_t actual;
+    if ((status = mx_vmo_write(vn->vmo, data, off, len, &actual)) != NO_ERROR) {
+        return status;
+    }
+
+    if (newlen > vn->length) {
+        vn->length = newlen;
+    }
+    return actual;
 }
 
 mx_status_t memfs_truncate(vnode_t* vn, size_t len) {
-    mx_status_t r = 0;
+    mx_status_t status;
+    len = len > MINFS_MAX_FILE_SIZE ? MINFS_MAX_FILE_SIZE : len;
 
-    while (len < vn->data.length) {
-        // Truncate should make the file shorter
-
-        // Observe the final blocks of the file first
-        size_t bno = vn->data.length / BLOCKSIZE;
-        size_t b_start = bno * BLOCKSIZE;
-
-        if (b_start == vn->data.length) {
-            // If the last block is empty, move to the one before
-            bno--;
-            b_start -= BLOCKSIZE;
+    if (vn->vmo == MX_HANDLE_INVALID) {
+        // First access to the file? Allocate it.
+        if ((status = mx_vmo_create(len, 0, &vn->vmo)) != NO_ERROR) {
+            return status;
         }
-        // "b_start" is now guaranteed to be less than "mem->datalen"
-
-        if (len <= b_start) {
-            // Wipe out this entire block
-            if (vn->data.block[bno] != NULL) {
-                free(vn->data.block[bno]);
-                vn->data.block[bno] = NULL;
-            }
-            vn->data.length = b_start;
-        } else {
-            // Wipe out a portion of a block
-            size_t sub_block_off = len - b_start;
-            memset(vn->data.block[bno] + sub_block_off, 0, BLOCKSIZE - sub_block_off);
-            vn->data.length = len;
+    } else if ((len < vn->length) && (len % PAGE_SIZE != 0)) {
+        // TODO(smklein): Remove this case when the VMO system causes 'shrinking to a partial page'
+        // to fill the end of that page with zeroes.
+        //
+        // Currently, if the file is truncated to a 'partial page', an later re-expanded, then the
+        // partial page is *not necessarily* filled with zeroes. As a consequence, we manually must
+        // fill the portion between "len" and the next highest page (or vn->length, whichever
+        // is smaller) with zeroes.
+        char buf[PAGE_SIZE];
+        size_t ppage_size = PAGE_SIZE - (len % PAGE_SIZE);
+        ppage_size = len + ppage_size < vn->length ? ppage_size : vn->length - len;
+        memset(buf, 0, ppage_size);
+        size_t actual;
+        status = mx_vmo_write(vn->vmo, buf, len, ppage_size, &actual);
+        if ((status != NO_ERROR) || (actual != ppage_size)) {
+            return status != NO_ERROR ? ERR_IO : status;
+        } else if ((status = mx_vmo_set_size(vn->vmo, len)) != NO_ERROR) {
+            return status;
         }
+    } else if ((status = mx_vmo_set_size(vn->vmo, len)) != NO_ERROR) {
+        return status;
     }
-    if (len > vn->data.length) {
-        // Truncate should make the file longer
-        if (len > MAXBLOCKS * BLOCKSIZE) {
-            return ERR_INVALID_ARGS;
-        }
-        // Memfs supports sparse files, so we can simply extend the data length,
-        // and trust the rest of the filesystem to deal with this appropriately
-        vn->data.length = len;
-    }
-    return r;
+
+    vn->length = len;
+    return NO_ERROR;
 }
 
 mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
@@ -291,7 +262,7 @@ mx_status_t mem_lookup_none(vnode_t* parent, vnode_t** out, const char* name, si
 static mx_status_t mem_getattr(vnode_t* vn, vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     if (vn->dnode == NULL) {
-        attr->size = vn->data.length;
+        attr->size = vn->length;
         attr->mode = V_TYPE_FILE | V_IRUSR;
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
@@ -386,12 +357,12 @@ static void dir_release(vnode_t* vn) {
 
 void vmo_release(vnode_t* vn) {
     xprintf("memfs: vn %p destroyed\n", vn);
-    if (vn->vmo.h <= 0) {
+    if (vn->vmo <= 0) {
         xprintf("vmofile_release: invalid handle\n");
     }
     if ((vn->memfs_flags & MEMFS_FLAG_VMO_REUSE) != 0) {
         // "reused" vmo's are closed by vmo owner
-        mx_status_t r = mx_handle_close(vn->vmo.h);
+        mx_status_t r = mx_handle_close(vn->vmo);
         if (r < 0) {
             printf("unexpected error closing vfs vmo handle %d\n", r);
         }
@@ -400,12 +371,12 @@ void vmo_release(vnode_t* vn) {
 }
 
 ssize_t vmo_read(vnode_t* vn, void* data, size_t len, size_t off) {
-    if (off > vn->vmo.length)
+    if (off > vn->length)
         return 0;
-    size_t rlen = vn->vmo.length - off;
+    size_t rlen = vn->length - off;
     if (len > rlen)
         len = rlen;
-    mx_status_t r = mx_vmo_read(vn->vmo.h, data, vn->vmo.offset+off, len, &len);
+    mx_status_t r = mx_vmo_read(vn->vmo, data, vn->offset+off, len, &len);
     if (r < 0) {
         return r;
     }
@@ -414,18 +385,18 @@ ssize_t vmo_read(vnode_t* vn, void* data, size_t len, size_t off) {
 
 mx_status_t vmo_getattr(vnode_t* vn, vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
-    attr->size = vn->vmo.length;
+    attr->size = vn->length;
     attr->mode = V_TYPE_FILE | V_IRUSR;
     return NO_ERROR;
 }
 
 static ssize_t vmo_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     size_t rlen;
-    if (off+len > vn->vmo.length) {
+    if (off+len > vn->length) {
         // TODO(orr): grow vmo to support extending length
         return ERR_NOT_SUPPORTED;
     }
-    mx_status_t r = mx_vmo_write(vn->vmo.h, data, vn->vmo.offset+off, len, &rlen);
+    mx_status_t r = mx_vmo_write(vn->vmo, data, vn->offset+off, len, &rlen);
     if (r < 0) {
         return r;
     }
@@ -533,7 +504,7 @@ mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
     vnode_t* vn;
     switch (type) {
     case MEMFS_TYPE_DATA:
-        if ((vn = calloc(1, sizeof(vnode_t)+MAXBLOCKS*sizeof(uint8_t*))) == NULL) {
+        if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
             return ERR_NO_MEMORY;
         }
         vn->ops = &vn_mem_ops;
@@ -836,9 +807,9 @@ mx_status_t memfs_create_from_vmo(const char* path, uint32_t flags,
     }
     vn_release(parent);
 
-    vn->vmo.h = h;
-    vn->vmo.offset = off;
-    vn->vmo.length = len;
+    vn->vmo = h;
+    vn->offset = off;
+    vn->length = len;
 
     return NO_ERROR;
 }
@@ -878,9 +849,9 @@ mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,
             vn_release(parent);
             return r;
         }
-        vn->vmo.h = vmo;
-        vn->vmo.offset = 0;
-        vn->vmo.length = len;
+        vn->vmo = vmo;
+        vn->offset = 0;
+        vn->length = len;
     }
 
     r = vn->ops->write(vn, ptr, len, 0);
