@@ -15,7 +15,8 @@ static void __attribute__((optimize("O0"))) minipr_thread_loop(void) {
     }
 }
 
-mx_status_t start_mini_process(mx_handle_t job, mx_handle_t* process, mx_handle_t* thread) {
+mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
+                                   mx_handle_t vmar, mx_handle_t transfered_handle) {
     // Allocate a single VMO for the child. It doubles as the stack on the top and
     // as the executable code (minipr_thread_loop()) at the bottom. In theory the stack usage
     // is minimal, like 32 bytes or less.
@@ -32,17 +33,6 @@ mx_status_t start_mini_process(mx_handle_t job, mx_handle_t* process, mx_handle_
     if (status < 0)
         return MX_HANDLE_INVALID;
 
-    *process = MX_HANDLE_INVALID;
-    mx_handle_t vmar = MX_HANDLE_INVALID;
-    status = mx_process_create(job, "minipr", 6u, 0u, process, &vmar);
-    if (status < 0)
-        goto exit;
-
-    *thread = MX_HANDLE_INVALID;
-    status = mx_thread_create(*process, "minith", 6u, 0, thread);
-    if (status < 0)
-        goto exit;
-
     mx_vaddr_t stack_base;
     status = mx_vmar_map(vmar, 0, stack_vmo, 0, stack_size,
                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE,
@@ -53,30 +43,43 @@ mx_status_t start_mini_process(mx_handle_t job, mx_handle_t* process, mx_handle_
     // See stack.h for explanation about this.
     uintptr_t sp = stack_size + stack_base - 8;
 
-    // In theory any trasferable object will do but in the future we might require
-    // this to be a channel.
-    mx_handle_t chan[2] = {MX_HANDLE_INVALID, MX_HANDLE_INVALID};
-    status = mx_channel_create(0, &chan[0], &chan[1]);
+    status = mx_process_start(process, thread, stack_base, sp, transfered_handle, 0u);
+
+exit:
+    if (stack_vmo != MX_HANDLE_INVALID)
+        mx_handle_close(stack_vmo);
+
+    return status;
+}
+
+mx_status_t start_mini_process(mx_handle_t job, mx_handle_t transfered_handle,
+                               mx_handle_t* process, mx_handle_t* thread) {
+    *process = MX_HANDLE_INVALID;
+    mx_handle_t vmar = MX_HANDLE_INVALID;
+    mx_status_t status = mx_process_create(job, "minipr", 6u, 0u, process, &vmar);
     if (status < 0)
         goto exit;
 
-    status = mx_process_start(*process, *thread, stack_base, sp, chan[1], 0u);
+    *thread = MX_HANDLE_INVALID;
+    status = mx_thread_create(*process, "minith", 6u, 0, thread);
+    if (status < 0)
+        goto exit;
 
-    // If succesful, one end has been transfered therefore our handle is invalid.
-    if (status == NO_ERROR)
-        chan[1] = MX_HANDLE_INVALID;
+    status = start_mini_process_etc(*process, *thread, vmar, transfered_handle);
+
+    // On sucess the transfered_handle gets consumed.
+
+    if (status == NO_ERROR) {
+        // We wait 10ms here to make sure that the thread has transitioned
+        // to into active. This is flaky but might make tests less flaky.
+        // TODO(cpu): investigate signals for this job.
+        mx_nanosleep(10000000);
+    }
 
 exit:
-    if (vmar != MX_HANDLE_INVALID)
-        mx_handle_close(vmar);
-    if (stack_vmo != MX_HANDLE_INVALID)
-        mx_handle_close(stack_vmo);
-    if (chan[0] != MX_HANDLE_INVALID)
-        mx_handle_close(chan[0]);
-    if (chan[1] != MX_HANDLE_INVALID)
-        mx_handle_close(chan[1]);
-
     if (status < 0) {
+        if (transfered_handle != MX_HANDLE_INVALID)
+            mx_handle_close(transfered_handle);
         if (*process != MX_HANDLE_INVALID)
             mx_handle_close(*process);
         if (*thread != MX_HANDLE_INVALID)

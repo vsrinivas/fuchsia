@@ -17,7 +17,7 @@
 
 namespace {
 
-const char kProcessName[] = "Test process";
+const char kProcessName[] = "test-proc-vmar";
 
 const uint32_t kRwxMapPerm =
         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE;

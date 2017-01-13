@@ -10,6 +10,9 @@
 #include <unittest/unittest.h>
 #include <runtime/thread.h>
 
+
+static const char kThreadName[] = "test-thread";
+
 static void test_thread_fn(void* arg) {
     // Note: You shouldn't use C standard library functions from this thread.
     mx_nanosleep(MX_MSEC(100));
@@ -83,8 +86,7 @@ static bool threads_test(void) {
 static bool test_thread_start_on_initial_thread(void) {
     BEGIN_TEST;
 
-    static const char kProcessName[] = "Test process";
-    static const char kThreadName[] = "Test thread";
+    static const char kProcessName[] = "test-proc-thread1";
     mx_handle_t process;
     mx_handle_t vmar;
     mx_handle_t thread;
@@ -107,8 +109,7 @@ static bool test_thread_start_on_initial_thread(void) {
 static bool test_thread_start_with_zero_instruction_pointer(void) {
     BEGIN_TEST;
 
-    static const char kProcessName[] = "Test process";
-    static const char kThreadName[] = "Test thread";
+    static const char kProcessName[] = "test-proc-thread2";
     mx_handle_t process;
     mx_handle_t vmar;
     mx_handle_t thread;

@@ -74,10 +74,12 @@ static bool kill_test(void) {
     mx_handle_t job_child;
     ASSERT_EQ(mx_job_create(job_parent, 0u, &job_child), NO_ERROR, "");
 
-    mx_handle_t process, thread;
-    ASSERT_EQ(start_mini_process(job_child, &process, &thread), NO_ERROR, "");
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), NO_ERROR, "");
 
-    mx_nanosleep(5000000);
+    mx_handle_t process, thread;
+    ASSERT_EQ(start_mini_process(job_child, event, &process, &thread), NO_ERROR, "");
+
     ASSERT_EQ(mx_task_kill(job_child), NO_ERROR, "");
 
     mx_signals_t signals;
