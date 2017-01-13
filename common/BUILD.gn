@@ -6,6 +6,7 @@ source_set("common") {
   sources = [
     "byte_buffer.cc",
     "byte_buffer.h",
+    "packet.h",
     "test_helpers.h",
   ]
 
@@ -20,6 +21,7 @@ executable("tests") {
 
   sources = [
     "byte_buffer_unittest.cc",
+    "packet_unittest.cc",
   ]
 
   deps = [
