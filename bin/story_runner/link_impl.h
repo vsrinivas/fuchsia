@@ -61,8 +61,8 @@ class LinkImpl : public StoryStorageLinkWatcher {
   // destroyed.
   LinkImpl(StoryStoragePtr story_storage,
            const fidl::String& name,
-           fidl::InterfaceRequest<Link> link_request);
-  ~LinkImpl() override = default;
+           fidl::InterfaceRequest<Link> request);
+  ~LinkImpl() override;
 
   // Used by LinkConnection.
   void UpdateObject(const fidl::String& path,
@@ -109,7 +109,7 @@ class LinkImpl : public StoryStorageLinkWatcher {
 
 class LinkConnection : public Link {
  public:
-  ~LinkConnection() override = default;
+  ~LinkConnection() override;
 
   // Creates a new instance on the heap and registers it with the
   // given LinkImpl, which takes ownership. It cannot be on the stack

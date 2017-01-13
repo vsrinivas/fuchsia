@@ -25,6 +25,8 @@ LinkImpl::LinkImpl(StoryStoragePtr story_storage,
   ]() mutable { LinkConnection::New(this, std::move(request)); }));
 }
 
+LinkImpl::~LinkImpl() {}
+
 // The |LinkConnection| object knows which client made the call to Set() or
 // Update(), so it notifies either all clients or all other clients, depending
 // on whether WatchAll() or Watch() was called, respectively.
@@ -84,7 +86,7 @@ void LinkImpl::UpdateObject(const fidl::String& path,
   CrtJsonPointer ptr(path);
   CrtJsonValue& current_value = ptr.Create(doc_);
 
-  bool dirty =
+  const bool dirty =
       MergeObject(current_value, std::move(new_value), doc_.GetAllocator());
   if (dirty) {
     DatabaseChanged(src);
@@ -210,6 +212,8 @@ LinkConnection::LinkConnection(LinkImpl* const impl,
   binding_.set_connection_error_handler(
       [this] { impl_->RemoveConnection(this); });
 }
+
+LinkConnection::~LinkConnection() {}
 
 void LinkConnection::Watch(fidl::InterfaceHandle<LinkWatcher> watcher) {
   AddWatcher(std::move(watcher), false);
