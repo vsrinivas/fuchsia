@@ -779,6 +779,11 @@ readwrite(int nfd)
         int lfd = fileno(stdout);
         int plen;
 
+#if defined(__Fuchsia__)
+        int flags = fcntl(wfd, F_GETFL, 0);
+        fcntl(wfd, F_SETFL, flags | O_NONBLOCK);
+#endif
+
         plen = sizeof(buf);
 
         /* Setup Network FD */
@@ -818,7 +823,16 @@ readwrite(int nfd)
                 }
 
                 if (!dflag && pfd[1].revents & POLLIN) {
-                        if ((n = read(wfd, buf, plen)) < 0)
+                        n = read(wfd, buf, plen);
+#if defined(__Fuchsia__)
+                        /*
+                         * stdin on the graphic terminal sometimes reports false
+                         * readability.
+                         */
+                        if (n == -1 && errno == EAGAIN)
+                                continue;
+#endif
+                        if (n < 0)
                                 return;
                         else if (n == 0) {
                                 if (Nflag)
