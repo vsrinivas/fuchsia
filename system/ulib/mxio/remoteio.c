@@ -873,6 +873,105 @@ static ssize_t mxsio_sendmsg_stream(mxio_t* io, const struct msghdr* msg, int fl
     return total;
 }
 
+static void mxsio_wait_begin_stream(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
+    mxrio_t* rio = (void*)io;
+    *handle = rio->h2;
+    // TODO: locking for flags/state
+    if (io->flags & MXIO_FLAG_SOCKET_CONNECTING) {
+        // check the connection state
+        mx_signals_t observed;
+        mx_status_t r;
+        r = mx_handle_wait_one(rio->h2, MXSIO_SIGNAL_CONNECTED, 0u,
+                               &observed);
+        if (r == NO_ERROR || r == ERR_TIMED_OUT) {
+            if (observed & MXSIO_SIGNAL_CONNECTED) {
+                io->flags &= ~MXIO_FLAG_SOCKET_CONNECTING;
+                io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
+            }
+        }
+    }
+    mx_signals_t signals = MXSIO_SIGNAL_ERROR;
+    if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
+        // if socket is connected
+        if (events & EPOLLIN) {
+            signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
+        }
+        if (events & EPOLLOUT) {
+            signals |= MX_SOCKET_WRITABLE;
+        }
+    } else {
+        // if socket is not connected
+        if (events & EPOLLIN) {
+            // signal when a listening socket gets an incoming connection
+            // or a connecting socket gets connected and receives data
+            signals |= MXSIO_SIGNAL_INCOMING |
+                MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
+        }
+        if (events & EPOLLOUT) {
+            // signal when connect() operation is finished
+            signals |= MXSIO_SIGNAL_OUTGOING;
+        }
+    }
+    if (events & EPOLLRDHUP) {
+        signals |= MX_SOCKET_PEER_CLOSED;
+    }
+    *_signals = signals;
+}
+
+static void mxsio_wait_end_stream(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
+    // check the connection state
+    if (io->flags & MXIO_FLAG_SOCKET_CONNECTING) {
+        if (signals & MXSIO_SIGNAL_CONNECTED) {
+            io->flags &= ~MXIO_FLAG_SOCKET_CONNECTING;
+            io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
+        }
+    }
+    uint32_t events = 0;
+    if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
+        if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
+            events |= EPOLLIN;
+        }
+        if (signals & MX_SOCKET_WRITABLE) {
+            events |= EPOLLOUT;
+        }
+    } else {
+        if (signals & (MXSIO_SIGNAL_INCOMING | MX_SOCKET_PEER_CLOSED)) {
+            events |= EPOLLIN;
+        }
+        if (signals & MXSIO_SIGNAL_OUTGOING) {
+            events |= EPOLLOUT;
+        }
+    }
+    if (signals & MXSIO_SIGNAL_ERROR) {
+        events |= EPOLLERR;
+    }
+    if (signals & MX_SOCKET_PEER_CLOSED) {
+        events |= EPOLLRDHUP;
+    }
+    *_events = events;
+}
+
+static ssize_t mxsio_posix_ioctl_stream(mxio_t* io, int req, va_list va) {
+    mxrio_t* rio = (mxrio_t*)io;
+    switch (req) {
+    case FIONREAD: {
+        mx_status_t r;
+        size_t avail;
+        if ((r = mx_socket_read(rio->h2, 0, NULL, 0, &avail)) < 0) {
+            return r;
+        }
+        if (avail > INT_MAX) {
+            avail = INT_MAX;
+        }
+        int* actual = va_arg(va, int*);
+        *actual = avail;
+        return NO_ERROR;
+    }
+    default:
+        return ERR_NOT_SUPPORTED;
+    }
+}
+
 static ssize_t mxsio_rx_dgram(mxio_t* io, void* buf, size_t buflen) {
     size_t n = 0;
     for (;;) {
@@ -1040,103 +1139,37 @@ static ssize_t mxsio_sendmsg_dgram(mxio_t* io, const struct msghdr* msg, int fla
     return r == NO_ERROR ? n : r;
 }
 
-static void mxsio_wait_begin(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
+static void mxsio_wait_begin_dgram(mxio_t* io, uint32_t events, mx_handle_t* handle, mx_signals_t* _signals) {
     mxrio_t* rio = (void*)io;
     *handle = rio->h2;
-    // TODO: locking for flags/state
-    if (io->flags & MXIO_FLAG_SOCKET_CONNECTING) {
-        // check the connection state
-        mx_signals_t observed;
-        mx_status_t r;
-        r = mx_handle_wait_one(rio->h2, MXSIO_SIGNAL_CONNECTED, 0u,
-                               &observed);
-        if (r == NO_ERROR || r == ERR_TIMED_OUT) {
-            if (observed & MXSIO_SIGNAL_CONNECTED) {
-                io->flags &= ~MXIO_FLAG_SOCKET_CONNECTING;
-                io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
-            }
-        }
-    }
     mx_signals_t signals = MXSIO_SIGNAL_ERROR;
-    if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
-        // if socket is connected
-        if (events & EPOLLIN) {
-            signals |= MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
-        }
-        if (events & EPOLLOUT) {
-            signals |= MX_SOCKET_WRITABLE;
-        }
-    } else {
-        // if socket is not connected
-        if (events & EPOLLIN) {
-            // signal when a listening socket gets an incoming connection
-            // or a connecting socket gets connected and receives data
-            signals |= MXSIO_SIGNAL_INCOMING |
-                MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED;
-        }
-        if (events & EPOLLOUT) {
-            // signal when connect() operation is finished
-            signals |= MXSIO_SIGNAL_OUTGOING;
-        }
+    if (events & EPOLLIN) {
+        signals |= MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+    }
+    if (events & EPOLLOUT) {
+        signals |= MX_CHANNEL_WRITABLE;
     }
     if (events & EPOLLRDHUP) {
-        signals |= MX_SOCKET_PEER_CLOSED;
+        signals |= MX_CHANNEL_PEER_CLOSED;
     }
     *_signals = signals;
 }
 
-static void mxsio_wait_end(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
-    // check the connection state
-    if (io->flags & MXIO_FLAG_SOCKET_CONNECTING) {
-        if (signals & MXSIO_SIGNAL_CONNECTED) {
-            io->flags &= ~MXIO_FLAG_SOCKET_CONNECTING;
-            io->flags |= MXIO_FLAG_SOCKET_CONNECTED;
-        }
-    }
+static void mxsio_wait_end_dgram(mxio_t* io, mx_signals_t signals, uint32_t* _events) {
     uint32_t events = 0;
-    if (io->flags & MXIO_FLAG_SOCKET_CONNECTED) {
-        if (signals & (MX_SOCKET_READABLE | MX_SOCKET_PEER_CLOSED)) {
-            events |= EPOLLIN;
-        }
-        if (signals & MX_SOCKET_WRITABLE) {
-            events |= EPOLLOUT;
-        }
-    } else {
-        if (signals & (MXSIO_SIGNAL_INCOMING | MX_SOCKET_PEER_CLOSED)) {
-            events |= EPOLLIN;
-        }
-        if (signals & MXSIO_SIGNAL_OUTGOING) {
-            events |= EPOLLOUT;
-        }
+    if (signals & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) {
+        events |= EPOLLIN;
+    }
+    if (signals & MX_CHANNEL_WRITABLE) {
+        events |= EPOLLOUT;
     }
     if (signals & MXSIO_SIGNAL_ERROR) {
         events |= EPOLLERR;
     }
-    if (signals & MX_SOCKET_PEER_CLOSED) {
+    if (signals & MX_CHANNEL_PEER_CLOSED) {
         events |= EPOLLRDHUP;
     }
     *_events = events;
-}
-
-static ssize_t mxsio_posix_ioctl_stream(mxio_t* io, int req, va_list va) {
-    mxrio_t* rio = (mxrio_t*)io;
-    switch (req) {
-    case FIONREAD: {
-        mx_status_t r;
-        size_t avail;
-        if ((r = mx_socket_read(rio->h2, 0, NULL, 0, &avail)) < 0) {
-            return r;
-        }
-        if (avail > INT_MAX) {
-            avail = INT_MAX;
-        }
-        int* actual = va_arg(va, int*);
-        *actual = avail;
-        return NO_ERROR;
-    }
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
 }
 
 static mxio_ops_t mxio_socket_stream_ops = {
@@ -1150,8 +1183,8 @@ static mxio_ops_t mxio_socket_stream_ops = {
     .open = mxrio_open,
     .clone = mxio_default_clone,
     .ioctl = mxrio_ioctl,
-    .wait_begin = mxsio_wait_begin,
-    .wait_end = mxsio_wait_end,
+    .wait_begin = mxsio_wait_begin_stream,
+    .wait_end = mxsio_wait_end_stream,
     .unwrap = mxio_default_unwrap,
     .posix_ioctl = mxsio_posix_ioctl_stream,
 };
@@ -1167,8 +1200,8 @@ static mxio_ops_t mxio_socket_dgram_ops = {
     .open = mxrio_open,
     .clone = mxio_default_clone,
     .ioctl = mxrio_ioctl,
-    .wait_begin = mxsio_wait_begin,
-    .wait_end = mxsio_wait_end,
+    .wait_begin = mxsio_wait_begin_dgram,
+    .wait_end = mxsio_wait_end_dgram,
     .unwrap = mxio_default_unwrap,
     .posix_ioctl = mxio_default_posix_ioctl, // not supported
 };
