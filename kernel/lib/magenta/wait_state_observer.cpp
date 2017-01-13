@@ -49,8 +49,6 @@ mx_signals_t WaitStateObserver::End() {
 
     // Return the set of reasons that we may have been woken.  Basically, this
     // is set of satisfied bits which were ever set while we were waiting on the list.
-    //
-    // TODO(johngro): should these reasons be masked by watched_signals_?
     return wakeup_reasons_;
 }
 
@@ -59,7 +57,11 @@ bool WaitStateObserver::OnInitialize(mx_signals_t initial_state) {
     // we are going to become immediately signaled, the reason is contained
     // somewhere in this initial state.
     wakeup_reasons_ = initial_state;
-    return MaybeSignal(initial_state);
+
+    if (initial_state & watched_signals_)
+        return event_->Signal() > 0;
+
+    return false;
 }
 
 bool WaitStateObserver::OnStateChange(mx_signals_t new_state) {
@@ -68,12 +70,14 @@ bool WaitStateObserver::OnStateChange(mx_signals_t new_state) {
     // woken up.  In particular any satisfied bits which have become set
     // while we were on the list may have been reasons to wake up.
     wakeup_reasons_ |= new_state;
-    return MaybeSignal(new_state);
+
+    if (new_state & watched_signals_)
+        return event_->Signal() > 0;
+
+    return false;
 }
 
 bool WaitStateObserver::OnCancel(Handle* handle, bool* should_remove) {
-    DEBUG_ASSERT(dispatcher_);
-
     if (handle == handle_) {
         wakeup_reasons_ |= MX_SIGNAL_HANDLE_CLOSED;
         return event_->Signal() > 0;
@@ -82,11 +86,3 @@ bool WaitStateObserver::OnCancel(Handle* handle, bool* should_remove) {
     }
 }
 
-bool WaitStateObserver::MaybeSignal(mx_signals_t state) {
-    DEBUG_ASSERT(dispatcher_);
-
-    if (state & watched_signals_)
-        return event_->Signal() > 0;
-
-    return false;
-}

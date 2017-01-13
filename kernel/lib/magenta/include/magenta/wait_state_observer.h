@@ -39,8 +39,6 @@ private:
     bool OnStateChange(mx_signals_t new_state) final;
     bool OnCancel(Handle* handle, bool* should_remove) final;
 
-    bool MaybeSignal(mx_signals_t signals);
-
     WaitEvent* event_ = nullptr;
     Handle* handle_ = nullptr;
     mx_signals_t watched_signals_ = 0u;
