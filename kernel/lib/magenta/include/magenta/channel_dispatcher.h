@@ -55,6 +55,7 @@ private:
     ChannelDispatcher(uint32_t flags);
     void Init(mxtl::RefPtr<ChannelDispatcher> other);
     status_t WriteSelf(mxtl::unique_ptr<MessagePacket> msg);
+    status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     void OnPeerZeroHandles();
 
     const uint32_t flags_;

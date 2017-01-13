@@ -158,3 +158,38 @@ status_t ChannelDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client)
 
     return NO_ERROR;
 }
+
+status_t ChannelDispatcher::user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) {
+    if ((set_mask & ~MX_USER_SIGNAL_ALL) || (clear_mask & ~MX_USER_SIGNAL_ALL))
+        return ERR_INVALID_ARGS;
+
+    if (!peer) {
+        state_tracker_.UpdateState(clear_mask, set_mask);
+        return NO_ERROR;
+    }
+
+    mxtl::RefPtr<ChannelDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        if (!other_)
+            return ERR_REMOTE_CLOSED;
+        other = other_;
+    }
+
+    return other->UserSignalSelf(clear_mask, set_mask);
+}
+
+status_t ChannelDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask) {
+    AutoLock lock(&lock_);
+
+    if (iopc_) {
+        auto satisfied = state_tracker_.GetSignalsState();
+        auto changed = ~satisfied & set_mask;
+
+        if (changed)
+            iopc_->Signal(changed, 0u, &lock_);
+    }
+
+    state_tracker_.UpdateState(clear_mask, set_mask);
+    return NO_ERROR;
+}
