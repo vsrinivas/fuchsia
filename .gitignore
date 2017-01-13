@@ -15,3 +15,5 @@ cscope.*
 Session.vim
 tags
 Thumbs.db
+.packages
+
