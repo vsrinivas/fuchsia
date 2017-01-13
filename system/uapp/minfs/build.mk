@@ -56,7 +56,7 @@ MINFS_TOOLS += $(BUILDDIR)/tools/fuse-minfs
 endif
 
 .PHONY: minfs
-minfs:: $(MINFS_TOOLS)
+minfs: $(MINFS_TOOLS)
 
 -include $(DEPS)
 -include $(LIBMINFS_DEPS)
@@ -65,31 +65,32 @@ minfs:: $(MINFS_TOOLS)
 
 $(BUILDDIR)/host/system/uapp/minfs/%.o: system/uapp/minfs/%.cpp
 	@echo compiling $@
-	@mkdir -p $(dir $@)
-	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
+	@$(MKDIR)
+	$(NOECHO)$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/host/system/ulib/fs/%.o: system/ulib/fs/%.c
 	@echo compiling $@
-	@mkdir -p $(dir $@)
-	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
+	@$(MKDIR)
+	$(NOECHO)$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/host/system/ulib/mxcpp/%.o: system/ulib/mxcpp/%.cpp
 	@echo compiling $@
-	@mkdir -p $(dir $@)
-	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
+	@$(MKDIR)
+	$(NOECHO)$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/tools/minfs: $(OBJS) $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(LIBMXCPP_OBJS)
 	@echo linking $@
-	@$(HOST_CC) $(MINFS_LDFLAGS) -o $@ $^
+	$(NOECHO)$(HOST_CC) $(MINFS_LDFLAGS) -o $@ $^
 
 $(BUILDDIR)/host/system/uapp/minfs/fuse.o: system/uapp/minfs/fuse.cpp
 	@echo compiling $@
-	@mkdir -p $(dir $@)
-	@$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) $(FUSE_CFLAGS) -c -o $@ $<
+	@$(MKDIR)
+	$(NOECHO)$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) $(FUSE_CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/tools/fuse-minfs: $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(BUILDDIR)/host/system/uapp/minfs/fuse.o
 	@echo linking $@
-	@$(HOST_CC) $(MINFS_LDFLAGS) $(FUSE_LDFLAGS) -o $@ $^
+	@$(MKDIR)
+	$(NOECHO)$(HOST_CC) $(MINFS_LDFLAGS) $(FUSE_LDFLAGS) -o $@ $^
 
 GENERATED += $(MINFS_TOOLS)
 EXTRA_BUILDDEPS += $(MINFS_TOOLS)
