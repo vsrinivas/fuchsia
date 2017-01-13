@@ -8,6 +8,7 @@
 #include <ddk/driver.h>
 #include <ddk/common/usb.h>
 #include <ddk/protocol/ethernet.h>
+#include <eth/eth-fifo.h>
 #include <hexdump/hexdump.h>
 #include <magenta/device/ethernet.h>
 #include <magenta/listnode.h>
@@ -57,12 +58,26 @@ typedef struct {
     list_node_t free_read_reqs;
     list_node_t free_write_reqs;
 
-    // list of received packets not yet read by upper layer
+    // list of received packets not yet queued into the rx fifo
     list_node_t completed_reads;
     // index of next packet header to process
     size_t packet;
     // offset of next packet to process from completed_reads head
     size_t read_offset;
+
+    // fifos
+    completion_t rx_complete;
+    eth_fifo_t fifo;
+    eth_fifo_entry_t* rx_entries;
+    eth_fifo_entry_t* tx_entries;
+    // Buffer VMO
+    mx_handle_t io_vmo;
+    // Buffer mappings
+    uint8_t* rx_map;
+    uint8_t* tx_map;
+    // fifo threads
+    thrd_t rx_thr;
+    thrd_t tx_thr;
 
     // the last signals we reported
     mx_signals_t signals;
@@ -242,6 +257,7 @@ static void ax88179_read_complete(iotxn_t* request, void* cookie) {
     mtx_lock(&eth->mutex);
     if (request->status == NO_ERROR) {
         list_add_tail(&eth->completed_reads, &request->node);
+        completion_signal(&eth->rx_complete);
     } else {
         requeue_read_request_locked(eth, request);
     }
@@ -311,105 +327,85 @@ static void ax88179_handle_interrupt(ax88179_t* eth, iotxn_t* request) {
     mtx_unlock(&eth->mutex);
 }
 
-mx_status_t ax88179_send(mx_device_t* device, const void* buffer, size_t length) {
-    ax88179_t* eth = get_ax88179(device);
-
-    if (eth->dead) {
-        return ERR_REMOTE_CLOSED;
-    }
-
-    mx_status_t status = NO_ERROR;
-
-    mtx_lock(&eth->mutex);
-
-    list_node_t* node = list_remove_head(&eth->free_write_reqs);
-    if (!node) {
-        status = ERR_BUFFER_TOO_SMALL;
-        goto out;
-    }
-    iotxn_t* request = containerof(node, iotxn_t, node);
-
-    if (length + sizeof(ax88179_tx_hdr_t) > 1500) {
-        status = ERR_INVALID_ARGS;
-        goto out;
-    }
-
-    ax88179_tx_hdr_t txhdr;
-    memset(&txhdr, 0, sizeof(txhdr));
-    txhdr.tx_len = htole16(length);
-    request->ops->copyto(request, &txhdr, sizeof(txhdr), 0);
-    request->ops->copyto(request, buffer, length, sizeof(txhdr));
-    request->length = length + sizeof(txhdr);
-    iotxn_queue(eth->usb_device, request);
-
-out:
-    update_signals_locked(eth);
-    mtx_unlock(&eth->mutex);
-    return status;
-}
-
-mx_status_t ax88179_recv(mx_device_t* device, void* buffer, size_t length) {
-    ax88179_t* eth = get_ax88179(device);
-
-    if (eth->dead) {
-        return ERR_REMOTE_CLOSED;
-    }
-
-    mx_status_t status = NO_ERROR;
-
-    mtx_lock(&eth->mutex);
+static mx_status_t process_one_packet(ax88179_t* eth, iotxn_t* completed_read,
+        mx_fifo_state_t* fifo_state) {
+    xprintf("request len %" PRIu64"\n", completed_read->actual);
     size_t offset = eth->read_offset;
 
-    list_node_t* node = list_peek_head(&eth->completed_reads);
-    if (!node) {
-        status = ERR_BAD_STATE;
-        goto out;
-    }
-    iotxn_t* request = containerof(node, iotxn_t, node);
-    xprintf("request len %llu\n", request->actual);
+    uint64_t entry_idx = fifo_state->tail & (eth->fifo.rx_entries_count - 1);
+    eth_fifo_entry_t* entry = &eth->rx_entries[entry_idx];
 
-    if (request->actual < 4) {
+    if (completed_read->actual < 4) {
         printf("ax88179_recv short packet\n");
-        status = ERR_INTERNAL;
-        list_remove_head(&eth->completed_reads);
-        requeue_read_request_locked(eth, request);
-        goto out;
+        return ERR_INTERNAL;
     }
-    ax88179_rx_hdr_t rxhdr;
-    request->ops->copyfrom(request, (void*)&rxhdr, RX_HEADER_SIZE, request->actual - sizeof(rxhdr));
-    xprintf("rxhdr offset %u, num %u\n", rxhdr.pkt_hdr_off, rxhdr.num_pkts);
-    if (rxhdr.num_pkts < 1 ||
-        rxhdr.pkt_hdr_off >= request->actual - sizeof(rxhdr)) {
-        status = ERR_IO_DATA_INTEGRITY;
-        list_remove_head(&eth->completed_reads);
-        requeue_read_request_locked(eth, request);
-        goto out;
+
+    uint8_t* read_data = NULL;
+    completed_read->ops->mmap(completed_read, (void*)&read_data);
+
+    ptrdiff_t rxhdr_off = completed_read->actual - sizeof(ax88179_rx_hdr_t);
+    ax88179_rx_hdr_t* rxhdr = (ax88179_rx_hdr_t*)(read_data + rxhdr_off);
+    xprintf("rxhdr offset %u, num %u\n", rxhdr->pkt_hdr_off, rxhdr->num_pkts);
+    if (rxhdr->num_pkts < 1 || rxhdr->pkt_hdr_off >= rxhdr_off) {
+        printf("%s bad packet\n", __func__);
+        return ERR_IO_DATA_INTEGRITY;
     }
 
     xprintf("next packet: %zd\n", eth->packet);
-    uint32_t pkt_hdr;
-    ptrdiff_t pkt_idx = eth->packet++ * sizeof(pkt_hdr);
-    request->ops->copyfrom(request, (void*)&pkt_hdr, sizeof(pkt_hdr), rxhdr.pkt_hdr_off + pkt_idx);
-    uint16_t pkt_len = le16toh((pkt_hdr & AX88179_RX_PKTLEN) >> 16);
-    xprintf("pkt_hdr: %0#x pkt_len: %u\n", pkt_hdr, pkt_len);
-    if (pkt_len > length) {
-        status = ERR_BUFFER_TOO_SMALL;
-        goto out;
+    ptrdiff_t pkt_idx = eth->packet++ * sizeof(uint32_t);
+    uint32_t* pkt_hdr = (uint32_t*)(read_data + rxhdr->pkt_hdr_off + pkt_idx);
+    if ((uintptr_t)pkt_hdr >= (uintptr_t)(read_data + completed_read->actual)) {
+        printf("%s packet header out of bounds %p > %p\n", __func__, pkt_hdr,
+                read_data + completed_read->actual);
+        return ERR_IO_DATA_INTEGRITY;
     }
-    xprintf("offset = %zd\n", offset);
-    request->ops->copyfrom(request, buffer, pkt_len - 2, offset + 2);
-    status = pkt_len - 2;
+    uint16_t pkt_len = le16toh((*pkt_hdr & AX88179_RX_PKTLEN) >> 16);
+    xprintf("pkt_hdr: %0#x pkt_len: %u\n", *pkt_hdr, pkt_len);
+    bool drop = false;
+    if (*pkt_hdr & AX88179_RX_DROPPKT) {
+        xprintf("%s DropPkt\n", __func__);
+        drop = true;
+    }
+    if (*pkt_hdr & AX88179_RX_MIIER) {
+        xprintf("%s MII-Er\n", __func__);
+        drop = true;
+    }
+    if (*pkt_hdr & AX88179_RX_CRCER) {
+        xprintf("%s CRC-Er\n", __func__);
+        drop = true;
+    }
+    if (!(*pkt_hdr & AX88179_RX_OK)) {
+        xprintf("%s !GoodPkt\n", __func__);
+        drop = true;
+    }
+    if (!drop) {
+        if (pkt_len > entry->length) {
+            // this should never happen? TODO: figure out how to prevent this
+            // earlier
+            printf("%s packet bigger than rx fifo entry length!!!\n", __func__);
+            return ERR_BUFFER_TOO_SMALL;
+        }
+        xprintf("offset = %zd\n", offset);
 
+        // Write the packet
+        memcpy(&eth->rx_map[entry->offset], (void*)&read_data[offset + 2], pkt_len - 2);
+        // Update the fifo entry
+        entry->length = pkt_len - 2;
+        // Move the fifo pointer
+        mx_status_t status = mx_fifo_op(eth->fifo.rx_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, fifo_state);
+        if (status != NO_ERROR) {
+            printf("%s could not advance rx fifo tail (%d)\n", __func__, status);
+        }
+    }
+
+    // Advance past this packet in the completed read
     offset += pkt_len;
     offset = ALIGN(offset, 8);
-    if (offset >= rxhdr.pkt_hdr_off) {
+    if (offset >= rxhdr->pkt_hdr_off) {
         offset = 0;
         eth->packet = 0;
-        list_remove_head(&eth->completed_reads);
-        requeue_read_request_locked(eth, request);
     }
 
-out:
 #if AX88179_DEBUG
     if (offset != 0) {
         printf("setting read offset to %zd\n", offset);
@@ -417,9 +413,173 @@ out:
 #endif
     eth->read_offset = offset;
 
-    update_signals_locked(eth);
-    mtx_unlock(&eth->mutex);
-    return status;
+    return NO_ERROR;
+}
+
+static int ax88179_rx_thread(void* arg) {
+    ax88179_t* eth = (ax88179_t*)arg;
+
+    mx_fifo_state_t state;
+    mx_status_t status;
+    while (true) {
+        // Check every second if we're being unbound
+        status = completion_wait(&eth->rx_complete, MX_SEC(1));
+        if (eth->dead) {
+            break;
+        }
+        if (status == ERR_TIMED_OUT) {
+            mtx_lock(&eth->mutex);
+            if (list_is_empty(&eth->completed_reads)) {
+                mtx_unlock(&eth->mutex);
+                continue;
+            }
+            mtx_unlock(&eth->mutex);
+        }
+
+        // Drain the completed reads, waiting for room in the rx fifo as needed
+        mtx_lock(&eth->mutex);
+        list_node_t* node = list_remove_head(&eth->completed_reads);
+        // Don't have a fifo yet; just drop the read
+        if (eth->fifo.entries_vmo == MX_HANDLE_INVALID) {
+            xprintf("%s no fifo in place yet, dropping packet\n", __func__);
+            completion_reset(&eth->rx_complete);
+            requeue_read_request_locked(eth, containerof(node, iotxn_t, node));
+            mtx_unlock(&eth->mutex);
+            continue;
+        }
+        mtx_unlock(&eth->mutex);
+
+        while (node) {
+            // TODO: we should probably drop packets if the rx fifo is full
+            do {
+                status = mx_handle_wait_one(eth->fifo.rx_fifo, MX_FIFO_NOT_EMPTY, MX_SEC(1), NULL);
+                if (eth->dead) return 0;
+            } while (status == ERR_TIMED_OUT);
+            if (status != NO_ERROR) {
+                break;
+            }
+
+            // Find out how much room we have.
+            status = mx_fifo_op(eth->fifo.rx_fifo, MX_FIFO_OP_READ_STATE, 0, &state);
+            if (status != NO_ERROR) {
+                printf("%s could not read rx fifo state (%d)\n", __func__, status);
+                break;
+            }
+            if (state.head == state.tail) {
+                printf("%s head == tail!!!\n", __func__);
+                // this shouldn't happen, since we found MX_FIFO_NOT_EMPTY,
+                // and we're the only one that will move tail
+                break;
+            }
+            uint64_t num_fifo_entries = state.head - state.tail;
+            iotxn_t* request = containerof(node, iotxn_t, node);
+            while (num_fifo_entries > 0) {
+                status = process_one_packet(eth, request, &state);
+                if (status != NO_ERROR) {
+                    printf("%s could not process packet (%d)\n", __func__, status);
+                    // error???
+                }
+                if (eth->read_offset == 0) {
+                    // Get the next completed read txn, if any
+                    mtx_lock(&eth->mutex);
+                    requeue_read_request_locked(eth, request);
+                    node = list_remove_head(&eth->completed_reads);
+                    if (!node) {
+                        update_signals_locked(eth);
+                        completion_reset(&eth->rx_complete);
+                        mtx_unlock(&eth->mutex);
+                        goto wait_for_rx;
+                    }
+                    mtx_unlock(&eth->mutex);
+                    request = containerof(node, iotxn_t, node);
+                }
+
+                num_fifo_entries = state.head - state.tail;
+            }
+        }
+wait_for_rx: ;
+    }
+    return 0;
+}
+
+static mx_status_t send_one_packet(ax88179_t* eth, iotxn_t* request, mx_fifo_state_t *fifo_state) {
+    uint64_t entry_idx = fifo_state->tail & (eth->fifo.tx_entries_count - 1);
+    eth_fifo_entry_t* entry = &eth->tx_entries[entry_idx];
+    if (entry->length + sizeof(ax88179_tx_hdr_t) > 1500) {
+        printf("%s tx entry too large\n", __func__);
+        return ERR_BUFFER_TOO_SMALL;
+    }
+
+    uint8_t* write_buffer = NULL;
+    request->ops->mmap(request, (void*)&write_buffer);
+
+    ax88179_tx_hdr_t* txhdr = (ax88179_tx_hdr_t*)write_buffer;
+    memset(txhdr, 0, sizeof(*txhdr));
+    txhdr->tx_len = htole16(entry->length);
+
+    memcpy((void*)(write_buffer + sizeof(*txhdr)), (void*)&eth->tx_map[entry->offset],
+            entry->length);
+    request->length = entry->length + sizeof(txhdr);
+    iotxn_queue(eth->usb_device, request);
+
+    // Move the fifo pointer
+    // TODO: batch these up
+    mx_status_t status = mx_fifo_op(eth->fifo.tx_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, fifo_state);
+    if (status != NO_ERROR) {
+        printf("%s could not advance tx fifo tail (%d)\n", __func__, status);
+    }
+
+    return NO_ERROR;
+}
+
+static int ax88179_tx_thread(void* arg) {
+    ax88179_t* eth = (ax88179_t*)arg;
+
+    mx_fifo_state_t state;
+    mx_status_t status;
+    while (true) {
+        do {
+            status = mx_handle_wait_one(eth->fifo.tx_fifo, MX_FIFO_NOT_EMPTY, MX_SEC(1), NULL);
+            if (eth->dead) {
+                return 0;
+            }
+        } while (status == ERR_TIMED_OUT);
+        if (status != NO_ERROR) {
+            printf("%s handle wait for tx fifo failed (%d)\n", __func__, status);
+            break;
+        }
+
+        status = mx_fifo_op(eth->fifo.tx_fifo, MX_FIFO_OP_READ_STATE, 0, &state);
+        if (status != NO_ERROR) {
+            printf("%s could not read tx fifo state (%d)\n", __func__, status);
+            break;
+        }
+        if (state.head == state.tail) continue;
+
+        uint64_t num_fifo_entries = state.head - state.tail;
+        while (num_fifo_entries > 0) {
+            mtx_lock(&eth->mutex);
+            list_node_t* node = list_remove_head(&eth->free_write_reqs);
+            mtx_unlock(&eth->mutex);
+            if (!node) {
+                // drop packets when no outgoing buffers
+                // or do we use a completion to find out when there are new
+                // buffers?
+                break;
+            }
+            status = send_one_packet(eth, containerof(node, iotxn_t, node), &state);
+            if (status != NO_ERROR) {
+                printf("%s could not send packet (%d)\n", __func__, status);
+                break;
+                // error???
+            }
+            num_fifo_entries = state.head - state.tail;
+        }
+        mtx_lock(&eth->mutex);
+        update_signals_locked(eth);
+        mtx_unlock(&eth->mutex);
+    }
+    return 0;
 }
 
 mx_status_t ax88179_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
@@ -430,8 +590,6 @@ mx_status_t ax88179_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
 
 size_t ax88179_get_mtu(mx_device_t* device) {
     return 1500;
-    // TODO: figure this out
-    //return USB_BUF_SIZE - ETH_HEADER_SIZE;
 }
 
 static ethernet_protocol_t ax88179_proto = {};
@@ -441,6 +599,7 @@ static void ax88179_unbind(mx_device_t* device) {
 
     mtx_lock(&eth->mutex);
     eth->dead = true;
+    completion_signal(&eth->rx_complete);
     update_signals_locked(eth);
     mtx_unlock(&eth->mutex);
 
@@ -468,45 +627,142 @@ static mx_status_t ax88179_release(mx_device_t* device) {
     return NO_ERROR;
 }
 
-static ssize_t ax88179_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
+static ssize_t ax88179_get_fifo(ax88179_t* eth, const void* in_buf, size_t in_len,
+                                void* out_buf, size_t out_len) {
+    if (in_len < sizeof(eth_get_fifo_args_t) || !in_buf) return ERR_INVALID_ARGS;
+    if (out_len < sizeof(eth_fifo_t) || !out_buf) return ERR_INVALID_ARGS;
+    // For now, we can only have one fifo per instance
+    if (eth->fifo.entries_vmo != MX_HANDLE_INVALID) return ERR_ALREADY_BOUND;
+
+    const eth_get_fifo_args_t* args = in_buf;
+    eth_fifo_t* reply = out_buf;
+
+    // Create the fifo
+    eth_fifo_t fifo;
+    mx_status_t status = eth_fifo_create(args->rx_entries, args->tx_entries, args->options,
+        &fifo);
+    if (status != NO_ERROR) {
+        printf("failed to create eth_fifo (%d)\n", status);
+        eth_fifo_cleanup(&fifo);
+        return status;
+    }
+
+    // Set up the driver's copy
+    status = eth_fifo_clone_consumer(&fifo, &eth->fifo);
+    if (status != NO_ERROR) {
+        printf("failed to clone consumer fifo: %d\n", status);
+        goto clone_consumer_fail;
+    }
+    status = eth_fifo_map_rx_entries(&eth->fifo, &eth->rx_entries);
+    if (status != NO_ERROR) {
+        printf("failed to map rx fifo entries: %d\n", status);
+        goto map_rx_entries_fail;
+    }
+    status = eth_fifo_map_tx_entries(&eth->fifo, &eth->tx_entries);
+    if (status != NO_ERROR) {
+        printf("failed to map tx fifo entries: %d\n", status);
+        goto map_tx_entries_fail;
+    }
+
+    // Set up the caller's copy
+    status = eth_fifo_clone_producer(&fifo, reply);
+    if (status != NO_ERROR) {
+        printf("failed to clone producer fifo: %d\n", status);
+        goto clone_producer_fail;
+    }
+
+    // Spawn the rx/tx threads
+    int ret = thrd_create_with_name(&eth->rx_thr, ax88179_rx_thread, eth, "ax88179_rx_thread");
+    if (ret != thrd_success) {
+        printf("failed to start rx thread: %d\n", ret);
+        status = ERR_BAD_STATE;
+        goto rx_thread_fail;
+    }
+    ret = thrd_create_with_name(&eth->tx_thr, ax88179_tx_thread, eth, "ax88179_tx_thread");
+    if (ret != thrd_success) {
+        printf("failed to start tx thread: %d\n", ret);
+        status = ERR_BAD_STATE;
+        goto tx_thread_fail;
+    }
+
+    thrd_detach(eth->rx_thr);
+    thrd_detach(eth->tx_thr);
+
+    return sizeof(*reply);
+
+tx_thread_fail:
+    thrd_detach(eth->rx_thr);
+rx_thread_fail:
+    eth_fifo_cleanup(reply);
+clone_producer_fail:
+    mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)eth->tx_entries, 0);
+map_tx_entries_fail:
+    mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)eth->rx_entries, 0);
+map_rx_entries_fail:
+    eth_fifo_cleanup(&eth->fifo);
+clone_consumer_fail:
+    eth_fifo_cleanup(&fifo);
+    return status;
+}
+
+static ssize_t ax88179_set_io_buf(ax88179_t* eth, const void* in_buf, size_t in_len) {
+    if (in_len < sizeof(eth_set_io_buf_args_t) || !in_buf) return ERR_INVALID_ARGS;
+
+    const eth_set_io_buf_args_t* args = in_buf;
+    eth->io_vmo = args->io_buf_vmo;
+
+    mx_status_t status = mx_vmar_map(mx_vmar_root_self(), 0, eth->io_vmo, args->rx_offset,
+            args->rx_len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (uintptr_t*)&eth->rx_map);
+    if (status != NO_ERROR) {
+        printf("ax88179: could not map rx buffer: %d\n", status);
+        goto map_rx_failed;
+    }
+
+    status = mx_vmar_map(mx_vmar_root_self(), 0, eth->io_vmo, args->tx_offset,
+            args->tx_len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (uintptr_t*)&eth->tx_map);
+    if (status != NO_ERROR) {
+        printf("ax88179: could not map tx buffer: %d\n", status);
+        goto map_tx_failed;
+    }
+    return NO_ERROR;
+
+map_tx_failed:
+    mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)eth->rx_map, 0);
+map_rx_failed:
+    mx_handle_close(eth->io_vmo);
+    eth->io_vmo = MX_HANDLE_INVALID;
+    return status;
+}
+
+static ssize_t ax88179_ioctl(mx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
+        void* out_buf, size_t out_len) {
+    ax88179_t* eth = get_ax88179(dev);
     switch (op) {
     case IOCTL_ETHERNET_GET_MAC_ADDR: {
-        uint8_t* mac = reply;
-        if (max < ETH_MAC_SIZE) return ERR_BUFFER_TOO_SMALL;
+        uint8_t* mac = out_buf;
+        if (out_len < ETH_MAC_SIZE) return ERR_BUFFER_TOO_SMALL;
         ax88179_get_mac_addr(dev, mac);
         return ETH_MAC_SIZE;
     }
     case IOCTL_ETHERNET_GET_MTU: {
-        size_t* mtu = reply;
-        if (max < sizeof(*mtu)) return ERR_BUFFER_TOO_SMALL;
+        size_t* mtu = out_buf;
+        if (out_len < sizeof(*mtu)) return ERR_BUFFER_TOO_SMALL;
         *mtu = ax88179_get_mtu(dev);
         return sizeof(*mtu);
     }
+    case IOCTL_ETHERNET_GET_FIFO:
+        return ax88179_get_fifo(eth, in_buf, in_len, out_buf, out_len);
+    case IOCTL_ETHERNET_SET_IO_BUF:
+        return ax88179_set_io_buf(eth, in_buf, in_len);
     default:
         return ERR_NOT_SUPPORTED;
     }
-}
-
-// simplified read/write interface
-
-static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
-  if (len < ax88179_get_mtu(dev)) {
-        xprintf("%s: ERR_BUFFER_TOO_SMALL\n", __func__);
-        return ERR_BUFFER_TOO_SMALL;
-    }
-    return ax88179_recv(dev, data, len);
-}
-
-static ssize_t eth_write(mx_device_t* dev, const void* data, size_t len, mx_off_t off) {
-    return ax88179_send(dev, data, len);
 }
 
 static mx_protocol_device_t ax88179_device_proto = {
     .ioctl = ax88179_ioctl,
     .unbind = ax88179_unbind,
     .release = ax88179_release,
-    .read = eth_read,
-    .write = eth_write,
 };
 
 #define READ_REG(r, len) \
