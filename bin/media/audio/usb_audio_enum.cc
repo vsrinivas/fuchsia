@@ -29,6 +29,10 @@ UsbAudioEnum::UsbAudioEnum() {
 
   for (struct dirent* entry = readdir(dir); entry != nullptr;
        entry = readdir(dir)) {
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+      continue;
+    }
+
     std::ostringstream device_path_stream;
     device_path_stream << kAudioDeviceClassPath << "/" << entry->d_name;
     const std::string& device_path = device_path_stream.str();
