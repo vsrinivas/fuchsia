@@ -13,15 +13,66 @@
 #include <new.h>
 #include <trace.h>
 
+#include <kernel/event.h>
+
 #include <magenta/handle.h>
 #include <magenta/message_packet.h>
 #include <magenta/port_client.h>
+#include <magenta/wait_event.h>
 
 #include <mxtl/type_support.h>
 
 #define LOCAL_TRACE 0
 
 constexpr mx_rights_t kDefaultChannelRights = MX_RIGHT_TRANSFER | MX_RIGHT_READ | MX_RIGHT_WRITE;
+
+
+// MessageWaiter's state is guarded by the lock of the
+// owning ChannelDispatcher, and Deliver(), Signal(),
+// and get_msg() methods must only be called under
+// that lock.
+//
+// See also: comments in ChannelDispatcher::Call()
+class MessageWaiter : public mxtl::DoublyLinkedListable<MessageWaiter*> {
+public:
+    MessageWaiter(uint32_t txid) : txid_(txid), signaled_(false) {
+    }
+    ~MessageWaiter() {
+    }
+
+    int Deliver(mxtl::unique_ptr<MessagePacket> msg) {
+        txid_ = msg->get_txid();
+        msg_ = mxtl::move(msg);
+        signaled_ = true;
+        return event_.Signal(NO_ERROR);
+    }
+
+    int Cancel(status_t status) {
+        signaled_ = true;
+        return event_.Signal(status);
+    }
+
+    uint32_t get_txid() const { return txid_; }
+
+    mx_status_t Wait(lk_time_t timeout) {
+        return event_.Wait(timeout);
+    }
+
+    // Returns any delivered message via out and
+    // returns true if a message was delivered or
+    // the Waiter was otherwise Signal()ed.
+    bool EndWait(mxtl::unique_ptr<MessagePacket>* out) {
+        *out = mxtl::move(msg_);
+        return signaled_;
+    }
+
+private:
+    mxtl::unique_ptr<MessagePacket> msg_;
+    WaitEvent event_;
+    uint32_t txid_;
+    bool signaled_;
+};
+
 
 // static
 status_t ChannelDispatcher::Create(uint32_t flags,
@@ -65,6 +116,15 @@ void ChannelDispatcher::on_zero_handles() {
     {
         AutoLock lock(&lock_);
         other = mxtl::move(other_);
+
+        // (3A) Abort any waiting Call operations
+        // because we've been canceled by reason
+        // of our local handle going away.
+        // Remove waiter from list.
+        while (!waiters_.is_empty()) {
+            auto waiter = waiters_.pop_front();
+            waiter->Cancel(ERR_HANDLE_CLOSED);
+        }
     }
 
     // Ensure other endpoint detaches us
@@ -82,6 +142,15 @@ void ChannelDispatcher::OnPeerZeroHandles() {
     state_tracker_.UpdateState(MX_CHANNEL_WRITABLE, MX_CHANNEL_PEER_CLOSED);
     if (iopc_)
         iopc_->Signal(MX_CHANNEL_PEER_CLOSED, &lock_);
+
+    // (3B) Abort any waiting Call operations
+    // because we've been canceled by reason
+    // of the opposing endpoint going away.
+    // Remove waiter from list.
+    while (!waiters_.is_empty()) {
+        auto waiter = waiters_.pop_front();
+        waiter->Cancel(ERR_REMOTE_CLOSED);
+    }
 }
 
 status_t ChannelDispatcher::Read(uint32_t* msg_size,
@@ -126,19 +195,85 @@ status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
         other = other_;
     }
 
-    return other->WriteSelf(mxtl::move(msg));
+    other->WriteSelf(mxtl::move(msg));
+    return NO_ERROR;
 }
 
-status_t ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
+status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
+                                 mx_time_t timeout, bool* return_handles,
+                                 mxtl::unique_ptr<MessagePacket>* reply) {
+
+    MessageWaiter waiter(msg->get_txid());
+
+    mxtl::RefPtr<ChannelDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        if (!other_) {
+            // |msg| will be destroyed but we want to keep the handles alive since
+            // the caller should put them back into the process table.
+            msg->set_owns_handles(false);
+            *return_handles = true;
+            return ERR_REMOTE_CLOSED;
+        }
+        other = other_;
+
+        // (0) Before writing outbound message and waiting.
+        // Add our stack-allocated waiter to the list.
+        waiters_.push_back(&waiter);
+    }
+
+    // (1) Write outbound message to opposing endpoint.
+    other->WriteSelf(mxtl::move(msg));
+
+    // (2) Wait for notification via waiter's event or
+    // timeout to occur.
+    mx_status_t status = waiter.Wait(mx_time_to_lk(timeout));
+
+    // (3) see (3A), (3B) above or (3C) below for paths where
+    // the waiter could be signaled and removed from the list.
+    //
+    // If the timeout expires, the waiter is not removed
+    // from the list *but* another thread could still
+    // cause (3A), (3B), or (3C) before the lock below.
+    {
+        AutoLock lock(&lock_);
+
+        // (4) If any of (3A), (3B), or (3C) have occured,
+        // we were removed from the waiters list already
+        // and get_msg() returns true.  If false is
+        // returned it's our job to remove ourselves
+        // from the list.
+        if (!waiter.EndWait(reply))
+            waiters_.erase(waiter);
+    }
+
+    return status;
+}
+
+void ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
     AutoLock lock(&lock_);
     auto size = msg->data_size();
+
+    if (!waiters_.is_empty()) {
+        // If the far side is waiting for replies to messages
+        // send via "call", see if this message has a matching
+        // txid to one of the waiters, and if so, deliver it.
+        uint32_t txid = msg->get_txid();
+        for (auto& waiter: waiters_) {
+            // (3C) Deliver message to waiter.
+            // Remove waiter from list.
+            if (waiter.get_txid() == txid) {
+                waiter.Deliver(mxtl::move(msg));
+                waiters_.erase(waiter);
+                return;
+            }
+        }
+    }
     messages_.push_back(mxtl::move(msg));
 
     state_tracker_.UpdateState(0u, MX_CHANNEL_READABLE);
     if (iopc_)
         iopc_->Signal(MX_CHANNEL_READABLE, size, &lock_);
-
-    return NO_ERROR;
 }
 
 status_t ChannelDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {

@@ -23,6 +23,10 @@
 // for the operation.
 #define ERR_NO_MEMORY (-4)
 
+// ERR_CALL_FAILED: The second phase of mx_channel_call() did not complete
+// successfully.
+#define ERR_CALL_FAILED (-53)
+
 // ======= Parameter errors =======
 // ERR_INVALID_ARGS: an argument is invalid, ex. null pointer
 #define ERR_INVALID_ARGS (-10)
@@ -123,4 +127,3 @@
 #define ERR_BAD_PATH (-50)
 #define ERR_NOT_DIR (-51)
 #define ERR_NOT_FILE (-52)
-

@@ -142,6 +142,17 @@ typedef uint32_t mx_signals_t;
 typedef uint64_t mx_koid_t;
 #define MX_KOID_INVALID ((uint64_t) 0)
 
+typedef struct {
+    void* wr_bytes;
+    mx_handle_t* wr_handles;
+    void *rd_bytes;
+    mx_handle_t* rd_handles;
+    uint32_t wr_num_bytes;
+    uint32_t wr_num_handles;
+    uint32_t rd_num_bytes;
+    uint32_t rd_num_handles;
+} mx_channel_call_args_t;
+
 // Structure for mx_handle_wait_many():
 typedef struct {
     mx_handle_t handle;

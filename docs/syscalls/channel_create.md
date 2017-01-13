@@ -56,5 +56,6 @@ of failure, a negative error value is returned.
 [handle_replace](handle_replace.md),
 [handle_wait_one](handle_wait_one.md),
 [handle_wait_many](handle_wait_many.md),
+[channel_call](channel_call.md),
 [channel_read](channel_read.md),
 [channel_write](channel_write.md).

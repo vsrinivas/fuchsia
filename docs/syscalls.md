@@ -38,6 +38,7 @@
 + [task_kill](syscalls/task_kill.md) - cause a task to stop running
 
 ## Channels
++ [channel_call](syscalls/channel_call.md) - synchronously send a message and receive a reply
 + [channel_create](syscalls/channel_create.md) - create a new channel
 + [channel_read](syscalls/channel_read.md) - receive a message from a channel
 + [channel_write](syscalls/channel_write.md) - write a message to a channel

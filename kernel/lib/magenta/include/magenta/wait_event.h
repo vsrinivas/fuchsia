@@ -36,8 +36,8 @@ public:
     }
 
     // returns number of ready threads
-    int Signal() {
-        return event_signal_etc(&event_, false, NO_ERROR);
+    int Signal(status_t status = NO_ERROR) {
+        return event_signal_etc(&event_, false, status);
     }
 
 private:

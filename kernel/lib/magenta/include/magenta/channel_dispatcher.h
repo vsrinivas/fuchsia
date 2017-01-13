@@ -12,10 +12,12 @@
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
 
+#include <mxtl/intrusive_double_list.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/unique_ptr.h>
 
 class PortClient;
+class MessageWaiter;
 class MessagePacket;
 
 class ChannelDispatcher final : public Dispatcher {
@@ -48,19 +50,24 @@ public:
 
     // Write to the opposing endpoint's message queue.
     status_t Write(mxtl::unique_ptr<MessagePacket> msg);
+    status_t Call(mxtl::unique_ptr<MessagePacket> msg,
+                  mx_time_t timeout, bool* return_handles,
+                  mxtl::unique_ptr<MessagePacket>* reply);
 
 private:
     using MessageList = mxtl::DoublyLinkedList<mxtl::unique_ptr<MessagePacket>>;
+    using WaiterList = mxtl::DoublyLinkedList<MessageWaiter*>;
 
     ChannelDispatcher(uint32_t flags);
     void Init(mxtl::RefPtr<ChannelDispatcher> other);
-    status_t WriteSelf(mxtl::unique_ptr<MessagePacket> msg);
+    void WriteSelf(mxtl::unique_ptr<MessagePacket> msg);
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     void OnPeerZeroHandles();
 
     const uint32_t flags_;
     Mutex lock_;
     MessageList messages_;
+    WaiterList waiters_;
     mxtl::unique_ptr<PortClient> iopc_;
     StateTracker state_tracker_;
     mxtl::RefPtr<ChannelDispatcher> other_;

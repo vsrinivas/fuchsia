@@ -32,8 +32,19 @@ public:
     Handle* const* handles() const { return handles_.get(); }
     Handle** mutable_handles() { return handles_.get(); }
 
+    // channel calls treat the leading uint32_t of the payload as
+    // a transaction id
+    uint32_t get_txid() const {
+        if (data_size_ < sizeof(uint32_t)) {
+            return 0;
+        } else {
+            return *(reinterpret_cast<uint32_t*>(data_.get()));
+        }
+    }
+
 private:
     MessagePacket(uint32_t data_size, uint32_t num_handles);
+
 
     bool owns_handles_;
     uint32_t data_size_;
