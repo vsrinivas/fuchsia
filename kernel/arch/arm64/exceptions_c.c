@@ -157,7 +157,8 @@ void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags
             }
 #endif
 
-            printf("instruction abort: PC at %#" PRIx64 "\n", iframe->elr);
+            printf("instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64 "\n",
+                    iframe->elr, is_user, far);
             break;
         }
         case 0b100100: /* data abort from lower level */
