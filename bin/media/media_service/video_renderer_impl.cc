@@ -80,29 +80,20 @@ void VideoRendererImpl::View::OnDraw() {
   } else {
     auto children = fidl::Array<uint32_t>::New(0);
 
-    // Shrink-to-fit the video horizontally, if necessary, otherwise center it.
+    // Scale the video so it fills the view.
     float width_scale = static_cast<float>(view_size.width) /
                         static_cast<float>(video_size.width);
     float height_scale = static_cast<float>(view_size.height) /
                          static_cast<float>(video_size.height);
-    float scale = std::min(width_scale, height_scale);
-    float translate_x = 0.0f;
 
-    if (scale > 1.0f) {
-      scale = 1.0f;
-      translate_x = (view_size.width - video_size.width) / 2.0f;
-    }
-
-    mozart::TransformPtr transform = mozart::Translate(
-        mozart::CreateScaleTransform(scale, scale), translate_x, 0);
+    mozart::TransformPtr transform =
+        mozart::CreateScaleTransform(width_scale, height_scale);
 
     // Create the image node and apply the transform to it to scale and
     // position it properly.
     auto video_node = MakeVideoNode(std::move(transform), update);
     update->nodes.insert(children.size() + 1, std::move(video_node));
     children.push_back(children.size() + 1);
-
-    // TODO(dalesat): More nodes for text, subpicture.
 
     // Create the root node.
     auto root = mozart::Node::New();
