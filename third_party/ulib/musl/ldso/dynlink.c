@@ -1231,7 +1231,7 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
  * process dependencies and relocations for the main application and
  * transfer control to its entry point. */
 
-static void* dls3(mx_handle_t exec_vmo, int argc, char** argv) {
+static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char** argv) {
     static struct dso app;
     size_t i;
     char* env_preload = 0;
@@ -1463,6 +1463,7 @@ dl_start_return_t __dls3(void* start_arg) {
         nbytes = nhandles = 0;
     }
 
+    mx_handle_t thread_self = MX_HANDLE_INVALID;
     mx_handle_t exec_vmo = MX_HANDLE_INVALID;
     for (int i = 0; i < nhandles; ++i) {
         switch (MX_HND_INFO_TYPE(handle_info[i])) {
@@ -1496,6 +1497,9 @@ dl_start_return_t __dls3(void* start_arg) {
         case MX_HND_TYPE_VMAR_ROOT:
             __magenta_vmar_root_self = handles[i];
             break;
+        case MX_HND_TYPE_THREAD_SELF:
+            thread_self = handles[i];
+            break;
         default:
             _mx_handle_close(handles[i]);
             break;
@@ -1506,6 +1510,8 @@ dl_start_return_t __dls3(void* start_arg) {
         error("bootstrap message bad no proc self");
     if (__magenta_vmar_root_self == MX_HANDLE_INVALID)
         error("bootstrap message bad no root vmar");
+    if (thread_self == MX_HANDLE_INVALID)
+        error("bootstrap message bad no thread self");
 
     // Unpack the environment strings so dls3 can use getenv.
     char* argv[procargs->args_num + 1];
@@ -1514,7 +1520,11 @@ dl_start_return_t __dls3(void* start_arg) {
     if (status == NO_ERROR)
         __environ = envp;
 
-    void* entry = dls3(exec_vmo, procargs->args_num, argv);
+    void* entry = dls3(thread_self, exec_vmo, procargs->args_num, argv);
+
+    // We can now close thread_self, after dls3 has used it.
+    if (thread_self != MX_HANDLE_INVALID)
+        _mx_handle_close(thread_self);
 
     // Reset it so there's no dangling pointer to this stack frame.
     // Presumably the parent will send the same strings in the main
