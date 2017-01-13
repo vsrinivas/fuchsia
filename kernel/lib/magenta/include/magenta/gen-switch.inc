@@ -1,11 +1,9 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // This is a GENERATED file. The license governing this file can be found in the LICENSE file.
 
     case 0: sfunc = reinterpret_cast<syscall_func>(sys_time_get);
        break;
     case 1: sfunc = reinterpret_cast<syscall_func>(sys_nanosleep);
-       break;
-    case 3: sfunc = reinterpret_cast<syscall_func>(sys_ticks_per_second);
        break;
     case 6: sfunc = reinterpret_cast<syscall_func>(sys_handle_close);
        break;

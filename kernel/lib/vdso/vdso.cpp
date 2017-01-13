@@ -9,6 +9,7 @@
 
 #include <kernel/vm/vm_aspace.h>
 #include <kernel/vm/vm_object.h>
+#include <platform.h>
 
 #include "vdso-code.h"
 
@@ -66,5 +67,6 @@ VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {
     // can warn if the initializer list omits any member.
     *constants_window.data() = (vdso_constants) {
         arch_max_num_cpus(),
+        ticks_per_second(),
     };
 }

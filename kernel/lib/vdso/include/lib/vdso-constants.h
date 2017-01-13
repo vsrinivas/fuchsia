@@ -24,4 +24,6 @@ struct vdso_constants {
     // of the booted system.
     uint32_t max_num_cpus;
 
+    // Conversion factor for mx_ticks_get return values to seconds.
+    uint64_t ticks_per_second;
 };

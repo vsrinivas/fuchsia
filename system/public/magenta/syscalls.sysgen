@@ -42,7 +42,7 @@ syscall ticks_get vdsocall
     ()
     returns (uint64_t);
 
-syscall ticks_per_second
+syscall ticks_per_second vdsocall leafc
     ()
     returns (uint64_t);
 

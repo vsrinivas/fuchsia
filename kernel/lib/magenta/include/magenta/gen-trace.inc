@@ -1,9 +1,8 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // This is a GENERATED file. The license governing this file can be found in the LICENSE file.
 
 {0, 1, "time_get"},
 {1, 1, "nanosleep"},
-{3, 0, "ticks_per_second"},
 {6, 1, "handle_close"},
 {7, 3, "handle_duplicate"},
 {8, 3, "handle_replace"},

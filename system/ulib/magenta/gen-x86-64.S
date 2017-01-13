@@ -1,9 +1,8 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
 // This is a GENERATED file. The license governing this file can be found in the LICENSE file.
 
 m_syscall 1 mx_time_get 0
 m_syscall 1 mx_nanosleep 1
-m_syscall 0 mx_ticks_per_second 3
 m_syscall 1 mx_handle_close 6
 m_syscall 3 mx_handle_duplicate 7
 m_syscall 3 mx_handle_replace 8

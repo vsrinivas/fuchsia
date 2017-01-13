@@ -95,10 +95,6 @@ mx_status_t sys_clock_adjust(mx_handle_t hrsrc, uint32_t clock_id, int64_t offse
     }
 }
 
-uint64_t sys_ticks_per_second() {
-    return ticks_per_second();
-}
-
 mx_status_t sys_event_create(uint32_t options, mx_handle_t* _out) {
     LTRACEF("options 0x%x\n", options);
 

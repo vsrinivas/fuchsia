@@ -21,6 +21,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/mx_num_cpus.c \
     $(LOCAL_DIR)/mx_status_get_string.c \
     $(LOCAL_DIR)/mx_ticks_get.c \
+    $(LOCAL_DIR)/mx_ticks_per_second.c \
     $(LOCAL_DIR)/mx_version_get.c \
 
 ifeq ($(ARCH),arm)
