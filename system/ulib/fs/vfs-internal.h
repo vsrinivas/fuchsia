@@ -4,12 +4,14 @@
 
 #pragma once
 
+#ifdef __Fuchsia__
 // TODO(smklein): Move thse ioctls to public/magenta/fs/vfs.h
 #include <magenta/device/device.h>
 #include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+#endif
 
 #include <fs/trace.h>
 #include <fs/vfs.h>
@@ -31,4 +33,3 @@
 typedef struct vnode {
     VNODE_BASE_FIELDS;
 } vnode_t;
-

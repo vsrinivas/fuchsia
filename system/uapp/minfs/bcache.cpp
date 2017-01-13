@@ -9,8 +9,6 @@
 
 #include <fs/trace.h>
 
-#include <magenta/device/device.h>
-
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 

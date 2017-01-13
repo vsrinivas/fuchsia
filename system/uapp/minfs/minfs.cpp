@@ -9,9 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <magenta/new.h>
-#include <magenta/syscalls.h>
-
 #include <mxtl/unique_ptr.h>
 
 #include "minfs-private.h"

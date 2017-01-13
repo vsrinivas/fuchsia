@@ -10,8 +10,11 @@
 #include <sys/stat.h>
 
 #include <magenta/device/devmgr.h>
+
+#ifdef __Fuchsia__
 #include <magenta/syscalls.h>
 #include <mxio/vfs.h>
+#endif
 
 #include "minfs-private.h"
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
@@ -1342,4 +1345,3 @@ vnode_ops_t minfs_ops = {
     .rename = fs_rename,
     .sync = fs_sync,
 };
-
