@@ -554,6 +554,8 @@ StoryProviderImpl::StoryProviderImpl(
   }));
 }
 
+StoryProviderImpl::~StoryProviderImpl() {}
+
 void StoryProviderImpl::AddBinding(fidl::InterfaceRequest<StoryProvider> request) {
   if (ready_) {
     bindings_.AddBinding(this, std::move(request));

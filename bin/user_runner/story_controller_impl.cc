@@ -23,6 +23,8 @@ StoryControllerImpl::StoryControllerImpl(
   });
 }
 
+StoryControllerImpl::~StoryControllerImpl() {}
+
 void StoryControllerImpl::Connect(
     fidl::InterfaceRequest<StoryController> request) {
   bindings_.AddBinding(this, std::move(request));

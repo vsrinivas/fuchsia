@@ -89,9 +89,9 @@ class LinkImpl : public StoryStorageLinkWatcher {
 
   void DatabaseChanged(LinkConnection* src);
   void NotifyWatchers(LinkConnection* src);
-  void ReadLinkData(const std::function<void()>& done);
-  void WriteLinkData(const std::function<void()>& done);
-  void WriteLinkDataImpl(const std::function<void()>& done);
+  void ReadLinkData(const std::function<void()>& callback);
+  void WriteLinkData(const std::function<void()>& callback);
+  void WriteLinkDataImpl(const std::function<void()>& callback);
 
   // |StoryStorageLinkWatcher|
   void OnChange(LinkDataPtr link_data) override;
@@ -115,8 +115,8 @@ class LinkConnection : public Link {
   // given LinkImpl, which takes ownership. It cannot be on the stack
   // because it destroys itself when its fidl connection closes. The
   // constructor is therefore private and only accessible from here.
-  static void New(LinkImpl* impl, fidl::InterfaceRequest<Link> link_request) {
-    new LinkConnection(impl, std::move(link_request));
+  static void New(LinkImpl* const impl, fidl::InterfaceRequest<Link> request) {
+    new LinkConnection(impl, std::move(request));
   }
 
   void NotifyWatchers(const CrtJsonDoc& doc, const bool self_notify);

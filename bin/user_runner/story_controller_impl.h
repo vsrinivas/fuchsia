@@ -31,7 +31,7 @@ class StoryControllerImpl : public StoryController, public ModuleWatcher {
  public:
   StoryControllerImpl(StoryDataPtr story_data,
                       StoryProviderImpl* story_provider_impl);
-  ~StoryControllerImpl() override = default;
+  ~StoryControllerImpl() override;
 
   // Used by StoryProviderImpl.
   void Connect(fidl::InterfaceRequest<StoryController> request);

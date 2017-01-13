@@ -124,6 +124,8 @@ StoryImpl::StoryImpl(
   binding_.Bind(std::move(story_runner_request));
 }
 
+StoryImpl::~StoryImpl() {}
+
 void StoryImpl::ReleaseModule(
     ModuleControllerImpl* const module_controller_impl) {
   auto f = std::find_if(connections_.begin(), connections_.end(),
@@ -137,11 +139,11 @@ void StoryImpl::ReleaseModule(
 }
 
 void StoryImpl::CreateLink(const fidl::String& name,
-                           fidl::InterfaceRequest<Link> link) {
+                           fidl::InterfaceRequest<Link> request) {
   StoryStoragePtr story_storage_dup;
   story_storage_->Dup(story_storage_dup.NewRequest());
   auto* const link_impl =
-      new LinkImpl(std::move(story_storage_dup), name, std::move(link));
+      new LinkImpl(std::move(story_storage_dup), name, std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
       [this, link_impl] { DisposeLink(link_impl); });
@@ -218,25 +220,25 @@ void StoryImpl::StartModule(
 }
 
 void StoryImpl::GetLedger(const std::string& module_name,
-                          fidl::InterfaceRequest<ledger::Ledger> req,
+                          fidl::InterfaceRequest<ledger::Ledger> request,
                           const std::function<void(ledger::Status)>& result) {
   FTL_DCHECK(!module_name.empty());
-  ledger_repository_->GetLedger(to_array(module_name), std::move(req), result);
+  ledger_repository_->GetLedger(to_array(module_name), std::move(request), result);
 }
 
 // |StoryRunner|
-void StoryImpl::GetStory(fidl::InterfaceRequest<Story> story_request) {
+void StoryImpl::GetStory(fidl::InterfaceRequest<Story> request) {
   Connection connection;
 
   connection.story_connection.reset(
-      new StoryConnection(this, "", nullptr, std::move(story_request)));
+      new StoryConnection(this, "", nullptr, std::move(request)));
 
   connections_.emplace_back(std::move(connection));
 }
 
 // |StoryRunner|
-void StoryImpl::Stop(const StopCallback& done) {
-  teardown_.push_back(done);
+void StoryImpl::Stop(const StopCallback& callback) {
+  teardown_.push_back(callback);
 
   if (teardown_.size() != 1) {
     // A teardown is in flight, just piggyback on it.

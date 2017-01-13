@@ -89,7 +89,7 @@ class StoryImpl : public StoryRunner {
             fidl::InterfaceRequest<StoryRunner> story_runner_request);
 
   // These methods are called by StoryConnection.
-  void CreateLink(const fidl::String& name, fidl::InterfaceRequest<Link> link);
+  void CreateLink(const fidl::String& name, fidl::InterfaceRequest<Link> request);
   void StartModule(const fidl::String& query,
                    fidl::InterfaceHandle<Link> link,
                    fidl::InterfaceHandle<ServiceProvider> outgoing_services,
@@ -104,13 +104,13 @@ class StoryImpl : public StoryRunner {
 
  private:
   // Deletes itself on Stop().
-  ~StoryImpl() override = default;
+  ~StoryImpl() override;
 
   void DisposeLink(LinkImpl* link);
 
   // |StoryRunner|
-  void GetStory(fidl::InterfaceRequest<Story> story_request) override;
-  void Stop(const StopCallback& done) override;
+  void GetStory(fidl::InterfaceRequest<Story> request) override;
+  void Stop(const StopCallback& callback) override;
 
   // Phases of Stop(), broken out into separate methods.
   void StopModules();

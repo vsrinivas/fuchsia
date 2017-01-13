@@ -40,7 +40,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
       fidl::InterfaceHandle<ledger::Ledger> ledger,
       ledger::LedgerRepositoryPtr ledger_repository);
 
-  ~StoryProviderImpl() override = default;
+  ~StoryProviderImpl() override;
 
   void AddBinding(fidl::InterfaceRequest<StoryProvider> request);
 

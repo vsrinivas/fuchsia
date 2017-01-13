@@ -127,12 +127,13 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
       story_page_(std::move(story_page)) {
   bindings_.AddBinding(this, std::move(request));
 
-  fidl::InterfaceHandle<ledger::PageWatcher> watcher;
-  page_watcher_binding_.Bind(watcher.NewRequest());
   if (story_page_.is_bound()) {
-    story_page_->Watch(std::move(watcher), [](ledger::Status status) {});
+    story_page_->Watch(page_watcher_binding_.NewBinding(),
+                       [](ledger::Status status) {});
   }
 }
+
+StoryStorageImpl::~StoryStorageImpl() {}
 
 // |StoryStorage|
 void StoryStorageImpl::ReadLinkData(const fidl::String& link_id,

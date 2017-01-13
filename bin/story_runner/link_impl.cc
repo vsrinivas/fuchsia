@@ -16,13 +16,13 @@ namespace modular {
 
 LinkImpl::LinkImpl(StoryStoragePtr story_storage,
                    const fidl::String& name,
-                   fidl::InterfaceRequest<Link> link_request)
+                   fidl::InterfaceRequest<Link> request)
     : name_(name),
       story_storage_(std::move(story_storage)),
       write_link_data_(Bottleneck::FRONT, this, &LinkImpl::WriteLinkDataImpl) {
   ReadLinkData(ftl::MakeCopyable([
-    this, link_request = std::move(link_request)
-  ]() mutable { LinkConnection::New(this, std::move(link_request)); }));
+    this, request = std::move(request)
+  ]() mutable { LinkConnection::New(this, std::move(request)); }));
 }
 
 // The |LinkConnection| object knows which client made the call to Set() or

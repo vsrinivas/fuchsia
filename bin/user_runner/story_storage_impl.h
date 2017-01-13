@@ -34,7 +34,7 @@ class StoryStorageImpl : public StoryStorage, public ledger::PageWatcher {
                    const fidl::String& key,
                    fidl::InterfaceRequest<StoryStorage> request);
 
-  ~StoryStorageImpl() override = default;
+  ~StoryStorageImpl() override;
 
  private:
   // |StoryStorage|
