@@ -658,6 +658,12 @@ bool generate_legacy_assembly_arm32(
     return os.good();
 }
 
+bool generate_syscall_numbers_header(
+    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+    os << gp.entry_prefix << sc.name << " " << index << "\n";
+    return os.good();
+}
+
 bool generate_trace_info(
     int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
     if (is_vdso(sc))
@@ -681,6 +687,7 @@ enum GenType : uint32_t {
     KernelAsmIntel64,
     KernelAsmArm64,
     KernelAsmArm32,
+    SyscallNumberHeader,
     TraceInfo,
     Max
 };
@@ -700,14 +707,14 @@ const GenParams gen_params[] = {
     // The kernel header, C++.  (KernelHeaderCPP)
     {
         generate_legacy_header,
-        ".kernel.h",        // file postix.
+        ".kernel.h",        // file postfix.
         nullptr,            // no function prefix.
         "sys_",             // function name prefix.
     },
     // The kernel C++ code. A switch statement set.
     {
         generate_legacy_code,
-        ".kernel.inc",      // file postix.
+        ".kernel.inc",      // file postfix.
         nullptr,            // no function prefix.
         "sys_",             // function name prefix.
         nullptr,            // no-args (does not apply)
@@ -717,23 +724,30 @@ const GenParams gen_params[] = {
     //  The assembly file for x86-64 (KernelAsmIntel64).
     {
         generate_legacy_assembly_x64,
-        ".x86-64.S",        // file postix.
+        ".x86-64.S",        // file postfix.
         "m_syscall",        // macro name prefix.
         "mx_",              // function name prefix.
     },
     //  The assembly include file for ARM64 (KernelAsmArm64).
     {
         generate_legacy_assembly_arm64,
-        ".arm64.S",         // file postix.
+        ".arm64.S",         // file postfix.
         "m_syscall",        // macro name prefix.
         "mx_",              // function name prefix.
     },
     //  The assembly include file for ARM32 (KernelAsmArm32).
     {
         generate_legacy_assembly_arm32,
-        ".arm32.S",         // file postix.
+        ".arm32.S",         // file postfix.
         "m_syscall",        // macro name prefix.
         "mx_",              // function name prefix.
+    },
+    // A C header defining MX_SYS_* syscall number macros
+    // (SyscallNumberHeader).
+    {
+        generate_syscall_numbers_header,
+        ".syscall-numbers.h",  // file postfix.
+        "#define MX_SYS_",     // macro prefix.
     },
     // The trace subsystem data, to be interpreted as an
     // array of structs.
@@ -903,6 +917,8 @@ int main(int argc, char* argv[]) {
     if (!generator.Generate(GenType::KernelAsmArm64, output_prefix))
         return 1;
     if (!generator.Generate(GenType::KernelAsmArm32, output_prefix))
+        return 1;
+    if (!generator.Generate(GenType::SyscallNumberHeader, output_prefix))
         return 1;
     if (!generator.Generate(GenType::TraceInfo, output_prefix))
         return 1;
