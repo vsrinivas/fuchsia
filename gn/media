@@ -37,6 +37,10 @@
             "bootfs_path": "apps/media_player"
         },
         {
+            "binary": "media_player_flutter.flx",
+            "bootfs_path": "apps/media_player_flutter"
+        },
+        {
             "binary": "media_service",
             "bootfs_path": "apps/media_service"
         },
@@ -51,6 +55,12 @@
         {
             "binary": "vu_meter",
             "bootfs_path": "apps/vu_meter"
+        }
+    ],
+    "resources": [
+        {
+            "file": "apps/media/examples/media_player_flutter/media_player_flutter.config",
+            "bootfs_path": "data/media_player_flutter/media_player_flutter.config"
         }
     ]
 }
