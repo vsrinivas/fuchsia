@@ -10,12 +10,6 @@
 // file should be used for the basic rapidjson files. Other files can be
 // included from //third_party/rapidjson.
 
-#define RAPIDJSON_HAS_STDSTRING 1
-#define RAPIDJSON_HAS_CXX11_RANGE_FOR 1
-#define RAPIDJSON_HAS_CXX11_RVALUE_REFS 1
-#define RAPIDJSON_HAS_CXX11_TYPETRAITS 1
-#define RAPIDJSON_HAS_CXX11_NOEXCEPT 1
-
 #include <sstream>
 #include <string>
 
