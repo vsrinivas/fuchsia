@@ -21,12 +21,16 @@
             "bootfs_path": "apps/media_audio_apptests"
         },
         {
-            "binary": "media_cpp_apptests",
-            "bootfs_path": "apps/media_cpp_apptests"
-        },
-        {
             "binary": "media_demux_apptests",
             "bootfs_path": "apps/media_demux_apptests"
+        },
+        {
+            "binary": "media_lib_timeline_tests",
+            "bootfs_path": "apps/media_lib_timeline_tests"
+        },
+        {
+            "binary": "media_lib_transport_tests",
+            "bootfs_path": "apps/media_lib_transport_tests"
         },
         {
             "binary": "media_player",
