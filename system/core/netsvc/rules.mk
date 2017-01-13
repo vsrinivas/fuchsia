@@ -14,7 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/netsvc.c \
     $(LOCAL_DIR)/netfile.c
 
-MODULE_STATIC_LIBS := ulib/inet6
+MODULE_STATIC_LIBS := ulib/inet6 ulib/eth
 
 MODULE_LIBS := ulib/mxio ulib/launchpad ulib/magenta ulib/musl
 
