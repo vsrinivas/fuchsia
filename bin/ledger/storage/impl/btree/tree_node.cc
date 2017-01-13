@@ -44,17 +44,6 @@ void TreeNode::FromId(
       });
 }
 
-Status TreeNode::FromIdSynchronous(PageStorage* page_storage,
-                                   ObjectIdView id,
-                                   std::unique_ptr<const TreeNode>* node) {
-  std::unique_ptr<const Object> object;
-  Status status = page_storage->GetObjectSynchronous(id, &object);
-  if (status != Status::OK) {
-    return status;
-  }
-  return FromObject(page_storage, std::move(object), node);
-}
-
 Status TreeNode::FromObject(PageStorage* page_storage,
                             std::unique_ptr<const Object> object,
                             std::unique_ptr<const TreeNode>* node) {

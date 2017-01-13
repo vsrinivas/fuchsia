@@ -110,17 +110,6 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   EXPECT_EQ(Status::NOT_FOUND, status);
 }
 
-TEST_F(TreeNodeTest, CreateGetTreeNodeSynchronous) {
-  std::unique_ptr<const TreeNode> node = CreateEmptyNode();
-
-  std::unique_ptr<const TreeNode> found_node;
-  EXPECT_EQ(Status::OK, TreeNode::FromIdSynchronous(
-                            &fake_storage_, node->GetId(), &found_node));
-
-  EXPECT_EQ(Status::NOT_FOUND, TreeNode::FromIdSynchronous(
-                                   &fake_storage_, RandomId(), &found_node));
-}
-
 TEST_F(TreeNodeTest, GetEntryChild) {
   int size = 10;
   std::vector<Entry> entries = GetEntries(size);
@@ -396,9 +385,7 @@ TEST_F(TreeNodeTest, Serialization) {
         object = std::move(returned_object);
       });
   EXPECT_EQ(Status::OK, status);
-  std::unique_ptr<const TreeNode> retrieved_node;
-  EXPECT_EQ(Status::OK, TreeNode::FromIdSynchronous(&fake_storage_,
-                                                    object->GetId(), &node));
+  std::unique_ptr<const TreeNode> retrieved_node = FromId(object->GetId());
 
   ftl::StringView data;
   EXPECT_EQ(Status::OK, object->GetData(&data));

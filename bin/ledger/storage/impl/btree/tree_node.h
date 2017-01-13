@@ -108,14 +108,6 @@ class TreeNode {
       ObjectIdView id,
       std::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
 
-  // Synchronously creates a |TreeNode| object for an existing node and stores
-  // it in the given |node|.
-  // TODO(nellyv): Should be removed. See LE-31: Remove synchronous methods from
-  // PageStorage.
-  static Status FromIdSynchronous(PageStorage* page_storage,
-                                  ObjectIdView id,
-                                  std::unique_ptr<const TreeNode>* node);
-
   // Creates a |TreeNode| object for an existing |object| and stores it in the
   // given |node|.
   static Status FromObject(PageStorage* page_storage,
