@@ -101,3 +101,19 @@ static_assert(!mxtl::is_base_of<sE, sC>::value, "sE should not be a base of sC!"
 static_assert(!mxtl::is_base_of<sE, sD>::value, "sE should not be a base of sD!");
 
 }  // namespace is_base_of_tests
+
+namespace has_virtual_destructor {
+
+struct A            {         ~A() { } };
+struct B            { virtual ~B() { } };
+struct C : public A {         ~C() { } };
+struct D : public B {         ~D() { } };
+struct E : public A { virtual ~E() { } };
+
+static_assert(!mxtl::has_virtual_destructor<A>::value, "A should have no virtual destructor");
+static_assert( mxtl::has_virtual_destructor<B>::value, "B should have a virtual destructor");
+static_assert(!mxtl::has_virtual_destructor<C>::value, "C should have no virtual destructor");
+static_assert( mxtl::has_virtual_destructor<D>::value, "D should have a virtual destructor");
+static_assert( mxtl::has_virtual_destructor<E>::value, "E should have a virtual destructor");
+
+}  // namespace has_virtual_destructor

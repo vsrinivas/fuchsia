@@ -192,4 +192,8 @@ struct is_class : public integral_constant<bool, __is_class(T)> { };
 template <typename Base, typename Derived>
 struct is_base_of : public integral_constant<bool, __is_base_of(Base, Derived)> { };
 
+// has_virtual_destructor
+template <typename T>
+struct has_virtual_destructor : public integral_constant<bool, __has_virtual_destructor(T)> { };
+
 }  // namespace mxtl
