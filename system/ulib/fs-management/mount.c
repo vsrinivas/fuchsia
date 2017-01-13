@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fs/vfs.h>
 #include <fs-management/mount.h>
 
 #include <errno.h>
@@ -62,62 +63,80 @@ static mx_status_t mount_remote_handle(const char* where, mx_handle_t* h) {
     return status;
 }
 
-static mx_status_t mount_minfs(const char* devicepath, const char* mountpath,
-                               const mount_options_t* options,
-                               mx_status_t (*cb)(int argc, const char** argv, mx_handle_t h)) {
-    mx_handle_t h;
-    mx_status_t status = mount_remote_handle(mountpath, &h);
-    if (status != NO_ERROR) {
+static mx_status_t mount_minfs(int devicefd, const char* mountpath, const mount_options_t* options,
+                               MountCallback cb) {
+    mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
+    uint32_t ids[MXIO_MAX_HANDLES * 2];
+    size_t n = 0;
+    mx_status_t status;
+    if ((status = mount_remote_handle(mountpath, hnd)) != NO_ERROR) {
         fprintf(stderr, "Failed to mount remote handle handle on mount path\n");
+        close(devicefd);
         return status;
     }
+    ids[n] = MX_HND_TYPE_USER0;
+    n++;
+    if ((status = mxio_transfer_fd(devicefd, FS_FD_BLOCKDEVICE, hnd + n, ids + n)) <= 0) {
+        fprintf(stderr, "Failed to access device handle\n");
+        close(devicefd);
+        return status != 0 ? status : ERR_BAD_STATE;
+    }
+    n += status;
 
     if (options->verbose_mount) {
-        printf("fs_mount: Launching Minfs [%s]\n", devicepath);
+        printf("fs_mount: Launching Minfs\n");
     }
-    const char* argv[] = { "/boot/bin/minfs", devicepath, "mount" };
-    return cb(arraylen(argv), argv, h);
+    const char* argv[] = { "/boot/bin/minfs", "mount" };
+    return cb(arraylen(argv), argv, hnd, ids, n);
 }
 
-static mx_status_t mount_fat(const char* devicepath, const char* mountpath,
-                             const mount_options_t* options,
-                             mx_status_t (*cb)(int argc, const char** argv, mx_handle_t h)) {
-    mx_handle_t h;
-    mx_status_t status = mount_remote_handle(mountpath, &h);
-    if (status != NO_ERROR) {
+static mx_status_t mount_fat(int devicefd, const char* mountpath, const mount_options_t* options,
+                             MountCallback cb) {
+    mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
+    uint32_t ids[MXIO_MAX_HANDLES * 2];
+    size_t n = 0;
+    mx_status_t status;
+    if ((status = mount_remote_handle(mountpath, hnd)) != NO_ERROR) {
         fprintf(stderr, "Failed to mount remote handle handle on mount path\n");
+        close(devicefd);
         return status;
     }
-
-    char device_path_arg[MXIO_MAX_FILENAME + 64];
-    snprintf(device_path_arg, sizeof(device_path_arg), "-devicepath=%s",
-             devicepath);
+    ids[n] = MX_HND_TYPE_USER0;
+    n++;
+    if ((status = mxio_transfer_fd(devicefd, FS_FD_BLOCKDEVICE, hnd + n, ids + n)) <= 0) {
+        fprintf(stderr, "Failed to access device handle\n");
+        close(devicefd);
+        return status != 0 ? status : ERR_BAD_STATE;
+    }
+    n += status;
 
     char readonly_arg[64];
     snprintf(readonly_arg, sizeof(readonly_arg), "-readonly=%s",
              options->readonly ? "true" : "false");
+    char blockfd_arg[64];
+    snprintf(blockfd_arg, sizeof(blockfd_arg), "-blockFD=%d", FS_FD_BLOCKDEVICE);
 
     if (options->verbose_mount) {
-        printf("fs_mount: Launching ThinFS [%s]\n", devicepath);
+        printf("fs_mount: Launching ThinFS\n");
     }
     const char* argv[] = {
         "/system/bin/thinfs",
-        device_path_arg,
         readonly_arg,
+        blockfd_arg,
         "mount",
     };
-    return cb(arraylen(argv), argv, h);
+    return cb(arraylen(argv), argv, hnd, ids, n);
 }
 
-mx_status_t mount(const char* devicepath, const char* mountpath,
-                  disk_format_t df, const mount_options_t* options,
-                  mx_status_t (*cb)(int argc, const char** argv, mx_handle_t h)) {
+mx_status_t mount(int devicefd, const char* mountpath,
+                  disk_format_t df, const mount_options_t* options, MountCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return mount_minfs(devicepath, mountpath, options, cb);
+        return mount_minfs(devicefd, mountpath, options, cb);
     case DISK_FORMAT_FAT:
-        return mount_fat(devicepath, mountpath, options, cb);
+        return mount_fat(devicefd, mountpath, options, cb);
     default:
+        close(devicefd);
         return ERR_NOT_SUPPORTED;
     }
 }

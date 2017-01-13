@@ -28,6 +28,12 @@
 #define V_FLAG_DEVICE 1
 #define V_FLAG_VMOFILE 2
 
+// On Fuchsia, the Block Device is transmitted by file descriptor, rather than
+// by path. This can prevent some racy behavior relating to FS start-up.
+#ifdef __Fuchsia__
+#define FS_FD_BLOCKDEVICE 200
+#endif
+
 __BEGIN_CDECLS
 
 // A lock which should be used to protect lookup and walk operations

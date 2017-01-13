@@ -17,7 +17,7 @@
 
 #define arraylen(arr) (sizeof(arr) / sizeof(arr[0]))
 
-static mx_status_t mkfs_minfs(const char* devicepath, MkfsCallback cb) {
+static mx_status_t fsck_minfs(const char* devicepath, FsckCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
@@ -33,21 +33,21 @@ static mx_status_t mkfs_minfs(const char* devicepath, MkfsCallback cb) {
     }
     n += status;
 
-    const char* argv[] = { "/boot/bin/minfs", "mkfs" };
+    const char* argv[] = { "/boot/bin/minfs", "fsck" };
     return cb(arraylen(argv), argv, hnd, ids, n);
 }
 
-static mx_status_t mkfs_fat(const char* devicepath, MkfsCallback cb) {
-    const char* argv[] = { "/boot/bin/mkfs-msdosfs", devicepath };
+static mx_status_t fsck_fat(const char* devicepath, FsckCallback cb) {
+    const char* argv[] = { "/boot/bin/fsck-msdosfs", devicepath };
     return cb(arraylen(argv), argv, NULL, NULL, 0);
 }
 
-mx_status_t mkfs(const char* devicepath, disk_format_t df, MkfsCallback cb) {
+mx_status_t fsck(const char* devicepath, disk_format_t df, FsckCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return mkfs_minfs(devicepath, cb);
+        return fsck_minfs(devicepath, cb);
     case DISK_FORMAT_FAT:
-        return mkfs_fat(devicepath, cb);
+        return fsck_fat(devicepath, cb);
     default:
         return ERR_NOT_SUPPORTED;
     }

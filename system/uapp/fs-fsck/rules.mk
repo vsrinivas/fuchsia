@@ -6,22 +6,19 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userlib
+MODULE_TYPE := userapp
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/fsck.c \
-    $(LOCAL_DIR)/mkfs.c \
-    $(LOCAL_DIR)/mount.c \
+MODULE_NAME := fsck
 
-MODULE_STATIC_LIBS := \
-    ulib/fs \
+# app main
+MODULE_SRCS := \
+    $(LOCAL_DIR)/main.c \
 
 MODULE_LIBS := \
-    ulib/mxio \
+    ulib/fs-management \
+    ulib/launchpad \
     ulib/magenta \
     ulib/musl \
-
-MODULE_EXPORT := so
-MODULE_SO_NAME := fs-management
+    ulib/mxio \
 
 include make/module.mk

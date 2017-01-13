@@ -281,13 +281,19 @@ int main(int argc, char** argv) {
         argv++;
     }
 
+#ifdef __Fuchsia__
+    // Block device passed by handle
+    if (argc < 2) {
+        return usage();
+    }
+    char* cmd = argv[1];
+#else
+    // Block device passed by path
     if (argc < 3) {
         return usage();
     }
-
     char* fn = argv[1];
     char* cmd = argv[2];
-
     char* sizestr;
     if ((sizestr = strchr(fn, '@')) != nullptr) {
         *sizestr++ = 0;
@@ -314,8 +320,12 @@ int main(int argc, char** argv) {
             return usage();
         }
     }
+#endif
 
     int fd;
+#ifdef __Fuchsia__
+    fd = FS_FD_BLOCKDEVICE;
+#else
     uint32_t flags = O_RDWR;
     for (unsigned i = 0; i < sizeof(CMDS) / sizeof(CMDS[0]); i++) {
         if (!strcmp(cmd, CMDS[i].name)) {
@@ -325,7 +335,6 @@ int main(int argc, char** argv) {
     }
     fprintf(stderr, "minfs: unknown command: %s\n", cmd);
     return usage();
-
 found:
     if ((fd = open(fn, flags, 0644)) < 0) {
         if (flags & O_CREAT) {
@@ -336,6 +345,7 @@ found:
         fprintf(stderr, "error: cannot open '%s'\n", fn);
         return -1;
     }
+#endif
     if (size == 0) {
         size = get_size(fd);
     }

@@ -56,15 +56,15 @@ static bool switch_to_first_vc(void) {
     return !strcmp(v, "0") || !strcmp(v, "false") || !strcmp(v, "off");
 }
 
-static mx_status_t launch_minfs(int argc, const char** argv, mx_handle_t h) {
-    devmgr_launch(svcs_job_handle, "minfs:/data", argc, argv, -1, h,
-                  MX_HND_TYPE_USER0);
+static mx_status_t launch_minfs(int argc, const char** argv, mx_handle_t* hnd,
+                                uint32_t* ids, size_t len) {
+    devmgr_launch(svcs_job_handle, "minfs:/data", argc, argv, -1, hnd, ids, len);
     return NO_ERROR;
 }
 
-static mx_status_t launch_fat(int argc, const char** argv, mx_handle_t h) {
-    devmgr_launch(svcs_job_handle, "fatfs:/volume", argc, argv, -1, h,
-                  MX_HND_TYPE_USER0);
+static mx_status_t launch_fat(int argc, const char** argv, mx_handle_t* hnd,
+                              uint32_t* ids, size_t len) {
+    devmgr_launch(svcs_job_handle, "fatfs:/volume", argc, argv, -1, hnd, ids, len);
     return NO_ERROR;
 }
 
@@ -77,8 +77,6 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
 
     disk_format_t df = detect_disk_format(fd);
 
-    // TODO(smklein): Pass block devices by handle, not pathname, since
-    // accessing devices by pathnames is inherently racy.
     switch (df) {
     case DISK_FORMAT_GPT: {
         printf("devmgr: /dev/class/block/%s: GPT?\n", name);
@@ -88,20 +86,16 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         return NO_ERROR;
     }
     case DISK_FORMAT_MINFS: {
-        close(fd);
-        char devicepath[MXIO_MAX_FILENAME + 64];
-        snprintf(devicepath, sizeof(devicepath), "/dev/class/block/%s", name);
         mount_options_t options;
         memcpy(&options, &default_mount_options, sizeof(mount_options_t));
-        printf("devmgr: %s: minfs?\n", devicepath);
-        mount(devicepath, "/data", df, &options, launch_minfs);
+        printf("devmgr: minfs\n");
+        mount(fd, "/data", df, &options, launch_minfs);
         return NO_ERROR;
     }
     case DISK_FORMAT_FAT: {
         // Use the GUID to avoid auto-mounting the EFI partition as writable
         uint8_t guid[GPT_GUID_LEN];
         ssize_t r = ioctl_block_get_type_guid(fd, guid, sizeof(guid));
-        close(fd);
         bool efi = false;
         static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
         if (r == GPT_GUID_LEN && !memcmp(guid, guid_efi_part, GPT_GUID_LEN)) {
@@ -110,8 +104,6 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         mount_options_t options;
         memcpy(&options, &default_mount_options, sizeof(mount_options_t));
         options.readonly = efi;
-        char devicepath[MXIO_MAX_FILENAME + 64];
-        snprintf(devicepath, sizeof(devicepath), "/dev/class/block/%s", name);
         static int fat_counter = 0;
         static int efi_counter = 0;
         char mountpath[MXIO_MAX_FILENAME + 64];
@@ -121,8 +113,8 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
             snprintf(mountpath, sizeof(mountpath), "/volume/fat-%d", fat_counter++);
         }
         mkdir(mountpath, 0755);
-        printf("devmgr: %s: fatfs?\n", devicepath);
-        mount(devicepath, mountpath, df, &options, launch_fat);
+        printf("devmgr: fatfs\n");
+        mount(fd, mountpath, df, &options, launch_fat);
         return NO_ERROR;
     }
     default:
@@ -144,18 +136,19 @@ void create_application_launcher_handles(void) {
 int service_starter(void* arg) {
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
-        devmgr_launch(svcs_job_handle, "netsvc", countof(argv_netsvc), argv_netsvc, -1, 0, 0);
+        devmgr_launch(svcs_job_handle, "netsvc", countof(argv_netsvc), argv_netsvc, -1, NULL, NULL, 0);
     }
 
     devmgr_launch(svcs_job_handle, "sh:autorun0", countof(argv_autorun0),
-                  argv_autorun0, -1, 0, 0);
+                  argv_autorun0, -1, NULL, NULL, 0);
     devmgr_launch(svcs_job_handle, "sh:autorun1", countof(argv_autorun1),
-                  argv_autorun1, -1, 0, 0);
+                  argv_autorun1, -1, NULL, NULL, 0);
 
     if (application_launcher_child) {
+        mx_handle_t hnd[1] = { application_launcher_child };
+        uint32_t ids[1] = { MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0) };
         devmgr_launch(svcs_job_handle, "application-manager", countof(argv_appmgr), argv_appmgr,
-                      -1, application_launcher_child,
-                      MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0));
+                      -1, hnd, ids, countof(hnd));
         application_launcher_child = 0;
     }
 
@@ -174,7 +167,7 @@ static int console_starter(void* arg) {
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open("/dev/class/misc/console", O_RDWR)) >= 0) {
-            devmgr_launch(svcs_job_handle, "sh:console", countof(argv_sh), argv_sh, fd, 0, 0);
+            devmgr_launch(svcs_job_handle, "sh:console", countof(argv_sh), argv_sh, fd, NULL, NULL, 0);
             break;
         }
         mx_nanosleep(MX_MSEC(100));
@@ -204,7 +197,7 @@ static mx_status_t console_device_added(int dirfd, const char* name, void* cooki
             if (i == 0 && switch_to_first_vc()) {
                 ioctl_console_set_active_vc(fd);
             }
-            devmgr_launch(svcs_job_handle, "sh:vc", countof(argv_sh), argv_sh, fd, 0, 0);
+            devmgr_launch(svcs_job_handle, "sh:vc", countof(argv_sh), argv_sh, fd, NULL, NULL, 0);
         }
     }
 
@@ -245,7 +238,7 @@ int main(int argc, char** argv) {
 #if defined(__x86_64__) || defined(__aarch64__)
     if (!getenv("crashlogger.disable")) {
         static const char* argv_crashlogger[] = { "/boot/bin/crashlogger" };
-        devmgr_launch(svcs_job_handle, "crashlogger", 1, argv_crashlogger, -1, 0, 0);
+        devmgr_launch(svcs_job_handle, "crashlogger", 1, argv_crashlogger, -1, NULL, NULL, 0);
     }
 #else
     // Until crashlogging exists, ensure we see load info

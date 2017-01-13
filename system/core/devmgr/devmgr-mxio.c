@@ -52,11 +52,13 @@ static const char* env[] = {
     NULL,
 };
 
+#define USER_MAX_HANDLES 4
+
 void devmgr_launch(mx_handle_t job,
                    const char* name, int argc, const char** argv, int stdiofd,
-                   mx_handle_t handle, uint32_t type) {
-    mx_handle_t hnd[1 + 2 * VFS_MAX_HANDLES];
-    uint32_t ids[1 + 2 * VFS_MAX_HANDLES];
+                   mx_handle_t* handles, uint32_t* types, size_t len) {
+    mx_handle_t hnd[2 * VFS_MAX_HANDLES + USER_MAX_HANDLES];
+    uint32_t ids[2 * VFS_MAX_HANDLES + USER_MAX_HANDLES];
     unsigned n = 1;
     mx_status_t r;
 
@@ -86,9 +88,12 @@ void devmgr_launch(mx_handle_t job,
         }
         n += r;
     }
-    if (handle) {
-        hnd[n] = handle;
-        ids[n] = type;
+    if (len > USER_MAX_HANDLES) {
+        goto fail;
+    }
+    for (size_t i = 0; i < len; i++) {
+        hnd[n] = handles[i];
+        ids[n] = types[i];
         n++;
     }
     printf("devmgr: launch %s (%s)\n", argv[0], name);

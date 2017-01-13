@@ -48,36 +48,48 @@ int parse_args(int argc, char** argv, mount_options_t* options,
     return 0;
 }
 
-static mx_status_t launch(int argc, const char** argv, mx_handle_t h) {
+static mx_status_t launch(int argc, const char** argv, mx_handle_t* handles, uint32_t* types, size_t len) {
     mx_status_t status;
-    mx_handle_t handles[4];
-    uint32_t ids[4];
+    mx_handle_t hnd[8];
+    uint32_t ids[8];
 
-    if ((status = mxio_clone_root(handles, ids)) < 0) {
+    size_t n = 0;
+    if ((status = mxio_clone_root(hnd, ids)) < 0) {
         fprintf(stderr, "fs_mount: Could not clone mxio root\n");
         return status;
     }
-    if ((handles[1] = mx_log_create(0)) < 0) {
+    n++;
+
+    if ((hnd[n] = mx_log_create(0)) < 0) {
         fprintf(stderr, "fs_mount: Could not create log\n");
-        mx_handle_close(handles[0]);
-        return handles[1];
+        status = hnd[n];
+        goto fail;
     }
-    if ((handles[2] = mx_log_create(0)) < 0) {
+    ids[n++] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 1);
+
+    if ((hnd[n] = mx_log_create(0)) < 0) {
         fprintf(stderr, "fs_mount: Could not create secondary log\n");
-        mx_handle_close(handles[0]);
-        mx_handle_close(handles[1]);
-        return handles[2];
+        status = hnd[n];
+        goto fail;
     }
-    handles[3] = h;
-    ids[1] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 1);
-    ids[2] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 2);
-    ids[3] = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
+    ids[n++] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 2);
+
+    if (n + len > sizeof(hnd)/sizeof(hnd[0])) {
+        fprintf(stderr, "fs_mount: Too many handles\n");
+        goto fail;
+    }
+
+    for (size_t i = 0; i < len; i++) {
+        hnd[n] = handles[i];
+        ids[n] = types[i];
+        n++;
+    }
 
     mx_handle_t proc;
+    // Launchpad consumes 'hnd'; if we fail after this, then we can assume those handles are closed.
     if ((proc = launchpad_launch_mxio_etc(argv[0], argc, argv,
                                           (const char* const*) environ,
-                                          sizeof(handles) / sizeof(handles[0]),
-                                          handles, ids)) <= 0) {
+                                          n, hnd, ids)) <= 0) {
         fprintf(stderr, "fs_mount: cannot launch %s\n", argv[0]);
         return proc;
     }
@@ -99,6 +111,12 @@ static mx_status_t launch(int argc, const char** argv, mx_handle_t h) {
     }
     mx_handle_close(proc);
     return status;
+
+fail:
+    for (size_t i = 0; i < n; i++) {
+        mx_handle_close(hnd[i]);
+    }
+    return status;
 }
 
 int main(int argc, char** argv) {
@@ -116,12 +134,10 @@ int main(int argc, char** argv) {
     }
 
     int fd;
-    if ((fd = open(devicepath, O_RDONLY)) < 0) {
+    if ((fd = open(devicepath, O_RDWR)) < 0) {
         fprintf(stderr, "Error opening block device\n");
         return -1;
     }
     disk_format_t df = detect_disk_format(fd);
-    close(fd);
-
-    return mount(devicepath, mountpath, df, &options, launch);
+    return mount(fd, mountpath, df, &options, launch);
 }

@@ -29,6 +29,9 @@ static const mount_options_t default_mount_options = {
     .verbose_mount = false,
 };
 
+typedef mx_status_t (*MountCallback)(int argc, const char** argv,
+                                     mx_handle_t* hnd, uint32_t* ids, size_t len);
+
 // Given the following:
 //  - A device containing a filesystem image of a known format
 //  - A path on which to mount the filesystem
@@ -38,13 +41,23 @@ static const mount_options_t default_mount_options = {
 // Prepare the argv arguments to the filesystem process, mount a handle on the
 // expected mountpath, and call the 'launch' callback (if the filesystem is
 // recognized).
-mx_status_t mount(const char* devicepath, const char* mountpath, disk_format_t df,
-                  const mount_options_t* options,
-                  mx_status_t (*cb)(int argc, const char** argv, mx_handle_t h));
+//
+// devicefd is always consumed. If the callback is reached, then the 'devicefd'
+// is transferred via handles to the callback arguments.
+mx_status_t mount(int devicefd, const char* mountpath, disk_format_t df,
+                  const mount_options_t* options, MountCallback cb);
+
+typedef mx_status_t (*MkfsCallback)(int argc, const char** argv,
+                                    mx_handle_t* hnd, uint32_t* ids, size_t len);
 
 // Format the provided device with a requested disk format.
-mx_status_t mkfs(const char* devicepath, disk_format_t df,
-                 mx_status_t (*cb)(int argc, const char** argv));
+mx_status_t mkfs(const char* devicepath, disk_format_t df, MkfsCallback cb);
+
+typedef mx_status_t (*FsckCallback)(int argc, const char** argv,
+                                    mx_handle_t* hnd, uint32_t* ids, size_t len);
+
+// Check and repair a device with a requested disk format.
+mx_status_t fsck(const char* devicepath, disk_format_t df, FsckCallback cb);
 
 // Umount the filesystem process.
 //
