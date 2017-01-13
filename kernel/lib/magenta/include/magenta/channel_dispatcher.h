@@ -8,7 +8,6 @@
 
 #include <stdint.h>
 
-#include <magenta/channel.h>
 #include <magenta/dispatcher.h>
 #include <magenta/state_tracker.h>
 #include <magenta/types.h>
@@ -17,6 +16,7 @@
 #include <mxtl/unique_ptr.h>
 
 class PortClient;
+class MessagePacket;
 
 class ChannelDispatcher final : public Dispatcher {
 public:
@@ -25,28 +25,43 @@ public:
 
     ~ChannelDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_CHANNEL; }
-    StateTracker* get_state_tracker() final;
-    mx_koid_t get_inner_koid() const final { return inner_koid_; }
+    StateTracker* get_state_tracker() final { return &state_tracker_; }
+    mx_koid_t get_inner_koid() const final { return other_koid_; }
+    status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
     status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
+
+    void on_zero_handles() final;
 
     bool is_reply_channel() const {
         return (flags_ & MX_FLAG_REPLY_CHANNEL) ? true : false;
     }
 
-    void set_inner_koid(mx_koid_t koid) { inner_koid_ = koid; }
-    // See Channel::Read() for details.
+    // Read from this endpoint's message queue.
+    // |msg_size| and |msg_handle_count| are in-out parameters. As input, they specify the maximum
+    // size and handle count, respectively. On NO_ERROR or ERR_BUFFER_TOO_SMALL, they specify the
+    // actual size and handle count of the next message. The next message is returned in |*msg| on
+    // NO_ERROR and also on ERR_BUFFER_TOO_SMALL when |may_discard| is set.
     status_t Read(uint32_t* msg_size,
                   uint32_t* msg_handle_count,
                   mxtl::unique_ptr<MessagePacket>* msg,
                   bool may_disard);
+
+    // Write to the opposing endpoint's message queue.
     status_t Write(mxtl::unique_ptr<MessagePacket> msg);
 
 private:
-    ChannelDispatcher(uint32_t flags, size_t side, mxtl::RefPtr<Channel> channel);
+    using MessageList = mxtl::DoublyLinkedList<mxtl::unique_ptr<MessagePacket>>;
 
-    const size_t side_;
+    ChannelDispatcher(uint32_t flags);
+    void Init(mxtl::RefPtr<ChannelDispatcher> other);
+    status_t WriteSelf(mxtl::unique_ptr<MessagePacket> msg);
+    void OnPeerZeroHandles();
+
     const uint32_t flags_;
-    mx_koid_t inner_koid_;
-
-    mxtl::RefPtr<Channel> channel_;
+    Mutex lock_;
+    MessageList messages_;
+    mxtl::unique_ptr<PortClient> iopc_;
+    StateTracker state_tracker_;
+    mxtl::RefPtr<ChannelDispatcher> other_;
+    mx_koid_t other_koid_;
 };

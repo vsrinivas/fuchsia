@@ -183,6 +183,13 @@ static bool channel_read_error_test(void) {
 static bool channel_close_test(void) {
     BEGIN_TEST;
     mx_handle_t channel[2];
+
+    // Channels should gain PEER_CLOSED (and lose WRITABLE) if their peer is closed
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
+    ASSERT_EQ(get_satisfied_signals(channel[0]), MX_CHANNEL_PEER_CLOSED, "");
+    ASSERT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
+
     ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
     mx_handle_t channel1[2];
     ASSERT_EQ(mx_channel_create(0, &channel1[0], &channel1[1]), NO_ERROR, "");

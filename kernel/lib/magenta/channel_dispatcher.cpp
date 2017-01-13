@@ -13,7 +13,6 @@
 #include <new.h>
 #include <trace.h>
 
-#include <magenta/channel.h>
 #include <magenta/handle.h>
 #include <magenta/message_packet.h>
 #include <magenta/port_client.h>
@@ -29,57 +28,133 @@ status_t ChannelDispatcher::Create(uint32_t flags,
                                    mxtl::RefPtr<Dispatcher>* dispatcher0,
                                    mxtl::RefPtr<Dispatcher>* dispatcher1,
                                    mx_rights_t* rights) {
-    LTRACE_ENTRY;
-
     AllocChecker ac;
-    mxtl::RefPtr<Channel> channel = mxtl::AdoptRef(new (&ac) Channel());
-    if (!ac.check()) return ERR_NO_MEMORY;
-
-    auto msgp0 = new (&ac) ChannelDispatcher((flags & ~MX_FLAG_REPLY_CHANNEL), 0u, channel);
-    if (!ac.check()) return ERR_NO_MEMORY;
-
-    auto msgp1 = new (&ac) ChannelDispatcher(flags, 1u, channel);
-    if (!ac.check()) {
-        delete msgp0;
+    auto ch0 = mxtl::AdoptRef(new (&ac) ChannelDispatcher((flags & ~MX_FLAG_REPLY_CHANNEL)));
+    if (!ac.check())
         return ERR_NO_MEMORY;
-    }
 
-    msgp0->set_inner_koid(msgp1->get_koid());
-    msgp1->set_inner_koid(msgp0->get_koid());
+    auto ch1 = mxtl::AdoptRef(new (&ac) ChannelDispatcher(flags));
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+
+    ch0->Init(ch1);
+    ch1->Init(ch0);
 
     *rights = kDefaultChannelRights;
-    *dispatcher0 = mxtl::AdoptRef<Dispatcher>(msgp0);
-    *dispatcher1 = mxtl::AdoptRef<Dispatcher>(msgp1);
+    *dispatcher0 = mxtl::move(ch0);
+    *dispatcher1 = mxtl::move(ch1);
     return NO_ERROR;
 }
 
-ChannelDispatcher::ChannelDispatcher(uint32_t flags,
-                                     size_t side, mxtl::RefPtr<Channel> channel)
-    : side_(side), flags_(flags), channel_(mxtl::move(channel)) {
+ChannelDispatcher::ChannelDispatcher(uint32_t flags)
+    : flags_(flags), state_tracker_(MX_CHANNEL_WRITABLE) {
+}
+
+void ChannelDispatcher::Init(mxtl::RefPtr<ChannelDispatcher> other) {
+    other_ = mxtl::move(other);
+    other_koid_ = other_->get_koid();
 }
 
 ChannelDispatcher::~ChannelDispatcher() {
-    channel_->OnDispatcherDestruction(side_);
+    DEBUG_ASSERT(messages_.is_empty());
 }
 
-StateTracker* ChannelDispatcher::get_state_tracker() {
-    return channel_->GetStateTracker(side_);
+void ChannelDispatcher::on_zero_handles() {
+    // Detach other endpoint
+    mxtl::RefPtr<ChannelDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        other = mxtl::move(other_);
+    }
+
+    // Ensure other endpoint detaches us
+    if (other)
+        other->OnPeerZeroHandles();
+
+    // Now that we're mutually disconnected, discard queued messages
+    // There can be no other references to us, so no lock needed
+    messages_.clear();
+}
+
+void ChannelDispatcher::OnPeerZeroHandles() {
+    AutoLock lock(&lock_);
+    other_.reset();
+    state_tracker_.UpdateState(MX_CHANNEL_WRITABLE, MX_CHANNEL_PEER_CLOSED);
+    if (iopc_)
+        iopc_->Signal(MX_CHANNEL_PEER_CLOSED, &lock_);
 }
 
 status_t ChannelDispatcher::Read(uint32_t* msg_size,
                                  uint32_t* msg_handle_count,
                                  mxtl::unique_ptr<MessagePacket>* msg,
                                  bool may_discard) {
-    LTRACE_ENTRY;
-    return channel_->Read(side_, msg_size, msg_handle_count, msg, may_discard);
+    auto max_size = *msg_size;
+    auto max_handle_count = *msg_handle_count;
+
+    AutoLock lock(&lock_);
+
+    if (messages_.is_empty())
+        return other_ ? ERR_SHOULD_WAIT : ERR_REMOTE_CLOSED;
+
+    *msg_size = messages_.front().data_size();
+    *msg_handle_count = messages_.front().num_handles();
+    status_t rv = NO_ERROR;
+    if (*msg_size > max_size || *msg_handle_count > max_handle_count) {
+        if (!may_discard)
+            return ERR_BUFFER_TOO_SMALL;
+        rv = ERR_BUFFER_TOO_SMALL;
+    }
+
+    *msg = messages_.pop_front();
+
+    if (messages_.is_empty())
+        state_tracker_.UpdateState(MX_CHANNEL_READABLE, 0u);
+
+    return rv;
 }
 
 status_t ChannelDispatcher::Write(mxtl::unique_ptr<MessagePacket> msg) {
-    LTRACE_ENTRY;
-    return channel_->Write(side_, mxtl::move(msg));
+    mxtl::RefPtr<ChannelDispatcher> other;
+    {
+        AutoLock lock(&lock_);
+        if (!other_) {
+            // |msg| will be destroyed but we want to keep the handles alive since
+            // the caller should put them back into the process table.
+            msg->set_owns_handles(false);
+            return ERR_REMOTE_CLOSED;
+        }
+        other = other_;
+    }
+
+    return other->WriteSelf(mxtl::move(msg));
+}
+
+status_t ChannelDispatcher::WriteSelf(mxtl::unique_ptr<MessagePacket> msg) {
+    AutoLock lock(&lock_);
+    auto size = msg->data_size();
+    messages_.push_back(mxtl::move(msg));
+
+    state_tracker_.UpdateState(0u, MX_CHANNEL_READABLE);
+    if (iopc_)
+        iopc_->Signal(MX_CHANNEL_READABLE, size, &lock_);
+
+    return NO_ERROR;
 }
 
 status_t ChannelDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
-    LTRACE_ENTRY;
-    return channel_->SetIOPort(side_, mxtl::move(client));
+    AutoLock lock(&lock_);
+    if (iopc_)
+        return ERR_BAD_STATE;
+
+    if ((client->get_trigger_signals() & ~(MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) != 0)
+        return ERR_INVALID_ARGS;
+
+    iopc_ = mxtl::move(client);
+
+    // Replay the messages that are pending.
+    for (auto& msg : messages_) {
+        iopc_->Signal(MX_CHANNEL_READABLE, msg.data_size(), &lock_);
+    }
+
+    return NO_ERROR;
 }

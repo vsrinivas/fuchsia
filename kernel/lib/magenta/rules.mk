@@ -11,7 +11,6 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/channel_dispatcher.cpp \
-    $(LOCAL_DIR)/channel.cpp \
     $(LOCAL_DIR)/diagnostics.cpp \
     $(LOCAL_DIR)/dispatcher.cpp \
     $(LOCAL_DIR)/event_dispatcher.cpp \

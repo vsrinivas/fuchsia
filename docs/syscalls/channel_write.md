@@ -57,9 +57,10 @@ and the channel is not a reply channel.
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
 any of *handles* do not have **MX_RIGHT_TRANSFER**.
 
-**ERR_BAD_STATE**  The other side of the channel is closed or
-the channel is a reply channel and the reply channel handle was not
-included as the last element of the *handles* array.
+**ERR_REMOTE_CLOSED**  The other side of the channel is closed.
+
+**ERR_BAD_STATE**  The channel is a reply channel and the reply channel
+handle was not included as the last element of the *handles* array.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
