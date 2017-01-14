@@ -32,7 +32,10 @@ mxio_dispatcher_t* vfs_dispatcher;
 mx_status_t vfs_get_handles(vnode_t* vn, uint32_t flags, mx_handle_t* hnds,
                             uint32_t* type, void* extra, uint32_t* esize) {
     // local vnode or device as a directory, we will create the handles
-    hnds[0] = vfs_create_handle(vn, flags);
+    mx_status_t r = vfs_create_handle(vn, flags, hnds);
+    if (r < 0) {
+        return r;
+    }
     *type = MXIO_PROTOCOL_REMOTE;
     return 1;
 }

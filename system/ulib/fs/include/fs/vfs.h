@@ -75,8 +75,7 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
 
 mx_status_t vfs_unlink(vnode_t* vn, const char* path, size_t len);
 
-mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath,
-                       mx_handle_t rh);
+mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath);
 
 mx_status_t vfs_close(vnode_t* vn);
 
@@ -91,7 +90,7 @@ mx_status_t vfs_uninstall_remote(vnode_t* vn);
 mx_status_t vfs_uninstall_all(void);
 
 // Acquire a handle to the vnode. vn_acquires vn if successful.
-mx_handle_t vfs_create_handle(vnode_t* vn, uint32_t flags);
+mx_status_t vfs_create_handle(vnode_t* vn, uint32_t flags, mx_handle_t* out);
 // Generic implementation of vfs_handler, which dispatches messages to fs operations.
 mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie);
 

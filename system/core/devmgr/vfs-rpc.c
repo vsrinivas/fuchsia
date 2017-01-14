@@ -44,7 +44,10 @@ mx_status_t vfs_get_handles(vnode_t* vn, uint32_t flags, mx_handle_t* hnds,
         return 1;
     } else {
         // local vnode or device as a directory, we will create the handles
-        hnds[0] = vfs_create_handle(vn, flags);
+        mx_status_t r = vfs_create_handle(vn, flags, hnds);
+        if (r < 0) {
+            return r;
+        }
         *type = MXIO_PROTOCOL_REMOTE;
         return 1;
     }
@@ -67,7 +70,11 @@ mx_handle_t vfs_create_root_handle(vnode_t* vn) {
     if ((r = vn->ops->open(&vn, O_DIRECTORY)) < 0) {
         return r;
     }
-    return vfs_create_handle(vn, 0);
+    mx_handle_t h;
+    if ((r = vfs_create_handle(vn, 0, &h)) < 0) {
+        return r;
+    }
+    return h;
 }
 
 static vnode_t* global_vfs_root;

@@ -213,23 +213,6 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
     return NO_ERROR;
 }
 
-#ifdef __Fuchsia__
-static mx_status_t txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
-                                      const char* oldpath, const char* newpath) {
-    mxrio_msg_t msg;
-    memset(&msg, 0, MXRIO_HDR_SZ);
-    size_t oldlen = strlen(oldpath);
-    size_t newlen = strlen(newpath);
-    msg.op = MXRIO_RENAME;
-    memcpy(msg.data, oldpath, oldlen);
-    msg.data[oldlen] = '\0';
-    memcpy(msg.data + oldlen + 1, newpath, newlen);
-    msg.data[oldlen + newlen + 1] = '\0';
-    msg.datalen = oldlen + newlen + 2;
-    return mxrio_txn_handoff(srv, rh, &msg);
-}
-#endif
-
 mx_status_t vfs_unlink(vnode_t* vndir, const char* path, size_t len) {
     bool must_be_dir;
     mx_status_t r;
@@ -239,45 +222,35 @@ mx_status_t vfs_unlink(vnode_t* vndir, const char* path, size_t len) {
     return vndir->ops->unlink(vndir, path, len, must_be_dir);
 }
 
-mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
-                       mx_handle_t rh) {
+mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath) {
     vnode_t* oldparent, *newparent;
     mx_status_t r = 0, r_old, r_new;
-    if ((r_old = vfs_walk(vndir, &oldparent, oldpath, &oldpath)) < 0) {
-        return r_old;
-    } else if ((r_new = vfs_walk(vndir, &newparent, newpath, &newpath)) < 0) {
+
+    // walk returns a handle (>0) if the walk is going to cross a filesystem
+    // boundary.  Since we can't easily do that in a non-blocking way, we don't
+    // support such renames for the time being.
+    // TODO(swetland): sort out supporting server-crossing renames provided
+    // the two paths both end up on the same server.
+    if ((r_old = vfs_walk(vndir, &oldparent, oldpath, &oldpath)) != NO_ERROR) {
+        return (r_old < 0) ? r_old : ERR_NOT_SUPPORTED;
+    }
+    if ((r_new = vfs_walk(vndir, &newparent, newpath, &newpath)) != NO_ERROR) {
         vn_release(oldparent);
-        return r_new;
-    } else if (r_old != r_new) {
-        // Rename can only be directed to one filesystem
-        vn_release(oldparent);
-        vn_release(newparent);
-        return ERR_NOT_SUPPORTED;
+        return (r_new < 0) ? r_new : ERR_NOT_SUPPORTED;
     }
 
-    if (r_old == 0) {
-        // Local filesystem
-        size_t oldlen = strlen(oldpath);
-        size_t newlen = strlen(newpath);
-        bool old_must_be_dir;
-        bool new_must_be_dir;
-        if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
-            goto done;
-        }
-        if ((r = vfs_name_trim(newpath, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
-            goto done;
-        }
-        r = vndir->ops->rename(oldparent, newparent, oldpath, oldlen, newpath, newlen,
-                               old_must_be_dir, new_must_be_dir);
-    } else {
-#ifdef __Fuchsia__
-        // Remote filesystem.
-        r = txn_handoff_rename(r_old, rh, oldpath, newpath);
-        if (r >= 0) {
-            r = ERR_DISPATCHER_INDIRECT;
-        }
-#endif
+    size_t oldlen = strlen(oldpath);
+    size_t newlen = strlen(newpath);
+    bool old_must_be_dir;
+    bool new_must_be_dir;
+    if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
+        goto done;
     }
+    if ((r = vfs_name_trim(newpath, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
+        goto done;
+    }
+    r = vndir->ops->rename(oldparent, newparent, oldpath, oldlen, newpath, newlen,
+                           old_must_be_dir, new_must_be_dir);
 
 done:
     vn_release(oldparent);

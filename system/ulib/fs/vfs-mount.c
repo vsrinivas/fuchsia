@@ -54,28 +54,34 @@ mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
 
 // Sends an 'unmount' signal on the srv handle, and waits until it is closed.
 static mx_status_t txn_unmount(mx_handle_t srv) {
-    mx_status_t r;
-    mx_handle_t rchannel0, rchannel1;
-    if ((r = mx_channel_create(MX_FLAG_REPLY_CHANNEL, &rchannel0, &rchannel1)) < 0) {
-        return r;
-    }
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
+
+    // the only other messages we ever send are no-reply OPEN or CLONE with
+    // txid of 0.
+    msg.txid = 1;
     msg.op = MXRIO_IOCTL;
     msg.arg2.op = IOCTL_DEVMGR_UNMOUNT_FS;
-    if ((r = mxrio_txn_handoff(srv, rchannel1, &msg)) < 0) {
-        mx_handle_close(rchannel0);
-        mx_handle_close(rchannel1);
-        return r;
-    }
-    r = mx_handle_wait_one(rchannel0, MX_CHANNEL_PEER_CLOSED | MX_CHANNEL_READABLE,
-                           MX_TIME_INFINITE, NULL);
+
+    mx_channel_call_args_t args;
+    args.wr_bytes = &msg;
+    args.wr_handles = NULL;
+    args.rd_bytes = &msg;
+    args.rd_handles = NULL;
+    args.wr_num_bytes = MXRIO_HDR_SZ;
+    args.wr_num_handles = 0;
+    args.rd_num_bytes = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;
+    args.rd_num_handles = 0;
+
+    uint32_t dsize;
+    uint32_t hcount;
+    mx_status_t rs;
+
     // At the moment, we don't actually care what the response is from the
-    // filesystem server (or even if it supports the unmount operation). As soon
-    // as ANY response comes back, either in the form of a closed reply handle
+    // filesystem server (or even if it supports the unmount operation). As
+    // soon as ANY response comes back, either in the form of a closed handle
     // or a visible response, shut down.
-    mx_handle_close(rchannel0);
-    return r;
+    return mx_channel_call(srv, 0, MX_TIME_INFINITE, &args, &dsize, &hcount, &rs);
 }
 
 static mx_status_t do_unmount(mount_node_t* mount_point) {

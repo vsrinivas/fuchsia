@@ -38,7 +38,8 @@ struct mxrio {
     // event handle for device state signals, or socket handle
     mx_handle_t h2;
 
-    uint32_t flags;
+    // transaction id used for synchronous remoteio calls
+    atomic_uint_fast32_t txid;
 };
 
 static pthread_key_t rchannel_key;
@@ -62,7 +63,7 @@ void __mxio_rchannel_init(void) {
 
 static const char* _opnames[] = MXRIO_OPNAMES;
 const char* mxio_opname(uint32_t op) {
-    op = MXRIO_OP(op);
+    op = MXRIO_OPNAME(op);
     if (op < MXRIO_NUM_OPS) {
         return _opnames[op];
     } else {
@@ -71,8 +72,7 @@ const char* mxio_opname(uint32_t op) {
 }
 
 static bool is_message_valid(mxrio_msg_t* msg) {
-    if ((msg->magic != MXRIO_MAGIC) ||
-        (msg->datalen > MXIO_CHUNK_SIZE) ||
+    if ((msg->datalen > MXIO_CHUNK_SIZE) ||
         (msg->hcount > MXIO_MAX_HANDLES)) {
         return false;
     }
@@ -108,7 +108,7 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
         return NO_ERROR;
     }
 
-    msg.hcount = MXIO_MAX_HANDLES + 1;
+    msg.hcount = MXIO_MAX_HANDLES;
     uint32_t dsz = sizeof(msg);
     if ((r = mx_channel_read(h, 0, &msg, dsz, &dsz, msg.handle, msg.hcount, &msg.hcount)) < 0) {
         if (r == ERR_BAD_STATE) {
@@ -122,23 +122,12 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
         return ERR_INVALID_ARGS;
     }
 
-    mx_handle_t rh = h;
-    if (msg.op & MXRIO_REPLY_CHANNEL) {
-        if (msg.hcount == 0) {
-            discard_handles(msg.handle, msg.hcount);
-            return ERR_INVALID_ARGS;
-        }
-        msg.hcount--;
-        rh = msg.handle[msg.hcount];
-    }
-
     bool is_close = (MXRIO_OP(msg.op) == MXRIO_CLOSE);
 
     xprintf("handle_rio: op=%s arg=%d len=%u hsz=%d\n",
             mxio_opname(msg.op), msg.arg, msg.datalen, msg.hcount);
 
-    msg.arg = cb(&msg, (rh != h) ? rh : 0, cookie);
-    if (msg.arg == ERR_DISPATCHER_INDIRECT) {
+    if ((msg.arg = cb(&msg, h, cookie)) == ERR_DISPATCHER_INDIRECT) {
         // callback is handling the reply itself
         // and took ownership of the reply handle
         return 0;
@@ -156,15 +145,8 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
         msg.arg = (msg.arg < 0) ? msg.arg : ERR_INTERNAL;
     }
 
-    // The kernel requires that a reply channel endpoint by
-    // returned as the last handle attached to a write
-    // to that endpoint
-    if (rh != h) {
-        msg.handle[msg.hcount++] = rh;
-    }
-
     msg.op = MXRIO_STATUS;
-    if ((r = mx_channel_write(rh, 0, &msg, MXRIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount)) < 0) {
+    if ((r = mx_channel_write(h, 0, &msg, MXRIO_HDR_SZ + msg.datalen, msg.handle, msg.hcount)) < 0) {
         discard_handles(msg.handle, msg.hcount);
     }
     if (is_close) {
@@ -175,80 +157,59 @@ mx_status_t mxrio_handler(mx_handle_t h, void* _cb, void* cookie) {
     }
 }
 
-mx_status_t mxrio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mxrio_msg_t* msg) {
-    msg->magic = MXRIO_MAGIC;
-    msg->handle[0] = rh;
+void mxrio_txn_handoff(mx_handle_t srv, mx_handle_t reply, mxrio_msg_t* msg) {
+    msg->txid = 0;
+    msg->handle[0] = reply;
     msg->hcount = 1;
-    msg->op |= MXRIO_REPLY_CHANNEL;
-
-    if (!is_message_valid(msg)) {
-        return ERR_INVALID_ARGS;
-    }
 
     mx_status_t r;
     uint32_t dsize = MXRIO_HDR_SZ + msg->datalen;
     if ((r = mx_channel_write(srv, 0, msg, dsize, msg->handle, msg->hcount)) < 0) {
-        return r;
+        // nothing to do but inform the caller that we failed
+        struct {
+            mx_status_t status;
+            uint32_t type;
+        } error = { r, 0 };
+        mx_channel_write(reply, 0, &error, sizeof(error), NULL, 0);
+        mx_handle_close(reply);
     }
-    return 0;
 }
 
 // on success, msg->hcount indicates number of valid handles in msg->handle
 // on error there are never any handles
 static mx_status_t mxrio_txn(mxrio_t* rio, mxrio_msg_t* msg) {
-    msg->magic = MXRIO_MAGIC;
     if (!is_message_valid(msg)) {
         return ERR_INVALID_ARGS;
     }
 
-    xprintf("txn h=%x op=%d len=%u\n", rio->h, msg->op, msg->datalen);
-    uint32_t dsize = MXRIO_HDR_SZ + msg->datalen;
+    msg->txid = atomic_fetch_add(&rio->txid, 1);
+    xprintf("txn h=%x txid=%x op=%d len=%u\n", rio->h, msg->txid, msg->op, msg->datalen);
 
     mx_status_t r;
+    mx_status_t rs = ERR_INTERNAL;
+    uint32_t dsize;
 
-    static thread_local mx_handle_t* rchannel;
-    if (rchannel == NULL) {
-        if ((rchannel = malloc(sizeof(mx_handle_t) * 2)) == NULL) {
-            return ERR_NO_MEMORY;
+    mx_channel_call_args_t args;
+    args.wr_bytes = msg;
+    args.wr_handles = msg->handle;
+    args.rd_bytes = msg;
+    args.rd_handles = msg->handle;
+    args.wr_num_bytes = MXRIO_HDR_SZ + msg->datalen;
+    args.wr_num_handles = msg->hcount;
+    args.rd_num_bytes = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;
+    args.rd_num_handles = MXIO_MAX_HANDLES;
+
+    r = mx_channel_call(rio->h, 0, MX_TIME_INFINITE, &args, &dsize, &msg->hcount, &rs);
+    if (r < 0) {
+        if (r == ERR_CALL_FAILED) {
+            // read phase failed, true status is in rs
+            msg->hcount = 0;
+            return rs;
+        } else {
+            // write phase failed, we must discard the handles
+            goto fail_discard_handles;
         }
-        if ((r = mx_channel_create(MX_FLAG_REPLY_CHANNEL, &rchannel[0], &rchannel[1])) < 0) {
-            free(rchannel);
-            return r;
-        }
-        // This is set just to run the associated destructor.
-        pthread_setspecific(rchannel_key, rchannel);
     }
-
-    msg->op |= MXRIO_REPLY_CHANNEL;
-    msg->handle[msg->hcount++] = rchannel[1];
-
-    if ((r = mx_channel_write(rio->h, 0, msg, dsize, msg->handle, msg->hcount)) < 0) {
-        msg->hcount--;
-        goto fail_discard_handles;
-    }
-
-    mx_signals_t pending;
-    if ((r = mx_handle_wait_one(rchannel[0], MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                                MX_TIME_INFINITE, &pending)) < 0) {
-        goto fail_close_reply_channel;
-    }
-    if ((pending & MX_CHANNEL_PEER_CLOSED) &&
-        !(pending & MX_CHANNEL_READABLE)) {
-        r = ERR_REMOTE_CLOSED;
-        goto fail_close_reply_channel;
-    }
-
-    dsize = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;
-    msg->hcount = MXIO_MAX_HANDLES + 1;
-    if ((r = mx_channel_read(rchannel[0], 0, msg, dsize, &dsize,
-                             msg->handle, msg->hcount, &msg->hcount)) < 0) {
-        goto fail_close_reply_channel;
-    }
-
-    // The kernel ensures that the reply channel endpoint is
-    // returned as the last handle in the message's handles.
-    // The handle number may have changed, so update it.
-    rchannel[1] = msg->handle[--msg->hcount];
 
     // check for protocol errors
     if (!is_message_reply_valid(msg, dsize) ||
@@ -267,19 +228,6 @@ fail_discard_handles:
     // or after reading (need to abandon any handles we received)
     discard_handles(msg->handle, msg->hcount);
     msg->hcount = 0;
-    return r;
-
-fail_close_reply_channel:
-    // We lost the far end of the reply channel, so
-    // close the near end and try to replace it.
-    // If that fails, free rchannel and let the next
-    // txn try again.
-    mx_handle_close(rchannel[0]);
-    if (mx_channel_create(MX_FLAG_REPLY_CHANNEL, &rchannel[0], &rchannel[1]) < 0) {
-        free(rchannel);
-        rchannel = NULL;
-        pthread_setspecific(rchannel_key, NULL);
-    }
     return r;
 }
 
@@ -317,6 +265,7 @@ static ssize_t mxrio_ioctl(mxio_t* io, uint32_t op, const void* in_buf,
         }
         break;
     case IOCTL_KIND_SET_HANDLE:
+        msg.op = MXRIO_IOCTL_1H;
         if (in_len < sizeof(mx_handle_t)) {
             return ERR_INVALID_ARGS;
         }
@@ -612,8 +561,8 @@ mx_status_t mxio_from_handles(uint32_t type, mx_handle_t* handles, int hcount,
 
 static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
                                    int32_t flags, uint32_t mode,
-                                   mx_handle_t* handles, uint32_t* type,
-                                   void* extra, size_t* esize) {
+                                   mxrio_object_t* info) {
+
     if (name == NULL) {
         return ERR_INVALID_ARGS;
     }
@@ -629,50 +578,73 @@ static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
     msg.datalen = len;
     msg.arg = flags;
     msg.arg2.mode = mode;
+    msg.hcount = 1;
     memcpy(msg.data, name, len);
 
+    // Create channel to receive the "callback" on
     mx_status_t r;
-    if ((r = mxrio_txn(rio, &msg)) < 0) {
+    mx_handle_t h;
+    if ((r = mx_channel_create(0, &h, &msg.handle[0])) < 0) {
         return r;
     }
-    if (msg.datalen) {
-        if ((extra == NULL) || (*esize < msg.datalen)) {
-            discard_handles(msg.handle, msg.hcount);
-            return ERR_IO;
-        }
-        memcpy(extra, msg.data, msg.datalen);
+
+    // Write the (one-way) OPEN or CLONE request message
+    if ((r = mx_channel_write(rio->h, 0, &msg, MXRIO_HDR_SZ + len,
+                              msg.handle, msg.hcount)) < 0) {
+        mx_handle_close(msg.handle[0]);
+        mx_handle_close(h);
+        return r;
     }
-    if (esize) {
-        *esize = msg.datalen;
+
+    // Wait
+    mx_handle_wait_one(h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
+
+    // Attempt to read the callback response
+    memset(info, 0xfe, sizeof(*info));
+    uint32_t dsize = MXRIO_OBJECT_MAXSIZE;
+    info->hcount = MXIO_MAX_HANDLES;
+    r = mx_channel_read(h, 0, info, dsize, &dsize, info->handle,
+                        info->hcount, &info->hcount);
+
+    mx_handle_close(h);
+
+    if (r < 0) {
+        return r;
     }
-    memcpy(handles, msg.handle, msg.hcount * sizeof(mx_handle_t));
-    *type = msg.arg2.protocol;
-    return (mx_status_t)msg.hcount;
+    if (dsize < MXRIO_OBJECT_MINSIZE) {
+        r = ERR_IO;
+    } else {
+        info->esize = dsize - MXRIO_OBJECT_MINSIZE;
+        r = info->status;
+    }
+    if (r < 0) {
+        discard_handles(info->handle, info->hcount);
+    }
+    return r;
 }
 
 static mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out) {
     mxrio_t* rio = (void*)io;
-    mx_handle_t handles[MXIO_MAX_HANDLES];
-    uint32_t type;
-    uint8_t extra[16];
-    size_t esize = sizeof(extra);
-    mx_status_t r = mxrio_getobject(rio, MXRIO_OPEN, path, flags, mode, handles, &type, extra, &esize);
-    if (r > 0) {
-        r = mxio_from_handles(type, handles, r, extra, esize, out);
-    } else if (r == 0) {
-        // It's not legal for OPEN to result in no handles
-        r = ERR_INTERNAL;
+    mxrio_object_t info;
+    mx_status_t r = mxrio_getobject(rio, MXRIO_OPEN, path, flags, mode, &info);
+    if (r < 0) {
+        return r;
     }
-    return r;
+    return mxio_from_handles(info.type, info.handle, info.hcount, info.extra, info.esize, out);
 }
 
 static mx_status_t mxrio_clone(mxio_t* io, mx_handle_t* handles, uint32_t* types) {
     mxrio_t* rio = (void*)io;
-    mx_status_t r = mxrio_getobject(rio, MXRIO_CLONE, "", 0, 0, handles, types, NULL, NULL);
-    for (int i = 0; i < r; i++) {
+    mxrio_object_t info;
+    mx_status_t r = mxrio_getobject(rio, MXRIO_CLONE, "", 0, 0, &info);
+    if (r < 0) {
+        return r;
+    }
+    for (unsigned i = 0; i < info.hcount; i++) {
         types[i] = MX_HND_TYPE_MXIO_REMOTE;
     }
-    return r;
+    memcpy(handles, info.handle, info.hcount * sizeof(mx_handle_t));
+    return info.hcount;
 }
 
 mx_status_t __mxrio_clone(mx_handle_t h, mx_handle_t* handles, uint32_t* types) {

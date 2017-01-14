@@ -95,11 +95,11 @@ fail1:
     return r;
 }
 
-mx_status_t txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
+void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
     msg.op = MXRIO_CLONE;
-    return mxrio_txn_handoff(srv, rh, &msg);
+    mxrio_txn_handoff(srv, rh, &msg);
 }
 
 static void sync_io_complete(iotxn_t* txn, void* cookie) {
@@ -218,13 +218,14 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
 
     *should_free_ios = false;
 
-    // only IOCTL txns are prepared to deal with inbound handles
-    if (msg->hcount && (MXRIO_OP(msg->op) != MXRIO_IOCTL)) {
+    // ensure handle count specified by opcode matches reality
+    if (msg->hcount != MXRIO_HC(msg->op)) {
         for (unsigned i = 0; i < msg->hcount; i++) {
             mx_handle_close(msg->handle[i]);
         }
-        msg->hcount = 0;
+        return ERR_IO;
     }
+    msg->hcount = 0;
 
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_CLOSE:
@@ -252,13 +253,23 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
             xprintf("devhost_rio_handler() clone dev %p name '%s'\n", dev, dev->name);
             flags = ios->flags;
         }
-        r = devhost_get_handles(dev, path, flags, msg->handle, ids);
+        mxrio_object_t obj;
+        r = devhost_get_handles(dev, path, flags, obj.handle, ids);
         if (r < 0) {
-            return r;
+            obj.status = r;
+            obj.hcount = 0;
+        } else {
+            obj.status = NO_ERROR;
+            obj.type = MXIO_PROTOCOL_REMOTE;
+            obj.hcount = r;
         }
-        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
-        msg->hcount = r;
-        return NO_ERROR;
+        // Response is written to the provided handle.
+        // If that fails there's no further useful action we can take
+        // (it should only fail when the caller closes its side first
+        // in which case it is no longer around to hear about a failure).
+        mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE, obj.handle, obj.hcount);
+        mx_handle_close(msg->handle[0]);
+        return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_READ: {
         if (!CAN_READ(ios)) {
@@ -365,62 +376,70 @@ static mx_status_t _devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh,
     case MXRIO_SYNC: {
         return do_ioctl(dev, IOCTL_DEVICE_SYNC, NULL, 0, NULL, 0);
     }
+    case MXRIO_IOCTL_1H: {
+        if ((len > MXIO_IOCTL_MAX_INPUT) ||
+            (arg > (ssize_t)sizeof(msg->data)) ||
+            (IOCTL_KIND(msg->arg2.op) != IOCTL_KIND_SET_HANDLE)) {
+            mx_handle_close(msg->handle[0]);
+            return ERR_INVALID_ARGS;
+        }
+        if (len < sizeof(mx_handle_t)) {
+            len = sizeof(mx_handle_t);
+        }
+
+        char in_buf[MXIO_IOCTL_MAX_INPUT];
+        // The sending side copied the handle into msg->handle[0]
+        // so that it would be sent via channel_write().  Here we
+        // copy the local version back into the space in the buffer
+        // that the original occupied.
+        memcpy(in_buf, msg->handle, sizeof(mx_handle_t));
+        memcpy(in_buf + sizeof(mx_handle_t), msg->data + sizeof(mx_handle_t),
+               len - sizeof(mx_handle_t));
+
+        mx_status_t r = do_ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
+
+        if (r == ERR_NOT_SUPPORTED) {
+            mx_handle_close(msg->handle[0]);
+        }
+
+        return r;
+    }
     case MXRIO_IOCTL: {
-        if (len > MXIO_IOCTL_MAX_INPUT || arg > (ssize_t)sizeof(msg->data)) {
-            for (unsigned i = 0; i < msg->hcount; i++) {
-                mx_handle_close(msg->handle[i]);
-            }
+        if ((len > MXIO_IOCTL_MAX_INPUT) ||
+            (arg > (ssize_t)sizeof(msg->data)) ||
+            (IOCTL_KIND(msg->arg2.op) == IOCTL_KIND_SET_HANDLE)) {
             return ERR_INVALID_ARGS;
         }
 
         char in_buf[MXIO_IOCTL_MAX_INPUT];
         memcpy(in_buf, msg->data, len);
 
-        uint32_t kind = IOCTL_KIND(msg->arg2.op);
-
-        if (kind == IOCTL_KIND_SET_HANDLE) {
-            if (len < sizeof(mx_handle_t)) {
-                len = sizeof(mx_handle_t);
-            }
-            // The sending side copied the handle into msg->handle[0]
-            // so that it would be sent via channel_write().  Here we
-            // copy the local version back into the space in the buffer
-            // that the original occupied.
-            memcpy(in_buf, msg->handle, sizeof(mx_handle_t));
-
-            // close any extraneous handles
-            for (unsigned i = 1; i < msg->hcount; i++) {
-                mx_handle_close(msg->handle[i]);
-            }
-            msg->hcount = 0;
-        }
-
         mx_status_t r = do_ioctl(dev, msg->arg2.op, in_buf, len, msg->data, arg);
         if (r >= 0) {
-            switch (kind) {
-                case IOCTL_KIND_DEFAULT:
-                    break;
-                case IOCTL_KIND_GET_HANDLE:
-                    msg->hcount = 1;
-                    memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
-                    break;
-                case IOCTL_KIND_GET_TWO_HANDLES:
-                    msg->hcount = 2;
-                    memcpy(msg->handle, msg->data, 2 * sizeof(mx_handle_t));
-                    break;
-                case IOCTL_KIND_GET_THREE_HANDLES:
-                    msg->hcount = 3;
-                    memcpy(msg->handle, msg->data, 3 * sizeof(mx_handle_t));
-                    break;
+            switch (IOCTL_KIND(msg->arg2.op)) {
+            case IOCTL_KIND_GET_HANDLE:
+                msg->hcount = 1;
+                memcpy(msg->handle, msg->data, sizeof(mx_handle_t));
+                break;
+            case IOCTL_KIND_GET_TWO_HANDLES:
+                msg->hcount = 2;
+                memcpy(msg->handle, msg->data, 2 * sizeof(mx_handle_t));
+                break;
+            case IOCTL_KIND_GET_THREE_HANDLES:
+                msg->hcount = 3;
+                memcpy(msg->handle, msg->data, 3 * sizeof(mx_handle_t));
+                break;
             }
             msg->datalen = r;
             msg->arg2.off = ios->io_off;
-        } else if ((r == ERR_NOT_SUPPORTED) && (kind == IOCTL_KIND_SET_HANDLE)) {
-            mx_handle_close(msg->handle[0]);
         }
         return r;
     }
     default:
+        // close inbound handles so they do not leak
+        for (unsigned i = 0; i < MXRIO_HC(msg->op); i++) {
+            mx_handle_close(msg->handle[i]);
+        }
         return ERR_NOT_SUPPORTED;
     }
 }

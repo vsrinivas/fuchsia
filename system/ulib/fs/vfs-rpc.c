@@ -18,9 +18,8 @@
 
 #include "vfs-internal.h"
 
-
-static mx_status_t txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
-                                    const char* path, uint32_t flags, uint32_t mode) {
+static void txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
+                             const char* path, uint32_t flags, uint32_t mode) {
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
     size_t len = strlen(path);
@@ -29,63 +28,67 @@ static mx_status_t txn_handoff_open(mx_handle_t srv, mx_handle_t rh,
     msg.arg2.mode = mode;
     msg.datalen = len + 1;
     memcpy(msg.data, path, len + 1);
-    return mxrio_txn_handoff(srv, rh, &msg);
+    mxrio_txn_handoff(srv, rh, &msg);
 }
 
-static mx_status_t txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
+static void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
     msg.op = MXRIO_CLONE;
-    return mxrio_txn_handoff(srv, rh, &msg);
+    mxrio_txn_handoff(srv, rh, &msg);
 }
 
 // Initializes io state for a vnode and attaches it to a dispatcher.
-static mx_status_t vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, vnode_t* vn,
-                                const char* path, uint32_t flags, uint32_t mode) {
+static void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, vnode_t* vn,
+                         const char* path, uint32_t flags, uint32_t mode) {
+    mxrio_object_t obj;
+    memset(&obj, 0, sizeof(obj));
+
     mx_status_t r;
+
     mtx_lock(&vfs_lock);
     r = vfs_open(vn, &vn, path, &path, flags, mode);
     mtx_unlock(&vfs_lock);
+
     if (r < 0) {
         xprintf("vfs: open: r=%d\n", r);
-        return r;
+        goto done;
     }
     if (r > 0) {
         //TODO: unify remote vnodes and remote devices
         //      eliminate vfs_get_handles() and the other
         //      reply pipe path
-        if ((r = txn_handoff_open(r, rh, path, flags, mode)) < 0) {
-            printf("txn_handoff_open() failed %d\n", r);
-            return r;
-        }
-        return ERR_DISPATCHER_INDIRECT;
+        txn_handoff_open(r, rh, path, flags, mode);
+        return;
     }
-    uint32_t* type = &msg->arg2.protocol;
-    if ((r = vfs_get_handles(vn, flags, msg->handle, type, msg->data, &msg->datalen)) < 0) {
+
+    obj.esize = 0;
+    if ((r = vfs_get_handles(vn, flags, obj.handle, &obj.type, obj.extra, &obj.esize)) < 0) {
         vn->ops->close(vn);
-        return r;
+        goto done;
     }
-    if (*type == 0) {
+    if (obj.type == 0) {
         // device is non-local, handle is the server that
         // can clone it for us, redirect the rpc to there
-        if ((r = txn_handoff_open(msg->handle[0], rh, ".", flags, mode)) < 0) {
-            printf("txn_handoff_open() failed %d\n", r);
-            vn_release(vn);
-            return r;
-        }
+        txn_handoff_open(obj.handle[0], rh, ".", flags, mode);
         vn_release(vn);
-        return ERR_DISPATCHER_INDIRECT;
+        return;
     }
+
     // drop the ref from vfs_open
     // the backend behind get_handles holds the on-going ref
     vn_release(vn);
+    obj.hcount = r;
+    r = NO_ERROR;
 
-    msg->hcount = r;
-    xprintf("vfs: open: h=%x\n", msg->handle[0]);
-    return NO_ERROR;
+done:
+    obj.status = r;
+    xprintf("vfs: open: r=%d h=%x\n", r, obj.handle[0]);
+    mx_channel_write(rh, 0, &obj, MXRIO_OBJECT_MINSIZE + obj.esize, obj.handle, obj.hcount);
+    mx_handle_close(rh);
 }
 
-mx_handle_t vfs_create_handle(vnode_t* vn, uint32_t flags) {
+mx_status_t vfs_create_handle(vnode_t* vn, uint32_t flags, mx_handle_t* out) {
     mx_handle_t h[2];
     mx_status_t r;
     vfs_iostate_t* ios;
@@ -107,7 +110,8 @@ mx_handle_t vfs_create_handle(vnode_t* vn, uint32_t flags) {
     }
     // take a ref for the dispatcher
     vn_acquire(vn);
-    return h[1];
+    *out = h[1];
+    return NO_ERROR;
 }
 
 mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
@@ -117,8 +121,12 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     int32_t arg = msg->arg;
     msg->datalen = 0;
 
-    for (unsigned i = 0; i < msg->hcount; i++) {
-        mx_handle_close(msg->handle[i]);
+    // ensure handle count specified by opcode matches reality
+    if (msg->hcount != MXRIO_HC(msg->op)) {
+        for (unsigned i = 0; i < msg->hcount; i++) {
+            mx_handle_close(msg->handle[i]);
+        }
+        return ERR_IO;
     }
     msg->hcount = 0;
 
@@ -126,26 +134,31 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     case MXRIO_OPEN: {
         char* path = (char*)msg->data;
         if ((len < 1) || (len > 1024)) {
-            return ERR_INVALID_ARGS;
+            mxrio_object_t obj;
+            obj.status = ERR_INVALID_ARGS;
+            mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE, NULL, 0);
+            mx_handle_close(msg->handle[0]);
+        } else {
+            path[len] = 0;
+            xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
+            vfs_rpc_open(msg, msg->handle[0], vn, path, arg, msg->arg2.mode);
         }
-        path[len] = 0;
-        xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
-        mx_status_t r = vfs_rpc_open(msg, rh, vn, path, arg, msg->arg2.mode);
-        xprintf("vfs open r=%d dl=%u\n", r, msg->datalen);
-        return r;
+        return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_CLOSE:
         // this will drop the ref on the vn
         vfs_close(vn);
         free(ios);
         return NO_ERROR;
-    case MXRIO_CLONE:
-        if ((msg->handle[0] = vfs_create_handle(vn, ios->io_flags)) < 0) {
-            return msg->handle[0];
-        }
-        msg->arg2.protocol = MXIO_PROTOCOL_REMOTE;
-        msg->hcount = 1;
-        return NO_ERROR;
+    case MXRIO_CLONE: {
+        mxrio_object_t obj;
+        obj.status = vfs_create_handle(vn, ios->io_flags, obj.handle);
+        obj.type = MXIO_PROTOCOL_REMOTE;
+        mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE,
+                         obj.handle, (obj.status < 0) ? 0 : 1);
+        mx_handle_close(msg->handle[0]);
+        return ERR_DISPATCHER_INDIRECT;
+    }
     case MXRIO_READ: {
         ssize_t r = vn->ops->read(vn, msg->data, arg, ios->io_off);
         if (r >= 0) {
@@ -314,7 +327,7 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         if (data_end <= newpath) {
             return ERR_INVALID_ARGS;
         }
-        return vfs_rename(vn, oldpath, newpath, rh);
+        return vfs_rename(vn, oldpath, newpath);
     }
     case MXRIO_SYNC: {
         return vn->ops->sync(vn);
@@ -322,6 +335,10 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     case MXRIO_UNLINK:
         return vfs_unlink(vn, (const char*)msg->data, len);
     default:
+        // close inbound handles so they do not leak
+        for (unsigned i = 0; i < MXRIO_HC(msg->op); i++) {
+            mx_handle_close(msg->handle[i]);
+        }
         return ERR_NOT_SUPPORTED;
     }
 }

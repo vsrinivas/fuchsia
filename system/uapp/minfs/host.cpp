@@ -223,7 +223,7 @@ int emu_unlink(const char* path) {
 
 int emu_rename(const char* oldpath, const char* newpath) {
     PATH_WRAP(oldpath, rename, oldpath, newpath);
-    mx_status_t status = vfs_rename(fake_root, oldpath + PREFIX_SIZE, newpath + PREFIX_SIZE, 0);
+    mx_status_t status = vfs_rename(fake_root, oldpath + PREFIX_SIZE, newpath + PREFIX_SIZE);
     STATUS(status);
 }
 

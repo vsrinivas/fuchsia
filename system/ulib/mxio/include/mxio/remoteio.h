@@ -19,8 +19,8 @@ __BEGIN_CDECLS
 
 #define MXRIO_STATUS       0x00000000
 #define MXRIO_CLOSE        0x00000001
-#define MXRIO_CLONE        0x00000002
-#define MXRIO_OPEN         0x00000003
+#define MXRIO_CLONE        0x00000102
+#define MXRIO_OPEN         0x00000103
 #define MXRIO_MISC         0x00000004
 #define MXRIO_READ         0x00000005
 #define MXRIO_WRITE        0x00000006
@@ -28,6 +28,7 @@ __BEGIN_CDECLS
 #define MXRIO_STAT         0x00000008
 #define MXRIO_READDIR      0x00000009
 #define MXRIO_IOCTL        0x0000000a
+#define MXRIO_IOCTL_1H     0x0000010a
 #define MXRIO_UNLINK       0x0000000b
 #define MXRIO_READ_AT      0x0000000c
 #define MXRIO_WRITE_AT     0x0000000d
@@ -45,8 +46,9 @@ __BEGIN_CDECLS
 #define MXRIO_SYNC         0x00000019
 #define MXRIO_NUM_OPS      26
 
-#define MXRIO_OP(n)            ((n) & 0xFFFF)
-#define MXRIO_REPLY_CHANNEL    0x01000000
+#define MXRIO_OP(n)        ((n) & 0x3FF) // opcode
+#define MXRIO_HC(n)        (((n) >> 8) & 3) // handle count
+#define MXRIO_OPNAME(n)    ((n) & 0xFF) // opcode, "name" part only
 
 #define MXRIO_OPNAMES { \
     "status", "close", "clone", "open", \
@@ -76,15 +78,39 @@ typedef mx_status_t (*mxrio_cb_t)(mxrio_msg_t* msg, mx_handle_t rh, void* cookie
 // a mxio_dispatcher_handler suitable for use with a mxio_dispatcher
 mx_status_t mxrio_handler(mx_handle_t h, void* cb, void* cookie);
 
-// Pass a message to another server (srv) along with a reply handle (rh)
-// The other server will reply via the reply handle, and this call returns
-// immediately, never blocking.
-// The reply-handle is *not* closed on error, as it's expected the caller
-// will want to send an error back via it.
-mx_status_t mxrio_txn_handoff(mx_handle_t srv, mx_handle_t rh, mxrio_msg_t* msg);
+
+// OPEN and CLOSE messages, can be forwarded to another remoteio server,
+// without any need to wait for a reply.  The reply channel from the initial
+// request is passed along to the new server.
+// If the write to the server fails, an error reply is sent to the reply channel.
+void mxrio_txn_handoff(mx_handle_t server, mx_handle_t reply, mxrio_msg_t* msg);
+
+
+// OPEN and CLONE ops do not return a reply
+// Instead they receive a channel handle that they write their status
+// and (if successful) type, extra data, and handles to.
+
+#define MXRIO_OBJECT_EXTRA 32
+#define MXRIO_OBJECT_MINSIZE (2 * sizeof(uint32_t))
+#define MXRIO_OBJECT_MAXSIZE (MXRIO_OBJECT_MINSIZE + MXRIO_OBJECT_EXTRA)
+
+typedef struct {
+    // Required Header
+    mx_status_t status;
+    uint32_t type;
+
+    // Optional Extra Data
+    uint8_t extra[MXRIO_OBJECT_EXTRA];
+
+    // OOB Data
+    uint32_t esize;
+    uint32_t hcount;
+    mx_handle_t handle[MXIO_MAX_HANDLES];
+} mxrio_object_t;
+
 
 struct mxrio_msg {
-    uint32_t magic;                    // MXRIO_MAGIC
+    uint32_t txid;                     // transaction id
     uint32_t op;                       // opcode
     uint32_t datalen;                  // size of data[]
     int32_t arg;                       // tx: argument, rx: return value
