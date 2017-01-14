@@ -18,9 +18,11 @@ import (
 	"fuchsia.googlesource.com/thinfs/lib/fs/msdosfs"
 
 	"fuchsia.googlesource.com/thinfs/lib/magenta/rpc"
+
+	"syscall/mx/mxio/mxc"
 )
 
-var devicePathPtr = flag.String("devicepath", "", "Path to Block Device")
+var blockFDPtr = flag.Int("blockFD", -1, "File Descriptor to Block Device")
 var readOnlyPtr = flag.Bool("readonly", false, "Determines if Filesystem is mounted as Read-Only")
 
 func parseArgs() (string, error) {
@@ -36,8 +38,8 @@ func parseArgs() (string, error) {
 
 	switch flag.Arg(0) {
 	case "mount":
-		if *devicePathPtr == "" {
-			return "", errors.New("Mount requires block device path")
+		if *blockFDPtr == -1 {
+			return "", errors.New("Mount required block device file descriptor")
 		}
 		return "mount", nil
 	default:
@@ -55,11 +57,13 @@ func main() {
 	switch action {
 	case "mount":
 		// Open the block device
-		f, err := os.OpenFile(*devicePathPtr, os.O_RDWR, 0666)
+		fd, err := mxc.ExtractCMXIO(*blockFDPtr)
 		if err != nil {
 			println("Failed to open block device: ", err.Error())
 			os.Exit(1)
 		}
+		f := os.NewFile(fd, "Blockdev")
+		// TODO(smklein): Query the block device to access the underlying block size
 		dev, err := fileBlk.New(f, 512)
 		if err != nil {
 			println("Failed to create block device object: ", err.Error())

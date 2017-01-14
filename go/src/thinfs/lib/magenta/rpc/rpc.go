@@ -428,6 +428,10 @@ func mxioServer(msg *rio.Msg, rh mx.Handle, cookie int64) mx.Status {
 	vfs.Lock()
 	obj := vfs.files[cookie]
 	vfs.Unlock()
+	if obj == nil && msg.Op() == rio.OpClose {
+		// Removing object that has already been removed
+		return mx.ErrOk
+	}
 	switch obj := obj.(type) {
 	default:
 		fmt.Printf("cookie %d resulted in unexpected type %T\n", cookie, obj)
