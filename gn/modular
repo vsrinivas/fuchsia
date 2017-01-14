@@ -80,10 +80,6 @@
             "bootfs_path": "apps/run_component"
         },
         {
-            "binary": "story_runner",
-            "bootfs_path": "apps/story_runner"
-        },
-        {
             "binary": "swap_module1",
             "bootfs_path": "apps/swap_module1"
         },
