@@ -45,9 +45,10 @@ const storage::CommitId& PageImpl::GetCurrentCommitId() {
   }
 }
 
-// GetSnapshot(PageSnapshot& snapshot) => (Status status);
+// GetSnapshot(PageSnapshot& snapshot, PageWatcher& watcher) => (Status status);
 void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+    fidl::InterfaceHandle<PageWatcher> watcher,
     const GetSnapshotCallback& callback) {
   TRACE_DURATION("page", "get_snapshot");
 
@@ -57,19 +58,13 @@ void PageImpl::GetSnapshot(
     callback(PageUtils::ConvertStatus(status));
     return;
   }
-  manager_->BindPageSnapshot(std::move(commit), std::move(snapshot_request));
+  manager_->BindPageSnapshot(commit->Clone(), std::move(snapshot_request));
+  if (watcher) {
+    PageWatcherPtr watcher_ptr = PageWatcherPtr::Create(std::move(watcher));
+    branch_tracker_->RegisterPageWatcher(std::move(watcher_ptr),
+                                         std::move(commit));
+  }
   callback(Status::OK);
-}
-
-// Watch(PageWatcher watcher) => (Status status);
-void PageImpl::Watch(fidl::InterfaceHandle<PageWatcher> watcher,
-                     const WatchCallback& callback) {
-  auto timed_callback = TRACE_CALLBACK(std::move(callback), "page", "watch");
-  PageWatcherPtr watcher_ptr = PageWatcherPtr::Create(std::move(watcher));
-  PageSnapshotPtr snapshot;
-  GetSnapshot(snapshot.NewRequest(), std::move(timed_callback));
-  branch_tracker_->RegisterPageWatcher(std::move(watcher_ptr),
-                                       std::move(snapshot));
 }
 
 void PageImpl::RunInTransaction(

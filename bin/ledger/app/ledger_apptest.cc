@@ -84,7 +84,7 @@ TEST_F(LedgerAppTest, PutAndGet) {
   page->Put(TestArray(), TestArray(), &status);
   EXPECT_EQ(Status::OK, status);
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
-  page->GetSnapshot(GetSynchronousProxy(&snapshot), &status);
+  page->GetSnapshot(GetSynchronousProxy(&snapshot), nullptr, &status);
   EXPECT_EQ(Status::OK, status);
   ValuePtr value;
   snapshot->Get(TestArray(), &status, &value);

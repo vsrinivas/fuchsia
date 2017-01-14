@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/app/page_impl.h"
 
+#include <map>
 #include <memory>
 
 #include "apps/ledger/src/app/constants.h"
@@ -273,8 +274,8 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_FALSE(entry.deleted);
     EXPECT_EQ(storage::KeyPriority::LAZY, entry.priority);
     message_loop_.PostQuitTask();
-
   };
+
   page_ptr_->PutReference(convert::ToArray(key2), std::move(reference),
                           Priority::LAZY, put_reference_callback);
   message_loop_.Run();
@@ -408,7 +409,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr, callback_getsnapshot);
   message_loop_.Run();
 
   fidl::Array<EntryPtr> actual_entries;
@@ -456,7 +457,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr, callback_getsnapshot);
   message_loop_.Run();
 
   fidl::Array<fidl::Array<uint8_t>> actual_keys;
@@ -492,7 +493,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceSmall) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr, callback_getsnapshot);
   message_loop_.Run();
 
   ValuePtr actual_value;
@@ -529,7 +530,7 @@ TEST_F(PageImplTest, SnapshotGetReferenceLarge) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr, callback_getsnapshot);
   message_loop_.Run();
 
   ValuePtr actual_value;
@@ -564,7 +565,7 @@ TEST_F(PageImplTest, SnapshotGetPartial) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(snapshot.NewRequest(), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr, callback_getsnapshot);
   message_loop_.Run();
 
   Status status;
@@ -621,9 +622,9 @@ TEST_F(PageImplTest, ParallelPut) {
     EXPECT_EQ(Status::OK, status);
     message_loop_.PostQuitTask();
   };
-  page_ptr_->GetSnapshot(snapshot1.NewRequest(), callback_getsnapshot);
+  page_ptr_->GetSnapshot(snapshot1.NewRequest(), nullptr, callback_getsnapshot);
   message_loop_.Run();
-  page_ptr2->GetSnapshot(snapshot2.NewRequest(), callback_getsnapshot);
+  page_ptr2->GetSnapshot(snapshot2.NewRequest(), nullptr, callback_getsnapshot);
   message_loop_.Run();
 
   std::string actual_value1;

@@ -137,14 +137,17 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
 
   PageWatcherPtr watcher;
   fidl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
-  page1->Watch(std::move(watcher), [this](Status status) {
-    EXPECT_EQ(Status::OK, status);
-    message_loop_.PostQuitTask();
-  });
+  PageSnapshotPtr snapshot;
+  page1->GetSnapshot(snapshot.NewRequest(), std::move(watcher),
+                     [this](Status status) {
+                       EXPECT_EQ(Status::OK, status);
+                       message_loop_.PostQuitTask();
+                     });
   EXPECT_FALSE(RunLoopWithTimeout());
 
   page1.reset();
   page2.reset();
+  snapshot.reset();
   EXPECT_TRUE(RunLoopWithTimeout());
   EXPECT_FALSE(on_empty_called);
 
@@ -196,7 +199,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   });
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
-};
+}
 
 }  // namespace
 }  // namespace ledger

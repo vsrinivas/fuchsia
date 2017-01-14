@@ -17,17 +17,13 @@ class BranchTracker::PageWatcherContainer {
   PageWatcherContainer(PageWatcherPtr watcher,
                        PageManager* page_manager,
                        storage::PageStorage* storage,
-                       std::unique_ptr<const storage::Commit> base_commit,
-                       PageSnapshotPtr snapshot)
-      : change_in_flight_(true),
+                       std::unique_ptr<const storage::Commit> base_commit
+                       )
+      : change_in_flight_(false),
         last_commit_(std::move(base_commit)),
         manager_(page_manager),
         storage_(storage),
         interface_(std::move(watcher)) {
-    interface_->OnInitialState(std::move(snapshot), [this]() {
-      change_in_flight_ = false;
-      SendCommit();
-    });
   }
 
   void set_on_empty(ftl::Closure on_empty_callback) {
@@ -174,13 +170,11 @@ void BranchTracker::SetTransactionInProgress(bool transaction_in_progress) {
   }
 }
 
-void BranchTracker::RegisterPageWatcher(PageWatcherPtr page_watcher_ptr,
-                                        PageSnapshotPtr snapshot_ptr) {
-  std::unique_ptr<const storage::Commit> base_commit;
-  storage::Status status = storage_->GetCommit(current_commit_, &base_commit);
-  FTL_DCHECK(status == storage::Status::OK);
+void BranchTracker::RegisterPageWatcher(
+    PageWatcherPtr page_watcher_ptr,
+    std::unique_ptr<const storage::Commit> base_commit) {
   watchers_.emplace(std::move(page_watcher_ptr), manager_, storage_,
-                    std::move(base_commit), std::move(snapshot_ptr));
+                    std::move(base_commit));
 }
 
 void BranchTracker::CheckEmpty() {

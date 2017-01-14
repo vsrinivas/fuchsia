@@ -79,11 +79,10 @@ interface Page {
   GetId() => (array<uint8, 16> id);
 
   // Creates a snapshot of the page. Read operations can only be performed on a
-  // snapshot.
-  GetSnapshot(PageSnapshot& snapshot_request) => (Status status);
-
-  // Starts watching the page.
-  Watch(PageWatcher watcher) => (Status status);
+  // snapshot. Optionally, clients can provide a PageWatcher to receive change
+  // notifications for any change posterior to the returned snapshot.
+  GetSnapshot(PageSnapshot& snapshot_request, PageWatcher? watcher)
+      => (Status status);
 
   // Mutation operations.
   // Mutations are bundled together into atomic commits. If a transaction is in
@@ -216,11 +215,9 @@ struct PageChange {
   array<array<uint8>> deleted_keys;
 };
 
-// Interface to watch changes to a page. The initial state is sent immediately
-// when the watcher is registered. The client will then receive changes made by
+// Interface to watch changes to a page. The client will receive changes made by
 // itself, as well as other clients or synced from other devices.
 interface PageWatcher {
-  OnInitialState(PageSnapshot snapshot) => ();
   // Called for changes made on the page. No new OnChange() call will be made
   // while the previous one is still active. If the client is interested in the
   // full content of the page at the time of the change, it can request a

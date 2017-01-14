@@ -39,11 +39,6 @@ class Watcher : public PageWatcher {
 
  private:
   // PageWatcher:
-  void OnInitialState(fidl::InterfaceHandle<PageSnapshot> snapshot,
-                      const OnInitialStateCallback& callback) override {
-    callback();
-  }
-
   void OnChange(PageChangePtr page_change,
                 const OnChangeCallback& callback) override {
     FTL_DCHECK(page_change);
@@ -147,15 +142,17 @@ TEST_F(MergingIntegrationTest, Merging) {
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
                    [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
-  page1->Watch(std::move(watcher1_ptr),
-               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  PageSnapshotPtr snapshot1;
+  page1->GetSnapshot(snapshot1.NewRequest(), std::move(watcher1_ptr),
+                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(GetProxy(&watcher2_ptr),
                    [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
-  page2->Watch(std::move(watcher2_ptr),
-               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  PageSnapshotPtr snapshot2;
+  page2->GetSnapshot(snapshot2.NewRequest(), std::move(watcher2_ptr),
+                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
@@ -246,15 +243,17 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
                    [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
-  page1->Watch(std::move(watcher1_ptr),
-               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  PageSnapshotPtr snapshot1;
+  page1->GetSnapshot(snapshot1.NewRequest(), std::move(watcher1_ptr),
+                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(GetProxy(&watcher2_ptr),
                    [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
-  page2->Watch(std::move(watcher2_ptr),
-               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  PageSnapshotPtr snapshot2;
+  page2->GetSnapshot(snapshot2.NewRequest(), std::move(watcher2_ptr),
+                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
 
   page1->StartTransaction([](Status status) { EXPECT_EQ(status, Status::OK); });
@@ -455,8 +454,9 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
-  page1->Watch(std::move(watcher_ptr),
-               [](Status status) { EXPECT_EQ(Status::OK, status); });
+  PageSnapshotPtr snapshot2;
+  page1->GetSnapshot(snapshot2.NewRequest(), std::move(watcher_ptr),
+                     [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
 
   resolver_impl->requests[0].callback(std::move(merged_values));

@@ -50,10 +50,8 @@ class PageImpl : public Page {
   void GetId(const GetIdCallback& callback) override;
 
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+                   fidl::InterfaceHandle<PageWatcher> watcher,
                    const GetSnapshotCallback& callback) override;
-
-  void Watch(fidl::InterfaceHandle<PageWatcher> watcher,
-             const WatchCallback& callback) override;
 
   void Put(fidl::Array<uint8_t> key,
            fidl::Array<uint8_t> value,

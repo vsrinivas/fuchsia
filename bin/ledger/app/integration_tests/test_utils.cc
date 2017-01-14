@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/app/integration_tests/test_utils.h"
 
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -59,7 +60,7 @@ fidl::Array<uint8_t> PageGetId(PagePtr* page) {
 
 PageSnapshotPtr PageGetSnapshot(PagePtr* page) {
   PageSnapshotPtr snapshot;
-  (*page)->GetSnapshot(snapshot.NewRequest(),
+  (*page)->GetSnapshot(snapshot.NewRequest(), nullptr,
                        [](Status status) { EXPECT_EQ(Status::OK, status); });
   EXPECT_TRUE(page->WaitForIncomingResponse());
   return snapshot;
@@ -199,5 +200,5 @@ void LedgerApplicationBaseTest::DeletePage(const fidl::Array<uint8_t>& page_id,
   EXPECT_EQ(expected_status, status);
 }
 
-}  // namespace
+}  // namespace integration_tests
 }  // namespace ledger

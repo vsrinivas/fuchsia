@@ -35,7 +35,7 @@ class BranchTracker : public storage::CommitWatcher {
 
   // Registers a new PageWatcher interface.
   void RegisterPageWatcher(PageWatcherPtr page_watcher_ptr,
-                           PageSnapshotPtr snapshot_ptr);
+                           std::unique_ptr<const storage::Commit> base_commit);
 
   // This method should be called by |PageImpl| when a journal is commited to
   // inform which branch should be tracked by the page and watchers from now on.
