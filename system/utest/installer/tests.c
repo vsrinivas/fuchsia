@@ -37,8 +37,9 @@ static void generate_guid(uint8_t* guid_out) {
 
 static void create_partition_table(gpt_partition_t* part_entries_out,
                                    gpt_partition_t** part_entry_table_out,
-                                   size_t num_entries,
-                                   uint64_t part_size) {
+                                   size_t num_entries, uint64_t part_size,
+                                   uint64_t blocks_reserved,
+                                   uint64_t* total_size_out) {
     // sleep a second, just in case we're called consecutively, this will
     // give us a different random seed than any previous call
     sleep(1);
@@ -47,10 +48,12 @@ static void create_partition_table(gpt_partition_t* part_entries_out,
         part_entry_table_out[idx] = &part_entries_out[idx];
         generate_guid(part_entries_out[idx].type);
         generate_guid(part_entries_out[idx].guid);
-        part_entries_out[idx].first = 34 + idx * part_size;
+        part_entries_out[idx].first = blocks_reserved + idx * part_size;
         part_entries_out[idx].last = part_entries_out[idx].first +
             part_size - 1;
     }
+
+    *total_size_out = num_entries * part_size + 2 * blocks_reserved;
 }
 
 bool test_find_partition_entries(void) {
@@ -58,10 +61,13 @@ bool test_find_partition_entries(void) {
     gpt_partition_t part_entries[TABLE_SIZE];
     //const uint16_t tbl_sz = 6;
     // all partitions are 4GiB worth of 512b blocks
-    const uint64_t part_size = ((uint64_t) 1) << (32 - 9);
+    const uint64_t block_size = 512;
+    const uint64_t part_size = (((uint64_t) 1) << 32) / block_size;
+    const uint64_t blocks_reserved = SIZE_RESERVED / block_size;
+    uint64_t total_blocks;
 
     create_partition_table(part_entries, part_entry_ptrs, TABLE_SIZE,
-                           part_size);
+                           part_size, blocks_reserved, &total_blocks);
 
     uint16_t test_indices[3] = {0, TABLE_SIZE - 1, TABLE_SIZE / 2};
 
@@ -90,9 +96,12 @@ bool test_find_partition(void) {
     gpt_partition_t part_entries[TABLE_SIZE];
     const uint64_t block_size = 512;
     const uint64_t part_size = ((uint64_t) 1) << 32;
+    const uint64_t blocks_reserved = SIZE_RESERVED / block_size;
+    uint64_t total_blocks;
 
     create_partition_table(part_entries, part_entry_ptrs, TABLE_SIZE,
-                           part_size / block_size);
+                           part_size / block_size, blocks_reserved,
+                           &total_blocks);
 
 
     uint16_t test_indices[3] = {0, TABLE_SIZE - 1, TABLE_SIZE / 2};
@@ -191,10 +200,77 @@ bool test_sort(void) {
     END_TEST;
 }
 
+bool test_find_available_space(void) {
+    BEGIN_TEST;
+    gpt_device_t test_device;
+    gpt_partition_t part_entries[TABLE_SIZE];
+    memset(test_device.partitions, 0,
+           sizeof(gpt_partition_t*) * PARTITIONS_COUNT);
+    const uint64_t block_size = 512;
+    const uint64_t blocks_reserved = SIZE_RESERVED / block_size;
+    const uint64_t part_blocks = (((uint64_t) 1) << 32) / block_size;
+    uint64_t total_blocks;
+
+    // create a full partition table
+    create_partition_table(part_entries, test_device.partitions, TABLE_SIZE,
+                           part_blocks , blocks_reserved, &total_blocks);
+
+    size_t hole_location = find_available_space(&test_device, 1, total_blocks,
+                                                block_size);
+
+    ASSERT_EQ(hole_location, (size_t) 0, "");
+
+    // "expand" the disk by the required size, we should find there is space
+    // at the end of the disk
+    hole_location = find_available_space(&test_device, part_blocks,
+                                         total_blocks + part_blocks, block_size);
+
+    ASSERT_EQ(hole_location, part_entries[TABLE_SIZE - 1].last + 1, "");
+
+    // "expand" the disk by not quite enough
+    hole_location = find_available_space(&test_device, part_blocks + 1,
+                                         total_blocks + part_blocks, block_size);
+
+    ASSERT_EQ(hole_location, (size_t) 0, "");
+
+    // remove the first partition, but hold a reference to it
+    gpt_partition_t* saved = test_device.partitions[0];
+    for (int idx = 0; idx < TABLE_SIZE - 1; idx++) {
+        test_device.partitions[idx] = test_device.partitions[idx + 1];
+    }
+    test_device.partitions[TABLE_SIZE - 1] = NULL;
+
+    // check that space is reported at the beginning of the disk, after the
+    // reserved area
+    hole_location = find_available_space(&test_device, part_blocks,
+                                         total_blocks, block_size);
+    ASSERT_EQ(hole_location, blocks_reserved, "");
+
+    // make the requested partition size just larger than available
+    hole_location = find_available_space(&test_device, part_blocks + 1,
+                                         total_blocks, block_size);
+    ASSERT_EQ(hole_location, (size_t) 0, "");
+
+    // restore the original first partition, overwriting the original second
+    // partition in the process
+    test_device.partitions[0] = saved;
+    hole_location = find_available_space(&test_device, part_blocks,
+                                         total_blocks, block_size);
+    ASSERT_EQ(hole_location, test_device.partitions[0]->last + 1, "");
+
+    // again make the requested space size slightly too large
+    hole_location = find_available_space(&test_device, part_blocks + 1,
+                                         total_blocks, block_size);
+    ASSERT_EQ(hole_location, (size_t) 0, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(installer_tests)
 RUN_TEST(test_find_partition_entries)
 RUN_TEST(test_find_partition)
-RUN_TEST(test_sort);
+RUN_TEST(test_sort)
+RUN_TEST(test_find_available_space)
 END_TEST_CASE(installer_tests)
 
 int main(int argc, char** argv) {

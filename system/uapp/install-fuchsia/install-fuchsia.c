@@ -46,13 +46,6 @@
 #define IMG_SYSTEM_PATH "/system/installer/user_fs.lz4"
 #define IMG_EFI_PATH "/system/installer/efi_fs.lz4"
 
-// the first and last 17K of the disk using GPT is reserved for
-// 512B for the MBR, 512B the GPT header, and 16K for for 128, 128B
-// partition entries. Technically the reserved space is two blocks
-// plus 16KB, so we're making an assumption here that block sizes are
-// 512B.
-#define SIZE_RESERVED (((uint32_t) 17) * 1024)
-
 // use for the partition mask sent to parition_for_install
 typedef enum {
     PART_EFI = 1 << 0,
@@ -229,90 +222,6 @@ static mx_status_t find_partition_path(gpt_partition_t* const* part_info,
     }
 
     return NO_ERROR;
-}
-
-/*
- * Attempt to find an unallocated portion of the specified device that is at
- * least blocks_req in size. block_count should contain the total number of
- * blocks on the disk. The offset in blocks of the allocation hole will be
- * returned or 0 if no suitable space is located. 0 is used as a sentinel here
- * because space would never be available at block 0 because the first blocks
- * of the disk are used for the GPT and/or MBR.
- */
-static size_t find_available_space(gpt_device_t* device, size_t blocks_req,
-                                   size_t block_count, size_t block_size) {
-    gpt_partition_t** sorted_parts;
-    // 17K is reserved at the front and back of the disk for the protected MBR
-    // and the GPT. The front is the primary of these and the back is the backup
-    const uint32_t blocks_resrvd = SIZE_RESERVED / block_size;
-
-    // if the device has no partitions, we can add one after the reserved
-    // section at the front
-    if (device->partitions[0] == NULL) {
-        if (block_count - blocks_resrvd * 2 >= blocks_req) {
-            // TODO link to GPT constant
-            return blocks_resrvd;
-        } else {
-            return 0;
-        }
-    }
-
-    // check if the GPT is sorted by partition position
-    bool sorted = true;
-    size_t count = 0;
-    for (count = 1; count < PARTITIONS_COUNT &&
-             device->partitions[count] != NULL && sorted; count++) {
-        sorted = device->partitions[count - 1]->first <
-            device->partitions[count]->first;
-    }
-
-    if (!sorted) {
-        // count the number of valid partitions because in this case we would
-        // have bailed out of counting early
-        for (count = 0; device->partitions[count] != NULL; count++);
-        sorted_parts = sort_partitions(device->partitions, count);
-        if (sorted_parts == NULL) {
-            return 0;
-        }
-    } else {
-        sorted_parts = device->partitions;
-    }
-
-    // check to see if we have space at the beginning of the disk
-    if (sorted_parts[0]->first - blocks_resrvd >= blocks_req) {
-        if (!sorted) {
-            free(sorted_parts);
-        }
-        return blocks_resrvd;
-    }
-
-    // check if there is space between partitions
-    for (size_t idx = 1; idx < count; idx++) {
-        if (sorted_parts[idx]->first - sorted_parts[idx - 1]->last - 1 >=
-            blocks_req) {
-            size_t offset = sorted_parts[idx - 1]->last + 1;
-            if (!sorted) {
-                free(sorted_parts);
-            }
-            return offset;
-        }
-    }
-
-    // check to see if there is space at the end of the disk
-    if (block_count - sorted_parts[count - 1]->last - 1 - blocks_resrvd >=
-        blocks_req) {
-        size_t offset = sorted_parts[count - 1]->last + 1;
-        if (!sorted) {
-            free(sorted_parts);
-        }
-        return offset;
-    }
-
-    if (!sorted) {
-        free(sorted_parts);
-    }
-
-    return 0;
 }
 
 /*
