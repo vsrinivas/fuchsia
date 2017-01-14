@@ -43,13 +43,13 @@ static void start_pthread(void* arg) {
     // if (self->unblock_cancel)
     //     __syscall(SYS_rt_sigprocmask, SIG_UNBLOCK,
     //               SIGPT_SET, 0, _NSIG / 8);
-    mxr_tp_set(pthread_to_tp(self));
+    mxr_tp_set(mxr_thread_get_handle(self->mxr_thread), pthread_to_tp(self));
     pthread_exit(self->start(self->start_arg));
 }
 
 static void start_c11(void* arg) {
     pthread_t self = arg;
-    mxr_tp_set(pthread_to_tp(self));
+    mxr_tp_set(mxr_thread_get_handle(self->mxr_thread), pthread_to_tp(self));
     int (*start)(void*) = (int (*)(void*))self->start;
     pthread_exit((void*)(intptr_t)start(self->start_arg));
 }

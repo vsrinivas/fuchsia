@@ -5,6 +5,7 @@
 #include "pthread_impl.h"
 #include <elf.h>
 #include <limits.h>
+#include <runtime/thread.h>
 #include <runtime/tls.h>
 #include <stddef.h>
 #include <string.h>
@@ -16,10 +17,10 @@
 static void* dummy_tsd[1] = {0};
 weak_alias(dummy_tsd, __pthread_tsd_main);
 
-void __init_tp(pthread_t thread) {
+void __init_tp(mx_handle_t self, pthread_t thread) {
     thread->self = thread;
     // TODO(kulakowski): Get and set thread ID
-    mxr_tp_set(pthread_to_tp(thread));
+    mxr_tp_set(self, pthread_to_tp(thread));
     thread->locale = &libc.global_locale;
 }
 
@@ -115,7 +116,7 @@ static void static_init_tls(mxr_thread_t* mxr_thread) {
         mem = builtin_tls;
     }
 
-    __init_tp(__copy_tls(mem));
+    __init_tp(mxr_thread_get_handle(mxr_thread), __copy_tls(mem));
 }
 
 weak_alias(static_init_tls, __init_tls);

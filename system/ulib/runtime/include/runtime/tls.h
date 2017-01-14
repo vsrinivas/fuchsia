@@ -14,7 +14,7 @@ __BEGIN_CDECLS
 
 // Get and set the thread pointer.
 static inline void* mxr_tp_get(void);
-static inline void mxr_tp_set(void* tp);
+static inline void mxr_tp_set(mx_handle_t self, void* tp);
 
 #if defined(__aarch64__)
 static inline void* mxr_tp_get(void) {
@@ -23,7 +23,7 @@ static inline void* mxr_tp_get(void) {
                      : "=r"(tp));
     return tp;
 }
-static inline void mxr_tp_set(void* tp) {
+static inline void mxr_tp_set(mx_handle_t self, void* tp) {
     __asm__ volatile("msr tpidr_el0, %0"
                      :
                      : "r"(tp));
@@ -36,9 +36,7 @@ static inline void* mxr_tp_get(void) {
                          : "=r"(tp));
     return tp;
 }
-static inline void mxr_tp_set(void* tp) {
-    // TODO(kulakowski) Thread self handle.
-    mx_handle_t self = 0;
+static inline void mxr_tp_set(mx_handle_t self, void* tp) {
     mx_status_t status = _mx_thread_arch_prctl(
         self, ARCH_SET_CP15_READONLY, (uintptr_t*)&tp);
     if (status != NO_ERROR)
@@ -52,9 +50,7 @@ static inline void* mxr_tp_get(void) {
                          : "=r"(tp));
     return tp;
 }
-static inline void mxr_tp_set(void* tp) {
-    // TODO(kulakowski) Thread self handle.
-    mx_handle_t self = 0;
+static inline void mxr_tp_set(mx_handle_t self, void* tp) {
     mx_status_t status = _mx_thread_arch_prctl(
         self, ARCH_SET_FS, (uintptr_t*)&tp);
     if (status != NO_ERROR)

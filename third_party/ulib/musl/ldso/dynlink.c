@@ -101,7 +101,7 @@ struct symdef {
     struct dso* dso;
 };
 
-void __init_tp(pthread_t);
+void __init_tp(mx_handle_t, pthread_t);
 pthread_t __copy_tls(unsigned char*);
 
 static struct builtin_tls {
@@ -1249,7 +1249,7 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
      * thread pointer at runtime. */
     libc.tls_size = sizeof builtin_tls;
     libc.tls_align = tls_align;
-    __init_tp(__copy_tls((void*)builtin_tls));
+    __init_tp(thread_self, __copy_tls((void*)builtin_tls));
 
     /* Only trust user/env if kernel says we're not suid/sgid */
     bool log_libs = false;
@@ -1376,7 +1376,7 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
                      libc.tls_size);
             _exit(127);
         }
-        __init_tp(__copy_tls(initial_tls));
+        __init_tp(thread_self, __copy_tls(initial_tls));
     } else {
         size_t tmp_tls_size = libc.tls_size;
         pthread_t self = __pthread_self();
