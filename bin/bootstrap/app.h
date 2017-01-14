@@ -62,6 +62,7 @@ class App : public modular::ApplicationEnvironmentHost {
   fidl::Binding<modular::ApplicationEnvironmentHost> env_host_binding_;
   modular::ServiceProviderImpl env_services_;
   modular::ApplicationLauncherPtr env_launcher_;
+  modular::ApplicationControllerPtr app_controller_;
 
   // View manager state.
   mozart::ViewManagerPtr view_manager_;
