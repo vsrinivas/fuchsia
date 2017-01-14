@@ -4,15 +4,15 @@
 
 group("examples") {
   deps = [
+    "components_query",
     "counter_cpp",
     "counter_flutter",
+    "hello_component",
     "hello_world_cpp",
     "hello_world_flutter",
     "https_flutter",
+    "request_components",
     "swap_cpp",
     "todo_cpp",
-    "hello_component",
-    "request_components",
-    "components_query",
   ]
 }
