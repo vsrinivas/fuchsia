@@ -17,10 +17,10 @@ executable("resolver_main") {
   ]
 
   deps = [
-    "//apps/component_manager/services",
     "//apps/maxwell/services/resolver",
     "//apps/modular/lib/app",
     "//apps/modular/services/application:application_sync",
+    "//apps/modular/services/component",
     "//lib/ftl",
     "//lib/mtl",
     "//third_party/rapidjson",
