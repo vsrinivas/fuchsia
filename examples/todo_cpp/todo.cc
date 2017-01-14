@@ -81,7 +81,10 @@ void TodoApp::Initialize(
   story_->GetLedger(ledger_.NewRequest(), HandleResponse("GetLedger"));
   ledger_->GetRootPage(page_.NewRequest(), HandleResponse("GetRootPage"));
 
-  page_->Watch(page_watcher_binding_.NewBinding(), HandleResponse("Watch"));
+  ledger::PageSnapshotPtr snapshot;
+  page_->GetSnapshot(snapshot.NewRequest(), page_watcher_binding_.NewBinding(),
+                     HandleResponse("Watch"));
+  List(std::move(snapshot));
 
   mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { Act(); });
 }
@@ -90,23 +93,14 @@ void TodoApp::Stop(const StopCallback& done) {
   done();
 }
 
-void TodoApp::OnInitialState(
-    ::fidl::InterfaceHandle<ledger::PageSnapshot> snapshot,
-    const OnInitialStateCallback& callback) {
-  List();
-  callback();
-}
-
 void TodoApp::OnChange(ledger::PageChangePtr page_change,
                        const OnChangeCallback& callback) {
-  List();
-  callback(nullptr);
+  ledger::PageSnapshotPtr snapshot;
+  callback(snapshot.NewRequest());
+  List(std::move(snapshot));
 }
 
-void TodoApp::List() {
-  ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), HandleResponse("GetSnapshot"));
-
+void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
       nullptr, nullptr,
@@ -129,7 +123,8 @@ void TodoApp::List() {
 
 void TodoApp::GetKeys(std::function<void(fidl::Array<Key>)> callback) {
   ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), HandleResponse("GetSnapshot"));
+  page_->GetSnapshot(snapshot.NewRequest(), nullptr,
+                     HandleResponse("GetSnapshot"));
 
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetKeys(nullptr, nullptr, ftl::MakeCopyable([

@@ -92,7 +92,7 @@ class GetStoryDataCall : public Operation {
           }
 
           root_page_->GetSnapshot(
-              root_snapshot_.NewRequest(), [this](ledger::Status status) {
+              root_snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
                 if (status != ledger::Status::OK) {
                   FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
                                  << " Page.GetSnapshot() " << status;
@@ -451,7 +451,7 @@ class PreviousStoriesCall : public Operation {
         return;
       }
       root_page_->GetSnapshot(
-          root_snapshot_.NewRequest(), [this](ledger::Status status) {
+          root_snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
             if (status != ledger::Status::OK) {
               FTL_LOG(ERROR) << "PreviousStoryCall() "
                              << " Page.GetSnapshot() " << status;
@@ -527,11 +527,16 @@ StoryProviderImpl::StoryProviderImpl(
 
   fidl::InterfaceHandle<ledger::PageWatcher> watcher;
   page_watcher_binding_.Bind(watcher.NewRequest());
-  root_page->Watch(std::move(watcher), [](ledger::Status status) {
-    if (status != ledger::Status::OK) {
-      FTL_LOG(ERROR) << "StoryProviderImpl() failed call to Ledger.Watch() "
-                     << status;
-    }
+  // TODO(mesch): Consider to initialize story_ids_ here. OnChange watcher
+  // callbacks may be from an unknown base state if we don't use the snapshot
+  // here.
+  ledger::PageSnapshotPtr snapshot_unused;
+  root_page->GetSnapshot(snapshot_unused.NewRequest(), std::move(watcher),
+    [](ledger::Status status) {
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "StoryProviderImpl() failed call to Ledger.Watch() "
+                       << status;
+      }
   });
 
   // We must initialize story_ids_ with the IDs of currently existing
@@ -691,15 +696,6 @@ void StoryProviderImpl::GetController(
 void StoryProviderImpl::PreviousStories(
     const PreviousStoriesCallback& callback) {
   new PreviousStoriesCall(&operation_queue_, ledger_.get(), callback);
-}
-
-// |PageWatcher|
-void StoryProviderImpl::OnInitialState(
-    fidl::InterfaceHandle<ledger::PageSnapshot> page,
-    const OnInitialStateCallback& callback) {
-  // TODO(mesch): Consider to initialize story_ids_ here, but the
-  // current place may be better anyway.
-  callback();
 }
 
 // |PageWatcher|

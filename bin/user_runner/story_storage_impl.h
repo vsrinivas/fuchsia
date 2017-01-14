@@ -50,8 +50,6 @@ class StoryStorageImpl : public StoryStorage, public ledger::PageWatcher {
   void Sync(const SyncCallback& callback) override;
 
   // |PageWatcher|
-  void OnInitialState(fidl::InterfaceHandle<ledger::PageSnapshot> page,
-                      const OnInitialStateCallback& callback) override;
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& callback) override;
 

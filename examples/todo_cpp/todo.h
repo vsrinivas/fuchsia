@@ -35,13 +35,11 @@ class TodoApp : public modular::Module, public ledger::PageWatcher {
   void Stop(const StopCallback& done) override;
 
   // ledger::PageWatcher:
-  void OnInitialState(fidl::InterfaceHandle<ledger::PageSnapshot> snapshot,
-                      const OnInitialStateCallback& callback) override;
   void OnChange(ledger::PageChangePtr page_change,
                 const OnChangeCallback& callback) override;
 
  private:
-  void List();
+  void List(ledger::PageSnapshotPtr snapshot);
 
   void GetKeys(std::function<void(fidl::Array<Key>)> callback);
 

@@ -29,7 +29,7 @@ class ReadLinkDataCall : public Operation {
 
   void Run() override {
     page_->GetSnapshot(
-        page_snapshot_.NewRequest(), [this](ledger::Status status) {
+        page_snapshot_.NewRequest(),  nullptr, [this](ledger::Status status) {
           page_snapshot_->Get(
               to_array(link_id_),
               [this](ledger::Status status, ledger::ValuePtr value) {
@@ -128,7 +128,13 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
   bindings_.AddBinding(this, std::move(request));
 
   if (story_page_.is_bound()) {
-    story_page_->Watch(page_watcher_binding_.NewBinding(),
+    // TODO(mesch): We get the initial state from a different query. This
+    // leaves the possibility that the next OnChange is against a
+    // different base state. We should get the initial state from this page
+    // snapshot instead.
+    ledger::PageSnapshotPtr snapshot_unused;
+    story_page_->GetSnapshot(snapshot_unused.NewRequest(),
+                       page_watcher_binding_.NewBinding(),
                        [](ledger::Status status) {});
   }
 }
@@ -178,16 +184,6 @@ void StoryStorageImpl::WatchLink(
 // |StoryStorage|
 void StoryStorageImpl::Dup(fidl::InterfaceRequest<StoryStorage> request) {
   bindings_.AddBinding(this, std::move(request));
-}
-
-// |PageWatcher|
-void StoryStorageImpl::OnInitialState(
-    fidl::InterfaceHandle<ledger::PageSnapshot> page,
-    const OnInitialStateCallback& callback) {
-  // TODO(mesch): We get the initial state from a direct query. This
-  // leaves the possibility that the next OnChange is against a
-  // different base state.
-  callback();
 }
 
 // |PageWatcher|

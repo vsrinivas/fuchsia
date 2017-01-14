@@ -98,10 +98,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   void Watch(fidl::InterfaceHandle<StoryProviderWatcher> watcher) override;
 
   // |PageWatcher|
-  void OnInitialState(fidl::InterfaceHandle<ledger::PageSnapshot> page,
-                      const OnInitialStateCallback& callback) override;
-
-  // |PageWatcher|
   void OnChange(ledger::PageChangePtr page,
                 const OnChangeCallback& callback) override;
 
