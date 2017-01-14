@@ -82,6 +82,45 @@ public:
         return ptr_;
     }
 
+    // Implicit upcasting via construction.
+    //
+    // We permit implicit casting of a unique_ptr<U> to a unique_ptr<T> as long
+    // as...
+    //
+    // 1) U* is implicitly convertible to a T*
+    // 2) Neither T nor U are a class/struct type, or both T and U are
+    //    class/struct types, and T has a virtual destructor.
+    // 3) The unique_ptr<U> we are casting from is using mxtl::default_delete as
+    //    its deleter.
+    // 4) The unique_ptr<T> we are casting to is using mxtl::default_delete as
+    //    its deleter.
+    //
+    // Note: we do this via an implicit converting constructor (instead of a
+    // user-defined conversion operator) so that we can demand that we are
+    // converting from a properly moved rvalue reference.
+    //
+    // Also Note:  This behavior is *not* the same as std::unique_ptr.
+    // std::unique_ptr only cares about point #1.  Its behavior emulates raw
+    // pointers and will gladly let you implicitly convert a class U to a class
+    // T as an implicit upcast regardless of whether or not T has a virtual
+    // destructor.
+    template <typename U, typename U_Deleter,
+              typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
+    unique_ptr(unique_ptr<U, U_Deleter>&& o) : ptr_(o.release()) {
+        static_assert((is_class<T>::value == is_class<U>::value) &&
+                     (!is_class<T>::value || has_virtual_destructor<T>::value),
+                "Cannot convert unique_ptr<U> to unique_ptr<T> unless neither T "
+                "nor U are class/struct types, or T has a virtual destructor");
+
+        static_assert(is_same<U_Deleter, default_delete<U>>::value,
+                "Cannot convert unique_ptr<U> to unique_ptr<T, ...> unless unique_ptr<U, ...> is "
+                "using default_delete<U>.");
+
+        static_assert(is_same<Deleter, default_delete<T>>::value,
+                "Cannot convert unique_ptr<U> to unique_ptr<T, ...> unless unique_ptr<T, ...> is "
+                "using default_delete<T>.");
+    }
+
 private:
     T* ptr_;
 };

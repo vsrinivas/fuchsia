@@ -334,6 +334,240 @@ static bool uptr_test_array_comparison() {
     END_TEST;
 }
 
+namespace upcasting {
+
+class A {
+public:
+    virtual ~A() { }
+
+private:
+    uint32_t stuff_;
+};
+
+class B {
+public:
+    ~B() { }
+
+private:
+    uint32_t stuff_;
+};
+
+class C : public A, public B {
+public:
+    ~C() { }
+
+private:
+    uint32_t stuff_;
+};
+
+class D {
+public:
+    virtual ~D() { }
+
+private:
+    uint32_t stuff_;
+};
+
+template <typename T>
+struct custom_delete {
+    inline void operator()(T* ptr) const {
+        enum { type_must_be_complete = sizeof(T) };
+        delete ptr;
+    }
+};
+
+template <typename UptrType>
+static bool handoff_fn(UptrType&& ptr) {
+    BEGIN_TEST;
+    EXPECT_NONNULL(ptr, "");
+    END_TEST;
+}
+
+class OverloadTestHelper {
+public:
+    enum class Result {
+        None,
+        ClassA,
+        ClassB,
+        ClassD,
+    };
+
+    void PassByMove(mxtl::unique_ptr<A>&&) { result_ = Result::ClassA; }
+    void PassByMove(mxtl::unique_ptr<D>&&) { result_ = Result::ClassD; }
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // Enabling this overload should cause the overload test to fail to compile
+    // due to ambiguity (it does not know whether to cast mxtl::unique_ptr<C> to
+    // mxtl::unique_ptr<A> or mxtl::unique_ptr<B>)
+    void PassByMove(mxtl::unique_ptr<B>&&) { result_ = Result::ClassB; }
+#endif
+
+    Result result() const { return result_; }
+
+private:
+    Result result_ = Result::None;
+};
+
+
+template <typename Base,
+          typename Derived,
+          typename BaseDeleter = mxtl::default_delete<Base>,
+          typename DerivedDeleter = mxtl::default_delete<Derived>>
+static bool test_upcast() {
+    BEGIN_TEST;
+
+    AllocChecker ac;
+
+    mxtl::unique_ptr<Derived, DerivedDeleter> derived_ptr;
+
+    // Construct unique_ptr<Base> with a move and implicit cast
+    derived_ptr.reset(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        EXPECT_NONNULL(derived_ptr, "");
+
+        mxtl::unique_ptr<Base, BaseDeleter> base_ptr(mxtl::move(derived_ptr));
+
+        EXPECT_NULL(derived_ptr, "");
+        EXPECT_NONNULL(base_ptr, "");
+    }
+
+    // Assign unique_ptr<Base> at declaration time with a mxtl::move
+    derived_ptr.reset(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        EXPECT_NONNULL(derived_ptr, "");
+
+        mxtl::unique_ptr<Base, BaseDeleter> base_ptr = mxtl::move(derived_ptr);
+
+        EXPECT_NULL(derived_ptr, "");
+        EXPECT_NONNULL(base_ptr, "");
+    }
+
+    // Assign unique_ptr<Base> after declaration with a mxtl::move
+    derived_ptr.reset(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        mxtl::unique_ptr<Base, BaseDeleter> base_ptr;
+        base_ptr = mxtl::move(derived_ptr);
+    }
+
+    // Pass the pointer to a function with a move and an implicit cast
+    derived_ptr.reset(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        EXPECT_NONNULL(derived_ptr, "");
+
+        bool test_res = handoff_fn<mxtl::unique_ptr<Base, BaseDeleter>>(mxtl::move(derived_ptr));
+
+        EXPECT_NULL(derived_ptr, "");
+        EXPECT_TRUE(test_res, "");
+    }
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // Construct unique_ptr<Base> without a move.
+    derived_ptr.reset(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        mxtl::unique_ptr<Base, BaseDeleter> base_ptr(derived_ptr);
+    }
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // Assign unique_ptr<Base> at declaration time without a mxtl::move.
+    derived_ptr.reset(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        mxtl::unique_ptr<Base, BaseDeleter> base_ptr = derived_ptr;
+    }
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // Assign unique_ptr<Base> after declaration without a mxtl::move.
+    derived_ptr.reset(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        mxtl::unique_ptr<Base, BaseDeleter> base_ptr;
+        base_ptr = derived_ptr;
+    }
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // Pass the pointer to a function with an implicit cast but without a move.
+    derived_ptr.reset(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        bool test_res = handoff_fn<mxtl::unique_ptr<Base, BaseDeleter>>(derived_ptr);
+        EXPECT_FALSE(test_res, "");
+    }
+#endif
+
+    END_TEST;
+}
+
+static bool uptr_upcasting() {
+    BEGIN_TEST;
+
+    bool test_res;
+
+    // This should work.  C derives from A, A has a virtual destructor, and
+    // everything is using the default deleter.
+    test_res = test_upcast<A, C>();
+    EXPECT_TRUE(test_res, "");
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // This should not work.  C derives from B, but B has no virtual destructor.
+    test_res = test_upcast<B, C>();
+    EXPECT_FALSE(test_res, "");
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // This should not work.  D has a virtual destructor, but it is not a base
+    // class of C.
+    test_res = test_upcast<D, C>();
+    EXPECT_FALSE(test_res, "");
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // This should not work.  A and C have the proper relationship, but we are
+    // using a custom deleter for unique_ptr<A>, and C will not implicitly cast
+    // itself to a unique_ptr<A> which uses a custom deleter.
+    test_res = test_upcast<A, C, custom_delete<A>>();
+    EXPECT_FALSE(test_res, "");
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // This should not work.  A and C have the proper relationship, and we are
+    // attempting to implicitly cast to unique_ptr<A, default_delete<A>>, but
+    // our C pointer is using a custom deleter.
+    test_res = test_upcast<A, C, mxtl::default_delete<A>, custom_delete<C>>();
+    EXPECT_FALSE(test_res, "");
+#endif
+
+    // Test overload resolution.  Make a C and the try to pass it to
+    // OverloadTestHelper's various overloaded methods.  The compiler should
+    // know which version to pick, and it should pick the unique_ptr<A> version,
+    // not the unique_ptr<D> version.  If the TEST_WILL_NOT_COMPILE check is
+    // enabled in OverloadTestHelper, a unique_ptr<B> version will be enabled as
+    // well.  This should cause the build to break because of ambiguity.
+    AllocChecker ac;
+    mxtl::unique_ptr<C> ptr(new (&ac) C());
+    ASSERT_TRUE(ac.check(), "");
+
+    {
+        // Now test pass by move.
+        OverloadTestHelper helper;
+        helper.PassByMove(mxtl::move(ptr));
+
+        EXPECT_NULL(ptr, "");
+        EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result(), "");
+    }
+
+    END_TEST;
+}
+
+}
+
 BEGIN_TEST_CASE(unique_ptr)
 RUN_NAMED_TEST("Scoped Destruction",               uptr_test_scoped_destruction)
 RUN_NAMED_TEST("Move",                             uptr_test_move)
@@ -347,4 +581,5 @@ RUN_NAMED_TEST("Array nullptr Scoped Destruction", uptr_test_array_null_scoped_d
 RUN_NAMED_TEST("Array Different Scope Swapping",   uptr_test_array_diff_scope_swap)
 RUN_NAMED_TEST("Array operator bool",              uptr_test_array_bool_op)
 RUN_NAMED_TEST("Array comparison operators",       uptr_test_array_comparison)
+RUN_NAMED_TEST("Upcast tests",                     upcasting::uptr_upcasting)
 END_TEST_CASE(unique_ptr);
