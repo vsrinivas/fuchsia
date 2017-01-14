@@ -11,7 +11,6 @@ group("modular") {
     "src/bootstrap",
     "src/component_manager",
     "src/device_runner:all",
-    "src/document_store",
     "src/run_component",
     "src/story_runner:all",
     "src/user_runner:all",
