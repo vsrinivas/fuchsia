@@ -135,7 +135,6 @@ static mx_status_t get_writable_vmo(mx_handle_t vmar_self,
                                     uintptr_t* file_start,
                                     uintptr_t* file_end,
                                     mx_handle_t* copy_vmo) {
-    mx_handle_t copy_vmo;
     mx_status_t status = mx_vmo_create(data_size, 0, copy_vmo);
     if (status != NO_ERROR)
         return status;
