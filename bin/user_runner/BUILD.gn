@@ -76,6 +76,7 @@ executable("dummy_user_shell") {
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/lib/rapidjson",
     "//apps/modular/services/device:device_context",
+    "//apps/modular/services/test_runner",
     "//apps/modular/services/user",
     "//apps/mozart/lib/view_framework",
     "//apps/mozart/services/views",

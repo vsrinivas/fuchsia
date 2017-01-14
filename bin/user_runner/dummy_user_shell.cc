@@ -14,6 +14,7 @@
 #include "apps/modular/lib/fidl/single_service_view_app.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
+#include "apps/modular/services/test_runner/test_runner.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_shell.fidl.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
@@ -128,7 +129,10 @@ class DummyUserShellApp
       : settings_(settings),
         story_provider_watcher_binding_(this),
         story_watcher_binding_(this),
-        link_watcher_binding_(this) {}
+        link_watcher_binding_(this),
+        test_runner_(application_context()
+                         ->ConnectToEnvironmentService<modular::TestRunner>()) {
+  }
   ~DummyUserShellApp() override = default;
 
  private:
@@ -185,6 +189,10 @@ class DummyUserShellApp
 
   // |UserShell|
   void Terminate(const TerminateCallback& done) override {
+    // Notify the test runner.
+    if (test_runner_)
+      test_runner_->Finish(true);
+
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     done();
   }
@@ -336,6 +344,7 @@ class DummyUserShellApp
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
   fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
   std::unique_ptr<DummyUserShellView> view_;
+  modular::TestRunnerPtr test_runner_;
   modular::UserContextPtr user_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;

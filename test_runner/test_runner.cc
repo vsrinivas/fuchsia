@@ -2,65 +2,122 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This is a TCP service that accepts shell commands, runs them, and streams
-// back output to the socket. The protocol is as follows:
-// - Client connects, sends a single line representing the shell command to run.
-// - Server launches the shell command, reads in the stdout and stderr of the child
-//   process, and flushes each line to the client.
-// - Once the process has shut down, server sends client a new line, followed by
-//   ASCII-encoded signed integer representing the process exit code.
+// This is a TCP service and a fidl service. The TCP portion of this process
+// accepts test commands, runs them, waits for completion or error, and reports
+// back to the TCP client.
+// The TCP protocol is as follows:
+// - Client connects, sends a single line representing the test command to run:
+//   run <test_id> <shell command to run>\n
+// - Once the test is done, we reply to the TCP client:
+//   <test_id> pass|fail\n
+//
+// The <test_id> is an unique ID string that the TCP client gives us per test;
+// we tag our replies and device logs with it so the TCP client can identify
+// device logs (and possibly if multiple tests are run at the same time).
+//
+// The shell command representing the running test is launched in a new
+// ApplicationEnvironment for easy teardown. This ApplicationEnvironment
+// contains a TestRunner service (see test_runner.fidl). The applications
+// launched by the shell command (which may launch more than 1 process) may use
+// the |TestRunner| service to signal completion of the test, and also provides
+// a way to signal process crashes.
 
-// TODO(vardhan): Process multiple clients/commands at the same time.
+// TODO(vardhan): Make it possible to run more than one test per TCP connection.
+// And possibly at the same time. And more than one TCP connection at the same
+// time.
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <sys/epoll.h>
 #include <sys/socket.h>
-#include <sys/types.h>
+#include <unistd.h>
 
 #include <functional>
 #include <string>
 #include <vector>
 
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
-#include <magenta/processargs.h>
-#include <magenta/types.h>
-#include <mx/process.h>
-#include <mxio/util.h>
-
+#include "apps/modular/lib/app/application_context.h"
+#include "apps/modular/lib/fidl/scope.h"
+#include "apps/modular/services/test_runner/test_runner.fidl.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_view.h"
-
-namespace {
+#include "lib/mtl/tasks/message_loop.h"
 
 // TODO(vardhan): Make listen port command-line configurable.
-constexpr uint16_t kListenPort = 8342;  // TCP port
+constexpr uint16_t kListenPort = 8342;        // TCP port
 constexpr uint16_t kMaxCommandLength = 2048;  // in bytes.
-constexpr uint16_t kMaxStdReadBytes = 1024;  // read threshold for stdout/err.
 
-// Represents a client connection. Self-owned.
-class TestRunnerConnection {
+namespace modular {
+namespace {
+
+// This is an ApplicationEnvironment under which our test runs. We expose a
+// TestRunner service which the test can use to assert when it is complete.
+class TestRunnerScope : public modular::Scope {
  public:
-  explicit TestRunnerConnection(int socket_fd)
-    : socket_(socket_fd) {};
-
-  void Start() {
-    ReadCommand();
+  TestRunnerScope(
+      ApplicationEnvironmentPtr parent_env,
+      ServiceProviderPtr default_services,
+      const std::string& label,
+      ServiceProviderImpl::InterfaceRequestHandler<TestRunner> request_handler)
+      : Scope(std::move(parent_env), label) {
+    service_provider_.SetDefaultServiceProvider(std::move(default_services));
+    service_provider_.AddService(request_handler);
   }
+
+ private:
+  // |ApplicationEnvironmentHost|:
+  void GetApplicationEnvironmentServices(
+      fidl::InterfaceRequest<ServiceProvider> environment_services) override {
+    service_provider_.AddBinding(std::move(environment_services));
+  }
+
+  ServiceProviderImpl service_provider_;
+};
+
+// Represents a client connection, and is self-owned (it will exit the
+// MessageLoop upon completion). TestRunnerConnection receives commands to run
+// tests, kicks them off in their own ApplicationEnvironment, provides the
+// environment a TestRunner service to report completion, and reports back test
+// results.
+class TestRunnerConnection : public TestRunner {
+ public:
+  explicit TestRunnerConnection(int socket_fd,
+                                std::shared_ptr<ApplicationContext> app_context)
+      : app_context_(app_context),
+        socket_(socket_fd),
+        test_runner_binding_(this) {
+    test_runner_binding_.set_connection_error_handler(
+        std::bind(&TestRunnerConnection::Finish, this, false));
+  }
+
+  void Start() { ReadAndRunCommand(); }
 
  private:
   ~TestRunnerConnection() {
     close(socket_);
-    if (lp_) {
-      launchpad_destroy(lp_);
-    }
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  }
+
+  // |TestRunner|:
+  void Finish(bool success) {
+    // IMPORTANT: leave this log here, exactly as it is. Currently, tests
+    // launched from host (e.g. Linux) grep for this text to figure out the
+    // amount of the log to associate with the test.
+    FTL_LOG(INFO) << "test_runner: done " << test_id_ << " success=" << success;
+
+    std::stringstream epilogue;
+    epilogue << test_id_ << " ";
+    epilogue << (success ? "pass" : "fail");
+
+    std::string bytes = epilogue.str();
+    write(socket_, bytes.data(), bytes.size());
+
+    delete this;
   }
 
   // Read an entire line representing the command to run. Blocks until we have a
-  // line. Fails if we hit |kMaxCommandLength| chars. Deletes this object once
-  // the command is executed.
-  void ReadCommand() {
+  // line. Fails if we hit |kMaxCommandLength| chars.
+  void ReadAndRunCommand() {
     char buf[kMaxCommandLength];
     size_t read_so_far = 0;
     while (read_so_far < kMaxCommandLength) {
@@ -68,184 +125,90 @@ class TestRunnerConnection {
       FTL_CHECK(n > 0);
       read_so_far += n;
       // Is there a line?
-      if (static_cast<char*>(memchr(buf, '\n', read_so_far)) != NULL) {
+      // TODO(vardhan): Will be bad if we receive anything after the new line.
+      if (static_cast<char*>(memchr(buf, '\n', read_so_far)) != nullptr) {
         break;
       }
     }
     if (read_so_far < kMaxCommandLength) {
-      RunCommand(ftl::StringView(buf, read_so_far));
-    }
-    delete this;
-  }
+      ftl::StringView command_line(buf, read_so_far);
 
-  // This mostly resembles launchpad_launch_mxio*(), with a modification: we
-  // control the reading-side of stdout/err.
-  void LaunchProcess(
-      const std::vector<const char*>& args) {
-    mx_handle_t job_to_child = MX_HANDLE_INVALID;
-    mx_handle_t job = mxio_get_startup_handle(MX_HND_INFO(MX_HND_TYPE_JOB, 0));
-    if (job > 0)
-      mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
+      // command_parse[0] = "run"
+      // command_parse[1] = test_id
+      // command_parse[2] = url
+      // command_parse[3..] = args (optional)
+      std::vector<std::string> command_parse = ftl::SplitStringCopy(
+          command_line, " ", ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
 
-    mx_handle_t vmo = launchpad_vmo_from_file(args[0]);
-    mx_status_t status = launchpad_create(job_to_child, args[0], &lp_);
-    if (status == NO_ERROR) {
-      status = launchpad_elf_load(lp_, vmo);
-      if (status == NO_ERROR)
-        status = launchpad_load_vdso(lp_, MX_HANDLE_INVALID);
-      if (status == NO_ERROR)
-        status = launchpad_add_vdso_vmo(lp_);
-      if (status == NO_ERROR)
-        status = launchpad_arguments(lp_, args.size(), args.data());
-      if (status == NO_ERROR)
-        status = launchpad_environ(lp_, environ);
-      if (status == NO_ERROR)
-        status = launchpad_clone_mxio_root(lp_);
-      if (status == NO_ERROR)
-        status = launchpad_clone_mxio_cwd(lp_);
-      if (status == NO_ERROR)
-        status = launchpad_add_handles(lp_, 0, nullptr, nullptr);
-      if (status == NO_ERROR)
-        status = launchpad_clone_fd(lp_, STDIN_FILENO, STDIN_FILENO);
-      if (status == NO_ERROR)
-        status = launchpad_add_pipe(lp_, &fd_stdout_, STDOUT_FILENO);
-      if (status == NO_ERROR)
-        status = launchpad_add_pipe(lp_, &fd_stderr_, STDERR_FILENO);
-    } else {
-      FTL_LOG(ERROR) << "Could not prepare launch for: " << args[0];
-      mx_handle_close(vmo);
-      return;
-    }
+      FTL_CHECK(command_parse.size() >= 3)
+          << "Not enough args. Must be: `run <test id> <command to run>`";
+      FTL_CHECK(command_parse[0] == "run")
+          << "Only supported command is `run`.";
 
-    if (status == NO_ERROR) {
-      process_ = mx::process(launchpad_start(lp_));
-    } else {
-      FTL_LOG(INFO) << "Could not prepare launch for: " << args[0];
-      process_ = mx::process(status);
-    }
-  }
+      test_id_ = command_parse[1];
+      FTL_LOG(INFO) << "test_runner: run " << test_id_;
 
-  // This blocks. Reads stdout/err from child process, writes them line-by-line
-  // to the socket.
-  void DrainOutput() {
-    int epollfd = epoll_create1(0);
-    FTL_CHECK(epollfd != -1);
-
-    struct pipe_description pipe_desc[2] = {
-      {fd_stdout_, std::string()},
-      {fd_stderr_, std::string()}
-    };
-    struct epoll_event events[2] = {
-      {EPOLLIN, {&pipe_desc[0]}},
-      {EPOLLIN, {&pipe_desc[1]}},
-    };
-
-    pipe_desc[0].buffer.reserve(kMaxStdReadBytes);
-    pipe_desc[1].buffer.reserve(kMaxStdReadBytes);
-
-    FTL_CHECK(epoll_ctl(epollfd, EPOLL_CTL_ADD, pipe_desc[0].fd,
-        &events[0]) != -1);
-    FTL_CHECK(epoll_ctl(epollfd, EPOLL_CTL_ADD, pipe_desc[1].fd,
-        &events[1]) != -1);
-
-    int opened_pipes = 2;
-    while (opened_pipes) {
-      int n = epoll_wait(epollfd, events, 2, -1);
-      FTL_CHECK(n != -1);
-      for (int i = 0; i < n; i++) {
-        struct pipe_description* event_data =
-            static_cast<struct pipe_description*>(events[i].data.ptr);
-        if (!ReadInto(event_data->fd, &event_data->buffer)) {
-          FTL_CHECK(epoll_ctl(epollfd, EPOLL_CTL_DEL, event_data->fd,
-            nullptr) != -1);
-          opened_pipes--;
-          continue;
-        }
-
-        FlushLinesToSocket(&event_data->buffer);
+      std::vector<std::string> args;
+      for (size_t i = 3; i < command_parse.size(); i++) {
+        args.push_back(std::move(command_parse[i]));
       }
-    }
-
-    close(epollfd);
-  }
-
-  // Writes available lines from |in_buf| into the socket.
-  void FlushLinesToSocket(std::string* in_buf) {
-    auto total_write = in_buf->rfind('\n');
-    if (total_write == std::string::npos) {
-      return;
-    }
-    total_write++;
-
-    if (total_write > 0) {
-      FTL_CHECK(write(socket_, in_buf->data(), total_write)
-          == static_cast<ssize_t>(total_write));
-      in_buf->erase(0, total_write);
+      RunCommand(command_parse[2], args);
+    } else {
+      delete this;
     }
   }
 
-  // Returns false if |in_fd| is closed. Reads from |in_fd| into |buffer|. Reads
-  // up to |kMaxStdReadBytes| bytes worth.
-  bool ReadInto(int in_fd, std::string* buffer) {
-    char buf[kMaxStdReadBytes];
-    ssize_t bytes_read = read(in_fd, buf, sizeof(buf));
-    if (bytes_read == 0 || (bytes_read == -1 && errno == ENOTCONN))
-      return false;
+  // If the child application stops without reporting anything, we declare the
+  // test a failure.
+  void RunCommand(const std::string& url,
+                  const std::vector<std::string>& args) {
+    // 1. Make a child environment to run the command.
+    ApplicationEnvironmentPtr parent_env;
+    app_context_->environment()->Duplicate(parent_env.NewRequest());
 
-    FTL_CHECK(bytes_read > 0)
-      << "bytes_read = " << bytes_read
-      << ", errno = " << errno;
-    buffer->append(buf, bytes_read);
-    return true;
+    ServiceProviderPtr parent_env_services;
+    parent_env->GetServices(parent_env_services.NewRequest());
+
+    child_env_scope_ = std::make_unique<TestRunnerScope>(
+        std::move(parent_env), std::move(parent_env_services),
+        "test_runner_env", [this](fidl::InterfaceRequest<TestRunner> request) {
+          test_runner_binding_.Bind(std::move(request));
+        });
+
+    // 2. Launch the test command.
+    ApplicationLauncherPtr launcher;
+    child_env_scope_->environment()->GetApplicationLauncher(
+        launcher.NewRequest());
+
+    ApplicationLaunchInfoPtr info = ApplicationLaunchInfo::New();
+    info->url = url;
+    info->arguments = fidl::Array<fidl::String>::From(args);
+    launcher->CreateApplication(std::move(info),
+                                child_app_controller_.NewRequest());
+    child_app_controller_.set_connection_error_handler(
+        std::bind(&TestRunnerConnection::Finish, this, false));
   }
 
-  // Blocks until the child process is terminated, and returns its exit code.
-  int WaitForTermination() {
-    FTL_CHECK(process_.wait_one(MX_TASK_TERMINATED,
-        MX_TIME_INFINITE, nullptr) == NO_ERROR);
+  std::shared_ptr<ApplicationContext> app_context_;
 
-    mx_info_process_t proc_info;
-    FTL_CHECK(mx_object_get_info(process_.get(), MX_INFO_PROCESS, &proc_info, sizeof(proc_info),
-        nullptr, nullptr) == NO_ERROR);
-
-    return proc_info.return_code;
-  }
-
-  // This will block until both stdout and stderr of the |command| are closed.
-  void RunCommand(ftl::StringView command) {
-    auto cmd_str = command.ToString();
-    std::vector<const char*> args = {
-      "/boot/bin/sh",
-      "-c",
-      cmd_str.c_str(),
-    };
-    LaunchProcess(args);
-    DrainOutput();
-    int exit_code = WaitForTermination();
-
-    // Always end with an ASCII-encoded exit code on a new line.
-    std::stringstream epilogue;
-    epilogue << "\n" << exit_code;
-    std::string bytes = epilogue.str();
-    FTL_CHECK(write(socket_, bytes.data(), bytes.size()) > 0);
-  }
-
-  struct pipe_description {
-    int fd;
-    std::string buffer;
-  };
-
-  launchpad_t* lp_{};
-  mx::process process_;
-
+  // Posix fd for the TCP connection.
   int socket_;
-  int fd_stdout_;
-  int fd_stderr_;
+
+  ApplicationControllerPtr child_app_controller_;
+  std::unique_ptr<TestRunnerScope> child_env_scope_;
+
+  fidl::Binding<TestRunner> test_runner_binding_;
+  // This is a tag that we use to identify the test that was run. For now, it
+  // helps distinguish between multiple test outputs to the device log.
+  std::string test_id_;
 };
 
-class TestRunnerService {
+// TestRunnerTCPServer is a TCP server that accepts connections and launches
+// them as TestRunnerConnection.
+class TestRunnerTCPServer {
  public:
-  TestRunnerService(uint16_t port) {
+  TestRunnerTCPServer(uint16_t port)
+      : app_context_(ApplicationContext::CreateFromStartupInfo()) {
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
@@ -256,37 +219,44 @@ class TestRunnerService {
     FTL_CHECK(listener_ != -1);
 
     // 2. Bind it to an address.
-    FTL_CHECK(bind(listener_,
-                   reinterpret_cast<struct sockaddr*>(&addr),
+    FTL_CHECK(bind(listener_, reinterpret_cast<struct sockaddr*>(&addr),
                    sizeof(addr)) != -1);
 
     // 3. Make it a listening socket.
     FTL_CHECK(listen(listener_, 100) != -1);
   }
 
-  ~TestRunnerService() { close(listener_); }
+  ~TestRunnerTCPServer() { close(listener_); }
 
+  // Blocks until there is a new connection.
   TestRunnerConnection* AcceptConnection() {
     int sockfd = accept(listener_, nullptr, nullptr);
     if (sockfd == -1) {
       FTL_LOG(INFO) << "accept() oops";
     }
-    return new TestRunnerConnection(sockfd);
+    return new TestRunnerConnection(sockfd, app_context_);
   }
 
  private:
   int listener_;
+  std::shared_ptr<ApplicationContext> app_context_;
 };
 
 }  // namespace
+}  // namespace modular
 
 int main() {
-  TestRunnerService server(kListenPort);
+  mtl::MessageLoop loop;
+  modular::TestRunnerTCPServer server(kListenPort);
   while (1) {
-    TestRunnerConnection* runner = server.AcceptConnection();
-    // Start() blocks until the connection is closed. |runner| will delete
-    // itself when it is done.
-    runner->Start();
+    // TODO(vardhan): Because our sockets are POSIX fds, they don't work with
+    // our message loop, so we do some synchronous operations and have to do
+    // manipulate the message loop to pass control back and forth. Consider
+    // using separate threads for handle message loop vs. fd polling.
+    auto* runner = server.AcceptConnection();
+    loop.task_runner()->PostTask(
+        std::bind(&modular::TestRunnerConnection::Start, runner));
+    loop.Run();
   }
   return 0;
 }

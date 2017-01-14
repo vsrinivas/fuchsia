@@ -1,0 +1,16 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+// This is an interface provided by the TestRunner to a test. The test can use
+// this interface to report back the completion of test, and the test result.
+// If a connection to TestRunner is closed without calling Finish() it
+// implicitly assumes a call to Finish(false).
+[ServiceName="modular.TestRunner"]
+interface TestRunner {
+  // Called to signal test completion and tear-down. |success| represents if the
+  // test passed or failed.
+  Finish(bool success);
+};

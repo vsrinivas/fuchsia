@@ -1,25 +1,35 @@
-test_runner is a TCP daemon for magenta. It accepts connections, reads shell
-commands, executes them while streaming back the stdout and stderr back to the
-client. It is meant to invoke programs and view their output remotely, primarily
-for testing purpose.
+
+test_runner is a TCP daemon that accepts connections, reads test commands and
+executes them. It is meant to provide a way to run tests from the host and get
+back results.
+
+On fuchsia, each test is run in a new application environment, which exposes a
+service that the tests can use to report completion (particularly useful for
+integration tests).
+
+INSTRUCTIONS
+============
 
 Prerequisite:
 - An instance of magenta running (qemu or otherwise), configured with network
-  that host (Linux or Mac) can interface over.
+  that host (Linux or Mac) can interface over. For example, see
+  [networking configuration doc](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only).
 
-
-Launch test_runner (remotely) using netruncmd on host (Linux or Mac):
+Run a test using //apps/modular/test_runner/tools/run_test. E.g:
 ```
-$ out/build-magenta/tools/netruncmd magenta /system/apps/test_runner
-```
-
-(if /system/apps/test_runner doesn't exist on your image, you can always netcp
-it)
-
-Use `netcat` to connect to test_runner and run a command:
-```
-$ echo /system/test/lib_fidl_cpp_tests | netcat 192.168.3.53 8342
+$ $FUCHSIA_DIR/apps/modular/test_runner/tools/run_test "/system/apps/bootstrap /system/apps/device_runner --user-shell=/system/apps/dummy_user_shell"
 ```
 
-(your QEMU's network interface may be configured on a different IP. using
-`ifconfig` to figure out what the inet address is.).
+This will return when it has completed (either by succeeding or crashing). You
+can watch the qemu console to see any console output written by test. In case of
+a crash, this console output will be dumped by `run_test`.
+
+Troubleshooting:
+- If `run_test` is having trouble finding your qemu instance, your instance may
+  be assigned a different IP than the default that `run_test` assumes. If
+  incorrect, you can pass the assigned IPv4 address by looking at the device log
+  of the qemu. The line to look for:
+``` [00006.470] 01216.01434> ip4_addr: 192.168.3.53 netmask: 255.255.255.0 gw: 192.168.3.1 ```
+  Pass the correct `ipv4_addr` to the `run_test` tool:
+``` $FUCHSIA_DIR/apps/modular/test_runner/tools/run_test --server 192.168.3.53:8342 ... ```
+- The `FUCHSIA_DIR` env variable is set, for example from sourcing `//scripts/env.sh`.

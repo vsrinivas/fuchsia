@@ -1,0 +1,80 @@
+#!/usr/bin/python
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import socket
+import argparse
+import sys
+import os
+import hashlib
+import random
+import subprocess
+import re
+
+def read_log_listener(test_id, listener_process):
+    """ Returns the output of loglistener up until it sees the |test_id|."""
+    termination_substring = "test_runner: done %s" % test_id
+    lines = []
+    while True:
+        line = listener_process.stdout.readline()
+        if line == "" or line.find(termination_substring) != -1:
+            listener_process.terminate()
+            break
+
+        lines.append(line)
+
+    return "".join(lines)
+
+def run_test(server_string, test_id, command):
+    """ Connects to the test runner daemon at |server_string|, runs |command|
+    and waits for results."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server, port = server_string.split(":")
+    sock.connect((server, int(port)))
+    sock.send("run %s %s\n" % (test_id, command))
+    result = []
+    while True:
+        data = sock.recv(1024)
+        if not data:
+            break
+        result.append(data)
+    sock.close()
+
+    ret_test_id, result = "".join(result).split(" ", 1)
+    assert ret_test_id == test_id, "Uhoh, wrong test result returned"
+    return result
+
+def main(argv):
+    assert "FUCHSIA_DIR" in os.environ, "Could not find env variable $FUCHSIA_DIR"
+    parser = argparse.ArgumentParser()
+    default_server = "192.168.3.53:8342"
+    parser.add_argument("--server",
+            help="Address ('server:port') of where the test_runner daemon is running. Default: " + default_server,
+            type=str,
+            default=default_server)
+    parser.add_argument("--loglistener_path",
+            help="Path to the loglistener binary",
+            type=str,
+            default=os.environ["FUCHSIA_DIR"] + \
+                    "/packages/prebuilt/downloads/magenta/tools/loglistener")
+    parser.add_argument("command", nargs="+")
+    args = parser.parse_args()
+
+    listener_process = subprocess.Popen([args.loglistener_path],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    command_str = " ".join(args.command)
+    test_id = hashlib.sha1(command_str + str(random.random())).hexdigest()
+
+    print "Running.."
+    result = run_test(args.server, test_id, command_str)
+
+    log_output = read_log_listener(test_id, listener_process)
+
+    print "Test result: ", result
+    if result == "fail":
+        print log_output
+
+if __name__ == "__main__":
+    main(sys.argv)
