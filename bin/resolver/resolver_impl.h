@@ -5,9 +5,7 @@
 #pragma once
 
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
-
-#include "apps/component_manager/services/component.fidl.h"
-
+#include "apps/modular/services/component/component.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace resolver {
@@ -23,6 +21,7 @@ class ResolverImpl : public Resolver {
 
  private:
   component::ComponentIndexPtr component_index_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(ResolverImpl);
 };
 

@@ -5,10 +5,10 @@
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/src/resolver/resolver_impl.h"
 
-#include "apps/component_manager/services/component.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/app/service_provider_impl.h"
+#include "apps/modular/services/component/component.fidl.h"
 
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/logging.h"
