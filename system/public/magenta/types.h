@@ -130,7 +130,8 @@ typedef uint32_t mx_signals_t;
 #define MX_TASK_SIGNAL_MASK         MX_OBJECT_SIGNAL_3
 
 // Job
-#define MX_JOB_SIGNALED             MX_OBJECT_SIGNAL_3
+#define MX_JOB_NO_PROCESSES         MX_OBJECT_SIGNAL_3
+#define MX_JOB_NO_JOBS              MX_OBJECT_SIGNAL_4
 
 // Process
 #define MX_PROCESS_SIGNALED         MX_OBJECT_SIGNAL_3

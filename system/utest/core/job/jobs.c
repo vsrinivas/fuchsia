@@ -87,6 +87,44 @@ static bool kill_test(void) {
         process, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
     ASSERT_EQ(signals, MX_TASK_TERMINATED, "");
 
+    ASSERT_EQ(mx_handle_wait_one(
+        job_child, MX_JOB_NO_PROCESSES, MX_TIME_INFINITE, &signals), NO_ERROR, "");
+    ASSERT_EQ(signals, MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS, "");
+
+    END_TEST;
+}
+
+static bool wait_test(void) {
+    BEGIN_TEST;
+
+    mx_handle_t job_parent = mx_job_default();
+    ASSERT_NEQ(job_parent, MX_HANDLE_INVALID, "");
+
+    mx_handle_t job_child;
+    ASSERT_EQ(mx_job_create(job_parent, 0u, &job_child), NO_ERROR, "");
+
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), NO_ERROR, "");
+
+    mx_handle_t process, thread;
+    ASSERT_EQ(start_mini_process(job_child, event, &process, &thread), NO_ERROR, "");
+
+    mx_signals_t signals;
+    ASSERT_EQ(mx_handle_wait_one(
+        job_child, MX_JOB_NO_JOBS, MX_TIME_INFINITE, &signals), NO_ERROR, "");
+    ASSERT_EQ(signals, MX_JOB_NO_JOBS, "");
+
+    mx_nanosleep(5000000);
+    ASSERT_EQ(mx_task_kill(process), NO_ERROR, "");
+
+    ASSERT_EQ(mx_handle_wait_one(
+        job_child, MX_JOB_NO_PROCESSES, MX_TIME_INFINITE, &signals), NO_ERROR, "");
+    ASSERT_EQ(signals, MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS, "");
+
+    ASSERT_EQ(mx_handle_close(thread), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(process), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_close(job_child), NO_ERROR, "");
+
     END_TEST;
 }
 
@@ -94,4 +132,5 @@ BEGIN_TEST_CASE(job_tests)
 RUN_TEST(basic_test)
 RUN_TEST(create_test)
 RUN_TEST(kill_test)
+RUN_TEST(wait_test)
 END_TEST_CASE(job_tests)

@@ -33,11 +33,9 @@
 
 #define LOCAL_TRACE 0
 
-
 static constexpr mx_rights_t kDefaultProcessRights =
         MX_RIGHT_READ  | MX_RIGHT_WRITE | MX_RIGHT_DUPLICATE | MX_RIGHT_TRANSFER |
         MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY | MX_RIGHT_ENUMERATE;
-
 
 
 mutex_t ProcessDispatcher::global_process_list_mutex_ =
@@ -67,21 +65,30 @@ mx_status_t ProcessDispatcher::Create(
     mxtl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
     mx_rights_t* root_vmar_rights) {
     AllocChecker ac;
-    auto process = new (&ac) ProcessDispatcher(mxtl::move(job), name, flags);
+    mxtl::unique_ptr<ProcessDispatcher> process(new (&ac) ProcessDispatcher(job, name, flags));
     if (!ac.check())
         return ERR_NO_MEMORY;
+
+
+    if (job) {
+        // Process creation can fail if the job is in the middle of a
+        // killing operation.
+        if (!job->AddChildProcess(process.get()))
+            return ERR_BAD_STATE;
+    }
 
     status_t result = process->Initialize();
     if (result != NO_ERROR)
         return result;
 
+    mxtl::RefPtr<VmAddressRegion> vmar(process->aspace()->RootVmar());
+
     *rights = kDefaultProcessRights;
-    *dispatcher = mxtl::AdoptRef<Dispatcher>(process);
+    *dispatcher = mxtl::AdoptRef<Dispatcher>(process.release());
 
     // Create a dispatcher for the root VMAR.
     mxtl::RefPtr<Dispatcher> new_vmar_dispatcher;
-    result = VmAddressRegionDispatcher::Create(
-        process->aspace()->RootVmar(), &new_vmar_dispatcher, root_vmar_rights);
+    result = VmAddressRegionDispatcher::Create(vmar, &new_vmar_dispatcher, root_vmar_rights);
     if (result == NO_ERROR) {
         *root_vmar_disp = DownCastDispatcher<VmAddressRegionDispatcher>(
                 &new_vmar_dispatcher);
@@ -100,9 +107,6 @@ ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,
 
     // Add ourself to the global process list.
     AddProcess(this);
-
-    if (job_)
-        job_->AddChildProcess(this);
 
     // Generate handle XOR mask with top bit and bottom two bits cleared
     uint32_t secret;
@@ -124,6 +128,8 @@ ProcessDispatcher::~ProcessDispatcher() {
     // assert that we have no handles, should have been cleaned up in the -> DEAD transition
     DEBUG_ASSERT(handles_.is_empty());
 
+    // Remove ourselves from the parent job's weak ref to us. Note that this might
+    // have beeen called when transitioning State::DEAD. The Job can handle double calls.
     if (job_)
         job_->RemoveChildProcess(this);
 
@@ -337,6 +343,11 @@ void ProcessDispatcher::SetState(State s) {
         // signal waiter
         LTRACEF_LEVEL(2, "signaling waiters\n");
         state_tracker_.UpdateState(0u, MX_TASK_TERMINATED);
+
+        // We remove ourselves from the parent Job weak ref (to us) list early, so
+        // the semantics of signaling MX_JOB_NO_PROCESSES match that of MX_TASK_TERMINATED.
+        if (job_)
+            job_->RemoveChildProcess(this);
 
         {
             AutoLock lock(&exception_lock_);

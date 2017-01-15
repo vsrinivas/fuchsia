@@ -32,7 +32,10 @@ status_t JobDispatcher::Create(uint32_t flags,
     if (!ac.check())
         return ERR_NO_MEMORY;
 
-    parent->AddChildJob(job);
+    if (!parent->AddChildJob(job)) {
+        delete job;
+        return ERR_BAD_STATE;
+    }
 
     *rights = kDefaultJobRights;
     *dispatcher = mxtl::AdoptRef<Dispatcher>(job);
@@ -42,8 +45,9 @@ status_t JobDispatcher::Create(uint32_t flags,
 JobDispatcher::JobDispatcher(uint32_t /*flags*/,
                              mxtl::RefPtr<JobDispatcher> parent)
     : parent_(mxtl::move(parent)),
-      process_count_(0u), job_count_(0u) {
-    state_tracker_.set_initial_signals_state(0u);
+      state_(State::READY),
+      process_count_(0u), job_count_(0u),
+      state_tracker_(MX_JOB_NO_PROCESSES|MX_JOB_NO_JOBS) {
 }
 
 JobDispatcher::~JobDispatcher() {
@@ -58,56 +62,125 @@ mx_koid_t JobDispatcher::get_inner_koid() const {
     return parent_? parent_->get_koid() : 0u;
 }
 
-void JobDispatcher::AddChildProcess(ProcessDispatcher* process) {
+bool JobDispatcher::AddChildProcess(ProcessDispatcher* process) {
     AutoLock lock(&lock_);
+    if (state_ != State::READY)
+        return false;
     procs_.push_back(process);
     ++process_count_;
+    MaybeUpdateSignalsLocked(false);
+    return true;
+}
+
+bool JobDispatcher::AddChildJob(JobDispatcher* job) {
+    AutoLock lock(&lock_);
+    if (state_ != State::READY)
+        return false;
+    jobs_.push_back(job);
+    ++job_count_;
+    MaybeUpdateSignalsLocked(false);
+    return true;
 }
 
 void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
     AutoLock lock(&lock_);
+    if (state_ != State::READY)
+        return;
+    // The process dispatcher can call us in its destructor or in Kill().
     if (!ProcessDispatcher::JobListTraits::node_state(*process).InContainer())
         return;
     procs_.erase(*process);
     --process_count_;
-}
-
-void JobDispatcher::AddChildJob(JobDispatcher* job) {
-    AutoLock lock(&lock_);
-    jobs_.push_back(job);
-    ++job_count_;
+    MaybeUpdateSignalsLocked(true);
 }
 
 void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
     AutoLock lock(&lock_);
-    if (!JobDispatcher::ListTraits::node_state(*job).InContainer())
+    if (state_ != State::READY)
         return;
     jobs_.erase(*job);
     --job_count_;
+    MaybeUpdateSignalsLocked(true);
+}
+
+void JobDispatcher::MaybeUpdateSignalsLocked(bool is_decrement) {
+    DEBUG_ASSERT(lock_.IsHeld());
+
+    // Note on the asserts below. Asserting when job or process is
+    // non-zero only makes sense when the counts are incrementing.
+    // This is because Kill() clears the lists up front.
+
+    if (is_decrement) {
+        // removing jobs or processes.
+        mx_signals_t set = 0u;
+        if (process_count_ == 0u) {
+            DEBUG_ASSERT(procs_.is_empty());
+            set |= MX_JOB_NO_PROCESSES;
+        }
+        if (job_count_ == 0u) {
+            DEBUG_ASSERT(jobs_.is_empty());
+            set |= MX_JOB_NO_JOBS;
+        }
+        state_tracker_.UpdateState(0u, set);
+    } else {
+        // Adding jobs or processes.
+        mx_signals_t clear = 0u;
+        if (process_count_ == 1u) {
+            DEBUG_ASSERT(!procs_.is_empty());
+            clear |= MX_JOB_NO_PROCESSES;
+        }
+        if (job_count_ == 1u) {
+            DEBUG_ASSERT(!jobs_.is_empty());
+            clear |= MX_JOB_NO_JOBS;
+        }
+        state_tracker_.UpdateState(clear, 0u);
+    }
 }
 
 void JobDispatcher::Kill() {
-    while (true) {
-        mxtl::RefPtr<ProcessDispatcher> proc;
-        {
-            AutoLock lock(&lock_);
-            if (procs_.is_empty())
-                break;
-            proc.reset(procs_.pop_front());
-        }
+    WeakProcessList procs_to_kill;
+    WeakJobList jobs_to_kill;
+
+    {
+        AutoLock lock(&lock_);
+        if (state_ != State::READY)
+            return;
+
+        // Short circuit if there is nothing to do. Notice |state_|
+        // does not change. See note at the end of this function.
+        if ((job_count_ == 0u) && (process_count_ == 0u))
+            return;
+
+        state_ = State::DYING;
+        procs_to_kill.swap(procs_);
+        jobs_to_kill.swap(jobs_);
+
+        process_count_ = 0u;
+        job_count_ = 0u;
+    }
+
+    // Since we kill the child jobs first we have a depth-first massacre.
+    while (!jobs_to_kill.is_empty()) {
+        mxtl::RefPtr<JobDispatcher> job(jobs_to_kill.pop_front());
+        // TODO(cpu): This recursive call can overflow the stack.
+        job->Kill();
+    }
+
+    while (!procs_to_kill.is_empty()) {
+        mxtl::RefPtr<ProcessDispatcher> proc(procs_to_kill.pop_front());
         proc->Kill();
     }
 
-    while (true) {
-        mxtl::RefPtr<JobDispatcher> job;
-        {
-            AutoLock lock(&lock_);
-            if (jobs_.is_empty())
-                break;
-            job.reset(jobs_.pop_front());
-        }
-        // TODO(cpu): This can overflow the stack.
-        job->Kill();
+    {
+        AutoLock lock(&lock_);
+        DEBUG_ASSERT((process_count_ == 0u) && (job_count_ == 0u));
+        state_tracker_.UpdateState(0u, MX_JOB_NO_PROCESSES | MX_JOB_NO_JOBS);
+
+        // BEWARE: Processes and threads transition to DEAD at this
+        // point. Here we transition to READY so clients can create further
+        // jobs or processes. Reason is that unlike them, nothing irreversible
+        // has happended.
+        state_ = State::READY;
     }
 }
 

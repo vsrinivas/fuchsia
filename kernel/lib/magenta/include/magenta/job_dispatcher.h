@@ -56,26 +56,39 @@ public:
     // Job methods.
     uint32_t process_count() const { return process_count_;}
     uint32_t job_count() const { return job_count_; }
-    void AddChildProcess(ProcessDispatcher* process);
+    bool AddChildProcess(ProcessDispatcher* process);
     void RemoveChildProcess(ProcessDispatcher* process);
     bool EnumerateChildren(JobEnumerator* je);
     void Kill();
 
 private:
-    JobDispatcher(uint32_t flags, mxtl::RefPtr<JobDispatcher> parent);
-    void AddChildJob(JobDispatcher* job);
-    void RemoveChildJob(JobDispatcher* job);
+    enum class State {
+        READY,
+        DYING,
+        DEAD
+    };
 
-    StateTracker state_tracker_;
+    JobDispatcher(uint32_t flags, mxtl::RefPtr<JobDispatcher> parent);
+    bool AddChildJob(JobDispatcher* job);
+    void RemoveChildJob(JobDispatcher* job);
+    void MaybeUpdateSignalsLocked(bool is_decrement);
+
     const mxtl::RefPtr<JobDispatcher> parent_;
 
     mxtl::DoublyLinkedListNodeState<JobDispatcher*> dll_job_;
 
     // The |lock_| protects all members below.
     Mutex lock_;
+    State state_;
     uint32_t process_count_;
     uint32_t job_count_;
+    StateTracker state_tracker_;
 
-    mxtl::DoublyLinkedList<JobDispatcher*, ListTraits> jobs_;
-    mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraits> procs_;
+    using WeakJobList =
+        mxtl::DoublyLinkedList<JobDispatcher*, ListTraits>;
+    using WeakProcessList =
+        mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraits>;
+
+    WeakJobList jobs_;
+    WeakProcessList procs_;
 };

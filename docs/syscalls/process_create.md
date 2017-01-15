@@ -48,6 +48,9 @@ or *flags* was non-zero.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
+**ERR_BAD_STATE**  (Temporary) Failure due to the job object being in the
+middle of a *mx_task_kill()* operation.
+
 ## SEE ALSO
 
 [handle_close](handle_close.md),
@@ -55,6 +58,7 @@ or *flags* was non-zero.
 [handle_wait_one](handle_wait_one.md),
 [handle_wait_many](handle_wait_many.md),
 [process_start](process_start.md),
+[task_kill](task_kill.md),
 [thread_create](thread_create.md),
 [thread_exit](thread_exit.md),
 [thread_start](thread_start.md),

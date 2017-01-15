@@ -32,6 +32,10 @@ is returned.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
+**ERR_BAD_STATE**  (Temporary) Failure due to the job object being in the
+middle of a *mx_task_kill()* operation.
+
 ## SEE ALSO
 
-[process_create](process_create.md).
+[process_create](process_create.md),
+[task_kill](task_kill.md).
