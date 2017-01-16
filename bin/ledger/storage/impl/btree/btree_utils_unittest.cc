@@ -66,10 +66,14 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
   }
 
   ObjectId CreateEmptyContents() {
+    Status status;
     ObjectId id;
-    EXPECT_EQ(Status::OK,
-              TreeNode::FromEntries(&fake_storage_, std::vector<Entry>(),
-                                    std::vector<ObjectId>(1), &id));
+    TreeNode::FromEntries(
+        &fake_storage_, std::vector<Entry>(), std::vector<ObjectId>(1),
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &id));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
     return id;
   }
 

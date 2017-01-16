@@ -10,6 +10,7 @@
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/logging.h"
+#include "lib/mtl/socket/strings.h"
 
 namespace storage {
 
@@ -62,10 +63,10 @@ Status TreeNode::FromObject(PageStorage* page_storage,
   return Status::OK;
 }
 
-Status TreeNode::FromEntries(PageStorage* page_storage,
-                             const std::vector<Entry>& entries,
-                             const std::vector<ObjectId>& children,
-                             ObjectId* node_id) {
+Status TreeNode::FromEntriesSynchronous(PageStorage* page_storage,
+                                        const std::vector<Entry>& entries,
+                                        const std::vector<ObjectId>& children,
+                                        ObjectId* node_id) {
   FTL_DCHECK(entries.size() + 1 == children.size());
   std::string encoding = storage::EncodeNode(entries, children);
   std::unique_ptr<const Object> object;
@@ -75,6 +76,16 @@ Status TreeNode::FromEntries(PageStorage* page_storage,
   }
   *node_id = object->GetId();
   return Status::OK;
+}
+
+void TreeNode::FromEntries(PageStorage* page_storage,
+                           const std::vector<Entry>& entries,
+                           const std::vector<ObjectId>& children,
+                           std::function<void(Status, ObjectId)> callback) {
+  FTL_DCHECK(entries.size() + 1 == children.size());
+  std::string encoding = storage::EncodeNode(entries, children);
+  page_storage->AddObjectFromLocal(mtl::WriteStringToSocket(encoding),
+                                   encoding.length(), std::move(callback));
 }
 
 void TreeNode::Merge(PageStorage* page_storage,
@@ -95,13 +106,8 @@ void TreeNode::Merge(PageStorage* page_storage,
   children.insert(children.end(), right->children_.begin() + 1,
                   right->children_.end());
 
-  ObjectId merged_id;
-  Status s = FromEntries(page_storage, entries, children, &merged_id);
-  if (s != Status::OK) {
-    on_done(s, "");
-    return;
-  }
-  on_done(Status::OK, merged_id);
+  FromEntries(page_storage, std::move(entries), std::move(children),
+              std::move(on_done));
 }
 
 TreeNode::Mutation TreeNode::StartMutation() const {
@@ -123,7 +129,7 @@ void TreeNode::Split(
   }
   children.push_back(left_rightmost_child.ToString());
   ObjectId left_id;
-  Status s = FromEntries(page_storage_, entries, children, &left_id);
+  Status s = FromEntriesSynchronous(page_storage_, entries, children, &left_id);
   if (s != Status::OK) {
     on_done(s, "", "");
     return;
@@ -138,7 +144,7 @@ void TreeNode::Split(
     children.push_back(children_[i + 1]);
   }
   ObjectId right_id;
-  s = FromEntries(page_storage_, entries, children, &right_id);
+  s = FromEntriesSynchronous(page_storage_, entries, children, &right_id);
   if (s != Status::OK) {
     // TODO(nellyv): If this fails, remove the left  object from the object
     // page_storage.
@@ -285,17 +291,10 @@ void TreeNode::Mutation::FinalizeEntriesChildren() {
   finished = true;
 }
 
-void TreeNode::Mutation::Finish(
-    std::function<void(Status, ObjectId /* new_id */)> on_done) {
+void TreeNode::Mutation::Finish(std::function<void(Status, ObjectId)> on_done) {
   FTL_DCHECK(!finished);
   FinalizeEntriesChildren();
-  ObjectId new_id;
-  Status s = FromEntries(node_.page_storage_, entries_, children_, &new_id);
-  if (s != Status::OK) {
-    on_done(s, "");
-    return;
-  }
-  on_done(Status::OK, std::move(new_id));
+  FromEntries(node_.page_storage_, entries_, children_, on_done);
 }
 
 void TreeNode::Mutation::Finish(
@@ -316,7 +315,8 @@ void TreeNode::Mutation::Finish(
   if (new_node_count == 1) {
     ObjectId result_id;
     ObjectId new_id;
-    Status s = FromEntries(node_.page_storage_, entries_, children_, &new_id);
+    Status s = FromEntriesSynchronous(node_.page_storage_, entries_, children_,
+                                      &new_id);
     if (s != Status::OK) {
       on_done(s, "", nullptr);
       return;
@@ -353,7 +353,7 @@ void TreeNode::Mutation::Finish(
     children_.erase(children_.begin(), children_.begin() + (element_count + 1));
 
     ObjectId new_id;
-    FromEntries(node_.page_storage_, entries, children, &new_id);
+    FromEntriesSynchronous(node_.page_storage_, entries, children, &new_id);
     new_children.push_back(new_id);
     new_nodes->insert(new_id);
 
@@ -384,9 +384,9 @@ void TreeNode::Mutation::Finish(
 
   // No parent node, create a new one.
   ObjectId empty_node_id;
-  Status s =
-      TreeNode::FromEntries(node_.page_storage_, std::vector<Entry>(),
-                            std::vector<ObjectId>{ObjectId()}, &empty_node_id);
+  Status s = TreeNode::FromEntriesSynchronous(
+      node_.page_storage_, std::vector<Entry>(),
+      std::vector<ObjectId>{ObjectId()}, &empty_node_id);
   FTL_DCHECK(s == Status::OK);
   TreeNode::FromId(node_.page_storage_, empty_node_id, [
     max_size, max_key, new_entries = std::move(new_entries),

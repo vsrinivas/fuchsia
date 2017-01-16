@@ -142,7 +142,7 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
 
 std::unique_ptr<Commit> CommitImpl::Empty(PageStorage* page_storage) {
   ObjectId root_node_id;
-  TreeNode::FromEntries(page_storage, std::vector<Entry>(),
+  TreeNode::FromEntriesSynchronous(page_storage, std::vector<Entry>(),
                         std::vector<ObjectId>(1), &root_node_id);
   return std::unique_ptr<Commit>(
       new CommitImpl(page_storage, kFirstPageCommitId.ToString(), 0, 0,

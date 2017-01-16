@@ -118,10 +118,19 @@ class TreeNode {
   // are optional and if a child is not present, an empty id should be given in
   // the corresponding index. The id of the new node is stored in |node_id|. It
   // is expected that |children| = |entries| + 1.
-  static Status FromEntries(PageStorage* page_storage,
-                            const std::vector<Entry>& entries,
-                            const std::vector<ObjectId>& children,
-                            ObjectId* node_id);
+  static Status FromEntriesSynchronous(PageStorage* page_storage,
+                                       const std::vector<Entry>& entries,
+                                       const std::vector<ObjectId>& children,
+                                       ObjectId* node_id);
+
+  // Creates a |TreeNode| object with the given entries and children. An empty
+  // id in the children's vector indicates that there is no child in that
+  // index. The |callback| will be called with the success or error status and
+  // the id of the new node. It is expected that |children| = |entries| + 1.
+  static void FromEntries(PageStorage* page_storage,
+                          const std::vector<Entry>& entries,
+                          const std::vector<ObjectId>& children,
+                          std::function<void(Status, ObjectId)> callback);
 
   // Creates a new tree node by merging |left| and |right|. |merged_child_id|
   // should contain the id of the new child node stored between the last entry

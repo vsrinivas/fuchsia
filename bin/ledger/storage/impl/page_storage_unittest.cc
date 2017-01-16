@@ -209,11 +209,23 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     return commit;
   }
 
+  ObjectId FromEntries(const std::vector<Entry>& entries,
+                       const std::vector<ObjectId>& children) {
+    Status status;
+    ObjectId id;
+    TreeNode::FromEntries(
+        storage_.get(), entries, children,
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &id));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
+    return id;
+  }
+
   CommitId TryCommitFromSync() {
-    ObjectId root_id;
-    EXPECT_EQ(Status::OK,
-              TreeNode::FromEntries(storage_.get(), std::vector<Entry>(),
-                                    std::vector<ObjectId>(1), &root_id));
+    ObjectId root_id =
+        FromEntries(std::vector<Entry>(), std::vector<ObjectId>(1));
+
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
     std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
@@ -352,11 +364,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
       Entry{"key0", lazy_value.object_id, storage::KeyPriority::LAZY},
       Entry{"key1", eager_value.object_id, storage::KeyPriority::EAGER},
   };
-  ObjectId root_id;
-  ASSERT_EQ(Status::OK,
-            TreeNode::FromEntries(storage_.get(), entries,
-                                  std::vector<ObjectId>(entries.size() + 1),
-                                  &root_id));
+  ObjectId root_id =
+      FromEntries(entries, std::vector<ObjectId>(entries.size() + 1));
 
   // Add the three objects to FakeSyncDelegate.
   sync.AddObject(lazy_value.object_id, lazy_value.value);
@@ -928,7 +937,7 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
   FakeSyncDelegate sync;
   storage_->SetSyncDelegate(&sync);
 
-  // Buil the commit Tree with:
+  // Build the commit Tree with:
   //         0
   //         |
   //         1  2
@@ -939,10 +948,8 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     std::vector<Entry> entries = {Entry{"key" + std::to_string(i),
                                         value.object_id,
                                         storage::KeyPriority::EAGER}};
-    ASSERT_EQ(Status::OK,
-              TreeNode::FromEntries(storage_.get(), entries,
-                                    std::vector<ObjectId>(entries.size() + 1),
-                                    &object_ids[i]));
+    object_ids[i] =
+        FromEntries(entries, std::vector<ObjectId>(entries.size() + 1));
     sync.AddObject(value.object_id, value.value);
     std::unique_ptr<const Object> root_object;
     ASSERT_EQ(Status::OK,

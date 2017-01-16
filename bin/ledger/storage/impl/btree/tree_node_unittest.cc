@@ -61,9 +61,14 @@ class TreeNodeTest : public ::test::TestWithMessageLoop {
   std::unique_ptr<const TreeNode> FromEntries(
       const std::vector<Entry>& entries,
       const std::vector<ObjectId>& children) {
+    Status status;
     ObjectId id;
-    EXPECT_EQ(Status::OK,
-              TreeNode::FromEntries(&fake_storage_, entries, children, &id));
+    TreeNode::FromEntries(
+        &fake_storage_, entries, children,
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &id));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
     return FromId(id);
   }
 
