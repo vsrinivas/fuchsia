@@ -131,6 +131,13 @@ syscall channel_write
         handles: mx_handle_t[num_handles] IN, num_handles: uint32_t)
     returns (mx_status_t);
 
+syscall channel_call
+    (handle: mx_handle_t, options: uint32_t, timeout: mx_time_t,
+        args: mx_channel_call_args_t[1] IN,
+        actual_bytes: uint32_t[1] OUT, actual_handles: uint32_t[1] OUT,
+        read_status: mx_status_t[1] OUT)
+    returns (mx_status_t);
+
 # IPC: Sockets
 
 syscall socket_create

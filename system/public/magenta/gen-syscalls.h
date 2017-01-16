@@ -211,6 +211,24 @@ extern mx_status_t _mx_channel_write(
     const mx_handle_t handles[],
     uint32_t num_handles) __attribute__((__leaf__));
 
+extern mx_status_t mx_channel_call(
+    mx_handle_t handle,
+    uint32_t options,
+    mx_time_t timeout,
+    const mx_channel_call_args_t args[1],
+    uint32_t actual_bytes[1],
+    uint32_t actual_handles[1],
+    mx_status_t read_status[1]);
+
+extern mx_status_t _mx_channel_call(
+    mx_handle_t handle,
+    uint32_t options,
+    mx_time_t timeout,
+    const mx_channel_call_args_t args[1],
+    uint32_t actual_bytes[1],
+    uint32_t actual_handles[1],
+    mx_status_t read_status[1]);
+
 extern mx_status_t mx_socket_create(
     uint32_t options,
     mx_handle_t out0[1],
