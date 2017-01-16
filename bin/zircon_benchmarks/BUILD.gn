@@ -13,8 +13,10 @@ executable("benchmarks") {
   ]
   deps = [
     "//third_party/benchmark",
+    "//third_party/gflags",
   ]
   libs = [
+    "launchpad",
     "magenta",
   ]
 }
