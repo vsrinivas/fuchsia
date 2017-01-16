@@ -133,7 +133,8 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
 
 static const char* argv_netsvc[] = { "/boot/bin/netsvc" };
 static const char* argv_sh[] = { "/boot/bin/sh" };
-static const char* argv_mxsh_autorun[] = { "/boot/bin/mxsh", "/boot/autorun", "/system/autorun" };
+static const char* argv_autorun0[] = { "/boot/bin/sh", "/boot/autorun" };
+static const char* argv_autorun1[] = { "/boot/bin/sh", "/system/autorun" };
 static const char* argv_appmgr[] = { "/system/bin/application_manager" };
 
 void create_application_launcher_handles(void) {
@@ -146,8 +147,10 @@ int service_starter(void* arg) {
         devmgr_launch(svcs_job_handle, "netsvc", countof(argv_netsvc), argv_netsvc, -1, 0, 0);
     }
 
-    devmgr_launch(svcs_job_handle, "mxsh:autorun", countof(argv_mxsh_autorun),
-                  argv_mxsh_autorun, -1, 0, 0);
+    devmgr_launch(svcs_job_handle, "sh:autorun0", countof(argv_autorun0),
+                  argv_autorun0, -1, 0, 0);
+    devmgr_launch(svcs_job_handle, "sh:autorun1", countof(argv_autorun1),
+                  argv_autorun1, -1, 0, 0);
 
     if (application_launcher_child) {
         devmgr_launch(svcs_job_handle, "application-manager", countof(argv_appmgr), argv_appmgr,
