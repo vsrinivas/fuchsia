@@ -444,6 +444,257 @@ static bool channel_may_discard(void) {
     END_TEST;
 }
 
+
+static uint32_t call_test_done = 0;
+static mtx_t call_test_lock;
+static cnd_t call_test_cvar;
+
+typedef struct {
+    uint32_t txid;
+    uint32_t cmd;
+    uint32_t bit;
+    unsigned action;
+    mx_status_t expect;
+    mx_status_t expect_rs;
+    const char* name;
+    const char* err;
+    int val;
+    mx_handle_t h;
+    thrd_t t;
+} ccargs_t;
+
+#define SRV_SEND_HANDLE   0x0001
+#define SRV_SEND_DATA     0x0002
+#define SRV_DISCARD       0x0004
+#define CLI_SHORT_WAIT    0x0100
+#define CLI_RECV_HANDLE   0x0200
+#define CLI_SEND_HANDLE   0x0400
+
+static int call_client(void* _args) {
+    ccargs_t* ccargs = _args;
+    mx_channel_call_args_t args;
+
+    uint32_t data[2];
+    mx_handle_t txhandle = 0;
+    mx_handle_t rxhandle = 0;
+
+    mx_status_t r;
+    if (ccargs->action & CLI_SEND_HANDLE) {
+        if ((r = mx_event_create(0, &txhandle)) != NO_ERROR) {
+            ccargs->err = "failed to create event";
+            goto done;
+        }
+    }
+
+    args.wr_bytes = ccargs;
+    args.wr_handles = &txhandle;
+    args.wr_num_bytes = sizeof(ccargs_t);
+    args.wr_num_handles = (ccargs->action & CLI_SEND_HANDLE) ? 1 : 0;
+    args.rd_bytes = data;
+    args.rd_handles = &rxhandle;
+    args.rd_num_bytes = sizeof(data);
+    args.rd_num_handles = (ccargs->action & CLI_RECV_HANDLE) ? 1 : 0;
+
+    uint32_t act_bytes = 0xffffffff;
+    uint32_t act_handles = 0xffffffff;
+
+    mx_time_t timeout = (ccargs->action & CLI_SHORT_WAIT) ? MX_MSEC(250) : MX_TIME_INFINITE;
+    mx_status_t rs = NO_ERROR;
+    if ((r = mx_channel_call(ccargs->h, 0, timeout, &args, &act_bytes, &act_handles, &rs)) != ccargs->expect) {
+        ccargs->err = "channel call returned";
+        ccargs->val = r;
+    }
+    if (txhandle && (r < 0)) {
+        mx_handle_close(txhandle);
+    }
+    if (rxhandle) {
+        mx_handle_close(rxhandle);
+    }
+    if (r == ERR_CALL_FAILED) {
+        if (ccargs->expect_rs && (ccargs->expect_rs != rs)) {
+            ccargs->err = "read_status not what was expected";
+            ccargs->val = ccargs->expect_rs;
+        }
+    }
+    if (r == NO_ERROR) {
+        if (act_bytes != sizeof(data)) {
+            ccargs->err = "expected 8 bytes";
+            ccargs->val = act_bytes;
+        } else if (ccargs->txid != data[0]) {
+            ccargs->err = "mismatched txid";
+            ccargs->val = data[0];
+        } else if (ccargs->cmd != data[1]) {
+            ccargs->err = "mismatched cmd";
+            ccargs->val = data[1];
+        } else if ((ccargs->action & CLI_RECV_HANDLE) && (act_handles != 1)) {
+            ccargs->err = "recv handle missing";
+        }
+    }
+
+done:
+    mtx_lock(&call_test_lock);
+    call_test_done |= ccargs->bit;
+    cnd_broadcast(&call_test_cvar);
+    mtx_unlock(&call_test_lock);
+    return 0;
+}
+
+static ccargs_t ccargs[] = {
+    {
+        .name = "too large reply",
+        .action = SRV_SEND_DATA,
+        .expect = ERR_CALL_FAILED,
+        .expect_rs = ERR_BUFFER_TOO_SMALL,
+    },
+    {
+        .name = "no reply",
+        .action = SRV_DISCARD | CLI_SHORT_WAIT,
+        .expect = ERR_TIMED_OUT,
+    },
+    {
+        .name = "reply handle",
+        .action = SRV_SEND_HANDLE | CLI_RECV_HANDLE,
+    },
+    {
+        .name = "unwanted reply handle",
+        .action = SRV_SEND_HANDLE,
+        .expect = ERR_CALL_FAILED,
+        .expect_rs = ERR_BUFFER_TOO_SMALL,
+    },
+    {
+        .name = "send-handle",
+        .action = CLI_SEND_HANDLE,
+    },
+    {
+        .name = "send-recv-handle",
+        .action = CLI_SEND_HANDLE | CLI_RECV_HANDLE | SRV_SEND_HANDLE,
+    },
+    {
+        .name = "basic",
+    },
+    {
+        .name = "basic",
+    },
+    {
+        .name = "basic",
+    },
+    {
+        .name = "basic",
+    },
+};
+
+#define ccargs_count (sizeof(ccargs)/sizeof(ccargs[0]))
+
+static int call_server(void* ptr) {
+    mx_handle_t h = (mx_handle_t) (uintptr_t) ptr;
+
+    ccargs_t msg[ccargs_count];
+    memset(msg, 0, sizeof(msg));
+
+    // received the expected number of messages
+    for (unsigned n = 0; n < ccargs_count; n++) {
+        mx_handle_wait_one(h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
+
+        uint32_t bytes = sizeof(msg[0]);
+        uint32_t handles = 1;
+        mx_handle_t handle = 0;
+        if (mx_channel_read(h, 0, &msg[n], bytes, &bytes, &handle, handles, &handles) != NO_ERROR) {
+            fprintf(stderr, "call_server() read failed\n");
+            break;
+        }
+        if (handle) {
+            mx_handle_close(handle);
+        }
+    }
+
+    // reply to them in reverse order received
+    for (unsigned n = 0; n < ccargs_count; n++) {
+        ccargs_t* m = &msg[ccargs_count - n - 1];
+
+        if (m->action & SRV_DISCARD) {
+            continue;
+        }
+
+        uint32_t data[4];
+        data[0] = m->txid;
+        data[1] = m->txid * 31337;
+        data[2] = 0x22222222;
+        data[3] = 0x33333333;
+
+        uint32_t bytes = (m->action & SRV_SEND_DATA) ? 16 : 8;
+        uint32_t handles = (m->action & SRV_SEND_HANDLE) ? 1 : 0;
+        mx_handle_t handle = 0;
+        if (handles) {
+            mx_event_create(0, &handle);
+        }
+        if (mx_channel_write(h, 0, data, bytes, &handle, handles) != NO_ERROR) {
+            fprintf(stderr, "call_server() write failed\n");
+            break;
+        }
+    }
+    return 0;
+}
+
+
+static bool channel_call(void) {
+    BEGIN_TEST;
+
+    mtx_init(&call_test_lock, mtx_plain);
+    cnd_init(&call_test_cvar);
+
+    mx_handle_t cli, srv;
+    ASSERT_EQ(mx_channel_create(0, &cli, &srv), NO_ERROR, "");
+
+    // start test server
+    thrd_t srvt;
+    ASSERT_EQ(thrd_create(&srvt, call_server, (void*) (uintptr_t) srv), thrd_success, "");
+
+    // start test clients
+    uint32_t waitfor = 0;
+    for (unsigned n = 0; n < ccargs_count; n++) {
+        ccargs[n].txid = 0x11223300 | n;
+        ccargs[n].cmd = ccargs[n].txid * 31337;
+        ccargs[n].h = cli;
+        ccargs[n].bit = 1 << n;
+        waitfor |= ccargs[n].bit;
+        ASSERT_EQ(thrd_create(&ccargs[n].t, call_client, &ccargs[n]), thrd_success, "");
+    }
+
+    // wait for all tests to finish or timeout
+    struct timespec until;
+    clock_gettime(CLOCK_REALTIME, &until);
+    until.tv_sec += 5;
+    int r = 0;
+    while (r == 0) {
+        mtx_lock(&call_test_lock);
+        if (call_test_done == waitfor) {
+            r = -1;
+        } else {
+            r = cnd_timedwait(&call_test_cvar, &call_test_lock, &until);
+        }
+        mtx_unlock(&call_test_lock);
+    }
+
+    // report tests that failed or failed to complete
+    mtx_lock(&call_test_lock);
+    for (unsigned n = 0; n < ccargs_count; n++) {
+        char buf[128];
+        snprintf(buf, sizeof(buf), "#%d '%s' did not complete", n, ccargs[n].name);
+        EXPECT_EQ(ccargs[n].bit & call_test_done, ccargs[n].bit, buf);
+        snprintf(buf, sizeof(buf), "'%s' did not succeed", ccargs[n].name);
+        EXPECT_EQ(ccargs[n].err, NULL, buf);
+        if (ccargs[n].err) {
+            unittest_printf_critical("call_client #%d: %s: %s %d (0x%x)\n", n, ccargs[n].name,
+                                     ccargs[n].err, ccargs[n].val, ccargs[n].val);
+        }
+    }
+    mtx_unlock(&call_test_lock);
+
+    mx_handle_close(cli);
+    mx_handle_close(srv);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(channel_tests)
 RUN_TEST(channel_test)
 RUN_TEST(channel_read_error_test)
@@ -452,6 +703,7 @@ RUN_TEST(channel_non_transferable)
 RUN_TEST(channel_duplicate_handles)
 RUN_TEST(channel_multithread_read)
 RUN_TEST(channel_may_discard)
+RUN_TEST(channel_call)
 END_TEST_CASE(channel_tests)
 
 #ifndef BUILD_COMBINED_TESTS
