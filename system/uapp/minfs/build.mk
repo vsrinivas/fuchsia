@@ -41,13 +41,13 @@ LIBMINFS_SRCS += minfs.cpp minfs-ops.cpp minfs-check.cpp
 LIBFS_SRCS += vfs.c
 LIBMXCPP_SRCS := new.cpp pure_virtual.cpp
 
-OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.o,$(SRCS))
+OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.cpp.o,$(SRCS))
 DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(SRCS))
-LIBMINFS_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.o,$(LIBMINFS_SRCS))
+LIBMINFS_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.cpp.o,$(LIBMINFS_SRCS))
 LIBMINFS_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(LIBMINFS_SRCS))
-LIBFS_OBJS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.o,$(LIBFS_SRCS))
+LIBFS_OBJS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.c.o,$(LIBFS_SRCS))
 LIBFS_DEPS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.d,$(LIBFS_SRCS))
-LIBMXCPP_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/mxcpp/%.o,$(LIBMXCPP_SRCS))
+LIBMXCPP_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/mxcpp/%.cpp.o,$(LIBMXCPP_SRCS))
 LIBMXCPP_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/mxcpp/%.d,$(LIBMXCPP_SRCS))
 MINFS_TOOLS := $(BUILDDIR)/tools/minfs
 
@@ -63,34 +63,30 @@ minfs: $(MINFS_TOOLS)
 -include $(LIBFS_DEPS)
 -include $(LIBMXCPP_DEPS)
 
-$(BUILDDIR)/host/system/uapp/minfs/%.o: system/uapp/minfs/%.cpp
+$(OBJS) $(LIBMINFS_OBJS) $(LIBMXCPP_OBJS): $(BUILDDIR)/host/%.cpp.o: %.cpp
 	@echo compiling $@
 	@$(MKDIR)
 	$(NOECHO)$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
 
-$(BUILDDIR)/host/system/ulib/fs/%.o: system/ulib/fs/%.c
+$(LIBFS_OBJS): $(BUILDDIR)/host/%.c.o: %.c
 	@echo compiling $@
 	@$(MKDIR)
 	$(NOECHO)$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
-
-$(BUILDDIR)/host/system/ulib/mxcpp/%.o: system/ulib/mxcpp/%.cpp
-	@echo compiling $@
-	@$(MKDIR)
-	$(NOECHO)$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) -c -o $@ $<
 
 $(BUILDDIR)/tools/minfs: $(OBJS) $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(LIBMXCPP_OBJS)
 	@echo linking $@
 	$(NOECHO)$(HOST_CC) $(MINFS_LDFLAGS) -o $@ $^
 
-$(BUILDDIR)/host/system/uapp/minfs/fuse.o: system/uapp/minfs/fuse.cpp
+$(BUILDDIR)/host/system/uapp/minfs/fuse.cpp.o: system/uapp/minfs/fuse.cpp
 	@echo compiling $@
 	@$(MKDIR)
 	$(NOECHO)$(HOST_CC) -MMD -MP $(HOST_COMPILEFLAGS) $(HOST_CPPFLAGS) $(MINFS_CFLAGS) $(FUSE_CFLAGS) -c -o $@ $<
 
-$(BUILDDIR)/tools/fuse-minfs: $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(BUILDDIR)/host/system/uapp/minfs/fuse.o
+$(BUILDDIR)/tools/fuse-minfs: $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(BUILDDIR)/host/system/uapp/minfs/fuse.cpp.o
 	@echo linking $@
 	@$(MKDIR)
 	$(NOECHO)$(HOST_CC) $(MINFS_LDFLAGS) $(FUSE_LDFLAGS) -o $@ $^
 
+GENERATED += $(OBJS) $(LIBMINFS_OBJS) $(LIBMXCPP_OBJS) $(LIBFS_OBJS)
 GENERATED += $(MINFS_TOOLS)
 EXTRA_BUILDDEPS += $(MINFS_TOOLS)
