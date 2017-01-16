@@ -24,45 +24,6 @@
 
 namespace modular {
 
-namespace {
-
-// Used to asynchronously  wait on links to sync. Calls |done| when all links
-// have synced.
-class LinkAsyncAwaiter {
- public:
-  static void New(const std::vector<std::unique_ptr<LinkImpl>>& v,
-                  std::function<void()> done) {
-    new LinkAsyncAwaiter(v, std::move(done));
-  }
-
- private:
-  // Private so it cannot be created on the stack.
-  LinkAsyncAwaiter(const std::vector<std::unique_ptr<LinkImpl>>& v,
-                   std::function<void()> done) {
-    counter_ = v.size();
-    if (counter_ == 0) {
-      done();
-      delete this;
-      return;
-    }
-
-    for (auto& e : v) {
-      e->Sync([this, done] {
-        counter_--;
-        FTL_DCHECK(counter_ >= 0);
-        if (counter_ == 0) {
-          done();
-          delete this;
-        }
-      });
-    }
-  }
-
-  int counter_;
-};
-
-}  // namespace
-
 StoryConnection::StoryConnection(
     StoryImpl* const story_impl,
     const std::string& module_url,
@@ -245,33 +206,19 @@ void StoryImpl::Stop(const StopCallback& callback) {
     return;
   }
 
-  // TODO(mesch): While a teardown is in flight, new links and modules
-  // can still be created. Those would be missed here. A newly created
-  // Module would actually block teardown, because no TearDown()
-  // request would be issued to it, and thus the connections_
-  // collection never becomes empty. A newly added Link would do no
-  // harm and just be removed again.
-
   // At this point, we don't need notifications from disconnected
   // Links anymore, as they will all be disposed soon anyway.
   for (auto& link : links_) {
     link->set_orphaned_handler(nullptr);
   }
 
+  // NOTE(mesch): While a teardown is in flight, new links and modules
+  // can still be created. Those would be missed here, but they would
+  // just be torn down in the destructor.
   StopModules();
 }
 
 void StoryImpl::StopModules() {
-  auto cont = [this] {
-    if (!connections_.empty()) {
-      // Not the last call.
-      return;
-    }
-
-    // Make sure that all the links are synced before stopping.
-    LinkAsyncAwaiter::New(links_, [this] { StopLinks(); });
-  };
-
   // First, get rid of all connections without a ModuleController.
   auto n = std::remove_if(
       connections_.begin(), connections_.end(),
@@ -279,6 +226,17 @@ void StoryImpl::StopModules() {
   connections_.erase(n, connections_.end());
 
   // Second, tear down all connections with a ModuleController.
+  auto connections_count = std::make_shared<int>(connections_.size());
+  auto cont = [this, connections_count] {
+    --*connections_count;
+    if (*connections_count > 0) {
+      // Not the last call.
+      return;
+    }
+
+    StopLinks();
+  };
+
   if (connections_.empty()) {
     cont();
   } else {
@@ -289,19 +247,36 @@ void StoryImpl::StopModules() {
 }
 
 void StoryImpl::StopLinks() {
-  // Clear the remaining links. After they are destroyed, no
-  // DisposeLink() calls can arrive anymore. They don't need to be
-  // written, because they all were written when they were last
-  // changed.
-  links_.clear();
+  auto links_count = std::make_shared<int>(links_.size());
+  auto cont = [this, links_count] {
+    --*links_count;
+    if (*links_count > 0) {
+      // Not the last call.
+      return;
+    }
 
-  for (auto done : teardown_) {
-    done();
+    // Clear the remaining links. After they are destroyed, no
+    // DisposeLink() calls can arrive anymore. They don't need to be
+    // written, because they all were written when they were last
+    // changed.
+    links_.clear();
+
+    for (auto done : teardown_) {
+      done();
+    }
+
+    // Also closes own connection, but the done callback to the Stop()
+    // invocation is guaranteed to be sent.
+    delete this;
+  };
+
+  if (links_.empty()) {
+    cont();
+  } else {
+    for (auto& link : links_) {
+      link->Sync(cont);
+    }
   }
-
-  // Also closes own connection, but the done callback to the Stop()
-  // invocation is guaranteed to be sent.
-  delete this;
 }
 
 }  // namespace modular
