@@ -184,6 +184,12 @@ static int stub_dup2(int oldfd, int newfd) {
 }
 weak_alias(stub_dup2, dup2);
 
+static int stub_dup3(int oldfd, int newfd, int flags) {
+    errno = ENOSYS;
+    return -1;
+}
+weak_alias(stub_dup3, dup3);
+
 static int stub_pipe(int pipefd[2]) {
     errno = ENOSYS;
     return -1;
