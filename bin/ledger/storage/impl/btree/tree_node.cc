@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 #include "apps/ledger/src/storage/public/constants.h"
@@ -114,39 +115,40 @@ void TreeNode::Split(
     ObjectIdView right_leftmost_child,
     std::function<void(Status, ObjectId, ObjectId)> on_done) const {
   FTL_DCHECK(index >= 0 && index < GetKeyCount());
+
   // Left node
-  std::vector<Entry> entries;
-  std::vector<ObjectId> children;
+  std::vector<Entry> left_entries;
+  std::vector<ObjectId> left_children;
   for (int i = 0; i < index; ++i) {
-    entries.push_back(entries_[i]);
-    children.push_back(children_[i]);
+    left_entries.push_back(entries_[i]);
+    left_children.push_back(children_[i]);
   }
-  children.push_back(left_rightmost_child.ToString());
-  ObjectId left_id;
-  Status s = FromEntriesSynchronous(page_storage_, entries, children, &left_id);
-  if (s != Status::OK) {
-    on_done(s, "", "");
-    return;
-  }
+  left_children.push_back(left_rightmost_child.ToString());
 
-  entries.clear();
-  children.clear();
   // Right node
-  children.push_back(right_leftmost_child.ToString());
+  std::vector<Entry> right_entries;
+  std::vector<ObjectId> right_children;
+  right_children.push_back(right_leftmost_child.ToString());
   for (int i = index; i < GetKeyCount(); ++i) {
-    entries.push_back(entries_[i]);
-    children.push_back(children_[i + 1]);
-  }
-  ObjectId right_id;
-  s = FromEntriesSynchronous(page_storage_, entries, children, &right_id);
-  if (s != Status::OK) {
-    // TODO(nellyv): If this fails, remove the left  object from the object
-    // page_storage.
-    on_done(s, "", "");
-    return;
+    right_entries.push_back(entries_[i]);
+    right_children.push_back(children_[i + 1]);
   }
 
-  on_done(Status::OK, left_id, right_id);
+  auto waiter = callback::Waiter<Status, ObjectId>::Create(Status::OK);
+  FromEntries(page_storage_, left_entries, left_children,
+              waiter->NewCallback());
+  FromEntries(page_storage_, right_entries, right_children,
+              waiter->NewCallback());
+
+  waiter->Finalize([on_done = std::move(on_done)](
+      Status s, std::vector<ObjectId> new_node_ids) {
+    if (s != Status::OK) {
+      on_done(s, "", "");
+      return;
+    }
+    FTL_DCHECK(new_node_ids.size() == 2);
+    on_done(Status::OK, new_node_ids[0], new_node_ids[1]);
+  });
 }
 
 int TreeNode::GetKeyCount() const {
@@ -314,10 +316,7 @@ void TreeNode::Mutation::Finish(
     bool is_root,
     const std::string& max_key,
     std::unordered_set<ObjectId>* new_nodes,
-    std::function<void(Status,
-                       ObjectId /* new_root_id */,
-                       std::unique_ptr<Updater> /* parent_updater */)>
-        on_done) {
+    std::function<void(Status, ObjectId, std::unique_ptr<Updater>)> on_done) {
   FinalizeEntriesChildren();
   // If we want N nodes, each with S entries, separated by 1 entry, then the
   // total number of entries E is E = N*S+(N-1), leading to N=(E+1)/(S+1). As
@@ -325,28 +324,28 @@ void TreeNode::Mutation::Finish(
   // the result to get the rounded up number.
   size_t new_node_count = 1 + entries_.size() / (max_size + 1);
   if (new_node_count == 1) {
-    ObjectId result_id;
-    ObjectId new_id;
-    Status s = FromEntriesSynchronous(node_.page_storage_, entries_, children_,
-                                      &new_id);
-    if (s != Status::OK) {
-      on_done(s, "", nullptr);
-      return;
-    }
-    new_nodes->insert(new_id);
-    if (is_root) {
-      on_done(Status::OK, new_id, nullptr);
-      return;
-    }
-    on_done(Status::OK, "",
-            std::make_unique<Updater>([ max_key, new_id = std::move(new_id) ](
-                Mutation * m) { m->UpdateChildId(max_key, new_id); }));
+    FromEntries(node_.page_storage_, entries_, children_, [
+      is_root, max_key, new_nodes, on_done = std::move(on_done)
+    ](Status s, ObjectId new_id) {
+      if (s != Status::OK) {
+        on_done(s, "", nullptr);
+        return;
+      }
+      new_nodes->insert(new_id);
+      if (is_root) {
+        on_done(Status::OK, new_id, nullptr);
+        return;
+      }
+      on_done(Status::OK, "", std::make_unique<Updater>([
+                max_key = std::move(max_key), new_id = std::move(new_id)
+              ](Mutation * m) { m->UpdateChildId(max_key, new_id); }));
+    });
     return;
   }
 
   std::vector<Entry> new_entries;
-  std::vector<ObjectId> new_children;
 
+  auto waiter = callback::Waiter<Status, ObjectId>::Create(Status::OK);
   size_t elements_per_node =
       1 + (entries_.size() - new_node_count) / new_node_count;
   for (size_t i = 0; i < new_node_count; ++i) {
@@ -364,10 +363,8 @@ void TreeNode::Mutation::Finish(
                     &children_[element_count + 1]);
     children_.erase(children_.begin(), children_.begin() + (element_count + 1));
 
-    ObjectId new_id;
-    FromEntriesSynchronous(node_.page_storage_, entries, children, &new_id);
-    new_children.push_back(new_id);
-    new_nodes->insert(new_id);
+    FromEntries(node_.page_storage_, std::move(entries), std::move(children),
+                waiter->NewCallback());
 
     if (entries_.size() != 0) {
       // Save the pivot that needs to be moved up one level in the tree.
@@ -375,48 +372,61 @@ void TreeNode::Mutation::Finish(
       entries_.erase(entries_.begin());
     }
   }
-
   // All entries and children must have been allocated.
   FTL_DCHECK(entries_.size() == 0) << "Entries left: " << entries_.size();
   FTL_DCHECK(children_.size() == 0) << "Children left: " << children_.size();
 
-  if (!is_root) {
-    // Move the pivots to the parent node.
-    on_done(Status::OK, "", std::make_unique<Updater>([
-              new_entries = std::move(new_entries),
-              new_children = std::move(new_children)
-            ](Mutation * m) {
-              for (size_t i = 0; i < new_entries.size(); ++i) {
-                m->AddEntry(new_entries[i], new_children[i],
-                            new_children[i + 1]);
-              }
-            }));
-    return;
-  }
-
-  // No parent node, create a new one.
-  ObjectId empty_node_id;
-  Status s = TreeNode::FromEntriesSynchronous(
-      node_.page_storage_, std::vector<Entry>(),
-      std::vector<ObjectId>{ObjectId()}, &empty_node_id);
-  FTL_DCHECK(s == Status::OK);
-  FromId(node_.page_storage_, empty_node_id, [
-    max_size, max_key, new_entries = std::move(new_entries),
-    new_children = std::move(new_children), new_nodes,
-    on_done = std::move(on_done)
-  ](Status s, std::unique_ptr<const TreeNode> new_node) {
-    if (s != Status::OK) {
-      on_done(s, "", nullptr);
+  waiter->Finalize([
+    this, max_size, is_root, max_key, new_nodes,
+    new_entries = std::move(new_entries), on_done = std::move(on_done)
+  ](Status s, std::vector<ObjectId> new_children) {
+    new_nodes->insert(new_children.begin(), new_children.end());
+    if (!is_root) {
+      // Move the pivots to the parent node.
+      on_done(Status::OK, "", std::make_unique<Updater>([
+                new_entries = std::move(new_entries),
+                new_children = std::move(new_children)
+              ](Mutation * m) {
+                for (size_t i = 0; i < new_entries.size(); ++i) {
+                  m->AddEntry(new_entries[i], new_children[i],
+                              new_children[i + 1]);
+                }
+              }));
       return;
     }
-    // new_entries could contain more than max_size elements,
-    // so we can't directly create the root using FromEntries.
-    // We use a mutation instead.
-    Mutation mutation = new_node->StartMutation();
-    for (size_t i = 0; i < new_entries.size(); ++i) {
-      mutation.AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
-    }
-    mutation.Finish(max_size, true, max_key, new_nodes, std::move(on_done));
+
+    // No parent node, create a new one.
+    FromEntries(node_.page_storage_, std::vector<Entry>(),
+                std::vector<ObjectId>{ObjectId()}, [
+                  this, max_size, max_key, new_entries = std::move(new_entries),
+                  new_children = std::move(new_children), new_nodes,
+                  on_done = std::move(on_done)
+                ](Status s, ObjectId empty_node_id) {
+                  if (s != Status::OK) {
+                    on_done(s, "", nullptr);
+                    return;
+                  }
+                  FromId(node_.page_storage_, empty_node_id, [
+                    max_size, max_key, new_entries = std::move(new_entries),
+                    new_children = std::move(new_children), new_nodes,
+                    on_done = std::move(on_done)
+                  ](Status s, std::unique_ptr<const TreeNode> new_node) {
+                    if (s != Status::OK) {
+                      on_done(s, "", nullptr);
+                      return;
+                    }
+                    // new_entries could contain more than max_size elements, so
+                    // we can't directly create the root using FromEntries. We
+                    // use a mutation instead.
+                    Mutation mutation = new_node->StartMutation();
+                    for (size_t i = 0; i < new_entries.size(); ++i) {
+                      mutation.AddEntry(new_entries[i], new_children[i],
+                                        new_children[i + 1]);
+                    }
+                    mutation.Finish(max_size, true, max_key, new_nodes,
+                                    std::move(on_done));
+                  });
+                });
   });
 }
 
