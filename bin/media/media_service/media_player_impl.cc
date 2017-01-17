@@ -186,16 +186,22 @@ void MediaPlayerImpl::Update() {
           // We want to seek. Enter |kWaiting| state until the operation is
           // complete.
           state_ = State::kWaiting;
-          FLOG(log_channel_, Seeking(target_position_));
-          source_->Seek(target_position_, [this]() {
-            transform_subject_time_ = target_position_;
-            target_position_ = kUnspecifiedTime;
-            state_ = State::kFlushed;
-            FLOG(log_channel_, Flushed());
-            // Back in |kFlushed|. Call |Update| to see if there's further
-            // action to be taken.
-            Update();
-          });
+          // Make sure the renderers have the right timeline so post-seek
+          // packets don't get discarded.
+          transform_subject_time_ = target_position_;
+          SetTimelineTransform(0.0f, Timeline::local_now(),
+                               [this](bool completed) {
+                                 // Seek to the new position.
+                                 FLOG(log_channel_, Seeking(target_position_));
+                                 source_->Seek(target_position_, [this]() {
+                                   target_position_ = kUnspecifiedTime;
+                                   state_ = State::kFlushed;
+                                   FLOG(log_channel_, Flushed());
+                                   // Back in |kFlushed|. Call |Update| to see
+                                   // if there's further action to be taken.
+                                   Update();
+                                 });
+                               });
 
           // Done for now. We're in kWaiting, and the callback will call Update
           // when the Seek call is complete.
@@ -254,18 +260,14 @@ void MediaPlayerImpl::Update() {
           // presentation timeline and transition to |kPlaying| when the
           // operation completes.
           state_ = State::kWaiting;
-          TimelineTransformPtr timeline_transform =
-              CreateTimelineTransform(1.0f);
-          FLOG(log_channel_,
-               SettingTimelineTransform(timeline_transform.Clone()));
-          timeline_consumer_->SetTimelineTransform(
-              std::move(timeline_transform), [this](bool completed) {
-                state_ = State::kPlaying;
-                FLOG(log_channel_, Playing());
-                // Now we're in |kPlaying|. Call |Update| to see if there's
-                // further action to be taken.
-                Update();
-              });
+          SetTimelineTransform(1.0f, Timeline::local_now() + kMinimumLeadTime,
+                               [this](bool completed) {
+                                 state_ = State::kPlaying;
+                                 FLOG(log_channel_, Playing());
+                                 // Now we're in |kPlaying|. Call |Update| to
+                                 // see if there's further action to be taken.
+                                 Update();
+                               });
 
           // Done for now. We're in |kWaiting|, and the callback will call
           // |Update| when the flush is complete.
@@ -285,18 +287,14 @@ void MediaPlayerImpl::Update() {
           // we need to enter |kWaiting|, stop the presentation timeline and
           // transition to |kPrimed| when the operation completes.
           state_ = State::kWaiting;
-          TimelineTransformPtr timeline_transform =
-              CreateTimelineTransform(0.0f);
-          FLOG(log_channel_,
-               SettingTimelineTransform(timeline_transform.Clone()));
-          timeline_consumer_->SetTimelineTransform(
-              std::move(timeline_transform), [this](bool completed) {
-                state_ = State::kPrimed;
-                FLOG(log_channel_, Primed());
-                // Now we're in |kPrimed|. Call |Update| to see if there's
-                // further action to be taken.
-                Update();
-              });
+          SetTimelineTransform(0.0f, Timeline::local_now() + kMinimumLeadTime,
+                               [this](bool completed) {
+                                 state_ = State::kPrimed;
+                                 FLOG(log_channel_, Primed());
+                                 // Now we're in |kPrimed|. Call |Update| to see
+                                 // if there's further action to be taken.
+                                 Update();
+                               });
 
           // Done for now. We're in |kWaiting|, and the callback will call
           // |Update| when the flush is complete.
@@ -323,9 +321,22 @@ void MediaPlayerImpl::Update() {
   }
 }
 
-TimelineTransformPtr MediaPlayerImpl::CreateTimelineTransform(float rate) {
+void MediaPlayerImpl::SetTimelineTransform(
+    float rate,
+    int64_t reference_time,
+    const TimelineConsumer::SetTimelineTransformCallback callback) {
+  TimelineTransformPtr timeline_transform =
+      CreateTimelineTransform(rate, reference_time);
+  FLOG(log_channel_, SettingTimelineTransform(timeline_transform.Clone()));
+  timeline_consumer_->SetTimelineTransform(std::move(timeline_transform),
+                                           callback);
+}
+
+TimelineTransformPtr MediaPlayerImpl::CreateTimelineTransform(
+    float rate,
+    int64_t reference_time) {
   TimelineTransformPtr result = TimelineTransform::New();
-  result->reference_time = Timeline::local_now() + kMinimumLeadTime;
+  result->reference_time = reference_time;
   result->subject_time = transform_subject_time_;
 
   TimelineRate timeline_rate(rate);

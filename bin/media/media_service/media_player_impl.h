@@ -78,8 +78,15 @@ class MediaPlayerImpl : public MediaServiceImpl::Product<MediaPlayer>,
   // Takes action based on current state.
   void Update();
 
+  // Sets the timeline transform.
+  void SetTimelineTransform(
+      float rate,
+      int64_t reference_time,
+      const TimelineConsumer::SetTimelineTransformCallback callback);
+
   // Creates a TimelineTransform for the specified rate.
-  TimelineTransformPtr CreateTimelineTransform(float rate);
+  TimelineTransformPtr CreateTimelineTransform(float rate,
+                                               int64_t reference_time);
 
   // Handles a status update from the source. When called with the default
   // argument values, initiates source status updates.
