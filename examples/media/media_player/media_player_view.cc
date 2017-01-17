@@ -128,17 +128,16 @@ MediaPlayerView::MediaPlayerView(
 
 MediaPlayerView::~MediaPlayerView() {}
 
-void MediaPlayerView::OnEvent(mozart::EventPtr event,
+void MediaPlayerView::OnEvent(mozart::InputEventPtr event,
                               const OnEventCallback& callback) {
   FTL_DCHECK(event);
   bool handled = false;
-  switch (event->action) {
-    case mozart::EventType::POINTER_DOWN:
-      FTL_DCHECK(event->pointer_data);
-      if (metadata_ && Contains(progress_bar_rect_, event->pointer_data->x,
-                                event->pointer_data->y)) {
+  if (event->is_pointer()) {
+    const mozart::PointerEventPtr& pointer = event->get_pointer();
+    if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
+      if (metadata_ && Contains(progress_bar_rect_, pointer->x, pointer->y)) {
         // User poked the progress bar...seek.
-        media_player_->Seek((event->pointer_data->x - progress_bar_rect_.x) *
+        media_player_->Seek((pointer->x - progress_bar_rect_.x) *
                             metadata_->duration / progress_bar_rect_.width);
         if (state_ != State::kPlaying) {
           media_player_->Play();
@@ -148,14 +147,11 @@ void MediaPlayerView::OnEvent(mozart::EventPtr event,
         TogglePlayPause();
       }
       handled = true;
-      break;
-
-    case mozart::EventType::KEY_PRESSED:
-      FTL_DCHECK(event->key_data);
-      if (!event->key_data) {
-        break;
-      }
-      switch (event->key_data->hid_usage) {
+    }
+  } else if (event->is_keyboard()) {
+    mozart::KeyboardEventPtr& keyboard = event->get_keyboard();
+    if (keyboard->phase == mozart::KeyboardEvent::Phase::PRESSED) {
+      switch (keyboard->hid_usage) {
         case HID_USAGE_KEY_SPACE:
           TogglePlayPause();
           handled = true;
@@ -167,11 +163,8 @@ void MediaPlayerView::OnEvent(mozart::EventPtr event,
         default:
           break;
       }
-      break;
-    default:
-      break;
+    }
   }
-
   callback(handled);
 }
 

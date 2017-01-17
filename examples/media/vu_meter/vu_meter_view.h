@@ -72,7 +72,7 @@ class VuMeterView : public mozart::BaseView, public mozart::InputListener {
   void OnDraw() override;
 
   // |InputListener|:
-  void OnEvent(mozart::EventPtr event,
+  void OnEvent(mozart::InputEventPtr event,
                const OnEventCallback& callback) override;
 
   // Draws the UI.

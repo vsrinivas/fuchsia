@@ -77,23 +77,20 @@ VuMeterView::VuMeterView(
 
 VuMeterView::~VuMeterView() {}
 
-void VuMeterView::OnEvent(mozart::EventPtr event,
+void VuMeterView::OnEvent(mozart::InputEventPtr event,
                           const OnEventCallback& callback) {
   FTL_DCHECK(event);
   bool handled = false;
-  switch (event->action) {
-    case mozart::EventType::POINTER_DOWN:
-      FTL_DCHECK(event->pointer_data);
+  if (event->is_pointer()) {
+    mozart::PointerEventPtr& pointer = event->get_pointer();
+    if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
       ToggleStartStop();
       handled = true;
-      break;
-
-    case mozart::EventType::KEY_PRESSED:
-      FTL_DCHECK(event->key_data);
-      if (!event->key_data) {
-        break;
-      }
-      switch (event->key_data->hid_usage) {
+    }
+  } else if (event->is_keyboard()) {
+    mozart::KeyboardEventPtr& keyboard = event->get_keyboard();
+    if (keyboard->phase == mozart::KeyboardEvent::Phase::PRESSED) {
+      switch (keyboard->hid_usage) {
         case HID_USAGE_KEY_SPACE:
           ToggleStartStop();
           handled = true;
@@ -105,11 +102,8 @@ void VuMeterView::OnEvent(mozart::EventPtr event,
         default:
           break;
       }
-      break;
-    default:
-      break;
+    }
   }
-
   callback(handled);
 }
 

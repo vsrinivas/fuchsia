@@ -40,7 +40,7 @@ class MediaPlayerView : public mozart::BaseView, public mozart::InputListener {
   void OnChildUnavailable(uint32_t child_key) override;
 
   // |InputListener|:
-  void OnEvent(mozart::EventPtr event,
+  void OnEvent(mozart::InputEventPtr event,
                const OnEventCallback& callback) override;
 
   // Draws the progress bar, etc, into the provided canvas.
