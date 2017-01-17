@@ -49,7 +49,7 @@ status_t eth_rx(ethdev_t* eth, void* data) {
     uint64_t info = eth->rxd[n].info;
 
     if (!(info & IE_RXD_DONE)) {
-        return ERR_BAD_STATE;
+        return ERR_SHOULD_WAIT;
     }
 
     // copy out packet
@@ -57,7 +57,7 @@ status_t eth_rx(ethdev_t* eth, void* data) {
     if (r > ETH_RXBUF_SIZE) {
         // should not be possible, but...
         r = ERR_BAD_STATE;
-    } else {
+    } else if (data) {
         memcpy(data, eth->rxb + ETH_RXBUF_SIZE * n, r);
     }
 

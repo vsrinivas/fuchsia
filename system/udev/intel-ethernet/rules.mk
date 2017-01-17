@@ -10,7 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := $(LOCAL_DIR)/ethernet.c $(LOCAL_DIR)/ie.c
 
-MODULE_STATIC_LIBS := ulib/ddk
+MODULE_STATIC_LIBS := ulib/ddk ulib/eth
 
 MODULE_LIBS := ulib/driver ulib/magenta ulib/musl
 
