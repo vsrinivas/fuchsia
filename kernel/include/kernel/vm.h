@@ -95,6 +95,12 @@ static inline bool is_user_address(vaddr_t va) {
     return (va >= USER_ASPACE_BASE && va <= (USER_ASPACE_BASE + (USER_ASPACE_SIZE - 1)));
 }
 
+static inline bool is_user_address_range(vaddr_t va, size_t len) {
+    return va + len >= va &&
+            is_user_address(va) &&
+            (len == 0 || is_user_address(va + len - 1));
+}
+
 /* physical allocator */
 typedef struct pmm_arena_info {
     const char* name;
