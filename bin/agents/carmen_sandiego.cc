@@ -5,8 +5,8 @@
 #include "apps/maxwell/services/context/client.fidl.h"
 #include "apps/maxwell/src/acquirers/gps.h"
 #include "apps/modular/lib/app/application_context.h"
-#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "third_party/rapidjson/rapidjson/document.h"
 
 constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
 constexpr char maxwell::acquirers::GpsAcquirer::kSchema[];

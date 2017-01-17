@@ -9,6 +9,8 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/mtl/tasks/message_loop.h"
+#include "third_party/rapidjson/rapidjson/document.h"
+#include "third_party/rapidjson/rapidjson/pointer.h"
 
 namespace {
 
@@ -68,10 +70,11 @@ maxwell::ProposalPtr MkProposal(const std::string& label,
   const auto& data = content.module_data;
   if (data.size() > 0) {
     // TODO(afergan): Don't hardcode the doc id key or initial_data map key.
-    modular::JsonDoc doc;
+    rapidjson::Document doc;
     std::vector<std::string> segments{"init", label, "color"};
-    modular::JsonPointer(modular::EscapeJsonPath(segments.begin(), segments.end()))
-        .Set(doc, data);
+    auto pointer =
+        modular::CreatePointer(doc, segments.begin(), segments.end());
+    pointer.Set(doc, data);
     create_story->initial_data = modular::JsonValueToString(doc);
   }
   auto action = maxwell::Action::New();

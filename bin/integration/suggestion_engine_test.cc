@@ -11,6 +11,8 @@
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/lib/testing/story_provider_mock.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "third_party/rapidjson/rapidjson/document.h"
+#include "third_party/rapidjson/rapidjson/pointer.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
@@ -417,11 +419,8 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   create_story->module_id = "foo://bar";
   auto action = maxwell::Action::New();
 
-  modular::JsonDoc doc;
-  std::vector<std::string> segments{"foo", "bar"};
-  modular::JsonPointer(
-      modular::EscapeJsonPath(segments.begin(), segments.end()))
-      .Set(doc, "some_data");
+  rapidjson::Document doc;
+  rapidjson::Pointer("/foo/bar").Set(doc, "some_data");
   create_story->initial_data = modular::JsonValueToString(doc);
 
   action->set_create_story(std::move(create_story));
