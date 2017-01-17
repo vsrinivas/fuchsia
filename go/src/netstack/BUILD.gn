@@ -2,6 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # if true, lwiperf server will run
+  lwiperf = false
+}
+
 group("netstack") {
   deps = [
     ":app",
@@ -32,15 +37,21 @@ executable("app") {
   ]
 
   sources += [
+    "ports/lwip/lwip-netdb.h",
+    "ports/lwip/lwip-socket.h",
     "ports/lwip/multiplexer-lwip.c",
     "ports/lwip/net_init-lwip.c",
     "ports/lwip/net_socket-lwip.c",
-    "ports/lwip/lwip-socket.h",
-    "ports/lwip/lwip-netdb.h",
   ]
 
+  defines = []
+
   if (is_debug) {
-    defines = [ "NETSTACK_DEBUG" ]
+    defines += [ "NETSTACK_DEBUG" ]
+  }
+
+  if (lwiperf) {
+    defines += [ "USE_LWIPERF" ]
   }
 
   libs = [
@@ -56,7 +67,9 @@ executable("app") {
 action("netstack2") {
   out_path = "$root_out_dir/netstack2"
 
-  outputs = [ out_path ]
+  outputs = [
+    out_path,
+  ]
 
   script = rebase_path("//.") + "/build/gobuild.py"
   depfile_path = "${out_path}.d"

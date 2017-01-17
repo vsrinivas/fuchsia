@@ -8,6 +8,9 @@
 #include "third_party/lwip/src/include/lwip/netif.h"
 #include "third_party/lwip/src/include/lwip/tcpip.h"
 #include "third_party/lwip/src/include/lwip/stats.h"
+#if USE_LWIPERF
+#include "third_party/lwip/src/include/lwip/apps/lwiperf.h"
+#endif
 
 // initialize a lwip network interface
 
@@ -56,6 +59,25 @@ static void lwip_netif_status_callback(struct netif *netif) {
   }
 }
 
+#if USE_LWIPERF
+// the callback called for lwiperf reports
+static void lwip_iperf_report(void *arg, enum lwiperf_report_type report_type,
+                              const ip_addr_t *local_addr, u16_t local_port,
+                              const ip_addr_t *remote_addr, u16_t remote_port,
+                              u32_t bytes_transferred, u32_t ms_duration,
+                              u32_t bandwidth_kbitpsec) {
+  LWIP_UNUSED_ARG(arg);
+  LWIP_UNUSED_ARG(local_addr);
+  LWIP_UNUSED_ARG(local_port);
+
+  printf(
+      "iperf report [%d]: %s:%u, transferred: %u (bytes), duration: %u (ms), "
+      "bandwidth %u (kb/s)\n",
+      report_type, ipaddr_ntoa(remote_addr), remote_port, bytes_transferred,
+      ms_duration, bandwidth_kbitpsec);
+}
+#endif
+
 static int lwip_netif_init(void) {
   sys_sem_t sem_tcpip_done;
 
@@ -90,6 +112,11 @@ static int lwip_netif_init(void) {
   // start dhcp
   // TODO: handle lease renewal
   dhcp_start(&netif);
+
+#if USE_LWIPERF
+  // start iperf server
+  lwiperf_start_tcp_server_default(lwip_iperf_report, NULL);
+#endif
 
   return 0;
 }
