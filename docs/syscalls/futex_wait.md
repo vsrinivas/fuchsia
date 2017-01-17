@@ -27,6 +27,8 @@ the thread can also be woken up after the timeout argument expires.
 
 **ERR_INVALID_ARGS**  *value_ptr* is not a valid userspace pointer.
 
+**ERR_INVALID_ARGS**  *value_ptr* is not aligned.
+
 **ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
 **ERR_TIMED_OUT**  The thread was not woken before *timeout* expired.

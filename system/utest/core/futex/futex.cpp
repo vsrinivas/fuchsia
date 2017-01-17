@@ -377,6 +377,23 @@ bool test_futex_thread_killed() {
     END_TEST;
 }
 
+// Test that misaligned pointers cause futex syscalls to return a failure.
+static bool test_futex_misaligned() {
+  BEGIN_TEST;
+
+  char buffer[sizeof(mx_futex_t) * 2];
+  ASSERT_EQ(((uintptr_t)&buffer[1]) % sizeof(int), 1, "");
+
+  mx_futex_t* futex = (mx_futex_t*)&buffer[1];
+  ASSERT_EQ(mx_futex_wait(futex, 0, MX_TIME_INFINITE), ERR_INVALID_ARGS, "");
+  ASSERT_EQ(mx_futex_wake(futex, 1), ERR_INVALID_ARGS, "");
+
+  mx_futex_t* futex_2 = (mx_futex_t*)&buffer[2];
+  ASSERT_EQ(mx_futex_requeue(futex, 1, 0, futex_2, 1), ERR_INVALID_ARGS, "");
+
+  END_TEST;
+}
+
 static void log(const char* str) {
     uint64_t now = mx_time_get(MX_CLOCK_MONOTONIC);
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
@@ -467,6 +484,7 @@ RUN_TEST(test_futex_requeue_same_addr);
 RUN_TEST(test_futex_requeue);
 RUN_TEST(test_futex_requeue_unqueued_on_timeout);
 RUN_TEST(test_futex_thread_killed);
+RUN_TEST(test_futex_misaligned);
 RUN_TEST(test_event_signaling);
 END_TEST_CASE(futex_tests)
 

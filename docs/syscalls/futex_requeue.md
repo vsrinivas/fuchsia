@@ -36,6 +36,8 @@ This requeueing behavior may be used to avoid thundering herds on wake.
 
 **ERR_INVALID_ARGS**  *value_ptr* is the same futex as *requeue_ptr*.
 
+**ERR_INVALID_ARGS**  *value_ptr* or *requeue_ptr* is not aligned.
+
 **ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
 ## SEE ALSO

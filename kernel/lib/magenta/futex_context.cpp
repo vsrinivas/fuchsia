@@ -31,6 +31,9 @@ status_t FutexContext::FutexWait(user_ptr<int> value_ptr, int current_value, mx_
     LTRACE_ENTRY;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
+    if (futex_key % sizeof(int))
+        return ERR_INVALID_ARGS;
+
     FutexNode* node;
 
     // FutexWait() checks that the address value_ptr still contains
@@ -100,6 +103,8 @@ status_t FutexContext::FutexWake(user_ptr<int> value_ptr, uint32_t count) {
     if (count == 0) return NO_ERROR;
 
     uintptr_t futex_key = reinterpret_cast<uintptr_t>(value_ptr.get());
+    if (futex_key % sizeof(int))
+        return ERR_INVALID_ARGS;
 
     {
         AutoLock lock(lock_);
@@ -147,6 +152,8 @@ status_t FutexContext::FutexRequeue(user_ptr<int> wake_ptr, uint32_t wake_count,
     uintptr_t wake_key = reinterpret_cast<uintptr_t>(wake_ptr.get());
     uintptr_t requeue_key = reinterpret_cast<uintptr_t>(requeue_ptr.get());
     if (wake_key == requeue_key) return ERR_INVALID_ARGS;
+    if (wake_key % sizeof(int) || requeue_key % sizeof(int))
+        return ERR_INVALID_ARGS;
 
     // This must happen before RemoveFromHead() calls set_hash_key() on
     // nodes below, because operations on futex_table_ look at the GetKey

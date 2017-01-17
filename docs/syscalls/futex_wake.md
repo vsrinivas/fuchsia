@@ -17,14 +17,15 @@ mx_status_t mx_futex_wake(mx_futex_t* value_ptr, uint32_t wake_count);
 Waking a futex causes `wake_count` threads waiting on the `value_ptr`
 futex to be woken up.
 
+Waking up zero threads is not an error condition.
+
 ## RETURN VALUE
 
-**futex_wake**() returns **NO_ERROR**.
+**futex_wake**() returns **NO_ERROR** on success.
 
 ## ERRORS
 
-**futex_wake**() always succeeds. Waking up zero threads is not an
-error condition.
+**ERR_INVALID_ARGS**  *value_ptr* is not aligned.
 
 ## SEE ALSO
 
