@@ -14,6 +14,7 @@
 #include <magenta/types.h>
 
 #include <assert.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -113,6 +114,9 @@ constexpr uint32_t DirentSize(uint8_t namelen) {
 constexpr uint8_t kMinfsMaxNameSize       = 255;
 constexpr uint32_t kMinfsMaxDirentSize    = DirentSize(kMinfsMaxNameSize);
 constexpr uint32_t kMinfsMaxDirectorySize = (((1 << 20) - 1) & (~3));
+
+static_assert(kMinfsMaxNameSize >= NAME_MAX,
+              "MinFS names must be large enough to hold NAME_MAX characters");
 
 constexpr uint32_t kMinfsReclenMask = 0x0FFFFFFF;
 constexpr uint32_t kMinfsReclenLast = 0x80000000;

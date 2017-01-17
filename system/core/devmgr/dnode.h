@@ -4,13 +4,20 @@
 
 #pragma once
 
+#include <assert.h>
+#include <limits.h>
 #include <mxio/vfs.h>
 #include <magenta/listnode.h>
 
 typedef struct dnode dnode_t;
 
-#define DN_NAME_MAX 255
-#define DN_NAME_LEN(flags) ((flags) & 0xFF)
+#define DN_NAME_MAX NAME_MAX
+static_assert(NAME_MAX == 255, "NAME_MAX must be 255");
+
+// Assert that DN_NAME_MAX can be used as a bitmask
+static_assert(((DN_NAME_MAX + 1) & DN_NAME_MAX) == 0,
+              "Expected DN_NAME_MAX to be one less than a power of two");
+#define DN_NAME_LEN(flags) ((flags) & DN_NAME_MAX)
 
 // Warning: These flags are currently unused
 #define DN_TYPE_MASK    0xF00

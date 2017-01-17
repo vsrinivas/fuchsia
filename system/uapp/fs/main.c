@@ -102,6 +102,7 @@ int test_append(void);
 int test_basic(void);
 int test_directory(void);
 int test_maxfile(void);
+int test_overflow(void);
 int test_rw_workers(void);
 int test_rename(void);
 int test_sync(void);
@@ -116,6 +117,7 @@ struct {
     {"basic", test_basic},
     {"directory", test_directory},
     {"maxfile", test_maxfile},
+    {"overflow", test_overflow},
     {"rw_workers", test_rw_workers},
     {"rename", test_rename},
     {"sync", test_sync},

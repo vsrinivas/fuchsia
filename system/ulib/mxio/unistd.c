@@ -292,7 +292,7 @@ static mx_status_t __mxio_opendir_containing_at(mxio_t** io, int dirfd, const ch
         return ERR_BAD_HANDLE;
     }
 
-    char dirpath[1024];
+    char dirpath[PATH_MAX];
 
     // Make 'path_end' the final index of the string without trailing '/' characters.
     size_t path_end = strnlen(path, PATH_MAX - 1) - 1;

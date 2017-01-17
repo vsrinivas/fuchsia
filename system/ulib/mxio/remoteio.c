@@ -620,8 +620,8 @@ static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
     }
 
     size_t len = strlen(name);
-    if (len >= MXIO_CHUNK_SIZE) {
-        return ERR_INVALID_ARGS;
+    if (len >= PATH_MAX) {
+        return ERR_BAD_PATH;
     }
 
     mxrio_msg_t msg;

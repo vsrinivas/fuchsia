@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -426,7 +427,6 @@ static mx_status_t can_unlink(vnode_t* vn) {
 
 static mx_status_t do_unlink(vnode_t* vndir, vnode_t* vn, minfs_dirent_t* de,
                              de_off_t* offs) {
-
     // Coalesce the current dirent with the previous/next dirent, if they
     // (1) exist and (2) are free.
     size_t off_prev = offs->off_prev;
@@ -917,6 +917,9 @@ done:
 
 static mx_status_t fs_lookup(vnode_t* vn, vnode_t** out, const char* name, size_t len) {
     trace(MINFS, "minfs_lookup() vn=%p(#%u) name='%.*s'\n", vn, vn->ino, (int)len, name);
+    assert(len <= kMinfsMaxNameSize);
+    assert(memchr(name, '/', len) == NULL);
+
     if (!VNODE_IS_DIR(vn)) {
         error("not directory\n");
         return ERR_NOT_SUPPORTED;
@@ -1044,9 +1047,9 @@ static mx_status_t fs_create(vnode_t* vndir, vnode_t** out,
                              const char* name, size_t len, uint32_t mode) {
     trace(MINFS, "minfs_create() vn=%p(#%u) name='%.*s' mode=%#x\n",
           vndir, vndir->ino, (int)len, name, mode);
+    assert(len <= kMinfsMaxNameSize);
+    assert(memchr(name, '/', len) == NULL);
     if (!VNODE_IS_DIR(vndir)) {
-        return ERR_NOT_SUPPORTED;
-    } else if (len > kMinfsMaxNameSize) {
         return ERR_NOT_SUPPORTED;
     }
 
@@ -1110,6 +1113,8 @@ static ssize_t fs_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
 
 static mx_status_t fs_unlink(vnode_t* vn, const char* name, size_t len, bool must_be_dir) {
     trace(MINFS, "minfs_unlink() vn=%p(#%u) name='%.*s'\n", vn, vn->ino, (int)len, name);
+    assert(len <= kMinfsMaxNameSize);
+    assert(memchr(name, '/', len) == NULL);
     if (!VNODE_IS_DIR(vn)) {
         return ERR_NOT_SUPPORTED;
     }
@@ -1246,7 +1251,10 @@ static mx_status_t fs_rename(vnode_t* olddir, vnode_t* newdir,
                              bool src_must_be_dir, bool dst_must_be_dir) {
     trace(MINFS, "minfs_rename() olddir=%p(#%u) newdir=%p(#%u) oldname='%.*s' newname='%.*s'\n",
           olddir, olddir->ino, newdir, newdir->ino, (int)oldlen, oldname, (int)newlen, newname);
-
+    assert(oldlen <= kMinfsMaxNameSize);
+    assert(memchr(oldname, '/', oldlen) == NULL);
+    assert(newlen <= kMinfsMaxNameSize);
+    assert(memchr(newname, '/', newlen) == NULL);
     // ensure that the vnodes containin oldname and newname are directories
     if (!(VNODE_IS_DIR(olddir) && VNODE_IS_DIR(newdir)))
         return ERR_NOT_SUPPORTED;

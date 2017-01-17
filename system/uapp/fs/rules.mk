@@ -17,6 +17,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/test-basic.c \
     $(LOCAL_DIR)/test-directory.c \
     $(LOCAL_DIR)/test-maxfile.c \
+    $(LOCAL_DIR)/test-overflow.c \
     $(LOCAL_DIR)/test-rw-workers.c \
     $(LOCAL_DIR)/test-rename.c \
     $(LOCAL_DIR)/test-sync.c \

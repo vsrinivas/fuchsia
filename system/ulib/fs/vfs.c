@@ -31,6 +31,8 @@ static mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, 
     // 'name' should not contain paths consisting of exclusively '/' characters.
     if (len == 0) {
         return ERR_INVALID_ARGS;
+    } else if (len > NAME_MAX) {
+        return ERR_BAD_PATH;
     }
 
     *len_out = len;

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <limits.h>
 #include <stdbool.h>
 #include <unistd.h> // for ssize_t
 
@@ -36,7 +37,7 @@
 #define MXIO_IOCTL_MAX_INPUT 1024
 
 // Maxium length of a filename
-#define MXIO_MAX_FILENAME 255
+#define MXIO_MAX_FILENAME NAME_MAX
 
 // events for mxio_wait_fd()
 #define MXIO_EVT_READABLE MX_USER_SIGNAL_0

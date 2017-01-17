@@ -11,6 +11,7 @@
 #include <mxio/vfs.h>
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -175,7 +176,7 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     switch (MXRIO_OP(msg->op)) {
     case MXRIO_OPEN: {
         char* path = (char*)msg->data;
-        if ((len < 1) || (len > 1024)) {
+        if ((len < 1) || (len > PATH_MAX)) {
             mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
         } else {
             path[len] = 0;

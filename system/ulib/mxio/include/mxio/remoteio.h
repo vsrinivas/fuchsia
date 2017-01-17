@@ -7,6 +7,9 @@
 #include <magenta/compiler.h>
 #include <magenta/types.h>
 #include <mxio/io.h>
+
+#include <assert.h>
+#include <limits.h>
 #include <stdint.h>
 
 __BEGIN_CDECLS
@@ -125,6 +128,8 @@ struct mxrio_msg {
     mx_handle_t handle[4];             // up to 3 handles + reply channel handle
     uint8_t data[MXIO_CHUNK_SIZE];     // payload
 };
+
+static_assert(MXIO_CHUNK_SIZE >= PATH_MAX, "MXIO_CHUNK_SIZE must be large enough to contain paths");
 
 // - msg.datalen is the size of data sent or received and must be <= MXIO_CHUNK_SIZE
 // - msg.arg is the return code on replies
