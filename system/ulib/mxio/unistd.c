@@ -735,6 +735,22 @@ int dup(int oldfd) {
     return mxio_dup(oldfd, -1, 0);
 }
 
+int dup3(int oldfd, int newfd, int flags) {
+    // dup3 differs from dup2 in that it fails with EINVAL, rather
+    // than being a no op, on being given the same fd for both old and
+    // new.
+    if (oldfd == newfd) {
+        return ERRNO(EINVAL);
+    }
+
+    if (flags != 0 && flags != O_CLOEXEC) {
+        return ERRNO(EINVAL);
+    }
+
+    // TODO(kulakowski) Implement O_CLOEXEC.
+    return mxio_dup(oldfd, newfd, 0);
+}
+
 int fcntl(int fd, int cmd, ...) {
 // Note that it is not safe to pull out the int out of the
 // variadic arguments at the top level, as callers are not
