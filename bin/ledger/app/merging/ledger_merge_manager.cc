@@ -7,8 +7,8 @@
 #include <memory>
 #include <string>
 
-#include "apps/ledger/src/app/merging/custom_merger.h"
-#include "apps/ledger/src/app/merging/last_one_wins_merger.h"
+#include "apps/ledger/src/app/merging/custom_merge_strategy.h"
+#include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
 
 namespace ledger {
@@ -52,7 +52,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
     const storage::PageId& page_id,
     std::function<void(std::unique_ptr<MergeStrategy>)> strategy_callback) {
   if (!conflict_resolver_factory_) {
-    strategy_callback(std::make_unique<LastOneWinsMerger>());
+    strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());
   } else if (conflict_resolver_factory_.encountered_error()) {
     strategy_callback(nullptr);
   } else {
@@ -64,7 +64,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
               strategy_callback(nullptr);
               break;
             case MergePolicy::LAST_ONE_WINS:
-              strategy_callback(std::make_unique<LastOneWinsMerger>());
+              strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());
               break;
             case MergePolicy::AUTOMATIC_WITH_FALLBACK:
               // TODO(etiennej): see bug LE-124.
@@ -75,11 +75,12 @@ void LedgerMergeManager::GetResolverStrategyForPage(
               ConflictResolverPtr conflict_resolver;
               conflict_resolver_factory_->NewConflictResolver(
                   convert::ToArray(page_id), conflict_resolver.NewRequest());
-              std::unique_ptr<CustomMerger> custom_merger =
-                  std::make_unique<CustomMerger>(std::move(conflict_resolver));
-              custom_merger->SetOnError(
+              std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
+                  std::make_unique<CustomMergeStrategy>(
+                      std::move(conflict_resolver));
+              custom_merge_strategy->SetOnError(
                   [this, page_id]() { ResetStrategyForPage(page_id); });
-              strategy_callback(std::move(custom_merger));
+              strategy_callback(std::move(custom_merge_strategy));
             }
           }
         });

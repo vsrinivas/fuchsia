@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/callback/cancellable.h"
+#include "apps/ledger/src/app/merging/merge_resolver.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 
@@ -26,12 +26,18 @@ class MergeStrategy {
   // available.
   virtual void SetOnError(std::function<void()> on_error) = 0;
 
-  virtual ftl::RefPtr<callback::Cancellable> Merge(
-      storage::PageStorage* storage,
-      PageManager* page_manager,
-      std::unique_ptr<const storage::Commit> head_1,
-      std::unique_ptr<const storage::Commit> head_2,
-      std::unique_ptr<const storage::Commit> ancestor) = 0;
+  // Merge the given commits. head_1.timesteamp must be less or equals to
+  // head_2.timestamp.
+  virtual void Merge(storage::PageStorage* storage,
+                     PageManager* page_manager,
+                     std::unique_ptr<const storage::Commit> head_1,
+                     std::unique_ptr<const storage::Commit> head_2,
+                     std::unique_ptr<const storage::Commit> ancestor,
+                     ftl::Closure on_done) = 0;
+
+  // Cancel an in-progress merge. This must be called after |Merge| has been
+  // called, and before the |on_done| callback.
+  virtual void Cancel() = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(MergeStrategy);

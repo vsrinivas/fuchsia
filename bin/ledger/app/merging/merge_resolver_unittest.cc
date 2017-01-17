@@ -7,7 +7,7 @@
 #include <string>
 
 #include "apps/ledger/src/app/constants.h"
-#include "apps/ledger/src/app/merging/last_one_wins_merger.h"
+#include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
 #include "apps/ledger/src/callback/cancellable_helper.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
@@ -99,8 +99,8 @@ TEST_F(MergeResolverTest, Empty) {
                                             AddKeyValueToJournal("foo", "bar"));
   storage::CommitId commit_2 = CreateCommit(storage::kFirstPageCommitId,
                                             AddKeyValueToJournal("foo", "baz"));
-  std::unique_ptr<LastOneWinsMerger> strategy =
-      std::make_unique<LastOneWinsMerger>();
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
+      std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, page_storage_.get());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
@@ -113,22 +113,26 @@ TEST_F(MergeResolverTest, Empty) {
   EXPECT_EQ(1u, ids.size());
 }
 
-class VerifyingMerger : public MergeStrategy {
+class VerifyingMergeStrategy : public MergeStrategy {
  public:
-  VerifyingMerger(storage::CommitId head1,
-                  storage::CommitId head2,
-                  storage::CommitId ancestor)
-      : head1_(head1), head2_(head2), ancestor_(ancestor) {}
-  ~VerifyingMerger() override {}
+  VerifyingMergeStrategy(ftl::RefPtr<ftl::TaskRunner> task_runner,
+                         storage::CommitId head1,
+                         storage::CommitId head2,
+                         storage::CommitId ancestor)
+      : task_runner_(task_runner),
+        head1_(head1),
+        head2_(head2),
+        ancestor_(ancestor) {}
+  ~VerifyingMergeStrategy() override {}
 
   void SetOnError(std::function<void()> on_error) override {}
 
-  ftl::RefPtr<callback::Cancellable> Merge(
-      storage::PageStorage* storage,
-      PageManager* page_manager,
-      std::unique_ptr<const storage::Commit> head_1,
-      std::unique_ptr<const storage::Commit> head_2,
-      std::unique_ptr<const storage::Commit> ancestor) override {
+  void Merge(storage::PageStorage* storage,
+             PageManager* page_manager,
+             std::unique_ptr<const storage::Commit> head_1,
+             std::unique_ptr<const storage::Commit> head_2,
+             std::unique_ptr<const storage::Commit> ancestor,
+             ftl::Closure on_done) override {
     EXPECT_EQ(ancestor_, ancestor->GetId());
     storage::CommitId actual_head1_id = head_1->GetId();
     if (actual_head1_id != head1_ && actual_head1_id != head2_) {
@@ -140,10 +144,13 @@ class VerifyingMerger : public MergeStrategy {
       // Fail
       EXPECT_EQ(head2_, actual_head2_id);
     }
-    return callback::CreateDoneCancellable();
+    task_runner_->PostTask(std::move(on_done));
   }
 
+  void Cancel() override{};
+
  private:
+  ftl::RefPtr<ftl::TaskRunner> task_runner_;
   const storage::CommitId head1_;
   const storage::CommitId head2_;
   const storage::CommitId ancestor_;
@@ -172,11 +179,12 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
-  std::unique_ptr<VerifyingMerger> strategy =
-      std::make_unique<VerifyingMerger>(commit_5, commit_3, commit_2);
+  std::unique_ptr<VerifyingMergeStrategy> strategy =
+      std::make_unique<VerifyingMergeStrategy>(message_loop_.task_runner(),
+                                               commit_5, commit_3, commit_2);
   MergeResolver resolver([] {}, page_storage_.get());
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });
+  resolver.set_on_empty([this] { message_loop_.QuitNow(); });
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_TRUE(resolver.IsEmpty());
@@ -205,8 +213,8 @@ TEST_F(MergeResolverTest, LastOneWins) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_3));
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
-  std::unique_ptr<LastOneWinsMerger> strategy =
-      std::make_unique<LastOneWinsMerger>();
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
+      std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, page_storage_.get());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty([this] { message_loop_.PostQuitTask(); });

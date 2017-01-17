@@ -7,8 +7,6 @@
 
 #include <vector>
 
-#include "apps/ledger/src/app/merging/merge_strategy.h"
-#include "apps/ledger/src/callback/cancellable.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
@@ -16,6 +14,7 @@
 
 namespace ledger {
 class PageManager;
+class MergeStrategy;
 
 // MergeResolver watches a page and resolves conflicts as they appear using the
 // provided merge strategy.
@@ -50,7 +49,10 @@ class MergeResolver : public storage::CommitWatcher {
   storage::PageStorage* const storage_;
   PageManager* page_manager_ = nullptr;
   std::unique_ptr<MergeStrategy> strategy_;
-  callback::CancellableContainer merges_;
+  std::unique_ptr<MergeStrategy> next_strategy_;
+  bool switch_strategy_ = false;
+  bool merge_in_progress_ = false;
+  ftl::Closure on_empty_callback_;
   ftl::Closure on_destroyed_;
 
   // WeakPtrFactory must be the last field of the class.

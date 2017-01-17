@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/ledger/src/app/merging/custom_merger.h"
+#include "apps/ledger/src/app/merging/custom_merge_strategy.h"
 
 #include <memory>
 #include <string>
@@ -10,46 +10,33 @@
 
 #include "apps/ledger/src/app/diff_utils.h"
 #include "apps/ledger/src/app/page_manager.h"
-#include "apps/ledger/src/callback/cancellable_helper.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/socket/strings.h"
 
 namespace ledger {
-namespace {
-class Merger : public callback::Cancellable {
+class CustomMergeStrategy::CustomMerger {
  public:
-  Merger(storage::PageStorage* storage,
-         PageManager* page_manager,
-         ConflictResolver* conflict_resolver,
-         std::unique_ptr<const storage::Commit> left,
-         std::unique_ptr<const storage::Commit> right,
-         std::unique_ptr<const storage::Commit> ancestor);
-  ~Merger();
-
-  static ftl::RefPtr<Merger> Create(
-      storage::PageStorage* storage,
-      PageManager* page_manager,
-      ConflictResolver* conflict_resolver,
-      std::unique_ptr<const storage::Commit> left,
-      std::unique_ptr<const storage::Commit> right,
-      std::unique_ptr<const storage::Commit> ancestor);
+  CustomMerger(storage::PageStorage* storage,
+               PageManager* page_manager,
+               ConflictResolver* conflict_resolver,
+               std::unique_ptr<const storage::Commit> left,
+               std::unique_ptr<const storage::Commit> right,
+               std::unique_ptr<const storage::Commit> ancestor,
+               ftl::Closure on_done);
+  ~CustomMerger();
 
   void Start();
-
-  // Cancellable
-  void Cancel() override;
-  bool IsDone() override;
-  void SetOnDone(ftl::Closure callback) override;
+  void Cancel();
+  void Done();
 
  private:
   void OnChangesReady(storage::Status status,
                       std::vector<PageChangePtr> changes);
   void OnMergeDone(fidl::Array<MergedValuePtr> merged_values);
-  void Done();
 
-  ftl::Closure on_done_;
   storage::PageStorage* const storage_;
   PageManager* const manager_;
   ConflictResolver* const conflict_resolver_;
@@ -58,39 +45,41 @@ class Merger : public callback::Cancellable {
   std::unique_ptr<const storage::Commit> const right_;
   std::unique_ptr<const storage::Commit> const ancestor_;
 
+  ftl::Closure on_done_;
+
   std::unique_ptr<storage::Journal> journal_;
-  bool is_done_ = false;
   bool cancelled_ = false;
+
+  // This must be the last member of the class.
+  ftl::WeakPtrFactory<CustomMergeStrategy::CustomMerger> weak_factory_;
 };
 
-Merger::Merger(storage::PageStorage* storage,
-               PageManager* page_manager,
-               ConflictResolver* conflict_resolver,
-               std::unique_ptr<const storage::Commit> left,
-               std::unique_ptr<const storage::Commit> right,
-               std::unique_ptr<const storage::Commit> ancestor)
-    : storage_(storage),
-      manager_(page_manager),
-      conflict_resolver_(conflict_resolver),
-      left_(std::move(left)),
-      right_(std::move(right)),
-      ancestor_(std::move(ancestor)) {}
-
-Merger::~Merger() {}
-
-ftl::RefPtr<Merger> Merger::Create(
+CustomMergeStrategy::CustomMerger::CustomMerger(
     storage::PageStorage* storage,
     PageManager* page_manager,
     ConflictResolver* conflict_resolver,
     std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right,
-    std::unique_ptr<const storage::Commit> ancestor) {
-  return ftl::AdoptRef(new Merger(storage, page_manager, conflict_resolver,
-                                  std::move(left), std::move(right),
-                                  std::move(ancestor)));
+    std::unique_ptr<const storage::Commit> ancestor,
+    ftl::Closure on_done)
+    : storage_(storage),
+      manager_(page_manager),
+      conflict_resolver_(conflict_resolver),
+      left_(std::move(left)),
+      right_(std::move(right)),
+      ancestor_(std::move(ancestor)),
+      on_done_(std::move(on_done)),
+      weak_factory_(this) {
+  FTL_DCHECK(on_done_);
 }
 
-void Merger::Start() {
+CustomMergeStrategy::CustomMerger::~CustomMerger() {
+  if (journal_) {
+    journal_->Rollback();
+  }
+}
+
+void CustomMergeStrategy::CustomMerger::Start() {
   ftl::RefPtr<callback::Waiter<storage::Status, PageChangePtr>> waiter =
       callback::Waiter<storage::Status, PageChangePtr>::Create(
           storage::Status::OK);
@@ -100,15 +89,20 @@ void Merger::Start() {
   diff_utils::ComputePageChange(storage_, *ancestor_, *right_,
                                 waiter->NewCallback());
 
-  waiter->Finalize([self = ftl::RefPtr<Merger>(this)](
+  waiter->Finalize([weak_this = weak_factory_.GetWeakPtr()](
       storage::Status status, std::vector<PageChangePtr> page_changes) mutable {
-    self->OnChangesReady(std::move(status), std::move(page_changes));
+    if (!weak_this) {
+      return;
+    }
+    weak_this->OnChangesReady(std::move(status), std::move(page_changes));
   });
 }
 
-void Merger::OnChangesReady(storage::Status status,
-                            std::vector<PageChangePtr> changes) {
+void CustomMergeStrategy::CustomMerger::OnChangesReady(
+    storage::Status status,
+    std::vector<PageChangePtr> changes) {
   if (cancelled_) {
+    Done();
     return;
   }
 
@@ -123,16 +117,21 @@ void Merger::OnChangesReady(storage::Status status,
 
   PageSnapshotPtr page_snapshot;
   manager_->BindPageSnapshot(ancestor_->Clone(), page_snapshot.NewRequest());
-  conflict_resolver_->Resolve(std::move(changes[0]), std::move(changes[1]),
-                              std::move(page_snapshot),
-                              [self = ftl::RefPtr<Merger>(this)](
-                                  fidl::Array<MergedValuePtr> merged_values) {
-                                self->OnMergeDone(std::move(merged_values));
-                              });
+  conflict_resolver_->Resolve(
+      std::move(changes[0]), std::move(changes[1]),
+      std::move(page_snapshot), [weak_this = weak_factory_.GetWeakPtr()](
+                                    fidl::Array<MergedValuePtr> merged_values) {
+        if (!weak_this) {
+          return;
+        }
+        weak_this->OnMergeDone(std::move(merged_values));
+      });
 }
 
-void Merger::OnMergeDone(fidl::Array<MergedValuePtr> merged_values) {
+void CustomMergeStrategy::CustomMerger::OnMergeDone(
+    fidl::Array<MergedValuePtr> merged_values) {
   if (cancelled_) {
+    Done();
     return;
   }
 
@@ -194,15 +193,15 @@ void Merger::OnMergeDone(fidl::Array<MergedValuePtr> merged_values) {
   }
 
   waiter->Finalize(ftl::MakeCopyable([
-    self = ftl::RefPtr<Merger>(this), merged_values = std::move(merged_values)
+    weak_this = weak_factory_.GetWeakPtr(),
+    merged_values = std::move(merged_values)
   ](storage::Status status, std::vector<storage::ObjectId> object_ids) {
-    if (self->cancelled_) {
+    if (!weak_this) {
       return;
     }
-
-    if (status != storage::Status::OK) {
-      // The error was logged before, no need to do it again here.
-      self->Done();
+    if (weak_this->cancelled_ || status != storage::Status::OK) {
+      // An eventual error was logged before, no need to do it again here.
+      weak_this->Done();
       return;
     }
 
@@ -210,80 +209,84 @@ void Merger::OnMergeDone(fidl::Array<MergedValuePtr> merged_values) {
       if (object_ids[i].empty()) {
         continue;
       }
-      self->journal_->Put(merged_values[i]->key, object_ids[i],
-                          merged_values[i]->priority == Priority::EAGER
-                              ? storage::KeyPriority::EAGER
-                              : storage::KeyPriority::LAZY);
+      weak_this->journal_->Put(merged_values[i]->key, object_ids[i],
+                               merged_values[i]->priority == Priority::EAGER
+                                   ? storage::KeyPriority::EAGER
+                                   : storage::KeyPriority::LAZY);
     }
-    self->journal_->Commit(
-        [self](storage::Status status, const storage::CommitId& commit_id) {
-          if (status != storage::Status::OK) {
-            FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
-          }
-          self->Done();
-        });
+    weak_this->journal_->Commit([weak_this](
+        storage::Status status, const storage::CommitId& commit_id) {
+      if (status != storage::Status::OK) {
+        FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
+      }
+      if (weak_this) {
+        weak_this->Done();
+      }
+    });
   }));
 }
 
-void Merger::Cancel() {
+void CustomMergeStrategy::CustomMerger::Cancel() {
   cancelled_ = true;
-}
-
-bool Merger::IsDone() {
-  return is_done_;
-}
-
-void Merger::SetOnDone(ftl::Closure callback) {
-  on_done_ = callback;
-}
-
-void Merger::Done() {
-  if (cancelled_) {
-    return;
-  }
-  is_done_ = true;
-  if (on_done_) {
-    on_done_();
+  if (journal_) {
+    journal_->Rollback();
+    journal_.reset();
   }
 }
 
-}  // namespace
+void CustomMergeStrategy::CustomMerger::Done() {
+  auto on_done = std::move(on_done_);
+  on_done_ = nullptr;
+  on_done();
+}
 
-CustomMerger::CustomMerger(ConflictResolverPtr conflict_resolver)
+CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)
     : conflict_resolver_(std::move(conflict_resolver)) {
   conflict_resolver_.set_connection_error_handler([this]() {
+    // If a merge is in progress, it must be forcefully terminated.
+    if (in_progress_merge_) {
+      auto in_progress_merge = std::move(in_progress_merge_);
+      in_progress_merge_.reset();
+      in_progress_merge->Done();
+    }
     if (on_error_) {
       on_error_();
     }
   });
 }
 
-CustomMerger::~CustomMerger() {}
+CustomMergeStrategy::~CustomMergeStrategy() {}
 
-void CustomMerger::SetOnError(ftl::Closure on_error) {
+void CustomMergeStrategy::SetOnError(ftl::Closure on_error) {
   on_error_ = on_error;
 }
 
-ftl::RefPtr<callback::Cancellable> CustomMerger::Merge(
-    storage::PageStorage* storage,
-    PageManager* page_manager,
-    std::unique_ptr<const storage::Commit> head_1,
-    std::unique_ptr<const storage::Commit> head_2,
-    std::unique_ptr<const storage::Commit> ancestor) {
-  if (head_1->GetTimestamp() < head_2->GetTimestamp()) {
-    // Use the most recent commit as the base.
-    head_1.swap(head_2);
-  }
+void CustomMergeStrategy::Merge(storage::PageStorage* storage,
+                                PageManager* page_manager,
+                                std::unique_ptr<const storage::Commit> head_1,
+                                std::unique_ptr<const storage::Commit> head_2,
+                                std::unique_ptr<const storage::Commit> ancestor,
+                                ftl::Closure on_done) {
+  FTL_DCHECK(head_1->GetTimestamp() <= head_2->GetTimestamp());
+  FTL_DCHECK(!in_progress_merge_);
 
-  // Both merger and this CustomMerger instance are owned by the same
+  // Both merger and this CustomMergeStrategy instance are owned by the same
   // MergeResolver object. MergeResolver makes sure that |Merger|s are cancelled
-  // before destroying the CustomMerger merge strategy.
-  ftl::RefPtr<Merger> merger =
-      Merger::Create(storage, page_manager, &*conflict_resolver_,
-                     std::move(head_1), std::move(head_2), std::move(ancestor));
+  // before destroying the CustomMergeStrategy merge strategy.
+  in_progress_merge_ = std::make_unique<CustomMergeStrategy::CustomMerger>(
+      storage, page_manager, &*conflict_resolver_, std::move(head_2),
+      std::move(head_1), std::move(ancestor),
+      [ this, on_done = std::move(on_done) ] {
+        in_progress_merge_.reset();
+        on_done();
+      });
 
-  merger->Start();
-  return merger;
+  in_progress_merge_->Start();
+}
+
+void CustomMergeStrategy::Cancel() {
+  FTL_DCHECK(in_progress_merge_);
+  in_progress_merge_->Cancel();
 }
 
 }  // namespace ledger

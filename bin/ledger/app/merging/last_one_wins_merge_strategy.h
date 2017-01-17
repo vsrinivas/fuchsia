@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_APP_MERGING_LAST_ONE_WINS_MERGER_H_
-#define APPS_LEDGER_SRC_APP_MERGING_LAST_ONE_WINS_MERGER_H_
+#ifndef APPS_LEDGER_SRC_APP_MERGING_LAST_ONE_WINS_MERGE_STRATEGY_H_
+#define APPS_LEDGER_SRC_APP_MERGING_LAST_ONE_WINS_MERGE_STRATEGY_H_
 
 #include <memory>
 #include "apps/ledger/src/app/merging/merge_strategy.h"
@@ -16,24 +16,28 @@ namespace ledger {
 // Strategy for merging commits using a last-one-wins policy for conflicts.
 // Commits are merged key-by-key. When a key has been modified on both sides,
 // the value from the most recent commit is used.
-class LastOneWinsMerger : public MergeStrategy {
+class LastOneWinsMergeStrategy : public MergeStrategy {
  public:
-  LastOneWinsMerger();
-  ~LastOneWinsMerger() override;
+  LastOneWinsMergeStrategy();
+  ~LastOneWinsMergeStrategy() override;
 
   void SetOnError(std::function<void()> on_error) override;
 
-  ftl::RefPtr<callback::Cancellable> Merge(
-      storage::PageStorage* storage,
-      PageManager* page_manager,
-      std::unique_ptr<const storage::Commit> head_1,
-      std::unique_ptr<const storage::Commit> head_2,
-      std::unique_ptr<const storage::Commit> ancestor) override;
+  void Merge(storage::PageStorage* storage,
+             PageManager* page_manager,
+             std::unique_ptr<const storage::Commit> head_1,
+             std::unique_ptr<const storage::Commit> head_2,
+             std::unique_ptr<const storage::Commit> ancestor,
+             ftl::Closure on_done) override;
+
+  void Cancel() override;
 
  private:
-  FTL_DISALLOW_COPY_AND_ASSIGN(LastOneWinsMerger);
+  class LastOneWinsMerger;
+
+  std::unique_ptr<LastOneWinsMerger> in_progress_merge_;
 };
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP_MERGING_LAST_ONE_WINS_MERGER_H_
+#endif  // APPS_LEDGER_SRC_APP_MERGING_LAST_ONE_WINS_MERGE_STRATEGY_H_
