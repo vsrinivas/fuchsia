@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 struct ReportInfo {
@@ -41,12 +42,14 @@ struct ReportInfo {
 
 namespace {
 
-int GatherReports(char* test_bin, mxtl::Array<ReportInfo>* reports);
+static const char* kBinName = "/boot/bin/aslr-analysis";
+
+int GatherReports(const char* test_bin, mxtl::Array<ReportInfo>* reports);
 unsigned int AnalyzeField(const mxtl::Array<ReportInfo>& reports,
                           uintptr_t ReportInfo::*field);
 double ApproxBinomialCdf(double p, double N, double n);
 int TestRunMain(int argc, char** argv);
-mx_handle_t LaunchTestRun(char* bin, mx_handle_t h);
+mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h);
 int JoinProcess(mx_handle_t proc);
 } // namespace
 
@@ -59,13 +62,19 @@ int main(int argc, char** argv) {
         return TestRunMain(argc, argv);
     }
 
+    struct stat stat_info;
+    if (stat(kBinName, &stat_info) != 0 || !S_ISREG(stat_info.st_mode)) {
+        printf("Could not find %s for running tests\n", kBinName);
+        return 1;
+    }
+
     mxtl::Array<ReportInfo> reports(new ReportInfo[kNumRuns], kNumRuns);
     if (!reports) {
         printf("Failed to allocate reports\n");
         return 1;
     }
 
-    int ret = GatherReports(argv[0], &reports);
+    int ret = GatherReports(kBinName, &reports);
     if (ret != 0) {
         return 1;
     }
@@ -150,7 +159,7 @@ unsigned int AnalyzeField(const mxtl::Array<ReportInfo>& reports,
     return good_bits;
 }
 
-int GatherReports(char* test_bin, mxtl::Array<ReportInfo>* reports) {
+int GatherReports(const char* test_bin, mxtl::Array<ReportInfo>* reports) {
     const size_t count = reports->size();
     for (unsigned int run = 0; run < count; ++run) {
         mx_handle_t handles[2];
@@ -163,8 +172,7 @@ int GatherReports(char* test_bin, mxtl::Array<ReportInfo>* reports) {
         mx_handle_t proc = LaunchTestRun(test_bin, handles[1]);
         if (proc < 0) {
             mx_handle_close(handles[0]);
-            mx_handle_close(handles[1]);
-            printf("Failed to launch testrun\n");
+            printf("Failed to launch testrun: %d\n", proc);
             return -1;
         }
 
@@ -215,14 +223,20 @@ int TestRunMain(int argc, char** argv) {
     return 0;
 }
 
-mx_handle_t LaunchTestRun(char* bin, mx_handle_t h) {
+// This function unconditionally consumes the handle h.
+mx_handle_t LaunchTestRun(const char* bin, mx_handle_t h) {
     mx_handle_t hnd[1];
     uint32_t ids[1];
     ids[0] = MX_HND_TYPE_USER1;
     hnd[0] = h;
     const char* args[] = {bin, "testrun"};
-    return launchpad_launch(bin, countof(args), args, NULL, countof(hnd), hnd,
-                            ids);
+    mx_handle_t job;
+    mx_status_t status = mx_handle_duplicate(mx_job_default(), MX_RIGHT_SAME_RIGHTS, &job);
+    if (status != NO_ERROR) {
+        return status;
+    }
+    return launchpad_launch_with_job(job, bin, countof(args), args, NULL,
+                                     countof(hnd), hnd, ids);
 }
 
 int JoinProcess(mx_handle_t proc) {
