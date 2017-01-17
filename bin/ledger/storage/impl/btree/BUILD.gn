@@ -15,8 +15,6 @@ source_set("lib") {
     "btree_utils.h",
     "encoding.cc",
     "encoding.h",
-    "position.cc",
-    "position.h",
     "tree_node.cc",
     "tree_node.h",
   ]
