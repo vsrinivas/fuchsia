@@ -133,6 +133,15 @@ void TraceManager::RegisterTraceProvider(
 }
 
 void TraceManager::LaunchConfiguredProviders() {
+  if (config_.providers().empty())
+    return;
+
+  if (!context_->launcher()) {
+    FTL_LOG(ERROR)
+        << "Cannot access application launcher to launch configured providers";
+    return;
+  }
+
   for (const auto& pair : config_.providers()) {
     // TODO(jeffbrown): Only do this if the provider isn't already running.
     // Also keep track of the provider so we can kill it when the trace

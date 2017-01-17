@@ -45,6 +45,11 @@ void App::Run(const ftl::CommandLine& command_line) {
     exit(1);
   }
 
+  if (!context()->environment_services()) {
+    err() << "Cannot access application environment services" << std::endl;
+    exit(1);
+  }
+
   command_ = it->second.factory(context());
   command_->Run(ftl::CommandLineFromIteratorsWithArgv0(
       positional_args.front(), positional_args.begin() + 1,
