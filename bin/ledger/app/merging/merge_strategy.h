@@ -18,16 +18,6 @@ class PageManager;
 // Interface for a merge algorithm.
 class MergeStrategy {
  public:
-  class ConflictResolverProxy {
-    ConflictResolverProxy() {}
-    virtual ~ConflictResolverProxy() {}
-
-    virtual void Resolve(PageChangePtr change_left,
-                         PageChangePtr change_right,
-                         ::fidl::InterfaceHandle<PageSnapshot> common_version,
-                         const ConflictResolver::ResolveCallback& callback) = 0;
-  };
-
   MergeStrategy() {}
   virtual ~MergeStrategy() {}
 
