@@ -271,17 +271,19 @@ static textcon_param_t osc_to_param(int osc) {
     case 2:
         return TC_SET_TITLE;
     default:
-        return -1;
+        return TC_INVALID;
     }
 }
 
 static void putc_osc2(textcon_t* tc, uint8_t c) {
     switch (c) {
-    case 7: // end command
-        if (tc->argstr_size)
-            setparam(tc, osc_to_param(ARG0(-1)), tc->argstr, tc->argstr_size);
+    case 7: { // end command
+        textcon_param_t param = osc_to_param(ARG0(-1));
+        if (param != TC_INVALID && tc->argstr_size)
+            setparam(tc, param, tc->argstr, tc->argstr_size);
         tc->putc = putc_plain;
         break;
+    }
     default:
         if (tc->argstr_size < TC_MAX_ARG_LENGTH)
             tc->argstr[tc->argstr_size++] = c;

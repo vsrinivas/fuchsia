@@ -14,6 +14,7 @@ typedef struct textcon textcon_t;
 typedef uint16_t vc_char_t;
 
 typedef enum textcon_param {
+    TC_INVALID,
     TC_SET_TITLE,
     TC_SHOW_CURSOR,
     TC_HIDE_CURSOR,
