@@ -71,7 +71,9 @@ EventPairDispatcher::EventPairDispatcher()
         : state_tracker_(0u),
           other_koid_(0ull) {}
 
-void EventPairDispatcher::Init(EventPairDispatcher* other) {
+// This is called before either EventPairDispatcher is accessible from threads other than the one
+// initializing the event pair, so it does not need locking.
+void EventPairDispatcher::Init(EventPairDispatcher* other) TA_NO_THREAD_SAFETY_ANALYSIS {
     DEBUG_ASSERT(other);
     // No need to take |lock_| here.
     DEBUG_ASSERT(!other_);

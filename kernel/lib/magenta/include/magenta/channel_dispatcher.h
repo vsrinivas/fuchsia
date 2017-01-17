@@ -28,7 +28,7 @@ public:
     ~ChannelDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_CHANNEL; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
-    mx_koid_t get_inner_koid() const final { return other_koid_; }
+    mx_koid_t get_inner_koid() const final TA_REQ(lock_) { return other_koid_; }
     status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
     status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 
@@ -66,10 +66,10 @@ private:
 
     const uint32_t flags_;
     Mutex lock_;
-    MessageList messages_;
-    WaiterList waiters_;
-    mxtl::unique_ptr<PortClient> iopc_;
+    MessageList messages_ TA_GUARDED(lock_);
+    WaiterList waiters_ TA_GUARDED(lock_);
+    mxtl::unique_ptr<PortClient> iopc_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
-    mxtl::RefPtr<ChannelDispatcher> other_;
-    mx_koid_t other_koid_;
+    mxtl::RefPtr<ChannelDispatcher> other_ TA_GUARDED(lock_);
+    mx_koid_t other_koid_ TA_GUARDED(lock_);
 };

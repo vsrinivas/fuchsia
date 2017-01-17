@@ -78,7 +78,7 @@ private:
 
     uint32_t num_children_;
     uint16_t num_records_;
-    uint16_t subtype_;
+    const uint16_t subtype_;
     bool valid_;
 
     HandleOwner inbound_;

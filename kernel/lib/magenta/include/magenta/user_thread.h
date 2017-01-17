@@ -104,7 +104,7 @@ private:
     static void ThreadExitCallback(void* arg);
 
     // change states of the object, do what is appropriate for the state transition
-    void SetState(State);
+    void SetState(State) TA_REQ(state_lock_);
 
     // The kernel object id. Since ProcessDispatcher maintains a list of
     // UserThreads, and since use of dispatcher_ is racy (see
@@ -127,7 +127,7 @@ private:
     uintptr_t user_arg2_ = 0;
 
     // our State
-    State state_ = State::INITIAL;
+    State state_ TA_GUARDED(state_lock_) = State::INITIAL;
     Mutex state_lock_;
 
     // Node for linked list of threads blocked on a futex
@@ -136,7 +136,7 @@ private:
     StateTracker state_tracker_;
 
     // A thread-level exception port for this thread.
-    mxtl::RefPtr<ExceptionPort> exception_port_;
+    mxtl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
     Mutex exception_lock_;
 
     // Support for sending an exception to an exception handler and then waiting for a response.

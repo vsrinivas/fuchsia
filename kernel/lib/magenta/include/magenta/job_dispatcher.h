@@ -54,8 +54,8 @@ public:
     mxtl::RefPtr<JobDispatcher> parent() { return mxtl::RefPtr<JobDispatcher>(parent_); }
 
     // Job methods.
-    uint32_t process_count() const { return process_count_;}
-    uint32_t job_count() const { return job_count_; }
+    uint32_t process_count() const TA_REQ(lock_) { return process_count_;}
+    uint32_t job_count() const TA_REQ(lock_) { return job_count_; }
     bool AddChildProcess(ProcessDispatcher* process);
     void RemoveChildProcess(ProcessDispatcher* process);
     bool EnumerateChildren(JobEnumerator* je);
@@ -71,7 +71,7 @@ private:
     JobDispatcher(uint32_t flags, mxtl::RefPtr<JobDispatcher> parent);
     bool AddChildJob(JobDispatcher* job);
     void RemoveChildJob(JobDispatcher* job);
-    void MaybeUpdateSignalsLocked(bool is_decrement);
+    void MaybeUpdateSignalsLocked(bool is_decrement) TA_REQ(lock_);
 
     const mxtl::RefPtr<JobDispatcher> parent_;
 
@@ -79,9 +79,9 @@ private:
 
     // The |lock_| protects all members below.
     Mutex lock_;
-    State state_;
-    uint32_t process_count_;
-    uint32_t job_count_;
+    State state_ TA_GUARDED(lock_);
+    uint32_t process_count_ TA_GUARDED(lock_);
+    uint32_t job_count_ TA_GUARDED(lock_);
     StateTracker state_tracker_;
 
     using WeakJobList =
@@ -89,6 +89,6 @@ private:
     using WeakProcessList =
         mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraits>;
 
-    WeakJobList jobs_;
-    WeakProcessList procs_;
+    WeakJobList jobs_ TA_GUARDED(lock_);
+    WeakProcessList procs_ TA_GUARDED(lock_);
 };

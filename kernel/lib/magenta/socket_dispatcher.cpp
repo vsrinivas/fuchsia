@@ -192,7 +192,9 @@ SocketDispatcher::SocketDispatcher(uint32_t /*flags*/)
 SocketDispatcher::~SocketDispatcher() {
 }
 
-mx_status_t SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) {
+// This is called before either SocketDispatcher is accessible from threads other than the one
+// initializing the socket, so it does not need locking.
+mx_status_t SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
     other_ = mxtl::move(other);
     return cbuf_.Init(kDeFaultSocketBufferSize) ? NO_ERROR : ERR_NO_MEMORY;
 }
@@ -252,19 +254,17 @@ status_t SocketDispatcher::UserSignalSelf(uint32_t clear_mask, uint32_t set_mask
 }
 
 status_t SocketDispatcher::set_port_client(mxtl::unique_ptr<PortClient> client) {
-    if (iopc_)
-        return ERR_BAD_STATE;
-
     if ((client->get_trigger_signals() & ~kValidSignalMask) != 0)
         return ERR_INVALID_ARGS;
 
-    {
-        AutoLock lock(&lock_);
-        iopc_ = mxtl::move(client);
+    AutoLock lock(&lock_);
+    if (iopc_)
+        return ERR_BAD_STATE;
 
-        if (!cbuf_.empty())
-            iopc_->Signal(MX_SOCKET_READABLE, 0u, &lock_);
-    }
+    iopc_ = mxtl::move(client);
+
+    if (!cbuf_.empty())
+        iopc_->Signal(MX_SOCKET_READABLE, 0u, &lock_);
 
     return NO_ERROR;
 }

@@ -86,11 +86,11 @@ public:
 
 private:
     PortDispatcher(uint32_t options);
-    void FreePacketsLocked();
+    void FreePacketsLocked() TA_REQ(lock_);
 
     Mutex lock_;
-    bool no_clients_;
-    mxtl::DoublyLinkedList<IOP_Packet*> packets_;
-    mxtl::DoublyLinkedList<IOP_Packet*> at_zero_;
-    event_t event_;
+    bool no_clients_ TA_GUARDED(lock_);
+    mxtl::DoublyLinkedList<IOP_Packet*> packets_ TA_GUARDED(lock_);
+    mxtl::DoublyLinkedList<IOP_Packet*> at_zero_ TA_GUARDED(lock_);
+    event_t event_ TA_GUARDED(lock_);
 };

@@ -83,7 +83,7 @@ public:
     status_t QueryIrqModeCaps(mx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
     status_t SetIrqMode(mx_pci_irq_mode_t mode, uint32_t requested_irq_count);
 
-    bool irqs_maskable() const { return irqs_maskable_; }
+    bool irqs_maskable() const TA_REQ(lock_) { return irqs_maskable_; }
 
 private:
     PciDeviceDispatcher(mxtl::RefPtr<PciDeviceWrapper> device,
@@ -97,10 +97,10 @@ private:
     // is unsafe to ever attempt to acquire this lock during a callback from the
     // PCI bus driver level.
     Mutex lock_;
-    mxtl::RefPtr<PciDeviceWrapper> device_;
+    mxtl::RefPtr<PciDeviceWrapper> device_ TA_GUARDED(lock_);
 
-    uint irqs_avail_cnt_ = 0;
-    bool irqs_maskable_  = false;
+    uint irqs_avail_cnt_  TA_GUARDED(lock_) = 0;
+    bool irqs_maskable_   TA_GUARDED(lock_) = false;
 };
 
 #endif  // if WITH_DEV_PCIE

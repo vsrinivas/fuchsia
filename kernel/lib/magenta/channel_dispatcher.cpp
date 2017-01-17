@@ -99,7 +99,9 @@ ChannelDispatcher::ChannelDispatcher(uint32_t flags)
     : flags_(flags), state_tracker_(MX_CHANNEL_WRITABLE) {
 }
 
-void ChannelDispatcher::Init(mxtl::RefPtr<ChannelDispatcher> other) {
+// This is called before either ChannelDispatcher is accessible from threads other than the one
+// initializing the channel, so it does not need locking.
+void ChannelDispatcher::Init(mxtl::RefPtr<ChannelDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
     other_ = mxtl::move(other);
     other_koid_ = other_->get_koid();
 }
@@ -108,7 +110,10 @@ ChannelDispatcher::~ChannelDispatcher() {
     DEBUG_ASSERT(messages_.is_empty());
 }
 
-void ChannelDispatcher::on_zero_handles() {
+// Thread safety analysis disabled as this accesses guarded member variables without holding
+// |lock_| after it knows there are no other references from other threads. See comment on last
+// statement.
+void ChannelDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
     // Detach other endpoint
     mxtl::RefPtr<ChannelDispatcher> other;
     {

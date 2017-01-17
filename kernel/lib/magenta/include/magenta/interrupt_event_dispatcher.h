@@ -39,5 +39,5 @@ private:
     mxtl::WAVLTreeNodeState<InterruptEventDispatcher*> wavl_node_state_;
 
     static Mutex vectors_lock_;
-    static VectorCollection vectors_;
+    static VectorCollection vectors_ TA_GUARDED(vectors_lock_);
 };

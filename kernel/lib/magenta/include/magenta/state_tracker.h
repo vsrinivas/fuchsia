@@ -51,5 +51,5 @@ private:
     Mutex lock_;
 
     // Active observers are elements in |observers_|.
-    mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits> observers_;
+    mxtl::DoublyLinkedList<StateObserver*, StateObserverListTraits> observers_ TA_GUARDED(lock_);
 };

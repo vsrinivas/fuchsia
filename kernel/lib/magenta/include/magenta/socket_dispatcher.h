@@ -74,9 +74,9 @@ private:
 
     // The |lock_| protects all members below.
     Mutex lock_;
-    CBuf cbuf_;
-    mxtl::RefPtr<SocketDispatcher> other_;
-    mxtl::unique_ptr<PortClient> iopc_;
+    CBuf cbuf_ TA_GUARDED(lock_);
+    mxtl::RefPtr<SocketDispatcher> other_ TA_GUARDED(lock_);
+    mxtl::unique_ptr<PortClient> iopc_ TA_GUARDED(lock_);
     // half_closed_[0] is this end and [1] is the other end.
-    bool half_closed_[2];
+    bool half_closed_[2] TA_GUARDED(lock_);
 };

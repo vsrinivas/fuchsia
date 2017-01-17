@@ -38,6 +38,6 @@ private:
 
     mutable Mutex lock_;
     const uint64_t count_;
-    mx_fifo_state_t state_;
-    StateTracker state_tracker_;
+    mx_fifo_state_t state_ TA_GUARDED(lock_);
+    StateTracker state_tracker_ TA_GUARDED(lock_);
 };

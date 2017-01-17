@@ -36,5 +36,5 @@ private:
 
     // Protects |other_| (except in Init(), where it's not needed).
     Mutex lock_;
-    mxtl::RefPtr<EventPairDispatcher> other_;
+    mxtl::RefPtr<EventPairDispatcher> other_ TA_GUARDED(lock_);
 };

@@ -170,7 +170,10 @@ private:
         return true;
     }
 
-    bool OnJob(JobDispatcher* job, uint32_t index) final {
+    // This is called by JobDispatcher::EnumerateChildren() which acquires JobDispatcher::lock_
+    // first, making it safe to access job->process_count_ etc, but there's no reasonable way to
+    // express this fact via thread safety annotations so we disable the analysis for this function.
+    bool OnJob(JobDispatcher* job, uint32_t index) final TA_NO_THREAD_SAFETY_ANALYSIS {
         printf("- %" PRIu64 " child job (%" PRIu32 " processes)\n",
             job->get_koid(), job->process_count());
         return true;
