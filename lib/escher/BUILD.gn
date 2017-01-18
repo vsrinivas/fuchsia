@@ -16,21 +16,8 @@ group("tests") {
 }
 
 # When targeting Linux, we use a LunarG Vulkan SDK that we download from
-# Google storage.
+# Google storage (see //lib/escher/scripts/).
 if (is_linux) {
-  group("examples_linux") {
-    deps = [
-      "//lib/escher/examples/waterfall($host_toolchain)",
-    ]
-  }
-
-  group("tests_linux") {
-    testonly = true
-    deps = [
-      "//lib/escher/test:escher_unittests($host_toolchain)",
-    ]
-  }
-
   config("vulkan_linux") {
     vulkan_sdk = "//lib/escher/third_party/vulkansdk/x86_64"
     include_dirs = [ "$vulkan_sdk/include" ]
