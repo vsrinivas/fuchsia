@@ -215,7 +215,7 @@ public:
     virtual ~A() { }
 
 private:
-    uint32_t stuff;
+    __UNUSED uint32_t stuff;
 };
 
 class B {
@@ -223,7 +223,7 @@ public:
     ~B() { }
 
 private:
-    uint32_t stuff;
+    __UNUSED uint32_t stuff;
 };
 
 class C : public A, public B {
@@ -236,7 +236,7 @@ public:
     virtual ~D() { }
 
 private:
-    uint32_t stuff;
+    __UNUSED uint32_t stuff;
 };
 
 template <typename T>
