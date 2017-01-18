@@ -16,7 +16,7 @@
 namespace mozart {
 namespace input {
 
-using OnEventCallback = std::function<void(mozart::EventPtr event)>;
+using OnEventCallback = std::function<void(mozart::InputEventPtr event)>;
 
 class InputInterpreter {
  public:

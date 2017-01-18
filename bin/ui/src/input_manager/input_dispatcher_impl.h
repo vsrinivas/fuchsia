@@ -34,11 +34,11 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   }
 
   // |mozart::InputDispatcher|
-  void DispatchEvent(mozart::EventPtr event) override;
+  void DispatchEvent(mozart::InputEventPtr event) override;
 
  private:
   void ProcessNextEvent();
-  void DeliverEvent(mozart::EventPtr event);
+  void DeliverEvent(mozart::InputEventPtr event);
   void OnHitTestResult(std::unique_ptr<mozart::ResolvedHits> resolved_hits);
 
   InputAssociate* const associate_;
@@ -46,7 +46,7 @@ class InputDispatcherImpl : public mozart::InputDispatcher {
   ftl::RefPtr<mozart::ViewTreeHitTesterClient> hit_tester_;
 
   // TODO(jeffbrown): Replace this with a proper pipeline.
-  std::queue<mozart::EventPtr> pending_events_;
+  std::queue<mozart::InputEventPtr> pending_events_;
 
   // TODO(jeffbrown): This hack is just for scaffolding.  Redesign later.
   mozart::ViewTokenPtr focused_view_token_;

@@ -20,7 +20,7 @@
 namespace mozart {
 namespace input {
 
-using OnEventCallback = std::function<void(mozart::EventPtr event)>;
+using OnEventCallback = std::function<void(mozart::InputEventPtr event)>;
 
 class KeyboardState {
  public:
@@ -29,11 +29,10 @@ class KeyboardState {
               const KeyboardDescriptor& descriptor);
 
  private:
-  void SendEvent(mozart::EventType type,
+  void SendEvent(mozart::KeyboardEvent::Phase phase,
                  KeyUsage key,
                  uint64_t modifiers,
-                 uint64_t timestamp,
-                 bool is_repeat);
+                 uint64_t timestamp);
   void Repeat(uint64_t sequence);
   void ScheduleRepeat(uint64_t sequence, ftl::TimeDelta delta);
 
@@ -59,8 +58,8 @@ class MouseState {
   void SendEvent(float rel_x,
                  float rel_y,
                  int64_t timestamp,
-                 mozart::EventType type,
-                 mozart::EventFlags flags);
+                 mozart::PointerEvent::Phase phase,
+                 uint32_t buttons);
 
   OnEventCallback callback_;
   uint8_t buttons_ = 0;
@@ -75,9 +74,18 @@ class StylusState {
               mozart::Size display_size);
 
  private:
+   void SendEvent(int64_t timestamp,
+                               mozart::PointerEvent::Phase phase,
+                               mozart::PointerEvent::Type type,
+                               float x,
+                               float y,
+                               uint32_t buttons);
+
   OnEventCallback callback_;
   bool stylus_down_ = false;
-  mozart::PointerData stylus_;
+  bool stylus_in_range_ = false;
+  bool inverted_stylus_ = false;
+  mozart::PointerEvent stylus_;
 };
 
 class TouchscreenState {
@@ -89,7 +97,7 @@ class TouchscreenState {
 
  private:
   OnEventCallback callback_;
-  std::vector<mozart::PointerData> pointers_;
+  std::vector<mozart::PointerEvent> pointers_;
 };
 
 struct DeviceState {

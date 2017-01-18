@@ -35,5 +35,5 @@ interface InputDispatcher {
   // to block the test until a sequence of events have been delivered and
   // handled.  However these same mechanisms have proven to be brittle in
   // the past so it might be better to solve the problem some other way.
-  DispatchEvent(Event event);
+  DispatchEvent(InputEvent event);
 };

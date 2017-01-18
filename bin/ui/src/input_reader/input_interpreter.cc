@@ -16,7 +16,7 @@ void InputInterpreter::RegisterCallback(OnEventCallback callback) {
 
 void InputInterpreter::RegisterDevice(const InputDevice* device) {
   FTL_DCHECK(devices_.count(device) == 0);
-  auto on_update = [this](mozart::EventPtr event) {
+  auto on_update = [this](mozart::InputEventPtr event) {
     for (auto callback : callbacks_) {
       callback(event.Clone());
     }

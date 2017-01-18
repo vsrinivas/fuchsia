@@ -73,18 +73,20 @@ class JankView : public mozart::BaseView, public mozart::InputListener {
 
  private:
   // |InputListener|:
-  void OnEvent(mozart::EventPtr event,
+  void OnEvent(mozart::InputEventPtr event,
                const OnEventCallback& callback) override {
-    if (event->pointer_data &&
-        event->action == mozart::EventType::POINTER_DOWN) {
-      SkScalar x = event->pointer_data->x;
-      SkScalar y = event->pointer_data->y;
-      if (x >= kMargin && x <= kButtonWidth + kMargin) {
-        int index = (y - kMargin) / (kButtonHeight + kMargin);
-        if (index >= 0 &&
-            size_t(index) < sizeof(kButtons) / sizeof(kButtons[0]) &&
-            y < (kButtonHeight + kMargin) * (index + 1))
-          OnClick(kButtons[index]);
+    if (event->is_pointer()) {
+      const mozart::PointerEventPtr& pointer = event->get_pointer();
+      if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
+        SkScalar x = pointer->x;
+        SkScalar y = pointer->y;
+        if (x >= kMargin && x <= kButtonWidth + kMargin) {
+          int index = (y - kMargin) / (kButtonHeight + kMargin);
+          if (index >= 0 &&
+              size_t(index) < sizeof(kButtons) / sizeof(kButtons[0]) &&
+              y < (kButtonHeight + kMargin) * (index + 1))
+            OnClick(kButtons[index]);
+        }
       }
     }
     callback(false);

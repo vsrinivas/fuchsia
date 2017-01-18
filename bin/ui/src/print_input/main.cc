@@ -14,8 +14,12 @@ int main(int argc, char** argv) {
   mtl::MessageLoop message_loop;
 
   mozart::input::InputInterpreter interpreter;
+  mozart::Size size;
+  size.width = 1.0;
+  size.height = 1.0;
+  interpreter.RegisterDisplay(size);
   interpreter.RegisterCallback(
-      [](mozart::EventPtr event) { FTL_LOG(INFO) << *(event.get()); });
+      [](mozart::InputEventPtr event) { FTL_LOG(INFO) << *(event.get()); });
   mozart::input::InputReader reader(&interpreter);
   reader.Start();
 

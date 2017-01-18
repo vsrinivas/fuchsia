@@ -23,7 +23,7 @@ InputConnectionImpl::InputConnectionImpl(
 
 InputConnectionImpl::~InputConnectionImpl() {}
 
-void InputConnectionImpl::DeliverEvent(mozart::EventPtr event) {
+void InputConnectionImpl::DeliverEvent(mozart::InputEventPtr event) {
   // TODO(jeffbrown): Pass the result back up the stack and handle errors.
   if (!listener_) {
     FTL_VLOG(1) << "DeliverEvent: dropped because there was no listener";

@@ -12,7 +12,7 @@ namespace {
 // The input event fidl is currently defined to expect some number
 // of milliseconds.
 int64_t InputEventTimestampNow() {
-  return ftl::TimePoint::Now().ToEpochDelta().ToMilliseconds();
+  return ftl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
 }
 }  // namespace
 
@@ -21,10 +21,6 @@ namespace input {
 
 constexpr ftl::TimeDelta kKeyRepeatSlow = ftl::TimeDelta::FromMilliseconds(250);
 constexpr ftl::TimeDelta kKeyRepeatFast = ftl::TimeDelta::FromMilliseconds(75);
-
-constexpr uint32_t kMouseLeftButtonMask = 0x01;
-constexpr uint32_t kMouseRightButtonMask = 0x02;
-constexpr uint32_t kMouseMiddleButtonMask = 0x04;
 
 #pragma mark - KeyboardState
 
@@ -39,22 +35,20 @@ KeyboardState::KeyboardState(OnEventCallback callback)
   }
 }
 
-void KeyboardState::SendEvent(mozart::EventType type,
+void KeyboardState::SendEvent(mozart::KeyboardEvent::Phase phase,
                               KeyUsage key,
                               uint64_t modifiers,
-                              uint64_t timestamp,
-                              bool is_repeat) {
-  mozart::EventPtr ev = mozart::Event::New();
-  ev->action = type;
-  ev->flags = mozart::EventFlags::NONE;
-  ev->time_stamp = timestamp;
-
-  ev->key_data = mozart::KeyData::New();
-  ev->key_data->hid_usage = key;
-  ev->key_data->code_point = hid_map_key(
-      key, modifiers & (kModifierShift | kModifierCapsLock), keymap_);
-  ev->key_data->modifiers = modifiers;
-  ev->key_data->is_repeat = is_repeat;
+                              uint64_t timestamp) {
+  auto ev = mozart::InputEvent::New();
+  auto kb = mozart::KeyboardEvent::New();
+  kb->phase = phase;
+  kb->event_time = timestamp;
+  kb->hid_usage = key;
+  kb->code_point = hid_map_key(
+      key, modifiers & (mozart::kModifierShift | mozart::kModifierCapsLock),
+      keymap_);
+  kb->modifiers = modifiers;
+  ev->set_keyboard(std::move(kb));
   callback_(std::move(ev));
 }
 
@@ -73,7 +67,7 @@ void KeyboardState::Update(const KeyboardReport& report,
       continue;
     }
 
-    SendEvent(mozart::EventType::KEY_PRESSED, key, modifiers_, now, false);
+    SendEvent(mozart::KeyboardEvent::Phase::PRESSED, key, modifiers_, now);
 
     uint64_t modifiers = modifiers_;
     switch (key) {
@@ -117,7 +111,7 @@ void KeyboardState::Update(const KeyboardReport& report,
   }
 
   for (KeyUsage key : old_keys) {
-    SendEvent(mozart::EventType::KEY_RELEASED, key, modifiers_, now, false);
+    SendEvent(mozart::KeyboardEvent::Phase::RELEASED, key, modifiers_, now);
 
     switch (key) {
       case HID_USAGE_KEY_LEFT_SHIFT:
@@ -169,7 +163,7 @@ void KeyboardState::Repeat(uint64_t sequence) {
   }
   uint64_t now = InputEventTimestampNow();
   for (KeyUsage key : repeat_keys_) {
-    SendEvent(mozart::EventType::KEY_PRESSED, key, modifiers_, now, true);
+    SendEvent(mozart::KeyboardEvent::Phase::REPEAT, key, modifiers_, now);
   }
   ScheduleRepeat(sequence, kKeyRepeatFast);
 }
@@ -188,26 +182,17 @@ void KeyboardState::ScheduleRepeat(uint64_t sequence, ftl::TimeDelta delta) {
 void MouseState::SendEvent(float rel_x,
                            float rel_y,
                            int64_t timestamp,
-                           mozart::EventType type,
-                           mozart::EventFlags flags) {
-  mozart::EventPtr ev = mozart::Event::New();
-  ev->time_stamp = timestamp;
-  ev->action = type;
-  ev->flags = flags;
-
-  ev->pointer_data = mozart::PointerData::New();
-  ev->pointer_data->pointer_id = 0;
-  ev->pointer_data->kind = mozart::PointerKind::MOUSE;
-  ev->pointer_data->x = rel_x;
-  ev->pointer_data->y = rel_y;
-  ev->pointer_data->screen_x = rel_x;
-  ev->pointer_data->screen_y = rel_y;
-  ev->pointer_data->pressure = 0;
-  ev->pointer_data->radius_major = 0;
-  ev->pointer_data->radius_minor = 0;
-  ev->pointer_data->orientation = 0.;
-  ev->pointer_data->horizontal_wheel = 0;
-  ev->pointer_data->vertical_wheel = 0;
+                           mozart::PointerEvent::Phase phase,
+                           uint32_t buttons) {
+  mozart::InputEventPtr ev = mozart::InputEvent::New();
+  mozart::PointerEventPtr pt = mozart::PointerEvent::New();
+  pt->event_time = timestamp;
+  pt->phase = phase;
+  pt->buttons = buttons;
+  pt->type = mozart::PointerEvent::Type::MOUSE;
+  pt->x = rel_x;
+  pt->y = rel_y;
+  ev->set_pointer(std::move(pt));
   callback_(std::move(ev));
 }
 
@@ -219,6 +204,8 @@ void MouseState::Update(const MouseReport& report,
   uint8_t released = (report.buttons ^ buttons_) & buttons_;
   buttons_ = report.buttons;
 
+  // TODO(jpoichet) coordinate interpretation should move in dispatcher
+  // and be dependent on whether the mouse is locked or not
   position_.x =
       std::max(0.0f, std::min(position_.x + report.rel_x,
                               static_cast<float>(display_size.width)));
@@ -227,83 +214,83 @@ void MouseState::Update(const MouseReport& report,
                               static_cast<float>(display_size.height)));
 
   if (!pressed && !released) {
-    if (buttons_ & kMouseLeftButtonMask) {
-      SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
-                mozart::EventFlags::LEFT_MOUSE_BUTTON);
-    } else if (buttons_ & kMouseRightButtonMask) {
-      SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
-                mozart::EventFlags::RIGHT_MOUSE_BUTTON);
-
-    } else if (buttons_ & kMouseMiddleButtonMask) {
-      SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
-                mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
-    } else {
-      SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_MOVE,
-                mozart::EventFlags::NONE);
-    }
+    SendEvent(position_.x, position_.y, now, mozart::PointerEvent::Phase::MOVE,
+              buttons_);
   } else {
     if (pressed) {
-      if (pressed & kMouseLeftButtonMask) {
-        SendEvent(position_.x, position_.y, now,
-                  mozart::EventType::POINTER_DOWN,
-                  mozart::EventFlags::LEFT_MOUSE_BUTTON);
-      }
-      if (pressed & kMouseRightButtonMask) {
-        SendEvent(position_.x, position_.y, now,
-                  mozart::EventType::POINTER_DOWN,
-                  mozart::EventFlags::RIGHT_MOUSE_BUTTON);
-      }
-      if (pressed & kMouseMiddleButtonMask) {
-        SendEvent(position_.x, position_.y, now,
-                  mozart::EventType::POINTER_DOWN,
-                  mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
-      }
+      SendEvent(position_.x, position_.y, now,
+                mozart::PointerEvent::Phase::DOWN, pressed);
     }
     if (released) {
-      if (released & kMouseLeftButtonMask) {
-        SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_UP,
-                  mozart::EventFlags::LEFT_MOUSE_BUTTON);
-      }
-      if (released & kMouseRightButtonMask) {
-        SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_UP,
-                  mozart::EventFlags::RIGHT_MOUSE_BUTTON);
-      }
-      if (released & kMouseMiddleButtonMask) {
-        SendEvent(position_.x, position_.y, now, mozart::EventType::POINTER_UP,
-                  mozart::EventFlags::MIDDLE_MOUSE_BUTTON);
-      }
+      SendEvent(position_.x, position_.y, now, mozart::PointerEvent::Phase::UP,
+                released);
     }
   }
 }
 
 #pragma mark - StylusState
 
+void StylusState::SendEvent(int64_t timestamp,
+                            mozart::PointerEvent::Phase phase,
+                            mozart::PointerEvent::Type type,
+                            float x,
+                            float y,
+                            uint32_t buttons) {
+  auto pt = mozart::PointerEvent::New();
+  pt->event_time = timestamp;
+  pt->pointer_id = 1;
+  pt->type = type;
+  pt->phase = phase;
+  pt->x = x;
+  pt->y = y;
+  pt->buttons = buttons;
+
+  stylus_ = *pt;
+
+  auto ev = mozart::InputEvent::New();
+  ev->set_pointer(std::move(pt));
+  callback_(std::move(ev));
+}
+
 void StylusState::Update(const StylusReport& report,
                          const StylusDescriptor& descriptor,
                          mozart::Size display_size) {
   const bool previous_stylus_down = stylus_down_;
+  const bool previous_stylus_in_range = stylus_in_range_;
   stylus_down_ = report.is_down;
+  stylus_in_range_ = report.in_range;
 
-  mozart::EventType action = mozart::EventType::POINTER_DOWN;
+  mozart::PointerEvent::Phase phase = mozart::PointerEvent::Phase::DOWN;
   if (stylus_down_) {
     if (previous_stylus_down) {
-      action = mozart::EventType::POINTER_MOVE;
+      phase = mozart::PointerEvent::Phase::MOVE;
     }
   } else {
-    if (!previous_stylus_down) {
-      return;
+    if (previous_stylus_down) {
+      phase = mozart::PointerEvent::Phase::UP;
+    } else {
+      if (stylus_in_range_ && !previous_stylus_in_range) {
+        inverted_stylus_ = report.pressed(INPUT_USAGE_STYLUS_INVERT) ||
+                           report.pressed(INPUT_USAGE_STYLUS_ERASER);
+        phase = mozart::PointerEvent::Phase::ADD;
+      } else if (!stylus_in_range_ && previous_stylus_in_range) {
+        phase = mozart::PointerEvent::Phase::REMOVE;
+      } else if (stylus_in_range_) {
+        phase = mozart::PointerEvent::Phase::HOVER;
+      } else {
+        return;
+      }
     }
-    action = mozart::EventType::POINTER_UP;
   }
-  int64_t now = InputEventTimestampNow();
 
-  mozart::EventPtr ev = mozart::Event::New();
-  ev->action = action;
-  ev->flags = mozart::EventFlags::NONE;
-  ev->time_stamp = now;
-  if (action == mozart::EventType::POINTER_UP) {
-    ev->pointer_data = stylus_.Clone();
+  int64_t now = InputEventTimestampNow();
+  if (phase == mozart::PointerEvent::Phase::UP) {
+    SendEvent(now, phase,
+              inverted_stylus_ ? mozart::PointerEvent::Type::INVERTED_STYLUS
+                               : mozart::PointerEvent::Type::STYLUS,
+              stylus_.x, stylus_.y, stylus_.buttons);
   } else {
+    // TODO(jpoichet) coordinate interpretation should move in dispatcher
     float x =
         static_cast<float>(display_size.width *
                            (report.x - descriptor.x.range.min)) /
@@ -313,22 +300,24 @@ void StylusState::Update(const StylusReport& report,
                            (report.y - descriptor.y.range.min)) /
         static_cast<float>(descriptor.y.range.max - descriptor.y.range.min);
 
-    ev->pointer_data = mozart::PointerData::New();
-    ev->pointer_data->pointer_id = 11;  // Assuming max of 10 fingers
-    ev->pointer_data->kind = mozart::PointerKind::TOUCH;
-    ev->pointer_data->x = x;
-    ev->pointer_data->y = y;
-    ev->pointer_data->screen_x = x;
-    ev->pointer_data->screen_y = y;
-    ev->pointer_data->pressure = report.pressure;
-    ev->pointer_data->radius_major = 0.;
-    ev->pointer_data->radius_minor = 0.;
-    ev->pointer_data->orientation = 0.;
-    ev->pointer_data->horizontal_wheel = 0.;
-    ev->pointer_data->vertical_wheel = 0.;
-    stylus_ = *ev->pointer_data;
+    uint32_t buttons = 0;
+    if (report.pressed(INPUT_USAGE_STYLUS_TIP)) {
+      buttons |= kStylusPrimaryButton;
+    }
+    if (report.pressed(INPUT_USAGE_STYLUS_BARREL)) {
+      buttons |= kStylusSecondaryButton;
+    }
+    if (report.pressed(INPUT_USAGE_STYLUS_ERASER)) {
+      // Eraser is when stylus is inverted and down
+      FTL_DCHECK(inverted_stylus_);
+      buttons |= kStylusPrimaryButton;
+    }
+
+    SendEvent(now, phase,
+              inverted_stylus_ ? mozart::PointerEvent::Type::INVERTED_STYLUS
+                               : mozart::PointerEvent::Type::STYLUS,
+              x, y, stylus_.buttons);
   }
-  callback_(std::move(ev));
 }
 
 #pragma mark - TouchscreenState
@@ -336,27 +325,27 @@ void StylusState::Update(const StylusReport& report,
 void TouchscreenState::Update(const TouchReport& report,
                               const TouchscreenDescriptor& descriptor,
                               mozart::Size display_size) {
-  std::vector<mozart::PointerData> old_pointers = pointers_;
+  std::vector<mozart::PointerEvent> old_pointers = pointers_;
   pointers_.clear();
 
   int64_t now = InputEventTimestampNow();
 
   for (auto touch : report.touches) {
-    auto ev = mozart::Event::New();
-    ev->action = mozart::EventType::POINTER_DOWN;
+    auto ev = mozart::InputEvent::New();
+    auto pt = mozart::PointerEvent::New();
+    pt->event_time = now;
+    pt->phase = mozart::PointerEvent::Phase::DOWN;
     for (auto it = old_pointers.begin(); it != old_pointers.end(); ++it) {
-      if (it->pointer_id == touch.finger_id) {
-        ev->action = mozart::EventType::POINTER_MOVE;
+      FTL_DCHECK(touch.finger_id >= 0);
+      if (it->pointer_id == static_cast<uint32_t>(touch.finger_id)) {
+        pt->phase = mozart::PointerEvent::Phase::MOVE;
         old_pointers.erase(it);
         break;
       }
     }
-    ev->flags = mozart::EventFlags::NONE;
-    ev->time_stamp = now;
 
-    ev->pointer_data = mozart::PointerData::New();
-    ev->pointer_data->pointer_id = touch.finger_id;
-    ev->pointer_data->kind = mozart::PointerKind::TOUCH;
+    pt->pointer_id = touch.finger_id;
+    pt->type = mozart::PointerEvent::Type::TOUCH;
 
     float x =
         static_cast<float>(display_size.width *
@@ -370,26 +359,38 @@ void TouchscreenState::Update(const TouchReport& report,
     uint32_t width = 2 * touch.width;
     uint32_t height = 2 * touch.height;
 
-    ev->pointer_data->x = x;
-    ev->pointer_data->y = y;
-    ev->pointer_data->screen_x = x;
-    ev->pointer_data->screen_y = y;
-    ev->pointer_data->pressure = 0.;
-    ev->pointer_data->radius_major = width > height ? width : height;
-    ev->pointer_data->radius_minor = width > height ? height : width;
-    ev->pointer_data->orientation = 0.;
-    ev->pointer_data->horizontal_wheel = 0.;
-    ev->pointer_data->vertical_wheel = 0.;
-    pointers_.push_back(*ev->pointer_data);
+    pt->x = x;
+    pt->y = y;
+    pt->radius_major = width > height ? width : height;
+    pt->radius_minor = width > height ? height : width;
+    pointers_.push_back(*pt);
+
+    // For now when we get DOWN we need to fake trigger ADD first.
+    if (pt->phase == mozart::PointerEvent::Phase::DOWN) {
+      auto add_ev = ev.Clone();
+      auto add_pt = pt.Clone();
+      add_pt->phase = mozart::PointerEvent::Phase::ADD;
+      add_ev->set_pointer(std::move(add_pt));
+      callback_(std::move(add_ev));
+    }
+
+    ev->set_pointer(std::move(pt));
     callback_(std::move(ev));
   }
 
   for (const auto& pointer : old_pointers) {
-    auto ev = mozart::Event::New();
-    ev->action = mozart::EventType::POINTER_UP;
-    ev->flags = mozart::EventFlags::NONE;
-    ev->time_stamp = now;
-    ev->pointer_data = pointer.Clone();
+    auto ev = mozart::InputEvent::New();
+    auto pt = pointer.Clone();
+    pt->phase = mozart::PointerEvent::Phase::UP;
+    pt->event_time = now;
+    ev->set_pointer(std::move(pt));
+    callback_(std::move(ev));
+
+    ev = mozart::InputEvent::New();
+    pt = pointer.Clone();
+    pt->phase = mozart::PointerEvent::Phase::REMOVE;
+    pt->event_time = now;
+    ev->set_pointer(std::move(pt));
     callback_(std::move(ev));
   }
 }

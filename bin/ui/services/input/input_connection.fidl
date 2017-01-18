@@ -30,5 +30,5 @@ interface InputListener {
   // The |consumed| result should indicate whether the input event was
   // consumed by the connection.  If |consumed| is false, the system may
   // apply default behavior of its own in response to the event.
-  OnEvent(Event event) => (bool consumed);
+  OnEvent(InputEvent event) => (bool consumed);
 };

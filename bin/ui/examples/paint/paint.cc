@@ -57,29 +57,30 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
   }
 
   // |InputListener|:
-  void OnEvent(mozart::EventPtr event,
+  void OnEvent(mozart::InputEventPtr event,
                const OnEventCallback& callback) override {
     bool handled = false;
-    if (event->pointer_data) {
-      uint32_t pointer_id = event->pointer_data->pointer_id;
-      switch (event->action) {
-        case mozart::EventType::POINTER_DOWN:
-        case mozart::EventType::POINTER_MOVE:
+    if (event->is_pointer()) {
+      const mozart::PointerEventPtr& pointer = event->get_pointer();
+      uint32_t pointer_id = pointer->pointer_id;
+      switch (pointer->phase) {
+        case mozart::PointerEvent::Phase::DOWN:
+        case mozart::PointerEvent::Phase::MOVE:
           // On down + move, keep appending points to the path being built
           // For mouse only draw if left button is pressed
-          if (event->pointer_data->kind == mozart::PointerKind::TOUCH ||
-              (event->pointer_data->kind == mozart::PointerKind::MOUSE &&
-               event->flags == mozart::EventFlags::LEFT_MOUSE_BUTTON)) {
+          if (pointer->type == mozart::PointerEvent::Type::TOUCH ||
+              pointer->type == mozart::PointerEvent::Type::STYLUS ||
+              (pointer->type == mozart::PointerEvent::Type::MOUSE &&
+               pointer->buttons & mozart::kMousePrimaryButton)) {
             if (!points_.count(pointer_id)) {
               points_[pointer_id] = std::vector<SkPoint>();
             }
             points_.at(pointer_id)
-                .push_back(SkPoint::Make(event->pointer_data->x,
-                                         event->pointer_data->y));
+                .push_back(SkPoint::Make(pointer->x, pointer->y));
           }
           handled = true;
           break;
-        case mozart::EventType::POINTER_UP:
+        case mozart::PointerEvent::Phase::UP:
           // Path is done, add it to the list of paths and reset the list of
           // points
           paths_.push_back(CurrentPath(pointer_id));
@@ -89,8 +90,9 @@ class PaintView : public mozart::BaseView, public mozart::InputListener {
         default:
           break;
       }
-    } else if (event->key_data) {
-      if (event->key_data->hid_usage == HID_USAGE_KEY_ESC) {
+    } else if (event->is_keyboard()) {
+      const mozart::KeyboardEventPtr& keyboard = event->get_keyboard();
+      if (keyboard->hid_usage == HID_USAGE_KEY_ESC) {
         // clear
         paths_.clear();
         handled = true;

@@ -6,19 +6,10 @@
 
 #include <utility>
 
+#include "apps/mozart/services/input/cpp/formatting.h"
 #include "apps/mozart/services/views/cpp/formatting.h"
 
 namespace input_manager {
-namespace {
-std::ostream& operator<<(std::ostream& os, const mozart::Event& value) {
-  os << "{action=" << value.action;
-  if (value.pointer_data)
-    os << ", x=" << value.pointer_data->x << ", y=" << value.pointer_data->y;
-  if (value.key_data)
-    os << ", hid_usage=0x" << std::hex << value.key_data->hid_usage;
-  return os << "}";
-}
-}  // namespace
 
 InputAssociate::InputAssociate() {}
 
@@ -119,7 +110,7 @@ void InputAssociate::OnInputDispatcherDied(InputDispatcherImpl* dispatcher) {
 }
 
 void InputAssociate::DeliverEvent(const mozart::ViewToken* view_token,
-                                  mozart::EventPtr event) {
+                                  mozart::InputEventPtr event) {
   FTL_DCHECK(view_token);
   FTL_DCHECK(event);
   FTL_VLOG(1) << "DeliverEvent: view_token=" << *view_token

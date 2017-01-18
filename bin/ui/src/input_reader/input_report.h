@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <algorithm>
 #include <vector>
 
 #include "apps/mozart/src/input_reader/input_descriptor.h"
@@ -45,6 +46,10 @@ struct StylusReport : InputReport {
   bool in_range = false;
   bool is_down = false;
   std::vector<ButtonUsage> down;
+
+  bool pressed(ButtonUsage button) const {
+    return std::find(down.begin(), down.end(), button) != down.end();
+  }
 };
 
 struct Touch {

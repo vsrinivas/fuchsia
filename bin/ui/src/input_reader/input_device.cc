@@ -15,8 +15,8 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-#include "apps/tracing/lib/trace/event.h"
 #include "apps/mozart/src/input_reader/input_report.h"
+#include "apps/tracing/lib/trace/event.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/time/time_point.h"
 
@@ -183,13 +183,14 @@ void InputDevice::ParseStylusReport(uint8_t* r, size_t len) {
 
   stylus_report_.in_range = acer12_stylus_status_inrange(report->status);
   stylus_report_.is_down = acer12_stylus_status_inrange(report->status) &&
-                           acer12_stylus_status_tswitch(report->status);
+                           (acer12_stylus_status_tswitch(report->status) ||
+                            acer12_stylus_status_eraser(report->status));
 
+  // TODO(jpoichet) TIP, INVERT and ERASER aren't all buttons
   stylus_report_.down.clear();
   if (acer12_stylus_status_tswitch(report->status)) {
     stylus_report_.down.push_back(INPUT_USAGE_STYLUS_TIP);
   }
-
   if (acer12_stylus_status_barrel(report->status)) {
     stylus_report_.down.push_back(INPUT_USAGE_STYLUS_BARREL);
   }

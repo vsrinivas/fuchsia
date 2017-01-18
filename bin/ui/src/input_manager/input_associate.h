@@ -40,7 +40,7 @@ class InputAssociate : public mozart::ViewAssociate {
 
   // Delivers an event to a view.
   void DeliverEvent(const mozart::ViewToken* view_token,
-                    mozart::EventPtr event);
+                    mozart::InputEventPtr event);
 
   // Callbacks.
   void OnInputConnectionDied(InputConnectionImpl* connection);

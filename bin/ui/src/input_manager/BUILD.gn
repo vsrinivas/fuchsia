@@ -25,6 +25,7 @@ executable("input_manager") {
     "//apps/mozart/services/geometry",
     "//apps/mozart/services/geometry/cpp",
     "//apps/mozart/services/input",
+    "//apps/mozart/services/input/cpp",
     "//apps/mozart/services/views",
     "//apps/mozart/services/views/cpp",
     "//apps/tracing/lib/trace:provider",

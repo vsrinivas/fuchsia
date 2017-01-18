@@ -12,15 +12,17 @@
 
 namespace input_manager {
 namespace {
-void TransformEvent(const mozart::Transform& transform, mozart::Event* event) {
-  if (!event->pointer_data)
+void TransformEvent(const mozart::Transform& transform,
+                    mozart::InputEvent* event) {
+  if (!event->is_pointer())
     return;
+  const mozart::PointerEventPtr& pointer = event->get_pointer();
   mozart::PointF point;
-  point.x = event->pointer_data->x;
-  point.y = event->pointer_data->y;
+  point.x = pointer->x;
+  point.y = pointer->y;
   point = TransformPoint(transform, point);
-  event->pointer_data->x = point.x;
-  event->pointer_data->y = point.y;
+  pointer->x = point.x;
+  pointer->y = point.y;
 }
 }  // namespace
 
@@ -44,7 +46,7 @@ InputDispatcherImpl::InputDispatcherImpl(
 
 InputDispatcherImpl::~InputDispatcherImpl() {}
 
-void InputDispatcherImpl::DispatchEvent(mozart::EventPtr event) {
+void InputDispatcherImpl::DispatchEvent(mozart::InputEventPtr event) {
   FTL_DCHECK(event);
 
   pending_events_.push(std::move(event));
@@ -56,27 +58,29 @@ void InputDispatcherImpl::ProcessNextEvent() {
   FTL_DCHECK(!pending_events_.empty());
 
   do {
-    const mozart::Event* event = pending_events_.front().get();
-    if (event->action == mozart::EventType::POINTER_DOWN) {
-      FTL_DCHECK(event->pointer_data);
-      auto point = mozart::PointF::New();
-      point->x = event->pointer_data->x;
-      point->y = event->pointer_data->y;
-      FTL_VLOG(1) << "HitTest: point=" << point;
-      auto hit_result_callback = [ this, weak = weak_factory_.GetWeakPtr() ](
-          std::unique_ptr<mozart::ResolvedHits> resolved_hits) {
-        if (weak)
-          weak->OnHitTestResult(std::move(resolved_hits));
-      };
-      hit_tester_->HitTest(std::move(point), hit_result_callback);
-      return;
+    const mozart::InputEvent* event = pending_events_.front().get();
+    if (event->is_pointer()) {
+      const mozart::PointerEventPtr& pointer = event->get_pointer();
+      if (pointer->phase == mozart::PointerEvent::Phase::DOWN) {
+        auto point = mozart::PointF::New();
+        point->x = pointer->x;
+        point->y = pointer->y;
+        FTL_VLOG(1) << "HitTest: point=" << point;
+        auto hit_result_callback = [ this, weak = weak_factory_.GetWeakPtr() ](
+            std::unique_ptr<mozart::ResolvedHits> resolved_hits) {
+          if (weak)
+            weak->OnHitTestResult(std::move(resolved_hits));
+        };
+        hit_tester_->HitTest(std::move(point), hit_result_callback);
+        return;
+      }
     }
     DeliverEvent(std::move(pending_events_.front()));
     pending_events_.pop();
   } while (!pending_events_.empty());
 }
 
-void InputDispatcherImpl::DeliverEvent(mozart::EventPtr event) {
+void InputDispatcherImpl::DeliverEvent(mozart::InputEventPtr event) {
   if (focused_view_token_) {
     TransformEvent(*focused_view_transform_, event.get());
     associate_->DeliverEvent(focused_view_token_.get(), std::move(event));

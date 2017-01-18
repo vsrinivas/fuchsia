@@ -12,9 +12,9 @@
 
 namespace mozart {
 
-std::ostream& operator<<(std::ostream& os, const KeyData& value);
-std::ostream& operator<<(std::ostream& os, const PointerData& value);
-std::ostream& operator<<(std::ostream& os, const Event& value);
+std::ostream& operator<<(std::ostream& os, const InputEvent& value);
+std::ostream& operator<<(std::ostream& os, const PointerEvent& value);
+std::ostream& operator<<(std::ostream& os, const KeyboardEvent& value);
 
 }  // namespace mozart
 

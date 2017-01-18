@@ -27,7 +27,7 @@ class InputConnectionImpl : public mozart::InputConnection {
   const mozart::ViewToken* view_token() const { return view_token_.get(); }
 
   // Delivers an event to a view.
-  void DeliverEvent(mozart::EventPtr event);
+  void DeliverEvent(mozart::InputEventPtr event);
 
   // |mozart::InputConnection|
   void SetListener(
