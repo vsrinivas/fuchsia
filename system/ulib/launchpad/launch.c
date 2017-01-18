@@ -63,6 +63,7 @@ mx_handle_t finish_launch(launchpad_t* lp, mx_status_t status,
             mx_handle_close(handles[i]);
         proc = status;
     }
-    launchpad_destroy(lp);
+    if (lp != NULL)
+        launchpad_destroy(lp);
     return proc;
 }

@@ -56,8 +56,8 @@ mx_status_t launchpad_clone_mxio_cwd(launchpad_t* lp) {
 
 mx_status_t launchpad_add_all_mxio(launchpad_t* lp) {
     mx_status_t status = launchpad_clone_mxio_root(lp);
-    if(status == NO_ERROR) {
-      status = launchpad_clone_mxio_cwd(lp);
+    if (status == NO_ERROR) {
+        status = launchpad_clone_mxio_cwd(lp);
     }
     for (int fd = 0; status == NO_ERROR && fd < MAX_MXIO_FD; ++fd) {
         status = launchpad_clone_fd(lp, fd, fd);
@@ -69,50 +69,51 @@ mx_status_t launchpad_add_all_mxio(launchpad_t* lp) {
     return status;
 }
 
-mx_handle_t launchpad_launch_mxio_vmo_etc(const char* name, mx_handle_t vmo,
+mx_handle_t launchpad_launch_mxio_vmo_etc(mx_handle_t job,
+                                          const char* name, mx_handle_t vmo,
                                           int argc, const char* const* argv,
                                           const char* const* envp,
                                           size_t hnds_count,
                                           mx_handle_t* handles, uint32_t* ids) {
-    launchpad_t* lp;
+    launchpad_t* lp = NULL;
 
     if (name == NULL)
         name = argv[0];
 
-    mx_handle_t job_to_child = MX_HANDLE_INVALID;
-    mx_handle_t job = mx_job_default();
-    if (job > 0)
-        mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
-
-    mx_status_t status = launchpad_create(job_to_child, name, &lp);
-    if (status == NO_ERROR) {
+    mx_handle_t transfer_job;
+    mx_status_t status =
+        mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &transfer_job);
+    if (status == NO_ERROR)
+        status = launchpad_create_with_jobs(job, transfer_job, name, &lp);
+    if (status == NO_ERROR)
         status = launchpad_elf_load(lp, vmo);
-        if (status == NO_ERROR)
-            status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
-        if (status == NO_ERROR)
-            status = launchpad_add_vdso_vmo(lp);
-        if (status == NO_ERROR)
-            status = launchpad_arguments(lp, argc, argv);
-        if (status == NO_ERROR)
-            status = launchpad_environ(lp, envp);
-        if (status == NO_ERROR)
-            status = launchpad_add_all_mxio(lp);
-        if (status == NO_ERROR)
-            status = launchpad_add_handles(lp, hnds_count, handles, ids);
+    if (status == NO_ERROR) {
+        status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
     } else {
-      mx_handle_close(vmo);
+        mx_handle_close(vmo);
     }
+    if (status == NO_ERROR)
+        status = launchpad_add_vdso_vmo(lp);
+    if (status == NO_ERROR)
+        status = launchpad_arguments(lp, argc, argv);
+    if (status == NO_ERROR)
+        status = launchpad_environ(lp, envp);
+    if (status == NO_ERROR)
+        status = launchpad_add_all_mxio(lp);
+    if (status == NO_ERROR)
+        status = launchpad_add_handles(lp, hnds_count, handles, ids);
 
     return finish_launch(lp, status, handles, hnds_count);
 }
 
-mx_handle_t launchpad_launch_mxio_etc(const char* name,
-                                      int argc, const char* const* argv,
+mx_handle_t launchpad_launch_mxio_etc(const char* name, int argc,
+                                      const char* const* argv,
                                       const char* const* envp,
                                       size_t hnds_count, mx_handle_t* handles,
                                       uint32_t* ids) {
-  return launchpad_launch_mxio_vmo_etc(name, launchpad_vmo_from_file(argv[0]),
-      argc, argv, envp, hnds_count, handles, ids);
+    return launchpad_launch_mxio_vmo_etc(
+        mx_job_default(), name, launchpad_vmo_from_file(argv[0]), argc, argv,
+        envp, hnds_count, handles, ids);
 }
 
 mx_handle_t launchpad_launch_mxio(const char* name,

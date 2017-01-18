@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <magenta/types.h>
 #include <magenta/compiler.h>
+#include <magenta/types.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -58,7 +59,6 @@ mx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp);
 mx_status_t launchpad_add_handle(launchpad_t* lp, mx_handle_t h, uint32_t id);
 mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
                                   const mx_handle_t h[], const uint32_t id[]);
-
 
 // Set the arguments or environment to be passed in the bootstrap
 // message.  All the strings are copied into the launchpad by this
@@ -282,14 +282,14 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
                                       uint32_t* ids);
 
 // Same as launchpad_launch_mxio_etc, but loads the program from a vmo not the
-// filesystem.
+// filesystem, and the job to launch the process under. The supplied job handle
+// is not consumed, but is duplicated and transfered to the new child process.
 // In all cases, the vmo and the handles are consumed.
-mx_handle_t launchpad_launch_mxio_vmo_etc(const char* name, mx_handle_t vmo,
+mx_handle_t launchpad_launch_mxio_vmo_etc(mx_handle_t job,
+                                          const char* name, mx_handle_t vmo,
                                           int argc, const char* const* argv,
                                           const char* const* envp,
-                                          size_t hnds_count, mx_handle_t* handles,
-                                          uint32_t* ids);
-
-
+                                          size_t hnds_count,
+                                          mx_handle_t* handles, uint32_t* ids);
 
 __END_CDECLS
