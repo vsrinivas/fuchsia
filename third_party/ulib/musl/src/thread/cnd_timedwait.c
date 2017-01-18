@@ -44,7 +44,7 @@ enum {
 int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
                   const struct timespec* restrict ts) {
     mxr_mutex_t* m = (mxr_mutex_t*)mutex;
-    struct waiter node = {0};
+    struct waiter node = {};
     int e, seq, clock = c->_c_clock, oldstate;
     volatile int* fut;
 

@@ -32,7 +32,7 @@ int __res_msend_rc(int nqueries, const unsigned char* const* queries, const int*
     union {
         struct sockaddr_in sin;
         struct sockaddr_in6 sin6;
-    } sa = {0}, ns[MAXNS] = {{0}};
+    } sa = {}, ns[MAXNS] = {};
     socklen_t sl = sizeof sa.sin;
     int nns = 0;
     int family = AF_INET;

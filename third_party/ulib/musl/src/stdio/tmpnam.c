@@ -17,7 +17,7 @@ char* tmpnam(char* buf) {
     int r;
     for (try = 0; try < MAXTRIES; try ++) {
         __randname(s + 12);
-        r = lstat(s, &(struct stat){0});
+        r = lstat(s, &(struct stat){});
         if (r == 0)
             return strcpy(buf ? buf : internal, s);
     }

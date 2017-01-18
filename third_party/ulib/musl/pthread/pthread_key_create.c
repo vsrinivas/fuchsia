@@ -1,7 +1,7 @@
 #include "pthread_impl.h"
 
 volatile size_t __pthread_tsd_size = sizeof(void*) * PTHREAD_KEYS_MAX;
-void* __pthread_tsd_main[PTHREAD_KEYS_MAX] = {0};
+void* __pthread_tsd_main[PTHREAD_KEYS_MAX] = {};
 
 static void (*volatile keys[PTHREAD_KEYS_MAX])(void*);
 

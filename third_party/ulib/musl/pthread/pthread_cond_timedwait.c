@@ -64,7 +64,7 @@ enum {
 
 int __pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict m,
                              const struct timespec* restrict ts) {
-    struct waiter node = {0};
+    struct waiter node = {};
     int e, seq, clock = c->_c_clock, cs, oldstate, tmp;
     volatile int* fut;
 

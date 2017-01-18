@@ -14,7 +14,7 @@
 #define ROUND(x) (((x) + PAGE_SIZE - 1) & -PAGE_SIZE)
 
 /* pthread_key_create.c overrides this */
-static void* dummy_tsd[1] = {0};
+static void* dummy_tsd[1] = {};
 weak_alias(dummy_tsd, __pthread_tsd_main);
 
 void __init_tp(mx_handle_t self, pthread_t thread) {

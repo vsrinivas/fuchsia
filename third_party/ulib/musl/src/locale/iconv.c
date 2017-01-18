@@ -154,7 +154,7 @@ size_t iconv(iconv_t cd0, char** restrict in, size_t* restrict inb, char** restr
     unsigned from = cd >> 16;
     const unsigned char* map = charmaps + from + 1;
     const unsigned char* tomap = charmaps + to + 1;
-    mbstate_t st = {0};
+    mbstate_t st = {};
     wchar_t wc;
     unsigned c, d;
     size_t k, l;

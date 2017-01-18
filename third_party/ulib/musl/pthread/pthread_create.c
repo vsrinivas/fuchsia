@@ -75,7 +75,7 @@ static mx_status_t allocate_stack(size_t stack_size, size_t guard_size, uintptr_
 }
 
 int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp, void* (*entry)(void*), void* restrict arg) {
-    pthread_attr_t attr = {0};
+    pthread_attr_t attr = {};
     if (attrp)
         attr = *attrp;
 

@@ -1,6 +1,6 @@
 #include "pthread_impl.h"
 
 int pthread_mutexattr_init(pthread_mutexattr_t* a) {
-    *a = (pthread_mutexattr_t){0};
+    *a = (pthread_mutexattr_t){};
     return 0;
 }

@@ -11,7 +11,7 @@ char* fgetln(FILE* f, size_t* plen) {
         ret = (char*)f->rpos;
         *plen = ++z - ret;
         f->rpos = (void*)z;
-    } else if ((l = getline(&f->getln_buf, (size_t[]){0}, f)) > 0) {
+    } else if ((l = getline(&f->getln_buf, (size_t[]){}, f)) > 0) {
         *plen = l;
         ret = f->getln_buf;
     }

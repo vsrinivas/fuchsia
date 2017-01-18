@@ -39,7 +39,7 @@ char* tempnam(const char* dir, const char* pfx) {
 
     for (try = 0; try < MAXTRIES; try ++) {
         __randname(s + l - 6);
-        r = lstat(s, &(struct stat){0});
+        r = lstat(s, &(struct stat){});
         if (r == -1 && errno == ENOENT) {
             return strdup(s);
         }

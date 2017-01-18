@@ -7,7 +7,7 @@
 int __inet_aton(const char* s0, struct in_addr* dest) {
     const char* s = s0;
     unsigned char* d = (void*)dest;
-    unsigned long a[4] = {0};
+    unsigned long a[4] = {};
     char* z;
     int i;
 

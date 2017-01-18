@@ -32,7 +32,7 @@ static size_t do_read(FILE* f, unsigned char* buf, size_t len) {
 static unsigned long long wcstox(const wchar_t* s, wchar_t** p, int base, unsigned long long lim) {
     wchar_t* t = (wchar_t*)s;
     unsigned char buf[64];
-    FILE f = {0};
+    FILE f = {};
     f.flags = 0;
     f.rpos = f.rend = 0;
     f.buf = buf + 4;

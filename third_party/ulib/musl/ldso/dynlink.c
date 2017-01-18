@@ -250,7 +250,7 @@ static Sym* gnu_lookup_filtered(uint32_t h1, uint32_t* hashtab, struct dso* dso,
 static struct symdef find_sym(struct dso* dso, const char* s, int need_def) {
     uint32_t h = 0, gh, gho, *ght;
     size_t ghm = 0;
-    struct symdef def = {0};
+    struct symdef def = {};
     for (; dso; dso = dso->next) {
         Sym* sym;
         if (!dso->global)
@@ -818,7 +818,7 @@ static struct dso* find_library(const char* name) {
 static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
                                     struct dso* needed_by) {
     unsigned char* map;
-    struct dso *p, temp_dso = {0};
+    struct dso *p, temp_dso = {};
     size_t alloc_size;
     int n_th = 0;
 

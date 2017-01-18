@@ -37,9 +37,6 @@ LOCAL_CFLAGS := \
     -Werror=incompatible-pointer-types \
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-LOCAL_CFLAGS += \
-    -Wno-missing-field-initializers \
-
 # TODO(kulakowski) This is needed because clang, as an assembler,
 # yells loudly about ununused options such as -finline which are
 # currently unconditionally added to COMPILEFLAGS. Ideally these

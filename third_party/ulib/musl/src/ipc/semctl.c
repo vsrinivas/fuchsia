@@ -10,7 +10,7 @@ union semun {
 };
 
 int semctl(int id, int num, int cmd, ...) {
-    union semun arg = {0};
+    union semun arg = {};
     va_list ap;
     switch (cmd) {
     case SETVAL:

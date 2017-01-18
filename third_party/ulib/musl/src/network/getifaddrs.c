@@ -80,7 +80,7 @@ static void copy_addr(struct sockaddr** r, int af, union sockany* sa, void* addr
 }
 
 static void gen_netmask(struct sockaddr** r, int af, union sockany* sa, int prefixlen) {
-    uint8_t addr[16] = {0};
+    uint8_t addr[16] = {};
     int i;
 
     if (prefixlen > 8 * sizeof(addr))

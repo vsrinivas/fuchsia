@@ -4,7 +4,7 @@
 #include <wchar.h>
 
 static wint_t __fgetwc_unlocked_internal(FILE* f) {
-    mbstate_t st = {0};
+    mbstate_t st = {};
     wchar_t wc;
     int c;
     unsigned char b;

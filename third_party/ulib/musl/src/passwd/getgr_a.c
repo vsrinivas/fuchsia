@@ -42,10 +42,10 @@ int __getgr_a(const char* name, gid_t gid, struct group* gr, char** buf, size_t*
         int32_t req = name ? GETGRBYNAME : GETGRBYGID;
         int32_t i;
         const char* key;
-        int32_t groupbuf[GR_LEN] = {0};
+        int32_t groupbuf[GR_LEN] = {};
         size_t len = 0;
         size_t grlist_len = 0;
-        char gidbuf[11] = {0};
+        char gidbuf[11] = {};
         int swap = 0;
         char* ptr;
 

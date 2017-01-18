@@ -33,7 +33,7 @@ static char* fourbyte_strstr(const unsigned char* h, const unsigned char* n) {
 static char* twoway_strstr(const unsigned char* h, const unsigned char* n) {
     const unsigned char* z;
     size_t l, ip, jp, k, p, ms, p0, mem, mem0;
-    size_t byteset[32 / sizeof(size_t)] = {0};
+    size_t byteset[32 / sizeof(size_t)] = {};
     size_t shift[256];
 
     /* Computing length of needle and fill shift table */

@@ -252,7 +252,7 @@ int vfscanf(FILE* restrict f, const char* restrict fmt, va_list ap) {
                 } else {
                     wcs = dest;
                 }
-                st = (mbstate_t){0};
+                st = (mbstate_t){};
                 while (scanset[(c = shgetc(f)) + 1]) {
                     switch (mbrtowc(&wc, &(char){c}, 1, &st)) {
                     case -1:

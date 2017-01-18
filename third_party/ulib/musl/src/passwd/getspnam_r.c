@@ -98,7 +98,7 @@ int getspnam_r(const char* name, struct spwd* sp, char* buf, size_t size, struct
 
     fd = open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
     if (fd >= 0) {
-        struct stat st = {0};
+        struct stat st = {};
         errno = EINVAL;
         if (fstat(fd, &st) || !S_ISREG(st.st_mode) || !(f = fdopen(fd, "rb"))) {
             pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &cs);

@@ -24,7 +24,7 @@ void __get_handler_set(sigset_t*);
 
 static int child(void* args_vp) {
     int i, ret;
-    struct sigaction sa = {0};
+    struct sigaction sa = {};
     struct args* args = args_vp;
     int p = args->p[1];
     const posix_spawn_file_actions_t* fa = args->fa;
@@ -145,7 +145,7 @@ int __posix_spawnx(pid_t* restrict res, const char* restrict path,
     args.path = path;
     args.exec = exec;
     args.fa = fa;
-    args.attr = attr ? attr : &(const posix_spawnattr_t){0};
+    args.attr = attr ? attr : &(const posix_spawnattr_t){};
     args.argv = argv;
     args.envp = envp;
     pthread_sigmask(SIG_BLOCK, SIGALL_SET, &args.oldmask);

@@ -5,7 +5,7 @@
 #include <sys/timex.h>
 
 int adjtime(const struct timeval* in, struct timeval* out) {
-    struct timex tx = {0};
+    struct timex tx = {};
     if (in) {
         if (in->tv_sec > 1000 || in->tv_usec > 1000000000) {
             errno = EINVAL;

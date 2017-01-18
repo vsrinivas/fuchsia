@@ -5,7 +5,7 @@
 
 size_t strspn(const char* s, const char* c) {
     const char* a = s;
-    size_t byteset[32 / sizeof(size_t)] = {0};
+    size_t byteset[32 / sizeof(size_t)] = {};
 
     if (!c[0])
         return 0;

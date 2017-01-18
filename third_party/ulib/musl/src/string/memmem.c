@@ -37,7 +37,7 @@ static char* fourbyte_memmem(const unsigned char* h, size_t k, const unsigned ch
 static char* twoway_memmem(const unsigned char* h, const unsigned char* z, const unsigned char* n,
                            size_t l) {
     size_t i, ip, jp, k, p, ms, p0, mem, mem0;
-    size_t byteset[32 / sizeof(size_t)] = {0};
+    size_t byteset[32 / sizeof(size_t)] = {};
     size_t shift[256];
 
     /* Computing length of needle and fill shift table */
