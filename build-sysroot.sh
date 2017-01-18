@@ -38,7 +38,7 @@ readonly CMAKE_SHARED_FLAGS="\
 set -eo pipefail; [[ "${TRACE}" ]] && set -x
 
 usage() {
-  printf >&2 '%s: [-c] [-t target] [-o outdir] [-d destdir]\n' "$0" && exit 1
+  printf >&2 '%s: [-c] [-r] [-t target] [-o outdir] [-d destdir]\n' "$0" && exit 1
 }
 
 build() {
