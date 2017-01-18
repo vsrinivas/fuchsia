@@ -8,9 +8,9 @@
 
 namespace mx {
 
-mx_status_t job::create(const job& parent, uint32_t flags, job* result) {
+mx_status_t job::create(mx_handle_t parent_job, uint32_t flags, job* result) {
     mx_handle_t h;
-    mx_status_t status = mx_job_create(parent.get(), flags, &h);
+    mx_status_t status = mx_job_create(parent_job, flags, &h);
     if (status < 0) {
         result->reset(MX_HANDLE_INVALID);
     } else {

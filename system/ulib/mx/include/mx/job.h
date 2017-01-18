@@ -4,24 +4,24 @@
 
 #pragma once
 
-#include <mx/handle.h>
+#include <mx/task.h>
 
 namespace mx {
 
-class job : public handle<job> {
+class job : public task<job> {
 public:
     job() = default;
 
-    explicit job(handle<void>&& h) : handle(h.release()) {}
-
-    job(job&& other) : handle(other.release()) {}
+    explicit job(handle<void>&& h) : task(h.release()) {}
+    job(job&& other) : task(other.release()) {}
 
     job& operator=(job&& other) {
         reset(other.release());
         return *this;
     }
 
-    static mx_status_t create(const job& parent, uint32_t options, job* result);
+    static mx_status_t create(mx_handle_t parent_job, uint32_t options,
+                              job* result);
 };
 
 } // namespace mx
