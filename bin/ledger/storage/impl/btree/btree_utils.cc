@@ -21,8 +21,9 @@ void ForEachEntryIn(PageStorage* page_storage,
                     std::string min_key,
                     std::function<bool(EntryAndNodeId)> on_next,
                     std::function<void(Status)> on_done) {
-  auto waiter = callback::Waiter<Status, std::unique_ptr<const Object>>::Create(
-      Status::OK);
+  auto waiter =
+      callback::Waiter<Status, std::unique_ptr<const TreeNode>>::Create(
+          Status::OK);
 
   int start_index;
   Status key_found = node->FindKeyOrChild(min_key, &start_index);
@@ -50,7 +51,8 @@ void ForEachEntryIn(PageStorage* page_storage,
 
   for (int i = start_index; i <= node->GetKeyCount(); ++i) {
     if (!node->GetChildId(i).empty()) {
-      page_storage->GetObject(node->GetChildId(i), waiter->NewCallback());
+      TreeNode::FromId(page_storage, node->GetChildId(i),
+                       waiter->NewCallback());
     } else {
       waiter->NewCallback()(Status::OK, nullptr);
     }
@@ -58,24 +60,18 @@ void ForEachEntryIn(PageStorage* page_storage,
   waiter->Finalize(ftl::MakeCopyable([
     parent = std::move(node), start_index, min_key = std::move(min_key),
     page_storage, on_next = std::move(on_next), on_done = std::move(on_done)
-  ](Status s, std::vector<std::unique_ptr<const Object>> objects) {
+  ](Status s, std::vector<std::unique_ptr<const TreeNode>> nodes) {
     if (s != Status::OK) {
       on_done(s);
       return;
     }
     callback::StatusWaiter<Status> children_waiter(Status::OK);
-    for (size_t i = 0; i < objects.size(); ++i) {
-      if (objects[i] != nullptr) {
-        std::unique_ptr<const TreeNode> node;
-        s = TreeNode::FromObject(page_storage, std::move(objects[i]), &node);
-        if (s != Status::OK) {
-          on_done(s);
-          return;
-        }
-        ForEachEntryIn(page_storage, std::move(node), min_key, on_next,
+    for (size_t i = 0; i < nodes.size(); ++i) {
+      if (nodes[i] != nullptr) {
+        ForEachEntryIn(page_storage, std::move(nodes[i]), min_key, on_next,
                        children_waiter.NewCallback());
       }
-      if (i == objects.size() - 1) {
+      if (i == nodes.size() - 1) {
         break;
       }
       Entry entry;
@@ -522,26 +518,18 @@ void ForEachEntry(PageStorage* page_storage,
                   std::function<bool(EntryAndNodeId)> on_next,
                   std::function<void(Status)> on_done) {
   FTL_DCHECK(!root_id.empty());
-  page_storage->GetObject(
-      root_id, ftl::MakeCopyable([
-        min_key = std::move(min_key), page_storage,
-        on_next = std::move(on_next), on_done = std::move(on_done)
-      ](Status status, std::unique_ptr<const Object> object) mutable {
-        if (status != Status::OK) {
-          on_done(status);
-          return;
-        }
-        std::unique_ptr<const TreeNode> root;
-        status = TreeNode::FromObject(page_storage, std::move(object), &root);
-        if (status != Status::OK) {
-          on_done(status);
-          return;
-        }
-        ForEachEntryIn(page_storage, std::move(root), std::move(min_key),
-                       std::move(on_next),
-                       ftl::MakeCopyable([on_done = std::move(on_done)](
-                           Status s) { on_done(s); }));
-      }));
+  TreeNode::FromId(page_storage, root_id, [
+    min_key = std::move(min_key), page_storage, on_next = std::move(on_next),
+    on_done = std::move(on_done)
+  ](Status status, std::unique_ptr<const TreeNode> root) {
+    if (status != Status::OK) {
+      on_done(status);
+      return;
+    }
+    ForEachEntryIn(page_storage, std::move(root), std::move(min_key),
+                   std::move(on_next), std::move(on_done));
+
+  });
 }
 
 void ForEachDiff(PageStorage* page_storage,

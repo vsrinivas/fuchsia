@@ -45,24 +45,6 @@ void TreeNode::FromId(
       });
 }
 
-Status TreeNode::FromObject(PageStorage* page_storage,
-                            std::unique_ptr<const Object> object,
-                            std::unique_ptr<const TreeNode>* node) {
-  ftl::StringView json;
-  Status status = object->GetData(&json);
-  if (status != Status::OK) {
-    return status;
-  }
-  std::vector<Entry> entries;
-  std::vector<ObjectId> children;
-  if (!DecodeNode(json, &entries, &children)) {
-    return Status::FORMAT_ERROR;
-  }
-  node->reset(new TreeNode(page_storage, object->GetId(), std::move(entries),
-                           std::move(children)));
-  return Status::OK;
-}
-
 Status TreeNode::FromEntriesSynchronous(PageStorage* page_storage,
                                         const std::vector<Entry>& entries,
                                         const std::vector<ObjectId>& children,
@@ -202,6 +184,24 @@ Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
 
 ObjectId TreeNode::GetId() const {
   return id_;
+}
+
+Status TreeNode::FromObject(PageStorage* page_storage,
+                            std::unique_ptr<const Object> object,
+                            std::unique_ptr<const TreeNode>* node) {
+  ftl::StringView json;
+  Status status = object->GetData(&json);
+  if (status != Status::OK) {
+    return status;
+  }
+  std::vector<Entry> entries;
+  std::vector<ObjectId> children;
+  if (!DecodeNode(json, &entries, &children)) {
+    return Status::FORMAT_ERROR;
+  }
+  node->reset(new TreeNode(page_storage, object->GetId(), std::move(entries),
+                           std::move(children)));
+  return Status::OK;
 }
 
 // TreeNode::Mutation
