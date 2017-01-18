@@ -15,11 +15,11 @@ etc.
 
 ## Notes
 
-The tests here are for "core" functionality (message pipes, etc.),
-but not all "core" functionality can go here.
-For example, you can't start a process in your test because
-core tests are for when that functionality isn't working.
-Core tests can't use mxio and launchpad uses mxio.
+The tests here are for "core" functionality (message pipes, etc.), but
+not all "core" functionality can go here.  For example, you can't
+start a process in your test with launchpad because core tests are for
+when that functionality isn't working.  Core tests can't use mxio and
+launchpad uses mxio.
 
 Since these tests can't use mxio core/main.c stubs out the needed
 functions from mxio.
