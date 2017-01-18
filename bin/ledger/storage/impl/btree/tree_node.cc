@@ -60,6 +60,18 @@ Status TreeNode::FromEntriesSynchronous(PageStorage* page_storage,
   return Status::OK;
 }
 
+Status TreeNode::Empty(PageStorage* page_storage, ObjectId* empty_node_id) {
+  std::string encoding =
+      storage::EncodeNode(std::vector<Entry>(), std::vector<ObjectId>(1));
+  std::unique_ptr<const Object> object;
+  Status s = page_storage->AddObjectSynchronous(encoding, &object);
+  if (s != Status::OK) {
+    return s;
+  }
+  *empty_node_id = object->GetId();
+  return Status::OK;
+}
+
 void TreeNode::FromEntries(PageStorage* page_storage,
                            const std::vector<Entry>& entries,
                            const std::vector<ObjectId>& children,
@@ -388,7 +400,7 @@ void TreeNode::Mutation::Finish(
       node_.page_storage_, std::vector<Entry>(),
       std::vector<ObjectId>{ObjectId()}, &empty_node_id);
   FTL_DCHECK(s == Status::OK);
-  TreeNode::FromId(node_.page_storage_, empty_node_id, [
+  FromId(node_.page_storage_, empty_node_id, [
     max_size, max_key, new_entries = std::move(new_entries),
     new_children = std::move(new_children), new_nodes,
     on_done = std::move(on_done)
@@ -400,7 +412,7 @@ void TreeNode::Mutation::Finish(
     // new_entries could contain more than max_size elements,
     // so we can't directly create the root using FromEntries.
     // We use a mutation instead.
-    TreeNode::Mutation mutation = new_node->StartMutation();
+    Mutation mutation = new_node->StartMutation();
     for (size_t i = 0; i < new_entries.size(); ++i) {
       mutation.AddEntry(new_entries[i], new_children[i], new_children[i + 1]);
     }

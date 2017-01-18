@@ -142,8 +142,11 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
 
 std::unique_ptr<Commit> CommitImpl::Empty(PageStorage* page_storage) {
   ObjectId root_node_id;
-  TreeNode::FromEntriesSynchronous(page_storage, std::vector<Entry>(),
-                        std::vector<ObjectId>(1), &root_node_id);
+  Status s = TreeNode::Empty(page_storage, &root_node_id);
+  if (s != Status::OK) {
+    FTL_LOG(ERROR) << "Failed to create an empty node.";
+    return nullptr;
+  }
   return std::unique_ptr<Commit>(
       new CommitImpl(page_storage, kFirstPageCommitId.ToString(), 0, 0,
                      root_node_id, std::vector<CommitId>(), ""));

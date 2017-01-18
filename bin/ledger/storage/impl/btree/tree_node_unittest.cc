@@ -58,6 +58,13 @@ class TreeNodeTest : public ::test::TestWithMessageLoop {
     return node;
   }
 
+  std::unique_ptr<const TreeNode> CreateEmptyNode() {
+    ObjectId id;
+    Status status = TreeNode::Empty(&fake_storage_, &id);
+    EXPECT_EQ(Status::OK, status);
+    return FromId(id);
+  }
+
   std::unique_ptr<const TreeNode> FromEntries(
       const std::vector<Entry>& entries,
       const std::vector<ObjectId>& children) {
@@ -76,10 +83,6 @@ class TreeNodeTest : public ::test::TestWithMessageLoop {
     Entry found_entry;
     EXPECT_EQ(Status::OK, node->GetEntry(index, &found_entry));
     return found_entry;
-  }
-
-  std::unique_ptr<const TreeNode> CreateEmptyNode() {
-    return FromEntries(std::vector<Entry>(), std::vector<ObjectId>(1));
   }
 
   std::vector<ObjectId> CreateChildren(int size) {
