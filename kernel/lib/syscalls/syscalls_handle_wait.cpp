@@ -45,7 +45,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     {
         AutoLock lock(up->handle_table_lock());
 
-        Handle* handle = up->GetHandle_NoLock(handle_value);
+        Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
             return up->BadHandle(handle_value, ERR_BAD_HANDLE);
         if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
@@ -128,7 +128,7 @@ mx_status_t sys_handle_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time
         AutoLock lock(up->handle_table_lock());
 
         for (; num_added != count; ++num_added) {
-            Handle* handle = up->GetHandle_NoLock(items[num_added].handle);
+            Handle* handle = up->GetHandleLocked(items[num_added].handle);
             if (!handle) {
                 result = up->BadHandle(items[num_added].handle, ERR_BAD_HANDLE);
                 break;

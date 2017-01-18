@@ -352,7 +352,7 @@ mx_handle_t ProcessDispatcher::MapHandleToValue(const Handle* handle) const {
     return map_handle_to_value(handle, handle_rand_);
 }
 
-Handle* ProcessDispatcher::GetHandle_NoLock(mx_handle_t handle_value) {
+Handle* ProcessDispatcher::GetHandleLocked(mx_handle_t handle_value) {
     auto handle = map_value_to_handle(handle_value, handle_rand_);
     if (!handle)
         return nullptr;
@@ -361,21 +361,21 @@ Handle* ProcessDispatcher::GetHandle_NoLock(mx_handle_t handle_value) {
 
 void ProcessDispatcher::AddHandle(HandleUniquePtr handle) {
     AutoLock lock(&handle_table_lock_);
-    AddHandle_NoLock(mxtl::move(handle));
+    AddHandleLocked(mxtl::move(handle));
 }
 
-void ProcessDispatcher::AddHandle_NoLock(HandleUniquePtr handle) {
+void ProcessDispatcher::AddHandleLocked(HandleUniquePtr handle) {
     handle->set_process_id(get_koid());
     handles_.push_front(handle.release());
 }
 
 HandleUniquePtr ProcessDispatcher::RemoveHandle(mx_handle_t handle_value) {
     AutoLock lock(&handle_table_lock_);
-    return RemoveHandle_NoLock(handle_value);
+    return RemoveHandleLocked(handle_value);
 }
 
-HandleUniquePtr ProcessDispatcher::RemoveHandle_NoLock(mx_handle_t handle_value) {
-    auto handle = GetHandle_NoLock(handle_value);
+HandleUniquePtr ProcessDispatcher::RemoveHandleLocked(mx_handle_t handle_value) {
+    auto handle = GetHandleLocked(handle_value);
     if (!handle)
         return nullptr;
     handles_.erase(*handle);
@@ -384,16 +384,16 @@ HandleUniquePtr ProcessDispatcher::RemoveHandle_NoLock(mx_handle_t handle_value)
     return HandleUniquePtr(handle);
 }
 
-void ProcessDispatcher::UndoRemoveHandle_NoLock(mx_handle_t handle_value) {
+void ProcessDispatcher::UndoRemoveHandleLocked(mx_handle_t handle_value) {
     auto handle = map_value_to_handle(handle_value, handle_rand_);
-    AddHandle_NoLock(HandleUniquePtr(handle));
+    AddHandleLocked(HandleUniquePtr(handle));
 }
 
 bool ProcessDispatcher::GetDispatcher(mx_handle_t handle_value,
                                       mxtl::RefPtr<Dispatcher>* dispatcher,
                                       uint32_t* rights) {
     AutoLock lock(&handle_table_lock_);
-    Handle* handle = GetHandle_NoLock(handle_value);
+    Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
         return false;
 

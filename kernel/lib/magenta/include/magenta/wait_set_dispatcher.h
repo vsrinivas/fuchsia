@@ -67,15 +67,15 @@ public:
         // Const, hence these don't care about locking:
         mx_signals_t watched_signals() const { return watched_signals_; }
 
-        void Init_NoLock(WaitSetDispatcher* wait_set, Handle* handle);
-        State GetState_NoLock() const;
-        void SetState_NoLock(State new_state);
-        Handle* GetHandle_NoLock() const;
-        const mxtl::RefPtr<Dispatcher>& GetDispatcher_NoLock() const;
-        bool IsTriggered_NoLock() const;
-        mx_signals_t GetSignalsState_NoLock() const;
+        void InitLocked(WaitSetDispatcher* wait_set, Handle* handle);
+        State GetStateLocked() const;
+        void SetStateLocked(State new_state);
+        Handle* GetHandleLocked() const;
+        const mxtl::RefPtr<Dispatcher>& GetDispatcherLocked() const;
+        bool IsTriggeredLocked() const;
+        mx_signals_t GetSignalsStateLocked() const;
 
-        bool InTriggeredEntriesList_NoLock() const {
+        bool InTriggeredEntriesListLocked() const {
             return triggered_entries_node_state_.InContainer();
         }
 
@@ -93,7 +93,7 @@ public:
 
         // Triggers (including adding to the triggered list). It must not already be triggered
         // (i.e., |is_triggered_| must be false; this will set it to true).
-        bool Trigger_NoLock();
+        bool TriggerLocked();
 
         const mx_signals_t watched_signals_;
         const uint64_t cookie_;

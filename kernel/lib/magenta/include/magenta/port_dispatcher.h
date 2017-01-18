@@ -86,7 +86,7 @@ public:
 
 private:
     PortDispatcher(uint32_t options);
-    void FreePackets_NoLock();
+    void FreePacketsLocked();
 
     Mutex lock_;
     bool no_clients_;

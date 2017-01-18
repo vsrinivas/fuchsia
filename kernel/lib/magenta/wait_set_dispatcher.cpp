@@ -39,7 +39,7 @@ status_t WaitSetDispatcher::Entry::Create(mx_signals_t watched_signals,
 
 WaitSetDispatcher::Entry::~Entry() {}
 
-void WaitSetDispatcher::Entry::Init_NoLock(WaitSetDispatcher* wait_set, Handle* handle) {
+void WaitSetDispatcher::Entry::InitLocked(WaitSetDispatcher* wait_set, Handle* handle) {
     DEBUG_ASSERT(wait_set->mutex_.IsHeld());
 
     DEBUG_ASSERT(state_ == State::UNINITIALIZED);
@@ -55,34 +55,34 @@ void WaitSetDispatcher::Entry::Init_NoLock(WaitSetDispatcher* wait_set, Handle* 
     dispatcher_ = handle_->dispatcher();
 }
 
-WaitSetDispatcher::Entry::State WaitSetDispatcher::Entry::GetState_NoLock() const {
+WaitSetDispatcher::Entry::State WaitSetDispatcher::Entry::GetStateLocked() const {
     // Don't assert |wait_set_->mutex_.IsHeld()| here, since we may get called from
     // WaitSetDispatcher's destructor.
     return state_;
 }
 
-Handle* WaitSetDispatcher::Entry::GetHandle_NoLock() const {
+Handle* WaitSetDispatcher::Entry::GetHandleLocked() const {
     DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
     return handle_;
 }
 
-void WaitSetDispatcher::Entry::SetState_NoLock(State new_state) {
+void WaitSetDispatcher::Entry::SetStateLocked(State new_state) {
     DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
     state_ = new_state;
 }
 
-const mxtl::RefPtr<Dispatcher>& WaitSetDispatcher::Entry::GetDispatcher_NoLock() const {
+const mxtl::RefPtr<Dispatcher>& WaitSetDispatcher::Entry::GetDispatcherLocked() const {
     // Don't assert |wait_set_->mutex_.IsHeld()| here, since we may get called from
     // WaitSetDispatcher's destructor.
     return dispatcher_;
 }
 
-bool WaitSetDispatcher::Entry::IsTriggered_NoLock() const {
+bool WaitSetDispatcher::Entry::IsTriggeredLocked() const {
     DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
     return is_triggered_;
 }
 
-mx_signals_t WaitSetDispatcher::Entry::GetSignalsState_NoLock() const {
+mx_signals_t WaitSetDispatcher::Entry::GetSignalsStateLocked() const {
     DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
     return signals_;
 }
@@ -99,7 +99,7 @@ bool WaitSetDispatcher::Entry::OnInitialize(mx_signals_t initial_state) {
     signals_ = initial_state;
 
     if (watched_signals_ & signals_)
-        return Trigger_NoLock();
+        return TriggerLocked();
 
     return false;
 }
@@ -117,11 +117,11 @@ bool WaitSetDispatcher::Entry::OnStateChange(mx_signals_t new_state) {
     if (watched_signals_ & signals_) {
         if (is_triggered_)
             return false;  // Already triggered.
-        return Trigger_NoLock();
+        return TriggerLocked();
     }
 
     if (is_triggered_) {
-        DEBUG_ASSERT(InTriggeredEntriesList_NoLock());
+        DEBUG_ASSERT(InTriggeredEntriesListLocked());
         is_triggered_ = false;
         wait_set_->triggered_entries_.erase(*this);
 
@@ -159,12 +159,12 @@ bool WaitSetDispatcher::Entry::OnCancel(Handle* handle,
     *should_remove = true;
 
     if (!is_triggered_)
-        return Trigger_NoLock();
+        return TriggerLocked();
 
     return false;
 }
 
-bool WaitSetDispatcher::Entry::Trigger_NoLock() {
+bool WaitSetDispatcher::Entry::TriggerLocked() {
     DEBUG_ASSERT(wait_set_->mutex_.IsHeld());
 
     DEBUG_ASSERT(!is_triggered_);
@@ -209,16 +209,16 @@ WaitSetDispatcher::~WaitSetDispatcher() {
         for (auto& e : entries_) {
             // If we're being destroyed, every entry in |entries_| should be in the ADDED state (since
             // we can't be in the middle of AddEntry() or RemoveEntry().
-            DEBUG_ASSERT(e.GetState_NoLock() == Entry::State::ADDED);
-            e.SetState_NoLock(Entry::State::REMOVED);
+            DEBUG_ASSERT(e.GetStateLocked() == Entry::State::ADDED);
+            e.SetStateLocked(Entry::State::REMOVED);
         }
     }
 
     // We can only call RemoveObserver() outside the lock.
     for (auto& e : entries_) {
-        DEBUG_ASSERT(e.GetState_NoLock() == Entry::State::REMOVED);
-        if (e.GetDispatcher_NoLock())
-            e.GetDispatcher_NoLock()->get_state_tracker()->RemoveObserver(&e);
+        DEBUG_ASSERT(e.GetStateLocked() == Entry::State::REMOVED);
+        if (e.GetDispatcherLocked())
+            e.GetDispatcherLocked()->get_state_tracker()->RemoveObserver(&e);
     }
     entries_.clear();   // Automatically destroys all Entry objects in entries_
 
@@ -240,10 +240,10 @@ status_t WaitSetDispatcher::AddEntry(mxtl::unique_ptr<Entry> entry, Handle* hand
         if (!entries_.insert_or_find(mxtl::move(entry)))
             return ERR_ALREADY_EXISTS;
 
-        e->Init_NoLock(this, handle);
+        e->InitLocked(this, handle);
     }
     // The entry |e| will remain valid since: we'll remain alive (since our caller better have a ref
-    // to us) and since e->Init_NoLock() will set the state to ADD_PENDING and RemoveEntry() won't
+    // to us) and since e->InitLocked() will set the state to ADD_PENDING and RemoveEntry() won't
     // destroy it if it's in that state (the only thing it'll do is remove it from |entries_| and
     // set its state to REMOVE_REQUESTED).
 
@@ -266,15 +266,15 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
         if (!entry)
             return ERR_NOT_FOUND;
 
-        if (entry->IsTriggered_NoLock()) {
-            DEBUG_ASSERT(entry->InTriggeredEntriesList_NoLock());
+        if (entry->IsTriggeredLocked()) {
+            DEBUG_ASSERT(entry->InTriggeredEntriesListLocked());
             triggered_entries_.erase(*entry);
 
             DEBUG_ASSERT(num_triggered_entries_ > 0u);
             num_triggered_entries_--;
         }
 
-        auto state = entry->GetState_NoLock();
+        auto state = entry->GetStateLocked();
         if (state == Entry::State::ADD_PENDING) {
             // We're *in* AddEntry() on another thread! Just put it back and pretend it hasn't been
             // added yet.
@@ -282,8 +282,8 @@ status_t WaitSetDispatcher::RemoveEntry(uint64_t cookie) {
             return NO_ERROR;
         }
         DEBUG_ASSERT(state == Entry::State::ADDED);
-        entry->SetState_NoLock(Entry::State::REMOVED);
-        dispatcher = entry->GetDispatcher_NoLock();
+        entry->SetStateLocked(Entry::State::REMOVED);
+        dispatcher = entry->GetDispatcherLocked();
     }
     if (dispatcher)
         dispatcher->get_state_tracker()->RemoveObserver(entry.get());
@@ -327,10 +327,10 @@ status_t WaitSetDispatcher::Wait(mx_time_t timeout,
         DEBUG_ASSERT(it != triggered_entries_.cend());
 
         results[i].cookie = it->GetKey();
-        if (it->GetHandle_NoLock()) {
+        if (it->GetHandleLocked()) {
             // Not cancelled
             results[i].status = NO_ERROR;
-            results[i].observed = it->GetSignalsState_NoLock();
+            results[i].observed = it->GetSignalsStateLocked();
         } else {
             // Cancelled.
             results[i].status = ERR_HANDLE_CLOSED;

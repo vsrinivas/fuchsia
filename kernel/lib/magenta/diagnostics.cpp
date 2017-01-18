@@ -93,7 +93,7 @@ size_t ProcessDispatcher::PageCount() const {
     return aspace_->AllocatedPages();
 }
 
-static char* DumpHandleTypeCount_NoLock(const ProcessDispatcher& pd) {
+static char* DumpHandleTypeCountLocked(const ProcessDispatcher& pd) {
     static char buf[(MX_OBJ_TYPE_LAST * 4) + 1];
 
     uint32_t types[MX_OBJ_TYPE_LAST] = {0};
@@ -126,7 +126,7 @@ void DumpProcessList() {
                StateChar(process),
                process.ThreadCount(),
                process.PageCount(),
-               DumpHandleTypeCount_NoLock(process),
+               DumpHandleTypeCountLocked(process),
                process.get_inner_koid(),
                pname);
     }

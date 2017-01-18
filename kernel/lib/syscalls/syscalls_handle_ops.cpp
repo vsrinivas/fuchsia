@@ -35,7 +35,7 @@ mx_status_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights, m
 
     {
         AutoLock lock(up->handle_table_lock());
-        Handle* source = up->GetHandle_NoLock(handle_value);
+        Handle* source = up->GetHandleLocked(handle_value);
         if (!source)
             return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
@@ -55,7 +55,7 @@ mx_status_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights, m
 
         if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(dest.get())) != NO_ERROR)
             return ERR_INVALID_ARGS;
-        up->AddHandle_NoLock(mxtl::move(dest));
+        up->AddHandleLocked(mxtl::move(dest));
     }
 
     return NO_ERROR;
@@ -69,7 +69,7 @@ mx_status_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights, mx_
 
     {
         AutoLock lock(up->handle_table_lock());
-        source = up->RemoveHandle_NoLock(handle_value);
+        source = up->RemoveHandleLocked(handle_value);
         if (!source)
             return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
@@ -87,13 +87,13 @@ mx_status_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights, mx_
 
         if (!dest) {
             // Unwind: put |source| back!
-            up->AddHandle_NoLock(mxtl::move(source));
+            up->AddHandleLocked(mxtl::move(source));
             return error;
         }
 
         if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(dest.get())) != NO_ERROR)
             return ERR_INVALID_ARGS;
-        up->AddHandle_NoLock(mxtl::move(dest));
+        up->AddHandleLocked(mxtl::move(dest));
     }
 
     return NO_ERROR;

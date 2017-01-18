@@ -83,21 +83,21 @@ public:
 
     // Maps a handle value into a Handle as long we can verify that
     // it belongs to this process.
-    Handle* GetHandle_NoLock(mx_handle_t handle_value);
+    Handle* GetHandleLocked(mx_handle_t handle_value);
 
     // Adds |handle| to this process handle list. The handle->process_id() is
     // set to this process id().
     void AddHandle(HandleUniquePtr handle);
-    void AddHandle_NoLock(HandleUniquePtr handle);
+    void AddHandleLocked(HandleUniquePtr handle);
 
     // Removes the Handle corresponding to |handle_value| from this process
     // handle list.
     HandleUniquePtr RemoveHandle(mx_handle_t handle_value);
-    HandleUniquePtr RemoveHandle_NoLock(mx_handle_t handle_value);
+    HandleUniquePtr RemoveHandleLocked(mx_handle_t handle_value);
 
     // Puts back the |handle_value| which has not yet been given to another process
     // back into this process.
-    void UndoRemoveHandle_NoLock(mx_handle_t handle_value);
+    void UndoRemoveHandleLocked(mx_handle_t handle_value);
 
     bool GetDispatcher(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
                        uint32_t* rights);

@@ -92,12 +92,12 @@ PortDispatcher::PortDispatcher(uint32_t /*options*/)
 }
 
 PortDispatcher::~PortDispatcher() {
-    FreePackets_NoLock();
+    FreePacketsLocked();
     DEBUG_ASSERT(packets_.is_empty());
     event_destroy(&event_);
 }
 
-void PortDispatcher::FreePackets_NoLock() {
+void PortDispatcher::FreePacketsLocked() {
     while (!packets_.is_empty()) {
         IOP_Packet::Delete(packets_.pop_front());
     }
@@ -113,7 +113,7 @@ void PortDispatcher::FreePackets_NoLock() {
 void PortDispatcher::on_zero_handles() {
     AutoLock al(&lock_);
     no_clients_ = true;
-    FreePackets_NoLock();
+    FreePacketsLocked();
 }
 
 mx_status_t PortDispatcher::Queue(IOP_Packet* packet) {

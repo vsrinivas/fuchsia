@@ -312,7 +312,7 @@ mx_status_t sys_waitset_add(mx_handle_t ws_handle_value,
     auto up = ProcessDispatcher::GetCurrent();
     AutoLock lock(up->handle_table_lock());
 
-    Handle* ws_handle = up->GetHandle_NoLock(ws_handle_value);
+    Handle* ws_handle = up->GetHandleLocked(ws_handle_value);
     if (!ws_handle)
         return up->BadHandle(ws_handle_value, ERR_BAD_HANDLE);
     if (ws_handle->dispatcher()->get_type() != DispatchTag<WaitSetDispatcher>::ID)
@@ -322,7 +322,7 @@ mx_status_t sys_waitset_add(mx_handle_t ws_handle_value,
     if (!magenta_rights_check(ws_handle->rights(), MX_RIGHT_WRITE))
         return up->BadHandle(ws_handle_value, ERR_ACCESS_DENIED);
 
-    Handle* handle = up->GetHandle_NoLock(handle_value);
+    Handle* handle = up->GetHandleLocked(handle_value);
     if (!handle)
         return up->BadHandle(handle_value, ERR_BAD_HANDLE);
     if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))

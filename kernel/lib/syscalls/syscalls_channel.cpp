@@ -163,7 +163,7 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
         size_t reply_channel_found = -1;
 
         for (size_t ix = 0; ix != num_handles; ++ix) {
-            auto handle = up->GetHandle_NoLock(handles[ix]);
+            auto handle = up->GetHandleLocked(handles[ix]);
             if (!handle)
                 return up->BadHandle(handles[ix], ERR_BAD_HANDLE);
 
@@ -191,13 +191,13 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
         }
 
         for (size_t ix = 0; ix != num_handles; ++ix) {
-            auto handle = up->RemoveHandle_NoLock(handles[ix]).release();
+            auto handle = up->RemoveHandleLocked(handles[ix]).release();
             // Passing duplicate handles is not allowed.
             // If we've already seen this handle flag an error.
             if (!handle) {
                 // Put back the handles we've already removed.
                 for (size_t idx = 0; idx < ix; ++idx) {
-                    up->UndoRemoveHandle_NoLock(handles[idx]);
+                    up->UndoRemoveHandleLocked(handles[idx]);
                 }
                 // TODO: more specific error?
                 return ERR_INVALID_ARGS;
@@ -261,7 +261,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
         // Write failed, put back the handles into this process.
         AutoLock lock(up->handle_table_lock());
         for (size_t ix = 0; ix != num_handles; ++ix) {
-            up->UndoRemoveHandle_NoLock(handles[ix]);
+            up->UndoRemoveHandleLocked(handles[ix]);
         }
     }
 
@@ -332,7 +332,7 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t flags,
             // 1. Put back the handles into this process.
             AutoLock lock(up->handle_table_lock());
             for (size_t ix = 0; ix != num_handles; ++ix) {
-                up->UndoRemoveHandle_NoLock(handles[ix]);
+                up->UndoRemoveHandleLocked(handles[ix]);
             }
             // 2. Return error directly
             return result;
