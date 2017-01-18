@@ -38,6 +38,14 @@ public:
         return mx_channel_write(get(), flags, bytes, num_bytes, handles,
                                 num_handles);
     }
+
+    mx_status_t call(uint32_t flags, mx_time_t timeout,
+                     const mx_channel_call_args_t* args,
+                     uint32_t* actual_bytes, uint32_t* actual_handles,
+                     mx_status_t* read_status) {
+        return mx_channel_call(get(), flags, timeout, args, actual_bytes,
+                               actual_handles, read_status);
+    }
 };
 
 } // namespace mx
