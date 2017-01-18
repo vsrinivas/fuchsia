@@ -52,10 +52,16 @@ class PageStorage {
   // It is guaranteed that valid pages have at least one head commit, even if
   // they are empty.
   virtual Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) = 0;
+  // Finds the commit with the given |commit_id| and calls the given |callback|
+  // with the result.
+  virtual void GetCommit(
+      const CommitId& commit_id,
+      std::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
   // Finds the commit with the given |commit_id| and stores the value in
   // |commit|.
-  virtual Status GetCommit(const CommitId& commit_id,
-                           std::unique_ptr<const Commit>* commit) = 0;
+  virtual Status GetCommitSynchronous(
+      const CommitId& commit_id,
+      std::unique_ptr<const Commit>* commit) = 0;
 
   // Adds a list of commits with the given ids and bytes to storage. The
   // callback is called when the storage has finished processing the commits. If

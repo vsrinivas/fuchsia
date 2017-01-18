@@ -217,7 +217,8 @@ TEST_F(MergeResolverTest, LastOneWins) {
   EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
   EXPECT_EQ(1u, ids.size());
   std::unique_ptr<const storage::Commit> commit;
-  EXPECT_EQ(storage::Status::OK, page_storage_->GetCommit(ids[0], &commit));
+  EXPECT_EQ(storage::Status::OK,
+            page_storage_->GetCommitSynchronous(ids[0], &commit));
   std::vector<storage::Entry> content_vector = GetCommitContents(*commit);
   // Entries are ordered by keys
   ASSERT_EQ(2u, content_vector.size());

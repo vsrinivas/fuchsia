@@ -65,8 +65,9 @@ Status FakePageStorage::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
   return Status::OK;
 }
 
-Status FakePageStorage::GetCommit(const CommitId& commit_id,
-                                  std::unique_ptr<const Commit>* commit) {
+Status FakePageStorage::GetCommitSynchronous(
+    const CommitId& commit_id,
+    std::unique_ptr<const Commit>* commit) {
   auto it = journals_.find(commit_id);
   if (it == journals_.end()) {
     return Status::NOT_FOUND;

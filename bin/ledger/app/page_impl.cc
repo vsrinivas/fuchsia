@@ -53,7 +53,8 @@ void PageImpl::GetSnapshot(
   TRACE_DURATION("page", "get_snapshot");
 
   std::unique_ptr<const storage::Commit> commit;
-  storage::Status status = storage_->GetCommit(GetCurrentCommitId(), &commit);
+  storage::Status status =
+      storage_->GetCommitSynchronous(GetCurrentCommitId(), &commit);
   if (status != storage::Status::OK) {
     callback(PageUtils::ConvertStatus(status));
     return;

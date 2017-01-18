@@ -356,8 +356,17 @@ Status PageStorageImpl::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
   return db_.GetHeads(commit_ids);
 }
 
-Status PageStorageImpl::GetCommit(const CommitId& commit_id,
-                                  std::unique_ptr<const Commit>* commit) {
+void PageStorageImpl::GetCommit(
+    const CommitId& commit_id,
+    std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+  std::unique_ptr<const Commit> commit;
+  Status s = GetCommitSynchronous(commit_id, &commit);
+  callback(s, std::move(commit));
+}
+
+Status PageStorageImpl::GetCommitSynchronous(
+    const CommitId& commit_id,
+    std::unique_ptr<const Commit>* commit) {
   if (IsFirstCommit(commit_id)) {
     *commit = CommitImpl::Empty(this);
     return Status::OK;
@@ -479,7 +488,7 @@ Status PageStorageImpl::GetUnsyncedCommits(
   std::vector<std::unique_ptr<const Commit>> result;
   for (size_t i = 0; i < result_ids.size(); ++i) {
     std::unique_ptr<const Commit> commit;
-    Status s = GetCommit(result_ids[i], &commit);
+    Status s = GetCommitSynchronous(result_ids[i], &commit);
     if (s != Status::OK) {
       return s;
     }
@@ -503,7 +512,7 @@ void PageStorageImpl::GetUnsyncedObjectIds(
     const CommitId& commit_id,
     std::function<void(Status, std::vector<ObjectId>)> callback) {
   std::unique_ptr<const Commit> commit;
-  Status s = GetCommit(commit_id, &commit);
+  Status s = GetCommitSynchronous(commit_id, &commit);
   if (s != Status::OK) {
     callback(s, std::vector<ObjectId>());
     return;

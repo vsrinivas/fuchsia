@@ -55,7 +55,7 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 
 // Fake implementation of storage::PageStorage. Injects the data that PageSync
 // asks about: page id, existing unsynced commits to be retrieved through
-// GetUnsyncedCommitS() and new commits to be retrieved through GetCommit().
+// GetUnsyncedCommits() and new commits to be retrieved through GetCommit().
 // Registers the commits marked as synced.
 class TestPageStorage : public storage::test::PageStorageEmptyImpl {
  public:
@@ -66,7 +66,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override {}
 
-  storage::Status GetCommit(
+  storage::Status GetCommitSynchronous(
       const storage::CommitId& commit_id,
       std::unique_ptr<const storage::Commit>* commit) override {
     if (should_fail_get_commit) {

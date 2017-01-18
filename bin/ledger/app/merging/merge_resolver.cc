@@ -99,7 +99,7 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   for (const storage::CommitId& id : heads) {
     std::unique_ptr<const storage::Commit> commit;
-    storage::Status s = storage_->GetCommit(id, &commit);
+    storage::Status s = storage_->GetCommitSynchronous(id, &commit);
     FTL_DCHECK(s == storage::Status::OK);
     commits.push_back(std::move(commit));
   }
@@ -137,7 +137,8 @@ std::unique_ptr<const storage::Commit> MergeResolver::FindCommonAncestor(
     std::vector<storage::CommitId> parent_ids = commit->GetParentIds();
     for (const storage::CommitId& parent_id : parent_ids) {
       std::unique_ptr<const storage::Commit> parent_commit;
-      storage::Status s = storage_->GetCommit(parent_id, &parent_commit);
+      storage::Status s =
+          storage_->GetCommitSynchronous(parent_id, &parent_commit);
       FTL_DCHECK(s == storage::Status::OK);
       commits.emplace(std::move(parent_commit));
     }

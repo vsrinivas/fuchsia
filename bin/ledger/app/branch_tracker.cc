@@ -17,21 +17,20 @@ class BranchTracker::PageWatcherContainer {
   PageWatcherContainer(PageWatcherPtr watcher,
                        PageManager* page_manager,
                        storage::PageStorage* storage,
-                       std::unique_ptr<const storage::Commit> base_commit
-                       )
+                       std::unique_ptr<const storage::Commit> base_commit)
       : change_in_flight_(false),
         last_commit_(std::move(base_commit)),
         manager_(page_manager),
         storage_(storage),
-        interface_(std::move(watcher)) {
-  }
+        interface_(std::move(watcher)) {}
 
   void set_on_empty(ftl::Closure on_empty_callback) {
     interface_.set_connection_error_handler(std::move(on_empty_callback));
   }
 
   void UpdateCommit(const storage::CommitId& commit_id) {
-    storage::Status status = storage_->GetCommit(commit_id, &current_commit_);
+    storage::Status status =
+        storage_->GetCommitSynchronous(commit_id, &current_commit_);
     FTL_DCHECK(status == storage::Status::OK);
     SendCommit();
   }

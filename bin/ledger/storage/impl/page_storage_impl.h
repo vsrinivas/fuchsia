@@ -47,8 +47,11 @@ class PageStorageImpl : public PageStorage {
   PageId GetId() override;
   void SetSyncDelegate(PageSyncDelegate* page_sync) override;
   Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) override;
-  Status GetCommit(const CommitId& commit_id,
-                   std::unique_ptr<const Commit>* commit) override;
+  void GetCommit(const CommitId& commit_id,
+                 std::function<void(Status, std::unique_ptr<const Commit>)>
+                     callback) override;
+  Status GetCommitSynchronous(const CommitId& commit_id,
+                              std::unique_ptr<const Commit>* commit) override;
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
                           std::function<void(Status)>) override;
   Status StartCommit(const CommitId& commit_id,

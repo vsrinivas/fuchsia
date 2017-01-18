@@ -134,7 +134,7 @@ void JournalDBImpl::Commit(
   }
 
   std::unique_ptr<const storage::Commit> base_commit;
-  status = page_storage_->GetCommit(base_, &base_commit);
+  status = page_storage_->GetCommitSynchronous(base_, &base_commit);
   if (status != Status::OK) {
     callback(status, "");
     return;
@@ -165,7 +165,7 @@ void JournalDBImpl::Commit(
         if (other_) {
           std::unique_ptr<const storage::Commit> other_commit;
           Status commit_status =
-              page_storage_->GetCommit(*other_, &other_commit);
+              page_storage_->GetCommitSynchronous(*other_, &other_commit);
           if (commit_status != Status::OK) {
             callback(commit_status, "");
             return;
