@@ -40,6 +40,7 @@ bool HasReservedHandles(
 }
 
 mx::process CreateProcess(
+    const mx::job& job,
     ApplicationPackagePtr package,
     ApplicationLaunchInfoPtr launch_info,
     fidl::InterfaceHandle<ApplicationEnvironment> environment) {
@@ -73,8 +74,10 @@ mx::process CreateProcess(
   // TODO(abarth): We probably shouldn't pass environ, but currently this
   // is very useful as a way to tell the loader in the child process to
   // print out load addresses so we can understand crashes.
+  // TODO(vardhan): The job passed to the child process (which will be
+  // duplicated from this |job|) should not be killable.
   mx_handle_t result = launchpad_launch_mxio_vmo_etc(
-      path_arg, data.release(), argv.size(), argv.data(), environ,
+      job.get(), path_arg, data.release(), argv.size(), argv.data(), environ,
       handles.size(), handles.data(), ids.data());
   if (result < 0) {
     auto status = static_cast<mx_status_t>(result);
@@ -113,6 +116,12 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
     : parent_(parent) {
   host_.Bind(std::move(host));
 
+  // parent_ is null if this is the root application environment. if so, we
+  // derive from the application manager's job.
+  mx_handle_t parent_job =
+      parent_ != nullptr ? parent_->job_.get() : mx_job_default();
+  FTL_CHECK(mx::job::create(parent_job, 0u, &job_) == NO_ERROR);
+
   // Get the ApplicationLoader service up front.
   ServiceProviderPtr service_provider;
   GetServices(service_provider.NewRequest());
@@ -124,7 +133,9 @@ ApplicationEnvironmentImpl::ApplicationEnvironmentImpl(
     label_ = label.get().substr(0, ApplicationEnvironment::kLabelMaxLength);
 }
 
-ApplicationEnvironmentImpl::~ApplicationEnvironmentImpl() = default;
+ApplicationEnvironmentImpl::~ApplicationEnvironmentImpl() {
+  job_.kill();
+}
 
 std::unique_ptr<ApplicationEnvironmentControllerImpl>
 ApplicationEnvironmentImpl::ExtractChild(ApplicationEnvironmentImpl* child) {
@@ -307,6 +318,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     fidl::InterfaceRequest<ApplicationController> controller) {
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateProcess(
+      job_,
       std::move(package), std::move(launch_info), std::move(environment));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
