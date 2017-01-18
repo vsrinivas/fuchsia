@@ -17,7 +17,7 @@ static char* setlocale_one_unlocked(int cat, const char* name) {
     else
         lm = libc.global_locale.cat[cat];
 
-    return lm ? (char*)lm->name : "C";
+    return (char*)(lm ? lm->name : "C");
 }
 
 char* __strchrnul(const char*, int);

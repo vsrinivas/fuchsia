@@ -49,7 +49,7 @@ int getservbyname_r(const char* name, const char* prots, struct servent* se, cha
     se->s_aliases[0] = se->s_name;
     se->s_aliases[1] = 0;
     se->s_port = htons(servs[0].port);
-    se->s_proto = servs[0].proto == IPPROTO_TCP ? "tcp" : "udp";
+    se->s_proto = (char*)(servs[0].proto == IPPROTO_TCP ? "tcp" : "udp");
 
     *res = se;
     return 0;

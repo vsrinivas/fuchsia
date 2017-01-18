@@ -4,17 +4,17 @@
 char* dirname(char* s) {
     size_t i;
     if (!s || !*s)
-        return ".";
+        return (char*)".";
     i = strlen(s) - 1;
     for (; s[i] == '/'; i--)
         if (!i)
-            return "/";
+            return (char*)"/";
     for (; s[i] != '/'; i--)
         if (!i)
-            return ".";
+            return (char*)".";
     for (; s[i] == '/'; i--)
         if (!i)
-            return "/";
+            return (char*)"/";
     s[i + 1] = 0;
     return s;
 }

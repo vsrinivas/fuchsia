@@ -9,7 +9,7 @@
 static char* current_domain;
 
 char* __gettextdomain(void) {
-    return current_domain ? current_domain : "messages";
+    return current_domain ? current_domain : (char*)"messages";
 }
 
 char* textdomain(const char* domainname) {

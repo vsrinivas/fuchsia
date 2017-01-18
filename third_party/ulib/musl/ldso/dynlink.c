@@ -1165,10 +1165,10 @@ static void update_tls_size(void) {
 
 __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
     void* start_arg, void* vdso_map) {
-    ldso.base = _BASE;
+    ldso.base = (unsigned char*)_BASE;
 
     Ehdr* ehdr = (void*)ldso.base;
-    ldso.name = "libc.so";
+    ldso.name = (char*)"libc.so";
     ldso.global = 1;
     ldso.phnum = ehdr->e_phnum;
     ldso.phdr = laddr(&ldso, ehdr->e_phoff);
@@ -1182,7 +1182,7 @@ __attribute__((__visibility__("hidden"))) dl_start_return_t __dls2(
         // can depend on it and require its symbols.
 
         vdso.base = vdso_map;
-        vdso.name = "<vDSO>";
+        vdso.name = (char*)"<vDSO>";
         vdso.global = 1;
 
         Ehdr* ehdr = vdso_map;
@@ -1429,7 +1429,7 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
 
     // Reset from the argv[0] value so we don't save a dangling pointer
     // into the caller's stack frame.
-    app.name = "";
+    app.name = (char*)"";
 
     errno = 0;
 

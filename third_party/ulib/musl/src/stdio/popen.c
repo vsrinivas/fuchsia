@@ -50,7 +50,7 @@ FILE* popen(const char* cmd, const char* mode) {
     e = ENOMEM;
     if (!posix_spawn_file_actions_init(&fa)) {
         if (!posix_spawn_file_actions_adddup2(&fa, p[1 - op], 1 - op)) {
-            if (!(e = posix_spawn(&pid, "/bin/sh", &fa, 0, (char* []){"sh", "-c", (char*)cmd, 0},
+            if (!(e = posix_spawn(&pid, "/bin/sh", &fa, 0, (char* []){(char*)"sh", (char*)"-c", (char*)cmd, 0},
                                   __environ))) {
                 posix_spawn_file_actions_destroy(&fa);
                 f->pipe_pid = pid;

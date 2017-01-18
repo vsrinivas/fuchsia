@@ -12,7 +12,7 @@ int __lookup_serv(struct service buf[static MAXSERVS], const char* name, int pro
                   int flags) {
     char line[128];
     int cnt = 0;
-    char *p, *z = "";
+    char *p, *z = (char*)"";
     unsigned long port = 0;
 
     switch (socktype) {

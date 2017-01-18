@@ -11,7 +11,7 @@ char* dlerror() {
     self->dlerror_flag = 0;
     char* s = self->dlerror_buf;
     if (s == (void*)-1)
-        return "Dynamic linker failed to allocate memory for error message";
+        return (char*)"Dynamic linker failed to allocate memory for error message";
     else
         return s;
 }

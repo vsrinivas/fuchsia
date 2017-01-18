@@ -273,7 +273,7 @@ static int fmt_fp(FILE* f, long double y, int w, int p, int fl, int t) {
         prefix++, pl = 0;
 
     if (!isfinite(y)) {
-        char* s = (t & 32) ? "inf" : "INF";
+        const char* s = (t & 32) ? "inf" : "INF";
         if (y != y)
             s = (t & 32) ? "nan" : "NAN";
         pad(f, ' ', w, 3 + pl, fl & ~ZERO_PAD);
@@ -539,7 +539,7 @@ static int getint(char** s) {
 }
 
 static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg, int* nl_type) {
-    char *a, *z, *s = (char *)fmt;
+    char *a, *z, *s = (char*)fmt;
     unsigned l10n = 0, fl;
     int w, p;
     union arg arg;
@@ -737,7 +737,7 @@ static int printf_core(FILE* f, const char* fmt, va_list* ap, union arg* nl_arg,
                 a = strerror(errno);
             else
             case 's':
-            a = arg.p ? arg.p : "(null)";
+            a = arg.p ? arg.p : (char*)"(null)";
             z = memchr(a, 0, p);
             if (!z)
                 z = a + p;

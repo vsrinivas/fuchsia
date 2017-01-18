@@ -34,7 +34,7 @@ static int do_wordexp(const char* s, wordexp_t* we, int flags) {
     int sq = 0, dq = 0;
     size_t np = 0;
     char *w, **tmp;
-    char* redir = (flags & WRDE_SHOWERR) ? "" : "2>/dev/null";
+    const char* redir = (flags & WRDE_SHOWERR) ? "" : "2>/dev/null";
     int err = 0;
     FILE* f;
     size_t wc = 0;

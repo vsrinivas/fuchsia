@@ -33,7 +33,7 @@ int system(const char* cmd) {
     posix_spawnattr_setsigmask(&attr, &old);
     posix_spawnattr_setsigdefault(&attr, &reset);
     posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK);
-    ret = posix_spawn(&pid, "/bin/sh", 0, &attr, (char* []){"sh", "-c", (char*)cmd, 0}, __environ);
+    ret = posix_spawn(&pid, "/bin/sh", 0, &attr, (char* []){(char*)"sh", (char*)"-c", (char*)cmd, 0}, __environ);
     posix_spawnattr_destroy(&attr);
 
     if (!ret)

@@ -67,31 +67,31 @@ char* __nl_langinfo_l(nl_item item, locale_t loc) {
     const char* str;
 
     if (item == CODESET)
-        return MB_CUR_MAX == 1 ? "ASCII" : "UTF-8";
+        return (char*)(MB_CUR_MAX == 1 ? "ASCII" : "UTF-8");
 
     switch (cat) {
     case LC_NUMERIC:
         if (idx > 1)
-            return "";
+            return (char*)"";
         str = c_numeric;
         break;
     case LC_TIME:
         if (idx > 0x31)
-            return "";
+            return (char*)"";
         str = c_time;
         break;
     case LC_MONETARY:
         if (idx > 0)
-            return "";
+            return (char*)"";
         str = "";
         break;
     case LC_MESSAGES:
         if (idx > 3)
-            return "";
+            return (char*)"";
         str = c_messages;
         break;
     default:
-        return "";
+        return (char*)"";
     }
 
     for (; idx; idx--, str++)

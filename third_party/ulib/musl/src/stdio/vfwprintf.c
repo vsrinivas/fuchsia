@@ -382,7 +382,7 @@ static int wprintf_core(FILE* f, const wchar_t* fmt, va_list* ap, union arg* nl_
             arg.p = strerror(errno);
         case 's':
             if (!arg.p)
-                arg.p = "(null)";
+                arg.p = (char*)"(null)";
             bs = arg.p;
             if (p < 0)
                 p = INT_MAX;

@@ -99,7 +99,7 @@ struct msgcat {
 };
 
 static char* dummy_gettextdomain(void) {
-    return "messages";
+    return (char*)"messages";
 }
 
 weak_alias(dummy_gettextdomain, __gettextdomain);
