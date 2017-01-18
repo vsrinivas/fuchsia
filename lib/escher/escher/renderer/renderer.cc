@@ -24,14 +24,10 @@ Renderer::~Renderer() {
   escher_->DecrementRendererCount();
 }
 
-void Renderer::BeginFrame(const FramebufferPtr& framebuffer) {
+void Renderer::BeginFrame() {
   FTL_DCHECK(!current_frame_);
   ++frame_number_;
   current_frame_ = pool_->GetCommandBuffer();
-
-  current_frame_->AddWaitSemaphore(
-      framebuffer->TakeWaitSemaphore(),
-      vk::PipelineStageFlagBits::eColorAttachmentOutput);
 }
 
 void Renderer::SubmitPartialFrame() {

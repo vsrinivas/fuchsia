@@ -16,10 +16,6 @@ VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
       renderer_(renderer),
       device_(renderer->vulkan_context().device),
       queue_(renderer->vulkan_context().queue) {
-  framebuffers_.reserve(swapchain.images.size());
-  for (auto& im : swapchain.images) {
-    framebuffers_.push_back(renderer->NewFramebuffer(im));
-  }
   image_available_semaphore_ = Semaphore::New(device_);
   render_finished_semaphore_ = Semaphore::New(device_);
 }
@@ -42,9 +38,9 @@ void VulkanSwapchainHelper::DrawFrame(Stage& stage, Model& model) {
 
   // Render the scene.  The Renderer will wait for acquireNextImageKHR() to
   // signal the semaphore.
-  auto& framebuffer = framebuffers_[swapchain_index];
-  framebuffer->SetWaitSemaphore(image_available_semaphore_);
-  renderer_->DrawFrame(stage, model, framebuffer, render_finished_semaphore_,
+  auto& image = swapchain_.images[swapchain_index];
+  image->SetWaitSemaphore(image_available_semaphore_);
+  renderer_->DrawFrame(stage, model, image, render_finished_semaphore_,
                        nullptr);
 
   // When the image is completely rendered, present it.

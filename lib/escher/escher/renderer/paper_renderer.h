@@ -13,13 +13,9 @@ class PaperRenderer : public Renderer {
  public:
   void DrawFrame(Stage& stage,
                  Model& model,
-                 const FramebufferPtr& framebuffer,
+                 const ImagePtr& color_image_out,
                  const SemaphorePtr& frame_done,
                  FrameRetiredCallback frame_retired_callback) override;
-
-  // Given a color image, create a framebuffer into which clients can draw
-  // frames.
-  FramebufferPtr NewFramebuffer(const ImagePtr& image) override;
 
   // Set whether one or more debug-overlays is to be show.
   void set_show_debug_info(bool b) { show_debug_info_ = b; }
@@ -45,19 +41,27 @@ class PaperRenderer : public Renderer {
   // Multiple render passes.  The first samples the depth buffer to generate
   // per-pixel occlusion information, and subsequent passes filter this noisy
   // data.
-  void DrawSsdoPasses(const FramebufferPtr& framebuffer, Stage& stage);
+  void DrawSsdoPasses(const TexturePtr& depth_in,
+                      const ImagePtr& color_out,
+                      const ImagePtr& color_aux,
+                      Stage& stage);
 
   // Render pass that renders the fully-lit/shadowed scene.  Uses the depth
   // buffer from DrawDepthPrePass(), and the illumination texture from
   // DrawSsdoPasses().
   // TODO: on GPUs that use tiled rendering, it may be faster simply clear the
   // depth buffer instead of reusing the values from DrawDepthPrePass().  This
-  // might save bandwidth at the cost of more per-fragment computation (but the
-  // latter might be mitigated by sorting front-to-back, etc.).  Revisit after
-  // doing performance profiling.
+  // might save bandwidth at the cost of more per-fragment computation (but
+  // the latter might be mitigated by sorting front-to-back, etc.).  Revisit
+  // after doing performance profiling.
   void DrawLightingPass(const FramebufferPtr& framebuffer,
+                        const TexturePtr& illumination_texture,
                         Stage& stage,
                         Model& model);
+
+  void DrawDebugOverlays(const ImagePtr& output,
+                         const ImagePtr& depth,
+                         const ImagePtr& illumination);
 
   MeshPtr full_screen_;
   impl::ImageCache* image_cache_;

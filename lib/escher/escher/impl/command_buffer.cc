@@ -70,6 +70,11 @@ void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore,
   }
 }
 
+void CommandBuffer::TakeWaitSemaphore(const ResourcePtr& resource,
+                                      vk::PipelineStageFlags stage) {
+  AddWaitSemaphore(resource->TakeWaitSemaphore(), stage);
+}
+
 void CommandBuffer::AddSignalSemaphore(SemaphorePtr semaphore) {
   if (semaphore) {
     // Build up list that will be used when frame is submitted.

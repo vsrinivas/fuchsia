@@ -43,6 +43,11 @@ class CommandBuffer {
   // No-op if semaphore is null.
   void AddWaitSemaphore(SemaphorePtr semaphore, vk::PipelineStageFlags stage);
 
+  // For convenience, calls TakeWaitSemaphore() on the resource, and passes the
+  // result to AddWaitSemaphore().
+  void TakeWaitSemaphore(const ResourcePtr& resource,
+                         vk::PipelineStageFlags stage);
+
   // During Submit(), these semaphores will be added to the vk::SubmitInfo.
   // No-op if semaphore is null.
   void AddSignalSemaphore(SemaphorePtr semaphore);

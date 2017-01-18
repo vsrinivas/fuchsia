@@ -20,13 +20,9 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
  public:
   virtual void DrawFrame(Stage& stage,
                          Model& model,
-                         const FramebufferPtr& framebuffer,
+                         const ImagePtr& color_image_out,
                          const SemaphorePtr& frame_done,
                          FrameRetiredCallback frame_retired_callback) = 0;
-
-  // Creating a Vulkan Framebuffer requires a render-pass to be specified, which
-  // can only be provided by a concrete Renderer subclass.
-  virtual FramebufferPtr NewFramebuffer(const ImagePtr& image) = 0;
 
   const VulkanContext& vulkan_context() { return context_; }
 
@@ -35,7 +31,7 @@ class Renderer : public ftl::RefCountedThreadSafe<Renderer> {
   virtual ~Renderer();
 
   // Obtain a CommandBuffer, to record commands for the current frame.
-  void BeginFrame(const FramebufferPtr& framebuffer);
+  void BeginFrame();
   void SubmitPartialFrame();
   void EndFrame(const SemaphorePtr& frame_done,
                 FrameRetiredCallback frame_retired_callback);

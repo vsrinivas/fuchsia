@@ -233,7 +233,6 @@ void Demo::CreateDeviceAndQueue() {
 void Demo::CreateSwapchain(const WindowParams& window_params) {
   FTL_CHECK(!swapchain_.swapchain);
   FTL_CHECK(swapchain_.images.empty());
-  FTL_CHECK(swapchain_.image_views.empty());
 
   vk::SurfaceCapabilitiesKHR surface_caps;
   {
@@ -362,8 +361,6 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
 
     std::vector<vk::Image> images(std::move(result.value));
     std::vector<escher::ImagePtr> escher_images;
-    std::vector<vk::ImageView> image_views;
-    image_views.reserve(images.size());
     escher_images.reserve(images.size());
     for (auto& im : images) {
       escher::ImageInfo image_info;
@@ -372,35 +369,15 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
       image_info.height = swapchain_extent.height;
       image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
       escher_images.push_back(CreateImage(image_info, im, nullptr));
-
-      vk::ImageSubresourceRange range;
-      range.aspectMask = vk::ImageAspectFlagBits::eColor;
-      range.levelCount = 1;
-      range.layerCount = 1;
-
-      vk::ImageViewCreateInfo info;
-      info.viewType = vk::ImageViewType::e2D;
-      info.format = format;
-      info.subresourceRange = range;
-      info.image = im;
-
-      auto result = device_.createImageView(info);
-      VK_CHECK_RESULT(result);
-
-      image_views.push_back(result.value);
     }
     swapchain_ = escher::VulkanSwapchain(
-        swapchain, escher_images, image_views, swapchain_extent.width,
+        swapchain, escher_images, swapchain_extent.width,
         swapchain_extent.height, format, color_space);
   }
 }
 
 void Demo::DestroySwapchain() {
-  for (auto& iview : swapchain_.image_views) {
-    device_.destroyImageView(iview);
-  }
   swapchain_.images.clear();
-  swapchain_.image_views.clear();
 
   FTL_CHECK(swapchain_.swapchain);
   device_.destroySwapchainKHR(swapchain_.swapchain);

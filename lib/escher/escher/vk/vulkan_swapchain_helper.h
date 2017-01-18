@@ -21,7 +21,6 @@ class VulkanSwapchainHelper {
   RendererPtr renderer_;
   vk::Device device_;
   vk::Queue queue_;
-  std::vector<FramebufferPtr> framebuffers_;
   SemaphorePtr image_available_semaphore_;
   SemaphorePtr render_finished_semaphore_;
 
