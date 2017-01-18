@@ -1,0 +1,86 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines a Rust artifact
+#
+# Only for internal use, supporting rust_library and rust_binary.
+template("rust_artifact") {
+
+  if (defined(invoker.name)) {
+    name = invoker.name
+  } else {
+    assert(false, "Must specify a crate name")
+  }
+
+  if (defined(invoker.type)) {
+    type = invoker.type
+  } else {
+    assert(false, "Must specify an artifact type")
+  }
+
+  assert(current_cpu == "x64")
+  assert(current_os == "mac" || current_os == "linux" || current_os == "fuchsia")
+  if (current_os == "mac") {
+    target_triple = "x86_64-darwin-apple"
+  } else if (current_os == "linux") {
+    target_triple = "x86_64-unknown-linux-gnu"
+  } else if (current_os == "fuchsia") {
+    target_triple = "x86_64-unknown-fuchsia"
+  }
+
+  assert(host_cpu == "x64")
+  assert(host_os == "mac" || host_os == "linux")
+  if (host_os == "mac") {
+    host_triple = "x86_64-darwin-apple"
+  } else if (host_os == "linux") {
+    host_triple = "x86_64-unknown-linux-gnu"
+  }
+  rust_base = "//buildtools/rust/rust-$host_triple"
+
+  # TODO(pylaligand): toggle debug/release depending on build type.
+  assert(type == "bin" || type == "lib")
+  if (type == "bin") {
+    output_file = "$target_out_dir/$target_triple/debug/$name"
+  } else if (type == "lib") {
+    output_file = "$target_out_dir/$target_triple/debug/lib$name.rlib"
+  }
+
+  action(target_name)  {
+    script = "//build/rust/build_target.py"
+
+    depfile = "$output_file.d"
+
+    inputs = [
+      "Cargo.toml",
+    ]
+
+    outputs = [
+      output_file,
+    ]
+
+    args = [
+      "--type",
+      type,
+      "--out-dir",
+      rebase_path(target_out_dir),
+      "--gen-dir",
+      rebase_path(target_gen_dir),
+      "--crate-root",
+      rebase_path("."),
+      "--cargo",
+      rebase_path("$rust_base/bin/cargo"),
+      "--rustc",
+      rebase_path("$rust_base/bin/rustc"),
+      "--target-triple",
+      target_triple,
+    ]
+
+    if (is_fuchsia) {
+      args += [
+        "--linker",
+        rebase_path("//rust/magenta-rs/tools/x86-64-unknown-fuchsia-cc"),
+      ]
+    }
+  }
+}

@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rust_artifact.gni")
+
+# Defines a Rust library
+#
+# Parameters
+#
+#   name
+#     Name of the crate as defined in its manifest file.
+#
+# Example of usage:
+#
+#   rust_library("foo") {
+#     name = "foo_rs"
+#   }
+template("rust_library") {
+  rust_artifact(target_name) {
+    forward_variables_from(invoker, [ "name" ])
+    type = "lib"
+  }
+}
