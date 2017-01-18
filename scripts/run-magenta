@@ -9,6 +9,7 @@
 function HELP {
     echo "help:"
     echo "-a <arch>           : arm32, arm64, or x86-64"
+    echo "-A                  : use Intel HD Audio"
     echo "-b                  : build first"
     echo "-c                  : add item to kernel commandline"
     echo "-d                  : run with emulated disk"
