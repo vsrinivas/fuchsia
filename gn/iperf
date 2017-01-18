@@ -1,0 +1,12 @@
+{
+    "labels": [
+        "//third_party/iperf",
+        "//third_party/iperf(//build/toolchain:host_x64)"
+    ],
+    "binaries": [
+        {
+            "binary": "iperf",
+            "bootfs_path": "benchmarks/iperf"
+        }
+    ]
+}
