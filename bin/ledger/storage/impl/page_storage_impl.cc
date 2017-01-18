@@ -477,26 +477,28 @@ Status PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
   return Status::OK;
 }
 
-Status PageStorageImpl::GetUnsyncedCommits(
-    std::vector<std::unique_ptr<const Commit>>* commits) {
-  std::vector<CommitId> result_ids;
-  Status s = db_.GetUnsyncedCommitIds(&result_ids);
+void PageStorageImpl::GetUnsyncedCommits(
+    std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
+        callback) {
+  std::vector<CommitId> commit_ids;
+  Status s = db_.GetUnsyncedCommitIds(&commit_ids);
   if (s != Status::OK) {
-    return s;
+    callback(s, {});
+    return;
   }
 
-  std::vector<std::unique_ptr<const Commit>> result;
-  for (size_t i = 0; i < result_ids.size(); ++i) {
+  std::vector<std::unique_ptr<const Commit>> commits;
+  for (size_t i = 0; i < commit_ids.size(); ++i) {
     std::unique_ptr<const Commit> commit;
-    Status s = GetCommitSynchronous(result_ids[i], &commit);
+    Status s = GetCommitSynchronous(commit_ids[i], &commit);
     if (s != Status::OK) {
-      return s;
+      callback(s, {});
+      return;
     }
-    result.push_back(std::move(commit));
+    commits.push_back(std::move(commit));
   }
 
-  commits->swap(result);
-  return Status::OK;
+  callback(Status::OK, std::move(commits));
 }
 
 Status PageStorageImpl::MarkCommitSynced(const CommitId& commit_id) {

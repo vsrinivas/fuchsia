@@ -121,15 +121,16 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     return storage::Status::OK;
   }
 
-  storage::Status GetUnsyncedCommits(
-      std::vector<std::unique_ptr<const storage::Commit>>* commits) override {
+  void GetUnsyncedCommits(
+      std::function<void(storage::Status,
+                         std::vector<std::unique_ptr<const storage::Commit>>)>
+          callback) override {
     if (should_fail_get_unsynced_commits) {
-      return storage::Status::IO_ERROR;
+      callback(storage::Status::IO_ERROR, {});
+      return;
     }
-
-    commits->swap(unsynced_commits_to_return);
+    callback(storage::Status::OK, std::move(unsynced_commits_to_return));
     unsynced_commits_to_return.clear();
-    return storage::Status::OK;
   }
 
   storage::Status MarkCommitSynced(

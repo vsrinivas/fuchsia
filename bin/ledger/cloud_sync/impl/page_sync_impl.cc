@@ -52,19 +52,22 @@ void PageSyncImpl::Start() {
   // TODO(ppi): either switch to a paginating API or (better?) ensure that long
   // backlogs of local commits are squashed in storage, as otherwise the list of
   // commits can be possibly very big.
-  std::vector<std::unique_ptr<const storage::Commit>> commits;
-  if (storage_->GetUnsyncedCommits(&commits) != storage::Status::OK) {
-    HandleError("Failed to retrieve the unsynced commits");
-    return;
-  }
+  storage_->GetUnsyncedCommits(
+      [this](storage::Status status,
+             std::vector<std::unique_ptr<const storage::Commit>> commits) {
+        if (status != storage::Status::OK) {
+          HandleError("Failed to retrieve the unsynced commits");
+          return;
+        }
 
-  for (auto& commit : commits) {
-    EnqueueUpload(std::move(commit));
-  }
+        for (auto& commit : commits) {
+          EnqueueUpload(std::move(commit));
+        }
 
-  // Subscribe to notifications about new commits in Storage.
-  storage_->AddCommitWatcher(this);
-  local_watch_set_ = true;
+        // Subscribe to notifications about new commits in Storage.
+        storage_->AddCommitWatcher(this);
+        local_watch_set_ = true;
+      });
 }
 
 void PageSyncImpl::SetOnIdle(ftl::Closure on_idle) {

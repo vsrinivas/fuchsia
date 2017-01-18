@@ -50,8 +50,9 @@ class PageStorageEmptyImpl : public PageStorage {
 
   Status RemoveCommitWatcher(CommitWatcher* watcher) override;
 
-  Status GetUnsyncedCommits(
-      std::vector<std::unique_ptr<const Commit>>* commits) override;
+  void GetUnsyncedCommits(
+      std::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
+          callback) override;
 
   Status MarkCommitSynced(const CommitId& commit_id) override;
 

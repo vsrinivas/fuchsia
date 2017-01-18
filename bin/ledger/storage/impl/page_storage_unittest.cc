@@ -310,6 +310,15 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     return result;
   }
 
+  std::vector<std::unique_ptr<const Commit>> GetUnsyncedCommits() {
+    Status status;
+    std::vector<std::unique_ptr<const Commit>> commits;
+    storage_->GetUnsyncedCommits(::test::Capture(
+        [this] { message_loop_.PostQuitTask(); }, &status, &commits));
+    EXPECT_EQ(Status::OK, status);
+    return commits;
+  }
+
   std::thread io_thread_;
   ftl::RefPtr<ftl::TaskRunner> io_runner_;
   files::ScopedTempDir tmp_dir_;
@@ -414,16 +423,14 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   EXPECT_EQ(commit->GetStorageBytes(), found->GetStorageBytes());
 
   // Check that the commit is not marked as unsynced.
-  std::vector<std::unique_ptr<const Commit>> commits;
-  EXPECT_EQ(Status::OK, storage_->GetUnsyncedCommits(&commits));
+  std::vector<std::unique_ptr<const Commit>> commits = GetUnsyncedCommits();
   EXPECT_TRUE(commits.empty());
 }
 
 TEST_F(PageStorageTest, SyncCommits) {
-  std::vector<std::unique_ptr<const Commit>> commits;
+  std::vector<std::unique_ptr<const Commit>> commits = GetUnsyncedCommits();
 
   // Initially there should be no unsynced commits.
-  EXPECT_EQ(Status::OK, storage_->GetUnsyncedCommits(&commits));
   EXPECT_TRUE(commits.empty());
 
   std::vector<std::unique_ptr<const Commit>> parent;
@@ -436,13 +443,13 @@ TEST_F(PageStorageTest, SyncCommits) {
 
   storage_->AddCommitFromLocal(
       std::move(commit), [](Status status) { EXPECT_EQ(Status::OK, status); });
-  EXPECT_EQ(Status::OK, storage_->GetUnsyncedCommits(&commits));
+  commits = GetUnsyncedCommits();
   EXPECT_EQ(1u, commits.size());
   EXPECT_EQ(storage_bytes, commits[0]->GetStorageBytes());
 
   // Mark it as synced.
   EXPECT_EQ(Status::OK, storage_->MarkCommitSynced(id));
-  EXPECT_EQ(Status::OK, storage_->GetUnsyncedCommits(&commits));
+  commits = GetUnsyncedCommits();
   EXPECT_TRUE(commits.empty());
 }
 
