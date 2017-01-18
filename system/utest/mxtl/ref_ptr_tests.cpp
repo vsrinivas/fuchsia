@@ -212,18 +212,18 @@ uint32_t Stats::destroy_count_ = 0;
 
 class A : public Stats {
 public:
-    virtual ~A() { }
+    virtual ~A() { stuff = 0u; }
 
 private:
-    __UNUSED uint32_t stuff;
+    volatile uint32_t stuff;
 };
 
 class B {
 public:
-    ~B() { }
+    ~B() { stuff = 1u; }
 
 private:
-    __UNUSED uint32_t stuff;
+    volatile uint32_t stuff;
 };
 
 class C : public A, public B {
@@ -233,10 +233,10 @@ public:
 
 class D : public A {
 public:
-    virtual ~D() { }
+    virtual ~D() { stuff = 2u; }
 
 private:
-    __UNUSED uint32_t stuff;
+    volatile uint32_t stuff;
 };
 
 template <typename T>
