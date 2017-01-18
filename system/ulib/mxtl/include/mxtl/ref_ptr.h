@@ -60,17 +60,29 @@ public:
             ptr_->AddRef();
     }
 
-    // Copy (normal and implicit convertible)
+    // Copy construction.
     RefPtr(const RefPtr& r)
         : RefPtr(r.ptr_) {}
 
-    template <typename OtherType>
-    RefPtr(const RefPtr<OtherType>& r)
-        : RefPtr(r.ptr_) {}
+    // Implicit upcast via copy construction.
+    //
+    // @see the notes in unique_ptr.h
+    template <typename U, typename U_Deleter>
+    RefPtr(const RefPtr<U, U_Deleter>& r) : RefPtr(r.ptr_) {
+        static_assert(is_base_of<T, U>::value,
+                "Cannot convert RefPtr<U> to RefPtr<T> unless T is a base class of U");
 
-    template <typename OtherType>
-    RefPtr(const RefPtr<OtherType, Deleter>& r)
-        : RefPtr(r.ptr_) {}
+        static_assert(has_virtual_destructor<T>::value,
+                "Cannot convert RefPtr<U> to RefPtr<T> unless T has a virtual destructor");
+
+        static_assert(is_same<U_Deleter, default_delete<U>>::value,
+                "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<U, ...> is "
+                "using default_delete<U>.");
+
+        static_assert(is_same<Deleter, default_delete<T>>::value,
+                "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<T, ...> is "
+                "using default_delete<T>.");
+    }
 
     // Assignment
     RefPtr& operator=(const RefPtr& r) {
@@ -86,21 +98,31 @@ public:
         return *this;
     }
 
-    // Move (normal and implicit convertible)
+    // Move construction
     RefPtr(RefPtr&& r)
         : ptr_(r.ptr_) {
         r.ptr_ = nullptr;
     }
 
-    template <typename OtherType>
-    RefPtr(RefPtr<OtherType>&& r)
-        : ptr_(r.ptr_) {
-        r.ptr_ = nullptr;
-    }
+    // Implicit upcast via move construction.
+    //
+    // @see the notes in unique_ptr.h
+    template <typename U, typename U_Deleter>
+    RefPtr(RefPtr<U, U_Deleter>&& r) : ptr_(r.ptr_) {
+        static_assert(is_base_of<T, U>::value,
+                "Cannot convert RefPtr<U> to RefPtr<T> unless T is a base class of U");
 
-    template <typename OtherType>
-    RefPtr(RefPtr<OtherType, Deleter>&& r)
-        : ptr_(r.ptr_) {
+        static_assert(has_virtual_destructor<T>::value,
+                "Cannot convert RefPtr<U> to RefPtr<T> unless T has a virtual destructor");
+
+        static_assert(is_same<U_Deleter, default_delete<U>>::value,
+                "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<U, ...> is "
+                "using default_delete<U>.");
+
+        static_assert(is_same<Deleter, default_delete<T>>::value,
+                "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<T, ...> is "
+                "using default_delete<T>.");
+
         r.ptr_ = nullptr;
     }
 

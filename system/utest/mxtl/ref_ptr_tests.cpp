@@ -53,41 +53,6 @@ bool RefCallCounter::Release() {
 static_assert(mxtl::is_standard_layout<mxtl::RefPtr<RefCallCounter>>::value,
               "mxtl::RefPtr<T>'s should have a standard layout.");
 
-struct Base : public RefCallCounter {
-    Base();
-    virtual ~Base();
-};
-
-Base::Base() = default;
-
-Base::~Base() = default;
-
-class Derived : public Base {
-public:
-    Derived();
-    explicit Derived(int* rc);
-    virtual ~Derived();
-
-private:
-    int* rc_;
-};
-
-Derived::Derived()
-    : rc_(nullptr) {}
-
-Derived::Derived(int* rc)
-    : rc_(rc) {}
-
-Derived::~Derived() {
-    if (rc_) {
-        *rc_ = 1;
-    }
-}
-
-static void pass_base_rval_ref(mxtl::RefPtr<Base, CountingDeleter>&& ptr) {}
-static void pass_base_lval_ref(const mxtl::RefPtr<Base, CountingDeleter>& ptr) {}
-static void pass_base_copy(mxtl::RefPtr<Base, CountingDeleter> ptr) {}
-
 static bool ref_ptr_test() {
     BEGIN_TEST;
     using RefCallPtr = mxtl::RefPtr<RefCallCounter, CountingDeleter>;
@@ -200,76 +165,352 @@ static bool ref_ptr_compare_test() {
     END_TEST;
 }
 
-static bool ref_ptr_upcast_test() {
-    BEGIN_TEST;
+namespace upcasting {
 
-    {
-        Derived der;
-        mxtl::RefPtr<Derived, CountingDeleter> foo(&der);
-        EXPECT_TRUE(static_cast<bool>(foo), "");
-        EXPECT_EQ(der.add_ref_calls(), 1, "");
-        EXPECT_EQ(der.release_calls(), 0, "");
+class Stats {
+public:
+     Stats() { }
+    ~Stats() { destroy_count_++; }
 
-        mxtl::RefPtr<Base, CountingDeleter> bar(foo);
-        EXPECT_TRUE(static_cast<bool>(foo), "");
-        EXPECT_TRUE(static_cast<bool>(bar), "");
-        EXPECT_EQ(der.add_ref_calls(), 2, "");
-        EXPECT_EQ(der.release_calls(), 0, "");
-
-        mxtl::RefPtr<Base, CountingDeleter> baz(mxtl::move(foo));
-        EXPECT_FALSE(static_cast<bool>(foo), "");
-        EXPECT_TRUE(static_cast<bool>(bar), "");
-        EXPECT_TRUE(static_cast<bool>(baz), "");
-        EXPECT_EQ(der.add_ref_calls(), 2, "");
-        EXPECT_EQ(der.release_calls(), 0, "");
-
-        foo.reset(&der);
-        pass_base_lval_ref(foo);
-        EXPECT_EQ(der.add_ref_calls(), 4, "");
-        EXPECT_EQ(der.release_calls(), 1, "");
-
-        pass_base_copy(foo);
-        EXPECT_EQ(der.add_ref_calls(), 5, "");
-        EXPECT_EQ(der.release_calls(), 2, "");
-
-        pass_base_rval_ref(mxtl::move(foo));
-        EXPECT_EQ(der.add_ref_calls(), 5, "");
-        EXPECT_EQ(der.release_calls(), 3, "");
-
-        foo.reset();
-        bar.reset();
-        baz.reset();
-        EXPECT_EQ(der.add_ref_calls(), 5, "");
-        EXPECT_EQ(der.release_calls(), 5, "");
+    static void Reset() {
+        adopt_calls_   = 0;
+        add_ref_calls_ = 0;
+        release_calls_ = 0;
+        destroy_count_ = 0;
     }
 
+    void Adopt() { adopt_calls_++; }
+
+    void AddRef() {
+        ref_count_++;
+        add_ref_calls_++;
+    }
+
+    bool Release() {
+        ref_count_--;
+        release_calls_++;
+        return (ref_count_ <= 0);
+    }
+
+    static uint32_t adopt_calls()   { return adopt_calls_; }
+    static uint32_t add_ref_calls() { return add_ref_calls_; }
+    static uint32_t release_calls() { return release_calls_; }
+    static uint32_t destroy_count() { return destroy_count_; }
+
+private:
+    int ref_count_ = 1;
+    static uint32_t adopt_calls_;
+    static uint32_t add_ref_calls_;
+    static uint32_t release_calls_;
+    static uint32_t destroy_count_;
+};
+
+uint32_t Stats::adopt_calls_   = 0;
+uint32_t Stats::add_ref_calls_ = 0;
+uint32_t Stats::release_calls_ = 0;
+uint32_t Stats::destroy_count_ = 0;
+
+class A : public Stats {
+public:
+    virtual ~A() { }
+
+private:
+    uint32_t stuff;
+};
+
+class B {
+public:
+    ~B() { }
+
+private:
+    uint32_t stuff;
+};
+
+class C : public A, public B {
+public:
+    ~C() { }
+};
+
+class D : public A {
+public:
+    virtual ~D() { }
+
+private:
+    uint32_t stuff;
+};
+
+template <typename T>
+struct custom_delete {
+    inline void operator()(T* ptr) const {
+        enum { type_must_be_complete = sizeof(T) };
+        delete ptr;
+    }
+};
+
+template <typename UptrType>
+static bool handoff_lvalue_fn(const UptrType& ptr) {
+    BEGIN_TEST;
+    EXPECT_NONNULL(ptr, "");
+    END_TEST;
+}
+
+template <typename UptrType>
+static bool handoff_copy_fn(UptrType ptr) {
+    BEGIN_TEST;
+    EXPECT_NONNULL(ptr, "");
+    END_TEST;
+}
+
+template <typename UptrType>
+static bool handoff_rvalue_fn(UptrType&& ptr) {
+    BEGIN_TEST;
+    EXPECT_NONNULL(ptr, "");
+    END_TEST;
+}
+
+template <typename Base,
+          typename Derived,
+          typename BaseDeleter = mxtl::default_delete<Base>,
+          typename DerivedDeleter = mxtl::default_delete<Derived>>
+static bool do_test() {
+    BEGIN_TEST;
+    AllocChecker ac;
+
+    mxtl::RefPtr<Derived, DerivedDeleter> derived_ptr;
+
+    // Construct RefPtr<Base> with a copy and implicit cast
+    Stats::Reset();
+    derived_ptr = mxtl::AdoptRef<Derived, DerivedDeleter>(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
     {
-        AllocChecker ac;
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(0, Stats::add_ref_calls(), "");
+        EXPECT_EQ(0, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
 
-        int rc = 0;
-        Derived* der = new (&ac) Derived(&rc);
-        EXPECT_TRUE(ac.check(), "");
+        mxtl::RefPtr<Base, BaseDeleter> base_ptr(derived_ptr);
 
-        mxtl::RefPtr<Derived> foo(der);
-        mxtl::RefPtr<Base> bar(foo);
-        mxtl::RefPtr<Base> baz(mxtl::move(foo));
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_NONNULL(base_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(0, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+    }
 
-        EXPECT_EQ(der->add_ref_calls(), 2, "");
-        EXPECT_EQ(der->release_calls(), 0, "");
+    // Construct RefPtr<Base> with a move and implicit cast
+    {
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(1, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
 
-        baz.reset();
-        EXPECT_EQ(rc, 0, "");
-        bar.reset();
-        EXPECT_EQ(rc, 1, "");
+        mxtl::RefPtr<Base, BaseDeleter> base_ptr(mxtl::move(derived_ptr));
+
+        EXPECT_NULL(derived_ptr, "");
+        EXPECT_NONNULL(base_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(1, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+    }
+
+    EXPECT_EQ(1, Stats::adopt_calls(), "");
+    EXPECT_EQ(1, Stats::add_ref_calls(), "");
+    EXPECT_EQ(2, Stats::release_calls(), "");
+    EXPECT_EQ(1, Stats::destroy_count(), "");
+
+    // Assign RefPtr<Base> at declaration time with a copy
+    Stats::Reset();
+    derived_ptr = mxtl::AdoptRef<Derived, DerivedDeleter>(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(0, Stats::add_ref_calls(), "");
+        EXPECT_EQ(0, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+
+        mxtl::RefPtr<Base, BaseDeleter> base_ptr = derived_ptr;
+
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_NONNULL(base_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(0, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+    }
+
+    // Assign RefPtr<Base> at declaration time with a mxtl::move
+    {
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(1, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+
+        mxtl::RefPtr<Base, BaseDeleter> base_ptr = mxtl::move(derived_ptr);
+
+        EXPECT_NULL(derived_ptr, "");
+        EXPECT_NONNULL(base_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(1, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+    }
+
+    EXPECT_EQ(1, Stats::adopt_calls(), "");
+    EXPECT_EQ(1, Stats::add_ref_calls(), "");
+    EXPECT_EQ(2, Stats::release_calls(), "");
+    EXPECT_EQ(1, Stats::destroy_count(), "");
+
+    // Assign RefPtr<Base> after declaration with a copy
+    Stats::Reset();
+    derived_ptr = mxtl::AdoptRef<Derived, DerivedDeleter>(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(0, Stats::add_ref_calls(), "");
+        EXPECT_EQ(0, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+
+        mxtl::RefPtr<Base, BaseDeleter> base_ptr;
+        base_ptr = derived_ptr;
+
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_NONNULL(base_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(0, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+    }
+
+    // Assign RefPtr<Base> after declaration with a mxtl::move
+    {
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(1, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+
+        mxtl::RefPtr<Base, BaseDeleter> base_ptr;
+        base_ptr = mxtl::move(derived_ptr);
+
+        EXPECT_NULL(derived_ptr, "");
+        EXPECT_NONNULL(base_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(1, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+    }
+
+    EXPECT_EQ(1, Stats::adopt_calls(), "");
+    EXPECT_EQ(1, Stats::add_ref_calls(), "");
+    EXPECT_EQ(2, Stats::release_calls(), "");
+    EXPECT_EQ(1, Stats::destroy_count(), "");
+
+    // Pass the pointer to a function as an lvalue reference with an implicit cast
+    Stats::Reset();
+    derived_ptr = mxtl::AdoptRef<Derived, DerivedDeleter>(new (&ac) Derived());
+    ASSERT_TRUE(ac.check(), "");
+    {
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(0, Stats::add_ref_calls(), "");
+        EXPECT_EQ(0, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+
+        // Note: counter to intuition, we actually do expect this to bump the
+        // reference count regardless of what the target function does with the
+        // reference-to-pointer passed to it.  We are not passing a const
+        // reference to a RefPtr<Derived>; instead we are creating a temp
+        // RefPtr<Base> (which is where the addref happens) and then passing a
+        // refernce to *that* to the function.
+        bool test_res = handoff_lvalue_fn<mxtl::RefPtr<Base, BaseDeleter>>(derived_ptr);
+        EXPECT_TRUE(test_res, "");
+
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(1, Stats::add_ref_calls(), "");
+        EXPECT_EQ(1, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+    }
+
+    // Pass the pointer to a function with a copy and implicit cast
+    {
+        bool test_res = handoff_copy_fn<mxtl::RefPtr<Base, BaseDeleter>>(derived_ptr);
+        EXPECT_TRUE(test_res, "");
+
+        EXPECT_NONNULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(2, Stats::add_ref_calls(), "");
+        EXPECT_EQ(2, Stats::release_calls(), "");
+        EXPECT_EQ(0, Stats::destroy_count(), "");
+    }
+
+    // Pass the pointer to a function as an rvalue reference and implicit cast
+    {
+        bool test_res = handoff_rvalue_fn<mxtl::RefPtr<Base, BaseDeleter>>(mxtl::move(derived_ptr));
+        EXPECT_TRUE(test_res, "");
+
+        EXPECT_NULL(derived_ptr, "");
+        EXPECT_EQ(1, Stats::adopt_calls(), "");
+        EXPECT_EQ(2, Stats::add_ref_calls(), "");
+        EXPECT_EQ(3, Stats::release_calls(), "");
+        EXPECT_EQ(1, Stats::destroy_count(), "");
     }
 
     END_TEST;
 }
 
-} //namespace
+static bool ref_ptr_upcast_test() {
+    BEGIN_TEST;
+    bool test_res;
+
+    // This should work.  C derives from A, A has a virtual destructor, and
+    // everything is using the default deleter.
+    test_res = do_test<A, C>();
+    EXPECT_TRUE(test_res, "");
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // This should not work.  C derives from B, but B has no virtual destructor.
+    test_res = do_test<B, C>();
+    EXPECT_FALSE(test_res, "");
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // This should not work.  D has a virtual destructor, but it is not a base
+    // class of C.
+    test_res = do_test<D, C>();
+    EXPECT_FALSE(test_res, "");
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // This should not work.  A and C have the proper relationship, but we are
+    // using a custom deleter for unique_ptr<A>, and C will not implicitly cast
+    // itself to a unique_ptr<A> which uses a custom deleter.
+    test_res = do_test<A, C, custom_delete<A>>();
+    EXPECT_FALSE(test_res, "");
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // This should not work.  A and C have the proper relationship, and we are
+    // attempting to implicitly cast to unique_ptr<A, default_delete<A>>, but
+    // our C pointer is using a custom deleter.
+    test_res = do_test<A, C, mxtl::default_delete<A>, custom_delete<C>>();
+    EXPECT_FALSE(test_res, "");
+#endif
+
+    END_TEST;
+}
+}  // namespace upcasting
+}  // namespace
 
 BEGIN_TEST_CASE(ref_ptr_tests)
 RUN_NAMED_TEST("Ref Pointer", ref_ptr_test)
 RUN_NAMED_TEST("Ref Pointer Comparison", ref_ptr_compare_test)
-RUN_NAMED_TEST("Ref Pointer Upcast", ref_ptr_upcast_test)
+RUN_NAMED_TEST("Ref Pointer Upcast", upcasting::ref_ptr_upcast_test)
 END_TEST_CASE(ref_ptr_tests);
