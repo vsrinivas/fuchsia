@@ -501,7 +501,11 @@ typedef struct {
 #endif
 
 #if defined(__NEED_mtx_t) && !defined(__DEFINED_mtx_t)
-typedef struct {
+typedef struct
+#if defined(__clang__)
+__attribute__((__capability__("mutex")))
+#endif
+{
     int __i[1];
 } mtx_t;
 #define __DEFINED_mtx_t
