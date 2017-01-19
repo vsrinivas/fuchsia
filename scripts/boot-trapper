@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+fastboot boot -n 4096 build-msm-trapper/zmagenta.bin-dtb

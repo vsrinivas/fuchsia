@@ -1,0 +1,10 @@
+/dts-v1/;
+
+/ {
+    qcom,msm-id = <0x124 0x20000>;
+    qcom,board-id = <0x1e 0x0>;
+
+    // empty nodes needed to make fastboot happy
+    chosen {};
+    memory {};
+};

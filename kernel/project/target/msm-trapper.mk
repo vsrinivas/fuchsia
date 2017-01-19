@@ -10,5 +10,22 @@ ARCH := arm64
 TARGET := msm-trapper
 ARM_CPU := cortex-a53
 
+# include fastboot header in start.S
+KERNEL_DEFINES += FASTBOOT_HEADER=1
 
+DEVICE_TREE := kernel/target/msm-trapper/device-tree.dtb
+OUTLKZIMAGE := $(BUILDDIR)/z$(LKNAME).bin
+OUTLKZIMAGE_DTB := $(OUTLKZIMAGE)-dtb
 
+# rule for gzipping the kernel
+$(OUTLKZIMAGE): $(OUTLKBIN)
+	@echo gzipping image: $@
+	$(NOECHO)gzip -c $< > $@
+
+# rule for appending device tree
+$(OUTLKZIMAGE_DTB): $(OUTLKZIMAGE)
+	@echo concatenating device tree: $@
+	$(NOECHO)cat $< $(DEVICE_TREE) > $@
+
+# build gzipped kernel with concatenated device tree
+all:: $(OUTLKZIMAGE_DTB)
