@@ -35,8 +35,6 @@ void magma_indriver_test(mx_device_t* device);
 #endif
 
 #define INTEL_I915_VID (0x8086)
-#define INTEL_I915_BROADWELL_DID (0x1616)
-#define INTEL_I915_SKYLAKE_DID (0x1916)
 
 #define INTEL_I915_REG_WINDOW_SIZE (0x1000000u)
 #define INTEL_I915_FB_WINDOW_SIZE (0x10000000u)
