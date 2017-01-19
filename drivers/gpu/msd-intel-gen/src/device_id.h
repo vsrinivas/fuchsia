@@ -14,6 +14,7 @@ public:
     static bool is_gen9(uint32_t device_id)
     {
         switch (device_id) {
+            case 0x1912: // Intel(R) HD Graphics 530 (Skylake GT2)
             case 0x1916: // Intel(R) HD Graphics 520 (Skylake GT2)
             case 0x5916: // Intel(R) HD Graphics 620 (Kabylake GT2)
                 return true;
