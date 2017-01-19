@@ -45,8 +45,11 @@ def main():
         try:
             os.mkdir(gopathsrc)
         except OSError, e:
-            # ignore, probably raced with another go build
-            print("could not setup GOPATH symlink: ", e)
+            if os.path.isdir(gopathsrc):
+                pass # ignore, probably raced with another go build
+            else:
+                print("could not setup GOPATH symlink: ", e)
+                return 1
     for src in sympaths:
         dst = sympaths[src]
         try:
@@ -65,6 +68,10 @@ def main():
     os.environ['MAGENTA'] = os.path.join(args.fuchsia_root, 'magenta')
     os.environ['GOOS'] = 'fuchsia'
     os.environ['GOARCH'] = goarch
+    if 'GOBIN' in os.environ:
+        del os.environ['GOBIN']
+    if 'GOROOT' in os.environ:
+        del os.environ['GOROOT']
     godepfile = os.path.join(args.fuchsia_root, 'buildtools/godepfile')
     pkgdir = os.path.join(args.root_out_dir, 'pkg')
 
