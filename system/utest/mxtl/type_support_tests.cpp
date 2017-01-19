@@ -102,7 +102,7 @@ static_assert(!mxtl::is_base_of<sE, sD>::value, "sE should not be a base of sD!"
 
 }  // namespace is_base_of_tests
 
-namespace has_virtual_destructor {
+namespace has_virtual_destructor_tests {
 
 struct A            {         ~A() { } };
 struct B            { virtual ~B() { } };
@@ -116,4 +116,113 @@ static_assert(!mxtl::has_virtual_destructor<C>::value, "C should have no virtual
 static_assert( mxtl::has_virtual_destructor<D>::value, "D should have a virtual destructor");
 static_assert( mxtl::has_virtual_destructor<E>::value, "E should have a virtual destructor");
 
-}  // namespace has_virtual_destructor
+}  // namespace has_virtual_destructor_tests
+
+namespace is_pointer_tests {
+
+struct StructType   {
+    void MemberFunction();
+    int member_variable;
+
+    static void StaticMemberFunction();
+    static int static_member_variable;
+};
+
+void SomeGlobalFunc();  // note; "global" in air-quotes
+static void SomeStaticFunc();
+
+class  ClassType    { };
+enum   EnumType     { One, Two };
+union  UnionType    { int a; double b; };
+
+static_assert(!mxtl::is_pointer<StructType>::value,         "StructType is not a pointer!");
+static_assert( mxtl::is_pointer<StructType*>::value,        "StructType* is a pointer!");
+static_assert( mxtl::is_pointer<StructType**>::value,       "StructType** is a pointer!");
+static_assert(!mxtl::is_pointer<ClassType>::value,          "ClassType is not a pointer!");
+static_assert( mxtl::is_pointer<ClassType*>::value,         "ClassType* is a pointer!");
+static_assert( mxtl::is_pointer<ClassType**>::value,        "ClassType** is a pointer!");
+static_assert(!mxtl::is_pointer<EnumType>::value,           "EnumType is not a pointer!");
+static_assert( mxtl::is_pointer<EnumType*>::value,          "EnumType* is a pointer!");
+static_assert( mxtl::is_pointer<EnumType**>::value,         "EnumType** is a pointer!");
+static_assert(!mxtl::is_pointer<UnionType>::value,          "UnionType is not a pointer!");
+static_assert( mxtl::is_pointer<UnionType*>::value,         "UnionType* is a pointer!");
+static_assert( mxtl::is_pointer<UnionType**>::value,        "UnionType** is a pointer!");
+static_assert(!mxtl::is_pointer<int>::value,                "int is not a pointer!");
+static_assert(!mxtl::is_pointer<int[]>::value,              "int[] is not a pointer!");
+static_assert( mxtl::is_pointer<int*>::value,               "int* is a pointer!");
+static_assert( mxtl::is_pointer<int**>::value,              "int** is a pointer!");
+
+static_assert(!mxtl::is_pointer<const int>::value,          "const int is not a pointer!");
+static_assert(!mxtl::is_pointer<volatile int>::value,       "volatile int is not a pointer!");
+static_assert(!mxtl::is_pointer<const volatile int>::value, "const volatile int is not a pointer!");
+
+static_assert( mxtl::is_pointer<const int*>::value,          "const int* is a pointer!");
+static_assert( mxtl::is_pointer<volatile int*>::value,       "volatile int* is a pointer!");
+static_assert( mxtl::is_pointer<const volatile int*>::value, "const volatile int* is a pointer!");
+
+static_assert( mxtl::is_pointer<int* const >::value,          "int* const is a pointer!");
+static_assert( mxtl::is_pointer<int* volatile >::value,       "int* volatile is a pointer!");
+static_assert( mxtl::is_pointer<int* const volatile >::value, "int* const volatile is a pointer!");
+
+static_assert( mxtl::is_pointer<const int* const >::value,    "const int* const is a pointer!");
+static_assert( mxtl::is_pointer<const int* volatile >::value, "const int* volatile is a pointer!");
+static_assert( mxtl::is_pointer<const int* const volatile>::value,
+        "const int* const volatile is a pointer!");
+
+static_assert( mxtl::is_pointer<volatile int* const >::value, "volatile int* const is a pointer!");
+static_assert( mxtl::is_pointer<volatile int* volatile >::value,
+        "volatile int* volatile is a pointer!");
+static_assert( mxtl::is_pointer<volatile int* const volatile>::value,
+        "volatile int* const volatile is a pointer!");
+
+static_assert( mxtl::is_pointer<const volatile int* const >::value,
+        "const volatile int* const is a pointer!");
+static_assert( mxtl::is_pointer<const volatile int* volatile >::value,
+        "const volatile int* volatile is a pointer!");
+static_assert( mxtl::is_pointer<const volatile int* const volatile>::value,
+        "const volatile int* const volatile is a pointer!");
+
+static_assert(!mxtl::is_pointer<decltype(&StructType::MemberFunction)>::value,
+              "pointer to StructType::MemberFunction is not a pointer!");
+static_assert(!mxtl::is_pointer<decltype(&StructType::member_variable)>::value,
+              "pointer to StructType::member_variable is not a pointer!");
+
+static_assert( mxtl::is_pointer<decltype(&StructType::StaticMemberFunction)>::value,
+              "pointer to StructType::MemberFunction is a pointer!");
+static_assert( mxtl::is_pointer<decltype(&StructType::static_member_variable)>::value,
+              "pointer to StructType::static_member_variable is a pointer!");
+
+static_assert( mxtl::is_pointer<decltype(&SomeGlobalFunc)>::value,
+              "pointer to SomeGlobalFunc is a pointer!");
+static_assert( mxtl::is_pointer<decltype(&SomeStaticFunc)>::value,
+              "pointer to SomeStaticFunc is a pointer!");
+static_assert(!mxtl::is_pointer<decltype(nullptr)>::value,
+              "decltype(nullptr) (aka nullptr_t) is not a pointer (because C++)");
+}  // namespace is_pointer_tests;
+
+namespace is_convertible_tests {
+
+class A { };
+class B : public A { };
+class C { };
+
+template <typename From, typename To>
+using icp = mxtl::is_convertible_pointer<From, To>;
+
+static_assert( icp<B*, A*>::value, "Should convert B* --> A*");
+static_assert(!icp<A*, B*>::value, "Should not convert A* --> B*");
+static_assert(!icp<A,  B*>::value, "Should not convert A --> B*");
+static_assert(!icp<A*, B>::value,  "Should not convert A* --> B");
+static_assert(!icp<A,  B>::value,  "Should not convert A --> B");
+static_assert(!icp<A*, C*>::value, "Should not convert A* --> C*");
+
+static_assert( icp<int*, void*>::value,         "Should convert int* --> void*");
+static_assert( icp<int*, const int*>::value,    "Should convert int* --> const int*");
+static_assert( icp<int*, volatile int*>::value, "Should convert int* --> volatile int*");
+static_assert(!icp<const int*, int*>::value,    "Should not convert const int* --> int*");
+static_assert(!icp<volatile int*, int*>::value, "Should not convert volatile int* --> int*");
+static_assert(!icp<unsigned int*, int*>::value, "Should not convert unsigned int* --> int*");
+static_assert(!icp<int*, unsigned int*>::value, "Should not convert int* --> unsigned int*");
+static_assert(!icp<float*, double*>::value,     "Should not convert float* --> double*");
+
+}  // namespace is_convertible_tests

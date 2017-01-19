@@ -200,4 +200,39 @@ struct has_virtual_destructor : public integral_constant<bool, __has_virtual_des
 template <typename T>
 struct has_trivial_destructor : public integral_constant<bool, __has_trivial_destructor(T)> { };
 
+// is_pointer
+namespace internal {
+template <typename T>
+struct is_pointer : public false_type { };
+
+template <typename T>
+struct is_pointer<T*> : public true_type { };
+}  // namespace internal
+
+template <typename T>
+struct is_pointer :
+    public integral_constant<bool,
+                             internal::is_pointer<typename remove_cv<T>::type>::value> { };
+
+// is_convertible_pointer
+//
+// Note: this is a simplified version of std::is_convertible.  Whereas
+// std::is_convertible will check to see if any two types are implicitly
+// convertible, is_convertible_pointer will only check to see if two pointer
+// types are implicitly convertible.  Additionally, no explicit support or tests
+// have been added for function pointers conversion.
+template <typename From, typename To>
+struct is_convertible_pointer {
+private:
+    static true_type  test(To);
+    static false_type test(...);
+    static From       make_from_type();
+
+public:
+    static constexpr bool value =
+        is_pointer<From>::value &&
+        is_pointer<To>::value &&
+        decltype(test(make_from_type()))::value;
+};
+
 }  // namespace mxtl
