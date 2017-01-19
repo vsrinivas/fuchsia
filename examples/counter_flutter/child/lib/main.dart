@@ -65,7 +65,7 @@ class ModuleImpl extends Module {
   final LinkProxy _link = new LinkProxy();
   final LinkWatcherImpl _linkWatcher = new LinkWatcherImpl();
 
-  final String _jsonPath = "/" + _kDocRoot + "/" + _kDocId;
+  final List<String> _jsonPath = <String>[_kDocRoot, _kDocId];
 
   void bind(InterfaceRequest<Module> request) {
     _binding.bind(this, request);

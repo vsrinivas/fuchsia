@@ -69,7 +69,7 @@ class LinkConnection : public modular::LinkWatcher {
     // In either case, it should be ignored, otherwise we can get multiple
     // messages traveling at the same time.
     if (!initial_update_ && json.size() > 0) {
-      dst_->Set("", json);
+      dst_->Set(nullptr, json);
     }
     initial_update_ = false;
   }
@@ -332,7 +332,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
 
     // Read initial Link data. We expect the shell to tell us what it
     // is.
-    link_->Get("", [this](const fidl::String& json) {
+    link_->Get(nullptr, [this](const fidl::String& json) {
       FTL_LOG(INFO) << "example_recipe link: " << json;
     });
 
@@ -404,7 +404,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
     // the Story is not new, but already contains existing Modules
     // and Links from the previous execution that is continued here.
     // Is that really enough?
-    module1_link_->Get("", [this](const fidl::String& json) {
+    module1_link_->Get(nullptr, [this](const fidl::String& json) {
       if (json == "null") {
         // This must come last, otherwise LinkConnection gets a
         // notification of our own write because of the "send
@@ -412,7 +412,7 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         std::vector<std::string> segments{modular_example::kJsonSegment,
                                           modular_example::kDocId};
         module1_link_->Set(
-            modular::EscapeJsonPath(segments.begin(), segments.end()),
+            fidl::Array<fidl::String>::From(segments),
             kInitialJson);
       }
     });

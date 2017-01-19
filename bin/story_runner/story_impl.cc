@@ -61,7 +61,7 @@ void StoryImpl::AddLinkDataAndSync(
     return;
   }
 
-  EnsureRoot()->UpdateObject("", json);
+  EnsureRoot()->UpdateObject(nullptr, json);
   EnsureRoot()->Sync(callback);
 }
 

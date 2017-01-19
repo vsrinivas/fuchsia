@@ -5,13 +5,9 @@
 #ifndef APPS_MODULAR_LIB_RAPIDJSON_RAPIDJSON_H_
 #define APPS_MODULAR_LIB_RAPIDJSON_RAPIDJSON_H_
 
-// rapidjson needs these defines to support C++11 features. These features
-// are intentionally not autodetected by rapidjson. Therefore, this include
-// file should be used for the basic rapidjson files. Other files can be
-// included from //third_party/rapidjson.
-
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
@@ -44,43 +40,28 @@ inline std::string JsonValueToPrettyString(const T& v) {
   return buffer.GetString();
 }
 
-inline void EscapeJsonPathElementToStream(
-    std::ostringstream& oss,
-    const std::string& source) {
-  for (const auto c : source) {
-    switch (c) {
-      case '~':
-        oss << "~0";
-        break;
-      case '/':
-        oss << "~1";
-        break;
-      default:
-        oss << c;
-        break;
-    }
+// Take a vector of std::string and convert it to "/a/b/c" form for display.
+// For debugging/logging purposes only
+inline std::string PrettyPrintPath(const std::vector<std::string>& path) {
+  std::string result;
+  for (const auto& str : path) {
+    result += '/' + str;
   }
+  return result;
 }
 
-// Helper function to take the path segments, escape them, and create a path
-// that's compliant for JSON Pointer that can be used with Set() and Update()
-// in the Link. Sample usage:
-//
-//    std::vector<std::string> segments{"init",
-//                                      "http://schema.org/Person",
-//                                      "given_name"};
-//    module1_link_->Set(
-//        modular::EscapeJsonPath(segments.begin(), segments.end()),
-//        "Frank");
-//    }
-template <typename T>
-inline std::string EscapeJsonPath(T begin, T end) {
-  std::ostringstream oss;
-  for (auto itr = begin; itr != end; ++itr) {
-    oss << "/";
-    EscapeJsonPathElementToStream(oss, *itr);
+// Take an array of strings representing the segments in a JSON Path
+// and construct a rapidjson::GenericPointer() object.
+template <typename Doc>
+inline rapidjson::GenericPointer<typename Doc::ValueType> CreatePointer(
+    const Doc& doc,
+    std::vector<std::string>::iterator begin,
+    std::vector<std::string>::iterator end) {
+  rapidjson::GenericPointer<typename Doc::ValueType> pointer;
+  for (auto it = begin; it != end; ++it) {
+    pointer = pointer.Append(*it, nullptr);
   }
-  return oss.str();
+  return pointer;
 }
 
 }  // namespace modular

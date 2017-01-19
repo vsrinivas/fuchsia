@@ -229,7 +229,7 @@ class DevUserShellApp
           if (!settings_.root_link.empty()) {
             modular::LinkPtr root;
             story_controller_->GetLink(root.NewRequest());
-            root->UpdateObject("", settings_.root_link);
+            root->UpdateObject(nullptr, settings_.root_link);
           }
         });
   }

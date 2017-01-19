@@ -6,6 +6,7 @@
 
 #include <functional>
 
+#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/link.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -13,6 +14,29 @@
 #include "lib/ftl/logging.h"
 
 namespace modular {
+
+namespace {
+
+template <typename Doc>
+rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromArray(
+    const Doc& doc,
+    typename fidl::Array<fidl::String>::Iterator begin,
+    typename fidl::Array<fidl::String>::Iterator end) {
+  rapidjson::GenericPointer<typename Doc::ValueType> pointer;
+  for (auto it = begin; it != end; ++it) {
+    pointer = pointer.Append(it->get(), nullptr);
+  }
+  return pointer;
+}
+
+//// Take an Array of fidl::String and convert it to "/a/b/c" form for display.
+//// For debugging/logging purposes only.
+//inline std::string PrettyPrintPath(const fidl::Array<fidl::String>& path) {
+//  return (path.is_null() || path.storage().empty())
+//             ? std::string("/")
+//             : modular::PrettyPrintPath(path.To<std::vector<std::string>>());
+//}
+}  // namespace
 
 LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
                    const fidl::String& name,
@@ -25,9 +49,8 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
         LinkConnection::New(this, std::move(request));
       }));
 
-  story_storage_->WatchLink(name, [this](const fidl::String& json) {
-    OnChange(json);
-  });
+  story_storage_->WatchLink(
+      name, [this](const fidl::String& json) { OnChange(json); });
 }
 
 LinkImpl::~LinkImpl() {}
@@ -40,11 +63,11 @@ LinkImpl::~LinkImpl() {}
 // *after* the call to SetAllDocument(). Need to find a way to improve
 // this.
 
-void LinkImpl::Set(const fidl::String& path,
+void LinkImpl::Set(fidl::Array<fidl::String> path,
                    const fidl::String& json,
                    LinkConnection* const src) {
   //  FTL_LOG(INFO) << "**** Set()" << std::endl
-  //                << "PATH " << path << std::endl
+  //                << "PATH " << PrettyPrintPath(path) << std::endl
   //                << "JSON " << json;
   CrtJsonDoc new_value;
   new_value.Parse(json);
@@ -58,8 +81,7 @@ void LinkImpl::Set(const fidl::String& path,
   bool dirty = true;
   bool alreadyExist = false;
 
-  // A single slash creates an unwanted node at the root.
-  CrtJsonPointer ptr(path == "/" ? "" : path);
+  CrtJsonPointer ptr = CreatePointerFromArray(doc_, path.begin(), path.end());
   CrtJsonValue& current_value =
       ptr.Create(doc_, doc_.GetAllocator(), &alreadyExist);
   if (alreadyExist) {
@@ -70,14 +92,14 @@ void LinkImpl::Set(const fidl::String& path,
     ptr.Set(doc_, new_value);
     DatabaseChanged(src);
   }
-  FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToPrettyString(doc_);
+  //FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToPrettyString(doc_);
 }
 
-void LinkImpl::UpdateObject(const fidl::String& path,
+void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
                             const fidl::String& json,
                             LinkConnection* const src) {
-  //  FTL_LOG(INFO) << "**** Update() starting" << std::endl
-  //                << "PATH " << path << std::endl
+  //  FTL_LOG(INFO) << "**** UpdateObject() starting" << std::endl
+  //                << "PATH " << PrettyPrintPath(path) << std::endl
   //                << "JSON " << json;
   CrtJsonDoc new_value;
   new_value.Parse(json);
@@ -88,7 +110,7 @@ void LinkImpl::UpdateObject(const fidl::String& path,
     return;
   }
 
-  CrtJsonPointer ptr(path);
+  auto ptr = CreatePointerFromArray(doc_, path.begin(), path.end());
   CrtJsonValue& current_value = ptr.Create(doc_);
 
   const bool dirty =
@@ -96,12 +118,15 @@ void LinkImpl::UpdateObject(const fidl::String& path,
   if (dirty) {
     DatabaseChanged(src);
   }
-  FTL_LOG(INFO) << "LinkImpl::Update() result "
-                << JsonValueToPrettyString(doc_);
+  //  FTL_LOG(INFO) << "LinkImpl::UpdateObject() result "
+  //                << JsonValueToPrettyString(doc_);
 }
 
-void LinkImpl::Erase(const fidl::String& path, LinkConnection* const src) {
-  CrtJsonPointer ptr(path);
+void LinkImpl::Erase(fidl::Array<fidl::String> path,
+                     LinkConnection* const src) {
+  //  FTL_LOG(INFO) << "LinkImpl::Erase() "
+  //                << "PATH " << PrettyPrintPath(path) << std::endl;
+  auto ptr = CreatePointerFromArray(doc_, path.begin(), path.end());
   auto p = ptr.Get(doc_);
   if (p != nullptr && ptr.Erase(doc_)) {
     DatabaseChanged(src);
@@ -150,7 +175,8 @@ void LinkImpl::ReadLinkData(const std::function<void()>& done) {
   story_storage_->ReadLinkData(name_, [this, done](const fidl::String& json) {
     if (!json.is_null()) {
       doc_.Parse(json.get());
-      FTL_LOG(INFO) << "LinkImpl::ReadLinkData() " << JsonValueToPrettyString(doc_);
+      FTL_LOG(INFO) << "LinkImpl::ReadLinkData() "
+                    << JsonValueToPrettyString(doc_);
     }
 
     done();
@@ -272,23 +298,24 @@ void LinkConnection::Sync(const SyncCallback& callback) {
   impl_->Sync(callback);
 }
 
-void LinkConnection::UpdateObject(const fidl::String& path,
+void LinkConnection::UpdateObject(fidl::Array<fidl::String> path,
                                   const fidl::String& json) {
-  impl_->UpdateObject(path, json, this);
+  impl_->UpdateObject(std::move(path), json, this);
 }
 
-void LinkConnection::Set(const fidl::String& path, const fidl::String& json) {
-  impl_->Set(path, json, this);
+void LinkConnection::Set(fidl::Array<fidl::String> path,
+                         const fidl::String& json) {
+  impl_->Set(std::move(path), json, this);
 }
 
-void LinkConnection::Erase(const fidl::String& path) {
-  impl_->Erase(path, this);
+void LinkConnection::Erase(fidl::Array<fidl::String> path) {
+  impl_->Erase(std::move(path), this);
 }
 
-void LinkConnection::Get(const fidl::String& path,
+void LinkConnection::Get(fidl::Array<fidl::String> path,
                          const GetCallback& callback) {
-  CrtJsonPointer ptr(path);
-  auto p = ptr.Get(impl_->doc());
+  auto p = CreatePointerFromArray(impl_->doc(), path.begin(), path.end())
+               .Get(impl_->doc());
   if (p == nullptr) {
     callback(fidl::String());
   } else {

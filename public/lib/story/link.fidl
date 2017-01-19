@@ -40,9 +40,6 @@ module modular;
 // through the original handle, the watcher is notified of all such
 // changes.
 //
-// For |path|, the caller must escape slashes in segments as ~1
-// and escape tildes as ~0.
-//
 // No service name: created by Story.
 //
 // TODO(jimbe) Add error reporting for JSON and Pointer errors.
@@ -52,13 +49,13 @@ interface Link {
   // JSON Pointer specification (https://tools.ietf.org/html/rfc6901).
   // Returns a null fidl string if |path| does not exist.
   // Calling Get("") on an empty Link will return the string "null".
-  Get(string path) => (string? json);
+  Get(array<string>? path) => (string? json);
 
   // Set() overwrites the value/object/array at the given |path|. Set also
   // overwrites any values or arrays as necessary to ensure that |path| exists.
   // To replace the root, pass "" for |path|.
   // This call notifies Watchers.
-  Set(string path, string json);
+  Set(array<string>? path, string json);
 
   // For each member of the object defined by |json|, set or overwrite the
   // same member of the object found at |path| with that member's value.
@@ -75,13 +72,13 @@ interface Link {
   // The string in |json| must represent an object.
   // To update the root (must be an object or null), pass "" for |path|.
   // This call notifies Watchers.
-  UpdateObject(string path, string json);
+  UpdateObject(array<string>? path, string json);
 
   // Erases the object at the given |path|. If the path is not found or does not
   // match the current structure of the JSON, the path will not be created and
   // the call is ignored.
   // This call notifies Watchers.
-  Erase(string path);
+  Erase(array<string>? path);
 
   // Registers a watcher, which is notified whenever the document changes. This
   // watcher will not be invoked for changes caused by calls made on this

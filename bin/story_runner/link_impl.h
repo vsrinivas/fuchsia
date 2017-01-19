@@ -66,13 +66,13 @@ class LinkImpl {
   ~LinkImpl();
 
   // Used by LinkConnection.
-  void UpdateObject(const fidl::String& path,
+  void UpdateObject(fidl::Array<fidl::String> path,
                     const fidl::String& json,
                     LinkConnection* src);
-  void Set(const fidl::String& path,
+  void Set(fidl::Array<fidl::String> path,
            const fidl::String& json,
            LinkConnection* src);
-  void Erase(const fidl::String& path, LinkConnection* src);
+  void Erase(fidl::Array<fidl::String> path, LinkConnection* src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
   const CrtJsonDoc& doc() const { return doc_; }
@@ -125,11 +125,12 @@ class LinkConnection : public Link {
   LinkConnection(LinkImpl* impl, fidl::InterfaceRequest<Link> request);
 
   // |Link|
-  void UpdateObject(const fidl::String& path,
+  void UpdateObject(fidl::Array<fidl::String> path,
                     const fidl::String& json) override;
-  void Set(const fidl::String& path, const fidl::String& json) override;
-  void Get(const fidl::String& path, const GetCallback& callback) override;
-  void Erase(const fidl::String& path) override;
+  void Set(fidl::Array<fidl::String> path, const fidl::String& json) override;
+  void Get(fidl::Array<fidl::String> path,
+           const GetCallback& callback) override;
+  void Erase(fidl::Array<fidl::String> path) override;
   void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
   void Dup(fidl::InterfaceRequest<Link> dup) override;

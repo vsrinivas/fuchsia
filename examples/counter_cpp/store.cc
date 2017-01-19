@@ -145,10 +145,8 @@ void Store::SendIfDirty() {
 
     std::vector<std::string> segments{modular_example::kJsonSegment,
                                       modular_example::kDocId};
-
-    link_->UpdateObject(
-        modular::EscapeJsonPath(segments.begin(), segments.end()),
-        modular::JsonValueToString(doc));
+    link_->UpdateObject(fidl::Array<fidl::String>::From(segments),
+                        modular::JsonValueToString(doc));
     dirty_ = false;
   }
 }

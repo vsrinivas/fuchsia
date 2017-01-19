@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <utility>
 
-#include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "lib/ftl/files/file.h"
+#include "third_party/rapidjson/rapidjson/document.h"
 
 namespace modular {
 namespace {
@@ -37,7 +37,7 @@ bool Config::ReadIfExistsFrom(const std::string& config_file) {
 bool Config::Parse(const std::string& string) {
   initial_apps_.clear();
 
-  JsonDoc document;
+  rapidjson::Document document;
   document.Parse(string);
   if (!document.IsObject())
     return false;

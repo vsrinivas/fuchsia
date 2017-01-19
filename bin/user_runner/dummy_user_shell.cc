@@ -237,8 +237,7 @@ class DummyUserShellApp
   void CreateStory(const fidl::String& url, const bool keep) {
     modular::JsonDoc doc;
     std::vector<std::string> segments{"example", url, "created-with-info"};
-    modular::JsonPointer(
-        modular::EscapeJsonPath(segments.begin(), segments.end()))
+    modular::CreatePointer(doc, segments.begin(), segments.end())
         .Set(doc, true);
 
     using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
@@ -285,7 +284,7 @@ class DummyUserShellApp
     // user shell it's running.
     std::vector<std::string> segments{"startup", "stories",
                                       story_info_->url.get(), kUserShell};
-    root_->Set(modular::EscapeJsonPath(segments.begin(), segments.end()),
+    root_->Set(fidl::Array<fidl::String>::From(segments),
                modular::JsonValueToString(modular::JsonValue(kDummyUserShell)));
 
     // NOTE(mesch): Both watchers below fire right after they are
