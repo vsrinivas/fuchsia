@@ -229,15 +229,14 @@ WAVLBalanceTestObserver::OpCounts WAVLBalanceTestObserver::op_counts_;
 
 // Test objects during the balance test will be allocated as a block all at once
 // and cleaned up at the end of the test.  Our test containers, however, are
-// containers of unique pointers with a no-op Deleter trait.  This allows the
-// containers to go out of scope with elements still in them (in case of a
+// containers of unique pointers to objects with a no-op delete.  This allows
+// the containers to go out of scope with elements still in them (in case of a
 // REQUIRE failure) without triggering the container assert for destroying a
 // container of unmanaged pointer with elements still in it.
 class BalanceTestObj;
-struct NopDelete { inline void operator()(BalanceTestObj*) const { } };
 
 using BalanceTestKeyType = uint64_t;
-using BalanceTestObjPtr  = unique_ptr<BalanceTestObj, NopDelete>;
+using BalanceTestObjPtr  = unique_ptr<BalanceTestObj>;
 using BalanceTestTree    = WAVLTree<BalanceTestKeyType,
                                     BalanceTestObjPtr,
                                     DefaultKeyedObjectTraits<BalanceTestKeyType, BalanceTestObj>,
@@ -264,6 +263,12 @@ public:
 
 private:
     friend DefaultWAVLTreeTraits<BalanceTestObjPtr, int32_t>;
+
+    static void operator delete(void* ptr) {
+        // Deliberate no-op
+    }
+    friend class mxtl::unique_ptr<BalanceTestObj[]>;
+    friend class mxtl::unique_ptr<BalanceTestObj>;
 
     BalanceTestKeyType key_;
     BalanceTestObj* erase_deck_ptr_;

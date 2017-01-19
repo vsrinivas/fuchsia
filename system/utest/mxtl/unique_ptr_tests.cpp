@@ -10,16 +10,25 @@
 
 static int destroy_count = 0;
 
-struct CountingDeleter {
-    void operator()(int* p)
-    {
+struct DeleteCounter {
+    DeleteCounter() = default;
+    DeleteCounter(int value) : value(value) {}
+
+    static void operator delete(void* ptr) {
         destroy_count++;
-        delete p;
+        ::operator delete(ptr);
     }
+
+    static void operator delete[](void* ptr) {
+        destroy_count++;
+        ::operator delete[](ptr);
+    }
+
+    int value = 0;
 };
 
-using CountingPtr    = mxtl::unique_ptr<int,   CountingDeleter>;
-using CountingArrPtr = mxtl::unique_ptr<int[], CountingDeleter>;
+using CountingPtr    = mxtl::unique_ptr<DeleteCounter>;
+using CountingArrPtr = mxtl::unique_ptr<DeleteCounter[]>;
 
 static_assert(mxtl::is_standard_layout<int>::value,
               "mxtl::unique_ptr<T>'s should have a standard layout");
@@ -37,7 +46,7 @@ static bool uptr_test_scoped_destruction() {
     AllocChecker ac;
     // Construct and let a unique_ptr fall out of scope.
     {
-        CountingPtr ptr(new (&ac) int);
+        CountingPtr ptr(new (&ac) DeleteCounter);
         EXPECT_TRUE(ac.check(), "");
     }
 
@@ -52,7 +61,7 @@ static bool uptr_test_move() {
     AllocChecker ac;
     // Construct and move into another unique_ptr.
     {
-        CountingPtr ptr(new (&ac) int);
+        CountingPtr ptr(new (&ac) DeleteCounter);
         EXPECT_TRUE(ac.check(), "");
 
         CountingPtr ptr2 = mxtl::move(ptr);
@@ -89,15 +98,15 @@ static bool uptr_test_diff_scope_swap() {
 
     AllocChecker ac;
     {
-        CountingPtr ptr1(new (&ac) int(4));
+        CountingPtr ptr1(new (&ac) DeleteCounter(4));
         EXPECT_TRUE(ac.check(), "");
         {
-            CountingPtr ptr2(new (&ac) int(7));
+            CountingPtr ptr2(new (&ac) DeleteCounter(7));
             EXPECT_TRUE(ac.check(), "");
 
             ptr1.swap(ptr2);
-            EXPECT_EQ(7, *ptr1, "");
-            EXPECT_EQ(4, *ptr2, "");
+            EXPECT_EQ(7, ptr1->value, "");
+            EXPECT_EQ(4, ptr2->value, "");
         }
         EXPECT_EQ(1, destroy_count, "");
     }
@@ -112,7 +121,7 @@ static bool uptr_test_bool_op() {
 
     AllocChecker ac;
 
-    CountingPtr foo(new (&ac) int);
+    CountingPtr foo(new (&ac) DeleteCounter);
     EXPECT_TRUE(ac.check(), "");
     EXPECT_TRUE(static_cast<bool>(foo), "");
 
@@ -128,11 +137,11 @@ static bool uptr_test_comparison() {
 
     AllocChecker ac;
     // Test comparison operators.
-    mxtl::unique_ptr<int> null_unique;
-    mxtl::unique_ptr<int> lesser_unique(new (&ac) int(1));
+    mxtl::unique_ptr<DeleteCounter> null_unique;
+    mxtl::unique_ptr<DeleteCounter> lesser_unique(new (&ac) DeleteCounter(1));
     EXPECT_TRUE(ac.check(), "");
 
-    mxtl::unique_ptr<int> greater_unique(new (&ac) int(2));
+    mxtl::unique_ptr<DeleteCounter> greater_unique(new (&ac) DeleteCounter(2));
     EXPECT_TRUE(ac.check(), "");
 
     EXPECT_NEQ(lesser_unique.get(), greater_unique.get(), "");
@@ -189,7 +198,7 @@ static bool uptr_test_array_scoped_destruction() {
     AllocChecker ac;
     // Construct and let a unique_ptr fall out of scope.
     {
-        CountingArrPtr ptr(new (&ac) int[1]);
+        CountingArrPtr ptr(new (&ac) DeleteCounter[1]);
         EXPECT_TRUE(ac.check(), "");
     }
     EXPECT_EQ(1, destroy_count, "");
@@ -204,7 +213,7 @@ static bool uptr_test_array_move() {
     AllocChecker ac;
     // Construct and move into another unique_ptr.
     {
-        CountingArrPtr ptr(new (&ac) int[1]);
+        CountingArrPtr ptr(new (&ac) DeleteCounter[1]);
         EXPECT_TRUE(ac.check(), "");
 
         CountingArrPtr ptr2 = mxtl::move(ptr);
@@ -239,18 +248,18 @@ static bool uptr_test_array_diff_scope_swap() {
     AllocChecker ac;
 
     {
-        CountingArrPtr ptr1(new (&ac) int[1]);
+        CountingArrPtr ptr1(new (&ac) DeleteCounter[1]);
         EXPECT_TRUE(ac.check(), "");
 
         ptr1[0] = 4;
         {
-            CountingArrPtr ptr2(new (&ac) int[1]);
+            CountingArrPtr ptr2(new (&ac) DeleteCounter[1]);
             EXPECT_TRUE(ac.check(), "");
 
             ptr2[0] = 7;
             ptr1.swap(ptr2);
-            EXPECT_EQ(7, ptr1[0], "");
-            EXPECT_EQ(4, ptr2[0], "");
+            EXPECT_EQ(7, ptr1[0].value, "");
+            EXPECT_EQ(4, ptr2[0].value, "");
         }
         EXPECT_EQ(1, destroy_count, "");
     }
@@ -265,7 +274,7 @@ static bool uptr_test_array_bool_op() {
 
     AllocChecker ac;
 
-    CountingArrPtr foo(new (&ac) int[1]);
+    CountingArrPtr foo(new (&ac) DeleteCounter[1]);
     EXPECT_TRUE(ac.check(), "");
     EXPECT_TRUE(static_cast<bool>(foo), "");
 
@@ -281,10 +290,10 @@ static bool uptr_test_array_comparison() {
 
     AllocChecker ac;
 
-    mxtl::unique_ptr<int[]> null_unique;
-    mxtl::unique_ptr<int[]> lesser_unique(new (&ac) int[1]);
+    mxtl::unique_ptr<DeleteCounter[]> null_unique;
+    mxtl::unique_ptr<DeleteCounter[]> lesser_unique(new (&ac) DeleteCounter[1]);
     EXPECT_TRUE(ac.check(), "");
-    mxtl::unique_ptr<int[]> greater_unique(new (&ac) int[2]);
+    mxtl::unique_ptr<DeleteCounter[]> greater_unique(new (&ac) DeleteCounter[2]);
     EXPECT_TRUE(ac.check(), "");
 
     EXPECT_NEQ(lesser_unique.get(), greater_unique.get(), "");
@@ -368,14 +377,6 @@ private:
     volatile uint32_t stuff_;
 };
 
-template <typename T>
-struct custom_delete {
-    inline void operator()(T* ptr) const {
-        enum { type_must_be_complete = sizeof(T) };
-        delete ptr;
-    }
-};
-
 template <typename UptrType>
 static bool handoff_fn(UptrType&& ptr) {
     BEGIN_TEST;
@@ -410,15 +411,13 @@ private:
 
 
 template <typename Base,
-          typename Derived,
-          typename BaseDeleter = mxtl::default_delete<Base>,
-          typename DerivedDeleter = mxtl::default_delete<Derived>>
+          typename Derived>
 static bool test_upcast() {
     BEGIN_TEST;
 
     AllocChecker ac;
 
-    mxtl::unique_ptr<Derived, DerivedDeleter> derived_ptr;
+    mxtl::unique_ptr<Derived> derived_ptr;
 
     // Construct unique_ptr<Base> with a move and implicit cast
     derived_ptr.reset(new (&ac) Derived());
@@ -426,7 +425,7 @@ static bool test_upcast() {
     {
         EXPECT_NONNULL(derived_ptr, "");
 
-        mxtl::unique_ptr<Base, BaseDeleter> base_ptr(mxtl::move(derived_ptr));
+        mxtl::unique_ptr<Base> base_ptr(mxtl::move(derived_ptr));
 
         EXPECT_NULL(derived_ptr, "");
         EXPECT_NONNULL(base_ptr, "");
@@ -438,7 +437,7 @@ static bool test_upcast() {
     {
         EXPECT_NONNULL(derived_ptr, "");
 
-        mxtl::unique_ptr<Base, BaseDeleter> base_ptr = mxtl::move(derived_ptr);
+        mxtl::unique_ptr<Base> base_ptr = mxtl::move(derived_ptr);
 
         EXPECT_NULL(derived_ptr, "");
         EXPECT_NONNULL(base_ptr, "");
@@ -448,7 +447,7 @@ static bool test_upcast() {
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check(), "");
     {
-        mxtl::unique_ptr<Base, BaseDeleter> base_ptr;
+        mxtl::unique_ptr<Base> base_ptr;
         base_ptr = mxtl::move(derived_ptr);
     }
 
@@ -458,7 +457,7 @@ static bool test_upcast() {
     {
         EXPECT_NONNULL(derived_ptr, "");
 
-        bool test_res = handoff_fn<mxtl::unique_ptr<Base, BaseDeleter>>(mxtl::move(derived_ptr));
+        bool test_res = handoff_fn<mxtl::unique_ptr<Base>>(mxtl::move(derived_ptr));
 
         EXPECT_NULL(derived_ptr, "");
         EXPECT_TRUE(test_res, "");
@@ -469,7 +468,7 @@ static bool test_upcast() {
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check(), "");
     {
-        mxtl::unique_ptr<Base, BaseDeleter> base_ptr(derived_ptr);
+        mxtl::unique_ptr<Base> base_ptr(derived_ptr);
     }
 #endif
 
@@ -478,7 +477,7 @@ static bool test_upcast() {
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check(), "");
     {
-        mxtl::unique_ptr<Base, BaseDeleter> base_ptr = derived_ptr;
+        mxtl::unique_ptr<Base> base_ptr = derived_ptr;
     }
 #endif
 
@@ -487,7 +486,7 @@ static bool test_upcast() {
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check(), "");
     {
-        mxtl::unique_ptr<Base, BaseDeleter> base_ptr;
+        mxtl::unique_ptr<Base> base_ptr;
         base_ptr = derived_ptr;
     }
 #endif
@@ -497,7 +496,7 @@ static bool test_upcast() {
     derived_ptr.reset(new (&ac) Derived());
     ASSERT_TRUE(ac.check(), "");
     {
-        bool test_res = handoff_fn<mxtl::unique_ptr<Base, BaseDeleter>>(derived_ptr);
+        bool test_res = handoff_fn<mxtl::unique_ptr<Base>>(derived_ptr);
         EXPECT_FALSE(test_res, "");
     }
 #endif
@@ -525,22 +524,6 @@ static bool uptr_upcasting() {
     // This should not work.  D has a virtual destructor, but it is not a base
     // class of C.
     test_res = test_upcast<D, C>();
-    EXPECT_FALSE(test_res, "");
-#endif
-
-#if TEST_WILL_NOT_COMPILE || 0
-    // This should not work.  A and C have the proper relationship, but we are
-    // using a custom deleter for unique_ptr<A>, and C will not implicitly cast
-    // itself to a unique_ptr<A> which uses a custom deleter.
-    test_res = test_upcast<A, C, custom_delete<A>>();
-    EXPECT_FALSE(test_res, "");
-#endif
-
-#if TEST_WILL_NOT_COMPILE || 0
-    // This should not work.  A and C have the proper relationship, and we are
-    // attempting to implicitly cast to unique_ptr<A, default_delete<A>>, but
-    // our C pointer is using a custom deleter.
-    test_res = test_upcast<A, C, mxtl::default_delete<A>, custom_delete<C>>();
     EXPECT_FALSE(test_res, "");
 #endif
 

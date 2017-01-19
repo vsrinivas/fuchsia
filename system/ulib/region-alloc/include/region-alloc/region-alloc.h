@@ -281,11 +281,11 @@ public:
         // So many friends!  I'm the most popular class in the build!!
         friend class  RegionAllocator;
         friend class  RegionPool;
+        friend class  mxtl::unique_ptr<const Region>;
         friend        KeyTraitsSortByBase;
         friend struct KeyTraitsSortBySize;
         friend struct WAVLTreeNodeTraitsSortByBase;
         friend struct WAVLTreeNodeTraitsSortBySize;
-        friend struct mxtl::default_delete<const Region>;
 
         // Regions can only be placement new'ed by RegionPool::Slabs.  They
         // cannot be copied, assigned, or deleted.  Externally, they should only
