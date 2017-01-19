@@ -37,6 +37,9 @@ attr                    .req x27
 
 .section .text.boot
 FUNCTION(_start)
+#if FASTBOOT_HEADER
+#include "fastboot-header.S"
+#endif
 .globl arm_reset
 arm_reset:
     adrp    tmp, boot_args
