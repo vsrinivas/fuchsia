@@ -25,31 +25,31 @@ namespace mxtl {
 #define mxtl_mutex_release mtx_unlock
 #endif
 
-class AutoLock {
+class __TA_SCOPED_CAPABILITY AutoLock {
 public:
-    explicit AutoLock(mxtl_mutex_t* mutex)
+    explicit AutoLock(mxtl_mutex_t* mutex) __TA_ACQUIRE(mutex)
         :   mutex_(mutex) {
         mxtl_mutex_acquire(mutex_);
     }
 
-    explicit AutoLock(mxtl_mutex_t& mutex)
+    explicit AutoLock(mxtl_mutex_t& mutex) __TA_ACQUIRE(mutex)
         :   AutoLock(&mutex) {}
 
-    explicit AutoLock(Mutex& mutex)
+    explicit AutoLock(Mutex& mutex) __TA_ACQUIRE(mutex)
         :   AutoLock(mutex.GetInternal()) {}
 
-    explicit AutoLock(Mutex* mutex)
+    explicit AutoLock(Mutex* mutex) __TA_ACQUIRE(mutex)
         :   AutoLock(mutex->GetInternal()) {}
 
     explicit AutoLock(mxtl::NullLock*) : mutex_(nullptr) { }
     explicit AutoLock(mxtl::NullLock&) : mutex_(nullptr) { }
 
-    ~AutoLock() {
+    ~AutoLock()  __TA_RELEASE() {
         release();
     }
 
     // early release the mutex before the object goes out of scope
-    void release() {
+    void release() __TA_RELEASE() {
         if (mutex_) {
             mxtl_mutex_release(mutex_);
             mutex_ = nullptr;

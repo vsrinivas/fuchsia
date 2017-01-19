@@ -10,6 +10,7 @@
 #define __KERNEL_MUTEX_H
 
 #include <magenta/compiler.h>
+#include <magenta/thread_annotations.h>
 #include <debug.h>
 #include <stdint.h>
 #include <kernel/thread.h>
@@ -18,7 +19,7 @@ __BEGIN_CDECLS;
 
 #define MUTEX_MAGIC (0x6D757478)  // 'mutx'
 
-typedef struct mutex {
+typedef struct TA_CAP("mutex") mutex {
     uint32_t magic;
     thread_t *holder;
     int count;
@@ -40,8 +41,8 @@ typedef struct mutex {
 
 void mutex_init(mutex_t *);
 void mutex_destroy(mutex_t *);
-status_t mutex_acquire(mutex_t *);
-void mutex_release(mutex_t *);
+status_t mutex_acquire(mutex_t *m);
+void mutex_release(mutex_t *m);
 
 /* Internal functions for use by condvar implementation. */
 status_t mutex_acquire_internal(mutex_t *m);

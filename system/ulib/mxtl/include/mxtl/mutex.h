@@ -24,18 +24,18 @@
 #include <kernel/mutex.h>
 #include <sys/types.h>
 
-class Mutex {
+class __TA_CAPABILITY("mutex") Mutex {
 public:
     constexpr Mutex() : mutex_(MUTEX_INITIAL_VALUE(mutex_)) { }
     ~Mutex() { mutex_destroy(&mutex_); }
-    void Acquire() { mutex_acquire(&mutex_); }
-    void Release() { mutex_release(&mutex_); }
+    void Acquire() __TA_ACQUIRE() { mutex_acquire(&mutex_); }
+    void Release() __TA_RELEASE() { mutex_release(&mutex_); }
 
     bool IsHeld() const {
         return is_mutex_held(&mutex_);
     }
 
-    mutex_t* GetInternal() {
+    mutex_t* GetInternal() __TA_RETURN_CAPABILITY(mutex_) {
         return &mutex_;
     }
 
@@ -55,12 +55,12 @@ namespace mxtl { using Mutex = ::Mutex; }
 
 namespace mxtl {
 
-class Mutex {
+class __TA_CAPABILITY("mutex") Mutex {
 public:
-     constexpr Mutex() : mutex_(MTX_INIT) { }
+    constexpr Mutex() : mutex_(MTX_INIT) { }
     ~Mutex() { mtx_destroy(&mutex_); }
-    void Acquire() { mtx_lock(&mutex_); }
-    void Release() { mtx_unlock(&mutex_); }
+    void Acquire() __TA_ACQUIRE() { mtx_lock(&mutex_); }
+    void Release() __TA_ACQUIRE() { mtx_unlock(&mutex_); }
 
     /* IsHeld is not supported by the Mutex wrapper in user-mode as C11 mtx_t
      * instances do not support a direct IsHeld style check.  A possible
@@ -68,7 +68,7 @@ public:
      * either relaxing away the const constraint on the method signature, or
      * flagging the mutex_ member as mutable */
 
-    mtx_t* GetInternal() {
+    mtx_t* GetInternal() __TA_RETURN_CAPABILITY(mutex_) {
         return &mutex_;
     }
 

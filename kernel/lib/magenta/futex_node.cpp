@@ -102,7 +102,7 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
 // This blocks the current thread.  This releases the given mutex (which
 // must be held when BlockThread() is called).  To reduce contention, it
 // does not reclaim the mutex on return.
-status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t timeout) {
+status_t FutexNode::BlockThread(Mutex* mutex, mx_time_t timeout) TA_NO_THREAD_SAFETY_ANALYSIS {
     lk_time_t t = mx_time_to_lk(timeout);
 
     THREAD_LOCK(state);

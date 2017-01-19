@@ -33,9 +33,11 @@
 #ifndef __clang__
 #define __OPTIMIZE(x) __attribute__((optimize(x)))
 #define __EXTERNALLY_VISIBLE __attribute__((externally_visible))
+#define __THREAD_ANNOTATION(x)
 #else
 #define __OPTIMIZE(x)
 #define __EXTERNALLY_VISIBLE
+#define __THREAD_ANNOTATION(x) __attribute__((x))
 #endif
 
 #define __ALWAYS_INLINE __attribute__((always_inline))
@@ -49,6 +51,17 @@
 #define __LOCAL  __attribute__ ((visibility("hidden")))
 #define __THREAD __thread
 #define __offsetof(type, field) __builtin_offsetof(type, field)
+
+// Publicly exposed thread annotation macros. These have a long and ugly name to
+// minimize the chance of collision with consumers of Magenta's public headers.
+#define __TA_CAPABILITY(x) __THREAD_ANNOTATION(capability(x))
+#define __TA_GUARDED(x) __THREAD_ANNOTATION(guarded_by(x))
+#define __TA_ACQUIRE(x) __THREAD_ANNOTATION(acquire_capability(x))
+#define __TA_RELEASE(x) __THREAD_ANNOTATION(release_capability(x))
+#define __TA_REQUIRES(x) __THREAD_ANNOTATION(requires_capability(x))
+#define __TA_RETURN_CAPABILITY(x) __THREAD_ANNOTATION(lock_returned(x))
+#define __TA_SCOPED_CAPABILITY __THREAD_ANNOTATION(scoped_lockable)
+#define __TA_NO_THREAD_SAFETY_ANALYSIS __THREAD_ANNOTATION(no_thread_safety_analysis)
 
 #if !defined __DEPRECATED
 #define __DEPRECATED __attribute((deprecated))
