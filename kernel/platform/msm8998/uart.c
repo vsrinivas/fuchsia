@@ -24,6 +24,8 @@
 #define UARTDM_NCF_TX       0x40
 #define UARTDM_RF           0x0070
 
+#define RXBUF_SIZE 16
+
 static cbuf_t uart_rx_buf;
 
 static inline void yield(void)
@@ -66,6 +68,7 @@ int uart_putc(int port, char c) {
 }
 
 void uart_init(void) {
+    cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);
 }
 
 void uart_init_early(void) {
