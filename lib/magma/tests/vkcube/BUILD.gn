@@ -4,22 +4,26 @@
 
 import("//magma/gnbuild/magma.gni")
 
-use_vulkan_loader = true
+use_vulkan_loader = false
 
 executable("vkcube") {
   include_dirs = [ "." ]
+
+  defines = [ "VK_USE_PLATFORM_MAGMA_KHR" ]
 
   sources = [
     "$magma_build_root/third_party/vkcube/cube.cc",
     "main.cc",
   ]
 
-  public_deps = [
-    "$magma_build_root/src/magma_util"
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/tests/vulkan_shim",
   ]
+
   if (use_vulkan_loader) {
-    public_deps += [ "//magma:vulkan" ]
+    deps += [ "$magma_build_root:vulkan" ]
   } else {
-    public_deps += [ "$mesa_build_root:magma_vulkan" ]
+    deps += [ "$mesa_build_root:magma_vulkan" ]
   }
 }

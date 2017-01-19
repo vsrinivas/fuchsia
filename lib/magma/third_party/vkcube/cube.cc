@@ -42,7 +42,7 @@ extern "C" {
 #include <chrono>
 #endif
 
-#include <vulkan/vulkan.h>
+#include "vulkan_shim.h"
 
 //#include <vulkan/vk_sdk_platform.h>
 #include "linmath.h"
@@ -2960,5 +2960,6 @@ int cube_main(int argc, char **argv) {
 
 int test_vk_cube(int argc, char** argv)
 {
+    VulkanShimInit();
     return cube_main(argc, argv);
 }

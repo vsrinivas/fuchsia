@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan/vulkan.h"
+#include "vulkan_shim.h"
 #include <stdint.h>
-#include <stdlib.h>
-#include <vector>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 #include "magma_util/macros.h"
 
@@ -334,6 +334,8 @@ bool VkReadbackTest::Readback()
 
 int main(void)
 {
+    VulkanShimInit();
+
     VkReadbackTest app;
 
     if (!app.Initialize())
