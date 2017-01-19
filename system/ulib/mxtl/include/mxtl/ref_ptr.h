@@ -67,13 +67,13 @@ public:
     // Implicit upcast via copy construction.
     //
     // @see the notes in unique_ptr.h
-    template <typename U, typename U_Deleter>
+    template <typename U, typename U_Deleter,
+              typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
     RefPtr(const RefPtr<U, U_Deleter>& r) : RefPtr(r.ptr_) {
-        static_assert(is_base_of<T, U>::value,
-                "Cannot convert RefPtr<U> to RefPtr<T> unless T is a base class of U");
-
-        static_assert(has_virtual_destructor<T>::value,
-                "Cannot convert RefPtr<U> to RefPtr<T> unless T has a virtual destructor");
+        static_assert((is_class<T>::value == is_class<U>::value) &&
+                     (!is_class<T>::value || has_virtual_destructor<T>::value),
+                "Cannot convert unique_ptr<U> to unique_ptr<T> unless neither T "
+                "nor U are class/struct types, or T has a virtual destructor");
 
         static_assert(is_same<U_Deleter, default_delete<U>>::value,
                 "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<U, ...> is "
@@ -106,14 +106,14 @@ public:
 
     // Implicit upcast via move construction.
     //
-    // @see the notes in unique_ptr.h
-    template <typename U, typename U_Deleter>
+    // @see the notes in RefPtr.h
+    template <typename U, typename U_Deleter,
+              typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
     RefPtr(RefPtr<U, U_Deleter>&& r) : ptr_(r.ptr_) {
-        static_assert(is_base_of<T, U>::value,
-                "Cannot convert RefPtr<U> to RefPtr<T> unless T is a base class of U");
-
-        static_assert(has_virtual_destructor<T>::value,
-                "Cannot convert RefPtr<U> to RefPtr<T> unless T has a virtual destructor");
+        static_assert((is_class<T>::value == is_class<U>::value) &&
+                     (!is_class<T>::value || has_virtual_destructor<T>::value),
+                "Cannot convert unique_ptr<U> to unique_ptr<T> unless neither T "
+                "nor U are class/struct types, or T has a virtual destructor");
 
         static_assert(is_same<U_Deleter, default_delete<U>>::value,
                 "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<U, ...> is "

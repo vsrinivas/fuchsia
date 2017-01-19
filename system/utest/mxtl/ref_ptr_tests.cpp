@@ -247,26 +247,61 @@ struct custom_delete {
     }
 };
 
-template <typename UptrType>
-static bool handoff_lvalue_fn(const UptrType& ptr) {
+template <typename RefPtrType>
+static bool handoff_lvalue_fn(const RefPtrType& ptr) {
     BEGIN_TEST;
     EXPECT_NONNULL(ptr, "");
     END_TEST;
 }
 
-template <typename UptrType>
-static bool handoff_copy_fn(UptrType ptr) {
+template <typename RefPtrType>
+static bool handoff_copy_fn(RefPtrType ptr) {
     BEGIN_TEST;
     EXPECT_NONNULL(ptr, "");
     END_TEST;
 }
 
-template <typename UptrType>
-static bool handoff_rvalue_fn(UptrType&& ptr) {
+template <typename RefPtrType>
+static bool handoff_rvalue_fn(RefPtrType&& ptr) {
     BEGIN_TEST;
     EXPECT_NONNULL(ptr, "");
     END_TEST;
 }
+
+class OverloadTestHelper {
+public:
+    enum class Result {
+        None,
+        ClassA,
+        ClassB,
+        ClassD,
+    };
+
+    void PassByCopy(mxtl::RefPtr<A>) { result_ = Result::ClassA; }
+    void PassByCopy(mxtl::RefPtr<D>) { result_ = Result::ClassD; }
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // Enabling this overload should cause the overload test to fail to compile
+    // due to ambiguity (it does not know whether to cast mxtl::RefPtr<C> to mxtl::RefPtr<A>
+    // or mxtl::RefPtr<B>)
+    void PassByCopy(mxtl::RefPtr<B>) { result_ = Result::ClassB; }
+#endif
+
+    void PassByMove(mxtl::RefPtr<A>&&) { result_ = Result::ClassA; }
+    void PassByMove(mxtl::RefPtr<D>&&) { result_ = Result::ClassD; }
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // Enabling this overload should cause the overload test to fail to compile
+    // due to ambiguity (it does not know whether to cast mxtl::RefPtr<C> to mxtl::RefPtr<A>
+    // or mxtl::RefPtr<B>)
+    void PassByMove(mxtl::RefPtr<B>&&) { result_ = Result::ClassB; }
+#endif
+
+    Result result() const { return result_; }
+
+private:
+    Result result_ = Result::None;
+};
 
 template <typename Base,
           typename Derived,
@@ -503,6 +538,35 @@ static bool ref_ptr_upcast_test() {
     test_res = do_test<A, C, mxtl::default_delete<A>, custom_delete<C>>();
     EXPECT_FALSE(test_res, "");
 #endif
+
+    // Test overload resolution.  Make a C and the try to pass it to
+    // OverloadTestHelper's various overloaded methods.  The compiler should
+    // know which version to pick, and it should pick the RefPtr<A> version, not
+    // the RefPtr<D> version.  If the TEST_WILL_NOT_COMPILE check is enabled in
+    // OverloadTestHelper, a RefPtr<B> version will be enabled as well.  This
+    // should cause the build to break because of ambiguity.
+    AllocChecker ac;
+    mxtl::RefPtr<C> ptr = mxtl::AdoptRef(new (&ac) C());
+    ASSERT_TRUE(ac.check(), "");
+
+    {
+        // Test pass by copy first (so we can reuse our object)
+        OverloadTestHelper helper;
+        helper.PassByCopy(ptr);
+
+        ASSERT_NONNULL(ptr, "");
+        EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result(), "");
+
+    }
+
+    {
+        // Now test pass by move.
+        OverloadTestHelper helper;
+        helper.PassByMove(mxtl::move(ptr));
+
+        EXPECT_NULL(ptr, "");
+        EXPECT_EQ(OverloadTestHelper::Result::ClassA, helper.result(), "");
+    }
 
     END_TEST;
 }
