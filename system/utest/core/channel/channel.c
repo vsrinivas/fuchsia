@@ -682,7 +682,7 @@ static bool channel_call(void) {
         snprintf(buf, sizeof(buf), "#%d '%s' did not complete", n, ccargs[n].name);
         EXPECT_EQ(ccargs[n].bit & call_test_done, ccargs[n].bit, buf);
         snprintf(buf, sizeof(buf), "'%s' did not succeed", ccargs[n].name);
-        EXPECT_EQ(ccargs[n].err, NULL, buf);
+        EXPECT_NULL(ccargs[n].err, buf);
         if (ccargs[n].err) {
             unittest_printf_critical("call_client #%d: %s: %s %d (0x%x)\n", n, ccargs[n].name,
                                      ccargs[n].err, ccargs[n].val, ccargs[n].val);
