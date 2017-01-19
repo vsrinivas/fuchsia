@@ -11,7 +11,7 @@
 #include "apps/maxwell/src/suggestion_engine/timeline_stories_watcher.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/services/user/focus.fidl.h"
-#include "apps/modular/services/user/story_provider.fidl.h"
+#include "apps/modular/services/story/story_provider.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/ftl/functional/make_copyable.h"
 

@@ -5,7 +5,7 @@
 module maxwell;
 
 import "apps/modular/services/user/focus.fidl";
-import "apps/modular/services/user/story_provider.fidl";
+import "apps/modular/services/story/story_provider.fidl";
 
 [ServiceName="maxwell.Launcher"]
 interface Launcher {
