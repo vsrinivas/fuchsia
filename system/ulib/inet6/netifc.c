@@ -11,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <magenta/device/ethernet.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
 
@@ -49,6 +50,7 @@ static int rxc;
 
 static int netfd = -1;
 static uint8_t netmac[6];
+static size_t netmtu;
 
 #define MAX_FILTER 8
 
@@ -131,7 +133,7 @@ int netifc_timer_expired(void) {
 
 void netifc_get_info(uint8_t* addr, uint16_t* mtu) {
     memcpy(addr, netmac, 6);
-    *mtu = 1500;
+    *mtu = netmtu;
 }
 
 static mx_status_t netifc_open_cb(int dirfd, const char* fn, void* cookie) {
@@ -141,10 +143,16 @@ static mx_status_t netifc_open_cb(int dirfd, const char* fn, void* cookie) {
         return NO_ERROR;
     }
 
-    if (read(netfd, netmac, 6) != 6) {
-        close(netfd);
-        netfd = -1;
-        return NO_ERROR;
+    if (ioctl_ethernet_get_mac_addr(netfd, netmac, sizeof(netmac)) < 0) {
+      close(netfd);
+      netfd = -1;
+      return NO_ERROR;
+    }
+
+    if (ioctl_ethernet_get_mtu(netfd, &netmtu) < 0) {
+      close(netfd);
+      netfd = -1;
+      return NO_ERROR;
     }
 
     ip6_init(netmac);
