@@ -10,11 +10,11 @@
 
 #include <magenta/prctl.h>
 #include <magenta/types.h>
+#include <magenta/handle_unique_ptr.h>
 
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>
 
-class Handle;
 class Dispatcher;
 class ExceptionPort;
 class ProcessDispatcher;
@@ -26,9 +26,6 @@ Handle* MakeHandle(mxtl::RefPtr<Dispatcher> dispatcher, mx_rights_t rights);
 
 // Duplicate a handle created by MakeHandle().
 Handle* DupHandle(Handle* source, mx_rights_t rights);
-
-// Deletes a |handle| made by MakeHandle() or DupHandle().
-void DeleteHandle(Handle* handle);
 
 // Maps a handle created by MakeHandle() to the 0 to 2^32 range.
 uint32_t MapHandleToU32(const Handle* handle);
@@ -44,14 +41,6 @@ mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort();
 mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
 
 bool magenta_rights_check(mx_rights_t actual, mx_rights_t desired);
-
-struct handle_delete {
-    inline void operator()(Handle* h) const {
-        DeleteHandle(h);
-    }
-};
-
-using HandleUniquePtr = mxtl::unique_ptr<Handle, handle_delete>;
 
 // (temporary) conversion from mx_time (nanoseconds) to lk_time_t (milliseconds)
 // remove once mx_time_t is converted to 1:1 match mx_time_t
