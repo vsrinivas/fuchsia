@@ -676,8 +676,13 @@ bool generate_trace_info(
 }
 
 const std::map<string, string> user_attrs = {
-    {"noreturn", "__attribute__((noreturn))"},
-    {"leafc", "__attribute__((leaf, const))"}
+    {"noreturn", "__attribute__((__noreturn__))"},
+    {"const", "__attribute__((const))"},
+
+    // All vDSO calls are "leaf" in the sense of the GCC attribute.
+    // It just means they can't ever call back into their callers'
+    // own translation unit.  No vDSO calls make callbacks at all.
+    {"*", "__attribute__((__leaf__))"},
 };
 
 enum GenType : uint32_t {
@@ -825,6 +830,9 @@ bool process_syscall(SygenGenerator* parser, TokenStream& ts) {
         return false;
 
     Syscall syscall { ts.filectx(), name };
+
+    // Every entry gets the special catch-all "*" attribute.
+    syscall.attributes.push_back("*");
 
     while (true) {
         auto maybe_attr = ts.next();

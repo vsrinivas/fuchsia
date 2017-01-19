@@ -42,13 +42,14 @@ syscall ticks_get vdsocall
     ()
     returns (uint64_t);
 
-syscall ticks_per_second vdsocall leafc
+syscall ticks_per_second vdsocall const
     ()
     returns (uint64_t);
 
 # Global system information
 
-syscall num_cpus vdsocall leafc ()
+syscall num_cpus vdsocall const
+    ()
     returns (uint32_t);
 
 syscall version_get vdsocall
