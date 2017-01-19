@@ -177,6 +177,25 @@ else
   rm -rf -- "$STAGING_DIR"/*
 fi
 
+set +e
+mcpy_loc=$(which mcopy)
+mmd_loc=$(which mmd)
+lz4_path=$(which lz4)
+
+if [ "$mcpy_loc" = "" ] || [ "$mmd_loc" = "" ]; then
+  echo "Unable to find necessary mtools binaries, please install a copy of"\
+    "mtools."
+  exit -1
+fi
+
+if [ "$lz4_path" = "" ]; then
+  echo "Unable to find lz4 tool, please install this package. On Ubuntu try"\
+    "'apt-get install liblz4-tool'."
+  exit -1
+fi
+
+set -e
+
 # create a suitably large file
 echo "Creating system disk image, this may take some time..."
 dd if=/dev/zero of="$disk_path" bs="$BLOCK_SIZE" count="$blocks_sys"
@@ -185,10 +204,6 @@ dd if=/dev/zero of="$disk_path" bs="$BLOCK_SIZE" count="$blocks_sys"
 echo "Creating EFI disk image, this may take some time..."
 dd if=/dev/zero of="$disk_path_efi" bs="$BLOCK_SIZE" count="$blocks_efi"
 mkfs.vfat -F 32 "$disk_path_efi"
-
-mcpy_loc=$(which mcopy)
-mmd_loc=$(which mmd)
-lz4_path=$(which lz4)
 
 "${script_dir}"/imager.py --disk_path="$disk_path" --mcp_path="$mcpy_loc" \
   --mmd_path="$mmd_loc" --lz4_path="$lz4_path" --build_dir="$build_dir_fuchsia" \
