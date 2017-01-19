@@ -1021,12 +1021,15 @@ TEST_F(PageStorageTest, Generation) {
   std::unique_ptr<Journal> journal;
   EXPECT_EQ(Status::OK,
             storage_->StartMergeCommit(commit_id1, commit_id2, &journal));
-  journal->Commit([this](Status status, const CommitId& commit_id3) {
-    std::unique_ptr<const Commit> commit3 = GetCommit(commit_id3);
-    EXPECT_EQ(3u, commit3->GetGeneration());
-    message_loop_.PostQuitTask();
-  });
+
+  Status status;
+  CommitId commit_id3;
+  journal->Commit(::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                  &status, &commit_id3));
   ASSERT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(Status::OK, status);
+  std::unique_ptr<const Commit> commit3 = GetCommit(commit_id3);
+  EXPECT_EQ(3u, commit3->GetGeneration());
 }
 
 TEST_F(PageStorageTest, DeletionOnIOThread) {
