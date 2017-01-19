@@ -42,7 +42,7 @@ class MotermView : public mozart::BaseView,
   void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
 
   // |InputListener|:
-  void OnEvent(mozart::EventPtr event,
+  void OnEvent(mozart::InputEventPtr event,
                const OnEventCallback& callback) override;
   // |MotermModel::Delegate|:
   void OnResponse(const void* buf, size_t size) override;
@@ -50,7 +50,7 @@ class MotermView : public mozart::BaseView,
 
   void ScheduleDraw(bool force);
   void DrawContent(SkCanvas* canvas, const mozart::Size& size);
-  void OnKeyPressed(mozart::EventPtr key_event);
+  void OnKeyPressed(mozart::InputEventPtr key_event);
 
   // stdin/stdout
   void OnDataReceived(const void* bytes, size_t num_bytes);

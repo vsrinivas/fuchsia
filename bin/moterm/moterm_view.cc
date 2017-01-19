@@ -265,29 +265,32 @@ void MotermView::OnSetKeypadMode(bool application_mode) {
 }
 
 // |InputListener|:
-void MotermView::OnEvent(mozart::EventPtr event,
+void MotermView::OnEvent(mozart::InputEventPtr event,
                          const OnEventCallback& callback) {
-  if (event->action == mozart::EventType::KEY_PRESSED) {
-    if (event->key_data->code_point == '+' &&
-        event->key_data->modifiers & mozart::kModifierAlt) {
-      params_.font_size++;
-      ComputeMetrics();
-      Resize();
-    } else if (event->key_data->code_point == '-' &&
-               event->key_data->modifiers & mozart::kModifierAlt) {
-      params_.font_size--;
-      ComputeMetrics();
-      Resize();
-    } else {
+  if (event->is_keyboard()) {
+    const mozart::KeyboardEventPtr& keyboard = event->get_keyboard();
+    if (keyboard->phase == mozart::KeyboardEvent::Phase::PRESSED ||
+        keyboard->phase == mozart::KeyboardEvent::Phase::REPEAT) {
+      if (keyboard->code_point == '+' &&
+          keyboard->modifiers & mozart::kModifierAlt) {
+        params_.font_size++;
+        ComputeMetrics();
+        Resize();
+      } else if (keyboard->code_point == '-' &&
+                 keyboard->modifiers & mozart::kModifierAlt) {
+        params_.font_size--;
+        ComputeMetrics();
+        Resize();
+      }
       OnKeyPressed(std::move(event));
+      callback(true);
+      return;
     }
-    callback(true);
-  } else {
-    callback(false);
   }
+  callback(false);
 }
 
-void MotermView::OnKeyPressed(mozart::EventPtr key_event) {
+void MotermView::OnKeyPressed(mozart::InputEventPtr key_event) {
   last_key_ = ftl::TimePoint::Now();
   blink_on_ = true;
 
