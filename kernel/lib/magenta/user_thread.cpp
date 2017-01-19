@@ -339,9 +339,13 @@ mxtl::RefPtr<ExceptionPort> UserThread::exception_port() {
     return exception_port_;
 }
 
-status_t UserThread::ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
-                                              const mx_exception_report_t* report,
-                                              const arch_exception_context_t* arch_context) {
+// Thread safety analysis disabled as the analysis doesn't understand that
+// |exception_wait_lock_.GetInternal()| is an alias for the same mutex_t as
+// |exception_wait_lock_.mutex_|.
+status_t UserThread::ExceptionHandlerExchange(
+        mxtl::RefPtr<ExceptionPort> eport,
+        const mx_exception_report_t* report,
+        const arch_exception_context_t* arch_context) TA_NO_THREAD_SAFETY_ANALYSIS {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(exception_wait_lock_);
 

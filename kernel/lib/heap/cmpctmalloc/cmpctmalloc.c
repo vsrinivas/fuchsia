@@ -87,12 +87,12 @@ static struct heap theheap;
 
 static ssize_t heap_grow(size_t len, free_t **bucket);
 
-static void lock(void)
+static void lock(void) TA_ACQ(theheap.lock)
 {
     mutex_acquire(&theheap.lock);
 }
 
-static void unlock(void)
+static void unlock(void) TA_REL(theheap.lock)
 {
     mutex_release(&theheap.lock);
 }

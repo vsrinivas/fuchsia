@@ -29,7 +29,7 @@ typedef struct cond {
 
 void cond_init(cond_t *cond);
 void cond_destroy(cond_t *cond);
-status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout);
+status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout) TA_REQ(mutex);
 void cond_signal(cond_t *cond);
 void cond_broadcast(cond_t *cond);
 
