@@ -79,7 +79,7 @@ Status FakePageStorage::GetCommitSynchronous(
 Status FakePageStorage::StartCommit(const CommitId& commit_id,
                                     JournalType journal_type,
                                     std::unique_ptr<Journal>* journal) {
-  auto delegate = std::make_unique<FakeJournalDelegate>();
+  auto delegate = std::make_unique<FakeJournalDelegate>(autocommit_);
   *journal = std::make_unique<FakeJournal>(delegate.get());
   journals_[delegate->GetId()] = std::move(delegate);
   return Status::OK;

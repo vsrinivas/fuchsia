@@ -71,32 +71,37 @@ void PageImpl::GetSnapshot(
 void PageImpl::RunInTransaction(
     std::function<Status(storage::Journal* journal)> runnable,
     std::function<void(Status)> callback) {
-  if (journal_) {
-    // A transaction is in progress; add this change to it.
-    callback(runnable(journal_.get()));
-    return;
-  }
-  // No transaction is in progress; create one just for this change.
-  // TODO(etiennej): Add a change batching strategy for operations outside
-  // transactions. Currently, we create a commit for every change; we would
-  // like to group changes that happen "close enough" together in one commit.
-  storage::CommitId commit_id = branch_tracker_->GetBranchHeadId();
-  std::unique_ptr<storage::Journal> journal;
-  storage::Status status = storage_->StartCommit(
-      commit_id, storage::JournalType::IMPLICIT, &journal);
-  if (status != storage::Status::OK) {
-    callback(PageUtils::ConvertStatus(status));
-    journal->Rollback();
-    return;
-  }
-  Status ledger_status = runnable(journal.get());
-  if (ledger_status != Status::OK) {
-    callback(ledger_status);
-    journal->Rollback();
-    return;
-  }
+  SerializeOperation(
+      std::move(callback),
+      [ this, runnable = std::move(runnable) ](StatusCallback callback) {
+        if (journal_) {
+          // A transaction is in progress; add this change to it.
+          callback(runnable(journal_.get()));
+          return;
+        }
+        // No transaction is in progress; create one just for this change.
+        // TODO(etiennej): Add a change batching strategy for operations outside
+        // transactions. Currently, we create a commit for every change; we
+        // would like to group changes that happen "close enough" together in
+        // one commit.
+        storage::CommitId commit_id = branch_tracker_->GetBranchHeadId();
+        std::unique_ptr<storage::Journal> journal;
+        storage::Status status = storage_->StartCommit(
+            commit_id, storage::JournalType::IMPLICIT, &journal);
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status));
+          journal->Rollback();
+          return;
+        }
+        Status ledger_status = runnable(journal.get());
+        if (ledger_status != Status::OK) {
+          callback(ledger_status);
+          journal->Rollback();
+          return;
+        }
 
-  CommitJournal(std::move(journal), callback);
+        CommitJournal(std::move(journal), callback);
+      });
 }
 
 void PageImpl::CommitJournal(std::unique_ptr<storage::Journal> journal,
@@ -116,6 +121,26 @@ void PageImpl::CommitJournal(std::unique_ptr<storage::Journal> journal,
     }
     callback(PageUtils::ConvertStatus(status));
   });
+}
+
+void PageImpl::SerializeOperation(
+    StatusCallback callback,
+    std::function<void(StatusCallback)> operation) {
+  auto closure = [
+    this, callback = std::move(callback), operation = std::move(operation)
+  ] {
+    operation([ this, callback = std::move(callback) ](Status status) {
+      callback(status);
+      this->queued_operations_.pop();
+      if (!this->queued_operations_.empty()) {
+        queued_operations_.front()();
+      }
+    });
+  };
+  queued_operations_.emplace(std::move(closure));
+  if (queued_operations_.size() == 1) {
+    queued_operations_.front()();
+  }
 }
 
 // Put(array<uint8> key, array<uint8> value) => (Status status);
@@ -142,16 +167,16 @@ void PageImpl::PutWithPriority(fidl::Array<uint8_t> key,
       std::move(socket), value.size(), ftl::MakeCopyable([
         this, key = std::move(key), priority,
         callback = std::move(timed_callback)
-      ](storage::Status status, storage::ObjectId object_id) {
+      ](storage::Status status, storage::ObjectId object_id) mutable {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status));
           return;
         }
 
-        PutInCommit(key, object_id,
+        PutInCommit(std::move(key), std::move(object_id),
                     priority == Priority::EAGER ? storage::KeyPriority::EAGER
                                                 : storage::KeyPriority::LAZY,
-                    callback);
+                    std::move(callback));
       }));
 }
 
@@ -169,39 +194,44 @@ void PageImpl::PutReference(fidl::Array<uint8_t> key,
       object_id, ftl::MakeCopyable([
         this, key = std::move(key), object_id = object_id.ToString(), priority,
         timed_callback
-      ](storage::Status status, std::unique_ptr<const storage::Object> object) {
+      ](storage::Status status,
+                 std::unique_ptr<const storage::Object> object) mutable {
         if (status != storage::Status::OK) {
           timed_callback(
               PageUtils::ConvertStatus(status, Status::REFERENCE_NOT_FOUND));
           return;
         }
-        PutInCommit(key, object_id,
+        PutInCommit(std::move(key), std::move(object_id),
                     priority == Priority::EAGER ? storage::KeyPriority::EAGER
                                                 : storage::KeyPriority::LAZY,
                     std::move(timed_callback));
       }));
 }
 
-void PageImpl::PutInCommit(convert::ExtendedStringView key,
-                           storage::ObjectIdView object_id,
+void PageImpl::PutInCommit(fidl::Array<uint8_t> key,
+                           storage::ObjectId object_id,
                            storage::KeyPriority priority,
                            std::function<void(Status)> callback) {
   RunInTransaction(
-      [&key, &object_id, &priority](storage::Journal* journal) {
-        return PageUtils::ConvertStatus(journal->Put(key, object_id, priority));
-      },
-      callback);
+      ftl::MakeCopyable([
+        key = std::move(key), object_id = std::move(object_id), priority
+      ](storage::Journal * journal) mutable {
+        return PageUtils::ConvertStatus(
+            journal->Put(std::move(key), std::move(object_id), priority));
+      }),
+      std::move(callback));
 }
 
 // Delete(array<uint8> key) => (Status status);
 void PageImpl::Delete(fidl::Array<uint8_t> key,
                       const DeleteCallback& callback) {
-  RunInTransaction(
-      [&key](storage::Journal* journal) {
-        return PageUtils::ConvertStatus(journal->Delete(key),
-                                        Status::KEY_NOT_FOUND);
-      },
-      TRACE_CALLBACK(std::move(callback), "page", "delete"));
+  RunInTransaction(ftl::MakeCopyable([key = std::move(key)](storage::Journal *
+                                                            journal) mutable {
+                     return PageUtils::ConvertStatus(
+                         journal->Delete(std::move(key)),
+                         Status::KEY_NOT_FOUND);
+                   }),
+                   TRACE_CALLBACK(std::move(callback), "page", "delete"));
 }
 
 // CreateReference(int64 size, handle<socket> data)
@@ -227,50 +257,55 @@ void PageImpl::CreateReference(int64_t size,
 
 // StartTransaction() => (Status status);
 void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
-  TRACE_DURATION("page", "start_transaction");
-
-  if (journal_) {
-    callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
-    return;
-  }
-  storage::CommitId commit_id = branch_tracker_->GetBranchHeadId();
-  storage::Status status = storage_->StartCommit(
-      commit_id, storage::JournalType::EXPLICIT, &journal_);
-  if (status != storage::Status::OK) {
-    callback(PageUtils::ConvertStatus(status));
-    return;
-  }
-  journal_parent_commit_ = commit_id;
-  branch_tracker_->StartTransaction([callback]() { callback(Status::OK); });
+  SerializeOperation(
+      TRACE_CALLBACK(std::move(callback), "page", "start_transaction"),
+      [this](StatusCallback callback) {
+        if (journal_) {
+          callback(Status::TRANSACTION_ALREADY_IN_PROGRESS);
+          return;
+        }
+        storage::CommitId commit_id = branch_tracker_->GetBranchHeadId();
+        storage::Status status = storage_->StartCommit(
+            commit_id, storage::JournalType::EXPLICIT, &journal_);
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status));
+          return;
+        }
+        journal_parent_commit_ = commit_id;
+        branch_tracker_->StartTransaction([callback = std::move(callback)]() {
+          callback(Status::OK);
+        });
+      });
 }
 
 // Commit() => (Status status);
 void PageImpl::Commit(const CommitCallback& callback) {
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "page", "put_with_priority");
-
-  if (!journal_) {
-    timed_callback(Status::NO_TRANSACTION_IN_PROGRESS);
-    return;
-  }
-  journal_parent_commit_.clear();
-  CommitJournal(std::move(journal_), std::move(timed_callback));
-  branch_tracker_->StopTransaction();
+  SerializeOperation(TRACE_CALLBACK(std::move(callback), "page", "commit"),
+                     [this](StatusCallback callback) {
+                       if (!journal_) {
+                         callback(Status::NO_TRANSACTION_IN_PROGRESS);
+                         return;
+                       }
+                       journal_parent_commit_.clear();
+                       CommitJournal(std::move(journal_), std::move(callback));
+                       branch_tracker_->StopTransaction();
+                     });
 }
 
 // Rollback() => (Status status);
 void PageImpl::Rollback(const RollbackCallback& callback) {
-  TRACE_DURATION("page", "rollback");
-
-  if (!journal_) {
-    callback(Status::NO_TRANSACTION_IN_PROGRESS);
-    return;
-  }
-  storage::Status status = journal_->Rollback();
-  journal_.reset();
-  journal_parent_commit_.clear();
-  callback(PageUtils::ConvertStatus(status));
-  branch_tracker_->StopTransaction();
+  SerializeOperation(TRACE_CALLBACK(std::move(callback), "page", "rollback"),
+                     [this](StatusCallback callback) {
+                       if (!journal_) {
+                         callback(Status::NO_TRANSACTION_IN_PROGRESS);
+                         return;
+                       }
+                       storage::Status status = journal_->Rollback();
+                       journal_.reset();
+                       journal_parent_commit_.clear();
+                       callback(PageUtils::ConvertStatus(status));
+                       branch_tracker_->StopTransaction();
+                     });
 }
 
 }  // namespace ledger

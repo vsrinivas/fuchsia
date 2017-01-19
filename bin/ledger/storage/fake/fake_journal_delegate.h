@@ -25,7 +25,7 @@ class FakeJournalDelegate {
     KeyPriority priority;
   };
 
-  FakeJournalDelegate();
+  FakeJournalDelegate(bool autocommit);
   ~FakeJournalDelegate();
 
   const CommitId& GetId() const { return id_; }
@@ -41,17 +41,23 @@ class FakeJournalDelegate {
   Status Rollback();
   bool IsRolledBack() const;
 
+  bool IsPendingCommit();
+  void ResolvePendingCommit(Status status);
+
   const std::map<std::string, Entry, convert::StringViewComparator>& GetData()
       const;
 
  private:
   Entry& Get(convert::ExtendedStringView key);
 
+  bool autocommit_;
+
   const CommitId id_;
   std::map<std::string, Entry, convert::StringViewComparator> data_;
 
   bool is_committed_ = false;
   bool is_rolled_back_ = false;
+  std::function<void(Status, const CommitId&)> commit_callback_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeJournalDelegate);
 };

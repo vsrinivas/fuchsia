@@ -54,12 +54,15 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
                           std::function<void(Status, Entry)> callback) override;
 
   // For testing:
+  void set_autocommit(bool autocommit) { autocommit_ = autocommit; }
   const std::map<std::string, std::unique_ptr<FakeJournalDelegate>>&
   GetJournals() const;
   const std::map<ObjectId, std::string, convert::StringViewComparator>&
   GetObjects() const;
 
  private:
+  bool autocommit_ = true;
+
   std::map<std::string, std::unique_ptr<FakeJournalDelegate>> journals_;
   std::map<ObjectId, std::string, convert::StringViewComparator> objects_;
   PageId page_id_;

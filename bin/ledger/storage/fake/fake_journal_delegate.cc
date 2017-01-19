@@ -20,7 +20,8 @@ storage::CommitId RandomId() {
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate() : id_(RandomId()) {}
+FakeJournalDelegate::FakeJournalDelegate(bool autocommit)
+    : autocommit_(autocommit), id_(RandomId()) {}
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
@@ -49,8 +50,12 @@ void FakeJournalDelegate::Commit(
     callback(Status::ILLEGAL_STATE, "");
     return;
   }
-  is_committed_ = true;
-  callback(Status::OK, id_);
+
+  commit_callback_ = std::move(callback);
+
+  if (autocommit_) {
+    ResolvePendingCommit(Status::OK);
+  }
 }
 
 bool FakeJournalDelegate::IsCommitted() const {
@@ -67,6 +72,17 @@ Status FakeJournalDelegate::Rollback() {
 
 bool FakeJournalDelegate::IsRolledBack() const {
   return is_rolled_back_;
+}
+
+bool FakeJournalDelegate::IsPendingCommit() {
+  return static_cast<bool>(commit_callback_);
+}
+
+void FakeJournalDelegate::ResolvePendingCommit(Status status) {
+  is_committed_ = true;
+  auto callback = std::move(commit_callback_);
+  commit_callback_ = nullptr;
+  callback(Status::OK, id_);
 }
 
 const std::
