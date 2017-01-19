@@ -300,7 +300,7 @@ public:
     // Get a pointer to block 'blkno_out' in bitmap, which contains bit 'bitno'.
     void* GetBitBlock(uint32_t* blkno_out, uint32_t bitno) const {
         assert(bitno <= bitcount_);
-        *blkno_out = (bitno / kMinfsBlockSize);
+        *blkno_out = (bitno / kMinfsBlockBits);
         return GetBlock(*blkno_out);
     }
 

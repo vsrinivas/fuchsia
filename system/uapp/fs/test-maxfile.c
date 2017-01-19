@@ -34,8 +34,8 @@ int test_maxfile(void) {
         }
         fprintf(stderr, "wrote %d bytes\n", (int) sz);
     }
-    close(fd);
-    unlink("::bigfile");
+    TRY(close(fd));
+    TRY(unlink("::bigfile"));
     fprintf(stderr, "wrote %d bytes\n", (int) sz);
     return (r < 0) ? -1 : 0;
 }

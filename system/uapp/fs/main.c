@@ -123,43 +123,39 @@ struct {
     {"unlink", test_unlink},
 };
 
-int run_fs_tests(int (*mount)(void), int (*unmount)(void), int argc, char** argv) {
+void run_fs_tests(int (*mount)(void), int (*unmount)(void), int argc, char** argv) {
     fprintf(stderr, "--- fs tests ---\n");
     int num_tests = sizeof(FS_TESTS) / sizeof(FS_TESTS[0]);
-    int res = 0;
     for (int i = 0; i < num_tests; i++) {
         if (argc > 1 && strcmp(argv[1], FS_TESTS[i].name)) {
             continue;
         }
         fprintf(stderr, "Running Test: %s\n", FS_TESTS[i].name);
         if (mount()) {
-            fprintf(stderr, "Error mounting filesystem\n");
-            return -1;
+            fprintf(stderr, "FAILED: Error mounting filesystem\n");
+            exit(-1);
         }
 
-        int res_delta = FS_TESTS[i].test();
-        if (res_delta) {
+        if (FS_TESTS[i].test()) {
             fprintf(stderr, "FAILED: %s\n", FS_TESTS[i].name);
+            exit(-1);
         } else {
             fprintf(stderr, "PASSED: %s\n", FS_TESTS[i].name);
         }
-        res |= res_delta;
 
         if (unmount()) {
-            fprintf(stderr, "Error unmounting filesystem\n");
-            return -1;
+            fprintf(stderr, "FAILED: Error unmounting filesystem\n");
+            exit(-1);
         }
     }
-    return res;
 }
 
 int main(int argc, char** argv) {
     int num_filesystems = sizeof(FILESYSTEMS) / sizeof(FILESYSTEMS[0]);
-    int res = 0;
     for (int i = 0; i < num_filesystems; i++) {
         printf("Testing FS: %s\n", FILESYSTEMS[i].name);
         test_root_path = FILESYSTEMS[i].mount_path;
-        res |= run_fs_tests(FILESYSTEMS[i].mount, FILESYSTEMS[i].unmount, argc, argv);
+        run_fs_tests(FILESYSTEMS[i].mount, FILESYSTEMS[i].unmount, argc, argv);
     }
-    return res;
+    return 0;
 }
