@@ -461,15 +461,7 @@ static mx_status_t lan9514_start_xcvr(lan9514_t* eth) {
 }
 
 static ssize_t lan9514_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
-    // special case reading MAC address
-    uint8_t* buff = data;
-    if (len == ETH_MAC_SIZE) {
-        lan9514_t* eth = get_lan9514(dev);
-        for (int i = 0; i < 6; i++)
-            buff[i] = eth->mac_addr[i];
-        return len;
-    }
-    if (len < (USB_BUF_SIZE - ETH_HEADER_SIZE)) {
+  if (len < (USB_BUF_SIZE - ETH_HEADER_SIZE)) {
         return ERR_BUFFER_TOO_SMALL;
     }
     return lan9514_recv(dev, data, len);
@@ -485,13 +477,6 @@ mx_status_t lan9514_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
     for (int i = 0; i < 6; i++)
         out_addr[i] = eth->mac_addr[i];
     return NO_ERROR;
-}
-
-bool lan9514_is_online(mx_device_t* device) {
-    printf("someone called is online\n");
-
-    lan9514_t* eth = get_lan9514(device);
-    return eth->online;
 }
 
 size_t lan9514_get_mtu(mx_device_t* device) {
@@ -554,13 +539,7 @@ static void lan9514_unbind(mx_device_t* device) {
     device_remove(eth->device);
 }
 
-static ethernet_protocol_t lan9514_proto = {
-    .send = lan9514_send,
-    .recv = lan9514_recv,
-    .get_mac_addr = lan9514_get_mac_addr,
-    .is_online = lan9514_is_online,
-    .get_mtu = lan9514_get_mtu,
-};
+static ethernet_protocol_t lan9514_proto = {};
 
 static mx_protocol_device_t lan9514_device_proto = {
     .ioctl = lan9514_ioctl,

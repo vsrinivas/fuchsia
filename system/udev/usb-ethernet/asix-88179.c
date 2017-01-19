@@ -428,24 +428,13 @@ mx_status_t ax88179_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
     return NO_ERROR;
 }
 
-bool ax88179_is_online(mx_device_t* device) {
-    ax88179_t* eth = get_ax88179(device);
-    return eth->online;
-}
-
 size_t ax88179_get_mtu(mx_device_t* device) {
     return 1500;
     // TODO: figure this out
     //return USB_BUF_SIZE - ETH_HEADER_SIZE;
 }
 
-static ethernet_protocol_t ax88179_proto = {
-    .send = ax88179_send,
-    .recv = ax88179_recv,
-    .get_mac_addr = ax88179_get_mac_addr,
-    .is_online = ax88179_is_online,
-    .get_mtu = ax88179_get_mtu,
-};
+static ethernet_protocol_t ax88179_proto = {};
 
 static void ax88179_unbind(mx_device_t* device) {
     ax88179_t* eth = get_ax88179(device);
@@ -501,12 +490,7 @@ static ssize_t ax88179_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, siz
 // simplified read/write interface
 
 static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
-    // special case reading MAC address
-    if (len == ETH_MAC_SIZE) {
-        ax88179_get_mac_addr(dev, data);
-        return len;
-    }
-    if (len < ax88179_get_mtu(dev)) {
+  if (len < ax88179_get_mtu(dev)) {
         xprintf("%s: ERR_BUFFER_TOO_SMALL\n", __func__);
         return ERR_BUFFER_TOO_SMALL;
     }

@@ -97,21 +97,11 @@ static mx_status_t eth_get_mac_addr(mx_device_t* dev, uint8_t* out_addr) {
     return NO_ERROR;
 }
 
-static bool eth_is_online(mx_device_t* dev) {
-    return true;
-}
-
 static size_t eth_get_mtu(mx_device_t* dev) {
     return ETH_RXBUF_SIZE;
 }
 
-static ethernet_protocol_t ethernet_ops = {
-    .send = eth_send,
-    .recv = eth_recv,
-    .get_mac_addr = eth_get_mac_addr,
-    .is_online = eth_is_online,
-    .get_mtu = eth_get_mtu,
-};
+static ethernet_protocol_t ethernet_ops = {};
 
 static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
     switch (op) {
@@ -135,12 +125,7 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t 
 // simplified read/write interface
 
 static ssize_t eth_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
-    // special case reading MAC address
-    if (len == ETH_MAC_SIZE) {
-        eth_get_mac_addr(dev, data);
-        return len;
-    }
-    if (len < eth_get_mtu(dev)) {
+  if (len < eth_get_mtu(dev)) {
         return ERR_BUFFER_TOO_SMALL;
     }
     return eth_recv(dev, data, len);
