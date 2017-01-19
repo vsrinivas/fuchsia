@@ -17,7 +17,6 @@
 + [object_signal_peer](syscalls/object_signal_peer.md) - set or clear the user signals in the opposite end
 
 ## Threads
-+ [thread_arch_prctl](syscalls/thread_arch_prctl.md) - deprecated
 + [thread_create](syscalls/thread_create.md) - create a new thread within a process
 + [thread_exit](syscalls/thread_exit.md) - exit the current thread
 + thread_read_state - read register state from a thread

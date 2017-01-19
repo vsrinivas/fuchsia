@@ -353,11 +353,6 @@ mx_status_t sys_ktrace_write(
     uint32_t arg0,
     uint32_t arg1);
 
-mx_status_t sys_thread_arch_prctl(
-    mx_handle_t handle,
-    uint32_t op,
-    uintptr_t value_ptr[1]);
-
 mx_handle_t sys_debug_transfer_handle(
     mx_handle_t proc,
     mx_handle_t handle);

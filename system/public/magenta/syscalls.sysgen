@@ -355,10 +355,6 @@ syscall ktrace_write
 
 # Syscalls to be removed / refactored
 
-syscall thread_arch_prctl
-    (handle: mx_handle_t, op: uint32_t, value_ptr: uintptr_t[1] INOUT)
-    returns (mx_status_t);
-
 syscall debug_transfer_handle
     (proc: mx_handle_t, handle: mx_handle_t)
     returns (mx_handle_t);

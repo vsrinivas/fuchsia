@@ -705,16 +705,6 @@ extern mx_status_t _mx_ktrace_write(
     uint32_t arg0,
     uint32_t arg1);
 
-extern mx_status_t mx_thread_arch_prctl(
-    mx_handle_t handle,
-    uint32_t op,
-    uintptr_t value_ptr[1]);
-
-extern mx_status_t _mx_thread_arch_prctl(
-    mx_handle_t handle,
-    uint32_t op,
-    uintptr_t value_ptr[1]);
-
 extern mx_handle_t mx_debug_transfer_handle(
     mx_handle_t proc,
     mx_handle_t handle);

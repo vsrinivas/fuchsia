@@ -118,67 +118,6 @@ void sys_thread_exit() {
     UserThread::GetCurrent()->Exit();
 }
 
-mx_status_t sys_thread_arch_prctl(mx_handle_t handle_value, uint32_t op,
-                                  uintptr_t* _value_ptr) {
-    LTRACEF("handle %d operation %u value_ptr %p", handle_value, op, _value_ptr);
-
-    // TODO(cpu) what to do with |handle_value|?
-
-    uintptr_t value;
-    user_ptr<uintptr_t> value_ptr(_value_ptr);
-
-    switch (op) {
-#ifdef ARCH_X86_64
-    case ARCH_SET_FS:
-        if (value_ptr.copy_from_user(&value) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-        if (!x86_is_vaddr_canonical(value))
-            return ERR_INVALID_ARGS;
-        write_msr(X86_MSR_IA32_FS_BASE, value);
-        break;
-    case ARCH_GET_FS:
-        value = read_msr(X86_MSR_IA32_FS_BASE);
-        if (value_ptr.copy_to_user(value) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-        break;
-    case ARCH_SET_GS:
-        if (value_ptr.copy_from_user(&value) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-        if (!x86_is_vaddr_canonical(value))
-            return ERR_INVALID_ARGS;
-        write_msr(X86_MSR_IA32_KERNEL_GS_BASE, value);
-        break;
-    case ARCH_GET_GS:
-        value = read_msr(X86_MSR_IA32_KERNEL_GS_BASE);
-        if (value_ptr.copy_to_user(value) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-        break;
-    case ARCH_GET_TSC_TICKS_PER_MS:
-        value = get_tsc_ticks_per_ms();
-        if (value_ptr.copy_to_user(value) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-        break;
-#elif ARCH_ARM64
-    case ARCH_SET_TPIDRRO_EL0:
-        if (value_ptr.copy_from_user(&value) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-        ARM64_WRITE_SYSREG(tpidrro_el0, value);
-        break;
-#elif ARCH_ARM
-    case ARCH_SET_CP15_READONLY:
-        if (value_ptr.copy_from_user(&value) != NO_ERROR)
-            return ERR_INVALID_ARGS;
-        __asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r" (value));
-        ISB;
-        break;
-#endif
-    default:
-        return ERR_INVALID_ARGS;
-    }
-
-    return NO_ERROR;
-}
-
 mx_status_t sys_process_create(mx_handle_t job_handle,
                                const char* _name, uint32_t name_len,
                                uint32_t flags, mx_handle_t* _proc_handle,
