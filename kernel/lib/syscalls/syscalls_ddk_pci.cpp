@@ -25,6 +25,7 @@
 #include <magenta/syscalls/pci.h>
 #include <magenta/user_copy.h>
 #include <mxtl/limits.h>
+#include <mxtl/unique_free_ptr.h>
 
 #include "syscalls_priv.h"
 
@@ -125,7 +126,7 @@ mx_status_t sys_pci_init(mx_handle_t handle, const mx_pci_init_arg_t* _init_buf,
         return status;
     }
 
-    mxtl::unique_ptr<mx_pci_init_arg_t, mxtl::free_delete> arg;
+    mxtl::unique_free_ptr<mx_pci_init_arg_t> arg;
 
     if (len < sizeof(*arg) || len > MX_PCI_INIT_ARG_MAX_SIZE) {
         return ERR_INVALID_ARGS;

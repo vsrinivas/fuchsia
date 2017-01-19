@@ -38,14 +38,4 @@ struct default_delete<T[n]> {
     static_assert(sizeof(T) == -1, "do not use array with size as type in mxtl pointers");
 };
 
-// Deleter that invokes 'free' on its parameter. Can be used to store
-// malloc-allocated pointers as follows:
-//
-//   unique_ptr<int, free_delete> foo(static_cast<int*>(malloc(sizeof(int))));
-struct free_delete {
-    inline void operator()(void* ptr) const {
-        ::free(ptr);
-    }
-};
-
 } // namespace mxtl

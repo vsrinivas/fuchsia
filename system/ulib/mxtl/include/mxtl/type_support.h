@@ -196,4 +196,8 @@ struct is_base_of : public integral_constant<bool, __is_base_of(Base, Derived)> 
 template <typename T>
 struct has_virtual_destructor : public integral_constant<bool, __has_virtual_destructor(T)> { };
 
+// has_trivial_destructor
+template <typename T>
+struct has_trivial_destructor : public integral_constant<bool, __has_trivial_destructor(T)> { };
+
 }  // namespace mxtl

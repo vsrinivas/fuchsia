@@ -9,7 +9,7 @@
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
-#include <mxtl/unique_ptr.h>
+#include <mxtl/unique_free_ptr.h>
 
 #include <magenta/types.h>
 
@@ -194,7 +194,7 @@ private:
     NodeState type_hash_state_;
     uint32_t flags_;
     uint32_t bno_;
-    mxtl::unique_ptr<char, mxtl::free_delete> data_;
+    mxtl::unique_free_ptr<char> data_;
 };
 
 // Contains operations that act on Bcache's linked lists, updating their flags as they move from
@@ -316,5 +316,5 @@ private:
     size_t BytesRequired() const;
 
     uint32_t bitcount_; // Number of addressable bits
-    mxtl::unique_ptr<uint64_t, mxtl::free_delete> map_; // Underlying map of bits
+    mxtl::unique_free_ptr<uint64_t> map_; // Underlying map of bits
 };
