@@ -58,13 +58,15 @@ static bool switch_to_first_vc(void) {
 
 static mx_status_t launch_minfs(int argc, const char** argv, mx_handle_t* hnd,
                                 uint32_t* ids, size_t len) {
-    devmgr_launch(svcs_job_handle, "minfs:/data", argc, argv, -1, hnd, ids, len);
+    devmgr_launch(svcs_job_handle, "minfs:/data", argc, argv, NULL, -1,
+                  hnd, ids, len);
     return NO_ERROR;
 }
 
 static mx_status_t launch_fat(int argc, const char** argv, mx_handle_t* hnd,
                               uint32_t* ids, size_t len) {
-    devmgr_launch(svcs_job_handle, "fatfs:/volume", argc, argv, -1, hnd, ids, len);
+    devmgr_launch(svcs_job_handle, "fatfs:/volume", argc, argv, NULL, -1,
+                  hnd, ids, len);
     return NO_ERROR;
 }
 
@@ -136,13 +138,15 @@ void create_application_launcher_handles(void) {
 int service_starter(void* arg) {
     if (getenv("netsvc.disable") == NULL) {
         // launch the network service
-        devmgr_launch(svcs_job_handle, "netsvc", countof(argv_netsvc), argv_netsvc, -1, NULL, NULL, 0);
+        devmgr_launch(svcs_job_handle, "netsvc",
+                      countof(argv_netsvc), argv_netsvc, NULL, -1,
+                      NULL, NULL, 0);
     }
 
     devmgr_launch(svcs_job_handle, "sh:autorun0", countof(argv_autorun0),
-                  argv_autorun0, -1, NULL, NULL, 0);
+                  argv_autorun0, NULL, -1, NULL, NULL, 0);
     devmgr_launch(svcs_job_handle, "sh:autorun1", countof(argv_autorun1),
-                  argv_autorun1, -1, NULL, NULL, 0);
+                  argv_autorun1, NULL, -1, NULL, NULL, 0);
 
     if (application_launcher_child) {
         mx_handle_t hnd[1] = { application_launcher_child };
@@ -164,10 +168,18 @@ int service_starter(void* arg) {
 static int console_starter(void* arg) {
     // if no kernel shell on serial uart, start a sh there
     printf("devmgr: shell startup\n");
+
+    // If we got a TERM environment variable (aka a TERM=... argument on
+    // the kernel command line), pass this down.
+    const char* term = getenv("TERM");
+    if (term != NULL)
+        term -= sizeof("TERM=") - 1;
+
     for (unsigned n = 0; n < 30; n++) {
         int fd;
         if ((fd = open("/dev/class/misc/console", O_RDWR)) >= 0) {
-            devmgr_launch(svcs_job_handle, "sh:console", countof(argv_sh), argv_sh, fd, NULL, NULL, 0);
+            devmgr_launch(svcs_job_handle, "sh:console",
+                          countof(argv_sh), argv_sh, term, fd, NULL, NULL, 0);
             break;
         }
         mx_nanosleep(MX_MSEC(100));
@@ -197,7 +209,8 @@ static mx_status_t console_device_added(int dirfd, const char* name, void* cooki
             if (i == 0 && switch_to_first_vc()) {
                 ioctl_console_set_active_vc(fd);
             }
-            devmgr_launch(svcs_job_handle, "sh:vc", countof(argv_sh), argv_sh, fd, NULL, NULL, 0);
+            devmgr_launch(svcs_job_handle, "sh:vc",
+                          countof(argv_sh), argv_sh, NULL, fd, NULL, NULL, 0);
         }
     }
 
@@ -238,7 +251,8 @@ int main(int argc, char** argv) {
 #if defined(__x86_64__) || defined(__aarch64__)
     if (!getenv("crashlogger.disable")) {
         static const char* argv_crashlogger[] = { "/boot/bin/crashlogger" };
-        devmgr_launch(svcs_job_handle, "crashlogger", 1, argv_crashlogger, -1, NULL, NULL, 0);
+        devmgr_launch(svcs_job_handle, "crashlogger",
+                      1, argv_crashlogger, NULL, -1, NULL, NULL, 0);
     }
 #else
     // Until crashlogging exists, ensure we see load info

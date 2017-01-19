@@ -208,7 +208,14 @@ if [ "$INITRD" != "" ]; then
     ARGS+=" -initrd $INITRD"
 fi
 
+# Propagate our TERM environment variable as a kernel command line
+# argument.  This is last so that an explicit -c TERM=foo argument
+# goes into CMDLINE first.  Kernel command line words become environment
+# variables, and the first variable in the list wins for getenv calls.
+if [ "$TERM" != "" ]; then
+    CMDLINE+="TERM=$TERM "
+fi
+
 # run qemu
 echo $QEMU $ARGS -append "$CMDLINE" $@
 $QEMU $ARGS -append "$CMDLINE" $@
-

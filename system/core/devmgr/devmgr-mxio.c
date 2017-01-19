@@ -44,19 +44,21 @@ static void callback(void* arg, const char* path, size_t off, size_t len) {
     ++cd->file_count;
 }
 
-static const char* env[] = {
-#if !(defined(__x86_64__) || defined(__aarch64__))
-    // make debugging less painful
-    "LD_DEBUG=1",
-#endif
-    NULL,
-};
-
 #define USER_MAX_HANDLES 4
 
 void devmgr_launch(mx_handle_t job,
-                   const char* name, int argc, const char** argv, int stdiofd,
+                   const char* name, int argc, const char** argv,
+                   const char* extra_env, int stdiofd,
                    mx_handle_t* handles, uint32_t* types, size_t len) {
+    const char* env[] = {
+#if !(defined(__x86_64__) || defined(__aarch64__))
+        // make debugging less painful
+        "LD_DEBUG=1",
+#endif
+        extra_env,
+        NULL
+    };
+
     mx_handle_t hnd[2 * VFS_MAX_HANDLES + USER_MAX_HANDLES];
     uint32_t ids[2 * VFS_MAX_HANDLES + USER_MAX_HANDLES];
     unsigned n = 1;
