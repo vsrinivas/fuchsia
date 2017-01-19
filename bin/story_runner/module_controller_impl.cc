@@ -34,6 +34,8 @@ ModuleControllerImpl::ModuleControllerImpl(
       [this] { OnConnectionError(); });
 }
 
+ModuleControllerImpl::~ModuleControllerImpl() {}
+
 // If the Module instance closes its own connection, we signal this to
 // all current and future watchers by an appropriate state transition.
 void ModuleControllerImpl::OnConnectionError() {

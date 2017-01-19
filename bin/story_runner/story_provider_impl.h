@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_USER_RUNNER_STORY_PROVIDER_IMPL_H_
-#define APPS_MODULAR_SRC_USER_RUNNER_STORY_PROVIDER_IMPL_H_
+#ifndef APPS_MODULAR_SRC_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
+#define APPS_MODULAR_SRC_STORY_RUNNER_STORY_PROVIDER_IMPL_H_
 
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
-#include "apps/modular/services/user/story_data.fidl.h"
-#include "apps/modular/services/user/story_provider.fidl.h"
-#include "apps/modular/src/user_runner/story_controller_impl.h"
-#include "apps/modular/src/user_runner/story_storage_impl.h"
+#include "apps/modular/services/story/story_data.fidl.h"
+#include "apps/modular/services/story/story_provider.fidl.h"
+#include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -26,6 +26,7 @@
 namespace modular {
 class ApplicationContext;
 class Resolver;
+class StoryImpl;
 
 namespace {
 class DeleteStoryCall;
@@ -42,8 +43,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   void AddBinding(fidl::InterfaceRequest<StoryProvider> request);
 
-  // Called by empty binding set handler of StoryControllerImpl to remove
-  // the corresponding entry.
+  // Called by empty binding set handler of StoryImpl to remove the
+  // corresponding entry.
   void PurgeController(const std::string& story_id);
 
   // Obtains the StoryData for an existing story from the ledger.
@@ -61,7 +62,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
     return launcher_.get();
   }
 
-  // Used by StoryControllerImpl.
+  // Used by StoryImpl.
   using Storage = StoryStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
@@ -146,7 +147,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
   fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
-  std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>
+  std::unordered_map<std::string, std::unique_ptr<StoryImpl>>
       story_controllers_;
 
   // This represents a delete operation that was created via |DeleteStory()|
@@ -164,4 +165,4 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_USER_RUNNER_STORY_PROVIDER_IMPL_H_
+#endif  // APPS_MODULAR_SRC_STORY_RUNNER_STORY_PROVIDER_IMPL_H_

@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "apps/modular/services/user/story_provider.fidl.h"
+#include "apps/modular/services/story/story_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 

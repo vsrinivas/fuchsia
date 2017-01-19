@@ -22,7 +22,7 @@ namespace modular {
 class StoryImpl;
 
 // Implements the ModuleController interface, which is given to the
-// client that called Story.StartModule(). At most one
+// client that called Story.StartModule(). Exactly one
 // ModuleControllerImpl instance is associated with each
 // StoryConnection instance.
 class ModuleControllerImpl : public ModuleController {
@@ -34,7 +34,7 @@ class ModuleControllerImpl : public ModuleController {
       ModulePtr module,
       fidl::InterfaceRequest<ModuleController> module_controller);
 
-  ~ModuleControllerImpl() override = default;
+  ~ModuleControllerImpl() override;
 
   // Notifies all watchers of a state change of the module. Also
   // remembers the state to initialize future added watchers.
@@ -51,6 +51,8 @@ class ModuleControllerImpl : public ModuleController {
   void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
   void Stop(const StopCallback& done) override;
 
+  // Used as connection error callback on the ModuleController
+  // binding.
   void OnConnectionError();
 
   StoryImpl* const story_impl_;

@@ -311,9 +311,11 @@ class DummyUserShellApp
 
     story_provider_->GetStoryInfo(
         story_info_->id, [this](modular::StoryInfoPtr story_info) {
+          FTL_LOG(INFO) << "DummyUserShell STOP got story info";
           FTL_DCHECK(!story_info.is_null());
           FTL_DCHECK(story_info->is_running == true);
           story_controller_->Stop([this] {
+            FTL_LOG(INFO) << "DummyUserShell STOP done";
             TearDownStoryController();
 
             // When the story stops, we start it again.

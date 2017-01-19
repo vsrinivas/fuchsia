@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_MODULAR_SRC_USER_RUNNER_STORY_STORAGE_IMPL_H_
-#define APPS_MODULAR_SRC_USER_RUNNER_STORY_STORAGE_IMPL_H_
+#ifndef APPS_MODULAR_SRC_STORY_RUNNER_STORY_STORAGE_IMPL_H_
+#define APPS_MODULAR_SRC_STORY_RUNNER_STORY_STORAGE_IMPL_H_
 
 #include <memory>
 #include <string>
@@ -64,4 +64,4 @@ class StoryStorageImpl : public ledger::PageWatcher {
 
 }  // namespace modular
 
-#endif  // APPS_MODULAR_SRC_USER_RUNNER_STORY_STORAGE_IMPL_H_
+#endif  // APPS_MODULAR_SRC_STORY_RUNNER_STORY_STORAGE_IMPL_H_

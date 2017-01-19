@@ -11,23 +11,23 @@
 #define APPS_MODULAR_SRC_STORY_RUNNER_STORY_IMPL_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
-#include "apps/modular/services/application/application_launcher.fidl.h"
-#include "apps/modular/services/story/module.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
+#include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/resolver.fidl.h"
-#include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/services/story/story_controller.fidl.h"
+#include "apps/modular/services/story/story_data.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/ftl/macros.h"
-
-namespace ledger {
-class LedgerRepository;
-}
 
 namespace modular {
 
@@ -37,65 +37,21 @@ class ModuleControllerImpl;
 class StoryConnection;
 class StoryImpl;
 class StoryPage;
+class StoryProviderImpl;
 class StoryStorageImpl;
 
-// StoryConnection keeps a single connection from a module instance in the
-// story to a StoryImpl. This way, requests that the module makes on
-// its Story handle can be associated with the Module instance.
-class StoryConnection : public Story {
- public:
-  // If this Story handle is for a module started by
-  // Story.StartModule(), there is also a module_controller_impl. If
-  // requested through StoryRunner.GetStory(), module_controller_impl
-  // is nullptr.
-  StoryConnection(StoryImpl* story_impl,
-                  const std::string& module_url,
-                  ModuleControllerImpl* module_controller_impl,
-                  fidl::InterfaceRequest<Story> story);
-
-  ~StoryConnection() override = default;
-
- private:
-  // |Story|
-  void CreateLink(const fidl::String& name,
-                  fidl::InterfaceRequest<Link> link) override;
-  void StartModule(
-      const fidl::String& query,
-      fidl::InterfaceHandle<Link> link,
-      fidl::InterfaceHandle<ServiceProvider> outgoing_services,
-      fidl::InterfaceRequest<ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
-  void GetLedger(fidl::InterfaceRequest<ledger::Ledger> module_ledger,
-                 const GetLedgerCallback& result) override;
-  void Ready() override;
-  void Done() override;
-
-  // Not owned.
-  StoryImpl* const story_impl_;
-
-  // This ID is used to namespace a module's ledger.
-  std::string module_url_;
-
-  // Not owned. Used to notify module watchers and request tear down.
-  ModuleControllerImpl* const module_controller_impl_;
-  fidl::Binding<Story> binding_;
-
-  FTL_DISALLOW_COPY_AND_ASSIGN(StoryConnection);
-};
-
 // The actual implementation of the Story service. Called from
-// StoryConnection above.
-class StoryImpl {
+// StoryConnection above. It also implements the StoryController
+// service to give clients control over the Story instance.
+class StoryImpl : public StoryController, ModuleWatcher {
  public:
-  StoryImpl(ApplicationLauncher* launcher,
-            fidl::InterfaceHandle<Resolver> resolver,
-            StoryStorageImpl* story_storage,
-            ledger::LedgerRepository* ledger_repository);
+  StoryImpl(
+    StoryDataPtr story_data,
+    StoryProviderImpl* const story_provider_impl);
 
-  ~StoryImpl();
+  ~StoryImpl() override;
 
-  // These methods are called by StoryConnection.
+  // Methods called by StoryConnection.
   void CreateLink(const fidl::String& name, fidl::InterfaceRequest<Link> request);
   void StartModule(const fidl::String& query,
                    fidl::InterfaceHandle<Link> link,
@@ -109,33 +65,69 @@ class StoryImpl {
   // Releases ownership of |controller|.
   void ReleaseModule(ModuleControllerImpl* controller);
 
-  // Used by StoryController.
-  void Stop(const std::function<void()>& done);
+  // Methods called by StoryProviderImpl.
+  void Connect(fidl::InterfaceRequest<StoryController> request);
+  void StopForDelete(const StopCallback& callback);
+  void AddLinkDataAndSync(
+      const fidl::String& json, const std::function<void()>& callback);
 
  private:
-  void DisposeLink(LinkImpl* link);
+  // |StoryController|
+  void GetInfo(const GetInfoCallback& callback) override;
+  void SetInfoExtra(const fidl::String& name,
+                    const fidl::String& value,
+                    const SetInfoExtraCallback& callback) override;
+  void Start(fidl::InterfaceRequest<mozart::ViewOwner> request) override;
+  void GetLink(fidl::InterfaceRequest<Link> request) override;
+  void Stop(const StopCallback& callback) override;
+  void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
 
-  // Phases of Stop(), broken out into separate methods.
+  // Phases of Start() broken out into separate methods.
+  void StartRootModule(fidl::InterfaceRequest<mozart::ViewOwner> request);
+
+  // Phases of Stop() broken out into separate methods.
   void StopModules();
   void StopLinks();
+  void StopFinish();
 
+  // |ModuleWatcher|
+  void OnStateChange(ModuleState new_state) override;
+
+  // Misc internal helpers.
+  void WriteStoryData(std::function<void()> callback);
+  void NotifyStateChange();
+  void DisposeLink(LinkImpl* link);
+  LinkPtr& EnsureRoot();
+
+  // The state of a Story and the context to obtain it from and
+  // persist it to.
+  StoryDataPtr story_data_;
+  StoryProviderImpl* const story_provider_impl_;
+  std::unique_ptr<StoryStorageImpl> story_storage_impl_;
+  ResolverPtr resolver_;
+
+  // Implements the primary service provided here: StoryController.
+  fidl::BindingSet<StoryController> bindings_;
+  fidl::InterfacePtrSet<StoryWatcher> watchers_;
+
+  // Needed to hold on to a running story. They get reset on Stop().
+  LinkPtr root_;
+  ModuleControllerPtr module_;
+  fidl::Binding<ModuleWatcher> module_watcher_binding_;
+
+  // State related to asynchronously completing a Stop() operation.
+  bool deleted_{};
+  fidl::InterfaceRequest<mozart::ViewOwner> start_request_;
+  std::vector<std::function<void()>> teardown_;
+
+  // The ingredient parts of a story: Modules and Links. For each
+  // Module, there is one Connection to it.
   struct Connection {
     std::unique_ptr<StoryConnection> story_connection;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
   };
-
-  ApplicationLauncher* const launcher_;
-  fidl::InterfacePtr<Resolver> resolver_;
-  StoryStorageImpl* const story_storage_;
-  ledger::LedgerRepository* const ledger_repository_;
   std::vector<Connection> connections_;
-
   std::vector<std::unique_ptr<LinkImpl>> links_;
-
-  // Callbacks for teardown requests in flight. This batches up
-  // concurrent Stop() requests (which may arise because the teardown
-  // sequence is asynchronous) into a single tear down sequence.
-  std::vector<std::function<void()>> teardown_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryImpl);
 };

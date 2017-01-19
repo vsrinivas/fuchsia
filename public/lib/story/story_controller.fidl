@@ -5,7 +5,7 @@
 module modular;
 
 import "apps/modular/services/story/link.fidl";
-import "apps/modular/services/user/story_info.fidl";
+import "apps/modular/services/story/story_info.fidl";
 import "apps/mozart/services/views/view_token.fidl";
 
 // Used by the client of StoryProvider (UserShell) to interact with a

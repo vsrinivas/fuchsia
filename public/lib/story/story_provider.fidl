@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/modular/services/user/story_controller.fidl";
+import "apps/modular/services/story/story_controller.fidl";
 
 // UserRunner implementation creates an instance of this service and
 // passes it to the UserShell service so it can operate on stories for

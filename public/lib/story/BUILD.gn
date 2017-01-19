@@ -11,6 +11,9 @@ fidl("story") {
     "module.fidl",
     "module_controller.fidl",
     "story.fidl",
+    "story_controller.fidl",
+    "story_info.fidl",
+    "story_provider.fidl",
   ]
 
   deps = [
@@ -24,6 +27,7 @@ fidl("story") {
 fidl("private") {
   sources = [
     "resolver.fidl",
+    "story_data.fidl",
     "story_storage.fidl",
   ]
 

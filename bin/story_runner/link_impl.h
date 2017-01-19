@@ -8,7 +8,7 @@
 #include "apps/modular/lib/fidl/bottleneck.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
 #include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/src/user_runner/story_storage_impl.h"
+#include "apps/modular/src/story_runner/story_storage_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"

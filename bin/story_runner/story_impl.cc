@@ -16,8 +16,11 @@
 #include "apps/modular/services/story/story.fidl.h"
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/module_controller_impl.h"
+#include "apps/modular/src/story_runner/story_connection.h"
+#include "apps/modular/src/story_runner/story_provider_impl.h"
 #include "apps/mozart/services/views/view_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -26,66 +29,207 @@
 
 namespace modular {
 
-StoryConnection::StoryConnection(
-    StoryImpl* const story_impl,
-    const std::string& module_url,
-    ModuleControllerImpl* const module_controller_impl,
-    fidl::InterfaceRequest<Story> story)
-    : story_impl_(story_impl),
-      module_url_(module_url),
-      module_controller_impl_(module_controller_impl),
-      binding_(this, std::move(story)) {}
-
-void StoryConnection::CreateLink(const fidl::String& name,
-                                 fidl::InterfaceRequest<Link> link) {
-  story_impl_->CreateLink(name, std::move(link));
-}
-
-void StoryConnection::StartModule(
-    const fidl::String& query,
-    fidl::InterfaceHandle<Link> link,
-    fidl::InterfaceHandle<ServiceProvider> outgoing_services,
-    fidl::InterfaceRequest<ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller,
-    fidl::InterfaceRequest<mozart::ViewOwner> view_owner) {
-  story_impl_->StartModule(query, std::move(link), std::move(outgoing_services),
-                           std::move(incoming_services),
-                           std::move(module_controller), std::move(view_owner));
-}
-
-void StoryConnection::GetLedger(fidl::InterfaceRequest<ledger::Ledger> req,
-                                const GetLedgerCallback& result) {
-  if (!module_url_.empty()) {
-    story_impl_->GetLedger(module_url_, std::move(req), result);
-  } else {
-    result(ledger::Status::UNKNOWN_ERROR);
-  }
-}
-
-void StoryConnection::Ready() {
-  if (module_controller_impl_) {
-    module_controller_impl_->SetState(ModuleState::RUNNING);
-  }
-}
-
-void StoryConnection::Done() {
-  if (module_controller_impl_) {
-    module_controller_impl_->SetState(ModuleState::DONE);
-  }
-}
-
 StoryImpl::StoryImpl(
-    ApplicationLauncher* const launcher,
-    fidl::InterfaceHandle<Resolver> resolver,
-    StoryStorageImpl* const story_storage,
-    ledger::LedgerRepository* const ledger_repository)
-    : launcher_(launcher),
-      story_storage_(story_storage),
-      ledger_repository_(ledger_repository) {
-  resolver_.Bind(std::move(resolver));
+    StoryDataPtr story_data,
+    StoryProviderImpl* const story_provider_impl)
+    : story_data_(std::move(story_data)),
+      story_provider_impl_(story_provider_impl),
+      module_watcher_binding_(this) {
+  bindings_.set_on_empty_set_handler([this] {
+    story_provider_impl_->PurgeController(story_data_->story_info->id);
+  });
+
+  story_storage_impl_.reset(new StoryStorageImpl(
+      story_provider_impl_->storage(),
+      story_provider_impl_->GetStoryPage(story_data_->story_page_id),
+      story_data_->story_info->id));
+
+  story_provider_impl_->ConnectToResolver(resolver_.NewRequest());
 }
 
 StoryImpl::~StoryImpl() {}
+
+void StoryImpl::Connect(
+    fidl::InterfaceRequest<StoryController> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
+void StoryImpl::AddLinkDataAndSync(
+    const fidl::String& json, const std::function<void()>& callback) {
+  if (json.is_null()) {
+    callback();
+    return;
+  }
+
+  EnsureRoot()->UpdateObject("", json);
+  EnsureRoot()->Sync(callback);
+}
+
+// |StoryController|
+void StoryImpl::GetInfo(const GetInfoCallback& callback) {
+  // If a controller is deleted, we know there are no story data
+  // anymore, and all connections to the controller are closed soon.
+  // We just don't answer this request anymore and let its connection
+  // get closed.
+  if (deleted_) {
+    FTL_LOG(INFO) << "StoryImpl::GetInfo() during delete: ignored.";
+    return;
+  }
+
+  story_provider_impl_->GetStoryData(
+      story_data_->story_info->id, [this, callback](StoryDataPtr story_data) {
+        story_data_ = std::move(story_data);
+        callback(story_data_->story_info->Clone());
+      });
+}
+
+// |StoryController|
+void StoryImpl::SetInfoExtra(const fidl::String& name,
+                                       const fidl::String& value,
+                                       const SetInfoExtraCallback& callback) {
+  story_data_->story_info->extra[name] = value;
+
+  // Callback is serialized after WriteStoryData. This means that
+  // after the callback returns, story info can be read from the
+  // ledger and will have it.
+  WriteStoryData(callback);
+}
+
+// |StoryController|
+void StoryImpl::Start(
+    fidl::InterfaceRequest<mozart::ViewOwner> request) {
+  // If a controller is stopped for delete, then it cannot be used
+  // further. However, as of now nothing prevents a client to call
+  // Start() on a story that is being deleted, so this condition
+  // arises legitimately. We just do nothing, and the connection to
+  // the client will be deleted shortly after. TODO(mesch): Change two
+  // things: (1) API such that it can be notified about such
+  // conditions, (2) implementation such that such conditons are
+  // checked more systematically, e.g. implement a formal state
+  // machine that checks how to handle each method in every state.
+  if (deleted_) {
+    FTL_LOG(INFO) << "StoryImpl::Start() during delete: ignored.";
+    return;
+  }
+
+  // If the story is running, we do nothing and close the view owner
+  // request.
+  if (story_data_->story_info->is_running) {
+    FTL_LOG(INFO) << "StoryImpl::Start() while already running: ignored.";
+    return;
+  }
+
+  // If another view owner request is pending, we close this one.
+  // First start request wins.
+  if (start_request_) {
+    FTL_LOG(INFO) << "StoryImpl::Start() start request is pending: ignored.";
+    return;
+  }
+
+  // We store the view owner request until we actually handle it. If
+  // another start request arrives in the meantime, it is preempted by
+  // this one.
+  start_request_ = std::move(request);
+
+  auto cont = [this] {
+    if (start_request_ && !deleted_) {
+      StartRootModule(std::move(start_request_));
+      NotifyStateChange();
+    }
+
+    // In case we didn't use the start request, we close it here,
+    start_request_ = nullptr;
+
+    if (deleted_) {
+      FTL_LOG(INFO) << "StoryImpl::Start() callback during delete: ignored.";
+    }
+  };
+
+  // If a stop request is in flight, we wait for it to finish before
+  // we start.
+  if (teardown_.size() > 0) {
+    Stop(cont);
+  } else {
+    cont();
+  }
+}
+
+void StoryImpl::StartRootModule(
+    fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+  fidl::InterfaceHandle<Link> link;
+  EnsureRoot()->Dup(link.NewRequest());
+
+  StartModule(story_data_->story_info->url, std::move(link), nullptr,
+              nullptr, module_.NewRequest(),
+              std::move(view_owner_request));
+
+  module_->Watch(module_watcher_binding_.NewBinding());
+
+  story_data_->story_info->is_running = true;
+  story_data_->story_info->state = StoryState::STARTING;
+
+  WriteStoryData([]{});
+}
+
+// |StoryController|
+void StoryImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
+  auto ptr = StoryWatcherPtr::Create(std::move(watcher));
+  const StoryState state = story_data_->story_info->state;
+  ptr->OnStateChange(state);
+  watchers_.AddInterfacePtr(std::move(ptr));
+}
+
+// |ModuleWatcher|
+void StoryImpl::OnStateChange(const ModuleState state) {
+  switch (state) {
+    case ModuleState::STARTING:
+      story_data_->story_info->state = StoryState::STARTING;
+      break;
+    case ModuleState::RUNNING:
+    case ModuleState::UNLINKED:
+      story_data_->story_info->state = StoryState::RUNNING;
+      break;
+    case ModuleState::STOPPED:
+      story_data_->story_info->state = StoryState::STOPPED;
+      break;
+    case ModuleState::DONE:
+      story_data_->story_info->state = StoryState::DONE;
+      break;
+    case ModuleState::ERROR:
+      story_data_->story_info->state = StoryState::ERROR;
+      break;
+  }
+
+  WriteStoryData([]{});
+  NotifyStateChange();
+}
+
+void StoryImpl::WriteStoryData(std::function<void()> callback) {
+  // If the story controller is deleted, we do not write story data
+  // anymore, because that would undelete it again.
+  if (!deleted_) {
+    story_provider_impl_->WriteStoryData(story_data_->Clone(), callback);
+  } else {
+    callback();
+  }
+}
+
+void StoryImpl::NotifyStateChange() {
+  const StoryState state = story_data_->story_info->state;
+  watchers_.ForAllPtrs(
+      [state](StoryWatcher* const watcher) { watcher->OnStateChange(state); });
+}
+
+LinkPtr& StoryImpl::EnsureRoot() {
+  if (!root_.is_bound()) {
+    CreateLink("root", root_.NewRequest());
+  }
+  return root_;
+}
+
+void StoryImpl::GetLink(fidl::InterfaceRequest<Link> request) {
+  EnsureRoot()->Dup(std::move(request));
+}
 
 void StoryImpl::ReleaseModule(
     ModuleControllerImpl* const module_controller_impl) {
@@ -102,7 +246,7 @@ void StoryImpl::ReleaseModule(
 void StoryImpl::CreateLink(const fidl::String& name,
                            fidl::InterfaceRequest<Link> request) {
   auto* const link_impl =
-      new LinkImpl(story_storage_, name, std::move(request));
+      new LinkImpl(story_storage_impl_.get(), name, std::move(request));
   links_.emplace_back(link_impl);
   link_impl->set_orphaned_handler(
       [this, link_impl] { DisposeLink(link_impl); });
@@ -145,7 +289,7 @@ void StoryImpl::StartModule(
         FTL_LOG(INFO) << "StoryImpl::StartModule() " << module_url;
 
         ApplicationControllerPtr application_controller;
-        launcher_->CreateApplication(
+        story_provider_impl_->launcher()->CreateApplication(
             std::move(launch_info), application_controller.NewRequest());
 
         mozart::ViewProviderPtr view_provider;
@@ -182,21 +326,39 @@ void StoryImpl::GetLedger(const std::string& module_name,
                           fidl::InterfaceRequest<ledger::Ledger> request,
                           const std::function<void(ledger::Status)>& result) {
   FTL_DCHECK(!module_name.empty());
-  ledger_repository_->GetLedger(to_array(module_name), std::move(request), result);
+  story_provider_impl_->ledger_repository()->GetLedger(
+      to_array(module_name), std::move(request), result);
 }
 
-void StoryImpl::Stop(const std::function<void()>& done) {
-  // TODO(mesch): Stop() is only ever called from StoryControllerImpl
-  // anymore, and in a way that ensures only one Stop() invocation is
-  // pending at a time. So this mechanism here is subsumed by the
-  // pending queue in StoryControllerImpl and will be removed here
-  // (actually the plan is to merge StoryImpl and
-  // StoryControllerImpl).
-  teardown_.push_back(done);
+// A variant of Stop() that stops the controller because the story was
+// deleted. It suppresses any further writes of story data, so that
+// the story is not resurrected in the ledger. After this operation
+// completes, Start() can not be called again. Once a StoryController
+// instance received StopForDelete(), it cannot be reused anymore, and
+// client connections will all be closed.
+//
+// TODO(mesch): A cleaner way is probably to retain tombstones in the
+// ledger. We revisit that once we sort out cross device
+// synchronization.
+void StoryImpl::StopForDelete(const StopCallback& callback) {
+  deleted_ = true;
+  Stop(callback);
+}
+
+// |StoryController|
+void StoryImpl::Stop(const StopCallback& done) {
+  teardown_.emplace_back(done);
 
   if (teardown_.size() != 1) {
     // A teardown is in flight, just piggyback on it.
     return;
+  }
+
+  // At this point, we don't need to monitor the root module for state
+  // changes anymore, because the next state change of the story is
+  // triggered by the Stop() call below.
+  if (module_watcher_binding_.is_bound()) {
+    module_watcher_binding_.Close();
   }
 
   // At this point, we don't need notifications from disconnected
@@ -225,8 +387,6 @@ void StoryImpl::StopModules() {
     StopLinks();
   };
 
-  // Invocation or pass of cont must be last, as cont might delete
-  // this via done callbacks.
   if (connections_.empty()) {
     cont();
   } else {
@@ -245,11 +405,34 @@ void StoryImpl::StopLinks() {
       return;
     }
 
-    // Clear the remaining links. After they are destroyed, no
-    // DisposeLink() calls can arrive anymore. They don't need to be
-    // written, because they all were written when they were last
-    // changed.
+    // Clear the remaining links. At this point, no DisposeLink()
+    // calls can arrive anymore.
     links_.clear();
+
+    StopFinish();
+  };
+
+  // There always is a root link.
+  FTL_CHECK(!links_.empty());
+
+  // The links don't need to be written now, because they all were
+  // written when they were last changed, but we need to wait for the
+  // last write request to finish, which is done with the Sync()
+  // request below.
+  for (auto& link : links_) {
+    link->Sync(cont);
+  }
+}
+
+void StoryImpl::StopFinish() {
+  story_data_->story_info->is_running = false;
+  story_data_->story_info->state = StoryState::STOPPED;
+
+  module_.reset();
+  root_.reset();
+
+  WriteStoryData([this] {
+    NotifyStateChange();
 
     // Done callbacks might delete |this| as well as objects provided
     // exclusively to |this| without ownership, and they are not
@@ -259,31 +442,12 @@ void StoryImpl::StopLinks() {
     // this function here, but also for the remainder of all functions
     // above us in the callstack, including functions that run as
     // methods of other objects owned by |this| or provided to |this|.
-    //
-    // (Specifically, this function is invoked as result callback from
-    // SyncCall, which is an Operation instance in the OperationQueue
-    // of StoryStorageImpl, which gets deleted together with StoryImpl
-    // by StoryControllerImpl. SyncCall then goes on to call Done() to
-    // remove itself from the OperationQueue, but at that time the
-    // OperationQueue and all pending Operation instances in it would
-    // already be deleted.)
-    //
     // Therefore, to avoid such problems, all done callbacks are
     // invoked through the run loop.
     for (auto& done : teardown_) {
       mtl::MessageLoop::GetCurrent()->task_runner()->PostTask(done);
     }
-  };
-
-  // Invocation or pass of cont must be last, as cont might delete
-  // this via done callbacks.
-  if (links_.empty()) {
-    cont();
-  } else {
-    for (auto& link : links_) {
-      link->Sync(cont);
-    }
-  }
+  });
 }
 
 }  // namespace modular

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/user_runner/story_provider_impl.h"
+#include "apps/modular/src/story_runner/story_provider_impl.h"
 
 #include <stdlib.h>
 #include <time.h>
@@ -11,7 +11,7 @@
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/services/story/resolver.fidl.h"
-#include "apps/modular/src/user_runner/story_controller_impl.h"
+#include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
@@ -239,7 +239,7 @@ class CreateStoryCall : public Operation {
         story_info->extra.mark_non_null();
 
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
-          controller_ = std::make_unique<StoryControllerImpl>(
+          controller_ = std::make_unique<StoryImpl>(
               std::move(story_data_), story_provider_impl_);
 
           // We call stop on the controller to ensure that root data has been
@@ -264,7 +264,7 @@ class CreateStoryCall : public Operation {
 
   ledger::PagePtr story_page_;
   StoryDataPtr story_data_;
-  std::unique_ptr<StoryControllerImpl> controller_;
+  std::unique_ptr<StoryImpl> controller_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CreateStoryCall);
 };
@@ -274,7 +274,7 @@ class DeleteStoryCall : public Operation {
   using Result = StoryProviderImpl::DeleteStoryCallback;
   using StoryIdSet = std::unordered_set<std::string>;
   using ControllerMap =
-      std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>;
+      std::unordered_map<std::string, std::unique_ptr<StoryImpl>>;
   using PendingDeletion = std::pair<std::string, DeleteStoryCall*>;
 
   DeleteStoryCall(OperationContainer* const container,
@@ -363,7 +363,7 @@ class DeleteStoryCall : public Operation {
 class GetControllerCall : public Operation {
  public:
   using ControllerMap =
-      std::unordered_map<std::string, std::unique_ptr<StoryControllerImpl>>;
+      std::unordered_map<std::string, std::unique_ptr<StoryImpl>>;
 
   GetControllerCall(OperationContainer* const container,
                     ledger::Ledger* const ledger,
@@ -404,7 +404,7 @@ class GetControllerCall : public Operation {
                                           << story_data_->story_info->id
                                           << " Ledger.GetPage() " << status;
                          }
-                         auto controller = new StoryControllerImpl(
+                         auto controller = new StoryImpl(
                              std::move(story_data_), story_provider_impl_);
                          controller->Connect(std::move(request_));
                          story_controllers_->emplace(story_id_, controller);

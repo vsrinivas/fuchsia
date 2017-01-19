@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "apps/modular/src/user_runner/story_storage_impl.h"
+#include "apps/modular/src/story_runner/story_storage_impl.h"
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/services/story/story_storage.fidl.h"
