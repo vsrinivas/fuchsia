@@ -44,7 +44,14 @@ static const char test_segfault_child_name[] = "segfault";
 // Used for testing the s/w breakpoint insn.
 static const char test_swbreak_child_name[] = "swbreak";
 
-static bool done_tests = false;
+// Setting to true when done turns off the watchdog timer.  This
+// must be an atomic so that the compiler does not assume anything
+// about when it can be touched.  Otherwise, since the compiler
+// knows that vDSO calls don't make direct callbacks, it assumes
+// that nothing can happen inside the watchdog loop that would touch
+// this variable.  In fact, it will be touched in parallel by
+// another thread.
+static volatile atomic_bool done_tests;
 
 static atomic_int extra_thread_count = ATOMIC_VAR_INIT(0);
 
@@ -194,7 +201,7 @@ static int watchdog_thread_func(void* arg)
 {
     for (int i = 0; i < WATCHDOG_DURATION_TICKS; ++i) {
         mx_nanosleep(WATCHDOG_DURATION_TICK);
-        if (done_tests)
+        if (atomic_load(&done_tests))
             return 0;
     }
     unittest_printf("WATCHDOG TIMER FIRED\n");
@@ -399,7 +406,7 @@ static bool msg_loop(mx_handle_t channel)
 
     bool my_done_tests = false;
 
-    while (!done_tests && !my_done_tests)
+    while (!atomic_load(&done_tests) && !my_done_tests)
     {
         enum message msg;
         ASSERT_TRUE(recv_msg(channel, &msg), "Error while receiving msg");
@@ -448,7 +455,7 @@ void test_inferior(void)
     if (!msg_loop(channel))
         exit(20);
 
-    done_tests = true;
+    atomic_store(&done_tests, true);
     unittest_printf("Inferior done\n");
     exit(1234);
 }
@@ -549,7 +556,7 @@ int main(int argc, char **argv)
 
     bool success = unittest_run_all_tests(argc, argv);
 
-    done_tests = true;
+    atomic_store(&done_tests, true);
     thrd_join(watchdog_thread, NULL);
     return success ? 0 : -1;
 }

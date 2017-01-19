@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,8 +36,14 @@ static char* program_path;
 
 static const char test_child_name[] = "test-child";
 
-// Setting to true when done turns off the watchdog timer.
-static bool done_tests;
+// Setting to true when done turns off the watchdog timer.  This
+// must be an atomic so that the compiler does not assume anything
+// about when it can be touched.  Otherwise, since the compiler
+// knows that vDSO calls don't make direct callbacks, it assumes
+// that nothing can happen inside the watchdog loop that would touch
+// this variable.  In fact, it will be touched in parallel by
+// another thread.
+static volatile atomic_bool done_tests;
 
 enum message {
     MSG_DONE,
@@ -315,7 +322,7 @@ static int watchdog_thread_func(void* arg)
     for (int i = 0; i < WATCHDOG_DURATION_TICKS; ++i)
     {
         mx_nanosleep(WATCHDOG_DURATION_TICK);
-        if (done_tests)
+        if (atomic_load(&done_tests))
             return 0;
     }
     unittest_printf("WATCHDOG TIMER FIRED\n");
@@ -716,7 +723,7 @@ int main(int argc, char **argv)
 
     bool success = unittest_run_all_tests(argc, argv);
 
-    done_tests = true;
+    atomic_store(&done_tests, true);
     // TODO: Add an alarm as thrd_join doesn't provide a timeout.
     thrd_join(watchdog_thread, NULL);
     return success ? 0 : -1;
