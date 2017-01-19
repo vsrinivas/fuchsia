@@ -216,9 +216,14 @@ TEST_F(MergeResolverTest, LastOneWins) {
   EXPECT_TRUE(resolver.IsEmpty());
   EXPECT_EQ(storage::Status::OK, page_storage_->GetHeadCommitIds(&ids));
   EXPECT_EQ(1u, ids.size());
+  storage::Status status;
   std::unique_ptr<const storage::Commit> commit;
-  EXPECT_EQ(storage::Status::OK,
-            page_storage_->GetCommitSynchronous(ids[0], &commit));
+  page_storage_->GetCommit(
+      ids[0], ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                              &commit));
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_EQ(storage::Status::OK, status);
+
   std::vector<storage::Entry> content_vector = GetCommitContents(*commit);
   // Entries are ordered by keys
   ASSERT_EQ(2u, content_vector.size());

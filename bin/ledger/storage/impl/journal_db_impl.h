@@ -10,7 +10,7 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <unordered_map>
+#include <unordered_set>
 
 #include "apps/ledger/src/storage/impl/db.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
@@ -58,6 +58,13 @@ class JournalDBImpl : public Journal {
 
   Status UpdateValueCounter(ObjectIdView object_id,
                             const std::function<int(int)>& operation);
+
+  void GetParents(
+      std::function<void(Status,
+                         std::vector<std::unique_ptr<const storage::Commit>>)>
+          callback);
+
+  Status ClearCommittedJournal(std::unordered_set<ObjectId> new_nodes);
 
   const JournalType type_;
   PageStorageImpl* const page_storage_;

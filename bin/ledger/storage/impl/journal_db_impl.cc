@@ -7,6 +7,7 @@
 #include <functional>
 #include <string>
 
+#include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/storage/impl/btree/btree_utils.h"
 #include "apps/ledger/src/storage/impl/commit_impl.h"
 #include "apps/ledger/src/storage/impl/db.h"
@@ -120,110 +121,112 @@ Status JournalDBImpl::Delete(convert::ExtendedStringView key) {
   return batch->Execute();
 }
 
+void JournalDBImpl::GetParents(
+    std::function<void(Status,
+                       std::vector<std::unique_ptr<const storage::Commit>>)>
+        callback) {
+  auto waiter =
+      callback::Waiter<Status, std::unique_ptr<const storage::Commit>>::Create(
+          Status::OK);
+  page_storage_->GetCommit(base_, waiter->NewCallback());
+  if (other_) {
+    page_storage_->GetCommit(*other_, waiter->NewCallback());
+  }
+  waiter->Finalize(std::move(callback));
+}
+
+Status JournalDBImpl::ClearCommittedJournal(
+    std::unordered_set<ObjectId> new_nodes) {
+  // Mark objects as unsynced in a single batch.
+  std::vector<ObjectId> objects_to_sync;
+  Status status = db_->GetJournalValues(id_, &objects_to_sync);
+  if (status != Status::OK) {
+    return status;
+  }
+  std::unique_ptr<DB::Batch> batch = db_->StartBatch();
+  for (const ObjectId& tree_node_id : new_nodes) {
+    status = db_->MarkObjectIdUnsynced(tree_node_id);
+    if (status != Status::OK) {
+      return status;
+    }
+  }
+  for (const ObjectId& object_id : objects_to_sync) {
+    status = db_->MarkObjectIdUnsynced(object_id);
+    if (status != Status::OK) {
+      return status;
+    }
+  }
+  status = batch->Execute();
+  if (status != Status::OK) {
+    return status;
+  }
+  // Notify PageStorage that the objects are now tracked.
+  for (const ObjectId& object_id : objects_to_sync) {
+    page_storage_->MarkObjectTracked(object_id);
+  }
+  db_->RemoveJournal(id_);
+  return Status::OK;
+}
+
 void JournalDBImpl::Commit(
     std::function<void(Status, const CommitId&)> callback) {
   if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
     callback(Status::ILLEGAL_STATE, "");
     return;
   }
-  std::unique_ptr<Iterator<const EntryChange>> entries;
-  Status status = db_->GetJournalEntries(id_, &entries);
-  if (status != Status::OK) {
-    callback(status, "");
-    return;
-  }
 
-  std::unique_ptr<const storage::Commit> base_commit;
-  status = page_storage_->GetCommitSynchronous(base_, &base_commit);
-  if (status != Status::OK) {
-    callback(status, "");
-    return;
-  }
-
-  size_t node_size;
-  status = db_->GetNodeSize(&node_size);
-  if (status != Status::OK) {
-    callback(status, "");
-    return;
-  }
-
-  const ObjectId& base_root_id = base_commit->GetRootId();
-  btree::ApplyChanges(
-      page_storage_, base_root_id, node_size, std::move(entries),
-      ftl::MakeCopyable([
-        this, callback, base_commit = std::move(base_commit)
-      ](Status status, ObjectId object_id,
-        std::unordered_set<ObjectId> new_nodes) mutable {
-        if (status != Status::OK) {
-          callback(status, "");
-          return;
-        }
-
-        std::vector<std::unique_ptr<const storage::Commit>> parents;
-        parents.emplace_back(std::move(base_commit));
-
-        if (other_) {
-          std::unique_ptr<const storage::Commit> other_commit;
-          Status commit_status =
-              page_storage_->GetCommitSynchronous(*other_, &other_commit);
-          if (commit_status != Status::OK) {
-            callback(commit_status, "");
+  GetParents([ this, callback = std::move(callback) ](
+      Status status,
+      std::vector<std::unique_ptr<const storage::Commit>> parents) {
+    if (status != Status::OK) {
+      callback(status, "");
+      return;
+    }
+    size_t node_size;
+    status = db_->GetNodeSize(&node_size);
+    if (status != Status::OK) {
+      callback(status, "");
+      return;
+    }
+    std::unique_ptr<Iterator<const EntryChange>> entries;
+    status = db_->GetJournalEntries(id_, &entries);
+    if (status != Status::OK) {
+      callback(status, "");
+      return;
+    }
+    btree::ApplyChanges(
+        page_storage_, parents[0]->GetRootId(), node_size, std::move(entries),
+        ftl::MakeCopyable([
+          this, parents = std::move(parents), callback = std::move(callback)
+        ](Status status, ObjectId object_id,
+          std::unordered_set<ObjectId> new_nodes) mutable {
+          if (status != Status::OK) {
+            callback(status, "");
             return;
           }
-          parents.emplace_back(std::move(other_commit));
-        }
-
-        std::unique_ptr<storage::Commit> commit =
-            CommitImpl::FromContentAndParents(page_storage_, object_id,
-                                              std::move(parents));
-        ObjectId id = commit->GetId();
-
-        page_storage_->AddCommitFromLocal(
-            std::move(commit), ftl::MakeCopyable([
-              this, id = std::move(id), new_nodes = std::move(new_nodes),
-              callback
-            ](Status status) mutable {
-              valid_ = false;
-              if (status != Status::OK) {
-                callback(status, "");
-                return;
-              }
-              // Mark objects as unsynced.
-              std::vector<ObjectId> objects_to_sync;
-              status = db_->GetJournalValues(id_, &objects_to_sync);
-              if (status != Status::OK) {
-                callback(status, "");
-                return;
-              }
-              // Mark unsynced objects in a single batch.
-              std::unique_ptr<DB::Batch> batch = db_->StartBatch();
-              for (const ObjectId& tree_node_id : new_nodes) {
-                status = db_->MarkObjectIdUnsynced(tree_node_id);
+          std::unique_ptr<storage::Commit> commit =
+              CommitImpl::FromContentAndParents(page_storage_, object_id,
+                                                std::move(parents));
+          CommitId id = commit->GetId();
+          page_storage_->AddCommitFromLocal(
+              std::move(commit), ftl::MakeCopyable([
+                this, id = std::move(id), new_nodes = std::move(new_nodes),
+                callback
+              ](Status status) mutable {
+                valid_ = false;
                 if (status != Status::OK) {
                   callback(status, "");
                   return;
                 }
-              }
-              for (const ObjectId& object_id : objects_to_sync) {
-                status = db_->MarkObjectIdUnsynced(object_id);
+                status = ClearCommittedJournal(std::move(new_nodes));
                 if (status != Status::OK) {
                   callback(status, "");
-                  return;
+                } else {
+                  callback(Status::OK, id);
                 }
-              }
-              status = batch->Execute();
-              if (status != Status::OK) {
-                callback(status, "");
-                return;
-              }
-              // Notify PageStorage that the objects are now tracked.
-              for (const ObjectId& object_id : objects_to_sync) {
-                page_storage_->MarkObjectTracked(object_id);
-              }
-              db_->RemoveJournal(id_);
-              callback(Status::OK, id);
-            }));
-      }));
+              }));
+        }));
+  });
 }
 
 Status JournalDBImpl::Rollback() {

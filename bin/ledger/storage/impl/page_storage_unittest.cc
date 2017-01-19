@@ -204,8 +204,17 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     std::vector<CommitId> ids;
     EXPECT_EQ(Status::OK, storage_->GetHeadCommitIds(&ids));
     EXPECT_FALSE(ids.empty());
+    return GetCommit(ids[0]);
+  }
+
+  std::unique_ptr<const Commit> GetCommit(const CommitId& id) {
+    Status status;
     std::unique_ptr<const Commit> commit;
-    EXPECT_EQ(Status::OK, storage_->GetCommitSynchronous(ids[0], &commit));
+    storage_->GetCommit(
+        id, ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                            &commit));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
     return commit;
   }
 
@@ -271,8 +280,7 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     EXPECT_EQ(Status::ILLEGAL_STATE, journal->Rollback());
 
     // Check the contents.
-    std::unique_ptr<const Commit> commit;
-    EXPECT_EQ(Status::OK, storage_->GetCommitSynchronous(commit_id, &commit));
+    std::unique_ptr<const Commit> commit = GetCommit(commit_id);
     std::vector<Entry> entries = GetCommitContents(*commit);
     EXPECT_EQ(static_cast<size_t>(keys), entries.size());
     for (int i = 0; i < keys; ++i) {
@@ -330,9 +338,12 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
 
 TEST_F(PageStorageTest, AddGetLocalCommits) {
   // Search for a commit id that doesn't exist and see the error.
+  Status status;
   std::unique_ptr<const Commit> lookup_commit;
-  EXPECT_EQ(Status::NOT_FOUND, storage_->GetCommitSynchronous(
-                                   RandomId(kCommitIdSize), &lookup_commit));
+  storage_->GetCommit(RandomId(kCommitIdSize),
+                      ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                      &status, &lookup_commit));
+  EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_FALSE(lookup_commit);
 
   std::vector<std::unique_ptr<const Commit>> parent;
@@ -345,8 +356,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   // Search for a commit that exist and check the content.
   storage_->AddCommitFromLocal(
       std::move(commit), [](Status status) { EXPECT_EQ(Status::OK, status); });
-  std::unique_ptr<const Commit> found;
-  EXPECT_EQ(Status::OK, storage_->GetCommitSynchronous(id, &found));
+  std::unique_ptr<const Commit> found = GetCommit(id);
   EXPECT_EQ(storage_bytes, found->GetStorageBytes());
 }
 
@@ -418,8 +428,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(sync.object_requests.empty());
 
-  std::unique_ptr<const Commit> found;
-  EXPECT_EQ(Status::OK, storage_->GetCommitSynchronous(id, &found));
+  std::unique_ptr<const Commit> found = GetCommit(id);
   EXPECT_EQ(commit->GetStorageBytes(), found->GetStorageBytes());
 
   // Check that the commit is not marked as unsynced.
@@ -768,8 +777,7 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(static_cast<unsigned>(i + 2), objects.size());
 
-    std::unique_ptr<const Commit> commit;
-    EXPECT_EQ(Status::OK, storage_->GetCommitSynchronous(commits[i], &commit));
+    std::unique_ptr<const Commit> commit = GetCommit(commits[i]);
     EXPECT_TRUE(std::find(objects.begin(), objects.end(),
                           commit->GetRootId()) != objects.end());
     for (int j = 0; j <= i; ++j) {
@@ -789,8 +797,7 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(3u, objects.size());
-  std::unique_ptr<const Commit> commit;
-  EXPECT_EQ(Status::OK, storage_->GetCommitSynchronous(commits[2], &commit));
+  std::unique_ptr<const Commit> commit = GetCommit(commits[2]);
   EXPECT_TRUE(std::find(objects.begin(), objects.end(), commit->GetRootId()) !=
               objects.end());
   EXPECT_TRUE(std::find(objects.begin(), objects.end(), data[0].object_id) !=
@@ -1004,21 +1011,18 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
 
 TEST_F(PageStorageTest, Generation) {
   const CommitId commit_id1 = TryCommitFromLocal(JournalType::EXPLICIT, 3);
-  std::unique_ptr<const Commit> commit1;
-  storage_->GetCommitSynchronous(commit_id1, &commit1);
+  std::unique_ptr<const Commit> commit1 = GetCommit(commit_id1);
   EXPECT_EQ(1u, commit1->GetGeneration());
 
   const CommitId commit_id2 = TryCommitFromLocal(JournalType::EXPLICIT, 3);
-  std::unique_ptr<const Commit> commit2;
-  storage_->GetCommitSynchronous(commit_id2, &commit2);
+  std::unique_ptr<const Commit> commit2 = GetCommit(commit_id2);
   EXPECT_EQ(2u, commit2->GetGeneration());
 
   std::unique_ptr<Journal> journal;
   EXPECT_EQ(Status::OK,
             storage_->StartMergeCommit(commit_id1, commit_id2, &journal));
   journal->Commit([this](Status status, const CommitId& commit_id3) {
-    std::unique_ptr<const Commit> commit3;
-    storage_->GetCommitSynchronous(commit_id3, &commit3);
+    std::unique_ptr<const Commit> commit3 = GetCommit(commit_id3);
     EXPECT_EQ(3u, commit3->GetGeneration());
     message_loop_.PostQuitTask();
   });
@@ -1049,8 +1053,7 @@ TEST_F(PageStorageTest, DeletionOnIOThread) {
 TEST_F(PageStorageTest, GetEntryFromCommit) {
   int size = 10;
   CommitId commit_id = TryCommitFromLocal(JournalType::EXPLICIT, size);
-  std::unique_ptr<const Commit> commit;
-  EXPECT_EQ(Status::OK, storage_->GetCommitSynchronous(commit_id, &commit));
+  std::unique_ptr<const Commit> commit = GetCommit(commit_id);
 
   Status status;
   Entry entry;

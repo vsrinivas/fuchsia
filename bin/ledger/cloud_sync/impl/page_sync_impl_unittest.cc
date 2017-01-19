@@ -66,17 +66,19 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override {}
 
-  storage::Status GetCommitSynchronous(
-      const storage::CommitId& commit_id,
-      std::unique_ptr<const storage::Commit>* commit) override {
+  void GetCommit(const storage::CommitId& commit_id,
+                 std::function<void(storage::Status,
+                                    std::unique_ptr<const storage::Commit>)>
+                     callback) override {
     if (should_fail_get_commit) {
-      return storage::Status::IO_ERROR;
+      callback(storage::Status::IO_ERROR, nullptr);
+      return;
     }
 
-    *commit = std::move(new_commits_to_return[commit_id]);
+    callback(storage::Status::OK, std::move(new_commits_to_return[commit_id]));
     new_commits_to_return.erase(commit_id);
-    return storage::Status::OK;
   }
+
 
   void AddCommitsFromSync(
       std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
