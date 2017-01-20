@@ -156,7 +156,7 @@ status_t ProcessDispatcher::Initialize() {
     DEBUG_ASSERT(state_ == State::INITIAL);
 
     // create an address space for this process.
-    aspace_ = VmAspace::Create(0, nullptr);
+    aspace_ = VmAspace::Create(VmAspace::TYPE_USER, nullptr);
     if (!aspace_) {
         TRACEF("error creating address space\n");
         return ERR_NO_MEMORY;
