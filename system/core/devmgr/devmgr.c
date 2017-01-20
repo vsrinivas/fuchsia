@@ -151,8 +151,9 @@ int service_starter(void* arg) {
     if (application_launcher_child) {
         mx_handle_t hnd[1] = { application_launcher_child };
         uint32_t ids[1] = { MX_HND_INFO(MX_HND_TYPE_APPLICATION_LAUNCHER, 0) };
-        devmgr_launch(svcs_job_handle, "application-manager", countof(argv_appmgr), argv_appmgr,
-                      -1, hnd, ids, countof(hnd));
+        devmgr_launch(svcs_job_handle, "application-manager",
+                      countof(argv_appmgr), argv_appmgr, NULL, -1,
+                      hnd, ids, countof(hnd));
         application_launcher_child = 0;
     }
 
