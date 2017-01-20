@@ -47,7 +47,7 @@ class PageImpl : public Page {
       StatusCallback callback);
 
   void CommitJournal(std::unique_ptr<storage::Journal> journal,
-                     StatusCallback callback);
+                     std::function<void(Status, storage::CommitId)> callback);
 
   // Queue operations such that they are serialized: an operation is run only
   // when all previous operations registered through this method have terminated

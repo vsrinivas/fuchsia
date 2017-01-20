@@ -45,7 +45,7 @@ Status FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
 }
 
 void FakeJournalDelegate::Commit(
-    std::function<void(Status, const CommitId&)> callback) {
+    std::function<void(Status, CommitId)> callback) {
   if (is_committed_ || is_rolled_back_) {
     callback(Status::ILLEGAL_STATE, "");
     return;

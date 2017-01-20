@@ -5,6 +5,8 @@
 #ifndef APPS_LEDGER_SRC_APP_BRANCH_TRACKER_H_
 #define APPS_LEDGER_SRC_APP_BRANCH_TRACKER_H_
 
+#include <memory>
+
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/app/fidl/bound_interface.h"
 #include "apps/ledger/src/app/page_impl.h"
@@ -12,6 +14,7 @@
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
+#include "apps/ledger/src/storage/public/types.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 
 namespace ledger {
@@ -37,10 +40,6 @@ class BranchTracker : public storage::CommitWatcher {
   void RegisterPageWatcher(PageWatcherPtr page_watcher_ptr,
                            std::unique_ptr<const storage::Commit> base_commit);
 
-  // This method should be called by |PageImpl| when a journal is commited to
-  // inform which branch should be tracked by the page and watchers from now on.
-  void SetBranchHead(const storage::CommitId& commit_id);
-
   // Informs the BranchTracker that a transaction is in progress. It first
   // drains all pending Watcher updates, then stop sending them until
   // |StopTransaction| is called. |watchers_drained_callback| is called when all
@@ -51,7 +50,9 @@ class BranchTracker : public storage::CommitWatcher {
   // Informs the BranchTracker that a transaction is no longer in progress.
   // Resumes sending updates to registered watchers. This should be used by
   // |PageImpl| when a transaction is committed or rolled back.
-  void StopTransaction();
+  // |commit_id| must be the commit of the transaction if is has been committed,
+  // and empty otherwise.
+  void StopTransaction(storage::CommitId commit_id);
 
  private:
   class PageWatcherContainer;

@@ -66,8 +66,10 @@ Status PageUtils::ConvertStatus(storage::Status status,
     case storage::Status::IO_ERROR:
       return Status::IO_ERROR;
     case storage::Status::NOT_FOUND:
+      FTL_DCHECK(not_found_status != Status::INTERNAL_ERROR);
       return not_found_status;
     default:
+      FTL_DCHECK(false);
       return Status::INTERNAL_ERROR;
   }
 }

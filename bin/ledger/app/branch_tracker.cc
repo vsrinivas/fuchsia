@@ -139,7 +139,7 @@ BranchTracker::BranchTracker(PageManager* manager,
       interface_(std::move(request), storage, manager, this),
       transaction_in_progress_(false) {
   interface_.set_on_empty([this] {
-    this->StopTransaction();
+    StopTransaction("");
     CheckEmpty();
   });
   watchers_.set_on_empty([this] { CheckEmpty(); });
@@ -161,13 +161,6 @@ void BranchTracker::set_on_empty(ftl::Closure on_empty_callback) {
 
 const storage::CommitId& BranchTracker::GetBranchHeadId() {
   return current_commit_;
-}
-
-void BranchTracker::SetBranchHead(const storage::CommitId& commit_id) {
-  current_commit_ = commit_id;
-  for (auto& watcher : watchers_) {
-    watcher.UpdateCommit(current_commit_);
-  }
 }
 
 void BranchTracker::OnNewCommits(
@@ -208,14 +201,21 @@ void BranchTracker::StartTransaction(ftl::Closure watchers_drained_callback) {
   waiter.Finalize(std::move(watchers_drained_callback));
 }
 
-void BranchTracker::StopTransaction() {
+void BranchTracker::StopTransaction(storage::CommitId commit_id) {
+  FTL_DCHECK(transaction_in_progress_ || commit_id.empty());
+
   if (!transaction_in_progress_) {
     return;
   }
   transaction_in_progress_ = false;
-  for (auto it = watchers_.begin(); it != watchers_.end(); ++it) {
-    it->SetOnDrainedCallback(nullptr);
-    it->UpdateCommit(current_commit_);
+
+  if (!commit_id.empty()) {
+    current_commit_ = std::move(commit_id);
+  }
+
+  for (auto& watcher : watchers_) {
+    watcher.SetOnDrainedCallback(nullptr);
+    watcher.UpdateCommit(current_commit_);
   }
 }
 

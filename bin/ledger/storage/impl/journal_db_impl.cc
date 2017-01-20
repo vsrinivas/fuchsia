@@ -168,8 +168,7 @@ Status JournalDBImpl::ClearCommittedJournal(
   return Status::OK;
 }
 
-void JournalDBImpl::Commit(
-    std::function<void(Status, const CommitId&)> callback) {
+void JournalDBImpl::Commit(std::function<void(Status, CommitId)> callback) {
   if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
     callback(Status::ILLEGAL_STATE, "");
     return;
@@ -222,7 +221,7 @@ void JournalDBImpl::Commit(
                 if (status != Status::OK) {
                   callback(status, "");
                 } else {
-                  callback(Status::OK, id);
+                  callback(Status::OK, std::move(id));
                 }
               }));
         }));

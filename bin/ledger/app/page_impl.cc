@@ -84,6 +84,7 @@ void PageImpl::RunInTransaction(
         // transactions. Currently, we create a commit for every change; we
         // would like to group changes that happen "close enough" together in
         // one commit.
+        branch_tracker_->StartTransaction([] {});
         storage::CommitId commit_id = branch_tracker_->GetBranchHeadId();
         std::unique_ptr<storage::Journal> journal;
         storage::Status status = storage_->StartCommit(
@@ -91,35 +92,41 @@ void PageImpl::RunInTransaction(
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status));
           journal->Rollback();
+          branch_tracker_->StopTransaction("");
           return;
         }
         Status ledger_status = runnable(journal.get());
         if (ledger_status != Status::OK) {
           callback(ledger_status);
           journal->Rollback();
+          branch_tracker_->StopTransaction("");
           return;
         }
 
-        CommitJournal(std::move(journal), callback);
+        CommitJournal(std::move(journal), [
+          this, callback = std::move(callback)
+        ](Status status, storage::CommitId commit_id) {
+          branch_tracker_->StopTransaction(status == Status::OK ? commit_id
+                                                                : "");
+          callback(status);
+        });
       });
 }
 
-void PageImpl::CommitJournal(std::unique_ptr<storage::Journal> journal,
-                             std::function<void(Status)> callback) {
+void PageImpl::CommitJournal(
+    std::unique_ptr<storage::Journal> journal,
+    std::function<void(Status, storage::CommitId)> callback) {
   storage::Journal* journal_ptr = journal.get();
   in_progress_journals_.push_back(std::move(journal));
 
   journal_ptr->Commit([this, callback, journal_ptr](
-      storage::Status status, const storage::CommitId& commit_id) {
+      storage::Status status, storage::CommitId commit_id) {
     in_progress_journals_.erase(std::remove_if(
         in_progress_journals_.begin(), in_progress_journals_.end(),
         [&journal_ptr](const std::unique_ptr<storage::Journal>& journal) {
           return journal_ptr == journal.get();
         }));
-    if (status == storage::Status::OK) {
-      branch_tracker_->SetBranchHead(commit_id);
-    }
-    callback(PageUtils::ConvertStatus(status));
+    callback(PageUtils::ConvertStatus(status), std::move(commit_id));
   });
 }
 
@@ -287,8 +294,12 @@ void PageImpl::Commit(const CommitCallback& callback) {
                          return;
                        }
                        journal_parent_commit_.clear();
-                       CommitJournal(std::move(journal_), std::move(callback));
-                       branch_tracker_->StopTransaction();
+                       CommitJournal(std::move(journal_), [
+                         this, callback = std::move(callback)
+                       ](Status status, storage::CommitId commit_id) {
+                         branch_tracker_->StopTransaction(commit_id);
+                         callback(status);
+                       });
                      });
 }
 
@@ -304,7 +315,7 @@ void PageImpl::Rollback(const RollbackCallback& callback) {
                        journal_.reset();
                        journal_parent_commit_.clear();
                        callback(PageUtils::ConvertStatus(status));
-                       branch_tracker_->StopTransaction();
+                       branch_tracker_->StopTransaction("");
                      });
 }
 
