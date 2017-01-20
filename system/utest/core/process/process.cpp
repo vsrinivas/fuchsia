@@ -83,6 +83,35 @@ bool kill_process_via_thread_kill() {
     END_TEST;
 }
 
+bool kill_process_via_vmar_destroy() {
+    BEGIN_TEST;
+
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), NO_ERROR, "");
+
+    mx_handle_t proc;
+    mx_handle_t vmar;
+    ASSERT_EQ(mx_process_create(mx_job_default(), "ttp", 3u, 0, &proc, &vmar), NO_ERROR, "");
+
+    mx_handle_t thread;
+    ASSERT_EQ(mx_thread_create(proc, "th", 2u, 0u, &thread), NO_ERROR, "");
+
+    EXPECT_EQ(start_mini_process_etc(proc, thread, vmar, event), NO_ERROR, "");
+
+    // Destroying the root VMAR should cause the process to terminate.
+    EXPECT_EQ(mx_vmar_destroy(vmar), NO_ERROR, "");
+
+    mx_signals_t signals;
+    EXPECT_EQ(mx_handle_wait_one(
+        proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
+    EXPECT_EQ(signals, MX_TASK_TERMINATED, "");
+
+    EXPECT_EQ(mx_handle_close(proc), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmar), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(thread), NO_ERROR, "");
+    END_TEST;
+}
+
 bool kill_process_handle_cycle() {
     BEGIN_TEST;
 
@@ -271,6 +300,7 @@ BEGIN_TEST_CASE(process_tests)
 RUN_TEST(kill_process_via_thread_close);
 RUN_TEST(kill_process_via_process_close);
 RUN_TEST(kill_process_via_thread_kill);
+RUN_TEST(kill_process_via_vmar_destroy);
 RUN_TEST(kill_process_handle_cycle);
 RUN_TEST(kill_channel_handle_cycle);
 RUN_TEST(info_reflects_process_state);
