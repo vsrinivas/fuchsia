@@ -230,11 +230,14 @@ static const char* match_subdir(const char* path, const char* name,
 #define MATCH_SUBDIR(path, name) match_subdir(path, name, sizeof(name) - 1)
 
 mx_status_t do_none(mxrio_msg_t* msg, iostate_t* ios, int events,
-                    mx_signals_t signals);
+                    mx_signals_t signals, mx_handle_t* peer_rio_h,
+                    mx_handle_t* peer_data_h, int* hcount);
 mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
-                      mx_signals_t signals);
+                      mx_signals_t signals, mx_handle_t* peer_rio_h,
+                      mx_handle_t* peer_data_h, int* hcount);
 mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
-                      mx_signals_t signals);
+                      mx_signals_t signals, mx_handle_t* peer_rio_h,
+                      mx_handle_t* peer_data_h, int* hcount);
 
 mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
                     mx_signals_t signals) {
@@ -247,45 +250,62 @@ mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
   path[msg->datalen] = '\0';
   debug("do_open: path \"%s\"\n", path);
 
+  mx_handle_t peer_rio_h = MX_HANDLE_INVALID;
+  mx_handle_t peer_data_h = MX_HANDLE_INVALID;
+  int hcount = 0;
+
+  mx_status_t r;
   if (MATCH_SUBDIR(path, MXRIO_SOCKET_DIR_NONE)) {
-    return do_none(msg, ios, events, MX_SIGNAL_NONE);
+    r = do_none(msg, ios, events, MX_SIGNAL_NONE, &peer_rio_h, &peer_data_h,
+                &hcount);
   } else if (MATCH_SUBDIR(path, MXRIO_SOCKET_DIR_SOCKET)) {
-    return do_socket(msg, ios, events, MX_SIGNAL_NONE);
+    r = do_socket(msg, ios, events, MX_SIGNAL_NONE, &peer_rio_h, &peer_data_h,
+                  &hcount);
   } else if (MATCH_SUBDIR(path, MXRIO_SOCKET_DIR_ACCEPT)) {
-    return do_accept(msg, ios, events, MX_SIGNAL_NONE);
+    r = do_accept(msg, ios, events, MX_SIGNAL_NONE, &peer_rio_h, &peer_data_h,
+                  &hcount);
   } else {
     error("invalid path: %s\n", path);
-    return ERR_INVALID_ARGS;
+    r = ERR_INVALID_ARGS;
   }
+
+  debug("do_open: r=%d peer_rio_h=%d peer_data_h=%d hcount=%d\n", r, peer_rio_h,
+        peer_data_h, hcount);
+
+  // mxrio_object
+  struct {
+    mx_status_t status;
+    uint32_t type;
+  } reply = {r, MXIO_PROTOCOL_SOCKET};
+  mx_handle_t handles[2] = {peer_rio_h, peer_data_h};
+  mx_channel_write(msg->handle[0], 0, &reply, sizeof(reply), handles, hcount);
+  mx_handle_close(msg->handle[0]);
+
+  return NO_ERROR;
 }
 
 mx_status_t do_none(mxrio_msg_t* msg, iostate_t* ios, int events,
-                    mx_signals_t signals) {
+                    mx_signals_t signals, mx_handle_t* peer_rio_h,
+                    mx_handle_t* peer_data_h, int* hcount) {
   ios = iostate_alloc();  // override
   ios->handle_type = HANDLE_TYPE_NONE;
 
-  mx_handle_t peer_rio_h, peer_data_h;
-  int hcount;
   // ios->data_h is set inside create_handles()
-  mx_status_t r = create_handles(ios, &peer_rio_h, &peer_data_h, &hcount);
+  mx_status_t r = create_handles(ios, peer_rio_h, peer_data_h, hcount);
   if (r < 0) {
+    error("do_none: create_handles failed (status=%d)\n", r);
     iostate_release(ios);
     return r;
   }
   debug_alloc("do_none: create_socket: ios=%p: ios->data_h=0x%x\n", ios,
               ios->data_h);
 
-  msg->handle[0] = peer_rio_h;
-  msg->handle[1] = peer_data_h;
-  msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
-  msg->hcount = hcount;
-  msg->datalen = 0;
-
   return NO_ERROR;
 }
 
 mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
-                      mx_signals_t signals) {
+                      mx_signals_t signals, mx_handle_t* peer_rio_h,
+                      mx_handle_t* peer_data_h, int* hcount) {
   const char* ptr = MATCH_SUBDIR((char*)msg->data, MXRIO_SOCKET_DIR_SOCKET);
   if (ptr == NULL) return ERR_INVALID_ARGS;
 
@@ -312,7 +332,7 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
   if (errno_ != 0) {
     return errno_to_status(errno_);
   }
-  debug("do_open: new sockfd=%d\n", ios->sockfd);
+  debug("do_socket: new sockfd=%d\n", ios->sockfd);
 
   int non_blocking = 1;
   int ret = net_ioctl(ios->sockfd, FIONBIO, &non_blocking);
@@ -324,22 +344,15 @@ mx_status_t do_socket(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  mx_handle_t peer_rio_h, peer_data_h;
-  int hcount;
   // ios->data_h is set inside create_handles()
-  mx_status_t r = create_handles(ios, &peer_rio_h, &peer_data_h, &hcount);
+  mx_status_t r = create_handles(ios, peer_rio_h, peer_data_h, hcount);
   if (r < 0) {
+    error("do_socket: create_handles failed (status=%d)\n", r);
     iostate_release(ios);
     return r;
   }
   debug_alloc("do_socket: create_socket: ios=%p: ios->data_h=0x%x\n", ios,
               ios->data_h);
-
-  msg->handle[0] = peer_rio_h;
-  msg->handle[1] = peer_data_h;
-  msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
-  msg->hcount = hcount;
-  msg->datalen = 0;
 
   fd_event_set(ios->sockfd, EVENT_EXCEPT);
   socket_signals_set(ios, MX_SOCKET_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED);
@@ -467,7 +480,8 @@ mx_status_t do_sigconn_r(mxrio_msg_t* msg, iostate_t* ios, int events,
 }
 
 mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
-                      mx_signals_t signals) {
+                      mx_signals_t signals, mx_handle_t* peer_rio_h,
+                      mx_handle_t* peer_data_h, int* hcount) {
   // we don't return the connected addr at this point.
   // the client will call getpeername later.
   int ret = net_accept(ios->sockfd, NULL, NULL);
@@ -500,26 +514,20 @@ mx_status_t do_accept(mxrio_msg_t* msg, iostate_t* ios, int events,
     return errno_to_status(errno_);
   }
 
-  mx_handle_t peer_rio_h, peer_data_h;
-  int hcount;
-  mx_status_t r = create_handles(ios_new, &peer_rio_h, &peer_data_h, &hcount);
+  mx_status_t r = create_handles(ios_new, peer_rio_h, peer_data_h, hcount);
   if (r < 0) {
+    error("do_accept: create_handles failed (status=%d)\n", r);
     iostate_release(ios_new);
     return r;
   }
   debug_alloc("do_accept: create_socket: ios=%p: ios->data_h=0x%x\n", ios,
               ios->data_h);
 
-  msg->handle[0] = peer_rio_h;
-  msg->handle[1] = peer_data_h;
-  msg->arg2.protocol = MXIO_PROTOCOL_SOCKET;
-  msg->hcount = hcount;
-  msg->datalen = 0;
-
   fd_event_set(ios_new->sockfd, EVENT_EXCEPT);
   socket_signals_set(ios_new, MX_SOCKET_PEER_CLOSED | MXSIO_SIGNAL_HALFCLOSED);
 
   schedule_rw(ios_new);
+
   return NO_ERROR;
 }
 
@@ -956,8 +964,7 @@ static do_func_t do_funcs[] = {
 };
 
 static bool is_message_valid(mxrio_msg_t* msg) {
-  if ((msg->magic != MXRIO_MAGIC) || (msg->datalen > MXIO_CHUNK_SIZE) ||
-      (msg->hcount > MXIO_MAX_HANDLES)) {
+  if ((msg->datalen > MXIO_CHUNK_SIZE) || (msg->hcount > MXIO_MAX_HANDLES)) {
     error("send_status: msg invalid\n");
     return false;
   }
@@ -979,14 +986,13 @@ static void send_status(mxrio_msg_t* msg, mx_handle_t rh) {
     msg->arg = (msg->arg < 0) ? msg->arg : ERR_INTERNAL;
   }
 
-  // rh is always a reply pipe
-  msg->handle[msg->hcount++] = rh;
-
-  msg->op = MXRIO_STATUS;
-  if (mx_channel_write(rh, 0u, msg, MXRIO_HDR_SZ + msg->datalen, msg->handle,
-                       msg->hcount) < 0) {
-    error("send_status: write failed\n");
-    discard_handles(msg->handle, msg->hcount);
+  if (MXRIO_OP(msg->op) != MXRIO_OPEN) {
+    msg->op = MXRIO_STATUS;
+    if (mx_channel_write(rh, 0u, msg, MXRIO_HDR_SZ + msg->datalen, msg->handle,
+                         msg->hcount) < 0) {
+      error("send_status: write failed\n");
+      discard_handles(msg->handle, msg->hcount);
+    }
   }
 
   debug_alloc("send_status: free msg %p\n", msg);
@@ -1001,7 +1007,7 @@ void handle_request(request_t* rq, int events, mx_signals_t signals) {
   request_unpack(rq, &op, &rh, &msg, &ios);
 
   debug_alloc("handle_request: rq %p\n", rq);
-  if (op >= NUM_OPS) {
+  if (MXRIO_OPNAME(op) >= NUM_OPS) {
     error("handle_request: unknown op (%d)\n", op);
     goto err;
   }
@@ -1030,9 +1036,10 @@ void handle_request(request_t* rq, int events, mx_signals_t signals) {
       case IO_HALFCLOSE:
       case IO_SIGCONN_R:
       case IO_SIGCONN_W:
-        // Don't call send_status()
+        // These are actually not RIO. Don't call send_status()
         break;
       default:
+        // Complete RIO.
         msg->arg = r;
         send_status(msg, rh);  // this frees msg
         break;
@@ -1042,7 +1049,7 @@ void handle_request(request_t* rq, int events, mx_signals_t signals) {
     return;
   }
 err:
-  if (op < MXRIO_NUM_OPS) {
+  if (MXRIO_OPNAME(op) < MXRIO_NUM_OPS) {
     msg->arg = ERR_INVALID_ARGS;
     send_status(msg, rh);
   }

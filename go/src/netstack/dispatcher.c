@@ -46,8 +46,14 @@ mx_status_t rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
     return ERR_INVALID_ARGS;
   }
 
-  for (unsigned i = 0; i < msg->hcount; i++) {
-    mx_handle_close(msg->handle[i]);
+  if (msg->hcount) {
+    if ((msg->hcount > 1) || (MXRIO_OP(msg->op) != MXRIO_OPEN)) {
+      // only OPEN may acccept a handle
+      for (unsigned i = 0; i < msg->hcount; i++) {
+        mx_handle_close(msg->handle[i]);
+      }
+      return ERR_INVALID_ARGS;
+    }
   }
 
   vdebug("rio_handler: op=%s, sockfd=%d, len=%u, arg=%d\n",
@@ -63,6 +69,9 @@ mx_status_t rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) {
 
   if (shared_queue_pack_and_put(MXRIO_OP(msg->op), rh, msg_dup(msg), ios) < 0) {
     debug("rio_handler: shared_queue_pack_and_put failed\n");
+    for (unsigned i = 0; i < msg->hcount; i++) {
+      mx_handle_close(msg->handle[i]);
+    }
     return ERR_IO;
   }
   return ERR_DISPATCHER_INDIRECT;

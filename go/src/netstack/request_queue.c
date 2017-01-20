@@ -14,6 +14,7 @@ static const char* s_mxrio_opnames[] = MXRIO_OPNAMES;
 static const char* s_io_opnames[] = IO_OPNAMES;
 
 const char* getopname(int op) {
+  op = MXRIO_OPNAME(op);
   if (op >= 0 && op < MXRIO_NUM_OPS) return s_mxrio_opnames[op];
   if (op >= 0 && op < NUM_OPS) return s_io_opnames[op - MXRIO_NUM_OPS];
   return "unknown";
