@@ -234,11 +234,14 @@ void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
     return;
   }
   storage::CommitId commit_id = branch_tracker_->GetBranchHeadId();
-  branch_tracker_->SetTransactionInProgress(true);
   storage::Status status = storage_->StartCommit(
       commit_id, storage::JournalType::EXPLICIT, &journal_);
+  if (status != storage::Status::OK) {
+    callback(PageUtils::ConvertStatus(status));
+    return;
+  }
   journal_parent_commit_ = commit_id;
-  callback(PageUtils::ConvertStatus(status));
+  branch_tracker_->StartTransaction([callback]() { callback(Status::OK); });
 }
 
 // Commit() => (Status status);
@@ -252,7 +255,7 @@ void PageImpl::Commit(const CommitCallback& callback) {
   }
   journal_parent_commit_.clear();
   CommitJournal(std::move(journal_), std::move(timed_callback));
-  branch_tracker_->SetTransactionInProgress(false);
+  branch_tracker_->StopTransaction();
 }
 
 // Rollback() => (Status status);
@@ -267,7 +270,7 @@ void PageImpl::Rollback(const RollbackCallback& callback) {
   journal_.reset();
   journal_parent_commit_.clear();
   callback(PageUtils::ConvertStatus(status));
-  branch_tracker_->SetTransactionInProgress(false);
+  branch_tracker_->StopTransaction();
 }
 
 }  // namespace ledger

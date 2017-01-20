@@ -24,6 +24,12 @@ class BranchTracker::PageWatcherContainer {
         storage_(storage),
         interface_(std::move(watcher)) {}
 
+  ~PageWatcherContainer() {
+    if (on_drained_) {
+      on_drained_();
+    }
+  }
+
   void set_on_empty(ftl::Closure on_empty_callback) {
     interface_.set_connection_error_handler(std::move(on_empty_callback));
   }
@@ -35,15 +41,49 @@ class BranchTracker::PageWatcherContainer {
     SendCommit();
   }
 
+  // Sets a callback to be called when all pending updates are sent. If all
+  // updates are already sent, the callback will be called immediately. This
+  // callback will only be called once; |SetOnDrainedCallback| should be called
+  // again to set a new callback after the first one is called. Setting a
+  // callback while a previous one is still active will execute the previous
+  // callback.
+  void SetOnDrainedCallback(ftl::Closure on_drained) {
+    // If a transaction is committed or rolled back before all watchers have
+    // been drained, we do not want to continue blocking until they drain. Thus,
+    // we declare them drained right away and proceed.
+    if (on_drained_) {
+      on_drained_();
+      on_drained_ = nullptr;
+    }
+    on_drained_ = on_drained;
+    if (Drained() && on_drained_) {
+      on_drained();
+      on_drained_ = nullptr;
+    }
+  }
+
  private:
+  // Returns true if all changes have been sent to the watcher client, false
+  // otherwise.
+  bool Drained() {
+    return !current_commit_ ||
+           last_commit_->GetId() == current_commit_->GetId();
+  }
+
   // Sends a commit to the watcher if needed.
   void SendCommit() {
     if (change_in_flight_) {
       return;
     }
-    if (!current_commit_ || last_commit_->GetId() == current_commit_->GetId()) {
+
+    if (Drained()) {
+      if (on_drained_) {
+        on_drained_();
+        on_drained_ = nullptr;
+      }
       return;
     }
+
     change_in_flight_ = true;
 
     // TODO(etiennej): See LE-74: clean object ownership
@@ -82,6 +122,7 @@ class BranchTracker::PageWatcherContainer {
         }));
   }
 
+  ftl::Closure on_drained_ = nullptr;
   bool change_in_flight_;
   std::unique_ptr<const storage::Commit> last_commit_;
   std::unique_ptr<const storage::Commit> current_commit_;
@@ -98,7 +139,7 @@ BranchTracker::BranchTracker(PageManager* manager,
       interface_(std::move(request), storage, manager, this),
       transaction_in_progress_(false) {
   interface_.set_on_empty([this] {
-    this->SetTransactionInProgress(false);
+    this->StopTransaction();
     CheckEmpty();
   });
   watchers_.set_on_empty([this] { CheckEmpty(); });
@@ -157,15 +198,24 @@ void BranchTracker::OnNewCommits(
   }
 }
 
-void BranchTracker::SetTransactionInProgress(bool transaction_in_progress) {
-  if (transaction_in_progress_ == transaction_in_progress) {
+void BranchTracker::StartTransaction(ftl::Closure watchers_drained_callback) {
+  FTL_DCHECK(!transaction_in_progress_);
+  transaction_in_progress_ = true;
+  callback::BasicWaiter waiter;
+  for (auto it = watchers_.begin(); it != watchers_.end(); ++it) {
+    it->SetOnDrainedCallback(waiter.NewCallback());
+  }
+  waiter.Finalize(std::move(watchers_drained_callback));
+}
+
+void BranchTracker::StopTransaction() {
+  if (!transaction_in_progress_) {
     return;
   }
-  transaction_in_progress_ = transaction_in_progress;
-  if (!transaction_in_progress) {
-    for (auto it = watchers_.begin(); it != watchers_.end(); ++it) {
-      it->UpdateCommit(current_commit_);
-    }
+  transaction_in_progress_ = false;
+  for (auto it = watchers_.begin(); it != watchers_.end(); ++it) {
+    it->SetOnDrainedCallback(nullptr);
+    it->UpdateCommit(current_commit_);
   }
 }
 

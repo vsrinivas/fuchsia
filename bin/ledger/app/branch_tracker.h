@@ -41,10 +41,17 @@ class BranchTracker : public storage::CommitWatcher {
   // inform which branch should be tracked by the page and watchers from now on.
   void SetBranchHead(const storage::CommitId& commit_id);
 
-  // If set to true, blocks the updates sent to watchers. When set back to
-  // false, updates resume. This should be used by |PageImpl| when a transaction
-  // is in progress.
-  void SetTransactionInProgress(bool transaction_in_progress);
+  // Informs the BranchTracker that a transaction is in progress. It first
+  // drains all pending Watcher updates, then stop sending them until
+  // |StopTransaction| is called. |watchers_drained_callback| is called when all
+  // watcher updates have been processed by the clients. This should be used by
+  // |PageImpl| when a transaction is in progress.
+  void StartTransaction(ftl::Closure watchers_drained_callback);
+
+  // Informs the BranchTracker that a transaction is no longer in progress.
+  // Resumes sending updates to registered watchers. This should be used by
+  // |PageImpl| when a transaction is committed or rolled back.
+  void StopTransaction();
 
  private:
   class PageWatcherContainer;

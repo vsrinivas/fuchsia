@@ -119,11 +119,12 @@ interface Page {
 
   // Transactions.
   //
-  // Transactions allow the client to control the content of a new commit.
-  // Once a transaction is started with |StartTransaction()|, every call to
-  // |Put(...)| and |Delete(...)| will not be visible until either |Commit()|
-  // is called, and all changes are applied in a single commit, or |Rollback()|
-  // is called and all changes are discarded.
+  // Transactions allow the client to ensures changes are seen atomically by
+  // observers of this page. Once a transaction is started with
+  // |StartTransaction()|, every call to |Put(...)| and |Delete(...)| will not
+  // be visible until either |Commit()| is called, and all changes are applied
+  // in a single commit, or |Rollback()| is called and all changes are
+  // discarded.
   //
   // Parallel transactions on the same *page connection* are not allowed, and
   // calling |StartTransaction()| when a transaction is already in progress
@@ -139,6 +140,12 @@ interface Page {
   // conflicting changes are made or synced while the transaction is in
   // progress, conflict resolution is invoked after the transaction is
   // committed.
+  //
+  // Starting a transaction will block until all watchers registered on this
+  // page connection have received the current page state, ie. the one that
+  // will be used as the base of the transaction. Put (with all its variants)
+  // and Delete calls may be pipelined while StartTransaction() is pending and
+  // will be taken into account in the transaction while it is pending.
   StartTransaction() => (Status status);
   Commit() => (Status status);
   Rollback() => (Status status);
@@ -216,12 +223,17 @@ struct PageChange {
 };
 
 // Interface to watch changes to a page. The client will receive changes made by
-// itself, as well as other clients or synced from other devices.
+// itself, as well as other clients or synced from other devices. The contents
+// of a transaction will never be split across multiple OnChange() calls, but
+// the contents of multiple transactions may be merged into one OnChange() call.
 interface PageWatcher {
   // Called for changes made on the page. No new OnChange() call will be made
   // while the previous one is still active. If the client is interested in the
   // full content of the page at the time of the change, it can request a
   // PageSnapshot in the callback. This request is optional.
+  //
+  // Note that calls to Page.StartTransaction() will block until all OnChange()
+  // calls have finished.
   OnChange(PageChange page_change) => (PageSnapshot&? snapshot);
 };
 

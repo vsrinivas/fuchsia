@@ -303,6 +303,95 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 }
 
+class WaitingWatcher : public PageWatcher {
+ public:
+  WaitingWatcher(fidl::InterfaceRequest<PageWatcher> request,
+                 ftl::Closure change_callback)
+      : binding_(this, std::move(request)), change_callback_(change_callback) {}
+
+  struct Change {
+    PageChangePtr change;
+    OnChangeCallback callback;
+
+    Change(PageChangePtr change, const OnChangeCallback& callback)
+        : change(std::move(change)), callback(callback) {}
+  };
+
+  std::vector<Change> changes;
+
+ private:
+  // PageWatcher:
+  void OnChange(PageChangePtr page_change,
+                const OnChangeCallback& callback) override {
+    FTL_DCHECK(page_change);
+    changes.emplace_back(std::move(page_change), callback);
+    change_callback_();
+  }
+
+  fidl::Binding<PageWatcher> binding_;
+  ftl::Closure change_callback_;
+};
+
+TEST_F(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
+  PagePtr page = GetTestPage();
+  PageWatcherPtr watcher_ptr;
+  WaitingWatcher watcher(watcher_ptr.NewRequest(), [this]() {
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  });
+
+  PageSnapshotPtr snapshot;
+  page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
+                    [](Status status) { EXPECT_EQ(Status::OK, status); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(1u, watcher.changes.size());
+
+  page->Put(convert::ToArray("foo"), convert::ToArray("bar"),
+            [](Status status) { EXPECT_EQ(status, Status::OK); });
+  EXPECT_TRUE(page.WaitForIncomingResponse());
+
+  bool start_transaction_callback_called = false;
+  Status start_transaction_status;
+  page->StartTransaction([&start_transaction_callback_called,
+                          &start_transaction_status](Status status) {
+    start_transaction_callback_called = true;
+    start_transaction_status = status;
+    mtl::MessageLoop::GetCurrent()->PostQuitTask();
+  });
+
+  EXPECT_TRUE(RunLoopWithTimeout());
+
+  // We haven't sent the callback of the first change, so nothing should have
+  // happened.
+  EXPECT_EQ(1u, watcher.changes.size());
+  EXPECT_FALSE(start_transaction_callback_called);
+
+  watcher.changes[0].callback(nullptr);
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  EXPECT_EQ(2u, watcher.changes.size());
+  EXPECT_FALSE(start_transaction_callback_called);
+
+  EXPECT_TRUE(RunLoopWithTimeout());
+
+  // We haven't sent the callback of the first change, so nothing should have
+  // happened.
+  EXPECT_EQ(2u, watcher.changes.size());
+  EXPECT_FALSE(start_transaction_callback_called);
+
+  watcher.changes[1].callback(nullptr);
+
+  EXPECT_FALSE(RunLoopWithTimeout());
+  EXPECT_TRUE(start_transaction_callback_called);
+  EXPECT_EQ(Status::OK, start_transaction_status);
+}
+
 }  // namespace
 }  // namespace integration_tests
 }  // namespace ledger

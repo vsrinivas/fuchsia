@@ -113,6 +113,26 @@ class StatusWaiter {
   FTL_DISALLOW_COPY_AND_ASSIGN(StatusWaiter);
 };
 
+// BasicWaiter can be used to be notified on completion of a computation.
+class BasicWaiter {
+ public:
+  BasicWaiter() : waiter_(Waiter<bool, bool>::Create(true)) {}
+
+  std::function<void()> NewCallback() {
+    return [callback = waiter_->NewCallback()]() { callback(true, true); };
+  }
+
+  void Finalize(std::function<void()> callback) {
+    waiter_->Finalize(
+        [callback](bool s, std::vector<bool> values) { callback(); });
+  }
+
+ private:
+  ftl::RefPtr<Waiter<bool, bool>> waiter_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(BasicWaiter);
+};
+
 }  // namespace callback
 
 #endif  // APPS_LEDGER_SRC_CALLBACK_WAITER_H_
