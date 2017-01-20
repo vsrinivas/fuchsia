@@ -78,7 +78,7 @@ status_t ChannelDispatcher::Create(uint32_t flags,
                                    mxtl::RefPtr<Dispatcher>* dispatcher1,
                                    mx_rights_t* rights) {
     AllocChecker ac;
-    auto ch0 = mxtl::AdoptRef(new (&ac) ChannelDispatcher((flags & ~MX_FLAG_REPLY_CHANNEL)));
+    auto ch0 = mxtl::AdoptRef(new (&ac) ChannelDispatcher(flags));
     if (!ac.check())
         return ERR_NO_MEMORY;
 

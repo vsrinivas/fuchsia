@@ -34,10 +34,6 @@ public:
 
     void on_zero_handles() final;
 
-    bool is_reply_channel() const {
-        return (flags_ & MX_FLAG_REPLY_CHANNEL) ? true : false;
-    }
-
     // Read from this endpoint's message queue.
     // |msg_size| and |msg_handle_count| are in-out parameters. As input, they specify the maximum
     // size and handle count, respectively. On NO_ERROR or ERR_BUFFER_TOO_SMALL, they specify the

@@ -39,7 +39,7 @@ constexpr size_t kChannelWriteHandlesInlineCount = 8u;
 mx_status_t sys_channel_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* _out1) {
     LTRACEF("out_handles %p,%p\n", _out0, _out1);
 
-    if ((flags != 0u) && (flags != MX_FLAG_REPLY_CHANNEL))
+    if (flags != 0u)
         return ERR_INVALID_ARGS;
 
     mxtl::RefPtr<Dispatcher> mpd0, mpd1;
@@ -151,7 +151,7 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
 
 static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx_handle_t* handles,
                                    const mx_handle_t* _handles, uint32_t num_handles,
-                                   Dispatcher* channel, bool is_reply_channel) {
+                                   Dispatcher* channel) {
 
     if (make_user_ptr(_handles).copy_array_from_user(handles, num_handles) != NO_ERROR)
         return ERR_INVALID_ARGS;
@@ -161,34 +161,21 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
         // we remove them from this process.
         AutoLock lock(up->handle_table_lock());
 
-        size_t reply_channel_found = -1;
-
         for (size_t ix = 0; ix != num_handles; ++ix) {
             auto handle = up->GetHandleLocked(handles[ix]);
             if (!handle)
                 return up->BadHandle(handles[ix], ERR_BAD_HANDLE);
 
             if (handle->dispatcher().get() == channel) {
-                // Found itself, which is only allowed for
-                // MX_FLAG_REPLY_CHANNEL (aka Reply) channels.
-                if (!is_reply_channel) {
-                    return ERR_NOT_SUPPORTED;
-                } else {
-                    reply_channel_found = ix;
-                }
+                // You may not write a channel endpoint handle
+                // into that channel endpoint
+                return ERR_NOT_SUPPORTED;
             }
 
             if (!magenta_rights_check(handle->rights(), MX_RIGHT_TRANSFER))
                 return up->BadHandle(handles[ix], ERR_ACCESS_DENIED);
 
             msg->mutable_handles()[ix] = handle;
-        }
-
-        if (is_reply_channel) {
-            // For reply channels, itself must be in the handle
-            // array and be the last handle.
-            if ((reply_channel_found != (num_handles - 1)))
-                return ERR_BAD_STATE;
         }
 
         for (size_t ix = 0; ix != num_handles; ++ix) {
@@ -224,8 +211,6 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
     if (result != NO_ERROR)
         return result;
 
-    bool is_reply_channel = channel->is_reply_channel();
-
     if (num_bytes > kMaxMessageSize)
         return ERR_OUT_OF_RANGE;
     if (num_handles > kMaxMessageHandles)
@@ -247,14 +232,9 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
         return ERR_NO_MEMORY;
     if (num_handles > 0u) {
         result = msg_put_handles(up, msg.get(), handles.get(), _handles, num_handles,
-                                 static_cast<Dispatcher*>(channel.get()), is_reply_channel);
+                                 static_cast<Dispatcher*>(channel.get()));
         if (result)
             return result;
-    } else {
-        // For reply channels, itself must be in the handle array and
-        // be the last handle.
-        if (is_reply_channel)
-            return ERR_BAD_STATE;
     }
 
     result = channel->Write(mxtl::move(msg));
@@ -298,9 +278,6 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t flags,
         return result;
 
     // Prepare a MessagePacket for writing
-    if (channel->is_reply_channel())
-        return ERR_BAD_STATE;
-
     mxtl::unique_ptr<MessagePacket> msg;
     result = MessagePacket::Create(num_bytes, num_handles, &msg);
     if (result != NO_ERROR)
@@ -318,8 +295,7 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t flags,
     if (num_handles > 0u) {
         result = msg_put_handles(up, msg.get(), handles.get(),
                                  args.wr_handles, num_handles,
-                                 static_cast<Dispatcher*>(channel.get()),
-                                 false);
+                                 static_cast<Dispatcher*>(channel.get()));
         if (result)
             return result;
     }

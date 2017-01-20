@@ -207,9 +207,9 @@ typedef uint32_t mx_rights_t;
 #define MX_VM_FLAG_CAN_MAP_EXECUTE    (1u << 9)
 #define MX_VM_FLAG_DMA                (1u << 10)
 
-// flags to channel routines
-#define MX_FLAG_REPLY_CHANNEL            (1u << 0)
-#define MX_CHANNEL_CREATE_REPLY_CHANNEL  (1u << 0)
+// compatibility flag for vmar routines
+// TODO(teisenbe): Move all users of this to using subregions.
+#define MX_VM_FLAG_ALLOC_BASE      (1u << 11)
 
 // clock ids
 #define MX_CLOCK_MONOTONIC        (0u)

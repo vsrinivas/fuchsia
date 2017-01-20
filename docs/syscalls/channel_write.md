@@ -27,14 +27,9 @@ to the message and will become available to the reader of that message
 from the opposite end of the channel.  On any failure, all handles
 remain accessible to the caller's process and are not transferred.
 
-If the *handle* channel is a reply channel, *handle* must be
-included as the last handle in the *handles* array.
+It is invalid to include *handle* (the handle of the channel being written
+to) in the *handles* array (the handles being sent in the message).
 
-If the *handle* channel is not a reply channel, it is invalid
-to include *handle* in the *handles* array.
-
-To create a reply channel, use MX_CHANNEL_CREATE_REPLY_CHANNEL in the
-**channel_create**() call.
 
 ## RETURN VALUE
 
@@ -51,16 +46,12 @@ are not a valid handle.
 is an invalid pointer, or if there are duplicates among the handles
 in the *handles* array.
 
-**ERR_NOT_SUPPORTED**  *handle* was found in the *handles* array
-and the channel is not a reply channel.
+**ERR_NOT_SUPPORTED**  *handle* was found in the *handles* array.
 
 **ERR_ACCESS_DENIED**  *handle* does not have **MX_RIGHT_WRITE** or
 any of *handles* do not have **MX_RIGHT_TRANSFER**.
 
 **ERR_REMOTE_CLOSED**  The other side of the channel is closed.
-
-**ERR_BAD_STATE**  The channel is a reply channel and the reply channel
-handle was not included as the last element of the *handles* array.
 
 **ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
