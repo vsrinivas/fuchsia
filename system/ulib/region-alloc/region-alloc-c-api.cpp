@@ -7,11 +7,11 @@
 
 extern "C" {
 
-mx_status_t ralloc_create_pool(size_t slab_size, size_t max_memory, ralloc_pool_t** out_pool) {
+mx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool) {
     if (out_pool == nullptr)
         return ERR_INVALID_ARGS;
 
-    auto pool = RegionAllocator::RegionPool::Create(slab_size, max_memory);
+    auto pool = RegionAllocator::RegionPool::Create(max_memory);
     if (pool == nullptr)
         return ERR_NO_MEMORY;
 

@@ -71,7 +71,7 @@
 // allocation is the only option.
 //
 // == Dependencies ==
-// The RegionAllocator depends only on malloc/calloc/free and mxtl.  The mxtl
+// The RegionAllocator depends only on malloc/free and mxtl.  The mxtl
 // dependency is not visible to users of the C API.  new/delete implementations
 // are provided internally, no global new/delete behavior needs to be defined by
 // the user.
@@ -157,7 +157,8 @@ typedef struct ralloc_region {
 // ++ Create  (specific memory limits at the time of creation)
 // ++ Release (release the C reference to the object.
 //
-mx_status_t ralloc_create_pool(size_t slab_size, size_t max_memory, ralloc_pool_t** out_pool);
+#define REGION_POOL_SLAB_SIZE (4u << 10)
+mx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool);
 void        ralloc_release_pool(ralloc_pool_t* pool);
 
 // RegionAllocator interface.  Valid operations are...
@@ -228,18 +229,23 @@ void ralloc_put_region(const ralloc_region_t* region);
 __END_CDECLS
 
 #ifdef __cplusplus
+
 #include <mxtl/intrusive_single_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/slab_allocator.h>
 #include <mxtl/unique_ptr.h>
 
 // C++ API
 class RegionAllocator {
 public:
-    class RegionPool;
+    class Region;
+    using RegionSlabTraits = mxtl::SlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE>;
 
-    class Region : public ralloc_region_t {
+    class Region : public ralloc_region_t,
+                   public mxtl::SlabAllocated<RegionSlabTraits>,
+                   public mxtl::Recyclable<Region> {
     public:
         using UPtr = mxtl::unique_ptr<const Region>;
 
@@ -273,7 +279,6 @@ public:
         using WAVLTreeSortBySize = mxtl::WAVLTree<ralloc_region_t, Region*,
                                                   KeyTraitsSortBySize,
                                                   WAVLTreeNodeTraitsSortBySize>;
-        using FreeListNodeState = mxtl::SinglyLinkedListNodeState<Region*>;
 
         // Used by SortByBase key traits
         uint64_t GetKey() const { return base; }
@@ -282,93 +287,59 @@ public:
         friend class  RegionAllocator;
         friend class  RegionPool;
         friend class  mxtl::unique_ptr<const Region>;
+        friend class  mxtl::Recyclable<Region>;
         friend        KeyTraitsSortByBase;
         friend struct KeyTraitsSortBySize;
         friend struct WAVLTreeNodeTraitsSortByBase;
         friend struct WAVLTreeNodeTraitsSortBySize;
 
-        // Regions can only be placement new'ed by RegionPool::Slabs.  They
-        // cannot be copied, assigned, or deleted.  Externally, they should only
-        // be handled by their unique_ptr<>s.
-        Region() { }
-        Region(const Region& c) = delete;
-        Region& operator=(const Region& c) = delete;
-        static void* operator new(size_t, void* p) { return p; }
-        // unique_ptr<>s will deallocate Regions via the default_delete trait
-        // which will invoke our destructor and operator delete via a delete
-        // expression. ~Region() does nothing. Region::operator delete()
-        // releases the memory for the Region from the RegionAllocator.
-        ~Region() = default;
-        static void operator delete(void* ptr) {
-            Region* thiz = static_cast<Region*>(ptr);
-            DEBUG_ASSERT(thiz->owner_ != nullptr);
-            thiz->owner_->ReleaseRegion(thiz);
+        // Regions can only be placement new'ed by the RegionPool slab
+        // allocator.  They cannot be copied, assigned, or deleted.  Externally,
+        // they should only be handled by their unique_ptr<>s.
+        explicit Region(RegionAllocator* owner) : owner_(owner) { }
+        friend class  mxtl::SlabAllocator<RegionSlabTraits>;
+        DISALLOW_COPY_ASSIGN_AND_MOVE(Region);
+
+        // When a user's unique_ptr<> reference to this region goes out of
+        // scope, we will be "recycled".  Don't actually delete the region.
+        // Instead, recycle it back into the set of available regions.  The
+        // memory for the bookkeeping will eventually be deleted when it merges
+        // with another available region, or when the allocator finally shuts
+        // down.
+        void mxtl_recycle() {
+            DEBUG_ASSERT(owner_ != nullptr);
+            owner_->ReleaseRegion(this);
         }
 
-        RegionAllocator* owner_ = nullptr;
-
+        RegionAllocator* owner_;
         WAVLTreeNodeState ns_tree_sort_by_base_;
         WAVLTreeNodeState ns_tree_sort_by_size_;
     };
 
-    class RegionPool : public mxtl::RefCounted<RegionPool> {
+    class RegionPool : public mxtl::RefCounted<RegionPool>,
+                       public mxtl::SlabAllocator<RegionSlabTraits> {
     public:
         using RefPtr = mxtl::RefPtr<RegionPool>;
 
-        RegionPool(const RegionPool& c) = delete;
-        RegionPool& operator=(const RegionPool& c) = delete;
-        ~RegionPool();
+        static constexpr size_t SLAB_SIZE = RegionSlabTraits::SLAB_SIZE;
 
-        void* operator new(size_t size) noexcept { return ::malloc(size); }
-        void  operator delete(void* obj) { ::free(obj); }
-
-        Region* AllocRegion(RegionAllocator* owner);
-        void    FreeRegion(Region* region);
-
-        static RefPtr Create(size_t slab_size, size_t max_memory);
+        static RefPtr Create(size_t max_memory);
 
     private:
-        friend class UPtr;
+        // Only our RefPtr's are allowed to destroy us.
+        friend mxtl::RefPtr<RegionPool>;
 
-        struct Slab {
-            using UPtr = mxtl::unique_ptr<Slab>;
+        // Attempt to allocate at least one slab up front when we are created.
+        explicit RegionPool(size_t num_slabs)
+            : mxtl::SlabAllocator<RegionSlabTraits>(num_slabs, true) { }
 
-            void* operator new(size_t, size_t real_size) noexcept { return ::calloc(1, real_size); }
-            void  operator delete(void* obj) { ::free(obj); }
+        ~RegionPool() { }
 
-            mxtl::SinglyLinkedListNodeState<UPtr> sll_node_state_;
-            uint8_t mem_[] __ALIGNED(sizeof(void*));
-        };
+        void* operator new(size_t sz) noexcept { return ::malloc(sz); }
+        void  operator delete(void* obj) { ::free(obj); }
 
-        struct SlabEntry {
-            mxtl::SinglyLinkedListNodeState<SlabEntry*> sll_node_state_;
-        };
-
-        static_assert(sizeof(SlabEntry) <= sizeof(Region),
-                      "SlabEntries cannot be larger than Regions");
-
-        RegionPool(size_t slab_size, size_t max_memory)
-            : slab_size_(slab_size),
-              max_memory_(max_memory) { }
-
-        void GrowLocked();
-
-        /* Locking notes:
-         *
-         * pool_lock_ protects the slabs_ list and the free_regions_ list.  It
-         * is acquired during AllocRegion and FreeRegion operations, and must be
-         * already held during internal GrowLocked operations.
-         */
-        mxtl::Mutex pool_lock_;
-
-        mxtl::SinglyLinkedList<Slab::UPtr> slabs_;
-        mxtl::SinglyLinkedList<SlabEntry*> free_regions_;
-        size_t alloc_size_ = 0;
-        const size_t slab_size_;
-        const size_t max_memory_;
-#if LK_DEBUGLEVEL > 1
-        size_t in_flight_allocations_ = 0;
-#endif
+        // No one may copy, assign or move us.
+        DISALLOW_COPY_ASSIGN_AND_MOVE(RegionPool);
     };
 
     RegionAllocator() { }
@@ -380,9 +351,6 @@ public:
     RegionAllocator& operator=(const RegionAllocator& c) = delete;
 
     ~RegionAllocator();
-
-    // Placement new for C API
-    void* operator new(size_t, void* mem) { return mem; }
 
     // Set the RegionPool this RegionAllocator will obtain bookkeeping structures from.
     //
@@ -506,7 +474,6 @@ public:
     }
 
 private:
-
     mx_status_t AddSubtractSanityCheckLocked(const ralloc_region_t& region);
     void ReleaseRegion(Region* region);
     void AddRegionToAvailLocked(Region* region, bool allow_overlap = false);
@@ -535,5 +502,9 @@ private:
     Region::WAVLTreeSortBySize avail_regions_by_size_;
     RegionPool::RefPtr region_pool_;
 };
+
+// If this is C++, clear out this pre-processor constant.  People can get to the
+// constant using more C++-ish methods (like RegionAllocator::RegionPool::SLAB_SIZE)
+#undef REGION_POOL_SLAB_SIZE
 
 #endif  // ifdef __cplusplus

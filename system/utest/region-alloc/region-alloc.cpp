@@ -28,7 +28,7 @@ static bool ralloc_region_pools_test() {
     }
 
     // Make a region pool to manage bookkeeping allocations.
-    auto pool = RegionAllocator::RegionPool::Create(REGION_POOL_SLAB_SIZE, REGION_POOL_MAX_SIZE);
+    auto pool = RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE);
     ASSERT_NONNULL(pool, "");
 
     // Assign our pool to our allocator, but hold onto the pool for now.
@@ -50,7 +50,7 @@ static bool ralloc_region_pools_test() {
     // Make a new pool and try to assign it to the allocator.  This should fail
     // because the allocator is currently using resources from its currently
     // assigned pool.
-    auto pool2 = RegionAllocator::RegionPool::Create(REGION_POOL_SLAB_SIZE, REGION_POOL_MAX_SIZE);
+    auto pool2 = RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE);
     ASSERT_NONNULL(pool2, "");
     EXPECT_EQ(ERR_BAD_STATE, alloc.SetRegionPool(pool2), "");
 
@@ -111,8 +111,7 @@ static bool ralloc_by_size_test() {
     BEGIN_TEST;
 
     // Make a pool and attach it to an allocator.  Then add the test regions to it.
-    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_SLAB_SIZE,
-                                                              REGION_POOL_MAX_SIZE));
+    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
     for (size_t i = 0; i < countof(ALLOC_BY_SIZE_REGIONS); ++i)
         ASSERT_EQ(NO_ERROR, alloc.AddRegion(ALLOC_BY_SIZE_REGIONS[i]), "");
@@ -160,8 +159,7 @@ static bool ralloc_specific_test() {
     BEGIN_TEST;
 
     // Make a pool and attach it to an allocator.  Then add the test regions to it.
-    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_SLAB_SIZE,
-                                                              REGION_POOL_MAX_SIZE));
+    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
     for (size_t i = 0; i < countof(ALLOC_SPECIFIC_REGIONS); ++i)
         ASSERT_EQ(NO_ERROR, alloc.AddRegion(ALLOC_SPECIFIC_REGIONS[i]), "");
@@ -199,8 +197,7 @@ static bool ralloc_add_overlap_test() {
     BEGIN_TEST;
 
     // Make a pool and attach it to an allocator.  Then add the test regions to it.
-    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_SLAB_SIZE,
-                                                              REGION_POOL_MAX_SIZE));
+    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
     // Add each of the regions specified by the test and check the expected results.
     for (size_t i = 0; i < countof(ADD_OVERLAP_TESTS); ++i) {
@@ -219,8 +216,7 @@ static bool ralloc_subtract_test() {
     BEGIN_TEST;
 
     // Make a pool and attach it to an allocator.  Then add the test regions to it.
-    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_SLAB_SIZE,
-                                                              REGION_POOL_MAX_SIZE));
+    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
 
     // Run the test sequence, adding and subtracting regions and verifying the results.
     for (size_t i = 0; i < countof(SUBTRACT_TESTS); ++i) {

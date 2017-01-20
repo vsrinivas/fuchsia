@@ -15,8 +15,7 @@ static bool ralloc_pools_c_api_test(void) {
     // Require that this succeeds, we will not be able to run the tests without
     // it.
     ralloc_pool_t* pool;
-    ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_SLAB_SIZE,
-                                           REGION_POOL_MAX_SIZE, &pool), "");
+    ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
     ASSERT_NONNULL(pool, "");
 
     // Create an allocator.
@@ -52,8 +51,7 @@ static bool ralloc_pools_c_api_test(void) {
     // Make a new pool and try to assign it to the allocator.  This should fail
     // because the allocator is currently using resources from its currently
     // assigned pool.
-    ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_SLAB_SIZE,
-                                           REGION_POOL_MAX_SIZE, &pool), "");
+    ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
     ASSERT_NONNULL(pool, "");
     EXPECT_EQ(ERR_BAD_STATE, ralloc_set_region_pool(alloc, pool), "");
 
@@ -122,8 +120,7 @@ static bool ralloc_by_size_c_api_test(void) {
     ralloc_allocator_t* alloc = NULL;
     {
         ralloc_pool_t* pool;
-        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_SLAB_SIZE,
-                                               REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
         ASSERT_NONNULL(pool, "");
 
         // Create an allocator and add our region pool to it.
@@ -193,8 +190,7 @@ static bool ralloc_specific_c_api_test(void) {
     ralloc_allocator_t* alloc = NULL;
     {
         ralloc_pool_t* pool;
-        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_SLAB_SIZE,
-                                               REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
         ASSERT_NONNULL(pool, "");
 
         // Create an allocator and add our region pool to it.
@@ -251,8 +247,7 @@ static bool ralloc_add_overlap_c_api_test(void) {
     ralloc_allocator_t* alloc = NULL;
     {
         ralloc_pool_t* pool;
-        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_SLAB_SIZE,
-                                               REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
         ASSERT_NONNULL(pool, "");
 
         // Create an allocator and add our region pool to it.
@@ -288,8 +283,7 @@ static bool ralloc_subtract_c_api_test(void) {
     ralloc_allocator_t* alloc = NULL;
     {
         ralloc_pool_t* pool;
-        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_SLAB_SIZE,
-                                               REGION_POOL_MAX_SIZE, &pool), "");
+        ASSERT_EQ(NO_ERROR, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
         ASSERT_NONNULL(pool, "");
 
         // Create an allocator and add our region pool to it.

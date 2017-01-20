@@ -20,6 +20,7 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     ulib/musl \
+    ulib/mxcpp \
     ulib/mxtl \
     ulib/mxio \
     ulib/unittest

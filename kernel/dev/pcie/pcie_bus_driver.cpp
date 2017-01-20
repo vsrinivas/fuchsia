@@ -344,8 +344,7 @@ status_t PcieBusDriver::AllocBookkeeping() {
     // Create the RegionPool we will use to supply the memory for the
     // bookkeeping for all of our region tracking and allocation needs.  Then
     // assign it to each of our allocators.
-    region_bookkeeping_ = RegionAllocator::RegionPool::Create(REGION_BOOKKEEPING_SLAB_SIZE,
-                                                              REGION_BOOKKEEPING_MAX_MEM);
+    region_bookkeeping_ = RegionAllocator::RegionPool::Create(REGION_BOOKKEEPING_MAX_MEM);
     if (region_bookkeeping_ == nullptr) {
         TRACEF("Failed to create pool allocator for Region bookkeeping!\n");
         return ERR_NO_MEMORY;

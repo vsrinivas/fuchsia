@@ -8,9 +8,12 @@
 #include <stddef.h>
 
 // Constants and common tables used by both the C and C++ API tests.
-
-#define REGION_POOL_SLAB_SIZE (4u << 10)
+#ifdef __cplusplus
+static constexpr size_t REGION_POOL_MAX_SIZE = (RegionAllocator::RegionPool::SLAB_SIZE << 1);
+#else
 #define REGION_POOL_MAX_SIZE  (REGION_POOL_SLAB_SIZE << 1)
+#endif
+
 #define OOM_RANGE_LIMIT (1000u)
 
 #define GOOD_MERGE_REGION_BASE ((uint64_t)0x3000000000000000)

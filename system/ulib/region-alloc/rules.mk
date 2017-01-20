@@ -12,6 +12,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/region-alloc.cpp \
     $(LOCAL_DIR)/region-alloc-c-api.cpp
 
+MODULE_LIBS := \
+    ulib/mxcpp
+
 MODULE_STATIC_LIBS := \
     ulib/mxtl
 

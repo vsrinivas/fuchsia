@@ -7,110 +7,12 @@
 #include <string.h>
 
 // Support for Pool allocated bookkeeping
-RegionAllocator::RegionPool::RefPtr RegionAllocator::RegionPool::Create(size_t slab_size,
-                                                                        size_t max_memory) {
+RegionAllocator::RegionPool::RefPtr RegionAllocator::RegionPool::Create(size_t max_memory) {
     // Sanity check our allocation arguments.
-    if ((slab_size < sizeof(RegionAllocator::RegionPool::Slab)) || (slab_size > max_memory))
+    if (SLAB_SIZE > max_memory)
         return RefPtr(nullptr);
 
-    RefPtr ret = mxtl::AdoptRef(new RegionPool(slab_size, max_memory));
-
-    // Allocate at least one slab to start with.  No need to actually hold the
-    // pool_lock_ here, as no one else knows about us yet.
-    if (ret != nullptr)
-        ret->GrowLocked();
-
-    return ret;
-}
-
-RegionAllocator::RegionPool::~RegionPool() {
-#if LK_DEBUGLEVEL > 1
-    ASSERT(!in_flight_allocations_);
-#endif
-    free_regions_.clear();
-    slabs_.clear();
-}
-
-void RegionAllocator::RegionPool::GrowLocked() {
-    DEBUG_ASSERT(alloc_size_ <= max_memory_);
-
-    // If growing would put us over our max_memory limit, do not grow.
-    if ((alloc_size_ + slab_size_) > max_memory_)
-        return;
-
-    // Attempt to allocate a new slab.  Do not continue to run if we cannot.
-    DEBUG_ASSERT(slab_size_ >= sizeof(RegionAllocator::RegionPool::Slab));
-    Slab::UPtr slab(new (slab_size_) Slab());
-    if (!slab)
-        return;
-
-    // We have successfully allocated a new slab.  Carve up its memory into
-    // Regions and place them on free list so they are available for allocation.
-    static_assert(offsetof(Slab, mem_) == sizeof(Slab), "mem_ must be the final member of Slab!");
-    size_t count = (slab_size_ - sizeof(Slab)) / sizeof(Region);
-    Region* tmp = reinterpret_cast<Region*>(slab->mem_);
-    for (size_t i = 0; i < count; ++i) {
-        Region* free_region = new (tmp + i) Region();
-        SlabEntry* free_entry = reinterpret_cast<SlabEntry*>(free_region);
-        DEBUG_ASSERT(!free_entry->sll_node_state_.InContainer());
-        DEBUG_ASSERT( free_entry->sll_node_state_.IsValid());
-
-        free_regions_.push_front(free_entry);
-    }
-
-    // Add it to the list of slabs allocated slabs so that it can be cleaned up
-    // at shutdown time.  Also update our allocation bookkeeping.
-    slabs_.push_front(mxtl::move(slab));
-    alloc_size_ += slab_size_;
-}
-
-RegionAllocator::Region* RegionAllocator::RegionPool::AllocRegion(RegionAllocator* owner) {
-    mxtl::AutoLock pool_lock(pool_lock_);
-
-    if (free_regions_.is_empty()) {
-        GrowLocked();
-        if (free_regions_.is_empty())
-            return nullptr;
-    }
-
-#if LK_DEBUGLEVEL > 1
-    ++in_flight_allocations_;
-#endif
-
-    auto entry = free_regions_.pop_front();
-    DEBUG_ASSERT(!entry->sll_node_state_.InContainer());
-    DEBUG_ASSERT( entry->sll_node_state_.IsValid());
-
-    Region* region = reinterpret_cast<Region*>(entry);
-
-    DEBUG_ASSERT(!region->ns_tree_sort_by_base_.InContainer());
-    DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
-    DEBUG_ASSERT( region->ns_tree_sort_by_base_.IsValid());
-    DEBUG_ASSERT( region->ns_tree_sort_by_size_.IsValid());
-
-    region->owner_ = owner;
-    return region;
-}
-
-void RegionAllocator::RegionPool::FreeRegion(Region* region) {
-    mxtl::AutoLock pool_lock(pool_lock_);
-
-    DEBUG_ASSERT(region);
-    DEBUG_ASSERT(!region->ns_tree_sort_by_base_.InContainer());
-    DEBUG_ASSERT(!region->ns_tree_sort_by_size_.InContainer());
-    DEBUG_ASSERT( region->ns_tree_sort_by_base_.IsValid());
-    DEBUG_ASSERT( region->ns_tree_sort_by_size_.IsValid());
-    ::memset(region, 0, sizeof(*region));
-
-#if LK_DEBUGLEVEL > 1
-    ASSERT(in_flight_allocations_);
-    --in_flight_allocations_;
-#endif
-
-    SlabEntry* free_entry = reinterpret_cast<SlabEntry*>(region);
-    DEBUG_ASSERT(!free_entry->sll_node_state_.InContainer());
-    DEBUG_ASSERT( free_entry->sll_node_state_.IsValid());
-    free_regions_.push_front(free_entry);
+    return mxtl::AdoptRef(new RegionPool(max_memory / SLAB_SIZE));
 }
 
 RegionAllocator::~RegionAllocator() {
@@ -126,8 +28,9 @@ RegionAllocator::~RegionAllocator() {
 
     // Return all of our bookkeeping to our region pool.
     avail_regions_by_base_.clear();
-    while (!avail_regions_by_size_.is_empty())
-        region_pool_->FreeRegion(avail_regions_by_size_.pop_front());
+    while (!avail_regions_by_size_.is_empty()) {
+        delete avail_regions_by_size_.pop_front();
+    }
 }
 
 void RegionAllocator::Reset() {
@@ -138,7 +41,7 @@ void RegionAllocator::Reset() {
     Region* removed;
     while ((removed = avail_regions_by_base_.pop_front()) != nullptr) {
         avail_regions_by_size_.erase(*removed);
-        region_pool_->FreeRegion(removed);
+        delete removed;
     }
 
     DEBUG_ASSERT(avail_regions_by_base_.is_empty());
@@ -171,7 +74,7 @@ mx_status_t RegionAllocator::AddRegion(const ralloc_region_t& region, bool allow
     // All sanity checks passed.  Grab a piece of free bookeeping from our pool,
     // fill it out, then add it to the sets of available regions (indexed by
     // base address as well as size)
-    Region* to_add = region_pool_->AllocRegion(this);
+    Region* to_add = region_pool_->New(this);
     if (to_add == nullptr)
         return ERR_NO_MEMORY;
 
@@ -218,7 +121,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
             if ((region.base == before->base) && (region_end == before_end)) {
                 Region* removed = avail_regions_by_base_.erase(before);
                 avail_regions_by_size_.erase(*removed);
-                region_pool_->FreeRegion(removed);
+                delete removed;
                 return NO_ERROR;
             }
 
@@ -226,7 +129,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
             // to be split into two regions.  If we are out of bookkeeping space, we
             // are out of luck.
             if ((region.base != before->base) && (region_end != before_end)) {
-                Region* second = region_pool_->AllocRegion(this);
+                Region* second = region_pool_->New(this);
                 if (second == nullptr)
                     return ERR_NO_MEMORY;
 
@@ -298,7 +201,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
             // before and need to recompute its size and position in the size index.
             if (bptr->base == region.base) {
                 avail_regions_by_base_.erase(*bptr);
-                region_pool_->FreeRegion(bptr);
+                delete bptr;
             } else {
                 bptr->size = region.base - bptr->base;
                 avail_regions_by_size_.insert(bptr);
@@ -348,7 +251,7 @@ mx_status_t RegionAllocator::SubtractRegion(const ralloc_region_t& to_subtract,
         avail_regions_by_base_.erase(*trim);
         region.base = trim_end;
         region.size = region_end - region.base;
-        region_pool_->FreeRegion(trim);
+        delete trim;
 
         if (!region.size)
             break;
@@ -528,7 +431,7 @@ mx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
         // If we only have to split after, then this region is aligned with what
         // we want to allocate, but we will not use all of it.  Break it into
         // two pieces and return the one which comes first.
-        Region* before_region = region_pool_->AllocRegion(this);
+        Region* before_region = region_pool_->New(this);
         if (before_region == nullptr)
             return ERR_NO_MEMORY;
 
@@ -548,7 +451,7 @@ mx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
         // properly with what we want to allocate, but we will use the entire
         // region (after aligning).  Break it into two pieces and return the one
         // which comes after.
-        Region* after_region = region_pool_->AllocRegion(this);
+        Region* after_region = region_pool_->New(this);
         if (after_region == nullptr)
             return ERR_NO_MEMORY;
 
@@ -565,13 +468,13 @@ mx_status_t RegionAllocator::AllocFromAvailLocked(Region::WAVLTreeSortBySize::it
     } else {
         // Looks like we need to break our region into 3 chunk and return the
         // middle chunk.  Start by grabbing the bookkeeping we require first.
-        Region* region = region_pool_->AllocRegion(this);
+        Region* region = region_pool_->New(this);
         if (region == nullptr)
             return ERR_NO_MEMORY;
 
-        Region* after_region = region_pool_->AllocRegion(this);
+        Region* after_region = region_pool_->New(this);
         if (after_region == nullptr) {
-            region_pool_->FreeRegion(region);
+            delete region;
             return ERR_NO_MEMORY;
         }
 
@@ -618,7 +521,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
 
             auto removed = avail_regions_by_base_.erase(before);
             avail_regions_by_size_.erase(*removed);
-            region_pool_->FreeRegion(removed);
+            delete removed;
         }
     }
 
@@ -636,7 +539,7 @@ void RegionAllocator::AddRegionToAvailLocked(Region* region, bool allow_overlap)
         auto remove_me = after++;
         auto removed  = avail_regions_by_base_.erase(remove_me);
         avail_regions_by_size_.erase(*removed);
-        region_pool_->FreeRegion(removed);
+        delete removed;
 
         if (!allow_overlap)
             break;
