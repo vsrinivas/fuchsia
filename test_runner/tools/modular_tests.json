@@ -1,0 +1,12 @@
+{
+    "tests": [
+        {
+          "name": "dummy_user_shell",
+          "exec": "/system/apps/bootstrap /system/apps/device_runner --user-shell=file:///system/apps/dummy_user_shell"
+        },
+        {
+          "name": "dummy_user_shell",
+          "exec": "/system/apps/bootstrap /system/apps/device_runner --user-shell=file:///system/apps/dummy_user_shell"
+        }
+    ]
+}

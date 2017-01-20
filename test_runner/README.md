@@ -24,6 +24,10 @@ This will return when it has completed (either by succeeding or crashing). You
 can watch the qemu console to see any console output written by test. In case of
 a crash, this console output will be dumped by `run_test`.
 
+You can also run a series of tests by supplying a JSON file describing the tests
+to run:
+$ $FUCHSIA_DIR/apps/modular/test_runner/tools/run_test --test_file=$FUCHSIA_DIR/apps/modular/test_runner/tools/modular_tests.json
+
 Troubleshooting:
 - If `run_test` is having trouble finding your qemu instance, your instance may
   be assigned a different IP than the default that `run_test` assumes. If

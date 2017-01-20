@@ -22,9 +22,9 @@
 // the |TestRunner| service to signal completion of the test, and also provides
 // a way to signal process crashes.
 
-// TODO(vardhan): Make it possible to run more than one test per TCP connection.
-// And possibly at the same time. And more than one TCP connection at the same
-// time.
+// TODO(vardhan): Make it possible to run multiple tests within the same test
+// runner environment, without teardown; useful for testing modules, which may
+// not need to tear down device_runner.
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -45,14 +45,13 @@
 
 // TODO(vardhan): Make listen port command-line configurable.
 constexpr uint16_t kListenPort = 8342;        // TCP port
-constexpr uint16_t kMaxCommandLength = 2048;  // in bytes.
 
 namespace modular {
 namespace {
 
 // This is an ApplicationEnvironment under which our test runs. We expose a
 // TestRunner service which the test can use to assert when it is complete.
-class TestRunnerScope : public modular::Scope {
+class TestRunnerScope : public Scope {
  public:
   TestRunnerScope(
       ApplicationEnvironmentPtr parent_env,
@@ -74,23 +73,72 @@ class TestRunnerScope : public modular::Scope {
   ServiceProviderImpl service_provider_;
 };
 
+class TestRunnerConnection;
+// TestRunContext represents a single run of a test. Given a test to run, it
+// runs it in a new ApplicationEnvironment and provides the environment a TestRunner
+// service to report completion. When tests are done, their completion is
+// reported back to TestRunnerConnection (which is responsible for deleting
+// TestRunContext). If the child application stops without reporting anything,
+// we declare the test a failure.
+class TestRunContext : public TestRunner {
+ public:
+  TestRunContext(
+      std::shared_ptr<ApplicationContext> app_context,
+      TestRunnerConnection* connection,
+      const std::string& test_id,
+      const std::string& url,
+      const std::vector<std::string>& args);
+
+ private:
+  // |TestRunner|:
+  void Finish(bool success);
+
+  ApplicationControllerPtr child_app_controller_;
+  std::unique_ptr<TestRunnerScope> child_env_scope_;
+
+  TestRunnerConnection* const test_runner_connection_;
+  fidl::Binding<TestRunner> test_runner_binding_;
+  // This is a tag that we use to identify the test that was run. For now, it
+  // helps distinguish between multiple test outputs to the device log.
+  const std::string test_id_;
+};
+
 // Represents a client connection, and is self-owned (it will exit the
 // MessageLoop upon completion). TestRunnerConnection receives commands to run
-// tests, kicks them off in their own ApplicationEnvironment, provides the
-// environment a TestRunner service to report completion, and reports back test
-// results.
-class TestRunnerConnection : public TestRunner {
+// tests and runs them one at a time using TestRunContext.
+class TestRunnerConnection {
  public:
   explicit TestRunnerConnection(int socket_fd,
                                 std::shared_ptr<ApplicationContext> app_context)
       : app_context_(app_context),
-        socket_(socket_fd),
-        test_runner_binding_(this) {
-    test_runner_binding_.set_connection_error_handler(
-        std::bind(&TestRunnerConnection::Finish, this, false));
+        socket_(socket_fd) {}
+
+  void Start() {
+    FTL_CHECK(!test_context_);
+    ReadAndRunCommand();
   }
 
-  void Start() { ReadAndRunCommand(); }
+  // Called by TestRunContext when it has finished running its test. This will
+  // trigger reading more commands from TCP socket.
+  void Finish(const std::string& test_id, bool success) {
+    FTL_CHECK(test_context_);
+
+    // IMPORTANT: leave this log here, exactly as it is. Currently, tests
+    // launched from host (e.g. Linux) grep for this text to figure out the
+    // amount of the log to associate with the test.
+    FTL_LOG(INFO) << "test_runner: done " << test_id
+                  << " success=" << success;
+
+    std::stringstream epilogue;
+    epilogue << test_id << " ";
+    epilogue << (success ? "pass" : "fail") << "\n";
+
+    std::string bytes = epilogue.str();
+    FTL_CHECK(write(socket_, bytes.data(), bytes.size()) > 0);
+
+    test_context_.reset();
+    Start();
+  }
 
  private:
   ~TestRunnerConnection() {
@@ -98,110 +146,116 @@ class TestRunnerConnection : public TestRunner {
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
-  // |TestRunner|:
-  void Finish(bool success) {
-    // IMPORTANT: leave this log here, exactly as it is. Currently, tests
-    // launched from host (e.g. Linux) grep for this text to figure out the
-    // amount of the log to associate with the test.
-    FTL_LOG(INFO) << "test_runner: done " << test_id_ << " success=" << success;
+  // Read and entire command (which consists of one line) and return it.
+  // Can be called again to read the next command. Blocks until an entire line
+  // has been read.
+  std::string ReadCommand() {
+    char buf[1024];
+    // Read until we see a new line.
+    auto newline_pos = command_buffer_.find("\n");
+    while (newline_pos == std::string::npos) {
+      ssize_t n = read(socket_, buf, sizeof(buf));
+      if (n <= 0) {
+        return std::string();
+      }
+      command_buffer_.append(buf, n);
+      newline_pos = command_buffer_.find("\n");
+    }
 
-    std::stringstream epilogue;
-    epilogue << test_id_ << " ";
-    epilogue << (success ? "pass" : "fail");
-
-    std::string bytes = epilogue.str();
-    write(socket_, bytes.data(), bytes.size());
-
-    delete this;
+    // Consume only until the new line (and leave the rest of the bytes for
+    // subsequent ReadCommand()s.
+    auto retval = command_buffer_.substr(0, newline_pos + 1);
+    command_buffer_.erase(0, newline_pos + 1);
+    return retval;
   }
 
-  // Read an entire line representing the command to run. Blocks until we have a
-  // line. Fails if we hit |kMaxCommandLength| chars.
+  // Read an entire line representing the command to run and run it. When the
+  // test has finished running, TestRunnerConnection::Finish is invoked. We do
+  // not read any further commands until that has happened.
   void ReadAndRunCommand() {
-    char buf[kMaxCommandLength];
-    size_t read_so_far = 0;
-    while (read_so_far < kMaxCommandLength) {
-      ssize_t n = read(socket_, buf + read_so_far, sizeof(buf) - read_so_far);
-      FTL_CHECK(n > 0);
-      read_so_far += n;
-      // Is there a line?
-      // TODO(vardhan): Will be bad if we receive anything after the new line.
-      if (static_cast<char*>(memchr(buf, '\n', read_so_far)) != nullptr) {
-        break;
-      }
-    }
-    if (read_so_far < kMaxCommandLength) {
-      ftl::StringView command_line(buf, read_so_far);
-
-      // command_parse[0] = "run"
-      // command_parse[1] = test_id
-      // command_parse[2] = url
-      // command_parse[3..] = args (optional)
-      std::vector<std::string> command_parse = ftl::SplitStringCopy(
-          command_line, " ", ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
-
-      FTL_CHECK(command_parse.size() >= 3)
-          << "Not enough args. Must be: `run <test id> <command to run>`";
-      FTL_CHECK(command_parse[0] == "run")
-          << "Only supported command is `run`.";
-
-      test_id_ = command_parse[1];
-      FTL_LOG(INFO) << "test_runner: run " << test_id_;
-
-      std::vector<std::string> args;
-      for (size_t i = 3; i < command_parse.size(); i++) {
-        args.push_back(std::move(command_parse[i]));
-      }
-      RunCommand(command_parse[2], args);
-    } else {
+    std::string command = ReadCommand();
+    if (command.empty()) {
       delete this;
+      return;
     }
-  }
 
-  // If the child application stops without reporting anything, we declare the
-  // test a failure.
-  void RunCommand(const std::string& url,
-                  const std::vector<std::string>& args) {
-    // 1. Make a child environment to run the command.
-    ApplicationEnvironmentPtr parent_env;
-    app_context_->environment()->Duplicate(parent_env.NewRequest());
+    // command_parse[0] = "run"
+    // command_parse[1] = test_id
+    // command_parse[2] = url
+    // command_parse[3..] = args (optional)
+    std::vector<std::string> command_parse = ftl::SplitStringCopy(
+        command, " ", ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
 
-    ServiceProviderPtr parent_env_services;
-    parent_env->GetServices(parent_env_services.NewRequest());
+    FTL_CHECK(command_parse.size() >= 3)
+        << "Not enough args. Must be: `run <test id> <command to run>`";
+    FTL_CHECK(command_parse[0] == "run") << "Only supported command is `run`.";
 
-    child_env_scope_ = std::make_unique<TestRunnerScope>(
-        std::move(parent_env), std::move(parent_env_services),
-        "test_runner_env", [this](fidl::InterfaceRequest<TestRunner> request) {
-          test_runner_binding_.Bind(std::move(request));
-        });
+    FTL_LOG(INFO) << "test_runner: run " << command_parse[1];
 
-    // 2. Launch the test command.
-    ApplicationLauncherPtr launcher;
-    child_env_scope_->environment()->GetApplicationLauncher(
-        launcher.NewRequest());
+    std::vector<std::string> args;
+    for (size_t i = 3; i < command_parse.size(); i++) {
+      args.push_back(std::move(command_parse[i]));
+    }
 
-    ApplicationLaunchInfoPtr info = ApplicationLaunchInfo::New();
-    info->url = url;
-    info->arguments = fidl::Array<fidl::String>::From(args);
-    launcher->CreateApplication(std::move(info),
-                                child_app_controller_.NewRequest());
-    child_app_controller_.set_connection_error_handler(
-        std::bind(&TestRunnerConnection::Finish, this, false));
+    // When TestRunContext is done with the test, it calls
+    // TestRunnerConnection::Finish().
+    test_context_.reset(new TestRunContext(app_context_,
+                                           this,
+                                           command_parse[1],
+                                           command_parse[2],
+                                           args));
   }
 
   std::shared_ptr<ApplicationContext> app_context_;
+  std::unique_ptr<TestRunContext> test_context_;
 
   // Posix fd for the TCP connection.
-  int socket_;
-
-  ApplicationControllerPtr child_app_controller_;
-  std::unique_ptr<TestRunnerScope> child_env_scope_;
-
-  fidl::Binding<TestRunner> test_runner_binding_;
-  // This is a tag that we use to identify the test that was run. For now, it
-  // helps distinguish between multiple test outputs to the device log.
-  std::string test_id_;
+  const int socket_;
+  std::string command_buffer_;
 };
+
+TestRunContext::TestRunContext(
+  std::shared_ptr<ApplicationContext> app_context,
+  TestRunnerConnection* connection,
+  const std::string& test_id,
+  const std::string& url,
+  const std::vector<std::string>& args)
+    : test_runner_connection_(connection),
+      test_runner_binding_(this),
+      test_id_(test_id) {
+  // 1. Make a child environment to run the command.
+  ApplicationEnvironmentPtr parent_env;
+  app_context->environment()->Duplicate(parent_env.NewRequest());
+
+  ServiceProviderPtr parent_env_services;
+  parent_env->GetServices(parent_env_services.NewRequest());
+
+  test_runner_binding_.set_connection_error_handler(
+      std::bind(&TestRunContext::Finish, this, false));
+
+  child_env_scope_ = std::make_unique<TestRunnerScope>(
+      std::move(parent_env), std::move(parent_env_services),
+      "test_runner_env", [this](fidl::InterfaceRequest<TestRunner> request) {
+        test_runner_binding_.Bind(std::move(request));
+      });
+
+  // 2. Launch the test command.
+  ApplicationLauncherPtr launcher;
+  child_env_scope_->environment()->GetApplicationLauncher(
+      launcher.NewRequest());
+
+  ApplicationLaunchInfoPtr info = ApplicationLaunchInfo::New();
+  info->url = url;
+  info->arguments = fidl::Array<fidl::String>::From(args);
+  launcher->CreateApplication(std::move(info),
+                              child_app_controller_.NewRequest());
+  child_app_controller_.set_connection_error_handler(
+      std::bind(&TestRunContext::Finish, this, false));
+}
+
+void TestRunContext::Finish(bool success) {
+  test_runner_connection_->Finish(test_id_, success);
+}
 
 // TestRunnerTCPServer is a TCP server that accepts connections and launches
 // them as TestRunnerConnection.

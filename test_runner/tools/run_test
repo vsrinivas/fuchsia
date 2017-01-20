@@ -1,49 +1,48 @@
 #!/usr/bin/python
+
 # Copyright 2017 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import socket
 import argparse
-import sys
-import os
 import hashlib
+import json
+import os
 import random
-import subprocess
 import re
+import socket
+import subprocess
+import sys
 
-def read_log_listener(test_id, listener_process):
+def read_log_listener(listener_process, test_id):
     """ Returns the output of loglistener up until it sees the |test_id|."""
     termination_substring = "test_runner: done %s" % test_id
     lines = []
     while True:
         line = listener_process.stdout.readline()
         if line == "" or line.find(termination_substring) != -1:
-            listener_process.terminate()
-            break
-
+            return "".join(lines) + line
         lines.append(line)
 
     return "".join(lines)
 
-def run_test(server_string, test_id, command):
-    """ Connects to the test runner daemon at |server_string|, runs |command|
-    and waits for results."""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server, port = server_string.split(":")
-    sock.connect((server, int(port)))
-    sock.send("run %s %s\n" % (test_id, command))
-    result = []
-    while True:
-        data = sock.recv(1024)
-        if not data:
-            break
-        result.append(data)
-    sock.close()
+def run_test(sock, listener_process, command_str):
+    """ Runs |command_str| on the remote test runner server, waits for the
+    result, and prints the relevant device log snippet in the event of a
+    failure. """
+    test_id = hashlib.sha1(command_str + str(random.random())).hexdigest()
 
-    ret_test_id, result = "".join(result).split(" ", 1)
+    sock.send("run %s %s\n" % (test_id, command))
+    result = sock.makefile().readline()
+    ret_test_id, result = result.split(" ", 1)
+
     assert ret_test_id == test_id, "Uhoh, wrong test result returned"
-    return result
+    result = result.strip()
+    print result
+
+    log_output = read_log_listener(listener_process, test_id)
+    if result == "fail":
+        print log_output
 
 def main(argv):
     assert "FUCHSIA_DIR" in os.environ, "Could not find env variable $FUCHSIA_DIR"
@@ -58,23 +57,44 @@ def main(argv):
             type=str,
             default=os.environ["FUCHSIA_DIR"] + \
                     "/packages/prebuilt/downloads/magenta/tools/loglistener")
-    parser.add_argument("command", nargs="+")
+    parser.add_argument("--test_file",
+            help="Path to a json file containing a series of tests to run.",
+            type=str,
+            default="")
+    parser.add_argument("command", nargs="*")
     args = parser.parse_args()
 
+    # 1. Start listening to the device log.
     listener_process = subprocess.Popen([args.loglistener_path],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    command_str = " ".join(args.command)
-    test_id = hashlib.sha1(command_str + str(random.random())).hexdigest()
+    # 2. Open up a connection to the on-device test runner server.
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server, port = args.server.split(":")
+    sock.connect((server, int(port)))
 
-    print "Running.."
-    result = run_test(args.server, test_id, command_str)
+    # 3. Read commands and send them to the test runner server.
+    assert args.test_file or len(args.command) > 0, \
+        "Either a single test command, or --test-file must be specified."
 
-    log_output = read_log_listener(test_id, listener_process)
+    if len(args.command) > 0:
+        command_str = " ".join(args.command)
+        # Run a single command
+        print "Running %s .." % command_str,
+        sys.stdout.flush()
+        run_test(sock, listener_process, command_str)
+    else:
+        # Run series of commands from test file
+        with open(args.test_file) as f:
+            tests = json.load(f)
+            for test in tests["tests"]:
+                print "Running %s .." % test["name"],
+                sys.stdout.flush()
+                run_test(sock, listener_process, test["exec"])
 
-    print "Test result: ", result
-    if result == "fail":
-        print log_output
+    # 4. Cleanup
+    listener_process.terminate()
+    sock.close()
 
 if __name__ == "__main__":
     main(sys.argv)
