@@ -597,6 +597,7 @@ int mxio_status_to_errno(mx_status_t status) {
     case ERR_ACCESS_DENIED: return EACCES;
     case ERR_SHOULD_WAIT: return EAGAIN;
     case ERR_FILE_BIG: return EFBIG;
+    case ERR_NO_SPACE: return ENOSPC;
 
     // No specific translation, so return a generic errno value.
     default: return EIO;

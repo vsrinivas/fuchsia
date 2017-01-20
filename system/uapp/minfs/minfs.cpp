@@ -276,7 +276,7 @@ mx_status_t Minfs::BlockNew(uint32_t hint, uint32_t* out_bno, mxtl::RefPtr<Block
         bno = block_map.Alloc(0);
     }
     if (bno == BITMAP_FAIL) {
-        return ERR_NO_RESOURCES;
+        return ERR_NO_SPACE;
     }
     assert(bno != 0); // Cannot allocate root block
 

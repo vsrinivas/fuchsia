@@ -128,4 +128,4 @@
 #define ERR_NOT_DIR (-51)
 #define ERR_NOT_FILE (-52)
 #define ERR_FILE_BIG (-53)  // file exceeds FS size limits
-
+#define ERR_NO_SPACE (-54)  // FS or device space exhausted

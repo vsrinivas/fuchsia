@@ -292,7 +292,7 @@ static mx_status_t vn_get_bno(vnode_t* vn, uint32_t n, uint32_t* bno, bool alloc
         // allocate a new indirect block
         mx_status_t status = vn->fs->BlockNew(0, &ibno, &iblk);
         if (status != NO_ERROR) {
-            return ERR_NO_RESOURCES;
+            return status;
         }
         // record new indirect block in inode, note that we need to update
         vn->inode.block_count++;
@@ -307,9 +307,10 @@ static mx_status_t vn_get_bno(vnode_t* vn, uint32_t n, uint32_t* bno, bool alloc
 
     if (((*bno = ientry[j]) == 0) && alloc) {
         // allocate a new block
-        if (vn->fs->BlockNew(hint, bno, nullptr) != NO_ERROR) {
+        mx_status_t status = vn->fs->BlockNew(hint, bno, nullptr);
+        if (status != NO_ERROR) {
             vn->fs->bc->Put(iblk, iflags);
-            return ERR_NO_RESOURCES;
+            return status;
         }
         vn->inode.block_count++;
         ientry[j] = *bno;
@@ -865,8 +866,8 @@ static mx_status_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t o
         }
         const void* wdata = (xfer != kMinfsBlockSize) ? bdata : data;
         uint32_t bno;
-        if (vn_get_bno(vn, n, &bno, true) != NO_ERROR) {
-            return ERR_IO;
+        if ((status = vn_get_bno(vn, n, &bno, true)) != NO_ERROR) {
+            return status;
         }
         assert(bno != 0);
         if (vn->fs->bc->Writeblk(bno, wdata)) {
@@ -899,6 +900,10 @@ done:
     if (len == 0) {
         // If more than zero bytes were requested, but zero bytes were written,
         // return an error explicitly (rather than zero).
+        if (off >= kMinfsMaxFileSize) {
+            return ERR_FILE_BIG;
+        }
+
         return ERR_NO_RESOURCES;
     }
     if ((off + len) > vn->inode.size) {
