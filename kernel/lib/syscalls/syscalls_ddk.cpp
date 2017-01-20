@@ -19,6 +19,7 @@
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
+#include <magenta/handle_owner.h>
 #include <magenta/interrupt_dispatcher.h>
 #include <magenta/interrupt_event_dispatcher.h>
 #include <magenta/io_mapping_dispatcher.h>
@@ -56,7 +57,7 @@ mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t fl
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
 
     auto up = ProcessDispatcher::GetCurrent();
     mx_handle_t hv = up->MapHandleToValue(handle.get());
@@ -191,7 +192,7 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 

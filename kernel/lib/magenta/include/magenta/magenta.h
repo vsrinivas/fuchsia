@@ -8,9 +8,9 @@
 
 #include <stdint.h>
 
+#include <magenta/handle.h>
 #include <magenta/prctl.h>
 #include <magenta/types.h>
-#include <magenta/handle_unique_ptr.h>
 
 #include <mxtl/ref_ptr.h>
 #include <mxtl/unique_ptr.h>

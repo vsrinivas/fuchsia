@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <magenta/handle_owner.h>
 #include <magenta/vm_object_dispatcher.h>
 
 // An RoDso object describes one DSO image built with the rodso.ld layout.
@@ -14,7 +15,7 @@ public:
     mxtl::RefPtr<VmObjectDispatcher> vmo() {
         return vmo_;
     }
-    HandleUniquePtr vmo_handle();
+    HandleOwner vmo_handle();
 
     size_t size() const { return size_; }
 

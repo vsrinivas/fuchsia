@@ -25,6 +25,7 @@
 #include <lk/init.h>
 #include <platform/debug.h>
 
+#include <magenta/handle_owner.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/syscalls/debug.h>
 #include <magenta/thread_dispatcher.h>
@@ -125,7 +126,7 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
     if (process.get() == up)
         return ERR_INVALID_ARGS;
 
-    HandleUniquePtr handle = up->RemoveHandle(src_handle);
+    HandleOwner handle = up->RemoveHandle(src_handle);
     if (!handle)
         return ERR_BAD_HANDLE;
 

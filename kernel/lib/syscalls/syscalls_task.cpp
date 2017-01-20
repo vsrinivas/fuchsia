@@ -22,6 +22,7 @@
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
+#include <magenta/handle_owner.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
@@ -84,7 +85,7 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
     ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
 
-    HandleUniquePtr handle(MakeHandle(mxtl::move(thread_dispatcher), thread_rights));
+    HandleOwner handle(MakeHandle(mxtl::move(thread_dispatcher), thread_rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
@@ -165,12 +166,12 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     ktrace_name(TAG_PROC_NAME, koid, 0, buf);
 
     // Create a handle and attach the dispatcher to it
-    HandleUniquePtr proc_h(MakeHandle(mxtl::move(proc_dispatcher), proc_rights));
+    HandleOwner proc_h(MakeHandle(mxtl::move(proc_dispatcher), proc_rights));
     if (!proc_h)
         return ERR_NO_MEMORY;
 
     // Create a handle and attach the dispatcher to it
-    HandleUniquePtr vmar_h(MakeHandle(mxtl::move(vmar_dispatcher), vmar_rights));
+    HandleOwner vmar_h(MakeHandle(mxtl::move(vmar_dispatcher), vmar_rights));
     if (!vmar_h)
         return ERR_NO_MEMORY;
 
@@ -223,7 +224,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
 
     // XXX test that handle has TRANSFER rights before we remove it from the source process
 
-    HandleUniquePtr arg_handle = up->RemoveHandle(arg_handle_value);
+    HandleOwner arg_handle = up->RemoveHandle(arg_handle_value);
     if (!arg_handle)
         return ERR_INVALID_ARGS;
 
@@ -301,7 +302,7 @@ mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t flags, mx_handle_t* 
     if (status != NO_ERROR)
         return status;
 
-    HandleUniquePtr job_handle(MakeHandle(mxtl::move(job), rights));
+    HandleOwner job_handle(MakeHandle(mxtl::move(job), rights));
     if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(job_handle.get())) != NO_ERROR)
         return ERR_INVALID_ARGS;
 

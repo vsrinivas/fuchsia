@@ -18,6 +18,7 @@
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
+#include <magenta/handle_owner.h>
 #include <magenta/interrupt_dispatcher.h>
 #include <magenta/interrupt_event_dispatcher.h>
 #include <magenta/magenta.h>
@@ -289,7 +290,7 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, mx_pcie_ge
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
@@ -400,7 +401,7 @@ mx_handle_t sys_pci_map_mmio(mx_handle_t handle, uint32_t bar_num, mx_cache_poli
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr mmio_handle(MakeHandle(mxtl::move(mmio_io_mapping), mmio_rights));
+    HandleOwner mmio_handle(MakeHandle(mxtl::move(mmio_io_mapping), mmio_rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
@@ -458,7 +459,7 @@ mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr handle(MakeHandle(mxtl::move(interrupt_dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(interrupt_dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
@@ -489,7 +490,7 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr config_handle(MakeHandle(mxtl::move(config_io_mapping), config_rights));
+    HandleOwner config_handle(MakeHandle(mxtl::move(config_io_mapping), config_rights));
     if (!config_handle)
         return ERR_NO_MEMORY;
 

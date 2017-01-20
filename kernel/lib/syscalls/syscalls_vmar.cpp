@@ -14,6 +14,7 @@
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
+#include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
@@ -66,7 +67,7 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
         return ERR_INVALID_ARGS;
 
     // Create a handle and attach the dispatcher to it
-    HandleUniquePtr handle(MakeHandle(mxtl::move(new_vmar), new_rights));
+    HandleOwner handle(MakeHandle(mxtl::move(new_vmar), new_rights));
     if (!handle)
         return ERR_NO_MEMORY;
 

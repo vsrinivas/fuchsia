@@ -12,8 +12,9 @@
 
 #include <lib/ktrace.h>
 
-#include <magenta/port_dispatcher.h>
+#include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
+#include <magenta/port_dispatcher.h>
 #include <magenta/process_dispatcher.h>
 
 #include <mxtl/ref_ptr.h>
@@ -33,7 +34,7 @@ mx_status_t sys_port_create(uint32_t options, mx_handle_t* _out) {
 
     uint32_t koid = (uint32_t)dispatcher->get_koid();
 
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 

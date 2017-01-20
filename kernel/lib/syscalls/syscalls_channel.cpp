@@ -14,6 +14,7 @@
 #include <lib/user_copy.h>
 
 #include <magenta/channel_dispatcher.h>
+#include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
 #include <magenta/message_packet.h>
 #include <magenta/process_dispatcher.h>
@@ -50,11 +51,11 @@ mx_status_t sys_channel_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* 
     uint64_t id0 = mpd0->get_koid();
     uint64_t id1 = mpd1->get_koid();
 
-    HandleUniquePtr h0(MakeHandle(mxtl::move(mpd0), rights));
+    HandleOwner h0(MakeHandle(mxtl::move(mpd0), rights));
     if (!h0)
         return ERR_NO_MEMORY;
 
-    HandleUniquePtr h1(MakeHandle(mxtl::move(mpd1), rights));
+    HandleOwner h1(MakeHandle(mxtl::move(mpd1), rights));
     if (!h1)
         return ERR_NO_MEMORY;
 
@@ -93,7 +94,7 @@ void msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
     for (size_t idx = 0u; idx < num_handles; ++idx) {
         if (handle_list[idx]->dispatcher()->get_state_tracker())
             handle_list[idx]->dispatcher()->get_state_tracker()->Cancel(handle_list[idx]);
-        HandleUniquePtr handle(handle_list[idx]);
+        HandleOwner handle(handle_list[idx]);
         up->AddHandle(mxtl::move(handle));
     }
 }

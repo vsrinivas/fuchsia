@@ -28,6 +28,7 @@
 #include <magenta/event_dispatcher.h>
 #include <magenta/event_pair_dispatcher.h>
 #include <magenta/fifo_dispatcher.h>
+#include <magenta/handle_owner.h>
 #include <magenta/log_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
@@ -105,7 +106,7 @@ mx_status_t sys_event_create(uint32_t options, mx_handle_t* _out) {
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
@@ -131,11 +132,11 @@ mx_status_t sys_eventpair_create(uint32_t flags,
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr h0(MakeHandle(mxtl::move(epd0), rights));
+    HandleOwner h0(MakeHandle(mxtl::move(epd0), rights));
     if (!h0)
         return ERR_NO_MEMORY;
 
-    HandleUniquePtr h1(MakeHandle(mxtl::move(epd1), rights));
+    HandleOwner h1(MakeHandle(mxtl::move(epd1), rights));
     if (!h1)
         return ERR_NO_MEMORY;
 
@@ -189,7 +190,7 @@ mx_handle_t sys_log_create(uint32_t flags) {
     }
 
     // create a handle and attach the dispatcher to it
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
@@ -283,7 +284,7 @@ mx_status_t sys_waitset_create(uint32_t options, mx_handle_t* _out) {
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 
@@ -403,11 +404,11 @@ mx_status_t sys_socket_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* _
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr h0(MakeHandle(mxtl::move(socket0), rights));
+    HandleOwner h0(MakeHandle(mxtl::move(socket0), rights));
     if (!h0)
         return ERR_NO_MEMORY;
 
-    HandleUniquePtr h1(MakeHandle(mxtl::move(socket1), rights));
+    HandleOwner h1(MakeHandle(mxtl::move(socket1), rights));
     if (!h1)
         return ERR_NO_MEMORY;
 
@@ -500,7 +501,7 @@ mx_status_t sys_fifo_create(uint64_t count, mx_handle_t* _out) {
     if (result != NO_ERROR)
         return result;
 
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 

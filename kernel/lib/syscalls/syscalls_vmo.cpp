@@ -14,6 +14,7 @@
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 
+#include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/user_copy.h>
@@ -44,7 +45,7 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, mx_handle_t* _out) {
         return result;
 
     // create a handle and attach the dispatcher to it
-    HandleUniquePtr handle(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
     if (!handle)
         return ERR_NO_MEMORY;
 

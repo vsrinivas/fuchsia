@@ -10,6 +10,7 @@
 
 #include <kernel/auto_lock.h>
 
+#include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
@@ -383,7 +384,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (!process)
             return ERR_NOT_FOUND;
 
-        HandleUniquePtr process_h(
+        HandleOwner process_h(
             MakeHandle(mxtl::RefPtr<Dispatcher>(process.get()), rights));
         if (!process_h)
             return ERR_NO_MEMORY;
@@ -416,7 +417,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         auto td = mxtl::RefPtr<Dispatcher>(thread->dispatcher());
         if (!td)
             return ERR_NOT_FOUND;
-        HandleUniquePtr thread_h(MakeHandle(td, rights));
+        HandleOwner thread_h(MakeHandle(td, rights));
         if (!thread_h)
             return ERR_NO_MEMORY;
 
@@ -434,7 +435,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         auto cd = mxtl::RefPtr<Dispatcher>(child.get());
         if (!cd)
             return ERR_NOT_FOUND;
-        HandleUniquePtr child_h(MakeHandle(cd, rights));
+        HandleOwner child_h(MakeHandle(cd, rights));
         if (!child_h)
             return ERR_NO_MEMORY;
 

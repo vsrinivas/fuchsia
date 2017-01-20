@@ -10,6 +10,7 @@
 
 #include <kernel/auto_lock.h>
 
+#include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 
@@ -22,7 +23,7 @@
 mx_status_t sys_handle_close(mx_handle_t handle_value) {
     LTRACEF("handle %d\n", handle_value);
     auto up = ProcessDispatcher::GetCurrent();
-    HandleUniquePtr handle(up->RemoveHandle(handle_value));
+    HandleOwner handle(up->RemoveHandle(handle_value));
     if (!handle)
         return up->BadHandle(handle_value, ERR_BAD_HANDLE);
     return NO_ERROR;
@@ -42,7 +43,7 @@ mx_status_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights, m
         if (!magenta_rights_check(source->rights(), MX_RIGHT_DUPLICATE))
             return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
-        HandleUniquePtr dest;
+        HandleOwner dest;
         if (rights == MX_RIGHT_SAME_RIGHTS) {
             dest.reset(DupHandle(source, source->rights()));
         } else {
@@ -65,7 +66,7 @@ mx_status_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights, mx_
     LTRACEF("handle %d\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
-    HandleUniquePtr source;
+    HandleOwner source;
 
     {
         AutoLock lock(up->handle_table_lock());
@@ -73,7 +74,7 @@ mx_status_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights, mx_
         if (!source)
             return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
-        HandleUniquePtr dest;
+        HandleOwner dest;
         // Used only if |dest| doesn't (successfully) get set below.
         mx_status_t error = ERR_NO_MEMORY;
         if (rights == MX_RIGHT_SAME_RIGHTS) {

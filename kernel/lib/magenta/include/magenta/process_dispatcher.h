@@ -13,6 +13,7 @@
 
 #include <magenta/dispatcher.h>
 #include <magenta/futex_context.h>
+#include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
 #include <magenta/state_tracker.h>
 #include <magenta/syscalls/object.h>
@@ -87,13 +88,13 @@ public:
 
     // Adds |handle| to this process handle list. The handle->process_id() is
     // set to this process id().
-    void AddHandle(HandleUniquePtr handle);
-    void AddHandleLocked(HandleUniquePtr handle);
+    void AddHandle(HandleOwner handle);
+    void AddHandleLocked(HandleOwner handle);
 
     // Removes the Handle corresponding to |handle_value| from this process
     // handle list.
-    HandleUniquePtr RemoveHandle(mx_handle_t handle_value);
-    HandleUniquePtr RemoveHandleLocked(mx_handle_t handle_value);
+    HandleOwner RemoveHandle(mx_handle_t handle_value);
+    HandleOwner RemoveHandleLocked(mx_handle_t handle_value);
 
     // Puts back the |handle_value| which has not yet been given to another process
     // back into this process.

@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <kernel/vm/vm_address_region.h>
 #include <kernel/vm/vm_object.h>
+#include <magenta/handle_owner.h>
 #include <magenta/vm_address_region_dispatcher.h>
 #include <magenta/vm_object_dispatcher.h>
 
@@ -28,8 +29,8 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
     vmo_rights_ &= ~MX_RIGHT_WRITE;
 }
 
-HandleUniquePtr RoDso::vmo_handle() {
-    return HandleUniquePtr(MakeHandle(vmo_, vmo_rights_));
+HandleOwner RoDso::vmo_handle() {
+    return HandleOwner(MakeHandle(vmo_, vmo_rights_));
 }
 
 // Map one segment from our VM object.

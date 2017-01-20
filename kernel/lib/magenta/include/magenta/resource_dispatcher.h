@@ -9,6 +9,7 @@
 #include <kernel/mutex.h>
 #include <lib/user_copy/user_array.h>
 #include <magenta/dispatcher.h>
+#include <magenta/handle_owner.h>
 #include <magenta/syscalls/resource.h>
 #include <mxtl/intrusive_double_list.h>
 #include <sys/types.h>
@@ -57,8 +58,8 @@ public:
     mx_status_t GetChildren(user_ptr<mx_rrec_t> records, size_t max,
                             size_t* actual, size_t* available);
 
-    mx_status_t Connect(HandleUniquePtr* channel);
-    mx_status_t Accept(HandleUniquePtr* channel);
+    mx_status_t Connect(HandleOwner* channel);
+    mx_status_t Accept(HandleOwner* channel);
 
     uint16_t get_subtype() const { return subtype_; }
 
@@ -80,7 +81,7 @@ private:
     uint16_t subtype_;
     bool valid_;
 
-    HandleUniquePtr inbound_;
+    HandleOwner inbound_;
     StateTracker state_tracker_;
     mxtl::unique_ptr<PortClient> iopc_;
 

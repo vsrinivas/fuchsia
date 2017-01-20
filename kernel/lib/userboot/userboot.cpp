@@ -23,6 +23,7 @@
 #include <lk/init.h>
 
 #include <magenta/channel_dispatcher.h>
+#include <magenta/handle_owner.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/message_packet.h>
@@ -149,7 +150,7 @@ static mx_status_t get_resource_handle(Handle** ptr) {
 static mx_handle_t make_bootstrap_channel(
     mxtl::RefPtr<ProcessDispatcher> process,
     mxtl::unique_ptr<MessagePacket> msg) {
-    HandleUniquePtr user_channel_handle;
+    HandleOwner user_channel_handle;
     mxtl::RefPtr<ChannelDispatcher> kernel_channel;
     {
         mxtl::RefPtr<Dispatcher> mpd0, mpd1;

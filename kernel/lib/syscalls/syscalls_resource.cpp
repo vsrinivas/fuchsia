@@ -7,8 +7,9 @@
 #include <err.h>
 #include <inttypes.h>
 #include <kernel/auto_lock.h>
-#include <magenta/magenta.h>
 #include <magenta/channel_dispatcher.h>
+#include <magenta/handle_owner.h>
+#include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
 #include <mxtl/ref_ptr.h>
@@ -69,7 +70,7 @@ mx_status_t sys_resource_create(mx_handle_t handle,
         return result;
 
     // Create a handle for the child
-    HandleUniquePtr child_h(MakeHandle(mxtl::RefPtr<Dispatcher>(child.get()), rights));
+    HandleOwner child_h(MakeHandle(mxtl::RefPtr<Dispatcher>(child.get()), rights));
     if (!child_h)
         return ERR_NO_MEMORY;
 
@@ -101,7 +102,7 @@ mx_status_t sys_resource_get_handle(mx_handle_t handle, uint32_t index,
     if (result)
         return result;
 
-    HandleUniquePtr out_h(MakeHandle(mxtl::move(dispatcher), rights));
+    HandleOwner out_h(MakeHandle(mxtl::move(dispatcher), rights));
     if (!out_h)
         return ERR_NO_MEMORY;
 
@@ -142,7 +143,7 @@ mx_status_t sys_resource_connect(mx_handle_t handle, mx_handle_t channel_hv) {
     if (result)
         return result;
 
-    HandleUniquePtr channel = up->RemoveHandle(channel_hv);
+    HandleOwner channel = up->RemoveHandle(channel_hv);
 
     if (!channel) {
         return up->BadHandle(channel_hv, ERR_BAD_HANDLE);
@@ -174,7 +175,7 @@ mx_status_t sys_resource_accept(mx_handle_t handle, mx_handle_t* _out) {
     if (result)
         return result;
 
-    HandleUniquePtr channel;
+    HandleOwner channel;
     result = resource->Accept(&channel);
     if (result)
         return result;

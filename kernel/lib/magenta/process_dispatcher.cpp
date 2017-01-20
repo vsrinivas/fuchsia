@@ -23,6 +23,7 @@
 #include <lib/crypto/global_prng.h>
 
 #include <magenta/futex_context.h>
+#include <magenta/handle_owner.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/thread_dispatcher.h>
@@ -359,34 +360,34 @@ Handle* ProcessDispatcher::GetHandleLocked(mx_handle_t handle_value) {
     return (handle->process_id() == get_koid()) ? handle : nullptr;
 }
 
-void ProcessDispatcher::AddHandle(HandleUniquePtr handle) {
+void ProcessDispatcher::AddHandle(HandleOwner handle) {
     AutoLock lock(&handle_table_lock_);
     AddHandleLocked(mxtl::move(handle));
 }
 
-void ProcessDispatcher::AddHandleLocked(HandleUniquePtr handle) {
+void ProcessDispatcher::AddHandleLocked(HandleOwner handle) {
     handle->set_process_id(get_koid());
     handles_.push_front(handle.release());
 }
 
-HandleUniquePtr ProcessDispatcher::RemoveHandle(mx_handle_t handle_value) {
+HandleOwner ProcessDispatcher::RemoveHandle(mx_handle_t handle_value) {
     AutoLock lock(&handle_table_lock_);
     return RemoveHandleLocked(handle_value);
 }
 
-HandleUniquePtr ProcessDispatcher::RemoveHandleLocked(mx_handle_t handle_value) {
+HandleOwner ProcessDispatcher::RemoveHandleLocked(mx_handle_t handle_value) {
     auto handle = GetHandleLocked(handle_value);
     if (!handle)
         return nullptr;
     handles_.erase(*handle);
     handle->set_process_id(0u);
 
-    return HandleUniquePtr(handle);
+    return HandleOwner(handle);
 }
 
 void ProcessDispatcher::UndoRemoveHandleLocked(mx_handle_t handle_value) {
     auto handle = map_value_to_handle(handle_value, handle_rand_);
-    AddHandleLocked(HandleUniquePtr(handle));
+    AddHandleLocked(HandleOwner(handle));
 }
 
 bool ProcessDispatcher::GetDispatcher(mx_handle_t handle_value,

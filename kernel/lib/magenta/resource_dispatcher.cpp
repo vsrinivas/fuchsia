@@ -7,6 +7,7 @@
 #include <kernel/auto_lock.h>
 #include <kernel/vm/vm_object.h>
 #include <magenta/handle.h>
+#include <magenta/handle_owner.h>
 #include <magenta/channel_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
 #include <magenta/interrupt_event_dispatcher.h>
@@ -343,7 +344,7 @@ mx_status_t ResourceDispatcher::RecordDoAction(uint32_t index, uint32_t action,
     }
 }
 
-mx_status_t ResourceDispatcher::Connect(HandleUniquePtr* handle) {
+mx_status_t ResourceDispatcher::Connect(HandleOwner* handle) {
     AutoLock lock(lock_);
 
     if (inbound_)
@@ -356,7 +357,7 @@ mx_status_t ResourceDispatcher::Connect(HandleUniquePtr* handle) {
     return NO_ERROR;
 }
 
-mx_status_t ResourceDispatcher::Accept(HandleUniquePtr* handle) {
+mx_status_t ResourceDispatcher::Accept(HandleOwner* handle) {
     AutoLock lock(lock_);
 
     if (!inbound_)

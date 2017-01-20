@@ -25,3 +25,5 @@ Handle::Handle(const Handle* rhs, mx_rights_t rights)
 Handle::~Handle() {
     dispatcher_->remove_handle();
 }
+
+mxtl::RefPtr<Dispatcher> Handle::dispatcher() const { return dispatcher_; }

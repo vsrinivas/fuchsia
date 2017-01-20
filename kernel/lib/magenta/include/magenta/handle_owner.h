@@ -6,31 +6,30 @@
 
 #pragma once
 
+#include <magenta/delete_handle.h>
+
 class Handle;
 
-// Deletes a |handle| made by MakeHandle() or DupHandle().
-void DeleteHandle(Handle* handle);
-
-// HandleUniquePtr wraps a Handle in a unique_ptr-like object that has single ownership of the
+// HandleOwner wraps a Handle in a unique_ptr-like object that has single ownership of the
 // Handle and deletes it (via DeleteHandle) whenever it falls out of scope.
-class HandleUniquePtr {
+class HandleOwner {
 public:
-    HandleUniquePtr() = default;
-    HandleUniquePtr(decltype(nullptr)) : h_(nullptr) {}
+    HandleOwner() = default;
+    HandleOwner(decltype(nullptr)) : h_(nullptr) {}
 
-    explicit HandleUniquePtr(Handle* h) : h_(h) {}
+    explicit HandleOwner(Handle* h) : h_(h) {}
 
-    HandleUniquePtr(const HandleUniquePtr&) = delete;
-    HandleUniquePtr& operator=(const HandleUniquePtr&) = delete;
+    HandleOwner(const HandleOwner&) = delete;
+    HandleOwner& operator=(const HandleOwner&) = delete;
 
-    HandleUniquePtr(HandleUniquePtr&& other) : h_(other.release()) {}
+    HandleOwner(HandleOwner&& other) : h_(other.release()) {}
 
-    HandleUniquePtr& operator=(HandleUniquePtr&& other) {
+    HandleOwner& operator=(HandleOwner&& other) {
         reset(other.release());
         return *this;
     }
 
-    ~HandleUniquePtr() {
+    ~HandleOwner() {
         if (h_) DeleteHandle(h_);
     }
 
@@ -53,7 +52,7 @@ public:
         h_ = h;
     }
 
-    void swap(HandleUniquePtr& other) {
+    void swap(HandleOwner& other) {
         Handle* h = h_;
         h_ = other.h_;
         other.h_ = h;

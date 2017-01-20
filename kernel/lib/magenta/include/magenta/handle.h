@@ -22,9 +22,7 @@ public:
     Handle(const Handle&) = delete;
     Handle& operator=(const Handle &) = delete;
 
-    ~Handle();
-
-    mxtl::RefPtr<Dispatcher> dispatcher() const { return dispatcher_; }
+    mxtl::RefPtr<Dispatcher> dispatcher() const;
 
     mx_koid_t process_id() const {
         return process_id_;
@@ -39,6 +37,10 @@ public:
     }
 
 private:
+    // Handle should never be destroyed by anything other than the DeleteHandle function.
+    friend void DeleteHandle(Handle* handle);
+    ~Handle();
+
     mx_koid_t process_id_;
     mxtl::RefPtr<Dispatcher> dispatcher_;
     const mx_rights_t rights_;
