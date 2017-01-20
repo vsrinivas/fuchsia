@@ -30,6 +30,6 @@ MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir
 MODULE_LDFLAGS += --wrap utimes
 
 MODULE_LIBS := \
-    ulib/mxio ulib/launchpad ulib/magenta ulib/musl
+    ulib/fs-management ulib/mxio ulib/launchpad ulib/magenta ulib/musl
 
 include make/module.mk
