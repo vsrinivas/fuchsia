@@ -25,12 +25,12 @@ class DbImpl : public DB {
   std::unique_ptr<Batch> StartBatch() override;
   Status GetHeads(std::vector<CommitId>* heads) override;
   Status AddHead(CommitIdView head) override;
-  Status RemoveHead(const CommitId& head) override;
+  Status RemoveHead(CommitIdView head) override;
   Status ContainsHead(const CommitId& commit_id) override;
-  Status GetCommitStorageBytes(const CommitId& commit_id,
+  Status GetCommitStorageBytes(CommitIdView commit_id,
                                std::string* storage_bytes) override;
   Status AddCommitStorageBytes(const CommitId& commit_id,
-                               const std::string& storage_bytes) override;
+                               ftl::StringView storage_bytes) override;
   Status RemoveCommit(const CommitId& commit_id) override;
   Status CreateJournal(JournalType journal_type,
                        const CommitId& base,

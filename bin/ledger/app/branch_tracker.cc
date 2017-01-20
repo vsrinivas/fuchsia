@@ -174,7 +174,7 @@ void BranchTracker::OnNewCommits(
     // This assumes commits are received in (partial) order. If the commit
     // doesn't have current_commit_ as a parent it is not part of this branch
     // and should be ignored.
-    std::vector<storage::CommitId> parent_ids = commit->GetParentIds();
+    std::vector<storage::CommitIdView> parent_ids = commit->GetParentIds();
     if (std::find(parent_ids.begin(), parent_ids.end(), current_commit_) ==
         parent_ids.end()) {
       continue;

@@ -83,8 +83,8 @@ std::string RandomId(size_t size) {
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
     const Commit& commit) {
   std::vector<PageStorage::CommitIdAndBytes> result;
-  result.push_back(
-      PageStorage::CommitIdAndBytes(commit.GetId(), commit.GetStorageBytes()));
+  result.push_back(PageStorage::CommitIdAndBytes(
+      commit.GetId(), commit.GetStorageBytes().ToString()));
   return result;
 }
 
@@ -351,7 +351,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomId(kObjectIdSize), std::move(parent));
   CommitId id = commit->GetId();
-  std::string storage_bytes = commit->GetStorageBytes();
+  std::string storage_bytes = commit->GetStorageBytes().ToString();
 
   // Search for a commit that exist and check the content.
   storage_->AddCommitFromLocal(
@@ -448,7 +448,7 @@ TEST_F(PageStorageTest, SyncCommits) {
   std::unique_ptr<Commit> commit = CommitImpl::FromContentAndParents(
       storage_.get(), RandomId(kObjectIdSize), std::move(parent));
   CommitId id = commit->GetId();
-  std::string storage_bytes = commit->GetStorageBytes();
+  std::string storage_bytes = commit->GetStorageBytes().ToString();
 
   storage_->AddCommitFromLocal(
       std::move(commit), [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -989,9 +989,12 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
       storage_.get(), object_ids[2], std::move(parent));
 
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
-  commits_and_bytes.emplace_back(commit0->GetId(), commit0->GetStorageBytes());
-  commits_and_bytes.emplace_back(commit1->GetId(), commit1->GetStorageBytes());
-  commits_and_bytes.emplace_back(commit2->GetId(), commit2->GetStorageBytes());
+  commits_and_bytes.emplace_back(commit0->GetId(),
+                                 commit0->GetStorageBytes().ToString());
+  commits_and_bytes.emplace_back(commit1->GetId(),
+                                 commit1->GetStorageBytes().ToString());
+  commits_and_bytes.emplace_back(commit2->GetId(),
+                                 commit2->GetStorageBytes().ToString());
 
   Status status;
   storage_->AddCommitsFromSync(

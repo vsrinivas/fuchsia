@@ -26,6 +26,7 @@ CommitRandomImpl::CommitRandomImpl()
       generation_(glue::RandUint64()),
       root_node_id_(RandomId(kObjectIdSize)),
       parent_ids_{RandomId(kObjectIdSize)},
+      parent_ids_views_{parent_ids_[0]},
       storage_bytes_(RandomId(64)) {}
 
 CommitRandomImpl::CommitRandomImpl(const CommitRandomImpl& other)
@@ -44,8 +45,8 @@ const CommitId& CommitRandomImpl::GetId() const {
   return id_;
 }
 
-std::vector<CommitId> CommitRandomImpl::GetParentIds() const {
-  return parent_ids_;
+std::vector<CommitIdView> CommitRandomImpl::GetParentIds() const {
+  return parent_ids_views_;
 }
 
 int64_t CommitRandomImpl::GetTimestamp() const {
@@ -56,11 +57,11 @@ uint64_t CommitRandomImpl::GetGeneration() const {
   return generation_;
 }
 
-ObjectId CommitRandomImpl::CommitRandomImpl::GetRootId() const {
+ObjectIdView CommitRandomImpl::GetRootId() const {
   return root_node_id_;
 }
 
-std::string CommitRandomImpl::GetStorageBytes() const {
+ftl::StringView CommitRandomImpl::GetStorageBytes() const {
   return storage_bytes_;
 }
 

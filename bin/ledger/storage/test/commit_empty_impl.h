@@ -26,15 +26,15 @@ class CommitEmptyImpl : public Commit {
 
   const CommitId& GetId() const override;
 
-  std::vector<CommitId> GetParentIds() const override;
+  std::vector<CommitIdView> GetParentIds() const override;
 
   int64_t GetTimestamp() const override;
 
   uint64_t GetGeneration() const override;
 
-  ObjectId GetRootId() const override;
+  ObjectIdView GetRootId() const override;
 
-  std::string GetStorageBytes() const override;
+  ftl::StringView GetStorageBytes() const override;
 };
 
 }  // namespace test

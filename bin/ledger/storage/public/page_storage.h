@@ -55,12 +55,12 @@ class PageStorage {
   // Finds the commit with the given |commit_id| and calls the given |callback|
   // with the result.
   virtual void GetCommit(
-      const CommitId& commit_id,
+      CommitIdView commit_id,
       std::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
   // Finds the commit with the given |commit_id| and stores the value in
   // |commit|.
   virtual Status GetCommitSynchronous(
-      const CommitId& commit_id,
+      CommitIdView commit_id,
       std::unique_ptr<const Commit>* commit) = 0;
 
   // Adds a list of commits with the given ids and bytes to storage. The

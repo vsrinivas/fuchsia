@@ -101,7 +101,7 @@ void CommitUpload::UploadObject(std::unique_ptr<const storage::Object> object) {
 
 void CommitUpload::UploadCommit() {
   cloud_provider::Commit commit(
-      commit_->GetId(), commit_->GetStorageBytes(),
+      commit_->GetId(), commit_->GetStorageBytes().ToString(),
       std::map<cloud_provider::ObjectId, cloud_provider::Data>{});
   storage::CommitId commit_id = commit_->GetId();
   cloud_provider_->AddCommit(commit, [ this, commit_id = std::move(commit_id) ](

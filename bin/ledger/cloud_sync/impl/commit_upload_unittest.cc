@@ -32,7 +32,7 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 
   const storage::CommitId& GetId() const override { return id; }
 
-  std::string GetStorageBytes() const override { return storage_bytes; }
+  ftl::StringView GetStorageBytes() const override { return storage_bytes; }
 
   storage::CommitId id;
   std::string storage_bytes;

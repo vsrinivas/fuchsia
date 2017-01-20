@@ -70,8 +70,8 @@ const CommitId& FakeCommit::GetId() const {
   return journal_->GetId();
 }
 
-std::vector<CommitId> FakeCommit::GetParentIds() const {
-  return std::vector<CommitId>();
+std::vector<CommitIdView> FakeCommit::GetParentIds() const {
+  return std::vector<CommitIdView>();
 }
 
 int64_t FakeCommit::GetTimestamp() const {
@@ -82,12 +82,12 @@ uint64_t FakeCommit::GetGeneration() const {
   return 0;
 }
 
-ObjectId FakeCommit::FakeCommit::GetRootId() const {
+ObjectIdView FakeCommit::GetRootId() const {
   return journal_->GetId();
 }
 
-std::string FakeCommit::GetStorageBytes() const {
-  return std::string();
+ftl::StringView FakeCommit::GetStorageBytes() const {
+  return ftl::StringView();
 }
 
 }  // namespace fake

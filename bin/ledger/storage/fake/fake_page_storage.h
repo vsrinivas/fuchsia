@@ -26,7 +26,7 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   // PageStorage:
   PageId GetId() override;
   Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) override;
-  Status GetCommitSynchronous(const CommitId& commit_id,
+  Status GetCommitSynchronous(CommitIdView commit_id,
                               std::unique_ptr<const Commit>* commit) override;
   Status StartCommit(const CommitId& commit_id,
                      JournalType journal_type,

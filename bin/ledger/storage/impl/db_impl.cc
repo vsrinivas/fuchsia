@@ -50,7 +50,7 @@ std::string GetHeadKeyFor(CommitIdView head) {
   return ftl::Concatenate({kHeadPrefix, head});
 }
 
-std::string GetCommitKeyFor(const CommitId& commit_id) {
+std::string GetCommitKeyFor(CommitIdView commit_id) {
   return ftl::Concatenate({kCommitPrefix, commit_id});
 }
 
@@ -252,7 +252,7 @@ Status DbImpl::AddHead(CommitIdView head) {
   return Put(GetHeadKeyFor(head), "");
 }
 
-Status DbImpl::RemoveHead(const CommitId& head) {
+Status DbImpl::RemoveHead(CommitIdView head) {
   return Delete(GetHeadKeyFor(head));
 }
 
@@ -261,13 +261,13 @@ Status DbImpl::ContainsHead(const CommitId& commit_id) {
   return Get(GetHeadKeyFor(commit_id), &value);
 }
 
-Status DbImpl::GetCommitStorageBytes(const CommitId& commit_id,
+Status DbImpl::GetCommitStorageBytes(CommitIdView commit_id,
                                      std::string* storage_bytes) {
   return Get(GetCommitKeyFor(commit_id), storage_bytes);
 }
 
 Status DbImpl::AddCommitStorageBytes(const CommitId& commit_id,
-                                     const std::string& storage_bytes) {
+                                     ftl::StringView storage_bytes) {
   return Put(GetCommitKeyFor(commit_id), storage_bytes);
 }
 

@@ -25,14 +25,14 @@ Status PageStorageEmptyImpl::GetHeadCommitIds(
 }
 
 void PageStorageEmptyImpl::GetCommit(
-    const CommitId& commit_id,
+    CommitIdView commit_id,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   FTL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
 Status PageStorageEmptyImpl::GetCommitSynchronous(
-    const CommitId& commit_id,
+    CommitIdView commit_id,
     std::unique_ptr<const Commit>* commit) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;

@@ -25,15 +25,15 @@ class CommitRandomImpl : public Commit {
 
   const CommitId& GetId() const override;
 
-  std::vector<CommitId> GetParentIds() const override;
+  std::vector<CommitIdView> GetParentIds() const override;
 
   int64_t GetTimestamp() const override;
 
   uint64_t GetGeneration() const override;
 
-  ObjectId GetRootId() const override;
+  ObjectIdView GetRootId() const override;
 
-  std::string GetStorageBytes() const override;
+  ftl::StringView GetStorageBytes() const override;
 
  private:
   CommitRandomImpl(const CommitRandomImpl&);
@@ -43,6 +43,7 @@ class CommitRandomImpl : public Commit {
   uint64_t generation_;
   ObjectId root_node_id_;
   std::vector<CommitId> parent_ids_;
+  std::vector<CommitIdView> parent_ids_views_;
   std::string storage_bytes_;
 };
 

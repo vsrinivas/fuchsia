@@ -45,9 +45,21 @@ const char kHexDigits[] = "0123456789ABCDEF";
 
 const size_t kDefaultNodeSize = 64u;
 
-bool StringPointerComparator(const std::string* str1, const std::string* str2) {
-  return *str1 < *str2;
-}
+struct StringPointerComparator {
+  using is_transparent = std::true_type;
+
+  bool operator()(const std::string* str1, const std::string* str2) const {
+    return *str1 < *str2;
+  }
+
+  bool operator()(const std::string* str1, const CommitIdView* str2) const {
+    return *str1 < *str2;
+  }
+
+  bool operator()(const CommitIdView* str1, const std::string* str2) const {
+    return *str1 < *str2;
+  }
+};
 
 std::string ToHex(convert::ExtendedStringView string) {
   std::string result;
@@ -357,7 +369,7 @@ Status PageStorageImpl::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
 }
 
 void PageStorageImpl::GetCommit(
-    const CommitId& commit_id,
+    CommitIdView commit_id,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   std::unique_ptr<const Commit> commit;
   Status s = GetCommitSynchronous(commit_id, &commit);
@@ -365,7 +377,7 @@ void PageStorageImpl::GetCommit(
 }
 
 Status PageStorageImpl::GetCommitSynchronous(
-    const CommitId& commit_id,
+    CommitIdView commit_id,
     std::unique_ptr<const Commit>* commit) {
   if (IsFirstCommit(commit_id)) {
     *commit = CommitImpl::Empty(this);
@@ -376,8 +388,8 @@ Status PageStorageImpl::GetCommitSynchronous(
   if (s != Status::OK) {
     return s;
   }
-  std::unique_ptr<const Commit> c =
-      CommitImpl::FromStorageBytes(this, commit_id, std::move(bytes));
+  std::unique_ptr<const Commit> c = CommitImpl::FromStorageBytes(
+      this, commit_id.ToString(), std::move(bytes));
   if (!c) {
     return Status::FORMAT_ERROR;
   }
@@ -398,8 +410,7 @@ void PageStorageImpl::AddCommitsFromSync(
     std::function<void(Status)> callback) {
   std::vector<std::unique_ptr<const Commit>> commits;
 
-  std::map<const CommitId*, const Commit*, decltype(&StringPointerComparator)>
-      leaves(&StringPointerComparator);
+  std::map<const CommitId*, const Commit*, StringPointerComparator> leaves;
   commits.reserve(ids_and_bytes.size());
 
   for (auto& id_and_bytes : ids_and_bytes) {
@@ -419,7 +430,10 @@ void PageStorageImpl::AddCommitsFromSync(
 
     // Remove parents from leaves.
     for (const auto& parent_id : commit->GetParentIds()) {
-      leaves.erase(&parent_id);
+      auto it = leaves.find(&parent_id);
+      if (it != leaves.end()) {
+        leaves.erase(it);
+      }
     }
     leaves[&commit->GetId()] = commit.get();
     commits.push_back(std::move(commit));
@@ -697,8 +711,7 @@ void PageStorageImpl::AddCommits(
     std::function<void(Status)> callback) {
   // Apply all changes atomically.
   std::unique_ptr<DB::Batch> batch = db_.StartBatch();
-  std::set<const CommitId*, decltype(&StringPointerComparator)> added_commits(
-      &StringPointerComparator);
+  std::set<const CommitId*, StringPointerComparator> added_commits;
 
   for (const auto& commit : commits) {
     Status s =
@@ -725,7 +738,7 @@ void PageStorageImpl::AddCommits(
 
     // Commits must arrive in order: Check that the parents are stored in DB and
     // remove them from the heads if they are present.
-    for (const CommitId& parent_id : commit->GetParentIds()) {
+    for (const CommitIdView& parent_id : commit->GetParentIds()) {
       if (added_commits.count(&parent_id) == 0) {
         s = ContainsCommit(parent_id);
         if (s != Status::OK) {
@@ -755,7 +768,7 @@ void PageStorageImpl::AddCommits(
   NotifyWatchers(std::move(commits), source);
 }
 
-Status PageStorageImpl::ContainsCommit(const CommitId& id) {
+Status PageStorageImpl::ContainsCommit(CommitIdView id) {
   if (IsFirstCommit(id)) {
     return Status::OK;
   }
@@ -763,7 +776,7 @@ Status PageStorageImpl::ContainsCommit(const CommitId& id) {
   return db_.GetCommitStorageBytes(id, &bytes);
 }
 
-bool PageStorageImpl::IsFirstCommit(const CommitId& id) {
+bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
   return id == kFirstPageCommitId;
 }
 

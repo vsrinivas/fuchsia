@@ -7,6 +7,7 @@
 
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
+#include "lib/ftl/memory/ref_ptr.h"
 
 namespace storage {
 
@@ -18,7 +19,7 @@ class CommitImpl : public Commit {
   // representation. If the format is incorrect, a NULL pointer will be
   // returned.
   static std::unique_ptr<Commit> FromStorageBytes(PageStorage* page_storage,
-                                                  const CommitId& id,
+                                                  CommitId id,
                                                   std::string storage_bytes);
 
   static std::unique_ptr<Commit> FromContentAndParents(
@@ -33,13 +34,15 @@ class CommitImpl : public Commit {
   // Commit:
   std::unique_ptr<Commit> Clone() const override;
   const CommitId& GetId() const override;
-  std::vector<CommitId> GetParentIds() const override;
+  std::vector<CommitIdView> GetParentIds() const override;
   int64_t GetTimestamp() const override;
   uint64_t GetGeneration() const override;
-  ObjectId GetRootId() const override;
-  std::string GetStorageBytes() const override;
+  ObjectIdView GetRootId() const override;
+  ftl::StringView GetStorageBytes() const override;
 
  private:
+  class SharedStorageBytes;
+
   // Creates a new |CommitImpl| object with the given contents. |timestamp| is
   // the number of nanoseconds since epoch.
   CommitImpl(PageStorage* page_storage,
@@ -47,16 +50,16 @@ class CommitImpl : public Commit {
              int64_t timestamp,
              uint64_t generation,
              ObjectIdView root_node_id,
-             const std::vector<CommitId>& parent_ids,
-             std::string storage_bytes);
+             std::vector<CommitIdView> parent_ids,
+             ftl::RefPtr<SharedStorageBytes> storage_bytes);
 
   PageStorage* page_storage_;
-  CommitId id_;
-  int64_t timestamp_;
-  uint64_t generation_;
-  ObjectId root_node_id_;
-  std::vector<CommitId> parent_ids_;
-  std::string storage_bytes_;
+  const CommitId id_;
+  const int64_t timestamp_;
+  const uint64_t generation_;
+  const ObjectIdView root_node_id_;
+  const std::vector<CommitIdView> parent_ids_;
+  const ftl::RefPtr<SharedStorageBytes> storage_bytes_;
 };
 
 }  // namespace storage

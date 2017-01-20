@@ -26,7 +26,7 @@ class Commit {
   virtual const CommitId& GetId() const = 0;
 
   // Returns the ids of this commit's parents.
-  virtual std::vector<CommitId> GetParentIds() const = 0;
+  virtual std::vector<CommitIdView> GetParentIds() const = 0;
 
   // Returns the creation timestamp of this commit in nanoseconds since epoch.
   // TODO(nellyv): Replace return value with a time/clock type.
@@ -37,11 +37,11 @@ class Commit {
   virtual uint64_t GetGeneration() const = 0;
 
   // Returns the id of the root node of this commit.
-  virtual ObjectId GetRootId() const = 0;
+  virtual ObjectIdView GetRootId() const = 0;
 
   // Returns the byte representation of this |Commit| as they will be
   // synced to the cloud.
-  virtual std::string GetStorageBytes() const = 0;
+  virtual ftl::StringView GetStorageBytes() const = 0;
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(Commit);

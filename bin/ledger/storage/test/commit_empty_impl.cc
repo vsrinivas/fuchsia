@@ -20,7 +20,7 @@ const CommitId& CommitEmptyImpl::GetId() const {
   return id;
 }
 
-std::vector<CommitId> CommitEmptyImpl::GetParentIds() const {
+std::vector<CommitIdView> CommitEmptyImpl::GetParentIds() const {
   FTL_NOTIMPLEMENTED();
   return {};
 }
@@ -35,12 +35,12 @@ uint64_t CommitEmptyImpl::GetGeneration() const {
   return 0;
 }
 
-ObjectId CommitEmptyImpl::CommitEmptyImpl::GetRootId() const {
+ObjectIdView CommitEmptyImpl::GetRootId() const {
   FTL_NOTIMPLEMENTED();
   return "NOT_IMPLEMENTED";
 }
 
-std::string CommitEmptyImpl::GetStorageBytes() const {
+ftl::StringView CommitEmptyImpl::GetStorageBytes() const {
   FTL_NOTIMPLEMENTED();
   return "NOT_IMPLEMENTED";
 }

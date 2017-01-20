@@ -13,12 +13,30 @@
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/build_config.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/memory/ref_counted.h"
 
 #if !defined(ARCH_CPU_LITTLE_ENDIAN)
 #error "Big endian is not supported"
 #endif
 
 namespace storage {
+
+class CommitImpl::SharedStorageBytes
+    : public ftl::RefCountedThreadSafe<SharedStorageBytes> {
+ public:
+  inline static ftl::RefPtr<SharedStorageBytes> Create(std::string bytes) {
+    return AdoptRef(new SharedStorageBytes(std::move(bytes)));
+  }
+
+  const std::string& bytes() { return bytes_; }
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(SharedStorageBytes);
+  SharedStorageBytes(std::string bytes) : bytes_(std::move(bytes)) {}
+  ~SharedStorageBytes() {}
+
+  std::string bytes_;
+};
 
 namespace {
 
@@ -41,11 +59,11 @@ std::string GenerationToBytes(uint64_t generation) {
   return std::string(reinterpret_cast<char*>(&generation), kGenerationSize);
 }
 
-int64_t BytesToTimestamp(std::string bytes) {
+int64_t BytesToTimestamp(ftl::StringView bytes) {
   return *reinterpret_cast<const int64_t*>(bytes.data());
 }
 
-uint64_t BytesToGeneration(std::string bytes) {
+uint64_t BytesToGeneration(ftl::StringView bytes) {
   return *reinterpret_cast<const uint64_t*>(bytes.data());
 }
 
@@ -56,14 +74,14 @@ CommitImpl::CommitImpl(PageStorage* page_storage,
                        int64_t timestamp,
                        uint64_t generation,
                        ObjectIdView root_node_id,
-                       const std::vector<CommitId>& parent_ids,
-                       std::string storage_bytes)
+                       std::vector<CommitIdView> parent_ids,
+                       ftl::RefPtr<SharedStorageBytes> storage_bytes)
     : page_storage_(page_storage),
       id_(std::move(id)),
       timestamp_(timestamp),
       generation_(generation),
-      root_node_id_(root_node_id.ToString()),
-      parent_ids_(parent_ids),
+      root_node_id_(root_node_id),
+      parent_ids_(std::move(parent_ids)),
       storage_bytes_(std::move(storage_bytes)) {
   FTL_DCHECK(page_storage_ != nullptr);
   FTL_DCHECK(id_ == kFirstPageCommitId ||
@@ -74,8 +92,9 @@ CommitImpl::~CommitImpl() {}
 
 std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
     PageStorage* page_storage,
-    const CommitId& id,
+    CommitId id,
     std::string storage_bytes) {
+  FTL_DCHECK(id != kFirstPageCommitId);
   int parent_count =
       (storage_bytes.size() - kParentsStartIndex) / kCommitIdSize;
 
@@ -86,21 +105,25 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
     return nullptr;
   }
 
+  ftl::RefPtr<SharedStorageBytes> storage_ptr =
+      SharedStorageBytes::Create(std::move(storage_bytes));
+  ftl::StringView storage_view(storage_ptr->bytes());
+
   int64_t timestamp = BytesToTimestamp(
-      storage_bytes.substr(kTimestampStartIndex, kTimestampSize));
+      storage_view.substr(kTimestampStartIndex, kTimestampSize));
   int64_t generation = BytesToGeneration(
-      storage_bytes.substr(kGenerationStartIndex, kGenerationSize));
-  ObjectId root_node_id =
-      storage_bytes.substr(kRootNodeStartIndex, kObjectIdSize);
-  std::vector<CommitId> parent_ids;
+      storage_view.substr(kGenerationStartIndex, kGenerationSize));
+  ObjectIdView root_node_id =
+      storage_view.substr(kRootNodeStartIndex, kObjectIdSize);
+  std::vector<CommitIdView> parent_ids;
 
   for (int i = 0; i < parent_count; i++) {
-    parent_ids.push_back(storage_bytes.substr(
+    parent_ids.push_back(storage_view.substr(
         kParentsStartIndex + i * kCommitIdSize, kCommitIdSize));
   }
   return std::unique_ptr<Commit>(
-      new CommitImpl(page_storage, id, timestamp, generation, root_node_id,
-                     parent_ids, std::move(storage_bytes)));
+      new CommitImpl(page_storage, std::move(id), timestamp, generation,
+                     root_node_id, parent_ids, std::move(storage_ptr)));
 }
 
 std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
@@ -109,15 +132,17 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   FTL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
   uint64_t parent_generation = 0;
-  std::vector<CommitId> parent_ids;
   for (const auto& commit : parent_commits) {
-    parent_ids.push_back(commit->GetId());
     parent_generation = std::max(parent_generation, commit->GetGeneration());
   }
   uint64_t generation = parent_generation + 1;
 
   // Sort commit ids for uniqueness.
-  std::sort(parent_ids.begin(), parent_ids.end());
+  std::sort(parent_commits.begin(), parent_commits.end(),
+            [](const std::unique_ptr<const Commit>& c1,
+               const std::unique_ptr<const Commit>& c2) {
+              return c1->GetId() < c2->GetId();
+            });
   // Compute timestamp.
   struct timeval tv;
   gettimeofday(&tv, NULL);
@@ -126,18 +151,17 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
 
   std::string storage_bytes;
   storage_bytes.reserve(kTimestampSize + kGenerationSize + kObjectIdSize +
-                        parent_ids.size() * kCommitIdSize);
+                        parent_commits.size() * kCommitIdSize);
   storage_bytes.append(TimestampToBytes(timestamp))
       .append(GenerationToBytes(generation))
       .append(root_node_id.data(), root_node_id.size());
-  for (const CommitId& commit_id : parent_ids) {
-    storage_bytes.append(commit_id);
+  for (const auto& commit : parent_commits) {
+    storage_bytes.append(commit->GetId().data(), commit->GetId().size());
   }
   CommitId id = glue::SHA256Hash(storage_bytes.data(), storage_bytes.size());
 
-  return std::unique_ptr<Commit>(
-      new CommitImpl(page_storage, id, timestamp, generation, root_node_id,
-                     std::move(parent_ids), std::move(storage_bytes)));
+  return FromStorageBytes(page_storage, std::move(id),
+                          std::move(storage_bytes));
 }
 
 std::unique_ptr<Commit> CommitImpl::Empty(PageStorage* page_storage) {
@@ -147,22 +171,26 @@ std::unique_ptr<Commit> CommitImpl::Empty(PageStorage* page_storage) {
     FTL_LOG(ERROR) << "Failed to create an empty node.";
     return nullptr;
   }
-  return std::unique_ptr<Commit>(
-      new CommitImpl(page_storage, kFirstPageCommitId.ToString(), 0, 0,
-                     root_node_id, std::vector<CommitId>(), ""));
+
+  ftl::RefPtr<SharedStorageBytes> storage_ptr =
+      SharedStorageBytes::Create(std::move(root_node_id));
+
+  return std::unique_ptr<Commit>(new CommitImpl(
+      page_storage, kFirstPageCommitId.ToString(), 0, 0, storage_ptr->bytes(),
+      std::vector<CommitIdView>(), std::move(storage_ptr)));
 }
 
 std::unique_ptr<Commit> CommitImpl::Clone() const {
   return std::unique_ptr<CommitImpl>(
       new CommitImpl(page_storage_, id_, timestamp_, generation_, root_node_id_,
-                     parent_ids_, std::string(storage_bytes_)));
+                     parent_ids_, storage_bytes_));
 }
 
 const CommitId& CommitImpl::GetId() const {
   return id_;
 }
 
-std::vector<CommitId> CommitImpl::GetParentIds() const {
+std::vector<CommitIdView> CommitImpl::GetParentIds() const {
   return parent_ids_;
 }
 
@@ -174,12 +202,12 @@ uint64_t CommitImpl::GetGeneration() const {
   return generation_;
 }
 
-ObjectId CommitImpl::CommitImpl::GetRootId() const {
+ObjectIdView CommitImpl::GetRootId() const {
   return root_node_id_;
 }
 
-std::string CommitImpl::GetStorageBytes() const {
-  return storage_bytes_;
+ftl::StringView CommitImpl::GetStorageBytes() const {
+  return storage_bytes_->bytes();
 }
 
 }  // namespace storage

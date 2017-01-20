@@ -47,7 +47,7 @@ class TestCommit : public storage::test::CommitEmptyImpl {
 
   const storage::CommitId& GetId() const override { return id; }
 
-  std::string GetStorageBytes() const override { return content; }
+  ftl::StringView GetStorageBytes() const override { return content; }
 
   storage::CommitId id;
   std::string content;
@@ -66,7 +66,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override {}
 
-  void GetCommit(const storage::CommitId& commit_id,
+  void GetCommit(storage::CommitIdView commit_id,
                  std::function<void(storage::Status,
                                     std::unique_ptr<const storage::Commit>)>
                      callback) override {
@@ -75,8 +75,9 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       return;
     }
 
-    callback(storage::Status::OK, std::move(new_commits_to_return[commit_id]));
-    new_commits_to_return.erase(commit_id);
+    callback(storage::Status::OK,
+             std::move(new_commits_to_return[commit_id.ToString()]));
+    new_commits_to_return.erase(commit_id.ToString());
   }
 
 

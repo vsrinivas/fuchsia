@@ -56,7 +56,7 @@ class DB {
   virtual Status AddHead(CommitIdView head) = 0;
 
   // Removes the given |head| from the head commits.
-  virtual Status RemoveHead(const CommitId& head) = 0;
+  virtual Status RemoveHead(CommitIdView head) = 0;
 
   // Returns |OK| if the commit with the given |commit_id| is head commits or
   // |NOT_FOUND| if not.
@@ -65,12 +65,12 @@ class DB {
   // Commits.
   // Finds the commit with the given |commit_id| and stores its represenation in
   // storage bytes in the |storage_bytes| string.
-  virtual Status GetCommitStorageBytes(const CommitId& commit_id,
+  virtual Status GetCommitStorageBytes(CommitIdView commit_id,
                                        std::string* storage_bytes) = 0;
 
   // Adds the given |commit| in the database.
   virtual Status AddCommitStorageBytes(const CommitId& commit_id,
-                                       const std::string& storage_bytes) = 0;
+                                       ftl::StringView storage_bytes) = 0;
 
   // Removes the commit with the given |commit_id| from the commits.
   virtual Status RemoveCommit(const CommitId& commit_id) = 0;

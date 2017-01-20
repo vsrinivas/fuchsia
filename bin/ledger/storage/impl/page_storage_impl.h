@@ -47,10 +47,10 @@ class PageStorageImpl : public PageStorage {
   PageId GetId() override;
   void SetSyncDelegate(PageSyncDelegate* page_sync) override;
   Status GetHeadCommitIds(std::vector<CommitId>* commit_ids) override;
-  void GetCommit(const CommitId& commit_id,
+  void GetCommit(CommitIdView commit_id,
                  std::function<void(Status, std::unique_ptr<const Commit>)>
                      callback) override;
-  Status GetCommitSynchronous(const CommitId& commit_id,
+  Status GetCommitSynchronous(CommitIdView commit_id,
                               std::unique_ptr<const Commit>* commit) override;
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
                           std::function<void(Status)>) override;
@@ -111,8 +111,8 @@ class PageStorageImpl : public PageStorage {
   void AddCommits(std::vector<std::unique_ptr<const Commit>> commits,
                   ChangeSource source,
                   std::function<void(Status)> callback);
-  Status ContainsCommit(const CommitId& id);
-  bool IsFirstCommit(const CommitId& id);
+  Status ContainsCommit(CommitIdView id);
+  bool IsFirstCommit(CommitIdView id);
   void AddObject(mx::socket data,
                  int64_t size,
                  const std::function<void(Status, ObjectId)>& callback);

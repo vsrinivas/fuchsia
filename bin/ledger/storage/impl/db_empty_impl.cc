@@ -29,18 +29,18 @@ Status DbEmptyImpl::GetHeads(std::vector<CommitId>* heads) {
 Status DbEmptyImpl::AddHead(CommitIdView head) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::RemoveHead(const CommitId& head) {
+Status DbEmptyImpl::RemoveHead(CommitIdView head) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::ContainsHead(const CommitId& commit_id) {
   return Status::NOT_IMPLEMENTED;
 }
-Status DbEmptyImpl::GetCommitStorageBytes(const CommitId& commit_id,
+Status DbEmptyImpl::GetCommitStorageBytes(CommitIdView commit_id,
                                           std::string* storage_bytes) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::AddCommitStorageBytes(const CommitId& commit_id,
-                                          const std::string& storage_bytes) {
+                                          ftl::StringView storage_bytes) {
   return Status::NOT_IMPLEMENTED;
 }
 Status DbEmptyImpl::RemoveCommit(const CommitId& commit_id) {

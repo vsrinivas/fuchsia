@@ -157,8 +157,8 @@ std::unique_ptr<const storage::Commit> MergeResolver::FindCommonAncestor(
     auto it = commits.end();
     --it;
     commits.erase(it);
-    std::vector<storage::CommitId> parent_ids = commit->GetParentIds();
-    for (const storage::CommitId& parent_id : parent_ids) {
+    std::vector<storage::CommitIdView> parent_ids = commit->GetParentIds();
+    for (const auto& parent_id : parent_ids) {
       std::unique_ptr<const storage::Commit> parent_commit;
       storage::Status s =
           storage_->GetCommitSynchronous(parent_id, &parent_commit);
