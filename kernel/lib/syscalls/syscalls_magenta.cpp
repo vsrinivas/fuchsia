@@ -61,6 +61,7 @@ mx_status_t sys_nanosleep(mx_time_t nanoseconds) {
     return magenta_sleep(nanoseconds);
 }
 
+// This must be accessed atomically from any given thread.
 static int64_t utc_offset;
 
 uint64_t sys_time_get(uint32_t clock_id) {
@@ -68,7 +69,7 @@ uint64_t sys_time_get(uint32_t clock_id) {
     case MX_CLOCK_MONOTONIC:
         return current_time_hires();
     case MX_CLOCK_UTC:
-        return current_time_hires() + utc_offset;
+        return current_time_hires() + atomic_load_64(&utc_offset);
     case MX_CLOCK_THREAD:
         return UserThread::GetCurrent()->runtime_ns();
     default:
@@ -88,8 +89,7 @@ mx_status_t sys_clock_adjust(mx_handle_t hrsrc, uint32_t clock_id, int64_t offse
     case MX_CLOCK_MONOTONIC:
         return ERR_ACCESS_DENIED;
     case MX_CLOCK_UTC:
-        //TODO: not atomic on ARM32
-        utc_offset = offset;
+        atomic_store_64(&utc_offset, offset);
         return NO_ERROR;
     default:
         return ERR_INVALID_ARGS;
