@@ -30,9 +30,6 @@
 
 #define LOCAL_TRACE 0
 
-constexpr uint32_t kMaxMessageSize = 65536u;
-constexpr uint32_t kMaxMessageHandles = 1024u;
-
 constexpr size_t kChannelReadHandlesChunkCount = 16u;
 constexpr size_t kChannelWriteHandlesInlineCount = 8u;
 
@@ -211,10 +208,6 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
     if (result != NO_ERROR)
         return result;
 
-    if (num_bytes > kMaxMessageSize)
-        return ERR_OUT_OF_RANGE;
-    if (num_handles > kMaxMessageHandles)
-        return ERR_OUT_OF_RANGE;
 
     mxtl::unique_ptr<MessagePacket> msg;
     result = MessagePacket::Create(num_bytes, num_handles, &msg);
@@ -264,11 +257,6 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t flags,
 
     uint32_t num_bytes = args.wr_num_bytes;
     uint32_t num_handles = args.wr_num_handles;
-
-    if (num_bytes > kMaxMessageSize)
-        return ERR_OUT_OF_RANGE;
-    if (num_handles > kMaxMessageHandles)
-        return ERR_OUT_OF_RANGE;
 
     auto up = ProcessDispatcher::GetCurrent();
 

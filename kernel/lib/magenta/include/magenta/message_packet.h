@@ -20,17 +20,15 @@ public:
     static mx_status_t Create(uint32_t data_size, uint32_t num_handles,
                               mxtl::unique_ptr<MessagePacket>* msg);
 
-    ~MessagePacket();
-
     uint32_t data_size() const { return data_size_; }
     uint32_t num_handles() const { return num_handles_; }
 
     void set_owns_handles(bool own_handles) { owns_handles_ = own_handles; }
 
-    const void* data() const { return data_.get(); }
-    void* mutable_data() { return data_.get(); }
-    Handle* const* handles() const { return handles_.get(); }
-    Handle** mutable_handles() { return handles_.get(); }
+    const void* data() const { return static_cast<void*>(handles_ + num_handles_); }
+    void* mutable_data() { return static_cast<void*>(handles_ + num_handles_); }
+    Handle* const* handles() const { return handles_; }
+    Handle** mutable_handles() { return handles_; }
 
     // channel calls treat the leading uint32_t of the payload as
     // a transaction id
@@ -38,19 +36,21 @@ public:
         if (data_size_ < sizeof(uint32_t)) {
             return 0;
         } else {
-            return *(reinterpret_cast<uint32_t*>(data_.get()));
+            return *(reinterpret_cast<const uint32_t*>(data()));
         }
     }
 
 private:
-    MessagePacket(uint32_t data_size, uint32_t num_handles);
+    MessagePacket(uint32_t data_size, uint32_t num_handles, Handle** handles);
+    ~MessagePacket();
 
+    static void operator delete(void* ptr) {
+        free(ptr);
+    }
+    friend struct mxtl::unique_ptr<MessagePacket>;
 
     bool owns_handles_;
     uint32_t data_size_;
     uint32_t num_handles_;
-
-    // TODO(vtl): Allocate these inline instead.
-    mxtl::unique_ptr<uint8_t[]> data_;
-    mxtl::unique_ptr<Handle*[]> handles_;
+    Handle** handles_;
 };
