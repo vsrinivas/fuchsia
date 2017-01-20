@@ -10,7 +10,7 @@
 
 namespace mxtl {
 
-template <typename T, typename Deleter = default_delete<T[]>>
+template <typename T>
 class Array {
 public:
     constexpr Array() : ptr_(nullptr), count_(0U) {}
@@ -27,7 +27,7 @@ public:
     }
 
     ~Array() {
-        if (ptr_) Deleter()(ptr_);
+        delete[] ptr_;
     }
 
     Array& operator=(Array&& o) {
@@ -51,7 +51,7 @@ public:
     }
 
     void reset(T* t, size_t count) {
-        if (ptr_) Deleter()(ptr_);
+        delete[] ptr_;
         ptr_ = t;
         count_ = count;
     }
@@ -82,4 +82,5 @@ private:
     T* ptr_;
     size_t count_;
 };
-}
+
+}  // namespace mxtl
