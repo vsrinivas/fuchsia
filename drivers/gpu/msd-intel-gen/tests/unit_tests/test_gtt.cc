@@ -42,9 +42,7 @@ private:
     MockMmio* mmio_{};
 };
 
-} // namespace
-
-static uint32_t cache_bits(CachingType caching_type)
+uint32_t cache_bits(CachingType caching_type)
 {
     switch (caching_type) {
     case CACHING_NONE:
@@ -56,8 +54,8 @@ static uint32_t cache_bits(CachingType caching_type)
     }
 }
 
-static void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint64_t size,
-                                    uint64_t bus_addr)
+void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint64_t size,
+                             uint64_t bus_addr)
 {
     ASSERT_NE(mmio, nullptr);
 
@@ -75,8 +73,8 @@ static void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr
     }
 }
 
-static void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer, uint64_t gpu_addr,
-                              CachingType caching_type)
+void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer, uint64_t gpu_addr,
+                       CachingType caching_type)
 {
     ASSERT_NE(mmio, nullptr);
 
@@ -254,3 +252,5 @@ TEST(Gtt, Insert)
         device.Insert();
     }
 }
+
+} // namespace
