@@ -338,34 +338,34 @@ namespace upcasting {
 
 class A {
 public:
-    virtual ~A() { }
+    virtual ~A() { stuff_ = 0; }
 
 private:
-    uint32_t stuff_;
+    volatile uint32_t stuff_;
 };
 
 class B {
 public:
-    ~B() { }
+    ~B() { stuff_ = 1; }
 
 private:
-    uint32_t stuff_;
+    volatile uint32_t stuff_;
 };
 
 class C : public A, public B {
 public:
-    ~C() { }
+    ~C() { stuff_ = 2; }
 
 private:
-    uint32_t stuff_;
+    volatile uint32_t stuff_;
 };
 
 class D {
 public:
-    virtual ~D() { }
+    virtual ~D() { stuff_ = 3; }
 
 private:
-    uint32_t stuff_;
+    volatile uint32_t stuff_;
 };
 
 template <typename T>
