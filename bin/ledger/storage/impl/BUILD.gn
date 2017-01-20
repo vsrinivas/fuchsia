@@ -2,11 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/flatbuffers/flatbuffer.gni")
+
 group("impl") {
 
   deps = [
     ":lib",
     "//apps/ledger/src/storage/impl/btree",
+  ]
+}
+
+flatbuffer("commit_storage") {
+  sources = [
+    "commit.fbs",
   ]
 }
 
@@ -28,6 +36,7 @@ source_set("lib") {
   ]
 
   deps = [
+    ":commit_storage",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/impl/btree:lib",

@@ -6,10 +6,12 @@
 
 #include <algorithm>
 
+#include <flatbuffers/flatbuffers.h>
 #include <sys/time.h>
 
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
+#include "apps/ledger/src/storage/impl/commit_generated.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/ftl/build_config.h"
 #include "lib/ftl/logging.h"
@@ -39,34 +41,37 @@ class CommitImpl::SharedStorageBytes
 };
 
 namespace {
-
-const int kTimestampSize = 8;
-const int kGenerationSize = 8;
-
-const int kTimestampStartIndex = 0;
-const int kGenerationStartIndex = kTimestampStartIndex + kTimestampSize;
-const int kRootNodeStartIndex = kGenerationStartIndex + kGenerationSize;
-const int kParentsStartIndex = kRootNodeStartIndex + kObjectIdSize;
-
-std::string TimestampToBytes(int64_t timestamp) {
-  static_assert(sizeof(timestamp) == kTimestampSize, "Illegal timestamp size");
-  return std::string(reinterpret_cast<char*>(&timestamp), kTimestampSize);
+ftl::StringView ToStringView(const flatbuffers::Vector<uint8_t>* vector) {
+  return ftl::StringView(reinterpret_cast<const char*>(vector->data()),
+                         vector->size());
 }
 
-std::string GenerationToBytes(uint64_t generation) {
-  static_assert(sizeof(generation) == kGenerationSize,
-                "Illegal generation size");
-  return std::string(reinterpret_cast<char*>(&generation), kGenerationSize);
+auto ToVector(flatbuffers::FlatBufferBuilder* builder, ftl::StringView view) {
+  return builder->CreateVector<uint8_t>(
+      reinterpret_cast<const unsigned char*>(view.data()), view.size());
 }
 
-int64_t BytesToTimestamp(ftl::StringView bytes) {
-  return *reinterpret_cast<const int64_t*>(bytes.data());
-}
+std::string SerializeCommit(
+    uint64_t generation,
+    int64_t timestamp,
+    ObjectIdView root_node_id,
+    std::vector<std::unique_ptr<const Commit>> parent_commits) {
+  flatbuffers::FlatBufferBuilder builder;
 
-uint64_t BytesToGeneration(ftl::StringView bytes) {
-  return *reinterpret_cast<const uint64_t*>(bytes.data());
-}
+  flatbuffers::Offset<Id> parents_offsets[parent_commits.size()];
+  for (size_t i = 0; i < parent_commits.size(); ++i) {
+    parents_offsets[i] =
+        CreateId(builder, ToVector(&builder, parent_commits[i]->GetId()));
+  }
 
+  auto storage = CreateCommitStorage(
+      builder, timestamp, generation,
+      CreateId(builder, ToVector(&builder, root_node_id)),
+      builder.CreateVector(parents_offsets, parent_commits.size()));
+  builder.Finish(storage);
+  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
+                     builder.GetSize());
+}
 }  // namespace
 
 CommitImpl::CommitImpl(PageStorage* page_storage,
@@ -95,35 +100,25 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
     CommitId id,
     std::string storage_bytes) {
   FTL_DCHECK(id != kFirstPageCommitId);
-  int parent_count =
-      (storage_bytes.size() - kParentsStartIndex) / kCommitIdSize;
-
-  if ((storage_bytes.size() - kParentsStartIndex) % kCommitIdSize != 0 ||
-      parent_count < 1 || parent_count > 2) {
-    FTL_LOG(ERROR) << "Illegal format for commit storage bytes "
-                   << storage_bytes;
-    return nullptr;
-  }
-
   ftl::RefPtr<SharedStorageBytes> storage_ptr =
       SharedStorageBytes::Create(std::move(storage_bytes));
-  ftl::StringView storage_view(storage_ptr->bytes());
 
-  int64_t timestamp = BytesToTimestamp(
-      storage_view.substr(kTimestampStartIndex, kTimestampSize));
-  int64_t generation = BytesToGeneration(
-      storage_view.substr(kGenerationStartIndex, kGenerationSize));
+  FTL_DCHECK(CheckValidSerialization(storage_ptr->bytes()));
+
+  const CommitStorage* commit_storage =
+      GetCommitStorage(storage_ptr->bytes().data());
+
   ObjectIdView root_node_id =
-      storage_view.substr(kRootNodeStartIndex, kObjectIdSize);
+      ToStringView(commit_storage->root_node_id()->id());
   std::vector<CommitIdView> parent_ids;
 
-  for (int i = 0; i < parent_count; i++) {
-    parent_ids.push_back(storage_view.substr(
-        kParentsStartIndex + i * kCommitIdSize, kCommitIdSize));
+  for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {
+    parent_ids.push_back(ToStringView(commit_storage->parents()->Get(i)->id()));
   }
   return std::unique_ptr<Commit>(
-      new CommitImpl(page_storage, std::move(id), timestamp, generation,
-                     root_node_id, parent_ids, std::move(storage_ptr)));
+      new CommitImpl(page_storage, std::move(id), commit_storage->timestamp(),
+                     commit_storage->generation(), root_node_id, parent_ids,
+                     std::move(storage_ptr)));
 }
 
 std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
@@ -131,6 +126,7 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
     ObjectIdView root_node_id,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   FTL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
+
   uint64_t parent_generation = 0;
   for (const auto& commit : parent_commits) {
     parent_generation = std::max(parent_generation, commit->GetGeneration());
@@ -149,15 +145,9 @@ std::unique_ptr<Commit> CommitImpl::FromContentAndParents(
   int64_t timestamp = static_cast<int64_t>(tv.tv_sec) * 1000000000L +
                       static_cast<int64_t>(tv.tv_usec) * 1000L;
 
-  std::string storage_bytes;
-  storage_bytes.reserve(kTimestampSize + kGenerationSize + kObjectIdSize +
-                        parent_commits.size() * kCommitIdSize);
-  storage_bytes.append(TimestampToBytes(timestamp))
-      .append(GenerationToBytes(generation))
-      .append(root_node_id.data(), root_node_id.size());
-  for (const auto& commit : parent_commits) {
-    storage_bytes.append(commit->GetId().data(), commit->GetId().size());
-  }
+  std::string storage_bytes = SerializeCommit(
+      generation, timestamp, root_node_id, std::move(parent_commits));
+
   CommitId id = glue::SHA256Hash(storage_bytes.data(), storage_bytes.size());
 
   return FromStorageBytes(page_storage, std::move(id),
@@ -178,6 +168,31 @@ std::unique_ptr<Commit> CommitImpl::Empty(PageStorage* page_storage) {
   return std::unique_ptr<Commit>(new CommitImpl(
       page_storage, kFirstPageCommitId.ToString(), 0, 0, storage_ptr->bytes(),
       std::vector<CommitIdView>(), std::move(storage_ptr)));
+}
+
+bool CommitImpl::CheckValidSerialization(ftl::StringView storage_bytes) {
+  flatbuffers::Verifier verifier(
+      reinterpret_cast<const unsigned char*>(storage_bytes.data()),
+      storage_bytes.size());
+
+  if (!VerifyCommitStorageBuffer(verifier)) {
+    return false;
+  };
+
+  const CommitStorage* commit_storage = GetCommitStorage(storage_bytes.data());
+  if (commit_storage->root_node_id()->id()->size() != kCommitIdSize) {
+    return false;
+  }
+  auto parents = commit_storage->parents();
+  if (!parents || parents->size() < 1 || parents->size() > 2) {
+    return false;
+  }
+  for (const auto& parent : *parents) {
+    if (parent->id()->size() != kCommitIdSize) {
+      return false;
+    }
+  }
+  return true;
 }
 
 std::unique_ptr<Commit> CommitImpl::Clone() const {

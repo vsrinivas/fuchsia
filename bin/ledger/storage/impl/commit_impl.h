@@ -31,6 +31,10 @@ class CommitImpl : public Commit {
   // parents and with empty contents.
   static std::unique_ptr<Commit> Empty(PageStorage* page_storage);
 
+  // Checks whether the given |storage_bytes| are a valid serialization of a
+  // commit.
+  static bool CheckValidSerialization(ftl::StringView storage_bytes);
+
   // Commit:
   std::unique_ptr<Commit> Clone() const override;
   const CommitId& GetId() const override;
