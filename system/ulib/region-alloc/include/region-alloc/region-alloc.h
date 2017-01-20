@@ -240,10 +240,8 @@ public:
     class RegionPool;
 
     class Region : public ralloc_region_t {
-    private:
-        struct ReturnToAllocatorTraits;
     public:
-        using UPtr = mxtl::unique_ptr<const Region, struct ReturnToAllocatorTraits>;
+        using UPtr = mxtl::unique_ptr<const Region>;
 
     private:
         using WAVLTreeNodeState   = mxtl::WAVLTreeNodeState<Region*>;
@@ -277,25 +275,17 @@ public:
                                                   WAVLTreeNodeTraitsSortBySize>;
         using FreeListNodeState = mxtl::SinglyLinkedListNodeState<Region*>;
 
-        struct ReturnToAllocatorTraits {
-            inline void operator()(const Region* ptr) const {
-                Region* thiz = const_cast<Region*>(ptr);
-                DEBUG_ASSERT(thiz->owner_ != nullptr);
-                thiz->owner_->ReleaseRegion(thiz);
-            }
-        };
-
         // Used by SortByBase key traits
         uint64_t GetKey() const { return base; }
 
         // So many friends!  I'm the most popular class in the build!!
         friend class  RegionAllocator;
         friend class  RegionPool;
+        friend class  mxtl::default_delete<const Region>;
         friend        KeyTraitsSortByBase;
         friend struct KeyTraitsSortBySize;
         friend struct WAVLTreeNodeTraitsSortByBase;
         friend struct WAVLTreeNodeTraitsSortBySize;
-        friend struct ReturnToAllocatorTraits;
 
         // Regions can only be placement new'ed by RegionPool::Slabs.  They
         // cannot be copied, assigned, or deleted.  Externally, they should only
@@ -303,9 +293,17 @@ public:
         Region() { }
         Region(const Region& c) = delete;
         Region& operator=(const Region& c) = delete;
-        ~Region() = delete;
-        void* operator new(size_t, void* p) { return p; }
-        void  operator delete(void*) { }
+        static void* operator new(size_t, void* p) { return p; }
+        // unique_ptr<>s will deallocate Regions via the default_delete trait
+        // which will invoke our destructor and operator delete via a delete
+        // expression. ~Region() does nothing. Region::operator delete()
+        // releases the memory for the Region from the RegionAllocator.
+        ~Region() = default;
+        static void operator delete(void* ptr) {
+            Region* thiz = static_cast<Region*>(ptr);
+            DEBUG_ASSERT(thiz->owner_ != nullptr);
+            thiz->owner_->ReleaseRegion(thiz);
+        }
 
         RegionAllocator* owner_ = nullptr;
 
@@ -330,6 +328,8 @@ public:
         static RefPtr Create(size_t slab_size, size_t max_memory);
 
     private:
+        friend class UPtr;
+
         struct Slab {
             using UPtr = mxtl::unique_ptr<Slab>;
 
@@ -506,7 +506,6 @@ public:
     }
 
 private:
-    friend struct Region::ReturnToAllocatorTraits;
 
     mx_status_t AddSubtractSanityCheckLocked(const ralloc_region_t& region);
     void ReleaseRegion(Region* region);
