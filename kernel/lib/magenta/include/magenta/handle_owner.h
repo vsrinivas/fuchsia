@@ -37,7 +37,7 @@ public:
         return h_;
     }
 
-    Handle* get() {
+    Handle* get() const {
         return h_;
     }
 

@@ -81,6 +81,7 @@ public:
     // Map a |handle| to an integer which can be given to usermode as a
     // handle value. Uses MapHandleToU32() plus additional mixing.
     mx_handle_t MapHandleToValue(const Handle* handle) const;
+    mx_handle_t MapHandleToValue(const HandleOwner& handle) const;
 
     // Maps a handle value into a Handle as long we can verify that
     // it belongs to this process.

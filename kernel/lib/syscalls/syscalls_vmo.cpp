@@ -51,7 +51,7 @@ mx_status_t sys_vmo_create(uint64_t size, uint32_t options, mx_handle_t* _out) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));

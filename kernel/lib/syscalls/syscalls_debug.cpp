@@ -130,7 +130,7 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
     if (!handle)
         return ERR_BAD_HANDLE;
 
-    auto dest_hv = process->MapHandleToValue(handle.get());
+    auto dest_hv = process->MapHandleToValue(handle);
     process->AddHandle(mxtl::move(handle));
     return dest_hv;
 }

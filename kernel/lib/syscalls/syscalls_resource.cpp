@@ -74,7 +74,7 @@ mx_status_t sys_resource_create(mx_handle_t handle,
     if (!child_h)
         return ERR_NO_MEMORY;
 
-    if (make_user_ptr(_rsrc_out).copy_to_user(up->MapHandleToValue(child_h.get())) != NO_ERROR)
+    if (make_user_ptr(_rsrc_out).copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(child_h));
@@ -106,7 +106,7 @@ mx_status_t sys_resource_get_handle(mx_handle_t handle, uint32_t index,
     if (!out_h)
         return ERR_NO_MEMORY;
 
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(out_h.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(out_h)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(out_h));
@@ -180,7 +180,7 @@ mx_status_t sys_resource_accept(mx_handle_t handle, mx_handle_t* _out) {
     if (result)
         return result;
 
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(channel.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(channel)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(channel));

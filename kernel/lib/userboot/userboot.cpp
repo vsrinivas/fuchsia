@@ -167,7 +167,7 @@ static mx_handle_t make_bootstrap_channel(
     if (status != NO_ERROR)
         return status;
 
-    mx_handle_t hv = process->MapHandleToValue(user_channel_handle.get());
+    mx_handle_t hv = process->MapHandleToValue(user_channel_handle);
     process->AddHandle(mxtl::move(user_channel_handle));
 
     return hv;

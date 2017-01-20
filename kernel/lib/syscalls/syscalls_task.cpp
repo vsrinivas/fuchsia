@@ -89,7 +89,7 @@ mx_status_t sys_thread_create(mx_handle_t process_handle,
     if (!handle)
         return ERR_NO_MEMORY;
 
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
@@ -175,10 +175,10 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     if (!vmar_h)
         return ERR_NO_MEMORY;
 
-    if (make_user_ptr(_proc_handle).copy_to_user(up->MapHandleToValue(proc_h.get())) != NO_ERROR)
+    if (make_user_ptr(_proc_handle).copy_to_user(up->MapHandleToValue(proc_h)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (make_user_ptr(_vmar_handle).copy_to_user(up->MapHandleToValue(vmar_h.get())) != NO_ERROR)
+    if (make_user_ptr(_vmar_handle).copy_to_user(up->MapHandleToValue(vmar_h)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(vmar_h));
@@ -228,7 +228,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
     if (!arg_handle)
         return ERR_INVALID_ARGS;
 
-    auto arg_nhv = process->MapHandleToValue(arg_handle.get());
+    auto arg_nhv = process->MapHandleToValue(arg_handle);
     process->AddHandle(mxtl::move(arg_handle));
 
     // TODO(cpu) if Start() fails we want to undo RemoveHandle().
@@ -303,7 +303,7 @@ mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t flags, mx_handle_t* 
         return status;
 
     HandleOwner job_handle(MakeHandle(mxtl::move(job), rights));
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(job_handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(job_handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(job_handle));

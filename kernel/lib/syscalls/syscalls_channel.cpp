@@ -60,9 +60,9 @@ mx_status_t sys_channel_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* 
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
+    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
         return ERR_INVALID_ARGS;
-    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
+    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));

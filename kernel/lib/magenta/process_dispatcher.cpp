@@ -364,6 +364,10 @@ mx_handle_t ProcessDispatcher::MapHandleToValue(const Handle* handle) const {
     return map_handle_to_value(handle, handle_rand_);
 }
 
+mx_handle_t ProcessDispatcher::MapHandleToValue(const HandleOwner& handle) const {
+    return map_handle_to_value(handle.get(), handle_rand_);
+}
+
 Handle* ProcessDispatcher::GetHandleLocked(mx_handle_t handle_value) {
     auto handle = map_value_to_handle(handle_value, handle_rand_);
     if (!handle)

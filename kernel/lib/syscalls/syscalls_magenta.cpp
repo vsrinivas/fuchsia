@@ -112,7 +112,7 @@ mx_status_t sys_event_create(uint32_t options, mx_handle_t* _out) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));
@@ -141,10 +141,10 @@ mx_status_t sys_eventpair_create(uint32_t flags,
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
+    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
+    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -196,7 +196,7 @@ mx_handle_t sys_log_create(uint32_t flags) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mx_handle_t hv = up->MapHandleToValue(handle.get());
+    mx_handle_t hv = up->MapHandleToValue(handle);
     up->AddHandle(mxtl::move(handle));
 
     return hv;
@@ -289,7 +289,7 @@ mx_status_t sys_waitset_create(uint32_t options, mx_handle_t* _out) {
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 
@@ -414,10 +414,10 @@ mx_status_t sys_socket_create(uint32_t flags, mx_handle_t* _out0, mx_handle_t* _
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0.get())) != NO_ERROR)
+    if (make_user_ptr(_out0).copy_to_user(up->MapHandleToValue(h0)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
-    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1.get())) != NO_ERROR)
+    if (make_user_ptr(_out1).copy_to_user(up->MapHandleToValue(h1)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(h0));
@@ -506,7 +506,7 @@ mx_status_t sys_fifo_create(uint64_t count, mx_handle_t* _out) {
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
     up->AddHandle(mxtl::move(handle));
 

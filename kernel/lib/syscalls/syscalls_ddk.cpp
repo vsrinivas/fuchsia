@@ -60,7 +60,7 @@ mx_handle_t sys_interrupt_create(mx_handle_t hrsrc, uint32_t vector, uint32_t fl
     HandleOwner handle(MakeHandle(mxtl::move(dispatcher), rights));
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_handle_t hv = up->MapHandleToValue(handle.get());
+    mx_handle_t hv = up->MapHandleToValue(handle);
     up->AddHandle(mxtl::move(handle));
     return hv;
 }
@@ -198,7 +198,7 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));

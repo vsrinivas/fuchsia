@@ -393,7 +393,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (!process_h)
             return ERR_NO_MEMORY;
 
-        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(process_h.get())))
+        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(process_h)))
             return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(process_h));
         return NO_ERROR;
@@ -425,7 +425,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (!thread_h)
             return ERR_NO_MEMORY;
 
-        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(thread_h.get())) != NO_ERROR)
+        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(thread_h)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(thread_h));
         return NO_ERROR;
@@ -443,7 +443,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
         if (!child_h)
             return ERR_NO_MEMORY;
 
-        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(child_h.get())) != NO_ERROR)
+        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(child_h));
         return NO_ERROR;

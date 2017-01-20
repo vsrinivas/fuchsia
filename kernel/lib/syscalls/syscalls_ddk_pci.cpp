@@ -295,7 +295,7 @@ mx_handle_t sys_pci_get_nth_device(mx_handle_t hrsrc, uint32_t index, mx_pcie_ge
         return ERR_NO_MEMORY;
 
     auto up = ProcessDispatcher::GetCurrent();
-    mx_handle_t handle_value = up->MapHandleToValue(handle.get());
+    mx_handle_t handle_value = up->MapHandleToValue(handle);
 
     if (copy_to_user_unsafe(reinterpret_cast<uint8_t*>(out_info),
                             &info, sizeof(*out_info)) != NO_ERROR)
@@ -405,7 +405,7 @@ mx_handle_t sys_pci_map_mmio(mx_handle_t handle, uint32_t bar_num, mx_cache_poli
     if (!handle)
         return ERR_NO_MEMORY;
 
-    mx_handle_t ret_val = up->MapHandleToValue(mmio_handle.get());
+    mx_handle_t ret_val = up->MapHandleToValue(mmio_handle);
     up->AddHandle(mxtl::move(mmio_handle));
     return ret_val;
 }
@@ -463,7 +463,7 @@ mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
     if (!handle)
         return ERR_NO_MEMORY;
 
-    mx_handle_t interrupt_handle = up->MapHandleToValue(handle.get());
+    mx_handle_t interrupt_handle = up->MapHandleToValue(handle);
     up->AddHandle(mxtl::move(handle));
     return interrupt_handle;
 }
@@ -494,7 +494,7 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
     if (!config_handle)
         return ERR_NO_MEMORY;
 
-    mx_handle_t ret_val = up->MapHandleToValue(config_handle.get());
+    mx_handle_t ret_val = up->MapHandleToValue(config_handle);
     up->AddHandle(mxtl::move(config_handle));
     return ret_val;
 }

@@ -40,7 +40,7 @@ mx_status_t sys_port_create(uint32_t options, mx_handle_t* _out) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mx_handle_t hv = up->MapHandleToValue(handle.get());
+    mx_handle_t hv = up->MapHandleToValue(handle);
 
     if (make_user_ptr(_out).copy_to_user(hv) != NO_ERROR)
         return ERR_INVALID_ARGS;

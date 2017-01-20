@@ -71,7 +71,7 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
     if (!handle)
         return ERR_NO_MEMORY;
 
-    if (make_user_ptr(_child_vmar).copy_to_user(up->MapHandleToValue(handle.get())) != NO_ERROR)
+    if (make_user_ptr(_child_vmar).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
         return ERR_INVALID_ARGS;
 
     up->AddHandle(mxtl::move(handle));

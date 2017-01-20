@@ -54,7 +54,7 @@ mx_status_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights, m
         if (!dest)
             return ERR_NO_MEMORY;
 
-        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(dest.get())) != NO_ERROR)
+        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(dest)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         up->AddHandleLocked(mxtl::move(dest));
     }
@@ -92,7 +92,7 @@ mx_status_t sys_handle_replace(mx_handle_t handle_value, mx_rights_t rights, mx_
             return error;
         }
 
-        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(dest.get())) != NO_ERROR)
+        if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(dest)) != NO_ERROR)
             return ERR_INVALID_ARGS;
         up->AddHandleLocked(mxtl::move(dest));
     }
