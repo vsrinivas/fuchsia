@@ -51,7 +51,7 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
  },
 
  /* null entry to terminate the list */
- { 0 }
+ {}
 };
 
 #define DEBUG_UART 1
@@ -211,5 +211,3 @@ size_t hw_rng_get_entropy(void* buf, size_t len, bool block) {
 status_t display_get_info(struct display_info *info) {
     return ERR_NOT_FOUND;
 }
-
-
