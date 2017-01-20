@@ -10,6 +10,7 @@
 
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/page_utils.h"
+#include "apps/ledger/src/callback/trace_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/convert/convert.h"
 #include "lib/ftl/functional/make_copyable.h"
@@ -28,6 +29,9 @@ PageSnapshotImpl::~PageSnapshotImpl() {}
 void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
                                   fidl::Array<uint8_t> token,
                                   const GetEntriesCallback& callback) {
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "snapshot", "get_entries");
+
   auto waiter = callback::
       Waiter<storage::Status, std::unique_ptr<const storage::Object>>::Create(
           storage::Status::OK);
@@ -49,7 +53,8 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
       });
 
   auto on_done = ftl::MakeCopyable([
-    this, waiter, entries = std::move(entries), callback = std::move(callback)
+    this, waiter, entries = std::move(entries),
+    callback = std::move(timed_callback)
   ](storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FTL_LOG(ERROR) << "PageSnapshotImpl::GetEntries error while reading.";
@@ -93,6 +98,9 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
 void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
                                fidl::Array<uint8_t> token,
                                const GetKeysCallback& callback) {
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "snapshot", "get_keys");
+
   auto keys = std::make_unique<fidl::Array<fidl::Array<uint8_t>>>();
   auto on_next = ftl::MakeCopyable([
     key_prefix = convert::ToString(key_prefix), keys = keys.get()
@@ -105,7 +113,7 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
     return true;
   });
   auto on_done = ftl::MakeCopyable([
-    keys = std::move(keys), callback = std::move(callback)
+    keys = std::move(keys), callback = std::move(timed_callback)
   ](storage::Status s) { callback(Status::OK, std::move(*keys), nullptr); });
   page_storage_->GetCommitContents(*commit_, convert::ToString(key_prefix),
                                    std::move(on_next), std::move(on_done));
@@ -113,8 +121,11 @@ void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
 
 void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
                            const GetCallback& callback) {
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "snapshot", "get");
+
   page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
-    this, callback = std::move(callback)
+    this, callback = std::move(timed_callback)
   ](storage::Status status, storage::Entry entry) {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
@@ -130,8 +141,11 @@ void PageSnapshotImpl::GetPartial(fidl::Array<uint8_t> key,
                                   int64_t offset,
                                   int64_t max_size,
                                   const GetPartialCallback& callback) {
+  auto timed_callback =
+      TRACE_CALLBACK(std::move(callback), "snapshot", "get_partial");
+
   page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
-    this, offset, max_size, callback = std::move(callback)
+    this, offset, max_size, callback = std::move(timed_callback)
   ](storage::Status status, storage::Entry entry) {
     if (status != storage::Status::OK) {
       callback(PageUtils::ConvertStatus(status, Status::KEY_NOT_FOUND),
