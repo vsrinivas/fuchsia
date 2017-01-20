@@ -30,14 +30,21 @@
 // the argument in the first argument register, pushing a zero return
 // address and clearing the frame pointer register so the user entry point
 // is the base of the call stack.
+//
+// We can be pretty sure that we were started with the stack pointer
+// correctly aligned, which is (rsp % 16) = 8 at function entry.
+// Since we'd need to adjust down by 8 to make an immediate call with
+// correct stack alignment, it's just as cheap to explicitly align and
+// then we're resilient to process setup not having given us the
+// ABI-required alignment, just in case.
 #define DL_START_ASM                   \
     __asm__(".globl _start\n"          \
             ".hidden _start\n"         \
             ".type _start,%function\n" \
             "_start:\n"                \
-            "    call _dl_start\n"     \
             "    and $-16,%rsp\n"      \
             "    xor %rbp,%rbp\n"      \
+            "    call _dl_start\n"     \
             "    mov %rax,%rdi\n"      \
             "    push %rbp\n"          \
             "    jmp *%rdx");
