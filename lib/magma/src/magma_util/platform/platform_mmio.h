@@ -30,28 +30,28 @@ public:
     {
         DASSERT(offset < size());
         DASSERT((offset & 0x3) == 0);
-        *reinterpret_cast<uint32_t*>(addr(offset)) = val;
+        *reinterpret_cast<volatile uint32_t*>(addr(offset)) = val;
     }
 
     uint32_t Read32(uint64_t offset)
     {
         DASSERT(offset < size());
         DASSERT((offset & 0x3) == 0);
-        return *reinterpret_cast<uint32_t*>(addr(offset));
+        return *reinterpret_cast<volatile uint32_t*>(addr(offset));
     }
 
     void Write64(uint64_t val, uint64_t offset)
     {
         DASSERT(offset < size());
         DASSERT((offset & 0x7) == 0);
-        *reinterpret_cast<uint64_t*>(addr(offset)) = val;
+        *reinterpret_cast<volatile uint64_t*>(addr(offset)) = val;
     }
 
     uint64_t Read64(uint64_t offset)
     {
         DASSERT(offset < size());
         DASSERT((offset & 0x7) == 0);
-        return *reinterpret_cast<uint64_t*>(addr(offset));
+        return *reinterpret_cast<volatile uint64_t*>(addr(offset));
     }
 
     // Posting reads serve to ensure that a previous bus write at the same address has completed.
