@@ -452,6 +452,10 @@ int minfs_mkfs(Bcache* bc) {
 
     // write rootdir
     mxtl::RefPtr<BlockNode> blk = bc->GetZero(info.dat_block);
+    if (blk == nullptr) {
+        error("mkfs: Insufficient space\n");
+        return -1;
+    }
     minfs_dir_init(blk->data(), kMinfsRootIno, kMinfsRootIno);
     bc->Put(blk, kBlockDirty);
 
