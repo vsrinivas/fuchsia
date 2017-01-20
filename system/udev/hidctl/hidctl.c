@@ -150,6 +150,7 @@ static mx_status_t hidctl_open(mx_device_t* dev, mx_device_t** dev_out, uint32_t
     mx_status_t status = device_add_instance(&inst->dev, dev);
     if (status != NO_ERROR) {
         printf("hidctl: could not open instance: %d\n", status);
+        free(inst);
         return status;
     }
     *dev_out = &inst->dev;
