@@ -142,7 +142,7 @@ constexpr char g_sampler_fragment_src[] = R"GLSL(
     }
     L = clamp(L / float(kTapCount), 0.0, 1.0);
 
-    outColor = vec4(L, 0.0, sampled_depth, 1.0);
+    outColor = vec4(L, sampled_depth, 0.0, 1.0);
   }
 )GLSL";
 
@@ -176,18 +176,18 @@ constexpr char g_filter_fragment_src[] = R"GLSL(
 
   void main() {
     vec4 center_tap = texture(illumination, fragment_uv);
-    float center_key = center_tap.z * pushed.scene_depth;
+    float center_key = center_tap.y * pushed.scene_depth;
 
     float sum = center_tap.x;
     float total_weight = 1.0;
 
     for (int r = 1; r <= kRadius; ++r) {
       vec4 left_tap = texture(illumination, fragment_uv + float(-r) * pushed.stride);
-      float left_tap_key = left_tap.z * pushed.scene_depth;
+      float left_tap_key = left_tap.y * pushed.scene_depth;
       float left_key_weight = max(0.0, 1.0 - abs(left_tap_key - center_key));
 
       vec4 right_tap = texture(illumination, fragment_uv + float(r) * pushed.stride);
-      float right_tap_key = right_tap.z * pushed.scene_depth;
+      float right_tap_key = right_tap.y * pushed.scene_depth;
       float right_key_weight = max(0.0, 1.0 - abs(right_tap_key - center_key));
 
       float position_weight = float(kRadius - r + 1) / float(kRadius + 1);
@@ -198,7 +198,7 @@ constexpr char g_filter_fragment_src[] = R"GLSL(
     }
 
     float filtered_illumination = sum / total_weight;
-    outColor = vec4(filtered_illumination, 0.0, center_tap.z, 1.0);
+    outColor = vec4(filtered_illumination, center_tap.y, 0.0, 1.0);
   }
 )GLSL";
 

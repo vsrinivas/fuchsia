@@ -86,7 +86,6 @@ class ImageCache : public ImageOwner {
   vk::Device device_;
   vk::PhysicalDevice physical_device_;
   vk::Queue queue_;
-  CommandBufferPool* command_buffer_pool_;
   GpuAllocator* allocator_;
   GpuUploader* uploader_;
 

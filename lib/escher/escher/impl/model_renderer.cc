@@ -331,8 +331,7 @@ void ModelRenderer::CreateRenderPasses(vk::Format color_format,
   color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
   depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
   depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-  depth_attachment.initialLayout =
-      vk::ImageLayout::eDepthStencilAttachmentOptimal;
+  depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
   depth_attachment.finalLayout =
       vk::ImageLayout::eDepthStencilAttachmentOptimal;
   depth_prepass_ = ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));

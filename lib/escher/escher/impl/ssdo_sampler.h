@@ -23,10 +23,9 @@ class SsdoSampler {
   // Must match the fragment shader in ssdo_sampler.cc
   const static uint32_t kNoiseSize = 5;
 
-  // TODO: change to eB8G8R8A8Srgb when Magma has a swapchain that supports it.
-  // Actually, this shouldn't be coupled with the format of the swapchain
-  // framebuffer, but some refactoring will be required to decouple it.
-  const static vk::Format kColorFormat = vk::Format::eB8G8R8A8Unorm;
+  // TODO: eR8G8Srgb would be preferable, but must check if it is supported.
+  // TODO: validate this choice via performance profiling.
+  const static vk::Format kColorFormat = vk::Format::eR8G8Unorm;
 
   struct SamplerConfig {
     vec4 key_light;

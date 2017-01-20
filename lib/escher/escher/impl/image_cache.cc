@@ -21,7 +21,6 @@ ImageCache::ImageCache(vk::Device device,
     : device_(device),
       physical_device_(physical_device),
       queue_(pool->queue()),
-      command_buffer_pool_(pool),
       allocator_(allocator),
       uploader_(uploader) {}
 
@@ -96,15 +95,7 @@ ImagePtr ImageCache::NewDepthImage(vk::Format format,
   info.usage =
       additional_flags | vk::ImageUsageFlagBits::eDepthStencilAttachment;
 
-  auto image = NewImage(info);
-
-  auto command_buffer = command_buffer_pool_->GetCommandBuffer();
-  command_buffer->TransitionImageLayout(
-      image, vk::ImageLayout::eUndefined,
-      vk::ImageLayout::eDepthStencilAttachmentOptimal);
-  command_buffer->Submit(queue_, nullptr);
-
-  return image;
+  return NewImage(info);
 }
 
 ImagePtr ImageCache::NewColorAttachmentImage(
@@ -118,17 +109,7 @@ ImagePtr ImageCache::NewColorAttachmentImage(
   info.sample_count = 1;
   info.usage = additional_flags | vk::ImageUsageFlagBits::eColorAttachment;
 
-  auto image = NewImage(info);
-
-  // TODO: this transition is not necessary if the render-pass uses eUndefined
-  // as the layout.
-  auto command_buffer = command_buffer_pool_->GetCommandBuffer();
-  command_buffer->TransitionImageLayout(
-      image, vk::ImageLayout::eUndefined,
-      vk::ImageLayout::eColorAttachmentOptimal);
-  command_buffer->Submit(queue_, nullptr);
-
-  return image;
+  return NewImage(info);
 }
 
 ImagePtr ImageCache::NewImageFromPixels(vk::Format format,
