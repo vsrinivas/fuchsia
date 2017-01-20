@@ -96,6 +96,12 @@ static void eth_handle_rx(ethernet_device_t* edev) {
     mx_status_t status;
     mx_fifo_state_t state;
 
+    if (edev->fifo.rx_fifo == MX_HANDLE_INVALID) {
+        // No client has established a fifo, so drop the packet
+        eth_rx(&edev->eth, NULL);
+        return;
+    }
+
     status = mx_fifo_op(edev->fifo.rx_fifo, MX_FIFO_OP_READ_STATE, 0, &state);
     if (status != NO_ERROR) {
         printf("%s could not read rx fifo state (%d)\n", __func__, status);
