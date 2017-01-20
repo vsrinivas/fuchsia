@@ -51,6 +51,8 @@ uint32_t get_gfx_vres() {
 
 void set_gfx_mode(uint32_t mode) {
     efi_graphics_output_protocol* gop = fb_get_gop();
+    if (!gop)
+        return;
     if (mode >= gop->Mode->MaxMode) {
         printf("invalid framebuffer mode: %u\n", mode);
         return;
@@ -63,6 +65,8 @@ void set_gfx_mode(uint32_t mode) {
 void set_gfx_mode_from_cmdline(char* fbres) {
     if (!fbres) return;
     efi_graphics_output_protocol* gop = fb_get_gop();
+    if (!gop)
+        return;
 
     uint32_t hres = 0;
     hres = atol(fbres);
@@ -113,6 +117,8 @@ void print_fb_modes() {
 
 void draw_logo() {
     efi_graphics_output_protocol* gop = fb_get_gop();
+    if (!gop)
+        return;
 
     const uint32_t h_res = gop->Mode->Info->HorizontalResolution;
     const uint32_t v_res = gop->Mode->Info->VerticalResolution;

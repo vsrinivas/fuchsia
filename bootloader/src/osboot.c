@@ -183,11 +183,16 @@ void do_select_fb() {
     }
 }
 
-void do_bootmenu() {
-    char* menukeys = "rfx";
+void do_bootmenu(bool have_fb) {
+    char* menukeys;
+    if (have_fb)
+        menukeys = "rfx";
+    else
+        menukeys = "rx";
     printf("  BOOT MENU  \n");
     printf("  ---------  \n");
-    printf("  (f) list framebuffer modes\n");
+    if (have_fb)
+        printf("  (f) list framebuffer modes\n");
     printf("  (r) reset\n");
     printf("  (x) exit menu\n");
     printf("\n");
@@ -304,7 +309,6 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     xefi_init(img, sys);
     gConOut->ClearScreen(gConOut);
 
-
     uint64_t mmio;
     if (xefi_find_pci_mmio(gBS, 0x0C, 0x03, 0x30, &mmio) == EFI_SUCCESS) {
         sprintf(cmdextra, " xdc.mmio=%#" PRIx64 " ", mmio);
@@ -320,21 +324,27 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         printf("cmdline: %s\n", cmdline);
     }
 
-    char fbres[11];
-    if (cmdline_get(cmdline, "bootloader.fbres", fbres, sizeof(fbres)) > 0) {
-        set_gfx_mode_from_cmdline(fbres);
+    efi_graphics_output_protocol* gop;
+    efi_status status = gBS->LocateProtocol(&GraphicsOutputProtocol, NULL,
+                                            (void**)&gop);
+    bool have_fb = !EFI_ERROR(status);
+
+    if (have_fb) {
+        char fbres[11];
+        if (cmdline_get(cmdline, "bootloader.fbres", fbres, sizeof(fbres)) > 0) {
+            set_gfx_mode_from_cmdline(fbres);
+        }
+        draw_logo();
     }
-    draw_logo();
 
     int32_t prev_attr = gConOut->Mode->Attribute;
     gConOut->SetAttribute(gConOut, EFI_LIGHTMAGENTA | EFI_BACKGROUND_BLACK);
     printf("\nGigaBoot 20X6\n\n");
     gConOut->SetAttribute(gConOut, prev_attr);
 
-    efi_graphics_output_protocol* gop;
-    gBS->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
-    printf("Framebuffer base is at %" PRIx64 "\n\n",
-           gop->Mode->FrameBufferBase);
+    if (have_fb)
+        printf("Framebuffer base is at %" PRIx64 "\n\n",
+               gop->Mode->FrameBufferBase);
 
     // Default boot defaults to network
     char defboot[8] = "network";
@@ -398,7 +408,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
         switch (key) {
         case 'b':
-            do_bootmenu();
+            do_bootmenu(have_fb);
             break;
         case 'n':
             do_netboot();
