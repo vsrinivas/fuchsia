@@ -10,6 +10,7 @@
 #include "escher/forward_declarations.h"
 #include "escher/impl/glsl_compiler.h"
 #include "escher/impl/model_pipeline_spec.h"
+#include "escher/util/hash.h"
 #include "ftl/macros.h"
 
 namespace escher {
@@ -70,7 +71,7 @@ class ModelPipelineCacheOLD : public ModelPipelineCache {
   ModelData* model_data_;
   std::unordered_map<ModelPipelineSpec,
                      std::unique_ptr<ModelPipeline>,
-                     ModelPipelineSpec::Hash>
+                     Hash<ModelPipelineSpec>>
       pipelines_;
   GlslToSpirvCompiler compiler_;
 

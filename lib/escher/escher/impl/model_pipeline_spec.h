@@ -15,18 +15,9 @@ namespace impl {
 struct ModelPipelineSpec {
   MeshSpec mesh_spec;
   ShapeModifiers shape_modifiers;
-
+  uint32_t sample_count = 1;
   // TODO: this is a hack.
   bool use_depth_prepass = true;
-
-  struct Hash {
-    // TODO: this hash should work fine for now, but feels cheezy.
-    std::size_t operator()(const ModelPipelineSpec& spec) const {
-      return 23 * (MeshSpec::Hash()(spec.mesh_spec) +
-                   19 * static_cast<uint32_t>(spec.shape_modifiers)) +
-             static_cast<std::uint32_t>(spec.use_depth_prepass);
-    }
-  };
 };
 
 // Inline function definitions.
@@ -35,6 +26,7 @@ inline bool operator==(const ModelPipelineSpec& spec1,
                        const ModelPipelineSpec& spec2) {
   return spec1.mesh_spec == spec2.mesh_spec &&
          spec1.shape_modifiers == spec2.shape_modifiers &&
+         spec1.sample_count == spec2.sample_count &&
          spec1.use_depth_prepass == spec2.use_depth_prepass;
 }
 

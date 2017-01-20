@@ -63,6 +63,10 @@ class PaperRenderer : public Renderer {
                          const ImagePtr& depth,
                          const ImagePtr& illumination);
 
+  // Configure the renderer to use the specified output formats.
+  void UpdateModelRenderer(vk::Format pre_pass_color_format,
+                           vk::Format lighting_pass_color_format);
+
   MeshPtr full_screen_;
   impl::ImageCache* image_cache_;
   vk::Format depth_format_;

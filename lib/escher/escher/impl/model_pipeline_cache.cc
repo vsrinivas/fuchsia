@@ -213,7 +213,8 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
     vk::CompareOp depth_compare_op,
     vk::RenderPass render_pass,
     std::vector<vk::DescriptorSetLayout> descriptor_set_layouts,
-    const MeshSpecImpl& mesh_spec_impl) {
+    const MeshSpecImpl& mesh_spec_impl,
+    vk::SampleCountFlagBits sample_count) {
   vk::PipelineShaderStageCreateInfo vertex_stage_info;
   vertex_stage_info.stage = vk::ShaderStageFlagBits::eVertex;
   vertex_stage_info.module = vertex_module;
@@ -277,7 +278,7 @@ std::pair<vk::Pipeline, vk::PipelineLayout> NewPipelineHelper(
 
   vk::PipelineMultisampleStateCreateInfo multisampling;
   multisampling.sampleShadingEnable = false;
-  multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
+  multisampling.rasterizationSamples = sample_count;
 
   vk::PipelineColorBlendAttachmentState color_blend_attachment;
   color_blend_attachment.colorWriteMask =
@@ -353,8 +354,8 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
                           std::string(), "main");
   }
 
-  // The depth-only pre-pass uses a different renderpass, cheap fragment shader,
-  // and different depth test settings.
+  // The depth-only pre-pass uses a different renderpass and a cheap fragment
+  // shader.
   vk::RenderPass render_pass = depth_prepass_;
   bool enable_depth_write = true;
   vk::CompareOp depth_compare_op = vk::CompareOp::eLess;
@@ -365,12 +366,6 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
         std::string(), "main");
   } else {
     render_pass = lighting_pass_;
-    // Don't write to the depth buffer; we re-use the buffer generated in the
-    // depth pre-pass.  Must modify the comparison operator, otherwise nothing
-    // would appear, because the nearest objects would have the exact same depth
-    // as in the depth buffer.
-    enable_depth_write = false;
-    depth_compare_op = vk::CompareOp::eLessOrEqual;
     fragment_spirv_future =
         compiler_.Compile(vk::ShaderStageFlagBits::eFragment,
                           {{g_fragment_src}}, std::string(), "main");
@@ -398,11 +393,34 @@ std::unique_ptr<ModelPipeline> ModelPipelineCacheOLD::NewPipeline(
         ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(module_info));
   }
 
+  // TODO: put this in a utility method somewhere.
+  vk::SampleCountFlagBits sample_count;
+  switch (spec.sample_count) {
+    case 1:
+      sample_count = vk::SampleCountFlagBits::e1;
+      break;
+    case 2:
+      sample_count = vk::SampleCountFlagBits::e2;
+      break;
+    case 4:
+      sample_count = vk::SampleCountFlagBits::e4;
+      break;
+    case 8:
+      sample_count = vk::SampleCountFlagBits::e8;
+      break;
+    case 16:
+      sample_count = vk::SampleCountFlagBits::e16;
+      break;
+    default:
+      sample_count = vk::SampleCountFlagBits::e1;
+      FTL_DCHECK(false);
+  }
+
   auto pipeline_and_layout = NewPipelineHelper(
       device_, vertex_module, fragment_module, enable_depth_write,
       depth_compare_op, render_pass,
       {model_data_->per_model_layout(), model_data_->per_object_layout()},
-      mesh_spec_impl);
+      mesh_spec_impl, sample_count);
 
   device_.destroyShaderModule(vertex_module);
   device_.destroyShaderModule(fragment_module);

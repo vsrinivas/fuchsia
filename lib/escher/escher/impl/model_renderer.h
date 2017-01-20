@@ -20,7 +20,8 @@ class ModelRenderer {
  public:
   ModelRenderer(EscherImpl* escher,
                 ModelData* model_data,
-                vk::Format color_format,
+                vk::Format pre_pass_color_format,
+                vk::Format lighting_pass_color_format,
                 vk::Format depth_format);
   ~ModelRenderer();
   void Draw(Stage& stage,
@@ -39,7 +40,9 @@ class ModelRenderer {
 
  private:
   const MeshPtr& GetMeshForShape(const Shape& shape) const;
-  void CreateRenderPasses(vk::Format color_format, vk::Format depth_format);
+  void CreateRenderPasses(vk::Format pre_pass_color_format,
+                          vk::Format lighting_pass_color_format,
+                          vk::Format depth_format);
 
   vk::Device device_;
   vk::RenderPass depth_prepass_;

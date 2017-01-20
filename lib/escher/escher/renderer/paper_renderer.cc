@@ -31,15 +31,6 @@ PaperRenderer::PaperRenderer(impl::EscherImpl* escher)
       // between multiple PaperRenderers.
       model_data_(std::make_unique<impl::ModelData>(context_.device,
                                                     escher->gpu_allocator())),
-      // TODO: VulkanProvider should know the swapchain format and we should use
-      // it.  Or, the PaperRenderer could be passed the format as a parameter.
-      model_renderer_(std::make_unique<impl::ModelRenderer>(
-          escher,
-          model_data_.get(),
-          // TODO: use a SRGB format.
-          vk::Format::eB8G8R8A8Unorm,
-          ESCHER_CHECKED_VK_RESULT(
-              impl::GetSupportedDepthFormat(context_.physical_device)))),
       ssdo_(std::make_unique<impl::SsdoSampler>(
           context_.device,
           full_screen_,
@@ -141,6 +132,20 @@ void PaperRenderer::DrawSsdoPasses(const TexturePtr& depth_in,
   }
 }
 
+void PaperRenderer::UpdateModelRenderer(vk::Format pre_pass_color_format,
+                                        vk::Format lighting_pass_color_format) {
+  // TODO: eventually, we should be able to handle it if the client changes the
+  // format of the buffers that we are to render into.  For now, just lazily
+  // create the ModelRenderer, and assume that it doesn't change.
+  if (!model_renderer_) {
+    model_renderer_ = std::make_unique<impl::ModelRenderer>(
+        escher_, model_data_.get(), pre_pass_color_format,
+        lighting_pass_color_format,
+        ESCHER_CHECKED_VK_RESULT(
+            impl::GetSupportedDepthFormat(context_.physical_device)));
+  }
+}
+
 void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer,
                                      const TexturePtr& illumination_texture,
                                      Stage& stage,
@@ -155,7 +160,7 @@ void PaperRenderer::DrawLightingPass(const FramebufferPtr& framebuffer,
       std::array<float, 4>{{clear_color.x, clear_color.y, clear_color.z, 1.f}});
 
   command_buffer->BeginRenderPass(model_renderer_->lighting_pass(), framebuffer,
-                                  clear_values_.data(), 1);
+                                  clear_values_.data(), clear_values_.size());
   model_renderer_->Draw(stage, model, command_buffer, illumination_texture);
   command_buffer->EndRenderPass();
 }
@@ -199,24 +204,32 @@ void PaperRenderer::DrawFrame(Stage& stage,
                               const ImagePtr& color_image_out,
                               const SemaphorePtr& frame_done,
                               FrameRetiredCallback frame_retired_callback) {
+  // TODO: use a SRGB format for the lighting pass.
+  UpdateModelRenderer(color_image_out->format(), vk::Format::eB8G8R8A8Unorm);
+
   uint32_t width = color_image_out->width();
   uint32_t height = color_image_out->height();
+
+  BeginFrame();
 
   ImagePtr depth_image = image_cache_->NewDepthImage(
       depth_format_, width, height,
       vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc);
 
-  FramebufferPtr main_fb = ftl::MakeRefCounted<Framebuffer>(
-      escher_, width, height,
-      std::vector<ImagePtr>{color_image_out, depth_image},
-      model_renderer_->depth_prepass());
+  // Depth-only pre-pass.
+  {
+    FramebufferPtr prepass_fb = ftl::MakeRefCounted<Framebuffer>(
+        escher_, width, height,
+        std::vector<ImagePtr>{color_image_out, depth_image},
+        model_renderer_->depth_prepass());
 
-  BeginFrame();
-  current_frame()->TakeWaitSemaphore(
-      color_image_out, vk::PipelineStageFlagBits::eColorAttachmentOutput);
+    current_frame()->AddUsedResource(prepass_fb);
+    current_frame()->TakeWaitSemaphore(
+        color_image_out, vk::PipelineStageFlagBits::eColorAttachmentOutput);
 
-  DrawDepthPrePass(main_fb, stage, model);
-  SubmitPartialFrame();
+    DrawDepthPrePass(prepass_fb, stage, model);
+    SubmitPartialFrame();
+  }
 
   // Compute the illumination and store the result in a texture.
   TexturePtr illumination_texture;
@@ -251,13 +264,58 @@ void PaperRenderer::DrawFrame(Stage& stage,
 
     illumination_texture = ftl::MakeRefCounted<Texture>(illum1, context_.device,
                                                         vk::Filter::eNearest);
+
+    // Done after previous SubmitPartialFrame(), because this is needed by the
+    // final lighting pass.
     current_frame()->AddUsedResource(illumination_texture);
   }
 
-  // TODO: revisit when implementing multisampling.
-  current_frame()->AddUsedResource(main_fb);
+  // Use multisampling for final lighting pass.
+  {
+    ImageInfo info;
+    info.width = width;
+    info.height = height;
+    constexpr uint32_t kSampleCount = 4;
+    info.sample_count = kSampleCount;
 
-  DrawLightingPass(main_fb, illumination_texture, stage, model);
+    // TODO: use Srgb, and make corresponding change to pipelines/render-passes.
+    info.format = vk::Format::eB8G8R8A8Unorm;
+    info.usage = vk::ImageUsageFlagBits::eColorAttachment |
+                 vk::ImageUsageFlagBits::eTransferSrc;
+    ImagePtr color_image_multisampled = image_cache_->NewImage(info);
+
+    // TODO: use lazily-allocated image: since we don't care about saving the
+    // depth buffer, a tile-based GPU doesn't actually need this memory.
+    info.format = depth_format_;
+    info.usage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+    ImagePtr depth_image_multisampled = image_cache_->NewImage(info);
+
+    FramebufferPtr multisample_fb = ftl::MakeRefCounted<Framebuffer>(
+        escher_, width, height, std::vector<ImagePtr>{color_image_multisampled,
+                                                      depth_image_multisampled},
+        model_renderer_->lighting_pass());
+
+    current_frame()->AddUsedResource(multisample_fb);
+
+    DrawLightingPass(multisample_fb, illumination_texture, stage, model);
+
+    // TODO: do this during lighting sub-pass by adding a resolve attachment.
+    vk::ImageResolve resolve;
+    vk::ImageSubresourceLayers layers;
+    layers.aspectMask = vk::ImageAspectFlagBits::eColor;
+    layers.mipLevel = 0;
+    layers.baseArrayLayer = 0;
+    layers.layerCount = 1;
+    resolve.srcSubresource = layers;
+    resolve.srcOffset = vk::Offset3D{0, 0, 0};
+    resolve.dstSubresource = layers;
+    resolve.dstOffset = vk::Offset3D{0, 0, 0};
+    resolve.extent = vk::Extent3D{width, height, 0};
+    current_frame()->get().resolveImage(
+        color_image_multisampled->get(),
+        vk::ImageLayout::eColorAttachmentOptimal, color_image_out->get(),
+        vk::ImageLayout::eColorAttachmentOptimal, resolve);
+  }
 
   DrawDebugOverlays(color_image_out, depth_image,
                     illumination_texture->image());

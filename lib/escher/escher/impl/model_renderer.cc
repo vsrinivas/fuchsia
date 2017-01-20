@@ -26,7 +26,8 @@ namespace impl {
 
 ModelRenderer::ModelRenderer(EscherImpl* escher,
                              ModelData* model_data,
-                             vk::Format color_format,
+                             vk::Format pre_pass_color_format,
+                             vk::Format lighting_pass_color_format,
                              vk::Format depth_format)
     : device_(escher->vulkan_context().device),
       mesh_manager_(escher->mesh_manager()),
@@ -35,7 +36,8 @@ ModelRenderer::ModelRenderer(EscherImpl* escher,
   circle_ = CreateCircle();
   white_texture_ = CreateWhiteTexture(escher);
 
-  CreateRenderPasses(color_format, depth_format);
+  CreateRenderPasses(pre_pass_color_format, lighting_pass_color_format,
+                     depth_format);
   pipeline_cache_ = std::make_unique<impl::ModelPipelineCacheOLD>(
       device_, depth_prepass_, lighting_pass_, model_data_);
 }
@@ -95,7 +97,9 @@ void ModelRenderer::Draw(Stage& stage,
   {
     const float half_width_recip = 2.f / volume.width();
     const float half_height_recip = 2.f / volume.height();
-    const float depth_range_recip = 1.f / volume.depth_range();
+    // Add bias so that objects at height = 0 aren't automatically depth-culled.
+    const float kDepthFudgeFactor = viewport.maxDepth - 0.01f;
+    const float depth_range_recip = kDepthFudgeFactor / volume.depth_range();
 
     ModelData::PerObject per_object;
     auto& scale_x = per_object.transform[0][0];
@@ -118,7 +122,8 @@ void ModelRenderer::Draw(Stage& stage,
       // Convert "height above the stage" into "distance from the camera",
       // normalized to the range (0,1).  This is passed unaltered through the
       // vertex shader.
-      translate_z = 1.f - (volume.far() + o.position().z * depth_range_recip);
+      translate_z = kDepthFudgeFactor -
+                    (volume.far() + o.position().z * depth_range_recip);
 
       if (o.rotation() != 0.f) {
         float pre_rot_translation_x = -o.rotation_point().x;
@@ -190,6 +195,8 @@ void ModelRenderer::Draw(Stage& stage,
     pipeline_spec.mesh_spec = mesh->spec;
     pipeline_spec.shape_modifiers = o.shape().modifiers();
     pipeline_spec.use_depth_prepass = hack_use_depth_prepass;
+    // TODO: more explicit way to indicate sample count.
+    pipeline_spec.sample_count = hack_use_depth_prepass ? 1 : 4;
 
     // Don't rebind pipeline state if it is already up-to-date.
     if (previous_pipeline_spec != pipeline_spec) {
@@ -248,7 +255,8 @@ TexturePtr ModelRenderer::CreateWhiteTexture(EscherImpl* escher) {
       std::move(image), escher->vulkan_context().device, vk::Filter::eNearest);
 }
 
-void ModelRenderer::CreateRenderPasses(vk::Format color_format,
+void ModelRenderer::CreateRenderPasses(vk::Format pre_pass_color_format,
+                                       vk::Format lighting_pass_color_format,
                                        vk::Format depth_format) {
   constexpr uint32_t kAttachmentCount = 2;
   const uint32_t kColorAttachment = 0;
@@ -257,15 +265,10 @@ void ModelRenderer::CreateRenderPasses(vk::Format color_format,
   auto& color_attachment = attachments[kColorAttachment];
   auto& depth_attachment = attachments[kDepthAttachment];
 
-  color_attachment.format = color_format;
-  color_attachment.samples = vk::SampleCountFlagBits::e1;
   // Load/store ops and image layouts differ between passes; see below.
-
   depth_attachment.format = depth_format;
-  depth_attachment.samples = vk::SampleCountFlagBits::e1;
   depth_attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
   depth_attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-  // Load/store ops and image layouts differ between passes; see below.
 
   vk::AttachmentReference color_reference;
   color_reference.attachment = kColorAttachment;
@@ -325,10 +328,13 @@ void ModelRenderer::CreateRenderPasses(vk::Format color_format,
   info.pDependencies = dependencies;
 
   // Create the depth-prepass RenderPass.
+  color_attachment.format = pre_pass_color_format;
+  color_attachment.samples = vk::SampleCountFlagBits::e1;
   color_attachment.loadOp = vk::AttachmentLoadOp::eDontCare;
   color_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
   color_attachment.initialLayout = vk::ImageLayout::eUndefined;
   color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
+  depth_attachment.samples = vk::SampleCountFlagBits::e1;
   depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
   depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
   depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
@@ -337,21 +343,17 @@ void ModelRenderer::CreateRenderPasses(vk::Format color_format,
   depth_prepass_ = ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
 
   // Create the illumination RenderPass.
+  color_attachment.format = lighting_pass_color_format;
+  color_attachment.samples = vk::SampleCountFlagBits::e4;
   color_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+  // TODO: necessary to store if we resolve as part of the render-pass?
   color_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-  color_attachment.initialLayout = vk::ImageLayout::eColorAttachmentOptimal;
+  color_attachment.initialLayout = vk::ImageLayout::eUndefined;
   color_attachment.finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
-  depth_attachment.loadOp = vk::AttachmentLoadOp::eLoad;
-  // TODO: Investigate whether we would say eDontCare about the depth_attachment
-  // contents.  Ideally the Vulkan implementation would notice that the pipeline
-  // that we use during the illumination pass don't write to the depth-buffer
-  // (only read), but who knows?  By saying eDontCare, we be indicating that
-  // Vulkan wouldn't go out of its way to trash memory that it being used
-  // read-only.  Anyway, until profiling indicates that it's a problem, we can
-  // leave it this way.
-  depth_attachment.storeOp = vk::AttachmentStoreOp::eStore;
-  depth_attachment.initialLayout =
-      vk::ImageLayout::eDepthStencilAttachmentOptimal;
+  depth_attachment.samples = vk::SampleCountFlagBits::e4;
+  depth_attachment.loadOp = vk::AttachmentLoadOp::eClear;
+  depth_attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+  depth_attachment.initialLayout = vk::ImageLayout::eUndefined;
   depth_attachment.finalLayout =
       vk::ImageLayout::eDepthStencilAttachmentOptimal;
   lighting_pass_ = ESCHER_CHECKED_VK_RESULT(device_.createRenderPass(info));
