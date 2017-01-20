@@ -292,11 +292,6 @@ status_t VmAspace::MapObject(mxtl::RefPtr<VmObject> vmo, const char* name, uint6
         vmar_flags |= VMAR_FLAG_SPECIFIC;
     }
 
-    // TODO(teisenbe): Remove this once migration to new syscalls is done
-    if (vmm_flags & VMM_FLAG_VALLOC_BASE) {
-        vmar_flags |= VMAR_FLAG_MAP_HIGH;
-    }
-
     // Create the mappings with all of the CAN_* RWX flags, so that
     // Protect() can transition them arbitrarily.  This is not desirable for the
     // long-term, and will vanish when MapObject is removed from VmAspace.

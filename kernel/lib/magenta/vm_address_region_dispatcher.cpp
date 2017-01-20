@@ -82,10 +82,6 @@ status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mm
         vmar |= VMAR_FLAG_CAN_MAP_EXECUTE;
         flags &= ~MX_VM_FLAG_CAN_MAP_EXECUTE;
     }
-    if (flags & MX_VM_FLAG_ALLOC_BASE) {
-        vmar |= VMAR_FLAG_MAP_HIGH;
-        flags &= ~MX_VM_FLAG_ALLOC_BASE;
-    }
 
     if (flags != 0)
         return ERR_INVALID_ARGS;

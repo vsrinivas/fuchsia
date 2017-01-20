@@ -42,11 +42,6 @@
 // mapping can gain this permission.
 #define VMAR_FLAG_CAN_MAP_EXECUTE (1 << 6)
 
-// TODO(teisenbe): Remove this flag once DDK uses VMAR interface
-// This flag is a hint to try to create the mapping high up in the address
-// space.
-#define VMAR_FLAG_MAP_HIGH (1 << 7)
-
 #define VMAR_CAN_RWX_FLAGS (VMAR_FLAG_CAN_MAP_READ | \
                             VMAR_FLAG_CAN_MAP_WRITE | \
                             VMAR_FLAG_CAN_MAP_EXECUTE)

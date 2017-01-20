@@ -129,17 +129,6 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
             return ERR_NO_MEMORY;
         }
     } else {
-        // TODO(teisenbe): This is a hack for the migration to the new interface.  It works
-        // around the lack of VALLOC_BASE until things start using subregions.
-        if (vmar_flags & VMAR_FLAG_MAP_HIGH) {
-#if _LP64
-            static const vaddr_t mmio_map_base_address = 0x7ff000000000ULL;
-#else
-            static const vaddr_t mmio_map_base_address = 0x20000000UL;
-#endif
-            new_base = mmio_map_base_address;
-        }
-
         // If we're not mapping to a specific place, search for an opening.
         new_base = AllocSpotLocked(new_base, size, align_pow2, 0 /*alloc_gap*/, arch_mmu_flags);
         if (new_base == static_cast<vaddr_t>(-1)) {
@@ -202,7 +191,7 @@ status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size, ui
 
     // Check that only allowed flags have been set
     if (vmar_flags & ~(VMAR_FLAG_SPECIFIC | VMAR_FLAG_SPECIFIC_OVERWRITE |
-                       VMAR_CAN_RWX_FLAGS | VMAR_FLAG_MAP_HIGH)) {
+                       VMAR_CAN_RWX_FLAGS)) {
         return ERR_INVALID_ARGS;
     }
 

@@ -133,7 +133,7 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
     auto vmar = aspace->RootVmar();
 
     mxtl::RefPtr<VmMapping> mapping;
-    status_t res = vmar->CreateVmMapping(0, len, PAGE_SIZE_SHIFT, VMAR_FLAG_MAP_HIGH,
+    status_t res = vmar->CreateVmMapping(0, len, PAGE_SIZE_SHIFT, 0,
                                          mxtl::move(vmo), 0, arch_mmu_flags, "user_mmio",
                                          &mapping);
 
