@@ -24,14 +24,14 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
     mx_handle_t stack_vmo = MX_HANDLE_INVALID;
     mx_status_t status = mx_vmo_create(stack_size, 0, &stack_vmo);
     if (status < 0)
-        return MX_HANDLE_INVALID;
+        return status;
 
     // We assume that the code to execute is less than 80 bytes. As of gcc 6
     // the code is 52 bytes with frame pointers in x86 and a bit larger for ARM.
     size_t actual;
     status = mx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, 80u, &actual);
     if (status < 0)
-        return MX_HANDLE_INVALID;
+        return status;
 
     mx_vaddr_t stack_base;
     status = mx_vmar_map(vmar, 0, stack_vmo, 0, stack_size,
