@@ -158,6 +158,16 @@ fi
 
 if [ "$NET" -eq 2 ]; then
     if [ $(uname -s) == "Darwin" ]; then
+        if [ ! -c "/dev/$IFNAME" ]; then
+          echo "To use qemu with networking on macOS, install the tun/tap driver:"
+          echo "http://tuntaposx.sourceforge.net/download.xhtml"
+          exit 1
+        fi
+        if [ ! -w "/dev/$IFNAME" ]; then
+          echo "For networking /dev/$IFNAME must be owned by $USER. Please run:"
+          echo "  sudo chown $USER /dev/$IFNAME"
+          exit 1
+        fi
         ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
     else
         ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
