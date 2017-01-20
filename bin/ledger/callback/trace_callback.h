@@ -36,7 +36,7 @@ class TracingLambda {
 
   // Copy constructor so that the resulting callback can be used as
   // std::function, but acts as a move constructor. Only the last copy is valid.
-  TracingLambda(const TracingLambda& other)
+  TracingLambda(TracingLambda&& other)
       : id_(other.id_),
         category_(other.category_),
         name_(other.name_),
@@ -52,8 +52,6 @@ class TracingLambda {
       TRACE_ASYNC_END(category_, name_, id_, "NotRun", true);
     }
   }
-
-  TracingLambda& operator=(const TracingLambda& other) = delete;
 
   template <typename... ArgType>
   auto operator()(ArgType&&... args) const {
@@ -77,6 +75,8 @@ class TracingLambda {
   const C callback_;
   mutable bool did_run_or_moved_out_;
   bool trace_enabled_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(TracingLambda);
 };
 
 template <typename C, typename... ArgType>
@@ -86,12 +86,13 @@ auto TraceCallback(C callback,
                    ArgType... args) {
   uint64_t id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN(category, name, id, std::forward<ArgType>(args)...);
-  return TracingLambda<C>(std::move(callback), id, category, name);
+  return ftl::MakeCopyable(
+      TracingLambda<C>(std::move(callback), id, category, name));
 }
 
 template <typename C>
 auto TraceCallback(C callback) {
-  return TracingLambda<C>(std::move(callback));
+  return ftl::MakeCopyable(TracingLambda<C>(std::move(callback)));
 }
 
 // Identity functions. This is used to ensure that a C string is a compile time
