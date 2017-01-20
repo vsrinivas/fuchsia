@@ -90,6 +90,10 @@ static ssize_t mem_write(vnode_t* vn, const void* data, size_t len, size_t off) 
     if (newlen > vn->length) {
         vn->length = newlen;
     }
+    if (actual == 0 && off >= MINFS_MAX_FILE_SIZE) {
+        // short write because we're beyond the end of the permissible length
+        return ERR_FILE_BIG;
+    }
     return actual;
 }
 
