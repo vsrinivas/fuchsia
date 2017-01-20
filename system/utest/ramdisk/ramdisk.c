@@ -17,14 +17,37 @@
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
-int get_ramdisk(uint64_t blk_size, uint64_t blk_count) {
-    int fd = open("/dev/misc/ramdisk", O_RDWR);
-    ASSERT_GE(fd, 0, "Could not open ramdisk device");
+#define RAMCTL_PATH "/dev/misc/ramctl"
+
+int get_ramdisk(const char* name, uint64_t blk_size, uint64_t blk_count) {
+    // Open the "ramdisk controller", and ask it to create a ramdisk for us.
+    int fd = open(RAMCTL_PATH, O_RDWR);
+    ASSERT_GE(fd, 0, "Could not open ramctl device");
     ramdisk_ioctl_config_t config;
     config.blk_size = blk_size;
     config.blk_count = blk_count;
+    strcpy(config.name, name);
     ssize_t r = ioctl_block_ramdisk_config(fd, &config);
-    ASSERT_EQ(r, NO_ERROR, "Failed to acquire ramdisk");
+    ASSERT_EQ(r, NO_ERROR, "Failed to create ramdisk");
+    ASSERT_EQ(close(fd), 0, "Failed to close ramctl");
+
+    // TODO(smklein): This "sleep" prevents a bug from triggering:
+    // - 'ioctl_block_ramdisk_config' --> 'device_add' --> 'open' *should* work, but sometimes
+    //   fails, as the ramdisk does not exist in the FS heirarchy yet. (MG-468)
+    usleep(1000);
+
+    // At this point, our ramdisk is accessible from filesystem hierarchy
+    char ramdisk_path[PATH_MAX];
+    snprintf(ramdisk_path, sizeof(ramdisk_path), "%s/%s", RAMCTL_PATH, name);
+    fd = open(ramdisk_path, O_RDWR);
+    if (fd < 0) {
+        printf("OPENING RAMDISK FAILURE. Errno: %d\n", errno);
+    }
+    ASSERT_GE(fd, 0, "Could not open ramdisk device");
+
+    // Although we are unlinking the ramdisk, it should still be accessible by the file descriptor
+    // we opened earlier. Once that fd is closed, the ramdisk should be released.
+    ASSERT_GE(ioctl_block_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     return fd;
 }
 
@@ -33,7 +56,7 @@ bool ramdisk_test_simple(void) {
     uint8_t out[PAGE_SIZE];
 
     BEGIN_TEST;
-    int fd = get_ramdisk(PAGE_SIZE / 2, 512);
+    int fd = get_ramdisk("ramdisk-test-simple", PAGE_SIZE / 2, 512);
     memset(buf, 'a', sizeof(buf));
     memset(out, 0, sizeof(out));
 
@@ -54,7 +77,7 @@ bool ramdisk_test_bad_requests(void) {
     uint8_t buf[PAGE_SIZE];
 
     BEGIN_TEST;
-    int fd = get_ramdisk(PAGE_SIZE, 512);
+    int fd = get_ramdisk("ramdisk-test-bad-requests", PAGE_SIZE, 512);
     memset(buf, 'a', sizeof(buf));
 
     // Read / write non-multiples of the block size
@@ -89,8 +112,8 @@ bool ramdisk_test_multiple(void) {
     uint8_t out[PAGE_SIZE];
 
     BEGIN_TEST;
-    int fd1 = get_ramdisk(PAGE_SIZE, 512);
-    int fd2 = get_ramdisk(PAGE_SIZE, 512);
+    int fd1 = get_ramdisk("ramdisk-test-A", PAGE_SIZE, 512);
+    int fd2 = get_ramdisk("ramdisk-test-B", PAGE_SIZE, 512);
 
     // Write 'a' to fd1, write 'b', to fd2
     memset(buf, 'a', sizeof(buf));
