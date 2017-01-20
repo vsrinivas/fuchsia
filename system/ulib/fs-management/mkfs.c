@@ -17,7 +17,7 @@
 
 #define arraylen(arr) (sizeof(arr) / sizeof(arr[0]))
 
-static mx_status_t mkfs_minfs(const char* devicepath, MkfsCallback cb) {
+static mx_status_t mkfs_minfs(const char* devicepath, LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
@@ -37,12 +37,12 @@ static mx_status_t mkfs_minfs(const char* devicepath, MkfsCallback cb) {
     return cb(arraylen(argv), argv, hnd, ids, n);
 }
 
-static mx_status_t mkfs_fat(const char* devicepath, MkfsCallback cb) {
+static mx_status_t mkfs_fat(const char* devicepath, LaunchCallback cb) {
     const char* argv[] = { "/boot/bin/mkfs-msdosfs", devicepath };
     return cb(arraylen(argv), argv, NULL, NULL, 0);
 }
 
-mx_status_t mkfs(const char* devicepath, disk_format_t df, MkfsCallback cb) {
+mx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
         return mkfs_minfs(devicepath, cb);

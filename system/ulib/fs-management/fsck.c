@@ -17,7 +17,7 @@
 
 #define arraylen(arr) (sizeof(arr) / sizeof(arr[0]))
 
-static mx_status_t fsck_minfs(const char* devicepath, FsckCallback cb) {
+static mx_status_t fsck_minfs(const char* devicepath, LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
@@ -37,12 +37,12 @@ static mx_status_t fsck_minfs(const char* devicepath, FsckCallback cb) {
     return cb(arraylen(argv), argv, hnd, ids, n);
 }
 
-static mx_status_t fsck_fat(const char* devicepath, FsckCallback cb) {
+static mx_status_t fsck_fat(const char* devicepath, LaunchCallback cb) {
     const char* argv[] = { "/boot/bin/fsck-msdosfs", devicepath };
     return cb(arraylen(argv), argv, NULL, NULL, 0);
 }
 
-mx_status_t fsck(const char* devicepath, disk_format_t df, FsckCallback cb) {
+mx_status_t fsck(const char* devicepath, disk_format_t df, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
         return fsck_minfs(devicepath, cb);

@@ -13,8 +13,6 @@
 #include <unistd.h>
 
 #include <fs-management/mount.h>
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
@@ -67,63 +65,6 @@ int parse_args(int argc, char** argv, bool* verbose, disk_format_t* df, char** d
     return 0;
 }
 
-static mx_status_t launch(int argc, const char** argv, mx_handle_t* handles, uint32_t* types,
-                          size_t len) {
-    mx_status_t status;
-    mx_handle_t hnd[8];
-    uint32_t ids[8];
-
-    size_t n = 0;
-    if ((status = mxio_clone_root(hnd, ids)) < 0) {
-        fprintf(stderr, "fs_mkfs: Could not clone mxio root\n");
-        return status;
-    }
-    n++;
-
-    if ((status = mxio_clone_fd(1, 1, hnd + n, ids + n)) < 0) {
-        fprintf(stderr, "fs_mkfs: Could not clone stdout\n");
-        goto fail;
-    }
-    n++;
-
-    if ((status = mxio_clone_fd(2, 2, hnd + n, ids + n)) < 0) {
-        fprintf(stderr, "fs_mkfs: Could not clone stderr\n");
-        goto fail;
-    }
-    n++;
-
-    if (n + len > sizeof(hnd)/sizeof(hnd[0])) {
-        fprintf(stderr, "fs_mkfs: Too many handles\n");
-        goto fail;
-    }
-
-    for (size_t i = 0; i < len; i++) {
-        hnd[n] = handles[i];
-        ids[n] = types[i];
-        n++;
-    }
-
-    mx_handle_t proc;
-    if ((proc = launchpad_launch_mxio_etc(argv[0], argc, argv,
-                                          (const char* const*) environ,
-                                          n, hnd, ids)) <= 0) {
-        fprintf(stderr, "fs_mkfs: cannot launch %s\n", argv[0]);
-        return proc;
-    }
-
-    status = mx_handle_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR) {
-        fprintf(stderr, "fs_mkfs: Error waiting for mkfs to terminate\n");
-    }
-    mx_handle_close(proc);
-    return status;
-fail:
-    for (size_t i = 0; i < n; i++) {
-        mx_handle_close(handles[i]);
-    }
-    return status;
-}
-
 int main(int argc, char** argv) {
     bool verbose;
     char* devicepath;
@@ -137,7 +78,7 @@ int main(int argc, char** argv) {
         printf("fs_mkfs: Formatting device [%s]\n", devicepath);
     }
 
-    if ((r = mkfs(devicepath, df, launch)) < 0) {
+    if ((r = mkfs(devicepath, df, launch_stdio_sync)) < 0) {
         fprintf(stderr, "fs_mkfs: Failed to format device: %d\n", r);
     }
     return r;

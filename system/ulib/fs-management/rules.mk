@@ -10,6 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/fsck.c \
+    $(LOCAL_DIR)/launch.c \
     $(LOCAL_DIR)/mkfs.c \
     $(LOCAL_DIR)/mount.c \
 
@@ -17,9 +18,10 @@ MODULE_STATIC_LIBS := \
     ulib/fs \
 
 MODULE_LIBS := \
-    ulib/mxio \
+    ulib/launchpad \
     ulib/magenta \
     ulib/musl \
+    ulib/mxio \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := fs-management

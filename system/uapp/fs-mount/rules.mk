@@ -16,7 +16,6 @@ MODULE_SRCS := \
 
 MODULE_LIBS := \
     ulib/fs-management \
-    ulib/launchpad \
     ulib/magenta \
     ulib/mxio \
     ulib/musl

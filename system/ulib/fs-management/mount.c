@@ -64,7 +64,7 @@ static mx_status_t mount_remote_handle(const char* where, mx_handle_t* h) {
 }
 
 static mx_status_t mount_minfs(int devicefd, const char* mountpath, const mount_options_t* options,
-                               MountCallback cb) {
+                               LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
@@ -91,7 +91,7 @@ static mx_status_t mount_minfs(int devicefd, const char* mountpath, const mount_
 }
 
 static mx_status_t mount_fat(int devicefd, const char* mountpath, const mount_options_t* options,
-                             MountCallback cb) {
+                             LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
@@ -129,7 +129,7 @@ static mx_status_t mount_fat(int devicefd, const char* mountpath, const mount_op
 }
 
 mx_status_t mount(int devicefd, const char* mountpath,
-                  disk_format_t df, const mount_options_t* options, MountCallback cb) {
+                  disk_format_t df, const mount_options_t* options, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
         return mount_minfs(devicefd, mountpath, options, cb);
