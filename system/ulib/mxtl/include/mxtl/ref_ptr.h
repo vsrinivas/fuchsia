@@ -6,27 +6,26 @@
 
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
-#include <mxtl/deleter.h>
 #include <mxtl/type_support.h>
 
 namespace mxtl {
 
-template <typename T, typename Deleter = default_delete<T>>
+template <typename T>
 class RefPtr;
 
-template <typename T, typename Deleter = default_delete<T>>
-RefPtr<T, Deleter> AdoptRef(T* ptr);
+template <typename T>
+RefPtr<T> AdoptRef(T* ptr);
 
-template <typename T, typename Deleter = default_delete<T>>
-RefPtr<T, Deleter> WrapRefPtr(T* ptr);
+template <typename T>
+RefPtr<T> WrapRefPtr(T* ptr);
 
 namespace internal {
-template <typename T, typename Deleter = default_delete<T>>
-RefPtr<T, Deleter> MakeRefPtrNoAdopt(T* ptr);
+template <typename T>
+RefPtr<T> MakeRefPtrNoAdopt(T* ptr);
 } // namespace internal
 
 // RefPtr<T> holds a reference to an intrusively-refcounted object of type
-// T that uses the Deleter to clean up when the refcount drops to 0.
+// T that deletes the object when the refcount drops to 0.
 //
 // T should be a subclass of mxtl::RefCounted<>, or something that adheres to
 // the same contract for AddRef() and Release().
@@ -41,11 +40,10 @@ RefPtr<T, Deleter> MakeRefPtrNoAdopt(T* ptr);
 // AdoptRef free function at the bottom of this header. To construct a RefPtr
 // to hold a reference to an object that already exists use the copy or move
 // constructor or assignment operator.
-template <typename T, typename Deleter>
+template <typename T>
 class RefPtr final {
 public:
     using ObjType = T;
-    using DeleterType = Deleter;
 
     // Constructors
     constexpr RefPtr()
@@ -67,21 +65,13 @@ public:
     // Implicit upcast via copy construction.
     //
     // @see the notes in unique_ptr.h
-    template <typename U, typename U_Deleter,
+    template <typename U,
               typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
-    RefPtr(const RefPtr<U, U_Deleter>& r) : RefPtr(r.ptr_) {
+    RefPtr(const RefPtr<U>& r) : RefPtr(r.ptr_) {
         static_assert((is_class<T>::value == is_class<U>::value) &&
                      (!is_class<T>::value || has_virtual_destructor<T>::value),
                 "Cannot convert unique_ptr<U> to unique_ptr<T> unless neither T "
                 "nor U are class/struct types, or T has a virtual destructor");
-
-        static_assert(is_same<U_Deleter, default_delete<U>>::value,
-                "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<U, ...> is "
-                "using default_delete<U>.");
-
-        static_assert(is_same<Deleter, default_delete<T>>::value,
-                "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<T, ...> is "
-                "using default_delete<T>.");
     }
 
     // Assignment
@@ -93,7 +83,7 @@ public:
         T* old = ptr_;
         ptr_ = r.ptr_;
         if (old && old->Release()) {
-            Deleter()(old);
+            delete old;
         }
         return *this;
     }
@@ -107,21 +97,13 @@ public:
     // Implicit upcast via move construction.
     //
     // @see the notes in RefPtr.h
-    template <typename U, typename U_Deleter,
+    template <typename U,
               typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
-    RefPtr(RefPtr<U, U_Deleter>&& r) : ptr_(r.ptr_) {
+    RefPtr(RefPtr<U>&& r) : ptr_(r.ptr_) {
         static_assert((is_class<T>::value == is_class<U>::value) &&
                      (!is_class<T>::value || has_virtual_destructor<T>::value),
-                "Cannot convert unique_ptr<U> to unique_ptr<T> unless neither T "
+                "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
                 "nor U are class/struct types, or T has a virtual destructor");
-
-        static_assert(is_same<U_Deleter, default_delete<U>>::value,
-                "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<U, ...> is "
-                "using default_delete<U>.");
-
-        static_assert(is_same<Deleter, default_delete<T>>::value,
-                "Cannot convert RefPtr<U> to RefPtr<T, ...> unless RefPtr<T, ...> is "
-                "using default_delete<T>.");
 
         r.ptr_ = nullptr;
     }
@@ -134,8 +116,8 @@ public:
 
     // Construct via explicit downcast.
     // ptr must be the same object as base.ptr_.
-    template <typename BaseType, typename BaseDeleter = default_delete<BaseType>>
-    RefPtr(T* ptr, RefPtr<BaseType, BaseDeleter>&& base)
+    template <typename BaseType>
+    RefPtr(T* ptr, RefPtr<BaseType>&& base)
         : ptr_(ptr) {
         ASSERT(static_cast<BaseType*>(ptr_) == base.ptr_);
         base.ptr_ = nullptr;
@@ -147,25 +129,22 @@ public:
     // mxtl::RefPtr<MyBase> foo = MakeBase();
     // auto bar_copy = mxtl::RefPtr<MyDerived>::Downcast(foo);
     // auto bar_move = mxtl::RefPtr<MyDerived>::Downcast(mxtl::move(foo));
-    // auto baz_copy = mxtl::RefPtr<MyDerived, CustomDeleter>::Downcast(foo);
-    // auto baz_move = mxtl::RefPtr<MyDerived, CustomDeleter>::Downcast(mxtl::move(foo));
     //
     template <typename BaseRefPtr>
     static RefPtr Downcast(BaseRefPtr base) {
-        // Make certain that BaseRefPtr is some form of RefPtr<T, Deleter>
-        static_assert(is_same<BaseRefPtr, RefPtr<typename BaseRefPtr::ObjType,
-                                                 typename BaseRefPtr::DeleterType>>::value,
-                     "BaseRefPtr must be a RefPtr<T, Deleter>!");
+        // Make certain that BaseRefPtr is some form of RefPtr<T>
+        static_assert(is_same<BaseRefPtr, RefPtr<typename BaseRefPtr::ObjType>>::value,
+                     "BaseRefPtr must be a RefPtr<T>!");
 
         if (base != nullptr)
-            return internal::MakeRefPtrNoAdopt<T, Deleter>(static_cast<T*>(base.leak_ref()));
+            return internal::MakeRefPtrNoAdopt<T>(static_cast<T*>(base.leak_ref()));
 
         return nullptr;
     }
 
     ~RefPtr() {
         if (ptr_ && ptr_->Release()) {
-            Deleter()(ptr_);
+            delete ptr_;
         }
     }
 
@@ -202,15 +181,14 @@ public:
     bool operator==(decltype(nullptr)) const { return (ptr_ == nullptr); }
     bool operator!=(decltype(nullptr)) const { return (ptr_ != nullptr); }
 
-    bool operator==(const RefPtr<T, Deleter>& other) const { return ptr_ == other.ptr_; }
-    bool operator!=(const RefPtr<T, Deleter>& other) const { return ptr_ != other.ptr_; }
+    bool operator==(const RefPtr<T>& other) const { return ptr_ == other.ptr_; }
+    bool operator!=(const RefPtr<T>& other) const { return ptr_ != other.ptr_; }
 
 private:
-    template <typename U, typename D>
+    template <typename U>
     friend class RefPtr;
-    friend RefPtr<T, Deleter> AdoptRef<T, Deleter>(T*);
-    friend RefPtr<T, Deleter> AdoptRef<T, Deleter>(T*);
-    friend RefPtr<T, Deleter> internal::MakeRefPtrNoAdopt<T, Deleter>(T*);
+    friend RefPtr<T> AdoptRef<T>(T*);
+    friend RefPtr<T> internal::MakeRefPtrNoAdopt<T>(T*);
 
     enum AdoptTag { ADOPT };
     enum NoAdoptTag { NO_ADOPT };
@@ -229,13 +207,13 @@ private:
 };
 
 // Comparison against nullptr operator (of the form, nullptr == myptr)
-template <typename T, typename Deleter>
-static inline bool operator==(decltype(nullptr), const RefPtr<T, Deleter>& ptr) {
+template <typename T>
+static inline bool operator==(decltype(nullptr), const RefPtr<T>& ptr) {
     return (ptr.get() == nullptr);
 }
 
-template <typename T, typename Deleter>
-static inline bool operator!=(decltype(nullptr), const RefPtr<T, Deleter>& ptr) {
+template <typename T>
+static inline bool operator!=(decltype(nullptr), const RefPtr<T>& ptr) {
     return (ptr.get() != nullptr);
 }
 
@@ -246,24 +224,24 @@ static inline bool operator!=(decltype(nullptr), const RefPtr<T, Deleter>& ptr) 
 //   if (!h)
 //      // Deal with allocation failure here
 //   h->DoStuff();
-template <typename T, typename Deleter>
-inline RefPtr<T, Deleter> AdoptRef(T* ptr) {
-    return RefPtr<T, Deleter>(ptr, RefPtr<T, Deleter>::ADOPT);
+template <typename T>
+inline RefPtr<T> AdoptRef(T* ptr) {
+    return RefPtr<T>(ptr, RefPtr<T>::ADOPT);
 }
 
 // Convenience wrappers to construct a RefPtr with argument type deduction.
-template <typename T, typename Deleter>
-inline RefPtr<T, Deleter> WrapRefPtr(T* ptr) {
-    return RefPtr<T, Deleter>(ptr);
+template <typename T>
+inline RefPtr<T> WrapRefPtr(T* ptr) {
+    return RefPtr<T>(ptr);
 }
 
 namespace internal {
 // Constructs a RefPtr from a T* without attempt to either AddRef or Adopt the
 // pointer.  Used by the internals of some intrusive container classes to store
 // sentinels (special invalid pointers) in RefPtr<>s.
-template <typename T, typename Deleter>
-inline RefPtr<T, Deleter> MakeRefPtrNoAdopt(T* ptr) {
-    return RefPtr<T, Deleter>(ptr, RefPtr<T, Deleter>::NO_ADOPT);
+template <typename T>
+inline RefPtr<T> MakeRefPtrNoAdopt(T* ptr) {
+    return RefPtr<T>(ptr, RefPtr<T>::NO_ADOPT);
 }
 } // namespace internal
 

@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_page_list.h>
-#include <mxtl/deleter.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
@@ -102,9 +101,9 @@ protected:
     // friend VmAddressRegion so it can access DestroyLocked
     friend VmAddressRegion;
 
-    friend mxtl::default_delete<VmAddressRegionOrMapping>;
     // destructor, should only be invoked from RefPtr
     virtual ~VmAddressRegionOrMapping();
+    friend mxtl::RefPtr<VmAddressRegionOrMapping>;
 
     enum class LifeCycleState {
         // Initial state: if NOT_READY, then do not invoke Destroy() in the
@@ -224,8 +223,8 @@ protected:
     // Remove *region* from the subregion list
     void RemoveSubregion(VmAddressRegionOrMapping* region);
 
-    friend mxtl::default_delete<VmAddressRegion>;
     ~VmAddressRegion() override;
+    friend mxtl::RefPtr<VmAddressRegion>;
 
 private:
     // utility so WAVL tree can find the intrusive node for the child list
@@ -383,8 +382,8 @@ public:
 protected:
     static const uint32_t kMagic = 0x564d4150; // VMAP
 
-    friend mxtl::default_delete<VmMapping>;
     ~VmMapping() override;
+    friend mxtl::RefPtr<VmMapping>;
 
     // private apis from VmObject land
     friend class VmObjectPaged;

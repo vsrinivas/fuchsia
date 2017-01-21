@@ -11,7 +11,6 @@
 #include <kernel/mutex.h>
 #include <kernel/vm.h>
 #include <kernel/vm/vm_address_region.h>
-#include <mxtl/deleter.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/macros.h>
@@ -99,7 +98,7 @@ private:
 
     // private destructor that can only be used from the ref ptr or vmm_free_aspace
     ~VmAspace();
-    friend mxtl::default_delete<VmAspace>;
+    friend mxtl::RefPtr<VmAspace>;
     friend status_t vmm_free_aspace(vmm_aspace_t* _aspace);
 
     // internal page fault routine, friended to be only called by vmm_page_fault_handler
