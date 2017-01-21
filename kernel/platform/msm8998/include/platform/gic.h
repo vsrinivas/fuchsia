@@ -9,7 +9,7 @@
 
 #include <platform/msm8998.h>
 
-#define GICBASE(n)  (GICV3_BASE)
+#define GICBASE(n)  (MSM8998_GIC_BASE_VIRT)
 #define GICD_OFFSET (0x00000)
 #define GICC_OFFSET (0x10000)
 
