@@ -70,7 +70,7 @@ public:
     RefPtr(const RefPtr<U>& r) : RefPtr(r.ptr_) {
         static_assert((is_class<T>::value == is_class<U>::value) &&
                      (!is_class<T>::value || has_virtual_destructor<T>::value),
-                "Cannot convert unique_ptr<U> to unique_ptr<T> unless neither T "
+                "Cannot convert RefPtr<U> to RefPtr<T> unless neither T "
                 "nor U are class/struct types, or T has a virtual destructor");
     }
 
