@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <kernel/vm/vm_object.h>
 #include <kernel/vm/vm_page_list.h>
+#include <magenta/thread_annotations.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_wavl_tree.h>
 #include <mxtl/ref_counted.h>
@@ -418,7 +419,9 @@ private:
 
     void Activate() override;
 
-    // Version of Activate that does not take the object_ lock
+    // Version of Activate that does not take the object_ lock.
+    // Should be annotated TA_REQ(object_->lock()), but due to limitations
+    // in Clang around capability aliasing, we need to relax the analysis.
     void ActivateLocked();
 
     // pointer and region of the object we are mapping

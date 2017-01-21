@@ -12,6 +12,7 @@
 #include <kernel/vm/vm_page_list.h>
 #include <lib/user_copy/user_ptr.h>
 #include <list.h>
+#include <magenta/thread_annotations.h>
 #include <mxtl/array.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/macros.h>
@@ -100,10 +101,10 @@ protected:
     // get a pointer to a page at a given offset
     friend class VmMapping;
 
-    virtual vm_page_t* GetPageLocked(uint64_t offset) { return nullptr; }
+    virtual vm_page_t* GetPageLocked(uint64_t offset) TA_REQ(lock_) { return nullptr; }
 
     // get the physical address of a page at offset
-    virtual status_t GetPageLocked(uint64_t offset, paddr_t* pa) {
+    virtual status_t GetPageLocked(uint64_t offset, paddr_t* pa) TA_REQ(lock_) {
         auto page = GetPageLocked(offset);
         if (!page)
             return ERR_NOT_FOUND;
@@ -112,10 +113,12 @@ protected:
     }
 
     // fault in a page at a given offset with PF_FLAGS
-    virtual vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) { return nullptr; }
+    virtual vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) TA_REQ(lock_) {
+        return nullptr;
+    }
 
     // fault in a page at a given offset with PF_FLAGS returning the physical address
-    virtual status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) {
+    virtual status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) TA_REQ(lock_) {
         auto page = FaultPageLocked(offset, pf_flags);
         if (!page)
             return ERR_NOT_FOUND;
@@ -123,11 +126,11 @@ protected:
         return NO_ERROR;
     }
 
-    Mutex& lock() { return lock_; }
+    Mutex& lock() TA_RET_CAP(lock_) { return lock_; }
 
     // TODO(teisenbe): Rename these to s/Region/Mapping/
-    void AddRegionLocked(VmMapping* r);
-    void RemoveRegionLocked(VmMapping* r);
+    void AddRegionLocked(VmMapping* r) TA_REQ(lock_);
+    void RemoveRegionLocked(VmMapping* r) TA_REQ(lock_);
 
     // magic value
     static const uint32_t MAGIC = 0x564d4f5f; // VMO_
@@ -135,7 +138,7 @@ protected:
 
     // members
     mutable Mutex lock_;
-    mxtl::DoublyLinkedList<VmMapping*> region_list_;
+    mxtl::DoublyLinkedList<VmMapping*> region_list_ TA_GUARDED(lock_);
 };
 
 // the main VM object type, holding a list of pages
@@ -172,8 +175,8 @@ public:
     status_t CleanInvalidateCache(const uint64_t offset, const uint64_t len) override;
     status_t SyncCache(const uint64_t offset, const uint64_t len) override;
 
-    vm_page_t* GetPageLocked(uint64_t offset) override;
-    vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) override;
+    vm_page_t* GetPageLocked(uint64_t offset) override TA_REQ(lock_);
+    vm_page_t* FaultPageLocked(uint64_t offset, uint pf_flags) override TA_REQ(lock_);
 
 private:
     // private constructor (use Create())
@@ -211,7 +214,7 @@ private:
     uint32_t pmm_alloc_flags_ = PMM_ALLOC_FLAG_ANY;
 
     // a tree of pages
-    VmPageList page_list_;
+    VmPageList page_list_ TA_GUARDED(lock_);
 };
 
 // VMO representing a physical range of memory
@@ -223,8 +226,8 @@ public:
 
     void Dump(uint depth, bool verbose) override;
 
-    status_t GetPageLocked(uint64_t offset, paddr_t* pa) override;
-    status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) override;
+    status_t GetPageLocked(uint64_t offset, paddr_t* pa) override TA_REQ(lock_);
+    status_t FaultPageLocked(uint64_t offset, uint pf_flags, paddr_t* pa) override TA_REQ(lock_);
 
 private:
     // private constructor (use Create())
@@ -236,6 +239,6 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(VmObjectPhysical);
 
     // members
-    uint64_t size_ = 0;
-    paddr_t base_ = 0;
+    const uint64_t size_ = 0;
+    const paddr_t base_ = 0;
 };
