@@ -317,6 +317,8 @@ private:
         auto status = connection->local_endpoint_.write(0, &reply, sizeof(reply), nullptr, 0);
         if (status != NO_ERROR)
             connection->SetError(DRET_MSG(status, "failed to write to channel"));
+
+        delete pageflip_data;
     }
 
     std::unique_ptr<Delegate> delegate_;
