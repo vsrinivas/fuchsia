@@ -203,8 +203,12 @@ mx_status_t process_subshell(union node* n, mx_handle_t* process) {
 
     // TODO(abarth): Handle the redirects properly (i.e., implement
     // redirect(n->nredir.redirect) using launchpad);
+    // TODO(joshconner): Here we're promoting non-exported variables to
+    // environment variables, which isn't quite correct (any commands
+    // executed in the subshell will inherit these definitions).
     mx_handle_t result = launchpad_launch_mxio_etc(arg0, 1,
-        (const char* const*)&arg0, (const char* const*)environ, count, handles, ids);
+        (const char* const*)&arg0, (const char* const*)listvars(0, VUNSET, 0),
+         count, handles, ids);
     if (result < 0)
         return result;
     *process = result;
