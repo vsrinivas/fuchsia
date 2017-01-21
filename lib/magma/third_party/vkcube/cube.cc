@@ -827,10 +827,10 @@ static void demo_prepare_buffers(struct demo *demo) {
         swapchainExtent = surfCapabilities.currentExtent;
         demo->width = surfCapabilities.currentExtent.width;
         demo->height = surfCapabilities.currentExtent.height;
-
-        mat4x4_perspective(demo->projection_matrix, (float)degreesToRadians(45.0f),
-            (float)demo->width / (float)demo->height, 0.1f, 100.0f);
     }
+
+    mat4x4_perspective(demo->projection_matrix, (float)degreesToRadians(45.0f),
+        (float)demo->width / (float)demo->height, 0.1f, 100.0f);
 
     // The FIFO present mode is guaranteed by the spec to be supported
     // and to have no tearing.  It's a great default present mode to use.
@@ -2847,6 +2847,9 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
     demo->presentMode = VK_PRESENT_MODE_FIFO_KHR;
     demo->frameCount = INT32_MAX;
 
+    demo->width = 2160;
+    demo->height = 1440;
+
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--use_staging") == 0) {
             demo->use_staging_buffer = true;
@@ -2882,12 +2885,18 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
             demo->suppress_popups = true;
             continue;
         }
+        if ((strcmp(argv[i], "--size") == 0 || strcmp(argv[i], "--res") == 0) && 
+            (i < argc - 2) && sscanf(argv[i + 1], "%u", &demo->width) == 1 &&
+            sscanf(argv[i + 2], "%u", &demo->height) == 1) {
+            i += 2;
+            continue;
+        }
 
         fprintf(stderr, "Usage:\n  %s [--use_staging] [--validate] [--break] "
 #if defined(VK_USE_PLATFORM_XLIB_KHR)
                         "[--xlib] "
 #endif
-                        "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>]\n"
+                        "[--c <framecount>] [--suppress_popups] [--present_mode <present mode enum>] [--res width height]\n"
                         "VK_PRESENT_MODE_IMMEDIATE_KHR = %d\n"
                         "VK_PRESENT_MODE_MAILBOX_KHR = %d\n"
                         "VK_PRESENT_MODE_FIFO_KHR = %d\n"
@@ -2903,8 +2912,7 @@ static void demo_init(struct demo *demo, int argc, char **argv) {
 
     demo_init_vk(demo);
 
-    demo->width = 500;
-    demo->height = 500;
+    printf("using resolution %ux%u\n", demo->width, demo->height);
 
     demo->spin_angle = 1.0f;
     demo->spin_increment = 0.2f;
