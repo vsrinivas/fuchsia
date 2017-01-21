@@ -29,7 +29,7 @@ config("compiler") {
   cflags = []
   cflags_c = [ "-std=c11" ]
   cflags_cc = [ "-std=c++14" ]
-  ldflags = []
+  ldflags = [ "-Wl,--threads" ]
   configs = [
     ":compiler_sysroot",
     ":compiler_target",
