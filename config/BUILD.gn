@@ -37,10 +37,6 @@ config("compiler") {
         "-Wl,-Bstatic",
         "-lc++abi",
         "-Wl,-Bdynamic",
-
-        # We currently ship libc++.a and libc++abi.a with LLVM IR,
-        # not ELF, so we have to use llvm's linker to link them in.
-        "-fuse-ld=lld",
       ]
     }
   }
@@ -84,6 +80,15 @@ config("default_warnings") {
     "-Wextra",
     "-Wno-unused-parameter",
   ]
+  if (current_os == "fuchsia") {
+    cflags += [
+      # TODO(TO-99): Remove once all the cases of unused 'this' lamda capture
+      # have been removed from our codebase.
+      "-Wno-unused-lambda-capture",
+      # TODO(TO-100): Remove once comparator types provide const call operator.
+      "-Wno-user-defined-warnings",
+    ]
+  }
 }
 
 config("symbol_visibility_hidden") {
