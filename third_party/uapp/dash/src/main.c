@@ -139,13 +139,13 @@ main(int argc, char **argv)
 			goto state4;
 	}
 	handler = &jmploc;
-	evalifsubshell();
 #ifdef DEBUG
 	opentrace();
 	trputs("Shell args:  ");  trargs(argv);
 #endif
 	rootpid = getpid();
 	init();
+	evalifsubshell();
 	setstackmark(&smark);
 	login = procargs(argc, argv);
 	if (login) {
