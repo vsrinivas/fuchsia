@@ -82,6 +82,8 @@ __BEGIN_CDECLS;
 #define PCI_STATUS_SERR_SIG         0x4000
 #define PCI_STATUS_PERR             0x8000
 
+#define PCI_MAX_BAR_COUNT           6u
+
 typedef struct {
     uint16_t vendor_id;
     uint16_t device_id;

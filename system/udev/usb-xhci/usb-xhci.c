@@ -335,23 +335,18 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
         goto error_return;
     }
 
-    const pci_config_t* pci_config;
-    cfg_handle = pci_proto->get_config(dev, &pci_config);
-    if (cfg_handle < 0) {
-        printf("usb_xhci_bind failed to fetch PCI config (err %d)\n", cfg_handle);
-        status = cfg_handle;
-        goto error_return;
-    }
-
     // create an IO memory allocator
     io_alloc = io_alloc_init(10 * 1024 * 1024);
 
     //printf("VID %04X %04X\n", pci_config->vendor_id, pci_config->device_id);
 
-    // find our bar
+    // map our MMIO
     int bar = -1;
-    for (size_t i = 0; i < countof(pci_config->base_addresses); i++) {
-        if (pci_config->base_addresses[i]) {
+    void* mmio;
+    uint64_t mmio_len;
+    for (size_t i = 0; i < PCI_MAX_BAR_COUNT; i++) {
+        mmio_handle = pci_proto->map_mmio(dev, i, MX_CACHE_POLICY_UNCACHED_DEVICE, &mmio, &mmio_len);
+        if (mmio_handle >= 0) {
             bar = i;
             break;
         }
@@ -359,15 +354,6 @@ static mx_status_t usb_xhci_bind(mx_driver_t* drv, mx_device_t* dev) {
     if (bar == -1) {
         printf("usb_xhci_bind could not find bar\n");
         status = ERR_INTERNAL;
-        goto error_return;
-    }
-
-    // map our MMIO
-    void* mmio;
-    uint64_t mmio_len;
-    mmio_handle = pci_proto->map_mmio(dev, bar, MX_CACHE_POLICY_UNCACHED_DEVICE, &mmio, &mmio_len);
-    if (mmio_handle < 0) {
-        status = mmio_handle;
         goto error_return;
     }
 
