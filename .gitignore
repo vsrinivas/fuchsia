@@ -38,3 +38,4 @@
 /mac/toolchain.stamp
 /qemu
 /toolchain
+/win/gn.exe
