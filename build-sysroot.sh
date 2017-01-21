@@ -31,7 +31,6 @@ readonly CMAKE_HOST_TOOLS="\
 readonly CMAKE_SHARED_FLAGS="\
   -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
   -DCMAKE_INSTALL_PREFIX='' \
-  -DCMAKE_TOOLCHAIN_FILE=${ROOT_DIR}/third_party/llvm/cmake/platforms/Fuchsia.cmake \
   -DLLVM_PATH=${ROOT_DIR}/third_party/llvm \
   -DLLVM_ENABLE_LIBCXX=ON"
 
@@ -87,6 +86,8 @@ build() {
       "${sysroot}"
   fi
 
+  local libgcc_file_name="$(${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang --target=${target}-fuchsia -print-libgcc-file-name)"
+
   mkdir -p -- "${outdir}/build-libunwind-${target}"
   pushd "${outdir}/build-libunwind-${target}"
   [[ -f "${outdir}/build-libunwind-${target}/build.ninja" ]] || CXXFLAGS="-I${ROOT_DIR}/third_party/llvm/runtimes/libcxx/include" ${CMAKE_PROGRAM} -GNinja \
@@ -94,7 +95,7 @@ build() {
     ${CMAKE_SHARED_FLAGS:-} \
     ${cmake_build_type_flags:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
-    -DCMAKE_SHARED_LINKER_FLAGS="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-${target}.a" \
+    -DCMAKE_SHARED_LINKER_FLAGS="${libgcc_file_name}" \
     -DLIBUNWIND_ENABLE_SHARED=ON \
     -DLIBUNWIND_ENABLE_STATIC=ON \
     -DLIBUNWIND_TARGET_TRIPLE="${target}-fuchsia" \
@@ -110,7 +111,7 @@ build() {
     ${CMAKE_SHARED_FLAGS:-} \
     ${cmake_build_type_flags:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
-    -DCMAKE_SHARED_LINKER_FLAGS="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-${target}.a" \
+    -DCMAKE_SHARED_LINKER_FLAGS="${libgcc_file_name}" \
     -DLIBCXXABI_TARGET_TRIPLE="${target}-fuchsia" \
     -DLIBCXXABI_SYSROOT="${sysroot}" \
     -DLIBCXXABI_LIBCXX_INCLUDES="${ROOT_DIR}/third_party/llvm/runtimes/libcxx/include" \
@@ -128,7 +129,7 @@ build() {
     ${CMAKE_SHARED_FLAGS:-} \
     ${cmake_build_type_flags:-} \
     -DCMAKE_EXE_LINKER_FLAGS="-nodefaultlibs -lc" \
-    -DCMAKE_SHARED_LINKER_FLAGS="${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/lib/clang/4.0.0/lib/fuchsia/libclang_rt.builtins-${target}.a" \
+    -DCMAKE_SHARED_LINKER_FLAGS="${libgcc_file_name}" \
     -DLIBCXX_CXX_ABI=libcxxabi \
     -DLIBCXXABI_USE_LLVM_UNWINDER=ON \
     -DLIBCXX_CXX_ABI_INCLUDE_PATHS="${ROOT_DIR}/third_party/llvm/runtimes/libcxxabi/include" \
