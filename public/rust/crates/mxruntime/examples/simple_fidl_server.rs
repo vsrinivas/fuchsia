@@ -36,7 +36,7 @@ fn main() {
     let _ = c1.wait(MX_CHANNEL_SIGNAL_READABLE, MX_TIME_INFINITE);
     let mut buf = MessageBuf::new();
     let _ = c1.read(0, &mut buf);
-    let h2 = buf.handles().next().expect("couldn't get service provider handle");
+    let h2 = buf.take_handle(0).expect("couldn't get service provider handle");
     let c2 = Channel::from_handle(h2);
     let _ = c2.wait(MX_CHANNEL_SIGNAL_READABLE, MX_TIME_INFINITE);
     let _ = c2.read(0, &mut buf);
