@@ -38,6 +38,8 @@ def main():
                         action="store_const",
                         const="release",
                         help="use release build")
+    parser.add_argument("--delete", "-e",
+                        action="store_true")
     parser.add_argument("--tree", "-t",
                         help="Add symlinks only to a subtree",
                         default="*")
@@ -70,7 +72,10 @@ def main():
             continue
 
         if os.path.islink(symlink):
-            if os.readlink(symlink) != packages:
+            if args.delete:
+                print 'DELETING: %s' % symlink
+                os.unlink(symlink)
+            elif os.readlink(symlink) != packages:
                 print 'UPDATING: %s' % symlink
                 os.unlink(symlink)
                 os.symlink(packages, symlink)
@@ -79,8 +84,11 @@ def main():
         elif os.path.exists(symlink):
             print 'IGNORING: %s' % symlink
         else:
-            print 'LINKING:  %s' % symlink
-            os.symlink(packages, symlink)
+            if args.delete:
+                print 'OK:       %s' % symlink
+            else:
+                print 'LINKING:  %s' % symlink
+                os.symlink(packages, symlink)
     if not success:
         sys.exit(1)
 
