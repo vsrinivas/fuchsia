@@ -99,6 +99,7 @@ mxtl::RefPtr<BlockNode> Bcache::Get(uint32_t bno, uint32_t mode) {
         }
         blk->bno_ = bno;
         hash_.insert(blk);
+        assert(hash_.size() <= kMinfsBlockCacheSize);
         if (mode == kModeZero) {
             blk->flags_ |= kBlockDirty;
             memset(blk->data(), 0, blocksize_);
@@ -181,8 +182,12 @@ Bcache::Bcache(int fd, uint32_t blockmax, uint32_t blocksize) :
     fd_(fd), blockmax_(blockmax), blocksize_(blocksize) {}
 Bcache::~Bcache() {}
 
+size_t BcacheLists::SizeAllSlow() const {
+    return list_busy_.size_slow() + list_lru_.size_slow() + list_free_.size_slow();
+}
 
 void BcacheLists::PushBack(mxtl::RefPtr<BlockNode> blk, uint32_t block_type) {
+    assert(SizeAllSlow() < kMinfsBlockCacheSize);
     block_type &= kBlockLLFlags;
     auto ll = GetList(block_type);
     blk->flags_ |= block_type;
@@ -190,6 +195,7 @@ void BcacheLists::PushBack(mxtl::RefPtr<BlockNode> blk, uint32_t block_type) {
 }
 
 mxtl::RefPtr<BlockNode> BcacheLists::PopFront(uint32_t block_type) {
+    assert(SizeAllSlow() == kMinfsBlockCacheSize);
     block_type &= kBlockLLFlags;
     auto ll = GetList(block_type);
     auto blk = ll->pop_front();
@@ -199,10 +205,13 @@ mxtl::RefPtr<BlockNode> BcacheLists::PopFront(uint32_t block_type) {
 }
 
 mxtl::RefPtr<BlockNode> BcacheLists::Erase(mxtl::RefPtr<BlockNode> blk, uint32_t block_type) {
+    assert(SizeAllSlow() == kMinfsBlockCacheSize);
     block_type &= kBlockLLFlags;
     auto ll = GetList(block_type);
     blk->flags_ &= ~block_type;
-    return ll->erase(*blk);
+    auto ptr = ll->erase(*blk);
+    assert(ptr != nullptr);
+    return ptr;
 }
 
 BcacheLists::LinkedList* BcacheLists::GetList(uint32_t block_type) {

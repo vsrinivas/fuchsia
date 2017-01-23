@@ -352,7 +352,7 @@ found:
     size /= kMinfsBlockSize;
 
     Bcache* bc;
-    if (Bcache::Create(&bc, fd, (uint32_t) size, kMinfsBlockSize, 64) < 0) {
+    if (Bcache::Create(&bc, fd, (uint32_t) size, kMinfsBlockSize, kMinfsBlockCacheSize) < 0) {
         fprintf(stderr, "error: cannot create block cache\n");
         return -1;
     }

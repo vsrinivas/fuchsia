@@ -20,6 +20,8 @@ constexpr uint32_t kMxFsSyncDefault = 0;     // default: no implicit time update
 constexpr uint32_t kMxFsSyncMtime   = (1<<0);
 constexpr uint32_t kMxFsSyncCtime   = (1<<1);
 
+constexpr uint32_t kMinfsBlockCacheSize = 64;
+
 // Used by fsck
 struct CheckMaps {
     Bitmap checked_inodes;

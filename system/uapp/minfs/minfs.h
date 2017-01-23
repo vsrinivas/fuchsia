@@ -208,6 +208,7 @@ public:
 private:
     using LinkedList = mxtl::DoublyLinkedList<mxtl::RefPtr<BlockNode>, BlockNode::TypeListTraits>;
     LinkedList* GetList(uint32_t block_type);
+    size_t SizeAllSlow() const; // Used for debugging
 
     LinkedList list_busy_;  // Between Get() and Put(). In hash.
     LinkedList list_lru_;   // Available for re-use. In hash.
