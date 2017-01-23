@@ -25,7 +25,9 @@ weak_alias(dummy_0, __do_orphaned_stdio_locks);
 weak_alias(dummy_0, __pthread_tsd_run_dtors);
 weak_alias(dummy_0, __release_ptc);
 
-#define ROUND(x) (((x) + PAGE_SIZE - 1) & -PAGE_SIZE)
+static inline size_t round_up_to_page(size_t sz) {
+    return (sz + PAGE_SIZE - 1) & -PAGE_SIZE;
+}
 
 void* __copy_tls(unsigned char*);
 
@@ -79,6 +81,10 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     if (attrp)
         attr = *attrp;
 
+    // We do not support providing a stack via pthread attributes.
+    if (attr._a_stackaddr)
+        return ENOTSUP;
+
     const char* name = attr.__name ? attr.__name : "";
     mxr_thread_t* mxr_thread = NULL;
     mx_status_t status = mxr_thread_create(name, &mxr_thread);
@@ -87,71 +93,24 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
 
     __acquire_ptc();
 
-    size_t size = 0u;
-    size_t guard_size = 0u;
-    unsigned char *map = 0, *stack = 0, *tsd = 0, *stack_limit;
-
-    if (attr._a_stackaddr) {
-        size_t need = libc.tls_size + __pthread_tsd_size;
-        size = attr._a_stacksize + DEFAULT_STACK_SIZE;
-        stack = (void*)(attr._a_stackaddr & -16);
-        stack_limit = (void*)(attr._a_stackaddr - size);
-        /* Use application-provided stack for TLS only when it does
-         * not take more than ~12% or 2k of the application's stack
-         * space. */
-        if (need < size / 8 && need < 2048) {
-            tsd = stack - __pthread_tsd_size;
-            stack = tsd - libc.tls_size;
-            memset(stack, 0, need);
-        } else {
-            size = ROUND(need);
-        }
-    } else {
-        guard_size = ROUND(DEFAULT_GUARD_SIZE + attr._a_guardsize);
-        size = guard_size + ROUND(DEFAULT_STACK_SIZE + attr._a_stacksize + libc.tls_size + __pthread_tsd_size);
+    size_t guard_size = round_up_to_page(DEFAULT_GUARD_SIZE + attr._a_guardsize);
+    size_t size = guard_size + round_up_to_page(DEFAULT_STACK_SIZE + attr._a_stacksize + libc.tls_size + __pthread_tsd_size);
+    uintptr_t addr = 0u;
+    status = allocate_stack(size, guard_size, &addr);
+    if (status < 0) {
+        __release_ptc();
+        mxr_thread_destroy(mxr_thread);
+        return EAGAIN;
     }
-
-    // At this point:
-    // If the attributes provided a stack, we know to use it.
-    //   - This also accounts for the guard page.
-    //   - If that stack is sufficiently large, also use that for the tsd.
-    //   - Thus:
-    //     - stack size is known
-    //     - stack is known
-    //     - guard_size is known
-    //     - tsd may or may not be known
-    // Otherwise:
-    //   - We use the default guard and default or provided stack size
-    //   - Thus:
-    //     - stack size is known
-    //     - stack is unknown
-    //     - guard_size is unknown
-    //     - tsd is unknown
-
-    // So unless we have already allocated the stack _and_ tsd in the
-    // first case, we are going to allocate here, and possibly set the
-    // stack pointer.
-
-    if (!tsd) {
-        uintptr_t addr = 0u;
-        status = allocate_stack(size, guard_size, &addr);
-        if (status < 0) {
-            __release_ptc();
-            mxr_thread_destroy(mxr_thread);
-            return EAGAIN;
-        }
-        map = (void*)addr;
-        tsd = map + size - __pthread_tsd_size;
-        if (!stack) {
-            stack = tsd - libc.tls_size;
-            stack_limit = map + guard_size;
-        }
-    }
+    unsigned char* map = (unsigned char*)addr;
+    unsigned char* tsd = map + size - __pthread_tsd_size;
+    unsigned char* stack = tsd - libc.tls_size;
+    unsigned char* stack_limit = map + guard_size;
 
     mxr_thread_entry_t start = attr.__c11 ? start_c11 : start_pthread;
     struct pthread* self = __pthread_self();
 
-    struct pthread* new = __copy_tls(tsd - libc.tls_size);
+    struct pthread* new = __copy_tls(stack);
     new->map_base = map;
     new->map_size = size;
     new->stack = stack;
@@ -159,7 +118,7 @@ int pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict attrp
     new->start = entry;
     new->start_arg = arg;
     new->self = new;
-    new->tsd = (void*)tsd;
+    new->tsd = (void**)tsd;
     new->locale = &libc.global_locale;
     // TODO (kulakowski) Actually detach via attribute
     if (attr._a_detach) {
