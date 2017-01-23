@@ -13,8 +13,8 @@
 .align 12
 
 #define lr x30
-#define regsave_long_offset 0xf0
-#define regsave_short_offset 0x90
+#define regsave_long_offset (30 * 8)
+#define regsave_short_offset (20 * 8)
 
 .macro regsave_long
 sub  sp, sp, #32
@@ -42,6 +42,7 @@ stp  x1, x2, [sp, #regsave_long_offset + 16]
 
 .macro regsave_short
 sub  sp, sp, #32
+push x18, xzr
 push x16, x17
 push x14, x15
 push x12, x13
@@ -97,6 +98,7 @@ pop x10, x11
 pop x12, x13
 pop x14, x15
 pop x16, x17
+pop x18, xzr
 add sp, sp, #32
 .endm
 
