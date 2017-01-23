@@ -3,6 +3,11 @@
 A library for recording time-series tracing data and encoding the data into the
 chrome://tracing format.
 
+## Operational Requirements
+
+Fuchsia tracing library and utilities require access to the `trace_manager`'s
+services in the environment.  This is normally set up by the `bootstrap` utility.
+
 ## Capturing Trace Data on Device
 
 The `trace` app takes care of starting and stopping tracing sessions and
