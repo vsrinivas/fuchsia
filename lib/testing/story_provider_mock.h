@@ -26,10 +26,10 @@ class StoryProviderMock : public StoryProvider {
 
  private:
   // |StoryProvider|
-  void CreateStory(
-      const fidl::String& url,
-      const CreateStoryCallback& callback) override {
+  void CreateStory(const fidl::String& url,
+                   const CreateStoryCallback& callback) override {
     last_created_story_ = url;
+    callback("foo");
   }
 
   // |StoryProvider|
@@ -39,6 +39,7 @@ class StoryProviderMock : public StoryProvider {
       const fidl::String& json,
       const CreateStoryWithInfoCallback& callback) override {
     last_created_story_ = url;
+    callback("foo");
   }
 
   // |StoryProvider|
@@ -50,11 +51,15 @@ class StoryProviderMock : public StoryProvider {
 
   // |StoryProvider|
   void DeleteStory(const fidl::String& story_id,
-                   const DeleteStoryCallback& callback) override {}
+                   const DeleteStoryCallback& callback) override {
+    callback();
+  }
 
   // |StoryProvider|
   void GetStoryInfo(const fidl::String& story_id,
-                    const GetStoryInfoCallback& callback) override {}
+                    const GetStoryInfoCallback& callback) override {
+    callback(nullptr);
+  }
 
   // |StoryProvider|
   void GetController(
@@ -62,7 +67,9 @@ class StoryProviderMock : public StoryProvider {
       fidl::InterfaceRequest<modular::StoryController> story) override {}
 
   // |StoryProvider|
-  void PreviousStories(const PreviousStoriesCallback& callback) override {}
+  void PreviousStories(const PreviousStoriesCallback& callback) override {
+    callback(fidl::Array<fidl::String>::New(0));
+  }
 
   std::string last_created_story_;
   fidl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
