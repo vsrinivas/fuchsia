@@ -659,6 +659,9 @@ static mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags, uint3
     mx_status_t r = mxrio_getobject(rio, MXRIO_OPEN, path, flags, mode, handles, &type, extra, &esize);
     if (r > 0) {
         r = mxio_from_handles(type, handles, r, extra, esize, out);
+    } else if (r == 0) {
+        // It's not legal for OPEN to result in no handles
+        r = ERR_INTERNAL;
     }
     return r;
 }
