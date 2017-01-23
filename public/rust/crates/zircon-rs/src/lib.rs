@@ -208,9 +208,6 @@ pub use magenta_sys::{
 pub enum ChannelOpts {
     /// A normal channel.
     Normal = 0,
-    /// A "reply channel", where writing a message also passes ownership of the
-    /// channel back to the peer.
-    ReplyChannel = sys::MX_CHANNEL_CREATE_REPLY_CHANNEL,
 }
 
 /// Options for creating wait sets. None supported yet.
@@ -225,6 +222,12 @@ pub enum WaitSetOpts {
 pub enum VmoOpts {
     /// Default options.
     Default = 0,
+}
+
+impl Default for ChannelOpts {
+    fn default() -> Self {
+        ChannelOpts::Normal
+    }
 }
 
 impl Default for WaitSetOpts {
@@ -510,49 +513,22 @@ impl Channel {
         }
     }
 
-    fn write_raw(handle: sys::mx_handle_t, bytes: &[u8], handles: &mut Vec<Handle>,
-            opts: u32) -> Result<(), Status>
+    /// Write a message to a channel. Wraps the
+    /// [mx_channel_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_write.md)
+    /// syscall.
+    pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
+            -> Result<(), Status>
     {
         unsafe {
             let n_bytes = try!(bytes.len().value_into().map_err(|_| Status::ErrOutOfRange));
             let n_handles = try!(handles.len().value_into().map_err(|_| Status::ErrOutOfRange));
-            let status = sys::mx_channel_write(handle, opts, bytes.as_ptr(), n_bytes,
+            let status = sys::mx_channel_write(self.raw_handle(), opts, bytes.as_ptr(), n_bytes,
                 handles.as_ptr() as *const sys::mx_handle_t, n_handles);
             into_result(status, || {
                 // Handles were successfully transferred, forget them on sender side
                 handles.set_len(0);
             })
         }
-    }
-
-    /// Write a message to a channel. Wraps the
-    /// [mx_channel_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_write.md)
-    /// syscall.
-    ///
-    /// This method should be used on normal channels. For reply channels, use
-    /// `write_reply` instead.
-    pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
-            -> Result<(), Status>
-    {
-        Self::write_raw(self.raw_handle(), bytes, handles, opts)
-    }
-
-    /// Write a message to a channel. Wraps the
-    /// [mx_channel_write](https://fuchsia.googlesource.com/magenta/+/master/docs/syscalls/channel_write.md)
-    /// syscall.
-    ///
-    /// This method should be used on reply channels. For normal channels, use
-    /// `write` instead. On success, ownership of `self` is transferred across
-    /// the channel. On error, the `Err` result contains the `self` handle so
-    /// ownership is passed back to the caller.
-    pub fn write_reply(self, bytes: &[u8], handles: &mut Vec<Handle>, opts: u32)
-            -> Result<(), (Self, Status)>
-    {
-        let raw_handle = self.raw_handle();
-        handles.push(self.into_handle());
-        Self::write_raw(raw_handle, bytes, handles, opts).map_err(|status|
-            (Self::from_handle(handles.pop().unwrap()), status)
-        )
     }
 }
 
@@ -901,20 +877,14 @@ mod tests {
     }
 
     #[test]
-    fn channel_reply_basic() {
+    fn channel_basic() {
         let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
 
-        // Don't need to test trying to include self-handle, ownership forbids it
         let mut empty = vec![];
-        let (p1, _status) = p1.write_reply(b"hello", &mut empty, 0).err().unwrap();
         assert!(p1.write(b"hello", &mut empty, 0).is_ok());
-        let (p2, _status) = p2.write_reply(b"hello", &mut empty, 0).err().unwrap();
-        assert!(p2.write(b"hello", &mut empty, 0).is_ok());
 
-        let (p1, p2) = Channel::create(ChannelOpts::ReplyChannel).unwrap();
-        let (p1, _status) = p1.write_reply(b"hello", &mut empty, 0).err().unwrap();
-        assert!(p1.write(b"hello", &mut empty, 0).is_ok());
-        assert!(p2.write(b"hello", &mut empty, 0).is_err());
-        assert!(p2.write_reply(b"hello", &mut empty, 0).is_ok());
+        let mut buf = MessageBuf::new();
+        assert!(p2.read(0, &mut buf).is_ok());
+        assert_eq!(buf.bytes(), b"hello");
     }
 }

@@ -134,11 +134,6 @@ bitflags! {
     }
 }
 
-// flags for channel creation
-// TODO: this doesn't have a typedef in the public magenta interface, maybe it should
-// be a named type anyway
-pub const MX_CHANNEL_CREATE_REPLY_CHANNEL: u32 = 1 << 0;
-
 // clock ids
 pub const MX_CLOCK_MONOTONIC: u32 = 0;
 
