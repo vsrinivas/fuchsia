@@ -49,7 +49,7 @@ struct mmu_initial_mapping mmu_initial_mappings[] = {
      .name = "msm peripherals"
  },
  /* null entry to terminate the list */
- { 0 }
+ {}
 };
 
 #define DEBUG_UART 1

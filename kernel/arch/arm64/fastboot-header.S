@@ -6,7 +6,7 @@
 
 
 // Optional header included in start.S needed to make fastboot happy
-_start:
+_fastboot_start:
     // magic instruction that gives us UEFI "MZ" signature
     add x13, x18, #0x16
     b header_end
@@ -14,7 +14,7 @@ _start:
     .quad   0
     .quad   0
     .quad   0
-    
+
     .quad   0
     .quad   0
     .quad   0
@@ -107,3 +107,4 @@ section_table:
     .align 12
 
 header_end:
+    // fall through to arm_reset
