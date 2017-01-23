@@ -18,6 +18,7 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/ftl/macros.h"
+#include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/vmo/strings.h"
@@ -487,6 +488,73 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
   EXPECT_EQ(2u, actual_keys.size());
   EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys[0]));
   EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys[1]));
+}
+
+TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
+  // The expected size of the result is:
+  // key_count * (|key| + |array_header|) = 200 * (8 + 8) = 3200
+  FTL_DCHECK(kMaxInlineDataSize < 3200) << "Update this test to add more keys";
+
+  // Add the keys.
+  int key_count = 200;
+  auto callback_statusok = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  };
+  page_ptr_->StartTransaction(callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+  for (int i = 0; i < key_count; ++i) {
+    page_ptr_->Put(convert::ToArray(ftl::StringPrintf("key %04d", i)),
+                   convert::ToArray("value"), callback_statusok);
+    EXPECT_FALSE(RunLoopWithTimeout());
+  }
+  page_ptr_->Commit(callback_statusok);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  auto callback_getsnapshot = [this](Status status) {
+    EXPECT_EQ(Status::OK, status);
+    message_loop_.PostQuitTask();
+  };
+  PageSnapshotPtr snapshot;
+  page_ptr_->GetSnapshot(snapshot.NewRequest(), nullptr, callback_getsnapshot);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Call GetKeys and find a partial result.
+  fidl::Array<fidl::Array<uint8_t>> actual_keys;
+  fidl::Array<uint8_t> actual_next_token;
+  auto callback_getkeys = [this, &actual_keys, &actual_next_token](
+      Status status, fidl::Array<fidl::Array<uint8_t>> keys,
+      fidl::Array<uint8_t> next_token) {
+    EXPECT_EQ(Status::PARTIAL_RESULT, status);
+    EXPECT_FALSE(next_token.is_null());
+    actual_keys = std::move(keys);
+    actual_next_token = std::move(next_token);
+    message_loop_.PostQuitTask();
+  };
+  snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Call GetKeys with the previous token and receive the remaining results.
+  auto callback_getkeys2 = [this, key_count, &actual_keys, &actual_next_token](
+      Status status, fidl::Array<fidl::Array<uint8_t>> keys,
+      fidl::Array<uint8_t> next_token) {
+    EXPECT_EQ(Status::OK, status);
+    EXPECT_TRUE(next_token.is_null());
+    for (size_t i = 0; i < keys.size(); ++i) {
+      actual_keys.push_back(std::move(keys[i]));
+    }
+    EXPECT_EQ(static_cast<size_t>(key_count), actual_keys.size());
+    message_loop_.PostQuitTask();
+  };
+  snapshot->GetKeys(nullptr, std::move(actual_next_token), callback_getkeys2);
+  EXPECT_FALSE(RunLoopWithTimeout());
+
+  // Check that the correct values of the keys are all present in the result and
+  // in the correct order.
+  for (size_t i = 0; i < actual_keys.size(); ++i) {
+    ASSERT_EQ(ftl::StringPrintf("key %04d", static_cast<int>(i)),
+              convert::ToString(actual_keys[i]));
+  }
 }
 
 TEST_F(PageImplTest, SnapshotGetReferenceSmall) {

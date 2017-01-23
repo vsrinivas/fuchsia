@@ -19,6 +19,12 @@
 #include "lib/ftl/tasks/task_runner.h"
 
 namespace ledger {
+namespace {
+
+const size_t kFidlArrayHeaderSize = sizeof(fidl::internal::Array_Data<char>);
+
+}  // namespace
+
 PageSnapshotImpl::PageSnapshotImpl(
     storage::PageStorage* page_storage,
     std::unique_ptr<const storage::Commit> commit)
@@ -53,8 +59,7 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
       });
 
   auto on_done = ftl::MakeCopyable([
-    waiter, entries = std::move(entries),
-    callback = std::move(timed_callback)
+    waiter, entries = std::move(entries), callback = std::move(timed_callback)
   ](storage::Status status) mutable {
     if (status != storage::Status::OK) {
       FTL_LOG(ERROR) << "PageSnapshotImpl::GetEntries error while reading.";
@@ -98,31 +103,61 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
 void PageSnapshotImpl::GetKeys(fidl::Array<uint8_t> key_prefix,
                                fidl::Array<uint8_t> token,
                                const GetKeysCallback& callback) {
+  // Represents the information that needs to be shared between on_next and
+  // on_done callbacks.
+  struct Context {
+    // The result of GetKeys. New keys from on_next are appended to this array.
+    fidl::Array<fidl::Array<uint8_t>> keys;
+    // The total size in number of bytes of the |keys| array.
+    size_t size = 0;
+    // If the |keys| array size exceeds the maximum allowed inlined data size,
+    // |next_token| will have the value of the next key (not included in array)
+    // which can be used as the next token.
+    std::string next_token = "";
+  };
+
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "snapshot", "get_keys");
 
-  auto keys = std::make_unique<fidl::Array<fidl::Array<uint8_t>>>();
+  auto context = std::make_unique<Context>();
   auto on_next = ftl::MakeCopyable([
-    key_prefix = convert::ToString(key_prefix), keys = keys.get()
+    key_prefix = convert::ToString(key_prefix), context = context.get()
   ](storage::Entry entry) {
     if (convert::ExtendedStringView(entry.key).substr(0, key_prefix.size()) !=
         convert::ExtendedStringView(key_prefix)) {
       return false;
     }
-    keys->push_back(convert::ToArray(entry.key));
+    context->size += entry.key.size() + kFidlArrayHeaderSize;
+    if (context->size > kMaxInlineDataSize) {
+      context->next_token = entry.key;
+      return false;
+    }
+    context->keys.push_back(convert::ToArray(entry.key));
     return true;
   });
   auto on_done = ftl::MakeCopyable([
-    keys = std::move(keys), callback = std::move(timed_callback)
-  ](storage::Status s) { callback(Status::OK, std::move(*keys), nullptr); });
-  page_storage_->GetCommitContents(*commit_, convert::ToString(key_prefix),
-                                   std::move(on_next), std::move(on_done));
+    context = std::move(context), callback = std::move(timed_callback)
+  ](storage::Status s) {
+    if (context->next_token.empty()) {
+      callback(Status::OK, std::move(context->keys), nullptr);
+    } else {
+      callback(Status::PARTIAL_RESULT, std::move(context->keys),
+               convert::ToArray(context->next_token));
+    }
+  });
+  if (token.is_null()) {
+    page_storage_->GetCommitContents(*commit_, convert::ToString(key_prefix),
+                                     std::move(on_next), std::move(on_done));
+
+  } else {
+    page_storage_->GetCommitContents(*commit_, convert::ToString(token),
+                                     std::move(on_next), std::move(on_done));
+  }
 }
 
 void PageSnapshotImpl::Get(fidl::Array<uint8_t> key,
                            const GetCallback& callback) {
-  auto timed_callback =
-      TRACE_CALLBACK(std::move(callback), "snapshot", "get");
+  auto timed_callback = TRACE_CALLBACK(std::move(callback), "snapshot", "get");
 
   page_storage_->GetEntryFromCommit(*commit_, convert::ToString(key), [
     this, callback = std::move(timed_callback)
