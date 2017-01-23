@@ -450,14 +450,15 @@ void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
     registers::DisplayPlaneControl::enable_update_on_vblank(
         register_io(), registers::DisplayPlaneControl::PIPE_A_PLANE_1, kUpdateOnVblank);
 
-    registers::DisplayPlaneSurfaceAddress::write(
-        register_io(), registers::DisplayPlaneSurfaceAddress::PIPE_A_PLANE_1, mapping->gpu_addr());
-
-    if (kWaitForFlip) {
+    if (kWaitForFlip)
         registers::DisplayPipeInterrupt::update_mask_bits(
             register_io(), registers::DisplayPipeInterrupt::PIPE_A,
             registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, true);
 
+    registers::DisplayPlaneSurfaceAddress::write(
+        register_io(), registers::DisplayPlaneSurfaceAddress::PIPE_A_PLANE_1, mapping->gpu_addr());
+
+    if (kWaitForFlip) {
         constexpr uint32_t kRetryMsMax = 100;
 
         auto start = std::chrono::high_resolution_clock::now();
