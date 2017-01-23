@@ -7,6 +7,16 @@ that can be used to build binaries suitable for running on Fuchsia.
 Building the compiler
 ---------------------
 
+Note: almost all the steps in this section are now automated in a shell script,
+just run this from your Fuchsia root:
+
+```
+sh build/rust/prelude.sh
+```
+
+The detailed instructions remain below, for those who might want to customize
+their build process.
+
 First, build the [clang wrapper](tools/). It helps if you check out this repo
 under your fuchsia root, but it's not necessary. We'll call the directory
 where you created the symlinks `${RUST_TOOLS}`. In any case, the created
