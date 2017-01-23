@@ -125,10 +125,10 @@ lg_floor(size_t x)
 
 	assert(x != 0);
 
-	asm ("bsr %1, %0"
-	    : "=r"(ret) // Outputs.
-	    : "r"(x)    // Inputs.
-	    );
+	__asm__ ("bsr %1, %0"
+		: "=r"(ret) // Outputs.
+		: "r"(x)    // Inputs.
+		);
 	assert(ret < UINT_MAX);
 	return ((unsigned)ret);
 }

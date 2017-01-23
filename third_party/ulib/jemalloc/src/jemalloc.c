@@ -188,7 +188,7 @@ const uint8_t	size2index_tab[] = {
 
 #ifdef JEMALLOC_THREADED_INIT
 /* Used to let the initializing thread recursively allocate. */
-#  define NO_INITIALIZER	((unsigned long)0)
+#  define NO_INITIALIZER	NULL
 #  define INITIALIZER		pthread_self()
 #  define IS_INITIALIZER	(malloc_initializer == pthread_self())
 static pthread_t		malloc_initializer = NO_INITIALIZER;
@@ -1177,7 +1177,7 @@ malloc_init_hard_needed(void)
 }
 
 static bool
-malloc_init_hard_a0_locked()
+malloc_init_hard_a0_locked(void)
 {
 	malloc_initializer = INITIALIZER;
 
@@ -1519,7 +1519,7 @@ compute_size_with_overflow(dynamic_opts_t *dopts, size_t *size) {
 	 */
 
 	/* A size_t with its high-half bits all set to 1. */
-	const static size_t high_bits = SIZE_T_MAX >> (sizeof(size_t) * 8 / 2);
+	static const size_t high_bits = SIZE_T_MAX >> (sizeof(size_t) * 8 / 2);
 
 	*size = dopts->item_size * dopts->num_items;
 

@@ -21,10 +21,14 @@
  * Hyper-threaded CPUs may need a special instruction inside spin loops in
  * order to yield to another virtual CPU.
  */
+#if defined(__x86_64__)
 #define CPU_SPINWAIT __asm__ volatile("pause")
+#else
+#define CPU_SPINWAIT do {} while(0)
+#endif
 
 /* Defined if C11 atomics are available. */
-/* #undef JEMALLOC_C11ATOMICS */
+#define JEMALLOC_C11ATOMICS 1
 
 /* Defined if the equivalent of FreeBSD's atomic(9) functions are available. */
 /* #undef JEMALLOC_ATOMIC9 */
@@ -68,12 +72,12 @@
 /* #undef JEMALLOC_OSSPIN */
 
 /* Defined if syscall(2) is usable. */
-#define JEMALLOC_USE_SYSCALL 
+/* #undef JEMALLOC_USE_SYSCALL */
 
 /*
  * Defined if secure_getenv(3) is available.
  */
-#define JEMALLOC_HAVE_SECURE_GETENV 
+/* #undef JEMALLOC_HAVE_SECURE_GETENV */
 
 /*
  * Defined if issetugid(2) is available.
@@ -81,7 +85,7 @@
 /* #undef JEMALLOC_HAVE_ISSETUGID */
 
 /* Defined if pthread_atfork(3) is available. */
-#define JEMALLOC_HAVE_PTHREAD_ATFORK 
+/* #undef JEMALLOC_HAVE_PTHREAD_ATFORK */
 
 /*
  * Defined if clock_gettime(CLOCK_MONOTONIC_COARSE, ...) is available.
@@ -162,7 +166,7 @@
  * JEMALLOC_DSS enables use of sbrk(2) to allocate extents from the data storage
  * segment (DSS).
  */
-#define JEMALLOC_DSS 
+/* #undef JEMALLOC_DSS */
 
 /* Support memory filling (junk/zero). */
 #define JEMALLOC_FILL 
@@ -212,7 +216,7 @@
 /* #undef JEMALLOC_MUNMAP */
 
 /* TLS is used to map arenas and magazine caches to threads. */
-#define JEMALLOC_TLS 
+/* #undef JEMALLOC_TLS */
 
 /*
  * Used to mark unreachable code to quiet "end of non-void" compiler warnings.
@@ -252,10 +256,10 @@
  * JEMALLOC_SYSCTL_VM_OVERCOMMIT: FreeBSD's vm.overcommit sysctl.
  */
 /* #undef JEMALLOC_SYSCTL_VM_OVERCOMMIT */
-#define JEMALLOC_PROC_SYS_VM_OVERCOMMIT_MEMORY 
+/* #undef JEMALLOC_PROC_SYS_VM_OVERCOMMIT_MEMORY */
 
 /* Defined if madvise(2) is available. */
-#define JEMALLOC_HAVE_MADVISE 
+/* #undef JEMALLOC_HAVE_MADVISE */
 
 /*
  * Methods for purging unused pages differ between operating systems.
@@ -267,13 +271,13 @@
  *                                 address region is later touched.
  */
 /* #undef JEMALLOC_PURGE_MADVISE_FREE */
-#define JEMALLOC_PURGE_MADVISE_DONTNEED 
+/* #undef JEMALLOC_PURGE_MADVISE_DONTNEED */
 
 /*
  * Defined if transparent huge pages are supported via the MADV_[NO]HUGEPAGE
  * arguments to madvise(2).
  */
-#define JEMALLOC_THP 
+/* #undef JEMALLOC_THP */
 
 /* Define if operating system has alloca.h header. */
 #define JEMALLOC_HAS_ALLOCA_H 1
@@ -297,13 +301,13 @@
 #define LG_SIZEOF_INTMAX_T 3
 
 /* glibc malloc hooks (__malloc_hook, __realloc_hook, __free_hook). */
-#define JEMALLOC_GLIBC_MALLOC_HOOK 
+/* #undef JEMALLOC_GLIBC_MALLOC_HOOK */
 
 /* glibc memalign hook. */
-#define JEMALLOC_GLIBC_MEMALIGN_HOOK 
+/* #undef JEMALLOC_GLIBC_MEMALIGN_HOOK */
 
 /* Adaptive mutex support in pthreads. */
-#define JEMALLOC_HAVE_PTHREAD_MUTEX_ADAPTIVE_NP 
+/* #undef JEMALLOC_HAVE_PTHREAD_MUTEX_ADAPTIVE_NP */
 
 /*
  * If defined, jemalloc symbols are not exported (doesn't work when

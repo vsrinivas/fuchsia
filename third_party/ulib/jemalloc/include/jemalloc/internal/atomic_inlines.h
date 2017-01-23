@@ -57,7 +57,7 @@ atomic_add_u64(uint64_t *p, uint64_t x)
 {
 	uint64_t t = x;
 
-	asm volatile (
+	__asm__ volatile (
 	    "lock; xaddq %0, %1;"
 	    : "+r" (t), "=m" (*p) /* Outputs. */
 	    : "m" (*p) /* Inputs. */
@@ -73,7 +73,7 @@ atomic_sub_u64(uint64_t *p, uint64_t x)
 
 	x = (uint64_t)(-(int64_t)x);
 	t = x;
-	asm volatile (
+	__asm__ volatile (
 	    "lock; xaddq %0, %1;"
 	    : "+r" (t), "=m" (*p) /* Outputs. */
 	    : "m" (*p) /* Inputs. */
@@ -87,7 +87,7 @@ atomic_cas_u64(uint64_t *p, uint64_t c, uint64_t s)
 {
 	uint8_t success;
 
-	asm volatile (
+	__asm__ volatile (
 	    "lock; cmpxchgq %4, %0;"
 	    "sete %1;"
 	    : "=m" (*p), "=a" (success) /* Outputs. */
@@ -101,7 +101,7 @@ atomic_cas_u64(uint64_t *p, uint64_t c, uint64_t s)
 JEMALLOC_INLINE void
 atomic_write_u64(uint64_t *p, uint64_t x)
 {
-	asm volatile (
+	__asm__ volatile (
 	    "xchgq %1, %0;" /* Lock is implied by xchgq. */
 	    : "=m" (*p), "+r" (x) /* Outputs. */
 	    : "m" (*p) /* Inputs. */
@@ -266,7 +266,7 @@ atomic_add_u32(uint32_t *p, uint32_t x)
 {
 	uint32_t t = x;
 
-	asm volatile (
+	__asm__ volatile (
 	    "lock; xaddl %0, %1;"
 	    : "+r" (t), "=m" (*p) /* Outputs. */
 	    : "m" (*p) /* Inputs. */
@@ -282,7 +282,7 @@ atomic_sub_u32(uint32_t *p, uint32_t x)
 
 	x = (uint32_t)(-(int32_t)x);
 	t = x;
-	asm volatile (
+	__asm__ volatile (
 	    "lock; xaddl %0, %1;"
 	    : "+r" (t), "=m" (*p) /* Outputs. */
 	    : "m" (*p) /* Inputs. */
@@ -296,7 +296,7 @@ atomic_cas_u32(uint32_t *p, uint32_t c, uint32_t s)
 {
 	uint8_t success;
 
-	asm volatile (
+	__asm__ volatile (
 	    "lock; cmpxchgl %4, %0;"
 	    "sete %1;"
 	    : "=m" (*p), "=a" (success) /* Outputs. */
@@ -310,7 +310,7 @@ atomic_cas_u32(uint32_t *p, uint32_t c, uint32_t s)
 JEMALLOC_INLINE void
 atomic_write_u32(uint32_t *p, uint32_t x)
 {
-	asm volatile (
+	__asm__ volatile (
 	    "xchgl %1, %0;" /* Lock is implied by xchgl. */
 	    : "=m" (*p), "+r" (x) /* Outputs. */
 	    : "m" (*p) /* Inputs. */

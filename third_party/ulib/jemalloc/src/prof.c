@@ -2107,7 +2107,7 @@ prof_thread_name_alloc(tsdn_t *tsdn, const char *thread_name)
 
 	size = strlen(thread_name) + 1;
 	if (size == 1)
-		return ("");
+		return (char*)("");
 
 	ret = iallocztm(tsdn, size, size2index(size), false, NULL, true,
 	    arena_get(TSDN_NULL, 0, true), true);

@@ -303,7 +303,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/legacy/lutimes.c \
     $(LOCAL_DIR)/src/legacy/ulimit.c \
     $(LOCAL_DIR)/src/legacy/utmpx.c \
-    $(LOCAL_DIR)/src/legacy/valloc.c \
     $(LOCAL_DIR)/src/linux/adjtime.c \
     $(LOCAL_DIR)/src/linux/cache.c \
     $(LOCAL_DIR)/src/linux/flock.c \
@@ -335,13 +334,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/locale/uselocale.c \
     $(LOCAL_DIR)/src/locale/wcscoll.c \
     $(LOCAL_DIR)/src/locale/wcsxfrm.c \
-    $(LOCAL_DIR)/src/malloc/aligned_alloc.c \
-    $(LOCAL_DIR)/src/malloc/calloc.c \
-    $(LOCAL_DIR)/src/malloc/expand_heap.c \
-    $(LOCAL_DIR)/src/malloc/malloc.c \
-    $(LOCAL_DIR)/src/malloc/malloc_usable_size.c \
-    $(LOCAL_DIR)/src/malloc/memalign.c \
-    $(LOCAL_DIR)/src/malloc/posix_memalign.c \
     $(LOCAL_DIR)/src/math/__expo2.c \
     $(LOCAL_DIR)/src/math/__expo2f.c \
     $(LOCAL_DIR)/src/math/__fpclassify.c \
@@ -1109,6 +1101,9 @@ endif
 
 # Include src/string sources
 include $(LOCAL_DIR)/src/string/rules.mk
+
+# Include jemalloc for our malloc implementation
+include $(LOCAL_DIR)/../jemalloc/rules.mk
 
 
 # shared library (which is also the dynamic linker)
