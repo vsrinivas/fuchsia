@@ -9,6 +9,7 @@
 #include <magenta/dlfcn.h>
 #include <magenta/syscalls.h>
 #include <mxio/loader-service.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -40,20 +41,26 @@ bool dlopen_vmo_test(void) {
 #define TEST_NAME "foobar"
 #define TEST_ACTUAL_NAME "/boot/lib/" TEST_SONAME
 
-static bool my_loader_service_ok = false;
-static int my_loader_service_calls;
+static atomic_bool my_loader_service_ok = false;
+static atomic_int my_loader_service_calls = 0;
 
 static mx_handle_t my_loader_service(void* arg, const char* name) {
     ++my_loader_service_calls;
 
-    bool all_ok = true;
-
-    EXPECT_EQ(strcmp(name, TEST_NAME), 0, "called with unexpected name");
+    int cmp = strcmp(name, TEST_NAME);
+    EXPECT_EQ(cmp, 0, "called with unexpected name");
+    if (cmp != 0) {
+        unittest_printf("        saw \"%s\", expected \"%s\"", name, TEST_NAME);
+        return MX_HANDLE_INVALID;
+    }
 
     mx_handle_t vmo = launchpad_vmo_from_file(arg);
     EXPECT_GT(vmo, 0, "launchpad_vmo_from_file");
+    if (vmo <= 0) {
+        return vmo;
+    }
 
-    my_loader_service_ok = all_ok;
+    my_loader_service_ok = true;
     return vmo;
 }
 
