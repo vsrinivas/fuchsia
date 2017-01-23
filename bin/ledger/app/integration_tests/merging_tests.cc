@@ -176,7 +176,7 @@ TEST_F(MergingIntegrationTest, Merging) {
   // Verify that each change is seen by the right watcher.
   page1->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page1.WaitForIncomingResponse());
-  mtl::MessageLoop::GetCurrent()->Run();
+  ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, watcher1.changes_seen);
   PageChangePtr change = std::move(watcher1.last_page_change_);
   EXPECT_EQ(2u, change->changes.size());
@@ -187,7 +187,7 @@ TEST_F(MergingIntegrationTest, Merging) {
 
   page2->Commit([](Status status) { EXPECT_EQ(status, Status::OK); });
   EXPECT_TRUE(page2.WaitForIncomingResponse());
-  mtl::MessageLoop::GetCurrent()->Run();
+  ASSERT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
@@ -198,8 +198,8 @@ TEST_F(MergingIntegrationTest, Merging) {
   EXPECT_EQ("0123456789",
             convert::ToString(change->changes[1]->value->get_bytes()));
 
-  mtl::MessageLoop::GetCurrent()->Run();
-  mtl::MessageLoop::GetCurrent()->Run();
+  ASSERT_FALSE(RunLoopWithTimeout());
+  ASSERT_FALSE(RunLoopWithTimeout());
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);

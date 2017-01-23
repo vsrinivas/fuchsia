@@ -12,6 +12,9 @@
 #include "apps/ledger/src/app/merging/ledger_merge_manager.h"
 #include "apps/ledger/src/app/merging/merge_strategy.h"
 #include "apps/ledger/src/app/page_manager.h"
+#include "apps/ledger/src/app/page_utils.h"
+#include "apps/ledger/src/callback/waiter.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/memory/weak_ptr.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -28,6 +31,60 @@ struct GenerationComparator {
                                             : lhs_generation < rhs_generation;
   }
 };
+
+// Recursively retrieves the parents of the most recent commits in the given
+// set, i.e. the commits with the highest generation. The recursion stops when
+// only one commit is left in the set, which is the lowest common ancestor.
+void FindCommonAncestorInGeneration(
+    storage::PageStorage* storage,
+    std::set<std::unique_ptr<const storage::Commit>, GenerationComparator>*
+        commits,
+    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+        callback) {
+  FTL_DCHECK(!commits->empty());
+  // If there is only one commit in the set it is the lowest common ancestor.
+  if (commits->size() == 1) {
+    callback(Status::OK,
+             std::move(const_cast<std::unique_ptr<const storage::Commit>&>(
+                 *commits->rbegin())));
+    return;
+  }
+  // Pop the newest commits and retrieve their parents.
+  uint64_t expected_generation = (*commits->rbegin())->GetGeneration();
+  auto waiter = callback::
+      Waiter<storage::Status, std::unique_ptr<const storage::Commit>>::Create(
+          storage::Status::OK);
+  while (commits->size() > 1 &&
+         expected_generation == (*commits->rbegin())->GetGeneration()) {
+    // Pop the newest commit.
+    std::unique_ptr<const storage::Commit> commit =
+        std::move(const_cast<std::unique_ptr<const storage::Commit>&>(
+            *commits->rbegin()));
+    auto it = commits->end();
+    --it;
+    commits->erase(it);
+    // Request its parents.
+    for (const auto& parent_id : commit->GetParentIds()) {
+      storage->GetCommit(parent_id, waiter->NewCallback());
+    }
+  }
+  // Once the parents have been retrieved, recursively try to find the common
+  // ancestor in that generation.
+  waiter->Finalize(
+      ftl::MakeCopyable([ storage, commits, callback = std::move(callback) ](
+          storage::Status status,
+          std::vector<std::unique_ptr<const storage::Commit>> parents) mutable {
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status), nullptr);
+          return;
+        }
+        // Push the parents in the commit set.
+        for (auto& parent : parents) {
+          commits->insert(std::move(parent));
+        }
+        FindCommonAncestorInGeneration(storage, commits, std::move(callback));
+      }));
+}
 
 }  // namespace
 
@@ -103,71 +160,85 @@ void MergeResolver::CheckConflicts() {
 
 void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
   FTL_DCHECK(heads.size() >= 2);
-  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  auto waiter = callback::
+      Waiter<storage::Status, std::unique_ptr<const storage::Commit>>::Create(
+          storage::Status::OK);
   for (const storage::CommitId& id : heads) {
-    std::unique_ptr<const storage::Commit> commit;
-    storage::Status s = storage_->GetCommitSynchronous(id, &commit);
-    FTL_DCHECK(s == storage::Status::OK);
-    commits.push_back(std::move(commit));
+    storage_->GetCommit(id, waiter->NewCallback());
   }
-  std::sort(commits.begin(), commits.end(),
-            [](const std::unique_ptr<const storage::Commit>& lhs,
-               const std::unique_ptr<const storage::Commit>& rhs) {
-              return lhs->GetTimestamp() < rhs->GetTimestamp();
-            });
+  waiter->Finalize([this](
+      storage::Status status,
+      std::vector<std::unique_ptr<const storage::Commit>> commits) {
+    if (status != storage::Status::OK) {
+      FTL_LOG(ERROR) << "Failed to retrieve head commits.";
+      return;
+    }
+    FTL_DCHECK(commits.size() >= 2);
+    std::sort(commits.begin(), commits.end(),
+              [](const std::unique_ptr<const storage::Commit>& lhs,
+                 const std::unique_ptr<const storage::Commit>& rhs) {
+                return lhs->GetTimestamp() < rhs->GetTimestamp();
+              });
 
-  // Use the most recent commit as the base.
-  auto head_1 = std::move(commits[0]);
-  auto head_2 = std::move(commits[1]);
-  std::unique_ptr<const storage::Commit> common_ancestor(
-      FindCommonAncestor(head_1, head_2));
-  merge_in_progress_ = true;
-  strategy_->Merge(storage_, page_manager_, std::move(head_1),
-                   std::move(head_2), std::move(common_ancestor), [this]() {
-                     merge_in_progress_ = false;
-                     if (switch_strategy_) {
-                       strategy_ = std::move(next_strategy_);
-                       next_strategy_.reset();
-                       switch_strategy_ = false;
-                     }
-                     PostCheckConflicts();
-                     // Call on_empty_callback_ at the very end as this might
-                     // delete this.
-                     if (on_empty_callback_) {
-                       on_empty_callback_();
-                     }
-                   });
+    // Merge the first two commits using the most recent one as the base.
+    auto head1 = std::move(commits[0]);
+    auto head2 = std::move(commits[1]);
+    FindCommonAncestor(
+        head1->Clone(), head2->Clone(),
+        ftl::MakeCopyable([
+          this, head1 = std::move(head1), head2 = std::move(head2)
+        ](Status status,
+          std::unique_ptr<const storage::Commit> common_ancestor) mutable {
+          if (status != Status::OK) {
+            FTL_LOG(ERROR) << "Failed to find common ancestor of head commits.";
+            return;
+          }
+          merge_in_progress_ = true;
+          strategy_->Merge(storage_, page_manager_, std::move(head1),
+                           std::move(head2), std::move(common_ancestor),
+                           [this]() {
+                             merge_in_progress_ = false;
+                             if (switch_strategy_) {
+                               strategy_ = std::move(next_strategy_);
+                               next_strategy_.reset();
+                               switch_strategy_ = false;
+                             }
+                             PostCheckConflicts();
+                             // Call on_empty_callback_ at the very end as this
+                             // might delete this.
+                             if (on_empty_callback_) {
+                               on_empty_callback_();
+                             }
+                           });
+        }));
+  });
 }
 
-std::unique_ptr<const storage::Commit> MergeResolver::FindCommonAncestor(
-    const std::unique_ptr<const storage::Commit>& head1,
-    const std::unique_ptr<const storage::Commit>& head2) {
-  std::set<std::unique_ptr<const storage::Commit>, GenerationComparator>
-      commits;
-  commits.emplace(head1->Clone());
-  commits.emplace(head2->Clone());
+void MergeResolver::FindCommonAncestor(
+    std::unique_ptr<const storage::Commit> head1,
+    std::unique_ptr<const storage::Commit> head2,
+    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+        callback) {
   // The algorithm goes as follows: we keep a set of "active" commits, ordered
   // by generation order. Until this set has only one element, we take the
   // commit with the greater generation (the one deepest in the commit graph)
   // and replace it by its parent. If we seed the initial set with two commits,
-  // we get their unique closest common ancestor.
-  while (commits.size() != 1) {
-    const std::unique_ptr<const storage::Commit> commit = std::move(
-        const_cast<std::unique_ptr<const storage::Commit>&>(*commits.rbegin()));
-    auto it = commits.end();
-    --it;
-    commits.erase(it);
-    std::vector<storage::CommitIdView> parent_ids = commit->GetParentIds();
-    for (const auto& parent_id : parent_ids) {
-      std::unique_ptr<const storage::Commit> parent_commit;
-      storage::Status s =
-          storage_->GetCommitSynchronous(parent_id, &parent_commit);
-      FTL_DCHECK(s == storage::Status::OK);
-      commits.emplace(std::move(parent_commit));
-    }
-  }
-  return std::move(
-      const_cast<std::unique_ptr<const storage::Commit>&>(*commits.rbegin()));
+  // we get their unique lowest common ancestor.
+  // At each step of the recursion (FindCommonAncestorInGeneration) we request
+  // the parent commits of all commits with the same generation.
+
+  // commits set should not be deleted before the callback is executed.
+  auto commits = std::make_unique<
+      std::set<std::unique_ptr<const storage::Commit>, GenerationComparator>>();
+
+  commits->emplace(std::move(head1));
+  commits->emplace(std::move(head2));
+  FindCommonAncestorInGeneration(
+      storage_, commits.get(), ftl::MakeCopyable([
+        commits = std::move(commits), callback = std::move(callback)
+      ](Status status, std::unique_ptr<const storage::Commit> ancestor) {
+        callback(status, std::move(ancestor));
+      }));
 }
 
 }  // namespace ledger

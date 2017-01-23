@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/macros.h"
@@ -42,9 +43,11 @@ class MergeResolver : public storage::CommitWatcher {
   void PostCheckConflicts();
   void CheckConflicts();
   void ResolveConflicts(std::vector<storage::CommitId> heads);
-  std::unique_ptr<const storage::Commit> FindCommonAncestor(
-      const std::unique_ptr<const storage::Commit>& head1,
-      const std::unique_ptr<const storage::Commit>& head2);
+  void FindCommonAncestor(
+      std::unique_ptr<const storage::Commit> head1,
+      std::unique_ptr<const storage::Commit> head2,
+      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+          callback);
 
   storage::PageStorage* const storage_;
   PageManager* page_manager_ = nullptr;
