@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//third_party/toybox"
+    ],
+    "binaries": [
+        {
+            "binary": "toybox",
+            "bootfs_path": "bin/toybox"
+        }
+    ]
+}
