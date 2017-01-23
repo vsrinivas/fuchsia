@@ -128,7 +128,6 @@ TEST_F(ContextEngineTest, MultipleSubscribers) {
 
   gps.Publish(90, 0);
   for (auto& listener : listeners) {
-    listener.WaitForUpdate();
-    EXPECT_TRUE(listener.PopLast());
+    WAIT_UNTIL(listener.PopLast());
   }
 }
