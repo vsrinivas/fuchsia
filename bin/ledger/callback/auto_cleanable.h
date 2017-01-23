@@ -23,7 +23,7 @@ class AutoCleanableSet {
  public:
   class ReferenceEquality {
    public:
-    bool operator()(const V& v1, const V& v2) { return &v1 == &v2; }
+    bool operator()(const V& v1, const V& v2) const { return &v1 == &v2; }
   };
 
   class ReferenceHash {
