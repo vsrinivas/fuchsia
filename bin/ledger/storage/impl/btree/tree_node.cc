@@ -46,21 +46,6 @@ void TreeNode::FromId(
       });
 }
 
-Status TreeNode::FromEntriesSynchronous(PageStorage* page_storage,
-                                        const std::vector<Entry>& entries,
-                                        const std::vector<ObjectId>& children,
-                                        ObjectId* node_id) {
-  FTL_DCHECK(entries.size() + 1 == children.size());
-  std::string encoding = storage::EncodeNode(entries, children);
-  std::unique_ptr<const Object> object;
-  Status s = page_storage->AddObjectSynchronous(encoding, &object);
-  if (s != Status::OK) {
-    return s;
-  }
-  *node_id = object->GetId();
-  return Status::OK;
-}
-
 Status TreeNode::Empty(PageStorage* page_storage, ObjectId* empty_node_id) {
   std::string encoding =
       storage::EncodeNode(std::vector<Entry>(), std::vector<ObjectId>(1));

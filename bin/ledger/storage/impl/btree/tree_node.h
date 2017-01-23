@@ -108,15 +108,6 @@ class TreeNode {
       ObjectIdView id,
       std::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
 
-  // Creates a |TreeNode| object with the given entries. Contents of |children|
-  // are optional and if a child is not present, an empty id should be given in
-  // the corresponding index. The id of the new node is stored in |node_id|. It
-  // is expected that |children| = |entries| + 1.
-  static Status FromEntriesSynchronous(PageStorage* page_storage,
-                                       const std::vector<Entry>& entries,
-                                       const std::vector<ObjectId>& children,
-                                       ObjectId* node_id);
-
   // Creates a |TreeNode| object with the given entries and children. An empty
   // id in the children's vector indicates that there is no child in that
   // index. The |callback| will be called with the success or error status and
