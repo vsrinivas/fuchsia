@@ -63,11 +63,11 @@ $(BUILDDIR)/%.dump: $(BUILDDIR)/%
 
 $(BUILDDIR)/%.lst: $(BUILDDIR)/%
 	@echo generating listing: $@
-	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -Cd $< > $@
+	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -d $< | $(CPPFILT) > $@
 
 $(BUILDDIR)/%.debug.lst: $(BUILDDIR)/%
 	@echo generating debug listing: $@
-	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -CS $< > $@
+	$(NOECHO)$(OBJDUMP) $(OBJDUMP_LIST_FLAGS) -S $< | $(CPPFILT) > $@
 
 $(BUILDDIR)/%.strip: $(BUILDDIR)/%
 	@echo generating $@
@@ -79,11 +79,11 @@ $(BUILDDIR)/%.debug: $(BUILDDIR)/%
 
 $(BUILDDIR)/%.sym: $(BUILDDIR)/%
 	@echo generating symbols: $@
-	$(NOECHO)$(OBJDUMP) -Ct $< > $@
+	$(NOECHO)$(OBJDUMP) -t $< | $(CPPFILT) > $@
 
 $(BUILDDIR)/%.sym.sorted: $(BUILDDIR)/%
 	@echo generating sorted symbols: $@
-	$(NOECHO)$(OBJDUMP) -Ct $< | sort > $@
+	$(NOECHO)$(OBJDUMP) -t $< | $(CPPFILT) | sort > $@
 
 $(BUILDDIR)/%.size: $(BUILDDIR)/%
 	@echo generating size map: $@

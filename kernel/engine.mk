@@ -179,7 +179,7 @@ HOST_ASMFLAGS :=
 all:: $(OUTLKBIN) $(OUTLKELF)-gdb.py
 
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_LISTFILES)),true)
-all:: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size $(OUTLKELF).dump
+all:: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
 endif
 
 # master module object list
