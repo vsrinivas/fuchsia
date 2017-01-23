@@ -75,6 +75,7 @@ template("dart_package") {
 
     outputs = [
       dot_packages_file,
+      "$root_gen_dir/dart.sources/$package_name",
     ]
     depfile = "$dot_packages_file.d"
 

@@ -26,6 +26,10 @@ def parse_dot_packages(dot_packages_path):
   return deps
 
 
+def create_base_directory(file):
+  path = os.path.dirname(file)
+  if not os.path.exists(path):
+    os.makedirs(path)
 
 
 def main():
@@ -47,9 +51,10 @@ def main():
   args = parser.parse_args()
 
   dot_packages_file = os.path.join(args.root_build_dir, args.out)
-  dot_packages_path = os.path.dirname(dot_packages_file)
-  if not os.path.exists(dot_packages_path):
-    os.makedirs(dot_packages_path)
+  create_base_directory(dot_packages_file)
+  package_locator_file = os.path.join(args.root_gen_dir, "dart.sources",
+      args.package_name)
+  create_base_directory(package_locator_file)
 
   dependent_files = []
 
@@ -87,6 +92,9 @@ def main():
 
   with open(args.depfile, "w") as depfile:
     depfile.write("%s: %s\n" % (args.out, " ".join(dependent_files)))
+
+  with open(package_locator_file, "w") as package_locator:
+      package_locator.write(args.source_dir)
 
   return 0
 
