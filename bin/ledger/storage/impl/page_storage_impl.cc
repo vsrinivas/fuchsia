@@ -787,7 +787,7 @@ void PageStorageImpl::AddObject(
   };
 
   file_writer_ptr->Start(std::move(data), size, [
-    this, cleanup = std::move(cleanup), callback = std::move(callback)
+    cleanup = std::move(cleanup), callback = std::move(callback)
   ](Status status, ObjectId object_id) {
     callback(status, std::move(object_id));
     cleanup();

@@ -467,8 +467,7 @@ void GetObjectIds(PageStorage* page_storage,
   auto object_ids = std::make_unique<std::set<ObjectId>>();
   object_ids->insert(root_id.ToString());
 
-  auto on_next =
-      [ page_storage, object_ids = object_ids.get() ](EntryAndNodeId e) {
+  auto on_next = [object_ids = object_ids.get()](EntryAndNodeId e) {
     object_ids->insert(e.entry.object_id);
     object_ids->insert(e.node_id);
     return true;

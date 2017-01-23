@@ -53,7 +53,7 @@ void PageSnapshotImpl::GetEntries(fidl::Array<uint8_t> key_prefix,
       });
 
   auto on_done = ftl::MakeCopyable([
-    this, waiter, entries = std::move(entries),
+    waiter, entries = std::move(entries),
     callback = std::move(timed_callback)
   ](storage::Status status) mutable {
     if (status != storage::Status::OK) {

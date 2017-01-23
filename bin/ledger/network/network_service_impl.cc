@@ -160,8 +160,8 @@ ftl::RefPtr<callback::Cancellable> NetworkServiceImpl::Request(
   RunningRequest& request =
       running_requests_.emplace(std::move(request_factory));
 
-  auto cancellable = callback::CancellableImpl::Create(
-      [this, &request]() { request.Cancel(); });
+  auto cancellable =
+      callback::CancellableImpl::Create([&request]() { request.Cancel(); });
 
   request.set_callback(cancellable->WrapCallback(
       TRACE_CALLBACK(std::move(callback), "network", "request")));
