@@ -57,7 +57,19 @@ typedef struct mx_info_handle_basic {
 } mx_info_handle_basic_t;
 
 typedef struct mx_info_process {
+    // The process's return code; only valid if |exited| is true.
+    // Guaranteed to be non-zero if the process was killed by |mx_task_kill|.
     int return_code;
+
+    // True if the process has ever left the initial creation state,
+    // even if it has exited as well.
+    bool started;
+
+    // If true, the process has exited and |return_code| is valid.
+    bool exited;
+
+    // True if a debugger is attached to the process.
+    bool debugger_attached;
 } mx_info_process_t;
 
 typedef struct mx_info_vmar {

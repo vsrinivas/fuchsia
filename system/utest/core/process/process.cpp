@@ -6,6 +6,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
+#include <magenta/types.h>
 
 #include <mini-process/mini-process.h>
 
@@ -13,8 +14,7 @@
 
 namespace {
 
-// Conversion from nanoseconds.
-const uint64_t kOneMiliSec = 1000000u;
+const mx_time_t kTimeoutNs = MX_MSEC(250);
 
 bool kill_process_via_thread_close() {
     BEGIN_TEST;
@@ -116,10 +116,10 @@ bool kill_process_handle_cycle() {
 
     mx_signals_t signals;
     EXPECT_EQ(mx_handle_wait_one(
-        thread1, MX_TASK_TERMINATED, 250 * kOneMiliSec, &signals), ERR_TIMED_OUT, "");
+        thread1, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
     EXPECT_EQ(mx_handle_wait_one(
-        thread2, MX_TASK_TERMINATED, 250 * kOneMiliSec, &signals), ERR_TIMED_OUT, "");
+        thread2, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
     EXPECT_EQ(mx_handle_close(thread1), NO_ERROR, "");
 
@@ -187,10 +187,10 @@ bool kill_channel_handle_cycle() {
 
     mx_signals_t signals;
     EXPECT_EQ(mx_handle_wait_one(
-        thread1, MX_TASK_TERMINATED, 250 * kOneMiliSec, &signals), ERR_TIMED_OUT, "");
+        thread1, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
     EXPECT_EQ(mx_handle_wait_one(
-        thread2, MX_TASK_TERMINATED, 250 * kOneMiliSec, &signals), ERR_TIMED_OUT, "");
+        thread2, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
     // At this point the two processes have each other thread/process handles. For example
     // if we close the thread handles, unlike the previous test, the processes will
@@ -199,7 +199,7 @@ bool kill_channel_handle_cycle() {
     EXPECT_EQ(mx_handle_close(thread1), NO_ERROR, "");
 
     EXPECT_EQ(mx_handle_wait_one(
-        thread2, MX_TASK_TERMINATED, 250 * kOneMiliSec, &signals), ERR_TIMED_OUT, "");
+        thread2, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
 
     // The only way out of this situation is to use the job handle.
 
@@ -215,6 +215,56 @@ bool kill_channel_handle_cycle() {
     END_TEST;
 }
 
+// Tests that |mx_info_process_t| fields reflect the current state of a process.
+bool info_reflects_process_state() {
+    BEGIN_TEST;
+
+    // Create a process with one thread.
+    mx_handle_t event;
+    ASSERT_EQ(mx_event_create(0u, &event), NO_ERROR, "");
+
+    mx_handle_t job_child;
+    ASSERT_EQ(mx_job_create(mx_job_default(), 0u, &job_child), NO_ERROR, "");
+
+    mx_handle_t proc;
+    mx_handle_t vmar;
+    ASSERT_EQ(mx_process_create(job_child, "ttp", 4u, 0u, &proc, &vmar), NO_ERROR, "");
+
+    mx_handle_t thread;
+    ASSERT_EQ(mx_thread_create(proc, "th", 3u, 0u, &thread), NO_ERROR, "");
+
+    mx_info_process_t info;
+    ASSERT_EQ(mx_object_get_info(
+            proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), NO_ERROR, "");
+    EXPECT_FALSE(info.started, "process should not appear as started");
+    EXPECT_FALSE(info.exited, "process should not appear as exited");
+
+    // Start the process and make (relatively) certain it's alive.
+    ASSERT_EQ(start_mini_process_etc(proc, thread, vmar, event), NO_ERROR, "");
+    mx_signals_t signals;
+    ASSERT_EQ(mx_handle_wait_one(
+        proc, MX_TASK_TERMINATED, kTimeoutNs, &signals), ERR_TIMED_OUT, "");
+
+    ASSERT_EQ(mx_object_get_info(
+            proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), NO_ERROR, "");
+    EXPECT_TRUE(info.started, "process should appear as started");
+    EXPECT_FALSE(info.exited, "process should not appear as exited");
+
+    // Kill the process and wait for it to terminate.
+    ASSERT_EQ(mx_task_kill(proc), NO_ERROR, "");
+    ASSERT_EQ(mx_handle_wait_one(
+        proc, MX_TASK_TERMINATED, MX_TIME_INFINITE, &signals), NO_ERROR, "");
+    ASSERT_EQ(signals, MX_TASK_TERMINATED, "");
+
+    ASSERT_EQ(mx_object_get_info(
+            proc, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), NO_ERROR, "");
+    EXPECT_TRUE(info.started, "process should appear as started");
+    EXPECT_TRUE(info.exited, "process should appear as exited");
+    EXPECT_NEQ(info.return_code, 0, "killed process should have non-zero return code");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(process_tests)
@@ -223,6 +273,7 @@ RUN_TEST(kill_process_via_process_close);
 RUN_TEST(kill_process_via_thread_kill);
 RUN_TEST(kill_process_handle_cycle);
 RUN_TEST(kill_channel_handle_cycle);
+RUN_TEST(info_reflects_process_state);
 END_TEST_CASE(process_tests)
 
 #ifndef BUILD_COMBINED_TESTS

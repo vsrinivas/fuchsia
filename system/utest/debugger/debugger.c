@@ -14,6 +14,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/debug.h>
 #include <magenta/syscalls/exception.h>
+#include <magenta/syscalls/object.h>
 #include <magenta/syscalls/port.h>
 #include <mxio/util.h>
 #include <test-utils/test-utils.h>
@@ -233,6 +234,16 @@ static void join_wait_inf_thread(thrd_t wait_inf_thread)
     unittest_printf("wait-inf thread done\n");
 }
 
+static bool expect_debugger_attached_eq(
+        mx_handle_t inferior, bool expected, const char* msg) {
+    mx_info_process_t info;
+    // ASSERT returns false if the check fails.
+    ASSERT_EQ(mx_object_get_info(
+            inferior, MX_INFO_PROCESS, &info, sizeof(info), NULL, NULL), NO_ERROR, "");
+    ASSERT_EQ(info.debugger_attached, expected, msg);
+    return true;
+}
+
 static bool debugger_test(void)
 {
     BEGIN_TEST;
@@ -242,7 +253,9 @@ static bool debugger_test(void)
     if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
         return false;
 
+    expect_debugger_attached_eq(inferior, false, "debugger should not appear attached");
     thrd_t wait_inf_thread = start_wait_inf_thread(inferior);
+    expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
     if (!start_inferior(lp))
         return false;
@@ -257,8 +270,11 @@ static bool debugger_test(void)
     EXPECT_EQ(msg, MSG_RECOVERED_FROM_CRASH, "unexpected response from crash");
     EXPECT_EQ(atomic_load(&segv_count), NUM_SEGV_TRIES, "segv tests terminated prematurely");
 
+    expect_debugger_attached_eq(inferior, true, "debugger should still appear attached");
     if (!shutdown_inferior(channel, inferior))
         return false;
+    expect_debugger_attached_eq(inferior, false, "debugger should no longer appear attached");
+
     tu_handle_close(channel);
     tu_handle_close(inferior);
 

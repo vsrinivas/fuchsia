@@ -40,7 +40,14 @@ information about the handle:  The kernel object id of the object it refers to, 
 associated with it, the type of object it refers to, and some property information.
 
 **MX_INFO_PROCESS**  Requires a Process handle.  Always returns a single *mx_info_process_t*
-record containing the return code of a process, if the process has exited.
+record containing:
+
+*   *return_code*: The process's return code; only valid if *exited* is true.
+    Guaranteed to be non-zero if the process was killed by *mx_task_kill*.
+*   *started*: True if the process has ever left the initial creation state, even if it has
+    exited as well.
+*   *exited*: If true, the process has exited and *return_code* is valid.
+*   *debugger_attached*: True if a debugger is attached to the process.
 
 **MX_INFO_PROCESS_THREADS**  Requires a Process handle. Returns an array of *mx_koid_t*, one for
 each thread in the Process at that moment in time.
@@ -51,7 +58,7 @@ one for each child Resource of the provided Resource handle.
 **MX_INFO_RESOURCE_RECORDS**  Requires a Resource handle.  Returns an array of *mx_rrec_t*,
 one for each Record associated with the provided Resource handle.
 
-**MX_INFO_VMAR**  Requires a VM Address Region handle.  Always returns a single of *mx_info_vmar_t*,
+**MX_INFO_VMAR**  Requires a VM Address Region handle.  Always returns a single *mx_info_vmar_t*
 record containing the base and length of the region.
 
 

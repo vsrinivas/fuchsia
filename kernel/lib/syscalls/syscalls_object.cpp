@@ -49,6 +49,8 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             return NO_ERROR;
         }
         case MX_INFO_HANDLE_BASIC: {
+            // TODO(MG-458): Handle forward/backward compatibility issues
+            // with changes to the struct.
             size_t actual = (buffer_size < sizeof(mx_info_handle_basic_t)) ? 0 : 1;
             size_t avail = 1;
 
@@ -81,6 +83,8 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             return NO_ERROR;
         }
         case MX_INFO_PROCESS: {
+            // TODO(MG-458): Handle forward/backward compatibility issues
+            // with changes to the struct.
             size_t actual = (buffer_size < sizeof(mx_info_process_t)) ? 0 : 1;
             size_t avail = 1;
 

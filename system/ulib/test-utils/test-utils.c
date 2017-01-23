@@ -223,6 +223,11 @@ int tu_process_get_return_code(mx_handle_t process)
     if ((status = mx_object_get_info(process, MX_INFO_PROCESS, &info,
                                      sizeof(info), NULL, NULL)) < 0)
         tu_fatal("get process info", status);
+    if (!info.exited) {
+        unittest_printf_critical(
+                "attempt to read return code of non-exited process");
+        exit(TU_FAIL_ERRCODE);
+    }
     return info.return_code;
 }
 

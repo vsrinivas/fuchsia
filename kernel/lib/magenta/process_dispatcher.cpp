@@ -415,7 +415,29 @@ bool ProcessDispatcher::GetDispatcher(mx_handle_t handle_value,
 }
 
 status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
-    info->return_code = retcode_;
+    // retcode_ depends on the state: make sure they're consistent.
+    state_lock_.Acquire();
+    int retcode = retcode_;
+    State state = state_;
+    state_lock_.Release();
+
+    memset(info, 0, sizeof(*info));
+    switch (state) {
+    case State::DEAD:
+    case State::DYING:
+        info->return_code = retcode;
+        info->exited = true;
+        /* fallthrough */
+    case State::RUNNING:
+        info->started = true;
+        break;
+    case State::INITIAL:
+    default:
+        break;
+    }
+    if (debugger_exception_port_) {  // TODO: Protect with rights if necessary.
+        info->debugger_attached = true;
+    }
 
     return NO_ERROR;
 }
