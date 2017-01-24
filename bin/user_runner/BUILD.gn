@@ -19,6 +19,7 @@ executable("user_runner") {
     "//apps/ledger/services/internal",
     "//apps/ledger/services/public",
     "//apps/maxwell/services/launcher",
+    "//apps/maxwell/services/resolver",
     "//apps/maxwell/services/suggestion",
     "//apps/modular/lib/app",
     "//apps/modular/lib/fidl:array_to_string",
