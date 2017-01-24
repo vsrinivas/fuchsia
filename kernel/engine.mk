@@ -17,7 +17,6 @@ include make/macros.mk
 # various command line and environment arguments
 # default them to something so when they're referenced in the make instance they're not undefined
 BUILDROOT ?= .
-BUILDDIR_SUFFIX ?=
 DEBUG ?= 2
 ENABLE_BUILD_LISTFILES ?= false
 ENABLE_BUILD_SYSROOT ?= false
@@ -31,6 +30,13 @@ endif
 LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
 USE_LINKER_GC ?= true
+
+# add -clang to the build-* dir if using clang and not otherwise overridden by the environment
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+BUILDDIR_SUFFIX ?= -clang
+else
+BUILDDIR_SUFFIX ?=
+endif
 
 # special rule for handling make spotless
 ifeq ($(MAKECMDGOALS),spotless)
@@ -74,6 +80,7 @@ endif
 endif
 
 BUILDDIR := $(BUILDROOT)/build-$(PROJECT)$(BUILDDIR_SUFFIX)
+$(info BUILDDIR = $(BUILDDIR))
 OUTLKBIN := $(BUILDDIR)/$(LKNAME).bin
 OUTLKELF := $(BUILDDIR)/$(LKNAME).elf
 GLOBAL_CONFIG_HEADER := $(BUILDDIR)/config-global.h
@@ -406,6 +413,8 @@ KERNEL_INCLUDES := $(addprefix -I,$(KERNEL_INCLUDES))
 
 # default to no ccache
 CCACHE ?=
+
+# set up paths to various tools
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 CC := $(CCACHE) $(CLANG_TOOLCHAIN_PREFIX)clang
 AR := $(CLANG_TOOLCHAIN_PREFIX)llvm-ar
