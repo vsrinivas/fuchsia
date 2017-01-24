@@ -29,8 +29,7 @@ static ssize_t _read(mx_handle_t h, void* data, size_t len, int nonblock) {
         ssize_t r = mx_socket_read(h, 0, data, len, &len);
         if (r == NO_ERROR) {
             return (ssize_t) len;
-        }
-        if (r == ERR_REMOTE_CLOSED && !nonblock) {
+        } else if (r == ERR_REMOTE_CLOSED) {
             return 0;
         }
         if (r == ERR_SHOULD_WAIT && !nonblock) {
