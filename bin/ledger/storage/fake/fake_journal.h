@@ -27,7 +27,9 @@ class FakeJournal : public Journal {
              ObjectIdView object_id,
              KeyPriority priority) override;
   Status Delete(convert::ExtendedStringView key) override;
-  void Commit(std::function<void(Status, CommitId)> callback) override;
+  void Commit(
+      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+          callback) override;
   Status Rollback() override;
 
  private:

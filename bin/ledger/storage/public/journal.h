@@ -6,6 +6,7 @@
 #define APPS_LEDGER_SRC_STORAGE_PUBLIC_JOURNAL_H_
 
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/macros.h"
 
@@ -29,9 +30,11 @@ class Journal {
   virtual Status Delete(convert::ExtendedStringView key) = 0;
 
   // Commits the changes of this |Journal|. Trying to update entries or rollback
-  // will fail after a successful commit. The id of the created commit is
-  // returned in |commit_id|.
-  virtual void Commit(std::function<void(Status, CommitId)> callback) = 0;
+  // will fail after a successful commit. The callback will be called with the
+  // returned status and the new commit.
+  virtual void Commit(
+      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+          callback) = 0;
 
   // Rolls back all changes to this |Journal|. Trying to update entries or
   // commit will fail with an |ILLEGAL_STATE| after a successful rollback.

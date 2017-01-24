@@ -342,10 +342,11 @@ Status PageStorageImpl::Init() {
     std::unique_ptr<Journal> journal;
     db_.GetImplicitJournal(id, &journal);
     bool async_test = false;
-    journal->Commit([&s, &async_test](Status status, const CommitId&) {
-      s = status;
-      async_test = true;
-    });
+    journal->Commit(
+        [&s, &async_test](Status status, std::unique_ptr<const Commit>) {
+          s = status;
+          async_test = true;
+        });
     FTL_DCHECK(async_test);
     if (s != Status::OK) {
       journal->Rollback();

@@ -103,16 +103,16 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
       weak_this->Done();
       return;
     }
-    weak_this->journal_->Commit(
-        [weak_this](storage::Status s, const storage::CommitId& commit_id) {
-          if (s != storage::Status::OK) {
-            FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
-          }
-          if (!weak_this) {
-            return;
-          }
-          weak_this->Done();
-        });
+    weak_this->journal_->Commit([weak_this](
+        storage::Status s, std::unique_ptr<const storage::Commit>) {
+      if (s != storage::Status::OK) {
+        FTL_LOG(ERROR) << "Unable to commit merge journal: " << s;
+      }
+      if (!weak_this) {
+        return;
+      }
+      weak_this->Done();
+    });
   };
   storage_->GetCommitContentsDiff(*ancestor_, *right_, std::move(on_next),
                                   std::move(on_diff_done));

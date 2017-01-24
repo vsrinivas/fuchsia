@@ -5,6 +5,7 @@
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 
 #include "apps/ledger/src/glue/crypto/rand.h"
+#include "apps/ledger/src/storage/fake/fake_commit.h"
 #include "apps/ledger/src/storage/public/constants.h"
 
 namespace storage {
@@ -45,9 +46,10 @@ Status FakeJournalDelegate::Delete(convert::ExtendedStringView key) {
 }
 
 void FakeJournalDelegate::Commit(
-    std::function<void(Status, CommitId)> callback) {
+    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+        callback) {
   if (is_committed_ || is_rolled_back_) {
-    callback(Status::ILLEGAL_STATE, "");
+    callback(Status::ILLEGAL_STATE, nullptr);
     return;
   }
 
@@ -82,7 +84,7 @@ void FakeJournalDelegate::ResolvePendingCommit(Status status) {
   is_committed_ = true;
   auto callback = std::move(commit_callback_);
   commit_callback_ = nullptr;
-  callback(Status::OK, id_);
+  callback(Status::OK, std::make_unique<const FakeCommit>(this));
 }
 
 const std::

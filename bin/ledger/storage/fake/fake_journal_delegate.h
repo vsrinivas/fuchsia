@@ -9,6 +9,7 @@
 #include <string>
 
 #include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/macros.h"
 
@@ -35,7 +36,9 @@ class FakeJournalDelegate {
                   KeyPriority priority);
   Status Delete(convert::ExtendedStringView key);
 
-  void Commit(std::function<void(Status, CommitId)> callback);
+  void Commit(
+      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+          callback);
   bool IsCommitted() const;
 
   Status Rollback();
@@ -57,7 +60,8 @@ class FakeJournalDelegate {
 
   bool is_committed_ = false;
   bool is_rolled_back_ = false;
-  std::function<void(Status, const CommitId&)> commit_callback_;
+  std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+      commit_callback_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(FakeJournalDelegate);
 };

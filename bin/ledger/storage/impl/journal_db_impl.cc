@@ -168,9 +168,11 @@ Status JournalDBImpl::ClearCommittedJournal(
   return Status::OK;
 }
 
-void JournalDBImpl::Commit(std::function<void(Status, CommitId)> callback) {
+void JournalDBImpl::Commit(
+    std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+        callback) {
   if (!valid_ || (type_ == JournalType::EXPLICIT && failed_operation_)) {
-    callback(Status::ILLEGAL_STATE, "");
+    callback(Status::ILLEGAL_STATE, nullptr);
     return;
   }
 
@@ -178,19 +180,19 @@ void JournalDBImpl::Commit(std::function<void(Status, CommitId)> callback) {
       Status status,
       std::vector<std::unique_ptr<const storage::Commit>> parents) {
     if (status != Status::OK) {
-      callback(status, "");
+      callback(status, nullptr);
       return;
     }
     size_t node_size;
     status = db_->GetNodeSize(&node_size);
     if (status != Status::OK) {
-      callback(status, "");
+      callback(status, nullptr);
       return;
     }
     std::unique_ptr<Iterator<const EntryChange>> entries;
     status = db_->GetJournalEntries(id_, &entries);
     if (status != Status::OK) {
-      callback(status, "");
+      callback(status, nullptr);
       return;
     }
     btree::ApplyChanges(
@@ -200,28 +202,27 @@ void JournalDBImpl::Commit(std::function<void(Status, CommitId)> callback) {
         ](Status status, ObjectId object_id,
           std::unordered_set<ObjectId> new_nodes) mutable {
           if (status != Status::OK) {
-            callback(status, "");
+            callback(status, nullptr);
             return;
           }
           std::unique_ptr<storage::Commit> commit =
               CommitImpl::FromContentAndParents(page_storage_, object_id,
                                                 std::move(parents));
-          CommitId id = commit->GetId();
           page_storage_->AddCommitFromLocal(
-              std::move(commit), ftl::MakeCopyable([
-                this, id = std::move(id), new_nodes = std::move(new_nodes),
-                callback
+              commit->Clone(), ftl::MakeCopyable([
+                this, commit = std::move(commit),
+                new_nodes = std::move(new_nodes), callback
               ](Status status) mutable {
                 valid_ = false;
                 if (status != Status::OK) {
-                  callback(status, "");
+                  callback(status, nullptr);
                   return;
                 }
                 status = ClearCommittedJournal(std::move(new_nodes));
                 if (status != Status::OK) {
-                  callback(status, "");
+                  callback(status, nullptr);
                 } else {
-                  callback(Status::OK, std::move(id));
+                  callback(Status::OK, std::move(commit));
                 }
               }));
         }));

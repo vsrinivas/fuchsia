@@ -61,12 +61,12 @@ class MergeResolverTest : public test::TestWithMessageLoop {
                                    storage::JournalType::IMPLICIT, &journal));
     contents(journal.get());
     storage::Status actual_status;
-    storage::CommitId actual_commit_id;
+    std::unique_ptr<const storage::Commit> actual_commit;
     journal->Commit(test::Capture([this] { message_loop_.PostQuitTask(); },
-                                  &actual_status, &actual_commit_id));
+                                  &actual_status, &actual_commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, actual_status);
-    return actual_commit_id;
+    return actual_commit->GetId();
   }
 
   std::vector<storage::Entry> GetCommitContents(const storage::Commit& commit) {
@@ -95,10 +95,8 @@ class MergeResolverTest : public test::TestWithMessageLoop {
 
 TEST_F(MergeResolverTest, Empty) {
   // Set up conflict
-  storage::CommitId commit_1 = CreateCommit(storage::kFirstPageCommitId,
-                                            AddKeyValueToJournal("foo", "bar"));
-  storage::CommitId commit_2 = CreateCommit(storage::kFirstPageCommitId,
-                                            AddKeyValueToJournal("foo", "baz"));
+  CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "bar"));
+  CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "baz"));
   std::unique_ptr<LastOneWinsMergeStrategy> strategy =
       std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, page_storage_.get());

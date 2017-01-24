@@ -120,13 +120,13 @@ void PageImpl::CommitJournal(
   in_progress_journals_.push_back(std::move(journal));
 
   journal_ptr->Commit([this, callback, journal_ptr](
-      storage::Status status, storage::CommitId commit_id) {
+      storage::Status status, std::unique_ptr<const storage::Commit> commit) {
     in_progress_journals_.erase(std::remove_if(
         in_progress_journals_.begin(), in_progress_journals_.end(),
         [&journal_ptr](const std::unique_ptr<storage::Journal>& journal) {
           return journal_ptr == journal.get();
         }));
-    callback(PageUtils::ConvertStatus(status), std::move(commit_id));
+    callback(PageUtils::ConvertStatus(status), commit->GetId());
   });
 }
 

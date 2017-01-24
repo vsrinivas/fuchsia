@@ -118,9 +118,9 @@ void CustomMergeStrategy::CustomMerger::OnChangesReady(
   PageSnapshotPtr page_snapshot;
   manager_->BindPageSnapshot(ancestor_->Clone(), page_snapshot.NewRequest());
   conflict_resolver_->Resolve(
-      std::move(changes[0]), std::move(changes[1]),
-      std::move(page_snapshot), [weak_this = weak_factory_.GetWeakPtr()](
-                                    fidl::Array<MergedValuePtr> merged_values) {
+      std::move(changes[0]), std::move(changes[1]), std::move(page_snapshot),
+      [weak_this = weak_factory_.GetWeakPtr()](
+          fidl::Array<MergedValuePtr> merged_values) {
         if (!weak_this) {
           return;
         }
@@ -215,7 +215,7 @@ void CustomMergeStrategy::CustomMerger::OnMergeDone(
                                    : storage::KeyPriority::LAZY);
     }
     weak_this->journal_->Commit([weak_this](
-        storage::Status status, const storage::CommitId& commit_id) {
+        storage::Status status, std::unique_ptr<const storage::Commit>) {
       if (status != storage::Status::OK) {
         FTL_LOG(ERROR) << "Unable to commit merge journal: " << status;
       }
