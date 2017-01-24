@@ -168,7 +168,7 @@ class TreeNode {
   // Returns the id of the child node at position |index|. If the child at the
   // given index is empty, an empty string is returned. |index| has to be in [0,
   // GetKeyCount()].
-  ObjectId GetChildId(int index) const;
+  ObjectIdView GetChildId(int index) const;
 
   // Searches for the given |key| in this node. If it is found, |OK| is
   // returned and index contains the index of the entry. If not, |NOT_FOUND|
@@ -176,7 +176,7 @@ class TreeNode {
   // might be found.
   Status FindKeyOrChild(convert::ExtendedStringView key, int* index) const;
 
-  ObjectId GetId() const;
+  const ObjectId& GetId() const;
 
  private:
   TreeNode(PageStorage* page_storage,

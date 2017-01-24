@@ -158,7 +158,7 @@ void TreeNode::GetChild(
   return FromId(page_storage_, children_[index], std::move(callback));
 }
 
-ObjectId TreeNode::GetChildId(int index) const {
+ObjectIdView TreeNode::GetChildId(int index) const {
   FTL_DCHECK(index >= 0 && index <= GetKeyCount());
   return children_[index];
 }
@@ -181,7 +181,7 @@ Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
   return Status::NOT_FOUND;
 }
 
-ObjectId TreeNode::GetId() const {
+const ObjectId& TreeNode::GetId() const {
   return id_;
 }
 
