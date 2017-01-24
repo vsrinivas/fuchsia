@@ -12,6 +12,7 @@ function HELP {
     echo "-A                  : use Intel HD Audio"
     echo "-b                  : build first"
     echo "-c                  : add item to kernel commandline"
+    echo "-C                  : use Clang build"
     echo "-d                  : run with emulated disk"
     echo "-g                  : use graphical console"
     echo "-I <interface name> : network interface name, default is qemu."
@@ -37,6 +38,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ARCH=
 AUDIO=0
 BUILD=0
+CLANG=0
 DISK=0
 BUILDDIR=
 GRAPHICS=0
@@ -59,12 +61,13 @@ else
   IFNAME="qemu"
 fi
 
-while getopts a:Abc:dgI:km:nNo:q:rs:u:vVx:h FLAG; do
+while getopts a:Abc:CdgI:km:nNo:q:rs:u:vVx:h FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
         A) AUDIO=1;;
         b) BUILD=1;;
         c) CMDLINE+="$OPTARG ";;
+        C) CLANG=1;;
         d) DISK=1;;
         g) GRAPHICS=1;;
         I) IFNAME=$OPTARG;;
@@ -100,12 +103,20 @@ else
     PROJECT=magenta-qemu-$ARCH
 fi
 
+if [ "$CLANG" -eq 1 ]; then
+    BUILDDIR_SUFFIX=-clang
+    BUILD_ARGS=USE_CLANG=true
+else
+    BUILDDIR_SUFFIX=
+    BUILD_ARGS=
+fi
+
 # build the project if asked for
 if [ "$BUILD" -eq 1 ]; then
     if [ "$RELEASE" -eq 1 ]; then
-        $DIR/make-release $PROJECT || exit 1
+        $DIR/make-release $PROJECT $BUILD_ARGS || exit 1
     else
-        $DIR/make-parallel $PROJECT || exit 1
+        $DIR/make-parallel $PROJECT $BUILD_ARGS || exit 1
     fi
 fi
 
@@ -115,7 +126,7 @@ if [ "$RELEASE" -eq 1 ]; then
 fi
 
 if [ "$BUILDDIR" == "" ]; then
-  BUILDDIR="$(dirname "$DIR")/build-$PROJECT"
+  BUILDDIR="$(dirname "$DIR")/build-$PROJECT$BUILDDIR_SUFFIX"
 fi
 
 # construct the args for qemu
