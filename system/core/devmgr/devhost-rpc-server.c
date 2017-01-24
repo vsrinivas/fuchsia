@@ -430,13 +430,18 @@ mx_status_t devhost_rio_handler(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     mx_status_t status;
     bool should_free_ios = false;
     mtx_lock(&ios->lock);
+    // if ios->dev is NULL, this is the "root" iostate of the
+    // device (where OPEN transactions are passed from devfs)
+    // and devhost_remove() has been called as part of device
+    // removal
     if (ios->dev != NULL) {
         status = _devhost_rio_handler(msg, rh, ios, &should_free_ios);
     } else {
         printf("rpc-device: stale ios %p\n", ios);
-        status = NO_ERROR;
+        status = ERR_REMOTE_CLOSED;
     }
     mtx_unlock(&ios->lock);
+    // TODO(swetland): pretty sure we sometimes leak these.
     if (should_free_ios) {
         free(ios);
     }
