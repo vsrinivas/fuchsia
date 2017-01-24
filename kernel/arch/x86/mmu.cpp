@@ -33,6 +33,9 @@ uint8_t g_vaddr_width = 32;
 uint8_t g_paddr_width = 32;
 #endif
 
+/* True if the system supports 1GB pages */
+static bool supports_huge_pages = false;
+
 #if ARCH_X86_64
 /* top level kernel page tables, initialized in start.S */
 pt_entry_t pml4[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE);
@@ -531,9 +534,8 @@ static bool level_supports_ps(page_table_levels level) {
         case PD_L:
             return true;
 #if X86_PAGING_LEVELS > 2
-        // TODO(teisenbe): Technically need to feature detect this
         case PDP_L:
-            return true;
+            return supports_huge_pages;
 #if X86_PAGING_LEVELS > 3
         case PML4_L:
             return false;
@@ -1052,6 +1054,8 @@ void x86_mmu_early_init() {
     /* get the address width from the CPU */
     uint8_t vaddr_width = x86_linear_address_width();
     uint8_t paddr_width = x86_physical_address_width();
+
+    supports_huge_pages = x86_feature_test(X86_FEATURE_HUGE_PAGE);
 
     /* if we got something meaningful, override the defaults.
      * some combinations of cpu on certain emulators seems to return
