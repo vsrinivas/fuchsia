@@ -60,7 +60,7 @@ public:
     constexpr Mutex() : mutex_(MTX_INIT) { }
     ~Mutex() { mtx_destroy(&mutex_); }
     void Acquire() __TA_ACQUIRE() { mtx_lock(&mutex_); }
-    void Release() __TA_ACQUIRE() { mtx_unlock(&mutex_); }
+    void Release() __TA_RELEASE() { mtx_unlock(&mutex_); }
 
     /* IsHeld is not supported by the Mutex wrapper in user-mode as C11 mtx_t
      * instances do not support a direct IsHeld style check.  A possible
