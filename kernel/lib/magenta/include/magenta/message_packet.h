@@ -47,7 +47,7 @@ private:
     static void operator delete(void* ptr) {
         free(ptr);
     }
-    friend struct mxtl::unique_ptr<MessagePacket>;
+    friend class mxtl::unique_ptr<MessagePacket>;
 
     bool owns_handles_;
     uint32_t data_size_;

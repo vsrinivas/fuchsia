@@ -60,7 +60,6 @@ private:
     status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     void OnPeerZeroHandles();
 
-    const uint32_t flags_;
     Mutex lock_;
     MessageList messages_ TA_GUARDED(lock_);
     WaiterList waiters_ TA_GUARDED(lock_);

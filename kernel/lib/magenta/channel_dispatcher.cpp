@@ -96,7 +96,8 @@ status_t ChannelDispatcher::Create(uint32_t flags,
 }
 
 ChannelDispatcher::ChannelDispatcher(uint32_t flags)
-    : flags_(flags), state_tracker_(MX_CHANNEL_WRITABLE) {
+    : state_tracker_(MX_CHANNEL_WRITABLE) {
+    DEBUG_ASSERT(flags == 0);
 }
 
 // This is called before either ChannelDispatcher is accessible from threads other than the one
