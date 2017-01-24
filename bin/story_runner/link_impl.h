@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef MOJO_APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
-#define MOJO_APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
+#ifndef APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
+#define APPS_MODULAR_SRC_STORY_RUNNER_LINK_IMPL_H_
 
 #include "apps/modular/lib/fidl/bottleneck.h"
 #include "apps/modular/lib/rapidjson/rapidjson.h"
@@ -15,6 +15,7 @@
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
+#include "third_party/rapidjson/rapidjson/schema.h"
 
 namespace modular {
 
@@ -66,6 +67,7 @@ class LinkImpl {
   ~LinkImpl();
 
   // Used by LinkConnection.
+  void SetSchema(const fidl::String& json_schema);
   void UpdateObject(fidl::Array<fidl::String> path,
                     const fidl::String& json,
                     LinkConnection* src);
@@ -94,12 +96,17 @@ class LinkImpl {
   void WriteLinkData(const std::function<void()>& callback);
   void WriteLinkDataImpl(const std::function<void()>& callback);
   void OnChange(const fidl::String& json);
+  void ValidateSchema(const char* entry_point,
+                      const CrtJsonPointer& pointer,
+                      const std::string& json);
 
   CrtJsonDoc doc_;
   std::vector<std::unique_ptr<LinkConnection>> connections_;
   const fidl::String name_;
   StoryStorageImpl* const story_storage_;
   std::function<void()> orphaned_handler_;
+
+  std::unique_ptr<rapidjson::SchemaDocument> schema_doc_;
 
   Bottleneck write_link_data_;
 
@@ -125,6 +132,7 @@ class LinkConnection : public Link {
   LinkConnection(LinkImpl* impl, fidl::InterfaceRequest<Link> request);
 
   // |Link|
+  void SetSchema(const fidl::String& json_schema) override;
   void UpdateObject(fidl::Array<fidl::String> path,
                     const fidl::String& json) override;
   void Set(fidl::Array<fidl::String> path, const fidl::String& json) override;

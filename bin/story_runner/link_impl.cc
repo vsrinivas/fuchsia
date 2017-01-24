@@ -55,6 +55,16 @@ LinkImpl::LinkImpl(StoryStorageImpl* const story_storage,
 
 LinkImpl::~LinkImpl() {}
 
+void LinkImpl::SetSchema(const fidl::String& json_schema) {
+  rapidjson::Document doc;
+  doc.Parse(json_schema.get());
+  FTL_DCHECK(!doc.HasParseError())
+      << "LinkImpl::SetSchema() " << name_ << " JSON parse failed error #"
+      << doc.GetParseError() << std::endl
+      << json_schema.get();
+  schema_doc_ = std::make_unique<rapidjson::SchemaDocument>(doc);
+}
+
 // The |LinkConnection| object knows which client made the call to Set() or
 // Update(), so it notifies either all clients or all other clients, depending
 // on whether WatchAll() or Watch() was called, respectively.
@@ -74,7 +84,9 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
   if (new_value.HasParseError()) {
     // TODO(jimbe) Handle errors better
     FTL_CHECK(!new_value.HasParseError())
-        << "PARSE ERROR in Update()" << new_value.GetParseError();
+        << "LinkImpl::Set() " << name_ << " JSON parse failed error #"
+        << new_value.GetParseError() << std::endl
+        << json.get();
     return;
   }
 
@@ -90,6 +102,7 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
 
   if (dirty) {
     ptr.Set(doc_, new_value);
+    ValidateSchema("LinkImpl::Set", ptr, json.get());
     DatabaseChanged(src);
   }
   //FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToPrettyString(doc_);
@@ -106,7 +119,9 @@ void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
   if (new_value.HasParseError()) {
     // TODO(jimbe) Handle errors better
     FTL_CHECK(!new_value.HasParseError())
-        << "PARSE ERROR in Update()" << new_value.GetParseError();
+        << "LinkImpl::UpdateObject() " << name_ << " JSON parse failed error #"
+        << new_value.GetParseError() << std::endl
+        << json.get();
     return;
   }
 
@@ -116,6 +131,7 @@ void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,
   const bool dirty =
       MergeObject(current_value, std::move(new_value), doc_.GetAllocator());
   if (dirty) {
+    ValidateSchema("LinkImpl::UpdateObject", ptr, json.get());
     DatabaseChanged(src);
   }
   //  FTL_LOG(INFO) << "LinkImpl::UpdateObject() result "
@@ -127,8 +143,9 @@ void LinkImpl::Erase(fidl::Array<fidl::String> path,
   //  FTL_LOG(INFO) << "LinkImpl::Erase() "
   //                << "PATH " << PrettyPrintPath(path) << std::endl;
   auto ptr = CreatePointerFromArray(doc_, path.begin(), path.end());
-  auto p = ptr.Get(doc_);
-  if (p != nullptr && ptr.Erase(doc_)) {
+  auto value = ptr.Get(doc_);
+  if (value != nullptr && ptr.Erase(doc_)) {
+    ValidateSchema("LinkImpl::Erase", ptr, std::string());
     DatabaseChanged(src);
   }
 }
@@ -196,6 +213,35 @@ void LinkImpl::DatabaseChanged(LinkConnection* const src) {
   // deleted before the callback is invoked, it will also be removed
   // from connections_.
   WriteLinkData([this, src] { NotifyWatchers(src); });
+}
+
+void LinkImpl::ValidateSchema(const char* const entry_point,
+                              const CrtJsonPointer& pointer,
+                              const std::string& json) {
+  if (!schema_doc_) {
+    return;
+  }
+
+  rapidjson::GenericSchemaValidator<rapidjson::SchemaDocument> validator(
+      *schema_doc_);
+  if (!doc_.Accept(validator)) {
+    if (!validator.IsValid()) {
+      rapidjson::StringBuffer sbpath;
+      validator.GetInvalidSchemaPointer().StringifyUriFragment(sbpath);
+      rapidjson::StringBuffer sbdoc;
+      validator.GetInvalidDocumentPointer().StringifyUriFragment(sbdoc);
+      rapidjson::StringBuffer sbapipath;
+      pointer.StringifyUriFragment(sbapipath);
+      FTL_LOG(ERROR) << "Schema constraint violation in " << name_ << ":"
+                     << std::endl
+                     << "  Constraint " << sbpath.GetString() << "/"
+                     << validator.GetInvalidSchemaKeyword() << std::endl
+                     << "  Doc location: " << sbdoc.GetString() << std::endl
+                     << "  API " << entry_point << std::endl
+                     << "  API path " << sbapipath.GetString() << std::endl
+                     << "  API json " << json << std::endl;
+    }
+  }
 }
 
 void LinkImpl::OnChange(const fidl::String& json) {
@@ -296,6 +342,10 @@ void LinkConnection::Dup(fidl::InterfaceRequest<Link> dup) {
 
 void LinkConnection::Sync(const SyncCallback& callback) {
   impl_->Sync(callback);
+}
+
+void LinkConnection::SetSchema(const fidl::String& json_schema) {
+  impl_->SetSchema(json_schema);
 }
 
 void LinkConnection::UpdateObject(fidl::Array<fidl::String> path,

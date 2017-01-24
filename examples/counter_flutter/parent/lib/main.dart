@@ -23,6 +23,44 @@ final String _kDocRoot = 'counters';
 final String _kDocId = 'counter-doc-id';
 final String _kCounterValueKey = "http://schema.domokit.org/counter";
 
+final String _kJsonSchema = '''
+{
+  "\$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "counters": {
+      "type": "object",
+      "properties": {
+        "counter-doc-id": {
+          "type": "object",
+          "properties": {
+            "@type": {
+              "type": "string"
+            },
+            "http://schema.domokit.org/counter": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties" : false,
+          "required": [
+            "@type",
+            "http://schema.domokit.org/counter"
+          ]
+        }
+      },
+      "additionalProperties" : false,
+      "required": [
+        "counter-doc-id"
+      ]
+    }
+  },
+  "additionalProperties" : false,
+  "required": [
+    "counters"
+  ]
+}
+''';
+
 ModuleImpl _module;
 
 ChildViewConnection _conn;
@@ -83,6 +121,8 @@ class ModuleImpl extends Module {
     // Bind the provided handles to our proxy objects.
     _story.ctrl.bind(storyHandle);
     _link.ctrl.bind(linkHandle);
+
+    _link.setSchema(_kJsonSchema);
 
     // Register the link watcher.
     _link.watchAll(_linkWatcher.getHandle());
