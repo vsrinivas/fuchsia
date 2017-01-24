@@ -36,8 +36,9 @@ public:
 private:
     // This is an internal helper routine that can only be called with |lock_|
     // held. Calling this without holding |lock_| is a compile-time error.
-    // Annotations on functions must be on the function declaration (usually in
-    // the header file), not the definition.
+    // Annotations like TA_REQ, TA_ACQ, TA_REL, etc are part of the function's
+    // interface and must be on the function declaration, usually in the header,
+    // not the definition.
     int IncreaseFooLocked(int by) TA_REQ(lock_);
 
     // This internal routine requires that both |lock_| and |foo_lock_| be held by the
