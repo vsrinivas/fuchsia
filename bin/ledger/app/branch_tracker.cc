@@ -34,10 +34,8 @@ class BranchTracker::PageWatcherContainer {
     interface_.set_connection_error_handler(std::move(on_empty_callback));
   }
 
-  void UpdateCommit(const storage::CommitId& commit_id) {
-    storage::Status status =
-        storage_->GetCommitSynchronous(commit_id, &current_commit_);
-    FTL_DCHECK(status == storage::Status::OK);
+  void UpdateCommit(std::unique_ptr<const storage::Commit> commit) {
+    current_commit_ = std::move(commit);
     SendCommit();
   }
 
@@ -139,7 +137,7 @@ BranchTracker::BranchTracker(PageManager* manager,
       interface_(std::move(request), storage, manager, this),
       transaction_in_progress_(false) {
   interface_.set_on_empty([this] {
-    StopTransaction("");
+    StopTransaction(nullptr);
     CheckEmpty();
   });
   watchers_.set_on_empty([this] { CheckEmpty(); });
@@ -147,7 +145,10 @@ BranchTracker::BranchTracker(PageManager* manager,
   // TODO(etiennej): Fail more nicely.
   FTL_CHECK(storage_->GetHeadCommitIds(&commit_ids) == storage::Status::OK);
   FTL_DCHECK(commit_ids.size() > 0);
-  current_commit_ = commit_ids[0];
+  // current_commit_ will be updated to have a correct value after the first
+  // Commit received in OnNewCommits or StopTransaction.
+  current_commit_ = nullptr;
+  current_commit_id_ = commit_ids[0];
   storage_->AddCommitWatcher(this);
 }
 
@@ -160,34 +161,39 @@ void BranchTracker::set_on_empty(ftl::Closure on_empty_callback) {
 }
 
 const storage::CommitId& BranchTracker::GetBranchHeadId() {
-  return current_commit_;
+  return current_commit_id_;
 }
 
 void BranchTracker::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& commits,
     storage::ChangeSource source) {
   bool changed = false;
+  const std::unique_ptr<const storage::Commit>* new_current_commit = nullptr;
   for (const auto& commit : commits) {
-    if (commit->GetId() == current_commit_) {
+    if (commit->GetId() == current_commit_id_) {
       continue;
     }
     // This assumes commits are received in (partial) order. If the commit
-    // doesn't have current_commit_ as a parent it is not part of this branch
+    // doesn't have current_commit_id_ as a parent it is not part of this branch
     // and should be ignored.
     std::vector<storage::CommitIdView> parent_ids = commit->GetParentIds();
-    if (std::find(parent_ids.begin(), parent_ids.end(), current_commit_) ==
+    if (std::find(parent_ids.begin(), parent_ids.end(), current_commit_id_) ==
         parent_ids.end()) {
       continue;
     }
     changed = true;
-    current_commit_ = commit->GetId();
+    current_commit_id_ = commit->GetId();
+    new_current_commit = &commit;
+  }
+  if (changed) {
+    current_commit_ = (*new_current_commit)->Clone();
   }
 
   if (!changed || transaction_in_progress_) {
     return;
   }
   for (auto& watcher : watchers_) {
-    watcher.UpdateCommit(current_commit_);
+    watcher.UpdateCommit(current_commit_->Clone());
   }
 }
 
@@ -201,21 +207,30 @@ void BranchTracker::StartTransaction(ftl::Closure watchers_drained_callback) {
   waiter.Finalize(std::move(watchers_drained_callback));
 }
 
-void BranchTracker::StopTransaction(storage::CommitId commit_id) {
-  FTL_DCHECK(transaction_in_progress_ || commit_id.empty());
+void BranchTracker::StopTransaction(
+    std::unique_ptr<const storage::Commit> commit) {
+  FTL_DCHECK(transaction_in_progress_ || !commit);
 
   if (!transaction_in_progress_) {
     return;
   }
   transaction_in_progress_ = false;
 
-  if (!commit_id.empty()) {
-    current_commit_ = std::move(commit_id);
+  if (commit) {
+    current_commit_id_ = commit->GetId();
+    current_commit_ = std::move(commit);
+  }
+
+  if (!current_commit_) {
+    // current_commit_ has a null value only if OnNewCommits has neven been
+    // called. Here we are in the case where a transaction stops, but no new
+    // commits have arrived in between: there is no need to update the watchers.
+    return;
   }
 
   for (auto& watcher : watchers_) {
     watcher.SetOnDrainedCallback(nullptr);
-    watcher.UpdateCommit(current_commit_);
+    watcher.UpdateCommit(current_commit_->Clone());
   }
 }
 

@@ -46,8 +46,10 @@ class PageImpl : public Page {
       std::function<Status(storage::Journal* journal)> runnable,
       StatusCallback callback);
 
-  void CommitJournal(std::unique_ptr<storage::Journal> journal,
-                     std::function<void(Status, storage::CommitId)> callback);
+  void CommitJournal(
+      std::unique_ptr<storage::Journal> journal,
+      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
+          callback);
 
   // Queue operations such that they are serialized: an operation is run only
   // when all previous operations registered through this method have terminated

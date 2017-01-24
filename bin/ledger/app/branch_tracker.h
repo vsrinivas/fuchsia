@@ -50,9 +50,9 @@ class BranchTracker : public storage::CommitWatcher {
   // Informs the BranchTracker that a transaction is no longer in progress.
   // Resumes sending updates to registered watchers. This should be used by
   // |PageImpl| when a transaction is committed or rolled back.
-  // |commit_id| must be the commit of the transaction if is has been committed,
-  // and empty otherwise.
-  void StopTransaction(storage::CommitId commit_id);
+  // |commit| must be the one created by the transaction if it was committed, or
+  // nullptr otherwise.
+  void StopTransaction(std::unique_ptr<const storage::Commit> commit);
 
  private:
   class PageWatcherContainer;
@@ -71,7 +71,18 @@ class BranchTracker : public storage::CommitWatcher {
   ftl::Closure on_empty_callback_;
 
   bool transaction_in_progress_;
-  storage::CommitId current_commit_;
+  // The following two variables hold the commit object and id correspondingly
+  // of the commit tracked by this BranchTracker. |current_commit_| is used
+  // for notifying the watchers. On initialization, |current_commit_id_| is set
+  // to track the first head as returned from PageStorage. |current_commit_| at
+  // that point equals nullptr and is only updated with a valid Commit,
+  // corresponding to the tracked id, after the first call to OnNewCommits or
+  // StopTransaction. Since the notifications are sent to the watchers only
+  // after updating the tracked commit, the value of the |current_commit_| at
+  // initialization (which is set to nullptr) is not necessary.
+  std::unique_ptr<const storage::Commit> current_commit_;
+  storage::CommitId current_commit_id_;
+
   FTL_DISALLOW_COPY_AND_ASSIGN(BranchTracker);
 };
 
