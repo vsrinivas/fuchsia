@@ -887,4 +887,17 @@ mod tests {
         assert!(p2.read(0, &mut buf).is_ok());
         assert_eq!(buf.bytes(), b"hello");
     }
+
+    #[test]
+    fn channel_read_raw_too_small() {
+        let (p1, p2) = Channel::create(ChannelOpts::Normal).unwrap();
+
+        let mut empty = vec![];
+        assert!(p1.write(b"hello", &mut empty, 0).is_ok());
+
+        let mut buf = MessageBuf::new();
+        let result = p2.read_raw(0, &mut buf);
+        assert_eq!(result, Err((5, 0)));
+        assert_eq!(buf.bytes(), b"");
+    }
 }
