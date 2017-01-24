@@ -47,8 +47,10 @@ static status_t arm64_mmu_alloc_asid(uint16_t* asid) {
     do {
         new_asid = rand() & ~(-(1 << MMU_ARM64_ASID_BITS));
         retry--;
-        if (retry == 0)
+        if (retry == 0) {
+            mutex_release(&asid_lock);
             return ERR_NO_MEMORY;
+        }
     } while ((asid_pool[new_asid >> 6] & (1 << (new_asid % 64))) || (new_asid == 0));
 
     asid_pool[new_asid >> 6] = asid_pool[new_asid >> 6] | (1 << (new_asid % 64));
