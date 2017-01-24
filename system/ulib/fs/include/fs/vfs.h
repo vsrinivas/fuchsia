@@ -59,6 +59,11 @@ ssize_t vfs_do_ioctl_watch_dir(vnode_t* vn,
                                void* out_buf, size_t out_len);
 // Called when something is added to a watched directory.
 void vfs_notify_add(vnode_t* vn, const char* name, size_t len);
+#ifdef __Fuchsia__
+// Called to implement filesystem-specific ioctls
+ssize_t vfs_do_local_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
+                           size_t in_len, void* out_buf, size_t out_len);
+#endif
 
 typedef struct vfs_iostate {
     vnode_t* vn;

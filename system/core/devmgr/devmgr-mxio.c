@@ -119,12 +119,12 @@ fail:
     }
 }
 
-static unsigned int setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
+static ssize_t setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
     uint64_t size;
     mx_status_t status = mx_vmo_get_size(vmo, &size);
     if (status != NO_ERROR) {
         printf("devmgr: failed to get bootfs #%u size (%d)\n", n, status);
-        return 0;
+        return status;
     }
     if (size == 0)
         return 0;
@@ -142,11 +142,15 @@ static void setup_bootfs(void) {
          (vmo = mxio_get_startup_handle(
              MX_HND_INFO(MX_HND_TYPE_BOOTFS_VMO, n))) != MX_HANDLE_INVALID;
         ++n) {
-        unsigned int count = setup_bootfs_vmo(n, vmo);
+        ssize_t count = setup_bootfs_vmo(n, vmo);
         if (count > 0)
-            printf("devmgr: bootfs #%u contains %u file%s\n",
+            printf("devmgr: bootfs #%u contains %zd file%s\n",
                    n, count, (count == 1) ? "" : "s");
     }
+}
+
+ssize_t devmgr_add_systemfs_vmo(mx_handle_t vmo) {
+    return setup_bootfs_vmo(100, vmo);
 }
 
 void devmgr_vfs_init(void) {

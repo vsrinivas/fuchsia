@@ -53,6 +53,20 @@ mx_status_t vfs_get_handles(vnode_t* vn, uint32_t flags, mx_handle_t* hnds,
     }
 }
 
+ssize_t vfs_do_local_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
+                           size_t in_len, void* out_buf, size_t out_len) {
+    switch (op) {
+    case IOCTL_DEVMGR_MOUNT_BOOTFS_VMO:
+        if (in_len < sizeof(mx_handle_t)) {
+            return ERR_INVALID_ARGS;
+        }
+        const mx_handle_t* vmo = in_buf;
+        return devmgr_add_systemfs_vmo(*vmo);
+    default:
+        return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
+    }
+}
+
 static volatile int vfs_txn = -1;
 static int vfs_txn_no = 0;
 

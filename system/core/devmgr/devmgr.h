@@ -20,6 +20,7 @@ void devmgr_launch(mx_handle_t job,
 void devmgr_launch_devhost(mx_handle_t job,
                            const char* name, int argc, char** argv,
                            mx_handle_t hdevice, mx_handle_t hrpc);
+ssize_t devmgr_add_systemfs_vmo(mx_handle_t vmo);
 
 typedef struct devhost_msg devhost_msg_t;
 struct devhost_msg {

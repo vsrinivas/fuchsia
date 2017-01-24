@@ -308,7 +308,11 @@ ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
     }
 #endif
     default:
+#ifdef __Fuchsia__
+        return vfs_do_local_ioctl(vn, op, in_buf, in_len, out_buf, out_len);
+#else
         return vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
+#endif
     }
 }
 

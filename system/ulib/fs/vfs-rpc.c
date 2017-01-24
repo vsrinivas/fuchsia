@@ -279,8 +279,38 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         }
         return r;
     }
+    case MXRIO_IOCTL_1H: {
+        if ((len > MXIO_IOCTL_MAX_INPUT) ||
+            (arg > (ssize_t)sizeof(msg->data)) ||
+            (IOCTL_KIND(msg->arg2.op) != IOCTL_KIND_SET_HANDLE)) {
+            mx_handle_close(msg->handle[0]);
+            return ERR_INVALID_ARGS;
+        }
+        if (len < sizeof(mx_handle_t)) {
+            len = sizeof(mx_handle_t);
+        }
+
+        char in_buf[MXIO_IOCTL_MAX_INPUT];
+        // The sending side copied the handle into msg->handle[0]
+        // so that it would be sent via channel_write().  Here we
+        // copy the local version back into the space in the buffer
+        // that the original occupied.
+        memcpy(in_buf, msg->handle, sizeof(mx_handle_t));
+        memcpy(in_buf + sizeof(mx_handle_t), msg->data + sizeof(mx_handle_t),
+               len - sizeof(mx_handle_t));
+
+        ssize_t r = vfs_do_ioctl(vn, msg->arg2.op, in_buf, len, msg->data, arg);
+
+        if (r == ERR_NOT_SUPPORTED) {
+            mx_handle_close(msg->handle[0]);
+        }
+
+        return r;
+    }
     case MXRIO_IOCTL: {
-        if (len > MXIO_IOCTL_MAX_INPUT) {
+        if (len > MXIO_IOCTL_MAX_INPUT ||
+            (arg > (ssize_t)sizeof(msg->data)) ||
+            (IOCTL_KIND(msg->arg2.op) == IOCTL_KIND_SET_HANDLE)) {
             return ERR_INVALID_ARGS;
         }
         char in_buf[MXIO_IOCTL_MAX_INPUT];
