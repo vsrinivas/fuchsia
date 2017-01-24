@@ -101,8 +101,10 @@ void showjobs(struct output *, int);
 int waitcmd(int, char **);
 struct job *makejob(union node *, int);
 int forkshell(struct job *, union node *, int);
+void forkparent(struct job *, union node *, int, pid_t);
 int waitforjob(struct job *);
 int stoppedjobs(void);
+void freejob(struct job *jp);
 
 #if ! JOBS
 #define setjobctl(on) ((void)(on))	/* do nothing */

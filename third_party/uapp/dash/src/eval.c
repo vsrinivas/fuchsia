@@ -484,7 +484,7 @@ evalsubshell(union node *n, int flags)
 		return status;
 	}
 
-	int result = process_await_termination(process);
+	int result = process_await_termination(process, true);
 	mx_handle_close(process);
 	return result;
 }
@@ -614,20 +614,18 @@ evalbackcmd(union node *n, struct backcmd *result)
 	if (pipe(pip) < 0)
 		sh_error("Pipe call failed");
 	jp = makejob(n, 1);
-	if (forkshell(jp, n, FORK_NOJOB) == 0) {
-		FORCEINTON;
-		close(pip[0]);
-		if (pip[1] != 1) {
-			dup2(pip[1], 1);
-			close(pip[1]);
-		}
-		ifsfree();
-		evaltreenr(n, EV_EXIT);
-		/* NOTREACHED */
+	mx_handle_t process;
+	mx_status_t status = process_backtick(n, &process, pip[1]);
+        close(pip[1]);
+	if (status != NO_ERROR) {
+		freejob(jp);
+		sh_error("Failed to create subshell");
+	} else {
+                /* Process-tracking management */
+		forkparent(jp, n, FORK_NOJOB, process);
+		result->fd = pip[0];
+		result->jp = jp;
 	}
-	close(pip[1]);
-	result->fd = pip[0];
-	result->jp = jp;
 
 out:
 	TRACE(("evalbackcmd done: fd=%d buf=0x%x nleft=%d jp=0x%x\n",
@@ -843,7 +841,7 @@ bail:
 			break;
 		}
 		settitle(argv[0]);
-		status = process_await_termination(process);
+		status = process_await_termination(process, true);
 		mx_handle_close(process);
 		settitle("sh");
 		break;

@@ -71,53 +71,53 @@ static mx_status_t clone_application_environment(mx_handle_t* application_enviro
     return duplicate_application_environment(application_environment, application_environment_for_child);
 }
 
-static mx_status_t prepare_launch(launchpad_t* lp, const char* filename, int argc, const char* const* argv) {
+static mx_status_t prepare_launch(launchpad_t* lp, const char* filename, int argc,
+                                  const char* const* argv, const char* const* envp,
+                                  int *fds) {
+
     mx_status_t status = launchpad_elf_load(lp, launchpad_vmo_from_file(filename));
-    if (status != NO_ERROR)
-        return status;
 
-    status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
-    if (status != NO_ERROR)
-        return status;
+    if (status == NO_ERROR)
+        status = launchpad_load_vdso(lp, MX_HANDLE_INVALID);
+    if (status == NO_ERROR)
+        status = launchpad_add_vdso_vmo(lp);
+    if (status == NO_ERROR)
+        status = launchpad_arguments(lp, argc, argv);
+    if (status == NO_ERROR)
+        status = launchpad_environ(lp, envp);
+    if (status == NO_ERROR)
+        status = launchpad_clone_mxio_root(lp);
+    if (status == NO_ERROR)
+        status = launchpad_clone_mxio_cwd(lp);
 
-    status = launchpad_add_vdso_vmo(lp);
-    if (status != NO_ERROR)
-        return status;
-
-    status = launchpad_arguments(lp, argc, argv);
-    if (status != NO_ERROR)
-        return status;
-
-    status = launchpad_environ(lp, (const char* const*)environment());
-    if (status != NO_ERROR)
-        return status;
-
-    status = launchpad_clone_mxio_root(lp);
-    if (status != NO_ERROR)
-        return status;
-
-    status = launchpad_clone_mxio_cwd(lp);
-    if (status != NO_ERROR)
-        return status;
-
-    launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
-    launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
-    launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+    if (fds) {
+        if (status == NO_ERROR)
+            status = launchpad_clone_fd(lp, fds[0], STDIN_FILENO);
+        if (status == NO_ERROR)
+            status = launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
+        if (status == NO_ERROR)
+            status = launchpad_clone_fd(lp, fds[2], STDERR_FILENO);
+    } else {
+        if (status == NO_ERROR)
+            status = launchpad_clone_fd(lp, STDIN_FILENO, STDIN_FILENO);
+        if (status == NO_ERROR)
+            status = launchpad_clone_fd(lp, STDOUT_FILENO, STDOUT_FILENO);
+        if (status == NO_ERROR)
+            status = launchpad_clone_fd(lp, STDERR_FILENO, STDERR_FILENO);
+    }
 
     mx_handle_t application_environment = MX_HANDLE_INVALID;
-    status = clone_application_environment(&application_environment);
-    if (status != NO_ERROR)
-        return status;
-
-    if (application_environment != MX_HANDLE_INVALID) {
+    if (status == NO_ERROR)
+        status = clone_application_environment(&application_environment);
+    if (status == NO_ERROR && application_environment != MX_HANDLE_INVALID)
         launchpad_add_handle(lp, application_environment,
             MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0));
-    }
 
     return status;
 }
 
-static mx_status_t launch(const char* filename, int argc, const char* const* argv, mx_handle_t* process) {
+static mx_status_t launch(const char* filename, int argc, const char* const* argv,
+                          const char* const* envp, mx_handle_t* process) {
     launchpad_t* lp = NULL;
 
     mx_handle_t job_to_child = MX_HANDLE_INVALID;
@@ -129,9 +129,56 @@ static mx_status_t launch(const char* filename, int argc, const char* const* arg
     if (status != NO_ERROR)
         return status;
 
-    status = prepare_launch(lp, filename, argc, argv);
+    status = prepare_launch(lp, filename, argc, argv, envp, NULL);
     if (status == NO_ERROR) {
         mx_handle_t result = launchpad_start(lp);
+        if (result > 0)
+            *process = result;
+        else
+            status = result;
+    }
+
+    launchpad_destroy(lp);
+    return status;
+}
+
+static mx_status_t launch_subshell(union node* n, const char* const* envp, mx_handle_t* process,
+                                   int *fds)
+{
+    if (!arg0)
+        return ERR_NOT_FOUND;
+
+    const char* const* argv = (const char* const*) &arg0;
+    launchpad_t* lp = NULL;
+
+    // TODO(abarth): Handle the redirects properly (i.e., implement
+    // redirect(n->nredir.redirect) using launchpad);
+    mx_handle_t ast_vmo = MX_HANDLE_INVALID;
+    mx_status_t status = codec_encode(n, &ast_vmo);
+    if (status != NO_ERROR)
+        return status;
+
+    mx_handle_t job_to_child = MX_HANDLE_INVALID;
+    mx_handle_t job = mx_job_default();
+    if (job != MX_HANDLE_INVALID)
+        mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_to_child);
+
+    status = launchpad_create(job_to_child, argv[0], &lp);
+    if (status != NO_ERROR)
+        return status;
+
+    int argc;
+    for (argc = 0; argv[argc]; argc++)
+        ;
+
+    status = prepare_launch(lp, argv[0], argc, (const char* const*)argv, envp, fds);
+    if (status == NO_ERROR) {
+        status = launchpad_add_handle(lp, ast_vmo, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    }
+
+    if (status == NO_ERROR) {
+        mx_handle_t result = launchpad_start(lp);
+
         if (result > 0)
             *process = result;
         else
@@ -145,8 +192,11 @@ static mx_status_t launch(const char* filename, int argc, const char* const* arg
 int process_launch(int argc, const char* const* argv, const char* path, int index, mx_handle_t* process) {
     mx_status_t status = NO_ERROR;
 
+    // All exported variables
+    const char* const* envp = (const char* const*)environment();
+
     if (strchr(argv[0], '/') != NULL) {
-        status = launch(argv[0], argc, argv, process);
+        status = launch(argv[0], argc, argv, envp, process);
         if (status == NO_ERROR)
             return 0;
     } else {
@@ -154,7 +204,7 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
         const char* filename = NULL;
         while (status != NO_ERROR && (filename = padvance(&path, argv[0])) != NULL) {
             if (--index < 0 && pathopt == NULL)
-                status = launch(filename, argc, argv, process);
+                status = launch(filename, argc, argv, envp, process);
             stunalloc(filename);
         }
     }
@@ -172,53 +222,31 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
 }
 
 mx_status_t process_subshell(union node* n, mx_handle_t* process) {
-    if (!arg0)
-        return ERR_NOT_FOUND;
-
-    mx_handle_t ast_vmo = MX_HANDLE_INVALID;
-    mx_status_t status = codec_encode(n, &ast_vmo);
-    if (status != NO_ERROR)
-        return status;
-
-    mx_handle_t application_environment = MX_HANDLE_INVALID;
-    status = clone_application_environment(&application_environment);
-    if (status != NO_ERROR) {
-        mx_handle_close(ast_vmo);
-        return status;
-    }
-
-    mx_handle_t handles[2];
-    uint32_t ids[2];
-
-    size_t count = 0;
-    handles[count] = ast_vmo;
-    ids[count] = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
-    ++count;
-
-    if (application_environment != MX_HANDLE_INVALID) {
-        handles[count] = application_environment;
-        ids[count] = MX_HND_INFO(MX_HND_TYPE_APPLICATION_ENVIRONMENT, 0);
-        ++count;
-    }
-
-    // TODO(abarth): Handle the redirects properly (i.e., implement
-    // redirect(n->nredir.redirect) using launchpad);
     // TODO(joshconner): Here we're promoting non-exported variables to
     // environment variables, which isn't quite correct (any commands
     // executed in the subshell will inherit these definitions).
-    mx_handle_t result = launchpad_launch_mxio_etc(arg0, 1,
-        (const char* const*)&arg0, (const char* const*)listvars(0, VUNSET, 0),
-         count, handles, ids);
-    if (result < 0)
-        return result;
-    *process = result;
-    return NO_ERROR;
+    const char* const* envp = (const char* const*)listvars(0, VUNSET, 0);
+
+    return  launch_subshell(n, envp, process, NULL);
 }
 
-int process_await_termination(mx_handle_t process) {
-    mx_status_t status = mx_handle_wait_one(process, MX_TASK_TERMINATED, MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR)
+mx_status_t process_backtick(union node* n, mx_handle_t* process, int stdout_fd) {
+    const char* const* envp = (const char* const*) environment();
+    int fds[3] = { STDIN_FILENO, stdout_fd, STDERR_FILENO };
+
+    return launch_subshell(n, envp, process, &fds[0]);
+}
+
+/* Check for process termination (block if requested). When not blocking,
+   returns ERR_TIMED_OUT if process hasn't exited yet.  */
+int process_await_termination(mx_handle_t process, bool blocking) {
+    mx_time_t timeout = blocking ? MX_TIME_INFINITE : 0;
+    mx_signals_t signals_observed;
+    mx_status_t status = mx_handle_wait_one(process, MX_TASK_TERMINATED, timeout, &signals_observed);
+    if (status != NO_ERROR && status != ERR_TIMED_OUT)
         return status;
+    if (!blocking && status == ERR_TIMED_OUT && !signals_observed)
+        return ERR_TIMED_OUT;
 
     mx_info_process_t proc_info;
     status = mx_object_get_info(process, MX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);

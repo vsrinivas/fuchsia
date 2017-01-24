@@ -68,6 +68,7 @@
 #include "error.h"
 #include "mystring.h"
 #include "system.h"
+#include "process.h"
 
 /* mode flags for set_curjob */
 #define CUR_DELETE 2
@@ -101,11 +102,9 @@ static int jobless;
 STATIC void set_curjob(struct job *, unsigned);
 STATIC int jobno(const struct job *);
 STATIC int sprint_status(char *, int, int);
-STATIC void freejob(struct job *);
 STATIC struct job *getjob(const char *, int);
 STATIC struct job *growjobtab(void);
 STATIC void forkchild(struct job *, union node *, int);
-STATIC void forkparent(struct job *, union node *, int, pid_t);
 STATIC int dowait(int, struct job *);
 #ifdef SYSV
 STATIC int onsigchild(void);
@@ -568,7 +567,7 @@ showjobs(struct output *out, int mode)
  * Mark a job structure as unused.
  */
 
-STATIC void
+void
 freejob(struct job *jp)
 {
 	struct procstat *ps;
@@ -892,7 +891,7 @@ forkchild(struct job *jp, union node *n, int mode)
 	jobless = 0;
 }
 
-STATIC inline void
+void
 forkparent(struct job *jp, union node *n, int mode, pid_t pid)
 {
 	TRACE(("In parent shell:  child = %d\n", pid));
@@ -1007,7 +1006,7 @@ waitforjob(struct job *jp)
 STATIC int
 dowait(int block, struct job *job)
 {
-	int pid;
+	int pid = -1;
 	int status;
 	struct job *jp;
 	struct job *thisjob = NULL;
@@ -1015,12 +1014,9 @@ dowait(int block, struct job *job)
 
 	INTOFF;
 	TRACE(("dowait(%d) called\n", block));
-	pid = waitproc(block, &status);
-	TRACE(("wait returns pid %d, status=%d\n", pid, status));
-	if (pid <= 0)
-		goto out;
 
-	for (jp = curjob; jp; jp = jp->prev_job) {
+	do {
+	    for (jp = curjob; jp; jp = jp->prev_job) {
 		struct procstat *sp;
 		struct procstat *spend;
 		if (jp->state == JOBDONE)
@@ -1029,12 +1025,16 @@ dowait(int block, struct job *job)
 		spend = jp->ps + jp->nprocs;
 		sp = jp->ps;
 		do {
-			if (sp->pid == pid) {
+			status = process_await_termination (sp->pid, false);
+			if (status >= 0) {
 				TRACE(("Job %d: changing status of proc %d from 0x%x to 0x%x\n", jobno(jp), pid, sp->status, status));
 				sp->status = status;
 				thisjob = jp;
+				pid = jobno(jp);
+			} else {
+				pid = -1;
 			}
-			if (sp->status == -1)
+			if (sp->status == ERR_TIMED_OUT)
 				state = JOBRUNNING;
 #if JOBS
 			if (state == JOBRUNNING)
@@ -1047,7 +1047,8 @@ dowait(int block, struct job *job)
 		} while (++sp < spend);
 		if (thisjob)
 			goto gotjob;
-	}
+	    }
+	} while (block);
 	if (!JOBS || !WIFSTOPPED(status))
 		jobless--;
 	goto out;
