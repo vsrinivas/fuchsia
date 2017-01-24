@@ -22,6 +22,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/intrusive_singly_linked_list_tests.cpp \
     $(LOCAL_DIR)/intrusive_wavl_tree_tests.cpp \
     $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/recycler_tests.cpp \
     $(LOCAL_DIR)/ref_counted_tests.cpp \
     $(LOCAL_DIR)/ref_ptr_tests.cpp \
     $(LOCAL_DIR)/slab_allocator_tests.cpp \

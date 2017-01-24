@@ -6,6 +6,7 @@
 
 #include <magenta/assert.h>
 #include <magenta/compiler.h>
+#include <mxtl/recycler.h>
 #include <mxtl/type_support.h>
 
 namespace mxtl {
@@ -83,7 +84,7 @@ public:
         T* old = ptr_;
         ptr_ = r.ptr_;
         if (old && old->Release()) {
-            delete old;
+            recycle(old);
         }
         return *this;
     }
@@ -144,7 +145,7 @@ public:
 
     ~RefPtr() {
         if (ptr_ && ptr_->Release()) {
-            delete ptr_;
+            recycle(ptr_);
         }
     }
 
@@ -202,6 +203,14 @@ private:
 
     RefPtr(T* ptr, NoAdoptTag)
         : ptr_(ptr) {}
+
+    static void recycle(T* ptr) {
+        if (::mxtl::internal::has_mxtl_recycle<T>::value) {
+            ::mxtl::internal::recycler<T>::recycle(ptr);
+        } else {
+            delete ptr;
+        }
+    }
 
     T* ptr_;
 };

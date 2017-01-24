@@ -6,6 +6,7 @@
 
 #include <stdlib.h>
 #include <mxtl/macros.h>
+#include <mxtl/recycler.h>
 #include <mxtl/type_support.h>
 
 namespace mxtl {
@@ -24,8 +25,7 @@ public:
     explicit unique_ptr(T* t) : ptr_(t) { }
 
     ~unique_ptr() {
-        enum { type_must_be_complete = sizeof(T) };
-        if (ptr_) delete ptr_;
+        recycle(ptr_);
     }
 
     unique_ptr(unique_ptr&& o) : ptr_(o.release()) {}
@@ -60,8 +60,7 @@ public:
         return t;
     }
     void reset(T* t = nullptr) {
-        enum { type_must_be_complete = sizeof(T) };
-        if (ptr_) delete ptr_;
+        recycle(ptr_);
         ptr_ = t;
     }
     void swap(unique_ptr& other) {
@@ -113,6 +112,17 @@ public:
     }
 
 private:
+    static void recycle(T* ptr) {
+        enum { type_must_be_complete = sizeof(T) };
+        if (ptr) {
+            if (::mxtl::internal::has_mxtl_recycle<T>::value) {
+                ::mxtl::internal::recycler<T>::recycle(ptr);
+            } else {
+                delete ptr;
+            }
+        }
+    }
+
     T* ptr_;
 };
 
