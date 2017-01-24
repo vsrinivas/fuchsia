@@ -328,7 +328,7 @@ impl<'a> HandleRef<'a> {
 /// A trait implemented by all handle objects.
 ///
 /// Note: it is reasonable for user-defined objects wrapping a handle to implement
-/// this trait. For example, a speficic interface in some protocol might be
+/// this trait. For example, a specific interface in some protocol might be
 /// represented as a newtype of `Channel`, and implement the `get_ref` and
 /// `from_handle` methods to facilitate conversion from and to the interface.
 pub trait HandleBase: Sized {
