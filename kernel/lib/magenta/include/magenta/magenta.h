@@ -9,7 +9,6 @@
 #include <stdint.h>
 
 #include <magenta/handle.h>
-#include <magenta/prctl.h>
 #include <magenta/types.h>
 
 #include <mxtl/ref_ptr.h>
