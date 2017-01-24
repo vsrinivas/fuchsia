@@ -27,8 +27,6 @@ extern "C" {
 
 typedef int32_t magma_status_t;
 
-#define MAGMA_STATUS_TO_BOOL(status) ((status) == MAGMA_STATUS_OK)
-
 typedef uintptr_t magma_buffer_t;
 
 struct magma_system_connection {
