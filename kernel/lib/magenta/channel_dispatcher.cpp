@@ -35,7 +35,7 @@ constexpr mx_rights_t kDefaultChannelRights = MX_RIGHT_TRANSFER | MX_RIGHT_READ 
 // See also: comments in ChannelDispatcher::Call()
 class MessageWaiter : public mxtl::DoublyLinkedListable<MessageWaiter*> {
 public:
-    MessageWaiter(uint32_t txid) : txid_(txid), signaled_(false) {
+    MessageWaiter(uint32_t txid) : txid_(txid), status_(ERR_TIMED_OUT) {
     }
     ~MessageWaiter() {
     }
@@ -43,12 +43,12 @@ public:
     int Deliver(mxtl::unique_ptr<MessagePacket> msg) {
         txid_ = msg->get_txid();
         msg_ = mxtl::move(msg);
-        signaled_ = true;
+        status_ = NO_ERROR;
         return event_.Signal(NO_ERROR);
     }
 
     int Cancel(status_t status) {
-        signaled_ = true;
+        status_ = status;
         return event_.Signal(status);
     }
 
@@ -58,19 +58,17 @@ public:
         return event_.Wait(timeout);
     }
 
-    // Returns any delivered message via out and
-    // returns true if a message was delivered or
-    // the Waiter was otherwise Signal()ed.
-    bool EndWait(mxtl::unique_ptr<MessagePacket>* out) {
+    // Returns any delivered message via out and the status.
+    mx_status_t EndWait(mxtl::unique_ptr<MessagePacket>* out) {
         *out = mxtl::move(msg_);
-        return signaled_;
+        return status_;
     }
 
 private:
     mxtl::unique_ptr<MessagePacket> msg_;
     WaitEvent event_;
     uint32_t txid_;
-    bool signaled_;
+    mx_status_t status_;
 };
 
 
@@ -240,10 +238,10 @@ status_t ChannelDispatcher::Call(mxtl::unique_ptr<MessagePacket> msg,
 
         // (4) If any of (3A), (3B), or (3C) have occured,
         // we were removed from the waiters list already
-        // and get_msg() returns true.  If false is
-        // returned it's our job to remove ourselves
-        // from the list.
-        if (!waiter.EndWait(reply))
+        // and get_msg() returns a non-TIMED_OUT status.
+        // Otherwise, the status is ERR_TIMED_OUT and it
+        // is our job to remove the waiter from the list.
+        if ((status = waiter.EndWait(reply)) == ERR_TIMED_OUT)
             waiters_.erase(waiter);
     }
 
