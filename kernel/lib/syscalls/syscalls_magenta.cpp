@@ -170,7 +170,7 @@ mx_status_t sys_futex_requeue(mx_futex_t* _wake_ptr, uint32_t wake_count, int cu
         make_user_ptr(_requeue_ptr), requeue_count);
 }
 
-mx_handle_t sys_log_create(uint32_t flags, mx_handle_t* out) {
+mx_status_t sys_log_create(uint32_t flags, mx_handle_t* out) {
     LTRACEF("flags 0x%x\n", flags);
 
     // kernel flag is forbidden to userspace
