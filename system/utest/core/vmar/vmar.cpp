@@ -9,6 +9,7 @@
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
+#include <magenta/syscalls/port.h>
 #include <unittest/unittest.h>
 #include <sys/mman.h>
 
@@ -41,6 +42,89 @@ bool check_pages_mapped(mx_handle_t process, uintptr_t base, uint64_t bitmap, si
         bitmap >>= 1;
     }
     return true;
+}
+
+// Thread run by test_local_address, used to attempt an access to memory
+void test_write_address_thread(uintptr_t address, bool* success) {
+    auto p = reinterpret_cast<volatile uint8_t*>(address);
+    *p = 5;
+    CF;
+    *success = true;
+
+    mx_thread_exit();
+}
+// Thread run by test_local_address, used to attempt an access to memory
+void test_read_address_thread(uintptr_t address, bool* success) {
+    auto p = reinterpret_cast<volatile uint8_t*>(address);
+    *p;
+    CF;
+    *success = true;
+
+    mx_thread_exit();
+}
+
+// Helper routine for testing via direct access whether or not an address in the
+// test process's address space is accessible.
+mx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
+    *success = false;
+
+    static uint8_t thread_stack[PAGE_SIZE];
+
+    mx_handle_t thread = MX_HANDLE_INVALID;
+    mx_handle_t port = MX_HANDLE_INVALID;
+    uintptr_t entry = reinterpret_cast<uintptr_t>(write ? test_write_address_thread :
+                                                          test_read_address_thread);
+    uintptr_t stack = reinterpret_cast<uintptr_t>(thread_stack + sizeof(thread_stack));
+
+    mx_status_t status = mx_thread_create(mx_process_self(), "vmar_test_addr", 14, 0, &thread);
+    if (status != NO_ERROR) {
+        goto err;
+    }
+
+    // Create an exception port and bind it to the thread to prevent the
+    // thread's illegal access from killing the process.
+    status = mx_port_create(0, &port);
+    if (status != NO_ERROR) {
+        goto err;
+    }
+    status = mx_object_bind_exception_port(thread, port, 0, 0);
+    if (status != NO_ERROR) {
+        goto err;
+    }
+
+    status = mx_thread_start(thread, entry, stack,
+                             address, reinterpret_cast<uintptr_t>(success));
+    if (status != NO_ERROR) {
+        goto err;
+    }
+
+    // Wait for the thread to exit and identify its cause of death
+    mx_exception_packet_t packet;
+    status = mx_port_wait(port, MX_TIME_INFINITE, &packet, sizeof(packet));
+    if (status != NO_ERROR) {
+        goto err;
+    }
+    if (packet.hdr.type != MX_PORT_PKT_TYPE_EXCEPTION) {
+        goto err;
+    }
+    if (packet.report.header.type == MX_EXCP_FATAL_PAGE_FAULT) {
+        mx_task_kill(thread);
+        status = NO_ERROR;
+        *success = false;
+    }
+    else if (packet.report.header.type == MX_EXCP_GONE) {
+        status = NO_ERROR;
+        *success = true;
+    }
+    else {
+        status = ERR_BAD_STATE;
+    }
+
+    // fallthrough to cleanup
+err:
+    mx_handle_close(port);
+    mx_handle_close(thread);
+    return status;
 }
 
 bool destroy_root_test() {
@@ -1405,6 +1489,48 @@ bool protect_multiple_test() {
     END_TEST;
 }
 
+// Verify that we can change protections on a demand paged mapping successfully.
+bool protect_over_demand_paged_test() {
+    BEGIN_TEST;
+
+    mx_handle_t vmo;
+    const size_t size = 100 * PAGE_SIZE;
+    ASSERT_EQ(mx_vmo_create(size, 0, &vmo), NO_ERROR, "");
+
+    // TODO(teisenbe): Move this into a separate process; currently we don't
+    // have an easy way to run a small test routine in another process.
+    uintptr_t mapping_addr;
+    ASSERT_EQ(mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size,
+                          MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                          &mapping_addr),
+              NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(vmo), NO_ERROR, "");
+
+    volatile uint8_t* target = reinterpret_cast<volatile uint8_t*>(mapping_addr);
+    target[0] = 5;
+    target[size / 2] = 6;
+    target[size - 1] = 7;
+
+    ASSERT_EQ(mx_vmar_protect(mx_vmar_root_self(), mapping_addr, size,
+                              MX_VM_FLAG_PERM_READ),
+              NO_ERROR, "");
+
+    // Attempt to write to the mapping again
+    bool success;
+    EXPECT_EQ(test_local_address(mapping_addr, true, &success), NO_ERROR, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 4, true, &success), NO_ERROR, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+    EXPECT_EQ(test_local_address(mapping_addr + size / 2, true, &success), NO_ERROR, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+    EXPECT_EQ(test_local_address(mapping_addr + size - 1, true, &success), NO_ERROR, "");
+    EXPECT_FALSE(success, "mapping should no longer be writeable");
+
+    EXPECT_EQ(mx_vmar_unmap(mx_vmar_root_self(), mapping_addr, size), NO_ERROR, "");
+
+    END_TEST;
+}
+
 }
 
 BEGIN_TEST_CASE(vmar_tests)
@@ -1426,6 +1552,7 @@ RUN_TEST(unmap_multiple_test);
 RUN_TEST(map_specific_overwrite_test);
 RUN_TEST(protect_split_test);
 RUN_TEST(protect_multiple_test);
+RUN_TEST(protect_over_demand_paged_test);
 END_TEST_CASE(vmar_tests)
 
 #ifndef BUILD_COMBINED_TESTS

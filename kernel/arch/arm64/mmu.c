@@ -553,7 +553,6 @@ static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
         } else {
             TRACEF("page table entry does not exist, index %#" PRIxPTR
                    ", %#" PRIx64 "\n", index, pte);
-            goto err;
         }
         vaddr += chunk_size;
         vaddr_rel += chunk_size;

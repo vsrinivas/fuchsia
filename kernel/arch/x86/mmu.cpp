@@ -883,9 +883,18 @@ static status_t x86_mmu_update_mapping(arch_aspace_t* aspace, pt_entry_t* table,
     uint index = vaddr_to_index<Level>(new_cursor->vaddr);
     for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
         pt_entry_t* e = table + index;
+        // Skip unmapped pages (we may encounter these due to demand paging)
         if (!IS_PAGE_PRESENT(*e)) {
-            ret = ERR_NOT_FOUND;
-            goto err;
+            // If our endpoint was in the middle of this range, clamp the
+            // amount we remove from the cursor
+            if (new_cursor->size < ps) {
+                new_cursor->vaddr += new_cursor->size;
+                new_cursor->size = 0;
+            } else {
+                new_cursor->vaddr += ps;
+                new_cursor->size -= ps;
+            }
+            continue;
         }
 
         if (IS_LARGE_PAGE(*e)) {
@@ -942,11 +951,10 @@ status_t x86_mmu_update_mapping<PT_L>(arch_aspace_t* aspace, pt_entry_t* table, 
     uint index = vaddr_to_index<PT_L>(new_cursor->vaddr);
     for (; index != NO_OF_PT_ENTRIES && new_cursor->size != 0; ++index) {
         pt_entry_t* e = table + index;
-        if (!IS_PAGE_PRESENT(*e)) {
-            // TODO: Cleanup
-            return ERR_NOT_FOUND;
+        // Skip unmapped pages (we may encounter these due to demand paging)
+        if (IS_PAGE_PRESENT(*e)) {
+            update_entry<PT_L>(aspace, new_cursor->vaddr, e, paddr_from_pte<PT_L>(*e), arch_flags);
         }
-        update_entry<PT_L>(aspace, new_cursor->vaddr, e, paddr_from_pte<PT_L>(*e), arch_flags);
 
         new_cursor->vaddr += PAGE_SIZE;
         new_cursor->size -= PAGE_SIZE;
