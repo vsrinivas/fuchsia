@@ -128,9 +128,9 @@ status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, uint
         }
     } else {
         // If we're not mapping to a specific place, search for an opening.
-        new_base = AllocSpotLocked(size, align_pow2, arch_mmu_flags);
-        if (new_base == static_cast<vaddr_t>(-1)) {
-            return ERR_NO_MEMORY;
+        status_t status = AllocSpotLocked(size, align_pow2, arch_mmu_flags, &new_base);
+        if (status != NO_ERROR) {
+            return status;
         }
     }
 
@@ -463,7 +463,8 @@ not_found:
     return true; // not_found: stop search
 }
 
-vaddr_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags) {
+status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
+                                          vaddr_t* spot) {
     DEBUG_ASSERT(magic_ == kMagic);
     DEBUG_ASSERT(size > 0 && IS_PAGE_ALIGNED(size));
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
@@ -473,12 +474,13 @@ vaddr_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, uint a
 
     if (aspace_->is_aslr_enabled()) {
         if (flags_ & VMAR_FLAG_COMPACT) {
-            return CompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
+            return CompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags, spot);
         } else {
-            return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
+            return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags,
+                                                             spot);
         }
     }
-    return LinearRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
+    return LinearRegionAllocatorLocked(size, align_pow2, arch_mmu_flags, spot);
 }
 
 bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
@@ -692,8 +694,8 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
     return NO_ERROR;
 }
 
-vaddr_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                     uint arch_mmu_flags) {
+status_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                     uint arch_mmu_flags, vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     const vaddr_t base = 0;
@@ -708,16 +710,19 @@ vaddr_t VmAddressRegion::LinearRegionAllocatorLocked(size_t size, uint8_t align_
     auto after_iter = subregions_.begin();
 
     do {
-        vaddr_t spot;
-        if (CheckGapLocked(before_iter, after_iter, &spot, base, align, size, 0, arch_mmu_flags)) {
-            return spot;
+        if (CheckGapLocked(before_iter, after_iter, spot, base, align, size, 0, arch_mmu_flags)) {
+            if (*spot != static_cast<vaddr_t>(-1)) {
+                return NO_ERROR;
+            } else {
+                return ERR_NO_MEMORY;
+            }
         }
 
         before_iter = after_iter++;
     } while (before_iter.IsValid());
 
     // couldn't find anything
-    return -1;
+    return ERR_NO_MEMORY;
 }
 
 template <typename F>
@@ -760,9 +765,11 @@ constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size, ui
 // Perform allocations for VMARs that aren't using the COMPACT policy.  This
 // allocator works by choosing uniformly at random from the set of positions
 // that could satisfy the allocation.
-vaddr_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                                   uint arch_mmu_flags) {
+status_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                                   uint arch_mmu_flags,
+                                                                   vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
+    DEBUG_ASSERT(spot);
 
     align_pow2 = mxtl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
     const vaddr_t align = 1UL << align_pow2;
@@ -779,7 +786,7 @@ vaddr_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, 
                align_pow2);
 
     if (candidate_spaces == 0) {
-        return static_cast<vaddr_t>(-1);
+        return ERR_NO_MEMORY;
     }
 
     // Choose the index of the allocation to use.
@@ -818,11 +825,9 @@ vaddr_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, 
 
     ASSERT(before_iter == subregions_.end() || before_iter.IsValid());
 
-    vaddr_t spot;
-    if (CheckGapLocked(before_iter, after_iter, &spot, alloc_spot, align, size, 0,
-                       arch_mmu_flags) &&
-        spot != static_cast<vaddr_t>(-1)) {
-        return spot;
+    if (CheckGapLocked(before_iter, after_iter, spot, alloc_spot, align, size, 0,
+                       arch_mmu_flags) && *spot != static_cast<vaddr_t>(-1)) {
+        return NO_ERROR;
     }
     panic("Unexpected allocation failure\n");
 }
@@ -830,15 +835,16 @@ vaddr_t VmAddressRegion::NonCompactRandomizedRegionAllocatorLocked(size_t size, 
 // The COMPACT allocator begins by picking a random offset in the region to
 // start allocations at, and then places new allocations to the left and right
 // of the original region with small random-length gaps between.
-vaddr_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                                uint arch_mmu_flags) {
+status_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                                uint arch_mmu_flags,
+                                                                vaddr_t* spot) {
     DEBUG_ASSERT(is_mutex_held(aspace_->lock()));
 
     align_pow2 = mxtl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
     const vaddr_t align = 1UL << align_pow2;
 
     if (unlikely(subregions_.size() == 0)) {
-        return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags);
+        return NonCompactRandomizedRegionAllocatorLocked(size, align_pow2, arch_mmu_flags, spot);
     }
 
     // Decide if we're allocating before or after the existing allocations, and
@@ -886,13 +892,12 @@ vaddr_t VmAddressRegion::CompactRandomizedRegionAllocatorLocked(size_t size, uin
                 chosen_base = base.ValueOrDie();
             }
 
-            vaddr_t spot;
-            if (CheckGapLocked(before_iter, after_iter, &spot, chosen_base, align, size, 0,
-                               arch_mmu_flags) && spot != static_cast<vaddr_t>(-1)) {
-                return spot;
+            if (CheckGapLocked(before_iter, after_iter, spot, chosen_base, align, size, 0,
+                               arch_mmu_flags) && *spot != static_cast<vaddr_t>(-1)) {
+                return NO_ERROR;
             }
         }
     }
 
-    return -1;
+    return ERR_NO_MEMORY;
 }

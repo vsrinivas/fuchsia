@@ -310,14 +310,15 @@ private:
                         size_t region_size, size_t min_gap, uint arch_mmu_flags);
 
     // search for a spot to allocate for a region of a given size
-    vaddr_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags);
+    status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot);
 
     // Allocators
-    vaddr_t LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags);
-    vaddr_t NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                      uint arch_mmu_flags);
-    vaddr_t CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
-                                                   uint arch_mmu_flags);
+    status_t LinearRegionAllocatorLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags,
+                                         vaddr_t* spot);
+    status_t NonCompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                      uint arch_mmu_flags, vaddr_t* spot);
+    status_t CompactRandomizedRegionAllocatorLocked(size_t size, uint8_t align_pow2,
+                                                   uint arch_mmu_flags, vaddr_t* spot);
 
     // Utility for allocators for iterating over gaps between allocations
     // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).
