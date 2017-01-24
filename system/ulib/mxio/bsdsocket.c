@@ -217,11 +217,13 @@ int getaddrinfo(const char* __restrict node,
     mx_status_t r;
 
     if ((node == NULL && service == NULL) || res == NULL) {
-        return ERRNO(EINVAL);
+        errno = EINVAL;
+        return EAI_SYSTEM;
     }
     if ((r = __mxio_open(&io, MXRIO_SOCKET_ROOT "/" MXRIO_SOCKET_DIR_NONE,
                          0, 0)) < 0) {
-        return ERROR(r);
+        errno = mxio_status_to_errno(r);
+        return EAI_SYSTEM;
     }
 
     static_assert(sizeof(mxrio_gai_req_reply_t) <= MXIO_CHUNK_SIZE,
@@ -243,7 +245,8 @@ int getaddrinfo(const char* __restrict node,
     if (hints) {
         if (hints->ai_addrlen != 0 || hints->ai_addr != NULL ||
             hints->ai_canonname != NULL || hints->ai_next != NULL) {
-            return ERRNO(EINVAL);
+            errno = EINVAL;
+            return EAI_SYSTEM;
         }
         memcpy(&gai.req.hints, hints, sizeof(struct addrinfo));
     }
