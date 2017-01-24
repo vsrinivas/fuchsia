@@ -229,13 +229,15 @@ public:
         EXPECT_NE(device, nullptr);
 
         constexpr uint32_t max_freq = 1050;
-        uint32_t freq = device->GetCurrentFrequency();
-        EXPECT_LE(freq, max_freq);
+        uint32_t current_freq = device->GetCurrentFrequency();
+        EXPECT_LE(current_freq, max_freq);
 
         device->RequestMaxFreq();
 
-        freq = device->GetCurrentFrequency();
-        EXPECT_EQ(freq, max_freq);
+        uint32_t freq = device->GetCurrentFrequency();
+        EXPECT_LE(freq, max_freq);
+
+        EXPECT_GE(freq, current_freq);
     }
 
 };
