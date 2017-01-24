@@ -17,6 +17,39 @@ __BEGIN_CDECLS
 // Use of this object is not thread-safe.
 typedef struct launchpad launchpad_t;
 
+// API OVERVIEW
+// -------------------------------------------------------------
+//
+// Launchpad is designed to be used like this:
+//   launchpad_t* lp;
+//   launchpad_create(job, "processname", &lp);
+//   launchpad_load_from_file(lp, argv[0]);
+//   launchpad_arguments(lp, argc, argv);
+//   launchpad_environ(lp, env);
+//   << other launchpad_*() calls to setup initial fds, handles, etc >>
+//   mx_handle_t proc;
+//   const char* errmsg;
+//   mx_status_t status = launchpad_go(lp, &proc, &errmsg);
+//   if (status < 0)
+//       printf("launchpad failed: %s: %d\n", errmsg, status);
+//
+// If any of the calls leading up to launchpad_go(), including
+// launchpad_create() itself fail, launchpad_go() will return
+// an error, and (if errmsg is non-NULL) provide a human-readable
+// descriptive string.
+// If proc is NULL, the process handle is closed for you.
+//
+// There are alternative versions of launchpad_create_*() which
+// provide more options, various simple and complex alternatives to
+// launchpad_load_*(), and a variety of functions to configure fds,
+// handles, etc, which are passed to the new process.  They are
+// described in detail below.
+
+
+// CREATION: one launchpad_create*() below must be called to create
+// a launchpad before any other operations may be one with it.
+// ----------------------------------------------------------------
+
 // Create a new process and a launchpad that will set it up. The
 // job handle is consumed regardless of the result.
 // It is equivalent to calling launchpad_create_with_jobs(job, job ..).
@@ -38,18 +71,70 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
                                           mx_handle_t vmar,
                                           launchpad_t** result);
 
+
+// LAUNCHING or ABORTING:
+// ----------------------------------------------------------------
+
+// If none of the launchpad_*() calls against this launchpad have failed,
+// and launchpad_abort() has not been called, this will attempt to complete
+// the launch of the process.
+//
+// This is launchpad_start() + launchpad_error_message() + launchpad_destroy()
+// If proc is NULL, the process handle is closed instead of returned.
+// If errmsg is non-NULL, the human readable status string is returned.
+//
+// The launchpad is destroyed (via launchpad_destroy()) before this returns,
+// all resources are reclaimed, handles are closed, and may not be accessed
+// again.
+mx_status_t launchpad_go(launchpad_t* lp, mx_handle_t* proc, const char** errmsg);
+
 // Clean up a launchpad_t, freeing all resources stored therein.
 // TODO(mcgrathr): Currently this closes the process handle but does
 // not kill a process that hasn't been started yet.
 void launchpad_destroy(launchpad_t* lp);
 
-// Fetch the process handle.  The launchpad still owns this handle
-// and callers must not close it or transfer it away.
-mx_handle_t launchpad_get_process_handle(launchpad_t* lp);
+// This ensures that the launchpad will not be launchable and
+// any calls to launchpad_go() will fail.
+// If it is not already in an error state, the error state is
+// set to status, and errmsg is set to msg.
+// If status is non-negative, it is interpreted as ERR_INTERNAL.
+void launchpad_abort(launchpad_t* lp, mx_status_t status, const char* msg);
 
-// Fetch the process's root VMAR handle.  The launchpad still owns this handle
-// and callers must not close it or transfer it away.
-mx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp);
+// If any launchpad_*() call against this lp has failed, this returns
+// a human-readable detailed message describing the failure that may
+// assist in debugging.
+const char* launchpad_error_message(launchpad_t* lp);
+
+
+// SIMPLIFIED BINARY LOADING
+// These functions are convenience wrappers around the more powerful
+// Advanced Binary Loading functions described below.  They cover the
+// most common use cases.
+// -------------------------------------------------------------------
+
+// Load an ELF PIE binary from path
+mx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path);
+
+// Load an ELF PIE binary from fd
+mx_status_t launchpad_load_from_fd(launchpad_t* lp, int fd);
+
+// Load an ELF PIE binary from vmo
+mx_status_t launchpad_load_from_vmo(launchpad_t* lp, mx_handle_t vmo);
+
+
+// ADDING ARGUMENTS, ENVIRONMENT, AND HANDLES
+// These functions setup arguments, environment, or handles to be
+// passed to the new process via the processargs protocol.
+// ---------------------------------------------------------------------
+
+// Set the arguments or environment to be passed in the bootstrap
+// message.  All the strings are copied into the launchpad by this
+// call, with no pointers to these argument strings retained.
+// Successive calls replace the previous values.
+mx_status_t launchpad_set_args(launchpad_t* lp,
+                               int argc, const char* const* argv);
+mx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp);
+
 
 // Add one or more handles to be passed in the bootstrap message.
 // The launchpad takes ownership of the handles; they will be closed
@@ -60,22 +145,25 @@ mx_status_t launchpad_add_handle(launchpad_t* lp, mx_handle_t h, uint32_t id);
 mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
                                   const mx_handle_t h[], const uint32_t id[]);
 
-// Set the arguments or environment to be passed in the bootstrap
-// message.  All the strings are copied into the launchpad by this
-// call, with no pointers to these argument strings retained.
-// Successive calls replace the previous values.
-mx_status_t launchpad_arguments(launchpad_t* lp,
-                                int argc, const char* const* argv);
-mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp);
+
+// ADDING MXIO FILE DESCRIPTORS
+// These functions configure the initial file descriptors, root directory,
+// and current working directory for processes which use libmxio for the
+// posix-style io api (open/close/read/write/...)
+// --------------------------------------------------------------------
 
 // Clone the mxio root handle into the new process.
 // This will allow mxio-based filesystem access to work in the new process.
+// Without a mxio root, open() on absolute paths will not be possible.
 mx_status_t launchpad_clone_mxio_root(launchpad_t* lp);
 
 // Clone the mxio current working directory handle into the new process
 // This will allow mxio-based filesystem access to inherit the cwd from the
 // launching process. If mxio root is cloned but not mxio cwd, mxio root is
 // treated as the cwd.
+// If no cwd is provided, the mxio root will be treated as the cwd.
+// If no root is provided, there will be no cwd and open() calls on relative
+// paths will not be possible.
 mx_status_t launchpad_clone_mxio_cwd(launchpad_t* lp);
 
 // Attempt to duplicate local descriptor fd into target_fd in the
@@ -104,12 +192,29 @@ mx_status_t launchpad_add_all_mxio(launchpad_t* lp);
 // successful) via the fd_out parameter.
 mx_status_t launchpad_add_pipe(launchpad_t* lp, int* fd_out, int target_fd);
 
+
+// ACCESSORS for internal state
+// --------------------------------------------------------------------
+
+// Fetch the process handle.  The launchpad still owns this handle
+// and callers must not close it or transfer it away.
+mx_handle_t launchpad_get_process_handle(launchpad_t* lp);
+
+// Fetch the process's root VMAR handle.  The launchpad still owns this handle
+// and callers must not close it or transfer it away.
+mx_handle_t launchpad_get_root_vmar_handle(launchpad_t* lp);
+
+
+// ADVANCED BINARY LOADING
+// These functions provide advanced control over binary loading.
+// -------------------------------------------------------------------
+
 // Map in the PT_LOAD segments of the ELF file image found in a VM
 // object.  If the file has a PT_GNU_STACK program header with a
 // nonzero p_memsz field, this calls launchpad_set_stack_size with
 // that value.  This does not check the file for a PT_INTERP program
-// header.  This consumes the VM object handle on success but not on
-// failure.  If the 'vmo' argument is a negative error code rather
+// header.  This consumes the VM object.
+// If the 'vmo' argument is a negative error code rather
 // than a handle, that result is just returned immediately; so this
 // can be passed the result of <launchpad/vmo.h> functions without
 // separate error checking.
@@ -202,6 +307,24 @@ mx_status_t launchpad_load_vdso(launchpad_t* lp, mx_handle_t vmo);
 // Otherwise, the size passed is rounded up to a multiple of the page size.
 size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size);
 
+
+
+// don't warn about this just yet
+#define __LP_DEPRECATED
+//#define __LP_DEPRECATED __attribute((deprecated))
+
+__LP_DEPRECATED
+static inline mx_status_t launchpad_arguments(launchpad_t* lp,
+                                              int argc, const char* const* argv) {
+    return launchpad_set_args(lp, argc, argv);
+}
+
+__LP_DEPRECATED
+static inline mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp) {
+    return launchpad_set_environ(lp, envp);
+}
+
+
 // Start the process running.  If the send_loader_message flag is
 // set and this succeeds in sending the initial bootstrap message,
 // it clears the loader-service handle.  If this succeeds in sending
@@ -215,6 +338,7 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size);
 // process, so on failure the loader-service handle might or might
 // not have been cleared and the handles to transfer might or might
 // not have been cleared.
+__LP_DEPRECATED
 mx_handle_t launchpad_start(launchpad_t* lp);
 
 // Start a new thread in the process, assuming this was a launchpad
@@ -226,9 +350,12 @@ mx_handle_t launchpad_start(launchpad_t* lp);
 // handle.  The other end of this message pipe must already be
 // present in the target process, with the given handle value in the
 // target process's handle space.
+__LP_DEPRECATED
 mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
                                      mx_handle_t to_child,
                                      uintptr_t bootstrap_handle_in_child);
+
+
 
 // Convenience interface for launching a process in one call with
 // minimal arguments and handles.  This just calls the functions
@@ -241,6 +368,7 @@ mx_status_t launchpad_start_injected(launchpad_t* lp, const char* thread_name,
 //
 // Returns the process handle on success, giving ownership to the caller;
 // or an error code on failure.  In all cases, the handles are consumed.
+__LP_DEPRECATED
 mx_handle_t launchpad_launch(const char* name,
                              int argc, const char* const* argv,
                              const char* const* envp,
@@ -249,6 +377,7 @@ mx_handle_t launchpad_launch(const char* name,
 
 // Same as launchpad_launch but allows to specify the job to use when
 // creating the process. The job handle is consumed regardless of the result.
+__LP_DEPRECATED
 mx_handle_t launchpad_launch_with_job(mx_status_t job,
                                       const char* name,
                                       int argc, const char* const* argv,
@@ -269,12 +398,14 @@ mx_handle_t launchpad_launch_with_job(mx_status_t job,
 //
 // Returns the process handle on success, giving ownership to the caller;
 // or an error code on failure.
+__LP_DEPRECATED
 mx_handle_t launchpad_launch_mxio(const char* name,
                                   int argc, const char* const* argv);
 
 // Same as launchpad_launch_mxio, but also passes additional handles
 // like launchpad_launch, and uses envp rather than global environ.
 // In all cases, the handles are consumed.
+__LP_DEPRECATED
 mx_handle_t launchpad_launch_mxio_etc(const char* name,
                                       int argc, const char* const* argv,
                                       const char* const* envp,
@@ -285,6 +416,7 @@ mx_handle_t launchpad_launch_mxio_etc(const char* name,
 // filesystem, and the job to launch the process under. The supplied job handle
 // is not consumed, but is duplicated and transfered to the new child process.
 // In all cases, the vmo and the handles are consumed.
+__LP_DEPRECATED
 mx_handle_t launchpad_launch_mxio_vmo_etc(mx_handle_t job,
                                           const char* name, mx_handle_t vmo,
                                           int argc, const char* const* argv,
