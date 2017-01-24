@@ -178,16 +178,23 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 	case rio.OpClone:
 		f2, err := f.Dup()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
-			return mxErr
+			return rio.IndirectError(msg.Handle[0], mxErr)
 		}
 		h, err := vfs.CreateHandle(f2)
 		if err != nil {
-			return mx.ErrInternal
+			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
 		}
-		msg.SetProtocol(mxio.ProtocolRemote)
-		msg.Handle[0] = h
-		msg.Hcount = 1
-		return mx.ErrOk
+		ro := &rio.RioObject{
+			RioObjectHeader: rio.RioObjectHeader{
+				Status: mx.ErrOk,
+				Type:   uint32(mxio.ProtocolRemote),
+			},
+			Esize:  0,
+			Hcount: 1,
+		}
+		ro.Handle[0] = h
+		ro.Write(msg.Handle[0], 0)
+		return dispatcher.ErrIndirect
 	case rio.OpClose:
 		err := f.Close()
 		vfs.freeCookie(cookie)
@@ -245,6 +252,7 @@ func (vfs *ThinVFS) processOpFile(msg *rio.Msg, f fs.File, cookie int64) mx.Stat
 		return errorToRIO(f.Touch(atime, mtime))
 	default:
 		println("ThinFS FILE UNKNOWN OP: ", msg.Op())
+		msg.DiscardHandles()
 		return mx.ErrNotSupported
 	}
 	return mx.ErrNotSupported
@@ -280,13 +288,13 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 	switch msg.Op() {
 	case rio.OpOpen:
 		if len(inputData) < 1 {
-			return mx.ErrInvalidArgs
+			return rio.IndirectError(msg.Handle[0], mx.ErrInvalidArgs)
 		}
 		path := strings.TrimRight(string(inputData), "\x00")
 		flags := openFlagsFromRIO(msg.Arg, msg.Mode())
 		f, d, err := dir.Open(path, flags)
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
-			return mxErr
+			return rio.IndirectError(msg.Handle[0], mxErr)
 		}
 		var obj interface{}
 		if f != nil {
@@ -303,26 +311,40 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 				d.Close()
 			}
 			vfs.freeCookie(cookie)
-			return mx.ErrInternal
+			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
 		}
-		msg.SetProtocol(mxio.ProtocolRemote)
-		msg.Hcount = 1
-		msg.Handle[0] = h
-		return mx.ErrOk
+		ro := &rio.RioObject{
+			RioObjectHeader: rio.RioObjectHeader{
+				Status: mx.ErrOk,
+				Type:   uint32(mxio.ProtocolRemote),
+			},
+			Esize:  0,
+			Hcount: 1,
+		}
+		ro.Handle[0] = h
+		ro.Write(msg.Handle[0], 0)
+		return dispatcher.ErrIndirect
 	case rio.OpClone:
 		d2, err := dir.Dup()
 		if mxErr := errorToRIO(err); mxErr != mx.ErrOk {
-			return mxErr
+			return rio.IndirectError(msg.Handle[0], mxErr)
 		}
 		h, err := vfs.CreateHandle(&directoryWrapper{d: d2})
 		if err != nil {
 			println("dir clone createhandle err: ", err.Error())
-			return mx.ErrInternal
+			return rio.IndirectError(msg.Handle[0], mx.ErrInternal)
 		}
-		msg.SetProtocol(mxio.ProtocolRemote)
-		msg.Handle[0] = h
-		msg.Hcount = 1
-		return mx.ErrOk
+		ro := &rio.RioObject{
+			RioObjectHeader: rio.RioObjectHeader{
+				Status: mx.ErrOk,
+				Type:   uint32(mxio.ProtocolRemote),
+			},
+			Esize:  0,
+			Hcount: 1,
+		}
+		ro.Handle[0] = h
+		ro.Write(msg.Handle[0], 0)
+		return dispatcher.ErrIndirect
 	case rio.OpClose:
 		err := dir.Close()
 		vfs.freeCookie(cookie)
@@ -413,15 +435,17 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		return errorToRIO(dir.Touch(atime, mtime))
 	default:
 		println("ThinFS DIR UNKNOWN OP: ", msg.Op())
+		msg.DiscardHandles()
 		return mx.ErrNotSupported
 	}
 	return mx.ErrNotSupported
 }
 
 func mxioServer(msg *rio.Msg, rh mx.Handle, cookie int64) mx.Status {
-	// Discard any arriving handles
-	for i := 0; i < int(msg.Hcount); i++ {
-		msg.Handle[i].Close()
+	if msg.Hcount != msg.OpHandleCount() {
+		// Incoming number of handles must match message type
+		msg.DiscardHandles()
+		return mx.ErrIO
 	}
 
 	// Determine if the object we're acting on is a directory or a file
@@ -433,15 +457,15 @@ func mxioServer(msg *rio.Msg, rh mx.Handle, cookie int64) mx.Status {
 		return mx.ErrOk
 	}
 	switch obj := obj.(type) {
-	default:
-		fmt.Printf("cookie %d resulted in unexpected type %T\n", cookie, obj)
-		return mx.ErrInternal
 	case fs.File:
 		return vfs.processOpFile(msg, obj, cookie)
 	case *directoryWrapper:
 		return vfs.processOpDirectory(msg, rh, obj, cookie)
+	default:
+		fmt.Printf("cookie %d resulted in unexpected type %T\n", cookie, obj)
+		msg.DiscardHandles()
+		return mx.ErrInternal
 	}
-	return mx.ErrNotSupported
 }
 
 // Allocates a unique identifier which can be used to access information about a RIO object
