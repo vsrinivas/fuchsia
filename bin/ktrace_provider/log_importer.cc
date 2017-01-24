@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <magenta/syscalls/log.h>
-#include <mx/handle.h>
+#include <mx/log.h>
 
 #include "apps/tracing/lib/trace/writer.h"
 #include "apps/tracing/src/ktrace_provider/log_importer.h"
@@ -18,8 +18,8 @@ LogImporter::~LogImporter() {
 
 void LogImporter::Start() {
   FTL_DCHECK(!is_running());
-  mx::handle<void> log_handle(mx_log_create(MX_LOG_FLAG_READABLE));
-  if (!log_handle) {
+  mx::log log_handle;
+  if (mx::log::create(&log_handle, 0) != NO_ERROR) {
     FTL_LOG(ERROR) << "Failed to open kernel log";
     return;
   }
