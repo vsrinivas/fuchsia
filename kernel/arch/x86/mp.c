@@ -145,6 +145,11 @@ void x86_init_percpu(uint8_t cpu_num)
     uint64_t efer_msr = read_msr(X86_MSR_EFER);
     efer_msr |= X86_EFER_SCE;
     write_msr(X86_MSR_EFER, efer_msr);
+
+    // Enable {rd,wr}{fs,gs}base instructions.
+    if (x86_feature_test(X86_FEATURE_FSGSBASE)) {
+        x86_set_cr4(x86_get_cr4() | X86_CR4_FSGSBASE);
+    }
 #endif
 
 #if WITH_SMP

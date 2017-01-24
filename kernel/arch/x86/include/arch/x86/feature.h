@@ -105,6 +105,7 @@ void x86_feature_debug(void);
 #define X86_FEATURE_FXSR         X86_CPUID_BIT(0x1, 3, 24)
 #define X86_FEATURE_SSE          X86_CPUID_BIT(0x1, 3, 25)
 #define X86_FEATURE_SSE2         X86_CPUID_BIT(0x1, 3, 26)
+#define X86_FEATURE_FSGSBASE     X86_CPUID_BIT(0x7, 1, 0)
 #define X86_FEATURE_TSC_ADJUST   X86_CPUID_BIT(0x7, 1, 1)
 #define X86_FEATURE_AVX2         X86_CPUID_BIT(0x7, 1, 5)
 #define X86_FEATURE_SMEP         X86_CPUID_BIT(0x7, 1, 7)

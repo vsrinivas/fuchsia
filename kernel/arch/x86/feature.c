@@ -152,6 +152,7 @@ void x86_feature_debug(void)
         { X86_FEATURE_FXSR, "fxsr" },
         { X86_FEATURE_XSAVE, "xsave" },
         { X86_FEATURE_AESNI, "aesni" },
+        { X86_FEATURE_FSGSBASE, "fsgsbase" },
         { X86_FEATURE_TSC_ADJUST, "tsc_adj" },
         { X86_FEATURE_SMEP, "smep" },
         { X86_FEATURE_SMAP, "smap" },
