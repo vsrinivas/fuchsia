@@ -58,7 +58,7 @@
 {58, 2, "cprng_add_entropy"},
 {59, 2, "fifo_create"},
 {60, 4, "fifo_op"},
-{61, 1, "log_create"},
+{61, 2, "log_create"},
 {62, 4, "log_write"},
 {63, 4, "log_read"},
 {64, 5, "ktrace_read"},

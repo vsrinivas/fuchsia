@@ -77,7 +77,7 @@ void devmgr_launch(mx_handle_t job,
     if (stdiofd < 0) {
         // use system log for stdio
         ids[n] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 1);
-        if ((hnd[n] = mx_log_create(0)) < 0) {
+        if (mx_log_create(0, &hnd[n]) < 0) {
             goto fail;
         }
         n++;

@@ -86,7 +86,7 @@ int isatty(int fd) {
 }
 
 int main(int argc, char** argv) {
-    if ((log_handle = mx_log_create(0)) < 0) {
+    if (mx_log_create(0, &log_handle) < 0) {
         return -2;
     }
     mx_log_write(log_handle, 4, "TEST", 0);

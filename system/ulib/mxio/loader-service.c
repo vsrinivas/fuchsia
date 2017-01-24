@@ -211,7 +211,7 @@ static mx_handle_t mxio_multiloader(void) {
             dispatcher = NULL;
             goto done;
         }
-        if ((dispatcher_log = mx_log_create(0)) < 0) {
+        if (mx_log_create(0, &dispatcher_log) < 0) {
             // unlikely to fail, but we'll keep going without it if so
             dispatcher_log = MX_HANDLE_INVALID;
         }
@@ -250,8 +250,8 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
         return r;
     }
 
-    mx_handle_t sys_log = mx_log_create(0u);
-    if (sys_log <= 0)
+    mx_handle_t sys_log = MX_HANDLE_INVALID;
+    if (mx_log_create(0u, &sys_log) < 0)
         fprintf(stderr, "dlsvc: log creation failed: error %d\n", sys_log);
 
     startup->loader = loader;

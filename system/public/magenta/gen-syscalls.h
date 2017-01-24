@@ -218,7 +218,7 @@ extern mx_status_t mx_channel_call(
     const mx_channel_call_args_t args[1],
     uint32_t actual_bytes[1],
     uint32_t actual_handles[1],
-    mx_status_t read_status[1]);
+    mx_status_t read_status[1]) __attribute__((__leaf__));
 
 extern mx_status_t _mx_channel_call(
     mx_handle_t handle,
@@ -227,7 +227,7 @@ extern mx_status_t _mx_channel_call(
     const mx_channel_call_args_t args[1],
     uint32_t actual_bytes[1],
     uint32_t actual_handles[1],
-    mx_status_t read_status[1]);
+    mx_status_t read_status[1]) __attribute__((__leaf__));
 
 extern mx_status_t mx_socket_create(
     uint32_t options,
@@ -655,11 +655,13 @@ extern mx_status_t _mx_fifo_op(
     uint64_t val,
     mx_fifo_state_t out[1]) __attribute__((__leaf__));
 
-extern mx_handle_t mx_log_create(
-    uint32_t options) __attribute__((__leaf__));
+extern mx_status_t mx_log_create(
+    uint32_t options,
+    mx_handle_t out[1]) __attribute__((__leaf__));
 
-extern mx_handle_t _mx_log_create(
-    uint32_t options) __attribute__((__leaf__));
+extern mx_status_t _mx_log_create(
+    uint32_t options,
+    mx_handle_t out[1]) __attribute__((__leaf__));
 
 extern mx_status_t mx_log_write(
     mx_handle_t handle,

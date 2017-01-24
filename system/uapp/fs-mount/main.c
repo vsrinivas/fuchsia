@@ -60,16 +60,14 @@ static mx_status_t launch(int argc, const char** argv, mx_handle_t* handles, uin
     }
     n++;
 
-    if ((hnd[n] = mx_log_create(0)) < 0) {
+    if ((status = mx_log_create(0, &hnd[n])) < 0) {
         fprintf(stderr, "fs_mount: Could not create log\n");
-        status = hnd[n];
         goto fail;
     }
     ids[n++] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 1);
 
-    if ((hnd[n] = mx_log_create(0)) < 0) {
+    if ((status = mx_log_create(0, &hnd[n])) < 0) {
         fprintf(stderr, "fs_mount: Could not create secondary log\n");
-        status = hnd[n];
         goto fail;
     }
     ids[n++] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 2);

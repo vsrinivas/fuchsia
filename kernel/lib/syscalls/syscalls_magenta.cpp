@@ -170,7 +170,7 @@ mx_status_t sys_futex_requeue(mx_futex_t* _wake_ptr, uint32_t wake_count, int cu
         make_user_ptr(_requeue_ptr), requeue_count);
 }
 
-mx_handle_t sys_log_create(uint32_t flags) {
+mx_handle_t sys_log_create(uint32_t flags, mx_handle_t* out) {
     LTRACEF("flags 0x%x\n", flags);
 
     // kernel flag is forbidden to userspace
@@ -196,10 +196,12 @@ mx_handle_t sys_log_create(uint32_t flags) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    mx_handle_t hv = up->MapHandleToValue(handle);
+    if (make_user_ptr(out).copy_to_user(up->MapHandleToValue(handle)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
     up->AddHandle(mxtl::move(handle));
 
-    return hv;
+    return NO_ERROR;
 }
 
 mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, const void* _ptr, uint32_t flags) {

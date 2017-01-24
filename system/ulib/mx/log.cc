@@ -9,10 +9,11 @@
 namespace mx {
 
 mx_status_t log::create(log* result, uint32_t flags) {
-    mx_handle_t h = mx_log_create(flags);
-    if (h < 0) {
+    mx_status_t status;
+    mx_handle_t h;
+    if ((status = mx_log_create(flags, &h)) < 0) {
         result->reset(MX_HANDLE_INVALID);
-        return h;
+        return status;
     } else {
         result->reset(h);
         return NO_ERROR;

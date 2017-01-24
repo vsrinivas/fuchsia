@@ -26,7 +26,7 @@ mx_handle_t vfs_create_global_root_handle(void);
 void devmgr_io_init(void) {
     // setup stdout
     mx_handle_t h;
-    if ((h = mx_log_create(LOG_FLAGS)) < 0) {
+    if (mx_log_create(LOG_FLAGS, &h) < 0) {
         return;
     }
     mxio_t* logger;

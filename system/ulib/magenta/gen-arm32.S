@@ -58,7 +58,7 @@ m_syscall 3 mx_cprng_draw 57
 m_syscall 2 mx_cprng_add_entropy 58
 m_syscall 3 mx_fifo_create 59
 m_syscall 5 mx_fifo_op 60
-m_syscall 1 mx_log_create 61
+m_syscall 2 mx_log_create 61
 m_syscall 4 mx_log_write 62
 m_syscall 4 mx_log_read 63
 m_syscall 5 mx_ktrace_read 64

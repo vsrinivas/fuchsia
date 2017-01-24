@@ -38,9 +38,7 @@ mx_status_t devmgr_launch_acpisvc(mx_handle_t job_handle) {
         goto cleanup_handles;
     }
 
-    logger = mx_log_create(0);
-    if (logger < 0) {
-        status = logger;
+    if ((status = mx_log_create(0, &logger)) < 0) {
         goto cleanup_handles;
     }
 

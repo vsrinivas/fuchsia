@@ -328,8 +328,9 @@ mx_status_t sys_fifo_op(
     uint64_t val,
     mx_fifo_state_t out[1]);
 
-mx_handle_t sys_log_create(
-    uint32_t options);
+mx_status_t sys_log_create(
+    uint32_t options,
+    mx_handle_t out[1]);
 
 mx_status_t sys_log_write(
     mx_handle_t handle,

@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     if ((argc == 2) && (!strcmp(argv[1], "-f"))) {
         tail = true;
     }
-    if ((h = mx_log_create(MX_LOG_FLAG_READABLE)) < 0) {
+    if (mx_log_create(MX_LOG_FLAG_READABLE, &h) < 0) {
         printf("dlog: cannot open log\n");
     }
 

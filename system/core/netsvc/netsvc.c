@@ -64,11 +64,11 @@ static void run_program(const char *progname, int argc, const char** argv, mx_ha
     if (mxio_clone_root(handles, ids) < 0) {
         return;
     }
-    if ((handles[1] = mx_log_create(0)) < 0) {
+    if (mx_log_create(0, &handles[1]) < 0) {
         mx_handle_close(handles[0]);
         return;
     }
-    if ((handles[2] = mx_log_create(0)) < 0) {
+    if (mx_log_create(0, &handles[2]) < 0) {
         mx_handle_close(handles[0]);
         mx_handle_close(handles[1]);
         return;
@@ -218,7 +218,7 @@ void netifc_recv(void* data, size_t len) {
 int main(int argc, char** argv) {
     logpacket_t pkt;
     int len = 0;
-    if ((loghandle = mx_log_create(MX_LOG_FLAG_READABLE)) < 0) {
+    if (mx_log_create(MX_LOG_FLAG_READABLE, &loghandle) < 0) {
         return -1;
     }
 

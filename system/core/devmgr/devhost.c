@@ -29,7 +29,7 @@
 
 static void devhost_io_init(void) {
     mx_handle_t h;
-    if ((h = mx_log_create(MX_LOG_FLAG_DEVICE)) < 0) {
+    if (mx_log_create(MX_LOG_FLAG_DEVICE, &h) < 0) {
         return;
     }
     mxio_t* logger;

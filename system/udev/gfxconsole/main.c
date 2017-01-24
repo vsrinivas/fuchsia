@@ -720,7 +720,7 @@ static int vc_log_reader_thread(void* arg) {
     mx_device_t* dev = arg;
     mx_handle_t h;
 
-    if ((h = mx_log_create(MX_LOG_FLAG_READABLE)) < 0) {
+    if (mx_log_create(MX_LOG_FLAG_READABLE, &h) < 0) {
         printf("vc log listener: cannot open log\n");
         return -1;
     }
