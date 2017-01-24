@@ -2,17 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-namespace storage;
+include "apps/ledger/src/convert/bytes.fbs";
 
-table Id {
-  id:[ubyte];
-}
+namespace storage;
 
 table CommitStorage {
   timestamp:ulong;
   generation:ulong;
-  root_node_id:Id;
-  parents:[Id];
+  root_node_id:convert.ByteStorage;
+  parents:[convert.ByteStorage];
 }
 
 root_type CommitStorage;

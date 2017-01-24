@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/flatbuffers/flatbuffer.gni")
+
 source_set("convert") {
   sources = [
     "convert.cc",
@@ -13,9 +15,16 @@ source_set("convert") {
   ]
 
   public_deps = [
+    ":byte_storage",
     "//lib/ftl",
     "//magenta/system/ulib/mx",
     "//third_party/leveldb",
+  ]
+}
+
+flatbuffer("byte_storage") {
+  sources = [
+    "bytes.fbs",
   ]
 }
 

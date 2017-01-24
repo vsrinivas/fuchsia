@@ -16,6 +16,10 @@ flatbuffer("commit_storage") {
   sources = [
     "commit.fbs",
   ]
+
+  deps = [
+    "//apps/ledger/src/convert:byte_storage",
+  ]
 }
 
 source_set("lib") {

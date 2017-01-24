@@ -61,7 +61,20 @@ TEST(Convert, ToStringView) {
   EXPECT_EQ(str, result.ToString());
 }
 
-TEST(Conver, ImplicitConversion) {
+TEST(Convert, ToByteStorage) {
+  flatbuffers::FlatBufferBuilder builder;
+
+  std::string str = "Hello";
+  ExtendedStringView str_view = str;
+
+  auto bytes = str_view.ToByteStorage(&builder);
+  builder.Finish(bytes);
+
+  ExtendedStringView result = GetByteStorage(builder.GetCurrentBufferPointer());
+  EXPECT_EQ(str, result);
+}
+
+TEST(Convert, ImplicitConversion) {
   std::string str = "Hello";
   ExtendedStringView esv(str);
 

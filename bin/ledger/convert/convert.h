@@ -8,8 +8,10 @@
 #include <leveldb/db.h>
 #include <string>
 
+#include "apps/ledger/src/convert/bytes_generated.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/ftl/strings/string_view.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace convert {
 
@@ -31,10 +33,17 @@ class ExtendedStringView : public ftl::StringView {
       : ftl::StringView(string_view) {}
   template <size_t N>
   constexpr ExtendedStringView(const char (&str)[N]) : ftl::StringView(str) {}
+  ExtendedStringView(const ByteStorage* byte_storage)
+      : ftl::StringView(
+            reinterpret_cast<const char*>(byte_storage->bytes()->data()),
+            byte_storage->bytes()->size()) {}
 
   operator leveldb::Slice() const { return leveldb::Slice(data(), size()); }
 
   fidl::Array<uint8_t> ToArray();
+
+  flatbuffers::Offset<ByteStorage> ToByteStorage(
+      flatbuffers::FlatBufferBuilder* builder);
 };
 
 // Returns the ExtendedStringView representation of the given value.

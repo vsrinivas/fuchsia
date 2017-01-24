@@ -9,6 +9,7 @@
 #include <flatbuffers/flatbuffers.h>
 #include <sys/time.h>
 
+#include "apps/ledger/src/convert/convert.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/impl/commit_generated.h"
@@ -16,10 +17,6 @@
 #include "lib/ftl/build_config.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/memory/ref_counted.h"
-
-#if !defined(ARCH_CPU_LITTLE_ENDIAN)
-#error "Big endian is not supported"
-#endif
 
 namespace storage {
 
@@ -41,16 +38,6 @@ class CommitImpl::SharedStorageBytes
 };
 
 namespace {
-ftl::StringView ToStringView(const flatbuffers::Vector<uint8_t>* vector) {
-  return ftl::StringView(reinterpret_cast<const char*>(vector->data()),
-                         vector->size());
-}
-
-auto ToVector(flatbuffers::FlatBufferBuilder* builder, ftl::StringView view) {
-  return builder->CreateVector<uint8_t>(
-      reinterpret_cast<const unsigned char*>(view.data()), view.size());
-}
-
 std::string SerializeCommit(
     uint64_t generation,
     int64_t timestamp,
@@ -58,15 +45,15 @@ std::string SerializeCommit(
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   flatbuffers::FlatBufferBuilder builder;
 
-  flatbuffers::Offset<Id> parents_offsets[parent_commits.size()];
+  flatbuffers::Offset<convert::ByteStorage>
+      parents_offsets[parent_commits.size()];
   for (size_t i = 0; i < parent_commits.size(); ++i) {
-    parents_offsets[i] =
-        CreateId(builder, ToVector(&builder, parent_commits[i]->GetId()));
+    parents_offsets[i] = convert::ExtendedStringView(parent_commits[i]->GetId())
+                             .ToByteStorage(&builder);
   }
 
   auto storage = CreateCommitStorage(
-      builder, timestamp, generation,
-      CreateId(builder, ToVector(&builder, root_node_id)),
+      builder, timestamp, generation, root_node_id.ToByteStorage(&builder),
       builder.CreateVector(parents_offsets, parent_commits.size()));
   builder.Finish(storage);
   return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
@@ -108,12 +95,11 @@ std::unique_ptr<Commit> CommitImpl::FromStorageBytes(
   const CommitStorage* commit_storage =
       GetCommitStorage(storage_ptr->bytes().data());
 
-  ObjectIdView root_node_id =
-      ToStringView(commit_storage->root_node_id()->id());
+  ObjectIdView root_node_id = commit_storage->root_node_id();
   std::vector<CommitIdView> parent_ids;
 
   for (size_t i = 0; i < commit_storage->parents()->size(); ++i) {
-    parent_ids.push_back(ToStringView(commit_storage->parents()->Get(i)->id()));
+    parent_ids.push_back(commit_storage->parents()->Get(i));
   }
   return std::unique_ptr<Commit>(
       new CommitImpl(page_storage, std::move(id), commit_storage->timestamp(),
@@ -180,7 +166,7 @@ bool CommitImpl::CheckValidSerialization(ftl::StringView storage_bytes) {
   };
 
   const CommitStorage* commit_storage = GetCommitStorage(storage_bytes.data());
-  if (commit_storage->root_node_id()->id()->size() != kCommitIdSize) {
+  if (commit_storage->root_node_id()->bytes()->size() != kCommitIdSize) {
     return false;
   }
   auto parents = commit_storage->parents();
@@ -188,7 +174,7 @@ bool CommitImpl::CheckValidSerialization(ftl::StringView storage_bytes) {
     return false;
   }
   for (const auto& parent : *parents) {
-    if (parent->id()->size() != kCommitIdSize) {
+    if (parent->bytes()->size() != kCommitIdSize) {
       return false;
     }
   }

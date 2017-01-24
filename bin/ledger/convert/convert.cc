@@ -15,6 +15,14 @@ fidl::Array<uint8_t> ExtendedStringView::ToArray() {
   return result;
 }
 
+flatbuffers::Offset<ByteStorage> ExtendedStringView::ToByteStorage(
+    flatbuffers::FlatBufferBuilder* builder) {
+  return CreateByteStorage(
+      *builder,
+      builder->CreateVector(reinterpret_cast<const unsigned char*>(data()),
+                            size()));
+}
+
 fidl::Array<uint8_t> ToArray(ExtendedStringView value) {
   return value.ToArray();
 }
