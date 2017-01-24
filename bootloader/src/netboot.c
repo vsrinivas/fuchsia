@@ -85,7 +85,7 @@ void udp6_recv(void* data, size_t len,
             return;
         }
         if (msg->arg != item->offset) {
-            printf("netboot: < received chunk at offset %d but current offset is %zu\n", msg->arg, item->offset);
+            // printf("netboot: < received chunk at offset %d but current offset is %zu\n", msg->arg, item->offset);
             ack.arg = item->offset;
             ack.cmd = NB_ACK;
         } else if ((item->offset + len) > item->size) {
@@ -120,8 +120,8 @@ void udp6_recv(void* data, size_t len,
 transmit:
     nb_active = 1;
     if (do_transmit) {
-        printf("netboot: MSG %08x %08x %08x %08x\n",
-           ack.magic, ack.cookie, ack.cmd, ack.arg);
+        // printf("netboot: MSG %08x %08x %08x %08x\n",
+        //   ack.magic, ack.cookie, ack.cmd, ack.arg);
 
         udp6_send(&ack, sizeof(ack), saddr, sport, NB_SERVER_PORT);
     }
