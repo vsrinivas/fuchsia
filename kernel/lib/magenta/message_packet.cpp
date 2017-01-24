@@ -7,6 +7,7 @@
 #include <err.h>
 #include <new.h>
 
+#include <magenta/handle_reaper.h>
 #include <magenta/magenta.h>
 #include <magenta/message_packet.h>
 
@@ -39,8 +40,9 @@ mx_status_t MessagePacket::Create(uint32_t data_size, uint32_t num_handles,
 
 MessagePacket::~MessagePacket() {
     if (owns_handles_) {
-        for (uint32_t i = 0; i < num_handles_; i++)
-            DeleteHandle(handles_[i]);
+        // Delete handles out-of-band to avoid the worst case recursive
+        // destruction behavior.
+        ReapHandles(handles_, num_handles_);
     }
 }
 

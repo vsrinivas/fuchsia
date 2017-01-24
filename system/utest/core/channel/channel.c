@@ -206,14 +206,14 @@ static bool channel_close_test(void) {
     // Close channel[1]; the former channel1[0] should be closed, so channel1[1] should have peer closed.
     ASSERT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
     channel[1] = MX_HANDLE_INVALID;
-    ASSERT_EQ(get_satisfied_signals(channel1[1]), MX_CHANNEL_PEER_CLOSED, "");
+    ASSERT_EQ(mx_handle_wait_one(channel1[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
     ASSERT_EQ(get_satisfied_signals(channel2[1]), MX_CHANNEL_WRITABLE, "");
 
     // Close channel[0]; the former channel2[0] should be closed, so channel2[1] should have peer closed.
     ASSERT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
     channel[0] = MX_HANDLE_INVALID;
     ASSERT_EQ(get_satisfied_signals(channel1[1]), MX_CHANNEL_PEER_CLOSED, "");
-    ASSERT_EQ(get_satisfied_signals(channel2[1]), MX_CHANNEL_PEER_CLOSED, "");
+    ASSERT_EQ(mx_handle_wait_one(channel2[1], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
 
     ASSERT_EQ(mx_handle_close(channel1[1]), NO_ERROR, "");
     ASSERT_EQ(mx_handle_close(channel2[1]), NO_ERROR, "");
@@ -695,6 +695,42 @@ static bool channel_call(void) {
     END_TEST;
 }
 
+static bool create_and_nest(mx_handle_t out, mx_handle_t* end, size_t n) {
+    BEGIN_TEST;
+
+    mx_handle_t channel[2];
+    if (n == 1) {
+        ASSERT_EQ(mx_channel_create(0, &channel[0], end), NO_ERROR, "");
+        ASSERT_EQ(mx_channel_write(out, 0u, NULL, 0u, channel, 1u), NO_ERROR, "");
+        return true;
+    }
+
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+    ASSERT_TRUE(create_and_nest(channel[0], end, n - 1), "");
+    ASSERT_EQ(mx_channel_write(out, 0u, NULL, 0u, channel, 2u), NO_ERROR, "");
+
+    END_TEST;
+}
+
+static bool channel_nest(void) {
+    BEGIN_TEST;
+    mx_handle_t channel[2];
+
+    ASSERT_EQ(mx_channel_create(0, &channel[0], &channel[1]), NO_ERROR, "");
+
+    mx_handle_t end;
+    ASSERT_TRUE(create_and_nest(channel[0], &end, 10), "");
+    EXPECT_EQ(mx_handle_close(channel[1]), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_wait_one(channel[0], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+
+    EXPECT_EQ(mx_handle_wait_one(end, MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL), NO_ERROR, "");
+    EXPECT_EQ(mx_handle_close(end), NO_ERROR, "");
+
+    EXPECT_EQ(mx_handle_close(channel[0]), NO_ERROR, "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(channel_tests)
 RUN_TEST(channel_test)
 RUN_TEST(channel_read_error_test)
@@ -704,6 +740,7 @@ RUN_TEST(channel_duplicate_handles)
 RUN_TEST(channel_multithread_read)
 RUN_TEST(channel_may_discard)
 RUN_TEST(channel_call)
+RUN_TEST(channel_nest)
 END_TEST_CASE(channel_tests)
 
 #ifndef BUILD_COMBINED_TESTS

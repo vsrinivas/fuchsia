@@ -24,6 +24,7 @@
 
 #include <magenta/futex_context.h>
 #include <magenta/handle_owner.h>
+#include <magenta/handle_reaper.h>
 #include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/thread_dispatcher.h>
@@ -330,10 +331,9 @@ void ProcessDispatcher::SetStateLocked(State s) {
         LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
         {
             AutoLock lock(&handle_table_lock_);
-            Handle* handle;
-            while ((handle = handles_.pop_front()) != nullptr) {
-                DeleteHandle(handle);
-            }
+            // Delete handles out-of-band to avoid the worst case recursive
+            // destruction behavior.
+            ReapHandles(&handles_);
         }
         LTRACEF_LEVEL(2, "done cleaning up handle table on proc %p\n", this);
 

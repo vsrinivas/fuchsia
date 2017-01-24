@@ -95,11 +95,8 @@ bool cleanup_test(void) {
     mx_handle_close(p0[1]);
 
     unittest_printf("cleanup-test: about to wait, should return immediately with PEER_CLOSED\n");
-    r = mx_handle_wait_one(p1[0], MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-                                 MX_TIME_INFINITE, &pending);
+    r = mx_handle_wait_one(p1[0], MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
     ASSERT_EQ(r, 0, "cleanup-test: FAILED");
-
-    ASSERT_EQ(pending, MX_CHANNEL_PEER_CLOSED, "cleanup-test: FAILED");
 
     test_state = 100;
     unittest_printf("cleanup-test: PASSED\n");
