@@ -30,14 +30,18 @@ static mx_protocol_device_t dmctl_device_proto = {
     .write = dmctl_write,
 };
 
-mx_handle_t _dmctl_handle;
+mx_handle_t _dmctl_handle = MX_HANDLE_INVALID;
 
 mx_status_t dmctl_init(mx_driver_t* driver) {
     mx_device_t* dev;
-    if (device_create(&dev, driver, "dmctl", &dmctl_device_proto) == NO_ERROR) {
-        if (device_add(dev, driver_get_misc_device()) < 0) {
-            free(dev);
-        }
+    mx_status_t s = device_create(&dev, driver, "dmctl", &dmctl_device_proto);
+    if (s != NO_ERROR) {
+        return s;
+    }
+    s = device_add(dev, driver_get_misc_device());
+    if (s != NO_ERROR) {
+        free(dev);
+        return s;
     }
     _dmctl_handle = dev->rpc;
     return NO_ERROR;
