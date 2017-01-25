@@ -327,7 +327,7 @@ endif
 
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_SYSROOT)),true)
 # identify global headers to copy to the sysroot
-GLOBAL_HEADERS := $(shell find system/public -name \*\.h -or -name \*\.inc)
+GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc)
 GLOBAL_HEADERS := $(patsubst system/public/%,$(BUILDDIR)/sysroot/include/%,$(GLOBAL_HEADERS))
 
 # generate rule to copy them

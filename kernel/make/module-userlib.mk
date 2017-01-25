@@ -162,7 +162,7 @@ ifneq ($(MODULE_EXPORT),)
 MODULE_INSTALL_HEADERS := $(BUILDDIR)/sysroot/include
 
 # locate headers from module source public include dir
-MODULE_PUBLIC_HEADERS := $(shell test -d $(MODULE_SRCDIR)/include && find $(MODULE_SRCDIR)/include -name \*\.h -or -name \*\.inc)
+MODULE_PUBLIC_HEADERS := $(shell test -d $(MODULE_SRCDIR)/include && find $(MODULE_SRCDIR)/include -name \*\.h -o -name \*\.inc)
 MODULE_PUBLIC_HEADERS := $(patsubst $(MODULE_SRCDIR)/include/%,%,$(MODULE_PUBLIC_HEADERS))
 
 # translate them to the final destination
