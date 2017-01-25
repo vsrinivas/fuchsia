@@ -16,7 +16,7 @@ import sys
 
 def read_log_listener(listener_process, test_id):
     """ Returns the output of loglistener up until it sees the |test_id|."""
-    termination_substring = "test_runner: done %s" % test_id
+    termination_substring = "test_runner: teardown %s" % test_id
     lines = []
     while True:
         line = listener_process.stdout.readline()
@@ -32,17 +32,25 @@ def run_test(sock, listener_process, command_str):
     failure. """
     test_id = hashlib.sha1(command_str + str(random.random())).hexdigest()
 
-    sock.send("run %s %s\n" % (test_id, command))
-    result = sock.makefile().readline()
-    ret_test_id, result = result.split(" ", 1)
+    sock.send("run %s %s\n" % (test_id, command_str))
+    read_sock_file = sock.makefile()
+    for line in read_sock_file:
+        ret_test_id, op, msg = line.split(" ", 2)
+        msg = msg.strip()
+        assert ret_test_id == test_id, "Uhoh, wrong test result returned."
 
-    assert ret_test_id == test_id, "Uhoh, wrong test result returned"
-    result = result.strip()
-    print result
-
-    log_output = read_log_listener(listener_process, test_id)
-    if result == "fail":
-        print log_output
+        if op == "teardown":
+            result = msg
+            print ".. %s" % result
+            # Consume the log output even, regardless of if we print it.
+            log_output = read_log_listener(listener_process, test_id)
+            if result == "fail":
+                print log_output
+            return
+        elif op == "log":
+            print msg
+        else:
+            print "UNRECOGNIZED STRING:", line.strip()
 
 def main(argv):
     assert "FUCHSIA_DIR" in os.environ, "Could not find env variable $FUCHSIA_DIR"
@@ -80,7 +88,7 @@ def main(argv):
     if len(args.command) > 0:
         command_str = " ".join(args.command)
         # Run a single command
-        print "Running %s .." % command_str,
+        print "Running %s .." % command_str
         sys.stdout.flush()
         run_test(sock, listener_process, command_str)
     else:
@@ -88,7 +96,7 @@ def main(argv):
         with open(args.test_file) as f:
             tests = json.load(f)
             for test in tests["tests"]:
-                print "Running %s .." % test["name"],
+                print "Running %s .." % test["name"]
                 sys.stdout.flush()
                 run_test(sock, listener_process, test["exec"])
 

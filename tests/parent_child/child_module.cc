@@ -4,15 +4,21 @@
 
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
+#include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
+
+using modular::testing::TestPoint;
 
 namespace {
 
 class ChildApp : public modular::SingleServiceApp<modular::Module> {
  public:
-  ChildApp() = default;
+  ChildApp() {
+    modular::testing::Init(application_context());
+  }
+
   ~ChildApp() override = default;
 
  private:
@@ -30,9 +36,10 @@ class ChildApp : public modular::SingleServiceApp<modular::Module> {
 
   // |Module|
   void Stop(const StopCallback& done) override {
-    done();
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
     stopped_.Pass();
+    modular::testing::Done();
+    done();
   }
 
   modular::StoryPtr story_;
@@ -48,6 +55,9 @@ int main(int argc, const char** argv) {
   mtl::MessageLoop loop;
   ChildApp app;
   loop.Run();
+  // TODO(vardhan): There is a race between module termination killing this
+  // process, and this process completing itself, so this may not actually
+  // print.
   TEST_PASS("Child module exited normally");
   return 0;
 }

@@ -67,6 +67,7 @@ executable("dummy_user_shell") {
     "//apps/modular/lib/fidl:array_to_string",
     "//apps/modular/lib/fidl:single_service_view_app",
     "//apps/modular/lib/rapidjson",
+    "//apps/modular/lib/testing",
     "//apps/modular/services/device:device_context",
     "//apps/modular/services/test_runner",
     "//apps/modular/services/user",

@@ -4,13 +4,23 @@
 
 module modular;
 
-// This is an interface provided by the TestRunner to a test. The test can use
-// this interface to report back the completion of test, and the test result.
-// If a connection to TestRunner is closed without calling Finish() it
-// implicitly assumes a call to Finish(false).
-[ServiceName="modular.TestRunner"]
+// This service is included in the ApplicationEnvironment of multi-process tests
+// that are launched by the test runner harness. Test processes can connect to
+// this service to log failures, signal crashes, and signal completion.
+[ServiceName="modular.testing.TestRunner"]
 interface TestRunner {
-  // Called to signal test completion and tear-down. |success| represents if the
-  // test passed or failed.
-  Finish(bool success);
+  // Tells the test runner that a particular test case failed, with the supplied
+  // message. May be called multiple times. When |Teardown()| is called, the
+  // test ends as a failure.
+  Fail(string log_message);
+
+  // Either this method or Teardown() must be invoked before closing the
+  // connection to this interface; otherwise the TestRunner service will
+  // assume that the connection broke due to the test crashing.
+  Done();
+
+  // Signals that the test is complete and the entire test harness should torn
+  // down. The test will be declared a failure if Fail() was ever called.
+  // Otherwise the test will be declared successful.
+  Teardown();
 };

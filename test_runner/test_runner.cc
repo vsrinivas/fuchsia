@@ -8,8 +8,10 @@
 // The TCP protocol is as follows:
 // - Client connects, sends a single line representing the test command to run:
 //   run <test_id> <shell command to run>\n
+// - To send a log message, we send to the TCP client:
+//   <test_id> log <msg>
 // - Once the test is done, we reply to the TCP client:
-//   <test_id> pass|fail\n
+//   <test_id> teardown pass|fail\n
 //
 // The <test_id> is an unique ID string that the TCP client gives us per test;
 // we tag our replies and device logs with it so the TCP client can identify
@@ -49,39 +51,15 @@ constexpr uint16_t kListenPort = 8342;  // TCP port
 namespace modular {
 namespace {
 
-// This is an ApplicationEnvironment under which our test runs. We expose a
-// TestRunner service which the test can use to assert when it is complete.
-class TestRunnerScope : public Scope {
- public:
-  TestRunnerScope(
-      ApplicationEnvironmentPtr parent_env,
-      ServiceProviderPtr default_services,
-      const std::string& label,
-      ServiceProviderImpl::InterfaceRequestHandler<TestRunner> request_handler)
-      : Scope(std::move(parent_env), label) {
-    service_provider_.SetDefaultServiceProvider(std::move(default_services));
-    service_provider_.AddService(request_handler);
-  }
-
- private:
-  // |ApplicationEnvironmentHost|:
-  void GetApplicationEnvironmentServices(
-      fidl::InterfaceRequest<ServiceProvider> environment_services) override {
-    service_provider_.AddBinding(std::move(environment_services));
-  }
-
-  ServiceProviderImpl service_provider_;
-};
-
+class TestRunnerImpl;
 class TestRunnerConnection;
 // TestRunContext represents a single run of a test. Given a test to run, it
 // runs it in a new ApplicationEnvironment and provides the environment a
-// TestRunner
-// service to report completion. When tests are done, their completion is
-// reported back to TestRunnerConnection (which is responsible for deleting
-// TestRunContext). If the child application stops without reporting anything,
-// we declare the test a failure.
-class TestRunContext : public TestRunner {
+// TestRunner service to report completion. When tests are done, their
+// completion is reported back to TestRunnerConnection (which is responsible for
+// deleting TestRunContext). If the child application stops without reporting
+// anything, we declare the test a failure.
+class TestRunContext {
  public:
   TestRunContext(std::shared_ptr<ApplicationContext> app_context,
                  TestRunnerConnection* connection,
@@ -89,18 +67,48 @@ class TestRunContext : public TestRunner {
                  const std::string& url,
                  const std::vector<std::string>& args);
 
- private:
-  // |TestRunner|:
-  void Finish(bool success);
+  // Called from TestRunnerServiceImpl, the actual implemention to |TestRunner|.
+  void StopTrackingClient(TestRunnerImpl* client, bool crashed);
+  void Fail(const fidl::String& log_message);
+  void Teardown();
 
+ private:
   ApplicationControllerPtr child_app_controller_;
-  std::unique_ptr<TestRunnerScope> child_env_scope_;
+  std::unique_ptr<Scope> child_env_scope_;
 
   TestRunnerConnection* const test_runner_connection_;
-  fidl::Binding<TestRunner> test_runner_binding_;
+  std::vector<std::unique_ptr<TestRunnerImpl>> test_runner_clients_;
   // This is a tag that we use to identify the test that was run. For now, it
   // helps distinguish between multiple test outputs to the device log.
   const std::string test_id_;
+  bool success_;
+};
+
+// Implements the TestRunner service which is available in the
+// ApplicationEnvironment of the test processes. Calls made to this service are
+// forwarded and handled by TestRunContext.
+class TestRunnerImpl : public TestRunner {
+ public:
+  TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
+                        TestRunContext* test_run_context)
+      : binding_(this, std::move(request)),
+        test_run_context_(test_run_context) {
+    binding_.set_connection_error_handler(
+        [this]() { test_run_context_->StopTrackingClient(this, true); });
+  }
+
+ private:
+  // |TestRunner|
+  void Fail(const fidl::String& log_message) {
+    test_run_context_->Fail(log_message);
+  }
+  // |TestRunner|
+  void Done() { test_run_context_->StopTrackingClient(this, false); }
+  // |TestRunner|
+  void Teardown() { test_run_context_->Teardown(); }
+
+  fidl::Binding<TestRunner> binding_;
+  TestRunContext* test_run_context_;
 };
 
 // Represents a client connection, and is self-owned (it will exit the
@@ -117,23 +125,28 @@ class TestRunnerConnection {
     ReadAndRunCommand();
   }
 
+  void SendMessage(const std::string& test_id,
+                   const std::string& operation,
+                   const std::string& msg) {
+    std::stringstream stream;
+    stream << test_id << " " << operation << " " << msg << "\n";
+
+    std::string bytes = stream.str();
+    FTL_CHECK(write(socket_, bytes.data(), bytes.size()) > 0);
+  }
+
   // Called by TestRunContext when it has finished running its test. This will
   // trigger reading more commands from TCP socket.
-  void Finish(const std::string& test_id, bool success) {
+  void Teardown(const std::string& test_id, bool success) {
     FTL_CHECK(test_context_);
 
     // IMPORTANT: leave this log here, exactly as it is. Currently, tests
     // launched from host (e.g. Linux) grep for this text to figure out the
     // amount of the log to associate with the test.
-    FTL_LOG(INFO) << "test_runner: done " << test_id << " success=" << success;
+    FTL_LOG(INFO) << "test_runner: teardown " << test_id
+                  << " success=" << success;
 
-    std::stringstream epilogue;
-    epilogue << test_id << " ";
-    epilogue << (success ? "pass" : "fail") << "\n";
-
-    std::string bytes = epilogue.str();
-    FTL_CHECK(write(socket_, bytes.data(), bytes.size()) > 0);
-
+    SendMessage(test_id, "teardown", success ? "pass" : "fail");
     test_context_.reset();
     Start();
   }
@@ -168,7 +181,7 @@ class TestRunnerConnection {
   }
 
   // Read an entire line representing the command to run and run it. When the
-  // test has finished running, TestRunnerConnection::Finish is invoked. We do
+  // test has finished running, TestRunnerConnection::Teardown is invoked. We do
   // not read any further commands until that has happened.
   void ReadAndRunCommand() {
     std::string command = ReadCommand();
@@ -196,7 +209,7 @@ class TestRunnerConnection {
     }
 
     // When TestRunContext is done with the test, it calls
-    // TestRunnerConnection::Finish().
+    // TestRunnerConnection::Teardown().
     test_context_.reset(new TestRunContext(app_context_, this, command_parse[1],
                                            command_parse[2], args));
   }
@@ -214,23 +227,18 @@ TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
                                const std::string& test_id,
                                const std::string& url,
                                const std::vector<std::string>& args)
-    : test_runner_connection_(connection),
-      test_runner_binding_(this),
-      test_id_(test_id) {
+    : test_runner_connection_(connection), test_id_(test_id), success_(true) {
   // 1. Make a child environment to run the command.
   ApplicationEnvironmentPtr parent_env;
   app_context->environment()->Duplicate(parent_env.NewRequest());
+  child_env_scope_ =
+      std::make_unique<Scope>(std::move(parent_env), "test_runner_env");
 
-  ServiceProviderPtr parent_env_services;
-  parent_env->GetServices(parent_env_services.NewRequest());
-
-  test_runner_binding_.set_connection_error_handler(
-      std::bind(&TestRunContext::Finish, this, false));
-
-  child_env_scope_ = std::make_unique<TestRunnerScope>(
-      std::move(parent_env), std::move(parent_env_services), "test_runner_env",
+  // 1.1 Setup child environment services
+  child_env_scope_->AddService<TestRunner>(
       [this](fidl::InterfaceRequest<TestRunner> request) {
-        test_runner_binding_.Bind(std::move(request));
+        test_runner_clients_.push_back(
+            std::make_unique<TestRunnerImpl>(std::move(request), this));
       });
 
   // 2. Launch the test command.
@@ -243,12 +251,38 @@ TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
   info->arguments = fidl::Array<fidl::String>::From(args);
   launcher->CreateApplication(std::move(info),
                               child_app_controller_.NewRequest());
+
+  // If the child app closes, the test is reported as a failure.
   child_app_controller_.set_connection_error_handler(
-      std::bind(&TestRunContext::Finish, this, false));
+      [this]() { test_runner_connection_->Teardown(test_id_, false); });
 }
 
-void TestRunContext::Finish(bool success) {
-  test_runner_connection_->Finish(test_id_, success);
+void TestRunContext::Fail(const fidl::String& log_msg) {
+  success_ = false;
+  std::string msg("FAIL: ");
+  msg += log_msg;
+  test_runner_connection_->SendMessage(test_id_, "log", msg);
+}
+
+void TestRunContext::StopTrackingClient(TestRunnerImpl* client,
+                                        bool crashed) {
+  if (crashed) {
+    test_runner_connection_->Teardown(test_id_, false);
+    return;
+  }
+
+  auto find_it = std::find_if(
+      test_runner_clients_.begin(), test_runner_clients_.end(),
+      [client](const std::unique_ptr<TestRunnerImpl>& client_it) {
+        return client_it.get() == client;
+      });
+
+  FTL_DCHECK(find_it != test_runner_clients_.end());
+  test_runner_clients_.erase(find_it);
+}
+
+void TestRunContext::Teardown() {
+  test_runner_connection_->Teardown(test_id_, success_);
 }
 
 // TestRunnerTCPServer is a TCP server that accepts connections and launches

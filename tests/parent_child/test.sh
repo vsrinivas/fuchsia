@@ -11,8 +11,8 @@ if [ "${FUCHSIA_BUILD_DIR}" = "" ]; then
   exit -1;
 fi
 
-# TODO(kgiesing) Wire this test up to test_runner
+# TODO(vardhan): Make these binaries available in the build.
 netcp ${FUCHSIA_BUILD_DIR}/parent_module :/tmp/tests/parent_child/parent_module
 netcp ${FUCHSIA_BUILD_DIR}/child_module :/tmp/tests/parent_child/child_module
-netruncmd magenta '@ bootstrap device_runner --user-shell=dev_user_shell \
-	--user-shell-args=--root-module=/tmp/tests/parent_child/parent_module'
+
+${FUCHSIA_DIR}/apps/modular/test_runner/tools/run_test "/system/apps/bootstrap /system/apps/device_runner --user-shell=file:///system/apps/dev_user_shell --user-shell-args=--root-module=/tmp/tests/parent_child/parent_module"

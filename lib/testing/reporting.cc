@@ -4,6 +4,9 @@
 
 #include "apps/modular/lib/testing/reporting.h"
 
+namespace modular {
+namespace testing {
+
 TestPoint::TestPoint(std::string label) : label_(std::move(label)) {}
 
 TestPoint::~TestPoint() {
@@ -15,3 +18,6 @@ void TestPoint::Pass() {
   value_ = true;
   TEST_PASS(label_);
 }
+
+}  // namespace testing
+}  // namespace modular

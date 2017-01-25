@@ -2,6 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("testing") {
+  sources = [
+    "reporting.cc",
+    "reporting.h",
+    "testing.cc",
+    "testing.h",
+  ]
+
+  deps = [
+    "//apps/modular/services/test_runner",
+    "//apps/modular/lib/app"
+  ]
+}
+
 source_set("story_provider_mock") {
   testonly = true
 
@@ -15,12 +29,5 @@ source_set("story_provider_mock") {
 
   deps = [
     "//lib/fidl/cpp/bindings",
-  ]     
-}
-
-source_set("reporting") {
-  sources = [
-    "reporting.h",
-    "reporting.cc",
   ]
 }

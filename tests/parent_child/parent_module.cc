@@ -6,9 +6,12 @@
 
 #include "apps/modular/lib/fidl/single_service_app.h"
 #include "apps/modular/lib/testing/reporting.h"
+#include "apps/modular/lib/testing/testing.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/mtl/tasks/message_loop.h"
+
+using modular::testing::TestPoint;
 
 namespace {
 
@@ -17,9 +20,13 @@ constexpr int kDoneMilliseconds = 500;
 
 constexpr char kChildModule[] = "file:///tmp/tests/parent_child/child_module";
 
-class ParentApp : public modular::SingleServiceApp<modular::Module> {
+class ParentApp
+  : public modular::SingleServiceApp<modular::Module> {
  public:
-  ParentApp() = default;
+  ParentApp() {
+    modular::testing::Init(application_context());
+  }
+
   ~ParentApp() override = default;
 
  private:
@@ -41,9 +48,10 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
 
   // |Module|
   void Stop(const StopCallback& done) override {
-    done();
     stopped_.Pass();
     mtl::MessageLoop::GetCurrent()->PostQuitTask();
+    modular::testing::Teardown();
+    done();
   }
 
   void StartModule(const std::string& module_query) {
