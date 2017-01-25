@@ -544,8 +544,8 @@ StoryProviderImpl::StoryProviderImpl(
   // stories *before* we can process any calls that might create a new
   // story. Hence we bind the interface request only after this call
   // completes.
-  new PreviousStoriesCall(&operation_queue_, ledger_.get(), ftl::MakeCopyable(
-      [this](fidl::Array<fidl::String> stories) mutable {
+  new PreviousStoriesCall(&operation_queue_, ledger_.get(),
+      [this](fidl::Array<fidl::String> stories) {
     for (auto& story_id : stories) {
       story_ids_.insert(story_id.get());
     }
@@ -557,7 +557,7 @@ StoryProviderImpl::StoryProviderImpl(
     }
     requests_.clear();
     ready_ = true;
-  }));
+  });
 }
 
 StoryProviderImpl::~StoryProviderImpl() {}
