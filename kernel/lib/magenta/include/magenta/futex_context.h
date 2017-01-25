@@ -51,14 +51,14 @@ private:
     FutexContext(const FutexContext&) = delete;
     FutexContext& operator=(const FutexContext&) = delete;
 
-    void QueueNodesLocked(FutexNode* head);
+    void QueueNodesLocked(FutexNode* head) TA_REQ(lock_);
 
-    bool UnqueueNodeLocked(FutexNode* node);
+    bool UnqueueNodeLocked(FutexNode* node) TA_REQ(lock_);
 
     // protects futex_table_
     Mutex lock_;
 
     // Hash table for futexes in this context.
     // Key is futex address, value is the FutexNode for the head of futex's blocked thread list.
-    FutexNode::HashTable futex_table_;
+    FutexNode::HashTable futex_table_ TA_GUARDED(lock_);
 };
