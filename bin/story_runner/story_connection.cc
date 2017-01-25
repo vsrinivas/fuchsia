@@ -42,10 +42,10 @@ void StoryConnection::StartModule(
                            std::move(module_controller), std::move(view_owner));
 }
 
-void StoryConnection::GetLedger(fidl::InterfaceRequest<ledger::Ledger> req,
+void StoryConnection::GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
                                 const GetLedgerCallback& result) {
   if (!module_url_.empty()) {
-    story_impl_->GetLedger(module_url_, std::move(req), result);
+    story_impl_->GetLedger(module_url_, std::move(request), result);
   } else {
     result(ledger::Status::UNKNOWN_ERROR);
   }

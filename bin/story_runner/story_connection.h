@@ -43,7 +43,7 @@ class StoryConnection : public Story {
       fidl::InterfaceRequest<ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
-  void GetLedger(fidl::InterfaceRequest<ledger::Ledger> module_ledger,
+  void GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
                  const GetLedgerCallback& result) override;
   void Ready() override;
   void Done() override;

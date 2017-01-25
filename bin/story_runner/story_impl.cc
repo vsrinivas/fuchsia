@@ -310,12 +310,12 @@ void StoryImpl::StartModule(
   connections_.emplace_back(std::move(connection));
 }
 
-void StoryImpl::GetLedger(const std::string& module_name,
+void StoryImpl::GetLedger(const std::string& module_url,
                           fidl::InterfaceRequest<ledger::Ledger> request,
                           const std::function<void(ledger::Status)>& result) {
-  FTL_DCHECK(!module_name.empty());
+  FTL_DCHECK(!module_url.empty());
   story_provider_impl_->ledger_repository()->GetLedger(
-      to_array(module_name), std::move(request), result);
+      to_array(module_url), std::move(request), result);
 }
 
 // A variant of Stop() that stops the controller because the story was

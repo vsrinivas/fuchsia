@@ -40,9 +40,9 @@ class StoryPage;
 class StoryProviderImpl;
 class StoryStorageImpl;
 
-// The actual implementation of the Story service. Called from
-// StoryConnection above. It also implements the StoryController
-// service to give clients control over the Story instance.
+// The actual implementation of the Story service. It also implements
+// the StoryController service to give clients control over the Story
+// instance.
 class StoryImpl : public StoryController, ModuleWatcher {
  public:
   StoryImpl(
@@ -59,8 +59,8 @@ class StoryImpl : public StoryController, ModuleWatcher {
                    fidl::InterfaceRequest<ServiceProvider> incoming_services,
                    fidl::InterfaceRequest<ModuleController> module_controller,
                    fidl::InterfaceRequest<mozart::ViewOwner> view_owner);
-  void GetLedger(const std::string& module_name,
-                 fidl::InterfaceRequest<ledger::Ledger> module_ledger,
+  void GetLedger(const std::string& module_url,
+                 fidl::InterfaceRequest<ledger::Ledger> request,
                  const std::function<void(ledger::Status)>& result);
   // Releases ownership of |controller|.
   void ReleaseModule(ModuleControllerImpl* controller);
