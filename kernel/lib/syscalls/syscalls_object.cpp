@@ -312,6 +312,21 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
             ISB;
             return NO_ERROR;
         }
+#elif ARCH_X86_64
+        case MX_PROP_REGISTER_FS: {
+            if (size < sizeof(uintptr_t))
+                return ERR_BUFFER_TOO_SMALL;
+            mx_status_t status = is_current_thread(&dispatcher);
+            if (status != NO_ERROR)
+                return status;
+            uintptr_t addr;
+            if (make_user_ptr(_value).reinterpret<const uintptr_t>().copy_from_user(&addr) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            if (!x86_is_vaddr_canonical(addr))
+                return ERR_INVALID_ARGS;
+            write_msr(X86_MSR_IA32_FS_BASE, addr);
+            return NO_ERROR;
+        }
 #endif
     }
 

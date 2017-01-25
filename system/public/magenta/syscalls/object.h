@@ -90,6 +90,9 @@ typedef struct mx_info_vmar {
 #if __arm__
 // Argument is a uintptr_t.
 #define MX_PROP_REGISTER_CP15           4u
+#elif __x86_64__
+// Argument is a uintptr_t.
+#define MX_PROP_REGISTER_FS             4u
 #endif
 
 // Policies for MX_PROP_BAD_HANDLE_POLICY:
