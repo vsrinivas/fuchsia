@@ -2,7 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//apps/dart_content_handler/dart_app.gni")
+
 group("agents") {
+  deps = [
+    # If we don't include this explicitly here, for some reason it still
+    # produces the expected build products but is not sensitive to source file
+    # changes.
+    ":bandsintown",
+  ]
+}
+
+dart_app("bandsintown") {
+  output_name = "agents/bandsintown.dartx"
+
+  main_dart = "bandsintown.dart"
+
+  deps = [
+    "//apps/maxwell/services/context:context_dart",
+    "//apps/modular/lib/app/dart",
+  ]
 }
 
 executable("carmen_sandiego") {

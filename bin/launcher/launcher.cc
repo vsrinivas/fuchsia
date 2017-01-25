@@ -58,6 +58,7 @@ class LauncherApp : public maxwell::Launcher {
 
     // TODO(rosswang): Search the ComponentIndex and iterate through results.
     StartAgent("file:///system/apps/acquirers/focus");
+    StartAgent("file:///system/apps/agents/bandsintown.dartx");
     StartAgent("file:///system/apps/agents/module_suggester");
   }
 
