@@ -157,6 +157,10 @@ RUN_NAMED_TEST("DirectInsert (unmanaged)",      UMTE::DirectInsertTest)
 RUN_NAMED_TEST("DirectInsert (unique)",         UPTE::DirectInsertTest)
 RUN_NAMED_TEST("DirectInsert (RefPtr)",         RPTE::DirectInsertTest)
 
+RUN_NAMED_TEST("Splice (unmanaged)",            UMTE::SpliceTest)
+RUN_NAMED_TEST("Splice (unique)",               UPTE::SpliceTest)
+RUN_NAMED_TEST("Splice (RefPtr)",               RPTE::SpliceTest)
+
 END_TEST_CASE(double_linked_list_tests);
 
 }  // namespace intrusive_containers

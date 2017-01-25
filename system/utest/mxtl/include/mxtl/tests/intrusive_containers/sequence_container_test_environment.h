@@ -546,6 +546,114 @@ public:
         END_TEST;
     }
 
+    bool FillN(size_t begin, size_t end) {
+        BEGIN_TEST;
+
+        for (size_t i = begin; i < end; ++i) {
+            PtrType new_object = this->CreateTrackedObject(i, i);
+            ASSERT_NONNULL(new_object, "");
+            container().push_back(mxtl::move(new_object));
+            EXPECT_TRUE(TestEnvTraits::WasMoved(new_object), "");
+        }
+
+        END_TEST;
+    }
+
+    bool BidirectionalEquals(const ContainerType& sequence, const size_t* values, size_t size) {
+      BEGIN_TEST;
+
+      // We use SupportsConstantOrderErase as a way to discriminate a singly-
+      // linked list from a doubly-linked list.
+      static_assert(ContainerType::IsSequenced && ContainerType::SupportsConstantOrderErase,
+                    "BidirectionalEquals must be used with a bi-directional sequence");
+
+      ASSERT_EQ(size, Size(sequence), "");
+
+      // Iterate forwards and verify values.
+      const size_t* val_iter = values;
+      for (const auto& node : sequence) {
+          EXPECT_EQ(node.value(), *val_iter, "");
+          ++val_iter;
+      }
+
+      // Iterate backwards and verify values.
+      for (auto begin = sequence.begin(), end = sequence.end(); begin != end;) {
+          --val_iter;
+          --end;
+          EXPECT_EQ(end->value(), *val_iter, "");
+      }
+
+      END_TEST;
+    }
+
+    bool Splice() {
+        BEGIN_TEST;
+
+        constexpr size_t LIST_COUNT = 2;
+        static_assert(LIST_COUNT * 4 < OBJ_COUNT,
+                      "OBJ_COUNT too small to run Splice test!");
+
+        EXPECT_EQ(0U, Size(container()), "");
+        ContainerType target;
+        EXPECT_EQ(0U, Size(target), "");
+
+        // Splice empty source into end of empty target list.
+        target.splice(target.end(), container());
+        EXPECT_EQ(0U, Size(target), "");
+        EXPECT_EQ(0u, Size(container()), "");
+
+        // Populate the source list.
+        ASSERT_TRUE(FillN(0, LIST_COUNT), "");
+        EXPECT_EQ(LIST_COUNT, Size(container()), "");
+
+        // Splice into end of empty target list.
+        target.splice(target.end(), container());
+        static const size_t expected_1[] = {0, 1};
+        EXPECT_TRUE(BidirectionalEquals(target, expected_1, countof(expected_1)), "");
+        EXPECT_EQ(0u, Size(container()), "");
+
+        // Populate the source list again.
+        ASSERT_TRUE(FillN(LIST_COUNT, LIST_COUNT * 2), "");
+        EXPECT_EQ(LIST_COUNT, Size(container()), "");
+
+        // Splice into end of non-empty target list.
+        target.splice(target.end(), container());
+        static const size_t expected_2[] = {0, 1, 2, 3};
+        EXPECT_TRUE(BidirectionalEquals(target, expected_2, countof(expected_2)), "");
+        EXPECT_EQ(0u, Size(container()), "");
+
+        // Populate the source list again.
+        ASSERT_TRUE(FillN(LIST_COUNT * 2, LIST_COUNT * 3), "");
+        EXPECT_EQ(LIST_COUNT, Size(container()), "");
+
+        // Splice into start of non-empty target list.
+        target.splice(target.begin(), container());
+        static const size_t expected_3[] = {4, 5, 0, 1, 2, 3};
+        EXPECT_TRUE(BidirectionalEquals(target, expected_3, countof(expected_3)), "");
+        EXPECT_EQ(0u, Size(container()), "");
+
+        // Populate the source list again.
+        ASSERT_TRUE(FillN(LIST_COUNT * 3, LIST_COUNT * 4), "");
+        EXPECT_EQ(LIST_COUNT, Size(container()), "");
+
+        // Splice into second element of non-empty target list.
+        target.splice(++target.begin(), container());
+        static const size_t expected_4[] = {4, 6, 7, 5, 0, 1, 2, 3};
+        EXPECT_TRUE(BidirectionalEquals(target, expected_4, countof(expected_4)), "");
+        EXPECT_EQ(0u, Size(container()), "");
+
+        // Splice empty source into end of non-empty target list.
+        target.splice(target.end(), container());
+        EXPECT_TRUE(BidirectionalEquals(target, expected_4, countof(expected_4)), "");
+        EXPECT_EQ(0u, Size(container()), "");
+
+        // Finally clear the target.
+        target.clear();
+        EXPECT_EQ(0u, Size(target), "");
+
+        END_TEST;
+    }
+
     template <typename IterType>
     bool DoSeqIterate(const IterType& begin, const IterType& end) {
         BEGIN_TEST;

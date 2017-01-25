@@ -174,6 +174,13 @@ RUN_NAMED_TEST("DirectInsert (unique)",         UPTE::DirectInsertTest)
 RUN_NAMED_TEST("DirectInsert (RefPtr)",         RPTE::DirectInsertTest)
 #endif
 
+// SinglyLinkedLists cannot perform splice operations.
+#if TEST_WILL_NOT_COMPILE || 0
+RUN_NAMED_TEST("Splice (unmanaged)",            UMTE::SpliceTest)
+RUN_NAMED_TEST("Splice (unique)",               UPTE::SpliceTest)
+RUN_NAMED_TEST("Splice (RefPtr)",               RPTE::SpliceTest)
+#endif
+
 END_TEST_CASE(single_linked_list_tests);
 
 }  // namespace intrusive_containers

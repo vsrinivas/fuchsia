@@ -50,6 +50,7 @@ struct TestThunks {
     MAKE_TEST_THUNK(InsertAfter);
     MAKE_TEST_THUNK(Insert);
     MAKE_TEST_THUNK(DirectInsert);
+    MAKE_TEST_THUNK(Splice);
 
     // Associative container specific tests
     MAKE_TEST_THUNK(InsertByKey);

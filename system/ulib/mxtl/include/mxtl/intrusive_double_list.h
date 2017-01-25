@@ -183,6 +183,53 @@ public:
         internal_insert(&before, mxtl::move(ptr));
     }
 
+    // splice : Splice another list before iter in this list.
+    void splice(const iterator& iter, DoublyLinkedList& other_list)  {
+        auto before = iter.node_;
+        DEBUG_ASSERT(before != nullptr);
+        DEBUG_ASSERT(head_  != nullptr);
+
+        if (other_list.is_empty()) {
+            return;
+        }
+        if (is_empty()) {
+            DEBUG_ASSERT(before == sentinel());
+            DEBUG_ASSERT(before == PtrTraits::GetRaw(head_));
+            swap(other_list);
+            return;
+        }
+
+        // If we are being inserted before the sentinel, the we are the new
+        // tail, and the node_state which contains the prev pointer we need to
+        // update is head's.  Otherwise, it is the node_state of the node we are
+        // being inserted before.
+        auto& prev_ns  = NodeTraits::node_state(PtrTraits::IsSentinel(before) ? *head_ : *before);
+        auto& tgt_prev = prev_ns.prev_;
+
+        // If we are being inserted before the head, then we need to update the
+        // managed head pointer.  Otherwise, we need to update the next pointer
+        // of the node which is about to come before us.
+        auto& tgt_next = (PtrTraits::GetRaw(head_) == before)
+                       ? head_
+                       : PtrTraits::IsSentinel(before) ? NodeTraits::node_state(*tail()).next_
+                                                       : NodeTraits::node_state(*tgt_prev).next_;
+
+        auto& other_head_ns  = NodeTraits::node_state(*other_list.head_);
+        auto other_tail = other_list.tail();
+        auto& other_tail_ns = NodeTraits::node_state(*other_tail);
+
+        // Update the prev pointers.
+        other_head_ns.prev_ = tgt_prev;
+        tgt_prev            = other_tail;
+
+        // Update the next pointers.
+        PtrTraits::DetachSentinel(other_tail_ns.next_);
+        other_tail_ns.next_ = PtrTraits::Take(tgt_next);
+        tgt_next            = PtrTraits::Take(other_list.head_);
+
+        other_list.head_ = PtrTraits::MakeSentinel(&other_list);
+    }
+
     // insert_after : Insert an element after iter in the list.
     //
     // Note: It is an error to attempt to push a nullptr instance of PtrType, or
