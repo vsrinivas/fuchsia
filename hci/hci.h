@@ -16,11 +16,6 @@
 namespace bluetooth {
 namespace hci {
 
-// An HCI command packet payload (excluding the header) can contain a maximum of
-// 255 bytes.
-constexpr size_t kMaxCommandPayloadSize = 255;
-constexpr size_t kMaxEventPayloadSize = 255;
-
 // HCI opcode as used in command packets.
 using OpCode = uint16_t;
 

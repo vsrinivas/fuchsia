@@ -521,11 +521,11 @@ enum class LESupportedFeature : uint8_t {
 constexpr size_t kMaxLocalNameLength = 248;
 
 // The maximum number of bytes in a HCI Command Packet payload, excluding the
-// header.
+// header. See Core Spec v5.0 Vol 2, Part E, 5.4.1, paragraph 2.
 constexpr size_t kMaxCommandPacketPayloadSize = 255;
 
 // The maximum number of bytes in a HCI event Packet payload, excluding the
-// header.
+// header. See Core Spec v5.0 Vol 2, Part E, 5.4.4, paragraph 1.
 constexpr size_t kMaxEventPacketPayloadSize = 255;
 
 // Values that can be used in HCI Read|WriteFlowControlMode commands.

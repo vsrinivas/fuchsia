@@ -1,0 +1,34 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("hci") {
+  sources = [
+    "command_packet.cc",
+    "command_packet.h",
+    "event_packet.cc",
+    "event_packet.h",
+  ]
+
+  deps = [
+    "//apps/bluetooth/common",
+    "//lib/ftl",
+  ]
+}
+
+executable("tests") {
+  testonly = true
+  output_name = "hci_unittests"
+
+  sources = [
+    "packet_unittest.cc",
+  ]
+
+  deps = [
+    ":hci",
+    "//apps/bluetooth/common",
+    "//apps/bluetooth/test:test_main",
+    "//lib/ftl",
+    "//third_party/gtest",
+  ]
+}
