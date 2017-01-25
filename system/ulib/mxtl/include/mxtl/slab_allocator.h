@@ -508,9 +508,22 @@ public:
         if (mem == nullptr)
             return nullptr;
 
-        // Construct the object, then record the slab allocator it came from so
-        // it can be returned later on.
-        ObjType* obj = new (mem) ObjType(mxtl::forward<ConstructorSignature>(args)...);
+        // Construct the object
+        //
+        // Note: This rather odd forwarding of this construction operation to
+        // the non-internal form of the slab allocator is deliberate.  This
+        // prevents object with private constructors from needing to be friends
+        // of a mxtl::internal class (a class which they should not need to know
+        // about).
+        ObjType* obj = ::mxtl::SlabAllocator<SATraits>::ConstructObject(
+                mem,
+                mxtl::forward<ConstructorSignature>(args)...);
+
+        // Now, record the slab allocator this object came from so it can be
+        // returned later on.
+        //
+        // Note: This is a no-op in the case of an object which came from a
+        // static slab allocator (who's road home is determined purely by type)
         SlabOriginSetter<SATraits>::SetOrigin(obj, this);
 
         return PtrTraits::CreatePtr(obj);
@@ -603,6 +616,14 @@ public:
         : BaseAllocatorType(max_slabs, alloc_initial) { }
 
     ~SlabAllocator() { }
+
+private:
+    friend class internal::SlabAllocator<SATraits>; // internal::SA<> gets to call ConstructObject
+
+    template <typename... ConstructorSignature>
+    static ObjType* ConstructObject(void* mem, ConstructorSignature&&... args) {
+        return new (mem) ObjType(mxtl::forward<ConstructorSignature>(args)...);
+    }
 };
 
 template <typename SATraits>
@@ -683,7 +704,14 @@ public:
     static size_t max_slabs() { return allocator_.max_slabs(); }
 
 private:
-    friend class SlabAllocated<SATraits>;
+    friend class SlabAllocated<SATraits>;           // SlabAllocated<> gets to call ReturnToFreeList
+    friend class internal::SlabAllocator<SATraits>; // internal::SA<> gets to call ConstructObject
+
+    template <typename... ConstructorSignature>
+    static ObjType* ConstructObject(void* mem, ConstructorSignature&&... args) {
+        return new (mem) ObjType(mxtl::forward<ConstructorSignature>(args)...);
+    }
+
     static void ReturnToFreeList(void* ptr) { allocator_.ReturnToFreeList(ptr); }
     static InternalAllocatorType allocator_;
 };
