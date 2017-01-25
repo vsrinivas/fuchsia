@@ -42,13 +42,13 @@ LIBFS_SRCS += vfs.c
 LIBMXCPP_SRCS := new.cpp pure_virtual.cpp
 
 OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.cpp.o,$(SRCS))
-DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(SRCS))
+DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.cpp.d,$(SRCS))
 LIBMINFS_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.cpp.o,$(LIBMINFS_SRCS))
-LIBMINFS_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.d,$(LIBMINFS_SRCS))
+LIBMINFS_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/uapp/minfs/%.cpp.d,$(LIBMINFS_SRCS))
 LIBFS_OBJS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.c.o,$(LIBFS_SRCS))
-LIBFS_DEPS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.d,$(LIBFS_SRCS))
+LIBFS_DEPS := $(patsubst %.c,$(BUILDDIR)/host/system/ulib/fs/%.c.d,$(LIBFS_SRCS))
 LIBMXCPP_OBJS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/mxcpp/%.cpp.o,$(LIBMXCPP_SRCS))
-LIBMXCPP_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/mxcpp/%.d,$(LIBMXCPP_SRCS))
+LIBMXCPP_DEPS := $(patsubst %.cpp,$(BUILDDIR)/host/system/ulib/mxcpp/%.cpp.d,$(LIBMXCPP_SRCS))
 MINFS_TOOLS := $(BUILDDIR)/tools/minfs
 
 ifeq ($(call TOBOOL,$(ENABLE_BUILD_MINFS_FUSE)),true)
@@ -75,6 +75,7 @@ $(LIBFS_OBJS): $(BUILDDIR)/host/%.c.o: %.c
 
 $(BUILDDIR)/tools/minfs: $(OBJS) $(LIBMINFS_OBJS) $(LIBFS_OBJS) $(LIBMXCPP_OBJS)
 	@echo linking $@
+	@$(MKDIR)
 	$(NOECHO)$(HOST_CC) $(MINFS_LDFLAGS) -o $@ $^
 
 $(BUILDDIR)/host/system/uapp/minfs/fuse.cpp.o: system/uapp/minfs/fuse.cpp
