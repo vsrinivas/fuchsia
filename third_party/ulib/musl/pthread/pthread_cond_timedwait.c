@@ -2,8 +2,6 @@
 #include "pthread_impl.h"
 
 void __pthread_testcancel(void);
-int __pthread_mutex_lock(pthread_mutex_t*);
-int __pthread_mutex_unlock(pthread_mutex_t*);
 int __pthread_setcancelstate(int, int*);
 
 /*
@@ -62,8 +60,8 @@ enum {
     LEAVING,
 };
 
-int __pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict m,
-                             const struct timespec* restrict ts) {
+int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict m,
+                           const struct timespec* restrict ts) {
     struct waiter node = {};
     int e, seq, clock = c->_c_clock, cs, oldstate, tmp;
     volatile int* fut;
@@ -90,7 +88,7 @@ int __pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restri
 
     unlock(&c->_c_lock);
 
-    __pthread_mutex_unlock(m);
+    pthread_mutex_unlock(m);
 
     __pthread_setcancelstate(PTHREAD_CANCEL_MASKED, &cs);
     if (cs == PTHREAD_CANCEL_DISABLE)
@@ -203,5 +201,3 @@ void __private_cond_signal(void* condvar, int n) {
     if (first)
         unlock(&first->barrier);
 }
-
-weak_alias(__pthread_cond_timedwait, pthread_cond_timedwait);

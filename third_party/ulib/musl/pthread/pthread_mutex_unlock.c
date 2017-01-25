@@ -2,7 +2,7 @@
 
 #include "futex_impl.h"
 
-int __pthread_mutex_unlock(pthread_mutex_t* m) {
+int pthread_mutex_unlock(pthread_mutex_t* m) {
     int waiters = m->_m_waiters;
     int cont;
     int type = m->_m_type & 15;
@@ -18,5 +18,3 @@ int __pthread_mutex_unlock(pthread_mutex_t* m) {
         __wake(&m->_m_lock, 1);
     return 0;
 }
-
-weak_alias(__pthread_mutex_unlock, pthread_mutex_unlock);
