@@ -74,9 +74,6 @@ class MediaSourceImpl : public MediaServiceImpl::Product<MediaSource>,
     std::unique_ptr<StreamType> stream_type_;
   };
 
-  // Reports a problem via status.
-  void ReportProblem(const std::string& type, const std::string& details);
-
   // Handles a status update from the demux. When called with the default
   // argument values, initiates demux status updates.
   void HandleDemuxStatusUpdates(uint64_t version = MediaSource::kInitialStatus,

@@ -102,7 +102,7 @@ void MediaDemuxImpl::ReportProblem(const std::string& type,
                                    const std::string& details) {
   problem_ = Problem::New();
   problem_->type = type;
-  problem_->details = details;
+  problem_->details = details.empty() ? nullptr : details;
   status_publisher_.SendUpdates();
 }
 

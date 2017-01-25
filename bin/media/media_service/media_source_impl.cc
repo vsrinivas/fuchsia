@@ -83,14 +83,6 @@ MediaSourceImpl::MediaSourceImpl(
 
 MediaSourceImpl::~MediaSourceImpl() {}
 
-void MediaSourceImpl::ReportProblem(const std::string& type,
-                                    const std::string& details) {
-  problem_ = Problem::New();
-  problem_->type = type;
-  problem_->details = details;
-  status_publisher_.SendUpdates();
-}
-
 void MediaSourceImpl::Describe(const DescribeCallback& callback) {
   init_complete_.When([this, callback]() {
     fidl::Array<MediaTypePtr> result =
