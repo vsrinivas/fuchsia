@@ -1,4 +1,3 @@
-#include "libc.h"
 #include <wchar.h>
 #include <wctype.h>
 
@@ -13,8 +12,6 @@ int iswspace(wint_t wc) {
     return wc && wcschr(spaces, wc);
 }
 
-int __iswspace_l(wint_t c, locale_t l) {
+int iswspace_l(wint_t c, locale_t l) {
     return iswspace(c);
 }
-
-weak_alias(__iswspace_l, iswspace_l);

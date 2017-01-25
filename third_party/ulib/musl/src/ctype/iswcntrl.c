@@ -1,4 +1,3 @@
-#include "libc.h"
 #include <wctype.h>
 
 int iswcntrl(wint_t wc) {
@@ -6,8 +5,6 @@ int iswcntrl(wint_t wc) {
            (unsigned)(wc - 0xfff9) < 3;
 }
 
-int __iswcntrl_l(wint_t c, locale_t l) {
+int iswcntrl_l(wint_t c, locale_t l) {
     return iswcntrl(c);
 }
-
-weak_alias(__iswcntrl_l, iswcntrl_l);
