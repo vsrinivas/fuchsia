@@ -12,9 +12,9 @@
 #include <mxtl/mutex.h>
 #include <mxtl/null_lock.h>
 #include <mxtl/ref_ptr.h>
+#include <mxtl/slab_malloc.h>
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
-#include <stdlib.h>
 
 // Usage Notes:
 //
@@ -377,7 +377,7 @@ public:
             DEBUG_ASSERT((bytes_used % alloc_size_) == 0);
             allocated_count += (bytes_used / alloc_size_);
 #endif
-            ::free(reinterpret_cast<void*>(free_me));
+            SlabMalloc::Free(reinterpret_cast<void*>(free_me));
         }
 
         // Make sure that everything which was ever allocated had been returned
@@ -409,7 +409,7 @@ protected:
 
         // If we are allowed to allocate new slabs, try to do so.
         if (slab_count_ < max_slabs_) {
-            void* slab_mem = aligned_alloc(slab_alignment_, slab_size_);
+            void* slab_mem = SlabMalloc::Allocate(slab_size_, slab_alignment_);
             if (slab_mem != nullptr) {
                 Slab* slab = new (slab_mem) Slab(initial_slab_used_);
 
