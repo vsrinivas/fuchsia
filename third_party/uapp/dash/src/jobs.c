@@ -1027,6 +1027,9 @@ dowait(int block, struct job *job)
 		do {
 			status = process_await_termination (sp->pid, false);
 			if (status >= 0) {
+				// Convert status to something that looks
+				// like a wait()-generated status.
+				status = (status & 0xff) << 8;
 				TRACE(("Job %d: changing status of proc %d from 0x%x to 0x%x\n", jobno(jp), pid, sp->status, status));
 				sp->status = status;
 				thisjob = jp;
