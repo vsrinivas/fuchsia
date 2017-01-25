@@ -72,10 +72,6 @@
             "bootfs_path": "apps/hello_app_parent"
         },
         {
-            "binary": "resolver",
-            "bootfs_path": "apps/resolver"
-        },
-        {
             "binary": "run_component",
             "bootfs_path": "apps/run_component"
         },
