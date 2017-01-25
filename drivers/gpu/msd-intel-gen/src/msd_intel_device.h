@@ -99,6 +99,7 @@ private:
 
     // MsdIntelConnection::Owner
     bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
+    void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
 
 private:
     MsdIntelDevice();
@@ -110,6 +111,7 @@ private:
     void HangCheck();
 
     void ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
+    void ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
     void ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
                      magma_system_pageflip_callback_t callback, void* data);
 
@@ -155,7 +157,7 @@ private:
 
     class CommandBufferRequest;
     class FlipRequest;
-    class WaitRenderingRequest;
+    class DestroyContextRequest;
 
     // Thread-shared data members
     std::shared_ptr<magma::Monitor> monitor_;

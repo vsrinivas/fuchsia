@@ -111,7 +111,18 @@ bool ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void msd_context_destroy(msd_context* ctx) { delete MsdIntelAbiContext::cast(ctx); }
+void msd_context_destroy(msd_context* ctx)
+{
+    auto abi_context = MsdIntelAbiContext::cast(ctx);
+    // get a copy of the shared ptr
+    auto client_context = abi_context->ptr();
+    // delete the abi container
+    delete abi_context;
+    // can safely unmap contexts only from the device thread; for that we go through the connection
+    auto connection = client_context->connection().lock();
+    DASSERT(connection);
+    connection->DestroyContext(std::move(client_context));
+}
 
 magma_status_t msd_context_execute_command_buffer(msd_context* ctx, msd_buffer* cmd_buf,
                                                   msd_buffer** exec_resources)

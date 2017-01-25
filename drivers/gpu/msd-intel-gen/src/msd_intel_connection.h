@@ -11,11 +11,14 @@
 #include "msd.h"
 #include <memory>
 
+class ClientContext;
+
 class MsdIntelConnection {
 public:
     class Owner {
     public:
         virtual bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
+        virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
     };
 
     MsdIntelConnection(Owner* owner) : owner_(owner) {}
@@ -25,6 +28,10 @@ public:
     bool SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
     {
         return owner_->SubmitCommandBuffer(std::move(cmd_buf));
+    }
+    void DestroyContext(std::shared_ptr<ClientContext> client_context)
+    {
+        return owner_->DestroyContext(std::move(client_context));
     }
 
 private:

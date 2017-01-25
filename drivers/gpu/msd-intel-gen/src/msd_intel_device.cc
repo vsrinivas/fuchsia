@@ -29,6 +29,23 @@ private:
     std::unique_ptr<CommandBuffer> command_buffer_;
 };
 
+class MsdIntelDevice::DestroyContextRequest : public DeviceRequest {
+public:
+    DestroyContextRequest(std::shared_ptr<ClientContext> client_context)
+        : client_context_(std::move(client_context))
+    {
+    }
+
+protected:
+    void Process(MsdIntelDevice* device) override
+    {
+        device->ProcessDestroyContext(std::move(client_context_));
+    }
+
+private:
+    std::shared_ptr<ClientContext> client_context_;
+};
+
 class MsdIntelDevice::FlipRequest : public DeviceRequest {
 public:
     FlipRequest(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_pageflip_callback_t callback,
@@ -263,6 +280,14 @@ bool MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_
     return true;
 }
 
+void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_context)
+{
+    DLOG("DestroyContext");
+    CHECK_THREAD_NOT_CURRENT(device_thread_id_);
+
+    EnqueueDeviceRequest(std::make_unique<DestroyContextRequest>(std::move(client_context)));
+}
+
 void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
                           magma_system_pageflip_callback_t callback, void* data)
 {
@@ -410,6 +435,13 @@ void MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command
     }
 
     progress_.Submitted(sequence_number);
+}
+
+void MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContext> client_context)
+{
+    DLOG("ProcessDestroyContext");
+    CHECK_THREAD_IS_CURRENT(device_thread_id_);
+    // Just let it go out of scope
 }
 
 void MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,

@@ -71,6 +71,8 @@ public:
 
     std::shared_ptr<AddressSpace> exec_address_space() { return exec_address_space_; }
 
+    std::weak_ptr<MsdIntelConnection> connection() { return connection_; }
+
 private:
     std::weak_ptr<MsdIntelConnection> connection_;
     std::shared_ptr<AddressSpace> exec_address_space_;
