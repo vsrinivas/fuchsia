@@ -245,6 +245,12 @@ int usage(void) {
             "\n"
             "options:  -v         some debug messages\n"
             "          -vv        all debug messages\n"
+#ifdef __Fuchsia__
+            "\n"
+            "On Fuchsia, MinFS takes the block device argument by handle.\n"
+            "This can make 'minfs' commands hard to invoke from command line.\n"
+            "Try using the [mkfs,fsck,mount,umount] commands instead\n"
+#endif
             "\n");
     for (unsigned n = 0; n < (sizeof(CMDS) / sizeof(CMDS[0])); n++) {
         fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:",
@@ -348,6 +354,10 @@ found:
 #endif
     if (size == 0) {
         size = get_size(fd);
+        if (size == 0) {
+            fprintf(stderr, "minfs: failed to access block device\n");
+            return usage();
+        }
     }
     size /= kMinfsBlockSize;
 
