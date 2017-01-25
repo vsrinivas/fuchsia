@@ -53,6 +53,7 @@ mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
 }
 
 // Sends an 'unmount' signal on the srv handle, and waits until it is closed.
+// Consumes 'srv'.
 static mx_status_t txn_unmount(mx_handle_t srv) {
     mxrio_msg_t msg;
     memset(&msg, 0, MXRIO_HDR_SZ);
@@ -81,7 +82,13 @@ static mx_status_t txn_unmount(mx_handle_t srv) {
     // filesystem server (or even if it supports the unmount operation). As
     // soon as ANY response comes back, either in the form of a closed handle
     // or a visible response, shut down.
-    return mx_channel_call(srv, 0, MX_TIME_INFINITE, &args, &dsize, &hcount, &rs);
+    mx_status_t status = mx_channel_call(srv, 0, MX_TIME_INFINITE, &args, &dsize, &hcount, &rs);
+    if (status == ERR_CALL_FAILED) {
+        // Write phase succeeded. The target filesystem had a chance to unmount properly.
+        status = NO_ERROR;
+    }
+    mx_handle_close(srv);
+    return status;
 }
 
 static mx_status_t do_unmount(mount_node_t* mount_point) {
@@ -89,7 +96,6 @@ static mx_status_t do_unmount(mount_node_t* mount_point) {
     if ((status = txn_unmount(mount_point->vn->remote)) < 0) {
         printf("Unexpected error unmounting filesystem: %d\n", status);
     }
-    mx_handle_close(mount_point->vn->remote);
     vnode_t* vn = mount_point->vn;
     free(mount_point);
     vn->remote = 0;
