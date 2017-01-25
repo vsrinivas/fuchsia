@@ -12,7 +12,6 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \
-    $(LOCAL_DIR)/decompress.c \
     $(LOCAL_DIR)/userboot-elf.c \
     $(LOCAL_DIR)/option.c \
     $(LOCAL_DIR)/start.c \
@@ -38,7 +37,7 @@ MODULE_COMPILEFLAGS += -Ithird_party/ulib/lz4/include/lz4 -DWITH_LZ4_NOALLOC
 # Make sure there are never any PLT entries generated.
 MODULE_COMPILEFLAGS += -fvisibility=hidden
 
-MODULE_STATIC_LIBS := ulib/elfload ulib/runtime
+MODULE_STATIC_LIBS := ulib/elfload ulib/runtime ulib/bootdata
 MODULE_HEADER_DEPS := ulib/magenta
 
 # This generated header lists all the ABI symbols in the vDSO with their

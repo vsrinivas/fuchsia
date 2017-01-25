@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include "bootfs.h"
-#include "decompress.h"
 #include "userboot-elf.h"
 #include "option.h"
 #include "util.h"
 
 #pragma GCC visibility push(hidden)
 
+#include <bootdata/decompress.h>
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/log.h>
