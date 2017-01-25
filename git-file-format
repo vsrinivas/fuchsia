@@ -22,14 +22,17 @@ if platform.platform().startswith("Darwin"):
     ossuffix = "darwin"
 CLANG_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "toolchain",
                            "clang+llvm-x86_64-%s" % ossuffix, "bin", "clang-format")
+DART_TOOL = os.path.join(paths.DART_ROOT, "bin", "dartfmt")
 GN_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "gn")
 
 C_CMD = [CLANG_TOOL, "-style=file", "-fallback-style=Chromium", "-i"]
+DART_CMD = [DART_TOOL, "-w"]
 GN_CMD = [GN_TOOL, "format"]
 
 EXT_TO_COMMAND = {
     ".cc": C_CMD,
     ".cpp": C_CMD,
+    ".dart": DART_CMD,
     ".gn": GN_CMD,
     ".gni": GN_CMD,
     ".h": C_CMD,
