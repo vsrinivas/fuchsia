@@ -297,7 +297,9 @@ size_t x86_extended_register_size(void) {
 
 void x86_extended_register_init_state(void *register_state)
 {
-    memcpy(register_state, extended_register_init_state, register_state_size);
+    // Copy the initialization state; this overcopies on systems that fall back
+    // to fxsave, but the buffer is required to be large enough.
+    memcpy(register_state, extended_register_init_state, sizeof(extended_register_init_state));
 }
 
 void x86_extended_register_save_state(void *register_state)
