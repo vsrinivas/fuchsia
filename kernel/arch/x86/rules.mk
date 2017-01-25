@@ -178,8 +178,6 @@ ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -mskip-rax-setup
 endif
 
-USER_COMPILEFLAGS += -mfsgsbase
-
 # Turn on -fasynchronous-unwind-tables to get .eh_frame.
 # [While this is the default on x86 we make this explicit.]
 # This is necessary for unwinding through optimized code.

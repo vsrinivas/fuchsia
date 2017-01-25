@@ -7,7 +7,6 @@
 #include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/object.h>
-#include <stdint.h>
 
 __BEGIN_CDECLS
 
@@ -46,10 +45,16 @@ static inline void mxr_tp_set(mx_handle_t self, void* tp) {
 
 #elif defined(__x86_64__)
 static inline void* mxr_tp_get(void) {
-    return (void*)__builtin_ia32_rdfsbase64();
+    void* tp;
+    __asm__ __volatile__("mov %%fs:0,%0"
+                         : "=r"(tp));
+    return tp;
 }
 static inline void mxr_tp_set(mx_handle_t self, void* tp) {
-    __builtin_ia32_wrfsbase64((uintptr_t)tp);
+    mx_status_t status = _mx_object_set_property(
+        self, MX_PROP_REGISTER_FS, (uintptr_t*)&tp, sizeof(uintptr_t));
+    if (status != NO_ERROR)
+        __builtin_trap();
 }
 
 #else
