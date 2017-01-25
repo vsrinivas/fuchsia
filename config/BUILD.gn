@@ -110,6 +110,9 @@ config("executable_config") {
   configs = []
 
   if (current_os == "fuchsia") {
-    configs += [ "//build/config/fuchsia:executable_config" ]
+    configs += [
+        "//build/config/fuchsia:executable_config",
+        "//build/config/fuchsia:mxio_config",
+    ]
   }
 }

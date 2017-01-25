@@ -67,11 +67,11 @@ config("shared_library_config") {
   cflags = [ "-fPIC" ]
 }
 
-config("executable_config") {
+config("mxio_config") {
   libs = [
-    # TODO: Depending on mxio implicitly is wrong. This is currently needed so
-    # printf() works, but we should wire that in explicitly and require
-    # applications that want to use mxio declare their dependency explicitly.
     "mxio",
   ]
+}
+
+config("executable_config") {
 }
