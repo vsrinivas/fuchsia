@@ -8,6 +8,7 @@
 
 #include "apps/ledger/services/internal/internal.fidl.h"
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/maxwell/services/context/context_engine.fidl.h"
 #include "apps/maxwell/services/launcher/launcher.fidl.h"
 #include "apps/maxwell/services/resolver/resolver.fidl.h"
 #include "apps/maxwell/services/suggestion/suggestion_provider.fidl.h"
@@ -135,8 +136,17 @@ class UserRunnerImpl : public UserRunner {
     maxwell_launcher->Initialize(std::move(story_provider_aux),
                                  std::move(focus_controller));
 
+    auto context_engine =
+        ConnectToService<maxwell::ContextEngine>(maxwell_services.get());
     auto suggestion_provider =
         ConnectToService<maxwell::SuggestionProvider>(maxwell_services.get());
+
+    // TODO(rosswang): Do proper attribution
+    stories_scope_->AddService<maxwell::ContextPublisher>(
+        ftl::MakeCopyable([context_engine = std::move(context_engine)](
+            fidl::InterfaceRequest<maxwell::ContextPublisher> request) {
+          context_engine->RegisterPublisher("unknown", std::move(request));
+        }));
 
     user_shell_->Initialize(std::move(user_context), std::move(story_provider),
                             std::move(suggestion_provider),
