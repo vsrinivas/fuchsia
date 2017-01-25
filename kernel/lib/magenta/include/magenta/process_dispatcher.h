@@ -85,21 +85,21 @@ public:
 
     // Maps a handle value into a Handle as long we can verify that
     // it belongs to this process.
-    Handle* GetHandleLocked(mx_handle_t handle_value);
+    Handle* GetHandleLocked(mx_handle_t handle_value) TA_REQ(handle_table_lock_);
 
     // Adds |handle| to this process handle list. The handle->process_id() is
     // set to this process id().
     void AddHandle(HandleOwner handle);
-    void AddHandleLocked(HandleOwner handle);
+    void AddHandleLocked(HandleOwner handle) TA_REQ(handle_table_lock_);
 
     // Removes the Handle corresponding to |handle_value| from this process
     // handle list.
     HandleOwner RemoveHandle(mx_handle_t handle_value);
-    HandleOwner RemoveHandleLocked(mx_handle_t handle_value);
+    HandleOwner RemoveHandleLocked(mx_handle_t handle_value) TA_REQ(handle_table_lock_);
 
     // Puts back the |handle_value| which has not yet been given to another process
     // back into this process.
-    void UndoRemoveHandleLocked(mx_handle_t handle_value);
+    void UndoRemoveHandleLocked(mx_handle_t handle_value) TA_REQ(handle_table_lock_);
 
     bool GetDispatcher(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
                        uint32_t* rights);
@@ -136,10 +136,10 @@ public:
     mx_status_t BadHandle(mx_handle_t handle_value, mx_status_t error);
 
     // accessors
-    Mutex& handle_table_lock() { return handle_table_lock_; }
+    Mutex& handle_table_lock() TA_RET_CAP(handle_table_lock_) { return handle_table_lock_; }
     FutexContext* futex_context() { return &futex_context_; }
     StateTracker* state_tracker() { return &state_tracker_; }
-    State state() const { return state_; }
+    State state() const;
     mxtl::RefPtr<VmAspace> aspace() { return aspace_; }
     mxtl::RefPtr<JobDispatcher> job();
 
@@ -195,7 +195,7 @@ private:
     status_t AddThread(UserThread* t, bool initial_thread);
     void RemoveThread(UserThread* t);
 
-    void SetState(State);
+    void SetStateLocked(State) TA_REQ(state_lock_);
 
     // Kill all threads
     void KillAllThreads();
@@ -216,7 +216,7 @@ private:
     mutable Mutex thread_list_lock_;
 
     // list of threads in this process
-    mxtl::DoublyLinkedList<UserThread*> thread_list_;
+    mxtl::DoublyLinkedList<UserThread*> thread_list_ TA_GUARDED(thread_list_lock_);
 
     // our address space
     mxtl::RefPtr<VmAspace> aspace_;
@@ -226,21 +226,21 @@ private:
 
     // our list of handles
     mutable Mutex handle_table_lock_; // protects |handles_|.
-    mxtl::DoublyLinkedList<Handle*> handles_;
+    mxtl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
 
     StateTracker state_tracker_;
 
     FutexContext futex_context_;
 
     // our state
-    State state_ = State::INITIAL;
+    State state_ TA_GUARDED(state_lock_) = State::INITIAL;
     mutable Mutex state_lock_;
 
     // process return code
     int retcode_ = 0;
 
-    mxtl::RefPtr<ExceptionPort> exception_port_;
-    mxtl::RefPtr<ExceptionPort> debugger_exception_port_;
+    mxtl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
+    mxtl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(exception_lock_);
     Mutex exception_lock_;
 
     uint32_t bad_handle_policy_ = MX_POLICY_BAD_HANDLE_IGNORE;
@@ -250,10 +250,11 @@ private:
 
     // The user-friendly process name. For debug purposes only.
     // This includes the trailing NUL.
-    char name_[MX_MAX_NAME_LEN] = {};
+    char name_[MX_MAX_NAME_LEN] TA_GUARDED(name_lock_) = {};
 
+    using ProcessList = mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessListTraits>;
     static mutex_t global_process_list_mutex_;
-    static mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessListTraits> global_process_list_;
+    static ProcessList global_process_list_ TA_GUARDED(global_process_list_mutex_);
 };
 
 const char* StateToString(ProcessDispatcher::State state);

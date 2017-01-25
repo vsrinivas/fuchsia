@@ -8,6 +8,7 @@
 #pragma once
 
 #include <magenta/compiler.h>
+#include <magenta/thread_annotations.h>
 #include <arch/spinlock.h>
 
 __BEGIN_CDECLS
@@ -78,13 +79,13 @@ static inline void spin_unlock_restore(
 __END_CDECLS
 
 #ifdef __cplusplus
-class SpinLock {
+class TA_CAP("mutex") SpinLock {
 public:
-    SpinLock()        { spin_lock_init(&spinlock_); }
-    void Acquire()    { spin_lock(&spinlock_); }
-    void TryAcquire() { spin_trylock(&spinlock_); }
-    void Release()    { spin_unlock(&spinlock_); }
-    bool IsHeld()     { return spin_lock_held(&spinlock_); }
+    SpinLock()              { spin_lock_init(&spinlock_); }
+    void Acquire() TA_ACQ() { spin_lock(&spinlock_); }
+    void TryAcquire()       { spin_trylock(&spinlock_); }
+    void Release() TA_REL() { spin_unlock(&spinlock_); }
+    bool IsHeld()           { return spin_lock_held(&spinlock_); }
 
     void AcquireIrqSave(spin_lock_saved_state_t& state,
                         spin_lock_save_flags_t flags = SPIN_LOCK_FLAG_INTERRUPTS) {

@@ -10,13 +10,13 @@
 #include <kernel/spinlock.h>
 #include <mxtl/auto_lock.h>
 
-class AutoSpinLock {
+class TA_SCOPED_CAP AutoSpinLock {
 public:
     explicit AutoSpinLock(spin_lock_t& lock) : spinlock_(&lock) { acquire(); }
     explicit AutoSpinLock(SpinLock& lock) : spinlock_(lock.GetInternal()) { acquire(); }
     ~AutoSpinLock() { release(); }
 
-    void release() {
+    void release() TA_REL() {
         if (spinlock_) {
             spin_unlock(spinlock_);
             spinlock_ = nullptr;
@@ -30,7 +30,7 @@ public:
     AutoSpinLock& operator=(AutoSpinLock&& c) = delete;
 
 private:
-    void acquire() { spin_lock(spinlock_); }
+    void acquire() TA_ACQ() { spin_lock(spinlock_); }
     spin_lock_t* spinlock_;
 };
 

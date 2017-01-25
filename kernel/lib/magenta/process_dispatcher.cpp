@@ -41,8 +41,7 @@ static constexpr mx_rights_t kDefaultProcessRights =
 mutex_t ProcessDispatcher::global_process_list_mutex_ =
     MUTEX_INITIAL_VALUE(global_process_list_mutex_);
 
-mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::ProcessListTraits>
-    ProcessDispatcher::global_process_list_;
+ProcessDispatcher::ProcessList ProcessDispatcher::global_process_list_;
 
 mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
     // Ensure that the last bit of the result is not zero and that
@@ -184,13 +183,17 @@ void ProcessDispatcher::Exit(int retcode) {
         retcode_ = retcode;
 
         // enter the dying state, which should kill all threads
-        SetState(State::DYING);
+        SetStateLocked(State::DYING);
     }
 
     UserThread::GetCurrent()->Exit();
 }
 
-void ProcessDispatcher::Kill() {
+// Thread safety analysis is disabled here as we read |thread_list_| to see if it is empty without
+// holding |thread_list_lock_|. This is safe as |thread_list_| is only mutated when the
+// |state_lock_|, which we hold here, is held. The |thread_list_lock_| is used to protect
+// non-mutating queries that don't want to hold |state_lock_|, such as in GetThreads().
+void ProcessDispatcher::Kill() TA_NO_THREAD_SAFETY_ANALYSIS {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(state_lock_);
@@ -208,11 +211,11 @@ void ProcessDispatcher::Kill() {
 
     // if we have no threads, enter the dead state directly
     if (thread_list_.is_empty()) {
-        SetState(State::DEAD);
+        SetStateLocked(State::DEAD);
     } else {
         // enter the dying state, which should trigger a thread kill.
         // the last thread exiting will transition us to DEAD
-        SetState(State::DYING);
+        SetStateLocked(State::DYING);
     }
 }
 
@@ -250,7 +253,7 @@ status_t ProcessDispatcher::AddThread(UserThread* t, bool initial_thread) {
     DEBUG_ASSERT(t->process() == this);
 
     if (initial_thread)
-        SetState(State::RUNNING);
+        SetStateLocked(State::RUNNING);
 
     return NO_ERROR;
 }
@@ -277,12 +280,12 @@ void ProcessDispatcher::RemoveThread(UserThread* t) {
     // if this was the last thread, transition directly to DEAD state
     if (thread_list_.is_empty()) {
         LTRACEF("last thread left the process %p, entering DEAD state\n", this);
-        SetState(State::DEAD);
+        SetStateLocked(State::DEAD);
     }
 }
 
 
-void ProcessDispatcher::on_zero_handles() {
+void ProcessDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
     LTRACE_ENTRY_OBJ;
 
     // check that we're not already entering a dead state
@@ -301,18 +304,23 @@ mx_koid_t ProcessDispatcher::get_inner_koid() const {
     return job_ ? job_->get_koid() : 0ull;
 }
 
+ProcessDispatcher::State ProcessDispatcher::state() const {
+    AutoLock lock(state_lock_);
+    return state_;
+}
+
 mxtl::RefPtr<JobDispatcher> ProcessDispatcher::job() {
     return job_;
 }
 
-void ProcessDispatcher::SetState(State s) {
+void ProcessDispatcher::SetStateLocked(State s) {
     LTRACEF("process %p: state %u (%s)\n", this, static_cast<unsigned int>(s), StateToString(s));
 
     DEBUG_ASSERT(state_lock_.IsHeld());
 
     // look for some invalid state transitions
     if (state_ == State::DEAD && s != State::DEAD) {
-        panic("ProcessDispatcher::SetState invalid state transition from DEAD to !DEAD\n");
+        panic("ProcessDispatcher::SetStateLocked invalid state transition from DEAD to !DEAD\n");
         return;
     }
 
@@ -439,8 +447,11 @@ status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
     default:
         break;
     }
-    if (debugger_exception_port_) {  // TODO: Protect with rights if necessary.
-        info->debugger_attached = true;
+    {
+        AutoLock lock(exception_lock_);
+        if (debugger_exception_port_) {  // TODO: Protect with rights if necessary.
+            info->debugger_attached = true;
+        }
     }
 
     return NO_ERROR;
