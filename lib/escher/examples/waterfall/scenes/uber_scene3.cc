@@ -32,6 +32,11 @@ void UberScene3::Init(escher::Stage* stage) {
   bg_->set_color(vec3(0.8f, 0.8f, 0.8f));
   color1_->set_color(vec3(157.f / 255.f, 183.f / 255.f, 189.f / 255.f));
   color2_->set_color(vec3(63.f / 255.f, 138.f / 255.f, 153.f / 255.f));
+
+  MeshSpec spec{MeshAttribute::kPosition | MeshAttribute::kPositionOffset |
+                MeshAttribute::kPerimeterPos | MeshAttribute::kUV};
+  ring_mesh_ = escher::NewRingMesh(escher(), spec, 8, vec2(0.f, 0.f), 75.f,
+                                   55.f, 18.f, -15.f);
 }
 
 UberScene3::~UberScene3() {}
@@ -49,7 +54,8 @@ escher::Model* UberScene3::Update(const escher::Stopwatch& stopwatch,
 
   std::vector<Object> objects;
 
-  float PI = 3.14159265359f;
+  constexpr float PI = 3.14159265359f;
+  constexpr float TWO_PI = PI * 2.f;
   float hex_circle_diameter = 170.f;
   float hex_circle_radius = hex_circle_diameter / 2.0f;
   float col_width = hex_circle_radius / tan(30.f * 180.f / PI);
@@ -107,10 +113,15 @@ escher::Model* UberScene3::Update(const escher::Stopwatch& stopwatch,
           hex_circle_radius * circle_scale, circle_elevation, color2_));
       objects.push_back(circle);
 
-      Object circle_bg(
-          Object::NewCircle(vec2(hex_current_x_pos, hex_current_y_pos),
-                            hex_circle_radius * circle_scale_alt,
-                            circle_elevation - 4.f, color1_));
+      Object circle_bg(ring_mesh_, vec3(hex_current_x_pos, hex_current_y_pos,
+                                        circle_elevation - 4.f),
+                       color1_, vec2(circle_scale_alt, circle_scale_alt));
+      circle_bg.set_shape_modifiers(ShapeModifier::kWobble);
+      escher::ModifierWobble wobble_data{
+          {{-0.3f * TWO_PI, 0.1f, 7.f * TWO_PI},
+           {-0.2f * TWO_PI, 0.05f, 23.f * TWO_PI},
+           {1.f * TWO_PI, 0.25f, 5.f * TWO_PI}}};
+      circle_bg.set_shape_modifier_data(wobble_data);
       objects.push_back(circle_bg);
 
       circle_index++;

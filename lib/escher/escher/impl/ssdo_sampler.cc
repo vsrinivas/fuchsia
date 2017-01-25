@@ -142,6 +142,10 @@ constexpr char g_sampler_fragment_src[] = R"GLSL(
     }
     L = clamp(L / float(kTapCount), 0.0, 1.0);
 
+    // TODO: This ensures that shadows aren't pure-black.  Replace this with
+    // something more principled/controllable.
+    L = L * 0.75 + 0.25;
+
     outColor = vec4(L, sampled_depth, 0.0, 1.0);
   }
 )GLSL";

@@ -22,6 +22,7 @@ class UberScene3 : public Scene {
  private:
   std::unique_ptr<escher::Model> model_;
 
+  escher::MeshPtr ring_mesh_;
   escher::MaterialPtr bg_;
 
   escher::MaterialPtr color1_;
