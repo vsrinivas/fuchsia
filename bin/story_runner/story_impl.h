@@ -17,7 +17,6 @@
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
-#include "apps/modular/services/story/resolver.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
