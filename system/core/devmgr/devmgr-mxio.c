@@ -60,82 +60,39 @@ void devmgr_launch(mx_handle_t job,
         NULL
     };
 
-    printf("devmgr: launch %s (%s)\n", argv[0], name);
-
-    mx_handle_t job_copy;
-    mx_status_t r;
-    if ((r = mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_copy)) < 0) {
-        goto done_no_lp;
-    }
+    mx_handle_t job_copy = MX_HANDLE_INVALID;;
+    mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_copy);
 
     launchpad_t* lp;
-    if ((r = launchpad_create(job_copy, name, &lp)) < 0) {
-        goto done_no_lp;
-    }
-
-    // TODO: launchpad_load_file(lp, path) & launchpad_load_vmo(lp, vmo)
-    if ((r = launchpad_elf_load(lp, launchpad_vmo_from_file(argv[0]))) < 0) {
-        goto done;
-    }
-    if ((r = launchpad_load_vdso(lp, MX_HANDLE_INVALID)) < 0) {
-        goto done;
-    }
-    if ((r = launchpad_add_vdso_vmo(lp)) < 0) {
-        goto done;
-    }
-
-    if ((r = launchpad_arguments(lp, argc, argv)) < 0) {
-        goto done;
-    }
-    if ((r = launchpad_environ(lp, env)) < 0) {
-        goto done;
-    }
+    launchpad_create(job_copy, name, &lp);
+    launchpad_load_from_file(lp, argv[0]);
+    launchpad_arguments(lp, argc, argv);
+    launchpad_environ(lp, env);
 
     mx_handle_t h = vfs_create_global_root_handle();
-    if ((r = launchpad_add_handle(lp, h, MX_HND_TYPE_MXIO_ROOT)) < 0) {
-        mx_handle_close(h);
-        goto done;
-    }
+    launchpad_add_handle(lp, h, MX_HND_TYPE_MXIO_ROOT);
 
     if (stdiofd < 0) {
+        mx_status_t r;
         if ((r = mx_log_create(0, &h) < 0)) {
-            goto done;
-        }
-        if ((r = launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 0))) < 0) {
-            goto done;
+            launchpad_abort(lp, r, "devmgr: cannot create debuglog handle");
+        } else {
+            launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 0));
         }
     } else {
-        r = launchpad_clone_fd(lp, stdiofd, MXIO_FLAG_USE_FOR_STDIO | 0);
+        launchpad_clone_fd(lp, stdiofd, MXIO_FLAG_USE_FOR_STDIO | 0);
         close(stdiofd);
-        stdiofd = -1;
-        if (r < 0) {
-            goto done;
-        }
     }
-    if ((r = launchpad_add_handles(lp, hcount, handles, types)) < 0) {
-        goto done;
-    }
-    hcount = 0;
 
-    if ((h = launchpad_start(lp)) < 0) {
-        printf("devmgr: launchpad_start() %s (%s) failed: %d\n", argv[0], name, h);
-        r = 0;
+    launchpad_add_handles(lp, hcount, handles, types);
+
+    const char* errmsg;
+    mx_status_t status = launchpad_go(lp, NULL, &errmsg);
+    if (status < 0) {
+        printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
+               argv[0], name, launchpad_error_message(lp), h);
     } else {
-        mx_handle_close(h);
-    }
-
-done:
-    launchpad_destroy(lp);
-
-done_no_lp:
-    while (hcount > 0) {
-        mx_handle_close(handles[--hcount]);
-    }
-    if (stdiofd >= 0) {
-        close(stdiofd);
-    }
-    if (r < 0) {
-        printf("devmgr: launch %s (%s): failed: %d\n", argv[0], name, r);
+        printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
 }
 
