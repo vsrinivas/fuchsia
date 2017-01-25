@@ -243,18 +243,19 @@ mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
                     mx_signals_t signals) {
   debug("do_open: msg->datalen=%d\n", msg->datalen);
 
-  char* path = (char*)msg->data;
-  if ((msg->datalen < 1) || (msg->datalen > 1024)) {
-    return ERR_INVALID_ARGS;
-  }
-  path[msg->datalen] = '\0';
-  debug("do_open: path \"%s\"\n", path);
-
+  mx_status_t r = NO_ERROR;
   mx_handle_t peer_rio_h = MX_HANDLE_INVALID;
   mx_handle_t peer_data_h = MX_HANDLE_INVALID;
   int hcount = 0;
 
-  mx_status_t r;
+  char* path = (char*)msg->data;
+  if ((msg->datalen < 1) || (msg->datalen > 1024)) {
+    r = ERR_INVALID_ARGS;
+    goto reply;
+  }
+  path[msg->datalen] = '\0';
+  debug("do_open: path \"%s\"\n", path);
+
   if (MATCH_SUBDIR(path, MXRIO_SOCKET_DIR_NONE)) {
     r = do_none(msg, ios, events, MX_SIGNAL_NONE, &peer_rio_h, &peer_data_h,
                 &hcount);
@@ -269,6 +270,7 @@ mx_status_t do_open(mxrio_msg_t* msg, iostate_t* ios, int events,
     r = ERR_INVALID_ARGS;
   }
 
+ reply:
   debug("do_open: r=%d peer_rio_h=%d peer_data_h=%d hcount=%d\n", r, peer_rio_h,
         peer_data_h, hcount);
 
@@ -979,14 +981,14 @@ static void discard_handles(mx_handle_t* handles, unsigned count) {
 
 static void send_status(mxrio_msg_t* msg, mx_handle_t rh) {
   debug("send_status: msg->arg = %d\n", msg->arg);
-  if ((msg->arg < 0) || !is_message_valid(msg)) {
-    discard_handles(msg->handle, msg->hcount);
-    msg->datalen = 0;
-    msg->hcount = 0;
-    msg->arg = (msg->arg < 0) ? msg->arg : ERR_INTERNAL;
-  }
-
   if (MXRIO_OP(msg->op) != MXRIO_OPEN) {
+    if ((msg->arg < 0) || !is_message_valid(msg)) {
+      discard_handles(msg->handle, msg->hcount);
+      msg->datalen = 0;
+      msg->hcount = 0;
+      msg->arg = (msg->arg < 0) ? msg->arg : ERR_INTERNAL;
+    }
+
     msg->op = MXRIO_STATUS;
     if (mx_channel_write(rh, 0u, msg, MXRIO_HDR_SZ + msg->datalen, msg->handle,
                          msg->hcount) < 0) {
