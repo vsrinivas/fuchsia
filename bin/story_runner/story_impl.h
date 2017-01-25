@@ -104,7 +104,6 @@ class StoryImpl : public StoryController, ModuleWatcher {
   StoryDataPtr story_data_;
   StoryProviderImpl* const story_provider_impl_;
   std::unique_ptr<StoryStorageImpl> story_storage_impl_;
-  ResolverPtr resolver_;
 
   // Implements the primary service provided here: StoryController.
   fidl::BindingSet<StoryController> bindings_;

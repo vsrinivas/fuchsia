@@ -33,14 +33,17 @@ interface Story {
   // For now, the name is scoped to the story.
   CreateLink(string name, Link& link);
 
-  // Starts a new module. The query identifies the module in some way.
-  // Currently, it's just the URL of the application executable, but in the
-  // future it might for example be a specification of a data schema the module
-  // can provide or consume. The calling module and the new module may also
-  // interact by exchanging ServiceProviders. The calling module may provide its
-  // |outgoing_services|, and the new module may implement |incoming_services|,
-  // if an interface request is supplied.
-  StartModule(string query, Link link,
+  // Starts a new module. The module is identified by the URL of the
+  // application executable. (In the future, such a URL might be
+  // obtained, for example, from a specification of a data schema the
+  // module can provide or consume through a resolver service provided
+  // to the module separately. The parameter provided may eventually
+  // also identify a component within an application rather than just
+  // an application.) The calling module and the new module may also
+  // interact by exchanging ServiceProviders. The calling module may
+  // provide its |outgoing_services|, and the new module may implement
+  // |incoming_services|, if an interface request is supplied.
+  StartModule(string module_url, Link link,
               ServiceProvider? outgoing_services,
               ServiceProvider&? incoming_services,
               ModuleController& module_controller,

@@ -66,7 +66,6 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   using Storage = StoryStorageImpl::Storage;
   std::shared_ptr<Storage> storage() { return storage_; }
   ledger::PagePtr GetStoryPage(const fidl::Array<uint8_t>& story_page_id);
-  void ConnectToResolver(fidl::InterfaceRequest<Resolver> request);
 
   using FidlStringMap = fidl::Map<fidl::String, fidl::String>;
 
@@ -114,15 +113,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   bool ready_{};
   std::vector<fidl::InterfaceRequest<StoryProvider>> requests_;
 
-  // The apps that provide the services below which were started by
-  // this service instance through launcher_. We retain their
-  // controllers, such that when this service terminates it terminates
-  // those apps as well.
-  fidl::InterfacePtrSet<ApplicationController> apps_;
-
   ApplicationLauncherPtr launcher_;
-  ServiceProviderPtr story_runner_services_;
-  ServiceProviderPtr resolver_services_;
 
   // A list of IDs of *all* stories available on a user's ledger.
   std::unordered_set<std::string> story_ids_;

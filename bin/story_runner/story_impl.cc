@@ -12,7 +12,6 @@
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
 #include "apps/modular/services/story/link.fidl.h"
-#include "apps/modular/services/story/resolver.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
 #include "apps/modular/src/story_runner/link_impl.h"
 #include "apps/modular/src/story_runner/module_controller_impl.h"
@@ -43,8 +42,6 @@ StoryImpl::StoryImpl(
       story_provider_impl_->storage(),
       story_provider_impl_->GetStoryPage(story_data_->story_page_id),
       story_data_->story_info->id));
-
-  story_provider_impl_->ConnectToResolver(resolver_.NewRequest());
 }
 
 StoryImpl::~StoryImpl() {}
@@ -261,65 +258,56 @@ void StoryImpl::DisposeLink(LinkImpl* const link) {
 }
 
 void StoryImpl::StartModule(
-    const fidl::String& query,
+    const fidl::String& module_url,
     fidl::InterfaceHandle<Link> link,
     fidl::InterfaceHandle<ServiceProvider> outgoing_services,
     fidl::InterfaceRequest<ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
-  resolver_->Resolve(
-      query, ftl::MakeCopyable([
-        this, link = std::move(link),
-        outgoing_services = std::move(outgoing_services),
-        incoming_services = std::move(incoming_services),
-        module_controller_request = std::move(module_controller_request),
-        view_owner_request = std::move(view_owner_request)
-      ](fidl::String module_url) mutable {
-        // We currently require a 1:1 relationship between module
-        // application instances and Module service instances, because
-        // flutter only allows one ViewOwner per flutter application,
-        // and we need one ViewOwner instance per Module instance.
+  // We currently require a 1:1 relationship between module
+  // application instances and Module service instances, because
+  // flutter only allows one ViewOwner per flutter application,
+  // and we need one ViewOwner instance per Module instance.
 
-        auto launch_info = ApplicationLaunchInfo::New();
+  auto launch_info = ApplicationLaunchInfo::New();
 
-        ServiceProviderPtr app_services;
-        launch_info->services = app_services.NewRequest();
-        launch_info->url = module_url;
+  ServiceProviderPtr app_services;
+  launch_info->services = app_services.NewRequest();
+  launch_info->url = module_url;
 
-        FTL_LOG(INFO) << "StoryImpl::StartModule() " << module_url;
+  FTL_LOG(INFO) << "StoryImpl::StartModule() " << module_url;
 
-        ApplicationControllerPtr application_controller;
-        story_provider_impl_->launcher()->CreateApplication(
-            std::move(launch_info), application_controller.NewRequest());
+  ApplicationControllerPtr application_controller;
+  story_provider_impl_->launcher()->CreateApplication(
+      std::move(launch_info), application_controller.NewRequest());
 
-        mozart::ViewProviderPtr view_provider;
-        ConnectToService(app_services.get(), view_provider.NewRequest());
-        view_provider->CreateView(std::move(view_owner_request), nullptr);
+  mozart::ViewProviderPtr view_provider;
+  ConnectToService(app_services.get(), view_provider.NewRequest());
+  view_provider->CreateView(std::move(view_owner_request), nullptr);
 
-        ModulePtr module;
-        ConnectToService(app_services.get(), module.NewRequest());
+  ModulePtr module;
+  ConnectToService(app_services.get(), module.NewRequest());
 
-        fidl::InterfaceHandle<Story> self;
-        fidl::InterfaceRequest<Story> self_request = self.NewRequest();
+  fidl::InterfaceHandle<Story> self;
+  fidl::InterfaceRequest<Story> self_request = self.NewRequest();
 
-        module->Initialize(std::move(self), std::move(link),
-                           std::move(outgoing_services),
-                           std::move(incoming_services));
+  module->Initialize(std::move(self), std::move(link),
+                     std::move(outgoing_services),
+                     std::move(incoming_services));
 
-        Connection connection;
+  Connection connection;
 
-        connection.module_controller_impl.reset(
-            new ModuleControllerImpl(this, module_url,
-                                     std::move(application_controller),
-                                     std::move(module),
-                                     std::move(module_controller_request)));
+  connection.module_controller_impl.reset(
+      new ModuleControllerImpl(this, module_url,
+                               std::move(application_controller),
+                               std::move(module),
+                               std::move(module_controller_request)));
 
-        connection.story_connection.reset(new StoryConnection(
-            this, module_url, connection.module_controller_impl.get(),
-            std::move(self_request)));
+  connection.story_connection.reset(new StoryConnection(
+      this, module_url, connection.module_controller_impl.get(),
+      std::move(self_request)));
 
-        connections_.emplace_back(std::move(connection));
-      }));
+  connections_.emplace_back(std::move(connection));
 }
 
 void StoryImpl::GetLedger(const std::string& module_name,

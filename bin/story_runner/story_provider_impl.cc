@@ -10,7 +10,6 @@
 
 #include "apps/modular/lib/app/connect.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
-#include "apps/modular/services/story/resolver.fidl.h"
 #include "apps/modular/src/story_runner/story_impl.h"
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -599,20 +598,6 @@ ledger::PagePtr StoryProviderImpl::GetStoryPage(
                    });
 
   return ret;
-}
-
-void StoryProviderImpl::ConnectToResolver(
-    fidl::InterfaceRequest<Resolver> request) {
-  if (!resolver_services_.is_bound()) {
-    auto resolver_launch_info = ApplicationLaunchInfo::New();
-    resolver_launch_info->services = resolver_services_.NewRequest();
-    resolver_launch_info->url = "file:///system/apps/resolver";
-    ApplicationControllerPtr app;
-    launcher_->CreateApplication(std::move(resolver_launch_info),
-                                 app.NewRequest());
-    apps_.AddInterfacePtr(std::move(app));
-  }
-  ConnectToService(resolver_services_.get(), std::move(request));
 }
 
 void StoryProviderImpl::WriteStoryData(StoryDataPtr story_data,

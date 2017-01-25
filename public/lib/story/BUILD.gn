@@ -26,7 +26,6 @@ fidl("story") {
 # Only for implementation of modular.
 fidl("private") {
   sources = [
-    "resolver.fidl",
     "story_data.fidl",
     "story_storage.fidl",
   ]
