@@ -97,8 +97,13 @@ static void gic_set_enable(uint vector, bool enable)
 
 static void arm_gic_init_percpu(uint level)
 {
+#if ARM_GIC_V3
+    gic_write_ctlr(1); // enable GIC0
+    gic_write_pmr(0xFF); // unmask interrupts at all priority levels
+#else
     GICREG(0, GICC_CTLR) = 1; // enable GIC0
     GICREG(0, GICC_PMR) = 0xFF; // unmask interrupts at all priority levels
+#endif
 }
 
 LK_INIT_HOOK_FLAGS(arm_gic_init_percpu,
@@ -153,6 +158,10 @@ void arm_gic_init(void)
             GICREG(0, GICD_ITARGETSR(i / 4)) = gicd_itargetsr[i / 4];
         }
     }
+
+#if ARM_GIC_V3
+    gic_write_igrpen1(1);
+#endif
 
     GICREG(0, GICD_CTLR) = 1; // enable GIC0
     arm_gic_init_percpu(0);
@@ -242,7 +251,11 @@ unsigned int remap_interrupt(unsigned int vector)
 enum handler_return platform_irq(struct iframe *frame)
 {
     // get the current vector
+#if ARM_GIC_V3
+    uint32_t iar = gic_read_iar1();
+#else
     uint32_t iar = GICREG(0, GICC_IAR);
+#endif
     unsigned int vector = iar & 0x3ff;
 
     if (vector >= 0x3fe) {
@@ -268,7 +281,11 @@ enum handler_return platform_irq(struct iframe *frame)
     if (handler->handler)
         ret = handler->handler(handler->arg);
 
+#if ARM_GIC_V3
+    gic_write_eoir1(vector);
+#else
     GICREG(0, GICC_EOIR) = iar;
+#endif
 
     LTRACEF_LEVEL(2, "cpu %u exit %u\n", cpu, ret);
 

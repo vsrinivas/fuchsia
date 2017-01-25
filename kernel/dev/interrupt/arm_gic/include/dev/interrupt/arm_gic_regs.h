@@ -12,6 +12,30 @@
 
 #define GICREG(gic, reg) (*REG32(GICBASE(gic) + (reg)))
 
+#if ARM_GIC_V3
+
+/* GIC V3 system registers */
+
+#define DEFINE_ICC_SYS_REG(name, reg)                   \
+static inline uint32_t gic_read_##name(void) {          \
+    uint32_t temp;                                      \
+   __asm__ volatile("mrs %0, " reg : "=r"(temp));       \
+    return temp;                                        \
+}                                                       \
+static inline void gic_write_##name(uint32_t value) {   \
+   __asm__ volatile("msr " reg ", %0" :: "r"(value));   \
+}
+
+DEFINE_ICC_SYS_REG(ctlr, "S3_0_C12_C12_4")
+DEFINE_ICC_SYS_REG(pmr, "S3_0_C4_C6_0")
+DEFINE_ICC_SYS_REG(iar1, "S3_0_C12_C12_0")
+DEFINE_ICC_SYS_REG(sre, "S3_0_C12_C12_5")
+DEFINE_ICC_SYS_REG(bpr1, "S3_0_C12_C12_3")
+DEFINE_ICC_SYS_REG(igrpen1, "S3_0_C12_C12_7")
+DEFINE_ICC_SYS_REG(eoir1, "S3_0_C12_C12_1")
+
+#else
+
 /* main cpu regs */
 #define GICC_CTLR               (GICC_OFFSET + 0x0000)
 #define GICC_PMR                (GICC_OFFSET + 0x0004)
@@ -28,6 +52,8 @@
 #define GICC_NSAPR(n)           (GICC_OFFSET + 0x00e0 + (n) * 4)
 #define GICC_IIDR               (GICC_OFFSET + 0x00fc)
 #define GICC_DIR                (GICC_OFFSET + 0x1000)
+
+#endif // ARM_GIC_V3
 
 /* distribution regs */
 #define GICD_CTLR               (GICD_OFFSET + 0x000)
