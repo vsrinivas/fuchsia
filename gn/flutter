@@ -5,7 +5,8 @@
         "icu_data"
     ],
     "labels": [
-        "//flutter"
+        "//flutter",
+        "//lib/flutter/examples/flutter_gallery"
     ],
     "binaries": [
         {
@@ -15,6 +16,10 @@
         {
             "binary": "hello_flutter.flx",
             "bootfs_path": "apps/hello_flutter"
+        },
+        {
+            "binary": "flutter_gallery.flx",
+            "bootfs_path": "apps/flutter_gallery"
         },
         {
             "binary": "spinning_square.flx",
