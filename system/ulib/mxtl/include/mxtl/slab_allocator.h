@@ -309,12 +309,180 @@ struct SlabOriginSetter<SATraits,
                                  internal::SlabAllocator<SATraits>* origin) { }
 };
 
+// Non-templated SlabAllocatorBase.  Any code which does not strictly depend on
+// trait/type awareness lives here in order to minimize code size explosion due
+// to template expansion.
+class SlabAllocatorBase {
+protected:
+    struct FreeListEntry : public SinglyLinkedListable<FreeListEntry*> { };
+
+    struct Slab {
+        explicit Slab(size_t initial_bytes_used) : bytes_used_(initial_bytes_used) { }
+
+        void* Allocate(size_t alloc_size, size_t slab_storage_limit) {
+            if ((bytes_used_ + alloc_size) > slab_storage_limit)
+                return nullptr;
+
+            void* ret = storage_ + bytes_used_;
+            bytes_used_ += alloc_size;
+            return ret;
+        }
+
+        SinglyLinkedListNodeState<Slab*> sll_node_state_;
+        size_t                           bytes_used_;
+        uint8_t                          storage_[];
+    };
+
+    static constexpr size_t SlabOverhead = offsetof(Slab, storage_);
+
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocatorBase);
+
+    SlabAllocatorBase(size_t slab_size,
+                      size_t alloc_size,
+                      size_t alloc_alignment,
+                      size_t initial_slab_used,
+                      size_t max_slabs,
+                      bool   alloc_initial)
+        : slab_size_(slab_size),
+          slab_alignment_(max(alignof(Slab), alloc_alignment)),
+          slab_storage_limit_(slab_size - SlabOverhead + initial_slab_used),
+          alloc_size_(alloc_size),
+          initial_slab_used_(initial_slab_used),
+          max_slabs_(max_slabs) {
+        // Attempt to ensure that at least one slab has been allocated before
+        // finishing construction if the user has asked us to do so.  In some
+        // situations, this can help to ensure that allocation performance is
+        // always O(1), provided that the slab limit has been configured to be
+        // 1.
+        if (alloc_initial) {
+            // No need to take the lock here, no one can possible know about us
+            // yet.
+            void* first_alloc = AllocateLocked();
+            if (first_alloc != nullptr)
+                ReturnToFreeListLocked(first_alloc);
+        }
+    }
+
+    ~SlabAllocatorBase() {
+#if (LK_DEBUGLEVEL > 1)
+        size_t allocated_count = 0;
+#endif
+
+        while (!slab_list_.is_empty()) {
+            Slab* free_me = slab_list_.pop_front();
+#if (LK_DEBUGLEVEL > 1)
+            size_t bytes_used = free_me->bytes_used_ - initial_slab_used_;
+            DEBUG_ASSERT(free_me->bytes_used_ >= initial_slab_used_);
+            DEBUG_ASSERT((bytes_used % alloc_size_) == 0);
+            allocated_count += (bytes_used / alloc_size_);
+#endif
+            ::free(reinterpret_cast<void*>(free_me));
+        }
+
+        // Make sure that everything which was ever allocated had been returned
+        // to the free list before we were destroyed.
+        DEBUG_ASSERT(free_list_size_ == allocated_count);
+
+        // null out the free list so that it does not assert that we left
+        // unmanaged pointers on it as we destruct.
+        this->free_list_.clear_unsafe();
+    }
+
+    size_t max_slabs() const { return max_slabs_; }
+
+protected:
+    void* AllocateLocked() {
+        // If we can alloc from the free list, do so.
+        if (!free_list_.is_empty()) {
+            dec_free_list_size();
+            return free_list_.pop_front();
+        }
+
+        // If we can allocate from the currently active slab, do so.
+        if (!slab_list_.is_empty()) {
+            auto& active_slab = slab_list_.front();
+            void* mem = active_slab.Allocate(alloc_size_, slab_storage_limit_);
+            if (mem)
+                return mem;
+        }
+
+        // If we are allowed to allocate new slabs, try to do so.
+        if (slab_count_ < max_slabs_) {
+            void* slab_mem = aligned_alloc(slab_alignment_, slab_size_);
+            if (slab_mem != nullptr) {
+                Slab* slab = new (slab_mem) Slab(initial_slab_used_);
+
+                slab_count_++;
+                slab_list_.push_front(slab);
+
+                return slab->Allocate(alloc_size_, slab_storage_limit_);
+            }
+        }
+
+        // Looks like we have run out of resources.
+        return nullptr;
+    }
+
+    void ReturnToFreeListLocked(void* ptr) {
+        FreeListEntry* free_obj = new (ptr) FreeListEntry;
+        inc_free_list_size();
+        free_list_.push_front(free_obj);
+    }
+
+private:
+    // Constant properties of the allocator passed to us by our templated
+    // wrapper during construction.
+    const size_t slab_size_;
+    const size_t slab_alignment_;
+    const size_t slab_storage_limit_;
+    const size_t alloc_size_;
+    const size_t initial_slab_used_;
+    const size_t max_slabs_;
+
+    SinglyLinkedList<FreeListEntry*> free_list_;
+    SinglyLinkedList<Slab*>          slab_list_;
+    size_t                           slab_count_ = 0;
+
+#if (LK_DEBUGLEVEL > 1)
+    inline void inc_free_list_size() { ++free_list_size_; }
+    inline void dec_free_list_size() { --free_list_size_; }
+    size_t free_list_size_ = 0;
+#else
+    inline void inc_free_list_size() { }
+    inline void dec_free_list_size() { }
+#endif
+};
+
 template <typename SATraits>
-class SlabAllocator {
+class SlabAllocator : public SlabAllocatorBase {
 public:
     using PtrTraits = typename SATraits::PtrTraits;
     using PtrType   = typename SATraits::PtrType;
     using ObjType   = typename SATraits::ObjType;
+
+protected:
+    static constexpr size_t SLAB_SIZE  = SATraits::SLAB_SIZE;
+    static constexpr size_t AllocSize  = max(sizeof(FreeListEntry), sizeof(ObjType));
+    static constexpr size_t AllocAlign = max(alignof(FreeListEntry), alignof(ObjType));
+
+    static_assert(AllocAlign > 0, "Alignment requirements cannot be zero!");
+    static_assert(!(AllocSize % AllocAlign),
+                  "Allocation size must be a multiple of allocation alignment!");
+
+    static constexpr size_t SlabStorageMisalignment = SlabAllocatorBase::SlabOverhead % AllocAlign;
+    static constexpr size_t InitialSlabUse = SlabStorageMisalignment
+                                           ? AllocAlign - SlabStorageMisalignment
+                                           : 0;
+    static constexpr size_t TotalSlabOverhead = SlabAllocatorBase::SlabOverhead + InitialSlabUse;
+
+    static_assert((sizeof(Slab) < SATraits::SLAB_SIZE) || (TotalSlabOverhead < SATraits::SLAB_SIZE),
+                  "SLAB_SIZE too small to hold slab bookkeeping");
+
+public:
+    static constexpr size_t AllocsPerSlab = (SLAB_SIZE - TotalSlabOverhead) / AllocSize;
+
+    static_assert(AllocsPerSlab > 0, "SLAB_SIZE too small to hold even 1 allocation");
 
     // Slab allocated objects must derive from SlabAllocated<SATraits>.
     static_assert(is_base_of<SlabAllocated<SATraits>, ObjType>::value,
@@ -324,39 +492,14 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocator);
 
     explicit SlabAllocator(size_t max_slabs, bool alloc_initial = false)
-        : max_slabs_(max_slabs) {
-        // Attempt to ensure that at least one slab has been allocated before
-        // finishing construction if the user has asked us to do so.  In some
-        // situations, this can help to ensure that allocation performance is
-        // always O(1), provided that the slab limit has been configured to be
-        // 1.
-        if (alloc_initial) {
-            void* first_alloc = Allocate();
-            if (first_alloc != nullptr)
-                this->ReturnToFreeList(first_alloc);
-        }
-    }
+        : SlabAllocatorBase(SLAB_SIZE,
+                            AllocSize,
+                            AllocAlign,
+                            InitialSlabUse,
+                            max_slabs,
+                            alloc_initial) { }
 
-    ~SlabAllocator() {
-        // Don't bother taking the alloc_lock_ here.  If we need to hold the
-        // lock, that means someone is already accessing us while we are
-        // destructing, and we are already screwed.
-        __UNUSED size_t allocated_count = 0;
-
-        while (!slab_list_.is_empty()) {
-            Slab* free_me = slab_list_.pop_front();
-            allocated_count += free_me->alloc_count();
-            free(reinterpret_cast<void*>(free_me));
-        }
-
-        // Make sure that everything which was ever allocated had been returned
-        // to the free list before we were destroyed.
-        DEBUG_ASSERT(this->free_list_size_ == allocated_count);
-
-        // null out the free list so that it does not assert that we left
-        // unmanaged pointers on it as we destruct.
-        this->free_list_.clear_unsafe();
-    }
+    ~SlabAllocator() { }
 
     template <typename... ConstructorSignature>
     PtrType New(ConstructorSignature&&... args) {
@@ -373,113 +516,25 @@ public:
         return PtrTraits::CreatePtr(obj);
     }
 
-    size_t max_slabs() const { return max_slabs_; }
-
 protected:
     friend class ::mxtl::SlabAllocator<SATraits>;
     friend class ::mxtl::SlabAllocated<SATraits>;
 
-    static constexpr size_t SLAB_SIZE = SATraits::SLAB_SIZE;
-
-    struct FreeListEntry : public SinglyLinkedListable<FreeListEntry*> { };
-
-    class Slab {
-    public:
-        static constexpr size_t RequiredSize  = max(sizeof(FreeListEntry), sizeof(ObjType));
-        static constexpr size_t RequiredAlign = max(alignof(FreeListEntry), alignof(ObjType));
-
-        struct Allocation {
-            uint8_t data[RequiredSize];
-        } __ALIGNED(RequiredAlign);
-
-        void* Allocate();
-        size_t alloc_count() const { return alloc_count_; }
-
-    private:
-        friend class  SlabAllocator;
-        friend struct DefaultSinglyLinkedListTraits<Slab*>;
-        SinglyLinkedListNodeState<Slab*> sll_node_state_;
-        size_t                           alloc_count_ = 0;
-        Allocation                       allocs_[];
-    };
-
-    static constexpr size_t SlabOverhead        = offsetof(Slab, allocs_);
-    static constexpr size_t SlabAllocationCount = (SLAB_SIZE - SlabOverhead)
-                                                / sizeof(typename Slab::Allocation);
-
-    static_assert((sizeof(Slab) < SLAB_SIZE) || (SlabOverhead < SLAB_SIZE),
-                  "SLAB_SIZE too small to hold slab bookkeeping");
-    static_assert(SlabAllocationCount > 0, "SLAB_SIZE too small to hold even 1 chunk");
-
     void* Allocate() {
         AutoLock alloc_lock(this->alloc_lock_);
-
-        // If we can alloc from the free list, do so.
-        if (!this->free_list_.is_empty()) {
-            this->dec_free_list_size();
-            return this->free_list_.pop_front();
-        }
-
-        // If we can allocate from the currently active slab, do so.
-        if (!slab_list_.is_empty()) {
-            auto& active_slab = slab_list_.front();
-            void* mem = active_slab.Allocate();
-            if (mem)
-                return mem;
-        }
-
-        // If we are allowed to allocate new slabs, try to do so.
-        if (slab_count_ < max_slabs_) {
-            void* slab_mem = aligned_alloc(alignof(Slab), SLAB_SIZE);
-            if (slab_mem != nullptr) {
-                Slab* slab = new (slab_mem) Slab();
-
-                slab_count_++;
-                slab_list_.push_front(slab);
-
-                return slab->Allocate();
-            }
-        }
-
-        // Looks like we have run out of resources.
-        return nullptr;
+        return AllocateLocked();
     }
 
     void ReturnToFreeList(void* ptr) {
         FreeListEntry* free_obj = new (ptr) FreeListEntry;
         {
             AutoLock alloc_lock(alloc_lock_);
-            inc_free_list_size();
-            free_list_.push_front(free_obj);
+            ReturnToFreeListLocked(free_obj);
         }
     }
 
-    typename SATraits::LockType      alloc_lock_;
-    SinglyLinkedList<FreeListEntry*> free_list_;
-    SinglyLinkedList<Slab*>          slab_list_;
-    const size_t                     max_slabs_;
-    size_t                           slab_count_ = 0;
-
-#if (LK_DEBUGLEVEL > 1)
-    inline void inc_free_list_size() { ++free_list_size_; }
-    inline void dec_free_list_size() { --free_list_size_; }
-    size_t free_list_size_ = 0;
-#else
-    inline void inc_free_list_size() { }
-    inline void dec_free_list_size() { }
-#endif
-
-public:
-    // Publicly exported number of allocations possible per slab.  Used during testing.
-    static constexpr size_t AllocsPerSlab = SlabAllocationCount;
+    typename SATraits::LockType alloc_lock_;
 };
-
-template <typename SATraits>
-inline void* SlabAllocator<SATraits>::Slab::Allocate() {
-    return (alloc_count_ >= SlabAllocator<SATraits>::SlabAllocationCount)
-        ? nullptr : allocs_[alloc_count_++].data;
-}
-
 }  // namespace internal
 
 ////////////////////////////////////////////////////////////////////////////////
