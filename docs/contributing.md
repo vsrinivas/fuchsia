@@ -26,7 +26,7 @@ changes should be to a single library, driver, app, etc.
 app, etc, is affected by the change.  The style here is somewhat informal.
 Look at past changes to get a feel for how these are used.
 
-* Magenta should be buildable for all major targets (x86-64, arm64, arm32)
+* Magenta should be buildable for all major targets (x86-64, arm64)
 at every change.  ./scripts/build-all-magenta can help with this.
 
 * Avoid breaking the unit tests.  Boot Magenta and run "runtests" to
