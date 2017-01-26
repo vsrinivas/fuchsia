@@ -5,6 +5,7 @@
 #pragma once
 
 #ifdef __cplusplus
+#include <magenta/thread_annotations.h>
 
 // Notes about class NullLock
 //
@@ -14,11 +15,11 @@
 // type as a template parameter to get a no-locking behavior.
 namespace mxtl {
 
-class NullLock {
+class __TA_CAPABILITY("mutex") NullLock {
 public:
     constexpr NullLock() { }
-    void Acquire() { }
-    void Release() { }
+    void Acquire() __TA_ACQUIRE() { }
+    void Release() __TA_RELEASE() { }
 };
 
 }  // namespace mxtl

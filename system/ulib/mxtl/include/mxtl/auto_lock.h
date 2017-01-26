@@ -41,8 +41,10 @@ public:
     explicit AutoLock(Mutex* mutex) __TA_ACQUIRE(mutex)
         :   AutoLock(mutex->GetInternal()) {}
 
-    explicit AutoLock(mxtl::NullLock*) : mutex_(nullptr) { }
-    explicit AutoLock(mxtl::NullLock&) : mutex_(nullptr) { }
+    explicit AutoLock(mxtl::NullLock* mutex) __TA_ACQUIRE(mutex)
+        : mutex_(nullptr) { }
+    explicit AutoLock(mxtl::NullLock& mutex) __TA_ACQUIRE(mutex)
+        : mutex_(nullptr) { }
 
     ~AutoLock()  __TA_RELEASE() {
         release();
