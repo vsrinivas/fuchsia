@@ -120,5 +120,4 @@ mx_status_t memfs_create_from_vmo(const char* path, uint32_t flags,
 extern mtx_t vfs_lock;
 
 vfs_iostate_t* create_vfs_iostate(mx_device_t* dev);
-
-
+void memfs_mount(vnode_t* parent, vnode_t* subtree);

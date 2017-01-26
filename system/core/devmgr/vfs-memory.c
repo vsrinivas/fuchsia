@@ -649,13 +649,19 @@ vnode_t* systemfs_get_root(void) {
     return systemfs_root;
 }
 
-static void memfs_mount(vnode_t* parent, vnode_t* subtree) {
+static void _memfs_mount(vnode_t* parent, vnode_t* subtree) {
     if (subtree->dnode->parent) {
         // subtrees will have "parent" set, either to themselves
         // while they are standalone, or to their mount parent
         subtree->dnode->parent = NULL;
     }
     dn_add_child(parent->dnode, subtree->dnode);
+}
+
+void memfs_mount(vnode_t* parent, vnode_t* subtree) {
+    mtx_lock(&vfs_lock);
+    _memfs_mount(parent, subtree);
+    mtx_unlock(&vfs_lock);
 }
 
 // Hardcoded initialization function to create/access global root directory
@@ -668,10 +674,9 @@ vnode_t* vfs_create_global_root(void) {
             panic();
         }
 
-        memfs_mount(vfs_root, devfs_get_root());
-        memfs_mount(vfs_root, bootfs_get_root());
-        memfs_mount(vfs_root, memfs_get_root());
-        memfs_mount(vfs_root, systemfs_get_root());
+        _memfs_mount(vfs_root, devfs_get_root());
+        _memfs_mount(vfs_root, bootfs_get_root());
+        _memfs_mount(vfs_root, memfs_get_root());
 
         memfs_create_directory("/data", 0);
         memfs_create_directory("/volume", 0);
@@ -894,4 +899,3 @@ mx_status_t memfs_create_directory(const char* path, uint32_t flags) {
 
     return r;
 }
-

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <ddk/protocol/device.h>
@@ -23,6 +24,7 @@
 #include <unistd.h>
 
 #include "devmgr.h"
+#include "memfs-private.h"
 
 #define VC_COUNT 3
 
@@ -70,6 +72,45 @@ static mx_status_t launch_fat(int argc, const char** argv, mx_handle_t* hnd,
     return NO_ERROR;
 }
 
+static bool data_mounted = false;
+
+static int mount_minfs(int fd, mount_options_t* options) {
+    uint8_t type_guid[GPT_GUID_LEN];
+    static const uint8_t sys_guid[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
+    static const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+
+    // initialize our data for this run
+    const char* path = NULL;
+    ssize_t read_sz = ioctl_block_get_type_guid(fd, type_guid,
+                                                sizeof(type_guid));
+
+    // check if this partition matches any special type GUID
+    if (read_sz == GPT_GUID_LEN) {
+        if (!memcmp(type_guid, sys_guid, GPT_GUID_LEN)) {
+            if (secondary_bootfs_ready()) {
+                return -1;
+            }
+            memfs_create_directory("/system", 0);
+            path = "/system";
+            options->readonly = true;
+        } else if (!memcmp(type_guid, data_guid, GPT_GUID_LEN)) {
+            if (data_mounted) {
+                return -1;
+            }
+            data_mounted = true;
+            path = "/data";
+        }
+    }
+
+    // if the path is set, this partition has a known type GUID
+    if (path != NULL) {
+        mount(fd, path, DISK_FORMAT_MINFS, options, launch_minfs);
+        return 0;
+    }
+
+    return -1;
+}
+
 static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
     printf("devmgr: new block device: /dev/class/block/%s\n", name);
     int fd;
@@ -91,7 +132,7 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         mount_options_t options;
         memcpy(&options, &default_mount_options, sizeof(mount_options_t));
         printf("devmgr: minfs\n");
-        mount(fd, "/data", df, &options, launch_minfs);
+        mount_minfs(fd, &options);
         return NO_ERROR;
     }
     case DISK_FORMAT_FAT: {

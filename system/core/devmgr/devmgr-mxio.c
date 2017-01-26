@@ -96,6 +96,7 @@ void devmgr_launch(mx_handle_t job,
     }
 }
 
+static bool has_secondary_bootfs = false;
 static ssize_t setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
     uint64_t size;
     mx_status_t status = mx_vmo_get_size(vmo, &size);
@@ -109,6 +110,10 @@ static ssize_t setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
         .vmo = vmo,
         .add_file = (n > 0) ? systemfs_add_file : bootfs_add_file,
     };
+    if (n > 0) {
+        has_secondary_bootfs = true;
+        memfs_mount(vfs_create_global_root(), systemfs_get_root());
+    }
     bootfs_parse(vmo, size, &callback, &cd);
     return cd.file_count;
 }
@@ -128,6 +133,10 @@ static void setup_bootfs(void) {
 
 ssize_t devmgr_add_systemfs_vmo(mx_handle_t vmo) {
     return setup_bootfs_vmo(100, vmo);
+}
+
+bool secondary_bootfs_ready(void) {
+    return has_secondary_bootfs;
 }
 
 void devmgr_vfs_init(void) {
