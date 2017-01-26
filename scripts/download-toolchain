@@ -72,9 +72,6 @@ function downloadGCCToolchain() {
   local toolchain_dir="${target}-${GCC_VERSION}-${OS}-${HOSTARCH}"
   local relative_install_dir="\$(LKMAKEROOT)${INSTALL_DIR#${MAGENTA_ROOT}}"
   case "${target}" in
-    "arm-eabi")
-      TOOLCHAIN_MAKEVARS+=("ARCH_arm_TOOLCHAIN_PREFIX = ${relative_install_dir}/${toolchain_dir}/bin/${target}-")
-      ;;
     "aarch64-elf")
       TOOLCHAIN_MAKEVARS+=("ARCH_arm64_TOOLCHAIN_PREFIX = ${relative_install_dir}/${toolchain_dir}/bin/${target}-")
       ;;
@@ -136,7 +133,7 @@ function downloadClangToolchain() {
 }
 
 # We want the toolchains for all target types.
-readonly TARGETS=("arm-eabi" "x86_64-elf" "aarch64-elf")
+readonly TARGETS=("x86_64-elf" "aarch64-elf")
 for target in "${TARGETS[@]}"; do
   downloadGCCToolchain "${target}"
 done
