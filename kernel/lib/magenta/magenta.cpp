@@ -32,12 +32,7 @@
 
 #define LOCAL_TRACE 0
 
-#if ARCH_X86_64 || ARCH_ARM64
 constexpr size_t kMaxHandleCount = 256 * 1024u;
-#else
-// TODO: The handle table design might be innapropiate for a 2GB address space.
-constexpr size_t kMaxHandleCount = 16 * 1024u;
-#endif
 
 constexpr size_t kHighHandleCount = (kMaxHandleCount * 8) / 7;
 

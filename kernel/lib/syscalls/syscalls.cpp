@@ -33,62 +33,6 @@ int sys_invalid_syscall(void) {
 
 #define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
 
-#if ARCH_ARM
-
-/* ARM32 supports up to 9 arguments */
-using syscall_func = int64_t (*)(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e,
-                                 uint32_t f, uint32_t g, uint32_t h, uint32_t i);
-
-extern "C" void arm_syscall_handler(struct arm_fault_frame* frame) {
-    uint64_t ret = 0;
-    uint32_t syscall_num = frame->r[12];
-
-    /* check for magic value to differentiate our syscalls */
-    if (unlikely((syscall_num & 0xf0f00000) != 0xf0f00000)) {
-        LTRACEF("syscall does not have magenta magic, 0x%x @ PC 0x%x\n", syscall_num, frame->pc);
-
-        ret = ERR_BAD_SYSCALL;
-        goto out;
-    }
-    syscall_num &= 0x000fffff;
-
-    /* re-enable interrupts to maintain kernel preemptiveness */
-    arch_enable_ints();
-
-    LTRACEF_LEVEL(2, "arm syscall: num 0x%x, pc 0x%x\n", syscall_num, frame->pc);
-
-    /* build a function pointer to call the routine.
-     * the args are jammed into the function independent of if the function
-     * uses them or not, which is safe for simple arg passing.
-     */
-    syscall_func sfunc;
-
-    switch (syscall_num) {
-#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...)                               \
-    case n:                                                                                        \
-        sfunc = reinterpret_cast<syscall_func>(sys_##name);                                        \
-        break;
-#include <magenta/gen-switch.inc>
-        default:
-            sfunc = reinterpret_cast<syscall_func>(sys_invalid_syscall);
-    }
-
-    /* call the routine */
-    ret = sfunc(frame->r[0], frame->r[1], frame->r[2], frame->r[3], frame->r[4],
-                         frame->r[5], frame->r[6], frame->r[7], frame->r[8]);
-
-    LTRACEF_LEVEL(2, "ret 0x%llx\n", ret);
-
-out:
-    /* check to see if there are any pending signals */
-    thread_process_pending_signals();
-
-    /* unpack the 64bit return back into r0 and r1 */
-    frame->r[0] = ret & 0xffffffff;
-    frame->r[1] = static_cast<uint32_t>((ret >> 32) & 0xffffffff);
-}
-#endif
-
 #if ARCH_ARM64
 #include <arch/arm64.h>
 
