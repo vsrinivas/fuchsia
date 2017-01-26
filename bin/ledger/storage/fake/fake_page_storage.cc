@@ -11,6 +11,7 @@
 #include "apps/ledger/src/storage/fake/fake_commit.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/public/constants.h"
+#include "lib/ftl/logging.h"
 #include "lib/mtl/socket/strings.h"
 #include "lib/mtl/tasks/message_loop.h"
 
@@ -43,7 +44,7 @@ storage::ObjectId RandomId() {
 
 }  // namespace
 
-FakePageStorage::FakePageStorage(PageId page_id) : page_id_(page_id) {}
+FakePageStorage::FakePageStorage(PageId page_id) : rng_(0), page_id_(page_id) {}
 
 FakePageStorage::~FakePageStorage() {}
 
@@ -113,7 +114,7 @@ void FakePageStorage::GetObject(
     ObjectIdView object_id,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([
+  object_requests_.push_back([
     this, object_id = object_id.ToString(), callback = std::move(callback)
   ] {
     auto it = objects_.find(object_id);
@@ -124,6 +125,9 @@ void FakePageStorage::GetObject(
 
     callback(Status::OK, std::make_unique<FakeObject>(object_id, it->second));
   });
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask([this] {
+    SendNextObject();
+  }, ftl::TimeDelta::FromMilliseconds(5));
 }
 
 Status FakePageStorage::GetObjectSynchronous(
@@ -195,6 +199,15 @@ FakePageStorage::GetJournals() const {
 const std::map<ObjectId, std::string, convert::StringViewComparator>&
 FakePageStorage::GetObjects() const {
   return objects_;
+}
+
+void FakePageStorage::SendNextObject() {
+  std::uniform_int_distribution<size_t> distribution(
+      0u, object_requests_.size() - 1);
+  auto it = object_requests_.begin() + distribution(rng_);
+  auto closure = std::move(*it);
+  object_requests_.erase(it);
+  closure();
 }
 
 }  // namespace fake
