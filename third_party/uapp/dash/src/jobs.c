@@ -1007,7 +1007,7 @@ STATIC int
 dowait(int block, struct job *job)
 {
 	int pid = -1;
-	int status;
+	int status = -1;
 	struct job *jp;
 	struct job *thisjob = NULL;
 	int state;
@@ -1025,28 +1025,29 @@ dowait(int block, struct job *job)
 		spend = jp->ps + jp->nprocs;
 		sp = jp->ps;
 		do {
+			if (sp->status != -1)
+				// Process has already completed
+				continue;
+			if (thisjob) {
+				// We only want to look for a single exited
+				// process per call, so once we have one, we're
+				// only looking to see if there are any processes
+				// still pending.
+				state = JOBRUNNING;
+				break;
+			}
 			status = process_await_termination (sp->pid, false);
-			if (status >= 0) {
+			if (status != ERR_TIMED_OUT) {
 				// Convert status to something that looks
 				// like a wait()-generated status.
 				status = (status & 0xff) << 8;
 				TRACE(("Job %d: changing status of proc %d from 0x%x to 0x%x\n", jobno(jp), pid, sp->status, status));
 				sp->status = status;
 				thisjob = jp;
-				pid = jobno(jp);
+				pid = sp->pid;
 			} else {
-				pid = -1;
-			}
-			if (sp->status == ERR_TIMED_OUT)
 				state = JOBRUNNING;
-#if JOBS
-			if (state == JOBRUNNING)
-				continue;
-			if (WIFSTOPPED(sp->status)) {
-				jp->stopstatus = sp->status;
-				state = JOBSTOPPED;
 			}
-#endif
 		} while (++sp < spend);
 		if (thisjob)
 			goto gotjob;

@@ -142,8 +142,7 @@ static mx_status_t launch(const char* filename, int argc, const char* const* arg
     return status;
 }
 
-static mx_status_t launch_subshell(union node* n, const char* const* envp, mx_handle_t* process,
-                                   int *fds)
+mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t* process, int *fds)
 {
     if (!arg0)
         return ERR_NOT_FOUND;
@@ -219,22 +218,6 @@ int process_launch(int argc, const char* const* argv, const char* path, int inde
     default:
         return 2;
     }
-}
-
-mx_status_t process_subshell(union node* n, mx_handle_t* process) {
-    // TODO(joshconner): Here we're promoting non-exported variables to
-    // environment variables, which isn't quite correct (any commands
-    // executed in the subshell will inherit these definitions).
-    const char* const* envp = (const char* const*)listvars(0, VUNSET, 0);
-
-    return  launch_subshell(n, envp, process, NULL);
-}
-
-mx_status_t process_backtick(union node* n, mx_handle_t* process, int stdout_fd) {
-    const char* const* envp = (const char* const*) environment();
-    int fds[3] = { STDIN_FILENO, stdout_fd, STDERR_FILENO };
-
-    return launch_subshell(n, envp, process, &fds[0]);
 }
 
 /* Check for process termination (block if requested). When not blocking,

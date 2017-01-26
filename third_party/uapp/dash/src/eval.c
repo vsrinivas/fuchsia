@@ -478,7 +478,11 @@ evalsubshell(union node *n, int flags)
 	}
 
 	mx_handle_t process;
-	mx_status_t status = process_subshell(n, &process);
+	// TODO(joshconner): Here we're promoting non-exported variables to
+	// environment variables, which isn't quite correct (any commands
+	// executed in the subshell will inherit these definitions).
+	const char* const* envp = (const char* const*)listvars(0, VUNSET, 0);
+	mx_status_t status = process_subshell(n, envp, &process, NULL);
 	if (status != NO_ERROR) {
 		sh_error("Failed to create subshell");
 		return status;
@@ -537,8 +541,8 @@ evalpipe(union node *n, int flags)
 	struct job *jp;
 	struct nodelist *lp;
 	int pipelen;
-	int prevfd;
-	int pip[2];
+	int fds[3] = { STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO };
+	int pip[2] = { -1, -1 };
 	int status = 0;
 
 	TRACE(("evalpipe(0x%lx) called\n", (long)n));
@@ -548,37 +552,34 @@ evalpipe(union node *n, int flags)
 	flags |= EV_EXIT;
 	INTOFF;
 	jp = makejob(n, pipelen);
-	prevfd = -1;
+
 	for (lp = n->npipe.cmdlist ; lp ; lp = lp->next) {
 		prehash(lp->n);
-		pip[1] = -1;
+		if (pip[0] > 0)
+			fds[0] = pip[0];
 		if (lp->next) {
-			if (pipe(pip) < 0) {
-				close(prevfd);
+			if (pipe(pip) < 0)
 				sh_error("Pipe call failed");
-			}
+			fds[1] = pip[1];
+		} else {
+			fds[1] = STDOUT_FILENO;
 		}
-		if (forkshell(jp, lp->n, n->npipe.backgnd) == 0) {
-			INTON;
-			if (pip[1] >= 0) {
-				close(pip[0]);
-			}
-			if (prevfd > 0) {
-				dup2(prevfd, 0);
-				close(prevfd);
-			}
-			if (pip[1] > 1) {
-				dup2(pip[1], 1);
-				close(pip[1]);
-			}
-			evaltreenr(lp->n, flags);
-			/* never returns */
+		mx_handle_t process;
+		const char* const* envp = (const char* const*)environment();
+		mx_status_t status = process_subshell (lp->n, envp, &process, fds);
+		if (fds[0] != STDIN_FILENO)
+			close(fds[0]);
+		if (fds[1] != STDOUT_FILENO)
+			close(fds[1]);
+		if (status == NO_ERROR) {
+			/* Process-tracking management */
+			forkparent(jp, lp->n, FORK_NOJOB, process);
+		} else {
+			freejob(jp);
+			sh_error("Failed to create shell");
 		}
-		if (prevfd >= 0)
-			close(prevfd);
-		prevfd = pip[0];
-		close(pip[1]);
 	}
+
 	if (n->npipe.backgnd == 0) {
 		status = waitforjob(jp);
 		TRACE(("evalpipe:  job done exit status %d\n", status));
@@ -615,7 +616,9 @@ evalbackcmd(union node *n, struct backcmd *result)
 		sh_error("Pipe call failed");
 	jp = makejob(n, 1);
 	mx_handle_t process;
-	mx_status_t status = process_backtick(n, &process, pip[1]);
+	const char* const* envp = (const char* const*)environment();
+	int fds[3] = { STDIN_FILENO, pip[1], STDERR_FILENO };
+	mx_status_t status = process_subshell(n, envp, &process, &fds[0]);
         close(pip[1]);
 	if (status != NO_ERROR) {
 		freejob(jp);
