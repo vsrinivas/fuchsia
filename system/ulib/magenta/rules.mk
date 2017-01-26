@@ -24,9 +24,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/mx_ticks_per_second.c \
     $(LOCAL_DIR)/mx_version_get.c \
 
-ifeq ($(ARCH),arm)
-MODULE_SRCS += $(LOCAL_DIR)/syscalls-arm32.S
-else ifeq ($(ARCH),arm64)
+ifeq ($(ARCH),arm64)
 MODULE_SRCS += $(LOCAL_DIR)/syscalls-arm64.S
 else ifeq ($(ARCH),x86)
     ifeq ($(SUBARCH),x86-64)
