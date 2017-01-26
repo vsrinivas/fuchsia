@@ -97,6 +97,13 @@ magma_status_t magma_system_export(magma_system_connection* connection, magma_bu
     return MAGMA_STATUS_OK;
 }
 
+int32_t magma_system_import(magma_system_connection* connection, uint32_t buffer_handle,
+                            magma_buffer_t* buffer_out)
+{
+
+    return 0;
+}
+
 void magma_system_display_page_flip(magma_system_connection* connection, uint64_t buffer_id,
                                     magma_system_pageflip_callback_t callback, void* data)
 {
