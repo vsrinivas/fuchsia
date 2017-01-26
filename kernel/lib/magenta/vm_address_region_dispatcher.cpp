@@ -39,18 +39,8 @@ status_t split_syscall_flags(uint32_t flags, uint32_t* vmar_flags, uint* arch_mm
         mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
     }
 
-    if (flags & MX_VM_FLAG_DMA) {
-#if ARCH_X86_64
-        mmu_flags |= ARCH_MMU_FLAG_CACHED;
-#else
-// for now assume other architectures require uncached device memory
-        mmu_flags |= ARCH_MMU_FLAG_UNCACHED_DEVICE;
-#endif
-    }
-
     // Mask out arch_mmu_flags options
-    flags &= ~(MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE |
-               MX_VM_FLAG_DMA);
+    flags &= ~(MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE | MX_VM_FLAG_PERM_EXECUTE);
 
     // Figure out vmar flags
     uint32_t vmar = 0;

@@ -205,7 +205,6 @@ typedef uint32_t mx_rights_t;
 #define MX_VM_FLAG_CAN_MAP_READ       (1u << 7)
 #define MX_VM_FLAG_CAN_MAP_WRITE      (1u << 8)
 #define MX_VM_FLAG_CAN_MAP_EXECUTE    (1u << 9)
-#define MX_VM_FLAG_DMA                (1u << 10)
 
 // compatibility flag for vmar routines
 // TODO(teisenbe): Move all users of this to using subregions.

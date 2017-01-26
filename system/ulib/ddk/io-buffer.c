@@ -12,8 +12,6 @@ static mx_status_t io_buffer_init_common(io_buffer_t* buffer, mx_handle_t vmo_ha
                                          mx_off_t offset, uint32_t flags) {
     mx_vaddr_t virt;
 
-    flags |= MX_VM_FLAG_DMA;
-
     mx_status_t status = mx_vmar_map(mx_vmar_root_self(), 0, vmo_handle, 0, size, flags, &virt);
     if (status != NO_ERROR) {
         printf("io_buffer: mx_vmar_map failed %d size: %zu\n", status, size);
