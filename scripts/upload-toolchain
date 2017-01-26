@@ -46,11 +46,7 @@ fi
 # structure $ARCH-$ABI-$VERSION-$OS-$HOSTARCH.
 readonly OS="$(uname)"
 readonly HOSTARCH="$(uname -m)"
-if [[ "${ARCH}" == "arm" ]]; then
-  readonly ABI="eabi"
-else
-  readonly ABI="elf"
-fi
+readonly ABI="elf"
 readonly TOOLCHAIN_DIR="$(ls -td ${ARCH}-${ABI}-*-${OS}-${HOSTARCH} | head -1)"
 
 # Fetch the current git SHA: we upload the prebuilts with a SHA that corresponds
