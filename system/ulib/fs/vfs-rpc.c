@@ -38,6 +38,21 @@ static void txn_handoff_clone(mx_handle_t srv, mx_handle_t rh) {
     mxrio_txn_handoff(srv, rh, &msg);
 }
 
+static void txn_handoff_rename(mx_handle_t srv, mx_handle_t rh,
+                               const char* oldpath, const char* newpath) {
+    mxrio_msg_t msg;
+    memset(&msg, 0, MXRIO_HDR_SZ);
+    size_t oldlen = strlen(oldpath);
+    size_t newlen = strlen(newpath);
+    msg.op = MXRIO_RENAME;
+    memcpy(msg.data, oldpath, oldlen);
+    msg.data[oldlen] = '\0';
+    memcpy(msg.data + oldlen + 1, newpath, newlen);
+    msg.data[oldlen + newlen + 1] = '\0';
+    msg.datalen = oldlen + newlen + 2;
+    return mxrio_txn_handoff(srv, rh, &msg);
+}
+
 // Initializes io state for a vnode and attaches it to a dispatcher.
 static void vfs_rpc_open(mxrio_msg_t* msg, mx_handle_t rh, vnode_t* vn,
                          const char* path, uint32_t flags, uint32_t mode) {
@@ -88,6 +103,33 @@ done:
     mx_handle_close(rh);
 }
 
+// Consumes rh.
+static void mxrio_reply_channel_status(mx_handle_t rh, mx_status_t status) {
+    struct {
+        mx_status_t status; uint32_t type;
+    } reply = { status, 0 };
+    mx_channel_write(rh, 0, &reply, MXRIO_OBJECT_MINSIZE, NULL, 0);
+    mx_handle_close(rh);
+}
+
+static void vfs_rpc_rename(mxrio_msg_t* msg, mx_handle_t rh, vnode_t* vn,
+                           const char* oldpath, const char* newpath) {
+    mx_status_t r;
+
+    mtx_lock(&vfs_lock);
+    r = vfs_rename(vn, oldpath, newpath, &oldpath, &newpath);
+    mtx_unlock(&vfs_lock);
+
+    if (r > 0) {
+        // Remote filesystem -- forward the request.
+        txn_handoff_rename(r, rh, oldpath, newpath);
+        return;
+    } else {
+        // Local filesystem. Return the result of the completed rename.
+        mxrio_reply_channel_status(rh, r);
+    }
+}
+
 mx_status_t vfs_create_handle(vnode_t* vn, uint32_t flags, mx_handle_t* out) {
     mx_handle_t h[2];
     mx_status_t r;
@@ -134,10 +176,7 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     case MXRIO_OPEN: {
         char* path = (char*)msg->data;
         if ((len < 1) || (len > 1024)) {
-            mxrio_object_t obj;
-            obj.status = ERR_INVALID_ARGS;
-            mx_channel_write(msg->handle[0], 0, &obj, MXRIO_OBJECT_MINSIZE, NULL, 0);
-            mx_handle_close(msg->handle[0]);
+            mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
         } else {
             path[len] = 0;
             xprintf("vfs: open name='%s' flags=%d mode=%u\n", path, arg, msg->arg2.mode);
@@ -347,7 +386,8 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
     }
     case MXRIO_RENAME: {
         if (len < 4) { // At least one byte for src + dst + null terminators
-            return ERR_INVALID_ARGS;
+            mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
+            return ERR_DISPATCHER_INDIRECT;
         }
         char* data_end = (char*)(msg->data + len - 1);
         *data_end = '\0';
@@ -355,9 +395,11 @@ mx_status_t vfs_handler_generic(mxrio_msg_t* msg, mx_handle_t rh, void* cookie) 
         size_t oldlen = strlen(oldpath);
         const char* newpath = (const char*)msg->data + (oldlen + 1);
         if (data_end <= newpath) {
-            return ERR_INVALID_ARGS;
+            mxrio_reply_channel_status(msg->handle[0], ERR_INVALID_ARGS);
+            return ERR_DISPATCHER_INDIRECT;
         }
-        return vfs_rename(vn, oldpath, newpath);
+        vfs_rpc_rename(msg, msg->handle[0], vn, oldpath, newpath);
+        return ERR_DISPATCHER_INDIRECT;
     }
     case MXRIO_SYNC: {
         return vn->ops->sync(vn);

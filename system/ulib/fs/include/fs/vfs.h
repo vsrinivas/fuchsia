@@ -81,7 +81,8 @@ mx_status_t vfs_walk(vnode_t* vn, vnode_t** out,
 
 mx_status_t vfs_unlink(vnode_t* vn, const char* path, size_t len);
 
-mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath);
+mx_status_t vfs_rename(vnode_t* vn, const char* oldpath, const char* newpath,
+                       const char** oldpathout, const char** newpathout);
 
 mx_status_t vfs_close(vnode_t* vn);
 

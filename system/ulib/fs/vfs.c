@@ -249,35 +249,45 @@ mx_status_t vfs_unlink(vnode_t* vndir, const char* path, size_t len) {
     return vndir->ops->unlink(vndir, path, len, must_be_dir);
 }
 
-mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath) {
+mx_status_t vfs_rename(vnode_t* vndir, const char* oldpath, const char* newpath,
+                       const char** oldpathout, const char** newpathout) {
     vnode_t* oldparent, *newparent;
     mx_status_t r = 0, r_old, r_new;
 
-    // walk returns a handle (>0) if the walk is going to cross a filesystem
-    // boundary.  Since we can't easily do that in a non-blocking way, we don't
-    // support such renames for the time being.
-    // TODO(swetland): sort out supporting server-crossing renames provided
-    // the two paths both end up on the same server.
-    if ((r_old = vfs_walk(vndir, &oldparent, oldpath, &oldpath)) != NO_ERROR) {
-        return (r_old < 0) ? r_old : ERR_NOT_SUPPORTED;
+    if ((r_old = vfs_walk(vndir, &oldparent, oldpath, &oldpath)) < 0) {
+        return r_old;
     }
-    if ((r_new = vfs_walk(vndir, &newparent, newpath, &newpath)) != NO_ERROR) {
+    if ((r_new = vfs_walk(vndir, &newparent, newpath, &newpath)) < 0) {
         vn_release(oldparent);
-        return (r_new < 0) ? r_new : ERR_NOT_SUPPORTED;
+        return r_new;
     }
 
-    size_t oldlen = strlen(oldpath);
-    size_t newlen = strlen(newpath);
-    bool old_must_be_dir;
-    bool new_must_be_dir;
-    if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
+    if (r_old != r_new) {
+        // Rename can only be directed to one filesystem
+        r = ERR_NOT_SUPPORTED;
         goto done;
     }
-    if ((r = vfs_name_trim(newpath, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
-        goto done;
+
+    if (r_old == 0) {
+        // Local filesystem
+        size_t oldlen = strlen(oldpath);
+        size_t newlen = strlen(newpath);
+        bool old_must_be_dir;
+        bool new_must_be_dir;
+        if ((r = vfs_name_trim(oldpath, oldlen, &oldlen, &old_must_be_dir)) != NO_ERROR) {
+            goto done;
+        }
+        if ((r = vfs_name_trim(newpath, newlen, &newlen, &new_must_be_dir)) != NO_ERROR) {
+            goto done;
+        }
+        r = vndir->ops->rename(oldparent, newparent, oldpath, oldlen, newpath, newlen,
+                               old_must_be_dir, new_must_be_dir);
+    } else {
+        // Remote filesystem -- forward the request
+        *oldpathout = oldpath;
+        *newpathout = newpath;
+        r = r_old;
     }
-    r = vndir->ops->rename(oldparent, newparent, oldpath, oldlen, newpath, newlen,
-                           old_must_be_dir, new_must_be_dir);
 
 done:
     vn_release(oldparent);

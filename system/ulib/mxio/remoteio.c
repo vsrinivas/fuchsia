@@ -460,6 +460,50 @@ static mx_status_t mxrio_close(mxio_t* io) {
     return r;
 }
 
+static mx_status_t mxrio_reply_channel_call(mxrio_t* rio, mxrio_msg_t* msg,
+                                            mxrio_object_t* info) {
+    mx_status_t r;
+    mx_handle_t h;
+    if ((r = mx_channel_create(0, &h, &msg->handle[0])) < 0) {
+        return r;
+    }
+    msg->hcount = 1;
+
+    // Write the (one-way) request message
+    if ((r = mx_channel_write(rio->h, 0, msg, MXRIO_HDR_SZ + msg->datalen,
+                              msg->handle, msg->hcount)) < 0) {
+        mx_handle_close(msg->handle[0]);
+        mx_handle_close(h);
+        return r;
+    }
+
+    // Wait
+    mx_handle_wait_one(h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
+
+    // Attempt to read the callback response
+    memset(info, 0xfe, sizeof(*info));
+    uint32_t dsize = MXRIO_OBJECT_MAXSIZE;
+    info->hcount = MXIO_MAX_HANDLES;
+    r = mx_channel_read(h, 0, info, dsize, &dsize, info->handle,
+                        info->hcount, &info->hcount);
+
+    mx_handle_close(h);
+
+    if (r < 0) {
+        return r;
+    }
+    if (dsize < MXRIO_OBJECT_MINSIZE) {
+        r = ERR_IO;
+    } else {
+        info->esize = dsize - MXRIO_OBJECT_MINSIZE;
+        r = info->status;
+    }
+    if (r < 0) {
+        discard_handles(info->handle, info->hcount);
+    }
+    return r;
+}
+
 static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
                               uint32_t maxreply, void* ptr, size_t len) {
     mxrio_t* rio = (mxrio_t*)io;
@@ -479,7 +523,15 @@ static mx_status_t mxrio_misc(mxio_t* io, uint32_t op, int64_t off,
         memcpy(msg.data, ptr, len);
     }
 
-    if ((r = mxrio_txn(rio, &msg)) < 0) {
+    if (op == MXRIO_RENAME) {
+        // Rename is a special snowflake that sends a reply channel, like open and clone.
+        mxrio_object_t info;
+        if ((r = mxrio_reply_channel_call(rio, &msg, &info)) < 0) {
+            return r;
+        }
+        discard_handles(info.handle, info.hcount);
+        return r;
+    } else if ((r = mxrio_txn(rio, &msg)) < 0) {
         return r;
     }
 
@@ -578,49 +630,9 @@ static mx_status_t mxrio_getobject(mxrio_t* rio, uint32_t op, const char* name,
     msg.datalen = len;
     msg.arg = flags;
     msg.arg2.mode = mode;
-    msg.hcount = 1;
     memcpy(msg.data, name, len);
 
-    // Create channel to receive the "callback" on
-    mx_status_t r;
-    mx_handle_t h;
-    if ((r = mx_channel_create(0, &h, &msg.handle[0])) < 0) {
-        return r;
-    }
-
-    // Write the (one-way) OPEN or CLONE request message
-    if ((r = mx_channel_write(rio->h, 0, &msg, MXRIO_HDR_SZ + len,
-                              msg.handle, msg.hcount)) < 0) {
-        mx_handle_close(msg.handle[0]);
-        mx_handle_close(h);
-        return r;
-    }
-
-    // Wait
-    mx_handle_wait_one(h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
-
-    // Attempt to read the callback response
-    memset(info, 0xfe, sizeof(*info));
-    uint32_t dsize = MXRIO_OBJECT_MAXSIZE;
-    info->hcount = MXIO_MAX_HANDLES;
-    r = mx_channel_read(h, 0, info, dsize, &dsize, info->handle,
-                        info->hcount, &info->hcount);
-
-    mx_handle_close(h);
-
-    if (r < 0) {
-        return r;
-    }
-    if (dsize < MXRIO_OBJECT_MINSIZE) {
-        r = ERR_IO;
-    } else {
-        info->esize = dsize - MXRIO_OBJECT_MINSIZE;
-        r = info->status;
-    }
-    if (r < 0) {
-        discard_handles(info->handle, info->hcount);
-    }
-    return r;
+    return mxrio_reply_channel_call(rio, &msg, info);
 }
 
 static mx_status_t mxrio_open(mxio_t* io, const char* path, int32_t flags, uint32_t mode, mxio_t** out) {

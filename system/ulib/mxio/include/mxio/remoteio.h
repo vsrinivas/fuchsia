@@ -15,12 +15,12 @@ __BEGIN_CDECLS
 
 #define MXRIO_HDR_SZ       (__builtin_offsetof(mxrio_msg_t, data))
 
-#define MXRIO_MAGIC        0x024F4952 // RIO 0x02
+#define MXRIO_ONE_HANDLE   0x00000100
 
 #define MXRIO_STATUS       0x00000000
 #define MXRIO_CLOSE        0x00000001
-#define MXRIO_CLONE        0x00000102
-#define MXRIO_OPEN         0x00000103
+#define MXRIO_CLONE       (0x00000002 | MXRIO_ONE_HANDLE)
+#define MXRIO_OPEN        (0x00000003 | MXRIO_ONE_HANDLE)
 #define MXRIO_MISC         0x00000004
 #define MXRIO_READ         0x00000005
 #define MXRIO_WRITE        0x00000006
@@ -28,12 +28,12 @@ __BEGIN_CDECLS
 #define MXRIO_STAT         0x00000008
 #define MXRIO_READDIR      0x00000009
 #define MXRIO_IOCTL        0x0000000a
-#define MXRIO_IOCTL_1H     0x0000010a
+#define MXRIO_IOCTL_1H    (0x0000000a | MXRIO_ONE_HANDLE)
 #define MXRIO_UNLINK       0x0000000b
 #define MXRIO_READ_AT      0x0000000c
 #define MXRIO_WRITE_AT     0x0000000d
 #define MXRIO_TRUNCATE     0x0000000e
-#define MXRIO_RENAME       0x0000000f
+#define MXRIO_RENAME      (0x0000000f | MXRIO_ONE_HANDLE)
 #define MXRIO_CONNECT      0x00000010
 #define MXRIO_BIND         0x00000011
 #define MXRIO_LISTEN       0x00000012
