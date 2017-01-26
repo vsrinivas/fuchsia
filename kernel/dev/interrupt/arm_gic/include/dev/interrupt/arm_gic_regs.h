@@ -18,12 +18,12 @@
 
 #define DEFINE_ICC_SYS_REG(name, reg)                   \
 static inline uint32_t gic_read_##name(void) {          \
-    uint32_t temp;                                      \
+    uint64_t temp;                                      \
    __asm__ volatile("mrs %0, " reg : "=r"(temp));       \
     return temp;                                        \
 }                                                       \
 static inline void gic_write_##name(uint32_t value) {   \
-   __asm__ volatile("msr " reg ", %0" :: "r"(value));   \
+   __asm__ volatile("msr " reg ", %0" :: "r"((uint64_t)value));   \
 }
 
 DEFINE_ICC_SYS_REG(ctlr, "S3_0_C12_C12_4")
