@@ -220,13 +220,18 @@ void linenoiseSetMultiLine(int ml) {
 
 /* Return true if the terminal name is in the list of terminals we know are
  * not able to understand basic escape sequences. */
-static int isUnsupportedTerm(void) {
+static int isUnsupportedTerm(int* uart) {
     char *term = getenv("TERM");
     int j;
 
+    *uart = 0;
     if (term == NULL) return 0;
     for (j = 0; unsupported_term[j]; j++)
         if (!strcasecmp(term,unsupported_term[j])) return 1;
+    if (!strcasecmp(term,"uart")) {
+        *uart = 1;
+        return 1;
+    }
     return 0;
 }
 
@@ -1076,18 +1081,42 @@ static char *linenoiseNoTTY(void) {
  * something even in the most desperate of the conditions. */
 char *linenoise(const char *prompt) {
     char buf[LINENOISE_MAX_LINE];
-    int count;
+    int count, uart;
 
     if (!isatty(STDIN_FILENO)) {
         /* Not a tty: read from file / pipe. In this mode we don't want any
          * limit to the line size, so we call a function to handle that. */
         return linenoiseNoTTY();
-    } else if (isUnsupportedTerm()) {
+    } else if (isUnsupportedTerm(&uart)) {
         size_t len;
 
         printf("%s",prompt);
         fflush(stdout);
-        if (fgets(buf,LINENOISE_MAX_LINE,stdin) == NULL) return NULL;
+        if (uart) {
+            int i = 0;
+            int ch;
+            do {
+                ch = getchar();
+                if (ch == EOF) return NULL;
+                if (ch == '\r') continue;
+
+                // map delete to backspace
+                if (ch == 127) ch = '\b';
+                if (ch == '\b' && i > 0) {
+                    // erase deleted char
+                    printf("\b ");
+                    // and backup index
+                    i--;
+                }
+                printf("%c", ch);
+                fflush(stdout);
+                if (ch == '\n') break;
+                if (ch != '\b') buf[i++] = ch;
+            } while (i < LINENOISE_MAX_LINE - 1);
+            buf[i] = 0;
+        } else {
+            if (fgets(buf,LINENOISE_MAX_LINE,stdin) == NULL) return NULL;
+        }
         len = strlen(buf);
         while(len && (buf[len-1] == '\n' || buf[len-1] == '\r')) {
             len--;
