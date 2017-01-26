@@ -21,10 +21,13 @@ endif
 Optionally install [YouCompleteMe](https://github.com/Valloric/YouCompleteMe) for fancy completion, source navigation
 and inline errors.
 
+## See also
+
+For Magenta YouCompleteMe integration: https://fuchsia.googlesource.com/magenta/+/master/docs/editors.md
+
 ## TODO
 
 In the future it would be nice to support:
-* YCM support for magenta (dbort is looking at this)
 * Fidl indentation
 * GN highlighting and indentation
 * Dart, Go and Rust support
