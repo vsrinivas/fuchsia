@@ -115,14 +115,6 @@ void platform_early_init(void)
                     //uint64_t base = fdt64_to_cpu(*(uint64_t *)prop_ptr);
                     uint64_t len = fdt64_to_cpu(*((const uint64_t *)prop_ptr + 1));
 
-                    /* trim size on certain platforms */
-#if ARCH_ARM
-                    if (len > 1024*1024*1024U) {
-                        len = 1024*1024*1024; /* only use the first 1GB on ARM32 */
-                        //printf("trimming memory to 1GB\n");
-                    }
-#endif
-
                     /* set the size in the pmm arena */
                     arena.size = len;
                 }
