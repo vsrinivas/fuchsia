@@ -138,14 +138,6 @@ void platform_early_init(void)
                     //uint64_t base = fdt64_to_cpu(*(uint64_t *)prop_ptr);
                     uint64_t len = fdt64_to_cpu(*((const uint64_t *)prop_ptr + 1));
 
-                    /* trim size on certain platforms */
-#if ARCH_ARM
-                    if (len > 1024*1024*1024U) {
-                        len = 1024*1024*1024; /* only use the first 1GB on ARM32 */
-                        printf("trimming memory to 1GB\n");
-                    }
-#endif
-
                     /* set the size in the pmm arena */
                     arena.size = len;
                 }
@@ -187,9 +179,7 @@ void platform_early_init(void)
 
     /* boot the secondary cpus using the Power State Coordintion Interface */
     ulong psci_call_num = 0x84000000 + 3; /* SMC32 CPU_ON */
-#if ARCH_ARM64
     psci_call_num += 0x40000000; /* SMC64 */
-#endif
     for (uint i = 1; i < SMP_MAX_CPUS; i++) {
         psci_call(psci_call_num, i, MEMBASE + KERNEL_LOAD_OFFSET, 0);
     }

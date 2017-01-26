@@ -9,15 +9,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-ifeq ($(ARCH),)
 ARCH := arm64
-endif
-ifeq ($(ARCH),arm64)
 ARM_CPU ?= cortex-a53
-endif
-ifeq ($(ARCH),arm)
-ARM_CPU ?= cortex-a15
-endif
 WITH_SMP ?= 1
 
 LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
@@ -44,8 +37,6 @@ KERNEL_DEFINES += \
     MEMBASE=$(MEMBASE) \
     MEMSIZE=$(MEMSIZE) \
     PLATFORM_SUPPORTS_PANIC_SHELL=1
-
-KERNEL_DEFINES += MMU_WITH_TRAMPOLINE=1 \
 
 LINKER_SCRIPT += \
     $(BUILDDIR)/system-onesegment.ld
