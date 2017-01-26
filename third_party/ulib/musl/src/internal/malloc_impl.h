@@ -24,6 +24,3 @@ struct chunk {
 
 #define C_INUSE ((size_t)1)
 #define IS_MMAPPED(c) !((c)->csize & (C_INUSE))
-
-void __donate_heap(void* start, void* end)
-    __attribute__((visibility("hidden")));

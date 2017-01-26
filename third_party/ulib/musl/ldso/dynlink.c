@@ -447,34 +447,6 @@ static void do_relocs(struct dso* dso, size_t* rel, size_t rel_size, size_t stri
     }
 }
 
-/* A huge hack: to make up for the wastefulness of shared libraries
- * needing at least a page of dirty memory even if they have no global
- * data, we reclaim the gaps at the beginning and end of writable maps
- * and "donate" them to the heap. */
-
-static void reclaim(struct dso* dso, size_t start, size_t end) {
-    if (start >= dso->relro_start && start < dso->relro_end)
-        start = dso->relro_end;
-    if (end >= dso->relro_start && end < dso->relro_end)
-        end = dso->relro_start;
-    __donate_heap(laddr(dso, start), laddr(dso, end));
-}
-
-static void reclaim_gaps(struct dso* dso) {
-    Phdr* ph = dso->phdr;
-    size_t phcnt = dso->phnum;
-
-    for (; phcnt--; ph = (void*)((char*)ph + dso->phentsize)) {
-        if (ph->p_type != PT_LOAD)
-            continue;
-        if ((ph->p_flags & (PF_R | PF_W)) != (PF_R | PF_W))
-            continue;
-        reclaim(dso, ph->p_vaddr & -PAGE_SIZE, ph->p_vaddr);
-        reclaim(dso, ph->p_vaddr + ph->p_memsz,
-                ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1 & -PAGE_SIZE);
-    }
-}
-
 static void unmap_library(struct dso* dso) {
     if (dso->map && dso->map_len) {
         munmap(dso->map, dso->map_len);
@@ -690,8 +662,6 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     dso->dynv = laddr(dso, dyn);
     if (dso->tls.size)
         dso->tls.image = laddr(dso, tls_image);
-    if (!runtime)
-        reclaim_gaps(dso);
     free(allocated_buf);
     return map;
 noexec:
@@ -1341,10 +1311,6 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
 
     /* Initial dso chain consists only of the app. */
     head = tail = &app;
-
-    // Donate unused parts of ldso mapping to malloc.
-    // map_library already did this for app.
-    reclaim_gaps(&ldso);
 
     /* Load preload/needed libraries, add their symbols to the global
      * namespace, and perform all remaining relocations. */
