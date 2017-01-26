@@ -34,27 +34,25 @@ def main():
 
     sympaths = {
         'apps': 'apps',
+        'third_party/netstack': 'github.com/google/netstack',
         # TODO(crawshaw): consider moving thinfs to apps/thinfs
         'go/src/fuchsia.googlesource.com': 'fuchsia.googlesource.com',
     }
 
     go_binary = os.path.join(args.fuchsia_root, "third_party/go/bin/go")
     gopath = args.root_out_dir
-    gopathsrc = os.path.join(gopath, "src")
-    if not os.path.exists(gopathsrc):
-        try:
-            os.mkdir(gopathsrc)
-        except OSError, e:
-            if os.path.isdir(gopathsrc):
-                pass # ignore, probably raced with another go build
-            else:
-                print("could not setup GOPATH symlink: ", e)
-                return 1
     for src in sympaths:
-        dst = sympaths[src]
+        dst = os.path.join(gopath, "src", sympaths[src])
         try:
-            os.symlink(os.path.join(args.fuchsia_root, src),
-                       os.path.join(gopathsrc, dst))
+            os.makedirs(os.path.dirname(dst))
+        except OSError, e:
+            if e.errno == os.errno.EEXIST:
+                pass # ignore, already have directory
+            else:
+                print("could not mkdir for path: ", dst, ": ", e)
+                return 1
+        try:
+            os.symlink(os.path.join(args.fuchsia_root, src), dst)
         except OSError, e:
             if e.errno == os.errno.EEXIST:
                 pass # ignore, already have symlink
