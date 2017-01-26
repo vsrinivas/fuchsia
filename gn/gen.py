@@ -83,7 +83,29 @@ def main():
     if passthrough:
         gn_command += passthrough
 
-    return gn.run(gn_command)
+    gn_result = gn.run(gn_command)
+
+    if gn_result == 0:
+        # Generate/Replace the compile commands database in out/.
+        compile_cmd_gen_cmd = [
+          'ninja',
+          '-C',
+          outdir_path,
+          '-t',
+          'compdb',
+          'cc',
+          'cxx',
+          'objc',
+          'objcxx',
+          'asm',
+        ]
+
+        contents = subprocess.check_output(compile_cmd_gen_cmd)
+        compile_commands = open('%s/compile_commands.json' % outdir_path, 'w+')
+        compile_commands.write(contents)
+        compile_commands.close()
+
+    return gn_result
 
 
 if __name__ == "__main__":
