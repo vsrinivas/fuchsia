@@ -18,7 +18,7 @@ DEPS = [
     'recipe_engine/step',
 ]
 
-TARGETS = ['magenta-qemu-arm32', 'magenta-qemu-arm64', 'magenta-pc-x86-64']
+TARGETS = ['magenta-qemu-arm64', 'magenta-pc-x86-64']
 
 PROPERTIES = {
     'category': Property(kind=str, help='Build category', default=None),
