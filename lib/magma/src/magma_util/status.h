@@ -13,11 +13,11 @@ class Status {
 public:
     Status(magma_status_t status) : status_(status) {}
 
-    magma_status_t get() { return status_; }
+    magma_status_t get() const { return status_; }
 
-    bool ok() { return status_ == MAGMA_STATUS_OK; }
+    bool ok() const { return status_ == MAGMA_STATUS_OK; }
 
-    operator bool() { return ok(); }
+    operator bool() const { return ok(); }
 
 private:
     magma_status_t status_;
