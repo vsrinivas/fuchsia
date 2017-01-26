@@ -87,12 +87,9 @@ typedef struct mx_info_vmar {
 // Argument is a char[MX_MAX_NAME_LEN].
 #define MX_PROP_NAME                        3u
 
-#if __arm__
+#if __x86_64__
 // Argument is a uintptr_t.
-#define MX_PROP_REGISTER_CP15           4u
-#elif __x86_64__
-// Argument is a uintptr_t.
-#define MX_PROP_REGISTER_FS             4u
+#define MX_PROP_REGISTER_FS                 4u
 #endif
 
 // Policies for MX_PROP_BAD_HANDLE_POLICY:

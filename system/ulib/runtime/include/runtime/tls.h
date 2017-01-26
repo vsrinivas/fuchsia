@@ -29,20 +29,6 @@ static inline void mxr_tp_set(mx_handle_t self, void* tp) {
                      : "r"(tp));
 }
 
-#elif defined(__arm__)
-static inline void* mxr_tp_get(void) {
-    void* tp;
-    __asm__ __volatile__("mrc p15, 0, %0, c13, c0, 3"
-                         : "=r"(tp));
-    return tp;
-}
-static inline void mxr_tp_set(mx_handle_t self, void* tp) {
-    mx_status_t status = _mx_object_set_property(
-        self, MX_PROP_REGISTER_CP15, (uintptr_t*)&tp, sizeof(uintptr_t));
-    if (status != NO_ERROR)
-        __builtin_trap();
-}
-
 #elif defined(__x86_64__)
 static inline void* mxr_tp_get(void) {
     void* tp;

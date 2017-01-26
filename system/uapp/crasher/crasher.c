@@ -80,8 +80,6 @@ int undefined(volatile unsigned int* unused) {
     __asm__ volatile("ud2");
 #elif defined(__aarch64__)
     __asm__ volatile("brk #0"); // not undefined, but close enough
-#elif defined(__arm__)
-    __asm__ volatile("udf #0");
 #else
 #error "need to define undefined for this architecture"
 #endif
