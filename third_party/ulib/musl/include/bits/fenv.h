@@ -2,8 +2,6 @@
 #include "x86_64/fenv.h"
 #elif defined(__aarch64__)
 #include "aarch64/fenv.h"
-#elif defined(__arm__)
-#include "arm/fenv.h"
 #else
 #error Unsupported architecture!
 #endif

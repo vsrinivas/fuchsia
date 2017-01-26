@@ -2,8 +2,6 @@
 #include "x86_64/user.h"
 #elif defined(__aarch64__)
 #include "aarch64/user.h"
-#elif defined(__arm__)
-#include "arm/user.h"
 #else
 #error Unsupported architecture!
 #endif

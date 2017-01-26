@@ -2,8 +2,6 @@
 #include "x86_64/io.h"
 #elif defined(__aarch64__)
 #include "generic/io.h"
-#elif defined(__arm__)
-#include "generic/io.h"
 #else
 #error Unsupported architecture!
 #endif

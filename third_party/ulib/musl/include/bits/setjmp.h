@@ -2,8 +2,6 @@
 #include "x86_64/setjmp.h"
 #elif defined(__aarch64__)
 #include "aarch64/setjmp.h"
-#elif defined(__arm__)
-#include "arm/setjmp.h"
 #else
 #error Unsupported architecture!
 #endif

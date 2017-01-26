@@ -2,8 +2,6 @@
 #include "generic/resource.h"
 #elif defined(__aarch64__)
 #include "generic/resource.h"
-#elif defined(__arm__)
-#include "generic/resource.h"
 #else
 #error Unsupported architecture!
 #endif

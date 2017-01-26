@@ -6,10 +6,6 @@
 #define _Int64 long long
 #define _Reg long
 
-#elif defined(__arm__)
-#define _Int64 long long
-#define _Reg int
-
 #else
 #error Unsupported architecture!
 

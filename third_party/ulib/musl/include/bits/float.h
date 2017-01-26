@@ -2,8 +2,6 @@
 #include "x86_64/float.h"
 #elif defined(__aarch64__)
 #include "aarch64/float.h"
-#elif defined(__arm__)
-#include "arm/float.h"
 #else
 #error Unsupported architecture!
 #endif

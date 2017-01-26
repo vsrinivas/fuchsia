@@ -2,8 +2,6 @@
 #include "x86_64/ipc.h"
 #elif defined(__aarch64__)
 #include "aarch64/ipc.h"
-#elif defined(__arm__)
-#include "generic/ipc.h"
 #else
 #error Unsupported architecture!
 #endif

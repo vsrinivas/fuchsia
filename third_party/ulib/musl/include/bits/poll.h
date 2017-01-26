@@ -2,8 +2,6 @@
 #include "generic/poll.h"
 #elif defined(__aarch64__)
 #include "generic/poll.h"
-#elif defined(__arm__)
-#include "generic/poll.h"
 #else
 #error Unsupported architecture!
 #endif

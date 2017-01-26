@@ -2,8 +2,6 @@
 #include "x86_64/reg.h"
 #elif defined(__aarch64__)
 #include "aarch64/reg.h"
-#elif defined(__arm__)
-#include "arm/reg.h"
 #else
 #error Unsupported architecture!
 #endif

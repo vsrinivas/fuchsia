@@ -2,8 +2,6 @@
 #include "x86_64/fcntl.h"
 #elif defined(__aarch64__)
 #include "aarch64/fcntl.h"
-#elif defined(__arm__)
-#include "arm/fcntl.h"
 #else
 #error Unsupported architecture!
 #endif

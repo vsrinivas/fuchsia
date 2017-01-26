@@ -7,8 +7,6 @@ LOCAL_COMPILEFLAGS := \
 
 ifeq ($(ARCH),arm64)
 MUSL_ARCH := aarch64
-else ifeq ($(ARCH),arm)
-MUSL_ARCH := arm
 else ifeq ($(SUBARCH),x86-64)
 MUSL_ARCH := x86_64
 else
@@ -1081,50 +1079,6 @@ LOCAL_SRCS += \
     $(LOCAL_DIR)/third_party/math/log1pl.c \
     $(LOCAL_DIR)/third_party/math/log2l.c \
     $(LOCAL_DIR)/third_party/math/logl.c \
-
-else ifeq ($(ARCH),arm)
-LOCAL_SRCS += \
-    $(LOCAL_DIR)/src/exit/arm/__aeabi_atexit.c \
-    $(LOCAL_DIR)/src/fenv/arm/fenv-hf.S \
-    $(LOCAL_DIR)/src/fenv/fenv.c \
-    $(LOCAL_DIR)/src/internal/syscall.c \
-    $(LOCAL_DIR)/src/ldso/arm/find_exidx.c \
-    $(LOCAL_DIR)/src/ldso/tlsdesc.c \
-    $(LOCAL_DIR)/src/math/ceill.c \
-    $(LOCAL_DIR)/src/math/fabs.c \
-    $(LOCAL_DIR)/src/math/fabsf.c \
-    $(LOCAL_DIR)/src/math/fabsl.c \
-    $(LOCAL_DIR)/src/math/floorl.c \
-    $(LOCAL_DIR)/src/math/fmodl.c \
-    $(LOCAL_DIR)/src/math/llrint.c \
-    $(LOCAL_DIR)/src/math/llrintf.c \
-    $(LOCAL_DIR)/src/math/llrintl.c \
-    $(LOCAL_DIR)/src/math/lrint.c \
-    $(LOCAL_DIR)/src/math/lrintf.c \
-    $(LOCAL_DIR)/src/math/lrintl.c \
-    $(LOCAL_DIR)/src/math/remainderl.c \
-    $(LOCAL_DIR)/src/math/rintl.c \
-    $(LOCAL_DIR)/src/math/sqrtl.c \
-    $(LOCAL_DIR)/src/math/truncl.c \
-    $(LOCAL_DIR)/src/process/vfork.c \
-    $(LOCAL_DIR)/src/setjmp/arm/longjmp.s \
-    $(LOCAL_DIR)/src/setjmp/arm/setjmp.s \
-    $(LOCAL_DIR)/src/signal/arm/restore.s \
-    $(LOCAL_DIR)/src/signal/arm/sigsetjmp.s \
-    $(LOCAL_DIR)/src/thread/arm/syscall_cp.s \
-    $(LOCAL_DIR)/third_party/math/acosl.c \
-    $(LOCAL_DIR)/third_party/math/asinl.c \
-    $(LOCAL_DIR)/third_party/math/atan2l.c \
-    $(LOCAL_DIR)/third_party/math/atanl.c \
-    $(LOCAL_DIR)/third_party/math/exp2l.c \
-    $(LOCAL_DIR)/third_party/math/expl.c \
-    $(LOCAL_DIR)/third_party/math/expm1l.c \
-    $(LOCAL_DIR)/third_party/math/log10l.c \
-    $(LOCAL_DIR)/third_party/math/log1pl.c \
-    $(LOCAL_DIR)/third_party/math/log2l.c \
-    $(LOCAL_DIR)/third_party/math/logl.c \
-    $(LOCAL_DIR)/third_party/math/sqrt.c \
-    $(LOCAL_DIR)/third_party/math/sqrtf.c \
 
 else ifeq ($(SUBARCH),x86-64)
 LOCAL_SRCS += \
