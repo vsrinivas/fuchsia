@@ -58,6 +58,11 @@ uint64_t magma_system_get_buffer_id(magma_buffer_t buffer)
     return reinterpret_cast<magma::PlatformBuffer*>(buffer)->id();
 }
 
+uint64_t magma_system_get_buffer_size(magma_buffer_t buffer)
+{
+    return reinterpret_cast<magma::PlatformBuffer*>(buffer)->size();
+}
+
 magma_status_t magma_system_map(magma_system_connection* connection, magma_buffer_t buffer,
                                 void** addr_out)
 {

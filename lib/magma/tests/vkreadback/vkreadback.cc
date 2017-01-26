@@ -30,6 +30,9 @@ private:
     VkQueue vk_queue_;
     VkImage vk_image_;
     VkDeviceMemory vk_device_memory_;
+#if defined(MAGMA_TEST_IMPORT_EXPORT)
+    VkDeviceMemory vk_imported_device_memory_;
+#endif
     VkCommandPool vk_command_pool_;
     VkCommandBuffer vk_command_buffer_;
 };
@@ -206,6 +209,19 @@ bool VkReadbackTest::InitImage()
         VK_SUCCESS)
         return DRETF(false, "vkAllocateMemory failed");
 
+#if defined(MAGMA_TEST_IMPORT_EXPORT)
+    uint32_t handle;
+    DASSERT(vkExportDeviceMemoryMAGMA);
+    if ((result = vkExportDeviceMemoryMAGMA(vk_device_, vk_device_memory_, &handle)) != VK_SUCCESS)
+        return DRETF(false, "vkExportDeviceMemoryMAGMA failed");
+
+    DASSERT(vkImportDeviceMemoryMAGMA);
+    if ((result = vkImportDeviceMemoryMAGMA(vk_device_, handle, nullptr,
+                                            &vk_imported_device_memory_)) != VK_SUCCESS)
+        return DRETF(false, "vkImportDeviceMemoryMAGMA failed");
+
+#endif
+
     void* addr;
     if ((result = vkMapMemory(vk_device_, vk_device_memory_, 0, VK_WHOLE_SIZE, 0, &addr)) !=
         VK_SUCCESS)
@@ -306,9 +322,15 @@ bool VkReadbackTest::Readback()
     VkResult result;
     void* addr;
 
+#if defined(MAGMA_TEST_IMPORT_EXPORT)
+    if ((result = vkMapMemory(vk_device_, vk_imported_device_memory_, 0, VK_WHOLE_SIZE, 0,
+                              &addr)) != VK_SUCCESS)
+        return DRETF(false, "vkMapMeory failed: %d", result);
+#else
     if ((result = vkMapMemory(vk_device_, vk_device_memory_, 0, VK_WHOLE_SIZE, 0, &addr)) !=
         VK_SUCCESS)
         return DRETF(false, "vkMapMeory failed: %d", result);
+#endif
 
     auto data = reinterpret_cast<uint32_t*>(addr);
 
@@ -327,7 +349,11 @@ bool VkReadbackTest::Readback()
         printf("****** Test Passed! All values matched.\n");
     }
 
+#if defined(MAGMA_TEST_IMPORT_EXPORT)
+    vkUnmapMemory(vk_device_, vk_imported_device_memory_);
+#else
     vkUnmapMemory(vk_device_, vk_device_memory_);
+#endif
 
     return mismatches == 0;
 }

@@ -24,5 +24,6 @@ group("tests") {
     "unit_tests:magma_sys_unit_tests",
     "vkcube",
     "vkreadback",
+    "vkreadback:vk_import_export_readback",
   ]
 }

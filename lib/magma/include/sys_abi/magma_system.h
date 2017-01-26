@@ -34,6 +34,7 @@ magma_status_t magma_system_alloc(struct magma_system_connection* connection, ui
 void magma_system_free(struct magma_system_connection* connection, magma_buffer_t buffer);
 
 uint64_t magma_system_get_buffer_id(magma_buffer_t buffer);
+uint64_t magma_system_get_buffer_size(magma_buffer_t buffer);
 
 void magma_system_set_tiling_mode(struct magma_system_connection* connection, magma_buffer_t buffer,
                                   uint32_t tiling_mode);
