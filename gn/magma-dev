@@ -31,6 +31,10 @@
             "bootfs_path": "test/vkreadback"
         },
         {
+            "binary": "vk_import_export_readback",
+            "bootfs_path": "test/vk_import_export_readback"
+        },
+        {
             "binary": "test_wsi_magma",
             "bootfs_path": "test/test_wsi_magma"
         },
