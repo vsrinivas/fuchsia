@@ -24,8 +24,8 @@ typedef struct launchpad launchpad_t;
 //   launchpad_t* lp;
 //   launchpad_create(job, "processname", &lp);
 //   launchpad_load_from_file(lp, argv[0]);
-//   launchpad_arguments(lp, argc, argv);
-//   launchpad_environ(lp, env);
+//   launchpad_set_args(lp, argc, argv);
+//   launchpad_set_environ(lp, env);
 //   << other launchpad_*() calls to setup initial fds, handles, etc >>
 //   mx_handle_t proc;
 //   const char* errmsg;
@@ -50,15 +50,26 @@ typedef struct launchpad launchpad_t;
 // a launchpad before any other operations may be one with it.
 // ----------------------------------------------------------------
 
-// Create a new process and a launchpad that will set it up. The
-// job handle is consumed regardless of the result.
-// It is equivalent to calling launchpad_create_with_jobs(job, job ..).
+// Create a new process and a launchpad that will set it up.
+// The job handle is used for creation of the process, but is not
+// taken ownership of or closed.
+//
+// If the job handle is 0 (MX_INVALID_JOB), the default job for
+// the running process is used, if it exists (mx_job_default())
+//
+// Unless the new process is provided with a job handle, at time
+// of launch or later, it will not be able to create any more
+// processes.
 mx_status_t launchpad_create(mx_handle_t job, const char* name,
                              launchpad_t** lp);
 
-// Create a new process and a launchpad that will set it up. The
-// transfered_job handle is optional (can be 0) when valid, is consumed
-// regardless of the result.
+// Create a new process and a launchpad that will set it up.
+// The creation_job handle is used to create the process but is
+// not taken ownership of or closed.
+//
+// The transfered_job handle is optional.  If non-zero, it is
+// consumed by the launchpad and will be passed to the new process
+// on successful launch or closed on failure.
 mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job,
                                        mx_handle_t transfered_job,
                                        const char* name,
@@ -104,6 +115,7 @@ void launchpad_abort(launchpad_t* lp, mx_status_t status, const char* msg);
 // a human-readable detailed message describing the failure that may
 // assist in debugging.
 const char* launchpad_error_message(launchpad_t* lp);
+mx_status_t launchpad_get_status(launchpad_t* lp);
 
 
 // SIMPLIFIED BINARY LOADING
@@ -141,16 +153,43 @@ mx_status_t launchpad_set_environ(launchpad_t* lp, const char* const* envp);
 // by launchpad_destroy or transferred by launchpad_start.
 // Successive calls append more handles.  The list of handles to
 // send is cleared only by a successful launchpad_start call.
+// It is an error to add a handle of 0 (MX_INVALID_HANDLE)
 mx_status_t launchpad_add_handle(launchpad_t* lp, mx_handle_t h, uint32_t id);
 mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
                                   const mx_handle_t h[], const uint32_t id[]);
-
 
 // ADDING MXIO FILE DESCRIPTORS
 // These functions configure the initial file descriptors, root directory,
 // and current working directory for processes which use libmxio for the
 // posix-style io api (open/close/read/write/...)
 // --------------------------------------------------------------------
+
+
+// This function allows some or all of the environment of the
+// running process to be shared with the process being launched.
+// The items shared are as of the call to launchpad_clone().
+//
+// CLONE_MXIO_ROOT   shares the root filestem view
+// CLONE_MXIO_CWD    shares the current working directory
+// CLONE_MXIO_STDIO  shares file descriptors 0, 1, and 2
+// CLONE_ENVIRON     shares the environment
+// CLONE_JOB         shares the default job (if one exists)
+//
+// It is *not* an error if any of the above requested items don't
+// exist (eg, fd0 is closed)
+//
+// launchpad_clone_fd() and launchpad_trasnfer_fd() may be used to
+// add additional file descriptors to the launched process.
+#define LP_CLONE_MXIO_ROOT     (0x0001u)
+#define LP_CLONE_MXIO_CWD      (0x0002u)
+#define LP_CLONE_MXIO_STDIO    (0x0004u)
+#define LP_CLONE_MXIO_ALL      (0x00FFu)
+#define LP_CLONE_ENVIRON       (0x0100u)
+#define LP_CLONE_DEFAULT_JOB   (0x0200u)
+#define LP_CLONE_ALL           (0xFFFFu)
+
+mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what);
+
 
 // Clone the mxio root handle into the new process.
 // This will allow mxio-based filesystem access to work in the new process.

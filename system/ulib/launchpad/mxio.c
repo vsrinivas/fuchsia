@@ -16,21 +16,47 @@ static mx_status_t add_mxio(launchpad_t* lp,
                             mx_handle_t handles[MXIO_MAX_HANDLES],
                             uint32_t types[MXIO_MAX_HANDLES],
                             mx_status_t status) {
+    if (status == ERR_BAD_HANDLE)
+        return NO_ERROR;
+    if (status == ERR_NOT_SUPPORTED)
+        return NO_ERROR;
     if (status > 0) {
-        size_t n = status;
-        status = launchpad_add_handles(lp, n, handles, types);
-        if (status != NO_ERROR) {
-            for (size_t i = 0; i < n; ++i)
-                mx_handle_close(handles[i]);
+        return launchpad_add_handles(lp, status, handles, types);
+    } else {
+        launchpad_abort(lp, status, "add_mxio: failed");
+        return status;
+    }
+}
+
+mx_status_t launchpad_clone(launchpad_t* lp, uint32_t what) {
+    mx_handle_t handles[MXIO_MAX_HANDLES];
+    uint32_t types[MXIO_MAX_HANDLES];
+
+    if (what & LP_CLONE_MXIO_ROOT) {
+        add_mxio(lp, handles, types, mxio_clone_root(handles, types));
+    }
+    if (what & LP_CLONE_MXIO_CWD) {
+        add_mxio(lp, handles, types, mxio_clone_cwd(handles, types));
+    }
+    if (what & LP_CLONE_MXIO_STDIO) {
+        for (int fd = 0; fd < 3; fd++) {
+            add_mxio(lp, handles, types, mxio_clone_fd(fd, fd, handles, types));
         }
     }
-    return status;
+    if (what & LP_CLONE_ENVIRON) {
+        launchpad_set_environ(lp, (const char* const*)environ);
+    }
+    if (what & LP_CLONE_DEFAULT_JOB) {
+        mx_handle_t job;
+        if (mx_handle_duplicate(mx_job_default(), MX_RIGHT_SAME_RIGHTS, &job) == NO_ERROR) {
+            launchpad_add_handle(lp, job, MX_HND_INFO(MX_HND_TYPE_JOB, 0));
+        }
+    }
+    return launchpad_get_status(lp);
 }
 
 mx_status_t launchpad_clone_mxio_root(launchpad_t* lp) {
-    mx_handle_t handles[MXIO_MAX_HANDLES];
-    uint32_t types[MXIO_MAX_HANDLES];
-    return add_mxio(lp, handles, types, mxio_clone_root(handles, types));
+    return launchpad_clone(lp, LP_CLONE_MXIO_ROOT);
 }
 
 mx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd) {
@@ -48,25 +74,15 @@ mx_status_t launchpad_transfer_fd(launchpad_t* lp, int fd, int target_fd) {
 }
 
 mx_status_t launchpad_clone_mxio_cwd(launchpad_t* lp) {
-    mx_handle_t handles[MXIO_MAX_HANDLES];
-    uint32_t types[MXIO_MAX_HANDLES];
-    return add_mxio(lp, handles, types,
-                    mxio_clone_cwd(handles, types));
+    return launchpad_clone(lp, LP_CLONE_MXIO_CWD);
 }
 
 mx_status_t launchpad_add_all_mxio(launchpad_t* lp) {
-    mx_status_t status = launchpad_clone_mxio_root(lp);
-    if (status == NO_ERROR) {
-        status = launchpad_clone_mxio_cwd(lp);
+    launchpad_clone(lp, LP_CLONE_MXIO_ROOT | LP_CLONE_MXIO_CWD);
+    for (int fd = 0; fd < MAX_MXIO_FD; ++fd) {
+        launchpad_clone_fd(lp, fd, fd);
     }
-    for (int fd = 0; status == NO_ERROR && fd < MAX_MXIO_FD; ++fd) {
-        status = launchpad_clone_fd(lp, fd, fd);
-        if (status == ERR_BAD_HANDLE)
-            status = NO_ERROR;
-        if (status == ERR_NOT_SUPPORTED)
-            status = NO_ERROR;
-    }
-    return status;
+    return launchpad_get_status(lp);
 }
 
 mx_handle_t launchpad_launch_mxio_vmo_etc(mx_handle_t job,

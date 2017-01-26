@@ -67,6 +67,10 @@ static mx_status_t lp_error(launchpad_t* lp, mx_status_t error, const char* msg)
     return lp->error;
 }
 
+mx_status_t launchpad_get_status(launchpad_t* lp) {
+    return lp->error;
+}
+
 void launchpad_abort(launchpad_t* lp, mx_status_t error, const char* msg) {
     lp_error(lp, (error < 0) ? error : ERR_INTERNAL, msg);
 }
@@ -121,7 +125,7 @@ mx_status_t launchpad_create_with_process(mx_handle_t proc,
 
 // Create a new process and a launchpad that will set it up.
 mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t transfered_job,
-                             const char* name, launchpad_t** result) {
+                                       const char* name, launchpad_t** result) {
     uint32_t name_len = strlen(name);
 
     mx_handle_t proc = MX_HANDLE_INVALID;
@@ -144,7 +148,11 @@ mx_status_t launchpad_create_with_jobs(mx_handle_t creation_job, mx_handle_t tra
 
 mx_status_t launchpad_create(mx_handle_t job,
                              const char* name, launchpad_t** result) {
-    return launchpad_create_with_jobs(job, job, name, result);
+    if (job == MX_HANDLE_INVALID)
+        job = mx_job_default();
+    mx_handle_t xjob = MX_HANDLE_INVALID;
+    mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &xjob);
+    return launchpad_create_with_jobs(job, xjob, name, result);
 }
 
 mx_handle_t launchpad_get_process_handle(launchpad_t* lp) {
@@ -249,6 +257,8 @@ static mx_status_t more_handles(launchpad_t* lp, size_t n) {
 }
 
 mx_status_t launchpad_add_handle(launchpad_t* lp, mx_handle_t h, uint32_t id) {
+    if (h == MX_HANDLE_INVALID)
+        return lp_error(lp, ERR_BAD_HANDLE, "added invalid handle");
     mx_status_t status = more_handles(lp, 1);
     if (status == NO_ERROR) {
         lp->handles[lp->handle_count] = h;
@@ -268,6 +278,11 @@ mx_status_t launchpad_add_handles(launchpad_t* lp, size_t n,
         memcpy(&lp->handles[lp->handle_count], h, n * sizeof(h[0]));
         memcpy(&lp->handles_info[lp->handle_count], id, n * sizeof(id[0]));
         lp->handle_count += n;
+        for (size_t i = 0; i < n; i++) {
+            if (h[i] == MX_HANDLE_INVALID) {
+                return lp_error(lp, ERR_BAD_HANDLE, "added invalid handle");
+            }
+        }
     } else {
         for (size_t i = 0; i < n; i++) {
             mx_handle_close(h[i]);
@@ -776,7 +791,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         mx_handle_t stack_vmo;
         mx_status_t status = mx_vmo_create(lp->stack_size, 0, &stack_vmo);
         if (status < 0)
-            return status;
+            return lp_error(lp, status, "cannot create stack vmo");
         mx_vaddr_t stack_base;
         status = mx_vmar_map(lp_vmar(lp), 0, stack_vmo, 0, lp->stack_size,
                               MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
@@ -795,14 +810,14 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         }
         if (status != NO_ERROR) {
             mx_handle_close(stack_vmo);
-            return status;
+            return lp_error(lp, status, "cannot map stack vmo");
         }
     }
 
     mx_status_t status = mx_thread_create(lp_proc(lp), thread_name,
                                           strlen(thread_name), 0, thread);
     if (status < 0) {
-        return status;
+        return lp_error(lp, status, "cannot create initial thread");
     } else {
         // Pass the thread handle down to the child.  The handle we pass
         // will be consumed by message_write.  So we need a duplicate to
@@ -811,12 +826,11 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         status = mx_handle_duplicate(*thread, MX_RIGHT_SAME_RIGHTS, &thread_copy);
         if (status < 0) {
             mx_handle_close(*thread);
-            return status;
+            return lp_error(lp, status, "cannot duplicate thread handle");
         }
         status = launchpad_add_handle(lp, thread_copy,
                                       MX_HND_TYPE_THREAD_SELF);
         if (status != NO_ERROR) {
-            mx_handle_close(thread_copy);
             mx_handle_close(*thread);
             return status;
         }
@@ -826,7 +840,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         status = send_loader_message(lp, *thread, to_child);
         if (status != NO_ERROR) {
             mx_handle_close(*thread);
-            return status;
+            return lp_error(lp, status, "failed to send loader message");
         }
     }
 
@@ -834,7 +848,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     void* msg = build_message(lp, &size);
     if (msg == NULL) {
         mx_handle_close(*thread);
-        return ERR_NO_MEMORY;
+        return lp_error(lp, ERR_NO_MEMORY, "out of memory assembling procargs message");
     }
 
     // Assume the process will read the bootstrap message onto its
@@ -845,7 +859,7 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
     if (size > lp->stack_size / 2) {
         free(msg);
         mx_handle_close(*thread);
-        return ERR_BUFFER_TOO_SMALL;
+        return lp_error(lp, ERR_BUFFER_TOO_SMALL, "procargs message is too large");
     }
 
     status = mx_channel_write(to_child, 0, msg, size,
@@ -858,9 +872,10 @@ static mx_status_t prepare_start(launchpad_t* lp, const char* thread_name,
         lp->handle_count = 0;
     } else {
         mx_handle_close(*thread);
+        return lp_error(lp, status, "failed to write procargs message");
     }
 
-    return status;
+    return NO_ERROR;
 }
 
 mx_handle_t launchpad_start(launchpad_t* lp) {
