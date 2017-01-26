@@ -1,6 +1,23 @@
 #include <stdint.h>
 #include <string.h>
 
+#ifdef __aarch64__
+// The compiler might autovectorize this code into using NEON instructions.
+// That's perfectly valid for it to do, but we currently have some callers
+// that use memset on device memory that is memory-mapped as uncached.
+// ARM64 allows wide NEON operations on pointers that are not aligned to
+// the vector size, but these actually fault in hardware when used on
+// uncached device memory.  It's a bug to call memset on memory that cannot
+// be accessed by the processor's normal rules.  But until those callers
+// are fixed, we work around their bugs by avoiding NEON autovectorization
+// of memset.
+// TODO(MG-480, MG-481): Remove the attribute when all callers are fixed.
+# ifdef __clang__
+__attribute__((target("no-neon")))
+# else
+__attribute__((target("general-regs-only")))
+# endif
+#endif
 void* memset(void* dest, int c, size_t n) {
     unsigned char* s = dest;
     size_t k;
