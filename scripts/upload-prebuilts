@@ -27,16 +27,12 @@ readonly GIT_SHA="$(git log -1 --format=%H)"
 
 # The list of targets to build.
 readonly TARGETS=(
-  "magenta-qemu-arm32"
   "magenta-qemu-arm64"
   "magenta-pc-x86-64"
 )
 
 # The list of output files to upload.
 declare -A PREBUILTS=(
-  ["build-magenta-qemu-arm32/magenta.bin"]="qemu-arm32/magenta.bin"
-  ["build-magenta-qemu-arm32/magenta.elf"]="qemu-arm32/magenta.elf"
-  ["build-magenta-qemu-arm32/upload/sysroot.tgz"]="qemu-arm32/sysroot.tgz"
   ["build-magenta-qemu-arm64/magenta.bin"]="qemu-arm64/magenta.bin"
   ["build-magenta-qemu-arm64/magenta.elf"]="qemu-arm64/magenta.elf"
   ["build-magenta-qemu-arm64/upload/sysroot.tgz"]="qemu-arm64/sysroot.tgz"
