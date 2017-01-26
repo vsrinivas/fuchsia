@@ -33,6 +33,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/pci_io_mapping_dispatcher.cpp \
     $(LOCAL_DIR)/port_client.cpp \
     $(LOCAL_DIR)/port_dispatcher.cpp \
+    $(LOCAL_DIR)/port_dispatcher_v2.cpp \
     $(LOCAL_DIR)/process_dispatcher.cpp \
     $(LOCAL_DIR)/resource_dispatcher.cpp \
     $(LOCAL_DIR)/socket_dispatcher.cpp \

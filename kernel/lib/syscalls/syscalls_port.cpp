@@ -8,14 +8,14 @@
 #include <inttypes.h>
 #include <trace.h>
 
-#include <kernel/auto_lock.h>
-
 #include <lib/ktrace.h>
 
 #include <magenta/handle_owner.h>
 #include <magenta/magenta.h>
 #include <magenta/port_dispatcher.h>
+#include <magenta/port_dispatcher_v2.h>
 #include <magenta/process_dispatcher.h>
+#include <magenta/user_copy.h>
 
 #include <mxtl/ref_ptr.h>
 
@@ -28,7 +28,11 @@ mx_status_t sys_port_create(uint32_t options, mx_handle_t* _out) {
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    mx_status_t result = PortDispatcher::Create(options, &dispatcher, &rights);
+
+    mx_status_t result = (options == MX_PORT_OPT_V2) ?
+        PortDispatcherV2::Create(options, &dispatcher, &rights):
+        PortDispatcher::Create(options, &dispatcher, &rights);
+
     if (result != NO_ERROR)
         return result;
 
@@ -50,21 +54,43 @@ mx_status_t sys_port_create(uint32_t options, mx_handle_t* _out) {
     return NO_ERROR;
 }
 
+static mx_status_t sys_port_queue2(mx_handle_t handle, const void* _packet) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<PortDispatcherV2> port;
+    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
+
+    AllocChecker ac;
+    mxtl::unique_ptr<PortPacket> pp(new (&ac) PortPacket(true));
+    if (!ac.check())
+        return ERR_NO_MEMORY;
+
+    if (make_user_ptr(_packet).copy_array_from_user(&pp->packet, sizeof(pp->packet)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    pp->packet.type = MX_PKT_TYPE_USER;
+
+    return port->Queue(pp.release());
+}
+
 mx_status_t sys_port_queue(mx_handle_t handle, const void* _packet, size_t size) {
     LTRACEF("handle %d\n", handle);
 
     if (size > MX_PORT_MAX_PKT_SIZE)
         return ERR_BUFFER_TOO_SMALL;
 
-    if (size < sizeof(mx_packet_header_t))
-        return ERR_INVALID_ARGS;
-
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_WRITE);
-    if (status != NO_ERROR)
-        return status;
+    if (status != NO_ERROR) {
+        return (size == 0u) ? sys_port_queue2(handle, _packet) : status;
+    }
+
+    if (size < sizeof(mx_packet_header_t))
+        return ERR_INVALID_ARGS;
 
     auto iopk = IOP_Packet::MakeFromUser(_packet, size);
     if (!iopk)
@@ -73,6 +99,28 @@ mx_status_t sys_port_queue(mx_handle_t handle, const void* _packet, size_t size)
     ktrace(TAG_PORT_QUEUE, (uint32_t)port->get_koid(), (uint32_t)size, 0, 0);
 
     return port->Queue(iopk);
+}
+
+mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, void* _packet) {
+    auto up = ProcessDispatcher::GetCurrent();
+
+    mxtl::RefPtr<PortDispatcherV2> port;
+    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
+
+    PortPacket* pp = nullptr;
+    mx_status_t st = port->DeQueue(timeout, &pp);
+    if (st != NO_ERROR)
+        return st;
+
+    if (make_user_ptr(_packet).copy_array_to_user(&pp->packet, sizeof(pp->packet)) != NO_ERROR)
+        return ERR_INVALID_ARGS;
+
+    if (pp->from_heap)
+        delete pp;
+
+    return NO_ERROR;
 }
 
 mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
@@ -86,8 +134,9 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
 
     mxtl::RefPtr<PortDispatcher> port;
     mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_READ);
-    if (status != NO_ERROR)
-        return status;
+    if (status != NO_ERROR) {
+        return (size == 0u) ? sys_port_wait2(handle, timeout, _packet) : status;
+    }
 
     ktrace(TAG_PORT_WAIT, (uint32_t)port->get_koid(), 0, 0, 0);
 

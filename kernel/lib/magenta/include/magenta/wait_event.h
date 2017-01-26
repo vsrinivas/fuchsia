@@ -17,8 +17,8 @@
 // signaled from many threads (Signal() is thread-safe).
 class WaitEvent {
 public:
-    WaitEvent() {
-        event_init(&event_, false, 0u);
+    WaitEvent(uint32_t opts = 0) {
+        event_init(&event_, false, opts);
     }
     ~WaitEvent() {
         event_destroy(&event_);
