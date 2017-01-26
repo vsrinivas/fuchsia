@@ -12,6 +12,7 @@
 #include <sys/time.h>
 
 #include <fcntl.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +31,7 @@ static struct in6_addr allowed_addr;
 static const char spinner[] = {'|', '/', '-', '\\'};
 static const int MAX_READ_RETRIES = 10;
 static const int MAX_SEND_RETRIES = 10000;
+static int64_t us_between_packets = 20;
 
 static int io_rcv(int s, nbmsg* msg, nbmsg* ack) {
     for (int i = 0; i < MAX_READ_RETRIES; i++) {
@@ -353,7 +355,7 @@ static int xfer(struct sockaddr_in6* addr, const char* fn, const char* name, boo
                 struct timeval now;
                 gettimeofday(&now, NULL);
                 us_since_last_packet = (int64_t)(now.tv_sec - packet_start_time.tv_sec) * 1000000 + ((int64_t)now.tv_usec - (int64_t)packet_start_time.tv_usec);
-            } while (us_since_last_packet < 20);
+            } while (us_since_last_packet < us_between_packets);
         }
 
         // ACKs really are NACKs
@@ -453,6 +455,20 @@ int main(int argc, char** argv) {
             }
         } else if (!strcmp(argv[1], "-1")) {
             once = 1;
+        } else if (!strcmp(argv[1], "-i")) {
+            if (argc <= 1) {
+                fprintf(stderr, "'-i' option requires an argument (micros between packets)\n");
+                return -1;
+            }
+            errno = 0;
+            us_between_packets = strtoll(argv[2], NULL, 10);
+            if (errno != 0 || us_between_packets <= 0) {
+                fprintf(stderr, "invalid arg for -i: %s\n", argv[2]);
+                return -1;
+            }
+            fprintf(stderr, "packet spacing set to %" PRId64 " microseconds\n", us_between_packets);
+            argc--;
+            argv++;
         } else if (!strcmp(argv[1], "-a")) {
             if (argc <= 1) {
                 fprintf(stderr, "'-a' option requires a valid ipv6 address\n");
