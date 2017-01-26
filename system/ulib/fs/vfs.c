@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifdef __Fuchsia__
+#include <magenta/syscalls.h>
+#endif
+
 #include <mxio/dispatcher.h>
 #include <mxio/remoteio.h>
 
@@ -34,16 +38,39 @@ static mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, 
     return NO_ERROR;
 }
 
+// Access the remote handle if it's ready -- otherwise, return an error.
+static mx_status_t vfs_get_remote(vnode_t* vn) {
+#ifdef __Fuchsia__
+    if (!(vn->flags & V_FLAG_MOUNT_READY)) {
+        mx_status_t status = mx_handle_wait_one(vn->remote,
+                                                MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED, 0,
+                                                NULL);
+        if (status != NO_ERROR) {
+            // Not set (or otherwise remote is bad)
+            return ERR_UNAVAILABLE;
+        }
+        vn->flags |= V_FLAG_MOUNT_READY;
+    }
+    return vn->remote;
+#else
+    return ERR_NOT_SUPPORTED;
+#endif
+}
+
 static mx_status_t vfs_walk_remote(vnode_t* vn, vnode_t** out, const char* path,
                                    const char** pathout, vnode_t* oldvn) {
     trace(WALK, "vfs_walk: vn=%p name='%s' (remote)\n", vn, path);
+    mx_status_t r = vfs_get_remote(vn);
+    if (r < 0) {
+        return r;
+    }
     *out = vn;
     *pathout = path;
     if (oldvn == NULL) {
         // returning our original vnode, need to upref it
         vn_acquire(vn);
     }
-    return vn->remote;
+    return r;
 }
 
 static mx_status_t vfs_walk_next(vnode_t* vn, vnode_t** out, const char* path,
@@ -185,7 +212,7 @@ mx_status_t vfs_open(vnode_t* vndir, vnode_t** out, const char* path,
             // Opening a mount point: Traverse across remote.
             // Devices are different, even though they also have remotes.  Ignore them.
             *pathout = ".";
-            r = vn->remote;
+            r = vfs_get_remote(vn);
             vn_release(vn);
             return r;
         }

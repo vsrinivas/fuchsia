@@ -99,6 +99,7 @@ static mx_status_t do_unmount(mount_node_t* mount_point) {
     vnode_t* vn = mount_point->vn;
     free(mount_point);
     vn->remote = 0;
+    vn->flags &= ~V_FLAG_MOUNT_READY;
     vn_release(vn);
     return status;
 }

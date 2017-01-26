@@ -79,6 +79,12 @@ mx_handle_t vfs_rpc_server(vnode_t* vn) {
         return h;
     }
 
+    // Tell the calling process that we've mounted
+    if ((r = mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0)) != NO_ERROR) {
+        free(ios);
+        return r;
+    }
+
     if ((r = mxio_dispatcher_add(vfs_dispatcher, h, (void*) vfs_handler, ios)) < 0) {
         free(ios);
         return r;

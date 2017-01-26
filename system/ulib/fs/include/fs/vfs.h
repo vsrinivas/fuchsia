@@ -27,6 +27,7 @@
 // VFS Helpers (vfs.c)
 #define V_FLAG_DEVICE 1
 #define V_FLAG_VMOFILE 2
+#define V_FLAG_MOUNT_READY 4
 
 // On Fuchsia, the Block Device is transmitted by file descriptor, rather than
 // by path. This can prevent some racy behavior relating to FS start-up.
