@@ -8,4 +8,5 @@
 # https://opensource.org/licenses/MIT
 
 rm -f TAGS
-find . -type f -regex '.*\.[chS]\|.*\.cpp' -print0 | xargs -0 etags -a
+find . \( -name 'build-*' -prune \) -o \
+    \( -type f -regex '.*\.[chS]\|.*\.cpp' -print0 \) | xargs -0 etags -a
