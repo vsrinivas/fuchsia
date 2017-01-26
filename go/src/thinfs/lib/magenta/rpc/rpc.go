@@ -412,15 +412,14 @@ func (vfs *ThinVFS) processOpDirectory(msg *rio.Msg, rh mx.Handle, dw *directory
 		return errorToRIO(err)
 	case rio.OpRename:
 		if len(inputData) < 4 { // Src + null + dst + null
-			return mx.ErrInvalidArgs
+			return rio.IndirectError(msg.Handle[0], mx.ErrInvalidArgs)
 		}
 		paths := strings.Split(strings.TrimRight(string(inputData), "\x00"), "\x00")
 		if len(paths) != 2 {
-			return mx.ErrInvalidArgs
+			return rio.IndirectError(msg.Handle[0], mx.ErrInvalidArgs)
 		}
 		err := dir.Rename(paths[0], paths[1])
-		msg.Datalen = 0
-		return errorToRIO(err)
+		return rio.IndirectError(msg.Handle[0], errorToRIO(err))
 	case rio.OpSync:
 		return errorToRIO(dir.Sync())
 	case rio.OpIoctl:
