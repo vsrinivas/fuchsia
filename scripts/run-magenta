@@ -8,7 +8,7 @@
 
 function HELP {
     echo "help:"
-    echo "-a <arch>           : arm32, arm64, or x86-64"
+    echo "-a <arch>           : arm64, or x86-64"
     echo "-A                  : use Intel HD Audio"
     echo "-b                  : build first"
     echo "-c                  : add item to kernel commandline"
@@ -220,10 +220,6 @@ if [ "$VIRTIO" -ne 0 ]; then
 fi
 
 case $ARCH in
-    arm32)
-        QEMU=${QEMUDIR}qemu-system-arm
-        ARGS+=" -machine virt -cpu cortex-a15 -kernel $BUILDDIR/magenta.elf"
-        ;;
     arm64)
         QEMU=${QEMUDIR}qemu-system-aarch64
         ARGS+=" -machine virt -cpu cortex-a53 -kernel $BUILDDIR/magenta.elf"
