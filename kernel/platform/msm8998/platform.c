@@ -12,6 +12,7 @@
 #include <dev/uart.h>
 #include <arch.h>
 #include <lk/init.h>
+#include <kernel/cmdline.h>
 #include <kernel/vm.h>
 #include <kernel/spinlock.h>
 #include <dev/timer/arm_generic.h>
@@ -70,8 +71,51 @@ void platform_init_mmu_mappings(void)
 {
 }
 
+#if FASTBOOT_HEADER
+extern ulong lk_boot_args[4];
+
+// find our command line in the device tree (fastboot stuffs it in there)
+static void find_command_line(void) {
+    void* fdt = paddr_to_kvaddr(lk_boot_args[0]);
+    if (!fdt) {
+        printf("msm8998: could not find device tree\n");
+        return;
+    }
+
+    if (fdt_check_header(fdt) < 0) {
+        printf("msm8998: fdt_check_header failed\n");
+        return;
+    }
+
+    int depth = 0;
+    int offset = 0;
+    for (;;) {
+        offset = fdt_next_node(fdt, offset, &depth);
+        if (offset < 0)
+            break;
+
+        const char* name = fdt_get_name(fdt, offset, NULL);
+        if (!name)
+            continue;
+        if (strcmp(name, "chosen") == 0) {
+            int lenp;
+            const char* bootargs = fdt_getprop(fdt, offset, "bootargs", &lenp);
+            if (bootargs) {
+                printf("msm8998 command line: %s\n", bootargs);
+                cmdline_init(bootargs);
+                return;
+            }
+        }
+    }
+}
+#endif // FASTBOOT_HEADER
+
 void platform_early_init(void)
 {
+#if FASTBOOT_HEADER
+    find_command_line();
+#endif
+
     uart_init_early();
 
     /* initialize the interrupt controller and timers */
