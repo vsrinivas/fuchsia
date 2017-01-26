@@ -18,7 +18,6 @@ fi
 
 readonly SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 readonly VULKANSDK_INSTALL_DIR="${SCRIPT_DIR}/../third_party/vulkansdk"
-readonly GLSLANG_INSTALL_DIR="${VULKANSDK_INSTALL_DIR}/${ARCH}/lib/glslang"
 readonly SHA_DIR="${SCRIPT_DIR}/../third_party/SHAs"
 SHA=""  # This is written to by sha_to_install()
 
@@ -133,53 +132,8 @@ install_vulkansdk () {
 
   # Mark this resource as installed.
   install_sha ${RESOURCE_NAME}
-
-  # Since the SDK was just installed, we need to reinstall the glslang libraries.
-  # Force this to happen by removing the installed SHA file, if it exists.
-  rm -f "${SHA_DIR}/installed/vulkansdk-glslang"
-}
-
-# If necessary, download and install binary glslang libaries.
-#
-# In order to compile GLSL to SPIR-V on the fly, Escher uses the code found in
-# $VULKAN_SDK/source/glslang.  The Vulkan SDK uses this code to build the
-# standalone "glslangValidator" executable, but does not provide binaries for
-# the constituent libraries.  We have built these libraries from source using
-# $VULKAN_SDK/source/glslang/CMakeLists.txt (modified to use C++14 and libc++)
-# and uploaded them to Google Storage.
-install_glslang () {
-  local -r RESOURCE_NAME=vulkansdk-glslang
-  sha_to_install ${RESOURCE_NAME}
-  if [ $? -eq 0 ]; then
-    # Installed SHA is up-to-date.
-    return 0;
-  fi
-
-  echo "Escher: Downloading glslang binary libraries from Google Storage."
-  download_from_google_storage ${RESOURCE_NAME} ${SHA}
-
-  echo "Escher: Decompressing glslang binary libraries."
-  cd "${TEMP_DIR}"
-  tar zxf "${SHA}"
-  if [ $? -ne 0 ]; then
-    panic "Decompression failed !!"
-  fi
-  if [ ! -d "glslang" ]; then
-    panic "Expected libs to unpack into glslang/ directory."
-  fi
-
-  echo "Escher: Moving glslang binary libs to final location."
-  rm -fr "${GLSLANG_INSTALL_DIR}"
-  mv glslang "${GLSLANG_INSTALL_DIR}"
-  if [ $? -ne 0 ]; then
-    panic "Failed to move glslang libs to ${GLSLANG_INSTALL_DIR} !!"
-  fi
-
-  # Mark this resource as installed.
-  install_sha ${RESOURCE_NAME}
 }
 
 # Install the Vulkan SDK and binary glslang libraries, if necessary.
 install_vulkansdk
-install_glslang
 rm -fr "${TEMP_DIR}"

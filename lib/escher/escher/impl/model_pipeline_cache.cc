@@ -96,9 +96,10 @@ constexpr char g_vertex_wobble_src[] = R"GLSL(
       //   SineParams sine_params_0;
       //   SineParams sine_params_1;
       //   SineParams sine_params_2;
-      // ... if I try, the GLSL compiler produces SPIR-V,
-      // but we fail when trying to create a vk::ShaderModule
-      // from that SPIR-V.
+      // ... if I try, the GLSL compiler produces SPIR-V, but the "SC"
+      // validation layer complains when trying to create a vk::ShaderModule
+      // from that SPIR-V.  Note: if we ignore the warning and proceed, nothing
+      // explodes.  Nevertheless, we'll leave it this way for now, to be safe.
     };
 
     // TODO: workaround.  See discussion in PerObject struct, above.
