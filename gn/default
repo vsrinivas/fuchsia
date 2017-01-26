@@ -13,6 +13,7 @@
         "ftl",
         "gdbserver",
         "icu_data",
+        "init",
         "ledger",
         "leveldb",
         "libc-tests",
