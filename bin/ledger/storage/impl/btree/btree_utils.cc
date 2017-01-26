@@ -55,6 +55,11 @@ void ForEachEntryInChildIndex(PageStorage* page_storage,
                 on_done(s, false);
                 return;
               }
+              if (child == nullptr) {
+                // If the child was not found in the search branch, no need to
+                // search again.
+                min_key = "";
+              }
               // Then, finish iterating through the subtree of that child.
               ForEachEntryInSubtree(
                   page_storage, std::move(child), min_key, on_next,
@@ -125,6 +130,8 @@ void ForEachEntryInSubtree(PageStorage* page_storage,
       on_done(Status::OK, true);
       return;
     }
+    // The child is found, no need to search again.
+    min_key = "";
     ++start_index;
   }
 

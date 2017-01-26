@@ -165,6 +165,11 @@ ObjectIdView TreeNode::GetChildId(int index) const {
 
 Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
                                 int* index) const {
+  if (key.empty()) {
+    *index = 0;
+    return !entries_.empty() && entries_[0].key.empty() ? Status::OK
+                                                        : Status::NOT_FOUND;
+  }
   auto it =
       std::lower_bound(entries_.begin(), entries_.end(), key,
                        [](const Entry& entry, convert::ExtendedStringView key) {
