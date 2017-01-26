@@ -4,6 +4,7 @@
 
 source_set("callback") {
   sources = [
+    "asynchronous_callback.h",
     "auto_cleanable.h",
     "cancellable.cc",
     "cancellable.h",
@@ -18,6 +19,7 @@ source_set("callback") {
   deps = [
     "//apps/tracing/lib/trace:provider",
     "//lib/ftl",
+    "//lib/mtl",
   ]
 }
 
@@ -25,6 +27,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "asynchronous_callback_unittest.cc",
     "auto_cleanable_unittest.cc",
     "cancellable_helper_unittest.cc",
     "cancellable_unittest.cc",
@@ -33,6 +36,7 @@ source_set("unittests") {
 
   deps = [
     ":callback",
+    "//apps/ledger/src/test:lib",
     "//third_party/gtest",
   ]
 }

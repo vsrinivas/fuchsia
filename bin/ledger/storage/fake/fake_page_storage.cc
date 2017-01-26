@@ -12,6 +12,7 @@
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "lib/mtl/socket/strings.h"
+#include "lib/mtl/tasks/message_loop.h"
 
 namespace storage {
 namespace fake {
@@ -112,13 +113,17 @@ void FakePageStorage::GetObject(
     ObjectIdView object_id,
     const std::function<void(Status, std::unique_ptr<const Object>)>&
         callback) {
-  auto it = objects_.find(object_id);
-  if (it == objects_.end()) {
-    callback(Status::NOT_FOUND, nullptr);
-    return;
-  }
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostTask([
+    this, object_id = object_id.ToString(), callback = std::move(callback)
+  ] {
+    auto it = objects_.find(object_id);
+    if (it == objects_.end()) {
+      callback(Status::NOT_FOUND, nullptr);
+      return;
+    }
 
-  callback(Status::OK, std::make_unique<FakeObject>(object_id, it->second));
+    callback(Status::OK, std::make_unique<FakeObject>(object_id, it->second));
+  });
 }
 
 Status FakePageStorage::GetObjectSynchronous(

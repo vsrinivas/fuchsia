@@ -384,14 +384,11 @@ TEST_F(TreeNodeTest, Serialization) {
 
   Status status;
   std::unique_ptr<const Object> object;
-  // Fake storage is always synchronous.
   fake_storage_.GetObject(
       node->GetId(),
-      [this, &status, &object](Status returned_status,
-                               std::unique_ptr<const Object> returned_object) {
-        status = returned_status;
-        object = std::move(returned_object);
-      });
+      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                      &object));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> retrieved_node = FromId(object->GetId());
 
