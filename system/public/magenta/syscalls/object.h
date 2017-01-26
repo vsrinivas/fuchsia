@@ -20,6 +20,8 @@ typedef enum {
     MX_INFO_RESOURCE_CHILDREN,      // mx_rrec_t[n]
     MX_INFO_RESOURCE_RECORDS,       // mx_rrec_t[n]
     MX_INFO_VMAR,                   // mx_info_vmar_t
+    MX_INFO_JOB_CHILDREN,           // mx_koid_t[n]
+    MX_INFO_JOB_PROCESSES,          // mx_koid_t[n]
 } mx_object_info_topic_t;
 
 typedef enum {

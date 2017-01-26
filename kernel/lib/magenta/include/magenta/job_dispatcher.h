@@ -61,6 +61,9 @@ public:
     bool EnumerateChildren(JobEnumerator* je);
     void Kill();
 
+    mxtl::RefPtr<ProcessDispatcher> LookupProcessById(mx_koid_t koid);
+    mxtl::RefPtr<JobDispatcher> LookupJobById(mx_koid_t koid);
+
 private:
     enum class State {
         READY,

@@ -15,7 +15,7 @@
 
 constexpr mx_rights_t kDefaultJobRights =
     MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_READ | MX_RIGHT_WRITE |
-    MX_RIGHT_ENUMERATE;
+    MX_RIGHT_ENUMERATE | MX_RIGHT_GET_PROPERTY;
 
 mxtl::RefPtr<JobDispatcher> JobDispatcher::CreateRootJob() {
     AllocChecker ac;
@@ -193,14 +193,39 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je) {
     if (!je->Size(process_count_, job_count_))
         return false;
 
+    bool completed = true;
+
     for (auto& proc : procs_) {
-        if (!je->OnProcess(&proc, proc_index++))
-            return false;
+        if (!je->OnProcess(&proc, proc_index++)) {
+            completed = false;
+            break;
+        }
     }
 
     for (auto& job : jobs_) {
-        if (!je->OnJob(&job, job_index++))
-            return false;
+        if (!je->OnJob(&job, job_index++)) {
+            completed = false;
+            break;
+        }
     }
-    return true;
+    return completed;
+}
+
+mxtl::RefPtr<ProcessDispatcher> JobDispatcher::LookupProcessById(mx_koid_t koid) {
+    AutoLock lock(&lock_);
+    for (auto& proc : procs_) {
+        if (proc.get_koid() == koid)
+            return mxtl::RefPtr<ProcessDispatcher>(&proc);
+    }
+    return nullptr;
+}
+
+mxtl::RefPtr<JobDispatcher> JobDispatcher::LookupJobById(mx_koid_t koid) {
+    AutoLock lock(&lock_);
+    for (auto& job : jobs_) {
+        if (job.get_koid() == koid) {
+            return mxtl::RefPtr<JobDispatcher>(&job);
+        }
+    }
+    return nullptr;
 }

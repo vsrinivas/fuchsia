@@ -11,6 +11,7 @@
 #include <kernel/auto_lock.h>
 
 #include <magenta/handle_owner.h>
+#include <magenta/job_dispatcher.h>
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 #include <magenta/resource_dispatcher.h>
@@ -22,6 +23,58 @@
 #include "syscalls_priv.h"
 
 #define LOCAL_TRACE 0
+
+//TODO: accumulate batches and do fewer user copies
+class SimpleJobEnumerator : public JobEnumerator {
+public:
+    SimpleJobEnumerator(mx_koid_t* ptr, size_t count, bool jobs) :
+        ptr_(ptr), count_(count), avail_(0), jobs_(jobs), failed_(false) {}
+
+    bool Size(uint32_t proc_count, uint32_t job_count) {
+        if (jobs_) {
+            avail_ = job_count;
+        } else {
+            avail_ = proc_count;
+        }
+        return true;
+    }
+    bool OnJob(JobDispatcher* job, uint32_t index) {
+        if (jobs_ && (count_ > 0)) {
+            if (make_user_ptr(ptr_).copy_to_user(job->get_koid()) != NO_ERROR) {
+                failed_ = true;
+                return false;
+            }
+            ptr_++;
+            count_--;
+            return true;
+        }
+        return false;
+    }
+    bool OnProcess(ProcessDispatcher* proc, uint32_t index) {
+        if (!jobs_ && (count_ > 0)) {
+            if (make_user_ptr(ptr_).copy_to_user(proc->get_koid()) != NO_ERROR) {
+                failed_ = true;
+                return false;
+            }
+            ptr_++;
+            count_--;
+            return true;
+        }
+        return false;
+    }
+
+    size_t get_avail() { return avail_; }
+    size_t get_remaining() { return count_; }
+    bool get_error() { return failed_; }
+
+private:
+    static constexpr uint32_t kError = 4;
+    mx_koid_t* ptr_;
+    size_t count_;
+    size_t avail_;
+    bool jobs_;
+    bool failed_;
+};
 
 // actual is an optional return parameter for the number of records returned
 // avail is an optional return parameter for the number of records available
@@ -140,6 +193,28 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             if (_actual && (make_user_ptr(_actual).copy_to_user(num_to_copy) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             if (_avail && (make_user_ptr(_avail).copy_to_user(num_threads) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            return NO_ERROR;
+        }
+        case MX_INFO_JOB_CHILDREN:
+        case MX_INFO_JOB_PROCESSES: {
+            mxtl::RefPtr<JobDispatcher> job;
+            auto error = up->GetDispatcher<JobDispatcher>(handle, &job, MX_RIGHT_ENUMERATE);
+            if (error < 0)
+                return error;
+
+            size_t max = buffer_size / sizeof(mx_koid_t);
+            SimpleJobEnumerator sje(static_cast<mx_koid_t*>(_buffer), max,
+                                    (topic == MX_INFO_JOB_CHILDREN));
+
+            job->EnumerateChildren(&sje);
+            size_t actual = max - sje.get_remaining();
+
+            if (sje.get_error())
+                return ERR_INVALID_ARGS;
+            if (_actual && (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (_avail && (make_user_ptr(_avail).copy_to_user(sje.get_avail()) != NO_ERROR))
                 return ERR_INVALID_ARGS;
             return NO_ERROR;
         }
@@ -415,6 +490,33 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
             return ERR_INVALID_ARGS;
         up->AddHandle(mxtl::move(thread_h));
         return NO_ERROR;
+    }
+
+    auto job = DownCastDispatcher<JobDispatcher>(&dispatcher);
+    if (job) {
+        auto child = job->LookupJobById(koid);
+        if (child) {
+            HandleOwner child_h(MakeHandle(child, rights));
+            if (!child_h)
+                return ERR_NO_MEMORY;
+
+            if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            up->AddHandle(mxtl::move(child_h));
+            return NO_ERROR;
+        }
+        auto proc = job->LookupProcessById(koid);
+        if (proc) {
+            HandleOwner child_h(MakeHandle(proc, rights));
+            if (!child_h)
+                return ERR_NO_MEMORY;
+
+            if (make_user_ptr(_out).copy_to_user(up->MapHandleToValue(child_h)) != NO_ERROR)
+                return ERR_INVALID_ARGS;
+            up->AddHandle(mxtl::move(child_h));
+            return NO_ERROR;
+        }
+        return ERR_NOT_FOUND;
     }
 
     auto resource = DownCastDispatcher<ResourceDispatcher>(&dispatcher);
