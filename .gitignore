@@ -13,6 +13,7 @@ blk.bin
 *.dSYM
 scripts/toolpaths.local
 clang-format
+compile_commands.json
 *_BACKUP_*
 *_REMOTE_*
 *_LOCAL_*
