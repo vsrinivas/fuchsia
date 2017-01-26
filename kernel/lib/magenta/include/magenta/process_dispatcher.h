@@ -198,7 +198,7 @@ private:
     void SetStateLocked(State) TA_REQ(state_lock_);
 
     // Kill all threads
-    void KillAllThreads();
+    void KillAllThreads() TA_REQ(state_lock_);
 
     // Add a process to the global process list.  Allocate a new process ID from
     // the global pool at the same time, and assign it to the process.
@@ -212,11 +212,8 @@ private:
 
     mx_handle_t handle_rand_ = 0;
 
-    // protects thread_list_
-    mutable Mutex thread_list_lock_;
-
     // list of threads in this process
-    mxtl::DoublyLinkedList<UserThread*> thread_list_ TA_GUARDED(thread_list_lock_);
+    mxtl::DoublyLinkedList<UserThread*> thread_list_ TA_GUARDED(state_lock_);
 
     // our address space
     mxtl::RefPtr<VmAspace> aspace_;

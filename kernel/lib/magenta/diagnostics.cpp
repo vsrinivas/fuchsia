@@ -85,7 +85,7 @@ uint32_t BuildHandleStats(const ProcessDispatcher& pd, uint32_t* handle_type, si
 }
 
 uint32_t ProcessDispatcher::ThreadCount() const {
-    AutoLock lock(&thread_list_lock_);
+    AutoLock lock(&state_lock_);
     return static_cast<uint32_t>(thread_list_.size_slow());
 }
 

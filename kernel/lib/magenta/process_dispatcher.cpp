@@ -189,11 +189,7 @@ void ProcessDispatcher::Exit(int retcode) {
     UserThread::GetCurrent()->Exit();
 }
 
-// Thread safety analysis is disabled here as we read |thread_list_| to see if it is empty without
-// holding |thread_list_lock_|. This is safe as |thread_list_| is only mutated when the
-// |state_lock_|, which we hold here, is held. The |thread_list_lock_| is used to protect
-// non-mutating queries that don't want to hold |state_lock_|, such as in GetThreads().
-void ProcessDispatcher::Kill() TA_NO_THREAD_SAFETY_ANALYSIS {
+void ProcessDispatcher::Kill() {
     LTRACE_ENTRY_OBJ;
 
     AutoLock lock(state_lock_);
@@ -222,8 +218,6 @@ void ProcessDispatcher::Kill() TA_NO_THREAD_SAFETY_ANALYSIS {
 void ProcessDispatcher::KillAllThreads() {
     LTRACE_ENTRY_OBJ;
 
-    AutoLock lock(&thread_list_lock_);
-
     for (auto& thread : thread_list_) {
         LTRACEF("killing thread %p\n", &thread);
         thread.Kill();
@@ -246,7 +240,6 @@ status_t ProcessDispatcher::AddThread(UserThread* t, bool initial_thread) {
     }
 
     // add the thread to our list
-    AutoLock lock(&thread_list_lock_);
     DEBUG_ASSERT(thread_list_.is_empty() == initial_thread);
     thread_list_.push_back(t);
 
@@ -273,7 +266,6 @@ void ProcessDispatcher::RemoveThread(UserThread* t) {
     AutoLock state_lock(&state_lock_);
 
     // remove the thread from our list
-    AutoLock lock(&thread_list_lock_);
     DEBUG_ASSERT(t != nullptr);
     thread_list_.erase(*t);
 
@@ -477,7 +469,7 @@ status_t ProcessDispatcher::CreateUserThread(mxtl::StringPiece name, uint32_t fl
 // Return the actual number of threads, which may be more than |num_info_threads|.
 
 status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
-    AutoLock lock(&thread_list_lock_);
+    AutoLock lock(&state_lock_);
     size_t n = thread_list_.size_slow();
     mxtl::Array<mx_koid_t> threads;
     AllocChecker ac;
@@ -563,7 +555,7 @@ mxtl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t k
 
 mxtl::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {
     LTRACE_ENTRY_OBJ;
-    AutoLock lock(&thread_list_lock_);
+    AutoLock lock(&state_lock_);
 
     auto iter = thread_list_.find_if([koid](const UserThread& t) { return t.get_koid() == koid; });
     return mxtl::WrapRefPtr(iter.CopyPointer());
