@@ -342,7 +342,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/malloc/aligned_alloc.c \
     $(LOCAL_DIR)/src/malloc/calloc.c \
     $(LOCAL_DIR)/src/malloc/expand_heap.c \
-    $(LOCAL_DIR)/src/malloc/lite_malloc.c \
     $(LOCAL_DIR)/src/malloc/malloc.c \
     $(LOCAL_DIR)/src/malloc/malloc_usable_size.c \
     $(LOCAL_DIR)/src/malloc/memalign.c \
