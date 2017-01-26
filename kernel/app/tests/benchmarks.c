@@ -161,57 +161,6 @@ __NO_INLINE static void bench_memcpy(void)
     free(buf);
 }
 
-#if ARCH_ARM
-__NO_INLINE static void arm_bench_cset_stm(void)
-{
-    uint32_t *buf = malloc(BUFSIZE);
-
-    uint count = arch_cycle_count();
-    for (uint i = 0; i < ITER; i++) {
-        for (uint j = 0; j < BUFSIZE / sizeof(*buf) / 8; j++) {
-            __asm__ volatile(
-                "stm    %0, {r0-r7};"
-                :: "r" (&buf[j*8])
-            );
-        }
-    }
-    count = arch_cycle_count() - count;
-
-    uint64_t bytes_cycle = (BUFSIZE * ITER * 1000ULL) / count;
-    printf("took %u cycles to manually clear a buffer of size %u %d times 8 words at a time using stm (%u bytes), %llu.%03llu bytes/cycle\n",
-           count, BUFSIZE, ITER, BUFSIZE * ITER, bytes_cycle / 1000, bytes_cycle % 1000);
-
-    free(buf);
-}
-
-#if       (__CORTEX_M >= 0x03)
-__NO_INLINE static void arm_bench_multi_issue(void)
-{
-    uint32_t cycles;
-    uint32_t a = 0, b = 0, c = 0, d = 0, e = 0, f = 0, g = 0, h = 0;
-#define ITER 1000000
-    uint count = ITER;
-    cycles = arch_cycle_count();
-    while (count--) {
-        __asm__ volatile ("");
-        __asm__ volatile ("add %0, %0, %0" : "=r" (a) : "r" (a));
-        __asm__ volatile ("add %0, %0, %0" : "=r" (b) : "r" (b));
-        __asm__ volatile ("and %0, %0, %0" : "=r" (c) : "r" (c));
-        __asm__ volatile ("mov %0, %0" : "=r" (d) : "r" (d));
-        __asm__ volatile ("orr %0, %0, %0" : "=r" (e) : "r" (e));
-        __asm__ volatile ("add %0, %0, %0" : "=r" (f) : "r" (f));
-        __asm__ volatile ("and %0, %0, %0" : "=r" (g) : "r" (g));
-        __asm__ volatile ("mov %0, %0" : "=r" (h) : "r" (h));
-    }
-    cycles = arch_cycle_count() - cycles;
-
-    uint64_t bytes_cycle = (cycles * 1000ULL) / ITER;
-    printf("took %u cycles to issue 8 integer ops (%llu.%03llu cycles/iteration)\n", cycles, bytes_cycle / 1000, bytes_cycle % 1000);
-#undef ITER
-}
-#endif // __CORTEX_M
-#endif // ARCH_ARM
-
 #if WITH_LIB_LIBM && !WITH_NO_FP
 #include <math.h>
 
@@ -268,13 +217,6 @@ void benchmarks(void)
     bench_cset_uint64_t();
     bench_cset_wide();
 
-#if ARCH_ARM
-    arm_bench_cset_stm();
-
-#if       (__CORTEX_M >= 0x03)
-    arm_bench_multi_issue();
-#endif
-#endif
 #if WITH_LIB_LIBM && !WITH_NO_FP
     bench_sincos();
 #endif
