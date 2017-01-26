@@ -704,10 +704,10 @@ static void fs_release(vnode_t* vn) {
         minfs_inode_destroy(vn);
     }
     list_delete(&vn->hashnode);
-    free(vn);
 #ifdef __Fuchsia__
     mx_handle_close(vn->vmo);
 #endif
+    free(vn);
 }
 
 static mx_status_t fs_open(vnode_t** _vn, uint32_t flags) {
