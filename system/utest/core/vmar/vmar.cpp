@@ -109,6 +109,8 @@ mx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
     }
     if (packet.report.header.type == MX_EXCP_FATAL_PAGE_FAULT) {
         mx_task_kill(thread);
+        mx_task_resume(thread, MX_RESUME_EXCEPTION);
+
         status = NO_ERROR;
         *success = false;
     }
