@@ -15,7 +15,7 @@
 #include "lib/mtl/handles/object_info.h"
 
 #include "process.h"
-#include "server.h"
+#include "rsp-server.h"
 
 namespace {
 

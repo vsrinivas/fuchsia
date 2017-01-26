@@ -14,7 +14,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 
-#include "server.h"
+#include "rsp-server.h"
 #include "util.h"
 
 using std::string;

@@ -13,10 +13,10 @@
 #include "lib/ftl/strings/string_view.h"
 #include "lib/mtl/tasks/message_loop.h"
 
-#include "command-handler.h"
 #include "exception-port.h"
-#include "io-loop.h"
 #include "process.h"
+#include "rsp-cmd-handler.h"
+#include "rsp-io-loop.h"
 #include "thread.h"
 
 namespace debugserver {

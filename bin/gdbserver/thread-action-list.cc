@@ -10,7 +10,7 @@
 
 // N.B. This file is included in the unittest, which does not
 // contain all the server/process/thread logic. Therefore do not
-// #include server.h, process.h, thread.h, etc.
+// #include rsp-server.h, process.h, thread.h, etc.
 
 namespace debugserver {
 

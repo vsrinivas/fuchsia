@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "command-handler.h"
+#include "rsp-cmd-handler.h"
 
 #include <algorithm>
 #include <cinttypes>
@@ -15,7 +15,7 @@
 #include "lib/ftl/strings/string_printf.h"
 
 #include "registers.h"
-#include "server.h"
+#include "rsp-server.h"
 #include "thread.h"
 #include "thread-action-list.h"
 #include "util.h"
