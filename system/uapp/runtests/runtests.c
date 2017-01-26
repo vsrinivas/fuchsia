@@ -74,16 +74,23 @@ static void run_tests(const char* dirn) {
         const char* argv[] = {name, verbose_opt};
         int argc = verbosity >= 0 ? 2 : 1;
 
-        mx_handle_t handle = launchpad_launch_mxio(name, argc, argv);
-        if (handle < 0) {
-            printf("FAILURE: Failed to launch %s: %d\n", de->d_name, handle);
+        launchpad_t* lp;
+        launchpad_create(0, name, &lp);
+        launchpad_load_from_file(lp, argv[0]);
+        launchpad_clone(lp, LP_CLONE_ALL);
+        launchpad_set_args(lp, argc, argv);
+        const char* errmsg;
+        mx_handle_t handle;
+        mx_status_t status = launchpad_go(lp, &handle, &errmsg);
+        if (status < 0) {
+            printf("FAILURE: Failed to launch %s: %d: %s\n", de->d_name, status, errmsg);
             fail_test(&failures, de->d_name, FAILED_TO_LAUNCH, 0);
             failed_count++;
             continue;
         }
 
-        mx_status_t status = mx_handle_wait_one(handle, MX_PROCESS_SIGNALED,
-                                                MX_TIME_INFINITE, NULL);
+        status = mx_handle_wait_one(handle, MX_PROCESS_SIGNALED,
+                                    MX_TIME_INFINITE, NULL);
         if (status != NO_ERROR) {
             printf("FAILURE: Failed to wait for process exiting %s: %d\n", de->d_name, status);
             fail_test(&failures, de->d_name, FAILED_TO_WAIT, 0);
