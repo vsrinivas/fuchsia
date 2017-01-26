@@ -626,38 +626,6 @@ bool generate_legacy_assembly_arm64(
     return os.good();
 }
 
-// TODO(cpu): Also consider moving this to the input file.
-const std::set<string> slots_64bit = {
-    "int64_t", "uint64_t", "mx_time_t"
-};
-
-bool generate_legacy_assembly_arm32(
-    int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
-    if (is_vdso(sc))
-        return true;
-
-    // For 32bit, each function argument occupies one slot, unless it is a fixed 64bit size
-    // in which case it uses two. Additionally, for arm32, if the 64bit slot is now not in
-    // an even slot, a padding slot needs to be added. examples:
-    // uint32, uint32, uint64 == 4 slots
-    // uint32, uint64, uint32 == 5 slots
-
-    uint32_t count = 0;
-    for (const auto& arg : sc.arg_spec ) {
-        if (slots_64bit.find(arg.type) != slots_64bit.end()) {
-            count += (count % 2u) == 0 ? 2u : 3u;
-        } else {
-            count += 1;
-        }
-    }
-
-    // SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...) m_syscall nargs32, mx_##name, n
-    os << gp.entry_prefix << " " << count << " "
-       << gp.name_prefix << sc.name << " " << index << "\n";
-
-    return os.good();
-}
-
 bool generate_syscall_numbers_header(
     int index, const GenParams& gp, std::ofstream& os, const Syscall& sc) {
     os << gp.entry_prefix << sc.name << " " << index << "\n";
@@ -691,7 +659,6 @@ enum GenType : uint32_t {
     KernelCodeCPP,
     KernelAsmIntel64,
     KernelAsmArm64,
-    KernelAsmArm32,
     SyscallNumberHeader,
     TraceInfo,
     Max
@@ -737,13 +704,6 @@ const GenParams gen_params[] = {
     {
         generate_legacy_assembly_arm64,
         ".arm64.S",         // file postfix.
-        "m_syscall",        // macro name prefix.
-        "mx_",              // function name prefix.
-    },
-    //  The assembly include file for ARM32 (KernelAsmArm32).
-    {
-        generate_legacy_assembly_arm32,
-        ".arm32.S",         // file postfix.
         "m_syscall",        // macro name prefix.
         "mx_",              // function name prefix.
     },
@@ -923,8 +883,6 @@ int main(int argc, char* argv[]) {
     if (!generator.Generate(GenType::KernelAsmIntel64, output_prefix))
         return 1;
     if (!generator.Generate(GenType::KernelAsmArm64, output_prefix))
-        return 1;
-    if (!generator.Generate(GenType::KernelAsmArm32, output_prefix))
         return 1;
     if (!generator.Generate(GenType::SyscallNumberHeader, output_prefix))
         return 1;

@@ -10,7 +10,6 @@ fi
 
 # remove any existing output.
 
-rm -f generated.arm32.S
 rm -f generated.arm64.S
 rm -f generated.kernel.h
 rm -f generated.kernel.inc
@@ -30,7 +29,6 @@ fi
 
 rsync -c generated.user.h     system/public/magenta/gen-syscalls.h
 rsync -c generated.x86-64.S   system/ulib/magenta/gen-x86-64.S
-rsync -c generated.arm32.S    system/ulib/magenta/gen-arm32.S
 rsync -c generated.arm64.S    system/ulib/magenta/gen-arm64.S
 rsync -c generated.syscall-numbers.h \
                               system/ulib/magenta/gen-syscall-numbers.h
