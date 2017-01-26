@@ -65,6 +65,13 @@ func StartServer(filesys fs.FileSystem) error {
 		return err
 	}
 	vfs.dispatcher = d
+
+	// We're ready to serve
+	if err := h.SignalPeer(0, mx.SignalUser0); err != nil {
+		h.Close()
+		return err
+	}
+
 	d.Serve()
 	return nil
 }
