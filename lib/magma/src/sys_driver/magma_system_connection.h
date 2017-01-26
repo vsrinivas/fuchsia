@@ -30,7 +30,7 @@ public:
     MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> device,
                           msd_connection_unique_ptr_t msd_connection, uint32_t capabilities);
 
-    ~MagmaSystemConnection();
+    ~MagmaSystemConnection() override;
 
     // Create a buffer from the handle and add it to the map,
     // on success |id_out| contains the id to be used to query the map
@@ -57,10 +57,6 @@ public:
 
     void PageFlip(uint64_t id, magma_system_pageflip_callback_t callback, void* data) override;
 
-    std::shared_ptr<magma::PlatformEvent> ShutdownEvent() override { return shutdown_event_; }
-
-    void SignalShutdown() { shutdown_event_->Signal(); }
-
 private:
     std::weak_ptr<MagmaSystemDevice> device_;
     msd_connection_unique_ptr_t msd_connection_;
@@ -68,7 +64,6 @@ private:
     std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemBuffer>> buffer_map_;
     bool has_display_capability_;
     bool has_render_capability_;
-    std::shared_ptr<magma::PlatformEvent> shutdown_event_;
 
     // MagmaSystemContext::Owner
     std::shared_ptr<MagmaSystemBuffer> LookupBufferForContext(uint64_t id) override

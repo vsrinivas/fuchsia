@@ -61,7 +61,10 @@ public:
 
         magma_system_submit_command_buffer(connection_, command_buffer, context_id);
         magma_system_wait_rendering(connection_, batch_buffer);
+
         magma_system_destroy_context(connection_, context_id);
+        magma_system_free(connection_, batch_buffer);
+        magma_system_free(connection_, command_buffer);
 
         result = magma_system_get_error(connection_);
         return DRET(result);
@@ -114,9 +117,10 @@ private:
     magma_system_connection* connection_;
 };
 
+constexpr uint32_t kMaxCount = 100;
+constexpr uint32_t kRestartCount = kMaxCount / 10;
+
 static std::atomic_uint complete_count;
-static constexpr uint32_t kMaxCount = 100;
-static constexpr uint32_t kRestartCount = kMaxCount / 10;
 
 static void looper_thread_entry()
 {
@@ -132,24 +136,33 @@ static void looper_thread_entry()
     }
 }
 
-TEST(Shutdown, Test)
+static void test_shutdown(uint32_t iters)
 {
-    std::thread looper(looper_thread_entry);
-    std::thread looper2(looper_thread_entry);
+    for (uint32_t i = 0; i < iters; i++) {
+        complete_count = 0;
 
-    TestBase test_base;
+        std::thread looper(looper_thread_entry);
+        std::thread looper2(looper_thread_entry);
 
-    uint32_t count = kRestartCount;
-    while (complete_count < kMaxCount) {
-        if (complete_count > count) {
-            // Should replace this with a request to devmgr to restart the driver
-            EXPECT_EQ(mxio_ioctl(test_base.fd(), IOCTL_MAGMA_TEST_RESTART, nullptr, 0, nullptr, 0),
-                      0);
-            count += kRestartCount;
+        TestBase test_base;
+
+        uint32_t count = kRestartCount;
+        while (complete_count < kMaxCount) {
+            if (complete_count > count) {
+                // Should replace this with a request to devmgr to restart the driver
+                EXPECT_EQ(
+                    mxio_ioctl(test_base.fd(), IOCTL_MAGMA_TEST_RESTART, nullptr, 0, nullptr, 0),
+                    0);
+                count += kRestartCount;
+            }
+            std::this_thread::yield();
         }
-        std::this_thread::yield();
-    }
 
-    looper.join();
-    looper2.join();
+        looper.join();
+        looper2.join();
+    }
 }
+
+TEST(Shutdown, Test) { test_shutdown(1); }
+
+TEST(Shutdown, Stress) { test_shutdown(1000); }

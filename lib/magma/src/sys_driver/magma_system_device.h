@@ -9,9 +9,9 @@
 #include "platform_connection.h"
 #include "platform_event.h"
 #include <functional>
-#include <list>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <unordered_map>
 
 using msd_device_unique_ptr_t = std::unique_ptr<msd_device, decltype(&msd_device_destroy)>;
@@ -22,10 +22,14 @@ static inline msd_device_unique_ptr_t MsdDeviceUniquePtr(msd_device* msd_dev)
 }
 
 class MagmaSystemBuffer;
+class MagmaSystemConnection;
 
 class MagmaSystemDevice {
 public:
-    MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev)) {}
+    MagmaSystemDevice(msd_device_unique_ptr_t msd_dev) : msd_dev_(std::move(msd_dev))
+    {
+        connection_map_ = std::make_unique<std::unordered_map<std::thread::id, Connection>>();
+    }
 
     // Opens a connection to the device. On success |connection_handle_out| will contain the
     // connection handle to be passed to the client
@@ -43,26 +47,26 @@ public:
     std::shared_ptr<MagmaSystemBuffer> GetBufferForHandle(uint32_t handle);
     void ReleaseBuffer(uint64_t id);
 
-    bool Shutdown(uint32_t timeout_ms);
+    // Called on driver thread
+    void Shutdown();
 
-    void ConnectionOpened(std::shared_ptr<magma::PlatformEvent> shutdown_event)
-    {
-        std::unique_lock<std::mutex> lock(connection_list_mutex_);
-        connection_list_.push_back(shutdown_event);
-    }
+    // Called on driver thread
+    void StartConnectionThread(std::unique_ptr<magma::PlatformConnection> platform_connection);
 
-    void ConnectionClosed(std::shared_ptr<magma::PlatformEvent> shutdown_event)
-    {
-        std::unique_lock<std::mutex> lock(connection_list_mutex_);
-        connection_list_.remove(shutdown_event);
-    }
+    // Called on connection thread
+    void ConnectionClosed(std::thread::id thread_id);
 
 private:
     msd_device_unique_ptr_t msd_dev_;
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
     std::mutex buffer_map_mutex_;
 
-    std::list<std::shared_ptr<magma::PlatformEvent>> connection_list_;
+    struct Connection {
+        std::thread thread;
+        std::shared_ptr<magma::PlatformEvent> shutdown_event;
+    };
+
+    std::unique_ptr<std::unordered_map<std::thread::id, Connection>> connection_map_;
     std::mutex connection_list_mutex_;
 };
 

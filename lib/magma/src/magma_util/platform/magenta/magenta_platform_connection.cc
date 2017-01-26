@@ -92,9 +92,11 @@ struct PageFlipReply {
 class MagentaPlatformConnection : public PlatformConnection {
 public:
     MagentaPlatformConnection(std::unique_ptr<Delegate> delegate, mx::channel local_endpoint,
-                              mx::channel remote_endpoint, mx::waitset waitset)
-        : delegate_(std::move(delegate)), local_endpoint_(std::move(local_endpoint)),
-          remote_endpoint_(std::move(remote_endpoint)), waitset_(std::move(waitset))
+                              mx::channel remote_endpoint, mx::waitset waitset,
+                              std::unique_ptr<magma::PlatformEvent> shutdown_event)
+        : magma::PlatformConnection(std::move(shutdown_event)), delegate_(std::move(delegate)),
+          local_endpoint_(std::move(local_endpoint)), remote_endpoint_(std::move(remote_endpoint)),
+          waitset_(std::move(waitset))
     {
     }
 
@@ -560,7 +562,6 @@ private:
     bool first_frame = true;
 };
 
-
 std::unique_ptr<PlatformIpcConnection> PlatformIpcConnection::Create(uint32_t device_handle)
 {
     return std::unique_ptr<MagentaPlatformIpcConnection>(
@@ -589,16 +590,18 @@ PlatformConnection::Create(std::unique_ptr<PlatformConnection::Delegate> delegat
     if (status != NO_ERROR)
         return DRETP(nullptr, "mx::waitset::add failed");
 
-    auto event = static_cast<MagentaPlatformEvent*>(delegate->ShutdownEvent().get());
-    DASSERT(event);
+    auto shutdown_event = magma::PlatformEvent::Create();
+    DASSERT(shutdown_event);
+
+    auto event = static_cast<MagentaPlatformEvent*>(shutdown_event.get());
 
     status = waitset.add(kCookieShutdown, event->mx_handle(), event->mx_signal());
     if (status != NO_ERROR)
         return DRETP(nullptr, "mx::waitset::add failed");
 
-    return std::unique_ptr<MagentaPlatformConnection>(
-        new MagentaPlatformConnection(std::move(delegate), std::move(local_endpoint),
-                                      std::move(remote_endpoint), std::move(waitset)));
+    return std::unique_ptr<MagentaPlatformConnection>(new MagentaPlatformConnection(
+        std::move(delegate), std::move(local_endpoint), std::move(remote_endpoint),
+        std::move(waitset), std::move(shutdown_event)));
 }
 
 } // namespace magma

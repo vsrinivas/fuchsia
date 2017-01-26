@@ -138,8 +138,7 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
         *device_handle_out = connection->GetHandle();
         result = sizeof(*device_handle_out);
 
-        std::thread connection_thread(magma::PlatformConnection::RunLoop, std::move(connection));
-        connection_thread.detach();
+        device->magma_system_device->StartConnectionThread(std::move(connection));
 
         break;
     }
@@ -318,12 +317,7 @@ MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
 static int magma_stop(intel_i915_device_t* device)
 {
     DLOG("magma_stop");
-
-    if (!device->magma_system_device->Shutdown(5000)) {
-        DLOG("magma device shutdown failed");
-        return ERR_INTERNAL;
-    }
-
+    device->magma_system_device->Shutdown();
     device->magma_system_device.reset();
     return NO_ERROR;
 }

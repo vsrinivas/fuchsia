@@ -20,20 +20,13 @@ MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> we
     DASSERT(has_render_capability_ || has_display_capability_);
     DASSERT((capabilities &
              ~(MAGMA_SYSTEM_CAPABILITY_DISPLAY | MAGMA_SYSTEM_CAPABILITY_RENDERING)) == 0);
-
-    shutdown_event_ = magma::PlatformEvent::Create();
-    DASSERT(shutdown_event_);
-
-    auto device = weak_device.lock();
-    if (device)
-        device->ConnectionOpened(shutdown_event_);
 }
 
 MagmaSystemConnection::~MagmaSystemConnection()
 {
     auto device = device_.lock();
     if (device)
-        device->ConnectionClosed(shutdown_event_);
+        device->ConnectionClosed(std::this_thread::get_id());
 }
 
 uint32_t MagmaSystemConnection::GetDeviceId()

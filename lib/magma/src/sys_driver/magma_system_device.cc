@@ -5,7 +5,6 @@
 #include "magma_system_device.h"
 #include "magma_system_connection.h"
 #include "magma_util/macros.h"
-#include "magma_util/sleep.h"
 
 uint32_t MagmaSystemDevice::GetDeviceId() { return msd_device_get_id(msd_dev()); }
 
@@ -61,28 +60,52 @@ void MagmaSystemDevice::ReleaseBuffer(uint64_t id)
         buffer_map_.erase(iter);
 }
 
-bool MagmaSystemDevice::Shutdown(uint32_t timeout_ms)
+void MagmaSystemDevice::StartConnectionThread(
+    std::unique_ptr<magma::PlatformConnection> platform_connection)
 {
     std::unique_lock<std::mutex> lock(connection_list_mutex_);
-    for (auto shutdown_event : connection_list_) {
-        shutdown_event->Signal();
+
+    auto shutdown_event = platform_connection->ShutdownEvent();
+    std::thread thread(magma::PlatformConnection::RunLoop, std::move(platform_connection));
+
+    connection_map_->insert(std::pair<std::thread::id, Connection>(
+        thread.get_id(), Connection{std::move(thread), std::move(shutdown_event)}));
+}
+
+void MagmaSystemDevice::ConnectionClosed(std::thread::id thread_id)
+{
+    std::unique_lock<std::mutex> lock(connection_list_mutex_);
+
+    if (!connection_map_)
+        return;
+
+    auto iter = connection_map_->find(thread_id);
+    // May not be in the map if no connection thread was started.
+    if (iter != connection_map_->end()) {
+        iter->second.thread.detach();
+        connection_map_->erase(iter);
     }
+}
+
+void MagmaSystemDevice::Shutdown()
+{
+    std::unique_lock<std::mutex> lock(connection_list_mutex_);
+    auto map = std::move(connection_map_);
     lock.unlock();
 
-    constexpr uint32_t kRetryDelayMs = 10;
+    for (auto& element : *map) {
+        element.second.shutdown_event->Signal();
+    }
 
     auto start = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> elapsed;
 
-    do {
-        if (connection_list_.empty()) {
-            DLOG("successful shutdown took %u ms", (uint32_t)elapsed.count());
-            return true;
-        }
-        magma::msleep(kRetryDelayMs);
-        elapsed = std::chrono::high_resolution_clock::now() - start;
+    for (auto& element : *map) {
+        element.second.thread.join();
+    }
 
-    } while (elapsed.count() < timeout_ms);
+    std::chrono::duration<double, std::milli> elapsed =
+        std::chrono::high_resolution_clock::now() - start;
+    DLOG("shutdown took %u ms", (uint32_t)elapsed.count());
 
-    return DRETF(false, "timeout waiting for connections to close (%zu)", connection_list_.size());
+    (void)elapsed;
 }

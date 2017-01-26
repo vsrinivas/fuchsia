@@ -1,7 +1,7 @@
 msleep 5000
 echo [SYS START=]
 /system/test/magma_sys_unit_tests
-/system/test/magma_system_tests
+/system/test/magma_system_tests --gtest_filter=-*Stress*
 echo [SYS END===]
 echo [==========]
 echo [ABI START=]

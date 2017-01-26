@@ -73,9 +73,12 @@ public:
 
         virtual void PageFlip(uint64_t buffer_id, magma_system_pageflip_callback_t callback,
                               void* data) = 0;
-
-        virtual std::shared_ptr<magma::PlatformEvent> ShutdownEvent() = 0;
     };
+
+    PlatformConnection(std::unique_ptr<magma::PlatformEvent> shutdown_event)
+        : shutdown_event_(std::move(shutdown_event))
+    {
+    }
 
     virtual ~PlatformConnection() {}
 
@@ -86,6 +89,8 @@ public:
     // or if the remote has closed
     virtual bool HandleRequest() = 0;
 
+    std::shared_ptr<magma::PlatformEvent> ShutdownEvent() { return shutdown_event_; }
+
     static void RunLoop(std::unique_ptr<magma::PlatformConnection> connection)
     {
         while (connection->HandleRequest())
@@ -93,6 +98,9 @@ public:
         // the runloop terminates when the remote closes, or an error is experienced
         // so this is the apropriate time to let the connection go out of scope and be destroyed
     }
+
+private:
+    std::shared_ptr<magma::PlatformEvent> shutdown_event_;
 };
 
 } // namespace magma

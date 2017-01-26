@@ -155,16 +155,6 @@ public:
         TestPlatformConnection::test_complete = true;
         callback(TestPlatformConnection::test_error, data);
     }
-
-    std::shared_ptr<magma::PlatformEvent> ShutdownEvent() override
-    {
-        if (!event_)
-            event_ = magma::PlatformEvent::Create();
-        return event_;
-    }
-
-private:
-    std::shared_ptr<magma::PlatformEvent> event_;
 };
 
 std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
