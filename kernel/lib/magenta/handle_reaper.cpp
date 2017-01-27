@@ -19,13 +19,9 @@ static dpc_t reaper_dpc = {
 };
 
 void ReapHandles(mxtl::DoublyLinkedList<Handle*>* handles) {
-    bool do_queue;
-    {
-        AutoLock lock(reaper_mutex);
-        do_queue = reaper_handles.is_empty();
-        reaper_handles.splice(reaper_handles.end(), *handles);
-    }
-    if (do_queue)
+    AutoLock lock(reaper_mutex);
+    reaper_handles.splice(reaper_handles.end(), *handles);
+    if (!list_in_list(&reaper_dpc.node))
         dpc_queue(&reaper_dpc, false);
 }
 
