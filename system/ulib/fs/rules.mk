@@ -11,6 +11,7 @@ MODULE_TYPE := userlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/vfs.c \
     $(LOCAL_DIR)/vfs-mount.c \
+    $(LOCAL_DIR)/vfs-unmount.c \
     $(LOCAL_DIR)/vfs-rpc.c \
 
 MODULE_LIBS := \

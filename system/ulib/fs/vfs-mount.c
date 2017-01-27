@@ -52,61 +52,18 @@ mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h) {
     return NO_ERROR;
 }
 
-// Sends an 'unmount' signal on the srv handle, and waits until it is closed.
-// Consumes 'srv'.
-static mx_status_t txn_unmount(mx_handle_t srv) {
-    mxrio_msg_t msg;
-    memset(&msg, 0, MXRIO_HDR_SZ);
-
-    // the only other messages we ever send are no-reply OPEN or CLONE with
-    // txid of 0.
-    msg.txid = 1;
-    msg.op = MXRIO_IOCTL;
-    msg.arg2.op = IOCTL_DEVMGR_UNMOUNT_FS;
-
-    mx_channel_call_args_t args;
-    args.wr_bytes = &msg;
-    args.wr_handles = NULL;
-    args.rd_bytes = &msg;
-    args.rd_handles = NULL;
-    args.wr_num_bytes = MXRIO_HDR_SZ;
-    args.wr_num_handles = 0;
-    args.rd_num_bytes = MXRIO_HDR_SZ + MXIO_CHUNK_SIZE;
-    args.rd_num_handles = 0;
-
-    uint32_t dsize;
-    uint32_t hcount;
-    mx_status_t rs;
-
-    // At the moment, we don't actually care what the response is from the
-    // filesystem server (or even if it supports the unmount operation). As
-    // soon as ANY response comes back, either in the form of a closed handle
-    // or a visible response, shut down.
-    mx_status_t status = mx_channel_call(srv, 0, MX_TIME_INFINITE, &args, &dsize, &hcount, &rs);
-    if (status == ERR_CALL_FAILED) {
-        // Write phase succeeded. The target filesystem had a chance to unmount properly.
-        status = NO_ERROR;
-    }
-    mx_handle_close(srv);
-    return status;
-}
-
-static mx_status_t do_unmount(mount_node_t* mount_point) {
-    mx_status_t status = NO_ERROR;
-    if ((status = txn_unmount(mount_point->vn->remote)) < 0) {
-        printf("Unexpected error unmounting filesystem: %d\n", status);
-    }
+static void do_unmount(mount_node_t* mount_point, mx_handle_t* h) {
+    *h = mount_point->vn->remote;
     vnode_t* vn = mount_point->vn;
     free(mount_point);
     vn->remote = 0;
     vn->flags &= ~V_FLAG_MOUNT_READY;
     vn_release(vn);
-    return status;
 }
 
 // Uninstall the remote filesystem mounted on vn. Removes vn from the
 // remote_list, and sends its corresponding filesystem an 'unmount' signal.
-mx_status_t vfs_uninstall_remote(vnode_t* vn) {
+mx_status_t vfs_uninstall_remote(vnode_t* vn, mx_handle_t* h) {
     mount_node_t* mount_point;
     mount_node_t* tmp;
     mx_status_t status = NO_ERROR;
@@ -123,19 +80,22 @@ done:
     if (status != NO_ERROR) {
         return status;
     }
-    return do_unmount(mount_point);
+    do_unmount(mount_point, h);
+    return NO_ERROR;
 }
 
 // Uninstall all remote filesystems. Acts like 'vfs_uninstall_remote' for all
 // known remotes.
-mx_status_t vfs_uninstall_all() {
+mx_status_t vfs_uninstall_all(mx_time_t timeout) {
     mount_node_t* mount_point;
     for (;;) {
         mtx_lock(&vfs_lock);
         mount_point = list_remove_head_type(&remote_list, mount_node_t, node);
         mtx_unlock(&vfs_lock);
         if (mount_point) {
-            do_unmount(mount_point);
+            mx_handle_t h;
+            do_unmount(mount_point, &h);
+            vfs_unmount_handle(h, timeout);
         } else {
             return NO_ERROR;
         }

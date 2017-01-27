@@ -152,6 +152,7 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
     case DISK_FORMAT_MINFS: {
         mount_options_t options;
         memcpy(&options, &default_mount_options, sizeof(mount_options_t));
+        options.wait_until_ready = false;
         printf("devmgr: minfs\n");
         if (mount_minfs(fd, &options) != NO_ERROR) {
             close(fd);
@@ -179,6 +180,7 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
             snprintf(mountpath, sizeof(mountpath), "/volume/fat-%d", fat_counter++);
         }
         mkdir(mountpath, 0755);
+        options.wait_until_ready = false;
         printf("devmgr: fatfs\n");
         mount(fd, mountpath, df, &options, launch_fat);
         return NO_ERROR;

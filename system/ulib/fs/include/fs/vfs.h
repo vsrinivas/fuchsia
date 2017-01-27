@@ -92,9 +92,17 @@ ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf, size_t in_len
 mx_status_t vfs_fill_dirent(vdirent_t* de, size_t delen,
                             const char* name, size_t len, uint32_t type);
 
+// Pins a handle to a remote filesystem onto a vnode, if possible.
 mx_status_t vfs_install_remote(vnode_t* vn, mx_handle_t h);
-mx_status_t vfs_uninstall_remote(vnode_t* vn);
-mx_status_t vfs_uninstall_all(void);
+// Unpin a handle to a remote filesystem from a vnode, if one exists.
+mx_status_t vfs_uninstall_remote(vnode_t* vn, mx_handle_t* h);
+
+// Send an unmount signal on a handle to a filesystem and await a response.
+mx_status_t vfs_unmount_handle(mx_handle_t h, mx_time_t timeout);
+
+// Unpins all remote filesystems in the current filesystem, and waits for the
+// response of each one with the provided timeout.
+mx_status_t vfs_uninstall_all(mx_time_t timeout);
 
 // Acquire a handle to the vnode. vn_acquires vn if successful.
 mx_status_t vfs_create_handle(vnode_t* vn, uint32_t flags, mx_handle_t* out);

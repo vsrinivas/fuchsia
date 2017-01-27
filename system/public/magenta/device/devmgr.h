@@ -9,25 +9,25 @@
 #include <magenta/types.h>
 
 #define IOCTL_DEVMGR_MOUNT_FS \
-    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DEVMGR, 0)
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_DEVMGR, 0)
 // Unmount the filesystem which 'fd' belongs to.
 #define IOCTL_DEVMGR_UNMOUNT_FS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVMGR, 1)
 // If a filesystem is mounted on the node represented by 'fd', unmount it.
 #define IOCTL_DEVMGR_UNMOUNT_NODE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVMGR, 2)
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DEVMGR, 2)
 // Add a bootfs vmo to the system fs.
 #define IOCTL_DEVMGR_MOUNT_BOOTFS_VMO \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_DEVMGR, 3)
 
-// ssize_t ioctl_devmgr_mount_fs(int fd, mx_handle_t* out);
-IOCTL_WRAPPER_OUT(ioctl_devmgr_mount_fs, IOCTL_DEVMGR_MOUNT_FS, mx_handle_t);
+// ssize_t ioctl_devmgr_mount_fs(int fd, mx_handle_t* in);
+IOCTL_WRAPPER_IN(ioctl_devmgr_mount_fs, IOCTL_DEVMGR_MOUNT_FS, mx_handle_t);
 
 // ssize_t ioctl_devmgr_unmount_fs(int fd);
 IOCTL_WRAPPER(ioctl_devmgr_unmount_fs, IOCTL_DEVMGR_UNMOUNT_FS);
 
-// ssize_t ioctl_devmgr_unmount_node(int fd);
-IOCTL_WRAPPER(ioctl_devmgr_unmount_node, IOCTL_DEVMGR_UNMOUNT_NODE);
+// ssize_t ioctl_devmgr_unmount_node(int fd, mx_handle_t* out);
+IOCTL_WRAPPER_OUT(ioctl_devmgr_unmount_node, IOCTL_DEVMGR_UNMOUNT_NODE, mx_handle_t);
 
 // ssize_t ioctl_devmgr_mount_bootfs_vmo(int fd, mx_handle_t* in);
 IOCTL_WRAPPER_IN(ioctl_devmgr_mount_bootfs_vmo, IOCTL_DEVMGR_MOUNT_BOOTFS_VMO, mx_handle_t);

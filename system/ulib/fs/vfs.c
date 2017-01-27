@@ -43,11 +43,16 @@ static mx_status_t vfs_name_trim(const char* name, size_t len, size_t* len_out, 
 // Access the remote handle if it's ready -- otherwise, return an error.
 static mx_status_t vfs_get_remote(vnode_t* vn) {
 #ifdef __Fuchsia__
-    if (!(vn->flags & V_FLAG_MOUNT_READY)) {
+    if (vn->remote == 0) {
+        // Trying to get remote on a non-remote vnode
+        return ERR_UNAVAILABLE;
+    } else if (!(vn->flags & V_FLAG_MOUNT_READY)) {
+        mx_signals_t observed;
         mx_status_t status = mx_handle_wait_one(vn->remote,
-                                                MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED, 0,
-                                                NULL);
-        if (status != NO_ERROR) {
+                                                MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
+                                                0,
+                                                &observed);
+        if ((status != NO_ERROR) || (observed & MX_CHANNEL_PEER_CLOSED)) {
             // Not set (or otherwise remote is bad)
             return ERR_UNAVAILABLE;
         }
@@ -321,27 +326,26 @@ ssize_t vfs_do_ioctl(vnode_t* vn, uint32_t op, const void* in_buf,
         return vfs_do_ioctl_watch_dir(vn, in_buf, in_len, out_buf, out_len);
     }
     case IOCTL_DEVMGR_MOUNT_FS: {
+        if ((in_len != sizeof(mx_handle_t)) || (out_len != 0)) {
+            return ERR_INVALID_ARGS;
+        }
+        mx_handle_t h = *(mx_handle_t*)in_buf;
+        mx_status_t status;
+        if ((status = vfs_install_remote(vn, h)) < 0) {
+            mx_handle_close(h);
+            return status;
+        }
+        return NO_ERROR;
+    }
+    case IOCTL_DEVMGR_UNMOUNT_NODE: {
         if ((in_len != 0) || (out_len != sizeof(mx_handle_t))) {
             return ERR_INVALID_ARGS;
         }
-        mx_handle_t h0, h1;
-        mx_status_t status;
-        if ((status = mx_channel_create(0, &h0, &h1)) < 0) {
-            return status;
-        }
-        if ((status = vfs_install_remote(vn, h1)) < 0) {
-            mx_handle_close(h0);
-            mx_handle_close(h1);
-            return status;
-        }
-        memcpy(out_buf, &h0, sizeof(mx_handle_t));
-        return sizeof(mx_handle_t);
-    }
-    case IOCTL_DEVMGR_UNMOUNT_NODE: {
-        return vfs_uninstall_remote(vn);
+        mx_handle_t* h = (mx_handle_t*)out_buf;
+        return vfs_uninstall_remote(vn, h);
     }
     case IOCTL_DEVMGR_UNMOUNT_FS: {
-        vfs_uninstall_all();
+        vfs_uninstall_all(MX_TIME_INFINITE);
         vn->ops->ioctl(vn, op, in_buf, in_len, out_buf, out_len);
         exit(0);
     }

@@ -49,8 +49,8 @@ static mx_status_t init_stdio(mx_handle_t* hnd, uint32_t* ids, size_t* n) {
     return NO_ERROR;
 }
 
-mx_status_t launch_logs_sync(int argc, const char** argv, mx_handle_t* handles,
-                             uint32_t* types, size_t len) {
+mx_status_t launch_logs_async(int argc, const char** argv, mx_handle_t* handles,
+                              uint32_t* types, size_t len) {
     mx_status_t status;
     mx_handle_t hnd[8];
     uint32_t ids[8];
@@ -86,10 +86,6 @@ mx_status_t launch_logs_sync(int argc, const char** argv, mx_handle_t* handles,
         return proc;
     }
 
-    status = mx_handle_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR) {
-        fprintf(stderr, "launch: Error waiting for process to terminate\n");
-    }
     mx_handle_close(proc);
     return status;
 fail:

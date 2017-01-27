@@ -52,66 +52,115 @@ disk_format_t detect_disk_format(int fd) {
     return DISK_FORMAT_UNKNOWN;
 }
 
-static mx_status_t mount_remote_handle(const char* where, mx_handle_t* h) {
-    int fd;
-    if ((fd = open(where, O_DIRECTORY | O_RDWR)) < 0) {
-        return ERR_BAD_STATE;
+// Initializes 'hnd' and 'ids' with the mountpoint handle and block device handle.
+// Consumes devicefd.
+static mx_status_t mount_prepare_handles(int devicefd, mx_handle_t* mount_handle_out,
+                                         mx_handle_t* hnd, uint32_t* ids, size_t* n) {
+    mx_status_t status;
+    mx_handle_t mountee_handle;
+    if ((status = mx_channel_create(0, &mountee_handle, mount_handle_out)) != NO_ERROR) {
+        close(devicefd);
+        return status;
     }
-    mx_status_t status = NO_ERROR;
-    if (ioctl_devmgr_mount_fs(fd, h) != sizeof(mx_handle_t)) {
-        fprintf(stderr, "fs_mount: Could not mount remote handle on %s\n", where);
-        status = ERR_BAD_STATE;
+    hnd[*n] = mountee_handle;
+    ids[*n] = MX_HND_TYPE_USER0;
+    *n = *n + 1;
+
+    if ((status = mxio_transfer_fd(devicefd, FS_FD_BLOCKDEVICE, hnd + *n, ids + *n)) <= 0) {
+        fprintf(stderr, "Failed to access device handle\n");
+        mx_handle_close(mountee_handle);
+        mx_handle_close(*mount_handle_out);
+        close(devicefd);
+        return status != 0 ? status : ERR_BAD_STATE;
     }
+    *n = *n + status;
+    return NO_ERROR;
+}
+
+// Calls the 'launch callback' and mounts the remote handle to the target vnode, if successful.
+static mx_status_t launch_and_mount(LaunchCallback cb, const mount_options_t* options,
+                                    const char** argv, int argc, mx_handle_t* hnd,
+                                    uint32_t* ids, size_t n, int fd, mx_handle_t mountpoint) {
+    mx_status_t status;
+    if ((status = cb(argc, argv, hnd, ids, n)) != NO_ERROR) {
+        close(fd);
+        return status;
+    }
+
+    if (options->wait_until_ready) {
+        // Wait until the filesystem is ready to take incoming requests
+        mx_signals_t observed;
+        status = mx_handle_wait_one(mountpoint, MX_USER_SIGNAL_0 | MX_CHANNEL_PEER_CLOSED,
+                                    MX_TIME_INFINITE, &observed);
+        if ((status != NO_ERROR) || (observed & MX_CHANNEL_PEER_CLOSED)) {
+            status = (status != NO_ERROR) ? status : ERR_BAD_STATE;
+            goto fail;
+        }
+    }
+
+    // Install remote handle. Thankfully, we know 'fd' hasn't been unlinked, since open directories
+    // may not be unlinked.
+    if ((status = ioctl_devmgr_mount_fs(fd, &mountpoint)) != NO_ERROR) {
+        // TODO(smklein): Retreive the mountpoint handle if mounting fails.
+        goto fail;
+    }
+
+    close(fd);
+    return NO_ERROR;
+
+fail:
+    // We've entered a failure case where the filesystem process (which may or may not be alive)
+    // had a *chance* to be spawned, but cannot be attached to a vnode (for whatever reason).
+    // Rather than abandoning the filesystem process (maybe causing dirty bits to be set), give it a
+    // chance to shutdown properly.
+    //
+    // The unmount process is a little atypical, since we're just sending a signal over a handle,
+    // rather than detaching the mounted filesytem from the "parent" filesystem.
+    vfs_unmount_handle(mountpoint, options->wait_until_ready ? MX_TIME_INFINITE : 0);
     close(fd);
     return status;
 }
 
 static mx_status_t mount_minfs(int devicefd, const char* mountpath, const mount_options_t* options,
                                LaunchCallback cb) {
+    int fd;
+    if ((fd = open(mountpath, O_DIRECTORY | O_RDWR)) < 0) {
+        return ERR_BAD_STATE;
+    }
+
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
+    mx_handle_t mountpoint;
     mx_status_t status;
-    if ((status = mount_remote_handle(mountpath, hnd)) != NO_ERROR) {
-        fprintf(stderr, "Failed to mount remote handle handle on mount path\n");
-        close(devicefd);
+    if ((status = mount_prepare_handles(devicefd, &mountpoint, hnd, ids, &n)) != NO_ERROR) {
+        close(fd);
         return status;
     }
-    ids[n] = MX_HND_TYPE_USER0;
-    n++;
-    if ((status = mxio_transfer_fd(devicefd, FS_FD_BLOCKDEVICE, hnd + n, ids + n)) <= 0) {
-        fprintf(stderr, "Failed to access device handle\n");
-        close(devicefd);
-        return status != 0 ? status : ERR_BAD_STATE;
-    }
-    n += status;
 
     if (options->verbose_mount) {
         printf("fs_mount: Launching Minfs\n");
     }
     const char* argv[] = { "/boot/bin/minfs", "mount" };
-    return cb(countof(argv), argv, hnd, ids, n);
+    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, fd, mountpoint);
 }
 
 static mx_status_t mount_fat(int devicefd, const char* mountpath, const mount_options_t* options,
                              LaunchCallback cb) {
+    int fd;
+    if ((fd = open(mountpath, O_DIRECTORY | O_RDWR)) < 0) {
+        return ERR_BAD_STATE;
+    }
+
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
+    mx_handle_t mountpoint;
     mx_status_t status;
-    if ((status = mount_remote_handle(mountpath, hnd)) != NO_ERROR) {
-        fprintf(stderr, "Failed to mount remote handle handle on mount path\n");
-        close(devicefd);
+    if ((status = mount_prepare_handles(devicefd, &mountpoint, hnd, ids, &n)) != NO_ERROR) {
+        close(fd);
         return status;
     }
-    ids[n] = MX_HND_TYPE_USER0;
-    n++;
-    if ((status = mxio_transfer_fd(devicefd, FS_FD_BLOCKDEVICE, hnd + n, ids + n)) <= 0) {
-        fprintf(stderr, "Failed to access device handle\n");
-        close(devicefd);
-        return status != 0 ? status : ERR_BAD_STATE;
-    }
-    n += status;
 
     char readonly_arg[64];
     snprintf(readonly_arg, sizeof(readonly_arg), "-readonly=%s",
@@ -128,7 +177,7 @@ static mx_status_t mount_fat(int devicefd, const char* mountpath, const mount_op
         blockfd_arg,
         "mount",
     };
-    return cb(countof(argv), argv, hnd, ids, n);
+    return launch_and_mount(cb, options, argv, countof(argv), hnd, ids, n, fd, mountpoint);
 }
 
 mx_status_t mount(int devicefd, const char* mountpath,
@@ -151,9 +200,12 @@ mx_status_t umount(const char* mountpath) {
         return ERR_BAD_STATE;
     }
 
-    mx_status_t status = ioctl_devmgr_unmount_node(fd);
+    mx_handle_t h;
+    mx_status_t status = ioctl_devmgr_unmount_node(fd, &h);
     if (status < 0) {
         fprintf(stderr, "Could not unmount filesystem: %d\n", status);
+    } else {
+        status = vfs_unmount_handle(h, MX_TIME_INFINITE);
     }
     close(fd);
     return status;

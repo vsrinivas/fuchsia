@@ -66,5 +66,5 @@ int main(int argc, char** argv) {
         return -1;
     }
     disk_format_t df = detect_disk_format(fd);
-    return mount(fd, mountpath, df, &options, launch_logs_sync);
+    return mount(fd, mountpath, df, &options, launch_logs_async);
 }

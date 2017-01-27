@@ -166,5 +166,5 @@ void devmgr_vfs_init(void) {
 }
 
 void devmgr_vfs_exit(void) {
-    vfs_uninstall_all();
+    vfs_uninstall_all(MX_SEC(5));
 }
