@@ -13,21 +13,24 @@ function HELP {
     echo "-f                  : Exit on first failure"
     echo "-m                  : Build magenta targets only"
     echo "-r                  : Also build release mode builds"
+    echo "-c                  : Also build with clang"
     echo "-h for help"
     exit 1
 }
 
 FAIL_FAST=0
 DO_RELEASE=0
+DO_CLANG=0
 MAGENTA_ONLY=0
 MAKE_ARGS=
 
-while getopts a:fhmr FLAG; do
+while getopts a:fhmrc FLAG; do
     case $FLAG in
         a) MAKE_ARGS="${MAKE_ARGS} ${OPTARG}";;
         f) FAIL_FAST=1;;
         h) HELP;;
         r) DO_RELEASE=1;;
+        c) DO_CLANG=1;;
         m) MAGENTA_ONLY=1;;
         \?)
             echo unrecognized option
@@ -57,6 +60,17 @@ for p in $PROJECTS; do
     fi
   fi
 
+  if [ "$DO_CLANG" -eq 1 ]; then
+    nice $DIR/make-parallel $p ${MAKE_ARGS} USE_CLANG=true
+    STATUS=$?
+    if [ "$STATUS" -ne 0 ]; then
+      FAILED="$FAILED $p-clang"
+      if [ "$FAIL_FAST" -eq 1 ]; then
+        break
+      fi
+    fi
+  fi
+
   if [ "$DO_RELEASE" -eq 1 ]; then
     nice $DIR/make-release $p ${MAKE_ARGS}
     STATUS=$?
@@ -64,6 +78,16 @@ for p in $PROJECTS; do
       FAILED="$FAILED $p-release"
       if [ "$FAIL_FAST" -eq 1 ]; then
         break
+      fi
+    fi
+    if [ "$DO_CLANG" -eq 1 ]; then
+      nice $DIR/make-release $p ${MAKE_ARGS} USE_CLANG=true
+      STATUS=$?
+      if [ "$STATUS" -ne 0 ]; then
+        FAILED="$FAILED $p-clang-release"
+        if [ "$FAIL_FAST" -eq 1 ]; then
+          break
+        fi
       fi
     fi
   fi

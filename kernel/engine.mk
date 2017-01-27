@@ -31,12 +31,22 @@ LKNAME ?= magenta
 CLANG_TARGET_FUCHSIA ?= false
 USE_LINKER_GC ?= true
 
-# add -clang to the build-* dir if using clang and not otherwise overridden by the environment
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-BUILDDIR_SUFFIX ?= -clang
-else
+# If no build directory suffix has been explicitly supplied by the environment,
+# generate a default based on build options.  Start with no suffix, then add
+# "-clang" if we are building with clang, and "-release" if we are building with
+# DEBUG=0
 BUILDDIR_SUFFIX ?=
+ifeq ($(strip $(BUILDDIR_SUFFIX)),)
+
+ifeq ($(call TOBOOL,$(USE_CLANG)),true)
+BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-clang
 endif
+
+ifeq ($(call TOBOOL,$(DEBUG)),false)
+BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-release
+endif
+
+endif   # if BUILDDIR_SUFFIX is empty
 
 # special rule for handling make spotless
 ifeq ($(MAKECMDGOALS),spotless)
