@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <threads.h>
 
 #include <eth/eth-fifo.h>
 #include <magenta/device/ethernet.h>
@@ -125,6 +126,14 @@ static int eth_fifo_send(const void* data, size_t len) {
     return status == NO_ERROR ? (int)len : -1;
 }
 
+static int eth_fifo_send_r(const void* data, size_t len) {
+    static mtx_t lock = MTX_INIT;
+    mtx_lock(&lock);
+    mx_status_t status = eth_fifo_send(data, len);
+    mtx_unlock(&lock);
+    return status;
+}
+
 int eth_send(void* data, size_t len) {
 #if DROP_PACKETS
     txc++;
@@ -136,7 +145,7 @@ int eth_send(void* data, size_t len) {
 #endif
     int r;
     if (use_fifo) {
-        r = eth_fifo_send(data, len);
+        r = eth_fifo_send_r(data, len);
     } else {
         r = write(netfd, data, len);
     }
@@ -146,7 +155,7 @@ int eth_send(void* data, size_t len) {
 
 void netifc_send(const void* data, size_t len) {
     if (use_fifo) {
-        eth_fifo_send(data, len);
+        eth_fifo_send_r(data, len);
     } else {
         write(netfd, data, len);
     }
