@@ -23,7 +23,7 @@ int test_maxfile(void) {
     for (;;) {
         if ((r = write(fd, data, sizeof(data))) < 0) {
             // TODO(smklein): ENOSPC? EFBIG?
-            if (errno == ENOMEM) {
+            if (errno == ENOMEM || errno == EFBIG) {
                 r = 0;
             }
             break;
