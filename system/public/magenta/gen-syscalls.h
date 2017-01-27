@@ -33,6 +33,16 @@ extern mx_status_t _mx_version_get(
     char version[],
     uint32_t version_len) __attribute__((__leaf__));
 
+extern mx_status_t mx_cache_flush(
+    const void* addr,
+    size_t len,
+    uint32_t flags) __attribute__((__leaf__));
+
+extern mx_status_t _mx_cache_flush(
+    const void* addr,
+    size_t len,
+    uint32_t flags) __attribute__((__leaf__));
+
 extern mx_status_t mx_handle_close(
     mx_handle_t handle) __attribute__((__leaf__));
 

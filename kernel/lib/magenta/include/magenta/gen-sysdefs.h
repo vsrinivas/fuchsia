@@ -17,6 +17,11 @@ mx_status_t sys_version_get(
     char version[],
     uint32_t version_len);
 
+mx_status_t sys_cache_flush(
+    const void* addr,
+    size_t len,
+    uint32_t flags);
+
 mx_status_t sys_handle_close(
     mx_handle_t handle);
 

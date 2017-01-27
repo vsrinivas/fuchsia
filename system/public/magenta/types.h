@@ -266,6 +266,10 @@ typedef enum {
 #define MX_FIFO_CONSUMER_RIGHTS \
     (MX_RIGHT_READ | MX_RIGHT_TRANSFER | MX_RIGHT_DUPLICATE | MX_RIGHT_FIFO_CONSUMER)
 
+// Flag bits for mx_cache_flush.
+#define MX_CACHE_FLUSH_INSN       (1u << 0)
+#define MX_CACHE_FLUSH_DATA       (1u << 1)
+
 #ifdef __cplusplus
 // We cannot use <stdatomic.h> with C++ code as _Atomic qualifier defined by
 // C11 is not valid in C++11. There is not a single standard name that can

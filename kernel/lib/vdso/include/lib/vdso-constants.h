@@ -24,6 +24,9 @@ struct vdso_constants {
     // of the booted system.
     uint32_t max_num_cpus;
 
+    // Number of bytes in a data cache line.
+    uint32_t dcache_line_size;
+
     // Conversion factor for mx_ticks_get return values to seconds.
     uint64_t ticks_per_second;
 };

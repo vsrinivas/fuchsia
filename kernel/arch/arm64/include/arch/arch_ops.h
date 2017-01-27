@@ -134,6 +134,18 @@ static inline bool arch_in_int_handler(void)
     return arm64_in_int_handler[arch_curr_cpu_num()];
 }
 
+static inline uint32_t arch_dcache_line_size(void) {
+    // According to ARMv8 manual D7.2.21, the Cache Type Register (CTR)
+    // is a 32 bit control register that contains the smallest icache
+    // line size and smallest dcache line size.
+    uint32_t ctr = (uint32_t)ARM64_READ_SYSREG(ctr_el0);
+
+    // Bits 16:19 of the CTR tell us the log_2 of the number of _words_
+    // in the smallest _data_ cache line on this system.
+    uint32_t dcache_log2 = (ctr >> 16) & 0xf;
+    return 4u << dcache_log2;
+}
+
 __END_CDECLS
 
 #endif // ASSEMBLY

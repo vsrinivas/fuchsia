@@ -67,6 +67,7 @@ VDso::VDso() : RoDso("vdso", vdso_image, VDSO_CODE_END, VDSO_CODE_START) {
     // can warn if the initializer list omits any member.
     *constants_window.data() = (vdso_constants) {
         arch_max_num_cpus(),
+        arch_dcache_line_size(),
         ticks_per_second(),
     };
 }

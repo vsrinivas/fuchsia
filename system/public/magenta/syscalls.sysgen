@@ -56,6 +56,12 @@ syscall version_get vdsocall
     (version: char[version_len] OUT, version_len: uint32_t)
     returns (mx_status_t);
 
+# Abstraction of machine operations
+
+syscall cache_flush vdsocall
+    (addr: any[len] IN, len: size_t, flags: uint32_t)
+    returns (mx_status_t);
+
 # Generic handle operations
 
 syscall handle_close

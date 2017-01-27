@@ -70,6 +70,12 @@ static inline void arch_spinloop_signal(void)
 #define smp_wmb()   wmb()
 #define smp_rmb()   rmb()
 
+static inline uint32_t arch_dcache_line_size(void) {
+    // TODO(mcgrathr): not needed for anything yet
+    // cpuid can separately report line sizes for L[123]
+    return 0;
+}
+
 __END_CDECLS
 
 #endif // !ASSEMBLY
