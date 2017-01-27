@@ -90,7 +90,7 @@ void devmgr_launch(mx_handle_t job,
     mx_status_t status = launchpad_go(lp, NULL, &errmsg);
     if (status < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
-               argv[0], name, launchpad_error_message(lp), status);
+               argv[0], name, errmsg, status);
     } else {
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }

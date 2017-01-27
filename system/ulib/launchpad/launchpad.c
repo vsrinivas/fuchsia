@@ -952,10 +952,10 @@ mx_status_t launchpad_go(launchpad_t* lp, mx_handle_t* proc, const char** errmsg
         } else {
             mx_handle_close(h);
         }
-        return NO_ERROR;
-    } else {
-        return h;
+        h = NO_ERROR;
     }
+    launchpad_destroy(lp);
+    return h;
 }
 
 mx_status_t launchpad_arguments(launchpad_t* lp,
