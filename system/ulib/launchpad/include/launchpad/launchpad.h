@@ -314,15 +314,11 @@ size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size);
 //#define __LP_DEPRECATED __attribute((deprecated))
 
 __LP_DEPRECATED
-static inline mx_status_t launchpad_arguments(launchpad_t* lp,
-                                              int argc, const char* const* argv) {
-    return launchpad_set_args(lp, argc, argv);
-}
+mx_status_t launchpad_arguments(launchpad_t* lp,
+                                int argc, const char* const* argv);
 
 __LP_DEPRECATED
-static inline mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp) {
-    return launchpad_set_environ(lp, envp);
-}
+mx_status_t launchpad_environ(launchpad_t* lp, const char* const* envp);
 
 
 // Start the process running.  If the send_loader_message flag is
