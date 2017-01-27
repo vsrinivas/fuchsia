@@ -105,6 +105,7 @@ mx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
         goto err;
     }
     if (packet.hdr.type != MX_PORT_PKT_TYPE_EXCEPTION) {
+        status = ERR_BAD_STATE;
         goto err;
     }
     if (packet.report.header.type == MX_EXCP_FATAL_PAGE_FAULT) {
@@ -119,6 +120,8 @@ mx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
         *success = true;
     }
     else {
+        mx_task_kill(thread);
+        mx_task_resume(thread, MX_RESUME_EXCEPTION);
         status = ERR_BAD_STATE;
     }
 
