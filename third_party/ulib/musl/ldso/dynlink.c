@@ -36,7 +36,7 @@
 
 static void error(const char*, ...);
 static void debugmsg(const char*, ...);
-static mx_handle_t get_library_vmo(const char* name);
+static mx_status_t get_library_vmo(const char* name, mx_handle_t* vmo);
 
 #define MAXP2(a, b) (-(-(a) & -(b)))
 #define ALIGN(x, y) ((x) + (y)-1 & -(y))
@@ -455,33 +455,33 @@ static void unmap_library(struct dso* dso) {
 
 // TODO(mcgrathr): Temporary hack to avoid modifying the file VMO.
 // This will go away when we have copy-on-write.
-static mx_handle_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
-                                    size_t* off_start, size_t* map_size) {
-    mx_handle_t copy_vmo;
-    mx_status_t status = _mx_vmo_create(data_size, 0, &copy_vmo);
-    if (status < 0)
+static mx_status_t get_writable_vmo(mx_handle_t vmo, size_t data_size,
+                                    size_t* off_start, size_t* map_size,
+                                    mx_handle_t* writable_vmo) {
+    mx_status_t status = _mx_vmo_create(data_size, 0, writable_vmo);
+    if (status != NO_ERROR)
         return status;
     uintptr_t window = 0;
     status = _mx_vmar_map(__magenta_vmar_root_self, 0, vmo, *off_start,
                           data_size, MX_VM_FLAG_PERM_READ, &window);
-    if (status < 0) {
-        _mx_handle_close(copy_vmo);
+    if (status != NO_ERROR) {
+        _mx_handle_close(*writable_vmo);
         return status;
     }
     size_t n;
-    status = _mx_vmo_write(copy_vmo, (void*)window, 0, data_size, &n);
+    status = _mx_vmo_write(*writable_vmo, (void*)window, 0, data_size, &n);
     _mx_vmar_unmap(__magenta_vmar_root_self, window, data_size);
-    if (status < 0) {
-        mx_handle_close(copy_vmo);
+    if (status != NO_ERROR) {
+        mx_handle_close(*writable_vmo);
         return status;
     }
     if (n != data_size) {
-        mx_handle_close(copy_vmo);
+        mx_handle_close(*writable_vmo);
         return ERR_IO;
     }
     *off_start = 0;
     *map_size = data_size;
-    return copy_vmo;
+    return NO_ERROR;
 }
 
 static void* map_library(mx_handle_t vmo, struct dso* dso) {
@@ -502,7 +502,7 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
     size_t l;
     mx_status_t status = _mx_vmo_read(vmo, buf, 0, sizeof buf, &l);
     eh = buf;
-    if (status < 0)
+    if (status != NO_ERROR)
         return 0;
     // We cannot support ET_EXEC in the general case, because its fixed
     // addresses might conflict with where the dynamic linker has already
@@ -517,14 +517,14 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
         if (!allocated_buf)
             return 0;
         status = _mx_vmo_read(vmo, allocated_buf, eh->e_phoff, phsize, &l);
-        if (status < 0)
+        if (status != NO_ERROR)
             goto error;
         if (l != phsize)
             goto noexec;
         ph = ph0 = allocated_buf;
     } else if (eh->e_phoff + phsize > l) {
         status = _mx_vmo_read(vmo, buf + 1, eh->e_phoff, phsize, &l);
-        if (status < 0)
+        if (status != NO_ERROR)
             goto error;
         if (l != phsize)
             goto noexec;
@@ -610,10 +610,9 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
                 ((ph->p_vaddr + ph->p_filesz + PAGE_SIZE - 1) & -PAGE_SIZE) -
                 this_min;
             if (data_size > 0) {
-                map_vmo = get_writable_vmo(vmo, data_size,
-                                           &off_start, &map_size);
-                if (map_vmo < 0) {
-                    status = map_vmo;
+                status = get_writable_vmo(vmo, data_size,
+                                          &off_start, &map_size, &map_vmo);
+                if (status != NO_ERROR) {
                 mx_error:
                     // TODO(mcgrathr): Perhaps this should translate the
                     // kernel error in 'status' into an errno value.  Or
@@ -642,15 +641,14 @@ static void* map_library(mx_handle_t vmo, struct dso* dso) {
                 size_t bss_len = (size_t)base + this_max - pgbrk;
                 mx_handle_t bss_vmo;
                 status = _mx_vmo_create(bss_len, 0, &bss_vmo);
-                if (status < 0) {
+                if (status != NO_ERROR)
                     goto mx_error;
-                }
                 uintptr_t bss_mapaddr = 0;
                 status = _mx_vmar_map(vmar, pgbrk - vmar_base,
                                       bss_vmo, 0, bss_len, mx_flags,
                                       &bss_mapaddr);
                 _mx_handle_close(bss_vmo);
-                if (status < 0)
+                if (status != NO_ERROR)
                     goto mx_error;
             }
         }
@@ -881,8 +879,9 @@ static struct dso* load_library(const char* name, struct dso* needed_by) {
 
     struct dso* p = find_library(name);
     if (p == NULL) {
-        mx_handle_t vmo = get_library_vmo(name);
-        if (vmo >= 0) {
+        mx_handle_t vmo;
+        mx_status_t status = get_library_vmo(name, &vmo);
+        if (status == NO_ERROR) {
             p = load_library_vmo(vmo, name, needed_by);
             _mx_handle_close(vmo);
         }
@@ -1266,9 +1265,9 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
 
         ldso.name = ldname;
 
-        exec_vmo = get_library_vmo(argv[0]);
-        if (exec_vmo < 0) {
-            debugmsg("%s: cannot load %s: %d\n", ldname, argv[0], exec_vmo);
+        mx_status_t status = get_library_vmo(argv[0], &exec_vmo);
+        if (status != NO_ERROR) {
+            debugmsg("%s: cannot load %s: %d\n", ldname, argv[0], status);
             _exit(1);
         }
     }
@@ -1607,7 +1606,7 @@ void* dlopen(const char* file, int mode) {
 }
 
 void* dlopen_vmo(mx_handle_t vmo, int mode) {
-    if (vmo < 0 || vmo == MX_HANDLE_INVALID) {
+    if (vmo == MX_HANDLE_INVALID) {
         errno = EINVAL;
         return NULL;
     }
@@ -1783,9 +1782,10 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 static bool loader_svc_rpc_in_progress;
 static uint32_t loader_svc_txid;
 
-static mx_handle_t loader_svc_rpc(uint32_t opcode,
-                                  const void* data, size_t len) {
-    mx_handle_t handle = MX_HANDLE_INVALID;
+static mx_status_t loader_svc_rpc(uint32_t opcode,
+                                  const void* data, size_t len,
+                                  mx_handle_t* result) {
+    mx_status_t status;
     struct {
         mx_loader_svc_msg_t header;
         uint8_t data[LOADER_SVC_MSG_MAX - sizeof(mx_loader_svc_msg_t)];
@@ -1796,7 +1796,7 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
     if (len >= sizeof msg.data) {
         error("message of %zu bytes too large for loader service protocol",
               len);
-        handle = ERR_OUT_OF_RANGE;
+        status = ERR_OUT_OF_RANGE;
         goto out;
     }
 
@@ -1811,63 +1811,60 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
         .wr_num_bytes = sizeof(msg.header) + len + 1,
         .rd_bytes = &msg,
         .rd_num_bytes = sizeof(msg),
-        .rd_handles = &handle,
-        .rd_num_handles = 1,
+        .rd_handles = result,
+        .rd_num_handles = result == NULL ? 0 : 1,
     };
 
     uint32_t reply_size;
     uint32_t handle_count;
     mx_status_t read_status = NO_ERROR;
-    mx_status_t status = _mx_channel_call(loader_svc, 0, MX_TIME_INFINITE,
-                                          &call, &reply_size, &handle_count,
-                                          &read_status);
+    status = _mx_channel_call(loader_svc, 0, MX_TIME_INFINITE,
+                              &call, &reply_size, &handle_count,
+                              &read_status);
     if (status != NO_ERROR) {
         error("_mx_channel_call of %u bytes to loader service: "
               "%d (%s), read %d (%s)",
               call.wr_num_bytes, status, _mx_status_get_string(status),
               read_status, _mx_status_get_string(read_status));
-        handle = status == ERR_CALL_FAILED ? read_status : status;
+        if (status == ERR_CALL_FAILED && read_status != NO_ERROR)
+            status = read_status;
         goto out;
     }
 
     if (reply_size != sizeof(msg.header)) {
         error("loader service reply %u bytes != %u",
               reply_size, sizeof(msg.header));
-        handle = ERR_INVALID_ARGS;
+        status = ERR_INVALID_ARGS;
         goto out;
     }
     if (msg.header.opcode != LOADER_SVC_OP_STATUS) {
         error("loader service reply opcode %u != %u",
               msg.header.opcode, LOADER_SVC_OP_STATUS);
-        handle = ERR_INVALID_ARGS;
+        status = ERR_INVALID_ARGS;
         goto out;
     }
     if (msg.header.arg != NO_ERROR) {
-        if (handle != MX_HANDLE_INVALID) {
+        if (*result != MX_HANDLE_INVALID) {
             error("loader service error %d reply contains handle %#x",
-                  msg.header.arg, handle);
-            handle = ERR_INVALID_ARGS;
+                  msg.header.arg, *result);
+            status = ERR_INVALID_ARGS;
             goto out;
         }
-        if (msg.header.arg > 0) {
-            error("loader service error reply %d > 0", msg.header.arg);
-            handle = ERR_INVALID_ARGS;
-            goto out;
-        }
-        handle = msg.header.arg;
+        status = msg.header.arg;
     }
 
 out:
     loader_svc_rpc_in_progress = false;
-    return handle;
+    return status;
 }
 
-static mx_handle_t get_library_vmo(const char* name) {
+static mx_status_t get_library_vmo(const char* name, mx_handle_t* result) {
     if (loader_svc == MX_HANDLE_INVALID) {
         error("cannot look up \"%s\" with no loader service", name);
-        return MX_HANDLE_INVALID;
+        return ERR_UNAVAILABLE;
     }
-    return loader_svc_rpc(LOADER_SVC_OP_LOAD_OBJECT, name, strlen(name));
+    return loader_svc_rpc(LOADER_SVC_OP_LOAD_OBJECT, name, strlen(name),
+                          result);
 }
 
 static void log_write(const void* buf, size_t len) {
@@ -1880,7 +1877,7 @@ static void log_write(const void* buf, size_t len) {
     if (logger != MX_HANDLE_INVALID)
         status = _mx_log_write(logger, len, buf, 0);
     else if (!loader_svc_rpc_in_progress && loader_svc != MX_HANDLE_INVALID)
-        status = loader_svc_rpc(LOADER_SVC_OP_DEBUG_PRINT, buf, len);
+        status = loader_svc_rpc(LOADER_SVC_OP_DEBUG_PRINT, buf, len, NULL);
     else {
         int n = _mx_debug_write(buf, len);
         status = n < 0 ? n : NO_ERROR;
