@@ -110,7 +110,7 @@ See [QEMU](qemu.md) for information on building and using QEMU with magenta.
 
 If the prebuilt toolchain binaries do not work for you, there are a
 set of scripts which will download and build suitable gcc toolchains
-for building Magenta for ARM32, ARM64, and x86-64 architectures:
+for building Magenta for the ARM64 and x86-64 architectures:
 
 ```
 cd $SRC
