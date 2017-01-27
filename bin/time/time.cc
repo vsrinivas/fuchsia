@@ -20,15 +20,22 @@ int main(int argc, char **argv) {
   timeval starttimeval, endtimeval;
   gettimeofday(&starttimeval, NULL);
 
-  char **args = argv + 1;
+  launchpad_t* lp;
+  // Use the default job.
+  launchpad_create(MX_HANDLE_INVALID, argv[1], &lp);
+  launchpad_load_from_file(lp, argv[1]);
+  launchpad_clone(lp, LP_CLONE_ALL);
+  launchpad_set_args(lp, argc - 1, argv + 1);
 
-  mx_handle_t handle = launchpad_launch_mxio(argv[1], argc - 1, args);
-  if (handle < 0) {
-    fprintf(stderr, "Failed to launch %s: %d\n", argv[1], handle);
+  mx_handle_t proc = MX_HANDLE_INVALID;
+  const char* errmsg = NULL;
+  mx_status_t status = launchpad_go(lp, &proc, &errmsg);
+  if (status != NO_ERROR) {
+    fprintf(stderr, "Failed to launch %s: %d: %s\n", argv[1], status, errmsg);
     return 1;
   }
-  mx_status_t status =
-      mx_handle_wait_one(handle, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
+  status =
+      mx_handle_wait_one(proc, MX_PROCESS_SIGNALED, MX_TIME_INFINITE, NULL);
 
   gettimeofday(&endtimeval, NULL);
 
@@ -39,9 +46,9 @@ int main(int argc, char **argv) {
   }
 
   mx_info_process_t proc_info;
-  status = mx_object_get_info(handle, MX_INFO_PROCESS, &proc_info,
+  status = mx_object_get_info(proc, MX_INFO_PROCESS, &proc_info,
                               sizeof(proc_info), nullptr, nullptr);
-  mx_handle_close(handle);
+  mx_handle_close(proc);
 
   if (status != NO_ERROR) {
     fprintf(stderr, "Failed to get process return code %s: %d\n", argv[1],
