@@ -635,7 +635,6 @@ static int call_server(void* ptr) {
     return 0;
 }
 
-
 static bool channel_call(void) {
     BEGIN_TEST;
 
@@ -712,6 +711,48 @@ static bool create_and_nest(mx_handle_t out, mx_handle_t* end, size_t n) {
     END_TEST;
 }
 
+static int call_server2(void* ptr) {
+    mx_handle_t h = (mx_handle_t) (uintptr_t) ptr;
+    mx_nanosleep(MX_MSEC(250));
+    mx_handle_close(h);
+    return 0;
+}
+
+static bool channel_call2(void) {
+    BEGIN_TEST;
+
+    mx_handle_t cli, srv;
+    ASSERT_EQ(mx_channel_create(0, &cli, &srv), NO_ERROR, "");
+
+    thrd_t t;
+    ASSERT_EQ(thrd_create(&t, call_server2, (void*) (uintptr_t) srv), thrd_success, "");
+
+    char msg[8] = { 0, };
+    mx_channel_call_args_t args = {
+        .wr_bytes = msg,
+        .wr_handles = NULL,
+        .wr_num_bytes = sizeof(msg),
+        .wr_num_handles = 0,
+        .rd_bytes = NULL,
+        .rd_handles = NULL,
+        .rd_num_bytes = 0,
+        .rd_num_handles = 0,
+    };
+
+    uint32_t act_bytes = 0xffffffff;
+    uint32_t act_handles = 0xffffffff;
+
+    mx_status_t rs = NO_ERROR;
+    mx_status_t r = mx_channel_call(cli, 0, MX_MSEC(1000), &args, &act_bytes, &act_handles, &rs);
+
+    mx_handle_close(cli);
+
+    EXPECT_EQ(r, ERR_CALL_FAILED, "");
+    EXPECT_EQ(rs, ERR_REMOTE_CLOSED, "");
+
+    END_TEST;
+}
+
 static bool channel_nest(void) {
     BEGIN_TEST;
     mx_handle_t channel[2];
@@ -740,6 +781,7 @@ RUN_TEST(channel_duplicate_handles)
 RUN_TEST(channel_multithread_read)
 RUN_TEST(channel_may_discard)
 RUN_TEST(channel_call)
+RUN_TEST(channel_call2)
 RUN_TEST(channel_nest)
 END_TEST_CASE(channel_tests)
 
