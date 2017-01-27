@@ -14,6 +14,8 @@
 #include <ddk/protocol/bcm.h>
 #include <ddk/protocol/display.h>
 
+#include <magenta/syscalls.h>
+
 #include "../bcm-common/bcm28xx.h"
 
 #define BCM_PROPERTY_TAG_GET_MACADDR        (0x00010003)
@@ -192,7 +194,7 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
         mx_mmap_device_memory(
             get_root_resource(),
             bcm_vc_framebuffer.fb_p & 0x3fffffff, bcm_vc_framebuffer.fb_size,
-            MX_CACHE_POLICY_UNCACHED_DEVICE, &page_base);
+            MX_CACHE_POLICY_CACHED, &page_base);
         vc_framebuffer = (uint8_t*)page_base;
         memset(vc_framebuffer, 0x00, bcm_vc_framebuffer.fb_size);
 
@@ -200,6 +202,11 @@ static mx_status_t bcm_vc_get_framebuffer(bcm_fb_desc_t* fb_desc) {
     }
     memcpy(fb_desc, &bcm_vc_framebuffer, sizeof(bcm_fb_desc_t));
     return sizeof(bcm_fb_desc_t);
+}
+
+void vc_flush_framebuffer(mx_device_t* dev) {
+    mx_cache_flush(vc_framebuffer, bcm_vc_framebuffer.fb_size,
+                   MX_CACHE_FLUSH_DATA);
 }
 
 // Use the Videocore to power on/off devices.
@@ -371,6 +378,7 @@ static mx_display_protocol_t vc_display_proto = {
     .set_mode = vc_set_mode,
     .get_mode = vc_get_mode,
     .get_framebuffer = vc_get_framebuffer,
+    .flush = vc_flush_framebuffer
 };
 
 static mx_protocol_device_t mailbox_device_proto = {
@@ -464,4 +472,3 @@ MAGENTA_DRIVER_BEGIN(_driver_bcm_mailbox, "bcm-vc-rpc", "magenta", "0.1", 3)
     BI_ABORT_IF(NE, BIND_SOC_VID, SOC_VID_BROADCOMM),
     BI_MATCH_IF(EQ, BIND_SOC_DID, SOC_DID_BROADCOMM_VIDEOCORE_BUS),
 MAGENTA_DRIVER_END(_driver_bcm_mailbox)
-
