@@ -14,6 +14,23 @@ extern "C" {
 // execution of the C11 thread.
 mx_handle_t thrd_get_mx_handle(thrd_t t);
 
+// Converts a threads.h-style status value to an |mx_status_t|.
+static inline mx_status_t __PURE thrd_status_to_mx_status(int thrd_status) {
+    switch (thrd_status) {
+    case thrd_success:
+        return NO_ERROR;
+    case thrd_nomem:
+        return ERR_NO_MEMORY;
+    case thrd_timedout:
+        return ERR_TIMED_OUT;
+    case thrd_busy:
+        return ERR_SHOULD_WAIT;
+    default:
+    case thrd_error:
+        return ERR_INTERNAL;
+    }
+}
+
 #ifdef __cplusplus
 }
 #endif
