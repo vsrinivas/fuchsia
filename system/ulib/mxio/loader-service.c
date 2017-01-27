@@ -16,6 +16,7 @@
 #include <unistd.h>
 
 #include <magenta/processargs.h>
+#include <magenta/threads.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
 
@@ -265,7 +266,7 @@ mx_handle_t mxio_loader_service(mxio_loader_service_function_t loader,
         mx_handle_close(h);
         mx_handle_close(startup->pipe_handle);
         free(startup);
-        return ret;
+        return thrd_status_to_mx_status(ret);
     }
 
     thrd_detach(t);

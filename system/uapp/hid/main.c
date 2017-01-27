@@ -16,6 +16,7 @@
 
 #include <magenta/listnode.h>
 
+#include <magenta/threads.h>
 #include <magenta/types.h>
 #include <magenta/device/input.h>
 
@@ -225,6 +226,7 @@ static mx_status_t hid_input_device_added(int dirfd, const char* fn, void* cooki
     if (ret != thrd_success) {
         printf("hid: input thread %s did not start (error=%d)\n", args->name, ret);
         close(fd);
+        return thrd_status_to_mx_status(ret);
     }
     thrd_detach(t);
     return NO_ERROR;
@@ -272,6 +274,7 @@ int read_reports(int argc, const char** argv) {
     if (ret != thrd_success) {
         printf("hid: input thread %s did not start (error=%d)\n", args->name, ret);
         close(fd);
+        return -1;
     }
     thrd_join(t, NULL);
     return 0;
@@ -280,7 +283,7 @@ int read_reports(int argc, const char** argv) {
 int readall_reports(int argc, const char** argv) {
     int ret = thrd_create_with_name(&input_poll_thread, hid_input_devices_poll_thread, NULL, "hid-inputdev-poll");
     if (ret != thrd_success) {
-        return ret;
+        return -1;
     }
 
     thrd_join(input_poll_thread, NULL);
