@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddk/common/usb.h>
-#include <ddk/protocol/bluetooth-hci.h>
-#include <magenta/listnode.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 #include <magenta/device/bt-hci.h>
+#include <magenta/listnode.h>
+#include <magenta/status.h>
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +22,13 @@
 #define ACL_WRITE_REQ_COUNT 8
 #define ACL_BUF_SIZE 2048
 
+#define CMD_BUF_SIZE 255 + 3   // 3 byte header + payload
+#define EVENT_BUF_SIZE 255 + 2 // 2 byte header + payload
+
+// The number of currently supported HCI channel endpoints. We currently have
+// one channel for command/event flow and one for ACL data flow.
+#define NUM_CHANNELS 2
+
 // Uncomment these to force using a particular Bluetooth module
 // #define USB_VID 0x0a12  // CSR
 // #define USB_PID 0x0001
@@ -29,13 +37,18 @@ typedef struct {
     mx_device_t device;
     mx_device_t* usb_device;
 
-    mx_handle_t control_pipe[2];
-    mx_handle_t acl_pipe[2];
+    mx_handle_t cmd_channel;
+    mx_handle_t acl_channel;
+
+    mx_wait_item_t read_wait_items[NUM_CHANNELS];
+    uint32_t read_wait_item_count;
+
+    bool read_thread_started;
 
     void* intr_queue;
 
     // for accumulating HCI events
-    uint8_t event_buffer[2 + 255]; // 2 byte header and 0 - 255 data
+    uint8_t event_buffer[EVENT_BUF_SIZE];
     size_t event_buffer_offset;
     size_t event_buffer_packet_length;
 
@@ -64,9 +77,26 @@ static void queue_interrupt_requests_locked(hci_t* hci) {
     }
 }
 
+static void cmd_channel_cleanup_locked(hci_t* hci) {
+    assert(hci->cmd_channel != MX_HANDLE_INVALID);
+    mx_handle_close(hci->cmd_channel);
+    hci->cmd_channel = MX_HANDLE_INVALID;
+}
+
+static void acl_channel_cleanup_locked(hci_t* hci) {
+    assert(hci->acl_channel != MX_HANDLE_INVALID);
+    mx_handle_close(hci->acl_channel);
+    hci->acl_channel = MX_HANDLE_INVALID;
+}
+
 static void hci_event_complete(iotxn_t* txn, void* cookie) {
     hci_t* hci = (hci_t*)cookie;
     mtx_lock(&hci->mutex);
+
+    // If the command channel is currently closed then ignore the interrupt.
+    if (hci->cmd_channel == MX_HANDLE_INVALID)
+        goto out2;
+
     if (txn->status == NO_ERROR) {
         uint8_t* buffer;
         txn->ops->mmap(txn, (void **)&buffer);
@@ -76,10 +106,9 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
         // simple case - packet fits in received data
         if (hci->event_buffer_offset == 0 && length >= 2) {
             if (packet_size == length) {
-                mx_status_t status = mx_channel_write(hci->control_pipe[0], 0, buffer, length,
-                                                      NULL, 0);
+                mx_status_t status = mx_channel_write(hci->cmd_channel, 0, buffer, length, NULL, 0);
                 if (status < 0) {
-                    printf("hci_interrupt failed to write\n");
+                    printf("hci_interrupt failed to write: %s\n", mx_status_get_string(status));
                 }
                 goto out;
             }
@@ -102,10 +131,10 @@ static void hci_event_complete(iotxn_t* txn, void* cookie) {
 
         // check to see if we have a full packet
         if (packet_size <= hci->event_buffer_offset) {
-            mx_status_t status = mx_channel_write(hci->control_pipe[0], 0, hci->event_buffer,
+            mx_status_t status = mx_channel_write(hci->cmd_channel, 0, hci->event_buffer,
                                                   packet_size, NULL, 0);
             if (status < 0) {
-                printf("hci_interrupt failed to write\n");
+                printf("hci_interrupt failed to write: %s\n", mx_status_get_string(status));
             }
             uint32_t remaining = hci->event_buffer_offset - packet_size;
             memmove(hci->event_buffer, hci->event_buffer + packet_size, remaining);
@@ -124,18 +153,25 @@ out2:
 static void hci_acl_read_complete(iotxn_t* txn, void* cookie) {
     hci_t* hci = (hci_t*)cookie;
 
+    mtx_lock(&hci->mutex);
+
     if (txn->status == NO_ERROR) {
         void* buffer;
         txn->ops->mmap(txn, &buffer);
-        mx_status_t status = mx_channel_write(hci->acl_pipe[0], 0, buffer, txn->actual, NULL, 0);
+
+        // The channel handle could be invalid here (e.g. if no process called
+        // the ioctl or they closed their endpoint). Instead of explicitly
+        // checking we let mx_channel_write fail with ERR_BAD_HANDLE or
+        // ERR_REMOTE_CLOSED.
+        mx_status_t status = mx_channel_write(hci->acl_channel, 0, buffer, txn->actual, NULL, 0);
         if (status < 0) {
-            printf("hci_acl_read_complete failed to write\n");
+            printf("hci_acl_read_complete failed to write: %s\n", mx_status_get_string(status));
         }
     }
 
-    mtx_lock(&hci->mutex);
     list_add_head(&hci->free_acl_read_reqs, &txn->node);
     queue_acl_read_requests_locked(hci);
+
     mtx_unlock(&hci->mutex);
 }
 
@@ -148,99 +184,206 @@ static void hci_acl_write_complete(iotxn_t* txn, void* cookie) {
     mtx_unlock(&hci->mutex);
 }
 
+static void hci_build_read_wait_items_locked(hci_t* hci) {
+    mx_wait_item_t* items = hci->read_wait_items;
+
+    memset(items, 0, NUM_CHANNELS);
+    uint32_t count = 0;
+
+    if (hci->cmd_channel != MX_HANDLE_INVALID) {
+        items[count].handle = hci->cmd_channel;
+        items[count].waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+        count++;
+    }
+
+    if (hci->acl_channel != MX_HANDLE_INVALID) {
+        items[count].handle = hci->acl_channel;
+        items[count].waitfor = MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED;
+        count++;
+    }
+
+    hci->read_wait_item_count = count;
+}
+
+static void hci_build_read_wait_items(hci_t* hci) {
+    mtx_lock(&hci->mutex);
+    hci_build_read_wait_items_locked(hci);
+    mtx_unlock(&hci->mutex);
+}
+
+// Returns false if there's an error while sending the packet to the hardware or
+// if the channel peer closed its endpoint.
+static bool hci_handle_cmd_read_events(hci_t* hci, mx_wait_item_t* cmd_item) {
+    if (cmd_item->pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) {
+        uint8_t buf[CMD_BUF_SIZE];
+        uint32_t length = sizeof(buf);
+        mx_status_t status =
+            mx_channel_read(cmd_item->handle, 0, buf, length, &length, NULL, 0, NULL);
+        if (status < 0) {
+            printf("hci_read_thread: failed to read from command channel %s\n",
+                   mx_status_get_string(status));
+            goto fail;
+        }
+
+        status = usb_control(hci->usb_device,
+                             USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
+                             0, 0, 0, buf, length);
+        if (status < 0) {
+            printf("hci_read_thread: usb_control failed: %s\n", mx_status_get_string(status));
+            goto fail;
+        }
+    }
+
+    return true;
+
+fail:
+    mtx_lock(&hci->mutex);
+    cmd_channel_cleanup_locked(hci);
+    mtx_unlock(&hci->mutex);
+
+    return false;
+}
+
+static bool hci_handle_acl_read_events(hci_t* hci, mx_wait_item_t* acl_item) {
+    if (acl_item->pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED)) {
+        uint8_t buf[ACL_BUF_SIZE];
+        uint32_t length = sizeof(buf);
+        mx_status_t status =
+            mx_channel_read(acl_item->handle, 0, buf, length, &length, NULL, 0, NULL);
+        if (status < 0) {
+            printf("hci_read_thread: failed to read from ACL channel %s\n",
+                   mx_status_get_string(status));
+            goto fail;
+        }
+
+        mtx_lock(&hci->mutex);
+        list_node_t* node = list_remove_head(&hci->free_acl_write_reqs);
+        mtx_unlock(&hci->mutex);
+
+        // TODO(armansito): There used to be a hack here that polled
+        // list_remove_head until it returned a none-NULL value. The hack looked
+        // ugly but I haven't really tested the ACL flow yet. Revisit this code
+        // once the ACL work has started.
+        assert(node);
+
+        iotxn_t* txn = containerof(node, iotxn_t, node);
+        txn->ops->copyto(txn, buf, length, 0);
+        txn->length = length;
+        iotxn_queue(hci->usb_device, txn);
+    }
+
+    return true;
+
+fail:
+    mtx_lock(&hci->mutex);
+    acl_channel_cleanup_locked(hci);
+    mtx_unlock(&hci->mutex);
+
+    return false;
+}
+
 static int hci_read_thread(void* arg) {
     hci_t* hci = (hci_t*)arg;
 
-    mx_wait_item_t items[2];
-    items[0].handle = hci->control_pipe[0];
-    items[1].handle = hci->acl_pipe[0];
-    items[0].waitfor = MX_CHANNEL_READABLE;
-    items[1].waitfor = MX_CHANNEL_READABLE;
+    mtx_lock(&hci->mutex);
+
+    if (hci->read_wait_item_count == 0) {
+        printf("hci_read_thread: no channels are open - exiting\n");
+        mtx_unlock(&hci->mutex);
+        goto done;
+    }
+
+    mtx_unlock(&hci->mutex);
 
     while (1) {
-        mx_status_t status = mx_handle_wait_many(items, countof(items), MX_TIME_INFINITE);
+        mx_status_t status = mx_handle_wait_many(
+            hci->read_wait_items, hci->read_wait_item_count, MX_TIME_INFINITE);
         if (status < 0) {
-            printf("mx_handle_wait_many fail\n");
+            printf("hci_read_thread: mx_handle_wait_many failed: %s\n",
+                   mx_status_get_string(status));
+            mtx_lock(&hci->mutex);
+            cmd_channel_cleanup_locked(hci);
+            acl_channel_cleanup_locked(hci);
+            mtx_unlock(&hci->mutex);
             break;
         }
-        if (items[0].pending & MX_CHANNEL_READABLE) {
-            uint8_t buf[256];
-            uint32_t length = sizeof(buf);
-            status = mx_channel_read(items[0].handle, 0, buf, length, &length, NULL, 0, NULL);
-            if (status >= 0) {
-                status = usb_control(hci->usb_device,
-                                     USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE,
-                                     0, 0, 0, buf, length);
-                if (status < 0) {
-                    printf("hci_read_thread control failed\n");
+
+        for (unsigned i = 0; i < NUM_CHANNELS; ++i) {
+            mtx_lock(&hci->mutex);
+            mx_wait_item_t item = hci->read_wait_items[i];
+            mtx_unlock(&hci->mutex);
+
+            mx_handle_t handle = hci->read_wait_items[i].handle;
+            if ((handle == hci->cmd_channel && !hci_handle_cmd_read_events(hci, &item)) ||
+                (handle == hci->acl_channel && !hci_handle_acl_read_events(hci, &item))) {
+                // There was an error while handling the read events. Rebuild the
+                // wait items array to see if any channels are still open.
+                hci_build_read_wait_items(hci);
+                if (hci->read_wait_item_count == 0) {
+                    printf("hci_read_thread: all channels closed - exiting\n");
+                    goto done;
                 }
-            } else {
-                printf("event read failed\n");
-                break;
-            }
-        }
-        if (items[1].pending & MX_CHANNEL_READABLE) {
-            uint8_t buf[ACL_BUF_SIZE];
-            uint32_t length = sizeof(buf);
-            status = mx_channel_read(items[1].handle, 0, buf, length, &length, NULL, 0, NULL);
-            if (status >= 0) {
-                mtx_lock(&hci->mutex);
-
-                list_node_t* node;
-                do {
-                    node = list_remove_head(&hci->free_acl_write_reqs);
-                    if (!node) {
-                        // FIXME this is nasty
-                        mtx_unlock(&hci->mutex);
-                        usleep(10 * 1000);
-                        mtx_lock(&hci->mutex);
-                    }
-                } while (!node);
-                mtx_unlock(&hci->mutex);
-
-                iotxn_t* txn = containerof(node, iotxn_t, node);
-                txn->ops->copyto(txn, buf, length, 0);
-                txn->length = length;
-                iotxn_queue(hci->usb_device, txn);
             }
         }
     }
+
+done:
+    mtx_lock(&hci->mutex);
+    hci->read_thread_started = false;
+    mtx_unlock(&hci->mutex);
+
     return 0;
 }
 
-static mx_handle_t hci_get_control_pipe(mx_device_t* device) {
-    hci_t* hci = get_hci(device);
-    return hci->control_pipe[1];
-}
-
-static mx_handle_t hci_get_acl_pipe(mx_device_t* device) {
-    hci_t* hci = get_hci(device);
-    return hci->acl_pipe[1];
-}
-
-static bluetooth_hci_protocol_t hci_proto = {
-    .get_control_pipe = hci_get_control_pipe,
-    .get_acl_pipe = hci_get_acl_pipe,
-};
-
 static ssize_t hci_ioctl(mx_device_t* device, uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len) {
-    switch (op) {
-    case IOCTL_BT_HCI_GET_CONTROL_PIPE: {
+    ssize_t result = ERR_NOT_SUPPORTED;
+    hci_t* hci = get_hci(device);
+
+    mtx_lock(&hci->mutex);
+
+    if (op == IOCTL_BT_HCI_GET_COMMAND_CHANNEL) {
         mx_handle_t* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
-        *reply = hci_get_control_pipe(device);
-        return sizeof(*reply);
+        if (out_len < sizeof(*reply)) {
+            result = ERR_BUFFER_TOO_SMALL;
+            goto done;
+        }
+
+        if (hci->cmd_channel != MX_HANDLE_INVALID) {
+            result = ERR_ALREADY_BOUND;
+            goto done;
+        }
+
+        mx_handle_t remote_end;
+        mx_status_t status = mx_channel_create(0, &hci->cmd_channel, &remote_end);
+        if (status < 0) {
+            printf("hci_ioctl: Failed to create command channel: %s\n",
+                   mx_status_get_string(status));
+            result = ERR_INTERNAL;
+            goto done;
+        }
+
+        assert(remote_end != MX_HANDLE_INVALID);
+
+        *reply = remote_end;
+        result = sizeof(*reply);
     }
-    case IOCTL_BT_HCI_GET_ACL_PIPE: {
-        mx_handle_t* reply = out_buf;
-        if (out_len < sizeof(*reply)) return ERR_BUFFER_TOO_SMALL;
-        *reply = hci_get_acl_pipe(device);
-        return sizeof(*reply);
+
+    // TODO(armansito): Put the IOCTL for ACL back in when it's ready to test.
+
+    hci_build_read_wait_items_locked(hci);
+
+    // Kick off the hci_read_thread if it's not already running.
+    if (result >= 0 && !hci->read_thread_started) {
+        thrd_t thread;
+        thrd_create_with_name(&thread, hci_read_thread, hci, "hci_read_thread");
+        hci->read_thread_started = true;
+        thrd_detach(thread);
     }
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
+
+done:
+    mtx_unlock(&hci->mutex);
+    return result;
 }
 
 static void hci_unbind(mx_device_t* device) {
@@ -262,10 +405,12 @@ static mx_status_t hci_release(mx_device_t* device) {
         txn->ops->release(txn);
     }
 
-    mx_handle_close(hci->control_pipe[0]);
-    mx_handle_close(hci->control_pipe[1]);
-    mx_handle_close(hci->acl_pipe[0]);
-    mx_handle_close(hci->acl_pipe[1]);
+    if (hci->cmd_channel != MX_HANDLE_INVALID)
+        cmd_channel_cleanup_locked(hci);
+
+    if (hci->acl_channel != MX_HANDLE_INVALID)
+        acl_channel_cleanup_locked(hci);
+
     free(hci);
 
     return NO_ERROR;
@@ -294,7 +439,7 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
     uint8_t intr_addr = 0;
     uint16_t intr_max_packet = 0;
 
-   usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
+    usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
     while (endp) {
         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
             if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
@@ -323,20 +468,13 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
         return ERR_NO_MEMORY;
     }
 
-    mx_status_t status = mx_channel_create(0, &hci->control_pipe[0], &hci->control_pipe[1]);
-    if (status < 0) {
-        goto fail;
-    }
-    status = mx_channel_create(0, &hci->acl_pipe[0], &hci->acl_pipe[1]);
-    if (status < 0) {
-        goto fail;
-    }
-
     list_initialize(&hci->free_event_reqs);
     list_initialize(&hci->free_acl_read_reqs);
     list_initialize(&hci->free_acl_write_reqs);
 
     hci->usb_device = device;
+
+    mx_status_t status;
 
     for (int i = 0; i < EVENT_REQ_COUNT; i++) {
         iotxn_t* txn = usb_alloc_iotxn(intr_addr, intr_max_packet, 0);
@@ -379,17 +517,12 @@ static mx_status_t hci_bind(mx_driver_t* driver, mx_device_t* device) {
     queue_acl_read_requests_locked(hci);
     mtx_unlock(&hci->mutex);
 
-    thrd_t thread;
-    thrd_create_with_name(&thread, hci_read_thread, hci, "hci_read_thread");
-    thrd_detach(thread);
-
     hci->device.protocol_id = MX_PROTOCOL_BLUETOOTH_HCI;
-    hci->device.protocol_ops = &hci_proto;
     status = device_add(&hci->device, device);
     if (status == NO_ERROR) return NO_ERROR;
 
 fail:
-    printf("hci_bind failed: %d\n", status);
+    printf("hci_bind failed: %s\n", mx_status_get_string(status));
     hci_release(&hci->device);
     return status;
 }

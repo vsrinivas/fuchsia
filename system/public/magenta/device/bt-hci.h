@@ -12,20 +12,16 @@
 
 __BEGIN_CDECLS
 
-// Get a message pipe handle for sending HCI commands and receiving HCI events
+// Get a channel handle for a two-way HCI command channel for sending and
+// receiving HCI command and event packets, respectively.
 //   in: none
-//   out: handle to message pipe
-#define IOCTL_BT_HCI_GET_CONTROL_PIPE       IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BT_HCI, 0)
+//   out: handle to channel
+#define IOCTL_BT_HCI_GET_COMMAND_CHANNEL \
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BT_HCI, 0)
 
-// Get a message pipe handle for sending and receiving ACL data
-//   in: none
-//   out: handle to message pipe
-#define IOCTL_BT_HCI_GET_ACL_PIPE           IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BT_HCI, 1)
+// ssize_t ioctl_bt_hci_get_command_channel(int fd, mx_handle_t* out);
+IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_command_channel, IOCTL_BT_HCI_GET_COMMAND_CHANNEL, mx_handle_t);
 
-// ssize_t ioctl_bt_hci_get_control_pipe(int fd, mx_handle_t* out);
-IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_control_pipe, IOCTL_BT_HCI_GET_CONTROL_PIPE, mx_handle_t);
-
-// ssize_t ioctl_bt_hci_get_control_pipe(int fd, mx_handle_t* out);
-IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_acl_pipe, IOCTL_BT_HCI_GET_ACL_PIPE, mx_handle_t);
+// TODO(armansito): Add ioctls for ACL and SCO
 
 __END_CDECLS
