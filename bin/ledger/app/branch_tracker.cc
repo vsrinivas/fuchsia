@@ -130,16 +130,8 @@ class BranchTracker::PageWatcherContainer {
 };
 
 BranchTracker::BranchTracker(PageManager* manager,
-                             storage::PageStorage* storage,
-                             fidl::InterfaceRequest<Page> request)
-    : manager_(manager),
-      storage_(storage),
-      interface_(std::move(request), storage, manager, this),
-      transaction_in_progress_(false) {
-  interface_.set_on_empty([this] {
-    StopTransaction(nullptr);
-    CheckEmpty();
-  });
+                             storage::PageStorage* storage)
+    : manager_(manager), storage_(storage), transaction_in_progress_(false) {
   watchers_.set_on_empty([this] { CheckEmpty(); });
   std::vector<storage::CommitId> commit_ids;
   // TODO(etiennej): Fail more nicely.
@@ -241,8 +233,12 @@ void BranchTracker::RegisterPageWatcher(
                     std::move(base_commit));
 }
 
+bool BranchTracker::IsEmpty() {
+  return watchers_.empty();
+}
+
 void BranchTracker::CheckEmpty() {
-  if (on_empty_callback_ && !interface_.is_bound() && watchers_.empty())
+  if (on_empty_callback_ && IsEmpty())
     on_empty_callback_();
 }
 

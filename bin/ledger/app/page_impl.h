@@ -5,59 +5,19 @@
 #ifndef APPS_LEDGER_SRC_APP_PAGE_IMPL_H_
 #define APPS_LEDGER_SRC_APP_PAGE_IMPL_H_
 
-#include <memory>
-#include <queue>
-#include <string>
-#include <vector>
-
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/convert/convert.h"
-#include "apps/ledger/src/storage/public/journal.h"
-#include "apps/ledger/src/storage/public/page_storage.h"
-#include "apps/ledger/src/storage/public/types.h"
 #include "lib/ftl/macros.h"
 
 namespace ledger {
-class PageManager;
-class BranchTracker;
+class PageDelegate;
 
 // An implementation of the |Page| interface.
 class PageImpl : public Page {
  public:
-  PageImpl(storage::PageStorage* storage,
-           PageManager* manager,
-           BranchTracker* branch_tracker);
+  PageImpl(PageDelegate* delegate);
   ~PageImpl() override;
 
  private:
-  using StatusCallback = std::function<void(Status)>;
-
-  const storage::CommitId& GetCurrentCommitId();
-
-  void PutInCommit(fidl::Array<uint8_t> key,
-                   storage::ObjectId value,
-                   storage::KeyPriority priority,
-                   StatusCallback callback);
-
-  // Run |runnable| in a transaction, and notifies |callback| of the result. If
-  // a transaction is currently in progress, reuses it, otherwise creates a new
-  // one and commit it before calling |callback|.
-  void RunInTransaction(
-      std::function<Status(storage::Journal* journal)> runnable,
-      StatusCallback callback);
-
-  void CommitJournal(
-      std::unique_ptr<storage::Journal> journal,
-      std::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback);
-
-  // Queue operations such that they are serialized: an operation is run only
-  // when all previous operations registered through this method have terminated
-  // by calling their callbacks. When |operation| terminates, |callback| is
-  // called with the status returned by |operation|.
-  void SerializeOperation(StatusCallback callback,
-                          std::function<void(StatusCallback)> operation);
-
   // Page:
   void GetId(const GetIdCallback& callback) override;
 
@@ -92,13 +52,7 @@ class PageImpl : public Page {
 
   void Rollback(const RollbackCallback& callback) override;
 
-  storage::PageStorage* storage_;
-  PageManager* manager_;
-  BranchTracker* branch_tracker_;
-  storage::CommitId journal_parent_commit_;
-  std::unique_ptr<storage::Journal> journal_;
-  std::queue<ftl::Closure> queued_operations_;
-  std::vector<std::unique_ptr<storage::Journal>> in_progress_journals_;
+  PageDelegate* delegate_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
 };

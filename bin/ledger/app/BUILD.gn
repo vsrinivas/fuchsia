@@ -51,6 +51,8 @@ source_set("lib") {
     "merging/merge_resolver.cc",
     "merging/merge_resolver.h",
     "merging/merge_strategy.h",
+    "page_delegate.cc",
+    "page_delegate.h",
     "page_impl.cc",
     "page_impl.h",
     "page_manager.cc",

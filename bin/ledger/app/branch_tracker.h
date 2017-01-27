@@ -8,14 +8,11 @@
 #include <memory>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/fidl/bound_interface.h"
-#include "apps/ledger/src/app/page_impl.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "apps/ledger/src/storage/public/types.h"
-#include "lib/fidl/cpp/bindings/binding.h"
 
 namespace ledger {
 class PageManager;
@@ -26,9 +23,7 @@ class PageManager;
 // have the same parent, the first one to be received will be followed.
 class BranchTracker : public storage::CommitWatcher {
  public:
-  BranchTracker(PageManager* manager,
-                storage::PageStorage* storage,
-                fidl::InterfaceRequest<Page> request);
+  BranchTracker(PageManager* manager, storage::PageStorage* storage);
   ~BranchTracker();
 
   void set_on_empty(ftl::Closure on_empty_callback);
@@ -44,15 +39,18 @@ class BranchTracker : public storage::CommitWatcher {
   // drains all pending Watcher updates, then stop sending them until
   // |StopTransaction| is called. |watchers_drained_callback| is called when all
   // watcher updates have been processed by the clients. This should be used by
-  // |PageImpl| when a transaction is in progress.
+  // |PageDelegate| when a transaction is in progress.
   void StartTransaction(ftl::Closure watchers_drained_callback);
 
   // Informs the BranchTracker that a transaction is no longer in progress.
   // Resumes sending updates to registered watchers. This should be used by
-  // |PageImpl| when a transaction is committed or rolled back.
+  // |PageDelegate| when a transaction is committed or rolled back.
   // |commit| must be the one created by the transaction if it was committed, or
   // nullptr otherwise.
   void StopTransaction(std::unique_ptr<const storage::Commit> commit);
+
+  // Returns true if there are no watchers registered.
+  bool IsEmpty();
 
  private:
   class PageWatcherContainer;
@@ -66,7 +64,6 @@ class BranchTracker : public storage::CommitWatcher {
 
   PageManager* manager_;
   storage::PageStorage* storage_;
-  BoundInterface<Page, PageImpl> interface_;
   callback::AutoCleanableSet<PageWatcherContainer> watchers_;
   ftl::Closure on_empty_callback_;
 

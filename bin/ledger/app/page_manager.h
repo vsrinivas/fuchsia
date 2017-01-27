@@ -8,9 +8,9 @@
 #include <memory>
 #include <vector>
 
-#include "apps/ledger/src/app/branch_tracker.h"
 #include "apps/ledger/src/app/fidl/bound_interface.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
+#include "apps/ledger/src/app/page_delegate.h"
 #include "apps/ledger/src/app/page_snapshot_impl.h"
 #include "apps/ledger/src/callback/auto_cleanable.h"
 #include "apps/ledger/src/cloud_sync/public/ledger_sync.h"
@@ -60,7 +60,7 @@ class PageManager {
   std::unique_ptr<MergeResolver> merge_resolver_;
   callback::AutoCleanableSet<BoundInterface<PageSnapshot, PageSnapshotImpl>>
       snapshots_;
-  callback::AutoCleanableSet<BranchTracker> pages_;
+  callback::AutoCleanableSet<PageDelegate> pages_;
   ftl::Closure on_empty_callback_;
 
   bool sync_backlog_downloaded_;
