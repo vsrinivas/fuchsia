@@ -49,13 +49,10 @@ MAKECVAR=$(subst C++,CPP,$(subst -,_,$(subst /,_,$(subst .,_,$1))))
 # $3 provides an (optional) raw footer to append to the end
 define MAKECONFIGHEADER
 	$(MKDIR); \
-	echo \#pragma once > $1.tmp; \
-	echo $(foreach var,\
-		$(call MAKECVAR,\
-			$(call UC,$($(2)))),\
-		"\\n#define $(subst =,$(SPACE),$(var))"\
-	) >> $1.tmp; \
-	echo "$3" >> $1.tmp; \
+	echo '#pragma once' > $1.tmp; \
+	$(foreach var,$(call MAKECVAR,$(call UC,$($(2)))),\
+	  echo "#define $(subst =,$(SPACE),$(var))" >> $1.tmp;) \
+	echo $3 >> $1.tmp; \
 	$(call TESTANDREPLACEFILE,$1.tmp,$1)
 endef
 
