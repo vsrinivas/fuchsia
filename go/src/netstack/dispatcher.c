@@ -106,6 +106,10 @@ mx_status_t dispatcher(void) {
   if ((h = devmgr_connect(MXRIO_SOCKET_ROOT)) < 0) {
     return h;
   }
+  // Inform upstream that we are ready to serve.
+  if ((r = mx_object_signal_peer(h, 0, MX_USER_SIGNAL_0)) != NO_ERROR) {
+    return r;
+  }
   if ((r = mxio_dispatcher_add(remoteio_dispatcher, h, rio_handler, NULL)) <
       0) {
     return r;
