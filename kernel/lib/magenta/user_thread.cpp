@@ -201,6 +201,16 @@ void UserThread::Kill() {
     // see if we're already going down.
     if (state_ == State::DYING || state_ == State::DEAD)
         return;
+    // if we've never been started, then release ourselves.
+    if (state_ == State::INITIALIZED) {
+        // as we've been initialized previously, forget the LK thread.
+        thread_forget(&thread_);
+        // reset our state, so that the destructor will properly shut down.
+        SetState(State::INITIAL);
+        // drop the ref, as the LK thread will not own this object.
+        __UNUSED auto ret = Release();
+        return;
+    }
 
     // deliver a kernel kill signal to the thread
     thread_kill(&thread_, false);
