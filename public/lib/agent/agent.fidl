@@ -1,0 +1,50 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/agent/agent_context.fidl";
+import "apps/modular/services/application/service_provider.fidl";
+
+// This service is implemented by an application that is meant to be run as an
+// Agent.
+[ServiceName="modular.Agent"]  // Created by each agent.
+interface Agent {
+  // Called when this Agent is first instantiated i.e. a process is created and
+  // this interface is requested from the application.
+  //
+  // An Agent is instantiated when it is not running and if:
+  // (1) Some component calls ComponentContext::ConnectToAgent().
+  // (2) A trigger causes a task to be run.
+  Initialize(AgentContext agent_context);
+
+  // Called when this agent is connected to by some other component.
+  // |requestor_url| is the identifier for the component which called
+  // ComponentContext::ConnectToAgent().
+  // |services| are the services that are provided to that component.
+  Connect(string requestor_url, ServiceProvider& services);
+
+  // Called when some task identified by |task_id| is scheduled to run. The task
+  // was first posted by this Agent using AgentContext::ScheduleTask(). The
+  // return callback is called when this task is completed.
+  RunTask(string task_id, string params) => ();
+
+  // Called when the system wants to cancel this task. This happens on a best
+  // effort basis.
+  CancelTask(string task_id);
+
+  // This method is invoked by the framework to notify the Agent that it has
+  // to stop. What can cause a request to an Agent to Stop():
+  // (1) ComponentContext::Done() is called by this Agent indicating that it has
+  // completed its work.
+  // (2) All AgentControllers associated with this agent are closed.
+  // (3) The system wants to optimize for resources.
+  //
+  // Additionally an Agent is stopped when it closes the pipe for this
+  // interface. But obviously in that case, Stop() can no longeer be called.
+  //
+  // The framework will wait to actually close its connection until after Stop()
+  // returns, or after a timeout, whichever occurs earlier.
+  Stop() => ();
+};

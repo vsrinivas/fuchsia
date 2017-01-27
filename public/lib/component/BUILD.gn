@@ -7,8 +7,12 @@ import("//lib/fidl/fidl.gni")
 fidl("component") {
   sources = [
     "component.fidl",
+    "component_context.fidl",
+    "message_queue.fidl",
   ]
-  public_deps = [
+
+  deps = [
+    "//apps/modular/services/agent:agent_controller",
     "//apps/modular/services/application",
     "//apps/network/services",
   ]

@@ -1,0 +1,33 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+module modular;
+
+import "apps/modular/services/agent/agent_controller.fidl";
+import "apps/modular/services/application/service_provider.fidl";
+import "apps/modular/services/component/message_queue.fidl";
+
+// Provided to all components in their respective intialization methods by the
+// framework. For example, a Module gets it in Module::Initialize() and an Agent
+// gets it in Agent::Initialize().
+interface ComponentContext {
+  // Used to start a new agent in the user scope and connect to it.
+  ConnectToAgent(string url, ServiceProvider& incoming_services,
+                 AgentController& controller);
+
+  // Used to create / delete a message queue or retrieve an existing queue
+  // identified by |name|. |name| has to be unique only within the scope of the
+  // calling component instance.
+  ObtainMessageQueue(string name, MessageQueue& queue);
+  DeleteMessageQueue(string name);
+
+  // Get a MessageSender service that can be used to send a message to a queue
+  // identified by |queue_token|. Token for a MessageQueue is obtained from its
+  // GetToken() method and the token is unique within the scope of the user.
+  GetMessageSender(string queue_token, MessageSender& sender);
+
+  // Used by a component to declare that it done and wants to be torn down.
+  // In case of an Agent, Agent::Stop() will get called as a result of this.
+  Done();
+};
