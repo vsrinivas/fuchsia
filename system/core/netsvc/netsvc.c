@@ -58,31 +58,22 @@ static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
 
 static void run_program(const char *progname, int argc, const char** argv, mx_handle_t h) {
-    mx_handle_t handles[4];
-    uint32_t ids[4];
 
-    if (mxio_clone_root(handles, ids) < 0) {
-        return;
+    launchpad_t* lp;
+    launchpad_create(0, progname, &lp);
+    launchpad_clone(lp, LP_CLONE_ALL & (~LP_CLONE_MXIO_STDIO));
+    launchpad_load_from_file(lp, argv[0]);
+    launchpad_set_args(lp, argc, argv);
+    mx_handle_t handle = MX_HANDLE_INVALID;
+    mx_log_create(0, &handle);
+    launchpad_add_handle(lp, handle, MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 0 | MXIO_FLAG_USE_FOR_STDIO));
+    if (h != MX_HANDLE_INVALID) {
+        launchpad_add_handle(lp, h, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
     }
-    if (mx_log_create(0, &handles[1]) < 0) {
-        mx_handle_close(handles[0]);
-        return;
-    }
-    if (mx_log_create(0, &handles[2]) < 0) {
-        mx_handle_close(handles[0]);
-        mx_handle_close(handles[1]);
-        return;
-    }
-    handles[3] = h;
-    ids[1] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 1);
-    ids[2] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, 2);
-    ids[3] = MX_HND_INFO(MX_HND_TYPE_USER0, 0);
-
-    mx_handle_t proc;
-    if ((proc = launchpad_launch_mxio_etc(progname, argc, argv,
-                                          (const char* const*) environ,
-                                          (h != 0) ? 4 : 3, handles, ids)) < 0) {
-        printf("netsvc: cannot launch %s\n", argv[0]);
+    mx_status_t status;
+    const char* errmsg;
+    if ((status = launchpad_go(lp, NULL, &errmsg)) < 0) {
+        printf("netsvc: cannot launch %s: %d: %s\n", argv[0], status, errmsg);
     }
 }
 
