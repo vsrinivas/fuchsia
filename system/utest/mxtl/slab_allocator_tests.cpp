@@ -49,12 +49,80 @@ private:
 // Static storage.
 size_t TestBase::allocated_obj_count_;
 
+template <typename SATraits, typename = void> struct ReleaseHelper;
+
+template <typename SATraits>
+struct ReleaseHelper<SATraits, typename mxtl::enable_if<
+                        (SATraits::PtrTraits::IsManaged == false) &&
+                        (SATraits::AllocatorFlavor == mxtl::SlabAllocatorFlavor::INSTANCED)
+                    >::type> {
+    static void ReleasePtr(mxtl::SlabAllocator<SATraits>& allocator,
+                           typename SATraits::PtrType& ptr) {
+        // Instanced slab allocators should static_assert if you attempt to
+        // expand their delete method.
+#if TEST_WILL_NOT_COMPILE || 0
+        allocator.Delete(ptr);
+#else
+        delete ptr;
+#endif
+    }
+};
+
+template <typename SATraits>
+struct ReleaseHelper<SATraits, typename mxtl::enable_if<
+                        (SATraits::PtrTraits::IsManaged == false) &&
+                        (SATraits::AllocatorFlavor == mxtl::SlabAllocatorFlavor::MANUAL_DELETE)
+                    >::type> {
+    static void ReleasePtr(mxtl::SlabAllocator<SATraits>& allocator,
+                           typename SATraits::PtrType& ptr) {
+        // SlabAllocated<> objects which come from MANUAL_DELETE flavors of slab
+        // allocators should have their delete operator protected in order to
+        // prevent someone from calling delete on the object.
+#if TEST_WILL_NOT_COMPILE || 0
+        delete ptr;
+#else
+        allocator.Delete(ptr);
+#endif
+    }
+};
+
+template <typename SATraits>
+struct ReleaseHelper<SATraits, typename mxtl::enable_if<
+                        (SATraits::PtrTraits::IsManaged == true) &&
+                        (SATraits::AllocatorFlavor != mxtl::SlabAllocatorFlavor::STATIC)
+                    >::type> {
+    static void ReleasePtr(mxtl::SlabAllocator<SATraits>&, typename SATraits::PtrType& ptr) {
+        ptr = nullptr;
+    }
+};
+
+template <typename SATraits>
+struct ReleaseHelper<SATraits, typename mxtl::enable_if<
+                        (SATraits::PtrTraits::IsManaged == false) &&
+                        (SATraits::AllocatorFlavor == mxtl::SlabAllocatorFlavor::STATIC)
+                    >::type> {
+    static void ReleasePtr(typename SATraits::PtrType& ptr) {
+        delete ptr;
+    }
+};
+
+template <typename SATraits>
+struct ReleaseHelper<SATraits, typename mxtl::enable_if<
+                        (SATraits::PtrTraits::IsManaged == true) &&
+                        (SATraits::AllocatorFlavor == mxtl::SlabAllocatorFlavor::STATIC)
+                    >::type> {
+    static void ReleasePtr(typename SATraits::PtrType& ptr) {
+        ptr = nullptr;
+    }
+};
+
 // Traits which define the various test flavors.
-template <typename LockType>
+template <typename LockType,
+          mxtl::SlabAllocatorFlavor AllocatorFlavor = mxtl::SlabAllocatorFlavor::INSTANCED>
 struct UnmanagedTestTraits {
     class ObjType;
     using PtrType       = ObjType*;
-    using AllocTraits   = mxtl::SlabAllocatorTraits<PtrType, 1024, LockType>;
+    using AllocTraits   = mxtl::SlabAllocatorTraits<PtrType, 1024, LockType, AllocatorFlavor>;
     using AllocatorType = mxtl::SlabAllocator<AllocTraits>;
     using RefList       = mxtl::DoublyLinkedList<PtrType>;
 
@@ -67,9 +135,6 @@ struct UnmanagedTestTraits {
         explicit ObjType(size_t&& val)                : TestBase(mxtl::move(val)) { }
         explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, mxtl::move(b)) { }
     };
-
-
-    static void ReleasePtr(AllocatorType& allocator, PtrType& ptr) { delete ptr; }
 
     static constexpr size_t MaxSlabs  = 4;
     static constexpr bool   IsManaged = false;
@@ -95,8 +160,6 @@ struct UniquePtrTestTraits {
     };
 
 
-    static void ReleasePtr(AllocatorType& allocator, PtrType& ptr) { ptr = nullptr; }
-
     static constexpr size_t MaxSlabs  = 4;
     static constexpr bool   IsManaged = true;
     static constexpr size_t MaxAllocs(size_t slabs) { return AllocatorType::AllocsPerSlab * slabs; }
@@ -120,8 +183,6 @@ struct RefPtrTestTraits {
         explicit ObjType(size_t&& val)                : TestBase(mxtl::move(val)) { }
         explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, mxtl::move(b)) { }
     };
-
-    static void ReleasePtr(AllocatorType& allocator, PtrType& ptr) { ptr = nullptr; }
 
     static constexpr size_t MaxSlabs  = 4;
     static constexpr bool   IsManaged = true;
@@ -182,8 +243,8 @@ bool do_slab_test(typename Traits::AllocatorType& allocator, size_t test_allocs)
             break;
         }
 
-        // Release the reference (explicitly delete if these are unmanaged pointers)
-        Traits::ReleasePtr(allocator, ptr);
+        // Release the reference (how this gets done depends on allocator flavor and pointer type)
+        ReleaseHelper<typename Traits::AllocTraits>::ReleasePtr(allocator, ptr);
     }
 
     EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS), i, "");
@@ -228,8 +289,6 @@ struct StaticUnmanagedTestTraits {
         explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, mxtl::move(b)) { }
     };
 
-
-    static void ReleasePtr(PtrType& ptr) { delete ptr; }
     static size_t MaxAllocs() { return AllocatorType::AllocsPerSlab * AllocatorType::max_slabs(); }
 
     static constexpr size_t MaxSlabs  = 4;
@@ -254,8 +313,6 @@ struct StaticUniquePtrTestTraits {
         explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, mxtl::move(b)) { }
     };
 
-
-    static void ReleasePtr(PtrType& ptr) { ptr = nullptr; }
     static size_t MaxAllocs() { return AllocatorType::AllocsPerSlab * AllocatorType::max_slabs(); }
 
     static constexpr size_t MaxSlabs  = 4;
@@ -281,8 +338,6 @@ struct StaticRefPtrTestTraits {
         explicit ObjType(const size_t& a, size_t&& b) : TestBase(a, mxtl::move(b)) { }
     };
 
-
-    static void ReleasePtr(PtrType& ptr) { ptr = nullptr; }
     static constexpr size_t MaxSlabs  = 4;
     static constexpr bool   IsManaged = false;
 
@@ -347,8 +402,8 @@ bool do_static_slab_test(size_t test_allocs) {
             break;
         }
 
-        // Release the reference (explicitly delete if these are unmanaged pointers)
-        Traits::ReleasePtr(ptr);
+        // Release the reference (how this gets done depends on allocator flavor and pointer type)
+        ReleaseHelper<typename Traits::AllocTraits>::ReleasePtr(ptr);
     }
 
     EXPECT_EQ(mxtl::min(test_allocs, MAX_ALLOCS), i, "");
@@ -400,6 +455,15 @@ RUN_NAMED_TEST("UniquePtr Single Slab (unlock)", (slab_test<UniquePtrTestTraits<
 RUN_NAMED_TEST("UniquePtr Multi Slab  (unlock)", (slab_test<UniquePtrTestTraits<NullLock>>))
 RUN_NAMED_TEST("RefPtr Single Slab    (unlock)", (slab_test<RefPtrTestTraits<NullLock>, 1>))
 RUN_NAMED_TEST("RefPtr Multi Slab     (unlock)", (slab_test<RefPtrTestTraits<NullLock>>))
+
+RUN_NAMED_TEST("Manual Delete Unmanaged (mutex)",
+              (slab_test<UnmanagedTestTraits<MutexLock, mxtl::SlabAllocatorFlavor::MANUAL_DELETE>>))
+RUN_NAMED_TEST("Manual Delete Unmanaged (unlock)",
+              (slab_test<UnmanagedTestTraits<NullLock, mxtl::SlabAllocatorFlavor::MANUAL_DELETE>>))
+
+RUN_NAMED_TEST("Static Unmanaged (unlock)", (static_slab_test<StaticUnmanagedTestTraits<NullLock>>))
+RUN_NAMED_TEST("Static UniquePtr (unlock)", (static_slab_test<StaticUniquePtrTestTraits<NullLock>>))
+RUN_NAMED_TEST("Static RefPtr    (unlock)", (static_slab_test<StaticRefPtrTestTraits<NullLock>>))
 
 RUN_NAMED_TEST("Static Unmanaged (mutex)", (static_slab_test<StaticUnmanagedTestTraits<MutexLock>>))
 RUN_NAMED_TEST("Static UniquePtr (mutex)", (static_slab_test<StaticUniquePtrTestTraits<MutexLock>>))

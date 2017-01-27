@@ -42,7 +42,7 @@
 // ++ The type of object and pointer created by the allocator.
 // ++ The size of the slabs of memory which get allocated.
 // ++ The synchronization primitive used to achieve thread safety.
-// ++ The static/instanced nature of the allocator.
+// ++ The static/instanced/manual-delete nature of the allocator.
 //
 // Details on each of these items are included in the sections below.
 //
@@ -64,8 +64,9 @@
 //    single block of object memory will be carved out of it.
 // 4) If all of the above fail, the allocation fails an nullptr is returned.
 //
-// Typically, allocation operations are O(1), but occasionally will be O(malloc)
-// if a new slab needs to be allocated.  Free operations are always O(1).
+// Typically, allocation operations are O(1), but occasionally will be
+// O(SlabMalloc::Allocate) if a new slab needs to be allocated.  Free operations
+// are always O(1).
 //
 // Slab size is determined by the SLAB_SIZE parameter of the
 // SlabAllocatorTraits<> struct and  defaults to 16KB.  The maximum number of
@@ -127,6 +128,14 @@
 // In the case of static slab allocators, the SlabAllocated<> class introduces
 // no storage overhead to the object, it just supplies the type information
 // needed for the object to automatically return to its allocator.
+//
+// In addition to instanced and static, there is a manual-delete flavor of slab
+// allocator as well.  Manual-delete allocators are instanced (and have
+// independent quotas), but objects allocated from manual-delete slab allocators
+// do not pay the cost of a pointer to find their way back to the allocator they
+// came from.  Instead, it is the user's responsibility to return the object to
+// the allocator by calling allocator.Delete(obj_ptr) at the end of its life.
+// Users are responsible for tracking which objects came from which allocator.
 //
 // :: Static Allocator Storage ::
 //
@@ -271,11 +280,17 @@
 //
 namespace mxtl {
 
+enum class SlabAllocatorFlavor {
+    INSTANCED,
+    STATIC,
+    MANUAL_DELETE,
+};
+
 // fwd decls
 template <typename T,
           size_t   SLAB_SIZE,
           typename LockType,
-          bool     IsStaticAllocator> struct SlabAllocatorTraits;
+          SlabAllocatorFlavor AllocatorFlavor> struct SlabAllocatorTraits;
 template <typename SATraits, typename = void> class SlabAllocator;
 template <typename SATraits, typename = void> class SlabAllocated;
 
@@ -293,6 +308,7 @@ struct SlabAllocatorPtrTraits<T*> {
     using ObjType = T;
     using PtrType = T*;
 
+    static constexpr bool IsManaged = false;
     static constexpr PtrType CreatePtr(ObjType* ptr) { return ptr; }
 };
 
@@ -302,6 +318,7 @@ struct SlabAllocatorPtrTraits<unique_ptr<T>> {
     using ObjType = T;
     using PtrType = unique_ptr<T>;
 
+    static constexpr bool IsManaged = true;
     static constexpr PtrType CreatePtr(ObjType* ptr) { return PtrType(ptr); }
 };
 
@@ -311,6 +328,7 @@ struct SlabAllocatorPtrTraits<RefPtr<T>> {
     using ObjType = T;
     using PtrType = RefPtr<T>;
 
+    static constexpr bool IsManaged = true;
     static constexpr PtrType CreatePtr(ObjType* ptr) { return AdoptRef<ObjType>(ptr); }
 };
 
@@ -323,10 +341,15 @@ struct SlabOriginSetter {
         ptr->slab_origin_ = origin;
     }
 };
-
+// Slab allocated objects from STATIC and MANUAL_DELETE slab allocators do not
+// have (or need) a slab_origin.  Their "origin setter" is a no-op.
 template <typename SATraits>
 struct SlabOriginSetter<SATraits,
-                        typename enable_if<SATraits::IsStaticAllocator == true>::type> {
+                        typename enable_if<
+                            (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC) ||
+                            (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
+                        >::type> {
+
     static inline void SetOrigin(typename SATraits::ObjType* ptr,
                                  internal::SlabAllocator<SATraits>* origin) { }
 };
@@ -590,23 +613,31 @@ protected:
 // ++ LockType
 //  The mxtl::AutoLock compatible class which will handle synchronization.
 //
-// ++ IsStaticAllocator
-//  Selects between a static or instanced allocator type.
-//
-// Instanced allocators allow multiple allocation pools to be created, each with
-// their own quota, but require an extra pointer-per-object of overhead
-// (provided by SlabAllocated<>) when used with managed pointers in order to be
-// able to return to their allocator origin.
-//
-// Static allocators are global for a process and distinguishable only by type,
-// but do not require any extra per-object overhead when used with managed
-// pointers.
+// ++ AllocatorType
+//  Selects between a the three flavors of allocator.
+//  ++ INSTANCED - Allocations come from an instance of an allocator.
+//     Allocation objects carry the overhead of an "origin pointer" which will
+//     be used to find their way home when the delete operator is applied to the
+//     object.  Each instance of an allocator has it's own slab quota.
+//  ++ STATIC - Allocations come from a static instance of an allocator.  There
+//     is only one allocation pool for the entire process.  All allocator
+//     methods are static members of the allocator's type and use the
+//     MyAllocator::Method syntax (instead of my_allocator.Method).  Allocation
+//     objects carry no overhead and will find their way home based on type when
+//     the delete operator is applied to them.
+//  ++ MANUAL_DELETE - A type of INSTANCED allocator where objects have no
+//     pointer overhead.  The delete operator of the object is hidden in the
+//     SlabAllocated<> class preventing users from delete'ing these objects.
+//     Users must be aware of where their allocations came from and are
+//     responsible for calling allocator.Delete in order to destruct and return
+//     the object to the allocator it came from.  MANUAL_DELETE allocators are
+//     only permitted for unmanaged pointer types.
 //
 ////////////////////////////////////////////////////////////////////////////////
 template <typename T,
-          size_t   _SLAB_SIZE         = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
-          typename _LockType          = ::mxtl::Mutex,
-          bool     _IsStaticAllocator = false>
+          size_t   _SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          typename _LockType  = ::mxtl::Mutex,
+          SlabAllocatorFlavor _AllocatorFlavor = SlabAllocatorFlavor::INSTANCED>
 struct SlabAllocatorTraits {
     using PtrTraits     = internal::SlabAllocatorPtrTraits<T>;
     using PtrType       = typename PtrTraits::PtrType;
@@ -614,7 +645,7 @@ struct SlabAllocatorTraits {
     using LockType      = _LockType;
 
     static constexpr size_t SLAB_SIZE = _SLAB_SIZE;
-    static constexpr bool   IsStaticAllocator = _IsStaticAllocator;
+    static constexpr SlabAllocatorFlavor AllocatorFlavor = _AllocatorFlavor;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -624,7 +655,10 @@ struct SlabAllocatorTraits {
 ////////////////////////////////////////////////////////////////////////////////
 template <typename SATraits>
 class SlabAllocator<SATraits,
-                    typename enable_if<SATraits::IsStaticAllocator == false>::type>
+                    typename enable_if<
+                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED) ||
+                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
+                    >::type>
       : public internal::SlabAllocator<SATraits> {
 public:
     using PtrTraits         = typename SATraits::PtrTraits;
@@ -639,6 +673,13 @@ public:
 
     ~SlabAllocator() { }
 
+    void Delete(ObjType* ptr) {
+        static_assert(SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE,
+                      "Only MANUAL_DELETE slab allocators have a Delete method!");
+        ptr->~ObjType();
+        BaseAllocatorType::ReturnToFreeList(ptr);
+    }
+
 private:
     friend class internal::SlabAllocator<SATraits>; // internal::SA<> gets to call ConstructObject
 
@@ -650,7 +691,9 @@ private:
 
 template <typename SATraits>
 class SlabAllocated<SATraits,
-                    typename enable_if<SATraits::IsStaticAllocator == false>::type> {
+                    typename enable_if<
+                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED)
+                    >::type> {
 public:
     using AllocatorType = internal::SlabAllocator<SATraits>;
     using ObjType       = typename SATraits::ObjType;
@@ -678,22 +721,62 @@ private:
     AllocatorType* slab_origin_ = nullptr;
 };
 
+template <typename SATraits>
+class SlabAllocated<SATraits,
+                    typename enable_if<
+                        (SATraits::PtrTraits::IsManaged == false) &&
+                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
+                    >::type> {
+public:
+     SlabAllocated() { }
+    ~SlabAllocated() { }
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
+
+protected:
+    // Object which come from a MANUAL_DELETE slab allocator may not be
+    // destroyed using the delete operator.  Instead, users must return the
+    // object to its allocator using the Delete method of the allocator
+    // instance.
+    //
+    // Hide the delete operator, and halt-and-catch-fire if some Bad Person ever
+    // manages to generate a call to this operator.
+    //
+    // Note: it would be nice to either = delete this operator, or at least make
+    // it private, but we cannot.  To do so would prevent the implemementer of
+    // the slab allocated object from defining a destructor.
+    void operator delete(void*) { DEBUG_ASSERT(false); }
+};
+
 // Shorthand for declaring the properties of an instanced allocator (somewhat
 // superfluous as the default is instanced)
 template <typename T,
           size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
           typename LockType  = ::mxtl::Mutex>
-using InstancedSlabAllocatorTraits = SlabAllocatorTraits<T, SLAB_SIZE, LockType, false>;
+using InstancedSlabAllocatorTraits =
+    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::INSTANCED>;
 
 template <typename T,
           size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>
 using UnlockedInstancedSlabAllocatorTraits =
-    SlabAllocatorTraits<T, SLAB_SIZE, ::mxtl::NullLock, false>;
+    SlabAllocatorTraits<T, SLAB_SIZE, ::mxtl::NullLock, SlabAllocatorFlavor::INSTANCED>;
 
 template <typename T,
           size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>
 using UnlockedSlabAllocatorTraits =
     SlabAllocatorTraits<T, SLAB_SIZE, ::mxtl::NullLock>;
+
+// Shorthand for declaring the properties of a MANUAL_DELETE slab allocator.
+template <typename T,
+          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+          typename LockType  = ::mxtl::Mutex>
+using ManualDeleteSlabAllocatorTraits =
+    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::MANUAL_DELETE>;
+
+template <typename T,
+          size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>
+using UnlockedManualDeleteSlabAllocatorTraits =
+    SlabAllocatorTraits<T, SLAB_SIZE, ::mxtl::NullLock, SlabAllocatorFlavor::MANUAL_DELETE>;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -702,7 +785,9 @@ using UnlockedSlabAllocatorTraits =
 ////////////////////////////////////////////////////////////////////////////////
 template <typename SATraits>
 class SlabAllocator<SATraits,
-                    typename enable_if<SATraits::IsStaticAllocator == true>::type> {
+                    typename enable_if<
+                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)
+                    >::type> {
 public:
     using PtrTraits             = typename SATraits::PtrTraits;
     using PtrType               = typename SATraits::PtrType;
@@ -736,7 +821,9 @@ private:
 
 template <typename SATraits>
 class SlabAllocated<SATraits,
-                    typename enable_if<SATraits::IsStaticAllocator == true>::type> {
+                    typename enable_if<
+                        (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)
+                    >::type> {
 public:
     SlabAllocated() { }
     DISALLOW_COPY_ASSIGN_AND_MOVE(SlabAllocated);
@@ -754,11 +841,13 @@ public:
 template <typename T,
           size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
           typename LockType  = ::mxtl::Mutex>
-using StaticSlabAllocatorTraits = SlabAllocatorTraits<T, SLAB_SIZE, LockType, true>;
+using StaticSlabAllocatorTraits =
+    SlabAllocatorTraits<T, SLAB_SIZE, LockType, SlabAllocatorFlavor::STATIC>;
 
 template <typename T,
           size_t   SLAB_SIZE = DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE>
-using UnlockedStaticSlabAllocatorTraits = SlabAllocatorTraits<T, SLAB_SIZE, ::mxtl::NullLock, true>;
+using UnlockedStaticSlabAllocatorTraits =
+    SlabAllocatorTraits<T, SLAB_SIZE, ::mxtl::NullLock, SlabAllocatorFlavor::STATIC>;
 
 // Shorthand for declaring the global storage required for a static allocator
 #define DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(ALLOC_TRAITS, ...) \
