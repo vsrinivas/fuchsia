@@ -28,9 +28,8 @@
 
 namespace modular {
 
-StoryImpl::StoryImpl(
-    StoryDataPtr story_data,
-    StoryProviderImpl* const story_provider_impl)
+StoryImpl::StoryImpl(StoryDataPtr story_data,
+                     StoryProviderImpl* const story_provider_impl)
     : story_data_(std::move(story_data)),
       story_provider_impl_(story_provider_impl),
       module_watcher_binding_(this) {
@@ -46,13 +45,12 @@ StoryImpl::StoryImpl(
 
 StoryImpl::~StoryImpl() {}
 
-void StoryImpl::Connect(
-    fidl::InterfaceRequest<StoryController> request) {
+void StoryImpl::Connect(fidl::InterfaceRequest<StoryController> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void StoryImpl::AddLinkDataAndSync(
-    const fidl::String& json, const std::function<void()>& callback) {
+void StoryImpl::AddLinkDataAndSync(const fidl::String& json,
+                                   const std::function<void()>& callback) {
   if (json.is_null()) {
     callback();
     return;
@@ -82,8 +80,8 @@ void StoryImpl::GetInfo(const GetInfoCallback& callback) {
 
 // |StoryController|
 void StoryImpl::SetInfoExtra(const fidl::String& name,
-                                       const fidl::String& value,
-                                       const SetInfoExtraCallback& callback) {
+                             const fidl::String& value,
+                             const SetInfoExtraCallback& callback) {
   story_data_->story_info->extra[name] = value;
 
   // Callback is serialized after WriteStoryData. This means that
@@ -93,8 +91,7 @@ void StoryImpl::SetInfoExtra(const fidl::String& name,
 }
 
 // |StoryController|
-void StoryImpl::Start(
-    fidl::InterfaceRequest<mozart::ViewOwner> request) {
+void StoryImpl::Start(fidl::InterfaceRequest<mozart::ViewOwner> request) {
   // If a controller is stopped for delete, then it cannot be used
   // further. However, as of now nothing prevents a client to call
   // Start() on a story that is being deleted, so this condition
@@ -156,16 +153,15 @@ void StoryImpl::StartRootModule(
   fidl::InterfaceHandle<Link> link;
   EnsureRoot()->Dup(link.NewRequest());
 
-  StartModule(story_data_->story_info->url, std::move(link), nullptr,
-              nullptr, module_.NewRequest(),
-              std::move(view_owner_request));
+  StartModule(story_data_->story_info->url, std::move(link), nullptr, nullptr,
+              module_.NewRequest(), std::move(view_owner_request));
 
   module_->Watch(module_watcher_binding_.NewBinding());
 
   story_data_->story_info->is_running = true;
   story_data_->story_info->state = StoryState::STARTING;
 
-  WriteStoryData([]{});
+  WriteStoryData([] {});
 }
 
 // |StoryController|
@@ -197,7 +193,7 @@ void StoryImpl::OnStateChange(const ModuleState state) {
       break;
   }
 
-  WriteStoryData([]{});
+  WriteStoryData([] {});
   NotifyStateChange();
 }
 
@@ -297,11 +293,9 @@ void StoryImpl::StartModule(
 
   Connection connection;
 
-  connection.module_controller_impl.reset(
-      new ModuleControllerImpl(this, module_url,
-                               std::move(application_controller),
-                               std::move(module),
-                               std::move(module_controller_request)));
+  connection.module_controller_impl.reset(new ModuleControllerImpl(
+      this, module_url, std::move(application_controller), std::move(module),
+      std::move(module_controller_request)));
 
   connection.story_connection.reset(new StoryConnection(
       this, module_url, connection.module_controller_impl.get(),

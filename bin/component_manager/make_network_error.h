@@ -9,8 +9,8 @@
 
 namespace component {
 
-network::NetworkErrorPtr MakeNetworkError(
-    int code, const std::string& description);
+network::NetworkErrorPtr MakeNetworkError(int code,
+                                          const std::string& description);
 
 }  // namespace component
 

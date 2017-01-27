@@ -34,7 +34,8 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     link_.Bind(std::move(link));
     StartModule(kChildModule);
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { StopModule(); }, ftl::TimeDelta::FromMilliseconds(kStopMilliseconds));
+        [this] { StopModule(); },
+        ftl::TimeDelta::FromMilliseconds(kStopMilliseconds));
     initialized_.Pass();
   }
 
@@ -49,17 +50,15 @@ class ParentApp : public modular::SingleServiceApp<modular::Module> {
     modular::LinkPtr child_link;
     story_->CreateLink("child", child_link.NewRequest());
     fidl::InterfaceHandle<mozart::ViewOwner> module_view;
-    story_->StartModule(module_query, std::move(child_link), nullptr,
-                        nullptr, module_.NewRequest(),
-                        module_view.NewRequest());
+    story_->StartModule(module_query, std::move(child_link), nullptr, nullptr,
+                        module_.NewRequest(), module_view.NewRequest());
   }
 
   void StopModule() {
-    module_->Stop([this] {
-      callback_.Pass();
-    });
+    module_->Stop([this] { callback_.Pass(); });
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { story_->Done(); }, ftl::TimeDelta::FromMilliseconds(kDoneMilliseconds));
+        [this] { story_->Done(); },
+        ftl::TimeDelta::FromMilliseconds(kDoneMilliseconds));
   }
 
   modular::StoryPtr story_;

@@ -455,9 +455,8 @@ class RecipeApp : public modular::SingleServiceViewApp<modular::Module> {
         // initial values" code.
         std::vector<std::string> segments{modular_example::kJsonSegment,
                                           modular_example::kDocId};
-        module1_link_->Set(
-            fidl::Array<fidl::String>::From(segments),
-            kInitialJson);
+        module1_link_->Set(fidl::Array<fidl::String>::From(segments),
+                           kInitialJson);
       }
     });
 

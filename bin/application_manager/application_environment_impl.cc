@@ -81,8 +81,9 @@ mx::process CreateProcess(
       handles.size(), handles.data(), ids.data());
   if (result < 0) {
     auto status = static_cast<mx_status_t>(result);
-    FTL_LOG(ERROR) << "Cannot run executable " << launch_info->url << " due to error "
-                   << status << " (" << mx_status_get_string(status) << ")";
+    FTL_LOG(ERROR) << "Cannot run executable " << launch_info->url
+                   << " due to error " << status << " ("
+                   << mx_status_get_string(status) << ")";
     return mx::process();
   }
   return mx::process(result);
@@ -233,7 +234,7 @@ void ApplicationEnvironmentImpl::CreateApplication(
     fidl::InterfaceRequest<ApplicationController> controller) {
   if (launch_info->url.get().empty()) {
     FTL_LOG(ERROR) << "Cannot create application because launch_info contains"
-        " an empty url";
+                      " an empty url";
     return;
   }
   std::string canon_url = CanonicalizeURL(launch_info->url);
@@ -253,25 +254,23 @@ void ApplicationEnvironmentImpl::CreateApplication(
 
   // launch_info is moved before LoadApplication() gets at its first argument.
   fidl::String url = launch_info->url;
-  loader_->LoadApplication(
-        url, ftl::MakeCopyable([
-        this, launch_info = std::move(launch_info),
-        controller = std::move(controller)
-      ](ApplicationPackagePtr package) mutable {
-        std::string runner;
-        if (HasShebang(package->data, &runner)) {
-          CreateApplicationWithRunner(std::move(package),
-                                      std::move(launch_info),
-                                      runner,
-                                      std::move(controller));
-        } else {
-          CreateApplicationWithProcess(std::move(package),
-                                       std::move(launch_info),
-                                       environment_bindings_.AddBinding(this),
-                                       std::move(controller));
-        }
+  loader_->LoadApplication(url, ftl::MakeCopyable([
+                             this, launch_info = std::move(launch_info),
+                             controller = std::move(controller)
+                           ](ApplicationPackagePtr package) mutable {
+                             std::string runner;
+                             if (HasShebang(package->data, &runner)) {
+                               CreateApplicationWithRunner(
+                                   std::move(package), std::move(launch_info),
+                                   runner, std::move(controller));
+                             } else {
+                               CreateApplicationWithProcess(
+                                   std::move(package), std::move(launch_info),
+                                   environment_bindings_.AddBinding(this),
+                                   std::move(controller));
+                             }
 
-      }));
+                           }));
 }
 
 void ApplicationEnvironmentImpl::CreateApplicationWithRunner(
@@ -318,8 +317,7 @@ void ApplicationEnvironmentImpl::CreateApplicationWithProcess(
     fidl::InterfaceRequest<ApplicationController> controller) {
   const std::string url = launch_info->url;  // Keep a copy before moving it.
   mx::process process = CreateProcess(
-      job_,
-      std::move(package), std::move(launch_info), std::move(environment));
+      job_, std::move(package), std::move(launch_info), std::move(environment));
   if (process) {
     auto application = std::make_unique<ApplicationControllerImpl>(
         std::move(controller), this, std::move(process), url);

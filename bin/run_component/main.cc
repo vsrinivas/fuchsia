@@ -67,7 +67,8 @@ class RunComponentApp : public modular::ApplicationEnvironmentHost {
       exit(0);
     });
 
-    context_->outgoing_services()->SetDefaultServiceProvider(std::move(app_services));
+    context_->outgoing_services()->SetDefaultServiceProvider(
+        std::move(app_services));
   }
 
   void GetApplicationEnvironmentServices(

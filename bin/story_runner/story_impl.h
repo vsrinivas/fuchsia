@@ -15,10 +15,10 @@
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/mozart/services/views/view_token.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
+#include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -44,14 +44,14 @@ class StoryStorageImpl;
 // instance.
 class StoryImpl : public StoryController, ModuleWatcher {
  public:
-  StoryImpl(
-    StoryDataPtr story_data,
-    StoryProviderImpl* const story_provider_impl);
+  StoryImpl(StoryDataPtr story_data,
+            StoryProviderImpl* const story_provider_impl);
 
   ~StoryImpl() override;
 
   // Methods called by StoryConnection.
-  void CreateLink(const fidl::String& name, fidl::InterfaceRequest<Link> request);
+  void CreateLink(const fidl::String& name,
+                  fidl::InterfaceRequest<Link> request);
   void StartModule(const fidl::String& query,
                    fidl::InterfaceHandle<Link> link,
                    fidl::InterfaceHandle<ServiceProvider> outgoing_services,
@@ -67,8 +67,8 @@ class StoryImpl : public StoryController, ModuleWatcher {
   // Methods called by StoryProviderImpl.
   void Connect(fidl::InterfaceRequest<StoryController> request);
   void StopForDelete(const StopCallback& callback);
-  void AddLinkDataAndSync(
-      const fidl::String& json, const std::function<void()>& callback);
+  void AddLinkDataAndSync(const fidl::String& json,
+                          const std::function<void()>& callback);
 
  private:
   // |StoryController|

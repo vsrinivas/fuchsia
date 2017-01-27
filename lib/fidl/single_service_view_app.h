@@ -18,10 +18,9 @@ namespace modular {
 // single service, which also provides a view.
 template <class Service>
 class SingleServiceViewApp : public SingleServiceApp<Service>,
-  public mozart::ViewProvider {
+                             public mozart::ViewProvider {
  public:
-  SingleServiceViewApp()
-      : view_provider_binding_(this) {
+  SingleServiceViewApp() : view_provider_binding_(this) {
     // TODO: The following line needs to be broken out for reasons not
     // completely clear. Using the more obvious
     //   application_context()->outgoing_services()...

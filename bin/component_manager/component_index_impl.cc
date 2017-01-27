@@ -32,7 +32,8 @@ constexpr char kLocalIndexPath[] = "/system/components/index.json";
 
 namespace {
 
-void CopyJSONFieldToFidl(const rapidjson::Value& object, const char* key,
+void CopyJSONFieldToFidl(const rapidjson::Value& object,
+                         const char* key,
                          fidl::String* string) {
   if (!object.IsObject()) {
     FTL_LOG(ERROR) << "Not a JSON object";
@@ -73,7 +74,8 @@ bool FacetInfoMatches(const rapidjson::Value& facet_data,
     // This was just an existence filter, so return true.
     return true;
   }
-  if (facet_data.GetType() != filter_data.GetType()) return false;
+  if (facet_data.GetType() != filter_data.GetType())
+    return false;
 
   if (facet_data.IsObject()) {
     // Go through each key in 'filter_data' and recursively check for the same
@@ -165,7 +167,8 @@ ApplicationFacetPtr MakeApplicationFacet(const rapidjson::Document& doc) {
 }
 
 std::pair<ComponentManifestPtr, network::NetworkErrorPtr> ParseManifest(
-    const std::string& component_id, const std::string& contents) {
+    const std::string& component_id,
+    const std::string& contents) {
   rapidjson::Document doc;
   if (doc.Parse(contents.c_str()).HasParseError()) {
     FTL_LOG(ERROR) << "Failed to parse component manifest at: " << component_id;

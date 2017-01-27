@@ -9,8 +9,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/ledger/services/internal/internal.fidl.h"
+#include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/lib/fidl/operation.h"
 #include "apps/modular/services/application/application_environment.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"
@@ -34,10 +34,9 @@ class DeleteStoryCall;
 
 class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
  public:
-  StoryProviderImpl(
-      ApplicationEnvironmentPtr environment,
-      fidl::InterfaceHandle<ledger::Ledger> ledger,
-      ledger::LedgerRepositoryPtr ledger_repository);
+  StoryProviderImpl(ApplicationEnvironmentPtr environment,
+                    fidl::InterfaceHandle<ledger::Ledger> ledger,
+                    ledger::LedgerRepositoryPtr ledger_repository);
 
   ~StoryProviderImpl() override;
 
@@ -58,9 +57,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
     return ledger_repository_.get();
   }
 
-  ApplicationLauncher* launcher() {
-    return launcher_.get();
-  }
+  ApplicationLauncher* launcher() { return launcher_.get(); }
 
   // Used by StoryImpl.
   using Storage = StoryStorageImpl::Storage;

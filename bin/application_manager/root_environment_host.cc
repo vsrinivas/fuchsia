@@ -35,7 +35,8 @@ void RootEnvironmentHost::ConnectToService(const fidl::String& interface_name,
                                            mx::channel channel) {
   if (interface_name == ApplicationLoader::Name_) {
     loader_bindings_.AddBinding(
-        &loader_, fidl::InterfaceRequest<ApplicationLoader>(std::move(channel)));
+        &loader_,
+        fidl::InterfaceRequest<ApplicationLoader>(std::move(channel)));
   }
 }
 

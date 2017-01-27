@@ -72,7 +72,8 @@ class UserRunnerImpl : public UserRunner {
  public:
   UserRunnerImpl(
       std::shared_ptr<ApplicationContext> application_context,
-      fidl::Array<uint8_t> user_id, const fidl::String& user_shell,
+      fidl::Array<uint8_t> user_id,
+      const fidl::String& user_shell,
       fidl::Array<fidl::String> user_shell_args,
       fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
       fidl::InterfaceHandle<UserContext> user_context,
@@ -156,7 +157,8 @@ class UserRunnerImpl : public UserRunner {
   }
 
   ServiceProviderPtr GetServiceProvider(
-      const fidl::String& url, const fidl::Array<fidl::String>* const args) {
+      const fidl::String& url,
+      const fidl::Array<fidl::String>* const args) {
     auto launch_info = ApplicationLaunchInfo::New();
 
     ServiceProviderPtr services;
@@ -216,7 +218,8 @@ class UserRunnerApp : public UserRunnerFactory {
 
  private:
   // |UserRunnerFactory|
-  void Create(fidl::Array<uint8_t> user_id, const fidl::String& user_shell,
+  void Create(fidl::Array<uint8_t> user_id,
+              const fidl::String& user_shell,
               fidl::Array<fidl::String> user_shell_args,
               fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository,
               fidl::InterfaceHandle<UserContext> user_context,

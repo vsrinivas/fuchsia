@@ -108,8 +108,9 @@ class DevUserShellView : public mozart::BaseView {
       if (!root_view_data_->view_properties.Equals(view_properties)) {
         root_view_data_->view_properties = view_properties.Clone();
         root_view_data_->scene_version++;
-        GetViewContainer()->SetChildProperties(
-            kRootModuleKey, root_view_data_->scene_version, std::move(view_properties));
+        GetViewContainer()->SetChildProperties(kRootModuleKey,
+                                               root_view_data_->scene_version,
+                                               std::move(view_properties));
       }
     }
   }
@@ -142,7 +143,8 @@ class DevUserShellView : public mozart::BaseView {
       scene_resource->set_scene(mozart::SceneResource::New());
       scene_resource->get_scene()->scene_token =
           root_view_data_->view_info->scene_token.Clone();
-      update->resources.insert(kRootViewSceneResourceId, std::move(scene_resource));
+      update->resources.insert(kRootViewSceneResourceId,
+                               std::move(scene_resource));
 
       auto scene_node = mozart::Node::New();
       scene_node->op = mozart::NodeOp::New();
@@ -209,10 +211,10 @@ class DevUserShellApp
     FTL_LOG(INFO) << "DevUserShell START " << settings_.root_module << " "
                   << settings_.root_link;
 
-    view_.reset(
-        new DevUserShellView(application_context()
-                           ->ConnectToEnvironmentService<mozart::ViewManager>(),
-                       std::move(view_owner_request_)));
+    view_.reset(new DevUserShellView(
+        application_context()
+            ->ConnectToEnvironmentService<mozart::ViewManager>(),
+        std::move(view_owner_request_)));
 
     story_provider_->CreateStory(
         settings_.root_module, [this](const fidl::String& story_id) {

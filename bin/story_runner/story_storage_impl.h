@@ -38,13 +38,11 @@ class StoryStorageImpl : public ledger::PageWatcher {
 
   ~StoryStorageImpl() override;
 
-  void ReadLinkData(const fidl::String& link_id,
-                    const DataCallback& callback);
+  void ReadLinkData(const fidl::String& link_id, const DataCallback& callback);
   void WriteLinkData(const fidl::String& link_id,
                      const fidl::String& data,
                      const SyncCallback& callback);
-  void WatchLink(const fidl::String& link_id,
-                 const DataCallback& watcher);
+  void WatchLink(const fidl::String& link_id, const DataCallback& watcher);
   void Sync(const SyncCallback& callback);
 
  private:

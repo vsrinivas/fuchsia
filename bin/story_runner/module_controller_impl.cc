@@ -30,8 +30,7 @@ ModuleControllerImpl::ModuleControllerImpl(
       binding_(this, std::move(module_controller)) {
   module_application_.set_connection_error_handler(
       [this] { SetState(ModuleState::ERROR); });
-  module_.set_connection_error_handler(
-      [this] { OnConnectionError(); });
+  module_.set_connection_error_handler([this] { OnConnectionError(); });
 }
 
 ModuleControllerImpl::~ModuleControllerImpl() {}
@@ -53,9 +52,7 @@ void ModuleControllerImpl::SetState(const ModuleState new_state) {
 
   state_ = new_state;
   watchers_.ForAllPtrs(
-      [this](ModuleWatcher* const watcher) {
-        watcher->OnStateChange(state_);
-      });
+      [this](ModuleWatcher* const watcher) { watcher->OnStateChange(state_); });
 }
 
 void ModuleControllerImpl::TearDown(std::function<void()> done) {
@@ -98,7 +95,7 @@ void ModuleControllerImpl::TearDown(std::function<void()> done) {
   module_application_.set_connection_error_handler(nullptr);
   module_.set_connection_error_handler(nullptr);
 
-  //If the module was UNLINKED, stop it without a delay. Otherwise
+  // If the module was UNLINKED, stop it without a delay. Otherwise
   // call Module.Stop(), but also schedule a timeout in case it
   // doesn't return from Stop().
   if (state_ == ModuleState::UNLINKED) {

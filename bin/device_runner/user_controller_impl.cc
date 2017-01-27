@@ -7,8 +7,8 @@
 #include <memory>
 #include <utility>
 
-#include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/app/connect.h"
+#include "apps/modular/lib/fidl/array_to_string.h"
 
 namespace modular {
 namespace {
@@ -27,11 +27,10 @@ UserControllerImpl::UserControllerImpl(
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     fidl::InterfaceRequest<UserController> user_controller,
     DoneCallback done)
-  : user_context_impl_(this),
-    user_context_binding_(&user_context_impl_),
-    user_controller_binding_(this, std::move(user_controller)),
-    done_(done) {
-
+    : user_context_impl_(this),
+      user_context_binding_(&user_context_impl_),
+      user_controller_binding_(this, std::move(user_controller)),
+      done_(done) {
   const std::string label = kUserScopeLabelPrefix + to_hex_string(user_id);
 
   // 1. Create a child environment for the UserRunner.
@@ -55,9 +54,8 @@ UserControllerImpl::UserControllerImpl(
   UserRunnerFactoryPtr user_runner_factory;
   ConnectToService(services.get(), user_runner_factory.NewRequest());
   user_runner_factory->Create(
-      std::move(user_id), user_shell,
-      to_array(user_shell_args), std::move(ledger_repository),
-      user_context_binding_.NewBinding(),
+      std::move(user_id), user_shell, to_array(user_shell_args),
+      std::move(ledger_repository), user_context_binding_.NewBinding(),
       std::move(view_owner_request), user_runner_.NewRequest());
 }
 
@@ -72,16 +70,15 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
   user_controller_binding_.Unbind();
   user_context_binding_.Unbind();
 
-  user_runner_->Terminate([this, done]{
+  user_runner_->Terminate([this, done] {
     for (const auto& done_cb : logout_response_callbacks_) {
       done_cb();
     }
     // We announce |OnLogout| only at point just before deleting ourselves,
     // so we can avoid any race conditions that may be triggered by |Shutdown|
     // (which in-turn will call this |Logout| since we have not completed yet).
-    user_watchers_.ForAllPtrs([](UserWatcher* watcher) {
-      watcher->OnLogout();
-    });
+    user_watchers_.ForAllPtrs(
+        [](UserWatcher* watcher) { watcher->OnLogout(); });
     done_();
   });
 }
@@ -93,7 +90,7 @@ void UserControllerImpl::Watch(fidl::InterfaceHandle<UserWatcher> watcher) {
 
 // |UserContext|
 void UserContextImpl::Logout() {
-  controller_->Logout([]{});
+  controller_->Logout([] {});
 }
 
 }  // namespace modular

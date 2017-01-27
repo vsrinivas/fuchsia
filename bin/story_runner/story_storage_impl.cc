@@ -5,9 +5,9 @@
 #include "apps/modular/src/story_runner/story_storage_impl.h"
 
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/modular/services/story/story_storage.fidl.h"
 #include "apps/modular/lib/fidl/array_to_string.h"
 #include "apps/modular/lib/fidl/operation.h"
+#include "apps/modular/services/story/story_storage.fidl.h"
 
 namespace modular {
 
@@ -21,16 +21,13 @@ class ReadLinkDataCall : public Operation {
                    ledger::Page* const page,
                    const fidl::String& link_id,
                    Result result)
-      : Operation(container),
-        page_(page),
-        link_id_(link_id),
-        result_(result) {
+      : Operation(container), page_(page), link_id_(link_id), result_(result) {
     Ready();
   }
 
   void Run() override {
     page_->GetSnapshot(
-        page_snapshot_.NewRequest(),  nullptr, [this](ledger::Status status) {
+        page_snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
           page_snapshot_->Get(
               to_array(link_id_),
               [this](ledger::Status status, ledger::ValuePtr value) {
@@ -64,10 +61,7 @@ class WriteLinkDataCall : public Operation {
                     const fidl::String& link_id,
                     const fidl::String& data,
                     Result result)
-      : Operation(container),
-        page_(page),
-        link_id_(link_id),
-        result_(result) {
+      : Operation(container), page_(page), link_id_(link_id), result_(result) {
     data_ = LinkData::New();
     data_->json = data;
     Ready();
@@ -100,8 +94,7 @@ class SyncCall : public Operation {
   using Result = StoryStorageImpl::SyncCallback;
 
   SyncCall(OperationContainer* const container, Result result)
-      : Operation(container),
-        result_(result) {
+      : Operation(container), result_(result) {
     Ready();
   }
 
@@ -133,8 +126,8 @@ StoryStorageImpl::StoryStorageImpl(std::shared_ptr<Storage> storage,
     // snapshot instead.
     ledger::PageSnapshotPtr snapshot_unused;
     story_page_->GetSnapshot(snapshot_unused.NewRequest(),
-                       page_watcher_binding_.NewBinding(),
-                       [](ledger::Status status) {});
+                             page_watcher_binding_.NewBinding(),
+                             [](ledger::Status status) {});
   }
 }
 
@@ -161,8 +154,8 @@ void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
                                      const fidl::String& data,
                                      const SyncCallback& callback) {
   if (story_page_.is_bound()) {
-    new WriteLinkDataCall(&operation_queue_, story_page_.get(), link_id,
-                          data, callback);
+    new WriteLinkDataCall(&operation_queue_, story_page_.get(), link_id, data,
+                          callback);
 
   } else {
     (*storage_)[key_][link_id] = data;
@@ -170,9 +163,8 @@ void StoryStorageImpl::WriteLinkData(const fidl::String& link_id,
   }
 }
 
-void StoryStorageImpl::WatchLink(
-    const fidl::String& link_id,
-    const DataCallback& watcher) {
+void StoryStorageImpl::WatchLink(const fidl::String& link_id,
+                                 const DataCallback& watcher) {
   watchers_.emplace_back(std::make_pair(link_id, watcher));
 }
 

@@ -81,46 +81,46 @@ class GetStoryDataCall : public Operation {
   }
 
   void Run() override {
-    ledger_->GetRootPage(
-        root_page_.NewRequest(), [this](ledger::Status status) {
-          if (status != ledger::Status::OK) {
-            FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
-                           << " Ledger.GetRootPage() " << status;
-            result_(std::move(story_data_));
-            Done();
-            return;
-          }
+    ledger_->GetRootPage(root_page_.NewRequest(), [this](
+                                                      ledger::Status status) {
+      if (status != ledger::Status::OK) {
+        FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
+                       << " Ledger.GetRootPage() " << status;
+        result_(std::move(story_data_));
+        Done();
+        return;
+      }
 
-          root_page_->GetSnapshot(
-              root_snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
-                if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
-                                 << " Page.GetSnapshot() " << status;
+      root_page_->GetSnapshot(
+          root_snapshot_.NewRequest(), nullptr, [this](ledger::Status status) {
+            if (status != ledger::Status::OK) {
+              FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
+                             << " Page.GetSnapshot() " << status;
+              result_(std::move(story_data_));
+              Done();
+              return;
+            }
+
+            root_snapshot_->Get(
+                to_array(story_id_),
+                [this](ledger::Status status, ledger::ValuePtr value) {
+                  if (status != ledger::Status::OK) {
+                    FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
+                                   << " PageSnapshot.Get() " << status;
+                    result_(std::move(story_data_));
+                    Done();
+                    return;
+                  }
+
+                  story_data_ = StoryData::New();
+                  story_data_->Deserialize(value->get_bytes().data(),
+                                           value->get_bytes().size());
+
                   result_(std::move(story_data_));
                   Done();
-                  return;
-                }
-
-                root_snapshot_->Get(
-                    to_array(story_id_),
-                    [this](ledger::Status status, ledger::ValuePtr value) {
-                      if (status != ledger::Status::OK) {
-                        FTL_LOG(ERROR) << "GetStoryDataCall() " << story_id_
-                                       << " PageSnapshot.Get() " << status;
-                        result_(std::move(story_data_));
-                        Done();
-                        return;
-                      }
-
-                      story_data_ = StoryData::New();
-                      story_data_->Deserialize(value->get_bytes().data(),
-                                               value->get_bytes().size());
-
-                      result_(std::move(story_data_));
-                      Done();
-                    });
-              });
-        });
+                });
+          });
+    });
   };
 
  private:
@@ -238,8 +238,8 @@ class CreateStoryCall : public Operation {
         story_info->extra.mark_non_null();
 
         story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
-          controller_ = std::make_unique<StoryImpl>(
-              std::move(story_data_), story_provider_impl_);
+          controller_ = std::make_unique<StoryImpl>(std::move(story_data_),
+                                                    story_provider_impl_);
 
           // We call stop on the controller to ensure that root data has been
           // written before this operations is done.
@@ -305,7 +305,7 @@ class DeleteStoryCall : public Operation {
     *pending_deletion_ = std::make_pair(story_id_, this);
 
     ledger_->GetRootPage(root_page_.NewRequest(), [this](
-        ledger::Status status) {
+                                                      ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "DeleteStoryCall() " << story_id_
                        << " Ledger.GetRootPage() " << status;
@@ -388,28 +388,29 @@ class GetControllerCall : public Operation {
       return;
     }
 
-    story_provider_impl_->GetStoryData(story_id_, [this](
-                                                      StoryDataPtr story_data) {
-      if (story_data.is_null()) {
-        // We cannot resume a deleted (or otherwise non-existing) story.
-        Done();
-        return;
-      }
-      story_data_ = std::move(story_data);
-      ledger_->GetPage(story_data_->story_page_id.Clone(),
-                       story_page_.NewRequest(), [this](ledger::Status status) {
-                         if (status != ledger::Status::OK) {
-                           FTL_LOG(ERROR) << "GetControllerCall() "
-                                          << story_data_->story_info->id
-                                          << " Ledger.GetPage() " << status;
-                         }
-                         auto controller = new StoryImpl(
-                             std::move(story_data_), story_provider_impl_);
-                         controller->Connect(std::move(request_));
-                         story_controllers_->emplace(story_id_, controller);
-                         Done();
-                       });
-    });
+    story_provider_impl_->GetStoryData(
+        story_id_, [this](StoryDataPtr story_data) {
+          if (story_data.is_null()) {
+            // We cannot resume a deleted (or otherwise non-existing) story.
+            Done();
+            return;
+          }
+          story_data_ = std::move(story_data);
+          ledger_->GetPage(
+              story_data_->story_page_id.Clone(), story_page_.NewRequest(),
+              [this](ledger::Status status) {
+                if (status != ledger::Status::OK) {
+                  FTL_LOG(ERROR)
+                      << "GetControllerCall() " << story_data_->story_info->id
+                      << " Ledger.GetPage() " << status;
+                }
+                auto controller =
+                    new StoryImpl(std::move(story_data_), story_provider_impl_);
+                controller->Connect(std::move(request_));
+                story_controllers_->emplace(story_id_, controller);
+                Done();
+              });
+        });
   }
 
  private:
@@ -443,7 +444,7 @@ class PreviousStoriesCall : public Operation {
     story_ids_.resize(0);
 
     ledger_->GetRootPage(root_page_.NewRequest(), [this](
-        ledger::Status status) {
+                                                      ledger::Status status) {
       if (status != ledger::Status::OK) {
         FTL_LOG(ERROR) << "PreviousStoryCall() "
                        << " Ledger.GetRootPage() " << status;
@@ -532,37 +533,40 @@ StoryProviderImpl::StoryProviderImpl(
   // callbacks may be from an unknown base state if we don't use the snapshot
   // here.
   ledger::PageSnapshotPtr snapshot_unused;
-  root_page->GetSnapshot(snapshot_unused.NewRequest(), std::move(watcher),
-    [](ledger::Status status) {
-      if (status != ledger::Status::OK) {
-        FTL_LOG(ERROR) << "StoryProviderImpl() failed call to Ledger.Watch() "
-                       << status;
-      }
-  });
+  root_page->GetSnapshot(
+      snapshot_unused.NewRequest(), std::move(watcher),
+      [](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          FTL_LOG(ERROR) << "StoryProviderImpl() failed call to Ledger.Watch() "
+                         << status;
+        }
+      });
 
   // We must initialize story_ids_ with the IDs of currently existing
   // stories *before* we can process any calls that might create a new
   // story. Hence we bind the interface request only after this call
   // completes.
-  new PreviousStoriesCall(&operation_queue_, ledger_.get(),
+  new PreviousStoriesCall(
+      &operation_queue_, ledger_.get(),
       [this](fidl::Array<fidl::String> stories) {
-    for (auto& story_id : stories) {
-      story_ids_.insert(story_id.get());
-    }
+        for (auto& story_id : stories) {
+          story_ids_.insert(story_id.get());
+        }
 
-    InitStoryId();  // So MakeStoryId() returns something more random.
+        InitStoryId();  // So MakeStoryId() returns something more random.
 
-    for (auto& request : requests_) {
-      bindings_.AddBinding(this, std::move(request));
-    }
-    requests_.clear();
-    ready_ = true;
-  });
+        for (auto& request : requests_) {
+          bindings_.AddBinding(this, std::move(request));
+        }
+        requests_.clear();
+        ready_ = true;
+      });
 }
 
 StoryProviderImpl::~StoryProviderImpl() {}
 
-void StoryProviderImpl::AddBinding(fidl::InterfaceRequest<StoryProvider> request) {
+void StoryProviderImpl::AddBinding(
+    fidl::InterfaceRequest<StoryProvider> request) {
   if (ready_) {
     bindings_.AddBinding(this, std::move(request));
   } else {
@@ -635,15 +639,14 @@ void StoryProviderImpl::DeleteStory(const fidl::String& story_id,
 }
 
 // |StoryProvider|
-void StoryProviderImpl::GetStoryInfo(
-    const fidl::String& story_id,
-    const GetStoryInfoCallback& callback) {
-  new GetStoryDataCall(
-      &operation_collection_, ledger_.get(), story_id,
-      [this, callback](StoryDataPtr story_data) {
-        callback(
-            story_data.is_null() ? nullptr : std::move(story_data->story_info));
-      });
+void StoryProviderImpl::GetStoryInfo(const fidl::String& story_id,
+                                     const GetStoryInfoCallback& callback) {
+  new GetStoryDataCall(&operation_collection_, ledger_.get(), story_id,
+                       [this, callback](StoryDataPtr story_data) {
+                         callback(story_data.is_null()
+                                      ? nullptr
+                                      : std::move(story_data->story_info));
+                       });
 }
 
 // |StoryProvider|

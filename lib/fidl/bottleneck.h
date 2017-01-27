@@ -64,11 +64,11 @@ class Bottleneck {
 
   // The underlying operation is defined as a pair of instance and
   // method. std::function<> would be an alternative if we need it.
-  template<class Class>
+  template <class Class>
   Bottleneck(Kind kind, Class* instance, void (Class::*method)(const Result&))
       : kind_(kind), operation_([instance, method](Result done) {
-        (instance->*method)(done);
-      }) {}
+          (instance->*method)(done);
+        }) {}
 
   // The invocation of the concurrent operation.
   void operator()(Result done);

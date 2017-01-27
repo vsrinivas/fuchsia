@@ -5,8 +5,8 @@
 #ifndef APPS_COMPONENT_MANAGER_SRC_RUN_COMPONENT_APPLICATION_LOADER_IMPL_H_
 #define APPS_COMPONENT_MANAGER_SRC_RUN_COMPONENT_APPLICATION_LOADER_IMPL_H_
 
-#include "apps/modular/services/component/component.fidl.h"
 #include "apps/modular/services/application/application_loader.fidl.h"
+#include "apps/modular/services/component/component.fidl.h"
 #include "lib/ftl/macros.h"
 
 namespace component {

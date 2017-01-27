@@ -31,7 +31,7 @@ rapidjson::GenericPointer<typename Doc::ValueType> CreatePointerFromArray(
 
 //// Take an Array of fidl::String and convert it to "/a/b/c" form for display.
 //// For debugging/logging purposes only.
-//inline std::string PrettyPrintPath(const fidl::Array<fidl::String>& path) {
+// inline std::string PrettyPrintPath(const fidl::Array<fidl::String>& path) {
 //  return (path.is_null() || path.storage().empty())
 //             ? std::string("/")
 //             : modular::PrettyPrintPath(path.To<std::vector<std::string>>());
@@ -105,7 +105,7 @@ void LinkImpl::Set(fidl::Array<fidl::String> path,
     ValidateSchema("LinkImpl::Set", ptr, json.get());
     DatabaseChanged(src);
   }
-  //FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToPrettyString(doc_);
+  // FTL_LOG(INFO) << "LinkImpl::Set() " << JsonValueToPrettyString(doc_);
 }
 
 void LinkImpl::UpdateObject(fidl::Array<fidl::String> path,

@@ -37,8 +37,7 @@ void OperationQueue::Drop(Operation* const o) {
   }
 }
 
-Operation::Operation(OperationContainer* const c)
-    : container_(c) {}
+Operation::Operation(OperationContainer* const c) : container_(c) {}
 
 void Operation::Ready() {
   container_->Hold(this);

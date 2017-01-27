@@ -12,8 +12,8 @@
 #include "apps/modular/lib/fidl/strong_binding.h"
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "apps/modular/services/application/service_provider.fidl.h"
-#include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/device_context.fidl.h"
+#include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
 #include "apps/modular/services/user/user_context.fidl.h"
 #include "apps/modular/services/user/user_runner.fidl.h"
@@ -44,8 +44,8 @@ class Settings {
   explicit Settings(const ftl::CommandLine& command_line) {
     device_shell = command_line.GetOptionValueWithDefault(
         "device-shell", "file:///system/apps/dummy_device_shell");
-    user_runner = command_line.GetOptionValueWithDefault("user-runner",
-        "file:///system/apps/user_runner");
+    user_runner = command_line.GetOptionValueWithDefault(
+        "user-runner", "file:///system/apps/user_runner");
     user_shell = command_line.GetOptionValueWithDefault(
         "user-shell", "file:///system/apps/armadillo_user_shell");
 
@@ -119,8 +119,7 @@ class Settings {
 
 // TODO(vardhan): A running user's state is starting to grow, so break it
 // outside of DeviceRunnerApp.
-class DeviceRunnerApp : public UserProvider,
-                        public DeviceContext {
+class DeviceRunnerApp : public UserProvider, public DeviceContext {
  public:
   DeviceRunnerApp(const Settings& settings)
       : settings_(settings),
@@ -171,9 +170,7 @@ class DeviceRunnerApp : public UserProvider,
   // TODO(vardhan): Signal the ledger application to tear down.
   void Shutdown() override {
     FTL_LOG(INFO) << "Shutting down DeviceRunner..";
-    auto cont = []{
-      mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    };
+    auto cont = [] { mtl::MessageLoop::GetCurrent()->PostQuitTask(); };
     if ((bool)user_controller_impl_) {
       // This will tear down the user runner altogether, and call us back to
       // delete |user_controller_impl_| when it is ready to be killed.
@@ -185,30 +182,25 @@ class DeviceRunnerApp : public UserProvider,
   }
 
   // |UserProvider|
-  void Login(
-      const fidl::String& username,
-      fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      fidl::InterfaceRequest<UserController> user_controller) override {
+  void Login(const fidl::String& username,
+             fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+             fidl::InterfaceRequest<UserController> user_controller) override {
     // Get the LedgerRepository for the user.
     fidl::Array<uint8_t> user_id = to_array(username);
     fidl::InterfaceHandle<ledger::LedgerRepository> ledger_repository;
     ledger_repository_factory_->GetRepository(
         kLedgerDataBaseDir + to_hex_string(user_id),
         ledger_repository.NewRequest(), [](ledger::Status status) {
-          FTL_DCHECK(status == ledger::Status::OK) << "GetRepository failed: "
-                                                   << status;
+          FTL_DCHECK(status == ledger::Status::OK)
+              << "GetRepository failed: " << status;
         });
 
     user_controller_impl_.reset(new UserControllerImpl(
-        app_context_,
-        settings_.user_runner,
-        settings_.user_shell,
-        settings_.user_shell_args,
-        std::move(user_id), std::move(ledger_repository),
-        std::move(view_owner_request), std::move(user_controller),
-        [this]() {
-          user_controller_impl_.reset();
-        }));
+        app_context_, settings_.user_runner, settings_.user_shell,
+        settings_.user_shell_args, std::move(user_id),
+        std::move(ledger_repository), std::move(view_owner_request),
+        std::move(user_controller),
+        [this]() { user_controller_impl_.reset(); }));
   }
 
   const Settings settings_;

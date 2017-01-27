@@ -44,7 +44,7 @@
 #include "lib/mtl/tasks/message_loop.h"
 
 // TODO(vardhan): Make listen port command-line configurable.
-constexpr uint16_t kListenPort = 8342;        // TCP port
+constexpr uint16_t kListenPort = 8342;  // TCP port
 
 namespace modular {
 namespace {
@@ -75,19 +75,19 @@ class TestRunnerScope : public Scope {
 
 class TestRunnerConnection;
 // TestRunContext represents a single run of a test. Given a test to run, it
-// runs it in a new ApplicationEnvironment and provides the environment a TestRunner
+// runs it in a new ApplicationEnvironment and provides the environment a
+// TestRunner
 // service to report completion. When tests are done, their completion is
 // reported back to TestRunnerConnection (which is responsible for deleting
 // TestRunContext). If the child application stops without reporting anything,
 // we declare the test a failure.
 class TestRunContext : public TestRunner {
  public:
-  TestRunContext(
-      std::shared_ptr<ApplicationContext> app_context,
-      TestRunnerConnection* connection,
-      const std::string& test_id,
-      const std::string& url,
-      const std::vector<std::string>& args);
+  TestRunContext(std::shared_ptr<ApplicationContext> app_context,
+                 TestRunnerConnection* connection,
+                 const std::string& test_id,
+                 const std::string& url,
+                 const std::vector<std::string>& args);
 
  private:
   // |TestRunner|:
@@ -110,8 +110,7 @@ class TestRunnerConnection {
  public:
   explicit TestRunnerConnection(int socket_fd,
                                 std::shared_ptr<ApplicationContext> app_context)
-      : app_context_(app_context),
-        socket_(socket_fd) {}
+      : app_context_(app_context), socket_(socket_fd) {}
 
   void Start() {
     FTL_CHECK(!test_context_);
@@ -126,8 +125,7 @@ class TestRunnerConnection {
     // IMPORTANT: leave this log here, exactly as it is. Currently, tests
     // launched from host (e.g. Linux) grep for this text to figure out the
     // amount of the log to associate with the test.
-    FTL_LOG(INFO) << "test_runner: done " << test_id
-                  << " success=" << success;
+    FTL_LOG(INFO) << "test_runner: done " << test_id << " success=" << success;
 
     std::stringstream epilogue;
     epilogue << test_id << " ";
@@ -199,11 +197,8 @@ class TestRunnerConnection {
 
     // When TestRunContext is done with the test, it calls
     // TestRunnerConnection::Finish().
-    test_context_.reset(new TestRunContext(app_context_,
-                                           this,
-                                           command_parse[1],
-                                           command_parse[2],
-                                           args));
+    test_context_.reset(new TestRunContext(app_context_, this, command_parse[1],
+                                           command_parse[2], args));
   }
 
   std::shared_ptr<ApplicationContext> app_context_;
@@ -214,12 +209,11 @@ class TestRunnerConnection {
   std::string command_buffer_;
 };
 
-TestRunContext::TestRunContext(
-  std::shared_ptr<ApplicationContext> app_context,
-  TestRunnerConnection* connection,
-  const std::string& test_id,
-  const std::string& url,
-  const std::vector<std::string>& args)
+TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
+                               TestRunnerConnection* connection,
+                               const std::string& test_id,
+                               const std::string& url,
+                               const std::vector<std::string>& args)
     : test_runner_connection_(connection),
       test_runner_binding_(this),
       test_id_(test_id) {
@@ -234,8 +228,8 @@ TestRunContext::TestRunContext(
       std::bind(&TestRunContext::Finish, this, false));
 
   child_env_scope_ = std::make_unique<TestRunnerScope>(
-      std::move(parent_env), std::move(parent_env_services),
-      "test_runner_env", [this](fidl::InterfaceRequest<TestRunner> request) {
+      std::move(parent_env), std::move(parent_env_services), "test_runner_env",
+      [this](fidl::InterfaceRequest<TestRunner> request) {
         test_runner_binding_.Bind(std::move(request));
       });
 

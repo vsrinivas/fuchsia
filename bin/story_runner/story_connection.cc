@@ -63,6 +63,4 @@ void StoryConnection::Done() {
   }
 }
 
-
-
 }  // namespace modular

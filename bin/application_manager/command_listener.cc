@@ -22,8 +22,8 @@ CommandListener::CommandListener(ApplicationEnvironmentImpl* root_environment,
   FTL_DCHECK(command_channel_);
 
   handler_key_ = message_loop_->AddHandler(
-      this, command_channel_.get(), MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED,
-      ftl::TimeDelta::Max());
+      this, command_channel_.get(),
+      MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, ftl::TimeDelta::Max());
 }
 
 CommandListener::~CommandListener() {

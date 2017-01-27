@@ -27,7 +27,7 @@ class UserControllerImpl;
 class UserContextImpl : public UserContext {
  public:
   explicit UserContextImpl(UserControllerImpl* controller)
-    : controller_(controller) {}
+      : controller_(controller) {}
 
  private:
   void Logout() override;

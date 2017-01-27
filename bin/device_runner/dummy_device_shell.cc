@@ -24,8 +24,8 @@ class DummyDeviceShellApp
       public modular::DeviceShell,
       public modular::UserWatcher {
  public:
-  DummyDeviceShellApp() : device_shell_binding_(this),
-                          user_watcher_binding_(this) {}
+  DummyDeviceShellApp()
+      : device_shell_binding_(this), user_watcher_binding_(this) {}
   ~DummyDeviceShellApp() override = default;
 
  private:
@@ -65,8 +65,7 @@ class DummyDeviceShellApp
 
   void Connect() {
     if (user_provider_ && view_owner_request_) {
-      user_provider_->Login(kDummyUserName,
-                            std::move(view_owner_request_),
+      user_provider_->Login(kDummyUserName, std::move(view_owner_request_),
                             user_controller_.NewRequest());
       user_controller_->Watch(user_watcher_binding_.NewBinding());
     }

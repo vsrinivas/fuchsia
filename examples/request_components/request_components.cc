@@ -4,9 +4,9 @@
 
 #include <string>
 
-#include "apps/modular/services/component/component.fidl.h"
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/app/connect.h"
+#include "apps/modular/services/component/component.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
