@@ -37,8 +37,15 @@ class ExtendedStringView : public ftl::StringView {
       : ftl::StringView(
             reinterpret_cast<const char*>(byte_storage->bytes()->data()),
             byte_storage->bytes()->size()) {}
+  ExtendedStringView(const IdStorage* id_storage)
+      : ftl::StringView(reinterpret_cast<const char*>(id_storage),
+                        sizeof(IdStorage)) {}
 
   operator leveldb::Slice() const { return leveldb::Slice(data(), size()); }
+  operator const IdStorage*() const {
+    FTL_DCHECK(size() == sizeof(IdStorage));
+    return reinterpret_cast<const IdStorage*>(data());
+  }
 
   fidl::Array<uint8_t> ToArray();
 
