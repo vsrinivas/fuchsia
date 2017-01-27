@@ -10,6 +10,7 @@
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -356,6 +357,8 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
 
 static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
                                   const void* data, size_t len) {
+    static atomic_uint_fast32_t next_txid;
+
     struct {
         mx_loader_svc_msg_t header;
         uint8_t data[LOADER_SVC_MSG_MAX - sizeof(mx_loader_svc_msg_t)];
@@ -365,28 +368,29 @@ static mx_handle_t loader_svc_rpc(mx_handle_t loader_svc, uint32_t opcode,
         return ERR_BUFFER_TOO_SMALL;
 
     memset(&msg.header, 0, sizeof(msg.header));
+    msg.header.txid = atomic_fetch_add(&next_txid, 1);
     msg.header.opcode = opcode;
     memcpy(msg.data, data, len);
     msg.data[len] = 0;
 
-    mx_status_t status = mx_channel_write(loader_svc, 0,
-                                          &msg, sizeof(msg.header) + len + 1,
-                                          NULL, 0);
-    if (status != NO_ERROR)
-        return status;
-
-    status = mx_handle_wait_one(loader_svc, MX_CHANNEL_READABLE,
-                                MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR)
-        return status;
-
     mx_handle_t handle = MX_HANDLE_INVALID;
-    uint32_t reply_size = sizeof(msg.header);
-    uint32_t handle_count = 1;
-    status = mx_channel_read(loader_svc, 0, &msg, reply_size, &reply_size,
-                             &handle, handle_count, &handle_count);
-    if (status != NO_ERROR)
-        return status;
+    const mx_channel_call_args_t call = {
+        .wr_bytes = &msg,
+        .wr_num_bytes = sizeof(msg.header) + len + 1,
+        .rd_bytes = &msg,
+        .rd_num_bytes = sizeof(msg),
+        .rd_handles = &handle,
+        .rd_num_handles = 1,
+    };
+    uint32_t reply_size;
+    uint32_t handle_count;
+    mx_status_t read_status = NO_ERROR;
+    mx_status_t status = mx_channel_call(loader_svc, 0, MX_TIME_INFINITE,
+                                         &call, &reply_size, &handle_count,
+                                         &read_status);
+    if (status != NO_ERROR) {
+        return status == ERR_CALL_FAILED ? read_status : status;
+    }
 
     // Check for protocol violations.
     if (reply_size != sizeof(msg.header)) {
@@ -969,6 +973,3 @@ mx_status_t launchpad_load_from_fd(launchpad_t* lp, int fd) {
 mx_status_t launchpad_load_from_vmo(launchpad_t* lp, mx_handle_t vmo) {
     return launchpad_elf_load_with_vdso(lp, vmo);
 }
-
-
-

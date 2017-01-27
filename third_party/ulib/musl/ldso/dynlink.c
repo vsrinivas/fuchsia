@@ -1781,6 +1781,7 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 
 // This detects recursion via the error function.
 static bool loader_svc_rpc_in_progress;
+static uint32_t loader_svc_txid;
 
 static mx_handle_t loader_svc_rpc(uint32_t opcode,
                                   const void* data, size_t len) {
@@ -1800,39 +1801,35 @@ static mx_handle_t loader_svc_rpc(uint32_t opcode,
     }
 
     memset(&msg.header, 0, sizeof msg.header);
+    msg.header.txid = ++loader_svc_txid;
     msg.header.opcode = opcode;
     memcpy(msg.data, data, len);
     msg.data[len] = 0;
 
-    uint32_t nbytes = sizeof msg.header + len + 1;
-    mx_status_t status = _mx_channel_write(loader_svc, 0, &msg, nbytes,
-                                           NULL, 0);
+    mx_channel_call_args_t call = {
+        .wr_bytes = &msg,
+        .wr_num_bytes = sizeof(msg.header) + len + 1,
+        .rd_bytes = &msg,
+        .rd_num_bytes = sizeof(msg),
+        .rd_handles = &handle,
+        .rd_num_handles = 1,
+    };
+
+    uint32_t reply_size;
+    uint32_t handle_count;
+    mx_status_t read_status = NO_ERROR;
+    mx_status_t status = _mx_channel_call(loader_svc, 0, MX_TIME_INFINITE,
+                                          &call, &reply_size, &handle_count,
+                                          &read_status);
     if (status != NO_ERROR) {
-        error("_mx_channel_write of %u bytes to loader service: %d (%s)",
-              nbytes, status, _mx_status_get_string(status));
-        handle = status;
+        error("_mx_channel_call of %u bytes to loader service: "
+              "%d (%s), read %d (%s)",
+              call.wr_num_bytes, status, _mx_status_get_string(status),
+              read_status, _mx_status_get_string(read_status));
+        handle = status == ERR_CALL_FAILED ? read_status : status;
         goto out;
     }
 
-    status = _mx_handle_wait_one(loader_svc, MX_CHANNEL_READABLE,
-                                 MX_TIME_INFINITE, NULL);
-    if (status != NO_ERROR) {
-        error("mx_handle_wait_one for loader service reply: %d (%s)",
-              status, _mx_status_get_string(status));
-        handle = status;
-        goto out;
-    }
-
-    uint32_t reply_size = sizeof(msg.header);
-    uint32_t handle_count = 1;
-    status = _mx_channel_read(loader_svc, 0, &msg, reply_size, &reply_size,
-                              &handle, handle_count, &handle_count);
-    if (status != NO_ERROR) {
-        error("_mx_channel_read of %u bytes for loader service reply: %d (%s)",
-              sizeof(msg.header), status, _mx_status_get_string(status));
-        handle = status;
-        goto out;
-    }
     if (reply_size != sizeof(msg.header)) {
         error("loader service reply %u bytes != %u",
               reply_size, sizeof(msg.header));

@@ -146,6 +146,7 @@ static mx_status_t handle_loader_rpc(mx_handle_t h, mxio_loader_service_function
         break;
     }
 
+    // msg->txid returned as received from the client.
     msg->opcode = LOADER_SVC_OP_STATUS;
     msg->reserved0 = 0;
     msg->reserved1 = 0;
