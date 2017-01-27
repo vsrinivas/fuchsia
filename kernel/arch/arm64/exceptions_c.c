@@ -76,182 +76,232 @@ static status_t try_magenta_data_fault_exception_handler (mx_excp_type_t type, s
 
 #endif
 
-void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags)
+__NO_RETURN static void exception_die(struct arm64_iframe_long *iframe, uint32_t esr)
 {
-    struct fault_handler_table_entry *fault_handler;
-    uint32_t esr = ARM64_READ_SYSREG(esr_el1);
+    platform_panic_start();
+
     uint32_t ec = BITS_SHIFT(esr, 31, 26);
     uint32_t il = BIT(esr, 25);
     uint32_t iss = BITS(esr, 24, 0);
-
-    switch (ec) {
-        case 0b000000: /* unknown reason */
-            /* this is for a lot of reasons, but most of them are undefined instructions */
-            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
-                /* trapped inside the kernel, this is bad */
-                printf("unknown exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-                break;
-            }
-#if WITH_LIB_MAGENTA
-            try_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
-#endif
-            return;
-        case 0b111000: /* BRK from arm32 */
-        case 0b111100: { /* BRK from arm64 */
-            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
-                /* trapped inside the kernel, this is bad */
-                printf("BRK in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-                break;
-            }
-#if WITH_LIB_MAGENTA
-            try_magenta_exception_handler (MX_EXCP_SW_BREAKPOINT, iframe, esr);
-#endif
-            return;
-        }
-        case 0b000111: /* floating point */
-            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
-                /* we trapped a floating point instruction inside our own EL, this is bad */
-                printf("invalid fpu use in kernel: PC at %#" PRIx64 "\n",
-                       iframe->elr);
-                break;
-            }
-            arm64_fpu_exception(iframe, exception_flags);
-            return;
-        case 0b010001: /* syscall from arm32 */
-        case 0b010101: /* syscall from arm64 */
-            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
-                /* trapped inside the kernel, this is bad */
-                printf("syscall from in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-                break;
-            }
-            arm64_syscall(iframe, (ec == 0x15) ? true : false, iss & 0xffff, iframe->elr);
-            return;
-        case 0b100000: /* instruction abort from lower level */
-        case 0b100001: { /* instruction abort from same level */
-            /* read the FAR register */
-            uint64_t far = ARM64_READ_SYSREG(far_el1);
-            bool is_user = !BIT(ec, 0);
-
-            uint pf_flags = VMM_PF_FLAG_INSTRUCTION;
-            pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
-            /* Check if this was not permission fault */
-            if ((iss & 0b111100) != 0b001100) {
-                pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
-            }
-
-            LTRACEF("instruction abort: PC at %#" PRIx64
-                    ", is_user %d, FAR %" PRIx64 ", esr 0x%x, iss 0x%x\n",
-                    iframe->elr, is_user, far, esr, iss);
-
-            arch_enable_ints();
-            status_t err = vmm_page_fault_handler(far, pf_flags);
-            arch_disable_ints();
-            if (err >= 0)
-                return;
-
-#if WITH_LIB_MAGENTA
-            /* if this is from user space, let magenta get a shot at it */
-            if (is_user) {
-                if (try_magenta_data_fault_exception_handler (MX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == NO_ERROR)
-                    return;
-            }
-#endif
-
-            printf("instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64 "\n",
-                    iframe->elr, is_user, far);
-            break;
-        }
-        case 0b100100: /* data abort from lower level */
-        case 0b100101: { /* data abort from same level */
-            /* read the FAR register */
-            uint64_t far = ARM64_READ_SYSREG(far_el1);
-            bool is_user = !BIT(ec, 0);
-
-            uint pf_flags = 0;
-            pf_flags |= BIT(iss, 6) ? VMM_PF_FLAG_WRITE : 0;
-            pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
-            /* Check if this was not permission fault */
-            if ((iss & 0b111100) != 0b001100) {
-                pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
-            }
-
-            LTRACEF("data fault: PC at %#" PRIx64
-                    ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
-                    iframe->elr, is_user, far, esr, iss);
-
-            uint8_t dfsc = BITS(iss, 5, 0);
-            if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
-                arch_enable_ints();
-                status_t err = vmm_page_fault_handler(far, pf_flags);
-                arch_disable_ints();
-                if (err >= 0){
-                    return;
-                }
-            }
-
-            // Check if the current thread was expecting a data fault and
-            // we should return to its handler.
-            thread_t *thr = get_current_thread();
-            if (thr->arch.data_fault_resume != NULL) {
-                iframe->elr = (uintptr_t)thr->arch.data_fault_resume;
-                return;
-            }
-
-            for (fault_handler = __fault_handler_table_start;
-                    fault_handler < __fault_handler_table_end;
-                    fault_handler++) {
-                if (fault_handler->pc == iframe->elr) {
-                    iframe->elr = fault_handler->fault_handler;
-                    return;
-                }
-            }
-
-#if WITH_LIB_MAGENTA
-            /* if this is from user space, let magenta get a shot at it */
-            if (is_user) {
-                mx_excp_type_t excp_type = MX_EXCP_FATAL_PAGE_FAULT;
-                if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
-                    excp_type = MX_EXCP_UNALIGNED_ACCESS;
-                }
-                if (try_magenta_data_fault_exception_handler (excp_type, iframe, esr, far) == NO_ERROR)
-                    return;
-            }
-#endif
-
-            /* decode the iss */
-            if (BIT(iss, 24)) { /* ISV bit */
-                printf("data fault: PC at %#" PRIx64
-                       ", FAR %#" PRIx64 ", iss %#x (DFSC %#x)\n",
-                       iframe->elr, far, iss, BITS(iss, 5, 0));
-            } else {
-                printf("data fault: PC at %#" PRIx64
-                       ", FAR %#" PRIx64 ", iss 0x%x\n",
-                       iframe->elr, far, iss);
-            }
-
-            break;
-        }
-        default: {
-            /* TODO: properly decode more of these */
-            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
-                /* trapped inside the kernel, this is bad */
-                printf("unhandled exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
-                break;
-            }
-#if WITH_LIB_MAGENTA
-            /* let magenta get a shot at it */
-            if (try_magenta_exception_handler (MX_EXCP_GENERAL, iframe, esr) == NO_ERROR)
-                return;
-#endif
-            printf("unhandled synchronous exception\n");
-        }
-    }
 
     /* fatal exception, die here */
     printf("ESR 0x%x: ec 0x%x, il 0x%x, iss 0x%x\n", esr, ec, il, iss);
     dump_iframe(iframe);
 
     platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
+}
+
+static void arm64_unknown_handler(struct arm64_iframe_long *iframe, uint exception_flags,
+                                  uint32_t esr)
+{
+    /* this is for a lot of reasons, but most of them are undefined instructions */
+    if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+        /* trapped inside the kernel, this is bad */
+        printf("unknown exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+        exception_die(iframe, esr);
+    }
+#if WITH_LIB_MAGENTA
+    try_magenta_exception_handler (MX_EXCP_UNDEFINED_INSTRUCTION, iframe, esr);
+#endif
+}
+
+static void arm64_brk_handler(struct arm64_iframe_long *iframe, uint exception_flags,
+                              uint32_t esr)
+{
+    if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+        /* trapped inside the kernel, this is bad */
+        printf("BRK in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+        exception_die(iframe, esr);
+    }
+#if WITH_LIB_MAGENTA
+    try_magenta_exception_handler (MX_EXCP_SW_BREAKPOINT, iframe, esr);
+#endif
+}
+
+static void arm64_fpu_handler(struct arm64_iframe_long *iframe, uint exception_flags,
+                              uint32_t esr)
+{
+    if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+        /* we trapped a floating point instruction inside our own EL, this is bad */
+        printf("invalid fpu use in kernel: PC at %#" PRIx64 "\n",
+               iframe->elr);
+        exception_die(iframe, esr);
+    }
+    arm64_fpu_exception(iframe, exception_flags);
+}
+
+static void arm64_syscall_handler(struct arm64_iframe_long *iframe, uint exception_flags,
+                                  uint32_t esr)
+{
+    uint32_t ec = BITS_SHIFT(esr, 31, 26);
+    uint32_t iss = BITS(esr, 24, 0);
+
+    if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+        /* trapped inside the kernel, this is bad */
+        printf("syscall from in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+        exception_die(iframe, esr);
+    }
+    arm64_syscall(iframe, (ec == 0x15) ? true : false, iss & 0xffff, iframe->elr);
+}
+
+static void arm64_instruction_abort_handler(struct arm64_iframe_long *iframe, uint exception_flags,
+                                            uint32_t esr)
+{
+    /* read the FAR register */
+    uint64_t far = ARM64_READ_SYSREG(far_el1);
+    uint32_t ec = BITS_SHIFT(esr, 31, 26);
+    uint32_t iss = BITS(esr, 24, 0);
+    bool is_user = !BIT(ec, 0);
+
+    uint pf_flags = VMM_PF_FLAG_INSTRUCTION;
+    pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
+    /* Check if this was not permission fault */
+    if ((iss & 0b111100) != 0b001100) {
+        pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
+    }
+
+    LTRACEF("instruction abort: PC at %#" PRIx64
+            ", is_user %d, FAR %" PRIx64 ", esr 0x%x, iss 0x%x\n",
+            iframe->elr, is_user, far, esr, iss);
+
+    arch_enable_ints();
+    status_t err = vmm_page_fault_handler(far, pf_flags);
+    arch_disable_ints();
+    if (err >= 0)
+        return;
+
+#if WITH_LIB_MAGENTA
+    /* if this is from user space, let magenta get a shot at it */
+    if (is_user) {
+        if (try_magenta_data_fault_exception_handler (MX_EXCP_FATAL_PAGE_FAULT, iframe, esr, far) == NO_ERROR)
+            return;
+    }
+#endif
+
+    printf("instruction abort: PC at %#" PRIx64 ", is_user %d, FAR %" PRIx64 "\n",
+           iframe->elr, is_user, far);
+    exception_die(iframe, esr);
+}
+
+static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exception_flags,
+                                     uint32_t esr)
+{
+    /* read the FAR register */
+    uint64_t far = ARM64_READ_SYSREG(far_el1);
+    uint32_t ec = BITS_SHIFT(esr, 31, 26);
+    uint32_t iss = BITS(esr, 24, 0);
+    bool is_user = !BIT(ec, 0);
+
+    uint pf_flags = 0;
+    pf_flags |= BIT(iss, 6) ? VMM_PF_FLAG_WRITE : 0;
+    pf_flags |= is_user ? VMM_PF_FLAG_USER : 0;
+    /* Check if this was not permission fault */
+    if ((iss & 0b111100) != 0b001100) {
+        pf_flags |= VMM_PF_FLAG_NOT_PRESENT;
+    }
+
+    LTRACEF("data fault: PC at %#" PRIx64
+            ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
+            iframe->elr, is_user, far, esr, iss);
+
+    uint8_t dfsc = BITS(iss, 5, 0);
+    if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
+        arch_enable_ints();
+        status_t err = vmm_page_fault_handler(far, pf_flags);
+        arch_disable_ints();
+        if (err >= 0){
+            return;
+        }
+    }
+
+    // Check if the current thread was expecting a data fault and
+    // we should return to its handler.
+    thread_t *thr = get_current_thread();
+    if (thr->arch.data_fault_resume != NULL) {
+        iframe->elr = (uintptr_t)thr->arch.data_fault_resume;
+        return;
+    }
+
+    struct fault_handler_table_entry *fault_handler;
+    for (fault_handler = __fault_handler_table_start;
+         fault_handler < __fault_handler_table_end;
+         fault_handler++) {
+        if (fault_handler->pc == iframe->elr) {
+            iframe->elr = fault_handler->fault_handler;
+            return;
+        }
+    }
+
+#if WITH_LIB_MAGENTA
+    /* if this is from user space, let magenta get a shot at it */
+    if (is_user) {
+        mx_excp_type_t excp_type = MX_EXCP_FATAL_PAGE_FAULT;
+        if (unlikely(dfsc == DFSC_ALIGNMENT_FAULT)) {
+            excp_type = MX_EXCP_UNALIGNED_ACCESS;
+        }
+        if (try_magenta_data_fault_exception_handler (excp_type, iframe, esr, far) == NO_ERROR)
+            return;
+    }
+#endif
+
+    /* decode the iss */
+    if (BIT(iss, 24)) { /* ISV bit */
+        printf("data fault: PC at %#" PRIx64
+               ", FAR %#" PRIx64 ", iss %#x (DFSC %#x)\n",
+               iframe->elr, far, iss, BITS(iss, 5, 0));
+    } else {
+        printf("data fault: PC at %#" PRIx64
+               ", FAR %#" PRIx64 ", iss 0x%x\n",
+               iframe->elr, far, iss);
+    }
+
+    exception_die(iframe, esr);
+}
+
+void arm64_sync_exception(struct arm64_iframe_long *iframe, uint exception_flags)
+{
+    uint32_t esr = ARM64_READ_SYSREG(esr_el1);
+    uint32_t ec = BITS_SHIFT(esr, 31, 26);
+
+    switch (ec) {
+        case 0b000000: /* unknown reason */
+            arm64_unknown_handler(iframe, exception_flags, esr);
+            break;
+        case 0b111000: /* BRK from arm32 */
+        case 0b111100: /* BRK from arm64 */
+            arm64_brk_handler(iframe, exception_flags, esr);
+            break;
+        case 0b000111: /* floating point */
+            arm64_fpu_handler(iframe, exception_flags, esr);
+            break;
+        case 0b010001: /* syscall from arm32 */
+        case 0b010101: /* syscall from arm64 */
+            arm64_syscall_handler(iframe, exception_flags, esr);
+            break;
+        case 0b100000: /* instruction abort from lower level */
+        case 0b100001: /* instruction abort from same level */
+            arm64_instruction_abort_handler(iframe, exception_flags, esr);
+            break;
+        case 0b100100: /* data abort from lower level */
+        case 0b100101: /* data abort from same level */
+            arm64_data_abort_handler(iframe, exception_flags, esr);
+            break;
+        default: {
+            /* TODO: properly decode more of these */
+            if (unlikely((exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL) == 0)) {
+                /* trapped inside the kernel, this is bad */
+                printf("unhandled exception in kernel: PC at %#" PRIx64 "\n", iframe->elr);
+                exception_die(iframe, esr);
+            }
+#if WITH_LIB_MAGENTA
+            /* let magenta get a shot at it */
+            if (try_magenta_exception_handler (MX_EXCP_GENERAL, iframe, esr) == NO_ERROR)
+                break;
+#endif
+            printf("unhandled synchronous exception\n");
+            exception_die(iframe, esr);
+        }
+    }
 }
 
 /* called from assembly */
