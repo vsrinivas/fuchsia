@@ -24,73 +24,32 @@ static acpi_handle_t acpi_root;
 mx_status_t devmgr_launch_acpisvc(mx_handle_t job_handle) {
     const char* binname = "/boot/bin/acpisvc";
 
-    const char* args[3] = {
-        binname,
-    };
-
-    mx_handle_t acpi_comm[2] = {0};
     mx_handle_t logger = MX_HANDLE_INVALID;
-    mx_handle_t lp_job_handle = MX_HANDLE_INVALID;
-    mx_handle_t hnd[3] = {0};
+    mx_handle_t root = MX_HANDLE_INVALID;
+    mx_handle_t rpc[2] = { MX_HANDLE_INVALID, MX_HANDLE_INVALID };
+    mx_log_create(0, &logger);
+    mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS, &root);
+    mx_channel_create(0, &rpc[0], &rpc[1]);
 
-    mx_status_t status = mx_channel_create(0, &acpi_comm[0], &acpi_comm[1]);
-    if (status != NO_ERROR) {
-        goto cleanup_handles;
-    }
+    launchpad_t* lp;
+    launchpad_create(job_handle, binname, &lp);
+    launchpad_load_from_file(lp, binname);
+    launchpad_set_args(lp, 1, &binname);
+    launchpad_clone(lp, LP_CLONE_ALL & (~LP_CLONE_MXIO_STDIO));
+    launchpad_add_handle(lp, logger, MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 1));
+    launchpad_add_handle(lp, root, MX_HND_INFO(MX_HND_TYPE_USER0, 0));
+    launchpad_add_handle(lp, rpc[1], MX_HND_INFO(MX_HND_TYPE_USER1, 0));
 
-    if ((status = mx_log_create(0, &logger)) < 0) {
-        goto cleanup_handles;
-    }
-
-    uint32_t ids[3];
-    ids[0] = MX_HND_INFO(MX_HND_TYPE_MXIO_LOGGER, MXIO_FLAG_USE_FOR_STDIO | 1);
-    hnd[0] = logger;
-    logger = MX_HANDLE_INVALID;
-    ids[1] = MX_HND_TYPE_USER0;
-    hnd[1] = MX_HANDLE_INVALID;
-    status = mx_handle_duplicate(get_root_resource(), MX_RIGHT_SAME_RIGHTS, &hnd[1]);
-    if (status != NO_ERROR) {
-        goto cleanup_handles;
-    }
-    ids[2] = MX_HND_TYPE_USER1;
-    hnd[2] = acpi_comm[1];
-    acpi_comm[1] = MX_HANDLE_INVALID;
-
-    status = mx_handle_duplicate(job_handle, MX_RIGHT_SAME_RIGHTS, &lp_job_handle);
-    if (status != NO_ERROR) {
-        goto cleanup_handles;
-    }
-    printf("devmgr: launch acpisvc\n");
-    mx_handle_t proc = launchpad_launch_with_job(lp_job_handle, "acpisvc", 1, args, NULL,
-                                                 3, hnd, ids);
-    if (proc < 0) {
-        printf("devmgr: acpisvc launch failed: %d\n", proc);
-        status = proc;
-        goto cleanup_handles;
-    }
-
-    mx_handle_close(proc);
-
-    if (status != NO_ERROR) {
-        mx_handle_close(acpi_comm[0]);
+    const char* errmsg;
+    mx_status_t status = launchpad_go(lp, NULL, &errmsg);
+    if (status < 0) {
+        mx_handle_close(rpc[0]);
+        printf("devmgr: acpisvc launch failed: %d: %s\n", status, errmsg);
         return status;
     }
 
-    acpi_handle_init(&acpi_root, acpi_comm[0]);
+    acpi_handle_init(&acpi_root, rpc[0]);
     return NO_ERROR;
-
-cleanup_handles:
-    for (size_t i = 0; i < countof(acpi_comm); ++i) {
-        if (acpi_comm[i] != MX_HANDLE_INVALID)
-            mx_handle_close(acpi_comm[i]);
-    }
-    if (logger != MX_HANDLE_INVALID)
-        mx_handle_close(logger);
-    for (size_t i = 0; i < countof(hnd); ++i) {
-        if (hnd[i] != MX_HANDLE_INVALID)
-            mx_handle_close(hnd[i]);
-    }
-    return status;
 }
 
 // TODO(teisenbe): Instead of doing this as a single function, give the kpci
