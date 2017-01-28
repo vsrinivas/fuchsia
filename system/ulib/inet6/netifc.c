@@ -63,7 +63,7 @@ static uint8_t* tx_map = NULL;
 static eth_fifo_entry_t* rx_entries = NULL;
 static eth_fifo_entry_t* tx_entries = NULL;
 
-#define NET_BUFFERS 32
+#define NET_BUFFERS 64
 #define NET_BUFFERSZ 2048
 
 #define MAX_FILTER 8
