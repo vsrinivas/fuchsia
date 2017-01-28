@@ -101,9 +101,9 @@ class Packet {
   // size of the packet payload not including the packet header. A
   // |payload_size| value of 0 indicates that the packet contains no payload.
   explicit Packet(ByteBuffer* buffer, size_t payload_size = 0u)
-      : buffer_(buffer), packet_size_(sizeof(HeaderType) + payload_size) {
+      : buffer_(buffer), size_(sizeof(HeaderType) + payload_size) {
     FTL_DCHECK(buffer_);
-    FTL_DCHECK(buffer_->GetSize() >= packet_size_);
+    FTL_DCHECK(buffer_->GetSize() >= size_);
   }
 
   // Returns a reference to the beginning of the packet header. This may never
@@ -121,7 +121,7 @@ class Packet {
   }
 
   // Returns the size of the packet payload, not including the header.
-  size_t GetPayloadSize() const { return packet_size_ - sizeof(HeaderType); }
+  size_t GetPayloadSize() const { return size_ - sizeof(HeaderType); }
 
   // Convenience getter that returns a pointer to the beginning of the packet
   // payload, immediately following the header, after casting it to a pointer of
@@ -134,10 +134,10 @@ class Packet {
   }
 
   // Returns the packet size.
-  size_t packet_size() const { return packet_size_; }
+  size_t size() const { return size_; }
 
-  // Returns a reference to the underlying buffer.
-  const ByteBuffer& buffer() const { return *buffer_; }
+  // Returns a pointer to the underlying buffer.
+  ByteBuffer* buffer() const { return buffer_; }
 
   // Encode and decode the header contents. A subclass implementation is
   // expected to finalize all header fields as required by the protocol and wire
@@ -155,7 +155,7 @@ class Packet {
 
  private:
   ByteBuffer* buffer_;  // weak
-  size_t packet_size_;
+  size_t size_;
 };
 
 }  // namespace common

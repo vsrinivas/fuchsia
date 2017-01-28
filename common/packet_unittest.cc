@@ -37,7 +37,7 @@ TEST(PacketTest, EmptyPayload) {
   buffer.GetMutableData()[2] = 255;
 
   Packet<TestHeader> packet(&buffer);
-  EXPECT_EQ(kBufferSize, packet.packet_size());
+  EXPECT_EQ(kBufferSize, packet.size());
   EXPECT_EQ(0u, packet.GetPayloadSize());
   EXPECT_EQ(nullptr, packet.GetPayloadData());
 
@@ -63,7 +63,7 @@ TEST(PacketTest, NonEmptyPayload) {
   buffer.SetToZeros();
 
   Packet<TestHeader> packet(&buffer, kPayloadSize);
-  EXPECT_EQ(kBufferSize, packet.packet_size());
+  EXPECT_EQ(kBufferSize, packet.size());
   EXPECT_EQ(kPayloadSize, packet.GetPayloadSize());
   EXPECT_NE(nullptr, packet.GetPayloadData());
 

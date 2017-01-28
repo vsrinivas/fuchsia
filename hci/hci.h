@@ -463,6 +463,11 @@ struct ReadLocalVersionInfoReturnParams {
 // Reset Command (v1.1)
 constexpr OpCode kReset = ControlAndBasebandOpCode(0x0003);
 
+struct ResetReturnParams {
+  // See enum class Status in hci_constants.h.
+  uint8_t status;
+};
+
 // =============================================
 // Write Class Of Device Command (v1.1) (BR/EDR)
 constexpr OpCode kWriteClassOfDevice = ControlAndBasebandOpCode(0x0024);

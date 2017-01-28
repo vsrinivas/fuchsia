@@ -8,8 +8,6 @@
 #include <cstdint>
 #include <memory>
 
-// TODO(armansito): Probably introduce BT_DCHECK, etc, so that we can avoid
-// including all of lib/ftl/logging.h
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 
@@ -104,6 +102,9 @@ class StaticByteBuffer : public ByteBuffer {
 // by using the trait/mixin pattern.
 class DynamicByteBuffer : public ByteBuffer {
  public:
+  // The default constructor creates an empty buffer with size 0.
+  DynamicByteBuffer();
+
   // Allocates a new buffer with |buffer_size| bytes.
   explicit DynamicByteBuffer(size_t buffer_size);
 
@@ -126,8 +127,6 @@ class DynamicByteBuffer : public ByteBuffer {
   const_iterator cend() const override;
 
  private:
-  DynamicByteBuffer() = default;
-
   // Pointer to the underlying buffer, which is owned and managed by us.
   size_t buffer_size_;
   std::unique_ptr<uint8_t[]> buffer_;

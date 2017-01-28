@@ -14,8 +14,7 @@ namespace hci {
 CommandPacket::CommandPacket(OpCode opcode,
                              common::ByteBuffer* buffer,
                              size_t payload_size)
-    : common::Packet<CommandHeader>(buffer, payload_size),
-      opcode_(opcode) {
+    : common::Packet<CommandHeader>(buffer, payload_size), opcode_(opcode) {
   FTL_DCHECK(GetPayloadSize() <= kMaxCommandPacketPayloadSize);
 }
 

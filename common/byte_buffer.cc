@@ -7,6 +7,8 @@
 namespace bluetooth {
 namespace common {
 
+DynamicByteBuffer::DynamicByteBuffer() : buffer_size_(0u) {}
+
 DynamicByteBuffer::DynamicByteBuffer(size_t buffer_size)
     : buffer_size_(buffer_size) {
   FTL_DCHECK(buffer_size_) << "|buffer_size| must be non-zero";

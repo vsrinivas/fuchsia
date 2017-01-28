@@ -41,9 +41,9 @@ TEST(HCIPacketTest, CommandPacket) {
   packet.EncodeHeader();
 
   constexpr std::array<uint8_t, kBufferSize> kExpected{{
-    0xFF, 0x07,  // opcode
-    0x01,        // parameter_total_size
-    0x7F,        // foo
+      0xFF, 0x07,  // opcode
+      0x01,        // parameter_total_size
+      0x7F,        // foo
   }};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 }
@@ -62,9 +62,9 @@ TEST(HCIPacketTest, EventPacket) {
   packet.EncodeHeader();
 
   constexpr std::array<uint8_t, kBufferSize> kExpected{{
-    0xFF,  // event code
-    0x01,  // parameter_total_size
-    0x7F,  // foo
+      0xFF,  // event code
+      0x01,  // parameter_total_size
+      0x7F,  // foo
   }};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 }
