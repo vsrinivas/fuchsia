@@ -17,6 +17,11 @@ typedef struct part_tuple {
     size_t first;
 } part_tuple_t;
 
+typedef struct part_location {
+    size_t blk_offset;
+    size_t blk_len;
+} part_location_t;
+
 mx_status_t find_partition_entries(gpt_partition_t** gpt_table,
                                    const uint8_t* guid,
                                    uint16_t table_size,
@@ -36,5 +41,6 @@ bool check_partition_size(const gpt_partition_t* partition,
 gpt_partition_t** sort_partitions(gpt_partition_t** parts,
                                   uint16_t count);
 
-size_t find_available_space(gpt_device_t* device, size_t blocks_req,
-                            size_t block_count, size_t block_size);
+void find_available_space(gpt_device_t* device, size_t blocks_req,
+                          size_t block_count, size_t block_size,
+                          part_location_t* result_out);

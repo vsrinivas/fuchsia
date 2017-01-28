@@ -181,31 +181,33 @@ gpt_partition_t** sort_partitions(gpt_partition_t** parts, uint16_t count) {
     return sorted_parts;
 }
 
-
 /*
  * Attempt to find an unallocated portion of the specified device that is at
  * least blocks_req in size. block_count should contain the total number of
  * blocks on the disk. The offset in blocks of the allocation hole will be
- * returned or 0 if no suitable space is located. 0 is used as a sentinel here
- * because space would never be available at block 0 because the first blocks
- * of the disk are used for the GPT and/or MBR.
+ * returned or 0 if no space is available. If there is available space, but
+ * no region is as large as requested, the next largest unallocated region
+ * will be returned. Callers should check the result_out to see what is found.
  */
-size_t find_available_space(gpt_device_t* device, size_t blocks_req,
-                            size_t block_count, size_t block_size) {
+void find_available_space(gpt_device_t* device, size_t blocks_req,
+                          size_t block_count, size_t block_size,
+                          part_location_t* result_out) {
+    DEBUG_ASSERT(result_out != NULL);
+    DEBUG_ASSERT(device != NULL);
+
     gpt_partition_t** sorted_parts;
     // 17K is reserved at the front and back of the disk for the protected MBR
     // and the GPT. The front is the primary of these and the back is the backup
     const uint32_t blocks_resrvd = SIZE_RESERVED / block_size;
-
+    result_out->blk_offset = 0;
+    result_out->blk_len = 0;
     // if the device has no partitions, we can add one after the reserved
     // section at the front
     if (device->partitions[0] == NULL) {
-        if (block_count - blocks_resrvd * 2 >= blocks_req) {
-            // TODO link to GPT constant
-            return blocks_resrvd;
-        } else {
-            return 0;
-        }
+        result_out->blk_len = block_count - blocks_resrvd * 2;
+        result_out->blk_offset = blocks_resrvd;
+        printf("No partitions\n");
+        return;
     }
 
     // check if the GPT is sorted by partition position
@@ -223,45 +225,67 @@ size_t find_available_space(gpt_device_t* device, size_t blocks_req,
         for (count = 0; device->partitions[count] != NULL; count++);
         sorted_parts = sort_partitions(device->partitions, count);
         if (sorted_parts == NULL) {
-            return 0;
+            printf("Sort failure\n");
+            return;
         }
     } else {
         sorted_parts = device->partitions;
     }
 
     // check to see if we have space at the beginning of the disk
-    if (sorted_parts[0]->first - blocks_resrvd >= blocks_req) {
+    size_t gap = sorted_parts[0]->first - blocks_resrvd;
+    if (result_out->blk_len < gap) {
+        result_out->blk_offset = blocks_resrvd;
+        result_out->blk_len = gap;
+    }
+
+    if (result_out->blk_len >= blocks_req) {
         if (!sorted) {
             free(sorted_parts);
         }
-        return blocks_resrvd;
+        return;
     }
 
     // check if there is space between partitions
     for (size_t idx = 1; idx < count; idx++) {
-        if (sorted_parts[idx]->first - sorted_parts[idx - 1]->last - 1 >=
-            blocks_req) {
-            size_t offset = sorted_parts[idx - 1]->last + 1;
+        gap = sorted_parts[idx]->first - sorted_parts[idx - 1]->last - 1;
+        if (result_out->blk_len < gap) {
+            result_out->blk_offset = sorted_parts[idx - 1]->last + 1;
+            result_out->blk_len = gap;
+        } else {
+            continue;
+        }
+
+        if (result_out->blk_len >= blocks_req) {
+            result_out->blk_offset = sorted_parts[idx - 1]->last + 1;
             if (!sorted) {
                 free(sorted_parts);
             }
-            return offset;
+            return;
         }
     }
 
-    // check to see if there is space at the end of the disk
-    if (sorted_parts[count - 1]->last + blocks_resrvd + blocks_req + 1 <=
-        block_count) {
-        size_t offset = sorted_parts[count - 1]->last + 1;
+    size_t req_disk_size = sorted_parts[count - 1]->last + blocks_resrvd +
+        blocks_req + 1;
+    // check to see if the size of the disk we would require is less than the
+    // actual size of the disk
+    if (req_disk_size <= block_count) {
+        gap = block_count - req_disk_size + blocks_req;
+    } else {
+        gap = blocks_req - (req_disk_size - block_count);
+    }
+
+    if (result_out->blk_len < gap) {
+        result_out->blk_len = gap;
+        result_out->blk_offset = sorted_parts[count - 1]->last + 1;
         if (!sorted) {
             free(sorted_parts);
         }
-        return offset;
     }
 
     if (!sorted) {
         free(sorted_parts);
     }
 
-    return 0;
+    return;
 }

@@ -214,23 +214,26 @@ bool test_find_available_space(void) {
     create_partition_table(part_entries, test_device.partitions, TABLE_SIZE,
                            part_blocks , blocks_reserved, &total_blocks);
 
-    size_t hole_location = find_available_space(&test_device, 1, total_blocks,
-                                                block_size);
+    part_location_t hole_location;
+    find_available_space(&test_device, 1, total_blocks, block_size,
+                         &hole_location);
 
-    ASSERT_EQ(hole_location, (size_t) 0, "");
+    ASSERT_EQ(hole_location.blk_offset, (size_t) 0, "");
+    ASSERT_EQ(hole_location.blk_len, (size_t) 0, "");
 
     // "expand" the disk by the required size, we should find there is space
     // at the end of the disk
-    hole_location = find_available_space(&test_device, part_blocks,
-                                         total_blocks + part_blocks, block_size);
+    find_available_space(&test_device, part_blocks, total_blocks + part_blocks,
+                         block_size, &hole_location);
 
-    ASSERT_EQ(hole_location, part_entries[TABLE_SIZE - 1].last + 1, "");
+    ASSERT_EQ(hole_location.blk_offset, part_entries[TABLE_SIZE - 1].last + 1,
+              "");
 
     // "expand" the disk by not quite enough
-    hole_location = find_available_space(&test_device, part_blocks + 1,
-                                         total_blocks + part_blocks, block_size);
+    find_available_space(&test_device, part_blocks + 1,
+                         total_blocks + part_blocks, block_size, &hole_location);
 
-    ASSERT_EQ(hole_location, (size_t) 0, "");
+    ASSERT_EQ(hole_location.blk_len, part_blocks, "");
 
     // remove the first partition, but hold a reference to it
     gpt_partition_t* saved = test_device.partitions[0];
@@ -241,26 +244,26 @@ bool test_find_available_space(void) {
 
     // check that space is reported at the beginning of the disk, after the
     // reserved area
-    hole_location = find_available_space(&test_device, part_blocks,
-                                         total_blocks, block_size);
-    ASSERT_EQ(hole_location, blocks_reserved, "");
+    find_available_space(&test_device, part_blocks, total_blocks, block_size,
+                         &hole_location);
+    ASSERT_EQ(hole_location.blk_offset, blocks_reserved, "");
 
     // make the requested partition size just larger than available
-    hole_location = find_available_space(&test_device, part_blocks + 1,
-                                         total_blocks, block_size);
-    ASSERT_EQ(hole_location, (size_t) 0, "");
+    find_available_space(&test_device, part_blocks + 1, total_blocks,
+                         block_size, &hole_location);
+    ASSERT_EQ(hole_location.blk_len, part_blocks, "");
 
     // restore the original first partition, overwriting the original second
     // partition in the process
     test_device.partitions[0] = saved;
-    hole_location = find_available_space(&test_device, part_blocks,
-                                         total_blocks, block_size);
-    ASSERT_EQ(hole_location, test_device.partitions[0]->last + 1, "");
+    find_available_space(&test_device, part_blocks, total_blocks, block_size,
+                         &hole_location);
+    ASSERT_EQ(hole_location.blk_offset, test_device.partitions[0]->last + 1, "");
 
     // again make the requested space size slightly too large
-    hole_location = find_available_space(&test_device, part_blocks + 1,
-                                         total_blocks, block_size);
-    ASSERT_EQ(hole_location, (size_t) 0, "");
+    find_available_space(&test_device, part_blocks + 1, total_blocks,
+                         block_size, &hole_location);
+    ASSERT_EQ(hole_location.blk_len, part_blocks, "");
 
     END_TEST;
 }
