@@ -241,7 +241,7 @@ __END_CDECLS
 class RegionAllocator {
 public:
     class Region;
-    using RegionSlabTraits = mxtl::SlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE>;
+    using RegionSlabTraits = mxtl::ManualDeleteSlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE>;
 
     class Region : public ralloc_region_t,
                    public mxtl::SlabAllocated<RegionSlabTraits>,
