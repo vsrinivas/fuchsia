@@ -71,7 +71,7 @@ build() {
   pushd "${ROOT_DIR}/magenta"
   rm -rf -- "${magenta_sysroot}"
   # build the sysroot for the target architecture
-  make -j ${JOBS} ${magenta_build_type_flags:-} BUILDROOT=${magenta_buildroot} ${magenta_target}
+  make -j ${JOBS} ${magenta_build_type_flags:-} BUILDROOT=${magenta_buildroot} ${magenta_target} BUILDDIR_SUFFIX=
   # build host tools
   make -j ${JOBS} BUILDDIR=${outdir}/build-magenta tools
   popd
