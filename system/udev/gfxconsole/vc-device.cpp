@@ -51,12 +51,14 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
     dev->scrollback_rows = SCROLLBACK_ROWS;
 
     // allocate the text buffer
-    dev->text_buf = calloc(1, dev->rows * dev->columns * sizeof(vc_char_t));
+    dev->text_buf = reinterpret_cast<vc_char_t*>(
+        calloc(1, dev->rows * dev->columns * sizeof(vc_char_t)));
     if (!dev->text_buf)
         return ERR_NO_MEMORY;
 
     // allocate the scrollback buffer
-    dev->scrollback_buf = calloc(1, dev->scrollback_rows * dev->columns * sizeof(vc_char_t));
+    dev->scrollback_buf = reinterpret_cast<vc_char_t*>(
+        calloc(1, dev->scrollback_rows * dev->columns * sizeof(vc_char_t)));
     if (!dev->scrollback_buf) {
         free(dev->text_buf);
         return ERR_NO_MEMORY;
@@ -71,7 +73,7 @@ static mx_status_t vc_device_setup(vc_device_t* dev) {
 }
 
 static void vc_device_invalidate(void* cookie, int x0, int y0, int w, int h) {
-    vc_device_t* dev = cookie;
+    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     for (int y = y0; y < y0 + h; y++) {
         int sc = 0;
         if (y < 0) {
@@ -102,7 +104,7 @@ static inline void vc_invalidate_lines(vc_device_t* dev, int y, int h) {
 }
 
 static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h) {
-    vc_device_t* dev = cookie;
+    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     if (dev->flags & VC_FLAG_RESETSCROLL) {
         dev->flags &= ~VC_FLAG_RESETSCROLL;
         vc_device_scroll_viewport(dev, -dev->vpy);
@@ -114,7 +116,7 @@ static void vc_tc_invalidate(void* cookie, int x0, int y0, int w, int h) {
 }
 
 static void vc_tc_movecursor(void* cookie, int x, int y) {
-    vc_device_t* dev = cookie;
+    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     if (!dev->hide_cursor) {
         vc_device_invalidate(cookie, dev->x, dev->y, 1, 1);
         vc_invalidate_lines(dev, dev->y, 1);
@@ -127,7 +129,7 @@ static void vc_tc_movecursor(void* cookie, int x, int y) {
 }
 
 static void vc_tc_pushline(void* cookie, int y) {
-    vc_device_t* dev = cookie;
+    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     vc_char_t* dst = &dev->scrollback_buf[dev->sc_t * dev->columns];
     vc_char_t* src = &dev->text_buf[y * dev->columns];
     memcpy(dst, src, dev->columns * sizeof(vc_char_t));
@@ -144,7 +146,7 @@ static void vc_tc_pushline(void* cookie, int y) {
 // positive = up, negative = down
 // textbuf must be updated before calling scroll
 static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
-    vc_device_t* dev = cookie;
+    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     if (dev->vpy < 0)
         return;
     // invalidate the cursor before copying
@@ -165,7 +167,7 @@ static void vc_tc_scroll(void* cookie, int y0, int y1, int dir) {
 }
 
 static void vc_tc_setparam(void* cookie, int param, uint8_t* arg, size_t arglen) {
-    vc_device_t* dev = cookie;
+    vc_device_t* dev = reinterpret_cast<vc_device_t*>(cookie);
     switch (param) {
     case TC_SET_TITLE:
         strncpy(dev->title, (char*)arg, sizeof(dev->title));
@@ -345,7 +347,8 @@ void vc_device_set_fullscreen(vc_device_t* dev, bool fullscreen) {
 }
 
 mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
-    vc_device_t* device = calloc(1, sizeof(vc_device_t));
+    vc_device_t* device =
+        reinterpret_cast<vc_device_t*>(calloc(1, sizeof(vc_device_t)));
     if (!device)
         return ERR_NO_MEMORY;
 
@@ -382,7 +385,8 @@ mx_status_t vc_device_alloc(gfx_surface* hw_gfx, vc_device_t** out_dev) {
     if (!device->st_gfx)
         goto fail;
 
-    size_t sz = hw_gfx->pixelsize * hw_gfx->stride * hw_gfx->height;
+    size_t sz;  // Declare and initialize separately due to use of goto.
+    sz = hw_gfx->pixelsize * hw_gfx->stride * hw_gfx->height;
     if ((mx_vmo_create(sz, 0, &device->gfx_vmo)) < 0)
         goto fail;
 

@@ -9,8 +9,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <magenta/compiler.h>
 #include <magenta/types.h>
 #include <magenta/pixelformat.h>
+
+__BEGIN_CDECLS
 
 // gfx library
 
@@ -107,3 +110,5 @@ void gfx_draw_pattern(void);
 
 extern const gfx_font font9x16;
 extern const gfx_font font18x32;
+
+__END_CDECLS

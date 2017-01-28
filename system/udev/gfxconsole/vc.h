@@ -18,8 +18,8 @@ typedef uint16_t vc_char_t;
 #define CHARVAL(ch, fg, bg) \
     ((vc_char_t)(((ch)&0xff) | (((fg)&0xf) << 8) | (((bg)&0xf) << 12)))
 #define TOCHAR(ch) ((ch)&0xff)
-#define TOFG(ch) (((ch) >> 8) & 0xf)
-#define TOBG(ch) (((ch) >> 12) & 0xf)
+#define TOFG(ch) ((uint8_t)(((ch) >> 8) & 0xf))
+#define TOBG(ch) ((uint8_t)(((ch) >> 12) & 0xf))
 
 #define MAX_COLOR 0xf
 
@@ -104,10 +104,12 @@ void vc_device_free(vc_device_t* dev);
 mx_status_t vc_set_active_console(unsigned console);
 void vc_get_status_line(char* str, int n);
 
+enum vc_battery_state {
+    UNAVAILABLE = 0, NOT_CHARGING, CHARGING, ERROR
+};
+
 typedef struct vc_battery_info {
-    enum {
-        UNAVAILABLE = 0, NOT_CHARGING, CHARGING, ERROR
-    } state;
+    enum vc_battery_state state;
     int pct;
 } vc_battery_info_t;
 void vc_get_battery_info(vc_battery_info_t* info);

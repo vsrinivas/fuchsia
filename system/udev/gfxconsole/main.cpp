@@ -614,7 +614,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
     vc_device_t* vc = get_vc_device(dev);
     switch (op) {
     case IOCTL_CONSOLE_GET_DIMENSIONS: {
-        ioctl_console_dimensions_t* dims = reply;
+        auto* dims = reinterpret_cast<ioctl_console_dimensions_t*>(reply);
         if (max < sizeof(*dims)) {
             return ERR_BUFFER_TOO_SMALL;
         }
@@ -628,7 +628,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
         if (max < sizeof(ioctl_display_get_fb_t)) {
             return ERR_BUFFER_TOO_SMALL;
         }
-        ioctl_display_get_fb_t* fb = reply;
+        auto* fb = reinterpret_cast<ioctl_display_get_fb_t*>(reply);
         fb->info.format = vc->gfx->format;
         fb->info.width = vc->gfx->width;
         fb->info.height = vc->gfx->height;
@@ -647,7 +647,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
         vc_gfx_invalidate_all(vc);
         return NO_ERROR;
     case IOCTL_DISPLAY_FLUSH_FB_REGION: {
-        const ioctl_display_region_t* rect = cmd;
+        auto* rect = reinterpret_cast<const ioctl_display_region_t*>(cmd);
         if (cmdlen < sizeof(*rect)) {
             return ERR_INVALID_ARGS;
         }
@@ -666,12 +666,7 @@ static ssize_t vc_device_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, s
     }
 }
 
-static mx_protocol_device_t vc_device_proto = {
-    .release = vc_device_release,
-    .read = vc_device_read,
-    .write = vc_device_write,
-    .ioctl = vc_device_ioctl,
-};
+static mx_protocol_device_t vc_device_proto;
 
 extern mx_driver_t _driver_vc_root;
 
@@ -717,7 +712,7 @@ static mx_status_t vc_root_open(mx_device_t* dev, mx_device_t** dev_out, uint32_
 }
 
 static int vc_log_reader_thread(void* arg) {
-    mx_device_t* dev = arg;
+    auto* dev = reinterpret_cast<mx_device_t*>(arg);
     mx_handle_t h;
 
     if (mx_log_create(MX_LOG_FLAG_READABLE, &h) < 0) {
@@ -803,9 +798,7 @@ static int vc_misc_poll_thread(void* arg) {
     return 0;
 }
 
-static mx_protocol_device_t vc_root_proto = {
-    .open = vc_root_open,
-};
+static mx_protocol_device_t vc_root_proto;
 
 static void display_flush(uint starty, uint endy)
 {
@@ -888,11 +881,18 @@ fail:
     return status;
 }
 
-mx_driver_t _driver_vc_root = {
-    .ops = {
-        .bind = vc_root_bind,
-    },
-};
+mx_driver_t _driver_vc_root;
+
+__attribute__((constructor)) static void initialize(void) {
+    vc_device_proto.release = vc_device_release;
+    vc_device_proto.read = vc_device_read;
+    vc_device_proto.write = vc_device_write;
+    vc_device_proto.ioctl = vc_device_ioctl;
+
+    vc_root_proto.open = vc_root_open;
+
+    _driver_vc_root.ops.bind = vc_root_bind;
+}
 
 MAGENTA_DRIVER_BEGIN(_driver_vc_root, "virtconsole", "magenta", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, MX_PROTOCOL_DISPLAY),

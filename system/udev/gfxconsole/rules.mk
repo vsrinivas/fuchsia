@@ -9,10 +9,10 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/vc-device.c \
-    $(LOCAL_DIR)/vc-gfx.c \
-    $(LOCAL_DIR)/textcon.c \
-    $(LOCAL_DIR)/main.c \
+    $(LOCAL_DIR)/vc-device.cpp \
+    $(LOCAL_DIR)/vc-gfx.cpp \
+    $(LOCAL_DIR)/textcon.cpp \
+    $(LOCAL_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := ulib/ddk ulib/gfx ulib/hid
 
