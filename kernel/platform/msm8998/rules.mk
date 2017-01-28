@@ -44,13 +44,12 @@ GLOBAL_DEFINES += \
 	MEMSIZE=$(MEMSIZE) \
 	MMU_WITH_TRAMPOLINE=1 \
 	PLATFORM_SUPPORTS_PANIC_SHELL=1 \
-	ARM_GIC_V3=1 \
 
 MODULE_DEPS += \
 	lib/cbuf \
 	lib/fdt \
 	dev/timer/arm_generic \
-	dev/interrupt/arm_gic \
+	dev/interrupt/arm_gicv3 \
 
 include make/module.mk
 

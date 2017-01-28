@@ -10,4 +10,5 @@
 #include <platform/msm8998.h>
 
 #define GICBASE(n)  (MSM8998_GIC_BASE_VIRT)
-#define GICD_OFFSET (0x00000)
+#define GICD_OFFSET (0x000000)
+#define GICR_OFFSET (0x100000)
