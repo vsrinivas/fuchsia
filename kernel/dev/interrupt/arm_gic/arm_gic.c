@@ -98,9 +98,10 @@ static void gic_set_enable(uint vector, bool enable)
 static void arm_gic_init_percpu(uint level)
 {
 #if ARM_GIC_V3
-// this is crashing on secondary CPUs
-//    gic_write_ctlr(1); // enable GIC0
-//    gic_write_pmr(0xFF); // unmask interrupts at all priority levels
+    gic_write_sre(1);       // enable system register access
+    gic_write_ctlr(1);      // enable GIC0
+    gic_write_pmr(0xFF);    // unmask interrupts at all priority levels
+    gic_write_igrpen1(1);   // and finally enable interrupts
 #else
     GICREG(0, GICC_CTLR) = 1; // enable GIC0
     GICREG(0, GICC_PMR) = 0xFF; // unmask interrupts at all priority levels
@@ -160,19 +161,9 @@ void arm_gic_init(void)
         }
     }
 
-#if ARM_GIC_V3
-    gic_write_igrpen1(1);
-#endif
-
     GICREG(0, GICD_CTLR) = 1; // enable GIC0
 
-#if ARM_GIC_V3
-// arm_gic_init_percpu() is disabled. do it here instead for main CPU 
-    gic_write_ctlr(1); // enable GIC0
-    gic_write_pmr(0xFF); // unmask interrupts at all priority levels
-#else
     arm_gic_init_percpu(0);
-#endif
 }
 
 status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask)
