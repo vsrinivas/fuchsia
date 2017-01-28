@@ -97,20 +97,6 @@ bool vmo_map_test() {
     EXPECT_NEQ(0u, ptr[0], "map address");
     //printf("mapped %#" PRIxPTR "\n", ptr[0]);
 
-    mx_info_vmar_t vmar_info;
-    status = mx_object_get_info(mx_vmar_root_self(), MX_INFO_VMAR, &vmar_info,
-                                sizeof(vmar_info), NULL, NULL);
-    EXPECT_EQ(NO_ERROR, status, "get_info");
-
-    // map it in a fixed spot
-    const uintptr_t fixed = 0x3e000000; // arbitrary fixed spot
-    status = mx_vmar_map(mx_vmar_root_self(), fixed - vmar_info.base, vmo, 0,
-                         PAGE_SIZE, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_SPECIFIC,
-                         &ptr[1]);
-    EXPECT_EQ(NO_ERROR, status, "map");
-    EXPECT_EQ(fixed, ptr[1], "map fixed address");
-    //printf("mapped %#" PRIxPTR "\n", ptr[1]);
-
     // try to map something completely out of range without any fixed mapping, should succeed
     ptr[2] = UINTPTR_MAX;
     status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, PAGE_SIZE,
