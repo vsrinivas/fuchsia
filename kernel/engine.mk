@@ -35,8 +35,8 @@ USE_LINKER_GC ?= true
 # generate a default based on build options.  Start with no suffix, then add
 # "-clang" if we are building with clang, and "-release" if we are building with
 # DEBUG=0
-BUILDDIR_SUFFIX ?=
-ifeq ($(strip $(BUILDDIR_SUFFIX)),)
+ifeq ($(origin BUILDDIR_SUFFIX),undefined) 
+BUILDDIR_SUFFIX :=
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 BUILDDIR_SUFFIX := $(BUILDDIR_SUFFIX)-clang
