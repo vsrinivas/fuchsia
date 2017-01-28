@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define MAGMA_DLOG_ENABLE 1
+
 #include <fcntl.h>
 #include <thread>
 
 #include "magma_system.h"
+#include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "gtest/gtest.h"
 
@@ -158,6 +161,37 @@ public:
         return true;
     }
 
+    static void Stress(uint32_t iterations)
+    {
+        for (uint32_t i = 0; i < iterations; i++) {
+            DLOG("iteration %d/%d", i, iterations);
+            std::thread happy([] {
+                std::unique_ptr<TestConnection> test(new TestConnection());
+                for (uint32_t count = 0; count < 100; count++) {
+                    test->SubmitCommandBuffer(TestConnection::NORMAL);
+                }
+            });
+
+            std::thread sad([] {
+                std::unique_ptr<TestConnection> test(new TestConnection());
+                for (uint32_t count = 0; count < 100; count++) {
+                    if (count % 2 == 0) {
+                        test->SubmitCommandBuffer(TestConnection::NORMAL);
+                    } else if (count % 3 == 0) {
+                        test->SubmitCommandBuffer(TestConnection::FAULT);
+                        test.reset(new TestConnection());
+                    } else {
+                        test->SubmitCommandBuffer(TestConnection::HANG);
+                        test.reset(new TestConnection());
+                    }
+                }
+            });
+
+            happy.join();
+            sad.join();
+        }
+    }
+
 private:
     magma_system_connection* connection_;
     uint32_t context_id_;
@@ -165,7 +199,7 @@ private:
 
 } // namespace
 
-TEST(HangRecovery, One)
+TEST(HangRecovery, Test)
 {
     std::unique_ptr<TestConnection> test;
     test.reset(new TestConnection());
@@ -180,30 +214,7 @@ TEST(HangRecovery, One)
     test->SubmitCommandBuffer(TestConnection::NORMAL);
 }
 
-TEST(HangRecovery, Two)
+TEST(HangRecovery, Stress)
 {
-    std::thread happy([] {
-        std::unique_ptr<TestConnection> test(new TestConnection());
-        for (uint32_t count = 0; count < 100; count++) {
-            test->SubmitCommandBuffer(TestConnection::NORMAL);
-        }
-    });
-
-    std::thread sad([] {
-        std::unique_ptr<TestConnection> test(new TestConnection());
-        for (uint32_t count = 0; count < 100; count++) {
-            if (count % 2 == 0) {
-                test->SubmitCommandBuffer(TestConnection::NORMAL);
-            } else if (count % 3 == 0) {
-                test->SubmitCommandBuffer(TestConnection::FAULT);
-                test.reset(new TestConnection());
-            } else {
-                test->SubmitCommandBuffer(TestConnection::HANG);
-                test.reset(new TestConnection());
-            }
-        }
-    });
-
-    happy.join();
-    sad.join();
+    TestConnection::Stress(1000);
 }
