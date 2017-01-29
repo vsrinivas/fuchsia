@@ -7,6 +7,7 @@
 #pragma once
 
 #include <magenta/dispatcher.h>
+#include <magenta/syscalls/exception.h>
 #include <magenta/user_thread.h>
 #include <sys/types.h>
 
@@ -24,6 +25,10 @@ public:
         return thread_->Start(pc, sp, arg1, arg2, initial_thread);
     }
     void Kill() { thread_->Kill(); }
+
+    status_t GetInfo(mx_info_thread_t* info);
+
+    status_t GetExceptionReport(mx_exception_report_t* report);
 
     StateTracker* get_state_tracker() final;
 

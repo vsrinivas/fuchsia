@@ -46,6 +46,39 @@ ThreadDispatcher::~ThreadDispatcher() {
     thread_->DispatcherClosed();
 }
 
+status_t ThreadDispatcher::GetInfo(mx_info_thread_t* info) {
+    memset(info, 0, sizeof(*info));
+    ExceptionPort::Type excp_port_type;
+    if (thread_->InException(&excp_port_type)) {
+        switch (excp_port_type) {
+        case ExceptionPort::Type::DEBUGGER:
+            info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_DEBUGGER;
+            break;
+        case ExceptionPort::Type::THREAD:
+            info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_THREAD;
+            break;
+        case ExceptionPort::Type::PROCESS:
+            info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_PROCESS;
+            break;
+        case ExceptionPort::Type::SYSTEM:
+            info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_SYSTEM;
+            break;
+        default:
+            DEBUG_ASSERT_MSG(false, "unexpected exception port type: %d",
+                             static_cast<int>(excp_port_type));
+            break;
+        }
+    } else {
+        info->wait_exception_port_type = MX_EXCEPTION_PORT_TYPE_NONE;
+    }
+
+    return NO_ERROR;
+}
+
+status_t ThreadDispatcher::GetExceptionReport(mx_exception_report_t* report) {
+    return thread_->GetExceptionReport(report);
+}
+
 StateTracker* ThreadDispatcher::get_state_tracker() {
     return thread_->state_tracker();
 }

@@ -235,6 +235,68 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                 return ERR_INVALID_ARGS;
             return status;
         }
+        case MX_INFO_THREAD: {
+            // TODO(MG-458): Handle forward/backward compatibility issues
+            // with changes to the struct.
+            size_t actual = (buffer_size < sizeof(mx_info_thread_t)) ? 0 : 1;
+            size_t avail = 1;
+
+            // grab a reference to the dispatcher
+            mxtl::RefPtr<ThreadDispatcher> thread;
+            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &thread);
+            if (error < 0)
+                return error;
+
+            if (actual > 0) {
+                // build the info structure
+                mx_info_thread_t info = { };
+
+                auto err = thread->GetInfo(&info);
+                if (err != NO_ERROR)
+                    return err;
+
+                if (buffer.copy_array_to_user(&info, sizeof(info)) != NO_ERROR)
+                    return ERR_INVALID_ARGS;
+            }
+            if (_actual && (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (_avail && (make_user_ptr(_avail).copy_to_user(avail) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (actual == 0)
+                return ERR_BUFFER_TOO_SMALL;
+            return NO_ERROR;
+        }
+        case MX_INFO_THREAD_EXCEPTION_REPORT: {
+            // TODO(MG-458): Handle forward/backward compatibility issues
+            // with changes to the struct.
+            size_t actual = (buffer_size < sizeof(mx_exception_report_t)) ? 0 : 1;
+            size_t avail = 1;
+
+            // grab a reference to the dispatcher
+            mxtl::RefPtr<ThreadDispatcher> thread;
+            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &thread);
+            if (error < 0)
+                return error;
+
+            if (actual > 0) {
+                // build the info structure
+                mx_exception_report_t report = { };
+
+                auto err = thread->GetExceptionReport(&report);
+                if (err != NO_ERROR)
+                    return err;
+
+                if (buffer.copy_array_to_user(&report, sizeof(report)) != NO_ERROR)
+                    return ERR_INVALID_ARGS;
+            }
+            if (_actual && (make_user_ptr(_actual).copy_to_user(actual) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (_avail && (make_user_ptr(_avail).copy_to_user(avail) != NO_ERROR))
+                return ERR_INVALID_ARGS;
+            if (actual == 0)
+                return ERR_BUFFER_TOO_SMALL;
+            return NO_ERROR;
+        }
         case MX_INFO_VMAR: {
             mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
             mx_status_t status = up->GetDispatcher(handle, &vmar);

@@ -76,7 +76,8 @@ public:
     // Send a report to the associated exception handler of |eport| and wait
     // for a response.
     // Note this takes a specific exception port as an argument because there are several:
-    // debugger, thread, process, and system.
+    // debugger, thread, process, and system. The kind of the exception port is
+    // specified by |eport->type()|.
     status_t ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
                                       const mx_exception_report_t* report,
                                       const arch_exception_context_t* arch_context);
@@ -86,6 +87,14 @@ public:
     // If the thread is waiting for the associated exception handler, continue
     // exception processing as if the exception port had not been installed.
     void OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport);
+    // Return true if waiting for an exception response.
+    // The kind of exception port the thread is waiting for a response from
+    // is returned in |*type|.
+    bool InException(ExceptionPort::Type* type);
+    // Assuming the thread is stopped waiting for an exception response,
+    // fill in |*report| with the exception report.
+    // Returns ERR_BAD_STATE if not in an exception.
+    status_t GetExceptionReport(mx_exception_report_t* report);
 
     // For debugger usage.
     // TODO(dje): The term "state" here conflicts with "state tracker".
@@ -151,6 +160,7 @@ private:
     mx_exception_status_t exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
     // The exception port of the handler the thread is waiting for a response from.
     mxtl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(exception_wait_lock_);
+    const mx_exception_report_t* exception_report_ TA_GUARDED(exception_wait_lock_);
     cond_t exception_wait_cond_ = COND_INITIAL_VALUE(exception_wait_cond_);
     Mutex exception_wait_lock_;
 

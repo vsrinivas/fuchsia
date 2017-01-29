@@ -327,6 +327,8 @@ void UserThread::SetState(State state) {
 }
 
 status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<ExceptionPort> eport) {
+    DEBUG_ASSERT(eport->type() == ExceptionPort::Type::THREAD);
+
     // Lock both |state_lock_| and |exception_lock_| to ensure the thread
     // doesn't transition to dead while we're setting the exception handler.
     AutoLock state_lock(state_lock_);
@@ -336,6 +338,7 @@ status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<Excepti
     if (exception_port_)
         return ERR_BAD_STATE; // TODO(dje): ?
     exception_port_ = eport;
+
     return NO_ERROR;
 }
 
@@ -389,6 +392,9 @@ status_t UserThread::ExceptionHandlerExchange(
     // So the handler can read/write our general registers.
     thread_.exception_context = arch_context;
 
+    // For GetExceptionReport.
+    exception_report_ = report;
+
     // For OnExceptionPortRemoval in case the port is unbound.
     DEBUG_ASSERT(exception_wait_port_ == nullptr);
     exception_wait_port_ = eport;
@@ -399,6 +405,7 @@ status_t UserThread::ExceptionHandlerExchange(
     DEBUG_ASSERT(exception_status_ != MX_EXCEPTION_STATUS_WAITING);
 
     exception_wait_port_.reset();
+    exception_report_ = nullptr;
     thread_.exception_context = nullptr;
 
     LTRACEF("ExceptionHandlerExchange returning\n");
@@ -426,6 +433,26 @@ void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport
         exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
         cond_signal(&exception_wait_cond_);
     }
+}
+
+bool UserThread::InException(ExceptionPort::Type* type) {
+    LTRACE_ENTRY_OBJ;
+    AutoLock lock(exception_wait_lock_);
+    if (!thread_stopped_in_exception(&thread_))
+        return false;
+    DEBUG_ASSERT(exception_wait_port_ != nullptr);
+    *type = exception_wait_port_->type();
+    return true;
+}
+
+status_t UserThread::GetExceptionReport(mx_exception_report_t* report) {
+    LTRACE_ENTRY_OBJ;
+    AutoLock lock(exception_wait_lock_);
+    if (exception_status_ != MX_EXCEPTION_STATUS_WAITING)
+        return ERR_BAD_STATE;
+    DEBUG_ASSERT(exception_report_ != nullptr);
+    *report = *exception_report_;
+    return NO_ERROR;
 }
 
 uint32_t UserThread::get_num_state_kinds() const {

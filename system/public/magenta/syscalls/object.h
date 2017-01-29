@@ -22,6 +22,8 @@ typedef enum {
     MX_INFO_VMAR,                   // mx_info_vmar_t
     MX_INFO_JOB_CHILDREN,           // mx_koid_t[n]
     MX_INFO_JOB_PROCESSES,          // mx_koid_t[n]
+    MX_INFO_THREAD,                 // mx_info_thread_t[1]
+    MX_INFO_THREAD_EXCEPTION_REPORT, // mx_exception_report_t[1]
 } mx_object_info_topic_t;
 
 typedef enum {
@@ -75,6 +77,13 @@ typedef struct mx_info_process {
     // True if a debugger is attached to the process.
     bool debugger_attached;
 } mx_info_process_t;
+
+typedef struct mx_info_thread {
+    // If nonzero, the thread has gotten an exception and is waiting for
+    // the exception to be handled by the specified port.
+    // The value is one of MX_EXCEPTION_PORT_TYPE_*.
+    uint32_t wait_exception_port_type;
+} mx_info_thread_t;
 
 typedef struct mx_info_vmar {
     uintptr_t base;

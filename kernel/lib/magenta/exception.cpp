@@ -7,6 +7,7 @@
 #include <magenta/exception.h>
 
 #include <arch.h>
+#include <assert.h>
 #include <err.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -59,13 +60,16 @@ static void build_exception_report(mx_exception_report_t* report,
     build_arch_exception_context(report, ip, arch_context);
 }
 
-static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport, UserThread* thread,
+static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
+                                      ExceptionPort::Type expected_type,
+                                      UserThread* thread,
                                       const mx_exception_report_t* report,
                                       const arch_exception_context_t* arch_context,
                                       bool* processed) {
     if (!eport)
         return ERR_NOT_FOUND;
 
+    DEBUG_ASSERT(eport->type() == expected_type);
     *processed = true;
     status_t status = thread->ExceptionHandlerExchange(eport, report, arch_context);
     LTRACEF("ExceptionHandlerExchange returned %d\n", status);
@@ -77,7 +81,9 @@ static status_t try_debugger_exception_handler(UserThread* thread,
                                                const arch_exception_context_t* arch_context,
                                                bool* processed) {
     LTRACE_ENTRY;
-    return try_exception_handler(thread->process()->debugger_exception_port(), thread, report, arch_context, processed);
+    mxtl::RefPtr<ExceptionPort> eport = thread->process()->debugger_exception_port();
+    return try_exception_handler(eport, ExceptionPort::Type::DEBUGGER,
+                                 thread, report, arch_context, processed);
 }
 
 static status_t try_thread_exception_handler(UserThread* thread,
@@ -85,7 +91,9 @@ static status_t try_thread_exception_handler(UserThread* thread,
                                              const arch_exception_context_t* arch_context,
                                              bool* processed) {
     LTRACE_ENTRY;
-    return try_exception_handler(thread->exception_port(), thread, report, arch_context, processed);
+    mxtl::RefPtr<ExceptionPort> eport = thread->exception_port();
+    return try_exception_handler(eport, ExceptionPort::Type::THREAD,
+                                 thread, report, arch_context, processed);
 }
 
 static status_t try_process_exception_handler(UserThread* thread,
@@ -93,7 +101,9 @@ static status_t try_process_exception_handler(UserThread* thread,
                                               const arch_exception_context_t* arch_context,
                                               bool* processed) {
     LTRACE_ENTRY;
-    return try_exception_handler(thread->process()->exception_port(), thread, report, arch_context, processed);
+    mxtl::RefPtr<ExceptionPort> eport = thread->process()->exception_port();
+    return try_exception_handler(eport, ExceptionPort::Type::PROCESS,
+                                 thread, report, arch_context, processed);
 }
 
 static status_t try_system_exception_handler(UserThread* thread,
@@ -101,7 +111,9 @@ static status_t try_system_exception_handler(UserThread* thread,
                                              const arch_exception_context_t* arch_context,
                                              bool* processed) {
     LTRACE_ENTRY;
-    return try_exception_handler(GetSystemExceptionPort(), thread, report, arch_context, processed);
+    mxtl::RefPtr<ExceptionPort> eport = GetSystemExceptionPort();
+    return try_exception_handler(eport, ExceptionPort::Type::SYSTEM,
+                                 thread, report, arch_context, processed);
 }
 
 // exception handler from low level architecturally-specific code

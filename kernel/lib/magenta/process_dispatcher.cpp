@@ -508,7 +508,20 @@ status_t ProcessDispatcher::GetThreads(mxtl::Array<mx_koid_t>* out_threads) {
     return NO_ERROR;
 }
 
-status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, bool debugger) {
+status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+    bool debugger = false;
+    switch (eport->type()) {
+    case ExceptionPort::Type::DEBUGGER:
+        debugger = true;
+        break;
+    case ExceptionPort::Type::PROCESS:
+        break;
+    default:
+        DEBUG_ASSERT_MSG(false, "unexpected port type: %d",
+                         static_cast<int>(eport->type()));
+        break;
+    }
+
     // Lock both |state_lock_| and |exception_lock_| to ensure the process
     // doesn't transition to dead while we're setting the exception handler.
     AutoLock state_lock(&state_lock_);
@@ -524,6 +537,7 @@ status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, 
             return ERR_BAD_STATE; // TODO(dje): ?
         exception_port_ = eport;
     }
+
     return NO_ERROR;
 }
 

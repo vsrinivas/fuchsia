@@ -121,6 +121,8 @@ Handle* MapU32ToHandle(uint32_t value) {
 }
 
 mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
+    DEBUG_ASSERT(eport->type() == ExceptionPort::Type::SYSTEM);
+
     AutoLock lock(&system_exception_mutex);
     if (system_exception_port)
         return ERR_BAD_STATE; // TODO(dje): ?

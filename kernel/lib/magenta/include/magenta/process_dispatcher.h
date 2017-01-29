@@ -178,7 +178,7 @@ public:
     status_t GetThreads(mxtl::Array<mx_koid_t>* threads);
 
     // exception handling support
-    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, bool debugger);
+    status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
     // Returns true if a port had been set.
     bool ResetExceptionPort(bool debugger, bool quietly);
     mxtl::RefPtr<ExceptionPort> exception_port();

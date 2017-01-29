@@ -4,7 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <assert.h>
 #include <err.h>
 #include <kernel/auto_lock.h>
 #include <kernel/thread.h>
@@ -78,14 +77,15 @@ static mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_
         return status;
 
     mxtl::RefPtr<ExceptionPort> eport;
-    status = ExceptionPort::Create(mxtl::move(ioport), key, &eport);
-    if (status != NO_ERROR)
-        return status;
 
     if (obj_handle == MX_HANDLE_INVALID) {
         //TODO: handle for system exception
         if (debugger)
             return ERR_INVALID_ARGS;
+        status = ExceptionPort::Create(ExceptionPort::Type::SYSTEM,
+                                       mxtl::move(ioport), key, &eport);
+        if (status != NO_ERROR)
+            return status;
         return SetSystemExceptionPort(mxtl::move(eport));
     }
 
@@ -96,13 +96,25 @@ static mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
-        return process->SetExceptionPort(mxtl::move(eport), debugger);
+        ExceptionPort::Type type;
+        if (debugger)
+            type = ExceptionPort::Type::DEBUGGER;
+        else
+            type = ExceptionPort::Type::PROCESS;
+        status = ExceptionPort::Create(type, mxtl::move(ioport), key, &eport);
+        if (status != NO_ERROR)
+            return status;
+        return process->SetExceptionPort(mxtl::move(eport));
     }
 
     auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (thread) {
         if (debugger)
             return ERR_INVALID_ARGS;
+        status = ExceptionPort::Create(ExceptionPort::Type::THREAD,
+                                       mxtl::move(ioport), key, &eport);
+        if (status != NO_ERROR)
+            return status;
         return thread->SetExceptionPort(mxtl::move(eport));
     }
 

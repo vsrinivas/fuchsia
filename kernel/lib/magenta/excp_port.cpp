@@ -31,18 +31,18 @@ static IOP_Packet* MakePacket(uint64_t key, const mx_exception_report_t* report,
 }
 
 // static
-mx_status_t ExceptionPort::Create(mxtl::RefPtr<PortDispatcher> port, uint64_t port_key,
+mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key,
                                   mxtl::RefPtr<ExceptionPort>* out_eport) {
     AllocChecker ac;
-    auto eport = new (&ac) ExceptionPort(mxtl::move(port), port_key);
+    auto eport = new (&ac) ExceptionPort(type, mxtl::move(port), port_key);
     if (!ac.check())
         return ERR_NO_MEMORY;
     *out_eport = mxtl::AdoptRef<ExceptionPort>(eport);
     return NO_ERROR;
 }
 
-ExceptionPort::ExceptionPort(mxtl::RefPtr<PortDispatcher> port, uint64_t port_key)
-    : port_(port), port_key_(port_key) {
+ExceptionPort::ExceptionPort(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key)
+    : type_(type), port_(port), port_key_(port_key) {
     LTRACE_ENTRY_OBJ;
 }
 

@@ -80,6 +80,24 @@ one for each child Resource of the provided Resource handle.
 **MX_INFO_RESOURCE_RECORDS**  Requires a Resource handle.  Returns an array of *mx_rrec_t*,
 one for each Record associated with the provided Resource handle.
 
+**MX_INFO_THREAD**  Requires a Thread handle.  Always returns a single *mx_info_thread_t*
+record containing:
+
+*   *exception_port_type*: Zero if the thread is not in an exception, or a
+    non-zero value indicating the kind of exception port that the thread is
+    waiting for an exception response from. The value is represented by these
+    values defined in magenta/syscalls/exception.h:
+
+    - *MX_EXCEPTION_PORT_TYPE_NONE*
+    - *MX_EXCEPTION_PORT_TYPE_DEBUGGER*
+    - *MX_EXCEPTION_PORT_TYPE_THREAD*
+    - *MX_EXCEPTION_PORT_TYPE_PROCESS*
+    - *MX_EXCEPTION_PORT_TYPE_SYSTEM*
+
+**MX_INFO_THREAD_EXCEPTION_REPORT** Requires a Thread handle. If the thread is
+currently in an exception and is waiting for an exception response, then
+this returns the exception report as a *mx_exception_report_t*.
+
 **MX_INFO_VMAR**  Requires a VM Address Region handle.  Always returns a single *mx_info_vmar_t*
 record containing the base and length of the region.
 

@@ -151,7 +151,9 @@ static bool read_exception(mx_handle_t eport, mx_exception_packet_t* packet)
     return true;
 }
 
-// TODO(dje): test_not_enough_buffer is wip
+// TODO(dje): test_not_enough_buffer is wip. Remove the argument and
+// have a separate explicit test for it.
+// TODO(dje): "kind" is losing its value. Delete?
 // The bool result is because we use the unittest EXPECT/ASSERT macros.
 
 static bool verify_exception(const mx_exception_packet_t* packet,
@@ -184,6 +186,8 @@ static bool verify_exception(const mx_exception_packet_t* packet,
         // TODO(dje): Verify exception was from expected thread.
     } else {
         // process/thread gone, nothing to do
+        // TODO(dje): Not true. Can move, e.g., tests that verify tid == 0 for
+        // "process gone" reports here.
     }
 
     // Verify the exception was from |process|.
@@ -209,6 +213,82 @@ static bool read_and_verify_exception(mx_handle_t eport,
         return false;
     return verify_exception(&packet, kind, process, expected_type,
                             test_not_enough_buffer, tid);
+}
+
+// Wait for a process to exit, and while it's exiting verify we get the
+// expected exception reports.
+// We may receive thread-exit reports while the process is terminating but
+// any other kind of exception is an error.
+// This may be used when attached to the process or debugger exception port.
+// The bool result is because we use the unittest EXPECT/ASSERT macros.
+
+static bool wait_process_exit(mx_handle_t eport, mx_handle_t process) {
+    mx_exception_packet_t packet;
+    mx_koid_t tid;
+
+    for (;;) {
+        if (!read_exception(eport, &packet))
+            return false;
+        // If we get a process gone report then all threads have exited.
+        if (packet.report.header.type == MX_EXCP_GONE)
+            break;
+        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXIT,
+                              false, &tid))
+            return false;
+        // MX_EXCP_THREAD_EXIT reports must be responded to.
+        resume_thread_from_exception(process, tid, 0);
+    }
+
+    verify_exception(&packet, "process-gone", process, MX_EXCP_GONE, false, &tid);
+    EXPECT_EQ(tid, 0u, "non-zero tid in process gone report");
+    // There is no reply to a "process gone" notification.
+
+    // The MX_TASK_TERMINATED signal comes last.
+    tu_process_wait_signaled(process);
+    return true;
+}
+
+// Wait for a process to exit, and while it's exiting verify we get the
+// expected exception reports.
+// N.B. This is only for use when attached to the debugger exception port:
+// only it gets thread-exit reports.
+// A thread-exit report for |tid| is expected to be seen.
+// We may get other thread-exit reports, that's ok, we don't assume the child
+// is single-threaded. But it is an error to get any other kind of exception
+// report from a thread.
+// The bool result is because we use the unittest EXPECT/ASSERT macros.
+
+static bool wait_process_exit_from_debugger(mx_handle_t eport, mx_handle_t process, mx_koid_t tid) {
+    bool tid_seen = false;
+    mx_exception_packet_t packet;
+    mx_koid_t tid2;
+
+    ASSERT_NEQ(tid, MX_KOID_INVALID, "invalid koid");
+
+    for (;;) {
+        if (!read_exception(eport, &packet))
+            return false;
+        // If we get a process gone report then all threads have exited.
+        if (packet.report.header.type == MX_EXCP_GONE)
+            break;
+        if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXIT,
+                              false, &tid2))
+            return false;
+        if (tid2 == tid)
+            tid_seen = true;
+        // MX_EXCP_THREAD_EXIT reports must be responded to.
+        resume_thread_from_exception(process, tid2, 0);
+    }
+
+    EXPECT_TRUE(tid_seen, "missing MX_EXCP_THREAD_EXIT report");
+
+    verify_exception(&packet, "process-gone", process, MX_EXCP_GONE, false, &tid2);
+    EXPECT_EQ(tid2, 0u, "non-zero tid in process gone report");
+    // There is no reply to a "process gone" notification.
+
+    // The MX_TASK_TERMINATED signal comes last.
+    tu_process_wait_signaled(process);
+    return true;
 }
 
 static void msg_loop(mx_handle_t channel)
@@ -501,11 +581,8 @@ static bool process_start_test(void)
     read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
     send_msg(our_channel, MSG_DONE);
     resume_thread_from_exception(child, tid, 0);
-    mx_koid_t tid2;
-    read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXIT, false, &tid2);
-    ASSERT_EQ(tid2, tid, "exiting tid mismatch");
-    resume_thread_from_exception(child, tid, 0);
-    tu_process_wait_signaled(child);
+
+    wait_process_exit_from_debugger(eport, child, tid);
 
     tu_handle_close(child);
     tu_handle_close(eport);
@@ -526,14 +603,10 @@ static bool process_gone_notification_test(void)
     tu_set_exception_port(child, eport, 0, 0);
 
     send_msg(our_channel, MSG_DONE);
-    mx_koid_t tid;
-    read_and_verify_exception(eport, "process gone", child, MX_EXCP_GONE, true, &tid);
-    ASSERT_EQ(tid, 0u, "tid not zero");
-    // there's no reply to a "gone" notification
 
-    tu_process_wait_signaled(child);
+    wait_process_exit(eport, child);
+
     tu_handle_close(child);
-
     tu_handle_close(eport);
     tu_handle_close(our_channel);
 
@@ -551,6 +624,8 @@ static bool thread_gone_notification_test(void)
     thrd_t thread;
     tu_thread_create_c11(&thread, thread_func, (void*) (uintptr_t) their_channel, "thread-gone-test-thread");
     mx_handle_t thread_handle = thrd_get_mx_handle(thread);
+    // Attach to the thread exception report as we're testing for MX_EXCP_GONE
+    // reports from the thread here.
     tu_set_exception_port(thread_handle, eport, 0, 0);
 
     send_msg(our_channel, MSG_DONE);
@@ -676,9 +751,11 @@ static bool trigger_test(void)
         tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
         child = tu_launch_mxio_fini(lp);
         // Now we own the child handle, and lp is destroyed.
+
         mx_koid_t tid;
         read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
         resume_thread_from_exception(child, tid, 0);
+
         mx_exception_packet_t packet;
         if (read_exception(eport, &packet)) {
             if (packet.report.header.type != MX_EXCP_THREAD_EXIT) {
@@ -689,8 +766,12 @@ static bool trigger_test(void)
                 ASSERT_EQ(tid2, tid, "exiting tid mismatch");
             }
             resume_thread_from_exception(child, tid, 0);
-            tu_process_wait_signaled(child);
+
+            // We've already seen tid's thread-exit report, so just skip that
+            // test here.
+            wait_process_exit(eport, child);
         }
+
         tu_handle_close(child);
         tu_handle_close(eport);
         tu_handle_close(our_channel);
@@ -722,6 +803,86 @@ static bool unbind_while_stopped_test(void)
     tu_set_exception_port(child, MX_HANDLE_INVALID, 0, MX_EXCEPTION_PORT_DEBUGGER);
     send_msg(our_channel, MSG_DONE);
     tu_process_wait_signaled(child);
+
+    tu_handle_close(child);
+    tu_handle_close(eport);
+    tu_handle_close(our_channel);
+
+    END_TEST;
+}
+
+static bool unbind_rebind_while_stopped_test(void)
+{
+    BEGIN_TEST;
+    unittest_printf("unbind_rebind_while_stopped tests\n");
+
+    mx_handle_t child, our_channel;
+    const char* arg = "";
+    launchpad_t* lp = setup_test_child(arg, &our_channel);
+    mx_handle_t eport = tu_io_port_create(0);
+    // Note: child is a borrowed handle, launchpad still owns it at this point.
+    child = launchpad_get_process_handle(lp);
+    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    child = tu_launch_mxio_fini(lp);
+    // Now we own the child handle, and lp is destroyed.
+
+    mx_koid_t tid;
+    mx_exception_packet_t start_packet;
+    // Assert reading the start packet succeeds because otherwise the rest
+    // of the test is moot.
+    ASSERT_TRUE(read_exception(eport, &start_packet), "error reading start exception");
+    ASSERT_TRUE(verify_exception(&start_packet, "process start", child,
+                                 MX_EXCP_START, false, &tid),
+                "unexpected exception");
+
+    // Unbind the exception port quietly, meaning to leave the thread
+    // waiting for an exception response.
+    tu_set_exception_port(child, MX_HANDLE_INVALID, 0,
+                          MX_EXCEPTION_PORT_DEBUGGER | MX_EXCEPTION_PORT_UNBIND_QUIETLY);
+
+    // Rebind and fetch the exception report, it should match the one
+    // we just got.
+
+    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    mx_handle_t thread;
+    mx_status_t status = mx_object_get_child(child, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    if (status < 0)
+        tu_fatal("mx_object_get_child", status);
+
+    // Verify mx_info_thread_t indicates waiting for debugger response.
+    mx_info_thread_t info;
+    status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
+    if (status < 0)
+        tu_fatal("mx_object_get_info(MX_INFO_THREAD)", status);
+    EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_DEBUGGER, "wrong exception port type");
+
+    // Verify exception report matches current exception.
+    mx_exception_report_t report;
+    status = mx_object_get_info(thread, MX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), NULL, NULL);
+    if (status < 0)
+        tu_fatal("mx_object_get_info(MX_INFO_THREAD_EXCEPTION_REPORT)", status);
+    EXPECT_EQ(report.header.size, start_packet.report.header.size, "size mismatch");
+    EXPECT_EQ(report.header.type, start_packet.report.header.type, "type mismatch");
+    EXPECT_EQ(report.context.arch_id, start_packet.report.context.arch_id, "arch_id mismatch");
+    EXPECT_EQ(report.context.pid, start_packet.report.context.pid, "pid mismatch");
+    EXPECT_EQ(report.context.tid, start_packet.report.context.tid, "tid mismatch");
+    // The "thread-start" report is a synthetic exception and doesn't contain
+    // any arch info yet, so we can't test report.context.arch.
+
+    // Done verifying we got the same exception, send the child on its way
+    // and tell it we're done.
+    resume_thread_from_exception(child, tid, 0);
+    send_msg(our_channel, MSG_DONE);
+
+    wait_process_exit_from_debugger(eport, child, tid);
+
+    // We should still be able to get info on the thread.
+    status = mx_object_get_info(thread, MX_INFO_THREAD, &info, sizeof(info), NULL, NULL);
+    if (status < 0)
+        tu_fatal("mx_object_get_info(MX_INFO_THREAD)", status);
+    EXPECT_EQ(info.wait_exception_port_type, MX_EXCEPTION_PORT_TYPE_NONE, "wrong exception port type at thread exit");
+
+    tu_handle_close(thread);
     tu_handle_close(child);
     tu_handle_close(eport);
     tu_handle_close(our_channel);
@@ -740,6 +901,7 @@ RUN_TEST(process_gone_notification_test);
 RUN_TEST(thread_gone_notification_test);
 RUN_TEST(trigger_test);
 RUN_TEST(unbind_while_stopped_test);
+RUN_TEST(unbind_rebind_while_stopped_test);
 END_TEST_CASE(exceptions_tests)
 
 static void check_verbosity(int argc, char** argv)

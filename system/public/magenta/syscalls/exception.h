@@ -149,4 +149,12 @@ typedef enum {
 // got an exception and are waiting for a response from this exception port
 // will continue to wait for a response.
 
+// The type of exception port a thread may be waiting for a response from.
+// These values are reported in mx_info_thread_t.exception_port.
+#define MX_EXCEPTION_PORT_TYPE_NONE     (0u)
+#define MX_EXCEPTION_PORT_TYPE_DEBUGGER (1u)
+#define MX_EXCEPTION_PORT_TYPE_THREAD   (2u)
+#define MX_EXCEPTION_PORT_TYPE_PROCESS  (3u)
+#define MX_EXCEPTION_PORT_TYPE_SYSTEM   (4u)
+
 __END_CDECLS
