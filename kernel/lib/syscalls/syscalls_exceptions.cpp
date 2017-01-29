@@ -30,12 +30,12 @@
 
 #define LOCAL_TRACE 0
 
-static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool debugger) {
+static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool debugger, bool quietly) {
     //TODO: check rights once appropriate right is determined
 
     if (obj_handle == MX_HANDLE_INVALID) {
         //TODO: handle for system exception
-        if (debugger)
+        if (debugger || quietly)
             return ERR_INVALID_ARGS;
         ResetSystemExceptionPort();
         return NO_ERROR;
@@ -50,7 +50,7 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
-        process->ResetExceptionPort(debugger);
+        process->ResetExceptionPort(debugger, quietly);
         return NO_ERROR;
     }
 
@@ -58,7 +58,7 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
     if (thread) {
         if (debugger)
             return ERR_INVALID_ARGS;
-        thread->ResetExceptionPort();
+        thread->ResetExceptionPort(quietly);
         return NO_ERROR;
     }
 
@@ -110,12 +110,19 @@ mx_status_t sys_object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t e
                                            uint64_t key, uint32_t options) {
     LTRACE_ENTRY;
 
-    if (options & ~MX_EXCEPTION_PORT_DEBUGGER)
-        return ERR_INVALID_ARGS;
+    if (eport_handle == MX_HANDLE_INVALID) {
+        if (options & ~(MX_EXCEPTION_PORT_DEBUGGER + MX_EXCEPTION_PORT_UNBIND_QUIETLY))
+            return ERR_INVALID_ARGS;
+    } else {
+        if (options & ~MX_EXCEPTION_PORT_DEBUGGER)
+            return ERR_INVALID_ARGS;
+    }
+
     bool debugger = (options & MX_EXCEPTION_PORT_DEBUGGER) != 0;
 
     if (eport_handle == MX_HANDLE_INVALID) {
-        return object_unbind_exception_port(obj_handle, debugger);
+        bool quietly = (options & MX_EXCEPTION_PORT_UNBIND_QUIETLY) != 0;
+        return object_unbind_exception_port(obj_handle, debugger, quietly);
     } else {
         return object_bind_exception_port(obj_handle, eport_handle, key, debugger);
     }

@@ -33,7 +33,7 @@ public:
 
     // exception handling support
     status_t SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport);
-    void ResetExceptionPort();
+    void ResetExceptionPort(bool quietly);
 
     void get_name(char out_name[MX_MAX_NAME_LEN]) const final;
     status_t set_name(const char* name, size_t len) final;

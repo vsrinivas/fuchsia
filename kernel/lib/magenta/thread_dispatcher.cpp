@@ -58,8 +58,8 @@ status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
     return thread_->SetExceptionPort(this, eport);
 }
 
-void ThreadDispatcher::ResetExceptionPort() {
-    return thread_->ResetExceptionPort();
+void ThreadDispatcher::ResetExceptionPort(bool quietly) {
+    return thread_->ResetExceptionPort(quietly);
 }
 
 void ThreadDispatcher::get_name(char out_name[MX_MAX_NAME_LEN]) const {

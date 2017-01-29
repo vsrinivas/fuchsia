@@ -132,5 +132,9 @@ typedef enum {
 #define MX_EXCEPTION_PORT_DEBUGGER (1)
 // When binding an exception port to a process, set the process's debugger
 // exception port.
+#define MX_EXCEPTION_PORT_UNBIND_QUIETLY (2)
+// When unbinding an exception port from a thread or process, any threads that
+// got an exception and are waiting for a response from this exception port
+// will continue to wait for a response.
 
 __END_CDECLS

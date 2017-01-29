@@ -521,7 +521,7 @@ status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, 
     return NO_ERROR;
 }
 
-void ProcessDispatcher::ResetExceptionPort(bool debugger) {
+void ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
     mxtl::RefPtr<ExceptionPort> eport;
 
     // Remove the exception handler first. As we resume threads we don't
@@ -536,9 +536,11 @@ void ProcessDispatcher::ResetExceptionPort(bool debugger) {
         }
     }
 
-    AutoLock lock(&state_lock_);
-    for (auto& thread : thread_list_) {
-        thread.OnExceptionPortRemoval(eport);
+    if (!quietly) {
+        AutoLock lock(&state_lock_);
+        for (auto& thread : thread_list_) {
+            thread.OnExceptionPortRemoval(eport);
+        }
     }
 }
 
