@@ -83,8 +83,8 @@ class LinkWatcherImpl extends LinkWatcher {
   /// A callback called whenever the associated [Link] has new changes.
   @override
   void notify(String json) {
-    _log('Parent LinkWatcherImpl.notify call');
-    _log('Parent JSON: $json');
+    _log('LinkWatcherImpl.notify()');
+    _log('Link data: $json');
     dynamic doc = JSON.decode(json);
     if (doc is Map &&
         doc[_kDocRoot] is Map &&
@@ -116,7 +116,7 @@ class ModuleImpl extends Module {
       InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
-    _log('ModuleImpl::initialize call');
+    _log('ModuleImpl.initialize()');
 
     // Bind the provided handles to our proxy objects.
     _story.ctrl.bind(storyHandle);
@@ -134,7 +134,7 @@ class ModuleImpl extends Module {
         new InterfacePair<ModuleController>();
     InterfacePair<ViewOwner> viewOwnerPair = new InterfacePair<ViewOwner>();
 
-    // Start the folder list module.
+    // Start the child module.
     _story.startModule(
       'file:///system/apps/example_flutter_counter_child',
       _linkForChild.ctrl.unbind(),
@@ -150,7 +150,7 @@ class ModuleImpl extends Module {
 
   @override
   void stop(void callback()) {
-    _log('ModuleImpl::stop call');
+    _log('ModuleImpl.stop()');
 
     // Do some clean up here.
     _linkWatcher.close();
@@ -170,10 +170,15 @@ class ModuleImpl extends Module {
 }
 
 class _HomeScreen extends StatefulWidget {
-  _HomeScreen({Key key}) : super(key: key);
+  _HomeScreen({Key key}) : super(key: key) {
+    _log("HomeScreen()");
+  }
 
   @override
-  _HomeScreenState createState() => new _HomeScreenState();
+  _HomeScreenState createState() {
+    _log("HomeScreen.createState()");
+    return new _HomeScreenState();
+  }
 }
 
 class _HomeScreenState extends State<_HomeScreen> {
@@ -184,11 +189,13 @@ class _HomeScreenState extends State<_HomeScreen> {
   }
 
   void updateValue(int value) {
+    _log("HomeScreenState.updateValue()");
     setState(() => _linkValue = value);
   }
 
   @override
   Widget build(BuildContext context) {
+    _log("HomeScreenState::build()");
     List<Widget> children = <Widget>[
       new Text('I am the parent module!'),
       new Text('Current Value: $_currentValue'),
@@ -202,6 +209,10 @@ class _HomeScreenState extends State<_HomeScreen> {
           new RaisedButton(
             onPressed: _handleDecrease,
             child: new Text('Decrease'),
+          ),
+          new RaisedButton(
+            onPressed: _handleStop,
+            child: new Text('Stop'),
           ),
         ],
       ),
@@ -224,6 +235,7 @@ class _HomeScreenState extends State<_HomeScreen> {
 
   /// Convenient method for others to trigger UI update.
   void updateUI() {
+    _log("HomeScreenState.updateUI()");
     setState(() {});
   }
 
@@ -234,15 +246,19 @@ class _HomeScreenState extends State<_HomeScreen> {
   void _handleDecrease() {
     _module._setValue(_currentValue - 1);
   }
+
+  void _handleStop() {
+    _module._story.done();
+  }
 }
 
 /// Main entry point to the example parent module.
 void main() {
-  _log('Parent module started with context: $_context');
+  _log('main()');
 
   _context.outgoingServices.addServiceForName(
     (InterfaceRequest<Module> request) {
-      _log('Received binding request for Module');
+      _log('Service request for Module');
       _module = new ModuleImpl()..bind(request);
     },
     Module.serviceName,
@@ -252,6 +268,8 @@ void main() {
     title: 'Counter Parent',
     home: new _HomeScreen(key: _homeKey),
     theme: new ThemeData(primarySwatch: Colors.orange),
-    debugShowCheckedModeBanner: false,
+    debugShowCheckedModeBanner: true,
   ));
+
+  _log('main() exit');
 }

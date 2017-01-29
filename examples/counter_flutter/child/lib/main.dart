@@ -46,8 +46,8 @@ class LinkWatcherImpl extends LinkWatcher {
   /// A callback called whenever the associated [Link] has new changes.
   @override
   void notify(String json) {
-    _log('Child LinkWatcherImpl.notify call');
-    _log('Child JSON: ${json}');
+    _log('LinkWatcherImpl.notify()');
+    _log('Link data: ${json}');
     dynamic doc = JSON.decode(json);
     if (doc is Map &&
         doc[_kDocRoot] is Map &&
@@ -78,7 +78,7 @@ class ModuleImpl extends Module {
       InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
-    _log('ModuleImpl::initialize call');
+    _log('ModuleImpl.initialize()');
 
     // Bind the provided handles to our proxy objects.
     _link.ctrl.bind(linkHandle);
@@ -91,7 +91,7 @@ class ModuleImpl extends Module {
 
   @override
   void stop(void callback()) {
-    _log('ModuleImpl::stop call');
+    _log('ModuleImpl.stop()');
 
     // Do some clean up here.
     _linkWatcher.close();
@@ -174,11 +174,11 @@ class _HomeScreenState extends State<_HomeScreen> {
 
 /// Main entry point to the example child module.
 void main() {
-  _log('Child module started with context: $_context');
+  _log('main()');
 
   _context.outgoingServices.addServiceForName(
     (InterfaceRequest<Module> request) {
-      _log('Received binding request for Module');
+      _log('Service request for Module');
       _module = new ModuleImpl()..bind(request);
     },
     Module.serviceName,
@@ -190,4 +190,6 @@ void main() {
     theme: new ThemeData(primarySwatch: Colors.blue),
     debugShowCheckedModeBanner: false,
   ));
+
+  _log('main() exit');
 }
