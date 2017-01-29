@@ -671,6 +671,36 @@ static bool trigger_test(void)
     END_TEST;
 }
 
+static bool unbind_while_stopped_test(void)
+{
+    BEGIN_TEST;
+    unittest_printf("unbind_while_stopped tests\n");
+
+    mx_handle_t child, our_channel;
+    const char* arg = "";
+    launchpad_t* lp = setup_test_child(arg, &our_channel);
+    mx_handle_t eport = tu_io_port_create(0);
+    // Note: child is a borrowed handle, launchpad still owns it at this point.
+    child = launchpad_get_process_handle(lp);
+    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    child = tu_launch_mxio_fini(lp);
+    // Now we own the child handle, and lp is destroyed.
+    mx_koid_t tid;
+    read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
+
+    // Now unbind the exception port and wait for the child to cleanly exit.
+    // If this doesn't work a thread will stay blocked, we'll timeout, and
+    // the watchdog will trigger.
+    tu_set_exception_port(child, MX_HANDLE_INVALID, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    send_msg(our_channel, MSG_DONE);
+    tu_process_wait_signaled(child);
+    tu_handle_close(child);
+    tu_handle_close(eport);
+    tu_handle_close(our_channel);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(exceptions_tests)
 RUN_TEST(process_set_close_set_test);
 RUN_TEST(thread_set_close_set_test);
@@ -680,6 +710,7 @@ RUN_TEST(process_start_test);
 RUN_TEST(process_gone_notification_test);
 RUN_TEST(thread_gone_notification_test);
 RUN_TEST(trigger_test);
+RUN_TEST(unbind_while_stopped_test);
 END_TEST_CASE(exceptions_tests)
 
 static void check_verbosity(int argc, char** argv)

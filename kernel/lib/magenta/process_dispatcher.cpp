@@ -506,11 +506,23 @@ status_t ProcessDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport, 
 }
 
 void ProcessDispatcher::ResetExceptionPort(bool debugger) {
-    AutoLock lock(&exception_lock_);
-    if (debugger) {
-        debugger_exception_port_.reset();
-    } else {
-        exception_port_.reset();
+    mxtl::RefPtr<ExceptionPort> eport;
+
+    // Remove the exception handler first. As we resume threads we don't
+    // want them to hit another exception and get back into
+    // ExceptionHandlerExchange.
+    {
+        AutoLock lock(&exception_lock_);
+        if (debugger) {
+            debugger_exception_port_.swap(eport);
+        } else {
+            exception_port_.swap(eport);
+        }
+    }
+
+    AutoLock lock(&state_lock_);
+    for (auto& thread : thread_list_) {
+        thread.OnExceptionPortRemoval(eport);
     }
 }
 

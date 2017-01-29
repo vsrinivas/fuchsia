@@ -340,8 +340,17 @@ status_t UserThread::SetExceptionPort(ThreadDispatcher* td, mxtl::RefPtr<Excepti
 }
 
 void UserThread::ResetExceptionPort() {
-    AutoLock lock(exception_lock_);
-    exception_port_.reset();
+    mxtl::RefPtr<ExceptionPort> eport;
+
+    // Remove the exception handler first. If the thread resumes execution
+    // we don't want it to hit another exception and get back into
+    // ExceptionHandlerExchange.
+    {
+        AutoLock lock(exception_lock_);
+        exception_port_.swap(eport);
+    }
+
+    OnExceptionPortRemoval(eport);
 }
 
 mxtl::RefPtr<ExceptionPort> UserThread::exception_port() {
@@ -359,14 +368,6 @@ status_t UserThread::ExceptionHandlerExchange(
     LTRACE_ENTRY_OBJ;
     AutoLock lock(exception_wait_lock_);
 
-    // So the handler can read/write our general registers.
-    thread_.exception_context = arch_context;
-
-    // So various bits know we're stopped in an exception.
-    thread_.flags |= THREAD_FLAG_STOPPED_FOR_EXCEPTION;
-
-    exception_status_ = MX_EXCEPTION_STATUS_WAITING;
-
     // Send message, wait for reply.
     // Note that there is a "race" that we need handle: We need to send the
     // exception report before going to sleep, but what if the receiver of the
@@ -377,17 +378,29 @@ status_t UserThread::ExceptionHandlerExchange(
     status_t status = eport->SendReport(report);
     if (status != NO_ERROR) {
         LTRACEF("SendReport returned %d\n", status);
-        exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
-        thread_.exception_context = NULL;
-        thread_.flags &= ~THREAD_FLAG_STOPPED_FOR_EXCEPTION;
         return status;
     }
+
+    // So the handler can read/write our general registers.
+    thread_.exception_context = arch_context;
+
+    // So various bits know we're stopped in an exception.
+    thread_.flags |= THREAD_FLAG_STOPPED_FOR_EXCEPTION;
+
+    // For OnExceptionPortRemoval in case the port is unbound.
+    DEBUG_ASSERT(exception_wait_port_ == nullptr);
+    exception_wait_port_ = eport;
+
+    exception_status_ = MX_EXCEPTION_STATUS_WAITING;
     status = cond_wait_timeout(&exception_wait_cond_, exception_wait_lock_.GetInternal(), INFINITE_TIME);
     DEBUG_ASSERT(status == NO_ERROR);
     DEBUG_ASSERT(exception_status_ != MX_EXCEPTION_STATUS_WAITING);
 
-    thread_.exception_context = NULL;
+    exception_wait_port_.reset();
     thread_.flags &= ~THREAD_FLAG_STOPPED_FOR_EXCEPTION;
+    thread_.exception_context = nullptr;
+
+    LTRACEF("ExceptionHandlerExchange returning\n");
     if (exception_status_ != MX_EXCEPTION_STATUS_RESUME)
         return ERR_BAD_STATE;
     return NO_ERROR;
@@ -401,6 +414,17 @@ status_t UserThread::MarkExceptionHandled(mx_exception_status_t status) {
     exception_status_ = status;
     cond_signal(&exception_wait_cond_);
     return NO_ERROR;
+}
+
+void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport) {
+    LTRACE_ENTRY_OBJ;
+    AutoLock lock(exception_wait_lock_);
+    if (exception_status_ != MX_EXCEPTION_STATUS_WAITING)
+        return;
+    if (exception_wait_port_ == eport) {
+        exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
+        cond_signal(&exception_wait_cond_);
+    }
 }
 
 uint32_t UserThread::get_num_state_kinds() const {
