@@ -16,11 +16,7 @@ final ApplicationContext _context = new ApplicationContext.fromStartupInfo();
 
 final GlobalKey<_HomeScreenState> _homeKey = new GlobalKey<_HomeScreenState>();
 
-final String _kDocRoot = 'counters';
-final String _kDocId = 'counter-doc-id';
 final String _kCounterValueKey = "http://schema.domokit.org/counter";
-final String _kPingPongPacketType = 'http://schema.domokit.org/PingPongPacket';
-final String _kAtTypeKey = '@type';
 
 ModuleImpl _module;
 
@@ -49,12 +45,8 @@ class LinkWatcherImpl extends LinkWatcher {
     _log('LinkWatcherImpl.notify()');
     _log('Link data: ${json}');
     dynamic doc = JSON.decode(json);
-    if (doc is Map &&
-        doc[_kDocRoot] is Map &&
-        doc[_kDocRoot][_kDocId] is Map &&
-        doc[_kDocRoot][_kDocId][_kCounterValueKey] is int) {
-      _homeKey.currentState
-          ?.updateValue(doc[_kDocRoot][_kDocId][_kCounterValueKey]);
+    if (doc is Map && doc[_kCounterValueKey] is int) {
+      _homeKey.currentState?.updateValue(doc[_kCounterValueKey]);
     }
   }
 }
@@ -65,7 +57,7 @@ class ModuleImpl extends Module {
   final LinkProxy _link = new LinkProxy();
   final LinkWatcherImpl _linkWatcher = new LinkWatcherImpl();
 
-  final List<String> _jsonPath = <String>[_kDocRoot, _kDocId];
+  final List<String> _jsonPath = <String>[_kCounterValueKey];
 
   void bind(InterfaceRequest<Module> request) {
     _binding.bind(this, request);
@@ -85,8 +77,6 @@ class ModuleImpl extends Module {
 
     // Register the link watcher.
     _link.watchAll(_linkWatcher.getHandle());
-
-    _initValue(42);
   }
 
   @override
@@ -101,19 +91,8 @@ class ModuleImpl extends Module {
     callback();
   }
 
-  void _initValue(int newValue) {
-    _link.set(
-        _jsonPath,
-        JSON.encode(<String, dynamic>{
-          _kAtTypeKey: _kPingPongPacketType,
-          _kCounterValueKey: newValue,
-        }));
-  }
-
   void _setValue(int newValue) {
-    // Update just the value of interest. Don't overwrite other members.
-    _link.updateObject(
-        _jsonPath, JSON.encode(<String, dynamic>{_kCounterValueKey: newValue}));
+    _link.set(_jsonPath, JSON.encode(newValue));
   }
 }
 

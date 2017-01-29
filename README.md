@@ -22,7 +22,7 @@ On the Fuchsia command line you can start an example application flow like this:
 A single application can be run using the `dev_user_shell`, for example:
 
 ```sh
-@ bootstrap device_runner --user-shell=dev_user_shell --user-shell-args='--root-module=example_recipe,--root-link={"http://schema.domokit.org/counter":5\,"http://schema.org/sender":"dev_user_shell"}'
+@ bootstrap device_runner --user-shell=dev_user_shell --user-shell-args='--root-module=example_flutter_counter_parent,--root-link={"http://schema.domokit.org/counter":5}'
 ```
 
 The flags `--user-shell` and `--user-shell-args` are read by `device_runner`.
