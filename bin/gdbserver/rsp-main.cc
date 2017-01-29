@@ -79,7 +79,8 @@ int main(int argc, char* argv[]) {
 
   std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
                                          cl.positional_args().end());
-  auto inferior = new debugserver::Process(&server, &server, inferior_argv);
+  auto inferior = new debugserver::Process(&server, &server);
+  inferior->set_argv(inferior_argv);
 
   // It's simpler to set the current process here since we don't support
   // multiple processes yet. The process is not live yet however, it does not

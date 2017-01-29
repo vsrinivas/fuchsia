@@ -29,6 +29,8 @@ extern struct r_debug* _dl_debug_addr;
 namespace debugserver {
 namespace {
 
+constexpr mx_time_t kill_timeout = MX_MSEC(10 * 1000);
+
 bool SetupLaunchpad(launchpad_t** out_lp, const vector<string>& argv) {
   FTL_DCHECK(out_lp);
   FTL_DCHECK(argv.size() > 0);
@@ -125,6 +127,9 @@ mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
   // Syscalls shouldn't return MX_HANDLE_INVALID in the case of NO_ERROR.
   FTL_DCHECK(debug_handle != MX_HANDLE_INVALID);
 
+  FTL_VLOG(1) << "Debug handle " << debug_handle
+              << " obtained for process " << pid;
+
   return debug_handle;
 }
 
@@ -147,10 +152,9 @@ const char* Process::StateName(Process::State state) {
   return "(unknown)";
 }
 
-Process::Process(Server* server, Delegate* delegate, const vector<string>& argv)
+Process::Process(Server* server, Delegate* delegate)
     : server_(server),
       delegate_(delegate),
-      argv_(argv),
       memory_(this),
       breakpoints_(this) {
   FTL_DCHECK(server_);
@@ -158,9 +162,17 @@ Process::Process(Server* server, Delegate* delegate, const vector<string>& argv)
 }
 
 Process::~Process() {
+  // If we're still attached then either kill the process if we
+  // started it or detach if we attached to it after it was running.
+  if (attached_running_) {
+    RawDetach();
+  } else {
+    if (!Kill()) {
+      // Paranoia: Still need to detach before we can call Clear().
+      RawDetach();
+    }
+  }
   Clear();
-
-  // TODO(armanisto): Somehow kill the process here if it's running.
 }
 
 std::string Process::GetName() const {
@@ -188,6 +200,8 @@ bool Process::Initialize() {
 
   FTL_LOG(INFO) << "Initializing process";
 
+  attached_running_ = false;
+
   if (argv_.size() == 0 || argv_[0].size() == 0) {
     FTL_LOG(ERROR) << "No program specified";
     return false;
@@ -206,13 +220,6 @@ bool Process::Initialize() {
   // Initialize the PID.
   id_ = GetProcessId(launchpad_);
   FTL_DCHECK(id_ != MX_KOID_INVALID);
-
-  // Now we need a debug-capable handle of the process.
-  debug_handle_ = GetProcessDebugHandle(id_);
-  if (!debug_handle_)
-    goto fail;
-
-  FTL_VLOG(1) << "Debug handle " << debug_handle_ << " obtained for process";
 
   status = launchpad_get_base_address(launchpad_, &base_address_);
   if (status != NO_ERROR) {
@@ -238,54 +245,123 @@ bool Process::Initialize() {
 
 fail:
   id_ = MX_KOID_INVALID;
-  if (debug_handle_ != MX_HANDLE_INVALID)
-    mx_handle_close(debug_handle_);
-  debug_handle_ = MX_HANDLE_INVALID;
   launchpad_destroy(launchpad_);
   launchpad_ = nullptr;
   return false;
 }
 
-bool Process::Attach() {
-  FTL_DCHECK(debug_handle_);
+// TODO(dje): Merge common parts with Initialize() after things settle down.
 
+bool Process::Initialize(mx_koid_t pid) {
+  FTL_DCHECK(!launchpad_);
+  FTL_DCHECK(!debug_handle_);
+  FTL_DCHECK(!eport_key_);
+
+  // The Process object survives run-after-run. Switch Gone back to New.
+  switch (state_) {
+    case State::kNew:
+      break;
+    case State::kGone:
+      set_state(State::kNew);
+      break;
+    default:
+      // Shouldn't get here if process is currently live.
+      FTL_DCHECK(false);
+  }
+
+  FTL_LOG(INFO) << "Initializing process";
+
+  attached_running_ = true;
+  id_ = pid;
+
+  FTL_LOG(INFO) << "Process setup complete";
+
+  return true;
+}
+
+bool Process::AllocDebugHandle() {
+  auto handle = GetProcessDebugHandle(id_);
+  if (handle == MX_HANDLE_INVALID)
+    return false;
+  debug_handle_ = handle;
+  return true;
+}
+
+void Process::CloseDebugHandle() {
+  mx_handle_close(debug_handle_);
+  debug_handle_ = MX_HANDLE_INVALID;
+}
+
+bool Process::BindExceptionPort() {
+  ExceptionPort::Key key = server_->exception_port()->Bind(
+    debug_handle_,
+    std::bind(&Process::OnException, this, std::placeholders::_1,
+              std::placeholders::_2));
+  if (!key)
+    return false;
+  eport_key_ = key;
+  return true;
+}
+
+void Process::UnbindExceptionPort() {
+  FTL_DCHECK(eport_key_);
+  if (!server_->exception_port()->Unbind(eport_key_))
+    FTL_LOG(WARNING) << "Failed to unbind exception port; ignoring";
+  eport_key_ = 0;
+}
+
+bool Process::Attach() {
   if (IsAttached()) {
     FTL_LOG(ERROR) << "Cannot attach an already attached process";
     return false;
   }
 
-  ExceptionPort::Key key = server_->exception_port()->Bind(
-      *this, std::bind(&Process::OnException, this, std::placeholders::_1,
-                       std::placeholders::_2));
-  if (!key) {
-    FTL_LOG(ERROR) << "Failed to attach: could not bind exception port";
+  FTL_LOG(INFO) << "Attaching to process " << id();
+
+  if (!AllocDebugHandle())
+    return false;
+
+  if (!BindExceptionPort()) {
+    CloseDebugHandle();
     return false;
   }
 
-  eport_key_ = key;
+  if (attached_running_) {
+    set_state(State::kRunning);
+    thread_map_stale_ = true;
+  }
 
   return true;
 }
 
-void Process::Detach() {
+void Process::RawDetach() {
   // A copy of the handle is kept in ExceptionPort.BindData.
   // We can't close the process handle until we unbind the exception port,
   // so verify it's still open.
   FTL_DCHECK(debug_handle_);
   FTL_DCHECK(IsAttached());
 
-  FTL_DCHECK(eport_key_);
-  if (!server_->exception_port()->Unbind(eport_key_))
-    FTL_LOG(WARNING) << "Failed to unbind exception port; ignoring";
+  FTL_LOG(INFO) << "Detaching from process " << id();
 
-  eport_key_ = 0;
+  UnbindExceptionPort();
+  CloseDebugHandle();
+}
+
+bool Process::Detach() {
+  if (!IsAttached()) {
+    FTL_LOG(ERROR) << "Not attached";
+    return false;
+  }
+  RawDetach();
+  Clear();
+  return true;
 }
 
 bool Process::Start() {
   FTL_DCHECK(launchpad_);
   FTL_DCHECK(debug_handle_);
 
-  if (started_) {
+  if (state_ != State::kNew) {
     FTL_LOG(ERROR) << "Process already started";
     return false;
   }
@@ -305,9 +381,55 @@ bool Process::Start() {
   }
   mx_handle_close(dup_handle);
 
-  started_ = true;
   set_state(State::kStarting);
+  return true;
+}
 
+bool Process::Kill() {
+  // If the caller wants to flag an error if the process isn't running s/he
+  // can, but for our purposes here we're more forgiving.
+  switch (state_) {
+    case Process::State::kNew:
+    case Process::State::kGone:
+      FTL_VLOG(1) << "Process is not live";
+      return true;
+    default:
+      break;
+  }
+
+  FTL_LOG(INFO) << "Killing process " << id();
+
+  // There's a few issues with sequencing here that we need to consider.
+  // - OnProcessOrThreadExited, called when we receive an exception indicating
+  //   the process has exited, will send back a stop reply which we don't want
+  // - we don't want to unbind the exception port before killing the process
+  //   because we don't want to accidently cause the process to resume before
+  //   we kill it
+  // - we need the debug handle to kill the process
+
+  FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
+  auto status = mx_task_kill(debug_handle_);
+  if (status != NO_ERROR) {
+    util::LogErrorWithMxStatus("Failed to kill process", status);
+    return false;
+  }
+
+  UnbindExceptionPort();
+
+  mx_signals_t signals;
+  // If something goes wrong we don't want to wait forever.
+  status = mx_handle_wait_one(debug_handle_, MX_TASK_TERMINATED,
+                              kill_timeout, &signals);
+  if (status != NO_ERROR) {
+    util::LogErrorWithMxStatus("Error waiting for process to die, ignoring",
+                               status);
+  } else {
+    FTL_DCHECK(signals == MX_TASK_TERMINATED);
+  }
+
+  CloseDebugHandle();
+
+  Clear();
   return true;
 }
 
@@ -320,10 +442,9 @@ void Process::set_state(State new_state) {
       FTL_DCHECK(state_ == State::kNew);
       break;
     case State::kRunning:
-      FTL_DCHECK(state_ == State::kStarting);
+      FTL_DCHECK(state_ == State::kNew || state_ == State::kStarting);
       break;
     case State::kGone:
-      FTL_DCHECK(state_ == State::kStarting || state_ == State::kRunning);
       break;
     default:
       FTL_DCHECK(false);
@@ -332,33 +453,42 @@ void Process::set_state(State new_state) {
 }
 
 void Process::Clear() {
-  if (IsAttached())
-    Detach();
+  // The process must already be fully detached from.
+  FTL_DCHECK(debug_handle_ == MX_HANDLE_INVALID);
+  FTL_DCHECK(!eport_key_);
 
   threads_.clear();
-
-  // We close the handle here so the o/s will release the process.
-  if (debug_handle_ != MX_HANDLE_INVALID)
-    mx_handle_close(debug_handle_);
-  debug_handle_ = MX_HANDLE_INVALID;
+  thread_map_stale_ = false;
 
   id_ = MX_KOID_INVALID;
   base_address_ = 0;
   entry_address_ = 0;
-  started_ = false;
+  attached_running_ = false;
 
   dso_free_list(dsos_);
   dsos_ = nullptr;
+  dsos_build_failed_ = false;
 
   if (launchpad_)
     launchpad_destroy(launchpad_);
   launchpad_ = nullptr;
 
-  // If the process just exited, leave the state as kGone.
+  // The process may just exited or whatever. Force the state to kGone.
+  set_state(State::kGone);
+}
+
+bool Process::IsLive() const {
+  return state_ != State::kNew && state_ != State::kGone;
 }
 
 bool Process::IsAttached() const {
   return !!eport_key_;
+}
+
+void Process::EnsureThreadMapFresh() {
+  if (thread_map_stale_) {
+    RefreshAllThreads();
+  }
 }
 
 Thread* Process::FindThreadById(mx_koid_t thread_id) {
@@ -367,6 +497,8 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
     FTL_LOG(ERROR) << "Invalid thread ID given: " << thread_id;
     return nullptr;
   }
+
+  EnsureThreadMapFresh();
 
   const auto iter = threads_.find(thread_id);
   if (iter != threads_.end()) {
@@ -396,6 +528,8 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
 }
 
 Thread* Process::PickOneThread() {
+  EnsureThreadMapFresh();
+
   if (threads_.empty())
     return nullptr;
 
@@ -412,7 +546,7 @@ bool Process::RefreshAllThreads() {
       mx_object_get_info(debug_handle_, MX_INFO_PROCESS_THREADS, nullptr, 0,
                          nullptr, &num_threads);
   if (status != NO_ERROR) {
-    util::LogErrorWithMxStatus("Failed to get process thread info", status);
+    util::LogErrorWithMxStatus("Failed to get process thread info (#threads)", status);
     return false;
   }
 
@@ -445,16 +579,21 @@ bool Process::RefreshAllThreads() {
 
   // Just clear the existing list and repopulate it.
   threads_ = std::move(new_threads);
+  thread_map_stale_ = false;
 
   return true;
 }
 
 void Process::ForEachThread(const ThreadCallback& callback) {
+  EnsureThreadMapFresh();
+
   for (const auto& iter : threads_)
     callback(iter.second.get());
 }
 
 void Process::ForEachLiveThread(const ThreadCallback& callback) {
+  EnsureThreadMapFresh();
+
   for (const auto& iter : threads_) {
     Thread* thread = iter.second.get();
     if (thread->state() != Thread::State::kGone)
@@ -560,7 +699,11 @@ void Process::OnException(const mx_excp_type_t type,
                     << GetName();
         set_state(Process::State::kGone);
         delegate_->OnProcessOrThreadExited(this, thread, type, context);
-        Clear();
+        if (!Detach()) {
+          // This is not a fatal error, just log it.
+          FTL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
+          Clear();
+        }
       }
       break;
     default:

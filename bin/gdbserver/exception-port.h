@@ -20,8 +20,6 @@
 
 namespace debugserver {
 
-class Process;
-
 // Maintains a dedicated thread for listening to exceptions from multiple
 // processes and provides an interface that processes can use to subscribe to
 // exception notifications.
@@ -47,16 +45,17 @@ class ExceptionPort final {
   // underlying thread. This must be called AFTER a successful call to Run().
   void Quit();
 
-  // Binds an exception port for |process| and associates |callback| with it.
-  // The returned key can be used to unbind this process later. On success, a
-  // positive Key value will be returned. On failure, 0 will be returned.
+  // Binds an exception port to |process_handle| and associates |callback|
+  // with it. The returned key can be used to unbind this process later.
+  // On success, a positive Key value will be returned. On failure, 0 will be
+  // returned.
   //
   // The |callback| will be posted on the origin thread's message loop, where
   // the origin thread is the thread on which this ExceptionPort instance was
   // created.
   //
   // This must be called AFTER a successful call to Run().
-  Key Bind(const Process& process, const Callback& callback);
+  Key Bind(const mx_handle_t process_handle, const Callback& callback);
 
   // Unbinds a previously bound exception port and returns true on success.
   // This must be called AFTER a successful call to Run().

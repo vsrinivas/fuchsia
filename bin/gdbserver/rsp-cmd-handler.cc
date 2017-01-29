@@ -35,15 +35,19 @@ const char kSupportedFeatures[] =
     "qXfer:auxv:read+";
 
 const char kAttached[] = "Attached";
-const char kCont[] = "Cont;";
 const char kCurrentThreadId[] = "C";
 const char kFirstThreadInfo[] = "fThreadInfo";
 const char kNonStop[] = "NonStop";
 const char kRcmd[] = "Rcmd,";
-const char kRun[] = "Run;";
 const char kSubsequentThreadInfo[] = "sThreadInfo";
 const char kSupported[] = "Supported";
 const char kXfer[] = "Xfer";
+
+// v Commands
+const char kAttach[] = "Attach;";
+const char kCont[] = "Cont;";
+const char kKill[] = "Kill;";
+const char kRun[] = "Run;";
 
 // qRcmd commands
 const char kExit[] = "exit";
@@ -122,6 +126,8 @@ bool CommandHandler::HandleCommand(const ftl::StringView& packet,
       return Handle_c(packet.substr(1), callback);
     case 'C':  // Continue with signal (optionally at addr)
       return Handle_C(packet.substr(1), callback);
+    case 'D':  // Detach
+      return Handle_D(packet.substr(1), callback);
     case 'g':  // Read general registers
       if (packet.size() > 1)
         break;
@@ -199,7 +205,7 @@ bool CommandHandler::Handle_c(const ftl::StringView& packet,
     // If there is no current thread, then report error. This is a special case
     // that means that the process hasn't started yet.
     if (!current_thread) {
-      FTL_DCHECK(!current_process->started());
+      FTL_DCHECK(!current_process->IsLive());
       return ReplyWithError(util::ErrorCode::PERM, callback);
     }
 
@@ -230,7 +236,7 @@ bool CommandHandler::Handle_c(const ftl::StringView& packet,
   // yet. We start it and set the current thread to the first one the kernel
   // gives us.
   // TODO(armansito): Remove this logic now that we handle MX_EXCP_START?
-  FTL_DCHECK(!current_process->started());
+  FTL_DCHECK(!current_process->IsLive());
   if (!current_process->Start()) {
     FTL_LOG(ERROR) << "c: Failed to start the current inferior";
     return ReplyWithError(util::ErrorCode::PERM, callback);
@@ -320,6 +326,47 @@ bool CommandHandler::Handle_C(const ftl::StringView& packet,
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
+  return ReplyOK(callback);
+}
+
+bool CommandHandler::Handle_D(const ftl::StringView& packet,
+                              const ResponseCallback& callback) {
+  // If there is no current process or if the current process isn't attached,
+  // then report an error.
+  Process* current_process = server_->current_process();
+  if (!current_process) {
+    FTL_LOG(ERROR) << "D: No inferior";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  // For now we only support detaching from the one process we have.
+  if (packet[0] == ';') {
+    mx_koid_t pid;
+    if (!ftl::StringToNumberWithError<mx_koid_t>(packet.substr(1), &pid,
+                                                 ftl::Base::k16)) {
+      FTL_LOG(ERROR) << "D: bad pid: " << packet;
+      return ReplyWithError(util::ErrorCode::INVAL, callback);
+    }
+    if (pid != current_process->id()) {
+      FTL_LOG(ERROR) << "D: unknown pid: " << pid;
+      return ReplyWithError(util::ErrorCode::INVAL, callback);
+    }
+  } else if (packet != "") {
+    FTL_LOG(ERROR) << "D: Malformed packet: " << packet;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  if (!current_process->IsAttached()) {
+    FTL_LOG(ERROR) << "D: Not attached to process " << current_process->id();
+    return ReplyWithError(util::ErrorCode::NOENT, callback);
+  }
+
+  if (!current_process->Detach()) {
+    // At the moment this shouldn't happen, but we don't want to kill the
+    // debug session because of it. The details of the failure are already
+    // logged by Detach().
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
   return ReplyOK(callback);
 }
 
@@ -421,12 +468,16 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
         return ReplyWithError(util::ErrorCode::INVAL, callback);
       }
 
-      if (!server_->current_process()) {
+      Process* current_process = server_->current_process();
+
+      // Note that at this point we may have a process but are not necessarily
+      // attached yet. GDB sends the Hg0 packet early on, and expects it to
+      // succeed.
+      if (!current_process) {
         FTL_LOG(ERROR) << "No inferior exists";
 
         // If we're given a positive thread ID but there is currently no
-        // inferior,
-        // then report error?
+        // inferior, then report error?
         if (!tid) {
           FTL_LOG(ERROR) << "Cannot set a current thread with no inferior";
           return ReplyWithError(util::ErrorCode::PERM, callback);
@@ -439,24 +490,25 @@ bool CommandHandler::Handle_H(const ftl::StringView& packet,
       }
 
       // If the process hasn't started yet it will have no threads. Since "Hg0"
-      // is
-      // one of the first things that GDB sends after a connection (and since we
-      // don't run the process right away), we lie to GDB and set the current
-      // thread to null.
-      if (!server_->current_process()->started()) {
+      // is one of the first things that GDB sends after a connection (and
+      // since we don't run the process right away), we lie to GDB and set the
+      // current thread to null.
+      if (!current_process->IsLive()) {
         FTL_LOG(INFO) << "Current process has no threads yet but we pretend to "
                       << "set one";
         server_->SetCurrentThread(nullptr);
         return ReplyOK(callback);
       }
 
-      Thread* thread = nullptr;
+      current_process->EnsureThreadMapFresh();
+
+      Thread* thread;
 
       // A thread ID value of 0 means "pick an arbitrary thread".
       if (tid == 0)
-        thread = server_->current_process()->PickOneThread();
+        thread = current_process->PickOneThread();
       else
-        thread = server_->current_process()->FindThreadById(tid);
+        thread = current_process->FindThreadById(tid);
 
       if (!thread) {
         FTL_LOG(ERROR) << "Failed to set the current thread";
@@ -619,8 +671,12 @@ bool CommandHandler::Handle_Q(const ftl::StringView& prefix,
 
 bool CommandHandler::Handle_v(const ftl::StringView& packet,
                               const ResponseCallback& callback) {
+  if (StartsWith(packet, kAttach))
+    return Handle_vAttach(packet.substr(std::strlen(kAttach)), callback);
   if (StartsWith(packet, kCont))
     return Handle_vCont(packet.substr(std::strlen(kCont)), callback);
+  if (StartsWith(packet, kKill))
+    return Handle_vKill(packet.substr(std::strlen(kKill)), callback);
   if (StartsWith(packet, kRun))
     return Handle_vRun(packet.substr(std::strlen(kRun)), callback);
 
@@ -713,7 +769,7 @@ bool CommandHandler::HandleQueryCurrentThreadId(
     // and set that as the current one. This is our work around for lying to GDB
     // about setting a current thread in response to an early Hg0 packet.
     Process* current_process = server_->current_process();
-    if (!current_process || !current_process->started()) {
+    if (!current_process || !current_process->IsLive()) {
       FTL_LOG(ERROR) << "qC: Current thread has not been set";
       return ReplyWithError(util::ErrorCode::PERM, callback);
     }
@@ -817,6 +873,8 @@ bool CommandHandler::HandleQueryThreadInfo(bool is_first,
                    << "sequence";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
+
+  current_process->EnsureThreadMapFresh();
 
   std::deque<std::string> thread_ids;
   size_t buf_size = 0;
@@ -932,6 +990,52 @@ bool CommandHandler::HandleQueryXfer(const ftl::StringView& params,
   return true;
 }
 
+bool CommandHandler::Handle_vAttach(const ftl::StringView& packet,
+                                    const ResponseCallback& callback) {
+  // TODO(dje): The terminology we use makes this confusing.
+  // Here when you see "process" think "inferior". An inferior must be created
+  // first, and then we can attach the inferior to a process.
+  Process* current_process = server_->current_process();
+  if (!current_process) {
+    FTL_LOG(ERROR) << "vAttach: no inferior selected";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  mx_koid_t pid;
+  if (!ftl::StringToNumberWithError<mx_koid_t>(packet, &pid, ftl::Base::k16)) {
+    FTL_LOG(ERROR) << "vAttach:: Malformed pid: " << packet;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  switch (current_process->state()) {
+    case Process::State::kNew:
+    case Process::State::kGone:
+      break;
+    default:
+      FTL_LOG(ERROR)
+          << "vAttach: need to kill the currently running process first";
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  if (!current_process->Initialize(pid)) {
+    FTL_LOG(ERROR) << "Failed to set up inferior";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  FTL_DCHECK(!current_process->IsAttached());
+  if (!current_process->Attach()) {
+    FTL_LOG(ERROR) << "vAttach: Failed to attach process!";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+  FTL_DCHECK(current_process->IsAttached());
+
+  // It's Attach()'s job to mark the process as live, since it knows we just
+  // attached to an already running program.
+  FTL_DCHECK(current_process->IsLive());
+
+  return ReplyOK(callback);
+}
+
 bool CommandHandler::Handle_vCont(const ftl::StringView& packet,
                                   const ResponseCallback& callback) {
   Process* current_process = server_->current_process();
@@ -946,8 +1050,8 @@ bool CommandHandler::Handle_vCont(const ftl::StringView& packet,
     return ReplyWithError(util::ErrorCode::INVAL, callback);
   }
 
+  FTL_DCHECK(current_process->IsLive());
   FTL_DCHECK(current_process->IsAttached());
-  FTL_DCHECK(current_process->started());
 
   // Before we start calling GetAction we need to resolve "pick one" thread
   // values.
@@ -1025,6 +1129,47 @@ bool CommandHandler::Handle_vCont(const ftl::StringView& packet,
   return ReplyOK(callback);
 }
 
+bool CommandHandler::Handle_vKill(const ftl::StringView& packet,
+                                  const ResponseCallback& callback) {
+  FTL_VLOG(2) << "Handle_vKill: " << packet;
+
+  Process* current_process = server_->current_process();
+  if (!current_process) {
+    // This can't happen today, but it might eventually.
+    FTL_LOG(ERROR) << "vRun: no current process to kill!";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  mx_koid_t pid;
+  if (!ftl::StringToNumberWithError<mx_koid_t>(packet, &pid, ftl::Base::k16)) {
+    FTL_LOG(ERROR) << "vAttach:: Malformed pid: " << packet;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  // Since we only support one process at the moment, only allow killing
+  // that one.
+  if (pid != current_process->id()) {
+    FTL_LOG(ERROR) << "vAttach:: not our pid: " << pid;
+    return ReplyWithError(util::ErrorCode::INVAL, callback);
+  }
+
+  switch (current_process->state()) {
+    case Process::State::kNew:
+    case Process::State::kGone:
+      FTL_LOG(ERROR) << "vKill: process not running";
+      return ReplyWithError(util::ErrorCode::PERM, callback);
+    default:
+      break;
+  }
+
+  if (!current_process->Kill()) {
+    FTL_LOG(ERROR) << "Failed to kill inferior";
+    return ReplyWithError(util::ErrorCode::PERM, callback);
+  }
+
+  return ReplyOK(callback);
+}
+
 bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
                                  const ResponseCallback& callback) {
   FTL_VLOG(2) << "Handle_vRun: " << packet;
@@ -1061,7 +1206,6 @@ bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
     FTL_LOG(ERROR) << "vRun: Failed to attach process!";
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
-
   FTL_DCHECK(current_process->IsAttached());
 
   // On Linux, the program is considered "live" after vRun, e.g. $pc is set. On
@@ -1074,7 +1218,7 @@ bool CommandHandler::Handle_vRun(const ftl::StringView& packet,
     return ReplyWithError(util::ErrorCode::PERM, callback);
   }
 
-  FTL_DCHECK(current_process->started());
+  FTL_DCHECK(current_process->IsLive());
 
   // We defer sending a stop-reply packet. Server will send it out when it
   // receives an OnThreadStarted() event from |current_process|.

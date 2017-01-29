@@ -60,11 +60,8 @@ class Process final {
         const mx_exception_context_t& context) = 0;
   };
 
-  // TODO(armansito): Add a different constructor later for attaching to an
-  // already running process.
   explicit Process(Server* server,
-                   Delegate* delegate,
-                   const std::vector<std::string>& argv);
+                   Delegate* delegate_);
   ~Process();
 
   std::string GetName() const;
@@ -79,26 +76,43 @@ class Process final {
 
   static const char* StateName(Process::State state);
 
-  // Creates and initializes the inferior process but does not start it. Returns
-  // false if there is an error.
+  // Creates and initializes the inferior process but does not start it.
+  // Returns false if there is an error.
   // Do not call this if the process is currently live (state is kStarting or
   // kRunning).
   bool Initialize();
 
-  // Binds an exception port for receiving exceptions from the inferior process.
-  // Returns true on success, or false in the case of an error. Initialize MUST
-  // be called successfully before calling Attach().
+  // Creates and initializes the inferior for debugging a running program.
+  // Returns false if there is an error.
+  // Do not call this if the process is currently live (state is kStarting or
+  // kRunning).
+  bool Initialize(mx_koid_t pid);
+
+  // Obtains a debug-capable handle and binds an exception port for receiving
+  // exceptions from the inferior process.
+  // Returns true on success, or false in the case of an error. One form of
+  // Initialize() MUST be called successfully before calling Attach().
+  // TODO(dje): While IWBN to have separate steps for "obtain debug-capable
+  // handle" and "bind exception port", it is important to the reader that
+  // "detach" means "release all connections with the inferior". After
+  // detaching we should have absolutely no effect on the inferior, including
+  // not preserving the lifetime of the kernel process instance because we
+  // still have a handle of the process.
   bool Attach();
 
-  // Detaches an attached process.
-  void Detach();
+  // Detach from an attached process, and return to pre-attached state.
+  // Returns true on success, or false if already detached.
+  bool Detach();
 
-  // Starts running the process. Returns false in case of an error. Initialize()
-  // MUST be called successfully before calling Start().
+  // Starts running the process. Returns false in case of an error.
+  // Initialize() MUST be called successfully before calling Start().
   bool Start();
 
-  // Returns true if the process has been started via a call to Start();
-  bool started() const { return started_; }
+  // Terminate the process.
+  bool Kill();
+
+  // Returns true if the process is running or has been running.
+  bool IsLive() const;
 
   // Returns true if the process is currently attached.
   bool IsAttached() const;
@@ -130,6 +144,9 @@ class Process final {
   // TODO(dje): ISTR GNU gdbserver being more random to avoid starving threads.
   Thread* PickOneThread();
 
+  // If the thread map might be stale, refresh it.
+  void EnsureThreadMapFresh();
+
   // Refreshes the complete Thread list for this process. Returns false if an
   // error is returned from a syscall.
   bool RefreshAllThreads();
@@ -155,6 +172,8 @@ class Process final {
   // Fetch the process's exit code.
   int ExitCode();
 
+  bool attached_running() const { return attached_running_; }
+
   // Return true if dsos, including the main executable, have been loaded
   // into the inferior.
   bool DsosLoaded() { return dsos_ != nullptr; }
@@ -170,6 +189,17 @@ class Process final {
   // The exception handler invoked by ExceptionPort.
   void OnException(const mx_excp_type_t type,
                    const mx_exception_context_t& context);
+
+  // Debug handle mgmt.
+  bool AllocDebugHandle();
+  void CloseDebugHandle();
+
+  // Exception port mgmt.
+  bool BindExceptionPort();
+  void UnbindExceptionPort();
+
+  // Detach from the inferior, but don't clear out any data structures.
+  void RawDetach();
 
   // Release all resources held by the process.
   // Called after all other processing of a process exit has been done.
@@ -213,8 +243,9 @@ class Process final {
   // The key we receive after binding an exception port.
   ExceptionPort::Key eport_key_ = 0;
 
-  // True, if the inferior has been run via a call to Start().
-  bool started_ = false;
+  // True if we attached, or will attach, to a running program.
+  // Otherwise we're launching a program from scratch.
+  bool attached_running_ = false;
 
   // The API to access memory.
   ProcessMemory memory_;
@@ -223,9 +254,13 @@ class Process final {
   arch::ProcessBreakpointSet breakpoints_;
 
   // The threads owned by this process. This is map is populated lazily when
-  // threads are requested through FindThreadById().
+  // threads are requested through FindThreadById(). It can also be repopulated
+  // from scratch, e.g., when attaching to an already running program.
   using ThreadMap = std::unordered_map<mx_koid_t, std::unique_ptr<Thread>>;
   ThreadMap threads_;
+
+  // If true then |threads_| needs to be recalculated from scratch.
+  bool thread_map_stale_ = false;
 
   // List of dsos loaded.
   // NULL if none have been loaded yet (including main executable).

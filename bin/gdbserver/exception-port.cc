@@ -117,21 +117,11 @@ void ExceptionPort::Quit() {
   FTL_LOG(INFO) << "Exception port I/O loop exited";
 }
 
-ExceptionPort::Key ExceptionPort::Bind(const Process& process,
+ExceptionPort::Key ExceptionPort::Bind(mx_handle_t process_handle,
                                        const Callback& callback) {
+  FTL_DCHECK(process_handle != MX_HANDLE_INVALID);
+  FTL_DCHECK(callback);
   FTL_DCHECK(eport_handle_);
-
-  mx_handle_t process_handle = process.handle();
-  if (process_handle == MX_HANDLE_INVALID) {
-    FTL_LOG(ERROR)
-        << "Cannot bind an exception port to process with invalid handle";
-    return 0;
-  }
-
-  if (!callback) {
-    FTL_LOG(ERROR) << "Cannot bind a null callback";
-    return 0;
-  }
 
   Key next_key = g_key_counter + 1;
 
@@ -155,6 +145,9 @@ ExceptionPort::Key ExceptionPort::Bind(const Process& process,
 
   callbacks_[next_key] = BindData(process_handle, callback);
   ++g_key_counter;
+
+  FTL_VLOG(1) << "Exception port bound to process handle " << process_handle
+              << " with key " << next_key;
 
   return next_key;
 }

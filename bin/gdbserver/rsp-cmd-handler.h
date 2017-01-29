@@ -40,6 +40,8 @@ class CommandHandler final {
                 const ResponseCallback& callback);
   bool Handle_C(const ftl::StringView& packet,
                 const ResponseCallback& callback);
+  bool Handle_D(const ftl::StringView& packet,
+                const ResponseCallback& callback);
   bool Handle_g(const ResponseCallback& callback);
   bool Handle_G(const ftl::StringView& packet,
                 const ResponseCallback& callback);
@@ -84,10 +86,12 @@ class CommandHandler final {
                         const ResponseCallback& callback);
 
   // v packets:
-  // vCont
+  bool Handle_vAttach(const ftl::StringView& packet,
+                      const ResponseCallback& callback);
   bool Handle_vCont(const ftl::StringView& packet,
                     const ResponseCallback& callback);
-  // vRun
+  bool Handle_vKill(const ftl::StringView& packet,
+                    const ResponseCallback& callback);
   bool Handle_vRun(const ftl::StringView& packet,
                    const ResponseCallback& callback);
 
