@@ -191,6 +191,7 @@ class DevUserShellApp
       fidl::InterfaceHandle<maxwell::SuggestionProvider> suggestion_provider,
       fidl::InterfaceRequest<modular::FocusController> focus_controller_request)
       override {
+    user_context_.Bind(std::move(user_context));
     story_provider_.Bind(std::move(story_provider));
     Connect();
   }
@@ -220,9 +221,8 @@ class DevUserShellApp
         settings_.root_module, [this](const fidl::String& story_id) {
           story_provider_->GetController(story_id,
                                          story_controller_.NewRequest());
-          fidl::InterfaceHandle<StoryWatcher> story_watcher;
-          story_watcher_binding_.Bind(story_watcher.NewRequest());
-          story_controller_->Watch(std::move(story_watcher));
+
+          story_controller_->Watch(story_watcher_binding_.NewBinding());
 
           fidl::InterfaceHandle<mozart::ViewOwner> root_module_view;
           story_controller_->Start(root_module_view.NewRequest());
@@ -248,15 +248,20 @@ class DevUserShellApp
       story_watcher_binding_.Close();
       story_controller_.reset();
       view_->SetRootModuleView(nullptr);
+
+      user_context_->Logout();
     });
   }
 
+  const Settings settings_;
+
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
   std::unique_ptr<DevUserShellView> view_;
-  const Settings settings_;
-  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
+
+  modular::UserContextPtr user_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
+  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);
 };
