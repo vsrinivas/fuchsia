@@ -184,9 +184,9 @@ status_t SocketDispatcher::Create(uint32_t flags,
 }
 
 SocketDispatcher::SocketDispatcher(uint32_t /*flags*/)
-    : half_closed_{false, false} {
-
-    state_tracker_.set_initial_signals_state(MX_SOCKET_WRITABLE);
+    : peer_koid_(0u),
+      state_tracker_(MX_SOCKET_WRITABLE),
+      half_closed_{false, false} {
 }
 
 SocketDispatcher::~SocketDispatcher() {
@@ -196,6 +196,7 @@ SocketDispatcher::~SocketDispatcher() {
 // initializing the socket, so it does not need locking.
 mx_status_t SocketDispatcher::Init(mxtl::RefPtr<SocketDispatcher> other) TA_NO_THREAD_SAFETY_ANALYSIS {
     other_ = mxtl::move(other);
+    peer_koid_ = other_->get_koid();
     return cbuf_.Init(kDeFaultSocketBufferSize) ? NO_ERROR : ERR_NO_MEMORY;
 }
 

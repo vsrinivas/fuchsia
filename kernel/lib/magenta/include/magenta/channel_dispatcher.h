@@ -28,7 +28,7 @@ public:
     ~ChannelDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_CHANNEL; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
-    mx_koid_t get_inner_koid() const final TA_REQ(lock_) { return other_koid_; }
+    mx_koid_t get_related_koid() const final TA_REQ(lock_) { return other_koid_; }
     status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
     status_t set_port_client(mxtl::unique_ptr<PortClient> client) final;
 

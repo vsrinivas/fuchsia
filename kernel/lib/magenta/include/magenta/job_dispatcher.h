@@ -50,7 +50,7 @@ public:
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_JOB; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
-    mx_koid_t get_inner_koid() const final;
+    mx_koid_t get_related_koid() const final;
     mxtl::RefPtr<JobDispatcher> parent() { return mxtl::RefPtr<JobDispatcher>(parent_); }
 
     // Job methods.

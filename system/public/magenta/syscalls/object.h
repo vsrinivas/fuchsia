@@ -55,6 +55,7 @@ typedef struct mx_info_handle_basic {
     mx_koid_t koid;
     mx_rights_t rights;
     uint32_t type;                // mx_obj_type_t;
+    mx_koid_t related_koid;
     uint32_t props;               // mx_obj_props_t;
 } mx_info_handle_basic_t;
 

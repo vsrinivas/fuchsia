@@ -9,7 +9,7 @@
 #include <magenta/syscalls/object.h>
 #include <unittest/unittest.h>
 
-bool handle_info_test(void) {
+static bool handle_info_test(void) {
     BEGIN_TEST;
 
     mx_handle_t event;
@@ -38,6 +38,7 @@ bool handle_info_test(void) {
     EXPECT_EQ(info.type, (uint32_t)MX_OBJ_TYPE_EVENT, "handle should be an event");
     EXPECT_EQ(info.rights, evr, "wrong set of rights");
     EXPECT_EQ(info.props, (uint32_t)MX_OBJ_PROP_WAITABLE, "");
+    EXPECT_EQ(info.related_koid, 0ULL, "events don't have associated koid");
 
     mx_handle_close(event);
     mx_handle_close(duped);
@@ -45,7 +46,68 @@ bool handle_info_test(void) {
     END_TEST;
 }
 
-bool handle_rights_test(void) {
+static bool handle_related_koid_test(void) {
+    BEGIN_TEST;
+
+    mx_info_handle_basic_t info0 = {};
+    mx_info_handle_basic_t info1 = {};
+
+    mx_status_t status = mx_object_get_info(
+        mx_job_default(), MX_INFO_HANDLE_BASIC, &info0, sizeof(info0), NULL, NULL);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    status = mx_object_get_info(
+        mx_process_self(), MX_INFO_HANDLE_BASIC, &info1, sizeof(info1), NULL, NULL);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    EXPECT_EQ(info0.type, (uint32_t)MX_OBJ_TYPE_JOB, "");
+    EXPECT_EQ(info1.type, (uint32_t)MX_OBJ_TYPE_PROCESS, "");
+
+    mx_handle_t thread;
+    status = mx_thread_create(mx_process_self(), "hitr", 4, 0u, &thread);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    mx_info_handle_basic_t info2 = {};
+
+    status = mx_object_get_info(
+        thread, MX_INFO_HANDLE_BASIC, &info2, sizeof(info2), NULL, NULL);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    EXPECT_EQ(info2.type, (uint32_t)MX_OBJ_TYPE_THREAD, "");
+
+    // The related koid of a process is its job and this test assumes that the
+    // default job is in fact the parent job of this test. Equivalently, a thread's
+    // associated koid is the process koid.
+    EXPECT_EQ(info1.related_koid, info0.koid, "");
+    EXPECT_EQ(info2.related_koid, info1.koid, "");
+
+    mx_handle_close(thread);
+
+    mx_handle_t sock0, sock1;
+    status = mx_socket_create(0u, &sock0, &sock1);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    status = mx_object_get_info(
+        sock0, MX_INFO_HANDLE_BASIC, &info0, sizeof(info0), NULL, NULL);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    status = mx_object_get_info(
+        sock1, MX_INFO_HANDLE_BASIC, &info1, sizeof(info1), NULL, NULL);
+    ASSERT_EQ(status, NO_ERROR, "");
+
+    EXPECT_EQ(info0.type, (uint32_t)MX_OBJ_TYPE_SOCKET, "");
+    EXPECT_EQ(info1.type, (uint32_t)MX_OBJ_TYPE_SOCKET, "");
+
+    // The related koid of a socket pair are each other koids.
+    EXPECT_EQ(info0.related_koid, info1.koid, "");
+    EXPECT_EQ(info1.related_koid, info0.koid, "");
+
+    mx_handle_close(sock0);
+    mx_handle_close(sock1);
+    END_TEST;
+}
+
+static bool handle_rights_test(void) {
     BEGIN_TEST;
 
     mx_handle_t event;
@@ -83,6 +145,7 @@ bool handle_rights_test(void) {
 
 BEGIN_TEST_CASE(handle_info_tests)
 RUN_TEST(handle_info_test)
+RUN_TEST(handle_related_koid_test)
 RUN_TEST(handle_rights_test)
 END_TEST_CASE(handle_info_tests)
 

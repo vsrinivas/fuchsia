@@ -62,7 +62,7 @@ public:
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_PROCESS; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
-    mx_koid_t get_inner_koid() const final;
+    mx_koid_t get_related_koid() const final;
 
     ~ProcessDispatcher() final;
 

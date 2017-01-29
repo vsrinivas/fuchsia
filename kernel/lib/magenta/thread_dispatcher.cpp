@@ -7,9 +7,10 @@
 #include <magenta/thread_dispatcher.h>
 
 #include <new.h>
+#include <trace.h>
 
 #include <magenta/handle.h>
-#include <trace.h>
+#include <magenta/process_dispatcher.h>
 
 #define LOCAL_TRACE 0
 
@@ -47,6 +48,10 @@ ThreadDispatcher::~ThreadDispatcher() {
 
 StateTracker* ThreadDispatcher::get_state_tracker() {
     return thread_->state_tracker();
+}
+
+mx_koid_t ThreadDispatcher::get_related_koid() const {
+    return thread_->process()->get_koid();
 }
 
 status_t ThreadDispatcher::SetExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {

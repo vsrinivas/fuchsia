@@ -121,6 +121,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
                     .koid = dispatcher->get_koid(),
                     .rights = rights,
                     .type = dispatcher->get_type(),
+                    .related_koid = dispatcher->get_related_koid(),
                     .props = waitable ? MX_OBJ_PROP_WAITABLE : MX_OBJ_PROP_NONE,
                 };
 

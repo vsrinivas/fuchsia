@@ -58,7 +58,7 @@ JobDispatcher::~JobDispatcher() {
 void JobDispatcher::on_zero_handles() {
 }
 
-mx_koid_t JobDispatcher::get_inner_koid() const {
+mx_koid_t JobDispatcher::get_related_koid() const {
     return parent_? parent_->get_koid() : 0u;
 }
 

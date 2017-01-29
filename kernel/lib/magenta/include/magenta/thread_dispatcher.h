@@ -17,7 +17,7 @@ public:
 
     ~ThreadDispatcher() final;
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_THREAD; }
-    mx_koid_t get_inner_koid() const final { return thread_->get_koid(); }
+    mx_koid_t get_related_koid() const final;
 
     mx_status_t Start(uintptr_t pc, uintptr_t sp,
                       uintptr_t arg1, uintptr_t arg2, bool initial_thread) {

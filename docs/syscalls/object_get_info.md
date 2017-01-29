@@ -36,8 +36,30 @@ If the buffer is insufficiently large, *avail* will be larger than *actual*.
 succeeds as long as *handle* is a valid handle.
 
 **MX_INFO_HANDLE_BASIC**  Always returns a single *mx_info_handle_basic_t* record containing
-information about the handle:  The kernel object id of the object it refers to, the rights
-associated with it, the type of object it refers to, and some property information.
+information about the handle:
+
+```
+typedef struct mx_info_handle_basic {
+    mx_koid_t koid;
+    mx_rights_t rights;
+    uint32_t type;
+    mx_koid_t related_koid;
+    uint32_t props;
+} mx_info_handle_basic_t;
+
+```
+*koid* is the unique id assigned by kernel to the object referenced by the handle.
+
+*rights* are the immutable rights assigned to the handle. Two handles that have the same koid
+and the same rights are equivalent and interchangeable.
+
+*type* is the object type. Allows to tell appart channels, events, sockets, etc.
+
+*related_koid* is the koid of the logical counterpart or parent object of the object
+referenced by the handle. Otherwise this value is zero.
+
+*props* contains zero or **MX_OBJ_PROP_WAITABLE** if the object referenced by the
+handle can be waited on.
 
 **MX_INFO_PROCESS**  Requires a Process handle.  Always returns a single *mx_info_process_t*
 record containing:

@@ -72,7 +72,7 @@ public:
 
     virtual void on_zero_handles() { }
 
-    virtual mx_koid_t get_inner_koid() const { return 0ULL; }
+    virtual mx_koid_t get_related_koid() const { return 0ULL; }
 
     // get_name() will return a null-terminated name of MX_MAX_NAME_LEN - 1 or fewer
     // characters.  For objects that don't have names it will be "".

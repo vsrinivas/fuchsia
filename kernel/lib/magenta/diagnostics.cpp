@@ -127,7 +127,7 @@ void DumpProcessList() {
                process.ThreadCount(),
                process.PageCount(),
                DumpHandleTypeCountLocked(process),
-               process.get_inner_koid(),
+               process.get_related_koid(),
                pname);
     }
 }

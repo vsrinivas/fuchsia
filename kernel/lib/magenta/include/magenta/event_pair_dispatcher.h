@@ -23,7 +23,7 @@ public:
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
     void on_zero_handles() final;
-    mx_koid_t get_inner_koid() const final { return other_koid_; }
+    mx_koid_t get_related_koid() const final { return other_koid_; }
 
 private:
     explicit EventPairDispatcher();

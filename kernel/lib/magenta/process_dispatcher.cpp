@@ -293,7 +293,7 @@ void ProcessDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
     Kill();
 }
 
-mx_koid_t ProcessDispatcher::get_inner_koid() const {
+mx_koid_t ProcessDispatcher::get_related_koid() const {
     return job_ ? job_->get_koid() : 0ull;
 }
 

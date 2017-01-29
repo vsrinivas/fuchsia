@@ -28,6 +28,7 @@ public:
 
     // Dispatcher implementation.
     mx_obj_type_t get_type() const final { return MX_OBJ_TYPE_SOCKET; }
+    mx_koid_t get_related_koid() const final { return peer_koid_; }
     StateTracker* get_state_tracker() final { return &state_tracker_; }
     void on_zero_handles() final;
     status_t user_signal(uint32_t clear_mask, uint32_t set_mask, bool peer) final;
@@ -67,9 +68,10 @@ private:
     mx_status_t Init(mxtl::RefPtr<SocketDispatcher> other);
     mx_status_t WriteSelf(const void* src, size_t len, bool from_user,
                           size_t* nwritten);
-    status_t  UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
+    status_t UserSignalSelf(uint32_t clear_mask, uint32_t set_mask);
     status_t HalfCloseOther();
 
+    mx_koid_t peer_koid_;
     StateTracker state_tracker_;
 
     // The |lock_| protects all members below.
