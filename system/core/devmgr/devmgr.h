@@ -22,6 +22,7 @@ void devmgr_launch_devhost(mx_handle_t job,
                            mx_handle_t hdevice, mx_handle_t hrpc);
 ssize_t devmgr_add_systemfs_vmo(mx_handle_t vmo);
 bool secondary_bootfs_ready(void);
+void devmgr_start_system_init(void);
 
 typedef struct devhost_msg devhost_msg_t;
 struct devhost_msg {
