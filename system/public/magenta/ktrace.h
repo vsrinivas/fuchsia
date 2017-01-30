@@ -17,7 +17,7 @@ __BEGIN_CDECLS
 // 12 group flags
 // 12 event id bits
 //  4 spare bits
-//  4 bit size (in uint8_t units)
+//  4 bit size (in uint64_t units)
 
 #define KTRACE_TAG(evt,grp,siz)   ((((grp)&0xFFF)<<20)|(((evt)&0xFFF)<<8)|(((siz)>>3)&0x0F))
 
