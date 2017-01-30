@@ -98,6 +98,8 @@ void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
     AutoLock lock(&lock_);
     if (state_ != State::READY)
         return;
+    if (!JobDispatcher::ListTraits::node_state(*job).InContainer())
+        return;
     jobs_.erase(*job);
     --job_count_;
     MaybeUpdateSignalsLocked(true);
