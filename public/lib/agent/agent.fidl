@@ -15,7 +15,7 @@ interface Agent {
   // this interface is requested from the application.
   //
   // An Agent is instantiated when it is not running and if:
-  // (1) Some component calls ComponentContext::ConnectToAgent().
+  // (1) Some component calls ComponentContext::ConnectToAgent() or
   // (2) A trigger causes a task to be run.
   Initialize(AgentContext agent_context);
 
@@ -27,12 +27,10 @@ interface Agent {
 
   // Called when some task identified by |task_id| is scheduled to run. The task
   // was first posted by this Agent using AgentContext::ScheduleTask(). The
-  // return callback is called when this task is completed.
+  // return callback is called by this Agent when all work related to this task
+  // is completed. Note that the framework may call Stop() before RunTask
+  // returns.
   RunTask(string task_id, string params) => ();
-
-  // Called when the system wants to cancel this task. This happens on a best
-  // effort basis.
-  CancelTask(string task_id);
 
   // This method is invoked by the framework to notify the Agent that it has
   // to stop. What can cause a request to an Agent to Stop():
