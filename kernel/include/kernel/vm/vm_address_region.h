@@ -79,6 +79,7 @@ public:
     vaddr_t base() const { return base_; }
     size_t size() const { return size_; }
     uint32_t flags() const { return flags_; }
+    const mxtl::RefPtr<VmAspace>& aspace() const { return aspace_; }
 
     // Recursively compute the number of allocated pages within this region
     virtual size_t AllocatedPages() const;

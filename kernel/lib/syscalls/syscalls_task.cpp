@@ -14,6 +14,8 @@
 #include <string.h>
 #include <trace.h>
 
+#include <arch/arch_ops.h>
+
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
@@ -164,6 +166,9 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     uint32_t koid = (uint32_t)proc_dispatcher->get_koid();
     ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);
     ktrace_name(TAG_PROC_NAME, koid, 0, buf);
+
+    // Give arch-specific tracing a chance to record process creation.
+    arch_trace_process_create(koid, &vmar_dispatcher->vmar()->aspace()->arch_aspace());
 
     // Create a handle and attach the dispatcher to it
     HandleOwner proc_h(MakeHandle(mxtl::move(proc_dispatcher), proc_rights));

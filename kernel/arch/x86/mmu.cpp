@@ -66,6 +66,10 @@ pt_entry_t pdp[NO_OF_PT_ENTRIES] __ALIGNED(PAGE_SIZE);
 /* kernel base top level page table in physical space */
 static const paddr_t kernel_pt_phys = (vaddr_t)KERNEL_PT - KERNEL_BASE;
 
+paddr_t x86_kernel_cr3(void) {
+    return kernel_pt_phys;
+}
+
 /* test the vaddr against the address space's range */
 static bool is_valid_vaddr(arch_aspace_t* aspace, vaddr_t vaddr) {
     return (vaddr >= aspace->base && vaddr <= aspace->base + aspace->size - 1);

@@ -28,6 +28,7 @@ enum x86_cpuid_leaf_num {
     X86_CPUID_MODEL_FEATURES = 0x1,
     X86_CPUID_TOPOLOGY = 0xb,
     X86_CPUID_XSAVE = 0xd,
+    X86_CPUID_PT = 0x14,
 
     X86_CPUID_EXT_BASE = 0x80000000,
     X86_CPUID_ADDR_WIDTH = 0x80000008,
@@ -111,6 +112,7 @@ void x86_feature_debug(void);
 #define X86_FEATURE_SMEP         X86_CPUID_BIT(0x7, 1, 7)
 #define X86_FEATURE_RDSEED       X86_CPUID_BIT(0x7, 1, 18)
 #define X86_FEATURE_SMAP         X86_CPUID_BIT(0x7, 1, 20)
+#define X86_FEATURE_PT           X86_CPUID_BIT(0x7, 1, 25)
 #define X86_FEATURE_PKU          X86_CPUID_BIT(0x7, 2, 3)
 #define X86_FEATURE_SYSCALL      X86_CPUID_BIT(0x80000001, 3, 11)
 #define X86_FEATURE_NX           X86_CPUID_BIT(0x80000001, 3, 20)

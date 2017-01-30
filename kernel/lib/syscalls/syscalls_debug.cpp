@@ -21,6 +21,7 @@
 #include <lib/user_copy.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/ktrace.h>
+#include <lib/mtrace.h>
 
 #include <lk/init.h>
 #include <platform/debug.h>
@@ -278,6 +279,18 @@ mx_status_t sys_ktrace_write(mx_handle_t handle, uint32_t event_id, uint32_t arg
     args[0] = arg0;
     args[1] = arg1;
     return NO_ERROR;
+}
+
+mx_status_t sys_mtrace_control(mx_handle_t handle,
+                               uint32_t kind, uint32_t action, uint32_t options,
+                               void* _ptr, uint32_t size) {
+    // TODO: finer grained validation
+    mx_status_t status;
+    if ((status = validate_resource_handle(handle)) < 0) {
+        return status;
+    }
+
+    return mtrace_control(kind, action, options, _ptr, size);
 }
 
 mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,

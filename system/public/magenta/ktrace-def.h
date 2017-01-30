@@ -51,4 +51,10 @@ KTRACE_DEF(0x143,32B,PORT_QUEUE,IPC) // id, size
 KTRACE_DEF(0x150,32B,WAIT_ONE,IPC) // id, signals, timeoutlo, timeouthi
 KTRACE_DEF(0x151,32B,WAIT_ONE_DONE,IPC) // id, status, pending
 
+// events from 0x200-0x2ff are for arch-specific needs
+
+#ifdef __x86_64__
+KTRACE_DEF(0x200,32B,IPT_CR3,ARCH) // pid, cr3(x86)
+#endif
+
 #undef KTRACE_DEF

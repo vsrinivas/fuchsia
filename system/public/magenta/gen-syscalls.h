@@ -735,6 +735,22 @@ extern mx_status_t _mx_ktrace_write(
     uint32_t arg0,
     uint32_t arg1) __attribute__((__leaf__));
 
+extern mx_status_t mx_mtrace_control(
+    mx_handle_t handle,
+    uint32_t kind,
+    uint32_t action,
+    uint32_t options,
+    void* ptr,
+    uint32_t size) __attribute__((__leaf__));
+
+extern mx_status_t _mx_mtrace_control(
+    mx_handle_t handle,
+    uint32_t kind,
+    uint32_t action,
+    uint32_t options,
+    void* ptr,
+    uint32_t size) __attribute__((__leaf__));
+
 extern mx_handle_t mx_debug_transfer_handle(
     mx_handle_t proc,
     mx_handle_t handle) __attribute__((__leaf__));

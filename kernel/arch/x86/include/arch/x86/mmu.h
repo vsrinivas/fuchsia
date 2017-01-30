@@ -195,6 +195,8 @@ void x86_mmu_percpu_init(void);
 void x86_mmu_early_init(void);
 void x86_mmu_init(void);
 
+paddr_t x86_kernel_cr3(void);
+
 __END_CDECLS
 
 #endif // !ASSEMBLY

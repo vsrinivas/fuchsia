@@ -113,6 +113,8 @@ typedef struct thread thread_t;
 void x86_extended_register_context_switch(
         thread_t *old_thread, thread_t *new_thread);
 
+void x86_set_extended_register_pt_state(bool threads);
+
 __END_CDECLS
 
 #endif

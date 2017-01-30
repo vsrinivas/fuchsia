@@ -23,6 +23,7 @@
 #include <arch/x86.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/proc_trace.h>
 #include <arch/x86/registers.h>
 #include <magenta/compiler.h>
 #include <kernel/spinlock.h>
@@ -38,6 +39,8 @@
 /* bits 2 through 62 of state vector can optionally be set */
 #define XSAVE_MAX_EXT_COMPONENTS 61
 #define XSAVE_XCOMP_BV_COMPACT (1ULL<<63)
+#define XSAVE_STATE_PT_BIT 8
+#define XSAVE_STATE_MAX_BIT 62
 
 static void fxsave(void *register_state);
 static void fxrstor(void *register_state);
@@ -274,9 +277,7 @@ bool x86_extended_register_enable_feature(
                 !(xss_component_bitmap & X86_XSAVE_STATE_PT)) {
                 return false;
             }
-
-            uint64_t new_state = read_msr(IA32_XSS_MSR) | X86_XSAVE_STATE_PT;
-            write_msr(IA32_XSS_MSR, new_state);
+            x86_set_extended_register_pt_state(true);
             break;
         }
         case X86_EXTENDED_REGISTER_PKRU: {
@@ -533,4 +534,18 @@ static void xsetbv(uint32_t reg, uint64_t val)
                      :
                      : "c"(reg), "d"((uint32_t)(val >> 32)), "a"((uint32_t)val)
                      : "memory");
+}
+
+// Set the extended register PT mode to trace either cpus (!threads)
+// or threads.
+// WARNING: All PT MSRs should be set to init values before changing the mode.
+// See x86_ipt_set_mode_task.
+
+void x86_set_extended_register_pt_state(bool threads) {
+    uint64_t xss = read_msr(IA32_XSS_MSR);
+    if (threads)
+        xss |= X86_XSAVE_STATE_PT;
+    else
+        xss &= ~(0ULL + X86_XSAVE_STATE_PT);
+    write_msr(IA32_XSS_MSR, xss);
 }
