@@ -45,20 +45,28 @@ void PageDelegate::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     fidl::InterfaceHandle<PageWatcher> watcher,
     const Page::GetSnapshotCallback& callback) {
-  std::unique_ptr<const storage::Commit> commit;
-  storage::Status status =
-      storage_->GetCommitSynchronous(GetCurrentCommitId(), &commit);
-  if (status != storage::Status::OK) {
-    callback(PageUtils::ConvertStatus(status));
-    return;
-  }
-  manager_->BindPageSnapshot(commit->Clone(), std::move(snapshot_request));
-  if (watcher) {
-    PageWatcherPtr watcher_ptr = PageWatcherPtr::Create(std::move(watcher));
-    branch_tracker_.RegisterPageWatcher(std::move(watcher_ptr),
-                                        std::move(commit));
-  }
-  callback(Status::OK);
+  auto tracked_callback = TrackCallback(std::move(callback));
+  storage_->GetCommit(
+      GetCurrentCommitId(),
+      ftl::MakeCopyable([
+        this, snapshot_request = std::move(snapshot_request),
+        watcher = std::move(watcher), callback = std::move(tracked_callback)
+      ](storage::Status status,
+        std::unique_ptr<const storage::Commit> commit) mutable {
+        if (status != storage::Status::OK) {
+          callback(PageUtils::ConvertStatus(status));
+          return;
+        }
+        manager_->BindPageSnapshot(commit->Clone(),
+                                   std::move(snapshot_request));
+        if (watcher) {
+          PageWatcherPtr watcher_ptr =
+              PageWatcherPtr::Create(std::move(watcher));
+          branch_tracker_.RegisterPageWatcher(std::move(watcher_ptr),
+                                              std::move(commit));
+        }
+        callback(Status::OK);
+      }));
 }
 
 // Put(array<uint8> key, array<uint8> value) => (Status status);
@@ -76,12 +84,14 @@ void PageDelegate::PutWithPriority(
     fidl::Array<uint8_t> value,
     Priority priority,
     const Page::PutWithPriorityCallback& callback) {
+  auto tracked_callback = TrackCallback(std::move(callback));
   // TODO(etiennej): Use asynchronous write, otherwise the run loop may block
   // until the socket is drained.
   mx::socket socket = mtl::WriteStringToSocket(convert::ToStringView(value));
   storage_->AddObjectFromLocal(
       std::move(socket), value.size(), ftl::MakeCopyable([
-        this, key = std::move(key), priority, callback = std::move(callback)
+        this, key = std::move(key), priority,
+        callback = std::move(tracked_callback)
       ](storage::Status status, storage::ObjectId object_id) mutable {
         if (status != storage::Status::OK) {
           callback(PageUtils::ConvertStatus(status));
@@ -101,11 +111,12 @@ void PageDelegate::PutReference(fidl::Array<uint8_t> key,
                                 ReferencePtr reference,
                                 Priority priority,
                                 const Page::PutReferenceCallback& callback) {
+  auto tracked_callback = TrackCallback(std::move(callback));
   storage::ObjectIdView object_id(reference->opaque_id);
   storage_->GetObject(
       object_id, ftl::MakeCopyable([
         this, key = std::move(key), object_id = object_id.ToString(), priority,
-        callback
+        callback = std::move(tracked_callback)
       ](storage::Status status,
                  std::unique_ptr<const storage::Object> object) mutable {
         if (status != storage::Status::OK) {
@@ -313,11 +324,23 @@ void PageDelegate::SerializeOperation(
   }
 }
 
+std::function<void(Status)> PageDelegate::TrackCallback(
+    StatusCallback callback) {
+  ++in_progress_storage_operations_;
+  return [ this, callback = std::move(callback) ](Status status) {
+    callback(status);
+    --in_progress_storage_operations_;
+    if (!in_progress_storage_operations_) {
+      CheckEmpty();
+    }
+  };
+}
+
 void PageDelegate::CheckEmpty() {
-  // TODO(nellyv): We need to also check that there are no operations in
-  // progress.
-  if (on_empty_callback_ && !interface_.is_bound() && branch_tracker_.IsEmpty())
+  if (on_empty_callback_ && !interface_.is_bound() &&
+      branch_tracker_.IsEmpty() && !in_progress_storage_operations_) {
     on_empty_callback_();
+  }
 }
 
 }  // namespace ledger

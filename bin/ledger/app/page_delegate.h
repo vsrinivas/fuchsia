@@ -102,6 +102,12 @@ class PageDelegate {
   void SerializeOperation(StatusCallback callback,
                           std::function<void(StatusCallback)> operation);
 
+  // Tracks all operations in progress and blocks calling |on_empty_callback|
+  // until they are all finished. An operation starts when |TrackCallback|
+  // is called and stops when the returned |StatusCallback| is called with the
+  // operation result.
+  StatusCallback TrackCallback(StatusCallback callback);
+
   void CheckEmpty();
 
   PageManager* manager_;
@@ -116,6 +122,12 @@ class PageDelegate {
   std::unique_ptr<storage::Journal> journal_;
   std::queue<ftl::Closure> queued_operations_;
   std::vector<std::unique_ptr<storage::Journal>> in_progress_journals_;
+  // |storage_| might outlive this PageDelegate, so asynchronous operations on
+  // PageStorage that capture |this| could fail while executing the callback.
+  // |in_progress_storage_operations_| keeps track of such operations that have
+  // not yet terminated, and blocks calling |on_empty_callback_| until there is
+  // none in progress.
+  int in_progress_storage_operations_ = 0;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(PageDelegate);
 };

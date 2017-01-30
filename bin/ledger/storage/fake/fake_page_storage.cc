@@ -67,6 +67,25 @@ Status FakePageStorage::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
   return Status::OK;
 }
 
+void FakePageStorage::GetCommit(
+    CommitIdView commit_id,
+    std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
+  auto it = journals_.find(commit_id.ToString());
+  if (it == journals_.end()) {
+    callback(Status::NOT_FOUND, nullptr);
+    return;
+  }
+
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      [
+        this, commit_id = commit_id.ToString(), callback = std::move(callback)
+      ] {
+        callback(Status::OK,
+                 std::make_unique<FakeCommit>(journals_[commit_id].get()));
+      },
+      ftl::TimeDelta::FromMilliseconds(5));
+}
+
 Status FakePageStorage::GetCommitSynchronous(
     CommitIdView commit_id,
     std::unique_ptr<const Commit>* commit) {
@@ -125,9 +144,8 @@ void FakePageStorage::GetObject(
 
     callback(Status::OK, std::make_unique<FakeObject>(object_id, it->second));
   });
-  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask([this] {
-    SendNextObject();
-  }, ftl::TimeDelta::FromMilliseconds(5));
+  mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+      [this] { SendNextObject(); }, ftl::TimeDelta::FromMilliseconds(5));
 }
 
 Status FakePageStorage::GetObjectSynchronous(
