@@ -16,7 +16,7 @@
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
 
-static mx_status_t mkfs_minfs(const char* devicepath, LaunchCallback cb) {
+static mx_status_t mkfs_mxfs(const char* binary, const char* devicepath, LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
     uint32_t ids[MXIO_MAX_HANDLES * 2];
     size_t n = 0;
@@ -32,7 +32,7 @@ static mx_status_t mkfs_minfs(const char* devicepath, LaunchCallback cb) {
     }
     n += status;
 
-    const char* argv[] = {"/boot/bin/minfs", "mkfs"};
+    const char* argv[] = { binary, "mkfs" };
     return cb(countof(argv), argv, hnd, ids, n);
 }
 
@@ -44,9 +44,11 @@ static mx_status_t mkfs_fat(const char* devicepath, LaunchCallback cb) {
 mx_status_t mkfs(const char* devicepath, disk_format_t df, LaunchCallback cb) {
     switch (df) {
     case DISK_FORMAT_MINFS:
-        return mkfs_minfs(devicepath, cb);
+        return mkfs_mxfs("/boot/bin/minfs", devicepath, cb);
     case DISK_FORMAT_FAT:
         return mkfs_fat(devicepath, cb);
+    case DISK_FORMAT_BLOBFS:
+        return mkfs_mxfs("/boot/bin/blobstore", devicepath, cb);
     default:
         return ERR_NOT_SUPPORTED;
     }

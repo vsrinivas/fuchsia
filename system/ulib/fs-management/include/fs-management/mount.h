@@ -8,7 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <magenta/compiler.h>
 #include <magenta/types.h>
+
+__BEGIN_CDECLS
 
 typedef enum disk_format_type {
     DISK_FORMAT_UNKNOWN,
@@ -16,6 +19,7 @@ typedef enum disk_format_type {
     DISK_FORMAT_MBR,
     DISK_FORMAT_MINFS,
     DISK_FORMAT_FAT,
+    DISK_FORMAT_BLOBFS,
 } disk_format_t;
 
 disk_format_t detect_disk_format(int fd);
@@ -73,3 +77,5 @@ mx_status_t fsck(const char* devicepath, disk_format_t df, LaunchCallback cb);
 // Returns ERR_NOT_FOUND if there is no mounted filesystem on mountpath.
 // Other errors may also be returned if problems occur while unmounting.
 mx_status_t umount(const char* mountpath);
+
+__END_CDECLS

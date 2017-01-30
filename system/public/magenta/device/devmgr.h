@@ -31,3 +31,14 @@ IOCTL_WRAPPER_OUT(ioctl_devmgr_unmount_node, IOCTL_DEVMGR_UNMOUNT_NODE, mx_handl
 
 // ssize_t ioctl_devmgr_mount_bootfs_vmo(int fd, mx_handle_t* in);
 IOCTL_WRAPPER_IN(ioctl_devmgr_mount_bootfs_vmo, IOCTL_DEVMGR_MOUNT_BOOTFS_VMO, mx_handle_t);
+
+// TODO(smklein): Move these ioctls to a new location
+#define IOCTL_BLOBSTORE_BLOB_INIT \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_DEVMGR, 4)
+
+typedef struct blob_ioctl_config {
+    size_t size_data;
+} blob_ioctl_config_t;
+
+// ssize_t ioctl_blobstore_blob_init(int fd, const blob_ioctl_config_t* in);
+IOCTL_WRAPPER_IN(ioctl_blobstore_blob_init, IOCTL_BLOBSTORE_BLOB_INIT, blob_ioctl_config_t);
