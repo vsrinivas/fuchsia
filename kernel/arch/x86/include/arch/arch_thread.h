@@ -21,7 +21,7 @@ struct arch_thread {
     vaddr_t gs_base;
 #endif
 
-    /* buffer to save fpu state */
+    /* buffer to save fpu and extended register (e.g., PT) state */
     vaddr_t *extended_register_state;
     uint8_t extended_register_buffer[X86_MAX_EXTENDED_REGISTER_SIZE + 64];
 
