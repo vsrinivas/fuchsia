@@ -23,7 +23,7 @@ mx_status_t _mx_cache_flush(const void* addr, size_t len, uint32_t flags) {
     }
 
     if (flags & MX_CACHE_FLUSH_DATA) {
-        for (uintptr_t p = (uintptr_t)addr & -DATA_CONSTANTS.dcache_line_size;
+        for (uintptr_t p = (uintptr_t)addr & -((uintptr_t)DATA_CONSTANTS.dcache_line_size);
              p < (uintptr_t)addr + len;
              p += DATA_CONSTANTS.dcache_line_size) {
             // Clean data cache (dc) to point of coherency (cvac).
