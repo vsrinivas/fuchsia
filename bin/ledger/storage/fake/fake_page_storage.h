@@ -31,8 +31,6 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
   void GetCommit(CommitIdView commit_id,
                  std::function<void(Status, std::unique_ptr<const Commit>)>
                      callback) override;
-  Status GetCommitSynchronous(CommitIdView commit_id,
-                              std::unique_ptr<const Commit>* commit) override;
   Status StartCommit(const CommitId& commit_id,
                      JournalType journal_type,
                      std::unique_ptr<Journal>* journal) override;

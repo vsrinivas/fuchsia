@@ -372,30 +372,22 @@ Status PageStorageImpl::GetHeadCommitIds(std::vector<CommitId>* commit_ids) {
 void PageStorageImpl::GetCommit(
     CommitIdView commit_id,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
-  std::unique_ptr<const Commit> commit;
-  Status s = GetCommitSynchronous(commit_id, &commit);
-  callback(s, std::move(commit));
-}
-
-Status PageStorageImpl::GetCommitSynchronous(
-    CommitIdView commit_id,
-    std::unique_ptr<const Commit>* commit) {
   if (IsFirstCommit(commit_id)) {
-    *commit = CommitImpl::Empty(this);
-    return Status::OK;
+    callback(Status::OK, CommitImpl::Empty(this));
+    return;
   }
   std::string bytes;
   Status s = db_.GetCommitStorageBytes(commit_id, &bytes);
   if (s != Status::OK) {
-    return s;
+    callback(s, nullptr);
+    return;
   }
-  std::unique_ptr<const Commit> c = CommitImpl::FromStorageBytes(
+  std::unique_ptr<const Commit> commit = CommitImpl::FromStorageBytes(
       this, commit_id.ToString(), std::move(bytes));
-  if (!c) {
-    return Status::FORMAT_ERROR;
+  if (!commit) {
+    callback(Status::FORMAT_ERROR, nullptr);
   }
-  commit->swap(c);
-  return Status::OK;
+  callback(Status::OK, std::move(commit));
 }
 
 void PageStorageImpl::AddCommitFromLocal(std::unique_ptr<const Commit> commit,

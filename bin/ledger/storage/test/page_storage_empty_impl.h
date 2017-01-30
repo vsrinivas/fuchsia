@@ -32,9 +32,6 @@ class PageStorageEmptyImpl : public PageStorage {
                  std::function<void(Status, std::unique_ptr<const Commit>)>
                      callback) override;
 
-  Status GetCommitSynchronous(CommitIdView commit_id,
-                              std::unique_ptr<const Commit>* commit) override;
-
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes,
                           std::function<void(Status)> callback) override;
 

@@ -31,13 +31,6 @@ void PageStorageEmptyImpl::GetCommit(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-Status PageStorageEmptyImpl::GetCommitSynchronous(
-    CommitIdView commit_id,
-    std::unique_ptr<const Commit>* commit) {
-  FTL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
-}
-
 void PageStorageEmptyImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> ids_and_bytes,
     std::function<void(Status)> callback) {

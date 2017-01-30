@@ -86,17 +86,6 @@ void FakePageStorage::GetCommit(
       ftl::TimeDelta::FromMilliseconds(5));
 }
 
-Status FakePageStorage::GetCommitSynchronous(
-    CommitIdView commit_id,
-    std::unique_ptr<const Commit>* commit) {
-  auto it = journals_.find(commit_id.ToString());
-  if (it == journals_.end()) {
-    return Status::NOT_FOUND;
-  }
-  *commit = std::make_unique<FakeCommit>(journals_[commit_id.ToString()].get());
-  return Status::OK;
-}
-
 Status FakePageStorage::StartCommit(const CommitId& commit_id,
                                     JournalType journal_type,
                                     std::unique_ptr<Journal>* journal) {
