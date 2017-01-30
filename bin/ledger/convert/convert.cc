@@ -31,4 +31,10 @@ std::string ToString(ExtendedStringView value) {
   return value.ToString();
 }
 
+flatbuffers::Offset<ByteStorage> ToByteStorage(
+    flatbuffers::FlatBufferBuilder* builder,
+    ExtendedStringView value) {
+  return value.ToByteStorage(builder);
+}
+
 }  // namespace convert

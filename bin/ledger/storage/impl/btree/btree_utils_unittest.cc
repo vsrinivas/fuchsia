@@ -9,6 +9,7 @@
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/impl/btree/entry_change_iterator.h"
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
+#include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/public/types.h"
 #include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
@@ -22,6 +23,13 @@ namespace storage {
 namespace {
 
 const int kTestNodeSize = 4;
+
+// Creates the object id for testing from the given str.
+ObjectId MakeObjectId(std::string str) {
+  // Resize id to the required size, adding trailing underscores if needed.
+  str.resize(kObjectIdSize, '_');
+  return str;
+}
 
 class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
  public:
@@ -169,7 +177,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
     EXPECT_EQ(golden_entries[i].entry, entries[i]);
   }
 
-  Entry new_entry = {"key071", "objectid071", KeyPriority::EAGER};
+  Entry new_entry = {"key071", MakeObjectId("objectid071"), KeyPriority::EAGER};
   std::vector<EntryChange> new_change{EntryChange{new_entry, false}};
   // Insert key "071" between keys "07" and "08".
   golden_entries.insert(golden_entries.begin() + 8, new_change[0]);

@@ -4,157 +4,144 @@
 
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 
-#include "apps/ledger/src/glue/crypto/base64.h"
+#include <algorithm>
+
+#include "apps/ledger/src/convert/convert.h"
+#include "apps/ledger/src/storage/impl/btree/tree_node_generated.h"
 #include "lib/ftl/logging.h"
 
-#include <rapidjson/document.h>
-#include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
-
 namespace storage {
-
 namespace {
-
-const int kPriorityEager = 0;
-const int kPriorityLazy = 1;
-
-const char kEntries[] = "entries";
-const char kKey[] = "key";
-const char kObjectId[] = "object_id";
-const char kPriority[] = "priority";
-const char kChildren[] = "children";
-
-void WriteAsBase64(rapidjson::Writer<rapidjson::StringBuffer>& writer,
-                   ftl::StringView bytes) {
-  std::string encoded;
-  glue::Base64Encode(bytes, &encoded);
-  writer.String(encoded.c_str(), encoded.size());
+KeyPriority ToKeyPriority(KeyPriorityStorage priority_storage) {
+  switch (priority_storage) {
+    case KeyPriorityStorage_EAGER:
+      return KeyPriority::EAGER;
+    case KeyPriorityStorage_LAZY:
+      return KeyPriority::LAZY;
+  }
 }
 
-bool ReadFromBase64(const rapidjson::Value& value, std::string* decoded) {
-  if (!value.IsString()) {
+KeyPriorityStorage ToKeyPriorityStorage(KeyPriority priority) {
+  switch (priority) {
+    case KeyPriority::EAGER:
+      return KeyPriorityStorage_EAGER;
+    case KeyPriority::LAZY:
+      return KeyPriorityStorage_LAZY;
+  }
+}
+
+Entry ToEntry(const EntryStorage* entry_storage) {
+  return Entry{convert::ToString(entry_storage->key()),
+               convert::ToString(entry_storage->object_id()),
+               ToKeyPriority(entry_storage->priority())};
+}
+}  // namespace
+
+bool CheckValidTreeNodeSerialization(ftl::StringView data) {
+  flatbuffers::Verifier verifier(
+      reinterpret_cast<const unsigned char*>(data.data()), data.size());
+  if (!VerifyTreeNodeStorageBuffer(verifier)) {
     return false;
   }
 
-  std::string result;
-  return glue::Base64Decode(
-      ftl::StringView(value.GetString(), value.GetStringLength()), decoded);
-}
+  const TreeNodeStorage* tree_node =
+      GetTreeNodeStorage(reinterpret_cast<const unsigned char*>(data.data()));
 
-}  // namespace
+  if (tree_node->children()->size() > tree_node->entries()->size() + 1) {
+    return false;
+  }
+
+  // Check that the indexes are strictly increasing.
+  size_t expected_min_next_index = 0;
+  for (const auto* child : *(tree_node->children())) {
+    if (child->index() < expected_min_next_index) {
+      return false;
+    }
+    expected_min_next_index = child->index() + 1;
+  }
+
+  // Check that all index are in [0, tree_node->entries()->size()]
+  if (expected_min_next_index > tree_node->entries()->size() + 1) {
+    return false;
+  }
+
+  // Check that keys are in order.
+  auto it = std::adjacent_find(
+      tree_node->entries()->begin(), tree_node->entries()->end(),
+      [](const auto* e1, const auto* e2) {
+        return convert::ExtendedStringView(e1->key()) >=
+               convert::ExtendedStringView(e2->key());
+      });
+  if (it != tree_node->entries()->end()) {
+    return false;
+  }
+
+  return true;
+}
 
 std::string EncodeNode(const std::vector<Entry>& entries,
                        const std::vector<ObjectId>& children) {
-  rapidjson::StringBuffer string_buffer;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
+  flatbuffers::FlatBufferBuilder builder;
 
-  writer.StartObject();
-  {
-    writer.Key(kEntries);
-    writer.StartArray();
-    {
-      for (const Entry& entry : entries) {
-        writer.StartObject();
-        {
-          writer.Key(kKey);
-          WriteAsBase64(writer, entry.key);
+  auto entries_offsets = builder.CreateVector(
+      entries.size(),
+      static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>(
+          [&builder, &entries](size_t i) {
+            const auto& entry = entries[i];
+            return CreateEntryStorage(
+                builder, convert::ToByteStorage(&builder, entry.key),
+                convert::ToIdStorage(entry.object_id),
+                ToKeyPriorityStorage(entry.priority));
+          }));
 
-          writer.Key(kObjectId);
-          WriteAsBase64(writer, entry.object_id);
-
-          writer.Key(kPriority);
-          if (entry.priority == KeyPriority::EAGER) {
-            writer.Int(kPriorityEager);
-          } else if (entry.priority == KeyPriority::LAZY) {
-            writer.Int(kPriorityLazy);
-          } else {
-            FTL_NOTREACHED();
-          }
-        }
-        writer.EndObject();
-      }
+  size_t children_count = 0;
+  for (const auto& child : children) {
+    if (!child.empty()) {
+      ++children_count;
     }
-    writer.EndArray();
-
-    writer.Key(kChildren);
-    writer.StartArray();
-    {
-      for (const ObjectId& child : children) {
-        WriteAsBase64(writer, child);
-      }
-    }
-    writer.EndArray();
   }
-  writer.EndObject();
+  size_t current_index = 0;
+  auto children_offsets = builder.CreateVectorOfStructs(
+      children_count,
+      static_cast<std::function<void(size_t, ChildStorage*)>>(
+          [&children, &current_index](size_t i, ChildStorage* child_storage) {
+            while (children[current_index].empty()) {
+              ++current_index;
+            }
+            child_storage->mutate_index(current_index);
+            child_storage->mutable_object_id() =
+                *convert::ToIdStorage(children[current_index]);
+            ++current_index;
+          }));
 
-  return string_buffer.GetString();
+  builder.Finish(
+      CreateTreeNodeStorage(builder, entries_offsets, children_offsets));
+
+  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
+                     builder.GetSize());
 }
 
-bool DecodeNode(ftl::StringView json,
+bool DecodeNode(ftl::StringView data,
                 std::vector<Entry>* res_entries,
                 std::vector<ObjectId>* res_children) {
-  rapidjson::Document document;
-  document.Parse(json.data(), json.size());
+  FTL_DCHECK(CheckValidTreeNodeSerialization(data));
 
-  if (document.HasParseError()) {
-    return false;
+  const TreeNodeStorage* tree_node =
+      GetTreeNodeStorage(reinterpret_cast<const unsigned char*>(data.data()));
+
+  res_entries->clear();
+  res_entries->reserve(tree_node->entries()->size());
+  for (const auto* entry_storage : *(tree_node->entries())) {
+    res_entries->push_back(ToEntry(entry_storage));
   }
-
-  if (!document.IsObject()) {
-    return false;
+  res_children->clear();
+  res_children->reserve(tree_node->entries()->size() + 1);
+  for (const auto* child_storage : *(tree_node->children())) {
+    res_children->resize(child_storage->index());
+    res_children->push_back(convert::ToString(&child_storage->object_id()));
   }
+  res_children->resize(tree_node->entries()->size() + 1);
 
-  if (!document.HasMember(kEntries) || !document[kEntries].IsArray()) {
-    return false;
-  }
-
-  if (!document.HasMember(kChildren) || !document[kEntries].IsArray()) {
-    return false;
-  }
-
-  std::vector<Entry> entries;
-  std::vector<ObjectId> children;
-
-  for (auto& it : document[kEntries].GetArray()) {
-    Entry entry;
-    if (!it.IsObject()) {
-      return false;
-    }
-
-    if (!it.HasMember(kKey) || !ReadFromBase64(it[kKey], &entry.key)) {
-      return false;
-    }
-
-    if (!it.HasMember(kObjectId) ||
-        !ReadFromBase64(it[kObjectId], &entry.object_id)) {
-      return false;
-    }
-
-    if (!it.HasMember(kPriority) || !it[kPriority].IsInt()) {
-      return false;
-    }
-
-    if (it[kPriority].GetInt() == kPriorityEager) {
-      entry.priority = KeyPriority::EAGER;
-    } else if (it[kPriority].GetInt() == kPriorityLazy) {
-      entry.priority = KeyPriority::LAZY;
-    } else {
-      return false;
-    }
-
-    entries.push_back(entry);
-  }
-
-  for (auto& it : document[kChildren].GetArray()) {
-    ObjectId child;
-    if (!ReadFromBase64(it, &child)) {
-      return false;
-    }
-    children.push_back(child);
-  }
-
-  res_entries->swap(entries);
-  res_children->swap(children);
   return true;
 }
 }  // namespace storage

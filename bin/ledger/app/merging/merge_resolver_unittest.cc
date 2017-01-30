@@ -9,6 +9,7 @@
 #include "apps/ledger/src/app/constants.h"
 #include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
 #include "apps/ledger/src/callback/cancellable_helper.h"
+#include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -21,12 +22,19 @@
 
 namespace ledger {
 namespace {
+std::string MakeObjectId(std::string str) {
+  // Resize id to the required size, adding trailing underscores if needed.
+  str.resize(storage::kObjectIdSize, '_');
+  return str;
+}
+
 std::function<void(storage::Journal*)> AddKeyValueToJournal(
     const std::string& key,
     const storage::ObjectId& object_id) {
   return [key, object_id](storage::Journal* journal) {
     EXPECT_EQ(storage::Status::OK,
-              journal->Put(key, object_id, storage::KeyPriority::EAGER));
+              journal->Put(key, MakeObjectId(object_id),
+                           storage::KeyPriority::EAGER));
   };
 }
 
@@ -234,9 +242,9 @@ TEST_F(MergeResolverTest, LastOneWins) {
   // Entries are ordered by keys
   ASSERT_EQ(2u, content_vector.size());
   EXPECT_EQ("key2", content_vector[0].key);
-  EXPECT_EQ("val2.1", content_vector[0].object_id);
+  EXPECT_EQ(MakeObjectId("val2.1"), content_vector[0].object_id);
   EXPECT_EQ("key3", content_vector[1].key);
-  EXPECT_EQ("val3.0", content_vector[1].object_id);
+  EXPECT_EQ(MakeObjectId("val3.0"), content_vector[1].object_id);
 }
 
 }  // namespace

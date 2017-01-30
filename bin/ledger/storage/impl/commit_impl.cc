@@ -45,16 +45,12 @@ std::string SerializeCommit(
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   flatbuffers::FlatBufferBuilder builder;
 
-  // Builds the vector by hand to not produce additional copies.
-  builder.StartVector(parent_commits.size(), sizeof(convert::IdStorage));
-  for (size_t i = 0; i < parent_commits.size(); ++i) {
-    builder.PushBytes(
-        reinterpret_cast<const uint8_t*>(parent_commits[i]->GetId().data()),
-        sizeof(convert::IdStorage));
-  }
-  auto parents_id =
-      flatbuffers::Offset<flatbuffers::Vector<const convert::IdStorage*>>(
-          builder.EndVector(parent_commits.size()));
+  auto parents_id = builder.CreateVectorOfStructs(
+      parent_commits.size(),
+      static_cast<std::function<void(size_t, convert::IdStorage*)>>(
+          [&parent_commits](size_t i, convert::IdStorage* child_storage) {
+            *child_storage = *convert::ToIdStorage(parent_commits[i]->GetId());
+          }));
 
   auto storage = CreateCommitStorage(builder, timestamp, generation,
                                      root_node_id, parents_id);

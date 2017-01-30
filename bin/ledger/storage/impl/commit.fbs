@@ -7,10 +7,10 @@ include "apps/ledger/src/convert/bytes.fbs";
 namespace storage;
 
 table CommitStorage {
-  timestamp:ulong;
-  generation:ulong;
-  root_node_id:convert.IdStorage;
-  parents:[convert.IdStorage];
+  timestamp: ulong;
+  generation: ulong;
+  root_node_id: convert.IdStorage;
+  parents: [convert.IdStorage];
 }
 
 root_type CommitStorage;

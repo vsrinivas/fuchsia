@@ -4,6 +4,7 @@
 
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 
+#include "apps/ledger/src/storage/impl/btree/tree_node_generated.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "gtest/gtest.h"
 
@@ -24,7 +25,7 @@ std::string operator"" _s(const char* str, size_t size) {
 
 TEST(EncodingTest, EmptyData) {
   std::vector<Entry> entries;
-  std::vector<ObjectId> children;
+  std::vector<ObjectId> children{""};
 
   std::string bytes = EncodeNode(entries, children);
 
@@ -84,15 +85,69 @@ TEST(EncodingTest, ZeroByte) {
   EXPECT_EQ(children, res_children);
 }
 
+std::string ToString(flatbuffers::FlatBufferBuilder* builder) {
+  return std::string(reinterpret_cast<const char*>(builder->GetBufferPointer()),
+                     builder->GetSize());
+}
+
 TEST(EncodingTest, Errors) {
-  std::vector<Entry> res_entries;
-  std::vector<ObjectId> res_children;
-  EXPECT_FALSE(DecodeNode("[]", &res_entries, &res_children));
-  EXPECT_FALSE(DecodeNode("{}", &res_entries, &res_children));
-  EXPECT_FALSE(DecodeNode("{\"entries\":[]}", &res_entries, &res_children));
-  EXPECT_FALSE(DecodeNode("{\"children\":[]}", &res_entries, &res_children));
-  EXPECT_TRUE(DecodeNode("{\"entries\":[],\"children\":[]}", &res_entries,
-                         &res_children));
+  flatbuffers::FlatBufferBuilder builder;
+
+  ChildStorage children[2];
+  children[0].mutate_index(1);
+  children[0].mutable_object_id() = *convert::ToIdStorage(MakeObjectId("c1"));
+  children[1].mutate_index(1);
+  children[1].mutable_object_id() = *convert::ToIdStorage(MakeObjectId("c2"));
+
+  // An empty string is not a valid serialization.
+  EXPECT_FALSE(CheckValidTreeNodeSerialization(""));
+
+  // 2 children without entries is not a valid serialization.
+  builder.Finish(CreateTreeNodeStorage(
+      builder,
+      builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
+      builder.CreateVectorOfStructs(children, 2)));
+  EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
+
+  // A single child with index 1 is not a valid serialization.
+  builder.Clear();
+  builder.Finish(CreateTreeNodeStorage(
+      builder,
+      builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
+      builder.CreateVectorOfStructs(children, 1)));
+  EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
+
+  // 2 children with the same index is not a valid serialization.
+  builder.Clear();
+  builder.Finish(CreateTreeNodeStorage(
+      builder,
+      builder.CreateVector(
+          1,
+          static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>(
+              [&](size_t i) {
+                return CreateEntryStorage(
+                    builder, convert::ToByteStorage(&builder, "hello"),
+                    convert::ToIdStorage(MakeObjectId("world")),
+                    KeyPriorityStorage::KeyPriorityStorage_EAGER);
+              })),
+      builder.CreateVectorOfStructs(children, 2)));
+  EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
+
+  // 2 entries not sorted.
+  builder.Clear();
+  builder.Finish(CreateTreeNodeStorage(
+      builder,
+      builder.CreateVector(
+          2,
+          static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>(
+              [&](size_t i) {
+                return CreateEntryStorage(
+                    builder, convert::ToByteStorage(&builder, "hello"),
+                    convert::ToIdStorage(MakeObjectId("world")),
+                    KeyPriorityStorage::KeyPriorityStorage_EAGER);
+              })),
+      builder.CreateVectorOfStructs(children, 0)));
+  EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
 }
 
 }  // namespace

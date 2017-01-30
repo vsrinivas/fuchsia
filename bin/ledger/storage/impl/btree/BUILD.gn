@@ -2,10 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/flatbuffers/flatbuffer.gni")
+
 group("btree") {
 
   deps = [
     ":lib",
+  ]
+}
+
+flatbuffer("tree_node_storage") {
+  sources = [
+    "tree_node.fbs",
+  ]
+
+  deps = [
+    "//apps/ledger/src/convert:byte_storage",
   ]
 }
 
@@ -20,11 +32,11 @@ source_set("lib") {
   ]
 
   deps = [
+    ":tree_node_storage",
     "//apps/ledger/src/callback",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/public",
     "//lib/ftl",
-    "//third_party/rapidjson",
   ]
 }
 
@@ -40,6 +52,7 @@ source_set("unittests") {
 
   deps = [
     ":lib",
+    ":tree_node_storage",
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/fake:lib",
     "//apps/ledger/src/storage/public",

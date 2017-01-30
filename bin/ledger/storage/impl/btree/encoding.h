@@ -12,10 +12,12 @@
 
 namespace storage {
 
+bool CheckValidTreeNodeSerialization(ftl::StringView data);
+
 std::string EncodeNode(const std::vector<Entry>& entries,
                        const std::vector<ObjectId>& children);
 
-bool DecodeNode(ftl::StringView json,
+bool DecodeNode(ftl::StringView data,
                 std::vector<Entry>* entries,
                 std::vector<ObjectId>* children);
 

@@ -63,11 +63,21 @@ inline leveldb::Slice ToSlice(ExtendedStringView value) {
   return value;
 }
 
+// Returns the representation of the given value as an IdStorage.
+inline const IdStorage* ToIdStorage(ExtendedStringView value) {
+  return value;
+}
+
 // Returns the fidl::Array representation of the given value.
 fidl::Array<uint8_t> ToArray(ExtendedStringView value);
 
 // Returns the std::string representation of the given value.
 std::string ToString(ExtendedStringView value);
+
+// Store the given value as a ByteStorage in the given builder.
+flatbuffers::Offset<ByteStorage> ToByteStorage(
+    flatbuffers::FlatBufferBuilder* builder,
+    ExtendedStringView value);
 
 // Comparator that allows heterogeneous lookup by StringView and
 // std::string in a container with the key type of std::string.

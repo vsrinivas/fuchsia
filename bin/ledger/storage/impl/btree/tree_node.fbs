@@ -1,0 +1,27 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+include "apps/ledger/src/convert/bytes.fbs";
+
+namespace storage;
+
+enum KeyPriorityStorage : byte { EAGER = 0, LAZY = 1 }
+
+table EntryStorage {
+  key: convert.ByteStorage;
+  object_id: convert.IdStorage;
+  priority: KeyPriorityStorage;
+}
+
+struct ChildStorage {
+  index:  ushort (key);
+  object_id: convert.IdStorage;
+}
+
+table TreeNodeStorage {
+  entries: [EntryStorage];
+  children: [ChildStorage];
+}
+
+root_type TreeNodeStorage;
