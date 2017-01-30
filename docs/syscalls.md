@@ -19,9 +19,9 @@
 ## Threads
 + [thread_create](syscalls/thread_create.md) - create a new thread within a process
 + [thread_exit](syscalls/thread_exit.md) - exit the current thread
-+ thread_read_state - read register state from a thread
++ [thread_read_state](syscalls/thread_read_state.md) - read register state from a thread
 + [thread_start](syscalls/thread_start.md) - cause a new thread to start executing
-+ thread_write_state - modify register state of a thread
++ [thread_write_state](syscalls/thread_write_state.md) - modify register state of a thread
 
 ## Processes
 + [process_create](syscalls/process_create.md) - create a new process within a job

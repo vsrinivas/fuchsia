@@ -181,8 +181,22 @@ bool dump_inferior_regs(mx_handle_t thread)
         ASSERT_EQ(status, ERR_BUFFER_TOO_SMALL, "getting regset size failed");
         void* buf = tu_malloc(regset_size);
         status = mx_thread_read_state(thread, MX_THREAD_STATE_REGSET0 + i, buf, regset_size, &regset_size);
-        ASSERT_EQ(status, NO_ERROR, "getting regset failed");
-        dump_arch_regs(thread, i, buf);
+        // Regset reads can fail for legitimate reasons:
+        // ERR_NOT_SUPPORTED - the regset is not supported on this chip
+        // ERR_UNAVAILABLE - the regset may be currently unavailable
+        switch (status) {
+        case NO_ERROR:
+            dump_arch_regs(thread, i, buf);
+            break;
+        case ERR_NOT_SUPPORTED:
+            unittest_printf("Regset %u not supported\n", i);
+            break;
+        case ERR_UNAVAILABLE:
+            unittest_printf("Regset %u unavailable\n", i);
+            break;
+        default:
+            ASSERT_EQ(status, NO_ERROR, "getting regset failed");
+        }
         free(buf);
     }
 
