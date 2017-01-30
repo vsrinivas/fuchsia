@@ -186,8 +186,7 @@ static void hci_acl_write_complete(iotxn_t* txn, void* cookie) {
 
 static void hci_build_read_wait_items_locked(hci_t* hci) {
     mx_wait_item_t* items = hci->read_wait_items;
-
-    memset(items, 0, NUM_CHANNELS);
+    memset(items, 0, sizeof(hci->read_wait_items));
     uint32_t count = 0;
 
     if (hci->cmd_channel != MX_HANDLE_INVALID) {
