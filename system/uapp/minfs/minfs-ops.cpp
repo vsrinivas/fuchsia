@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#include <mxtl/algorithm.h>
 #include <magenta/device/devmgr.h>
 
 #ifdef __Fuchsia__
@@ -18,7 +19,6 @@
 #endif
 
 #include "minfs-private.h"
-#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
 #ifdef __Fuchsia__
 static mx_status_t vmo_read_exact(mx_handle_t h, void* data, uint64_t offset, size_t len) {
@@ -206,7 +206,7 @@ static mx_status_t vn_init_vmo(vnode_t* vn) {
     }
 
     mx_status_t status;
-    if ((status = mx_vmo_create(ROUNDUP(vn->inode.size, kMinfsBlockSize), 0, &vn->vmo)) != NO_ERROR) {
+    if ((status = mx_vmo_create(mxtl::roundup(vn->inode.size, kMinfsBlockSize), 0, &vn->vmo)) != NO_ERROR) {
         error("Failed to initialize vmo; error: %d\n", status);
         return status;
     }
@@ -838,7 +838,7 @@ static mx_status_t _fs_write(vnode_t* vn, const void* data, size_t len, size_t o
         size_t xfer_off = n * kMinfsBlockSize + adjust;
         if ((xfer_off + xfer) > vn->inode.size) {
             size_t new_size = xfer_off + xfer;
-            if ((status = mx_vmo_set_size(vn->vmo, ROUNDUP(new_size, kMinfsBlockSize))) != NO_ERROR) {
+            if ((status = mx_vmo_set_size(vn->vmo, mxtl::roundup(new_size, kMinfsBlockSize))) != NO_ERROR) {
                 goto done;
             }
             vn->inode.size = static_cast<uint32_t>(new_size);
@@ -1212,7 +1212,7 @@ static mx_status_t _fs_truncate(vnode_t* vn, size_t len) {
     }
 
 #ifdef __Fuchsia__
-    if ((r = mx_vmo_set_size(vn->vmo, ROUNDUP(len, kMinfsBlockSize))) != NO_ERROR) {
+    if ((r = mx_vmo_set_size(vn->vmo, mxtl::roundup(len, kMinfsBlockSize))) != NO_ERROR) {
         return r;
     }
 #endif

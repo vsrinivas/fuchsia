@@ -51,6 +51,27 @@ bool clamp_test() {
     END_TEST;
 }
 
+bool roundup_test() {
+    BEGIN_TEST;
+
+    EXPECT_EQ(mxtl::roundup(0u, 1u), 0u, "");
+    EXPECT_EQ(mxtl::roundup(0u, 5u), 0u, "");
+    EXPECT_EQ(mxtl::roundup(5u, 5u), 5u, "");
+
+    EXPECT_EQ(mxtl::roundup(1u, 6u), 6u, "");
+    EXPECT_EQ(mxtl::roundup(6u, 1u), 6u, "");
+    EXPECT_EQ(mxtl::roundup(6u, 3u), 6u, "");
+    EXPECT_EQ(mxtl::roundup(6u, 4u), 8u, "");
+
+    EXPECT_EQ(mxtl::roundup(15u, 8u), 16u, "");
+    EXPECT_EQ(mxtl::roundup(16u, 8u), 16u, "");
+    EXPECT_EQ(mxtl::roundup(17u, 8u), 24u, "");
+    EXPECT_EQ(mxtl::roundup(123u, 100u), 200u, "");
+    EXPECT_EQ(mxtl::roundup(123456u, 1000u), 124000u, "");
+
+    END_TEST;
+}
+
 template <typename T>
 bool is_pow2_test() {
     BEGIN_TEST;
@@ -74,6 +95,7 @@ BEGIN_TEST_CASE(algorithm_tests)
 RUN_NAMED_TEST("min test", min_test)
 RUN_NAMED_TEST("max test", max_test)
 RUN_NAMED_TEST("clamp test", clamp_test)
+RUN_NAMED_TEST("roundup test", roundup_test)
 RUN_NAMED_TEST("is_pow2<uint8_t>",  is_pow2_test<uint8_t>)
 RUN_NAMED_TEST("is_pow2<uint16_t>", is_pow2_test<uint16_t>)
 RUN_NAMED_TEST("is_pow2<uint32_t>", is_pow2_test<uint32_t>)
