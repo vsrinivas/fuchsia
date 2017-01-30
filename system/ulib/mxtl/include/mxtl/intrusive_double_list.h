@@ -121,7 +121,7 @@ public:
 
     ~DoublyLinkedList() {
         // It is considered an error to allow a list of unmanaged pointers to
-        // destruct of there are still elements in it.  Managed pointer lists
+        // destruct if there are still elements in it.  Managed pointer lists
         // will automatically release their references to their elements.
         DEBUG_ASSERT(PtrTraits::IsManaged || is_empty());
         clear();
