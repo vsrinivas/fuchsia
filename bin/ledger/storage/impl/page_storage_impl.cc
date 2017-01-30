@@ -386,6 +386,7 @@ void PageStorageImpl::GetCommit(
       this, commit_id.ToString(), std::move(bytes));
   if (!commit) {
     callback(Status::FORMAT_ERROR, nullptr);
+    return;
   }
   callback(Status::OK, std::move(commit));
 }
