@@ -84,12 +84,10 @@ class UserRunnerImpl : public UserRunner {
     binding_.set_connection_error_handler([this] { delete this; });
 
     const std::string label = kStoriesScopeLabelPrefix + to_hex_string(user_id);
-    ApplicationEnvironmentPtr parent_env;
-    application_context_->environment()->Duplicate(parent_env.NewRequest());
-
-    ServiceProviderPtr parent_env_service_provider;
-    parent_env->GetServices(parent_env_service_provider.NewRequest());
-    stories_scope_ = std::make_unique<Scope>(std::move(parent_env), label);
+    ApplicationEnvironmentPtr user_runner_env;
+    application_context_->environment()->Duplicate(
+        user_runner_env.NewRequest());
+    stories_scope_ = std::make_unique<Scope>(std::move(user_runner_env), label);
 
     auto resolver_service_provider = GetServiceProvider(
         "file:///system/apps/resolver_main", nullptr /* user_shell_args */);
