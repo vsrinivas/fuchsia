@@ -22,6 +22,9 @@ static status_t arch_get_general_regs(struct thread *thread, mx_aarch64_general_
     uint32_t provided_buf_size = *buf_size;
     *buf_size = sizeof(*gr);
 
+    // Do "buffer too small" checks first. No point in prohibiting the caller
+    // from finding out the needed size just because the thread is currently
+    // running.
     if (provided_buf_size < sizeof(*gr))
         return ERR_BUFFER_TOO_SMALL;
 
