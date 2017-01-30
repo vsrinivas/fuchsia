@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "init"
+    ],
     "labels": [
         "//drivers/wifi/qualcomm:wifi-qca6174",
         "//magma:magma_service_driver"
