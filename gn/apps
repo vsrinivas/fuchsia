@@ -2,6 +2,7 @@
     "labels": [
         "//apps/dart_content_handler",
         "//apps/dart_content_handler/examples",
+        "//apps/dart_content_handler/integration",
         "//apps/maxwell",
         "//apps/maxwell/src/integration"
     ],
@@ -29,6 +30,10 @@
         {
             "binary": "dart_content_handler",
             "bootfs_path": "apps/dart_content_handler"
+        },
+        {
+            "binary": "dart_content_handler_test.dartx",
+            "bootfs_path": "apps/dart_content_handler_test.dartx"
         },
         {
             "binary": "hello_app_dart.dartx",
