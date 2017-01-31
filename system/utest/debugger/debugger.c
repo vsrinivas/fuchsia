@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -138,6 +139,12 @@ static bool wait_inferior_thread_worker(mx_handle_t inferior, mx_handle_t eport)
             return false;
         if (packet.report.header.type == MX_EXCP_START) {
             unittest_printf("wait-inf: inferior started\n");
+            if (!resume_inferior(inferior, packet.report.context.tid))
+                return false;
+            continue;
+        } else if (packet.report.header.type == MX_EXCP_THREAD_EXIT) {
+            unittest_printf("wait-inf: thread %" PRId64 " exited\n", packet.report.context.tid);
+            // A thread is gone, but we only care about the process.
             if (!resume_inferior(inferior, packet.report.context.tid))
                 return false;
             continue;

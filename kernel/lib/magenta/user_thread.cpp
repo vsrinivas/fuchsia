@@ -241,7 +241,9 @@ void UserThread::Exiting() {
     state_tracker_.UpdateState(0u, MX_TASK_TERMINATED);
 
     {
-        AutoLock lock(exception_lock_);
+        AutoLock lock(&exception_lock_);
+        if (process_->debugger_exception_port_)
+            process_->debugger_exception_port_->OnThreadExitForDebugger(this);
         if (exception_port_)
             exception_port_->OnThreadExit(this);
     }

@@ -161,7 +161,13 @@ static bool verify_exception(const mx_exception_packet_t* packet,
                              mx_koid_t* tid)
 {
     const mx_exception_report_t* report = &packet->report;
-    EXPECT_EQ(report->header.type, expected_type, "bad exception type");
+
+    unittest_printf("%s: exception received: pid %"
+                    PRIu64 ", tid %" PRIu64 ", kind %d\n",
+                    kind, report->context.pid, report->context.tid,
+                    report->header.type);
+
+    EXPECT_EQ(report->header.type, expected_type, "unexpected exception type");
 
     if (strcmp(kind, "process") == 0) {
         // Test mx_object_get_child: Verify it returns the correct process.
@@ -186,10 +192,6 @@ static bool verify_exception(const mx_exception_packet_t* packet,
         EXPECT_EQ(process_info.koid, report->context.pid, "wrong process in exception report");
     }
 
-    unittest_printf("%s: exception received: pid %"
-                    PRIu64 ", tid %" PRIu64 ", kind %d\n",
-                    kind, report->context.pid, report->context.tid,
-                    report->header.type);
     *tid = report->context.tid;
     return true;
 }
@@ -481,6 +483,10 @@ static bool process_start_test(void)
     read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
     send_msg(our_channel, MSG_DONE);
     resume_thread_from_exception(child, tid, 0);
+    mx_koid_t tid2;
+    read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXIT, false, &tid2);
+    ASSERT_EQ(tid2, tid, "exiting tid mismatch");
+    resume_thread_from_exception(child, tid, 0);
     tu_process_wait_signaled(child);
 
     tu_handle_close(child);
@@ -657,12 +663,16 @@ static bool trigger_test(void)
         resume_thread_from_exception(child, tid, 0);
         mx_exception_packet_t packet;
         if (read_exception(eport, &packet)) {
-            if (packet.report.header.type != MX_EXCP_GONE) {
+            if (packet.report.header.type != MX_EXCP_THREAD_EXIT) {
                 verify_exception(&packet, excp_name, child, excp_type, false, &tid);
                 resume_thread_from_exception(child, tid, MX_RESUME_NOT_HANDLED);
+                mx_koid_t tid2;
+                read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXIT, false, &tid2);
+                ASSERT_EQ(tid2, tid, "exiting tid mismatch");
             }
+            resume_thread_from_exception(child, tid, 0);
+            tu_process_wait_signaled(child);
         }
-        tu_process_wait_signaled(child);
         tu_handle_close(child);
         tu_handle_close(eport);
         tu_handle_close(our_channel);

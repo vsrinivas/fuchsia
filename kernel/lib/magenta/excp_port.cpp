@@ -76,11 +76,11 @@ mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
     return port_->Queue(iopk);
 }
 
-void ExceptionPort::BuildThreadStartReport(mx_exception_report_t* report,
-                                           mx_koid_t pid, mx_koid_t tid) {
+void ExceptionPort::BuildReport(mx_exception_report_t* report, uint32_t type,
+                                mx_koid_t pid, mx_koid_t tid) {
     memset(report, 0, sizeof(*report));
     report->header.size = sizeof(*report);
-    report->header.type = MX_EXCP_START;
+    report->header.type = type;
     report->context.pid = pid;
     report->context.tid = tid;
 }
@@ -90,7 +90,7 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
     mx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " started\n", pid, tid);
     mx_exception_report_t report;
-    BuildThreadStartReport(&report, pid, tid);
+    BuildReport(&report, MX_EXCP_START, pid, tid);
     arch_exception_context_t context;
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
@@ -101,24 +101,6 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
     }
 }
 
-void ExceptionPort::BuildProcessGoneReport(mx_exception_report_t* report,
-                                           mx_koid_t pid) {
-    memset(report, 0, sizeof(*report));
-    report->header.size = sizeof(*report);
-    report->header.type = MX_EXCP_GONE;
-    report->context.pid = pid;
-    report->context.tid = MX_KOID_INVALID;
-}
-
-void ExceptionPort::BuildThreadGoneReport(mx_exception_report_t* report,
-                                          mx_koid_t pid, mx_koid_t tid) {
-    memset(report, 0, sizeof(*report));
-    report->header.size = sizeof(*report);
-    report->header.type = MX_EXCP_GONE;
-    report->context.pid = pid;
-    report->context.tid = tid;
-}
-
 // This isn't called for every process's destruction, only for processes that
 // have a process-specific exception handler.
 // TODO(dje): Debugger's needs.
@@ -127,21 +109,39 @@ void ExceptionPort::OnProcessExit(ProcessDispatcher* process) {
     mx_koid_t pid = process->get_koid();
     LTRACEF("process %" PRIu64 " gone\n", pid);
     mx_exception_report_t report;
-    BuildProcessGoneReport(&report, pid);
+    BuildReport(&report, MX_EXCP_GONE, pid, MX_KOID_INVALID);
     // The result is ignored, not much else we can do.
     SendReport(&report);
 }
 
 // This isn't called for every thread's destruction, only for threads that
 // have a thread-specific exception handler.
-// TODO(dje): Debugger's needs.
 
 void ExceptionPort::OnThreadExit(UserThread* thread) {
     mx_koid_t pid = thread->process()->get_koid();
     mx_koid_t tid = thread->get_koid();
     LTRACEF("thread %" PRIu64 ".%" PRIu64 " gone\n", pid, tid);
     mx_exception_report_t report;
-    BuildThreadGoneReport(&report, pid, tid);
+    BuildReport(&report, MX_EXCP_GONE, pid, tid);
     // The result is ignored, not much else we can do.
     SendReport(&report);
+}
+
+// This isn't called for every thread's destruction, only when a debugger
+// is attached.
+
+void ExceptionPort::OnThreadExitForDebugger(UserThread* thread) {
+    mx_koid_t pid = thread->process()->get_koid();
+    mx_koid_t tid = thread->get_koid();
+    LTRACEF("thread %" PRIu64 ".%" PRIu64 " exited\n", pid, tid);
+    mx_exception_report_t report;
+    BuildReport(&report, MX_EXCP_THREAD_EXIT, pid, tid);
+    arch_exception_context_t context;
+    // There is no iframe at the moment. We'll need one (or equivalent) if/when
+    // we want to make $pc, $sp available.
+    memset(&context, 0, sizeof(context));
+    auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context);
+    if (status != NO_ERROR) {
+        // Ignore any errors, we still want the thread to run.
+    }
 }

@@ -32,8 +32,20 @@ typedef enum {
     MX_EXCP_START = 100,
 
     // A thread or process has exited or otherwise terminated.
+    // At this point thread registers are no longer available.
+    // For process gone notifications this is only sent to the process
+    // exception port (if one is registered). For thread gone notifications
+    // this is only sent to the thread exception port (if one is registered).
     // N.B. "gone" notifications are not responded to.
     MX_EXCP_GONE = 101,
+
+    // A thread has cleanly exited.
+    // This exception is (currently) sent to debuggers only
+    // (MX_EXCEPTION_PORT_DEBUGGER).
+    // Register state is still available at this point.
+    // This exception is different from MX_EXCP_GONE in that a debugger can
+    // still examine thread state.
+    MX_EXCP_THREAD_EXIT = 102,
 } mx_excp_type_t;
 
 #define MX_EXCP_IS_ARCH(excp) ((excp) <= MX_EXCP_MAX_ARCH)

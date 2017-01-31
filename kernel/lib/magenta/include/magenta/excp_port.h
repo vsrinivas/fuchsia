@@ -26,6 +26,7 @@ public:
 
     void OnProcessExit(ProcessDispatcher* process);
     void OnThreadExit(UserThread* thread);
+    void OnThreadExitForDebugger(UserThread* thread);
 
 private:
     ExceptionPort(mxtl::RefPtr<PortDispatcher> port, uint64_t port_key);
@@ -35,10 +36,7 @@ private:
 
     void OnDestruction();
 
-    void BuildThreadStartReport(mx_exception_report_t* report, mx_koid_t pid, mx_koid_t tid);
-
-    void BuildProcessGoneReport(mx_exception_report_t* report, mx_koid_t pid);
-    void BuildThreadGoneReport(mx_exception_report_t* report, mx_koid_t pid, mx_koid_t tid);
+    void BuildReport(mx_exception_report_t* report, uint32_t type, mx_koid_t pid, mx_koid_t tid);
 
     // These aren't locked as once the exception port is created these are
     // immutable (the io port itself has its own locking though).
