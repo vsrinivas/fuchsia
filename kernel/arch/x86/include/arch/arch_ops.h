@@ -62,9 +62,9 @@ static inline void arch_spinloop_signal(void)
 {
 }
 
-#define mb()        __asm__ volatile ("mfence")
-#define wmb()       __asm__ volatile ("sfence")
-#define rmb()       __asm__ volatile ("lfence")
+#define mb()        __asm__ volatile ("mfence" ::: "memory")
+#define wmb()       __asm__ volatile ("sfence" ::: "memory")
+#define rmb()       __asm__ volatile ("lfence" ::: "memory")
 
 #define smp_mb()    mb()
 #define smp_wmb()   wmb()
