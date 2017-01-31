@@ -79,5 +79,5 @@ static const int a15irqmap[] = {
 #define PCIE_INT_COUNT  (4)
 #define VIRTIO0_INT     (32 + 16)
 
-#define MAX_INT 128
+#define MAX_INT 288
 

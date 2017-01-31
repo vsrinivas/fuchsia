@@ -149,6 +149,10 @@ void arm_gic_init(void)
 {
     int i;
 
+    uint max_irqs = ((GICREG(0, GICD_TYPER) & 0x1F) + 1) * 32;
+    printf("arm_gic_init max_irqs: %u\n", max_irqs);
+    assert(max_irqs <= MAX_INT);
+
     for (i = 0; i < MAX_INT; i+= 32) {
         GICREG(0, GICD_ICENABLER(i / 32)) = ~0;
         GICREG(0, GICD_ICPENDR(i / 32)) = ~0;
