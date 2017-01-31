@@ -66,12 +66,12 @@ static inline bool arch_fiqs_disabled(void)
 
 static inline void arch_spinloop_pause(void)
 {
-    __asm__ volatile("wfe");
+    __asm__ volatile("wfe" ::: "memory");
 }
 
 static inline void arch_spinloop_signal(void)
 {
-    __asm__ volatile("sev");
+    __asm__ volatile("sev" ::: "memory");
 }
 
 #define mb()        __asm__ volatile("dsb sy" : : : "memory")

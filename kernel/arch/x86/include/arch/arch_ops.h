@@ -55,7 +55,7 @@ static inline uint32_t arch_cycle_count(void)
 
 static inline void arch_spinloop_pause(void)
 {
-    __asm__ volatile("pause");
+    __asm__ volatile("pause" ::: "memory");
 }
 
 static inline void arch_spinloop_signal(void)
