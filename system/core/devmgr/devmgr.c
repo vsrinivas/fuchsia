@@ -106,6 +106,7 @@ static int mount_minfs(int fd, mount_options_t* options) {
             memfs_create_directory("/system", 0);
             path = "/system";
             options->readonly = true;
+            devmgr_start_system_init(NULL);
         } else if (!memcmp(type_guid, data_guid, GPT_GUID_LEN)) {
             if (data_mounted) {
                 return ERR_ALREADY_BOUND;
@@ -194,7 +195,7 @@ void create_netsvc_ipc_handles(void) {
     mx_channel_create(0, &netsvc_ipc, &netsvc_ipc_child);
 }
 
-void devmgr_start_system_init(void) {
+int devmgr_start_system_init(void* arg) {
     static bool init_started = false;
     static mtx_t lock = MTX_INIT;
     mtx_lock(&lock);
@@ -222,6 +223,7 @@ void devmgr_start_system_init(void) {
         init_started = true;
     }
     mtx_unlock(&lock);
+    return 0;
 }
 
 int service_starter(void* arg) {
@@ -235,8 +237,6 @@ int service_starter(void* arg) {
 
     devmgr_launch(svcs_job_handle, "sh:autorun0", countof(argv_autorun0),
                   argv_autorun0, NULL, -1, NULL, NULL, 0);
-
-    devmgr_start_system_init();
 
     int dirfd;
     if ((dirfd = open("/dev/class/block", O_DIRECTORY|O_RDONLY)) >= 0) {
@@ -346,6 +346,10 @@ int main(int argc, char** argv) {
 
     create_application_launcher_handles();
     create_netsvc_ipc_handles();
+
+    if (secondary_bootfs_ready()) {
+        devmgr_start_system_init(NULL);
+    }
 
     thrd_t t;
     if ((thrd_create_with_name(&t, service_starter, NULL, "service-starter")) == thrd_success) {

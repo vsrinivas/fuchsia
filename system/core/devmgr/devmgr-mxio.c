@@ -96,6 +96,14 @@ void devmgr_launch(mx_handle_t job,
     }
 }
 
+static void start_system_init(void) {
+    thrd_t t;
+    int r = thrd_create_with_name(&t, devmgr_start_system_init, NULL, "system-init");
+    if (r == thrd_success) {
+        thrd_detach(t);
+    }
+}
+
 static bool has_secondary_bootfs = false;
 static ssize_t setup_bootfs_vmo(unsigned int n, mx_handle_t vmo) {
     uint64_t size;
@@ -132,7 +140,11 @@ static void setup_bootfs(void) {
 }
 
 ssize_t devmgr_add_systemfs_vmo(mx_handle_t vmo) {
-    return setup_bootfs_vmo(100, vmo);
+    ssize_t added = setup_bootfs_vmo(100, vmo);
+    if (added > 0) {
+        start_system_init();
+    }
+    return added;
 }
 
 bool secondary_bootfs_ready(void) {
