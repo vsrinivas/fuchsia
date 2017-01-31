@@ -7,11 +7,6 @@
 #include "lib/ftl/strings/string_number_conversions.h"
 
 namespace moterm {
-namespace {
-
-constexpr char kDefaultShell[] = "file:///boot/bin/sh";
-
-}  // namespace
 
 MotermParams::MotermParams() {}
 
@@ -28,8 +23,6 @@ bool MotermParams::Parse(const ftl::CommandLine& command_line) {
   // <command> <args...>
   if (!command_line.positional_args().empty()) {
     command = command_line.positional_args();
-  } else {
-    command.push_back(kDefaultShell);
   }
   return true;
 }

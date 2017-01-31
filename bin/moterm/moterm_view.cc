@@ -15,6 +15,7 @@
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/ftl/time/time_delta.h"
+#include "lib/mtl/io/redirection.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "third_party/skia/include/core/SkPaint.h"
 
@@ -42,7 +43,6 @@ MotermView::MotermView(
       weak_ptr_factory_(this),
       task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
       params_(moterm_params) {
-  FTL_CHECK(!params_.command.empty());
   FTL_DCHECK(context_);
 
   auto font_request = fonts::FontRequest::New();
@@ -78,14 +78,25 @@ void MotermView::ComputeMetrics() {
 void MotermView::StartCommand() {
   command_.reset(new Command());
 
-  bool success = command_->Start(context_->launcher().get(), params_.command,
-                                 [this](const void* bytes, size_t num_bytes) {
-                                   OnDataReceived(bytes, num_bytes);
-                                 },
-                                 [this]() {
-                                   FTL_LOG(INFO) << "Command terminated.";
-                                   exit(1);
-                                 });
+  std::vector<std::string> command_to_run = params_.command;
+  std::vector<mtl::StartupHandle> startup_handles;
+
+  if (command_to_run.empty()) {
+    shell_controller_ = std::make_unique<ShellController>();
+    command_to_run = shell_controller_->GetShellCommand();
+    startup_handles = shell_controller_->GetStartupHandles();
+    shell_controller_->Start();
+  }
+
+  bool success = command_->Start(
+      context_->launcher().get(), command_to_run, std::move(startup_handles),
+      [this](const void* bytes, size_t num_bytes) {
+        OnDataReceived(bytes, num_bytes);
+      },
+      [this]() {
+        FTL_LOG(INFO) << "Command terminated.";
+        mtl::MessageLoop::GetCurrent()->PostQuitTask();
+      });
   if (!success) {
     FTL_LOG(ERROR) << "Error starting command.";
     exit(1);

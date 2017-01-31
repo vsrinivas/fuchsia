@@ -11,6 +11,7 @@
 #include "apps/moterm/moterm_model.h"
 #include "apps/moterm/moterm_params.h"
 #include "apps/moterm/moterm_params.h"
+#include "apps/moterm/shell_controller.h"
 #include "apps/mozart/lib/skia/skia_font_loader.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
 #include "apps/mozart/lib/view_framework/input_handler.h"
@@ -67,6 +68,7 @@ class MotermView : public mozart::BaseView,
   MotermModel model_;
   // State changes to the model since last draw.
   MotermModel::StateChanges model_state_changes_;
+  std::unique_ptr<ShellController> shell_controller_;
 
   // If we skip drawing despite being forced to, we should force the next draw.
   bool force_next_draw_;

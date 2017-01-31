@@ -11,10 +11,12 @@
 #include <mxio/util.h>
 
 #include <functional>
+#include <vector>
 
 #include "apps/modular/services/application/application_launcher.fidl.h"
 #include "lib/ftl/files/unique_fd.h"
 #include "lib/ftl/functional/closure.h"
+#include "lib/mtl/io/redirection.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
 
@@ -30,6 +32,7 @@ class Command : mtl::MessageLoopHandler {
 
   bool Start(modular::ApplicationLauncher* launcher,
              std::vector<std::string> command,
+             std::vector<mtl::StartupHandle> startup_handles,
              ReceiveCallback receive_callback,
              ftl::Closure termination_callback);
 

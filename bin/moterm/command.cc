@@ -5,7 +5,6 @@
 #include "apps/moterm/command.h"
 
 #include "lib/ftl/logging.h"
-#include "lib/mtl/io/redirection.h"
 
 namespace moterm {
 namespace {
@@ -38,6 +37,7 @@ Command::~Command() {
 
 bool Command::Start(modular::ApplicationLauncher* launcher,
                     std::vector<std::string> command,
+                    std::vector<mtl::StartupHandle> startup_handles,
                     ReceiveCallback receive_callback,
                     ftl::Closure termination_callback) {
   FTL_DCHECK(!command.empty());
@@ -46,6 +46,10 @@ bool Command::Start(modular::ApplicationLauncher* launcher,
   launch_info->url = command[0];
   for (size_t i = 1; i < command.size(); ++i)
     launch_info->arguments.push_back(command[i]);
+  for (mtl::StartupHandle& startup_handle : startup_handles) {
+    launch_info->startup_handles.insert(startup_handle.id,
+                                        std::move(startup_handle.handle));
+  }
 
   mx_status_t status;
   if ((status =
