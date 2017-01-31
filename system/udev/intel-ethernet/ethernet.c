@@ -340,16 +340,19 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
         return r;
     }
 
-    if (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1)) {
-        if (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_LEGACY, 1)) {
-            printf("eth: failed to set irq mode\n");
-            goto fail;
-        } else {
-            printf("eth: using legacy irq mode\n");
-            edev->edge_triggered_irq = false;
-        }
-    } else {
+    // Query whether we have MSI or Legacy interrupts.
+    uint32_t irq_cnt = 0;
+    if ((pci->query_irq_mode_caps(dev, MX_PCIE_IRQ_MODE_MSI, &irq_cnt) == NO_ERROR) &&
+            (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_MSI, 1) == NO_ERROR)) {
         edev->edge_triggered_irq = true;
+        printf("eth: using MSI mode\n");
+    } else if ((pci->query_irq_mode_caps(dev, MX_PCIE_IRQ_MODE_LEGACY, &irq_cnt) == NO_ERROR) &&
+               (pci->set_irq_mode(dev, MX_PCIE_IRQ_MODE_LEGACY, 1) == NO_ERROR)) {
+        edev->edge_triggered_irq = false;
+        printf("eth: using legacy irq mode\n");
+    } else {
+        printf("eth: failed to configure irqs\n");
+        goto fail;
     }
 
     if ((edev->irqh = pci->map_interrupt(dev, 0)) < 0) {
