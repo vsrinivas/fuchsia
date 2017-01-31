@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
+#include <inttypes.h>
 #include <launchpad/vmo.h>
+#include <magenta/device/dmctl.h>
 #include <magenta/dlfcn.h>
 #include <magenta/syscalls.h>
-#include <mxio/util.h>
+#include <mxio/loader-service.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <unittest/unittest.h>
 
@@ -103,12 +107,41 @@ bool loader_service_test(void) {
     if (fail)
         show_dlerror();
 
+    // Put things back to how they were.
+    mx_handle_t old2 = dl_set_loader_service(old);
+    EXPECT_EQ(old2, my_service, "unexpected previous service handle");
+    mx_handle_close(old2);
+
     END_TEST;
 }
+
+#define DMCTL_PATH "/dev/class/misc/dmctl"
+
+bool ioctl_test(void) {
+    BEGIN_TEST;
+
+    int fd = open(DMCTL_PATH, O_RDONLY);
+    ASSERT_GE(fd, 0, "can't open " DMCTL_PATH);
+
+    mx_handle_t h;
+    ssize_t s = ioctl_dmctl_get_loader_service_channel(fd, &h);
+    close(fd);
+
+    EXPECT_EQ(s, (ssize_t)sizeof(mx_handle_t),
+              "unexpected return value from ioctl");
+    EXPECT_GT(h, 0, "invalid handle from ioctl");
+
+    mx_handle_close(h);
+
+    END_TEST;
+}
+
+// TODO(dbort): Test that this process uses the system loader service by default
 
 BEGIN_TEST_CASE(dlfcn_tests)
 RUN_TEST(dlopen_vmo_test);
 RUN_TEST(loader_service_test);
+RUN_TEST(ioctl_test);
 END_TEST_CASE(dlfcn_tests)
 
 int main(int argc, char** argv) {

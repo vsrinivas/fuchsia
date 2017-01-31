@@ -9,6 +9,8 @@
 #include <magenta/processargs.h>
 #include <magenta/stack.h>
 #include <magenta/syscalls.h>
+#include <mxio/loader-service.h>
+#include <mxio/io.h>
 #include <mxio/util.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -431,9 +433,6 @@ static mx_status_t setup_loader_svc(launchpad_t* lp) {
     if (lp->special_handles[HND_LOADER_SVC] != MX_HANDLE_INVALID)
         return NO_ERROR;
 
-    // TODO(mcgrathr): In the long run, this will use some long-running
-    // service set up elsewhere and inherited.  For now, just spin up
-    // a background thread to implement a dumb service locally.
     mx_handle_t loader_svc = mxio_loader_service(NULL, NULL);
     if (loader_svc < 0)
         return loader_svc;

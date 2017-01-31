@@ -9,6 +9,7 @@
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/types.h>
+#include <mxio/io.h>
 #include <mxio/util.h>
 #include <stdbool.h>
 #include <stdio.h>

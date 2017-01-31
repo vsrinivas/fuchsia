@@ -9,6 +9,7 @@
 #include <magenta/syscalls/object.h>
 #include <mxio/util.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "shell.h"
 #include "memalloc.h"

@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 
 typedef struct mxio mxio_t;
 

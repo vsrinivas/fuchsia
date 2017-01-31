@@ -30,6 +30,7 @@
 #define IOCTL_FAMILY_RESERVED       0x00
 #define IOCTL_FAMILY_DEVICE         0x01
 #define IOCTL_FAMILY_DEVMGR         0x02
+#define IOCTL_FAMILY_DMCTL          0x03
 
 // device protocol families
 #define IOCTL_FAMILY_CONSOLE        0x10
