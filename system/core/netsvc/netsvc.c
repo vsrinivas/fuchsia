@@ -250,14 +250,20 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        if (atomic_load_explicit(&ipc_ready, memory_order_acquire)) {
-            uint8_t info[8];
-            netifc_get_info(info, (uint16_t*) (info + 6));
-            mx_channel_write(ipc_handle, 0, info, 8, NULL, 0);
-        }
+        bool sent_info = false;
 
         printf("netsvc: start\n");
         for (;;) {
+            // See if the ipc channel is open, and send the mac address/mtu.
+            // Only do this once. Since sent_info is only available to the main
+            // thread, it doesn't need to be atomic.
+            if (!sent_info && atomic_load_explicit(&ipc_ready, memory_order_acquire)) {
+                uint8_t info[8];
+                netifc_get_info(info, (uint16_t*) (info + 6));
+                mx_channel_write(ipc_handle, 0, info, 8, NULL, 0);
+                sent_info = true;
+            }
+
             if (pending == 0) {
                 pkt.magic = 0xaeae1123;
                 pkt.seqno = seqno;
