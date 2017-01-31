@@ -109,12 +109,19 @@ void eth_put_buffer(void* data) {
 
 static int eth_fifo_send(const void* data, size_t len) {
     mx_fifo_state_t state;
-    mx_status_t status = mx_fifo_op(fifo.tx_fifo, MX_FIFO_OP_READ_STATE, 0, &state);
-    if (status != NO_ERROR) {
-        return -1;
-    }
-    if (state.head - state.tail == NET_BUFFERS) {
-        return -1;
+    mx_status_t status;
+    for (;;) {
+        if ((status = mx_fifo_op(fifo.tx_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+            printf("can't read tx_fifo state (%d)\n", status);
+            return -1;
+        }
+        if ((state.head - state.tail) < NET_BUFFERS) {
+            break;
+        }
+        if ((status = mx_handle_wait_one(fifo.tx_fifo, MX_FIFO_NOT_FULL, MX_TIME_INFINITE, NULL)) < 0) {
+            printf("wait on tx_fifo failed (%d)\n", status);
+            return -1;
+        }
     }
     uint64_t entry_idx = state.head & (NET_BUFFERS - 1);
     uint64_t offset = NET_BUFFERSZ * entry_idx;
