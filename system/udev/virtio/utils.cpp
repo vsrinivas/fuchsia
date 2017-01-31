@@ -19,7 +19,7 @@ namespace virtio {
 mx_status_t map_contiguous_memory(size_t size, uintptr_t* _va, mx_paddr_t* _pa) {
 
     mx_handle_t vmo_handle;
-    mx_status_t r = mx_vmo_create_contiguous(get_root_resource(), size, &vmo_handle);
+    mx_status_t r = mx_vmo_create_contiguous(get_root_resource(), size, 0, &vmo_handle);
     if (r) {
         VIRTIO_ERROR("mx_vmo_create_contiguous failed %d\n", r);
         return r;

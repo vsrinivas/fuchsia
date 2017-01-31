@@ -27,6 +27,7 @@ enum {
 
 // Initializes a new io_buffer
 mx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags);
+mx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t alignment_log2, uint32_t flags);
 
 // Initializes an io_buffer base on an existing VMO.
 // duplicates the provided vmo_handle - does not take ownership
