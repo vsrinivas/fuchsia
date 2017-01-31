@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(dje): Revisit where things should live once things settle.
+
 #pragma once
 
 #include <magenta/compiler.h>
@@ -96,5 +98,124 @@ typedef struct {
 #define IPT_MODE_CPUS 0
 // trace specific threads
 #define IPT_MODE_THREADS 1
+
+///////////////////////////////////////////////////////////////////////////////
+
+// ioctls
+
+// set the trace mode, either cpus or threads
+// Input: one of IPT_MODE_CPUS, IPT_MODE_THREADS
+#define IOCTL_IPT_SET_MODE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 0)
+IOCTL_WRAPPER_IN(ioctl_ipt_set_mode, IOCTL_IPT_SET_MODE, uint32_t);
+
+typedef struct {
+    uint32_t num_buffers;
+    // #pages as a power of 2
+    uint32_t buffer_order;
+    bool is_circular;
+    uint64_t ctl;
+    uint64_t cr3_match;
+    struct {
+        uint64_t a,b;
+    } addr_ranges[IPT_MAX_NUM_ADDR_RANGES];
+} ioctl_ipt_buffer_config_t;
+
+// allocate a trace buffer
+// Input: ioctl_ipt_buffer_config_t
+// Output: trace buffer descriptor (think file descriptor for trace buffers)
+// When tracing cpus, buffers are auto-assigned to cpus: the resulting trace
+// buffer descriptor is the number of the cpu using the buffer.
+#define IOCTL_IPT_ALLOC_BUFFER \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 1)
+IOCTL_WRAPPER_INOUT(ioctl_ipt_alloc_buffer, IOCTL_IPT_ALLOC_BUFFER, ioctl_ipt_buffer_config_t, uint32_t);
+
+typedef struct {
+    // for IOCTL_KIND_SET_HANDLE first element must be the handle
+    mx_handle_t thread;
+    uint32_t descriptor;
+} ioctl_ipt_assign_buffer_thread_t;
+
+// assign a buffer to a thread
+// Input: ioctl_ipt_assign_buffer_thread_t
+#define IOCTL_IPT_ASSIGN_BUFFER_THREAD \
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_IPT, 3)
+IOCTL_WRAPPER_IN(ioctl_ipt_assign_buffer_thread, IOCTL_IPT_ASSIGN_BUFFER_THREAD,
+                 ioctl_ipt_assign_buffer_thread_t);
+
+// release a buffer from a thread
+// Input: ioctl_ipt_assign_buffer_thread_t
+#define IOCTL_IPT_RELEASE_BUFFER_THREAD \
+    IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_IPT, 5)
+IOCTL_WRAPPER_IN(ioctl_ipt_release_buffer_thread, IOCTL_IPT_RELEASE_BUFFER_THREAD,
+                 ioctl_ipt_assign_buffer_thread_t);
+
+// return config data for a trace buffer
+// Input: trace buffer descriptor
+// Output: ioctl_ipt_trace_buffer_config_t
+#define IOCTL_IPT_GET_BUFFER_CONFIG \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 6)
+IOCTL_WRAPPER_INOUT(ioctl_ipt_get_buffer_config, IOCTL_IPT_GET_BUFFER_CONFIG,
+                    uint32_t, ioctl_ipt_buffer_config_t);
+
+// This contains the run-time produced data about the buffer.
+// Not the trace data itself, just info about the data.
+typedef struct {
+    // N.B. This is the offset in the buffer where tracing stopped (treating
+    // all buffers as one large one). If using a circular buffer then all of
+    // the buffer may contain data, there's no current way to know if tracing
+    // wrapped.
+    uint64_t capture_end;
+} ioctl_ipt_buffer_info_t;
+
+// get trace data associated with the buffer
+// Input: trace buffer descriptor
+// Output: ioctl_ipt_buffer_info_t
+#define IOCTL_IPT_GET_BUFFER_INFO \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 7)
+IOCTL_WRAPPER_INOUT(ioctl_ipt_get_buffer_info, IOCTL_IPT_GET_BUFFER_INFO,
+                    uint32_t, ioctl_ipt_buffer_info_t);
+
+typedef struct {
+    uint32_t descriptor;
+    uint32_t buffer_num;
+} ioctl_ipt_buffer_handle_req_t;
+
+// return a handle of a trace buffer
+// There is no API to get N handles, we have to get them one at a time.
+// [There's no point in trying to micro-optimize this and, say, get 3 at
+// a time.]
+#define IOCTL_IPT_GET_BUFFER_HANDLE \
+    IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_IPT, 8)
+IOCTL_WRAPPER_INOUT(ioctl_ipt_get_buffer_handle, IOCTL_IPT_GET_BUFFER_HANDLE,
+                    ioctl_ipt_buffer_handle_req_t, mx_handle_t);
+
+// free a trace buffer
+// Input: trace buffer descriptor
+#define IOCTL_IPT_FREE_BUFFER \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 9)
+IOCTL_WRAPPER_IN(ioctl_ipt_free_buffer, IOCTL_IPT_FREE_BUFFER,
+                 uint32_t);
+
+// must be called prior to START, allocate buffers of the specified size
+#define IOCTL_IPT_CPU_MODE_ALLOC \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 10)
+IOCTL_WRAPPER(ioctl_ipt_cpu_mode_alloc, IOCTL_IPT_CPU_MODE_ALLOC);
+
+// turn on processor tracing
+#define IOCTL_IPT_CPU_MODE_START \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 11)
+IOCTL_WRAPPER(ioctl_ipt_cpu_mode_start, IOCTL_IPT_CPU_MODE_START);
+
+// turn off processor tracing
+#define IOCTL_IPT_CPU_MODE_STOP \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 12)
+IOCTL_WRAPPER(ioctl_ipt_cpu_mode_stop, IOCTL_IPT_CPU_MODE_STOP);
+
+// release resources allocated with IOCTL_IPT_CPU_MODE_ALLOC
+// must be called prior to reconfiguring buffer sizes
+#define IOCTL_IPT_CPU_MODE_FREE \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_IPT, 13)
+IOCTL_WRAPPER(ioctl_ipt_cpu_mode_free, IOCTL_IPT_CPU_MODE_FREE);
 
 __END_CDECLS
