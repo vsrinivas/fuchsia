@@ -55,7 +55,7 @@ void DynamicByteBuffer::SetToZeros() {
   memset(buffer_.get(), 0, buffer_size_);
 }
 
-std::unique_ptr<uint8_t[]> DynamicByteBuffer::MoveContents() {
+std::unique_ptr<uint8_t[]> DynamicByteBuffer::TransferContents() {
   auto moved = std::move(buffer_);
   buffer_size_ = 0u;
   return moved;

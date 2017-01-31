@@ -31,14 +31,11 @@ TEST(ByteBufferTest, StaticByteBuffer) {
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
   EXPECT_TRUE(ContainersEqual(kExpected, buffer_copy));
 
-  // Move contents into raw buffer. Calling MoveContents() should invalidate the
-  // buffer contents.
-  auto moved_contents = buffer.MoveContents();
-  EXPECT_TRUE(ContainersEqual(kExpected, moved_contents.get(), kBufferSize));
-  EXPECT_EQ(nullptr, buffer.GetData());
-  EXPECT_EQ(nullptr, buffer.GetMutableData());
-  EXPECT_EQ(0u, buffer.GetSize());
-  EXPECT_EQ(buffer.cbegin(), buffer.cend());
+  // Transfer contents into raw buffer.
+  auto contents = buffer.TransferContents();
+  EXPECT_TRUE(ContainersEqual(kExpected, contents.get(), kBufferSize));
+  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 }
 
 TEST(ByteBufferTest, DynamicByteBuffer) {
@@ -60,10 +57,10 @@ TEST(ByteBufferTest, DynamicByteBuffer) {
   EXPECT_EQ(nullptr, buffer.GetData());
   EXPECT_TRUE(ContainersEqual(kExpected, buffer_moved));
 
-  // Move contents into raw buffer. Calling MoveContents() should invalidate the
-  // buffer contents.
-  auto moved_contents = buffer_moved.MoveContents();
-  EXPECT_TRUE(ContainersEqual(kExpected, moved_contents.get(), kBufferSize));
+  // Transfer contents into raw buffer. Calling TransferContents() should
+  // invalidate the buffer contents.
+  auto contents = buffer_moved.TransferContents();
+  EXPECT_TRUE(ContainersEqual(kExpected, contents.get(), kBufferSize));
   EXPECT_EQ(nullptr, buffer_moved.GetData());
   EXPECT_EQ(nullptr, buffer_moved.GetMutableData());
   EXPECT_EQ(0u, buffer_moved.GetSize());
