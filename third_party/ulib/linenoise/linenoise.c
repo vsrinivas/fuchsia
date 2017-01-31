@@ -103,6 +103,7 @@
  *
  */
 
+#include <assert.h>
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -319,7 +320,11 @@ static int getColumns(int ifd, int ofd) {
 
     if (ioctl(1, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
 #endif
-        /* ioctl() failed. Try to query the terminal itself. */
+        /* ioctl() failed. Try to query the terminal itself.
+         *
+         * Note that this has a potential race condition: If another
+         * process is also writing to the terminal and moves the cursor, we
+         * can get the wrong number of columns here. */
         int start, cols;
 
         /* Get the initial position so we can restore it later. */
@@ -495,6 +500,7 @@ static void abInit(struct abuf *ab) {
 }
 
 static void abAppend(struct abuf *ab, const char *s, int len) {
+    assert(len >= 0);
     char *new = realloc(ab->b,ab->len+len);
 
     if (new == NULL) return;
@@ -544,12 +550,22 @@ static void refreshSingleLine(struct linenoiseState *l) {
     size_t pos = l->pos;
     struct abuf ab;
 
-    while((plen+pos) >= l->cols) {
+    /* If the prompt is too wide to fit on a single line of the terminal,
+     * truncate it. */
+    if (plen > l->cols) {
+        plen = l->cols;
+    }
+
+    /* Scroll the buffer to keep the cursor visible on the single line.
+     * Drop characters to the left of the visible part. */
+    while ((plen+pos) >= l->cols && len > 0) {
         buf++;
         len--;
         pos--;
     }
+    /* Drop characters to the right of the visible part. */
     while (plen+len > l->cols) {
+        assert(len > 0);
         len--;
     }
 
@@ -558,7 +574,7 @@ static void refreshSingleLine(struct linenoiseState *l) {
     snprintf(seq,64,"\r");
     abAppend(&ab,seq,strlen(seq));
     /* Write the prompt and the current buffer content */
-    abAppend(&ab,l->prompt,strlen(l->prompt));
+    abAppend(&ab,l->prompt,plen);
     abAppend(&ab,buf,len);
     /* Show hits if any. */
     refreshShowHints(&ab,l,plen);
