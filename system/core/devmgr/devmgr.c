@@ -79,6 +79,14 @@ static mx_status_t launch_fat(int argc, const char** argv, mx_handle_t* hnd,
 
 static bool data_mounted = false;
 
+/*
+ * Attempt to mount the device pointed to be the file descriptor at a known
+ * location.
+ * Returns ERR_ALREADY_BOUND if the device could be mounted, but something
+ * is already mounted at that location. Returns ERR_INVALID_ARGS if the
+ * GUID of the device does not match a known valid one. Returns NO_ERROR if an
+ * attempt to mount is made, without checking mount success.
+ */
 static int mount_minfs(int fd, mount_options_t* options) {
     uint8_t type_guid[GPT_GUID_LEN];
     static const uint8_t sys_guid[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
@@ -93,14 +101,14 @@ static int mount_minfs(int fd, mount_options_t* options) {
     if (read_sz == GPT_GUID_LEN) {
         if (!memcmp(type_guid, sys_guid, GPT_GUID_LEN)) {
             if (secondary_bootfs_ready()) {
-                return -1;
+                return ERR_ALREADY_BOUND;
             }
             memfs_create_directory("/system", 0);
             path = "/system";
             options->readonly = true;
         } else if (!memcmp(type_guid, data_guid, GPT_GUID_LEN)) {
             if (data_mounted) {
-                return -1;
+                return ERR_ALREADY_BOUND;
             }
             data_mounted = true;
             path = "/data";
@@ -110,10 +118,10 @@ static int mount_minfs(int fd, mount_options_t* options) {
     // if the path is set, this partition has a known type GUID
     if (path != NULL) {
         mount(fd, path, DISK_FORMAT_MINFS, options, launch_minfs);
-        return 0;
+        return NO_ERROR;
     }
 
-    return -1;
+    return ERR_INVALID_ARGS;
 }
 
 static mx_status_t block_device_added(int dirfd, const char* name, void* cookie) {
@@ -137,7 +145,9 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         mount_options_t options;
         memcpy(&options, &default_mount_options, sizeof(mount_options_t));
         printf("devmgr: minfs\n");
-        mount_minfs(fd, &options);
+        if (mount_minfs(fd, &options) != NO_ERROR) {
+            close(fd);
+        }
         return NO_ERROR;
     }
     case DISK_FORMAT_FAT: {
