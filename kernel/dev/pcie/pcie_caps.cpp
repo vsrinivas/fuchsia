@@ -284,6 +284,8 @@ status_t PcieDevice::ParseStdCapabilitiesLocked() {
      * by their object in the PcieDevice, and are additionally stored in a list
      * for reference later.
      */
+    LTRACEF("Scanning for capabilities at %02x:%02x.%01x (%04hx:%04hx)\n",
+            bus_id(), dev_id(), func_id(), vendor_id(), device_id());
     while (cap_offset != PCIE_CAP_PTR_NULL && caps_found < PCIE_MAX_CAPABILITIES) {
         if ((res = validate_capability_offset(cap_offset)) != NO_ERROR) {
             TRACEF("Device %02x:%02x.%01x (%04hx:%04hx) has invalid cptr (%#02x)\n",

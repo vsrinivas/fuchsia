@@ -536,7 +536,6 @@ enum handler_return PcieDevice::MsiIrqHandlerThunk(void *arg) {
  ******************************************************************************/
 status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
                                                     pcie_irq_mode_caps_t* out_caps) const {
-    DEBUG_ASSERT(irq_.msi);
     DEBUG_ASSERT(plugged_in_);
     DEBUG_ASSERT(dev_lock_.IsHeld());
     DEBUG_ASSERT(out_caps);
@@ -566,7 +565,7 @@ status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
 
         /* If the device supports MSI, it will have a pointer to the control
          * structure in config. */
-        if (!irq_.msi->is_valid())
+        if (!irq_.msi || !irq_.msi->is_valid())
             return ERR_NOT_SUPPORTED;
 
         /* We support PVM if either the device does, or if the platform is
