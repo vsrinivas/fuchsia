@@ -69,5 +69,41 @@ ByteBuffer::const_iterator DynamicByteBuffer::cend() const {
   return buffer_.get() + buffer_size_;
 }
 
+BufferView::BufferView(uint8_t* bytes, size_t size)
+    : size_(size), bytes_(bytes) {
+  FTL_DCHECK(bytes_);
+  FTL_DCHECK(size_);
+}
+
+const uint8_t* BufferView::GetData() const {
+  return bytes_;
+}
+
+uint8_t* BufferView::GetMutableData() {
+  return bytes_;
+}
+
+size_t BufferView::GetSize() const {
+  return size_;
+}
+
+void BufferView::SetToZeros() {
+  memset(bytes_, 0, size_);
+}
+
+std::unique_ptr<uint8_t[]> BufferView::TransferContents() {
+  auto buffer = std::make_unique<uint8_t[]>(size_);
+  memcpy(buffer.get(), bytes_, size_);
+  return buffer;
+}
+
+ByteBuffer::const_iterator BufferView::cbegin() const {
+  return bytes_;
+}
+
+ByteBuffer::const_iterator BufferView::cend() const {
+  return bytes_ + size_;
+}
+
 }  // namespace common
 }  // namespace bluetooth

@@ -38,6 +38,21 @@ TEST(ByteBufferTest, StaticByteBuffer) {
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 }
 
+TEST(ByteBufferTest, StaticByteBufferVariadicConstructor) {
+  constexpr size_t kBufferSize = 3;
+  StaticByteBuffer<kBufferSize> buffer0;
+  buffer0.GetMutableData()[0] = 0x01;
+  buffer0.GetMutableData()[1] = 0x02;
+  buffer0.GetMutableData()[2] = 0x03;
+
+  StaticByteBuffer<kBufferSize> buffer1{0x01, 0x02, 0x03};
+  auto buffer2 = CreateStaticByteBuffer(0x01, 0x02, 0x03);
+
+  EXPECT_TRUE(ContainersEqual(buffer0, buffer1));
+  EXPECT_TRUE(ContainersEqual(buffer0, buffer2));
+  EXPECT_TRUE(ContainersEqual(buffer1, buffer2));
+}
+
 TEST(ByteBufferTest, DynamicByteBuffer) {
   constexpr size_t kBufferSize = 5;
   DynamicByteBuffer buffer(kBufferSize);
@@ -77,6 +92,23 @@ TEST(ByteBufferTest, DynamicByteBufferConstructFromBytes) {
   DynamicByteBuffer buffer(kBufferSize, std::move(bytes));
   EXPECT_EQ(nullptr, bytes.get());
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
+}
+
+TEST(ByteBufferTest, BufferViewTest) {
+  constexpr size_t kBufferSize = 5;
+  DynamicByteBuffer buffer(kBufferSize);
+
+  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  buffer.SetToZeros();
+
+  BufferView view(buffer.GetMutableData(), buffer.GetSize());
+  view.GetMutableData()[0] = 0xFF;
+  EXPECT_EQ(0xFF, buffer.GetData()[0]);
+
+  // Calling TransferContents() should leave |buffer| untouched.
+  auto contents = view.TransferContents();
+  EXPECT_EQ(kBufferSize, buffer.GetSize());
+  EXPECT_EQ(kBufferSize, view.GetSize());
 }
 
 }  // namespace

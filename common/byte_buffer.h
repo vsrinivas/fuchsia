@@ -60,6 +60,19 @@ class StaticByteBuffer : public ByteBuffer {
     static_assert(BufferSize, "|BufferSize| must be non-zero");
   }
 
+  // Variadic template constructor to initialize a StaticByteBuffer using an
+  // initializer_list e.g.:
+  //
+  //   StaticByteBuffer<3> foo{0x00, 0x01, 0x02};
+  //   StaticByteBuffer<3> bar({0x00, 0x01, 0x02});
+  //
+  template <typename... T>
+  StaticByteBuffer(T... bytes) : buffer_{{static_cast<uint8_t>(bytes)...}} {
+    static_assert(BufferSize, "|BufferSize| must be non-zero");
+    static_assert(BufferSize == sizeof...(T),
+                  "|BufferSize| must match initializer list count");
+  }
+
   // ByteBuffer overrides
   const uint8_t* GetData() const override { return buffer_.data(); }
   uint8_t* GetMutableData() override { return buffer_.data(); }
@@ -79,6 +92,18 @@ class StaticByteBuffer : public ByteBuffer {
  private:
   std::array<uint8_t, BufferSize> buffer_;
 };
+
+// Wrapper for the variadic template StaticByteBuffer constructor that deduces
+// the value of the |BufferSize| template parameter from the given input. This
+// way one can construct a StaticByteBuffer without hard-coding the size of the
+// buffer like so:
+//
+//   auto buffer = common::CreateStaticByteBuffer(0x01, 0x02, 0x03);
+//
+template <typename... T>
+StaticByteBuffer<sizeof...(T)> CreateStaticByteBuffer(T... bytes) {
+  return StaticByteBuffer<sizeof...(T)>{bytes...};
+}
 
 // A ByteBuffer with dynamic storage duration. The underlying buffer is
 // allocated using malloc. Instances of this class are move-only.
@@ -118,6 +143,26 @@ class DynamicByteBuffer : public ByteBuffer {
   std::unique_ptr<uint8_t[]> buffer_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(DynamicByteBuffer);
+};
+
+// A ByteBuffer that does not own the memory that it points to but rather
+// provides a view over it.
+class BufferView : public ByteBuffer {
+ public:
+  BufferView(uint8_t* bytes, size_t size);
+
+  // ByteBuffer overrides:
+  const uint8_t* GetData() const override;
+  uint8_t* GetMutableData() override;
+  size_t GetSize() const override;
+  void SetToZeros() override;
+  std::unique_ptr<uint8_t[]> TransferContents() override;
+  const_iterator cbegin() const override;
+  const_iterator cend() const override;
+
+ private:
+  size_t size_;
+  uint8_t* bytes_;
 };
 
 }  // namespace common
