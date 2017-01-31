@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
+#include <stdalign.h>
 #include <unistd.h>
 
 #include <magenta/syscalls.h>
@@ -68,7 +69,7 @@ void test_read_address_thread(uintptr_t address, bool* success) {
 mx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
     *success = false;
 
-    static uint8_t thread_stack[PAGE_SIZE];
+    alignas(16) static uint8_t thread_stack[PAGE_SIZE];
 
     mx_handle_t thread = MX_HANDLE_INVALID;
     mx_handle_t port = MX_HANDLE_INVALID;
