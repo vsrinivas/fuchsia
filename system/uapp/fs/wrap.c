@@ -11,7 +11,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #include <mxio/vfs.h>
 
@@ -122,4 +124,11 @@ int FN(stat)(const char* fn, struct stat* s) {
     char real_fn[WPATH_MAX];
     PATH_WRAP(fn, real_fn);
     DO_REAL(stat, real_fn, s);
+}
+
+int FL(utimes)(const char* fn, struct timeval t[2]);
+int FN(utimes)(const char* fn, struct timeval t[2]) {
+    char real_fn[PATH_MAX];
+    PATH_WRAP(fn, real_fn);
+    DO_REAL(utimes, real_fn, t);
 }

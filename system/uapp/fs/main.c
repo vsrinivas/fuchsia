@@ -102,6 +102,7 @@ struct {
 
 int test_append(void);
 int test_basic(void);
+int test_attr(void);
 int test_directory(void);
 int test_maxfile(void);
 int test_overflow(void);
@@ -117,6 +118,7 @@ struct {
 } FS_TESTS[] = {
     {"append", test_append},
     {"basic", test_basic},
+    {"attr", test_attr},
     {"directory", test_directory},
     {"maxfile", test_maxfile},
     {"overflow", test_overflow},

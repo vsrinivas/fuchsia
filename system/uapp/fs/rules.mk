@@ -15,6 +15,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/wrap.c \
     $(LOCAL_DIR)/test-append.c \
     $(LOCAL_DIR)/test-basic.c \
+    $(LOCAL_DIR)/test-attr.c \
     $(LOCAL_DIR)/test-directory.c \
     $(LOCAL_DIR)/test-maxfile.c \
     $(LOCAL_DIR)/test-overflow.c \
@@ -26,6 +27,7 @@ MODULE_SRCS := \
 
 MODULE_LDFLAGS := --wrap open --wrap unlink --wrap stat --wrap mkdir
 MODULE_LDFLAGS += --wrap rename --wrap truncate --wrap opendir
+MODULE_LDFLAGS += --wrap utimes
 
 MODULE_LIBS := \
     ulib/mxio ulib/launchpad ulib/magenta ulib/musl
