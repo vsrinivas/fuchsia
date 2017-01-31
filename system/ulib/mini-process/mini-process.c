@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <magenta/syscalls.h>
 #include <magenta/status.h>
+#include <magenta/stack.h>
 
 static void __attribute__((optimize("O0"))) minipr_thread_loop(void) {
     volatile uint32_t val = 1;
@@ -40,8 +41,8 @@ mx_status_t start_mini_process_etc(mx_handle_t process, mx_handle_t thread,
     if (status < 0)
         goto exit;
 
-    // See stack.h for explanation about this.
-    uintptr_t sp = stack_size + stack_base - 8;
+    // Compute a valid starting SP for the machine's ABI.
+    uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
 
     status = mx_process_start(process, thread, stack_base, sp, transfered_handle, 0u);
 
