@@ -113,6 +113,8 @@ static uint32_t ipt_config_psb_freq_mask = 0;
 static uint32_t ipt_config_num_addr_ranges = 0;
 static uint32_t ipt_config_bus_freq = 0;
 
+static bool ipt_config_supported = false;
+
 static bool ipt_config_cr3_filtering = false;
 static bool ipt_config_psb = false;
 static bool ipt_config_ip_filtering = false;
@@ -176,6 +178,9 @@ static void x86_pt_init(void)
         xprintf("IPT: No PT support\n");
         return;
     }
+
+    ipt_config_supported = true;
+
     __cpuid_count(0x14, 0, a, b, c, d);
     if (BIT(b, 2))
         ipt_config_addr_cfg_max = 2;
@@ -929,6 +934,8 @@ static mx_protocol_device_t ipt_device_proto = {
 
 static mx_status_t ipt_init(mx_driver_t* driver) {
     x86_pt_init();
+    if (!ipt_config_supported)
+        return ERR_NOT_SUPPORTED;
 
     ipt_device_t* ipt_dev = calloc(1, sizeof(*ipt_dev));
     if (!ipt_dev)
