@@ -326,6 +326,7 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     std::vector<std::unique_ptr<const Commit>> commits;
     storage_->GetUnsyncedCommits(::test::Capture(
         [this] { message_loop_.PostQuitTask(); }, &status, &commits));
+    EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     return commits;
   }
@@ -346,6 +347,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   storage_->GetCommit(RandomId(kCommitIdSize),
                       ::test::Capture([this] { message_loop_.PostQuitTask(); },
                                       &status, &lookup_commit));
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::NOT_FOUND, status);
   EXPECT_FALSE(lookup_commit);
 

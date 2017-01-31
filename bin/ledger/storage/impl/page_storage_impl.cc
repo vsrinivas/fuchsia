@@ -373,7 +373,7 @@ void PageStorageImpl::GetCommit(
     CommitIdView commit_id,
     std::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   if (IsFirstCommit(commit_id)) {
-    callback(Status::OK, CommitImpl::Empty(this));
+    CommitImpl::Empty(this, std::move(callback));
     return;
   }
   std::string bytes;

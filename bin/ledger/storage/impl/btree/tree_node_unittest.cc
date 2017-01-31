@@ -59,8 +59,12 @@ class TreeNodeTest : public ::test::TestWithMessageLoop {
   }
 
   std::unique_ptr<const TreeNode> CreateEmptyNode() {
+    Status status;
     ObjectId id;
-    Status status = TreeNode::Empty(&fake_storage_, &id);
+    TreeNode::Empty(&fake_storage_,
+                    ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                    &status, &id));
+    EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     return FromId(id);
   }
@@ -385,9 +389,8 @@ TEST_F(TreeNodeTest, Serialization) {
   Status status;
   std::unique_ptr<const Object> object;
   fake_storage_.GetObject(
-      node->GetId(),
-      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                      &object));
+      node->GetId(), ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                     &status, &object));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> retrieved_node = FromId(object->GetId());

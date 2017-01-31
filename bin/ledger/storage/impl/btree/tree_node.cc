@@ -46,16 +46,10 @@ void TreeNode::FromId(
       });
 }
 
-Status TreeNode::Empty(PageStorage* page_storage, ObjectId* empty_node_id) {
-  std::string encoding =
-      storage::EncodeNode(std::vector<Entry>(), std::vector<ObjectId>(1));
-  std::unique_ptr<const Object> object;
-  Status s = page_storage->AddObjectSynchronous(encoding, &object);
-  if (s != Status::OK) {
-    return s;
-  }
-  *empty_node_id = object->GetId();
-  return Status::OK;
+void TreeNode::Empty(PageStorage* page_storage,
+                     std::function<void(Status, ObjectId)> callback) {
+  FromEntries(page_storage, std::vector<Entry>(), std::vector<ObjectId>(1),
+              std::move(callback));
 }
 
 void TreeNode::FromEntries(PageStorage* page_storage,

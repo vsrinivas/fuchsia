@@ -86,6 +86,33 @@ void FindCommonAncestorInGeneration(
       }));
 }
 
+// Sets merge_in_progress value to true on construction and false on
+// destruction. It should be used to ensure that merge_in_progress_ is not
+// accidently left to be true after a early operation exit.
+class MergeInProgress {
+ public:
+  MergeInProgress(bool* merge_in_progress)
+      : merge_in_progress_(merge_in_progress) {
+    *merge_in_progress_ = true;
+  }
+
+  MergeInProgress(MergeInProgress&& other)
+      : merge_in_progress_(other.merge_in_progress_) {
+    other.merge_in_progress_ = nullptr;
+  }
+
+  ~MergeInProgress() {
+    if (merge_in_progress_) {
+      *merge_in_progress_ = false;
+    }
+  }
+
+ private:
+  bool* merge_in_progress_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(MergeInProgress);
+};
+
 }  // namespace
 
 MergeResolver::MergeResolver(ftl::Closure on_destroyed,
@@ -160,15 +187,17 @@ void MergeResolver::CheckConflicts() {
 
 void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
   FTL_DCHECK(heads.size() >= 2);
+  MergeInProgress merge_token(&merge_in_progress_);
   auto waiter = callback::
       Waiter<storage::Status, std::unique_ptr<const storage::Commit>>::Create(
           storage::Status::OK);
   for (const storage::CommitId& id : heads) {
     storage_->GetCommit(id, waiter->NewCallback());
   }
-  waiter->Finalize([this](
-      storage::Status status,
-      std::vector<std::unique_ptr<const storage::Commit>> commits) {
+  waiter->Finalize(ftl::MakeCopyable([
+    this, merge_token = std::move(merge_token)
+  ](storage::Status status,
+    std::vector<std::unique_ptr<const storage::Commit>> commits) mutable {
     if (status != storage::Status::OK) {
       FTL_LOG(ERROR) << "Failed to retrieve head commits.";
       return;
@@ -186,32 +215,34 @@ void MergeResolver::ResolveConflicts(std::vector<storage::CommitId> heads) {
     FindCommonAncestor(
         head1->Clone(), head2->Clone(),
         ftl::MakeCopyable([
-          this, head1 = std::move(head1), head2 = std::move(head2)
+          this, head1 = std::move(head1), head2 = std::move(head2),
+          merge_token = std::move(merge_token)
         ](Status status,
           std::unique_ptr<const storage::Commit> common_ancestor) mutable {
           if (status != Status::OK) {
             FTL_LOG(ERROR) << "Failed to find common ancestor of head commits.";
             return;
           }
-          merge_in_progress_ = true;
-          strategy_->Merge(storage_, page_manager_, std::move(head1),
-                           std::move(head2), std::move(common_ancestor),
-                           [this]() {
-                             merge_in_progress_ = false;
-                             if (switch_strategy_) {
-                               strategy_ = std::move(next_strategy_);
-                               next_strategy_.reset();
-                               switch_strategy_ = false;
-                             }
-                             PostCheckConflicts();
-                             // Call on_empty_callback_ at the very end as this
-                             // might delete this.
-                             if (on_empty_callback_) {
-                               on_empty_callback_();
-                             }
-                           });
+          strategy_->Merge(
+              storage_, page_manager_, std::move(head1), std::move(head2),
+              std::move(common_ancestor),
+              ftl::MakeCopyable(
+                  [ this, merge_token = std::move(merge_token) ]() {
+                    merge_in_progress_ = false;
+                    if (switch_strategy_) {
+                      strategy_ = std::move(next_strategy_);
+                      next_strategy_.reset();
+                      switch_strategy_ = false;
+                    }
+                    PostCheckConflicts();
+                    // Call on_empty_callback_ at the very end as this
+                    // might delete this.
+                    if (on_empty_callback_) {
+                      on_empty_callback_();
+                    }
+                  }));
         }));
-  });
+  }));
 }
 
 void MergeResolver::FindCommonAncestor(

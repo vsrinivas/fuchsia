@@ -117,10 +117,10 @@ class TreeNode {
                           const std::vector<ObjectId>& children,
                           std::function<void(Status, ObjectId)> callback);
 
-  // Synchronously creates an empty node, i.e. a TreeNode with no entries and an
-  // empty child at index 0.
-  // TODO(nellyv): change this to be asynchronous.
-  static Status Empty(PageStorage* page_storage, ObjectId* empty_node_id);
+  // Creates an empty node, i.e. a TreeNode with no entries and an empty child
+  // at index 0 and calls the callback with the result.
+  static void Empty(PageStorage* page_storage,
+                    std::function<void(Status, ObjectId)> callback);
 
   // Creates a new tree node by merging |left| and |right|. |merged_child_id|
   // should contain the id of the new child node stored between the last entry
