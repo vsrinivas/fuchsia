@@ -41,7 +41,8 @@ public:
 private:
     PortDispatcherV2(uint32_t options);
 
+    WaitEvent event_;
+
     Mutex lock_;
-    WaitEvent event_ TA_GUARDED(lock_);
     mxtl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(lock_);
 };

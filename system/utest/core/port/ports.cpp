@@ -22,7 +22,7 @@ static bool basic_test(void)
         12ull,
         MX_PKT_TYPE_USER + 5u,    // kernel overrides the |type|.
         -3,
-        { }
+        { {} }
     };
 
     mx_port_packet_t out = {};
@@ -61,7 +61,7 @@ static bool queue_and_close_test(void)
         1ull,
         MX_PKT_TYPE_USER,
         0,
-        { }
+        { {} }
     };
 
     status = mx_port_queue(port, &in, 0u);
