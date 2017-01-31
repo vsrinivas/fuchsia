@@ -194,13 +194,13 @@ const char* check_data_block(CheckMaps* chk, const Minfs* fs, uint32_t bno) {
     if (bno >= fs->info.block_count) {
         return "out of range";
     }
-    if (!fs->block_map.Get(bno)) {
+    if (!fs->block_map.Get(bno, bno + 1)) {
         return "not allocated";
     }
-    if (chk->checked_blocks.Get(bno)) {
+    if (chk->checked_blocks.Get(bno, bno + 1)) {
         return "double-allocated";
     }
-    chk->checked_blocks.Set(bno);
+    chk->checked_blocks.Set(bno, bno + 1);
     return nullptr;
 }
 
@@ -269,12 +269,12 @@ mx_status_t check_file(CheckMaps* chk, const Minfs* fs,
 }
 
 mx_status_t check_inode(CheckMaps* chk, const Minfs* fs, uint32_t ino, uint32_t parent) {
-    if (chk->checked_inodes.Get(ino)) {
+    if (chk->checked_inodes.Get(ino, ino + 1)) {
         // we've been here before
         return NO_ERROR;
     }
-    chk->checked_inodes.Set(ino);
-    if (!fs->inode_map_.Get(ino)) {
+    chk->checked_inodes.Set(ino, ino + 1);
+    if (!fs->inode_map_.Get(ino, ino + 1)) {
         warn("check: ino#%u: not marked in-use\n", ino);
     }
     mx_status_t status;
@@ -321,10 +321,10 @@ mx_status_t minfs_check(Bcache* bc) {
     }
 
     CheckMaps chk;
-    if ((status = chk.checked_inodes.Init(info.inode_count)) < 0) {
+    if ((status = chk.checked_inodes.Reset(info.inode_count)) < 0) {
         return status;
     }
-    if ((status = chk.checked_blocks.Init(info.block_count)) < 0) {
+    if ((status = chk.checked_blocks.Reset(info.block_count)) < 0) {
         return status;
     }
     Minfs* fs;
@@ -339,8 +339,8 @@ mx_status_t minfs_check(Bcache* bc) {
 
     unsigned missing = 0;
     for (unsigned n = info.dat_block; n < info.block_count; n++) {
-        if (fs->block_map.Get(n)) {
-            if (!chk.checked_blocks.Get(n)) {
+        if (fs->block_map.Get(n, n + 1)) {
+            if (!chk.checked_blocks.Get(n, n + 1)) {
                 missing++;
             }
         }
@@ -352,8 +352,8 @@ mx_status_t minfs_check(Bcache* bc) {
 
     missing = 0;
     for (unsigned n = 1; n < info.inode_count; n++) {
-        if (fs->inode_map_.Get(n)) {
-            if (!chk.checked_inodes.Get(n)) {
+        if (fs->inode_map_.Get(n, n + 1)) {
+            if (!chk.checked_inodes.Get(n, n + 1)) {
                 missing++;
             }
         }

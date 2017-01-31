@@ -271,8 +271,6 @@ off_t get_size(int fd) {
     return s.st_size;
 }
 
-int do_bitmap_test(void);
-
 int main(int argc, char** argv) {
     off_t size = 0;
 

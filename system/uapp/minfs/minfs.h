@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <bitmap/raw-bitmap.h>
 #include <mxtl/intrusive_double_list.h>
 #include <mxtl/intrusive_hash_table.h>
 #include <mxtl/macros.h>
@@ -270,56 +271,5 @@ private:
     uint32_t blocksize_;
 };
 
-// Allocation Bitmap (bitmap.c)
-constexpr uint32_t BITMAP_FAIL = (0xFFFFFFFF);
-
-class Bitmap {
-public:
-    Bitmap();
-    ~Bitmap();
-
-    mx_status_t Init(uint32_t maxbits);
-    void Reset();
-
-    // find an available bit, set it, return that bitnumber
-    // returns BITMAP_FAIL if no bit is found
-    uint32_t Alloc(uint32_t minbit);
-
-    // This will never fail if the new maxbits is no larger
-    // that the original maxbits.  The underlying storage will
-    // not be reduced (so this is useful for creating a bitmap
-    // to match a particular storage size and then adjust it
-    // to a maximum allowed bit smaller than the storage)
-    mx_status_t Resize(uint32_t maxbits);
-
-    void Set(uint32_t n);
-    void Clr(uint32_t n);
-    bool Get(uint32_t n) const;
-
-    // Get a pointer to block 'blkno' in bitmap.
-    void* GetBlock(uint32_t blkno) const {
-        assert(blkno * kMinfsBlockSize <= bitcount_);
-        return (void*)((uintptr_t)(map_.get()) + (uintptr_t)(kMinfsBlockSize * blkno));
-    }
-
-    // Get a pointer to block 'blkno_out' in bitmap, which contains bit 'bitno'.
-    void* GetBitBlock(uint32_t* blkno_out, uint32_t bitno) const {
-        assert(bitno <= bitcount_);
-        *blkno_out = (bitno / kMinfsBlockBits);
-        return GetBlock(*blkno_out);
-    }
-
-    const void* data() const { return map_.get(); }
-
-    uint32_t Capacity() const {
-        return bitcount_;
-    }
-
-private:
-    uint32_t Mapcount() const;
-    uint64_t* End() const;
-    size_t BytesRequired() const;
-
-    uint32_t bitcount_; // Number of addressable bits
-    mxtl::unique_free_ptr<uint64_t> map_; // Underlying map of bits
-};
+void* GetBlock(const bitmap::RawBitmap& bitmap, uint32_t blkno);
+void* GetBitBlock(const bitmap::RawBitmap& bitmap, uint32_t* blkno_out, uint32_t bitno);

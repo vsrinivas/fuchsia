@@ -7,6 +7,8 @@
 #include "minfs.h"
 #include "misc.h"
 
+#include <bitmap/raw-bitmap.h>
+#include <mxtl/algorithm.h>
 #include <mxtl/macros.h>
 #include <mxtl/ref_counted.h>
 #include <mxtl/ref_ptr.h>
@@ -24,8 +26,8 @@ constexpr uint32_t kMinfsBlockCacheSize = 64;
 
 // Used by fsck
 struct CheckMaps {
-    Bitmap checked_inodes;
-    Bitmap checked_blocks;
+    bitmap::RawBitmap checked_inodes;
+    bitmap::RawBitmap checked_blocks;
 };
 
 class Minfs {
@@ -62,7 +64,7 @@ public:
     void BitmapBlockPut(const mxtl::RefPtr<BlockNode>& blk);
 
     Bcache* bc;
-    Bitmap block_map;
+    bitmap::RawBitmap block_map;
     minfs_info_t info;
 private:
     Minfs(Bcache* bc_, minfs_info_t* info_);
@@ -72,7 +74,7 @@ private:
 
     uint32_t abmblks_;
     uint32_t ibmblks_;
-    Bitmap inode_map_;
+    bitmap::RawBitmap inode_map_;
     list_node_t vnode_hash_[kMinfsBuckets];
 
     // Fsck can introspect Minfs

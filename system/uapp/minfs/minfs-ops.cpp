@@ -64,7 +64,7 @@ mxtl::RefPtr<BlockNode> Minfs::BitmapBlockGet(const mxtl::RefPtr<BlockNode>& blk
             return blk;
         }
         // write previous block to disk
-        const void* src = block_map.GetBlock(bitblock_old);
+        const void* src = GetBlock(block_map, bitblock_old);
         memcpy(blk->data(), src, kMinfsBlockSize);
         bc->Put(blk, kBlockDirty);
     }
@@ -74,7 +74,7 @@ mxtl::RefPtr<BlockNode> Minfs::BitmapBlockGet(const mxtl::RefPtr<BlockNode>& blk
 void Minfs::BitmapBlockPut(const mxtl::RefPtr<BlockNode>& blk) {
     if (blk) {
         uint32_t bitblock = blk->GetKey() - info.abm_block;
-        const void* src = block_map.GetBlock(bitblock);
+        const void* src = GetBlock(block_map, bitblock);
         memcpy(blk->data(), src, kMinfsBlockSize);
         bc->Put(blk, kBlockDirty);
     }
@@ -106,7 +106,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
             return ERR_IO;
         }
 
-        vn->fs->block_map.Clr(vn->inode.dnum[bno]);
+        vn->fs->block_map.Clear(vn->inode.dnum[bno], vn->inode.dnum[bno] + 1);
         vn->inode.dnum[bno] = 0;
         vn->inode.block_count--;
         minfs_sync_vnode(vn, kMxFsSyncDefault);
@@ -149,7 +149,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
                 vn->fs->bc->Put(blk, iflags);
                 return ERR_IO;
             }
-            vn->fs->block_map.Clr(entry[direct]);
+            vn->fs->block_map.Clear(entry[direct], entry[direct] + 1);
             entry[direct] = 0;
             iflags = kBlockDirty;
             vn->inode.block_count--;
@@ -166,7 +166,7 @@ static mx_status_t vn_blocks_shrink(vnode_t* vn, uint32_t start) {
             if (bitmap_blk == nullptr) {
                 return ERR_IO;
             }
-            vn->fs->block_map.Clr(vn->inode.inum[indirect]);
+            vn->fs->block_map.Clear(vn->inode.inum[indirect], vn->inode.inum[indirect] + 1);
             vn->inode.inum[indirect] = 0;
             vn->inode.block_count--;
             minfs_sync_vnode(vn, kMxFsSyncDefault);

@@ -14,7 +14,6 @@ MODULE_SRCS := \
 
 # "libfs"
 MODULE_SRCS += \
-    $(LOCAL_DIR)/bitmap.cpp \
     $(LOCAL_DIR)/bcache.cpp \
     $(LOCAL_DIR)/rpc.cpp \
 
@@ -28,6 +27,7 @@ MODULE_STATIC_LIBS := \
     ulib/fs \
 
 MODULE_LIBS := \
+    ulib/bitmap \
     ulib/magenta \
     ulib/mxio \
     ulib/musl \
