@@ -551,8 +551,8 @@ static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                     page_table, index, pte);
             page_table[index] = pte;
         } else {
-            TRACEF("page table entry does not exist, index %#" PRIxPTR
-                   ", %#" PRIx64 "\n", index, pte);
+            LTRACEF("page table entry does not exist, index %#" PRIxPTR
+                    ", %#" PRIx64 "\n", index, pte);
         }
         vaddr += chunk_size;
         vaddr_rel += chunk_size;
@@ -887,4 +887,3 @@ void arch_zero_page(void *_ptr)
         ptr += zva_size;
     } while (ptr != end_ptr);
 }
-
