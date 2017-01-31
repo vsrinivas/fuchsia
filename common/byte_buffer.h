@@ -128,7 +128,7 @@ class DynamicByteBuffer : public ByteBuffer {
   DynamicByteBuffer(DynamicByteBuffer&& other);
   DynamicByteBuffer& operator=(DynamicByteBuffer&& other);
 
-  // ByteBuffer overrides
+  // ByteBuffer overrides:
   const uint8_t* GetData() const override;
   uint8_t* GetMutableData() override;
   size_t GetSize() const override;

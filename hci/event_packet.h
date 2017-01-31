@@ -33,6 +33,20 @@ class EventPacket : public ::bluetooth::common::Packet<EventHeader> {
   constexpr static size_t GetMinBufferSize(size_t payload_size) {
     return sizeof(EventHeader) + payload_size;
   }
+
+  // If this is a CommandComplete event packet, this method returns a pointer to
+  // the beginning of the return parameter structure. If the given template type
+  // would exceed the bounds of the packet or if this packet does not represent
+  // a CommandComplete event, this method returns nullptr.
+  template <typename ReturnParams>
+  ReturnParams* GetReturnParams() const {
+    if (event_code() != kCommandCompleteEventCode ||
+        sizeof(ReturnParams) >
+            GetPayloadSize() - sizeof(CommandCompleteEventParams))
+      return nullptr;
+    return reinterpret_cast<ReturnParams*>(
+        GetPayload<CommandCompleteEventParams>()->return_parameters);
+  }
 };
 
 }  // namespace hci

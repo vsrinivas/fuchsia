@@ -51,7 +51,7 @@ enum class HCIVersion {
 // HCI Error Codes. Refer to Core Spec v5.0, Vol 2, Part D for definitions and
 // descriptions. All enum values are in increasing numerical order, however the
 // values are listed below for clarity.
-enum class Status : uint8_t {
+enum Status : uint8_t {
   kSuccess                                      = 0x00,
   kUnknownCommand                               = 0x01,
   kUnknownConnectionId                          = 0x02,

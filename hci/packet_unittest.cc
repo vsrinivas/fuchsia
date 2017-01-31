@@ -5,6 +5,8 @@
 #include "apps/bluetooth/hci/command_packet.h"
 #include "apps/bluetooth/hci/event_packet.h"
 
+#include <endian.h>
+
 #include <array>
 #include <cstdint>
 
@@ -65,6 +67,43 @@ TEST(HCIPacketTest, EventPacket) {
       0xFF,  // event code
       0x01,  // parameter_total_size
       0x7F,  // foo
+  }};
+  EXPECT_TRUE(ContainersEqual(kExpected, buffer));
+}
+
+TEST(HCIPacketTest, EventPacketGetReturnParams) {
+  constexpr size_t kPayloadSize =
+      sizeof(TestPayload) + sizeof(CommandCompleteEventParams);
+  constexpr size_t kBufferSize = CommandPacket::GetMinBufferSize(kPayloadSize);
+  StaticByteBuffer<kBufferSize> buffer;
+
+  // Not CommandComplete
+  EventPacket packet0(kCommandStatusEventCode, &buffer, kPayloadSize);
+  packet0.EncodeHeader();
+  EXPECT_EQ(nullptr, packet0.GetReturnParams<TestPayload>());
+
+  // Packet is too small.
+  EventPacket packet1(kCommandCompleteEventCode, &buffer, kPayloadSize - 1);
+  packet1.EncodeHeader();
+  EXPECT_EQ(nullptr, packet1.GetReturnParams<TestPayload>());
+
+  // Packet is good
+  EventPacket packet2(kCommandCompleteEventCode, &buffer, kPayloadSize);
+  packet2.GetPayload<CommandCompleteEventParams>()->num_hci_command_packets = 1;
+  packet2.GetPayload<CommandCompleteEventParams>()->command_opcode =
+      htole16(kTestOpCode);
+  packet2.GetReturnParams<TestPayload>()->foo = 127;
+  packet2.EncodeHeader();
+
+  constexpr std::array<uint8_t, kBufferSize> kExpected{{
+      // Event header
+      0x0E, 0x04,
+
+      // CommandCompleteEventParams
+      0x01, 0xFF, 0x07,
+
+      // Return parameters
+      0x7F,
   }};
   EXPECT_TRUE(ContainersEqual(kExpected, buffer));
 }

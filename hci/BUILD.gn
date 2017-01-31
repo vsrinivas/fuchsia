@@ -4,6 +4,8 @@
 
 static_library("hci") {
   sources = [
+    "command_channel.cc",
+    "command_channel.h",
     "command_packet.cc",
     "command_packet.h",
     "event_packet.cc",
@@ -13,6 +15,7 @@ static_library("hci") {
   public_deps = [
     "//apps/bluetooth/common",
     "//lib/ftl",
+    "//lib/mtl",
   ]
 }
 
@@ -21,6 +24,7 @@ executable("tests") {
   output_name = "hci_unittests"
 
   sources = [
+    "command_channel_unittest.cc",
     "packet_unittest.cc",
   ]
 
