@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+module modular.testing;
 
 // This service is included in the ApplicationEnvironment of multi-process tests
 // that are launched by the test runner harness. Test processes can connect to

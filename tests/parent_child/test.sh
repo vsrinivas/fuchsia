@@ -11,7 +11,6 @@ if [ "${FUCHSIA_BUILD_DIR}" = "" ]; then
   exit -1;
 fi
 
-# TODO(vardhan): Make these binaries available in the build.
 netcp ${FUCHSIA_BUILD_DIR}/parent_module :/tmp/tests/parent_child/parent_module
 netcp ${FUCHSIA_BUILD_DIR}/child_module :/tmp/tests/parent_child/child_module
 

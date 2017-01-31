@@ -28,7 +28,7 @@ void Fail(const std::string& log_msg);
 // A test must call Done() before it dies, to let the TestRunner
 // service (which has a channel connected to this application) know that this
 // test process has not crashed, otherwise it must call Teardown() to signal the
-// TestRunner that the test has finish altogether. If Done() is not called and
+// TestRunner that the test has finished altogether. If Done() is not called and
 // the connection to the TestService is broken, the test is declared as failed
 // and is torndown. If Done() is called, it is not possible to call Teardown().
 void Done();

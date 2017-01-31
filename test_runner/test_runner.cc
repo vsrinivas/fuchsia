@@ -87,9 +87,9 @@ class TestRunContext {
 // Implements the TestRunner service which is available in the
 // ApplicationEnvironment of the test processes. Calls made to this service are
 // forwarded and handled by TestRunContext.
-class TestRunnerImpl : public TestRunner {
+class TestRunnerImpl : public testing::TestRunner {
  public:
-  TestRunnerImpl(fidl::InterfaceRequest<TestRunner> request,
+  TestRunnerImpl(fidl::InterfaceRequest<testing::TestRunner> request,
                         TestRunContext* test_run_context)
       : binding_(this, std::move(request)),
         test_run_context_(test_run_context) {
@@ -107,7 +107,7 @@ class TestRunnerImpl : public TestRunner {
   // |TestRunner|
   void Teardown() { test_run_context_->Teardown(); }
 
-  fidl::Binding<TestRunner> binding_;
+  fidl::Binding<testing::TestRunner> binding_;
   TestRunContext* test_run_context_;
 };
 
@@ -235,8 +235,8 @@ TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
       std::make_unique<Scope>(std::move(parent_env), "test_runner_env");
 
   // 1.1 Setup child environment services
-  child_env_scope_->AddService<TestRunner>(
-      [this](fidl::InterfaceRequest<TestRunner> request) {
+  child_env_scope_->AddService<testing::TestRunner>(
+      [this](fidl::InterfaceRequest<testing::TestRunner> request) {
         test_runner_clients_.push_back(
             std::make_unique<TestRunnerImpl>(std::move(request), this));
       });
