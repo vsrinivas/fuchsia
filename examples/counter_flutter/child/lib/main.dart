@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// This file is very similar (although not identical) to
+// parent/lib/main.dart. For comments that explain the purposes of the
+// classes and their members, see the comments there.
+
 import 'dart:convert';
 
 import 'package:apps.modular.lib.app.dart/app.dart';
@@ -12,58 +16,33 @@ import 'package:apps.modular.services.story/story.fidl.dart';
 import 'package:flutter/material.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
-final ApplicationContext _context = new ApplicationContext.fromStartupInfo();
-
-final GlobalKey<_HomeScreenState> _homeKey = new GlobalKey<_HomeScreenState>();
-
 final String _kCounterValueKey = "http://schema.domokit.org/counter";
-
-ModuleImpl _module;
 
 void _log(String msg) {
   print('[Counter Child] $msg');
 }
 
-class LinkWatcherImpl extends LinkWatcher {
-  final LinkWatcherBinding _binding = new LinkWatcherBinding();
+typedef void _ValueCallback(int);
+typedef void _UpdateCallback();
 
-  /// Gets the [InterfaceHandle] for this [LinkWatcher] implementation.
-  ///
-  /// The returned handle should only be used once.
-  InterfaceHandle<LinkWatcher> getHandle() => _binding.wrap(this);
+class _ChildCounterModule extends Module implements LinkWatcher {
+  _ChildCounterModule(this._valueCallback);
 
-  /// Closes the binding.
-  void close() {
-    if (_binding.isBound) {
-      _binding.close();
-    }
-  }
+  final _ValueCallback _valueCallback;
 
-  /// A callback called whenever the associated [Link] has new changes.
-  @override
-  void notify(String json) {
-    _log('LinkWatcherImpl.notify()');
-    _log('Link data: ${json}');
-    dynamic doc = JSON.decode(json);
-    if (doc is Map && doc[_kCounterValueKey] is int) {
-      _homeKey.currentState?.updateValue(doc[_kCounterValueKey]);
-    }
-  }
-}
+  final ModuleBinding _moduleBinding = new ModuleBinding();
+  final LinkWatcherBinding _linkWatcherBinding = new LinkWatcherBinding();
 
-class ModuleImpl extends Module {
-  final ModuleBinding _binding = new ModuleBinding();
-
+  final StoryProxy _story = new StoryProxy();
   final LinkProxy _link = new LinkProxy();
-  final LinkWatcherImpl _linkWatcher = new LinkWatcherImpl();
 
   final List<String> _jsonPath = <String>[_kCounterValueKey];
 
   void bind(InterfaceRequest<Module> request) {
-    _binding.bind(this, request);
+    _moduleBinding.bind(this, request);
   }
 
-  /// Implementation of the Initialize(Story story, Link link) method.
+  /// |Module|
   @override
   void initialize(
       InterfaceHandle<Story> storyHandle,
@@ -72,62 +51,114 @@ class ModuleImpl extends Module {
       InterfaceRequest<ServiceProvider> outgoingServices) {
     _log('ModuleImpl.initialize()');
 
-    // Bind the provided handles to our proxy objects.
     _link.ctrl.bind(linkHandle);
-
-    // Register the link watcher.
-    _link.watchAll(_linkWatcher.getHandle());
+    _link.watchAll(_linkWatcherBinding.wrap(this));
   }
 
+  /// |Module|
   @override
   void stop(void callback()) {
-    _log('ModuleImpl.stop()');
+    _log('Module.stop()');
 
-    // Do some clean up here.
-    _linkWatcher.close();
+    _linkWatcherBinding.close();
     _link.ctrl.close();
 
-    // Invoke the callback to signal that the clean-up process is done.
     callback();
   }
 
-  void _setValue(int newValue) {
-    _link.set(_jsonPath, JSON.encode(newValue));
+  /// |LinkWatcher|
+  @override
+  void notify(String json) {
+    _log('LinkWatcherImpl.notify()');
+    _log('Link data: $json');
+    dynamic doc = JSON.decode(json);
+    if (doc is Map && doc[_kCounterValueKey] is int) {
+      _valueCallback(doc[_kCounterValueKey]);
+    }
   }
+
+  // API below is exposed to _AppState. In addition, _AppState uses the
+  // constructor argument to get notifications.
+  void setValue(int newValue) => _link.set(_jsonPath, JSON.encode(newValue));
+}
+
+class _AppState {
+  _AppState(this._context) {
+    _module = new _ChildCounterModule(_updateValue);
+    _context.outgoingServices.addServiceForName(
+        (InterfaceRequest<Module> request) {
+          _log('Service request for Module');
+          _module.bind(request);
+        },
+        Module.serviceName);
+  }
+
+  // NOTE(mesch): _context is a constructor argument and only used
+  // there. We keep it around, however, to prevent it from getting
+  // garbage collected, as it holds on to fidl objects whose existence
+  // is meaningful.
+  final ApplicationContext _context;
+
+  // This is the application state. Everything else in this class
+  // orchestrates sources for updates of this state or ways to access
+  // this state.
+  int _value = 0;
+
+  // Watchers to be notified of state changes.
+  final List<_UpdateCallback> _watch = <_UpdateCallback>[];
+
+  // The application is connected to a Story as a Module.
+  _ChildCounterModule _module;
+
+  void _updateValue(int newValue) => _notify(() => _value = newValue);
+
+  void _notify(Function change) {
+    change();
+    _watch.forEach((f) => f());
+  }
+
+  // API below is exposed to the view state.
+  int get value => _value;
+  void increment() => _module.setValue(_value + 1);
+  void decrement() => _module.setValue(_value - 1);
+  void watch(_UpdateCallback callback) => _watch.add(callback);
 }
 
 class _HomeScreen extends StatefulWidget {
-  _HomeScreen({Key key}) : super(key: key);
+  _HomeScreen({Key key, _AppState state}) : super(key: key), _state = state {
+    _log("HomeScreen()");
+  }
+
+  final _AppState _state;
 
   @override
-  _HomeScreenState createState() => new _HomeScreenState();
+  _HomeScreenState createState() {
+    _log("HomeScreen.createState()");
+    return new _HomeScreenState(_state);
+  }
 }
 
 class _HomeScreenState extends State<_HomeScreen> {
-  int _linkValue = 0;
-
-  int get _currentValue {
-    return _linkValue;
+  _HomeScreenState(_AppState this._state) {
+    _state.watch(() => setState(() {}));
   }
 
-  void updateValue(int value) {
-    setState(() => _linkValue = value);
-  }
+  final _AppState _state;
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = <Widget>[
+    final List<Widget> children = <Widget>[
       new Text('I am the child module!'),
-      new Text('Current Value: $_currentValue'),
+      new Text('Current Value: ${_state.value}'),
       new Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           new RaisedButton(
-            onPressed: _handleIncrease,
+            onPressed: _state.increment,
             child: new Text('Increase'),
           ),
           new RaisedButton(
-            onPressed: _handleDecrease,
+            onPressed: _state.decrement,
             child: new Text('Decrease'),
           ),
         ],
@@ -141,31 +172,16 @@ class _HomeScreenState extends State<_HomeScreen> {
       ),
     );
   }
-
-  void _handleIncrease() {
-    _module._setValue(_currentValue + 1);
-  }
-
-  void _handleDecrease() {
-    _module._setValue(_currentValue - 1);
-  }
 }
 
-/// Main entry point to the example child module.
 void main() {
   _log('main()');
 
-  _context.outgoingServices.addServiceForName(
-    (InterfaceRequest<Module> request) {
-      _log('Service request for Module');
-      _module = new ModuleImpl()..bind(request);
-    },
-    Module.serviceName,
-  );
+  final _AppState state = new _AppState(new ApplicationContext.fromStartupInfo());
 
   runApp(new MaterialApp(
     title: 'Counter Child',
-    home: new _HomeScreen(key: _homeKey),
+    home: new _HomeScreen(state: state),
     theme: new ThemeData(primarySwatch: Colors.blue),
     debugShowCheckedModeBanner: false,
   ));

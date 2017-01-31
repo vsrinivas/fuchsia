@@ -15,10 +15,6 @@ import 'package:apps.mozart.services.views/view_token.fidl.dart';
 import 'package:flutter/material.dart';
 import 'package:lib.fidl.dart/bindings.dart';
 
-final ApplicationContext _context = new ApplicationContext.fromStartupInfo();
-
-final GlobalKey<_HomeScreenState> _homeKey = new GlobalKey<_HomeScreenState>();
-
 final String _kCounterValueKey = "http://schema.domokit.org/counter";
 final String _kJsonSchema = '''
 {
@@ -36,95 +32,85 @@ final String _kJsonSchema = '''
 }
 ''';
 
-ModuleImpl _module;
-
-ChildViewConnection _conn;
-
 void _log(String msg) {
   print('[Counter Parent] $msg');
 }
 
-class LinkWatcherImpl extends LinkWatcher {
-  final LinkWatcherBinding _binding = new LinkWatcherBinding();
+typedef void _ValueCallback(int);
+typedef void _UpdateCallback();
+typedef void _ChildViewCallback(ChildViewConnection);
 
-  /// Gets the [InterfaceHandle] for this [LinkWatcher] implementation.
-  ///
-  /// The returned handle should only be used once.
-  InterfaceHandle<LinkWatcher> getHandle() => _binding.wrap(this);
+// This module produces two things: A connection to the view of its
+// child module, and updates of the value shared with that child module
+// through a Link.
+class _ParentCounterModule extends Module implements LinkWatcher {
+  _ParentCounterModule(this._valueCallback, this._childViewCallback);
 
-  /// Correctly close the Link Binding
-  void close() => _binding.close();
+  final _ValueCallback _valueCallback;
+  final _ChildViewCallback _childViewCallback;
 
-  /// A callback called whenever the associated [Link] has new changes.
-  @override
-  void notify(String json) {
-    _log('LinkWatcherImpl.notify()');
-    _log('Link data: $json');
-    dynamic doc = JSON.decode(json);
-    if (doc is Map && doc[_kCounterValueKey] is int) {
-      _homeKey.currentState?.updateValue(doc[_kCounterValueKey]);
-    }
-  }
-}
-
-class ModuleImpl extends Module {
-  final ModuleBinding _binding = new ModuleBinding();
+  final ModuleBinding _moduleBinding = new ModuleBinding();
+  final LinkWatcherBinding _linkWatcherBinding = new LinkWatcherBinding();
 
   final StoryProxy _story = new StoryProxy();
   final LinkProxy _link = new LinkProxy();
-  final LinkWatcherImpl _linkWatcher = new LinkWatcherImpl();
 
   final List<String> _jsonPath = <String>[_kCounterValueKey];
 
   void bind(InterfaceRequest<Module> request) {
-    _binding.bind(this, request);
+    _moduleBinding.bind(this, request);
   }
 
+  /// |Module|
   @override
   void initialize(
       InterfaceHandle<Story> storyHandle,
       InterfaceHandle<Link> linkHandle,
       InterfaceHandle<ServiceProvider> incomingServices,
       InterfaceRequest<ServiceProvider> outgoingServices) {
-    _log('ModuleImpl.initialize()');
+    _log('Module.initialize()');
 
-    // Bind the provided handles to our proxy objects.
+    // A module is initialized with a Story and a Link.
     _story.ctrl.bind(storyHandle);
     _link.ctrl.bind(linkHandle);
 
+    // On the link, we can declare that values stored in the link adhere
+    // to a schema. If an update violates the schema, this only created
+    // debug log output.
     _link.setSchema(_kJsonSchema);
 
-    // Register the link watcher.
-    _link.watchAll(_linkWatcher.getHandle());
+    // If the value in the link changes, we notice this.
+    _link.watchAll(_linkWatcherBinding.wrap(this));
 
-    // Duplicate the link handle to pass it down to the sub-module.
     final LinkProxy linkForChild = new LinkProxy();
     _link.dup(linkForChild.ctrl.request());
 
+    // If we would retain the module controller for the child module, we
+    // could later stop it.
     InterfacePair<ModuleController> moduleControllerPair =
         new InterfacePair<ModuleController>();
+
     InterfacePair<ViewOwner> viewOwnerPair = new InterfacePair<ViewOwner>();
 
     // Start the child module.
     _story.startModule(
-      'file:///system/apps/example_flutter_counter_child',
-      linkForChild.ctrl.unbind(),
-      null,
-      null,
-      moduleControllerPair.passRequest(),
-      viewOwnerPair.passRequest(),
-    );
+        'file:///system/apps/example_flutter_counter_child',
+        linkForChild.ctrl.unbind(),
+        null,
+        null,
+        moduleControllerPair.passRequest(),
+        viewOwnerPair.passRequest());
 
-    _conn = new ChildViewConnection(viewOwnerPair.passHandle());
-    _homeKey.currentState?.updateUI();
+    _childViewCallback(new ChildViewConnection(viewOwnerPair.passHandle()));
   }
 
+  /// |Module|
   @override
   void stop(void callback()) {
-    _log('ModuleImpl.stop()');
+    _log('Module.stop()');
 
     // Do some clean up here.
-    _linkWatcher.close();
+    _linkWatcherBinding.close();
     _link.ctrl.close();
     _story.ctrl.close();
 
@@ -132,65 +118,125 @@ class ModuleImpl extends Module {
     callback();
   }
 
-  void _setValue(int newValue) {
-    // Update just the value of interest. Don't overwrite other members.
-    _link.set(_jsonPath, JSON.encode(newValue));
+  /// |LinkWatcher|
+  @override
+  void notify(String json) {
+    _log('LinkWatcherImpl.notify()');
+    _log('Link data: $json');
+    dynamic doc = JSON.decode(json);
+    if (doc is Map && doc[_kCounterValueKey] is int) {
+      _valueCallback(doc[_kCounterValueKey]);
+    }
   }
+
+  // API below is exposed to _AppState. In addition, _AppState uses the
+  // constructor arguments to get notifications.
+  void done() => _story.done();
+  void setValue(int newValue) => _link.set(_jsonPath, JSON.encode(newValue));
+}
+
+class _AppState {
+  _AppState(this._context) {
+    _module = new _ParentCounterModule(_updateValue,
+                                       _updateChildView);
+    _context.outgoingServices.addServiceForName(
+        (InterfaceRequest<Module> request) {
+          _log('Service request for Module');
+          _module.bind(request);
+        },
+        Module.serviceName);
+  }
+
+  // NOTE(mesch): _context is a constructor argument and only used
+  // there. We keep it around, however, to prevent it from getting
+  // garbage collected, as it holds on to fidl objects whose existence
+  // is meaningful.
+  final ApplicationContext _context;
+
+  // This is the application state. Everything else in this class
+  // orchestrates sources for updates of this state or ways to access
+  // this state.
+  int _value = 0;
+
+  // This module explicitly hosts another module. This is a connection
+  // to its view.
+  ChildViewConnection _childViewConnection;
+
+  // Watchers to be notified of state changes.
+  final List<_UpdateCallback> _watch = <_UpdateCallback>[];
+
+  // The application is connected to a Story as a Module.
+  _ParentCounterModule _module;
+
+  void _updateValue(int newValue) => _notify(() => _value = newValue);
+  void _updateChildView(ChildViewConnection v) => _notify(() => _childViewConnection = v);
+
+  void _notify(Function change) {
+    change();
+    _watch.forEach((f) => f());
+  }
+
+  // API below is exposed to the view state.
+  int get value => _value;
+  ChildViewConnection get childViewConnection => _childViewConnection;
+  void increment() => _module.setValue(_value + 1);
+  void decrement() => _module.setValue(_value - 1);
+  void done() => _module.done();
+
+  // This allows the view to update when the value changes through the link.
+  void watch(_UpdateCallback callback) => _watch.add(callback);
 }
 
 class _HomeScreen extends StatefulWidget {
-  _HomeScreen({Key key}) : super(key: key) {
+  _HomeScreen({Key key, _AppState state}) : super(key: key), _state = state {
     _log("HomeScreen()");
   }
+
+  final _AppState _state;
 
   @override
   _HomeScreenState createState() {
     _log("HomeScreen.createState()");
-    return new _HomeScreenState();
+    return new _HomeScreenState(_state);
   }
 }
 
 class _HomeScreenState extends State<_HomeScreen> {
-  int _linkValue = 0;
-
-  int get _currentValue {
-    return _linkValue;
+  _HomeScreenState(_AppState this._state) {
+    _state.watch(() => setState(() {}));
   }
 
-  void updateValue(int value) {
-    _log("HomeScreenState.updateValue()");
-    setState(() => _linkValue = value);
-  }
+  final _AppState _state;
 
   @override
   Widget build(BuildContext context) {
     _log("HomeScreenState::build()");
-    List<Widget> children = <Widget>[
+    final List<Widget> children = <Widget>[
       new Text('I am the parent module!'),
-      new Text('Current Value: $_currentValue'),
+      new Text('Current Value: ${_state.value}'),
       new Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           new RaisedButton(
-            onPressed: _handleIncrease,
+            onPressed: _state.increment,
             child: new Text('Increase'),
           ),
           new RaisedButton(
-            onPressed: _handleDecrease,
+            onPressed: _state.decrement,
             child: new Text('Decrease'),
           ),
           new RaisedButton(
-            onPressed: _handleStop,
+            onPressed: _state.done,
             child: new Text('Stop'),
           ),
         ],
       ),
     ];
 
-    if (_conn != null) {
+    if (_state.childViewConnection != null) {
       children.add(new Expanded(
         flex: 1,
-        child: new ChildView(connection: _conn),
+        child: new ChildView(connection: _state.childViewConnection),
       ));
     }
 
@@ -201,41 +247,25 @@ class _HomeScreenState extends State<_HomeScreen> {
       ),
     );
   }
-
-  /// Convenient method for others to trigger UI update.
-  void updateUI() {
-    _log("HomeScreenState.updateUI()");
-    setState(() {});
-  }
-
-  void _handleIncrease() {
-    _module._setValue(_currentValue + 1);
-  }
-
-  void _handleDecrease() {
-    _module._setValue(_currentValue - 1);
-  }
-
-  void _handleStop() {
-    _module._story.done();
-  }
 }
 
 /// Main entry point to the example parent module.
 void main() {
   _log('main()');
 
-  _context.outgoingServices.addServiceForName(
-    (InterfaceRequest<Module> request) {
-      _log('Service request for Module');
-      _module = new ModuleImpl()..bind(request);
-    },
-    Module.serviceName,
-  );
+  // NOTE(mesch): Application state is hung off the state of a top level
+  // stateful widget. It, however, is deliberately not directly the
+  // state of this widget. The reason becomes clear if there were
+  // multiple top level widgets, e.g. when the MaterialApp would
+  // actually have multiple routes, each with a top level stateful
+  // widget. In that case, the application state would be *shared*
+  // between all those widgets, which a widget state instance would not
+  // be.
+  final _AppState state = new _AppState(new ApplicationContext.fromStartupInfo());
 
   runApp(new MaterialApp(
     title: 'Counter Parent',
-    home: new _HomeScreen(key: _homeKey),
+    home: new _HomeScreen(state: state),
     theme: new ThemeData(primarySwatch: Colors.orange),
     debugShowCheckedModeBanner: true,
   ));
