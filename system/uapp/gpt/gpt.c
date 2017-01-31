@@ -315,6 +315,39 @@ static mx_status_t get_gpt_and_part(char* path_device, long idx_part,
 }
 
 /*
+ * Match keywords "DATA", "SYSTEM", or "EFI" and convert them to their
+ * corresponding byte sequences. 'out' should point to a GPT_GUID_LEN array.
+ */
+static bool expand_special(char* in, uint8_t* out) {
+    if (in == NULL) {
+        return false;
+    }
+
+    static const uint8_t data[GPT_GUID_LEN] = GUID_DATA_VALUE;
+    static const uint8_t system[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
+    static const uint8_t efi[GPT_GUID_LEN] = GUID_EFI_VALUE;
+
+    int len = strlen(in);
+
+    if (len == 4 && !strncmp("DATA", in, 4)) {
+        memcpy(out, data, GPT_GUID_LEN);
+        return true;
+    }
+
+    if (len == 6 && !strncmp("SYSTEM", in, 6)) {
+        memcpy(out, system, GPT_GUID_LEN);
+        return true;
+    }
+
+    if (len == 3 && !strncmp("EFI", in, 3)) {
+        memcpy(out, efi, GPT_GUID_LEN);
+        return true;
+    }
+
+    return false;
+}
+
+/*
  * Edit a partition, changing either its type or ID GUID. path_device should be
  * the path to the device where the GPT can be read. idx_part should be the
  * index of the partition in the GPT that you want to change. guid should be the
@@ -346,7 +379,7 @@ static mx_status_t edit_partition(char* path_device, long idx_part,
     }
 
     uint8_t guid_bytes[GPT_GUID_LEN];
-    if (!parse_guid(guid, guid_bytes)) {
+    if (!expand_special(guid, guid_bytes) && !parse_guid(guid, guid_bytes)) {
         printf("GUID could not be parsed.\n");
         tear_down_gpt(fd, gpt);
         return ERR_INVALID_ARGS;
@@ -433,7 +466,7 @@ usage:
     printf("dump [<dev>]\n");
     printf("add <offset> <blocks> <name> [<dev>]\n");
     printf("remove <n> [<dev>]\n");
-    printf("edit <n> type|id <guid> <dev>\n");
+    printf("edit <n> type|id DATA|SYSTEM|EFI|<guid> <dev>\n");
     printf("visible <n> true|false <dev>\n");
     return 0;
 }
