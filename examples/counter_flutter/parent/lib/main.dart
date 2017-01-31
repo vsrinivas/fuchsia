@@ -72,7 +72,6 @@ class ModuleImpl extends Module {
 
   final StoryProxy _story = new StoryProxy();
   final LinkProxy _link = new LinkProxy();
-  final LinkProxy _linkForChild = new LinkProxy();
   final LinkWatcherImpl _linkWatcher = new LinkWatcherImpl();
 
   final List<String> _jsonPath = <String>[_kCounterValueKey];
@@ -99,7 +98,8 @@ class ModuleImpl extends Module {
     _link.watchAll(_linkWatcher.getHandle());
 
     // Duplicate the link handle to pass it down to the sub-module.
-    _link.dup(_linkForChild.ctrl.request());
+    final LinkProxy linkForChild = new LinkProxy();
+    _link.dup(linkForChild.ctrl.request());
 
     InterfacePair<ModuleController> moduleControllerPair =
         new InterfacePair<ModuleController>();
@@ -108,7 +108,7 @@ class ModuleImpl extends Module {
     // Start the child module.
     _story.startModule(
       'file:///system/apps/example_flutter_counter_child',
-      _linkForChild.ctrl.unbind(),
+      linkForChild.ctrl.unbind(),
       null,
       null,
       moduleControllerPair.passRequest(),
@@ -125,7 +125,6 @@ class ModuleImpl extends Module {
 
     // Do some clean up here.
     _linkWatcher.close();
-    _linkForChild.ctrl.close();
     _link.ctrl.close();
     _story.ctrl.close();
 
