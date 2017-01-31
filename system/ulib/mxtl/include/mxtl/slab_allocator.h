@@ -16,6 +16,14 @@
 #include <mxtl/type_support.h>
 #include <mxtl/unique_ptr.h>
 
+// Bring in a definition of the placement new operator.  Currently, kernel code
+// and user-mode code put this definition in different places.
+#ifdef _KERNEL
+#include <new.h>
+#else
+#include <magenta/new.h>
+#endif
+
 // Usage Notes:
 //
 // mxtl::SlabAllocator<> is a utility class which implements a slab-style
@@ -123,23 +131,37 @@
 // :: Static Allocator Storage ::
 //
 // Static slab allocators require that the storage required for the allocator to
-// function be declared somewhere in the program.
+// function be declared instantiated in a translation unit somewhere in the
+// program.  In addition, if the allocator is going to be used outside of just
+// this one translation unit, the existance of the storage must be forward
+// declared to all of the users of the allocator.
 //
 // Given the precondition...
 //
-// class MyObject;
-// using SATraits = mxtl::StaticAllocatorTraits<mxtl::unique_ptr<MyObject>>;
+//   class MyObject;
+//   using SATraits = mxtl::StaticAllocatorTraits<mxtl::unique_ptr<MyObject>>;
 //
-// The formal syntax for declaring the allocator storage would be...
+// The formal syntax for forward declaring the existance of the allocator
+// storage would be...
 //
-// template<>
-// typename mxtl::SlabAllocator<SATraits>::InternalAllocatorType
-// mxtl::SlabAllocator<SATraits>::allocator_(ctor_args...);
+//   template<>
+//   typename mxtl::SlabAllocator<SATraits>::InternalAllocatorType
+//   mxtl::SlabAllocator<SATraits>::allocator_;
 //
-// To ease some of this pain, a helper macro is provided.  Using it looks
-// like...
+// And the formal syntax for instantiating the allocator storage would be...
 //
-// DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(SATraits, ctor_args...);
+//   template<>
+//   typename mxtl::SlabAllocator<SATraits>::InternalAllocatorType
+//   mxtl::SlabAllocator<SATraits>::allocator_(ctor_args...);
+//
+// To ease some of this pain, a two helper macro is provided.  In the header
+// file in your program defines the allocator, you can write...
+//
+//   FWD_DECL_STATIC_SLAB_ALLOCATOR(SATraits);
+//
+// Then, in a .cpp file somewhere in your program, you can write...
+//
+//   DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(SATraits, ctor_args...);
 //
 // :: API ::
 //
@@ -697,10 +719,6 @@ public:
         return allocator_.New(mxtl::forward<ConstructorSignature>(args)...);
     }
 
-    static inline void Delete(ObjType* ptr) {
-        return allocator_.Delete(ptr);
-    }
-
     static size_t max_slabs() { return allocator_.max_slabs(); }
 
 private:
@@ -744,7 +762,15 @@ using UnlockedStaticSlabAllocatorTraits = SlabAllocatorTraits<T, SLAB_SIZE, ::mx
 
 // Shorthand for declaring the global storage required for a static allocator
 #define DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(ALLOC_TRAITS, ...) \
-template<> ::mxtl::SlabAllocator<typename ALLOC_TRAITS>::InternalAllocatorType \
-mxtl::SlabAllocator<typename ALLOC_TRAITS>::allocator_(__VA_ARGS__)
+template<> ::mxtl::SlabAllocator<ALLOC_TRAITS>::InternalAllocatorType \
+mxtl::SlabAllocator<ALLOC_TRAITS>::allocator_(__VA_ARGS__)
+
+// Shorthand for forward declaring the existance of the storage required to use
+// a static slab allocator.  Use this macro in your header file if your static
+// slab allocator is to be used outside of a single translational unit.
+#define FWD_DECL_STATIC_SLAB_ALLOCATOR(ALLOC_TRAITS) \
+template<> ::mxtl::SlabAllocator<ALLOC_TRAITS>::InternalAllocatorType \
+mxtl::SlabAllocator<ALLOC_TRAITS>::allocator_;
+
 
 }  // namespace mxtl
