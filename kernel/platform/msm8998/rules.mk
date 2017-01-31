@@ -8,7 +8,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-WITH_SMP := 1
+WITH_SMP := 0
 
 # TODO - change to 8 after we are able to bring up gold CPUs
 SMP_MAX_CPUS := 4
