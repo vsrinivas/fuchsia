@@ -38,6 +38,9 @@ struct vnode {
     mx_handle_t vmo;
     mx_off_t length; // TYPE_VMO: Size of data within vmo. TYPE_DATA: Size of vmo
     mx_off_t offset; // TYPE_VMO: Offset into vmo which contains data.
+
+    uint64_t create_time;
+    uint64_t modify_time;
 };
 
 typedef struct vnode_watcher {
@@ -74,14 +77,14 @@ mx_status_t systemfs_add_file(const char* path, mx_handle_t vmo, mx_off_t off, s
 // memory fs
 vnode_t* memfs_get_root(void);
 mx_status_t memfs_add_link(vnode_t* parent, const char* name, vnode_t* target);
-mx_status_t mem_lookup_none(vnode_t* parent, vnode_t** out, const char* name, size_t len);
-mx_status_t mem_create_none(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode);
-ssize_t mem_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
+mx_status_t memfs_lookup_none(vnode_t* parent, vnode_t** out, const char* name, size_t len);
+mx_status_t memfs_create_none(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode);
+ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
 ssize_t memfs_read_none(vnode_t* vn, void* data, size_t len, size_t off);
-mx_status_t mem_readdir_none(vnode_t* parent, void* cookie, void* data, size_t len);
+mx_status_t memfs_readdir_none(vnode_t* parent, void* cookie, void* data, size_t len);
 
 // TODO(orr) normally static; temporary exposure, to be undone in subsequent patch
-mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
+mx_status_t _memfs_create(vnode_t* parent, vnode_t** out,
                         const char* name, size_t namelen,
                         uint32_t type);
 
@@ -98,15 +101,15 @@ mx_status_t memfs_open(vnode_t** _vn, uint32_t flags);
 mx_status_t memfs_close(vnode_t* vn);
 mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_t len);
 mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len);
-mx_status_t mem_truncate_none(vnode_t* vn, size_t len);
-mx_status_t mem_rename_none(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
-                            const char* newname, size_t newlen, bool src_must_be_dir,
-                            bool dst_must_be_dir);
+mx_status_t memfs_truncate_none(vnode_t* vn, size_t len);
+mx_status_t memfs_rename_none(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
+                              const char* newname, size_t newlen, bool src_must_be_dir,
+                              bool dst_must_be_dir);
 ssize_t memfs_read_none(vnode_t* vn, void* data, size_t len, size_t off);
-ssize_t mem_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
+ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off);
 mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len, bool must_be_dir);
-ssize_t memfs_ioctl(vnode_t* vn, uint32_t op, const void* in_data, size_t in_len,
-                    void* out_data, size_t out_len);
+ssize_t memfs_ioctl(vnode_t* vn, uint32_t op, const void* in_data,
+                    size_t in_len, void* out_data, size_t out_len);
 mx_status_t memfs_lookup_name(const vnode_t* vn, char* outname, size_t out_len);
 
 mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,

@@ -41,7 +41,7 @@ static mx_status_t _vnb_create(vnode_t* parent, vnode_t** out,
     }
 
     vnode_t* vnb;
-    mx_status_t r = _mem_create(parent, &vnb, name, namelen, MEMFS_TYPE_VMO|MEMFS_FLAG_VMO_REUSE);
+    mx_status_t r = _memfs_create(parent, &vnb, name, namelen, MEMFS_TYPE_VMO|MEMFS_FLAG_VMO_REUSE);
     if (r < 0) {
         if (mx_handle_close(h) < 0) {
             printf("memfs_create_from_vmo: unexpected error closing handle\n");
@@ -85,7 +85,7 @@ static mx_status_t _vnb_mkdir(vnode_t* parent, vnode_t** out, const char* name, 
     }
 
     // create a new directory
-    return _mem_create(parent, out, name, namelen, MEMFS_TYPE_DIR);
+    return _memfs_create(parent, out, name, namelen, MEMFS_TYPE_DIR);
 }
 
 static mx_status_t _add_file(vnode_t* vnb, const char* path, mx_handle_t vmo,

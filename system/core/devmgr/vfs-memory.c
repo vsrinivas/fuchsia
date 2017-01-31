@@ -25,10 +25,10 @@
 
 #define MINFS_MAX_FILE_SIZE (8192 * 8192)
 
-mx_status_t mem_get_node(vnode_t** out, mx_device_t* dev);
-mx_status_t mem_can_unlink(dnode_t* dn);
+mx_status_t memfs_get_node(vnode_t** out, mx_device_t* dev);
+mx_status_t memfs_can_unlink(dnode_t* dn);
 
-static void mem_release(vnode_t* vn) {
+static void memfs_release(vnode_t* vn) {
     xprintf("memfs: vn %p destroyed\n", vn);
 
     if (vn->vmo != MX_HANDLE_INVALID) {
@@ -50,7 +50,7 @@ mx_status_t memfs_close(vnode_t* vn) {
     return NO_ERROR;
 }
 
-static ssize_t mem_read(vnode_t* vn, void* data, size_t len, size_t off) {
+static ssize_t memfs_read(vnode_t* vn, void* data, size_t len, size_t off) {
     if ((off >= vn->length) || (vn->vmo == MX_HANDLE_INVALID)) {
         return 0;
     }
@@ -63,7 +63,7 @@ static ssize_t mem_read(vnode_t* vn, void* data, size_t len, size_t off) {
     return actual;
 }
 
-static ssize_t mem_write(vnode_t* vn, const void* data, size_t len, size_t off) {
+static ssize_t memfs_write(vnode_t* vn, const void* data, size_t len, size_t off) {
     mx_status_t status;
     size_t newlen = off + len;
     newlen = newlen > MINFS_MAX_FILE_SIZE ? MINFS_MAX_FILE_SIZE : newlen;
@@ -94,6 +94,7 @@ static ssize_t mem_write(vnode_t* vn, const void* data, size_t len, size_t off) 
         // short write because we're beyond the end of the permissible length
         return ERR_FILE_BIG;
     }
+    vn->modify_time = mx_time_get(MX_CLOCK_UTC);
     return actual;
 }
 
@@ -130,6 +131,7 @@ mx_status_t memfs_truncate(vnode_t* vn, size_t len) {
     }
 
     vn->length = len;
+    vn->modify_time = mx_time_get(MX_CLOCK_UTC);
     return NO_ERROR;
 }
 
@@ -182,7 +184,7 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir, const char* oldname, 
         if (DNODE_IS_DIR(olddn) != DNODE_IS_DIR(targetdn)) {
             // Cannot rename files to directories (and vice versa)
             return ERR_INVALID_ARGS;
-        } else if ((r = mem_can_unlink(targetdn)) < 0) {
+        } else if ((r = memfs_can_unlink(targetdn)) < 0) {
             return r;
         }
     } else if (r != ERR_NOT_FOUND) {
@@ -221,7 +223,7 @@ mx_status_t memfs_rename(vnode_t* olddir, vnode_t* newdir, const char* oldname, 
     return NO_ERROR;
 }
 
-mx_status_t mem_rename_none(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
+mx_status_t memfs_rename_none(vnode_t* olddir, vnode_t* newdir, const char* oldname, size_t oldlen,
                             const char* newname, size_t newlen, bool src_must_be_dir,
                             bool dst_must_be_dir) {
     return ERR_NOT_SUPPORTED;
@@ -233,7 +235,7 @@ mx_status_t memfs_sync(vnode_t* vn) {
     return NO_ERROR;
 }
 
-mx_status_t mem_truncate_none(vnode_t* vn, size_t len) {
+mx_status_t memfs_truncate_none(vnode_t* vn, size_t len) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -241,7 +243,7 @@ ssize_t memfs_read_none(vnode_t* vn, void* data, size_t len, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
-ssize_t mem_write_none(vnode_t* vn, const void* data, size_t len, size_t off) {
+ssize_t memfs_write_none(vnode_t* vn, const void* data, size_t len, size_t off) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -259,11 +261,11 @@ mx_status_t memfs_lookup(vnode_t* parent, vnode_t** out, const char* name, size_
     return r;
 }
 
-mx_status_t mem_lookup_none(vnode_t* parent, vnode_t** out, const char* name, size_t len) {
+mx_status_t memfs_lookup_none(vnode_t* parent, vnode_t** out, const char* name, size_t len) {
     return ERR_NOT_SUPPORTED;
 }
 
-static mx_status_t mem_getattr(vnode_t* vn, vnattr_t* attr) {
+static mx_status_t memfs_getattr(vnode_t* vn, vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     if (vn->dnode == NULL) {
         attr->size = vn->length;
@@ -271,7 +273,25 @@ static mx_status_t mem_getattr(vnode_t* vn, vnattr_t* attr) {
     } else {
         attr->mode = V_TYPE_DIR | V_IRUSR;
     }
+    attr->create_time = vn->create_time;
+    attr->modify_time = vn->modify_time;
+    attr->size = vn->length;
     return NO_ERROR;
+}
+
+static mx_status_t memfs_setattr(vnode_t* vn, vnattr_t* attr) {
+    if ((attr->valid & ~(ATTR_MTIME)) != 0) {
+        // only attr currently supported
+        return ERR_INVALID_ARGS;
+    }
+    if (attr->valid & ATTR_MTIME) {
+        vn->modify_time = attr->modify_time;
+    }
+    return NO_ERROR;
+}
+
+static mx_status_t memfs_setattr_none(vnode_t* vn, vnattr_t* attr) {
+    return ERR_NOT_SUPPORTED;
 }
 
 mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len) {
@@ -281,21 +301,21 @@ mx_status_t memfs_readdir(vnode_t* parent, void* cookie, void* data, size_t len)
     return dn_readdir(parent->dnode, cookie, data, len);
 }
 
-mx_status_t mem_readdir_none(vnode_t* parent, void* cookie, void* data, size_t len) {
+mx_status_t memfs_readdir_none(vnode_t* parent, void* cookie, void* data, size_t len) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
+mx_status_t _memfs_create(vnode_t* parent, vnode_t** out,
                         const char* name, size_t namelen,
                         uint32_t flags);
 
 // postcondition: reference taken on vn returned through "out"
-static mx_status_t mem_create(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode) {
+static mx_status_t memfs_create(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode) {
     vnode_t* vn;
     uint32_t flags = S_ISDIR(mode)
         ? MEMFS_TYPE_DIR
         : MEMFS_TYPE_DATA;
-    mx_status_t r = _mem_create(vndir, &vn, name, len, flags);
+    mx_status_t r = _memfs_create(vndir, &vn, name, len, flags);
     if (r >= 0) {
         vn_acquire(vn);
         *out = vn;
@@ -303,17 +323,17 @@ static mx_status_t mem_create(vnode_t* vndir, vnode_t** out, const char* name, s
     return r;
 }
 
-mx_status_t mem_create_none(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode) {
+mx_status_t memfs_create_none(vnode_t* vndir, vnode_t** out, const char* name, size_t len, uint32_t mode) {
     return ERR_NOT_SUPPORTED;
 }
 
-ssize_t memfs_ioctl(vnode_t* vn, uint32_t op,
-                    const void* in_data, size_t in_len,
-                    void* out_data, size_t out_len) {
+ssize_t memfs_ioctl_none(vnode_t* vn, uint32_t op,
+                         const void* in_data, size_t in_len,
+                         void* out_data, size_t out_len) {
     return ERR_NOT_SUPPORTED;
 }
 
-mx_status_t mem_can_unlink(dnode_t* dn) {
+mx_status_t memfs_can_unlink(dnode_t* dn) {
     bool is_directory = (dn->vnode->dnode != NULL);
     if (is_directory && (dn->vnode->refcount > 1)) {
         // Cannot unlink an open directory
@@ -342,14 +362,14 @@ mx_status_t memfs_unlink(vnode_t* vn, const char* name, size_t len, bool must_be
     if (!is_directory && must_be_dir) {
         return ERR_NOT_DIR;
     }
-    if ((r = mem_can_unlink(dn)) < 0) {
+    if ((r = memfs_can_unlink(dn)) < 0) {
         return r;
     }
     dn_delete(dn);
     return NO_ERROR;
 }
 
-mx_status_t mem_unlink_none(vnode_t* vn, const char* name, size_t len, bool must_be_dir) {
+mx_status_t memfs_unlink_none(vnode_t* vn, const char* name, size_t len, bool must_be_dir) {
     return ERR_NOT_SUPPORTED;
 }
 
@@ -391,6 +411,8 @@ mx_status_t vmo_getattr(vnode_t* vn, vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->size = vn->length;
     attr->mode = V_TYPE_FILE | V_IRUSR;
+    attr->create_time = vn->create_time;
+    attr->modify_time = vn->modify_time;
     return NO_ERROR;
 }
 
@@ -404,6 +426,7 @@ static ssize_t vmo_write(vnode_t* vn, const void* data, size_t len, size_t off) 
     if (r < 0) {
         return r;
     }
+    vn->modify_time = mx_time_get(MX_CLOCK_UTC);
     return rlen;
 }
 
@@ -429,19 +452,20 @@ static mx_status_t device_getattr(vnode_t* vn, vnattr_t* attr) {
     return NO_ERROR;
 }
 
-static vnode_ops_t vn_mem_ops = {
-    .release = mem_release,
+static vnode_ops_t vn_memfs_ops = {
+    .release = memfs_release,
     .open = memfs_open,
     .close = memfs_close,
-    .read = mem_read,
-    .write = mem_write,
-    .lookup = mem_lookup_none,
-    .getattr = mem_getattr,
-    .readdir = mem_readdir_none,
-    .create = mem_create,
-    .unlink = mem_unlink_none,
+    .read = memfs_read,
+    .write = memfs_write,
+    .lookup = memfs_lookup_none,
+    .getattr = memfs_getattr,
+    .setattr = memfs_setattr,
+    .readdir = memfs_readdir_none,
+    .create = memfs_create,
+    .unlink = memfs_unlink_none,
     .truncate = memfs_truncate,
-    .rename = mem_rename_none,
+    .rename = memfs_rename_none,
     .sync = memfs_sync,
 };
 
@@ -451,28 +475,30 @@ static vnode_ops_t vn_vmo_ops = {
     .close = memfs_close,
     .read = vmo_read,
     .write = vmo_write,
-    .lookup = mem_lookup_none,
+    .lookup = memfs_lookup_none,
     .getattr = vmo_getattr,
-    .readdir = mem_readdir_none,
-    .create = mem_create_none,
-    .unlink = mem_unlink_none,
-    .truncate = mem_truncate_none,
-    .rename = mem_rename_none,
+    .setattr = memfs_setattr_none,
+    .readdir = memfs_readdir_none,
+    .create = memfs_create_none,
+    .unlink = memfs_unlink_none,
+    .truncate = memfs_truncate_none,
+    .rename = memfs_rename_none,
     .sync = memfs_sync,
 };
 
-static vnode_ops_t vn_mem_ops_dir = {
+static vnode_ops_t vn_memfs_ops_dir = {
     .release = dir_release,
     .open = memfs_open,
     .close = memfs_close,
     .read = memfs_read_none,
-    .write = mem_write_none,
+    .write = memfs_write_none,
     .lookup = memfs_lookup,
-    .getattr = mem_getattr,
+    .getattr = memfs_getattr,
+    .setattr = memfs_setattr,
     .readdir = memfs_readdir,
-    .create = mem_create,
+    .create = memfs_create,
     .unlink = memfs_unlink,
-    .truncate = mem_truncate_none,
+    .truncate = memfs_truncate_none,
     .rename = memfs_rename,
     .sync = memfs_sync,
 };
@@ -482,21 +508,22 @@ static vnode_ops_t vn_device_ops = {
     .open = memfs_open,
     .close = memfs_close,
     .read = memfs_read_none,
-    .write = mem_write_none,
+    .write = memfs_write_none,
     .lookup = memfs_lookup,
     .getattr = device_getattr,
+    .setattr = memfs_setattr_none,
     .readdir = memfs_readdir,
-    .create = mem_create_none,
-    .ioctl = memfs_ioctl,
-    .unlink = mem_unlink_none,
-    .truncate = mem_truncate_none,
-    .rename = mem_rename_none,
+    .create = memfs_create_none,
+    .ioctl = memfs_ioctl_none,
+    .unlink = memfs_unlink_none,
+    .truncate = memfs_truncate_none,
+    .rename = memfs_rename_none,
     .sync = memfs_sync,
 };
 
 // common memfs node creation
 // postcondition: return vn linked into dir (1 ref); no extra ref returned
-mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
+mx_status_t _memfs_create(vnode_t* parent, vnode_t** out,
                         const char* name, size_t namelen,
                         uint32_t flags) {
     if ((parent == NULL) || (parent->dnode == NULL)) {
@@ -511,13 +538,13 @@ mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
         if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
             return ERR_NO_MEMORY;
         }
-        vn->ops = &vn_mem_ops;
+        vn->ops = &vn_memfs_ops;
         break;
     case MEMFS_TYPE_DIR:
         if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
             return ERR_NO_MEMORY;
         }
-        vn->ops = &vn_mem_ops_dir;
+        vn->ops = &vn_memfs_ops_dir;
         break;
     case MEMFS_TYPE_VMO:
         if ((vn = calloc(1, sizeof(vnode_t))) == NULL) {
@@ -533,13 +560,14 @@ mx_status_t _mem_create(vnode_t* parent, vnode_t** out,
         vn->ops = &vn_device_ops;
         break;
     default:
-        printf("mem_create: ERROR unknown type %d\n", type);
+        printf("memfs_create: ERROR unknown type %d\n", type);
         return ERR_INVALID_ARGS;
     }
-    xprintf("mem_create: vn=%p, parent=%p name='%.*s'\n",
+    xprintf("memfs_create: vn=%p, parent=%p name='%.*s'\n",
             vn, parent, (int)namelen, name);
 
     vn->memfs_flags = flags;
+    vn->create_time = vn->modify_time = mx_time_get(MX_CLOCK_UTC);
 
     list_initialize(&vn->dn_list);
     list_initialize(&vn->watch_list);
@@ -588,7 +616,7 @@ mx_status_t memfs_create_fs(const char* name, vnode_t** out) {
     if (fs == NULL) {
         return ERR_NO_MEMORY;
     }
-    fs->ops = &vn_mem_ops_dir;  // default: root node is a dir
+    fs->ops = &vn_memfs_ops_dir;  // default: root node is a dir
     fs->refcount = 1;
     fs->dnode = dn;
     list_initialize(&fs->dn_list);
@@ -599,17 +627,17 @@ mx_status_t memfs_create_fs(const char* name, vnode_t** out) {
     return NO_ERROR;
 }
 
-static vnode_t* mem_root = NULL;
+static vnode_t* memfs_root = NULL;
 vnode_t* memfs_get_root(void) {
-    if (mem_root == NULL) {
-        mx_status_t r = memfs_create_fs("tmp", &mem_root);
+    if (memfs_root == NULL) {
+        mx_status_t r = memfs_create_fs("tmp", &memfs_root);
         if (r < 0) {
             printf("fatal error %d allocating 'tmp' file system\n", r);
             panic();
         }
-        mem_root->refcount += 1; // one for 'created'; one for 'unlinkable'
+        memfs_root->refcount += 1; // one for 'created'; one for 'unlinkable'
     }
-    return mem_root;
+    return memfs_root;
 }
 
 static vnode_t* devfs_root = NULL;
@@ -708,7 +736,7 @@ static mx_status_t _memfs_create_device_at(vnode_t* parent, vnode_t** out, const
 
     // create vnode
     vnode_t* vn;
-    mx_status_t r = _mem_create(parent, &vn, name, len, MEMFS_TYPE_DEVICE);
+    mx_status_t r = _memfs_create(parent, &vn, name, len, MEMFS_TYPE_DEVICE);
     if (r < 0) {
         return r;
     }
@@ -806,7 +834,7 @@ mx_status_t memfs_create_from_vmo(const char* path, uint32_t flags,
     }
 
     vnode_t* vn;
-    r = _mem_create(parent, &vn, pathout, strlen(pathout), MEMFS_TYPE_VMO);
+    r = _memfs_create(parent, &vn, pathout, strlen(pathout), MEMFS_TYPE_VMO);
     if (r < 0) {
         if (mx_handle_close(h) < 0) {
             printf("memfs_create_from_vmo: unexpected error closing handle\n");
@@ -840,7 +868,7 @@ mx_status_t memfs_create_from_buffer(const char* path, uint32_t flags,
     }
 
     vnode_t* vn;
-    r = _mem_create(parent, &vn, pathout, strlen(pathout), flags); // no ref taken
+    r = _memfs_create(parent, &vn, pathout, strlen(pathout), flags); // no ref taken
     if (r != NO_ERROR) {
         vn_release(parent);
         return r;
@@ -894,7 +922,7 @@ mx_status_t memfs_create_directory(const char* path, uint32_t flags) {
     }
 
     vnode_t* vn;
-    r = _mem_create(parent, &vn, pathout, strlen(pathout), MEMFS_TYPE_DIR);
+    r = _memfs_create(parent, &vn, pathout, strlen(pathout), MEMFS_TYPE_DIR);
     vn_release(parent);
 
     return r;

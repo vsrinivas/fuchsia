@@ -561,8 +561,11 @@ int mxio_stat(mxio_t* io, struct stat* s) {
     s->st_mode = attr.mode;
     s->st_size = attr.size;
     s->st_ino = attr.inode;
-    s->st_ctime = attr.create_time;
-    s->st_mtime = attr.modify_time;
+
+    s->st_ctim.tv_sec = attr.create_time / MX_SEC(1);
+    s->st_ctim.tv_nsec = attr.create_time % MX_SEC(1);
+    s->st_mtim.tv_sec = attr.modify_time / MX_SEC(1);
+    s->st_mtim.tv_nsec = attr.modify_time % MX_SEC(1);
     return 0;
 }
 
@@ -1041,7 +1044,7 @@ static int mx_utimens(mxio_t* io, const struct timespec times[2], int flags) {
 
     // extract modify time
     vn.modify_time = (times == NULL || times[1].tv_nsec == UTIME_NOW)
-        ? mx_time_get(MX_CLOCK_MONOTONIC)  // TODO(orr): update to MX_CLOCK_UTC when available
+        ? mx_time_get(MX_CLOCK_UTC)
         : MX_SEC(times[1].tv_sec) + times[1].tv_nsec;
 
     if (times == NULL || times[1].tv_nsec != UTIME_OMIT) {
