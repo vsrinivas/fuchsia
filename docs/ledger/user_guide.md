@@ -86,7 +86,7 @@ service firebase.storage {
 In order to point Ledger to your database, run the configuration script:
 
 ```
-configure_ledger --gcs_bucket=<BUCKET NAME> --firebase_id=<DATABASE_ID> --user_prefix=<USER_IDENTITY>
+configure_ledger --gcs_bucket=<BUCKET NAME> --firebase_id=<DATABASE_ID> [ --cloud_prefix=<CLOUD_PREFIX> ]
 ```
 
 `BUCKET_NAME` is the name of the storage bucket referenced above. Firebase
@@ -97,9 +97,9 @@ configured as described above, and not any general GCS bucket.
 `DATABASE_ID` is the identifier of your Firebase project. (it's "ABC" for a
 firebase database "ABC.firebaseio.com")
 
-`USER_IDENTITY` is a stop-gap self-declared identity of the user. You can share
-one instance of the database between multiple users declaring different
-identities.
+`CLOUD_PREFIX` is a stop-gap self-declared namespace for the ledger. You can share
+one instance of the cloud database between multiple ledger declaring different
+identities. This parameter is not mandatory.
 
 ### Diagnose
 

@@ -22,7 +22,7 @@ class LedgerSyncImplTest : public test::TestWithMessageLoop {
         environment_(configuration::Configuration(),
                      nullptr,
                      &network_service_),
-        ledger_sync_(&environment_, "test_id") {}
+        ledger_sync_(&environment_, "test_user", "test_id") {}
 
   // ::testing::Test:
   void SetUp() override { ::testing::Test::SetUp(); }
@@ -46,7 +46,7 @@ TEST_F(LedgerSyncImplTest, RemoteContainsRequestUrl) {
       test::Capture([this] { message_loop_.PostQuitTask(); }, &response));
   RunLoopWithTimeout();
   const std::string expected_url = ftl::Concatenate(
-      {"https://.firebaseio.com/V/", storage::kSerializationVersion,
+      {"https://.firebaseio.com/test_userV/", storage::kSerializationVersion,
        "/test_idV/page_idV.json?shallow=true"});
   EXPECT_EQ(expected_url, network_service_.GetRequest()->url);
 }

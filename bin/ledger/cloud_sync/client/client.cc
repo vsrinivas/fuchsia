@@ -80,16 +80,17 @@ bool ClientApp::Initialize() {
   if (!configuration_.use_sync) {
     std::cout << "Error: Cloud sync is disabled in the Ledger configuration."
               << std::endl;
-    std::cout << "Hint: pass --firebase_id and --user_prefix to "
-              << "`configure_ledger`" << std::endl;
+    std::cout << "Hint: pass --firebase_id to `configure_ledger`" << std::endl;
     return false;
   }
 
   std::cout << "Cloud Sync Settings:" << std::endl;
   std::cout << " - firebase id: " << configuration_.sync_params.firebase_id
             << std::endl;
-  std::cout << " - user prefix: " << configuration_.sync_params.user_prefix
-            << std::endl;
+  if (!configuration_.sync_params.cloud_prefix.empty()) {
+    std::cout << " - cloud prefix: " << configuration_.sync_params.cloud_prefix
+              << std::endl;
+  }
   std::cout << std::endl;
 
   network_service_ = std::make_unique<ledger::NetworkServiceImpl>(
@@ -97,13 +98,15 @@ bool ClientApp::Initialize() {
         return context_->ConnectToEnvironmentService<network::NetworkService>();
       });
 
-  std::string app_firebase_path = GetFirebasePathForApp(
-      configuration_.sync_params.user_prefix, "cloud_sync_client");
+  std::string app_firebase_path =
+      GetFirebasePathForApp(configuration_.sync_params.cloud_prefix,
+                            "cloud_sync_user", "cloud_sync_client");
   firebase_ = std::make_unique<firebase::FirebaseImpl>(
       network_service_.get(), configuration_.sync_params.firebase_id,
       GetFirebasePathForPage(app_firebase_path, RandomString()));
-  std::string app_gcs_prefix = GetGcsPrefixForApp(
-      configuration_.sync_params.user_prefix, "cloud_sync_client");
+  std::string app_gcs_prefix =
+      GetGcsPrefixForApp(configuration_.sync_params.cloud_prefix,
+                         "cloud_sync_user", "cloud_sync_client");
   cloud_storage_ = std::make_unique<gcs::CloudStorageImpl>(
       mtl::MessageLoop::GetCurrent()->task_runner(), network_service_.get(),
       configuration_.sync_params.gcs_bucket,

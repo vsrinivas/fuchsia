@@ -30,7 +30,7 @@ bool operator==(const Configuration::SyncParams& lhs,
                 const Configuration::SyncParams& rhs) {
   return lhs.gcs_bucket == rhs.gcs_bucket &&
          lhs.firebase_id == rhs.firebase_id &&
-         lhs.user_prefix == rhs.user_prefix;
+         lhs.cloud_prefix == rhs.cloud_prefix;
 }
 
 bool operator!=(const Configuration::SyncParams& lhs,

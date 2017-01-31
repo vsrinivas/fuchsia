@@ -37,6 +37,8 @@ class LedgerRepositoryImpl : public LedgerRepository {
   void Duplicate(fidl::InterfaceRequest<LedgerRepository> request,
                  const DuplicateCallback& callback) override;
 
+  ftl::StringView GetStorageDirectoryName();
+
   void CheckEmpty();
 
   const std::string base_storage_dir_;

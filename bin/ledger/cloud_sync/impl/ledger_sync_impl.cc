@@ -15,13 +15,16 @@
 namespace cloud_sync {
 
 LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment,
+                               ftl::StringView user_id,
                                ftl::StringView app_id)
     : environment_(environment),
       app_gcs_prefix_(GetGcsPrefixForApp(
-          environment_->configuration().sync_params.user_prefix,
+          environment_->configuration().sync_params.cloud_prefix,
+          user_id,
           app_id)),
       app_firebase_path_(GetFirebasePathForApp(
-          environment_->configuration().sync_params.user_prefix,
+          environment_->configuration().sync_params.cloud_prefix,
+          user_id,
           app_id)),
       app_firebase_(std::make_unique<firebase::FirebaseImpl>(
           environment_->network_service(),

@@ -37,7 +37,7 @@ struct Configuration {
     // ID of the firebase instance.
     std::string firebase_id;
     // Prefix to use for firebase keys and GCS objects.
-    std::string user_prefix;
+    std::string cloud_prefix;
   };
 
   // sync_params holds the parameters used for cloud synchronization if

@@ -20,8 +20,8 @@ const char kSynchronization[] = "synchronization";
 const char kUseSync[] = "use_sync";
 const char kGcsBucket[] = "gcs_bucket";
 const char kFirebaseId[] = "firebase_id";
-const char kUserPrefix[] = "user_prefix";
-const char kDeprecatedFirebasePrefix[] = "firebase_prefix";
+const char kCloudPrefix[] = "cloud_prefix";
+const char kDeprecatedUserPrefix[] = "user_prefix";
 }
 
 bool ConfigurationEncoder::Decode(const std::string& configuration_path,
@@ -93,45 +93,39 @@ bool ConfigurationEncoder::DecodeFromString(const std::string& json,
   new_configuration.sync_params.firebase_id =
       sync_config[kFirebaseId].GetString();
 
-  // Read the user prefix from --firebase_prefix for backward-compatibility.
-  // TODO(ppi): remove the fallback in 2017.
-  if (sync_config.HasMember(kDeprecatedFirebasePrefix)) {
-    if (!sync_config[kDeprecatedFirebasePrefix].IsString()) {
-      FTL_LOG(ERROR) << "The " << kDeprecatedFirebasePrefix
-                     << " parameter inside " << kSynchronization
-                     << " must be a string.";
+  // Read the cloud prefix from --cloud_prefix for backward-compatibility.
+  // TODO(ppi): remove the fallback in 6/2017
+  if (sync_config.HasMember(kDeprecatedUserPrefix)) {
+    if (!sync_config[kDeprecatedUserPrefix].IsString()) {
+      FTL_LOG(ERROR) << "The " << kDeprecatedUserPrefix << " parameter inside "
+                     << kSynchronization << " must be a string.";
       return false;
     }
 
-    FTL_LOG(WARNING) << "The " << kDeprecatedFirebasePrefix << " parameter is "
+    FTL_LOG(WARNING) << "The " << kDeprecatedUserPrefix << " parameter is "
                      << "deprecated.";
-    new_configuration.sync_params.user_prefix =
-        sync_config[kDeprecatedFirebasePrefix].GetString();
-  } else {
-    if (!sync_config.HasMember(kUserPrefix) ||
-        !sync_config[kUserPrefix].IsString()) {
-      FTL_LOG(ERROR) << "The " << kUserPrefix
-                     << " parameter must be specified inside "
-                     << kSynchronization << ".";
+    new_configuration.sync_params.cloud_prefix =
+        sync_config[kDeprecatedUserPrefix].GetString();
+  }
+
+  if (sync_config.HasMember(kCloudPrefix)) {
+    if (!sync_config[kCloudPrefix].IsString()) {
+      FTL_LOG(ERROR) << "The " << kCloudPrefix << " parameter inside "
+                     << kSynchronization << "must be a string.";
       return false;
     }
 
-    new_configuration.sync_params.user_prefix =
-        sync_config[kUserPrefix].GetString();
+    new_configuration.sync_params.cloud_prefix =
+        sync_config[kCloudPrefix].GetString();
   }
 
-  // Set use_sync to true if kUseSync is true or missing. This is for
-  // backward-compatibility with config files written before serializing the
-  // |kUseSync| flag. TODO(ppi): remove the fallback in 2017.
-  new_configuration.use_sync = true;
-  if (sync_config.HasMember(kUseSync)) {
-    if (!sync_config[kUseSync].IsBool()) {
-      FTL_LOG(ERROR) << "The " << kUseSync << " parameter inside "
-                     << kSynchronization << " must be a boolean.";
-      return false;
-    }
-    new_configuration.use_sync = sync_config[kUseSync].GetBool();
+  if (!sync_config.HasMember(kUseSync) || !sync_config[kUseSync].IsBool()) {
+    FTL_LOG(ERROR) << "The " << kUseSync << " parameter inside "
+                   << kSynchronization
+                   << " must be specified and must be a boolean.";
+    return false;
   }
+  new_configuration.use_sync = sync_config[kUseSync].GetBool();
 
   *configuration = std::move(new_configuration);
   return true;
@@ -162,10 +156,12 @@ std::string ConfigurationEncoder::EncodeToString(
         writer.String(configuration.sync_params.firebase_id.c_str(),
                       configuration.sync_params.firebase_id.size());
       }
-      {
-        writer.Key(kUserPrefix);
-        writer.String(configuration.sync_params.user_prefix.c_str(),
-                      configuration.sync_params.user_prefix.size());
+      if (!configuration.sync_params.cloud_prefix.empty()) {
+        {
+          writer.Key(kCloudPrefix);
+          writer.String(configuration.sync_params.cloud_prefix.c_str(),
+                        configuration.sync_params.cloud_prefix.size());
+        }
       }
     }
     writer.EndObject();

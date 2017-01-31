@@ -15,7 +15,9 @@ namespace cloud_sync {
 
 class LedgerSyncImpl : public LedgerSync {
  public:
-  LedgerSyncImpl(ledger::Environment* environment, ftl::StringView app_id);
+  LedgerSyncImpl(ledger::Environment* environment,
+                 ftl::StringView user_id,
+                 ftl::StringView app_id);
   ~LedgerSyncImpl();
 
   void RemoteContains(ftl::StringView page_id,

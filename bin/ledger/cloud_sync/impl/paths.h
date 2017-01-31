@@ -11,7 +11,8 @@ namespace cloud_sync {
 
 // Returns common object name prefix used for all objects stored on behalf of
 // the given user and app.
-std::string GetGcsPrefixForApp(ftl::StringView user_prefix,
+std::string GetGcsPrefixForApp(ftl::StringView cloud_prefix,
+                               ftl::StringView user_id,
                                ftl::StringView app_id);
 
 // Returns common object name prefix used for all objects stored for the given
@@ -20,7 +21,8 @@ std::string GetGcsPrefixForPage(ftl::StringView app_prefix,
                                 ftl::StringView app_id);
 
 // Returns the Firebase path under which the data for the given app is stored.
-std::string GetFirebasePathForApp(ftl::StringView user_prefix,
+std::string GetFirebasePathForApp(ftl::StringView cloud_prefix,
+                                  ftl::StringView user_id,
                                   ftl::StringView app_id);
 
 // Returns the Firebase path under which the data for the given page is stored,

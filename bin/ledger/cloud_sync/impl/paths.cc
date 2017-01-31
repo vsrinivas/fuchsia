@@ -18,9 +18,14 @@ constexpr char kFirebaseSeparator[] = "/";
 // Even though this yields a path to be used in GCS, we use Firebase key
 // encoding, as it happens to produce valid GCS object names. To be revisited
 // when we redo the encoding in LE-118.
-std::string GetGcsPrefixForApp(ftl::StringView user_prefix,
+std::string GetGcsPrefixForApp(ftl::StringView cloud_prefix,
+                               ftl::StringView user_id,
                                ftl::StringView app_id) {
-  return ftl::Concatenate({firebase::EncodeKey(user_prefix), kGcsSeparator,
+  return (cloud_prefix.empty()
+              ? ""
+              : ftl::Concatenate(
+                    {firebase::EncodeKey(cloud_prefix), kGcsSeparator})) +
+         ftl::Concatenate({firebase::EncodeKey(user_id), kGcsSeparator,
                            storage::kSerializationVersion, kGcsSeparator,
                            firebase::EncodeKey(app_id)});
 }
@@ -31,9 +36,14 @@ std::string GetGcsPrefixForPage(ftl::StringView app_path,
       {app_path, kGcsSeparator, firebase::EncodeKey(page_id), kGcsSeparator});
 }
 
-std::string GetFirebasePathForApp(ftl::StringView user_prefix,
+std::string GetFirebasePathForApp(ftl::StringView cloud_prefix,
+                                  ftl::StringView user_id,
                                   ftl::StringView app_id) {
-  return ftl::Concatenate({firebase::EncodeKey(user_prefix), kFirebaseSeparator,
+  return (cloud_prefix.empty()
+              ? ""
+              : ftl::Concatenate(
+                    {firebase::EncodeKey(cloud_prefix), kFirebaseSeparator})) +
+         ftl::Concatenate({firebase::EncodeKey(user_id), kFirebaseSeparator,
                            storage::kSerializationVersion, kFirebaseSeparator,
                            firebase::EncodeKey(app_id)});
 }

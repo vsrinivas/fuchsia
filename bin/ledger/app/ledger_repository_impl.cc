@@ -47,7 +47,7 @@ void LedgerRepositoryImpl::GetLedger(
     std::unique_ptr<cloud_sync::LedgerSync> ledger_sync;
     if (environment_->configuration().use_sync) {
       ledger_sync = std::make_unique<cloud_sync::LedgerSyncImpl>(
-          environment_, name_as_string);
+          environment_, GetStorageDirectoryName(), name_as_string);
     }
     auto result = ledger_managers_.emplace(
         std::piecewise_construct,
@@ -67,6 +67,15 @@ void LedgerRepositoryImpl::Duplicate(
     const DuplicateCallback& callback) {
   BindRepository(std::move(request));
   callback(Status::OK);
+}
+
+ftl::StringView LedgerRepositoryImpl::GetStorageDirectoryName() {
+  ftl::StringView storage_dir = base_storage_dir_;
+  size_t separator = storage_dir.rfind('/');
+  FTL_DCHECK(separator != std::string::npos);
+  FTL_DCHECK(separator != storage_dir.size() - 1);
+
+  return storage_dir.substr(separator + 1);
 }
 
 void LedgerRepositoryImpl::CheckEmpty() {

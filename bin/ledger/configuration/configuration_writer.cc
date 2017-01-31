@@ -19,7 +19,7 @@ const char kHelpArg[] = "help";
 const char kConfigPathArg[] = "config_path";
 const char kGcsBucketArg[] = "gcs_bucket";
 const char kFirebaseIdArg[] = "firebase_id";
-const char kUserPrefixArg[] = "user_prefix";
+const char kCloudPrefixArg[] = "cloud_prefix";
 const char kSyncArg[] = "sync";
 const char kNoSyncArg[] = "nosync";
 
@@ -32,9 +32,9 @@ void PrintHelp() {
   printf("  --help: prints this help.\n");
   printf("Cloud Sync configuration:\n");
   printf("  (passing any implies --sync unless --nosync is passed)\n");
-  printf("  --gcs_bucket=<NAME_OF_GCS_BUCKET>\n");
   printf("  --firebase_id=<NAME_OF_FIREBASE_INSTANCE>\n");
-  printf("  --user_prefix=<USER_SPECIFIC_PREFIX>\n");
+  printf("  --gcs_bucket=<NAME_OF_GCS_BUCKET>\n");
+  printf("  --cloud_prefix=<CLOUD_PREFIX>\n");
   printf("Toggle Cloud Sync off and on:\n");
   printf("  --sync\n");
   printf("  --nosync\n");
@@ -84,10 +84,10 @@ int main(int argc, const char** argv) {
     FTL_CHECK(ret);
   }
 
-  if (command_line.HasOption(kUserPrefixArg)) {
+  if (command_line.HasOption(kCloudPrefixArg)) {
     config.use_sync = true;
-    bool ret = command_line.GetOptionValue(kUserPrefixArg,
-                                           &config.sync_params.user_prefix);
+    bool ret = command_line.GetOptionValue(kCloudPrefixArg,
+                                           &config.sync_params.cloud_prefix);
     FTL_CHECK(ret);
   }
 
@@ -105,10 +105,8 @@ int main(int argc, const char** argv) {
     config.use_sync = false;
   }
 
-  if (config.use_sync && (config.sync_params.firebase_id.empty() ||
-                          config.sync_params.user_prefix.empty())) {
-    FTL_LOG(ERROR) << "To enable Cloud Sync pass "
-                   << "--firebase_id and --user_prefix";
+  if (config.use_sync && config.sync_params.firebase_id.empty()) {
+    FTL_LOG(ERROR) << "To enable Cloud Sync pass --firebase_id";
     return 1;
   }
 
