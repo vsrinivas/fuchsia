@@ -58,6 +58,7 @@
 #include "alias.h"
 #include "parser.h"
 #include "main.h"
+#include "controller.h"
 
 #define EOF_NLEFT -99		/* value of parsenleft when EOF pushed back */
 #define IBUFSIZ (BUFSIZ + 1)
@@ -193,6 +194,17 @@ retry:
 	return nr;
 }
 
+static void addtohistory(const char* entry, size_t length) {
+	// TODO(abarth): If whichprompt != 1, we should append this value to an
+	// existing history entry. However, linenoise doesn't support editing the
+	// history entries, so we'll probably need to refactor the input system to
+	// get this behavior right.
+#ifdef USE_LINENOISE
+	linenoiseHistoryAdd(entry);
+#endif
+	controller_add_to_history(entry, length);
+}
+
 /*
  * Refill the input buffer and return the next input character:
  *
@@ -291,11 +303,7 @@ again:
 		char command_terminator = q[-1];
 		q[-1] = '\0';
 
-		// TODO(abarth): If whichprompt != 1, we should append this value to an
-		// existing history entry. However, linenoise doesn't support editing the
-		// history entries, so we'll probably need to refactor the input system to
-		// get this behavior right.
-		linenoiseHistoryAdd(parsefile->nextc);
+		addtohistory(parsefile->nextc, strlen(parsefile->nextc));
 
 		// Restore the command terminator.
 		q[-1] = command_terminator;

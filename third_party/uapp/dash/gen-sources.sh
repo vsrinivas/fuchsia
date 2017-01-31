@@ -30,7 +30,7 @@ gcc mkinit.c -o mkinit
 gcc mknodes.c -o mknodes
 gcc mksyntax.c -o mksyntax
 
-DASH_CFILES="alias.c arith_yacc.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
+DASH_CFILES="alias.c arith_yacc.c arith_yylex.c cd.c controller.c error.c eval.c exec.c expand.c \
   input.c jobs.c main.c memalloc.c miscbltin.c \
   mystring.c options.c parser.c redir.c show.c trap.c output.c \
   bltin/printf.c system.c tab.c bltin/test.c bltin/times.c var.c"

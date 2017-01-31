@@ -18,6 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/src/bltin/times.c \
     $(LOCAL_DIR)/src/builtins.c \
     $(LOCAL_DIR)/src/cd.c \
+    $(LOCAL_DIR)/src/controller.c \
     $(LOCAL_DIR)/src/error.c \
     $(LOCAL_DIR)/src/eval.c \
     $(LOCAL_DIR)/src/exec.c \
