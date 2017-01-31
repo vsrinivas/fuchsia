@@ -21,6 +21,8 @@ executable("moterm") {
 
   deps = [
     "//apps/fonts/services",
+    "//apps/modular/lib/app",
+    "//apps/modular/services/story",
     "//apps/mozart/lib/skia:fonts",
     "//apps/mozart/lib/skia:vmo",
     "//apps/mozart/lib/view_framework:view_provider",
