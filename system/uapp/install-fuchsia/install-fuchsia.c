@@ -13,6 +13,7 @@
 #include <magenta/syscalls.h>
 #include <magenta/device/block.h>
 #include <mxio/io.h>
+#include <mxio/util.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,7 +76,12 @@ static const uint8_t guid_efi_part[GPT_GUID_LEN] = GUID_EFI_VALUE;
 static ssize_t get_next_file_path(
     DIR* dfd, size_t max_name_len, char* name_out) {
     DEBUG_ASSERT(name_out != NULL);
-    struct dirent* entry = readdir(dfd);
+    struct dirent* entry;
+
+    do {
+        entry = readdir(dfd);
+    } while(entry != NULL &&
+            (!strcmp(".", entry->d_name) || !strcmp("..", entry->d_name)));
     if (entry == NULL) {
         return -1;
     } else {
@@ -707,12 +713,12 @@ void find_device_with_space(DIR* dir, char* dir_path, uint64_t space_required,
         }
 
         uint64_t disk_size;
-        ssize_t rc2 = ioctl_block_get_size(device_fd, &disk_size);
-        ssize_t rc3 = ioctl_block_get_blocksize(device_fd, &block_size);
-        if (rc2 < 0 || rc3 < 0) {
-            fprintf(stderr, "Unable to read disk or block size.\n");
+        if (ioctl_block_get_size(device_fd, &disk_size) < 0 ||
+            ioctl_block_get_blocksize(device_fd, &block_size) < 0) {
+            fprintf(stderr, "Unable to block or disk size for '%s'\n",
+                    path_buffer);
             close(device_fd);
-            return;
+            continue;
         }
 
         gpt_device_t* install_dev = read_gpt(device_fd, &block_size);
@@ -784,7 +790,197 @@ mx_status_t create_partitions(char* dev_path, uint64_t block_offset) {
     // properly picked up
     ioctl_block_rr_part(rw_dev);
     close(rw_dev);
-    printf("Partitions added, please run installer again.\n");
+    return NO_ERROR;
+}
+
+/*
+ * Given a file descriptor open on a GPT device, checks if that GPT has an
+ * entry whose type GUID is the data partition type GUID as defined in
+ * the GPT library.
+ * Returns:
+ *  NO_ERROR if the data partition is found
+ *  ERR_NOT_FOUND if we were able to look for the partition, but couldn't find
+ *    it.
+ *  ERR_IO if we were unable to read the partition table from device_fd
+ */
+static mx_status_t check_data_partition(int device_fd) {
+    gpt_device_t* gpt_edit;
+    uint64_t block_size;
+    gpt_edit = read_gpt(device_fd, &block_size);
+    if (gpt_edit == NULL) {
+        fprintf(stderr, "Unable to read GPT from device.\n");
+        return ERR_IO;
+    }
+
+    int part_count = 0;
+    for (;gpt_edit->partitions[part_count] != NULL; part_count++);
+
+    uint16_t part_idx = 0;
+    uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+    mx_status_t rc = find_partition_entries(
+        (gpt_partition_t**) &gpt_edit->partitions, data_guid, part_count,
+        &part_idx);
+    return rc;
+}
+
+/*
+ * Give a partition table struct and a file descriptor pointing to a disk,
+ * find the location and select an appropriate size for the data partition.
+ * The data partition will be between PREFERRED_SIZE_DATA and MIN_SIZE_DATA
+ * and depends on the available space on the disk. If metadata can not be
+ * read from the disk or the disk contains less than MIN_SIZE_DATA,
+ * ERR_NOT_FOUND is returned.
+ */
+static mx_status_t get_data_part_size(gpt_device_t* dev, int device_fd,
+                                      size_t* offset_out, size_t* len_out) {
+    uint64_t disk_size;
+    uint64_t block_size;
+    part_location_t part_data;
+    part_data.blk_offset = 0;
+    part_data.blk_len = 0;
+
+    if (ioctl_block_get_size(device_fd, &disk_size) < 0 ||
+        ioctl_block_get_blocksize(device_fd, &block_size) < 0) {
+        return ERR_NOT_FOUND;
+    }
+
+    uint64_t num_blocks_pref = PREFERRED_SIZE_DATA / block_size;
+    uint64_t num_blocks_min = MIN_SIZE_DATA / block_size;
+    find_available_space(dev, num_blocks_pref, disk_size / block_size,
+                         block_size, &part_data);
+
+    if (part_data.blk_len < num_blocks_min) {
+        return ERR_NOT_FOUND;
+    }
+
+    *len_out = part_data.blk_len >= num_blocks_pref ? num_blocks_pref :
+        part_data.blk_len;
+    *offset_out = part_data.blk_offset;
+    return NO_ERROR;
+}
+
+/*
+ * Given a device struct, a file descriptor that is open on it's block device,
+ * a block location, and number of blocks, create a partition entry in the GPT
+ * for the partition and format that partition as MinFS.
+ */
+static mx_status_t make_data_part(gpt_device_t* install_dev, int device_fd,
+                                  size_t offset, size_t length) {
+    // TODO(jmatt): Make the disk format a parameter
+    uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
+    uint64_t block_size;
+
+    // add the data partition of the requested size that the requested location
+    gpt_device_t* gpt_edit = read_gpt(device_fd, &block_size);
+    if (gpt_edit == NULL) {
+        fprintf(stderr, "Couldn't read GPT from device.\n");
+    }
+
+    mx_status_t rc = add_partition(gpt_edit, offset, length, data_guid, "data");
+    gpt_device_release(gpt_edit);
+    if (rc != NO_ERROR) {
+        fprintf(stderr, "Partition entry could not be added to GPT.\n");
+        return ERR_IO;
+    }
+
+    ssize_t ioctl_rc = ioctl_block_rr_part(device_fd);
+    if (ioctl_rc < 0) {
+        fprintf(stderr, "Unknown error re-reading GPT.\n");
+        return ERR_IO;
+    }
+    // a brief pause is required while the system absorbs the GPT change
+    sleep(1);
+    unmount_all();
+    gpt_edit = read_gpt(device_fd, &block_size);
+    if (gpt_edit == NULL) {
+        fprintf(stderr, "Couldn't read GPT after partition addition.\n");
+        return ERR_IO;
+    }
+
+    // count the number of partitions we have
+    int part_count = 0;
+    for (;gpt_edit->partitions[part_count] != NULL; part_count++);
+
+    // locate the metadata for the partition just created
+    uint16_t part_idx = 0;
+    rc = find_partition_entries((gpt_partition_t**) &gpt_edit->partitions,
+                                data_guid, part_count, &part_idx);
+    if (rc != NO_ERROR) {
+        fprintf(stderr, "Partition that was just created is not found.\n");
+        gpt_device_release(gpt_edit);
+        return ERR_NOT_FOUND;
+    }
+
+    // find the partition in the block device directory
+    char data_path[PATH_MAX];
+    char* path_holder[1] = {data_path};
+    DIR* dir = opendir(PATH_BLOCKDEVS);
+    gpt_partition_t* const* ptr_cpy = &gpt_edit->partitions[part_idx];
+    rc = find_partition_path(ptr_cpy, path_holder, dir, 1);
+    gpt_device_release(gpt_edit);
+
+    if (rc != NO_ERROR) {
+        fprintf(stderr, "Problem finding partition path.\n");
+        return ERR_INTERNAL;
+    }
+
+    if (strlen(PATH_BLOCKDEVS) + strlen(data_path) > PATH_MAX) {
+        fprintf(stderr, "Device path is too long!\n");
+        return ERR_INTERNAL;
+    }
+
+    // construct the full path now that we know which device it is
+    int len_temp = strlen(data_path);
+    memcpy(&data_path[PATH_MAX - len_temp], data_path, len_temp);
+    strcpy(data_path, PATH_BLOCKDEVS);
+    strcat(data_path, "/");
+    memcpy(&data_path[strlen(data_path)], &data_path[PATH_MAX - len_temp],
+           len_temp);
+
+    // kick off formatting of the device
+    rc = mkfs(data_path, DISK_FORMAT_MINFS, launch_stdio_sync);
+    if (rc != NO_ERROR) {
+        fprintf(stderr, "ERROR: Partition formatting failed.\n");
+        return ERR_INTERNAL;
+    }
+
+    return NO_ERROR;
+}
+
+/*
+ * Given a GPT device struct and a path to the disk device, check to see if
+ * there is already a data partition and if not, try to create one.
+ *
+ * This returns NO_ERROR if there already is a partition or if there is enough
+ * space to create one and it is successfully created and formatted, otherwise
+ * returns an error.
+ */
+static mx_status_t do_data_partition(gpt_device_t* install_dev,
+                                     char* device_path) {
+    int device_fd = open(device_path, O_RDWR);
+    if (device_fd < 0) {
+        printf("WARNING: Problem opening device, data partition not created.\n");
+        return ERR_IO;
+    }
+
+    mx_status_t rc;
+    if ((rc = check_data_partition(device_fd)) == ERR_NOT_FOUND) {
+        size_t blk_off;
+        size_t blk_len;
+        if ((get_data_part_size(install_dev, device_fd, &blk_off, &blk_len)
+             != NO_ERROR) ||
+            (make_data_part(install_dev, device_fd, blk_off, blk_len) !=
+             NO_ERROR)) {
+            close(device_fd);
+            return ERR_INTERNAL;
+        }
+    } else if (rc != NO_ERROR) {
+        fprintf(stderr, "Unexpected error '%i' looking for data partition\n",
+                rc);
+        close(device_fd);
+        return rc;
+    }
+    close(device_fd);
     return NO_ERROR;
 }
 
@@ -830,68 +1026,34 @@ int main(int argc, char** argv) {
         mx_status_t rc = find_install_device(dir, path_buffer, requested_parts,
                                              &ready_for_install, part_paths,
                                              &install_dev, disk_path, PATH_MAX);
-        printf("Device is at %s\n", disk_path);
         closedir(dir);
 
         if (rc == NO_ERROR && install_dev->valid) {
             rc = write_install_data(requested_parts, ready_for_install,
                                     disk_img_paths, part_paths);
 
-            if (rc != NO_ERROR) {
-                gpt_device_release(install_dev);
-                return -1;
-            }
-            // TODO(jmatt): check if we already have a data partition
-
-            gpt_device_t* gpt_edit = NULL;
-            int device_fd = open(disk_path, O_RDWR);
-
-            if (device_fd >= 0) {
-                uint64_t disk_size;
-                uint64_t block_size;
-                if (ioctl_block_get_size(device_fd, &disk_size) < 0 ||
-                    ioctl_block_get_blocksize(device_fd, &block_size) < 0) {
-                    close(device_fd);
-                    gpt_device_release(install_dev);
-                    return -1;
+            // check for a data partition and create one if necessary.
+            // having a data partition is highly desireable, but we can live
+            // without it if needed
+            if (rc == NO_ERROR) {
+                if (do_data_partition(install_dev, disk_path) != NO_ERROR) {
+                    printf("WARNING: Problem location or creating data partition.\n");
                 }
-
-                part_location_t part_data;
-                uint64_t num_blocks_pref = PREFERRED_SIZE_DATA / block_size;
-                uint64_t num_blocks_min = MIN_SIZE_DATA / block_size;
-                find_available_space(install_dev, num_blocks_pref,
-                                     disk_size / block_size, block_size,
-                                     &part_data);
-                uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
-                if ((part_data.blk_len >= num_blocks_min) &&
-                    ((gpt_edit = read_gpt(device_fd, &block_size)) != NULL)) {
-                    uint64_t part_size = part_data.blk_len >= num_blocks_pref ?
-                        num_blocks_pref : part_data.blk_len;
-                    printf("About to add data partition %zd  %" PRIu64 "\n",
-                           part_data.blk_offset, part_size);
-                    if ((rc = add_partition(gpt_edit, part_data.blk_offset,
-                                            part_size, data_guid, "data")) !=
-                        NO_ERROR) {
-                        fprintf(stderr,
-                                "Unable to add partition to GPT, error '%i'\n",
-                                rc);
-                    }
-                    gpt_device_release(gpt_edit);
-                }
-                close(device_fd);
             } else {
-                printf("Problem opening device to get block data\n");
+                gpt_device_release(install_dev);
+                fprintf(stderr, "Failure writing install data, aborting.\n");
+                return -1;
             }
 
             gpt_device_release(install_dev);
-
             // we ignore whether or not we could make the data partition since
             // it is desired, but not required
             return 0;
         } else {
             dir = opendir(PATH_BLOCKDEVS);
             if (dir == NULL) {
-                fprintf(stderr, "Open failed for directory: '%s' with error %s\n",
+                fprintf(stderr,
+                        "Open failed for directory: '%s' with error %s\n",
                         PATH_BLOCKDEVS, strerror(errno));
                 return -1;
             }
@@ -912,6 +1074,12 @@ int main(int argc, char** argv) {
 
             // if partition creation succeeds, set the dirty bit
             retry = create_partitions(device_path, space_offset) == NO_ERROR;
+
+            // if we're going to try again, give the system a moment to absorb
+            // newly created partitions
+            if (retry) {
+                sleep(1);
+            }
         }
     } while (retry);
 }
