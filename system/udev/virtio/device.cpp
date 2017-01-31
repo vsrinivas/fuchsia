@@ -96,8 +96,9 @@ mx_status_t Device::Bind(pci_protocol_t* pci,
             uint64_t sz;
             bar0_mmio_handle_.reset(pci->map_mmio(bus_device_, 0, MX_CACHE_POLICY_UNCACHED_DEVICE,
                                                   (void**)&bar0_mmio_base_, &sz));
-            if (!bar0_mmio_handle_) {
-                VIRTIO_ERROR("cannot map io %d\n", bar0_mmio_handle_.get());
+            // XXX test against negative until map_mmio api is fixed to not return negative handles on error
+            if (bar0_mmio_handle_.get() < 0) {
+                VIRTIO_ERROR("cannot mmap io %d\n", bar0_mmio_handle_.get());
                 return bar0_mmio_handle_.get();
             }
 
