@@ -45,9 +45,7 @@ def main():
     # TODO(vtl): Not sure what to use instead of "qemu" for booting on real
     # ARM64 hardware (probably varies depending on hardware).
     magenta_build_dir = os.path.join(paths.FUCHSIA_ROOT, "out", "build-magenta",
-            "build-magenta-%s-%s%s" %
-                ("pc" if args.arch == "x86-64" else "qemu", args.arch,
-                 "" if args.debug else "-release"))
+            "build-magenta-%s-%s" % ("pc" if args.arch == "x86-64" else "qemu", args.arch))
 
     boot_fs = (os.path.join(fuchsia_build_dir, "user.bootfs") if args.fuchsia
                   else None)
