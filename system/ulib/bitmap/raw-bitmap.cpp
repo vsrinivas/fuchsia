@@ -69,21 +69,32 @@ size_t CountZeros(size_t idx, size_t value) {
 
 namespace bitmap {
 
-RawBitmap::RawBitmap(size_t size)
-    : size_(0), bits_(nullptr) {
-    Reset(size);
-}
+RawBitmap::RawBitmap() : size_(0), bits_(nullptr) {}
 
 // Resets the bitmap; clearing and resizing it.
-void RawBitmap::Reset(size_t size) {
+mx_status_t RawBitmap::Reset(size_t size) {
     size_ = size;
     if (size_ == 0) {
         bits_.reset(nullptr);
-        return;
+        return NO_ERROR;
     }
     size_t last_idx = LastIdx(size);
-    bits_.reset(new size_t[last_idx + 1]);
+    auto arr = new size_t[last_idx + 1];
+    if (arr == nullptr) {
+        return ERR_NO_MEMORY;
+    }
+    bits_.reset(mxtl::move(arr));
     ClearAll();
+
+    return NO_ERROR;
+}
+
+mx_status_t RawBitmap::Shrink(size_t size) {
+    if (size > size_) {
+        return ERR_NO_MEMORY;
+    }
+    size_ = size;
+    return NO_ERROR;
 }
 
 size_t RawBitmap::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
@@ -111,6 +122,24 @@ size_t RawBitmap::Scan(size_t bitoff, size_t bitmax, bool is_set) const {
         }
     }
     return mxtl::min(bitmax, CountZeros(i, value));
+}
+
+mx_status_t RawBitmap::Find(bool is_set, size_t bitoff, size_t bitmax,
+                            size_t run_len, size_t* out) const {
+    if (!out || bitmax <= bitoff) {
+        return ERR_INVALID_ARGS;
+    }
+    size_t start = bitoff;
+    while (bitoff - start < run_len && bitoff < bitmax) {
+        start = Scan(bitoff, bitmax, !is_set);
+        if (bitmax - start < run_len) {
+            *out = bitmax;
+            return ERR_NO_RESOURCES;
+        }
+        bitoff = Scan(start, start + run_len, is_set);
+    }
+    *out = start;
+    return NO_ERROR;
 }
 
 bool RawBitmap::Get(size_t bitoff, size_t bitmax, size_t* first) const {

@@ -309,7 +309,7 @@ public:
         return GetBlock(*blkno_out);
     }
 
-    void* data() const { return map_.get(); }
+    const void* data() const { return map_.get(); }
 
     uint32_t Capacity() const {
         return bitcount_;

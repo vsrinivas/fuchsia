@@ -18,7 +18,7 @@ namespace bitmap {
 // A simple bitmap backed by an array.
 class RawBitmap final : public Bitmap {
 public:
-    RawBitmap(size_t size);
+    RawBitmap();
     virtual ~RawBitmap() = default;
     RawBitmap(RawBitmap&& rhs) = default;
     RawBitmap& operator=(RawBitmap&& rhs) = default;
@@ -28,11 +28,27 @@ public:
     size_t size(void) const { return size_; }
 
     // Resets the bitmap; clearing and resizing it.
-    void Reset(size_t size);
+    // Allocates memory, and can fail.
+    mx_status_t Reset(size_t size);
+
+    // Shrinks the accessible portion of the bitmap, without re-allocating
+    // the underlying storage.
+    //
+    // This is useful for programs which require underlying bitmap storage
+    // to be aligned to a certain size (initialized via Reset), but want to
+    // restrict access to a smaller portion of the bitmap (via Shrink).
+    mx_status_t Shrink(size_t size);
 
     // Returns the lesser of bitmax and the index of the first bit that doesn't
     // match *is_set* starting from *bitoff*.
     size_t Scan(size_t bitoff, size_t bitmax, bool is_set) const;
+
+    // Find a run of *run_len* *set* bits, between bitoff and bitmax.
+    // Returns the start of the run in *bitoff_start*, or bitmax if it is
+    // not found in the provided range.
+    // If the run is not found, "ERR_NO_RESOURCES" is returned.
+    mx_status_t Find(bool set, size_t bitoff, size_t bitmax, size_t run_len,
+                     size_t* bitoff_start) const;
 
     // Returns true if all the bits in [*bitoff*, *bitmax*) are set. Afterwards,
     // *first_unset* will be set to the lesser of bitmax and the index of the
@@ -50,6 +66,11 @@ public:
 
     // Clear all bits in the bitmap.
     void ClearAll() override;
+
+    // This function allows access to underlying data, but is dangerous: It
+    // leaks the pointer to bits_. Reset and the bitmap destructor should not
+    // be called on the bitmap while the pointer returned from data() is alive.
+    const void* data_unsafe() const { return bits_.get(); }
 
 private:
     // The size of this bitmap, in bits.
