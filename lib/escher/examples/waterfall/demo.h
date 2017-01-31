@@ -17,8 +17,8 @@
 class Demo : public escher::ImageOwner {
  public:
   struct WindowParams {
-    int width = 1024;
-    int height = 1024;
+    uint32_t width = 1024;
+    uint32_t height = 1024;
     std::string window_name;
     uint32_t desired_swapchain_image_count = 2;
     bool use_fullscreen = false;

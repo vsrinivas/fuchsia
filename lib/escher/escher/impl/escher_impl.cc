@@ -84,11 +84,12 @@ EscherImpl::EscherImpl(const VulkanContext& context)
   // TODO: additional validation, e.g. ensure that queue supports both graphics
   // and compute.
 
+  auto device_properties = context.physical_device.getProperties();
+  timestamp_period_ = device_properties.limits.timestampPeriod;
   auto queue_properties =
       context.physical_device
           .getQueueFamilyProperties()[context.queue_family_index];
-  supports_timer_queries_ =
-      TimestampProfiler::SupportsQueueFamily(queue_properties);
+  supports_timer_queries_ = queue_properties.timestampValidBits > 0;
 }
 
 EscherImpl::~EscherImpl() {

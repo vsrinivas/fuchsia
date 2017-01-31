@@ -32,7 +32,8 @@ void Renderer::BeginFrame() {
 
   FTL_DCHECK(!profiler_);
   if (enable_profiling_ && escher_->supports_timer_queries()) {
-    profiler_ = ftl::MakeRefCounted<TimestampProfiler>(context_.device);
+    profiler_ = ftl::MakeRefCounted<TimestampProfiler>(
+        context_.device, escher_->timestamp_period());
     profiler_->AddTimestamp(current_frame_,
                             vk::PipelineStageFlagBits::eTopOfPipe,
                             "start of frame");
@@ -64,13 +65,12 @@ void Renderer::EndFrame(const SemaphorePtr& frame_done,
       FTL_LOG(INFO) << "total\t|\tsince previous (all times in microseconds)";
       FTL_LOG(INFO) << "------------------------------------------------------";
       auto timestamps = profiler->GetQueryResults();
-      uint64_t start_time = timestamps[0].time;
-      timestamps[0].time = 0;
+      uint64_t previous_time = timestamps[0].elapsed;
       for (size_t i = 1; i < timestamps.size(); ++i) {
-        auto& time = timestamps[i].time;
-        time = (time - start_time) / 1000;
-        FTL_LOG(INFO) << time << " \t|\t" << (time - timestamps[i - 1].time)
-                      << "   \t" << timestamps[i].name;
+        uint64_t time = timestamps[i].elapsed;
+        FTL_LOG(INFO) << time << " \t | \t" << (time - previous_time) << "   \t"
+                      << timestamps[i].name;
+        previous_time = time;
       }
     });
   } else {

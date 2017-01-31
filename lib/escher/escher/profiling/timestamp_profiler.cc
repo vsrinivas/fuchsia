@@ -11,17 +11,12 @@ namespace escher {
 
 static constexpr uint32_t kPoolSize = 100;
 
-TimestampProfiler::TimestampProfiler(vk::Device device) : device_(device) {}
+TimestampProfiler::TimestampProfiler(vk::Device device, float timestamp_period)
+    : device_(device), timestamp_period_(timestamp_period) {}
 
 TimestampProfiler::~TimestampProfiler() {
   FTL_DCHECK(ranges_.empty() && pools_.empty() && query_count_ == 0 &&
              current_pool_index_ == 0);
-}
-
-bool TimestampProfiler::SupportsQueueFamily(
-    const vk::QueueFamilyProperties& props) {
-  // TODO: support other bit-counts than 64.
-  return props.timestampValidBits == 64;
 }
 
 void TimestampProfiler::AddTimestamp(impl::CommandBuffer* cmd_buf,
@@ -29,7 +24,7 @@ void TimestampProfiler::AddTimestamp(impl::CommandBuffer* cmd_buf,
                                      std::string name) {
   QueryRange* range = ObtainRange(cmd_buf);
   cmd_buf->get().writeTimestamp(flags, range->pool, current_pool_index_);
-  results_.push_back(Result{0, std::move(name)});
+  results_.push_back(Result{0, 0, std::move(name)});
   ++range->count;
   ++current_pool_index_;
   ++query_count_;
@@ -57,6 +52,13 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
   pools_.clear();
   query_count_ = 0;
   current_pool_index_ = 0;
+
+  const uint64_t first_time = results_[0].time;
+  const float microsecond_multiplier = timestamp_period_ * 0.001f;
+  for (size_t i = 0; i < results_.size(); ++i) {
+    results_[i].elapsed = static_cast<uint64_t>(
+        (results_[i].time - first_time) * microsecond_multiplier);
+  }
 
   return std::move(results_);
 }

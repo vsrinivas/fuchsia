@@ -37,6 +37,7 @@ class EscherImpl {
   GlslToSpirvCompiler* glsl_compiler();
 
   bool supports_timer_queries() const { return supports_timer_queries_; }
+  float timestamp_period() const { return timestamp_period_; }
 
   void IncrementRendererCount() { ++renderer_count_; }
   void DecrementRendererCount() { --renderer_count_; }
@@ -59,6 +60,7 @@ class EscherImpl {
   std::atomic<uint32_t> resource_count_;
 
   bool supports_timer_queries_ = false;
+  float timestamp_period_ = 0.f;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(EscherImpl);
 };

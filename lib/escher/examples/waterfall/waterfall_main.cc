@@ -165,6 +165,15 @@ int main(int argc, char** argv) {
       if (++frame_count == 1) {
         first_frame_microseconds = stopwatch.GetElapsedMicroseconds();
         stopwatch.Reset();
+      } else if (frame_count % 200 == 0) {
+        g_profile_one_frame = true;
+
+        // Print out FPS stats.  Omit the first frame when computing the
+        // average, because it is generating pipelines.
+        auto microseconds = stopwatch.GetElapsedMicroseconds();
+        double fps = (frame_count - 2) * 1000000.0 /
+                     (microseconds - first_frame_microseconds);
+        FTL_LOG(INFO) << "Average frame rate: " << fps;
       }
 
       demo->PollEvents();
@@ -172,8 +181,11 @@ int main(int argc, char** argv) {
 
     vulkan_context.device.waitIdle();
 
+    // Print out FPS stats.  Omit the first frame when computing the average,
+    // because it is generating pipelines.
     auto microseconds = stopwatch.GetElapsedMicroseconds();
-    double fps = (frame_count - 1) * 1000000.0 / microseconds;
+    double fps = (frame_count - 2) * 1000000.0 /
+                 (microseconds - first_frame_microseconds);
     FTL_LOG(INFO) << "Average frame rate: " << fps;
     FTL_LOG(INFO) << "First frame took: " << first_frame_microseconds / 1000.0
                   << " milliseconds";

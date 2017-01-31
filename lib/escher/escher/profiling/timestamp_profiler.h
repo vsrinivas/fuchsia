@@ -14,7 +14,7 @@ namespace escher {
 
 class TimestampProfiler : public ftl::RefCountedThreadSafe<TimestampProfiler> {
  public:
-  TimestampProfiler(vk::Device device);
+  TimestampProfiler(vk::Device device, float timestamp_period);
   ~TimestampProfiler();
 
   // Add a Vulkan timestamp-query that will mark the time that all previous
@@ -29,13 +29,12 @@ class TimestampProfiler : public ftl::RefCountedThreadSafe<TimestampProfiler> {
                     std::string name);
 
   struct Result {
-    uint64_t time;
+    uint64_t time;     // Vulkan timestamp value (number of timestamp periods)
+    uint64_t elapsed;  // microseconds elapsed since first result
     std::string name;
   };
 
   std::vector<Result> GetQueryResults();
-
-  static bool SupportsQueueFamily(const vk::QueueFamilyProperties& props);
 
  private:
   // Each QueryRange keeps track of current usage of a separate vk::QueryPool.
@@ -63,7 +62,8 @@ class TimestampProfiler : public ftl::RefCountedThreadSafe<TimestampProfiler> {
   uint32_t query_count_ = 0;
   uint32_t current_pool_index_ = 0;
 
-  vk::Device device_;
+  const vk::Device device_;
+  const float timestamp_period_;
 };
 
 }  // namespace escher

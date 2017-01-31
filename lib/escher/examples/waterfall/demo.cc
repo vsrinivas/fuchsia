@@ -251,10 +251,14 @@ void Demo::CreateSwapchain(const WindowParams& window_params) {
   // TODO: handle undefined width/height.
   vk::Extent2D swapchain_extent = surface_caps.currentExtent;
   constexpr uint32_t VK_UNDEFINED_WIDTH_OR_HEIGHT = 0xFFFFFFFF;
-  FTL_CHECK(swapchain_extent.width != VK_UNDEFINED_WIDTH_OR_HEIGHT);
-  FTL_CHECK(swapchain_extent.height != VK_UNDEFINED_WIDTH_OR_HEIGHT);
-  // TODO: adjust demo width/height to match surface caps, if they don't
-  // already.
+  if (swapchain_extent.width == VK_UNDEFINED_WIDTH_OR_HEIGHT) {
+    swapchain_extent.width = window_params.width;
+  }
+  if (swapchain_extent.height == VK_UNDEFINED_WIDTH_OR_HEIGHT) {
+    swapchain_extent.height = window_params.height;
+  }
+  FTL_CHECK(swapchain_extent.width == window_params.width);
+  FTL_CHECK(swapchain_extent.height == window_params.height);
 
   // FIFO mode is always available, but we will try to find a more efficient
   // mode.
