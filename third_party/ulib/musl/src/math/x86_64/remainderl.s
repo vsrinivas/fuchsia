@@ -1,6 +1,7 @@
 .global remainderl
 .type remainderl,@function
 remainderl:
+	.cfi_startproc
 	fldt 24(%rsp)
 	fldt 8(%rsp)
 1:	fprem1
@@ -9,3 +10,4 @@ remainderl:
 	jnz 1b
 	fstp %st(1)
 	ret
+	.cfi_endproc

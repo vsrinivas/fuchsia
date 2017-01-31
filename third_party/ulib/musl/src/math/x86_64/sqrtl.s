@@ -1,5 +1,8 @@
 .global sqrtl
 .type sqrtl,@function
-sqrtl:	fldt 8(%rsp)
+sqrtl:
+	.cfi_startproc
+	fldt 8(%rsp)
 	fsqrt
 	ret
+	.cfi_endproc

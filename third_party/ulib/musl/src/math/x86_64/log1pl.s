@@ -1,6 +1,7 @@
 .global log1pl
 .type log1pl,@function
 log1pl:
+	.cfi_startproc
 	mov 14(%rsp),%eax
 	fldln2
 	and $0x7fffffff,%eax
@@ -13,3 +14,4 @@ log1pl:
 	faddp
 	fyl2x
 	ret
+	.cfi_endproc

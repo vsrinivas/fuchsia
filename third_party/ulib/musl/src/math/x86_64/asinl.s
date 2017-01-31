@@ -1,6 +1,7 @@
 .global asinl
 .type asinl,@function
 asinl:
+	.cfi_startproc
 	fldt 8(%rsp)
 1:	fld %st(0)
 	fld1
@@ -10,3 +11,4 @@ asinl:
 	fsqrt
 	fpatan
 	ret
+	.cfi_endproc

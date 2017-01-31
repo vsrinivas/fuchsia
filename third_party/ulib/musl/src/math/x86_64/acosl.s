@@ -3,6 +3,7 @@
 .global acosl
 .type acosl,@function
 acosl:
+	.cfi_startproc
 	fldt 8(%rsp)
 1:	fld %st(0)
 	fld1
@@ -14,3 +15,4 @@ acosl:
 	fxch %st(1)
 	fpatan
 	ret
+	.cfi_endproc

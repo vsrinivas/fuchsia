@@ -1,6 +1,7 @@
 .global fmodl
 .type fmodl,@function
 fmodl:
+	.cfi_startproc
 	fldt 24(%rsp)
 	fldt 8(%rsp)
 1:	fprem
@@ -9,3 +10,4 @@ fmodl:
 	jnz 1b
 	fstp %st(1)
 	ret
+	.cfi_endproc
