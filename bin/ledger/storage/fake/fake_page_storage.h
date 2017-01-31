@@ -44,10 +44,6 @@ class FakePageStorage : public test::PageStorageEmptyImpl {
       ObjectIdView object_id,
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) override;
-  Status GetObjectSynchronous(ObjectIdView object_id,
-                              std::unique_ptr<const Object>* object) override;
-  Status AddObjectSynchronous(convert::ExtendedStringView data,
-                              std::unique_ptr<const Object>* object) override;
   void GetCommitContents(const Commit& commit,
                          std::string min_key,
                          std::function<bool(Entry)> on_next,

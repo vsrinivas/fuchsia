@@ -600,38 +600,6 @@ void PageStorageImpl::GetObject(
                                                     std::move(file_path)));
 }
 
-Status PageStorageImpl::GetObjectSynchronous(
-    ObjectIdView object_id,
-    std::unique_ptr<const Object>* object) {
-  std::string file_path = GetFilePath(object_id);
-  if (!files::IsFile(file_path))
-    return Status::NOT_FOUND;
-
-  *object =
-      std::make_unique<ObjectImpl>(object_id.ToString(), std::move(file_path));
-  return Status::OK;
-}
-
-Status PageStorageImpl::AddObjectSynchronous(
-    convert::ExtendedStringView data,
-    std::unique_ptr<const Object>* object) {
-  ObjectId object_id = glue::SHA256Hash(data.data(), data.size());
-
-  // Using mkstemp to create an unique file. XXXXXX will be replaced.
-  std::string staging_path = staging_dir_ + "/XXXXXX";
-  ftl::UniqueFD fd(mkstemp(&staging_path[0]));
-  if (!ftl::WriteFileDescriptor(fd.get(), data.data(), data.size()))
-    return Status::INTERNAL_IO_ERROR;
-  if (fsync(fd.get()) != 0)
-    return Status::INTERNAL_IO_ERROR;
-  fd.reset();
-  Status status =
-      StagingToDestination(data.size(), staging_path, GetFilePath(object_id));
-  if (status != Status::OK)
-    return status;
-  return GetObjectSynchronous(object_id, object);
-}
-
 Status PageStorageImpl::SetSyncMetadata(ftl::StringView sync_state) {
   return db_.SetSyncMetadata(sync_state);
 }

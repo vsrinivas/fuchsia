@@ -14,6 +14,7 @@
 #include "apps/ledger/src/storage/fake/fake_journal.h"
 #include "apps/ledger/src/storage/fake/fake_journal_delegate.h"
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
+#include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -59,31 +60,40 @@ class PageImplTest : public test::TestWithMessageLoop {
     }
   }
 
+  storage::ObjectId AddObjectToStorage(const std::string& value_string) {
+    storage::Status status;
+    storage::ObjectId object_id;
+    fake_storage_->AddObjectFromLocal(
+        mtl::WriteStringToSocket(value_string), value_string.size(),
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &object_id));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(storage::Status::OK, status);
+    return object_id;
+  }
+
+  std::unique_ptr<const storage::Object> AddObject(const std::string& value) {
+    storage::ObjectId object_id = AddObjectToStorage(value);
+
+    storage::Status status;
+    std::unique_ptr<const storage::Object> object;
+    fake_storage_->GetObject(
+        object_id, ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                   &status, &object));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(storage::Status::OK, status);
+    return object;
+  }
+
   storage::PageId page_id1_;
   storage::fake::FakePageStorage* fake_storage_;
   std::unique_ptr<PageManager> manager_;
 
   PagePtr page_ptr_;
 
-  storage::ObjectId AddObjectToStorage(const std::string& value_string);
-
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(PageImplTest);
 };
-
-storage::ObjectId PageImplTest::AddObjectToStorage(
-    const std::string& value_string) {
-  storage::ObjectId object_id;
-  // FakeStorage is synchronous.
-  fake_storage_->AddObjectFromLocal(
-      mtl::WriteStringToSocket(value_string), value_string.size(),
-      [&object_id](storage::Status status,
-                   storage::ObjectId returned_object_id) {
-        EXPECT_EQ(storage::Status::OK, status);
-        object_id = std::move(returned_object_id);
-      });
-  return object_id;
-}
 
 TEST_F(PageImplTest, GetId) {
   page_ptr_->GetId([this](fidl::Array<uint8_t> page_id) {
@@ -125,10 +135,7 @@ TEST_F(PageImplTest, PutNoTransaction) {
 TEST_F(PageImplTest, PutReferenceNoTransaction) {
   std::string key("some_key");
   std::string object_data("some_data");
-  std::unique_ptr<const storage::Object> object;
-  storage::Status status =
-      fake_storage_->AddObjectSynchronous(object_data, &object);
-  EXPECT_EQ(storage::Status::OK, status);
+  std::unique_ptr<const storage::Object> object = AddObject(object_data);
 
   storage::ObjectId object_id = object->GetId();
   ReferencePtr reference = Reference::New();
@@ -213,10 +220,7 @@ TEST_F(PageImplTest, TransactionCommit) {
 
   std::string key2("some_key2");
   std::string value2("another value");
-  std::unique_ptr<const storage::Object> object2;
-  storage::Status status =
-      fake_storage_->AddObjectSynchronous(value2, &object2);
-  EXPECT_EQ(storage::Status::OK, status);
+  std::unique_ptr<const storage::Object> object2 = AddObject(value2);
   storage::ObjectId object_id2 = object2->GetId();
 
   ReferencePtr reference = Reference::New();

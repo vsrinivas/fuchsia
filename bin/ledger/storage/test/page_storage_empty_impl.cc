@@ -118,20 +118,6 @@ void PageStorageEmptyImpl::GetObject(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-Status PageStorageEmptyImpl::GetObjectSynchronous(
-    ObjectIdView object_id,
-    std::unique_ptr<const Object>* object) {
-  FTL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
-}
-
-Status PageStorageEmptyImpl::AddObjectSynchronous(
-    convert::ExtendedStringView data,
-    std::unique_ptr<const Object>* object) {
-  FTL_NOTIMPLEMENTED();
-  return Status::NOT_IMPLEMENTED;
-}
-
 Status PageStorageEmptyImpl::SetSyncMetadata(ftl::StringView sync_state) {
   FTL_NOTIMPLEMENTED();
   return Status::NOT_IMPLEMENTED;

@@ -137,26 +137,6 @@ void FakePageStorage::GetObject(
       [this] { SendNextObject(); }, ftl::TimeDelta::FromMilliseconds(5));
 }
 
-Status FakePageStorage::GetObjectSynchronous(
-    ObjectIdView object_id,
-    std::unique_ptr<const Object>* object) {
-  auto it = objects_.find(object_id);
-  if (it == objects_.end()) {
-    return Status::NOT_FOUND;
-  }
-
-  *object = std::make_unique<FakeObject>(object_id, it->second);
-  return Status::OK;
-}
-
-Status FakePageStorage::AddObjectSynchronous(
-    convert::ExtendedStringView data,
-    std::unique_ptr<const Object>* object) {
-  std::string object_id = RandomId();
-  objects_[object_id] = data.ToString();
-  return GetObjectSynchronous(object_id, object);
-}
-
 void FakePageStorage::GetCommitContents(const Commit& commit,
                                         std::string min_key,
                                         std::function<bool(Entry)> on_next,

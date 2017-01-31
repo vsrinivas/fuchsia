@@ -130,15 +130,6 @@ class PageStorage {
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) = 0;
 
-  // Synchronous access to the store. These methods are a stop-gap to implement
-  // the first version of the Ledger and should be removed. See: LE-31.
-  virtual Status GetObjectSynchronous(
-      ObjectIdView object_id,
-      std::unique_ptr<const Object>* object) = 0;
-  virtual Status AddObjectSynchronous(
-      convert::ExtendedStringView data,
-      std::unique_ptr<const Object>* object) = 0;
-
   // Sets the opaque sync metadata associated with this page. This state is
   // persisted through restarts and can be retrieved using |GetSyncMetadata()|.
   virtual Status SetSyncMetadata(ftl::StringView sync_state) = 0;

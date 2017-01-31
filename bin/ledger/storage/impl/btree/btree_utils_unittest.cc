@@ -59,13 +59,31 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
     std::srand(0);
   }
 
+  std::unique_ptr<const Object> AddObject(const std::string& value) {
+    Status status;
+    ObjectId object_id;
+    fake_storage_.AddObjectFromLocal(
+        mtl::WriteStringToSocket(value), value.size(),
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &object_id));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
+
+    std::unique_ptr<const Object> object;
+    fake_storage_.GetObject(
+        object_id, ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                   &status, &object));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
+    return object;
+  }
+
   std::vector<EntryChange> CreateEntryChanges(int size) {
     FTL_CHECK(size >= 0 && size <= 100);
     std::vector<EntryChange> result;
     for (int i = 0; i < size; ++i) {
-      std::unique_ptr<const Object> object;
-      EXPECT_EQ(Status::OK, fake_storage_.AddObjectSynchronous(
-                                ftl::StringPrintf("object%02d", i), &object));
+      std::unique_ptr<const Object> object =
+          AddObject(ftl::StringPrintf("object%02d", i));
       result.push_back(EntryChange{Entry{ftl::StringPrintf("key%02d", i),
                                          object->GetId(), KeyPriority::EAGER},
                                    false});
@@ -405,8 +423,7 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
 }
 
 TEST_F(BTreeUtilsTest, ForEachDiff) {
-  std::unique_ptr<const Object> object;
-  ASSERT_EQ(Status::OK, fake_storage_.AddObjectSynchronous("change1", &object));
+  std::unique_ptr<const Object> object = AddObject("change1");
   ObjectId object_id = object->GetId();
 
   std::vector<EntryChange> changes = CreateEntryChanges(50);

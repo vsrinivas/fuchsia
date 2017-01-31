@@ -302,7 +302,20 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
           EXPECT_EQ(expected_id, object_id);
           message_loop_.PostQuitTask();
         });
-    message_loop_.Run();
+    EXPECT_FALSE(RunLoopWithTimeout());
+  }
+
+  std::unique_ptr<const Object> TryGetObject(
+      const ObjectId& object_id,
+      Status expected_status = Status::OK) {
+    Status status;
+    std::unique_ptr<const Object> object;
+    storage_->GetObject(
+        object_id, ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                   &status, &object));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(expected_status, status);
+    return object;
   }
 
   std::vector<Entry> GetCommitContents(const Commit& commit) {
@@ -394,8 +407,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
   // Add the three objects to FakeSyncDelegate.
   sync.AddObject(lazy_value.object_id, lazy_value.value);
   sync.AddObject(eager_value.object_id, eager_value.value);
-  std::unique_ptr<const Object> root_object;
-  ASSERT_EQ(Status::OK, storage_->GetObjectSynchronous(root_id, &root_object));
+  std::unique_ptr<const Object> root_object = TryGetObject(root_id);
+
   ftl::StringView root_data;
   ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
   sync.AddObject(root_id, root_data.ToString());
@@ -555,7 +568,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
         object_id = std::move(returned_object_id);
         message_loop_.PostQuitTask();
       });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(data.object_id, object_id);
 
@@ -589,7 +602,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalNegativeSize) {
         EXPECT_EQ(Status::OK, returned_status);
         message_loop_.PostQuitTask();
       });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
 }
 
@@ -602,7 +615,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalWrongSize) {
         EXPECT_EQ(Status::IO_ERROR, returned_status);
         message_loop_.PostQuitTask();
       });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_FALSE(storage_->ObjectIsUntracked(data.object_id));
 }
 
@@ -615,7 +628,7 @@ TEST_F(PageStorageTest, AddObjectFromSync) {
                                 EXPECT_EQ(Status::OK, returned_status);
                                 message_loop_.PostQuitTask();
                               });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 
   std::string file_path = GetFilePath(data.object_id);
   std::string file_content;
@@ -634,7 +647,7 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongObjectId) {
                                           returned_status);
                                 message_loop_.PostQuitTask();
                               });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 }
 
 TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
@@ -646,7 +659,7 @@ TEST_F(PageStorageTest, AddObjectFromSyncWrongSize) {
                                 EXPECT_EQ(Status::IO_ERROR, returned_status);
                                 message_loop_.PostQuitTask();
                               });
-  message_loop_.Run();
+  EXPECT_FALSE(RunLoopWithTimeout());
 }
 
 TEST_F(PageStorageTest, GetObject) {
@@ -655,19 +668,7 @@ TEST_F(PageStorageTest, GetObject) {
   ASSERT_TRUE(files::CreateDirectory(files::GetDirectoryName(file_path)));
   ASSERT_TRUE(files::WriteFile(file_path, data.value.data(), data.size));
 
-  Status status;
-  std::unique_ptr<const Object> object;
-  storage_->GetObject(
-      data.object_id,
-      [this, &status, &object](Status returned_status,
-                               std::unique_ptr<const Object> returned_object) {
-        status = returned_status;
-        object = std::move(returned_object);
-        message_loop_.PostQuitTask();
-      });
-  message_loop_.Run();
-
-  EXPECT_EQ(Status::OK, status);
+  std::unique_ptr<const Object> object = TryGetObject(data.object_id);
   EXPECT_EQ(data.object_id, object->GetId());
   ftl::StringView object_data;
   ASSERT_EQ(Status::OK, object->GetData(&object_data));
@@ -680,61 +681,14 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
   sync.AddObject(data.object_id, data.value);
   storage_->SetSyncDelegate(&sync);
 
-  Status status;
-  std::unique_ptr<const Object> object;
-  storage_->GetObject(
-      data.object_id,
-      [this, &status, &object](Status returned_status,
-                               std::unique_ptr<const Object> returned_object) {
-        status = returned_status;
-        object = std::move(returned_object);
-        message_loop_.PostQuitTask();
-      });
-  message_loop_.Run();
-
-  EXPECT_EQ(Status::OK, status);
+  std::unique_ptr<const Object> object = TryGetObject(data.object_id);
   EXPECT_EQ(data.object_id, object->GetId());
   ftl::StringView object_data;
   ASSERT_EQ(Status::OK, object->GetData(&object_data));
   EXPECT_EQ(data.value, convert::ToString(object_data));
 
   storage_->SetSyncDelegate(nullptr);
-  storage_->GetObject(RandomId(kObjectIdSize),
-                      [this](Status returned_status,
-                             std::unique_ptr<const Object> returned_object) {
-                        EXPECT_EQ(Status::NOT_CONNECTED_ERROR, returned_status);
-                        EXPECT_EQ(nullptr, returned_object);
-                      });
-}
-
-TEST_F(PageStorageTest, AddObjectSynchronous) {
-  ObjectData data("Some data");
-
-  std::unique_ptr<const Object> object;
-  Status status = storage_->AddObjectSynchronous(data.value, &object);
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(data.object_id, object->GetId());
-
-  std::string file_path = GetFilePath(data.object_id);
-  std::string file_content;
-  EXPECT_TRUE(files::ReadFileToString(file_path, &file_content));
-  EXPECT_EQ(data.value, file_content);
-}
-
-TEST_F(PageStorageTest, GetObjectSynchronous) {
-  ObjectData data("Some data");
-  std::string file_path = GetFilePath(data.object_id);
-  ASSERT_TRUE(files::CreateDirectory(files::GetDirectoryName(file_path)));
-  ASSERT_TRUE(files::WriteFile(file_path, data.value.data(), data.size));
-
-  std::unique_ptr<const Object> object;
-  Status status = storage_->GetObjectSynchronous(data.object_id, &object);
-
-  EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(data.object_id, object->GetId());
-  ftl::StringView object_data;
-  ASSERT_EQ(Status::OK, object->GetData(&object_data));
-  EXPECT_EQ(data.value, convert::ToString(object_data));
+  TryGetObject(RandomId(kObjectIdSize), Status::NOT_CONNECTED_ERROR);
 }
 
 TEST_F(PageStorageTest, UnsyncedObjects) {
@@ -952,9 +906,7 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     object_ids[i] =
         FromEntries(entries, std::vector<ObjectId>(entries.size() + 1));
     sync.AddObject(value.object_id, value.value);
-    std::unique_ptr<const Object> root_object;
-    ASSERT_EQ(Status::OK,
-              storage_->GetObjectSynchronous(object_ids[i], &root_object));
+    std::unique_ptr<const Object> root_object = TryGetObject(object_ids[i]);
     ftl::StringView root_data;
     ASSERT_EQ(Status::OK, root_object->GetData(&root_data));
     sync.AddObject(object_ids[i], root_data.ToString());

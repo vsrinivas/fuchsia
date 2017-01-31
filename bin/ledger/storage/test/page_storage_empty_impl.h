@@ -77,12 +77,6 @@ class PageStorageEmptyImpl : public PageStorage {
       const std::function<void(Status, std::unique_ptr<const Object>)>&
           callback) override;
 
-  Status GetObjectSynchronous(ObjectIdView object_id,
-                              std::unique_ptr<const Object>* object) override;
-
-  Status AddObjectSynchronous(convert::ExtendedStringView data,
-                              std::unique_ptr<const Object>* object) override;
-
   Status SetSyncMetadata(ftl::StringView sync_state) override;
 
   Status GetSyncMetadata(std::string* sync_state) override;
