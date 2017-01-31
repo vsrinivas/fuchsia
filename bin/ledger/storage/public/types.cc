@@ -15,6 +15,16 @@ bool operator!=(const Entry& lhs, const Entry& rhs) {
   return !(lhs == rhs);
 }
 
+bool operator==(const EntryChange& lhs, const EntryChange& rhs) {
+  return lhs.deleted == rhs.deleted &&
+         (lhs.deleted ? lhs.entry.key == rhs.entry.key
+                      : lhs.entry == rhs.entry);
+}
+
+bool operator!=(const EntryChange& lhs, const EntryChange& rhs) {
+  return !(lhs == rhs);
+}
+
 ftl::StringView StatusToString(Status status) {
   switch (status) {
     case Status::OK:

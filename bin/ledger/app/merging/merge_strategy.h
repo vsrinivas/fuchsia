@@ -23,11 +23,13 @@ class MergeStrategy {
 
   // Sets a callback that will be called if this strategy is not to be used
   // anymore, for instance when the underlying merge mechanism is no longer
-  // available.
+  // available. This callback should not delete the strategy if there are merges
+  // in progress.
   virtual void SetOnError(std::function<void()> on_error) = 0;
 
   // Merge the given commits. head_1.timesteamp must be less or equals to
-  // head_2.timestamp.
+  // head_2.timestamp. MergeStrategy should not be deleted while merges are in
+  // progress.
   virtual void Merge(storage::PageStorage* storage,
                      PageManager* page_manager,
                      std::unique_ptr<const storage::Commit> head_1,

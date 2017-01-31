@@ -44,6 +44,9 @@ struct EntryChange {
   bool deleted;
 };
 
+bool operator==(const EntryChange& lhs, const EntryChange& rhs);
+bool operator!=(const EntryChange& lhs, const EntryChange& rhs);
+
 enum class ChangeSource { LOCAL, SYNC };
 
 enum class JournalType { IMPLICIT, EXPLICIT };

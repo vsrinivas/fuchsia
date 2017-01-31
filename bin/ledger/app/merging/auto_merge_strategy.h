@@ -2,23 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_APP_MERGING_CUSTOM_MERGE_STRATEGY_H_
-#define APPS_LEDGER_SRC_APP_MERGING_CUSTOM_MERGE_STRATEGY_H_
+#ifndef APPS_LEDGER_SRC_APP_MERGING_AUTO_MERGE_STRATEGY_H_
+#define APPS_LEDGER_SRC_APP_MERGING_AUTO_MERGE_STRATEGY_H_
 
 #include <memory>
 #include "apps/ledger/services/public/ledger.fidl.h"
-#include "apps/ledger/src/app/merging/conflict_resolver_client.h"
 #include "apps/ledger/src/app/merging/merge_strategy.h"
 #include "apps/ledger/src/storage/public/commit.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
 #include "lib/ftl/macros.h"
 
 namespace ledger {
-// Strategy for merging commits using the CUSTOM policy.
-class CustomMergeStrategy : public MergeStrategy {
+// Strategy for merging commits using the AUTOMATIC_WITH_FALLBACK policy.
+class AutoMergeStrategy : public MergeStrategy {
  public:
-  explicit CustomMergeStrategy(ConflictResolverPtr conflict_resolver);
-  ~CustomMergeStrategy() override;
+  explicit AutoMergeStrategy(ConflictResolverPtr conflict_resolver);
+  ~AutoMergeStrategy() override;
 
   // MergeStrategy:
   void SetOnError(ftl::Closure on_error) override;
@@ -33,15 +32,17 @@ class CustomMergeStrategy : public MergeStrategy {
   void Cancel() override;
 
  private:
+  class AutoMerger;
+
   ftl::Closure on_error_;
 
   ConflictResolverPtr conflict_resolver_;
 
-  std::unique_ptr<ConflictResolverClient> in_progress_merge_;
+  std::unique_ptr<AutoMerger> in_progress_merge_;
 
-  FTL_DISALLOW_COPY_AND_ASSIGN(CustomMergeStrategy);
+  FTL_DISALLOW_COPY_AND_ASSIGN(AutoMergeStrategy);
 };
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP_MERGING_CUSTOM_MERGE_STRATEGY_H_
+#endif  // APPS_LEDGER_SRC_APP_MERGING_AUTO_MERGE_STRATEGY_H_

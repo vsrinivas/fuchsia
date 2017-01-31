@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include "apps/ledger/src/app/merging/auto_merge_strategy.h"
 #include "apps/ledger/src/app/merging/custom_merge_strategy.h"
 #include "apps/ledger/src/app/merging/last_one_wins_merge_strategy.h"
 #include "apps/ledger/src/app/merging/merge_resolver.h"
@@ -66,11 +67,18 @@ void LedgerMergeManager::GetResolverStrategyForPage(
             case MergePolicy::LAST_ONE_WINS:
               strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());
               break;
-            case MergePolicy::AUTOMATIC_WITH_FALLBACK:
-              // TODO(etiennej): see bug LE-124.
-              FTL_LOG(ERROR) << "AUTOMATIC_WITH_FALLBACK merge policy not "
-                                "implemented, defaulting to NONE";
+            case MergePolicy::AUTOMATIC_WITH_FALLBACK: {
+              ConflictResolverPtr conflict_resolver;
+              conflict_resolver_factory_->NewConflictResolver(
+                  convert::ToArray(page_id), conflict_resolver.NewRequest());
+              std::unique_ptr<AutoMergeStrategy> auto_merge_strategy =
+                  std::make_unique<AutoMergeStrategy>(
+                      std::move(conflict_resolver));
+              auto_merge_strategy->SetOnError(
+                  [this, page_id]() { ResetStrategyForPage(page_id); });
+              strategy_callback(std::move(auto_merge_strategy));
               break;
+            }
             case MergePolicy::CUSTOM: {
               ConflictResolverPtr conflict_resolver;
               conflict_resolver_factory_->NewConflictResolver(
@@ -81,6 +89,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
               custom_merge_strategy->SetOnError(
                   [this, page_id]() { ResetStrategyForPage(page_id); });
               strategy_callback(std::move(custom_merge_strategy));
+              break;
             }
           }
         });
