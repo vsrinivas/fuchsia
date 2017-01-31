@@ -45,6 +45,12 @@ needed for debugging it may speed up boot to disable it.
 This option asks the graphics console to use a specific font.  Currently
 only "9x16" (the default) and "18x32" (a double-size font) are supported.
 
+## ldso.trace
+
+This option (disabled by default) turns on dynamic linker trace output.
+The output is in a form that is consumable by clients like Intel
+Processor Trace support.
+
 ## smp.maxcpus=\<num>
 
 This option caps the number of CPUs to initialize.  It cannot be greater than

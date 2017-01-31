@@ -133,6 +133,11 @@ static mx_handle_t logger = MX_HANDLE_INVALID;
 
 struct debug* _dl_debug_addr = &debug;
 
+// If true then dump load map data in a specific format for tracing.
+// This is used by Intel PT (Processor Trace) support for example when
+// post-processing the h/w trace.
+static bool trace_maps = false;
+
 __attribute__((__visibility__("hidden"))) void (*const __init_array_start)(void) = 0,
                                                        (*const __fini_array_start)(void) = 0;
 
@@ -787,6 +792,107 @@ static struct dso* find_library(const char* name) {
     return p;
 }
 
+#define MAX_BUILDID_SIZE 64
+
+static void read_buildid(struct dso* p, char* buf, size_t buf_size) {
+    Phdr* ph = p->phdr;
+    size_t cnt;
+
+    for (cnt = p->phnum; cnt--; ph = (void*)((char*)ph + p->phentsize)) {
+        if (ph->p_type != PT_NOTE)
+            continue;
+
+        // Find the PT_LOAD segment we live in.
+        Phdr* ph2 = p->phdr;
+        Phdr* ph_load = NULL;
+        size_t cnt2;
+        for (cnt2 = p->phnum; cnt2--; ph2 = (void*)((char*)ph2 + p->phentsize)) {
+            if (ph2->p_type != PT_LOAD)
+                continue;
+            if (ph->p_vaddr >= ph2->p_vaddr &&
+                ph->p_vaddr < ph2->p_vaddr + ph2->p_filesz) {
+                ph_load = ph2;
+                break;
+            }
+        }
+        if (ph_load == NULL)
+            continue;
+
+        size_t off = ph_load->p_vaddr + (ph->p_offset - ph_load->p_offset);
+        size_t size = ph->p_filesz;
+
+        struct {
+            Elf32_Nhdr hdr;
+            char name[sizeof("GNU")];
+        } hdr;
+
+        while (size > sizeof(hdr)) {
+            memcpy(&hdr, (char*)p->base + off, sizeof(hdr));
+            size_t header_size = sizeof(Elf32_Nhdr) + ((hdr.hdr.n_namesz + 3) & -4);
+            size_t payload_size = (hdr.hdr.n_descsz + 3) & -4;
+            off += header_size;
+            size -= header_size;
+            uint8_t* payload = (uint8_t*)p->base + off;
+            off += payload_size;
+            size -= payload_size;
+            if (hdr.hdr.n_type != NT_GNU_BUILD_ID ||
+                hdr.hdr.n_namesz != sizeof("GNU") ||
+                memcmp(hdr.name, "GNU", sizeof("GNU")) != 0) {
+                continue;
+            }
+            if (hdr.hdr.n_descsz > MAX_BUILDID_SIZE) {
+                // TODO(dje): Revisit.
+                snprintf(buf, buf_size, "build_id_too_large_%u", hdr.hdr.n_descsz);
+            } else {
+                for (size_t i = 0; i < hdr.hdr.n_descsz; ++i) {
+                    snprintf(&buf[i * 2], 3, "%02x", payload[i]);
+                }
+            }
+            return;
+        }
+    }
+
+    strcpy(buf, "<none>");
+}
+
+static void trace_load(struct dso* p) {
+    static mx_koid_t pid = MX_KOID_INVALID;
+    if (pid == MX_KOID_INVALID) {
+        mx_info_handle_basic_t process_info;
+        if (mx_object_get_info(__magenta_process_self,
+                               MX_INFO_HANDLE_BASIC,
+                               &process_info, sizeof(process_info),
+                               NULL, NULL) == NO_ERROR) {
+            pid = process_info.koid;
+        } else {
+            // No point in continually calling mx_object_get_info.
+            // The first 100 are reserved.
+            pid = 1;
+        }
+    }
+
+    // Compute extra values useful to tools.
+    // This is done here so that it's only done when necessary.
+    char buildid[MAX_BUILDID_SIZE * 2 + 1];
+    read_buildid(p, buildid, sizeof(buildid));
+
+    const char* name = p->soname == NULL ? "<application>" : p->name;
+    const char* soname = p->soname == NULL ? "<application>" : p->soname;
+
+    // The output is in multiple lines to cope with damn line wrapping.
+    // N.B. Programs like the Intel Processor Trace decoder parse this output.
+    // Do not change without coordination with consumers.
+    // TODO(dje): Switch to official tracing mechanism when ready. MG-519
+    static int seqno;
+    debugmsg("@trace_load: %" PRIu64 ":%da %p %p %p",
+             pid, seqno, p->base, p->map, p->map + p->map_len);
+    debugmsg("@trace_load: %" PRIu64 ":%db %s",
+             pid, seqno, buildid);
+    debugmsg("@trace_load: %" PRIu64 ":%dc %s %s",
+             pid, seqno, soname, name);
+    ++seqno;
+}
+
 static struct dso* load_library_vmo(mx_handle_t vmo, const char* name,
                                     struct dso* needed_by) {
     unsigned char* map;
@@ -1250,6 +1356,14 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
     if (ld_debug != NULL && ld_debug[0] != '\0')
         log_libs = true;
 
+    {
+        // Features like Intel Processor Trace require specific output in a
+        // specific format. Thus this output has its own env var.
+        const char* ld_trace = getenv("LD_TRACE");
+        if (ld_trace != NULL && ld_trace[0] != '\0')
+            trace_maps = true;
+    }
+
     if (exec_vmo == MX_HANDLE_INVALID) {
         char* ldname = argv[0];
         size_t l = strlen(ldname);
@@ -1409,6 +1523,12 @@ static void* dls3(mx_handle_t thread_self, mx_handle_t exec_vmo, int argc, char*
             else
                 debugmsg("Loaded at [%p,%p) bias %p: %s%s%s%s\n",
                          p->map, p->map + p->map_len, p->base, name, a, b, c);
+        }
+    }
+
+    if (trace_maps) {
+        for (struct dso* p = &app; p != NULL; p = p->next) {
+            trace_load(p);
         }
     }
 
@@ -1615,6 +1735,9 @@ static void* dlopen_internal(mx_handle_t vmo, const char* file, int mode) {
 
     update_tls_size();
     _dl_debug_state();
+    if (trace_maps) {
+        trace_load(p);
+    }
     orig_tail = tail;
 end:
     __release_ptc();

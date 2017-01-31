@@ -339,6 +339,19 @@ int main(int argc, char** argv) {
         printf("unable to create service job\n");
     }
 
+    // Features like Intel Processor Trace need a dump of ld.so activity.
+    // The output has a specific format, and will eventually be recorded
+    // via a specific mechanism (magenta tracing support), so we use a specific
+    // env var (and don't, for example, piggyback on LD_DEBUG).
+    // We enable this pretty early so that we get a trace of as many processes
+    // as possible.
+    if (getenv(LDSO_TRACE_CMDLINE)) {
+        // This takes care of places that clone our environment.
+        putenv(strdup(LDSO_TRACE_ENV));
+        // There is still devmgr_launch() which does not clone our enviroment.
+        // It has its own check.
+    }
+
 #if defined(__x86_64__) || defined(__aarch64__)
     if (!getenv("crashlogger.disable")) {
         static const char* argv_crashlogger[] = { "/boot/bin/crashlogger" };

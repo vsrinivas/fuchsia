@@ -36,3 +36,9 @@ struct devhost_msg {
 #define DH_OP_ADD 1
 #define DH_OP_REMOVE 2
 #define DH_OP_SHUTDOWN 3
+
+// The variable to set on the kernel command line to enable ld.so tracing
+// of the processes we launch.
+#define LDSO_TRACE_CMDLINE "ldso.trace"
+// The env var to set to enable ld.so tracing.
+#define LDSO_TRACE_ENV "LD_TRACE=1"

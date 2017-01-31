@@ -57,8 +57,18 @@ void devmgr_launch(mx_handle_t job,
         "LD_DEBUG=1",
 #endif
         extra_env,
+        NULL, // placeholder for LDSO_TRACE_ENV
         NULL
     };
+
+    if (getenv(LDSO_TRACE_CMDLINE)) {
+        unsigned int i;
+        for (i = 0; i < countof(env) - 1; ++i) {
+            if (env[i] == NULL)
+                break;
+        }
+        env[i] = LDSO_TRACE_ENV;
+    }
 
     mx_handle_t job_copy = MX_HANDLE_INVALID;;
     mx_handle_duplicate(job, MX_RIGHT_SAME_RIGHTS, &job_copy);
