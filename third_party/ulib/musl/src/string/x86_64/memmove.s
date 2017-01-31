@@ -1,6 +1,7 @@
 .global memmove
 .type memmove,@function
 memmove:
+	.cfi_startproc
 	mov %rdi,%rax
 	sub %rsi,%rax
 	cmp %rdx,%rax
@@ -14,3 +15,4 @@ memmove:
 	cld
 	lea 1(%rdi),%rax
 	ret
+	.cfi_endproc

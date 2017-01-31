@@ -4,6 +4,7 @@
 .type memcpy,@function
 memcpy:
 __memcpy_fwd:
+	.cfi_startproc
 	mov %rdi,%rax
 	cmp $8,%rdx
 	jc 1f
@@ -23,3 +24,4 @@ __memcpy_fwd:
 	dec %edx
 	jnz 2b
 1:	ret
+	.cfi_endproc
