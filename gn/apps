@@ -12,6 +12,10 @@
             "bootfs_path": "apps/acquirers/focus"
         },
         {
+            "binary": "agents/bandsintown.dartx",
+            "bootfs_path": "apps/agents/bandsintown.dartx"
+        },
+        {
             "binary": "agents/carmen_sandiego",
             "bootfs_path": "apps/agents/carmen_sandiego"
         },
