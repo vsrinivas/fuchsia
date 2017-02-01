@@ -890,13 +890,8 @@ static enum handler_return thread_sleep_handler(timer_t *timer, lk_time_t now, v
      * thread_sleep_etc, may be trying to simultaneously cancel this timer while holding the
      * thread_lock.
      */
-    while (unlikely(spin_trylock(&thread_lock))) {
-        /* we failed to grab it, check for cancel */
-        if (timer->cancel) {
-            /* we were cancelled, so bail immediately */
-            return INT_NO_RESCHEDULE;
-        }
-    }
+    if (timer_trylock_or_cancel(timer, &thread_lock))
+        return INT_NO_RESCHEDULE;
 
     if (t->state != THREAD_SLEEPING) {
         spin_unlock(&thread_lock);
@@ -1321,13 +1316,8 @@ static enum handler_return wait_queue_timeout_handler(timer_t *timer, lk_time_t 
      * wait_queue_block, may be trying to simultaneously cancel this timer while holding the
      * thread_lock.
      */
-    while (unlikely(spin_trylock(&thread_lock))) {
-        /* we failed to grab it, check for cancel */
-        if (timer->cancel) {
-            /* we were cancelled, so bail immediately */
-            return INT_NO_RESCHEDULE;
-        }
-    }
+    if (timer_trylock_or_cancel(timer, &thread_lock))
+        return INT_NO_RESCHEDULE;
 
     enum handler_return ret = INT_NO_RESCHEDULE;
     if (thread_unblock_from_wait_queue(thread, ERR_TIMED_OUT) >= NO_ERROR) {

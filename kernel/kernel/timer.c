@@ -20,6 +20,7 @@
  * @{
  */
 #include <debug.h>
+#include <err.h>
 #include <trace.h>
 #include <assert.h>
 #include <list.h>
@@ -180,6 +181,9 @@ void timer_cancel(timer_t *timer)
     timer->cancel = true;
     smp_mb();
 
+    /* wake up any spinners on the cancel signal */
+    arch_spinloop_signal();
+
     /* see if we're trying to cancel the timer we're currently in the middle of handling */
     if (unlikely(timer->active_cpu == (int)cpu)) {
         /* zero it out */
@@ -294,6 +298,9 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
         timer->active_cpu = -1;
         smp_mb();
 
+        /* make sure any spinners wake up */
+        arch_spinloop_signal();
+
         /* if we've been cancelled, it's not okay to touch the timer structure from now on out */
         if (!cancelled) {
             /* if it is a periodic timer and it hasn't been requeued
@@ -333,6 +340,24 @@ static enum handler_return timer_tick(void *arg, lk_time_t now)
 #endif
 
     return ret;
+}
+
+status_t timer_trylock_or_cancel(timer_t *t, spin_lock_t *lock)
+{
+    /* spin trylocking on the passed in spinlock either waiting for it
+     * to grab or the passed in timer to be canceled.
+     */
+    while (unlikely(spin_trylock(lock))) {
+        /* we failed to grab it, check for cancel */
+        if (t->cancel) {
+            /* we were canceled, so bail immediately */
+            return ERR_TIMED_OUT;
+        }
+        /* tell the arch to wait */
+        arch_spinloop_pause();
+    }
+
+    return NO_ERROR;
 }
 
 void timer_transition_off_cpu(uint old_cpu)
