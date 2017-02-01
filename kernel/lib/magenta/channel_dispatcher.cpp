@@ -108,7 +108,13 @@ void ChannelDispatcher::Init(mxtl::RefPtr<ChannelDispatcher> other) TA_NO_THREAD
 }
 
 ChannelDispatcher::~ChannelDispatcher() {
-    DEBUG_ASSERT(messages_.is_empty());
+    // At this point the other endpoint no longer holds
+    // a reference to us, so we can be sure we're discarding
+    // any remaining messages safely.
+
+    // It's not possible to do this safely in on_zero_handles()
+
+    messages_.clear();
 }
 
 // Thread safety analysis disabled as this accesses guarded member variables without holding
@@ -134,10 +140,6 @@ void ChannelDispatcher::on_zero_handles() TA_NO_THREAD_SAFETY_ANALYSIS {
     // Ensure other endpoint detaches us
     if (other)
         other->OnPeerZeroHandles();
-
-    // Now that we're mutually disconnected, discard queued messages
-    // There can be no other references to us, so no lock needed
-    messages_.clear();
 }
 
 void ChannelDispatcher::OnPeerZeroHandles() {
