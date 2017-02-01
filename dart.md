@@ -128,6 +128,14 @@ scripts/symlink-dot-packages.py --tree //apps/sysui/*
 You may also want to update your project's `.gitignore` file to ignore these
 symlinks.
 
+### Atom
+
+The Dart SDK built in the Fuchsia tree has a version of the analysis service
+which understands the structure of the Fuchsia directory. In the `dartlang` Atom
+plugin, set the Dart SDK as `out/<build-type>/<host-flavor>/dart-sdk` (e.g.
+`out/debug-x86-64/host_x64/dart-sdk`). Packages and apps with build targets
+should now be error-free.
+
 
 ## Known issues
 
