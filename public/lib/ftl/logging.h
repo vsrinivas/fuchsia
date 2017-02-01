@@ -39,9 +39,13 @@ class LogMessage {
 // Gets the FTL_VLOG default verbosity level.
 int GetVlogVerbosity();
 
+// Returns true if |severity| is at or above the current minimum log level.
+// LOG_FATAL and above is always true.
+bool ShouldCreateLogMessage(LogSeverity severity);
+
 }  // namespace ftl
 
-#define FTL_LOG(severity) \
+#define FTL_LOG_STREAM(severity) \
   ::ftl::LogMessage(::ftl::LOG_##severity, __FILE__, __LINE__, nullptr).stream()
 
 #define FTL_LAZY_STREAM(stream, condition) \
@@ -52,6 +56,12 @@ int GetVlogVerbosity();
       ? (void)0                            \
       : ::ftl::LogMessageVoidify() &       \
             ::ftl::LogMessage(::ftl::LOG_FATAL, 0, 0, nullptr).stream()
+
+#define FTL_LOG_IS_ON(severity) \
+  (::ftl::ShouldCreateLogMessage(::ftl::LOG_##severity))
+
+#define FTL_LOG(severity) \
+  FTL_LAZY_STREAM(FTL_LOG_STREAM(severity), FTL_LOG_IS_ON(severity))
 
 #define FTL_CHECK(condition)                                              \
   FTL_LAZY_STREAM(                                                        \

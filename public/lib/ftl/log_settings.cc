@@ -52,7 +52,7 @@ LogSettings GetLogSettings() {
 }
 
 int GetMinLogLevel() {
-  return state::g_log_settings.min_log_level;
+  return std::min(state::g_log_settings.min_log_level, LOG_FATAL);
 }
 
 bool ParseLogSettings(const ftl::CommandLine& command_line,
