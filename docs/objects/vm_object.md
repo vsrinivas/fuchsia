@@ -15,4 +15,9 @@ TODO
 
 ## SEE ALSO
 
-TODO (add links to vmo syscalls)
+[vmo_create](../syscalls/vmo_create.md)  
+[vmo_op_range](../syscalls/vmo_op_range.md)  
+[vmo_get_size](../syscalls/vmo_get_size.md)  
+[vmo_set_size](../syscalls/vmo_set_size.md)  
+[vmo_read](../syscalls/vmo_read.md)  
+[vmo_write](../syscalls/vmo_write.md)
