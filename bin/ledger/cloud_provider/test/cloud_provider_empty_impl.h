@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_
-#define SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_
+#ifndef APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_
+#define APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_
 
 #include <functional>
 #include <string>
@@ -48,4 +48,4 @@ class CloudProviderEmptyImpl : public CloudProvider {
 }  // namespace test
 }  // namespace cloud_provider
 
-#endif  // SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_
+#endif  // APPS_LEDGER_SRC_CLOUD_PROVIDER_TEST_CLOUD_PROVIDER_EMPTY_IMPL_H_

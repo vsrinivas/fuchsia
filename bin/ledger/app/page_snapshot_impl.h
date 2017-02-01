@@ -40,4 +40,4 @@ class PageSnapshotImpl : public PageSnapshot {
 
 }  // namespace ledger
 
-#endif  // APPS_LEDGER_SRC_APP_PAGE_STORAGE_IMPL_H_
+#endif  // APPS_LEDGER_SRC_APP_PAGE_SNAPSHOT_IMPL_H_

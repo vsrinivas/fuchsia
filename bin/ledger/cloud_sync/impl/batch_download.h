@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_COMMIT_DOWNLOAD_H_
-#define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_COMMIT_DOWNLOAD_H_
+#ifndef APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
+#define APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 
 #include "apps/ledger/src/cloud_provider/public/record.h"
 #include "apps/ledger/src/storage/public/page_storage.h"
@@ -42,4 +42,4 @@ class BatchDownload {
 
 }  // namespace cloud_sync
 
-#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_COMMIT_DOWNLOAD_H_
+#endif  // APPS_LEDGER_SRC_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_

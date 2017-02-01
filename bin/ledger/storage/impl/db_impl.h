@@ -100,4 +100,4 @@ class DbImpl : public DB {
 
 }  // namespace storage
 
-#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_DB_H_
+#endif  // APPS_LEDGER_SRC_STORAGE_IMPL_DB_IMPL_H_
