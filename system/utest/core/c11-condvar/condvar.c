@@ -34,6 +34,7 @@ bool cnd_test(void) {
     thrd_create(&thread2, cond_thread, (void*)(uintptr_t)1);
     thrd_create(&thread3, cond_thread, (void*)(uintptr_t)2);
 
+    // Wait for all the threads to report that they've started.
     while (true) {
         mtx_lock(&mutex);
         int threads = threads_started;
@@ -47,6 +48,7 @@ bool cnd_test(void) {
     int result = cnd_broadcast(&cond);
     EXPECT_EQ(result, thrd_success, "Failed to broadcast");
 
+    // Wait for all the threads to report that they were woken.
     while (true) {
         mtx_lock(&mutex);
         int threads = threads_woke_first_barrier;
@@ -57,40 +59,20 @@ bool cnd_test(void) {
         sched_yield();
     }
 
-    result = cnd_signal(&cond);
-    EXPECT_EQ(result, thrd_success, "Failed to signal");
-    while (true) {
-        mtx_lock(&mutex);
-        int threads = threads_waked;
-        mtx_unlock(&mutex);
-        if (threads == 1) {
-            break;
-        }
-        sched_yield();
-    }
+    for (int iteration = 0; iteration < 3; iteration++) {
+        result = cnd_signal(&cond);
+        EXPECT_EQ(result, thrd_success, "Failed to signal");
 
-    result = cnd_signal(&cond);
-    EXPECT_EQ(result, thrd_success, "Failed to signal");
-    while (true) {
-        mtx_lock(&mutex);
-        int threads = threads_waked;
-        mtx_unlock(&mutex);
-        if (threads == 2) {
-            break;
+        // Wait for one thread to report that it was woken.
+        while (true) {
+            mtx_lock(&mutex);
+            int threads = threads_waked;
+            mtx_unlock(&mutex);
+            if (threads == iteration + 1) {
+                break;
+            }
+            sched_yield();
         }
-        sched_yield();
-    }
-
-    result = cnd_signal(&cond);
-    EXPECT_EQ(result, thrd_success, "Failed to signal");
-    while (true) {
-        mtx_lock(&mutex);
-        int threads = threads_waked;
-        mtx_unlock(&mutex);
-        if (threads == 3) {
-            break;
-        }
-        sched_yield();
     }
 
     thrd_join(thread1, NULL);
