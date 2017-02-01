@@ -145,7 +145,6 @@ main(int argc, char **argv)
 #endif
 	rootpid = getpid();
 	init();
-	evalifsubshell();
 	setstackmark(&smark);
 	login = procargs(argc, argv);
 	if (login) {
@@ -173,6 +172,10 @@ state3:
 	state = 4;
 	if (minusc)
 		evalstring(minusc, sflag ? 0 : EV_EXIT);
+
+        // Fuchsia: recognize if we have been invoked for the purpose of evaluating
+	// an expression (i.e., node) and exiting immediately.
+	evalifsubshell();
 
 	if (sflag || minusc == NULL) {
 state4:	/* XXX ??? - why isn't this before the "if" statement */

@@ -460,37 +460,47 @@ out:
 STATIC int
 evalsubshell(union node *n, int flags)
 {
-	if (n->type == NBACKGND) {
-		// TODO(abarth): Support background jobs.
-		sh_error("Backgound jobs not yet supported.");
-		return -1;
-	}
+	struct job *jp;
+	int backgnd = (n->type == NBACKGND);
+	int status;
 
 	errlinno = lineno = n->nredir.linno;
 	if (funcline)
 		lineno -= funcline - 1;
 
 	expredir(n->nredir.redirect);
-	if (flags & EV_EXIT && !have_traps()) {
+	if (!backgnd && flags & EV_EXIT && !have_traps()) {
 		redirect(n->nredir.redirect, 0);
 		evaltreenr(n->nredir.n, flags);
 		/* never returns */
 	}
-
+	INTOFF;
+	jp = makejob(n, 1);
 	mx_handle_t process;
 	// TODO(joshconner): Here we're promoting non-exported variables to
 	// environment variables, which isn't quite correct (any commands
 	// executed in the subshell will inherit these definitions).
 	const char* const* envp = (const char* const*)listvars(0, VUNSET, 0);
-	mx_status_t status = process_subshell(n, envp, &process, NULL);
-	if (status != NO_ERROR) {
-		sh_error("Failed to create subshell");
-		return status;
-	}
 
-	int result = process_await_termination(process, true);
-	mx_handle_close(process);
-	return result;
+	// Run in the foreground (of the subshell running in the background)
+	if (backgnd)
+		n->type = NSUBSHELL;
+
+	mx_status_t exec_result = process_subshell(n, envp, &process, NULL);
+        if (exec_result == NO_ERROR) {
+		/* Process-tracking management */
+		forkparent(jp, n, backgnd, process);
+        } else {
+		sh_error("Failed to create subshell (%d)", exec_result);
+		return exec_result;
+	}
+	status = 0;
+	if (! backgnd) {
+		status = process_await_termination(process, true);
+		mx_handle_close(process);
+	}
+	INTON;
+	return status;
 }
 
 
