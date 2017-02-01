@@ -64,7 +64,8 @@ void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint6
 
     uint32_t page_count = size >> PAGE_SHIFT;
 
-    for (unsigned int i = 0; i < page_count; i++) {
+    // Note: <= is intentional here to accout for ofer-fetch protection page
+    for (unsigned int i = 0; i <= page_count; i++) {
         uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + i];
         EXPECT_EQ(pte & ~(PAGE_SIZE - 1), bus_addr);
         EXPECT_FALSE(pte & 0x1); // page should not be present
@@ -74,7 +75,7 @@ void check_pte_entries_clear(magma::PlatformMmio* mmio, uint64_t gpu_addr, uint6
 }
 
 void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer, uint64_t gpu_addr,
-                       CachingType caching_type)
+                       uint64_t scratch_bus_addr, CachingType caching_type)
 {
     ASSERT_NE(mmio, nullptr);
 
@@ -96,6 +97,12 @@ void check_pte_entries(magma::PlatformMmio* mmio, magma::PlatformBuffer* buffer,
 
         EXPECT_TRUE(buffer->UnmapPageBus(i));
     }
+
+    uint64_t pte = pte_array[(gpu_addr >> PAGE_SHIFT) + page_count];
+    EXPECT_EQ(pte & ~(PAGE_SIZE - 1), scratch_bus_addr);
+    EXPECT_FALSE(pte & 0x1); // page present
+    EXPECT_TRUE(pte & 0x3);  // rw
+    EXPECT_EQ(pte & cache_bits(caching_type), cache_bits(caching_type));
 }
 
 class TestDevice : public Gtt::Owner {
@@ -183,13 +190,15 @@ public:
         ret = gtt->Insert(addr[0], buffer[0].get(), 0, buffer[0]->size(), CACHING_NONE);
         EXPECT_EQ(ret, true);
 
-        check_pte_entries(platform_device->mmio(), buffer[0].get(), addr[0], CACHING_NONE);
+        check_pte_entries(platform_device->mmio(), buffer[0].get(), addr[0], scratch_bus_addr,
+                          CACHING_NONE);
 
         // Also correct
         ret = gtt->Insert(addr[1], buffer[1].get(), 0, buffer[1]->size(), CACHING_NONE);
         EXPECT_EQ(ret, true);
 
-        check_pte_entries(platform_device->mmio(), buffer[1].get(), addr[1], CACHING_NONE);
+        check_pte_entries(platform_device->mmio(), buffer[1].get(), addr[1], scratch_bus_addr,
+                          CACHING_NONE);
 
         // Bogus addr
         ret = gtt->Clear(0xdead1000);

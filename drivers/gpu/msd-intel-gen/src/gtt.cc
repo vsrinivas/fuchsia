@@ -114,7 +114,12 @@ bool Gtt::InitScratch()
 bool Gtt::Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out)
 {
     DASSERT(allocator_);
-    return allocator_->Alloc(size, align_pow2, addr_out);
+    // allocate an extra page on the end to avoid page faults from over fetch
+    // see
+    // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf
+    // page 908
+    size_t alloc_size = size + PAGE_SIZE;
+    return allocator_->Alloc(alloc_size, align_pow2, addr_out);
 }
 
 bool Gtt::Free(uint64_t addr)
@@ -182,7 +187,8 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, 
     if (!allocator_->GetSize(addr, &allocated_length))
         return DRETF(false, "couldn't get allocated length for addr");
 
-    if (length != allocated_length)
+    // add an extra page to length to account for the overfetch protection page
+    if (length + PAGE_SIZE != allocated_length)
         return DRETF(false, "allocated length (0x%lx) doesn't match length (0x%x)",
                      allocated_length, length);
 
@@ -210,6 +216,10 @@ bool Gtt::Insert(uint64_t addr, magma::PlatformBuffer* buffer, uint64_t offset, 
         auto pte = gen_pte_encode(bus_addr_array[i], caching_type, true);
         mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + i * sizeof(gen_pte_t));
     }
+
+    // insert pte for overfetch protection page
+    auto pte = gen_pte_encode(scratch_gpu_addr_, caching_type, true);
+    mmio_->Write64(static_cast<uint64_t>(pte), pte_offset + (num_pages) * sizeof(gen_pte_t));
 
     uint64_t readback = mmio_->PostingRead64(pte_offset + (num_pages - 1) * sizeof(gen_pte_t));
 
