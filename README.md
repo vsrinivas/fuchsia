@@ -16,21 +16,21 @@ in a shared context without the need to call each other's APIs directly.
 On the Fuchsia command line you can start an example application flow like this:
 
 ```sh
-@ bootstrap device_runner --user-shell=dummy_user_shell
+@ bootstrap device_runner --user_shell=dummy_user_shell
 ```
 
 A single application can be run using the `dev_user_shell`, for example:
 
 ```sh
-@ bootstrap device_runner --user-shell=dev_user_shell --user-shell-args='--root-module=example_flutter_counter_parent,--root-link={"http://schema.domokit.org/counter":5}'
+@ bootstrap device_runner --user_shell=dev_user_shell --user_shell_args='--root_module=example_flutter_counter_parent,--root_link={"http://schema.domokit.org/counter":5}'
 ```
 
-The flags `--user-shell` and `--user-shell-args` are read by `device_runner`.
-The value of `--user-shell` is the application run as user shell. The value of
-`--user-shell-args` is a comma separated list of arguments passed to the user
+The flags `--user_shell` and `--user_shell_args` are read by `device_runner`.
+The value of `--user_shell` is the application run as user shell. The value of
+`--user_shell_args` is a comma separated list of arguments passed to the user
 shell application. In this example, these arguments are in turn more flags.
 Commas inside the value of such arguments are escaped by backslashes. The value
-of `--root-module` selects the module to run. The value of `--root-link` is a
+of `--root_module` selects the module to run. The value of `--root_link` is a
 JSON representation of the initial data the module is started with.
 
 ## Testing
@@ -39,7 +39,7 @@ Testing support is currently under development.
 Please use our example as an integration test and wait for it to complete.
 
 ```sh
-$ @ bootstrap device_runner --user-shell=dummy_user_shell
+$ @ bootstrap device_runner --user_shell=dummy_user_shell
 ...
 ...
 [00091.616] 03539.03566> [INFO:../../apps/modular/src/user_runner/dummy_user_shell.cc(256)] DummyUserShell DELETE STORY DONE

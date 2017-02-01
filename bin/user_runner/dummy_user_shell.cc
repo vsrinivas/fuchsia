@@ -48,9 +48,9 @@ class Settings {
     // Good other value to use for dev:
     // "file:///system/apps/example_flutter_counter_parent"
     first_module = command_line.GetOptionValueWithDefault(
-        "first-module", "file:///system/apps/example_recipe");
+        "first_module", "file:///system/apps/example_recipe");
     second_module = command_line.GetOptionValueWithDefault(
-        "second-module", "file:///system/apps/example_flutter_hello_world");
+        "second_module", "file:///system/apps/example_flutter_hello_world");
   }
 
   std::string first_module;

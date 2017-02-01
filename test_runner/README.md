@@ -1,4 +1,3 @@
-
 test_runner is a TCP daemon that accepts connections, reads test commands and
 executes them. It is meant to provide a way to run tests from the host and get
 back results.
@@ -15,18 +14,20 @@ Prerequisite:
   that host (Linux or Mac) can interface over. For example, see
   [networking configuration doc](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only).
 
-Run a test using //apps/modular/test_runner/tools/run_test. E.g:
-```
-$ $FUCHSIA_DIR/apps/modular/test_runner/tools/run_test "/system/apps/bootstrap /system/apps/device_runner --user-shell=/system/apps/dummy_user_shell"
+Run a test using `//apps/modular/test_runner/tools/run_test`. E.g:
+```sh
+$ $FUCHSIA_DIR/apps/modular/test_runner/tools/run_test "/system/apps/bootstrap /system/apps/device_runner --user_shell=/system/apps/dummy_user_shell"
 ```
 
 This will return when it has completed (either by succeeding or crashing). You
 can watch the qemu console to see any console output written by test. In case of
 a crash, this console output will be dumped by `run_test`.
 
-You can also run a series of tests by supplying a JSON file describing the tests
+You can also run a series of tests by supplying a [JSON file describing the tests](tools/README.md)
 to run:
+```sh
 $ $FUCHSIA_DIR/apps/modular/test_runner/tools/run_test --test_file=$FUCHSIA_DIR/apps/modular/test_runner/tools/modular_tests.json
+```
 
 Troubleshooting:
 - If `run_test` is having trouble finding your qemu instance, your instance may

@@ -83,7 +83,7 @@ def main(argv):
 
     # 3. Read commands and send them to the test runner server.
     assert args.test_file or len(args.command) > 0, \
-        "Either a single test command, or --test-file must be specified."
+        "Either a single test command, or --test_file must be specified."
 
     if len(args.command) > 0:
         command_str = " ".join(args.command)

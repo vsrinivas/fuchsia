@@ -42,28 +42,28 @@ class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
     device_shell = command_line.GetOptionValueWithDefault(
-        "device-shell", "file:///system/apps/dummy_device_shell");
+        "device_shell", "file:///system/apps/dummy_device_shell");
     user_runner = command_line.GetOptionValueWithDefault(
-        "user-runner", "file:///system/apps/user_runner");
+        "user_runner", "file:///system/apps/user_runner");
     user_shell = command_line.GetOptionValueWithDefault(
-        "user-shell", "file:///system/apps/armadillo_user_shell");
+        "user_shell", "file:///system/apps/armadillo_user_shell");
 
     ParseShellArgs(
-        command_line.GetOptionValueWithDefault("device-shell-args", ""),
+        command_line.GetOptionValueWithDefault("device_shell_args", ""),
         &device_shell_args);
 
     ParseShellArgs(
-        command_line.GetOptionValueWithDefault("user-shell-args", ""),
+        command_line.GetOptionValueWithDefault("user_shell_args", ""),
         &user_shell_args);
   }
 
   static std::string GetUsage() {
     return R"USAGE(device_runner
-      --device-shell=DEVICE_SHELL
-      --device-shell-args=SHELL_ARGS
-      --user-runner=USER_RUNNER
-      --user-shell=USER_SHELL
-      --user-shell-args=SHELL_ARGS
+      --device_shell=DEVICE_SHELL
+      --device_shell_args=SHELL_ARGS
+      --user_runner=USER_RUNNER
+      --user_shell=USER_SHELL
+      --user_shell_args=SHELL_ARGS
     DEVICE_SHELL: URL of the device shell to run.
                 Defaults to "file:///system/apps/dummy_device_shell".
     USER_RUNNER: URL of the user runner implementation to run.
@@ -224,7 +224,7 @@ class DeviceRunnerApp : public UserProvider, public DeviceContext {
 
 int main(int argc, const char** argv) {
   auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
-  if (command_line.HasOption("--help")) {
+  if (command_line.HasOption("help")) {
     std::cout << modular::Settings::GetUsage() << std::endl;
     return 0;
   }

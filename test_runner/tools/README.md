@@ -1,6 +1,6 @@
-
 Test config description
 =======================
+
 This describes the config format for the test file supplied to the |run_test|
 script for running multiple tests.
 
@@ -11,7 +11,7 @@ By example:
     "tests": [
         {
           "name": "dummy_user_shell",
-          "exec": "/system/apps/bootstrap /system/apps/device_runner --user-shell=file:///system/apps/dummy_user_shell"
+          "exec": "/system/apps/bootstrap /system/apps/device_runner --user_shell=file:///system/apps/dummy_user_shell"
         },
 }
 ```

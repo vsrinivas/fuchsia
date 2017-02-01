@@ -33,8 +33,8 @@ class Settings {
  public:
   explicit Settings(const ftl::CommandLine& command_line) {
     root_module = command_line.GetOptionValueWithDefault(
-        "root-module", "file:///system/apps/example_recipe");
-    root_link = command_line.GetOptionValueWithDefault("root-link", "");
+        "root_module", "file:///system/apps/example_recipe");
+    root_link = command_line.GetOptionValueWithDefault("root_link", "");
   }
 
   std::string root_module;
