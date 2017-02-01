@@ -1,6 +1,7 @@
 {
     "imports": [
         "boringssl",
+        "init",
         "netstack",
         "vulkan_loader_and_layers"
     ],
