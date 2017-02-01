@@ -95,7 +95,7 @@ bool cnd_timedwait_timeout_test(void) {
     int result = cnd_timedwait(&cond, &mutex, &delay);
     mtx_unlock(&mutex);
 
-    EXPECT_NEQ(result, thrd_success, "Lock should have timeout");
+    EXPECT_EQ(result, thrd_timedout, "Lock should have timeout");
 
     END_TEST;
 }
