@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <mxtl/unique_ptr.h>
@@ -20,6 +21,14 @@ void minfs_dump_info(minfs_info_t* info) {
     printf("minfs: alloc bitmap @ %10u\n", info->abm_block);
     printf("minfs: inode table  @ %10u\n", info->ino_block);
     printf("minfs: data blocks  @ %10u\n", info->dat_block);
+}
+
+static mx_time_t minfs_gettime_utc() {
+    // linux/magenta compatible
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    mx_time_t time = MX_SEC(ts.tv_sec)+ts.tv_nsec;
+    return time;
 }
 
 mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
@@ -46,20 +55,12 @@ mx_status_t minfs_check_info(minfs_info_t* info, uint32_t max) {
     return 0;
 }
 
-static uint64_t minfs_current_utc_time(void) {
-    // placeholder to provide changing values for file time (in unix epoch time)
-    // TODO(orr) replace with syscall when RTC info is available
-    static uint64_t timestamp = 0xdeadbeef;
-
-    return timestamp++;
-}
-
 // sync the data portion of the current vnode
 void minfs_sync_vnode(vnode_t* vn, uint32_t flags) {
 
     // by default, c/mtimes are not updated to current time
     if (flags != kMxFsSyncDefault) {
-        mx_time_t cur_time = minfs_current_utc_time();
+        mx_time_t cur_time = minfs_gettime_utc();
         // update times before syncing
         if ((flags & kMxFsSyncMtime) != 0) {
             vn->inode.modify_time = cur_time;
@@ -209,8 +210,7 @@ mx_status_t Minfs::VnodeNew(vnode_t** out, uint32_t type) {
         return ERR_NO_MEMORY;
     }
     vn->inode.magic = MinfsMagic(type);
-    // TODO(orr) update when mx_time_get() works with unix epoch time
-    vn->inode.create_time = vn->inode.modify_time = minfs_current_utc_time();
+    vn->inode.create_time = vn->inode.modify_time = minfs_gettime_utc();
     vn->inode.link_count = 1;
     vn->refcount = 1;
     vn->ops = &minfs_ops;
