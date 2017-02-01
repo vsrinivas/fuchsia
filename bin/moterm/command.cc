@@ -4,6 +4,8 @@
 
 #include "apps/moterm/command.h"
 
+#include <unistd.h>
+
 #include "lib/ftl/logging.h"
 
 namespace moterm {
