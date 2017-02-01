@@ -24,3 +24,26 @@ interface TestRunner {
   // Otherwise the test will be declared successful.
   Teardown();
 };
+
+// This service is included in the ApplicationEnvironment of the test runner
+// harness, along with TestRunner. This service represents a key value store
+// that multiple process can use to coordinate events. The key value store is
+// persistent for the entirety of the test run harness and can be connected to
+// from any process. This interface serves multiple clients and its store is a
+// monitor; only one operation is serviced at a time.
+//
+// An example use case:
+//
+// A module testing the persistence of its 'Ledger' between reinflations can use
+// this store to save some state from its previous run, and assert that the
+// ledger data it sees in its subsequent runs matches the state saved in this
+// key value store.
+[ServiceName="modular.testing.TestRunnerStore"]
+interface TestRunnerStore {
+  // Get() will return the value associated with the |key|. If the |key| doesn't
+  // exist, a null value is returned.
+  Get(string key) => (string? value);
+
+  // This will store |key| with value |value| and respond back.
+  Put(string key, string value) => ();
+};

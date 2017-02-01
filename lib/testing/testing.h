@@ -38,6 +38,11 @@ void Done();
 // having passed successfully.
 void Teardown();
 
+class TestRunnerStore;
+// This returns the TestRunnerStore interface from the caller's
+// ApplicationEnvironment. Init() must be called before GetStore().
+TestRunnerStore* GetStore();
+
 }  // namespace testing
 }  // namespace modular
 

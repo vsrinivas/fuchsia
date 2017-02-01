@@ -40,6 +40,7 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/test_runner/test_runner.fidl.h"
+#include "apps/modular/test_runner/test_runner_store_impl.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_view.h"
@@ -78,10 +79,14 @@ class TestRunContext {
 
   TestRunnerConnection* const test_runner_connection_;
   std::vector<std::unique_ptr<TestRunnerImpl>> test_runner_clients_;
+  testing::TestRunnerStoreImpl test_runner_store_;
+
   // This is a tag that we use to identify the test that was run. For now, it
   // helps distinguish between multiple test outputs to the device log.
   const std::string test_id_;
   bool success_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunContext);
 };
 
 // Implements the TestRunner service which is available in the
@@ -109,6 +114,8 @@ class TestRunnerImpl : public testing::TestRunner {
 
   fidl::Binding<testing::TestRunner> binding_;
   TestRunContext* test_run_context_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerImpl);
 };
 
 // Represents a client connection, and is self-owned (it will exit the
@@ -220,6 +227,8 @@ class TestRunnerConnection {
   // Posix fd for the TCP connection.
   const int socket_;
   std::string command_buffer_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerConnection);
 };
 
 TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
@@ -240,6 +249,10 @@ TestRunContext::TestRunContext(std::shared_ptr<ApplicationContext> app_context,
         test_runner_clients_.push_back(
             std::make_unique<TestRunnerImpl>(std::move(request), this));
       });
+  child_env_scope_->AddService<testing::TestRunnerStore>(
+        [this](fidl::InterfaceRequest<testing::TestRunnerStore> request) {
+          test_runner_store_.AddBinding(std::move(request));
+        });
 
   // 2. Launch the test command.
   ApplicationLauncherPtr launcher;
@@ -322,6 +335,8 @@ class TestRunnerTCPServer {
  private:
   int listener_;
   std::shared_ptr<ApplicationContext> app_context_;
+
+  FTL_DISALLOW_COPY_AND_ASSIGN(TestRunnerTCPServer);
 };
 
 }  // namespace

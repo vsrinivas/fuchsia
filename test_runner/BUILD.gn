@@ -3,7 +3,11 @@
 # found in the LICENSE file.
 
 executable("test_runner") {
-  sources = ["test_runner.cc"]
+  sources = [
+    "test_runner.cc",
+    "test_runner_store_impl.h",
+    "test_runner_store_impl.cc"
+  ]
 
   deps = [
     "//apps/modular/services/test_runner",
