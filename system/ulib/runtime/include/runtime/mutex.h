@@ -36,13 +36,6 @@ void mxr_mutex_lock(mxr_mutex_t* mutex);
 // Unlocks the lock.
 void mxr_mutex_unlock(mxr_mutex_t* mutex);
 
-// This is the same as mxr_mutex_lock() except that it always marks the
-// mutex as having a waiter.  This is intended for use by condvar
-// implementations.  This means that a thread waiting on a condvar futex
-// can be requeued onto the mutex's futex, so that a later call to
-// mxr_mutex_unlock() will wake that thread.
-void mxr_mutex_lock_with_waiter(mxr_mutex_t* mutex);
-
 #pragma GCC visibility pop
 
 __END_CDECLS

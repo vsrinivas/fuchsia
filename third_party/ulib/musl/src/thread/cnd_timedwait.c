@@ -101,14 +101,20 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
         lock(&node.barrier);
     }
 
-    if (oldstate != WAITING && node.prev) {
+    mxr_mutex_lock(m);
+
+    if (oldstate != WAITING) {
+        // TODO(kulakowski) If mxr_mutex_t grows a waiters count, increment it here.
+        // if (!node.next)
+        //     a_inc(&mutex->_m_waiters);
+
         /* Unlock the barrier that's holding back the next waiter, and
-         * requeue it to the mutex so that it will be woken when the
-         * mutex is unlocked. */
-        mxr_mutex_lock_with_waiter(m);
-        unlock_requeue(&node.prev->barrier, &m->futex);
-    } else {
-        mxr_mutex_lock(m);
+         * either wake it or requeue it to the mutex. */
+        if (node.prev)
+            unlock_requeue(&node.prev->barrier, &m->futex);
+        // TODO(kulakowski) If mxr_mutex_t grows a waiters count, decrement it here.
+        // else
+        //     a_dec(&mutex->_m_waiters);
     }
 
     switch (e) {
