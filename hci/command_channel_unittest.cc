@@ -17,6 +17,7 @@
 #include "apps/bluetooth/common/test_helpers.h"
 #include "apps/bluetooth/hci/command_packet.h"
 #include "apps/bluetooth/hci/hci.h"
+#include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 #include "lib/mtl/tasks/message_loop_handler.h"
@@ -26,10 +27,14 @@ namespace bluetooth {
 namespace hci {
 namespace {
 
-void NopStatusCallback(CommandChannel::TransactionId id, Status status) {}
+void NopStatusCallback(CommandChannel::TransactionId, Status) {}
+void NopCompleteCallback(CommandChannel::TransactionId, const EventPacket&) {}
 
 #define NOP_STATUS_CB() \
   std::bind(&NopStatusCallback, std::placeholders::_1, std::placeholders::_2)
+
+#define NOP_COMPLETE_CB() \
+  std::bind(&NopCompleteCallback, std::placeholders::_1, std::placeholders::_2)
 
 constexpr uint8_t UpperBits(const OpCode opcode) {
   return opcode >> 8;
@@ -83,7 +88,6 @@ class FakeController final : public ::mtl::MessageLoopHandler {
   ~FakeController() override { Stop(); }
 
   void Start(std::vector<TestTransaction>* transactions) {
-    FTL_DCHECK(!transactions->empty());
     for (auto& t : *transactions) {
       transactions_.push(std::move(t));
     }
@@ -103,6 +107,21 @@ class FakeController final : public ::mtl::MessageLoopHandler {
     }
     if (thread_.joinable())
       thread_.join();
+  }
+
+  // Immediately sends the given packet over the channel.
+  void SendPacket(common::ByteBuffer* packet) {
+    FTL_DCHECK(packet);
+    FTL_DCHECK(task_runner_.get());
+
+    common::DynamicByteBuffer buffer(packet->GetSize());
+    memcpy(buffer.GetMutableData(), packet->GetData(), packet->GetSize());
+    task_runner_->PostTask(
+        ftl::MakeCopyable([ buffer = std::move(buffer), this ]() mutable {
+          mx_status_t status =
+              channel_.write(0, buffer.GetData(), buffer.GetSize(), nullptr, 0);
+          ASSERT_EQ(NO_ERROR, status);
+        }));
   }
 
  private:
@@ -131,7 +150,7 @@ class FakeController final : public ::mtl::MessageLoopHandler {
       auto& response = current.responses.front();
       status =
           channel_.write(0, response.GetData(), response.GetSize(), nullptr, 0);
-      ASSERT_EQ(status, NO_ERROR)
+      ASSERT_EQ(NO_ERROR, status)
           << "Failed to send response: " << mx_status_get_string(status);
       current.responses.pop();
     }
@@ -428,6 +447,138 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
   RunMessageLoop();
   EXPECT_EQ(2, status_cb_count);
   EXPECT_EQ(1, complete_cb_count);
+}
+
+TEST_F(CommandChannelTest, EventHandlerBasic) {
+  constexpr EventCode kTestEventCode0 = 0xFE;
+  constexpr EventCode kTestEventCode1 = 0xFF;
+  auto cmd_status = common::CreateStaticByteBuffer(
+      kCommandStatusEventCode, 0x04, 0x00, 0x01, 0x00, 0x00);
+  auto cmd_complete = common::CreateStaticByteBuffer(kCommandCompleteEventCode,
+                                                     0x03, 0x01, 0x00, 0x00);
+  auto event0 = common::CreateStaticByteBuffer(kTestEventCode0, 0x00);
+  auto event1 = common::CreateStaticByteBuffer(kTestEventCode1, 0x00);
+
+  int event_count0 = 0;
+  auto event_cb0 = [&event_count0, kTestEventCode0](const EventPacket& event) {
+    event_count0++;
+    EXPECT_EQ(kTestEventCode0, event.event_code());
+  };
+
+  int event_count1 = 0;
+  auto event_cb1 = [&event_count1, kTestEventCode1,
+                    this](const EventPacket& event) {
+    event_count1++;
+    EXPECT_EQ(kTestEventCode1, event.event_code());
+
+    // The code below will send this event twice. Quit the message loop when we
+    // get the second event.
+    if (event_count1 == 2)
+      message_loop()->PostQuitTask();
+  };
+
+  auto id0 = cmd_channel()->AddEventHandler(kTestEventCode0, event_cb0,
+                                            message_loop()->task_runner());
+  EXPECT_NE(0u, id0);
+
+  // Cannot register a handler for the same event code more than once.
+  auto id1 = cmd_channel()->AddEventHandler(kTestEventCode0, event_cb1,
+                                            message_loop()->task_runner());
+  EXPECT_EQ(0u, id1);
+
+  // Add a handler for a different event code.
+  id1 = cmd_channel()->AddEventHandler(kTestEventCode1, event_cb1,
+                                       message_loop()->task_runner());
+  EXPECT_NE(0u, id1);
+
+  std::vector<TestTransaction> transactions;
+  fake_controller()->Start(&transactions);
+  fake_controller()->SendPacket(&cmd_status);
+  fake_controller()->SendPacket(&cmd_complete);
+  fake_controller()->SendPacket(&event1);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&cmd_complete);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&cmd_status);
+  fake_controller()->SendPacket(&event1);
+
+  RunMessageLoop();
+
+  EXPECT_EQ(3, event_count0);
+  EXPECT_EQ(2, event_count1);
+
+  event_count0 = 0;
+  event_count1 = 0;
+
+  // Remove the first event handler.
+  cmd_channel()->RemoveEventHandler(id0);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&event1);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&event0);
+  fake_controller()->SendPacket(&event1);
+
+  RunMessageLoop();
+
+  EXPECT_EQ(0, event_count0);
+  EXPECT_EQ(2, event_count1);
+}
+
+TEST_F(CommandChannelTest, EventHandlerEventWhileTransactionPending) {
+  // HCI_Reset
+  auto req = common::CreateStaticByteBuffer(
+      LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
+      0x00                                   // parameter_total_size
+      );
+
+  auto cmd_status = common::CreateStaticByteBuffer(
+      kCommandStatusEventCode,
+      0x04,  // parameter_total_size (4 byte payload)
+      Status::kSuccess, 0x01, LowerBits(kReset),
+      UpperBits(kReset)  // HCI_Reset opcode
+      );
+
+  constexpr EventCode kTestEventCode = 0xFF;
+  auto event0 = common::CreateStaticByteBuffer(kTestEventCode, 0x00);
+  auto event1 = common::CreateStaticByteBuffer(kTestEventCode, 0x01, 0x00);
+
+  // We will send the HCI_Reset command with kTestEventCode as the completion
+  // event. The event handler we register below should only get invoked once and
+  // after the pending transaction completes.
+  std::vector<TestTransaction> transactions;
+  transactions.push_back(
+      TestTransaction(&req, {&cmd_status, &event0, &event1}));
+  fake_controller()->Start(&transactions);
+
+  int event_count = 0;
+  auto event_cb = [&event_count, kTestEventCode,
+                   this](const EventPacket& event) {
+    event_count++;
+    EXPECT_EQ(kTestEventCode, event.event_code());
+    EXPECT_EQ(1, event.GetHeader().parameter_total_size);
+
+    // We post this task to the end of the message queue so that the quit call
+    // doesn't inherently guarantee that this callback gets invoked only once.
+    message_loop()->PostQuitTask();
+  };
+
+  cmd_channel()->AddEventHandler(kTestEventCode, event_cb,
+                                 message_loop()->task_runner());
+
+  common::StaticByteBuffer<CommandPacket::GetMinBufferSize(0u)> buffer;
+  CommandPacket reset(kReset, &buffer);
+  reset.EncodeHeader();
+  cmd_channel()->SendCommand(reset, NOP_STATUS_CB(), NOP_COMPLETE_CB(),
+                             message_loop()->task_runner(), kTestEventCode);
+
+  RunMessageLoop();
+
+  EXPECT_EQ(1, event_count);
 }
 
 }  // namespace

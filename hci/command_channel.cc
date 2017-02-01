@@ -10,6 +10,7 @@
 
 #include "lib/ftl/functional/make_copyable.h"
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/threading/create_thread.h"
 
 #include "command_packet.h"
@@ -19,6 +20,9 @@ namespace hci {
 
 // static
 std::atomic_size_t CommandChannel::next_transaction_id_(0u);
+
+// static
+std::atomic_size_t CommandChannel::next_event_handler_id_(0u);
 
 CommandChannel::QueuedCommand::QueuedCommand(
     TransactionId id,
@@ -84,6 +88,8 @@ void CommandChannel::ShutDown() {
   SetPendingCommand(nullptr);
 
   send_queue_ = std::queue<QueuedCommand>();
+  event_handler_id_map_.clear();
+  event_code_handlers_.clear();
   io_task_runner_ = nullptr;
   is_running_ = false;
 
@@ -109,6 +115,48 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
       std::bind(&CommandChannel::TrySendNextQueuedCommand, this));
 
   return id;
+}
+
+CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
+    EventCode event_code,
+    const EventCallback& event_callback,
+    ftl::RefPtr<ftl::TaskRunner> task_runner) {
+  FTL_DCHECK(event_code != 0);
+  FTL_DCHECK(event_code != kCommandStatusEventCode);
+  FTL_DCHECK(event_code != kCommandCompleteEventCode);
+
+  std::lock_guard<std::mutex> lock(event_handler_mutex_);
+
+  if (event_code_handlers_.find(event_code) != event_code_handlers_.end()) {
+    FTL_LOG(ERROR) << "hci: event handler already registered for event code: "
+                   << ftl::StringPrintf("0x%02x", event_code);
+    return 0u;
+  }
+
+  auto id = ++next_event_handler_id_;
+  EventHandlerData data;
+  data.id = id;
+  data.event_code = event_code;
+  data.event_callback = event_callback;
+  data.task_runner = task_runner;
+
+  FTL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
+  event_handler_id_map_[id] = data;
+  event_code_handlers_[event_code] = id;
+
+  return id;
+}
+
+void CommandChannel::RemoveEventHandler(const EventHandlerId id) {
+  std::lock_guard<std::mutex> lock(event_handler_mutex_);
+
+  auto iter = event_handler_id_map_.find(id);
+  if (iter == event_handler_id_map_.end())
+    return;
+
+  if (iter->second.event_code != 0)
+    event_code_handlers_.erase(iter->second.event_code);
+  event_handler_id_map_.erase(iter);
 }
 
 void CommandChannel::TrySendNextQueuedCommand() {
@@ -222,6 +270,44 @@ void CommandChannel::SetPendingCommand(PendingTransactionData* command) {
   is_command_pending_ = true;
 }
 
+void CommandChannel::NotifyEventHandler(const EventPacket& event) {
+  // Ignore HCI_CommandComplete and HCI_CommandStatus events.
+  if (event.event_code() == kCommandCompleteEventCode ||
+      event.event_code() == kCommandStatusEventCode) {
+    FTL_LOG(ERROR) << "hci: Muting unhandled "
+                   << (event.event_code() == kCommandCompleteEventCode
+                           ? "HCI_CommandComplete"
+                           : "HCI_CommandStatus")
+                   << " event";
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(event_handler_mutex_);
+
+  auto iter = event_code_handlers_.find(event.event_code());
+  if (iter == event_code_handlers_.end()) {
+    // No handler registered for event.
+    return;
+  }
+
+  auto handler_iter = event_handler_id_map_.find(iter->second);
+  FTL_DCHECK(handler_iter != event_handler_id_map_.end());
+
+  auto& handler = handler_iter->second;
+  FTL_DCHECK(handler.event_code == event.event_code());
+
+  common::DynamicByteBuffer buffer(event.size());
+  memcpy(buffer.GetMutableData(), event.buffer()->GetData(), event.size());
+
+  handler.task_runner->PostTask(ftl::MakeCopyable([
+    buffer = std::move(buffer), payload_size = event.GetPayloadSize(),
+    event_callback = handler.event_callback
+  ]() mutable {
+    EventPacket event(buffer.GetData()[0], &buffer, payload_size);
+    event_callback(event);
+  }));
+}
+
 void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
   FTL_DCHECK(handle == channel_.get());
   FTL_DCHECK(pending & (MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED));
@@ -273,9 +359,9 @@ void CommandChannel::OnHandleReady(mx_handle_t handle, mx_signals_t pending) {
     }
   }
 
-  // TODO(armansito): Don't log anything and notify a registered event
-  // handler.
-  FTL_LOG(INFO) << "hci: CommandChannel: HCI event: " << event.event_code();
+  // The event did not match a pending command OR no command is currently
+  // pending. Notify the upper layers.
+  NotifyEventHandler(event);
 }
 
 void CommandChannel::OnHandleError(mx_handle_t handle, mx_status_t error) {

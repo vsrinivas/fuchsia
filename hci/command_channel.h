@@ -34,9 +34,6 @@ class CommandPacket;
 // packet control flow.
 class CommandChannel final : public ::mtl::MessageLoopHandler {
  public:
-  // Used to identify an individual HCI command<->event transaction.
-  using TransactionId = size_t;
-
   // |hci_command_channel| is a Magenta channel construct that can receive
   // Bluetooth HCI command and event packets, in which the remote end is
   // implemented by the underlying Bluetooth HCI device driver.
@@ -54,6 +51,9 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // that would race with a call to Initialize(). ShutDown() is not thread-safe
   // and should not be called from multiple threads at the same time.
   void ShutDown();
+
+  // Used to identify an individual HCI command<->event transaction.
+  using TransactionId = size_t;
 
   // Callback invoked to report the completion of a HCI command.
   using CommandCompleteCallback =
@@ -93,9 +93,46 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
       ftl::RefPtr<ftl::TaskRunner> task_runner,
       const EventCode complete_event_code = kCommandCompleteEventCode);
 
+  // Used to identify an individual HCI event handler that was registered with
+  // this CommandChannel.
+  using EventHandlerId = size_t;
+
+  // Callback invoked to report generic HCI events excluding CommandComplete and
+  // CommandStatus events.
+  using EventCallback = std::function<void(const EventPacket& event_packet)>;
+
+  // Registers an event handler for HCI events that match |event_code|. Incoming
+  // HCI event packets that are not associated with a pending command sequence
+  // will be posted on the given |task_runner| via the given |event_callback|.
+  // The returned ID can be used to unregister a previously registered event
+  // handler.
+  //
+  // |event_callback| will be invoked for all HCI event packets that match
+  // |event_code|, except for:
+  //   - HCI_CommandStatus events;
+  //   - HCI_CommandComplete events;
+  //   - The completion event of the currently pending command packet, if any;
+  //
+  // Returns a non-zero ID if the handler was successfully registered. Returns
+  // zero in case of an error.
+  //
+  // Only one handler can be registered for a given |event_code| at a time. If a
+  // handler was previously registered for the given |event_code|, this method
+  // returns zero.
+  EventHandlerId AddEventHandler(EventCode event_code,
+                                 const EventCallback& event_callback,
+                                 ftl::RefPtr<ftl::TaskRunner> task_runner);
+
+  // Removes a previously registered event handler. Does nothing if an event
+  // handler with the given |id| could not be found.
+  void RemoveEventHandler(EventHandlerId id);
+
  private:
   // TransactionId counter.
   static std::atomic_size_t next_transaction_id_;
+
+  // EventHandlerId counter.
+  static std::atomic_size_t next_event_handler_id_;
 
   // Represents a pending HCI command.
   struct PendingTransactionData {
@@ -114,7 +151,7 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
                   const CommandStatusCallback& status_callback,
                   const CommandCompleteCallback& complete_callback,
                   ftl::RefPtr<ftl::TaskRunner> task_runner,
-                  const EventCode complete_event_code);
+                  EventCode complete_event_code);
     QueuedCommand() = default;
 
     QueuedCommand(QueuedCommand&& other) = default;
@@ -122,6 +159,14 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
 
     common::DynamicByteBuffer packet_data;
     PendingTransactionData transaction_data;
+  };
+
+  // Data stored for each event handler registered via AddEventHandler.
+  struct EventHandlerData {
+    EventHandlerId id;
+    EventCode event_code;
+    EventCallback event_callback;
+    ftl::RefPtr<ftl::TaskRunner> task_runner;
   };
 
   // Tries to send the next queued command if there are any queued commands and
@@ -144,6 +189,9 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   // Sets the currently pending command. If |command| is nullptr, this will
   // clear the currently pending command.
   void SetPendingCommand(PendingTransactionData* command);
+
+  // Notifies a matching event handler for the given event.
+  void NotifyEventHandler(const EventPacket& event);
 
   // ::mtl::MessageLoopHandler overrides:
   void OnHandleReady(mx_handle_t handle, mx_signals_t pending) override;
@@ -186,6 +234,17 @@ class CommandChannel final : public ::mtl::MessageLoopHandler {
   common::StaticByteBuffer<EventPacket::GetMinBufferSize(
       kMaxEventPacketPayloadSize)>
       event_buffer_;
+
+  // Mapping from event handler IDs to handler data.
+  std::unordered_map<EventHandlerId, EventHandlerData> event_handler_id_map_;
+
+  // Mapping from event code to the event handler that was registered to handle
+  // that event code.
+  std::unordered_map<EventCode, EventHandlerId> event_code_handlers_;
+
+  // Guards |event_handler_id_map_| and |event_code_handlers_| which can be
+  // accessed by both the public EventHandler methods and |io_thread_|.
+  std::mutex event_handler_mutex_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(CommandChannel);
 };
