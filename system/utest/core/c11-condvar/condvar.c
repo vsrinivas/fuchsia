@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <threads.h>
-
+#include <assert.h>
 #include <sched.h>
+#include <threads.h>
 
 #include <unittest/unittest.h>
 
@@ -82,6 +82,16 @@ bool cnd_test(void) {
     END_TEST;
 }
 
+static void time_add_nsec(struct timespec* ts, int nsec) {
+    const int kNsecPerSec = 1000000000;
+    assert(nsec < kNsecPerSec);
+    ts->tv_nsec += nsec;
+    if (ts->tv_nsec > kNsecPerSec) {
+        ts->tv_nsec -= kNsecPerSec;
+        ts->tv_sec++;
+    }
+}
+
 bool cnd_timedwait_timeout_test(void) {
     BEGIN_TEST;
 
@@ -91,7 +101,7 @@ bool cnd_timedwait_timeout_test(void) {
     mtx_lock(&mutex);
     struct timespec delay;
     clock_gettime(CLOCK_REALTIME, &delay);
-    delay.tv_sec += 2;
+    time_add_nsec(&delay, 1000000);
     int result = cnd_timedwait(&cond, &mutex, &delay);
     mtx_unlock(&mutex);
 
