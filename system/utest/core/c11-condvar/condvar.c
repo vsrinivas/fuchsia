@@ -97,11 +97,20 @@ bool cnd_test(void) {
     thrd_join(thread2, NULL);
     thrd_join(thread3, NULL);
 
+    END_TEST;
+}
+
+bool cnd_timedwait_timeout_test(void) {
+    BEGIN_TEST;
+
+    cnd_t cond = CND_INIT;
+    mtx_t mutex = MTX_INIT;
+
     mtx_lock(&mutex);
     struct timespec delay;
     clock_gettime(CLOCK_REALTIME, &delay);
     delay.tv_sec += 2;
-    result = cnd_timedwait(&cond, &mutex, &delay);
+    int result = cnd_timedwait(&cond, &mutex, &delay);
     mtx_unlock(&mutex);
 
     EXPECT_NEQ(result, thrd_success, "Lock should have timeout");
@@ -111,6 +120,7 @@ bool cnd_test(void) {
 
 BEGIN_TEST_CASE(cnd_tests)
 RUN_TEST(cnd_test)
+RUN_TEST(cnd_timedwait_timeout_test)
 END_TEST_CASE(cnd_tests)
 
 #ifndef BUILD_COMBINED_TESTS
