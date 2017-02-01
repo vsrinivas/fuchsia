@@ -11,21 +11,29 @@
 #include "apps/modular/services/device/device_context.fidl.h"
 #include "apps/modular/services/device/device_shell.fidl.h"
 #include "apps/modular/services/device/user_provider.fidl.h"
+#include "lib/ftl/command_line.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/macros.h"
 #include "lib/mtl/tasks/message_loop.h"
 
 namespace {
 
-constexpr char kDummyUserName[] = "user1";
+class Settings {
+ public:
+  explicit Settings(const ftl::CommandLine& command_line) {
+    user = command_line.GetOptionValueWithDefault("user", "user1");
+  }
+
+  std::string user;
+};
 
 class DummyDeviceShellApp
     : public modular::SingleServiceViewApp<modular::DeviceShellFactory>,
       public modular::DeviceShell,
       public modular::UserWatcher {
  public:
-  DummyDeviceShellApp()
-      : device_shell_binding_(this), user_watcher_binding_(this) {}
+  DummyDeviceShellApp(const Settings& settings)
+      : settings_(settings), device_shell_binding_(this), user_watcher_binding_(this) {}
   ~DummyDeviceShellApp() override = default;
 
  private:
@@ -65,12 +73,13 @@ class DummyDeviceShellApp
 
   void Connect() {
     if (user_provider_ && view_owner_request_) {
-      user_provider_->Login(kDummyUserName, std::move(view_owner_request_),
+      user_provider_->Login(settings_.user, std::move(view_owner_request_),
                             user_controller_.NewRequest());
       user_controller_->Watch(user_watcher_binding_.NewBinding());
     }
   }
 
+  const Settings settings_;
   fidl::Binding<modular::DeviceShell> device_shell_binding_;
   fidl::Binding<modular::UserWatcher> user_watcher_binding_;
   fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
@@ -83,8 +92,11 @@ class DummyDeviceShellApp
 }  // namespace
 
 int main(int argc, const char** argv) {
+  auto command_line = ftl::CommandLineFromArgcArgv(argc, argv);
+  Settings settings(command_line);
+
   mtl::MessageLoop loop;
-  DummyDeviceShellApp app;
+  DummyDeviceShellApp app(settings);
   loop.Run();
   return 0;
 }

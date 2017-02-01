@@ -33,6 +33,12 @@ Commas inside the value of such arguments are escaped by backslashes. The value
 of `--root_module` selects the module to run. The value of `--root_link` is a
 JSON representation of the initial data the module is started with.
 
+The dummy user name used by the dummy user shell can be set with `--user`:
+
+```sh
+@ bootstrap device_runner --user_shell=dummy_user_shell --user_shell_args=--user=dummy_user
+```
+
 ## Testing
 
 Testing support is currently under development.
