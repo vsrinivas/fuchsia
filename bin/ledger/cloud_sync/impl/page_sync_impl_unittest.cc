@@ -80,7 +80,6 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
     new_commits_to_return.erase(commit_id.ToString());
   }
 
-
   void AddCommitsFromSync(
       std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
       std::function<void(storage::Status status)> callback) override {
@@ -88,7 +87,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
 
     if (should_fail_add_commit_from_sync) {
       message_loop_->task_runner()->PostTask(
-          [this, callback]() { callback(storage::Status::IO_ERROR); });
+          [callback]() { callback(storage::Status::IO_ERROR); });
       return;
     }
 
@@ -217,7 +216,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
                       callback) override {
     get_commits_calls++;
     if (should_fail_get_commits) {
-      message_loop_->task_runner()->PostTask([this, callback]() {
+      message_loop_->task_runner()->PostTask([callback]() {
         callback(cloud_provider::Status::NETWORK_ERROR, {});
       });
       return;
@@ -234,7 +233,7 @@ class TestCloudProvider : public cloud_provider::test::CloudProviderEmptyImpl {
                                     mx::socket data)> callback) override {
     get_object_calls++;
     if (should_fail_get_object) {
-      message_loop_->task_runner()->PostTask([this, callback]() {
+      message_loop_->task_runner()->PostTask([callback]() {
         callback(cloud_provider::Status::NETWORK_ERROR, 0, mx::socket());
       });
       return;

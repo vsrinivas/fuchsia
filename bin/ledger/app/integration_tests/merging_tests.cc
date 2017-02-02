@@ -141,7 +141,7 @@ TEST_F(MergingIntegrationTest, Merging) {
 
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
-                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                   [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot1;
   page1->GetSnapshot(snapshot1.NewRequest(), std::move(watcher1_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -149,7 +149,7 @@ TEST_F(MergingIntegrationTest, Merging) {
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(GetProxy(&watcher2_ptr),
-                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                   [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot2;
   page2->GetSnapshot(snapshot2.NewRequest(), std::move(watcher2_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -230,7 +230,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   std::unique_ptr<TestConflictResolverFactory> resolver_factory =
       std::make_unique<TestConflictResolverFactory>(
           MergePolicy::NONE, GetProxy(&resolver_factory_ptr),
-          [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+          [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   LedgerPtr ledger_ptr = GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
@@ -242,7 +242,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(GetProxy(&watcher1_ptr),
-                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                   [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot1;
   page1->GetSnapshot(snapshot1.NewRequest(), std::move(watcher1_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -250,7 +250,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(GetProxy(&watcher2_ptr),
-                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                   [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot2;
   page2->GetSnapshot(snapshot2.NewRequest(), std::move(watcher2_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -306,7 +306,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   resolver_factory_ptr.reset();
   resolver_factory = std::make_unique<TestConflictResolverFactory>(
       MergePolicy::LAST_ONE_WINS, GetProxy(&resolver_factory_ptr),
-      [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](Status status) { EXPECT_EQ(status, Status::OK); });
@@ -409,15 +409,17 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   EXPECT_EQ("city",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[0]->key));
-  EXPECT_EQ("Paris", convert::ExtendedStringView(resolver_impl->requests[0]
-                                                     .change_right->changes[0]
-                                                     ->value->get_bytes()));
+  EXPECT_EQ("Paris",
+            convert::ExtendedStringView(resolver_impl->requests[0]
+                                            .change_right->changes[0]
+                                            ->value->get_bytes()));
   EXPECT_EQ("name",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[1]->key));
-  EXPECT_EQ("Alice", convert::ExtendedStringView(resolver_impl->requests[0]
-                                                     .change_right->changes[1]
-                                                     ->value->get_bytes()));
+  EXPECT_EQ("Alice",
+            convert::ExtendedStringView(resolver_impl->requests[0]
+                                            .change_right->changes[1]
+                                            ->value->get_bytes()));
   // Common ancestor is empty.
   PageSnapshotPtr snapshot = PageSnapshotPtr::Create(
       std::move(resolver_impl->requests[0].common_version));
@@ -453,7 +455,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   // Watch for the change.
   PageWatcherPtr watcher_ptr;
   Watcher watcher(GetProxy(&watcher_ptr),
-                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                  [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot2;
   page1->GetSnapshot(snapshot2.NewRequest(), std::move(watcher_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });

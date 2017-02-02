@@ -131,7 +131,7 @@ void LedgerApplicationBaseTest::TearDown() {
   thread_.join();
 
   socket_task_runner_->PostTask(
-      [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+      [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   socket_thread_.join();
 
   ::testing::Test::TearDown();
@@ -194,8 +194,7 @@ void LedgerApplicationBaseTest::DeletePage(const fidl::Array<uint8_t>& page_id,
   fidl::InterfaceHandle<Page> page;
   Status status;
 
-  ledger_->DeletePage(page_id.Clone(),
-                      [&status, &page](Status s) { status = s; });
+  ledger_->DeletePage(page_id.Clone(), [&status](Status s) { status = s; });
   EXPECT_TRUE(ledger_.WaitForIncomingResponse());
   EXPECT_EQ(expected_status, status);
 }

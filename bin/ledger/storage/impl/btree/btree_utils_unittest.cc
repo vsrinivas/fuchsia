@@ -71,8 +71,9 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
 
     std::unique_ptr<const Object> object;
     fake_storage_.GetObject(
-        object_id, ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                   &status, &object));
+        object_id,
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     return object;
@@ -453,7 +454,7 @@ TEST_F(BTreeUtilsTest, ForEachDiff) {
   size_t current_change = 0;
   btree::ForEachDiff(
       &fake_storage_, base_root_id, other_root_id,
-      [this, &changes, &current_change](EntryChange e) {
+      [&changes, &current_change](EntryChange e) {
         EXPECT_EQ(changes[current_change].deleted, e.deleted);
         if (e.deleted) {
           EXPECT_EQ(changes[current_change].entry.key, e.entry.key);

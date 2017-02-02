@@ -78,8 +78,9 @@ class PageImplTest : public test::TestWithMessageLoop {
     storage::Status status;
     std::unique_ptr<const storage::Object> object;
     fake_storage_->GetObject(
-        object_id, ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                   &status, &object));
+        object_id,
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(storage::Status::OK, status);
     return object;
@@ -172,7 +173,7 @@ TEST_F(PageImplTest, PutUnknownReference) {
   ReferencePtr reference = Reference::New();
   reference->opaque_id = convert::ToArray(object_id);
 
-  auto callback = [this, &key, &object_id](Status status) {
+  auto callback = [this](Status status) {
     EXPECT_EQ(Status::REFERENCE_NOT_FOUND, status);
     auto objects = fake_storage_->GetObjects();
     // No object should have been added.
@@ -539,7 +540,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   EXPECT_FALSE(RunLoopWithTimeout());
 
   // Call GetKeys with the previous token and receive the remaining results.
-  auto callback_getkeys2 = [this, key_count, &actual_keys, &actual_next_token](
+  auto callback_getkeys2 = [this, key_count, &actual_keys](
       Status status, fidl::Array<fidl::Array<uint8_t>> keys,
       fidl::Array<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);

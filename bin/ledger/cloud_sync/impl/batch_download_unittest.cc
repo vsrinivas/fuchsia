@@ -31,7 +31,7 @@ class TestPageStorage : public storage::test::PageStorageEmptyImpl {
       std::function<void(storage::Status status)> callback) override {
     if (should_fail_add_commit_from_sync) {
       message_loop_->task_runner()->PostTask(
-          [this, callback]() { callback(storage::Status::IO_ERROR); });
+          [callback]() { callback(storage::Status::IO_ERROR); });
       return;
     }
     message_loop_->task_runner()->PostTask(ftl::MakeCopyable(
@@ -78,7 +78,7 @@ TEST_F(BatchDownloadTest, AddCommit) {
                                  done_calls++;
                                  message_loop_.PostQuitTask();
                                },
-                               [this, &error_calls] { error_calls++; });
+                               [&error_calls] { error_calls++; });
   batch_download.Start();
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -100,7 +100,7 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
                                  done_calls++;
                                  message_loop_.PostQuitTask();
                                },
-                               [this, &error_calls] { error_calls++; });
+                               [&error_calls] { error_calls++; });
   batch_download.Start();
 
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -118,7 +118,7 @@ TEST_F(BatchDownloadTest, FailToAddCommit) {
   std::vector<cloud_provider::Record> records;
   records.emplace_back(cloud_provider::Commit("id1", "content1", {}), "42");
   BatchDownload batch_download(&storage_, std::move(records),
-                               [this, &done_calls] { done_calls++; },
+                               [&done_calls] { done_calls++; },
                                [this, &error_calls] {
                                  error_calls++;
                                  message_loop_.PostQuitTask();

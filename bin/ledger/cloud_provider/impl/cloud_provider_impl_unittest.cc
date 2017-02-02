@@ -46,7 +46,7 @@ class CloudProviderImplTest : public test::TestWithMessageLoop,
     upload_keys_.push_back(key);
     upload_data_.push_back(std::move(data));
     message_loop_.task_runner()->PostTask(
-        [this, callback] { callback(gcs::Status::OK); });
+        [callback] { callback(gcs::Status::OK); });
   }
 
   void DownloadFile(
@@ -420,8 +420,9 @@ TEST_F(CloudProviderImplTest, GetObject) {
   uint64_t size;
   mx::socket data;
   cloud_provider_->GetObject(
-      "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &size, &data));
+      "object_id",
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &size,
+                    &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::OK, status);
@@ -443,8 +444,9 @@ TEST_F(CloudProviderImplTest, GetObjectNotFound) {
   uint64_t size;
   mx::socket data;
   cloud_provider_->GetObject(
-      "object_id", test::Capture([this] { message_loop_.PostQuitTask(); },
-                                 &status, &size, &data));
+      "object_id",
+      test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &size,
+                    &data));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(Status::NOT_FOUND, status);

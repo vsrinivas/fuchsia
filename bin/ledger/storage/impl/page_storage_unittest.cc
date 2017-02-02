@@ -211,8 +211,9 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     Status status;
     std::unique_ptr<const Commit> commit;
     storage_->GetCommit(
-        id, ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                            &commit));
+        id,
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &commit));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     return commit;
@@ -311,8 +312,9 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     Status status;
     std::unique_ptr<const Object> object;
     storage_->GetObject(
-        object_id, ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                   &status, &object));
+        object_id,
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &object));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(expected_status, status);
     return object;
@@ -550,8 +552,9 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
 TEST_F(PageStorageTest, DestroyUncommittedJournal) {
   // It is not an error if a journal is not committed or rolled back.
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
-                                              JournalType::EXPLICIT, &journal));
+  EXPECT_EQ(Status::OK,
+            storage_->StartCommit(GetFirstHead()->GetId(),
+                                  JournalType::EXPLICIT, &journal));
   EXPECT_NE(nullptr, journal);
   EXPECT_EQ(Status::OK,
             journal->Put("key", RandomId(kObjectIdSize), KeyPriority::EAGER));
@@ -585,8 +588,7 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
   ObjectId object_id;
   storage_->AddObjectFromLocal(
       mtl::WriteStringToSocket(data.value), data.size,
-      [this, &object_id](Status returned_status, ObjectId returned_object_id) {
-      });
+      [](Status returned_status, ObjectId returned_object_id) {});
 
   // Checking that we do not crash when deleting the storage while an AddObject
   // call is in progress.
@@ -710,8 +712,9 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     EXPECT_EQ(Status::OK,
               storage_->StartCommit(GetFirstHead()->GetId(),
                                     JournalType::IMPLICIT, &journal));
-    EXPECT_EQ(Status::OK, journal->Put(ftl::StringPrintf("key%d", i),
-                                       data[i].object_id, KeyPriority::LAZY));
+    EXPECT_EQ(Status::OK,
+              journal->Put(ftl::StringPrintf("key%d", i), data[i].object_id,
+                           KeyPriority::LAZY));
     TryCommitJournal(&journal, Status::OK);
     commits.push_back(GetFirstHead()->GetId());
   }
@@ -723,8 +726,9 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
     Status status;
     std::vector<ObjectId> objects;
     storage_->GetUnsyncedObjectIds(
-        commits[i], ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                    &status, &objects));
+        commits[i],
+        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                        &objects));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     EXPECT_EQ(static_cast<unsigned>(i + 2), objects.size());
@@ -744,8 +748,9 @@ TEST_F(PageStorageTest, UnsyncedObjects) {
   Status status;
   std::vector<ObjectId> objects;
   storage_->GetUnsyncedObjectIds(
-      commits[2], ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                  &status, &objects));
+      commits[2],
+      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                      &objects));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(3u, objects.size());
@@ -770,8 +775,9 @@ TEST_F(PageStorageTest, UntrackedObjectsSimple) {
 
   // After adding the object in a commit it should not be untracked any more.
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
-                                              JournalType::IMPLICIT, &journal));
+  EXPECT_EQ(Status::OK,
+            storage_->StartCommit(GetFirstHead()->GetId(),
+                                  JournalType::IMPLICIT, &journal));
   EXPECT_EQ(Status::OK,
             journal->Put("key", data.object_id, KeyPriority::EAGER));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data.object_id));
@@ -791,8 +797,9 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
 
   // Add a first commit containing object_ids[0].
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
-                                              JournalType::IMPLICIT, &journal));
+  EXPECT_EQ(Status::OK,
+            storage_->StartCommit(GetFirstHead()->GetId(),
+                                  JournalType::IMPLICIT, &journal));
   EXPECT_EQ(Status::OK,
             journal->Put("key0", data[0].object_id, KeyPriority::LAZY));
   EXPECT_TRUE(storage_->ObjectIsUntracked(data[0].object_id));
@@ -805,8 +812,9 @@ TEST_F(PageStorageTest, UntrackedObjectsComplex) {
   // object_ids[1] is no longer part of this commit: it should remain untracked
   // after committing.
   journal.reset();
-  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
-                                              JournalType::IMPLICIT, &journal));
+  EXPECT_EQ(Status::OK,
+            storage_->StartCommit(GetFirstHead()->GetId(),
+                                  JournalType::IMPLICIT, &journal));
   EXPECT_EQ(Status::OK,
             journal->Put("key1", data[1].object_id, KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,
@@ -857,8 +865,9 @@ TEST_F(PageStorageTest, OrderOfCommitWatch) {
   storage_->AddCommitWatcher(&watcher);
 
   std::unique_ptr<Journal> journal;
-  EXPECT_EQ(Status::OK, storage_->StartCommit(GetFirstHead()->GetId(),
-                                              JournalType::EXPLICIT, &journal));
+  EXPECT_EQ(Status::OK,
+            storage_->StartCommit(GetFirstHead()->GetId(),
+                                  JournalType::EXPLICIT, &journal));
   EXPECT_EQ(Status::OK,
             journal->Put("key1", RandomId(kObjectIdSize), KeyPriority::EAGER));
 

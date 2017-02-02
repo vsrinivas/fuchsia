@@ -57,7 +57,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                  [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
 
   PageSnapshotPtr snapshot;
   page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
@@ -84,7 +84,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
 
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                  [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
 
   PageSnapshotPtr snapshot;
   page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
@@ -107,7 +107,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                  [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
 
   PageSnapshotPtr snapshot;
   page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
@@ -132,7 +132,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                  [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
 
   PageSnapshotPtr snapshot;
   page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
@@ -174,7 +174,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
 
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(watcher1_ptr.NewRequest(),
-                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                   [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot1;
   page1->GetSnapshot(snapshot1.NewRequest(), std::move(watcher1_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -182,7 +182,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(),
-                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                   [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot2;
   page2->GetSnapshot(snapshot2.NewRequest(), std::move(watcher2_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -238,7 +238,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
   PagePtr page = GetTestPage();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                  [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
 
   PageSnapshotPtr snapshot;
   page->GetSnapshot(snapshot.NewRequest(), std::move(watcher_ptr),
@@ -269,7 +269,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
 
   PageWatcherPtr watcher1_ptr;
   Watcher watcher1(watcher1_ptr.NewRequest(),
-                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                   [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot1;
   page1->GetSnapshot(snapshot1.NewRequest(), std::move(watcher1_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });
@@ -277,7 +277,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(),
-                   [this]() { mtl::MessageLoop::GetCurrent()->QuitNow(); });
+                   [] { mtl::MessageLoop::GetCurrent()->QuitNow(); });
   PageSnapshotPtr snapshot2;
   page2->GetSnapshot(snapshot2.NewRequest(), std::move(watcher2_ptr),
                      [](Status status) { EXPECT_EQ(Status::OK, status); });

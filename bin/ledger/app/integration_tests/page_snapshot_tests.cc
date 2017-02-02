@@ -262,10 +262,9 @@ TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceNegativeSize) {
 
   PagePtr page = GetTestPage();
 
-  page->CreateReference(-1, StreamDataToSocket(big_data),
-                        [this](Status status, ReferencePtr ref) {
-                          EXPECT_EQ(Status::OK, status);
-                        });
+  page->CreateReference(
+      -1, StreamDataToSocket(big_data),
+      [](Status status, ReferencePtr ref) { EXPECT_EQ(Status::OK, status); });
   ASSERT_TRUE(page.WaitForIncomingResponse());
 }
 
@@ -275,7 +274,7 @@ TEST_F(PageSnapshotIntegrationTest, PageCreateReferenceWrongSize) {
   PagePtr page = GetTestPage();
 
   page->CreateReference(123, StreamDataToSocket(big_data),
-                        [this](Status status, ReferencePtr ref) {
+                        [](Status status, ReferencePtr ref) {
                           EXPECT_EQ(Status::IO_ERROR, status);
                         });
   ASSERT_TRUE(page.WaitForIncomingResponse());
@@ -289,7 +288,7 @@ TEST_F(PageSnapshotIntegrationTest, PageCreatePutLargeReference) {
   // Stream the data into the reference.
   ReferencePtr reference;
   page->CreateReference(big_data.size(), StreamDataToSocket(big_data),
-                        [this, &reference](Status status, ReferencePtr ref) {
+                        [&reference](Status status, ReferencePtr ref) {
                           EXPECT_EQ(Status::OK, status);
                           reference = std::move(ref);
                         });
@@ -362,18 +361,17 @@ TEST_F(PageSnapshotIntegrationTest, PageGetById) {
   page.reset();
 
   page = GetPage(test_page_id, Status::OK);
-  page->GetId([&test_page_id, this](fidl::Array<uint8_t> page_id) {
+  page->GetId([&test_page_id](fidl::Array<uint8_t> page_id) {
     EXPECT_EQ(convert::ToString(test_page_id), convert::ToString(page_id));
   });
   EXPECT_TRUE(page.WaitForIncomingResponse());
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ValuePtr value;
-  snapshot->Get(convert::ToArray("name"),
-                [&value, this](Status status, ValuePtr v) {
-                  EXPECT_EQ(status, Status::OK);
-                  value = std::move(v);
-                });
+  snapshot->Get(convert::ToArray("name"), [&value](Status status, ValuePtr v) {
+    EXPECT_EQ(status, Status::OK);
+    value = std::move(v);
+  });
   EXPECT_TRUE(snapshot.WaitForIncomingResponse());
   EXPECT_TRUE(value->is_bytes());
   EXPECT_EQ("Alice", convert::ToString(value->get_bytes()));
