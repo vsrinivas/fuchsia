@@ -54,7 +54,9 @@ KTRACE_DEF(0x151,32B,WAIT_ONE_DONE,IPC) // id, status, pending
 // events from 0x200-0x2ff are for arch-specific needs
 
 #ifdef __x86_64__
-KTRACE_DEF(0x200,32B,IPT_CR3,ARCH) // pid, cr3(x86)
+KTRACE_DEF(0x200,32B,IPT_START,ARCH) // MSR_PLATFORM_INFO[15:8], kernel cr3
+KTRACE_DEF(0x201,32B,IPT_STOP,ARCH)
+KTRACE_DEF(0x202,32B,IPT_PROCESS_CREATE,ARCH) // pid, cr3
 #endif
 
 #undef KTRACE_DEF

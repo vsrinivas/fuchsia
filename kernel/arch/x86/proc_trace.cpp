@@ -56,6 +56,10 @@
 #define IA32_RTIT_ADDR3_A 0x586
 #define IA32_RTIT_ADDR3_B 0x587
 
+// We need bits[15:8] to get the "maximum non-turbo ratio".
+// See libipt:intel-pt.h:pt_config, and Intel Vol. 3 chapter 35.5.
+#define IA32_PLATFORM_INFO 0xce
+
 // Our own copy of what h/w supports, mostly for sanity checking.
 static bool supports_cr3_filtering = false;
 static bool supports_psb = false;
@@ -117,7 +121,7 @@ void x86_processor_trace_init(void)
 void arch_trace_process_create(uint64_t pid, const arch_aspace_t* aspace) {
     // The cr3 value that appears in Intel PT h/w tracing.
     uint64_t cr3 = aspace->pt_phys;
-    ktrace(TAG_IPT_CR3, (uint32_t)pid, (uint32_t)(pid >> 32),
+    ktrace(TAG_IPT_PROCESS_CREATE, (uint32_t)pid, (uint32_t)(pid >> 32),
            (uint32_t)cr3, (uint32_t)(cr3 >> 32));
 }
 
@@ -232,13 +236,6 @@ static void x86_ipt_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
 // Begin the trace.
 
 status_t x86_ipt_cpu_mode_start() {
-    // TODO(dje): Could provide an API to obtain the kernel cr3, but we need to
-    // log cr3s for potentially all processes anyway.
-    // Could add this to the trace with ptwrite but not all chips support it,
-    // and if circular buffers are in use it could be lost.
-    TRACEF("Enabling processor trace, kernel cr3: 0x%" PRIxPTR "\n",
-           x86_kernel_cr3());
-
     AutoLock al(ipt_lock);
 
     if (trace_mode == IPT_TRACE_THREADS)
@@ -248,10 +245,18 @@ status_t x86_ipt_cpu_mode_start() {
     if (!ipt_cpu_state)
         return ERR_BAD_STATE;
 
+    uint64_t kernel_cr3 = x86_kernel_cr3();
+    TRACEF("Enabling processor trace, kernel cr3: 0x%" PRIxPTR "\n",
+           kernel_cr3);
+
     active = true;
 
-    mp_sync_exec(MP_CPU_ALL, x86_ipt_start_cpu_task, ipt_cpu_state);
+    uint64_t platform_msr = read_msr(IA32_PLATFORM_INFO);
+    unsigned nom_freq = (platform_msr >> 8) & 0xff;
+    ktrace(TAG_IPT_START, (uint32_t)nom_freq, 0,
+           (uint32_t)kernel_cr3, (uint32_t)(kernel_cr3 >> 32));
 
+    mp_sync_exec(MP_CPU_ALL, x86_ipt_start_cpu_task, ipt_cpu_state);
     return NO_ERROR;
 }
 
@@ -288,8 +293,6 @@ static void x86_ipt_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 // during any cleanup.
 
 status_t x86_ipt_cpu_mode_stop() {
-    TRACEF("Disabling processor trace\n");
-
     AutoLock al(ipt_lock);
 
     if (trace_mode == IPT_TRACE_THREADS)
@@ -297,8 +300,10 @@ status_t x86_ipt_cpu_mode_stop() {
     if (!ipt_cpu_state)
         return ERR_BAD_STATE;
 
-    mp_sync_exec(MP_CPU_ALL, x86_ipt_stop_cpu_task, ipt_cpu_state);
+    TRACEF("Disabling processor trace\n");
 
+    mp_sync_exec(MP_CPU_ALL, x86_ipt_stop_cpu_task, ipt_cpu_state);
+    ktrace(TAG_IPT_STOP, 0, 0, 0, 0);
     active = false;
     return NO_ERROR;
 }
