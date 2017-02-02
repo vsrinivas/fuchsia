@@ -92,20 +92,19 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
     return result;
   }
 
-  ObjectId CreateEmptyContents() {
+  ObjectId GetEmptyNodeId() {
     Status status;
     ObjectId id;
-    TreeNode::FromEntries(
-        &fake_storage_, std::vector<Entry>(), std::vector<ObjectId>(1),
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &id));
+    TreeNode::Empty(&fake_storage_,
+                    ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                    &status, &id));
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     return id;
   }
 
   ObjectId CreateTree(std::vector<EntryChange>& entries) {
-    ObjectId root_id = CreateEmptyContents();
+    ObjectId root_id = GetEmptyNodeId();
 
     Status status;
     ObjectId new_root_id;
@@ -144,7 +143,7 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
 };
 
 TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
-  ObjectId root_id = CreateEmptyContents();
+  ObjectId root_id = GetEmptyNodeId();
   std::vector<EntryChange> changes = CreateEntryChanges(4);
 
   Status status;
@@ -170,7 +169,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
 }
 
 TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
-  ObjectId root_id = CreateEmptyContents();
+  ObjectId root_id = GetEmptyNodeId();
   std::vector<EntryChange> golden_entries = CreateEntryChanges(11);
 
   Status status;
@@ -275,7 +274,7 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
 }
 
 TEST_F(BTreeUtilsTest, GetObjectIdsFromEmpty) {
-  ObjectId root_id = CreateEmptyContents();
+  ObjectId root_id = GetEmptyNodeId();
   Status status;
   std::set<ObjectId> object_ids;
   btree::GetObjectIds(&fake_storage_, root_id,

@@ -219,6 +219,17 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     return commit;
   }
 
+  ObjectId GetEmptyNodeId() {
+    Status status;
+    ObjectId id;
+    TreeNode::Empty(storage_.get(),
+                    ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                    &status, &id));
+    EXPECT_FALSE(RunLoopWithTimeout());
+    EXPECT_EQ(Status::OK, status);
+    return id;
+  }
+
   ObjectId FromEntries(const std::vector<Entry>& entries,
                        const std::vector<ObjectId>& children) {
     Status status;
@@ -233,8 +244,7 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
   }
 
   CommitId TryCommitFromSync() {
-    ObjectId root_id =
-        FromEntries(std::vector<Entry>(), std::vector<ObjectId>(1));
+    ObjectId root_id = GetEmptyNodeId();
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());

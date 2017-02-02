@@ -497,9 +497,7 @@ void GetOrCreateEmptyNode(PageStorage* page_storage,
     callback(Status::OK, node_id.ToString());
     return;
   }
-  TreeNode::FromEntries(page_storage, std::vector<Entry>(),
-                        std::vector<ObjectId>{ObjectId()},
-                        ftl::MakeCopyable(std::move(callback)));
+  TreeNode::Empty(page_storage, ftl::MakeCopyable(std::move(callback)));
 }
 
 }  // namespace
@@ -535,23 +533,23 @@ void ApplyChanges(
               auto new_nodes = std::make_unique<std::unordered_set<ObjectId>>();
               std::unordered_set<ObjectId>* new_nodes_ptr = new_nodes.get();
               auto changes_ptr = changes.get();
-              ApplyChangesIn(page_storage, changes_ptr, std::move(root), true,
-                             "", node_size, new_nodes_ptr,
-                             ftl::MakeCopyable([
-                               new_nodes = std::move(new_nodes),
-                               callback = std::move(callback),
-                               changes = std::move(changes)
-                             ](Status s, ObjectId new_id,
-                               std::unique_ptr<TreeNode::Mutation::Updater>
-                                   parent_updater) mutable {
-                               FTL_DCHECK(parent_updater == nullptr);
-                               if (s != Status::OK) {
-                                 callback(s, "", {});
-                                 return;
-                               }
-                               callback(Status::OK, std::move(new_id),
-                                        std::move(*new_nodes));
-                             }));
+              ApplyChangesIn(
+                  page_storage, changes_ptr, std::move(root), true, "",
+                  node_size, new_nodes_ptr,
+                  ftl::MakeCopyable([
+                    new_nodes = std::move(new_nodes),
+                    callback = std::move(callback), changes = std::move(changes)
+                  ](Status s, ObjectId new_id,
+                    std::unique_ptr<TreeNode::Mutation::Updater>
+                        parent_updater) mutable {
+                    FTL_DCHECK(parent_updater == nullptr);
+                    if (s != Status::OK) {
+                      callback(s, "", {});
+                      return;
+                    }
+                    callback(Status::OK, std::move(new_id),
+                             std::move(*new_nodes));
+                  }));
             }));
       }));
 }
@@ -622,8 +620,10 @@ void ForEachEntry(PageStorage* page_storage,
       return;
     }
     ForEachEntryInSubtree(
-        page_storage, std::move(root), std::move(min_key), std::move(on_next),
-        [on_done = std::move(on_done)](Status s, bool) { on_done(s); });
+        page_storage, std::move(root), std::move(min_key),
+        std::move(on_next), [on_done = std::move(on_done)](Status s, bool) {
+          on_done(s);
+        });
 
   });
 }

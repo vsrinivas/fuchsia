@@ -33,17 +33,17 @@ void TreeNode::FromId(
     ObjectIdView id,
     std::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
   std::unique_ptr<const Object> object;
-  page_storage->GetObject(
-      id, [ page_storage, callback = std::move(callback) ](
-              Status status, std::unique_ptr<const Object> object) {
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-        std::unique_ptr<const TreeNode> node;
-        status = FromObject(page_storage, std::move(object), &node);
-        callback(status, std::move(node));
-      });
+  page_storage->GetObject(id, [
+    page_storage, callback = std::move(callback)
+  ](Status status, std::unique_ptr<const Object> object) {
+    if (status != Status::OK) {
+      callback(status, nullptr);
+      return;
+    }
+    std::unique_ptr<const TreeNode> node;
+    status = FromObject(page_storage, std::move(object), &node);
+    callback(status, std::move(node));
+  });
 }
 
 void TreeNode::Empty(PageStorage* page_storage,
@@ -380,37 +380,35 @@ void TreeNode::Mutation::Finish(
     }
 
     // No parent node, create a new one.
-    FromEntries(node_.page_storage_, std::vector<Entry>(),
-                std::vector<ObjectId>{ObjectId()}, [
-                  this, max_size, max_key, new_entries = std::move(new_entries),
-                  new_children = std::move(new_children), new_nodes,
-                  on_done = std::move(on_done)
-                ](Status s, ObjectId empty_node_id) {
-                  if (s != Status::OK) {
-                    on_done(s, "", nullptr);
-                    return;
-                  }
-                  FromId(node_.page_storage_, empty_node_id, [
-                    max_size, max_key, new_entries = std::move(new_entries),
-                    new_children = std::move(new_children), new_nodes,
-                    on_done = std::move(on_done)
-                  ](Status s, std::unique_ptr<const TreeNode> new_node) {
-                    if (s != Status::OK) {
-                      on_done(s, "", nullptr);
-                      return;
-                    }
-                    // new_entries could contain more than max_size elements, so
-                    // we can't directly create the root using FromEntries. We
-                    // use a mutation instead.
-                    Mutation mutation = new_node->StartMutation();
-                    for (size_t i = 0; i < new_entries.size(); ++i) {
-                      mutation.AddEntry(new_entries[i], new_children[i],
-                                        new_children[i + 1]);
-                    }
-                    mutation.Finish(max_size, true, max_key, new_nodes,
-                                    std::move(on_done));
-                  });
-                });
+    Empty(node_.page_storage_, [
+      this, max_size, max_key, new_entries = std::move(new_entries),
+      new_children = std::move(new_children), new_nodes,
+      on_done = std::move(on_done)
+    ](Status s, ObjectId empty_node_id) {
+      if (s != Status::OK) {
+        on_done(s, "", nullptr);
+        return;
+      }
+      FromId(node_.page_storage_, empty_node_id, [
+        max_size, max_key, new_entries = std::move(new_entries),
+        new_children = std::move(new_children), new_nodes,
+        on_done = std::move(on_done)
+      ](Status s, std::unique_ptr<const TreeNode> new_node) {
+        if (s != Status::OK) {
+          on_done(s, "", nullptr);
+          return;
+        }
+        // new_entries could contain more than max_size elements, so we can't
+        // directly create the root using FromEntries. We use a mutation
+        // instead.
+        Mutation mutation = new_node->StartMutation();
+        for (size_t i = 0; i < new_entries.size(); ++i) {
+          mutation.AddEntry(new_entries[i], new_children[i],
+                            new_children[i + 1]);
+        }
+        mutation.Finish(max_size, true, max_key, new_nodes, std::move(on_done));
+      });
+    });
   });
 }
 
