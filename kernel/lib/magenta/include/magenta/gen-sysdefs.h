@@ -425,6 +425,7 @@ mx_status_t sys_io_mapping_get_info(
 mx_status_t sys_vmo_create_contiguous(
     mx_handle_t rsrc_handle,
     size_t size,
+    uint32_t alignment_log2,
     mx_handle_t out[1]);
 
 mx_status_t sys_vmar_allocate(

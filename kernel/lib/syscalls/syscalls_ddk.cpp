@@ -158,10 +158,17 @@ mx_status_t sys_mmap_device_memory(mx_handle_t hrsrc, uintptr_t paddr, uint32_t 
 }
 
 mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
+                                      uint32_t alignment_log2,
                                       mx_handle_t* _out) {
     LTRACEF("size 0x%zu\n", size);
 
     if (size == 0) return ERR_INVALID_ARGS;
+    if (alignment_log2 == 0)
+        alignment_log2 = PAGE_SIZE_SHIFT;
+    // catch obviously wrong values
+    if (alignment_log2 < PAGE_SIZE_SHIFT ||
+            alignment_log2 >= (8 * sizeof(uint64_t)))
+        return ERR_INVALID_ARGS;
 
     // TODO: finer grained validation
     mx_status_t status;
@@ -177,7 +184,9 @@ mx_status_t sys_vmo_create_contiguous(mx_handle_t hrsrc, size_t size,
 
     // always immediately commit memory to the object
     uint64_t committed;
-    status = vmo->CommitRangeContiguous(0, size, &committed, PAGE_SIZE_SHIFT);
+    // CommitRangeContiguous takes a uint8_t for the alignment
+    auto align_log2_arg = static_cast<uint8_t>(alignment_log2);
+    status = vmo->CommitRangeContiguous(0, size, &committed, align_log2_arg);
     if (status < 0 || (size_t)committed < size) {
         LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
                 (size_t)committed / PAGE_SIZE);

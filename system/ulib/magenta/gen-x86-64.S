@@ -75,7 +75,7 @@ m_syscall 1 mx_interrupt_wait 75
 m_syscall 3 mx_mmap_device_io 76
 m_syscall 5 mx_mmap_device_memory 77
 m_syscall 3 mx_io_mapping_get_info 78
-m_syscall 3 mx_vmo_create_contiguous 79
+m_syscall 4 mx_vmo_create_contiguous 79
 m_syscall 6 mx_vmar_allocate 80
 m_syscall 1 mx_vmar_destroy 81
 m_syscall 7 mx_vmar_map 82

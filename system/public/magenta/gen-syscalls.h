@@ -846,11 +846,13 @@ extern mx_status_t _mx_io_mapping_get_info(
 extern mx_status_t mx_vmo_create_contiguous(
     mx_handle_t rsrc_handle,
     size_t size,
+    uint32_t alignment_log2,
     mx_handle_t out[1]) __attribute__((__leaf__));
 
 extern mx_status_t _mx_vmo_create_contiguous(
     mx_handle_t rsrc_handle,
     size_t size,
+    uint32_t alignment_log2,
     mx_handle_t out[1]) __attribute__((__leaf__));
 
 extern mx_status_t mx_vmar_allocate(

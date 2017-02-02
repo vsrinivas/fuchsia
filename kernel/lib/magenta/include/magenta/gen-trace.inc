@@ -75,7 +75,7 @@
 {76, 3, "mmap_device_io"},
 {77, 5, "mmap_device_memory"},
 {78, 3, "io_mapping_get_info"},
-{79, 3, "vmo_create_contiguous"},
+{79, 4, "vmo_create_contiguous"},
 {80, 6, "vmar_allocate"},
 {81, 1, "vmar_destroy"},
 {82, 7, "vmar_map"},
