@@ -1,4 +1,7 @@
 {
+    "imports": [
+        "init"
+    ],
     "labels": [
         "//apps/netstack",
         "//apps/netstack/tests"
