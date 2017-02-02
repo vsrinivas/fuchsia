@@ -16,6 +16,7 @@
 #include "apps/ledger/src/storage/impl/page_storage_impl.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/test/commit_random_impl.h"
+#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/files/scoped_temp_dir.h"
 #include "lib/ftl/macros.h"
@@ -23,31 +24,6 @@
 
 namespace storage {
 namespace {
-
-std::string RandomId(size_t size) {
-  std::string result;
-  result.resize(size);
-  glue::RandBytes(&result[0], size);
-  return result;
-}
-
-EntryChange NewEntryChange(std::string key,
-                           std::string object_id,
-                           KeyPriority priority) {
-  EntryChange change;
-  change.deleted = false;
-  change.entry.key.swap(key);
-  change.entry.object_id.swap(object_id);
-  change.entry.priority = priority;
-  return change;
-}
-
-EntryChange NewRemoveEntryChange(std::string key) {
-  EntryChange change;
-  change.deleted = true;
-  change.entry.key.swap(key);
-  return change;
-}
 
 void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
   EXPECT_EQ(expected.deleted, found.deleted);
@@ -113,8 +89,9 @@ TEST_F(DBTest, Commits) {
   EXPECT_EQ(Status::NOT_FOUND,
             db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
 
-  EXPECT_EQ(Status::OK, db_.AddCommitStorageBytes(commit->GetId(),
-                                                  commit->GetStorageBytes()));
+  EXPECT_EQ(
+      Status::OK,
+      db_.AddCommitStorageBytes(commit->GetId(), commit->GetStorageBytes()));
   EXPECT_EQ(Status::OK,
             db_.GetCommitStorageBytes(commit->GetId(), &storage_bytes));
   EXPECT_EQ(storage_bytes, commit->GetStorageBytes());
@@ -129,10 +106,12 @@ TEST_F(DBTest, Journals) {
 
   std::unique_ptr<Journal> implicit_journal;
   std::unique_ptr<Journal> explicit_journal;
-  EXPECT_EQ(Status::OK, db_.CreateJournal(JournalType::IMPLICIT, commit_id,
-                                          &implicit_journal));
-  EXPECT_EQ(Status::OK, db_.CreateJournal(JournalType::EXPLICIT, commit_id,
-                                          &explicit_journal));
+  EXPECT_EQ(
+      Status::OK,
+      db_.CreateJournal(JournalType::IMPLICIT, commit_id, &implicit_journal));
+  EXPECT_EQ(
+      Status::OK,
+      db_.CreateJournal(JournalType::EXPLICIT, commit_id, &explicit_journal));
 
   EXPECT_EQ(Status::OK, db_.RemoveExplicitJournals());
 
@@ -158,8 +137,9 @@ TEST_F(DBTest, JournalEntries) {
   CommitId commit_id = RandomId(kCommitIdSize);
 
   std::unique_ptr<Journal> implicit_journal;
-  EXPECT_EQ(Status::OK, db_.CreateJournal(JournalType::IMPLICIT, commit_id,
-                                          &implicit_journal));
+  EXPECT_EQ(
+      Status::OK,
+      db_.CreateJournal(JournalType::IMPLICIT, commit_id, &implicit_journal));
   EXPECT_EQ(Status::OK,
             implicit_journal->Put("add-key-1", "value1", KeyPriority::LAZY));
   EXPECT_EQ(Status::OK,

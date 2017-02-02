@@ -20,6 +20,7 @@
 #include "apps/ledger/src/storage/public/commit_watcher.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/test/commit_random_impl.h"
+#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -71,13 +72,6 @@ bool IsDirectoryEmpty(const std::string& directory) {
     return false;
   }
   return true;
-}
-
-std::string RandomId(size_t size) {
-  std::string result;
-  result.resize(size);
-  glue::RandBytes(&result[0], size);
-  return result;
 }
 
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
@@ -165,7 +159,7 @@ class ObjectData {
   const std::string object_id;
 };
 
-class PageStorageTest : public ::test::TestWithMessageLoop {
+class PageStorageTest : public StorageTest {
  public:
   PageStorageTest() {}
 
@@ -180,6 +174,7 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     PageId id = RandomId(16);
     storage_ = std::make_unique<PageStorageImpl>(
         message_loop_.task_runner(), io_runner_, tmp_dir_.path(), id);
+
     EXPECT_EQ(Status::OK, storage_->Init());
     EXPECT_EQ(id, storage_->GetId());
   }
@@ -196,6 +191,8 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
   }
 
  protected:
+  PageStorage* GetStorage() override { return storage_.get(); }
+
   std::string GetFilePath(ObjectIdView object_id) {
     return PageStorageImplAccessorForTest::GetFilePath(*storage_, object_id);
   }
@@ -217,30 +214,6 @@ class PageStorageTest : public ::test::TestWithMessageLoop {
     EXPECT_FALSE(RunLoopWithTimeout());
     EXPECT_EQ(Status::OK, status);
     return commit;
-  }
-
-  ObjectId GetEmptyNodeId() {
-    Status status;
-    ObjectId id;
-    TreeNode::Empty(storage_.get(),
-                    ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                    &status, &id));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
-    return id;
-  }
-
-  ObjectId FromEntries(const std::vector<Entry>& entries,
-                       const std::vector<ObjectId>& children) {
-    Status status;
-    ObjectId id;
-    TreeNode::FromEntries(
-        storage_.get(), entries, children,
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &id));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
-    return id;
   }
 
   CommitId TryCommitFromSync() {
@@ -414,7 +387,8 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
       Entry{"key1", eager_value.object_id, storage::KeyPriority::EAGER},
   };
   ObjectId root_id =
-      FromEntries(entries, std::vector<ObjectId>(entries.size() + 1));
+      CreateNodeFromEntries(entries, std::vector<ObjectId>(entries.size() + 1))
+          ->GetId();
 
   // Add the three objects to FakeSyncDelegate.
   sync.AddObject(lazy_value.object_id, lazy_value.value);
@@ -922,8 +896,9 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     std::vector<Entry> entries = {Entry{"key" + std::to_string(i),
                                         value.object_id,
                                         storage::KeyPriority::EAGER}};
-    object_ids[i] =
-        FromEntries(entries, std::vector<ObjectId>(entries.size() + 1));
+    object_ids[i] = CreateNodeFromEntries(
+                        entries, std::vector<ObjectId>(entries.size() + 1))
+                        ->GetId();
     sync.AddObject(value.object_id, value.value);
     std::unique_ptr<const Object> root_object = TryGetObject(object_ids[i]);
     ftl::StringView root_data;

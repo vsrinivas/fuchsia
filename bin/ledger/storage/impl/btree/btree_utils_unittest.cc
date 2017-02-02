@@ -11,6 +11,7 @@
 #include "apps/ledger/src/storage/impl/btree/tree_node.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/public/types.h"
+#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -23,13 +24,6 @@ namespace storage {
 namespace {
 
 const int kTestNodeSize = 4;
-
-// Creates the object id for testing from the given str.
-ObjectId MakeObjectId(std::string str) {
-  // Resize id to the required size, adding trailing underscores if needed.
-  str.resize(kObjectIdSize, '_');
-  return str;
-}
 
 class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
  public:
@@ -47,7 +41,7 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
   std::set<ObjectId> object_requests;
 };
 
-class BTreeUtilsTest : public ::test::TestWithMessageLoop {
+class BTreeUtilsTest : public StorageTest {
  public:
   BTreeUtilsTest() : fake_storage_("page_id") {}
 
@@ -59,49 +53,8 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
     std::srand(0);
   }
 
-  std::unique_ptr<const Object> AddObject(const std::string& value) {
-    Status status;
-    ObjectId object_id;
-    fake_storage_.AddObjectFromLocal(
-        mtl::WriteStringToSocket(value), value.size(),
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &object_id));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
-
-    std::unique_ptr<const Object> object;
-    fake_storage_.GetObject(
-        object_id,
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &object));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
-    return object;
-  }
-
-  std::vector<EntryChange> CreateEntryChanges(int size) {
-    FTL_CHECK(size >= 0 && size <= 100);
-    std::vector<EntryChange> result;
-    for (int i = 0; i < size; ++i) {
-      std::unique_ptr<const Object> object =
-          AddObject(ftl::StringPrintf("object%02d", i));
-      result.push_back(EntryChange{Entry{ftl::StringPrintf("key%02d", i),
-                                         object->GetId(), KeyPriority::EAGER},
-                                   false});
-    }
-    return result;
-  }
-
-  ObjectId GetEmptyNodeId() {
-    Status status;
-    ObjectId id;
-    TreeNode::Empty(&fake_storage_,
-                    ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                    &status, &id));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
-    return id;
-  }
+ protected:
+  PageStorage* GetStorage() override { return &fake_storage_; }
 
   ObjectId CreateTree(std::vector<EntryChange>& entries) {
     ObjectId root_id = GetEmptyNodeId();
@@ -135,7 +88,6 @@ class BTreeUtilsTest : public ::test::TestWithMessageLoop {
     return entries;
   }
 
- protected:
   TrackGetObjectFakePageStorage fake_storage_;
 
  private:

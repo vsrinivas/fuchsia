@@ -6,19 +6,11 @@
 
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/public/constants.h"
+#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "lib/ftl/logging.h"
 
 namespace storage {
 namespace test {
-namespace {
-
-std::string RandomId(size_t size) {
-  std::string result;
-  result.resize(size);
-  glue::RandBytes(&result[0], size);
-  return result;
-}
-}
 
 CommitRandomImpl::CommitRandomImpl()
     : id_(RandomId(kCommitIdSize)),

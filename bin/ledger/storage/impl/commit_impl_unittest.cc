@@ -8,24 +8,21 @@
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/public/constants.h"
 #include "apps/ledger/src/storage/test/commit_random_impl.h"
+#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "gtest/gtest.h"
 #include "lib/ftl/macros.h"
 
 namespace storage {
 namespace {
 
-std::string RandomId(size_t size) {
-  std::string result;
-  result.resize(size);
-  glue::RandBytes(&result[0], size);
-  return result;
-}
-
-class CommitImplTest : public ::testing::Test {
+class CommitImplTest : public StorageTest {
  public:
   CommitImplTest() : page_storage_(ObjectId(kObjectIdSize, 'a')) {}
 
   ~CommitImplTest() override {}
+
+ protected:
+  PageStorage* GetStorage() override { return &page_storage_; }
 
   bool CheckCommitEquals(const Commit& expected, const Commit& commit) {
     return (expected.GetId() == commit.GetId()) &&
@@ -41,7 +38,6 @@ class CommitImplTest : public ::testing::Test {
     return CheckCommitEquals(*commit, *copy);
   }
 
- protected:
   fake::FakePageStorage page_storage_;
 
  private:

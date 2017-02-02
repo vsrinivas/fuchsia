@@ -8,6 +8,7 @@
 #include "apps/ledger/src/storage/fake/fake_page_storage.h"
 #include "apps/ledger/src/storage/impl/btree/encoding.h"
 #include "apps/ledger/src/storage/public/constants.h"
+#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -16,25 +17,7 @@
 namespace storage {
 namespace {
 
-ObjectId RandomId() {
-  std::string result;
-  result.resize(kObjectIdSize);
-  glue::RandBytes(&result[0], kObjectIdSize);
-  return result;
-}
-
-std::vector<Entry> GetEntries(int size) {
-  // Lower case letters are used as keys.
-  FTL_DCHECK(size < 26);
-  std::vector<Entry> entries;
-  for (int i = 0; i < size; ++i) {
-    Entry entry{std::string(1, 'a' + i), RandomId(), KeyPriority::EAGER};
-    entries.push_back(entry);
-  }
-  return entries;
-}
-
-class TreeNodeTest : public ::test::TestWithMessageLoop {
+class TreeNodeTest : public StorageTest {
  public:
   TreeNodeTest() : fake_storage_("page_id") {}
 
@@ -47,40 +30,10 @@ class TreeNodeTest : public ::test::TestWithMessageLoop {
   }
 
  protected:
-  std::unique_ptr<const TreeNode> FromId(ObjectIdView id) {
-    Status status;
-    std::unique_ptr<const TreeNode> node;
-    TreeNode::FromId(&fake_storage_, id,
-                     ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                     &status, &node));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
-    return node;
-  }
+  PageStorage* GetStorage() override { return &fake_storage_; }
 
   std::unique_ptr<const TreeNode> CreateEmptyNode() {
-    Status status;
-    ObjectId id;
-    TreeNode::Empty(&fake_storage_,
-                    ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                    &status, &id));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
-    return FromId(id);
-  }
-
-  std::unique_ptr<const TreeNode> FromEntries(
-      const std::vector<Entry>& entries,
-      const std::vector<ObjectId>& children) {
-    Status status;
-    ObjectId id;
-    TreeNode::FromEntries(
-        &fake_storage_, entries, children,
-        ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                        &id));
-    EXPECT_FALSE(RunLoopWithTimeout());
-    EXPECT_EQ(Status::OK, status);
-    return FromId(id);
+    return CreateNodeFromId(GetEmptyNodeId());
   }
 
   Entry GetEntry(const TreeNode* node, int index) {
@@ -115,7 +68,7 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, found_node);
 
-  TreeNode::FromId(&fake_storage_, RandomId(),
+  TreeNode::FromId(&fake_storage_, RandomId(kObjectIdSize),
                    ::test::Capture([this] { message_loop_.PostQuitTask(); },
                                    &status, &found_node));
   EXPECT_FALSE(RunLoopWithTimeout());
@@ -124,9 +77,9 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
 
 TEST_F(TreeNodeTest, GetEntryChild) {
   int size = 10;
-  std::vector<Entry> entries = GetEntries(size);
+  std::vector<Entry> entries = CreateEntries(size);
   std::unique_ptr<const TreeNode> node =
-      FromEntries(entries, std::vector<ObjectId>(size + 1));
+      CreateNodeFromEntries(entries, std::vector<ObjectId>(size + 1));
   EXPECT_EQ(size, node->GetKeyCount());
   for (int i = 0; i < size; ++i) {
     EXPECT_EQ(entries[i], GetEntry(node.get(), i));
@@ -135,8 +88,9 @@ TEST_F(TreeNodeTest, GetEntryChild) {
   for (int i = 0; i <= size; ++i) {
     Status status;
     std::unique_ptr<const TreeNode> child;
-    node->GetChild(i, ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &status, &child));
+    node->GetChild(i,
+                   ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                   &status, &child));
     EXPECT_FALSE(RunLoopWithTimeout());
     ASSERT_EQ(Status::NO_SUCH_CHILD, status);
     EXPECT_TRUE(node->GetChildId(i).empty());
@@ -145,9 +99,9 @@ TEST_F(TreeNodeTest, GetEntryChild) {
 
 TEST_F(TreeNodeTest, SplitMerge) {
   int size = 10;
-  std::vector<Entry> entries = GetEntries(size);
+  std::vector<Entry> entries = CreateEntries(size);
   std::unique_ptr<const TreeNode> node =
-      FromEntries(entries, std::vector<ObjectId>(size + 1));
+      CreateNodeFromEntries(entries, std::vector<ObjectId>(size + 1));
 
   int split_index = 3;
   Status status;
@@ -159,13 +113,13 @@ TEST_F(TreeNodeTest, SplitMerge) {
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
-  std::unique_ptr<const TreeNode> left_node = FromId(left_id);
+  std::unique_ptr<const TreeNode> left_node = CreateNodeFromId(left_id);
   EXPECT_EQ(split_index, left_node->GetKeyCount());
   for (int i = 0; i < split_index; ++i) {
     EXPECT_EQ(entries[i], GetEntry(left_node.get(), i));
   }
 
-  std::unique_ptr<const TreeNode> right_node = FromId(right_id);
+  std::unique_ptr<const TreeNode> right_node = CreateNodeFromId(right_id);
   EXPECT_EQ(size - split_index, right_node->GetKeyCount());
   for (int i = 0; i < size - split_index; ++i) {
     EXPECT_EQ(entries[split_index + i], GetEntry(right_node.get(), i));
@@ -174,12 +128,13 @@ TEST_F(TreeNodeTest, SplitMerge) {
   // Merge
   ObjectId merged_id;
   TreeNode::Merge(&fake_storage_, std::move(left_node), std::move(right_node),
-                  "", ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                      &status, &merged_id));
+                  "",
+                  ::test::Capture([this] { message_loop_.PostQuitTask(); },
+                                  &status, &merged_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
 
-  std::unique_ptr<const TreeNode> merged_node = FromId(merged_id);
+  std::unique_ptr<const TreeNode> merged_node = CreateNodeFromId(merged_id);
   EXPECT_EQ(size, merged_node->GetKeyCount());
   for (int i = 0; i < size; ++i) {
     EXPECT_EQ(entries[i], GetEntry(merged_node.get(), i));
@@ -188,39 +143,39 @@ TEST_F(TreeNodeTest, SplitMerge) {
 
 TEST_F(TreeNodeTest, FindKeyOrChild) {
   int size = 10;
-  std::vector<Entry> entries = GetEntries(size);
+  std::vector<Entry> entries = CreateEntries(size);
   std::unique_ptr<const TreeNode> node =
-      FromEntries(entries, std::vector<ObjectId>(size + 1));
+      CreateNodeFromEntries(entries, std::vector<ObjectId>(size + 1));
 
   int index;
-  EXPECT_EQ(Status::OK, node->FindKeyOrChild("a", &index));
+  EXPECT_EQ(Status::OK, node->FindKeyOrChild("key00", &index));
   EXPECT_EQ(0, index);
 
-  EXPECT_EQ(Status::OK, node->FindKeyOrChild("c", &index));
+  EXPECT_EQ(Status::OK, node->FindKeyOrChild("key02", &index));
   EXPECT_EQ(2, index);
 
-  EXPECT_EQ(Status::OK, node->FindKeyOrChild("j", &index));
+  EXPECT_EQ(Status::OK, node->FindKeyOrChild("key09", &index));
   EXPECT_EQ(9, index);
 
   EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("0", &index));
   EXPECT_EQ(0, index);
 
-  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("aa", &index));
+  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("key001", &index));
   EXPECT_EQ(1, index);
 
-  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("cc", &index));
+  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("key020", &index));
   EXPECT_EQ(3, index);
 
-  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("z", &index));
+  EXPECT_EQ(Status::NOT_FOUND, node->FindKeyOrChild("key999", &index));
   EXPECT_EQ(10, index);
 }
 
 TEST_F(TreeNodeTest, MutationAddEntry) {
   int size = 2;
   std::unique_ptr<const TreeNode> node =
-      FromEntries(GetEntries(size), CreateChildren(size + 1));
+      CreateNodeFromEntries(CreateEntries(size), CreateChildren(size + 1));
 
-  Entry entry{"ab", RandomId(), KeyPriority::EAGER};
+  Entry entry{"key001", RandomId(kObjectIdSize), KeyPriority::EAGER};
   ObjectId left = CreateEmptyNode()->GetId();
   ObjectId right = CreateEmptyNode()->GetId();
 
@@ -232,17 +187,17 @@ TEST_F(TreeNodeTest, MutationAddEntry) {
                               &new_node_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
+  std::unique_ptr<const TreeNode> new_node = CreateNodeFromId(new_node_id);
 
   // Initial node:
-  //   [ a, b]
-  //   /  |   \
-  // 0    1    2
+  //   [ 00, 01]
+  //    /  |   \
+  //  0    1    2
   //
-  // After adding entry ab:
-  //   [ a, ab, b]
-  //   /  |   |   \
-  // 0  left right 2
+  // After adding entry 001:
+  //   [ 00, 001, 01]
+  //    /  |   |   \
+  //  0  left right 2
   EXPECT_EQ(size + 1, new_node->GetKeyCount());
 
   EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(new_node.get(), 0));
@@ -258,21 +213,21 @@ TEST_F(TreeNodeTest, MutationAddEntry) {
 TEST_F(TreeNodeTest, MutationUpdateEntry) {
   int size = 3;
   std::unique_ptr<const TreeNode> node =
-      FromEntries(GetEntries(size), CreateChildren(size + 1));
+      CreateNodeFromEntries(CreateEntries(size), CreateChildren(size + 1));
 
-  Entry entry{"b", RandomId(), KeyPriority::EAGER};
+  Entry entry{"key01", RandomId(kObjectIdSize), KeyPriority::EAGER};
   Status status;
   ObjectId new_node_id;
   node->StartMutation().UpdateEntry(entry).Finish(::test::Capture(
       [this] { message_loop_.PostQuitTask(); }, &status, &new_node_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
+  std::unique_ptr<const TreeNode> new_node = CreateNodeFromId(new_node_id);
 
   // Initial node:
-  //   [ a, b, c]
-  //   /  |   |  \
-  // 0    1   2   3
+  //   [ 00, 01, 02]
+  //    /  |   |  \
+  //  0    1   2   3
   //
   // After updating entry b:
   // (same with different value for b)
@@ -290,28 +245,28 @@ TEST_F(TreeNodeTest, MutationUpdateEntry) {
 TEST_F(TreeNodeTest, MutationRemoveEntry) {
   int size = 3;
   std::unique_ptr<const TreeNode> node =
-      FromEntries(GetEntries(size), CreateChildren(size + 1));
+      CreateNodeFromEntries(CreateEntries(size), CreateChildren(size + 1));
 
   ObjectId child = CreateEmptyNode()->GetId();
   Status status;
   ObjectId new_node_id;
   node->StartMutation()
-      .RemoveEntry("b", child)
+      .RemoveEntry("key01", child)
       .Finish(::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                               &new_node_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
+  std::unique_ptr<const TreeNode> new_node = CreateNodeFromId(new_node_id);
 
   // Initial node:
-  //   [ a, b, c]
-  //   /  |   |  \
-  // 0    1   2   3
+  //   [ 00, 01, 02]
+  //    /  |   |   \
+  //  0    1   2    3
   //
   // After removing entry b:
-  //   [ a, c]
-  //   /  |   \
-  // 0  child  3
+  //   [ 00, 02]
+  //    /  |   \
+  //  0  child  3
   EXPECT_EQ(size - 1, new_node->GetKeyCount());
 
   EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(new_node.get(), 0));
@@ -325,28 +280,28 @@ TEST_F(TreeNodeTest, MutationRemoveEntry) {
 TEST_F(TreeNodeTest, MutationUpdateChildId) {
   int size = 2;
   std::unique_ptr<const TreeNode> node =
-      FromEntries(GetEntries(size), CreateChildren(size + 1));
+      CreateNodeFromEntries(CreateEntries(size), CreateChildren(size + 1));
 
   ObjectId child = CreateEmptyNode()->GetId();
   Status status;
   ObjectId new_node_id;
   node->StartMutation()
-      .UpdateChildId("b", child)
+      .UpdateChildId("key01", child)
       .Finish(::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                               &new_node_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
+  std::unique_ptr<const TreeNode> new_node = CreateNodeFromId(new_node_id);
 
   // Initial node:
-  //   [ a, b]
-  //   /  |   \
-  // 0    1    2
+  //   [ 00, 01]
+  //    /  |   \
+  //  0    1    2
   //
   // After updating the child before b:
-  //   [ a, b]
-  //   /  |   \
-  // 0  child  2
+  //   [ 00, 01]
+  //    /  |   \
+  //  0  child  2
   EXPECT_EQ(size, new_node->GetKeyCount());
 
   EXPECT_EQ(GetEntry(node.get(), 0), GetEntry(new_node.get(), 0));
@@ -360,7 +315,7 @@ TEST_F(TreeNodeTest, MutationUpdateChildId) {
 TEST_F(TreeNodeTest, EmptyMutation) {
   int size = 3;
   std::unique_ptr<const TreeNode> node =
-      FromEntries(GetEntries(size), CreateChildren(size + 1));
+      CreateNodeFromEntries(CreateEntries(size), CreateChildren(size + 1));
 
   // Note that creating an empty mutation is inefficient and should be avoided
   // when possible.
@@ -370,7 +325,7 @@ TEST_F(TreeNodeTest, EmptyMutation) {
       [this] { message_loop_.PostQuitTask(); }, &status, &new_node_id));
   EXPECT_FALSE(RunLoopWithTimeout());
   ASSERT_EQ(Status::OK, status);
-  std::unique_ptr<const TreeNode> new_node = FromId(new_node_id);
+  std::unique_ptr<const TreeNode> new_node = CreateNodeFromId(new_node_id);
   ASSERT_EQ(size, new_node->GetKeyCount());
   for (int i = 0; i < size; ++i) {
     EXPECT_EQ(GetEntry(node.get(), i), GetEntry(new_node.get(), i));
@@ -382,18 +337,21 @@ TEST_F(TreeNodeTest, EmptyMutation) {
 
 TEST_F(TreeNodeTest, Serialization) {
   int size = 3;
-  std::vector<Entry> entries = GetEntries(size);
+  std::vector<Entry> entries = CreateEntries(size);
   std::vector<ObjectId> children = CreateChildren(size + 1);
-  std::unique_ptr<const TreeNode> node = FromEntries(entries, children);
+  std::unique_ptr<const TreeNode> node =
+      CreateNodeFromEntries(entries, children);
 
   Status status;
   std::unique_ptr<const Object> object;
   fake_storage_.GetObject(
-      node->GetId(), ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                     &status, &object));
+      node->GetId(),
+      ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
+                      &object));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(Status::OK, status);
-  std::unique_ptr<const TreeNode> retrieved_node = FromId(object->GetId());
+  std::unique_ptr<const TreeNode> retrieved_node =
+      CreateNodeFromId(object->GetId());
 
   ftl::StringView data;
   EXPECT_EQ(Status::OK, object->GetData(&data));

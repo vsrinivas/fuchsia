@@ -12,6 +12,8 @@ source_set("test") {
     "commit_random_impl.h",
     "page_storage_empty_impl.cc",
     "page_storage_empty_impl.h",
+    "storage_test_utils.cc",
+    "storage_test_utils.h",
   ]
 
   public_deps = [
@@ -20,6 +22,8 @@ source_set("test") {
 
   deps = [
     "//apps/ledger/src/glue/crypto",
+    "//apps/ledger/src/storage/impl/btree:lib",
+    "//apps/ledger/src/test:lib",
     "//lib/ftl",
   ]
 }

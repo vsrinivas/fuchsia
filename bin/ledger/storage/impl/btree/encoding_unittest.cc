@@ -6,16 +6,11 @@
 
 #include "apps/ledger/src/storage/impl/btree/tree_node_generated.h"
 #include "apps/ledger/src/storage/public/constants.h"
+#include "apps/ledger/src/storage/test/storage_test_utils.h"
 #include "gtest/gtest.h"
 
 namespace storage {
 namespace {
-// Creates the object id for testing from the given str.
-ObjectId MakeObjectId(std::string str) {
-  // Resize id to the required size, adding trailing underscores if needed.
-  str.resize(kObjectIdSize, '_');
-  return str;
-}
 
 // Allows to create correct std::strings with \0 bytes inside from C-style
 // string constants.
