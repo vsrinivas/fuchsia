@@ -26,11 +26,58 @@ MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id
         std::move(device), MsdConnectionUniquePtr(msd_connection), capabilities));
 }
 
+// Called by the driver thread
+std::shared_ptr<MagmaSystemBuffer>
+MagmaSystemDevice::PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
+                                     magma_system_image_descriptor* image_desc, bool enable)
+{
+    std::unique_lock<std::mutex> lock(page_flip_mutex_);
+
+    msd_device_page_flip(msd_dev(), buf->msd_buf(), image_desc, 0, 0, nullptr);
+
+    DLOG("PageFlipAndEnable enable %d", enable);
+    page_flip_enable_ = enable;
+
+    if (enable) {
+        DLOG("flip_deferred_wait_semaphores_ size %zu", flip_deferred_wait_semaphores_.size());
+        for (auto iter : flip_deferred_wait_semaphores_) {
+            iter.second->platform_semaphore()->Reset();
+        }
+        DLOG("flip_deferred_signal_semaphores_ size %zu", flip_deferred_signal_semaphores_.size());
+        for (auto iter : flip_deferred_signal_semaphores_) {
+            iter.second->platform_semaphore()->Signal();
+        }
+        flip_deferred_wait_semaphores_.clear();
+        flip_deferred_signal_semaphores_.clear();
+    }
+
+    return last_flipped_buffer_;
+}
+
+// Called by display connection threads
 void MagmaSystemDevice::PageFlip(std::shared_ptr<MagmaSystemBuffer> buf,
                                  magma_system_image_descriptor* image_desc,
                                  uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
                                  std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores)
 {
+    std::unique_lock<std::mutex> lock(page_flip_mutex_);
+
+    if (!page_flip_enable_) {
+        for (uint32_t i = 0; i < wait_semaphore_count; i++) {
+            DLOG("page flip disabled buffer 0x%" PRIx64 " wait semaphore 0x%" PRIx64,
+                 buf->platform_buffer()->id(), semaphores[i]->platform_semaphore()->id());
+            flip_deferred_wait_semaphores_[semaphores[i]->platform_semaphore()->id()] =
+                semaphores[i];
+        }
+        for (uint32_t i = wait_semaphore_count; i < semaphores.size(); i++) {
+            DLOG("page flip disabled buffer 0x%" PRIx64 " signal semaphore 0x%" PRIx64,
+                 buf->platform_buffer()->id(), semaphores[i]->platform_semaphore()->id());
+            flip_deferred_signal_semaphores_[semaphores[i]->platform_semaphore()->id()] =
+                semaphores[i];
+        }
+        return;
+    }
+
     DASSERT(wait_semaphore_count + signal_semaphore_count == semaphores.size());
 
     std::vector<msd_semaphore_t*> msd_semaphores(semaphores.size());
@@ -40,6 +87,8 @@ void MagmaSystemDevice::PageFlip(std::shared_ptr<MagmaSystemBuffer> buf,
 
     msd_device_page_flip(msd_dev(), buf->msd_buf(), image_desc, wait_semaphore_count,
                          signal_semaphore_count, msd_semaphores.data());
+
+    last_flipped_buffer_ = buf;
 }
 
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::GetBufferForHandle(uint32_t handle)

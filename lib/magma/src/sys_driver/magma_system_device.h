@@ -47,6 +47,13 @@ public:
                   uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
                   std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores);
 
+    // Returns the last flipped buffer.
+    std::shared_ptr<MagmaSystemBuffer> PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
+                                                         magma_system_image_descriptor* image_desc,
+                                                         bool enable);
+
+    bool page_flip_enabled() { return page_flip_enable_; }
+
     std::shared_ptr<MagmaSystemBuffer> GetBufferForHandle(uint32_t handle);
     void ReleaseBuffer(uint64_t id);
 
@@ -63,6 +70,14 @@ private:
     msd_device_unique_ptr_t msd_dev_;
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
     std::mutex buffer_map_mutex_;
+
+    bool page_flip_enable_ = true;
+    std::mutex page_flip_mutex_;
+    std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemSemaphore>>
+        flip_deferred_wait_semaphores_;
+    std::unordered_map<uint64_t, std::shared_ptr<MagmaSystemSemaphore>>
+        flip_deferred_signal_semaphores_;
+    std::shared_ptr<MagmaSystemBuffer> last_flipped_buffer_;
 
     struct Connection {
         std::thread thread;

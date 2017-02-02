@@ -22,6 +22,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/platform/magenta/magenta_platform_ioctl.h"
 #include "sys_driver/magma_driver.h"
+#include "sys_driver/magma_system_buffer.h"
 
 #define MAGMA_START 1
 
@@ -35,15 +36,19 @@ struct intel_i915_device_t {
     mx_device_t device;
     mx_device_t* parent_device;
 
-    void* framebuffer;
+    void* framebuffer_addr;
     uint64_t framebuffer_size;
-    mx_handle_t framebuffer_handle;
 
     mx_display_info_t info;
     uint32_t flags;
 
+    std::unique_ptr<magma::PlatformBuffer> console_buffer;
+    std::unique_ptr<magma::PlatformBuffer> placeholder_buffer;
     std::unique_ptr<MagmaDriver> magma_driver;
     std::shared_ptr<MagmaSystemDevice> magma_system_device;
+    std::shared_ptr<MagmaSystemBuffer> console_framebuffer;
+    std::shared_ptr<MagmaSystemBuffer> placeholder_framebuffer;
+    std::mutex magma_mutex;
 };
 
 static int magma_start(intel_i915_device_t* dev);
@@ -75,14 +80,64 @@ static mx_status_t intel_i915_get_framebuffer(mx_device_t* dev, void** framebuff
 {
     assert(framebuffer);
     intel_i915_device_t* device = get_i915_device(dev);
-    (*framebuffer) = device->framebuffer;
+    (*framebuffer) = device->framebuffer_addr;
     return NO_ERROR;
+}
+
+#define CACHELINE_SIZE 64
+#define CACHELINE_MASK 63
+
+static inline void clflush_range(void* start, size_t size)
+{
+    DLOG("clflush_range");
+
+    uint8_t* p = reinterpret_cast<uint8_t*>(reinterpret_cast<uintptr_t>(start) & ~CACHELINE_MASK);
+    uint8_t* end = reinterpret_cast<uint8_t*>(start) + size;
+
+    __builtin_ia32_mfence();
+    while (p < end) {
+        __builtin_ia32_clflush(p);
+        p += CACHELINE_SIZE;
+    }
+}
+
+static void intel_i915_flush(mx_device_t* dev)
+{
+    intel_i915_device_t* device = get_i915_device(dev);
+    // Don't incur overhead of flushing when console's not visible
+    if (!device->magma_system_device->page_flip_enabled())
+        clflush_range(device->framebuffer_addr, device->framebuffer_size);
+}
+
+static void intel_i915_acquire_or_release_display(mx_device_t* dev)
+{
+    intel_i915_device_t* device = get_i915_device(dev);
+    DLOG("intel_i915_acquire_or_release_display");
+
+    std::unique_lock<std::mutex> lock(device->magma_mutex);
+
+    if (device->magma_system_device->page_flip_enabled()) {
+        DLOG("flipping to console");
+        // Ensure any software writes to framebuffer are visible
+        clflush_range(device->framebuffer_addr, device->framebuffer_size);
+        magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
+        auto last_framebuffer = device->magma_system_device->PageFlipAndEnable(
+            device->console_framebuffer, &image_desc, false);
+        if (last_framebuffer)
+            device->placeholder_framebuffer = last_framebuffer;
+    } else {
+        magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
+        device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer, &image_desc,
+                                                       true);
+    }
 }
 
 static mx_display_protocol_t intel_i915_display_proto = {
     .set_mode = intel_i915_set_mode,
     .get_mode = intel_i915_get_mode,
     .get_framebuffer = intel_i915_get_framebuffer,
+    .acquire_or_release_display = intel_i915_acquire_or_release_display,
+    .flush = intel_i915_flush,
 };
 
 // implement device protocol
@@ -96,16 +151,39 @@ static mx_status_t intel_i915_open(mx_device_t* dev, mx_device_t** out, uint32_t
 
 static mx_status_t intel_i915_close(mx_device_t* mx_device, uint32_t flags) { return NO_ERROR; }
 
+static int reset_placeholder(intel_i915_device_t* device)
+{
+    void* addr;
+    if (device->placeholder_buffer->MapCpu(&addr)) {
+        memset(addr, 0, device->placeholder_buffer->size());
+        clflush_range(addr, device->placeholder_buffer->size());
+        device->placeholder_buffer->UnmapCpu();
+    }
+
+    uint32_t buffer_handle;
+    if (!device->placeholder_buffer->duplicate_handle(&buffer_handle))
+        return DRET_MSG(ERR_NO_RESOURCES, "duplicate_handle failed");
+
+    device->placeholder_framebuffer =
+        MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(buffer_handle));
+    if (!device->placeholder_framebuffer)
+        return DRET_MSG(ERR_NO_MEMORY, "failed to created magma system buffer");
+
+    return NO_ERROR;
+}
+
 static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void* in_buf,
                                 size_t in_len, void* out_buf, size_t out_len)
 {
     intel_i915_device_t* device = get_i915_device(mx_device);
+
     DASSERT(device->magma_system_device);
 
     ssize_t result = ERR_NOT_SUPPORTED;
 
     switch (op) {
         case IOCTL_MAGMA_GET_DEVICE_ID: {
+            DLOG("IOCTL_MAGMA_GET_DEVICE_ID");
             auto device_id_out = reinterpret_cast<uint32_t*>(out_buf);
             if (!out_buf || out_len < sizeof(*device_id_out))
                 return ERR_INVALID_ARGS;
@@ -114,6 +192,7 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
             break;
         }
         case IOCTL_MAGMA_CONNECT: {
+            DLOG("IOCTL_MAGMA_CONNECT");
             auto request = reinterpret_cast<const magma_system_connection_request*>(in_buf);
             if (!in_buf || in_len < sizeof(*request))
                 return DRET(ERR_INVALID_ARGS);
@@ -121,6 +200,14 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
             auto device_handle_out = reinterpret_cast<uint32_t*>(out_buf);
             if (!out_buf || out_len < sizeof(*device_handle_out))
                 return DRET(ERR_INVALID_ARGS);
+
+            // Override console for new display connections
+            if (request->capabilities & MAGMA_SYSTEM_CAPABILITY_DISPLAY) {
+                reset_placeholder(device);
+                magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
+                device->magma_system_device->PageFlipAndEnable(device->placeholder_framebuffer,
+                                                               &image_desc, true);
+            }
 
             auto connection = MagmaSystemDevice::Open(device->magma_system_device,
                                                       request->client_id, request->capabilities);
@@ -135,15 +222,19 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
             break;
         }
 #if MAGMA_INDRIVER_TEST
-        case IOCTL_MAGMA_TEST_RESTART:
+        case IOCTL_MAGMA_TEST_RESTART: {
+            DLOG("IOCTL_MAGMA_TEST_RESTART");
+            std::unique_lock<std::mutex> lock(device->magma_mutex);
             result = magma_stop(device);
             if (result != NO_ERROR)
                 return DRET_MSG(result, "magma_stop failed");
             result = magma_start(device);
             break;
+        }
+        default:
+            DLOG("intel_i915_ioctl unhandled op 0x%x", op);
 #endif
     }
-    DLOG("intel_i915_ioctl op 0x%x returning %zd\n", op, result);
 
     return result;
 }
@@ -151,17 +242,14 @@ static ssize_t intel_i915_ioctl(mx_device_t* mx_device, uint32_t op, const void*
 static mx_status_t intel_i915_release(mx_device_t* dev)
 {
     DLOG("intel_i915_release");
-
     intel_i915_device_t* device = get_i915_device(dev);
+
+    std::unique_lock<std::mutex> lock(device->magma_mutex);
+
     intel_i915_enable_backlight(device, false);
 
     if (MAGMA_START)
         magma_stop(device);
-
-    if (device->framebuffer) {
-        mx_handle_close(device->framebuffer_handle);
-        device->framebuffer_handle = -1;
-    }
 
     return NO_ERROR;
 }
@@ -189,30 +277,12 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
 
     // map resources and initialize the device
     auto device = new intel_i915_device_t();
-    if (!device)
-        return ERR_NO_MEMORY;
-
-    // map framebuffer window
-    // in vga mode we are scanning out from the same memory (pci bar 2) that's used by the gpu
-    // memory aperture (gtt).
-    // for now just redirect to offscreen the framebuffer used by the rest of the system.
-    device->framebuffer_handle = MX_HANDLE_INVALID;
-    if (!MAGMA_START) {
-        mx_handle_t handle;
-        status = pci->map_mmio(dev, 2, MX_CACHE_POLICY_WRITE_COMBINING, &device->framebuffer,
-                               &device->framebuffer_size, &handle);
-        if (status < 0) {
-            delete device;
-            return status;
-        }
-        device->framebuffer_handle = handle;
-    }
 
     // create and add the display (char) device
     device_init(&device->device, drv, "intel_i915_disp", &intel_i915_device_proto);
 
     mx_display_info_t* di = &device->info;
-    uint32_t format, width, height, stride;
+    uint32_t format, width, height, stride, pitch;
     status = mx_bootloader_fb_get_info(&format, &width, &height, &stride);
     if (status == NO_ERROR) {
         di->format = format;
@@ -226,22 +296,30 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
         di->stride = 2560 / 2;
     }
 
-    if (device->framebuffer_handle == MX_HANDLE_INVALID) {
-        switch (di->format) {
-            case MX_PIXEL_FORMAT_RGB_565:
-                device->framebuffer_size = di->stride * di->height * sizeof(uint16_t);
-                break;
-            default:
-                DLOG("unrecognized format 0x%x, defaulting to 32bpp", di->format);
-            case MX_PIXEL_FORMAT_ARGB_8888:
-            case MX_PIXEL_FORMAT_RGB_x888:
-                device->framebuffer_size = di->stride * di->height * sizeof(uint32_t);
-                break;
-        }
-        device->framebuffer = malloc(device->framebuffer_size);
-    } else {
-        di->flags = MX_DISPLAY_FLAG_HW_FRAMEBUFFER;
+    switch (di->format) {
+        case MX_PIXEL_FORMAT_RGB_565:
+            pitch = di->stride * sizeof(uint16_t);
+            break;
+        default:
+            DLOG("unrecognized format 0x%x, defaulting to 32bpp", di->format);
+        case MX_PIXEL_FORMAT_ARGB_8888:
+        case MX_PIXEL_FORMAT_RGB_x888:
+            pitch = di->stride * sizeof(uint32_t);
+            break;
     }
+
+    device->framebuffer_size = pitch * di->height;
+
+    device->console_buffer = magma::PlatformBuffer::Create(device->framebuffer_size);
+
+    if (!device->console_buffer->MapCpu(&device->framebuffer_addr))
+        return DRET_MSG(ERR_NO_MEMORY, "Failed to map framebuffer");
+
+    // Placeholder is in tiled format
+    device->placeholder_buffer =
+        magma::PlatformBuffer::Create(magma::round_up(pitch, 512) * di->height);
+
+    di->flags = MX_DISPLAY_FLAG_HW_FRAMEBUFFER;
 
     // TODO remove when the gfxconsole moves to user space
     intel_i915_enable_backlight(device, true);
@@ -251,7 +329,7 @@ static mx_status_t intel_i915_bind(mx_driver_t* drv, mx_device_t* dev, void** co
     device->parent_device = dev;
     device_add(&device->device, dev);
 
-    DLOG("initialized magma intel display driver, fb=0x%p fbsize=0x%lx", device->framebuffer,
+    DLOG("initialized magma intel display driver, fb=0x%p fbsize=0x%lx", device->framebuffer_addr,
          device->framebuffer_size);
 
     if (MAGMA_START) {
@@ -293,12 +371,30 @@ MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
     DLOG("magma_start");
 
     device->magma_system_device = device->magma_driver->CreateDevice(device->parent_device);
-    if (!device->magma_system_device) {
-        DLOG("Failed to create device");
-        return ERR_INTERNAL;
-    }
+    if (!device->magma_system_device)
+        return DRET_MSG(ERR_NO_RESOURCES, "Failed to create device");
 
     DLOG("Created device %p", device->magma_system_device.get());
+
+    DASSERT(device->console_buffer);
+    DASSERT(device->placeholder_buffer);
+
+    uint32_t buffer_handle;
+
+    if (!device->console_buffer->duplicate_handle(&buffer_handle))
+        return DRET_MSG(ERR_NO_RESOURCES, "duplicate_handle failed");
+
+    device->console_framebuffer =
+        MagmaSystemBuffer::Create(magma::PlatformBuffer::Import(buffer_handle));
+    if (!device->console_framebuffer)
+        return DRET_MSG(ERR_NO_MEMORY, "failed to created magma system buffer");
+
+    int result = reset_placeholder(device);
+    if (result != 0)
+        return result;
+
+    magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
+    device->magma_system_device->PageFlipAndEnable(device->console_framebuffer, &image_desc, false);
 
     return NO_ERROR;
 }
@@ -306,7 +402,12 @@ MAGENTA_DRIVER_END(_driver_intel_gen_gpu)
 static int magma_stop(intel_i915_device_t* device)
 {
     DLOG("magma_stop");
+
+    device->console_framebuffer.reset();
+    device->placeholder_framebuffer.reset();
+
     device->magma_system_device->Shutdown();
     device->magma_system_device.reset();
+
     return NO_ERROR;
 }
