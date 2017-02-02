@@ -15,8 +15,9 @@ Prerequisite:
   [networking configuration doc](https://fuchsia.googlesource.com/magenta/+/HEAD/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only).
 
 Run a test using `//apps/modular/src/test_runner/run_test`. E.g:
+
 ```sh
-$ $FUCHSIA_DIR/apps/modular/src/test_runner/run_test "/system/apps/bootstrap /system/apps/device_runner --user_shell=/system/apps/dummy_user_shell"
+$ $FUCHSIA_DIR/apps/modular/src/test_runner/run_test "bootstrap device_runner --user_shell=dummy_user_shell"
 ```
 
 This will return when it has completed (either by succeeding or crashing). You
@@ -51,7 +52,7 @@ By example:
     "tests": [
         {
           "name": "dummy_user_shell",
-          "exec": "/system/apps/bootstrap /system/apps/device_runner --user_shell=/system/apps/dummy_user_shell"
+          "exec": "bootstrap device_runner --user_shell=dummy_user_shell"
         },
 }
 ```

@@ -39,6 +39,24 @@ The dummy user name used by the dummy user shell can be set with `--user`:
 @ bootstrap device_runner --user_shell=dummy_user_shell --user_shell_args=--user=dummy_user
 ```
 
+Applications are generally referenced by URLs. If the application binary is in a
+location where application manager expects it (specifically `/system/apps`)
+the URL can be relative. Otherwise, the URL should be relative with an absolute
+path, or absolute altogether. For example
+(from [test runner invocation](tests/parent_child/test.sh)):
+
+```
+bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/tmp/tests/parent_child/parent_module
+```
+
+or even more generally:
+
+```
+bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=file:///tmp/tests/parent_child/parent_module
+```
+
+See also the [bootstrap](src/bootstrap/README.md) documentation.
+
 ## Testing
 
 Testing support is currently under development.
