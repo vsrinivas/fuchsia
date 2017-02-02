@@ -338,7 +338,7 @@ std::function<void(Status)> PageDelegate::TrackCallback(
 
 void PageDelegate::CheckEmpty() {
   if (on_empty_callback_ && !interface_.is_bound() &&
-      branch_tracker_.IsEmpty() && &queued_operations_.empty() &&
+      branch_tracker_.IsEmpty() && queued_operations_.empty() &&
       !in_progress_storage_operations_) {
     on_empty_callback_();
   }
