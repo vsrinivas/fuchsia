@@ -10,6 +10,8 @@ static_library("hci") {
     "command_packet.h",
     "event_packet.cc",
     "event_packet.h",
+    "transport.cc",
+    "transport.h",
   ]
 
   public_deps = [
