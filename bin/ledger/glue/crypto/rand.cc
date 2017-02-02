@@ -18,13 +18,8 @@ namespace glue {
 namespace {
 
 void InitEntropy() {
-  struct timeval tv;
-
-  if (gettimeofday(&tv, nullptr) != 0) {
-    FTL_LOG(WARNING)
-        << "Unable to call gettimeofday. No additional entropy added.";
-  }
-  if (mx_cprng_add_entropy(&tv, sizeof(tv)) != NO_ERROR) {
+  auto current_time = mx_time_get(MX_CLOCK_UTC);
+  if (mx_cprng_add_entropy(&current_time, sizeof(current_time)) != NO_ERROR) {
     FTL_LOG(WARNING)
         << "Unable to add entropy to the kernel. No additional entropy added.";
     return;
@@ -38,7 +33,6 @@ void EnsureInitEntropy() {
   InitEntropy();
   initialized = true;
 }
-
 }
 
 void RandBytes(void* buffer, size_t size) {
