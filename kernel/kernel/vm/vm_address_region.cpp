@@ -618,12 +618,7 @@ status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mmu_f
 
     size = ROUNDUP(size, PAGE_SIZE);
 
-    mxtl::RefPtr<VmAspace> aspace(aspace_);
-    if (!aspace) {
-        return ERR_BAD_STATE;
-    }
-
-    AutoLock guard(aspace->lock());
+    AutoLock guard(aspace_->lock());
     if (state_ != LifeCycleState::ALIVE) {
         return ERR_BAD_STATE;
     }
