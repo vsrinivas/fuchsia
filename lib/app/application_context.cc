@@ -30,6 +30,9 @@ ApplicationContext::CreateFromStartupInfo() {
   mx_handle_t services =
       mxio_get_startup_handle(MX_HND_TYPE_APPLICATION_SERVICES);
 
+  FTL_CHECK(environment != MX_HANDLE_INVALID && services != MX_HANDLE_INVALID)
+      << "Maybe you meant to run with bootstrap (@) ?";
+
   return std::make_unique<ApplicationContext>(
       fidl::InterfaceHandle<ApplicationEnvironment>(mx::channel(environment),
                                                     0u),
