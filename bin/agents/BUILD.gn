@@ -16,10 +16,11 @@ group("agents") {
 dart_app("bandsintown") {
   output_name = "agents/bandsintown.dartx"
 
-  main_dart = "bandsintown.dart"
+  main_dart = "bandsintown/main.dart"
 
   deps = [
     "//application/lib/app/dart",
+    "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",
   ]
 }
