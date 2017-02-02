@@ -167,9 +167,7 @@ mx_status_t process_subshell(union node* n, const char* const* envp, mx_handle_t
     if (status != NO_ERROR)
         return status;
 
-    int argc;
-    for (argc = 0; argv[argc]; argc++)
-        ;
+    int argc = 1;
 
     status = prepare_launch(lp, argv[0], argc, (const char* const*)argv, envp, fds);
     if (status == NO_ERROR) {
