@@ -241,9 +241,13 @@ void UserThread::Exiting() {
     state_tracker_.UpdateState(0u, MX_TASK_TERMINATED);
 
     {
-        AutoLock lock(&exception_lock_);
+        AutoLock lock(exception_lock_);
         if (exception_port_)
             exception_port_->OnThreadExit(this);
+        // Note: If an eport is bound, it will have a reference to the
+        // ThreadDispatcher and thus keep the object, and the underlying
+        // UserThread object, around until someone unbinds the port or closes
+        // all handles to its underling PortDispatcher.
     }
 
     // remove ourselves from our parent process's view
@@ -351,11 +355,31 @@ bool UserThread::ResetExceptionPort(bool quietly) {
     {
         AutoLock lock(exception_lock_);
         exception_port_.swap(eport);
+        if (eport == nullptr) {
+            // Attempted to unbind when no exception port is bound.
+            return false;
+        }
+        // This method must guarantee that no caller will return until
+        // OnTargetUnbind has been called on the port-to-unbind.
+        // This becomes important when a manual unbind races with a
+        // PortDispatcher::on_zero_handles auto-unbind.
+        //
+        // If OnTargetUnbind were called outside of the lock, it would lead to
+        // a race (for threads A and B):
+        //
+        //   A: Calls ResetExceptionPort; acquires the lock
+        //   A: Sees a non-null exception_port_, swaps it into the eport local.
+        //      exception_port_ is now null.
+        //   A: Releases the lock
+        //
+        //   B: Calls ResetExceptionPort; acquires the lock
+        //   B: Sees a null exception_port_ and returns. But OnTargetUnbind()
+        //      hasn't yet been called for the port.
+        //
+        // So, call it before releasing the lock
+        eport->OnTargetUnbind();
     }
 
-    if (eport == nullptr) {
-        return false;
-    }
     if (!quietly)
         OnExceptionPortRemoval(eport);
     return true;

@@ -86,7 +86,12 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
                                        mxtl::move(ioport), key, &eport);
         if (status != NO_ERROR)
             return status;
-        return SetSystemExceptionPort(mxtl::move(eport));
+        status = SetSystemExceptionPort(eport);
+        if (status != NO_ERROR)
+            return status;
+
+        eport->SetSystemTarget();
+        return NO_ERROR;
     }
 
     mxtl::RefPtr<Dispatcher> dispatcher;
@@ -104,7 +109,12 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
         status = ExceptionPort::Create(type, mxtl::move(ioport), key, &eport);
         if (status != NO_ERROR)
             return status;
-        return process->SetExceptionPort(mxtl::move(eport));
+        status = process->SetExceptionPort(eport);
+        if (status != NO_ERROR)
+            return status;
+
+        eport->SetTarget(process);
+        return NO_ERROR;
     }
 
     auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
@@ -115,7 +125,12 @@ static mx_status_t task_bind_exception_port(mx_handle_t obj_handle, mx_handle_t 
                                        mxtl::move(ioport), key, &eport);
         if (status != NO_ERROR)
             return status;
-        return thread->SetExceptionPort(mxtl::move(eport));
+        status = thread->SetExceptionPort(eport);
+        if (status != NO_ERROR)
+            return status;
+
+        eport->SetTarget(thread);
+        return NO_ERROR;
     }
 
     return ERR_WRONG_TYPE;

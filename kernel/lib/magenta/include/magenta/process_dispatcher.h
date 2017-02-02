@@ -269,6 +269,7 @@ private:
     // process return code
     int retcode_ = 0;
 
+    // Exception ports bound to the process.
     mxtl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(exception_lock_);
     mxtl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(exception_lock_);
     Mutex exception_lock_;

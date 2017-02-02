@@ -125,8 +125,10 @@ ProcessDispatcher::~ProcessDispatcher() {
 
     DEBUG_ASSERT(state_ == State::INITIAL || state_ == State::DEAD);
 
-    // assert that we have no handles, should have been cleaned up in the -> DEAD transition
+    // Assert that the -> DEAD transition cleaned up what it should have.
     DEBUG_ASSERT(handles_.is_empty());
+    DEBUG_ASSERT(exception_port_ == nullptr);
+    DEBUG_ASSERT(debugger_exception_port_ == nullptr);
 
     // Remove ourselves from the parent job's weak ref to us. Note that this might
     // have beeen called when transitioning State::DEAD. The Job can handle double calls.
@@ -350,10 +352,16 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // For now it is left here, following aspace destruction.
         {
             AutoLock lock(&exception_lock_);
-            if (exception_port_)
+            if (exception_port_) {
                 exception_port_->OnProcessExit(this);
-            if (debugger_exception_port_)
+            }
+            if (debugger_exception_port_) {
                 debugger_exception_port_->OnProcessExit(this);
+            }
+            // Note: If an eport is bound, it will have a reference to the
+            // ProcessDispatcher and thus keep the object around until someone
+            // unbinds the port or closes all handles to its underling
+            // PortDispatcher.
         }
 
         // signal waiter
@@ -556,11 +564,31 @@ bool ProcessDispatcher::ResetExceptionPort(bool debugger, bool quietly) {
         } else {
             exception_port_.swap(eport);
         }
+        if (eport == nullptr) {
+            // Attempted to unbind when no exception port is bound.
+            return false;
+        }
+        // This method must guarantee that no caller will return until
+        // OnTargetUnbind has been called on the port-to-unbind.
+        // This becomes important when a manual unbind races with a
+        // PortDispatcher::on_zero_handles auto-unbind.
+        //
+        // If OnTargetUnbind were called outside of the lock, it would lead to
+        // a race (for threads A and B):
+        //
+        //   A: Calls ResetExceptionPort; acquires the lock
+        //   A: Sees a non-null exception_port_, swaps it into the eport local.
+        //      exception_port_ is now null.
+        //   A: Releases the lock
+        //
+        //   B: Calls ResetExceptionPort; acquires the lock
+        //   B: Sees a null exception_port_ and returns. But OnTargetUnbind()
+        //      hasn't yet been called for the port.
+        //
+        // So, call it before releasing the lock.
+        eport->OnTargetUnbind();
     }
 
-    if (eport == nullptr) {
-        return false;
-    }
     if (!quietly) {
         AutoLock lock(&state_lock_);
         for (auto& thread : thread_list_) {

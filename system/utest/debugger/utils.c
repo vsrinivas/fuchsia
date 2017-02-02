@@ -417,12 +417,6 @@ bool shutdown_inferior(mx_handle_t channel, mx_handle_t inferior)
     EXPECT_EQ(tu_process_get_return_code(inferior), 1234,
               "unexpected inferior return code");
 
-    // TODO(dje): detach-on-close
-    mx_status_t status =
-        mx_task_bind_exception_port(inferior, MX_HANDLE_INVALID, 0,
-                                      MX_EXCEPTION_PORT_DEBUGGER);
-    EXPECT_EQ(status, NO_ERROR, "error resetting exception port");
-
     END_HELPER;
 }
 

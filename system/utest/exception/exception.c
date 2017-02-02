@@ -439,13 +439,6 @@ static bool test_set_close_set(const char* kind, mx_handle_t object,
     // Close the ports.
     tu_handle_close(eport2);
     tu_handle_close(eport);
-#if 1
-    // TODO(MG-307): Dropping all handles to a port should unbind it.
-    // Until that works, unbind manually.
-    status =
-        mx_task_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
-    ASSERT_EQ(status, NO_ERROR, "error resetting exception port");
-#endif
 
     // Verify the close removed the previous handler by successfully
     // adding a new one.
@@ -453,13 +446,6 @@ static bool test_set_close_set(const char* kind, mx_handle_t object,
     status = mx_task_bind_exception_port(object, eport, 0, options);
     ASSERT_EQ(status, NO_ERROR, "error setting exception port (#2)");
     tu_handle_close(eport);
-#if 1
-    // TODO(MG-307): Dropping all handles to a port should unbind it.
-    // Until that works, unbind manually.
-    status =
-        mx_task_bind_exception_port(object, MX_HANDLE_INVALID, 0, options);
-    ASSERT_EQ(status, NO_ERROR, "error resetting exception port (#2)");
-#endif
 
     // Try unbinding from an object without a bound port, which should fail.
     status =
@@ -498,6 +484,229 @@ static bool thread_set_close_set_test(void)
     send_msg(our_channel, MSG_DONE);
     // thrd_join doesn't provide a timeout, but we have the watchdog for that.
     thrd_join(thread, NULL);
+    END_TEST;
+}
+
+typedef struct {
+    mx_handle_t proc;
+    mx_handle_t vmar;
+} proc_handles;
+
+// Creates but does not start a process, returning its handles in |*ph|.
+// Returns false if an assertion fails.
+static bool create_non_running_process(const char* name, proc_handles* ph) {
+    memset(ph, 0, sizeof(*ph));
+    mx_status_t status = mx_process_create(
+        mx_job_default(), name, strlen(name), 0, &ph->proc, &ph->vmar);
+    ASSERT_EQ(status, NO_ERROR, "mx_process_create");
+    ASSERT_GT(ph->proc, 0, "proc handle");
+    return true;
+}
+
+// Closes any valid handles in |ph|.
+static void close_proc_handles(proc_handles *ph) {
+    if (ph->proc > 0) {
+        tu_handle_close(ph->proc);
+        ph->proc = MX_HANDLE_INVALID;
+    }
+    if (ph->vmar > 0) {
+        tu_handle_close(ph->vmar);
+        ph->vmar = MX_HANDLE_INVALID;
+    }
+}
+
+static bool non_running_process_set_close_set_test(void) {
+    BEGIN_TEST;
+
+    // Create but do not start a process.
+    proc_handles ph;
+    ASSERT_TRUE(create_non_running_process(__func__, &ph), "");
+
+    // Make sure binding and unbinding behaves.
+    test_set_close_set(__func__, ph.proc, /* debugger */ false);
+
+    close_proc_handles(&ph);
+    END_TEST;
+}
+
+static bool non_running_process_debugger_set_close_set_test(void) {
+    BEGIN_TEST;
+
+    // Create but do not start a process.
+    proc_handles ph;
+    ASSERT_TRUE(create_non_running_process(__func__, &ph), "");
+
+    // Make sure binding and unbinding behaves.
+    test_set_close_set(__func__, ph.proc, /* debugger */ true);
+
+    close_proc_handles(&ph);
+    END_TEST;
+}
+
+static bool non_running_thread_set_close_set_test(void) {
+    BEGIN_TEST;
+
+    // Create but do not start a process.
+    proc_handles ph;
+    ASSERT_TRUE(create_non_running_process(__func__, &ph), "");
+
+    // Create but do not start a thread in that process.
+    mx_handle_t thread;
+    mx_status_t status =
+        mx_thread_create(ph.proc, __func__, sizeof(__func__)-1, 0, &thread);
+    ASSERT_EQ(status, NO_ERROR, "mx_thread_create");
+    ASSERT_GT(thread, 0, "thread handle");
+
+    // Make sure binding and unbinding behaves.
+    test_set_close_set(__func__, thread, /* debugger */ false);
+
+    tu_handle_close(thread);
+    close_proc_handles(&ph);
+    END_TEST;
+}
+
+// Creates a process, possibly binds an eport to it (if |bind_while_alive| is set),
+// then tries to unbind the eport, checking for the expected status.
+static bool dead_process_unbind_helper(bool debugger, bool bind_while_alive) {
+    const uint32_t options = debugger ? MX_EXCEPTION_PORT_DEBUGGER : 0;
+
+    // Start a new process.
+    mx_handle_t child, our_channel;
+    start_test_child(NULL, &child, &our_channel);
+
+    // Possibly bind an eport to it.
+    mx_handle_t eport = MX_HANDLE_INVALID;
+    if (bind_while_alive) {
+        eport = tu_io_port_create(0);
+        tu_set_exception_port(child, eport, 0, options);
+    }
+
+    // Tell the process to exit and wait for it.
+    send_msg(our_channel, MSG_DONE);
+    if (debugger && bind_while_alive) {
+        // If we bound a debugger port, the process won't die until we
+        // consume the exception reports.
+        ASSERT_TRUE(wait_process_exit(eport, child), "");
+    } else {
+        ASSERT_EQ(tu_process_wait_exit(child), 0, "non-zero exit code");
+    }
+
+    // Try unbinding.
+    mx_status_t status =
+        mx_task_bind_exception_port(child, MX_HANDLE_INVALID, 0, options);
+    if (bind_while_alive) {
+        EXPECT_EQ(status, NO_ERROR, "matched unbind should have succeeded");
+    } else {
+        EXPECT_NEQ(status, NO_ERROR, "unmatched unbind should have failed");
+    }
+
+    // Clean up.
+    tu_handle_close(child);
+    if (eport != MX_HANDLE_INVALID) {
+        tu_handle_close(eport);
+    }
+    tu_handle_close(our_channel);
+    return true;
+}
+
+static bool dead_process_matched_unbind_succeeds_test(void) {
+    BEGIN_TEST;
+    // If an eport is bound while a process is alive, it should be
+    // valid to unbind it after the process is dead.
+    ASSERT_TRUE(dead_process_unbind_helper(
+        /* debugger */ false, /* bind_while_alive */ true), "");
+    END_TEST;
+}
+
+static bool dead_process_mismatched_unbind_fails_test(void) {
+    BEGIN_TEST;
+    // If an eport was not bound while a process was alive, it should be
+    // invalid to unbind it after the process is dead.
+    ASSERT_TRUE(dead_process_unbind_helper(
+        /* debugger */ false, /* bind_while_alive */ false), "");
+    END_TEST;
+}
+
+static bool dead_process_debugger_matched_unbind_succeeds_test(void) {
+    BEGIN_TEST;
+    // If a debugger port is bound while a process is alive, it should be
+    // valid to unbind it after the process is dead.
+    ASSERT_TRUE(dead_process_unbind_helper(
+        /* debugger */ true, /* bind_while_alive */ true), "");
+    END_TEST;
+}
+
+static bool dead_process_debugger_mismatched_unbind_fails_test(void) {
+    BEGIN_TEST;
+    // If an eport was not bound while a process was alive, it should be
+    // invalid to unbind it after the process is dead.
+    ASSERT_TRUE(dead_process_unbind_helper(
+        /* debugger */ true, /* bind_while_alive */ false), "");
+    END_TEST;
+}
+
+// Creates a thread, possibly binds an eport to it (if |bind_while_alive| is set),
+// then tries to unbind the eport, checking for the expected status.
+static bool dead_thread_unbind_helper(bool bind_while_alive) {
+    // Start a new thread.
+    mx_handle_t our_channel, their_channel;
+    tu_channel_create(&our_channel, &their_channel);
+    thrd_t cthread;
+    tu_thread_create_c11(&cthread, thread_func, (void*)(uintptr_t)their_channel,
+                         "thread-set-close-set");
+    mx_handle_t thread = thrd_get_mx_handle(cthread);
+    ASSERT_GT(thread, 0, "failed to get thread handle");
+
+    // Duplicate the thread's handle. thrd_join() will close the |thread|
+    // handle, but we need to be able to refer to the thread after that.
+    mx_handle_t thread_copy = MX_HANDLE_INVALID;
+    mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS, &thread_copy);
+    ASSERT_GT(thread_copy, 0, "failed to copy thread handle");
+
+    // Possibly bind an eport to it.
+    mx_handle_t eport = MX_HANDLE_INVALID;
+    if (bind_while_alive) {
+        eport = tu_io_port_create(0);
+        tu_set_exception_port(thread, eport, 0, 0);
+    }
+
+    // Tell the thread to exit and wait for it.
+    send_msg(our_channel, MSG_DONE);
+    // thrd_join doesn't provide a timeout, but we have the watchdog for that.
+    thrd_join(cthread, NULL);
+
+    // Try unbinding.
+    mx_status_t status =
+        mx_task_bind_exception_port(thread_copy, MX_HANDLE_INVALID, 0, 0);
+    if (bind_while_alive) {
+        EXPECT_EQ(status, NO_ERROR, "matched unbind should have succeeded");
+    } else {
+        EXPECT_NEQ(status, NO_ERROR, "unmatched unbind should have failed");
+    }
+
+    // Clean up. The |thread| and |their_channel| handles died
+    // along with the thread.
+    tu_handle_close(thread_copy);
+    if (eport != MX_HANDLE_INVALID) {
+        tu_handle_close(eport);
+    }
+    tu_handle_close(our_channel);
+    return true;
+}
+
+static bool dead_thread_matched_unbind_succeeds_test(void) {
+    BEGIN_TEST;
+    // If an eport is bound while a thread is alive, it should be
+    // valid to unbind it after the thread is dead.
+    ASSERT_TRUE(dead_thread_unbind_helper(/* bind_while_alive */ true), "");
+    END_TEST;
+}
+
+static bool dead_thread_mismatched_unbind_fails_test(void) {
+    BEGIN_TEST;
+    // If an eport was not bound while a thread was alive, it should be
+    // invalid to unbind it after the thread is dead.
+    ASSERT_TRUE(dead_thread_unbind_helper(/* bind_while_alive */ false), "");
     END_TEST;
 }
 
@@ -894,6 +1103,15 @@ BEGIN_TEST_CASE(exceptions_tests)
 RUN_TEST(process_set_close_set_test);
 RUN_TEST(process_debugger_set_close_set_test);
 RUN_TEST(thread_set_close_set_test);
+RUN_TEST(non_running_process_set_close_set_test);
+RUN_TEST(non_running_process_debugger_set_close_set_test);
+RUN_TEST(non_running_thread_set_close_set_test);
+RUN_TEST(dead_process_matched_unbind_succeeds_test);
+RUN_TEST(dead_process_mismatched_unbind_fails_test);
+RUN_TEST(dead_process_debugger_matched_unbind_succeeds_test);
+RUN_TEST(dead_process_debugger_mismatched_unbind_fails_test);
+RUN_TEST(dead_thread_matched_unbind_succeeds_test);
+RUN_TEST(dead_thread_mismatched_unbind_fails_test);
 RUN_TEST(process_handler_test);
 RUN_TEST(thread_handler_test);
 RUN_TEST(process_start_test);

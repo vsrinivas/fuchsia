@@ -16,6 +16,7 @@
 #include <kernel/auto_lock.h>
 #include <lib/user_copy.h>
 
+#include <magenta/excp_port.h>
 #include <magenta/state_tracker.h>
 #include <magenta/user_copy.h>
 
@@ -94,6 +95,7 @@ PortDispatcher::PortDispatcher(uint32_t /*options*/)
 PortDispatcher::~PortDispatcher() {
     FreePacketsLocked();
     DEBUG_ASSERT(packets_.is_empty());
+    DEBUG_ASSERT(eports_.is_empty());
     event_destroy(&event_);
 }
 
@@ -112,6 +114,16 @@ void PortDispatcher::on_zero_handles() {
     AutoLock al(&lock_);
     no_clients_ = true;
     FreePacketsLocked();
+
+    // Unlink and unbind exception ports.
+    while (!eports_.is_empty()) {
+        auto eport = eports_.pop_back();
+
+        // Tell the eport to unbind itself, then drop our ref to it.
+        lock_.Release();  // The eport may call our ::UnlinkExceptionPort
+        eport->OnPortZeroHandles();
+        lock_.Acquire();
+    }
 }
 
 mx_status_t PortDispatcher::Queue(IOP_Packet* packet) {
@@ -218,5 +230,20 @@ mx_status_t PortDispatcher::Wait(mx_time_t timeout, IOP_Packet** packet) {
         status_t st = event_wait_timeout(&event_, (t == 0u) ? 1u : t, true);
         if (st != NO_ERROR)
             return st;
+    }
+}
+
+void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
+    AutoLock al(&lock_);
+    DEBUG_ASSERT(eport->PortMatches(this, /* allow_null */ false));
+    DEBUG_ASSERT(!eport->InContainer());
+    eports_.push_back(mxtl::move(AdoptRef(eport)));
+}
+
+void PortDispatcher::UnlinkExceptionPort(ExceptionPort* eport) {
+    AutoLock al(&lock_);
+    DEBUG_ASSERT(eport->PortMatches(this, /* allow_null */ true));
+    if (eport->InContainer()) {
+        eports_.erase(*eport);
     }
 }

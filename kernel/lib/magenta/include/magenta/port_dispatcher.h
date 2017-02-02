@@ -18,6 +18,7 @@
 
 #include <sys/types.h>
 
+class ExceptionPort;
 
 struct IOP_Packet : public mxtl::DoublyLinkedListable<IOP_Packet*> {
     friend struct IOP_PacketListTraits;
@@ -85,12 +86,24 @@ public:
     mx_status_t Wait(mx_time_t timeout, IOP_Packet** packet);
 
 private:
+    friend class ExceptionPort;
+
     PortDispatcher(uint32_t options);
     void FreePacketsLocked() TA_REQ(lock_);
+
+    // Adopts a RefPtr to |eport|, and adds it to |eports_|.
+    // Called by ExceptionPort.
+    void LinkExceptionPort(ExceptionPort* eport);
+
+    // Removes |eport| from |eports_|, dropping its RefPtr.
+    // Does nothing if |eport| is not on the list.
+    // Called by ExceptionPort.
+    void UnlinkExceptionPort(ExceptionPort* eport);
 
     Mutex lock_;
     bool no_clients_ TA_GUARDED(lock_);
     mxtl::DoublyLinkedList<IOP_Packet*> packets_ TA_GUARDED(lock_);
     mxtl::DoublyLinkedList<IOP_Packet*> at_zero_ TA_GUARDED(lock_);
+    mxtl::DoublyLinkedList<mxtl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(lock_);
     event_t event_ TA_GUARDED(lock_);
 };

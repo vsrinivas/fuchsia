@@ -21,6 +21,9 @@ the exception port of a process or thread, or the system exception port.
 
 To bind to the system exception port pass **MX_HANDLE_INVALID** for *object*.
 
+*eport* is an IO port created by [mx_port_create](port_create.md). The same
+IO port can be bound to multiple objects.
+
 *key* is passed back in exception reports, and is part of the port
 message protocol.
 
@@ -35,6 +38,9 @@ longer participate in exception processing for *object*.
 
 To unbind from the system exception port pass **MX_HANDLE_INVALID** for
 *object*.
+
+The exception port will unbind automatically if all handles to *eport*
+are closed while it is still bound.
 
 A thread may be currently waiting for a response from the program that
 bound *eport* when it is unbound. There are two choices for what happens

@@ -37,37 +37,162 @@ mx_status_t ExceptionPort::Create(Type type, mxtl::RefPtr<PortDispatcher> port, 
     auto eport = new (&ac) ExceptionPort(type, mxtl::move(port), port_key);
     if (!ac.check())
         return ERR_NO_MEMORY;
-    *out_eport = mxtl::AdoptRef<ExceptionPort>(eport);
+
+    // ExceptionPort's ctor causes the first ref to be adopted,
+    // so we should only wrap.
+    *out_eport = mxtl::WrapRefPtr<ExceptionPort>(eport);
     return NO_ERROR;
 }
 
 ExceptionPort::ExceptionPort(Type type, mxtl::RefPtr<PortDispatcher> port, uint64_t port_key)
-    : type_(type), port_(port), port_key_(port_key) {
+    : type_(type), port_key_(port_key), port_(port) {
     LTRACE_ENTRY_OBJ;
+    DEBUG_ASSERT(port_ != nullptr);
+    port_->LinkExceptionPort(this);
 }
 
 ExceptionPort::~ExceptionPort() {
     LTRACE_ENTRY_OBJ;
+    DEBUG_ASSERT(port_ == nullptr);
+    DEBUG_ASSERT(!InContainer());
+    DEBUG_ASSERT(!IsBoundLocked());
 }
 
-// This is called when the exception handler goes away.
-// Its job is to uninstall the exception port and mark any threads waiting on the handler with
-// MX_EXCEPTION_STATUS_HANDLER_GONE. One could use MX_EXCEPTION_STATUS_NOT_HANDLED, however it's not
-// in order to add some clarity to the reason for the exception not being handled.
-// TODO(dje): This isn't wired up yet.
-
-void ExceptionPort::OnDestruction() {
+void ExceptionPort::SetSystemTarget() {
     LTRACE_ENTRY_OBJ;
-    // Note: "Gone" notifications aren't replied to. If there are any that
-    // haven't been read yet then just discard them.
-    // TODO(dje): Find threads blocked on the handler and unblock them.
-    // TODO(dje): Remember this isn't wired up yet.
+    AutoLock lock(&lock_);
+    DEBUG_ASSERT_MSG(type_ == Type::SYSTEM,
+                     "unexpected type %d", static_cast<int>(type_));
+    DEBUG_ASSERT(!IsBoundLocked());
+    DEBUG_ASSERT(port_ != nullptr);
+    bound_to_system_ = true;
+}
+
+void ExceptionPort::SetTarget(const mxtl::RefPtr<ProcessDispatcher>& target) {
+    LTRACE_ENTRY_OBJ;
+    AutoLock lock(&lock_);
+    DEBUG_ASSERT_MSG(type_ == Type::DEBUGGER || type_ == Type::PROCESS,
+                     "unexpected type %d", static_cast<int>(type_));
+    DEBUG_ASSERT(!IsBoundLocked());
+    DEBUG_ASSERT(target != nullptr);
+    DEBUG_ASSERT(port_ != nullptr);
+    target_ = target;
+}
+
+void ExceptionPort::SetTarget(const mxtl::RefPtr<ThreadDispatcher>& target) {
+    LTRACE_ENTRY_OBJ;
+    AutoLock lock(&lock_);
+    DEBUG_ASSERT_MSG(type_ == Type::THREAD,
+                     "unexpected type %d", static_cast<int>(type_));
+    DEBUG_ASSERT(!IsBoundLocked());
+    DEBUG_ASSERT(target != nullptr);
+    DEBUG_ASSERT(port_ != nullptr);
+    target_ = target;
+}
+
+// Called by PortDispatcher after unlinking us from its eport list.
+void ExceptionPort::OnPortZeroHandles() {
+    // TODO(dje): Add a way to mark specific ports as unbinding quietly
+    // when auto-unbinding.
+    static const bool default_quietness = false;
+
+    LTRACE_ENTRY_OBJ;
+    AutoLock lock(&lock_);
+    if (port_ == nullptr) {
+        // Already unbound. This can happen when
+        // PortDispatcher::on_zero_handles and a manual unbind (via
+        // mx_task_bind_exception_port) race with each other.
+        DEBUG_ASSERT(!IsBoundLocked());
+        return;
+    }
+
+    // Unbind ourselves from our target if necessary. At the end of this
+    // block, some thread (ours or another) will have called back into our
+    // ::OnTargetUnbind method, cleaning up our target/port references. The
+    // "other thread" case can happen if another thread manually unbinds after
+    // we release the lock.
+    if (!IsBoundLocked()) {
+        // Created but never bound.
+        lock.release();
+        // Simulate an unbinding to finish cleaning up.
+        OnTargetUnbind();
+    } else if (type_ == Type::SYSTEM) {
+        DEBUG_ASSERT(bound_to_system_);
+        DEBUG_ASSERT(target_ == nullptr);
+        lock.release();  // The target may call our ::OnTargetUnbind
+        ResetSystemExceptionPort();
+    } else if (type_ == Type::PROCESS || type_ == Type::DEBUGGER) {
+        DEBUG_ASSERT(!bound_to_system_);
+        DEBUG_ASSERT(target_ != nullptr);
+        auto process = DownCastDispatcher<ProcessDispatcher>(&target_);
+        DEBUG_ASSERT(process != nullptr);
+        lock.release();  // The target may call our ::OnTargetUnbind
+        process->ResetExceptionPort(type_ == Type::DEBUGGER, default_quietness);
+    } else if (type_ == Type::THREAD) {
+        DEBUG_ASSERT(!bound_to_system_);
+        DEBUG_ASSERT(target_ != nullptr);
+        auto thread = DownCastDispatcher<ThreadDispatcher>(&target_);
+        DEBUG_ASSERT(thread != nullptr);
+        lock.release();  // The target may call our ::OnTargetUnbind
+        thread->ResetExceptionPort(default_quietness);
+    } else {
+        PANIC("unexpected type %d", static_cast<int>(type_));
+    }
+    // All cases must release the lock.
+    DEBUG_ASSERT(!lock_.IsHeld());
+
+#if (LK_DEBUGLEVEL > 1)
+    // The target should have called back into ::OnTargetUnbind by this point,
+    // cleaning up our references.
+    {
+        AutoLock lock2(&lock_);
+        DEBUG_ASSERT(port_ == nullptr);
+        DEBUG_ASSERT(!IsBoundLocked());
+    }
+#endif  // if (LK_DEBUGLEVEL > 1)
+}
+
+void ExceptionPort::OnTargetUnbind() {
+    LTRACE_ENTRY_OBJ;
+    mxtl::RefPtr<PortDispatcher> port;
+    {
+        AutoLock lock(&lock_);
+        if (port_ == nullptr) {
+            // Already unbound.
+            // This could happen if ::OnPortZeroHandles releases the
+            // lock and another thread immediately does a manual unbind
+            // via mx_task_bind_exception_port.
+            DEBUG_ASSERT(!IsBoundLocked());
+            return;
+        }
+        // Clear port_, indicating that this ExceptionPort has been unbound.
+        port_.swap(port);
+
+        // Drop references to the target.
+        // We may not have a target if the binding (Set*Target) never happened,
+        // so don't require that we're bound.
+        bound_to_system_ = false;
+        target_.reset();
+    }
+    // It should actually be safe to hold our lock while calling into
+    // the PortDispatcher, but there's no reason to.
+
+    // Unlink ourselves from the PortDispatcher's list.
+    // No-op if this method was ultimately called from
+    // PortDispatcher:on_zero_handles (via ::OnPortZeroHandles).
+    port->UnlinkExceptionPort(this);
 }
 
 mx_status_t ExceptionPort::SendReport(const mx_exception_report_t* report) {
-    LTRACEF("Sending exception report, type %u, pid %"
-            PRIu64 ", tid %" PRIu64 "\n",
+    AutoLock lock(&lock_);
+    LTRACEF("%s, type %u, pid %" PRIu64 ", tid %" PRIu64 "\n",
+            port_ == nullptr ? "Not sending exception report on unbound port"
+                : "Sending exception report",
             report->header.type, report->context.pid, report->context.tid);
+    if (port_ == nullptr) {
+        // The port has been unbound.
+        return ERR_REMOTE_CLOSED;
+    }
 
     auto iopk = MakePacket(port_key_, report, sizeof(*report));
     if (!iopk)

@@ -132,9 +132,13 @@ mx_status_t SetSystemExceptionPort(mxtl::RefPtr<ExceptionPort> eport) {
 
 bool ResetSystemExceptionPort() {
     AutoLock lock(&system_exception_mutex);
-    bool was_set = (system_exception_port != nullptr);
+    if (system_exception_port == nullptr) {
+        // Attempted to unbind when no exception port is bound.
+        return false;
+    }
+    system_exception_port->OnTargetUnbind();
     system_exception_port.reset();
-    return was_set;
+    return true;
 }
 
 mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort() {

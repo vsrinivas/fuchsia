@@ -202,9 +202,6 @@ static int wait_inferior_thread_func(void* arg)
     free(args);
 
     bool pass = wait_inferior_thread_worker(inferior, eport);
-
-    tu_handle_close(eport);
-
     return pass ? 0 : -1;
 }
 
@@ -222,17 +219,20 @@ static int watchdog_thread_func(void* arg)
     exit(5);
 }
 
-static thrd_t start_wait_inf_thread(mx_handle_t inferior)
+static thrd_t start_wait_inf_thread(mx_handle_t inferior,
+                                    mx_handle_t* out_eport)
 {
     mx_handle_t eport = attach_inferior(inferior);
     mx_handle_t* wait_inf_args = calloc(2, sizeof(mx_handle_t));
 
+    // Both handles are loaned to the thread. The caller of this function
+    // owns and must close them.
     wait_inf_args[0] = inferior;
     wait_inf_args[1] = eport;
 
     thrd_t wait_inferior_thread;
-    // |inferior| is loaned to the thread, whereas |eport| is transfered to the thread.
     tu_thread_create_c11(&wait_inferior_thread, wait_inferior_thread_func, (void*)wait_inf_args, "wait-inf thread");
+    *out_eport = eport;
     return wait_inferior_thread;
 }
 
@@ -266,7 +266,9 @@ static bool debugger_test(void)
         return false;
 
     expect_debugger_attached_eq(inferior, false, "debugger should not appear attached");
-    thrd_t wait_inf_thread = start_wait_inf_thread(inferior);
+    mx_handle_t eport = MX_HANDLE_INVALID;
+    thrd_t wait_inf_thread = start_wait_inf_thread(inferior, &eport);
+    EXPECT_GT(eport, 0, "");
     expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
     if (!start_inferior(lp))
@@ -282,15 +284,18 @@ static bool debugger_test(void)
     EXPECT_EQ(msg, MSG_RECOVERED_FROM_CRASH, "unexpected response from crash");
     EXPECT_EQ(atomic_load(&segv_count), NUM_SEGV_TRIES, "segv tests terminated prematurely");
 
-    expect_debugger_attached_eq(inferior, true, "debugger should still appear attached");
     if (!shutdown_inferior(channel, inferior))
         return false;
+
+    // Stop the waiter thread before closing the eport that it's waiting on.
+    join_wait_inf_thread(wait_inf_thread);
+
+    expect_debugger_attached_eq(inferior, true, "debugger should still appear attached");
+    tu_handle_close(eport);
     expect_debugger_attached_eq(inferior, false, "debugger should no longer appear attached");
 
     tu_handle_close(channel);
     tu_handle_close(inferior);
-
-    join_wait_inf_thread(wait_inf_thread);
 
     END_TEST;
 }
@@ -304,7 +309,9 @@ static bool debugger_thread_list_test(void)
     if (!setup_inferior(test_inferior_child_name, &lp, &inferior, &channel))
         return false;
 
-    thrd_t wait_inf_thread = start_wait_inf_thread(inferior);
+    mx_handle_t eport = MX_HANDLE_INVALID;
+    thrd_t wait_inf_thread = start_wait_inf_thread(inferior, &eport);
+    EXPECT_GT(eport, 0, "");
 
     if (!start_inferior(lp))
         return false;
@@ -342,10 +349,13 @@ static bool debugger_thread_list_test(void)
 
     if (!shutdown_inferior(channel, inferior))
         return false;
+
+    // Stop the waiter thread before closing the eport that it's waiting on.
+    join_wait_inf_thread(wait_inf_thread);
+
+    tu_handle_close(eport);
     tu_handle_close(channel);
     tu_handle_close(inferior);
-
-    join_wait_inf_thread(wait_inf_thread);
 
     END_TEST;
 }
