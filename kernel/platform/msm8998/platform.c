@@ -128,6 +128,12 @@ void platform_early_init(void)
     /* add the main memory arena */
     pmm_add_arena(&arena);
 
+    /* Allocate memory regions reserved by bootloaders for other functions */
+    struct list_node list = LIST_INITIAL_VALUE(list);
+    pmm_alloc_range(MSM8998_BOOT_HYP_START,
+                    (MSM8998_BOOT_APSS2_START - MSM8998_BOOT_HYP_START)/ PAGE_SIZE,
+                    &list);
+
     /* boot the secondary cpus using the Power State Coordintion Interface */
     ulong psci_call_num = 0x84000000 + 3; /* SMC32 CPU_ON */
     psci_call_num += 0x40000000; /* SMC64 */

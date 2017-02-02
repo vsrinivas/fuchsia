@@ -32,12 +32,11 @@ LINKER_SCRIPT += \
 	$(BUILDDIR)/system-onesegment.ld
 
 ARCH := arm64
-# Need to figure out what this needs to be for this part
 ARM_CPU := cortex-a53
 
 # based on qca boot sequence documentation
 KERNEL_LOAD_OFFSET := 0x00080000
-MEMSIZE ?= 0x80000000 # Limit to 512MB for now (GPU uses 1/2 of the 1GB total)
+MEMSIZE ?= 0x180000000
 
 GLOBAL_DEFINES += \
 	MEMBASE=$(MEMBASE) \

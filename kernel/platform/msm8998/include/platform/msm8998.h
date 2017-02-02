@@ -7,6 +7,17 @@
 
 #define SDRAM_BASE 0x80000000
 
+/* See memory map in doc 80-P2484-68 for for memory layout of bootloaders */
+#define MSM8998_BOOT_APSS1_START                0x80000000
+#define MSM8998_BOOT_HYP_START                  0x85800000
+#define MSM8998_BOOT_XBL_START                  0x85e00000
+#define MSM8998_BOOT_SMEM_START                 0x86000000
+#define MSM8998_BOOT_TZ_STAT_START              0x86200000
+#define MSM8998_BOOT_PIMEM_START                0x86300000
+#define MSM8998_BOOT_PIL_REGION_START           0x8ab00000
+#define MSM8998_BOOT_APSS2_START                0x94700000
+#define MSM8998_BOOT_UEFI_START                 0x9fc00000
+
 #define MSM8998_PERIPH_BASE_PHYS    (0x00000000U)
 #define MSM8998_PERIPH_SIZE         (0x40000000U) // 1GB
 #define MSM8998_PERIPH_BASE_VIRT    (0xffffffffc0000000UL)
