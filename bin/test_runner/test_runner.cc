@@ -40,7 +40,7 @@
 #include "apps/modular/lib/app/application_context.h"
 #include "apps/modular/lib/fidl/scope.h"
 #include "apps/modular/services/test_runner/test_runner.fidl.h"
-#include "apps/modular/test_runner/test_runner_store_impl.h"
+#include "apps/modular/src/test_runner/test_runner_store_impl.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/split_string.h"
 #include "lib/ftl/strings/string_view.h"
@@ -206,7 +206,7 @@ class TestRunnerConnection {
 
     FTL_CHECK(command_parse.size() >= 3)
         << "Not enough args. Must be: `run <test id> <command to run>`";
-    FTL_CHECK(command_parse[0] == "run") << "Only supported command is `run`.";
+    FTL_CHECK(command_parse[0] == "run") << command_parse[0] << " is not a supported command.";
 
     FTL_LOG(INFO) << "test_runner: run " << command_parse[1];
 

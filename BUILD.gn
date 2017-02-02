@@ -13,8 +13,8 @@ group("modular") {
     "src/device_runner:all",
     "src/run_component",
     "src/story_runner:all",
+    "src/test_runner",
     "src/user_runner:all",
-    "test_runner",
     "tests",
   ]
 }
