@@ -400,7 +400,7 @@ struct ReadLocalNameReturnParams {
   // than 248 octets, the end of the name is indicated by a NULL octet (0x00),
   // and the following octets (to fill up 248 octets, which is the length of the
   // parameter) do not have valid values.
-  uint8_t local_name[kMaxLocalNameLength];
+  uint8_t local_name[0];
 } __PACKED;
 
 // ============================================
@@ -508,7 +508,7 @@ struct WriteLocalNameCommandParams {
   // than 248 octets, the end of the name is indicated by a NULL octet (0x00),
   // and the following octets (to fill up 248 octets, which is the length of the
   // parameter) do not have valid values.
-  uint8_t local_name[kMaxLocalNameLength];
+  uint8_t local_name[0];
 };
 
 struct WriteLocalNameReturnParams {
