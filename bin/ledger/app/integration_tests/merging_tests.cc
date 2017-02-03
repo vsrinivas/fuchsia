@@ -179,7 +179,7 @@ TEST_F(MergingIntegrationTest, Merging) {
   ASSERT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, watcher1.changes_seen);
   PageChangePtr change = std::move(watcher1.last_page_change_);
-  EXPECT_EQ(2u, change->changes.size());
+  ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
   EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
@@ -191,7 +191,7 @@ TEST_F(MergingIntegrationTest, Merging) {
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  EXPECT_EQ(2u, change->changes.size());
+  ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
@@ -203,7 +203,7 @@ TEST_F(MergingIntegrationTest, Merging) {
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);
-  EXPECT_EQ(2u, change->changes.size());
+  ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
@@ -212,7 +212,7 @@ TEST_F(MergingIntegrationTest, Merging) {
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  EXPECT_EQ(1u, change->changes.size());
+  ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
 }
@@ -281,7 +281,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   EXPECT_EQ(1u, watcher1.changes_seen);
   PageChangePtr change = std::move(watcher1.last_page_change_);
-  EXPECT_EQ(2u, change->changes.size());
+  ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
   EXPECT_EQ("name", convert::ToString(change->changes[1]->key));
@@ -293,7 +293,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  EXPECT_EQ(2u, change->changes.size());
+  ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
@@ -319,7 +319,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);
-  EXPECT_EQ(2u, change->changes.size());
+  ASSERT_EQ(2u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
   EXPECT_EQ("phone", convert::ToString(change->changes[1]->key));
@@ -328,7 +328,7 @@ TEST_F(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   EXPECT_EQ(2u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  EXPECT_EQ(1u, change->changes.size());
+  ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("city", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Paris", convert::ToString(change->changes[0]->value->get_bytes()));
 
@@ -386,10 +386,10 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
             ->second);
-  EXPECT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(1u, resolver_impl->requests.size());
 
   // Left change is the most recent, so the one made on |page2|.
-  EXPECT_EQ(2u, resolver_impl->requests[0].change_left->changes.size());
+  ASSERT_EQ(2u, resolver_impl->requests[0].change_left->changes.size());
   EXPECT_EQ("email",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_left->changes[0]->key));
@@ -405,7 +405,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
                                             .change_left->changes[1]
                                             ->value->get_bytes()));
   // Right change comes from |page1|.
-  EXPECT_EQ(2u, resolver_impl->requests[0].change_right->changes.size());
+  ASSERT_EQ(2u, resolver_impl->requests[0].change_right->changes.size());
   EXPECT_EQ("city",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[0]->key));
@@ -468,7 +468,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
 
   fidl::Array<EntryPtr> final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
-  EXPECT_EQ(3u, final_entries.size());
+  ASSERT_EQ(3u, final_entries.size());
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("pager", convert::ExtendedStringView(final_entries[1]->key));
   EXPECT_EQ("phone", convert::ExtendedStringView(final_entries[2]->key));
@@ -534,7 +534,7 @@ TEST_F(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
             ->second);
-  EXPECT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(1u, resolver_impl->requests.size());
 
   // Remove all references to a page:
   page1 = nullptr;
@@ -621,7 +621,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
 
   fidl::Array<EntryPtr> final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
-  EXPECT_EQ(4u, final_entries.size());
+  ASSERT_EQ(4u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("email", convert::ExtendedStringView(final_entries[1]->key));
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[2]->key));
@@ -677,10 +677,10 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   ConflictResolverImpl* resolver_impl =
       &(resolver_factory->resolvers.find(convert::ToString(test_page_id))
             ->second);
-  EXPECT_EQ(1u, resolver_impl->requests.size());
+  ASSERT_EQ(1u, resolver_impl->requests.size());
 
   // Left change is the most recent, so the one made on |page2|.
-  EXPECT_EQ(2u, resolver_impl->requests[0].change_left->changes.size());
+  ASSERT_EQ(2u, resolver_impl->requests[0].change_left->changes.size());
   EXPECT_EQ("city",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_left->changes[0]->key));
@@ -697,7 +697,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
                                             ->value->get_bytes()));
 
   // Right change comes from |page1|.
-  EXPECT_EQ(1u, resolver_impl->requests[0].change_right->changes.size());
+  ASSERT_EQ(1u, resolver_impl->requests[0].change_right->changes.size());
   EXPECT_EQ("city",
             convert::ExtendedStringView(
                 resolver_impl->requests[0].change_right->changes[0]->key));
@@ -738,7 +738,7 @@ TEST_F(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
 
   fidl::Array<EntryPtr> final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, fidl::Array<uint8_t>());
-  EXPECT_EQ(2u, final_entries.size());
+  ASSERT_EQ(2u, final_entries.size());
   EXPECT_EQ("city", convert::ExtendedStringView(final_entries[0]->key));
   EXPECT_EQ("name", convert::ExtendedStringView(final_entries[1]->key));
 }

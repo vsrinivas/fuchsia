@@ -170,7 +170,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
                   [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
-  EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
+  ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(id, storage_ptr->get_page_calls[0]);
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
   page.reset();
@@ -181,7 +181,7 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   message_loop_.Run();
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
-  EXPECT_EQ(1u, storage_ptr->delete_page_calls.size());
+  ASSERT_EQ(1u, storage_ptr->delete_page_calls.size());
   EXPECT_EQ(id, storage_ptr->delete_page_calls[0]);
   storage_ptr->ClearCalls();
 }
@@ -222,7 +222,7 @@ TEST_F(LedgerManagerTest, CallGetPageTwice) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(2u, calls);
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
-  EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
+  ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(id, storage_ptr->get_page_calls[0]);
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 }

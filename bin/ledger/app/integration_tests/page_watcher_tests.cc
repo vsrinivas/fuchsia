@@ -71,7 +71,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSimple) {
 
   EXPECT_EQ(1u, watcher.changes_seen);
   PageChangePtr change = std::move(watcher.last_page_change_);
-  EXPECT_EQ(1u, change->changes.size());
+  ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 }
@@ -96,10 +96,10 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherDelete) {
   EXPECT_TRUE(page.WaitForIncomingResponse());
   EXPECT_FALSE(RunLoopWithTimeout());
 
-  EXPECT_EQ(1u, watcher.changes_seen);
+  ASSERT_EQ(1u, watcher.changes_seen);
   PageChangePtr change = std::move(watcher.last_page_change_);
   EXPECT_EQ(0u, change->changes.size());
-  EXPECT_EQ(1u, change->deleted_keys.size());
+  ASSERT_EQ(1u, change->deleted_keys.size());
   EXPECT_EQ("foo", convert::ToString(change->deleted_keys[0]));
 }
 
@@ -122,7 +122,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   EXPECT_EQ(1u, watcher.changes_seen);
   fidl::Array<EntryPtr> entries =
       SnapshotGetEntries(&(watcher.last_snapshot_), convert::ToArray(""));
-  EXPECT_EQ(1u, entries.size());
+  ASSERT_EQ(1u, entries.size());
   EXPECT_EQ("name", convert::ToString(entries[0]->key));
   EXPECT_EQ("Alice", convert::ToString(entries[0]->value->get_bytes()));
   EXPECT_EQ(Priority::EAGER, entries[0]->priority);
@@ -157,7 +157,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherTransaction) {
 
   EXPECT_EQ(1u, watcher.changes_seen);
   PageChangePtr change = std::move(watcher.last_page_change_);
-  EXPECT_EQ(1u, change->changes.size());
+  ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 }
@@ -206,7 +206,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   mtl::MessageLoop::GetCurrent()->Run();
   EXPECT_EQ(1u, watcher1.changes_seen);
   PageChangePtr change = std::move(watcher1.last_page_change_);
-  EXPECT_EQ(1u, change->changes.size());
+  ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Alice", convert::ToString(change->changes[0]->value->get_bytes()));
 
@@ -216,7 +216,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
-  EXPECT_EQ(1u, change->changes.size());
+  ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
 
@@ -229,7 +229,7 @@ TEST_F(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ(1u, watcher2.changes_seen);
 
   change = std::move(watcher1.last_page_change_);
-  EXPECT_EQ(1u, change->changes.size());
+  ASSERT_EQ(1u, change->changes.size());
   EXPECT_EQ("name", convert::ToString(change->changes[0]->key));
   EXPECT_EQ("Bob", convert::ToString(change->changes[0]->value->get_bytes()));
 }

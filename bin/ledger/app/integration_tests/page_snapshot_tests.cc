@@ -127,7 +127,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   // Get keys matching the prefix "00".
   result = SnapshotGetKeys(
       &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
-  EXPECT_EQ(2u, result.size());
+  ASSERT_EQ(2u, result.size());
   for (size_t i = 0; i < 2u; ++i) {
     EXPECT_TRUE(keys[i].Equals(result[i]));
   }
@@ -135,7 +135,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   // Get keys matching the prefix "010".
   result = SnapshotGetKeys(
       &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
-  EXPECT_EQ(1u, result.size());
+  ASSERT_EQ(1u, result.size());
   EXPECT_TRUE(keys[2].Equals(result[0]));
 
   // Get keys matching the prefix "5".
@@ -190,7 +190,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   // Get entries matching the prefix "00".
   entries = SnapshotGetEntries(
       &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 0}));
-  EXPECT_EQ(2u, entries.size());
+  ASSERT_EQ(2u, entries.size());
   for (size_t i = 0; i < 2; ++i) {
     EXPECT_TRUE(keys[i].Equals(entries[i]->key));
     EXPECT_TRUE(values[i].Equals(entries[i]->value->get_bytes()));
@@ -199,7 +199,7 @@ TEST_F(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   // Get keys matching the prefix "010".
   entries = SnapshotGetEntries(
       &snapshot, fidl::Array<uint8_t>::From(std::vector<uint8_t>{0, 1, 0}));
-  EXPECT_EQ(1u, entries.size());
+  ASSERT_EQ(1u, entries.size());
   EXPECT_TRUE(keys[2].Equals(entries[0]->key));
   EXPECT_TRUE(values[2].Equals(entries[0]->value->get_bytes()));
 
