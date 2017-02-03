@@ -217,7 +217,8 @@ class PageStorageTest : public StorageTest {
   }
 
   CommitId TryCommitFromSync() {
-    ObjectId root_id = GetEmptyNodeId();
+    ObjectId root_id;
+    EXPECT_TRUE(GetEmptyNodeId(&root_id));
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
@@ -386,9 +387,10 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
       Entry{"key0", lazy_value.object_id, storage::KeyPriority::LAZY},
       Entry{"key1", eager_value.object_id, storage::KeyPriority::EAGER},
   };
-  ObjectId root_id =
-      CreateNodeFromEntries(entries, std::vector<ObjectId>(entries.size() + 1))
-          ->GetId();
+  std::unique_ptr<const TreeNode> node;
+  ASSERT_TRUE(CreateNodeFromEntries(
+      entries, std::vector<ObjectId>(entries.size() + 1), &node));
+  ObjectId root_id = node->GetId();
 
   // Add the three objects to FakeSyncDelegate.
   sync.AddObject(lazy_value.object_id, lazy_value.value);
@@ -896,9 +898,10 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     std::vector<Entry> entries = {Entry{"key" + std::to_string(i),
                                         value.object_id,
                                         storage::KeyPriority::EAGER}};
-    object_ids[i] = CreateNodeFromEntries(
-                        entries, std::vector<ObjectId>(entries.size() + 1))
-                        ->GetId();
+    std::unique_ptr<const TreeNode> node;
+    ASSERT_TRUE(CreateNodeFromEntries(
+        entries, std::vector<ObjectId>(entries.size() + 1), &node));
+    object_ids[i] = node->GetId();
     sync.AddObject(value.object_id, value.value);
     std::unique_ptr<const Object> root_object = TryGetObject(object_ids[i]);
     ftl::StringView root_data;

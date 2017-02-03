@@ -34,6 +34,12 @@ EntryChange NewRemoveEntryChange(std::string key);
 
 // A TestWithMessageLoop providing some additional utility functions on
 // PageStorage.
+//
+// All utility functions in this class return an |AssertionResult| meaning that
+// they can be used in an EXPECT/ASSERT_TRUE: E.g.
+//     ASSERT_TRUE(AddObject("value", &object));
+// or an EXPECT/ASSERT_FALSE if the function is expected to fail.
+//     ASSERT_FALSE(AddObject("value", &object));
 class StorageTest : public ::test::TestWithMessageLoop {
  protected:
   StorageTest();
@@ -42,29 +48,39 @@ class StorageTest : public ::test::TestWithMessageLoop {
 
   virtual PageStorage* GetStorage() = 0;
 
-  // Adds a new object with the given value in the page storage and returns the
-  // object.
-  std::unique_ptr<const Object> AddObject(const std::string& value);
+  // Adds a new object with the given value in the page storage and updates
+  // |object| with the new value.
+  ::testing::AssertionResult AddObject(const std::string& value,
+                                       std::unique_ptr<const Object>* object);
 
-  // Returns a vector of entries, each of which has a key from "key00" to
+  // Creates a vector of entries, each of which has a key from "key00" to
   // "key01". A new value is created for each entry and the corresponding
-  // object_id is set on the entry.
-  std::vector<Entry> CreateEntries(int size);
+  // object_id is set on the entry. |entries| vector will be swapped with the
+  // result.
+  ::testing::AssertionResult CreateEntries(int size,
+                                           std::vector<Entry>* entries);
 
-  // Returns a vector of entry changes adding or updating the given number of
+  // Creates a vector of entry changes adding or updating the given number of
   // entries. See |CreateEntries| for information on the created entries.
-  std::vector<EntryChange> CreateEntryChanges(int size);
+  // |changes| vector will be swapped with the result.
+  ::testing::AssertionResult CreateEntryChanges(
+      int size,
+      std::vector<EntryChange>* changes);
 
-  // Creates an empty tree node and returns its id.
-  ObjectId GetEmptyNodeId();
+  // Creates an empty tree node and updates |empty_node_id| with the result.
+  ::testing::AssertionResult GetEmptyNodeId(ObjectId* empty_node_id);
 
   // Returns the tree node corresponding to the given id.
-  std::unique_ptr<const TreeNode> CreateNodeFromId(ObjectIdView id);
+  ::testing::AssertionResult CreateNodeFromId(
+      ObjectIdView id,
+      std::unique_ptr<const TreeNode>* node);
 
-  // Returns a new tree node containing the given entries and children.
-  std::unique_ptr<const TreeNode> CreateNodeFromEntries(
+  // Creates a new tree node from the given entries and children and updates
+  // |node| with the result.
+  ::testing::AssertionResult CreateNodeFromEntries(
       const std::vector<Entry>& entries,
-      const std::vector<ObjectId>& children);
+      const std::vector<ObjectId>& children,
+      std::unique_ptr<const TreeNode>* node);
 
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(StorageTest);

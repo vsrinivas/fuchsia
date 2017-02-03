@@ -39,81 +39,138 @@ StorageTest::StorageTest(){};
 
 StorageTest::~StorageTest(){};
 
-std::unique_ptr<const Object> StorageTest::AddObject(const std::string& value) {
+::testing::AssertionResult StorageTest::AddObject(
+    const std::string& value,
+    std::unique_ptr<const Object>* object) {
   Status status;
   ObjectId object_id;
   GetStorage()->AddObjectFromLocal(
       mtl::WriteStringToSocket(value), value.size(),
       ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
                       &object_id));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
+  if (RunLoopWithTimeout()) {
+    return ::testing::AssertionFailure()
+           << "AddObjectFromLocal callback was not executed. value: " << value;
+  }
+  if (status != Status::OK) {
+    return ::testing::AssertionFailure()
+           << "AddObjectFromLocal failed with status " << status
+           << ". value: " << value;
+  }
 
-  std::unique_ptr<const Object> object;
+  std::unique_ptr<const Object> result;
   GetStorage()->GetObject(
       object_id,
       ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status,
-                      &object));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
-  return object;
+                      &result));
+  if (RunLoopWithTimeout()) {
+    return ::testing::AssertionFailure()
+           << "GetObject callback was not executed. value: " << value
+           << ", object_id: " << object_id;
+  }
+  if (status != Status::OK) {
+    return ::testing::AssertionFailure()
+           << "GetObject failed with status " << status << ". value: " << value
+           << ", object_id: " << object_id;
+  }
+  object->swap(result);
+  return ::testing::AssertionSuccess();
 }
 
-std::vector<Entry> StorageTest::CreateEntries(int size) {
+::testing::AssertionResult StorageTest::CreateEntries(
+    int size,
+    std::vector<Entry>* entries) {
   FTL_CHECK(size >= 0 && size <= 100);
   std::vector<Entry> result;
   for (int i = 0; i < size; ++i) {
-    std::unique_ptr<const Object> object =
-        AddObject(ftl::StringPrintf("object%02d", i));
+    std::unique_ptr<const Object> object;
+    ::testing::AssertionResult assertion_result =
+        AddObject(ftl::StringPrintf("object%02d", i), &object);
+    if (!assertion_result) {
+      return assertion_result;
+    }
     result.push_back(Entry{ftl::StringPrintf("key%02d", i), object->GetId(),
                            KeyPriority::EAGER});
   }
-  return result;
+  entries->swap(result);
+  return ::testing::AssertionSuccess();
 }
 
-std::vector<EntryChange> StorageTest::CreateEntryChanges(int size) {
-  std::vector<Entry> entries = CreateEntries(size);
+::testing::AssertionResult StorageTest::CreateEntryChanges(
+    int size,
+    std::vector<EntryChange>* changes) {
+  std::vector<Entry> entries;
+  ::testing::AssertionResult assertion_result = CreateEntries(size, &entries);
+  if (!assertion_result) {
+    return assertion_result;
+  }
   std::vector<EntryChange> result;
 
   for (int i = 0; i < size; ++i) {
     result.push_back(EntryChange{std::move(entries[i]), false});
   }
-  return result;
+  changes->swap(result);
+  return ::testing::AssertionSuccess();
 }
 
-ObjectId StorageTest::GetEmptyNodeId() {
+::testing::AssertionResult StorageTest::GetEmptyNodeId(
+    ObjectId* empty_node_id) {
   Status status;
   ObjectId id;
   TreeNode::Empty(
       GetStorage(),
       ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &id));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
-  return id;
+  if (RunLoopWithTimeout()) {
+    return ::testing::AssertionFailure()
+           << "TreeNode::Empty callback was not executed.";
+  }
+  if (status != Status::OK) {
+    return ::testing::AssertionFailure()
+           << "TreeNode::Empty failed with status " << status;
+  }
+  empty_node_id->swap(id);
+  return ::testing::AssertionSuccess();
 }
 
-std::unique_ptr<const TreeNode> StorageTest::CreateNodeFromId(ObjectIdView id) {
+::testing::AssertionResult StorageTest::CreateNodeFromId(
+    ObjectIdView id,
+    std::unique_ptr<const TreeNode>* node) {
   Status status;
-  std::unique_ptr<const TreeNode> node;
+  std::unique_ptr<const TreeNode> result;
   TreeNode::FromId(GetStorage(), id,
                    ::test::Capture([this] { message_loop_.PostQuitTask(); },
-                                   &status, &node));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
-  return node;
+                                   &status, &result));
+  if (RunLoopWithTimeout()) {
+    return ::testing::AssertionFailure()
+           << "TreeNode::FromId callback was not executed.";
+  }
+  if (status != Status::OK) {
+    return ::testing::AssertionFailure()
+           << "TreeNode::FromId failed with status " << status;
+  }
+  node->swap(result);
+  return ::testing::AssertionSuccess();
 }
 
-std::unique_ptr<const TreeNode> StorageTest::CreateNodeFromEntries(
+::testing::AssertionResult StorageTest::CreateNodeFromEntries(
     const std::vector<Entry>& entries,
-    const std::vector<ObjectId>& children) {
+    const std::vector<ObjectId>& children,
+    std::unique_ptr<const TreeNode>* node) {
   Status status;
   ObjectId id;
   TreeNode::FromEntries(
       GetStorage(), entries, children,
       ::test::Capture([this] { message_loop_.PostQuitTask(); }, &status, &id));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_EQ(Status::OK, status);
-  return CreateNodeFromId(id);
+
+  if (RunLoopWithTimeout()) {
+    return ::testing::AssertionFailure()
+           << "TreeNode::FromEntries callback was not executed.";
+  }
+  if (status != Status::OK) {
+    return ::testing::AssertionFailure()
+           << "TreeNode::FromEntries failed with status " << status;
+  }
+  return CreateNodeFromId(id, node);
 }
 
 }  // storage

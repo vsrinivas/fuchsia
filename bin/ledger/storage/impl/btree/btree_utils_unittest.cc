@@ -57,7 +57,8 @@ class BTreeUtilsTest : public StorageTest {
   PageStorage* GetStorage() override { return &fake_storage_; }
 
   ObjectId CreateTree(std::vector<EntryChange>& entries) {
-    ObjectId root_id = GetEmptyNodeId();
+    ObjectId root_id;
+    EXPECT_TRUE(GetEmptyNodeId(&root_id));
 
     Status status;
     ObjectId new_root_id;
@@ -95,8 +96,10 @@ class BTreeUtilsTest : public StorageTest {
 };
 
 TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
-  ObjectId root_id = GetEmptyNodeId();
-  std::vector<EntryChange> changes = CreateEntryChanges(4);
+  ObjectId root_id;
+  ASSERT_TRUE(GetEmptyNodeId(&root_id));
+  std::vector<EntryChange> changes;
+  ASSERT_TRUE(CreateEntryChanges(4, &changes));
 
   Status status;
   ObjectId new_root_id;
@@ -121,8 +124,10 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
 }
 
 TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
-  ObjectId root_id = GetEmptyNodeId();
-  std::vector<EntryChange> golden_entries = CreateEntryChanges(11);
+  ObjectId root_id;
+  ASSERT_TRUE(GetEmptyNodeId(&root_id));
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
 
   Status status;
   ObjectId new_root_id;
@@ -182,7 +187,8 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   //                 [03, 07]
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
-  std::vector<EntryChange> golden_entries = CreateEntryChanges(11);
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
   ObjectId root_id = CreateTree(golden_entries);
 
   // Delete entries.
@@ -226,7 +232,8 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
 }
 
 TEST_F(BTreeUtilsTest, GetObjectIdsFromEmpty) {
-  ObjectId root_id = GetEmptyNodeId();
+  ObjectId root_id;
+  ASSERT_TRUE(GetEmptyNodeId(&root_id));
   Status status;
   std::set<ObjectId> object_ids;
   btree::GetObjectIds(&fake_storage_, root_id,
@@ -239,7 +246,8 @@ TEST_F(BTreeUtilsTest, GetObjectIdsFromEmpty) {
 }
 
 TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
-  std::vector<EntryChange> entries = CreateEntryChanges(kTestNodeSize);
+  std::vector<EntryChange> entries;
+  ASSERT_TRUE(CreateEntryChanges(kTestNodeSize, &entries));
   ObjectId root_id = CreateTree(entries);
 
   Status status;
@@ -257,7 +265,8 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
 }
 
 TEST_F(BTreeUtilsTest, GetObjectIdsBigTree) {
-  std::vector<EntryChange> entries = CreateEntryChanges(99);
+  std::vector<EntryChange> entries;
+  ASSERT_TRUE(CreateEntryChanges(99, &entries));
   ObjectId root_id = CreateTree(entries);
 
   Status status;
@@ -275,7 +284,8 @@ TEST_F(BTreeUtilsTest, GetObjectIdsBigTree) {
 }
 
 TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
-  std::vector<EntryChange> entries = CreateEntryChanges(5);
+  std::vector<EntryChange> entries;
+  ASSERT_TRUE(CreateEntryChanges(5, &entries));
   entries[3].entry.priority = KeyPriority::LAZY;
   ObjectId root_id = CreateTree(entries);
 
@@ -333,7 +343,8 @@ TEST_F(BTreeUtilsTest, ForEachEmptyTree) {
 
 TEST_F(BTreeUtilsTest, ForEachAllEntries) {
   // Create a tree from entries with keys from 00-99.
-  std::vector<EntryChange> entries = CreateEntryChanges(100);
+  std::vector<EntryChange> entries;
+  ASSERT_TRUE(CreateEntryChanges(100, &entries));
   ObjectId root_id = CreateTree(entries);
 
   int current_key = 0;
@@ -352,7 +363,8 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
 
 TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
   // Create a tree from entries with keys from 00-99.
-  std::vector<EntryChange> entries = CreateEntryChanges(100);
+  std::vector<EntryChange> entries;
+  ASSERT_TRUE(CreateEntryChanges(100, &entries));
   ObjectId root_id = CreateTree(entries);
 
   // Find all entries with "key3" prefix in the key.
@@ -375,10 +387,12 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
 }
 
 TEST_F(BTreeUtilsTest, ForEachDiff) {
-  std::unique_ptr<const Object> object = AddObject("change1");
+  std::unique_ptr<const Object> object;
+  ASSERT_TRUE(AddObject("change1", &object));
   ObjectId object_id = object->GetId();
 
-  std::vector<EntryChange> changes = CreateEntryChanges(50);
+  std::vector<EntryChange> changes;
+  ASSERT_TRUE(CreateEntryChanges(50, &changes));
   ObjectId base_root_id = CreateTree(changes);
   changes.clear();
   // Update value for key10.
