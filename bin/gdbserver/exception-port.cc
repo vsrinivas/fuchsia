@@ -39,25 +39,6 @@ std::string IOPortPacketTypeToString(const mx_packet_header_t& header) {
   return "(unknown)";
 }
 
-std::string ExceptionTypeToString(const mx_excp_type_t type) {
-#define CASE_TO_STR(x) \
-  case x:              \
-    return #x
-  switch (type) {
-    CASE_TO_STR(MX_EXCP_GENERAL);
-    CASE_TO_STR(MX_EXCP_FATAL_PAGE_FAULT);
-    CASE_TO_STR(MX_EXCP_UNDEFINED_INSTRUCTION);
-    CASE_TO_STR(MX_EXCP_SW_BREAKPOINT);
-    CASE_TO_STR(MX_EXCP_HW_BREAKPOINT);
-    CASE_TO_STR(MX_EXCP_START);
-    CASE_TO_STR(MX_EXCP_GONE);
-    default:
-      break;
-  }
-#undef CASE_TO_STR
-  return "(other)";
-}
-
 }  // namespace
 
 // static
@@ -196,7 +177,7 @@ void ExceptionPort::Worker() {
       continue;
 
     FTL_VLOG(1) << "Exception received: "
-                << ExceptionTypeToString(static_cast<const mx_excp_type_t>(
+                << util::ExceptionName(static_cast<const mx_excp_type_t>(
                        packet.report.header.type))
                 << " (" << packet.report.header.type
                 << "), pid: " << packet.report.context.pid
