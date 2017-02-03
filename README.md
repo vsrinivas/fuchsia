@@ -46,13 +46,13 @@ path, or absolute altogether. For example
 (from [test runner invocation](tests/parent_child/test.sh)):
 
 ```
-bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/tmp/tests/parent_child/parent_module
+@ bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/tmp/tests/parent_child/parent_module
 ```
 
 or even more generally:
 
 ```
-bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=file:///tmp/tests/parent_child/parent_module
+@ bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=file:///tmp/tests/parent_child/parent_module
 ```
 
 See also the [bootstrap](src/bootstrap/README.md) documentation.
