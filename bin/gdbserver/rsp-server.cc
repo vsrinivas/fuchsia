@@ -342,26 +342,30 @@ void Server::OnThreadStarted(Process* process,
   }
 }
 
-void Server::OnProcessOrThreadExited(Process* process,
-                                     Thread* thread,
-                                     const mx_excp_type_t type,
-                                     const mx_exception_context_t& context) {
+void Server::OnThreadExit(Process* process,
+                          Thread* thread,
+                          const mx_excp_type_t type,
+                          const mx_exception_context_t& context) {
   std::vector<char> packet;
-  if (thread) {
-    FTL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
-    int exit_code = 0;  // TODO(dje)
-    StopReplyPacket stop_reply(StopReplyPacket::Type::kThreadExited);
-    stop_reply.SetSignalNumber(exit_code);
-    stop_reply.SetThreadId(process->id(), thread->id());
-    packet = stop_reply.Build();
-  } else {
-    FTL_LOG(INFO) << "Process " << process->GetName() << " exited";
-    SetCurrentThread(nullptr);
-    int exit_code = process->ExitCode();
-    StopReplyPacket stop_reply(StopReplyPacket::Type::kProcessExited);
-    stop_reply.SetSignalNumber(exit_code);
-    packet = stop_reply.Build();
-  }
+  FTL_LOG(INFO) << "Thread " << thread->GetName() << " exited";
+  int exit_code = 0; // TODO(dje)
+  StopReplyPacket stop_reply(StopReplyPacket::Type::kThreadExited);
+  stop_reply.SetSignalNumber(exit_code);
+  stop_reply.SetThreadId(process->id(), thread->id());
+  packet = stop_reply.Build();
+  QueueStopNotification(ftl::StringView(packet.data(), packet.size()));
+}
+
+void Server::OnProcessExit(Process* process,
+                           const mx_excp_type_t type,
+                           const mx_exception_context_t& context) {
+  std::vector<char> packet;
+  FTL_LOG(INFO) << "Process " << process->GetName() << " exited";
+  SetCurrentThread(nullptr);
+  int exit_code = process->ExitCode();
+  StopReplyPacket stop_reply(StopReplyPacket::Type::kProcessExited);
+  stop_reply.SetSignalNumber(exit_code);
+  packet = stop_reply.Build();
   QueueStopNotification(ftl::StringView(packet.data(), packet.size()));
 }
 

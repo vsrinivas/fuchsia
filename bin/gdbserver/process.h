@@ -43,12 +43,16 @@ class Process final {
                                  Thread* thread,
                                  const mx_exception_context_t& context) = 0;
 
-    // Called when either |process| or one of its threads has exited. If
-    // |context.tid| is zero, then the process is gone. Otherwise the thread
-    // with that specific thread ID is gone.
-    virtual void OnProcessOrThreadExited(
+    // Called when |thread| has exited.
+    virtual void OnThreadExit(
         Process* process,
         Thread* thread,
+        const mx_excp_type_t type,
+        const mx_exception_context_t& context) = 0;
+
+    // Called when |process| has exited.
+    virtual void OnProcessExit(
+        Process* process,
         const mx_excp_type_t type,
         const mx_exception_context_t& context) = 0;
 

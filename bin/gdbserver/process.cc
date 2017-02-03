@@ -400,7 +400,7 @@ bool Process::Kill() {
   FTL_LOG(INFO) << "Killing process " << id();
 
   // There's a few issues with sequencing here that we need to consider.
-  // - OnProcessOrThreadExited, called when we receive an exception indicating
+  // - OnProcessExit, called when we receive an exception indicating
   //   the process has exited, will send back a stop reply which we don't want
   // - we don't want to unbind the exception port before killing the process
   //   because we don't want to accidently cause the process to resume before
@@ -692,13 +692,13 @@ void Process::OnException(const mx_excp_type_t type,
                     << thread->GetName();
         thread->set_state(Thread::State::kGone);
         // TODO: Split up OnProcessOrThreadExited into process/thread.
-        delegate_->OnProcessOrThreadExited(this, thread, type, context);
+        delegate_->OnThreadExit(this, thread, type, context);
         thread->Clear();
       } else {
         FTL_VLOG(1) << "Received MX_EXCP_GONE exception for process "
                     << GetName();
         set_state(Process::State::kGone);
-        delegate_->OnProcessOrThreadExited(this, thread, type, context);
+        delegate_->OnProcessExit(this, type, context);
         if (!Detach()) {
           // This is not a fatal error, just log it.
           FTL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
