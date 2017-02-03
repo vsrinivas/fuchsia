@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cstdio>
+
 #include <magenta/syscalls/exception.h>
 #include <magenta/types.h>
 
@@ -17,6 +19,10 @@ int ComputeGdbSignal(const mx_exception_context_t& context);
 
 // Returns true if |context| is a single-stepping exception.
 bool IsSingleStepException(const mx_exception_context_t& context);
+
+// Dump random bits about the architecuture.
+// TODO(dje): Switch to iostreams maybe later.
+void DumpArch(FILE* out);
 
 }  // namespace arch
 }  // namespace debugserver
