@@ -15,6 +15,36 @@
 #include <magenta/magenta.h>
 #include <magenta/process_dispatcher.h>
 
+// Machinery to walk over a job tree and run a callback on each process.
+template <typename ProcessCallbackType>
+class ProcessWalker final : public JobEnumerator {
+public:
+    ProcessWalker(ProcessCallbackType cb) : cb_(cb) {}
+    ProcessWalker(const ProcessWalker&) = delete;
+    ProcessWalker(ProcessWalker&& other) : cb_(other.cb_) {}
+
+private:
+    bool Size(uint32_t proc_count, uint32_t job_count) final {
+        return true;
+    }
+
+    bool OnJob(JobDispatcher* job, uint32_t index) final {
+        return true;
+    }
+
+    bool OnProcess(ProcessDispatcher* process, uint32_t index) final {
+        cb_(process);
+        return true;
+    }
+
+    ProcessCallbackType cb_;
+};
+
+template <typename ProcessCallbackType>
+static ProcessWalker<ProcessCallbackType> MakeProcessWalker(ProcessCallbackType cb) {
+    return ProcessWalker<ProcessCallbackType>(cb);
+}
+
 static void DumpProcessListKeyMap() {
     printf("id  : process id number\n");
     printf("-s  : state: R = running D = dead\n");
@@ -118,21 +148,21 @@ static char* DumpHandleTypeCountLocked(const ProcessDispatcher& pd) {
 }
 
 void DumpProcessList() {
-    AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
     printf("%8s-s  #t  #pg  #h:  #jb #pr #th #vo #vm #ch #ev #ip [  job:name]\n", "id");
 
-    for (const auto& process : ProcessDispatcher::global_process_list_) {
+    auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
         char pname[MX_MAX_NAME_LEN];
-        process.get_name(pname);
+        process->get_name(pname);
         printf("%8" PRIu64 "-%c %3u %4zu %s  [%5" PRIu64 ":%s]\n",
-               process.get_koid(),
-               StateChar(process),
-               process.ThreadCount(),
-               process.PageCount(),
-               DumpHandleTypeCountLocked(process),
-               process.get_related_koid(),
+               process->get_koid(),
+               StateChar(*process),
+               process->ThreadCount(),
+               process->PageCount(),
+               DumpHandleTypeCountLocked(*process),
+               process->get_related_koid(),
                pname);
-    }
+    });
+    GetRootJobDispatcher()->EnumerateChildren(&walker);
 }
 
 void DumpProcessHandles(mx_koid_t id) {
@@ -254,16 +284,15 @@ static size_t mwd_limit = 32 * 256;
 static bool mwd_running;
 
 void DumpProcessMemoryUsage(const char* prefix, size_t limit) {
-    AutoLock lock(& ProcessDispatcher::global_process_list_mutex_);
-
-    for (const auto& process : ProcessDispatcher::global_process_list_) {
-        size_t pages = process.PageCount();
+    auto walker = MakeProcessWalker([&](ProcessDispatcher* process) {
+        size_t pages = process->PageCount();
         if (pages > limit) {
             char pname[MX_MAX_NAME_LEN];
-            process.get_name(pname);
+            process->get_name(pname);
             printf("%s%s: %zu MB\n", prefix, pname, pages / 256);
         }
-    }
+    });
+    GetRootJobDispatcher()->EnumerateChildren(&walker);
 }
 
 static int mwd_thread(void* arg) {

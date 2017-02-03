@@ -198,6 +198,8 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je) {
             completed = false;
             break;
         }
+        // TODO(kulakowski) This recursive call can overflow the stack.
+        job.EnumerateChildren(je);
     }
     return completed;
 }
@@ -235,4 +237,3 @@ status_t JobDispatcher::set_name(const char* name, size_t len) {
     memset(name_ + len, 0, MX_MAX_NAME_LEN - len);
     return NO_ERROR;
 }
-

@@ -39,11 +39,6 @@ static constexpr mx_rights_t kDefaultProcessRights =
         MX_RIGHT_GET_PROPERTY | MX_RIGHT_SET_PROPERTY | MX_RIGHT_ENUMERATE;
 
 
-mutex_t ProcessDispatcher::global_process_list_mutex_ =
-    MUTEX_INITIAL_VALUE(global_process_list_mutex_);
-
-ProcessDispatcher::ProcessList ProcessDispatcher::global_process_list_;
-
 mx_handle_t map_handle_to_value(const Handle* handle, mx_handle_t mixer) {
     // Ensure that the last bit of the result is not zero and that
     // we don't lose upper bits.
@@ -105,9 +100,6 @@ ProcessDispatcher::ProcessDispatcher(mxtl::RefPtr<JobDispatcher> job,
     : job_(mxtl::move(job)), state_tracker_(0u) {
     LTRACE_ENTRY_OBJ;
 
-    // Add ourself to the global process list.
-    AddProcess(this);
-
     // Generate handle XOR mask with top bit and bottom two bits cleared
     uint32_t secret;
     auto prng = crypto::GlobalPRNG::GetInstance();
@@ -134,9 +126,6 @@ ProcessDispatcher::~ProcessDispatcher() {
     // have beeen called when transitioning State::DEAD. The Job can handle double calls.
     if (job_)
         job_->RemoveChildProcess(this);
-
-    // remove ourself from the global process list
-    RemoveProcess(this);
 
     LTRACE_EXIT_OBJ;
 }
@@ -608,33 +597,40 @@ mxtl::RefPtr<ExceptionPort> ProcessDispatcher::debugger_exception_port() {
     return debugger_exception_port_;
 }
 
-void ProcessDispatcher::AddProcess(ProcessDispatcher* process) {
-    // Don't call any method of |process|, it is not yet fully constructed.
-    AutoLock lock(&global_process_list_mutex_);
+class FindProcessByKoid final : public JobEnumerator {
+public:
+    FindProcessByKoid(mx_koid_t koid) : koid_(koid) {}
+    FindProcessByKoid(const FindProcessByKoid&) = delete;
 
-    global_process_list_.push_back(process);
+    // To be called after enumeration.
+    mxtl::RefPtr<ProcessDispatcher> get_pd() { return pd_; }
 
-    LTRACEF("Adding process %p : koid = %" PRIu64 "\n",
-            process, process->get_koid());
-}
+private:
+    bool Size(uint32_t proc_count, uint32_t job_count) final {
+        return true;
+    }
 
-void ProcessDispatcher::RemoveProcess(ProcessDispatcher* process) {
-    AutoLock lock(&global_process_list_mutex_);
+    bool OnJob(JobDispatcher* job, uint32_t index) final {
+        // Stop if we have already found it.
+        return pd_ == nullptr;
+    }
 
-    DEBUG_ASSERT(process != nullptr);
-    global_process_list_.erase(*process);
-    LTRACEF("Removing process %p : koid = %" PRIu64 "\n",
-            process, process->get_koid());
-}
+    bool OnProcess(ProcessDispatcher* process, uint32_t index) final {
+        if (process->get_koid() == koid_)
+            pd_ = mxtl::WrapRefPtr(process);
+
+        return true;
+    }
+
+    mx_koid_t koid_;
+    mxtl::RefPtr<ProcessDispatcher> pd_ = nullptr;
+};
 
 // static
 mxtl::RefPtr<ProcessDispatcher> ProcessDispatcher::LookupProcessById(mx_koid_t koid) {
-    LTRACE_ENTRY;
-    AutoLock lock(&global_process_list_mutex_);
-    auto iter = global_process_list_.find_if([koid](const ProcessDispatcher& p) {
-                                                return p.get_koid() == koid;
-                                             });
-    return mxtl::WrapRefPtr(iter.CopyPointer());
+    FindProcessByKoid finder(koid);
+    GetRootJobDispatcher()->EnumerateChildren(&finder);
+    return finder.get_pd();
 }
 
 mxtl::RefPtr<UserThread> ProcessDispatcher::LookupThreadById(mx_koid_t koid) {

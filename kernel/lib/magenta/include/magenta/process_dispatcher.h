@@ -36,14 +36,6 @@ public:
         mxtl::RefPtr<VmAddressRegionDispatcher>* root_vmar_disp,
         mx_rights_t* root_vmar_rights);
 
-    // Traits to belong in the global list of processes.
-    struct ProcessListTraits {
-        static mxtl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(
-            ProcessDispatcher& obj) {
-            return obj.dll_process_;
-        }
-    };
-
     // Traits to belong in the parent job's weak list.
     struct JobListTraitsWeak {
         static mxtl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(
@@ -230,16 +222,7 @@ private:
     // Kill all threads
     void KillAllThreadsLocked() TA_REQ(state_lock_);
 
-    // Add a process to the global process list.  Allocate a new process ID from
-    // the global pool at the same time, and assign it to the process.
-    static void AddProcess(ProcessDispatcher* process);
-
-    // Remove a process from the global process list.
-    static void RemoveProcess(ProcessDispatcher* process);
-
-    // The process can belong to any of 3 lists independently. The first one should
-    // probably be removed.
-    mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_process_;
+    // The process can belong to either of these lists independently.
     mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_weak_;
     mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<ProcessDispatcher>> dll_job_;
 
@@ -282,10 +265,6 @@ private:
     // The user-friendly process name. For debug purposes only.
     // This includes the trailing NUL.
     char name_[MX_MAX_NAME_LEN] TA_GUARDED(name_lock_) = {};
-
-    using ProcessList = mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessListTraits>;
-    static mutex_t global_process_list_mutex_;
-    static ProcessList global_process_list_ TA_GUARDED(global_process_list_mutex_);
 };
 
 const char* StateToString(ProcessDispatcher::State state);
