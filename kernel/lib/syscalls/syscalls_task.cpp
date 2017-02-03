@@ -263,12 +263,11 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    // get dispatcher to the handle passed in
-    // use the bool version of GetDispatcher to just get a raw dispatcher
     mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    if (!up->GetDispatcher(task_handle, &dispatcher, &rights))
-        return up->BadHandle(task_handle, ERR_BAD_HANDLE);
+    mx_rights_t rights;
+    auto status = up->GetDispatcher(task_handle, &dispatcher, &rights);
+    if (status != NO_ERROR)
+        return status;
 
     // see if it's a process or thread and dispatch accordingly
     switch (dispatcher->get_type()) {

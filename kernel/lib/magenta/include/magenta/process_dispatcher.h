@@ -101,15 +101,12 @@ public:
     // back into this process.
     void UndoRemoveHandleLocked(mx_handle_t handle_value) TA_REQ(handle_table_lock_);
 
-    bool GetDispatcher(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
-                       uint32_t* rights);
-
     template <typename T>
     mx_status_t GetDispatcher(mx_handle_t handle_value,
                               mxtl::RefPtr<T>* dispatcher,
                               mx_rights_t* out_rights) {
         mxtl::RefPtr<Dispatcher> generic_dispatcher;
-        if (!GetDispatcher(handle_value, &generic_dispatcher, out_rights))
+        if (!GetDispatcherInternal(handle_value, &generic_dispatcher, out_rights))
             return BadHandle(handle_value, ERR_BAD_HANDLE);
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
@@ -120,16 +117,17 @@ public:
     template <typename T>
     mx_status_t GetDispatcher(mx_handle_t handle_value,
                               mxtl::RefPtr<T>* dispatcher,
-                              mx_rights_t check_rights = 0) {
+                              mx_rights_t desired_rights) {
         mx_rights_t rights;
         mx_status_t status = GetDispatcher(handle_value, dispatcher, &rights);
-        if (status == NO_ERROR && check_rights &&
-            !magenta_rights_check(rights, check_rights)) {
-            dispatcher->reset();
-            status = BadHandle(handle_value, ERR_ACCESS_DENIED);
-        }
-        return status;
+        if (status != NO_ERROR)
+            return status;
+        return magenta_rights_check(rights, desired_rights) ? status : ERR_ACCESS_DENIED;
     }
+
+    mx_koid_t GetKoidForHandle(mx_handle_t handle_value);
+
+    bool IsHandleValid(mx_handle_t handle_value);
 
     // Called when this process attempts to use an invalid handle,
     // a handle of the wrong type, or a handle with insufficient rights.
@@ -189,6 +187,10 @@ private:
 
     ProcessDispatcher(const ProcessDispatcher&) = delete;
     ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;
+
+
+    bool GetDispatcherInternal(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
+                               mx_rights_t* rights);
 
     // Thread lifecycle support
     friend class UserThread;

@@ -169,12 +169,10 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key,
         return status;
 
     mxtl::RefPtr<Dispatcher> source_disp;
-    uint32_t rights;
-    if (!up->GetDispatcher(source, &source_disp, &rights))
-        return up->BadHandle(source, ERR_BAD_HANDLE);
 
-    if (!magenta_rights_check(rights, MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
+    status = up->GetDispatcher(source, &source_disp, MX_RIGHT_READ);
+    if (status != NO_ERROR)
+        return status;
 
     AllocChecker ac;
     mxtl::unique_ptr<PortClient> client(

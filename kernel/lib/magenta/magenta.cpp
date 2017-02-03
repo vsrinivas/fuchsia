@@ -161,7 +161,7 @@ mx_status_t magenta_sleep(mx_time_t nanoseconds) {
 mx_status_t validate_resource_handle(mx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<ResourceDispatcher> resource;
-    return up->GetDispatcher(handle, &resource);
+    return up->GetDispatcher(handle, &resource, nullptr);
 }
 
 mx_status_t get_process(ProcessDispatcher* up,

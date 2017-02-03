@@ -110,7 +110,7 @@ mx_status_t sys_vmo_get_size(mx_handle_t handle, uint64_t* _size) {
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
-    mx_status_t status = up->GetDispatcher(handle, &vmo);
+    mx_status_t status = up->GetDispatcher(handle, &vmo, nullptr);
     if (status != NO_ERROR)
         return status;
 

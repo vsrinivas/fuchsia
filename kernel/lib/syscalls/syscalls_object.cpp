@@ -93,13 +93,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
 
     switch (topic) {
         case MX_INFO_HANDLE_VALID: {
-            mxtl::RefPtr<Dispatcher> dispatcher;
-            uint32_t rights;
-
-            // test that the handle is valid at all, return error if it's not
-            if (!up->GetDispatcher(handle, &dispatcher, &rights))
-                return ERR_BAD_HANDLE;
-            return NO_ERROR;
+            return up->IsHandleValid(handle) ?  NO_ERROR : ERR_BAD_HANDLE;
         }
         case MX_INFO_HANDLE_BASIC: {
             // TODO(MG-458): Handle forward/backward compatibility issues
@@ -110,8 +104,9 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             mxtl::RefPtr<Dispatcher> dispatcher;
             uint32_t rights;
 
-            if (!up->GetDispatcher(handle, &dispatcher, &rights))
-                return up->BadHandle(handle, ERR_BAD_HANDLE);
+            auto status = up->GetDispatcher(handle, &dispatcher, &rights);
+            if (status != NO_ERROR)
+                return status;
 
             if (actual > 0) {
                 bool waitable = dispatcher->get_state_tracker() != nullptr;
@@ -285,8 +280,9 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
     mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
+    auto status = up->GetDispatcher(handle_value, &dispatcher, &rights);
+    if (status != NO_ERROR)
+        return status;
 
     if (!magenta_rights_check(rights, MX_RIGHT_GET_PROPERTY))
         return ERR_ACCESS_DENIED;
@@ -346,13 +342,10 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
 
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
-
-    if (!magenta_rights_check(rights, MX_RIGHT_SET_PROPERTY))
-        return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
+    auto status = up->GetDispatcher(handle_value, &dispatcher, MX_RIGHT_SET_PROPERTY);
+    if (status != NO_ERROR)
+        return status;
 
     switch (property) {
         case MX_PROP_BAD_HANDLE_POLICY: {
@@ -400,12 +393,10 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
 
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
+    auto status = up->GetDispatcher(handle_value, &dispatcher, MX_RIGHT_WRITE);
+    if (status != NO_ERROR)
+        return status;
 
     return dispatcher->user_signal(clear_mask, set_mask, false);
 }
@@ -417,10 +408,9 @@ mx_status_t sys_object_signal_peer(mx_handle_t handle_value, uint32_t clear_mask
     mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
 
-    if (!up->GetDispatcher(handle_value, &dispatcher, &rights))
-        return up->BadHandle(handle_value, ERR_BAD_HANDLE);
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
+    auto status = up->GetDispatcher(handle_value, &dispatcher, &rights);
+    if (status != NO_ERROR)
+        return status;
 
     return dispatcher->user_signal(clear_mask, set_mask, true);
 }
@@ -463,8 +453,9 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t parent_rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &parent_rights))
-        return ERR_BAD_HANDLE;
+    auto status = up->GetDispatcher(handle, &dispatcher, &parent_rights);
+    if (status != NO_ERROR)
+        return status;
 
     if (!(parent_rights & MX_RIGHT_ENUMERATE))
         return ERR_ACCESS_DENIED;

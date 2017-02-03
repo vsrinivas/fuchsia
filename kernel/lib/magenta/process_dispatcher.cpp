@@ -405,16 +405,17 @@ void ProcessDispatcher::UndoRemoveHandleLocked(mx_handle_t handle_value) {
     AddHandleLocked(HandleOwner(handle));
 }
 
-bool ProcessDispatcher::GetDispatcher(mx_handle_t handle_value,
-                                      mxtl::RefPtr<Dispatcher>* dispatcher,
-                                      uint32_t* rights) {
+bool ProcessDispatcher::GetDispatcherInternal(mx_handle_t handle_value,
+                                              mxtl::RefPtr<Dispatcher>* dispatcher,
+                                              mx_rights_t* rights) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
         return false;
 
-    *rights = handle->rights();
     *dispatcher = handle->dispatcher();
+    if (rights)
+        *rights = handle->rights();
     return true;
 }
 
@@ -594,6 +595,11 @@ const char* StateToString(ProcessDispatcher::State state) {
     return "unknown";
 }
 
+bool ProcessDispatcher::IsHandleValid(mx_handle_t handle_value) {
+    AutoLock lock(&handle_table_lock_);
+    return (GetHandleLocked(handle_value) != nullptr);
+}
+
 mx_status_t ProcessDispatcher::BadHandle(mx_handle_t handle_value,
                                          mx_status_t error) {
     // TODO(mcgrathr): Maybe treat other errors the same?
@@ -609,4 +615,11 @@ mx_status_t ProcessDispatcher::BadHandle(mx_handle_t handle_value,
         Exit(error);
     }
     return error;
+}
+
+mx_koid_t ProcessDispatcher::GetKoidForHandle(mx_handle_t handle_value) {
+    mxtl::RefPtr<Dispatcher> dispatcher;
+    if (!GetDispatcherInternal(handle_value, &dispatcher, nullptr))
+        return 0ull;
+    return dispatcher->get_koid();
 }

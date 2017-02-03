@@ -45,8 +45,9 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
-    if (!up->GetDispatcher(obj_handle, &dispatcher, &rights))
-        return ERR_BAD_HANDLE;
+    auto status = up->GetDispatcher(obj_handle, &dispatcher, &rights);
+    if (status != NO_ERROR)
+        return status;
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
@@ -70,7 +71,7 @@ static mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcher> ioport;
-    mx_status_t status = up->GetDispatcher(eport_handle, &ioport);
+    mx_status_t status = up->GetDispatcher(eport_handle, &ioport, nullptr);
     if (status != NO_ERROR)
         return status;
 
@@ -88,8 +89,9 @@ static mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t rights;
-    if (!up->GetDispatcher(obj_handle, &dispatcher, &rights))
-        return ERR_BAD_HANDLE;
+    status = up->GetDispatcher(obj_handle, &dispatcher, &rights);
+    if (status != NO_ERROR)
+        return status;
 
     auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
     if (process) {
@@ -131,8 +133,9 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     mx_rights_t rights;
-    if (!up->GetDispatcher(handle, &dispatcher, &rights))
-        return ERR_BAD_HANDLE;
+    auto status = up->GetDispatcher(handle, &dispatcher, &rights);
+    if (status != NO_ERROR)
+        return status;
 
     auto thread = DownCastDispatcher<ThreadDispatcher>(&dispatcher);
     if (!thread)

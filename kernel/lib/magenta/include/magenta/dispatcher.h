@@ -100,3 +100,8 @@ mxtl::RefPtr<T> DownCastDispatcher(mxtl::RefPtr<Dispatcher>* disp) {
             mxtl::RefPtr<T>::Downcast(mxtl::move(*disp)) :
             nullptr;
 }
+
+template <>
+inline mxtl::RefPtr<Dispatcher> DownCastDispatcher(mxtl::RefPtr<Dispatcher>* disp) {
+    return mxtl::move(*disp);
+}

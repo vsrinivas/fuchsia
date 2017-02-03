@@ -57,14 +57,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
     }
 
 #if WITH_LIB_KTRACE
-    mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    uint32_t koid;
-    if (up->GetDispatcher(handle_value, &dispatcher, &rights)) {
-        koid = (uint32_t)dispatcher->get_koid();
-    } else {
-        koid = 0;
-    }
+    auto koid = static_cast<uint32_t>(up->GetKoidForHandle(handle_value));
     ktrace(TAG_WAIT_ONE, koid, signals, (uint32_t)timeout, (uint32_t)(timeout >> 32));
 #endif
 
