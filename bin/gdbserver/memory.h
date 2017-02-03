@@ -13,6 +13,9 @@ namespace debugserver {
 namespace util {
 
 // An API for accessing "memory".
+// TODO(dje): Find a better name than "memory".
+// This is a fixed size, randomly accessible, block of contiguous bytes.
+// No rush though, the name is "good enough" until things settle.
 
 class Memory {
  public:
