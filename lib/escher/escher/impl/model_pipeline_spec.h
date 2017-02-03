@@ -36,4 +36,8 @@ inline bool operator!=(const ModelPipelineSpec& spec1,
 }
 
 }  // namespace impl
+
+// Debugging.
+ESCHER_DEBUG_PRINTABLE(impl::ModelPipelineSpec);
+
 }  // namespace escher

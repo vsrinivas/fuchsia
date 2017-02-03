@@ -6,6 +6,7 @@
 
 #include "escher/geometry/types.h"
 #include "escher/shape/mesh.h"
+#include "escher/util/debug_print.h"
 
 #include "ftl/logging.h"
 
@@ -48,5 +49,9 @@ class Shape {
   ShapeModifiers modifiers_;
   MeshPtr mesh_;
 };
+
+// Debugging.
+ESCHER_DEBUG_PRINTABLE(ShapeModifier);
+ESCHER_DEBUG_PRINTABLE(ShapeModifiers);
 
 }  // namespace escher

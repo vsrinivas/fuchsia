@@ -48,4 +48,8 @@ inline bool operator==(const MeshSpec& spec1, const MeshSpec& spec2) {
   return spec1.flags == spec2.flags;
 }
 
+// Debugging.
+std::ostream& operator<<(std::ostream& str, const MeshAttribute& attr);
+std::ostream& operator<<(std::ostream& str, const MeshSpec& spec);
+
 }  // namespace escher
