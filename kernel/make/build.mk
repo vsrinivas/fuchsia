@@ -92,6 +92,10 @@ $(BUILDDIR)/%.size: $(BUILDDIR)/%
 $(BUILDDIR)/%.id: $(BUILDDIR)/%
 	$(NOECHO)env READELF=$(READELF) scripts/get-build-id $< > $@
 
+ifneq ($(USER_AUTORUN),)
+USER_MANIFEST_LINES += autorun=$(USER_AUTORUN)
+endif
+
 # generate a new manifest and compare to see if it differs from the previous one
 # USER_MANIFEST_DEBUG_INPUTS is a dependency here as the file name to put in
 # the manifest must be computed *after* the input file is produced (to get the
