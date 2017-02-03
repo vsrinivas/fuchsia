@@ -142,7 +142,8 @@ mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher() {
     return root_job;
 }
 
-bool magenta_rights_check(mx_rights_t actual, mx_rights_t desired) {
+bool magenta_rights_check(const Handle* handle, mx_rights_t desired) {
+    auto actual = handle->rights();
     if ((actual & desired) == desired)
         return true;
     LTRACEF("rights check fail!! has 0x%x, needs 0x%x\n", actual, desired);

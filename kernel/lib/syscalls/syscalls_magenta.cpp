@@ -322,13 +322,13 @@ mx_status_t sys_waitset_add(mx_handle_t ws_handle_value,
         return up->BadHandle(ws_handle_value, ERR_WRONG_TYPE);
     // No need to take a ref to the dispatcher, since we're under the handle table lock. :-/
     auto ws_dispatcher = static_cast<WaitSetDispatcher*>(ws_handle->dispatcher().get());
-    if (!magenta_rights_check(ws_handle->rights(), MX_RIGHT_WRITE))
+    if (!magenta_rights_check(ws_handle, MX_RIGHT_WRITE))
         return up->BadHandle(ws_handle_value, ERR_ACCESS_DENIED);
 
     Handle* handle = up->GetHandleLocked(handle_value);
     if (!handle)
         return up->BadHandle(handle_value, ERR_BAD_HANDLE);
-    if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
+    if (!magenta_rights_check(handle, MX_RIGHT_READ))
         return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
     return ws_dispatcher->AddEntry(mxtl::move(entry), handle);

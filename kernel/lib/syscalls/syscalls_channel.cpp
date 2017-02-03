@@ -169,7 +169,7 @@ static mx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg, mx
                 return ERR_NOT_SUPPORTED;
             }
 
-            if (!magenta_rights_check(handle->rights(), MX_RIGHT_TRANSFER))
+            if (!magenta_rights_check(handle, MX_RIGHT_TRANSFER))
                 return up->BadHandle(handles[ix], ERR_ACCESS_DENIED);
 
             msg->mutable_handles()[ix] = handle;

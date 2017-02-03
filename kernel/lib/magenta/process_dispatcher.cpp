@@ -419,6 +419,21 @@ bool ProcessDispatcher::GetDispatcherInternal(mx_handle_t handle_value,
     return true;
 }
 
+mx_status_t ProcessDispatcher::GetDispatcherWithRights(mx_handle_t handle_value,
+                                                       mx_rights_t desired_rights,
+                                                       mxtl::RefPtr<Dispatcher>* dispatcher_out) {
+    AutoLock lock(&handle_table_lock_);
+    Handle* handle = GetHandleLocked(handle_value);
+    if (!handle)
+        return ERR_BAD_HANDLE;
+
+    if (!magenta_rights_check(handle, desired_rights))
+        return ERR_ACCESS_DENIED;
+
+    *dispatcher_out = handle->dispatcher();
+    return NO_ERROR;
+}
+
 status_t ProcessDispatcher::GetInfo(mx_info_process_t* info) {
     // retcode_ depends on the state: make sure they're consistent.
     state_lock_.Acquire();

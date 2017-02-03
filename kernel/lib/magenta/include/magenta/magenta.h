@@ -39,7 +39,7 @@ mxtl::RefPtr<ExceptionPort> GetSystemExceptionPort();
 
 mxtl::RefPtr<JobDispatcher> GetRootJobDispatcher();
 
-bool magenta_rights_check(mx_rights_t actual, mx_rights_t desired);
+bool magenta_rights_check(const Handle* handle, mx_rights_t desired);
 
 // (temporary) conversion from mx_time (nanoseconds) to lk_time_t (milliseconds)
 // remove once mx_time_t is converted to 1:1 match mx_time_t

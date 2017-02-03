@@ -40,7 +40,7 @@ mx_status_t sys_handle_duplicate(mx_handle_t handle_value, mx_rights_t rights, m
         if (!source)
             return up->BadHandle(handle_value, ERR_BAD_HANDLE);
 
-        if (!magenta_rights_check(source->rights(), MX_RIGHT_DUPLICATE))
+        if (!magenta_rights_check(source, MX_RIGHT_DUPLICATE))
             return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
         HandleOwner dest;

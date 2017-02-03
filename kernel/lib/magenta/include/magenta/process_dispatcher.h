@@ -118,11 +118,14 @@ public:
     mx_status_t GetDispatcher(mx_handle_t handle_value,
                               mxtl::RefPtr<T>* dispatcher,
                               mx_rights_t desired_rights) {
-        mx_rights_t rights;
-        mx_status_t status = GetDispatcher(handle_value, dispatcher, &rights);
+        mxtl::RefPtr<Dispatcher> generic_dispatcher;
+        auto status = GetDispatcherWithRights(handle_value, desired_rights, &generic_dispatcher);
         if (status != NO_ERROR)
             return status;
-        return magenta_rights_check(rights, desired_rights) ? status : ERR_ACCESS_DENIED;
+        *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
+        if (!*dispatcher)
+            return BadHandle(handle_value, ERR_WRONG_TYPE);
+        return NO_ERROR;
     }
 
     mx_koid_t GetKoidForHandle(mx_handle_t handle_value);
@@ -191,6 +194,9 @@ private:
 
     bool GetDispatcherInternal(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
                                mx_rights_t* rights);
+
+    mx_status_t GetDispatcherWithRights(mx_handle_t handle_value, mx_rights_t desired_rights,
+                                        mxtl::RefPtr<Dispatcher>* dispatcher_out);
 
     // Thread lifecycle support
     friend class UserThread;

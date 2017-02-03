@@ -48,7 +48,7 @@ mx_status_t sys_handle_wait_one(mx_handle_t handle_value,
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
             return up->BadHandle(handle_value, ERR_BAD_HANDLE);
-        if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ))
+        if (!magenta_rights_check(handle, MX_RIGHT_READ))
             return up->BadHandle(handle_value, ERR_ACCESS_DENIED);
 
         result = wait_state_observer.Begin(&event, handle, signals);
@@ -126,7 +126,7 @@ mx_status_t sys_handle_wait_many(mx_wait_item_t* _items, uint32_t count, mx_time
                 result = up->BadHandle(items[num_added].handle, ERR_BAD_HANDLE);
                 break;
             }
-            if (!magenta_rights_check(handle->rights(), MX_RIGHT_READ)) {
+            if (!magenta_rights_check(handle, MX_RIGHT_READ)) {
                 result = ERR_ACCESS_DENIED;
                 break;
             }
