@@ -5,30 +5,7 @@
   },
   {
     "cmd": [
-      "python",
-      "-u",
-      "RECIPE_MODULE[infra::cipd]/resources/bootstrap.py",
-      "--platform",
-      "linux-amd64",
-      "--dest-directory",
-      "[START_DIR]/cipd",
-      "--json-output",
-      "/path/to/tmp/json"
-    ],
-    "name": "ensure_jiri.install cipd",
-    "~followup_annotations": [
-      "@@@STEP_NEST_LEVEL@1@@@",
-      "@@@STEP_TEXT@cipd version: git_revision:05844bd9d1200cba8449b936b76e25eb90eabe25@@@",
-      "@@@STEP_LOG_LINE@json.output@{@@@",
-      "@@@STEP_LOG_LINE@json.output@  \"executable\": \"[START_DIR]/cipd/cipd\", @@@",
-      "@@@STEP_LOG_LINE@json.output@  \"version\": \"git_revision:05844bd9d1200cba8449b936b76e25eb90eabe25\"@@@",
-      "@@@STEP_LOG_LINE@json.output@}@@@",
-      "@@@STEP_LOG_END@json.output@@@"
-    ]
-  },
-  {
-    "cmd": [
-      "[START_DIR]/cipd/cipd",
+      "cipd",
       "ensure",
       "--root",
       "[START_DIR]/cipd/jiri",
@@ -56,7 +33,7 @@
       "[START_DIR]/cipd/jiri/jiri",
       "init",
       "-cache",
-      "[CACHE]/jiri"
+      "[CACHE]/git"
     ],
     "name": "jiri init"
   },
