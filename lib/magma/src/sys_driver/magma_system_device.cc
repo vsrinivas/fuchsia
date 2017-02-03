@@ -26,9 +26,10 @@ MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id
 }
 
 void MagmaSystemDevice::PageFlip(std::shared_ptr<MagmaSystemBuffer> buf,
+                                 magma_system_image_descriptor* image_desc,
                                  magma_system_pageflip_callback_t callback, void* data)
 {
-    msd_device_page_flip(msd_dev(), buf->msd_buf(), callback, data);
+    msd_device_page_flip(msd_dev(), buf->msd_buf(), image_desc, callback, data);
 }
 
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::GetBufferForHandle(uint32_t handle)

@@ -39,6 +39,7 @@ struct msd_connection* msd_device_open(struct msd_device* dev, msd_client_id cli
 // no longer being displayed and is safe to be reused. The first argument to
 // |callback| indicates an error with the page flip, where 0 indicates success
 void msd_device_page_flip(struct msd_device* dev, struct msd_buffer* buf,
+                          struct magma_system_image_descriptor* image_desc,
                           magma_system_pageflip_callback_t callback, void* data);
 
 // Closes the given connection to the device.

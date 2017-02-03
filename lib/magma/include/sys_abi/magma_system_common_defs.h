@@ -26,7 +26,13 @@ extern "C" {
 #define MAGMA_STATUS_CONTEXT_KILLED (-5)
 #define MAGMA_STATUS_CONNECTION_LOST (-6)
 
+// possible values for magma_image_tiling_t
+#define MAGMA_IMAGE_TILING_OPTIMAL 0
+#define MAGMA_IMAGE_TILING_LINEAR 1
+
 typedef int32_t magma_status_t;
+
+typedef uint32_t magma_image_tiling_t;
 
 typedef uintptr_t magma_buffer_t;
 
@@ -68,6 +74,10 @@ typedef void (*magma_system_pageflip_callback_t)(magma_status_t status, void* da
 struct magma_system_connection_request {
     uint32_t client_id;
     uint32_t capabilities;
+} __attribute__((packed));
+
+struct magma_system_image_descriptor {
+    magma_image_tiling_t tiling;
 } __attribute__((packed));
 
 #if defined(__cplusplus)

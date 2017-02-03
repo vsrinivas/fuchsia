@@ -29,6 +29,7 @@ void msd_device_destroy(msd_device* dev)
 }
 
 void msd_device_page_flip(msd_device* dev, msd_buffer* buf,
+                          magma_system_image_descriptor* image_desc,
                           magma_system_pageflip_callback_t callback, void* data)
 {
     callback(0, data);

@@ -41,8 +41,8 @@ public:
     // Returns the device id. 0 is invalid.
     uint32_t GetDeviceId();
 
-    void PageFlip(std::shared_ptr<MagmaSystemBuffer> buf, magma_system_pageflip_callback_t callback,
-                  void* data);
+    void PageFlip(std::shared_ptr<MagmaSystemBuffer> buf, magma_system_image_descriptor* image_desc,
+                  magma_system_pageflip_callback_t callback, void* data);
 
     std::shared_ptr<MagmaSystemBuffer> GetBufferForHandle(uint32_t handle);
     void ReleaseBuffer(uint64_t id);

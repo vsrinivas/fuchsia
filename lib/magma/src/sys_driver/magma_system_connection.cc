@@ -186,5 +186,7 @@ void MagmaSystemConnection::PageFlip(uint64_t id, magma_system_pageflip_callback
         return;
     }
 
-    device->PageFlip(buf, callback, data);
+    magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
+
+    device->PageFlip(buf, &image_desc, callback, data);
 }
