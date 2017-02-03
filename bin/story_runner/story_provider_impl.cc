@@ -48,7 +48,7 @@ std::string MakeStoryId(std::unordered_set<std::string>* story_ids,
   return id;
 }
 
-// Below are helper classes that encapsulates a chain of asynchronous
+// Below are helper classes that encapsulate a chain of asynchronous
 // operations on the Ledger. Because the operations all return
 // something, the handles on which they are invoked need to be kept
 // around until the return value arrives. This precludes them to be
@@ -396,6 +396,22 @@ class GetControllerCall : public Operation {
             return;
           }
           story_data_ = std::move(story_data);
+
+          // HACK(mesch): If the story were really running, it would
+          // have a story controller found in the section above, and
+          // we would never get here. But if the user runner was
+          // previously killed while the story was running, the story
+          // would be recorded in the ledger as running even thoug it
+          // isn't, and the user shell is then unable to actually
+          // start it (cf. StoryImpl::Start()).
+          //
+          // This needs to be fixed properly in different ways (adding
+          // a device ID to the persisted state and resurrecting the
+          // user session with stories already running). This
+          // workaround here just gets user shell be able to start
+          // previous stories. FW-95
+          story_data_->story_info->is_running = false;
+
           ledger_->GetPage(
               story_data_->story_page_id.Clone(), story_page_.NewRequest(),
               [this](ledger::Status status) {
