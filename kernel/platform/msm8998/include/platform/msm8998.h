@@ -28,7 +28,10 @@
 #define MSM8998_GIC_BASE_VIRT       (MSM8998_PERIPH_BASE_VIRT + 0x17a00000)
 
 /* interrupts */
-#define ARM_GENERIC_TIMER_PHYSICAL_INT 30
-#define UART_INT       (32 + 114)
+#define PPI_BASE    16  // first per-processor interrupt
+#define SPI_BASE    32  // first system peripheral interrupt
+
+#define ARM_GENERIC_TIMER_PHYSICAL_VIRT (PPI_BASE + 3)
+#define UART_INT                        (SPI_BASE + 114)
 
 #define MAX_INT 640

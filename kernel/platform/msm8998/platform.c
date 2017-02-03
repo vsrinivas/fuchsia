@@ -123,7 +123,7 @@ void platform_early_init(void)
 
     /* initialize the interrupt controller and timers */
     arm_gic_init();
-    arm_generic_timer_init(ARM_GENERIC_TIMER_PHYSICAL_INT, 0);
+    arm_generic_timer_init(ARM_GENERIC_TIMER_PHYSICAL_VIRT, 0);
 
     /* add the main memory arena */
     pmm_add_arena(&arena);
