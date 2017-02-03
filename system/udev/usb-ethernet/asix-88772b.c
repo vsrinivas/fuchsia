@@ -42,32 +42,13 @@ typedef struct {
     list_node_t free_write_reqs;
     list_node_t free_intr_reqs;
 
-    // list of received packets not yet read by upper layer
-    list_node_t completed_reads;
-    // offset of next packet to process from completed_reads head
-    size_t read_offset;
-
-    // the last signals we reported
-    mx_signals_t signals;
+    // callback interface to attached ethernet layer
+    ethmac_ifc_t* ifc;
+    void* cookie;
 
     mtx_t mutex;
 } ax88772b_t;
 #define get_ax88772b(dev) ((ax88772b_t*)dev->ctx)
-
-static void update_signals_locked(ax88772b_t* eth) {
-    mx_signals_t new_signals = 0;
-
-    if (eth->dead)
-        new_signals |= (DEV_STATE_READABLE | DEV_STATE_ERROR);
-    if (!list_is_empty(&eth->completed_reads))
-        new_signals |= DEV_STATE_READABLE;
-    if (!list_is_empty(&eth->free_write_reqs) && eth->online)
-        new_signals |= DEV_STATE_WRITABLE;
-    if (new_signals != eth->signals) {
-        device_state_set_clr(eth->device, new_signals & ~eth->signals, eth->signals & ~new_signals);
-        eth->signals = new_signals;
-    }
-}
 
 static mx_status_t ax88772b_set_value(ax88772b_t* eth, uint8_t request, uint16_t value) {
     return usb_control(eth->usb_device, USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
@@ -152,6 +133,41 @@ static void queue_interrupt_requests_locked(ax88772b_t* eth) {
     }
 }
 
+static void ax88772b_recv(ax88772b_t* eth, iotxn_t* request) {
+    size_t len = request->actual;
+    uint8_t* pkt;
+    request->ops->mmap(request, (void**) &pkt);
+
+    while (len > ETH_HEADER_SIZE) {
+        uint16_t length1 = (pkt[0] | (uint16_t)pkt[1] << 8) & 0x7FF;
+        uint16_t length2 = (~(pkt[2] | (uint16_t)pkt[3] << 8)) & 0x7FF;
+        pkt += ETH_HEADER_SIZE;
+        len -= ETH_HEADER_SIZE;
+
+        if (length1 != length2) {
+            printf("invalid header: length1: %d length2: %d\n", length1, length2);
+            return;
+        }
+
+        if (length1 > len) {
+            return;
+        }
+
+        eth->ifc->recv(eth->cookie, pkt, length1, 0);
+        pkt += length1;
+        len -= length1;
+
+        // align to uint16
+        if (length1 & 1) {
+            if (len == 0) {
+                return;
+            }
+            pkt++;
+            len--;
+        }
+    }
+}
+
 static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
     ax88772b_t* eth = (ax88772b_t*)cookie;
 
@@ -161,12 +177,10 @@ static void ax88772b_read_complete(iotxn_t* request, void* cookie) {
     }
 
     mtx_lock(&eth->mutex);
-    if (request->status == NO_ERROR) {
-        list_add_tail(&eth->completed_reads, &request->node);
-    } else {
-        requeue_read_request_locked(eth, request);
+    if ((request->status == NO_ERROR) && eth->ifc) {
+        ax88772b_recv(eth, request);
     }
-    update_signals_locked(eth);
+    requeue_read_request_locked(eth, request);
     mtx_unlock(&eth->mutex);
 }
 
@@ -180,7 +194,6 @@ static void ax88772b_write_complete(iotxn_t* request, void* cookie) {
 
     mtx_lock(&eth->mutex);
     list_add_tail(&eth->free_write_reqs, &request->node);
-    update_signals_locked(eth);
     mtx_unlock(&eth->mutex);
 }
 
@@ -216,7 +229,6 @@ static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
                     list_delete(&req->node);
                     requeue_read_request_locked(eth, req);
                 }
-                update_signals_locked(eth);
             }
         }
     }
@@ -227,7 +239,7 @@ static void ax88772b_interrupt_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-mx_status_t ax88772b_send(mx_device_t* device, const void* buffer, size_t length) {
+static mx_status_t _ax88772b_send(mx_device_t* device, const void* buffer, size_t length) {
     ax88772b_t* eth = get_ax88772b(device);
 
     if (eth->dead) {
@@ -240,6 +252,7 @@ mx_status_t ax88772b_send(mx_device_t* device, const void* buffer, size_t length
 
     list_node_t* node = list_remove_head(&eth->free_write_reqs);
     if (!node) {
+        //TODO: block
         status = ERR_BUFFER_TOO_SMALL;
         goto out;
     }
@@ -265,92 +278,15 @@ mx_status_t ax88772b_send(mx_device_t* device, const void* buffer, size_t length
     iotxn_queue(eth->usb_device, request);
 
 out:
-    update_signals_locked(eth);
     mtx_unlock(&eth->mutex);
     return status;
 }
-
-mx_status_t ax88772b_recv(mx_device_t* device, void* buffer, size_t length) {
-    ax88772b_t* eth = get_ax88772b(device);
-
-    if (eth->dead) {
-        return ERR_REMOTE_CLOSED;
-    }
-
-    mx_status_t status = NO_ERROR;
-
-    mtx_lock(&eth->mutex);
-    size_t offset = eth->read_offset;
-
-    list_node_t* node = list_peek_head(&eth->completed_reads);
-    if (!node) {
-        status = ERR_BAD_STATE;
-        goto out;
-    }
-    iotxn_t* request = containerof(node, iotxn_t, node);
-    int remaining = request->actual - offset;
-    if (remaining < 4) {
-        printf("ax88772b_recv short packet\n");
-        status = ERR_INTERNAL;
-        list_remove_head(&eth->completed_reads);
-        requeue_read_request_locked(eth, request);
-        goto out;
-    }
-
-    uint8_t header[ETH_HEADER_SIZE];
-    request->ops->copyfrom(request, header, ETH_HEADER_SIZE, 0);
-    uint16_t length1 = (header[0] | (uint16_t)header[1] << 8) & 0x7FF;
-    uint16_t length2 = (~(header[2] | (uint16_t)header[3] << 8)) & 0x7FF;
-
-    if (length1 != length2) {
-        printf("invalid header: length1: %d length2: %d offset %zu\n", length1, length2, offset);
-        status = ERR_INTERNAL;
-        offset = 0;
-        list_remove_head(&eth->completed_reads);
-        requeue_read_request_locked(eth, request);
-        goto out;
-    }
-    if (length1 > length) {
-        status = ERR_BUFFER_TOO_SMALL;
-        goto out;
-    }
-    request->ops->copyfrom(request, buffer, length1, ETH_HEADER_SIZE);
-    status = length1;
-    offset += (length1 + 4);
-    if (offset & 1)
-        offset++;
-    if (offset >= request->actual) {
-        offset = 0;
-        list_remove_head(&eth->completed_reads);
-        requeue_read_request_locked(eth, request);
-    }
-
-out:
-    eth->read_offset = offset;
-
-    update_signals_locked(eth);
-    mtx_unlock(&eth->mutex);
-    return status;
-}
-
-mx_status_t ax88772b_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
-    ax88772b_t* eth = get_ax88772b(device);
-    memcpy(out_addr, eth->mac_addr, sizeof(eth->mac_addr));
-    return NO_ERROR;
-}
-
-size_t ax88772b_get_mtu(mx_device_t* device) {
-    return USB_BUF_SIZE - ETH_HEADER_SIZE;
-}
-
-static ethernet_protocol_t ax88772b_proto = {};
 
 static void ax88772b_unbind(mx_device_t* device) {
     ax88772b_t* eth = get_ax88772b(device);
 
     mtx_lock(&eth->mutex);
     eth->dead = true;
-    update_signals_locked(eth);
     mtx_unlock(&eth->mutex);
 
     // this must be last since this can trigger releasing the device
@@ -379,44 +315,57 @@ static mx_status_t ax88772b_release(mx_device_t* device) {
     return NO_ERROR;
 }
 
-static ssize_t ax88772b_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
-    switch (op) {
-    case IOCTL_ETHERNET_GET_MAC_ADDR: {
-        uint8_t* mac = reply;
-        if (max < ETH_MAC_SIZE) return ERR_BUFFER_TOO_SMALL;
-        ax88772b_get_mac_addr(dev, mac);
-        return ETH_MAC_SIZE;
-    }
-    case IOCTL_ETHERNET_GET_MTU: {
-        size_t* mtu = reply;
-        if (max < sizeof(*mtu)) return ERR_BUFFER_TOO_SMALL;
-        *mtu = ax88772b_get_mtu(dev);
-        return sizeof(*mtu);
-    }
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
-}
-
-// simplified read/write interface
-
-static ssize_t ax88772b_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
-  if (len < ax88772b_get_mtu(dev)) {
-        return ERR_BUFFER_TOO_SMALL;
-    }
-    return ax88772b_recv(dev, data, len);
-}
-
-static ssize_t ax88772b_write(mx_device_t* dev, const void* data, size_t len, mx_off_t off) {
-    return ax88772b_send(dev, data, len);
-}
-
 static mx_protocol_device_t ax88772b_device_proto = {
-    .ioctl = ax88772b_ioctl,
     .unbind = ax88772b_unbind,
     .release = ax88772b_release,
-    .read = ax88772b_read,
-    .write = ax88772b_write,
+};
+
+static mx_status_t ax88772b_query(mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
+    ax88772b_t* eth = get_ax88772b(dev);
+
+    if (options) {
+        return ERR_INVALID_ARGS;
+    }
+
+    memset(info, 0, sizeof(*info));
+    info->mtu = USB_BUF_SIZE - ETH_HEADER_SIZE;
+    memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
+
+    return NO_ERROR;
+}
+
+static void ax88772b_stop(mx_device_t* dev) {
+    ax88772b_t* eth = get_ax88772b(dev);
+    mtx_lock(&eth->mutex);
+    eth->ifc = NULL;
+    mtx_unlock(&eth->mutex);
+}
+
+static mx_status_t ax88772b_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
+    ax88772b_t* eth = get_ax88772b(dev);
+    mx_status_t status = NO_ERROR;
+
+    mtx_lock(&eth->mutex);
+    if (eth->ifc) {
+        status = ERR_BAD_STATE;
+    } else {
+        eth->ifc = ifc;
+        eth->cookie = cookie;
+    }
+    mtx_unlock(&eth->mutex);
+
+    return status;
+}
+
+static void ax88772b_send(mx_device_t* dev, uint32_t options, void* data, size_t length) {
+    _ax88772b_send(dev, data, length);
+}
+
+static ethmac_protocol_t ethmac_ops = {
+    .query = ax88772b_query,
+    .stop = ax88772b_stop,
+    .start = ax88772b_start,
+    .send = ax88772b_send,
 };
 
 static int ax88772b_start_thread(void* arg) {
@@ -516,8 +465,8 @@ static int ax88772b_start_thread(void* arg) {
     mtx_unlock(&eth->mutex);
 
     eth->device->ctx = eth;
-    eth->device->protocol_id = MX_PROTOCOL_ETHERNET;
-    eth->device->protocol_ops = &ax88772b_proto;
+    eth->device->protocol_id = MX_PROTOCOL_ETHERMAC;
+    eth->device->protocol_ops = &ethmac_ops;
     status = device_add(eth->device, eth->usb_device);
     if (status == NO_ERROR) return NO_ERROR;
 
@@ -573,7 +522,6 @@ static mx_status_t ax88772b_bind(mx_driver_t* driver, mx_device_t* device) {
     list_initialize(&eth->free_read_reqs);
     list_initialize(&eth->free_write_reqs);
     list_initialize(&eth->free_intr_reqs);
-    list_initialize(&eth->completed_reads);
 
     eth->usb_device = device;
     eth->driver = driver;
