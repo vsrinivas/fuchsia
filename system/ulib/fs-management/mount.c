@@ -39,12 +39,15 @@ disk_format_t detect_disk_format(int fd) {
         return DISK_FORMAT_GPT;
     } else if (!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
         return DISK_FORMAT_MINFS;
-    } else if ((data[510] == 0x55 && data[511] == 0xAA) &&
-               (data[38] == 0x29 || data[66] == 0x29)) {
-        // 0x55AA are always placed at offset 510 and 511 for FAT filesystems.
-        // 0x29 is the Boot Signature, but it is placed at either offset 38 or
-        // 66 (depending on FAT type).
-        return DISK_FORMAT_FAT;
+    } else if ((data[510] == 0x55 && data[511] == 0xAA)) {
+        if ((data[38] == 0x29 || data[66] == 0x29)) {
+            // 0x55AA are always placed at offset 510 and 511 for FAT filesystems.
+            // 0x29 is the Boot Signature, but it is placed at either offset 38 or
+            // 66 (depending on FAT type).
+            return DISK_FORMAT_FAT;
+        } else {
+            return DISK_FORMAT_MBR;
+        }
     }
     return DISK_FORMAT_UNKNOWN;
 }

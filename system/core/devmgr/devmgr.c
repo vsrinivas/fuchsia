@@ -142,6 +142,13 @@ static mx_status_t block_device_added(int dirfd, const char* name, void* cookie)
         close(fd);
         return NO_ERROR;
     }
+    case DISK_FORMAT_MBR: {
+        printf("devmgr: /dev/class/block/%s: MBR?\n", name);
+        // probe for partition table
+        ioctl_device_bind(fd, "mbr", 4);
+        close(fd);
+        return NO_ERROR;
+    }
     case DISK_FORMAT_MINFS: {
         mount_options_t options;
         memcpy(&options, &default_mount_options, sizeof(mount_options_t));

@@ -13,6 +13,7 @@
 typedef enum disk_format_type {
     DISK_FORMAT_UNKNOWN,
     DISK_FORMAT_GPT,
+    DISK_FORMAT_MBR,
     DISK_FORMAT_MINFS,
     DISK_FORMAT_FAT,
 } disk_format_t;
