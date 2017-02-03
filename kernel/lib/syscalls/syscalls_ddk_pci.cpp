@@ -401,7 +401,7 @@ mx_handle_t sys_pci_map_mmio(mx_handle_t handle, uint32_t bar_num, mx_cache_poli
         return result;
 
     HandleOwner mmio_handle(MakeHandle(mxtl::move(mmio_io_mapping), mmio_rights));
-    if (!handle)
+    if (!mmio_handle)
         return ERR_NO_MEMORY;
 
     mx_handle_t ret_val = up->MapHandleToValue(mmio_handle);
