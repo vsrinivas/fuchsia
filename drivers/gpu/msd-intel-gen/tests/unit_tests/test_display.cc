@@ -48,9 +48,11 @@ public:
             buffers.push_back(std::move(buffer));
         }
 
+        magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_LINEAR};
+
         for (uint32_t frame = 0; frame < num_frames; frame++) {
             uint32_t buffer_index = frame % buffers.size();
-            device->Flip(buffers[buffer_index], callback, this);
+            device->Flip(buffers[buffer_index], &image_desc, callback, this);
             EXPECT_EQ(num_callback_, frame);
         }
     }

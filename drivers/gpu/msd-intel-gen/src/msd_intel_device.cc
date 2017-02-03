@@ -48,20 +48,21 @@ private:
 
 class MsdIntelDevice::FlipRequest : public DeviceRequest {
 public:
-    FlipRequest(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_pageflip_callback_t callback,
-                void* data)
-        : buffer_(std::move(buffer)), callback_(callback), data_(data)
+    FlipRequest(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
+                magma_system_pageflip_callback_t callback, void* data)
+        : buffer_(std::move(buffer)), image_desc_(*image_desc), callback_(callback), data_(data)
     {
     }
 
 protected:
     magma::Status Process(MsdIntelDevice* device) override
     {
-        return device->ProcessFlip(buffer_, callback_, data_);
+        return device->ProcessFlip(buffer_, image_desc_, callback_, data_);
     }
 
 private:
     std::shared_ptr<MsdIntelBuffer> buffer_;
+    magma_system_image_descriptor image_desc_;
     magma_system_pageflip_callback_t callback_;
     void* data_;
 };
@@ -309,6 +310,7 @@ void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_contex
 }
 
 void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
+                          magma_system_image_descriptor* image_desc,
                           magma_system_pageflip_callback_t callback, void* data)
 {
     DLOG("Flip");
@@ -317,7 +319,7 @@ void MsdIntelDevice::Flip(std::shared_ptr<MsdIntelBuffer> buffer,
 
     buffer->WaitRendering();
 
-    auto request = std::make_unique<FlipRequest>(buffer, callback, data);
+    auto request = std::make_unique<FlipRequest>(buffer, image_desc, callback, data);
     auto reply = request->GetReply();
 
     EnqueueDeviceRequest(std::move(request));
@@ -484,6 +486,7 @@ magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContex
 }
 
 magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
+                                          const magma_system_image_descriptor& image_desc,
                                           magma_system_pageflip_callback_t callback, void* data)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
@@ -512,6 +515,10 @@ magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer
         display_mappings_.push_front(mapping);
     }
 
+    uint32_t width, height;
+    registers::DisplayPlaneSurfaceSize::read(
+        register_io(), registers::DisplayPlaneSurfaceSize::PIPE_A_PLANE_1, &width, &height);
+
     // Controls whether the plane surface update happens immediately or on the next vblank.
     constexpr bool kUpdateOnVblank = true;
 
@@ -525,26 +532,34 @@ magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer
     registers::DisplayPlaneControl::enable_update_on_vblank(
         register_io(), registers::DisplayPlaneControl::PIPE_A_PLANE_1, kUpdateOnVblank);
 
-    registers::DisplayPlaneControl::set_tiling(register_io(),
-                                               registers::DisplayPlaneControl::PIPE_A_PLANE_1,
-                                               registers::DisplayPlaneControl::TILING_X);
-
-    // Until we know the stride of the given image, we assume the hardware has already been
-    // programmed with the correct stride.  However the stride may be programmed for linear,
-    // so if we detect that then convert to X tiled.
-    uint32_t stride = registers::DisplayPlaneSurfaceStride::read(
-        register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1);
-
-    if (stride > 64) {
-        stride = magma::round_up(stride * 64, 512) / 512;
-        registers::DisplayPlaneSurfaceStride::write(
-            register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1, stride);
-    }
-
     if (kWaitForFlip)
         registers::DisplayPipeInterrupt::update_mask_bits(
             register_io(), registers::DisplayPipeInterrupt::PIPE_A,
             registers::DisplayPipeInterrupt::kPlane1FlipDoneBit, true);
+
+    constexpr uint32_t kCacheLineSize = 64;
+    constexpr uint32_t kTileSize = 512;
+
+    if (image_desc.tiling == MAGMA_IMAGE_TILING_OPTIMAL) {
+        // Stride must be an integer number of tiles
+        uint32_t stride = magma::round_up(width * sizeof(uint32_t), kTileSize) / kTileSize;
+        registers::DisplayPlaneSurfaceStride::write(
+            register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1, stride);
+
+        registers::DisplayPlaneControl::set_tiling(register_io(),
+                                                   registers::DisplayPlaneControl::PIPE_A_PLANE_1,
+                                                   registers::DisplayPlaneControl::TILING_X);
+    } else {
+        // Stride must be an integer number of cache lines
+        uint32_t stride =
+            magma::round_up(width * sizeof(uint32_t), kCacheLineSize) / kCacheLineSize;
+        registers::DisplayPlaneSurfaceStride::write(
+            register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1, stride);
+
+        registers::DisplayPlaneControl::set_tiling(register_io(),
+                                                   registers::DisplayPlaneControl::PIPE_A_PLANE_1,
+                                                   registers::DisplayPlaneControl::TILING_NONE);
+    }
 
     registers::DisplayPlaneSurfaceAddress::write(
         register_io(), registers::DisplayPlaneSurfaceAddress::PIPE_A_PLANE_1, mapping->gpu_addr());
@@ -652,7 +667,9 @@ void msd_device_dump_status(struct msd_device* dev)
 }
 
 void msd_device_page_flip(msd_device* dev, msd_buffer* buf,
+                          magma_system_image_descriptor* image_desc,
                           magma_system_pageflip_callback_t callback, void* data)
 {
-    MsdIntelDevice::cast(dev)->Flip(MsdIntelAbiBuffer::cast(buf)->ptr(), callback, data);
+    MsdIntelDevice::cast(dev)->Flip(MsdIntelAbiBuffer::cast(buf)->ptr(), image_desc, callback,
+                                    data);
 }

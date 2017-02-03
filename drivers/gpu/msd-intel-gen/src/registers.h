@@ -299,6 +299,29 @@ public:
     }
 };
 
+class DisplayPlaneSurfaceSize {
+public:
+    enum Plane { PIPE_A_PLANE_1 };
+
+    static constexpr uint32_t kOffsetPipeAPlane1 = 0x70190;
+    static constexpr uint32_t kWidthMask = 0x1fff;
+    static constexpr uint32_t kHeightShift = 16;
+    static constexpr uint32_t kHeightMask = 0x1fff << kHeightShift;
+
+    // Returns width and height in pixels
+    static void read(RegisterIo* reg_io, Plane plane, uint32_t* width_out, uint32_t* height_out)
+    {
+        uint32_t val;
+        switch (plane) {
+        case PIPE_A_PLANE_1:
+            val = reg_io->Read32(kOffsetPipeAPlane1);
+            break;
+        }
+        *width_out = (val & kWidthMask) + 1;
+        *height_out = ((val & kHeightMask) >> kHeightShift) + 1;
+    }
+};
+
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.559-566
 class DisplayPlaneControl {
 public:

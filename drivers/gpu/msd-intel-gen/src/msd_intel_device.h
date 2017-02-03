@@ -66,8 +66,8 @@ public:
     void Dump(DumpState* dump_state);
     void DumpToString(std::string& dump_string);
 
-    void Flip(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_pageflip_callback_t callback,
-              void* data);
+    void Flip(std::shared_ptr<MsdIntelBuffer> buffer, magma_system_image_descriptor* image_desc,
+              magma_system_pageflip_callback_t callback, void* data);
 
 private:
 #define CHECK_THREAD_IS_CURRENT(x)                                                                 \
@@ -119,6 +119,7 @@ private:
     magma::Status ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
     magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
     magma::Status ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
+                              const magma_system_image_descriptor& image_desc,
                               magma_system_pageflip_callback_t callback, void* data);
 
     bool WaitIdle();
