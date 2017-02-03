@@ -9,6 +9,7 @@
 #include "arch-x86.h"
 #include "thread.h"
 #include "util.h"
+#include "x86-cpuid.h"
 
 namespace debugserver {
 namespace arch {
@@ -93,7 +94,7 @@ bool IsSingleStepException(const mx_exception_context_t& context) {
 }
 
 void DumpArch(FILE* out) {
-  FTL_NOTIMPLEMENTED();
+  x86::x86_feature_debug(out);
 }
 
 }  // namespace arch

@@ -33,6 +33,8 @@ if (current_cpu == "x64") {
     "arch-x86.h",
     "breakpoint-amd64.cc",
     "registers-amd64.cc",
+    "x86-cpuid.cc",
+    "x86-cpuid.h",
   ]
 } else if (current_cpu == "arm64") {
   arch_sources = [
