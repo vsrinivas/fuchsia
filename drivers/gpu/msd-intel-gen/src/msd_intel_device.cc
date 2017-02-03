@@ -525,6 +525,22 @@ magma::Status MsdIntelDevice::ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer
     registers::DisplayPlaneControl::enable_update_on_vblank(
         register_io(), registers::DisplayPlaneControl::PIPE_A_PLANE_1, kUpdateOnVblank);
 
+    registers::DisplayPlaneControl::set_tiling(register_io(),
+                                               registers::DisplayPlaneControl::PIPE_A_PLANE_1,
+                                               registers::DisplayPlaneControl::TILING_X);
+
+    // Until we know the stride of the given image, we assume the hardware has already been
+    // programmed with the correct stride.  However the stride may be programmed for linear,
+    // so if we detect that then convert to X tiled.
+    uint32_t stride = registers::DisplayPlaneSurfaceStride::read(
+        register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1);
+
+    if (stride > 64) {
+        stride = magma::round_up(stride * 64, 512) / 512;
+        registers::DisplayPlaneSurfaceStride::write(
+            register_io(), registers::DisplayPlaneSurfaceStride::PIPE_A_PLANE_1, stride);
+    }
+
     if (kWaitForFlip)
         registers::DisplayPipeInterrupt::update_mask_bits(
             register_io(), registers::DisplayPipeInterrupt::PIPE_A,

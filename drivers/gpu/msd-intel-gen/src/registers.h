@@ -274,13 +274,41 @@ public:
     }
 };
 
+// from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.598
+class DisplayPlaneSurfaceStride {
+public:
+    enum Plane { PIPE_A_PLANE_1 };
+
+    static constexpr uint32_t kOffsetPipeAPlane1 = 0x70188;
+
+    static uint32_t read(RegisterIo* reg_io, Plane plane)
+    {
+        switch (plane) {
+        case PIPE_A_PLANE_1:
+            return reg_io->Read32(kOffsetPipeAPlane1);
+        }
+    }
+
+    static void write(RegisterIo* reg_io, Plane plane, uint32_t stride)
+    {
+        switch (plane) {
+        case PIPE_A_PLANE_1:
+            reg_io->Write32(kOffsetPipeAPlane1, stride);
+            break;
+        }
+    }
+};
+
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.559-566
 class DisplayPlaneControl {
 public:
     enum Plane { PIPE_A_PLANE_1 };
+    enum Tiling { TILING_NONE = 0, TILING_X = 1, TILING_Y_LEGACY = 4, TILING_YF = 5 };
 
     static constexpr uint32_t kOffsetPipeAPlane1 = 0x70180;
     static constexpr uint32_t kAsyncAddressAutoUpdateEnableBit = 1 << 9;
+    static constexpr uint32_t kTiledSurfaceShift = 10;
+    static constexpr uint32_t kTiledSurfaceMask = 0x7 << kTiledSurfaceShift;
 
     static uint32_t read(RegisterIo* reg_io, Plane plane)
     {
@@ -307,6 +335,13 @@ public:
         } else {
             val |= kAsyncAddressAutoUpdateEnableBit;
         }
+        write(reg_io, plane, val);
+    }
+
+    static void set_tiling(RegisterIo* reg_io, Plane plane, Tiling tiling)
+    {
+        uint32_t val = read(reg_io, plane);
+        val = (val & ~kTiledSurfaceMask) | (tiling << kTiledSurfaceShift);
         write(reg_io, plane, val);
     }
 };
