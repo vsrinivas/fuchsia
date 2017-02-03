@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-assert(target_os == "fuchsia")
+assert(current_os == "fuchsia")
 
 declare_args() {
   # Path to Fuchsia SDK.
