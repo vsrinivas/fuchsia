@@ -415,13 +415,13 @@ void PcieDevice::LeaveMsiIrqMode() {
 
 status_t PcieDevice::EnterMsiIrqMode(uint requested_irqs) {
     DEBUG_ASSERT(requested_irqs);
-    DEBUG_ASSERT(irq_.msi);
 
     status_t res = NO_ERROR;
 
     // We cannot go into MSI mode if we don't support MSI at all, or we don't
     // support the number of IRQs requested
-    if (!irq_.msi->is_valid()                  ||
+    if (!irq_.msi                             ||
+        !irq_.msi->is_valid()                 ||
         !bus_drv_.platform().supports_msi()   ||
         (requested_irqs > irq_.msi->max_irqs()))
         return ERR_NOT_SUPPORTED;
