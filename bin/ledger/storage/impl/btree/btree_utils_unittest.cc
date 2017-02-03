@@ -15,6 +15,7 @@
 #include "apps/ledger/src/test/capture.h"
 #include "apps/ledger/src/test/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/ftl/arraysize.h"
 #include "lib/ftl/logging.h"
 #include "lib/ftl/strings/string_printf.h"
 #include "lib/mtl/socket/strings.h"
@@ -94,6 +95,20 @@ class BTreeUtilsTest : public StorageTest {
  private:
   FTL_DISALLOW_COPY_AND_ASSIGN(BTreeUtilsTest);
 };
+
+TEST_F(BTreeUtilsTest, GetNodeLevel) {
+  size_t level_distribution[4];
+  memset(level_distribution, 0, sizeof(level_distribution));
+
+  for (size_t i = 0; i < 1000; ++i) {
+    ftl::StringView key(reinterpret_cast<char*>(&i), sizeof(i));
+    level_distribution[btree::GetNodeLevel(key, arraysize(level_distribution))]++;
+  }
+
+  EXPECT_TRUE(std::is_sorted(level_distribution, level_distribution + arraysize(level_distribution),
+                             [](int v1, int v2) { return v2 < v1; }));
+  EXPECT_NE(0u, level_distribution[1]);
+}
 
 TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   ObjectId root_id;

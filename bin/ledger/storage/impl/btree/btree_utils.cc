@@ -8,10 +8,30 @@
 #include "apps/ledger/src/callback/waiter.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "third_party/murmur3/murmur3.h"
 
 namespace storage {
 namespace btree {
 namespace {
+
+constexpr uint32_t kMurmurHashSeed = 0xbeef;
+
+constexpr uint8_t kMurmurHashSizeInBytes = 128 / 8;
+
+using HashSliceType = uint8_t;
+
+struct Hash {
+    HashSliceType values[kMurmurHashSizeInBytes / sizeof(HashSliceType)];
+};
+
+Hash FastHash(convert::ExtendedStringView value) {
+  static_assert(sizeof(Hash) == kMurmurHashSizeInBytes,
+                "Hash must be 128 bits");
+
+  Hash result;
+  MurmurHash3_x64_128(value.data(), value.size(), kMurmurHashSeed, &result);
+  return result;
+}
 
 // Helper functions for btree::ForEach.
 void ForEachEntryInSubtree(PageStorage* page_storage,
@@ -501,6 +521,22 @@ void GetOrCreateEmptyNode(PageStorage* page_storage,
 }
 
 }  // namespace
+
+uint8_t GetNodeLevel(convert::ExtendedStringView key, uint8_t max_level) {
+  // Compute the level of a key by computing the hash of the key.
+  // A key is at level k if the first k bytes of the hash of |key| are 0s. This
+  // constructs a tree with an expected node size of |255|.
+  if (max_level == 0) {
+    return 0;
+  }
+  Hash hash = FastHash(key);
+  for (size_t l = 0; l < std::min<uint8_t>(max_level, sizeof(Hash)); ++l) {
+    if (hash.values[l]) {
+      return l;
+    }
+  }
+  return max_level;
+}
 
 void ApplyChanges(
     PageStorage* page_storage,

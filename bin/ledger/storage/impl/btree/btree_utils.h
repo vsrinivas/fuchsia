@@ -21,6 +21,11 @@ struct EntryAndNodeId {
   const ObjectId& node_id;
 };
 
+// Return the level in the tree where a node containing |key| must be located.
+// The leaves are located on level 0.
+uint8_t GetNodeLevel(convert::ExtendedStringView key,
+                     uint8_t max_level = std::numeric_limits<uint8_t>::max());
+
 // Applies changes provided by |changes| to the BTree starting at |root_id|.
 // |changes| must provide |EntryChange| objects sorted by their key. The
 // callback will provide the status of the operation, the id of the new root

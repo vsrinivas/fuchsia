@@ -37,6 +37,7 @@ source_set("lib") {
     "//apps/ledger/src/glue/crypto",
     "//apps/ledger/src/storage/public",
     "//lib/ftl",
+    "//third_party/murmur3",
   ]
 }
 
