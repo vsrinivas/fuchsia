@@ -6,6 +6,7 @@ module modular;
 
 import "apps/ledger/services/public/ledger.fidl";
 import "apps/modular/services/application/service_provider.fidl";
+import "apps/modular/services/component/component_context.fidl";
 import "apps/modular/services/story/link.fidl";
 import "apps/modular/services/story/module_controller.fidl";
 import "apps/mozart/services/views/view_token.fidl";
@@ -53,6 +54,10 @@ interface Story {
   // is unique to this module under this user, regardless of which
   // story is run.
   GetLedger(ledger.Ledger& module_ledger) => (ledger.Status status);
+
+  // Gets the ComponentContext associated with this module. This component
+  // context is unique to this particular module instance.
+  GetComponentContext(ComponentContext& context_request);
 
   // The module holding this handle to the Story declares it's ready
   // to run. The story implementation notifies all ModuleWatchers

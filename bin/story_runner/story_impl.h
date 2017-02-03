@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "apps/ledger/services/public/ledger.fidl.h"
+#include "apps/modular/services/component/component_context.fidl.h"
 #include "apps/modular/services/story/module.fidl.h"
 #include "apps/modular/services/story/story_controller.fidl.h"
 #include "apps/modular/services/story/story_data.fidl.h"

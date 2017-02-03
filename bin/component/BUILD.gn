@@ -2,17 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//lib/fidl/fidl.gni")
-
-fidl("agent") {
+source_set("component_context_impl") {
   sources = [
-    "agent.fidl",
-    "agent_context.fidl",
+    "component_context_impl.h",
+    "component_context_impl.cc"
   ]
 
   deps = [
-    "//apps/modular/services/agent/agent_controller",
-    "//apps/modular/services/application:service_provider",
     "//apps/modular/services/component",
+    "//lib/ftl"
   ]
 }
+

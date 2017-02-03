@@ -9,8 +9,10 @@
 
 #include "apps/ledger/services/public/ledger.fidl.h"
 #include "apps/modular/services/story/story.fidl.h"
+#include "apps/modular/src/component/component_context_impl.h"
 #include "apps/mozart/services/views/view_token.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/ftl/macros.h"
@@ -45,6 +47,8 @@ class StoryConnection : public Story {
       fidl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
   void GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
                  const GetLedgerCallback& result) override;
+  void GetComponentContext(
+      fidl::InterfaceRequest<ComponentContext> context_request) override;
   void Ready() override;
   void Done() override;
 
@@ -57,6 +61,9 @@ class StoryConnection : public Story {
 
   // Not owned. Used to notify module watchers and request tear down.
   ModuleControllerImpl* const module_controller_impl_;
+
+  ComponentContextImpl component_context_impl_;
+  fidl::BindingSet<ComponentContext> component_context_bindings_;
 
   // The one connection to the StoryImpl instance that this
   // StoryConnection instance represents.

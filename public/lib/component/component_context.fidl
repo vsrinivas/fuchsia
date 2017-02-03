@@ -4,7 +4,7 @@
 
 module modular;
 
-import "apps/modular/services/agent/agent_controller.fidl";
+import "apps/modular/services/agent/agent_controller/agent_controller.fidl";
 import "apps/modular/services/application/service_provider.fidl";
 import "apps/modular/services/component/message_queue.fidl";
 
@@ -26,8 +26,4 @@ interface ComponentContext {
   // identified by |queue_token|. Token for a MessageQueue is obtained from its
   // GetToken() method and the token is unique within the scope of the user.
   GetMessageSender(string queue_token, MessageSender& sender);
-
-  // Used by a component to declare that it done and wants to be torn down.
-  // In case of an Agent, Agent::Stop() will get called as a result of this.
-  Done();
 };
