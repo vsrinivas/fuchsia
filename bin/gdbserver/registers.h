@@ -55,11 +55,6 @@ int GetFPRegisterNumber();
 // platform. Returns -1, if this operation is not supported.
 int GetSPRegisterNumber();
 
-// Maps the architecture-specific exception code to a UNIX compatible signal
-// value that GDB understands. Returns -1  if the current architecture is not
-// currently supported.
-int ComputeGdbSignal(const mx_exception_context_t& exception_context);
-
 // Registers represents an architecture-dependent general register set.
 // This is an abstract, opaque interface that returns a register-value
 // representation that complies with the GDB Remote Protocol with

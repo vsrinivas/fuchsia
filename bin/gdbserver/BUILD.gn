@@ -6,6 +6,7 @@ executable("gdbserver") {
   output_name = "debugserver"
 
   sources = [
+    "arch.h",
     "breakpoint.cc",
     "breakpoint.h",
     "dso-list.cc",
