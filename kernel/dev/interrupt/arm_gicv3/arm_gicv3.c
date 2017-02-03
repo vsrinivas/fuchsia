@@ -96,12 +96,14 @@ static void gic_set_enable(uint vector, bool enable)
     uint32_t mask = 1ULL << (vector % 32);
 
     if (vector < 32) {
-        if (enable) {
-            GICREG(0, GICR_ISENABLER0) = mask;
-        } else {
-            GICREG(0, GICR_ICENABLER0) = mask;
+        for (int i = 0; i < SMP_MAX_CPUS; i++) {
+            if (enable) {
+                GICREG(0, GICR_ISENABLER0(i)) = mask;
+            } else {
+                GICREG(0, GICR_ICENABLER0(i)) = mask;
+            }
+            gic_wait_for_rwp(GICR_CTLR(i));
         }
-        gic_wait_for_rwp(GICR_CTLR);
     } else {
         if (enable) {
             GICREG(0, GICD_ISENABLER(reg)) = mask;
@@ -114,14 +116,16 @@ static void gic_set_enable(uint vector, bool enable)
 
 static void arm_gic_init_percpu(uint level)
 {
+    uint cpu = arch_curr_cpu_num();
+
     // configure sgi/ppi as non-secure group 1
-    GICREG(0, GICR_IGROUPR0) = ~0;
-    gic_wait_for_rwp(GICR_CTLR);
+    GICREG(0, GICR_IGROUPR0(cpu)) = ~0;
+    gic_wait_for_rwp(GICR_CTLR(cpu));
 
     // clear and mask sgi/ppi
-    GICREG(0, GICR_ICENABLER0) = 0xffffffff;
-    GICREG(0, GICR_ICPENDR0) = ~0;
-    gic_wait_for_rwp(GICR_CTLR);
+    GICREG(0, GICR_ICENABLER0(cpu)) = 0xffffffff;
+    GICREG(0, GICR_ICPENDR0(cpu)) = ~0;
+    gic_wait_for_rwp(GICR_CTLR(cpu));
 
     // TODO lpi init
 
