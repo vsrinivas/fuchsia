@@ -24,6 +24,8 @@ class PublisherClient : public virtual Interface {
     DataNode* output = component_->EmplaceDataNode(label, schema);
     repo_->Index(output);
     output->SetPublisher(std::move(controller), std::move(link));
+    FTL_LOG(INFO) << "Context publisher registered for " << label << " ("
+                  << schema << ") by component " << component_->url;
   }
 
  private:
@@ -50,6 +52,8 @@ class SubscriberClient : public virtual Interface {
         ContextSubscriberLinkPtr::Create(std::move(link_handle));
     // TODO(rosswang): add a meta-query for whether any known publishers exist.
     repo_->Query(label, schema, std::move(link));
+    FTL_LOG(INFO) << "Context subscriber registered for " << label << " ("
+                  << schema << ")";
   }
 
  private:
