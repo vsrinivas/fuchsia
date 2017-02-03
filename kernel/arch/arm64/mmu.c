@@ -550,6 +550,13 @@ static int arm64_mmu_protect_pt(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
             LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n",
                     page_table, index, pte);
             page_table[index] = pte;
+
+            CF;
+            if (asid == MMU_ARM64_GLOBAL_ASID) {
+                ARM64_TLBI(vaae1is, vaddr >> 12);
+            } else {
+                ARM64_TLBI(vae1is, vaddr >> 12 | (vaddr_t)asid << 48);
+            }
         } else {
             LTRACEF("page table entry does not exist, index %#" PRIxPTR
                     ", %#" PRIx64 "\n", index, pte);
