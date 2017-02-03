@@ -6,7 +6,6 @@ import 'package:application.lib.app.dart/app.dart';
 import 'package:apps.maxwell.lib.context.dart/subscriber_link_impl.dart';
 import 'package:apps.maxwell.services.context/client.fidl.dart';
 
-final albumSub = new ContextSubscriberLinkImpl(print);
 final artistSub = new ContextSubscriberLinkImpl(print);
 
 void main(List args) {
@@ -14,10 +13,9 @@ void main(List args) {
   final sub = new ContextSubscriberProxy();
   connectToService(context.environmentServices, sub.ctrl);
   sub.subscribe(
-      'album id',
-      'https://developer.spotify.com/web-api/user-guide/#spotify-uris-and-ids',
-      albumSub.getHandle());
-  sub.subscribe('artist', 'name', artistSub.getHandle());
+      'music artist id',
+      'https://musicbrainz.org/doc/MusicBrainz_Identifier',
+      artistSub.getHandle());
   sub.ctrl.close();
   context.close();
 }

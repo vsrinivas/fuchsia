@@ -10,6 +10,7 @@ group("agents") {
     # produces the expected build products but is not sensitive to source file
     # changes.
     ":bandsintown",
+    ":music_brainz",
   ]
 }
 
@@ -22,6 +23,20 @@ dart_app("bandsintown") {
     "//application/lib/app/dart",
     "//apps/maxwell/lib/context/dart",
     "//apps/maxwell/services/context:context_dart",
+    "//lib/flutter/packages/flutter",
+  ]
+}
+
+dart_app("music_brainz") {
+  output_name = "agents/music_brainz.dartx"
+
+  main_dart = "music_brainz/main.dart"
+
+  deps = [
+    "//application/lib/app/dart",
+    "//apps/maxwell/lib/context/dart",
+    "//apps/maxwell/services/context:context_dart",
+    "//lib/flutter/packages/flutter",
   ]
 }
 
