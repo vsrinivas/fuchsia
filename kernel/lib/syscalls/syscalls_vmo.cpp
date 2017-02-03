@@ -68,7 +68,7 @@ mx_status_t sys_vmo_read(mx_handle_t handle, void* _data,
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
-    mx_status_t status = up->GetDispatcher(handle, &vmo, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &vmo);
     if (status != NO_ERROR)
         return status;
 
@@ -90,7 +90,7 @@ mx_status_t sys_vmo_write(mx_handle_t handle, const void* _data,
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
-    mx_status_t status = up->GetDispatcher(handle, &vmo, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &vmo);
     if (status != NO_ERROR)
         return status;
 
@@ -110,7 +110,7 @@ mx_status_t sys_vmo_get_size(mx_handle_t handle, uint64_t* _size) {
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
-    mx_status_t status = up->GetDispatcher(handle, &vmo, nullptr);
+    mx_status_t status = up->GetDispatcher(handle, &vmo);
     if (status != NO_ERROR)
         return status;
 
@@ -134,7 +134,7 @@ mx_status_t sys_vmo_set_size(mx_handle_t handle, uint64_t size) {
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
-    mx_status_t status = up->GetDispatcher(handle, &vmo, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &vmo);
     if (status != NO_ERROR)
         return status;
 
@@ -153,7 +153,7 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
     // lookup the dispatcher from handle
     // TODO: test rights
     mxtl::RefPtr<VmObjectDispatcher> vmo;
-    mx_status_t status = up->GetDispatcher(handle, &vmo, nullptr);
+    mx_status_t status = up->GetDispatcher(handle, &vmo);
     if (status != NO_ERROR)
         return status;
 

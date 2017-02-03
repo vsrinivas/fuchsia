@@ -101,25 +101,38 @@ public:
     // back into this process.
     void UndoRemoveHandleLocked(mx_handle_t handle_value) TA_REQ(handle_table_lock_);
 
+    // Get the dispatcher corresponding to this handle value.
     template <typename T>
     mx_status_t GetDispatcher(mx_handle_t handle_value,
-                              mxtl::RefPtr<T>* dispatcher,
-                              mx_rights_t* out_rights) {
+                              mxtl::RefPtr<T>* dispatcher) {
+        return GetDispatcherAndRights(handle_value, dispatcher, nullptr);
+    }
+
+    // Get the dispatcher and the rights corresponding to this handle value.
+    template <typename T>
+    mx_status_t GetDispatcherAndRights(mx_handle_t handle_value,
+                                       mxtl::RefPtr<T>* dispatcher,
+                                       mx_rights_t* out_rights) {
         mxtl::RefPtr<Dispatcher> generic_dispatcher;
-        if (!GetDispatcherInternal(handle_value, &generic_dispatcher, out_rights))
-            return BadHandle(handle_value, ERR_BAD_HANDLE);
+        auto status = GetDispatcherInternal(handle_value, &generic_dispatcher, out_rights);
+        if (status != NO_ERROR)
+            return BadHandle(handle_value, status);
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
         if (!*dispatcher)
             return BadHandle(handle_value, ERR_WRONG_TYPE);
         return NO_ERROR;
     }
 
+    // Get the dispatcher corresponding to this handle value, after
+    // checking that this handle has the desired rights.
     template <typename T>
-    mx_status_t GetDispatcher(mx_handle_t handle_value,
-                              mxtl::RefPtr<T>* dispatcher,
-                              mx_rights_t desired_rights) {
+    mx_status_t GetDispatcherWithRights(mx_handle_t handle_value,
+                                        mx_rights_t desired_rights,
+                                        mxtl::RefPtr<T>* dispatcher) {
         mxtl::RefPtr<Dispatcher> generic_dispatcher;
-        auto status = GetDispatcherWithRights(handle_value, desired_rights, &generic_dispatcher);
+        auto status = GetDispatcherWithRightsInternal(handle_value,
+                                                      desired_rights,
+                                                      &generic_dispatcher);
         if (status != NO_ERROR)
             return status;
         *dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
@@ -192,11 +205,11 @@ private:
     ProcessDispatcher& operator=(const ProcessDispatcher&) = delete;
 
 
-    bool GetDispatcherInternal(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
-                               mx_rights_t* rights);
+    mx_status_t GetDispatcherInternal(mx_handle_t handle_value, mxtl::RefPtr<Dispatcher>* dispatcher,
+                                      mx_rights_t* rights);
 
-    mx_status_t GetDispatcherWithRights(mx_handle_t handle_value, mx_rights_t desired_rights,
-                                        mxtl::RefPtr<Dispatcher>* dispatcher_out);
+    mx_status_t GetDispatcherWithRightsInternal(mx_handle_t handle_value, mx_rights_t desired_rights,
+                                                mxtl::RefPtr<Dispatcher>* dispatcher_out);
 
     // Thread lifecycle support
     friend class UserThread;

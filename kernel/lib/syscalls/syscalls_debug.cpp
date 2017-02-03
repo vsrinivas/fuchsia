@@ -117,8 +117,8 @@ mx_handle_t sys_debug_transfer_handle(mx_handle_t proc, mx_handle_t src_handle) 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ProcessDispatcher> process;
-    mx_status_t status = up->GetDispatcher(proc, &process,
-                                           MX_RIGHT_READ | MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(proc, MX_RIGHT_READ | MX_RIGHT_WRITE,
+                                                     &process);
     if (status != NO_ERROR)
         return status;
 
@@ -146,8 +146,8 @@ mx_status_t sys_process_read_memory(mx_handle_t proc, uintptr_t vaddr,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ProcessDispatcher> process;
-    mx_status_t status = up->GetDispatcher(proc, &process,
-                                           MX_RIGHT_READ | MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(proc, MX_RIGHT_READ | MX_RIGHT_WRITE,
+                                                     &process);
     if (status != NO_ERROR)
         return status;
 
@@ -190,7 +190,7 @@ mx_status_t sys_process_write_memory(mx_handle_t proc, uintptr_t vaddr,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ProcessDispatcher> process;
-    mx_status_t status = up->GetDispatcher(proc, &process, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(proc, MX_RIGHT_WRITE, &process);
     if (status != NO_ERROR)
         return status;
 
@@ -289,7 +289,7 @@ mx_status_t sys_thread_read_state(mx_handle_t handle, uint32_t state_kind,
 
     // TODO(dje): debug rights
     mxtl::RefPtr<ThreadDispatcher> thread;
-    mx_status_t status = up->GetDispatcher(handle, &thread, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &thread);
     if (status != NO_ERROR)
         return status;
 
@@ -329,7 +329,7 @@ mx_status_t sys_thread_write_state(mx_handle_t handle, uint32_t state_kind,
 
     // TODO(dje): debug rights
     mxtl::RefPtr<ThreadDispatcher> thread;
-    mx_status_t status = up->GetDispatcher(handle, &thread, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &thread);
     if (status != NO_ERROR)
         return status;
 

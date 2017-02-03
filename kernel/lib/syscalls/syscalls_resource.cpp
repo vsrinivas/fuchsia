@@ -31,7 +31,7 @@ mx_status_t sys_resource_create(mx_handle_t handle,
     // Obtain the parent Resource
     mx_status_t result;
     mxtl::RefPtr<ResourceDispatcher> parent;
-    result = up->GetDispatcher<ResourceDispatcher>(handle, &parent, MX_RIGHT_WRITE);
+    result = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &parent);
     if (result)
         return result;
 
@@ -92,7 +92,7 @@ mx_status_t sys_resource_get_handle(mx_handle_t handle, uint32_t index,
     // Obtain the parent Resource
     mx_status_t result;
     mxtl::RefPtr<ResourceDispatcher> resource;
-    result = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_EXECUTE);
+    result = up->GetDispatcherWithRights(handle, MX_RIGHT_EXECUTE, &resource);
     if (result)
         return result;
 
@@ -123,7 +123,7 @@ mx_status_t sys_resource_do_action(mx_handle_t handle, uint32_t index,
     // Obtain the parent Resource
     mx_status_t result;
     mxtl::RefPtr<ResourceDispatcher> resource;
-    result = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_EXECUTE);
+    result = up->GetDispatcherWithRights(handle, MX_RIGHT_EXECUTE, &resource);
     if (result)
         return result;
 
@@ -139,7 +139,7 @@ mx_status_t sys_resource_connect(mx_handle_t handle, mx_handle_t channel_hv) {
 
     mx_status_t result;
     mxtl::RefPtr<ResourceDispatcher> resource;
-    result = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_EXECUTE);
+    result = up->GetDispatcherWithRights(handle, MX_RIGHT_EXECUTE, &resource);
     if (result)
         return result;
 
@@ -171,7 +171,7 @@ mx_status_t sys_resource_accept(mx_handle_t handle, mx_handle_t* _out) {
 
     mx_status_t result;
     mxtl::RefPtr<ResourceDispatcher> resource;
-    result = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_WRITE);
+    result = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &resource);
     if (result)
         return result;
 

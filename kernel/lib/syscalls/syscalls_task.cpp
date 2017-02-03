@@ -105,8 +105,8 @@ mx_status_t sys_thread_start(mx_handle_t thread_handle, uintptr_t entry,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ThreadDispatcher> thread;
-    mx_status_t status = up->GetDispatcher(thread_handle, &thread,
-                                           MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(thread_handle, MX_RIGHT_WRITE,
+                                                     &thread);
     if (status != NO_ERROR)
         return status;
 
@@ -146,7 +146,7 @@ mx_status_t sys_process_create(mx_handle_t job_handle,
     if (job_handle != MX_HANDLE_INVALID) {
         // TODO: don't accept invalid handle here.
         // TODO: define process creation job rights.
-        auto status = up->GetDispatcher(job_handle, &job, MX_RIGHT_WRITE);
+        auto status = up->GetDispatcherWithRights(job_handle, MX_RIGHT_WRITE, &job);
         if (status != NO_ERROR)
             return status;
     }
@@ -214,7 +214,7 @@ mx_status_t sys_process_start(mx_handle_t process_handle, mx_handle_t thread_han
 
     // get thread_dispatcher
     mxtl::RefPtr<ThreadDispatcher> thread;
-    status = up->GetDispatcher(thread_handle, &thread, MX_RIGHT_WRITE);
+    status = up->GetDispatcherWithRights(thread_handle, MX_RIGHT_WRITE, &thread);
     if (status != NO_ERROR)
         return status;
 
@@ -261,7 +261,7 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> dispatcher;
-    auto status = up->GetDispatcher(task_handle, &dispatcher, MX_RIGHT_WRITE);
+    auto status = up->GetDispatcherWithRights(task_handle, MX_RIGHT_WRITE, &dispatcher);
     if (status != NO_ERROR)
         return status;
 
@@ -287,7 +287,7 @@ mx_status_t sys_job_create(mx_handle_t parent_job, uint32_t flags, mx_handle_t* 
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<JobDispatcher> parent;
-    mx_status_t status = up->GetDispatcher(parent_job, &parent, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(parent_job, MX_RIGHT_WRITE, &parent);
     if (status != NO_ERROR)
         return status;
 

@@ -315,7 +315,7 @@ mx_status_t sys_pci_claim_device(mx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcher(handle, &pci_device, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &pci_device);
     if (status != NO_ERROR)
         return status;
 
@@ -333,7 +333,7 @@ mx_status_t sys_pci_enable_bus_master(mx_handle_t handle, bool enable) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcher(handle, &pci_device, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &pci_device);
     if (status != NO_ERROR)
         return status;
 
@@ -351,7 +351,7 @@ mx_status_t sys_pci_enable_pio(mx_handle_t handle, bool enable) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcher(handle, &pci_device, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &pci_device);
     if (status != NO_ERROR)
         return status;
 
@@ -368,7 +368,7 @@ mx_status_t sys_pci_reset_device(mx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcher(handle, &pci_device, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &pci_device);
     if (status != NO_ERROR)
         return status;
 
@@ -390,7 +390,7 @@ mx_handle_t sys_pci_map_mmio(mx_handle_t handle, uint32_t bar_num, mx_cache_poli
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcher(handle, &pci_device, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &pci_device);
     if (status != NO_ERROR)
         return status;
 
@@ -448,7 +448,7 @@ mx_handle_t sys_pci_map_interrupt(mx_handle_t handle_value, int32_t which_irq) {
 
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
     mx_status_t status =
-        up->GetDispatcher(handle_value, &pci_device, MX_RIGHT_READ);
+        up->GetDispatcherWithRights(handle_value, MX_RIGHT_READ, &pci_device);
     if (status != NO_ERROR)
         return status;
 
@@ -479,7 +479,7 @@ mx_handle_t sys_pci_map_config(mx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcher(handle, &pci_device, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &pci_device);
     if (status != NO_ERROR)
         return status;
 
@@ -512,7 +512,7 @@ mx_status_t sys_pci_query_irq_mode_caps(mx_handle_t handle,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcher(handle, &pci_device, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &pci_device);
     if (status != NO_ERROR)
         return status;
 
@@ -542,7 +542,7 @@ mx_status_t sys_pci_set_irq_mode(mx_handle_t handle,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PciDeviceDispatcher> pci_device;
-    mx_status_t status = up->GetDispatcher(handle, &pci_device, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &pci_device);
     if (status != NO_ERROR)
         return status;
 

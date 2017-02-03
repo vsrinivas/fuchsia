@@ -58,7 +58,7 @@ static mx_status_t sys_port_queue2(mx_handle_t handle, const void* _packet) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcherV2> port;
-    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
     if (status != NO_ERROR)
         return status;
 
@@ -84,7 +84,7 @@ mx_status_t sys_port_queue(mx_handle_t handle, const void* _packet, size_t size)
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcher> port;
-    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
     if (status != NO_ERROR) {
         return (size == 0u) ? sys_port_queue2(handle, _packet) : status;
     }
@@ -105,7 +105,7 @@ mx_status_t sys_port_wait2(mx_handle_t handle, mx_time_t timeout, void* _packet)
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcherV2> port;
-    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
     if (status != NO_ERROR)
         return status;
 
@@ -133,7 +133,7 @@ mx_status_t sys_port_wait(mx_handle_t handle, mx_time_t timeout,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcher> port;
-    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &port);
     if (status != NO_ERROR) {
         return (size == 0u) ? sys_port_wait2(handle, timeout, _packet) : status;
     }
@@ -164,13 +164,13 @@ mx_status_t sys_port_bind(mx_handle_t handle, uint64_t key,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<PortDispatcher> port;
-    mx_status_t status = up->GetDispatcher(handle, &port, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &port);
     if (status != NO_ERROR)
         return status;
 
     mxtl::RefPtr<Dispatcher> source_disp;
 
-    status = up->GetDispatcher(source, &source_disp, MX_RIGHT_READ);
+    status = up->GetDispatcherWithRights(source, MX_RIGHT_READ, &source_disp);
     if (status != NO_ERROR)
         return status;
 

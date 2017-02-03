@@ -405,23 +405,23 @@ void ProcessDispatcher::UndoRemoveHandleLocked(mx_handle_t handle_value) {
     AddHandleLocked(HandleOwner(handle));
 }
 
-bool ProcessDispatcher::GetDispatcherInternal(mx_handle_t handle_value,
-                                              mxtl::RefPtr<Dispatcher>* dispatcher,
-                                              mx_rights_t* rights) {
+mx_status_t ProcessDispatcher::GetDispatcherInternal(mx_handle_t handle_value,
+                                                     mxtl::RefPtr<Dispatcher>* dispatcher,
+                                                     mx_rights_t* rights) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
-        return false;
+        return ERR_BAD_HANDLE;
 
     *dispatcher = handle->dispatcher();
     if (rights)
         *rights = handle->rights();
-    return true;
+    return NO_ERROR;
 }
 
-mx_status_t ProcessDispatcher::GetDispatcherWithRights(mx_handle_t handle_value,
-                                                       mx_rights_t desired_rights,
-                                                       mxtl::RefPtr<Dispatcher>* dispatcher_out) {
+mx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(mx_handle_t handle_value,
+                                                               mx_rights_t desired_rights,
+                                                               mxtl::RefPtr<Dispatcher>* dispatcher_out) {
     AutoLock lock(&handle_table_lock_);
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)

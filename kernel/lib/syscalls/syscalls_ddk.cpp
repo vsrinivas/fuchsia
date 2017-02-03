@@ -70,7 +70,7 @@ mx_status_t sys_interrupt_complete(mx_handle_t handle_value) {
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<InterruptDispatcher> interrupt;
-    mx_status_t status = up->GetDispatcher(handle_value, &interrupt, nullptr);
+    mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
     if (status != NO_ERROR)
         return status;
 
@@ -82,7 +82,7 @@ mx_status_t sys_interrupt_wait(mx_handle_t handle_value) {
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<InterruptDispatcher> interrupt;
-    mx_status_t status = up->GetDispatcher(handle_value, &interrupt, nullptr);
+    mx_status_t status = up->GetDispatcher(handle_value, &interrupt);
     if (status != NO_ERROR)
         return status;
 
@@ -267,7 +267,7 @@ mx_status_t sys_io_mapping_get_info(mx_handle_t handle,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<IoMappingDispatcher> io_mapping;
-    mx_status_t status = up->GetDispatcher(handle, &io_mapping, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &io_mapping);
     if (status != NO_ERROR)
         return status;
 

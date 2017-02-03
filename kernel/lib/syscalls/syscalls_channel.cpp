@@ -107,7 +107,7 @@ mx_status_t sys_channel_read(mx_handle_t handle_value, uint32_t flags,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ChannelDispatcher> channel;
-    mx_status_t result = up->GetDispatcher(handle_value, &channel, MX_RIGHT_READ);
+    mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_READ, &channel);
     if (result != NO_ERROR)
         return result;
 
@@ -204,7 +204,7 @@ mx_status_t sys_channel_write(mx_handle_t handle_value, uint32_t flags,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ChannelDispatcher> channel;
-    mx_status_t result = up->GetDispatcher(handle_value, &channel, MX_RIGHT_WRITE);
+    mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &channel);
     if (result != NO_ERROR)
         return result;
 
@@ -261,7 +261,7 @@ mx_status_t sys_channel_call(mx_handle_t handle_value, uint32_t flags,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<ChannelDispatcher> channel;
-    mx_status_t result = up->GetDispatcher(handle_value, &channel, MX_RIGHT_WRITE);
+    mx_status_t result = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &channel);
     if (result != NO_ERROR)
         return result;
 

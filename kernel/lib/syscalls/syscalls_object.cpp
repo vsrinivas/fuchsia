@@ -103,7 +103,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
 
             mxtl::RefPtr<Dispatcher> dispatcher;
             mx_rights_t rights;
-            auto status = up->GetDispatcher(handle, &dispatcher, &rights);
+            auto status = up->GetDispatcherAndRights(handle, &dispatcher, &rights);
             if (status != NO_ERROR)
                 return status;
 
@@ -138,7 +138,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
 
             // grab a reference to the dispatcher
             mxtl::RefPtr<ProcessDispatcher> process;
-            auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_READ);
+            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &process);
             if (error < 0)
                 return error;
 
@@ -164,7 +164,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         case MX_INFO_PROCESS_THREADS: {
             // grab a reference to the dispatcher
             mxtl::RefPtr<ProcessDispatcher> process;
-            auto error = up->GetDispatcher<ProcessDispatcher>(handle, &process, MX_RIGHT_ENUMERATE);
+            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_ENUMERATE, &process);
             if (error < 0)
                 return error;
 
@@ -194,7 +194,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         case MX_INFO_JOB_CHILDREN:
         case MX_INFO_JOB_PROCESSES: {
             mxtl::RefPtr<JobDispatcher> job;
-            auto error = up->GetDispatcher<JobDispatcher>(handle, &job, MX_RIGHT_ENUMERATE);
+            auto error = up->GetDispatcherWithRights(handle, MX_RIGHT_ENUMERATE, &job);
             if (error < 0)
                 return error;
 
@@ -216,7 +216,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         case MX_INFO_RESOURCE_CHILDREN:
         case MX_INFO_RESOURCE_RECORDS: {
             mxtl::RefPtr<ResourceDispatcher> resource;
-            mx_status_t status = up->GetDispatcher<ResourceDispatcher>(handle, &resource, MX_RIGHT_ENUMERATE);
+            mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_ENUMERATE, &resource);
             if (status < 0)
                 return status;
 
@@ -237,7 +237,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         }
         case MX_INFO_VMAR: {
             mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-            mx_status_t status = up->GetDispatcher<VmAddressRegionDispatcher>(handle, &vmar, nullptr);
+            mx_status_t status = up->GetDispatcher(handle, &vmar);
             if (status < 0)
                 return status;
 
@@ -275,7 +275,7 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
-    auto status = up->GetDispatcher(handle_value, &dispatcher, MX_RIGHT_GET_PROPERTY);
+    auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_GET_PROPERTY, &dispatcher);
     if (status != NO_ERROR)
         return status;
 
@@ -335,7 +335,7 @@ mx_status_t sys_object_set_property(mx_handle_t handle_value, uint32_t property,
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
 
-    auto status = up->GetDispatcher(handle_value, &dispatcher, MX_RIGHT_SET_PROPERTY);
+    auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_SET_PROPERTY, &dispatcher);
     if (status != NO_ERROR)
         return status;
 
@@ -386,7 +386,7 @@ mx_status_t sys_object_signal(mx_handle_t handle_value, uint32_t clear_mask, uin
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
 
-    auto status = up->GetDispatcher(handle_value, &dispatcher, MX_RIGHT_WRITE);
+    auto status = up->GetDispatcherWithRights(handle_value, MX_RIGHT_WRITE, &dispatcher);
     if (status != NO_ERROR)
         return status;
 
@@ -399,7 +399,7 @@ mx_status_t sys_object_signal_peer(mx_handle_t handle_value, uint32_t clear_mask
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
 
-    auto status = up->GetDispatcher(handle_value, &dispatcher, nullptr);
+    auto status = up->GetDispatcher(handle_value, &dispatcher);
     if (status != NO_ERROR)
         return status;
 
@@ -444,7 +444,7 @@ mx_status_t sys_object_get_child(mx_handle_t handle, uint64_t koid, mx_rights_t 
 
     mxtl::RefPtr<Dispatcher> dispatcher;
     uint32_t parent_rights;
-    auto status = up->GetDispatcher(handle, &dispatcher, &parent_rights);
+    auto status = up->GetDispatcherAndRights(handle, &dispatcher, &parent_rights);
     if (status != NO_ERROR)
         return status;
 

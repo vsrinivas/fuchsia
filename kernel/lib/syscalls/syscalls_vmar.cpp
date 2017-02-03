@@ -45,7 +45,7 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-    mx_status_t status = up->GetDispatcher(parent_vmar_handle, &vmar, vmar_rights);
+    mx_status_t status = up->GetDispatcherWithRights(parent_vmar_handle, vmar_rights, &vmar);
     if (status != NO_ERROR)
         return status;
 
@@ -84,7 +84,7 @@ mx_status_t sys_vmar_destroy(mx_handle_t vmar_handle) {
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, nullptr);
+    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar);
     if (status != NO_ERROR)
         return status;
 
@@ -99,14 +99,14 @@ mx_status_t sys_vmar_map(mx_handle_t vmar_handle, size_t vmar_offset,
     // lookup the VMAR dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
     mx_rights_t vmar_rights;
-    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, &vmar_rights);
+    mx_status_t status = up->GetDispatcherAndRights(vmar_handle, &vmar, &vmar_rights);
     if (status != NO_ERROR)
         return status;
 
     // lookup the VMO dispatcher from handle
     mxtl::RefPtr<VmObjectDispatcher> vmo;
     mx_rights_t vmo_rights;
-    status = up->GetDispatcher(vmo_handle, &vmo, &vmo_rights);
+    status = up->GetDispatcherAndRights(vmo_handle, &vmo, &vmo_rights);
     if (status != NO_ERROR)
         return status;
 
@@ -169,7 +169,7 @@ mx_status_t sys_vmar_unmap(mx_handle_t vmar_handle, uintptr_t addr, size_t len) 
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, nullptr);
+    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar);
     if (status != NO_ERROR)
         return status;
 
@@ -189,7 +189,7 @@ mx_status_t sys_vmar_protect(mx_handle_t vmar_handle, uintptr_t addr, size_t len
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, vmar_rights);
+    mx_status_t status = up->GetDispatcherWithRights(vmar_handle, vmar_rights, &vmar);
     if (status != NO_ERROR)
         return status;
 

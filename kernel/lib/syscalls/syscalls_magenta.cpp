@@ -213,7 +213,7 @@ mx_status_t sys_log_write(mx_handle_t log_handle, uint32_t len, const void* _ptr
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<LogDispatcher> log;
-    mx_status_t status = up->GetDispatcher(log_handle, &log, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(log_handle, MX_RIGHT_WRITE, &log);
     if (status != NO_ERROR)
         return status;
 
@@ -230,7 +230,7 @@ mx_status_t sys_log_read(mx_handle_t log_handle, uint32_t len, void* _ptr, uint3
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<LogDispatcher> log;
-    mx_status_t status = up->GetDispatcher(log_handle, &log, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcherWithRights(log_handle, MX_RIGHT_READ, &log);
     if (status != NO_ERROR)
         return status;
 
@@ -341,7 +341,7 @@ mx_status_t sys_waitset_remove(mx_handle_t ws_handle, uint64_t cookie) {
 
     mxtl::RefPtr<WaitSetDispatcher> ws_dispatcher;
     mx_status_t status =
-        up->GetDispatcher(ws_handle, &ws_dispatcher, MX_RIGHT_WRITE);
+        up->GetDispatcherWithRights(ws_handle, MX_RIGHT_WRITE, &ws_dispatcher);
     if (status != NO_ERROR)
         return status;
 
@@ -376,7 +376,7 @@ mx_status_t sys_waitset_wait(mx_handle_t ws_handle,
 
     mxtl::RefPtr<WaitSetDispatcher> ws_dispatcher;
     mx_status_t status =
-        up->GetDispatcher(ws_handle, &ws_dispatcher, MX_RIGHT_READ);
+        up->GetDispatcherWithRights(ws_handle, MX_RIGHT_READ, &ws_dispatcher);
     if (status != NO_ERROR)
         return status;
 
@@ -439,7 +439,7 @@ mx_status_t sys_socket_write(mx_handle_t handle, uint32_t flags,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<SocketDispatcher> socket;
-    mx_status_t status = up->GetDispatcher(handle, &socket, MX_RIGHT_WRITE);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_WRITE, &socket);
     if (status != NO_ERROR)
         return status;
 
@@ -477,7 +477,7 @@ mx_status_t sys_socket_read(mx_handle_t handle, uint32_t flags,
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<SocketDispatcher> socket;
-    mx_status_t status = up->GetDispatcher(handle, &socket, MX_RIGHT_READ);
+    mx_status_t status = up->GetDispatcherWithRights(handle, MX_RIGHT_READ, &socket);
     if (status != NO_ERROR)
         return status;
 
@@ -536,7 +536,7 @@ mx_status_t sys_fifo_op(mx_handle_t handle, uint32_t op, uint64_t val, mx_fifo_s
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<FifoDispatcher> fifo;
-    mx_status_t status = up->GetDispatcher(handle, &fifo, rights);
+    mx_status_t status = up->GetDispatcherWithRights(handle, rights, &fifo);
     if (status != NO_ERROR)
         return status;
 
