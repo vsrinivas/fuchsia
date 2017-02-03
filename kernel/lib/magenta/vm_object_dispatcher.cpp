@@ -64,12 +64,10 @@ mx_status_t VmObjectDispatcher::GetSize(uint64_t* size) {
 }
 
 mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t size,
-                                        user_ptr<void> buffer, size_t buffer_size, mx_rights_t rights) {
+                                        user_ptr<void> buffer, size_t buffer_size) {
     LTRACEF("op %u offset %#" PRIx64 " size %#" PRIx64
-            " buffer %p buffer_size %zu rights %#x\n",
-            op, offset, size, buffer.get(), buffer_size, rights);
-
-    // TODO: test rights
+            " buffer %p buffer_size %zu\n",
+            op, offset, size, buffer.get(), buffer_size);
 
     switch (op) {
         case MX_VMO_OP_COMMIT: {
@@ -107,4 +105,3 @@ mx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
             return ERR_INVALID_ARGS;
     }
 }
-

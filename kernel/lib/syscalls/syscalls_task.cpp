@@ -246,13 +246,10 @@ void sys_process_exit(int retcode) {
 
 // helper routine for sys_task_kill
 template <typename T>
-static mx_status_t kill_task(mxtl::RefPtr<Dispatcher> dispatcher, uint32_t rights) {
+static mx_status_t kill_task(mxtl::RefPtr<Dispatcher> dispatcher) {
     auto task = DownCastDispatcher<T>(&dispatcher);
     if (!task)
         return ERR_WRONG_TYPE;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
 
     task->Kill();
     return NO_ERROR;
@@ -264,19 +261,18 @@ mx_status_t sys_task_kill(mx_handle_t task_handle) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
-    auto status = up->GetDispatcher(task_handle, &dispatcher, &rights);
+    auto status = up->GetDispatcher(task_handle, &dispatcher, MX_RIGHT_WRITE);
     if (status != NO_ERROR)
         return status;
 
     // see if it's a process or thread and dispatch accordingly
     switch (dispatcher->get_type()) {
         case MX_OBJ_TYPE_PROCESS:
-            return kill_task<ProcessDispatcher>(mxtl::move(dispatcher), rights);
+            return kill_task<ProcessDispatcher>(mxtl::move(dispatcher));
         case MX_OBJ_TYPE_THREAD:
-            return kill_task<ThreadDispatcher>(mxtl::move(dispatcher), rights);
+            return kill_task<ThreadDispatcher>(mxtl::move(dispatcher));
         case MX_OBJ_TYPE_JOB:
-            return kill_task<JobDispatcher>(mxtl::move(dispatcher), rights);
+            return kill_task<JobDispatcher>(mxtl::move(dispatcher));
         default:
             return ERR_WRONG_TYPE;
     }

@@ -102,8 +102,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
             size_t avail = 1;
 
             mxtl::RefPtr<Dispatcher> dispatcher;
-            uint32_t rights;
-
+            mx_rights_t rights;
             auto status = up->GetDispatcher(handle, &dispatcher, &rights);
             if (status != NO_ERROR)
                 return status;
@@ -238,9 +237,7 @@ mx_status_t sys_object_get_info(mx_handle_t handle, uint32_t topic,
         }
         case MX_INFO_VMAR: {
             mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-            mx_rights_t rights;
-            mx_status_t status = up->GetDispatcher<VmAddressRegionDispatcher>(handle,
-                                                                              &vmar, &rights);
+            mx_status_t status = up->GetDispatcher<VmAddressRegionDispatcher>(handle, &vmar, nullptr);
             if (status < 0)
                 return status;
 
@@ -278,14 +275,9 @@ mx_status_t sys_object_get_property(mx_handle_t handle_value, uint32_t property,
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-
-    auto status = up->GetDispatcher(handle_value, &dispatcher, &rights);
+    auto status = up->GetDispatcher(handle_value, &dispatcher, MX_RIGHT_GET_PROPERTY);
     if (status != NO_ERROR)
         return status;
-
-    if (!magenta_rights_check(rights, MX_RIGHT_GET_PROPERTY))
-        return ERR_ACCESS_DENIED;
 
     switch (property) {
         case MX_PROP_BAD_HANDLE_POLICY: {
@@ -406,9 +398,8 @@ mx_status_t sys_object_signal_peer(mx_handle_t handle_value, uint32_t clear_mask
 
     auto up = ProcessDispatcher::GetCurrent();
     mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
 
-    auto status = up->GetDispatcher(handle_value, &dispatcher, &rights);
+    auto status = up->GetDispatcher(handle_value, &dispatcher, nullptr);
     if (status != NO_ERROR)
         return status;
 

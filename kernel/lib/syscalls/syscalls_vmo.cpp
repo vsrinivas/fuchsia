@@ -151,11 +151,11 @@ mx_status_t sys_vmo_op_range(mx_handle_t handle, uint32_t op, uint64_t offset, u
     auto up = ProcessDispatcher::GetCurrent();
 
     // lookup the dispatcher from handle
+    // TODO: test rights
     mxtl::RefPtr<VmObjectDispatcher> vmo;
-    mx_rights_t vmo_rights;
-    mx_status_t status = up->GetDispatcher(handle, &vmo, &vmo_rights);
+    mx_status_t status = up->GetDispatcher(handle, &vmo, nullptr);
     if (status != NO_ERROR)
         return status;
 
-    return vmo->RangeOp(op, offset, size, make_user_ptr(_buffer), buffer_size, vmo_rights);
+    return vmo->RangeOp(op, offset, size, make_user_ptr(_buffer), buffer_size);
 }

@@ -44,8 +44,7 @@ static mx_status_t object_unbind_exception_port(mx_handle_t obj_handle, bool deb
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    auto status = up->GetDispatcher(obj_handle, &dispatcher, &rights);
+    auto status = up->GetDispatcher(obj_handle, &dispatcher, nullptr);
     if (status != NO_ERROR)
         return status;
 
@@ -88,8 +87,7 @@ static mx_status_t object_bind_exception_port(mx_handle_t obj_handle, mx_handle_
     }
 
     mxtl::RefPtr<Dispatcher> dispatcher;
-    uint32_t rights;
-    status = up->GetDispatcher(obj_handle, &dispatcher, &rights);
+    status = up->GetDispatcher(obj_handle, &dispatcher, nullptr);
     if (status != NO_ERROR)
         return status;
 
@@ -132,8 +130,7 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
     auto up = ProcessDispatcher::GetCurrent();
 
     mxtl::RefPtr<Dispatcher> dispatcher;
-    mx_rights_t rights;
-    auto status = up->GetDispatcher(handle, &dispatcher, &rights);
+    auto status = up->GetDispatcher(handle, &dispatcher, nullptr);
     if (status != NO_ERROR)
         return status;
 

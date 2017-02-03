@@ -34,20 +34,20 @@ mx_status_t sys_vmar_allocate(mx_handle_t parent_vmar_handle,
 
     auto up = ProcessDispatcher::GetCurrent();
 
+    // Compute needed rights from requested mapping protections.
+    mx_rights_t vmar_rights = 0u;
+    if (flags & MX_VM_FLAG_CAN_MAP_READ)
+        vmar_rights |= MX_RIGHT_READ;
+    if (flags & MX_VM_FLAG_CAN_MAP_WRITE)
+        vmar_rights |= MX_RIGHT_WRITE;
+    if (flags & MX_VM_FLAG_CAN_MAP_EXECUTE)
+        vmar_rights |= MX_RIGHT_EXECUTE;
+
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-    mx_rights_t vmar_rights;
-    mx_status_t status = up->GetDispatcher(parent_vmar_handle, &vmar, &vmar_rights);
+    mx_status_t status = up->GetDispatcher(parent_vmar_handle, &vmar, vmar_rights);
     if (status != NO_ERROR)
         return status;
-
-    // test to see if the requested mapping protections are allowed
-    if ((flags & MX_VM_FLAG_CAN_MAP_READ) && !(vmar_rights & MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
-    if ((flags & MX_VM_FLAG_CAN_MAP_WRITE) && !(vmar_rights & MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
-    if ((flags & MX_VM_FLAG_CAN_MAP_EXECUTE) && !(vmar_rights & MX_RIGHT_EXECUTE))
-        return ERR_ACCESS_DENIED;
 
     // Create the new VMAR
     mxtl::RefPtr<VmAddressRegionDispatcher> new_vmar;
@@ -84,8 +84,7 @@ mx_status_t sys_vmar_destroy(mx_handle_t vmar_handle) {
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-    mx_rights_t vmar_rights;
-    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, &vmar_rights);
+    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, nullptr);
     if (status != NO_ERROR)
         return status;
 
@@ -170,8 +169,7 @@ mx_status_t sys_vmar_unmap(mx_handle_t vmar_handle, uintptr_t addr, size_t len) 
 
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-    mx_rights_t vmar_rights;
-    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, &vmar_rights);
+    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, nullptr);
     if (status != NO_ERROR)
         return status;
 
@@ -181,22 +179,22 @@ mx_status_t sys_vmar_unmap(mx_handle_t vmar_handle, uintptr_t addr, size_t len) 
 mx_status_t sys_vmar_protect(mx_handle_t vmar_handle, uintptr_t addr, size_t len, uint32_t prot) {
     auto up = ProcessDispatcher::GetCurrent();
 
+    mx_rights_t vmar_rights = 0u;
+    if (prot & MX_VM_FLAG_PERM_READ)
+        vmar_rights |= MX_RIGHT_READ;
+    if (prot & MX_VM_FLAG_PERM_WRITE)
+        vmar_rights |= MX_RIGHT_WRITE;
+    if (prot & MX_VM_FLAG_PERM_EXECUTE)
+        vmar_rights |= MX_RIGHT_EXECUTE;
+
     // lookup the dispatcher from handle
     mxtl::RefPtr<VmAddressRegionDispatcher> vmar;
-    mx_rights_t vmar_rights;
-    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, &vmar_rights);
+    mx_status_t status = up->GetDispatcher(vmar_handle, &vmar, vmar_rights);
     if (status != NO_ERROR)
         return status;
 
     if (!VmAddressRegionDispatcher::is_valid_mapping_protection(prot))
         return ERR_INVALID_ARGS;
-
-    if ((prot & MX_VM_FLAG_PERM_READ) && !(vmar_rights & MX_RIGHT_READ))
-        return ERR_ACCESS_DENIED;
-    if ((prot & MX_VM_FLAG_PERM_WRITE) && !(vmar_rights & MX_RIGHT_WRITE))
-        return ERR_ACCESS_DENIED;
-    if ((prot & MX_VM_FLAG_PERM_EXECUTE) && !(vmar_rights & MX_RIGHT_EXECUTE))
-        return ERR_ACCESS_DENIED;
 
     return vmar->Protect(addr, len, prot);
 }
