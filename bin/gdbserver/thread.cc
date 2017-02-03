@@ -21,14 +21,14 @@ namespace debugserver {
 
 // static
 const char* Thread::StateName(Thread::State state) {
-#define CASE_TO_STR(x) \
-  case x:              \
+#define CASE_TO_STR(x)   \
+  case Thread::State::x: \
     return #x
   switch (state) {
-    CASE_TO_STR(Thread::State::kNew);
-    CASE_TO_STR(Thread::State::kGone);
-    CASE_TO_STR(Thread::State::kStopped);
-    CASE_TO_STR(Thread::State::kRunning);
+    CASE_TO_STR(kNew);
+    CASE_TO_STR(kGone);
+    CASE_TO_STR(kStopped);
+    CASE_TO_STR(kRunning);
     default:
       break;
   }

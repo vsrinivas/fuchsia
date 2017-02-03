@@ -137,14 +137,14 @@ mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
 
 // static
 const char* Process::StateName(Process::State state) {
-#define CASE_TO_STR(x) \
-  case x:              \
+#define CASE_TO_STR(x)     \
+  case Process::State::x:  \
     return #x
   switch (state) {
-    CASE_TO_STR(Process::State::kNew);
-    CASE_TO_STR(Process::State::kStarting);
-    CASE_TO_STR(Process::State::kRunning);
-    CASE_TO_STR(Process::State::kGone);
+    CASE_TO_STR(kNew);
+    CASE_TO_STR(kStarting);
+    CASE_TO_STR(kRunning);
+    CASE_TO_STR(kGone);
     default:
       break;
   }
