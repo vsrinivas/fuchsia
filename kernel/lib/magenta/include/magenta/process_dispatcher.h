@@ -44,9 +44,17 @@ public:
         }
     };
 
+    // Traits to belong in the parent job's weak list.
+    struct JobListTraitsWeak {
+        static mxtl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(
+            ProcessDispatcher& obj) {
+            return obj.dll_job_weak_;
+        }
+    };
+
     // Traits to belong in the parent job's list.
     struct JobListTraits {
-        static mxtl::DoublyLinkedListNodeState<ProcessDispatcher*>& node_state(
+        static mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<ProcessDispatcher>>& node_state(
             ProcessDispatcher& obj) {
             return obj.dll_job_;
         }
@@ -228,8 +236,11 @@ private:
     // Remove a process from the global process list.
     static void RemoveProcess(ProcessDispatcher* process);
 
+    // The process can belong to any of 3 lists independently. The first one should
+    // probably be removed.
     mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_process_;
-    mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_;
+    mxtl::DoublyLinkedListNodeState<ProcessDispatcher*> dll_job_weak_;
+    mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<ProcessDispatcher>> dll_job_;
 
     mx_handle_t handle_rand_ = 0;
 

@@ -30,9 +30,17 @@ public:
 
 class JobDispatcher final : public Dispatcher {
 public:
+    // Traits to belong to the parent's weak job list.
+    struct ListTraitsWeak {
+        static mxtl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(
+            JobDispatcher& obj) {
+            return obj.dll_job_weak_;
+        }
+    };
+
     // Traits to belong to the parent's job list.
     struct ListTraits {
-        static mxtl::DoublyLinkedListNodeState<JobDispatcher*>& node_state(
+        static mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<JobDispatcher>>& node_state(
             JobDispatcher& obj) {
             return obj.dll_job_;
         }
@@ -67,18 +75,20 @@ public:
 private:
     enum class State {
         READY,
-        DYING,
-        DEAD
+        KILLING,
     };
 
     JobDispatcher(uint32_t flags, mxtl::RefPtr<JobDispatcher> parent);
     bool AddChildJob(JobDispatcher* job);
     void RemoveChildJob(JobDispatcher* job);
-    void MaybeUpdateSignalsLocked(bool is_decrement) TA_REQ(lock_);
+
+    void UpdateSignalsIncrementLocked() TA_REQ(lock_);
+    void UpdateSignalsDecrementLocked() TA_REQ(lock_);
 
     const mxtl::RefPtr<JobDispatcher> parent_;
 
-    mxtl::DoublyLinkedListNodeState<JobDispatcher*> dll_job_;
+    mxtl::DoublyLinkedListNodeState<JobDispatcher*> dll_job_weak_;
+    mxtl::SinglyLinkedListNodeState<mxtl::RefPtr<JobDispatcher>> dll_job_;
 
     // The |lock_| protects all members below.
     Mutex lock_;
@@ -88,9 +98,14 @@ private:
     StateTracker state_tracker_;
 
     using WeakJobList =
-        mxtl::DoublyLinkedList<JobDispatcher*, ListTraits>;
+        mxtl::DoublyLinkedList<JobDispatcher*, ListTraitsWeak>;
     using WeakProcessList =
-        mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraits>;
+        mxtl::DoublyLinkedList<ProcessDispatcher*, ProcessDispatcher::JobListTraitsWeak>;
+
+    using ProcessList =
+        mxtl::SinglyLinkedList<mxtl::RefPtr<ProcessDispatcher>, ProcessDispatcher::JobListTraits>;
+    using JobList =
+        mxtl::SinglyLinkedList<mxtl::RefPtr<JobDispatcher>, ListTraits>;
 
     WeakJobList jobs_ TA_GUARDED(lock_);
     WeakProcessList procs_ TA_GUARDED(lock_);
