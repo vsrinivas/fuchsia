@@ -37,6 +37,8 @@ executable("app") {
   ]
 
   sources += [
+    "ports/lwip/ethernetif.c",
+    "ports/lwip/ethernetif.h",
     "ports/lwip/lwip-netdb.h",
     "ports/lwip/lwip-socket.h",
     "ports/lwip/multiplexer-lwip.c",

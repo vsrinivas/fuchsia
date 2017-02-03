@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "third_party/lwip/ports/fuchsia/include/netif/ethernetif.h"
 #include "third_party/lwip/src/include/lwip/dhcp.h"
 #include "third_party/lwip/src/include/lwip/inet.h"
 #include "third_party/lwip/src/include/lwip/netif.h"
@@ -11,6 +10,8 @@
 #if USE_LWIPERF
 #include "third_party/lwip/src/include/lwip/apps/lwiperf.h"
 #endif
+
+#include "apps/netstack/ports/lwip/ethernetif.h"
 
 // initialize a lwip network interface
 
