@@ -21,31 +21,12 @@ namespace moterm {
 
 namespace {
 constexpr char kShell[] = "file:///boot/bin/sh";
-constexpr char kHistoryFilePath[] = "/data/moterm/history";
-constexpr int kMaxHistorySize = 1000;
 constexpr size_t kMaxHistoryEntrySize = 1024;
 
 constexpr char kGetHistoryCommand[] = "get_history";
 constexpr char kAddToHistoryCommand[] = "add_to_history:";
 
-// Reads the command history. This uses a disk file as an intermediate step.
-// TODO(ppi): read from Ledger instead.
-std::deque<std::string> ReadHistory() {
-  std::string content;
-  if (!files::IsFile(kHistoryFilePath) ||
-      !files::ReadFileToString(kHistoryFilePath, &content)) {
-    return {};
-  }
-
-  std::vector<std::string> history = SplitStringCopy(
-      content, "\n", ftl::kTrimWhitespace, ftl::kSplitWantNonEmpty);
-
-  std::deque<std::string> result;
-  std::move(std::begin(history), std::end(history), std::back_inserter(result));
-  return result;
-}
-
-std::string SerializeHistory(const std::deque<std::string>& history) {
+std::string SerializeHistory(const std::vector<std::string>& history) {
   std::stringstream output_stream;
   for (const std::string& command : history) {
     output_stream << command << std::endl;
@@ -54,31 +35,14 @@ std::string SerializeHistory(const std::deque<std::string>& history) {
   return output_stream.str();
 }
 
-// Persists the command history. This uses a disk file as an intermediate step.
-// TODO(ppi): write to Ledger instead.
-void WriteHistory(const std::deque<std::string>& history) {
-  if (!files::CreateDirectory(files::GetDirectoryName(kHistoryFilePath))) {
-    FTL_LOG(ERROR) << "Unable to create directory for file "
-                   << kHistoryFilePath;
-    return;
-  }
-
-  const std::string output = SerializeHistory(history);
-  if (!files::WriteFile(kHistoryFilePath, output.c_str(), output.size())) {
-    FTL_LOG(ERROR) << "Unable to write terminal history to "
-                   << kHistoryFilePath;
-    return;
-  }
-}
 }  // namespace
 
-ShellController::ShellController() {}
+ShellController::ShellController(History* history) : history_(history) {}
 
 ShellController::~ShellController() {
   if (wait_id_) {
     waiter_->CancelWait(wait_id_);
   }
-  WriteHistory(terminal_history_);
 }
 
 std::vector<std::string> ShellController::GetShellCommand() {
@@ -104,12 +68,11 @@ std::vector<mtl::StartupHandle> ShellController::GetStartupHandles() {
 }
 
 void ShellController::Start() {
-  terminal_history_ = ReadHistory();
   WaitForShell();
 }
 
-bool ShellController::HandleGetHistory() {
-  const std::string history_str = SerializeHistory(terminal_history_);
+bool ShellController::SendBackHistory(std::vector<std::string> entries) {
+  const std::string history_str = SerializeHistory(entries);
 
   mx::vmo data;
   if (!mtl::VmoFromString(history_str, &data)) {
@@ -131,10 +94,7 @@ bool ShellController::HandleGetHistory() {
 }
 
 void ShellController::HandleAddToHistory(const std::string& entry) {
-  terminal_history_.push_back(entry);
-  if (terminal_history_.size() > kMaxHistorySize) {
-    terminal_history_.pop_front();
-  }
+  history_->AddEntry(entry);
 }
 
 void ShellController::ReadCommand() {
@@ -148,9 +108,9 @@ void ShellController::ReadCommand() {
   if (rv == NO_ERROR) {
     const std::string command = std::string(buffer, num_bytes);
     if (command == kGetHistoryCommand) {
-      if (!HandleGetHistory()) {
-        return;
-      }
+      history_->ReadEntries([this](std::vector<std::string> entries) {
+        SendBackHistory(std::move(entries));
+      });
     } else if (command.substr(0, strlen(kAddToHistoryCommand)) ==
                kAddToHistoryCommand) {
       HandleAddToHistory(command.substr(strlen(kAddToHistoryCommand)));

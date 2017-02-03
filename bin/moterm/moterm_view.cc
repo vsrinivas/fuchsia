@@ -31,6 +31,7 @@ MotermView::MotermView(
     mozart::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
     modular::ApplicationContext* context,
+    History* history,
     const MotermParams& moterm_params)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
@@ -42,8 +43,10 @@ MotermView::MotermView(
           context_->ConnectToEnvironmentService<fonts::FontProvider>()),
       weak_ptr_factory_(this),
       task_runner_(mtl::MessageLoop::GetCurrent()->task_runner()),
+      history_(history),
       params_(moterm_params) {
   FTL_DCHECK(context_);
+  FTL_DCHECK(history_);
 
   auto font_request = fonts::FontRequest::New();
   font_request->family = "RobotoMono";
@@ -82,7 +85,7 @@ void MotermView::StartCommand() {
   std::vector<mtl::StartupHandle> startup_handles;
 
   if (command_to_run.empty()) {
-    shell_controller_ = std::make_unique<ShellController>();
+    shell_controller_ = std::make_unique<ShellController>(history_);
     command_to_run = shell_controller_->GetShellCommand();
     startup_handles = shell_controller_->GetStartupHandles();
     shell_controller_->Start();
@@ -93,7 +96,7 @@ void MotermView::StartCommand() {
       [this](const void* bytes, size_t num_bytes) {
         OnDataReceived(bytes, num_bytes);
       },
-      [this]() {
+      [] {
         FTL_LOG(INFO) << "Command terminated.";
         mtl::MessageLoop::GetCurrent()->PostQuitTask();
       });

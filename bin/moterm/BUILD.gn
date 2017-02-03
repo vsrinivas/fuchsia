@@ -6,8 +6,12 @@ executable("moterm") {
   sources = [
     "command.cc",
     "command.h",
+    "history.cc",
+    "history.h",
     "key_util.cc",
     "key_util.h",
+    "ledger_helpers.cc",
+    "ledger_helpers.h",
     "main.cc",
     "moterm_model.cc",
     "moterm_model.h",
@@ -21,6 +25,7 @@ executable("moterm") {
 
   deps = [
     "//apps/fonts/services",
+    "//apps/ledger/services/public",
     "//apps/modular/lib/app",
     "//apps/modular/services/story",
     "//apps/mozart/lib/skia:fonts",

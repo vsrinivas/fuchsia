@@ -10,7 +10,7 @@
 #include "apps/moterm/command.h"
 #include "apps/moterm/moterm_model.h"
 #include "apps/moterm/moterm_params.h"
-#include "apps/moterm/moterm_params.h"
+#include "apps/moterm/history.h"
 #include "apps/moterm/shell_controller.h"
 #include "apps/mozart/lib/skia/skia_font_loader.h"
 #include "apps/mozart/lib/view_framework/base_view.h"
@@ -32,6 +32,7 @@ class MotermView : public mozart::BaseView,
   MotermView(mozart::ViewManagerPtr view_manager,
              fidl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
              modular::ApplicationContext* context,
+             History* history,
              const MotermParams& moterm_params);
   ~MotermView() override;
 
@@ -88,6 +89,8 @@ class MotermView : public mozart::BaseView,
   ftl::RefPtr<ftl::TaskRunner> task_runner_;
   ftl::TimePoint last_key_;
   bool blink_on_ = true;
+
+  History* history_;
 
   MotermParams params_;
   std::unique_ptr<Command> command_;
