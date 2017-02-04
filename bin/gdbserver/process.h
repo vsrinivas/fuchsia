@@ -123,7 +123,7 @@ class Process final {
 
   // Returns the process handle. This handle is owned and managed by this
   // Process instance, thus the caller should not close the handle.
-  mx_handle_t handle() const { return debug_handle_; }
+  mx_handle_t handle() const { return handle_; }
 
   // Returns the process ID.
   mx_koid_t id() const { return id_; }
@@ -230,7 +230,7 @@ class Process final {
   launchpad_t* launchpad_ = nullptr;
 
   // The debug-capable handle that we use to invoke mx_debug_* syscalls.
-  mx_handle_t debug_handle_ = MX_HANDLE_INVALID;
+  mx_handle_t handle_ = MX_HANDLE_INVALID;
 
   // The current state of this process.
   State state_ = State::kNew;

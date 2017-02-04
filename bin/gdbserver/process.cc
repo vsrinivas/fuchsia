@@ -113,24 +113,24 @@ mx_koid_t GetProcessId(launchpad_t* lp) {
 }
 
 mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
-  mx_handle_t debug_handle = MX_HANDLE_INVALID;
+  mx_handle_t handle = MX_HANDLE_INVALID;
   mx_status_t status = mx_object_get_child(MX_HANDLE_INVALID, pid,
-                                           MX_RIGHT_SAME_RIGHTS, &debug_handle);
+                                           MX_RIGHT_SAME_RIGHTS, &handle);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("mx_object_get_child failed", status);
     return MX_HANDLE_INVALID;
   }
 
-  // TODO(armansito): Check that |debug_handle| has MX_RIGHT_DEBUG (this seems
+  // TODO(armansito): Check that |handle| has MX_RIGHT_DEBUG (this seems
   // not to be set by anything at the moment but eventully we should check)?
 
   // Syscalls shouldn't return MX_HANDLE_INVALID in the case of NO_ERROR.
-  FTL_DCHECK(debug_handle != MX_HANDLE_INVALID);
+  FTL_DCHECK(handle != MX_HANDLE_INVALID);
 
-  FTL_VLOG(1) << "Debug handle " << debug_handle
+  FTL_VLOG(1) << "Debug handle " << handle
               << " obtained for process " << pid;
 
-  return debug_handle;
+  return handle;
 }
 
 }  // namespace
@@ -181,7 +181,7 @@ std::string Process::GetName() const {
 
 bool Process::Initialize() {
   FTL_DCHECK(!launchpad_);
-  FTL_DCHECK(!debug_handle_);
+  FTL_DCHECK(!handle_);
   FTL_DCHECK(!eport_key_);
 
   mx_status_t status;
@@ -254,7 +254,7 @@ fail:
 
 bool Process::Initialize(mx_koid_t pid) {
   FTL_DCHECK(!launchpad_);
-  FTL_DCHECK(!debug_handle_);
+  FTL_DCHECK(!handle_);
   FTL_DCHECK(!eport_key_);
 
   // The Process object survives run-after-run. Switch Gone back to New.
@@ -283,18 +283,18 @@ bool Process::AllocDebugHandle() {
   auto handle = GetProcessDebugHandle(id_);
   if (handle == MX_HANDLE_INVALID)
     return false;
-  debug_handle_ = handle;
+  handle_ = handle;
   return true;
 }
 
 void Process::CloseDebugHandle() {
-  mx_handle_close(debug_handle_);
-  debug_handle_ = MX_HANDLE_INVALID;
+  mx_handle_close(handle_);
+  handle_ = MX_HANDLE_INVALID;
 }
 
 bool Process::BindExceptionPort() {
   ExceptionPort::Key key = server_->exception_port()->Bind(
-    debug_handle_,
+    handle_,
     std::bind(&Process::OnException, this, std::placeholders::_1,
               std::placeholders::_2));
   if (!key)
@@ -338,7 +338,7 @@ void Process::RawDetach() {
   // A copy of the handle is kept in ExceptionPort.BindData.
   // We can't close the process handle until we unbind the exception port,
   // so verify it's still open.
-  FTL_DCHECK(debug_handle_);
+  FTL_DCHECK(handle_);
   FTL_DCHECK(IsAttached());
 
   FTL_LOG(INFO) << "Detaching from process " << id();
@@ -359,7 +359,7 @@ bool Process::Detach() {
 
 bool Process::Start() {
   FTL_DCHECK(launchpad_);
-  FTL_DCHECK(debug_handle_);
+  FTL_DCHECK(handle_);
 
   if (state_ != State::kNew) {
     FTL_LOG(ERROR) << "Process already started";
@@ -407,8 +407,8 @@ bool Process::Kill() {
   //   we kill it
   // - we need the debug handle to kill the process
 
-  FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
-  auto status = mx_task_kill(debug_handle_);
+  FTL_DCHECK(handle_ != MX_HANDLE_INVALID);
+  auto status = mx_task_kill(handle_);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Failed to kill process", status);
     return false;
@@ -418,7 +418,7 @@ bool Process::Kill() {
 
   mx_signals_t signals;
   // If something goes wrong we don't want to wait forever.
-  status = mx_handle_wait_one(debug_handle_, MX_TASK_TERMINATED,
+  status = mx_handle_wait_one(handle_, MX_TASK_TERMINATED,
                               kill_timeout, &signals);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Error waiting for process to die, ignoring",
@@ -454,7 +454,7 @@ void Process::set_state(State new_state) {
 
 void Process::Clear() {
   // The process must already be fully detached from.
-  FTL_DCHECK(debug_handle_ == MX_HANDLE_INVALID);
+  FTL_DCHECK(handle_ == MX_HANDLE_INVALID);
   FTL_DCHECK(!eport_key_);
 
   threads_.clear();
@@ -492,7 +492,7 @@ void Process::EnsureThreadMapFresh() {
 }
 
 Thread* Process::FindThreadById(mx_koid_t thread_id) {
-  FTL_DCHECK(debug_handle_);
+  FTL_DCHECK(handle_);
   if (thread_id == MX_HANDLE_INVALID) {
     FTL_LOG(ERROR) << "Invalid thread ID given: " << thread_id;
     return nullptr;
@@ -513,16 +513,16 @@ Thread* Process::FindThreadById(mx_koid_t thread_id) {
 
   // Try to get a debug capable handle to the child of the current process with
   // a kernel object ID that matches |thread_id|.
-  mx_handle_t thread_debug_handle;
+  mx_handle_t thread_handle;
   mx_status_t status = mx_object_get_child(
-      debug_handle_, thread_id, MX_RIGHT_SAME_RIGHTS, &thread_debug_handle);
+      handle_, thread_id, MX_RIGHT_SAME_RIGHTS, &thread_handle);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
                                status);
     return nullptr;
   }
 
-  Thread* thread = new Thread(this, thread_debug_handle, thread_id);
+  Thread* thread = new Thread(this, thread_handle, thread_id);
   threads_[thread_id] = std::unique_ptr<Thread>(thread);
   return thread;
 }
@@ -537,13 +537,13 @@ Thread* Process::PickOneThread() {
 }
 
 bool Process::RefreshAllThreads() {
-  FTL_DCHECK(debug_handle_);
+  FTL_DCHECK(handle_);
 
   // First get the thread count so that we can allocate an appropriately sized
   // buffer.
   size_t num_threads;
   mx_status_t status =
-      mx_object_get_info(debug_handle_, MX_INFO_PROCESS_THREADS, nullptr, 0,
+      mx_object_get_info(handle_, MX_INFO_PROCESS_THREADS, nullptr, 0,
                          nullptr, &num_threads);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Failed to get process thread info (#threads)", status);
@@ -553,7 +553,7 @@ bool Process::RefreshAllThreads() {
   auto buffer_size = num_threads * sizeof(mx_koid_t);
   auto koids = std::make_unique<mx_koid_t[]>(num_threads);
   size_t records_read;
-  status = mx_object_get_info(debug_handle_, MX_INFO_PROCESS_THREADS,
+  status = mx_object_get_info(handle_, MX_INFO_PROCESS_THREADS,
                               koids.get(), buffer_size, &records_read, nullptr);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus("Failed to get process thread info", status);
@@ -565,16 +565,16 @@ bool Process::RefreshAllThreads() {
   ThreadMap new_threads;
   for (size_t i = 0; i < num_threads; ++i) {
     mx_koid_t thread_id = koids[i];
-    mx_handle_t thread_debug_handle = MX_HANDLE_INVALID;
-    status = mx_object_get_child(debug_handle_, thread_id, MX_RIGHT_SAME_RIGHTS,
-                                 &thread_debug_handle);
+    mx_handle_t thread_handle = MX_HANDLE_INVALID;
+    status = mx_object_get_child(handle_, thread_id, MX_RIGHT_SAME_RIGHTS,
+                                 &thread_handle);
     if (status != NO_ERROR) {
       util::LogErrorWithMxStatus("Could not obtain a debug handle to thread",
                                  status);
       continue;
     }
     new_threads[thread_id] =
-        std::make_unique<Thread>(this, thread_debug_handle, thread_id);
+        std::make_unique<Thread>(this, thread_handle, thread_id);
   }
 
   // Just clear the existing list and repopulate it.

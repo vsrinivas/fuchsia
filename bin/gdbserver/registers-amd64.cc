@@ -70,7 +70,7 @@ class RegistersAmd64 final : public Registers {
 
     uint32_t gregs_size;
     mx_status_t status = mx_thread_read_state(
-        thread()->debug_handle(), regset, &gregs_, sizeof(gregs_), &gregs_size);
+        thread()->handle(), regset, &gregs_, sizeof(gregs_), &gregs_size);
     if (status < 0) {
       util::LogErrorWithMxStatus("Failed to read x86_64 registers", status);
       return false;
@@ -85,7 +85,7 @@ class RegistersAmd64 final : public Registers {
   bool WriteRegset(int regset) override {
     FTL_DCHECK(regset == 0);
 
-    mx_status_t status = mx_thread_write_state(thread()->debug_handle(), regset,
+    mx_status_t status = mx_thread_write_state(thread()->handle(), regset,
                                                &gregs_, sizeof(gregs_));
     if (status < 0) {
       util::LogErrorWithMxStatus("Failed to write x86_64 registers", status);

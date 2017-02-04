@@ -30,11 +30,11 @@ class Thread final {
     kStepping,
   };
 
-  Thread(Process* process, mx_handle_t debug_handle, mx_koid_t id);
+  Thread(Process* process, mx_handle_t handle, mx_koid_t id);
   ~Thread();
 
   Process* process() const { return process_; }
-  mx_handle_t debug_handle() const { return debug_handle_; }
+  mx_handle_t handle() const { return handle_; }
   mx_koid_t id() const { return id_; }
 
   std::string GetName() const;
@@ -87,7 +87,7 @@ class Thread final {
   Process* process_;  // weak
 
   // The debug-capable handle that we use to invoke mx_debug_* syscalls.
-  mx_handle_t debug_handle_;
+  mx_handle_t handle_;
 
   // The thread ID (also the kernel object ID) of this thread.
   mx_koid_t id_;

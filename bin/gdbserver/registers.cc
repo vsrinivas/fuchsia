@@ -15,7 +15,7 @@ namespace arch {
 
 Registers::Registers(Thread* thread) : thread_(thread) {
   FTL_DCHECK(thread);
-  FTL_DCHECK(thread->debug_handle() != MX_HANDLE_INVALID);
+  FTL_DCHECK(thread->handle() != MX_HANDLE_INVALID);
 }
 
 bool Registers::RefreshGeneralRegisters() {

@@ -36,15 +36,15 @@ const char* Thread::StateName(Thread::State state) {
   return "(unknown)";
 }
 
-Thread::Thread(Process* process, mx_handle_t debug_handle, mx_koid_t id)
+Thread::Thread(Process* process, mx_handle_t handle, mx_koid_t id)
     : process_(process),
-      debug_handle_(debug_handle),
+      handle_(handle),
       id_(id),
       state_(State::kNew),
       breakpoints_(this),
       weak_ptr_factory_(this) {
   FTL_DCHECK(process_);
-  FTL_DCHECK(debug_handle_ != MX_HANDLE_INVALID);
+  FTL_DCHECK(handle_ != MX_HANDLE_INVALID);
   FTL_DCHECK(id_ != MX_KOID_INVALID);
 
   registers_ = arch::Registers::Create(this);
@@ -73,9 +73,9 @@ void Thread::set_state(State state) {
 
 void Thread::Clear() {
   // We close the handle here so the o/s will release the thread.
-  if (debug_handle_ != MX_HANDLE_INVALID)
-    mx_handle_close(debug_handle_);
-  debug_handle_ = MX_HANDLE_INVALID;
+  if (handle_ != MX_HANDLE_INVALID)
+    mx_handle_close(handle_);
+  handle_ = MX_HANDLE_INVALID;
 }
 
 ftl::WeakPtr<Thread> Thread::AsWeakPtr() {
@@ -122,7 +122,7 @@ bool Thread::Resume() {
   // thread).
   FTL_VLOG(2) << "Thread " << GetName() << " is now running";
 
-  mx_status_t status = mx_task_resume(debug_handle_, MX_RESUME_EXCEPTION);
+  mx_status_t status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
   if (status < 0) {
     util::LogErrorWithMxStatus("Failed to resume thread", status);
     return false;
@@ -153,7 +153,7 @@ bool Thread::Step() {
   // thread).
   FTL_LOG(INFO) << "Thread " << GetName() << " is now stepping";
 
-  mx_status_t status = mx_task_resume(debug_handle_, MX_RESUME_EXCEPTION);
+  mx_status_t status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
   if (status < 0) {
     breakpoints_.RemoveSingleStepBreakpoint();
     util::LogErrorWithMxStatus("Failed to resume thread", status);
