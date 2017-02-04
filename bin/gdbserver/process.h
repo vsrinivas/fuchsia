@@ -6,7 +6,6 @@
 
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 #include <launchpad/launchpad.h>
 #include <magenta/syscalls/exception.h>
@@ -21,6 +20,7 @@
 #include "exception-port.h"
 #include "memory-process.h"
 #include "thread.h"
+#include "util.h"
 
 namespace debugserver {
 
@@ -70,7 +70,9 @@ class Process final {
 
   std::string GetName() const;
 
-  void set_argv(const std::vector<std::string>& argv) { argv_ = argv; }
+  // Note: This includes the program in |argv[0]|.
+  const util::Argv& argv() { return argv_; }
+  void set_argv(const util::Argv& argv) { argv_ = argv; }
 
   // Returns the current state of this process.
   State state() const { return state_; }
@@ -238,7 +240,7 @@ class Process final {
   Delegate* delegate_;  // weak
 
   // The argv that this process was initialized with.
-  std::vector<std::string> argv_;
+  util::Argv argv_;
 
   // The launchpad_t instance used to bootstrap and run the process. The Process
   // owns this instance and holds on to it until it gets destroyed.

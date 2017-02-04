@@ -5,6 +5,7 @@
 #include "util.h"
 
 #include <cctype>
+#include <cinttypes>
 
 #include <magenta/status.h>
 
@@ -128,6 +129,10 @@ std::string EscapeNonPrintableString(const ftl::StringView& data) {
   }
 
   return result;
+}
+
+void LogError(const std::string& message) {
+  FTL_LOG(ERROR) << message;
 }
 
 void LogErrorWithErrno(const std::string& message) {
@@ -386,6 +391,106 @@ bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max) {
   }
   *ptr = '\0';
   return true;
+}
+
+Argv BuildArgv(const ftl::StringView& args) {
+  Argv result;
+
+  // TODO: quoting, escapes, etc.
+  // TODO: tweaks for gdb-like command simplification?
+  // (e.g., p/x foo -> p /x foo)
+
+  size_t n = args.size();
+  for (size_t i = 0; i < n; ++i) {
+    while (i < n && isspace(args[i]))
+      ++i;
+    if (i == n)
+      break;
+    size_t start = i;
+    ++i;
+    while (i < n && !isspace(args[i]))
+      ++i;
+    result.push_back(args.substr(start, i - start).ToString());
+  }
+
+  return result;
+}
+
+std::string ArgvToString(const Argv& argv) {
+  if (argv.size() == 0)
+    return "";
+
+  std::string result(argv[0]);
+
+  for (auto a = argv.begin() + 1; a != argv.end(); ++a)
+    result += " " + *a;
+
+  return result;
+}
+
+char* xstrdup(const char* s) {
+  char* result = strdup(s);
+  if (!result) {
+    fprintf(stderr, "strdup OOM\n");
+    exit(1);
+  }
+  return result;
+}
+
+const char* basename(const char* s) {
+  // This implementation is copied from musl's basename.c,
+  // but this will not modify its argument.
+  size_t i;
+  if (!s || !*s)
+    return ".";
+  i = strlen(s) - 1;
+  if (i > 0 && s[i] == '/')
+    return s;
+  for (; i && s[i - 1] != '/'; i--)
+    ;
+  return s + i;
+}
+
+#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr) {
+  uintptr_t address = (uintptr_t)ptr;
+  size_t count;
+
+  for (count = 0; count < len; count += 16) {
+    union {
+      uint32_t buf[4];
+      uint8_t cbuf[16];
+    } u;
+    size_t s = ROUNDUP(MIN(len - count, 16), 4);
+    size_t i;
+
+    fprintf(out, ((disp_addr + len) > 0xFFFFFFFF)
+            ? "0x%016" PRIx64 ": "
+            : "0x%08" PRIx64 ": ",
+            disp_addr + count);
+
+    for (i = 0; i < s / 4; i++) {
+      u.buf[i] = ((const uint32_t*)address)[i];
+      fprintf(out, "%08x ", u.buf[i]);
+    }
+    for (; i < 4; i++) {
+      fprintf(out, "         ");
+    }
+    fprintf(out, "|");
+
+    for (i = 0; i < 16; i++) {
+      char c = u.cbuf[i];
+      if (i < s && isprint(c)) {
+        fprintf(out, "%c", c);
+      } else {
+        fprintf(out, ".");
+      }
+    }
+    fprintf(out, "|\n");
+    address += 16;
+  }
 }
 
 }  // namespace util

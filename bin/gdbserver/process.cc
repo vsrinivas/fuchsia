@@ -17,9 +17,6 @@
 #include "rsp-server.h"
 #include "util.h"
 
-using std::string;
-using std::vector;
-
 // This is a global variable that exists in the dynamic linker, and thus in
 // every processes's address space (since Fuchsia is PIE-only). It contains
 // various information provided by the dynamic linker for use by debugging
@@ -31,7 +28,7 @@ namespace {
 
 constexpr mx_time_t kill_timeout = MX_MSEC(10 * 1000);
 
-bool SetupLaunchpad(launchpad_t** out_lp, const vector<string>& argv) {
+bool SetupLaunchpad(launchpad_t** out_lp, const util::Argv& argv) {
   FTL_DCHECK(out_lp);
   FTL_DCHECK(argv.size() > 0);
 
@@ -39,9 +36,10 @@ bool SetupLaunchpad(launchpad_t** out_lp, const vector<string>& argv) {
   const char* c_args[argv.size()];
   for (size_t i = 0; i < argv.size(); ++i)
     c_args[i] = argv[i].c_str();
+  const char* name = util::basename(c_args[0]);
 
   launchpad_t* lp = nullptr;
-  mx_status_t status = launchpad_create(0u, c_args[0], &lp);
+  mx_status_t status = launchpad_create(0u, name, &lp);
   if (status != NO_ERROR)
     goto fail;
 
@@ -70,7 +68,7 @@ fail:
   return false;
 }
 
-bool LoadBinary(launchpad_t* lp, const string& binary_path) {
+bool LoadBinary(launchpad_t* lp, const std::string& binary_path) {
   FTL_DCHECK(lp);
 
   mx_status_t status =
@@ -205,6 +203,8 @@ bool Process::Initialize() {
     FTL_LOG(ERROR) << "No program specified";
     return false;
   }
+
+  FTL_LOG(INFO) << "argv: " << util::ArgvToString(argv_);
 
   if (!SetupLaunchpad(&launchpad_, argv_))
     return false;

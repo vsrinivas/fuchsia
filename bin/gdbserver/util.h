@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdio>
 #include <deque>
 #include <string>
 #include <vector>
@@ -50,6 +51,9 @@ std::vector<uint8_t> DecodeByteArrayString(const ftl::StringView& string);
 
 // Same as DecodeByteArrayString but return a string.
 std::string DecodeString(const ftl::StringView& string);
+
+// Logs the given |message|.
+void LogError(const std::string& message);
 
 // Logs the given |message| using the global errno variable, including the
 // result of strerror in a nicely formatted way.
@@ -169,6 +173,23 @@ std::string ExceptionToString(mx_excp_type_t type,
                               const mx_exception_context_t& context);
 
 bool ReadString(const Memory& m, mx_vaddr_t vaddr, char* ptr, size_t max);
+
+// An argv abstraction, and easier to type.
+using Argv = std::vector<std::string>;
+
+Argv BuildArgv(const ftl::StringView& args);
+
+std::string ArgvToString(const Argv& argv);
+
+// Same as strdup but exit if malloc fails.
+char* xstrdup(const char* s);
+
+// Same as basename, except will not modify |file|.
+// This assumes there are no trailing /s. If there are then |file| is returned
+// as is.
+const char* basename(const char* s);
+
+void hexdump_ex(FILE* out, const void* ptr, size_t len, uint64_t disp_addr);
 
 }  // namespace util
 }  // namespace debugserver
