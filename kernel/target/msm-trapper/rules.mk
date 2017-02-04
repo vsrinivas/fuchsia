@@ -8,5 +8,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 PLATFORM := msm8998
 
-#include make/module.mk
+DEVICE_TREE := $(GET_LOCAL_DIR)/device-tree.dtb
 
+# extra build rules for building fastboot compatible image
+include make/fastboot.mk
