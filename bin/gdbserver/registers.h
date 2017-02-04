@@ -131,8 +131,20 @@ class Registers {
   // RefreshGeneralRegisters() must be called first.
   mx_vaddr_t GetPC();
 
+  // Get the value of the SP.
+  // RefreshGeneralRegisters() must be called first.
+  mx_vaddr_t GetSP();
+
+  // Get the value of the FP.
+  // RefreshGeneralRegisters() must be called first.
+  mx_vaddr_t GetFP();
+
   // Set the h/w singlestepping register.
   virtual bool SetSingleStep(bool enable) = 0;
+
+  // Return a formatted display of |regset|.
+  // RefreshRegset() of the appropriate regset must be called first.
+  virtual std::string GetFormattedRegset(int regset) = 0;
 
   // Returns a string containing all 0s. This is used in our implementation to
   // return register values when there is a current inferior but no current
@@ -153,6 +165,9 @@ class Registers {
 
  private:
   Thread* thread_;  // weak
+
+  // Helper function for GetPC,GetSP,GetFP.
+  mx_vaddr_t GetIntRegister(int regno);
 
   FTL_DISALLOW_COPY_AND_ASSIGN(Registers);
 };

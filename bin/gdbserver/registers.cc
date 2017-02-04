@@ -34,12 +34,23 @@ bool Registers::SetGeneralRegisters(const ftl::StringView& value) {
   return SetRegset(MX_THREAD_STATE_REGSET0, value);
 }
 
-mx_vaddr_t Registers::GetPC() {
-  int regno = GetPCRegisterNumber();
-  mx_vaddr_t pc;
-  bool success = GetRegister(regno, &pc, sizeof(pc));
+mx_vaddr_t Registers::GetIntRegister(int regno) {
+  mx_vaddr_t value;
+  bool success = GetRegister(regno, &value, sizeof(value));
   FTL_DCHECK(success);
-  return pc;
+  return value;
+}
+
+mx_vaddr_t Registers::GetPC() {
+  return GetIntRegister(GetPCRegisterNumber());
+}
+
+mx_vaddr_t Registers::GetSP() {
+  return GetIntRegister(GetSPRegisterNumber());
+}
+
+mx_vaddr_t Registers::GetFP() {
+  return GetIntRegister(GetFPRegisterNumber());
 }
 
 }  // namespace arch

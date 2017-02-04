@@ -4,12 +4,14 @@
 
 #include "registers.h"
 
+#include <cinttypes>
 #include <cstring>
 
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/debug.h>
 
 #include "lib/ftl/logging.h"
+#include "lib/ftl/strings/string_printf.h"
 
 #include "thread.h"
 #include "util.h"
@@ -171,7 +173,37 @@ class RegistersAmd64 final : public Registers {
     return true;
   }
 
+  std::string GetFormattedRegset(int regset) override {
+    if (regset != 0)
+      return ftl::StringPrintf("Invalid regset %d\n", regset);
+
+    return FormatGeneralRegisters();
+  }
+
  private:
+
+  std::string FormatGeneralRegisters() {
+    std::string result;
+
+    result += ftl::StringPrintf(
+        "  CS: %#18llx RIP: %#18" PRIx64 " EFL: %#18" PRIx64 "\n",
+        0ull, gregs_.rip, gregs_.rflags);
+    result += ftl::StringPrintf(
+        " RAX: %#18" PRIx64 " RBX: %#18" PRIx64 " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
+        gregs_.rax, gregs_.rbx, gregs_.rcx, gregs_.rdx);
+    result += ftl::StringPrintf(
+        " RSI: %#18" PRIx64 " RDI: %#18" PRIx64 " RBP: %#18" PRIx64 " RSP: %#18" PRIx64 "\n",
+        gregs_.rsi, gregs_.rdi, gregs_.rbp, gregs_.rsp);
+    result += ftl::StringPrintf(
+        "  R8: %#18" PRIx64 "  R9: %#18" PRIx64 " R10: %#18" PRIx64 " R11: %#18" PRIx64 "\n",
+        gregs_.r8, gregs_.r9, gregs_.r10, gregs_.r11);
+    result += ftl::StringPrintf(
+        " R12: %#18" PRIx64 " R13: %#18" PRIx64 " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
+        gregs_.r12, gregs_.r13, gregs_.r14, gregs_.r15);
+
+    return result;
+  }
+
   mx_x86_64_general_regs_t gregs_;
 };
 
