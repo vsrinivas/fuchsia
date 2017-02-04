@@ -180,9 +180,29 @@ class Process final {
 
   bool attached_running() const { return attached_running_; }
 
+  // Build list of loaded dsos.
+  // This must be called at a point where it is safe to read the list.
+  // If |check_ldso_bkpt| is true then verify |thread| is stopped at the
+  // dynamic linker breakpoint. If not then skip trying. Otherwise |thread|
+  // must be nullptr.
+  // TODO(dje): Maybe just pass |thread|, later.
+  // TODO(dje): For the rsp server this is only called once, after the main
+  // executable has been loaded. Therefore this list will not contain
+  // subsequently loaded dsos.
+  void TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt);
+
   // Return true if dsos, including the main executable, have been loaded
   // into the inferior.
   bool DsosLoaded() { return dsos_ != nullptr; }
+
+  // Return list of loaded dsos.
+  // Returns nullptr if none loaded yet or loading failed.
+  // TODO(dje): constness wip
+  elf::dsoinfo_t* GetDsos() const { return dsos_; }
+
+  // Return the DSO for |pc| or nullptr if none.
+  // TODO(dje): Result is not const for debug file lookup support.
+  elf::dsoinfo_t* LookupDso(mx_vaddr_t pc) const;
 
   // Return the entry for the main executable from the dsos list.
   // Returns nullptr if not present (could happen if inferior data structure
@@ -210,13 +230,6 @@ class Process final {
   // Release all resources held by the process.
   // Called after all other processing of a process exit has been done.
   void Clear();
-
-  // Build list of loaded dsos.
-  // |thread| is the thread we stopped in.
-  // TODO(dje): This is normally only called once, after the main executable
-  // has been loaded. Therefore this list will not contain subsequently loaded
-  // dsos.
-  void TryBuildLoadedDsosList(Thread* thread);
 
   // The server that owns us.
   Server* server_;  // weak

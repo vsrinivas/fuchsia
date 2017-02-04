@@ -90,7 +90,7 @@ int ComputeGdbSignal(const mx_exception_context_t& context) {
 bool IsSingleStepException(const mx_exception_context_t& context) {
   auto arch_exception = context.arch.u.x86_64.vector;
 
-  return arch_exception == 1;
+  return arch_exception == x86::INT_DEBUG;
 }
 
 void DumpArch(FILE* out) {

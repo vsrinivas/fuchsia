@@ -614,11 +614,8 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
   return memory_.Write(address, data, length);
 }
 
-void Process::TryBuildLoadedDsosList(Thread* thread) {
+void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
   FTL_DCHECK(dsos_ == nullptr);
-
-  if (dsos_build_failed_)
-    return;
 
   FTL_VLOG(2) << "Building dso list";
 
@@ -626,25 +623,33 @@ void Process::TryBuildLoadedDsosList(Thread* thread) {
   // this variable in our address space is constant among all processes.
   auto rdebug_vaddr = reinterpret_cast<mx_vaddr_t>(_dl_debug_addr);
   struct r_debug debug;
-  if (!ReadMemory(rdebug_vaddr, &debug, sizeof(debug)))
+  if (!ReadMemory(rdebug_vaddr, &debug, sizeof(debug))) {
+    FTL_VLOG(2) << "unable to read _dl_debug_addr";
+    // Don't set dsos_build_failed_ here, it may be too early to try.
     return;
+  }
 
   // Since we could, theoretically, stop in the dynamic linker before we get
   // that far check to see if it has been filled in.
   // TODO(dje): Document our test in dynlink.c.
   if (debug.r_version == 0) {
     FTL_VLOG(2) << "debug.r_version is 0";
+    // Don't set dsos_build_failed_ here, it may be too early to try.
     return;
   }
 
-  // Did we stop at the dynamic linker debug breakpoint?
-  bool success = thread->registers()->RefreshGeneralRegisters();
-  FTL_DCHECK(success);
-  mx_vaddr_t pc = thread->registers()->GetPC();
-  // TODO(dje): -1: adjust_pc_after_break
-  if (pc - 1 != debug.r_brk) {
-    FTL_VLOG(2) << "not stopped at dynlink debug bkpt";
-    return;
+  if (check_ldso_bkpt) {
+    FTL_DCHECK(thread);
+    bool success = thread->registers()->RefreshGeneralRegisters();
+    FTL_DCHECK(success);
+    mx_vaddr_t pc = thread->registers()->GetPC();
+    // TODO(dje): -1: adjust_pc_after_break
+    if (pc - 1 != debug.r_brk) {
+      FTL_VLOG(2) << "not stopped at dynamic linker debug breakpoint";
+      return;
+    }
+  } else {
+    FTL_DCHECK(!thread);
   }
 
   auto lmap_vaddr = reinterpret_cast<mx_vaddr_t>(debug.r_map);
@@ -657,6 +662,8 @@ void Process::TryBuildLoadedDsosList(Thread* thread) {
     dsos_build_failed_ = true;
   } else {
     elf::dso_vlog_list(dsos_);
+    // This may already be false, but set it any for documentation purposes.
+    dsos_build_failed_ = false;
   }
 }
 
@@ -671,8 +678,9 @@ void Process::OnException(const mx_excp_type_t type,
   // breakpoint. For now gdb sets that breakpoint. What we do is watch for
   // s/w breakpoint exceptions.
   if (type == MX_EXCP_SW_BREAKPOINT) {
-    if (!DsosLoaded())
-      TryBuildLoadedDsosList(thread);
+    FTL_DCHECK(thread);
+    if (!DsosLoaded() && !dsos_build_failed_)
+      TryBuildLoadedDsosList(thread, true);
   }
 
   // |type| could either map to an architectural exception or Magenta-defined
@@ -733,6 +741,10 @@ int Process::ExitCode() {
 
 const elf::dsoinfo_t* Process::GetExecDso() {
   return dso_get_main_exec(dsos_);
+}
+
+elf::dsoinfo_t* Process::LookupDso(mx_vaddr_t pc) const {
+  return elf::dso_lookup(dsos_, pc);
 }
 
 }  // namespace debugserver
