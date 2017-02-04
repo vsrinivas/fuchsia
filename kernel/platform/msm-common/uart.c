@@ -12,9 +12,7 @@
 #include <dev/interrupt.h>
 #include <dev/uart.h>
 #include <lib/cbuf.h>
-#include <platform/msm8998.h>
-
-#define UART_BASE   (MSM8998_PERIPH_BASE_VIRT + 0xc1b0000)
+#include <platform/uart.h>
 
 #define UART_MR1                            0x0000
 #define UART_MR1_RX_RDY_CTL                 (1 << 7)

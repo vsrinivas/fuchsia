@@ -6,6 +6,8 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
+MSM_COMMON := $(LOCAL_DIR)/../msm-common
+
 MODULE := $(LOCAL_DIR)
 
 WITH_SMP := 0
@@ -18,7 +20,7 @@ LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
 MODULE_SRCS += \
 	$(LOCAL_DIR)/platform.c \
 	$(LOCAL_DIR)/secondary_boot.S \
-	$(LOCAL_DIR)/uart.c \
+	$(MSM_COMMON)/uart.c \
 
 # $(LOCAL_DIR)/gpio.c \
 
