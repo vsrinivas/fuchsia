@@ -516,6 +516,116 @@ enum class LESupportedFeature : uint8_t {
   // The rest is reserved for future use.
 };
 
+// Potential values that can be passed as a parameter to the
+// HCI_LE_Set_Advertising_Enable command.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.9)
+enum class LESetAdvertisingEnableValue : uint8_t {
+  kDisable = 0x00,
+  kEnable = 0x01,
+};
+
+// The minimum and maximum range values for the LE advertising interval
+// parameters.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5)
+constexpr uint16_t kLEAdvertisingIntervalMin = 0x0020;
+constexpr uint16_t kLEAdvertisingIntervalMax = 0x4000;
+
+// The default LE advertising interval parameter value, corresponding 1.28
+// seconds (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5).
+constexpr uint16_t kLEAdvertisingIntervalDefault = 0x0800;
+
+// LE advertising types (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5).
+enum class LEAdvertisingType : uint8_t {
+  // ADV_IND: Connectable and scannable undirected advertising (the default
+  // value used by the controller).
+  kAdvInd = 0x00,
+
+  // ADV_DIRECT_IND (high duty cycle): Connectable high duty cycle directed
+  // advertising.
+  kAdvDirectIndHighDutyCycle = 0x01,
+
+  // ADV_SCAN_IND: Scannable undirected advertising.
+  kAdvScanInd = 0x02,
+
+  // ADV_NONCONN_IND: Non-connectable undirected advertising.
+  kAdvNonConnInd = 0x03,
+
+  // ADV_DIRECT_IND (low duty cycle): Connectable low duty cycle advertising.
+  kAdvDirectIndLowDutyCycle = 0x04,
+
+  // The rest is reserved for future use
+};
+
+// Possible values that can be used for the |own_address_type| parameter in a
+// HCI_LE_Set_Advertising_Parameters command.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5)
+enum class LEAdvParamOwnAddressType : uint8_t {
+  // Public device address (default)
+  kPublic = 0x00,
+
+  // Random device address
+  kRandom = 0x01,
+
+  // Controller generates Resolvable Private Address based on the local IRK from
+  // the resolving list. If the resolving list contains no matching entry, use
+  // the public address.
+  kPrivateDefaultToPublic = 0x02,
+
+  // Controller generates Resolvable Private Address based on the local IRK from
+  // the resolving list. If the resolving list contains no matching entry, use
+  // the random address from LE_Set_Random_Address.
+  kPrivateDefaultToRandom = 0x03,
+
+  // The rest is reserved for future use
+};
+
+// Possible values that can be used for the |peer_address_type| parameter in a
+// HCI_LE_Set_Advertising_Parameters command.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5)
+enum class LEAdvParamPeerAddressType : uint8_t {
+  // Public Device Address (default) or Public Identity Address
+  kPublic = 0x00,
+
+  // Random Device Address or Random (static) Identity Address
+  kRandom = 0x01,
+
+  // The rest is reserved for future use
+};
+
+// Possible values that can be used for the |adv_channel_map| bitfield in a
+// HCI_LE_Set_Advertising_Parameters command.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5)
+constexpr uint8_t kLEAdvertisingChannel37 = 0x01;
+constexpr uint8_t kLEAdvertisingChannel38 = 0x02;
+constexpr uint8_t kLEAdvertisingChannel39 = 0x04;
+constexpr uint8_t kLEAdvertisingChannelAll = 0x07;
+
+// Possible values that can be used for the |adv_filter_policy| parameter in a
+// HCI_LE_Set_Advertising_Parameters command.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5)
+enum class LEAdvFilterPolicy : uint8_t {
+  // Process scan and connection requests from all devices (i.e., the White List
+  // is not in use) (default).
+  kAllowAll = 0x00,
+
+  // Process connection requests from all devices and only scan requests from
+  // devices that are in the White List.
+  kConnAllScanWhiteList = 0x01,
+
+  // Process scan requests from all devices and only connection requests from
+  // devices that are in the White List.
+  kScanAllConnWhiteList = 0x02,
+
+  // Process scan and connection requests only from devices in the White List.
+  kWhiteListOnly = 0x03,
+
+  // The rest is reserved for future use.
+};
+
+// The maximum length of advertising data that can get passed to the
+// HCI_LE_Set_Advertising_Data command.
+constexpr size_t kMaxLEAdvertisingDataLength = 0x1F;  // (31)
+
 // The maximum length of Local Name that can be assigned to a BR/EDR controller,
 // in octets.
 constexpr size_t kMaxLocalNameLength = 248;

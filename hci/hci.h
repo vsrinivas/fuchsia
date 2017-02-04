@@ -507,6 +507,122 @@ struct LEReadMaximumDataLengthReturnParams {
   uint16_t supported_max_rx_time;
 } __PACKED;
 
+// =================================================
+// LE Set Advertising Parameters Command (v4.0) (LE)
+constexpr OpCode kLESetAdvertisingParameters =
+    LEControllerCommandOpCode(0x0006);
+
+struct LESetAdvertisingParametersCommandParams {
+  // Minimum advertising interval for undirected and low duty cycle directed
+  // advertising. This value shall be less than or equal to |adv_interval_max|.
+  // |adv_interval_min| and |adv_interval_max| should not be the same value to
+  // enable the controller to determine the best advertising interval given
+  // other activities.
+  //
+  //   Range: see kLEAdvertisingInterval[Min|Max] in hci_constants.h
+  //   Default: N = kLEAdvertisingIntervalDefault (see hci_constants.h)
+  //   Time: N * 0.625 ms
+  //   Time Range: 20 ms to 10.24 s
+  uint16_t adv_interval_min;
+
+  // Maximum advertising interval for undirected and low duty cycle directed
+  // advertising. This value shall be greater than or equal to
+  // |adv_interval_max|. |adv_interval_min| and |adv_interval_max| should not be
+  // the same value to enable the controller to determine the best advertising
+  // interval given other activities.
+  //
+  //   Range: see kLEAdvertisingInterval[Min|Max] in hci_constants.h
+  //   Default: N = kLEAdvertisingIntervalDefault (see hci_constants.h)
+  //   Time: N * 0.625 ms
+  //   Time Range: 20 ms to 10.24 s
+  uint16_t adv_interval_max;
+
+  // Used to determine the packet type that is used for advertising when
+  // advertising is enabled (see hci_constants.h)
+  LEAdvertisingType adv_type;
+
+  // Indicates the type of address being used in the advertising packets.
+  //
+  // If |own_address_type| equals 0x02 or 0x03, the |peer_address| parameter
+  // contains the peer’s Identity Address and the |peer_address_type| parameter
+  // contains the Peer’s Identity Type (i.e. 0x00 or 0x01). These parameters are
+  // used to locate the corresponding local IRK in the resolving list; this IRK
+  // is used to generate the own address used in the advertisement.
+  //
+  // If directed advertising is performed, i.e. when Advertising_Type is set to
+  // 0x01 (ADV_DIRECT_IND, high duty cycle) or 0x04 (ADV_DIRECT_IND, low duty
+  // cycle mode), then the |peer_address_type| and |peer_address| shall be
+  // valid.
+  //
+  // If |own_address_type| equals 0x02 or 0x03, the Controller generates the
+  // peer’s Resolvable Private Address using the peer’s IRK corresponding to the
+  // peer’s Identity Address contained in the |peer_address| parameter and
+  // peer’s Identity Address Type (i.e. 0x00 or 0x01) contained in the
+  // |peer_address_type| parameter.
+  LEAdvParamOwnAddressType own_address_type;
+  LEAdvParamPeerAddressType peer_address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address, or
+  // Random (static) Identity Address of the device to be connected.
+  common::DeviceAddress peer_address;
+
+  // Bit field that indicates the advertising channels that shall be used when
+  // transmitting advertising packets. At least one channel bit shall be set in
+  // the |adv_channel_map| parameter (see the constants kLEAdvertisingChannel*
+  // in hci_constants.h for possible values).
+  uint8_t adv_channel_map;
+
+  // This parameter shall be ignored when directed advertising is enabled (see
+  // hci_constants.h for possible values).
+  LEAdvFilterPolicy adv_filter_policy;
+} __PACKED;
+
+struct LESetAdvertisingParametersReturnParams {
+  // See enum Status in hci_constants.h
+  Status status;
+};
+
+// ===========================================
+// LE Set Advertising Data Command (v4.0) (LE)
+constexpr OpCode kLESetAdvertisingData = LEControllerCommandOpCode(0x0008);
+
+struct LESetAdvertisingDataCommandParams {
+  // The number of significant octets in |adv_data|.
+  uint8_t adv_data_length;
+
+  // 31 octets of advertising data formatted as defined in Core Spec v5.0, Vol
+  // 3, Part C, Section 11.
+  uint8_t adv_data[kMaxLEAdvertisingDataLength];
+} __PACKED;
+
+struct LESetAdvertisingDataReturnParams {
+  // See enum Status in hci_constants.h
+  Status status;
+};
+
+// =============================================
+// LE Set Advertising Enable Command (v4.0) (LE)
+constexpr OpCode kLESetAdvertisingEnable = LEControllerCommandOpCode(0x000A);
+
+struct LESetAdvertisingEnableCommandParams {
+  // The LE_Set_Advertising_Enable command is used to request the Controller to
+  // start or stop advertising. The Controller manages the timing of
+  // advertisements as per the advertising parameters given in the
+  // LE_Set_Advertising_Parameters command.
+  //
+  // The Controller shall continue advertising until the Host issues an
+  // LE_Set_Advertising_Enable command with Advertising_Enable set to 0x00
+  // (Advertising is disabled) or until a connection is created or until the
+  // Advertising is timed out due to high duty cycle Directed Advertising. In
+  // these cases, advertising is then disabled.
+  LESetAdvertisingEnableValue advertising_enable;
+};
+
+struct LESetAdvertisingEnableReturnParams {
+  // See enum Status in hci_constants.h.
+  Status status;
+};
+
 // ============================================
 // LE Read Supported States Command (v4.0) (LE)
 constexpr OpCode kLEReadSupportedStates = LEControllerCommandOpCode(0x001C);
