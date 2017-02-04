@@ -127,8 +127,7 @@ mx_handle_t GetProcessDebugHandle(mx_koid_t pid) {
   // Syscalls shouldn't return MX_HANDLE_INVALID in the case of NO_ERROR.
   FTL_DCHECK(handle != MX_HANDLE_INVALID);
 
-  FTL_VLOG(1) << "Debug handle " << handle
-              << " obtained for process " << pid;
+  FTL_VLOG(1) << "Handle " << handle << " obtained for process " << pid;
 
   return handle;
 }
@@ -280,6 +279,7 @@ bool Process::Initialize(mx_koid_t pid) {
 }
 
 bool Process::AllocDebugHandle() {
+  FTL_DCHECK(handle_ == MX_HANDLE_INVALID);
   auto handle = GetProcessDebugHandle(id_);
   if (handle == MX_HANDLE_INVALID)
     return false;
@@ -454,8 +454,7 @@ void Process::set_state(State new_state) {
 
 void Process::Clear() {
   // The process must already be fully detached from.
-  FTL_DCHECK(handle_ == MX_HANDLE_INVALID);
-  FTL_DCHECK(!eport_key_);
+  FTL_DCHECK(!IsAttached());
 
   threads_.clear();
   thread_map_stale_ = false;
@@ -482,7 +481,13 @@ bool Process::IsLive() const {
 }
 
 bool Process::IsAttached() const {
-  return !!eport_key_;
+  if (eport_key_) {
+    FTL_DCHECK(handle_ != MX_HANDLE_INVALID);
+    return true;
+  } else {
+    FTL_DCHECK(handle_ == MX_HANDLE_INVALID);
+    return false;
+  }
 }
 
 void Process::EnsureThreadMapFresh() {

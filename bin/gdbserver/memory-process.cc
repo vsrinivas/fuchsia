@@ -45,9 +45,9 @@ bool ProcessMemory::Read(uintptr_t address,
 }
 
 bool ProcessMemory::Write(uintptr_t address,
-                          const void* data,
+                          const void* buffer,
                           size_t length) const {
-  FTL_DCHECK(data);
+  FTL_DCHECK(buffer);
 
   // We could be trying to remove a breakpoint after the process has exited.
   // So if the process is gone just return.
@@ -64,7 +64,7 @@ bool ProcessMemory::Write(uintptr_t address,
 
   size_t bytes_written;
   mx_status_t status =
-      mx_process_write_memory(handle, address, data, length, &bytes_written);
+      mx_process_write_memory(handle, address, buffer, length, &bytes_written);
   if (status != NO_ERROR) {
     util::LogErrorWithMxStatus(
         ftl::StringPrintf("Failed to write memory at addr: %" PRIxPTR, address),

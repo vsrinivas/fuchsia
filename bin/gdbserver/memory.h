@@ -29,11 +29,11 @@ class Memory {
                     void* out_buffer,
                     size_t length) const = 0;
 
-  // Writes the block of memory of length |length| bytes from |data| to the
+  // Writes the block of memory of length |length| bytes from |buffer| to the
   // memory address |address| of this process.
   // Returns true on success or false on failure.
   virtual bool Write(uintptr_t address,
-                     const void* data,
+                     const void* buffer,
                      size_t length) const = 0;
 
  protected:

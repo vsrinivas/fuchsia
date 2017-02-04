@@ -82,12 +82,14 @@ class Process final {
 
   // Creates and initializes the inferior process but does not start it.
   // Returns false if there is an error.
+  // The process must still be attached to by calling Attach().
   // Do not call this if the process is currently live (state is kStarting or
   // kRunning).
   bool Initialize();
 
   // Creates and initializes the inferior for debugging a running program.
   // Returns false if there is an error.
+  // The process must still be attached to by calling Attach().
   // Do not call this if the process is currently live (state is kStarting or
   // kRunning).
   bool Initialize(mx_koid_t pid);
