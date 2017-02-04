@@ -48,15 +48,11 @@ typedef struct {
     list_node_t free_write_reqs;
     list_node_t free_intr_reqs;
 
-    // list of received packets not yet read by upper layer
-    list_node_t completed_reads;
-    // offset of next packet to process from completed_reads head
-    size_t read_offset;
-
-    // the last signals we reported
-    mx_signals_t signals;
-
     completion_t phy_state_completion;
+
+    // callback interface to attached ethernet layer
+    ethmac_ifc_t* ifc;
+    void* cookie;
 
     mtx_t mutex;
 } lan9514_t;
@@ -245,21 +241,6 @@ mx_status_t lan9514_read_mac_address(lan9514_t* eth) {
     return NO_ERROR;
 }
 
-static void update_signals_locked(lan9514_t* eth) {
-    mx_signals_t new_signals = 0;
-
-    if (eth->dead)
-        new_signals |= (DEV_STATE_READABLE | DEV_STATE_ERROR);
-    if (!list_is_empty(&eth->completed_reads))
-        new_signals |= DEV_STATE_READABLE;
-    if (!list_is_empty(&eth->free_write_reqs) && eth->online)
-        new_signals |= DEV_STATE_WRITABLE;
-    if (new_signals != eth->signals) {
-        device_state_set_clr(eth->device, new_signals & ~eth->signals, eth->signals & ~new_signals);
-        eth->signals = new_signals;
-    }
-}
-
 static void requeue_read_request_locked(lan9514_t* eth, iotxn_t* req) {
     if (eth->online) {
         iotxn_queue(eth->usb_device, req);
@@ -274,6 +255,38 @@ static void queue_interrupt_requests_locked(lan9514_t* eth) {
     }
 }
 
+mx_status_t lan9514_recv(lan9514_t* eth, iotxn_t* request) {
+    if (eth->dead) {
+        printf("lan9514_recv dead\n");
+        return ERR_REMOTE_CLOSED;
+    }
+
+    size_t len = request->actual;
+    uint8_t* pkt;
+    request->ops->mmap(request, (void**) &pkt);
+
+    uint32_t rx_status;
+    if (len < sizeof(rx_status)) {
+        return ERR_IO;
+    }
+    memcpy(&rx_status, pkt, sizeof(rx_status));
+
+    uint32_t frame_len = (rx_status & LAN9514_RXSTATUS_FRAME_LEN) >> 16;
+
+    if (rx_status & LAN9514_RXSTATUS_ERROR_MASK) {
+        printf("invalid header: 0x%08x\n", rx_status);
+        return ERR_INTERNAL;
+    }
+    if (frame_len > (len - sizeof(rx_status))) {
+        printf("LAN9514 recv - buffer too small\n)");
+        return ERR_BUFFER_TOO_SMALL;
+    }
+
+    eth->ifc->recv(eth->cookie, pkt + sizeof(rx_status), frame_len, 0);
+    return NO_ERROR;
+}
+
+
 static void lan9514_read_complete(iotxn_t* request, void* cookie) {
     lan9514_t* eth = (lan9514_t*)cookie;
     //printf("lan9514 read complete\n");
@@ -284,12 +297,10 @@ static void lan9514_read_complete(iotxn_t* request, void* cookie) {
     }
 
     mtx_lock(&eth->mutex);
-    if (request->status == NO_ERROR) {
-        list_add_tail(&eth->completed_reads, &request->node);
-    } else {
-        requeue_read_request_locked(eth, request);
+    if ((request->status == NO_ERROR) && eth->ifc) {
+        lan9514_recv(eth, request);
     }
-    update_signals_locked(eth);
+    requeue_read_request_locked(eth, request);
     mtx_unlock(&eth->mutex);
 }
 
@@ -302,7 +313,6 @@ static void lan9514_write_complete(iotxn_t* request, void* cookie) {
 
     mtx_lock(&eth->mutex);
     list_add_tail(&eth->free_write_reqs, &request->node);
-    update_signals_locked(eth);
     mtx_unlock(&eth->mutex);
 }
 
@@ -327,55 +337,7 @@ static void lan9514_interrupt_complete(iotxn_t* request, void* cookie) {
     mtx_unlock(&eth->mutex);
 }
 
-mx_status_t lan9514_recv(mx_device_t* device, void* buffer, size_t length) {
-    lan9514_t* eth = get_lan9514(device);
-    if (eth->dead) {
-        printf("lan9514_recv dead\n");
-        return ERR_REMOTE_CLOSED;
-    }
-
-    mx_status_t status = NO_ERROR;
-
-    mtx_lock(&eth->mutex);
-
-    list_node_t* node = list_peek_head(&eth->completed_reads);
-    if (!node) {
-        status = ERR_BAD_STATE;
-        goto out;
-    }
-    iotxn_t* request = containerof(node, iotxn_t, node);
-
-    uint32_t rx_status;
-
-    request->ops->copyfrom(request, &rx_status, sizeof(rx_status), 0);
-
-    uint32_t frame_len = (rx_status & LAN9514_RXSTATUS_FRAME_LEN) >> 16;
-
-    if (rx_status & LAN9514_RXSTATUS_ERROR_MASK) {
-        printf("invalid header: 0x%08x\n", rx_status);
-        status = ERR_INTERNAL;
-        list_remove_head(&eth->completed_reads);
-        requeue_read_request_locked(eth, request);
-        goto out;
-    }
-    if (frame_len > length) {
-        status = ERR_BUFFER_TOO_SMALL;
-        printf("LAN9514 recv - buffer too small\n)");
-        goto out;
-    }
-
-    request->ops->copyfrom(request, buffer, frame_len, sizeof(rx_status));
-    status = frame_len;
-
-    list_remove_head(&eth->completed_reads);
-out:
-    eth->read_offset = 0;
-    update_signals_locked(eth);
-    mtx_unlock(&eth->mutex);
-    return status;
-}
-
-mx_status_t lan9514_send(mx_device_t* device, const void* buffer, size_t length) {
+mx_status_t _lan9514_send(mx_device_t* device, const void* buffer, size_t length) {
     lan9514_t* eth = get_lan9514(device);
 
     if (eth->dead) {
@@ -417,7 +379,6 @@ mx_status_t lan9514_send(mx_device_t* device, const void* buffer, size_t length)
     iotxn_queue(eth->usb_device, request);
 
 out:
-    update_signals_locked(eth);
     mtx_unlock(&eth->mutex);
     return status;
 }
@@ -460,29 +421,6 @@ static mx_status_t lan9514_start_xcvr(lan9514_t* eth) {
     return lan9514_write_register(eth, LAN9514_MAC_CR_REG, value);
 }
 
-static ssize_t lan9514_read(mx_device_t* dev, void* data, size_t len, mx_off_t off) {
-  if (len < (USB_BUF_SIZE - ETH_HEADER_SIZE)) {
-        return ERR_BUFFER_TOO_SMALL;
-    }
-    return lan9514_recv(dev, data, len);
-}
-
-static ssize_t lan9514_write(mx_device_t* dev, const void* data, size_t len, mx_off_t off) {
-    return lan9514_send(dev, data, len);
-}
-
-mx_status_t lan9514_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
-    lan9514_t* eth = get_lan9514(device);
-    printf("someone called get mac\n");
-    for (int i = 0; i < 6; i++)
-        out_addr[i] = eth->mac_addr[i];
-    return NO_ERROR;
-}
-
-size_t lan9514_get_mtu(mx_device_t* device) {
-    return USB_BUF_SIZE - ETH_HEADER_SIZE;
-}
-
 static void lan9514_free(lan9514_t* eth) {
     iotxn_t* txn;
 
@@ -502,25 +440,6 @@ static void lan9514_free(lan9514_t* eth) {
     free(eth);
 }
 
-static ssize_t lan9514_ioctl(mx_device_t* dev, uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max) {
-    switch (op) {
-    case IOCTL_ETHERNET_GET_MAC_ADDR: {
-        uint8_t* mac = reply;
-        if (max < ETH_MAC_SIZE) return ERR_BUFFER_TOO_SMALL;
-        lan9514_get_mac_addr(dev, mac);
-        return ETH_MAC_SIZE;
-    }
-    case IOCTL_ETHERNET_GET_MTU: {
-        size_t* mtu = reply;
-        if (max < sizeof(*mtu)) return ERR_BUFFER_TOO_SMALL;
-        *mtu = lan9514_get_mtu(dev);
-        return sizeof(*mtu);
-    }
-    default:
-        return ERR_NOT_SUPPORTED;
-    }
-}
-
 static mx_status_t lan9514_release(mx_device_t* device) {
     lan9514_t* eth = get_lan9514(device);
     lan9514_free(eth);
@@ -532,21 +451,63 @@ static void lan9514_unbind(mx_device_t* device) {
 
     mtx_lock(&eth->mutex);
     eth->dead = true;
-    update_signals_locked(eth);
     mtx_unlock(&eth->mutex);
 
     // this must be last since this can trigger releasing the device
     device_remove(eth->device);
 }
 
-static ethernet_protocol_t lan9514_proto = {};
-
 static mx_protocol_device_t lan9514_device_proto = {
-    .ioctl = lan9514_ioctl,
     .unbind = lan9514_unbind,
     .release = lan9514_release,
-    .read = lan9514_read,
-    .write = lan9514_write,
+};
+
+static mx_status_t lan9514_query(mx_device_t* dev, uint32_t options, ethmac_info_t* info) {
+    lan9514_t* eth = get_lan9514(dev);
+
+    if (options) {
+        return ERR_INVALID_ARGS;
+    }
+
+    memset(info, 0, sizeof(*info));
+    info->mtu = USB_BUF_SIZE - ETH_HEADER_SIZE;
+    memcpy(info->mac, eth->mac_addr, sizeof(eth->mac_addr));
+
+    return NO_ERROR;
+}
+
+static void lan9514_stop(mx_device_t* dev) {
+    lan9514_t* eth = get_lan9514(dev);
+    mtx_lock(&eth->mutex);
+    eth->ifc = NULL;
+    mtx_unlock(&eth->mutex);
+}
+
+static mx_status_t lan9514_start(mx_device_t* dev, ethmac_ifc_t* ifc, void* cookie) {
+    lan9514_t* eth = get_lan9514(dev);
+    mx_status_t status = NO_ERROR;
+
+    mtx_lock(&eth->mutex);
+    if (eth->ifc) {
+        status = ERR_BAD_STATE;
+    } else {
+        eth->ifc = ifc;
+        eth->cookie = cookie;
+    }
+    mtx_unlock(&eth->mutex);
+
+    return status;
+}
+
+static void lan9514_send(mx_device_t* dev, uint32_t options, void* data, size_t length) {
+    _lan9514_send(dev, data, length);
+}
+
+static ethmac_protocol_t ethmac_ops = {
+    .query = lan9514_query,
+    .stop = lan9514_stop,
+    .start = lan9514_start,
+    .send = lan9514_send,
 };
 
 static mx_status_t lan9514_reset(lan9514_t* eth) {
@@ -668,8 +629,8 @@ static int lan9514_start_thread(void* arg) {
     mtx_unlock(&eth->mutex);
 
     eth->device->ctx = eth;
-    eth->device->protocol_id = MX_PROTOCOL_ETHERNET;
-    eth->device->protocol_ops = &lan9514_proto;
+    eth->device->protocol_id = MX_PROTOCOL_ETHERMAC;
+    eth->device->protocol_ops = &ethmac_ops;
     status = device_add(eth->device, eth->usb_device);
 
     while (true) {
@@ -720,7 +681,6 @@ static int lan9514_start_thread(void* arg) {
                     list_delete(&req->node);
                     requeue_read_request_locked(eth, req);
                 }
-                update_signals_locked(eth);
                 mtx_unlock(&eth->mutex);
 
             }
@@ -789,7 +749,6 @@ static mx_status_t lan9514_bind(mx_driver_t* driver, mx_device_t* device) {
     list_initialize(&eth->free_read_reqs);
     list_initialize(&eth->free_write_reqs);
     list_initialize(&eth->free_intr_reqs);
-    list_initialize(&eth->completed_reads);
 
     eth->usb_device = device;
     eth->driver = driver;
