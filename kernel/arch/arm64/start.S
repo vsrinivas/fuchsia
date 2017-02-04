@@ -410,14 +410,14 @@ DATA(page_tables_not_ready)
     .long       1
 #endif
 
-.section .bss.prebss.stack
+.section .bss.prebss.stack, "aw", @nobits
     .align 4
 DATA(__stack)
     .skip ARCH_DEFAULT_STACK_SIZE * SMP_MAX_CPUS
     .align 16
 DATA(__stack_end)
 
-.section ".bss.prebss.translation_table"
+.section .bss.prebss.translation_table, "aw", @nobits
 .align 3 + MMU_PAGE_TABLE_ENTRIES_IDENT_SHIFT
 DATA(tt_trampoline)
     .skip 8 * MMU_PAGE_TABLE_ENTRIES_IDENT
