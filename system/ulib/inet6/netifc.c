@@ -118,8 +118,13 @@ static int eth_fifo_send(const void* data, size_t len) {
         if ((state.head - state.tail) < NET_BUFFERS) {
             break;
         }
-        if ((status = mx_handle_wait_one(fifo.tx_fifo, MX_FIFO_NOT_FULL, MX_TIME_INFINITE, NULL)) < 0) {
+        mx_signals_t pending;
+        if ((status = mx_handle_wait_one(fifo.tx_fifo, MX_FIFO_NOT_FULL | MX_FIFO_CONSUMER_EXCEPTION,
+                                         MX_TIME_INFINITE, &pending)) < 0) {
             printf("wait on tx_fifo failed (%d)\n", status);
+            return -1;
+        }
+        if (pending & MX_FIFO_CONSUMER_EXCEPTION) {
             return -1;
         }
     }
@@ -300,6 +305,11 @@ static mx_status_t netifc_open_cb(int dirfd, const char* fn, void* cookie) {
             netifc_close();
             return NO_ERROR;
         }
+
+        if ((status = ioctl_ethernet_start(netfd)) < 0) {
+            printf("netifc: ethernet_start(): %d\n", status);
+            //TODO: make fatal once all drivers support this
+        }
     }
 
     for (int i = 0; i < NET_BUFFERS; i++) {
@@ -388,15 +398,20 @@ static int netifc_fifo_poll(void) {
             printf("%s netfd < 0, stopping poll\n", __func__);
             return -1;
         }
+        mx_signals_t pending = 0;
         if (net_timer) {
             mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
             if (now > net_timer) {
                 break;
             }
-            mx_handle_wait_one(fifo.rx_fifo, MX_FIFO_NOT_FULL, net_timer - now + MX_MSEC(1),
-                    NULL);
+            mx_handle_wait_one(fifo.rx_fifo, MX_FIFO_NOT_FULL | MX_FIFO_CONSUMER_EXCEPTION,
+                               net_timer - now + MX_MSEC(1), &pending);
         } else {
-            mx_handle_wait_one(fifo.rx_fifo, MX_FIFO_NOT_FULL, MX_TIME_INFINITE, NULL);
+            mx_handle_wait_one(fifo.rx_fifo, MX_FIFO_NOT_FULL | MX_FIFO_CONSUMER_EXCEPTION,
+                               MX_TIME_INFINITE, &pending);
+        }
+        if (pending & MX_FIFO_CONSUMER_EXCEPTION) {
+            return -1;
         }
     }
     return 0;

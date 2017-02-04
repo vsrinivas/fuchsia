@@ -33,6 +33,19 @@
 #define IOCTL_ETHERNET_SET_IO_BUF \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_ETH, 3)
 
+// Start transferring packets
+#define IOCTL_ETHERNET_START \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 4)
+
+// Stop transferring packets
+#define IOCTL_ETHERNET_STOP \
+    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_ETH, 5)
+
+// fifo entry flags
+#define ETH_FIFO_RX_OK   (1u)
+#define ETH_FIFO_TX_OK   (1u)
+#define ETH_FIFO_INVALID (2u)
+
 typedef struct eth_fifo_entry {
     uint32_t offset;
     uint16_t length;
@@ -75,3 +88,9 @@ IOCTL_WRAPPER_INOUT(ioctl_ethernet_get_fifo, IOCTL_ETHERNET_GET_FIFO, eth_get_fi
 
 // ssize_t ioctl_ethernet_set_io_buf(int fd, eth_set_io_buf_args* in);
 IOCTL_WRAPPER_IN(ioctl_ethernet_set_io_buf, IOCTL_ETHERNET_SET_IO_BUF, eth_set_io_buf_args_t);
+
+// ssize_t ioctl_ethernet_start(int fd);
+IOCTL_WRAPPER(ioctl_ethernet_start, IOCTL_ETHERNET_START);
+
+// ssize_t ioctl_ethernet_stop(int fd);
+IOCTL_WRAPPER(ioctl_ethernet_stop, IOCTL_ETHERNET_STOP);
