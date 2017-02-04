@@ -340,6 +340,20 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // tear down the address space
         aspace_->Destroy();
 
+        // Send out exception reports before signalling MX_TASK_TERMINATED,
+        // the theory being that marking the process as terminated is the
+        // last thing that is done.
+        // Note: If we need OnProcessExit for the debugger to do an exchange
+        // with the debugger then this should preceed aspace destruction.
+        // For now it is left here, following aspace destruction.
+        {
+            AutoLock lock(&exception_lock_);
+            if (exception_port_)
+                exception_port_->OnProcessExit(this);
+            if (debugger_exception_port_)
+                debugger_exception_port_->OnProcessExit(this);
+        }
+
         // signal waiter
         LTRACEF_LEVEL(2, "signaling waiters\n");
         state_tracker_.UpdateState(0u, MX_TASK_TERMINATED);
@@ -348,14 +362,6 @@ void ProcessDispatcher::SetStateLocked(State s) {
         // the semantics of signaling MX_JOB_NO_PROCESSES match that of MX_TASK_TERMINATED.
         if (job_)
             job_->RemoveChildProcess(this);
-
-        {
-            AutoLock lock(&exception_lock_);
-            if (exception_port_)
-                exception_port_->OnProcessExit(this);
-            if (debugger_exception_port_)
-                debugger_exception_port_->OnProcessExit(this);
-        }
     }
 }
 
