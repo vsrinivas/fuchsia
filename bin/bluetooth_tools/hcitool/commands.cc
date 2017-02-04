@@ -92,11 +92,7 @@ bool HandleReadBDADDR(const CommandDispatcher& owner,
       return;
     }
 
-    std::cout << "  BD_ADDR: "
-              << ftl::StringPrintf("%02X", return_params->bd_addr[5]);
-    for (int i = 4; i >= 0; --i)
-      std::cout << ftl::StringPrintf(":%02X", return_params->bd_addr[i]);
-    std::cout << std::endl;
+    std::cout << "  BD_ADDR: " << return_params->bd_addr.ToString() << std::endl;
     complete_cb();
   };
 

@@ -8,6 +8,7 @@
 
 #include <magenta/compiler.h>
 
+#include "apps/bluetooth/common/device_address.h"
 #include "apps/bluetooth/hci/hci_constants.h"
 
 // This file contains general opcode/number and static packet definitions for
@@ -302,7 +303,7 @@ struct ReadBDADDRReturnParams {
   Status status;
 
   // BD_ADDR of the device.
-  uint8_t bd_addr[6];
+  common::DeviceAddress bd_addr;
 } __PACKED;
 
 // =======================================================

@@ -424,9 +424,7 @@ TEST_F(CommandChannelTest, MultipleQueuedRequests) {
 
     auto return_params = event.GetReturnParams<ReadBDADDRReturnParams>();
     EXPECT_EQ(Status::kSuccess, return_params->status);
-    EXPECT_TRUE(common::ContainersEqual(
-        std::array<uint8_t, 6>{{0x01, 0x02, 0x03, 0x04, 0x05, 0x06}},
-        return_params->bd_addr, 6));
+    EXPECT_EQ("06:05:04:03:02:01", return_params->bd_addr.ToString());
 
     // Quit the message loop to continue the test. We post a delayed task so
     // that our check for |complete_cb_count| == 1 isn't guaranteed to be true
