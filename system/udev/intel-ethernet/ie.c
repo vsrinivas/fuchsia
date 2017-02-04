@@ -44,7 +44,7 @@ unsigned eth_handle_irq(ethdev_t* eth) {
     return readl(IE_ICR);
 }
 
-status_t eth_rx(ethdev_t* eth, void* data) {
+status_t eth_rx(ethdev_t* eth, void** data, size_t* len) {
     uint32_t n = eth->rx_rd_ptr;
     uint64_t info = eth->rxd[n].info;
 
@@ -54,20 +54,21 @@ status_t eth_rx(ethdev_t* eth, void* data) {
 
     // copy out packet
     mx_status_t r = IE_RXD_LEN(info);
-    if (r > ETH_RXBUF_SIZE) {
-        // should not be possible, but...
-        r = ERR_BAD_STATE;
-    } else if (data) {
-        memcpy(data, eth->rxb + ETH_RXBUF_SIZE * n, r);
-    }
+
+    *data = eth->rxb + ETH_RXBUF_SIZE * n;
+    *len = r;
+
+    return NO_ERROR;
+}
+
+void eth_rx_ack(ethdev_t* eth) {
+    uint32_t n = eth->rx_rd_ptr;
 
     // make buffer available to hw
     eth->rxd[n].info = 0;
     writel(n, IE_RDT);
     n = (n + 1) & (ETH_RXBUF_COUNT - 1);
     eth->rx_rd_ptr = n;
-
-    return r;
 }
 
 status_t eth_tx(ethdev_t* eth, const void* data, size_t len) {

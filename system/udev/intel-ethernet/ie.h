@@ -61,7 +61,9 @@ void eth_init_hw(ethdev_t* eth);
 
 void eth_dump_regs(ethdev_t* eth);
 
-status_t eth_rx(ethdev_t* eth, void* data);
+status_t eth_rx(ethdev_t* eth, void** data, size_t* len);
+void eth_rx_ack(ethdev_t* eth);
+
 status_t eth_tx(ethdev_t* eth, const void* data, size_t len);
 
 #define ETH_IRQ_RX IE_INT_RXT0
