@@ -73,6 +73,13 @@ void StoryImpl::GetInfo(const GetInfoCallback& callback) {
 
   story_provider_impl_->GetStoryData(
       story_data_->story_info->id, [this, callback](StoryDataPtr story_data) {
+        // TODO(mesch): It should not be necessary to read the data from ledger
+        // again. Updates from the ledger should be propagated to here and
+        // processed, and any change that happens here should be written to the
+        // ledger such that it can't be read again before it's
+        // written. Currently there is a race condition between updating story
+        // info and reading it back, because GetStoryData() executes in an
+        // operation collection, not an operation queue.
         story_data_ = std::move(story_data);
         callback(story_data_->story_info->Clone());
       });

@@ -237,12 +237,12 @@ class CreateStoryCall : public Operation {
         story_info->extra = std::move(extra_info_);
         story_info->extra.mark_non_null();
 
-        story_provider_impl_->WriteStoryData(story_data_->Clone(), [this]() {
+        story_provider_impl_->WriteStoryData(story_data_->Clone(), [this] {
           controller_ = std::make_unique<StoryImpl>(std::move(story_data_),
                                                     story_provider_impl_);
 
-          // We call stop on the controller to ensure that root data has been
-          // written before this operations is done.
+          // We ensure that root data has been written before this operations is
+          // done.
           controller_->AddLinkDataAndSync(std::move(root_json_), [this] {
             result_(story_id_);
             Done();
@@ -410,22 +410,37 @@ class GetControllerCall : public Operation {
           // user session with stories already running). This
           // workaround here just gets user shell be able to start
           // previous stories. FW-95
-          story_data_->story_info->is_running = false;
+          //
+          // If this field is changed here, it needs to be written back too,
+          // otherwise StoryProvider.GetStoryInfo() and
+          // StoryController.GetInfo() will return the wrong values.
+          if (story_data_->story_info->is_running) {
+            FTL_LOG(INFO)
+              << "GetControllerCall() " << story_data_->story_info->id
+              << " marked running but isn't -- correcting";
+            story_data_->story_info->is_running = false;
+            story_provider_impl_->WriteStoryData(story_data_->Clone(),
+                                                 [this] { Cont(); });
+          } else {
+            Cont();
+          }
+        });
+  }
 
-          ledger_->GetPage(
-              story_data_->story_page_id.Clone(), story_page_.NewRequest(),
-              [this](ledger::Status status) {
-                if (status != ledger::Status::OK) {
-                  FTL_LOG(ERROR)
-                      << "GetControllerCall() " << story_data_->story_info->id
-                      << " Ledger.GetPage() " << status;
-                }
-                auto controller =
-                    new StoryImpl(std::move(story_data_), story_provider_impl_);
-                controller->Connect(std::move(request_));
-                story_controllers_->emplace(story_id_, controller);
-                Done();
-              });
+  void Cont() {
+    ledger_->GetPage(
+        story_data_->story_page_id.Clone(), story_page_.NewRequest(),
+        [this](ledger::Status status) {
+          if (status != ledger::Status::OK) {
+            FTL_LOG(ERROR)
+              << "GetControllerCall() " << story_data_->story_info->id
+              << " Ledger.GetPage() " << status;
+          }
+          auto controller =
+            new StoryImpl(std::move(story_data_), story_provider_impl_);
+          controller->Connect(std::move(request_));
+          story_controllers_->emplace(story_id_, controller);
+          Done();
         });
   }
 
@@ -501,6 +516,10 @@ class PreviousStoriesCall : public Operation {
                     story_data->Deserialize(entry->value->get_bytes().data(),
                                             entry->value->get_bytes().size());
                     story_ids_.push_back(story_data->story_info->id);
+                    FTL_LOG(INFO) << "PreviousStoryCall() "
+                                  << " previous story " << story_data->story_info->id
+                                  << " " << story_data->story_info->url
+                                  << " " << story_data->story_info->is_running;
                   }
 
                   result_(std::move(story_ids_));
@@ -696,6 +715,9 @@ void StoryProviderImpl::OnChange(ledger::PageChangePtr page,
     watchers_.ForAllPtrs([&story_data](StoryProviderWatcher* const watcher) {
       watcher->OnChange(story_data->story_info.Clone());
     });
+
+    // TODO(mesch): If there is an update for a running story, the story
+    // controller needs to be notified.
   }
 
   for (auto& key : page->deleted_keys) {
