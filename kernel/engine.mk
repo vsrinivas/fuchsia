@@ -277,7 +277,6 @@ USER_FS := $(BUILDDIR)/user.fs
 # manifest of files to include in the user bootfs
 USER_MANIFEST := $(BUILDDIR)/bootfs.manifest
 USER_MANIFEST_LINES :=
-USER_AUTORUN :=
 # The contents of this are derived from BOOTFS_DEBUG_MODULES.
 USER_MANIFEST_DEBUG_INPUTS :=
 
