@@ -40,7 +40,8 @@ hci::CommandChannel::TransactionId SendCommand(
       owner.task_runner());
 }
 
-void LogCommandComplete(uint8_t status, hci::CommandChannel::TransactionId id) {
+void LogCommandComplete(hci::Status status,
+                        hci::CommandChannel::TransactionId id) {
   std::cout << "  Command Complete - status: "
             << ftl::StringPrintf("0x%02x", status) << " (id=" << id << ")"
             << std::endl;
@@ -170,6 +171,185 @@ bool HandleWriteLocalName(const CommandDispatcher& owner,
   return true;
 }
 
+bool HandleSetAdvEnable(const CommandDispatcher& owner,
+                        const ftl::CommandLine& cmd_line,
+                        const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size() != 1 || cmd_line.options().size()) {
+    std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
+    return false;
+  }
+
+  hci::LESetAdvertisingEnableValue value;
+  std::string cmd_arg = cmd_line.positional_args()[0];
+  if (cmd_arg == "enable") {
+    value = hci::LESetAdvertisingEnableValue::kEnable;
+  } else if (cmd_arg == "disable") {
+    value = hci::LESetAdvertisingEnableValue::kDisable;
+  } else {
+    std::cout << "  Unrecognized parameter: " << cmd_arg << std::endl;
+    std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
+    return false;
+  }
+
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
+                          const hci::EventPacket& event) {
+    auto return_params =
+        event.GetReturnParams<hci::LESetAdvertisingEnableReturnParams>();
+    LogCommandComplete(return_params->status, id);
+    complete_cb();
+  };
+
+  constexpr size_t kPayloadSize =
+      sizeof(hci::LESetAdvertisingEnableCommandParams);
+  constexpr size_t kBufferSize = BufferSize(kPayloadSize);
+
+  common::StaticByteBuffer<kBufferSize> buffer;
+  hci::CommandPacket packet(hci::kLESetAdvertisingEnable, &buffer,
+                            kPayloadSize);
+  packet.GetPayload<hci::LESetAdvertisingEnableCommandParams>()
+      ->advertising_enable = value;
+  packet.EncodeHeader();
+
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+
+  std::cout << "  Sent HCI_Set_Advertising_Enable (id=" << id << ")"
+            << std::endl;
+  return true;
+}
+
+bool HandleSetAdvParams(const CommandDispatcher& owner,
+                        const ftl::CommandLine& cmd_line,
+                        const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size()) {
+    std::cout << "  Usage: set-adv-params [--help|--type]" << std::endl;
+    return false;
+  }
+
+  if (cmd_line.HasOption("help")) {
+    std::cout
+        << "  Options: \n"
+           "    --help - Display this help message\n"
+           "    --type=<type> - The advertising type. Possible values are:\n"
+           "          - nonconn: non-connectable undirected (default)\n"
+           "          - adv-ind: connectable and scannable undirected\n"
+           "          - direct-low: connectable directed low-duty\n"
+           "          - direct-high: connectable directed high-duty\n"
+           "          - scan: scannable undirected";
+    std::cout << std::endl;
+    return false;
+  }
+
+  hci::LEAdvertisingType adv_type = hci::LEAdvertisingType::kAdvNonConnInd;
+  std::string type;
+  if (cmd_line.GetOptionValue("type", &type)) {
+    if (type == "adv-ind") {
+      adv_type = hci::LEAdvertisingType::kAdvInd;
+    } else if (type == "direct-low") {
+      adv_type = hci::LEAdvertisingType::kAdvDirectIndLowDutyCycle;
+    } else if (type == "direct-high") {
+      adv_type = hci::LEAdvertisingType::kAdvDirectIndHighDutyCycle;
+    } else if (type == "scan") {
+      adv_type = hci::LEAdvertisingType::kAdvScanInd;
+    } else if (type == "nonconn") {
+      adv_type = hci::LEAdvertisingType::kAdvNonConnInd;
+    } else {
+      std::cout << "  Unrecognized advertising type: " << type << std::endl;
+      return false;
+    }
+  }
+
+  constexpr size_t kPayloadSize =
+      sizeof(hci::LESetAdvertisingParametersCommandParams);
+  common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
+  hci::CommandPacket packet(hci::kLESetAdvertisingParameters, &buffer,
+                            kPayloadSize);
+  auto params =
+      packet.GetPayload<hci::LESetAdvertisingParametersCommandParams>();
+  params->adv_interval_min = hci::kLEAdvertisingIntervalDefault;
+  params->adv_interval_max = hci::kLEAdvertisingIntervalDefault;
+  params->adv_type = adv_type;
+  params->own_address_type = hci::LEAdvParamOwnAddressType::kPublic;
+  params->peer_address_type = hci::LEAdvParamPeerAddressType::kPublic;
+  params->peer_address.SetToZero();
+  params->adv_channel_map = hci::kLEAdvertisingChannelAll;
+  params->adv_filter_policy = hci::LEAdvFilterPolicy::kAllowAll;
+
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
+                          const hci::EventPacket& event) {
+    auto return_params =
+        event.GetReturnParams<hci::LESetAdvertisingParametersReturnParams>();
+    LogCommandComplete(return_params->status, id);
+    complete_cb();
+  };
+
+  packet.EncodeHeader();
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+
+  std::cout << "  Sent HCI_Set_Advertising_Parameters (id=" << id << ")"
+            << std::endl;
+
+  return true;
+}
+
+bool HandleSetAdvData(const CommandDispatcher& owner,
+                      const ftl::CommandLine& cmd_line,
+                      const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size()) {
+    std::cout << "  Usage: set-adv-data [--help|--name]" << std::endl;
+    return false;
+  }
+
+  if (cmd_line.HasOption("help")) {
+    std::cout
+        << "  Options: \n"
+           "    --help - Display this help message\n"
+           "    --name=<local-name> - Set the \"Complete Local Name\" field";
+    std::cout << std::endl;
+    return false;
+  }
+
+  constexpr size_t kPayloadSize =
+      sizeof(hci::LESetAdvertisingDataCommandParams);
+  common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
+  buffer.SetToZeros();
+  hci::CommandPacket packet(hci::kLESetAdvertisingData, &buffer, kPayloadSize);
+
+  std::string name;
+  if (cmd_line.GetOptionValue("name", &name)) {
+    // Each advertising data structure consists of a 1 octet length field, 1
+    // octet type field.
+    size_t adv_data_len = 2 + name.length();
+    if (adv_data_len > hci::kMaxLEAdvertisingDataLength) {
+      std::cout << "  Given name is too long" << std::endl;
+      return false;
+    }
+
+    auto params = packet.GetPayload<hci::LESetAdvertisingDataCommandParams>();
+    params->adv_data_length = adv_data_len;
+    params->adv_data[0] = adv_data_len - 1;
+    params->adv_data[1] = 0x09;  // Complete Local Name
+    std::strncpy((char*)params->adv_data + 2, name.c_str(), name.length());
+  } else {
+    packet.GetPayload<hci::LESetAdvertisingDataCommandParams>()
+        ->adv_data_length = 0;
+  }
+
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
+                          const hci::EventPacket& event) {
+    auto return_params =
+        event.GetReturnParams<hci::LESetAdvertisingDataReturnParams>();
+    LogCommandComplete(return_params->status, id);
+    complete_cb();
+  };
+
+  packet.EncodeHeader();
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+
+  std::cout << "  Sent HCI_Set_Advertising_Data (id=" << id << ")" << std::endl;
+
+  return true;
+}
+
 }  // namespace
 
 void RegisterCommands(CommandDispatcher* handler_map) {
@@ -182,6 +362,14 @@ void RegisterCommands(CommandDispatcher* handler_map) {
                                HandleReadLocalName);
   handler_map->RegisterHandler("write-local-name", "Send HCI_Write_Local_Name",
                                HandleWriteLocalName);
+  handler_map->RegisterHandler("set-adv-enable",
+                               "Send HCI_LE_Set_Advertising_Enable",
+                               HandleSetAdvEnable);
+  handler_map->RegisterHandler("set-adv-params",
+                               "Send HCI_LE_Set_Advertising_Parameters",
+                               HandleSetAdvParams);
+  handler_map->RegisterHandler(
+      "set-adv-data", "Send HCI_LE_Set_Advertisig_Data", HandleSetAdvData);
 }
 
 }  // namespace hcitool

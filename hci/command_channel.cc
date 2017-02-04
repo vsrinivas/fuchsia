@@ -200,7 +200,11 @@ void CommandChannel::HandlePendingCommandComplete(const EventPacket& event) {
   if (event.event_code() == kCommandCompleteEventCode &&
       le16toh(event.GetPayload<CommandCompleteEventParams>()->command_opcode) !=
           pending_command->opcode) {
-    FTL_LOG(ERROR) << "hci: CommandChannel: Unmatched CommandComplete event";
+    FTL_LOG(ERROR) << ftl::StringPrintf(
+        "hci: CommandChannel: Unmatched CommandComplete event - opcode: "
+        "0x%04x, pending: 0x%04x",
+        le16toh(event.GetPayload<CommandCompleteEventParams>()->command_opcode),
+        pending_command->opcode);
     return;
   }
 
