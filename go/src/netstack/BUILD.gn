@@ -5,6 +5,7 @@
 declare_args() {
   # if true, lwiperf server will run
   lwiperf = false
+
   # if true, use netstack2 for netstack
   netstack2 = false
 }
@@ -46,6 +47,8 @@ executable("app") {
   ]
 
   sources += [
+    "ports/lwip/eth-client.c",
+    "ports/lwip/eth-client.h",
     "ports/lwip/ethernetif.c",
     "ports/lwip/ethernetif.h",
     "ports/lwip/lwip-netdb.h",

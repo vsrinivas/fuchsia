@@ -376,7 +376,7 @@ mx_status_t do_close(mxrio_msg_t* msg, iostate_t* ios, int events,
     wait_queue_discard(WAIT_NET, ios->sockfd);
     debug_socket("wait_queue_discard(SOCKET) (sockfd=%d)\n", ios->sockfd);
     wait_queue_discard(WAIT_SOCKET, ios->sockfd);
-    info("sockfd %d closed (ios=%p)\n", ios->sockfd, ios);
+    debug("sockfd %d closed (ios=%p)\n", ios->sockfd, ios);
     ios->sockfd = -1;
   }
   iostate_release(ios);
@@ -568,7 +568,7 @@ mx_status_t do_read_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
     if (n == 0) {
     connection_closed:
       // connection is closed
-      info("do_read_stream: net_read: connection closed\n");
+      debug("do_read_stream: net_read: connection closed\n");
       mx_status_t r =
           mx_socket_write(ios->data_h, MX_SOCKET_HALF_CLOSE, NULL, 0u, NULL);
       if (r < 0) {
@@ -577,8 +577,8 @@ mx_status_t do_read_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
           return r;
         }
       } else {
-        info("half_close(ios->data_h 0x%x) => %d (ios=%p)\n", ios->data_h, r,
-             ios);
+        debug("half_close(ios->data_h 0x%x) => %d (ios=%p)\n", ios->data_h, r,
+              ios);
       }
       return NO_ERROR;
     } else if (errno_ == EWOULDBLOCK) {
@@ -713,7 +713,7 @@ mx_status_t do_write_stream(mxrio_msg_t* msg, iostate_t* ios, int events,
       // TODO: use user signal
       mx_status_t r =
           mx_socket_write(ios->data_h, MX_SOCKET_HALF_CLOSE, NULL, 0u, NULL);
-      info("mx_socket_write(half_close) => %d\n", r);
+      debug("mx_socket_write(half_close) => %d\n", r);
       return r;
     }
     ios->wlen = nread;

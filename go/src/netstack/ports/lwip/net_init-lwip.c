@@ -11,6 +11,7 @@
 #include "third_party/lwip/src/include/lwip/apps/lwiperf.h"
 #endif
 
+#include "apps/netstack/trace.h"
 #include "apps/netstack/ports/lwip/ethernetif.h"
 
 // initialize a lwip network interface
@@ -32,7 +33,7 @@ static int print_ip4_addr(void) {
     ipaddr_ntoa_r(&netif.ip_addr, ip_addr, sizeof(ip_addr));
     ipaddr_ntoa_r(&netif.netmask, netmask, sizeof(netmask));
     ipaddr_ntoa_r(&netif.gw, gw, sizeof(gw));
-    printf("ip4_addr: %s netmask: %s gw: %s\n", ip_addr, netmask, gw);
+    info("ip4_addr: %s netmask: %s gw: %s\n", ip_addr, netmask, gw);
     return 1;
   }
   return 0;
@@ -41,9 +42,9 @@ static int print_ip4_addr(void) {
 static void print_ip6_addr(int *printed_bits, int idx) {
   if (netif.ip6_addr_state[idx] & IP6_ADDR_PREFERRED) {
     char ip6_addr[INET6_ADDRSTRLEN];
-    printf("ip6_addr[%d]: %s\n", idx,
-           ip6addr_ntoa_r(netif_ip6_addr(&netif, idx), ip6_addr,
-                          sizeof(ip6_addr)));
+    info("ip6_addr[%d]: %s\n", idx,
+         ip6addr_ntoa_r(netif_ip6_addr(&netif, idx), ip6_addr,
+                        sizeof(ip6_addr)));
     *printed_bits = (1 << idx);
   }
 }
