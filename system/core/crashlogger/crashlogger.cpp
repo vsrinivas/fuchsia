@@ -188,7 +188,7 @@ void dump_memory(mx_handle_t proc, uintptr_t start, size_t len) {
 void resume_thread(mx_handle_t thread, bool handled) {
     uint32_t options = MX_RESUME_EXCEPTION;
     if (!handled)
-        options |= MX_RESUME_NOT_HANDLED;
+        options |= MX_RESUME_TRY_NEXT;
     auto status = mx_task_resume(thread, options);
     if (status != NO_ERROR) {
         print_mx_error("unable to \"resume\" thread", status);

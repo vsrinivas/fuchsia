@@ -399,27 +399,28 @@ status_t UserThread::ExceptionHandlerExchange(
     DEBUG_ASSERT(exception_wait_port_ == nullptr);
     exception_wait_port_ = eport;
 
-    exception_status_ = MX_EXCEPTION_STATUS_WAITING;
+    exception_status_ = ExceptionStatus::UNPROCESSED;
     status = cond_wait_timeout(&exception_wait_cond_, exception_wait_lock_.GetInternal(), INFINITE_TIME);
     DEBUG_ASSERT(status == NO_ERROR);
-    DEBUG_ASSERT(exception_status_ != MX_EXCEPTION_STATUS_WAITING);
+    DEBUG_ASSERT(exception_status_ != ExceptionStatus::UNPROCESSED);
 
     exception_wait_port_.reset();
     exception_report_ = nullptr;
     thread_.exception_context = nullptr;
 
     LTRACEF("ExceptionHandlerExchange returning\n");
-    if (exception_status_ != MX_EXCEPTION_STATUS_RESUME)
+    if (exception_status_ != ExceptionStatus::RESUME)
         return ERR_BAD_STATE;
     return NO_ERROR;
 }
 
-status_t UserThread::MarkExceptionHandled(mx_exception_status_t status) {
-    LTRACE_ENTRY_OBJ;
+status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {
+    LTRACEF("%s: obj %p, estatus %d\n", __FUNC__, this, static_cast<int>(estatus));
     AutoLock lock(exception_wait_lock_);
-    if (exception_status_ != MX_EXCEPTION_STATUS_WAITING)
+    if (!InExceptionLocked())
         return ERR_BAD_STATE;
-    exception_status_ = status;
+    if (exception_status_ == ExceptionStatus::UNPROCESSED)
+        exception_status_ = estatus;
     cond_signal(&exception_wait_cond_);
     return NO_ERROR;
 }
@@ -427,18 +428,25 @@ status_t UserThread::MarkExceptionHandled(mx_exception_status_t status) {
 void UserThread::OnExceptionPortRemoval(const mxtl::RefPtr<ExceptionPort>& eport) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(exception_wait_lock_);
-    if (exception_status_ != MX_EXCEPTION_STATUS_WAITING)
+    if (!InExceptionLocked())
         return;
     if (exception_wait_port_ == eport) {
-        exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
+        if (exception_status_ == ExceptionStatus::UNPROCESSED)
+            exception_status_ = ExceptionStatus::TRY_NEXT;
         cond_signal(&exception_wait_cond_);
     }
+}
+
+bool UserThread::InExceptionLocked() {
+    LTRACE_ENTRY_OBJ;
+    DEBUG_ASSERT(exception_wait_lock_.IsHeld());
+    return thread_stopped_in_exception(&thread_);
 }
 
 bool UserThread::InException(ExceptionPort::Type* type) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(exception_wait_lock_);
-    if (!thread_stopped_in_exception(&thread_))
+    if (!InExceptionLocked())
         return false;
     DEBUG_ASSERT(exception_wait_port_ != nullptr);
     *type = exception_wait_port_->type();
@@ -448,7 +456,7 @@ bool UserThread::InException(ExceptionPort::Type* type) {
 status_t UserThread::GetExceptionReport(mx_exception_report_t* report) {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(exception_wait_lock_);
-    if (exception_status_ != MX_EXCEPTION_STATUS_WAITING)
+    if (!InExceptionLocked())
         return ERR_BAD_STATE;
     DEBUG_ASSERT(exception_report_ != nullptr);
     *report = *exception_report_;
@@ -466,8 +474,7 @@ status_t UserThread::ReadState(uint32_t state_kind, void* buffer, uint32_t* buff
 
     AutoLock lock(exception_wait_lock_);
 
-    if (thread_.state != THREAD_BLOCKED ||
-        !thread_stopped_in_exception(&thread_))
+    if (!InExceptionLocked() || thread_.state != THREAD_BLOCKED)
         return ERR_BAD_STATE;
 
     switch (state_kind)
@@ -486,8 +493,7 @@ status_t UserThread::WriteState(uint32_t state_kind, const void* buffer, uint32_
 
     AutoLock lock(exception_wait_lock_);
 
-    if (thread_.state != THREAD_BLOCKED ||
-        !thread_stopped_in_exception(&thread_))
+    if (!InExceptionLocked() || thread_.state != THREAD_BLOCKED)
         return ERR_BAD_STATE;
 
     switch (state_kind)

@@ -508,7 +508,7 @@ static void finish_basic_test(const char* kind, mx_handle_t child,
     send_msg(our_channel, crash_msg);
     mx_koid_t tid;
     read_and_verify_exception(eport, kind, child, MX_EXCP_FATAL_PAGE_FAULT, false, &tid);
-    resume_thread_from_exception(child, tid, MX_RESUME_NOT_HANDLED);
+    resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
     tu_process_wait_signaled(child);
 
     tu_handle_close(child);
@@ -760,7 +760,7 @@ static bool trigger_test(void)
         if (read_exception(eport, &packet)) {
             if (packet.report.header.type != MX_EXCP_THREAD_EXIT) {
                 verify_exception(&packet, excp_name, child, excp_type, false, &tid);
-                resume_thread_from_exception(child, tid, MX_RESUME_NOT_HANDLED);
+                resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
                 mx_koid_t tid2;
                 read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXIT, false, &tid2);
                 ASSERT_EQ(tid2, tid, "exiting tid mismatch");
@@ -798,7 +798,7 @@ static bool unbind_while_stopped_test(void)
     read_and_verify_exception(eport, "process start", child, MX_EXCP_START, false, &tid);
 
     // Now unbind the exception port and wait for the child to cleanly exit.
-    // If this doesn't work a thread will stay blocked, we'll timeout, and
+    // If this doesn't work the thread will stay blocked, we'll timeout, and
     // the watchdog will trigger.
     tu_set_exception_port(child, MX_HANDLE_INVALID, 0, MX_EXCEPTION_PORT_DEBUGGER);
     send_msg(our_channel, MSG_DONE);

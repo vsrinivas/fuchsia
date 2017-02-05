@@ -38,6 +38,34 @@ public:
         DEAD,        // thread has exited and is not running
     };
 
+    // the exception status (disposition?) of the thread
+    enum class ExceptionStatus {
+        // Initial state.
+        // The thread is either not in an exception, or is and is waiting for
+        // a response.
+        UNPROCESSED,
+
+        // The exception is unhandled, try the next handler.
+        // If this is the last handler then the process is killed.
+        // As an analogy, this would be like typing "c" in gdb after a
+        // segfault. In linux the signal would be delivered to the thread,
+        // which would either terminate the process or run a signal handler if
+        // defined. In magenta this gives the next signal handler in the list
+        // a crack at // the exception.
+        TRY_NEXT,
+
+        // The exception has been handled, resume the thread.
+        // As an analogy, this would be like typing "sig 0" in gdb after a
+        // segfault. The faulting instruction will be retried. If, for example,
+        // it segfaults again then the user is back in the debugger again,
+        // which is working as intended.
+        // Note: We don't, currently at least, support delivering a different
+        // exception (signal in linux parlance) to the thread. As an analogy,
+        // this would be like typing "sig 8" in gdb after getting a segfault
+        // (which is signal 11).
+        RESUME,
+    };
+
     UserThread(mxtl::RefPtr<ProcessDispatcher> process,
                uint32_t flags);
     ~UserThread();
@@ -82,7 +110,7 @@ public:
                                       const mx_exception_report_t* report,
                                       const arch_exception_context_t* arch_context);
     // Called when an exception handler is finished processing the exception.
-    status_t MarkExceptionHandled(mx_exception_status_t status);
+    status_t MarkExceptionHandled(ExceptionStatus estatus);
     // Called when exception port |eport| is removed.
     // If the thread is waiting for the associated exception handler, continue
     // exception processing as if the exception port had not been installed.
@@ -91,6 +119,9 @@ public:
     // The kind of exception port the thread is waiting for a response from
     // is returned in |*type|.
     bool InException(ExceptionPort::Type* type);
+    // Return true if waiting for an exception response.
+    // |exception_wait_lock_| must be held.
+    bool InExceptionLocked();
     // Assuming the thread is stopped waiting for an exception response,
     // fill in |*report| with the exception report.
     // Returns ERR_BAD_STATE if not in an exception.
@@ -157,7 +188,7 @@ private:
     Mutex exception_lock_;
 
     // Support for sending an exception to an exception handler and then waiting for a response.
-    mx_exception_status_t exception_status_ = MX_EXCEPTION_STATUS_NOT_HANDLED;
+    ExceptionStatus exception_status_ = ExceptionStatus::UNPROCESSED;
     // The exception port of the handler the thread is waiting for a response from.
     mxtl::RefPtr<ExceptionPort> exception_wait_port_ TA_GUARDED(exception_wait_lock_);
     const mx_exception_report_t* exception_report_ TA_GUARDED(exception_wait_lock_);

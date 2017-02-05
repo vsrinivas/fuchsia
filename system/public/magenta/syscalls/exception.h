@@ -107,38 +107,17 @@ typedef struct mx_exception_report {
     mx_exception_context_t context;
 } mx_exception_report_t;
 
-// The status argument to _magenta_mark_exception_handled.
-// Negative values are for internal use only.
-typedef enum {
-    MX_EXCEPTION_STATUS_HANDLER_GONE = -2,
-    MX_EXCEPTION_STATUS_WAITING = -1,
-    // As an analogy, this would be like typing "c" in gdb after a segfault.
-    // In linux the signal would be delivered to the thread, which would
-    // either terminate the process or run a signal handler if defined.
-    // In magenta this gives the next signal handler in the list a crack at
-    // the exception.
-    MX_EXCEPTION_STATUS_NOT_HANDLED = 0,
-    // As an analogy, this would be like typing "sig 0" in gdb after a
-    // segfault. The faulting instruction will be retried. If, for example, it
-    // segfaults again then the user is back in the debugger again, which is
-    // working as intended.
-    // Note: We don't, currently at least, support delivering a different
-    // exception (signal in linux parlance) to the thread. As an analogy, this
-    // would be like typing "sig 8" in gdb after getting a segfault (which is
-    // signal 11).
-    MX_EXCEPTION_STATUS_RESUME = 1
-} mx_exception_status_t;
-
 // Flags for mx_task_resume()
 #define MX_RESUME_EXCEPTION (1)
 // Indicates that we should resume the thread from stopped-in-exception state
 // (default resume does not do so)
 
-#define MX_RESUME_NOT_HANDLED (2)
+#define MX_RESUME_TRY_NEXT (2)
+#define MX_RESUME_NOT_HANDLED (2) // deprecated
 // Only meaningful when combined with MX_RESUME_EXCEPTION
 // Indicates that instead of resuming from the faulting instruction we instead
-// let any additional exception handlers (eg, system after process) take a shot
-// at it, and if there are no additional handlers, the thread will terminate
+// let the next exception handler in the search order, if any, process the
+// exception. If there are no more then the entire process is killed.
 
 // Flags for mx_object_bind_exception_port.
 #define MX_EXCEPTION_PORT_DEBUGGER (1)

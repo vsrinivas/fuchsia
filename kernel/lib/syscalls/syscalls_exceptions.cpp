@@ -146,8 +146,13 @@ mx_status_t sys_object_bind_exception_port(mx_handle_t obj_handle, mx_handle_t e
 mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
     LTRACE_ENTRY;
 
-    if (options & (~(MX_RESUME_EXCEPTION | MX_RESUME_NOT_HANDLED)))
+    if (options & ~(MX_RESUME_EXCEPTION | MX_RESUME_TRY_NEXT))
         return ERR_INVALID_ARGS;
+    if (!(options & MX_RESUME_EXCEPTION)) {
+        // These options are only valid with MX_RESUME_EXCEPTION.
+        if (options & MX_RESUME_TRY_NEXT)
+            return ERR_INVALID_ARGS;
+    }
 
     auto up = ProcessDispatcher::GetCurrent();
 
@@ -161,11 +166,11 @@ mx_status_t sys_task_resume(mx_handle_t handle, uint32_t options) {
         return ERR_WRONG_TYPE;
 
     if (options & MX_RESUME_EXCEPTION) {
-        mx_exception_status_t estatus;
-        if (options & MX_RESUME_NOT_HANDLED) {
-            estatus = MX_EXCEPTION_STATUS_NOT_HANDLED;
+        UserThread::ExceptionStatus estatus;
+        if (options & MX_RESUME_TRY_NEXT) {
+            estatus = UserThread::ExceptionStatus::TRY_NEXT;
         } else {
-            estatus = MX_EXCEPTION_STATUS_RESUME;
+            estatus = UserThread::ExceptionStatus::RESUME;
         }
         return thread->thread()->MarkExceptionHandled(estatus);
     }
