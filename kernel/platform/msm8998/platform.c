@@ -23,7 +23,6 @@
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic.h>
 #include <platform/msm8998.h>
-#include <platform/atag.h>
 
 #include <target.h>
 
