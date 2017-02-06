@@ -20,7 +20,7 @@
 namespace network {
 
 // Maximum number of slots used to run network requests concurrently.
-constexpr size_t kMaxSlots = 5;
+constexpr size_t kMaxSlots = 255;
 
 // Container for the url loader implementation. The loader is run on his own
 // thread.
