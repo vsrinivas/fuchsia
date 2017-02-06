@@ -87,6 +87,16 @@ build() {
       "${sysroot}"
   fi
 
+  # These are magenta headers for use in building host tools outside
+  # of the magenta tree.
+  local magenta_host_include="${magenta_buildroot}/build-${magenta_target}/tools/include"
+  local out_magenta_host_dir="${outdir}/magenta-host-${target}"
+  rm -rf -- "${out_magenta_host_dir}"
+  mkdir -p -- "${out_magenta_host_dir}"
+  cp -r -- \
+   "${magenta_host_include}" \
+   "${out_magenta_host_dir}"
+
   local libgcc_file_name="$(${ROOT_DIR}/buildtools/toolchain/clang+llvm-${HOST_TRIPLE}/bin/clang --target=${target}-fuchsia -print-libgcc-file-name)"
 
   mkdir -p -- "${outdir}/build-libunwind-${target}"
