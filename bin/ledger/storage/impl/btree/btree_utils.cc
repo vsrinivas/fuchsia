@@ -6,15 +6,13 @@
 
 #include "apps/ledger/src/callback/asynchronous_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
+#include "apps/ledger/src/glue/crypto/hash.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
-#include "third_party/murmur3/murmur3.h"
 
 namespace storage {
 namespace btree {
 namespace {
-
-constexpr uint32_t kMurmurHashSeed = 0xbeef;
 
 constexpr uint8_t kMurmurHashSizeInBytes = 128 / 8;
 
@@ -28,8 +26,9 @@ Hash FastHash(convert::ExtendedStringView value) {
   static_assert(sizeof(Hash) == kMurmurHashSizeInBytes,
                 "Hash must be 128 bits");
 
+  std::string hash = glue::SHA256Hash(value.data(), value.size());
   Hash result;
-  MurmurHash3_x64_128(value.data(), value.size(), kMurmurHashSeed, &result);
+  memcpy(&result, hash.data(), sizeof(result));
   return result;
 }
 
