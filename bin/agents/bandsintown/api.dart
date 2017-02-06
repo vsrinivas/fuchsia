@@ -15,7 +15,7 @@ class BandsInTownApi {
     Uri uri = new Uri.https(
         'api.bandsintown.com',
         'artists/mbid_${musicBrainzId}/events',
-        {'format': 'json', 'app_id': 'foo'});
+        {'format': 'json', 'app_id': 'foo', 'api_version': '2.0'});
     http.Response response = await http.get(uri);
     List<Map<String, dynamic>> json = JSON.decode(response.body);
     return json.map((artistEvent) {

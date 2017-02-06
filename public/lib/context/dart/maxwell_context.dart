@@ -95,19 +95,31 @@ typedef Future<String> TransformFn(String);
 
 /// Convenience function that sets up a transformation pipeline between two
 /// pieces of context.
+///
+/// This pipeline will tear down the subscriber link if there are no downstream
+/// subscribers and set it up when there are. To do so, the global context
+/// client must remain open, so [closeGlobals] should not be called until the
+/// transform pipeline is no longer necessary (or more accurately, until it no
+/// longer needs to be resurrected).
 ContextPublisherLinkProxy buildTransform(
     {@required String labelIn,
     @required String schemaIn,
     @required String labelOut,
     @required String schemaOut,
     @required Function transform,
-    bool invalidateOnNoSubscribers = true}) {
+    bool invalidateOnNoSubscribers = true,
+    bool invalidateOnNull = true}) {
   ContextSubscriberLinkImpl sub;
   ContextPublisherLinkProxy pub;
 
   pub = publisherLink(labelOut, schemaOut, onHasSubscribers: () {
-    sub = subscriberLink(
-        labelIn, schemaIn, (update) => transform(update).then(pub.update));
+    sub = subscriberLink(labelIn, schemaIn, (update) {
+      if (update == null) {
+        pub.update(null);
+      } else {
+        transform(update).then(pub.update);
+      }
+    });
   }, onNoSubscribers: () {
     if (invalidateOnNoSubscribers) pub.update(null);
     sub.close();
