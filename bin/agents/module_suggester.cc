@@ -40,8 +40,8 @@ const std::unordered_map<std::string, ProposalContent> kAskOnlyStories(
      {"Music",
       {"file:///system/apps/music_story",
        0xffff8c00 /*Google Play Music logo orange*/, "",
-       "http://www.technobuffalo.com/wp-content/uploads/2016/03/"
-       "kanye-west-1280x640.jpg"}},
+       "https://d3rt1990lpmkn.cloudfront.net/640/"
+       "843b5fdc00c829aaf4250e9f611f4d0646391ff5"}},
      {"Noodles",
       {"file:///system/apps/noodles_view", 0xff212121 /*Grey 900*/, "", ""}},
      {"Color",

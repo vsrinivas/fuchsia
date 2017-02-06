@@ -6,10 +6,11 @@ import("//apps/dart_content_handler/dart_app.gni")
 
 group("agents") {
   deps = [
-    # If we don't include this explicitly here, for some reason it still
+    # If we don't include these explicitly here, for some reason it still
     # produces the expected build products but is not sensitive to source file
     # changes.
     ":bandsintown",
+    ":module_suggester",
     ":music_brainz",
   ]
 }
