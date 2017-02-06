@@ -8,139 +8,78 @@
 
 #include <limits.h>
 #include <stdio.h>
+#include <string.h>
 
 // borrowed from LK/magenta stdlib.h
 #define ROUNDUP(a, b) (((a)+ ((b)-1)) & ~((b)-1))
 #define ALIGN(a, b) ROUNDUP(a, b)
 
-mx_status_t eth_fifo_create(uint32_t rx_entries, uint32_t tx_entries, uint32_t options,
-        eth_fifo_t* out) {
-    // No options supported yet.
-    if (options != 0) {
+void eth_ioring_destroy(eth_ioring_t* ioring) {
+    if (ioring->entries_vmo) {
+        mx_handle_close(ioring->entries_vmo);
+        ioring->entries_vmo = 0;
+    }
+    if (ioring->enqueue_fifo) {
+        mx_handle_close(ioring->enqueue_fifo);
+        ioring->enqueue_fifo = 0;
+    }
+    if (ioring->dequeue_fifo) {
+        mx_handle_close(ioring->dequeue_fifo);
+        ioring->dequeue_fifo = 0;
+    }
+}
+
+mx_status_t eth_ioring_create(size_t entries, size_t entry_size,
+                              eth_ioring_t* cli, eth_ioring_t* srv) {
+    if ((entries > 8192) || (entry_size > 256)) {
         return ERR_INVALID_ARGS;
     }
 
-    size_t rx_entry_size = ALIGN(sizeof(eth_fifo_entry_t) * rx_entries, PAGE_SIZE);
-    size_t tx_entry_size = ALIGN(sizeof(eth_fifo_entry_t) * tx_entries, PAGE_SIZE);
-    uint64_t fifo_vmo_size = rx_entry_size + tx_entry_size;
-    mx_status_t status = mx_vmo_create(fifo_vmo_size, 0, &out->entries_vmo);
-    if (status != NO_ERROR) {
-        eth_fifo_cleanup(out);
+    memset(cli, 0, sizeof(*cli));
+    memset(srv, 0, sizeof(*srv));
+    mx_handle_t fifo0 = 0;
+    mx_handle_t fifo1 = 0;
+
+    mx_status_t status;
+    if ((status = mx_fifo_create(entries, &fifo0)) < 0) {
         return status;
     }
-
-    status = mx_fifo_create(rx_entries, &out->rx_fifo);
-    if (status != NO_ERROR) {
-        eth_fifo_cleanup(out);
-        return status;
+    if ((status = mx_fifo_create(entries, &fifo1)) < 0) {
+        goto fail;
     }
 
-    status = mx_fifo_create(tx_entries, &out->tx_fifo);
-    if (status != NO_ERROR) {
-        eth_fifo_cleanup(out);
-        return status;
+    // clients are producers of "enqueue" and consumers of "dequeue"
+    if ((status = mx_handle_duplicate(fifo0, MX_FIFO_PRODUCER_RIGHTS, &cli->enqueue_fifo)) < 0) {
+        goto fail;
+    }
+    if ((status = mx_handle_duplicate(fifo1, MX_FIFO_CONSUMER_RIGHTS, &cli->dequeue_fifo)) < 0) {
+        goto fail;
     }
 
-    out->version = 1;
-    out->options = options;
-    out->rx_entries_count = rx_entries;
-    out->tx_entries_count = tx_entries;
+    // servers are consuemrs of "enqueue" and producers of "dequeue"
+    if ((status = mx_handle_duplicate(fifo0, MX_FIFO_CONSUMER_RIGHTS, &srv->enqueue_fifo)) < 0) {
+        goto fail;
+    }
+    if ((status = mx_handle_duplicate(fifo1, MX_FIFO_PRODUCER_RIGHTS, &srv->dequeue_fifo)) < 0) {
+        goto fail;
+    }
 
+    // both share a vmo with a set of enqueue and set of dequeue entries
+    if ((status = mx_vmo_create(2 * entries * entry_size, 0, &cli->entries_vmo)) < 0) {
+        goto fail;
+    }
+    if ((status = mx_handle_duplicate(cli->entries_vmo, MX_RIGHT_SAME_RIGHTS, &srv->entries_vmo)) < 0) {
+        goto fail;
+    }
+
+    mx_handle_close(fifo0);
+    mx_handle_close(fifo1);
     return NO_ERROR;
-}
 
-mx_status_t eth_fifo_clone_consumer(eth_fifo_t* in, eth_fifo_t* out) {
-    if (in == out) {
-        printf("eth_fifo: clone to self not supported\n");
-        return ERR_NOT_SUPPORTED;
-    }
-
-    // Clone the fifo VMO handle
-    mx_status_t status = mx_handle_duplicate(in->entries_vmo, MX_RIGHT_SAME_RIGHTS, &out->entries_vmo);
-    if (status != NO_ERROR) {
-        eth_fifo_cleanup(out);
-        return status;
-    }
-    // Drop producer rights
-    status = mx_handle_duplicate(in->rx_fifo, MX_FIFO_CONSUMER_RIGHTS, &out->rx_fifo);
-    if (status != NO_ERROR) {
-        eth_fifo_cleanup(out);
-        return status;
-    }
-    status = mx_handle_duplicate(in->tx_fifo, MX_FIFO_CONSUMER_RIGHTS, &out->tx_fifo);
-    if (status != NO_ERROR) {
-        eth_fifo_cleanup(out);
-        return status;
-    }
-
-    out->version = in->version;
-    out->options = in->options;
-    out->rx_entries_count = in->rx_entries_count;
-    out->tx_entries_count = in->tx_entries_count;
-
-    return NO_ERROR;
-}
-
-mx_status_t eth_fifo_clone_producer(eth_fifo_t* in, eth_fifo_t* out) {
-    if (in == out) {
-        printf("eth_fifo: clone to self not supported\n");
-        return ERR_NOT_SUPPORTED;
-    }
-
-    // Clone the fifo VMO handle
-    mx_status_t status = mx_handle_duplicate(in->entries_vmo, MX_RIGHT_SAME_RIGHTS, &out->entries_vmo);
-    if (status != NO_ERROR) {
-        eth_fifo_cleanup(out);
-        return status;
-    }
-    // Drop consumer rights
-    status = mx_handle_duplicate(in->rx_fifo, MX_FIFO_PRODUCER_RIGHTS, &out->rx_fifo);
-    if (status != NO_ERROR) {
-        eth_fifo_cleanup(out);
-        return status;
-    }
-    status = mx_handle_duplicate(in->tx_fifo, MX_FIFO_PRODUCER_RIGHTS, &out->tx_fifo);
-    if (status != NO_ERROR) {
-        eth_fifo_cleanup(out);
-        return status;
-    }
-
-    out->version = in->version;
-    out->options = in->options;
-    out->rx_entries_count = in->rx_entries_count;
-    out->tx_entries_count = in->tx_entries_count;
-
-    return NO_ERROR;
-}
-
-void eth_fifo_cleanup(eth_fifo_t* fifo) {
-    if (fifo->entries_vmo != MX_HANDLE_INVALID) {
-        mx_handle_close(fifo->entries_vmo);
-        fifo->entries_vmo = MX_HANDLE_INVALID;
-    }
-    if (fifo->rx_fifo != MX_HANDLE_INVALID) {
-        mx_handle_close(fifo->rx_fifo);
-        fifo->rx_fifo = MX_HANDLE_INVALID;
-    }
-    if (fifo->tx_fifo != MX_HANDLE_INVALID) {
-        mx_handle_close(fifo->tx_fifo);
-        fifo->tx_fifo = MX_HANDLE_INVALID;
-    }
-    fifo->version = 0;
-    fifo->options = 0;
-    fifo->rx_entries_count = 0;
-    fifo->tx_entries_count = 0;
-}
-
-mx_status_t eth_fifo_map_rx_entries(eth_fifo_t* fifo, void* addr) {
-    size_t rx_entry_size = ALIGN(sizeof(eth_fifo_entry_t) * fifo->rx_entries_count, PAGE_SIZE);
-    return mx_vmar_map(mx_vmar_root_self(), 0, fifo->entries_vmo, 0,
-            rx_entry_size, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (uintptr_t*)addr);
-}
-
-mx_status_t eth_fifo_map_tx_entries(eth_fifo_t* fifo, void* addr) {
-    size_t rx_entry_size = ALIGN(sizeof(eth_fifo_entry_t) * fifo->rx_entries_count, PAGE_SIZE);
-    size_t tx_entry_size = ALIGN(sizeof(eth_fifo_entry_t) * fifo->tx_entries_count, PAGE_SIZE);
-    return mx_vmar_map(mx_vmar_root_self(), 0, fifo->entries_vmo, rx_entry_size,
-            tx_entry_size, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (uintptr_t*)addr);
+fail:
+    mx_handle_close(fifo0);
+    mx_handle_close(fifo1);
+    eth_ioring_destroy(cli);
+    eth_ioring_destroy(srv);
+    return status;
 }

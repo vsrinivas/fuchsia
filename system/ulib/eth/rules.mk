@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/eth-client.c \
     $(LOCAL_DIR)/eth-fifo.c
 
 MODULE_LIBS := \

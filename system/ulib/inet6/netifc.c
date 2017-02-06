@@ -14,6 +14,8 @@
 #include <threads.h>
 
 #include <eth/eth-fifo.h>
+#include <eth/eth-client.h>
+
 #include <magenta/device/ethernet.h>
 #include <magenta/types.h>
 #include <magenta/syscalls.h>
@@ -52,124 +54,159 @@ static int txc;
 static int rxc;
 #endif
 
+static mtx_t eth_lock = MTX_INIT;
 static int netfd = -1;
+static eth_client_t* eth;
 static uint8_t netmac[6];
 static size_t netmtu;
-static bool use_fifo = false;
-static mx_handle_t io_buf = MX_HANDLE_INVALID;
-static eth_fifo_t fifo;
-static uint8_t* rx_map = NULL;
-static uint8_t* tx_map = NULL;
-static eth_fifo_entry_t* rx_entries = NULL;
-static eth_fifo_entry_t* tx_entries = NULL;
+
+static mx_handle_t iovmo;
+static void* iobuf;
 
 #define NET_BUFFERS 64
 #define NET_BUFFERSZ 2048
 
-#define MAX_FILTER 8
-
-#define NUM_BUFFER_PAGES 8
-#define ETH_BUFFER_SIZE 1536
 #define ETH_BUFFER_MAGIC 0x424201020304A7A7UL
 
+#define ETH_BUFFER_FREE   0u // on free list
+#define ETH_BUFFER_TX     1u // in tx ring
+#define ETH_BUFFER_RX     2u // in rx ring
+#define ETH_BUFFER_CLIENT 3u // in use by stack
+
 typedef struct eth_buffer eth_buffer_t;
+
 struct eth_buffer {
     uint64_t magic;
     eth_buffer_t* next;
-    uint8_t data[0];
+    void* data;
+    uint32_t state;
+    uint32_t reserved;
 };
+
+static_assert(sizeof(eth_buffer_t) == 32, "");
+
+static eth_buffer_t* eth_buffer_base;
+static size_t eth_buffer_count;
+
+static int _check_ethbuf(eth_buffer_t* ethbuf, uint32_t state) {
+    if (((uintptr_t) ethbuf) & 31) {
+        printf("ethbuf %p misaligned\n", ethbuf);
+        return -1;
+    }
+    if ((ethbuf < eth_buffer_base) ||
+        (ethbuf >= (eth_buffer_base + eth_buffer_count))) {
+        printf("ethbuf %p outside of arena\n", ethbuf);
+        return -1;
+    }
+    if (ethbuf->magic != ETH_BUFFER_MAGIC) {
+        printf("ethbuf %p bad magic\n", ethbuf);
+        return -1;
+    }
+    if (ethbuf->state != state) {
+        printf("ethbuf %p incorrect state (%u != %u)\n", ethbuf, ethbuf->state, state);
+        return -1;
+    }
+    return 0;
+}
+
+static void check_ethbuf(eth_buffer_t* ethbuf, uint32_t state) {
+    if (_check_ethbuf(ethbuf, state)) {
+        __builtin_trap();
+    }
+}
 
 static eth_buffer_t* eth_buffers = NULL;
 
-void* eth_get_buffer(size_t sz) {
+static int eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** out, uint32_t newstate) {
     eth_buffer_t* buf;
-    if (sz > ETH_BUFFER_SIZE) {
-        return NULL;
+    if (sz > NET_BUFFERSZ) {
+        return -1;
     }
     if (eth_buffers == NULL) {
-        printf("out of buffers\n");
-        return NULL;
+        printf("eth: get_buffer: out of buffers\n");
+        return -1;
     }
     buf = eth_buffers;
     eth_buffers = buf->next;
     buf->next = NULL;
-    return buf->data;
+
+    check_ethbuf(buf, ETH_BUFFER_FREE);
+
+    buf->state = newstate;
+    *data = buf->data;
+    *out = buf;
+    return 0;
 }
 
-void eth_put_buffer(void* data) {
-    eth_buffer_t* buf = (void*)(((uintptr_t)data) & (~31));
-    if (buf->magic != ETH_BUFFER_MAGIC) {
-        printf("fatal: eth buffer %p (from %p) bad magic %" PRIx64 "\n", buf, data, buf->magic);
-        for (;;)
-            ;
-    }
+int eth_get_buffer(size_t sz, void** data, eth_buffer_t** out) {
+    mtx_lock(&eth_lock);
+    int r = eth_get_buffer_locked(sz, data, out, ETH_BUFFER_CLIENT);
+    mtx_unlock(&eth_lock);
+    return r;
+}
+
+static void eth_put_buffer_locked(eth_buffer_t* buf, uint32_t state) {
+    check_ethbuf(buf, state);
+    buf->state = ETH_BUFFER_FREE;
     buf->next = eth_buffers;
     eth_buffers = buf;
 }
 
-static int eth_fifo_send(const void* data, size_t len) {
-    mx_fifo_state_t state;
-    mx_status_t status;
-    for (;;) {
-        if ((status = mx_fifo_op(fifo.tx_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
-            printf("can't read tx_fifo state (%d)\n", status);
-            return -1;
-        }
-        if ((state.head - state.tail) < NET_BUFFERS) {
-            break;
-        }
-        mx_signals_t pending;
-        if ((status = mx_handle_wait_one(fifo.tx_fifo, MX_FIFO_NOT_FULL | MX_FIFO_CONSUMER_EXCEPTION,
-                                         MX_TIME_INFINITE, &pending)) < 0) {
-            printf("wait on tx_fifo failed (%d)\n", status);
-            return -1;
-        }
-        if (pending & MX_FIFO_CONSUMER_EXCEPTION) {
-            return -1;
-        }
-    }
-    uint64_t entry_idx = state.head & (NET_BUFFERS - 1);
-    uint64_t offset = NET_BUFFERSZ * entry_idx;
-    memcpy(&tx_map[offset], data, len);
-    eth_fifo_entry_t* entry = &tx_entries[entry_idx];
-    entry->offset = offset;
-    entry->length = len;
-    status = mx_fifo_op(fifo.tx_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL);
-    return status == NO_ERROR ? (int)len : -1;
+void eth_put_buffer(eth_buffer_t* ethbuf) {
+    mtx_lock(&eth_lock);
+    eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
+    mtx_unlock(&eth_lock);
 }
 
-static int eth_fifo_send_r(const void* data, size_t len) {
-    static mtx_t lock = MTX_INIT;
-    mtx_lock(&lock);
-    mx_status_t status = eth_fifo_send(data, len);
-    mtx_unlock(&lock);
-    return status;
+static void tx_complete(void* ctx, void* cookie) {
+    eth_put_buffer_locked(cookie, ETH_BUFFER_TX);
 }
 
-int eth_send(void* data, size_t len) {
+int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
+    mtx_lock(&eth_lock);
+
+    check_ethbuf(ethbuf, ETH_BUFFER_CLIENT);
+
 #if DROP_PACKETS
     txc++;
     if ((random() % DROP_PACKETS) == 0) {
         printf("tx drop %d\n", txc);
-        eth_put_buffer(data);
-        return len;
+        eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
+        goto fail;
     }
 #endif
-    int r;
-    if (use_fifo) {
-        r = eth_fifo_send_r(data, len);
-    } else {
-        r = write(netfd, data, len);
+
+    if (eth == NULL) {
+        printf("eth_fifo_send: not connected\n");
+        eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
+        goto fail;
     }
-    eth_put_buffer(data);
-    return r;
+
+    eth_complete_tx(eth, NULL, tx_complete);
+
+    ethbuf->state = ETH_BUFFER_TX;
+    mx_status_t status = eth_queue_tx(eth, ethbuf, ethbuf->data + skip, len, 0);
+    if (status < 0) {
+        printf("eth_fifo_send: queue tx failed: %d\n", status);
+        eth_put_buffer_locked(ethbuf, ETH_BUFFER_TX);
+        goto fail;
+    }
+
+    mtx_unlock(&eth_lock);
+    return 0;
+
+fail:
+    mtx_unlock(&eth_lock);
+    return -1;
 }
 
-void netifc_send(const void* data, size_t len) {
-    if (use_fifo) {
-        eth_fifo_send_r(data, len);
-    } else {
-        write(netfd, data, len);
+//TODO: expose ethbuf to netifc clients, avoid a copy here
+void netifc_send(const void* _data, size_t len) {
+    void* data;
+    eth_buffer_t* ethbuf;
+    if (eth_get_buffer(len, &data, &ethbuf) == 0) {
+        memcpy(data, _data, len);
+        eth_send(ethbuf, 0, len);
     }
 }
 
@@ -206,124 +243,98 @@ static mx_status_t netifc_open_cb(int dirfd, const char* fn, void* cookie) {
     }
 
     if (ioctl_ethernet_get_mac_addr(netfd, netmac, sizeof(netmac)) < 0) {
-      close(netfd);
-      netfd = -1;
-      return NO_ERROR;
+        close(netfd);
+        netfd = -1;
+        return NO_ERROR;
     }
 
     if (ioctl_ethernet_get_mtu(netfd, &netmtu) < 0) {
-      close(netfd);
-      netfd = -1;
-      return NO_ERROR;
+        close(netfd);
+        netfd = -1;
+        return NO_ERROR;
     }
+
+    mtx_lock(&eth_lock);
+    mx_status_t status;
+
+    // we only do this the very first time
+    if (eth_buffer_base == NULL) {
+        eth_buffer_base = memalign(sizeof(eth_buffer_t), 2 * NET_BUFFERS * sizeof(eth_buffer_t));
+        if (eth_buffer_base == NULL) {
+            goto fail_close_fd;
+        }
+        eth_buffer_count = 2 * NET_BUFFERS;
+    }
+
+    // we only do this the very first time
+    if (iobuf == NULL) {
+        // allocate shareable ethernet buffer data heap
+        size_t iosize = 2 * NET_BUFFERS * NET_BUFFERSZ;
+        if ((status = mx_vmo_create(iosize, 0, &iovmo)) < 0) {
+            goto fail_close_fd;
+        }
+        if ((status = mx_vmar_map(mx_vmar_root_self(), 0, iovmo, 0, iosize,
+                                  MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                                  (uintptr_t*)&iobuf)) < 0) {
+            mx_handle_close(iovmo);
+            iovmo = MX_HANDLE_INVALID;
+            goto fail_close_fd;
+        }
+        printf("netifc: create %zu eth buffers\n", eth_buffer_count);
+        // assign data chunks to ethbufs
+        for (unsigned n = 0; n < eth_buffer_count; n++) {
+            eth_buffer_base[n].magic = ETH_BUFFER_MAGIC;
+            eth_buffer_base[n].data = iobuf + n * NET_BUFFERSZ;
+            eth_buffer_base[n].state = ETH_BUFFER_FREE;
+            eth_buffer_base[n].reserved = 0;
+            eth_put_buffer_locked(eth_buffer_base + n, ETH_BUFFER_FREE);
+        }
+    }
+
+    eth_client_args_t args = {
+        .rx_entries = NET_BUFFERS * 2,
+        .tx_entries = NET_BUFFERS * 2 ,
+        .iobuf_vmo = iovmo,
+        .iobuf = iobuf,
+    };
+
+    status = eth_create(netfd, &args, &eth);
+    if (status < 0) {
+        printf("eth_create() failed: %d\n", status);
+        goto fail_close_fd;
+    }
+
+    if ((status = ioctl_ethernet_start(netfd)) < 0) {
+        printf("netifc: ethernet_start(): %d\n", status);
+        goto fail_destroy_client;
+    }
+
     ip6_init(netmac);
 
-    eth_get_fifo_args_t args = { .options = 0, .rx_entries = NET_BUFFERS, .tx_entries = NET_BUFFERS };
-    ssize_t fifo_ret = ioctl_ethernet_get_fifo(netfd, &args, &fifo);
-    if (fifo_ret == ERR_NOT_SUPPORTED) {
-        use_fifo = false;
-    } else if (fifo_ret < 0) {
-        printf("%s could not get fifo from driver\n", __func__);
-        netifc_close();
-        return NO_ERROR;
-    } else {
-        printf("%s using fifo\n", __func__);
-        use_fifo = true;
+    // enqueue rx buffers
+    for (unsigned n = 0; n < NET_BUFFERS; n++) {
+        void* data;
+        eth_buffer_t* ethbuf;
+        if (eth_get_buffer_locked(NET_BUFFERSZ, &data, &ethbuf, ETH_BUFFER_RX)) {
+            printf("netifc: only queued %u buffers (desired: %u)\n", n, NET_BUFFERS);
+            break;
+        }
+        eth_queue_rx(eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
     }
 
-    if (use_fifo) {
-        // Both rx and tx will have NET_BUFFERS buffers of size NET_BUFFERSZ.
-        // Align each set of buffers to PAGE_SIZE for ease of mapping.
-        size_t io_buf_size = ALIGN(NET_BUFFERS * NET_BUFFERSZ, PAGE_SIZE);
-        mx_status_t status = mx_vmo_create(2 * io_buf_size, 0, &io_buf);
-        if (status != NO_ERROR) {
-            printf("%s could not create fifo io vmo (%d)\n", __func__, status);
-            netifc_close();
-            return NO_ERROR;
-        }
-
-        mx_handle_t io_buf_dup;
-        if (mx_handle_duplicate(io_buf, MX_RIGHT_SAME_RIGHTS, &io_buf_dup) != NO_ERROR) {
-            printf("%s could not duplicate io vmo\n", __func__);
-            netifc_close();
-            return NO_ERROR;
-        }
-        eth_set_io_buf_args_t io_buf_args = {
-            .io_buf_vmo = io_buf_dup,
-            .rx_offset = 0,
-            .rx_len = io_buf_size,
-            .tx_offset = io_buf_size,
-            .tx_len = io_buf_size,
-        };
-        if (ioctl_ethernet_set_io_buf(netfd, &io_buf_args) < 0) {
-            printf("%s could not set io vmo in driver\n", __func__);
-            mx_handle_close(io_buf_dup);
-            netifc_close();
-            return NO_ERROR;
-        }
-
-        status = mx_vmar_map(mx_vmar_root_self(), 0, io_buf, 0, io_buf_size,
-                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (uintptr_t*)&rx_map);
-        if (status != NO_ERROR) {
-            printf("%s could not map rx buf vmo (%d)\n", __func__, status);
-            netifc_close();
-            return NO_ERROR;
-        }
-        status = mx_vmar_map(mx_vmar_root_self(), 0, io_buf, io_buf_size, io_buf_size,
-                MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (uintptr_t*)&tx_map);
-        if (status != NO_ERROR) {
-            printf("%s could not map tx buf vmo (%d)\n", __func__, status);
-            netifc_close();
-            return NO_ERROR;
-        }
-
-        status = eth_fifo_map_rx_entries(&fifo, &rx_entries);
-        if (status != NO_ERROR) {
-            printf("%s could not map rx entries vmo (%d)\n", __func__, status);
-            netifc_close();
-            return NO_ERROR;
-        }
-
-        status = eth_fifo_map_tx_entries(&fifo, &tx_entries);
-        if (status != NO_ERROR) {
-            printf("%s could not map rx entries vmo (%d)\n", __func__, status);
-            netifc_close();
-            return NO_ERROR;
-        }
-
-        eth_fifo_entry_t* entry = rx_entries;
-        for (int i = 0; i < NET_BUFFERS; i++) {
-            entry->offset = i * NET_BUFFERSZ;
-            entry->length = NET_BUFFERSZ;
-            entry->flags = 0;
-            entry->cookie = 0;
-            entry++;
-        }
-        status = mx_fifo_op(fifo.rx_fifo, MX_FIFO_OP_ADVANCE_HEAD, NET_BUFFERS, NULL);
-        if (status != NO_ERROR) {
-            printf("%s could not advance rx fifo head (%d)\n", __func__, status);
-            netifc_close();
-            return NO_ERROR;
-        }
-
-        if ((status = ioctl_ethernet_start(netfd)) < 0) {
-            printf("netifc: ethernet_start(): %d\n", status);
-            //TODO: make fatal once all drivers support this
-        }
-    }
-
-    for (int i = 0; i < NET_BUFFERS; i++) {
-        char* buffer = malloc(sizeof(eth_buffer_t) + ETH_BUFFER_SIZE + 32);
-        buffer = (char*)((((uintptr_t)buffer) + 31) & (~31));
-        if (buffer) {
-            eth_buffer_t* eb = (eth_buffer_t*)buffer;
-            eb->magic = ETH_BUFFER_MAGIC;
-            eth_put_buffer(buffer + sizeof(eth_buffer_t));
-        }
-    }
+    mtx_unlock(&eth_lock);
 
     // stop polling
     return 1;
+
+fail_destroy_client:
+    eth_destroy(eth);
+    eth = NULL;
+fail_close_fd:
+    close(netfd);
+    netfd = -1;
+    mtx_unlock(&eth_lock);
+    return -1;
 }
 
 int netifc_open(void) {
@@ -338,116 +349,67 @@ int netifc_open(void) {
 }
 
 void netifc_close(void) {
-    if (use_fifo) {
-        // TODO: reset the driver
-        printf("%s closing netifc, cleaning up fifo\n", __func__);
-        if (tx_entries) {
-            mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)tx_entries, 0);
-        }
-        if (rx_entries) {
-            mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)rx_entries, 0);
-        }
-        if (rx_map) {
-            mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)rx_map, 0);
-        }
-        if (tx_map) {
-            mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)tx_map, 0);
-        }
-        eth_fifo_cleanup(&fifo);
-        if (io_buf != MX_HANDLE_INVALID) {
-            mx_handle_close(io_buf);
-            io_buf = MX_HANDLE_INVALID;
+    mtx_lock(&eth_lock);
+    if (netfd != -1) {
+        close(netfd);
+        netfd = -1;
+    }
+    if (eth != NULL) {
+        eth_destroy(eth);
+        eth = NULL;
+    }
+    unsigned count = 0;
+    for (unsigned n = 0; n < eth_buffer_count; n++) {
+        switch (eth_buffer_base[n].state) {
+        case ETH_BUFFER_FREE:
+        case ETH_BUFFER_CLIENT:
+            // on free list or owned by client
+            // leave it alone
+            break;
+        case ETH_BUFFER_TX:
+        case ETH_BUFFER_RX:
+            // was sitting in ioring. reclaim.
+            eth_put_buffer_locked(eth_buffer_base + n, eth_buffer_base[n].state);
+            count++;
+            break;
+        default:
+            printf("ethbuf %p: illegal state %u\n",
+                   eth_buffer_base + n, eth_buffer_base[n].state);
+            __builtin_trap();
+            break;
         }
     }
-    close(netfd);
-    netfd = -1;
-    use_fifo = false;
+    printf("netifc: recovered %u buffers\n", count);
+    mtx_unlock(&eth_lock);
 }
 
-int netifc_active(void) {
-    return (netfd >= 0);
-}
-
-static int netifc_fifo_poll(void) {
-    mx_status_t status;
-    mx_fifo_state_t state;
-    eth_fifo_entry_t* entry;
-    for (;;) {
-        status = mx_fifo_op(fifo.rx_fifo, MX_FIFO_OP_READ_STATE, 0, &state);
-        if (status != NO_ERROR) {
-            printf("%s could not read fifo state (%d)\n", __func__, status);
-            return -1;
-        }
-        uint64_t entries = state.head - state.tail;
-        while (entries < NET_BUFFERS) {
-            uint64_t entry_idx = state.head & (NET_BUFFERS - 1);
-            entry = &rx_entries[entry_idx];
-            netifc_recv(&rx_map[entry->offset], entry->length);
-            // requeue entry
-            // TODO: batch these up
-            entry->length = NET_BUFFERSZ;
-            status = mx_fifo_op(fifo.rx_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, &state);
-            if (status != NO_ERROR) {
-                printf("%s could not advance fifo rx head (%d)\n", __func__, status);
-                return -1;
-            }
-            entries = state.head - state.tail;
-        }
-        // TODO: detect ENOTCONN
-        if (netfd == -1) {
-            printf("%s netfd < 0, stopping poll\n", __func__);
-            return -1;
-        }
-        mx_signals_t pending = 0;
-        if (net_timer) {
-            mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
-            if (now > net_timer) {
-                break;
-            }
-            mx_handle_wait_one(fifo.rx_fifo, MX_FIFO_NOT_FULL | MX_FIFO_CONSUMER_EXCEPTION,
-                               net_timer - now + MX_MSEC(1), &pending);
-        } else {
-            mx_handle_wait_one(fifo.rx_fifo, MX_FIFO_NOT_FULL | MX_FIFO_CONSUMER_EXCEPTION,
-                               MX_TIME_INFINITE, &pending);
-        }
-        if (pending & MX_FIFO_CONSUMER_EXCEPTION) {
-            return -1;
-        }
-    }
-    return 0;
+static void rx_complete(void* ctx, void* cookie, size_t len, uint32_t flags) {
+    eth_buffer_t* ethbuf = cookie;
+    check_ethbuf(ethbuf, ETH_BUFFER_RX);
+    netifc_recv(ethbuf->data, len);
+    eth_queue_rx(eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
 }
 
 int netifc_poll(void) {
-    uint8_t buffer[NET_BUFFERSZ];
-    mx_status_t r;
-
-    if (use_fifo) {
-        return netifc_fifo_poll();
-    }
-
     for (;;) {
-        while ((r = read(netfd, buffer, sizeof(buffer))) > 0) {
-#if DROP_PACKETS
-            rxc++;
-            if ((random() % DROP_PACKETS) == 0) {
-                printf("rx drop %d\n", rxc);
-                continue;
-            }
-#endif
-            netifc_recv(buffer, r);
-        }
-        if (errno == ENOTCONN) {
+        mx_status_t status;
+        if ((status = eth_complete_rx(eth, NULL, rx_complete)) < 0) {
+            printf("netifc: eth rx failed: %d\n", status);
             return -1;
         }
         if (net_timer) {
             mx_time_t now = mx_time_get(MX_CLOCK_MONOTONIC);
             if (now > net_timer) {
-                break;
+                return 0;
             }
-            mxio_wait_fd(netfd, MXIO_EVT_READABLE, NULL, net_timer - now + MX_MSEC(1));
+            status = eth_wait_rx(eth, net_timer - now + MX_MSEC(1));
         } else {
-            mxio_wait_fd(netfd, MXIO_EVT_READABLE, NULL, MX_TIME_INFINITE);
+            status = eth_wait_rx(eth, MX_TIME_INFINITE);
+        }
+        if ((status < 0) && (status != ERR_TIMED_OUT)) {
+            printf("netifc: eth rx wait failed: %d\n", status);
+            return -1;
         }
     }
-    return 0;
 }
+

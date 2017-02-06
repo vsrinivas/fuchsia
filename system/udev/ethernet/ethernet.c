@@ -69,19 +69,30 @@ typedef struct ethdev {
 
     uint32_t state;
 
-    // fifos
-    eth_fifo_t fifo;
-    eth_fifo_entry_t* rx_entries;
-    eth_fifo_entry_t* tx_entries;
-
-    // Buffer VMO
-    mx_handle_t io_vmo;
-
-    // Buffer mappings and sizes
-    uint8_t* rx_map;
-    uint8_t* tx_map;
+    // rx ioring
+    // naming is client-centric
+    // we read from enqueue, reply to dequeue
+    eth_fifo_entry_t* rx_enqueue;
+    eth_fifo_entry_t* rx_dequeue;
+    mx_handle_t rx_enqueue_fifo;
+    mx_handle_t rx_dequeue_fifo;
     uint32_t rx_size;
+    uint32_t rx_mask;
+
+    // tx ioring
+    // naming is client-centric
+    // we read from enqueue, reply to dequeue
+    eth_fifo_entry_t* tx_enqueue;
+    eth_fifo_entry_t* tx_dequeue;
+    mx_handle_t tx_enqueue_fifo;
+    mx_handle_t tx_dequeue_fifo;
     uint32_t tx_size;
+    uint32_t tx_mask;
+
+    // io buffer
+    mx_handle_t io_vmo;
+    void* io_buf;
+    size_t io_size;
 
     // fifo thread
     thrd_t tx_thr;
@@ -96,44 +107,134 @@ static void eth_handle_rx(ethdev_t* edev, void* data, size_t len) {
     mx_status_t status;
     mx_fifo_state_t state;
 
-    if ((status = mx_fifo_op(edev->fifo.rx_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
-        printf("%s could not read rx fifo state (%d)\n", __func__, status);
+    // look for a pending rx transaction we can complete
+    if ((status = mx_fifo_op(edev->rx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+        printf("eth: rx_enqueue_fifo: cannot read: %d\n", status);
         return;
     }
     if (state.head == state.tail) {
-        // No space in fifo, drop packet
+        printf("eth: rx_enqueue_fifo: empty!\n");
         return;
     }
 
-    uint64_t idx = state.tail & (edev->fifo.rx_entries_count - 1);
-    eth_fifo_entry_t* entry = &edev->rx_entries[idx];
+    uint64_t idx = state.tail & edev->rx_mask;
+    eth_fifo_entry_t* entry = edev->rx_enqueue + idx;
 
     uint32_t eoff = entry->offset;
     uint32_t elen = entry->length;
-    if ((eoff >= edev->rx_size) || ((elen > (edev->rx_size - eoff)))) {
+    void* ecookie = entry->cookie;
+    uint16_t olen;
+    uint16_t oflags;
+
+    if ((eoff >= edev->io_size) || ((elen > (edev->io_size - eoff)))) {
         // invalid offset/length. report error. drop packet
-        entry->length = 0;
-        entry->flags = ETH_FIFO_INVALID;
+        olen = 0;
+        oflags = ETH_FIFO_INVALID;
     } else if (len > elen) {
         // packet does not fit. drop it
         return;
     } else {
         // packet fits. deliver it
-        memcpy(edev->rx_map + eoff, data, len);
-        entry->length = len;
-        entry->flags = ETH_FIFO_RX_OK;
+        memcpy(edev->io_buf + eoff, data, len);
+        olen = len;
+        oflags = ETH_FIFO_RX_OK;
     }
 
-    if ((status = mx_fifo_op(edev->fifo.rx_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, &state)) < 0) {
-        printf("%s could not advance rx fifo tail (%d)\n", __func__, status);
-        // TODO: probably fatal - stop transport?
+    // look for space to write the completed transcation
+    if ((status = mx_fifo_op(edev->rx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+        printf("eth: rx_dequeue_fifo: cannot read: %d\n", status);
+        return;
+    }
+    if ((state.head - state.tail) == edev->rx_size) {
+        printf("eth: rx_dequeue_fifo: full!\n");
+        return;
+    }
+
+    idx = state.head & edev->rx_mask;
+    entry = edev->rx_dequeue + idx;
+
+    entry->offset = eoff;
+    entry->length = olen;
+    entry->flags = oflags;
+    entry->cookie = ecookie;
+
+    // advance both fifos
+    if ((status = mx_fifo_op(edev->rx_dequeue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL)) < 0) {
+        printf("eth: rx_dwqueue_fifo: cannot advance head: %d\n", status);
+    }
+    if ((status = mx_fifo_op(edev->rx_enqueue_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, NULL)) < 0) {
+        printf("eth: rx_enqueue_fifo: cannot advance tail: %d\n", status);
     }
 }
+
+static mx_status_t eth_handle_tx(ethdev_t* edev) {
+    mx_status_t status;
+    mx_fifo_state_t state;
+
+    // look for a pending tx transaction we can complete
+    if ((status = mx_fifo_op(edev->tx_enqueue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+        printf("eth: tx_enqueue_fifo: cannot read: %d\n", status);
+        return status;
+    }
+    if (state.head == state.tail) {
+        printf("eth: tx_enqueue_fifo: empty!\n");
+        return NO_ERROR;
+    }
+
+    uint64_t idx = state.tail & edev->tx_mask;
+    eth_fifo_entry_t* entry = edev->tx_enqueue + idx;
+
+    uint32_t eoff = entry->offset;
+    uint32_t elen = entry->length;
+    void* ecookie = entry->cookie;
+    uint16_t oflags;
+
+    if ((eoff >= edev->io_size) || ((elen > (edev->io_size - eoff)))) {
+        // invalid offset/length. report error. drop packet
+        oflags = ETH_FIFO_INVALID;
+    } else {
+        edev->edev0->macops->send(edev->edev0->mac, 0, edev->io_buf + eoff, elen);
+        oflags = ETH_FIFO_TX_OK;
+    }
+
+    // look for space to write the completed transcation
+    if ((status = mx_fifo_op(edev->tx_dequeue_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+        printf("eth: tx_dequeue_fifo: cannot read: %d\n", status);
+        return status;
+    }
+    if ((state.head - state.tail) == edev->tx_size) {
+        printf("eth: tx_dequeue_fifo: full!\n");
+        return status;
+    }
+
+    idx = state.head & edev->tx_mask;
+    entry = edev->tx_dequeue + idx;
+
+    entry->offset = eoff;
+    entry->length = elen;
+    entry->flags = oflags;
+    entry->cookie = ecookie;
+
+    // advance both fifos
+    if ((status = mx_fifo_op(edev->tx_dequeue_fifo, MX_FIFO_OP_ADVANCE_HEAD, 1u, NULL)) < 0) {
+        printf("eth: tx_dequeue_fifo: cannot advance head: %d\n", status);
+        return status;
+    }
+    if ((status = mx_fifo_op(edev->tx_enqueue_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, NULL)) < 0) {
+        printf("eth: tx_enqueue_fifo: cannot advance tail: %d\n", status);
+        return status;
+    }
+
+    return NO_ERROR;
+}
+
 
 static void eth0_status(void* cookie, uint32_t status) {
     printf("eth: status() %08x\n", status);
 }
 
+// TODO: I think if this arrives at the wrong time during teardown we
+// can deadlock with the ethermac device
 static void eth0_recv(void* cookie, void* data, size_t len, uint32_t flags) {
     ethdev0_t* edev0 = cookie;
 
@@ -153,40 +254,13 @@ static ethmac_ifc_t ethmac_ifc = {
 static int eth_tx_thread(void* arg) {
     ethdev_t* edev = (ethdev_t*)arg;
 
-    mx_fifo_state_t state;
     mx_status_t status;
-
-    mx_device_t* mac = edev->edev0->mac;
-    ethmac_protocol_t* macops = edev->edev0->macops;
-
     for (;;) {
-        if ((status = mx_handle_wait_one(edev->fifo.tx_fifo, MX_FIFO_NOT_EMPTY, MX_TIME_INFINITE, NULL)) < 0) {
+        if ((status = mx_handle_wait_one(edev->tx_enqueue_fifo, MX_FIFO_NOT_EMPTY, MX_TIME_INFINITE, NULL)) < 0) {
             break;
         }
-        if ((status = mx_fifo_op(edev->fifo.tx_fifo, MX_FIFO_OP_READ_STATE, 0, &state)) < 0) {
+        if ((status = eth_handle_tx(edev)) < 0) {
             break;
-        }
-
-        uint64_t num_fifo_entries = state.head - state.tail;
-        while (num_fifo_entries > 0) {
-            uint64_t idx = state.tail & (edev->fifo.tx_entries_count - 1);
-            eth_fifo_entry_t* entry = &edev->tx_entries[idx];
-
-            uint32_t eoff = entry->offset;
-            uint32_t elen = entry->length;
-            if ((eoff >= edev->tx_size) || ((elen > (edev->tx_size - eoff)))) {
-                entry->length = 0;
-                entry->flags = ETH_FIFO_INVALID;
-            } else {
-                macops->send(mac, 0, edev->tx_map + eoff, elen);
-                entry->flags = ETH_FIFO_TX_OK;
-            }
-
-            // TODO: batch these up
-            if ((status = mx_fifo_op(edev->fifo.tx_fifo, MX_FIFO_OP_ADVANCE_TAIL, 1u, &state)) < 0) {
-                break;
-            }
-            num_fifo_entries = state.head - state.tail;
         }
     }
 
@@ -194,98 +268,128 @@ static int eth_tx_thread(void* arg) {
     return 0;
 }
 
-static ssize_t eth_get_fifo_locked(ethdev_t* edev, const void* in_buf, size_t in_len,
+static ssize_t eth_get_tx_ioring_locked(ethdev_t* edev, const void* in_buf, size_t in_len,
                                    void* out_buf, size_t out_len) {
-    if ((in_len < sizeof(eth_get_fifo_args_t)) ||
-        (out_len < sizeof(eth_fifo_t))) {
+    if ((in_len < sizeof(uint32_t)) ||
+        (out_len < sizeof(eth_ioring_t))) {
         return ERR_INVALID_ARGS;
     }
-    // For now, we can only have one fifo per instance
-    if (edev->fifo.entries_vmo != MX_HANDLE_INVALID) {
+    // For now, we can only have one ioring per instance
+    if (edev->tx_enqueue_fifo != MX_HANDLE_INVALID) {
         return ERR_ALREADY_BOUND;
     }
 
-    const eth_get_fifo_args_t* args = in_buf;
-    eth_fifo_t* reply = out_buf;
+    uint32_t entries = *((uint32_t*) in_buf);
 
-    // Create the fifo
-    mx_status_t status = eth_fifo_create(args->rx_entries, args->tx_entries,
-                                         args->options, &edev->fifo);
-    if (status != NO_ERROR) {
-        printf("eth: failed to create eth_fifo (%d)\n", status);
+    mx_status_t status;
+    eth_ioring_t cli, srv;
+    if ((status = eth_ioring_create(entries, sizeof(eth_fifo_entry_t), &cli, &srv)) < 0) {
+        printf("eth: failed to create tx ioring: %d\n", status);
         return status;
     }
 
-    // Map rx and tx entries
-    status = eth_fifo_map_rx_entries(&edev->fifo, &edev->rx_entries);
-    if (status != NO_ERROR) {
-        printf("eth: failed to map rx fifo entries: %d\n", status);
-        goto map_rx_entries_fail;
-    }
-    status = eth_fifo_map_tx_entries(&edev->fifo, &edev->tx_entries);
-    if (status != NO_ERROR) {
-        printf("eth: failed to map tx fifo entries: %d\n", status);
-        goto map_tx_entries_fail;
-    }
+    status = mx_vmar_map(mx_vmar_root_self(), 0, srv.entries_vmo,
+                         0, 2 * entries * sizeof(eth_fifo_entry_t),
+                         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                         (uintptr_t*) &edev->tx_enqueue);
+    mx_handle_close(srv.entries_vmo);
 
-    // Set up the caller's copy
-    status = eth_fifo_clone_producer(&edev->fifo, reply);
-    if (status != NO_ERROR) {
-        printf("eth: failed to clone producer fifo: %d\n", status);
-        goto clone_producer_fail;
+    if (status < 0) {
+        printf("eth: failed to map tx ioring: %d\n", status);
+        mx_handle_close(cli.enqueue_fifo);
+        mx_handle_close(cli.dequeue_fifo);
+        mx_handle_close(cli.entries_vmo);
+        mx_handle_close(srv.enqueue_fifo);
+        mx_handle_close(srv.dequeue_fifo);
+        return status;
     }
 
-    return sizeof(*reply);
+    edev->tx_enqueue_fifo = srv.enqueue_fifo;
+    edev->tx_dequeue_fifo = srv.dequeue_fifo;
+    edev->tx_size = entries;
+    edev->tx_mask = entries - 1;
+    edev->tx_dequeue = edev->tx_enqueue + entries;
 
-clone_producer_fail:
-    mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)edev->tx_entries, 0);
-map_tx_entries_fail:
-    mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)edev->rx_entries, 0);
-map_rx_entries_fail:
-    eth_fifo_cleanup(&edev->fifo);
-    return status;
+    memcpy(out_buf, &cli, sizeof(cli));
+    return sizeof(cli);
 }
 
-static ssize_t eth_set_io_buf_locked(ethdev_t* edev, const void* in_buf, size_t in_len) {
-    if (in_len < sizeof(eth_set_io_buf_args_t)) {
+static ssize_t eth_get_rx_ioring_locked(ethdev_t* edev, const void* in_buf, size_t in_len,
+                                   void* out_buf, size_t out_len) {
+    if ((in_len < sizeof(uint32_t)) ||
+        (out_len < sizeof(eth_ioring_t))) {
+        return ERR_INVALID_ARGS;
+    }
+    // For now, we can only have one ioring per instance
+    if (edev->rx_enqueue_fifo != MX_HANDLE_INVALID) {
+        return ERR_ALREADY_BOUND;
+    }
+
+    uint32_t entries = *((uint32_t*) in_buf);
+
+    mx_status_t status;
+    eth_ioring_t cli, srv;
+    if ((status = eth_ioring_create(entries, sizeof(eth_fifo_entry_t), &cli, &srv)) < 0) {
+        printf("eth: failed to create tx ioring: %d\n", status);
+        return status;
+    }
+
+    status = mx_vmar_map(mx_vmar_root_self(), 0, srv.entries_vmo,
+                         0, 2 * entries * sizeof(eth_fifo_entry_t),
+                         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                         (uintptr_t*) &edev->rx_enqueue);
+    mx_handle_close(srv.entries_vmo);
+
+    if (status < 0) {
+        printf("eth: failed to map rx ioring: %d\n", status);
+        mx_handle_close(cli.enqueue_fifo);
+        mx_handle_close(cli.dequeue_fifo);
+        mx_handle_close(cli.entries_vmo);
+        mx_handle_close(srv.enqueue_fifo);
+        mx_handle_close(srv.dequeue_fifo);
+        return status;
+    }
+
+    edev->rx_enqueue_fifo = srv.enqueue_fifo;
+    edev->rx_dequeue_fifo = srv.dequeue_fifo;
+    edev->rx_size = entries;
+    edev->rx_mask = entries - 1;
+    edev->rx_dequeue = edev->rx_enqueue + entries;
+
+    memcpy(out_buf, &cli, sizeof(cli));
+    return sizeof(cli);
+}
+
+
+static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t in_len) {
+    if (in_len < sizeof(mx_handle_t)) {
         return ERR_INVALID_ARGS;
     }
     if (edev->io_vmo != MX_HANDLE_INVALID) {
         return ERR_ALREADY_BOUND;
     }
 
-    const eth_set_io_buf_args_t* args = in_buf;
-    edev->io_vmo = args->io_buf_vmo;
+    mx_handle_t vmo = *((mx_handle_t*) in_buf);
+    size_t size;
+    mx_status_t status;
 
-    if ((args->rx_len > (128*1024*1024)) ||
-        (args->tx_len > (128*1024*1024))) {
-        return ERR_INVALID_ARGS;
+    if ((status = mx_vmo_get_size(vmo, &size)) < 0) {
+        printf("eth: could not get io_buf size: %d\n", status);
+        mx_handle_close(vmo);
+        return status;
     }
 
-    mx_status_t status = mx_vmar_map(mx_vmar_root_self(), 0, edev->io_vmo, args->rx_offset,
-            args->rx_len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (uintptr_t*)&edev->rx_map);
-    if (status != NO_ERROR) {
-        printf("eth: could not map rx buffer: %d\n", status);
-        goto map_rx_failed;
+    if ((status = mx_vmar_map(mx_vmar_root_self(), 0, vmo, 0, size,
+                              MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                              (uintptr_t*)&edev->io_buf)) < 0) {
+        printf("eth: could not map io_buf: %d\n", status);
+        mx_handle_close(vmo);
+        return status;
     }
 
-    status = mx_vmar_map(mx_vmar_root_self(), 0, edev->io_vmo, args->tx_offset,
-            args->tx_len, MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, (uintptr_t*)&edev->tx_map);
-    if (status != NO_ERROR) {
-        printf("eth: could not map tx buffer: %d\n", status);
-        goto map_tx_failed;
-    }
-
-    edev->rx_size = (uint32_t) args->rx_len;
-    edev->tx_size = (uint32_t) args->tx_len;
+    edev->io_vmo = vmo;
+    edev->io_size = size;
     return NO_ERROR;
-
-map_tx_failed:
-    mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t)edev->rx_map, 0);
-map_rx_failed:
-    mx_handle_close(edev->io_vmo);
-    edev->io_vmo = MX_HANDLE_INVALID;
-    return status;
 }
 
 static mx_status_t eth_start_locked(ethdev_t* edev) {
@@ -293,7 +397,8 @@ static mx_status_t eth_start_locked(ethdev_t* edev) {
 
     // Cannot start unless tx/rx rings are configured
     if ((edev->io_vmo == MX_HANDLE_INVALID) ||
-        (edev->fifo.entries_vmo == MX_HANDLE_INVALID)) {
+        (edev->tx_enqueue_fifo == MX_HANDLE_INVALID) ||
+        (edev->rx_enqueue_fifo == MX_HANDLE_INVALID)) {
         return ERR_BAD_STATE;
     }
 
@@ -378,11 +483,14 @@ static ssize_t eth_ioctl(mx_device_t* dev, uint32_t op,
         }
         break;
     }
-    case IOCTL_ETHERNET_GET_FIFO:
-        status = eth_get_fifo_locked(edev, in_buf, in_len, out_buf, out_len);
+    case IOCTL_ETHERNET_GET_TX_IORING:
+        status = eth_get_tx_ioring_locked(edev, in_buf, in_len, out_buf, out_len);
         break;
-    case IOCTL_ETHERNET_SET_IO_BUF:
-        status = eth_set_io_buf_locked(edev, in_buf, in_len);
+    case IOCTL_ETHERNET_GET_RX_IORING:
+        status = eth_get_rx_ioring_locked(edev, in_buf, in_len, out_buf, out_len);
+        break;
+    case IOCTL_ETHERNET_SET_IOBUF:
+        status = eth_set_iobuf_locked(edev, in_buf, in_len);
         break;
     case IOCTL_ETHERNET_START:
         status = eth_start_locked(edev);
@@ -407,26 +515,57 @@ static void eth_kill_locked(ethdev_t* edev) {
         return;
     }
 
+    printf("eth: kill: tearing down%s\n",
+           (edev->state & ETHDEV_TX_THREAD) ? " tx thread" : "");
+
     // make sure any future ioctls or other ops will fail
     edev->state |= ETHDEV_DEAD;
 
     // try to convince clients to close us
-    if (edev->fifo.rx_fifo) {
-        mx_fifo_op(edev->fifo.rx_fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 1, NULL);
-        mx_fifo_op(edev->fifo.tx_fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 1, NULL);
+    if (edev->rx_enqueue_fifo) {
+        mx_fifo_op(edev->rx_enqueue_fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 1, NULL);
+        mx_fifo_op(edev->rx_dequeue_fifo, MX_FIFO_OP_PRODUCER_EXCEPTION, 1, NULL);
+        mx_handle_close(edev->rx_enqueue_fifo);
+        mx_handle_close(edev->rx_dequeue_fifo);
+        edev->rx_enqueue_fifo = MX_HANDLE_INVALID;
+        edev->rx_dequeue_fifo = MX_HANDLE_INVALID;
+    }
+    if (edev->tx_enqueue_fifo) {
+        mx_fifo_op(edev->tx_enqueue_fifo, MX_FIFO_OP_CONSUMER_EXCEPTION, 1, NULL);
+        mx_fifo_op(edev->tx_dequeue_fifo, MX_FIFO_OP_PRODUCER_EXCEPTION, 1, NULL);
+        mx_handle_close(edev->tx_enqueue_fifo);
+        mx_handle_close(edev->tx_dequeue_fifo);
+        edev->tx_enqueue_fifo = MX_HANDLE_INVALID;
+        edev->tx_dequeue_fifo = MX_HANDLE_INVALID;
     }
     if (edev->io_vmo) {
         mx_handle_close(edev->io_vmo);
         edev->io_vmo = MX_HANDLE_INVALID;
     }
-    eth_fifo_cleanup(&edev->fifo);
+
+    // closing handles will 'encourage' the tx thread to exit
     if (edev->state & ETHDEV_TX_THREAD) {
         edev->state &= (~ETHDEV_TX_THREAD);
         int ret;
         thrd_join(edev->tx_thr, &ret);
+        printf("eth: kill: tx thread exited\n");
     }
 
-    //TODO: unmap memory *after* thread exits
+    if (edev->rx_enqueue) {
+        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t) edev->rx_enqueue, 0);
+        edev->rx_enqueue = NULL;
+        edev->rx_dequeue = NULL;
+    }
+    if (edev->rx_enqueue) {
+        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t) edev->rx_enqueue, 0);
+        edev->rx_enqueue = NULL;
+        edev->rx_dequeue = NULL;
+    }
+    if (edev->io_buf) {
+        mx_vmar_unmap(mx_vmar_root_self(), (uintptr_t) edev->io_buf, 0);
+        edev->io_buf = NULL;
+    }
+    printf("eth: all resources released\n");
 }
 
 static mx_status_t eth_release(mx_device_t* dev) {
@@ -529,18 +668,18 @@ static mx_status_t eth_bind(mx_driver_t* drv, mx_device_t* dev) {
 
     mx_status_t status;
     if (device_get_protocol(dev, MX_PROTOCOL_ETHERMAC, (void**)&edev0->macops)) {
-        printf("no ethermac protocol\n");
+        printf("eth: bind: no ethermac protocol\n");
         status = ERR_INTERNAL;
         goto fail;
     }
 
     if ((status = edev0->macops->query(dev, 0, &edev0->info)) < 0) {
-        printf("ethermac query failed: %d\n", status);
+        printf("eth: bind: ethermac query failed: %d\n", status);
         goto fail;
     }
 
     if (edev0->info.features & BAD_FEATURES) {
-        printf("ethermac requires unsupported features: %08x\n",
+        printf("eth: bind: ethermac requires unsupported features: %08x\n",
                edev0->info.features & BAD_FEATURES);
         status = ERR_NOT_SUPPORTED;
         goto fail;

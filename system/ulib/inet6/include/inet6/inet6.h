@@ -132,10 +132,14 @@ char* ip6toa(char* _out, void* ip6addr);
 void ip6_init(void* macaddr);
 void eth_recv(void* data, size_t len);
 
+typedef struct eth_buffer eth_buffer_t;
+
 // provided by interface driver
-void* eth_get_buffer(size_t len);
-void eth_put_buffer(void* ptr);
-int eth_send(void* data, size_t len);
+int eth_get_buffer(size_t len, void** data, eth_buffer_t** out);
+void eth_put_buffer(eth_buffer_t* ethbuf);
+
+int eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len);
+
 int eth_add_mcast_filter(const mac_addr_t* addr);
 
 // call to transmit a UDP packet
