@@ -183,12 +183,6 @@ void JournalDBImpl::Commit(
       callback(status, nullptr);
       return;
     }
-    size_t node_size;
-    status = db_->GetNodeSize(&node_size);
-    if (status != Status::OK) {
-      callback(status, nullptr);
-      return;
-    }
     std::unique_ptr<Iterator<const EntryChange>> entries;
     status = db_->GetJournalEntries(id_, &entries);
     if (status != Status::OK) {
@@ -196,7 +190,7 @@ void JournalDBImpl::Commit(
       return;
     }
     btree::ApplyChanges(
-        page_storage_, parents[0]->GetRootId(), node_size, std::move(entries),
+        page_storage_, parents[0]->GetRootId(), std::move(entries),
         ftl::MakeCopyable([
           this, parents = std::move(parents), callback = std::move(callback)
         ](Status status, ObjectId object_id,

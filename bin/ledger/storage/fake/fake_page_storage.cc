@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/glue/crypto/rand.h"
 #include "apps/ledger/src/storage/fake/fake_commit.h"
 #include "apps/ledger/src/storage/fake/fake_journal.h"
@@ -35,11 +36,8 @@ class FakeObject : public Object {
   std::string content_;
 };
 
-storage::ObjectId RandomId() {
-  std::string result;
-  result.resize(kObjectIdSize);
-  glue::RandBytes(&result[0], kObjectIdSize);
-  return result;
+storage::ObjectId ComputeObjectId(ftl::StringView value) {
+  return glue::SHA256Hash(value.data(), value.size());
 }
 
 }  // namespace
@@ -113,7 +111,7 @@ void FakePageStorage::AddObjectFromLocal(
     callback(Status::IO_ERROR, "");
     return;
   }
-  std::string object_id = RandomId();
+  std::string object_id = ComputeObjectId(value);
   objects_[object_id] = value;
   callback(Status::OK, std::move(object_id));
 }

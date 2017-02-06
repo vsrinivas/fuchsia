@@ -15,6 +15,7 @@
 #include <iterator>
 #include <map>
 
+#include "apps/ledger/src/callback/asynchronous_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
 #include "apps/ledger/src/glue/crypto/hash.h"
 #include "apps/ledger/src/storage/impl/btree/btree_utils.h"
@@ -604,8 +605,9 @@ void PageStorageImpl::GetObject(
     }
     return;
   }
-  callback(Status::OK, std::make_unique<ObjectImpl>(object_id.ToString(),
-                                                    std::move(file_path)));
+  callback::MakeAsynchronous(callback)(
+      Status::OK,
+      std::make_unique<ObjectImpl>(object_id.ToString(), std::move(file_path)));
 }
 
 Status PageStorageImpl::SetSyncMetadata(ftl::StringView sync_state) {
