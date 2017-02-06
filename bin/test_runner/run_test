@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 import os
+import os.path
 import random
 import re
 import socket
@@ -63,8 +64,8 @@ def main(argv):
     parser.add_argument("--loglistener_path",
             help="Path to the loglistener binary",
             type=str,
-            default=os.environ["FUCHSIA_DIR"] + \
-                    "/packages/prebuilt/downloads/magenta/tools/loglistener")
+            default=os.path.join(os.environ["FUCHSIA_DIR"],
+                                 "out/build-magenta/tools/loglistener"))
     parser.add_argument("--test_file",
             help="Path to a json file containing a series of tests to run.",
             type=str,
