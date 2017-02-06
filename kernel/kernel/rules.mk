@@ -24,7 +24,6 @@ MODULE_SRCS := \
 	$(LOCAL_DIR)/mutex.c \
 	$(LOCAL_DIR)/thread.c \
 	$(LOCAL_DIR)/timer.c \
-	$(LOCAL_DIR)/semaphore.c \
 	$(LOCAL_DIR)/mp.c \
 	$(LOCAL_DIR)/cmdline.c \
 

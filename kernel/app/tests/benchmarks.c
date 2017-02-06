@@ -13,9 +13,6 @@
 #include <string.h>
 #include <app/tests.h>
 #include <kernel/thread.h>
-#include <kernel/mutex.h>
-#include <kernel/semaphore.h>
-#include <kernel/event.h>
 #include <platform.h>
 #include <arch/ops.h>
 

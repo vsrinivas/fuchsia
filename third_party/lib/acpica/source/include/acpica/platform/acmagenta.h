@@ -8,7 +8,6 @@
 
 #include <stdbool.h>
 
-#include <kernel/semaphore.h>
 #include <kernel/spinlock.h>
 
 /*
@@ -38,7 +37,6 @@
 // Specify the types Magenta uses for various common objects
 #define ACPI_CPU_FLAGS spin_lock_saved_state_t
 #define ACPI_SPINLOCK spin_lock_t*
-#define ACPI_SEMAPHORE semaphore_t*
 
 // Borrowed from aclinuxex.h
 
