@@ -421,5 +421,7 @@ void vc_device_free(vc_device_t* device) {
         mx_handle_close(device->gfx_vmo);
     if (device->gfx)
         free(device->gfx);
+    free(device->text_buf);
+    free(device->scrollback_buf);
     free(device);
 }
