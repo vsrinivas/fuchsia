@@ -9,6 +9,10 @@
             "bootfs_path": "bin/debugserver"
         },
         {
+            "binary": "ipt",
+            "bootfs_path": "bin/ipt"
+        },
+        {
             "binary": "gdbserver-unittests",
             "bootfs_path": "test/gdbserver-unittests"
         },
