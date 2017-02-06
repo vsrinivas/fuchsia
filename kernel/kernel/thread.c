@@ -502,8 +502,8 @@ void thread_process_pending_signals(void)
     THREAD_LOCK(state);
 
     if (current_thread->signals & THREAD_SIGNAL_KILL) {
-        /* mask the signal to avoid any recursion into the exit handler */
-        current_thread->signals &= ~THREAD_SIGNAL_KILL;
+        // Ensure we don't recurse into thread_exit.
+        DEBUG_ASSERT(current_thread->state != THREAD_DEATH);
         THREAD_UNLOCK(state);
         thread_exit(0);
         /* unreachable */

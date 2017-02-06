@@ -396,7 +396,8 @@ mxtl::RefPtr<ExceptionPort> UserThread::exception_port() {
 status_t UserThread::ExceptionHandlerExchange(
         mxtl::RefPtr<ExceptionPort> eport,
         const mx_exception_report_t* report,
-        const arch_exception_context_t* arch_context) TA_NO_THREAD_SAFETY_ANALYSIS {
+        const arch_exception_context_t* arch_context,
+        ExceptionStatus *out_estatus) TA_NO_THREAD_SAFETY_ANALYSIS {
     LTRACE_ENTRY_OBJ;
     AutoLock lock(exception_wait_lock_);
 
@@ -410,7 +411,9 @@ status_t UserThread::ExceptionHandlerExchange(
     status_t status = eport->SendReport(report);
     if (status != NO_ERROR) {
         LTRACEF("SendReport returned %d\n", status);
-        return status;
+        // Treat the exception as unhandled.
+        *out_estatus = ExceptionStatus::TRY_NEXT;
+        return NO_ERROR;
     }
 
     // So the handler can read/write our general registers.
@@ -424,18 +427,30 @@ status_t UserThread::ExceptionHandlerExchange(
     exception_wait_port_ = eport;
 
     exception_status_ = ExceptionStatus::UNPROCESSED;
-    status = cond_wait_timeout(&exception_wait_cond_, exception_wait_lock_.GetInternal(), INFINITE_TIME, false);
-    DEBUG_ASSERT(status == NO_ERROR);
-    DEBUG_ASSERT(exception_status_ != ExceptionStatus::UNPROCESSED);
+    status = cond_wait_timeout(&exception_wait_cond_, exception_wait_lock_.GetInternal(), INFINITE_TIME, true);
+    // Note: If |status| != NO_ERROR, then |exception_status_| is still
+    // ExceptionStatus::UNPROCESSED.
+    switch (status) {
+    case NO_ERROR:
+        DEBUG_ASSERT(exception_status_ != ExceptionStatus::UNPROCESSED);
+        break;
+    case ERR_INTERRUPTED:
+        break;
+    default:
+        ASSERT_MSG(false, "unexpected exception result: %d\n", status);
+        __UNREACHABLE;
+    }
 
     exception_wait_port_.reset();
     exception_report_ = nullptr;
     thread_.exception_context = nullptr;
 
-    LTRACEF("ExceptionHandlerExchange returning\n");
-    if (exception_status_ != ExceptionStatus::RESUME)
-        return ERR_BAD_STATE;
-    return NO_ERROR;
+    *out_estatus = exception_status_;
+    exception_status_ = ExceptionStatus::UNPROCESSED;
+
+    LTRACEF("ExceptionHandlerExchange returning status %d, estatus %d\n",
+            status, static_cast<int>(*out_estatus));
+    return status;
 }
 
 status_t UserThread::MarkExceptionHandled(ExceptionStatus estatus) {

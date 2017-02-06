@@ -106,9 +106,14 @@ public:
     // Note this takes a specific exception port as an argument because there are several:
     // debugger, thread, process, and system. The kind of the exception port is
     // specified by |eport->type()|.
+    // Returns:
+    // NO_ERROR: the exception was handled in some way, and |*out_estatus|
+    // specifies how.
+    // ERR_INTERRUPTED: the thread was killed (probably via mx_task_kill)
     status_t ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort> eport,
                                       const mx_exception_report_t* report,
-                                      const arch_exception_context_t* arch_context);
+                                      const arch_exception_context_t* arch_context,
+                                      ExceptionStatus* out_estatus);
     // Called when an exception handler is finished processing the exception.
     status_t MarkExceptionHandled(ExceptionStatus estatus);
     // Called when exception port |eport| is removed.

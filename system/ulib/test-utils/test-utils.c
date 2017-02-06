@@ -212,6 +212,16 @@ void tu_process_wait_signaled(mx_handle_t process)
     }
 }
 
+bool tu_process_has_exited(mx_handle_t process)
+{
+    mx_info_process_t info;
+    mx_status_t status;
+    if ((status = mx_object_get_info(process, MX_INFO_PROCESS, &info,
+                                     sizeof(info), NULL, NULL)) < 0)
+        tu_fatal("get process info", status);
+    return info.exited;
+}
+
 int tu_process_get_return_code(mx_handle_t process)
 {
     mx_info_process_t info;

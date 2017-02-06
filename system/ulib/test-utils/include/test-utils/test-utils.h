@@ -95,6 +95,10 @@ bool tu_channel_wait_readable(mx_handle_t channel);
 
 void tu_process_wait_signaled(mx_handle_t process);
 
+// Return true if |process| has exited.
+
+bool tu_process_has_exited(mx_handle_t process);
+
 // Fetch the return code of |process|.
 
 int tu_process_get_return_code(mx_handle_t process);

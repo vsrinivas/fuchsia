@@ -222,7 +222,7 @@ static bool read_and_verify_exception(mx_handle_t eport,
 // Wait for a process to exit, and while it's exiting verify we get the
 // expected exception reports.
 // We may receive thread-exit reports while the process is terminating but
-// any other kind of exception is an error.
+// any other kind of exception besides MX_EXCP_GONE is an error.
 // This may be used when attached to the process or debugger exception port.
 // The bool result is because we use the unittest EXPECT/ASSERT macros.
 
@@ -239,8 +239,10 @@ static bool wait_process_exit(mx_handle_t eport, mx_handle_t process) {
         if (!verify_exception(&packet, "thread-exit", process, MX_EXCP_THREAD_EXITING,
                               false, &tid))
             return false;
-        // MX_EXCP_THREAD_EXITING reports must be responded to.
-        resume_thread_from_exception(process, tid, 0);
+        // MX_EXCP_THREAD_EXITING reports must normally be responded to.
+        // However, when the process exits it kills all threads which will
+        // kick them out of the ExceptionHandlerExchange. Thus there's no
+        // need to resume them here.
     }
 
     verify_exception(&packet, "process-gone", process, MX_EXCP_GONE, false, &tid);
@@ -280,8 +282,10 @@ static bool wait_process_exit_from_debugger(mx_handle_t eport, mx_handle_t proce
             return false;
         if (tid2 == tid)
             tid_seen = true;
-        // MX_EXCP_THREAD_EXITING reports must be responded to.
-        resume_thread_from_exception(process, tid2, 0);
+        // MX_EXCP_THREAD_EXITING reports must normally be responded to.
+        // However, when the process exits it kills all threads which will
+        // kick them out of the ExceptionHandlerExchange. Thus there's no
+        // need to resume them here.
     }
 
     EXPECT_TRUE(tid_seen, "missing MX_EXCP_THREAD_EXITING report");
@@ -994,6 +998,10 @@ static bool trigger_test(void)
 
         mx_exception_packet_t packet;
         if (read_exception(eport, &packet)) {
+            // MX_EXCP_THREAD_EXITING reports must normally be responded to.
+            // However, when the process exits it kills all threads which will
+            // kick them out of the ExceptionHandlerExchange. Thus there's no
+            // need to resume them here.
             if (packet.report.header.type != MX_EXCP_THREAD_EXITING) {
                 verify_exception(&packet, excp_name, child, excp_type, false, &tid);
                 resume_thread_from_exception(child, tid, MX_RESUME_TRY_NEXT);
@@ -1001,7 +1009,6 @@ static bool trigger_test(void)
                 read_and_verify_exception(eport, "thread exit", child, MX_EXCP_THREAD_EXITING, false, &tid2);
                 ASSERT_EQ(tid2, tid, "exiting tid mismatch");
             }
-            resume_thread_from_exception(child, tid, 0);
 
             // We've already seen tid's thread-exit report, so just skip that
             // test here.
@@ -1030,6 +1037,7 @@ static bool unbind_while_stopped_test(void)
     tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
     child = tu_launch_mxio_fini(lp);
     // Now we own the child handle, and lp is destroyed.
+
     mx_koid_t tid;
     read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
 
@@ -1126,6 +1134,46 @@ static bool unbind_rebind_while_stopped_test(void)
     END_TEST;
 }
 
+static bool kill_while_stopped_at_start_test(void)
+{
+    BEGIN_TEST;
+    unittest_printf("kill_while_stopped_at_start tests\n");
+
+    mx_handle_t child, our_channel;
+    const char* arg = "";
+    launchpad_t* lp = setup_test_child(arg, &our_channel);
+    mx_handle_t eport = tu_io_port_create(0);
+    // Note: child is a borrowed handle, launchpad still owns it at this point.
+    child = launchpad_get_process_handle(lp);
+    tu_set_exception_port(child, eport, 0, MX_EXCEPTION_PORT_DEBUGGER);
+    child = tu_launch_mxio_fini(lp);
+    // Now we own the child handle, and lp is destroyed.
+
+    mx_koid_t tid;
+    read_and_verify_exception(eport, "process start", child, MX_EXCP_THREAD_STARTING, false, &tid);
+
+    // Now kill the thread and wait for the child to exit.
+    // This assumes the inferior only has the one thread.
+    // If this doesn't work the thread will stay blocked, we'll timeout, and
+    // the watchdog will trigger.
+    mx_handle_t thread;
+    mx_status_t status = mx_object_get_child(child, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    if (status < 0)
+        tu_fatal("mx_object_get_child", status);
+    mx_task_kill(thread);
+    tu_process_wait_signaled(child);
+
+    // Keep the thread handle open until after we know the process has exited
+    // to ensure the thread's handle lifetime doesn't affect process lifetime.
+    tu_handle_close(thread);
+
+    tu_handle_close(child);
+    tu_handle_close(eport);
+    tu_handle_close(our_channel);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(exceptions_tests)
 RUN_TEST(process_set_close_set_test);
 RUN_TEST(process_debugger_set_close_set_test);
@@ -1147,6 +1195,7 @@ RUN_TEST(thread_gone_notification_test);
 RUN_TEST(trigger_test);
 RUN_TEST(unbind_while_stopped_test);
 RUN_TEST(unbind_rebind_while_stopped_test);
+RUN_TEST(kill_while_stopped_at_start_test);
 END_TEST_CASE(exceptions_tests)
 
 static void check_verbosity(int argc, char** argv)

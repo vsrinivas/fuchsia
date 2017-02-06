@@ -72,6 +72,9 @@ mx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
 
     alignas(16) static uint8_t thread_stack[PAGE_SIZE];
 
+    mx_exception_packet_t packet;
+    bool saw_page_fault = false;
+
     mx_handle_t thread = MX_HANDLE_INVALID;
     mx_handle_t port = MX_HANDLE_INVALID;
     uintptr_t entry = reinterpret_cast<uintptr_t>(write ? test_write_address_thread :
@@ -100,35 +103,43 @@ mx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
         goto err;
     }
 
-    // Wait for the thread to exit and identify its cause of death
-    mx_exception_packet_t packet;
-    status = mx_port_wait(port, MX_TIME_INFINITE, &packet, sizeof(packet));
-    if (status != NO_ERROR) {
-        goto err;
-    }
-    if (packet.hdr.type != MX_PORT_PKT_TYPE_EXCEPTION) {
-        status = ERR_BAD_STATE;
-        goto err;
-    }
-    if (packet.report.header.type == MX_EXCP_FATAL_PAGE_FAULT) {
-        mx_task_kill(thread);
-        mx_task_resume(thread, MX_RESUME_EXCEPTION);
+    // Wait for the thread to exit and identify its cause of death.
+    // Keep looping until the thread is gone so that crashlogger doesn't
+    // see the page fault.
+    do {
+        mx_status_t s;
 
-        status = NO_ERROR;
-        *success = false;
-    }
-    else if (packet.report.header.type == MX_EXCP_GONE) {
-        status = NO_ERROR;
+        s = mx_port_wait(port, MX_TIME_INFINITE, &packet, sizeof(packet));
+        if (s != NO_ERROR && status != NO_ERROR) {
+            status = s;
+            break;
+        }
+        if (packet.hdr.type != MX_PORT_PKT_TYPE_EXCEPTION) {
+            status = ERR_BAD_STATE;
+            break;
+        }
+        if (packet.report.header.type == MX_EXCP_FATAL_PAGE_FAULT) {
+            mx_task_kill(thread);
+            saw_page_fault = true;
+            // Leave status as is.
+        }
+        else if (packet.report.header.type == MX_EXCP_GONE) {
+            // Leave status as is.
+        }
+        else {
+            mx_task_kill(thread);
+            if (status != NO_ERROR)
+                status = ERR_BAD_STATE;
+        }
+    } while (packet.report.header.type != MX_EXCP_GONE);
+
+    if (status == NO_ERROR && !saw_page_fault)
         *success = true;
-    }
-    else {
-        mx_task_kill(thread);
-        mx_task_resume(thread, MX_RESUME_EXCEPTION);
-        status = ERR_BAD_STATE;
-    }
 
     // fallthrough to cleanup
 err:
+    if (thread != MX_HANDLE_INVALID)
+        mx_task_bind_exception_port(thread, MX_HANDLE_INVALID, 0, 0);
     mx_handle_close(port);
     mx_handle_close(thread);
     return status;

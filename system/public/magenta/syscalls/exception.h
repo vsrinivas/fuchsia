@@ -45,7 +45,7 @@ typedef enum {
     // A thread or process has exited or otherwise terminated.
     // At this point thread/process state is no longer available.
     // Process gone notifications are only sent to the process exception port
-    // (if one is registered).
+    // or debugger exception port (if one is registered).
     // Thread gone notifications are only sent to the thread exception port
     // (if one is registered).
     // N.B. "gone" notifications are not responded to.

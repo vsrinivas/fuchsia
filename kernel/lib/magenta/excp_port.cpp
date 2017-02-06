@@ -220,15 +220,18 @@ void ExceptionPort::OnThreadStart(UserThread* thread) {
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
     memset(&context, 0, sizeof(context));
-    auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context);
+    UserThread::ExceptionStatus estatus;
+    auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
     if (status != NO_ERROR) {
-        // Ignore any errors, we still want the thread to run.
+        // Ignore any errors. There's nothing we can do here, and
+        // we still want the thread to run. It's possible the thread was
+        // killed (status == ERR_INTERRUPTED), the kernel will kill the
+        // thread shortly.
     }
 }
 
 // This isn't called for every process's destruction, only for processes that
-// have a process-specific exception handler.
-// TODO(dje): Debugger's needs.
+// have a bound process or debugger exception export.
 
 void ExceptionPort::OnProcessExit(ProcessDispatcher* process) {
     mx_koid_t pid = process->get_koid();
@@ -265,8 +268,12 @@ void ExceptionPort::OnThreadExitForDebugger(UserThread* thread) {
     // There is no iframe at the moment. We'll need one (or equivalent) if/when
     // we want to make $pc, $sp available.
     memset(&context, 0, sizeof(context));
-    auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context);
+    UserThread::ExceptionStatus estatus;
+    // N.B. If the process is exiting it will have killed all threads. That
+    // means all threads get marked with THREAD_SIGNAL_KILL which means this
+    // exchange will return immediately with ERR_INTERRUPTED.
+    auto status = thread->ExceptionHandlerExchange(mxtl::RefPtr<ExceptionPort>(this), &report, &context, &estatus);
     if (status != NO_ERROR) {
-        // Ignore any errors, we still want the thread to run.
+        // Ignore any errors, we still want the thread to continue exiting.
     }
 }

@@ -395,11 +395,23 @@ bool resume_inferior(mx_handle_t inferior, mx_koid_t tid)
 
     mx_handle_t thread;
     mx_status_t status = mx_object_get_child(inferior, tid, MX_RIGHT_SAME_RIGHTS, &thread);
+    if (status == ERR_NOT_FOUND) {
+        // If the process has exited then the kernel may have reaped the
+        // thread already. Check.
+        if (tu_process_has_exited(inferior))
+            return true;
+    }
     ASSERT_EQ(status, NO_ERROR, "mx_object_get_child failed");
 
     unittest_printf("Resuming inferior ...\n");
     status = mx_task_resume(thread, MX_RESUME_EXCEPTION);
     tu_handle_close(thread);
+    if (status == ERR_BAD_STATE) {
+        // If the process has exited then the thread may have exited
+        // ExceptionHandlerExchange already. Check.
+        if (tu_process_has_exited(inferior))
+            return true;
+    }
     ASSERT_EQ(status, NO_ERROR, "mx_task_resume failed");
 
     END_HELPER;

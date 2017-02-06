@@ -65,55 +65,54 @@ static status_t try_exception_handler(mxtl::RefPtr<ExceptionPort> eport,
                                       UserThread* thread,
                                       const mx_exception_report_t* report,
                                       const arch_exception_context_t* arch_context,
-                                      bool* processed) {
+                                      UserThread::ExceptionStatus* estatus) {
     if (!eport)
         return ERR_NOT_FOUND;
 
     DEBUG_ASSERT(eport->type() == expected_type);
-    *processed = true;
-    status_t status = thread->ExceptionHandlerExchange(eport, report, arch_context);
-    LTRACEF("ExceptionHandlerExchange returned %d\n", status);
+    auto status = thread->ExceptionHandlerExchange(eport, report, arch_context, estatus);
+    LTRACEF("ExceptionHandlerExchange returned status %d, estatus %d\n", status, static_cast<int>(*estatus));
     return status;
 }
 
 static status_t try_debugger_exception_handler(UserThread* thread,
                                                const mx_exception_report_t* report,
                                                const arch_exception_context_t* arch_context,
-                                               bool* processed) {
+                                               UserThread::ExceptionStatus* estatus) {
     LTRACE_ENTRY;
     mxtl::RefPtr<ExceptionPort> eport = thread->process()->debugger_exception_port();
     return try_exception_handler(eport, ExceptionPort::Type::DEBUGGER,
-                                 thread, report, arch_context, processed);
+                                 thread, report, arch_context, estatus);
 }
 
 static status_t try_thread_exception_handler(UserThread* thread,
                                              const mx_exception_report_t* report,
                                              const arch_exception_context_t* arch_context,
-                                             bool* processed) {
+                                             UserThread::ExceptionStatus* estatus) {
     LTRACE_ENTRY;
     mxtl::RefPtr<ExceptionPort> eport = thread->exception_port();
     return try_exception_handler(eport, ExceptionPort::Type::THREAD,
-                                 thread, report, arch_context, processed);
+                                 thread, report, arch_context, estatus);
 }
 
 static status_t try_process_exception_handler(UserThread* thread,
                                               const mx_exception_report_t* report,
                                               const arch_exception_context_t* arch_context,
-                                              bool* processed) {
+                                              UserThread::ExceptionStatus* estatus) {
     LTRACE_ENTRY;
     mxtl::RefPtr<ExceptionPort> eport = thread->process()->exception_port();
     return try_exception_handler(eport, ExceptionPort::Type::PROCESS,
-                                 thread, report, arch_context, processed);
+                                 thread, report, arch_context, estatus);
 }
 
 static status_t try_system_exception_handler(UserThread* thread,
                                              const mx_exception_report_t* report,
                                              const arch_exception_context_t* arch_context,
-                                             bool* processed) {
+                                             UserThread::ExceptionStatus* estatus) {
     LTRACE_ENTRY;
     mxtl::RefPtr<ExceptionPort> eport = GetSystemExceptionPort();
     return try_exception_handler(eport, ExceptionPort::Type::SYSTEM,
-                                 thread, report, arch_context, processed);
+                                 thread, report, arch_context, estatus);
 }
 
 // exception handler from low level architecturally-specific code
@@ -125,7 +124,7 @@ static status_t try_system_exception_handler(UserThread* thread,
 // not a magenta thread.
 //
 // TODO(dje): Support unwinding from this exception and introducing a
-// different exception.
+// different exception?
 
 status_t magenta_exception_handler(uint exception_type,
                                    arch_exception_context_t* context,
@@ -138,26 +137,53 @@ status_t magenta_exception_handler(uint exception_type,
         return ERR_BAD_STATE;
     }
 
+    typedef status_t (Handler)(UserThread* thread,
+                               const mx_exception_report_t* report,
+                               const arch_exception_context_t* arch_context,
+                               UserThread::ExceptionStatus* estatus);
+
+    static Handler* const handlers[] = {
+        try_debugger_exception_handler,
+        try_thread_exception_handler,
+        try_process_exception_handler,
+        try_system_exception_handler
+    };
+
     bool processed = false;
-    status_t status;
     mx_exception_report_t report;
     build_exception_report(&report, thread, exception_type, context, ip);
 
-    status = try_debugger_exception_handler(thread, &report, context, &processed);
-    if (status == NO_ERROR)
-        return NO_ERROR;
-
-    status = try_thread_exception_handler(thread, &report, context, &processed);
-    if (status == NO_ERROR)
-        return NO_ERROR;
-
-    status = try_process_exception_handler(thread, &report, context, &processed);
-    if (status == NO_ERROR)
-        return NO_ERROR;
-
-    status = try_system_exception_handler(thread, &report, context, &processed);
-    if (status == NO_ERROR)
-        return NO_ERROR;
+    for (size_t i = 0; i < countof(handlers); ++i) {
+        // Initialize for paranoia's sake.
+        UserThread::ExceptionStatus estatus = UserThread::ExceptionStatus::UNPROCESSED;
+        auto status = handlers[i](thread, &report, context, &estatus);
+        LTRACEF("handler returned %d/%d\n",
+                static_cast<int>(status), static_cast<int>(estatus));
+        switch (status) {
+        case ERR_INTERRUPTED:
+            // thread was killed, probably with mx_task_kill
+            thread->Exit();
+            __UNREACHABLE;
+        case ERR_NOT_FOUND:
+            continue;
+        case NO_ERROR:
+            switch (estatus) {
+            case UserThread::ExceptionStatus::TRY_NEXT:
+                processed = true;
+                break;
+            case UserThread::ExceptionStatus::RESUME:
+                return NO_ERROR;
+            default:
+                ASSERT_MSG(0, "invalid exception status %d",
+                           static_cast<int>(estatus));
+                __UNREACHABLE;
+            }
+            break;
+        default:
+            ASSERT_MSG(0, "unexpected exception result %d", status);
+            __UNREACHABLE;
+        }
+    }
 
     auto process = thread->process();
 
