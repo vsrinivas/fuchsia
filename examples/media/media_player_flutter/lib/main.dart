@@ -63,7 +63,6 @@ bool _playNext() {
   if (_assetToPlay == null ||
       _assetToPlay.children == null ||
       _assetToPlay.children.length <= ++_playlistIndex) {
-        _leafAssetToPlay = null;
     return false;
   }
 
