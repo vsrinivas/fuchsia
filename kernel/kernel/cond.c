@@ -29,8 +29,10 @@ void cond_destroy(cond_t *cond)
     THREAD_UNLOCK(state);
 }
 
-status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout)
+status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout, bool interruptable)
 {
+    thread_t *current_thread = get_current_thread();
+
     DEBUG_ASSERT(cond->magic == COND_MAGIC);
     DEBUG_ASSERT(mutex->magic == MUTEX_MAGIC);
     DEBUG_ASSERT(!arch_in_int_handler());
@@ -42,7 +44,15 @@ status_t cond_wait_timeout(cond_t *cond, mutex_t *mutex, lk_time_t timeout)
     // would not be atomic, which would mean that we could miss wakeups.
     mutex_release_internal(mutex, /* reschedule= */ false);
 
-    status_t result = wait_queue_block(&cond->wait, timeout);
+    /* if we've been killed and going in interruptable, abort here */
+    status_t result;
+    if (interruptable && unlikely((current_thread->signals & THREAD_SIGNAL_KILL))) {
+        result = ERR_INTERRUPTED;
+    } else {
+        current_thread->interruptable = interruptable;
+        result = wait_queue_block(&cond->wait, timeout);
+        current_thread->interruptable = false;
+    }
 
     mutex_acquire_internal(mutex);
 

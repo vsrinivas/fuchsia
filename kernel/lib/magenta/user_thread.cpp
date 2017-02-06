@@ -400,7 +400,7 @@ status_t UserThread::ExceptionHandlerExchange(
     exception_wait_port_ = eport;
 
     exception_status_ = ExceptionStatus::UNPROCESSED;
-    status = cond_wait_timeout(&exception_wait_cond_, exception_wait_lock_.GetInternal(), INFINITE_TIME);
+    status = cond_wait_timeout(&exception_wait_cond_, exception_wait_lock_.GetInternal(), INFINITE_TIME, false);
     DEBUG_ASSERT(status == NO_ERROR);
     DEBUG_ASSERT(exception_status_ != ExceptionStatus::UNPROCESSED);
 
