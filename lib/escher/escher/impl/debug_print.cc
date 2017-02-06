@@ -34,9 +34,9 @@ std::ostream& operator<<(std::ostream& str, const MeshSpec& spec) {
   str << "MeshSpec[";
   // TODO: would be nice to guarantee that we don't miss any.  Too bad we can't
   // enumerate over the values in an enum class.
-  std::array<MeshAttribute, 4> all_flags = {
+  std::array<MeshAttribute, 4> all_flags = {{
       MeshAttribute::kPosition, MeshAttribute::kPositionOffset,
-      MeshAttribute::kUV, MeshAttribute::kPerimeterPos};
+      MeshAttribute::kUV, MeshAttribute::kPerimeterPos}};
   for (auto flag : all_flags) {
     if (spec.flags & flag) {
       // Put a pipe after the previous flag, if there is one.
@@ -74,7 +74,7 @@ std::ostream& operator<<(std::ostream& str, const ShapeModifiers& flags) {
   str << "ShapeModifiers[";
   // TODO: would be nice to guarantee that we don't miss any.  Too bad we can't
   // enumerate over the values in an enum class.
-  std::array<ShapeModifier, 1> all_flags = {ShapeModifier::kWobble};
+  std::array<ShapeModifier, 1> all_flags = {{ShapeModifier::kWobble}};
   for (auto flag : all_flags) {
     if (flags & flag) {
       // Put a pipe after the previous flag, if there is one.
