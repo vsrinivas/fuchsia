@@ -5,13 +5,15 @@ create a media player.
 
 ## USAGE
 
-The media player currently uses a file reader only, so you'll need to have an
-accessible file. Here's an example command line:
+The media player uses a file reader or a network reader. To use the file
+reader, you'll need to have an accessible file. Here's an example command line:
 
     @ bootstrap -
     @boot launch media_player --path=/data/vid.ogv
 
-In the future, we'll support a network reader as well.
+Here's an example using the network reader:
+
+    @boot launch media_player --url=http://example.com/vid.ogv
 
 It's important to use @boot as shown above rather than creating a new
 bootstrap environment for each invocation of media_player. Each instance of
@@ -28,30 +30,6 @@ point. The space bar toggles between play and pause. 'q' quits.
 Audio output works on e.g. Acer with a supported USB audio device. We currently
 have no drivers for non-USB audio devices. The media player will play audio-only
 files.
-
-## HOW TO GET CONTENT ONTO YOUR MACHINE
-
-The media player works best pulling content from a minfs volume, typically
-mounted as /data. To get this volume set up, see the "Target Device" section
-of https://fuchsia.googlesource.com/magenta/+/master/docs/minfs.md.
-
-To get your content onto /data, copy it from your host machine to your USB
-drive and then (on the Fuchsia device) from the USB drive to /data. In order
-to do this, the USB drive will need to work with thinfs so it shows up as
-/volume/fat-0.
-
-Thinfs only works with GPT-partitioned drives, so first make sure your drive
-is so partitioned. The linux utility gdisk can set up a GPT partition table.
-
-Thinfs is also picky about the dirty bit on the drive. A freshly-formatted
-FAT32 partition should work fine as long as the drive is properly ejected from
-the host machine. Thinfs seems to set the dirty bit itself, so you may need to
-reformat every time you want to copy a file.
-
-In any case, make sure you specify a file name in /data when you cp. If you
-just cp to /data, the root directory gets overwritten and life is bad.
-
-    cp /volume/fat-0/vid.ogv /data/vid.ogv
 
 ## FORMAT SUPPORT
 
