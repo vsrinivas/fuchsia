@@ -200,16 +200,16 @@ class Process final {
   // Return list of loaded dsos.
   // Returns nullptr if none loaded yet or loading failed.
   // TODO(dje): constness wip
-  elf::dsoinfo_t* GetDsos() const { return dsos_; }
+  util::dsoinfo_t* GetDsos() const { return dsos_; }
 
   // Return the DSO for |pc| or nullptr if none.
   // TODO(dje): Result is not const for debug file lookup support.
-  elf::dsoinfo_t* LookupDso(mx_vaddr_t pc) const;
+  util::dsoinfo_t* LookupDso(mx_vaddr_t pc) const;
 
   // Return the entry for the main executable from the dsos list.
   // Returns nullptr if not present (could happen if inferior data structure
   // has been clobbered).
-  const elf::dsoinfo_t* GetExecDso();
+  const util::dsoinfo_t* GetExecDso();
 
  private:
   Process() = default;
@@ -287,7 +287,7 @@ class Process final {
   // NULL if none have been loaded yet (including main executable).
   // TODO(dje): Code taking from crashlogger, to be rewritten.
   // TODO(dje): Doesn't include dsos loaded later.
-  elf::dsoinfo_t* dsos_ = nullptr;
+  util::dsoinfo_t* dsos_ = nullptr;
 
   // If true then building the dso list failed, don't try again.
   bool dsos_build_failed_ = false;

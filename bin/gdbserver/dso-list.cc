@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <link.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -23,7 +22,7 @@
 extern struct r_debug* _dl_debug_addr;
 
 namespace debugserver {
-namespace elf {
+namespace util {
 
 // TODO: For now we make the simplifying assumption that the address of
 // this variable in our address space is constant among all processes.
@@ -68,8 +67,7 @@ static dsoinfo_t* dsolist_add(dsoinfo_t** list,
   return dso;
 }
 
-dsoinfo_t* dso_fetch_list(const util::Memory& m,
-                          mx_vaddr_t lmap_addr,
+dsoinfo_t* dso_fetch_list(const Memory& m, mx_vaddr_t lmap_addr,
                           const char* name) {
   dsoinfo_t* dsolist = nullptr;
   // The first dso we see is the main executable.
@@ -84,25 +82,68 @@ dsoinfo_t* dso_fetch_list(const util::Memory& m,
 
     if (!m.Read(lmap_addr, &lmap, sizeof(lmap)))
       break;
-    if (!util::ReadString(m, reinterpret_cast<mx_vaddr_t>(lmap.l_name), dsoname,
-                          sizeof(dsoname)))
+    if (!ReadString(m, reinterpret_cast<mx_vaddr_t>(lmap.l_name), dsoname,
+                    sizeof(dsoname)))
       break;
 
     dsoinfo_t* dso =
         dsolist_add(&dsolist, dsoname[0] ? dsoname : name, lmap.l_addr);
-    ehdr_type ehdr;
-    if (!ReadElfHdr(m, dso->base, &ehdr))
-      break;
-    if (!VerifyElfHdr(&ehdr))
-      break;
 
-    // Ignore failures, this isn't critical.
-    ReadBuildId(m, dso->base, &ehdr, dso->buildid, sizeof(dso->buildid));
+    std::unique_ptr<elf::Reader> elf_reader;
+    elf::Error rc = elf::Reader::Create(m, 0, dso->base, &elf_reader);
+    if (rc != elf::Error::OK) {
+      FTL_LOG(ERROR) << "Unable to read ELF file: " << elf::ErrorName(rc);
+      break;
+    }
+
+    auto hdr = elf_reader->header();
+    rc = elf_reader->ReadSegmentHeaders();
+    if (rc != elf::Error::OK) {
+      FTL_LOG(ERROR) << "Error reading ELF segment headers: "
+                     << elf::ErrorName(rc);
+    } else {
+      size_t num_segments = elf_reader->GetNumSegments();
+      uint32_t num_loadable_phdrs = 0;
+      for (size_t i = 0; i < num_segments; ++i) {
+        const elf::SegmentHeader& phdr = elf_reader->GetSegmentHeader(i);
+        if (phdr.p_type == PT_LOAD)
+          ++num_loadable_phdrs;
+      }
+      // malloc may, or may not, return NULL for a zero byte request.
+      // Remove the ambiguity for consumers and always use NULL if there no
+      // loadable phdrs.
+      elf::SegmentHeader* loadable_phdrs = NULL;
+      if (num_loadable_phdrs > 0) {
+        loadable_phdrs =
+          reinterpret_cast<elf::SegmentHeader*>(malloc(num_loadable_phdrs *
+                                                       hdr.e_phentsize));
+      }
+      if (loadable_phdrs || num_loadable_phdrs == 0) {
+        size_t j = 0;
+        for (size_t i = 0; i < num_segments; ++i) {
+          const elf::SegmentHeader& phdr = elf_reader->GetSegmentHeader(i);
+          if (phdr.p_type == PT_LOAD)
+            loadable_phdrs[j++] = phdr;
+        }
+        FTL_DCHECK(j == num_loadable_phdrs);
+        dso->num_loadable_phdrs = num_loadable_phdrs;
+        dso->loadable_phdrs = loadable_phdrs;
+      } else {
+        FTL_LOG(ERROR) << "OOM reading phdrs";
+      }
+    }
+
+    rc = elf_reader->ReadBuildId(dso->buildid, sizeof(dso->buildid));
+    if (rc != elf::Error::OK) {
+      // This isn't fatal so don't flag as an error.
+      FTL_VLOG(1) << "Unable to read build id: " << elf::ErrorName(rc);
+    }
+
     dso->is_main_exec = is_main_exec;
-    dso->entry = dso->base + ehdr.e_entry;
-    dso->phdr = dso->base + ehdr.e_phoff;
-    dso->phentsize = ehdr.e_phentsize;
-    dso->phnum = ehdr.e_phnum;
+    dso->entry = dso->base + hdr.e_entry;
+    dso->phdr = dso->base + hdr.e_phoff;
+    dso->phentsize = hdr.e_phentsize;
+    dso->phnum = hdr.e_phnum;
 
     is_main_exec = false;
     lmap_addr = reinterpret_cast<mx_vaddr_t>(lmap.l_next);
@@ -112,8 +153,9 @@ dsoinfo_t* dso_fetch_list(const util::Memory& m,
 }
 
 void dso_free_list(dsoinfo_t* list) {
-  while (list != NULL) {
+  while (list != nullptr) {
     dsoinfo_t* next = list->next;
+    free(list->loadable_phdrs);
     free(list->debug_file);
     free(list);
     list = next;
@@ -121,7 +163,7 @@ void dso_free_list(dsoinfo_t* list) {
 }
 
 dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, mx_vaddr_t pc) {
-  for (auto dso = dso_list; dso != NULL; dso = dso->next) {
+  for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
     if (pc >= dso->base)
       return dso;
   }
@@ -130,7 +172,7 @@ dsoinfo_t* dso_lookup(dsoinfo_t* dso_list, mx_vaddr_t pc) {
 }
 
 dsoinfo_t* dso_get_main_exec(dsoinfo_t* dso_list) {
-  for (auto dso = dso_list; dso != NULL; dso = dso->next) {
+  for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
     if (dso->is_main_exec)
       return dso;
   }
@@ -138,7 +180,14 @@ dsoinfo_t* dso_get_main_exec(dsoinfo_t* dso_list) {
   return nullptr;
 }
 
-void dso_vlog_list(dsoinfo_t* dso_list) {
+void dso_print_list(FILE* out, const dsoinfo_t* dso_list) {
+  for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
+    fprintf(out,"dso: id=%s base=%p name=%s\n",
+            dso->buildid, (void*) dso->base, dso->name);
+  }
+}
+
+void dso_vlog_list(const dsoinfo_t* dso_list) {
   for (auto dso = dso_list; dso != nullptr; dso = dso->next) {
     FTL_VLOG(2) << ftl::StringPrintf("dso: id=%s base=%p name=%s", dso->buildid,
                                      (void*)dso->base, dso->name);
@@ -191,5 +240,5 @@ mx_status_t dso_find_debug_file(dsoinfo_t* dso, const char** out_debug_file) {
   return dso->debug_file_status;
 }
 
-}  // namespace elf
+}  // namespace util
 }  // namespace debugserver

@@ -959,7 +959,7 @@ bool CommandHandler::HandleQueryXfer(const ftl::StringView& params,
   size_t n = 0;
   ADD_AUXV(AT_BASE, current_process->base_address());
   if (current_process->DsosLoaded()) {
-    const elf::dsoinfo_t* exec = current_process->GetExecDso();
+    const util::dsoinfo_t* exec = current_process->GetExecDso();
     if (exec) {
       ADD_AUXV(AT_ENTRY, exec->entry);
       ADD_AUXV(AT_PHDR, exec->phdr);

@@ -653,7 +653,7 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
   }
 
   auto lmap_vaddr = reinterpret_cast<mx_vaddr_t>(debug.r_map);
-  dsos_ = elf::dso_fetch_list(memory_, lmap_vaddr, "app");
+  dsos_ = util::dso_fetch_list(memory_, lmap_vaddr, "app");
   // We should have fetched at least one since this is not called until the
   // dl_debug_state breakpoint is hit.
   if (dsos_ == nullptr) {
@@ -661,7 +661,7 @@ void Process::TryBuildLoadedDsosList(Thread* thread, bool check_ldso_bkpt) {
     FTL_VLOG(2) << "dso_fetch_list failed";
     dsos_build_failed_ = true;
   } else {
-    elf::dso_vlog_list(dsos_);
+    util::dso_vlog_list(dsos_);
     // This may already be false, but set it any for documentation purposes.
     dsos_build_failed_ = false;
   }
@@ -738,12 +738,12 @@ int Process::ExitCode() {
   }
 }
 
-const elf::dsoinfo_t* Process::GetExecDso() {
+const util::dsoinfo_t* Process::GetExecDso() {
   return dso_get_main_exec(dsos_);
 }
 
-elf::dsoinfo_t* Process::LookupDso(mx_vaddr_t pc) const {
-  return elf::dso_lookup(dsos_, pc);
+util::dsoinfo_t* Process::LookupDso(mx_vaddr_t pc) const {
+  return util::dso_lookup(dsos_, pc);
 }
 
 }  // namespace debugserver
