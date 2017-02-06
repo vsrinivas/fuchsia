@@ -1,0 +1,16 @@
+{
+    "tests": [
+        {
+          "name": "dummy_user_shell",
+          "exec": "bootstrap device_runner --user_shell=dummy_user_shell"
+        },
+        {
+          "name": "parent_child",
+          "exec": "bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/tmp/tests/parent_module"
+        },
+        {
+          "name": "component_context",
+          "exec": "bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/tmp/tests/component_context_test"
+        }
+    ]
+}

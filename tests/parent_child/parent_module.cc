@@ -18,7 +18,7 @@ namespace {
 constexpr int kStopMilliseconds = 500;
 constexpr int kDoneMilliseconds = 500;
 
-constexpr char kChildModule[] = "file:///tmp/tests/parent_child/child_module";
+constexpr char kChildModule[] = "file:///tmp/tests/child_module";
 
 class ParentApp
   : public modular::SingleServiceApp<modular::Module> {

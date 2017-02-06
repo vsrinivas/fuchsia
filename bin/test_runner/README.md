@@ -1,4 +1,4 @@
-test_runner is a TCP daemon that accepts connections, reads test commands and
+`test_runner` is a TCP daemon that accepts connections, reads test commands and
 executes them. It is meant to provide a way to run tests from the host and get
 back results.
 
@@ -26,7 +26,7 @@ a crash, this console output will be dumped by `run_test`.
 
 You can also run a series of tests by supplying a JSON file describing the tests to run:
 ```sh
-$ $FUCHSIA_DIR/apps/modular/src/test_runner/run_test --test_file=$FUCHSIA_DIR/apps/modular/src/test_runner/modular_tests.json
+$ $FUCHSIA_DIR/apps/modular/src/test_runner/run_test --test_file=$FUCHSIA_DIR/apps/modular/tests/modular_tests.json
 ```
 
 Troubleshooting:
