@@ -15,6 +15,7 @@
 
 #if WITH_DEV_INTERRUPT_ARM_GIC || WITH_DEV_INTERRUPT_ARM_GICV3
 #include <dev/interrupt/arm_gic.h>
+#include <platform/gic.h>
 #elif PLATFORM_BCM28XX
 /* bcm28xx has a weird custom interrupt controller for MP */
 #include <platform/bcm28xx.h>
@@ -24,8 +25,6 @@ extern void bcm28xx_send_ipi(uint irq, uint cpu_mask);
 #endif
 
 #define LOCAL_TRACE 0
-
-#include <platform/gic.h>
 
 #ifndef GIC_IPI_BASE
 #define GIC_IPI_BASE (14)
