@@ -14,6 +14,7 @@
 FUNCTION(psci_call)
     hvc     #0
     ret
+END(psci_call)
 
 .ltorg
 

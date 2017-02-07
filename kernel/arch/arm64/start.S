@@ -40,8 +40,7 @@ FUNCTION(_start)
 #if FASTBOOT_HEADER
 #include "fastboot-header.S"
 #endif
-.globl arm_reset
-arm_reset:
+FUNCTION(arm_reset)
     adrp    tmp, boot_args
     add     tmp, tmp, #:lo12:boot_args
     stp     x2, x3, [tmp]
@@ -399,25 +398,29 @@ arm_reset:
     wfe
     b       .Lunsupported_cpu_trap
 #endif
+END(arm_reset)
 
 .ltorg
 .data
 DATA(boot_args)
     .align  6
     .skip   32
+END(boot_args)
 #if WITH_SMP
 DATA(page_tables_not_ready)
     .long       1
+END(page_tables_not_ready)
 #endif
 
 .section .bss.prebss.stack, "aw", @nobits
     .align 4
 DATA(__stack)
     .skip ARCH_DEFAULT_STACK_SIZE * SMP_MAX_CPUS
-    .align 16
+END(__stack)
 DATA(__stack_end)
 
 .section .bss.prebss.translation_table, "aw", @nobits
 .align 3 + MMU_PAGE_TABLE_ENTRIES_IDENT_SHIFT
 DATA(tt_trampoline)
     .skip 8 * MMU_PAGE_TABLE_ENTRIES_IDENT
+END(tt_trampoline)

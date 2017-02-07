@@ -42,6 +42,7 @@ FUNCTION(arm64_context_switch)
     pop  x28, x29
 
     ret
+END(arm64_context_switch)
 
 FUNCTION(arm64_el3_to_el1)
     /* set EL2 to 64bit */
@@ -73,6 +74,7 @@ FUNCTION(arm64_el3_to_el1)
     isb
 
     eret
+END(arm64_el3_to_el1)
 
 FUNCTION(arm64_elX_to_el1)
     mrs x9, CurrentEL
@@ -130,3 +132,5 @@ FUNCTION(arm64_elX_to_el1)
 
 .Ltarget:
     ret
+END(arm64_elX_to_el1)
+

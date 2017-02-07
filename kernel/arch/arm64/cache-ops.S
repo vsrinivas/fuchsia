@@ -27,16 +27,19 @@
 FUNCTION(arch_clean_cache_range)
     cache_range_op dc cvac         // clean cache to PoC by MVA
     ret
+END(arch_clean_cache_range)
 
     /* void arch_flush_invalidate_cache_range(addr_t start, size_t len); */
 FUNCTION(arch_clean_invalidate_cache_range)
     cache_range_op dc civac        // clean & invalidate dcache to PoC by MVA
     ret
+END(arch_clean_invalidate_cache_range)
 
     /* void arch_invalidate_cache_range(addr_t start, size_t len); */
 FUNCTION(arch_invalidate_cache_range)
     cache_range_op dc ivac         // invalidate dcache to PoC by MVA
     ret
+END(arch_invalidate_cache_range)
 
     /* void arch_sync_cache_range(addr_t start, size_t len); */
 FUNCTION(arch_sync_cache_range)
@@ -44,6 +47,7 @@ FUNCTION(arch_sync_cache_range)
     cache_range_op ic ivau         // invalidate icache to PoU by MVA
     isb
     ret
+END(arch_sync_cache_range)
 
 /* void arch_invalidate_cache_all()
  *      should only be used early in boot, prior to enabling mmu/cache
@@ -93,4 +97,5 @@ skip:
 finished:
     ic      iallu
     ret
+END(arch_invalidate_cache_all)
 
