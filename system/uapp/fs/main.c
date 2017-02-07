@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <magenta/compiler.h>
+
 // Path to mounted filesystem currently being tested
 const char* test_root_path;
 
@@ -127,8 +129,7 @@ struct {
 
 void run_fs_tests(int (*mount)(void), int (*unmount)(void), int argc, char** argv) {
     fprintf(stderr, "--- fs tests ---\n");
-    int num_tests = sizeof(FS_TESTS) / sizeof(FS_TESTS[0]);
-    for (int i = 0; i < num_tests; i++) {
+    for (unsigned i = 0; i < countof(FS_TESTS); i++) {
         if (argc > 1 && strcmp(argv[1], FS_TESTS[i].name)) {
             continue;
         }
@@ -153,8 +154,7 @@ void run_fs_tests(int (*mount)(void), int (*unmount)(void), int argc, char** arg
 }
 
 int main(int argc, char** argv) {
-    int num_filesystems = sizeof(FILESYSTEMS) / sizeof(FILESYSTEMS[0]);
-    for (int i = 0; i < num_filesystems; i++) {
+    for (unsigned i = 0; i < countof(FILESYSTEMS); i++) {
         printf("Testing FS: %s\n", FILESYSTEMS[i].name);
         test_root_path = FILESYSTEMS[i].mount_path;
         run_fs_tests(FILESYSTEMS[i].mount, FILESYSTEMS[i].unmount, argc, argv);

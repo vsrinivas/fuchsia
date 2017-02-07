@@ -12,17 +12,19 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <magenta/compiler.h>
+
 #include "misc.h"
 
 // Make some files, then unlink them.
 void test_unlink_simple(void) {
     printf("Test Unlink (simple)\n");
     const char* const paths[] = {"::abc", "::def", "::ghi", "::jkl", "::mnopqrstuvxyz"};
-    for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
+    for (size_t i = 0; i < countof(paths); i++) {
         int fd = TRY(open(paths[i], O_RDWR | O_CREAT | O_EXCL, 0644));
         TRY(close(fd));
     }
-    for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
+    for (size_t i = 0; i < countof(paths); i++) {
         TRY(unlink(paths[i]));
     }
 }

@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include <fs-management/mount.h>
+#include <magenta/compiler.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
@@ -29,7 +30,7 @@ int usage(void) {
     fprintf(stderr, "usage: mkfs [ <option>* ] devicepath filesystem\n");
     fprintf(stderr, " -v  : Verbose mode\n");
     fprintf(stderr, " values for 'filesystem' include:\n");
-    for (size_t i = 0; i < sizeof(FILESYSTEMS) / sizeof(FILESYSTEMS[0]); i++) {
+    for (size_t i = 0; i < countof(FILESYSTEMS); i++) {
         fprintf(stderr, "  '%s'\n", FILESYSTEMS[i].name);
     }
     return -1;
@@ -52,7 +53,7 @@ int parse_args(int argc, char** argv, bool* verbose, disk_format_t* df, char** d
     }
 
     *devicepath = argv[1];
-    for (size_t i = 0; i < sizeof(FILESYSTEMS) / sizeof(FILESYSTEMS[0]); i++) {
+    for (size_t i = 0; i < countof(FILESYSTEMS); i++) {
         if (!strcmp(FILESYSTEMS[i].name, argv[2])) {
             *df = FILESYSTEMS[i].df;
             break;

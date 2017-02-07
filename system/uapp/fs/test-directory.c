@@ -14,6 +14,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <magenta/compiler.h>
+
 #include "misc.h"
 
 void test_directory_filename_max(void) {
@@ -101,7 +103,7 @@ void test_directory_coalesce_helper(const int *unlink_order) {
         "::coalesce/dddddddd",
         "::coalesce/eeeeeeee",
     };
-    int num_files = sizeof(files) / sizeof(files[0]);
+    int num_files = countof(files);
 
     // Allocate a bunch of files in a directory
     TRY(mkdir("::coalesce", 0755));
@@ -232,7 +234,7 @@ void test_directory_readdir(void) {
         { false, ".", DT_DIR },
         { false, "..", DT_DIR },
     };
-    check_contains_all("::a", empty_dir, sizeof(empty_dir) / sizeof(empty_dir[0]));
+    check_contains_all("::a", empty_dir, countof(empty_dir));
 
     TRY(mkdir("::a/dir1", 0755));
     TRY(close(TRY(open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644))));
@@ -246,7 +248,7 @@ void test_directory_readdir(void) {
         { false, "file1", DT_REG },
         { false, "file2", DT_REG },
     };
-    check_contains_all("::a", filled_dir, sizeof(filled_dir) / sizeof(filled_dir[0]));
+    check_contains_all("::a", filled_dir, countof(filled_dir));
 
     TRY(unlink("::a/dir2"));
     TRY(unlink("::a/file2"));
@@ -256,11 +258,11 @@ void test_directory_readdir(void) {
         { false, "dir1", DT_DIR },
         { false, "file1", DT_REG },
     };
-    check_contains_all("::a", partial_dir, sizeof(partial_dir) / sizeof(partial_dir[0]));
+    check_contains_all("::a", partial_dir, countof(partial_dir));
 
     TRY(unlink("::a/dir1"));
     TRY(unlink("::a/file1"));
-    check_contains_all("::a", empty_dir, sizeof(empty_dir) / sizeof(empty_dir[0]));
+    check_contains_all("::a", empty_dir, countof(empty_dir));
 }
 
 int test_directory(void) {
