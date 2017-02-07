@@ -118,8 +118,8 @@
 #include <unistd.h>
 
 #ifdef __Fuchsia__
+#include <magenta/device/console.h>
 #include <mxio/io.h>
-#include <ddk/protocol/console.h>
 #endif
 
 #include "linenoise.h"
