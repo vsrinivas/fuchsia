@@ -75,12 +75,83 @@ static int modifiers_from_keycode(uint8_t keycode) {
     return 0;
 }
 
+// Process key sequences that affect the console (scrolling, switching
+// console, etc.) without sending input to the current console.  This
+// returns whether this key press was handled.
+static bool vc_handle_control_keys(uint8_t keycode, int modifiers) {
+    switch (keycode) {
+    case HID_USAGE_KEY_F1 ... HID_USAGE_KEY_F10:
+        if (modifiers & MOD_ALT) {
+            vc_set_active_console(keycode - HID_USAGE_KEY_F1);
+            return true;
+        }
+        break;
+
+    case HID_USAGE_KEY_F11:
+        if (g_active_vc && (modifiers & MOD_ALT)) {
+            vc_device_set_fullscreen(g_active_vc, !(g_active_vc->flags & VC_FLAG_FULLSCREEN));
+            return true;
+        }
+        break;
+
+    case HID_USAGE_KEY_TAB:
+        if (modifiers & MOD_ALT) {
+            if (modifiers & MOD_SHIFT) {
+                vc_set_active_console(g_active_vc_index == 0 ? g_vc_count - 1 : g_active_vc_index - 1);
+            } else {
+                vc_set_active_console(g_active_vc_index == g_vc_count - 1 ? 0 : g_active_vc_index + 1);
+            }
+            return true;
+        }
+        break;
+
+    case HID_USAGE_KEY_UP:
+        if (modifiers & MOD_ALT) {
+            vc_device_scroll_viewport(g_active_vc, -1);
+            return true;
+        }
+        break;
+    case HID_USAGE_KEY_DOWN:
+        if (modifiers & MOD_ALT) {
+            vc_device_scroll_viewport(g_active_vc, 1);
+            return true;
+        }
+        break;
+    case HID_USAGE_KEY_PAGEUP:
+        if (modifiers & MOD_SHIFT) {
+            vc_device_scroll_viewport(g_active_vc, -(vc_device_rows(g_active_vc) / 2));
+            return true;
+        }
+        break;
+    case HID_USAGE_KEY_PAGEDOWN:
+        if (modifiers & MOD_SHIFT) {
+            vc_device_scroll_viewport(g_active_vc, vc_device_rows(g_active_vc) / 2);
+            return true;
+        }
+        break;
+
+    case HID_USAGE_KEY_DELETE:
+        // Provide a CTRL-ALT-DEL reboot sequence
+        if ((modifiers & MOD_CTRL) && (modifiers & MOD_ALT)) {
+            int fd;
+            // Send the reboot command to devmgr
+            if ((fd = open("/dev/class/misc/dmctl", O_WRONLY)) >= 0) {
+                write(fd, "reboot", strlen("reboot"));
+                close(fd);
+            }
+            return true;
+        }
+        break;
+    }
+    return false;
+}
+
 static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
                                  int* cur_idx, int* prev_idx,
                                  hid_keys_t* key_pressed,
                                  hid_keys_t* key_released, int* modifiers) {
     // process the key
-    int consumed = 0;
+    bool consumed = false;
     uint8_t keycode;
     hid_keys_t key_delta;
 
@@ -92,74 +163,8 @@ static void vc_process_kb_report(uint8_t* report_buf, hid_keys_t* key_state,
     hid_for_every_key(&key_delta, keycode) {
         *modifiers |= modifiers_from_keycode(keycode);
 
-        switch (keycode) {
-        case HID_USAGE_KEY_F1 ... HID_USAGE_KEY_F10:
-            if (*modifiers & MOD_ALT) {
-                vc_set_active_console(keycode - HID_USAGE_KEY_F1);
-                consumed = 1;
-            }
-            break;
-
-        case HID_USAGE_KEY_F11:
-            if (g_active_vc && (*modifiers & MOD_ALT)) {
-                vc_device_set_fullscreen(g_active_vc, !(g_active_vc->flags & VC_FLAG_FULLSCREEN));
-                consumed = 1;
-            }
-            break;
-
-        case HID_USAGE_KEY_TAB:
-            if (*modifiers & MOD_ALT) {
-                if (*modifiers & MOD_SHIFT) {
-                    vc_set_active_console(g_active_vc_index == 0 ? g_vc_count - 1 : g_active_vc_index - 1);
-                } else {
-                    vc_set_active_console(g_active_vc_index == g_vc_count - 1 ? 0 : g_active_vc_index + 1);
-                }
-                consumed = 1;
-            }
-            break;
-
-        case HID_USAGE_KEY_UP:
-            if (*modifiers & MOD_ALT) {
-                vc_device_scroll_viewport(g_active_vc, -1);
-                consumed = 1;
-            }
-            break;
-        case HID_USAGE_KEY_DOWN:
-            if (*modifiers & MOD_ALT) {
-                vc_device_scroll_viewport(g_active_vc, 1);
-                consumed = 1;
-            }
-            break;
-        case HID_USAGE_KEY_PAGEUP:
-            if (*modifiers & MOD_SHIFT) {
-                vc_device_scroll_viewport(g_active_vc, -(vc_device_rows(g_active_vc) / 2));
-                consumed = 1;
-            }
-            break;
-        case HID_USAGE_KEY_PAGEDOWN:
-            if (*modifiers & MOD_SHIFT) {
-                vc_device_scroll_viewport(g_active_vc, vc_device_rows(g_active_vc) / 2);
-                consumed = 1;
-            }
-            break;
-
-        case HID_USAGE_KEY_DELETE:
-            // Provide a CTRL-ALT-DEL reboot sequence
-            if ((*modifiers & MOD_CTRL) && (*modifiers & MOD_ALT)) {
-
-                int fd;
-                // Send the reboot command to devmgr
-                if ((fd = open("/dev/class/misc/dmctl", O_WRONLY)) >= 0) {
-                    write(fd, "reboot", strlen("reboot"));
-                    close(fd);
-                }
-                consumed = 1;
-            }
-            break;
-
-        // eat everything else
-        default:; // nothing
-        }
+        if (vc_handle_control_keys(keycode, *modifiers))
+            consumed = true;
     }
 
     hid_kbd_released_keys(&key_state[*prev_idx], &key_state[*cur_idx], &key_delta);
