@@ -21,7 +21,7 @@ interface ViewProvider {
   // and forwarding the |view_owner| interface request to
   // |ViewManager.CreateView()|.
   //
-  // The caller may provide services to the view via the |services|
+  // The caller may request services from the created view via the |services|
   // service provider.
   CreateView(ViewOwner& view_owner,
              modular.ServiceProvider&? services);
