@@ -4,6 +4,8 @@
 
 static_library("hci") {
   sources = [
+    "advertising_report_parser.cc",
+    "advertising_report_parser.h",
     "command_channel.cc",
     "command_channel.h",
     "command_packet.cc",
@@ -26,6 +28,7 @@ executable("tests") {
   output_name = "hci_unittests"
 
   sources = [
+    "advertising_report_parser_unittest.cc",
     "command_channel_unittest.cc",
     "packet_unittest.cc",
   ]

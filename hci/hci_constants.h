@@ -564,6 +564,43 @@ enum class LEAdvertisingType : uint8_t {
   // The rest is reserved for future use
 };
 
+// LE Advertising event types that can be reported in a LE Advertising Report
+// event.
+enum class LEAdvertisingEventType : uint8_t {
+  // Connectable and scannable undirected advertising (ADV_IND)
+  kAdvInd = 0x00,
+
+  // Connectable directed advertising (ADV_DIRECT_IND)
+  kAdvDirectInd = 0x01,
+
+  // Scannable undirected advertising (ADV_SCAN_IND)
+  kAdvScanInd = 0x02,
+
+  // Non connectable undirected advertising (ADV_NONCONN_IND)
+  kAdvNonConnInd = 0x03,
+
+  // Scan Response (SCAN_RSP)
+  kScanRsp = 0x04,
+
+  // The rest is reserved for future use
+};
+
+// Possible values that can be reported for the |address_type| parameter in a LE
+// Advertising Report event.
+enum class LEAddressType : uint8_t {
+  // Public Device Address
+  kPublic = 0x00,
+
+  // Random Device Address
+  kRandom = 0x01,
+
+  // Public Identity Address (Corresponds to Resolved Private Address)
+  kPublicIdentity = 0x02,
+
+  // Random (static) Identity Address (Corresponds to Resolved Private Address)
+  kRandomIdentity = 0x03,
+};
+
 // Possible values that can be used for the |own_address_type| parameter in a
 // HCI_LE_Set_Advertising_Parameters or a HCI_LE_Set_Scan_Parameters command.
 // (see Core Spec v5.0, Vol 2, Part E, Sections 7.8.5 and 7.8.10)
@@ -678,6 +715,9 @@ enum class LEScanFilterPolicy : uint8_t {
 // The maximum length of advertising data that can get passed to the
 // HCI_LE_Set_Advertising_Data command.
 constexpr size_t kMaxLEAdvertisingDataLength = 0x1F;  // (31)
+
+// Invalid RSSI value.
+constexpr int8_t kRSSIInvalid = 127;
 
 // The maximum length of Local Name that can be assigned to a BR/EDR controller,
 // in octets.

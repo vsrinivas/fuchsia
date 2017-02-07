@@ -397,6 +397,61 @@ struct NumberOfCompletedPacketsEventParams {
   NumberOfCompletedPacketsEventData data[0];
 } __PACKED;
 
+// =========================
+// LE Meta Event (v4.0) (LE)
+constexpr EventCode kLEMetaEventCode = 0x3E;
+
+struct LEMetaEventParams {
+  // The event code for the LE subevent.
+  EventCode subevent_code;
+
+  // Beginning of parameters that are specific to the LE subevent.
+  uint8_t subevent_parameters[0];
+} __PACKED;
+
+// LE Advertising Report Event
+constexpr EventCode kLEAdvertisingReportSubeventCode = 0x02;
+
+struct LEAdvertisingReportData {
+  // The event type.
+  LEAdvertisingEventType event_type;
+
+  // Type of |address| for the advertising device.
+  LEAddressType address_type;
+
+  // Public Device Address, Random Device Address, Public Identity Address or
+  // Random (static) Identity Address of the advertising device.
+  common::DeviceAddress address;
+
+  // Length of the advertising data payload.
+  uint8_t length_data;
+
+  // The begining of |length_data| octets of advertising or scan response data
+  // formatted as defined in Core Spec v5.0, Vol 3, Part C, Section 11.
+  uint8_t data[0];
+
+  // Immediately following |data| there is a single octet field containing the
+  // received signal strength for this advertising report. Since |data| has a
+  // variable length we do not declare it as a field within this struct.
+  //
+  //   Range: -127 <= N <= +20
+  //   Units: dBm
+  //   If N == 127: RSSI is not available.
+  //
+  // int8_t rssi;
+} __PACKED;
+
+struct LEAdvertisingReportSubeventParams {
+  // Number of LEAdvertisingReportData instances contained in the array
+  // |reports|.
+  uint8_t num_reports;
+
+  // Beginning of LEAdvertisingReportData array. Since each report data has a
+  // variable length, the contents of |reports| this is declared as an array of
+  // uint8_t.
+  uint8_t reports[0];
+} __PACKED;
+
 // ================================================================
 // Number Of Completed Data Blocks Event (v3.0 + HS) (BR/EDR & AMP)
 constexpr EventCode kNumberOfCompletedDataBlocksEventCode = 0x48;
