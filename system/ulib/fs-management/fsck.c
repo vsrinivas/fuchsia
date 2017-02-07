@@ -10,12 +10,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <magenta/compiler.h>
 #include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
-
-#define arraylen(arr) (sizeof(arr) / sizeof(arr[0]))
 
 static mx_status_t fsck_minfs(const char* devicepath, LaunchCallback cb) {
     mx_handle_t hnd[MXIO_MAX_HANDLES * 2];
@@ -34,12 +33,12 @@ static mx_status_t fsck_minfs(const char* devicepath, LaunchCallback cb) {
     n += status;
 
     const char* argv[] = { "/boot/bin/minfs", "fsck" };
-    return cb(arraylen(argv), argv, hnd, ids, n);
+    return cb(countof(argv), argv, hnd, ids, n);
 }
 
 static mx_status_t fsck_fat(const char* devicepath, LaunchCallback cb) {
     const char* argv[] = { "/boot/bin/fsck-msdosfs", devicepath };
-    return cb(arraylen(argv), argv, NULL, NULL, 0);
+    return cb(countof(argv), argv, NULL, NULL, 0);
 }
 
 mx_status_t fsck(const char* devicepath, disk_format_t df, LaunchCallback cb) {

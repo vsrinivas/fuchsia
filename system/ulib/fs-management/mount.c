@@ -10,13 +10,13 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <magenta/compiler.h>
 #include <magenta/device/devmgr.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/util.h>
 
 #define HEADER_SIZE 4096
-#define arraylen(arr) (sizeof(arr) / sizeof(arr[0]))
 
 static const uint8_t minfs_magic[16] = {
     0x21, 0x4d, 0x69, 0x6e, 0x46, 0x53, 0x21, 0x00,
@@ -90,7 +90,7 @@ static mx_status_t mount_minfs(int devicefd, const char* mountpath, const mount_
         printf("fs_mount: Launching Minfs\n");
     }
     const char* argv[] = { "/boot/bin/minfs", "mount" };
-    return cb(arraylen(argv), argv, hnd, ids, n);
+    return cb(countof(argv), argv, hnd, ids, n);
 }
 
 static mx_status_t mount_fat(int devicefd, const char* mountpath, const mount_options_t* options,
@@ -128,7 +128,7 @@ static mx_status_t mount_fat(int devicefd, const char* mountpath, const mount_op
         blockfd_arg,
         "mount",
     };
-    return cb(arraylen(argv), argv, hnd, ids, n);
+    return cb(countof(argv), argv, hnd, ids, n);
 }
 
 mx_status_t mount(int devicefd, const char* mountpath,
