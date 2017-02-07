@@ -27,6 +27,7 @@ static_library("ftl") {
     "arraysize.h",
     "command_line.cc",
     "command_line.h",
+    "compiler_specific.h",
     "debug/debugger.cc",
     "debug/debugger.h",
     # TODO(abarth): Move files/* out to its own library.
