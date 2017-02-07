@@ -9,6 +9,7 @@
 
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <magenta/compiler.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <magenta/syscalls/debug.h>
@@ -325,8 +326,8 @@ bool setup_inferior(const char* name, launchpad_t** out_lp, mx_handle_t* out_inf
 
     launchpad_t* lp;
     unittest_printf("Creating process \"%s\"\n", name);
-    status = create_inferior(name, ARRAY_SIZE(argv), argv, NULL,
-                             ARRAY_SIZE(handles), handles, handle_ids, &lp);
+    status = create_inferior(name, countof(argv), argv, NULL,
+                             countof(handles), handles, handle_ids, &lp);
     ASSERT_EQ(status, NO_ERROR, "failed to create inferior");
 
     // Note: |inferior| is a borrowed handle here.

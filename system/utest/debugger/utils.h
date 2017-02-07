@@ -10,8 +10,6 @@
 
 #include <magenta/syscalls.h>
 
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-
 enum message {
     // Force the type to be signed, avoids mismatch clashes in unittest macros.
     MSG_FORCE_SIGNED = -1,
