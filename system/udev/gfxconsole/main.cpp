@@ -444,6 +444,92 @@ static mx_status_t vc_device_release(mx_device_t* dev) {
     return NO_ERROR;
 }
 
+// Converts the given HID keycode into an equivalent ANSI (VT100) byte
+// sequence, for the given modifier key state and keymap.  This writes the
+// result into |buf| and returns the number of bytes that were written.
+static uint32_t hid_key_to_ansi_code(uint8_t keycode, int modifiers,
+                                     keychar_t* keymap, char* buf) {
+    uint8_t ch = hid_map_key(keycode, modifiers & MOD_SHIFT, keymap);
+    if (ch) {
+        if (modifiers & MOD_CTRL) {
+            uint8_t sub = modifiers & MOD_SHIFT ? 'A' : 'a';
+            buf[0] = (char)(ch - sub + 1);
+        } else {
+            buf[0] = ch;
+        }
+        return 1;
+    }
+
+    switch (keycode) {
+    // generate special stuff for a few different keys
+    case HID_USAGE_KEY_ENTER:
+    case HID_USAGE_KEY_KP_ENTER:
+        buf[0] = '\n';
+        return 1;
+    case HID_USAGE_KEY_BACKSPACE:
+        buf[0] = '\b';
+        return 1;
+    case HID_USAGE_KEY_TAB:
+        buf[0] = '\t';
+        return 1;
+    case HID_USAGE_KEY_ESC:
+        buf[0] = 0x1b;
+        return 1;
+
+    // generate vt100 key codes for arrows
+    case HID_USAGE_KEY_UP:
+        buf[0] = 0x1b;
+        buf[1] = '[';
+        buf[2] = 65;
+        return 3;
+    case HID_USAGE_KEY_DOWN:
+        buf[0] = 0x1b;
+        buf[1] = '[';
+        buf[2] = 66;
+        return 3;
+    case HID_USAGE_KEY_RIGHT:
+        buf[0] = 0x1b;
+        buf[1] = '[';
+        buf[2] = 67;
+        return 3;
+    case HID_USAGE_KEY_LEFT:
+        buf[0] = 0x1b;
+        buf[1] = '[';
+        buf[2] = 68;
+        return 3;
+    case HID_USAGE_KEY_HOME:
+        buf[0] = 0x1b;
+        buf[1] = '[';
+        buf[2] = 'H';
+        return 3;
+    case HID_USAGE_KEY_END:
+        buf[0] = 0x1b;
+        buf[1] = '[';
+        buf[2] = 'F';
+        return 3;
+    case HID_USAGE_KEY_DELETE:
+        buf[0] = 0x1b;
+        buf[1] = '[';
+        buf[2] = '3';
+        buf[3] = '~';
+        return 4;
+    case HID_USAGE_KEY_PAGEUP:
+        buf[0] = 0x1b;
+        buf[1] = '[';
+        buf[2] = '5';
+        buf[3] = '~';
+        return 4;
+    case HID_USAGE_KEY_PAGEDOWN:
+        buf[0] = 0x1b;
+        buf[1] = '[';
+        buf[2] = '6';
+        buf[3] = '~';
+        return 4;
+    }
+    // ignore unknown keys; character keys were handled above
+    return 0;
+}
+
 static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_t off) {
     vc_device_t* vc = get_vc_device(dev);
 
@@ -473,108 +559,14 @@ static ssize_t vc_device_read(mx_device_t* dev, void* buf, size_t count, mx_off_
         }
 
         uint8_t keycode;
-        char* str = vc->chardata;
         hid_kbd_parse_report(report, &vc->key_states[cur_idx]);
 
         hid_kbd_pressed_keys(&vc->key_states[prev_idx], &vc->key_states[cur_idx], &key_delta);
         hid_for_every_key(&key_delta, keycode) {
-            uint8_t ch = hid_map_key(keycode, vc->modifiers & MOD_SHIFT, vc->keymap);
-            if (ch) {
-                if (vc->modifiers & MOD_CTRL) {
-                    uint8_t sub = vc->modifiers & MOD_SHIFT ? 'A' : 'a';
-                    str[0] = (char)(ch - sub + 1);
-                } else {
-                    str[0] = ch;
-                }
-                vc->charcount = 1;
-                continue;
-            }
-
             vc->modifiers |= modifiers_from_keycode(keycode);
 
-            switch (keycode) {
-            // generate special stuff for a few different keys
-            case HID_USAGE_KEY_ENTER:
-            case HID_USAGE_KEY_KP_ENTER:
-                str[0] = '\n';
-                vc->charcount = 1;
-                break;
-            case HID_USAGE_KEY_BACKSPACE:
-                str[0] = '\b';
-                vc->charcount = 1;
-                break;
-            case HID_USAGE_KEY_TAB:
-                str[0] = '\t';
-                vc->charcount = 1;
-                break;
-            case HID_USAGE_KEY_ESC:
-                str[0] = 0x1b;
-                vc->charcount = 1;
-                break;
-
-            // generate vt100 key codes for arrows
-            case HID_USAGE_KEY_UP:
-                str[0] = 0x1b;
-                str[1] = '[';
-                str[2] = 65;
-                vc->charcount = 3;
-                break;
-            case HID_USAGE_KEY_DOWN:
-                str[0] = 0x1b;
-                str[1] = '[';
-                str[2] = 66;
-                vc->charcount = 3;
-                break;
-            case HID_USAGE_KEY_RIGHT:
-                str[0] = 0x1b;
-                str[1] = '[';
-                str[2] = 67;
-                vc->charcount = 3;
-                break;
-            case HID_USAGE_KEY_LEFT:
-                str[0] = 0x1b;
-                str[1] = '[';
-                str[2] = 68;
-                vc->charcount = 3;
-                break;
-            case HID_USAGE_KEY_HOME:
-                str[0] = 0x1b;
-                str[1] = '[';
-                str[2] = 'H';
-                vc->charcount = 3;
-                break;
-            case HID_USAGE_KEY_END:
-                str[0] = 0x1b;
-                str[1] = '[';
-                str[2] = 'F';
-                vc->charcount = 3;
-                break;
-            case HID_USAGE_KEY_DELETE:
-                str[0] = 0x1b;
-                str[1] = '[';
-                str[2] = '3';
-                str[3] = '~';
-                vc->charcount = 4;
-                break;
-            case HID_USAGE_KEY_PAGEUP:
-                str[0] = 0x1b;
-                str[1] = '[';
-                str[2] = '5';
-                str[3] = '~';
-                vc->charcount = 4;
-                break;
-            case HID_USAGE_KEY_PAGEDOWN:
-                str[0] = 0x1b;
-                str[1] = '[';
-                str[2] = '6';
-                str[3] = '~';
-                vc->charcount = 4;
-                break;
-
-            default:
-                // ignore unknown keys; character keys were handled above
-                break;
-            }
+            vc->charcount = hid_key_to_ansi_code(keycode, vc->modifiers, vc->keymap, vc->chardata);
+            assert(vc->charcount <= sizeof(vc->chardata));
         }
 
         hid_kbd_released_keys(&vc->key_states[prev_idx], &vc->key_states[cur_idx], &key_delta);
