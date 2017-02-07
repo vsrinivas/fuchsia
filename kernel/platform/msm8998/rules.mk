@@ -13,7 +13,7 @@ MODULE := $(LOCAL_DIR)
 WITH_SMP := 1
 
 # TODO - change to 8 after we are able to bring up gold CPUs
-SMP_MAX_CPUS := 4
+SMP_MAX_CPUS := 8
 
 LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
 
@@ -51,6 +51,7 @@ MODULE_DEPS += \
 	lib/fdt \
 	dev/timer/arm_generic \
 	dev/interrupt/arm_gicv3 \
+	dev/psci \
 
 include make/module.mk
 

@@ -18,6 +18,7 @@
 #include <dev/timer/arm_generic.h>
 #include <dev/display.h>
 #include <dev/hw_rng.h>
+#include <dev/psci.h>
 
 #include <platform.h>
 #include <dev/interrupt.h>
@@ -133,12 +134,13 @@ void platform_early_init(void)
                     (MSM8998_BOOT_APSS2_START - MSM8998_BOOT_HYP_START)/ PAGE_SIZE,
                     &list);
 
-    /* boot the secondary cpus using the Power State Coordintion Interface */
-    ulong psci_call_num = 0x84000000 + 3; /* SMC32 CPU_ON */
-    psci_call_num += 0x40000000; /* SMC64 */
-    for (uint i = 1; i < SMP_MAX_CPUS; i++) {
-        psci_call(psci_call_num, i, MEMBASE + KERNEL_LOAD_OFFSET, 0);
-    }
+    psci_cpu_on(0,1, MEMBASE + KERNEL_LOAD_OFFSET);
+    psci_cpu_on(0,2, MEMBASE + KERNEL_LOAD_OFFSET);
+    psci_cpu_on(0,3, MEMBASE + KERNEL_LOAD_OFFSET);
+    psci_cpu_on(1,0, MEMBASE + KERNEL_LOAD_OFFSET);
+    psci_cpu_on(1,1, MEMBASE + KERNEL_LOAD_OFFSET);
+    psci_cpu_on(1,2, MEMBASE + KERNEL_LOAD_OFFSET);
+    psci_cpu_on(1,3, MEMBASE + KERNEL_LOAD_OFFSET);
 }
 
 void platform_init(void)
