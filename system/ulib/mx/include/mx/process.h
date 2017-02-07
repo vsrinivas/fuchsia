@@ -28,6 +28,10 @@ public:
         return *this;
     }
 
+    // Rather than creating a process directly with this syscall,
+    // consider using the launchpad library, which properly sets up
+    // the many details of creating a process beyond simply creating
+    // the kernel structure.
     static mx_status_t create(const job& job, const char* name, uint32_t name_len,
                               uint32_t flags, process* proc, vmar* root_vmar);
 
