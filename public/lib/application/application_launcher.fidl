@@ -34,21 +34,21 @@ struct ApplicationLaunchInfo {
   map<uint32, handle>? startup_handles;
 };
 
-// An interface for creating applications.
+// An interface for creating application instances.
 //
 // Typically obtained via |ApplicationEnvironment.GetApplicationLauncher|.
 [ServiceName="modular.ApplicationLauncher"]
 interface ApplicationLauncher {
   // Creates a new instance of the application described by |launch_info|.
   //
-  // The application is created in the |ApplicationEnvironment| associated with
-  // this |ApplicationLauncher|. When creating the application, the environment
-  // requests the environment services for this application from its
-  // |ApplicationEnvironmentHost|.
+  // The application instance is created in the |ApplicationEnvironment|
+  // associated with this |ApplicationLauncher|. When creating the application,
+  // the environment requests the environment services for this application from
+  // its |ApplicationEnvironmentHost|.
   //
   // The |controller| can be used to control the lifecycle of the created
-  // application. If an |ApplicationController|'s interface is request, the
-  // application will be killed when the interface is closed.
+  // application instance. If an |ApplicationController|'s interface is
+  // requested, the application instance is killed when the interface is closed.
   CreateApplication(ApplicationLaunchInfo launch_info,
                     ApplicationController&? controller);
 };
