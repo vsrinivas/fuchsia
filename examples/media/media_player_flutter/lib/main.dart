@@ -52,7 +52,9 @@ bool _play(Asset asset) {
   }
 
   _controller.uri = _leafAssetToPlay.uri;
-  _controller.play();
+  if (_leafAssetToPlay.type != AssetType.remote) {
+    _controller.play();
+  }
   return true;
 }
 
@@ -68,7 +70,9 @@ bool _playNext() {
 
   _leafAssetToPlay = _assetToPlay.children[_playlistIndex];
   _controller.uri = _leafAssetToPlay.uri;
-  _controller.play();
+  if (_leafAssetToPlay.type != AssetType.remote) {
+    _controller.play();
+  }
   return true;
 }
 
@@ -221,7 +225,8 @@ class _ChooserScreenState extends State<_ChooserScreen> {
         return;
       } on ArgumentError {
         // File doesn't exist. Continue.
-      } on FormatException {
+      } on FormatException catch (e) {
+        print('Failed to parse config $fileName: $e');
         io.exit(0);
         return;
       }
@@ -243,6 +248,9 @@ class _ChooserScreenState extends State<_ChooserScreen> {
         break;
       case AssetType.playlist:
         iconData = Icons.playlist_play;
+        break;
+      case AssetType.remote:
+        iconData = Icons.settings_remote;
         break;
     }
 

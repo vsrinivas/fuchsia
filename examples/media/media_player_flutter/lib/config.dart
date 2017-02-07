@@ -61,6 +61,9 @@ Asset _convertAsset(dynamic json) {
           case 'playlist':
             type = AssetType.playlist;
             break;
+          case 'remote':
+            type = AssetType.remote;
+            break;
           default:
             throw new FormatException(
               'Config file is malformed: $value is not a valid type'
@@ -96,6 +99,8 @@ Asset _convertAsset(dynamic json) {
         'Config file is malformed: an asset must have a URI or children, not'
         ' both'
       );
+    } else if (_isRemoteUri(uri)) {
+      type = AssetType.remote;
     } else if (_isMovieUri(uri)) {
       type = AssetType.movie;
     } else if (_isMusicUri(uri)) {
@@ -183,6 +188,10 @@ bool _isMusicUri(Uri uri) {
   }
 
   return false;
+}
+
+bool _isRemoteUri(Uri uri) {
+  return uri.scheme == 'remoteplayer';
 }
 
 String _extension(Uri uri) {

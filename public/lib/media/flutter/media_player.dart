@@ -34,6 +34,11 @@ class _MediaPlayerState extends State<MediaPlayer> {
   void initState() {
     assert(config.controller != null);
     config.controller.addListener(_handleControllerChanged);
+    if (_shouldShowControlOverlay()) {
+      _ensureProgressTimer();
+    } else {
+      _ensureNoProgressTimer();
+    }
     super.initState();
   }
 
@@ -67,7 +72,7 @@ class _MediaPlayerState extends State<MediaPlayer> {
 
   /// Determines of the control overlay should be shown.
   bool _shouldShowControlOverlay() {
-    return config.controller.audioOnly || !config.controller.playing ||
+    return !config.controller.hasVideo || !config.controller.playing ||
       _hideTimer != null;
   }
 

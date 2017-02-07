@@ -61,7 +61,11 @@ Here's an example config file:
             "album": "At the Close of the Century Disc 2"
           }
         ]
-      }
+      },
+      {
+        "uri": "remoteplayer://myacer/only_media_player",
+        "title": "Remote player on myacer",
+      },
     ]
 
 The config file must be well-formed JSON specifying an array of objects. The
@@ -73,6 +77,12 @@ Specifies the URI from which to obtain the content. The file scheme is
 supported for files on the device. This field is prohibited for playlists and
 required for all other item types.
 
+To control a remote player that's already running, use a URI of the form
+"remoteplayer://<device>/<service>" where <device> is the name of the device
+on which the remote player is running and <service> is the service name with
+which the player is registered. Currently, all media players are registered
+under the service name "only_media_player".
+
 ### children
 
 Specifies an array of items to populate this item, which must be a playlist.
@@ -80,14 +90,14 @@ This field is required for playlists and prohibited for all other item types.
 
 ### type
 
-Specifies the type of the item, one of "movie", "music" or "playlist". This
-field is optional. If it's absent, the app will attempt to infer the type of
-the content.
+Specifies the type of the item, one of "movie", "music", "playlist" or "remote".
+This field is optional. If it's absent, the app will attempt to infer the type
+of the content.
 
 ### title
 
 The title of the item. This field is optional. If it's absent, the item will be
-titled '<untitled>' in the content chooser. The app will attempt to get the
+titled "(untitled)" in the content chooser. The app will attempt to get the
 title from the content, if applicable.
 
 ### artist

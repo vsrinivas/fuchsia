@@ -4,19 +4,23 @@
 
 /// The asset types.
 enum AssetType {
-  /// Describes single assets containing both audio and video.
+  /// Individual assets containing both audio and video.
   movie,
 
-  /// Describes single assets containing only audio.
+  /// Individual assets containing only audio.
   music,
 
-  /// Describes assets that consist of a list of other assets.
-  playlist
+  /// Composite assets that consist of a list of other assets.
+  playlist,
+
+  /// Remote player
+  remote,
 }
 
 /// Describes an asset.
 class Asset {
-  /// Uri of the asset. Must be null for playlists.
+  /// Uri of the asset. Must be null for playlists, required for all other
+  /// asset types.
   final Uri uri;
 
   /// Type of the asset.

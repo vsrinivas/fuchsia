@@ -23,6 +23,8 @@ import 'package:lib.fidl.dart/bindings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+const String _remotePlayerProxyScheme = 'remoteplayer';
+
 /// Controller for MediaPlayer widgets.
 class MediaPlayerController extends ChangeNotifier {
   final MediaServiceProxy _mediaService = new MediaServiceProxy();
@@ -42,7 +44,7 @@ class MediaPlayerController extends ChangeNotifier {
   bool _loading;
   bool _playing;
   bool _ended;
-  bool _audioOnly;
+  bool _hasVideo;
 
   Size _videoSize;
   TimelineFunction _timelineFunction;
@@ -87,10 +89,10 @@ class MediaPlayerController extends ChangeNotifier {
   /// Gets the video view connection.
   ChildViewConnection get videoViewConnection => _videoViewConnection;
 
-  /// Indicates whether the current content is audio-only
-  bool get audioOnly => _audioOnly;
+  /// Indicates whether the player has video to present.
+  bool get hasVideo => _hasVideo;
 
-  /// Indicates whether the current content is audio-only
+  /// Indicates whether the player is in the process of loading content.
   bool get loading => _loading;
 
   /// Indicates whether the player is currently playing.
@@ -117,14 +119,17 @@ class MediaPlayerController extends ChangeNotifier {
       return Duration.ZERO;
     }
 
+    return new Duration(
+      microseconds: _progressNanoseconds.clamp(0, _durationNanoseconds) ~/ 1000
+    );
+  }
+
+  int get _progressNanoseconds {
     // Estimate FrameInfo::presentationTime.
     int microseconds = (new DateTime.now()).microsecondsSinceEpoch -
       _progressBarMicrosecondsSinceEpoch;
     int referenceNanoseconds = microseconds * 1000 + _progressBarReferenceTime;
-    int progressNanoseconds =
-      _timelineFunction(referenceNanoseconds).clamp(0, _durationNanoseconds);
-
-    return new Duration(microseconds: progressNanoseconds ~/ 1000);
+    return _timelineFunction(referenceNanoseconds);
   }
 
   /// Starts or resumes playback.
@@ -186,7 +191,7 @@ class MediaPlayerController extends ChangeNotifier {
     _playing = false;
     _ended = false;
     _loading = true;
-    _audioOnly = true;
+    _hasVideo = false;
 
     _problem = null;
     _metadata = null;
@@ -204,6 +209,19 @@ class MediaPlayerController extends ChangeNotifier {
 
     _active = true;
 
+    if (_uri.scheme == _remotePlayerProxyScheme) {
+      _createRemotePlayerProxy();
+    } else {
+      _createLocalPlayer();
+    }
+
+    if (_problem == null) {
+      _handleStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
+    }
+  }
+
+  /// Creates a local player.
+  void _createLocalPlayer() {
     InterfacePair<MediaRenderer> audioMediaRenderer =
       new InterfacePair<MediaRenderer>();
     _mediaService.createAudioRenderer(
@@ -226,7 +244,7 @@ class MediaPlayerController extends ChangeNotifier {
 
     _videoRenderer.getVideoSize((fidl.Size size) {
       _videoSize = new Size(size.width.toDouble(), size.height.toDouble());
-      _audioOnly = false;
+      _hasVideo = true;
       notifyListeners();
     });
 
@@ -242,8 +260,23 @@ class MediaPlayerController extends ChangeNotifier {
       videoMediaRenderer.passHandle(),
       _mediaPlayer.ctrl.request()
     );
+  }
 
-    _handleStatusUpdates(mp.MediaPlayer.kInitialStatus, null);
+  /// Creates a proxy to a remote player.
+  void _createRemotePlayerProxy() {
+    if (!_uri.hasAuthority || _uri.pathSegments.length != 1) {
+      // URI must have an authority and one path segment.
+      _problem = new Problem()
+        ..type = Problem.kProblemAssetNotFound
+        ..details = 'Remote player URI ${_uri.toString()} is malformed.';
+      return;
+    }
+
+    _mediaService.createPlayerProxy(
+      _uri.authority,
+      _uri.pathSegments[0],
+      _mediaPlayer.ctrl.request()
+    );
   }
 
   // Handles a status update from the player and requests a new update. Call
@@ -271,6 +304,16 @@ class MediaPlayerController extends ChangeNotifier {
         _durationNanoseconds = _metadata.duration;
       }
 
+      if (_progressBarReady && _progressNanoseconds < 0) {
+        // We thought the progress bar was ready, but we're getting negative
+        // progress values. That means our assumption about reference time
+        // correlation is probably wrong. We need to prepare the progress bar
+        // again. See the comment in |_prepareProgressBar|.
+        // TODO(dalesat): Remove once we're given access to presentation time.
+        // https://fuchsia.atlassian.net/browse/US-130
+        _progressBarReady = false;
+      }
+
       if (_timelineFunction != null && _timelineFunction.referenceTime != 0 &&
         !_progressBarReady) {
         _prepareProgressBar();
@@ -293,6 +336,12 @@ class MediaPlayerController extends ChangeNotifier {
     // because flutter doesn't provide access to FrameInfo::presentationTime.
     // TODO(dalesat): Fix once we're given access to presentation time.
     // https://fuchsia.atlassian.net/browse/US-130
+    // One instance in which our correlation assumption falls down is when
+    // we're connecting to a (remote) player whose current timeline was
+    // established some time ago. In this case, the reference time in the
+    // timeline function correlates to a past time, and the progress values we
+    // get will be negative. When that happens, this function should be called
+    // again.
     _progressBarMicrosecondsSinceEpoch =
       (new DateTime.now()).microsecondsSinceEpoch;
     _progressBarReferenceTime = _timelineFunction.referenceTime;
