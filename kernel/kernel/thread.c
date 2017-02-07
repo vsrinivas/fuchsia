@@ -37,14 +37,15 @@
 #include <magenta/c_user_thread.h>
 #endif
 
-#if THREAD_STATS
 struct thread_stats thread_stats[SMP_MAX_CPUS];
-#endif
 
 #define STACK_DEBUG_BYTE (0x99)
 #define STACK_DEBUG_WORD (0x99999999)
 
 #define DEBUG_THREAD_CONTEXT_SWITCH 0
+
+#define TRACE_CONTEXT_SWITCH(str, x...) \
+    do { if (DEBUG_THREAD_CONTEXT_SWITCH) printf("CS " str, ## x); } while (0)
 
 #define THREAD_INITIAL_TIME_SLICE ((lk_bigtime_t)50000000u) // 50ms
 #define THREAD_TICK_RATE ((lk_bigtime_t)10000000u) // 10ms
@@ -461,9 +462,7 @@ void thread_kill(thread_t *t, bool block)
             break;
         case THREAD_RUNNING:
             /* thread is running (on another cpu) */
-#if WITH_SMP
             mp_reschedule(1u << t->curr_cpu, 0);
-#endif
             break;
         case THREAD_BLOCKED:
             /* thread is blocked on something and marked interruptable */
@@ -531,9 +530,6 @@ __NO_RETURN static int idle_thread_routine(void *arg)
  */
 void thread_resched(void)
 {
-    thread_t *oldthread;
-    thread_t *newthread;
-
     thread_t *current_thread = get_current_thread();
     uint cpu = arch_curr_cpu_num();
 
@@ -543,14 +539,16 @@ void thread_resched(void)
 
     THREAD_STATS_INC(reschedules);
 
-    newthread = sched_get_top_thread(cpu);
+    /* pick a new thread to run */
+    thread_t *newthread = sched_get_top_thread(cpu);
 
     DEBUG_ASSERT(newthread);
 
     newthread->state = THREAD_RUNNING;
 
-    oldthread = current_thread;
+    thread_t *oldthread = current_thread;
 
+    /* if it's the same thread as we're already running, exit */
     if (newthread == oldthread)
         return;
 
@@ -567,7 +565,7 @@ void thread_resched(void)
     thread_set_curr_cpu(oldthread, -1);
     thread_set_curr_cpu(newthread, cpu);
 
-#if WITH_SMP
+    /* set the cpu state based on the new thread we've picked */
     if (thread_is_idle(newthread)) {
         mp_set_cpu_idle(cpu);
     } else {
@@ -579,9 +577,7 @@ void thread_resched(void)
     } else {
         mp_set_cpu_non_realtime(cpu);
     }
-#endif
 
-#if THREAD_STATS
     THREAD_STATS_INC(context_switches);
 
     if (thread_is_idle(oldthread)) {
@@ -590,31 +586,24 @@ void thread_resched(void)
     if (thread_is_idle(newthread)) {
         thread_stats[cpu].last_idle_timestamp = now;
     }
-#endif
 
-#if WITH_LIB_KTRACE
     ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid, cpu | (oldthread->state << 16),
            (uint32_t)(uintptr_t)oldthread, (uint32_t)(uintptr_t)newthread);
-#endif
 
 #if PLATFORM_HAS_DYNAMIC_TIMER
     if (thread_is_real_time_or_idle(newthread)) {
         if (!thread_is_real_time_or_idle(oldthread)) {
             /* if we're switching from a non real time to a real time, cancel
              * the preemption timer. */
-#if DEBUG_THREAD_CONTEXT_SWITCH
-            dprintf(ALWAYS, "arch_context_switch: stop preempt, cpu %u, old %p (%s), new %p (%s)\n",
+            TRACE_CONTEXT_SWITCH("stop preempt, cpu %u, old %p (%s), new %p (%s)\n",
                     cpu, oldthread, oldthread->name, newthread, newthread->name);
-#endif
             timer_cancel(&preempt_timer[cpu]);
         }
     } else if (thread_is_real_time_or_idle(oldthread)) {
         /* if we're switching from a real time (or idle thread) to a regular one,
          * set up a periodic timer to run our preemption tick. */
-#if DEBUG_THREAD_CONTEXT_SWITCH
-        dprintf(ALWAYS, "arch_context_switch: start preempt, cpu %u, old %p (%s), new %p (%s)\n",
+        TRACE_CONTEXT_SWITCH("start preempt, cpu %u, old %p (%s), new %p (%s)\n",
                 cpu, oldthread, oldthread->name, newthread, newthread->name);
-#endif
         timer_set_periodic(&preempt_timer[cpu], THREAD_TICK_RATE_MS, (timer_callback)thread_timer_tick, NULL);
     }
 #endif
@@ -625,12 +614,10 @@ void thread_resched(void)
     /* do the switch */
     set_current_thread(newthread);
 
-#if DEBUG_THREAD_CONTEXT_SWITCH
-    dprintf(ALWAYS, "arch_context_switch: cpu %u, old %p (%s, pri %d, flags 0x%x), new %p (%s, pri %d, flags 0x%x)\n",
+    TRACE_CONTEXT_SWITCH("cpu %u, old %p (%s, pri %d, flags 0x%x), new %p (%s, pri %d, flags 0x%x)\n",
             cpu, oldthread, oldthread->name, oldthread->priority,
             oldthread->flags, newthread, newthread->name,
             newthread->priority, newthread->flags);
-#endif
 
 #if THREAD_STACK_BOUNDS_CHECK
     /* check that the old thread has not blown its stack just before pushing its context */
@@ -647,10 +634,6 @@ void thread_resched(void)
             }
         }
     }
-#endif
-
-#ifdef WITH_LIB_UTHREAD
-    uthread_context_switch(oldthread, newthread);
 #endif
 
     /* see if we need to swap mmu context */
@@ -706,13 +689,12 @@ void thread_yield(void)
  */
 void thread_preempt(bool interrupt)
 {
-    __UNUSED thread_t *current_thread = get_current_thread();
+    thread_t *current_thread = get_current_thread();
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
     DEBUG_ASSERT(!arch_in_int_handler());
 
-#if THREAD_STATS
     if (!thread_is_idle(current_thread)) {
         /* only track when a meaningful preempt happens */
         if (interrupt) {
@@ -721,7 +703,6 @@ void thread_preempt(bool interrupt)
             THREAD_STATS_INC(preempts);
         }
     }
-#endif
 
     THREAD_LOCK(state);
 
@@ -961,13 +942,9 @@ void thread_become_idle(void)
 
     thread_t *t = get_current_thread();
 
-#if WITH_SMP
     char name[16];
     snprintf(name, sizeof(name), "idle %u", arch_curr_cpu_num());
     thread_set_name(name);
-#else
-    thread_set_name("idle");
-#endif
 
     /* mark ourself as idle */
     t->priority = IDLE_PRIORITY;

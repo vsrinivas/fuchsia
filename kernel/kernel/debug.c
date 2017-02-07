@@ -38,10 +38,8 @@ STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 1
 STATIC_COMMAND_MASKED("thread", "list kernel threads with options", &cmd_thread, CMD_AVAIL_ALWAYS)
 #endif
-#if THREAD_STATS
 STATIC_COMMAND("threadstats", "thread level statistics", &cmd_threadstats)
 STATIC_COMMAND("threadload", "toggle thread load display", &cmd_threadload)
-#endif
 STATIC_COMMAND("kill", "kill a thread", &cmd_kill)
 STATIC_COMMAND_END(kernel);
 
@@ -71,7 +69,6 @@ usage:
 }
 #endif
 
-#if THREAD_STATS
 static int cmd_threadstats(int argc, const cmd_args *argv)
 {
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
@@ -168,8 +165,6 @@ static int cmd_threadload(int argc, const cmd_args *argv)
 
     return 0;
 }
-
-#endif // THREAD_STATS
 
 static int cmd_kill(int argc, const cmd_args *argv)
 {

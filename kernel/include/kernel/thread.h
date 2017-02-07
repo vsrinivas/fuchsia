@@ -23,7 +23,6 @@ __BEGIN_CDECLS;
 
 /* debug-enable runtime checks */
 #if LK_DEBUGLEVEL > 1
-#define THREAD_STATS 1
 #define THREAD_STACK_BOUNDS_CHECK 1
 #ifndef THREAD_STACK_PADDING_SIZE
 #define THREAD_STACK_PADDING_SIZE 256
@@ -45,9 +44,6 @@ typedef void (*thread_exit_callback_t)(void *arg);
 
 /* thread local storage */
 enum thread_tls_list {
-#ifdef WITH_LIB_UTHREAD
-    TLS_ENTRY_UTHREAD,
-#endif
 #ifdef WITH_LIB_USERBOOT
     TLS_ENTRY_LKUSER,
 #endif
@@ -237,10 +233,6 @@ static inline bool thread_is_real_time_or_idle(thread_t *t)
     return !!(t->flags & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE));
 }
 
-#ifdef WITH_LIB_UTHREAD
-void uthread_context_switch(thread_t *oldthread, thread_t *newthread);
-#endif
-
 /* called on every timer tick for the scheduler to do quantum expiration */
 enum handler_return thread_timer_tick(void);
 
@@ -263,7 +255,6 @@ static inline bool thread_lock_held(void)
 }
 
 /* thread level statistics */
-#if THREAD_STATS
 struct thread_stats {
     lk_bigtime_t idle_time;
     lk_bigtime_t last_idle_timestamp;
@@ -284,12 +275,6 @@ struct thread_stats {
 extern struct thread_stats thread_stats[SMP_MAX_CPUS];
 
 #define THREAD_STATS_INC(name) do { thread_stats[arch_curr_cpu_num()].name++; } while(0)
-
-#else
-
-#define THREAD_STATS_INC(name) do { } while (0)
-
-#endif
 
 __END_CDECLS;
 
