@@ -6,30 +6,29 @@
 
 #include "apps/ledger/src/callback/asynchronous_callback.h"
 #include "apps/ledger/src/callback/waiter.h"
-#include "apps/ledger/src/glue/crypto/hash.h"
 #include "lib/ftl/functional/closure.h"
 #include "lib/ftl/functional/make_copyable.h"
+#include "third_party/murmurhash/murmurhash.h"
 
 namespace storage {
 namespace btree {
 namespace {
 
-constexpr uint8_t kMurmurHashSizeInBytes = 128 / 8;
+constexpr uint32_t kMurmurHashSeed = 0xbeef;
 
+using HashResultType = decltype(murmurhash(nullptr, 0, 0));
 using HashSliceType = uint8_t;
 
-struct Hash {
-    HashSliceType values[kMurmurHashSizeInBytes / sizeof(HashSliceType)];
+union Hash {
+    HashResultType hash;
+    HashSliceType slices[sizeof(HashResultType) / sizeof(HashSliceType)];
 };
 
 Hash FastHash(convert::ExtendedStringView value) {
-  static_assert(sizeof(Hash) == kMurmurHashSizeInBytes,
-                "Hash must be 128 bits");
+  static_assert(sizeof(Hash::slices) == sizeof(Hash::hash),
+                "Hash size is incorrect.");
 
-  std::string hash = glue::SHA256Hash(value.data(), value.size());
-  Hash result;
-  memcpy(&result, hash.data(), sizeof(result));
-  return result;
+  return { .hash =  murmurhash(value.data(), value.size(), kMurmurHashSeed) };
 }
 
 // Helper functions for btree::ForEach.
@@ -530,7 +529,7 @@ uint8_t GetNodeLevel(convert::ExtendedStringView key, uint8_t max_level) {
   }
   Hash hash = FastHash(key);
   for (size_t l = 0; l < std::min<uint8_t>(max_level, sizeof(Hash)); ++l) {
-    if (hash.values[l]) {
+    if (hash.slices[l]) {
       return l;
     }
   }
