@@ -195,4 +195,25 @@ status_t display_get_info(struct display_info *info) {
     return ERR_NOT_FOUND;
 }
 
+void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason)
+{
+    if (suggested_action == HALT_ACTION_REBOOT) {
+        ulong psci_call_num = 0x84000000 + 9; /* SYSTEM_RESET */
+        psci_call(psci_call_num, 0, 0, 0);
+    } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
+        // XXX shutdown seem to not work through psci
+        // implement shutdown via pmic
+#if 0
+        ulong psci_call_num = 0x84000000 + 8; /* SYSTEM_SHUTDOWN */
+        psci_call(psci_call_num, 0, 0, 0);
+#endif
+        printf("shutdown is unsupported\n");
+    }
 
+    // Deassert PSHold
+    *REG32(MSM8998_PSHOLD_VIRT) = 0;
+
+    // catch all fallthrough cases
+    arch_disable_ints();
+    for (;;);
+}

@@ -26,6 +26,8 @@
 
 #define MSM8998_GIC_BASE_PHYS       (MSM8998_PERIPH_BASE_PHYS + 0x17a00000)
 #define MSM8998_GIC_BASE_VIRT       (MSM8998_PERIPH_BASE_VIRT + 0x17a00000)
+#define MSM8998_PSHOLD_PHYS         (MSM8998_PERIPH_BASE_PHYS + 0x010ac000)
+#define MSM8998_PSHOLD_VIRT         (MSM8998_PERIPH_BASE_VIRT + 0x010ac000)
 
 /* interrupts */
 #define PPI_BASE    16  // first per-processor interrupt
