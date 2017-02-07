@@ -306,7 +306,7 @@ void StoryImpl::StartModule(
 
   connection.story_connection.reset(new StoryConnection(
       this, module_url, connection.module_controller_impl.get(),
-      std::move(self_request)));
+      story_provider_impl_->agent_runner(), std::move(self_request)));
 
   connections_.emplace_back(std::move(connection));
 }

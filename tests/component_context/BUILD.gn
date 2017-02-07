@@ -20,3 +20,15 @@ executable("component_context_test") {
     "//lib/mtl",
   ]
 }
+
+executable("component_context_test_agent") {
+  sources = [
+    "test_agent.cc",
+  ]
+  deps = [
+    "//apps/modular/lib/fidl:single_service_app",
+    "//apps/modular/lib/testing",
+    "//apps/modular/services/agent",
+    "//lib/mtl",
+  ]
+}

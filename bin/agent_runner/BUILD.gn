@@ -1,0 +1,34 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("public") {
+  sources = [
+    "agent_runner.h",
+  ]
+
+  deps = [
+    "//apps/modular/services/agent/agent_controller",
+    "//apps/modular/services/application",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+  ]
+}
+
+source_set("impl") {
+  sources = [
+    "agent_runner.cc",
+    "agent_context_impl.h",
+    "agent_context_impl.cc",
+  ]
+
+  deps = [
+    ":public",
+    "//apps/modular/lib/app",
+    "//apps/modular/services/agent",
+    "//apps/modular/services/agent/agent_controller",
+    "//apps/modular/services/application",
+    "//lib/fidl/cpp/bindings",
+    "//lib/ftl",
+  ]
+}

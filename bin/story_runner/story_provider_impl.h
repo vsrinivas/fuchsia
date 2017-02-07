@@ -16,6 +16,7 @@
 #include "apps/modular/services/story/story_data.fidl.h"
 #include "apps/modular/services/story/story_provider.fidl.h"
 #include "apps/modular/src/story_runner/story_storage_impl.h"
+#include "apps/modular/src/agent_runner/agent_runner.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
@@ -36,7 +37,8 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
  public:
   StoryProviderImpl(ApplicationEnvironmentPtr environment,
                     fidl::InterfaceHandle<ledger::Ledger> ledger,
-                    ledger::LedgerRepositoryPtr ledger_repository);
+                    ledger::LedgerRepositoryPtr ledger_repository,
+                    AgentRunner* agent_runner);
 
   ~StoryProviderImpl() override;
 
@@ -58,6 +60,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   }
 
   ApplicationLauncher* launcher() { return launcher_.get(); }
+  AgentRunner* agent_runner() { return agent_runner_; }
 
   // Used by StoryImpl.
   using Storage = StoryStorageImpl::Storage;
@@ -147,6 +150,7 @@ class StoryProviderImpl : public StoryProvider, ledger::PageWatcher {
   std::pair<std::string, DeleteStoryCall*> pending_deletion_;
 
   ledger::LedgerRepositoryPtr ledger_repository_;
+  AgentRunner* const agent_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(StoryProviderImpl);
 };

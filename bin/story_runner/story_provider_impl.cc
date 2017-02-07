@@ -544,11 +544,13 @@ class PreviousStoriesCall : public Operation {
 StoryProviderImpl::StoryProviderImpl(
     ApplicationEnvironmentPtr environment,
     fidl::InterfaceHandle<ledger::Ledger> ledger,
-    ledger::LedgerRepositoryPtr ledger_repository)
+    ledger::LedgerRepositoryPtr ledger_repository,
+    AgentRunner* agent_runner)
     : environment_(std::move(environment)),
       storage_(new Storage),
       page_watcher_binding_(this),
-      ledger_repository_(std::move(ledger_repository)) {
+      ledger_repository_(std::move(ledger_repository)),
+      agent_runner_(agent_runner) {
   environment_->GetApplicationLauncher(launcher_.NewRequest());
 
   ledger_.Bind(std::move(ledger));

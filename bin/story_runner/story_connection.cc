@@ -17,10 +17,12 @@ StoryConnection::StoryConnection(
     StoryImpl* const story_impl,
     const std::string& module_url,
     ModuleControllerImpl* const module_controller_impl,
+    AgentRunner* agent_runner,
     fidl::InterfaceRequest<Story> story)
     : story_impl_(story_impl),
       module_url_(module_url),
       module_controller_impl_(module_controller_impl),
+      component_context_impl_(module_url, agent_runner),
       binding_(this, std::move(story)) {}
 
 StoryConnection::~StoryConnection() {}

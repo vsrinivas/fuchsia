@@ -5,6 +5,8 @@
 #ifndef APPS_MODULAR_SRC_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
 #define APPS_MODULAR_SRC_COMPONENT_COMPONENT_CONTEXT_IMPL_H_
 
+#include <string>
+
 #include "apps/modular/services/component/component_context.fidl.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fidl/cpp/bindings/string.h"
@@ -12,11 +14,14 @@
 
 namespace modular {
 
+class AgentRunner;
+
 // This class implements the ComponentContext interface, which is provided to
 // modules and agents.
 class ComponentContextImpl : public ComponentContext {
  public:
-  ComponentContextImpl();
+  explicit ComponentContextImpl(const std::string& component_id,
+                                AgentRunner* agent_runner);
   ~ComponentContextImpl();
 
  private:
@@ -31,6 +36,9 @@ class ComponentContextImpl : public ComponentContext {
   void GetMessageSender(
       const fidl::String& queue_token,
       fidl::InterfaceRequest<modular::MessageSender> sender) override;
+
+  const std::string component_id_;
+  AgentRunner* const agent_runner_;
 
   FTL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
 };

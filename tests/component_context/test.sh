@@ -12,5 +12,6 @@ if [ "${FUCHSIA_BUILD_DIR}" = "" ]; then
 fi
 
 netcp ${FUCHSIA_BUILD_DIR}/component_context_test :/tmp/tests/component_context_test
+netcp ${FUCHSIA_BUILD_DIR}/component_context_test_agent :/tmp/tests/component_context_test_agent
 
 ${FUCHSIA_DIR}/apps/modular/src/test_runner/run_test "bootstrap device_runner --user_shell=dev_user_shell --user_shell_args=--root_module=/tmp/tests/component_context_test"

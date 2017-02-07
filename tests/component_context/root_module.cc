@@ -13,7 +13,9 @@ using modular::testing::TestPoint;
 
 namespace {
 
-constexpr int kStopMilliseconds = 250;
+// TODO: This timer is high since it might take long to start a process.
+constexpr int kStopMilliseconds = 2000;
+constexpr char kTestAgent[] = "file:///tmp/tests/component_context_test_agent";
 
 class ParentApp
   : public modular::SingleServiceApp<modular::Module> {
@@ -36,10 +38,15 @@ class ParentApp
     link_.Bind(std::move(link));
     initialized_.Pass();
 
-    // Exercise ComponentContext
+    // Exercise ComponentContext.ConnectToAgent()
     modular::ComponentContextPtr ctx;
     story_->GetComponentContext(ctx.NewRequest());
-    ctx->DeleteMessageQueue("");
+
+    modular::AgentControllerPtr agent_ctrl;
+    modular::ServiceProviderPtr agent_services;
+    ctx->ConnectToAgent(kTestAgent,
+                        agent_services.NewRequest(),
+                        agent_ctrl.NewRequest());
 
     // Start a timer to call Story.Done.
     mtl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
@@ -50,9 +57,17 @@ class ParentApp
   // |Module|
   void Stop(const StopCallback& done) override {
     stopped_.Pass();
-    mtl::MessageLoop::GetCurrent()->PostQuitTask();
-    modular::testing::Teardown();
-    done();
+    modular::testing::GetStore()->Get(
+        "test_agent_connected", [done](const fidl::String& val) {
+          if (val.is_null()) {
+            TEST_FAIL("Could not connect to test agent");
+          } else {
+            TEST_PASS("Connected to test agent");
+          }
+          mtl::MessageLoop::GetCurrent()->PostQuitTask();
+          modular::testing::Teardown();
+          done();
+        });
   }
 
   modular::StoryPtr story_;

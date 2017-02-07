@@ -4,11 +4,16 @@
 
 #include "apps/modular/src/component/component_context_impl.h"
 
+#include "apps/modular/src/agent_runner/agent_runner.h"
 #include "lib/ftl/logging.h"
 
 namespace modular {
 
-ComponentContextImpl::ComponentContextImpl() = default;
+ComponentContextImpl::ComponentContextImpl(const std::string& component_id,
+                                           AgentRunner* agent_runner)
+    : component_id_(component_id), agent_runner_(agent_runner) {
+  FTL_DCHECK(agent_runner);
+}
 
 ComponentContextImpl::~ComponentContextImpl() = default;
 
@@ -16,8 +21,9 @@ void ComponentContextImpl::ConnectToAgent(
     const fidl::String& url,
     fidl::InterfaceRequest<modular::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<modular::AgentController> controller) {
-  // Unimplemented.
-  FTL_LOG(INFO) << "ComponentContextImpl::ConnectToAgent";
+  // TODO: Plumb requestor url.
+  agent_runner_->ConnectToAgent(
+      component_id_, url, std::move(incoming_services), std::move(controller));
 }
 
 void ComponentContextImpl::ObtainMessageQueue(
