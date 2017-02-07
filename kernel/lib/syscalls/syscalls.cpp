@@ -31,13 +31,21 @@ int sys_invalid_syscall(void) {
     return ERR_BAD_SYSCALL;
 }
 
-#define MAGENTA_VDSOCALL_DEF(ret, name, args...) // Nothing to do here.
+inline uint64_t invoke_syscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg2, uint64_t arg3,
+                               uint64_t arg4, uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8) {
+    uint64_t ret;
+
+    switch (syscall_num) {
+#include <magenta/gen-switch.inc>
+        default:
+            ret = sys_invalid_syscall();
+    }
+
+    return ret;
+}
 
 #if ARCH_ARM64
 #include <arch/arm64.h>
-
-using syscall_func = int64_t (*)(uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e,
-                                 uint64_t f, uint64_t g, uint64_t h);
 
 extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, uint32_t syscall_imm, uint64_t pc) {
     uint64_t syscall_num = frame->r[16];
@@ -59,25 +67,9 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 
     LTRACEF_LEVEL(2, "num %" PRIu64 "\n", syscall_num);
 
-    /* build a function pointer to call the routine.
-     * the args are jammed into the function independent of if the function
-     * uses them or not, which is safe for simple arg passing.
-     */
-    syscall_func sfunc;
-
-    switch (syscall_num) {
-#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...)                               \
-    case n:                                                                                        \
-        sfunc = reinterpret_cast<syscall_func>(sys_##name);                                        \
-        break;
-#include <magenta/gen-switch.inc>
-        default:
-            sfunc = reinterpret_cast<syscall_func>(sys_invalid_syscall);
-    }
-
     /* call the routine */
-    uint64_t ret = sfunc(frame->r[0], frame->r[1], frame->r[2], frame->r[3], frame->r[4],
-                         frame->r[5], frame->r[6], frame->r[7]);
+    uint64_t ret = invoke_syscall(syscall_num, frame->r[0], frame->r[1], frame->r[2], frame->r[3],
+                                  frame->r[4], frame->r[5], frame->r[6], frame->r[7]);
 
     LTRACEF_LEVEL(2, "ret %#" PRIx64 "\n", ret);
 
@@ -97,9 +89,6 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
 
 #if ARCH_X86_64
 #include <arch/x86.h>
-
-using syscall_func = int64_t (*)(uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t e,
-                                 uint64_t f, uint64_t g, uint64_t h);
 
 uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4,
                         uint64_t arg5, uint64_t arg6, uint64_t arg7, uint64_t arg8,
@@ -123,24 +112,7 @@ uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t ar
     LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip %#" PRIx64 "\n",
                   get_current_thread(), syscall_num, ip);
 
-    /* build a function pointer to call the routine.
-     * the args are jammed into the function independent of if the function
-     * uses them or not, which is safe for simple arg passing.
-     */
-    syscall_func sfunc;
-
-    switch (syscall_num) {
-#define MAGENTA_SYSCALL_DEF(nargs64, nargs32, n, ret, name, args...)                               \
-    case n:                                                                                        \
-        sfunc = reinterpret_cast<syscall_func>(sys_##name);                                        \
-        break;
-#include <magenta/gen-switch.inc>
-        default:
-            sfunc = reinterpret_cast<syscall_func>(sys_invalid_syscall);
-    }
-
-    /* call the routine */
-    uint64_t ret = sfunc(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    uint64_t ret = invoke_syscall(syscall_num, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 
     /* check to see if there are any pending signals */
     thread_process_pending_signals();

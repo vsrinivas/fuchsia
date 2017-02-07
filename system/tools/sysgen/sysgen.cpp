@@ -243,6 +243,18 @@ struct ArraySpec {
     }
 };
 
+const std::map<string, string> c_overrides = {
+    {"", "void"},
+    {"any[]IN", "const void*"},
+    {"any[]OUT", "void*"},
+    {"any[]INOUT", "void*"}
+};
+
+const string override_type(const string& type_name) {
+    auto ft = c_overrides.find(type_name);
+    return (ft == c_overrides.end()) ? type_name : ft->second;
+}
+
 struct TypeSpec {
     string name;
     string type;
@@ -260,6 +272,42 @@ struct TypeSpec {
 
     string to_string() const {
         return type + (arr_spec ? arr_spec->to_string() : string());
+    }
+
+    string as_declaration() const {
+        auto overrided = override_type(to_string());
+        string output_type;
+
+        if (overrided != to_string()) {
+            return overrided + " " + name;
+        } else if (!arr_spec) {
+            return type + " " + name;
+        } else {
+            string ret;
+            if (arr_spec->kind == ArraySpec::IN)
+                ret += "const ";
+
+            ret += type + " " + name;
+            ret += "[";
+            if (arr_spec->count)
+                ret += std::to_string(arr_spec->count);
+            ret += "]";
+            return ret;
+        }
+    }
+
+    string as_cast(string arg) const {
+        auto overrided = override_type(to_string());
+        string output_type = overrided == to_string() ? type : overrided;
+        bool is_ptr = output_type.find("*") != std::string::npos || arr_spec;
+
+        if (is_ptr && output_type == overrided) {
+            return "reinterpret_cast<" + output_type + ">(" + arg + ")";
+        } else if (is_ptr) {
+            string modifier = arr_spec && arr_spec->kind == ArraySpec::IN ? "const " : "";
+            return "reinterpret_cast<" + modifier + output_type + "*>(" + arg + ")";
+        }
+        return "static_cast<" + overrided + ">(" + arg + ")";
     }
 };
 
@@ -288,7 +336,10 @@ struct Syscall {
     }
 
     bool validate() const {
-        if (ret_spec.size() > kMaxReturnArgs) {
+        if (ret_spec.size() > 0 && is_noreturn()) {
+            print_error("noreturn should have zero return arguments");
+            return false;
+        } else if (ret_spec.size() > kMaxReturnArgs) {
             print_error("invalid number of return arguments");
             return false;
         } else if (ret_spec.size() == 1) {
@@ -352,6 +403,17 @@ struct Syscall {
         for (auto& a : arg_spec) {
             a.debug_dump();
         }
+    }
+
+    string return_type() const {
+        if (ret_spec.empty()) {
+            return override_type(string());
+        }
+        return override_type(ret_spec[0].to_string());
+    }
+
+    bool is_void_return() const {
+        return return_type() == "void";
     }
 };
 
@@ -509,18 +571,6 @@ bool generate_file_header(std::ofstream& os) {
     return os.good();
 }
 
-const std::map<string, string> c_overrides = {
-    {"", "void"},
-    {"any[]IN", "const void*"},
-    {"any[]OUT", "void*"},
-    {"any[]INOUT", "void*"}
-};
-
-const string override_type(const string& type_name) {
-    auto ft = c_overrides.find(type_name);
-    return (ft == c_overrides.end()) ? type_name : ft->second;
-}
-
 const string add_attribute(const GenParams& gp, const string& attribute) {
     auto ft = gp.attributes.find(attribute);
     return (ft == gp.attributes.end()) ? string() : ft->second;
@@ -541,44 +591,14 @@ bool generate_legacy_header(
         }
 
         // writes "[return-type] prefix_[syscall-name]("
-
-        if (sc.ret_spec.empty()) {
-            os << override_type(string());
-        } else {
-            if (sc.is_noreturn()) {
-                fprintf(stderr, "error: unexpected return spec for %s\n", sc.name.c_str());
-                return false;
-            }
-            os << override_type(sc.ret_spec[0].to_string());
-        }
-
-        os << " " << syscall_name << "(";
+        os << sc.return_type() << " " << syscall_name << "(";
 
         // Writes all arguments.
         for (const auto& arg : sc.arg_spec) {
             if (!os.good())
                 return false;
-            // writes each parameter in its own line.
-            os << "\n" << string(indent_spaces, ' ');
-
-            auto overrided = override_type(arg.to_string());
-
-            if (overrided != arg.to_string()) {
-                os << overrided << " " << arg.name;
-            } else if (!arg.arr_spec) {
-                os << arg.type << " " << arg.name;
-            } else {
-                if (arg.arr_spec->kind == ArraySpec::IN)
-                    os << "const ";
-
-                os << arg.type << " " << arg.name;
-                os << "[";
-                if (arg.arr_spec->count)
-                    os << arg.arr_spec->count;
-                os << "]";
-            }
-
-            os << ",";
+            os << "\n" << string(indent_spaces, ' ')
+               << arg.as_declaration() << ",";
         }
 
         if (!sc.arg_spec.empty()) {
@@ -614,12 +634,57 @@ bool generate_kernel_header(
     return sc.is_vdso() ? true : generate_legacy_header(gp, os, sc);
 }
 
-bool generate_legacy_code(const GenParams& gp, std::ofstream& os, const Syscall& sc) {
+string invocation(std::ofstream& os, const string out_var, const string out_type, const string syscall_name, const Syscall& sc) {
+    os << out_var << " = ";
+
+    bool is_void = sc.is_void_return();
+    if (is_void) {
+        // void function - synthesise an empty return value.
+        // case 0: ret = 0; sys_andy(
+        os << "0; " << syscall_name << "(";
+        return ")";
+    }
+    // case 0: ret = static_cast<int64_t(sys_andy(
+    os << "static_cast<" << out_type << ">(" << syscall_name << "(";
+    return "))";
+}
+
+bool generate_kernel_code(
+    const GenParams& gp, std::ofstream& os, const Syscall& sc) {
     if (sc.is_vdso())
         return true;
-    os << "    case " << sc.index << ": " << gp.switch_var
-       << " = reinterpret_cast<" << gp.switch_type << ">(" << gp.name_prefix << sc.name <<");\n"
-       << "       break;\n";
+
+    constexpr uint32_t indent_spaces = 8u;
+
+    auto syscall_name = gp.name_prefix + sc.name;
+
+    // case 0:
+    os << "    case " << sc.index << ": ";
+
+    // ret = static_cast<uint64_t>(syscall_whatevs(      )) -closer
+    string close_invocation = invocation(os, gp.switch_var, "uint64_t", syscall_name, sc);
+
+    // Writes all arguments.
+    for (int i = 0; i < sc.arg_spec.size(); ++i) {
+        if (!os.good())
+            return false;
+        os << "\n" << string(indent_spaces, ' ')
+           << sc.arg_spec[i].as_cast("arg" + std::to_string(i + 1));
+
+        if (i < sc.arg_spec.size() - 1)
+            os << ",";
+    }
+
+    if (sc.arg_spec.empty()) {
+        // empty args might have a special type.
+        if (gp.empty_args)
+            os << gp.empty_args;
+    }
+
+    os << close_invocation;
+
+    os << ";\n" << string(indent_spaces, ' ') << "break;\n";
+
     return os.good();
 }
 
@@ -682,7 +747,7 @@ const GenParams gen_params[] = {
         "void",             // no-args special type
         nullptr,            // switch var (does not apply)
         nullptr,            // switch type (does not apply)
-        user_attrs,         // attributes dictionary
+        user_attrs,         // attribute`s dictionary
     },
     // The vDSO-internal header, pure C.  (VDsoHeaderC)
     {
@@ -702,17 +767,21 @@ const GenParams gen_params[] = {
         ".kernel.h",        // file postfix.
         nullptr,            // no function prefix.
         "sys_",             // function name prefix.
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
     },
     // The kernel C++ code. A switch statement set.
     {
-        generate_legacy_code,
+        generate_kernel_code,
         ".kernel.inc",      // file postfix.
         nullptr,            // no function prefix.
         "sys_",             // function name prefix.
         nullptr,            // second function name prefix.
         nullptr,            // no-args (does not apply)
-        "sfunc",            // switch var name
-        "syscall_func"      // switch var type
+        "ret",              // switch var name
+        "uint64_t"          // switch var type
     },
     //  The assembly file for x86-64.
     {
