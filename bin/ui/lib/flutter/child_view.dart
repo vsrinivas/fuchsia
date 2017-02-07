@@ -81,25 +81,28 @@ class ChildViewConnection {
   }
 
   factory ChildViewConnection.launch(String url, ApplicationLauncher launcher,
-      {InterfaceRequest<ApplicationController> controller}) {
+      {InterfaceRequest<ApplicationController> controller,
+      InterfaceRequest<ServiceProvider> childServices}) {
     final ServiceProviderProxy services = new ServiceProviderProxy();
     final ApplicationLaunchInfo launchInfo = new ApplicationLaunchInfo()
       ..url = url
       ..services = services.ctrl.request();
     try {
       launcher.createApplication(launchInfo, controller);
-      return new ChildViewConnection.connect(services);
+      return new ChildViewConnection.connect(services,
+          childServices: childServices);
     } finally {
       services.ctrl.close();
     }
   }
 
-  factory ChildViewConnection.connect(ServiceProvider services) {
+  factory ChildViewConnection.connect(ServiceProvider services,
+      {InterfaceRequest<ServiceProvider> childServices}) {
     final ViewProviderProxy viewProvider = new ViewProviderProxy();
     connectToService(services, viewProvider.ctrl);
     try {
       final InterfacePair<ViewOwner> viewOwner = new InterfacePair<ViewOwner>();
-      viewProvider.createView(viewOwner.passRequest(), null);
+      viewProvider.createView(viewOwner.passRequest(), childServices);
       return new ChildViewConnection(viewOwner.passHandle());
     } finally {
       viewProvider.ctrl.close();
