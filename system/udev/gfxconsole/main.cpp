@@ -4,6 +4,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
+#include <ddk/protocol/console.h>
 #include <ddk/protocol/display.h>
 #include <ddk/protocol/input.h>
 
@@ -13,7 +14,6 @@
 #include <gfx/gfx.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
-#include <magenta/device/console.h>
 #include <magenta/listnode.h>
 #include <stdio.h>
 #include <stdlib.h>
