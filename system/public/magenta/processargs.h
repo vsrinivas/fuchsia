@@ -92,6 +92,9 @@ struct mx_proc_args {
 // Handle to the root of our address space
 #define MX_HND_TYPE_VMAR_ROOT 7
 
+// Handle to the VMAR used to load the initial program image.
+#define MX_HND_TYPE_VMAR_LOADED 8
+
 // Handle types the mxio library uses
 #define MX_HND_TYPE_MXIO_ROOT 0x10
 #define MX_HND_TYPE_MXIO_REMOTE 0x11

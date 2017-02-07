@@ -984,14 +984,11 @@ static void reloc_all(struct dso* p) {
                                  (uintptr_t)laddr(p, p->relro_start),
                                  p->relro_end - p->relro_start,
                                  MX_VM_FLAG_PERM_READ);
-            if (status == ERR_BAD_HANDLE && p->vmar == MX_HANDLE_INVALID) {
-                // TODO(mcgrathr): This special case is because we don't
-                // have the VMAR for ldso itself and so can't apply its
-                // RELRO.  We need to plumb it through from the creator.
-                // Then this special case can be removed.
-                if (p != &ldso)
-                    debugmsg("XXX skipping '%s' RELRO: no VMAR handle\n",
-                             p->name);
+            if (status == ERR_BAD_HANDLE &&
+                p == &ldso && p->vmar == MX_HANDLE_INVALID) {
+                debugmsg("No VMAR_LOADED handle received;"
+                         " cannot protect RELRO for %s\n",
+                         p->name);
             } else if (status != NO_ERROR) {
                 error("Error relocating %s: RELRO protection"
                       " %p+%#zx failed: %s",
@@ -1480,6 +1477,14 @@ dl_start_return_t __dls3(void* start_arg) {
                       handles[i], logger);
             }
             logger = handles[i];
+            break;
+        case MX_HND_TYPE_VMAR_LOADED:
+            if (ldso.vmar != MX_HANDLE_INVALID ||
+                handles[i] == MX_HANDLE_INVALID) {
+                error("bootstrap message bad VMAR_LOADED %#x vs %#x",
+                      handles[i], ldso.vmar);
+            }
+            ldso.vmar = handles[i];
             break;
         case MX_HND_TYPE_PROC_SELF:
             __magenta_process_self = handles[i];

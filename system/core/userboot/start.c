@@ -37,8 +37,9 @@ static void load_child_process(mx_handle_t log, mx_handle_t vmar_self,
                                const struct options* o, mx_handle_t bootfs_vmo,
                                mx_handle_t vdso_vmo, mx_handle_t proc,
                                mx_handle_t vmar, mx_handle_t thread,
-                               mx_handle_t to_child, mx_vaddr_t* entry,
-                               mx_vaddr_t* vdso_base, size_t* stack_size) {
+                               mx_handle_t to_child,
+                               mx_vaddr_t* entry, mx_vaddr_t* vdso_base,
+                               size_t* stack_size) {
 
     // Examine the bootfs image and find the requested file in it.
     struct bootfs bootfs;
@@ -136,11 +137,13 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (vdso_vmo == MX_HANDLE_INVALID)
         fail(log, ERR_INVALID_ARGS, "no vDSO handle in bootstrap message\n");
     if (resource_root == MX_HANDLE_INVALID)
-        fail(log, ERR_INVALID_ARGS, "no resource handle in bootstrap message\n");
+        fail(log, ERR_INVALID_ARGS,
+             "no resource handle in bootstrap message\n");
     if (job == MX_HANDLE_INVALID)
         fail(log, ERR_INVALID_ARGS, "no job handle in bootstrap message\n");
     if (vmar_root_handle_loc == NULL)
-        fail(log, ERR_INVALID_ARGS, "no vmar root handle in bootstrap message\n");
+        fail(log, ERR_INVALID_ARGS,
+             "no vmar root handle in bootstrap message\n");
 
     // Hang on to our own process handle.  If we closed it, our process
     // would be killed.  Exiting will clean it up.
@@ -149,7 +152,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
 
     // Hang on to the resource root handle.
     mx_handle_t root_resource_handle;
-    status = mx_handle_duplicate(resource_root, MX_RIGHT_SAME_RIGHTS, &root_resource_handle);
+    status = mx_handle_duplicate(resource_root, MX_RIGHT_SAME_RIGHTS,
+                                 &root_resource_handle);
     if (status < 0)
         fail(log, status, "mx_handle_duplicate failed\n");
 
@@ -164,16 +168,16 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     }
 
     // Make the channel for the bootstrap message.
-    mx_handle_t pipeh[2];
-    status = mx_channel_create(0, &pipeh[0], &pipeh[1]);
+    mx_handle_t to_child;
+    mx_handle_t child_start_handle;
+    status = mx_channel_create(0, &to_child, &child_start_handle);
     check(log, status, "mx_channel_create failed\n");
-    mx_handle_t to_child = pipeh[0];
-    mx_handle_t child_start_handle = pipeh[1];
 
     const char* filename = o.value[OPTION_FILENAME];
     mx_handle_t proc;
     mx_handle_t vmar;
-    status = mx_process_create(job, filename, strlen(filename), 0, &proc, &vmar);
+    status = mx_process_create(job, filename, strlen(filename), 0,
+                               &proc, &vmar);
     if (status < 0)
         fail(log, status, "mx_process_create failed\n");
 
@@ -196,7 +200,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
         fail(log, status, "mx_vmo_create failed for child stack\n");
     mx_vaddr_t stack_base;
     status = mx_vmar_map(vmar, 0, stack_vmo, 0, stack_size,
-                         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE, &stack_base);
+                         MX_VM_FLAG_PERM_READ | MX_VM_FLAG_PERM_WRITE,
+                         &stack_base);
     check(log, status, "mx_vmar_map failed for child stack\n");
     uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
     if (stack_vmo_handle_loc != NULL) {
@@ -217,7 +222,8 @@ static noreturn void bootstrap(mx_handle_t log, mx_handle_t bootstrap_pipe) {
     if (thread_handle_loc != NULL) {
         // Reuse the slot for the child's handle.
         // NOTE: Leaks the current thread handle the same way as the process handle.
-        status = mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS, thread_handle_loc);
+        status = mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS,
+                                     thread_handle_loc);
         if (status < 0)
             fail(log, status,
                  "mx_handle_duplicate failed on child thread handle\n");

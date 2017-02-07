@@ -52,6 +52,7 @@ mx_status_t elf_load_map_segments(mx_handle_t vmar_self,
                                   const elf_load_header_t* header,
                                   const elf_phdr_t* phdrs,
                                   mx_handle_t vmo,
+                                  mx_handle_t* segments_vmar,
                                   mx_vaddr_t* bias, mx_vaddr_t* entry);
 
 // Locate the PT_INTERP program header and extract its bounds in the file.

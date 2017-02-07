@@ -32,6 +32,7 @@ size_t elf_load_get_stack_size(elf_load_info_t* info);
 // If this fails, the state of the process address space is unspecified.
 mx_status_t elf_load_finish(mx_handle_t vmar, elf_load_info_t* info,
                             mx_handle_t vmo,
+                            mx_handle_t* segments_vmar,
                             mx_vaddr_t* base, mx_vaddr_t* entry);
 
 #pragma GCC visibility pop

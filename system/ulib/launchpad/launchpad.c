@@ -24,6 +24,7 @@
 enum special_handles {
     HND_LOADER_SVC,
     HND_EXEC_VMO,
+    HND_SEGMENTS_VMAR,
     HND_SPECIAL_COUNT
 };
 
@@ -336,13 +337,17 @@ mx_status_t launchpad_elf_load_basic(launchpad_t* lp, mx_handle_t vmo) {
     mx_status_t status;
     if ((status = elf_load_start(vmo, &elf)))
         lp_error(lp, status, "elf_load: elf_load_start() failed");
-    if ((status = elf_load_finish(lp_vmar(lp), elf, vmo, &lp->base, &lp->entry)))
+    mx_handle_t segments_vmar;
+    if ((status = elf_load_finish(lp_vmar(lp), elf, vmo,
+                                  &segments_vmar, &lp->base, &lp->entry)))
         lp_error(lp, status, "elf_load: elf_load_finish() failed");
     check_elf_stack_size(lp, elf);
     elf_load_destroy(elf);
 
     if (status == NO_ERROR) {
         lp->loader_message = false;
+        launchpad_add_handle(lp, segments_vmar,
+                             MX_HND_INFO(MX_HND_TYPE_VMAR_LOADED, 0));
     }
 
 done:
@@ -363,7 +368,7 @@ mx_status_t launchpad_elf_load_extra(launchpad_t* lp, mx_handle_t vmo,
     mx_status_t status;
     if ((status = elf_load_start(vmo, &elf)))
         lp_error(lp, status, "elf_load_extra: elf_load_start() failed");
-    if ((status = elf_load_finish(lp_vmar(lp), elf, vmo, base, entry)))
+    if ((status = elf_load_finish(lp_vmar(lp), elf, vmo, NULL, base, entry)))
         lp_error(lp, status, "elf_load_extra: elf_load_finish() failed");
     elf_load_destroy(elf);
 
@@ -455,10 +460,11 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
         return interp_vmo;
 
     elf_load_info_t* elf;
+    mx_handle_t segments_vmar;
     status = elf_load_start(interp_vmo, &elf);
     if (status == NO_ERROR) {
         status = elf_load_finish(lp_vmar(lp), elf, interp_vmo,
-                                 &lp->base, &lp->entry);
+                                 &segments_vmar, &lp->base, &lp->entry);
         elf_load_destroy(elf);
     }
     mx_handle_close(interp_vmo);
@@ -467,6 +473,9 @@ static mx_status_t handle_interp(launchpad_t* lp, mx_handle_t vmo,
         if (lp->special_handles[HND_EXEC_VMO] != MX_HANDLE_INVALID)
             mx_handle_close(lp->special_handles[HND_EXEC_VMO]);
         lp->special_handles[HND_EXEC_VMO] = vmo;
+        if (lp->special_handles[HND_SEGMENTS_VMAR] != MX_HANDLE_INVALID)
+            mx_handle_close(lp->special_handles[HND_SEGMENTS_VMAR]);
+        lp->special_handles[HND_SEGMENTS_VMAR] = segments_vmar;
         lp->loader_message = true;
     }
 
@@ -493,12 +502,16 @@ mx_status_t launchpad_elf_load(launchpad_t* lp, mx_handle_t vmo) {
             lp_error(lp, status, "elf_load: get_interp() failed");
         } else {
             if (interp == NULL) {
-                status = elf_load_finish(lp_vmar(lp), elf, vmo,
+                mx_handle_t segments_vmar;
+                status = elf_load_finish(lp_vmar(lp), elf, vmo, &segments_vmar,
                                          &lp->base, &lp->entry);
                 if (status != NO_ERROR) {
                     lp_error(lp, status, "elf_load: elf_load_finish() failed");
                 } else {
                     lp->loader_message = false;
+                    launchpad_add_handle(
+                        lp, segments_vmar,
+                        MX_HND_INFO(MX_HND_TYPE_VMAR_LOADED, 0));
                 }
             } else {
                 if ((status = handle_interp(lp, vmo, interp, interp_len))) {
@@ -695,6 +708,10 @@ static mx_status_t send_loader_message(launchpad_t* lp,
 
         case HND_EXEC_VMO:
             id = MX_HND_TYPE_EXEC_VMO;
+            break;
+
+        case HND_SEGMENTS_VMAR:
+            id = MX_HND_TYPE_VMAR_LOADED;
             break;
         }
         if (lp->special_handles[i] != MX_HANDLE_INVALID) {

@@ -278,6 +278,7 @@ mx_status_t elf_load_map_segments(mx_handle_t vmar_self, mx_handle_t root_vmar,
                                   const elf_load_header_t* header,
                                   const elf_phdr_t phdrs[],
                                   mx_handle_t vmo,
+                                  mx_handle_t* segments_vmar,
                                   mx_vaddr_t* base, mx_vaddr_t* entry) {
     uintptr_t vmar_base = 0;
     uintptr_t bias = 0;
@@ -291,7 +292,10 @@ mx_status_t elf_load_map_segments(mx_handle_t vmar_self, mx_handle_t root_vmar,
             status = load_segment(vmar_self, vmar, vmar_offset, vmo, &phdrs[i]);
     }
 
-    mx_handle_close(vmar);
+    if (status == NO_ERROR && segments_vmar != NULL)
+        *segments_vmar = vmar;
+    else
+        mx_handle_close(vmar);
 
     if (status == NO_ERROR) {
         if (base != NULL)
