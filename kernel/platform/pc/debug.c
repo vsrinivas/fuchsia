@@ -112,8 +112,9 @@ static void debug_uart_putc(char c)
     if (unlikely(!output_enabled))
         return;
 
-    while ((inp(uart_io_port + 5) & (1<<6)) == 0)
-        ;
+    while ((inp(uart_io_port + 5) & (1<<6)) == 0) {
+        arch_spinloop_pause();
+    }
     outp(uart_io_port + 0, c);
 }
 
