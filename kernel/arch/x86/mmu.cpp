@@ -1204,8 +1204,6 @@ status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, ui
 
     DEBUG_ASSERT(aspace);
 
-    if (!paddr) return ERR_INVALID_ARGS;
-
     if (!is_valid_vaddr(aspace, vaddr)) return ERR_INVALID_ARGS;
 
     pt_entry_t* last_valid_entry;
@@ -1218,26 +1216,28 @@ status_t arch_mmu_query(arch_aspace_t* aspace, vaddr_t vaddr, paddr_t* paddr, ui
             ret_level);
 
     /* based on the return level, parse the page table entry */
-    switch (ret_level) {
+    if (paddr) {
+        switch (ret_level) {
 #if X86_PAGING_LEVELS > 2
-        case PDP_L: /* 1GB page */
-            *paddr = paddr_from_pte<PDP_L>(*last_valid_entry);
-            *paddr |= vaddr & PAGE_OFFSET_MASK_HUGE;
-            break;
+            case PDP_L: /* 1GB page */
+                *paddr = paddr_from_pte<PDP_L>(*last_valid_entry);
+                *paddr |= vaddr & PAGE_OFFSET_MASK_HUGE;
+                break;
 #endif
-        case PD_L: /* 2MB page */
-            *paddr = paddr_from_pte<PD_L>(*last_valid_entry);
-            *paddr |= vaddr & PAGE_OFFSET_MASK_LARGE;
-            break;
-        case PT_L: /* 4K page */
-            *paddr = paddr_from_pte<PT_L>(*last_valid_entry);
-            *paddr |= vaddr & PAGE_OFFSET_MASK_4KB;
-            break;
-        default:
-            panic("arch_mmu_query: unhandled frame level\n");
-    }
+            case PD_L: /* 2MB page */
+                *paddr = paddr_from_pte<PD_L>(*last_valid_entry);
+                *paddr |= vaddr & PAGE_OFFSET_MASK_LARGE;
+                break;
+            case PT_L: /* 4K page */
+                *paddr = paddr_from_pte<PT_L>(*last_valid_entry);
+                *paddr |= vaddr & PAGE_OFFSET_MASK_4KB;
+                break;
+            default:
+                panic("arch_mmu_query: unhandled frame level\n");
+        }
 
-    LTRACEF("paddr %#" PRIxPTR "\n", *paddr);
+        LTRACEF("paddr %#" PRIxPTR "\n", *paddr);
+    }
 
     /* converting x86 arch specific flags to arch mmu flags */
     if (flags) {
