@@ -152,6 +152,10 @@ void vm_init_postheap(uint level) {
     for (uint i = 0; i < countof(regions); ++i) {
         temp_region* region = &regions[i];
         ASSERT(IS_PAGE_ALIGNED(region->base));
+
+        dprintf(INFO, "VM: reserving kernel region [%016" PRIxPTR ", %016" PRIxPTR ") flags %#x name '%s'\n",
+                region->base, region->base + region->size, region->arch_mmu_flags, region->name);
+
         status_t status = vmm_reserve_space(aspace, region->name, region->size, region->base);
         ASSERT(status == NO_ERROR);
         status = vmm_protect_region(aspace, region->base, region->arch_mmu_flags);
@@ -193,7 +197,7 @@ void vm_init_postheap(uint level) {
 
                 if (map->flags & MMU_INITIAL_MAPPING_TEMPORARY) {
                     // If the region is part of a temporary mapping, immediately unmap it
-                    LTRACEF("Freeing region [%016" PRIxPTR ", %016" PRIxPTR ")\n", vaddr, next_kernel_region);
+                    dprintf(INFO, "VM: freeing region [%016" PRIxPTR ", %016" PRIxPTR ")\n", vaddr, next_kernel_region);
                     status = vmm_free_region(aspace, vaddr);
                     ASSERT(status == NO_ERROR);
                 } else {
