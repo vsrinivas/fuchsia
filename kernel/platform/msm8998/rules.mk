@@ -10,7 +10,7 @@ MSM_COMMON := $(LOCAL_DIR)/../msm-common
 
 MODULE := $(LOCAL_DIR)
 
-WITH_SMP := 0
+WITH_SMP := 1
 
 # TODO - change to 8 after we are able to bring up gold CPUs
 SMP_MAX_CPUS := 4

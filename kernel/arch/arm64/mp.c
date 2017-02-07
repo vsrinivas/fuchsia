@@ -25,7 +25,11 @@ extern void bcm28xx_send_ipi(uint irq, uint cpu_mask);
 
 #define LOCAL_TRACE 0
 
+#include <platform/gic.h>
+
+#ifndef GIC_IPI_BASE
 #define GIC_IPI_BASE (14)
+#endif
 
 status_t arch_mp_send_ipi(mp_cpu_mask_t target, mp_ipi_t ipi)
 {
