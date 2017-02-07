@@ -39,6 +39,8 @@
 #define USB_BUF_SIZE 24576
 #define INTR_REQ_SIZE 8
 #define RX_HEADER_SIZE 4
+#define AX88179_MTU 1500
+#define MAX_ETH_HDRS 26
 
 typedef struct {
     mx_device_t* device;
@@ -505,8 +507,8 @@ wait_for_rx: ;
 static mx_status_t send_one_packet(ax88179_t* eth, iotxn_t* request, mx_fifo_state_t *fifo_state) {
     uint64_t entry_idx = fifo_state->tail & (eth->fifo.tx_entries_count - 1);
     eth_fifo_entry_t* entry = &eth->tx_entries[entry_idx];
-    if (entry->length + sizeof(ax88179_tx_hdr_t) > 1500) {
-        printf("%s tx entry too large\n", __func__);
+    if (entry->length > AX88179_MTU + MAX_ETH_HDRS) {
+        printf("%s tx entry too large (%u > %u)\n", __func__, entry->length, AX88179_MTU + MAX_ETH_HDRS);
         return ERR_BUFFER_TOO_SMALL;
     }
 
@@ -589,7 +591,7 @@ mx_status_t ax88179_get_mac_addr(mx_device_t* device, uint8_t* out_addr) {
 }
 
 size_t ax88179_get_mtu(mx_device_t* device) {
-    return 1500;
+    return AX88179_MTU;
 }
 
 static ethernet_protocol_t ax88179_proto = {};
