@@ -583,16 +583,14 @@ static ccargs_t ccargs[] = {
     },
 };
 
-#define ccargs_count (sizeof(ccargs)/sizeof(ccargs[0]))
-
 static int call_server(void* ptr) {
     mx_handle_t h = (mx_handle_t) (uintptr_t) ptr;
 
-    ccargs_t msg[ccargs_count];
+    ccargs_t msg[countof(ccargs)];
     memset(msg, 0, sizeof(msg));
 
     // received the expected number of messages
-    for (unsigned n = 0; n < ccargs_count; n++) {
+    for (unsigned n = 0; n < countof(ccargs); n++) {
         mx_handle_wait_one(h, MX_CHANNEL_READABLE | MX_CHANNEL_PEER_CLOSED, MX_TIME_INFINITE, NULL);
 
         uint32_t bytes = sizeof(msg[0]);
@@ -608,8 +606,8 @@ static int call_server(void* ptr) {
     }
 
     // reply to them in reverse order received
-    for (unsigned n = 0; n < ccargs_count; n++) {
-        ccargs_t* m = &msg[ccargs_count - n - 1];
+    for (unsigned n = 0; n < countof(ccargs); n++) {
+        ccargs_t* m = &msg[countof(ccargs) - n - 1];
 
         if (m->action & SRV_DISCARD) {
             continue;
@@ -650,7 +648,7 @@ static bool channel_call(void) {
 
     // start test clients
     uint32_t waitfor = 0;
-    for (unsigned n = 0; n < ccargs_count; n++) {
+    for (unsigned n = 0; n < countof(ccargs); n++) {
         ccargs[n].txid = 0x11223300 | n;
         ccargs[n].cmd = ccargs[n].txid * 31337;
         ccargs[n].h = cli;
@@ -676,7 +674,7 @@ static bool channel_call(void) {
 
     // report tests that failed or failed to complete
     mtx_lock(&call_test_lock);
-    for (unsigned n = 0; n < ccargs_count; n++) {
+    for (unsigned n = 0; n < countof(ccargs); n++) {
         char buf[128];
         snprintf(buf, sizeof(buf), "#%d '%s' did not complete", n, ccargs[n].name);
         EXPECT_EQ(ccargs[n].bit & call_test_done, ccargs[n].bit, buf);

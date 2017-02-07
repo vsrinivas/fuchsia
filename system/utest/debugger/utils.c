@@ -134,7 +134,7 @@ void dump_gregs(mx_handle_t thread_handle, void* buf)
 {
 #if defined(__x86_64__) || defined(__aarch64__)
     unittest_printf("Registers for thread %d\n", thread_handle);
-    for (unsigned i = 0; i < sizeof(general_regs) / sizeof(general_regs[0]); ++i) {
+    for (unsigned i = 0; i < countof(general_regs); ++i) {
         const regspec_t* r = &general_regs[i];
         uint64_t val;
         for (unsigned j = 0; j < r->count; ++j)

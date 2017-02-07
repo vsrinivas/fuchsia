@@ -11,6 +11,7 @@
 
 #include <elf.h>
 #include <elfload/elfload.h>
+#include <magenta/compiler.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <stdbool.h>
@@ -114,8 +115,7 @@ static void stuff_loader_bootstrap(mx_handle_t log, mx_handle_t proc,
     mx_handle_duplicate(thread, MX_RIGHT_SAME_RIGHTS, &handles[BOOTSTRAP_THREAD]);
 
     mx_status_t status = mx_channel_write(
-        to_child, 0, &msg, sizeof(msg),
-        handles, sizeof(handles) / sizeof(handles[0]));
+        to_child, 0, &msg, sizeof(msg), handles, countof(handles));
     check(log, status,
           "mx_channel_write of loader bootstrap message failed\n");
 }

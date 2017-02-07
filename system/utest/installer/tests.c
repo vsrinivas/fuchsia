@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <magenta/assert.h>
+#include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,8 +73,7 @@ bool test_find_partition_entries(void) {
     uint16_t test_indices[3] = {0, TABLE_SIZE - 1, TABLE_SIZE / 2};
 
     BEGIN_TEST;
-    for (uint16_t idx = 0; idx < sizeof(test_indices) / sizeof(test_indices[0]);
-         idx++) {
+    for (uint16_t idx = 0; idx < countof(test_indices); idx++) {
         uint16_t found_idx = TABLE_SIZE;
         uint16_t targ_idx = test_indices[idx];
         mx_status_t rc = find_partition_entries(part_entry_ptrs,
@@ -107,8 +107,7 @@ bool test_find_partition(void) {
     uint16_t test_indices[3] = {0, TABLE_SIZE - 1, TABLE_SIZE / 2};
 
     BEGIN_TEST;
-    for (uint16_t idx = 0; idx < sizeof(test_indices) / sizeof(test_indices[0]);
-         idx++) {
+    for (uint16_t idx = 0; idx < countof(test_indices); idx++) {
         uint16_t targ_idx = test_indices[idx];
         uint16_t found_idx = TABLE_SIZE;
         gpt_partition_t* part_info;

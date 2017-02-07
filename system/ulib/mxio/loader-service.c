@@ -17,6 +17,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <magenta/compiler.h>
 #include <magenta/device/dmctl.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
@@ -54,7 +55,7 @@ static mx_handle_t default_load_object(void* ignored, const char* fn) {
     struct stat s;
     int fd;
 
-    for (unsigned n = 0; n < sizeof(libpaths)/sizeof(libpaths[0]); n++) {
+    for (unsigned n = 0; n < countof(libpaths); n++) {
         snprintf(path, PATH_MAX, "%s/%s", libpaths[n], fn);
 
         if ((fd = open(path, O_RDONLY)) >= 0) {
