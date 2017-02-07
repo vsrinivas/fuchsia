@@ -9,9 +9,13 @@
 #include <iostream>
 #include <cstring>
 
+#include "apps/bluetooth/hci/advertising_report_parser.h"
 #include "apps/bluetooth/hci/command_channel.h"
 #include "apps/bluetooth/hci/command_packet.h"
+#include "apps/bluetooth/hci/event_packet.h"
+#include "lib/ftl/strings/string_number_conversions.h"
 #include "lib/ftl/strings/string_printf.h"
+#include "lib/ftl/time/time_delta.h"
 
 #include "command_dispatcher.h"
 
@@ -28,8 +32,7 @@ void StatusCallback(ftl::Closure complete_cb,
                     bluetooth::hci::Status status) {
   std::cout << "  Command Status: " << ftl::StringPrintf("0x%02x", status)
             << " (id=" << id << ")" << std::endl;
-  if (status != bluetooth::hci::Status::kSuccess)
-    complete_cb();
+  if (status != bluetooth::hci::Status::kSuccess) complete_cb();
 }
 
 hci::CommandChannel::TransactionId SendCommand(
@@ -347,7 +350,228 @@ bool HandleSetAdvData(const CommandDispatcher& owner,
   packet.EncodeHeader();
   auto id = SendCommand(owner, packet, cb, complete_cb);
 
-  std::cout << "  Sent HCI_Set_Advertising_Data (id=" << id << ")" << std::endl;
+  std::cout << "  Sent HCI_LE_Set_Advertising_Data (id=" << id << ")"
+            << std::endl;
+
+  return true;
+}
+
+bool HandleSetScanParams(const CommandDispatcher& owner,
+                         const ftl::CommandLine& cmd_line,
+                         const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size()) {
+    std::cout << "  Usage: set-scan-params [--help|--type]" << std::endl;
+    return false;
+  }
+
+  if (cmd_line.HasOption("help")) {
+    std::cout << "  Options: \n"
+                 "    --help - Display this help message\n"
+                 "    --type=<type> - The scan type. Possible values are:\n"
+                 "          - passive: passive scanning (default)\n"
+                 "          - active: active scanning; sends scan requests";
+    std::cout << std::endl;
+    return false;
+  }
+
+  hci::LEScanType scan_type = hci::LEScanType::kPassive;
+  std::string type;
+  if (cmd_line.GetOptionValue("type", &type)) {
+    if (type == "passive") {
+      scan_type = hci::LEScanType::kPassive;
+    } else if (type == "active") {
+      scan_type = hci::LEScanType::kActive;
+    } else {
+      std::cout << "  Unrecognized scan type: " << type << std::endl;
+      return false;
+    }
+  }
+
+  constexpr size_t kPayloadSize = sizeof(hci::LESetScanParametersCommandParams);
+  common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
+  hci::CommandPacket packet(hci::kLESetScanParameters, &buffer, kPayloadSize);
+
+  auto params = packet.GetPayload<hci::LESetScanParametersCommandParams>();
+  params->scan_type = scan_type;
+  params->scan_interval = htole16(hci::kLEScanIntervalDefault);
+  params->scan_window = htole16(hci::kLEScanIntervalDefault);
+  params->own_address_type = hci::LEOwnAddressType::kPublic;
+  params->filter_policy = hci::LEScanFilterPolicy::kNoWhiteList;
+
+  auto cb = [complete_cb](hci::CommandChannel::TransactionId id,
+                          const hci::EventPacket& event) {
+    auto return_params =
+        event.GetReturnParams<hci::LESetScanParametersReturnParams>();
+    LogCommandComplete(return_params->status, id);
+    complete_cb();
+  };
+
+  packet.EncodeHeader();
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+
+  std::cout << "  Sent HCI_LE_Set_Scan_Parameters (id=" << id << ")"
+            << std::endl;
+
+  return true;
+}
+
+bool HandleSetScanEnable(const CommandDispatcher& owner,
+                         const ftl::CommandLine& cmd_line,
+                         const ftl::Closure& complete_cb) {
+  if (cmd_line.positional_args().size()) {
+    std::cout << "  Usage: set-scan-params [--help|--timeout=<t>|--no-dedup]"
+              << std::endl;
+    return false;
+  }
+
+  if (cmd_line.HasOption("help")) {
+    std::cout
+        << "  Options: \n"
+           "    --help - Display this help message\n"
+           "    --timeout=<t> - Duration (in seconds) during which to scan\n"
+           "                    (default is 10 seconds)\n"
+           "    --no-dedup - Tell the controller not to filter duplicate "
+           "reports";
+    std::cout << std::endl;
+    return false;
+  }
+
+  auto timeout = ftl::TimeDelta::FromSeconds(10);  // Default to 10 seconds.
+  std::string timeout_str;
+  if (cmd_line.GetOptionValue("timeout", &timeout_str)) {
+    uint32_t time_seconds;
+    if (!ftl::StringToNumberWithError(timeout_str, &time_seconds)) {
+      std::cout << "  Malformed timeout value: " << timeout_str << std::endl;
+      return false;
+    }
+
+    timeout = ftl::TimeDelta::FromSeconds(time_seconds);
+  }
+
+  hci::GenericEnableParam filter_duplicates = hci::GenericEnableParam::kEnable;
+  if (cmd_line.HasOption("no-dedup")) {
+    filter_duplicates = hci::GenericEnableParam::kDisable;
+  }
+
+  constexpr size_t kPayloadSize = sizeof(hci::LESetScanEnableCommandParams);
+  common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
+  hci::CommandPacket packet(hci::kLESetScanEnable, &buffer, kPayloadSize);
+
+  auto params = packet.GetPayload<hci::LESetScanEnableCommandParams>();
+  params->scanning_enabled = hci::GenericEnableParam::kEnable;
+  params->filter_duplicates = filter_duplicates;
+
+  // Event handler to log when we receive advertising reports
+  auto le_meta_event_cb = [](const hci::EventPacket& event) {
+    if (event.GetPayload<hci::LEMetaEventParams>()->subevent_code !=
+        hci::kLEAdvertisingReportSubeventCode)
+      return;
+
+    hci::AdvertisingReportParser parser(event);
+
+    // TODO(armansito): Factor the report logging out into a helper function.
+    std::cout << "  LE_Advertising_Report Event" << std::endl;
+    hci::LEAdvertisingReportData* data;
+    int8_t rssi;
+    while (parser.GetNextReport(&data, &rssi)) {
+      std::cout << "  Report:" << std::endl;
+      std::cout << "    RSSI: " << ftl::NumberToString(rssi) << std::endl;
+      std::cout << "    type: ";
+      switch (data->event_type) {
+        case hci::LEAdvertisingEventType::kAdvInd:
+          std::cout << "ADV_IND" << std::endl;
+          break;
+        case hci::LEAdvertisingEventType::kAdvDirectInd:
+          std::cout << "ADV_DIRECT_IND" << std::endl;
+          break;
+        case hci::LEAdvertisingEventType::kAdvScanInd:
+          std::cout << "ADV_SCAN_IND" << std::endl;
+          break;
+        case hci::LEAdvertisingEventType::kAdvNonConnInd:
+          std::cout << "ADV_NONCONN_IND" << std::endl;
+          break;
+        case hci::LEAdvertisingEventType::kScanRsp:
+          std::cout << "SCAN_RSP" << std::endl;
+          break;
+        default:
+          std::cout << "(unknown)" << std::endl;
+          break;
+      }
+      std::cout << "    addres type: ";
+      switch (data->address_type) {
+        case hci::LEAddressType::kPublic:
+          std::cout << "public" << std::endl;
+          break;
+        case hci::LEAddressType::kRandom:
+          std::cout << "random" << std::endl;
+          break;
+        case hci::LEAddressType::kPublicIdentity:
+          std::cout << "public-identity (resolved private)" << std::endl;
+          break;
+        case hci::LEAddressType::kRandomIdentity:
+          std::cout << "random-identity (resolved private)" << std::endl;
+          break;
+        default:
+          std::cout << "(unknown)" << std::endl;
+          break;
+      }
+      std::cout << "    BD_ADDR: " << data->address.ToString() << std::endl;
+      std::cout << "    Data Length: " << ftl::NumberToString(data->length_data)
+                << " bytes" << std::endl;
+    }
+  };
+  auto event_handler_id = owner.cmd_channel()->AddEventHandler(
+      hci::kLEMetaEventCode, le_meta_event_cb, owner.task_runner());
+
+  auto cleanup_cb =
+      [ complete_cb, event_handler_id, cmd_channel = owner.cmd_channel() ] {
+    cmd_channel->RemoveEventHandler(event_handler_id);
+    complete_cb();
+  };
+
+  // The callback invoked after scanning is stopped.
+  auto final_cb = [cleanup_cb](hci::CommandChannel::TransactionId id,
+                               const hci::EventPacket& event) {
+    auto return_params =
+        event.GetReturnParams<hci::LESetScanEnableReturnParams>();
+    LogCommandComplete(return_params->status, id);
+    cleanup_cb();
+  };
+
+  // Delayed task that stops scanning.
+  auto scan_disable_cb = [kPayloadSize, cleanup_cb, final_cb, &owner] {
+    common::StaticByteBuffer<BufferSize(kPayloadSize)> buffer;
+    hci::CommandPacket packet(hci::kLESetScanEnable, &buffer, kPayloadSize);
+
+    auto params = packet.GetPayload<hci::LESetScanEnableCommandParams>();
+    params->scanning_enabled = hci::GenericEnableParam::kDisable;
+    params->filter_duplicates = hci::GenericEnableParam::kDisable;
+
+    packet.EncodeHeader();
+    auto id = SendCommand(owner, packet, final_cb, cleanup_cb);
+
+    std::cout << "  Sent HCI_LE_Set_Scan_Enable (disabled) (id=" << id << ")"
+              << std::endl;
+  };
+
+  auto cb = [
+    scan_disable_cb, cleanup_cb, timeout, task_runner = owner.task_runner()
+  ](hci::CommandChannel::TransactionId id, const hci::EventPacket& event) {
+    auto return_params =
+        event.GetReturnParams<hci::LESetScanEnableReturnParams>();
+    LogCommandComplete(return_params->status, id);
+    if (return_params->status != hci::Status::kSuccess) {
+      cleanup_cb();
+      return;
+    }
+    task_runner->PostDelayedTask(scan_disable_cb, timeout);
+  };
+
+  packet.EncodeHeader();
+  auto id = SendCommand(owner, packet, cb, complete_cb);
+
+  std::cout << "  Sent HCI_LE_Set_Scan_Enable (enabled) (id=" << id << ")"
+            << std::endl;
 
   return true;
 }
@@ -371,7 +595,13 @@ void RegisterCommands(CommandDispatcher* handler_map) {
                                "Send HCI_LE_Set_Advertising_Parameters",
                                HandleSetAdvParams);
   handler_map->RegisterHandler(
-      "set-adv-data", "Send HCI_LE_Set_Advertisig_Data", HandleSetAdvData);
+      "set-adv-data", "Send HCI_LE_Set_Advertising_Data", HandleSetAdvData);
+  handler_map->RegisterHandler("set-scan-params",
+                               "Send HCI_LE_Set_Scan_Parameters",
+                               HandleSetScanParams);
+  handler_map->RegisterHandler(
+      "set-scan-enable", "Perform a LE device scan for a limited duration",
+      HandleSetScanEnable);
 }
 
 }  // namespace hcitool
