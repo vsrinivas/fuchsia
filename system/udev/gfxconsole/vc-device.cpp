@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <ddk/protocol/console.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
