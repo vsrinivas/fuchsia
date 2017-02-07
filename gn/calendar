@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/calendar"
+    ],
+    "binaries": [
+        {
+            "binary": "calendar.flx",
+            "bootfs_path": "apps/calendar"
+        }
+    ]
+}

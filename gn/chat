@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/chat"
+    ],
+    "binaries": [
+        {
+            "binary": "chat.flx",
+            "bootfs_path": "apps/chat"
+        }
+    ]
+}

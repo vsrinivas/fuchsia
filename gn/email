@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/email"
+    ],
+    "binaries": [
+        {
+            "binary": "email.flx",
+            "bootfs_path": "apps/email"
+        }
+    ]
+}

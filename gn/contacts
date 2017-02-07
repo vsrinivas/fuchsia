@@ -1,0 +1,11 @@
+{
+    "labels": [
+        "//apps/contacts"
+    ],
+    "binaries": [
+        {
+            "binary": "contacts.flx",
+            "bootfs_path": "apps/contacts"
+        }
+    ]
+}
