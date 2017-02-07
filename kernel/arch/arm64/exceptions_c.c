@@ -24,14 +24,6 @@
 
 #define DFSC_ALIGNMENT_FAULT 0b100001
 
-struct fault_handler_table_entry {
-    uint64_t pc;
-    uint64_t fault_handler;
-};
-
-extern struct fault_handler_table_entry __fault_handler_table_start[];
-extern struct fault_handler_table_entry __fault_handler_table_end[];
-
 bool arm64_in_int_handler[SMP_MAX_CPUS];
 
 static void dump_iframe(const struct arm64_iframe_long *iframe)
@@ -220,16 +212,6 @@ static void arm64_data_abort_handler(struct arm64_iframe_long *iframe, uint exce
     if (thr->arch.data_fault_resume != NULL) {
         iframe->elr = (uintptr_t)thr->arch.data_fault_resume;
         return;
-    }
-
-    struct fault_handler_table_entry *fault_handler;
-    for (fault_handler = __fault_handler_table_start;
-         fault_handler < __fault_handler_table_end;
-         fault_handler++) {
-        if (fault_handler->pc == iframe->elr) {
-            iframe->elr = fault_handler->fault_handler;
-            return;
-        }
     }
 
 #if WITH_LIB_MAGENTA

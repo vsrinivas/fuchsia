@@ -69,11 +69,3 @@ ldp \ra, \rb, [sp], #16
     b.lo    .Lcalloc_bootmem_aligned_clear_loop\@
 .endm
 
-/* Set fault handler for next instruction */
-.macro set_fault_handler, handler
-.Lfault_location\@:
-.pushsection .rodata.fault_handler_table
-    .quad    .Lfault_location\@
-    .quad    \handler
-.popsection
-.endm
