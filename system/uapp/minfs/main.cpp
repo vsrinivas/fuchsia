@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <magenta/compiler.h>
+
 #include "minfs-private.h"
 #ifndef __Fuchsia__
 #include "host.h"
@@ -252,7 +254,7 @@ int usage(void) {
             "Try using the [mkfs,fsck,mount,umount] commands instead\n"
 #endif
             "\n");
-    for (unsigned n = 0; n < (sizeof(CMDS) / sizeof(CMDS[0])); n++) {
+    for (unsigned n = 0; n < countof(CMDS); n++) {
         fprintf(stderr, "%9s %-10s %s\n", n ? "" : "commands:",
                 CMDS[n].name, CMDS[n].help);
     }
@@ -333,7 +335,7 @@ int main(int argc, char** argv) {
     fd = FS_FD_BLOCKDEVICE;
 #else
     uint32_t flags = O_RDWR;
-    for (unsigned i = 0; i < sizeof(CMDS) / sizeof(CMDS[0]); i++) {
+    for (unsigned i = 0; i < countof(CMDS); i++) {
         if (!strcmp(cmd, CMDS[i].name)) {
             flags = CMDS[i].flags;
             goto found;
@@ -367,7 +369,7 @@ found:
         return -1;
     }
 
-    for (unsigned i = 0; i < sizeof(CMDS) / sizeof(CMDS[0]); i++) {
+    for (unsigned i = 0; i < countof(CMDS); i++) {
         if (!strcmp(cmd, CMDS[i].name)) {
             return CMDS[i].func(bc, argc - 3, argv + 3);
         }

@@ -15,6 +15,7 @@
 #include <fs-management/mount.h>
 #include <launchpad/launchpad.h>
 #include <launchpad/vmo.h>
+#include <magenta/compiler.h>
 #include <magenta/processargs.h>
 #include <magenta/syscalls.h>
 #include <mxio/io.h>
@@ -64,7 +65,7 @@ mx_status_t launch_logs_sync(int argc, const char** argv, mx_handle_t* handles,
         goto fail;
     }
 
-    if (n + len > sizeof(hnd)/sizeof(hnd[0])) {
+    if (n + len > countof(hnd)) {
         fprintf(stderr, "launch: Too many handles\n");
         status = ERR_INVALID_ARGS;
         goto fail;
@@ -114,7 +115,7 @@ mx_status_t launch_stdio_sync(int argc, const char** argv, mx_handle_t* handles,
         goto fail;
     }
 
-    if (n + len > sizeof(hnd)/sizeof(hnd[0])) {
+    if (n + len > countof(hnd)) {
         fprintf(stderr, "launch: Too many handles\n");
         status = ERR_INVALID_ARGS;
         goto fail;
@@ -164,7 +165,7 @@ mx_status_t launch_stdio_async(int argc, const char** argv, mx_handle_t* handles
         goto fail;
     }
 
-    if (n + len > sizeof(hnd)/sizeof(hnd[0])) {
+    if (n + len > countof(hnd)) {
         fprintf(stderr, "launch: Too many handles\n");
         status = ERR_INVALID_ARGS;
         goto fail;
