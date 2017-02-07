@@ -81,7 +81,7 @@ typedef struct thread {
     unsigned int flags;
     unsigned int signals;
 #if WITH_SMP
-    int curr_cpu;
+    uint last_cpu; /* last/current cpu the thread is running on */
     int pinned_cpu; /* only run on pinned_cpu if >= 0 */
 #endif
 
@@ -139,14 +139,14 @@ typedef struct thread {
 } thread_t;
 
 #if WITH_SMP
-#define thread_curr_cpu(t) ((t)->curr_cpu)
+#define thread_last_cpu(t) ((t)->last_cpu)
 #define thread_pinned_cpu(t) ((t)->pinned_cpu)
-#define thread_set_curr_cpu(t,c) ((t)->curr_cpu = (c))
+#define thread_set_last_cpu(t,c) ((t)->last_cpu = (c))
 #define thread_set_pinned_cpu(t, c) ((t)->pinned_cpu = (c))
 #else
-#define thread_curr_cpu(t) (0)
+#define thread_last_cpu(t) (0)
 #define thread_pinned_cpu(t) (-1)
-#define thread_set_curr_cpu(t,c) do {} while(0)
+#define thread_set_last_cpu(t,c) do {} while(0)
 #define thread_set_pinned_cpu(t, c) do {} while(0)
 #endif
 

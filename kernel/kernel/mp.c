@@ -44,6 +44,9 @@ void mp_init(void)
 
 void mp_reschedule(mp_cpu_mask_t target, uint flags)
 {
+    if (target == 0)
+        return;
+
     uint local_cpu = arch_curr_cpu_num();
 
     LTRACEF("local %u, target 0x%x\n", local_cpu, target);

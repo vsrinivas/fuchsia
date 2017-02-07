@@ -152,7 +152,7 @@ thread_t *thread_create_etc(
     t->blocking_wait_queue = NULL;
     t->blocked_status = NO_ERROR;
     t->interruptable = false;
-    thread_set_curr_cpu(t, -1);
+    thread_set_last_cpu(t, 0);
 
     t->retcode = 0;
     wait_queue_init(&t->retcode_wait_queue);
@@ -462,7 +462,7 @@ void thread_kill(thread_t *t, bool block)
             break;
         case THREAD_RUNNING:
             /* thread is running (on another cpu) */
-            mp_reschedule(1u << t->curr_cpu, 0);
+            mp_reschedule(1u << thread_last_cpu(t), 0);
             break;
         case THREAD_BLOCKED:
             /* thread is blocked on something and marked interruptable */
@@ -562,8 +562,7 @@ void thread_resched(void)
     }
 
     /* mark the cpu ownership of the threads */
-    thread_set_curr_cpu(oldthread, -1);
-    thread_set_curr_cpu(newthread, cpu);
+    thread_set_last_cpu(newthread, cpu);
 
     /* set the cpu state based on the new thread we've picked */
     if (thread_is_idle(newthread)) {
@@ -850,7 +849,7 @@ void thread_construct_first(thread_t *t, const char *name)
     t->state = THREAD_RUNNING;
     t->flags = THREAD_FLAG_DETACHED;
     t->signals = 0;
-    thread_set_curr_cpu(t, cpu);
+    thread_set_last_cpu(t, cpu);
     thread_set_pinned_cpu(t, cpu);
 
     THREAD_LOCK(state);
@@ -1067,8 +1066,8 @@ void dump_thread(thread_t *t, bool full_dump)
     if (full_dump) {
         dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name);
 #if WITH_SMP
-        dprintf(INFO, "\tstate %s, curr_cpu %d, pinned_cpu %d, priority %d, remaining time slice %" PRIu64 "\n",
-                thread_state_to_str(t->state), t->curr_cpu, t->pinned_cpu, t->priority, t->remaining_time_slice);
+        dprintf(INFO, "\tstate %s, last_cpu %u, pinned_cpu %d, priority %d, remaining time slice %" PRIu64 "\n",
+                thread_state_to_str(t->state), t->last_cpu, t->pinned_cpu, t->priority, t->remaining_time_slice);
 #else
         dprintf(INFO, "\tstate %s, priority %d, remaining time slice %" PRIu64 "\n",
                 thread_state_to_str(t->state), t->priority, t->remaining_time_slice);

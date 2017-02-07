@@ -16,6 +16,9 @@
 #include <kernel/mp.h>
 #include <kernel/thread.h>
 
+/* legacy implementation that just broadcast ipis for every reschedule */
+#define BROADCAST_RESCHEDULE 0
+
 /* the run queue */
 static struct list_node run_queue[NUM_PRIORITIES];
 static uint32_t run_queue_bitmap;
@@ -23,10 +26,75 @@ static uint32_t run_queue_bitmap;
 /* make sure the bitmap is large enough to cover our number of priorities */
 static_assert(NUM_PRIORITIES <= sizeof(run_queue_bitmap) * CHAR_BIT, "");
 
+/* pick a 'random' cpu */
+static mp_cpu_mask_t rand_cpu(const mp_cpu_mask_t mask)
+{
+    if (unlikely(mask == 0))
+        return 0;
+
+    /* check that the mask passed in has at least one bit set in the online mask */
+    mp_cpu_mask_t online = mp_get_online_mask();
+    if (unlikely((mask & online) == 0))
+        return 0;
+
+    /* compute the highest online cpu */
+    uint highest_cpu = (sizeof(mp_cpu_mask_t) * CHAR_BIT - 1) - __builtin_clz(online);
+
+    /* not very random, round robins a bit through the mask until it gets a hit */
+    for (;;) {
+        /* protected by THREAD_LOCK, safe to use non atomically */
+        static uint rot = 0;
+
+        if (++rot > highest_cpu)
+            rot = 0;
+
+        if ((1u << rot) & mask)
+            return (1u << rot);
+    }
+}
+
 /* find a cpu to wake up */
 static mp_cpu_mask_t find_cpu(thread_t *t)
 {
+#if BROADCAST_RESCHEDULE
     return MP_CPU_ALL_BUT_LOCAL;
+#elif WITH_SMP
+    /* get the last cpu the thread ran on */
+    mp_cpu_mask_t last_ran_cpu_mask = (1u << thread_last_cpu(t));
+
+    /* the current cpu */
+    mp_cpu_mask_t curr_cpu_mask = (1u << arch_curr_cpu_num());
+
+    /* get a list of idle cpus */
+    mp_cpu_mask_t idle_cpu_mask = mp_get_idle_mask();
+    if (idle_cpu_mask != 0) {
+        if (idle_cpu_mask & curr_cpu_mask) {
+            /* the current cpu is idle, so run it here */
+            return 0;
+        }
+
+        if (last_ran_cpu_mask & idle_cpu_mask) {
+            /* the last core it ran on is idle and isn't the current cpu */
+            return last_ran_cpu_mask;
+        }
+
+        /* pick an idle_cpu */
+        return rand_cpu(idle_cpu_mask);
+    }
+
+    /* no idle cpus */
+    if (last_ran_cpu_mask == curr_cpu_mask) {
+        /* the last cpu it ran on is us */
+        /* pick a random cpu that isn't the current one */
+        return rand_cpu(mp_get_online_mask() & ~(curr_cpu_mask));
+    } else {
+        /* pick the last cpu it ran on */
+        return last_ran_cpu_mask;
+    }
+#else /* !WITH_SMP */
+    /* no smp, dont send an IPI */
+    return 0;
+#endif
 }
 
 /* run queue manipulation */
