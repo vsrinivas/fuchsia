@@ -9,13 +9,12 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <magenta/compiler.h>
 #include <magenta/syscalls.h>
 #include <unittest/unittest.h>
 
 #define THREAD_COUNT 8
 #define ITER 1000000
-
-#define countof(a) (sizeof(a) / sizeof((a)[0]))
 
 /* expected double bit pattern for each thread */
 static const uint64_t expected[THREAD_COUNT] = {
