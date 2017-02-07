@@ -4,6 +4,8 @@
 
 #include "commands.h"
 
+#include <endian.h>
+
 #include <iostream>
 #include <cstring>
 
@@ -179,12 +181,12 @@ bool HandleSetAdvEnable(const CommandDispatcher& owner,
     return false;
   }
 
-  hci::LESetAdvertisingEnableValue value;
+  hci::GenericEnableParam value;
   std::string cmd_arg = cmd_line.positional_args()[0];
   if (cmd_arg == "enable") {
-    value = hci::LESetAdvertisingEnableValue::kEnable;
+    value = hci::GenericEnableParam::kEnable;
   } else if (cmd_arg == "disable") {
-    value = hci::LESetAdvertisingEnableValue::kDisable;
+    value = hci::GenericEnableParam::kDisable;
   } else {
     std::cout << "  Unrecognized parameter: " << cmd_arg << std::endl;
     std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
@@ -212,7 +214,7 @@ bool HandleSetAdvEnable(const CommandDispatcher& owner,
 
   auto id = SendCommand(owner, packet, cb, complete_cb);
 
-  std::cout << "  Sent HCI_Set_Advertising_Enable (id=" << id << ")"
+  std::cout << "  Sent HCI_LE_Set_Advertising_Enable (id=" << id << ")"
             << std::endl;
   return true;
 }
@@ -265,11 +267,11 @@ bool HandleSetAdvParams(const CommandDispatcher& owner,
                             kPayloadSize);
   auto params =
       packet.GetPayload<hci::LESetAdvertisingParametersCommandParams>();
-  params->adv_interval_min = hci::kLEAdvertisingIntervalDefault;
-  params->adv_interval_max = hci::kLEAdvertisingIntervalDefault;
+  params->adv_interval_min = htole16(hci::kLEAdvertisingIntervalDefault);
+  params->adv_interval_max = htole16(hci::kLEAdvertisingIntervalDefault);
   params->adv_type = adv_type;
-  params->own_address_type = hci::LEAdvParamOwnAddressType::kPublic;
-  params->peer_address_type = hci::LEAdvParamPeerAddressType::kPublic;
+  params->own_address_type = hci::LEOwnAddressType::kPublic;
+  params->peer_address_type = hci::LEPeerAddressType::kPublic;
   params->peer_address.SetToZero();
   params->adv_channel_map = hci::kLEAdvertisingChannelAll;
   params->adv_filter_policy = hci::LEAdvFilterPolicy::kAllowAll;
@@ -285,7 +287,7 @@ bool HandleSetAdvParams(const CommandDispatcher& owner,
   packet.EncodeHeader();
   auto id = SendCommand(owner, packet, cb, complete_cb);
 
-  std::cout << "  Sent HCI_Set_Advertising_Parameters (id=" << id << ")"
+  std::cout << "  Sent HCI_LE_Set_Advertising_Parameters (id=" << id << ")"
             << std::endl;
 
   return true;

@@ -516,10 +516,9 @@ enum class LESupportedFeature : uint8_t {
   // The rest is reserved for future use.
 };
 
-// Potential values that can be passed as a parameter to the
-// HCI_LE_Set_Advertising_Enable command.
-// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.9)
-enum class LESetAdvertisingEnableValue : uint8_t {
+// Binary values that can be generically passed to HCI commands that expect a
+// 1-octet boolean "enable"/"disable" parameter.
+enum class GenericEnableParam : uint8_t {
   kDisable = 0x00,
   kEnable = 0x01,
 };
@@ -530,9 +529,18 @@ enum class LESetAdvertisingEnableValue : uint8_t {
 constexpr uint16_t kLEAdvertisingIntervalMin = 0x0020;
 constexpr uint16_t kLEAdvertisingIntervalMax = 0x4000;
 
-// The default LE advertising interval parameter value, corresponding 1.28
+// The default LE advertising interval parameter value, corresponding to 1.28
 // seconds (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5).
 constexpr uint16_t kLEAdvertisingIntervalDefault = 0x0800;
+
+// The minimum and maximum range values for the LE scan interval parameters.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.10)
+constexpr uint16_t kLEScanIntervalMin = 0x0004;
+constexpr uint16_t kLEScanIntervalMax = 0x4000;
+
+// The default LE scan interval parameter value, corresponding to 10
+// milliseconds (see Core Spec v5.0, Vol 2, Part E, Section 7.8.10).
+constexpr uint16_t kLEScanIntervalDefault = 0x0010;
 
 // LE advertising types (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5).
 enum class LEAdvertisingType : uint8_t {
@@ -557,9 +565,9 @@ enum class LEAdvertisingType : uint8_t {
 };
 
 // Possible values that can be used for the |own_address_type| parameter in a
-// HCI_LE_Set_Advertising_Parameters command.
-// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5)
-enum class LEAdvParamOwnAddressType : uint8_t {
+// HCI_LE_Set_Advertising_Parameters or a HCI_LE_Set_Scan_Parameters command.
+// (see Core Spec v5.0, Vol 2, Part E, Sections 7.8.5 and 7.8.10)
+enum class LEOwnAddressType : uint8_t {
   // Public device address (default)
   kPublic = 0x00,
 
@@ -582,7 +590,7 @@ enum class LEAdvParamOwnAddressType : uint8_t {
 // Possible values that can be used for the |peer_address_type| parameter in a
 // HCI_LE_Set_Advertising_Parameters command.
 // (see Core Spec v5.0, Vol 2, Part E, Section 7.8.5)
-enum class LEAdvParamPeerAddressType : uint8_t {
+enum class LEPeerAddressType : uint8_t {
   // Public Device Address (default) or Public Identity Address
   kPublic = 0x00,
 
@@ -620,6 +628,51 @@ enum class LEAdvFilterPolicy : uint8_t {
   kWhiteListOnly = 0x03,
 
   // The rest is reserved for future use.
+};
+
+// Possible values that can be used for the |scan_type| parameter in a
+// LE_Set_Scan_Parameters command.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.10)
+enum class LEScanType : uint8_t {
+  // Passive Scanning. No scanning PDUs shall be sent (default)
+  kPassive = 0x00,
+
+  // Active scanning. Scanning PDUs may be sent.
+  kActive = 0x01,
+
+  // The rest is reserved for future use.
+};
+
+// Possible values that can be used for the |filter_policy| parameter
+// in a HCI_LE_Set_Scan_Parameters command.
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.8.10)
+enum class LEScanFilterPolicy : uint8_t {
+  // Accept all advertising packets except directed advertising packets not
+  // addressed to this device (default).
+  kNoWhiteList = 0x00,
+
+  // Accept only advertising packets from devices where the advertiser’s address
+  // is in the White List. Directed advertising packets which are not addressed
+  // to this device shall be ignored.
+  kUseWhiteList = 0x01,
+
+  // Accept all advertising packets except directed advertising packets where
+  // the initiator's identity address does not address this device.
+  // Note: Directed advertising packets where the initiator's address is a
+  // resolvable private address that cannot be resolved are also accepted.
+  kNoWhiteListWithPrivacy = 0x02,
+
+  // Accept all advertising packets except:
+  //
+  //   - advertising packets where the advertiser's identity address is not in
+  //     the White List; and
+  //
+  //   - directed advertising packets where the initiator's identity address
+  //     does not address this device
+  //
+  // Note: Directed advertising packets where the initiator's address is a
+  // resolvable private address that cannot be resolved are also accepted.
+  kUseWhiteListWithPrivacy = 0x03,
 };
 
 // The maximum length of advertising data that can get passed to the

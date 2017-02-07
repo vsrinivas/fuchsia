@@ -559,8 +559,8 @@ struct LESetAdvertisingParametersCommandParams {
   // peer’s Identity Address contained in the |peer_address| parameter and
   // peer’s Identity Address Type (i.e. 0x00 or 0x01) contained in the
   // |peer_address_type| parameter.
-  LEAdvParamOwnAddressType own_address_type;
-  LEAdvParamPeerAddressType peer_address_type;
+  LEOwnAddressType own_address_type;
+  LEPeerAddressType peer_address_type;
 
   // Public Device Address, Random Device Address, Public Identity Address, or
   // Random (static) Identity Address of the device to be connected.
@@ -615,11 +615,72 @@ struct LESetAdvertisingEnableCommandParams {
   // (Advertising is disabled) or until a connection is created or until the
   // Advertising is timed out due to high duty cycle Directed Advertising. In
   // these cases, advertising is then disabled.
-  LESetAdvertisingEnableValue advertising_enable;
+  GenericEnableParam advertising_enable;
 };
 
 struct LESetAdvertisingEnableReturnParams {
   // See enum Status in hci_constants.h.
+  Status status;
+};
+
+// ==========================================
+// LE Set Scan Parameters Command (v4.0) (LE)
+constexpr OpCode kLESetScanParameters = LEControllerCommandOpCode(0x000B);
+
+struct LESetScanParametersCommandParams {
+  // Controls the type of scan to perform.
+  LEScanType scan_type;
+
+  // The LE_Scan_Interval and LE_Scan_Window parameters are recommendations from
+  // the Host on how long (LE_Scan_Window) and how frequently (LE_Scan_Interval)
+  // the Controller should scan (See Core Spec v5.0, Vol 6, Part B, Section
+  // 4.5.3). The LE_Scan_Window parameter shall always be set to a value smaller
+  // or equal to the value set for the LE_Scan_Interval parameter. If they are
+  // set to the same value scanning should be run continuously.
+  //
+  //   Range: see kLEScanInterval[Min|Max] in hci_constants.h
+  //   Default: N = kLEScanIntervalDefault (see hci_constants.h)
+  //   Time: N * 0.625 ms
+  //   Time Range: 2.5 ms to 10.24 s
+  uint16_t scan_interval;
+  uint16_t scan_window;
+
+  // Indicates the type of address being used in the scan request packets (for
+  // active scanning).
+  LEOwnAddressType own_address_type;
+
+  // The LE white-list and privacy filter policy that should be used while
+  // scanning for directed and undirected advertisements.
+  LEScanFilterPolicy filter_policy;
+} __PACKED;
+
+struct LESetScanParametersReturnParams {
+  // See enum status in hci_constants.h
+  Status status;
+};
+
+// ======================================
+// LE Set Scan Enable Command (v4.0) (LE)
+constexpr OpCode kLESetScanEnable = LEControllerCommandOpCode(0x000C);
+
+struct LESetScanEnableCommandParams {
+  // The LE_Set_Scan_Enable command is used to start scanning. Scanning is used
+  // to discover advertising devices nearby.
+  //
+  // If the LE_Scan_Enable parameter is set to 0x01 and scanning is already
+  // enabled, any change to the Filter_Duplicates setting shall take effect.
+  // Note: Disabling scanning when it is disabled has no effect.
+  GenericEnableParam scanning_enabled;
+
+  // Controls whether the Link Layer should filter out duplicate advertising
+  // reports (Filtering_Enabled) to the Host, or if the Link Layer should
+  // generate advertising reports for each packet received (Filtering_Disabled).
+  // (See Core Spec v5.0, Vol 6, Part B, Section 4.4.3.5)
+  GenericEnableParam filter_duplicates;
+} __PACKED;
+
+struct LESetScanEnableReturnParams {
+  // See enum status in hci_constants.h
   Status status;
 };
 
