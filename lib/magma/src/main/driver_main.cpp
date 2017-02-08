@@ -289,8 +289,6 @@ mx_driver_t _driver_intel_gen_gpu = {
         },
 };
 
-extern const magenta_driver_info_t __magenta_driver__;
-
 // clang-format off
 MAGENTA_DRIVER_BEGIN(_driver_intel_gen_gpu, "intel-gen-gpu", "magenta", "!0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, MX_PROTOCOL_PCI),
