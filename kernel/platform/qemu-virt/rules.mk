@@ -13,6 +13,10 @@ ARCH := arm64
 ARM_CPU ?= cortex-a53
 WITH_SMP ?= 1
 
+# qemu virt can support up to 8 cores in cluster 0
+SMP_MAX_CPUS := 8
+SMP_CPU_ID_BITS := 3
+
 LK_HEAP_IMPLEMENTATION ?= cmpctmalloc
 
 MODULE_SRCS += \
