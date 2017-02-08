@@ -16,7 +16,7 @@
     "resources": [
         {
             "file": "application/src/applications.config",
-            "bootfs_path": "data/src/applications.config"
+            "bootfs_path": "data/application_manager/applications.config"
         },
         {
             "file": "apps/modular/src/bootstrap/services.config",
