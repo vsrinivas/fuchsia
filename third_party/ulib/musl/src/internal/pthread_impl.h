@@ -19,7 +19,6 @@ struct pthread {
     struct pthread* self;
     void **dtv, *unused1, *unused2;
     uintptr_t canary, canary2;
-    pid_t tid, pid;
     int errno_value;
     int tsd_used;
     volatile int cancel, canceldisable, cancelasync;
