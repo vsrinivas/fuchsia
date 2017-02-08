@@ -679,6 +679,44 @@ extern mx_status_t _mx_fifo0_op(
     uint64_t val,
     mx_fifo_state_t out[1]) __attribute__((__leaf__));
 
+extern mx_status_t mx_fifo_create(
+    uint32_t elem_count,
+    uint32_t elem_size,
+    uint32_t options,
+    mx_handle_t out0[1],
+    mx_handle_t out1[1]) __attribute__((__leaf__));
+
+extern mx_status_t _mx_fifo_create(
+    uint32_t elem_count,
+    uint32_t elem_size,
+    uint32_t options,
+    mx_handle_t out0[1],
+    mx_handle_t out1[1]) __attribute__((__leaf__));
+
+extern mx_status_t mx_fifo_read(
+    mx_handle_t handle,
+    void* data,
+    size_t len,
+    uint32_t num_written[1]) __attribute__((__leaf__));
+
+extern mx_status_t _mx_fifo_read(
+    mx_handle_t handle,
+    void* data,
+    size_t len,
+    uint32_t num_written[1]) __attribute__((__leaf__));
+
+extern mx_status_t mx_fifo_write(
+    mx_handle_t handle,
+    const void* data,
+    size_t len,
+    uint32_t num_written[1]) __attribute__((__leaf__));
+
+extern mx_status_t _mx_fifo_write(
+    mx_handle_t handle,
+    const void* data,
+    size_t len,
+    uint32_t num_written[1]) __attribute__((__leaf__));
+
 extern mx_status_t mx_log_create(
     uint32_t options,
     mx_handle_t out[1]) __attribute__((__leaf__));

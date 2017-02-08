@@ -45,8 +45,13 @@
 
 ## Sockets
 + [socket_create](syscalls/socket_create.md) - create a new socket
-+ [socket_write](syscalls/socket_write.md) - write data to a socket
 + [socket_read](syscalls/socket_read.md) - read data from a socket
++ [socket_write](syscalls/socket_write.md) - write data to a socket
+
+## Fifos
++ [fifo_create](syscalls/fifo_create.md) - create a new fifo
++ [fifo_read](syscalls/fifo_read.md) - read data from a fifo
++ [fifo_write](syscalls/fifo_write.md) - write data to a fifo
 
 ## Events and Event Pairs
 + [event_create](syscalls/event_create.md) - create an event

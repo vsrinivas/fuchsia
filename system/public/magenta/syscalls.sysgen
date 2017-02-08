@@ -336,6 +336,19 @@ syscall fifo0_op
     (handle: mx_handle_t, op: uint32_t, val: uint64_t, out: mx_fifo_state_t[1] OUT)
     returns (mx_status_t);
 
+syscall fifo_create
+    (elem_count: uint32_t, elem_size: uint32_t, options: uint32_t,
+        out0: mx_handle_t[1] OUT, out1: mx_handle_t[1] OUT)
+    returns (mx_status_t);
+
+syscall fifo_read
+    (handle: mx_handle_t, data: any[len] OUT, len: size_t, num_written: uint32_t[1] OUT)
+    returns (mx_status_t);
+
+syscall fifo_write
+    (handle: mx_handle_t, data: any[len] IN, len: size_t, num_written: uint32_t[1] OUT)
+    returns (mx_status_t);
+
 # ---------------------------------------------------------------------------------------
 # Syscalls past this point are non-public
 # Some currently do not require a handle to restrict access.

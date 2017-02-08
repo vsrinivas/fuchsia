@@ -112,6 +112,11 @@ typedef uint32_t mx_signals_t;
 #define MX_RESOURCE_CHILD_ADDED     MX_OBJECT_SIGNAL_2
 
 // Fifo
+#define MX_FIFO_READABLE            MX_OBJECT_SIGNAL_0
+#define MX_FIFO_WRITABLE            MX_OBJECT_SIGNAL_1
+#define MX_FIFO_PEER_CLOSED         MX_OBJECT_SIGNAL_2
+
+// Fifo0
 #define MX_FIFO_EMPTY               MX_OBJECT_SIGNAL_0
 #define MX_FIFO_FULL                MX_OBJECT_SIGNAL_1
 #define MX_FIFO_NOT_EMPTY           MX_OBJECT_SIGNAL_2
