@@ -294,7 +294,9 @@ enum handler_return platform_irq(struct iframe* frame) {
         return INT_NO_RESCHEDULE;
     }
 
-    THREAD_STATS_INC(interrupts);
+    // tracking external hardware irqs in this variable
+    if (vector >= 32)
+        THREAD_STATS_INC(interrupts);
 
     uint cpu = arch_curr_cpu_num();
 

@@ -259,7 +259,7 @@ static inline bool thread_lock_held(void)
     return spin_lock_held(&thread_lock);
 }
 
-/* thread level statistics */
+/* thread/cpu level statistics */
 struct thread_stats {
     lk_bigtime_t idle_time;
     lk_bigtime_t last_idle_timestamp;
@@ -268,18 +268,24 @@ struct thread_stats {
     ulong irq_preempts;
     ulong preempts;
     ulong yields;
-    ulong interrupts; /* platform code increment this */
-    ulong timer_ints; /* timer code increment this */
-    ulong timers; /* timer code increment this */
+
+    /* cpu level interrupts and exceptions */
+    ulong interrupts; /* hardware interrupts, minus timer interrupts or inter-processor interrupts */
+    ulong timer_ints; /* timer interrupts */
+    ulong timers; /* timer callbacks */
+    ulong exceptions; /* exceptions such as page fault or undefined opcode */
+    ulong syscalls;
 
 #if WITH_SMP
+    /* inter-processor interrupts */
     ulong reschedule_ipis;
+    ulong generic_ipis;
 #endif
 };
 
 extern struct thread_stats thread_stats[SMP_MAX_CPUS];
 
-#define THREAD_STATS_INC(name) do { thread_stats[arch_curr_cpu_num()].name++; } while(0)
+#define THREAD_STATS_INC(name) do { __atomic_fetch_add(&thread_stats[arch_curr_cpu_num()].name, 1u, __ATOMIC_RELAXED); } while(0)
 
 __END_CDECLS;
 

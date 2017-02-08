@@ -52,6 +52,8 @@ extern "C" void arm64_syscall(struct arm64_iframe_long* frame, bool is_64bit, ui
         return;
     }
 
+    THREAD_STATS_INC(syscalls);
+
     /* re-enable interrupts to maintain kernel preemptiveness */
     arch_enable_ints();
 
@@ -112,6 +114,8 @@ uint64_t x86_64_syscall(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t ar
     syscall_num &= 0xffffffff;
 
     ktrace_tiny(TAG_SYSCALL_ENTER, (static_cast<uint32_t>(syscall_num) << 8) | arch_curr_cpu_num());
+
+    THREAD_STATS_INC(syscalls);
 
     /* re-enable interrupts to maintain kernel preemptiveness */
     arch_enable_ints();

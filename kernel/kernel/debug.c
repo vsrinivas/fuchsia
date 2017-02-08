@@ -99,8 +99,17 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
     static struct thread_stats old_stats[SMP_MAX_CPUS];
     static lk_bigtime_t last_idle_time[SMP_MAX_CPUS];
 
+    printf("cpu    load"
+            " sched (cs ylds pmpts irq_pmpts)"
+            " excep"
+            "  sysc"
+            " ints (hw  tmr tmr_cb)"
+#if WITH_SMP
+            " ipi (rs  gen)\n"
+#endif
+            );
     for (uint i = 0; i < SMP_MAX_CPUS; i++) {
-        /* dont display time for inactiv cpus */
+        /* dont display time for inactive cpus */
         if (!mp_is_cpu_active(i))
             continue;
 
@@ -116,30 +125,33 @@ static enum handler_return threadload(struct timer *t, lk_time_t now, void *arg)
         lk_bigtime_t busy_time = 1000000000ULL - (delta_time > 1000000000ULL ? 1000000000ULL : delta_time);
         uint busypercent = (busy_time * 10000) / (1000000000);
 
-        printf("cpu %u LOAD: "
-               "%u.%02u%%, "
-               "cs %lu, "
-               "ylds %lu, "
-               "pmpts %lu, "
-               "irq_pmpts %lu, "
+        printf("%3u"
+               " %3u.%02u%%"
+               " %9lu %4lu %5lu %9lu"
+               " %6lu"
+               " %5lu"
+               " %8lu %4lu %6lu"
 #if WITH_SMP
-               "rs_ipis %lu, "
+               " %8lu %4lu"
 #endif
-               "ints %lu, "
-               "tmr ints %lu, "
-               "tmrs %lu\n",
+               "\n",
                i,
                busypercent / 100, busypercent % 100,
                thread_stats[i].context_switches - old_stats[i].context_switches,
                thread_stats[i].yields - old_stats[i].yields,
                thread_stats[i].preempts - old_stats[i].preempts,
                thread_stats[i].irq_preempts - old_stats[i].irq_preempts,
-#if WITH_SMP
-               thread_stats[i].reschedule_ipis - old_stats[i].reschedule_ipis,
-#endif
+               thread_stats[i].exceptions - old_stats[i].exceptions,
+               thread_stats[i].syscalls - old_stats[i].syscalls,
                thread_stats[i].interrupts - old_stats[i].interrupts,
                thread_stats[i].timer_ints - old_stats[i].timer_ints,
-               thread_stats[i].timers - old_stats[i].timers);
+               thread_stats[i].timers - old_stats[i].timers
+#if WITH_SMP
+               ,
+               thread_stats[i].reschedule_ipis - old_stats[i].reschedule_ipis,
+               thread_stats[i].generic_ipis - old_stats[i].generic_ipis
+#endif
+               );
 
         old_stats[i] = thread_stats[i];
         last_idle_time[i] = idle_time;

@@ -355,6 +355,8 @@ enum handler_return mp_mbx_generic_irq(void)
     DEBUG_ASSERT(arch_ints_disabled());
     uint local_cpu = arch_curr_cpu_num();
 
+    THREAD_STATS_INC(generic_ipis);
+
     while (1) {
         struct mp_ipi_task *task;
         spin_lock(&mp.ipi_task_lock);

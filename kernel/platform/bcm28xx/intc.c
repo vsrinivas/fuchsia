@@ -152,8 +152,6 @@ enum handler_return platform_irq(struct arm64_iframe_short* frame) {
     uint vector;
     uint cpu = arch_curr_cpu_num();
 
-    THREAD_STATS_INC(interrupts);
-
     // see what kind of irq it is
     uint32_t pend = *REG32(INTC_LOCAL_IRQ_PEND0 + cpu * 4);
 
@@ -221,9 +219,11 @@ decoded:
         }
     } else
 #endif // WITH_SMP
-        if (vector == 0xffffffff) {
+    if (vector == 0xffffffff) {
         ret = INT_NO_RESCHEDULE;
     } else if (int_handler_table[vector].handler) {
+        if (vector < ARM_IRQ_LOCAL_BASE)
+            THREAD_STATS_INC(interrupts);
         ret = int_handler_table[vector].handler(int_handler_table[vector].arg);
     } else {
         panic("irq %u fired on cpu %u but no handler set!\n", vector, cpu);
