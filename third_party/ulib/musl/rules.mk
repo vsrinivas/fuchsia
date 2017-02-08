@@ -915,11 +915,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/time/strptime.c \
     $(LOCAL_DIR)/src/time/time.c \
     $(LOCAL_DIR)/src/time/timegm.c \
-    $(LOCAL_DIR)/src/time/timer_create.c \
-    $(LOCAL_DIR)/src/time/timer_delete.c \
-    $(LOCAL_DIR)/src/time/timer_getoverrun.c \
-    $(LOCAL_DIR)/src/time/timer_gettime.c \
-    $(LOCAL_DIR)/src/time/timer_settime.c \
     $(LOCAL_DIR)/src/time/times.c \
     $(LOCAL_DIR)/src/time/timespec_get.c \
     $(LOCAL_DIR)/src/time/utime.c \

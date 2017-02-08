@@ -1,7 +1,7 @@
-#include "syscall.h"
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 void* __mmap(void*, size_t, int, int, int, off_t);
 
