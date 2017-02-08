@@ -79,6 +79,8 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
     seq = node.barrier = 2;
     fut = &node.barrier;
     node.state = WAITING;
+    /* Add our waiter node onto the condvar's list.  We add the node to the
+     * head of the list, but this is logically the end of the queue. */
     node.next = c->_c_head;
     c->_c_head = &node;
     if (!c->_c_tail)
@@ -94,6 +96,14 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
     if (cs == PTHREAD_CANCEL_DISABLE)
         __pthread_setcancelstate(cs, 0);
 
+    /* Wait to be signaled.  There are multiple ways this loop could exit:
+     *  1) After being woken by __private_cond_signal().
+     *  2) After being woken by pthread_mutex_unlock(), after we were
+     *     requeued from the condvar's futex to the mutex's futex (by
+     *     pthread_cond_timedwait() in another thread).
+     *  3) After a timeout.
+     *  4) On Linux, interrupted by an asynchronous signal.  This does
+     *     not apply on Magenta. */
     do
         e = __timedwait_cp(fut, seq, clock, ts);
     while (*fut == seq && !e);
@@ -101,6 +111,14 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
     oldstate = a_cas(&node.state, WAITING, LEAVING);
 
     if (oldstate == WAITING) {
+        /* The wait timed out.  So far, this thread was not signaled
+         * by pthread_cond_signal()/broadcast() -- this thread was
+         * able to move state.node out of the WAITING state before any
+         * __private_cond_signal() call could do that.
+         *
+         * This thread must therefore remove the waiter node from the
+         * list itself. */
+
         /* Access to cv object is valid because this waiter was not
          * yet signaled and a new signal/broadcast cannot return
          * after seeing a LEAVING waiter without getting notified
@@ -108,6 +126,7 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
 
         lock(&c->_c_lock);
 
+        /* Remove our waiter node from the list. */
         if (c->_c_head == &node)
             c->_c_head = node.next;
         else if (node.prev)
@@ -119,16 +138,30 @@ int pthread_cond_timedwait(pthread_cond_t* restrict c, pthread_mutex_t* restrict
 
         unlock(&c->_c_lock);
 
+        /* It is possible that __private_cond_signal() saw our waiter node
+         * after we set node.state to LEAVING but before we removed the
+         * node from the list.  If so, it will have set node.notify and
+         * will be waiting on it, and we need to wake it up.
+         *
+         * This is rather complex.  An alternative would be to eliminate
+         * the node.state field and always claim _c_lock if we could have
+         * got a timeout.  However, that presumably has higher overhead
+         * (since it contends _c_lock and involves more atomic ops). */
         if (node.notify) {
             if (a_fetch_add(node.notify, -1) == 1)
                 __wake(node.notify, 1);
         }
     } else {
-        /* Lock barrier first to control wake order. */
+        /* This thread was at least partially signaled by
+         * pthread_cond_signal()/broadcast().  That might have raced
+         * with a timeout, so we need to wait for this thread to be
+         * fully signaled.  We need to wait until another thread sets
+         * node.barrier to 0.  (This lock() call will also set
+         * node.barrier to non-zero, but that side effect is
+         * unnecessary here.) */
         lock(&node.barrier);
     }
 
-relock:
     /* Errors locking the mutex override any existing error or
      * cancellation, since the caller must see them to know the
      * state of the mutex. */
@@ -138,6 +171,18 @@ relock:
     if (oldstate == WAITING)
         goto done;
 
+    /* By this point, our part of the waiter list cannot change further.
+     * It has been unlinked from the condvar by __private_cond_signal().
+     * It consists only of waiters that were woken explicitly by
+     * pthread_cond_signal()/broadcast().  Any timed-out waiters would have
+     * removed themselves from the list before __private_cond_signal()
+     * signaled the first node.barrier in our list.
+     *
+     * It is therefore safe now to read node.next and node.prev without
+     * holding _c_lock. */
+
+    /* As an optimization, we only update _m_waiters at the beginning and
+     * end of the woken list. */
     if (!node.next)
         a_inc(&m->_m_waiters);
 
@@ -163,6 +208,9 @@ done:
     return e;
 }
 
+/* This will wake upto |n| threads that are waiting on the condvar.  This
+ * is used to implement pthread_cond_signal() (for n=1) and
+ * pthread_cond_broadcast() (for n=-1). */
 void __private_cond_signal(void* condvar, int n) {
     pthread_cond_t* c = condvar;
     struct waiter *p, *first = 0;
@@ -172,6 +220,11 @@ void __private_cond_signal(void* condvar, int n) {
     lock(&c->_c_lock);
     for (p = c->_c_tail; n && p; p = p->prev) {
         if (a_cas(&p->state, WAITING, SIGNALED) != WAITING) {
+            /* This waiter timed out, and it marked itself as in the
+             * LEAVING state.  However, it hasn't yet claimed _c_lock
+             * (since we claimed the lock first) and so it hasn't yet
+             * removed itself from the list.  We will wait for the waiter
+             * to remove itself from the list and to notify us of that. */
             ref++;
             p->notify = &ref;
         } else {

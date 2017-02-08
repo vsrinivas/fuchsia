@@ -56,6 +56,8 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
     seq = node.barrier = 2;
     fut = &node.barrier;
     node.state = WAITING;
+    /* Add our waiter node onto the condvar's list.  We add the node to the
+     * head of the list, but this is logically the end of the queue. */
     node.next = c->_c_head;
     c->_c_head = &node;
     if (!c->_c_tail)
@@ -67,6 +69,14 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
 
     mxr_mutex_unlock(m);
 
+    /* Wait to be signaled.  There are multiple ways this loop could exit:
+     *  1) After being woken by __private_cond_signal().
+     *  2) After being woken by mxr_mutex_unlock(), after we were
+     *     requeued from the condvar's futex to the mutex's futex (by
+     *     cnd_timedwait() in another thread).
+     *  3) After a timeout.
+     *  4) On Linux, interrupted by an asynchronous signal.  This does
+     *     not apply on Magenta. */
     do
         e = __timedwait_cp(fut, seq, clock, ts);
     while (*fut == seq && !e);
@@ -74,6 +84,14 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
     oldstate = a_cas(&node.state, WAITING, LEAVING);
 
     if (oldstate == WAITING) {
+        /* The wait timed out.  So far, this thread was not signaled by
+         * cnd_signal()/cnd_broadcast() -- this thread was able to move
+         * state.node out of the WAITING state before any
+         * __private_cond_signal() call could do that.
+         *
+         * This thread must therefore remove the waiter node from the
+         * list itself. */
+
         /* Access to cv object is valid because this waiter was not
          * yet signaled and a new signal/broadcast cannot return
          * after seeing a LEAVING waiter without getting notified
@@ -81,6 +99,7 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
 
         lock(&c->_c_lock);
 
+        /* Remove our waiter node from the list. */
         if (c->_c_head == &node)
             c->_c_head = node.next;
         else if (node.prev)
@@ -92,6 +111,15 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
 
         unlock(&c->_c_lock);
 
+        /* It is possible that __private_cond_signal() saw our waiter node
+         * after we set node.state to LEAVING but before we removed the
+         * node from the list.  If so, it will have set node.notify and
+         * will be waiting on it, and we need to wake it up.
+         *
+         * This is rather complex.  An alternative would be to eliminate
+         * the node.state field and always claim _c_lock if we could have
+         * got a timeout.  However, that presumably has higher overhead
+         * (since it contends _c_lock and involves more atomic ops). */
         if (node.notify) {
             if (a_fetch_add(node.notify, -1) == 1)
                 __wake(node.notify, 1);
@@ -102,6 +130,16 @@ int cnd_timedwait(cnd_t* restrict c, mtx_t* restrict mutex,
     }
 
     mxr_mutex_lock(m);
+
+    /* By this point, our part of the waiter list cannot change further.
+     * It has been unlinked from the condvar by __private_cond_signal().
+     * It consists only of waiters that were woken explicitly by
+     * cnd_signal()/cnd_broadcast().  Any timed-out waiters would have
+     * removed themselves from the list before __private_cond_signal()
+     * signaled the first node.barrier in our list.
+     *
+     * It is therefore safe now to read node.next and node.prev without
+     * holding _c_lock. */
 
     if (oldstate != WAITING) {
         // TODO(kulakowski) If mxr_mutex_t grows a waiters count, increment it here.
