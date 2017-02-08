@@ -19,7 +19,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/platform.c \
     $(LOCAL_DIR)/platform_pcie.cpp \
-    $(LOCAL_DIR)/secondary_boot.S \
     $(LOCAL_DIR)/uart.c
 
 MEMBASE := 0x40000000
@@ -31,12 +30,14 @@ MODULE_DEPS += \
     lib/fdt \
     dev/pcie \
     dev/timer/arm_generic \
-    dev/interrupt/arm_gicv2m
+    dev/interrupt/arm_gicv2m \
+	dev/psci \
 
 KERNEL_DEFINES += \
     MEMBASE=$(MEMBASE) \
     MEMSIZE=$(MEMSIZE) \
-    PLATFORM_SUPPORTS_PANIC_SHELL=1
+    PLATFORM_SUPPORTS_PANIC_SHELL=1 \
+    PSCI_USE_HVC=1 \
 
 LINKER_SCRIPT += \
     $(BUILDDIR)/system-onesegment.ld

@@ -10,7 +10,7 @@
 
 /* used to call into PSCI firmware (Power State Coordination Firmware) */
 FUNCTION(psci_smc_call)
-#if WITH_HYPERVISOR
+#if PSCI_USE_HVC
     hvc     #0
 #else
     smc     #0

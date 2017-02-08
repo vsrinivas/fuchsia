@@ -22,6 +22,7 @@
 #include <kernel/thread.h>
 #include <platform.h>
 #include <platform/gic.h>
+#include <dev/psci.h>
 #include <dev/interrupt.h>
 #include <platform/qemu-virt.h>
 #include <libfdt.h>
@@ -61,8 +62,6 @@ static pmm_arena_info_t arena = {
     .size = DEFAULT_MEMORY_SIZE,
     .flags = PMM_ARENA_FLAG_KMAP,
 };
-
-extern void psci_call(ulong arg0, ulong arg1, ulong arg2, ulong arg3);
 
 static uint32_t bootloader_ramdisk_base;
 static uint32_t bootloader_ramdisk_size;
@@ -178,10 +177,8 @@ void platform_early_init(void)
     platform_preserve_ramdisk();
 
     /* boot the secondary cpus using the Power State Coordintion Interface */
-    ulong psci_call_num = 0x84000000 + 3; /* SMC32 CPU_ON */
-    psci_call_num += 0x40000000; /* SMC64 */
     for (uint i = 1; i < SMP_MAX_CPUS; i++) {
-        psci_call(psci_call_num, i, MEMBASE + KERNEL_LOAD_OFFSET, 0);
+        psci_cpu_on(0, i, MEMBASE + KERNEL_LOAD_OFFSET);
     }
 }
 
@@ -194,11 +191,9 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
 {
 
     if (suggested_action == HALT_ACTION_REBOOT) {
-        ulong psci_call_num = 0x84000000 + 9; /* SYSTEM_RESET */
-        psci_call(psci_call_num, 0, 0, 0);
+        psci_system_reset();
     } else if (suggested_action == HALT_ACTION_SHUTDOWN) {
-        ulong psci_call_num = 0x84000000 + 8; /* SYSTEM_SHUTDOWN */
-        psci_call(psci_call_num, 0, 0, 0);
+        psci_system_off();
     } else {
 #if WITH_PANIC_BACKTRACE
     thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
