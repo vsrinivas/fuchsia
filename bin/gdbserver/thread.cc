@@ -26,9 +26,11 @@ const char* Thread::StateName(Thread::State state) {
     return #x
   switch (state) {
     CASE_TO_STR(kNew);
-    CASE_TO_STR(kGone);
     CASE_TO_STR(kStopped);
     CASE_TO_STR(kRunning);
+    CASE_TO_STR(kStepping);
+    CASE_TO_STR(kExiting);
+    CASE_TO_STR(kGone);
     default:
       break;
   }
@@ -89,7 +91,8 @@ int Thread::GetGdbSignal() const {
   return arch::ComputeGdbSignal(*exception_context_);
 }
 
-void Thread::OnArchException(const mx_exception_context_t& context) {
+void Thread::OnException(const mx_excp_type_t type,
+                         const mx_exception_context_t& context) {
   // TODO(dje): While having a pointer allows for a simple "do we have a
   // context" check, it might be simpler to just store the struct in the class.
   exception_context_.reset(new mx_exception_context_t);
@@ -100,7 +103,9 @@ void Thread::OnArchException(const mx_exception_context_t& context) {
 
   // If we were singlestepping turn it off.
   // If the user wants to try the singlestep again it must be re-requested.
-  if (prev_state == State::kStepping) {
+  // If the thread has exited we may not be able to, and there's no point
+  // anyway.
+  if (prev_state == State::kStepping && type != MX_EXCP_THREAD_EXIT) {
     FTL_DCHECK(breakpoints_.SingleStepBreakpointInserted());
     if (!breakpoints_.RemoveSingleStepBreakpoint()) {
       FTL_LOG(ERROR) << "Unable to clear single-step bkpt";
@@ -130,6 +135,31 @@ bool Thread::Resume() {
 
   state_ = State::kRunning;
   return true;
+}
+
+void Thread::ResumeForExit() {
+  switch (state()) {
+    case State::kNew:
+    case State::kStopped:
+    case State::kExiting:
+      break;
+    default:
+      FTL_DCHECK(false) << "unexpected state " << StateName(state());
+      break;
+  }
+
+  FTL_VLOG(2) << "Thread " << GetName() << " is exiting";
+
+  auto status = mx_task_resume(handle_, MX_RESUME_EXCEPTION);
+  if (status < 0) {
+    // This might fail if the process has been killed in the interim.
+    // It shouldn't otherwise fail. Just log the failure, nothing else
+    // we can do.
+    util::LogErrorWithMxStatus("Failed to resume thread", status);
+  }
+
+  set_state(State::kGone);
+  Clear();
 }
 
 bool Thread::Step() {

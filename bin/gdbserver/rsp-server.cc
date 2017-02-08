@@ -329,6 +329,12 @@ void RspServer::OnThreadExit(Process* process,
   stop_reply.SetThreadId(process->id(), thread->id());
   packet = stop_reply.Build();
   QueueStopNotification(ftl::StringView(packet.data(), packet.size()));
+
+  // The Remote Serial Protocol doesn't provide for a means to examine
+  // state when exiting, like it does when starting. The thread needs to be
+  // "resumed" so that the o/s will finish terminating the thread. This also
+  // takes care of marking the thread as kGone.
+  thread->ResumeForExit();
 }
 
 void RspServer::OnProcessExit(Process* process,

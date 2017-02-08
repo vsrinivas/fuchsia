@@ -43,7 +43,7 @@ class Process final {
                                  Thread* thread,
                                  const mx_exception_context_t& context) = 0;
 
-    // Called when |thread| has exited.
+    // Called when |thread| has exited (MX_EXCP_THREAD_EXIT).
     virtual void OnThreadExit(
         Process* process,
         Thread* thread,

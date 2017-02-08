@@ -218,11 +218,9 @@ void PrintException(FILE* out, Process* process, Thread* thread,
     case MX_EXCP_START:
       fprintf(out, "Thread %s started\n", thread->GetDebugName().c_str());
       break;
-#if 0 // waiting on magenta CL to add this
     case MX_EXCP_THREAD_EXIT:
       fprintf(out, "Thread %s exited\n", thread->GetDebugName().c_str());
       break;
-#endif
     case MX_EXCP_GONE:
       if (thread)
         fprintf(out, "Thread %s is gone\n", thread->GetDebugName().c_str());

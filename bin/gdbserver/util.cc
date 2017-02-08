@@ -366,6 +366,7 @@ const char* ExceptionName(mx_excp_type_t type) {
     CASE_TO_STR(MX_EXCP_HW_BREAKPOINT);
     CASE_TO_STR(MX_EXCP_START);
     CASE_TO_STR(MX_EXCP_GONE);
+    CASE_TO_STR(MX_EXCP_THREAD_EXIT);
     default:
       return "UNKNOWN";
   }

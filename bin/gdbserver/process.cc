@@ -687,7 +687,7 @@ void Process::OnException(const mx_excp_type_t type,
   // synthetic exceptions.
   if (MX_EXCP_IS_ARCH(type)) {
     FTL_DCHECK(thread);
-    thread->OnArchException(context);
+    thread->OnException(type, context);
     delegate_->OnArchitecturalException(this, thread, type, context);
     return;
   }
@@ -697,27 +697,26 @@ void Process::OnException(const mx_excp_type_t type,
       FTL_VLOG(1) << "Received MX_EXCP_START exception";
       FTL_DCHECK(thread);
       FTL_DCHECK(thread->state() == Thread::State::kNew);
+      thread->OnException(type, context);
       delegate_->OnThreadStarted(this, thread, context);
       break;
     case MX_EXCP_GONE:
-      if (thread) {
-        FTL_VLOG(1) << "Received MX_EXCP_GONE exception for thread "
-                    << thread->GetName();
-        thread->set_state(Thread::State::kGone);
-        // TODO: Split up OnProcessOrThreadExited into process/thread.
-        delegate_->OnThreadExit(this, thread, type, context);
-        thread->Clear();
-      } else {
-        FTL_VLOG(1) << "Received MX_EXCP_GONE exception for process "
-                    << GetName();
-        set_state(Process::State::kGone);
-        delegate_->OnProcessExit(this, type, context);
-        if (!Detach()) {
-          // This is not a fatal error, just log it.
-          FTL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
-          Clear();
-        }
+      FTL_VLOG(1) << "Received MX_EXCP_GONE exception for process "
+                  << GetName();
+      set_state(Process::State::kGone);
+      delegate_->OnProcessExit(this, type, context);
+      if (!Detach()) {
+        // This is not a fatal error, just log it.
+        FTL_LOG(ERROR) << "Unexpected failure to detach (already detached)";
+        Clear();
       }
+      break;
+    case MX_EXCP_THREAD_EXIT:
+      FTL_VLOG(1) << "Received MX_EXCP_THREAD_EXIT exception for thread "
+                  << thread->GetName();
+      FTL_DCHECK(thread);
+      thread->OnException(type, context);
+      delegate_->OnThreadExit(this, thread, type, context);
       break;
     default:
       FTL_LOG(ERROR) << "Ignoring unrecognized synthetic exception: " << type;

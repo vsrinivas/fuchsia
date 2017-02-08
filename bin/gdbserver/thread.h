@@ -24,10 +24,11 @@ class Thread final {
  public:
   enum class State {
     kNew,
-    kGone,
     kStopped,
     kRunning,
     kStepping,
+    kExiting,
+    kGone,
   };
 
   Thread(Process* process, mx_handle_t handle, mx_koid_t id);
@@ -62,12 +63,18 @@ class Thread final {
   // -1.
   int GetGdbSignal() const;
 
-  // Called when the thread gets an architectural exception.
-  void OnArchException(const mx_exception_context_t& context);
+  // Called when the thread gets an exception.
+  void OnException(const mx_excp_type_t type,
+                   const mx_exception_context_t& context);
 
   // Resumes the thread from a "stopped in exception" state. Returns true on
-  // success, false on failure.
+  // success, false on failure. The thread state on return is kRunning.
   bool Resume();
+
+  // Resumes the thread from an MX_EXCP_THREAD_EXIT exception.
+  // The thread state on entry must one of kNew, kStopped, kExiting.
+  // The thread state on return is kGone.
+  void ResumeForExit();
 
   // Steps the thread from a "stopped in exception" state. Returns true on
   // success, false on failure.
