@@ -18,9 +18,10 @@ thread annotation macros provided by
 the prefix `"TA_"` for thread analysis. The most commonly used ones are:
 
 * `TA_GUARDED(x)` the annotated variable is guarded by the capability (e.g. lock) `x`
-* `TA_ACQ(x)` function acquires the mutex `x`
-* `TA_REL(x)` function releases the mutex `x`
-* `TA_REQ(x)` function requires that the caller hold the mutex `x`
+* `TA_ACQ(x...)` function acquires all of the mutexes in the set `x` and hold them after returning
+* `TA_REL(x...)` function releases all of the mutexes in the set `x`
+* `TA_REQ(x...)` function requires that the caller hold all of the mutexes in the set `x`
+* `TA_EXCL(x...)` function requires that the caller not be holding any of the mutexes in the set `x`
 
 For example, a class containing a member variable `'int foo_'` protected by a
 mutex would be annotated like so:
@@ -66,6 +67,15 @@ int Example::IncreaseFoo(int by) {
     }
     return new_value;
 }
+```
+
+Note that for annotations which allow sets of mutex objects, one may either
+apply the annotation multiple times, or provided a comma separated list to the
+annotation.  In other words, the following two declarations are equivalent.
+
+```
+    int IncreaseFooAndBarLocked(int foo_by, int bar_by) TA_REQ(lock_) TA_REQ(bar_lock_);
+    int IncreaseFooAndBarLocked(int foo_by, int bar_by) TA_REQ(lock_, bar_lock_);
 ```
 
 Library code exposed through the sysroot must use the more awkwardly named

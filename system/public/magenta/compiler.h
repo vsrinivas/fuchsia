@@ -56,9 +56,10 @@
 // minimize the chance of collision with consumers of Magenta's public headers.
 #define __TA_CAPABILITY(x) __THREAD_ANNOTATION(capability(x))
 #define __TA_GUARDED(x) __THREAD_ANNOTATION(guarded_by(x))
-#define __TA_ACQUIRE(x) __THREAD_ANNOTATION(acquire_capability(x))
-#define __TA_RELEASE(x) __THREAD_ANNOTATION(release_capability(x))
-#define __TA_REQUIRES(x) __THREAD_ANNOTATION(requires_capability(x))
+#define __TA_ACQUIRE(...) __THREAD_ANNOTATION(acquire_capability(__VA_ARGS__))
+#define __TA_RELEASE(...) __THREAD_ANNOTATION(release_capability(__VA_ARGS__))
+#define __TA_REQUIRES(...) __THREAD_ANNOTATION(requires_capability(__VA_ARGS__))
+#define __TA_EXCLUDES(...) __THREAD_ANNOTATION(locks_excluded(__VA_ARGS__))
 #define __TA_RETURN_CAPABILITY(x) __THREAD_ANNOTATION(lock_returned(x))
 #define __TA_SCOPED_CAPABILITY __THREAD_ANNOTATION(scoped_lockable)
 #define __TA_NO_THREAD_SAFETY_ANALYSIS __THREAD_ANNOTATION(no_thread_safety_analysis)
